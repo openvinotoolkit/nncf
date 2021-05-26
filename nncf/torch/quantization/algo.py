@@ -1137,8 +1137,7 @@ class QuantizationController(QuantizationControllerBase):
         self.all_quantizations.update({k: v.quantizer_module_ref for k, v in self.non_weight_quantizers.items()})
         self._distributed = False
         self._groups_of_adjacent_quantizers = groups_of_adjacent_quantizers
-        self._bn_adaptation = BatchnormAdaptationAlgorithm(
-            **extract_bn_adaptation_init_params(self.quantization_config))
+        self._bn_adaptation = None
 
         should_export_to_onnx_qdq = quantization_config.get("export_to_onnx_standard_ops",
                                                             False)
@@ -1172,7 +1171,7 @@ class QuantizationController(QuantizationControllerBase):
         self.is_staged_scheduler = bool(params)
 
         if is_main_process() and should_init:
-            self._bn_adaptation.run(self.model)
+            self._run_batchnorm_adaptation()
 
         # Staged scheduler must be created after initialized to prevent extra logic with disabled quantizations
         if self.is_staged_scheduler:
@@ -1363,6 +1362,12 @@ class QuantizationController(QuantizationControllerBase):
         nncf_stats = NNCFStatistics()
         nncf_stats.register('quantization', stats)
         return nncf_stats
+
+    def _run_batchnorm_adaptation(self):
+        if self._bn_adaptation is None:
+            self._bn_adaptation = BatchnormAdaptationAlgorithm(
+                **extract_bn_adaptation_init_params(self.quantization_config))
+        self._bn_adaptation.run(self.model)
 
 
 class QuantizationDebugInterface(DebugInterface):

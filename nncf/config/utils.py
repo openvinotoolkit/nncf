@@ -25,14 +25,23 @@ def extract_bn_adaptation_init_params(config: NNCFConfig) -> Dict[str, object]:
     :param config: NNCF config.
     :return: Parameters for initialization of an object of the class `BatchnormAdaptationAlgorithm`.
     """
-
     params = config.get('initializer', {}).get('batchnorm_adaptation', {})
+    num_bn_adaptation_samples = params.get('num_bn_adaptation_samples', 2000)
+    num_bn_forget_samples = params.get('num_bn_forget_samples', 1000)
 
     try:
         args = config.get_extra_struct(BNAdaptationInitArgs)
     except KeyError:
-        args = None
+        raise RuntimeError(
+            'There is no possibility to create the batch-norm statistics adaptation algorithm '
+            'because the data loader is not provided as an extra struct. Refer to the '
+            '`NNCFConfig.register_extra_structs` method and the `BNAdaptationInitArgs` class.') from None
 
-    params['data_loader'] = args.data_loader if args else None
-    params['device'] = args.device if args else None
+    params = {
+        'num_bn_adaptation_samples': num_bn_adaptation_samples,
+        'num_bn_forget_samples': num_bn_forget_samples,
+        'data_loader': args.data_loader,
+        'device': args.device,
+    }
+
     return params

@@ -16,6 +16,7 @@ from typing import Optional, List, Tuple, Any
 from nncf.api.compression import ModelType
 from nncf.common.exporter import Exporter
 from nncf.common.initialization import NNCFDataLoader
+from nncf.common.batchnorm_adaptation import BatchnormAdaptationAlgorithmImpl
 
 from nncf.common.utils.backend import __nncf_backend__
 if __nncf_backend__ == 'Torch':
@@ -44,7 +45,7 @@ def create_exporter(model: ModelType,
 def create_bn_adaptation_algorithm_impl(data_loader: NNCFDataLoader,
                                         num_bn_adaptation_steps: int,
                                         num_bn_forget_steps: int,
-                                        device: Optional[str] = None):
+                                        device: Optional[str] = None) -> BatchnormAdaptationAlgorithmImpl:
     """
     Factory for building a batchnorm adaptation algorithm implementation.
     """

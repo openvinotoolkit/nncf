@@ -128,7 +128,7 @@ class FilterPruningController(BasePruningAlgoController):
 
         self.set_pruning_rate(self.pruning_init)
         self._scheduler = scheduler_cls(self, params)
-        self._bn_adaptation = BatchnormAdaptationAlgorithm(**extract_bn_adaptation_init_params(self.config))
+        self._bn_adaptation = None
 
     @property
     def loss(self) -> CompressionLoss:
@@ -336,7 +336,7 @@ class FilterPruningController(BasePruningAlgoController):
             self._pruning_rate = self._calculate_global_weight_pruning_rate()
 
         if run_batchnorm_adaptation:
-            self._bn_adaptation.run(self.model)
+            self._run_batchnorm_adaptation()
 
     def _calculate_global_weight_pruning_rate(self) -> float:
         full_param_count = 0
@@ -620,3 +620,8 @@ class FilterPruningController(BasePruningAlgoController):
         if actual_pruning_level >= target_pruning_level:
             return CompressionStage.FULLY_COMPRESSED
         return CompressionStage.PARTIALLY_COMPRESSED
+
+    def _run_batchnorm_adaptation(self):
+        if self._bn_adaptation is None:
+            self._bn_adaptation = BatchnormAdaptationAlgorithm(**extract_bn_adaptation_init_params(self.config))
+        self._bn_adaptation.run(self.model)

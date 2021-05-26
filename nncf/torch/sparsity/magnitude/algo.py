@@ -56,7 +56,7 @@ class MagnitudeSparsityController(BaseSparsityAlgoController):
             scheduler_cls = SPARSITY_SCHEDULERS.get(params.get('schedule', 'polynomial'))
             self._scheduler = scheduler_cls(self, params)
 
-        self._bn_adaptation = BatchnormAdaptationAlgorithm(**extract_bn_adaptation_init_params(self._config))
+        self._bn_adaptation = None
 
         self.set_sparsity_level(sparsity_init)
 
@@ -99,7 +99,7 @@ class MagnitudeSparsityController(BaseSparsityAlgoController):
         self._set_masks_for_threshold(threshold, target_sparsified_module_info_list)
 
         if run_batchnorm_adaptation:
-            self._bn_adaptation.run(self.model)
+            self._run_batchnorm_adaptation()
 
     def _select_threshold(self, sparsity_level, target_sparsified_module_info_list):
         all_weights = self._collect_all_weights(target_sparsified_module_info_list)
@@ -131,3 +131,8 @@ class MagnitudeSparsityController(BaseSparsityAlgoController):
         if self.scheduler.current_sparsity_level >= self.scheduler.target_level:
             return CompressionStage.FULLY_COMPRESSED
         return CompressionStage.PARTIALLY_COMPRESSED
+
+    def _run_batchnorm_adaptation(self):
+        if self._bn_adaptation is None:
+            self._bn_adaptation = BatchnormAdaptationAlgorithm(**extract_bn_adaptation_init_params(self._config))
+        self._bn_adaptation.run(self.model)

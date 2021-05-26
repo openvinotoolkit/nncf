@@ -17,16 +17,16 @@ from nncf.common.utils.logger import logger as nncf_logger
 
 class TFBatchnormAdaptationAlgorithmImpl(BatchnormAdaptationAlgorithmImpl):
     """
-    Implementation of the batch-norm adaptation algorithm for the TensorFlow backend.
+    Implementation of the batch-norm statistics adaptation algorithm for the TensorFlow backend.
     """
 
-    def run(self, model):
+    def run(self, model) -> None:
         """
-        Runs the batch-norm adaptation algorithm.
+        Runs the batch-norm statistics adaptation algorithm.
 
         :param model: A model for which the algorithm will be applied.
         """
         # TODO(andrey-churkin): Should be implemented.
 
-        nncf_logger.warning('There is no possibility to start batchnorm adaptation algorithm for '
+        nncf_logger.warning('There is no possibility to start the batch-norm statistics adaptation algorithm for '
                             'the TensorFlow backend because it is not implemented.')

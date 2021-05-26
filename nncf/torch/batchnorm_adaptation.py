@@ -17,15 +17,14 @@ from nncf.torch.initialization import DataLoaderBNAdaptationRunner
 
 class PTBatchnormAdaptationAlgorithmImpl(BatchnormAdaptationAlgorithmImpl):
     """
-    Implementation of the batch-norm adaptation algorithm for the PyTorch.
+    Implementation of the batch-norm statistics adaptation algorithm for the PyTorch.
     """
 
-    def run(self, model):
+    def run(self, model) -> None:
         """
-        Runs the batch-norm adaptation algorithm.
+        Runs the batch-norm statistics adaptation algorithm.
 
         :param model: A model for which the algorithm will be applied.
         """
-
         bn_adaptation_runner = DataLoaderBNAdaptationRunner(model, self._device, self._num_bn_forget_steps)
         bn_adaptation_runner.run(self._data_loader, self._num_bn_adaptation_steps)

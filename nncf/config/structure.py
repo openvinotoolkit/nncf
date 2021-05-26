@@ -34,8 +34,8 @@ class BNAdaptationInitArgs(NNCFExtraConfigStruct):
         Initializes additional arguments for batchnorm statistics adaptation algorithm.
 
         :param data_loader: Provides an iterable over the given dataset.
-        :param device: Device to perform initialization at. Either 'cpu', 'cuda', or None (default); if None, will
-            use the device of the model's parameters.
+        :param device: Device to perform initialization. If `device` is `None` then the device
+            of the model parameters will be used.
         """
         self._data_loader = data_loader
         self._device = device
