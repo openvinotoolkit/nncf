@@ -179,9 +179,6 @@ SKIP_MAP = {
         'nasnet_mobile': pytest.mark.skip(reason='gitlab issue #18'),
         'xception': pytest.mark.skip(reason='gitlab issue #28'),
         'mask_rcnn': pytest.mark.skip(reason='ticket #50605'),
-        'mobilenet_v3_small': pytest.mark.skip(reason='ticket #50607'),
-        'mobilenet_v3_large': pytest.mark.skip(reason='ticket #50607'),
-        'yolo_v4': pytest.mark.skip(reason='ticket #50608'),
         'resnet50_v2': pytest.mark.skip(resason='Several masks on one weight'),
         'mobilenet_v2_slim': pytest.mark.skip(reason='ticket #46349')
     },
