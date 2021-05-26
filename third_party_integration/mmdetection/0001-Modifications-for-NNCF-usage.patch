@@ -280,7 +280,7 @@ index ad17a53..719e9bc 100644
                              replace_ImageToTensor)
  from mmdet.utils import get_root_logger
 
-+from nncf.utils import get_all_modules
++from nncf.torch.utils import get_all_modules
 +from mmdet.core.nncf import wrap_nncf_model
 +
 
@@ -397,7 +397,7 @@ new file mode 100644
 index 0000000..d6b3887
 --- /dev/null
 +++ b/mmdet/core/nncf/hooks.py
-@@ -0,0 +1,24 @@
+@@ -0,0 +1,16 @@
 +from texttable import Texttable
 +from mmcv.runner.hooks.hook import Hook
 +
@@ -414,8 +414,6 @@ index 0000000..d6b3887
 +
 +    def before_run(self, runner):
 +        runner.logger.info(self.compression_ctrl.statistics().to_str())
-+
-+
 diff --git a/mmdet/core/nncf/utils.py b/mmdet/core/nncf/utils.py
 new file mode 100644
 index 0000000..c903a55
