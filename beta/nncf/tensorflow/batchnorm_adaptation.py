@@ -12,7 +12,6 @@
 """
 
 from nncf.common.batchnorm_adaptation import BatchnormAdaptationAlgorithmImpl
-from nncf.common.utils.logger import logger as nncf_logger
 
 
 class TFBatchnormAdaptationAlgorithmImpl(BatchnormAdaptationAlgorithmImpl):
@@ -28,5 +27,5 @@ class TFBatchnormAdaptationAlgorithmImpl(BatchnormAdaptationAlgorithmImpl):
         """
         # TODO(andrey-churkin): Should be implemented.
 
-        nncf_logger.warning('There is no possibility to start the batch-norm statistics adaptation algorithm for '
-                            'the TensorFlow backend because it is not implemented.')
+        raise NotImplementedError('There is no possibility to start the batch-norm statistics adaptation algorithm '
+                                  'for the TensorFlow backend because it is not implemented.')
