@@ -175,7 +175,7 @@ class FilterPruningController(BasePruningAlgoController):
 
         # 3. Initialize pruning quotas
         for cluster in self._pruned_layer_groups_info.get_all_clusters():
-            self._pruning_quotas[cluster.id] = floor(self._layers_out_channels[cluster.nodes[0].key]
+            self._pruning_quotas[cluster.id] = floor(self._layers_out_channels[cluster.nodes[0].node_name]
                                                      * self.pruning_quota)
 
     def _flops_count_init(self):
@@ -343,7 +343,7 @@ class FilterPruningController(BasePruningAlgoController):
             # Update input/output shapes of pruned nodes
             group = self._pruned_layer_groups_info.get_cluster_by_id(group_id)
             for node in group.nodes:
-                tmp_out_channels[node.key] -= 1
+                tmp_out_channels[node.node_name] -= 1
             for node_name in self._next_nodes[group_id]:
                 tmp_in_channels[node_name] -= 1
 

@@ -51,7 +51,6 @@ class PrunedLayerInfo:
         self.node_name = node_name
         self.layer_name = layer_name
         self.nncf_node_id = node_id
-        self.key = self.node_name
 
 
 class BasePruningAlgoBuilder(TFCompressionAlgorithmBuilder):

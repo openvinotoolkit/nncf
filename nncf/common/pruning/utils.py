@@ -305,8 +305,8 @@ def calculate_in_out_channels_in_uniformly_pruned_model(pruning_groups, pruning_
     tmp_out_channels = full_output_channels.copy()
 
     for group in pruning_groups:
-        layer_name = group.nodes[0].key
-        assert all(tmp_out_channels[layer_name] == tmp_out_channels[node.key] for node in
+        layer_name = group.nodes[0].node_name
+        assert all(tmp_out_channels[layer_name] == tmp_out_channels[node.node_name] for node in
                    group.nodes)
         # Prune all nodes in cluster (by output channels)
         old_out_channels = full_output_channels[layer_name]
@@ -314,7 +314,7 @@ def calculate_in_out_channels_in_uniformly_pruned_model(pruning_groups, pruning_
         new_out_channels_num = old_out_channels - num_of_sparse_elems
 
         for node in group.nodes:
-            tmp_out_channels[node.key] = new_out_channels_num
+            tmp_out_channels[node.node_name] = new_out_channels_num
 
         # Prune in_channels in all next nodes of cluster
         for node_name in pruning_groups_next_nodes[group.id]:

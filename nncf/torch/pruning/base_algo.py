@@ -42,7 +42,6 @@ class PrunedModuleInfo:
         self.module = module
         self.operand = operand
         self.nncf_node_id = node_id
-        self.key = self.node_name
 
 
 class NodeInfo:
