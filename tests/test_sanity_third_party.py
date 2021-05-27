@@ -13,13 +13,14 @@
 
 # pylint:disable=no-name-in-module
 import os
-import pytest
-import sys
 import subprocess
+import sys
+
+import pytest
 
 from nncf import BKC_TORCH_VERSION
-from tests.helpers import Command
 from tests.conftest import PROJECT_ROOT
+from tests.helpers import Command
 
 TRANSFORMERS_COMMIT = "b0892fa0e8df02d683e05e625b3903209bff362d"
 MMDETECTION_COMMIT = "3e902c3afc62693a71d672edab9b22e35f7d4776"
@@ -46,6 +47,19 @@ def temp_folder(tmp_path_factory):
             "venv": str(tmp_path_factory.mktemp("venv", False))}
 
 
+class CachedPipRunner:
+    def __init__(self, venv_activation_script_path: str, cache_dir: str = None):
+        self.venv_activate = venv_activation_script_path
+        self.cache_dir = cache_dir
+
+    def run_pip(self, pip_command: str, cwd: str = None):
+        if self.cache_dir is not None:
+            cache_dir_entry = "--cache-dir {}".format(self.cache_dir)
+        else:
+            cache_dir_entry = ""
+        subprocess.run(f"{self.venv_activate} && pip {cache_dir_entry} {pip_command}",
+                       check=True, shell=True, cwd=cwd)
+
 # pylint:disable=redefined-outer-name
 class TestTransformers:
     @pytest.fixture(autouse=True)
@@ -59,14 +73,13 @@ class TestTransformers:
         self.activate_venv = str(". {}/bin/activate".format(self.VENV_TRANS_PATH))
 
     @pytest.mark.dependency(name='install_trans')
-    def test_install_trans_(self):
+    def test_install_trans_(self, pip_cache_dir):
         version_string = "{}.{}".format(sys.version_info[0], sys.version_info[1])
         subprocess.call("virtualenv -ppython{} {}".format(version_string, self.VENV_TRANS_PATH), shell=True)
-        subprocess.run("{} pip uninstall setuptools -y && pip install setuptools".format(self.activate_venv),
-                       check=True, shell=True)
-        subprocess.run("{} && pip install torch=={}".format(self.activate_venv,
-                                                            BKC_TORCH_VERSION),
-                       check=True, shell=True)
+        pip_runner = CachedPipRunner(self.activate_venv, pip_cache_dir)
+        pip_runner.run_pip("uninstall setuptools -y")
+        pip_runner.run_pip("install setuptools")
+        pip_runner.run_pip("install torch=={}".format(BKC_TORCH_VERSION))
         subprocess.run("{} && git clone https://github.com/huggingface/transformers".format(self.activate_venv),
                        check=True, shell=True, cwd=self.VENV_TRANS_PATH)
         subprocess.run("{} && git checkout {}".format(self.activate_venv, TRANSFORMERS_COMMIT), check=True, shell=True,
@@ -75,13 +88,10 @@ class TestTransformers:
                        cwd=self.TRANS_PATH)
         subprocess.run("{} && git apply 0001-Modifications-for-NNCF-usage.patch".format(self.activate_venv),
                        check=True, shell=True, cwd=self.TRANS_PATH)
-        subprocess.run("{} && pip install .".format(self.activate_venv), check=True, shell=True, cwd=self.TRANS_PATH)
-        subprocess.run("{} && pip install -e \".[testing]\"".format(self.activate_venv), check=True, shell=True,
-                       cwd=self.TRANS_PATH)
-        subprocess.run("{} && pip install -r examples/requirements.txt".format(self.activate_venv), check=True,
-                       shell=True, cwd=self.TRANS_PATH)
-        subprocess.run("{} && pip install boto3".format(self.activate_venv), check=True, shell=True,
-                       cwd=self.TRANS_PATH)
+        pip_runner.run_pip("install .", cwd=self.TRANS_PATH)
+        pip_runner.run_pip("install -e \".[testing]\"", cwd=self.TRANS_PATH)
+        pip_runner.run_pip("install -r examples/requirements.txt", cwd=self.TRANS_PATH)
+        pip_runner.run_pip("install boto3", cwd=self.TRANS_PATH)
         subprocess.run(
             "{} && {}/bin/python setup.py develop".format(self.activate_venv, self.VENV_TRANS_PATH), check=True,
             shell=True, cwd=PROJECT_ROOT)
@@ -228,16 +238,17 @@ class TestMmdetection:
         self.MMDET_PATH = str(os.path.join(self.VENV_MMDET_PATH, "mmdetection"))
 
     @pytest.mark.dependency(name='install_mmdet')
-    def test_install_mmdet(self):
+    def test_install_mmdet(self, pip_cache_dir):
         version_string = "{}.{}".format(sys.version_info[0], sys.version_info[1])
         subprocess.call("virtualenv -ppython{} {}".format(version_string, self.VENV_MMDET_PATH), shell=True)
-        subprocess.run("{} pip install --upgrade pip".format(self.activate_venv),
-                       check=True, shell=True)
+        pip_runner = CachedPipRunner(self.activate_venv, pip_cache_dir)
+
+        pip_runner.run_pip("install --upgrade pip")
         subprocess.run(
             "{} && {}/bin/python setup.py develop".format(self.activate_venv, self.VENV_MMDET_PATH), check=True,
             shell=True, cwd=PROJECT_ROOT)
-        subprocess.run("{} pip uninstall setuptools -y && pip install setuptools".format(self.activate_venv),
-                       check=True, shell=True)
+        pip_runner.run_pip("uninstall setuptools -y")
+        pip_runner.run_pip("install setuptools")
         subprocess.run("{}; git clone https://github.com/open-mmlab/mmdetection.git".format(self.activate_venv),
                        check=True, shell=True, cwd=self.VENV_MMDET_PATH)
         subprocess.run("{}; git checkout {}".format(self.activate_venv, MMDETECTION_COMMIT), check=True, shell=True,
@@ -246,23 +257,16 @@ class TestMmdetection:
                        cwd=self.MMDET_PATH)
         subprocess.run("{}; git apply 0001-Modifications-for-NNCF-usage.patch".format(self.activate_venv),
                        check=True, shell=True, cwd=self.MMDET_PATH)
-        subprocess.run(
-            "{}; pip install mmcv-full==1.2.0 "
-            "-f https://download.openmmlab.com/mmcv/dist/cu102/torch{}/index.html".format(self.activate_venv,
-                                                                                          BKC_TORCH_VERSION),
-            check=True, shell=True,
-            cwd=self.MMDET_PATH)
-        subprocess.run("{}; pip install onnx onnxruntime".format(self.activate_venv), check=True, shell=True,
-                       cwd=self.MMDET_PATH)
-        subprocess.run("{}; pip install torchvision".format(self.activate_venv), check=True, shell=True,
-                       cwd=self.MMDET_PATH)
-        subprocess.run("{}; pip install -r requirements/build.txt".format(self.activate_venv), check=True, shell=True,
-                       cwd=self.MMDET_PATH)
-        subprocess.run("{}; pip install -v -e .".format(self.activate_venv), check=True, shell=True,
-                       cwd=self.MMDET_PATH)
-        subprocess.run("{}; pip install -U \"git+https://github.com/open-mmlab/cocoapi.git#subdirectory=pycocotools\""
-                       .format(self.activate_venv), check=True, shell=True, cwd=self.MMDET_PATH)
-
+        pip_runner.run_pip("install mmcv-full==1.2.0 "
+                           "-f https://download.openmmlab.com/mmcv/dist/cu102/torch{}/index.html".format(
+            BKC_TORCH_VERSION),
+                           cwd=self.MMDET_PATH)
+        pip_runner.run_pip("install onnx onnxruntime", cwd=self.MMDET_PATH)
+        pip_runner.run_pip("install torchvision", cwd=self.MMDET_PATH)
+        pip_runner.run_pip("install -r requirements/build.txt", cwd=self.MMDET_PATH)
+        pip_runner.run_pip("install -v -e .", cwd=self.MMDET_PATH)
+        pip_runner.run_pip("install -U \"git+https://github.com/open-mmlab/cocoapi.git#subdirectory=pycocotools\"",
+                           cwd=self.MMDET_PATH)
         subprocess.run("{}; mkdir {}".format(self.activate_venv, self.MMDET_PATH + "/data"), check=True, shell=True,
                        cwd=self.MMDET_PATH)
         subprocess.run("{}; ln -s {}/voc data/VOCdevkit".format(self.activate_venv, DATASET_PATH), check=True,

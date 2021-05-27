@@ -80,6 +80,11 @@ def pytest_addoption(parser):
     parser.addoption(
         "--ov-config-dir", type=str, default=None, help="Path to OpenVino configs"
     )
+    parser.addoption(
+        "--pip-cache-dir", type=str, default=None,
+        help="Path to pip cached downloaded packages directory (speeds up installation tests)"
+    )
+
 
 
 def pytest_configure(config):
@@ -158,6 +163,10 @@ def onnx_dir(request):
 @pytest.fixture(scope="module")
 def ov_config_dir(request):
     return request.config.getoption("--ov-config-dir")
+
+@pytest.fixture(scope="module")
+def pip_cache_dir(request):
+    return request.config.getoption("--pip-cache-dir")
 
 
 @pytest.fixture(scope="function")
