@@ -14,9 +14,9 @@
 import numpy as np
 import tensorflow as tf
 
-from beta.nncf.tensorflow.layers.common import DECONV_LAYERS
-from beta.nncf.tensorflow.layers.common import ALL_LAYERS_WITH_WEIGHTS
-from beta.nncf.tensorflow.layers.common import WEIGHT_ATTR_NAME
+from beta.nncf.tensorflow.graph.metatypes.common import DECONV_LAYER_METATYPES
+from beta.nncf.tensorflow.graph.metatypes.common import DEPTHWISE_CONV_LAYER_METATYPES
+from beta.nncf.tensorflow.graph.metatypes.matcher import get_keras_layer_metatype
 from beta.nncf.tensorflow.layers.data_layout import get_weight_channel_axis
 from beta.nncf.tensorflow.layers.wrapper import NNCFWrapper
 from nncf.common.graph import NNCFNode
@@ -24,17 +24,13 @@ from nncf.common.graph.module_attributes import ConvolutionModuleAttributes
 
 
 def is_depthwise_conv(node: NNCFNode) -> bool:
-    return isinstance(node.module_attributes, ConvolutionModuleAttributes) \
-           and node.module_attributes.groups == node.module_attributes.in_channels \
-           and (node.module_attributes.out_channels % node.module_attributes.in_channels == 0) \
-           and node.module_attributes.in_channels > 1 \
-           or node.node_type == 'DepthwiseConv2D'
+    return node.metatype in DEPTHWISE_CONV_LAYER_METATYPES
 
 
 def is_conv_with_downsampling(node: NNCFNode) -> bool:
     return isinstance(node.module_attributes, ConvolutionModuleAttributes) \
            and not np.all(np.array(node.module_attributes.stride) == 1) \
-           and node.node_type not in DECONV_LAYERS
+           and node.metatype not in DECONV_LAYER_METATYPES
 
 
 def is_shared(node: NNCFNode) -> bool:
@@ -48,9 +44,13 @@ def get_filter_axis(layer: NNCFWrapper, weight_attr: str) -> int:
 
 
 def get_filters_num(layer: NNCFWrapper):
-    layer_type = layer.layer.__class__.__name__
-    layer_props = ALL_LAYERS_WITH_WEIGHTS[layer_type]
-    weight_attr = layer_props[WEIGHT_ATTR_NAME]
+    layer_metatype = get_keras_layer_metatype(layer)
+    if len(layer_metatype.weight_definitions) != 1:
+        raise ValueError(f'Could not calculate the number of filters '
+                         f'for the layer {layer.layer.name}.')
+
+    weight_def = layer_metatype.weight_definitions[0]
+    weight_attr = weight_def.weight_attr_name
 
     filter_axis = get_filter_axis(layer, weight_attr)
     filters_num = layer.layer_weights[weight_attr].shape[filter_axis]

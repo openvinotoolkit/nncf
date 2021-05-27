@@ -59,7 +59,7 @@ HW_CONFIG_TYPE_TARGET_DEVICE_MAP = {
 
 def get_metatypes_by_hw_config_name(hw_config_name: str) -> List[Type[OperatorMetatype]]:
     retval = []
-    for op_meta in get_operator_metatypes().registry_dict.values():
+    for op_meta in get_operator_metatypes():
         if hw_config_name in op_meta.hw_config_names:
             retval.append(op_meta)
     return retval
@@ -195,7 +195,7 @@ class HWConfig(list):
     def get_metatype_vs_quantizer_configs_map(self, for_weights=False) -> Dict[Type[OperatorMetatype],
                                                                                Optional[List[QuantizerConfig]]]:
         # 'None' for ops unspecified in HW config, empty list for wildcard quantization ops
-        retval = {k: None for k in get_operator_metatypes().registry_dict.values()}
+        retval = {k: None for k in get_operator_metatypes()}
         config_key = "weights" if for_weights else "activations"
         for op_dict in self:
             hw_config_op_name = op_dict.type

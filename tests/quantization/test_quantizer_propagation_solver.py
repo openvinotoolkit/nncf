@@ -33,7 +33,7 @@ from nncf.torch.dynamic_graph.wrappers import OP_NAMES_REQUIRING_MODULE_ATTRS
 from nncf.torch.graph.graph import InputAgnosticOperationExecutionContext
 from nncf.torch.graph.graph import NNCFGraph
 from nncf.torch.graph.graph import PTNNCFGraph
-from nncf.torch.graph.operator_metatypes import PT_OPERATOR_METATYPES
+from nncf.torch.graph.operator_metatypes import get_operator_metatypes
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.graph.version_agnostic_op_names import get_version_agnostic_name
 from nncf.torch.nncf_network import InsertionPointGraph
@@ -156,7 +156,7 @@ class TestQuantizerPropagationSolver:
     def test_set_quantization_traits_for_quant_prop_graph_nodes(self):
         # Test all patchable metatypes. If a patchable metatype is not registered
         # in quantization trait-to-metatype dict, the test will fail.
-        tested_op_metatypes = list(PT_OPERATOR_METATYPES.registry_dict.values()) # type: List[OperatorMetatype]
+        tested_op_metatypes = get_operator_metatypes() # type: List[OperatorMetatype]
         tested_op_names = []
         for op_meta in tested_op_metatypes:
             aliases = op_meta.get_all_aliases()

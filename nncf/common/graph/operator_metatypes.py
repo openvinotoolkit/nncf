@@ -44,6 +44,20 @@ class OperatorMetatype:
         """
         return []
 
+    @classmethod
+    def subtype_check(cls, metatype: Type['OperatorMetatype']) -> bool:
+        """
+        Check if a metatype is a subtype.
+
+        :param metatype: An operator metatype.
+        :return: True if metatype is a subtype otherwise False
+        """
+        subtypes = cls.get_subtypes()
+        if metatype == cls or metatype in subtypes:
+            return True
+
+        return any([subtype.subtype_check(metatype) for subtype in subtypes])
+
 
 class OperatorMetatypeRegistry(Registry):
     """
@@ -83,13 +97,13 @@ class OperatorMetatypeRegistry(Registry):
             op_names = obj.get_all_aliases()
             for name in op_names:
                 name = get_version_agnostic_name(name)
-                if name not in self._op_name_to_op_meta_dict:
-                    self._op_name_to_op_meta_dict[name] = obj
-                else:
-                    if self._op_name_to_op_meta_dict[name] != obj:
-                        raise RuntimeError(
-                            'Inconsistent operator metatype registry - single patched '
-                            'op name maps to multiple metatypes!')
+                if name in self._op_name_to_op_meta_dict \
+                        and not obj.subtype_check(self._op_name_to_op_meta_dict[name]):
+                    raise RuntimeError(
+                        'Inconsistent operator metatype registry - single patched '
+                        'op name maps to multiple metatypes!')
+
+                self._op_name_to_op_meta_dict[name] = obj
             return obj
 
         return wrap
@@ -106,18 +120,52 @@ class OperatorMetatypeRegistry(Registry):
         return self._op_name_to_op_meta_dict[op_name]
 
 
-def get_operator_metatypes() -> Optional[OperatorMetatypeRegistry]:
+def get_operator_metatypes() -> List[Type[OperatorMetatype]]:
     """
-    Returns operator metatype registry.
+    Returns a list of the operator metatypes.
 
-    :return: The operator metatype registry.
+    :return: List of operator metatypes .
     """
     if __nncf_backend__ == 'Torch':
         from nncf.torch.graph.operator_metatypes \
-            import PT_OPERATOR_METATYPES
-        return PT_OPERATOR_METATYPES
+            import get_operator_metatypes as get_operator_metatypes_pt
+        operator_metatypes = get_operator_metatypes_pt()
+    elif __nncf_backend__ == 'TensorFlow':
+        from beta.nncf.tensorflow.graph.metatypes.common \
+            import get_operator_metatypes as get_operator_metatypes_tf
+        operator_metatypes = get_operator_metatypes_tf()
+    return operator_metatypes
+
+
+def get_input_metatypes() -> List[Type[OperatorMetatype]]:
+    """
+    Returns a list of the input operator metatypes.
+
+    :return: List of the input operator metatypes .
+    """
+    if __nncf_backend__ == 'Torch':
+        from nncf.torch.graph.operator_metatypes \
+            import get_input_metatypes as get_input_metatypes_pt
+        input_metatypes = get_input_metatypes_pt()
+    elif __nncf_backend__ == 'TensorFlow':
+        from beta.nncf.tensorflow.graph.metatypes.common \
+            import get_input_metatypes as get_input_metatypes_tf
+        input_metatypes = get_input_metatypes_tf()
+    return input_metatypes
+
+
+def get_output_metatypes() -> List[Type[OperatorMetatype]]:
+    """
+    Returns a list of the output operator metatypes.
+
+    :return: List of the output operator metatypes .
+    """
+    if __nncf_backend__ == 'Torch':
+        from nncf.torch.graph.operator_metatypes \
+            import get_output_metatypes as get_output_metatypes_pt
+        output_metatypes = get_output_metatypes_pt()
     if __nncf_backend__ == 'TensorFlow':
-        from beta.nncf.tensorflow.graph.operator_metatypes \
-            import TF_OPERATOR_METATYPES
-        return TF_OPERATOR_METATYPES
-    return None
+        from beta.nncf.tensorflow.graph.metatypes.common \
+            import get_output_metatypes as get_output_metatypes_tf
+        output_metatypes = get_output_metatypes_tf()
+    return output_metatypes

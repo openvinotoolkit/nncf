@@ -1,17 +1,31 @@
+"""
+ Copyright (c) 2021 Intel Corporation
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+      http://www.apache.org/licenses/LICENSE-2.0
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+"""
+
 import warnings
 
 from torch.nn import DataParallel, Module as TorchModule
 
 from nncf.common.graph.module_attributes import ConvolutionModuleAttributes
 from nncf.common.graph.module_attributes import GroupNormModuleAttributes
-from nncf.torch.utils import nncf_logger
 from nncf.torch.debug import is_debug
-from nncf.torch.dynamic_graph.context import get_current_context, OperatorInput
-from nncf.torch.graph.graph import ModuleAttributes
+from nncf.torch.dynamic_graph.context import get_current_context
+from nncf.torch.dynamic_graph.context import OperatorInput
 from nncf.torch.dynamic_graph.trace_tensor import make_tensor_metas
 from nncf.torch.dynamic_graph.trace_tensor import trace_tensors
+from nncf.torch.graph.graph import ModuleAttributes
 from nncf.torch.layers import ITERATION_MODULES
 from nncf.torch.layers import NNCF_GENERAL_CONV_MODULES_DICT
+from nncf.torch.utils import nncf_logger
 
 _IGNORED_SCOPES = []
 

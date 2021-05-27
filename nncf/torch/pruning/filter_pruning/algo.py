@@ -35,6 +35,7 @@ from nncf.common.pruning.schedulers import PRUNING_SCHEDULERS
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.torch.compression_method_api import PTCompressionAlgorithmController
 from nncf.torch.dynamic_graph.context import Scope
+from nncf.torch.graph import operator_metatypes as metatypes
 from nncf.torch.layers import NNCF_PRUNING_MODULES_DICT
 from nncf.torch.layers import NNCF_GENERAL_CONV_MODULES_DICT
 from nncf.torch.layer_utils import _NNCFModuleMixin
@@ -214,9 +215,20 @@ class FilterPruningController(BasePruningAlgoController):
         self._model.do_dummy_forward(force_eval=True)
 
         self.nodes_flops = count_flops_for_nodes(graph, in_shapes, out_shapes,
-                                                 conv_op_types=[v.op_func_name
-                                                                for v in NNCF_GENERAL_CONV_MODULES_DICT],
-                                                 linear_op_types=['linear'])
+                                                 conv_op_metatypes=[
+                                                     metatypes.Conv1dMetatype,
+                                                     metatypes.DepthwiseConv1dSubtype,
+                                                     metatypes.Conv2dMetatype,
+                                                     metatypes.DepthwiseConv2dSubtype,
+                                                     metatypes.Conv3dMetatype,
+                                                     metatypes.DepthwiseConv3dSubtype,
+                                                     metatypes.ConvTranspose2dMetatype,
+                                                     metatypes.ConvTranspose3dMetatype
+                                                 ],
+                                                 linear_op_metatypes=[
+                                                     metatypes.LinearMetatype
+                                                 ])
+
         for h in hook_list:
             h.remove()
 

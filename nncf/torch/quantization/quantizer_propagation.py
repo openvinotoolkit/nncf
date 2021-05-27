@@ -1879,7 +1879,7 @@ class QuantizerPropagationSolver:
         # TODO: ensure that there are no name collisions between ops in different torch subpackages with the same name
         retval = {}
         if self._hw_config is None:
-            for op_meta in PT_OPERATOR_METATYPES.registry_dict.values():
+            for op_meta in get_operator_metatypes():
                 retval[op_meta] = QuantizationTrait.QUANTIZATION_AGNOSTIC  # Default value
             for trait, meta_list in DEFAULT_QUANT_TRAIT_TO_OP_DICT.items():
                 for op_meta in meta_list:  # type: OperatorMetatype
@@ -1927,7 +1927,7 @@ class QuantizerPropagationSolver:
         # TODO: ensure that there are no name collisions between ops in different torch subpackages with the same name
         retval = {}
         if self._hw_config is None:
-            for op_meta in PT_OPERATOR_METATYPES.registry_dict.values():
+            for op_meta in get_operator_metatypes():
                 retval[op_meta] = []  # Default value, corresponds to wildcard quantization
             for trait, meta_list in DEFAULT_QUANT_TRAIT_TO_OP_DICT.items():
                 if trait == QuantizationTrait.INPUTS_QUANTIZABLE:

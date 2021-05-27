@@ -21,17 +21,18 @@ from beta.nncf.tensorflow.api.compression import TFCompressionAlgorithmBuilder
 from beta.nncf.tensorflow.api.compression import TFCompressionAlgorithmController
 from beta.nncf.tensorflow.loss import TFZeroCompressionLoss
 from beta.nncf.tensorflow.graph import patterns as p
-from beta.nncf.tensorflow.graph.converter import convert_keras_model_to_nxmodel
+from beta.nncf.tensorflow.graph.metatypes.common import ELEMENTWISE_LAYER_METATYPES
+from beta.nncf.tensorflow.graph.metatypes.common import GENERAL_CONV_LAYER_METATYPES
+from beta.nncf.tensorflow.graph.metatypes.common import LAYER_METATYPES_AGNOSTIC_TO_DATA_PRECISION
+from beta.nncf.tensorflow.graph.metatypes.common import LINEAR_LAYER_METATYPES
+from beta.nncf.tensorflow.graph.metatypes.keras_layers import TFLambdaLayerMetatype
+from beta.nncf.tensorflow.graph.converter import convert_keras_model_to_nncf_graph
 from beta.nncf.tensorflow.graph.pattern_matching import search_all
 from beta.nncf.tensorflow.graph.transformations.commands import TFInsertionCommand
 from beta.nncf.tensorflow.graph.transformations.commands import TFAfterLayer
 from beta.nncf.tensorflow.graph.transformations.commands import TFLayerWeight
 from beta.nncf.tensorflow.graph.transformations.layout import TFTransformationLayout
 from beta.nncf.tensorflow.graph.utils import get_original_name_and_instance_index
-from beta.nncf.tensorflow.layers.common import ELEMENTWISE_LAYERS
-from beta.nncf.tensorflow.layers.common import LAYERS_AGNOSTIC_TO_DATA_PRECISION
-from beta.nncf.tensorflow.layers.common import LAYERS_WITH_WEIGHTS
-from beta.nncf.tensorflow.layers.common import WEIGHT_ATTR_NAME
 from beta.nncf.tensorflow.layers.custom_objects import NNCF_QUANTIZATION_OPERATONS
 from beta.nncf.tensorflow.quantization.initializers.minmax import MinMaxInitializer
 from beta.nncf.tensorflow.quantization.layers import FakeQuantize
@@ -52,10 +53,10 @@ QUANTIZER_GROUPS = [
     WEIGHTS
 ]
 
-QUANTIZATION_LAYERS = LAYERS_WITH_WEIGHTS
+QUANTIZATION_LAYER_METATYPES = GENERAL_CONV_LAYER_METATYPES + LINEAR_LAYER_METATYPES
 
-NOT_SUPPORT_LAYERS = [
-    'Lambda'
+NOT_SUPPORT_LAYER_METATYPES = [
+    TFLambdaLayerMetatype
 ]
 
 
@@ -98,127 +99,125 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
             qconfig = constraints.apply_constraints_to(qconfig)
         return qconfig
 
-    def _create_quantizer(self, name: str, qconfig: QuantizerConfig):
+    def _create_quantizer(self, name: str, qconfig: TFQuantizerSpec):
         quantizer_cls = NNCF_QUANTIZATION_OPERATONS.get(qconfig.mode)
         return quantizer_cls(name, qconfig)
 
     def get_transformation_layout(self, model):
-        nxmodel = convert_keras_model_to_nxmodel(model)
-        for node_name, node in nxmodel.nodes.items():
-            if node['type'] in NOT_SUPPORT_LAYERS:
+        graph = convert_keras_model_to_nncf_graph(model)
+        nodes = graph.get_all_nodes()
+        for node in nodes:
+            if node.metatype in NOT_SUPPORT_LAYER_METATYPES:
                 logger.warning('The layer {} is not supported by the quantization algorithm'
-                               .format(get_original_name_and_instance_index(node_name)[0]))
+                               .format(get_original_name_and_instance_index(node.node_name)[0]))
 
         transformations = TFTransformationLayout()
         qconfig = self._get_default_qconfig(self.global_quantizer_constraints[WEIGHTS])
         shared_nodes = set()
-        for node_name, node in nxmodel.nodes.items():
-            original_node_name, _ = get_original_name_and_instance_index(node_name)
-            if node['type'] not in QUANTIZATION_LAYERS \
-                    or is_ignored(node_name, self.ignored_scopes_per_group[WEIGHTS]) \
+        for node in nodes:
+            original_node_name, _ = get_original_name_and_instance_index(node.node_name)
+            if node.metatype not in QUANTIZATION_LAYER_METATYPES \
+                    or is_ignored(node.node_name, self.ignored_scopes_per_group[WEIGHTS]) \
                     or original_node_name in shared_nodes:
                 continue
 
-            if node['is_shared']:
+            if node.data['is_shared']:
                 shared_nodes.add(original_node_name)
 
-            weight_attr_name = QUANTIZATION_LAYERS[node['type']][WEIGHT_ATTR_NAME]
-            op_name = self._get_quantizer_operation_name(node_name, weight_attr_name)
+            for weight_def in node.metatype.weight_definitions:
+                op_name = self._get_quantizer_operation_name(
+                    node.node_name,
+                    weight_def.weight_attr_name)
 
-            operation = self._create_quantizer(op_name, TFQuantizerSpec.from_config(qconfig,
-                                                                           narrow_range=True,
-                                                                           half_range=False))
+                operation = self._create_quantizer(
+                    op_name,
+                    TFQuantizerSpec.from_config(qconfig, narrow_range=True, half_range=False))
 
-            transformations.register(
-                TFInsertionCommand(
-                    target_point=TFLayerWeight(original_node_name, weight_attr_name),
-                    callable_object=operation,
-                    priority=TransformationPriority.QUANTIZATION_PRIORITY
-                ))
+                transformations.register(
+                    TFInsertionCommand(
+                        target_point=TFLayerWeight(original_node_name, weight_def.weight_attr_name),
+                        callable_object=operation,
+                        priority=TransformationPriority.QUANTIZATION_PRIORITY))
 
-        insertion_points = self._find_insertion_points(nxmodel)
+        insertion_points = self._find_insertion_points(graph)
         qconfig = self._get_default_qconfig(self.global_quantizer_constraints[ACTIVATIONS])
         for original_node_name, instance_index in insertion_points:
             fake_quantize_name = self._get_fake_quantize_name(original_node_name, instance_index)
-            fake_quantize_layer = FakeQuantize(TFQuantizerSpec.from_config(qconfig, narrow_range=False,
-                                                                           half_range=False),
-                                               name=fake_quantize_name)
+            fake_quantize_layer = FakeQuantize(
+                TFQuantizerSpec.from_config(qconfig, narrow_range=False, half_range=False),
+                name=fake_quantize_name)
 
             transformations.register(
                 TFInsertionCommand(
                     target_point=TFAfterLayer(original_node_name, instance_index),
                     callable_object=fake_quantize_layer,
-                    priority=TransformationPriority.QUANTIZATION_PRIORITY
-                ))
+                    priority=TransformationPriority.QUANTIZATION_PRIORITY))
 
         return transformations
 
-    def _find_insertion_points(self, nxmodel):
-        def _filter_fn(node_name, node):
-            return not is_ignored(node_name, self.ignored_scopes_per_group[ACTIVATIONS]) \
-                   and 'float' in node['dtype'].lower()
+    def _find_insertion_points(self, graph):
+        def _filter_fn(node):
+            return not is_ignored(node.node_name, self.ignored_scopes_per_group[ACTIVATIONS]) \
+                   and 'float' in node.data['dtype'].lower()
 
-        pattern = p.LINEAR_OPS | p.ELEMENTWISE | p.ANY_BN_ACT_COMBO | \
-                  p.LINEAR_OPS + p.ANY_AG_BN_ACT_COMBO | p.ELEMENTWISE + p.ANY_AG_BN_ACT_COMBO | p.SINGLE_OPS
+        pattern = p.CONV_LINEAR_OPS | p.ELEMENTWISE | p.ANY_BN_ACT_COMBO | \
+                  p.CONV_LINEAR_OPS + p.ANY_AG_BN_ACT_COMBO | p.ELEMENTWISE + p.ANY_AG_BN_ACT_COMBO | p.SINGLE_OPS
 
-        matches = search_all(nxmodel, pattern)
+        matches = search_all(graph.nx_graph, pattern)
 
-        topological_order = {node: k for k, node in enumerate(nx.topological_sort(nxmodel))}
+        topological_order = {node: k for k, node in enumerate(nx.topological_sort(graph.nx_graph))}
         insertion_points = [max(match, key=topological_order.__getitem__) for match in matches]
 
         if self.quantize_inputs:
-            for node_name, degree in nxmodel.in_degree:
-                if degree > 0:
-                    continue
-
-                preprocessing_nodes = self._get_input_preprocessing_nodes(nxmodel, node_name)
+            for node in graph.get_input_nodes():
+                preprocessing_nodes = self._get_input_preprocessing_nodes(graph, node)
                 if preprocessing_nodes:
                     for n in preprocessing_nodes[:-1]:
                         if n in insertion_points:
-                            insertion_points.remove(node_name)
-                elif _filter_fn(node_name, nxmodel.nodes[node_name]):
-                    insertion_points = [node_name] + insertion_points
+                            insertion_points.remove(node.node_name)
+                elif _filter_fn(node):
+                    insertion_points = [node.node_name] + insertion_points
 
         if not self.quantize_outputs:
-            outputs = []
-            for node_name in nxmodel.nodes:
-                if nxmodel.out_degree(node_name) == 0:
-                    outputs.append(node_name)
-            for output in outputs:
-                for quantized_node in self._get_quantized_nodes_for_output(nxmodel, insertion_points, output):
-                    insertion_points.remove(quantized_node)
+            for node in graph.get_output_nodes():
+                for quantized_node in self._get_quantized_nodes_for_output(
+                        graph, insertion_points, node):
+                    insertion_points.remove(quantized_node.node_name)
 
         insertion_points = [point for point in insertion_points
-                            if _filter_fn(point, nxmodel.nodes[point])]
+                            if _filter_fn(graph.get_node_by_key(point))]
 
         return [get_original_name_and_instance_index(point) for point in insertion_points]
 
-    def _get_input_preprocessing_nodes(self, nxmodel, node_name, preprocessing_nodes=None):
+    def _get_input_preprocessing_nodes(self, graph, node, preprocessing_nodes=None):
         if preprocessing_nodes is None:
             preprocessing_nodes = []
 
-        if nxmodel.out_degree(node_name) == 1:
-            successor = next(nxmodel.successors(node_name))
-            if nxmodel.nodes[successor]['type'] in ELEMENTWISE_LAYERS and nxmodel.in_degree(successor) == 1:
-                preprocessing_nodes.append(successor)
-                return self._get_input_preprocessing_nodes(nxmodel, successor, preprocessing_nodes)
+        succ_nodes = graph.get_next_nodes(node)
+        if len(succ_nodes) == 1:
+            pred_nodes = graph.get_previous_nodes(succ_nodes[0])
+            if succ_nodes[0].metatype in ELEMENTWISE_LAYER_METATYPES and len(pred_nodes) == 1:
+                preprocessing_nodes.append(succ_nodes[0])
+                return self._get_input_preprocessing_nodes(graph, succ_nodes[0], preprocessing_nodes)
         return preprocessing_nodes
 
-    def _get_quantized_nodes_for_output(self, nxmodel, insetrion_points, node_name, quantized_nodes_for_output=None):
+    def _get_quantized_nodes_for_output(self, graph, insetrion_points, node, quantized_nodes_for_output=None):
         if quantized_nodes_for_output is None:
-            if node_name in insetrion_points:
-                return [node_name]
+            if node.node_name in insetrion_points:
+                return [node]
             quantized_nodes_for_output = []
 
-        for predecessor in nxmodel.predecessors(node_name):
-            if nxmodel.out_degree(predecessor) > 1:
+        for pred_node in graph.get_previous_nodes(node):
+            if len(graph.get_next_nodes(pred_node)) > 1:
                 logger.warning('Removing of FakeQuantize after layer {} '
-                               'with multiple outputs is not fully supported'.format(predecessor))
-            if nxmodel.nodes[predecessor]['type'] in LAYERS_AGNOSTIC_TO_DATA_PRECISION:
-                self._get_quantized_nodes_for_output(nxmodel, insetrion_points,
-                                                     predecessor, quantized_nodes_for_output)
-            elif predecessor in insetrion_points:
-                quantized_nodes_for_output.append(predecessor)
+                               'with multiple outputs is not fully supported'.format(pred_node.node_name))
+                continue
+
+            if pred_node.metatype in LAYER_METATYPES_AGNOSTIC_TO_DATA_PRECISION:
+                self._get_quantized_nodes_for_output(graph, insetrion_points,
+                                                     pred_node, quantized_nodes_for_output)
+            elif pred_node.node_name in insetrion_points:
+                quantized_nodes_for_output.append(pred_node)
         return quantized_nodes_for_output
 
     def _get_fake_quantize_name(self, node_name, instance_index):
