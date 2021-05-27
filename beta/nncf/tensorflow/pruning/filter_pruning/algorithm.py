@@ -25,6 +25,7 @@ from beta.nncf.tensorflow.graph.metatypes.matcher import get_keras_layer_metatyp
 from beta.nncf.tensorflow.graph.utils import collect_wrapped_layers
 from beta.nncf.tensorflow.graph.utils import get_layer_identifier
 from beta.nncf.tensorflow.graph.utils import get_original_name_and_instance_index
+from beta.nncf.tensorflow.graph.utils import unwrap_layer
 from beta.nncf.tensorflow.layers.data_layout import get_input_channel_axis
 from beta.nncf.tensorflow.layers.wrapper import NNCFWrapper
 from beta.nncf.tensorflow.loss import TFZeroCompressionLoss
@@ -186,9 +187,9 @@ class FilterPruningController(BasePruningAlgoController):
         for node in self._original_graph.get_nodes_by_metatypes(GENERAL_CONV_LAYER_METATYPES):
             node_name, node_index = get_original_name_and_instance_index(node.node_name)
             layer = self._model.get_layer(node_name)
-            layer_ = layer.layer if isinstance(layer, NNCFWrapper) else layer
+            layer_ = unwrap_layer(layer)
 
-            channel_axis = get_input_channel_axis(layer_)
+            channel_axis = get_input_channel_axis(layer)
             dims_slice = slice(channel_axis - layer_.rank, channel_axis) \
                 if layer.data_format == 'channels_last' else slice(channel_axis + 1, None)
             in_shape = layer.get_input_shape_at(node_index)[dims_slice]

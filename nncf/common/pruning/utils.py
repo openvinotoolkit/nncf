@@ -14,16 +14,9 @@
 import math
 
 from functools import partial
-from typing import Dict, List, Optional, Tuple, Type, Union
+from typing import Dict, List, Optional, Tuple, Type
 
 import numpy as np
-<<<<<<< HEAD
-=======
-from typing import Dict
-from typing import List
-from typing import Optional
-from typing import Tuple
->>>>>>> shapes calculation using graph edges
 
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
