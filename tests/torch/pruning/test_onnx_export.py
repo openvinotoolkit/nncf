@@ -14,7 +14,7 @@ import pytest
 
 from tests.torch.pruning.helpers import BigPruningTestModel, get_basic_pruning_config, \
     PruningTestModelConcat, PruningTestModelEltwise, TestModelDiffConvs, TestModelGroupNorm
-from tests.torch.test_helpers import load_exported_onnx_version
+from tests.torch.test_torch_helpers import load_exported_onnx_version
 
 
 def find_value_by_name_in_list(obj_list, name):

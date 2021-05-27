@@ -30,7 +30,7 @@ from tests.torch.helpers import get_empty_config
 from tests.torch.helpers import register_bn_adaptation_init_args
 from tests.torch.quantization.test_hawq_precision_init import check_bitwidth_graph
 from tests.torch.test_compressed_graph import GeneralModelDesc
-from tests.torch.test_helpers import load_exported_onnx_version
+from tests.torch.test_torch_helpers import load_exported_onnx_version
 from tests.torch.test_models.synthetic import MultiBranchesModel
 
 

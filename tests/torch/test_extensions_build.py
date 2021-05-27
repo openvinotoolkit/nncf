@@ -41,14 +41,14 @@ def test_force_cuda_build(tmp_venv_with_nncf, install_type, tmp_path, package_ty
 
     run_path = tmp_path / 'run'
 
-    shutil.copy(TEST_ROOT / EXTENSIONS_BUILD_FILENAME, run_path)
+    shutil.copy(TEST_ROOT / 'torch' / EXTENSIONS_BUILD_FILENAME, run_path)
 
     torch_ext_dir = pathlib.Path(torch_build_dir)
     assert not torch_ext_dir.exists()
 
     mode = 'cpu'
 
-    command = Command("{} {}/torch/extensions_build_checks.py {}".format(python_executable_with_venv, run_path, mode),
+    command = Command("{} {}/extensions_build_checks.py {}".format(python_executable_with_venv, run_path, mode),
                       path=run_path)
     command.run()
 
@@ -74,7 +74,7 @@ def test_force_cuda_build(tmp_venv_with_nncf, install_type, tmp_path, package_ty
 
     mode = 'cuda'
 
-    command = Command("{} {}/torch/extensions_build_checks.py {}".format(python_executable_with_venv, run_path, mode),
+    command = Command("{} {}/extensions_build_checks.py {}".format(python_executable_with_venv, run_path, mode),
                       path=run_path)
     command.run()
 
