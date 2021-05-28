@@ -28,6 +28,7 @@ from nncf.torch.dynamic_graph.context import no_nncf_trace
 from nncf.torch.dynamic_graph.context import TracingContext
 from nncf.torch.graph.graph_builder import GraphBuilder
 from tests.helpers import create_compressed_model_and_algo_for_test
+from tests.helpers import register_bn_adaptation_init_args
 from tests.test_compressed_graph import get_basic_quantization_config
 
 TEST_TRACING_CONTEXT = 'test'
@@ -255,6 +256,7 @@ def test_input_info_specification_from_config(mocker, input_info_test_struct):
     input_info_config_entry = input_info_test_struct[0]
     target_argument_info = input_info_test_struct[1]  # type: List[ModelInputInfo]
     config["input_info"] = input_info_config_entry
+    register_bn_adaptation_init_args(config)
 
     _, _ = create_compressed_model_and_algo_for_test(mock_model, config)
     forward_call_args = stub_fn.call_args[0]
@@ -281,6 +283,7 @@ def test_input_info_specification_from_config(mocker, input_info_test_struct):
 def create_model_and_control_with_defaults():
     model = ModelForTest()
     config = get_basic_quantization_config("symmetric", input_sample_sizes=list(input_shapes[0]))
+    register_bn_adaptation_init_args(config)
     compressed_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
     return compressed_model, compression_ctrl
 
@@ -288,6 +291,7 @@ def create_model_and_control_with_defaults():
 def create_model_with_user_dummy():
     model = ModelForTest()
     config = get_basic_quantization_config("symmetric", input_sample_sizes=list(input_shapes[0]))
+    register_bn_adaptation_init_args(config)
     compressed_model, compression_ctrl = \
         create_compressed_model_and_algo_for_test(model, config,
                                                   dummy_forward_fn=ModelForTest.simple_user_dummy_forward,
@@ -298,6 +302,7 @@ def create_model_with_user_dummy():
 def create_model_with_user_wrap_inputs_fn():
     model = ModelForTest()
     config = get_basic_quantization_config("symmetric", input_sample_sizes=list(input_shapes[0]))
+    register_bn_adaptation_init_args(config)
     compressed_model, compression_ctrl = \
         create_compressed_model_and_algo_for_test(model, config,
                                                   dummy_forward_fn=ModelForTest.simple_user_dummy_forward,
@@ -376,6 +381,7 @@ class TestGraphStability:
 def test_struct_auxiliary_nodes_ptnncf_graph():
     model = ModelForTest()
     config = get_basic_quantization_config("symmetric", input_sample_sizes=list(input_shapes[0]))
+    register_bn_adaptation_init_args(config)
     compressed_model, _ = create_compressed_model_and_algo_for_test(model, config)
 
     ptnncf_graph = compressed_model.get_graph()

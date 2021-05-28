@@ -49,6 +49,7 @@ from nncf.torch.utils import get_all_modules_by_type
 from tests import test_models
 from tests.helpers import create_compressed_model_and_algo_for_test
 from tests.helpers import get_empty_config
+from tests.helpers import register_bn_adaptation_init_args
 from tests.modules.seq2seq.gnmt import GNMT
 from tests.modules.test_rnn import replace_lstm
 from tests.test_models.synthetic import ArangeModel
@@ -336,6 +337,7 @@ class TestModelsGraph:
     def test_quantize_network(self, desc: ModelDesc, _case_config):
         model = desc.model_builder()
         config = get_basic_quantization_config(_case_config.quant_type, input_sample_sizes=desc.input_sample_sizes)
+        register_bn_adaptation_init_args(config)
         compressed_model, _ = \
             create_compressed_model_and_algo_for_test(model, config, dummy_forward_fn=desc.dummy_forward_fn,
                                                       wrap_inputs_fn=desc.wrap_inputs_fn)
@@ -350,6 +352,7 @@ class TestModelsGraph:
             {"algorithm": "rb_sparsity"},
             {"algorithm": "quantization"}
         ]
+        register_bn_adaptation_init_args(config)
 
         compressed_model, compression_ctrl = \
             create_compressed_model_and_algo_for_test(model, config, dummy_forward_fn=desc.dummy_forward_fn,
@@ -408,6 +411,7 @@ def test_resnet18__with_not_qinput(_case_config):
 
     config = get_basic_quantization_config(_case_config.quant_type, input_sample_sizes=input_shape)
     config["compression"].update({"quantize_inputs": False})
+    register_bn_adaptation_init_args(config)
 
     compressed_model, _ = create_compressed_model_and_algo_for_test(model, config)
     check_model_graph(compressed_model, 'resnet18_no_qinput.dot', _case_config.graph_dir)
@@ -421,6 +425,7 @@ def test_resnet18__with_ignore(_case_config):
     ignored_scopes = ['ResNet/Sequential[layer3]', ]
     config.update({"ignored_scopes": ignored_scopes})  # Global config ignored_scopes for NNCF module replacement
     config["compression"].update({"ignored_scopes": ignored_scopes})  # Local ignored_scopes for quantization
+    register_bn_adaptation_init_args(config)
 
     compressed_model, _ = create_compressed_model_and_algo_for_test(model, config)
     check_model_graph(compressed_model, 'resnet18_ignore.dot', _case_config.graph_dir)
@@ -733,6 +738,7 @@ SYNTHETIC_MODEL_DESC_LIST = [
 def test_synthetic_model_quantization(synthetic_model_desc: IModelDesc):
     config = get_basic_quantization_config(input_sample_sizes=synthetic_model_desc.get_input_sample_sizes(),
                                            input_info=synthetic_model_desc.get_input_info())
+    register_bn_adaptation_init_args(config)
 
     model = synthetic_model_desc.get_model()
     compressed_model, _ = create_compressed_model_and_algo_for_test(
@@ -748,6 +754,7 @@ def test_output_quantization(_case_config):
 
     config = get_basic_quantization_config(_case_config.quant_type, input_sample_sizes=input_shape)
     config["compression"].update({"quantize_outputs": True})
+    register_bn_adaptation_init_args(config)
 
     compressed_model, _ = create_compressed_model_and_algo_for_test(model, config)
     check_model_graph(compressed_model, 'unet_qoutput.dot', _case_config.graph_dir)
@@ -763,6 +770,7 @@ def test_custom_quantizable_subgraph_patterns(_case_config):
     config["compression"].update({"quantize_outputs": False,
                                   "quantizable_subgraph_patterns": [["sigmoid", "__mul__"],
                                                                     ["__iadd__", "batch_norm"]]})
+    register_bn_adaptation_init_args(config)
 
     compressed_model, _ = create_compressed_model_and_algo_for_test(model, config)
     check_model_graph(compressed_model, 'senet_custom_patterns.dot', _case_config.graph_dir)

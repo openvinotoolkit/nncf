@@ -17,6 +17,7 @@ import torch
 import nncf
 from nncf import NNCFConfig
 from tests.helpers import create_compressed_model_and_algo_for_test
+from tests.helpers import register_bn_adaptation_init_args
 
 from tests.test_helpers import TwoConvTestModel
 
@@ -72,6 +73,7 @@ def get_config_for_logarithm_scale(logarithm_scale: bool, quantization_type: str
     initializing_data_loader = SquadInitializingDataloader(data_loader)
     init_range = nncf.torch.initialization.QuantizationRangeInitArgs(initializing_data_loader)
     nncf_config.register_extra_structs([init_range])
+    register_bn_adaptation_init_args(nncf_config)
 
     return nncf_config
 

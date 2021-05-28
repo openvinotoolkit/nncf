@@ -57,6 +57,7 @@ from tests.helpers import TwoConvTestModel
 from tests.helpers import create_compressed_model_and_algo_for_test
 from tests.helpers import create_ones_mock_dataloader
 from tests.helpers import get_empty_config
+from tests.helpers import register_bn_adaptation_init_args
 from tests.quantization.test_quantization_helpers import compare_multi_gpu_dump
 from tests.quantization.test_quantization_helpers import create_rank_dataloader
 from tests.quantization.test_quantization_helpers import distributed_init_test_default
@@ -140,6 +141,7 @@ def test_multiprocessing_distributed_shares_init_scales_signedness_across_gpus(t
 
     ngpus_per_node = torch.cuda.device_count()
     config.world_size = ngpus_per_node
+    register_bn_adaptation_init_args(config)
     torch.multiprocessing.spawn(scale_signed_dumping_worker,
                                 nprocs=ngpus_per_node,
                                 args=(ngpus_per_node, config, tmp_path),
@@ -152,12 +154,14 @@ def test_multiprocessing_distributed_shares_init_scales_signedness_across_gpus(t
 def create_empty_config_without_init_section():
     config = get_empty_config()
     config['compression'] = {'algorithm': 'quantization'}
+    register_bn_adaptation_init_args(config)
     return config
 
 
 def create_config():
     config = get_empty_config()
     config['compression'] = {'algorithm': 'quantization', 'initializer': {'range': {'num_init_samples': 1}}}
+    register_bn_adaptation_init_args(config)
     return config
 
 
@@ -557,6 +561,7 @@ def test_init_ranges_are_set(quantization_mode: str, per_channel: bool,
     # Activations init check
     id_model = SingleConv2dIdentityModel()
     config_with_init.register_extra_structs([QuantizationRangeInitArgs(data_loader)])
+    register_bn_adaptation_init_args(config_with_init)
     _, compression_ctrl = create_compressed_model_and_algo_for_test(id_model, config_with_init)
 
     act_quantizer_info = next(iter(compression_ctrl.non_weight_quantizers.values()))

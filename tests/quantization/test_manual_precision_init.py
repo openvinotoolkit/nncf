@@ -24,6 +24,7 @@ from tests.conftest import TEST_ROOT
 from tests.helpers import BasicConvTestModel
 from tests.helpers import create_compressed_model_and_algo_for_test
 from tests.helpers import create_ones_mock_dataloader
+from tests.helpers import register_bn_adaptation_init_args
 from tests.quantization.test_hawq_precision_init import check_bitwidth_graph
 from tests.quantization.test_quantization_helpers import get_quantization_config_without_range_init
 from tests.test_models.synthetic import AddTwoConv
@@ -157,6 +158,7 @@ MANUAL_SINGLE_CONV_TEST_PARAMS = [
                          ids=[p.name for p in MANUAL_SINGLE_CONV_TEST_PARAMS])
 def test_manual_single_conv(params):
     config = params.nncf_config
+    register_bn_adaptation_init_args(config)
     model = params.model
 
     if params.expects_error:
@@ -180,6 +182,7 @@ def test_quantization_configs__with_precisions_list():
         }})
     config['target_device'] = 'TRIAL'
     config['compression']["activations"] = {"bits": 6}
+    register_bn_adaptation_init_args(config)
     model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
 
     ref_bits = [('AddTwoConv/NNCFConv2d[conv1]module_weight', 2),

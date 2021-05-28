@@ -6,6 +6,7 @@ from nncf.torch.quantization.layers import SymmetricQuantizer
 from nncf.torch.sparsity.rb.layers import RBSparsifyingWeight
 from nncf.torch.utils import get_all_modules_by_type, get_all_modules
 from tests.helpers import BasicConvTestModel, create_compressed_model_and_algo_for_test
+from tests.helpers import register_bn_adaptation_init_args
 
 
 def get_basic_sparsity_plus_quantization_config(input_sample_size=None):
@@ -32,6 +33,7 @@ def get_basic_sparsity_plus_quantization_config(input_sample_size=None):
 def test_can_quantize_inputs_for_sparsity_plus_quantization():
     model = BasicConvTestModel()
     config = get_basic_sparsity_plus_quantization_config()
+    register_bn_adaptation_init_args(config)
     sparse_quantized_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
     assert isinstance(compression_ctrl, CompositeCompressionAlgorithmController)
 
