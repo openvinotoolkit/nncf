@@ -138,8 +138,7 @@ class QuantizationEnv:
         self.eval_loader = eval_loader
         self.eval_fn = eval_fn
         self._hw_precision_constraints = hw_precision_constraints
-        self._bn_adaptation = BatchnormAdaptationAlgorithm(
-            **extract_bn_adaptation_init_params(self.qctrl.quantization_config))
+        self._bn_adaptation = None
 
         self.model_name = self.qmodel.nncf_module.__class__.__name__
 
@@ -465,9 +464,15 @@ class QuantizationEnv:
         self.qctrl.enable_activation_quantization()
         self.qmodel.rebuild_graph()
 
+    def _run_batchnorm_adaptation(self):
+        if self._bn_adaptation is None:
+            self._bn_adaptation = BatchnormAdaptationAlgorithm(
+            **extract_bn_adaptation_init_params(self.qctrl.quantization_config))
+        self._bn_adaptation.run(self.qctrl.model)
 
     def _run_quantization_pipeline(self, finetune=False) -> float:
-        self._bn_adaptation.run(self.qctrl.model)
+        if self.qctrl.quantization_config:
+            self._run_batchnorm_adaptation()
 
         if finetune:
             raise NotImplementedError("Post-Quantization fine tuning is not implemented.")

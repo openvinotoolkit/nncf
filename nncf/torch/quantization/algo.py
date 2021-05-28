@@ -1170,7 +1170,7 @@ class QuantizationController(QuantizationControllerBase):
         params = quantization_config.get('params', None)
         self.is_staged_scheduler = bool(params)
 
-        if is_main_process() and should_init:
+        if is_main_process() and should_init and self.quantization_config:
             self._run_batchnorm_adaptation()
 
         # Staged scheduler must be created after initialized to prevent extra logic with disabled quantizations
