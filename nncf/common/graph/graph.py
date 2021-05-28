@@ -219,6 +219,16 @@ class NNCFGraph:
 
         return OrderedDict((edge, self._nx_graph.edges[edge]) for edge in input_edges)
 
+    def get_output_edges(self, node: NNCFNode) -> Dict[Tuple[str, str], dict]:
+        """
+        Returns edges of output tensors with description. Unordered.
+
+        :param node: Producer node.
+        :return: Dictionary of output edges for the node.
+        """
+        nx_node_key = self._node_id_to_key_dict[node.node_id]
+        return {edge: self._nx_graph.edges[edge] for edge in self._nx_graph.out_edges(nx_node_key)}
+
     def traverse_graph(self,
                        curr_node: NNCFNode,
                        traverse_function: Callable[[NNCFNode, List[Any]], Tuple[bool, List[Any]]],

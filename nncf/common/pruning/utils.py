@@ -14,7 +14,7 @@
 import math
 
 from functools import partial
-from typing import Dict, List, Optional, Tuple, Type, Union
+from typing import Dict, List, Optional, Tuple, Type
 
 import numpy as np
 
@@ -193,10 +193,6 @@ def get_previous_conv(graph: NNCFGraph, nncf_node: NNCFNode,
     return None
 
 
-def get_original_node_name(node_name: str):
-    return node_name.split('^')[0]
-
-
 def get_conv_in_out_channels(graph: NNCFGraph):
     """
     Collects the number of input and output channels for each convolution in the graph.
@@ -210,8 +206,7 @@ def get_conv_in_out_channels(graph: NNCFGraph):
     in_channels, out_channels = {}, {}
     for node in graph.get_all_nodes():
         if isinstance(node.module_attributes, ConvolutionModuleAttributes):
-            name = node.ia_op_exec_context.scope_in_model if hasattr(node, 'ia_op_exec_context') \
-                else get_original_node_name(node.node_name)
+            name = node.node_name
             if name in in_channels and name in out_channels:
                 continue
             in_channels[name] = node.module_attributes.in_channels
@@ -235,14 +230,10 @@ def get_cluster_next_nodes(graph: NNCFGraph, pruned_groups_info,
         cluster_nodes = set()
         for cluster_node in cluster.nodes:
             nncf_cluster_node = graph.get_node_by_id(cluster_node.nncf_node_id)
-            nncf_cluster_node_scope = nncf_cluster_node.ia_op_exec_context.scope_in_model \
-                if hasattr(nncf_cluster_node, 'ia_op_exec_context') \
-                else get_original_node_name(nncf_cluster_node.node_name)
-            cluster_nodes.add(nncf_cluster_node_scope)
+            cluster_nodes.add(nncf_cluster_node.node_name)
             curr_next_nodes = get_next_nodes_of_types(graph, nncf_cluster_node, prunable_types)
 
-            next_nodes_idxs = [n.ia_op_exec_context.scope_in_model if hasattr(n, 'ia_op_exec_context')
-                               else get_original_node_name(n.node_name) for n in curr_next_nodes]
+            next_nodes_idxs = [n.node_name for n in curr_next_nodes]
             next_nodes_cluster = next_nodes_cluster.union(next_nodes_idxs)
         next_nodes[cluster.id] = list(next_nodes_cluster - cluster_nodes)
     return next_nodes
@@ -262,8 +253,8 @@ def count_flops_for_nodes(graph: NNCFGraph,
                          fully connected layers. E.g {node_name: (height, width)}
     :param output_shapes: Dictionary of output dimension shapes for convolutions and
                           fully connected layers. E.g {node_name: (height, width)}
-    :param conv_op_types: List of metatypes defining convolution operations.
-    :param linear_op_types: List of metatypes defining linear/fully connected operations.
+    :param conv_op_metatypes: List of metatypes defining convolution operations.
+    :param linear_op_metatypes: List of metatypes defining linear/fully connected operations.
     :param input_channels: Dictionary of input channels number in convolutions.
                            If not specified, taken from the graph. {node_name: channels_num}
     :param output_channels: Dictionary of output channels number in convolutions.
@@ -274,26 +265,22 @@ def count_flops_for_nodes(graph: NNCFGraph,
     input_channels = input_channels or {}
     output_channels = output_channels or {}
     for node in graph.get_nodes_by_metatypes(conv_op_metatypes):
-        name = node.ia_op_exec_context.scope_in_model if hasattr(node, 'ia_op_exec_context') \
-            else get_original_node_name(node.node_name)
-        if name in flops:
-            continue
+        name = node.node_name
         num_in_channels = input_channels.get(name, node.module_attributes.in_channels)
         num_out_channels = output_channels.get(name, node.module_attributes.out_channels)
         flops[name] = 2 * np.prod(node.module_attributes.kernel_size) * \
                       num_in_channels * num_out_channels * np.prod(output_shapes[name])
 
     for node in graph.get_nodes_by_metatypes(linear_op_metatypes):
-        name = node.ia_op_exec_context.scope_in_model if hasattr(node, 'ia_op_exec_context') \
-            else get_original_node_name(node.node_name)
+        name = node.node_name
         flops[name] = 2 * np.prod(input_shapes[name]) * np.prod(output_shapes[name])
 
     return flops
 
 
 def calculate_in_out_channels_in_uniformly_pruned_model(pruning_groups, pruning_rate: float,
-                                                        full_input_channels: Dict[Union[str, 'Scope'], int],
-                                                        full_output_channels: Dict[Union[str, 'Scope'], int],
+                                                        full_input_channels: Dict[str, int],
+                                                        full_output_channels: Dict[str, int],
                                                         pruning_groups_next_nodes: Dict[int, List[str]]):
     """
     Imitates filters pruning by removing `pruning_rate` percent of output filters in each pruning group
@@ -311,8 +298,8 @@ def calculate_in_out_channels_in_uniformly_pruned_model(pruning_groups, pruning_
     tmp_out_channels = full_output_channels.copy()
 
     for group in pruning_groups:
-        layer_name = group.nodes[0].key
-        assert all(tmp_out_channels[layer_name] == tmp_out_channels[node.key] for node in
+        layer_name = group.nodes[0].node_name
+        assert all(tmp_out_channels[layer_name] == tmp_out_channels[node.node_name] for node in
                    group.nodes)
         # Prune all nodes in cluster (by output channels)
         old_out_channels = full_output_channels[layer_name]
@@ -320,7 +307,7 @@ def calculate_in_out_channels_in_uniformly_pruned_model(pruning_groups, pruning_
         new_out_channels_num = old_out_channels - num_of_sparse_elems
 
         for node in group.nodes:
-            tmp_out_channels[node.key] = new_out_channels_num
+            tmp_out_channels[node.node_name] = new_out_channels_num
 
         # Prune in_channels in all next nodes of cluster
         for node_name in pruning_groups_next_nodes[group.id]:

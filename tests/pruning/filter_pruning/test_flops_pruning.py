@@ -15,6 +15,7 @@ import pytest
 from tests.helpers import create_compressed_model_and_algo_for_test
 from tests.pruning.helpers import get_basic_pruning_config
 from tests.pruning.helpers import PruningTestModel
+from tests.pruning.helpers import PruningTestModelSharedConvs
 from tests.pruning.helpers import PruningTestWideModelConcat
 from tests.pruning.helpers import PruningTestWideModelEltwise
 
@@ -56,14 +57,12 @@ def test_both_targets_assert():
 
 @pytest.mark.parametrize(
     ("model", "ref_params"),
-    ((PruningTestModel, {"modules_in_channels": {PruningTestModel.CONV_SCOPE_1: 1,
-                                                 PruningTestModel.CONV_SCOPE_2: 3},
-                         "modules_out_channels": {PruningTestModel.CONV_SCOPE_1: 3,
-                                                  PruningTestModel.CONV_SCOPE_2: 1},
+    ((PruningTestModel, {"_modules_in_channels": {PruningTestModel.CONV_SCOPE_1: 1,
+                                                  PruningTestModel.CONV_SCOPE_2: 3},
+                         "_modules_out_channels": {PruningTestModel.CONV_SCOPE_1: 3,
+                                                   PruningTestModel.CONV_SCOPE_2: 1},
                          "nodes_flops": {PruningTestModel.CONV_SCOPE_1: 216,
-                                         PruningTestModel.CONV_SCOPE_2: 54},
-                         "nodes_flops_cost": {PruningTestModel.CONV_SCOPE_1: 72,
-                                              PruningTestModel.CONV_SCOPE_2: 18}}),)
+                                         PruningTestModel.CONV_SCOPE_2: 54}}),)
 )
 def test_init_params_for_flops_calculation(model, ref_params):
     config = get_basic_pruning_config()
@@ -83,7 +82,9 @@ def test_init_params_for_flops_calculation(model, ref_params):
         (PruningTestWideModelConcat, False, 671154176, 402311168, [400, 792, 792, 1584]),
         (PruningTestWideModelEltwise, False, 268500992, 157402112, [392, 784, 784, 784]),
         (PruningTestWideModelConcat, True, 671154176, 402578304, [441, 821, 822, 1473]),
-        (PruningTestWideModelEltwise, True, 268500992, 161036544, [393, 855, 855, 685])
+        (PruningTestWideModelEltwise, True, 268500992, 161036544, [393, 855, 855, 685]),
+        (PruningTestModelSharedConvs, True, 461438976, 276861184, [373, 827, 827]),
+        (PruningTestModelSharedConvs, False, 461438976, 270498816, [392, 784, 784])
     )
 )
 def test_flops_calulation_for_spec_layers(model, all_weights, ref_full_flops, ref_current_flops, ref_sizes):
@@ -102,8 +103,8 @@ def test_flops_calulation_for_spec_layers(model, all_weights, ref_full_flops, re
     assert compression_ctrl.full_flops == ref_full_flops
     assert compression_ctrl.current_flops == ref_current_flops
 
-    for i in range(0, 4):
+    for i, ref_size in enumerate(ref_sizes):
         node = getattr(compressed_model, f"conv{i+1}")
         op = list(node.pre_ops.values())[0]
         mask = op.operand.binary_filter_pruning_mask
-        assert int(sum(mask)) == ref_sizes[i]
+        assert int(sum(mask)) == ref_size
