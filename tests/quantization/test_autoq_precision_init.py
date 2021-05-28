@@ -38,7 +38,6 @@ from tests.quantization.test_quantization_helpers import get_quantization_config
 # pylint:disable=unused-import
 from tests.modules.test_rnn import _seed
 from tests.test_models import squeezenet1_1
-from tests.helpers import register_bn_adaptation_init_args
 
 
 class AutoQConfigBuilder(BaseConfigBuilder):
@@ -182,7 +181,6 @@ def test_can_broadcast_initialized_precisions_in_distributed_mode(tmp_path, runs
     config = config_builder.build()
     ngpus_per_node = torch.cuda.device_count()
     config.world_size = ngpus_per_node
-    register_bn_adaptation_init_args(config)
 
     torch.multiprocessing.spawn(precision_init_dumping_worker,
                                 nprocs=ngpus_per_node,

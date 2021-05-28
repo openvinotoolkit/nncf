@@ -99,6 +99,7 @@ def test_can_restore_binary_mask_on_magnitude_quant_algo_resume(tmp_path, use_da
 
     config = get_empty_config()
     config["compression"] = [{"algorithm": "const_sparsity"}, {"algorithm": "quantization"}]
+    register_bn_adaptation_init_args(config)
     const_sparse_model, _ = create_compressed_model_and_algo_for_test(MagnitudeTestModel(), config)
 
     load_state(const_sparse_model, sparse_model.state_dict())
