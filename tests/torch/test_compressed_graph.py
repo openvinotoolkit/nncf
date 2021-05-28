@@ -46,7 +46,7 @@ from nncf.torch.layers import NNCF_RNN
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.quantization.quantizer_setup import SingleConfigQuantizerSetup
 from nncf.torch.utils import get_all_modules_by_type
-from tests torch.import test_models
+from tests.torch import test_models
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
 from tests.torch.helpers import get_empty_config
 from tests.torch.helpers import register_bn_adaptation_init_args

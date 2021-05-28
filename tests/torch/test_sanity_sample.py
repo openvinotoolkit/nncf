@@ -103,10 +103,12 @@ DATASET_PATHS = {
     "semantic_segmentation": {
         DATASETS["semantic_segmentation"][0]: lambda dataset_root: TEST_ROOT.joinpath("torch", "data", "mock_datasets",
                                                                                       "camvid"),
-        DATASETS["semantic_segmentation"][0]: lambda dataset_root: TEST_ROOT.joinpath("torch", "data", "mock_datasets", "camvid")
+        DATASETS["semantic_segmentation"][0]: lambda dataset_root: TEST_ROOT.joinpath("torch", "data", "mock_datasets",
+                                                                                      "camvid")
     },
     "object_detection": {
-        DATASETS["object_detection"][0]: lambda dataset_root: TEST_ROOT.joinpath("torch", "data", "mock_datasets", "voc")
+        DATASETS["object_detection"][0]: lambda dataset_root: TEST_ROOT.joinpath("torch", "data", "mock_datasets",
+                                                                                 "voc")
     },
 }
 

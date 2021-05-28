@@ -19,8 +19,8 @@ from nncf.common.quantization.statistics import BitwidthDistributionStatistics
 from examples.torch.common.model_loader import load_model
 from nncf import NNCFConfig
 from nncf import register_default_init_args
-from tests.conftest import EXAMPLES_DIR
-from tests.conftest import TEST_ROOT
+from tests.common.helpers import EXAMPLES_DIR
+from tests.common.helpers import TEST_ROOT
 from tests.torch.helpers import BasicConvTestModel
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
 from tests.torch.helpers import create_ones_mock_dataloader

@@ -22,7 +22,7 @@ from tests.torch.quantization.test_functions import check_equal
 from tests.torch.sparsity.magnitude.test_helpers import MagnitudeTestModel
 from tests.torch.helpers import BasicConvTestModel, get_empty_config, create_compressed_model_and_algo_for_test, \
     check_correct_nncf_modules_replacement
-from tests.helpers import register_bn_adaptation_init_args
+from tests.torch.helpers import register_bn_adaptation_init_args
 
 sub_tensor = torch.tensor([[[[1., 0.],
                              [0., 1.]]]])

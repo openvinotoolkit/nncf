@@ -53,7 +53,7 @@ from nncf.torch.nncf_network import PTInsertionType
 from nncf.torch.nncf_network import PTModelTransformer
 from nncf.torch.quantization.node_matcher import PTOperatorMetatypeNodeMatcher
 from tests.torch.composite.test_sparsity_quantization import get_basic_sparsity_plus_quantization_config
-from tests.torch.conftest import TEST_ROOT
+from tests.common.helpers import TEST_ROOT
 from tests.torch.helpers import BasicConvTestModel
 from tests.torch.helpers import TwoConvTestModel
 from tests.torch.helpers import check_correct_nncf_modules_replacement

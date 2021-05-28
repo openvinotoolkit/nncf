@@ -26,7 +26,7 @@ from nncf.common.graph.graph import MODEL_INPUT_OP_NAME
 from nncf.config import NNCFConfig
 from nncf.torch.nncf_network import LEGACY_ACT_STORAGE_NAME
 from nncf.torch.nncf_network import MODEL_WRAPPED_BY_NNCF_ATTR_NAME
-from tests.conftest import TEST_ROOT
+from tests.common.helpers import TEST_ROOT
 from tests.torch.helpers import create_ones_mock_dataloader
 from tests.torch.helpers import register_bn_adaptation_init_args
 from tests.torch.quantization.test_range_init import SingleConv2dIdentityModel

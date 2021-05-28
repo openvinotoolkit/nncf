@@ -63,7 +63,7 @@ from nncf.torch.quantization.quantizer_setup import SingleConfigQuantizerSetup
 from nncf.torch.structures import QuantizationPrecisionInitArgs
 from nncf.torch.utils import get_all_modules_by_type
 from nncf.torch.utils import safe_thread_call
-from tests.conftest import TEST_ROOT
+from tests.common.helpers import TEST_ROOT
 from tests.torch.helpers import BasicConvTestModel
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
 from tests.torch.helpers import create_conv

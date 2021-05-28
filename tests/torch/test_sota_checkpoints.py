@@ -470,7 +470,7 @@ class TestSotaCheckpoints:
         if ov_config_dir:
             config_folder = ov_config_dir
         else:
-            config_folder = PROJECT_ROOT / 'tests' / 'data' / 'ac_configs'
+            config_folder = PROJECT_ROOT / 'tests' / 'torch' / 'data' / 'ac_configs'
         ir_model_folder = PROJECT_ROOT / 'ir_models' / eval_test_struct.model_name_
         q_dq_ir_model_folder = PROJECT_ROOT / 'q_dq_ir_models' / eval_test_struct.model_name_
         mean_val = eval_test_struct.mean_val_

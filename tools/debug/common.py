@@ -17,7 +17,7 @@ import torch
 from functools import partial
 from torch import nn
 
-from examples.common.model_loader import load_model
+from examples.torch.common.model_loader import load_model
 from nncf.torch.checkpoint_loading import load_state
 from nncf.torch.layers import NNCFConv1d, NNCFConv2d, NNCFLinear
 from nncf.torch.model_creation import create_compressed_model
