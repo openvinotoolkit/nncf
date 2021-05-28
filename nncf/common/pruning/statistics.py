@@ -115,8 +115,8 @@ class FilterPruningStatistics(Statistics):
         :param target_pruning_level: A target level of the pruning
             for the algorithm for the current epoch.
         """
-        self.giga = 1e9
-        self.mega = 1e6
+        self._giga = 1e9
+        self._mega = 1e6
         self.model_statistics = model_statistics
         self.full_flops = full_flops
         self.current_flops = current_flops
@@ -130,10 +130,10 @@ class FilterPruningStatistics(Statistics):
             header=['Statistic\'s name', 'Value'],
             rows=[
                 ['FLOPS pruning level', self.flops_pruning_level],
-                ['GFLOPS current / full', f'{self.current_flops / self.giga:.3f} /'
-                                          f' {self.full_flops / self.giga:.3f}'],
-                ['MParams current / full', f'{self.current_params_num / self.mega:.3f} /'
-                                           f' {self.full_params_num / self.mega:.3f}'],
+                ['GFLOPS current / full', f'{self.current_flops / self._giga:.3f} /'
+                                          f' {self.full_flops / self._giga:.3f}'],
+                ['MParams current / full', f'{self.current_params_num / self._mega:.3f} /'
+                                           f' {self.full_params_num / self._mega:.3f}'],
                 ['A target level of the pruning for the algorithm for the current epoch', self.target_pruning_level],
             ]
         )
