@@ -12,6 +12,7 @@
 """
 
 from nncf.common.batchnorm_adaptation import BatchnormAdaptationAlgorithmImpl
+from beta.nncf.tensorflow.initialization import DataLoaderBNAdaptationRunner
 
 
 class TFBatchnormAdaptationAlgorithmImpl(BatchnormAdaptationAlgorithmImpl):
@@ -25,7 +26,6 @@ class TFBatchnormAdaptationAlgorithmImpl(BatchnormAdaptationAlgorithmImpl):
 
         :param model: A model for which the algorithm will be applied.
         """
-        # TODO(andrey-churkin): Should be implemented.
 
-        raise NotImplementedError('There is no possibility to start the batch-norm statistics adaptation algorithm '
-                                  'for the TensorFlow backend because it is not implemented.')
+        bn_adaptation_runner = DataLoaderBNAdaptationRunner(model, self._device, self._num_bn_forget_steps)
+        bn_adaptation_runner.run(self._data_loader, self._num_bn_adaptation_steps)

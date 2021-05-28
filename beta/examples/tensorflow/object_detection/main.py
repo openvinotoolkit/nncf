@@ -38,6 +38,7 @@ from beta.examples.tensorflow.common.utils import get_saving_parameters
 from beta.examples.tensorflow.common.utils import write_metrics
 from beta.examples.tensorflow.object_detection.models.model_selector import get_predefined_config
 from beta.examples.tensorflow.object_detection.models.model_selector import get_model_builder
+from beta.nncf.tensorflow.initialization import register_default_init_args
 
 
 def get_argument_parser():
@@ -260,6 +261,7 @@ def run(config):
     datasets = [builder.build() for builder in builders]
     train_builder, test_builder = builders
     train_dataset, test_dataset = datasets
+    config.nncf_config = register_default_init_args(config.nncf_config, train_dataset)
     train_dist_dataset = strategy.experimental_distribute_dataset(train_dataset)
     test_dist_dataset = strategy.experimental_distribute_dataset(test_dataset)
 

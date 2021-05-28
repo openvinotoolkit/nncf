@@ -38,6 +38,7 @@ from beta.examples.tensorflow.common.utils import SummaryWriter
 from beta.examples.tensorflow.common.utils import Timer
 from beta.examples.tensorflow.segmentation.models.model_selector import get_predefined_config
 from beta.examples.tensorflow.segmentation.models.model_selector import get_model_builder
+from beta.nncf.tensorflow.initialization import register_default_init_args
 
 
 def get_argument_parser():
@@ -216,6 +217,7 @@ def run_train(config):
     datasets = [builder.build() for builder in builders]
     train_builder, _ = builders
     train_dataset, calibration_dataset = datasets
+    config.nncf_config = register_default_init_args(config.nncf_config, train_dataset)
     train_dist_dataset = strategy.experimental_distribute_dataset(train_dataset)
 
     # Training parameters
