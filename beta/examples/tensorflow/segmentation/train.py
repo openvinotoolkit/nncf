@@ -217,7 +217,7 @@ def run_train(config):
     datasets = [builder.build() for builder in builders]
     train_builder, _ = builders
     train_dataset, calibration_dataset = datasets
-    config.nncf_config = register_default_init_args(config.nncf_config, train_dataset)
+    config.nncf_config = register_default_init_args(config.nncf_config, calibration_dataset)
     train_dist_dataset = strategy.experimental_distribute_dataset(train_dataset)
 
     # Training parameters
