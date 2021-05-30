@@ -477,7 +477,7 @@ class FilterPruningController(BasePruningAlgoController):
         tmp_out_channels = self._layers_out_channels.copy()
 
         for group in self._pruned_layer_groups_info.get_all_clusters():
-            assert all(tmp_out_channels[group.nodes[0].layer_name] == tmp_out_channels[node.layer_name] for node in
+            assert all(tmp_out_channels[group.nodes[0].node_name] == tmp_out_channels[node.node_name] for node in
                        group.nodes)
             mask = self._original_graph.get_node_by_key(group.nodes[0].node_name).data['output_mask']
             new_out_channels_num = int(sum(mask))

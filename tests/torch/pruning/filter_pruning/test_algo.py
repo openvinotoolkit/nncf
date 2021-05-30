@@ -328,8 +328,6 @@ def test_calculation_of_flops(all_weights, pruning_flops_target, ref_flops):
     :param pruning_flops_target: prune model by flops, if None then by number of channels
     :param ref_flops: reference size of model
     """
-
-
     config = get_basic_pruning_config(input_sample_size=[1, 1, 8, 8])
     config['compression']['params']['all_weights'] = all_weights
     config['compression']['pruning_init'] = 0.5
@@ -340,7 +338,7 @@ def test_calculation_of_flops(all_weights, pruning_flops_target, ref_flops):
 
     assert pruning_algo.current_flops == ref_flops
     # pylint:disable=protected-access
-    assert pruning_algo._calculate_flops_pruned_model_by_masks() == ref_flops
+    assert pruning_algo._calculate_flops_and_weights_pruned_model_by_masks()[0] == ref_flops
 
 
 def test_clusters_for_multiple_forward():
