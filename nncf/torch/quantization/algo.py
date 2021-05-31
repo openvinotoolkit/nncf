@@ -1070,6 +1070,8 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
                 callable_obj = self.ExternalQuantizerCallHook(target_model.get_tracing_context(),
                                                           external_quantizer_storage_key,
                                                           self._debug_interface)
+
+            insertion_commands.append(PTInsertionCommand(curr_insertion_point,
                                                          callable_obj,
                                                          TransformationPriority.QUANTIZATION_PRIORITY))
         return primary_qid, insertion_commands
