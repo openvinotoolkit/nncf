@@ -31,14 +31,13 @@ class InitializingDataLoader(NNCFDataLoader):
     certain compression algorithms.
     """
 
-    def __init__(self, data_loader):
+    def __init__(self, data_loader, batch_size):
         self._data_loader = data_loader
+        self._batch_size = batch_size
 
     @property
     def batch_size(self):
-        for (x, _) in self._data_loader:
-            batch_size = x.shape[0]
-            return batch_size
+        return self._batch_size
 
     def __iter__(self):
         return iter(self._data_loader)
@@ -132,5 +131,8 @@ class DataLoaderBNAdaptationRunner:
 
 
 def register_default_init_args(nncf_config, train_loader, device = None):
-    nncf_config.register_extra_structs([BNAdaptationInitArgs(data_loader=InitializingDataLoader(train_loader), device=device)])
+    nncf_config.register_extra_structs([
+        BNAdaptationInitArgs(data_loader=InitializingDataLoader(train_loader, nncf_config['batch_size']),
+                             device=device)
+    ])
     return nncf_config
