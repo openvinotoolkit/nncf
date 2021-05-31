@@ -50,26 +50,17 @@ class Expression:
             result = self._match(n, graph)
             if not result:
                 continue
-            if isinstance(result, list):
-                # https://github.com/PyCQA/pylint/issues/3105
-                # pylint: disable=E1133
-                for res in result:
-                    n, following = res
-                    following = list(following)
-                    if not isinstance(n, list):
-                        n = [n]
-
-                    all_matches.append((n, following))
-                # pylint: enable=E1133
-            else:
-                n, following = result
+            if not isinstance(result, list):
+                result = [result]
+            for res in result:
+                n, following = res
                 following = list(following)
                 if not isinstance(n, list):
                     n = [n]
 
                 all_matches.append((n, following))
         if not all_matches:
-            return None
+            return []
         return all_matches
 
     def all_matches(self, nodes, graph):
@@ -77,7 +68,7 @@ class Expression:
 
     def match(self, nodes, graph):
         all_matches = self._find_all_matches(nodes, graph)
-        if all_matches is None:
+        if not all_matches:
             return None, None
         return max(all_matches, key=lambda x: len(x[0]))
 
