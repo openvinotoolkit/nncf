@@ -51,8 +51,8 @@ class Expression:
             if not result:
                 continue
             if isinstance(result, list):
-                for result in result:
-                    n, following = result
+                for res in result:
+                    n, following = res
                     following = list(following)
                     if not isinstance(n, list):
                         n = [n]
@@ -277,7 +277,6 @@ def find_subgraphs_match_expression(graph: nx.DiGraph, expression: Expression) -
     """
     subgraphs = []
     subgraphs_nodes = set()
-
     nodes = nx.topological_sort(graph)
     for node in nodes:
         # If a node has already been added to any pattern skip this node

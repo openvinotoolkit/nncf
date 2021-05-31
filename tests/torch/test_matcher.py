@@ -157,3 +157,18 @@ def test_branching_expression2():
 
     matches = find_subgraphs_match_expression(g, ex)
     assert matches == [[1, 2, 3, 5, 4]]
+
+
+def test_weakly_components_graph():
+    g = nx.DiGraph()
+    #   b
+    # a e  d
+    #   c
+
+    # j -- f
+    add_nodes(g, ['a', 'b', 'c', 'd', 'e', 'j', 'f'])
+    g.add_edges_from([(1, 2), (1, 3), (2, 4), (3, 4), (1, 5), (5, 4), (6, 7)])
+    ex = N('j') + N('f')
+    matches = find_subgraphs_match_expression(g, ex)
+
+    assert matches == [[6, 7]]
