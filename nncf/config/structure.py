@@ -11,7 +11,43 @@
  limitations under the License.
 """
 
+from typing import Optional
+
+from nncf.common.initialization import NNCFDataLoader
+
+
 class NNCFExtraConfigStruct:
     @classmethod
     def get_id(cls) -> str:
         raise NotImplementedError
+
+
+class BNAdaptationInitArgs(NNCFExtraConfigStruct):
+    """
+    Stores additional arguments for batchnorm statistics adaptation algorithm.
+    """
+
+    def __init__(self,
+                 data_loader: NNCFDataLoader,
+                 device: Optional[str] = None):
+        """
+        Initializes additional arguments for batchnorm statistics adaptation algorithm.
+
+        :param data_loader: Provides an iterable over the given dataset.
+        :param device: Device to perform initialization. If `device` is `None` then the device
+            of the model parameters will be used.
+        """
+        self._data_loader = data_loader
+        self._device = device
+
+    @property
+    def data_loader(self) -> NNCFDataLoader:
+        return self._data_loader
+
+    @property
+    def device(self) -> str:
+        return self._device
+
+    @classmethod
+    def get_id(cls) -> str:
+        return 'bn_adaptation_init_args'

@@ -7,6 +7,7 @@ from nncf.torch.dynamic_graph.graph_tracer import ModelInputInfo
 from nncf.torch.dynamic_graph.io_handling import InputInfoWrapManager
 from tests.helpers import MockModel
 from tests.helpers import create_compressed_model_and_algo_for_test
+from tests.helpers import register_bn_adaptation_init_args
 from tests.test_compressed_graph import get_basic_quantization_config
 
 TENSOR_1 = torch.ones([1]) * (-1)
@@ -159,6 +160,7 @@ def test_same_input_tensor_replication(mocker):
         },
 
     ])
+    register_bn_adaptation_init_args(config)
     model = CatModel()
     model, _ = create_compressed_model_and_algo_for_test(model, config)
 

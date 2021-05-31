@@ -30,6 +30,7 @@ from nncf.torch.quantization.quantizer_id import NonWeightQuantizerId
 from nncf.torch.quantization.quantizer_propagation import QuantizerPropagationSolver
 from tests.helpers import create_compressed_model_and_algo_for_test
 from tests.helpers import get_nodes_by_type
+from tests.helpers import register_bn_adaptation_init_args
 from tests.quantization.test_quantization_helpers import get_quantization_config_without_range_init
 
 
@@ -452,6 +453,7 @@ def test_quantizer_scale_linking(mocker):
             "EltwiseQuantizerLinkingTestModel/__add___2",
         ]
     }
+    register_bn_adaptation_init_args(nncf_config)
 
     compressed_model, compression_ctrl = create_compressed_model_and_algo_for_test(EltwiseQuantizerLinkingTestModel(),
                                                                                    nncf_config)
@@ -492,6 +494,7 @@ def test_eltwise_unified_scales_for_vpu():
         }
     ]
     nncf_config["target_device"] = "VPU"
+    register_bn_adaptation_init_args(nncf_config)
 
     _, compression_ctrl = create_compressed_model_and_algo_for_test(EltwiseQuantizerLinkingTestModel(),
                                                                     nncf_config)
@@ -573,6 +576,7 @@ def test_unified_scales_with_concat(target_device, model_creator, ref_aq_module_
     ]
 
     nncf_config["target_device"] = target_device
+    register_bn_adaptation_init_args(nncf_config)
 
     _, compression_ctrl = create_compressed_model_and_algo_for_test(model_creator(),
                                                                                    nncf_config)
@@ -703,6 +707,7 @@ class TestsWithONNXInspection:
             },
         ]
         nncf_config["target_device"] = "VPU"
+        register_bn_adaptation_init_args(nncf_config)
 
         compressed_model, compression_ctrl = create_compressed_model_and_algo_for_test(
             SimplerModelForUnifiedScalesTesting(),
@@ -758,6 +763,7 @@ class TestsWithONNXInspection:
             },
         ]
         nncf_config["target_device"] = "VPU"
+        register_bn_adaptation_init_args(nncf_config)
 
         compressed_model, compression_ctrl = create_compressed_model_and_algo_for_test(
             TwoEmbeddingAddModel(),

@@ -21,6 +21,7 @@ from nncf.torch.quantization.algo import QuantizationControllerBase
 from nncf.torch.quantization.schedulers import StagedQuantizationScheduler
 from nncf.torch.structures import QuantizationRangeInitArgs
 from tests.helpers import create_compressed_model_and_algo_for_test, OnesDatasetMock
+from tests.helpers import register_bn_adaptation_init_args
 from tests.quantization.test_algo_quantization import get_squeezenet_quantization_config
 from tests.test_models import squeezenet1_1
 
@@ -150,6 +151,7 @@ def test_staged_scheduler_with_empty_quantization():
             "weights_quant_start_epoch": 2,
         }
     })
+    register_bn_adaptation_init_args(config)
     model = squeezenet1_1(num_classes=10, dropout=0)
 
     model, algo = create_compressed_model_and_algo_for_test(model, config)
@@ -184,6 +186,7 @@ def test_staged_scheduler_with_range_init():
             }
         }
     })
+    register_bn_adaptation_init_args(config)
     model = squeezenet1_1(num_classes=10, dropout=0)
 
     input_infos_list = create_input_infos(config)

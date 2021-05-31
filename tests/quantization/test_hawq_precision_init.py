@@ -67,6 +67,7 @@ from tests.conftest import TEST_ROOT
 from tests.helpers import BasicConvTestModel
 from tests.helpers import create_compressed_model_and_algo_for_test
 from tests.helpers import create_conv
+from tests.helpers import register_bn_adaptation_init_args
 from tests.quantization.test_quantization_helpers import compare_multi_gpu_dump
 from tests.quantization.test_quantization_helpers import create_rank_dataloader
 from tests.quantization.test_quantization_helpers import distributed_init_test_default
@@ -346,6 +347,7 @@ def test_hawq_precision_init(_seed, dataset_dir, tmp_path, mocker, params):
     else:
         pregen_device = 'cpu'
 
+    pregen_traces_for_all_layers = params.avg_traces_creator(model, pregen_device)
     criterion = nn.CrossEntropyLoss().cuda()
     if not dataset_dir:
         dataset_dir = str(tmp_path)
@@ -354,7 +356,6 @@ def test_hawq_precision_init(_seed, dataset_dir, tmp_path, mocker, params):
 
     mocked_trace = mocker.patch('nncf.torch.quantization.hessian_trace.HessianTraceEstimator.get_average_traces',
                                 autospec=True)
-    pregen_traces_for_all_layers = params.avg_traces_creator(model, pregen_device)
     ratio_list_spy = mocker.spy(HAWQPrecisionInitializer, 'get_compression_ratio_per_qconfig_sequence')
     chosen_index_spy = mocker.spy(HAWQPrecisionInitializer, 'choose_qconfig_sequence')
 
@@ -543,6 +544,7 @@ def disable_quantizer_gradients():
     config['input_info'] = {
         "sample_size": [2, 3, 10, 10],
     }
+    register_bn_adaptation_init_args(config)
     model = MobileNetV2(num_classes=10)
     model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
     original_requires_grad_per_param = get_requires_grad_per_param(model)
@@ -611,7 +613,7 @@ def test_hawq_behaviour__if_method_returns_none(mocker, method_name, expected_be
                                                                  criterion=mocker.stub(),
                                                                  data_loader=mock_train_loader,
                                                                  device=device)])
-    mocker.patch('nncf.torch.quantization.algo.QuantizationController.run_batchnorm_adaptation')
+    mocker.patch('nncf.common.batchnorm_adaptation.BatchnormAdaptationAlgorithm.run')
     mocked_calc_traces = mocker.patch(
         'nncf.torch.quantization.precision_init.hawq_init.HAWQPrecisionInitializer._calc_traces')
     stub = mocker.stub()
@@ -765,6 +767,7 @@ RATIO_CALCULATOR_TEST_DESCS = [
 @pytest.mark.parametrize('desc', RATIO_CALCULATOR_TEST_DESCS, ids=map(str, RATIO_CALCULATOR_TEST_DESCS))
 def test_compression_ratio(desc, mocker):
     config = desc.create_config()
+    register_bn_adaptation_init_args(config)
     from nncf.torch.quantization.algo import QuantizationBuilder
     get_qsetyp_spy = mocker.spy(QuantizationBuilder, '_get_quantizer_setup')
     model, ctrl = create_compressed_model_and_algo_for_test(ConvLinear(), config)
@@ -784,6 +787,7 @@ def test_staged_quantization_saves_enabled_quantizers_in_state_dict(tmp_path):
         "activations_quant_start_epoch": 2,
         "weights_quant_start_epoch": 1
     }
+    register_bn_adaptation_init_args(config)
     model_save, ctrl_save = create_compressed_model_and_algo_for_test(BasicConvTestModel(), config)
     ctrl_save.scheduler.epoch_step()
     ctrl_save.scheduler.epoch_step()

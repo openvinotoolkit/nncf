@@ -58,6 +58,7 @@ from tests.helpers import BasicConvTestModel
 from tests.helpers import TwoConvTestModel
 from tests.helpers import check_correct_nncf_modules_replacement
 from tests.helpers import create_compressed_model_and_algo_for_test
+from tests.helpers import register_bn_adaptation_init_args
 from tests.test_models.synthetic import ManyNonEvalModules
 
 
@@ -702,6 +703,7 @@ def test_can_collect_scopes_of_train_only_modules():
 def test_get_clean_shallow_copy():
     model = TwoConvTestModelWithUserModule()
     config = get_basic_sparsity_plus_quantization_config()
+    register_bn_adaptation_init_args(config)
     sparse_quantized_model, _ = create_compressed_model_and_algo_for_test(model, config)
     external_quantizers = getattr(sparse_quantized_model, EXTERNAL_QUANTIZERS_STORAGE_NAME)
     assert external_quantizers
@@ -723,6 +725,7 @@ def test_get_clean_shallow_copy():
 def test_temporary_clean_view():
     model = TwoConvTestModelWithUserModule()
     config = get_basic_sparsity_plus_quantization_config()
+    register_bn_adaptation_init_args(config)
     sparse_quantized_model, _ = create_compressed_model_and_algo_for_test(model, config)
     old_sd = sparse_quantized_model.state_dict()
     old_graph = deepcopy(sparse_quantized_model.get_graph())
@@ -761,6 +764,7 @@ def test_multiple_forward():
     # for case with multiple forward of one module
     model = TestModelMultipleForward()
     config = get_basic_sparsity_plus_quantization_config()
+    register_bn_adaptation_init_args(config)
     sparse_quantized_model, _ = create_compressed_model_and_algo_for_test(model, config)
     graph = sparse_quantized_model.get_original_graph()
     for node_key in list(graph.get_all_node_keys())[1:-2]:

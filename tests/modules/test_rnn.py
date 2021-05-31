@@ -35,6 +35,7 @@ from nncf.torch.model_creation import create_compressed_model
 from nncf.torch.utils import manual_seed
 from tests.modules.seq2seq.gnmt import GNMT
 from tests.helpers import get_empty_config, get_grads, create_compressed_model_and_algo_for_test
+from tests.helpers import register_bn_adaptation_init_args
 
 
 @pytest.fixture
@@ -204,6 +205,7 @@ class TestLSTMCell:
 def test_export_lstm_cell(tmp_path):
     config = get_empty_config(model_size=1, input_sample_sizes=[1, 1])
     config['compression'] = {'algorithm': 'quantization'}
+    register_bn_adaptation_init_args(config)
 
     model, algo = create_compressed_model_and_algo_for_test(LSTMCellNNCF(1, 1), config)
 
@@ -380,6 +382,7 @@ def test_export_stacked_bi_lstm(tmp_path):
     p = LSTMTestSizes(3, 3, 3, 3)
     config = get_empty_config(input_sample_sizes=[1, p.hidden_size, p.input_size])
     config['compression'] = {'algorithm': 'quantization'}
+    register_bn_adaptation_init_args(config)
 
     # TODO: batch_first=True fails with building graph: ambiguous call to mul or sigmoid
     test_rnn = NNCF_RNN('LSTM', input_size=p.input_size, hidden_size=p.hidden_size, num_layers=2, bidirectional=True,
@@ -411,6 +414,7 @@ class TestNumberOfNodes:
         batch_first = False
         config = get_empty_config(input_sample_sizes=[p.seq_length, p.batch, p.input_size])
         config['compression'] = {'algorithm': 'quantization', 'quantize_inputs': True}
+        register_bn_adaptation_init_args(config)
 
         test_data = TestLSTMCell.generate_lstm_data(p, num_layers, num_directions, bias=bias, batch_first=batch_first)
 
@@ -477,6 +481,7 @@ class TestNumberOfNodes:
              'quantize_inputs': True}
         config['scopes_without_shape_matching'] = \
             ['GNMT/ResidualRecurrentDecoder[decoder]/RecurrentAttention[att_rnn]/BahdanauAttention[attn]', ]
+        register_bn_adaptation_init_args(config)
 
         model = GNMT(**model_config)
         model = replace_lstm(model)

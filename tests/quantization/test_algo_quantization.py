@@ -51,6 +51,7 @@ from tests.helpers import BasicConvTestModel
 from tests.helpers import TwoConvTestModel
 from tests.helpers import create_compressed_model_and_algo_for_test
 from tests.helpers import get_empty_config
+from tests.helpers import register_bn_adaptation_init_args
 from tests.quantization.test_quantization_helpers import get_quantization_config_without_range_init
 from tests.quantization.test_quantization_helpers import get_squeezenet_quantization_config
 
@@ -67,6 +68,7 @@ def compare_qspecs(qspec: PTQuantizerSpec, quantizer: BaseQuantizer):
 def test_quantization_configs__with_defaults():
     model = BasicConvTestModel()
     config = get_quantization_config_without_range_init()
+    register_bn_adaptation_init_args(config)
     _, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
 
     assert isinstance(compression_ctrl, QuantizationController)
@@ -111,6 +113,7 @@ def test_quantization_configs__custom():
         },
     })
     config['target_device'] = 'TRIAL'
+    register_bn_adaptation_init_args(config)
     _, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
 
     assert isinstance(compression_ctrl, QuantizationController)
@@ -166,6 +169,7 @@ def compare_weights_activation_quantizers_pairs(actual_pairs: List[Tuple[List[We
 def test_can_load_quant_algo__with_defaults():
     model = BasicConvTestModel()
     config = get_quantization_config_without_range_init()
+    register_bn_adaptation_init_args(config)
     composite_builder = PTCompositeCompressionAlgorithmBuilder(config)
     assert len(composite_builder.child_builders) == 1
     assert isinstance(composite_builder.child_builders[0], QuantizationBuilder)
@@ -192,6 +196,7 @@ def test_can_load_quant_algo__with_defaults():
 
 def test_can_create_quant_loss_and_scheduler():
     config = get_quantization_config_without_range_init()
+    register_bn_adaptation_init_args(config)
     _, compression_ctrl = create_compressed_model_and_algo_for_test(BasicConvTestModel(), config)
 
     loss = compression_ctrl.loss
@@ -220,6 +225,7 @@ def test_activation_quantizers_order_is_the_same__for_resnet50(tmp_path, runs_su
         pytest.skip("Skipping CUDA test cases for CPU only setups")
     config = get_empty_config(input_sample_sizes=[1, 3, 224, 224])
     config['compression'] = {'algorithm': 'quantization', "initializer": {"range": {"num_init_samples": 0}}}
+    register_bn_adaptation_init_args(config)
     ngpus_per_node = torch.cuda.device_count()
 
     torch.multiprocessing.spawn(activation_quantizers_dumping_worker,
@@ -237,6 +243,7 @@ def test_activation_quantizers_order_is_the_same__for_resnet50(tmp_path, runs_su
 
 def test_load_state_sets_initialized_flag():
     config = get_quantization_config_without_range_init()
+    register_bn_adaptation_init_args(config)
 
     model = TwoConvTestModel()
     quant_model, qctrl = create_compressed_model_and_algo_for_test(model, config)
@@ -265,6 +272,7 @@ def test_quantizers_have_proper_narrow_range_set():
 
     model = Model()
     config = get_quantization_config_without_range_init(model_size=2)
+    register_bn_adaptation_init_args(config)
     quant_model, _ = create_compressed_model_and_algo_for_test(model, config)
 
     for module in quant_model.modules():
@@ -284,6 +292,7 @@ def hw_config_type_(request):
 def test_hw_config_quantization_can_quantize_squeezenet(hw_config_type):
     config = get_squeezenet_quantization_config()
     config["target_device"] = hw_config_type.value
+    register_bn_adaptation_init_args(config)
     model = squeezenet1_1()
     create_compressed_model_and_algo_for_test(model, config)
 
@@ -372,6 +381,7 @@ def test_quantize_inputs():
             "sample_size": [2, 3, 32, 32],
         }
     ]
+    register_bn_adaptation_init_args(config)
 
     model, qctrl = create_compressed_model_and_algo_for_test(model, config)
     REF_QUANTIZED_INPUT_MODULE_SCOPES = [
@@ -494,6 +504,7 @@ def test_quantize_outputs():
     ]
     model = QuantizeOutputsTestModel()
     config['compression']['quantize_outputs'] = True
+    register_bn_adaptation_init_args(config)
     model, qctrl = create_compressed_model_and_algo_for_test(model, config)
     REF_QUANTIZED_OUTPUT_MODULE_SCOPES = [
         'QuantizeOutputsTestModel/NNCFConv2d[conv1]/conv2d_0|OUTPUT',
@@ -531,6 +542,7 @@ def test_quantize_outputs_with_scope_overrides():
             "mode": "asymmetric",
         }
     }
+    register_bn_adaptation_init_args(config)
     model, ctrl = create_compressed_model_and_algo_for_test(model, config)
     output_quantizers =\
         [ q for qid, q in ctrl.all_quantizations.items() if isinstance(qid, NonWeightQuantizerId)][:-1]
@@ -549,6 +561,7 @@ def nncf_debug():
 
 def test_debug_mode():
     config = get_quantization_config_without_range_init()
+    register_bn_adaptation_init_args(config)
     model = BasicConvTestModel()
     with nncf_debug():
         model, _ = create_compressed_model_and_algo_for_test(model, config)

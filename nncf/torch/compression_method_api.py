@@ -16,7 +16,7 @@
 This package defines the API for the NNCF compression methods so that the user could
 extend the existing algorithms.
 """
-import numpy
+
 from typing import List, Tuple, TypeVar, Dict
 
 import torch
@@ -24,13 +24,11 @@ from torch import nn
 
 from nncf.config import NNCFConfig
 from nncf.torch.graph.transformations.layout import PTTransformationLayout
-from nncf.torch.initialization import DataLoaderBNAdaptationRunner
 from nncf.torch.layers import NNCF_MODULES_DICT, NNCF_WRAPPED_USER_MODULES_DICT
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.common.compression import BaseCompressionAlgorithmController
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.nncf_network import PTModelTransformer
-from nncf.torch.structures import BNAdaptationInitArgs
 from nncf.torch.utils import should_consider_scope
 from nncf.api.compression import CompressionAlgorithmBuilder
 from nncf.api.compression import CompressionLoss
@@ -129,39 +127,6 @@ class PTCompressionAlgorithmController(BaseCompressionAlgorithmController):
         """
         return {'scheduler': self.scheduler.get_state(),
                 'compression_stage': self.compression_stage()}
-
-    def run_batchnorm_adaptation(self, config):
-        initializer_params = config.get("initializer", {})
-        init_bn_adapt_config = initializer_params.get('batchnorm_adaptation', {})
-        num_bn_adaptation_samples = init_bn_adapt_config.get('num_bn_adaptation_samples', 0)
-        num_bn_forget_samples = init_bn_adapt_config.get('num_bn_forget_samples', 0)
-        try:
-            bn_adaptation_args = config.get_extra_struct(BNAdaptationInitArgs)
-            has_bn_adapt_init_args = True
-        except KeyError:
-            has_bn_adapt_init_args = False
-
-        if not init_bn_adapt_config:
-            if has_bn_adapt_init_args:
-                nncf_logger.warning("Enabling quantization batch norm adaptation with default parameters.")
-                num_bn_adaptation_samples = 2000
-                num_bn_forget_samples = 1000
-
-        if num_bn_adaptation_samples < 0:
-            raise AttributeError('Number of adaptation samples must be >= 0')
-        if num_bn_adaptation_samples > 0:
-            if not has_bn_adapt_init_args:
-                nncf_logger.info(
-                    'Could not run batchnorm adaptation '
-                    'as the adaptation data loader is not provided as an extra struct. '
-                    'Refer to `NNCFConfig.register_extra_structs` and the `BNAdaptationInitArgs` class')
-                return
-            batch_size = bn_adaptation_args.data_loader.batch_size
-            num_bn_forget_steps = numpy.ceil(num_bn_forget_samples / batch_size)
-            num_bn_adaptation_steps = numpy.ceil(num_bn_adaptation_samples / batch_size)
-            bn_adaptation_runner = DataLoaderBNAdaptationRunner(self._model, bn_adaptation_args.device,
-                                                                num_bn_forget_steps)
-            bn_adaptation_runner.run(bn_adaptation_args.data_loader, num_bn_adaptation_steps)
 
 
 class PTCompressionAlgorithmBuilder(CompressionAlgorithmBuilder):

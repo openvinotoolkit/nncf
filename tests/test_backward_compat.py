@@ -28,6 +28,7 @@ from nncf.torch.nncf_network import LEGACY_ACT_STORAGE_NAME
 from nncf.torch.nncf_network import MODEL_WRAPPED_BY_NNCF_ATTR_NAME
 from tests.conftest import TEST_ROOT
 from tests.helpers import create_ones_mock_dataloader
+from tests.helpers import register_bn_adaptation_init_args
 from tests.quantization.test_range_init import SingleConv2dIdentityModel
 from tests.test_compressed_graph import get_basic_quantization_config
 from tests.helpers import create_compressed_model_and_algo_for_test
@@ -161,6 +162,7 @@ def test_renamed_activation_quantizer_storage_in_state_dict():
     config = get_basic_quantization_config(input_info={
         "sample_size": [1, 3, 100, 100]
     })
+    register_bn_adaptation_init_args(config)
     compressed_model, _ = create_compressed_model_and_algo_for_test(model, config)
 
     with pytest.deprecated_call():

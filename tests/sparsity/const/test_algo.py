@@ -22,6 +22,7 @@ from tests.quantization.test_functions import check_equal
 from tests.sparsity.magnitude.test_helpers import MagnitudeTestModel
 from tests.helpers import BasicConvTestModel, get_empty_config, create_compressed_model_and_algo_for_test, \
     check_correct_nncf_modules_replacement
+from tests.helpers import register_bn_adaptation_init_args
 
 sub_tensor = torch.tensor([[[[1., 0.],
                              [0., 1.]]]])
@@ -83,6 +84,7 @@ def test_can_restore_binary_mask_on_magnitude_quant_algo_resume(tmp_path, use_da
         {"algorithm": "magnitude_sparsity",
          "params": {"schedule": "multistep", "multistep_sparsity_levels": [0.3, 0.5], "weight_importance": "abs"}},
         {"algorithm": "quantization"}]
+    register_bn_adaptation_init_args(config)
 
     sparse_model, _ = create_compressed_model_and_algo_for_test(MagnitudeTestModel(), config)
 
@@ -97,6 +99,7 @@ def test_can_restore_binary_mask_on_magnitude_quant_algo_resume(tmp_path, use_da
 
     config = get_empty_config()
     config["compression"] = [{"algorithm": "const_sparsity"}, {"algorithm": "quantization"}]
+    register_bn_adaptation_init_args(config)
     const_sparse_model, _ = create_compressed_model_and_algo_for_test(MagnitudeTestModel(), config)
 
     load_state(const_sparse_model, sparse_model.state_dict())

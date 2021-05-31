@@ -8,6 +8,7 @@ from tests.helpers import TwoConvTestModel
 from tests.helpers import create_compressed_model_and_algo_for_test
 from tests.helpers import create_ones_mock_dataloader
 from tests.helpers import get_empty_config
+from tests.helpers import register_bn_adaptation_init_args
 
 FIRST_NNCF_CONV_SCOPE = 'TwoConvTestModel/Sequential[features]/Sequential[0]/NNCFConv2d[0]'
 FIRST_CONV_SCOPE = 'TwoConvTestModel/Sequential[features]/Sequential[0]/Conv2d[0]'
@@ -224,6 +225,7 @@ def _nncf_caplog(caplog):
 def test_frozen_layers(_nncf_caplog, params):
     model = params.create_frozen_model()
     config = params.create_config()
+    register_bn_adaptation_init_args(config)
 
     if params.raising_error:
         with pytest.raises(RuntimeError):

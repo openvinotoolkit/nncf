@@ -22,6 +22,7 @@ from nncf.torch.quantization.layers import QuantizationMode
 from nncf.torch.quantization.layers import QuantizerExportMode
 from tests.test_helpers import TwoConvTestModel
 from tests.test_helpers import load_exported_onnx_version
+from tests.helpers import  register_bn_adaptation_init_args
 
 
 def get_config_for_export_mode(should_be_onnx_standard: bool) -> NNCFConfig:
@@ -35,6 +36,7 @@ def get_config_for_export_mode(should_be_onnx_standard: bool) -> NNCFConfig:
             "export_to_onnx_standard_ops": should_be_onnx_standard
         }
     })
+    register_bn_adaptation_init_args(nncf_config)
     return nncf_config
 
 

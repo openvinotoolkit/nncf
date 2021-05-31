@@ -27,6 +27,7 @@ from nncf.torch.quantization.quantizer_propagation import QuantizerPropagationSo
 from tests.helpers import create_compressed_model_and_algo_for_test
 from tests.helpers import create_conv
 from tests.helpers import get_empty_config
+from tests.helpers import register_bn_adaptation_init_args
 from tests.quantization.test_hawq_precision_init import check_bitwidth_graph
 from tests.test_compressed_graph import GeneralModelDesc
 from tests.test_helpers import load_exported_onnx_version
@@ -160,6 +161,7 @@ ADJUST_PAD_DESC_LIST = [
 def test_adjust_padding_on_synthetic_models(desc: MultiBranchesModelDesc, mocker, monkeypatch):
     model = desc.get_model()
     config = desc.get_config()
+    register_bn_adaptation_init_args(config)
 
     if desc.custom_hw_config_dict:
         hw_config_from_json = mocker.patch('nncf.common.hardware.config.HWConfig.from_json')
@@ -176,6 +178,7 @@ def test_onnx_export_to_fake_quantize_with_adjust_pad(tmp_path):
     desc = MultiBranchesModelDesc(name="vpu_max_int4").vpu().manual_precision([4, 4, 4, 4], [8, 4, 4, 4])
     model = desc.get_model()
     nncf_config = desc.get_config()
+    register_bn_adaptation_init_args(nncf_config)
 
     onnx_model_proto = load_exported_onnx_version(nncf_config, model,
                                                   path_to_storage_dir=tmp_path)

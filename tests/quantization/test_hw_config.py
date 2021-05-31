@@ -14,6 +14,7 @@
 import torch
 
 from nncf.torch.dynamic_graph.graph_tracer import ModelInputInfo
+from nncf.config import NNCFConfig
 from nncf.common.graph.graph import MODEL_INPUT_OP_NAME
 from nncf.common.hardware.config import HWConfig
 from nncf.torch.nncf_network import  NNCFNetwork
@@ -48,7 +49,7 @@ class TestHWConfigRules:
 
         net = NNCFNetwork(model, input_infos=[ModelInputInfo([1, 2, 1, 1])])
         hw_config = HWConfig.from_dict(hw_config_dict)
-        qbuilder = QuantizationBuilder(nncf_config["compression"], should_init=False)
+        qbuilder = QuantizationBuilder(NNCFConfig(nncf_config["compression"]), should_init=False)
         qbuilder.hw_config = hw_config
         net = qbuilder.apply_to(net)
         ctrl = qbuilder.build_controller(net)

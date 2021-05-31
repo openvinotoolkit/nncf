@@ -18,6 +18,7 @@ import pytest
 from nncf import NNCFConfig
 from nncf import create_compressed_model
 from tests import test_models
+from tests.helpers import register_bn_adaptation_init_args
 
 
 def get_basic_quantization_config():
@@ -37,6 +38,7 @@ def get_basic_quantization_config():
             }
         }
     })
+    register_bn_adaptation_init_args(config)
 
     return config
 
