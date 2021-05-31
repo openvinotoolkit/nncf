@@ -34,6 +34,7 @@ from nncf.torch.structures import BNAdaptationInitArgs
 from nncf.torch.utils import should_consider_scope
 from nncf.api.compression import CompressionAlgorithmBuilder
 from nncf.api.compression import CompressionLoss
+from nncf.api.compression import CompressionLevel
 
 
 ModelType = TypeVar('ModelType')
@@ -101,7 +102,24 @@ class PTCompressionAlgorithmController(BaseCompressionAlgorithmController):
 
         :param state: Output of `get_state()` method.
         """
-        self.scheduler.load_state(state)
+        self._check_loaded_compression_stage(state)
+        if self.scheduler is not None:
+            self.scheduler.load_state(state['scheduler'])
+
+    def _check_loaded_compression_stage(self, state: Dict[str, object]) -> None:
+        if 'compression_level' in state:
+            if 'compression_stage' not in state:
+                compression_level = state['compression_level']
+                state['compression_stage'] = CompressionLevel.map_legacy_level_to_stage()[compression_level]
+            else:
+                nncf_logger.warning('Both CompressionStage and (legacy) CompressionLevel attributes '
+                                    'are specified in the checkpoint. Proceeding with the value stored '
+                                    'in CompressionStage')
+        if 'compression_stage' in state and self.compression_stage() != state['compression_stage']:
+            nncf_logger.warning('Current CompressionStage ({}) of the compression controller does '
+                                'not correspond to the value found in '
+                                'the checkpoint ({})'.format(self.compression_stage(),
+                                                             state['compression_stage']))
 
     def get_state(self) -> Dict[str, object]:
         """
@@ -109,7 +127,8 @@ class PTCompressionAlgorithmController(BaseCompressionAlgorithmController):
 
         :return: The compression controller state.
         """
-        return self.scheduler.get_state()
+        return {'scheduler': self.scheduler.get_state(),
+                'compression_stage': self.compression_stage()}
 
     def run_batchnorm_adaptation(self, config):
         initializer_params = config.get("initializer", {})

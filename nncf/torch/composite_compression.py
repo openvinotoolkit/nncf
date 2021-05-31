@@ -144,3 +144,8 @@ class PTCompositeCompressionAlgorithmController(
         for ctrl in self.child_ctrls:
             target_model = ctrl.apply_to(target_model)
         return target_model
+
+    def load_state(self, states):
+        self._check_loaded_compression_stage(states)
+        for child_ctrl, child_state in zip(self.child_ctrls, states['scheduler']):
+            child_ctrl.load_state({'scheduler': child_state})

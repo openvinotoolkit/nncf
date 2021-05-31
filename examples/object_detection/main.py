@@ -178,7 +178,7 @@ def main_worker(current_gpu, config):
     #################################
 
     if resuming_checkpoint_path is not None and config.mode.lower() == 'train' and config.to_onnx is None:
-        compression_ctrl.load_state(resuming_checkpoint['scheduler'])
+        compression_ctrl.load_state(resuming_checkpoint)
         optimizer.load_state_dict(resuming_checkpoint.get('optimizer', optimizer.state_dict()))
         config.start_iter = resuming_checkpoint.get('iter', 0) + 1
 
