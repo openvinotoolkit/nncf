@@ -705,7 +705,7 @@ class RatioCalculatorTestDesc:
         return self
 
     def ignore_fc(self):
-        self._ignored_scopes = ['ConvLinear/NNCFLinear[fc]']
+        self._ignored_scopes = ['ConvLinear/NNCFLinear[fc]/linear_0']
         return self
 
     def create_config(self):

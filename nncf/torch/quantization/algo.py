@@ -1181,16 +1181,14 @@ class QuantizationController(QuantizationControllerBase):
     def _do_runtime_range_init(self, range_init_params: RangeInitParams):
         modules_to_init = OrderedDict()
         for wq_id, wq_info in self.weight_quantizers.items():
-            scope_str = str(wq_id)
             group = QuantizerGroup.WEIGHTS
-            init_config = range_init_params.get_init_config_for_scope_and_group(scope_str, group)
-            modules_to_init[scope_str] = (wq_info.quantizer_module_ref, init_config)
+            init_config = range_init_params.get_init_config_for_scope_and_group(wq_id, group)
+            modules_to_init[str(wq_id)] = (wq_info.quantizer_module_ref, init_config)
 
         for aq_id, aq_info in self.non_weight_quantizers.items():
-            scope_str = str(aq_id)
             group = QuantizerGroup.ACTIVATIONS
-            init_config = range_init_params.get_init_config_for_scope_and_group(scope_str, group)
-            modules_to_init[scope_str] = (aq_info.quantizer_module_ref, init_config)
+            init_config = range_init_params.get_init_config_for_scope_and_group(aq_id, group)
+            modules_to_init[str(aq_id)] = (aq_info.quantizer_module_ref, init_config)
 
         # NOTE: Order of modules must be the same to correctly broadcast parameters (e.g. input_low
         # and input_range)

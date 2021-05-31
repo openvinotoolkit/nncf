@@ -21,7 +21,9 @@ from beta.nncf.tensorflow.graph.metatypes.keras_layers import TFNNCFWrapperLayer
 from beta.nncf.tensorflow.graph.metatypes.matcher import get_keras_layer_metatype
 from beta.nncf.tensorflow.layers.wrapper import NNCFWrapper
 from beta.nncf.tensorflow.layers.operation import NNCFOperation
+from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
+from nncf.common.graph.graph import NNCFNodeName
 
 SHARED_OPERATION_MARK = '^'
 
@@ -129,10 +131,11 @@ def get_layer_to_graph_nodes_map(model, node_names):
     return layer_to_nodes_map
 
 
-def get_weight_node_name(graph, node_name):
-    while list(graph.nx_graph.predecessors(node_name)):
-        node_name = list(graph.nx_graph.predecessors(node_name))[-1]
-    return node_name
+def get_weight_node_name(graph: NNCFGraph, node_name: NNCFNodeName) -> NNCFNodeName:
+    node = graph.get_node_by_name(node_name)
+    while list(graph.get_previous_nodes(node)):
+        node = list(graph.get_previous_nodes(node))[-1]
+    return node.node_name
 
 
 def get_layer_identifier(node: NNCFNode):

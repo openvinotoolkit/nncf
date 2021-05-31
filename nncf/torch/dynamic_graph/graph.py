@@ -21,7 +21,7 @@ import networkx as nx
 import networkx.algorithms.isomorphism as iso
 from torch import Tensor
 
-from nncf.common.graph.module_attributes import BaseLayerAttributes
+from nncf.common.graph.layer_attributes import BaseLayerAttributes
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.torch.dynamic_graph.trace_tensor import TensorMeta
 from nncf.torch.dynamic_graph.trace_tensor import TracedTensor

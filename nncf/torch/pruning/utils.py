@@ -20,7 +20,7 @@ from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNodeName
 from nncf.torch.layers import NNCF_DECONV_MODULES_DICT
 from nncf.torch.graph.graph import NNCFNode
-from nncf.common.graph.module_attributes import ConvolutionLayerAttributes
+from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
 from nncf.torch.nncf_network import NNCFNetwork
 
 

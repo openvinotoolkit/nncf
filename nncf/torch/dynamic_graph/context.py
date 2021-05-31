@@ -20,6 +20,7 @@ from typing import List
 from typing import Optional
 import torch
 
+from nncf.common.graph.layer_attributes import BaseLayerAttributes
 from nncf.torch.debug import is_debug
 from nncf.torch.dynamic_graph.graph import DynamicGraph
 from nncf.torch.dynamic_graph.graph import DynamicGraphNode
@@ -28,7 +29,6 @@ from nncf.torch.dynamic_graph.scope import Scope
 from nncf.torch.dynamic_graph.scope import ScopeElement
 from nncf.torch.dynamic_graph.operation_address import OperationAddress
 from nncf.torch.dynamic_graph.trace_tensor import TensorMeta
-from nncf.torch.graph.graph import ModuleAttributes
 from nncf.common.graph.version_agnostic_op_names import get_version_agnostic_name
 
 _CURRENT_CONTEXT = None
@@ -97,7 +97,7 @@ class TracingContext:
 
     def maybe_add_node(self, inputs: OperatorInput, tensor_metas: List[Optional[TensorMeta]],
                        op_address: OperationAddress,
-                       module_attrs: ModuleAttributes = None,
+                       module_attrs: BaseLayerAttributes = None,
                        ignored_algorithms: List[str] = None) -> Optional[DynamicGraphNode]:
         if not self._may_add_nodes:
             return None

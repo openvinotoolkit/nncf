@@ -17,7 +17,6 @@ from typing import List
 import numpy as np
 import tensorflow as tf
 
-from beta.nncf.tensorflow.graph.converter import convert_keras_model_to_nncf_graph
 from nncf.common.graph.transformations.commands import TransformationPriority
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.sparsity.schedulers import SPARSITY_SCHEDULERS
@@ -54,7 +53,7 @@ class RBSparsityBuilder(TFCompressionAlgorithmBuilder):
         processed_shared_layer_names = set()  # type: Set[str]
 
         for node in nncf_graph.get_all_nodes():
-            if nncf_graph.is_shared_node(node):
+            if node.is_shared():
                 target_layer_name, _ = get_original_name_and_instance_index(node.node_name)
                 if target_layer_name in processed_shared_layer_names:
                     continue

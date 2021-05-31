@@ -14,15 +14,24 @@
 import warnings
 from copy import deepcopy
 
+from torch.nn import Conv1d
+from torch.nn import Conv2d
+from torch.nn import Conv3d
+from torch.nn import ConvTranspose1d
+from torch.nn import ConvTranspose2d
+from torch.nn import ConvTranspose3d
 from torch.nn import DataParallel, Module as TorchModule
+from torch.nn import Linear
 
-from nncf.common.graph.module_attributes import GenericWeightedLayerAttributes
-from nncf.common.graph.module_attributes import GroupNormLayerAttributes
+from nncf.common.graph.layer_attributes import BaseLayerAttributes
+from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
+from nncf.common.graph.layer_attributes import GenericWeightedLayerAttributes
+from nncf.common.graph.layer_attributes import GroupNormLayerAttributes
+from nncf.common.graph.layer_attributes import LinearLayerAttributes
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.torch.debug import is_debug
 from nncf.torch.dynamic_graph.context import get_current_context
 from nncf.torch.dynamic_graph.op_input_processing import OperatorInput
-from nncf.torch.graph.graph import ModuleAttributes
 from nncf.torch.dynamic_graph.trace_tensor import make_tensor_metas
 from nncf.torch.dynamic_graph.trace_tensor import trace_tensors
 from nncf.torch.layer_utils import _NNCFModuleMixin
@@ -81,7 +90,7 @@ def wrap_operator(operator, operator_info: 'PatchedOperatorInfo'):
                     if curr_module is None:
                         raise RuntimeError("Operation {} requires module attributes, "
                                            "but it was executed outside any module".format(op_name))
-                    module_attrs = _get_module_attributes(curr_module, op_name)
+                    module_attrs = _get_layer_attributes(curr_module, op_name)
                     if isinstance(curr_module, _NNCFModuleMixin):
                         ignored_algos = deepcopy(curr_module.ignored_algorithms)
 
@@ -138,13 +147,37 @@ def wrap_module_call(module_call):
     return wrapped
 
 
-def _get_module_attributes(module: TorchModule, operator_name: str) -> ModuleAttributes:
+def _get_layer_attributes(module: TorchModule, operator_name: str) -> BaseLayerAttributes:
     if operator_name == "group_norm":
         return GroupNormLayerAttributes(
             module.weight.requires_grad,
             module.num_channels,
             module.num_groups
         )
-    if isinstance(module, _NNCFModuleMixin):
-        return module.collect_module_attributes()
-    return GenericWeightedLayerAttributes(weight_requires_grad=False, weight_shape=[1, 1])
+    if isinstance(module, (Conv1d, Conv2d, Conv3d)):
+        return ConvolutionLayerAttributes(weight_requires_grad=module.weight.requires_grad,
+                                          in_channels=module.in_channels,
+                                          out_channels=module.out_channels,
+                                          kernel_size=module.kernel_size,
+                                          stride=module.stride,
+                                          groups=module.groups,
+                                          transpose=False)
+    if isinstance(module, (ConvTranspose1d, ConvTranspose2d, ConvTranspose3d)):
+        return ConvolutionLayerAttributes(weight_requires_grad=module.weight.requires_grad,
+                                          in_channels=module.in_channels,
+                                          out_channels=module.out_channels,
+                                          kernel_size=module.kernel_size,
+                                          stride=module.stride,
+                                          groups=module.groups,
+                                          transpose=True)
+    if isinstance(module, Linear):
+        return LinearLayerAttributes(weight_requires_grad=module.weight.requires_grad,
+                                     in_features=module.in_features,
+                                     out_features=module.out_features)
+
+    if hasattr(module, 'weight'):
+        return GenericWeightedLayerAttributes(weight_requires_grad=module.weight.requires_grad,
+                                              weight_shape=module.weight.shape)
+
+    return GenericWeightedLayerAttributes(weight_requires_grad=False,
+                                          weight_shape=[1, 1])

@@ -13,11 +13,11 @@
 import pytest
 
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
-from tests.torch.pruning.helpers import get_basic_pruning_config
 from tests.torch.pruning.helpers import PruningTestModel
 from tests.torch.pruning.helpers import PruningTestModelSharedConvs
 from tests.torch.pruning.helpers import PruningTestWideModelConcat
 from tests.torch.pruning.helpers import PruningTestWideModelEltwise
+from tests.torch.pruning.helpers import get_basic_pruning_config
 
 
 @pytest.mark.parametrize(
@@ -57,10 +57,10 @@ def test_both_targets_assert():
 
 @pytest.mark.parametrize(
     ("model", "ref_params"),
-    ((PruningTestModel, {"modules_in_channels": {PruningTestModel.CONV_1_NODE_NAME: 1,
-                                                 PruningTestModel.CONV_2_NODE_NAME: 3},
-                         "modules_out_channels": {PruningTestModel.CONV_1_NODE_NAME: 3,
-                                                  PruningTestModel.CONV_2_NODE_NAME: 1},
+    ((PruningTestModel, {"_modules_in_channels": {PruningTestModel.CONV_1_NODE_NAME: 1,
+                                                  PruningTestModel.CONV_2_NODE_NAME: 3},
+                         "_modules_out_channels": {PruningTestModel.CONV_1_NODE_NAME: 3,
+                                                   PruningTestModel.CONV_2_NODE_NAME: 1},
                          "nodes_flops": {PruningTestModel.CONV_1_NODE_NAME: 216,
                                          PruningTestModel.CONV_2_NODE_NAME: 54}}),)
 )

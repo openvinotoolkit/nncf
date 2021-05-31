@@ -16,7 +16,12 @@ import operator
 from collections import OrderedDict
 from copy import deepcopy
 from enum import Enum
-from typing import Callable, Dict, List, Optional, Tuple, TypeVar
+from typing import Callable
+from typing import Dict
+from typing import List
+from typing import Optional
+from typing import Tuple
+from typing import TypeVar
 
 import networkx as nx
 import torch
@@ -26,12 +31,14 @@ from nncf.common.graph.graph import MODEL_INPUT_OP_NAME
 from nncf.common.graph.graph import MODEL_OUTPUT_OP_NAME
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
+from nncf.common.graph.graph import NNCFNodeExpression
 from nncf.common.graph.graph import NNCFNodeName
 from nncf.common.graph.graph_matching import NodeExpression
 from nncf.common.graph.model_transformer import ModelTransformer
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationPriority
 from nncf.common.hardware.config import HWConfig
+from nncf.common.utils.logger import logger as nncf_logger
 from nncf.common.utils.ordered_enum import OrderedEnum
 from nncf.torch.debug import CombinedDebugInterface
 from nncf.torch.debug import debuggable_forward
@@ -39,34 +46,32 @@ from nncf.torch.debug import is_debug
 from nncf.torch.dynamic_graph.context import TracingContext
 from nncf.torch.dynamic_graph.graph import DynamicGraph
 from nncf.torch.dynamic_graph.graph import ShapeIgnoringTensorMetaComparator
-from nncf.torch.dynamic_graph.graph_tracer import ModelInputInfo
 from nncf.torch.dynamic_graph.graph_tracer import GraphTracer
+from nncf.torch.dynamic_graph.graph_tracer import ModelInputInfo
 from nncf.torch.dynamic_graph.graph_tracer import PostGraphBuildActing
 from nncf.torch.dynamic_graph.graph_tracer import create_dummy_forward_fn
 from nncf.torch.dynamic_graph.io_handling import InputInfoWrapManager
 from nncf.torch.dynamic_graph.io_handling import replicate_same_tensors
 from nncf.torch.dynamic_graph.io_handling import wrap_nncf_model_outputs_with_objwalk
-from nncf.torch.dynamic_graph.patch_pytorch import ignore_scope
-from nncf.torch.dynamic_graph.trace_tensor import TracedTensor
-from nncf.torch.dynamic_graph.scope import Scope
-from nncf.torch.dynamic_graph.transform_graph import replace_modules_by_nncf_modules
-from nncf.common.graph.graph import NNCFNodeExpression
 from nncf.torch.dynamic_graph.operation_address import OperationAddress
+from nncf.torch.dynamic_graph.patch_pytorch import ignore_scope
+from nncf.torch.dynamic_graph.scope import Scope
+from nncf.torch.dynamic_graph.trace_tensor import TracedTensor
+from nncf.torch.dynamic_graph.transform_graph import replace_modules_by_nncf_modules
 from nncf.torch.graph.graph import PTNNCFGraph
 from nncf.torch.graph.graph_builder import GraphBuilder
+from nncf.torch.graph.graph_builder import GraphConverter
 from nncf.torch.graph.transformations.commands import PTInsertionCommand
 from nncf.torch.graph.transformations.commands import PTTargetPoint
+from nncf.torch.graph.transformations.layout import PTTransformationLayout
 from nncf.torch.layers import NNCF_MODULES
 from nncf.torch.layers import NNCF_WRAPPED_USER_MODULES_DICT
 from nncf.torch.module_operations import UpdateWeight
-from nncf.torch.graph.transformations.layout import PTTransformationLayout
 from nncf.torch.quantization.layers import QUANTIZATION_MODULES
 from nncf.torch.utils import compute_FLOPs_hook
 from nncf.torch.utils import get_all_modules_by_type
 from nncf.torch.utils import get_state_dict_names_with_modules
 from nncf.torch.utils import objwalk
-
-from nncf.common.utils.logger import logger as nncf_logger
 
 MODEL_WRAPPED_BY_NNCF_ATTR_NAME = 'nncf_module'
 LEGACY_ACT_STORAGE_NAME = "activation_quantizers"
@@ -122,7 +127,7 @@ class InsertionPointGraph(nx.DiGraph):
     REGULAR_NODE_REF_NODE_ATTR = "regular_node_data"
     ASSOCIATED_IP_NODE_KEYS_NODE_ATTR = "associated_ip_node_keys"
     IS_MERGED_NODE_ATTR = 'is_merged'
-    MERGED_NNCF_NODE_LIST_NODE_ATTR = 'is_merged'
+    MERGED_NNCF_NODE_LIST_NODE_ATTR = 'merged_node_list'
 
     PRE_HOOK_ID_PREFIX = "PRE HOOK "  # NB: Do not use colon (':') in node keys! Causes trouble for .dot file export.
     POST_HOOK_ID_PREFIX = "POST HOOK "
@@ -223,8 +228,8 @@ class InsertionPointGraph(nx.DiGraph):
         # pylint:disable=too-many-branches
         merged_ip_graph = deepcopy(self)
         pattern = self._get_mergeable_operator_patterns(hw_config, additional_patterns)
-        from nncf.common.graph.graph_matching import find_subgraphs_match_expression
-        matches = find_subgraphs_match_expression(self._base_nx_graph, pattern)
+        from nncf.common.graph.graph_matching import find_subgraphs_matching_expression
+        matches = find_subgraphs_matching_expression(self._base_nx_graph, pattern)
         for match in matches:
             if len(match) == 1:
                 continue
@@ -394,13 +399,13 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
 
         _orig_graph_build_forward_fn = self._get_dummy_forward_fn_for_graph_building(with_input_tracing=True,
                                                                                      with_output_tracing=True)
-        self._graph_builder = GraphBuilder(_orig_graph_build_forward_fn)
 
         nncf_wrapped_model = self.get_nncf_wrapped_model()
-        eval_only_ops_exec_ctx = self.collect_eval_only_ops_exec_context(nncf_wrapped_model, self._graph_builder)
+        eval_only_op_scopes = self._collect_eval_only_op_scopes(nncf_wrapped_model,
+                                                                _orig_graph_build_forward_fn)
 
         # all modules called in eval mode should be replaced prior to graph building
-        self._replace_modules_by_nncf_modules(device, eval_only_ops_exec_ctx, reset)
+        self._replace_modules_by_nncf_modules(device, eval_only_op_scopes, reset)
 
         _orig_context = TracingContext()
 
@@ -413,8 +418,8 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
         self._original_dynamic_graph = GraphTracer(_orig_graph_build_forward_fn).trace_graph(nncf_wrapped_model,
                                                                                              _orig_context,
                                                                                              as_eval=True)
-        self._original_graph = PTNNCFGraph.from_dynamic_graph(self._original_dynamic_graph,
-                                                              input_infos=self.input_infos)
+        self._original_graph = GraphConverter.convert(self._original_dynamic_graph,
+                                                      input_infos=self.input_infos)
         self._compressed_graph = None  # type: PTNNCFGraph
 
         self._compressed_context = TracingContext()
@@ -555,11 +560,11 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
         return wrapped_user_dummy_forward_fn
 
 
-    def _replace_modules_by_nncf_modules(self, device, eval_only_ops_exec_ctx: List[str] = None,
+    def _replace_modules_by_nncf_modules(self, device, eval_only_op_scopes: List[Scope] = None,
                                          reset: bool = False):
         module, self._nncf_module_scopes = replace_modules_by_nncf_modules(
             self.get_nncf_wrapped_model(), ignored_scopes=self.ignored_scopes,
-            target_scopes=self.target_scopes, eval_ops_exec_ctx_str=eval_only_ops_exec_ctx,
+            target_scopes=self.target_scopes, eval_op_scopes=eval_only_op_scopes,
             reset=reset)
         self._set_nncf_wrapped_model(module.to(device))
 
@@ -579,7 +584,7 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
                     continue
             nodes_in_scope = self._original_graph.get_op_nodes_in_scope(nncf_module_scope)
             for node in nodes_in_scope:
-                if node.module_attributes is not None:  # TODO: implement more explicit filtering
+                if node.module_attributes is not None:  # TODO(vshampor): implement more explicit filtering
                     retval.append(node)
         return retval
 
@@ -783,14 +788,16 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
 
         return Mgr(self)
 
-    def collect_eval_only_ops_exec_context(self, model: nn.Module, graph_builder) -> List[NNCFNodeName]:
+    def _collect_eval_only_op_scopes(self, model: nn.Module, dummy_forward_fn: Callable) -> List[Scope]:
         """
         Returns scopes of the modules which are executed in evaluation mode only.
         """
+
+        tracer = GraphTracer(dummy_forward_fn)
         result = []
-        eval_graph = graph_builder.build_graph(model, as_eval=True, input_infos=self.input_infos)
-        for nncf_node in eval_graph.get_all_nodes():
-            result.append(nncf_node.node_name)
+        eval_graph = tracer.trace_graph(model, as_eval=True)
+        for dyn_graph_node in eval_graph.get_all_nodes():
+            result.append(dyn_graph_node.op_exec_context.scope_in_model)
         return result
 
     def get_node_to_op_address_mapping(self) -> Dict[NNCFNodeName, OperationAddress]:

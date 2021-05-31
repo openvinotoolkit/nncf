@@ -71,7 +71,7 @@ class BasePruningAlgoBuilder(PTCompressionAlgorithmBuilder):
 
         device = next(target_model.parameters()).device
         insertion_commands = []
-        self.pruned_module_groups_info = Clusterization[PrunedModuleInfo](lambda x: x.module_node_name)
+        self.pruned_module_groups_info = Clusterization[PrunedModuleInfo](lambda x: x.node_name)
 
         for i, group in enumerate(groups_of_nodes_to_prune.get_all_clusters()):
             group_minfos = []
@@ -235,6 +235,6 @@ class BasePruningAlgoController(PTCompressionAlgorithmController):
 
             layer_info["mask_pr"] = self.pruning_rate_for_mask(minfo)
 
-            stats[str(minfo.module_node_name)] = layer_info
+            stats[str(minfo.node_name)] = layer_info
 
         return stats

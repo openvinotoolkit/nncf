@@ -10,16 +10,19 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-from typing import List, Dict
+from typing import Dict
+from typing import List
 
 import tensorflow as tf
 from tensorflow.python.framework.convert_to_constants import convert_variables_to_constants_v2
 
 from beta.nncf.tensorflow.graph.metatypes.common import GENERAL_CONV_LAYER_METATYPES
+from beta.nncf.tensorflow.graph.metatypes.keras_layers import TFConv1DTransposeLayerMetatype
+from beta.nncf.tensorflow.graph.metatypes.keras_layers import TFConv2DTransposeLayerMetatype
+from beta.nncf.tensorflow.graph.metatypes.keras_layers import TFConv3DTransposeLayerMetatype
 from beta.nncf.tensorflow.graph.metatypes.matcher import get_keras_layer_metatype
 from beta.nncf.tensorflow.graph.metatypes.matcher import get_op_metatype
 from beta.nncf.tensorflow.graph.metatypes.nncf_op import OutputNoopMetatype
-from beta.nncf.tensorflow.graph.graph import TFNNCFGraph
 from beta.nncf.tensorflow.graph.utils import get_expanded_node_name
 from beta.nncf.tensorflow.graph.utils import is_functional_model
 from beta.nncf.tensorflow.graph.utils import is_sequential_model
@@ -27,8 +30,9 @@ from beta.nncf.tensorflow.graph.utils import unwrap_layer
 from beta.nncf.tensorflow.layers.data_layout import get_input_channel_axis
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFGraphNodeType
-from nncf.common.graph.module_attributes import ConvolutionLayerAttributes
-from nncf.common.graph.module_attributes import Dtype
+from nncf.common.graph.graph import NNCFNode
+from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
+from nncf.common.graph.layer_attributes import Dtype
 
 PREFIX_AUXILIARY_OUTPUT_NODE = 'output'
 
@@ -76,7 +80,7 @@ def _process_outputs(outputs, raw_nodes):
     return raw_nodes
 
 
-def convert_layer_graph_to_nncf_graph(layer, use_graph_var_names=False):
+def convert_layer_graph_to_nncf_graph(layer, use_graph_var_names=False) -> NNCFGraph:
     def get_graph_to_layer_var_names_map(concrete_fun):
         names_map = {}
         for layer_var in concrete_fun.variables:
@@ -95,19 +99,25 @@ def convert_layer_graph_to_nncf_graph(layer, use_graph_var_names=False):
     graph_to_layer_names_map = {} if use_graph_var_names else get_graph_to_layer_var_names_map(concr_fn)
 
     nncf_graph = NNCFGraph()
-    for node in nodes:
-        nncf_graph.add_node(
-            graph_to_layer_names_map.get(node.name, node.name),
-            type=node.op,
-            dtype=node.attr['dtype'],
-            metatype=get_op_metatype(node.op))
+
+    graphdef_node_name_to_id = {}  # type: Dict[str, int]
 
     for node in nodes:
-        for input_node in node.input:
-            node_name = graph_to_layer_names_map.get(node.name, node.name)
-            input_node_name = graph_to_layer_names_map.get(input_node, input_node)
-            if input_node_name in nncf_graph.get_all_node_keys():
-                nncf_graph.add_edge(input_node_name, node_name)
+        nncf_node = nncf_graph.add_nncf_node(node_name=graph_to_layer_names_map.get(node.name, node.name),
+                                             node_type=node.op,
+                                             node_metatype=get_op_metatype(node.op))
+        graphdef_node_name_to_id[node.name] = nncf_node.node_id
+
+    for node in nodes:
+        dtype = Dtype.FLOAT if node.attr['dtype'].type == 1 else Dtype.INTEGER
+        for idx, input_node in enumerate(node.input):
+            nncf_node_id = graphdef_node_name_to_id[node.name]
+            if input_node in graphdef_node_name_to_id:
+                input_nncf_node_id = graphdef_node_name_to_id[input_node]
+                nncf_graph.add_edge_between_nncf_nodes(input_nncf_node_id,
+                                                       nncf_node_id,
+                                                       tensor_shape=None,  # TODO(vshampor): fix
+                                                       input_port_id=idx, dtype=dtype)
 
     return nncf_graph
 
@@ -137,7 +147,7 @@ def convert_keras_model_to_nncf_graph(model: tf.keras.Model) -> NNCFGraph:
 def _get_nncf_graph_from_functional(model: tf.keras.Model) -> NNCFGraph:
     #pylint:disable=too-many-statements
     #pylint:disable=too-many-branches
-    nncf_graph = TFNNCFGraph()
+    nncf_graph = NNCFGraph()
     model_config = model.get_config()
     raw_nodes = {}  # type: Dict[str, List[Dict]]
     for layer in model_config['layers']:
@@ -170,7 +180,7 @@ def _get_nncf_graph_from_functional(model: tf.keras.Model) -> NNCFGraph:
                     'output_shape': _prepare_shape(model_layer.inbound_nodes[i].output_shapes)
                 }
                 if layer_metatype in GENERAL_CONV_LAYER_METATYPES:
-                    module_attributes = _get_module_attributes(model_layer)
+                    module_attributes = _get_layer_attributes(model_layer)
                     instance.update({NNCFGraph.MODULE_ATTRIBUTES: module_attributes})
                 for parent_name, parent_instance_index, parent_out_ports, _ in inbound_node:
                     parent_instance = raw_nodes[parent_name][parent_instance_index]
@@ -194,7 +204,7 @@ def _get_nncf_graph_from_functional(model: tf.keras.Model) -> NNCFGraph:
                 'output_shape': _prepare_shape(model_layer.output_shape)
             }
             if layer_metatype in GENERAL_CONV_LAYER_METATYPES:
-                module_attributes = _get_module_attributes(model_layer)
+                module_attributes = _get_layer_attributes(model_layer)
                 instance.update({NNCFGraph.MODULE_ATTRIBUTES: module_attributes})
             raw_nodes[layer_name].append(instance)
 
@@ -216,6 +226,7 @@ def _get_nncf_graph_from_functional(model: tf.keras.Model) -> NNCFGraph:
             instance['out_ports'] = sorted(list(instance['out_ports']))
 
     layer_name_vs_nncf_node_ids = {}  # type: Dict[str, List[int]]
+    all_output_nncf_nodes_vs_attrs = {}  # type: Dict[NNCFNode, Dict]
 
     for layer_name, instances in raw_nodes.items():
         layer_name_vs_nncf_node_ids[layer_name] = []
@@ -225,21 +236,12 @@ def _get_nncf_graph_from_functional(model: tf.keras.Model) -> NNCFGraph:
                                                  node_type=attributes['type'],
                                                  node_metatype=attributes['metatype'],
                                                  module_attributes=attributes.get('module_attributes'),
-                                                 containing_layer_name=layer_name)
+                                                 layer_name=layer_name,
+                                                 is_shared=attributes['is_shared'])
             layer_name_vs_nncf_node_ids[layer_name].append(nncf_node.node_id)
 
             if attributes['is_output']:
-                # Aligning the structure of auxiliary output nodes is only necessary for NNCFGraph
-                output_aux_node_name = PREFIX_AUXILIARY_OUTPUT_NODE + '_{}'.format(i)
-                output_node = nncf_graph.add_nncf_node(
-                    node_name=output_aux_node_name,
-                    node_type=NNCFGraphNodeType.OUTPUT_NODE,
-                    node_metatype=OutputNoopMetatype)
-                nncf_graph.add_edge_between_nncf_nodes(nncf_node.node_id,
-                                                       output_node.node_id,
-                                                       tensor_shape=attributes['output_shape'],
-                                                       input_port_id=0,
-                                                       dtype=Dtype.FLOAT)
+                all_output_nncf_nodes_vs_attrs[nncf_node] = attributes
 
     for layer in model_config['layers']:
         layer_name = layer['name']
@@ -256,6 +258,26 @@ def _get_nncf_graph_from_functional(model: tf.keras.Model) -> NNCFGraph:
                                                        tensor_shape=input_shape,
                                                        input_port_id=k,
                                                        dtype=dtype)
+
+    for idx, kv in enumerate(all_output_nncf_nodes_vs_attrs.items()):
+        # Ticket: 56853
+        # We won't add an NNCF output auxiliary node for all of the NNCF nodes corresponding to real
+        # model output, but only for the nodes that do not serve as a tensor source for any other node.
+        # The reason is that current TF capabilities do not allow to insert post-hooks after TF functional model
+        # output nodes without changing the name of the corresponding output, which won't be obvious to the user.
+        nncf_node, attrs = kv
+        if not nncf_graph.get_next_nodes(nncf_node):
+            output_aux_node_name = PREFIX_AUXILIARY_OUTPUT_NODE + '_{}'.format(idx)
+            output_node = nncf_graph.add_nncf_node(
+                node_name=output_aux_node_name,
+                node_type=NNCFGraphNodeType.OUTPUT_NODE,
+                node_metatype=OutputNoopMetatype)
+            nncf_graph.add_edge_between_nncf_nodes(nncf_node.node_id,
+                                                   output_node.node_id,
+                                                   tensor_shape=attrs['output_shape'],
+                                                   input_port_id=0,
+                                                   dtype=Dtype.FLOAT)
+
     return nncf_graph
 
 
@@ -265,7 +287,7 @@ def _prepare_shape(shape) -> List:
     return shape
 
 def _get_nncf_graph_from_sequential(model: tf.keras.Model) -> NNCFGraph:
-    nncf_graph = TFNNCFGraph()
+    nncf_graph = NNCFGraph()
     producer_layer_id = None
     model_config = model.get_config()
     layer_name = None
@@ -287,14 +309,15 @@ def _get_nncf_graph_from_sequential(model: tf.keras.Model) -> NNCFGraph:
 
         module_attributes = None
         if layer_metatype in GENERAL_CONV_LAYER_METATYPES:
-            module_attributes = _get_module_attributes(model.get_layer(layer_name))
+            module_attributes = _get_layer_attributes(model.get_layer(layer_name))
             attrs.update({NNCFGraph.MODULE_ATTRIBUTES: module_attributes})
 
         nncf_node = nncf_graph.add_nncf_node(layer_name,
                                              node_type=layer_type,
                                              node_metatype=layer_metatype,
                                              module_attributes=module_attributes,
-                                             containing_layer_name=layer_name)
+                                             layer_name=layer_name,
+                                             is_shared=False)
 
         if producer_layer_id is not None:
             input_shape = _prepare_shape(model.get_layer(layer_name).input_shape)
@@ -302,7 +325,7 @@ def _get_nncf_graph_from_sequential(model: tf.keras.Model) -> NNCFGraph:
                                                    nncf_node.node_id,
                                                    tensor_shape=input_shape[0],
                                                    input_port_id=0,
-                                                   dtype=Dtype.FLOAT)  # TODO: determine from keras layers
+                                                   dtype=Dtype.FLOAT)  # TODO(vshampor): determine from keras layers
         producer_layer_id = nncf_node.node_id
 
     if layer_name is not None:
@@ -320,16 +343,24 @@ def _get_nncf_graph_from_sequential(model: tf.keras.Model) -> NNCFGraph:
     return nncf_graph
 
 
-def _get_module_attributes(layer: tf.keras.layers.Layer) -> ConvolutionLayerAttributes:
+TRANSPOSE_CONV_METATYPES = [TFConv1DTransposeLayerMetatype,
+                            TFConv2DTransposeLayerMetatype,
+                            TFConv3DTransposeLayerMetatype]
+
+
+def _get_layer_attributes(layer: tf.keras.layers.Layer) -> ConvolutionLayerAttributes:
     channel_axis = get_input_channel_axis(layer)
     layer_ = unwrap_layer(layer)
+    layer_metatype = get_keras_layer_metatype(layer_, determine_subtype=False)
     strides = layer_.strides[0]
     groups = layer_.groups
     kernel_size = layer_.kernel_size
+
+    transpose = layer_metatype in TRANSPOSE_CONV_METATYPES
 
     return ConvolutionLayerAttributes(layer.trainable,
                                       layer.get_input_shape_at(0)[channel_axis],
                                       layer.get_output_shape_at(0)[channel_axis],
                                       kernel_size,
                                       strides,
-                                      groups, transpose=False)  # TODO: how to determine transpose here?
+                                      groups, transpose=transpose)

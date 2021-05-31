@@ -124,7 +124,7 @@ AUTOQ_TEST_PARAMS = (
                     config_builder=AutoQConfigBuilder().with_sample_size([2, 3, 299, 299]).with_ratio(RATIO)),
     AutoQTestStruct(model_creator=inception_v3,
                     config_builder=AutoQConfigBuilder().with_sample_size([2, 3, 299, 299]).
-                    with_ignored_scope(['Inception3/BasicConv2d[Conv2d_2a_3x3]'],
+                    with_ignored_scope(['Inception3/BasicConv2d[Conv2d_2a_3x3]/NNCFConv2d[conv]/conv2d_0'],
                                        target_group=QuantizerGroup.WEIGHTS).eval_subset_ratio(RATIO)),
     AutoQTestStruct(model_creator=ssd_vgg_512_test,
                     config_builder=AutoQConfigBuilder().with_sample_size([1, 3, 512, 512]).eval_subset_ratio(RATIO)),

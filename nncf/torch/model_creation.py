@@ -140,7 +140,8 @@ def create_compressed_model(model: Module, config: NNCFConfig,
             else:
                 compressed_graph_builder = GraphBuilder(custom_forward_fn=dummy_forward_fn)
 
-            graph = compressed_graph_builder.build_graph(compressed_model, compressed_model.get_tracing_context())
+            graph = compressed_graph_builder.build_graph(compressed_model,
+                                                         compressed_model.get_tracing_context())
             graph.visualize_graph(osp.join(config.get("log_dir", "."), "compressed_graph.dot"))
 
     # Synchronize all processes if run in distributed mode

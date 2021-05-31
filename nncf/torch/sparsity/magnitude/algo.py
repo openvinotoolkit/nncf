@@ -80,7 +80,7 @@ class MagnitudeSparsityController(BaseSparsityAlgoController):
                 sparsity_level_for_sparse_module = module_name_to_sparsity_level_map[minfo.module_name]
                 threshold = self._select_threshold(sparsity_level_for_sparse_module, [minfo])
 
-            threshold_statistics.append(LayerThreshold(minfo.module_name, threshold))
+            threshold_statistics.append(LayerThreshold(minfo.module_node_name, threshold))
 
         stats = MagnitudeSparsityStatistics(model_statistics, threshold_statistics)
 

@@ -40,7 +40,7 @@ from nncf.api.compression import CompressionLoss
 from nncf.api.compression import CompressionScheduler
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
-from nncf.common.graph.module_attributes import Dtype
+from nncf.common.graph.layer_attributes import Dtype
 from nncf.common.graph.transformations.commands import TransformationPriority
 from nncf.common.quantization.structs import QuantizationConstraints
 from nncf.common.quantization.structs import QuantizationMode
@@ -125,7 +125,7 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
         processed_shared_layer_names = set()  # type: Set[str]
         for node in nodes:
 
-            if nncf_graph.is_shared_node(node):
+            if node.is_shared():
                 target_layer_name, _ = get_original_name_and_instance_index(node.node_name)
                 if target_layer_name in processed_shared_layer_names:
                     continue

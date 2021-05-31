@@ -19,6 +19,7 @@ from typing import List
 from typing import Optional
 from typing import Set
 from typing import Tuple
+from typing import Type
 from unittest.mock import MagicMock
 
 import networkx as nx
@@ -38,7 +39,7 @@ from nncf.torch.dynamic_graph.operation_address import OperationAddress
 from nncf.torch.dynamic_graph.scope import Scope
 from nncf.torch.dynamic_graph.wrappers import OP_NAMES_REQUIRING_MODULE_ATTRS
 from nncf.torch.graph.graph import NNCFGraph
-from nncf.torch.graph.operator_metatypes import PT_OPERATOR_METATYPES
+from nncf.torch.graph.operator_metatypes import get_operator_metatypes
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.nncf_network import InsertionPointGraph
 from nncf.torch.quantization.quantizer_propagation import DEFAULT_QUANT_TRAIT_TO_OP_DICT
@@ -238,7 +239,7 @@ class TestQuantizerPropagationSolver:
     def test_set_quantization_traits_for_quant_prop_graph_nodes(self):
         # Test all patchable metatypes. If a patchable metatype is not registered
         # in quantization trait-to-metatype dict, the test will fail.
-        tested_op_metatypes = get_operator_metatypes() # type: List[OperatorMetatype]
+        tested_op_metatypes = get_operator_metatypes()  # type: List[Type[OperatorMetatype]]
         tested_op_names = []
         for op_meta in tested_op_metatypes:
             aliases = op_meta.get_all_aliases()
@@ -1635,7 +1636,7 @@ class TestQuantizerPropagationSolver:
             retval_shared_input_operation_set_groups=[{1}],
             expected_count_finished_quant=1,
             expected_count_active_quant=0,
-            ignored_scopes=[TwoFcAfterDropout.FC_2_SCOPE_STR]
+            ignored_scopes=[TwoFcAfterDropout.FC_2_NODE_NAME]
         )
     ]
 

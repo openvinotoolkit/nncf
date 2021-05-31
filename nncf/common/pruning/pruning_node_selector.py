@@ -10,7 +10,7 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-
+from collections import defaultdict
 from typing import Dict, List, Optional, Tuple
 
 from nncf.common.graph.graph import NNCFGraph
@@ -153,7 +153,7 @@ class PruningNodeSelector:
                     pruned_nodes_clusterization.merge_clusters(cluster_id, previous_conv_cluster_id)
 
         # 5. Merge nodes into one cluster if some module forwards several times
-        multiforward_nodes = graph.get_shared_nodes()
+        multiforward_nodes = self._get_multiforward_nodes(graph)
         for list_of_nodes in multiforward_nodes:
             clusters_to_merge = [pruned_nodes_clusterization.get_cluster_containing_element(node.node_id).id
                                  for node in list_of_nodes]
@@ -176,6 +176,20 @@ class PruningNodeSelector:
         can_prune_analysis = model_analyser.analyse_model_before_pruning()
         self._check_pruning_groups(graph, pruned_nodes_clusterization, can_prune_analysis)
         return pruned_nodes_clusterization
+
+    def _get_multiforward_nodes(self, graph: NNCFGraph) -> List[List[NNCFNode]]:
+        """
+        Groups nodes based on their `layer_name` property to determine groups of nodes belonging to
+        a single weighted layer object in the model, i.e. the group of operations in the graph that reuse one and
+        the same set of weights, and returns the groups that have more than one element.
+
+        :return: List of lists of nodes; each list corresponds to a group of nodes united by the common
+         underlying layer object of the original model.
+        """
+        ret = defaultdict(list)
+        for node in graph.get_nodes_by_types(self._prune_operations):
+            ret[node.layer_name].append(node)
+        return [ret[module_identifier] for module_identifier in ret if len(ret[module_identifier]) > 1]
 
     def _check_pruning_groups(self, graph: NNCFGraph, pruned_nodes_clusterization: Clusterization,
                               can_prune: Dict[str, bool]):

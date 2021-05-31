@@ -14,8 +14,11 @@ from typing import Set
 
 import tensorflow as tf
 
-from beta.nncf.tensorflow.graph.converter import convert_keras_model_to_nncf_graph
+from beta.nncf.tensorflow.graph.converter import convert_layer_graph_to_nncf_graph
+from beta.nncf.tensorflow.graph.utils import get_custom_layers
 from beta.nncf.tensorflow.graph.utils import get_original_name_and_instance_index
+from beta.nncf.tensorflow.graph.utils import get_weight_node_name
+from beta.nncf.tensorflow.sparsity.base_algorithm import SPARSITY_TF_OP_METATYPES
 from nncf.common.graph.transformations.commands import TransformationPriority
 from nncf.common.sparsity.schedulers import SPARSITY_SCHEDULERS
 from nncf.common.sparsity.statistics import LayerThreshold
@@ -26,17 +29,13 @@ from nncf.api.compression import CompressionLoss
 from beta.nncf.tensorflow.algorithm_selector import TF_COMPRESSION_ALGORITHMS
 from beta.nncf.tensorflow.api.compression import TFCompressionAlgorithmBuilder
 from beta.nncf.tensorflow.loss import TFZeroCompressionLoss
-from beta.nncf.tensorflow.graph.converter import convert_layer_graph_to_nncf_graph
 from beta.nncf.tensorflow.graph.converter import convert_keras_model_to_nncf_graph
 from beta.nncf.tensorflow.graph.transformations.commands import TFInsertionCommand
 from beta.nncf.tensorflow.graph.transformations.commands import TFLayerWeight
 from beta.nncf.tensorflow.graph.transformations.layout import TFTransformationLayout
 from beta.nncf.tensorflow.graph.utils import collect_wrapped_layers
-from beta.nncf.tensorflow.graph.utils import get_custom_layers
-from beta.nncf.tensorflow.graph.utils import get_weight_node_name
 from beta.nncf.tensorflow.sparsity.base_algorithm import BaseSparsityController
 from beta.nncf.tensorflow.sparsity.base_algorithm import SPARSITY_LAYER_METATYPES
-from beta.nncf.tensorflow.sparsity.base_algorithm import SPARSITY_TF_OP_METATYPES
 from beta.nncf.tensorflow.sparsity.magnitude.functions import calc_magnitude_binary_mask
 from beta.nncf.tensorflow.sparsity.magnitude.functions import WEIGHT_IMPORTANCE_FUNCTIONS
 from beta.nncf.tensorflow.sparsity.magnitude.operation import BinaryMask
@@ -61,7 +60,7 @@ class MagnitudeSparsityBuilder(TFCompressionAlgorithmBuilder):
         processed_shared_layer_names = set()  # type: Set[str]
 
         for node in nncf_graph.get_all_nodes():
-            if nncf_graph.is_shared_node(node):
+            if node.is_shared():
                 target_layer_name, _ = get_original_name_and_instance_index(node.node_name)
                 if target_layer_name in processed_shared_layer_names:
                     continue
@@ -85,6 +84,26 @@ class MagnitudeSparsityBuilder(TFCompressionAlgorithmBuilder):
                         callable_object=BinaryMask(op_name),
                         priority=TransformationPriority.SPARSIFICATION_PRIORITY
                     ))
+
+        # Currently only applicable for models with custom layers. TODO(vshampor): expand custom layers
+        # as part of building an NNCFGraph.
+        for layer in get_custom_layers(model):
+            layer_graph = convert_layer_graph_to_nncf_graph(layer)
+            for node in layer_graph.get_all_nodes():
+                if (node.metatype in SPARSITY_TF_OP_METATYPES and
+                        should_consider_scope(node.node_name, target_scopes=None,
+                                              ignored_scopes=self.ignored_scopes)):
+                    weight_attr_name = get_weight_node_name(layer_graph, node.node_name)
+                    op_name = self._get_sparsity_operation_name(node.node_name, weight_attr_name)
+                    self._op_names.append(op_name)
+
+                    transformations.register(
+                        TFInsertionCommand(
+                            target_point=TFLayerWeight(layer.name, weight_attr_name),
+                            callable_object=BinaryMaskWithWeightsBackup(op_name, weight_attr_name),
+                            priority=TransformationPriority.SPARSIFICATION_PRIORITY
+                        ))
+
         return transformations
 
     def _get_sparsity_operation_name(self, layer_name, weight_attr_name):

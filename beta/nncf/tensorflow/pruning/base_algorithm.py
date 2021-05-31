@@ -35,21 +35,22 @@ from beta.nncf.tensorflow.sparsity.utils import strip_model_from_masks
 from beta.nncf.tensorflow.pruning.export_helpers import TF_PRUNING_OPERATOR_METATYPES
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.graph import NNCFGraph
+from nncf.common.graph.graph import NNCFNodeName
 from nncf.common.graph.transformations.commands import TransformationPriority
 from nncf.common.pruning.pruning_node_selector import PruningNodeSelector
 from nncf.common.pruning.clusterization import Cluster
 from nncf.common.pruning.clusterization import Clusterization
 from nncf.common.pruning.mask_propagation import MaskPropagationAlgorithm
+from nncf.common.pruning.structs import PrunedLayerInfoBase
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.common.pruning.statistics import PrunedLayerSummary
 from nncf.common.pruning.statistics import PrunedModelStatistics
 
 
-class PrunedLayerInfo:
-    def __init__(self, node_name: str, layer_name, node_id: int):
-        self.node_name = node_name
+class PrunedLayerInfo(PrunedLayerInfoBase):
+    def __init__(self, node_name: NNCFNodeName, layer_name: str, node_id: int):
+        super().__init__(node_name, node_id)
         self.layer_name = layer_name
-        self.nncf_node_id = node_id
 
 
 class BasePruningAlgoBuilder(TFCompressionAlgorithmBuilder):
@@ -126,7 +127,7 @@ class BasePruningAlgoBuilder(TFCompressionAlgorithmBuilder):
                 node.data['output_mask'] = tf.ones(node.module_attributes.out_channels)
                 if layer_name in shared_layers:
                     continue
-                if self._graph.is_shared_node(node):
+                if node.is_shared():
                     shared_layers.add(layer_name)
                 # Check that we need to prune weights in this op
                 assert self._is_pruned_layer(layer)
@@ -163,7 +164,7 @@ class BasePruningAlgoBuilder(TFCompressionAlgorithmBuilder):
                 continue
             if layer_name in shared_layers:
                 continue
-            if self._graph.is_shared_node(spec_node):
+            if spec_node.is_shared():
                 shared_layers.add(layer_name)
             nncf_logger.info('Adding Weight Pruner in: %s', layer_name)
             for weight_def in spec_node.metatype.weight_definitions:

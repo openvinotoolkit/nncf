@@ -184,7 +184,7 @@ def test_activation_shape_tracing(input_shape: Tuple):
     ]
     for node_id, ref_output_shapes in ref_node_ids_and_output_shapes:
         # pylint:disable=protected-access
-        output_edges = graph._get_nncf_graph_pattern_input_output([node_id, ]).output_edges
+        output_edges = graph.get_nncf_graph_pattern_io([node_id, ]).output_edges
         output_shapes = [x.tensor_shape for x in output_edges]
         assert output_shapes == ref_output_shapes, "Failed for {}".format(node_id)
 

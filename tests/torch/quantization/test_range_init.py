@@ -333,11 +333,11 @@ class TestRangeInit:
             range_init_config=[{
                 "type": "min_max",
                 "num_init_samples": 1,
-                "target_scopes": ["TwoConvTestModel/Sequential[features]"]
+                "target_scopes": ["{re}TwoConvTestModel/Sequential\\[features\\]/.*"]
             }, {
                 "type": "mean_min_max",
                 "num_init_samples": 2,
-                "ignored_scopes": ["TwoConvTestModel/Sequential[features]"]
+                "ignored_scopes": ["{re}TwoConvTestModel/Sequential\\[features\\]/.*"]
             }],
             qps_vs_expected_init_config=[
                 (
@@ -369,12 +369,12 @@ class TestRangeInit:
                     "type": "min_max",
                     "num_init_samples": 1,
                     "target_quantizer_group": "weights",
-                    "target_scopes": ["TwoConvTestModel/Sequential[features]"]
+                    "target_scopes": ["{re}TwoConvTestModel/Sequential\\[features\\]/.*"]
                 },
                 {
                     "type": "mean_min_max",
                     "num_init_samples": 2,
-                    "ignored_scopes": ["TwoConvTestModel/Sequential[features]",
+                    "ignored_scopes": ["{re}TwoConvTestModel/Sequential\\[features\\]/.*",
                                        "{re}/nncf_model_input_0"]
                 },
                 {
@@ -391,7 +391,8 @@ class TestRangeInit:
                         "max_percentile": "99.9"
                     },
                     "target_quantizer_group": "activations",
-                    "target_scopes": ["TwoConvTestModel/Sequential[features]/Sequential[1]/NNCFConv2d[0]"]
+                    "target_scopes": [
+                        "TwoConvTestModel/Sequential[features]/Sequential[1]/NNCFConv2d[0]/conv2d_0|OUTPUT"]
                 }
             ],
             qps_vs_expected_init_config=[
@@ -630,16 +631,16 @@ RANGE_INIT_CALL_COUNT_TEST_CASES = [
             "type": "min_max",
             "num_init_samples": 5,
             "target_quantizer_group": "weights",
-            "target_scopes": ["TwoConvTestModel/Sequential[features]"]
+            "target_scopes": ["{re}TwoConvTestModel/Sequential\\[features\\]/.*"]
         }, {
             "type": "mean_min_max",
             "num_init_samples": 2,
-            "ignored_scopes": ["TwoConvTestModel/Sequential[features]"]
+            "ignored_scopes": ["{re}TwoConvTestModel/Sequential\\[features\\]/.*"]
         }, {
             "type": "threesigma",
             "num_init_samples": 3,
             "target_quantizer_group": "activations",
-            "target_scopes": ["TwoConvTestModel/Sequential[features]"]
+            "target_scopes": ["{re}TwoConvTestModel/Sequential\\[features\\]/.*"]
         }],
         expected_call_count_initializer_create={
             'min_max': 2,

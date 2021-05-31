@@ -8,6 +8,7 @@ import torch
 from nncf.torch.initialization import DataLoaderBaseRunner
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.quantization.layers import BaseQuantizer
+from nncf.torch.quantization.quantizer_id import QuantizerId
 from nncf.torch.quantization.quantizer_id import WeightQuantizerId, NonWeightQuantizerId
 from nncf.torch.quantization.quantizer_setup import QuantizationPointBase, QuantizerSetupBase
 from nncf.common.quantization.structs import QuantizerGroup
@@ -127,23 +128,24 @@ class RangeInitParams:
             group = QuantizerGroup.ACTIVATIONS
         return self.get_init_config_for_scope_and_group(scope_str, group)
 
-    def get_init_config_for_scope_and_group(self, scope_str: str, group: QuantizerGroup) -> RangeInitConfig:
+    def get_init_config_for_scope_and_group(self, qid: QuantizerId, group: QuantizerGroup) -> RangeInitConfig:
+        string_to_match = str(qid)
         matches = []  # type: List[RangeInitConfig]
         for pl_config in self.per_layer_range_init_configs:
-            if should_consider_scope(scope_str, pl_config.target_scopes, pl_config.ignored_scopes):
+            if should_consider_scope(string_to_match, pl_config.target_scopes, pl_config.ignored_scopes):
                 if group == pl_config.target_group or pl_config.target_group is None:
                     matches.append(RangeInitConfig(pl_config.init_type, pl_config.num_init_samples,
                                                    pl_config.init_type_specific_params))
         if len(matches) > 1:
             raise ValueError("Location {} matches more than one per-layer initialization parameter "
-                             "definition!".format(scope_str))
+                             "definition!".format(string_to_match))
         if len(matches) == 1:
             return matches[0]
         if not matches and self.global_init_config is not None:
             return deepcopy(self.global_init_config)
 
         raise ValueError("Location {} does not match any per-layer initialization parameter "
-                         "definition!".format(scope_str))
+                         "definition!".format(string_to_match))
 
 
 class StatCollectorGenerator:

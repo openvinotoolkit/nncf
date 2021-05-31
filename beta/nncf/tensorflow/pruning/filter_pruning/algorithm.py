@@ -10,6 +10,7 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+from typing import Set
 
 from math import floor
 from typing import Dict
@@ -185,7 +186,7 @@ class FilterPruningController(BasePruningAlgoController):
 
         # 3. Initialize pruning quotas
         for cluster in self._pruned_layer_groups_info.get_all_clusters():
-            self._pruning_quotas[cluster.id] = floor(self._layers_out_channels[cluster.elements[0].layer_name]
+            self._pruning_quotas[cluster.id] = floor(self._layers_out_channels[cluster.elements[0].node_name]
                                                      * self.pruning_quota)
 
     def _flops_count_init(self):
@@ -431,13 +432,13 @@ class FilterPruningController(BasePruningAlgoController):
                                           linear_op_metatypes=LINEAR_LAYER_METATYPES).values())
         return flops
 
-    def _calculate_filters_importance_in_group(self, group: Cluster):
+    def _calculate_filters_importance_in_group(self, group: Cluster[PrunedLayerInfo]):
         """
         Calculates cumulative filters importance in the group.
         :param group: Nodes cluster
         :return a list of filter importance scores
         """
-        group_layers = [self._model.get_layer(node.layer_name) for node in group.nodes]
+        group_layers = [self._model.get_layer(node.layer_name) for node in group.elements]
         group_filters_num = tf.constant([get_filters_num(layer) for layer in group_layers])
         filters_num = group_filters_num[0]
         assert tf.reduce_all(group_filters_num == filters_num)
@@ -445,13 +446,13 @@ class FilterPruningController(BasePruningAlgoController):
         cumulative_filters_importance = tf.zeros(filters_num)
         # Calculate cumulative importance for all filters in this group
         shared_nodes = set()  # type: Set[str]
-        for minfo in group.nodes:
+        for minfo in group.elements:
             layer_name = minfo.layer_name
             if layer_name in shared_nodes:
                 continue
             nncf_node = self._original_graph.get_node_by_id(minfo.nncf_node_id)
             if nncf_node.is_shared():
-                shared_nodes.append(layer_name)
+                shared_nodes.add(layer_name)
             filters_importance = self._layer_filter_importance(self._model.get_layer(layer_name))
             cumulative_filters_importance += filters_importance
 

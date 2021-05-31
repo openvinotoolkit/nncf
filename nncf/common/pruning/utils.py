@@ -21,12 +21,13 @@ import numpy as np
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.graph import NNCFNodeName
-from nncf.common.graph.module_attributes import ConvolutionLayerAttributes
+from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.version_agnostic_op_names import get_version_agnostic_name
+from nncf.common.pruning.clusterization import Cluster
 from nncf.common.pruning.clusterization import Clusterization
+from nncf.common.pruning.structs import PrunedLayerInfoBase
 from nncf.common.utils.registry import Registry
-from nncf.torch.pruning.structs import PrunedModuleInfo
 
 
 def is_grouped_conv(node: NNCFNode) -> bool:
@@ -217,7 +218,7 @@ def get_conv_in_out_channels(graph: NNCFGraph):
     return in_channels, out_channels
 
 
-def get_cluster_next_nodes(graph: NNCFGraph, pruned_groups_info: Clusterization[PrunedModuleInfo],
+def get_cluster_next_nodes(graph: NNCFGraph, pruned_groups_info: Clusterization[PrunedLayerInfoBase],
                            prunable_types: List[str]) -> Dict[int, List[NNCFNodeName]]:
     """
     Finds nodes of `prunable_types` types that receive the output of a pruned cluster as input.
@@ -232,7 +233,7 @@ def get_cluster_next_nodes(graph: NNCFGraph, pruned_groups_info: Clusterization[
         next_nodes_cluster = set()
         cluster_nodes = set()
         for pruned_module_info in cluster.elements:
-            nncf_node = graph.get_node_by_id(pruned_module_info.nncf_node_id)
+            nncf_cluster_node = graph.get_node_by_id(pruned_module_info.nncf_node_id)
             cluster_nodes.add(nncf_cluster_node.node_name)
             curr_next_nodes = get_next_nodes_of_types(graph, nncf_cluster_node, prunable_types)
 
@@ -247,7 +248,8 @@ def count_flops_for_nodes(graph: NNCFGraph,
                           output_shapes:  Dict[NNCFNodeName, List[int]],
                           conv_op_metatypes: List[Type[OperatorMetatype]],
                           linear_op_metatypes: List[Type[OperatorMetatype]],
-                          input_channels: Dict[str, int] = None, output_channels: Dict[str, int] = None) -> Dict[str, int]:
+                          input_channels: Dict[str, int] = None,
+                          output_channels: Dict[str, int] = None) -> Dict[str, int]:
     """
     Counts the number FLOPs in the model for convolution and fully connected layers.
 
@@ -281,7 +283,8 @@ def count_flops_for_nodes(graph: NNCFGraph,
     return flops
 
 
-def calculate_in_out_channels_in_uniformly_pruned_model(pruning_groups, pruning_rate: float,
+def calculate_in_out_channels_in_uniformly_pruned_model(pruning_groups: List[Cluster[PrunedLayerInfoBase]],
+                                                        pruning_rate: float,
                                                         full_input_channels: Dict[str, int],
                                                         full_output_channels: Dict[str, int],
                                                         pruning_groups_next_nodes: Dict[int, List[str]]):
@@ -289,7 +292,7 @@ def calculate_in_out_channels_in_uniformly_pruned_model(pruning_groups, pruning_
     Imitates filters pruning by removing `pruning_rate` percent of output filters in each pruning group
     and updating corresponding input channels number in `pruning_groups_next_nodes` nodes.
 
-    :param pruning_groups: `Clusterization` of pruning groups.
+    :param pruning_groups: A list of pruning groups.
     :param pruning_rate: Target pruning rate.
     :param full_input_channels:  A dictionary of input channels number in original model.
     :param full_output_channels: A dictionary of output channels number in original model.
@@ -309,8 +312,8 @@ def calculate_in_out_channels_in_uniformly_pruned_model(pruning_groups, pruning_
         num_of_sparse_elems = get_rounded_pruned_element_number(old_out_channels, pruning_rate)
         new_out_channels_num = old_out_channels - num_of_sparse_elems
 
-        for node in group.elements:
-            tmp_out_channels[node.node_name] = new_out_channels_num
+        for minfo in group.elements:
+            tmp_out_channels[minfo.node_name] = new_out_channels_num
 
         # Prune in_channels in all next nodes of cluster
         for node_name in pruning_groups_next_nodes[group.id]:

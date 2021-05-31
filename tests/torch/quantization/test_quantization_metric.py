@@ -168,8 +168,8 @@ MEMORY_CONSUMPTION_STATS_TEST_CASES = [
             'memory_consumption_statistics': {
                 'fp32_weight_size': 88.74,
                 'quantized_weight_size': 22.18,
-                'max_fp32_activation_size': 0.015625,
-                'max_compressed_activation_size': 0.0625,
+                'max_fp32_activation_size': 0.0625,
+                'max_compressed_activation_size': 0.015625,
                 'weight_memory_consumption_decrease': 4.0
             }
         }

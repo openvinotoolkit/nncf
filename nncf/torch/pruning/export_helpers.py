@@ -24,7 +24,7 @@ from nncf.common.pruning.utils import PruningOperationsMetatypeRegistry
 from nncf.common.pruning.mask_propagation import identity_mask_propagation
 from nncf.common.pruning.mask_propagation import get_input_masks
 from nncf.common.pruning.mask_propagation import MaskPropagationAlgorithm
-from nncf.common.graph.module_attributes import GroupNormLayerAttributes
+from nncf.common.graph.layer_attributes import GroupNormLayerAttributes
 from nncf.torch.graph.operator_metatypes import (
     AddMetatype,
     AvgPool2dMetatype,

@@ -110,10 +110,10 @@ class FilterPruningController(BasePruningAlgoController):
         self.pruning_init = config.get("pruning_init", 0)
         self.pruning_quota = 1.0
 
-        self.modules_in_channels = {}  # type: Dict[NNCFNodeName, int]
-        self.modules_out_channels = {}  # type: Dict[NNCFNodeName, int]
-        self._modules_in_shapes = {}
-        self._modules_out_shapes = {}
+        self._modules_in_channels = {}  # type: Dict[NNCFNodeName, int]
+        self._modules_out_channels = {}  # type: Dict[NNCFNodeName, int]
+        self._modules_in_shapes = {}  # type: Dict[NNCFNodeName, List[int]]
+        self._modules_out_shapes = {}  # type: Dict[NNCFNodeName, List[int]]
         self.pruning_quotas = {}
         self.nodes_flops = {}  # type: Dict[NNCFNodeName, int]
         self.next_nodes = {}  # type: Dict[int, List[str]]
@@ -184,7 +184,7 @@ class FilterPruningController(BasePruningAlgoController):
 
         # 3. Init pruning quotas
         for cluster in self.pruned_module_groups_info.get_all_clusters():
-            self.pruning_quotas[cluster.id] = self.modules_out_channels[cluster.elements[0].module_node_name] \
+            self.pruning_quotas[cluster.id] = self._modules_out_channels[cluster.elements[0].node_name] \
                                               * self.pruning_quota
 
     def flops_count_init(self) -> None:
@@ -219,12 +219,12 @@ class FilterPruningController(BasePruningAlgoController):
         tmp_out_channels = self._modules_out_channels.copy()
 
         for group in self.pruned_module_groups_info.get_all_clusters():
-            assert all(tmp_out_channels[group.elements[0].module_node_name] == tmp_out_channels[node.module_node_name]
+            assert all(tmp_out_channels[group.elements[0].node_name] == tmp_out_channels[node.node_name]
                        for node in group.elements)
             new_out_channels_num = int(sum(group.elements[0].operand.binary_filter_pruning_mask))
             num_of_sparse_elems = len(group.elements[0].operand.binary_filter_pruning_mask) - new_out_channels_num
             for node in group.elements:
-                tmp_out_channels[node.module_node_name] = new_out_channels_num
+                tmp_out_channels[node.node_name] = new_out_channels_num
             # Prune in_channels in all next nodes of cluster
             next_nodes = self.next_nodes[group.id]
             for node_name in next_nodes:
@@ -499,7 +499,7 @@ class FilterPruningController(BasePruningAlgoController):
 
             cluster = self.pruned_module_groups_info.get_cluster_by_id(cluster_idx)
             for node in cluster.elements:
-                tmp_out_channels[node.module_node_name] -= 1
+                tmp_out_channels[node.node_name] -= 1
                 node.operand.binary_filter_pruning_mask[filter_idx] = 0
 
             # Prune in channels in all next nodes
