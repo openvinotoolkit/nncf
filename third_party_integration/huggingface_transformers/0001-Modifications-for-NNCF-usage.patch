@@ -42,13 +42,14 @@ index d9465c37..9da9d30f 100644
  from transformers import (
      CONFIG_MAPPING,
      MODEL_WITH_LM_HEAD_MAPPING,
-@@ -43,8 +45,14 @@ from transformers import (
+@@ -43,8 +45,15 @@ from transformers import (
  )
  
  
 -logger = logging.getLogger(__name__)
 +from nncf import NNCFConfig
 +from nncf.torch.structures import QuantizationRangeInitArgs
++from nncf.config.structure import BNAdaptationInitArgs
 +from nncf.torch.initialization import InitializingDataLoader
 +from transformers.trainer import get_train_dataloader_for_init
  
@@ -58,7 +59,7 @@ index d9465c37..9da9d30f 100644
  
  MODEL_CONFIG_CLASSES = list(MODEL_WITH_LM_HEAD_MAPPING.keys())
  MODEL_TYPES = tuple(conf.model_type for conf in MODEL_CONFIG_CLASSES)
-@@ -192,16 +200,58 @@ def main():
+@@ -192,16 +200,60 @@ def main():
              "and load it from here, using --tokenizer_name"
          )
  
@@ -93,8 +94,10 @@ index d9465c37..9da9d30f 100644
 +                def get_inputs(self, dataloader_output):
 +                    return (), dataloader_output
 +
-+            nncf_config.register_extra_structs(
-+                [QuantizationRangeInitArgs(WikitextInitializingDataLoader(train_dataloader))])
++            nncf_config.register_extra_structs([
++                QuantizationRangeInitArgs(WikitextInitializingDataLoader(train_dataloader)),
++                BNAdaptationInitArgs(WikitextInitializingDataLoader(train_dataloader)),
++            ])
 +
      if model_args.model_name_or_path:
 -        model = AutoModelWithLMHead.from_pretrained(
@@ -160,10 +163,11 @@ diff --git a/examples/question-answering/run_squad.py b/examples/question-answer
 index 2bd4e90f..2b1a60e8 100644
 --- a/examples/question-answering/run_squad.py
 +++ b/examples/question-answering/run_squad.py
-@@ -25,9 +25,12 @@ import timeit
+@@ -25,9 +25,13 @@ import timeit
  
  import numpy as np
  import torch
++from nncf.config.structure import BNAdaptationInitArgs
 +from nncf.torch.structures import QuantizationRangeInitArgs
 +from nncf.common.utils.tensorboard import prepare_for_tensorboard
  from torch.utils.data import DataLoader, RandomSampler, SequentialSampler
@@ -304,7 +308,7 @@ index 2bd4e90f..2b1a60e8 100644
      args = parser.parse_args()
  
      if args.doc_stride >= args.max_seq_length - args.max_query_length:
-@@ -732,19 +768,67 @@ def main():
+@@ -732,19 +768,69 @@ def main():
          do_lower_case=args.do_lower_case,
          cache_dir=args.cache_dir if args.cache_dir else None,
      )
@@ -333,8 +337,10 @@ index 2bd4e90f..2b1a60e8 100644
 +                                       'p_mask': dataloader_output[6]})
 +                    return (dataloader_output[0],), kwargs
 +
-+            initializing_data_loader = SquadInitializingDataloader(train_dataloader)
-+            nncf_config.register_extra_structs([QuantizationRangeInitArgs(initializing_data_loader)])
++            nncf_config.register_extra_structs([
++                QuantizationRangeInitArgs(SquadInitializingDataloader(train_dataloader)),
++                BNAdaptationInitArgs(SquadInitializingDataloader(train_dataloader)),
++            ])
 +
 +    retval = AutoModelForQuestionAnswering.from_pretrained(
          args.model_name_or_path,
@@ -428,12 +434,13 @@ diff --git a/examples/text-classification/run_glue.py b/examples/text-classifica
 index cf9b765a..957cdba2 100644
 --- a/examples/text-classification/run_glue.py
 +++ b/examples/text-classification/run_glue.py
-@@ -24,6 +24,9 @@ from dataclasses import dataclass, field
+@@ -24,6 +24,10 @@ from dataclasses import dataclass, field
  from typing import Callable, Dict, Optional
  
  import numpy as np
 +from nncf import NNCFConfig
 +from nncf.torch.structures import QuantizationRangeInitArgs
++from nncf.config.structure import BNAdaptationInitArgs
 +from nncf.torch.initialization import InitializingDataLoader
  
  from transformers import AutoConfig, AutoModelForSequenceClassification, AutoTokenizer, EvalPrediction, GlueDataset
@@ -447,7 +454,7 @@ index cf9b765a..957cdba2 100644
  
  logger = logging.getLogger(__name__)
  
-@@ -126,14 +129,42 @@ def main():
+@@ -126,14 +129,44 @@ def main():
          model_args.tokenizer_name if model_args.tokenizer_name else model_args.model_name_or_path,
          cache_dir=model_args.cache_dir,
      )
@@ -470,8 +477,10 @@ index cf9b765a..957cdba2 100644
 +                def get_inputs(self, dataloader_output):
 +                    return (), dataloader_output
 +
-+            nncf_config.register_extra_structs(
-+                [QuantizationRangeInitArgs(GlueInitializingDataLoader(train_dataloader))])
++            nncf_config.register_extra_structs([
++                QuantizationRangeInitArgs(GlueInitializingDataLoader(train_dataloader)),
++                BNAdaptationInitArgs(GlueInitializingDataLoader(train_dataloader)),
++            ])
 +
 +    retval = AutoModelForSequenceClassification.from_pretrained(
          model_args.model_name_or_path,
@@ -504,11 +513,12 @@ diff --git a/examples/text-classification/run_xnli.py b/examples/text-classifica
 index c1db6fa3..ca44bd1c 100644
 --- a/examples/text-classification/run_xnli.py
 +++ b/examples/text-classification/run_xnli.py
-@@ -25,8 +25,12 @@ import random
+@@ -25,8 +25,13 @@ import random
  
  import numpy as np
  import torch
 +from nncf.torch.structures import QuantizationRangeInitArgs
++from nncf.config.structure import BNAdaptationInitArgs
 +from nncf.common.utils.tensorboard import prepare_for_tensorboard
  from torch.utils.data import DataLoader, RandomSampler, SequentialSampler, TensorDataset
  from torch.utils.data.distributed import DistributedSampler
@@ -644,7 +654,7 @@ index c1db6fa3..ca44bd1c 100644
      args = parser.parse_args()
  
      if (
-@@ -551,24 +589,72 @@ def main():
+@@ -551,24 +589,74 @@ def main():
          do_lower_case=args.do_lower_case,
          cache_dir=args.cache_dir,
      )
@@ -671,8 +681,10 @@ index c1db6fa3..ca44bd1c 100644
 +                            'bert'] else None  # XLM and DistilBERT don't use segment_ids
 +                    return (dataloader_output[0],), kwargs
 +
-+            initializing_data_loader = XnliInitializingDataloader(train_dataloader,)
-+            nncf_config.register_extra_structs([QuantizationRangeInitArgs(initializing_data_loader)])
++            nncf_config.register_extra_structs([
++                QuantizationRangeInitArgs(XnliInitializingDataloader(train_dataloader)),
++                BNAdaptationInitArgs(XnliInitializingDataloader(train_dataloader)),
++            ])
 +
 +
 +    retval = AutoModelForSequenceClassification.from_pretrained(
