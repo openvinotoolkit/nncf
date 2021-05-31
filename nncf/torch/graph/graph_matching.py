@@ -51,6 +51,8 @@ class Expression:
             if not result:
                 continue
             if isinstance(result, list):
+                # https://github.com/PyCQA/pylint/issues/3105
+                # pylint: disable=E1133
                 for res in result:
                     n, following = res
                     following = list(following)
@@ -58,6 +60,7 @@ class Expression:
                         n = [n]
 
                     all_matches.append((n, following))
+                # pylint: enable=E1133
             else:
                 n, following = result
                 following = list(following)
