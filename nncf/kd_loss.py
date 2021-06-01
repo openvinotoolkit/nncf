@@ -67,7 +67,7 @@ class KDLossCalculator(PTCompressionLoss):
                 return True
         return False
 
-    def forward(self):
+    def forward(self, input_=None, target=None):
         loss = self._target_model.get_kdloss()
         for i in range(len(loss)):
             loss[i] = loss[i].unsqueeze(0)

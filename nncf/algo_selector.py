@@ -34,7 +34,7 @@ class ZeroCompressionLoss(PTCompressionLoss):
         super().__init__()
         self._device = device
 
-    def calculate(self) -> torch.Tensor:
+    def calculate(self, input_=None, target=None) -> torch.Tensor:
         return torch.zeros([], device=self._device)
 
 

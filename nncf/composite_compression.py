@@ -11,7 +11,7 @@
  limitations under the License.
 """
 
-from typing import TypeVar
+from typing import TypeVar, Any
 
 import torch.nn
 from copy import deepcopy
@@ -35,6 +35,17 @@ class PTCompositeCompressionLoss(CompositeCompressionLoss, PTCompressionLoss):
     def __init__(self):
         super().__init__()
         self._child_losses = torch.nn.ModuleList()
+
+    def calculate(self, input_=None, target=None) -> Any:
+        """
+        Traverses through all children and calculates the total compression
+        loss value.
+        :return: The compression loss value.
+        """
+        result_loss = 0
+        for loss in self._child_losses:
+            result_loss += loss(input_, target)
+        return result_loss
 
     @property
     def child_losses(self) -> torch.nn.ModuleList:

@@ -703,7 +703,21 @@ KNOWLEDGE_DISTILLATION_SCHEMA = {
         },
         "scale": with_attributes(_NUMBER,
                                  description="Scale parameter for kdloss"),
-        "type": with_attributes(_STRING, description="Is KDLoss computed via SoftMax")
+        "type": with_attributes(_STRING, description="Type of KDLoss (mse/softmax)")
+    },
+    "additionalProperties": False
+}
+
+KNOWLEDGE_DISTILLATION_OLD_ALGO_NAME_IN_CONFIG = 'knowledge_distillation_old'
+KNOWLEDGE_DISTILLATION_OLD_SCHEMA = {
+    **BASIC_COMPRESSION_ALGO_SCHEMA,
+    "properties": {
+        "algorithm": {
+            "const": KNOWLEDGE_DISTILLATION_OLD_ALGO_NAME_IN_CONFIG
+        },
+        "scale": with_attributes(_NUMBER,
+                                 description="Scale parameter for kdloss"),
+        "is_softmax": with_attributes(_STRING, description="Is KDLoss computed via SoftMax")
     },
     "additionalProperties": False
 }
@@ -714,7 +728,8 @@ ALL_SUPPORTED_ALGO_SCHEMA = [BINARIZATION_SCHEMA,
                              MAGNITUDE_SPARSITY_SCHEMA,
                              RB_SPARSITY_SCHEMA,
                              FILTER_PRUNING_SCHEMA,
-                             KNOWLEDGE_DISTILLATION_SCHEMA]
+                             KNOWLEDGE_DISTILLATION_SCHEMA,
+                             KNOWLEDGE_DISTILLATION_OLD_SCHEMA]
 
 REF_VS_ALGO_SCHEMA = {BINARIZATION_ALGO_NAME_IN_CONFIG: BINARIZATION_SCHEMA,
                       QUANTIZATION_ALGO_NAME_IN_CONFIG: QUANTIZATION_SCHEMA,
@@ -722,7 +737,8 @@ REF_VS_ALGO_SCHEMA = {BINARIZATION_ALGO_NAME_IN_CONFIG: BINARIZATION_SCHEMA,
                       MAGNITUDE_SPARSITY_ALGO_NAME_IN_CONFIG: MAGNITUDE_SPARSITY_SCHEMA,
                       RB_SPARSITY_ALGO_NAME_IN_CONFIG: RB_SPARSITY_SCHEMA,
                       FILTER_PRUNING_ALGO_NAME_IN_CONFIG: FILTER_PRUNING_SCHEMA,
-                      KNOWLEDGE_DISTILLATION_ALGO_NAME_IN_CONFIG: KNOWLEDGE_DISTILLATION_SCHEMA}
+                      KNOWLEDGE_DISTILLATION_ALGO_NAME_IN_CONFIG: KNOWLEDGE_DISTILLATION_SCHEMA,
+                      KNOWLEDGE_DISTILLATION_OLD_ALGO_NAME_IN_CONFIG: KNOWLEDGE_DISTILLATION_OLD_SCHEMA}
 
 TARGET_DEVICE_SCHEMA = {
     "type": "string",
