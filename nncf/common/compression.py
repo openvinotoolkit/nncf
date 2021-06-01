@@ -14,7 +14,7 @@
 from typing import Optional, List, Tuple, Any
 
 from nncf.api.compression import CompressionAlgorithmController
-from nncf.common.factory import create_exporter
+import nncf.common.factory as factory
 
 
 class BaseCompressionAlgorithmController(CompressionAlgorithmController):
@@ -48,5 +48,5 @@ class BaseCompressionAlgorithmController(CompressionAlgorithmController):
                 - ({'x': None, 'y': y},) for keyword arguments only.
         """
         self.prepare_for_export()
-        exporter = create_exporter(self.model, input_names, output_names, model_args)
+        exporter = factory.create_exporter(self.model, input_names, output_names, model_args)
         exporter.export_model(save_path, save_format)

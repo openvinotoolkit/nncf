@@ -16,15 +16,7 @@ from typing import Optional, List, Tuple, Any
 from nncf.api.compression import ModelType
 from nncf.common.exporter import Exporter
 from nncf.common.initialization import NNCFDataLoader
-from nncf.common.batchnorm_adaptation import BatchnormAdaptationAlgorithmImpl
-
 from nncf.common.utils.backend import __nncf_backend__
-if __nncf_backend__ == 'Torch':
-    from nncf.torch.exporter import PTExporter
-    from nncf.torch.batchnorm_adaptation import PTBatchnormAdaptationAlgorithmImpl
-elif __nncf_backend__ == 'TensorFlow':
-    from beta.nncf.tensorflow.exporter import TFExporter
-    from beta.nncf.tensorflow.batchnorm_adaptation import TFBatchnormAdaptationAlgorithmImpl
 
 
 def create_exporter(model: ModelType,
@@ -35,8 +27,10 @@ def create_exporter(model: ModelType,
     Factory for building an exporter.
     """
     if __nncf_backend__ == 'Torch':
+        from nncf.torch.exporter import PTExporter
         exporter = PTExporter(model, input_names, output_names, model_args)
     elif __nncf_backend__ == 'TensorFlow':
+        from beta.nncf.tensorflow.exporter import TFExporter
         exporter = TFExporter(model, input_names, output_names, model_args)
 
     return exporter
@@ -45,16 +39,20 @@ def create_exporter(model: ModelType,
 def create_bn_adaptation_algorithm_impl(data_loader: NNCFDataLoader,
                                         num_bn_adaptation_steps: int,
                                         num_bn_forget_steps: int,
-                                        device: Optional[str] = None) -> BatchnormAdaptationAlgorithmImpl:
+                                        device: Optional[str] = None):
     """
     Factory for building a batchnorm adaptation algorithm implementation.
+
+    :return: Implementation of the `BatchnormAdaptationAlgorithmImpl` class.
     """
     if __nncf_backend__ == 'Torch':
+        from nncf.torch.batchnorm_adaptation import PTBatchnormAdaptationAlgorithmImpl
         bn_adaptation_algorithm_impl = PTBatchnormAdaptationAlgorithmImpl(data_loader,
                                                                           num_bn_adaptation_steps,
                                                                           num_bn_forget_steps,
                                                                           device)
     elif __nncf_backend__ == 'Tensorflow':
+        from beta.nncf.tensorflow.batchnorm_adaptation import TFBatchnormAdaptationAlgorithmImpl
         bn_adaptation_algorithm_impl = TFBatchnormAdaptationAlgorithmImpl(data_loader,
                                                                           num_bn_adaptation_steps,
                                                                           num_bn_forget_steps,
