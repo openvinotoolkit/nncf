@@ -62,6 +62,7 @@ from nncf.torch.quantization.precision_init.traces_order import TracesPerLayer
 from nncf.torch.quantization.quantizer_setup import SingleConfigQuantizerSetup
 from nncf.torch.structures import QuantizationPrecisionInitArgs
 from nncf.torch.utils import get_all_modules_by_type
+from nncf.torch.utils import manual_seed
 from nncf.torch.utils import safe_thread_call
 from tests.conftest import TEST_ROOT
 from tests.helpers import BasicConvTestModel
@@ -262,6 +263,7 @@ def ssd_vgg_512_test():
 
 def get_avg_traces(model, init_device: str):
     num_layers = len(get_all_modules_by_type(model, ['Conv2d', 'Linear']))
+    manual_seed(0)
     return torch.randperm(num_layers).to(init_device) + 1
 
 
@@ -293,8 +295,8 @@ class HAWQTestStruct(NamedTuple):
 INCV3_FLOPS_PER_MODULE = [83886080, 100663296, 117440512,
                           56623104, 56623104, 198180864, 50331648,
                           56623104, 56623104]
-INCV3_BITWIDTH_PER_MODULE = [4, 8, 4,
-                             4, 8, 4, 4,
+INCV3_BITWIDTH_PER_MODULE = [8, 8, 4,
+                             4, 4, 4, 4,
                              8, 4]
 INCV3_BITS_COMPLEXITY = map(lambda x, y: x * y, INCV3_FLOPS_PER_MODULE, INCV3_BITWIDTH_PER_MODULE)
 INCV3_COMPRESSION_RATIO = sum(INCV3_FLOPS_PER_MODULE) * 8 / sum(INCV3_BITS_COMPLEXITY)
@@ -347,7 +349,6 @@ def test_hawq_precision_init(_seed, dataset_dir, tmp_path, mocker, params):
     else:
         pregen_device = 'cpu'
 
-    pregen_traces_for_all_layers = params.avg_traces_creator(model, pregen_device)
     criterion = nn.CrossEntropyLoss().cuda()
     if not dataset_dir:
         dataset_dir = str(tmp_path)
@@ -356,6 +357,7 @@ def test_hawq_precision_init(_seed, dataset_dir, tmp_path, mocker, params):
 
     mocked_trace = mocker.patch('nncf.torch.quantization.hessian_trace.HessianTraceEstimator.get_average_traces',
                                 autospec=True)
+    pregen_traces_for_all_layers = params.avg_traces_creator(model, pregen_device)
     ratio_list_spy = mocker.spy(HAWQPrecisionInitializer, 'get_compression_ratio_per_qconfig_sequence')
     chosen_index_spy = mocker.spy(HAWQPrecisionInitializer, 'choose_qconfig_sequence')
 
