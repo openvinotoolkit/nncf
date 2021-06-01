@@ -167,7 +167,7 @@ class FilterPruningController(BasePruningAlgoController):
                                        self.pruning_rate_for_filters(minfo))
 
         model_statistics = PrunedModelStatistics(self._pruning_rate, list(pruned_layers_summary.values()))
-
+        self._update_benchmark_statistics()
         target_pruning_level = self.scheduler.current_pruning_level
 
         stats = FilterPruningStatistics(model_statistics, self.full_flops, self.current_flops,
@@ -413,7 +413,7 @@ class FilterPruningController(BasePruningAlgoController):
                 pruning_module.binary_filter_pruning_mask = mask
 
         # Calculate actual flops and weights number with new masks
-        self.current_flops, self.current_params_num = self._calculate_flops_and_weights_pruned_model_by_masks()
+        self._update_benchmark_statistics()
 
     def _set_binary_masks_for_pruned_modules_globally(self, pruning_rate: float) -> None:
         """
@@ -452,7 +452,7 @@ class FilterPruningController(BasePruningAlgoController):
                 pruning_module.binary_filter_pruning_mask = mask
 
         # Calculate actual flops and weights number with new masks
-        self.current_flops, self.current_params_num = self._calculate_flops_and_weights_pruned_model_by_masks()
+        self._update_benchmark_statistics()
 
     def _set_binary_masks_for_pruned_modules_globally_by_flops_target(self,
                                                                       target_flops_pruning_rate: float) -> None:
@@ -639,6 +639,9 @@ class FilterPruningController(BasePruningAlgoController):
         if actual_pruning_level >= target_pruning_level:
             return CompressionStage.FULLY_COMPRESSED
         return CompressionStage.PARTIALLY_COMPRESSED
+
+    def _update_benchmark_statistics(self):
+        self.current_flops, self.current_params_num = self._calculate_flops_and_weights_pruned_model_by_masks()
 
     def _run_batchnorm_adaptation(self):
         if self._bn_adaptation is None:

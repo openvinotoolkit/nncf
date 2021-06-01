@@ -144,7 +144,7 @@ class FilterPruningController(BasePruningAlgoController):
 
     def statistics(self, quickly_collected_only: bool = False) -> NNCFStatistics:
         model_statistics = self._calculate_pruned_model_stats()
-
+        self._update_benchmark_statistics()
         target_pruning_level = self.scheduler.current_pruning_level
 
         stats = FilterPruningStatistics(model_statistics, self.full_flops, self.current_flops,
@@ -275,7 +275,7 @@ class FilterPruningController(BasePruningAlgoController):
                 self._set_operation_masks([layer], nncf_node.data['output_mask'])
 
         # Calculate actual flops and weights number with new masks
-        self.current_flops, self.current_params_num = self._calculate_flops_and_weights_pruned_model_by_masks()
+        self._update_benchmark_statistics()
 
     def _set_binary_masks_for_pruned_layers_globally(self, pruning_rate: float):
         """
@@ -322,7 +322,7 @@ class FilterPruningController(BasePruningAlgoController):
                 self._set_operation_masks([layer], nncf_node.data['output_mask'])
 
         # Calculate actual flops with new masks
-        self.current_flops, self.current_params_num = self._calculate_flops_and_weights_pruned_model_by_masks()
+        self._update_benchmark_statistics()
 
     def _set_binary_masks_for_pruned_modules_globally_by_flops_target(self,
                                                                       target_flops_pruning_rate: float):
@@ -495,6 +495,9 @@ class FilterPruningController(BasePruningAlgoController):
                                        output_channels=tmp_out_channels,
                                        conv_op_metatypes=GENERAL_CONV_LAYER_METATYPES,
                                        linear_op_metatypes=LINEAR_LAYER_METATYPES)
+
+    def _update_benchmark_statistics(self):
+        self.current_flops, self.current_params_num = self._calculate_flops_and_weights_pruned_model_by_masks()
 
     def _layer_filter_importance(self, layer: NNCFWrapper):
         layer_metatype = get_keras_layer_metatype(layer)
