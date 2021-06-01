@@ -132,5 +132,6 @@ class DataLoaderBNAdaptationRunner:
 
 
 def register_default_init_args(nncf_config, train_loader, device = None):
-    nncf_config.register_extra_structs([BNAdaptationInitArgs(data_loader=InitializingDataLoader(train_loader), device=device)])
+    nncf_config.register_extra_structs([BNAdaptationInitArgs(data_loader=InitializingDataLoader(train_loader), 
+                                                             device=device)])
     return nncf_config
