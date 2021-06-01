@@ -4,6 +4,7 @@ from typing import Callable
 from typing import Dict
 from typing import Optional
 from typing import Tuple
+from typing import Union
 
 import torch
 from functools import partial
@@ -246,7 +247,7 @@ def default_criterion_fn(outputs: Any, target: Any, criterion: Any) -> torch.Ten
 
 
 def register_default_init_args(nncf_config: 'NNCFConfig',
-                               train_loader: torch.utils.data.DataLoader,
+                               train_loader: Union[torch.utils.data.DataLoader, InitializingDataLoader],
                                criterion: _Loss = None,
                                criterion_fn: Callable[[Any, Any, _Loss], torch.Tensor] = None,
                                autoq_eval_fn: Callable[[torch.nn.Module, torch.utils.data.DataLoader], float] = None,

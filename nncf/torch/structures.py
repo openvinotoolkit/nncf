@@ -10,13 +10,17 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-from typing import Callable, Any
+from typing import Any
+from typing import Callable
+from typing import Union
+
 
 import torch
 from torch.nn.modules.loss import _Loss
 from torch.utils.data import DataLoader
 
 from nncf.config.structure import NNCFExtraConfigStruct
+from nncf.initialization import InitializingDataLoader
 
 
 class QuantizationPrecisionInitArgs(NNCFExtraConfigStruct):
@@ -66,7 +70,7 @@ class QuantizationRangeInitArgs(NNCFExtraConfigStruct):
                    use the device of the model's parameters.
     """
 
-    def __init__(self, data_loader: DataLoader, device: str = None):
+    def __init__(self, data_loader: Union[DataLoader, InitializingDataLoader], device: str = None):
         self.data_loader = data_loader
         self.device = device
 
@@ -74,6 +78,26 @@ class QuantizationRangeInitArgs(NNCFExtraConfigStruct):
     def get_id(cls) -> str:
         return "quantization_range_init_args"
 
+
+class BNAdaptationInitArgs(NNCFExtraConfigStruct):
+    """
+    Stores arguments for BatchNorm statistics adaptation procedure.
+    Adaptation is done by inferring a number of data batches on a compressed model
+    while the BN layers are updating the rolling_mean and rolling_variance stats.
+    :param data_loader: 'data_loader' - provides an iterable over the given dataset. Instance of
+                nncf.initialization.InitializingDataLoader; a regular 'torch.utils.data.DataLoader' may
+                also be passed, but only in the simple case when it returns a tuple of (input, target) tensors.
+    :param device: Device to perform initialization at. Either 'cpu', 'cuda', or None (default); if None, will
+                   use the device of the model's parameters.
+    """
+
+    def __init__(self, data_loader: Union[DataLoader, InitializingDataLoader], device: str = None):
+        self.data_loader = data_loader
+        self.device = device
+
+    @classmethod
+    def get_id(cls) -> str:
+        return "bn_adaptation_init_args"
 
 class AutoQPrecisionInitArgs(NNCFExtraConfigStruct):
     """
@@ -87,7 +111,7 @@ class AutoQPrecisionInitArgs(NNCFExtraConfigStruct):
                 create different compressed model objects for each distributed process and the distributed training
                 will fail.
     """
-    def __init__(self, data_loader: DataLoader,
+    def __init__(self, data_loader: Union[DataLoader, InitializingDataLoader],
                  eval_fn: Callable[[torch.nn.Module, torch.utils.data.DataLoader], float],
                  nncf_config: 'NNCFConfig'):
         self.data_loader = data_loader
