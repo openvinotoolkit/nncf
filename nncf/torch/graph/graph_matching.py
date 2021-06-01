@@ -59,8 +59,6 @@ class Expression:
                     n = [n]
 
                 all_matches.append((n, following))
-        if not all_matches:
-            return []
         return all_matches
 
     def all_matches(self, nodes, graph):
@@ -278,10 +276,6 @@ def find_subgraphs_match_expression(graph: nx.DiGraph, expression: Expression) -
             continue
 
         all_matches = expression.all_matches([node], graph)
-
-        if all_matches is None:
-            continue
-
         all_matches = sorted(all_matches, key=lambda x: len(x[0]), reverse=True)
 
         longest_valid_match = None
