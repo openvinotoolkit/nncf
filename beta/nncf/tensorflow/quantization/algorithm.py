@@ -251,12 +251,8 @@ class QuantizationController(TFCompressionAlgorithmController):
     def initialize(self, dataset=None, loss=None):
         self._initializer(self._model, dataset, loss)
 
-        # TODO(Evgeny Tsykunov) Add BNadaptation support for detection and segmentation models
-        if self._model.name in ['inception_v3',
-                                'mobilenetv2_1.00_224',
-                                'MobilenetV3large',
-                                'MobilenetV3small',
-                                'resnet50']:
+        init_bn_adapt_config = self._config.get("initializer", {}).get('batchnorm_adaptation', {})
+        if init_bn_adapt_config:
             self._run_batchnorm_adaptation()
 
     def statistics(self, quickly_collected_only: bool = False) -> NNCFStatistics:
