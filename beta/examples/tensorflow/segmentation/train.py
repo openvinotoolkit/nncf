@@ -38,7 +38,6 @@ from beta.examples.tensorflow.common.utils import SummaryWriter
 from beta.examples.tensorflow.common.utils import Timer
 from beta.examples.tensorflow.segmentation.models.model_selector import get_predefined_config
 from beta.examples.tensorflow.segmentation.models.model_selector import get_model_builder
-from beta.nncf.tensorflow.initialization import register_default_init_args
 
 
 def get_argument_parser():

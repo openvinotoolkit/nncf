@@ -38,7 +38,6 @@ from beta.examples.tensorflow.common.utils import get_saving_parameters
 from beta.examples.tensorflow.common.utils import write_metrics
 from beta.examples.tensorflow.object_detection.models.model_selector import get_predefined_config
 from beta.examples.tensorflow.object_detection.models.model_selector import get_model_builder
-from beta.nncf.tensorflow.initialization import register_default_init_args
 
 
 def get_argument_parser():
