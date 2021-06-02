@@ -146,7 +146,7 @@ def run(config):
     train_builder, validation_builder = builders
     train_dataset, validation_dataset = datasets
 
-    config.nncf_config = register_default_init_args(config.nncf_config, train_dataset)
+    config = register_default_init_args(config, train_dataset)
 
     train_epochs = config.epochs
     train_steps = train_builder.steps_per_epoch

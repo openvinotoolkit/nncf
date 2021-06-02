@@ -18,6 +18,7 @@ import tensorflow as tf
 from nncf.common.initialization import NNCFDataLoader
 from nncf.config.structure import BNAdaptationInitArgs
 from nncf.config.config import NNCFConfig
+from beta.examples.tensorflow.common.sample_config import SampleConfig
 
 
 class InitializingDataLoader(NNCFDataLoader):
@@ -37,20 +38,25 @@ class InitializingDataLoader(NNCFDataLoader):
         return iter(self._data_loader)
 
 
-def register_default_init_args(nncf_config: NNCFConfig,
+def register_default_init_args(config: SampleConfig,
                                data_loader: Union[tf.data.Dataset, InitializingDataLoader],
-                               device: str = None) -> NNCFConfig:
+                               device: str = None) -> SampleConfig:
     """
     Register extra structures for the NNCFConfig.
     Initialization of some compression algorithms requires certain extra structures.
-    :param nncf_config: NNCF config without extra structures.
+
+    :param config: Config without extra structures.
     :param data_loader: Dataset used for initialization.
     :param device: Device to perform initialization. If `device` is `None` then the device
         of the model parameters will be used.
-    :return: NNCF config with extra structures.
+    :return: Config with extra structures.
     """
-    nncf_config.register_extra_structs([
-        BNAdaptationInitArgs(data_loader=InitializingDataLoader(data_loader, nncf_config['batch_size']),
+    batch_size = config.get('batch_size')
+    if not batch_size:
+        batch_size = config.nncf_config.get('batch_size')
+
+    config.nncf_config.register_extra_structs([
+        BNAdaptationInitArgs(data_loader=InitializingDataLoader(data_loader, batch_size),
                              device=device)
     ])
-    return nncf_config
+    return config
