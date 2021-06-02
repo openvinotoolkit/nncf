@@ -51,6 +51,7 @@ def test_install(tmp_venv_with_nncf, install_type, tmp_path, package_type):
             "{} install {}/dist/*.whl ".format(pip_with_venv, PROJECT_ROOT), check=True, shell=True)
 
     subprocess.run(
-        "{} {}/install_checks.py {}".format(python_executable_with_venv, run_path,
-                                            'cpu' if install_type == "CPU" else 'cuda'),
+        "{} {}/install_checks.py {} {}".format(python_executable_with_venv, run_path,
+                                               'cpu' if install_type == "CPU" else 'cuda',
+                                               package_type),
         check=True, shell=True, cwd=run_path)
