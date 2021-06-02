@@ -1965,7 +1965,8 @@ class QuantizerPropagationSolver:
         """Determines the initial subset of the nodes that must be quantized
            and corresponding allowed quantization configs (possibly multiple) for each
            quantizer."""
-        for node_key, node in quant_prop_graph.nodes.items():
+        for node_key in nx.lexicographical_topological_sort(quant_prop_graph):
+            node = quant_prop_graph.nodes[node_key]
             node_type = node[QuantizerPropagationStateGraph.NODE_TYPE_NODE_ATTR]
             if node_type == QuantizerPropagationStateGraphNodeType.OPERATOR:
                 num_input_activations = quant_prop_graph.get_num_input_activations(node_key)
@@ -2084,7 +2085,9 @@ class QuantizerPropagationSolver:
     def _setup_initial_quantizers_for_operator_node(self, operator_node_key: str,
                                                     quant_prop_graph: QuantizerPropagationStateGraph):
         node = quant_prop_graph.nodes[operator_node_key]
-        preds = list(quant_prop_graph.predecessors(operator_node_key))
+
+        # preds are in sorted order for reproducibility
+        preds = list(sorted(quant_prop_graph.predecessors(operator_node_key)))
 
         if not preds:
             return  # TODO: remove this once module insertion points are included in the IP graph

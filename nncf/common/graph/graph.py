@@ -286,10 +286,12 @@ class NNCFGraph:
 
     def topological_sort(self) -> List[NNCFNode]:
         """
-        Returns nodes in topologically sorted order.
+        Returns nodes in topologically sorted order, additionally sorted in ascending node ID order.
         """
         return [self._nx_node_to_nncf_node(self._nx_graph.nodes[node_name])
-                for node_name in nx.topological_sort(self._nx_graph)]
+                for node_name in
+                nx.lexicographical_topological_sort(self._nx_graph,
+                                                    key=lambda x: self._nx_graph.nodes[x][NNCFGraph.ID_NODE_ATTR])]
 
     def dump_graph(self, path: str):
         """

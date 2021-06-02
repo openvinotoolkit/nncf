@@ -108,8 +108,10 @@ GROUP_PRUNING_MODULES_TEST_CASES = [
                                   not_pruned_nodes=[],
                                   pruned_groups=[['1 TestModelEltwiseCombination/NNCFConv2d[conv1]/conv2d_0',
                                                   '2 TestModelEltwiseCombination/NNCFConv2d[conv2]/conv2d_0',
-                                                  '4 TestModelEltwiseCombination/NNCFConv2d[conv3]/conv2d_0',
-                                                  '6 TestModelEltwiseCombination/NNCFConv2d[conv4]/conv2d_0'],
+                                                  # Order is determined by runtime cluster merge logic.
+                                                  # TODO: should the pruned module info be delivered sorted?
+                                                  '6 TestModelEltwiseCombination/NNCFConv2d[conv4]/conv2d_0',
+                                                  '4 TestModelEltwiseCombination/NNCFConv2d[conv3]/conv2d_0'],
                                                  ['8 TestModelEltwiseCombination/NNCFConv2d[conv5]/conv2d_0',
                                                   '9 TestModelEltwiseCombination/NNCFConv2d[conv6]/conv2d_0']],
                                   pruned_groups_by_node_id=[[1, 2, 4, 6], [8, 9]],
