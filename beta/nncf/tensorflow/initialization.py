@@ -13,8 +13,7 @@
 
 from functools import partial
 from contextlib import contextmanager
-from typing import Dict
-from typing import Union
+from typing import Dict, Union
 
 import tensorflow as tf
 
