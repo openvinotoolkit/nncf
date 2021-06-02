@@ -78,7 +78,7 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
             self._parse_group_params(self.config, quantizer_group)
 
     def build_controller(self, model):
-        return QuantizationController(model, self.config, self.should_init)
+        return QuantizationController(model, self.config)
 
     def _parse_group_params(self, config, quantizer_group):
         params_dict = config.get(quantizer_group, {})
@@ -232,13 +232,12 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
 
 
 class QuantizationController(TFCompressionAlgorithmController):
-    def __init__(self, target_model, config, should_init):
+    def __init__(self, target_model, config):
         super().__init__(target_model)
         self._initializer = MinMaxInitializer(config)
         self._scheduler = BaseCompressionScheduler()
         self._loss = TFZeroCompressionLoss()
         self._config = config
-        self._should_init = should_init
         self._bn_adaptation = None
 
     @property
@@ -250,8 +249,14 @@ class QuantizationController(TFCompressionAlgorithmController):
         return self._loss
 
     def initialize(self, dataset=None, loss=None):
-        if self._should_init:
-            self._initializer(self._model, dataset, loss)
+        self._initializer(self._model, dataset, loss)
+
+        # TODO(Evgeny Tsykunov) Add BNadaptation support for detection and segmentation models
+        if self._model.name in ['inception_v3',
+                                'mobilenetv2_1.00_224',
+                                'MobilenetV3large',
+                                'MobilenetV3small',
+                                'resnet50']:
             self._run_batchnorm_adaptation()
 
     def statistics(self, quickly_collected_only: bool = False) -> NNCFStatistics:

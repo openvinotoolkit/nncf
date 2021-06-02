@@ -261,7 +261,6 @@ def run(config):
     datasets = [builder.build() for builder in builders]
     train_builder, test_builder = builders
     train_dataset, test_dataset = datasets
-    config.nncf_config = register_default_init_args(config.nncf_config, train_dataset)
     train_dist_dataset = strategy.experimental_distribute_dataset(train_dataset)
     test_dist_dataset = strategy.experimental_distribute_dataset(test_dataset)
 
