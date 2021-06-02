@@ -78,7 +78,7 @@ class TFBatchnormAdaptationAlgorithmImpl(BatchnormAdaptationAlgorithmImpl):
         finally:
             self._apply_to_model(self._apply_to_batchnorms(restore_original_bn_momentum))
 
-    def _infer_batch(self, x: tf.Tensor) -> None:
+    def _infer_batch(self, x) -> None:
         """
         Run the forward pass of the model in train mode.
         BatchNormalization moving statistics are getting updated.
