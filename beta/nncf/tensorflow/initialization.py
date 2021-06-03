@@ -17,7 +17,6 @@ import tensorflow as tf
 
 from nncf.common.initialization import NNCFDataLoader
 from nncf.config.structure import BNAdaptationInitArgs
-from nncf.config.config import NNCFConfig
 from beta.examples.tensorflow.common.sample_config import SampleConfig
 
 
