@@ -83,7 +83,7 @@ EXTRAS_REQUIRE = {
 
 setup(
     name="nncf",
-    version=find_version(os.path.join(here, "nncf/version.py")),
+    version=find_version(os.path.join(here, "nncf/torch/version.py")),
     author="Intel",
     author_email="alexander.kozlov@intel.com",
     description="Neural Networks Compression Framework",
@@ -93,7 +93,7 @@ setup(
     packages=find_packages(exclude=["tests", "tests.*",
                                     "examples", "examples.*",
                                     "tools", "tools.*",
-                                    "beta", "beta.*"]),
+                                    "nncf.tensorflow", "nncf.tensorflow.*"]),
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: Apache Software License",
