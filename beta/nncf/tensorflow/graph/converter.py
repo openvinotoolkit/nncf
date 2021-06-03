@@ -10,46 +10,25 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-from typing import Union
 
 from addict import Dict
-import networkx as nx
 import tensorflow as tf
 from tensorflow.python.framework.convert_to_constants import convert_variables_to_constants_v2
 
+from beta.nncf.tensorflow.graph.metatypes.common import GENERAL_CONV_LAYER_METATYPES
+from beta.nncf.tensorflow.graph.metatypes.matcher import get_keras_layer_metatype
+from beta.nncf.tensorflow.graph.metatypes.matcher import get_op_metatype
+from beta.nncf.tensorflow.graph.metatypes.nncf_op import OutputNoopMetatype
 from beta.nncf.tensorflow.graph.utils import get_expanded_node_name
 from beta.nncf.tensorflow.graph.utils import is_functional_model
 from beta.nncf.tensorflow.graph.utils import is_sequential_model
-from beta.nncf.tensorflow.layers.common import GENERAL_CONV_LAYERS
+from beta.nncf.tensorflow.graph.utils import unwrap_layer
 from beta.nncf.tensorflow.layers.data_layout import get_input_channel_axis
-from beta.nncf.tensorflow.layers.wrapper import NNCFWrapper
 from nncf.common.graph.graph import NNCFGraph
+from nncf.common.graph.graph import NNCFGraphNodeType
 from nncf.common.graph.module_attributes import ConvolutionModuleAttributes
 
-
-def convert_keras_model_to_nxmodel(model):
-    """
-    Convert Keras model graph to the NetworkX directed graph
-
-    :param model: Keras model
-    :return: NetworkX directed graph
-    """
-    func_model = is_functional_model(model)
-    seq_model = is_sequential_model(model)
-
-    if not func_model and not seq_model:
-        RuntimeError('convert_keras_model_to_nxmodel function supports '
-                     'only sequential or functional models')
-
-    if func_model:
-        nxmodel = _get_nxmodel_from_functional(model)
-    else:
-        nxmodel = _get_nxmodel_from_sequential(model)
-
-    #nx.drawing.nx_pydot.write_dot(nxmodel, str("nxmodel_graph.dot"))
-
-    return nxmodel
-
+PREFIX_AUXILIARY_OUTPUT_NODE = 'output'
 
 def _get_layer_type(layer):
     if layer['class_name'] == 'TensorFlowOpLayer':
@@ -67,10 +46,17 @@ def _get_layer_dtype(layer):
     return dtype
 
 
-def _get_nxmodel_from_functional(model):
-    model_config = model.get_config()
-    raw_nodes = _prepare_raw_nodes(model)
-    return _get_nxmodel_from_raw_nodes(model_config, raw_nodes)
+def _get_layer(model: tf.keras.Model, layer_name: str) -> tf.keras.layers.Layer:
+    try:
+        return model.get_layer(layer_name)
+    except ValueError:
+        for layer in model.submodules:
+            if not isinstance(layer, tf.keras.layers.Layer):
+                continue
+            if layer.name == layer_name:
+                return layer
+
+    raise ValueError(f'No such layer: {layer_name}.')
 
 
 def _process_outputs(outputs, raw_nodes):
@@ -88,36 +74,7 @@ def _process_outputs(outputs, raw_nodes):
     return raw_nodes
 
 
-def _get_nxmodel_from_raw_nodes(model_config, raw_nodes):
-    nxmodel = nx.DiGraph()
-    nxmodel = _update_graph_with_raw_nodes(nxmodel, raw_nodes, model_config)
-    return nxmodel
-
-
-def _get_nxmodel_from_sequential(model):
-    nxmodel = nx.DiGraph()
-    producer_layer = None
-    model_config = model.get_config()
-    for layer in model_config['layers']:
-        layer_name = layer['config']['name']
-        layer_type = _get_layer_type(layer)
-        layer_dtype = _get_layer_dtype(layer)
-        data_format = layer['config'].get('data_format')
-        nxmodel.add_node(layer_name,
-                         type=layer_type,
-                         dtype=layer_dtype,
-                         data_format=data_format,
-                         in_ports=[0],
-                         out_ports=[0],
-                         is_shared=False)
-        if producer_layer is not None:
-            nxmodel.add_edge(producer_layer, layer_name)
-        producer_layer = layer_name
-
-    return nxmodel
-
-
-def convert_layer_graph_to_nxmodel(layer, use_graph_var_names=False):
+def convert_layer_graph_to_nncf_graph(layer, use_graph_var_names=False):
     def get_graph_to_layer_var_names_map(concrete_fun):
         names_map = {}
         for layer_var in concrete_fun.variables:
@@ -135,19 +92,22 @@ def convert_layer_graph_to_nxmodel(layer, use_graph_var_names=False):
     nodes = wrapped_function.graph.as_graph_def().node
     graph_to_layer_names_map = {} if use_graph_var_names else get_graph_to_layer_var_names_map(concr_fn)
 
-    nxmodel = nx.DiGraph()
+    nncf_graph = NNCFGraph()
     for node in nodes:
-        nxmodel.add_node(graph_to_layer_names_map.get(node.name, node.name),
-                         type=node.op, dtype=node.attr['dtype'])
+        nncf_graph.add_node(
+            graph_to_layer_names_map.get(node.name, node.name),
+            type=node.op,
+            dtype=node.attr['dtype'],
+            metatype=get_op_metatype(node.op))
 
     for node in nodes:
         for input_node in node.input:
             node_name = graph_to_layer_names_map.get(node.name, node.name)
             input_node_name = graph_to_layer_names_map.get(input_node, input_node)
-            if input_node_name in nxmodel.nodes:
-                nxmodel.add_edge(input_node_name, node_name)
+            if input_node_name in nncf_graph.get_all_node_keys():
+                nncf_graph.add_edge(input_node_name, node_name)
 
-    return nxmodel
+    return nncf_graph
 
 
 def convert_keras_model_to_nncf_graph(model: tf.keras.Model) -> NNCFGraph:
@@ -161,7 +121,7 @@ def convert_keras_model_to_nncf_graph(model: tf.keras.Model) -> NNCFGraph:
     seq_model = is_sequential_model(model)
 
     if not func_model and not seq_model:
-        RuntimeError('convert_keras_model_to_nxmodel function supports '
+        RuntimeError('convert_keras_model_to_nncf_graph function supports '
                      'only sequential or functional models')
 
     if func_model:
@@ -192,14 +152,20 @@ def _prepare_raw_nodes(model: tf.keras.Model) -> Dict:
         layer_type = _get_layer_type(layer)
         layer_dtype = _get_layer_dtype(layer)
         data_format = layer['config'].get('data_format')
-        model_layer = model.get_layer(layer_name)
+        model_layer = _get_layer(model, layer_name)
+        layer_metatype = get_keras_layer_metatype(model_layer)
 
+        is_output = False
+        # pylint: disable=protected-access
+        if model_layer in model._output_layers:
+            is_output = True
         if layer['inbound_nodes']:
             is_shared = len(layer['inbound_nodes']) > 1
             for i, inbound_node in enumerate(layer['inbound_nodes']):
                 input_shape = _prepare_shape(model_layer.inbound_nodes[i].input_shapes)
                 instance = raw_nodes[layer_name][i]
                 instance['type'] = layer_type
+                instance['metatype'] = layer_metatype
                 instance['dtype'] = layer_dtype
                 instance['data_format'] = data_format
                 instance['is_shared'] = is_shared
@@ -207,8 +173,8 @@ def _prepare_raw_nodes(model: tf.keras.Model) -> Dict:
                 instance['in_ports'] = list(range(len(inbound_node)))
                 if not instance['out_ports']:
                     instance['out_ports'] = set()
-                if layer_type in GENERAL_CONV_LAYERS:
-                    module_attributes = _get_module_attributes(model_layer, instance)
+                if layer_metatype in GENERAL_CONV_LAYER_METATYPES:
+                    module_attributes = _get_module_attributes(model_layer)
                     instance.update({NNCFGraph.MODULE_ATTRIBUTES: module_attributes})
                 for parent_name, parent_instance_index, parent_out_ports, _ in inbound_node:
                     parent_instance = raw_nodes[parent_name][parent_instance_index]
@@ -216,17 +182,22 @@ def _prepare_raw_nodes(model: tf.keras.Model) -> Dict:
                         parent_instance['out_ports'].add(parent_out_ports)
                     else:
                         parent_instance['out_ports'] = {parent_out_ports}
+                instance['is_output'] = is_output
+                instance['output_shape'] = _prepare_shape(model_layer.inbound_nodes[i].output_shapes)
         else:
             instance = raw_nodes[layer_name][0]
             instance['type'] = layer_type
             instance['dtype'] = layer_dtype
+            instance['metatype'] = layer_metatype
             instance['data_format'] = data_format
             instance['is_shared'] = False
             instance['in_ports'] = []
             instance['input_shape'] = _prepare_shape(model_layer.input_shape)
-            if layer_type in GENERAL_CONV_LAYERS:
-                module_attributes = _get_module_attributes(model_layer, instance)
+            if layer_metatype in GENERAL_CONV_LAYER_METATYPES:
+                module_attributes = _get_module_attributes(model_layer)
                 instance.update({NNCFGraph.MODULE_ATTRIBUTES: module_attributes})
+            instance['is_output'] = is_output
+            instance['output_shape'] = _prepare_shape(model_layer.output_shape)
 
     outputs = model_config['output_layers']
     raw_nodes = _process_outputs(outputs, raw_nodes)
@@ -244,13 +215,28 @@ def _get_nncf_graph_from_raw_nodes(model_config: dict, raw_nodes: Dict) -> NNCFG
     return nncf_graph
 
 
-def _update_graph_with_raw_nodes(graph: Union[nx.DiGraph, NNCFGraph],
+def _update_graph_with_raw_nodes(graph: NNCFGraph,
                                  raw_nodes: Dict,
-                                 model_config: dict) -> Union[nx.DiGraph, NNCFGraph]:
+                                 model_config: dict) -> NNCFGraph:
     for original_name, instances in raw_nodes.items():
         for i, attributes in instances.items():
             node_name = get_expanded_node_name(original_name, i, attributes['is_shared'])
-            graph.add_node(node_name, original_name=original_name, **attributes)
+            graph.add_node(node_name, **attributes)
+
+            if attributes['is_output']:
+                # Aligning the structure of auxiliary output nodes is only necessary for NNCFGraph
+                output_aux_node_name = PREFIX_AUXILIARY_OUTPUT_NODE + '_{}'.format(i)
+                node_attrs = {
+                    NNCFGraph.NODE_TYPE_ATTR: NNCFGraphNodeType.OUTPUT_NODE,
+                    NNCFGraph.METATYPE_ATTR: OutputNoopMetatype,
+                    'original_name': output_aux_node_name
+                }
+                edge_attrs = {
+                    NNCFGraph.ACTIVATION_SHAPE_EDGE_ATTR: attributes['output_shape'],
+                    NNCFGraph.IN_PORT_NAME_EDGE_ATTR: 0,
+                }
+                graph.add_node(output_aux_node_name, **node_attrs)
+                graph.add_edge(node_name, output_aux_node_name, **edge_attrs)
 
     for layer in model_config['layers']:
         layer_name = layer['name']
@@ -278,19 +264,23 @@ def _get_nncf_graph_from_sequential(model: tf.keras.Model) -> NNCFGraph:
         layer_type = _get_layer_type(layer)
         layer_dtype = _get_layer_dtype(layer)
         data_format = layer['config'].get('data_format')
+        model_layer = _get_layer(model, layer_name)
+        layer_metatype = get_keras_layer_metatype(model_layer)
+
         attrs = dict(type=layer_type,
                      dtype=layer_dtype,
+                     metatype=layer_metatype,
                      data_format=data_format,
                      in_ports=[0],
                      out_ports=[0],
                      is_shared=False)
-        if layer_type in GENERAL_CONV_LAYERS:
-            module_attributes = _get_module_attributes(model.get_layer(layer_name), attrs)
+        if layer_metatype in GENERAL_CONV_LAYER_METATYPES:
+            module_attributes = _get_module_attributes(model_layer)
             attrs.update({NNCFGraph.MODULE_ATTRIBUTES: module_attributes})
 
         nncf_graph.add_node(layer_name, **attrs)
         if producer_layer is not None:
-            input_shape = _prepare_shape(model.get_layer(layer_name).input_shape)
+            input_shape = _prepare_shape(_get_layer(model, layer_name).input_shape)
             attr = {
                 NNCFGraph.ACTIVATION_SHAPE_EDGE_ATTR: input_shape[0],
                 NNCFGraph.IN_PORT_NAME_EDGE_ATTR: 0
@@ -298,19 +288,29 @@ def _get_nncf_graph_from_sequential(model: tf.keras.Model) -> NNCFGraph:
             nncf_graph.add_edge(producer_layer, layer_name, **attr)
         producer_layer = layer_name
 
+    output_model_layer = model.get_layer(producer_layer)
+    output_aux_node_name = PREFIX_AUXILIARY_OUTPUT_NODE + '_0'
+    node_attrs = {
+        NNCFGraph.NODE_TYPE_ATTR: NNCFGraphNodeType.OUTPUT_NODE,
+        NNCFGraph.METATYPE_ATTR: OutputNoopMetatype,
+        'original_name': output_aux_node_name
+    }
+    edge_attrs = {
+        NNCFGraph.ACTIVATION_SHAPE_EDGE_ATTR: _prepare_shape(output_model_layer.output_shape),
+        NNCFGraph.IN_PORT_NAME_EDGE_ATTR: 0,
+    }
+    nncf_graph.add_node(output_aux_node_name, **node_attrs)
+    nncf_graph.add_edge(producer_layer, output_aux_node_name, **edge_attrs)
+
     return nncf_graph
 
 
-def _get_module_attributes(layer: tf.keras.layers.Layer, attrs: dict) -> ConvolutionModuleAttributes:
+def _get_module_attributes(layer: tf.keras.layers.Layer) -> ConvolutionModuleAttributes:
     channel_axis = get_input_channel_axis(layer)
-    if isinstance(layer, NNCFWrapper):
-        strides = layer.layer.strides[0]
-        groups = layer.layer.groups
-        kernel_size = layer.layer.kernel_size
-    else:
-        strides = layer.strides[0]
-        groups = layer.groups
-        kernel_size = layer.kernel_size
+    layer_ = unwrap_layer(layer)
+    strides = layer_.strides[0]
+    groups = layer_.groups
+    kernel_size = layer_.kernel_size
 
     return ConvolutionModuleAttributes(layer.trainable,
                                        layer.get_input_shape_at(0)[channel_axis],

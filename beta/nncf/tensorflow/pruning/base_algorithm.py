@@ -11,7 +11,6 @@
  limitations under the License.
 """
 
-from typing import Dict
 from typing import List
 from typing import Tuple
 
@@ -20,6 +19,7 @@ import tensorflow as tf
 from beta.nncf.tensorflow.api.compression import TFCompressionAlgorithmController
 from beta.nncf.tensorflow.api.compression import TFCompressionAlgorithmBuilder
 from beta.nncf.tensorflow.graph.converter import convert_keras_model_to_nncf_graph
+from beta.nncf.tensorflow.graph.metatypes.keras_layers import TFBatchNormalizationLayerMetatype
 from beta.nncf.tensorflow.graph.model_transformer import TFModelTransformer
 from beta.nncf.tensorflow.pruning.export_helpers import TFElementwise
 from beta.nncf.tensorflow.pruning.export_helpers import TFIdentityMaskForwardOps
@@ -28,15 +28,10 @@ from beta.nncf.tensorflow.graph.transformations.commands import TFInsertionComma
 from beta.nncf.tensorflow.graph.transformations.layout import TFTransformationLayout
 from beta.nncf.tensorflow.graph.utils import get_layer_identifier
 from beta.nncf.tensorflow.graph.utils import collect_wrapped_layers
-from beta.nncf.tensorflow.layers.common import BIAS_ATTR_NAME
-from beta.nncf.tensorflow.layers.common import LAYERS_WITH_WEIGHTS
-from beta.nncf.tensorflow.layers.common import SPECIAL_LAYERS_WITH_WEIGHTS
-from beta.nncf.tensorflow.layers.common import WEIGHT_ATTR_NAME
 from beta.nncf.tensorflow.pruning.utils import get_filter_axis
 from beta.nncf.tensorflow.pruning.utils import get_filters_num
 from beta.nncf.tensorflow.pruning.utils import is_shared
 from beta.nncf.tensorflow.sparsity.magnitude.operation import BinaryMask
-from beta.nncf.tensorflow.sparsity.utils import convert_raw_to_printable
 from beta.nncf.tensorflow.sparsity.utils import strip_model_from_masks
 from beta.nncf.tensorflow.pruning.export_helpers import TF_PRUNING_OPERATOR_METATYPES
 from nncf.common.graph import NNCFNode
@@ -47,13 +42,15 @@ from nncf.common.pruning.model_analysis import NodesCluster
 from nncf.common.pruning.model_analysis import Clusterization
 from nncf.common.pruning.mask_propagation import MaskPropagationAlgorithm
 from nncf.common.utils.logger import logger as nncf_logger
+from nncf.common.pruning.statistics import PrunedLayerSummary
+from nncf.common.pruning.statistics import PrunedModelStatistics
 
 
 class PrunedLayerInfo:
-    def __init__(self, layer_name: str, node_id: int):
+    def __init__(self, node_name: str, layer_name, node_id: int):
+        self.node_name = node_name
         self.layer_name = layer_name
         self.nncf_node_id = node_id
-        self.key = self.layer_name
 
 
 class BasePruningAlgoBuilder(TFCompressionAlgorithmBuilder):
@@ -114,13 +111,14 @@ class BasePruningAlgoBuilder(TFCompressionAlgorithmBuilder):
         transformations = TFTransformationLayout()
         shared_layers = set()
 
-        self._pruned_layer_groups_info = Clusterization('layer_name')
+        self._pruned_layer_groups_info = Clusterization('node_name')
 
         for i, group in enumerate(groups_of_nodes_to_prune.get_all_clusters()):
             group_minfos = []
             for node in group.nodes:
                 layer_name = get_layer_identifier(node)
                 layer = model.get_layer(layer_name)
+                group_minfos.append(PrunedLayerInfo(node.node_name, layer_name, node.node_id))
 
                 # Add output_mask to nodes to run mask_propagation
                 # and detect spec_nodes that will be pruned.
@@ -133,13 +131,17 @@ class BasePruningAlgoBuilder(TFCompressionAlgorithmBuilder):
                 # Check that we need to prune weights in this op
                 assert self._is_pruned_layer(layer)
                 nncf_logger.info('Adding Weight Pruner in: %s', layer_name)
-                for attr_name_key in [WEIGHT_ATTR_NAME, BIAS_ATTR_NAME]:
-                    attr_name = LAYERS_WITH_WEIGHTS[node.node_type][attr_name_key]
-                    if getattr(layer, attr_name) is not None:
-                        transformations.register(
-                            self._get_insertion_command_binary_mask(layer_name, attr_name)
-                        )
-                group_minfos.append(PrunedLayerInfo(layer_name, node.node_id))
+                for weight_def in node.metatype.weight_definitions:
+                    transformations.register(
+                        self._get_insertion_command_binary_mask(
+                            layer_name, weight_def.weight_attr_name)
+                    )
+                if node.metatype.bias_attr_name is not None and \
+                        getattr(layer, node.metatype.bias_attr_name) is not None:
+                    transformations.register(
+                        self._get_insertion_command_binary_mask(
+                            layer_name, node.metatype.bias_attr_name)
+                    )
 
             cluster = NodesCluster(i, group_minfos, [n.node_id for n in group.nodes])
             self._pruned_layer_groups_info.add_cluster(cluster)
@@ -150,11 +152,10 @@ class BasePruningAlgoBuilder(TFCompressionAlgorithmBuilder):
 
         # Add masks for all spec modules, because prunable batchnorm layers can be determines
         # at the moment of mask propagation
-        types_spec_layers = list(SPECIAL_LAYERS_WITH_WEIGHTS)
-        if not self._prune_batch_norms:
-            types_spec_layers.remove('BatchNormalization')
+        types_spec_layers = [TFBatchNormalizationLayerMetatype] \
+            if self._prune_batch_norms else []
 
-        spec_nodes = self._graph.get_nodes_by_types(types_spec_layers)
+        spec_nodes = self._graph.get_nodes_by_metatypes(types_spec_layers)
         for spec_node in spec_nodes:
             layer_name = get_layer_identifier(spec_node)
             if spec_node.data['output_mask'] is None:
@@ -165,11 +166,15 @@ class BasePruningAlgoBuilder(TFCompressionAlgorithmBuilder):
             if is_shared(spec_node):
                 shared_layers.add(layer_name)
             nncf_logger.info('Adding Weight Pruner in: %s', layer_name)
-            for attr_name_key in [WEIGHT_ATTR_NAME, BIAS_ATTR_NAME]:
-                attr_name = SPECIAL_LAYERS_WITH_WEIGHTS[spec_node.node_type][attr_name_key]
+            for weight_def in spec_node.metatype.weight_definitions:
                 transformations.register(
-                    self._get_insertion_command_binary_mask(layer_name, attr_name)
+                    self._get_insertion_command_binary_mask(
+                        layer_name, weight_def.weight_attr_name)
                 )
+            transformations.register(
+                self._get_insertion_command_binary_mask(
+                    layer_name, spec_node.metatype.bias_attr_name)
+            )
         return transformations
 
     def _get_insertion_command_binary_mask(self, layer_name, attr_name):
@@ -274,14 +279,7 @@ class BasePruningAlgoController(TFCompressionAlgorithmController):
         if pruning_flops_target:
             self.prune_flops = True
 
-    def statistics(self, quickly_collected_only=False) -> Dict[str, object]:
-        raw_pruning_statistics = self.raw_statistics()
-        prefix = 'pruning'
-        header = ['Name', 'Weight\'s Shape', 'Mask Shape', 'PR']
-        return convert_raw_to_printable(raw_pruning_statistics, prefix, header)
-
-    def raw_statistics(self) -> Dict[str, object]:
-        raw_pruning_statistics = {}
+    def _calculate_pruned_model_stats(self) -> PrunedModelStatistics:
         pruning_rates = []
         mask_names = []
         weights_shapes = []
@@ -305,23 +303,18 @@ class BasePruningAlgoController(TFCompressionAlgorithmController):
                         pruned_filters_number = filters_number - tf.reduce_sum(filter_mask)
                         pruning_rates.append(pruned_filters_number / filters_number)
 
-        raw_pruning_statistics.update({
-            'pruning_rate': self.pruning_rate
-        })
-
         pruning_rates = tf.keras.backend.batch_get_value(pruning_rates)
-
         mask_pruning = list(zip(mask_names, weights_shapes, mask_shapes, pruning_rates))
-        raw_pruning_statistics['pruning_statistic_by_layer'] = []
-        for mask_name, weights_shape, mask_shape, pruning_rate in mask_pruning:
-            raw_pruning_statistics['pruning_statistic_by_layer'].append({
-                'Name': mask_name,
-                'Weight\'s Shape': weights_shape,
-                'Mask Shape': mask_shape,
-                'PR': pruning_rate
-            })
 
-        return raw_pruning_statistics
+        pruned_layers_summary = []
+        for mask_name, weights_shape, mask_shape, pruning_rate in mask_pruning:
+            # TODO(andrey-churkin): Should be calculated
+            weight_pruning_level = -1
+            mask_pruning_level = -1
+            pruned_layers_summary.append(PrunedLayerSummary(mask_name, weights_shape, mask_shape,
+                                                            weight_pruning_level, mask_pruning_level, pruning_rate))
+
+        return PrunedModelStatistics(self.pruning_rate, pruned_layers_summary)
 
     def strip_model(self, model: tf.keras.Model) -> tf.keras.Model:
         return strip_model_from_masks(model, self._op_names)

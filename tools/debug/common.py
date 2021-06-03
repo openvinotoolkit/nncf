@@ -17,8 +17,7 @@ import torch
 from functools import partial
 from torch import nn
 
-from examples.common.model_loader import load_model
-from examples.common.utils import print_statistics
+from examples.torch.common.model_loader import load_model
 from nncf.torch.checkpoint_loading import load_state
 from nncf.torch.layers import NNCFConv1d, NNCFConv2d, NNCFLinear
 from nncf.torch.model_creation import create_compressed_model
@@ -149,7 +148,7 @@ def load_torch_model(config, cuda=False):
     if cuda:
         model = model.cuda()
         model = torch.nn.DataParallel(model)
-    print_statistics(compression_ctrl.statistics())
+    print(compression_ctrl.statistics().to_str())
     return model
 
 

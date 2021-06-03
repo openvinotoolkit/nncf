@@ -14,7 +14,6 @@
 from typing import List
 
 import torch
-from texttable import Texttable
 
 from nncf.torch.algo_selector import COMPRESSION_ALGORITHMS
 from nncf.api.compression import CompressionStage
@@ -25,6 +24,11 @@ from nncf.torch.sparsity.layers import BinaryMask
 from nncf.torch.sparsity.magnitude.functions import WEIGHT_IMPORTANCE_FUNCTIONS, calc_magnitude_binary_mask
 from nncf.common.sparsity.schedulers import SPARSITY_SCHEDULERS
 from nncf.common.accuracy_aware_training.training_loop import ADAPTIVE_COMPRESSION_CONTROLLERS
+from nncf.common.sparsity.statistics import MagnitudeSparsityStatistics
+from nncf.common.statistics import NNCFStatistics
+from nncf.common.sparsity.statistics import LayerThreshold
+from nncf.common.batchnorm_adaptation import BatchnormAdaptationAlgorithm
+from nncf.config.utils import extract_bn_adaptation_init_params
 
 
 @COMPRESSION_ALGORITHMS.register('magnitude_sparsity')
@@ -54,28 +58,30 @@ class MagnitudeSparsityController(BaseSparsityAlgoController):
             scheduler_cls = SPARSITY_SCHEDULERS.get(params.get('schedule', 'polynomial'))
             self._scheduler = scheduler_cls(self, params)
 
+        self._bn_adaptation = None
+
         self.set_sparsity_level(sparsity_init)
 
-    def statistics(self, quickly_collected_only=False):
-        stats = super().statistics(quickly_collected_only)
-        if self._mode == 'global':
-            stats['sparsity_threshold'] =\
-                 self._select_threshold(self.sparsity_rate_for_sparsified_modules(), self.sparsified_module_info)
-        else:
-            table = Texttable()
-            header = ["Name", "Per-layer sparsity threshold"]
-            data = [header]
+    def statistics(self, quickly_collected_only: bool = False) -> NNCFStatistics:
+        model_statistics = self._calculate_sparsified_model_stats()
 
-            for minfo in self.sparsified_module_info:
-                drow = {h: 0 for h in header}
-                drow["Name"] = minfo.module_name
-                drow['Per-layer sparsity threshold'] =\
-                     self._select_threshold(self.sparsity_rate_for_sparsified_modules(minfo), [minfo])
-                row = [drow[h] for h in header]
-                data.append(row)
-            table.add_rows(data)
-            stats['sparsity_thresholds'] = table
-        return stats
+        threshold_statistics = []
+        if self._mode == 'global':
+            global_threshold = self._select_threshold(self.sparsity_rate_for_sparsified_modules(),
+                                                      self.sparsified_module_info)
+        for minfo in self.sparsified_module_info:
+            if self._mode == 'global':
+                threshold = global_threshold
+            else:
+                threshold = self._select_threshold(self.sparsity_rate_for_sparsified_modules(minfo), [minfo])
+
+            threshold_statistics.append(LayerThreshold(minfo.module_name, threshold))
+
+        stats = MagnitudeSparsityStatistics(model_statistics, threshold_statistics)
+
+        nncf_stats = NNCFStatistics()
+        nncf_stats.register('magnitude_sparsity', stats)
+        return nncf_stats
 
     def freeze(self):
         for layer in self.sparsified_module_info:
@@ -93,8 +99,9 @@ class MagnitudeSparsityController(BaseSparsityAlgoController):
             target_sparsified_module_info_list = [target_sparsified_module_info]
         threshold = self._select_threshold(sparsity_level, target_sparsified_module_info_list)
         self._set_masks_for_threshold(threshold, target_sparsified_module_info_list)
+
         if run_batchnorm_adaptation:
-            self.run_batchnorm_adaptation(self._config)
+            self._run_batchnorm_adaptation()
 
     def _select_threshold(self, sparsity_level, target_sparsified_module_info_list):
         all_weights = self._collect_all_weights(target_sparsified_module_info_list)
@@ -126,3 +133,8 @@ class MagnitudeSparsityController(BaseSparsityAlgoController):
         if self.scheduler.current_sparsity_level >= self.scheduler.target_level:
             return CompressionStage.FULLY_COMPRESSED
         return CompressionStage.PARTIALLY_COMPRESSED
+
+    def _run_batchnorm_adaptation(self):
+        if self._bn_adaptation is None:
+            self._bn_adaptation = BatchnormAdaptationAlgorithm(**extract_bn_adaptation_init_params(self._config))
+        self._bn_adaptation.run(self.model)

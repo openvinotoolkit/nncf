@@ -16,9 +16,9 @@ from typing import TypeVar
 import torch.nn
 from copy import deepcopy
 
-from nncf.api.composite_compression import CompositeCompressionAlgorithmBuilder
-from nncf.api.composite_compression import CompositeCompressionAlgorithmController
-from nncf.api.composite_compression import CompositeCompressionLoss
+from nncf.common.composite_compression import CompositeCompressionAlgorithmBuilder
+from nncf.common.composite_compression import CompositeCompressionAlgorithmController
+from nncf.common.composite_compression import CompositeCompressionLoss
 from nncf.torch.compression_method_api import PTCompressionAlgorithmBuilder
 from nncf.torch.compression_method_api import PTCompressionAlgorithmController
 from nncf.torch.compression_method_api import PTCompressionLoss
@@ -156,3 +156,8 @@ class PTCompositeCompressionAlgorithmController(
     @compression_rate.setter
     def compression_rate(self, compression_rate: float) -> None:
         raise NotImplementedError
+
+    def load_state(self, states):
+        self._check_loaded_compression_stage(states)
+        for child_ctrl, child_state in zip(self.child_ctrls, states['scheduler']):
+            child_ctrl.load_state({'scheduler': child_state})

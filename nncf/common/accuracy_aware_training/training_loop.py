@@ -20,7 +20,7 @@ import numpy as np
 from scipy.interpolate import interp1d
 
 from nncf.api.compression import CompressionAlgorithmController
-from nncf.api.composite_compression import CompositeCompressionAlgorithmController
+from nncf.common.composite_compression import CompositeCompressionAlgorithmController
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.common.utils.registry import Registry
 from nncf.config.config import NNCFConfig

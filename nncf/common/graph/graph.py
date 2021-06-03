@@ -14,9 +14,12 @@
 import networkx as nx
 
 from collections import OrderedDict
-from typing import Any, Callable, Dict, KeysView, List, Tuple, ValuesView
+from typing import Any, Callable, Dict, KeysView, List, Tuple, Type, ValuesView
 
 from nncf.common.graph.module_attributes import BaseModuleAttributes
+from nncf.common.graph.operator_metatypes import OperatorMetatype
+from nncf.common.graph.operator_metatypes import get_input_metatypes
+from nncf.common.graph.operator_metatypes import get_output_metatypes
 
 MODEL_INPUT_OP_NAME = "nncf_model_input"
 MODEL_OUTPUT_OP_NAME = "nncf_model_output"
@@ -42,6 +45,10 @@ class NNCFNode:
         return self.data.get(NNCFGraph.NODE_TYPE_ATTR)
 
     @property
+    def metatype(self) -> Type[OperatorMetatype]:
+        return self.data.get(NNCFGraph.METATYPE_ATTR)
+
+    @property
     def module_attributes(self) -> BaseModuleAttributes:
         return self.data.get(NNCFGraph.MODULE_ATTRIBUTES)
 
@@ -59,6 +66,11 @@ class NNCFNode:
                and self.module_attributes == other.module_attributes
 
 
+class NNCFGraphNodeType:
+    INPUT_NODE = MODEL_INPUT_OP_NAME
+    OUTPUT_NODE = MODEL_OUTPUT_OP_NAME
+
+
 class NNCFGraph:
     """
     Wrapper over a regular directed acyclic graph that represents a control flow/execution graph of a DNN
@@ -68,6 +80,7 @@ class NNCFGraph:
     ID_NODE_ATTR = 'id'
     KEY_NODE_ATTR = 'key'
     NODE_TYPE_ATTR = 'type'
+    METATYPE_ATTR = 'metatype'
     MODULE_ATTRIBUTES = 'module_attributes'
     ACTIVATION_SHAPE_EDGE_ATTR = 'activation_shape'
     IN_PORT_NAME_EDGE_ATTR = 'in_port'
@@ -75,6 +88,17 @@ class NNCFGraph:
     def __init__(self):
         self._nx_graph = nx.DiGraph()
         self._node_id_to_key_dict = dict()
+        self._input_nncf_nodes = {}  # type: Dict[int, NNCFNode]
+        self._output_nncf_nodes = {}  # type: Dict[int, NNCFNode]
+
+    @property
+    def nx_graph(self) -> nx.DiGraph:
+        """
+        Returns the internal representation of the graph as a DiGraph instance.
+
+        :return: The DiGraph instance.
+        """
+        return self._nx_graph
 
     def get_node_by_id(self, node_id: int) -> NNCFNode:
         """
@@ -91,24 +115,10 @@ class NNCFGraph:
         return self._nx_node_to_nncf_node(self._nx_graph.nodes[key])
 
     def get_input_nodes(self) -> List[NNCFNode]:
-        """
-        Returns list of input nodes of the graph.
-        """
-        inputs = []
-        for nx_node_key, deg in self._nx_graph.in_degree():
-            if deg == 0:
-                inputs.append(self._nx_node_to_nncf_node(self._nx_graph.nodes[nx_node_key]))
-        return inputs
+        return list(self._input_nncf_nodes.values())
 
     def get_output_nodes(self) -> List[NNCFNode]:
-        """
-        Returns list of output nodes of the graph.
-        """
-        outputs = []
-        for nx_node_key, deg in self._nx_graph.out_degree():
-            if deg == 0:
-                outputs.append(self._nx_node_to_nncf_node(self._nx_graph.nodes[nx_node_key]))
-        return outputs
+        return list(self._output_nncf_nodes.values())
 
     def get_nodes_by_types(self, type_list: List[str]) -> List[NNCFNode]:
         """
@@ -122,6 +132,22 @@ class NNCFGraph:
             if nncf_node.node_type in type_list:
                 all_nodes_of_type.append(nncf_node)
         return all_nodes_of_type
+
+    def get_nodes_by_metatypes(self, metatype_list: List[Type[OperatorMetatype]]) -> List[NNCFNode]:
+        """
+        Return a list of nodes with provided metatypes.
+
+        :param metatype_list: List of types to look for.
+        :return: List of nodes with provided metatypes.
+        """
+        all_nodes_of_type = []
+        for node_key in self.get_all_node_keys():
+            nx_node = self._nx_graph.nodes[node_key]
+            nncf_node = self._nx_node_to_nncf_node(nx_node)
+            if nncf_node.metatype in metatype_list:
+                all_nodes_of_type.append(nncf_node)
+        return all_nodes_of_type
+
 
     def get_all_node_ids(self) -> KeysView[int]:
         """
@@ -193,6 +219,16 @@ class NNCFGraph:
 
         return OrderedDict((edge, self._nx_graph.edges[edge]) for edge in input_edges)
 
+    def get_output_edges(self, node: NNCFNode) -> Dict[Tuple[str, str], dict]:
+        """
+        Returns edges of output tensors with description. Unordered.
+
+        :param node: Producer node.
+        :return: Dictionary of output edges for the node.
+        """
+        nx_node_key = self._node_id_to_key_dict[node.node_id]
+        return {edge: self._nx_graph.edges[edge] for edge in self._nx_graph.out_edges(nx_node_key)}
+
     def traverse_graph(self,
                        curr_node: NNCFNode,
                        traverse_function: Callable[[NNCFNode, List[Any]], Tuple[bool, List[Any]]],
@@ -226,10 +262,17 @@ class NNCFGraph:
         :param attrs: Attributes of the node.
         """
         node_id = len(self._node_id_to_key_dict)
+        attrs[NNCFGraph.ID_NODE_ATTR] = node_id
         self._node_id_to_key_dict[node_id] = label
         attrs[NNCFGraph.KEY_NODE_ATTR] = label
-        attrs[NNCFGraph.ID_NODE_ATTR] = node_id
         self._nx_graph.add_node(label, **attrs)
+
+        nncf_node = self.get_node_by_id(node_id)
+        if nncf_node.metatype in get_input_metatypes():
+            self._input_nncf_nodes[node_id] = nncf_node
+
+        if nncf_node.metatype in get_output_metatypes():
+            self._output_nncf_nodes[node_id] = nncf_node
 
     def add_edge(self, u_of_edge: str, v_of_edge: str, **attrs):
         """
@@ -243,10 +286,12 @@ class NNCFGraph:
 
     def topological_sort(self) -> List[NNCFNode]:
         """
-        Returns nodes in topologically sorted order.
+        Returns nodes in topologically sorted order, additionally sorted in ascending node ID order.
         """
         return [self._nx_node_to_nncf_node(self._nx_graph.nodes[node_name])
-                for node_name in nx.topological_sort(self._nx_graph)]
+                for node_name in
+                nx.lexicographical_topological_sort(self._nx_graph,
+                                                    key=lambda x: self._nx_graph.nodes[x][NNCFGraph.ID_NODE_ATTR])]
 
     def dump_graph(self, path: str):
         """

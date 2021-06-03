@@ -40,12 +40,16 @@ from nncf.common.quantization.structs import QuantizationConstraints
 from nncf.common.quantization.structs import QuantizerGroup
 from nncf.common.hardware.config import HWConfig
 from nncf.common.hardware.config import HWConfigType
+from nncf.common.quantization.statistics import QuantizationStatistics
+from nncf.common.statistics import NNCFStatistics
 from nncf.common.schedulers import BaseCompressionScheduler
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.common.utils.os import safe_open
+from nncf.common.batchnorm_adaptation import BatchnormAdaptationAlgorithm
 from nncf.torch.compression_method_api import PTCompressionAlgorithmBuilder
 from nncf.torch.compression_method_api import PTCompressionAlgorithmController
 from nncf.config import NNCFConfig
+from nncf.config.utils import extract_bn_adaptation_init_params
 from nncf.torch.debug import CallCountTracker
 from nncf.torch.debug import DebugInterface
 from nncf.torch.debug import is_debug
@@ -80,10 +84,11 @@ from nncf.torch.quantization.layers import QuantizationMode
 from nncf.torch.quantization.layers import QuantizerConfig
 from nncf.torch.quantization.layers import QuantizerExportMode
 from nncf.torch.quantization.layers import QuantizersSwitcher
-from nncf.torch.quantization.metrics import MemoryCostMetric
-from nncf.torch.quantization.metrics import NetworkQuantizationShareMetric
-from nncf.torch.quantization.metrics import NetworkQuantizationShareMetricBuildTimeInfo
-from nncf.torch.quantization.metrics import ShareEdgesQuantizedDataPath
+from nncf.torch.quantization.metrics import MemoryConsumptionStatisticsCollector
+from nncf.torch.quantization.metrics import QuantizationShareStatisticsCollector
+from nncf.torch.quantization.metrics import QuantizationShareBuildTimeInfo
+from nncf.torch.quantization.metrics import BitwidthDistributionStatisticsCollector
+from nncf.torch.quantization.metrics import ShareEdgesQuantizedDataPathStatisticsCollector
 from nncf.torch.quantization.node_matcher import PTOperatorMetatypeNodeMatcher
 from nncf.torch.quantization.precision_constraints import HardwareQuantizationConstraints
 from nncf.torch.quantization.precision_init.adjacent_quantizers import GroupsOfAdjacentQuantizers
@@ -453,8 +458,8 @@ class PropagationBasedQuantizerSetupGenerator(QuantizerSetupGeneratorBase):
         return quantizer_setup
 
     def get_build_time_metric_infos(self):
-        return NetworkQuantizationShareMetricBuildTimeInfo(self._num_potential_quantized_activations,
-                                                           self._num_potential_quantized_weights)
+        return QuantizationShareBuildTimeInfo(self._num_potential_quantized_activations,
+                                              self._num_potential_quantized_weights)
 
 
 @COMPRESSION_ALGORITHMS.register('quantization')
@@ -1115,7 +1120,7 @@ class QuantizationController(QuantizationControllerBase):
                  non_weight_quantizers: Dict[NonWeightQuantizerId, NonWeightQuantizerInfo],
                  groups_of_adjacent_quantizers: GroupsOfAdjacentQuantizers,
                  collect_compression_metrics: bool = True,
-                 build_time_metric_info: NetworkQuantizationShareMetricBuildTimeInfo = None,
+                 build_time_metric_info: QuantizationShareBuildTimeInfo = None,
                  build_time_range_init_params: RangeInitParams = None):
         super().__init__(target_model)
         self._loss = ZeroCompressionLoss(next(target_model.parameters()).device)
@@ -1132,6 +1137,7 @@ class QuantizationController(QuantizationControllerBase):
         self.all_quantizations.update({k: v.quantizer_module_ref for k, v in self.non_weight_quantizers.items()})
         self._distributed = False
         self._groups_of_adjacent_quantizers = groups_of_adjacent_quantizers
+        self._bn_adaptation = None
 
         should_export_to_onnx_qdq = quantization_config.get("export_to_onnx_standard_ops",
                                                             False)
@@ -1146,20 +1152,26 @@ class QuantizationController(QuantizationControllerBase):
         if self._collect_compression_metrics:
             self.metric_store = {}
             # These metrics are collected here and are updated when the method .statistics() is called
-            self.non_stable_metric_collectors = [NetworkQuantizationShareMetric(target_model, self.weight_quantizers, \
-                                                                                self.non_weight_quantizers,
-                                                                                build_time_metric_info),
-                                                 MemoryCostMetric(target_model, self.weight_quantizers,
-                                                                  self.non_weight_quantizers)]
+            self.non_stable_metric_collectors = [
+                QuantizationShareStatisticsCollector(
+                    self.weight_quantizers, self.non_weight_quantizers, build_time_metric_info
+                ),
+                BitwidthDistributionStatisticsCollector(
+                    self.weight_quantizers, self.non_weight_quantizers
+                ),
+                MemoryConsumptionStatisticsCollector(
+                    target_model, self.weight_quantizers, self.non_weight_quantizers
+                ),
+            ]
             # These metrics are collected once here and are not updated when the method .statistics() is called
-            self.stable_metric_collectors = [ShareEdgesQuantizedDataPath(target_model, self)]
+            self.stable_metric_collectors = [ShareEdgesQuantizedDataPathStatisticsCollector(target_model, self)]
             self.update_metric_store(True)
 
         params = quantization_config.get('params', None)
         self.is_staged_scheduler = bool(params)
 
-        if is_main_process() and should_init:
-            self.run_batchnorm_adaptation(self.quantization_config)
+        if is_main_process() and should_init and self.quantization_config:
+            self._run_batchnorm_adaptation()
 
         # Staged scheduler must be created after initialized to prevent extra logic with disabled quantizations
         if self.is_staged_scheduler:
@@ -1185,12 +1197,10 @@ class QuantizationController(QuantizationControllerBase):
 
     def update_metric_store(self, do_all: bool = False):
         for collector in self.non_stable_metric_collectors:
-            collector.collect()
-            self.metric_store[collector.NAME_STR] = collector.get_metric_table()
+            self.metric_store[collector.NAME_STR] = collector.collect()
         if do_all:
             for collector in self.stable_metric_collectors:
-                collector.collect()
-                self.metric_store[collector.NAME_STR] = collector.get_metric_table()
+                self.metric_store[collector.NAME_STR] = collector.collect()
 
     def distributed(self):
         self._distributed = True
@@ -1339,17 +1349,25 @@ class QuantizationController(QuantizationControllerBase):
 
         return module_init_range_config
 
-    def statistics(self, quickly_collected_only=False):
-        stats = super().statistics(quickly_collected_only)
+    def statistics(self, quickly_collected_only=False) -> NNCFStatistics:
         num_enabled_quantization = len([1 for q in self.all_quantizations.values() if q.is_enabled_quantization()])
         multiplier = 100 / len(self.all_quantizations)
-        stats["ratio_of_enabled_quantizations"] = num_enabled_quantization * multiplier
+        ratio_of_enabled_quantizations = num_enabled_quantization * multiplier
+
+        stats = QuantizationStatistics(ratio_of_enabled_quantizations)
         if self._collect_compression_metrics and not quickly_collected_only:
             self.update_metric_store()
-            for metric in self.metric_store.values():
-                for add_info, table in metric.items():
-                    stats[add_info] = table
-        return stats
+            stats = QuantizationStatistics(ratio_of_enabled_quantizations, **self.metric_store)
+
+        nncf_stats = NNCFStatistics()
+        nncf_stats.register('quantization', stats)
+        return nncf_stats
+
+    def _run_batchnorm_adaptation(self):
+        if self._bn_adaptation is None:
+            self._bn_adaptation = BatchnormAdaptationAlgorithm(
+                **extract_bn_adaptation_init_params(self.quantization_config))
+        self._bn_adaptation.run(self.model)
 
 
 class QuantizationDebugInterface(DebugInterface):
@@ -1541,8 +1559,8 @@ class ExperimentalQuantizationBuilder(QuantizationBuilder):
                                                                  self._quantizer_setup,
                                                                  self._setup_to_module_id_translation_dict)
 
-        build_time_metric_infos = NetworkQuantizationShareMetricBuildTimeInfo(len(self._non_weight_quantizers),
-                                                                              len(self._weight_quantizers))
+        build_time_metric_infos = QuantizationShareBuildTimeInfo(len(self._non_weight_quantizers),
+                                                                 len(self._weight_quantizers))
 
         return ExperimentalQuantizationController(target_model,
                                                   self._weight_quantizers,
@@ -1566,7 +1584,7 @@ class ExperimentalQuantizationController(QuantizationController):
                  initial_quantizer_setup: SingleConfigQuantizerSetup,
                  setup_to_module_id_translation_dict: Dict[QuantizationPointId, QuantizerId],
                  tensor_stats: Dict[PTTargetPoint, Dict[ReductionShape, TensorStatistic]],
-                 build_time_metric_info: NetworkQuantizationShareMetricBuildTimeInfo,
+                 build_time_metric_info: QuantizationShareBuildTimeInfo,
                  should_setup_adjust_pad_ops=False,
                  hw_config: HWConfig = None):
         super().__init__(target_model,

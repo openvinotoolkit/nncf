@@ -75,26 +75,6 @@ class QuantizationRangeInitArgs(NNCFExtraConfigStruct):
         return "quantization_range_init_args"
 
 
-class BNAdaptationInitArgs(NNCFExtraConfigStruct):
-    """
-    Stores arguments for BatchNorm statistics adaptation procedure.
-    Adaptation is done by inferring a number of data batches on a compressed model
-    while the BN layers are updating the rolling_mean and rolling_variance stats.
-    :param data_loader: 'data_loader' - provides an iterable over the given dataset. Instance of
-                nncf.initialization.InitializingDataLoader; a regular 'torch.utils.data.DataLoader' may
-                also be passed, but only in the simple case when it returns a tuple of (input, target) tensors.
-    :param device: Device to perform initialization at. Either 'cpu', 'cuda', or None (default); if None, will
-                   use the device of the model's parameters.
-    """
-
-    def __init__(self, data_loader: DataLoader, device: str = None):
-        self.data_loader = data_loader
-        self.device = device
-
-    @classmethod
-    def get_id(cls) -> str:
-        return "bn_adaptation_init_args"
-
 class AutoQPrecisionInitArgs(NNCFExtraConfigStruct):
     """
     :param data_loader: 'data_loader' - provides an iterable over the given dataset. Instance of

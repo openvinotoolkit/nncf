@@ -11,6 +11,13 @@
  limitations under the License.
 """
 
+from pathlib import Path
+
+TEST_ROOT = Path(__file__).absolute().parents[1]
+PROJECT_ROOT = TEST_ROOT.parent.absolute()
+EXAMPLES_DIR = PROJECT_ROOT / 'examples'
+
+
 def get_cli_dict_args(args):
     cli_args = dict()
     for key, val in args.items():

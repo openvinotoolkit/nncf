@@ -15,30 +15,36 @@ from typing import Dict
 from typing import List
 from typing import Union
 
-import numpy as np
 import torch
 from texttable import Texttable
-from torch import nn
 
 from nncf.torch.algo_selector import COMPRESSION_ALGORITHMS
 from nncf.api.compression import CompressionStage
 from nncf.api.compression import CompressionLoss
 from nncf.api.compression import CompressionScheduler
+from nncf.config.utils import extract_bn_adaptation_init_params
+from nncf.common.graph.graph import NNCFGraph
 from nncf.common.pruning.mask_propagation import MaskPropagationAlgorithm
 from nncf.common.pruning.model_analysis import Clusterization
+from nncf.common.pruning.schedulers import PRUNING_SCHEDULERS
+from nncf.common.pruning.statistics import PrunedLayerSummary
+from nncf.common.pruning.statistics import PrunedModelStatistics
+from nncf.common.pruning.statistics import FilterPruningStatistics
 from nncf.common.pruning.utils import calculate_in_out_channels_in_uniformly_pruned_model
 from nncf.common.pruning.utils import count_flops_for_nodes
 from nncf.common.pruning.utils import get_cluster_next_nodes
 from nncf.common.pruning.utils import get_conv_in_out_channels
 from nncf.common.pruning.utils import get_rounded_pruned_element_number
-from nncf.common.pruning.schedulers import PRUNING_SCHEDULERS
+from nncf.common.statistics import NNCFStatistics
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.common.accuracy_aware_training.training_loop import ADAPTIVE_COMPRESSION_CONTROLLERS
 from nncf.common.schedulers import StubCompressionScheduler
+from nncf.common.batchnorm_adaptation import BatchnormAdaptationAlgorithm
 from nncf.torch.compression_method_api import PTCompressionAlgorithmController
-from nncf.torch.dynamic_graph.context import Scope
+from nncf.torch.graph import operator_metatypes as metatypes
 from nncf.torch.layers import NNCF_PRUNING_MODULES_DICT
 from nncf.torch.layers import NNCF_GENERAL_CONV_MODULES_DICT
+from nncf.torch.layers import NNCF_LINEAR_MODULES_DICT
 from nncf.torch.layer_utils import _NNCFModuleMixin
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.pruning.base_algo import BasePruningAlgoBuilder
@@ -54,6 +60,20 @@ from nncf.torch.pruning.filter_pruning.layers import FilterPruningBlock
 from nncf.torch.pruning.filter_pruning.layers import inplace_apply_filter_binary_mask
 from nncf.torch.pruning.utils import init_output_masks_in_graph
 from nncf.torch.utils import get_filters_num
+
+GENERAL_CONV_LAYER_METATYPES = [
+    metatypes.Conv1dMetatype,
+    metatypes.DepthwiseConv1dSubtype,
+    metatypes.Conv2dMetatype,
+    metatypes.DepthwiseConv2dSubtype,
+    metatypes.Conv3dMetatype,
+    metatypes.DepthwiseConv3dSubtype,
+    metatypes.ConvTranspose2dMetatype,
+    metatypes.ConvTranspose3dMetatype
+]
+LINEAR_LAYER_METATYPES = [
+    metatypes.LinearMetatype
+]
 
 
 @COMPRESSION_ALGORITHMS.register('filter_pruning')
@@ -92,11 +112,12 @@ class FilterPruningController(BasePruningAlgoController):
         self.pruning_init = config.get("pruning_init", 0)
         self.pruning_quota = 1.0
 
-        self.modules_in_channels = {}  # type: Dict[Scope, int]
-        self.modules_out_channels = {}  # type: Dict[Scope, int]
+        self._modules_in_channels = {}  # type: Dict[str, int]
+        self._modules_out_channels = {}  # type: Dict[str, int]
+        self._modules_in_shapes = {}
+        self._modules_out_shapes = {}
         self.pruning_quotas = {}
-        self.nodes_flops = {}  # type: Dict[Scope, int]
-        self.nodes_flops_cost = {}  # type: Dict[Scope, int]
+        self.nodes_flops = {}  # type: Dict[str, int]
         self.next_nodes = {}
         self._init_pruned_modules_params()
         self.flops_count_init()
@@ -110,6 +131,7 @@ class FilterPruningController(BasePruningAlgoController):
 
         self.set_pruning_rate(self.pruning_init)
         self._scheduler = scheduler_cls(self, params)
+        self._bn_adaptation = None
 
     @property
     def loss(self) -> CompressionLoss:
@@ -123,12 +145,25 @@ class FilterPruningController(BasePruningAlgoController):
     def _get_mask(minfo: PrunedModuleInfo):
         return minfo.operand.binary_filter_pruning_mask
 
-    def statistics(self, quickly_collected_only=False):
-        stats = super().statistics(quickly_collected_only)
-        stats['pruning_rate'] = self._pruning_rate
-        stats['FLOPS pruning level'] = 1 - self.current_flops / self.full_flops
-        stats['FLOPS current / full'] = f"{self.current_flops} / {self.full_flops}"
-        return stats
+    def statistics(self, quickly_collected_only: bool = False) -> NNCFStatistics:
+        pruned_layers_summary = {}
+        for minfo in self.pruned_module_groups_info.get_all_nodes():
+            module_scope = str(minfo.module_scope)
+            if module_scope not in pruned_layers_summary:
+                pruned_layers_summary[module_scope] = \
+                    PrunedLayerSummary(module_scope,
+                                       list(minfo.module.weight.size()),
+                                       list(self.mask_shape(minfo)),
+                                       self.pruning_rate_for_weight(minfo),
+                                       self.pruning_rate_for_mask(minfo),
+                                       self.pruning_rate_for_filters(minfo))
+
+        model_statistics = PrunedModelStatistics(self._pruning_rate, list(pruned_layers_summary.values()))
+        stats = FilterPruningStatistics(model_statistics, self.full_flops, self.current_flops)
+
+        nncf_stats = NNCFStatistics()
+        nncf_stats.register('filter_pruning', stats)
+        return nncf_stats
 
     @property
     def pruning_rate(self) -> float:
@@ -144,113 +179,66 @@ class FilterPruningController(BasePruningAlgoController):
     def _init_pruned_modules_params(self):
         # 1. Init in/out channels for potentially prunable modules
         graph = self._model.get_original_graph()
-        self.modules_in_channels, self.modules_out_channels = get_conv_in_out_channels(graph)
+        self._modules_in_channels, self._modules_out_channels = get_conv_in_out_channels(graph)
 
         # 2. Init next_nodes for every pruning cluster
         self.next_nodes = get_cluster_next_nodes(graph, self.pruned_module_groups_info, self._prunable_types)
 
         # 3. Init pruning quotas
         for cluster in self.pruned_module_groups_info.get_all_clusters():
-            self.pruning_quotas[cluster.id] = self.modules_out_channels[cluster.nodes[0].module_scope] \
+            self.pruning_quotas[cluster.id] = self._modules_out_channels[cluster.nodes[0].node_name] \
                                               * self.pruning_quota
 
     def flops_count_init(self) -> None:
-        def get_in_out_shapes_hook(in_shapes_dict_to_save: dict, out_shapes_dict_to_save: dict):
-            ctx = self._model.get_tracing_context()
-
-            def compute_in_out_shapes_hook(module, input_, output):
-                if isinstance(module, tuple(NNCF_GENERAL_CONV_MODULES_DICT.values())):
-                    out_shapes_dict_to_save[ctx.scope] = output.shape[2:]
-                if isinstance(module, nn.Linear):
-                    out_shapes_dict_to_save[ctx.scope] = output.shape[-1]
-                    if len(input_[0].shape) == 1:
-                        in_shapes_dict_to_save[ctx.scope] = input_[0].shape[0]
-                    else:
-                        in_shapes_dict_to_save[ctx.scope] = input_[0].shape[1:]
-
-            return compute_in_out_shapes_hook
-
-        def get_node_cost_hook():
-            """
-            Cost of node is num of flops for this node divided by numbers of input and output channels for this node.
-            """
-            ctx = self._model.get_tracing_context()
-
-            def compute_cost_hook(module, input_, output):
-                if isinstance(module, (nn.Conv1d, nn.Conv2d, nn.Conv3d, nn.ConvTranspose1d, nn.ConvTranspose2d,
-                                       nn.ConvTranspose3d)):
-                    ks = module.weight.data.shape
-                    cost = 2 * np.prod(ks[2:]) * np.prod(output.shape[2:]) / module.groups
-                else:
-                    return
-                self.nodes_flops_cost[ctx.scope] = cost
-
-            return compute_cost_hook
-
         graph = self._model.get_original_graph()
-        hook_list = []
-        in_shapes, out_shapes = {}, {}
+        for node in graph.get_nodes_by_types([v.op_func_name for v in NNCF_GENERAL_CONV_MODULES_DICT]):
+            out_edge = list(graph.get_output_edges(node).values())[0]
+            out_shape = out_edge[NNCFGraph.ACTIVATION_SHAPE_EDGE_ATTR]
+            self._modules_out_shapes[node.node_name] = out_shape[2:]
 
-        for nncf_node in graph.get_all_nodes():
-            node_module = self._model.get_module_by_scope(nncf_node.ia_op_exec_context.scope_in_model)
-            hook_list.append(node_module.register_forward_hook(get_in_out_shapes_hook(in_shapes, out_shapes)))
-            hook_list.append(node_module.register_forward_hook(get_node_cost_hook()))
+        for node in graph.get_nodes_by_types([v.op_func_name for v in NNCF_LINEAR_MODULES_DICT]):
+            out_edge = list(graph.get_output_edges(node).values())[0]
+            out_shape = out_edge[NNCFGraph.ACTIVATION_SHAPE_EDGE_ATTR]
+            self._modules_out_shapes[node.node_name] = out_shape[-1]
 
-        self._model.do_dummy_forward(force_eval=True)
+            in_edge = list(graph.get_input_edges(node).values())[0]
+            in_shape = in_edge[NNCFGraph.ACTIVATION_SHAPE_EDGE_ATTR]
+            if len(in_shape) == 1:
+                self._modules_in_shapes[node.node_name] = in_shape[0]
+            else:
+                self._modules_in_shapes[node.node_name] = in_shape[1:]
 
-        self.nodes_flops = count_flops_for_nodes(graph, in_shapes, out_shapes,
-                                                 conv_op_types=[v.op_func_name
-                                                                for v in NNCF_GENERAL_CONV_MODULES_DICT],
-                                                 linear_op_types=['linear'])
-        for h in hook_list:
-            h.remove()
+        self.nodes_flops = count_flops_for_nodes(graph, self._modules_in_shapes, self._modules_out_shapes,
+                                                 conv_op_metatypes=GENERAL_CONV_LAYER_METATYPES,
+                                                 linear_op_metatypes=LINEAR_LAYER_METATYPES)
 
     def _calculate_flops_pruned_model_by_masks(self) -> float:
         """
         Calculates number of flops for pruned model by using binary_filter_pruning_mask.
         :return: number of flops in model
         """
-        tmp_in_channels = self.modules_in_channels.copy()
-        tmp_out_channels = self.modules_out_channels.copy()
+        tmp_in_channels = self._modules_in_channels.copy()
+        tmp_out_channels = self._modules_out_channels.copy()
 
         for group in self.pruned_module_groups_info.get_all_clusters():
-            assert all(tmp_out_channels[group.nodes[0].module_scope] == tmp_out_channels[node.module_scope] for node in
+            assert all(tmp_out_channels[group.nodes[0].node_name] == tmp_out_channels[node.node_name] for node in
                        group.nodes)
             new_out_channels_num = int(sum(group.nodes[0].operand.binary_filter_pruning_mask))
             num_of_sparse_elems = len(group.nodes[0].operand.binary_filter_pruning_mask) - new_out_channels_num
             for node in group.nodes:
-                tmp_out_channels[node.module_scope] = new_out_channels_num
+                tmp_out_channels[node.node_name] = new_out_channels_num
             # Prune in_channels in all next nodes of cluster
             next_nodes = self.next_nodes[group.id]
-            for node_module_scope in next_nodes:
-                tmp_in_channels[node_module_scope] -= num_of_sparse_elems
+            for node_name in next_nodes:
+                tmp_in_channels[node_name] -= num_of_sparse_elems
 
-        flops = self._calculate_flops_in_pruned_model(tmp_in_channels, tmp_out_channels)
-        return flops
-
-    def _calculate_flops_in_pruned_model(self, modules_in_channels: Dict[Scope, int],
-                                         modules_out_channels: Dict[Scope, int]) -> float:
-        """
-        Calculates number of flops in model with number of input/output channels for nodes from modules_in_channels,
-        modules_out_channels. It allows to count the number of flops in pruned model (with changed number of
-        input/output channels for some nodes).
-        Number of flops calculates as follows: for nodes that isn't in in/out channels used full number of flops from
-        self.nodes_flops.
-        For nodes with keys from in/out channels dicts flops
-        = modules_in_channels[node_id] * modules_out_channels[node_id] * self.nodes_flops_cost[node_id]
-        :param modules_in_channels: numbers of input channels in nodes
-        :param modules_out_channels: numbers of output channels in model
-        :return: number of flops in model
-        """
-        flops = 0
-        graph = self._model.get_original_graph()
-        for nncf_node in graph.get_all_nodes():
-            scope = nncf_node.ia_op_exec_context.scope_in_model
-            if scope in modules_in_channels:
-                flops += int(modules_in_channels[scope] * modules_out_channels[scope] * \
-                         self.nodes_flops_cost[scope])
-            elif scope in self.nodes_flops:
-                flops += self.nodes_flops[scope]
+        flops = sum(count_flops_for_nodes(self._model.get_original_graph(),
+                                          self._modules_in_shapes,
+                                          self._modules_out_shapes,
+                                          input_channels=tmp_in_channels,
+                                          output_channels=tmp_out_channels,
+                                          conv_op_metatypes=GENERAL_CONV_LAYER_METATYPES,
+                                          linear_op_metatypes=LINEAR_LAYER_METATYPES).values())
         return flops
 
     def _calculate_flops_in_uniformly_pruned_model(self, pruning_rate: float) -> float:
@@ -263,10 +251,17 @@ class FilterPruningController(BasePruningAlgoController):
             calculate_in_out_channels_in_uniformly_pruned_model(
                 pruning_groups=self.pruned_module_groups_info.get_all_clusters(),
                 pruning_rate=pruning_rate,
-                full_input_channels=self.modules_in_channels,
-                full_output_channels=self.modules_out_channels,
+                full_input_channels=self._modules_in_channels,
+                full_output_channels=self._modules_out_channels,
                 pruning_groups_next_nodes=self.next_nodes)
-        flops = self._calculate_flops_in_pruned_model(tmp_in_channels, tmp_out_channels)
+
+        flops = sum(count_flops_for_nodes(self._model.get_original_graph(),
+                                          self._modules_in_shapes,
+                                          self._modules_out_shapes,
+                                          input_channels=tmp_in_channels,
+                                          output_channels=tmp_out_channels,
+                                          conv_op_metatypes=GENERAL_CONV_LAYER_METATYPES,
+                                          linear_op_metatypes=LINEAR_LAYER_METATYPES).values())
         return flops
 
     def _find_uniform_pruning_rate_for_target_flops(self, target_flops_pruning_rate: float) -> float:
@@ -344,7 +339,7 @@ class FilterPruningController(BasePruningAlgoController):
             self._pruning_rate = self._calculate_global_weight_pruning_rate()
 
         if run_batchnorm_adaptation:
-            self.run_batchnorm_adaptation(self.config)
+            self._run_batchnorm_adaptation()
 
     def _calculate_global_weight_pruning_rate(self) -> float:
         full_param_count = 0
@@ -492,8 +487,8 @@ class FilterPruningController(BasePruningAlgoController):
         # until target flops pruning rate is achieved
         sorted_importances = sorted(zip(importances, cluster_indexes, filter_indexes), key=lambda x: x[0])
         cur_num = 0
-        tmp_in_channels = self.modules_in_channels.copy()
-        tmp_out_channels = self.modules_out_channels.copy()
+        tmp_in_channels = self._modules_in_channels.copy()
+        tmp_out_channels = self._modules_out_channels.copy()
         while cur_num < len(sorted_importances):
             cluster_idx = int(sorted_importances[cur_num][1])
             filter_idx = int(sorted_importances[cur_num][2])
@@ -506,7 +501,7 @@ class FilterPruningController(BasePruningAlgoController):
 
             cluster = self.pruned_module_groups_info.get_cluster_by_id(cluster_idx)
             for node in cluster.nodes:
-                tmp_out_channels[node.module_scope] -= 1
+                tmp_out_channels[node.node_name] -= 1
                 node.operand.binary_filter_pruning_mask[filter_idx] = 0
 
             # Prune in channels in all next nodes
@@ -514,7 +509,13 @@ class FilterPruningController(BasePruningAlgoController):
             for node_id in next_nodes:
                 tmp_in_channels[node_id] -= 1
 
-            flops = self._calculate_flops_in_pruned_model(tmp_in_channels, tmp_out_channels)
+            flops = sum(count_flops_for_nodes(self._model.get_original_graph(),
+                                              self._modules_in_shapes,
+                                              self._modules_out_shapes,
+                                              input_channels=tmp_in_channels,
+                                              output_channels=tmp_out_channels,
+                                              conv_op_metatypes=GENERAL_CONV_LAYER_METATYPES,
+                                              linear_op_metatypes=LINEAR_LAYER_METATYPES).values())
             if flops < target_flops:
                 self.current_flops = flops
                 return
@@ -638,3 +639,8 @@ class FilterPruningController(BasePruningAlgoController):
 
     def disable_scheduler(self):
         self._scheduler = StubCompressionScheduler()
+
+    def _run_batchnorm_adaptation(self):
+        if self._bn_adaptation is None:
+            self._bn_adaptation = BatchnormAdaptationAlgorithm(**extract_bn_adaptation_init_params(self.config))
+        self._bn_adaptation.run(self.model)

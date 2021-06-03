@@ -26,9 +26,9 @@ from torch.utils.tensorboard import SummaryWriter
 import nncf.torch.accuracy_aware_training.restricted_pickle_module as restricted_pickle_module
 from nncf.torch.checkpoint_loading import load_state
 from nncf.torch.accuracy_aware_training.utils import is_main_process
-from nncf.torch.accuracy_aware_training.utils import print_statistics
 from nncf.torch.accuracy_aware_training.utils import configure_paths
 from nncf.common.utils.logger import logger as nncf_logger
+from nncf.common.utils.tensorboard import prepare_for_tensorboard
 from nncf.common.accuracy_aware_training.runner import BaseAccuracyAwareTrainingRunner
 
 
@@ -82,7 +82,7 @@ class PTAccuracyAwareTrainingRunner(BaseAccuracyAwareTrainingRunner):
             self.lr_scheduler.step(self.training_epoch_count if not isinstance(self.lr_scheduler, ReduceLROnPlateau)
                                    else self.best_val_metric_value)
 
-        stats = compression_controller.statistics()
+        statistics = compression_controller.statistics()
 
         self.current_val_metric_value = None
         if self.validate_every_n_epochs is not None and \
@@ -91,10 +91,10 @@ class PTAccuracyAwareTrainingRunner(BaseAccuracyAwareTrainingRunner):
 
         if is_main_process():
             if self.verbose:
-                print_statistics(stats)
+                nncf_logger.info(statistics.to_str())
             self.dump_checkpoint(model, compression_controller)
             # dump best checkpoint for current target compression rate
-            for key, value in stats.items():
+            for key, value in prepare_for_tensorboard(statistics).items():
                 if isinstance(value, (int, float)):
                     self.add_tensorboard_scalar('compression/statistics/{0}'.format(key),
                                                 value, self.cumulative_epoch_count)

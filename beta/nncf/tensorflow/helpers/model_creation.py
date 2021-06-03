@@ -36,6 +36,7 @@ def create_compressed_model(model, config, should_eval_original_model):
     if should_eval_original_model:
         evaluation_args = config.get_extra_struct(ModelEvaluationArgs)
         original_model_accuracy = evaluation_args.eval_fn(model)
+
     builder = create_compression_algorithm_builder(config)
     if builder is None:
         return None, model

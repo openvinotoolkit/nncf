@@ -38,15 +38,6 @@ def is_main_process():
     return get_rank() == 0
 
 
-def print_statistics(stats, logger=nncf_logger):
-    for key, val in stats.items():
-        if isinstance(val, Texttable):
-            logger.info("{}:".format(key))
-            logger.info(val.draw())
-        else:
-            logger.info("{}: {}".format(key, val))
-
-
 def configure_paths(log_dir):
     d = datetime.datetime.now()
     run_id = '{:%Y-%m-%d__%H-%M-%S}'.format(d)

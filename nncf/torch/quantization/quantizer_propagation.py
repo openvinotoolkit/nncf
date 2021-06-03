@@ -22,6 +22,8 @@ from typing import Any, Callable, Dict, Set, Tuple, Type
 import networkx as nx
 
 from nncf.common.graph.transformations.commands import TargetType
+from nncf.common.graph.graph import MODEL_INPUT_OP_NAME
+from nncf.common.graph.graph import MODEL_OUTPUT_OP_NAME
 from nncf.common.quantization.structs import QuantizableModule
 from nncf.common.quantization.structs import QuantizationConstraints
 from nncf.common.quantization.structs import QuantizerGroup
@@ -1877,7 +1879,7 @@ class QuantizerPropagationSolver:
         # TODO: ensure that there are no name collisions between ops in different torch subpackages with the same name
         retval = {}
         if self._hw_config is None:
-            for op_meta in PT_OPERATOR_METATYPES.registry_dict.values():
+            for op_meta in get_operator_metatypes():
                 retval[op_meta] = QuantizationTrait.QUANTIZATION_AGNOSTIC  # Default value
             for trait, meta_list in DEFAULT_QUANT_TRAIT_TO_OP_DICT.items():
                 for op_meta in meta_list:  # type: OperatorMetatype
@@ -1925,7 +1927,7 @@ class QuantizerPropagationSolver:
         # TODO: ensure that there are no name collisions between ops in different torch subpackages with the same name
         retval = {}
         if self._hw_config is None:
-            for op_meta in PT_OPERATOR_METATYPES.registry_dict.values():
+            for op_meta in get_operator_metatypes():
                 retval[op_meta] = []  # Default value, corresponds to wildcard quantization
             for trait, meta_list in DEFAULT_QUANT_TRAIT_TO_OP_DICT.items():
                 if trait == QuantizationTrait.INPUTS_QUANTIZABLE:
@@ -1963,7 +1965,8 @@ class QuantizerPropagationSolver:
         """Determines the initial subset of the nodes that must be quantized
            and corresponding allowed quantization configs (possibly multiple) for each
            quantizer."""
-        for node_key, node in quant_prop_graph.nodes.items():
+        for node_key in nx.lexicographical_topological_sort(quant_prop_graph):
+            node = quant_prop_graph.nodes[node_key]
             node_type = node[QuantizerPropagationStateGraph.NODE_TYPE_NODE_ATTR]
             if node_type == QuantizerPropagationStateGraphNodeType.OPERATOR:
                 num_input_activations = quant_prop_graph.get_num_input_activations(node_key)
@@ -2082,7 +2085,9 @@ class QuantizerPropagationSolver:
     def _setup_initial_quantizers_for_operator_node(self, operator_node_key: str,
                                                     quant_prop_graph: QuantizerPropagationStateGraph):
         node = quant_prop_graph.nodes[operator_node_key]
-        preds = list(quant_prop_graph.predecessors(operator_node_key))
+
+        # preds are in sorted order for reproducibility
+        preds = list(sorted(quant_prop_graph.predecessors(operator_node_key)))
 
         if not preds:
             return  # TODO: remove this once module insertion points are included in the IP graph

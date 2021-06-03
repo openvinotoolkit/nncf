@@ -16,12 +16,7 @@ import operator
 from collections import OrderedDict
 from copy import deepcopy
 from enum import Enum
-from typing import Callable
-from typing import Dict
-from typing import List
-from typing import Optional
-from typing import Tuple
-from typing import TypeVar
+from typing import Callable, Dict, List, Optional, Tuple, TypeVar
 
 import networkx as nx
 import torch
@@ -31,8 +26,6 @@ from nncf.common.graph.graph import MODEL_INPUT_OP_NAME
 from nncf.common.graph.graph import MODEL_OUTPUT_OP_NAME
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.model_transformer import ModelTransformer
-from nncf.common.graph.module_attributes import ConvolutionModuleAttributes
-from nncf.common.graph.module_attributes import GroupNormModuleAttributes
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationPriority
 from nncf.common.hardware.config import HWConfig
@@ -52,7 +45,6 @@ from nncf.torch.dynamic_graph.io_handling import wrap_nncf_model_outputs_with_ob
 from nncf.torch.dynamic_graph.patch_pytorch import ignore_scope
 from nncf.torch.dynamic_graph.trace_tensor import TracedTensor
 from nncf.torch.dynamic_graph.transform_graph import replace_modules_by_nncf_modules
-from nncf.torch.graph.graph import ModuleAttributes
 from nncf.torch.graph.graph import NNCFNodeExpression
 from nncf.torch.graph.graph import PTNNCFGraph
 from nncf.torch.graph.graph_builder import GraphBuilder
@@ -820,23 +812,6 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
     @property
     def original_model_accuracy(self):
         return self._original_model_accuracy
-
-
-def _get_module_attributes(module: Module, operator_name: str) -> ModuleAttributes:
-    if operator_name == "group_norm":
-        return GroupNormModuleAttributes(
-            module.weight.requires_grad,
-            module.num_channels,
-            module.num_groups
-        )
-    return ConvolutionModuleAttributes(
-        module.weight.requires_grad,
-        module.in_channels,
-        module.out_channels,
-        module.kernel_size,
-        module.stride,
-        module.groups
-    )
 
 
 class PTModelTransformer(ModelTransformer):

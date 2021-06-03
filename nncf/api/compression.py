@@ -10,10 +10,12 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+
 from abc import ABC, abstractmethod
 from typing import Any, Dict, Optional, TypeVar, List, Tuple
 
 from nncf import NNCFConfig
+from nncf.api.statistics import Statistics
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.utils.ordered_enum import OrderedEnum
 
@@ -35,17 +37,6 @@ class CompressionLoss(ABC):
         Calculates the compression loss value.
 
         :return: The compression loss value.
-        """
-
-    @abstractmethod
-    def statistics(self, quickly_collected_only: bool = False) -> Dict[str, object]:
-        """
-        Returns a dictionary of printable statistics.
-
-        :param quickly_collected_only: Enables collection of the statistics that
-            don't take too much time to compute. Can be helpful for the case when
-            need to keep track of statistics on each training batch/step/iteration.
-        :return: A dictionary of printable statistics.
         """
 
     @abstractmethod
@@ -223,16 +214,16 @@ class CompressionAlgorithmController(ABC):
         :return: The compression stage of the target model.
         """
 
-    def statistics(self, quickly_collected_only: bool = False) -> Dict[str, object]:
+    @abstractmethod
+    def statistics(self, quickly_collected_only: bool = False) -> Statistics:
         """
-        Returns a dictionary of printable statistics.
+        Returns a `Statistics` class instance that contains compression algorithm statistics.
 
         :param quickly_collected_only: Enables collection of the statistics that
             don't take too much time to compute. Can be helpful for the case when
             need to keep track of statistics on each training batch/step/iteration.
-        :return: A dictionary of printable statistics.
+        :return: A `Statistics` class instance that contains compression algorithm statistics.
         """
-        return self.loss.statistics(quickly_collected_only)
 
     def prepare_for_export(self) -> None:
         """
@@ -340,3 +331,23 @@ class CompressionAlgorithmBuilder(ABC):
         :return: The instance of the `TransformationLayout` class containing
             a list of algorithm-specific modifications.
         """
+
+
+class CompressionLevel(OrderedEnum):
+    """
+    Legacy class, now replaced by CompressionStage.
+    Supports backward compatibility of older checkpoints produced with NNCF.
+    CompressionLevel is deprecated and will be removed in future releases.
+    """
+
+    NONE = 0
+    PARTIAL = 1
+    FULL = 2
+
+    @classmethod
+    def map_legacy_level_to_stage(cls):
+        return {
+            CompressionLevel.NONE: CompressionStage.UNCOMPRESSED,
+            CompressionLevel.PARTIAL: CompressionStage.PARTIALLY_COMPRESSED,
+            CompressionLevel.FULL: CompressionStage.FULLY_COMPRESSED,
+        }

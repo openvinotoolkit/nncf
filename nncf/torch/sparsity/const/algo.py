@@ -12,6 +12,8 @@
 """
 from typing import Tuple
 
+from nncf.common.sparsity.statistics import ConstSparsityStatistics
+from nncf.common.statistics import NNCFStatistics
 from nncf.torch.compression_method_api import PTCompressionAlgorithmController
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.sparsity.layers import BinaryMask
@@ -37,3 +39,11 @@ class ConstSparsityController(BaseSparsityAlgoController):
 
     def set_sparsity_level(self, sparsity_level: float):
         pass
+
+    def statistics(self, quickly_collected_only: bool = False) -> NNCFStatistics:
+        model_statistics = self._calculate_sparsified_model_stats()
+        stats = ConstSparsityStatistics(model_statistics)
+
+        nncf_stats = NNCFStatistics()
+        nncf_stats.register('const_sparsity', stats)
+        return nncf_stats

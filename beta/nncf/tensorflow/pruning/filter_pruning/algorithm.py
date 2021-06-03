@@ -19,12 +19,13 @@ import tensorflow as tf
 
 from beta.nncf.tensorflow.algorithm_selector import TF_COMPRESSION_ALGORITHMS
 from beta.nncf.tensorflow.api.compression import TFCompressionAlgorithmController
+from beta.nncf.tensorflow.graph.metatypes.common import LINEAR_LAYER_METATYPES
+from beta.nncf.tensorflow.graph.metatypes.common import GENERAL_CONV_LAYER_METATYPES
+from beta.nncf.tensorflow.graph.metatypes.matcher import get_keras_layer_metatype
 from beta.nncf.tensorflow.graph.utils import collect_wrapped_layers
-from beta.nncf.tensorflow.graph.utils import get_original_name
-from beta.nncf.tensorflow.layers.common import GENERAL_CONV_LAYERS
-from beta.nncf.tensorflow.layers.common import LAYERS_WITH_WEIGHTS
-from beta.nncf.tensorflow.layers.common import LINEAR_LAYERS
-from beta.nncf.tensorflow.layers.common import WEIGHT_ATTR_NAME
+from beta.nncf.tensorflow.graph.utils import get_layer_identifier
+from beta.nncf.tensorflow.graph.utils import get_original_name_and_instance_index
+from beta.nncf.tensorflow.graph.utils import unwrap_layer
 from beta.nncf.tensorflow.layers.data_layout import get_input_channel_axis
 from beta.nncf.tensorflow.layers.wrapper import NNCFWrapper
 from beta.nncf.tensorflow.loss import TFZeroCompressionLoss
@@ -57,6 +58,8 @@ from nncf.common.pruning.utils import get_rounded_pruned_element_number
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.common.accuracy_aware_training.training_loop import ADAPTIVE_COMPRESSION_CONTROLLERS
 from nncf.common.schedulers import StubCompressionScheduler
+from nncf.common.pruning.statistics import FilterPruningStatistics
+from nncf.common.statistics import NNCFStatistics
 
 
 @TF_COMPRESSION_ALGORITHMS.register('filter_pruning')
@@ -157,6 +160,14 @@ class FilterPruningController(BasePruningAlgoController):
         stats['FLOPS current / full'] = f"{self.current_flops} / {self.full_flops}"
         return stats
 
+    def statistics(self, quickly_collected_only: bool = False) -> NNCFStatistics:
+        model_statistics = self._calculate_pruned_model_stats()
+        stats = FilterPruningStatistics(model_statistics, self.full_flops, self.current_flops)
+
+        nncf_stats = NNCFStatistics()
+        nncf_stats.register('filter_pruning', stats)
+        return nncf_stats
+
     def freeze(self):
         self.frozen = True
 
@@ -191,7 +202,7 @@ class FilterPruningController(BasePruningAlgoController):
 
         # 3. Initialize pruning quotas
         for cluster in self._pruned_layer_groups_info.get_all_clusters():
-            self._pruning_quotas[cluster.id] = floor(self._layers_out_channels[cluster.nodes[0].layer_name]
+            self._pruning_quotas[cluster.id] = floor(self._layers_out_channels[cluster.nodes[0].node_name]
                                                      * self.pruning_quota)
 
     def _flops_count_init(self):
@@ -199,37 +210,41 @@ class FilterPruningController(BasePruningAlgoController):
         Collects input/output shapes of convolutional and dense layers,
         calculates corresponding layerwise FLOPs
         """
-        for layer in self._model.layers:
-            layer_ = layer.layer if isinstance(layer, NNCFWrapper) else layer
+        for node in self._original_graph.get_nodes_by_metatypes(GENERAL_CONV_LAYER_METATYPES):
+            node_name, node_index = get_original_name_and_instance_index(node.node_name)
+            layer = self._model.get_layer(node_name)
+            layer_ = unwrap_layer(layer)
 
-            if type(layer_).__name__ in GENERAL_CONV_LAYERS:
-                channel_axis = get_input_channel_axis(layer_)
-                dims_slice = slice(channel_axis - layer_.rank, channel_axis) \
-                    if layer.data_format == 'channels_last' else slice(channel_axis + 1, None)
-                in_shape = layer.get_input_shape_at(0)[dims_slice]
-                out_shape = layer.get_output_shape_at(0)[dims_slice]
+            channel_axis = get_input_channel_axis(layer)
+            dims_slice = slice(channel_axis - layer_.rank, channel_axis) \
+                if layer.data_format == 'channels_last' else slice(channel_axis + 1, None)
+            in_shape = layer.get_input_shape_at(node_index)[dims_slice]
+            out_shape = layer.get_output_shape_at(node_index)[dims_slice]
 
-                if not is_valid_shape(in_shape) or not is_valid_shape(out_shape):
-                    raise RuntimeError(f'Input/output shape is not defined for layer `{layer.name}` ')
+            if not is_valid_shape(in_shape) or not is_valid_shape(out_shape):
+                raise RuntimeError(f'Input/output shape is not defined for layer `{layer.name}` ')
 
-                self._layers_in_shapes[layer.name] = in_shape
-                self._layers_out_shapes[layer.name] = out_shape
+            self._layers_in_shapes[node.node_name] = in_shape
+            self._layers_out_shapes[node.node_name] = out_shape
 
-            elif type(layer_).__name__ in LINEAR_LAYERS:
-                in_shape = layer.get_input_shape_at(0)[1:]
-                out_shape = layer.get_output_shape_at(0)[1:]
+        for node in self._original_graph.get_nodes_by_metatypes(LINEAR_LAYER_METATYPES):
+            node_name, node_index = get_original_name_and_instance_index(node.node_name)
+            layer = self._model.get_layer(node_name)
 
-                if not is_valid_shape(in_shape) or not is_valid_shape(out_shape):
-                    raise RuntimeError(f'Input/output shape is not defined for layer `{layer.name}` ')
+            in_shape = layer.get_input_shape_at(node_index)[1:]
+            out_shape = layer.get_output_shape_at(node_index)[1:]
 
-                self._layers_in_shapes[layer.name] = in_shape
-                self._layers_out_shapes[layer.name] = out_shape
+            if not is_valid_shape(in_shape) or not is_valid_shape(out_shape):
+                raise RuntimeError(f'Input/output shape is not defined for layer `{layer.name}` ')
+
+            self._layers_in_shapes[node.node_name] = in_shape
+            self._layers_out_shapes[node.node_name] = out_shape
 
         self._nodes_flops = count_flops_for_nodes(self._original_graph,
                                                   self._layers_in_shapes,
                                                   self._layers_out_shapes,
-                                                  conv_op_types=GENERAL_CONV_LAYERS,
-                                                  linear_op_types=LINEAR_LAYERS)
+                                                  conv_op_metatypes=GENERAL_CONV_LAYER_METATYPES,
+                                                  linear_op_metatypes=LINEAR_LAYER_METATYPES)
 
     def _set_binary_masks_for_pruned_layers_groupwise(self, pruning_rate: float):
         nncf_logger.debug('Setting new binary masks for pruned layers.')
@@ -242,8 +257,7 @@ class FilterPruningController(BasePruningAlgoController):
         # 1. Calculate masks
         for group in self._pruned_layer_groups_info.get_all_clusters():
             # a. Calculate the cumulative importance for all filters in the group
-            cumulative_filters_importance = \
-                self._calculate_filters_importance_in_group(group, wrapped_layers)
+            cumulative_filters_importance = self._calculate_filters_importance_in_group(group)
             filters_num = len(cumulative_filters_importance)
 
             # b. Calculate threshold
@@ -265,7 +279,7 @@ class FilterPruningController(BasePruningAlgoController):
         nncf_sorted_nodes = self._original_graph.topological_sort()
         for layer in wrapped_layers:
             nncf_node = [n for n in nncf_sorted_nodes
-                         if layer.name == get_original_name(n.node_name)][0]
+                         if layer.name == get_layer_identifier(n)][0]
             if nncf_node.data['output_mask'] is not None:
                 self._set_operation_masks([layer], nncf_node.data['output_mask'])
 
@@ -287,8 +301,7 @@ class FilterPruningController(BasePruningAlgoController):
         # 1. Calculate masks
         # a. Calculate importances for all groups of filters
         for group in self._pruned_layer_groups_info.get_all_clusters():
-            cumulative_filters_importance = \
-                self._calculate_filters_importance_in_group(group, wrapped_layers)
+            cumulative_filters_importance = self._calculate_filters_importance_in_group(group)
             filter_importances[group.id] = cumulative_filters_importance
 
         # b. Calculate one threshold for all weights
@@ -310,7 +323,7 @@ class FilterPruningController(BasePruningAlgoController):
         nncf_sorted_nodes = self._original_graph.topological_sort()
         for layer in wrapped_layers:
             nncf_node = [n for n in nncf_sorted_nodes
-                         if layer.name == get_original_name(n.node_name)][0]
+                         if layer.name == get_layer_identifier(n)][0]
             if nncf_node.data['output_mask'] is not None:
                 self._set_operation_masks([layer], nncf_node.data['output_mask'])
 
@@ -328,7 +341,7 @@ class FilterPruningController(BasePruningAlgoController):
         nncf_sorted_nodes = self._original_graph.topological_sort()
         for layer in wrapped_layers:
             nncf_node = [n for n in nncf_sorted_nodes
-                         if layer.name == get_original_name(n.node_name)][0]
+                         if layer.name == get_layer_identifier(n)][0]
             nncf_node.data['output_mask'] = tf.ones(get_filters_num(layer))
 
         # 1. Calculate importances for all groups of filters. Initialize masks.
@@ -336,9 +349,7 @@ class FilterPruningController(BasePruningAlgoController):
         group_indexes = []
         filter_indexes = []
         for group in self._pruned_layer_groups_info.get_all_clusters():
-            cumulative_filters_importance = \
-                self._calculate_filters_importance_in_group(group, wrapped_layers)
-
+            cumulative_filters_importance = self._calculate_filters_importance_in_group(group)
             filter_importances.extend(cumulative_filters_importance)
             filters_num = len(cumulative_filters_importance)
             group_indexes.extend([group.id] * filters_num)
@@ -359,7 +370,7 @@ class FilterPruningController(BasePruningAlgoController):
             # Update input/output shapes of pruned nodes
             group = self._pruned_layer_groups_info.get_cluster_by_id(group_id)
             for node in group.nodes:
-                tmp_out_channels[node.layer_name] -= 1
+                tmp_out_channels[node.node_name] -= 1
             for node_name in self._next_nodes[group_id]:
                 tmp_in_channels[node_name] -= 1
 
@@ -368,8 +379,8 @@ class FilterPruningController(BasePruningAlgoController):
                                               self._layers_out_shapes,
                                               input_channels=tmp_in_channels,
                                               output_channels=tmp_out_channels,
-                                              conv_op_types=GENERAL_CONV_LAYERS,
-                                              linear_op_types=LINEAR_LAYERS).values())
+                                              conv_op_metatypes=GENERAL_CONV_LAYER_METATYPES,
+                                              linear_op_metatypes=LINEAR_LAYER_METATYPES).values())
             if flops <= target_flops:
                 # 3. Add masks to the graph and propagate them
                 for group in self._pruned_layer_groups_info.get_all_clusters():
@@ -385,7 +396,7 @@ class FilterPruningController(BasePruningAlgoController):
                 nncf_sorted_nodes = self._original_graph.topological_sort()
                 for layer in wrapped_layers:
                     nncf_node = [n for n in nncf_sorted_nodes
-                                 if layer.name == get_original_name(n.node_name)][0]
+                                 if layer.name == get_layer_identifier(n)][0]
                     if nncf_node.data['output_mask'] is not None:
                         self._set_operation_masks([layer], nncf_node.data['output_mask'])
                 return
@@ -433,37 +444,42 @@ class FilterPruningController(BasePruningAlgoController):
                                           self._layers_out_shapes,
                                           input_channels=tmp_in_channels,
                                           output_channels=tmp_out_channels,
-                                          conv_op_types=GENERAL_CONV_LAYERS,
-                                          linear_op_types=LINEAR_LAYERS).values())
+                                          conv_op_metatypes=GENERAL_CONV_LAYER_METATYPES,
+                                          linear_op_metatypes=LINEAR_LAYER_METATYPES).values())
         return flops
 
-    def _calculate_filters_importance_in_group(self, group: NodesCluster,
-                                               wrapped_layers: List[tf.keras.layers.Layer]):
+    def _calculate_filters_importance_in_group(self, group: NodesCluster):
         """
         Calculates cumulative filters importance in the group.
         :param group: Nodes cluster
-        :param wrapped_layers: List of keras nodes wrapped by NNCFWrapper
         :return a list of filter importance scores
         """
-        group_layer_names = [node.layer_name for node in group.nodes]
-        group_filters_num = tf.constant([get_filters_num(wrapped_layer)
-                                         for wrapped_layer in wrapped_layers
-                                         if wrapped_layer.name in group_layer_names])
+        group_layers = [self._model.get_layer(node.layer_name) for node in group.nodes]
+        group_filters_num = tf.constant([get_filters_num(layer) for layer in group_layers])
         filters_num = group_filters_num[0]
         assert tf.reduce_all(group_filters_num == filters_num)
 
         cumulative_filters_importance = tf.zeros(filters_num)
         # Calculate cumulative importance for all filters in this group
+        shared_nodes = []
         for minfo in group.nodes:
-            layer = [layer for layer in wrapped_layers if layer.name == minfo.layer_name][0]
-            filters_importance = self._layer_filter_importance(layer)
+            layer_name = minfo.layer_name
+            if layer_name in shared_nodes:
+                continue
+            nncf_node = self._original_graph.get_node_by_id(minfo.nncf_node_id)
+            if nncf_node.data['is_shared']:
+                shared_nodes.append(layer_name)
+            filters_importance = self._layer_filter_importance(self._model.get_layer(layer_name))
             cumulative_filters_importance += filters_importance
 
         return cumulative_filters_importance
 
     def _layer_filter_importance(self, layer: NNCFWrapper):
-        layer_type = layer.layer.__class__.__name__
-        weight_attr = LAYERS_WITH_WEIGHTS[layer_type][WEIGHT_ATTR_NAME]
+        layer_metatype = get_keras_layer_metatype(layer)
+        if len(layer_metatype.weight_definitions) != 1:
+            raise RuntimeError(f'The layer {layer.layer.name} does not support by the pruning '
+                               f'algorithm because it contains several weight attributes.')
+        weight_attr = layer_metatype.weight_definitions[0].weight_attr_name
         weight = layer.layer_weights[weight_attr]
         if self.all_weights:
             weight = self._weights_normalizer(weight)

@@ -65,9 +65,9 @@ For more details about the framework architecture, refer to the [NNCFArchitectur
 For a quicker start with NNCF-powered compression, you can also try the sample scripts, each of which provides a basic training pipeline for classification, semantic segmentation and object detection neural network training correspondingly.
 
 To run the samples please refer to the corresponding tutorials:
-- [Image Classification sample](examples/classification/README.md)
-- [Object Detection sample](examples/object_detection/README.md)
-- [Semantic Segmentation sample](examples/semantic_segmentation/README.md)
+- [Image Classification sample](examples/torch/classification/README.md)
+- [Object Detection sample](examples/torch/object_detection/README.md)
+- [Semantic Segmentation sample](examples/torch/semantic_segmentation/README.md)
 
 ## Third-party repository integration
 NNCF may be straightforwardly integrated into training/evaluation pipelines of third-party repositories.
@@ -116,7 +116,7 @@ Use one of the Dockerfiles in the [docker](./docker) directory to build an image
 
 **NOTE**: If you want to use sample training scripts provided in the NNCF repository under `examples`, you should install the corresponding Python package dependencies:
 ```
-pip install -r examples/requirements.txt
+pip install -r examples/torch/requirements.txt
 ```
 
 ## Contributing

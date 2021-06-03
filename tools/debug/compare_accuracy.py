@@ -113,7 +113,7 @@ def infer_pytorch_model(model, inputs):
 
 
 def validate_general(val_loader, model, infer_model_fn, cuda=False):
-    from examples.classification.main import AverageMeter, accuracy
+    from examples.torch.classification.main import AverageMeter, accuracy
     top1 = AverageMeter()
     top5 = AverageMeter()
 

@@ -24,7 +24,6 @@ from nncf import AdaptiveCompressionTrainingLoop
 from nncf.torch.structures import ModelEvaluationArgs
 from beta.nncf import create_compressed_model
 from beta.nncf import create_compression_callbacks
-from beta.nncf.helpers.utils import print_statistics
 from beta.nncf.tensorflow.helpers.model_manager import TFOriginalModelManager
 from beta.nncf.tensorflow.accuracy_aware_training.runner import TFAccuracyAwareTrainingRunner as \
         AccuracyAwareTrainingRunner
@@ -266,7 +265,8 @@ def run(config):
             **validation_kwargs)
 
     logger.info('evaluation...')
-    print_statistics(compression_ctrl.statistics())
+    statistics = compression_ctrl.statistics()
+    logger.info(statistics.to_str())
     results = compress_model.evaluate(
         validation_dataset,
         steps=validation_steps,

@@ -14,8 +14,8 @@
 from typing import List, Optional, TypeVar
 
 from nncf import NNCFConfig
-from nncf.api.composite_compression import CompositeCompressionAlgorithmBuilder
-from nncf.api.composite_compression import CompositeCompressionAlgorithmController
+from nncf.common.composite_compression import CompositeCompressionAlgorithmBuilder
+from nncf.common.composite_compression import CompositeCompressionAlgorithmController
 from beta.nncf.tensorflow.api.compression import TFCompressionAlgorithmBuilder
 from beta.nncf.tensorflow.api.compression import TFCompressionAlgorithmController
 from beta.nncf.tensorflow.graph.transformations.layout import TFTransformationLayout
