@@ -127,6 +127,15 @@ def create_compressed_model(model: Module, config: NNCFConfig,
     # In particular, this is currently required for correct functioning of RNNs.
     compressed_model.rebuild_graph()
 
+    def create_wrapped_user_dummy_forward(user_dummy_forward_fn):
+        def wrap_dummy_forward_fn(model):
+            #pylint:disable=protected-access
+            model._in_user_dummy_forward = True
+            retval = user_dummy_forward_fn(model)
+            model._in_user_dummy_forward = False
+            return retval
+        return wrap_dummy_forward_fn
+
     try:
         if resuming_state_dict is not None:
             load_state(compressed_model, resuming_state_dict, is_resume=True)
@@ -138,7 +147,8 @@ def create_compressed_model(model: Module, config: NNCFConfig,
                                                                                 with_input_tracing=False,
                                                                                 with_output_tracing=False))
             else:
-                compressed_graph_builder = GraphBuilder(custom_forward_fn=dummy_forward_fn)
+                compressed_graph_builder = GraphBuilder(custom_forward_fn=
+                                                        create_wrapped_user_dummy_forward(dummy_forward_fn))
 
             graph = compressed_graph_builder.build_graph(compressed_model,
                                                          compressed_model.get_tracing_context())
