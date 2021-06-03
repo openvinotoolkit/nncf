@@ -146,7 +146,8 @@ def run(config):
     train_builder, validation_builder = builders
     train_dataset, validation_dataset = datasets
 
-    config = register_default_init_args(config, train_dataset)
+    nncf_config = config.nncf_config
+    nncf_config = register_default_init_args(nncf_config, train_dataset, train_builder.global_batch_size)
 
     train_epochs = config.epochs
     train_steps = train_builder.steps_per_epoch
@@ -154,7 +155,7 @@ def run(config):
 
     with TFOriginalModelManager(model_fn, **model_params) as model:
         with strategy.scope():
-            compression_ctrl, compress_model = create_compressed_model(model, config.nncf_config)
+            compression_ctrl, compress_model = create_compressed_model(model, nncf_config)
             compression_callbacks = create_compression_callbacks(compression_ctrl,
                                                                  log_dir=config.log_dir)
 
