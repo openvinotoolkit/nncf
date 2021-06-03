@@ -12,3 +12,4 @@
 """
 
 from nncf.config import NNCFConfig
+from nncf.version import __version__
