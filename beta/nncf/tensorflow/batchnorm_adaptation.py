@@ -11,9 +11,7 @@
  limitations under the License.
 """
 
-from functools import partial
-from contextlib import contextmanager
-from typing import Dict
+from itertools import islice
 
 import tensorflow as tf
 
@@ -21,6 +19,40 @@ from nncf.common.batchnorm_adaptation import BatchnormAdaptationAlgorithmImpl
 from beta.nncf.tensorflow.graph.metatypes.keras_layers import TFBatchNormalizationLayerMetatype
 from beta.nncf.tensorflow.graph.metatypes.matcher import get_keras_layer_metatype
 from nncf.common.utils.progress_bar import ProgressBar
+
+
+class BNTrainingStateSwitcher():
+    def __init__(self, model):
+        self._model = model
+        self._original_training_state = {}
+
+    def __enter__(self):
+        for layer in self._model.layers:
+            if get_keras_layer_metatype(layer) == TFBatchNormalizationLayerMetatype:
+                self._original_training_state[layer] = layer.trainable
+                layer.trainable = True
+
+    def __exit__(self, type, value, traceback):
+        for layer in self._model.layers:
+            if get_keras_layer_metatype(layer) == TFBatchNormalizationLayerMetatype:
+                layer.trainable = self._original_training_state[layer]
+
+
+class BNMomentumSwitcher():
+    def __init__(self, model):
+        self._model = model
+        self._original_momenta_values = {}
+
+    def __enter__(self):
+        for layer in self._model.layers:
+            if get_keras_layer_metatype(layer) == TFBatchNormalizationLayerMetatype:
+                self._original_momenta_values[layer] = layer.momentum
+                layer.momentum = 0.1
+
+    def __exit__(self, type, value, traceback):
+        for layer in self._model.layers:
+            if get_keras_layer_metatype(layer) == TFBatchNormalizationLayerMetatype:
+                layer.momentum = self._original_momenta_values[layer]
 
 
 class TFBatchnormAdaptationAlgorithmImpl(BatchnormAdaptationAlgorithmImpl):
@@ -36,48 +68,6 @@ class TFBatchnormAdaptationAlgorithmImpl(BatchnormAdaptationAlgorithmImpl):
 
         return func_apply_to_bns
 
-    def _apply_to_model(self, func):
-        for layer in self._model.layers:
-            func(layer)
-
-    @contextmanager
-    def _bn_training_state_switcher(self) -> None:
-        def save_original_bn_training_state(module):
-            self.original_training_state[module] = module.trainable
-
-        def set_bn_training_state(module, state: Dict[str, bool]):
-            module.trainable = state
-
-        def restore_original_bn_training_state(module):
-            module.trainable = self.original_training_state[module]
-
-        self._apply_to_model(self._apply_to_batchnorms(save_original_bn_training_state))
-        self._apply_to_model(self._apply_to_batchnorms(partial(set_bn_training_state, state=True)))
-
-        try:
-            yield
-        finally:
-            self._apply_to_model(self._apply_to_batchnorms(restore_original_bn_training_state))
-
-    @contextmanager
-    def _bn_momentum_switcher(self) -> None:
-        def set_bn_momentum(module, momentum_value):
-            module.momentum = momentum_value
-
-        def save_original_bn_momentum(module):
-            self.original_momenta_values[module] = module.momentum
-
-        def restore_original_bn_momentum(module):
-            module.momentum = self.original_momenta_values[module]
-
-        self._apply_to_model(self._apply_to_batchnorms(save_original_bn_momentum))
-        self._apply_to_model(self._apply_to_batchnorms(partial(set_bn_momentum,
-                                                               momentum_value=0.1)))
-        try:
-            yield
-        finally:
-            self._apply_to_model(self._apply_to_batchnorms(restore_original_bn_momentum))
-
     def _infer_batch(self, x) -> None:
         """
         Run the forward pass of the model in train mode.
@@ -88,26 +78,20 @@ class TFBatchnormAdaptationAlgorithmImpl(BatchnormAdaptationAlgorithmImpl):
     def _run_model_inference(self):
         self.original_momenta_values = {}
         self.original_training_state = {}
-        num_bn_adaptation_steps = self._num_bn_adaptation_steps
-        num_bn_forget_steps = self._num_bn_forget_steps
-        with self._bn_training_state_switcher():
-            if num_bn_forget_steps is not None and num_bn_forget_steps > 0:
-                with self._bn_momentum_switcher():
-                    for i, (x, _) in ProgressBar(
-                            enumerate(self._data_loader),
-                            total=num_bn_forget_steps,
-                            desc='BatchNorm statistics forget'
-                    ):
-                        if i >= num_bn_forget_steps:
-                            break
-                        self._infer_batch(x)
-            for i, (x, _) in ProgressBar(
-                    enumerate(self._data_loader),
-                    total=num_bn_adaptation_steps,
+
+        with BNTrainingStateSwitcher(self._model):
+            with BNMomentumSwitcher(self._model):
+                for (x, _) in ProgressBar(
+                        islice(self._data_loader, self._num_bn_forget_steps),
+                        total=self._num_bn_forget_steps,
+                        desc='BatchNorm statistics forget'
+                ):
+                    self._infer_batch(x)
+            for (x, _) in ProgressBar(
+                    islice(self._data_loader, self._num_bn_adaptation_steps),
+                    total=self._num_bn_adaptation_steps,
                     desc='BatchNorm statistics adaptation'
             ):
-                if num_bn_adaptation_steps is not None and i >= num_bn_adaptation_steps:
-                    break
                 self._infer_batch(x)
 
     def run(self, model: tf.keras.Model) -> None:
