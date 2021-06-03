@@ -1,5 +1,5 @@
 """
- Copyright (c) 2021 Intel Corporation
+ Copyright (c) 2019 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -11,18 +11,15 @@
  limitations under the License.
 """
 
-from pathlib import Path
-
-TEST_ROOT = Path(__file__).absolute().parents[1]
-PROJECT_ROOT = TEST_ROOT.parent.absolute()
-EXAMPLES_DIR = PROJECT_ROOT / 'examples'
+from examples.torch.object_detection.models.ssd_mobilenet import build_ssd_mobilenet
+from examples.torch.object_detection.models.ssd_vgg import build_ssd_vgg
 
 
-def get_cli_dict_args(args):
-    cli_args = dict()
-    for key, val in args.items():
-        cli_key = '--{}'.format(str(key))
-        cli_args[cli_key] = None
-        if val is not None:
-            cli_args[cli_key] = str(val)
-    return cli_args
+def build_ssd(net_name, cfg, ssd_dim, num_classes, config):
+    assert net_name in ['ssd_vgg', 'ssd_mobilenet']
+    if net_name == 'ssd_vgg':
+        model = build_ssd_vgg(cfg, ssd_dim, num_classes, config)
+    if net_name == 'ssd_mobilenet':
+        model = build_ssd_mobilenet(cfg, ssd_dim, num_classes, config)
+
+    return model
