@@ -49,7 +49,7 @@ ANY_AG_BN_ACT_COMBO = AG + ACT | ANY_BN_ACT_COMBO
 
 POOLING = N('AveragePooling2D') | N('AveragePooling3D') | N('GlobalAveragePooling2D') | N('GlobalAveragePooling3D')
 
-SINGLE_OPS = POOLING | N('Average') | N('LayerNormalization')
+SINGLE_OPS = POOLING | N('Average') | N('LayerNormalization') | N('UpSampling2D')
 
 SET_ELEMENTWISE_LAYERS = {layer for m in ELEMENTWISE_LAYER_METATYPES for layer in m.get_all_aliases()}
 LIST_ELEMENTWISE_OPS = [N(layer) for layer in SET_ELEMENTWISE_LAYERS]
