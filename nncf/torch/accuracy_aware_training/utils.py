@@ -15,9 +15,7 @@ import os
 import datetime
 import os.path as osp
 
-from texttable import Texttable
 from torch import distributed as dist
-from nncf.common.utils.logger import logger as nncf_logger
 
 
 def is_dist_avail_and_initialized():

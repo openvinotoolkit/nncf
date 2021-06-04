@@ -129,7 +129,8 @@ class RBSparsityController(BaseSparsityController):
 
     @property
     def compression_rate(self) -> float:
-        return self.raw_statistics()['sparsity_rate_for_model']
+        self.statistics()
+        return self.sparsity_rate_for_model
 
     @compression_rate.setter
     def compression_rate(self, compression_rate: float) -> None:
@@ -137,9 +138,6 @@ class RBSparsityController(BaseSparsityController):
 
     def disable_scheduler(self):
         self._scheduler = StubCompressionScheduler()
-
-    def raw_statistics(self):
-        raw_sparsity_statistics = {}
 
     def statistics(self, quickly_collected_only: bool = False) -> NNCFStatistics:
         sparsity_levels = []
@@ -168,7 +166,7 @@ class RBSparsityController(BaseSparsityController):
 
         sparsity_rate_for_sparsified_modules = (total_sparsified_weights_number / total_weights_number).numpy()
         model_weights_number = count_params(self._model.weights) - total_weights_number
-        sparsity_rate_for_model = (total_sparsified_weights_number / model_weights_number).numpy()
+        self.sparsity_rate_for_model = (total_sparsified_weights_number / model_weights_number).numpy()
         mean_sparse_prob = 1.0 - (sparse_prob_sum / tf.cast(total_weights_number, tf.float32)).numpy()
 
         sparsity_levels = tf.keras.backend.batch_get_value(sparsity_levels)
@@ -183,7 +181,7 @@ class RBSparsityController(BaseSparsityController):
                 SparsifiedLayerSummary(mask_name, weights_shape, sparsity_level, weights_percentage)
             )
 
-        model_statistics = SparsifiedModelStatistics(sparsity_rate_for_model,
+        model_statistics = SparsifiedModelStatistics(self.sparsity_rate_for_model,
                                                      sparsity_rate_for_sparsified_modules,
                                                      sparsified_layers_summary)
 

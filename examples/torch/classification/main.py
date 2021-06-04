@@ -36,6 +36,7 @@ from torchvision.datasets import CIFAR10, CIFAR100
 from torchvision.models import InceptionOutputs
 
 from nncf.common.utils.tensorboard import prepare_for_tensorboard
+from nncf.common.utils.helpers import is_accuracy_aware_training
 from examples.torch.common.argparser import get_common_argument_parser
 from examples.torch.common.example_logger import logger
 from examples.torch.common.execution import ExecutionMode, get_execution_mode, \
@@ -46,7 +47,6 @@ from examples.torch.common.sample_config import SampleConfig, create_sample_conf
 from examples.torch.common.utils import configure_logging, configure_paths, create_code_snapshot, \
     print_args, make_additional_checkpoints, get_name, is_staged_quantization, \
     is_pretrained_model_requested, log_common_mlflow_params, SafeMLFLow, MockDataset, configure_device
-from examples.torch.common.utils import is_accuracy_aware_training
 from examples.torch.common.utils import write_metrics
 from nncf import create_compressed_model
 from nncf import AdaptiveCompressionTrainingLoop
@@ -114,7 +114,7 @@ def inception_criterion_fn(model_outputs: Any, target: Any, criterion: _Loss) ->
     return loss1 + 0.4 * loss2
 
 
-# pylint:disable=too-many-branches
+# pylint:disable=too-many-branches,too-many-statements
 def main_worker(current_gpu, config: SampleConfig):
     configure_device(current_gpu, config)
     config.mlflow = SafeMLFLow(config)
@@ -123,8 +123,6 @@ def main_worker(current_gpu, config: SampleConfig):
         print_args(config)
 
     set_seed(config)
-
-    is_accuracy_aware_training_mode = is_accuracy_aware_training(config)
 
     # define loss function (criterion)
     criterion = nn.CrossEntropyLoss()
@@ -168,8 +166,7 @@ def main_worker(current_gpu, config: SampleConfig):
 
     resuming_model_sd, resuming_checkpoint = load_resuming_checkpoint(resuming_checkpoint_path)
     compression_ctrl, model = create_compressed_model(model, nncf_config,
-                                                      resuming_state_dict=resuming_model_sd,
-                                                      should_eval_original_model=is_accuracy_aware_training_mode)
+                                                      resuming_state_dict=resuming_model_sd)
 
     if config.to_onnx:
         compression_ctrl.export_model(config.to_onnx)
@@ -206,40 +203,40 @@ def main_worker(current_gpu, config: SampleConfig):
         statistics = compression_ctrl.statistics()
         logger.info(statistics.to_str())
 
-    if config.mode.lower() == 'train' and is_accuracy_aware_training_mode:
-        # validation function that returns the target metric value
-        # pylint: disable=E1123
-        def validate_fn(model, epoch):
-            top1, _ = validate(val_loader, model, criterion, config, epoch=epoch)
-            return top1
-
-        # training function that trains the model for one epoch (full training dataset pass)
-        def train_epoch_fn(compression_ctrl, model, epoch, optimizer, lr_scheduler):
-            return train_epoch(train_loader, model, criterion, train_criterion_fn,
-                               optimizer, compression_ctrl, epoch, config)
-
-        # function that initializes optimizers & lr schedulers to start training
-        def configure_optimizers_fn():
-            params_to_optimize = get_parameter_groups(model, config)
-            optimizer, lr_scheduler = make_optimizer(params_to_optimize, config)
-            return optimizer, lr_scheduler
-
-        # instantiate and run accuracy-aware training loop
-        acc_aware_training_loop = AdaptiveCompressionTrainingLoop(nncf_config, compression_ctrl)
-        model = acc_aware_training_loop.run(model,
-                                            train_epoch_fn=train_epoch_fn,
-                                            validate_fn=validate_fn,
-                                            configure_optimizers_fn=configure_optimizers_fn,
-                                            tensorboard_writer=config.tb,
-                                            log_dir=config.log_dir)
-        return
-
     if config.mode.lower() == 'test':
         validate(val_loader, model, criterion, config)
 
     if config.mode.lower() == 'train':
-        train(config, compression_ctrl, model, criterion, train_criterion_fn, lr_scheduler, model_name, optimizer,
+        if is_accuracy_aware_training(config):
+            # validation function that returns the target metric value
+            # pylint: disable=E1123
+            def validate_fn(model, epoch):
+                top1, _ = validate(val_loader, model, criterion, config, epoch=epoch)
+                return top1
+
+            # training function that trains the model for one epoch (full training dataset pass)
+            def train_epoch_fn(compression_ctrl, model, epoch, optimizer, lr_scheduler):
+                return train_epoch(train_loader, model, criterion, train_criterion_fn,
+                                optimizer, compression_ctrl, epoch, config)
+
+            # function that initializes optimizers & lr schedulers to start training
+            def configure_optimizers_fn():
+                params_to_optimize = get_parameter_groups(model, config)
+                optimizer, lr_scheduler = make_optimizer(params_to_optimize, config)
+                return optimizer, lr_scheduler
+
+            # instantiate and run accuracy-aware training loop
+            acc_aware_training_loop = AdaptiveCompressionTrainingLoop(nncf_config, compression_ctrl)
+            model = acc_aware_training_loop.run(model,
+                                                train_epoch_fn=train_epoch_fn,
+                                                validate_fn=validate_fn,
+                                                configure_optimizers_fn=configure_optimizers_fn,
+                                                tensorboard_writer=config.tb,
+                                                log_dir=config.log_dir)
+        else:
+            train(config, compression_ctrl, model, criterion, train_criterion_fn, lr_scheduler, model_name, optimizer,
               train_loader, train_sampler, val_loader, best_acc1)
+
     config.mlflow.end_run()
 
 

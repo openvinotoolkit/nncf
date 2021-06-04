@@ -136,18 +136,6 @@ def set_hard_limit_num_open_files():
     resource.setrlimit(resource.RLIMIT_NOFILE, (high, high))
 
 
-def is_accuracy_aware_training(config):
-    compression_config = config.get('compression', {})
-    if isinstance(compression_config, list):
-        for algo_config in compression_config:
-            if algo_config.get("accuracy_aware_training") is not None:
-                return True
-        return False
-    if compression_config.get("accuracy_aware_training") is not None:
-        return True
-    return False
-
-
 class SummaryWriter:
     """Simple SummaryWriter for writing dictionary of metrics
 

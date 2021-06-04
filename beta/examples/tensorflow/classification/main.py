@@ -11,24 +11,18 @@
  limitations under the License.
 """
 
-import gc
 import sys
 import os.path as osp
 from pathlib import Path
 
 import tensorflow as tf
 import tensorflow_addons as tfa
-from tensorflow.python.keras.engine import data_adapter
 
-from nncf import AdaptiveCompressionTrainingLoop
-from nncf.torch.structures import ModelEvaluationArgs
+from nncf.common.utils.helpers import is_accuracy_aware_training
 from beta.nncf import create_compressed_model
 from beta.nncf import create_compression_callbacks
 from beta.nncf.tensorflow.helpers.model_manager import TFOriginalModelManager
-from beta.nncf.tensorflow.accuracy_aware_training.runner import TFAccuracyAwareTrainingRunner as \
-        AccuracyAwareTrainingRunner
 from beta.examples.tensorflow.classification.datasets.builder import DatasetBuilder
-from beta.examples.tensorflow.classification.accuracy_aware_utils import get_training_validation_functions
 from beta.examples.tensorflow.common.argparser import get_common_argument_parser
 from beta.examples.tensorflow.common.callbacks import get_callbacks, get_progress_bar
 from beta.examples.tensorflow.common.distributed import get_distribution_strategy
@@ -42,7 +36,6 @@ from beta.examples.tensorflow.common.utils import create_code_snapshot
 from beta.examples.tensorflow.common.utils import configure_paths
 from beta.examples.tensorflow.common.utils import get_saving_parameters
 from beta.examples.tensorflow.common.utils import write_metrics
-from beta.examples.tensorflow.common.utils import is_accuracy_aware_training
 
 
 def get_argument_parser():
@@ -156,27 +149,20 @@ def run(config):
     train_steps = train_builder.steps_per_epoch
     validation_steps = validation_builder.steps_per_epoch
 
-    is_accuracy_aware_training_mode = is_accuracy_aware_training(config)
-
-    def model_eval_fn(model):
-        orig_model = model_fn(**model_params)
-        orig_model.compile(metrics=[tf.keras.metrics.CategoricalAccuracy(name='acc@1')])
-        val_x, val_y, val_sample_weight = (
-            data_adapter.unpack_x_y_sample_weight(validation_dataset))
-        val_logs = orig_model.evaluate(
-            x=val_x,
-            y=val_y,
-            sample_weight=val_sample_weight,
-            batch_size=None,
-            steps=validation_steps,
-            callbacks=None,
-            return_dict=True)
-        del orig_model
-        gc.collect()
-        return val_logs['acc@1'] * 100
-
     with TFOriginalModelManager(model_fn, **model_params) as model:
         with strategy.scope():
+
+            orig_model = model_fn(**model_params)
+            orig_model.compile(metrics=[tf.keras.metrics.CategoricalAccuracy(name='acc@1')])
+            results = orig_model.evaluate(
+                validation_dataset,
+                steps=validation_steps,
+                return_dict=True)
+            uncompressed_model_accuracy = 100 * results['acc@1']
+
+            compression_ctrl, compress_model = create_compressed_model(model, config.nncf_config)
+            compression_callbacks = create_compression_callbacks(compression_ctrl,
+                                                                 log_dir=config.log_dir)
 
             scheduler = build_scheduler(
                 config=config,
@@ -186,12 +172,6 @@ def run(config):
                 scheduler=scheduler)
 
             loss_obj = tf.keras.losses.CategoricalCrossentropy(label_smoothing=0.1)
-
-            config.nncf_config.register_extra_structs([ModelEvaluationArgs(eval_fn=model_eval_fn)])
-            compression_ctrl, compress_model = create_compressed_model(model, config.nncf_config,
-                                                                       should_eval_original_model=is_accuracy_aware_training_mode)
-            compression_callbacks = create_compression_callbacks(compression_ctrl,
-                                                                 log_dir=config.log_dir)
 
             compress_model.add_loss(compression_ctrl.loss)
 
@@ -239,30 +219,30 @@ def run(config):
         'validation_freq': 1,
     }
 
-    if 'train' in config.mode and is_accuracy_aware_training_mode:
-
-        train_epoch_fn, validate_fn = get_training_validation_functions(train_dataset,
-            validation_dataset, callbacks, initial_epoch, validation_steps, train_steps)
-
-        # instantiate and run accuracy-aware training loop
-        acc_aware_training_loop = AdaptiveCompressionTrainingLoop(config.nncf_config, compression_ctrl,
-                                                            runner_cls=AccuracyAwareTrainingRunner)
-        compress_model = acc_aware_training_loop.run(compress_model,
-                                                     train_epoch_fn=train_epoch_fn,
-                                                     validate_fn=validate_fn,
-                                                     tensorboard_writer=config.tb,
-                                                     log_dir=config.log_dir)
-        return
-
     if 'train' in config.mode:
-        logger.info('training...')
-        compress_model.fit(
-            train_dataset,
-            epochs=train_epochs,
-            steps_per_epoch=train_steps,
-            initial_epoch=initial_epoch,
-            callbacks=callbacks,
-            **validation_kwargs)
+        if is_accuracy_aware_training(config):
+            logger.info('starting an accuracy-aware training loop...')
+            result_dict_to_val_metric_fn = lambda results: 100 * results['acc@1']
+            compress_model.accuracy_aware_fit(train_dataset,
+                                              compression_ctrl,
+                                              nncf_config=config.nncf_config,
+                                              callbacks=callbacks,
+                                              initial_epoch=initial_epoch,
+                                              steps_per_epoch=train_steps,
+                                              tensorboard_writer=config.tb,
+                                              log_dir=config.log_dir,
+                                              uncompressed_model_accuracy=uncompressed_model_accuracy,
+                                              result_dict_to_val_metric_fn=result_dict_to_val_metric_fn,
+                                              **validation_kwargs)
+        else:
+            logger.info('training...')
+            compress_model.fit(
+                train_dataset,
+                epochs=train_epochs,
+                steps_per_epoch=train_steps,
+                initial_epoch=initial_epoch,
+                callbacks=callbacks,
+                **validation_kwargs)
 
     logger.info('evaluation...')
     statistics = compression_ctrl.statistics()

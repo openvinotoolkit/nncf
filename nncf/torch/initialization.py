@@ -13,10 +13,10 @@ from torch.utils.data import DataLoader
 from nncf.config.structure import BNAdaptationInitArgs
 from nncf.common.utils.progress_bar import ProgressBar
 from nncf.common.initialization import NNCFDataLoader
+from nncf.common.structures import ModelEvaluationArgs
 from nncf.torch.structures import AutoQPrecisionInitArgs
 from nncf.torch.structures import QuantizationPrecisionInitArgs
 from nncf.torch.structures import QuantizationRangeInitArgs
-from nncf.torch.structures import ModelEvaluationArgs
 from nncf.torch.utils import is_tensor
 from nncf.torch.utils import objwalk
 from contextlib import contextmanager

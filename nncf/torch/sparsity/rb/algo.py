@@ -25,9 +25,7 @@ from nncf.torch.sparsity.rb.loss import SparseLoss, SparseLossForPerLayerSparsit
 from nncf.torch.utils import get_world_size
 from nncf.common.sparsity.schedulers import SPARSITY_SCHEDULERS
 from nncf.common.accuracy_aware_training.training_loop import ADAPTIVE_COMPRESSION_CONTROLLERS
-from nncf.common.sparsity.schedulers import SPARSITY_SCHEDULERS
 from nncf.common.sparsity.statistics import RBSparsityStatistics
-from nncf.torch.utils import get_world_size
 from nncf.common.statistics import NNCFStatistics
 
 

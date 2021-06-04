@@ -28,10 +28,10 @@ from examples.torch.common.sample_config import create_sample_config
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 
 from nncf.common.utils.tensorboard import prepare_for_tensorboard
+from nncf.common.utils.helpers import is_accuracy_aware_training
 import examples.torch.semantic_segmentation.utils.data as data_utils
 import examples.torch.semantic_segmentation.utils.loss_funcs as loss_funcs
 import examples.torch.semantic_segmentation.utils.transforms as JT
-from examples.torch.common.utils import is_accuracy_aware_training
 from examples.torch.common.argparser import get_common_argument_parser
 from examples.torch.common.example_logger import logger
 from examples.torch.common.execution import get_execution_mode, \
@@ -466,7 +466,6 @@ def main_worker(current_gpu, config):
         print_args(config)
 
     logger.info(config)
-    is_accuracy_aware_training_mode = is_accuracy_aware_training(config)
 
     dataset = get_dataset(config.dataset)
     color_encoding = dataset.color_encoding
@@ -517,8 +516,7 @@ def main_worker(current_gpu, config):
         resuming_model_sd, resuming_checkpoint = load_resuming_model_state_dict_and_checkpoint_from_path(
             resuming_checkpoint_path)
     compression_ctrl, model = create_compressed_model(model, nncf_config,
-                                                      resuming_state_dict=resuming_model_sd,
-                                                      should_eval_original_model=is_accuracy_aware_training_mode)
+                                                      resuming_state_dict=resuming_model_sd)
     model, model_without_dp = prepare_model_for_execution(model, config)
 
     if config.distributed:
@@ -541,7 +539,7 @@ def main_worker(current_gpu, config):
         logger.info("Trainable argument count:{params}".format(params=params))
         model = model.to(config.device)
         test(model, val_loader, criterion, color_encoding, config)
-    elif is_accuracy_aware_training_mode and config.mode.lower() == 'train':
+    elif is_accuracy_aware_training(config) and config.mode.lower() == 'train':
         def validate_fn(model, epoch):
             return test(model, val_loader, criterion, color_encoding, config)
 

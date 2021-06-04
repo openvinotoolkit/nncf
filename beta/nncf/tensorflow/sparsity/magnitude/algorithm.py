@@ -194,7 +194,8 @@ class MagnitudeSparsityController(BaseSparsityController):
 
     @property
     def compression_rate(self) -> float:
-        return self.raw_statistics()['sparsity_rate_for_model']
+        self.statistics()
+        return self.sparsity_rate_for_model
 
     @compression_rate.setter
     def compression_rate(self, compression_rate: float) -> None:
@@ -202,9 +203,6 @@ class MagnitudeSparsityController(BaseSparsityController):
 
     def disable_scheduler(self):
         self._scheduler = StubCompressionScheduler()
-
-    def raw_statistics(self):
-        raw_sparsity_statistics = {}
 
     def statistics(self, quickly_collected_only: bool = False) -> NNCFStatistics:
         sparsity_levels = []
@@ -234,7 +232,7 @@ class MagnitudeSparsityController(BaseSparsityController):
 
         sparsity_rate_for_sparsified_modules = (total_sparsified_weights_number / total_weights_number).numpy()
         model_weights_number = count_params(self._model.weights) - total_weights_number - total_bkup_weights_number
-        sparsity_rate_for_model = (total_sparsified_weights_number / model_weights_number).numpy()
+        self.sparsity_rate_for_model = (total_sparsified_weights_number / model_weights_number).numpy()
 
         sparsity_levels = tf.keras.backend.batch_get_value(sparsity_levels)
         weights_percentages = [weights_number / total_weights_number * 100
@@ -251,7 +249,7 @@ class MagnitudeSparsityController(BaseSparsityController):
 
             threshold_statistics.append(LayerThreshold(mask_name, self._threshold))
 
-        model_statistics = SparsifiedModelStatistics(sparsity_rate_for_model,
+        model_statistics = SparsifiedModelStatistics(self.sparsity_rate_for_model,
                                                      sparsity_rate_for_sparsified_modules,
                                                      sparsified_layers_summary)
 

@@ -24,8 +24,11 @@ from nncf.common.composite_compression import CompositeCompressionAlgorithmContr
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.common.utils.registry import Registry
 from nncf.config.config import NNCFConfig
-from nncf.torch.accuracy_aware_training.runner import PTAccuracyAwareTrainingRunner as \
-    AccuracyAwareTrainingRunner
+from nncf.common.utils.backend import __nncf_backend__
+
+if __nncf_backend__ == 'Torch':
+    from nncf.torch.accuracy_aware_training.runner import PTAccuracyAwareTrainingRunner as \
+        AccuracyAwareTrainingRunner
 
 
 ModelType = TypeVar('ModelType')
@@ -121,7 +124,8 @@ class AdaptiveCompressionTrainingLoop(TrainingLoop):
             was_compression_rate_changed = self._update_target_compression_rate(self.adaptive_controller, self.runner)
             nncf_logger.info('Current target compression rate value: '
                                 '{comp_rate:.3f}'.format(comp_rate=self.runner.compression_rate_target))
-            nncf_logger.info('Current accuracy budget value: {acc_budget:.3f}'.format(acc_budget=self.runner.accuracy_bugdet))
+            nncf_logger.info('Current accuracy budget value: '
+                             '{acc_budget:.3f}'.format(acc_budget=self.runner.accuracy_bugdet))
             nncf_logger.info('Current compression rate step value: '
                                 '{comp_step:.3f}'.format(comp_step=self.runner.compression_rate_step))
 
@@ -170,7 +174,8 @@ class AdaptiveCompressionTrainingLoop(TrainingLoop):
             accuracy_aware_controller.disable_scheduler()
             return True
         if runner.training_epoch_count >= runner.patience_epochs:
-            runner.compression_rate_target += self._determine_compression_rate_step_value(runner, current_compression_rate)
+            runner.compression_rate_target += self._determine_compression_rate_step_value(runner,
+                                                                                          current_compression_rate)
             runner.was_compression_increased_on_prev_step = np.sign(best_accuracy_budget)
             return True
         return False

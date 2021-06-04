@@ -20,12 +20,13 @@ import numpy as np
 
 
 from nncf import AdaptiveCompressionTrainingLoop
-from nncf.structures import ModelEvaluationArgs
+from nncf.common.structures import ModelEvaluationArgs
 from beta.nncf import create_compressed_model
 from beta.nncf.tensorflow.helpers.model_manager import TFOriginalModelManager
 from beta.nncf.tensorflow.accuracy_aware_training.runner import TFAccuracyAwareTrainingRunner as \
         AccuracyAwareTrainingRunner
 from nncf.common.utils.tensorboard import prepare_for_tensorboard
+from nncf.common.utils.helpers import is_accuracy_aware_training
 
 from beta.examples.tensorflow.common.argparser import get_common_argument_parser
 from beta.examples.tensorflow.common.distributed import get_distribution_strategy
@@ -41,8 +42,6 @@ from beta.examples.tensorflow.common.utils import create_code_snapshot
 from beta.examples.tensorflow.common.utils import configure_paths
 from beta.examples.tensorflow.common.utils import get_saving_parameters
 from beta.examples.tensorflow.common.utils import write_metrics
-from beta.examples.tensorflow.common.utils import get_scheduler_state
-from beta.examples.tensorflow.common.utils import is_accuracy_aware_training
 from beta.examples.tensorflow.object_detection.models.model_selector import get_predefined_config
 from beta.examples.tensorflow.object_detection.models.model_selector import get_model_builder
 
@@ -270,8 +269,6 @@ def run(config):
     if config.metrics_dump is not None:
         write_metrics(0, config.metrics_dump)
 
-    is_accuracy_aware_training_mode = is_accuracy_aware_training(config)
-
     # Create dataset
     builders = get_dataset_builders(config, strategy.num_replicas_in_sync)
     datasets = [builder.build() for builder in builders]
@@ -298,8 +295,7 @@ def run(config):
                                 weights=config.get('weights', None)) as model:
         with strategy.scope():
             config.nncf_config.register_extra_structs([ModelEvaluationArgs(eval_fn=model_eval_fn)])
-            compression_ctrl, compress_model = create_compressed_model(model, config.nncf_config,
-                                                                       should_eval_original_model=is_accuracy_aware_training_mode)
+            compression_ctrl, compress_model = create_compressed_model(model, config.nncf_config)
 
             scheduler = build_scheduler(
                 config=config,
@@ -330,38 +326,37 @@ def run(config):
     train_step = create_train_step_fn(strategy, compress_model, loss_fn, optimizer)
     test_step = create_test_step_fn(strategy, compress_model, predict_post_process_fn)
 
-    if 'train' in config.mode and is_accuracy_aware_training_mode:
-
-        train_summary_writer = SummaryWriter(config.log_dir, 'train')
-        timer = Timer()
-        timer.tic()
-
-        def train_epoch_fn(compression_ctrl, model, epoch):
-            train_step = create_train_step_fn(strategy, model, loss_fn, optimizer)
-            train_epoch(train_step, compression_ctrl, epoch, initial_epoch, steps_per_epoch,
-                optimizer, checkpoint_manager, train_dist_dataset, train_summary_writer,
-                initial_step, config.print_freq, timer)
-
-        def validate_fn(model, epoch):
-            test_step = create_test_step_fn(strategy, model, predict_post_process_fn)
-            metric_result = evaluate(test_step, eval_metric, test_dist_dataset,
-                                     num_test_batches, config.print_freq)
-            return metric_result['AP']
-
-        # instantiate and run accuracy-aware training loop
-        acc_aware_training_loop = AdaptiveCompressionTrainingLoop(config.nncf_config, compression_ctrl,
-                                                            runner_cls=AccuracyAwareTrainingRunner)
-        compress_model = acc_aware_training_loop.run(compress_model,
-                                                     train_epoch_fn=train_epoch_fn,
-                                                     validate_fn=validate_fn,
-                                                     tensorboard_writer=config.tb,
-                                                     log_dir=config.log_dir)
-        return
-
     if 'train' in config.mode:
-        train(train_step, test_step, eval_metric, train_dist_dataset, test_dist_dataset, initial_epoch, initial_step,
-            epochs, steps_per_epoch, checkpoint_manager, compression_ctrl, config.log_dir, optimizer, num_test_batches,
-            config.print_freq)
+        if is_accuracy_aware_training(config):
+            train_summary_writer = SummaryWriter(config.log_dir, 'train')
+            timer = Timer()
+            timer.tic()
+
+            def train_epoch_fn(compression_ctrl, model, epoch):
+                train_step = create_train_step_fn(strategy, model, loss_fn, optimizer)
+                train_epoch(train_step, compression_ctrl, epoch, initial_epoch, steps_per_epoch,
+                    optimizer, checkpoint_manager, train_dist_dataset, train_summary_writer,
+                    initial_step, config.print_freq, timer)
+
+            def validate_fn(model, epoch):
+                test_step = create_test_step_fn(strategy, model, predict_post_process_fn)
+                metric_result = evaluate(test_step, eval_metric, test_dist_dataset,
+                                        num_test_batches, config.print_freq)
+                return metric_result['AP']
+
+            # instantiate and run accuracy-aware training loop
+            acc_aware_training_loop = AdaptiveCompressionTrainingLoop(config.nncf_config, compression_ctrl,
+                                                                runner_cls=AccuracyAwareTrainingRunner)
+            compress_model = acc_aware_training_loop.run(compress_model,
+                                                         train_epoch_fn=train_epoch_fn,
+                                                         validate_fn=validate_fn,
+                                                         tensorboard_writer=config.tb,
+                                                         log_dir=config.log_dir)
+
+        else:
+            train(train_step, test_step, eval_metric, train_dist_dataset, test_dist_dataset,
+                  initial_epoch, initial_step, epochs, steps_per_epoch, checkpoint_manager,
+                  compression_ctrl, config.log_dir, optimizer, num_test_batches, config.print_freq)
 
     statistics = compression_ctrl.statistics()
     logger.info(statistics.to_str())

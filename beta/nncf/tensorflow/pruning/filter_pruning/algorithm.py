@@ -153,13 +153,6 @@ class FilterPruningController(BasePruningAlgoController):
     def disable_scheduler(self):
         self._scheduler = StubCompressionScheduler()
 
-    def statistics(self, quickly_collected_only=False):
-        stats = super().statistics(quickly_collected_only)
-        stats['pruning_rate'] = self.pruning_rate
-        stats['FLOPS pruning level'] = 1 - self.current_flops / self.full_flops
-        stats['FLOPS current / full'] = f"{self.current_flops} / {self.full_flops}"
-        return stats
-
     def statistics(self, quickly_collected_only: bool = False) -> NNCFStatistics:
         model_statistics = self._calculate_pruned_model_stats()
         stats = FilterPruningStatistics(model_statistics, self.full_flops, self.current_flops)

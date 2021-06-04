@@ -29,7 +29,6 @@ class TrainingRunner(ABC):
         """
         Train the supplied model for a single epoch (single dataset pass).
         """
-        pass
 
     @abstractmethod
     def validate(self, model: ModelType, compression_controller: CompressionAlgorithmController):
@@ -37,35 +36,30 @@ class TrainingRunner(ABC):
         Compute the target metric value on the validation dataset for the supplied model
         :return: Target validation metric value.
         """
-        pass
 
     @abstractmethod
     def dump_checkpoint(self, model: ModelType, compression_controller: CompressionAlgorithmController):
         """
         Dump current model checkpoint on disk.
         """
-        pass
 
     @abstractmethod
     def configure_optimizers(self):
         """
         Initialize the training optimizer object (and, optionally, the learning rate scheduler object).
         """
-        pass
 
     @abstractmethod
     def reset_training(self):
         """
         Initialize all-training related parameters (e.g. epoch count, optimizer, learning rate scheduler).
         """
-        pass
 
     @abstractmethod
     def retrieve_original_accuracy(self, model):
         """
         Retrive the original uncompressed model accuracy from the model instance.
         """
-        pass
 
     @abstractmethod
     def initialize_training_loop_fns(self, train_epoch_fn, validate_fn, configure_optimizers_fn,
@@ -73,7 +67,6 @@ class TrainingRunner(ABC):
         """
         Register the user-supplied functions to be used to control the training process.
         """
-        pass
 
 
 class BaseAccuracyAwareTrainingRunner(TrainingRunner):
@@ -113,7 +106,7 @@ class BaseAccuracyAwareTrainingRunner(TrainingRunner):
 
         self.maximal_accuracy_drop = accuracy_aware_config.get('maximal_accuracy_degradation')
         self.initial_training_phase_epochs = accuracy_aware_config.get('initial_training_phase_epochs')
-
+        # pylint: disable=no-member
         self.compression_rate_step = self.initial_compression_rate_step
         self.step_reduction_factor = self.compression_rate_step_reduction_factor
 

@@ -28,9 +28,10 @@ from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.utils import is_main_process
 from nncf.torch.utils import is_dist_avail_and_initialized
 from nncf.torch.algo_selector import COMPRESSION_ALGORITHMS
-from nncf.torch.structures import ModelEvaluationArgs
+from nncf.common.structures import ModelEvaluationArgs
 
 from nncf.common.utils.logger import logger
+from nncf.common.utils.helpers import is_accuracy_aware_training
 
 
 def get_compression_algorithm(config):
@@ -39,13 +40,13 @@ def get_compression_algorithm(config):
     return COMPRESSION_ALGORITHMS.get(algorithm_key)
 
 
+# pylint: disable=too-many-branches
 def create_compressed_model(model: Module, config: NNCFConfig,
                             resuming_state_dict: dict = None,
                             dummy_forward_fn: Callable[[Module], Any] = None,
                             wrap_inputs_fn: Callable[[Tuple, Dict], Tuple[Tuple, Dict]] = None,
                             wrap_outputs_fn: Callable[[Tuple, Dict], Tuple[Tuple, Dict]] = None,
-                            dump_graphs=True,
-                            should_eval_original_model=False) \
+                            dump_graphs=True) \
     -> Tuple[PTCompressionAlgorithmController, NNCFNetwork]:
     """
     The main function used to produce a model ready for compression fine-tuning from an original PyTorch
@@ -113,10 +114,11 @@ def create_compressed_model(model: Module, config: NNCFConfig,
     target_scopes = config.get('target_scopes')
 
     original_model_accuracy = None
-    if should_eval_original_model:
-        evaluation_args = config.get_extra_struct(ModelEvaluationArgs)
-        with torch.no_grad():
-            original_model_accuracy = evaluation_args.eval_fn(model)
+    if is_accuracy_aware_training(config):
+        if config.has_extra_struct(ModelEvaluationArgs):
+            evaluation_args = config.get_extra_struct(ModelEvaluationArgs)
+            with torch.no_grad():
+                original_model_accuracy = evaluation_args.eval_fn(model)
 
     compressed_model = NNCFNetwork(model, input_infos=input_info_list,
                                    dummy_forward_fn=dummy_forward_fn,

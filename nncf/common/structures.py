@@ -10,3 +10,15 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+from typing import Callable
+from nncf.config.structure import NNCFExtraConfigStruct
+
+
+class ModelEvaluationArgs(NNCFExtraConfigStruct):
+    def __init__(self,
+                 eval_fn: Callable):
+        self.eval_fn = eval_fn
+
+    @classmethod
+    def get_id(cls) -> str:
+        return "model_evaluation_args"

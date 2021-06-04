@@ -25,3 +25,20 @@ def create_table(header: List[str], rows: List[List[Any]]) -> str:
     :return: A string which represents a table with a header and rows.
     """
     return Texttable().header(header).add_rows(rows, header=False).draw()
+
+
+def is_accuracy_aware_training(config, compression_config_passed=False):
+    """
+    Returns True if the compression config contains an accuracy-aware
+    training related section, False otherwise.
+    """
+    compression_config = config.get('compression', {}) if not compression_config_passed \
+        else config
+    if isinstance(compression_config, list):
+        for algo_config in compression_config:
+            if algo_config.get("accuracy_aware_training") is not None:
+                return True
+        return False
+    if compression_config.get("accuracy_aware_training") is not None:
+        return True
+    return False

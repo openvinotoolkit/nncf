@@ -18,7 +18,6 @@ import tensorflow as tf
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.common.accuracy_aware_training.runner import BaseAccuracyAwareTrainingRunner
 
-from beta.nncf.helpers.utils import print_statistics
 from beta.nncf.tensorflow.accuracy_aware_training.utils import configure_paths
 
 
@@ -27,12 +26,6 @@ class TFAccuracyAwareTrainingRunner(BaseAccuracyAwareTrainingRunner):
     """
     The Training Runner implementation for TensorFlow training code.
     """
-    def __init__(self, accuracy_aware_config, verbose=True,
-                 minimal_compression_rate=0.05, maximal_compression_rate=0.95):
-
-        super().__init__(accuracy_aware_config, verbose,
-                         minimal_compression_rate, maximal_compression_rate)
-
     def initialize_training_loop_fns(self, train_epoch_fn, validate_fn, configure_optimizers_fn=None,
                                      tensorboard_writer=None, log_dir=None):
         super().initialize_training_loop_fns(train_epoch_fn, validate_fn, configure_optimizers_fn,
@@ -55,7 +48,7 @@ class TFAccuracyAwareTrainingRunner(BaseAccuracyAwareTrainingRunner):
                              model,
                              self.cumulative_epoch_count)
 
-        stats = compression_controller.statistics()
+        statistics = compression_controller.statistics()
 
         self.current_val_metric_value = None
         if self.validate_every_n_epochs is not None and \
@@ -63,14 +56,9 @@ class TFAccuracyAwareTrainingRunner(BaseAccuracyAwareTrainingRunner):
             self.current_val_metric_value = self.validate(model, compression_controller)
 
         if self.verbose:
-            print_statistics(stats)
-        self.dump_checkpoint(model, compression_controller)
-
+            nncf_logger.info(statistics.to_str())
         # dump best checkpoint for current target compression rate
-        for key, value in stats.items():
-            if isinstance(value, (int, float)):
-                self.add_tensorboard_scalar('compression/statistics/{0}'.format(key),
-                                            data=value, step=self.cumulative_epoch_count)
+        self.dump_checkpoint(model, compression_controller)
 
         self.training_epoch_count += 1
         self.cumulative_epoch_count += 1
@@ -99,6 +87,7 @@ class TFAccuracyAwareTrainingRunner(BaseAccuracyAwareTrainingRunner):
             best_path = osp.join(self._checkpoint_save_dir,
                                  'acc_aware_checkpoint_best_compression_rate_'
                                  '{comp_rate:.3f}.pth'.format(comp_rate=self.compression_rate_target))
+            self._best_checkpoints[self.compression_rate_target] = best_path
             model.save_weights(best_path)
 
     def add_tensorboard_scalar(self, key, data, step):
@@ -116,13 +105,14 @@ class TFAccuracyAwareTrainingRunner(BaseAccuracyAwareTrainingRunner):
         # load checkpoint with highest compression rate and positive acc budget
         possible_checkpoint_rates = [comp_rate for (comp_rate, acc_budget) in self._compressed_training_history
                                      if acc_budget >= 0]
+        if not possible_checkpoint_rates:
+            nncf_logger.warning('Could not produce a compressed model satisfying the set accuracy '
+                                'degradation criterion during training. Increasing the number of training '
+                                'epochs')
         best_checkpoint_compression_rate = max(possible_checkpoint_rates)
-        resuming_checkpoint_path = osp.join(self._checkpoint_save_dir,
-                                            'acc_aware_checkpoint_best_compression_rate_'
-                                            '{comp_rate:.3f}.pth'.format(comp_rate=best_checkpoint_compression_rate))
+        resuming_checkpoint_path = self._best_checkpoints[best_checkpoint_compression_rate]
         nncf_logger.info('Loading the best checkpoint found during training '
                          '{}...'.format(resuming_checkpoint_path))
-
         model.load_weights(resuming_checkpoint_path)
 
     def configure_optimizers(self):
