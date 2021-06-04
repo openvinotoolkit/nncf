@@ -60,7 +60,7 @@ from nncf.torch.graph.transformations.commands import PTInsertionCommand
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.graph.transformations.commands import TransformationPriority
 from nncf.torch.graph.transformations.layout import PTTransformationLayout
-from nncf.torch.initialization import SimpleDataLoaderRunner
+from nncf.torch.initialization.data_loader import SimpleDataLoaderRunner
 from nncf.torch.layer_utils import _NNCFModuleMixin
 from nncf.torch.module_operations import UpdatePaddingValue
 from nncf.torch.nncf_network import EXTERNAL_QUANTIZERS_STORAGE_NAME

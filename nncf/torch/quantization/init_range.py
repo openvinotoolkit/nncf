@@ -5,7 +5,7 @@ from typing import List, Dict, Set, Optional, Tuple, Callable
 import numpy as np
 import torch
 
-from nncf.torch.initialization import DataLoaderBaseRunner
+from nncf.torch.initialization.data_loader import DataLoaderBaseRunner
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.quantization.layers import BaseQuantizer
 from nncf.torch.quantization.quantizer_id import WeightQuantizerId, NonWeightQuantizerId

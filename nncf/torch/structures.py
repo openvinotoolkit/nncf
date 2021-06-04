@@ -20,7 +20,7 @@ from torch.nn.modules.loss import _Loss
 from torch.utils.data import DataLoader
 
 from nncf.config.structure import NNCFExtraConfigStruct
-from nncf.torch.initialization import InitializingDataLoader
+from nncf.torch.initialization.data_loader import InitializingDataLoader
 
 
 class QuantizationPrecisionInitArgs(NNCFExtraConfigStruct):

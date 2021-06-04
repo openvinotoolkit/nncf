@@ -50,7 +50,7 @@ if __nncf_backend__ == 'Torch':
     from nncf.torch.checkpoint_loading import load_state
     from nncf.common.utils.logger import disable_logging
     from nncf.common.utils.logger import set_log_level
-    from nncf.torch.initialization import register_default_init_args
+    from nncf.torch.initialization.init_functions import register_default_init_args
     from nncf.torch.layers import register_module
     from nncf.torch.dynamic_graph.patch_pytorch import register_operator
     from nncf.torch.dynamic_graph.io_handling import nncf_model_input

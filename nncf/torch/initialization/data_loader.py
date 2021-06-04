@@ -1,22 +1,16 @@
 import math
+from functools import partial
+
 from typing import Any
-from typing import Callable
 from typing import Dict
 from typing import Optional
 from typing import Tuple
-from typing import Union
 
 import torch
-from functools import partial
-from torch.nn.modules.loss import _Loss
 from torch.utils.data import DataLoader
-
-from nncf.config.structure import BNAdaptationInitArgs
-from nncf.common.utils.progress_bar import ProgressBar
 from nncf.common.initialization import NNCFDataLoader
-from nncf.torch.structures import AutoQPrecisionInitArgs
-from nncf.torch.structures import QuantizationPrecisionInitArgs
-from nncf.torch.structures import QuantizationRangeInitArgs
+from nncf.common.utils.progress_bar import ProgressBar
+
 from nncf.torch.utils import is_tensor
 from nncf.torch.utils import objwalk
 from contextlib import contextmanager
@@ -63,20 +57,6 @@ class DefaultInitializingDataLoader(InitializingDataLoader):
 
     def get_target(self, dataloader_output: Any):
         return dataloader_output[1]
-
-
-def wrap_dataloader_for_init(data_loader) -> InitializingDataLoader:
-    if not isinstance(data_loader, InitializingDataLoader):
-        loaded_item = next(iter(data_loader))
-        if isinstance(loaded_item, (tuple, list)) and len(loaded_item) == 2:
-            return DefaultInitializingDataLoader(data_loader)
-        raise NotImplementedError("By default it is assumed that the data loader used for initialize "
-                                  "produces a tuple/list of (*model_input*, *ground_truth*) and that no special "
-                                  "forward arguments have to be set during init. If this is not the case, then instead "
-                                  "of your regular data loader you need to pass a specialized version of "
-                                  "InitializingDataLoader that returns a general (args, kwargs) tuple for your "
-                                  "model to be called with at each __next__ call.")
-    return data_loader
 
 
 class PartialDataLoader:
@@ -242,35 +222,15 @@ class DataLoaderBNAdaptationRunner(DataLoaderBaseRunner):
         pass
 
 
-def default_criterion_fn(outputs: Any, target: Any, criterion: Any) -> torch.Tensor:
-    return criterion(outputs, target)
-
-
-def register_default_init_args(nncf_config: 'NNCFConfig',
-                               train_loader: Union[torch.utils.data.DataLoader, InitializingDataLoader],
-                               criterion: _Loss = None,
-                               criterion_fn: Callable[[Any, Any, _Loss], torch.Tensor] = None,
-                               autoq_eval_fn: Callable[[torch.nn.Module, torch.utils.data.DataLoader], float] = None,
-                               autoq_eval_loader: torch.utils.data.DataLoader = None,
-                               device: str = None) -> 'NNCFConfig':
-    nncf_config.register_extra_structs([QuantizationRangeInitArgs(data_loader=train_loader,
-                                                                  device=device),
-                                        BNAdaptationInitArgs(data_loader=wrap_dataloader_for_init(train_loader),
-                                                             device=device)])
-
-    if criterion:
-        if not criterion_fn:
-            criterion_fn = default_criterion_fn
-        nncf_config.register_extra_structs([QuantizationPrecisionInitArgs(criterion_fn=criterion_fn,
-                                                                          criterion=criterion,
-                                                                          data_loader=train_loader,
-                                                                          device=device)])
-
-    if autoq_eval_fn:
-        if not autoq_eval_loader:
-            autoq_eval_loader = train_loader
-        nncf_config.register_extra_structs([AutoQPrecisionInitArgs(data_loader=autoq_eval_loader,
-                                                                   eval_fn=autoq_eval_fn,
-                                                                   nncf_config=nncf_config)])
-
-    return nncf_config
+def wrap_dataloader_for_init(data_loader) -> InitializingDataLoader:
+    if not isinstance(data_loader, InitializingDataLoader):
+        loaded_item = next(iter(data_loader))
+        if isinstance(loaded_item, (tuple, list)) and len(loaded_item) == 2:
+            return DefaultInitializingDataLoader(data_loader)
+        raise NotImplementedError("By default it is assumed that the data loader used for initialize "
+                                  "produces a tuple/list of (*model_input*, *ground_truth*) and that no special "
+                                  "forward arguments have to be set during init. If this is not the case, then instead "
+                                  "of your regular data loader you need to pass a specialized version of "
+                                  "InitializingDataLoader that returns a general (args, kwargs) tuple for your "
+                                  "model to be called with at each __next__ call.")
+    return data_loader

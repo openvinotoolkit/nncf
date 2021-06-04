@@ -21,7 +21,7 @@ from torch.nn import Parameter
 from torch.nn.modules.loss import _Loss
 from torch.utils.data import DataLoader
 
-from nncf.torch.initialization import wrap_dataloader_for_init, InitializingDataLoader
+from nncf.torch.initialization.data_loader import wrap_dataloader_for_init, InitializingDataLoader
 from nncf.common.utils.logger import logger as nncf_logger
 
 
