@@ -21,7 +21,7 @@ from beta.nncf.tensorflow.graph.metatypes.matcher import get_keras_layer_metatyp
 from nncf.common.utils.progress_bar import ProgressBar
 
 
-class BNTrainingStateSwitcher():
+class BNTrainingStateSwitcher:
     def __init__(self, model):
         self._model = model
         self._original_training_state = {}
@@ -38,7 +38,7 @@ class BNTrainingStateSwitcher():
                 layer.trainable = self._original_training_state[layer]
 
 
-class BNMomentumSwitcher():
+class BNMomentumSwitcher:
     def __init__(self, model):
         self._model = model
         self._original_momenta_values = {}
@@ -76,8 +76,9 @@ class TFBatchnormAdaptationAlgorithmImpl(BatchnormAdaptationAlgorithmImpl):
         self._model(x, training=True)
 
     def _run_model_inference(self):
-        self.original_momenta_values = {}
-        self.original_training_state = {}
+        @tf.function
+        def strategy_run(x):
+            self._model.distribute_strategy.run(self._infer_batch, args=(x,))
 
         with BNTrainingStateSwitcher(self._model):
             with BNMomentumSwitcher(self._model):
@@ -86,13 +87,13 @@ class TFBatchnormAdaptationAlgorithmImpl(BatchnormAdaptationAlgorithmImpl):
                         total=self._num_bn_forget_steps,
                         desc='BatchNorm statistics forget'
                 ):
-                    self._infer_batch(x)
+                    strategy_run(x)
             for (x, _) in ProgressBar(
                     islice(self._data_loader, self._num_bn_adaptation_steps),
                     total=self._num_bn_adaptation_steps,
                     desc='BatchNorm statistics adaptation'
             ):
-                self._infer_batch(x)
+                strategy_run(x)
 
     def run(self, model: tf.keras.Model) -> None:
         """

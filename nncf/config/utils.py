@@ -41,7 +41,7 @@ def extract_bn_adaptation_init_params(config: NNCFConfig) -> Dict[str, object]:
         'num_bn_adaptation_samples': num_bn_adaptation_samples,
         'num_bn_forget_samples': num_bn_forget_samples,
         'data_loader': args.data_loader,
-        'device': args.device,
+        'device': args.device
     }
 
     return params
