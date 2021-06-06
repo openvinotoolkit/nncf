@@ -11,6 +11,7 @@
  limitations under the License.
 """
 
+from typing import List
 import sys
 import inspect
 
@@ -137,8 +138,22 @@ def get_layer_identifier(node: NNCFNode):
     layer_name, _ = get_original_name_and_instance_index(node.node_name)
     return layer_name
 
+
 def unwrap_layer(layer):
     layer_metatype = get_keras_layer_metatype(layer, determine_subtype=False)
     if layer_metatype == TFNNCFWrapperLayerMetatype:
         return layer.layer
     return layer
+
+
+def get_nncf_operations(model: tf.keras.Model, operation_names: List[str]):
+    """
+    :param model:
+    :param operation_names:
+    :return:
+    """
+    for wrapped_layer in collect_wrapped_layers(model):
+        for weight_attr, ops in wrapped_layer.weights_attr_ops.items():
+            for op in ops.values():
+                if op.name in operation_names:
+                    yield wrapped_layer, weight_attr, op

@@ -12,12 +12,9 @@
 """
 
 import tensorflow as tf
-from tensorflow.python.keras.utils.layer_utils import count_params
 
 from nncf.common.graph.transformations.commands import TransformationPriority
 from nncf.common.sparsity.schedulers import SPARSITY_SCHEDULERS
-from nncf.common.sparsity.statistics import SparsifiedLayerSummary
-from nncf.common.sparsity.statistics import SparsifiedModelStatistics
 from nncf.common.sparsity.statistics import LayerThreshold
 from nncf.common.sparsity.statistics import MagnitudeSparsityStatistics
 from nncf.common.statistics import NNCFStatistics
@@ -42,6 +39,7 @@ from beta.nncf.tensorflow.sparsity.magnitude.functions import calc_magnitude_bin
 from beta.nncf.tensorflow.sparsity.magnitude.functions import WEIGHT_IMPORTANCE_FUNCTIONS
 from beta.nncf.tensorflow.sparsity.magnitude.operation import BinaryMask
 from beta.nncf.tensorflow.sparsity.magnitude.operation import BinaryMaskWithWeightsBackup
+from beta.nncf.tensorflow.sparsity.collector import TFSparseModelStatisticsCollector
 from beta.nncf.tensorflow.utils.node import is_ignored
 
 
@@ -189,55 +187,15 @@ class MagnitudeSparsityController(BaseSparsityController):
         return all_weights
 
     def statistics(self, quickly_collected_only: bool = False) -> NNCFStatistics:
-        sparsity_levels = []
-        mask_names = []
-        weights_shapes = []
-        weights_numbers = []
-        total_weights_number = tf.constant(0)
-        total_sparsified_weights_number = tf.constant(0)
-        total_bkup_weights_number = tf.constant(0)
-        wrapped_layers = collect_wrapped_layers(self._model)
-        for wrapped_layer in wrapped_layers:
-            for ops in wrapped_layer.weights_attr_ops.values():
-                for op_name, op in ops.items():
-                    if op_name in self._op_names:
-                        if isinstance(op, BinaryMaskWithWeightsBackup):
-                            total_bkup_weights_number += tf.size(op.bkup_var)
-                        if isinstance(op, BinaryMask):
-                            mask = wrapped_layer.ops_weights[op_name]['mask']
-                            mask_names.append(mask.name)
-                            weights_shapes.append(list(mask.shape))
-                            weights_number = tf.size(mask)
-                            weights_numbers.append(weights_number)
-                            sparsified_weights_number = weights_number - tf.reduce_sum(tf.cast(mask, tf.int32))
-                            sparsity_levels.append(sparsified_weights_number / weights_number)
-                            total_weights_number += weights_number
-                            total_sparsified_weights_number += sparsified_weights_number
+        collector = TFSparseModelStatisticsCollector(self.model, self._op_names)
+        model_stats = collector.collect()
 
-        sparsity_rate_for_sparsified_modules = (total_sparsified_weights_number / total_weights_number).numpy()
-        model_weights_number = count_params(self._model.weights) - total_weights_number - total_bkup_weights_number
-        sparsity_rate_for_model = (total_sparsified_weights_number / model_weights_number).numpy()
+        threshold_stats = []
+        threshold = self._select_threshold(model_stats.sparsity_level)
+        for s in model_stats.sparsified_layers_summary:
+            threshold_stats.append(LayerThreshold(s.name, threshold))
 
-        sparsity_levels = tf.keras.backend.batch_get_value(sparsity_levels)
-        weights_percentages = [weights_number / total_weights_number * 100
-                               for weights_number in weights_numbers]
-        weights_percentages = tf.keras.backend.batch_get_value(weights_percentages)
-        mask_sparsity = list(zip(mask_names, weights_shapes, sparsity_levels, weights_percentages))
-
-        sparsified_layers_summary = []
-        threshold_statistics = []
-        for mask_name, weights_shape, sparsity_level, weights_percentage in mask_sparsity:
-            sparsified_layers_summary.append(
-                SparsifiedLayerSummary(mask_name, weights_shape, sparsity_level, weights_percentage)
-            )
-
-            threshold_statistics.append(LayerThreshold(mask_name, self._threshold))
-
-        model_statistics = SparsifiedModelStatistics(sparsity_rate_for_model,
-                                                     sparsity_rate_for_sparsified_modules,
-                                                     sparsified_layers_summary)
-
-        stats = MagnitudeSparsityStatistics(model_statistics, threshold_statistics)
+        stats = MagnitudeSparsityStatistics(model_stats, threshold_stats)
 
         nncf_stats = NNCFStatistics()
         nncf_stats.register('magnitude_sparsity', stats)
