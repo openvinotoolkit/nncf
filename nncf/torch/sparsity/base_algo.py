@@ -20,12 +20,9 @@ from nncf.api.compression import CompressionLoss
 from nncf.api.compression import CompressionScheduler
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.sparsity.controller import SparsityController
-from nncf.common.sparsity.statistics import SparsifiedLayerSummary
-from nncf.common.sparsity.statistics import SparsifiedModelStatistics
 from nncf.torch.compression_method_api import PTCompressionAlgorithmBuilder
 from nncf.torch.compression_method_api import PTCompressionAlgorithmController
 from nncf.torch.graph.transformations.layout import PTTransformationLayout
-from nncf.torch.layer_utils import COMPRESSION_MODULES
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.torch.graph.transformations.commands import TransformationPriority
 from nncf.torch.graph.transformations.commands import PTTargetPoint
@@ -90,78 +87,6 @@ class BaseSparsityAlgoController(PTCompressionAlgorithmController, SparsityContr
     @property
     def scheduler(self) -> CompressionScheduler:
         return self._scheduler
-
-    @property
-    def sparsified_weights_count(self):
-        count = 0
-        for minfo in self.sparsified_module_info:
-            count = count + minfo.module.weight.view(-1).size(0)
-        return max(count, 1)
-
-    def sparsity_rate_for_sparsified_modules(self, target_sparsified_module_info=None):
-        if target_sparsified_module_info is None:
-            target_sparsified_module_info = self.sparsified_module_info
-        else:
-            target_sparsified_module_info = [target_sparsified_module_info]
-
-        nonzero = 0
-        count = 0
-        for minfo in target_sparsified_module_info:
-            mask = minfo.operand.apply_binary_mask(minfo.module.weight)
-            nonzero = nonzero + mask.nonzero().size(0)
-            count = count + mask.view(-1).size(0)
-
-        return 1 - nonzero / max(count, 1)
-
-    @property
-    def sparsity_rate_for_model(self):
-        nonzero = 0
-        count = 0
-
-        for m in self._model.modules():
-            if isinstance(m, tuple(COMPRESSION_MODULES.registry_dict.values())):
-                continue
-
-            sparsified_module = False
-            for minfo in self.sparsified_module_info:
-                if minfo.module == m:
-                    mask = minfo.operand.apply_binary_mask(m.weight)
-                    nonzero = nonzero + mask.nonzero().size(0)
-                    count = count + mask.numel()
-
-                    if not m.bias is None:
-                        nonzero = nonzero + m.bias.nonzero().size(0)
-                        count = count + m.bias.numel()
-
-                    sparsified_module = True
-
-            if not sparsified_module:
-                for param in m.parameters(recurse=False):
-                    nonzero = nonzero + param.nonzero().size(0)
-                    count = count + param.numel()
-
-        return 1 - nonzero / max(count, 1)
-
-    def _calculate_sparsified_model_stats(self) -> SparsifiedModelStatistics:
-        sparsified_layers_summary = []
-        sparsified_weights_count = self.sparsified_weights_count
-
-        for minfo in self.sparsified_module_info:
-            mask = minfo.operand.apply_binary_mask(minfo.module.weight)
-            nonzero = mask.nonzero().size(0)
-            sparsity_level = 1.0 - nonzero / max(mask.view(-1).size(0), 1)
-            weight_percentage = (mask.view(-1).size(0) / sparsified_weights_count) * 100
-            weight_shape = list(minfo.module.weight.size())
-
-            sparsified_layers_summary.append(
-                SparsifiedLayerSummary(minfo.module_name, weight_shape, sparsity_level, weight_percentage)
-            )
-
-        model_statistics = SparsifiedModelStatistics(self.sparsity_rate_for_model,
-                                                     self.sparsity_rate_for_sparsified_modules(),
-                                                     sparsified_layers_summary)
-
-        return model_statistics
 
     def compression_stage(self) -> CompressionStage:
         return CompressionStage.FULLY_COMPRESSED

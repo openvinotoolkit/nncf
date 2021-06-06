@@ -131,11 +131,13 @@ def test_sparse_algo_can_calc_sparsity_rate__for_basic_model():
     config = get_basic_sparsity_config()
     _, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
 
-    assert compression_ctrl.sparsified_weights_count == model.weights_num
-    assert compression_ctrl.sparsity_rate_for_model == (
+    nncf_stats = compression_ctrl.statistics()
+    sparse_model_stats = nncf_stats.rb_sparsity.model_statistics
+
+    assert sparse_model_stats.sparsity_level == (
         1 - (model.nz_weights_num + model.nz_bias_num) / (model.weights_num + model.bias_num)
     )
-    assert compression_ctrl.sparsity_rate_for_sparsified_modules() == 1 - model.nz_weights_num / model.weights_num
+    assert sparse_model_stats.sparsity_level_for_layers == 1 - model.nz_weights_num / model.weights_num
     assert len(compression_ctrl.sparsified_module_info) == 1
 
 
@@ -154,11 +156,13 @@ def test_sparse_algo_can_calc_sparsity_rate__for_2_conv_model():
     config = get_basic_sparsity_config()
     _, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
 
-    assert compression_ctrl.sparsified_weights_count == model.weights_num
-    assert compression_ctrl.sparsity_rate_for_model == (
+    nncf_stats = compression_ctrl.statistics()
+    sparse_model_stats = nncf_stats.rb_sparsity.model_statistics
+
+    assert pytest.approx(sparse_model_stats.sparsity_level) == (
         1 - (model.nz_weights_num + model.nz_bias_num) / (model.weights_num + model.bias_num)
     )
-    assert compression_ctrl.sparsity_rate_for_sparsified_modules() == 1 - model.nz_weights_num / model.weights_num
+    assert sparse_model_stats.sparsity_level_for_layers == 1 - model.nz_weights_num / model.weights_num
 
 
 def test_scheduler_can_do_epoch_step__with_rb_algo():

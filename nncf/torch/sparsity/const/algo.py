@@ -18,6 +18,7 @@ from nncf.torch.compression_method_api import PTCompressionAlgorithmController
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.sparsity.layers import BinaryMask
 from nncf.torch.sparsity.base_algo import BaseSparsityAlgoBuilder, BaseSparsityAlgoController
+from nncf.torch.sparsity.collector import PTSparseModelStatisticsCollector
 from nncf.torch.algo_selector import COMPRESSION_ALGORITHMS
 
 
@@ -41,7 +42,8 @@ class ConstSparsityController(BaseSparsityAlgoController):
         pass
 
     def statistics(self, quickly_collected_only: bool = False) -> NNCFStatistics:
-        model_statistics = self._calculate_sparsified_model_stats()
+        collector = PTSparseModelStatisticsCollector(self.model, self.sparsified_module_info)
+        model_statistics = collector.collect()
         stats = ConstSparsityStatistics(model_statistics)
 
         nncf_stats = NNCFStatistics()

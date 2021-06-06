@@ -22,6 +22,7 @@ from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.sparsity.base_algo import BaseSparsityAlgoBuilder, BaseSparsityAlgoController, SparseModuleInfo
 from nncf.torch.sparsity.layers import BinaryMask
 from nncf.torch.sparsity.magnitude.functions import WEIGHT_IMPORTANCE_FUNCTIONS, calc_magnitude_binary_mask
+from nncf.torch.sparsity.collector import PTSparseModelStatisticsCollector
 from nncf.common.sparsity.schedulers import SPARSITY_SCHEDULERS
 from nncf.common.sparsity.statistics import MagnitudeSparsityStatistics
 from nncf.common.statistics import NNCFStatistics
@@ -61,17 +62,23 @@ class MagnitudeSparsityController(BaseSparsityAlgoController):
         self.set_sparsity_level(sparsity_init)
 
     def statistics(self, quickly_collected_only: bool = False) -> NNCFStatistics:
-        model_statistics = self._calculate_sparsified_model_stats()
+        collector = PTSparseModelStatisticsCollector(self.model, self.sparsified_module_info)
+        model_statistics = collector.collect()
 
         threshold_statistics = []
         if self._mode == 'global':
-            global_threshold = self._select_threshold(self.sparsity_rate_for_sparsified_modules(),
+            global_threshold = self._select_threshold(model_statistics.sparsity_level_for_layers,
                                                       self.sparsified_module_info)
+
+        module_name_to_sparsity_level_map = {
+            s.name: s.sparsity_level for s in model_statistics.sparsified_layers_summary
+        }
         for minfo in self.sparsified_module_info:
             if self._mode == 'global':
                 threshold = global_threshold
             else:
-                threshold = self._select_threshold(self.sparsity_rate_for_sparsified_modules(minfo), [minfo])
+                sparsity_level_for_sparse_module = module_name_to_sparsity_level_map[minfo.module_name]
+                threshold = self._select_threshold(sparsity_level_for_sparse_module, [minfo])
 
             threshold_statistics.append(LayerThreshold(minfo.module_name, threshold))
 
