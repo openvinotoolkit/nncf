@@ -206,8 +206,8 @@ class QuantizationConstraints:
 
 
 class QuantizerGroup(Enum):
-    ACTIVATIONS = "activations"
-    WEIGHTS = "weights"
+    ACTIVATIONS = 'activations'
+    WEIGHTS = 'weights'
 
     @staticmethod
     def from_str(str_: str) -> 'QuantizerGroup':
@@ -215,7 +215,7 @@ class QuantizerGroup(Enum):
             return QuantizerGroup.ACTIVATIONS
         if str_ == QuantizerGroup.WEIGHTS.value:
             return QuantizerGroup.WEIGHTS
-        raise RuntimeError("Unknown quantizer group string")
+        raise RuntimeError('Unknown quantizer group string')
 
 
 class QuantizableWeightedLayerNode:

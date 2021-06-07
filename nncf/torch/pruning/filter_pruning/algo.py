@@ -47,7 +47,7 @@ from nncf.common.pruning.utils import get_conv_in_out_channels
 from nncf.common.pruning.utils import get_rounded_pruned_element_number
 from nncf.common.statistics import NNCFStatistics
 from nncf.common.utils.logger import logger as nncf_logger
-from nncf.common.batchnorm_adaptation import BatchnormAdaptationAlgorithm
+from nncf.common.initialization.batchnorm_adaptation import BatchnormAdaptationAlgorithm
 from nncf.torch.compression_method_api import PTCompressionAlgorithmController
 from nncf.torch.layers import NNCF_PRUNING_MODULES_DICT
 from nncf.torch.layers import NNCF_GENERAL_CONV_MODULES_DICT

@@ -81,6 +81,9 @@ class BaseSparsityAlgoBuilder(PTCompressionAlgorithmBuilder):
     def create_weight_sparsifying_operation(self, target_module_node: NNCFNode, compression_lr_multiplier: float):
         raise NotImplementedError
 
+    def initialize(self, model: NNCFNetwork) -> None:
+        pass
+
 
 class BaseSparsityAlgoController(PTCompressionAlgorithmController, SparsityController):
     def __init__(self, target_model: NNCFNetwork,

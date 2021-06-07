@@ -16,7 +16,6 @@ import tensorflow.keras.layers as layers
 
 from nncf.tensorflow.layers.wrapper import NNCFWrapper
 from nncf.tensorflow.quantization import FakeQuantize
-from nncf.tensorflow.quantization.algorithm import ACTIVATIONS, WEIGHTS
 from tests.tensorflow.helpers import create_compressed_model_and_algo_for_test
 from tests.tensorflow.quantization.test_algorithm_quantization import get_basic_quantization_config
 
@@ -27,8 +26,8 @@ def test_ignored_scopes():
         'conv1',
         '{re}.*conv2.*'
     ]
-    config['compression'][WEIGHTS]['ignored_scopes'] = ['{re}.*conv3/c[23]']
-    config['compression'][ACTIVATIONS]['ignored_scopes'] = ['{re}.*c3$']
+    config['compression']['weights']['ignored_scopes'] = ['{re}.*conv3/c[23]']
+    config['compression']['activations']['ignored_scopes'] = ['{re}.*c3$']
 
     model = tf.keras.Sequential([
         layers.Conv2D(3, 3, name='conv1', input_shape=config['input_info']['sample_size'][1:]),
@@ -40,7 +39,7 @@ def test_ignored_scopes():
         layers.Conv2D(3, 3, name='c3_1'),
         layers.Conv2D(3, 3, name='end')
     ])
-    compressed_model, _ = create_compressed_model_and_algo_for_test(model, config)
+    compressed_model, _ = create_compressed_model_and_algo_for_test(model, config, should_init=False)
 
     ref_fake_quantize_names = [
         'conv1_input/fake_quantize',

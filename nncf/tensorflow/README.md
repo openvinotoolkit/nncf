@@ -29,20 +29,28 @@ The samples demonstrate the usage of compression algorithms for two different us
 
 ## Usage
 The NNCF TF is organized as a regular Python package that can be imported in an arbitrary training script.
-The basic workflow is loading a JSON configuration script containing NNCF-specific parameters determining the compression to be applied to your model, and then passing your model along with the configuration script to the `nncf.create_compressed_model` function.
+The basic workflow is loading a JSON configuration script containing NNCF-specific parameters determining the compression to be applied to your model, and then passing your model along with the configuration script to the `nncf.tensorflow.create_compressed_model` function.
 This function returns a transformed model ready for compression fine-tuning, and handle to the object allowing you to control the compression during the training process:
 
 ```python
-import nncf
-from nncf.tensorflow import create_compressed_model
+import tensorflow as tf
+
 from nncf import NNCFConfig
+from nncf.tensorflow import create_compressed_model
+from nncf.tensorflow.initialization import register_default_init_args
 
 # Instantiate your uncompressed model
 from tensorflow.keras.applications import ResNet50
 model = ResNet50()
 
-# Apply compression according to a loaded NNCF config
+# Load a configuration file to specify compression
 nncf_config = NNCFConfig.from_json("resnet50_imagenet_int8.json")
+
+# Provide dataset for compression algorithm initialization
+dataset = tf.data.Dataset.list_files("/path/*.txt")
+nncf_config = register_default_init_args(nncf_config, dataset, batch_size=1)
+
+# Apply the specified compression algorithms to the model
 compression_ctrl, compressed_model = create_compressed_model(model, nncf_config)
 
 # Now use compressed_model as a usual Keras model

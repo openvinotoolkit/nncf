@@ -11,44 +11,33 @@
  limitations under the License.
 """
 
-from typing import List, Optional, TypeVar
+from typing import TypeVar
 
 from nncf import NNCFConfig
 from nncf.common.composite_compression import CompositeCompressionAlgorithmBuilder
 from nncf.common.composite_compression import CompositeCompressionAlgorithmController
+from nncf.config.utils import extract_compression_algorithm_configs
+from nncf.tensorflow.algorithm_selector import get_compression_algorithm_builder
 from nncf.tensorflow.api.compression import TFCompressionAlgorithmBuilder
 from nncf.tensorflow.api.compression import TFCompressionAlgorithmController
 from nncf.tensorflow.graph.transformations.layout import TFTransformationLayout
 
 ModelType = TypeVar('ModelType')
-DatasetType = TypeVar('DatasetType')
-LossType = TypeVar('LossType')
-
 
 class TFCompositeCompressionAlgorithmController(
     CompositeCompressionAlgorithmController, TFCompressionAlgorithmController):
-    def __init__(self, target_model: ModelType):
-        super().__init__(target_model)
-        self._initializer = None
-
-    def initialize(self,
-                   dataset: Optional[DatasetType] = None,
-                   loss: Optional[LossType] = None) -> None:
-        for ctrl in self.child_ctrls:
-            ctrl.initialize(dataset, loss)
+    pass
 
 
 class TFCompositeCompressionAlgorithmBuilder(
     CompositeCompressionAlgorithmBuilder, TFCompressionAlgorithmBuilder):
-    def __init__(self, config: Optional[NNCFConfig] = None, should_init: bool = True):
+    def __init__(self, config: NNCFConfig, should_init: bool = True):
         super().__init__(config, should_init)
 
-    @property
-    def child_builders(self) -> List[TFCompressionAlgorithmBuilder]:
-        return self._child_builders
-
-    def add(self, child_builder: TFCompressionAlgorithmBuilder) -> None:
-        self._child_builders.append(child_builder)
+        algorithm_configs = extract_compression_algorithm_configs(config)
+        for algo_config in algorithm_configs:
+            self._child_builders.append(
+                get_compression_algorithm_builder(algo_config)(algo_config, should_init=should_init))
 
     def build_controller(self, model: ModelType) -> TFCompositeCompressionAlgorithmController:
         composite_ctrl = TFCompositeCompressionAlgorithmController(model)
@@ -61,3 +50,7 @@ class TFCompositeCompressionAlgorithmBuilder(
         for builder in self.child_builders:
             transformations.update(builder.get_transformation_layout(model))
         return transformations
+
+    def initialize(self, model: ModelType) -> None:
+        for builder in self.child_builders:
+            builder.initialize(model)

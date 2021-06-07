@@ -11,18 +11,20 @@
  limitations under the License.
 """
 
+import os
+from pathlib import Path
+
+import pytest
 import tensorflow as tf
 import tensorflow_addons as tfa
-from pathlib import Path
-import pytest
-import os
 
 from nncf import NNCFConfig
-from nncf.tensorflow.helpers.model_creation import create_compressed_model
 from nncf.common.composite_compression import CompositeCompressionAlgorithmController
-from examples.tensorflow.common.callbacks import get_callbacks, get_progress_bar
 from nncf.tensorflow.helpers.callback_creation import create_compression_callbacks
+from nncf.tensorflow.helpers.model_creation import create_compressed_model
 
+from examples.tensorflow.common.callbacks import get_callbacks
+from examples.tensorflow.common.callbacks import get_progress_bar
 
 MODEL_PATH = Path(__file__).parent.parent.parent / 'data' / 'mock_models' / 'LeNet.h5'
 
@@ -139,7 +141,7 @@ def test_rb_sparse_target_lenet(distributed, quantized):
         if quantized:
             config.update({'compression': [config['compression'], {'algorithm': 'quantization'}]})
 
-        compress_algo, compress_model = create_compressed_model(model, config)
+        compress_algo, compress_model = create_compressed_model(model, config, should_init=False)
         compression_callbacks = create_compression_callbacks(compress_algo, log_tensorboard=True, log_dir='logdir/')
 
         sparse_algo = compress_algo.child_ctrls[0] \

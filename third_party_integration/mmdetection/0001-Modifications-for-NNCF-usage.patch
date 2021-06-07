@@ -425,8 +425,8 @@ index 0000000..c903a55
 +
 +import torch
 +from nncf.torch.initialization import InitializingDataLoader
-+from nncf.torch.structures import QuantizationRangeInitArgs
-+from nncf.config.structure import BNAdaptationInitArgs
++from nncf.config.structures import QuantizationRangeInitArgs
++from nncf.config.structures import BNAdaptationInitArgs
 +
 +from nncf import NNCFConfig
 +from nncf.torch import load_state

@@ -13,14 +13,16 @@
 
 import tensorflow as tf
 
-from nncf.common.initialization import NNCFDataLoader
-from nncf.config.structure import BNAdaptationInitArgs
+from nncf.common.initialization.dataloader import NNCFDataLoader
 from nncf.config import NNCFConfig
+from nncf.config.structures import BNAdaptationInitArgs
+from nncf.config.structures import QuantizationRangeInitArgs
 
 
 class TFInitializingDataLoader(NNCFDataLoader):
     """
     This class wraps the tf.data.Dataset class.
+
     This is required for proper initialization of certain compression algorithms.
     """
 
@@ -41,8 +43,8 @@ def register_default_init_args(nncf_config: NNCFConfig,
                                batch_size: int,
                                device: str = None) -> NNCFConfig:
     """
-    Register extra structures for the NNCFConfig.
-    Initialization of some compression algorithms requires certain extra structures.
+    Register extra structures in the NNCFConfig. Initialization of some
+    compression algorithms requires certain extra structures.
 
     :param nncf_config: An instance of the NNCFConfig class without extra structures.
     :param data_loader: Dataset used for initialization.
@@ -52,6 +54,8 @@ def register_default_init_args(nncf_config: NNCFConfig,
     :return: An instance of the NNCFConfig class with extra structures.
     """
     nncf_config.register_extra_structs([
+        QuantizationRangeInitArgs(data_loader=TFInitializingDataLoader(data_loader, batch_size),
+                                  device=device),
         BNAdaptationInitArgs(data_loader=TFInitializingDataLoader(data_loader, batch_size),
                              device=device)
     ])

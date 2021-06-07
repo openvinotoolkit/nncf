@@ -48,8 +48,8 @@ index d9465c37..9da9d30f 100644
  
 -logger = logging.getLogger(__name__)
 +from nncf import NNCFConfig
-+from nncf.torch.structures import QuantizationRangeInitArgs
-+from nncf.config.structure import BNAdaptationInitArgs
++from nncf.config.structures import QuantizationRangeInitArgs
++from nncf.config.structures import BNAdaptationInitArgs
 +from nncf.torch.initialization import InitializingDataLoader
 +from transformers.trainer import get_train_dataloader_for_init
  
@@ -167,8 +167,8 @@ index 2bd4e90f..2b1a60e8 100644
  
  import numpy as np
  import torch
-+from nncf.config.structure import BNAdaptationInitArgs
-+from nncf.torch.structures import QuantizationRangeInitArgs
++from nncf.config.structures import BNAdaptationInitArgs
++from nncf.config.structures import QuantizationRangeInitArgs
 +from nncf.common.utils.tensorboard import prepare_for_tensorboard
  from torch.utils.data import DataLoader, RandomSampler, SequentialSampler
  from torch.utils.data.distributed import DistributedSampler
@@ -439,8 +439,8 @@ index cf9b765a..957cdba2 100644
  
  import numpy as np
 +from nncf import NNCFConfig
-+from nncf.torch.structures import QuantizationRangeInitArgs
-+from nncf.config.structure import BNAdaptationInitArgs
++from nncf.config.structures import QuantizationRangeInitArgs
++from nncf.config.structures import BNAdaptationInitArgs
 +from nncf.torch.initialization import InitializingDataLoader
  
  from transformers import AutoConfig, AutoModelForSequenceClassification, AutoTokenizer, EvalPrediction, GlueDataset
@@ -517,8 +517,8 @@ index c1db6fa3..ca44bd1c 100644
  
  import numpy as np
  import torch
-+from nncf.torch.structures import QuantizationRangeInitArgs
-+from nncf.config.structure import BNAdaptationInitArgs
++from nncf.config.structures import QuantizationRangeInitArgs
++from nncf.config.structures import BNAdaptationInitArgs
 +from nncf.common.utils.tensorboard import prepare_for_tensorboard
  from torch.utils.data import DataLoader, RandomSampler, SequentialSampler, TensorDataset
  from torch.utils.data.distributed import DistributedSampler

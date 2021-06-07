@@ -321,6 +321,15 @@ class CompressionAlgorithmBuilder(ABC):
             a list of algorithm-specific modifications.
         """
 
+    @abstractmethod
+    def initialize(self, model: ModelType) -> None:
+        """
+        Initialize model parameters before training
+
+        :param model: The model with additional modifications necessary to enable
+            algorithm-specific compression during fine-tuning.
+        """
+
 
 class CompressionLevel(OrderedEnum):
     """
