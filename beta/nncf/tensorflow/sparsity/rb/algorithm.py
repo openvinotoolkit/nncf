@@ -13,30 +13,28 @@
 
 from typing import List
 
+import numpy as np
 import tensorflow as tf
-from tensorflow.python.keras.utils.layer_utils import count_params
 
 from nncf.common.graph.transformations.commands import TransformationPriority
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.sparsity.schedulers import SPARSITY_SCHEDULERS
 from nncf.common.sparsity.schedulers import SparsityScheduler
-from nncf.common.sparsity.statistics import SparsifiedLayerSummary
-from nncf.common.sparsity.statistics import SparsifiedModelStatistics
 from nncf.common.sparsity.statistics import RBSparsityStatistics
 from nncf.common.statistics import NNCFStatistics
 from beta.nncf.tensorflow.algorithm_selector import TF_COMPRESSION_ALGORITHMS
 from beta.nncf.tensorflow.api.compression import TFCompressionAlgorithmBuilder
 from beta.nncf.tensorflow.graph.transformations.commands import TFInsertionCommand
 from beta.nncf.tensorflow.graph.transformations.commands import TFLayerWeight
-from beta.nncf.tensorflow.graph.utils import collect_wrapped_layers
 from beta.nncf.tensorflow.graph.utils import get_original_name_and_instance_index
+from beta.nncf.tensorflow.graph.utils import get_nncf_operations
 from beta.nncf.tensorflow.graph.converter import convert_keras_model_to_nncf_graph
 from beta.nncf.tensorflow.sparsity.base_algorithm import BaseSparsityController
 from beta.nncf.tensorflow.sparsity.base_algorithm import SPARSITY_LAYERS
 from beta.nncf.tensorflow.sparsity.rb.loss import SparseLoss
 from beta.nncf.tensorflow.sparsity.rb.operation import RBSparsifyingWeight
-from beta.nncf.tensorflow.sparsity.rb.functions import binary_mask
 from beta.nncf.tensorflow.sparsity.utils import apply_fn_to_op_weights
+from beta.nncf.tensorflow.sparsity.collector import TFSparseModelStatisticsCollector
 from beta.nncf.tensorflow.utils.node import is_ignored
 
 
@@ -124,56 +122,23 @@ class RBSparsityController(BaseSparsityController):
         self._loss.disable()
 
     def statistics(self, quickly_collected_only: bool = False) -> NNCFStatistics:
-        sparsity_levels = []
-        mask_names = []
-        weights_shapes = []
-        weights_numbers = []
-        sparse_prob_sum = tf.constant(0.)
-        total_weights_number = tf.constant(0)
-        total_sparsified_weights_number = tf.constant(0)
-        wrapped_layers = collect_wrapped_layers(self._model)
-        for wrapped_layer in wrapped_layers:
-            for ops in wrapped_layer.weights_attr_ops.values():
-                for op_name in ops:
-                    if op_name in self._op_names:
-                        mask = wrapped_layer.ops_weights[op_name]['mask']
-                        sw_loss = tf.reduce_sum(binary_mask(mask))
-                        weights_number = tf.size(mask)
-                        sparsified_weights_number = weights_number - tf.cast(sw_loss, tf.int32)
-                        mask_names.append(wrapped_layer.name + '_rb_mask')
-                        weights_shapes.append(list(mask.shape))
-                        weights_numbers.append(weights_number)
-                        sparsity_levels.append(sparsified_weights_number / weights_number)
-                        sparse_prob_sum += tf.math.reduce_sum(tf.math.sigmoid(mask))
-                        total_weights_number += weights_number
-                        total_sparsified_weights_number += sparsified_weights_number
+        collector = TFSparseModelStatisticsCollector(self.model, self._op_names)
+        model_stats = collector.collect()
 
-        sparsity_rate_for_sparsified_modules = (total_sparsified_weights_number / total_weights_number).numpy()
-        model_weights_number = count_params(self._model.weights) - total_weights_number
-        sparsity_rate_for_model = (total_sparsified_weights_number / model_weights_number).numpy()
-        mean_sparse_prob = 1.0 - (sparse_prob_sum / tf.cast(total_weights_number, tf.float32)).numpy()
-
-        sparsity_levels = tf.keras.backend.batch_get_value(sparsity_levels)
-        weights_percentages = [weights_number / total_weights_number * 100
-                               for weights_number in weights_numbers]
-        weights_percentages = tf.keras.backend.batch_get_value(weights_percentages)
-        mask_sparsity = list(zip(mask_names, weights_shapes, sparsity_levels, weights_percentages))
-
-        sparsified_layers_summary = []
-        for mask_name, weights_shape, sparsity_level, weights_percentage in mask_sparsity:
-            sparsified_layers_summary.append(
-                SparsifiedLayerSummary(mask_name, weights_shape, sparsity_level, weights_percentage)
-            )
-
-        model_statistics = SparsifiedModelStatistics(sparsity_rate_for_model,
-                                                     sparsity_rate_for_sparsified_modules,
-                                                     sparsified_layers_summary)
+        sparse_prob_sum = 0.0
+        num_weights = 0
+        for wrapped_layer, _, op in get_nncf_operations(self.model, self._op_names):
+            operation_weights = wrapped_layer.get_operation_weights(op.name)
+            mask = op.get_mask(operation_weights)
+            sparse_prob_sum += tf.math.reduce_sum(tf.math.sigmoid(mask)).numpy().item()
+            num_weights += np.prod(mask.shape.as_list()).item()
+        mean_sparse_prob = 1.0 - (sparse_prob_sum / num_weights)
 
         target_level = self.loss.target_sparsity_rate
         # TODO(andrey-churkin): Should be calculated when the distributed mode will be supported
         masks_consistency = 1.0
 
-        stats = RBSparsityStatistics(model_statistics, masks_consistency, target_level, mean_sparse_prob)
+        stats = RBSparsityStatistics(model_stats, masks_consistency, target_level, mean_sparse_prob)
 
         nncf_stats = NNCFStatistics()
         nncf_stats.register('rb_sparsity', stats)

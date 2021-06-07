@@ -11,6 +11,7 @@
  limitations under the License.
 """
 
+from typing import List, Tuple
 import sys
 import inspect
 
@@ -19,6 +20,7 @@ import tensorflow as tf
 from beta.nncf.tensorflow.graph.metatypes.keras_layers import TFNNCFWrapperLayerMetatype
 from beta.nncf.tensorflow.graph.metatypes.matcher import get_keras_layer_metatype
 from beta.nncf.tensorflow.layers.wrapper import NNCFWrapper
+from beta.nncf.tensorflow.layers.operation import NNCFOperation
 from nncf.common.graph import NNCFNode
 
 SHARED_OPERATION_MARK = '^'
@@ -137,8 +139,28 @@ def get_layer_identifier(node: NNCFNode):
     layer_name, _ = get_original_name_and_instance_index(node.node_name)
     return layer_name
 
+
 def unwrap_layer(layer):
     layer_metatype = get_keras_layer_metatype(layer, determine_subtype=False)
     if layer_metatype == TFNNCFWrapperLayerMetatype:
         return layer.layer
     return layer
+
+
+def get_nncf_operations(model: tf.keras.Model, operation_names: List[str]) -> Tuple[NNCFWrapper, str, NNCFOperation]:
+    """
+    Yields the operations from the model which names in `operation_names`.
+
+    :param model: Wrapped model.
+    :param operation_names: List of operation names.
+    :return: A tuple (wrapped_layer, weight_attr, op) where
+        - wrapped_layer: A wrapped layer, which contains operation weights.
+        - weight_attr: A name of the attribute of the wrapped layer to which
+            the operation is applied.
+        - op: NNCF operation.
+    """
+    for wrapped_layer in collect_wrapped_layers(model):
+        for weight_attr, ops in wrapped_layer.weights_attr_ops.items():
+            for op in ops.values():
+                if op.name in operation_names:
+                    yield wrapped_layer, weight_attr, op

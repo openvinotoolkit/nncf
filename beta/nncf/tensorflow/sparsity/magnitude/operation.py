@@ -42,6 +42,16 @@ class BinaryMask(NNCFOperation):
     def call(self, inputs, weights, _):
         return apply_mask(inputs, weights['mask'])
 
+    @staticmethod
+    def get_binary_mask(op_weights):
+        """
+        Returns binary mask from weights of the operation.
+
+        :param op_weights: Weights of the operaton.
+        :return: Binary mask.
+        """
+        return op_weights['mask']
+
 
 @NNCF_CUSTOM_OBJECTS.register()
 class BinaryMaskWithWeightsBackup(BinaryMask):

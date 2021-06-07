@@ -126,6 +126,16 @@ class RBSparsifyingWeight(NNCFOperation):
         return op_weights['mask']
 
     @staticmethod
+    def get_binary_mask(op_weights):
+        """
+        Returns binary mask from weights of the operation.
+
+        :param op_weights: Weights of the operaton.
+        :return: Binary mask.
+        """
+        return binary_mask(op_weights['mask'])
+
+    @staticmethod
     def get_trainable_weight(op_weights):
         """
         Return trainable weight from operation weights.

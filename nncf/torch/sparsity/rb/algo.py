@@ -22,6 +22,7 @@ from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.sparsity.base_algo import BaseSparsityAlgoBuilder, BaseSparsityAlgoController, SparseModuleInfo
 from nncf.torch.sparsity.rb.layers import RBSparsifyingWeight
 from nncf.torch.sparsity.rb.loss import SparseLoss, SparseLossForPerLayerSparsity
+from nncf.torch.sparsity.collector import PTSparseModelStatisticsCollector
 from nncf.common.sparsity.schedulers import SPARSITY_SCHEDULERS
 from nncf.common.sparsity.statistics import RBSparsityStatistics
 from nncf.torch.utils import get_world_size
@@ -125,7 +126,8 @@ class RBSparsityController(BaseSparsityAlgoController):
         return ncor_values / nvalues
 
     def statistics(self, quickly_collected_only=False) -> NNCFStatistics:
-        model_statistics = self._calculate_sparsified_model_stats()
+        collector = PTSparseModelStatisticsCollector(self.model, self.sparsified_module_info)
+        model_statistics = collector.collect()
 
         target_level = self.loss.target_sparsity_rate
         mean_sparse_prob = 1.0 - self.loss.mean_sparse_prob
