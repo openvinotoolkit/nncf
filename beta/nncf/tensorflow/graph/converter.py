@@ -10,8 +10,12 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+from abc import ABC
+from abc import abstractmethod
+from collections import defaultdict
 from typing import Dict
 from typing import List
+from typing import Tuple
 
 import tensorflow as tf
 from tensorflow.python.framework.convert_to_constants import convert_variables_to_constants_v2
@@ -23,46 +27,19 @@ from beta.nncf.tensorflow.graph.metatypes.keras_layers import TFConv3DTransposeL
 from beta.nncf.tensorflow.graph.metatypes.matcher import get_keras_layer_metatype
 from beta.nncf.tensorflow.graph.metatypes.matcher import get_op_metatype
 from beta.nncf.tensorflow.graph.metatypes.nncf_op import OutputNoopMetatype
-from beta.nncf.tensorflow.graph.utils import get_expanded_node_name
+from beta.nncf.tensorflow.graph.utils import get_shared_node_name
 from beta.nncf.tensorflow.graph.utils import is_functional_model
 from beta.nncf.tensorflow.graph.utils import is_sequential_model
 from beta.nncf.tensorflow.graph.utils import unwrap_layer
 from beta.nncf.tensorflow.layers.data_layout import get_input_channel_axis
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFGraphNodeType
-from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
 from nncf.common.graph.layer_attributes import Dtype
 
 PREFIX_AUXILIARY_OUTPUT_NODE = 'output'
 
-def _get_layer_type(layer):
-    if layer['class_name'] == 'TensorFlowOpLayer':
-        return layer['config']['node_def']['op']
-    if layer['class_name'] == 'NNCFWrapper':
-        # Return class_name of wrapped layer
-        return layer['config']['layer']['class_name']
-    return layer['class_name']
 
-
-def _get_layer_dtype(layer):
-    dtype = layer['config']['dtype']
-    if layer['class_name'] == 'TensorFlowOpLayer':
-        dtype = layer['config']['node_def'].get('attr', {}).get('T', {}).get('type') or dtype
-    return dtype
-
-
-def _get_layer(model: tf.keras.Model, layer_name: str) -> tf.keras.layers.Layer:
-    try:
-        return model.get_layer(layer_name)
-    except ValueError:
-        for layer in model.submodules:
-            if not isinstance(layer, tf.keras.layers.Layer):
-                continue
-            if layer.name == layer_name:
-                return layer
-
-    raise ValueError(f'No such layer: {layer_name}.')
 
 
 def _process_outputs(outputs, raw_nodes):
@@ -137,210 +114,267 @@ def convert_keras_model_to_nncf_graph(model: tf.keras.Model) -> NNCFGraph:
                      'only sequential or functional models')
 
     if func_model:
-        nncf_graph = _get_nncf_graph_from_functional(model)
+        converter = FunctionalConverter(model)
     else:
-        nncf_graph = _get_nncf_graph_from_sequential(model)
+        converter = SequentialConverter(model)
 
-    return nncf_graph
+    return converter.convert()
 
 
-def _get_nncf_graph_from_functional(model: tf.keras.Model) -> NNCFGraph:
-    #pylint:disable=too-many-statements
-    #pylint:disable=too-many-branches
-    nncf_graph = NNCFGraph()
-    model_config = model.get_config()
-    raw_nodes = {}  # type: Dict[str, List[Dict]]
-    for layer in model_config['layers']:
-        layer_name = layer['name']
-        layer_type = _get_layer_type(layer)
-        layer_dtype = _get_layer_dtype(layer)
-        data_format = layer['config'].get('data_format')
-        model_layer = _get_layer(model, layer_name)
-        layer_metatype = get_keras_layer_metatype(model_layer)
-        raw_nodes[layer_name] = []
+class TFModelConverter(ABC):
+    def __init__(self, model: tf.keras.Model):
+        self._model = model
 
-        is_output = False
-        # pylint: disable=protected-access
-        if model_layer in model._output_layers:
-            is_output = True
-        if layer['inbound_nodes']:
-            is_shared = len(layer['inbound_nodes']) > 1
-            for i, inbound_node in enumerate(layer['inbound_nodes']):
-                input_shape = _prepare_shape(model_layer.inbound_nodes[i].input_shapes)
-                instance = {
-                    'type': layer_type,
-                    'metatype': layer_metatype,
-                    'dtype': layer_dtype,
-                    'data_format': data_format,
-                    'is_shared': is_shared,
-                    'input_shapes': input_shape,
-                    'in_ports': list(range(len(inbound_node))),
-                    'out_ports': set(),
-                    'is_output': is_output,
-                    'output_shape': _prepare_shape(model_layer.inbound_nodes[i].output_shapes)
+    @staticmethod
+    def _get_layer_type(layer):
+        if layer['class_name'] == 'TensorFlowOpLayer':
+            return layer['config']['node_def']['op']
+        if layer['class_name'] == 'NNCFWrapper':
+            # Return class_name of wrapped layer
+            return layer['config']['layer']['class_name']
+        return layer['class_name']
+
+    @staticmethod
+    def _get_layer_dtype(layer):
+        dtype = layer['config']['dtype']
+        if layer['class_name'] == 'TensorFlowOpLayer':
+            dtype = layer['config']['node_def'].get('attr', {}).get('T', {}).get('type') or dtype
+        return dtype
+
+    @staticmethod
+    def _prepare_shape(shape) -> List:
+        if not isinstance(shape, list):
+            return [shape]
+        return shape
+
+    @abstractmethod
+    def convert(self) -> NNCFGraph:
+        pass
+
+    def _get_layer(self, layer_name: str) -> tf.keras.layers.Layer:
+        try:
+            return self._model.get_layer(layer_name)
+        except ValueError:
+            for layer in self._model.submodules:
+                if not isinstance(layer, tf.keras.layers.Layer):
+                    continue
+                if layer.name == layer_name:
+                    return layer
+
+        raise ValueError(f'No such layer: {layer_name}.')
+
+
+class FunctionalConverter(TFModelConverter):
+    def __init__(self, model: tf.keras.Model):
+        super().__init__(model)
+        self._raw_nodes = {}  # type: Dict[str, List[Dict]]
+        self._layer_info = {}  # type: Dict[str, Dict]
+        self._collect_layer_information()
+        self._node_info = {}  # type: Dict[str, Dict]
+        self._layer_name_to_node_names = defaultdict(set)
+        self._collect_node_information()
+        self._edge_info = {}  # type: Dict[Tuple[str, str], Dict]
+        self._collect_edge_information()
+
+    def _collect_layer_information(self):
+        model_config = self._model.get_config()
+        for layer_config in model_config['layers']:
+            layer_name = layer_config['name']
+            layer_type = self._get_layer_type(layer_config)
+            layer_dtype = self._get_layer_dtype(layer_config)
+            data_format = layer_config['config'].get('data_format')
+            model_layer = self._get_layer(layer_name)
+            layer_metatype = get_keras_layer_metatype(model_layer)
+            self._layer_info[layer_name] = {
+                        'type': layer_type,
+                        'metatype': layer_metatype,
+                        'dtype': layer_dtype,
+                        'data_format': data_format,
+                        'inbound_nodes': layer_config.get('inbound_nodes')
+                    }
+
+    def _collect_node_information(self):
+        model_config = self._model.get_config()
+        for layer_config in model_config['layers']:
+            layer_name = layer_config['name']
+            layer = self._get_layer(layer_name)
+            if layer_config['inbound_nodes']:
+                instances_count = len(layer_config['inbound_nodes'])
+                is_shared = instances_count > 1
+                for i in range(instances_count):
+                    node_name = get_shared_node_name(layer_name, i) if is_shared else layer_name
+                    input_shapes = self._prepare_shape(layer.inbound_nodes[i].input_shapes)
+                    output_shapes = self._prepare_shape(layer.inbound_nodes[i].output_shapes)
+
+                    self._node_info[node_name] = {
+                        'layer_name': layer_name,
+                        'inbound_node_idx': i,
+                        'input_shapes': input_shapes,
+                        'output_shapes': output_shapes,
+                    }
+                    self._layer_name_to_node_names[layer_name].add(node_name)
+            else:
+                node_name = layer_name
+                input_shapes = self._prepare_shape(layer.input_shape)
+                output_shapes = self._prepare_shape(layer.output_shape)
+                self._node_info[node_name] = {
+                    'layer_name': layer_name,
+                    'inbound_node_idx': None,
+                    'input_shapes': input_shapes,
+                    'output_shapes': output_shapes,
                 }
-                if layer_metatype in GENERAL_CONV_LAYER_METATYPES:
-                    module_attributes = _get_layer_attributes(model_layer)
-                    instance.update({NNCFGraph.MODULE_ATTRIBUTES: module_attributes})
-                for parent_name, parent_instance_index, parent_out_ports, _ in inbound_node:
-                    parent_instance = raw_nodes[parent_name][parent_instance_index]
-                    if parent_instance['out_ports']:
-                        parent_instance['out_ports'].add(parent_out_ports)
+
+
+    def _is_layer_shared(self, layer_name: str):
+        # Only gives valid results if called after _collect_node_information()
+        return len(self._layer_name_to_node_names[layer_name]) > 1
+
+    def _collect_edge_information(self):
+        model_config = self._model.get_config()
+        for layer_config in model_config['layers']:
+            layer_name = layer_config['name']
+            for layer_instance_idx, instance_input_info in enumerate(layer_config['inbound_nodes']):
+                if self._is_layer_shared(layer_name):
+                    node_name = get_shared_node_name(layer_name, layer_instance_idx)
+                else:
+                    node_name = layer_name
+                input_shapes = self._node_info[node_name]['input_shapes']
+                for layer_instance_input_port_id, inbound_node in enumerate(instance_input_info):
+                    producer_layer_name, producer_layer_instance, *_ = inbound_node
+                    if self._is_layer_shared(producer_layer_name):
+                        producer_node_name = get_shared_node_name(producer_layer_name, producer_layer_instance)
                     else:
-                        parent_instance['out_ports'] = {parent_out_ports}
-                raw_nodes[layer_name].append(instance)
-        else:
-            input_shapes = _prepare_shape(model_layer.input_shape)
-            instance = {
-                'type': layer_type,
-                'metatype': layer_metatype,
-                'dtype': layer_dtype,
-                'data_format': data_format,
-                'is_shared': False,
-                'input_shapes': input_shapes,
-                'in_ports': [],
-                'out_ports': set(),
-                'is_output': is_output,
-                'output_shape': _prepare_shape(model_layer.output_shape)
-            }
-            if layer_metatype in GENERAL_CONV_LAYER_METATYPES:
-                module_attributes = _get_layer_attributes(model_layer)
-                instance.update({NNCFGraph.MODULE_ATTRIBUTES: module_attributes})
-            raw_nodes[layer_name].append(instance)
+                        producer_node_name = producer_layer_name
 
-    outputs = model_config['output_layers']
+                    producer_layer_info = self._layer_info[producer_layer_name]
+                    dtype = Dtype.FLOAT if 'float' in producer_layer_info['dtype'].lower() else Dtype.INTEGER
+                    edge = (producer_node_name, node_name)
+                    tensor_shape = input_shapes[layer_instance_input_port_id]
+                    self._edge_info[edge] = {
+                        'tensor_shape': tensor_shape,
+                        'dtype': dtype,
+                        'associated_node_input_port_id': layer_instance_input_port_id
+                    }
 
-    if isinstance(outputs, list):
-        for layer_name, instance, out_port in outputs:
-            raw_nodes[layer_name][instance]['out_ports'].add(out_port)
-    elif isinstance(outputs, dict):
-        for output in outputs.values():
-            if isinstance(output, list):
-                raw_nodes[output[0]][output[1]]['out_ports'].add(output[2])
-            elif isinstance(output, dict):
-                for layer_name, instance, out_port in output.values():
-                    raw_nodes[layer_name][instance]['out_ports'].add(out_port)
+    def convert(self) -> NNCFGraph:
+        nncf_graph = NNCFGraph()
 
-    for instance_dicts in raw_nodes.values():
-        for instance in instance_dicts:
-            instance['out_ports'] = sorted(list(instance['out_ports']))
+        node_name_vs_nncf_node_ids = {}  # type: Dict[str, int]
+        output_node_id_vs_model_output_idx = {}  # type: Dict[int, int]
 
-    layer_name_vs_nncf_node_ids = {}  # type: Dict[str, List[int]]
-    all_output_nncf_nodes_vs_attrs = {}  # type: Dict[NNCFNode, Dict]
-
-    for layer_name, instances in raw_nodes.items():
-        layer_name_vs_nncf_node_ids[layer_name] = []
-        for i, attributes in enumerate(instances):
-            nncf_node = nncf_graph.add_nncf_node(get_expanded_node_name(layer_name, i,
-                                                                        attributes['is_shared']),
-                                                 node_type=attributes['type'],
-                                                 node_metatype=attributes['metatype'],
-                                                 module_attributes=attributes.get('module_attributes'),
+        for node_name, node_info in self._node_info.items():
+            layer_name = node_info['layer_name']
+            node_name_vs_nncf_node_ids[layer_name] = []
+            layer_info = self._layer_info[layer_name]
+            metatype = layer_info['metatype']
+            layer = self._get_layer(layer_name)
+            if metatype in GENERAL_CONV_LAYER_METATYPES:
+                module_attributes = _get_layer_attributes(self._get_layer(layer_name))
+            else:
+                module_attributes = None
+            is_shared = len(self._layer_name_to_node_names[layer_name]) > 1
+            nncf_node = nncf_graph.add_nncf_node(node_name=node_name,
+                                                 node_type=layer_info['type'],
+                                                 node_metatype=metatype,
+                                                 module_attributes=module_attributes,
                                                  layer_name=layer_name,
-                                                 is_shared=attributes['is_shared'])
-            layer_name_vs_nncf_node_ids[layer_name].append(nncf_node.node_id)
+                                                 is_shared=is_shared)
+            node_name_vs_nncf_node_ids[node_name] = nncf_node.node_id
 
-            if attributes['is_output']:
-                all_output_nncf_nodes_vs_attrs[nncf_node] = attributes
+            #pylint:disable=protected-access
+            if layer in self._model._output_layers:
+                output_idx = self._model._output_layers.index(layer)
+                output_node_id_vs_model_output_idx[nncf_node.node_id] = output_idx
 
-    for layer in model_config['layers']:
-        layer_name = layer['name']
-        for i, inbound_nodes in enumerate(layer['inbound_nodes']):
-            node_id = layer_name_vs_nncf_node_ids[layer_name][i]
-            for k, inbound_node in enumerate(inbound_nodes):
-                producer_name, producer_instance, *_ = inbound_node
-                producer_node_id = layer_name_vs_nncf_node_ids[producer_name][producer_instance]
-                input_shape = raw_nodes[layer_name][i]['input_shapes'][k]
-                producer_node_attrs = raw_nodes[producer_name][producer_instance]
-                dtype = Dtype.FLOAT if 'float' in producer_node_attrs['dtype'].lower() else Dtype.INTEGER
-                nncf_graph.add_edge_between_nncf_nodes(producer_node_id,
-                                                       node_id,
-                                                       tensor_shape=input_shape,
-                                                       input_port_id=k,
-                                                       dtype=dtype)
+        for edge, edge_info in self._edge_info.items():
+            from_node_name, to_node_name = edge
+            from_node_id = node_name_vs_nncf_node_ids[from_node_name]
+            to_node_id = node_name_vs_nncf_node_ids[to_node_name]
+            nncf_graph.add_edge_between_nncf_nodes(from_node_id,
+                                                   to_node_id,
+                                                   tensor_shape=edge_info['tensor_shape'],
+                                                   input_port_id=edge_info['associated_node_input_port_id'],
+                                                   dtype=edge_info['dtype'])
 
-    for idx, kv in enumerate(all_output_nncf_nodes_vs_attrs.items()):
-        # Ticket: 56853
-        # We won't add an NNCF output auxiliary node for all of the NNCF nodes corresponding to real
-        # model output, but only for the nodes that do not serve as a tensor source for any other node.
-        # The reason is that current TF capabilities do not allow to insert post-hooks after TF functional model
-        # output nodes without changing the name of the corresponding output, which won't be obvious to the user.
-        nncf_node, attrs = kv
-        if not nncf_graph.get_next_nodes(nncf_node):
-            output_aux_node_name = PREFIX_AUXILIARY_OUTPUT_NODE + '_{}'.format(idx)
-            output_node = nncf_graph.add_nncf_node(
-                node_name=output_aux_node_name,
-                node_type=NNCFGraphNodeType.OUTPUT_NODE,
-                node_metatype=OutputNoopMetatype)
-            nncf_graph.add_edge_between_nncf_nodes(nncf_node.node_id,
-                                                   output_node.node_id,
-                                                   tensor_shape=attrs['output_shape'],
-                                                   input_port_id=0,
-                                                   dtype=Dtype.FLOAT)
+        for output_node_id, model_output_idx in output_node_id_vs_model_output_idx.items():
+            # Ticket: 56853
+            # We won't add an NNCF output auxiliary node for all of the NNCF nodes corresponding to real
+            # model output, but only for the nodes that do not serve as a tensor source for any other node.
+            # The reason is that current TF capabilities do not allow to insert post-hooks after TF functional model
+            # output nodes without changing the name of the corresponding output, which won't be obvious to the user.
+            nncf_node = nncf_graph.get_node_by_id(output_node_id)
+            if not nncf_graph.get_next_nodes(nncf_node):
+                output_aux_node_name = PREFIX_AUXILIARY_OUTPUT_NODE + '_{}'.format(model_output_idx)
+                output_node = nncf_graph.add_nncf_node(
+                    node_name=output_aux_node_name,
+                    node_type=NNCFGraphNodeType.OUTPUT_NODE,
+                    node_metatype=OutputNoopMetatype)
+                node_info = self._node_info[nncf_node.node_name]  # works if _node_info keys are identical to node_names
+                nncf_graph.add_edge_between_nncf_nodes(nncf_node.node_id,
+                                                       output_node.node_id,
+                                                       tensor_shape=node_info['output_shapes'][0],
+                                                       input_port_id=0,
+                                                       dtype=Dtype.FLOAT)
 
-    return nncf_graph
+        return nncf_graph
 
 
-def _prepare_shape(shape) -> List:
-    if not isinstance(shape, list):
-        return [shape]
-    return shape
+class SequentialConverter(TFModelConverter):
+    def convert(self) -> NNCFGraph:
+        nncf_graph = NNCFGraph()
+        producer_layer_id = None
+        model_config = self._model.get_config()
+        layer_name = None
+        for layer in model_config['layers']:
+            layer_name = layer['config']['name']
+            layer_type = self._get_layer_type(layer)
+            layer_dtype = self._get_layer_dtype(layer)
+            data_format = layer['config'].get('data_format')
+            model_layer = self._get_layer(layer_name)
+            layer_metatype = get_keras_layer_metatype(model_layer)
 
-def _get_nncf_graph_from_sequential(model: tf.keras.Model) -> NNCFGraph:
-    nncf_graph = NNCFGraph()
-    producer_layer_id = None
-    model_config = model.get_config()
-    layer_name = None
-    for layer in model_config['layers']:
-        layer_name = layer['config']['name']
-        layer_type = _get_layer_type(layer)
-        layer_dtype = _get_layer_dtype(layer)
-        data_format = layer['config'].get('data_format')
-        model_layer = _get_layer(model, layer_name)
-        layer_metatype = get_keras_layer_metatype(model_layer)
+            attrs = dict(type=layer_type,
+                         dtype=layer_dtype,
+                         metatype=layer_metatype,
+                         data_format=data_format,
+                         in_ports=[0],
+                         out_ports=[0],
+                         is_shared=False)
 
-        attrs = dict(type=layer_type,
-                     dtype=layer_dtype,
-                     metatype=layer_metatype,
-                     data_format=data_format,
-                     in_ports=[0],
-                     out_ports=[0],
-                     is_shared=False)
+            module_attributes = None
+            if layer_metatype in GENERAL_CONV_LAYER_METATYPES:
+                module_attributes = _get_layer_attributes(self._model.get_layer(layer_name))
+                attrs.update({NNCFGraph.MODULE_ATTRIBUTES: module_attributes})
 
-        module_attributes = None
-        if layer_metatype in GENERAL_CONV_LAYER_METATYPES:
-            module_attributes = _get_layer_attributes(model.get_layer(layer_name))
-            attrs.update({NNCFGraph.MODULE_ATTRIBUTES: module_attributes})
+            nncf_node = nncf_graph.add_nncf_node(layer_name,
+                                                 node_type=layer_type,
+                                                 node_metatype=layer_metatype,
+                                                 module_attributes=module_attributes,
+                                                 layer_name=layer_name,
+                                                 is_shared=False)
 
-        nncf_node = nncf_graph.add_nncf_node(layer_name,
-                                             node_type=layer_type,
-                                             node_metatype=layer_metatype,
-                                             module_attributes=module_attributes,
-                                             layer_name=layer_name,
-                                             is_shared=False)
+            if producer_layer_id is not None:
+                input_shapes = self._prepare_shape(self._model.get_layer(layer_name).input_shape)
+                nncf_graph.add_edge_between_nncf_nodes(producer_layer_id,
+                                                       nncf_node.node_id,
+                                                       tensor_shape=input_shapes[0],
+                                                       input_port_id=0,
+                                                       dtype=Dtype.FLOAT)  # TODO(vshampor): determine from keras layers
+            producer_layer_id = nncf_node.node_id
 
-        if producer_layer_id is not None:
-            input_shape = _prepare_shape(model.get_layer(layer_name).input_shape)
-            nncf_graph.add_edge_between_nncf_nodes(producer_layer_id,
-                                                   nncf_node.node_id,
-                                                   tensor_shape=input_shape[0],
-                                                   input_port_id=0,
-                                                   dtype=Dtype.FLOAT)  # TODO(vshampor): determine from keras layers
-        producer_layer_id = nncf_node.node_id
+        if layer_name is not None:
+            last_producer_layer_name = layer_name
+            last_producer_layer_id = producer_layer_id
+            output_model_layer = self._model.get_layer(last_producer_layer_name)
+            output_aux_node_name = PREFIX_AUXILIARY_OUTPUT_NODE + '_0'
+            output_node = nncf_graph.add_nncf_node(node_name=output_aux_node_name,
+                                                   node_type=NNCFGraphNodeType.OUTPUT_NODE,
+                                                   node_metatype=OutputNoopMetatype)
+            nncf_graph.add_edge_between_nncf_nodes(last_producer_layer_id, output_node.node_id,
+                                                   tensor_shape=self._prepare_shape(output_model_layer.output_shape),
+                                                   input_port_id=0, dtype=Dtype.FLOAT)
 
-    if layer_name is not None:
-        last_producer_layer_name = layer_name
-        last_producer_layer_id = producer_layer_id
-        output_model_layer = model.get_layer(last_producer_layer_name)
-        output_aux_node_name = PREFIX_AUXILIARY_OUTPUT_NODE + '_0'
-        output_node = nncf_graph.add_nncf_node(node_name=output_aux_node_name,
-                                               node_type=NNCFGraphNodeType.OUTPUT_NODE,
-                                               node_metatype=OutputNoopMetatype)
-        nncf_graph.add_edge_between_nncf_nodes(last_producer_layer_id, output_node.node_id,
-                                               tensor_shape=_prepare_shape(output_model_layer.output_shape),
-                                               input_port_id=0, dtype=Dtype.FLOAT)
-
-    return nncf_graph
+        return nncf_graph
 
 
 TRANSPOSE_CONV_METATYPES = [TFConv1DTransposeLayerMetatype,

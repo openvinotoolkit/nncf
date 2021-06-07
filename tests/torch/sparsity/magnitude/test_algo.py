@@ -277,5 +277,5 @@ def test_magnitude_algo_can_calculate_sparsity_rate_for_one_sparsified_module():
         s.name: s.sparsity_level for s in sparse_model_stats.sparsified_layers_summary
     }
 
-    module_name = sparse_info_conv1[0].module_name
+    module_name = sparse_info_conv1[0].module_node_name
     assert pytest.approx(module_name_to_sparsity_level_map[module_name], 1e-2) == 0.5

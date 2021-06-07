@@ -149,9 +149,9 @@ class BranchingExpression(Expression):
     A composite expression that matches to a subgraph which is composed of separate branches, each matching
     against a subexpression; the branches are united by one and the same sourcing node.
     E.g. in a graph:
-                /--> (max_pool2d)
+                |--> (max_pool2d)
          (conv2d)--> (batch_norm) the expression:
-                \--> (RELU)
+                |--> (RELU)
 
     the expression given by
         BranchingExpression([NodeExpression('max_pool2d'), NodeExpression('batch_norm'), NodeExpression('RELU')])
@@ -339,5 +339,3 @@ def find_subgraphs_matching_expression(graph: nx.DiGraph, expression: Expression
 
         subgraphs.append(longest_valid_match[0])
     return subgraphs
-
-

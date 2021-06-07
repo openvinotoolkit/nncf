@@ -102,10 +102,8 @@ def collect_wrapped_layers(model):
     return wrapped_layers
 
 
-def get_expanded_node_name(layer_name, instance_index, is_shared):
-    if is_shared:
-        return '{}{}{}'.format(layer_name, SHARED_OPERATION_MARK, instance_index)
-    return layer_name
+def get_shared_node_name(layer_name: str, instance_index: int):
+    return '{}{}{}'.format(layer_name, SHARED_OPERATION_MARK, instance_index)
 
 
 def get_original_name_and_instance_index(node_name):
