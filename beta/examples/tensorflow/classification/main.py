@@ -147,9 +147,8 @@ def run(config):
     train_dataset, validation_dataset = datasets
 
     nncf_config = config.nncf_config
-    train_dist_dataset = strategy.experimental_distribute_dataset(train_dataset)
     nncf_config = register_default_init_args(nncf_config,
-                                             train_dist_dataset,
+                                             train_dataset,
                                              train_builder.global_batch_size)
 
     train_epochs = config.epochs
