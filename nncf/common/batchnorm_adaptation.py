@@ -73,7 +73,7 @@ def _create_bn_adaptation_algorithm_impl(data_loader: NNCFDataLoader,
                                                                           num_bn_adaptation_steps,
                                                                           num_bn_forget_steps,
                                                                           device)
-    elif __nncf_backend__ == 'Tensorflow':
+    elif __nncf_backend__ == 'TensorFlow':
         from beta.nncf.tensorflow.batchnorm_adaptation import TFBatchnormAdaptationAlgorithmImpl
         bn_adaptation_algorithm_impl = TFBatchnormAdaptationAlgorithmImpl(data_loader,
                                                                           num_bn_adaptation_steps,
