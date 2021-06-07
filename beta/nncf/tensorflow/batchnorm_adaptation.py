@@ -32,7 +32,7 @@ class BNTrainingStateSwitcher:
                 self._original_training_state[layer] = layer.trainable
                 layer.trainable = True
 
-    def __exit__(self, type, value, traceback):
+    def __exit__(self):
         for layer in self._model.layers:
             if get_keras_layer_metatype(layer) == TFBatchNormalizationLayerMetatype:
                 layer.trainable = self._original_training_state[layer]
@@ -49,7 +49,7 @@ class BNMomentumSwitcher:
                 self._original_momenta_values[layer] = layer.momentum
                 layer.momentum = 0.1
 
-    def __exit__(self, type, value, traceback):
+    def __exit__(self):
         for layer in self._model.layers:
             if get_keras_layer_metatype(layer) == TFBatchNormalizationLayerMetatype:
                 layer.momentum = self._original_momenta_values[layer]
