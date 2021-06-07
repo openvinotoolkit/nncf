@@ -44,19 +44,28 @@ class Expression:
     def _iterate_alternatives(self, nodes):
         return powerset(nodes, min_r=1)
 
-    def match(self, nodes, graph):
+    def _find_all_matches(self, nodes, graph):
         all_matches = []
         for n in self._iterate_alternatives(nodes):
             result = self._match(n, graph)
             if not result:
                 continue
+            if not isinstance(result, list):
+                result = [result]
+            for res in result:
+                n, following = res
+                following = list(following)
+                if not isinstance(n, list):
+                    n = [n]
 
-            n, following = result
-            following = list(following)
-            if not isinstance(n, list):
-                n = [n]
+                all_matches.append((n, following))
+        return all_matches
 
-            all_matches.append((n, following))
+    def all_matches(self, nodes, graph):
+        return self._find_all_matches(nodes, graph)
+
+    def match(self, nodes, graph):
+        all_matches = self._find_all_matches(nodes, graph)
         if not all_matches:
             return None, None
         return max(all_matches, key=lambda x: len(x[0]))
@@ -106,7 +115,7 @@ class AlternatingExpression(Expression):
         if self.greedy_consume:
             if not all_matches:
                 return None
-            return max(all_matches, key=lambda x: len(x[0]))
+            return all_matches
         return None
 
     def __or__(self, other):
@@ -215,21 +224,72 @@ def get_edge_boundaries(match: List[str], graph: nx.DiGraph):
     return in_edge_boundary, out_edge_boundary
 
 
-def search_all(graph: nx.DiGraph, expression: Expression) -> List[List[str]]:
-    """Returns list of node key lists that match the expression."""
-    matches = []
-    matched_nodes = set()
-    weakly_subgraphs = [graph.subgraph(c) for c in nx.weakly_connected_components(graph)]
-    for subgraph in weakly_subgraphs:
-        dfs_order = nx.topological_sort(subgraph)
-        for node in dfs_order:
-            match, _ = expression.match([node], graph)
+def find_whether_subgraph_has_inner_outgoing_edges(graph: nx.DiGraph, subgraph: List[str]) -> bool:
+    """
+    Check out whether the subgraph has outgoing edges starting not from the last node.
+    Example:
+    (conv2d + BN + ReLU pattern):
+            ...
+             |
+          (conv2d)
+             |------\
+            (BN)    |
+             |      |
+           (RELU)   |
+             |      |
+           (cat)----/
+             |
+            ...
+    :param graph: The model graph.
+    :param subgraph: A subgraph of the model graph.
+    :return: True if the subgraph contains outgoing edges starting not from the last node,
+        False - otherwise.
+    """
+    for node_key in subgraph[:-1]:
+        successors = list(graph.succ[node_key].keys())
+        for successors_key in successors:
+            if successors_key not in subgraph:
+                return True
 
-            if node in matched_nodes:
-                continue
+    # Breaking input edges
+    for node_key in subgraph[1:]:
+        predecessors = list(graph.pred[node_key].keys())
+        for predecessors_key in predecessors:
+            if predecessors_key not in subgraph:
+                return True
+    return False
 
-            if match:
-                for mn in match:
-                    matched_nodes.add(mn)
-                matches.append(match)
-    return matches
+
+def find_subgraphs_match_expression(graph: nx.DiGraph, expression: Expression) -> List[List[str]]:
+    """
+    Find a list of subgraphs for the particular graph that match the pattern expression.
+    :param graph: The model graph.
+    :param expression: A pattern expression containing a logic of layer fusing.
+    :return: A list of subgraphs for the particular graph, matching the pattern expression.
+    """
+    subgraphs = []
+    subgraphs_nodes = set()
+    nodes = nx.topological_sort(graph)
+    for node in nodes:
+        # If a node has already been added to any pattern skip this node
+        if node in subgraphs_nodes:
+            continue
+
+        all_matches = expression.all_matches([node], graph)
+        all_matches = sorted(all_matches, key=lambda x: len(x[0]), reverse=True)
+
+        longest_valid_match = None
+        for match in all_matches:
+            # Find out the longest valid pattern
+            if not find_whether_subgraph_has_inner_outgoing_edges(graph, match[0]):
+                longest_valid_match = match
+                break
+        # If there is no pattern found, then skip this node
+        if longest_valid_match is None:
+            continue
+
+        for mn in longest_valid_match[0]:
+            subgraphs_nodes.add(mn)
+
+        subgraphs.append(longest_valid_match[0])
+    return subgraphs

@@ -31,7 +31,7 @@ from nncf.common.utils.logger import logger as nncf_logger
 from nncf.torch.graph.graph_matching import Expression
 from nncf.torch.graph.graph_matching import NodeExpression
 from nncf.torch.graph.graph_matching import get_edge_boundaries
-from nncf.torch.graph.graph_matching import search_all
+from nncf.torch.graph.graph_matching import find_subgraphs_match_expression
 
 
 # pylint: disable=too-many-public-methods
@@ -214,7 +214,7 @@ class PTNNCFGraph(NNCFGraph):
         return nncf_nodes
 
     def get_matching_nncf_graph_pattern_io_list(self, expression: Expression) -> List[NNCFGraphPatternIO]:
-        matched_node_key_sequences = search_all(self._nx_graph, expression)
+        matched_node_key_sequences = find_subgraphs_match_expression(self._nx_graph, expression)
         pattern_ios = [self._get_nncf_graph_pattern_io_list(match) for match in matched_node_key_sequences]
         return pattern_ios
 

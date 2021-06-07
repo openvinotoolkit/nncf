@@ -206,21 +206,6 @@ class InsertionPointGraph(nx.DiGraph):
             if ia_op_exec_context.operator_name == MODEL_INPUT_OP_NAME:
                 self._input_ips.append(post_hook_insertion_point)
 
-    def _base_graph_match_has_breaking_edges(self, match):
-        # Breaking output edges
-        for node_key in match[:-1]:
-            succs = list(self._base_nx_graph.succ[node_key].keys())
-            for succ_key in succs:
-                if succ_key not in match:
-                    return True
-
-        # Breaking input edges
-        for node_key in match[1:]:
-            preds = list(self._base_nx_graph.pred[node_key].keys())
-            for pred_key in preds:
-                if pred_key not in match:
-                    return True
-        return False
 
     def get_ip_graph_with_merged_hw_optimized_operations(self,
                                                          hw_config: Optional[HWConfig] = None,
@@ -229,37 +214,14 @@ class InsertionPointGraph(nx.DiGraph):
         # pylint:disable=too-many-branches
         merged_ip_graph = deepcopy(self)
         pattern = self._get_mergeable_operator_patterns(hw_config, additional_patterns)
-        from nncf.torch.graph.graph_matching import search_all
-        matches = search_all(self._base_nx_graph, pattern)
+        from nncf.torch.graph.graph_matching import find_subgraphs_match_expression
+        matches = find_subgraphs_match_expression(self._base_nx_graph, pattern)
         for match in matches:
             if len(match) == 1:
                 continue
 
             input_node_key = match[0]
             output_node_key = match[-1]
-
-            # If a subgraph has output edges in its middle, should skip merging it
-            # Example (conv2d + BN + relu pattern):
-            #       (conv2d)
-            #          |------\
-            #         (BN)    |
-            #          |      |
-            #        (RELU)   |
-            #          |      |
-            #        (cat)----/
-            #          |
-            #         ...
-
-            # Same for input edges (linear + add pattern):
-            # (linear)      (linear)
-            #     |            |
-            #     \----(add)---/
-            #            |
-            #           ...
-            has_breaking_output_edges = self._base_graph_match_has_breaking_edges(match)
-
-            if has_breaking_output_edges:
-                continue
 
             in_edges = list(self.in_edges(input_node_key))
             out_edges = list(self.out_edges(output_node_key))
