@@ -63,6 +63,11 @@ if python_version < (3, 7):
 
 version_string = "{}{}".format(sys.version_info[0], sys.version_info[1])
 
+if "--cpu-only" in sys.argv:
+    print("WARNING: --cpu-only option for NNCF setup.py is deprecated and will "
+          "be ignored. CPU/GPU support will be determined by the torch package.")
+    sys.argv.remove("--cpu-only")
+
 _extra_deps = [
     "torch>=1.5.0, <=1.8.1, !=1.8.0",
     "tensorflow==2.4.0",
@@ -82,6 +87,12 @@ EXTRAS_REQUIRE = {
         extra_deps["tensorflow"],
         extra_deps["torch"]],
 }
+
+if os.environ.get('NNCF_INSTALLING_TORCH'):
+    INSTALL_REQUIRES.append(extra_deps["torch"])
+
+if os.environ.get('NNCF_INSTALLING_TF'):
+    INSTALL_REQUIRES.append(extra_deps["tensorflow"])
 
 setup(
     name="nncf",

@@ -14,7 +14,6 @@
 # Do not remove - these imports are for testing purposes.
 #pylint:disable=unused-import
 import nncf
-from nncf.torch import create_compressed_model
 
 import sys
 
@@ -24,6 +23,14 @@ if len(sys.argv) != 3:
     raise RuntimeError("Must be run with an execution type as argument (either 'cpu' or 'cuda') and package type")
 execution_type = sys.argv[1]
 package_type = sys.argv[2]
+
+if package_type == 'pip_pypi':
+    try:
+        from nncf.torch import create_compressed_model
+    except ImportError:
+        from nncf import create_compressed_model
+else:
+    from nncf.torch import create_compressed_model
 
 input_low_tensor = torch.zeros([1])
 input_tensor = torch.ones([1, 1, 1, 1])

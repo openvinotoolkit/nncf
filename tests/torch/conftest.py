@@ -189,13 +189,13 @@ def tmp_venv_with_nncf(install_type, tmp_path, package_type, venv_type):  # pyli
 
     if package_type == "pip_pypi":
         subprocess.run(
-            f"{pip_with_venv} install nncf", check=True, shell=True)
+            f"{pip_with_venv} install nncf[torch]", check=True, shell=True)
     elif package_type == "pip_local":
         subprocess.run(
-            f"{pip_with_venv} install {PROJECT_ROOT}", check=True, shell=True)
+            f"{pip_with_venv} install {PROJECT_ROOT}[torch]", check=True, shell=True)
     elif package_type == "pip_e_local":
         subprocess.run(
-            f"{pip_with_venv} install -e {PROJECT_ROOT}", check=True, shell=True)
+            f"{pip_with_venv} install -e {PROJECT_ROOT}[torch]", check=True, shell=True)
     else:
 
         subprocess.run(

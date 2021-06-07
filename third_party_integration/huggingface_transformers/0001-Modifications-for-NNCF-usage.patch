@@ -1212,7 +1212,7 @@ index 5b000c81..05df28a7 100644
  
 -
 +import nncf
-+@nncf.register_module()
++@nncf.torch.register_module()
  class Conv1D(nn.Module):
      def __init__(self, nf, nx):
          """ Conv1D layer as defined by Radford et al. for OpenAI GPT (and also used in GPT-2)
