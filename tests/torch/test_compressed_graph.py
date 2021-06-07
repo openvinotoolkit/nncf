@@ -898,6 +898,7 @@ def test_output_quantization_with_user_forward(_case_config):
     config = get_basic_quantization_config(_case_config.quant_type,
                                             input_sample_sizes=input_shape)
     config["compression"].update({"quantize_outputs": True})
+    register_bn_adaptation_init_args(config)
     compressed_model, _ = create_compressed_model_and_algo_for_test(model, config,
                                                                     dummy_forward_fn=desc.dummy_forward_fn,
                                                                     wrap_inputs_fn=desc.wrap_inputs_fn)
