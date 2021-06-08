@@ -31,6 +31,7 @@ This function returns a wrapped model ready for compression fine-tuning, and han
 ```python
 import torch
 import nncf  # Important - should be imported directly after torch
+from nncf import NNCFConfig
 from nncf.torch import create_compressed_model, NNCFConfig, register_default_init_args
 
 # Instantiate your uncompressed model

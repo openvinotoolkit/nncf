@@ -46,10 +46,10 @@ INSTALL_REQUIRES = ["ninja>=1.10.0.post2",
                     "scipy>=1.3.2",
                     "networkx>=2.5",
                     "graphviz>=0.15",
-                    "jsonschema>=3.2.0",
+                    "jsonschema==3.2.0",
                     "pydot>=1.4.1",
                     "jstyleson>=0.0.2",
-                    "numpy>=1.19",
+                    "numpy~=1.19.2",
                     "tqdm>=4.54.1",
                     "natsort>=7.1.0",
                     "pandas>=1.1.5",
@@ -63,14 +63,10 @@ if python_version < (3, 7):
 
 version_string = "{}{}".format(sys.version_info[0], sys.version_info[1])
 
-if "--cpu-only" in sys.argv:
-    print("WARNING: --cpu-only option for NNCF setup.py is deprecated and will "
-          "be ignored. CPU/GPU support will be determined by the torch package.")
-    sys.argv.remove("--cpu-only")
-
 _extra_deps = [
-    "torch>=1.5.0, <=1.8.1, !=1.8.0",
+    "protobuf>=3.7, <4",
     "tensorflow==2.4.0",
+    "torch>=1.5.0, <=1.8.1, !=1.8.0",
 ]
 
 extra_deps = {b: a for a, b in (re.findall(r"^(([^!=<>]+)(?:[!=<>].*)?$)", x)[0] for x in _extra_deps)}
@@ -80,19 +76,23 @@ EXTRAS_REQUIRE = {
         "pytest"],
     "docs": [],
     "tf": [
-        extra_deps["tensorflow"]],
+        extra_deps["tensorflow"],
+        extra_deps["protobuf"]],
     "torch": [
         extra_deps["torch"]],
     "all": [
         extra_deps["tensorflow"],
+        extra_deps["protobuf"],
         extra_deps["torch"]],
 }
 
-if os.environ.get('NNCF_INSTALLING_TORCH'):
-    INSTALL_REQUIRES.append(extra_deps["torch"])
+if "--torch" in sys.argv:
+    INSTALL_REQUIRES.extend(EXTRAS_REQUIRE["torch"])
+    sys.argv.remove("--torch")
 
-if os.environ.get('NNCF_INSTALLING_TF'):
-    INSTALL_REQUIRES.append(extra_deps["tensorflow"])
+if "--tf" in sys.argv:
+    INSTALL_REQUIRES.extend(EXTRAS_REQUIRE["tf"])
+    sys.argv.remove("--tf")
 
 setup(
     name="nncf",

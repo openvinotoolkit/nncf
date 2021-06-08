@@ -17,9 +17,9 @@ import tensorflow as tf
 
 from nncf.common.sparsity.collector import WeightDescription
 from nncf.common.sparsity.collector import BaseSparseModelStatisticsCollector
-from beta.nncf.tensorflow.sparsity.magnitude.functions import apply_mask
-from beta.nncf.tensorflow.sparsity.magnitude.operation import BinaryMaskWithWeightsBackup
-from beta.nncf.tensorflow.graph.utils import get_nncf_operations
+from nncf.tensorflow.sparsity.magnitude.functions import apply_mask
+from nncf.tensorflow.sparsity.magnitude.operation import BinaryMaskWithWeightsBackup
+from nncf.tensorflow.graph.utils import get_nncf_operations
 
 
 def _get_standardized_weight_shape(shape):

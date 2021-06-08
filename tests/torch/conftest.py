@@ -199,12 +199,10 @@ def tmp_venv_with_nncf(install_type, tmp_path, package_type, venv_type):  # pyli
     else:
 
         subprocess.run(
-            "{python} {nncf_repo_root}/setup.py {package_type} {install_flag}".format(
+            "{python} {nncf_repo_root}/setup.py {package_type} --torch".format(
                 python=python_executable_with_venv,
                 nncf_repo_root=PROJECT_ROOT,
-                package_type=package_type,
-                install_flag='--cpu-only' if
-                install_type == "CPU" else ''),
+                package_type=package_type),
             check=True,
             shell=True,
             cwd=PROJECT_ROOT)
