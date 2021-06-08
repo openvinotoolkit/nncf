@@ -41,38 +41,30 @@ class BNTrainingStateSwitcher:
 class BNMomentumSwitcher:
     def __init__(self, model):
         self._model = model
-        self._original_momenta_values = {}
+        self._original_momentum_values = {}
 
     def __enter__(self):
         for layer in self._model.layers:
             if get_keras_layer_metatype(layer) == TFBatchNormalizationLayerMetatype:
-                self._original_momenta_values[layer] = layer.momentum
+                self._original_momentum_values[layer] = layer.momentum
                 layer.momentum = 0.1
 
     def __exit__(self, *exc):
         for layer in self._model.layers:
             if get_keras_layer_metatype(layer) == TFBatchNormalizationLayerMetatype:
-                layer.momentum = self._original_momenta_values[layer]
+                layer.momentum = self._original_momentum_values[layer]
 
 
 class TFBatchnormAdaptationAlgorithmImpl(BatchnormAdaptationAlgorithmImpl):
     """
     Implementation of the batch-norm statistics adaptation algorithm for the TensorFlow backend.
     """
-    def _infer_batch(self, x) -> None:
-        """
-        Run the forward pass of the model in train mode.
-        BatchNormalization moving statistics are getting updated.
-        """
-        self._model(x, training=True)
-
     def run(self, model: tf.keras.Model) -> None:
         """
         Runs the batch-norm statistics adaptation algorithm.
 
         :param model: A model for which the algorithm will be applied.
         """
-        self._model = model
         with BNTrainingStateSwitcher(model):
             with BNMomentumSwitcher(model):
                 for (x, _) in ProgressBar(
@@ -80,10 +72,10 @@ class TFBatchnormAdaptationAlgorithmImpl(BatchnormAdaptationAlgorithmImpl):
                         total=self._num_bn_forget_steps,
                         desc='BatchNorm statistics forget'
                 ):
-                    self._infer_batch(x)
+                    model(x, training=True)
             for (x, _) in ProgressBar(
                     islice(self._data_loader, self._num_bn_adaptation_steps),
                     total=self._num_bn_adaptation_steps,
                     desc='BatchNorm statistics adaptation'
             ):
-                self._infer_batch(x)
+                model(x, training=True)
