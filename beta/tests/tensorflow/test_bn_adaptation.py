@@ -24,7 +24,16 @@ from beta.nncf.tensorflow.graph.metatypes.matcher import get_keras_layer_metatyp
 from beta.nncf.tensorflow.graph.metatypes.keras_layers import TFBatchNormalizationLayerMetatype
 
 
-def get_config_for_test(batch_size, dataset, num_bn_adaptation_samples=100, num_bn_forget_samples=50):
+def get_dataset_for_test(batch_size=10):
+    rand_image = tf.random.uniform(shape=[5, 5, 1])
+    dataset1 = tf.data.Dataset.from_tensors(rand_image)
+    rand_label = tf.random.uniform(shape=[])
+    dataset2 = tf.data.Dataset.from_tensors(rand_label)
+    dataset = tf.data.Dataset.zip((dataset1, dataset2)).repeat(100).batch(batch_size)
+    return dataset
+
+
+def get_config_for_test(batch_size=10, num_bn_adaptation_samples=100, num_bn_forget_samples=50):
     config = NNCFConfig()
     config.update(Dict({
         "compression":
@@ -38,6 +47,7 @@ def get_config_for_test(batch_size, dataset, num_bn_adaptation_samples=100, num_
             }
     }))
 
+    dataset = get_dataset_for_test()
     config = register_default_init_args(config,
                                         dataset,
                                         batch_size)
@@ -61,15 +71,6 @@ def get_model_for_test():
     return model
 
 
-def get_dataset_for_test(batch_size=5):
-    rand_image = tf.random.uniform(shape=[5, 5, 1])
-    dataset1 = tf.data.Dataset.from_tensors(rand_image)
-    rand_label = tf.random.uniform(shape=[])
-    dataset2 = tf.data.Dataset.from_tensors(rand_label)
-    dataset = tf.data.Dataset.zip((dataset1, dataset2)).repeat(100).batch(batch_size)
-    return dataset
-
-
 def compare_params(weights_a, weights_b, equal=True):
     for i in range(len(weights_a)):
         if equal:
@@ -91,10 +92,7 @@ def test_parameter_update():
         else:
             original_param_values[layer] = deepcopy(layer.weights)
 
-    batch_size = 10
-    dataset = get_dataset_for_test(batch_size=batch_size)
-
-    config = get_config_for_test(batch_size, dataset)
+    config = get_config_for_test()
 
     bn_adaptation = BatchnormAdaptationAlgorithm(**extract_bn_adaptation_init_params(config))
     bn_adaptation.run(model)
@@ -115,10 +113,7 @@ def test_all_parameter_keep():
     for layer in model.layers:
         original_all_param_values[layer] = deepcopy(layer.weights)
 
-    dataset = get_dataset_for_test()
-
-    batch_size = 5
-    config = get_config_for_test(batch_size, dataset, num_bn_adaptation_samples=0, num_bn_forget_samples=0)
+    config = get_config_for_test(num_bn_adaptation_samples=0, num_bn_forget_samples=0)
 
     bn_adaptation = BatchnormAdaptationAlgorithm(**extract_bn_adaptation_init_params(config))
     bn_adaptation.run(model)
