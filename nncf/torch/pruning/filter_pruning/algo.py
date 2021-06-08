@@ -146,10 +146,10 @@ class FilterPruningController(BasePruningAlgoController):
     def statistics(self, quickly_collected_only: bool = False) -> NNCFStatistics:
         pruned_layers_summary = {}
         for minfo in self.pruned_module_groups_info.get_all_nodes():
-            module_scope = str(minfo.module_scope)
-            if module_scope not in pruned_layers_summary:
-                pruned_layers_summary[module_scope] = \
-                    PrunedLayerSummary(module_scope,
+            layer_node_name = str(minfo.node_name)
+            if layer_node_name not in pruned_layers_summary:
+                pruned_layers_summary[layer_node_name] = \
+                    PrunedLayerSummary(layer_node_name,
                                        list(minfo.module.weight.size()),
                                        list(self.mask_shape(minfo)),
                                        self.pruning_rate_for_weight(minfo),
