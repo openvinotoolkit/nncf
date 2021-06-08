@@ -22,7 +22,12 @@ from nncf.common.utils.progress_bar import ProgressBar
 
 
 class BNTrainingStateSwitcher:
-    def __init__(self, model):
+    """
+    Context manager for switching BatchNormalization layer train mode.
+    At the enter, set BatchNormalization layers to the train mode.
+    At the exit, restore original BatchNormalization layer mode.
+    """
+    def __init__(self, model: tf.keras.Model):
         self._model = model
         self._original_training_state = {}
 
@@ -39,7 +44,12 @@ class BNTrainingStateSwitcher:
 
 
 class BNMomentumSwitcher:
-    def __init__(self, model):
+    """
+    Context manager for setting BatchNormalization layer momentum value.
+    At the enter, set BatchNormalization layer momentum to 0.1 to erase the history of statistics.
+    At the exit, restore original BatchNormalization layer momentum (used for further adaptation).
+    """
+    def __init__(self, model: tf.keras.Model):
         self._model = model
         self._original_momentum_values = {}
 

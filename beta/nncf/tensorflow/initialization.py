@@ -20,7 +20,7 @@ from nncf.config.structure import BNAdaptationInitArgs
 from nncf.config import NNCFConfig
 
 
-class InitializingDataLoader(NNCFDataLoader):
+class TFInitializingDataLoader(NNCFDataLoader):
     """
     This class wraps the tf.data.Dataset class.
     This is required for proper initialization of certain compression algorithms.
@@ -38,7 +38,7 @@ class InitializingDataLoader(NNCFDataLoader):
 
 
 def register_default_init_args(nncf_config: NNCFConfig,
-                               data_loader: Union[tf.data.Dataset, InitializingDataLoader],
+                               data_loader: Union[tf.data.Dataset, TFInitializingDataLoader],
                                batch_size: int,
                                device: str = None) -> NNCFConfig:
     """
@@ -53,7 +53,7 @@ def register_default_init_args(nncf_config: NNCFConfig,
     :return: NNCF config with extra structures.
     """
     nncf_config.register_extra_structs([
-        BNAdaptationInitArgs(data_loader=InitializingDataLoader(data_loader, batch_size),
+        BNAdaptationInitArgs(data_loader=TFInitializingDataLoader(data_loader, batch_size),
                              device=device)
     ])
     return nncf_config
