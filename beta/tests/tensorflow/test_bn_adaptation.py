@@ -25,9 +25,9 @@ from beta.nncf.tensorflow.graph.metatypes.keras_layers import TFBatchNormalizati
 
 
 def get_dataset_for_test(batch_size=10):
-    rand_image = tf.random.uniform(shape=[5, 5, 1])
+    rand_image = tf.random.uniform(shape=[5, 5, 1], dtype=tf.float32)
     dataset1 = tf.data.Dataset.from_tensors(rand_image)
-    rand_label = tf.random.uniform(shape=[])
+    rand_label = tf.random.uniform(shape=[], dtype=tf.float32)
     dataset2 = tf.data.Dataset.from_tensors(rand_label)
     dataset = tf.data.Dataset.zip((dataset1, dataset2)).repeat(100).batch(batch_size)
     return dataset
@@ -72,7 +72,7 @@ def get_model_for_test():
 
 
 def compare_params(weights_a, weights_b, equal=True):
-    for i in range(len(weights_a)):
+    for i, _ in enumerate(weights_a):
         if equal:
             assert tf.reduce_all(tf.equal(weights_a[i], weights_b[i]))
         else:
@@ -100,9 +100,9 @@ def test_parameter_update():
     for layer in model.layers:
         if get_keras_layer_metatype(layer) == TFBatchNormalizationLayerMetatype:
             compare_params(original_bn_stat_values[layer], layer.non_trainable_weights, equal=False)
-            compare_params(original_param_values[layer], layer.trainable_weights, equal=True)
+            compare_params(original_param_values[layer], layer.trainable_weights)
         else:
-            compare_params(original_param_values[layer], layer.weights, equal=True)
+            compare_params(original_param_values[layer], layer.weights)
 
 
 def test_all_parameter_keep():
@@ -119,4 +119,4 @@ def test_all_parameter_keep():
     bn_adaptation.run(model)
 
     for layer in model.layers:
-        compare_params(original_all_param_values[layer], layer.weights, equal=True)
+        compare_params(original_all_param_values[layer], layer.weights)
