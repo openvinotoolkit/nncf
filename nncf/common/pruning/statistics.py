@@ -100,18 +100,22 @@ class FilterPruningStatistics(Statistics):
     def __init__(self,
                  model_statistics: PrunedModelStatistics,
                  full_flops: int,
-                 current_flops: int):
+                 current_flops: int,
+                 target_pruning_level: float):
         """
         Initializes statistics of the filter pruning algorithm.
 
         :param model_statistics: Statistics of the pruned model.
         :param full_flops: Full FLOPS.
         :param current_flops: Current FLOPS.
+        :param target_pruning_level: Pruning level which was applied
+            by the algorithm.
         """
         self.model_statistics = model_statistics
         self.full_flops = full_flops
         self.current_flops = current_flops
         self.flops_pruning_level = 1 - self.current_flops / self.full_flops
+        self.target_pruning_level = target_pruning_level
 
     def to_str(self) -> str:
         algorithm_string = create_table(
@@ -119,6 +123,7 @@ class FilterPruningStatistics(Statistics):
             rows=[
                 ['FLOPS pruning level', self.flops_pruning_level],
                 ['FLOPS current / full', f'{self.current_flops} / {self.full_flops}'],
+                ['Pruning level which was applied by the algorithm', self.target_pruning_level],
             ]
         )
 

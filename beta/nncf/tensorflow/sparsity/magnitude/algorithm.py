@@ -195,7 +195,10 @@ class MagnitudeSparsityController(BaseSparsityController):
         for s in model_stats.sparsified_layers_summary:
             threshold_stats.append(LayerThreshold(s.name, threshold))
 
-        stats = MagnitudeSparsityStatistics(model_stats, threshold_stats)
+        # Sparsity level which was applied by the algorithm.
+        target_sparsity_level = self.scheduler.current_sparsity_level
+
+        stats = MagnitudeSparsityStatistics(model_stats, threshold_stats, target_sparsity_level)
 
         nncf_stats = NNCFStatistics()
         nncf_stats.register('magnitude_sparsity', stats)
