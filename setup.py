@@ -64,7 +64,6 @@ if python_version < (3, 7):
 version_string = "{}{}".format(sys.version_info[0], sys.version_info[1])
 
 _extra_deps = [
-    "protobuf>=3.7, <4",
     "tensorflow==2.4.0",
     "torch>=1.5.0, <=1.8.1, !=1.8.0",
 ]
@@ -76,13 +75,11 @@ EXTRAS_REQUIRE = {
         "pytest"],
     "docs": [],
     "tf": [
-        extra_deps["tensorflow"],
-        extra_deps["protobuf"]],
+        extra_deps["tensorflow"]],
     "torch": [
         extra_deps["torch"]],
     "all": [
         extra_deps["tensorflow"],
-        extra_deps["protobuf"],
         extra_deps["torch"]],
 }
 

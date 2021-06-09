@@ -18,7 +18,15 @@ from typing import Union
 import torch
 from texttable import Texttable
 
-import nncf.torch.graph.operator_metatypes as metatypes
+from nncf.torch.graph.operator_metatypes import Conv1dMetatype
+from nncf.torch.graph.operator_metatypes import DepthwiseConv1dSubtype
+from nncf.torch.graph.operator_metatypes import Conv2dMetatype
+from nncf.torch.graph.operator_metatypes import DepthwiseConv2dSubtype
+from nncf.torch.graph.operator_metatypes import Conv3dMetatype
+from nncf.torch.graph.operator_metatypes import DepthwiseConv3dSubtype
+from nncf.torch.graph.operator_metatypes import ConvTranspose2dMetatype
+from nncf.torch.graph.operator_metatypes import ConvTranspose3dMetatype
+from nncf.torch.graph.operator_metatypes import LinearMetatype
 from nncf.torch.algo_selector import COMPRESSION_ALGORITHMS
 from nncf.api.compression import CompressionStage
 from nncf.api.compression import CompressionLoss
@@ -61,17 +69,17 @@ from nncf.torch.pruning.utils import init_output_masks_in_graph
 from nncf.torch.utils import get_filters_num
 
 GENERAL_CONV_LAYER_METATYPES = [
-    metatypes.Conv1dMetatype,
-    metatypes.DepthwiseConv1dSubtype,
-    metatypes.Conv2dMetatype,
-    metatypes.DepthwiseConv2dSubtype,
-    metatypes.Conv3dMetatype,
-    metatypes.DepthwiseConv3dSubtype,
-    metatypes.ConvTranspose2dMetatype,
-    metatypes.ConvTranspose3dMetatype
+    Conv1dMetatype,
+    DepthwiseConv1dSubtype,
+    Conv2dMetatype,
+    DepthwiseConv2dSubtype,
+    Conv3dMetatype,
+    DepthwiseConv3dSubtype,
+    ConvTranspose2dMetatype,
+    ConvTranspose3dMetatype
 ]
 LINEAR_LAYER_METATYPES = [
-    metatypes.LinearMetatype
+    LinearMetatype
 ]
 
 

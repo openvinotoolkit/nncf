@@ -13,3 +13,17 @@
 
 from nncf.config import NNCFConfig
 from nncf.version import __version__
+
+try:
+    import torch
+except ImportError:
+    torch = None
+
+try:
+    import tensorflow as tf
+except ImportError:
+    tf = None
+
+if torch is None and tf is None:
+    import warnings
+    warnings.warn("None of PyTorch or TensorFlow have been found. Please, install one of the frameworks")

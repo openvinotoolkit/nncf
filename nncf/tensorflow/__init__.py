@@ -11,6 +11,7 @@
  limitations under the License.
 """
 
+# pylint: skip-file
 from nncf.version import BKC_TF_VERSION
 
 import tensorflow

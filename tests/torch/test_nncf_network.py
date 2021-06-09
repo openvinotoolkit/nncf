@@ -26,7 +26,7 @@ from nncf.torch.graph.operator_metatypes import NoopMetatype
 from nncf.torch.graph.operator_metatypes import ReshapeMetatype
 from torch import nn
 
-from nncf import register_module
+from nncf.torch import register_module
 from nncf.common.graph import MODEL_INPUT_OP_NAME
 from nncf.common.graph import MODEL_OUTPUT_OP_NAME
 from nncf.common.graph import NNCFNode

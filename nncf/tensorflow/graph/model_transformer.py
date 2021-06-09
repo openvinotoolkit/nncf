@@ -16,7 +16,7 @@ from collections import namedtuple
 
 import tensorflow as tf
 
-from beta.nncf.tensorflow.graph.transformations.layout import TFTransformationLayout
+from nncf.tensorflow.graph.transformations.layout import TFTransformationLayout
 from nncf.common.graph.model_transformer import ModelTransformer
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationType
