@@ -17,6 +17,13 @@ import networkx.algorithms.isomorphism as ism
 from nncf.torch.graph.patterns import GraphPattern
 
 
+def get_edge_boundaries(match: List[str], graph: nx.DiGraph):
+    out_edge_boundary = list(nx.edge_boundary(graph, match, data=True))
+    complement = list(filter(lambda x: x not in match, graph.nodes.keys()))
+    in_edge_boundary = list(nx.edge_boundary(graph, complement, data=True))
+    return in_edge_boundary, out_edge_boundary
+
+
 def find_whether_subgraph_has_inner_outgoing_edges(graph: nx.DiGraph, subgraph: List[str]) -> bool:
     """
     Check out whether the subgraph has outgoing edges starting not from the last node.

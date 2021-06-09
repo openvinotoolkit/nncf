@@ -37,6 +37,7 @@ from nncf.common.graph.graph_matching import NodeExpression
 from nncf.common.graph.model_transformer import ModelTransformer
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationPriority
+from nncf.torch.graph.patterns import GraphPattern, FULL_PATTERN_GRAPH
 from nncf.common.hardware.config import HWConfig
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.common.utils.ordered_enum import OrderedEnum
@@ -289,15 +290,15 @@ class InsertionPointGraph(nx.DiGraph):
         return InsertionPointGraph.POST_HOOK_ID_PREFIX + node_key
 
     def _get_mergeable_operator_patterns(self, hw_config: Optional[HWConfig] = None,
-                                         additional_patterns: Optional[List[str]] = None) -> NodeExpression:
+                                         additional_patterns: Optional[List[str]] = None) -> GraphPattern:
         """
         Resulting pattern should have single input; the operation with inputs to
         quantize should be the input operation; outputs should only be produced by one output node.
         """
         # TODO: Implement "repeating expressions" so that any number of "mergeable" operations
         # immediately following a linear/convolutional/matrix op are merged into one block
-        import nncf.torch.graph.patterns as p
-        full_pattern = p.FULL_PATTERN_GRAPH
+
+        full_pattern = FULL_PATTERN_GRAPH
         # TODO(Aleksei K) add additional patterns functionl
         # if additional_patterns is not None:
         #     for pattern in additional_patterns:

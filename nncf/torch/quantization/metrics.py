@@ -351,7 +351,7 @@ class ShareEdgesQuantizedDataPathStatisticsCollector(StatisticsCollector):
         import nncf.torch.graph.patterns as p
         from nncf.common.graph.graph_matching import find_subgraphs_matching_expression
 
-        pattern = p.LINEAR_OPS + p.ANY_BN_ACT_COMBO | p.LINEAR_OPS + p.ELTWISE_UNIFORM_OPS
+        pattern = p.FULL_PATTERN_GRAPH
         # pylint: disable=protected-access
         matches = find_subgraphs_matching_expression(original_graph._nx_graph, pattern)
         merged_graph = deepcopy(original_graph._nx_graph)
