@@ -20,6 +20,7 @@ from typing import Tuple
 import tensorflow as tf
 from tensorflow.python.framework.convert_to_constants import convert_variables_to_constants_v2
 
+from beta.nncf.tensorflow.graph.metatypes.common import DECONV_LAYER_METATYPES
 from beta.nncf.tensorflow.graph.metatypes.common import GENERAL_CONV_LAYER_METATYPES
 from beta.nncf.tensorflow.graph.metatypes.keras_layers import TFConv1DTransposeLayerMetatype
 from beta.nncf.tensorflow.graph.metatypes.keras_layers import TFConv2DTransposeLayerMetatype
@@ -377,9 +378,6 @@ class SequentialConverter(TFModelConverter):
         return nncf_graph
 
 
-TRANSPOSE_CONV_METATYPES = [TFConv1DTransposeLayerMetatype,
-                            TFConv2DTransposeLayerMetatype,
-                            TFConv3DTransposeLayerMetatype]
 
 
 def _get_layer_attributes(layer: tf.keras.layers.Layer) -> ConvolutionLayerAttributes:
@@ -390,7 +388,7 @@ def _get_layer_attributes(layer: tf.keras.layers.Layer) -> ConvolutionLayerAttri
     groups = layer_.groups
     kernel_size = layer_.kernel_size
 
-    transpose = layer_metatype in TRANSPOSE_CONV_METATYPES
+    transpose = layer_metatype in DECONV_LAYER_METATYPES
 
     return ConvolutionLayerAttributes(layer.trainable,
                                       layer.get_input_shape_at(0)[channel_axis],

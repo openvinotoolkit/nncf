@@ -28,8 +28,6 @@ class ModelTransformer:
         Initializes Model Transformer.
 
         :param model: The model to be transformed.
-        :param transformation_layout: An instance of `TransformationLayout` that
-            includes a list of transformations to be applied to the model.
         """
         self._model = model
 
@@ -37,6 +35,8 @@ class ModelTransformer:
         """
         Applies transformations to the model.
 
+        :param transformation_layout: An instance of `TransformationLayout` that
+            includes a list of transformations to be applied to the model.
         :return: The transformed model.
         """
         raise NotImplementedError()
