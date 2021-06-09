@@ -69,8 +69,7 @@ class MagnitudeSparsityBuilder(TFCompressionAlgorithmBuilder):
                 target_layer_name = node.node_name
 
             if not (node.metatype in SPARSITY_LAYER_METATYPES and
-                    should_consider_scope(node.node_name, target_scopes=None,
-                                          ignored_scopes=self.ignored_scopes)):
+                    should_consider_scope(node.node_name, ignored_scopes=self.ignored_scopes)):
                 continue
 
             for weight_def in node.metatype.weight_definitions:
@@ -91,8 +90,7 @@ class MagnitudeSparsityBuilder(TFCompressionAlgorithmBuilder):
             layer_graph = convert_layer_graph_to_nncf_graph(layer)
             for node in layer_graph.get_all_nodes():
                 if (node.metatype in SPARSITY_TF_OP_METATYPES and
-                        should_consider_scope(node.node_name, target_scopes=None,
-                                              ignored_scopes=self.ignored_scopes)):
+                        should_consider_scope(node.node_name, ignored_scopes=self.ignored_scopes)):
                     weight_attr_name = get_weight_node_name(layer_graph, node.node_name)
                     op_name = self._get_sparsity_operation_name(node.node_name, weight_attr_name)
                     self._op_names.append(op_name)

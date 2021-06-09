@@ -50,7 +50,7 @@ class NNCFNode:
         self.data = data if data else {}
 
     @property
-    def node_name(self) -> str:
+    def node_name(self) -> NNCFNodeName:
         return self.data.get(NNCFGraph.NODE_NAME_ATTR)
 
     @property

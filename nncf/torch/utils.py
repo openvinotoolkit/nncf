@@ -22,7 +22,7 @@ from torch import distributed as dist, nn
 from torch.nn import Module, Parameter
 
 from nncf.common.graph.graph import NNCFNodeName
-from nncf.common.utils.helpers import in_scope_list
+from nncf.common.utils.helpers import matches_any
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.torch.dynamic_graph.graph_tracer import ModelInputInfo, create_dummy_forward_fn
 from nncf.torch.dynamic_graph.trace_tensor import TracedTensor
@@ -70,10 +70,10 @@ def get_all_modules_by_type(model, module_types=None, current_scope=None,
         child_scope = current_scope.copy()
         child_scope.push(child_scope_element)
 
-        if in_scope_list(str(child_scope), ignored_scopes):
+        if matches_any(str(child_scope), ignored_scopes):
             continue
 
-        if target_scopes is None or in_scope_list(str(child_scope), target_scopes):
+        if target_scopes is None or matches_any(str(child_scope), target_scopes):
             if module_types is None or module_types.count(str(type(module).__name__)) != 0:
                 found[child_scope] = module
             sub_found = get_all_modules_by_type(module, module_types,

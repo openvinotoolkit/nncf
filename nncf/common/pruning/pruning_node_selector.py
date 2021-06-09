@@ -28,14 +28,14 @@ from nncf.common.pruning.clusterization import Cluster
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.common.utils.backend import __nncf_backend__
 
+from nncf.common.utils.helpers import should_consider_scope
+
 if __nncf_backend__ == 'Torch':
     from nncf.torch.pruning.utils import is_depthwise_conv
     from nncf.torch.pruning.utils import is_conv_with_downsampling
-    from nncf.common.utils.helpers import should_consider_scope
 elif __nncf_backend__ == 'TensorFlow':
     from beta.nncf.tensorflow.pruning.utils import is_depthwise_conv
     from beta.nncf.tensorflow.pruning.utils import is_conv_with_downsampling
-    from beta.nncf.tensorflow.utils.scopes_handle import should_consider_scope
 
 
 class PruningNodeSelector:
@@ -243,7 +243,7 @@ class PruningNodeSelector:
         output_non_pruned_nodes = get_last_nodes_of_type(graph, types_to_track)
         node_name = node.node_name
 
-        if not should_consider_scope(node_name, self._target_scopes, self._ignored_scopes):
+        if not should_consider_scope(node_name, self._ignored_scopes, self._target_scopes):
             msg = 'Ignored adding Weight Pruner in: {}'.format(node_name)
             prune = False
         elif not self._prune_first and node in input_non_pruned_nodes:

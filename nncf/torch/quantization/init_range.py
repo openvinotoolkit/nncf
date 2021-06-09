@@ -1,23 +1,34 @@
 from collections import OrderedDict
 from copy import deepcopy
-from typing import List, Dict, Set, Optional, Tuple, Callable
+from typing import Callable
+from typing import Dict
+from typing import List
+from typing import Optional
+from typing import Set
+from typing import Tuple
 
 import numpy as np
 import torch
 
+from nncf.common.quantization.structs import QuantizerGroup
+from nncf.common.utils.helpers import should_consider_scope
 from nncf.torch.initialization import DataLoaderBaseRunner
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.quantization.layers import BaseQuantizer
+from nncf.torch.quantization.quantizer_id import NonWeightQuantizerId
 from nncf.torch.quantization.quantizer_id import QuantizerId
-from nncf.torch.quantization.quantizer_id import WeightQuantizerId, NonWeightQuantizerId
-from nncf.torch.quantization.quantizer_setup import QuantizationPointBase, QuantizerSetupBase
-from nncf.common.quantization.structs import QuantizerGroup
+from nncf.torch.quantization.quantizer_id import WeightQuantizerId
+from nncf.torch.quantization.quantizer_setup import QuantizationPointBase
+from nncf.torch.quantization.quantizer_setup import QuantizerSetupBase
 from nncf.torch.tensor_statistics.algo import TensorStatisticObservationPoint
-from nncf.torch.tensor_statistics.collectors import TensorStatisticCollectorBase, MinMaxStatisticCollector, \
-    ReductionShape, MeanMinMaxStatisticCollector, MedianMADStatisticCollector, PercentileStatisticCollector, \
-    MeanPercentileStatisticCollector
+from nncf.torch.tensor_statistics.collectors import MeanMinMaxStatisticCollector
+from nncf.torch.tensor_statistics.collectors import MeanPercentileStatisticCollector
+from nncf.torch.tensor_statistics.collectors import MedianMADStatisticCollector
+from nncf.torch.tensor_statistics.collectors import MinMaxStatisticCollector
+from nncf.torch.tensor_statistics.collectors import PercentileStatisticCollector
+from nncf.torch.tensor_statistics.collectors import ReductionShape
+from nncf.torch.tensor_statistics.collectors import TensorStatisticCollectorBase
 from nncf.torch.tensor_statistics.statistics import MinMaxTensorStatistic
-from nncf.common.utils.helpers import should_consider_scope
 
 
 class RangeInitConfig:
@@ -120,32 +131,31 @@ class RangeInitParams:
 
     def get_init_config_for_quantization_point(self, qp: QuantizationPointBase) -> RangeInitConfig:
         if qp.is_weight_quantization_point():
-            scope_str = str(WeightQuantizerId(qp.insertion_point.target_node_name))
+            qid = WeightQuantizerId(qp.insertion_point.target_node_name)
             group = QuantizerGroup.WEIGHTS
         else:
-            scope_str = str(NonWeightQuantizerId(qp.insertion_point.target_node_name,
-                                                 qp.insertion_point.input_port_id))
+            qid = NonWeightQuantizerId(qp.insertion_point.target_node_name,
+                                       qp.insertion_point.input_port_id)
             group = QuantizerGroup.ACTIVATIONS
-        return self.get_init_config_for_scope_and_group(scope_str, group)
+        return self.get_init_config_for_scope_and_group(qid, group)
 
     def get_init_config_for_scope_and_group(self, qid: QuantizerId, group: QuantizerGroup) -> RangeInitConfig:
-        string_to_match = str(qid)
         matches = []  # type: List[RangeInitConfig]
         for pl_config in self.per_layer_range_init_configs:
-            if should_consider_scope(string_to_match, pl_config.target_scopes, pl_config.ignored_scopes):
+            if should_consider_scope(qid, pl_config.ignored_scopes, pl_config.target_scopes):
                 if group == pl_config.target_group or pl_config.target_group is None:
                     matches.append(RangeInitConfig(pl_config.init_type, pl_config.num_init_samples,
                                                    pl_config.init_type_specific_params))
         if len(matches) > 1:
             raise ValueError("Location {} matches more than one per-layer initialization parameter "
-                             "definition!".format(string_to_match))
+                             "definition!".format(str(qid)))
         if len(matches) == 1:
             return matches[0]
         if not matches and self.global_init_config is not None:
             return deepcopy(self.global_init_config)
 
         raise ValueError("Location {} does not match any per-layer initialization parameter "
-                         "definition!".format(string_to_match))
+                         "definition!".format(str(qid)))
 
 
 class StatCollectorGenerator:

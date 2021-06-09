@@ -34,7 +34,7 @@ from nncf.common.hardware.config import HWConfig
 from nncf.common.quantization.structs import QuantizableWeightedLayerNode
 from nncf.common.quantization.structs import QuantizationConstraints
 from nncf.common.quantization.structs import QuantizerGroup
-from nncf.common.utils.helpers import in_scope_list
+from nncf.common.utils.helpers import matches_any
 from nncf.common.utils.helpers import should_consider_scope
 from nncf.common.utils.logger import logger as nncf_logger
 # pylint: disable=wildcard-import
@@ -311,9 +311,7 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
 
                 ignored = False
                 for nncf_node in underlying_nncf_nodes:
-                    if not should_consider_scope(nncf_node.node_name,
-                                                 self._target_scopes,
-                                                 self._ignored_scopes):
+                    if not should_consider_scope(nncf_node.node_name, self._ignored_scopes, self._target_scopes):
                         ignored = True
 
                 if ignored:
@@ -2112,7 +2110,7 @@ class QuantizerPropagationSolver:
 
         act_scope_overrides = self._scope_overrides.get("activations", {})
         for overridden_scope, scoped_override_dict in act_scope_overrides.items():
-            if in_scope_list(nncf_node_name, overridden_scope):
+            if matches_any(nncf_node_name, overridden_scope):
                 scope_constraints = QuantizationConstraints.from_config_dict(scoped_override_dict)
                 local_constraints = local_constraints.get_updated_constraints(scope_constraints)
 

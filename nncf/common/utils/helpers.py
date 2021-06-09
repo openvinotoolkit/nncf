@@ -18,6 +18,9 @@ from typing import Union
 
 from texttable import Texttable
 
+from nncf.common.graph.graph import NNCFNodeName
+from nncf.torch.quantization.quantizer_id import QuantizerId
+
 
 def create_table(header: List[str], rows: List[List[Any]]) -> str:
     """
@@ -30,22 +33,37 @@ def create_table(header: List[str], rows: List[List[Any]]) -> str:
     return Texttable().header(header).add_rows(rows, header=False).draw()
 
 
-def should_consider_scope(scope_str: str, target_scopes: Optional[List[str]],
-                          ignored_scopes: List[str]):
-    return (target_scopes is None or in_scope_list(scope_str, target_scopes)) \
-               and not in_scope_list(scope_str, ignored_scopes)
+def should_consider_scope(serializable_id: Union[QuantizerId, NNCFNodeName],
+                          ignored_scopes: List[str],
+                          target_scopes: Optional[List[str]] = None) -> bool:
+    """
+    Used when an entity arising during compression has to be compared to an allowlist or a denylist of strings
+    (potentially regex-enabled) that is defined in an NNCFConfig .json.
+    :param serializable_id: One of the supported entity types to be matched - currently possible to pass either
+    NNCFNodeName (to refer to the original model operations) or QuantizerId (to refer to specific quantizers)
+    :param target_scopes: A list of strings specifying an allowlist for the serializable_id. Entries of the list
+        may be prefixed with `{re}` to enable regex matching.
+    :param ignored_scopes: A list of strings specifying a denylist for the serializable_id. Entries of the list
+        may be prefixed with `{re}` to enable regex matching.
+    :return: A boolean value specifying whether a serializable_id should be considered (i.e. "not ignored", "targeted")
+    """
+    string_id = str(serializable_id)
+    return (target_scopes is None or matches_any(string_id, target_scopes)) \
+               and not matches_any(string_id, ignored_scopes)
 
 
-def in_scope_list(scope: str, scope_list: Union[List[str], str]) -> bool:
-    if scope_list is None:
+def matches_any(tested_str: str,
+                str_or_list_to_match_to: Union[List[str], str]) -> bool:
+    if str_or_list_to_match_to is None:
         return False
 
-    for item in [scope_list] if isinstance(scope_list, str) else scope_list:
+    str_list = [str_or_list_to_match_to] if isinstance(str_or_list_to_match_to, str) else str_or_list_to_match_to
+    for item in str_list:
         if "{re}" in item:
             regex = item.replace("{re}", "")
-            if re.search(regex, scope):
+            if re.search(regex, tested_str):
                 return True
         else:
-            if scope == item:
+            if tested_str == item:
                 return True
     return False

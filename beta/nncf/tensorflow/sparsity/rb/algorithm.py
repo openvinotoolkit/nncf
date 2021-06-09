@@ -62,8 +62,7 @@ class RBSparsityBuilder(TFCompressionAlgorithmBuilder):
                 target_layer_name = node.node_name
 
             if not (node.metatype in SPARSITY_LAYER_METATYPES and
-                    should_consider_scope(node.node_name, target_scopes=None,
-                                          ignored_scopes=self.ignored_scopes)):
+                    should_consider_scope(node.node_name, ignored_scopes=self.ignored_scopes)):
                 continue
 
             for weight_def in node.metatype.weight_definitions:

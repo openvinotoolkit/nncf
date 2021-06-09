@@ -22,6 +22,7 @@ from typing import List, Tuple, TypeVar, Dict
 import torch
 from torch import nn
 
+from nncf.common.graph.graph import NNCFNodeName
 from nncf.config import NNCFConfig
 from nncf.torch.graph.transformations.layout import PTTransformationLayout
 from nncf.torch.layers import NNCF_MODULES_DICT, NNCF_WRAPPED_USER_MODULES_DICT
@@ -180,7 +181,7 @@ class PTCompressionAlgorithmBuilder(CompressionAlgorithmBuilder):
         scopes_of_frozen_layers = []
         for weighted_node in target_model.get_weighted_original_graph_nodes():
             if not weighted_node.module_attributes.weight_requires_grad:
-                if should_consider_scope(weighted_node.node_name, self.target_scopes, self.ignored_scopes):
+                if should_consider_scope(weighted_node.node_name, self.ignored_scopes, self.target_scopes):
                     scopes_of_frozen_layers.append(weighted_node.node_name)
         scopes_to_print = '\n'.join(scopes_of_frozen_layers)
         if len(scopes_of_frozen_layers) > 0:
@@ -195,9 +196,8 @@ class PTCompressionAlgorithmBuilder(CompressionAlgorithmBuilder):
                                    f'Frozen Layers:\n'
                                    f'{scopes_to_print}')
 
-
-    def _should_consider_scope(self, scope_str: str) -> bool:
-        return should_consider_scope(scope_str, self.target_scopes, self.ignored_scopes)
+    def _should_consider_scope(self, node_name: NNCFNodeName) -> bool:
+        return should_consider_scope(node_name, self.ignored_scopes, self.target_scopes)
 
     def _nncf_module_types_to_compress(self) -> List[str]:
         """

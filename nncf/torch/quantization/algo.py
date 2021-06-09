@@ -117,7 +117,7 @@ from nncf.torch.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.torch.tensor_statistics.statistics import TensorStatistic
 from nncf.torch.utils import get_scale_shape
 from nncf.torch.utils import get_state_dict_names_with_modules
-from nncf.common.utils.helpers import in_scope_list
+from nncf.common.utils.helpers import matches_any
 from nncf.torch.utils import is_main_process
 from nncf.common.utils.helpers import should_consider_scope
 
@@ -175,7 +175,7 @@ class QuantizerSetupGeneratorBase:
         if scope_overrides is None:
             scope_overrides = {}
         for overridden_scope in scope_overrides.keys():
-            if in_scope_list(parent_module_scope_str, overridden_scope):
+            if matches_any(parent_module_scope_str, overridden_scope):
                 config_overrides = scope_overrides[overridden_scope]
                 if config_overrides.get("bits") is not None:
                     qconfig.num_bits = config_overrides["bits"]
@@ -195,16 +195,16 @@ class QuantizerSetupGeneratorBase:
 
     def _should_consider_scope_for_group(self, scope_str: str, group: QuantizerGroup) -> bool:
         if self.target_scopes is not None or self._target_scopes_per_group[group] is not None:
-            if in_scope_list(scope_str, self.target_scopes):
+            if matches_any(scope_str, self.target_scopes):
                 return True
-            if in_scope_list(scope_str, self._target_scopes_per_group[group]):
+            if matches_any(scope_str, self._target_scopes_per_group[group]):
                 return True
 
             return False
 
-        if in_scope_list(scope_str, self.ignored_scopes):
+        if matches_any(scope_str, self.ignored_scopes):
             return False
-        if in_scope_list(scope_str, self._ignored_scopes_per_group[group]):
+        if matches_any(scope_str, self._ignored_scopes_per_group[group]):
             return False
 
         return True
@@ -397,7 +397,7 @@ class PropagationBasedQuantizerSetupGenerator(QuantizerSetupGeneratorBase):
                 try:
                     local_constraints = global_constraints
                     for overridden_scope, scoped_override_dict in scope_overrides_dict.items():
-                        if in_scope_list(node.node_name, overridden_scope):
+                        if matches_any(node.node_name, overridden_scope):
                             scope_constraints = QuantizationConstraints.from_config_dict(scoped_override_dict)
                             local_constraints = local_constraints.get_updated_constraints(scope_constraints)
                     qconfig_list = local_constraints.constrain_qconfig_list(qconfig_list)
@@ -1248,21 +1248,6 @@ class QuantizationController(QuantizationControllerBase):
         if self._distributed:
             self._broadcast_initialized_params_for_each_quantizer()
 
-    def update_range_config_by_default(self, init_range_config: Dict):
-        global_init_range_config = dict()
-        global_init_range_config.update(init_range_config)
-        if global_init_range_config.get("type") is None:
-            global_init_range_config["type"] = "mean_min_max"
-
-        if global_init_range_config.get("num_init_samples") is None:
-            global_init_range_config["num_init_samples"] = 256
-
-        num_init_samples = global_init_range_config.get('num_init_samples', 256)
-        if num_init_samples < 0:
-            raise AttributeError('Number of initialization samples must be >= 0')
-        return global_init_range_config
-
-
     def enable_activation_quantization(self):
         for m in self.non_weight_quantizers.values():
             m.quantizer_module_ref.enable_quantization()
@@ -1278,44 +1263,6 @@ class QuantizationController(QuantizationControllerBase):
     def disable_weight_quantization(self):
         for m in self.weight_quantizers.values():
             m.quantizer_module_ref.disable_quantization()
-
-    def _get_local_init_range_config(self, scope: Scope, scope_overrides: Dict[str, Dict],
-                                     global_init_range_config: Dict, quantizer_group: str):
-        if isinstance(global_init_range_config, dict):
-            module_init_range_config = global_init_range_config
-        else:
-            module_init_range_config = None
-            matched_init_range_config = []
-            for range_init_subconfig in global_init_range_config:
-                target_scopes = range_init_subconfig.get("target_scopes", None)
-                ignored_scopes = range_init_subconfig.get("ignored_scopes", None)
-                target_quantizer_group = range_init_subconfig.get("target_quantizer_group", quantizer_group)
-                if quantizer_group == target_quantizer_group and \
-                    should_consider_scope(str(scope), target_scopes, ignored_scopes):
-                    matched_init_range_config.append(range_init_subconfig)
-
-            if len(matched_init_range_config) > 1:
-                raise AssertionError("The range initialization configs conflict with each other. "
-                                     "Conflicting configs: {} for scope {}.".format(matched_init_range_config,
-                                                                                    str(scope)))
-
-            if len(matched_init_range_config) == 1:
-                module_init_range_config = matched_init_range_config[0]
-            else:
-                raise AssertionError("The range initialization configs conflict with each other. "
-                                     "Conflicting configs: {} for scope {}.".format(matched_init_range_config,
-                                                                                    str(scope)))
-
-        for overridden_scope in scope_overrides.keys():
-            if in_scope_list(str(scope), overridden_scope):
-                override_config = scope_overrides[overridden_scope].get('initializer', {}).get("range")
-                if override_config is not None:
-                    module_init_range_config = override_config
-
-        if module_init_range_config is None:
-            module_init_range_config = self.update_range_config_by_default({})
-
-        return module_init_range_config
 
     def statistics(self, quickly_collected_only=False) -> NNCFStatistics:
         num_enabled_quantization = len([1 for q in self.all_quantizations.values() if q.is_enabled_quantization()])

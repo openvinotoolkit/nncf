@@ -134,8 +134,8 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
                 target_layer_name = node.node_name
 
             if not (node.metatype in QUANTIZATION_LAYER_METATYPES \
-                    and should_consider_scope(node.node_name, target_scopes=None,
-                                              ignored_scopes=self.ignored_scopes_per_group[WEIGHTS])):
+                    and should_consider_scope(node.node_name, ignored_scopes=self.ignored_scopes_per_group[WEIGHTS],
+                                              target_scopes=None)):
                 continue
 
             for weight_def in node.metatype.weight_definitions:
@@ -172,8 +172,8 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
     def _find_insertion_points(self, nncf_graph: NNCFGraph) -> List[str]:
         def _filter_fn(node: NNCFNode):
             ignored = not should_consider_scope(node.node_name,
-                                                target_scopes=None,
-                                                ignored_scopes=self.ignored_scopes_per_group[ACTIVATIONS])
+                                                ignored_scopes=self.ignored_scopes_per_group[ACTIVATIONS],
+                                                target_scopes=None)
             # Works if the insertion is done as an operation after the corresponding node.
             out_nodes = nncf_graph.get_next_nodes(node)
             is_float_dtype = True

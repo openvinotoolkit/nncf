@@ -17,7 +17,7 @@ from typing import List
 
 from nncf.torch.layers import NNCF_MODULES_DICT, NNCF_MODULES, \
     add_nncf_functionality_to_user_module, NNCF_WRAPPED_USER_MODULES_DICT
-from nncf.common.utils.helpers import in_scope_list
+from nncf.common.utils.helpers import matches_any
 from nncf.torch.dynamic_graph.scope import ScopeElement
 from nncf.torch.dynamic_graph.scope import Scope
 
@@ -95,7 +95,7 @@ def replace_modules(model: nn.Module, replace_fn, affected_scopes, ignored_scope
             replaced_scope = current_scope.copy()
             replaced_scope.push(replaced_scope_element)
             if module is not replaced_module:
-                if in_scope_list(str(child_scope), ignored_scopes):
+                if matches_any(str(child_scope), ignored_scopes):
                     nncf_logger.info("Ignored wrapping modules specified in scope: {}".format(child_scope))
                     continue
                 if eval_op_scopes is None:
@@ -112,7 +112,7 @@ def replace_modules(model: nn.Module, replace_fn, affected_scopes, ignored_scope
                         "Ignored wrapping modules not called in eval mode in scope: {}".format(child_scope))
                     continue
 
-                if target_scopes is None or in_scope_list(str(child_scope), target_scopes):
+                if target_scopes is None or matches_any(str(child_scope), target_scopes):
                     nncf_logger.info("Wrapping module {} by {}".format(str(child_scope),
                                                                        str(replaced_scope)))
                     set_replaced_module_by_name(model, name, replaced_module)
