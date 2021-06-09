@@ -341,7 +341,7 @@
             "ssd512_vgg_voc_int8": {
                 "config": "examples/torch/object_detection/configs/ssd512_vgg_voc_int8.json",
                 "reference": "ssd512_vgg_voc",
-                "target": 80.12,
+                "target": 79.98,
                 "metric_type": "Mean AP",
                 "resume": "ssd512_vgg_voc_int8.pth",
                 "batch": 32,
@@ -391,7 +391,7 @@
             "unet_camvid_magnitude_sparsity_int8": {
                 "config": "examples/torch/semantic_segmentation/configs/unet_camvid_magnitude_sparsity_int8.json",
                 "reference": "unet_camvid",
-                "target": 72.03,
+                "target": 72.51,
                 "metric_type": "Mean IoU",
                 "resume": "unet_camvid_magnitude_sparsity_int8.pth",
                 "mean_value": "[99.603,103.329,105.6567]",
@@ -399,7 +399,7 @@
                 "model_description": "UNet",
                 "compression_description": "INT8 + Sparsity 60% (Magnitude)",
                 "diff_fp32_min": -1,
-                "diff_fp32_max": 0.1
+                "diff_fp32_max": 0.6
             },
             "icnet_camvid": {
                 "config": "examples/torch/semantic_segmentation/configs/icnet_camvid.json",
