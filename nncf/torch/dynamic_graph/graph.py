@@ -456,6 +456,13 @@ class NodeManager:
 
 
 class DynamicGraph:
+    """
+    The class for representing a graph dynamically built during a PyTorch model's `forward` method execution
+    within a nncf.torch.dynamic_graph.context.TracingContext. This graph may change from a forward call to a
+    forward call if the execution paths of the model change between the calls - this sets DynamicGraph apart from
+    NNCFGraph which is a static representation of the model's structure. The DynamicGraph has limited support for
+    RNN tracing and is rather suited to regular DNN tracing.
+    """
     ID_NODE_ATTR = 'id'
     KEY_NODE_ATTR = 'key'
     MODULE_ATTRIBUTES = 'module_attributes'
