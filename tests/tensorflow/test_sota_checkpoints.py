@@ -43,9 +43,9 @@ DIFF_TARGET_MAX_GLOBAL = 0.1
 DIFF_FP32_MIN_GLOBAL = -1.0
 DIFF_FP32_MAX_GLOBAL = 0.1
 
-OPENVINO_DIR = PROJECT_ROOT.parent.parent / 'intel' / 'openvino'
+OPENVINO_DIR = PROJECT_ROOT.parent / 'intel' / 'openvino'
 if not os.path.exists(OPENVINO_DIR):
-    OPENVINO_DIR = PROJECT_ROOT.parent.parent / 'intel' / 'openvino_2021'
+    OPENVINO_DIR = PROJECT_ROOT.parent / 'intel' / 'openvino_2021'
 ACC_CHECK_DIR = OPENVINO_DIR / 'deployment_tools' / 'open_model_zoo' / 'tools' / 'accuracy_checker'
 MO_DIR = OPENVINO_DIR / 'deployment_tools' / 'model_optimizer'
 
@@ -516,7 +516,7 @@ class TestSotaCheckpoints:
                 model_path = model_path / f'{eval_test_struct.model_name_}.h5'
         if eval_test_struct.sample_type_ == 'segmentation':
             file = 'evaluation.py'
-        csv_result = f'{PROJECT_ROOT.parent}/{eval_test_struct.model_name_}.csv'
+        csv_result = f'{PROJECT_ROOT}/{eval_test_struct.model_name_}.csv'
         if eval_test_struct.model_name_.startswith('mask_'):
             self.write_error_in_csv('AC does not support mask models yet', csv_result, eval_test_struct.model_name_)
             pytest.fail('AC does not support mask models yet')
