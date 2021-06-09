@@ -27,6 +27,7 @@ class BNTrainingStateSwitcher:
     At the enter, set BatchNormalization layers to the train mode.
     At the exit, restore original BatchNormalization layer mode.
     """
+
     def __init__(self, model: tf.keras.Model):
         self._model = model
         self._original_training_state = {}
@@ -49,6 +50,7 @@ class BNMomentumSwitcher:
     At the enter, set BatchNormalization layer momentum to 0.1 to erase the history of statistics.
     At the exit, restore original BatchNormalization layer momentum (used for further adaptation).
     """
+
     def __init__(self, model: tf.keras.Model):
         self._model = model
         self._original_momentum_values = {}
@@ -69,12 +71,17 @@ class TFBatchnormAdaptationAlgorithmImpl(BatchnormAdaptationAlgorithmImpl):
     """
     Implementation of the batch-norm statistics adaptation algorithm for the TensorFlow backend.
     """
+
     def run(self, model: tf.keras.Model) -> None:
         """
         Runs the batch-norm statistics adaptation algorithm.
 
         :param model: A model for which the algorithm will be applied.
         """
+        if self._device is not None:
+            raise ValueError('TF implementation of batchnorm adaptation algorithm '
+                             'does not support switch of devices. Model initial device '
+                             'is used by default for batchnorm adaptation.')
         with BNTrainingStateSwitcher(model):
             with BNMomentumSwitcher(model):
                 for (x, _) in ProgressBar(
