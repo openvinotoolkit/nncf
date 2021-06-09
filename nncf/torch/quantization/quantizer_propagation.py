@@ -263,7 +263,7 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
     NODE_TYPE_NODE_ATTR = "node_type"
     IS_IN_IGNORED_SCOPES = "is_ignored"
     IS_MERGED_NODE_ATTR = "is_merged"
-    MERGED_NNCF_NODE_LIST_NODE_ATTR = "merged_nodes"
+    MERGED_NNCF_NODE_LIST_NODE_ATTR = "merged_node_list"
     BARRIER_NODE_KEY_POSTFIX = "BARRIER"
 
     def __init__(self, ip_graph: InsertionPointGraph,
