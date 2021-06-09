@@ -717,7 +717,7 @@ KNOWLEDGE_DISTILLATION_OLD_SCHEMA = {
         },
         "scale": with_attributes(_NUMBER,
                                  description="Scale parameter for kdloss"),
-        "is_softmax": with_attributes(_STRING, description="Is KDLoss computed via SoftMax")
+        "is_softmax": with_attributes(_BOOLEAN, description="Is KDLoss computed via SoftMax")
     },
     "additionalProperties": False
 }

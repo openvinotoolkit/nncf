@@ -69,6 +69,8 @@ class KDLossCalculator(PTCompressionLoss):
 
     def forward(self, input_=None, target=None):
         loss = self._target_model.get_kdloss()
+        if isinstance(loss, int):
+            return loss
         for i in range(len(loss)):
             loss[i] = loss[i].unsqueeze(0)
         output = torch.cat(loss).mean()

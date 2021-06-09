@@ -292,11 +292,11 @@ class OnesDatasetMock:
         return self._len
 
 
-def create_mock_dataloader(config, num_samples=1):
+def create_mock_dataloader(config, num_samples=1, batch_size=1):
     input_infos_list = create_input_infos(config)
     input_sample_size = input_infos_list[0].shape
     data_loader = torch.utils.data.DataLoader(OnesDatasetMock(input_sample_size[1:], num_samples),
-                                              batch_size=1,
+                                              batch_size=batch_size,
                                               num_workers=0,  # Workaround
                                               shuffle=False, drop_last=True)
     return data_loader
