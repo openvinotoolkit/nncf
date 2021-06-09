@@ -30,11 +30,13 @@ def powerset(iterable, min_r: int = 1, max_r: int = None):
 
 
 class Expression:
-    """A base class for objects that represent an expression to be matched against a subgraph of a directed
+    """
+    A base class for objects that represent an expression to be matched against a subgraph of a directed
     acyclic graph. Overloads certain Python operator to define a kind of a domain-specific mini-language for
     specifying a DAG subgraph in a single line. `Expression`-based subgraph specification is not expressive
     enough to cover all cases required by NNCF, e.g. in the case of the swish activation x * sigmoid(x), which
-    cannot be unambigously specified using `Expression`s."""
+    cannot be unambigously specified using `Expression`s.
+    """
     def _match(self, nodes, graph):
         return NotImplementedError
 
@@ -79,7 +81,8 @@ class Expression:
 
 
 class ConcatExpression(Expression):
-    """A composite expression that matches to a node path in the graph which is a concatenation
+    """
+    A composite expression that matches to a node path in the graph which is a concatenation
     of the paths that each matches, in order, to the sub-expression of this expression.
     E.g. a subgraph (conv2d) -> (batch_norm) will be matched to the expression:
         ConcatExpression([NodeExpression('conv2d'), NodeExpression('batch_norm2d')])
@@ -108,7 +111,8 @@ class ConcatExpression(Expression):
 
 
 class AlternatingExpression(Expression):
-    """A composite expression that matches to any of the node path in the graph which matches to at least
+    """
+    A composite expression that matches to any of the node path in the graph which matches to at least
      one of the subexpressions.
     E.g. in a graph (conv2d) -> (batch_norm) the expression:
         AlternatingExpression([NodeExpression('conv2d'), NodeExpression('batch_norm2d')]),
@@ -225,8 +229,10 @@ class BranchingExpression(Expression):
 
 
 class NodeExpression(Expression):
-    """A basic Expression that is matched against a single node; the node descriptor is expected to be a dict commonly
-    seen in networkx graphs."""
+    """
+    A basic Expression that is matched against a single node; the node descriptor is expected to be a dict commonly
+    seen in networkx graphs.
+    """
     def __init__(self, node_type: str = None,
                  filter_fn: Callable[[Dict], bool] = None,
                  node_type_fn: Callable[[dict], str] = None):

@@ -290,8 +290,10 @@ class InsertionPointGraph(nx.DiGraph):
 
     def _get_mergeable_operator_patterns(self, hw_config: Optional[HWConfig] = None,
                                          additional_patterns: Optional[List[str]] = None) -> NodeExpression:
-        """Resulting pattern should have single input; the operation with inputs to
-        quantize should be the input operation; outputs should only be produced by one output node."""
+        """
+        Resulting pattern should have single input; the operation with inputs to
+        quantize should be the input operation; outputs should only be produced by one output node.
+        """
         # TODO: Implement "repeating expressions" so that any number of "mergeable" operations
         # immediately following a linear/convolutional/matrix op are merged into one block
         import nncf.torch.graph.patterns as p
@@ -641,8 +643,10 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
 
     @staticmethod
     def _compression_module_type_to_attr_name(compression_module_type: ExtraCompressionModuleType):
-        """Required for backward compatibility with checkpoints that store function and activation
-        quantizers directly under corresponding attributes of NNCFNetwork."""
+        """
+        Required for backward compatibility with checkpoints that store function and activation
+        quantizers directly under corresponding attributes of NNCFNetwork.
+        """
         if compression_module_type == ExtraCompressionModuleType.EXTERNAL_QUANTIZER:
             return EXTERNAL_QUANTIZERS_STORAGE_NAME
         raise RuntimeError("Unknown extra module type")
@@ -670,8 +674,10 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
         return ret_scope
 
     def do_dummy_forward(self, force_eval=False):
-        """Attention: If run with force_eval=False, this may spoil the batchnorm statistics,
-        and an eval run of the model will perform much worse than the train run. """
+        """
+        Attention: If run with force_eval=False, this may spoil the batchnorm statistics,
+        and an eval run of the model will perform much worse than the train run.
+        """
         if force_eval:
             train_mode = self.training
             self.eval()

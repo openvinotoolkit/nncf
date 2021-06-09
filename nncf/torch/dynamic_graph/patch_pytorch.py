@@ -30,8 +30,10 @@ from nncf.torch.dynamic_graph.wrappers import wrap_operator
 
 class PatchedOperatorInfo:
     def __init__(self, name: str, custom_trace_fn: CustomTraceFunction = None):
-        """custom_trace_fn will be called instead of the regular node search/insertion step
-        during the corresponding operator call"""
+        """
+        custom_trace_fn will be called instead of the regular node search/insertion step
+        during the corresponding operator call
+        """
         self.name = name
         self.custom_trace_fn = custom_trace_fn
 

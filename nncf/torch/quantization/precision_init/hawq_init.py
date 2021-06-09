@@ -179,10 +179,12 @@ class TraceOrderBitwidthMatcher:
                                                              List[QuantizerConfig]],
                                                          indices_for_bitwidth_adjustment_only: Set[int]) -> \
             Tuple[List[QConfigSequenceForHAWQToEvaluate], List[CoveringQConfigSequenceForQuantNoiseCalculation]]:
-        """The 'constraint' is so that the each qconfig sequence should have non-decreasing bitwidths. It
+        """
+        The 'constraint' is so that the each qconfig sequence should have non-decreasing bitwidths. It
         might be impossible to apply this constraint for a given qconfig space (consider [[2], [6, 8], [4]]).
         In such a case, for trace order index positions where it was impossible to select a bitwidth so that the entire
-        sequence is non-decreasing, the bitwidth closest to this target will be chosen instead."""
+        sequence is non-decreasing, the bitwidth closest to this target will be chosen instead.
+        """
         if len(possible_qconfigs_sequence_in_trace_order) != len(self._traces_order):
             raise ValueError("The size of the qconfig space and the traces do not match!")
         retval = []  # type: List[QConfigSequenceForHAWQToEvaluate]
@@ -700,8 +702,10 @@ class HAWQPrecisionInitializer(BasePrecisionInitializer):
             weight_quantization_ids_by_execution_order: List[QuantizerId],
             groups_of_adjacent_quantizers: GroupsOfAdjacentQuantizers,
             traces_order: TracesOrder) -> List[QConfigSequenceForHAWQToEvaluate]:
-        """ removes configs where adjacent weight quantizers have different bitwidth. Adjacency is defined by common
-        activation quantizers"""
+        """
+        Removes configs where adjacent weight quantizers have different bitwidth. Adjacency is defined by common
+        activation quantizers
+        """
         filtered_qconfig_sequences = []
         all_grouped_indexes = []
         for group_of_adjacent_quantizers in groups_of_adjacent_quantizers:

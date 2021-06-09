@@ -710,8 +710,10 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
         return commands
 
     class ExternalQuantizerCallHook:
-        """Cannot simply register the quantizer module as a callable hook, since we need to call
-        a thread-local version of the quantizer module during base module execution."""
+        """
+        Cannot simply register the quantizer module as a callable hook, since we need to call
+        a thread-local version of the quantizer module during base module execution.
+        """
 
         def __init__(self, context: TracingContext, quantizer_storage_key: str,
                      debug_interface: 'QuantizationDebugInterface' = None):
@@ -895,7 +897,8 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
                                              qconfig: QuantizerConfig,
                                              range_init_minmax_values: Tuple[torch.Tensor, torch.Tensor] = None) -> \
             Tuple[QuantizerId, List[PTInsertionCommand]]:
-        """Will generate insertion commands for quantization at possibly multiple points
+        """
+        Will generate insertion commands for quantization at possibly multiple points
         in the network using one and the same trainable quantizer module. The trainable
         quantizer module will be saved either inside the weightable module which weights
         it quantizes (for single-point weight quantization), or in a NNCFNetwork wrapper
@@ -908,7 +911,8 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
         for initializing the quantizer's trainable parameters
         :return: A tuple with the identifier of the new quantizer module and a list of
         insertion commands registering this module for quantization at spots described by
-        insertion_points."""
+        insertion_points.
+        """
         #pylint:disable=too-many-branches
         #pylint:disable=too-many-statements
         nncf_graph = target_model.get_original_graph()

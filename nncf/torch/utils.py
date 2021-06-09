@@ -267,8 +267,10 @@ def is_named_tuple(obj) -> bool:
 
 
 def objwalk(obj, unary_predicate: Callable[[Any], bool], apply_fn: Callable, memo=None):
-    """Walks through the indexable container hierarchy of obj and replaces all sub-objects matching a criterion
-    with the result of a given function application."""
+    """
+    Walks through the indexable container hierarchy of obj and replaces all sub-objects matching a criterion
+    with the result of a given function application.
+    """
     #pylint:disable=too-many-nested-blocks
     #pylint:disable=too-many-branches
     if memo is None:

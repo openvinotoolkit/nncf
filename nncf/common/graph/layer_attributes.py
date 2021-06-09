@@ -28,12 +28,17 @@ class BaseLayerAttributes(ABC):
     of modules/layers.
     """
 
+
+class WeightedLayerAttributes(BaseLayerAttributes):
+    """
+    Represents a layer with weights.
+    """
     def __init__(self, weight_requires_grad: bool, dtype: Dtype = Dtype.FLOAT):
         self.weight_requires_grad = weight_requires_grad
         self.dtype = dtype
 
     def __eq__(self, other):
-        return isinstance(other, BaseLayerAttributes) \
+        return isinstance(other, WeightedLayerAttributes) \
                and self.weight_requires_grad == other.weight_requires_grad
 
     @abstractmethod
@@ -45,7 +50,11 @@ class BaseLayerAttributes(ABC):
         pass
 
 
-class GenericWeightedLayerAttributes(BaseLayerAttributes):
+class GenericWeightedLayerAttributes(WeightedLayerAttributes):
+    """
+    Represents a weighted layer for which there is no information ahead of time
+    of the exact meaning of the weight indices.
+    """
     def __init__(self, weight_requires_grad: bool, weight_shape: List[int],
                  filter_dimension_idx: int = 0):
         super().__init__(weight_requires_grad)
@@ -59,7 +68,7 @@ class GenericWeightedLayerAttributes(BaseLayerAttributes):
         return self.weight_shape[0]
 
 
-class LinearLayerAttributes(BaseLayerAttributes):
+class LinearLayerAttributes(WeightedLayerAttributes):
     def __init__(self,
                  weight_requires_grad: bool,
                  in_features: int,
@@ -75,7 +84,7 @@ class LinearLayerAttributes(BaseLayerAttributes):
         return self.out_features
 
 
-class ConvolutionLayerAttributes(BaseLayerAttributes):
+class ConvolutionLayerAttributes(WeightedLayerAttributes):
     """
     This class stores attributes of convolution modules/layers
     that are useful for some algorithms.
@@ -116,7 +125,7 @@ class ConvolutionLayerAttributes(BaseLayerAttributes):
         return self.out_channels
 
 
-class GroupNormLayerAttributes(BaseLayerAttributes):
+class GroupNormLayerAttributes(WeightedLayerAttributes):
     """
     This class stores attributes of group normalization modules/layers
     that are useful for some algorithms.
@@ -131,7 +140,7 @@ class GroupNormLayerAttributes(BaseLayerAttributes):
         self.num_groups = num_groups
 
     def __eq__(self, other):
-        return isinstance(other, BaseLayerAttributes) \
+        return isinstance(other, GroupNormLayerAttributes) \
                and super().__eq__(other) \
                and self.num_channels == other.num_channels \
                and self.num_groups == other.num_groups

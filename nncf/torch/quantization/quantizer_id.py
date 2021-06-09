@@ -14,8 +14,10 @@ from nncf.common.graph.graph import NNCFNodeName
 
 
 class QuantizerId:
-    """ Unique identifier of a quantizer. It's used to store and search all quantizers in a single
-    structure. Also it provides the scope, where the quantizer was inserted. """
+    """
+    Unique identifier of a quantizer. It's used to store and search all quantizers in a single
+    structure. Also it provides the scope, where the quantizer was inserted.
+    """
 
     def get_base(self):
         raise NotImplementedError
@@ -47,8 +49,10 @@ class WeightQuantizerId(QuantizerId):
 
 
 class NonWeightQuantizerId(QuantizerId):
-    """ Unique identifier of a quantizer, which corresponds to non-weight operations, such as
-    ordinary activation, function and input"""
+    """
+    Unique identifier of a quantizer, which corresponds to non-weight operations, such as
+    ordinary activation, function and input
+    """
 
     def __init__(self, target_node_name: NNCFNodeName,
                  input_port_id=None):

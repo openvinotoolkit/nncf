@@ -384,9 +384,11 @@ class SymmetricQuantizer(BaseQuantizer):
             self._scale_param_storage.data.log_()
 
     def __setattr__(self, key, value):
-        """Need to handle the redirect-storage attributes (which are implemented using Python properties
-         here) specially - otherwise the torch.nn.Module's __setattr__ will try to set them during
-         assignment."""
+        """
+        Need to handle the redirect-storage attributes (which are implemented using Python properties
+        here) specially - otherwise the torch.nn.Module's __setattr__ will try to set them during
+        assignment.
+        """
         if key == self.SCALE_PARAM_NAME:
             object.__setattr__(self, key, value)
         else:
@@ -530,9 +532,11 @@ class AsymmetricQuantizer(BaseQuantizer):
             self._input_range_param_storage.data.log_()
 
     def __setattr__(self, key, value):
-        """Need to handle the redirect-storage attributes (which are implemented using Python properties
-         here) specially - otherwise the torch.nn.Module's __setattr__ will try to set them during
-         assignment."""
+        """
+        Need to handle the redirect-storage attributes (which are implemented using Python properties
+        here) specially - otherwise the torch.nn.Module's __setattr__ will try to set them during
+        assignment.
+        """
         if key == self.INPUT_RANGE_PARAM_NAME:
             object.__setattr__(self, key, value)
         else:

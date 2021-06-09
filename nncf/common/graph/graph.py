@@ -14,22 +14,22 @@ import os
 from collections import OrderedDict
 from collections import defaultdict
 from copy import deepcopy
-from typing import Any, Callable, Dict, KeysView, List, Tuple, ValuesView, Type
+from typing import Any, Callable, Dict, KeysView, List, Tuple, Type, ValuesView
 
 import networkx as nx
-from networkx.drawing.nx_agraph import to_agraph
 import networkx.algorithms.isomorphism as iso
+from networkx.drawing.nx_agraph import to_agraph
 
+from nncf.common.graph.graph_matching import Expression
+from nncf.common.graph.graph_matching import NodeExpression
 from nncf.common.graph.graph_matching import find_subgraphs_matching_expression
+from nncf.common.graph.graph_matching import get_edge_boundaries
 from nncf.common.graph.layer_attributes import BaseLayerAttributes
+from nncf.common.graph.layer_attributes import Dtype
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.operator_metatypes import get_input_metatypes
 from nncf.common.graph.operator_metatypes import get_output_metatypes
-from nncf.common.graph.layer_attributes import Dtype
 from nncf.common.utils.logger import logger as nncf_logger
-from nncf.common.graph.graph_matching import Expression
-from nncf.common.graph.graph_matching import NodeExpression
-from nncf.common.graph.graph_matching import get_edge_boundaries
 
 MODEL_INPUT_OP_NAME = "nncf_model_input"
 MODEL_OUTPUT_OP_NAME = "nncf_model_output"
@@ -105,9 +105,11 @@ class NNCFGraphNodeType:
 
 
 class NNCFGraphEdge:
-    """A structure describing an edge in NNCFGraph. Since nodes of the NNCFGraph are operations
+    """
+    A structure describing an edge in NNCFGraph. Since nodes of the NNCFGraph are operations
     on (activation) tensors, an edge in NNCFGraph is a representation of an activation tensor produced or
-    consumed by an operation."""
+    consumed by an operation.
+    """
     def __init__(self, from_node: NNCFNode, to_node: NNCFNode, tensor_shape: List[int]):
         """
         :param from_node: An NNCFNode that sources the directed edge.
@@ -139,8 +141,10 @@ class NNCFGraphPatternIO:
 
 
 class NNCFNodeExpression(NodeExpression):
-    """A variation of NodeExpression that has a specific matcher function to work with nxgraph node dicts that
-    underlie the NNCFGraph."""
+    """
+    A variation of NodeExpression that has a specific matcher function to work with nxgraph node dicts that
+    underlie the NNCFGraph.
+    """
     def __init__(self, node_type: str = None, filter_fn=None):
         node_type_fn = lambda x: x[NNCFGraph.NODE_TYPE_ATTR]
         super().__init__(node_type, filter_fn, node_type_fn=node_type_fn)
@@ -450,8 +454,10 @@ class NNCFGraph:
                                 "PNG rendering.")
 
     def get_graph_for_structure_analysis(self, extended=False) -> nx.DiGraph:
-        """The graph to dump has certain node attributes omitted, compared to the graph stored
-         inside NNCFGraph."""
+        """
+        The graph to dump has certain node attributes omitted, compared to the graph stored
+         inside NNCFGraph.
+        """
         out_graph = nx.DiGraph()
         for node_name, node in self._nx_graph.nodes.items():
             attrs_node = {
@@ -476,8 +482,10 @@ class NNCFGraph:
         return out_graph
 
     def _get_graph_for_visualization(self) -> nx.DiGraph:
-        """A user-friendly graph .dot file, making it easier to debug the network and setup
-        ignored/target scopes."""
+        """
+        A user-friendly graph .dot file, making it easier to debug the network and setup
+        ignored/target scopes.
+        """
         out_graph = nx.DiGraph()
         for node_name, node in self._nx_graph.nodes.items():
             attrs_node = {}
@@ -525,7 +533,8 @@ class NNCFGraph:
         return pattern_ios
 
     def get_nncf_graph_pattern_io(self, match: List[str]) -> NNCFGraphPatternIO:
-        """Returns an NNCFGraphPatternIO object that describes the input/output nodes and edges of a
+        """
+        Returns an NNCFGraphPatternIO object that describes the input/output nodes and edges of a
         subgraph specified by `match`.
 
         :param match: A list of node keys specifying a subgraph to be matched. The subgraph to be matched will

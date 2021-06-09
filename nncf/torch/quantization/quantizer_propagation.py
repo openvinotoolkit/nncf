@@ -25,15 +25,17 @@ from typing import Tuple
 
 import networkx as nx
 
+from nncf.common.graph.graph import MODEL_INPUT_OP_NAME
+from nncf.common.graph.graph import MODEL_OUTPUT_OP_NAME
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.graph import NNCFNodeName
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.hardware.config import HWConfig
 from nncf.common.quantization.structs import QuantizableWeightedLayerNode
-from nncf.common.graph.graph import MODEL_INPUT_OP_NAME
-from nncf.common.graph.graph import MODEL_OUTPUT_OP_NAME
 from nncf.common.quantization.structs import QuantizationConstraints
 from nncf.common.quantization.structs import QuantizerGroup
+from nncf.common.utils.helpers import in_scope_list
+from nncf.common.utils.helpers import should_consider_scope
 from nncf.common.utils.logger import logger as nncf_logger
 # pylint: disable=wildcard-import
 # pylint: disable=unused-wildcard-import
@@ -49,13 +51,13 @@ from nncf.torch.quantization.quantizer_setup import MultiConfigQuantizerSetup
 from nncf.torch.quantization.quantizer_setup import QuantizationPointId
 from nncf.torch.quantization.quantizer_setup import SingleConfigQuantizerSetup
 from nncf.torch.quantization.structs import UnifiedScaleType
-from nncf.common.utils.helpers import in_scope_list
-from nncf.common.utils.helpers import should_consider_scope
 
 
 class QuantizationTrait(Enum):
-    """General, hardware-agnostic specifications for the relation of operators to quantization.
-    Hardware-specific quantization configuration is handled elsewhere."""
+    """
+    General, hardware-agnostic specifications for the relation of operators to quantization.
+    Hardware-specific quantization configuration is handled elsewhere.
+    """
     NON_QUANTIZABLE = -1
     QUANTIZATION_AGNOSTIC = 0
     INPUTS_QUANTIZABLE = 1
@@ -115,14 +117,16 @@ DEFAULT_QUANT_TRAIT_TO_OP_DICT = {
 
 
 class PropagatingQuantizer:
-    """Used in conjunction with QuantizerPropagationStateGraph to keep track of
-       the allowed quantization configs corresponding to the model operation node
-       whose inputs it quantizes, and also of the nodes/edges in the model control
-       graph that this quantizer affects. It should be moved against the data flow of
-       the model, tracking the affected nodes and edges of
-       QuantizerPropagationStateGraph. No actual quantization modules are used here,
-       only the associated configs (such as bitwidths, modes, signed/unsigned
-       attributes etc.)"""
+    """
+    Used in conjunction with QuantizerPropagationStateGraph to keep track of
+    the allowed quantization configs corresponding to the model operation node
+    whose inputs it quantizes, and also of the nodes/edges in the model control
+    graph that this quantizer affects. It should be moved against the data flow of
+    the model, tracking the affected nodes and edges of
+    QuantizerPropagationStateGraph. No actual quantization modules are used here,
+    only the associated configs (such as bitwidths, modes, signed/unsigned
+    attributes etc.)
+    """
 
     def __init__(self, id_: int, quant_configs: List[QuantizerConfig], init_location_node_key: str,
                  unified_scale_type: Optional[UnifiedScaleType] = None):
@@ -240,14 +244,16 @@ PropagationPath = List[Tuple[str, str]]
 
 # pylint:disable=too-many-public-methods
 class QuantizerPropagationStateGraph(nx.DiGraph):
-    """This class is based upon InsertionPointGraph and represents
-       a"chessboard" for PropagatingQuantizer items.  It tracks the current state of
-       quantizer propagation by associating the operator and insertion point nodes and
-       edges to propagating quantizers, if any. It can move a propagating quantizer
-       via own edges and mark its progress through the graph, which is required for
-       resolving situations when multiple quantizers attempt to proceed via one and
-       the same graph node/edge. This class is mainly operated upon by the
-       QuantizerPropagationSolver objects."""
+    """
+    This class is based upon InsertionPointGraph and represents
+    a"chessboard" for PropagatingQuantizer items.  It tracks the current state of
+    quantizer propagation by associating the operator and insertion point nodes and
+    edges to propagating quantizers, if any. It can move a propagating quantizer
+    via own edges and mark its progress through the graph, which is required for
+    resolving situations when multiple quantizers attempt to proceed via one and
+    the same graph node/edge. This class is mainly operated upon by the
+    QuantizerPropagationSolver objects.
+    """
     PROPAGATING_QUANTIZER_NODE_ATTR = "propagating_quantizer"
     AFFECTING_PROPAGATING_QUANTIZERS_ATTR = "affecting_propagating_quantizers"
     QUANTIZATION_TRAIT_NODE_ATTR = "quantization_trait"
@@ -372,7 +378,8 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
         return matches[0]
 
     def mark_act_quantizer_as_dependent_on_weights(self, pq: PropagatingQuantizer, operator_node_key: str):
-        """Marks a given propagating quantizer corresponding to input activation quantization
+        """
+        Marks a given propagating quantizer corresponding to input activation quantization
         of some downstream op as depenedent on weights of an operation that gives its weights directly
         as outputs (such as Embedding). The quantizer marked in this manner will be later considered
         for removal if the weights of the weight-as-outputs operation are quantized in a compatible
@@ -380,7 +387,8 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
         quantizer.
         :param: pq - the propagating quantizer corresponding to input quantization of some op
         :param: operator_node_key - a key of the node in QuantizerPropagationStateGraph that corresponds to
-        a weights-as-outputs node."""
+            a weights-as-outputs node.
+        """
         op_node = self.nodes[operator_node_key]
         assert op_node[QuantizerPropagationStateGraph.NODE_TYPE_NODE_ATTR] is \
                QuantizerPropagationStateGraphNodeType.OPERATOR
@@ -456,9 +464,11 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
 
     @staticmethod
     def _get_major_unified_scale_type(type_list: List[Optional[UnifiedScaleType]]) -> Optional[UnifiedScaleType]:
-        """Treats input list entries as unified scale types of merged quantizers, and outputs
+        """
+        Treats input list entries as unified scale types of merged quantizers, and outputs
         the unified scale type of the resulting merge-quantizer so that it is still compatible with the
-        downstream ops."""
+        downstream ops.
+        """
         major_unified_scale_type = None
         if UnifiedScaleType.UNIFY_ALWAYS in type_list:
             major_unified_scale_type = UnifiedScaleType.UNIFY_ALWAYS
@@ -563,10 +573,12 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
         return merge_pqs
 
     def get_predecessor_weight_as_outputs_node_keys(self, curr_node_key: str) -> List[str]:
-        """For a given node key in this graph, returns node keys of all direct predecessors
+        """
+        For a given node key in this graph, returns node keys of all direct predecessors
         of this node that correspond to weights-as-outputs operations (such as Embedding)
         :param: curr_node_key - a node key in this QuantizerPropagationStateGraph
-        :return: A list of weights-as-outputs predecessor node keys for `curr_node_key`"""
+        :return: A list of weights-as-outputs predecessor node keys for `curr_node_key`
+        """
         pred_keys = list(self.predecessors(curr_node_key))
         matches = []
         for pred_key in pred_keys:
@@ -1165,10 +1177,12 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
         all_pqs = self.collect_all_propagating_quantizers()
 
         class Grouper:
-            """Propagating quantizers will be grouped so that each quantizer is in the same group as the
+            """
+            Propagating quantizers will be grouped so that each quantizer is in the same group as the
             node that it is affecting. Furthermore, each quantizer that does not affect any node
             (e.g. if it only affects other quantizers as a topmost quantizer in a requantization
-            scenario) will be placed in a separate group."""
+            scenario) will be placed in a separate group.
+            """
 
             def __init__(self):
                 self._group_vs_node_keys_and_pqs = {}  # type: Dict[int, SharedAffectedOpsPropagatingQuantizerGroup]
@@ -1296,7 +1310,8 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
                                                              pqid_vs_qpid: Dict[int, QuantizationPointId],
                                                              wao_op_node_key_vs_wq_id: Dict[str, QuantizationPointId]) \
             -> MultiConfigQuantizerSetup:
-        """In case there are propagating quantizers dependent on the weights-as-outputs weighted operations
+        """
+        In case there are propagating quantizers dependent on the weights-as-outputs weighted operations
         (as marked by mark_act_quantizer_as_dependent_on_weights) in the current state of the quantizer setup,
         and if the quantizer configurations between the dependent activation quantizer and the weight output
         quantizer have at least one compatible configuration (checked across all AQ's in the unified
@@ -1307,13 +1322,14 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
         If the configurations were incompatible, will not remove the corresponding activation quantizer and
         requantization will occur.
         :param: setup - a MultiConfigQuantizerSetup corresponding to the quantizer setup state with potentially
-        dependent activation quantizers on the weights-as-outputs ops
+            dependent activation quantizers on the weights-as-outputs ops
         :param: pqid_vs_qpid - a mapping from propagating quantizer IDs to the corresponding activation quantization
-        point IDs in `setup`
+            point IDs in `setup`
         :param: wao_op_node_key_vs_wq_id - a mapping from weights-as-outputs operator node keys in the
-        QuantizerPropagationStageGraph to the corresponding weight quantization points in `setup`
+            QuantizerPropagationStageGraph to the corresponding weight quantization points in `setup`
         :return: A MultiConfigQuantizerSetup with weights-as-outputs-dependent quantizers removed where possible
-        and shared inputs/unified scales group adjusted to reflect the change."""
+            and shared inputs/unified scales group adjusted to reflect the change.
+        """
 
         # For the weights-are-outputs quantized operations, need to find out the dependent activation quantizers in
         # the multiconfig setup and see if it is possible to avoid requantization by selecting a common configuration
@@ -1435,8 +1451,10 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
 
 
 class QuantizersWaitingForMergeManager:
-    """Tracks the quantizers that await a merge while trying to transition through a downward-branching node
-    and corresponding node keys."""
+    """
+    Tracks the quantizers that await a merge while trying to transition through a downward-branching node
+    and corresponding node keys.
+    """
 
     def __init__(self):
         self._branching_node_keys_vs_quantizers_waiting_for_merge = {}  # type: Dict[str, Set[PropagatingQuantizer]]
@@ -1532,11 +1550,13 @@ class QuantizationProposal:
 
 
 class QuantizerPropagationSolver:
-    """Analyzes a fresh QuantizerPropagationStateGraph object according to HW
-       configuration supplied in the initializer and produces the list of insertion
-       commands that correspond to the final state of the quantizer propagation graph
-       when the model has the most contol flow graph edges quantized according to HW
-       capabilities."""
+    """
+    Analyzes a fresh QuantizerPropagationStateGraph object according to HW
+    configuration supplied in the initializer and produces the list of insertion
+    commands that correspond to the final state of the quantizer propagation graph
+    when the model has the most contol flow graph edges quantized according to HW
+    capabilities.
+    """
 
     DEFAULT_QUANTIZATION_TYPES = [QuantizerConfig(
         num_bits=8,
@@ -1602,9 +1622,11 @@ class QuantizerPropagationSolver:
         self._num_potential_quantized_activations = 0
 
     def run_on_ip_graph(self, ip_graph: InsertionPointGraph) -> QuantizationProposal:
-        """ The main function to be used on an InsertionPointGraph to produce
-            the list of insertion commands and configs corresponding to the final quantized
-            graph state."""
+        """
+        The main function to be used on an InsertionPointGraph to produce
+        the list of insertion commands and configs corresponding to the final quantized
+        graph state.
+        """
         self._num_potential_quantized_activations = 0
         quant_prop_graph = QuantizerPropagationStateGraph(ip_graph,
                                                           self._ignored_scopes,
@@ -1658,7 +1680,9 @@ class QuantizerPropagationSolver:
 
     def get_final_quantizer_setup(self, finalized_quantization_proposal: FinalizedQuantizationProposal) -> \
             SingleConfigQuantizerSetup:
-        """Merges consequent quantizers which ended up having the same quantization configuration."""
+        """
+        Merges consequent quantizers which ended up having the same quantization configuration.
+        """
         quant_prop_graph = finalized_quantization_proposal.quant_prop_graph
         quant_prop_graph.merge_redundant_subsequent_quantizers_across_graph()
 
@@ -1748,10 +1772,12 @@ class QuantizerPropagationSolver:
 
     def propagation_step(self, curr_prop_quantizer: PropagatingQuantizer,
                          quant_prop_graph: QuantizerPropagationStateGraph) -> QuantizerPropagationStateGraph:
-        """Returns an updated curr_prop_quantizer state if the quantizer is not
-           yet in its final (accepting) position, and None if the quantizer is in its
-           final location.  The location before and after the step should correspond to
-           some insertion point."""
+        """
+        Returns an updated curr_prop_quantizer state if the quantizer is not
+        yet in its final (accepting) position, and None if the quantizer is in its
+        final location.  The location before and after the step should correspond to
+        some insertion point.
+        """
         # TODO: full-fledged discrete finite automata approach? Switch to traversing a graph
         # consisting of insertion points only, with reversed edges holding associated operator data?
 
@@ -1979,9 +2005,11 @@ class QuantizerPropagationSolver:
 
     def setup_initial_quantizers(self,
                                  quant_prop_graph: QuantizerPropagationStateGraph) -> QuantizerPropagationStateGraph:
-        """Determines the initial subset of the nodes that must be quantized
-           and corresponding allowed quantization configs (possibly multiple) for each
-           quantizer."""
+        """
+        Determines the initial subset of the nodes that must be quantized
+        and corresponding allowed quantization configs (possibly multiple) for each
+        quantizer.
+        """
         for node_key in nx.lexicographical_topological_sort(quant_prop_graph):
             node = quant_prop_graph.nodes[node_key]
             node_type = node[QuantizerPropagationStateGraph.NODE_TYPE_NODE_ATTR]
@@ -2022,9 +2050,11 @@ class QuantizerPropagationSolver:
     @staticmethod
     def coalesce_insertion_points(target_insertion_points: List[PTTargetPoint],
                                   linked_scopes_groups_list: List[List[str]]) -> List[List[PTTargetPoint]]:
-        """Accepts a list of InsertionPoints and groups these according to linked_scope_groups_list.
-           The matching of an InsertionPoint to the string entries in the lists is made based on the
-           string representation of InsertionPoint's OperationAddress attribute."""
+        """
+        Accepts a list of InsertionPoints and groups these according to linked_scope_groups_list.
+        The matching of an InsertionPoint to the string entries in the lists is made based on the
+        string representation of InsertionPoint's OperationAddress attribute.
+        """
         # pylint:disable=too-many-branches
         if linked_scopes_groups_list is None:
             return [[ip, ] for ip in target_insertion_points]
@@ -2194,13 +2224,15 @@ class QuantizerPropagationSolver:
     def check_branching_transition(self, quant_prop_graph: QuantizerPropagationStateGraph,
                                    prop_quant_to_transition: PropagatingQuantizer,
                                    branching_node_key: str) -> Optional[TransitionStatus]:
-        """If a propagating quantizer advances through a node that branches
-           downwards, the branches neighbouring to the one that the propagating quantizer
-           had just propagated from will have the precision of the quantizer imposed upon
-           them.  This is not always desirable - we might want to keep some branches in
-           higher precision than the others. For this reason, this function checks whether
-           the quantizer may safely advance through a branching node based on the possible
-           configs of the quantizers it might affect by doing so."""
+        """
+        If a propagating quantizer advances through a node that branches
+        downwards, the branches neighbouring to the one that the propagating quantizer
+        had just propagated from will have the precision of the quantizer imposed upon
+        them.  This is not always desirable - we might want to keep some branches in
+        higher precision than the others. For this reason, this function checks whether
+        the quantizer may safely advance through a branching node based on the possible
+        configs of the quantizers it might affect by doing so.
+        """
         dom_op_node_keys = quant_prop_graph.get_non_quant_agnostic_op_nodes_immediately_dominated_by_node(
             branching_node_key)
         dom_op_quantizers = set()
@@ -2269,9 +2301,11 @@ class QuantizerPropagationSolver:
                                   quant_prop_graph: QuantizerPropagationStateGraph,
                                   cloned_prop_quantizers: Optional[
                                       List[PropagatingQuantizer]] = None) -> TransitionStatus:
-        """Determines which action should be taken regarding the
-           prop_quantizer's propagation via path, which may be one of many possible
-           propagation paths."""
+        """
+        Determines which action should be taken regarding the
+        prop_quantizer's propagation via path, which may be one of many possible
+        propagation paths.
+        """
         for from_node_key, to_node_key in path:
             from_node = quant_prop_graph.nodes[from_node_key]
 
@@ -2336,11 +2370,13 @@ class QuantizerPropagationSolver:
                                                             List[Optional[QuantizerConfig]]]) -> \
             Tuple[Optional[List[QuantizerConfig]],
                   List[Optional[List[QuantizerConfig]]]]:
-        """Returns a tuple, of which the first node is the qconfig list for the quantizer to be placed
+        """
+        Returns a tuple, of which the first node is the qconfig list for the quantizer to be placed
         above the branching node (i.e. that will affect all of the downward branches), and a list
         of nodes which are either None (which means that the corresponding branch quantizer has been successfully
         merged, or qconfigs list to be set for the corresponding branch quantizer if it cannot be merged (e.g. if
-        requantization to a lower bitwidth has to be done for this branch)"""
+        requantization to a lower bitwidth has to be done for this branch)
+        """
         # pylint:disable=too-many-branches
 
         if self._propagation_strategy == PropagationStrategy.DO_NOT_MERGE_BRANCH_FQS:
@@ -2448,9 +2484,11 @@ class QuantizerPropagationSolver:
 
     def __disambiguate_config_list(self, qconfig_list_with_priority: List[Tuple[QuantizerConfig, int]]) -> \
             List[QuantizerConfig]:
-        """The input list should be sorted in descending order of priority. In case some qconfigs in the list have the
+        """
+        The input list should be sorted in descending order of priority. In case some qconfigs in the list have the
         same priority, this function will resolve the ambiguity in ordering these qconfigs in the final returned
-        list."""
+        list.
+        """
 
         class QConfigComparator:
             def __init__(self, qconfig: QuantizerConfig):

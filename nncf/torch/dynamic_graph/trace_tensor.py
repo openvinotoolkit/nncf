@@ -55,8 +55,10 @@ class TracedTensor(torch.Tensor):
         return tensor
 
     def as_subclass(self, cls: 'TracedTensor') -> 'TracedTensor':
-        """Required for PyTorch 1.7.0 compatibility - the handle_torch_function and __torch_function__
-        API in general calls this after a wrapped function call; need to preserve the tensor_meta extensions"""
+        """
+        Required for PyTorch 1.7.0 compatibility - the handle_torch_function and __torch_function__
+        API in general calls this after a wrapped function call; need to preserve the tensor_meta extensions
+        """
 
         return self
 

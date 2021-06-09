@@ -81,10 +81,12 @@ class PTCompressionLoss(nn.Module, CompressionLoss):
 
 
 class PTCompressionAlgorithmController(BaseCompressionAlgorithmController):
-    """Serves as a handle to the additional modules, parameters and hooks inserted
+    """
+    Serves as a handle to the additional modules, parameters and hooks inserted
     into the original uncompressed model in order to enable algorithm-specific compression.
     Hosts entities that are to be used during the training process, such as compression scheduler and
-    compression loss."""
+    compression loss.
+    """
 
     def distributed(self):
         """

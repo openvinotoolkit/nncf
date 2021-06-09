@@ -87,12 +87,13 @@ class DefaultInputsMatcher(InputsMatcher):
         return True
 
 
-
 class OperationExecutionContext:
-    """Information that allows to uniquely identify an operation inside the NNCF graph,
+    """
+    Information that allows to uniquely identify an operation inside the NNCF graph,
     i.e. determine whether an execution of the operator inside the module has already been
     registered as a node in the graph or not (in the latter case a new node would have to
-    be created"""
+    be created
+    """
 
     def __init__(self,
                  operator_name: str,

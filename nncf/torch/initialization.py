@@ -48,9 +48,11 @@ class InitializingDataLoader(NNCFDataLoader):
         raise NotImplementedError
 
     def get_target(self, dataloader_output: Any) -> Any:
-        """Parses the generic data loader output and returns a structure to be used as
+        """
+        Parses the generic data loader output and returns a structure to be used as
         ground truth in the loss criterion.
-        :param dataloader_output - the (args, kwargs) tuple returned by the __next__ method."""
+        :param dataloader_output - the (args, kwargs) tuple returned by the __next__ method.
+        """
 
         raise NotImplementedError
 

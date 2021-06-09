@@ -31,7 +31,8 @@ PT_OPERATOR_METATYPES = OperatorMetatypeRegistry("operator_metatypes")
 
 
 class PTOperatorMetatype(OperatorMetatype):
-    """Base class for grouping PyTorch operators based on their semantic meaning.
+    """
+    Base class for grouping PyTorch operators based on their semantic meaning.
     Each derived class represents a single semantic group - for example, AddMetatype would
     group together '__iadd__', '__add__' and '__radd__' operations which all define nodewise
     tensor addition.
@@ -114,9 +115,11 @@ class PTPatchSpec:
 
 
 class PTOperatorSubtype(PTOperatorMetatype):
-    """Exact specialization of PTOperatorMetatype that can only be determined via operator argument
+    """
+    Exact specialization of PTOperatorMetatype that can only be determined via operator argument
     inspection or owning module attribute inspection, and that may have specialized compression method
-    configuration other than the one used for general operations having the type of PTOperatorMetatype."""
+    configuration other than the one used for general operations having the type of PTOperatorMetatype.
+    """
 
     @classmethod
     def matches(cls, module_attributes: Optional[ModuleAttributes] = None,

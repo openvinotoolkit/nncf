@@ -32,10 +32,12 @@ def wrap_nncf_model_outputs_with_objwalk(model_outputs):
 
 
 def replicate_same_tensors(obj: Any) -> Any:
-    """Required to handle the situation when multiple references to one and the
+    """
+    Required to handle the situation when multiple references to one and the
     same tensor are present in the input. If tensor replication is not done, then
     at runtime one and the same tensor could be wrapped by input/output wrappers twice,
-    which will disrupt the traced graph structure and possibly hook calls."""
+    which will disrupt the traced graph structure and possibly hook calls.
+    """
     observed_tensor_object_ids = set()  # type: Set[int]
 
     def replicate_fn(tensor: torch.Tensor) -> torch.Tensor:
