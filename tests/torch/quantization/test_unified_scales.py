@@ -27,7 +27,7 @@ from nncf.torch.dynamic_graph.operation_address import OperationAddress
 from nncf.common.hardware.config import HWConfigType
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.quantization.layers import AsymmetricQuantizer
-from nncf.torch.quantization.quantizer_id import NonWeightQuantizerId
+from nncf.common.quantization.structs import NonWeightQuantizerId
 from nncf.torch.quantization.quantizer_propagation import QuantizerPropagationSolver
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
 from tests.torch.helpers import get_nodes_by_type

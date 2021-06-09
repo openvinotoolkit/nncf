@@ -22,9 +22,6 @@ from tensorflow.python.framework.convert_to_constants import convert_variables_t
 
 from beta.nncf.tensorflow.graph.metatypes.common import DECONV_LAYER_METATYPES
 from beta.nncf.tensorflow.graph.metatypes.common import GENERAL_CONV_LAYER_METATYPES
-from beta.nncf.tensorflow.graph.metatypes.keras_layers import TFConv1DTransposeLayerMetatype
-from beta.nncf.tensorflow.graph.metatypes.keras_layers import TFConv2DTransposeLayerMetatype
-from beta.nncf.tensorflow.graph.metatypes.keras_layers import TFConv3DTransposeLayerMetatype
 from beta.nncf.tensorflow.graph.metatypes.matcher import get_keras_layer_metatype
 from beta.nncf.tensorflow.graph.metatypes.matcher import get_op_metatype
 from beta.nncf.tensorflow.graph.metatypes.nncf_op import OutputNoopMetatype
@@ -39,23 +36,6 @@ from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
 from nncf.common.graph.layer_attributes import Dtype
 
 PREFIX_AUXILIARY_OUTPUT_NODE = 'output'
-
-
-
-
-def _process_outputs(outputs, raw_nodes):
-    if isinstance(outputs, list):
-        for layer_name, instance, out_port in outputs:
-            raw_nodes[layer_name][instance]['out_ports'].add(out_port)
-    elif isinstance(outputs, dict):
-        for output in outputs.values():
-            if isinstance(output, list):
-                raw_nodes[output[0]][output[1]]['out_ports'].add(output[2])
-            elif isinstance(output, dict):
-                for layer_name, instance, out_port in output.values():
-                    raw_nodes[layer_name][instance]['out_ports'].add(out_port)
-
-    return raw_nodes
 
 
 def convert_layer_graph_to_nncf_graph(layer, use_graph_var_names=False) -> NNCFGraph:
@@ -127,19 +107,19 @@ class TFModelConverter(ABC):
         self._model = model
 
     @staticmethod
-    def _get_layer_type(layer):
-        if layer['class_name'] == 'TensorFlowOpLayer':
-            return layer['config']['node_def']['op']
-        if layer['class_name'] == 'NNCFWrapper':
-            # Return class_name of wrapped layer
-            return layer['config']['layer']['class_name']
-        return layer['class_name']
+    def _get_layer_type(layer_config: Dict) -> str:
+        if layer_config['class_name'] == 'TensorFlowOpLayer':
+            return layer_config['config']['node_def']['op']
+        if layer_config['class_name'] == 'NNCFWrapper':
+            # Return class_name of wrapped layer_config
+            return layer_config['config']['layer']['class_name']
+        return layer_config['class_name']
 
     @staticmethod
-    def _get_layer_dtype(layer):
-        dtype = layer['config']['dtype']
-        if layer['class_name'] == 'TensorFlowOpLayer':
-            dtype = layer['config']['node_def'].get('attr', {}).get('T', {}).get('type') or dtype
+    def _get_layer_dtype(layer_config: Dict) -> str:
+        dtype = layer_config['config']['dtype']
+        if layer_config['class_name'] == 'TensorFlowOpLayer':
+            dtype = layer_config['config']['node_def'].get('attr', {}).get('T', {}).get('type') or dtype
         return dtype
 
     @staticmethod
@@ -277,7 +257,7 @@ class FunctionalConverter(TFModelConverter):
             nncf_node = nncf_graph.add_nncf_node(node_name=node_name,
                                                  node_type=layer_info['type'],
                                                  node_metatype=metatype,
-                                                 module_attributes=module_attributes,
+                                                 layer_attributes=module_attributes,
                                                  layer_name=layer_name,
                                                  is_shared=is_shared)
             node_name_vs_nncf_node_ids[node_name] = nncf_node.node_id
@@ -326,11 +306,11 @@ class SequentialConverter(TFModelConverter):
         producer_layer_id = None
         model_config = self._model.get_config()
         layer_name = None
-        for layer in model_config['layers']:
-            layer_name = layer['config']['name']
-            layer_type = self._get_layer_type(layer)
-            layer_dtype = self._get_layer_dtype(layer)
-            data_format = layer['config'].get('data_format')
+        for layer_config in model_config['layers']:
+            layer_name = layer_config['config']['name']
+            layer_type = self._get_layer_type(layer_config)
+            layer_dtype = self._get_layer_dtype(layer_config)
+            data_format = layer_config['config'].get('data_format')
             model_layer = self._get_layer(layer_name)
             layer_metatype = get_keras_layer_metatype(model_layer)
 
@@ -350,7 +330,7 @@ class SequentialConverter(TFModelConverter):
             nncf_node = nncf_graph.add_nncf_node(layer_name,
                                                  node_type=layer_type,
                                                  node_metatype=layer_metatype,
-                                                 module_attributes=module_attributes,
+                                                 layer_attributes=module_attributes,
                                                  layer_name=layer_name,
                                                  is_shared=False)
 

@@ -50,9 +50,9 @@ from nncf.common.batchnorm_adaptation import BatchnormAdaptationAlgorithm
 from nncf.common.utils.os import safe_open
 from nncf.torch.quantization.precision_constraints import HardwareQuantizationConstraints
 from nncf.torch.quantization.precision_init.compression_ratio import CompressionRatioCalculator
-from nncf.torch.quantization.quantizer_id import NonWeightQuantizerId
-from nncf.torch.quantization.quantizer_id import QuantizerId
-from nncf.torch.quantization.quantizer_id import WeightQuantizerId
+from nncf.common.quantization.structs import NonWeightQuantizerId
+from nncf.common.quantization.structs import QuantizerId
+from nncf.common.quantization.structs import WeightQuantizerId
 from nncf.torch.quantization.quantizer_setup import QuantizationPointId
 
 

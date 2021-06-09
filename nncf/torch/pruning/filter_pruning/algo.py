@@ -116,7 +116,7 @@ class FilterPruningController(BasePruningAlgoController):
         self._modules_out_shapes = {}  # type: Dict[NNCFNodeName, List[int]]
         self.pruning_quotas = {}
         self.nodes_flops = {}  # type: Dict[NNCFNodeName, int]
-        self.next_nodes = {}  # type: Dict[int, List[str]]
+        self.next_nodes = {}  # type: Dict[int, List[NNCFNodeName]]
         self._init_pruned_modules_params()
         self.flops_count_init()
         self.full_flops = sum(self.nodes_flops.values())
@@ -146,10 +146,10 @@ class FilterPruningController(BasePruningAlgoController):
     def statistics(self, quickly_collected_only: bool = False) -> NNCFStatistics:
         pruned_layers_summary = {}
         for minfo in self.pruned_module_groups_info.get_all_nodes():
-            layer_node_name = str(minfo.node_name)
-            if layer_node_name not in pruned_layers_summary:
-                pruned_layers_summary[layer_node_name] = \
-                    PrunedLayerSummary(layer_node_name,
+            layer_name = str(minfo.module_scope)
+            if layer_name not in pruned_layers_summary:
+                pruned_layers_summary[layer_name] = \
+                    PrunedLayerSummary(layer_name,
                                        list(minfo.module.weight.size()),
                                        list(self.mask_shape(minfo)),
                                        self.pruning_rate_for_weight(minfo),

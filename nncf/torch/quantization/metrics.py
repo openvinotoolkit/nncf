@@ -22,15 +22,14 @@ from copy import deepcopy
 
 from nncf.common.graph.graph import NNCFGraph
 from nncf.torch.quantization.layers import BaseQuantizer
-from nncf.torch.quantization.quantizer_id import QuantizerId
-
+from nncf.common.quantization.structs import QuantizerId
 
 from nncf.torch.quantization.layers import SymmetricQuantizer
 from nncf.torch.nncf_network import NNCFNetwork, PTNNCFGraph
 from nncf.torch.dynamic_graph.transform_graph import is_nncf_module
 from nncf.torch.quantization.quantizer_propagation import DEFAULT_QUANT_TRAIT_TO_OP_DICT, QuantizationTrait
-from nncf.torch.quantization.quantizer_id import WeightQuantizerId
-from nncf.torch.quantization.quantizer_id import NonWeightQuantizerId
+from nncf.common.quantization.structs import WeightQuantizerId
+from nncf.common.quantization.structs import NonWeightQuantizerId
 from nncf.torch.quantization.structs import WeightQuantizerInfo
 from nncf.torch.quantization.structs import NonWeightQuantizerInfo
 from nncf.common.collector import StatisticsCollector

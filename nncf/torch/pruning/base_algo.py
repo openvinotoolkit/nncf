@@ -78,6 +78,7 @@ class BasePruningAlgoBuilder(PTCompressionAlgorithmBuilder):
             for node in group.elements:
                 node_name = node.node_name
                 module = target_model.get_containing_module(node_name)
+                module_scope = target_model.get_original_graph().get_scope_by_node_name(node_name)
                 # Check that we need to prune weights in this op
                 assert self._is_pruned_module(module)
 
@@ -93,7 +94,11 @@ class BasePruningAlgoBuilder(PTCompressionAlgorithmBuilder):
                     )
                 )
 
-                group_minfos.append(PrunedModuleInfo(node_name, module, hook, node.node_id))
+                group_minfos.append(PrunedModuleInfo(node_name=node_name,
+                                                     module_scope=module_scope,
+                                                     module=module,
+                                                     operand=hook,
+                                                     node_id=node.node_id))
             cluster = Cluster[PrunedModuleInfo](i, group_minfos, [n.node_id for n in group.elements])
             self.pruned_module_groups_info.add_cluster(cluster)
         return insertion_commands
@@ -235,6 +240,6 @@ class BasePruningAlgoController(PTCompressionAlgorithmController):
 
             layer_info["mask_pr"] = self.pruning_rate_for_mask(minfo)
 
-            stats[str(minfo.node_name)] = layer_info
+            stats[str(minfo.module_scope)] = layer_info
 
         return stats

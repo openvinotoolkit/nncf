@@ -110,14 +110,14 @@ def get_next_nodes_of_types(graph: NNCFGraph, nncf_node: NNCFNode, types: List[s
 
 def get_rounded_pruned_element_number(total: int, sparsity_rate: float, multiple_of: int = 8) -> int:
     """
-    Calculates number of sparsified nodes (approximately sparsity rate) from total such as
+    Calculates number of sparsified elements (approximately sparsity rate) from total such as
     number of remaining items will be multiple of some value.
-    Always rounds number of remaining nodes up.
+    Always rounds number of remaining elements up.
 
-    :param total: Total nodes number.
-    :param sparsity_rate: Prorortion of zero nodes in total.
-    :param multiple_of: Number of remaining nodes must be a multiple of `multiple_of`.
-    :return: Number of nodes to be zeroed.
+    :param total: Total elements number.
+    :param sparsity_rate: Prorortion of zero elements in total.
+    :param multiple_of: Number of remaining elements must be a multiple of `multiple_of`.
+    :return: Number of elements to be zeroed.
     """
     remaining_elems = math.ceil((total - total * sparsity_rate) / multiple_of) * multiple_of
     return max(total - remaining_elems, 0)
@@ -232,8 +232,8 @@ def get_cluster_next_nodes(graph: NNCFGraph, pruned_groups_info: Clusterization[
     for cluster in pruned_groups_info.get_all_clusters():
         next_nodes_cluster = set()
         cluster_nodes = set()
-        for pruned_module_info in cluster.elements:
-            nncf_cluster_node = graph.get_node_by_id(pruned_module_info.nncf_node_id)
+        for pruned_layer_info in cluster.elements:
+            nncf_cluster_node = graph.get_node_by_id(pruned_layer_info.nncf_node_id)
             cluster_nodes.add(nncf_cluster_node.node_name)
             curr_next_nodes = get_next_nodes_of_types(graph, nncf_cluster_node, prunable_types)
 
@@ -248,8 +248,8 @@ def count_flops_for_nodes(graph: NNCFGraph,
                           output_shapes:  Dict[NNCFNodeName, List[int]],
                           conv_op_metatypes: List[Type[OperatorMetatype]],
                           linear_op_metatypes: List[Type[OperatorMetatype]],
-                          input_channels: Dict[str, int] = None,
-                          output_channels: Dict[str, int] = None) -> Dict[str, int]:
+                          input_channels: Dict[NNCFNodeName, int] = None,
+                          output_channels: Dict[NNCFNodeName, int] = None) -> Dict[NNCFNodeName, int]:
     """
     Counts the number FLOPs in the model for convolution and fully connected layers.
 

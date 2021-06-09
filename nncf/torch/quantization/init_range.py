@@ -15,9 +15,9 @@ from nncf.common.utils.helpers import should_consider_scope
 from nncf.torch.initialization import DataLoaderBaseRunner
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.quantization.layers import BaseQuantizer
-from nncf.torch.quantization.quantizer_id import NonWeightQuantizerId
-from nncf.torch.quantization.quantizer_id import QuantizerId
-from nncf.torch.quantization.quantizer_id import WeightQuantizerId
+from nncf.common.quantization.structs import NonWeightQuantizerId
+from nncf.common.quantization.structs import QuantizerId
+from nncf.common.quantization.structs import WeightQuantizerId
 from nncf.torch.quantization.quantizer_setup import QuantizationPointBase
 from nncf.torch.quantization.quantizer_setup import QuantizerSetupBase
 from nncf.torch.tensor_statistics.algo import TensorStatisticObservationPoint

@@ -344,14 +344,38 @@ class NNCFGraph:
     def add_nncf_node(self, node_name: str,
                       node_type: str,
                       node_metatype: Type[OperatorMetatype],
-                      module_attributes: BaseLayerAttributes = None,
+                      layer_attributes: BaseLayerAttributes = None,
                       node_id_override: int = None,
                       layer_name: LayerName = None,
                       ignored_algorithms: List[str] = None,
                       is_in_iteration_scope: bool = False,
                       is_integer_input: bool = False,
                       is_shared: bool = False) -> NNCFNode:
-
+        """
+        Adds a node into the graph. A node represents an operation being performed on tensors.
+        :param node_name: The name of the node to add - will serve as a human-readable and specifiable ID.
+        :param node_type: The type of the node - usually a framework-specific string representation of the operation.
+        :param node_metatype: The metatype of the node - a framework-abstract definition of what the operation
+            actually means.
+        :param layer_attributes: Must be passed for operations that, in order to be processed
+            during compression, require additional information such as the exact dimension of the weights tensor to be
+            considered a "channel" dimension for per-channel quantization, the weight shape itself for sparsity mask
+            creation etc.
+        :param node_id_override: The numerical ID to be associated with the new node; if unspecified, will
+            assign a unique ID.
+        :param layer_name: The name of the framework-specific "layer" object that houses the operation represented by
+            the node.
+        :param ignored_algorithms: A list of compression algorithm names (from the same set of strings that are
+            specified in the `"algorithm": ...` section of the .json NNCF config) which should ignore this operation.
+        :param is_in_iteration_scope: Whether the node to be currently added corresponds to an iteration of an RNN
+            cycle (where the number of iterations is determined dynamically based on the RNN input shape).
+        :param is_integer_input: Only valid for input nodes - whether the input node corresponds to an integer input.
+        :param is_shared: Whether the node corresponds to an operation that accesses the weights that are also accessed
+            by another operation (represented by a separate node) in NNCFGraph. Examples would be repeated applications
+            of a convolution layer with the same weights at different stages in the network.
+        :return: An NNCFNode object representing the newly created node in the graph. The node will still have
+            to be connected to the rest of the nodes with edges using the `NNCFGraph.add_edge_between_nncf_nodes` method
+        """
         if node_id_override is not None:
             node_id = node_id_override
         else:
@@ -378,8 +402,8 @@ class NNCFGraph:
             NNCFGraph.IS_IN_ITERATION_SCOPE_NODE_ATTR: is_in_iteration_scope,
             NNCFGraph.IS_INTEGER_INPUT_NODE_ATTR: is_integer_input
         }
-        if module_attributes is not None:
-            attrs[NNCFGraph.MODULE_ATTRIBUTES] = module_attributes
+        if layer_attributes is not None:
+            attrs[NNCFGraph.MODULE_ATTRIBUTES] = layer_attributes
 
         if ignored_algorithms is None:
             ignored_algorithms = []
@@ -404,6 +428,16 @@ class NNCFGraph:
                                     tensor_shape: List[int],
                                     input_port_id: int,
                                     dtype: Dtype):
+        """
+        Adds a directed edge between two `NNCFNode`s that are already present in the graph.
+        The edge represents an activation tensor, produced or consumed by an operation (which is represented by a node)
+        :param from_node_id: The `NNCFNode.node_id` of the node that produces the tensor represented by the edge.
+        :param to_node_id: The `NNCFNode.node_id` of the node that consumes the tensor represented by the edge.
+        :param tensor_shape: The shape of the tensor represented by the edge.
+        :param input_port_id: Specifies the index among the possible inputs of the `to_node_id` node' that this tensor
+            should correspond to.
+        :param dtype: The data type of the tensor.
+        """
         from_node_key = self._node_id_to_key_dict[from_node_id]
         to_node_key = self._node_id_to_key_dict[to_node_id]
 

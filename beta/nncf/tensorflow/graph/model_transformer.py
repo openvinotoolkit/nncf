@@ -40,7 +40,6 @@ class TFModelTransformer(ModelTransformer):
         Initializes Model Transformer
 
         :param model: Keras model to be transformed
-        :param transformation_layout: List of transformations
         """
         if not is_sequential_or_functional_model(model):
             raise ValueError(
@@ -56,6 +55,7 @@ class TFModelTransformer(ModelTransformer):
     def transform(self, transformation_layout: TFTransformationLayout):
         """ Applies transformations to the Keras model.
 
+        :param transformation_layout: List of transformations
         :return: The transformed Keras model
         """
         layer_weights_map = {layer.name: self._get_layer_weights(layer) for layer in self._model.layers}

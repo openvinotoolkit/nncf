@@ -18,7 +18,7 @@ from typing import Tuple
 from nncf.common.graph.graph import NNCFNodeName
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.torch.quantization.layers import BaseQuantizer
-from nncf.torch.quantization.quantizer_id import QuantizerId
+from nncf.common.quantization.structs import QuantizerId
 from nncf.torch.quantization.quantizer_setup import QuantizationPointId
 from nncf.torch.quantization.quantizer_setup import QuantizerSetupBase
 

@@ -377,7 +377,7 @@ def get_nncf_graph_from_mock_nx_graph(nx_graph: nx.DiGraph) -> PTNNCFGraph:
             node_name=node_name,
             node_type=node_type,
             node_metatype=NoopMetatype,
-            module_attributes=module_attributes,
+            layer_attributes=module_attributes,
             node_id_override=idx)
         key_vs_id[curr_node_key] = node_id
 

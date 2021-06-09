@@ -20,7 +20,7 @@ from nncf.torch.layers import NNCFConv2d
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.quantization.algo import QuantizationController
 from nncf.torch.quantization.precision_init.adjacent_quantizers import GroupsOfAdjacentQuantizers
-from nncf.torch.quantization.quantizer_id import NonWeightQuantizerId
+from nncf.common.quantization.structs import NonWeightQuantizerId
 from nncf.torch.quantization.structs import NonWeightQuantizerInfo
 
 

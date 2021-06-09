@@ -79,7 +79,6 @@ class Expression:
         return max(all_matches, key=lambda x: len(x[0]))
 
 
-
 class ConcatExpression(Expression):
     """
     A composite expression that matches to a node path in the graph which is a concatenation

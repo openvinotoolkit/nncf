@@ -28,6 +28,7 @@ import numpy as np
 import torch
 from torch import nn
 
+from nncf.common.graph.graph import NNCFNodeName
 from nncf.torch.algo_selector import COMPRESSION_ALGORITHMS
 from nncf.torch.algo_selector import ZeroCompressionLoss
 from nncf.api.compression import CompressionStage
@@ -55,7 +56,6 @@ from nncf.torch.debug import CallCountTracker
 from nncf.torch.debug import DebugInterface
 from nncf.torch.debug import is_debug
 from nncf.torch.dynamic_graph.context import TracingContext
-from nncf.torch.dynamic_graph.scope import Scope
 from nncf.torch.graph.transformations.commands import PTInsertionCommand
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.graph.transformations.commands import TransformationPriority
@@ -95,9 +95,9 @@ from nncf.torch.quantization.precision_init.autoq_init import AutoQPrecisionInit
 from nncf.torch.quantization.precision_init.base_init import BasePrecisionInitParams
 from nncf.torch.quantization.precision_init.hawq_init import HAWQPrecisionInitParams
 from nncf.torch.quantization.precision_init.manual_init import ManualPrecisionInitParams
-from nncf.torch.quantization.quantizer_id import NonWeightQuantizerId
-from nncf.torch.quantization.quantizer_id import QuantizerId
-from nncf.torch.quantization.quantizer_id import WeightQuantizerId
+from nncf.common.quantization.structs import NonWeightQuantizerId
+from nncf.common.quantization.structs import QuantizerId
+from nncf.common.quantization.structs import WeightQuantizerId
 from nncf.torch.quantization.quantizer_propagation import QuantizerPropagationSolver
 from nncf.torch.quantization.quantizer_propagation import QuantizerPropagationStateGraph
 from nncf.torch.quantization.quantizer_setup import MultiConfigQuantizerSetup
@@ -119,7 +119,6 @@ from nncf.torch.utils import get_scale_shape
 from nncf.torch.utils import get_state_dict_names_with_modules
 from nncf.common.utils.helpers import matches_any
 from nncf.torch.utils import is_main_process
-from nncf.common.utils.helpers import should_consider_scope
 
 
 class QuantizerSetupGeneratorBase:
@@ -193,18 +192,18 @@ class QuantizerSetupGeneratorBase:
             qconfig = constraints.apply_constraints_to(qconfig)
         return qconfig
 
-    def _should_consider_scope_for_group(self, scope_str: str, group: QuantizerGroup) -> bool:
+    def _should_consider_scope_for_group(self, node_name: NNCFNodeName, group: QuantizerGroup) -> bool:
         if self.target_scopes is not None or self._target_scopes_per_group[group] is not None:
-            if matches_any(scope_str, self.target_scopes):
+            if matches_any(node_name, self.target_scopes):
                 return True
-            if matches_any(scope_str, self._target_scopes_per_group[group]):
+            if matches_any(node_name, self._target_scopes_per_group[group]):
                 return True
 
             return False
 
-        if matches_any(scope_str, self.ignored_scopes):
+        if matches_any(node_name, self.ignored_scopes):
             return False
-        if matches_any(scope_str, self._ignored_scopes_per_group[group]):
+        if matches_any(node_name, self._ignored_scopes_per_group[group]):
             return False
 
         return True

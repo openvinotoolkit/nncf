@@ -74,7 +74,7 @@ class GraphConverter:
             nncf_graph.add_nncf_node(node_name=str(op_address),
                                      node_type=op_address.operator_name,
                                      node_metatype=metatype,
-                                     module_attributes=dynamic_graph_node.module_attributes,
+                                     layer_attributes=dynamic_graph_node.module_attributes,
                                      node_id_override=dynamic_graph_node.node_id,
                                      layer_name=str(op_address.scope_in_model),
                                      ignored_algorithms=dynamic_graph_node.ignored_algorithms,

@@ -19,7 +19,7 @@ from typing import Union
 from texttable import Texttable
 
 from nncf.common.graph.graph import NNCFNodeName
-from nncf.torch.quantization.quantizer_id import QuantizerId
+from nncf.common.quantization.structs import QuantizerId
 
 
 def create_table(header: List[str], rows: List[List[Any]]) -> str:

@@ -44,8 +44,8 @@ from nncf.torch.quantization.layers import PTQuantizerSpec
 from nncf.torch.quantization.layers import QUANTIZATION_MODULES
 from nncf.torch.quantization.layers import SymmetricQuantizer
 from nncf.torch.quantization.layers import AsymmetricQuantizer
-from nncf.torch.quantization.quantizer_id import NonWeightQuantizerId
-from nncf.torch.quantization.quantizer_id import WeightQuantizerId
+from nncf.common.quantization.structs import NonWeightQuantizerId
+from nncf.common.quantization.structs import WeightQuantizerId
 from nncf.torch.utils import get_all_modules_by_type
 from tests.torch.helpers import BasicConvTestModel
 from tests.torch.helpers import TwoConvTestModel
