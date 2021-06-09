@@ -297,16 +297,16 @@ class InsertionPointGraph(nx.DiGraph):
         # TODO: Implement "repeating expressions" so that any number of "mergeable" operations
         # immediately following a linear/convolutional/matrix op are merged into one block
         import nncf.torch.graph.patterns as p
-        full_pattern = p.LINEAR_OPS + p.ANY_BN_ACT_COMBO | p.LINEAR_OPS + p.ELTWISE_UNIFORM_OPS | \
-                       p.ARITHMETIC + p.ANY_BN_ACT_COMBO | p.ANY_BN_ACT_COMBO
-        if additional_patterns is not None:
-            for pattern in additional_patterns:
-                if not isinstance(pattern, str):
-                    custom_pattern = functools.reduce(operator.add,
-                                                      [NNCFNodeExpression(node) for node in pattern])
-                else:
-                    custom_pattern = NNCFNodeExpression(pattern)
-                full_pattern = full_pattern | custom_pattern
+        full_pattern = p.FULL_PATTERN_GRAPH
+        # TODO(Aleksei K) add additional patterns functionl
+        # if additional_patterns is not None:
+        #     for pattern in additional_patterns:
+        #         if not isinstance(pattern, str):
+        #             custom_pattern = functools.reduce(operator.add,
+        #                                               [NNCFNodeExpression(node) for node in pattern])
+        #         else:
+        #             custom_pattern = NNCFNodeExpression(pattern)
+        #         full_pattern = full_pattern | custom_pattern
         return full_pattern
 
 
