@@ -313,15 +313,15 @@ def test_zeroing_gradients(zero_grad):
                 assert torch.allclose(masked_grad, grad)
 
 
-@pytest.mark.parametrize(('all_weights', 'pruning_flops_target', 'ref_flops'),
+@pytest.mark.parametrize(('all_weights', 'pruning_flops_target', 'ref_flops', 'ref_params_num'),
                          [
-                             (False, None, 1315008),
-                             (True, None, 1492400),
-                             (False, 0.5, 2367952),
-                             (True, 0.5, 2380268),
+                             (False, None, 1315008, 7776),
+                             (True, None, 1492400, 9304),
+                             (False, 0.5, 2367952, 13160),
+                             (True, 0.5, 2380268, 13678),
                          ]
                          )
-def test_calculation_of_flops(all_weights, pruning_flops_target, ref_flops):
+def test_calculation_of_flops(all_weights, pruning_flops_target, ref_flops, ref_params_num):
     """
     Test for pruning masks check (_set_binary_masks_for_filters, _set_binary_masks_for_all_filters_together).
     :param all_weights: whether mask will be calculated for all weights in common or not
@@ -337,8 +337,9 @@ def test_calculation_of_flops(all_weights, pruning_flops_target, ref_flops):
     _, pruning_algo, _ = create_pruning_algo_with_config(config)
 
     assert pruning_algo.current_flops == ref_flops
+    assert pruning_algo.current_params_num == ref_params_num
     # pylint:disable=protected-access
-    assert pruning_algo._calculate_flops_and_weights_pruned_model_by_masks()[0] == ref_flops
+    assert pruning_algo._calculate_flops_and_weights_pruned_model_by_masks() == (ref_flops, ref_params_num)
 
 
 def test_clusters_for_multiple_forward():

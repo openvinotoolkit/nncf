@@ -255,15 +255,15 @@ def count_flops_and_weights(graph: NNCFGraph,
 
     :param graph: NNCFGraph.
     :param input_shapes: Dictionary of input dimension shapes for convolutions and
-                         fully connected layers. E.g {node_name: (height, width)}
+        fully connected layers. E.g {node_name: (height, width)}
     :param output_shapes: Dictionary of output dimension shapes for convolutions and
-                          fully connected layers. E.g {node_name: (height, width)}
+        fully connected layers. E.g {node_name: (height, width)}
     :param conv_op_metatypes: List of metatypes defining convolution operations.
     :param linear_op_metatypes: List of metatypes defining linear/fully connected operations.
     :param input_channels: Dictionary of input channels number in convolutions.
-                           If not specified, taken from the graph. {node_name: channels_num}
+        If not specified, taken from the graph. {node_name: channels_num}
     :param output_channels: Dictionary of output channels number in convolutions.
-                            If not specified, taken from the graph. {node_name: channels_num}
+        If not specified, taken from the graph. {node_name: channels_num}
     :return number of FLOPs for the model
             number of weights (params) in the model
     """
@@ -287,15 +287,15 @@ def count_flops_and_weights_per_node(graph: NNCFGraph,
 
     :param graph: NNCFGraph.
     :param input_shapes: Dictionary of input dimension shapes for convolutions and
-                         fully connected layers. E.g {node_name: (height, width)}
+        fully connected layers. E.g {node_name: (height, width)}
     :param output_shapes: Dictionary of output dimension shapes for convolutions and
-                          fully connected layers. E.g {node_name: (height, width)}
+        fully connected layers. E.g {node_name: (height, width)}
     :param conv_op_metatypes: List of metatypes defining convolution operations.
     :param linear_op_metatypes: List of metatypes defining linear/fully connected operations.
     :param input_channels: Dictionary of input channels number in convolutions.
-                           If not specified, taken from the graph. {node_name: channels_num}
+        If not specified, taken from the graph. {node_name: channels_num}
     :param output_channels: Dictionary of output channels number in convolutions.
-                            If not specified, taken from the graph. {node_name: channels_num}
+        If not specified, taken from the graph. {node_name: channels_num}
     :return Dictionary of FLOPs number {node_name: flops_num}
             Dictionary of weights number {node_name: weights_num}
     """
