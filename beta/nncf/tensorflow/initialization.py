@@ -23,6 +23,7 @@ class TFInitializingDataLoader(NNCFDataLoader):
     This class wraps the tf.data.Dataset class.
     This is required for proper initialization of certain compression algorithms.
     """
+    
     def __init__(self, data_loader: tf.data.Dataset, batch_size: int):
         self._data_loader = data_loader
         self._batch_size = batch_size
