@@ -14,16 +14,21 @@
 from beta.nncf.tensorflow.algorithm_selector import get_compression_algorithm_builder
 from beta.nncf.tensorflow.api.composite_compression import TFCompositeCompressionAlgorithmBuilder
 from beta.nncf.tensorflow.helpers.utils import get_built_model
+from nncf.config.config import NNCFConfig
 
 
 def create_compression_algorithm_builder(config):
     compression_config = config.get('compression', {})
 
     if isinstance(compression_config, dict):
+        compression_config = NNCFConfig(compression_config)
+        compression_config.register_extra_structs(config.get_all_extra_structs_for_copy())
         return get_compression_algorithm_builder(compression_config)(compression_config)
     if isinstance(compression_config, list):
         composite_builder = TFCompositeCompressionAlgorithmBuilder()
         for algo_config in compression_config:
+            algo_config = NNCFConfig(algo_config)
+            algo_config.register_extra_structs(config.get_all_extra_structs_for_copy())
             composite_builder.add(get_compression_algorithm_builder(algo_config)(algo_config))
         return composite_builder
     return None

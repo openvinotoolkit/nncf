@@ -14,7 +14,7 @@
 from typing import Optional
 from abc import ABC, abstractmethod
 
-import numpy as np
+import math
 
 from nncf.api.compression import ModelType
 from nncf.common.initialization import NNCFDataLoader
@@ -73,7 +73,7 @@ def _create_bn_adaptation_algorithm_impl(data_loader: NNCFDataLoader,
                                                                           num_bn_adaptation_steps,
                                                                           num_bn_forget_steps,
                                                                           device)
-    elif __nncf_backend__ == 'Tensorflow':
+    elif __nncf_backend__ == 'TensorFlow':
         from beta.nncf.tensorflow.batchnorm_adaptation import TFBatchnormAdaptationAlgorithmImpl
         bn_adaptation_algorithm_impl = TFBatchnormAdaptationAlgorithmImpl(data_loader,
                                                                           num_bn_adaptation_steps,
@@ -115,8 +115,8 @@ class BatchnormAdaptationAlgorithm:
         if num_bn_adaptation_samples < 0:
             raise ValueError('Number of adaptation samples must be >= 0')
 
-        num_bn_adaptation_steps = np.ceil(num_bn_adaptation_samples / data_loader.batch_size)
-        num_bn_forget_steps = np.ceil(num_bn_forget_samples / data_loader.batch_size)
+        num_bn_adaptation_steps = math.ceil(num_bn_adaptation_samples / data_loader.batch_size)
+        num_bn_forget_steps = math.ceil(num_bn_forget_samples / data_loader.batch_size)
 
         self._impl = _create_bn_adaptation_algorithm_impl(data_loader,
                                                           num_bn_adaptation_steps,

@@ -44,6 +44,8 @@ from nncf.common.quantization.structs import QuantizationConstraints
 from nncf.common.statistics import NNCFStatistics
 from nncf.api.compression import CompressionScheduler
 from nncf.api.compression import CompressionLoss
+from nncf.common.batchnorm_adaptation import BatchnormAdaptationAlgorithm
+from nncf.config.utils import extract_bn_adaptation_init_params
 
 ACTIVATIONS = "activations"
 WEIGHTS = "weights"
@@ -62,8 +64,8 @@ NOT_SUPPORT_LAYER_METATYPES = [
 
 @TF_COMPRESSION_ALGORITHMS.register('quantization')
 class QuantizationBuilder(TFCompressionAlgorithmBuilder):
-    def __init__(self, config):
-        super().__init__(config)
+    def __init__(self, config, should_init: bool = True):
+        super().__init__(config, should_init)
 
         self.quantize_inputs = self.config.get('quantize_inputs', True)
         self.quantize_outputs = self.config.get('quantize_outputs', False)
@@ -235,6 +237,8 @@ class QuantizationController(TFCompressionAlgorithmController):
         self._initializer = MinMaxInitializer(config)
         self._scheduler = BaseCompressionScheduler()
         self._loss = TFZeroCompressionLoss()
+        self._config = config
+        self._bn_adaptation = None
 
     @property
     def scheduler(self) -> CompressionScheduler:
@@ -247,5 +251,15 @@ class QuantizationController(TFCompressionAlgorithmController):
     def initialize(self, dataset=None, loss=None):
         self._initializer(self._model, dataset, loss)
 
+        init_bn_adapt_config = self._config.get('initializer', {}).get('batchnorm_adaptation', {})
+        if init_bn_adapt_config:
+            self._run_batchnorm_adaptation()
+
     def statistics(self, quickly_collected_only: bool = False) -> NNCFStatistics:
         return NNCFStatistics()
+
+    def _run_batchnorm_adaptation(self):
+        if self._bn_adaptation is None:
+            self._bn_adaptation = BatchnormAdaptationAlgorithm(
+                **extract_bn_adaptation_init_params(self._config))
+        self._bn_adaptation.run(self.model)

@@ -36,6 +36,7 @@ from beta.examples.tensorflow.common.utils import create_code_snapshot
 from beta.examples.tensorflow.common.utils import configure_paths
 from beta.examples.tensorflow.common.utils import get_saving_parameters
 from beta.examples.tensorflow.common.utils import write_metrics
+from beta.nncf.tensorflow.initialization import register_default_init_args
 
 
 def get_argument_parser():
@@ -145,13 +146,18 @@ def run(config):
     train_builder, validation_builder = builders
     train_dataset, validation_dataset = datasets
 
+    nncf_config = config.nncf_config
+    nncf_config = register_default_init_args(nncf_config,
+                                             train_dataset,
+                                             train_builder.global_batch_size)
+
     train_epochs = config.epochs
     train_steps = train_builder.steps_per_epoch
     validation_steps = validation_builder.steps_per_epoch
 
     with TFOriginalModelManager(model_fn, **model_params) as model:
         with strategy.scope():
-            compression_ctrl, compress_model = create_compressed_model(model, config.nncf_config)
+            compression_ctrl, compress_model = create_compressed_model(model, nncf_config)
             compression_callbacks = create_compression_callbacks(compression_ctrl,
                                                                  log_dir=config.log_dir)
 

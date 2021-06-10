@@ -22,6 +22,12 @@
 
     "compression": {
         "algorithm": "quantization",
+        "initializer": {
+            "batchnorm_adaptation": {
+                "num_bn_adaptation_samples": 2048,
+                "num_bn_forget_samples": 1024
+            }
+        },
         "weights": {
            "mode": "symmetric",
            "bits": 8,

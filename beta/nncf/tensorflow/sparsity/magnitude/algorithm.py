@@ -41,6 +41,8 @@ from beta.nncf.tensorflow.sparsity.magnitude.operation import BinaryMask
 from beta.nncf.tensorflow.sparsity.magnitude.operation import BinaryMaskWithWeightsBackup
 from beta.nncf.tensorflow.sparsity.collector import TFSparseModelStatisticsCollector
 from beta.nncf.tensorflow.utils.node import is_ignored
+from nncf.common.batchnorm_adaptation import BatchnormAdaptationAlgorithm
+from nncf.config.utils import extract_bn_adaptation_init_params
 
 
 @TF_COMPRESSION_ALGORITHMS.register('magnitude_sparsity')
@@ -131,6 +133,8 @@ class MagnitudeSparsityController(BaseSparsityController):
         scheduler_cls = SPARSITY_SCHEDULERS.get(scheduler_type)
         self._scheduler = scheduler_cls(self, params)
         self._loss = TFZeroCompressionLoss()
+        self._bn_adaptation = None
+        self._config = config
         self.set_sparsity_level(sparsity_init)
 
     @property
@@ -144,7 +148,8 @@ class MagnitudeSparsityController(BaseSparsityController):
     def freeze(self):
         self._frozen = True
 
-    def set_sparsity_level(self, sparsity_level):
+    def set_sparsity_level(self, sparsity_level,
+                           run_batchnorm_adaptation: bool = False):
         if not self._frozen:
             if sparsity_level >= 1 or sparsity_level < 0:
                 raise AttributeError(
@@ -152,6 +157,9 @@ class MagnitudeSparsityController(BaseSparsityController):
 
             self._threshold = self._select_threshold(sparsity_level)
             self._set_masks_for_threshold(self._threshold)
+
+        if run_batchnorm_adaptation:
+            self._run_batchnorm_adaptation()
 
     def _select_threshold(self, sparsity_level):
         all_weights = self._collect_all_weights()
@@ -200,3 +208,8 @@ class MagnitudeSparsityController(BaseSparsityController):
         nncf_stats = NNCFStatistics()
         nncf_stats.register('magnitude_sparsity', stats)
         return nncf_stats
+
+    def _run_batchnorm_adaptation(self):
+        if self._bn_adaptation is None:
+            self._bn_adaptation = BatchnormAdaptationAlgorithm(**extract_bn_adaptation_init_params(self._config))
+        self._bn_adaptation.run(self.model)

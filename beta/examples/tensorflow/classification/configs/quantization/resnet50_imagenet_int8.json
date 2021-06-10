@@ -18,6 +18,12 @@
     "dataset_type": "tfds",
 
    "compression": {
-        "algorithm": "quantization"
+        "algorithm": "quantization",
+        "initializer": {
+            "batchnorm_adaptation": {
+                "num_bn_adaptation_samples": 2048,
+                "num_bn_forget_samples": 1024
+            }
+        }
     }
 }

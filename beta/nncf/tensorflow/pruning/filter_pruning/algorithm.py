@@ -58,6 +58,8 @@ from nncf.common.pruning.utils import get_rounded_pruned_element_number
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.common.pruning.statistics import FilterPruningStatistics
 from nncf.common.statistics import NNCFStatistics
+from nncf.common.batchnorm_adaptation import BatchnormAdaptationAlgorithm
+from nncf.config.utils import extract_bn_adaptation_init_params
 
 
 @TF_COMPRESSION_ALGORITHMS.register('filter_pruning')
@@ -123,6 +125,7 @@ class FilterPruningController(BasePruningAlgoController):
         self.all_weights = params.get('all_weights', False)
         scheduler_cls = PRUNING_SCHEDULERS.get(params.get('schedule', 'exponential'))
         self._scheduler = scheduler_cls(self, params)
+        self._bn_adaptation = None
         self.set_pruning_rate(self.pruning_init)
         self._loss = TFZeroCompressionLoss()
 
@@ -145,7 +148,8 @@ class FilterPruningController(BasePruningAlgoController):
     def freeze(self):
         self.frozen = True
 
-    def set_pruning_rate(self, pruning_rate: float):
+    def set_pruning_rate(self, pruning_rate: float,
+                         run_batchnorm_adaptation: bool = False):
         """
         Setup pruning masks in accordance to provided pruning rate
         :param pruning_rate: pruning ration
@@ -165,6 +169,9 @@ class FilterPruningController(BasePruningAlgoController):
                     # Looking for a layerwise pruning rate needed for the required flops pruning rate
                     pruning_rate = self._find_uniform_pruning_rate_for_target_flops(pruning_rate)
                 self._set_binary_masks_for_pruned_layers_groupwise(pruning_rate)
+
+        if run_batchnorm_adaptation:
+            self._run_batchnorm_adaptation()
 
     def _init_pruned_layers_params(self):
         # 1. Initialize in/out channels for potentially prunable layers
@@ -460,3 +467,8 @@ class FilterPruningController(BasePruningAlgoController):
         target_weight_dim_for_compression = get_filter_axis(layer, weight_attr)
         filters_importance = self._filter_importance(weight, target_weight_dim_for_compression)
         return filters_importance
+
+    def _run_batchnorm_adaptation(self):
+        if self._bn_adaptation is None:
+            self._bn_adaptation = BatchnormAdaptationAlgorithm(**extract_bn_adaptation_init_params(self.config))
+        self._bn_adaptation.run(self.model)
