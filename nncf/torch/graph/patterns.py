@@ -37,6 +37,8 @@ class GraphPattern:
          that should be considered as one single node
         """
         self._graph = nx.DiGraph()
+        if isinstance(types, str):
+            types = [types]
         self._graph.add_node(GraphPattern.NODE_COUNTER, type=types)
         GraphPattern.NODE_COUNTER += 1
 
@@ -141,24 +143,22 @@ NON_RELU_ACTIVATIONS_type = ['elu', 'elu_', 'prelu', 'sigmoid', 'gelu']
 ARITHMETIC_type = ['__iadd__', '__add__', '__mul__', '__rmul__']
 
 # Basic Graph Patterns
-LINEAR_OPS_graph = GraphPattern(LINEAR_OPS_type)
+LINEAR_OPS = GraphPattern(LINEAR_OPS_type)
 
-BN_graph = GraphPattern(BN_type)
+BN = GraphPattern(BN_type)
 
-ACTIVATIONS_graph = GraphPattern(RELU_type + NON_RELU_ACTIVATIONS_type)
+ACTIVATIONS = GraphPattern(RELU_type + NON_RELU_ACTIVATIONS_type)
 
-ARITHMETIC_graph = GraphPattern(ARITHMETIC_type)
+ARITHMETIC = GraphPattern(ARITHMETIC_type)
 
-ANY_BN_ACT_COMBO_graph = BN_graph + ACTIVATIONS_graph | ACTIVATIONS_graph + BN_graph | BN_graph | ACTIVATIONS_graph
-
-ELTWISE_UNIFORM_OPS_graph = BN_graph | ACTIVATIONS_graph
+ANY_BN_ACT_COMBO = BN + ACTIVATIONS | ACTIVATIONS + BN | BN | ACTIVATIONS
 
 # Linear Types United with Swish Activation
-MUL_graph = GraphPattern(['__mul__'])
-SIGMOID_graph = GraphPattern(['sigmoid'])
-LINEAR_OPS_SWISH_ACTIVATION_graph = (LINEAR_OPS_graph + SIGMOID_graph) * MUL_graph | \
-                                    LINEAR_OPS_graph + (BN_graph + SIGMOID_graph) * MUL_graph
+MUL = GraphPattern('__mul__')
+SIGMOID = GraphPattern('sigmoid')
+LINEAR_OPS_SWISH_ACTIVATION = (LINEAR_OPS + SIGMOID) * MUL | LINEAR_OPS + (BN + SIGMOID) * MUL
 
-FULL_PATTERN_GRAPH = LINEAR_OPS_graph + ANY_BN_ACT_COMBO_graph | ANY_BN_ACT_COMBO_graph | \
-                     ARITHMETIC_graph + ANY_BN_ACT_COMBO_graph | LINEAR_OPS_graph + ELTWISE_UNIFORM_OPS_graph | \
-                     LINEAR_OPS_SWISH_ACTIVATION_graph
+FULL_PATTERN_GRAPH = LINEAR_OPS + ANY_BN_ACT_COMBO | ANY_BN_ACT_COMBO | \
+                     ARITHMETIC + ANY_BN_ACT_COMBO | LINEAR_OPS_SWISH_ACTIVATION
+
+FULL_PATTERN_GRAPH.dump_graph('/home/aleksei/tmp/pattern.dot')
