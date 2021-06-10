@@ -130,7 +130,6 @@ class RBSparsityController(BaseSparsityAlgoController):
         collector = PTSparseModelStatisticsCollector(self.model, self.sparsified_module_info)
         model_statistics = collector.collect()
 
-        # Sparsity level which was applied by the algorithm.
         target_sparsity_level = self.scheduler.current_sparsity_level if self._mode == 'global' else None
 
         mean_sparse_prob = 1.0 - self.loss.mean_sparse_prob

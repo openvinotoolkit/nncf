@@ -134,7 +134,6 @@ class RBSparsityController(BaseSparsityController):
             num_weights += np.prod(mask.shape.as_list()).item()
         mean_sparse_prob = 1.0 - (sparse_prob_sum / num_weights)
 
-        # Sparsity level which was applied by the algorithm.
         target_sparsity_level = self.scheduler.current_sparsity_level
 
         # TODO(andrey-churkin): Should be calculated when the distributed mode will be supported

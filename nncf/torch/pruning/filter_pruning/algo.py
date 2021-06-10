@@ -157,7 +157,6 @@ class FilterPruningController(BasePruningAlgoController):
 
         model_statistics = PrunedModelStatistics(self._pruning_rate, list(pruned_layers_summary.values()))
 
-        # Pruning level which was applied by the algorithm.
         target_pruning_level = self.scheduler.current_pruning_level
 
         stats = FilterPruningStatistics(model_statistics, self.full_flops, self.current_flops, target_pruning_level)

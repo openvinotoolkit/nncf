@@ -106,8 +106,8 @@ class MagnitudeSparsityStatistics(Statistics):
 
         :param model_statistics: Statistics of the sparsified model.
         :param thresholds: List of the sparsity thresholds.
-        :param target_sparsity_level: Sparsity level which was applied
-            by the algorithm.
+        :param target_sparsity_level: A target level of the sparsity
+            for the algorithm for the current epoch.
         """
         self.model_statistics = model_statistics
         self.thresholds = thresholds
@@ -122,7 +122,7 @@ class MagnitudeSparsityStatistics(Statistics):
         algorithm_string = create_table(
             header=['Statistic\'s name', 'Value'],
             rows=[
-                ['Sparsity level which was applied by the algorithm', self.target_sparsity_level],
+                ['A target level of the sparsity for the algorithm for the current epoch', self.target_sparsity_level],
             ]
         )
 
@@ -166,8 +166,8 @@ class RBSparsityStatistics(Statistics):
 
         :param model_statistics: Statistics of the sparsified model.
         :param masks_consistency: TODO
-        :param target_sparsity_level: Sparsity level which was applied
-            by the algorithm.
+        :param target_sparsity_level: A target level of the sparsity
+            for the algorithm for the current epoch.
         :param mean_sparse_prob: TODO
         """
         self.model_statistics = model_statistics
@@ -181,7 +181,7 @@ class RBSparsityStatistics(Statistics):
             header=['Statistic\'s name', 'Value'],
             rows=[
                 ['masks_consistency', self.masks_consistency],
-                ['Sparsity level which was applied by the algorithm', self.target_sparsity_level],
+                ['A target level of the sparsity for the algorithm for the current epoch', self.target_sparsity_level],
                 ['mean_sparse_prob', self.mean_sparse_prob],
             ]
         )

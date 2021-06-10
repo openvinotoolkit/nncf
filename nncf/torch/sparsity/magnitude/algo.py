@@ -85,7 +85,6 @@ class MagnitudeSparsityController(BaseSparsityAlgoController):
 
             threshold_statistics.append(LayerThreshold(minfo.module_name, threshold))
 
-        # Sparsity level which was applied by the algorithm.
         target_sparsity_level = self.scheduler.current_sparsity_level if self._mode == 'global' else None
 
         stats = MagnitudeSparsityStatistics(model_statistics, threshold_statistics, target_sparsity_level)
