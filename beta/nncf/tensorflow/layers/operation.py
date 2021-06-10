@@ -15,6 +15,7 @@ from collections import OrderedDict
 
 from beta.nncf.tensorflow.utils.hook_handle import HookHandle
 
+
 class InputType:
     INPUTS = "inputs"
     WEIGHTS = "weights"

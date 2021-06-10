@@ -139,7 +139,7 @@ class MagnitudeSparsityController(BaseSparsityController):
         scheduler_cls = SPARSITY_SCHEDULERS.get(scheduler_type)
         self._scheduler = scheduler_cls(self, params)
         self._loss = TFZeroCompressionLoss()
-        self._bn_adaptation = none
+        self._bn_adaptation = None
         self._config = config
         self.set_sparsity_level(sparsity_init)
 

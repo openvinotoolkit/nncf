@@ -47,8 +47,6 @@ from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.schedulers import BaseCompressionScheduler
 from nncf.common.statistics import NNCFStatistics
-from nncf.api.compression import CompressionScheduler
-from nncf.api.compression import CompressionLoss
 from nncf.common.batchnorm_adaptation import BatchnormAdaptationAlgorithm
 from nncf.config.utils import extract_bn_adaptation_init_params
 from nncf.common.utils.helpers import should_consider_scope

@@ -358,8 +358,6 @@ class SequentialConverter(TFModelConverter):
         return nncf_graph
 
 
-
-
 def _get_layer_attributes(layer: tf.keras.layers.Layer) -> ConvolutionLayerAttributes:
     channel_axis = get_input_channel_axis(layer)
     layer_ = unwrap_layer(layer)
