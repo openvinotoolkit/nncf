@@ -374,7 +374,8 @@ class NNCFGraph:
             by another operation (represented by a separate node) in NNCFGraph. Examples would be repeated applications
             of a convolution layer with the same weights at different stages in the network.
         :return: An NNCFNode object representing the newly created node in the graph. The node will still have
-            to be connected to the rest of the nodes with edges using the `NNCFGraph.add_edge_between_nncf_nodes` method.
+            to be connected to the rest of the nodes with edges using the `NNCFGraph.add_edge_between_nncf_nodes`
+            method.
         """
         if node_id_override is not None:
             node_id = node_id_override

@@ -64,7 +64,7 @@ class BasePruningAlgoBuilder(TFCompressionAlgorithmBuilder):
         params = config.get('params', {})
         self._params = params
         self.ignored_scopes = self.config.get('ignored_scopes', [])
-        self.target_scopes = self.config.get('target_scopes', [])
+        self.target_scopes = self.config.get('target_scopes')
 
         self._ignore_frozen_layers = True
         self._prune_first = params.get('prune_first_conv', False)

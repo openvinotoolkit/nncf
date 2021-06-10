@@ -11,7 +11,6 @@
  limitations under the License.
 """
 
-import weakref
 from collections import OrderedDict
 
 from beta.nncf.tensorflow.utils.hook_handle import HookHandle
@@ -19,23 +18,6 @@ from beta.nncf.tensorflow.utils.hook_handle import HookHandle
 class InputType:
     INPUTS = "inputs"
     WEIGHTS = "weights"
-
-
-class HookHandle:
-    """
-    A handle to remove a hook
-    """
-    id = 0
-
-    def __init__(self, hooks_registry):
-        self.hooks_registry_ref = weakref.ref(hooks_registry)
-        self.hook_id = HookHandle.id
-        HookHandle.id = HookHandle.id + 1
-
-    def remove(self):
-        hooks_registry = self.hooks_registry_ref()
-        if hooks_registry is not None and self.hook_id in hooks_registry:
-            del hooks_registry[self.hook_id]
 
 
 class NNCFOperation:
