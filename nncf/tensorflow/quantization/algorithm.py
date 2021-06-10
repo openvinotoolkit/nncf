@@ -86,6 +86,8 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
             self._parse_group_params(self.config, quantizer_group)
 
         self._parse_init_params()
+        self._range_initializer = None
+        self._bn_adaptation = None
 
     def _parse_init_params(self):
         init_config = self.config.get('initializer', {})
@@ -356,7 +358,6 @@ class QuantizationController(TFCompressionAlgorithmController):
         self._loss = TFZeroCompressionLoss()
         self._op_names = op_names
         self._config = config
-        self._bn_adaptation = None
 
     @property
     def scheduler(self) -> CompressionScheduler:

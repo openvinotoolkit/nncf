@@ -40,6 +40,7 @@ from examples.tensorflow.common.utils import serialize_config
 from examples.tensorflow.common.utils import write_metrics
 
 
+
 def get_argument_parser():
     parser = get_common_argument_parser(precision=False,
                                         save_checkpoint_freq=False,
