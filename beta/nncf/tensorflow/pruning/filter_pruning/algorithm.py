@@ -139,7 +139,10 @@ class FilterPruningController(BasePruningAlgoController):
 
     def statistics(self, quickly_collected_only: bool = False) -> NNCFStatistics:
         model_statistics = self._calculate_pruned_model_stats()
-        stats = FilterPruningStatistics(model_statistics, self.full_flops, self.current_flops)
+
+        target_pruning_level = self.scheduler.current_pruning_level
+
+        stats = FilterPruningStatistics(model_statistics, self.full_flops, self.current_flops, target_pruning_level)
 
         nncf_stats = NNCFStatistics()
         nncf_stats.register('filter_pruning', stats)

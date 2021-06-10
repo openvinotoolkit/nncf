@@ -25,6 +25,7 @@ from nncf.torch.sparsity.magnitude.functions import WEIGHT_IMPORTANCE_FUNCTIONS,
 from nncf.torch.sparsity.collector import PTSparseModelStatisticsCollector
 from nncf.common.sparsity.schedulers import SPARSITY_SCHEDULERS
 from nncf.common.sparsity.statistics import MagnitudeSparsityStatistics
+from nncf.common.schedulers import StubCompressionScheduler
 from nncf.common.statistics import NNCFStatistics
 from nncf.common.sparsity.statistics import LayerThreshold
 from nncf.common.batchnorm_adaptation import BatchnormAdaptationAlgorithm
@@ -56,6 +57,8 @@ class MagnitudeSparsityController(BaseSparsityAlgoController):
             params['sparsity_init'] = sparsity_init
             scheduler_cls = SPARSITY_SCHEDULERS.get(params.get('schedule', 'polynomial'))
             self._scheduler = scheduler_cls(self, params)
+        else:
+            self._scheduler = StubCompressionScheduler()
 
         self._bn_adaptation = None
 
@@ -82,7 +85,9 @@ class MagnitudeSparsityController(BaseSparsityAlgoController):
 
             threshold_statistics.append(LayerThreshold(minfo.module_name, threshold))
 
-        stats = MagnitudeSparsityStatistics(model_statistics, threshold_statistics)
+        target_sparsity_level = self.scheduler.current_sparsity_level if self._mode == 'global' else None
+
+        stats = MagnitudeSparsityStatistics(model_statistics, threshold_statistics, target_sparsity_level)
 
         nncf_stats = NNCFStatistics()
         nncf_stats.register('magnitude_sparsity', stats)

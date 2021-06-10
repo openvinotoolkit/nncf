@@ -24,6 +24,7 @@ from nncf.torch.sparsity.rb.layers import RBSparsifyingWeight
 from nncf.torch.sparsity.rb.loss import SparseLoss, SparseLossForPerLayerSparsity
 from nncf.torch.sparsity.collector import PTSparseModelStatisticsCollector
 from nncf.common.sparsity.schedulers import SPARSITY_SCHEDULERS
+from nncf.common.schedulers import StubCompressionScheduler
 from nncf.common.sparsity.statistics import RBSparsityStatistics
 from nncf.torch.utils import get_world_size
 from nncf.common.statistics import NNCFStatistics
@@ -50,12 +51,12 @@ class RBSparsityController(BaseSparsityAlgoController):
 
         self._distributed = False
         self._mode = params.get('sparsity_level_setting_mode', 'global')
-        self._scheduler = None
         self._check_sparsity_masks = params.get('check_sparsity_masks', False)
 
         sparsify_operations = [m.operand for m in self.sparsified_module_info]
         if self._mode == 'local':
             self._loss = SparseLossForPerLayerSparsity(sparsify_operations)
+            self._scheduler = StubCompressionScheduler()
         else:
             self._loss = SparseLoss(sparsify_operations)
 
@@ -129,14 +130,15 @@ class RBSparsityController(BaseSparsityAlgoController):
         collector = PTSparseModelStatisticsCollector(self.model, self.sparsified_module_info)
         model_statistics = collector.collect()
 
-        target_level = self.loss.target_sparsity_rate
+        target_sparsity_level = self.scheduler.current_sparsity_level if self._mode == 'global' else None
+
         mean_sparse_prob = 1.0 - self.loss.mean_sparse_prob
 
         masks_consistency = 1.0
         if self._distributed and self._check_sparsity_masks:
             masks_consistency = self._check_distributed_masks()
 
-        stats = RBSparsityStatistics(model_statistics, masks_consistency, target_level, mean_sparse_prob)
+        stats = RBSparsityStatistics(model_statistics, masks_consistency, target_sparsity_level, mean_sparse_prob)
 
         nncf_stats = NNCFStatistics()
         nncf_stats.register('rb_sparsity', stats)
