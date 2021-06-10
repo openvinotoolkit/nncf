@@ -14,9 +14,9 @@
 from typing import Dict
 from typing import List
 from typing import Tuple
-from nncf.common.graph.graph import NNCFGraph
-from nncf.common.graph.graph import NNCFNode
-from nncf.common.graph.graph import NNCFNodeName
+from nncf.common.graph import NNCFGraph
+from nncf.common.graph import NNCFNode
+from nncf.common.graph import NNCFNodeName
 from nncf.torch.dynamic_graph.scope import Scope
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 

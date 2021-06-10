@@ -33,9 +33,9 @@ from beta.nncf.tensorflow.pruning.utils import get_filters_num
 from beta.nncf.tensorflow.sparsity.magnitude.operation import BinaryMask
 from beta.nncf.tensorflow.sparsity.utils import strip_model_from_masks
 from beta.nncf.tensorflow.pruning.export_helpers import TF_PRUNING_OPERATOR_METATYPES
-from nncf.common.graph.graph import NNCFNode
-from nncf.common.graph.graph import NNCFGraph
-from nncf.common.graph.graph import NNCFNodeName
+from nncf.common.graph import NNCFNode
+from nncf.common.graph import NNCFGraph
+from nncf.common.graph import NNCFNodeName
 from nncf.common.graph.transformations.commands import TransformationPriority
 from nncf.common.pruning.pruning_node_selector import PruningNodeSelector
 from nncf.common.pruning.clusterization import Cluster

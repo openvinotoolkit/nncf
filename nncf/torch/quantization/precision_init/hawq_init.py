@@ -26,7 +26,7 @@ from torch import Tensor
 from torch import nn
 from torch.nn.modules.loss import _Loss
 
-from nncf.common.graph.graph import NNCFNodeName
+from nncf.common.graph import NNCFNodeName
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.common.utils.os import safe_open

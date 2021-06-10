@@ -18,9 +18,9 @@ from typing import Dict, List, Optional, Tuple, Type
 
 import numpy as np
 
-from nncf.common.graph.graph import NNCFGraph
-from nncf.common.graph.graph import NNCFNode
-from nncf.common.graph.graph import NNCFNodeName
+from nncf.common.graph import NNCFGraph
+from nncf.common.graph import NNCFNode
+from nncf.common.graph import NNCFNodeName
 from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.version_agnostic_op_names import get_version_agnostic_name

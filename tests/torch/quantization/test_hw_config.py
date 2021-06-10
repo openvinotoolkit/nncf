@@ -14,7 +14,7 @@
 import torch
 
 from nncf.config import NNCFConfig
-from nncf.common.graph.graph import MODEL_INPUT_OP_NAME
+from nncf.common.graph import MODEL_INPUT_OP_NAME
 from nncf.common.hardware.config import HWConfig
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.torch.dynamic_graph.graph_tracer import ModelInputInfo

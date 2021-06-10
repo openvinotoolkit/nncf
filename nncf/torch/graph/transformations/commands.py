@@ -1,6 +1,6 @@
 from typing import Callable
 
-from nncf.common.graph.graph import NNCFNodeName
+from nncf.common.graph import NNCFNodeName
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationCommand

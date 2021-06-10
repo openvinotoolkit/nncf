@@ -12,7 +12,7 @@
 """
 from typing import Tuple
 
-from nncf.common.graph.graph import NNCFNode
+from nncf.common.graph import NNCFNode
 from nncf.common.sparsity.statistics import ConstSparsityStatistics
 from nncf.common.statistics import NNCFStatistics
 from nncf.torch.compression_method_api import PTCompressionAlgorithmController

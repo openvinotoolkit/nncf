@@ -6,7 +6,7 @@ from typing import Optional
 from typing import Set
 from typing import Tuple
 
-from nncf.common.graph.graph import NNCFNodeName
+from nncf.common.graph import NNCFNodeName
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.torch.graph.transformations.commands import PTTargetPoint

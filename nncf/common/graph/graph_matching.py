@@ -35,7 +35,7 @@ class Expression:
     acyclic graph. Overloads certain Python operator to define a kind of a domain-specific mini-language for
     specifying a DAG subgraph in a single line. `Expression`-based subgraph specification is not expressive
     enough to cover all cases required by NNCF, e.g. in the case of the swish activation x * sigmoid(x), which
-    cannot be unambigously specified using `Expression`s.
+    cannot be unambiguosly specified using `Expression`s.
     """
     def _match(self, nodes, graph):
         return NotImplementedError
@@ -89,6 +89,9 @@ class ConcatExpression(Expression):
         NodeExpression('conv2d') + NodeExpression('batch_norm2d')
     """
     def __init__(self, expressions: List[Expression]):
+        """
+        :param expressions: A list of subexpressions to be matched in a concat-fashion
+        """
         self.expressions = expressions
 
     def _match(self, nodes, graph):
@@ -120,6 +123,11 @@ class AlternatingExpression(Expression):
     will match both to the (conv2d) node and the (batch_norm) node.
     """
     def __init__(self, expressions, greedy_match=False, greedy_consume=True):
+        """
+        :param expressions: A list of subexpressions to be matched in an alternating-fashion
+        :param greedy_match:
+        :param greedy_consume:
+        """
         self.greedy_match = greedy_match
         self.greedy_consume = greedy_consume
         self.expressions = expressions
@@ -163,6 +171,9 @@ class BranchingExpression(Expression):
     will match to the (max_pool2d), (batch_norm) and the (RELU) nodes.
     """
     def __init__(self, expressions):
+        """
+        :param expressions: A list of subexpressions to be matched as branches
+        """
         self.expressions = expressions
 
     def _iterate_alternatives(self, nodes):

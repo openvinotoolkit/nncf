@@ -28,14 +28,14 @@ import numpy as np
 import torch
 from torch import nn
 
-from nncf.common.graph.graph import NNCFNodeName
+from nncf.common.graph import NNCFNodeName
 from nncf.torch.algo_selector import COMPRESSION_ALGORITHMS
 from nncf.torch.algo_selector import ZeroCompressionLoss
 from nncf.api.compression import CompressionStage
 from nncf.api.compression import CompressionLoss
 from nncf.api.compression import CompressionScheduler
-from nncf.common.graph.graph import MODEL_INPUT_OP_NAME
-from nncf.common.graph.graph import NNCFNode
+from nncf.common.graph import MODEL_INPUT_OP_NAME
+from nncf.common.graph import NNCFNode
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.quantization.structs import QuantizableWeightedLayerNode
 from nncf.common.quantization.structs import QuantizationConstraints

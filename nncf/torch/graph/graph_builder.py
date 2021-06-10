@@ -19,7 +19,7 @@ from typing import Optional
 
 import torch
 
-from nncf.common.graph.graph import LayerName
+from nncf.common.graph import LayerName
 from nncf.common.graph.layer_attributes import Dtype
 from nncf.torch.dynamic_graph.graph import DynamicGraph
 from nncf.torch.dynamic_graph.graph_tracer import GraphTracer

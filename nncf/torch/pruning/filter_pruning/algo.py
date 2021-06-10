@@ -24,8 +24,8 @@ from nncf.api.compression import CompressionStage
 from nncf.api.compression import CompressionLoss
 from nncf.api.compression import CompressionScheduler
 from nncf.config.utils import extract_bn_adaptation_init_params
-from nncf.common.graph.graph import NNCFNodeName
-from nncf.common.graph.graph import NNCFGraph
+from nncf.common.graph import NNCFNodeName
+from nncf.common.graph import NNCFGraph
 from nncf.common.pruning.mask_propagation import MaskPropagationAlgorithm
 from nncf.common.pruning.clusterization import Clusterization
 from nncf.common.pruning.schedulers import PRUNING_SCHEDULERS

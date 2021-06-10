@@ -13,8 +13,8 @@
 
 from typing import Callable, List
 
-from nncf.common.graph.graph import NNCFGraph
-from nncf.common.graph.graph import NNCFNode
+from nncf.common.graph import NNCFGraph
+from nncf.common.graph import NNCFNode
 from nncf.common.pruning.clusterization import Cluster
 from nncf.common.pruning.clusterization import Clusterization
 from nncf.common.pruning.export_helpers import DefaultMetaOp

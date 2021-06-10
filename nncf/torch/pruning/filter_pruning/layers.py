@@ -15,7 +15,7 @@ import torch
 import torch.nn as nn
 
 from nncf.torch.layer_utils import COMPRESSION_MODULES
-from nncf.common.graph.graph import NNCFNodeName
+from nncf.common.graph import NNCFNodeName
 from nncf.torch.utils import is_tracing_state, no_jit_trace
 
 

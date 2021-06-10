@@ -13,8 +13,8 @@
 from collections import defaultdict
 from typing import Dict, List, Optional, Tuple
 
-from nncf.common.graph.graph import NNCFGraph
-from nncf.common.graph.graph import NNCFNode
+from nncf.common.graph import NNCFGraph
+from nncf.common.graph import NNCFNode
 from nncf.common.pruning.utils import get_sources_of_node
 from nncf.common.pruning.utils import get_first_nodes_of_type
 from nncf.common.pruning.utils import get_last_nodes_of_type
@@ -27,7 +27,6 @@ from nncf.common.pruning.model_analysis import cluster_special_ops
 from nncf.common.pruning.clusterization import Cluster
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.common.utils.backend import __nncf_backend__
-
 from nncf.common.utils.helpers import should_consider_scope
 
 if __nncf_backend__ == 'Torch':

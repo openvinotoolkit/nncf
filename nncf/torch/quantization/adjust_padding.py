@@ -17,7 +17,7 @@ import networkx as nx
 import torch
 from torch import nn
 
-from nncf.common.graph.graph import NNCFNodeName
+from nncf.common.graph import NNCFNodeName
 from nncf.torch.layers import NNCFConv2d
 from nncf.torch.module_operations import UpdatePaddingValue
 from nncf.torch.nncf_network import NNCFNetwork

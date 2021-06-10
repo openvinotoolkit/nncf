@@ -19,7 +19,7 @@ from beta.nncf.tensorflow.graph.metatypes.common import DEPTHWISE_CONV_LAYER_MET
 from beta.nncf.tensorflow.graph.metatypes.matcher import get_keras_layer_metatype
 from beta.nncf.tensorflow.layers.data_layout import get_weight_channel_axis
 from beta.nncf.tensorflow.layers.wrapper import NNCFWrapper
-from nncf.common.graph.graph import NNCFNode
+from nncf.common.graph import NNCFNode
 from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
 
 

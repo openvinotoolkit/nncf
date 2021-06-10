@@ -30,8 +30,8 @@ from beta.nncf.tensorflow.graph.utils import is_functional_model
 from beta.nncf.tensorflow.graph.utils import is_sequential_model
 from beta.nncf.tensorflow.graph.utils import unwrap_layer
 from beta.nncf.tensorflow.layers.data_layout import get_input_channel_axis
-from nncf.common.graph.graph import NNCFGraph
-from nncf.common.graph.graph import NNCFGraphNodeType
+from nncf.common.graph import NNCFGraph
+from nncf.common.graph import NNCFGraphNodeType
 from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
 from nncf.common.graph.layer_attributes import Dtype
 

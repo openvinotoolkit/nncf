@@ -21,9 +21,9 @@ from beta.nncf.tensorflow.graph.metatypes.keras_layers import TFNNCFWrapperLayer
 from beta.nncf.tensorflow.graph.metatypes.matcher import get_keras_layer_metatype
 from beta.nncf.tensorflow.layers.wrapper import NNCFWrapper
 from beta.nncf.tensorflow.layers.operation import NNCFOperation
-from nncf.common.graph.graph import NNCFGraph
-from nncf.common.graph.graph import NNCFNode
-from nncf.common.graph.graph import NNCFNodeName
+from nncf.common.graph import NNCFGraph
+from nncf.common.graph import NNCFNode
+from nncf.common.graph import NNCFNodeName
 
 SHARED_OPERATION_MARK = '^'
 

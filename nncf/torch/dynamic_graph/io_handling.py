@@ -5,8 +5,8 @@ from typing import List
 
 import torch
 
-from nncf.common.graph.graph import MODEL_INPUT_OP_NAME
-from nncf.common.graph.graph import MODEL_OUTPUT_OP_NAME
+from nncf.common.graph import MODEL_INPUT_OP_NAME
+from nncf.common.graph import MODEL_OUTPUT_OP_NAME
 from nncf.torch.dynamic_graph.patch_pytorch import register_operator
 from nncf.torch.dynamic_graph.graph_tracer import ModelInputInfo, create_mock_tensor
 from nncf.torch.utils import is_tensor, objwalk, is_traced_tensor

@@ -23,7 +23,7 @@ import torch.utils.data
 from functools import partial
 from pytest import approx
 
-from nncf.common.graph.graph import NNCFNodeName
+from nncf.common.graph import NNCFNodeName
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 from torch.utils.data import DataLoader

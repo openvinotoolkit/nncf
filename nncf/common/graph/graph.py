@@ -353,7 +353,6 @@ class NNCFGraph:
                       is_shared: bool = False) -> NNCFNode:
         """
         Adds a node into the graph. A node represents an operation being performed on tensors.
-
         :param node_name: The name of the node to add - will serve as a human-readable and specifiable ID.
         :param node_type: The type of the node - usually a framework-specific string representation of the operation.
         :param node_metatype: The metatype of the node - a framework-abstract definition of what the operation
@@ -375,7 +374,7 @@ class NNCFGraph:
             by another operation (represented by a separate node) in NNCFGraph. Examples would be repeated applications
             of a convolution layer with the same weights at different stages in the network.
         :return: An NNCFNode object representing the newly created node in the graph. The node will still have
-            to be connected to the rest of the nodes with edges using the `NNCFGraph.add_edge_between_nncf_nodes` method
+            to be connected to the rest of the nodes with edges using the `NNCFGraph.add_edge_between_nncf_nodes` method.
         """
         if node_id_override is not None:
             node_id = node_id_override
@@ -432,7 +431,6 @@ class NNCFGraph:
         """
         Adds a directed edge between two `NNCFNode`s that are already present in the graph.
         The edge represents an activation tensor, produced or consumed by an operation (which is represented by a node)
-
         :param from_node_id: The `NNCFNode.node_id` of the node that produces the tensor represented by the edge.
         :param to_node_id: The `NNCFNode.node_id` of the node that consumes the tensor represented by the edge.
         :param tensor_shape: The shape of the tensor represented by the edge.
@@ -489,10 +487,13 @@ class NNCFGraph:
                                 "Install pygraphviz into your Python environment and graphviz system-wide to enable "
                                 "PNG rendering.")
 
-    def get_graph_for_structure_analysis(self, extended=False) -> nx.DiGraph:
+    def get_graph_for_structure_analysis(self, extended: bool = False) -> nx.DiGraph:
         """
         The graph to dump has certain node attributes omitted, compared to the graph stored
-         inside NNCFGraph.
+        inside NNCFGraph.
+
+        :param extended - whether the graph should have additional node attributes for improved visualization
+        :return: An nx.DiGraph to be used for structure analysis
         """
         out_graph = nx.DiGraph()
         for node_name, node in self._nx_graph.nodes.items():
@@ -519,7 +520,7 @@ class NNCFGraph:
 
     def _get_graph_for_visualization(self) -> nx.DiGraph:
         """
-        A user-friendly graph .dot file, making it easier to debug the network and setup
+        :return: A user-friendly graph .dot file, making it easier to debug the network and setup
         ignored/target scopes.
         """
         out_graph = nx.DiGraph()

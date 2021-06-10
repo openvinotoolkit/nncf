@@ -15,8 +15,8 @@ from typing import List
 
 import torch
 
-from nncf.common.graph.graph import NNCFGraph
-from nncf.common.graph.graph import NNCFNode
+from nncf.common.graph import NNCFGraph
+from nncf.common.graph import NNCFNode
 from nncf.common.pruning.export_helpers import DefaultMetaOp
 from nncf.common.pruning.utils import is_grouped_conv
 from nncf.common.pruning.utils import get_sources_of_node

@@ -22,7 +22,7 @@ from typing import List, Tuple, TypeVar, Dict
 import torch
 from torch import nn
 
-from nncf.common.graph.graph import NNCFNodeName
+from nncf.common.graph import NNCFNodeName
 from nncf.config import NNCFConfig
 from nncf.torch.graph.transformations.layout import PTTransformationLayout
 from nncf.torch.layers import NNCF_MODULES_DICT, NNCF_WRAPPED_USER_MODULES_DICT

@@ -12,8 +12,8 @@
 """
 from collections import Counter
 
-from nncf.common.graph.graph import NNCFGraphEdge
-from nncf.common.graph.graph import NNCFGraphPatternIO
+from nncf.common.graph import NNCFGraphEdge
+from nncf.common.graph import NNCFGraphPatternIO
 from nncf.common.graph.layer_attributes import Dtype
 from nncf.torch.graph.graph import PTNNCFGraph
 from nncf.torch.graph.operator_metatypes import NoopMetatype

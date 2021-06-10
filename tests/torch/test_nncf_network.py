@@ -27,16 +27,16 @@ from nncf.torch.graph.operator_metatypes import ReshapeMetatype
 from torch import nn
 
 from nncf import register_module
-from nncf.common.graph.graph import MODEL_INPUT_OP_NAME
-from nncf.common.graph.graph import MODEL_OUTPUT_OP_NAME
-from nncf.common.graph.graph import NNCFNode
+from nncf.common.graph import MODEL_INPUT_OP_NAME
+from nncf.common.graph import MODEL_OUTPUT_OP_NAME
+from nncf.common.graph import NNCFNode
 from nncf.common.graph.layer_attributes import Dtype
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.torch.dynamic_graph.context import PreHookId
 from nncf.torch.dynamic_graph.graph_tracer import ModelInputInfo
 from nncf.torch.dynamic_graph.operation_address import OperationAddress
 from nncf.torch.dynamic_graph.scope import Scope
-from nncf.common.graph.graph import NNCFGraph
+from nncf.common.graph import NNCFGraph
 from nncf.torch.graph.graph import PTNNCFGraph
 from nncf.torch.graph.graph_builder import GraphBuilder
 from nncf.torch.graph.operator_metatypes import InputNoopMetatype

@@ -27,12 +27,12 @@ import networkx as nx
 import torch
 from torch import nn
 
-from nncf.common.graph.graph import MODEL_INPUT_OP_NAME
-from nncf.common.graph.graph import MODEL_OUTPUT_OP_NAME
-from nncf.common.graph.graph import NNCFGraph
-from nncf.common.graph.graph import NNCFNode
-from nncf.common.graph.graph import NNCFNodeExpression
-from nncf.common.graph.graph import NNCFNodeName
+from nncf.common.graph import MODEL_INPUT_OP_NAME
+from nncf.common.graph import MODEL_OUTPUT_OP_NAME
+from nncf.common.graph import NNCFGraph
+from nncf.common.graph import NNCFNode
+from nncf.common.graph import NNCFNodeExpression
+from nncf.common.graph import NNCFNodeName
 from nncf.common.graph.graph_matching import NodeExpression
 from nncf.common.graph.model_transformer import ModelTransformer
 from nncf.common.graph.transformations.commands import TargetType

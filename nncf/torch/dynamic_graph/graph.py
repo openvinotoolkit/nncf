@@ -503,8 +503,8 @@ class DynamicGraph:
         node = self.match_manager.add_node(op_address, tensor_metas, input_comparators_per_scope, inputs,
                                            module_attrs, ignored_algorithms)
 
-        from nncf.common.graph.graph import MODEL_OUTPUT_OP_NAME
-        from nncf.common.graph.graph import MODEL_INPUT_OP_NAME
+        from nncf.common.graph import MODEL_OUTPUT_OP_NAME
+        from nncf.common.graph import MODEL_INPUT_OP_NAME
         if node.op_exec_context.operator_name == MODEL_INPUT_OP_NAME:
             self._input_nncf_nodes.append(node)
 

@@ -47,8 +47,8 @@ from beta.nncf.tensorflow.pruning.utils import is_valid_shape
 from beta.nncf.tensorflow.sparsity.magnitude.operation import BinaryMask
 from nncf.api.compression import CompressionLoss
 from nncf.api.compression import CompressionScheduler
-from nncf.common.graph.graph import NNCFGraph
-from nncf.common.graph.graph import NNCFNodeName
+from nncf.common.graph import NNCFGraph
+from nncf.common.graph import NNCFNodeName
 from nncf.common.pruning.mask_propagation import MaskPropagationAlgorithm
 from nncf.common.pruning.clusterization import Clusterization
 from nncf.common.pruning.clusterization import Cluster

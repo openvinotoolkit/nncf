@@ -15,7 +15,7 @@ from copy import copy
 from typing import List, Optional, Type
 from typing import TypeVar
 
-from nncf.common.graph.graph import NNCFGraphNodeType
+from nncf.common.graph import NNCFGraphNodeType
 from nncf.common.graph.layer_attributes import BaseLayerAttributes
 from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
 from nncf.common.graph.operator_metatypes import OperatorMetatype

@@ -30,8 +30,8 @@ import torch.nn.functional as F
 import torchvision
 
 from nncf import nncf_model_input
-from nncf.common.graph.graph import NNCFGraph
-from nncf.common.graph.graph import NNCFNodeName
+from nncf.common.graph import NNCFGraph
+from nncf.common.graph import NNCFNodeName
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.torch.composite_compression import PTCompositeCompressionAlgorithmBuilder
 from nncf.torch.dynamic_graph.graph_tracer import ModelInputInfo

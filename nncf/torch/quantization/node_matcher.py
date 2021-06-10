@@ -10,7 +10,7 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-from nncf.common.graph.graph import NNCFNode
+from nncf.common.graph import NNCFNode
 
 from nncf.torch.graph.operator_metatypes import PT_OPERATOR_METATYPES
 from nncf.torch.graph.operator_metatypes import PTOperatorMetatype

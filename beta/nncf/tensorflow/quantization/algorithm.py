@@ -38,8 +38,8 @@ from beta.nncf.tensorflow.quantization.layers import FakeQuantize
 from beta.nncf.tensorflow.quantization.quantizers import TFQuantizerSpec
 from nncf.api.compression import CompressionLoss
 from nncf.api.compression import CompressionScheduler
-from nncf.common.graph.graph import NNCFGraph
-from nncf.common.graph.graph import NNCFNode
+from nncf.common.graph import NNCFGraph
+from nncf.common.graph import NNCFNode
 from nncf.common.graph.layer_attributes import Dtype
 from nncf.common.graph.transformations.commands import TransformationPriority
 from nncf.common.quantization.structs import QuantizationConstraints

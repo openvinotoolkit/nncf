@@ -17,7 +17,7 @@ import torch.distributed as dist
 
 from nncf.torch.algo_selector import COMPRESSION_ALGORITHMS
 from nncf.api.compression import CompressionStage
-from nncf.common.graph.graph import NNCFNode
+from nncf.common.graph import NNCFNode
 from nncf.torch.compression_method_api import PTCompressionAlgorithmController
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.sparsity.base_algo import BaseSparsityAlgoBuilder, BaseSparsityAlgoController, SparseModuleInfo

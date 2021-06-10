@@ -11,7 +11,7 @@
  limitations under the License.
 """
 from copy import deepcopy
-from nncf.common.graph.graph import NNCFGraphNodeType
+from nncf.common.graph import NNCFGraphNodeType
 from typing import List
 from typing import Tuple
 

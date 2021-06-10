@@ -40,7 +40,7 @@ from examples.torch.common.sample_config import SampleConfig
 from examples.torch.object_detection.models.ssd_vgg import SSD_VGG
 from nncf import register_default_init_args
 from nncf.torch.checkpoint_loading import load_state
-from nncf.common.graph.graph import NNCFNodeName
+from nncf.common.graph import NNCFNodeName
 from nncf.common.hardware.config import HWConfigType
 from nncf.common.quantization.structs import QuantizerGroup
 from nncf.torch.debug import set_debug_log_dir

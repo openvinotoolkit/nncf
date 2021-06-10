@@ -15,7 +15,7 @@ from typing import Callable
 
 from torch import nn
 
-from nncf.common.graph.graph import NNCFNodeName
+from nncf.common.graph import NNCFNodeName
 from nncf.common.pruning.structs import PrunedLayerInfoBase
 from nncf.torch.dynamic_graph.scope import Scope
 

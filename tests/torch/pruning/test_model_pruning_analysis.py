@@ -20,7 +20,7 @@ import pytest
 import torch
 from torch import nn
 
-from nncf.common.graph.graph import NNCFNodeName
+from nncf.common.graph import NNCFNodeName
 from nncf.common.pruning.clusterization import Cluster
 from nncf.common.pruning.clusterization import Clusterization
 from nncf.common.pruning.model_analysis import ModelAnalyzer

@@ -15,8 +15,8 @@ from copy import deepcopy
 from enum import Enum
 from typing import Dict, List, Optional
 
-from nncf.common.graph.graph import NNCFNode
-from nncf.common.graph.graph import NNCFNodeName
+from nncf.common.graph import NNCFNode
+from nncf.common.graph import NNCFNodeName
 
 
 class QuantizationMode:

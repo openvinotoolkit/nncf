@@ -20,7 +20,7 @@ from collections import Counter
 from collections import deque
 from copy import deepcopy
 
-from nncf.common.graph.graph import NNCFGraph
+from nncf.common.graph import NNCFGraph
 from nncf.torch.quantization.layers import BaseQuantizer
 from nncf.common.quantization.structs import QuantizerId
 

@@ -12,7 +12,7 @@
 """
 from typing import Dict
 
-from nncf.common.graph.graph import NNCFNodeName
+from nncf.common.graph import NNCFNodeName
 from nncf.torch.quantization.quantizer_setup import QuantizationPointId
 from nncf.torch.quantization.quantizer_setup import SingleConfigQuantizerSetup
 

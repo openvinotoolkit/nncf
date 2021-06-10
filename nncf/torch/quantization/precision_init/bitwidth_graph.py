@@ -15,7 +15,7 @@ from typing import Dict
 
 import networkx as nx
 
-from nncf.common.graph.graph import NNCFGraph
+from nncf.common.graph import NNCFGraph
 from nncf.torch.layers import NNCFConv2d
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.quantization.algo import QuantizationController

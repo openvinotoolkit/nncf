@@ -18,7 +18,7 @@ from typing import Union
 
 from texttable import Texttable
 
-from nncf.common.graph.graph import NNCFNodeName
+from nncf.common.graph import NNCFNodeName
 from nncf.common.quantization.structs import QuantizerId
 
 

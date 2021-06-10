@@ -16,8 +16,8 @@ from typing import List
 import torch
 import numpy as np
 
-from nncf.common.graph.graph import NNCFGraph
-from nncf.common.graph.graph import NNCFNodeName
+from nncf.common.graph import NNCFGraph
+from nncf.common.graph import NNCFNodeName
 from nncf.torch.layers import NNCF_DECONV_MODULES_DICT
 from nncf.torch.graph.graph import NNCFNode
 from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes

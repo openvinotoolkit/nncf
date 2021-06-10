@@ -21,7 +21,7 @@ import torch
 import torch.nn
 from onnx import numpy_helper
 
-from nncf.common.graph.graph import NNCFNodeName
+from nncf.common.graph import NNCFNodeName
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.torch.dynamic_graph.operation_address import OperationAddress
 from nncf.common.hardware.config import HWConfigType

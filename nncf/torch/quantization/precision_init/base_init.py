@@ -18,7 +18,7 @@ from typing import Union
 
 from copy import deepcopy
 
-from nncf.common.graph.graph import NNCFNodeName
+from nncf.common.graph import NNCFNodeName
 from nncf.torch.dynamic_graph.scope import Scope
 from nncf.torch.module_operations import UpdateWeight
 from nncf.torch.nncf_network import ExtraCompressionModuleType
