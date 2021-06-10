@@ -38,7 +38,7 @@ class StatisticsCallback(tf.keras.callbacks.Callback):
         :param log_dir: The directory for tensorbard logging.
         """
         super().__init__()
-        self._statistics_fn =  statistics_fn
+        self._statistics_fn = statistics_fn
         self._log_tensorboard = log_tensorboard
         self._log_text = log_text
         self._file_writer = None
