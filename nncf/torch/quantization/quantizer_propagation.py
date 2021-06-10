@@ -383,6 +383,7 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
         for removal if the weights of the weight-as-outputs operation are quantized in a compatible
         way (i.e. with the same quantizer configuration) as is required by the propagating activation
         quantizer.
+
         :param: pq - the propagating quantizer corresponding to input quantization of some op
         :param: operator_node_key - a key of the node in QuantizerPropagationStateGraph that corresponds to
             a weights-as-outputs node.
@@ -574,6 +575,7 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
         """
         For a given node key in this graph, returns node keys of all direct predecessors
         of this node that correspond to weights-as-outputs operations (such as Embedding)
+
         :param: curr_node_key - a node key in this QuantizerPropagationStateGraph
         :return: A list of weights-as-outputs predecessor node keys for `curr_node_key`
         """
@@ -1319,6 +1321,7 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
         belonged to a unified scale group, the weight quantizer will be put into the same group instead.
         If the configurations were incompatible, will not remove the corresponding activation quantizer and
         requantization will occur.
+
         :param: setup - a MultiConfigQuantizerSetup corresponding to the quantizer setup state with potentially
             dependent activation quantizers on the weights-as-outputs ops
         :param: pqid_vs_qpid - a mapping from propagating quantizer IDs to the corresponding activation quantization

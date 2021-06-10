@@ -39,6 +39,7 @@ def should_consider_scope(serializable_id: Union[QuantizerId, NNCFNodeName],
     """
     Used when an entity arising during compression has to be compared to an allowlist or a denylist of strings
     (potentially regex-enabled) that is defined in an NNCFConfig .json.
+
     :param serializable_id: One of the supported entity types to be matched - currently possible to pass either
     NNCFNodeName (to refer to the original model operations) or QuantizerId (to refer to specific quantizers)
     :param target_scopes: A list of strings specifying an allowlist for the serializable_id. Entries of the list

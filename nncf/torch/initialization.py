@@ -51,6 +51,7 @@ class InitializingDataLoader(NNCFDataLoader):
         """
         Parses the generic data loader output and returns a structure to be used as
         ground truth in the loss criterion.
+
         :param dataloader_output - the (args, kwargs) tuple returned by the __next__ method.
         """
 

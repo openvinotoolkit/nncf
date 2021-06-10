@@ -353,6 +353,7 @@ class NNCFGraph:
                       is_shared: bool = False) -> NNCFNode:
         """
         Adds a node into the graph. A node represents an operation being performed on tensors.
+
         :param node_name: The name of the node to add - will serve as a human-readable and specifiable ID.
         :param node_type: The type of the node - usually a framework-specific string representation of the operation.
         :param node_metatype: The metatype of the node - a framework-abstract definition of what the operation
@@ -431,6 +432,7 @@ class NNCFGraph:
         """
         Adds a directed edge between two `NNCFNode`s that are already present in the graph.
         The edge represents an activation tensor, produced or consumed by an operation (which is represented by a node)
+
         :param from_node_id: The `NNCFNode.node_id` of the node that produces the tensor represented by the edge.
         :param to_node_id: The `NNCFNode.node_id` of the node that consumes the tensor represented by the edge.
         :param tensor_shape: The shape of the tensor represented by the edge.
