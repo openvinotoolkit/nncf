@@ -11,8 +11,6 @@
  limitations under the License.
 """
 
-from typing import Union
-
 import tensorflow as tf
 
 from nncf.common.initialization import NNCFDataLoader
@@ -38,19 +36,19 @@ class TFInitializingDataLoader(NNCFDataLoader):
 
 
 def register_default_init_args(nncf_config: NNCFConfig,
-                               data_loader: Union[tf.data.Dataset, TFInitializingDataLoader],
+                               data_loader: tf.data.Dataset,
                                batch_size: int,
                                device: str = None) -> NNCFConfig:
     """
     Register extra structures for the NNCFConfig.
     Initialization of some compression algorithms requires certain extra structures.
 
-    :param nncf_config: NNCF config without extra structures.
+    :param nncf_config: An instance of the NNCFConfig class without extra structures.
     :param data_loader: Dataset used for initialization.
     :param batch_size: Batch size used for initialization.
     :param device: Device to perform initialization. If `device` is `None` then the device
         of the model parameters will be used.
-    :return: NNCF config with extra structures.
+    :return: An instance of the NNCFConfig class with extra structures.
     """
     nncf_config.register_extra_structs([
         BNAdaptationInitArgs(data_loader=TFInitializingDataLoader(data_loader, batch_size),
