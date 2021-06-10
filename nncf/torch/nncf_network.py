@@ -289,25 +289,18 @@ class InsertionPointGraph(nx.DiGraph):
     def get_post_hook_node_key(node_key: str) -> str:
         return InsertionPointGraph.POST_HOOK_ID_PREFIX + node_key
 
-    def _get_mergeable_operator_patterns(self, hw_config: Optional[HWConfig] = None,
-                                         additional_patterns: Optional[List[str]] = None) -> GraphPattern:
+    def _get_mergeable_operator_patterns(self, additional_patterns: Optional[List[List[str]]] = None) -> GraphPattern:
         """
         Resulting pattern should have single input; the operation with inputs to
         quantize should be the input operation; outputs should only be produced by one output node.
         """
-        # TODO: Implement "repeating expressions" so that any number of "mergeable" operations
-        # immediately following a linear/convolutional/matrix op are merged into one block
-
         full_pattern = FULL_PATTERN_GRAPH
-        # TODO(Aleksei K) add additional patterns functionl
-        # if additional_patterns is not None:
-        #     for pattern in additional_patterns:
-        #         if not isinstance(pattern, str):
-        #             custom_pattern = functools.reduce(operator.add,
-        #                                               [NNCFNodeExpression(node) for node in pattern])
-        #         else:
-        #             custom_pattern = NNCFNodeExpression(pattern)
-        #         full_pattern = full_pattern | custom_pattern
+        if additional_patterns is not None:
+            for pattern in additional_patterns:
+                custom_pattern = GraphPattern(pattern[0])
+                for layer_name in pattern[1:]:
+                    custom_pattern = custom_pattern + GraphPattern(layer_name)
+            full_pattern = full_pattern | custom_pattern
         return full_pattern
 
 
