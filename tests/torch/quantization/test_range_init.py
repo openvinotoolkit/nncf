@@ -22,6 +22,8 @@ import torch.nn as nn
 import torch.utils.data
 from functools import partial
 from pytest import approx
+
+from nncf.common.graph import NNCFNodeName
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 from torch.utils.data import DataLoader
@@ -33,8 +35,6 @@ from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizerGroup
 from nncf.config import NNCFConfig
-from nncf.torch.dynamic_graph.context import Scope
-from nncf.torch.graph.graph import InputAgnosticOperationExecutionContext
 from nncf.torch.initialization import DefaultInitializingDataLoader
 from nncf.torch.nncf_network import EXTERNAL_QUANTIZERS_STORAGE_NAME
 from nncf.torch.quantization.init_range import PerLayerRangeInitConfig
@@ -165,20 +165,18 @@ def create_config():
     return config
 
 
-def generate_qp(scope_str: str, target: QuantizerGroup, in_port_id: int = None) -> SingleConfigQuantizationPoint:
+def generate_qp(node_name: NNCFNodeName,
+                target: QuantizerGroup,
+                in_port_id: int = None) -> SingleConfigQuantizationPoint:
     if target is QuantizerGroup.WEIGHTS:
-        scope = Scope.from_str(scope_str)
-        ip = PTTargetPoint(TargetType.OPERATION_WITH_WEIGHTS, module_scope=scope)
-        scopes_of_directly_quantized_operators = [scope]
+        ip = PTTargetPoint(TargetType.OPERATION_WITH_WEIGHTS, target_node_name=node_name)
     elif target is QuantizerGroup.ACTIVATIONS:
-        ia_op_exec_context = InputAgnosticOperationExecutionContext.from_str(scope_str)
-        scopes_of_directly_quantized_operators = [ia_op_exec_context.scope_in_model]
         ip = PTTargetPoint(TargetType.OPERATOR_POST_HOOK if in_port_id is None else TargetType.OPERATOR_PRE_HOOK,
-                           ia_op_exec_context=InputAgnosticOperationExecutionContext.from_str(scope_str),
+                           target_node_name=node_name,
                            input_port_id=in_port_id)
     else:
         raise RuntimeError()
-    return SingleConfigQuantizationPoint(ip, QuantizerConfig(), scopes_of_directly_quantized_operators)
+    return SingleConfigQuantizationPoint(ip, QuantizerConfig(), [node_name])
 
 
 @pytest.mark.parametrize("wrap_dataloader",
@@ -260,13 +258,17 @@ class TestRangeInit:
         config = create_config()
         config['target_device'] = 'TRIAL'
         config["compression"]["scope_overrides"] = {
-            r"{re}NNCFConv2d\[[0-9]*\]$": {
-                "bits": 7,
-                "mode": "asymmetric",
+            "weights": {
+                r"{re}NNCFConv2d\[[0-9]*\]/conv2d_0": {
+                    "bits": 7,
+                    "mode": "asymmetric",
+                },
             },
-            r"{re}NNCFConv2d\[[0-9]*\]/conv2d_0": {
-                "bits": 7,
-                "signed": False,
+            "activations": {
+                r"{re}NNCFConv2d\[[0-9]*\]/conv2d_0": {
+                    "bits": 7,
+                    "signed": False,
+                }
             }
         }
         data_loader = self.create_dataloader(wrap_dataloader, config)
@@ -301,6 +303,7 @@ class TestRangeInit:
                                              ('range_init_config',
                                               'qps_vs_expected_init_config'))
 
+
     PER_LAYER_RANGE_INIT_TEST_CASES = [
         PerLayerRangeInitTestStruct(
             range_init_config=[{
@@ -310,7 +313,9 @@ class TestRangeInit:
             }],
             qps_vs_expected_init_config=[
                 (
-                    generate_qp("/nncf_model_input_0", QuantizerGroup.ACTIVATIONS),
+                    generate_qp("/nncf_model_input_0",
+                                QuantizerGroup.ACTIVATIONS,
+                                ),
                     RangeInitConfig(init_type="min_max", num_init_samples=1)
                 ),
                 (
@@ -328,11 +333,11 @@ class TestRangeInit:
             range_init_config=[{
                 "type": "min_max",
                 "num_init_samples": 1,
-                "target_scopes": ["TwoConvTestModel/Sequential[features]"]
+                "target_scopes": ["{re}TwoConvTestModel/Sequential\\[features\\]/.*"]
             }, {
                 "type": "mean_min_max",
                 "num_init_samples": 2,
-                "ignored_scopes": ["TwoConvTestModel/Sequential[features]"]
+                "ignored_scopes": ["{re}TwoConvTestModel/Sequential\\[features\\]/.*"]
             }],
             qps_vs_expected_init_config=[
                 (
@@ -364,12 +369,12 @@ class TestRangeInit:
                     "type": "min_max",
                     "num_init_samples": 1,
                     "target_quantizer_group": "weights",
-                    "target_scopes": ["TwoConvTestModel/Sequential[features]"]
+                    "target_scopes": ["{re}TwoConvTestModel/Sequential\\[features\\]/.*"]
                 },
                 {
                     "type": "mean_min_max",
                     "num_init_samples": 2,
-                    "ignored_scopes": ["TwoConvTestModel/Sequential[features]",
+                    "ignored_scopes": ["{re}TwoConvTestModel/Sequential\\[features\\]/.*",
                                        "{re}/nncf_model_input_0"]
                 },
                 {
@@ -386,7 +391,8 @@ class TestRangeInit:
                         "max_percentile": "99.9"
                     },
                     "target_quantizer_group": "activations",
-                    "target_scopes": ["TwoConvTestModel/Sequential[features]/Sequential[1]/NNCFConv2d[0]"]
+                    "target_scopes": [
+                        "TwoConvTestModel/Sequential[features]/Sequential[1]/NNCFConv2d[0]/conv2d_0|OUTPUT"]
                 }
             ],
             qps_vs_expected_init_config=[
@@ -625,16 +631,16 @@ RANGE_INIT_CALL_COUNT_TEST_CASES = [
             "type": "min_max",
             "num_init_samples": 5,
             "target_quantizer_group": "weights",
-            "target_scopes": ["TwoConvTestModel/Sequential[features]"]
+            "target_scopes": ["{re}TwoConvTestModel/Sequential\\[features\\]/.*"]
         }, {
             "type": "mean_min_max",
             "num_init_samples": 2,
-            "ignored_scopes": ["TwoConvTestModel/Sequential[features]"]
+            "ignored_scopes": ["{re}TwoConvTestModel/Sequential\\[features\\]/.*"]
         }, {
             "type": "threesigma",
             "num_init_samples": 3,
             "target_quantizer_group": "activations",
-            "target_scopes": ["TwoConvTestModel/Sequential[features]"]
+            "target_scopes": ["{re}TwoConvTestModel/Sequential\\[features\\]/.*"]
         }],
         expected_call_count_initializer_create={
             'min_max': 2,

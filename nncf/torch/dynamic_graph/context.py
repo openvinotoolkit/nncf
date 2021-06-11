@@ -11,234 +11,40 @@
  limitations under the License.
 """
 
-import re
 import threading
-from collections import OrderedDict
 from collections import deque
 from contextlib import contextmanager
-from copy import deepcopy
-from functools import partial
-from itertools import islice
 from typing import Callable
 from typing import Dict
 from typing import List
 from typing import Optional
-from typing import Tuple
-from typing import Union
 import torch
 
+from nncf.common.graph.layer_attributes import BaseLayerAttributes
 from nncf.torch.debug import is_debug
 from nncf.torch.dynamic_graph.graph import DynamicGraph
-from nncf.torch.graph.graph import InputAgnosticOperationExecutionContext
-from nncf.torch.graph.graph import PTNNCFNode
-from nncf.torch.graph.graph import NNCFNode
+from nncf.torch.dynamic_graph.graph import DynamicGraphNode
+from nncf.torch.dynamic_graph.op_input_processing import OperatorInput
+from nncf.torch.dynamic_graph.scope import Scope
+from nncf.torch.dynamic_graph.scope import ScopeElement
+from nncf.torch.dynamic_graph.operation_address import OperationAddress
 from nncf.torch.dynamic_graph.trace_tensor import TensorMeta
-from nncf.torch.graph.version_agnostic_op_names import get_version_agnostic_name
-from nncf.torch.graph.graph import ModuleAttributes
-from nncf.torch.utils import maybe_get_iterator
+from nncf.common.graph.version_agnostic_op_names import get_version_agnostic_name
 
 _CURRENT_CONTEXT = None
 
 
-def nth(iterable, n, default=None):
-    return next(islice(iterable, n, None), default)
-
-
-class InputIndexEntry:
-    def __init__(self, path: Tuple[Union[int, str], ...], getter: Callable, setter: Callable):
-        self.path = path
-        self.getter = getter
-        self.setter = setter
-
-
-class TupleRebuildingSetter:
-    def __init__(self, idx_to_set, current_tuple, previous_level_setter_for_current_tuple):
-        self._previous_level_setter = previous_level_setter_for_current_tuple
-        self._current_tuple = current_tuple
-        self._idx_to_set = idx_to_set
-
-    def __call__(self, value):
-        tmp_list = list(self._current_tuple)
-        tmp_list[self._idx_to_set] = value
-        new_tuple = tuple(tmp_list)
-        self._current_tuple = new_tuple
-        self._previous_level_setter(new_tuple)
-
-
-class OperatorInput:
-    def __init__(self, op_args, op_kwargs):
-        self.op_args = op_args
-        self.op_kwargs = op_kwargs
-        self._index = OrderedDict()  # type: Dict[int, InputIndexEntry]
-
-        op_args_index_entries = []
-        self._nested_object_paths_generator(self.op_args, op_args_index_entries,
-                                            previous_level_setter=partial(setattr, self, "op_args"))
-        op_kwargs_index_entries = []
-        self._nested_object_paths_generator(self.op_kwargs, op_kwargs_index_entries)
-
-        # pylint:disable=unnecessary-comprehension
-        self._index = {idx: entry for idx, entry in
-                       enumerate(op_args_index_entries + op_kwargs_index_entries)}
-
-    @staticmethod
-    def _nested_object_paths_generator(obj, out_entries_list, path=(), memo=None, previous_level_setter=None):
-        if memo is None:
-            memo = set()
-        iterator = maybe_get_iterator(obj)
-        if iterator is not None:
-            if id(obj) not in memo:
-                memo.add(id(obj))
-                current_level_getters = []
-                current_level_setters = []
-                for idx, iterval in enumerate(iterator(obj)):
-                    path_component, value = iterval
-                    current_level_getters.append(partial(obj.__getitem__, path_component))
-                    if not isinstance(obj, tuple):
-                        # `range` objects, for instance, have no __setitem__ and should be disregarded
-                        if hasattr(obj, '__setitem__'):
-                            current_level_setters.append(partial(obj.__setitem__, path_component))
-                        else:
-                            current_level_setters.append(None)
-                    else:
-                        current_level_setters.append(TupleRebuildingSetter(idx, obj, previous_level_setter))
-
-                for idx, iterval in enumerate(iterator(obj)):
-                    path_component, value = iterval
-                    retval = OperatorInput._nested_object_paths_generator(value, out_entries_list,
-                                                                          path + (path_component,), memo,
-                                                                          current_level_setters[idx])
-                    was_leaf = retval[1]
-                    if was_leaf:
-                        leaf_entry_path = retval
-                        # getter = partial(obj.__getitem__, path_component)
-                        getter = current_level_getters[idx]
-                        setter = current_level_setters[idx]
-                        if setter is not None:  # see note above about non-settable objects
-                            out_entries_list.append(InputIndexEntry(leaf_entry_path,
-                                                                    getter,
-                                                                    setter))
-
-                memo.remove(id(obj))
-            is_leaf = False
-            return path, is_leaf
-
-        is_leaf = True
-        return path, is_leaf
-
-    def __iter__(self):
-        return iter(self._index.values())
-
-    def __getitem__(self, n):
-        return self._index[n].getter()
-
-    def __setitem__(self, n, value):
-        self._index[n].setter(value)
-
-    def __len__(self):
-        return len(self._index)
-
-
-class ScopeElement:
-    def __init__(self, calling_module_class_name: str, calling_field_name: str = None):
-        self.calling_module_class_name = calling_module_class_name
-        self.calling_field_name = calling_field_name
-
-    def __str__(self):
-        if self.calling_field_name is None:
-            return self.calling_module_class_name
-        return "{cls}[{name}]".format(cls=self.calling_module_class_name,
-                                      name=self.calling_field_name)
-
-    def __eq__(self, other: 'ScopeElement'):
-        return (self.calling_module_class_name == other.calling_module_class_name) and \
-               (self.calling_field_name == other.calling_field_name)
-
-    def __hash__(self):
-        return hash((self.calling_module_class_name, self.calling_field_name))
-
-    @staticmethod
-    def from_str(string: str):
-        matches = re.search(r"(.*)\[(.*)\]|(.*)", string)
-        if matches is None:
-            raise RuntimeError("Invalid scope element string")
-        if matches.groups()[0] is None and matches.groups()[1] is None:
-            return ScopeElement(matches.groups()[2])
-        if matches.groups()[0] is not None and matches.groups()[1] is not None:
-            return ScopeElement(matches.groups()[0], matches.groups()[1])
-        raise RuntimeError("Could not parse the scope element string")
-
-
-class Scope:
-    def __init__(self, scope_elements: List[ScopeElement] = None):
-        if scope_elements is not None:
-            self.scope_elements = scope_elements
-        else:
-            self.scope_elements = []
-
-    def __str__(self):
-        return '/'.join([str(scope_el) for scope_el in self.scope_elements])
-
-    def __hash__(self):
-        return hash(str(self))
-
-    def __eq__(self, other: 'Scope'):
-        return self.scope_elements == other.scope_elements
-
-    def __getitem__(self, key):
-        return self.scope_elements[key]
-
-    def __contains__(self, item: 'Scope'):
-        """Idiom: ('A/B/C' in 'A/B') == True"""
-        if len(self.scope_elements) > len(item.scope_elements):
-            return False
-        for i in range(len(self.scope_elements)):
-            if self.scope_elements[i] != item.scope_elements[i]:
-                return False
-        return True
-
-    def __add__(self, rhs):
-        init_list = self.scope_elements + rhs.scope_elements
-        return Scope(init_list)
-
-    def copy(self):
-        return Scope(deepcopy(self.scope_elements))
-
-    def push(self, scope_element: ScopeElement):
-        self.scope_elements.append(scope_element)
-
-    def pop(self) -> ScopeElement:
-        return self.scope_elements.pop()
-
-    @staticmethod
-    def from_str(string: str) -> 'Scope':
-        if string:
-            elts = string.split('/')
-        else:
-            elts = []
-        return Scope([ScopeElement.from_str(s) for s in elts])
-
-    def get_iteration_scopes(self) -> List[str]:
-        results = []
-        scope_name = str(self)
-        from nncf.torch.layers import ITERATION_MODULES
-        for iter_scope in ITERATION_MODULES.registry_dict:
-            if iter_scope in scope_name:
-                results.append(iter_scope)
-        return results
-
-
 class PreHookId:
-    def __init__(self, ia_op_exec_context: InputAgnosticOperationExecutionContext,
+    def __init__(self, op_address: OperationAddress,
                  input_port_id: int):
-        self.ia_op_exec_context = ia_op_exec_context
+        self.op_address = op_address
         self.input_port_id = input_port_id
 
     def __eq__(self, other):
         return self.__dict__ == other.__dict__
 
     def __str__(self):
-        return str(self.ia_op_exec_context) + "|INPUT{}".format(self.input_port_id)
+        return str(self.op_address) + "|INPUT{}".format(self.input_port_id)
 
     def __hash__(self):
         return hash(str(self))
@@ -278,11 +84,11 @@ class TracingContext:
         self.leave()
 
     def find_operator_node(self, tensor_metas: List[Optional[TensorMeta]],
-                           ia_op_exec_context: InputAgnosticOperationExecutionContext) -> Optional[PTNNCFNode]:
+                           op_address: OperationAddress) -> Optional[DynamicGraphNode]:
         with self._cond:
             self._n_instances_searching_graph += 1
 
-        node = self.graph.find_node(ia_op_exec_context, tensor_metas, self._input_comparators_per_scope)
+        node = self.graph.find_node(op_address, tensor_metas, self._input_comparators_per_scope)
 
         with self._cond:
             self._n_instances_searching_graph -= 1
@@ -290,8 +96,9 @@ class TracingContext:
         return node
 
     def maybe_add_node(self, inputs: OperatorInput, tensor_metas: List[Optional[TensorMeta]],
-                       ia_op_exec_context: InputAgnosticOperationExecutionContext,
-                       module_attrs: ModuleAttributes = None) -> NNCFNode:
+                       op_address: OperationAddress,
+                       module_attrs: BaseLayerAttributes = None,
+                       ignored_algorithms: List[str] = None) -> Optional[DynamicGraphNode]:
         if not self._may_add_nodes:
             return None
         with self._cond:
@@ -299,13 +106,13 @@ class TracingContext:
                 self._cond.wait()
             # Another thread may have added a node inside this block,
             # so we need to check again if a node is already added.
-            node = self.graph.find_node(ia_op_exec_context, tensor_metas, self._input_comparators_per_scope)
+            node = self.graph.find_node(op_address, tensor_metas, self._input_comparators_per_scope)
             if node is None:
-                node = self.graph.add_node(ia_op_exec_context, tensor_metas, self._input_comparators_per_scope,
-                                           inputs, module_attrs)
+                node = self.graph.add_node(op_address, tensor_metas, self._input_comparators_per_scope,
+                                           inputs, module_attrs, ignored_algorithms)
         return node
 
-    def get_caller_context(self, operator_type: str) -> InputAgnosticOperationExecutionContext:
+    def get_caller_context(self, operator_type: str) -> OperationAddress:
         """
         Designed to work in the following way - for each scope the context will track the number of the calls to the
         operators with the name operator_type (call_order). The counter values are preserved until reset by a
@@ -320,10 +127,10 @@ class TracingContext:
 
         call_order = self.get_operator_call_count_in_scope(version_agnostic_operator_type, self.scope)
 
-        ia_op_exec_context = InputAgnosticOperationExecutionContext(version_agnostic_operator_type,
-                                                                    self.scope,
-                                                                    call_order)
-        return ia_op_exec_context
+        op_address = OperationAddress(version_agnostic_operator_type,
+                                              self.scope,
+                                              call_order)
+        return op_address
 
     def reset_scope_operator_call_counters(self):
         """
@@ -375,20 +182,20 @@ class TracingContext:
         self.relative_scopes_stack.pop()
         self.module_call_stack.pop()
 
-    def register_pre_hooks(self, fn_list: List[Callable], ia_op_exec_context: InputAgnosticOperationExecutionContext,
+    def register_pre_hooks(self, fn_list: List[Callable], op_address: OperationAddress,
                            input_port_id: int):
-        pre_hook_id = PreHookId(ia_op_exec_context, input_port_id)
+        pre_hook_id = PreHookId(op_address, input_port_id)
         if pre_hook_id in self._pre_hooks:
             raise KeyError("Pre hook for context {} is already registered".format(str(pre_hook_id)))
         self._pre_hooks[pre_hook_id] = fn_list
 
-    def execute_pre_hooks(self, ia_op_exec_context: InputAgnosticOperationExecutionContext,
+    def execute_pre_hooks(self, op_address: OperationAddress,
                           op_inputs: OperatorInput) -> OperatorInput:
         in_op = getattr(self, 'in_operator', False)
         self.in_operator = False
         self._thread_local.num_nested_hooks += 1
 
-        pre_hook_ids_for_curr_op = [x for x in self._pre_hooks if x.ia_op_exec_context == ia_op_exec_context]
+        pre_hook_ids_for_curr_op = [x for x in self._pre_hooks if x.op_address == op_address]
         pre_hook_ids_for_curr_op = sorted(pre_hook_ids_for_curr_op, key=lambda x: x.input_port_id)
         for pre_hook_id in pre_hook_ids_for_curr_op:
             hook_list_for_current_input_port = self._pre_hooks[pre_hook_id]
@@ -399,17 +206,17 @@ class TracingContext:
         self.in_operator = in_op
         return op_inputs
 
-    def register_post_hooks(self, fn_list: List[Callable], ia_op_exec_context: InputAgnosticOperationExecutionContext):
-        if ia_op_exec_context in self._post_hooks:
-            raise KeyError("Post hook for context {} is already registered".format(str(ia_op_exec_context)))
-        self._post_hooks[ia_op_exec_context] = fn_list
+    def register_post_hooks(self, fn_list: List[Callable], op_address: OperationAddress):
+        if op_address in self._post_hooks:
+            raise KeyError("Post hook for context {} is already registered".format(str(op_address)))
+        self._post_hooks[op_address] = fn_list
 
-    def execute_post_hooks(self, ia_op_exec_context: InputAgnosticOperationExecutionContext, outputs):
+    def execute_post_hooks(self, op_address: OperationAddress, outputs):
         in_op = getattr(self, 'in_operator', False)
         self.in_operator = False
         self._thread_local.num_nested_hooks += 1
-        if ia_op_exec_context in self._post_hooks:
-            for hook in self._post_hooks[ia_op_exec_context]:
+        if op_address in self._post_hooks:
+            for hook in self._post_hooks[op_address]:
                 outputs = hook(outputs)
         self._thread_local.num_nested_hooks -= 1
         self.in_operator = in_op
@@ -494,7 +301,7 @@ class TracingContext:
         tl.operator_counters = {}
         tl.node_call_tracker = {}
 
-    def register_node_call(self, node: NNCFNode):
+    def register_node_call(self, node: DynamicGraphNode):
         if node.node_id in self._thread_local.node_call_tracker:
             self._thread_local.node_call_tracker[node.node_id] += 1
         else:

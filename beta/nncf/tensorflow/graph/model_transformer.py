@@ -16,6 +16,7 @@ from collections import namedtuple
 
 import tensorflow as tf
 
+from beta.nncf.tensorflow.graph.transformations.layout import TFTransformationLayout
 from nncf.common.graph.model_transformer import ModelTransformer
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationType
@@ -34,32 +35,32 @@ class TFModelTransformer(ModelTransformer):
     """
     Applies transformations to a Keras model graph.
     """
-    def __init__(self, model, transformation_layout):
+    def __init__(self, model):
         """
         Initializes Model Transformer
 
         :param model: Keras model to be transformed
-        :param transformation_layout: List of transformations
         """
         if not is_sequential_or_functional_model(model):
             raise ValueError(
                 'Only tf.keras sequential or functional models can be transformed.')
 
-        super().__init__(model, transformation_layout)
+        super().__init__(model)
         self._model_config = model.get_config()
         self._custom_objects = dict(
             list(get_custom_objects(model).items()) + list(get_nncf_custom_objects().items())
         )
         self._name_mapping = {}
 
-    def transform(self):
+    def transform(self, transformation_layout: TFTransformationLayout):
         """ Applies transformations to the Keras model.
 
+        :param transformation_layout: List of transformations
         :return: The transformed Keras model
         """
         layer_weights_map = {layer.name: self._get_layer_weights(layer) for layer in self._model.layers}
 
-        for transform in self._transformations:
+        for transform in transformation_layout.transformations:
             self._apply_transformation(transform)
 
         if is_functional_model(self._model):

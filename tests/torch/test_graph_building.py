@@ -11,7 +11,7 @@
  limitations under the License.
 """
 from copy import deepcopy
-from nncf.common.graph.graph import NNCFGraphNodeType
+from nncf.common.graph import NNCFGraphNodeType
 from typing import List
 from typing import Tuple
 
@@ -20,7 +20,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from nncf import nncf_model_input
-from nncf.torch.graph.graph import PTNNCFGraph
+from nncf.torch.dynamic_graph.graph import DynamicGraph
+from nncf.torch.dynamic_graph.graph_tracer import GraphTracer
 from nncf.torch.dynamic_graph.graph_tracer import ModelInputInfo
 from nncf.torch.dynamic_graph.graph_tracer import create_dummy_forward_fn
 from nncf.torch.dynamic_graph.context import get_current_context
@@ -65,14 +66,15 @@ def test_ambiguous_function():
     mod = Model()
     input_info = ModelInputInfo([1, 1, 1, 1])
 
-    graph_builder = GraphBuilder(custom_forward_fn=create_dummy_forward_fn([input_info, ]))
-    graph = graph_builder.build_graph(mod)
+    tracer = GraphTracer(custom_forward_fn=create_dummy_forward_fn([input_info, ]))
+    graph = tracer.trace_graph(mod)
 
     unique_op_exec_contexts = set()
     # pylint:disable=protected-access
     for _, node in graph._nx_graph.nodes.items():
-        node_op_exec_context = node[PTNNCFGraph.IA_OP_EXEC_CONTEXT_NODE_ATTR]
-        assert node_op_exec_context not in unique_op_exec_contexts
+        node_op_address = node[DynamicGraph.OP_EXEC_CONTEXT_NODE_ATTR].op_address
+        assert node_op_address not in unique_op_exec_contexts
+        unique_op_exec_contexts.add(node_op_address)
 
 
 def test_forward_trace_functor():
@@ -182,7 +184,7 @@ def test_activation_shape_tracing(input_shape: Tuple):
     ]
     for node_id, ref_output_shapes in ref_node_ids_and_output_shapes:
         # pylint:disable=protected-access
-        output_edges = graph._get_nncf_graph_pattern_input_output([node_id, ]).output_edges
+        output_edges = graph.get_nncf_graph_pattern_io([node_id, ]).output_edges
         output_shapes = [x.tensor_shape for x in output_edges]
         assert output_shapes == ref_output_shapes, "Failed for {}".format(node_id)
 
@@ -378,16 +380,16 @@ class TestGraphStability:
         assert ref_compressed_graph == compressed_graph_with_dummy
 
 
-def test_struct_auxiliary_nodes_ptnncf_graph():
+def test_nncf_graph_auxiliary_node_structure():
     model = ModelForTest()
     config = get_basic_quantization_config("symmetric", input_sample_sizes=list(input_shapes[0]))
     register_bn_adaptation_init_args(config)
     compressed_model, _ = create_compressed_model_and_algo_for_test(model, config)
 
-    ptnncf_graph = compressed_model.get_graph()
+    nncf_graph = compressed_model.get_graph()
 
-    input_nodes = ptnncf_graph.get_input_nodes()
-    output_nodes = ptnncf_graph.get_output_nodes()
+    input_nodes = nncf_graph.get_input_nodes()
+    output_nodes = nncf_graph.get_output_nodes()
 
     assert len(input_nodes) == 1
     assert len(output_nodes) == 1

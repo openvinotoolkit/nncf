@@ -442,16 +442,35 @@ QUANTIZATION_SCHEMA = {
         },
         "scope_overrides": {
             "type": "object",
-            "patternProperties": {
-                ".*": {
+            "properties": {
+                "weights": {
                     "type": "object",
-                    "properties": {
-                        **QUANTIZER_CONFIG_PROPERTIES,
-                        **RANGE_INIT_CONFIG_PROPERTIES,
+                    "patternProperties": {
+                        ".*": {
+                            "type": "object",
+                            "properties": {
+                                **QUANTIZER_CONFIG_PROPERTIES,
+                                **RANGE_INIT_CONFIG_PROPERTIES,
+                            },
+                            "additionalProperties": False
+                        },
                     },
-                    "additionalProperties": False
                 },
+                "activations": {
+                    "type": "object",
+                    "patternProperties": {
+                        ".*": {
+                            "type": "object",
+                            "properties": {
+                                **QUANTIZER_CONFIG_PROPERTIES,
+                                **RANGE_INIT_CONFIG_PROPERTIES,
+                            },
+                            "additionalProperties": False
+                        },
+                    },
+                }
             },
+
             "description": "This option is used to specify overriding quantization constraints for specific scope,"
                            "e.g. in case you need to quantize a single operation differently than the rest of the "
                            "model."

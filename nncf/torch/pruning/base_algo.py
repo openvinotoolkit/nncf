@@ -21,35 +21,18 @@ from nncf.torch.algo_selector import ZeroCompressionLoss
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.torch.compression_method_api import PTCompressionAlgorithmBuilder
 from nncf.torch.compression_method_api import PTCompressionAlgorithmController
-from nncf.torch.dynamic_graph.context import Scope
-from nncf.torch.graph.graph import PTNNCFNode
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.torch.graph.transformations.layout import PTTransformationLayout
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.graph.transformations.commands import TransformationPriority
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.graph.transformations.commands import PTInsertionCommand
+from nncf.torch.pruning.export_helpers import PT_PRUNING_OPERATOR_METATYPES
 from nncf.torch.pruning.filter_pruning.layers import apply_filter_binary_mask
 from nncf.common.pruning.pruning_node_selector import PruningNodeSelector
-from nncf.common.pruning.model_analysis import NodesCluster, Clusterization
-from nncf.torch.pruning.export_helpers import PT_PRUNING_OPERATOR_METATYPES
-
-
-class PrunedModuleInfo:
-    def __init__(self, node_name: str, module_scope: Scope, module: nn.Module, operand, node_id: int):
-        self.node_name = node_name
-        self.module_scope = module_scope
-        self.module = module
-        self.operand = operand
-        self.nncf_node_id = node_id
-
-
-class NodeInfo:
-    def __init__(self, nncf_node: PTNNCFNode, module: nn.Module, module_scope: Scope):
-        self.node = nncf_node
-        self.id = nncf_node.node_id
-        self.module = module
-        self.module_scope = module_scope
+from nncf.common.pruning.clusterization import Clusterization
+from nncf.common.pruning.clusterization import Cluster
+from nncf.torch.pruning.structs import PrunedModuleInfo
 
 
 class BasePruningAlgoBuilder(PTCompressionAlgorithmBuilder):
@@ -88,33 +71,35 @@ class BasePruningAlgoBuilder(PTCompressionAlgorithmBuilder):
 
         device = next(target_model.parameters()).device
         insertion_commands = []
-        self.pruned_module_groups_info = Clusterization('node_name')
+        self.pruned_module_groups_info = Clusterization[PrunedModuleInfo](lambda x: x.node_name)
 
         for i, group in enumerate(groups_of_nodes_to_prune.get_all_clusters()):
             group_minfos = []
-            for node in group.nodes:
-                module_scope = node.ia_op_exec_context.scope_in_model
-                module = target_model.get_module_by_scope(module_scope)
+            for node in group.elements:
+                node_name = node.node_name
+                module = target_model.get_containing_module(node_name)
+                module_scope = target_model.get_original_graph().get_scope_by_node_name(node_name)
                 # Check that we need to prune weights in this op
                 assert self._is_pruned_module(module)
 
-                module_scope_str = str(module_scope)
-
-                nncf_logger.info("Adding Weight Pruner in scope: {}".format(module_scope_str))
+                nncf_logger.info("Adding Weight Pruner in scope: {}".format(node_name))
                 operation = self.create_weight_pruning_operation(module)
                 hook = operation.to(device)
                 insertion_commands.append(
                     PTInsertionCommand(
                         PTTargetPoint(TargetType.OPERATION_WITH_WEIGHTS,
-                                      module_scope=module_scope),
+                                      target_node_name=node_name),
                         hook,
                         TransformationPriority.PRUNING_PRIORITY
                     )
                 )
 
-                minfo = PrunedModuleInfo(node.node_name, module_scope, module, hook, node.node_id)
-                group_minfos.append(minfo)
-            cluster = NodesCluster(i, group_minfos, [n.node_id for n in group.nodes])
+                group_minfos.append(PrunedModuleInfo(node_name=node_name,
+                                                     module_scope=module_scope,
+                                                     module=module,
+                                                     operand=hook,
+                                                     node_id=node.node_id))
+            cluster = Cluster[PrunedModuleInfo](i, group_minfos, [n.node_id for n in group.elements])
             self.pruned_module_groups_info.add_cluster(cluster)
         return insertion_commands
 
@@ -140,7 +125,7 @@ class BasePruningAlgoBuilder(PTCompressionAlgorithmBuilder):
 class BasePruningAlgoController(PTCompressionAlgorithmController):
     def __init__(self, target_model: NNCFNetwork,
                  prunable_types: List[str],
-                 pruned_module_groups_info: Clusterization,
+                 pruned_module_groups_info: Clusterization[PrunedModuleInfo],
                  config):
         super().__init__(target_model)
         self._loss = ZeroCompressionLoss(next(target_model.parameters()).device)
@@ -212,7 +197,7 @@ class BasePruningAlgoController(PTCompressionAlgorithmController):
     @staticmethod
     def pruning_rate_for_weight(minfo: PrunedModuleInfo):
         """
-        Calculates sparsity rate for all weight elements.
+        Calculates sparsity rate for all weight nodes.
         """
         weight = minfo.module.weight
         pruning_rate = 1 - weight.nonzero().size(0) / weight.view(-1).size(0)

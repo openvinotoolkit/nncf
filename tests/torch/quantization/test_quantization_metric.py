@@ -169,7 +169,7 @@ MEMORY_CONSUMPTION_STATS_TEST_CASES = [
                 'fp32_weight_size': 88.74,
                 'quantized_weight_size': 22.18,
                 'max_fp32_activation_size': 0.0625,
-                'max_compressed_activation_size': 0.0625,
+                'max_compressed_activation_size': 0.015625,
                 'weight_memory_consumption_decrease': 4.0
             }
         }
@@ -178,8 +178,8 @@ MEMORY_CONSUMPTION_STATS_TEST_CASES = [
         initializers={
             'precision': {
                 'bitwidth_per_scope': [
-                    [2, 'TargetType.OPERATION_WITH_WEIGHTS AlexNet/Sequential[features]/NNCFConv2d[0]'],
-                    [4, 'TargetType.OPERATION_WITH_WEIGHTS AlexNet/Sequential[features]/NNCFConv2d[6]']
+                    [2, 'TargetType.OPERATION_WITH_WEIGHTS AlexNet/Sequential[features]/NNCFConv2d[0]/conv2d_0'],
+                    [4, 'TargetType.OPERATION_WITH_WEIGHTS AlexNet/Sequential[features]/NNCFConv2d[6]/conv2d_0']
                 ]
             }
         },
@@ -194,7 +194,7 @@ MEMORY_CONSUMPTION_STATS_TEST_CASES = [
                 'fp32_weight_size': 88.74,
                 'quantized_weight_size': 21.86,
                 'max_fp32_activation_size': 0.0625,
-                'max_compressed_activation_size': 0.0625,
+                'max_compressed_activation_size': 0.015625,
                 'weight_memory_consumption_decrease': 4.05
             }
         }
@@ -204,7 +204,7 @@ MEMORY_CONSUMPTION_STATS_TEST_CASES = [
         activations={},
         weights={},
         ignored_scopes=[
-            'AlexNet/Sequential[features]/NNCFConv2d[0]'
+            'AlexNet/Sequential[features]/NNCFConv2d[0]/conv2d_0'
         ],
         target_device='TRIAL',
         expected={

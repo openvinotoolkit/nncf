@@ -1,5 +1,5 @@
 """
- Copyright (c) 2020 Intel Corporation
+ Copyright (c) 2021 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -10,3 +10,10 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+from nncf.common.graph import NNCFNodeName
+
+
+class PrunedLayerInfoBase:
+    def __init__(self, node_name: NNCFNodeName, node_id: int):
+        self.node_name = node_name
+        self.nncf_node_id = node_id

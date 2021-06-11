@@ -14,7 +14,7 @@
 import pytest
 import networkx as nx
 
-from nncf.torch.graph.graph_matching import NodeExpression as N, find_subgraphs_match_expression
+from nncf.common.graph.graph_matching import NodeExpression as N, find_subgraphs_matching_expression
 
 
 def add_nodes(graph, types, nodes=None):
@@ -31,7 +31,7 @@ def test_simple():
 
     ex = N('b') + N('c')
 
-    matches = find_subgraphs_match_expression(g, ex)
+    matches = find_subgraphs_matching_expression(g, ex)
     assert matches == [[2, 3]]
 
 
@@ -42,12 +42,12 @@ def test_two_matched():
 
     ex = N('b') + N('c')
 
-    matches = find_subgraphs_match_expression(g, ex)
+    matches = find_subgraphs_matching_expression(g, ex)
     assert matches == [[2, 3], [5, 6]]
 
 
 def test_graph_branching():
-    # Skip a test because the new implementation of find_subgraphs_match_expression() filters
+    # Skip a test because the new implementation of find_subgraphs_matching_expression() filters
     # all breaking edges, therefore these patterns are not valid anymore
     pytest.skip()
     g = nx.DiGraph()
@@ -56,12 +56,12 @@ def test_graph_branching():
 
     ex = N('a') + N('b')
 
-    matches = find_subgraphs_match_expression(g, ex)
+    matches = find_subgraphs_matching_expression(g, ex)
     assert matches == [[1, 2]]
 
 
 def test_graph_branching_other_order():
-    # Skip a test because the new implementation of find_subgraphs_match_expression() filters
+    # Skip a test because the new implementation of find_subgraphs_matching_expression() filters
     # all breaking edges, therefore these patterns are not valid anymore
     pytest.skip()
     g = nx.DiGraph()
@@ -71,7 +71,7 @@ def test_graph_branching_other_order():
 
     ex = N('a') + N('b')
 
-    matches = find_subgraphs_match_expression(g, ex)
+    matches = find_subgraphs_matching_expression(g, ex)
     assert matches == [[1, 3]]
 
 
@@ -83,12 +83,12 @@ def test_alternating():
 
     ex = N('a') + (N('a') | N('b'))
 
-    matches = find_subgraphs_match_expression(g, ex)
+    matches = find_subgraphs_matching_expression(g, ex)
     assert matches == [[1, 2]]
 
 
 def test_alternating_longest():
-    # Skip a test because the new implementation of find_subgraphs_match_expression() filters
+    # Skip a test because the new implementation of find_subgraphs_matching_expression() filters
     # all breaking edges, therefore these patterns are not valid anymore
     pytest.skip()
     g = nx.DiGraph()
@@ -101,8 +101,8 @@ def test_alternating_longest():
     ex = N('a') + (N('b') | N('b') + N('c'))
     ex2 = N('a') + (N('b') + N('c') | N('b'))
 
-    matches = find_subgraphs_match_expression(g, ex)
-    matches2 = find_subgraphs_match_expression(g, ex2)
+    matches = find_subgraphs_matching_expression(g, ex)
+    matches2 = find_subgraphs_matching_expression(g, ex2)
 
     assert matches2 == matches == [[1, 2, 3]]
 
@@ -121,7 +121,7 @@ def test_branching_expression():
 
     ex = N('a') + (N('b') & N('c')) + N('d')
 
-    matches = find_subgraphs_match_expression(g, ex)
+    matches = find_subgraphs_matching_expression(g, ex)
     assert matches == [[1, 2, 3, 4]]
 
 
@@ -139,7 +139,7 @@ def test_branching_expression3():
 
     ex = N('a') + (N('b') & N('c')) + N('d')
 
-    matches = find_subgraphs_match_expression(g, ex)
+    matches = find_subgraphs_matching_expression(g, ex)
     assert matches == [[1, 2, 3, 4]]
 
 
@@ -155,7 +155,7 @@ def test_branching_expression2():
     node_expression = N('d')
     ex = n + c_ + node_expression
 
-    matches = find_subgraphs_match_expression(g, ex)
+    matches = find_subgraphs_matching_expression(g, ex)
     assert matches == [[1, 2, 3, 5, 4]]
 
 
@@ -169,6 +169,6 @@ def test_weakly_components_graph():
     add_nodes(g, ['a', 'b', 'c', 'd', 'e', 'j', 'f'])
     g.add_edges_from([(1, 2), (1, 3), (2, 4), (3, 4), (1, 5), (5, 4), (6, 7)])
     ex = N('j') + N('f')
-    matches = find_subgraphs_match_expression(g, ex)
+    matches = find_subgraphs_matching_expression(g, ex)
 
     assert matches == [[6, 7]]

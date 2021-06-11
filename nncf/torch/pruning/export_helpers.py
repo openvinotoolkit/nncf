@@ -15,6 +15,8 @@ from typing import List
 
 import torch
 
+from nncf.common.graph import NNCFGraph
+from nncf.common.graph import NNCFNode
 from nncf.common.pruning.export_helpers import DefaultMetaOp
 from nncf.common.pruning.utils import is_grouped_conv
 from nncf.common.pruning.utils import get_sources_of_node
@@ -22,7 +24,7 @@ from nncf.common.pruning.utils import PruningOperationsMetatypeRegistry
 from nncf.common.pruning.mask_propagation import identity_mask_propagation
 from nncf.common.pruning.mask_propagation import get_input_masks
 from nncf.common.pruning.mask_propagation import MaskPropagationAlgorithm
-from nncf.common.graph.module_attributes import GroupNormModuleAttributes
+from nncf.common.graph.layer_attributes import GroupNormLayerAttributes
 from nncf.torch.graph.operator_metatypes import (
     AddMetatype,
     AvgPool2dMetatype,
@@ -55,8 +57,6 @@ from nncf.torch.graph.operator_metatypes import (
     SubMetatype,
     TanhMetatype,
 )
-from nncf.torch.graph.graph import PTNNCFGraph
-from nncf.torch.graph.graph import PTNNCFNode
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.layers import NNCF_WRAPPED_USER_MODULES_DICT
@@ -67,7 +67,7 @@ PT_PRUNING_OPERATOR_METATYPES = PruningOperationsMetatypeRegistry("operator_meta
 
 class PTDefaultMetaOp(DefaultMetaOp):
     @classmethod
-    def mask_propagation(cls, node: PTNNCFNode, graph: PTNNCFGraph):
+    def mask_propagation(cls, node: NNCFNode, graph: NNCFGraph):
         """
         Propagate mask through a node using masks of all inputs and pruning mask of current node (if any).
         Should set the following attributes:
@@ -80,7 +80,7 @@ class PTDefaultMetaOp(DefaultMetaOp):
         raise NotImplementedError
 
     @classmethod
-    def input_prune(cls, model: NNCFNetwork, node: PTNNCFNode, graph: PTNNCFGraph):
+    def input_prune(cls, model: NNCFNetwork, node: NNCFNode, graph: NNCFGraph):
         """
         Prune node by input_masks (if masks is not none and operation support it).
 
@@ -90,7 +90,7 @@ class PTDefaultMetaOp(DefaultMetaOp):
         """
 
     @classmethod
-    def output_prune(cls, model: NNCFNetwork, node: PTNNCFNode, graph: PTNNCFGraph):
+    def output_prune(cls, model: NNCFNetwork, node: NNCFNode, graph: NNCFGraph):
         """
         Prune node by output_mask (if mask is not none and operation support it).
 
@@ -105,11 +105,11 @@ class PTInput(PTDefaultMetaOp):
     subtypes = [InputNoopMetatype]
 
     @classmethod
-    def accept_pruned_input(cls, node: PTNNCFNode):
+    def accept_pruned_input(cls, node: NNCFNode):
         return False
 
     @classmethod
-    def mask_propagation(cls, node: PTNNCFNode, graph: PTNNCFGraph):
+    def mask_propagation(cls, node: NNCFNode, graph: NNCFGraph):
         node.data['input_masks'] = []
         node.data['output_mask'] = None
 
@@ -119,11 +119,11 @@ class PTOutput(PTDefaultMetaOp):
     subtypes = [OutputNoopMetatype]
 
     @classmethod
-    def accept_pruned_input(cls, node: PTNNCFNode):
+    def accept_pruned_input(cls, node: NNCFNode):
         return True
 
     @classmethod
-    def mask_propagation(cls, node: PTNNCFNode, graph: PTNNCFGraph):
+    def mask_propagation(cls, node: NNCFNode, graph: NNCFGraph):
         node.data['input_masks'] = []
         node.data['output_mask'] = None
 
@@ -135,11 +135,11 @@ class PTIdentityMaskForwardOps(PTDefaultMetaOp):
     additional_types = ['h_sigmoid', 'h_swish', 'RELU']
 
     @classmethod
-    def accept_pruned_input(cls, node: PTNNCFNode):
+    def accept_pruned_input(cls, node: NNCFNode):
         return True
 
     @classmethod
-    def mask_propagation(cls, node: PTNNCFNode, graph: PTNNCFGraph):
+    def mask_propagation(cls, node: NNCFNode, graph: NNCFGraph):
         identity_mask_propagation(node, graph)
 
 
@@ -148,7 +148,7 @@ class PTConvolution(PTDefaultMetaOp):
     subtypes = [Conv1dMetatype, Conv2dMetatype, Conv3dMetatype]
 
     @classmethod
-    def accept_pruned_input(cls, node: PTNNCFNode):
+    def accept_pruned_input(cls, node: NNCFNode):
         accept_pruned_input = True
         if is_grouped_conv(node):
             if not is_depthwise_conv(node):
@@ -156,7 +156,7 @@ class PTConvolution(PTDefaultMetaOp):
         return accept_pruned_input
 
     @classmethod
-    def mask_propagation(cls, node: PTNNCFNode, graph: PTNNCFGraph):
+    def mask_propagation(cls, node: NNCFNode, graph: NNCFGraph):
         input_masks = get_input_masks(node, graph)
         output_mask = node.data.get('output_mask', None)
 
@@ -170,22 +170,22 @@ class PTConvolution(PTDefaultMetaOp):
         node.data['output_mask'] = output_mask
 
     @classmethod
-    def input_prune(cls, model: NNCFNetwork, node: PTNNCFNode, graph: PTNNCFGraph):
+    def input_prune(cls, model: NNCFNetwork, node: NNCFNode, graph: NNCFGraph):
         input_mask = node.data['input_masks'][0]
         if input_mask is None:
             return
         bool_mask = torch.tensor(input_mask, dtype=torch.bool)
         new_num_channels = int(torch.sum(input_mask))
 
-        node_module = model.get_module_by_scope(node.ia_op_exec_context.scope_in_model)
         is_depthwise = is_depthwise_conv(node)
-        old_num_clannels = int(node_module.weight.size(1))
+        node_module = model.get_containing_module(node.node_name)
+        old_num_channels = int(node_module.weight.size(1))
 
         if is_depthwise:
             # In depthwise case prune output channels by input mask, here only fix for new number of input channels
             node_module.groups = new_num_channels
             node_module.in_channels = new_num_channels
-            old_num_clannels = int(node_module.weight.size(0))
+            old_num_channels = int(node_module.weight.size(0))
         else:
             out_channels = node_module.weight.size(0)
             broadcasted_mask = bool_mask.repeat(out_channels).view(out_channels, bool_mask.size(0))
@@ -196,17 +196,17 @@ class PTConvolution(PTDefaultMetaOp):
             node_module.weight = torch.nn.Parameter(node_module.weight[broadcasted_mask].view(new_weight_shape))
 
         nncf_logger.info('Pruned Convolution {} by input mask. Old input filters number: {}, new filters number:'
-                         ' {}.'.format(node.data['key'], old_num_clannels, new_num_channels))
+                         ' {}.'.format(node.data['key'], old_num_channels, new_num_channels))
 
     @classmethod
-    def output_prune(cls, model: NNCFNetwork, node: PTNNCFNode, graph: PTNNCFGraph):
+    def output_prune(cls, model: NNCFNetwork, node: NNCFNode, graph: NNCFGraph):
         mask = node.data['output_mask']
         if mask is None:
             return
 
         bool_mask = torch.tensor(mask, dtype=torch.bool)
 
-        node_module = model.get_module_by_scope(node.ia_op_exec_context.scope_in_model)
+        node_module = model.get_containing_module(node.node_name)
         old_num_clannels = int(node_module.weight.size(0))
 
         node_module.out_channels = int(torch.sum(mask))
@@ -224,7 +224,7 @@ class PTTransposeConvolution(PTDefaultMetaOp):
     subtypes = [ConvTranspose2dMetatype, ConvTranspose3dMetatype]
 
     @classmethod
-    def accept_pruned_input(cls, node: PTNNCFNode):
+    def accept_pruned_input(cls, node: NNCFNode):
         accept_pruned_input = True
         if is_grouped_conv(node):
             if not is_depthwise_conv(node):
@@ -232,7 +232,7 @@ class PTTransposeConvolution(PTDefaultMetaOp):
         return accept_pruned_input
 
     @classmethod
-    def mask_propagation(cls, node: PTNNCFNode, graph: PTNNCFGraph):
+    def mask_propagation(cls, node: NNCFNode, graph: NNCFGraph):
         input_masks = get_input_masks(node, graph)
         output_mask = node.data.get('output_mask', None)
 
@@ -246,13 +246,13 @@ class PTTransposeConvolution(PTDefaultMetaOp):
         node.data['output_mask'] = output_mask
 
     @classmethod
-    def input_prune(cls, model: NNCFNetwork, node: PTNNCFNode, graph: PTNNCFGraph):
+    def input_prune(cls, model: NNCFNetwork, node: NNCFNode, graph: NNCFGraph):
         input_mask = node.data['input_masks'][0]
         if input_mask is None:
             return
         bool_mask = torch.tensor(input_mask, dtype=torch.bool)
 
-        node_module = model.get_module_by_scope(node.ia_op_exec_context.scope_in_model)
+        node_module = model.get_containing_module(node.node_name)
         old_num_clannels = int(node_module.weight.size(0))
 
         node_module.in_channels = int(torch.sum(bool_mask))
@@ -262,7 +262,7 @@ class PTTransposeConvolution(PTDefaultMetaOp):
                          ' {}.'.format(node.data['key'], old_num_clannels, node_module.in_channels))
 
     @classmethod
-    def output_prune(cls, model: NNCFNetwork, node: PTNNCFNode, graph: PTNNCFGraph):
+    def output_prune(cls, model: NNCFNetwork, node: NNCFNode, graph: NNCFGraph):
         output_mask = node.data['output_mask']
         if output_mask is None:
             return
@@ -270,7 +270,7 @@ class PTTransposeConvolution(PTDefaultMetaOp):
         bool_mask = torch.tensor(output_mask, dtype=torch.bool)
         new_num_channels = int(torch.sum(bool_mask))
 
-        node_module = model.get_module_by_scope(node.ia_op_exec_context.scope_in_model)
+        node_module = model.get_containing_module(node.node_name)
         old_num_clannels = int(node_module.weight.size(1))
 
         in_channels = node_module.weight.size(0)
@@ -293,20 +293,20 @@ class PTBatchNorm(PTDefaultMetaOp):
     subtypes = [BatchNormMetatype]
 
     @classmethod
-    def accept_pruned_input(cls, node: PTNNCFNode):
+    def accept_pruned_input(cls, node: NNCFNode):
         return True
 
     @classmethod
-    def mask_propagation(cls, node: PTNNCFNode, graph: PTNNCFGraph):
+    def mask_propagation(cls, node: NNCFNode, graph: NNCFGraph):
         identity_mask_propagation(node, graph)
 
     @classmethod
-    def input_prune(cls, model: NNCFNetwork, node: PTNNCFNode, graph: PTNNCFGraph):
+    def input_prune(cls, model: NNCFNetwork, node: NNCFNode, graph: NNCFGraph):
         input_mask = node.data['input_masks'][0]
         if input_mask is None:
             return
 
-        node_module = model.get_module_by_scope(node.ia_op_exec_context.scope_in_model)
+        node_module = model.get_containing_module(node.node_name)
 
         bool_mask = torch.tensor(input_mask, dtype=torch.bool)
         old_num_clannels = int(node_module.weight.size(0))
@@ -327,22 +327,22 @@ class GroupNorm(PTDefaultMetaOp):
     subtypes = [GroupNormMetatype]
 
     @classmethod
-    def accept_pruned_input(cls, node: PTNNCFNode):
+    def accept_pruned_input(cls, node: NNCFNode):
         # For Instance Normalization
-        return isinstance(node.module_attributes, GroupNormModuleAttributes) \
+        return isinstance(node.module_attributes, GroupNormLayerAttributes) \
                and node.module_attributes.num_groups == node.module_attributes.num_channels
 
     @classmethod
-    def mask_propagation(cls, node: PTNNCFNode, graph: PTNNCFGraph):
+    def mask_propagation(cls, node: NNCFNode, graph: NNCFGraph):
         identity_mask_propagation(node, graph)
 
     @classmethod
-    def input_prune(cls, model: NNCFNetwork, node: PTNNCFNode, graph: PTNNCFGraph):
+    def input_prune(cls, model: NNCFNetwork, node: NNCFNode, graph: NNCFGraph):
         input_mask = node.data['input_masks'][0]
         if input_mask is None:
             return
 
-        node_module = model.get_module_by_scope(node.ia_op_exec_context.scope_in_model)
+        node_module = model.get_containing_module(node.node_name)
 
         bool_mask = torch.tensor(input_mask, dtype=torch.bool)
         old_num_clannels = int(node_module.weight.size(0))
@@ -363,11 +363,11 @@ class PTConcat(PTDefaultMetaOp):
     subtypes = [CatMetatype]
 
     @classmethod
-    def accept_pruned_input(cls, node: PTNNCFNode):
+    def accept_pruned_input(cls, node: NNCFNode):
         return True
 
     @classmethod
-    def check_concat(cls, node: PTNNCFNode, graph: PTNNCFGraph) -> bool:
+    def check_concat(cls, node: NNCFNode, graph: NNCFGraph) -> bool:
         """
         Return whether all input sources of node is convolutions or not.
 
@@ -384,13 +384,13 @@ class PTConcat(PTDefaultMetaOp):
             source_nodes = get_sources_of_node(input_node, graph, PTConvolution.get_all_op_aliases() +
                                                PTStopMaskForwardOps.get_all_op_aliases() +
                                                PTInput.get_all_op_aliases())
-            sources_types = [node.ia_op_exec_context.operator_name for node in source_nodes]
+            sources_types = [node.node_type for node in source_nodes]
             if any(t in sources_types for t in PTStopMaskForwardOps.get_all_op_aliases()):
                 return False
         return True
 
     @classmethod
-    def fill_input_masks(cls, node: PTNNCFNode, graph: PTNNCFGraph) -> Union[List[torch.Tensor], None]:
+    def fill_input_masks(cls, node: NNCFNode, graph: NNCFGraph) -> Union[List[torch.Tensor], None]:
         """
         Fill input masks with all None replaced by identity masks.
         If all input masks is None return None.
@@ -412,12 +412,12 @@ class PTConcat(PTDefaultMetaOp):
         filled_input_masks = []
         for i, mask in enumerate(input_masks):
             if mask is None:
-                mask = torch.ones(input_edges_desc[i][PTNNCFGraph.ACTIVATION_SHAPE_EDGE_ATTR][1], device=device)
+                mask = torch.ones(input_edges_desc[i][NNCFGraph.ACTIVATION_SHAPE_EDGE_ATTR][1], device=device)
             filled_input_masks.append(mask)
         return filled_input_masks
 
     @classmethod
-    def mask_propagation(cls, node: PTNNCFNode, graph: PTNNCFGraph):
+    def mask_propagation(cls, node: NNCFNode, graph: NNCFGraph):
         input_masks = None
         output_mask = None
 
@@ -435,11 +435,11 @@ class PTElementwise(PTDefaultMetaOp):
     subtypes = [AddMetatype, SubMetatype, DivMetatype, MulMetatype]
 
     @classmethod
-    def accept_pruned_input(cls, node: PTNNCFNode):
+    def accept_pruned_input(cls, node: NNCFNode):
         return True
 
     @classmethod
-    def mask_propagation(cls, node: PTNNCFNode, graph: PTNNCFGraph):
+    def mask_propagation(cls, node: NNCFNode, graph: NNCFGraph):
         input_masks = get_input_masks(node, graph)
 
         node.data['input_masks'] = input_masks
@@ -448,13 +448,13 @@ class PTElementwise(PTDefaultMetaOp):
         node.data['output_mask'] = input_masks[0]
 
     @classmethod
-    def input_prune(cls, model: NNCFNetwork, node: PTNNCFNode, graph: PTNNCFGraph):
+    def input_prune(cls, model: NNCFNetwork, node: NNCFNode, graph: NNCFGraph):
         input_mask = node.data['input_masks'][0]
         if input_mask is None:
             return
 
         bool_mask = torch.tensor(input_mask, dtype=torch.bool)
-        node_module = model.get_module_by_scope(node.ia_op_exec_context.scope_in_model)
+        node_module = model.get_containing_module(node.node_name)
 
         if isinstance(node_module, tuple(NNCF_WRAPPED_USER_MODULES_DICT)):
             assert node_module.target_weight_dim_for_compression == 0,\
@@ -473,11 +473,11 @@ class PTStopMaskForwardOps(PTDefaultMetaOp):
     subtypes = [MeanMetatype, MaxMetatype, MinMetatype, LinearMetatype, MatMulMetatype]
 
     @classmethod
-    def accept_pruned_input(cls, node: PTNNCFNode):
+    def accept_pruned_input(cls, node: NNCFNode):
         return False
 
     @classmethod
-    def mask_propagation(cls, node: PTNNCFNode, graph: PTNNCFGraph):
+    def mask_propagation(cls, node: NNCFNode, graph: NNCFGraph):
         input_masks = get_input_masks(node, graph)
 
         node.data['input_masks'] = input_masks
@@ -485,7 +485,7 @@ class PTStopMaskForwardOps(PTDefaultMetaOp):
 
 
 class ModelPruner(MaskPropagationAlgorithm):
-    def __init__(self, model: NNCFNetwork, graph: PTNNCFGraph,
+    def __init__(self, model: NNCFNetwork, graph: NNCFGraph,
                  pruning_operator_metatypes: PruningOperationsMetatypeRegistry):
         super().__init__(graph, pruning_operator_metatypes)
         self._model = model
@@ -500,7 +500,7 @@ class ModelPruner(MaskPropagationAlgorithm):
         with torch.no_grad():
             for node in self._graph.topological_sort():
                 node_cls = self.get_meta_operation_by_type_name(node.node_type)
-                node_module = self._model.get_module_by_scope(node.ia_op_exec_context.scope_in_model)
+                node_module = self._model.get_containing_module(node.node_name)
                 if node_module not in pruned_node_modules:
                     node_cls.input_prune(self._model, node, self._graph)
                     node_cls.output_prune(self._model, node, self._graph)

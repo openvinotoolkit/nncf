@@ -21,12 +21,13 @@ import torch
 import torch.nn
 from onnx import numpy_helper
 
+from nncf.common.graph import NNCFNodeName
 from nncf.common.graph.transformations.commands import TargetType
+from nncf.torch.dynamic_graph.operation_address import OperationAddress
 from nncf.common.hardware.config import HWConfigType
-from nncf.torch.graph.graph import InputAgnosticOperationExecutionContext
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.quantization.layers import AsymmetricQuantizer
-from nncf.torch.quantization.quantizer_id import NonWeightQuantizerId
+from nncf.common.quantization.structs import NonWeightQuantizerId
 from nncf.torch.quantization.quantizer_propagation import QuantizerPropagationSolver
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
 from tests.torch.helpers import get_nodes_by_type
@@ -34,17 +35,16 @@ from tests.torch.helpers import register_bn_adaptation_init_args
 from tests.torch.quantization.test_quantization_helpers import get_quantization_config_without_range_init
 
 
-def make_ia_op_exec_context_for_coalescing_test(scope_str: str) -> InputAgnosticOperationExecutionContext:
-    ia_op_exec_context = InputAgnosticOperationExecutionContext.from_str(scope_str)
-    return ia_op_exec_context
+def make_op_address_for_coalescing_test(scope_str: str) -> OperationAddress:
+    op_address = OperationAddress.from_str(scope_str)
+    return op_address
 
 
-def make_insertion_point_for_coalescing_test(scope_str: str,
+def make_insertion_point_for_coalescing_test(node_name: NNCFNodeName,
                                              input_port_id: int = None)\
         -> PTTargetPoint:
-    ia_op_exec_context = make_ia_op_exec_context_for_coalescing_test(scope_str)
     retval = PTTargetPoint(TargetType.OPERATOR_POST_HOOK,
-                           ia_op_exec_context=ia_op_exec_context,
+                           target_node_name=node_name,
                            input_port_id=input_port_id)
     return retval
 
@@ -462,8 +462,7 @@ def test_quantizer_scale_linking(mocker):
     # 8 quantization points left after propagation, out of these 3 are linked
     assert len(compression_ctrl.non_weight_quantizers) == 6
 
-    shared_quantizer_id = NonWeightQuantizerId(
-        InputAgnosticOperationExecutionContext.from_str("/nncf_model_input_0"))
+    shared_quantizer_id = NonWeightQuantizerId(target_node_name="/nncf_model_input_0")
 
     non_shared_spies = []
     for aq_id, aq_info in compression_ctrl.non_weight_quantizers.items():

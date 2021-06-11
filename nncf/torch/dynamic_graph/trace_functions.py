@@ -27,11 +27,13 @@ class CustomTraceFunction:
 
 class ForwardTraceOnly(CustomTraceFunction):
     def __call__(self, operator: Callable, *args, **kwargs):
-        """ This wrapper override will result in the operator not being added to graph,
+        """
+        This wrapper override will result in the operator not being added to graph,
         but the result will still have TracedTensors with parent IDs left the same as in input.
         Useful for operators which are not likely to be present in patterns considered for
         compression, but still have to be accounted for so that the NNCF internal graph representation
-        does not become disjoint. """
+        does not become disjoint.
+        """
 
         result = operator(*args, **kwargs)
 

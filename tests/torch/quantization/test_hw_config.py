@@ -13,19 +13,23 @@
 
 import torch
 
-from nncf.torch.dynamic_graph.graph_tracer import ModelInputInfo
 from nncf.config import NNCFConfig
-from nncf.common.graph.graph import MODEL_INPUT_OP_NAME
+from nncf.common.graph import MODEL_INPUT_OP_NAME
 from nncf.common.hardware.config import HWConfig
-from nncf.torch.nncf_network import  NNCFNetwork
-from nncf.torch.quantization.algo import QuantizationBuilder, QuantizationController, QuantizerSetupGeneratorBase
-from nncf.torch.quantization.layers import SymmetricQuantizer, AsymmetricQuantizer, BaseQuantizer
 from nncf.common.quantization.structs import QuantizationMode
-
+from nncf.torch.dynamic_graph.graph_tracer import ModelInputInfo
+from nncf.torch.nncf_network import NNCFNetwork
+from nncf.torch.quantization.algo import QuantizationBuilder
+from nncf.torch.quantization.algo import QuantizationController
+from nncf.torch.quantization.algo import QuantizerSetupGeneratorBase
+from nncf.torch.quantization.layers import AsymmetricQuantizer
+from nncf.torch.quantization.layers import BaseQuantizer
+from nncf.torch.quantization.layers import SymmetricQuantizer
 from tests.torch.quantization.test_quantization_helpers import get_quantization_config_without_range_init
 
 
 class ModelForHWConfigTest(torch.nn.Module):
+    CONV2D_OP_NODE_NAME = "ModelForHWConfigTest/NNCFConv2d[conv2d]/conv2d_0"
     def __init__(self, with_gelu=False):
         super().__init__()
         self.with_gelu = with_gelu
@@ -70,7 +74,7 @@ class TestHWConfigRules:
 
     @staticmethod
     def get_quantizer_module_after_op_name(op_name: str, ctrl: QuantizationController) -> BaseQuantizer:
-        input_matches = list(filter(lambda x: x.ia_op_exec_context.operator_name == op_name,
+        input_matches = list(filter(lambda x: op_name in x.target_node_name and x.input_port_id is None,
                                     ctrl.non_weight_quantizers.keys()))
         assert len(input_matches) == 1
         act_quant_key = input_matches[0]
@@ -110,7 +114,7 @@ class TestHWConfigRules:
 
         key = next(iter(ctrl.non_weight_quantizers.keys()))
         # Corresponds to a quantizer AFTER conv2d, i.e. matmul input quantizer
-        assert key.ia_op_exec_context.operator_name == "conv2d"
+        assert key.target_node_name == ModelForHWConfigTest.CONV2D_OP_NODE_NAME
 
     def test_missing_non_ir_op_results_in_default_qconf_list(self):
         # GELU is the non-IR op here, adjust if this no longer reflects reality
@@ -153,7 +157,7 @@ class TestHWConfigRules:
         assert len(ctrl.non_weight_quantizers) == 3  # GELU input, conv2d input, matmul input (single in this case)
 
         w_key = next(iter(ctrl.weight_quantizers.keys()))
-        assert str(w_key.scope) == "ModelForHWConfigTest/NNCFConv2d[conv2d]"
+        assert str(w_key.target_node_name) == ModelForHWConfigTest.CONV2D_OP_NODE_NAME
 
         gelu_input_act_quantizer_ref = self.get_quantizer_module_after_op_name(MODEL_INPUT_OP_NAME, ctrl)
         assert self.quantizer_has_default_config(gelu_input_act_quantizer_ref)
@@ -195,14 +199,15 @@ class TestHWConfigRules:
         assert not self.quantizer_has_default_config(conv2d_weight_quantizer_ref)
 
         assert len(ctrl.non_weight_quantizers) == 1  # Matmul input
-        matmul_input_matches = list(filter(lambda x: x.ia_op_exec_context.operator_name == "conv2d",
-                                           ctrl.non_weight_quantizers.keys()))
+        matmul_input_matches = list(
+            filter(lambda x: x.target_node_name == ModelForHWConfigTest.CONV2D_OP_NODE_NAME,
+                   ctrl.non_weight_quantizers.keys()))
 
         assert len(matmul_input_matches) == 1
         matmul_quantizer_ref = ctrl.non_weight_quantizers[matmul_input_matches[0]].quantizer_module_ref
         assert self.quantizer_has_default_config(matmul_quantizer_ref)
 
-        non_matmul_input_matches = list(filter(lambda x: x.ia_op_exec_context.operator_name != "conv2d",
+        non_matmul_input_matches = list(filter(lambda x: x.target_node_name != ModelForHWConfigTest.CONV2D_OP_NODE_NAME,
                                                ctrl.non_weight_quantizers.keys()))
         for quantizer_id in non_matmul_input_matches:
             quantizer_ref = ctrl.non_weight_quantizers[quantizer_id].quantizer_module_ref

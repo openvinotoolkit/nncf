@@ -15,147 +15,11 @@ from typing import Callable, List
 
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
+from nncf.common.pruning.clusterization import Cluster
+from nncf.common.pruning.clusterization import Clusterization
 from nncf.common.pruning.export_helpers import DefaultMetaOp
 from nncf.common.pruning.utils import find_next_nodes_not_of_types
 from nncf.common.pruning.utils import PruningOperationsMetatypeRegistry
-
-
-class NodesCluster:
-    """
-    Represents element of Сlusterization. Groups together nodes.
-    """
-
-    def __init__(self, cluster_id: int, nodes: List, nodes_orders: List[int]):
-        self.id = cluster_id
-        self.nodes = list(nodes)
-        self.importance = max(nodes_orders)
-
-    def clean_cluster(self):
-        self.nodes = []
-        self.importance = 0
-
-    def add_nodes(self, nodes: List, importance: int):
-        self.nodes.extend(nodes)
-        self.importance = max(self.importance, importance)
-
-
-class Clusterization:
-    """
-    Handles group of node clusters allowing to add new cluster,
-    delete existing one or merge existing clusters.
-    """
-
-    def __init__(self, id_attr_name="id"):
-        self.clusters = {}
-        self._node_to_cluster = {}
-        self._id_attr = id_attr_name
-
-    def get_cluster_by_id(self, cluster_id: int) -> NodesCluster:
-        """
-        Returns cluster according to provided cluster_id.
-
-        :param cluster_id: Id of the cluster.
-        :return: Cluster according to provided `cluster_id`.
-        """
-        if cluster_id not in self.clusters:
-            raise IndexError('No cluster with id = {}'.format(cluster_id))
-        return self.clusters[cluster_id]
-
-    def get_cluster_by_node_id(self, node_id: int) -> NodesCluster:
-        """
-        Returns cluster containing node with provided `node_id`.
-
-        :param node_id: Id of the node which is in cluster.
-        :return: Cluster containing node with provided `node_id`.
-        """
-        if node_id not in self._node_to_cluster:
-            raise IndexError('No cluster for node with id = {}'.format(node_id))
-        return self.get_cluster_by_id(self._node_to_cluster[node_id])
-
-    def is_node_in_clusterization(self, node_id: int) -> bool:
-        """
-        Returns whether node with provided `node_id` is in clusterization.
-
-        :param node_id: Id of the node to test.
-        :return: Whether node with provided `node_id` is in clusterization.
-        """
-        return node_id in self._node_to_cluster
-
-    def add_cluster(self, cluster: NodesCluster):
-        """
-        Adds provided cluster to clusterization.
-
-        :param cluster: Cluster to add.
-        """
-        cluster_id = cluster.id
-        if cluster_id in self.clusters:
-            raise IndexError('Cluster with index = {} already exist'.format(cluster_id))
-        self.clusters[cluster_id] = cluster
-        for node in cluster.nodes:
-            self._node_to_cluster[getattr(node, self._id_attr)] = cluster_id
-
-    def delete_cluster(self, cluster_id: int):
-        """
-        Removes cluster with `cluster_id` from clusterization.
-
-        :param cluster_id: Id of a cluster to delete.
-        """
-        if cluster_id not in self.clusters:
-            raise IndexError('No cluster with index = {} to delete'.format(cluster_id))
-        for node in self.clusters[cluster_id].nodes:
-            node_id = getattr(node, self._id_attr)
-            self._node_to_cluster.pop(node_id)
-        self.clusters.pop(cluster_id)
-
-    def get_all_clusters(self) -> List[NodesCluster]:
-        """
-        Returns list of all clusters in clusterization.
-
-        :return: List of all clusters in clusterization.
-        """
-        return list(self.clusters.values())
-
-    def get_all_nodes(self) -> List:
-        """
-        Returns list all nodes of all clusters in clusterization.
-
-        :return: List all nodes of all clusters in clusterization.
-        """
-        all_nodes = []
-        for cluster in self.clusters.values():
-            all_nodes.extend(cluster.nodes)
-        return all_nodes
-
-    def merge_clusters(self, first_id: int, second_id: int):
-        """
-        Merges two clusters with provided ids.
-
-        :param first_id: Id of the first cluster to merge.
-        :param second_id: Id of the second cluster to merge.
-        """
-        cluster_1 = self.get_cluster_by_id(first_id)
-        cluster_2 = self.get_cluster_by_id(second_id)
-        if cluster_1.importance > cluster_2.importance:
-            cluster_1.add_nodes(cluster_2.nodes, cluster_2.importance)
-            for node in cluster_2.nodes:
-                self._node_to_cluster[getattr(node, self._id_attr)] = first_id
-            self.clusters.pop(second_id)
-        else:
-            cluster_2.add_nodes(cluster_1.nodes, cluster_1.importance)
-            for node in cluster_1.nodes:
-                self._node_to_cluster[getattr(node, self._id_attr)] = second_id
-            self.clusters.pop(first_id)
-
-    def merge_list_of_clusters(self, clusters: List[int]):
-        """
-        Merges provided clusters.
-
-        :param clusters: List of clusters to merge.
-        """
-        clusters = list(set(clusters))
-        clusters.sort(key=lambda cluster_id: self.get_cluster_by_id(cluster_id).importance)
-        for cluster_id in clusters[:-1]:
-            self.merge_clusters(clusters[-1], cluster_id)
 
 
 def get_position(nodes_list: List[NNCFNode], idx: int):
@@ -179,20 +43,21 @@ def merge_clusters_for_nodes(nodes_to_merge: List[NNCFNode], clusterization: Clu
     max_importance_node_id = None
     max_importance = 0
     for node in nodes_to_merge:
-        importance = clusterization.get_cluster_by_node_id(node.node_id).importance
+        importance = clusterization.get_cluster_containing_element(node.node_id).importance
         if importance > max_importance:
             max_importance_node_id = node.node_id
             max_importance = importance
 
-    max_importance_cluster_id = clusterization.get_cluster_by_node_id(max_importance_node_id).id
+    max_importance_cluster_id = clusterization.get_cluster_containing_element(max_importance_node_id).id
     for node in nodes_to_merge:
         if node.node_id != max_importance_node_id:
-            current_node_cluster_id = clusterization.get_cluster_by_node_id(node.node_id).id
+            current_node_cluster_id = clusterization.get_cluster_containing_element(node.node_id).id
             if current_node_cluster_id != max_importance_cluster_id:
                 clusterization.merge_clusters(max_importance_cluster_id, current_node_cluster_id)
 
 
-def cluster_special_ops(graph: NNCFGraph, special_types: List[str], identity_types: List[str]) -> Clusterization:
+def cluster_special_ops(graph: NNCFGraph, special_types: List[str],
+                        identity_types: List[str]) -> Clusterization[NNCFNode]:
     """
     This model will cluster all operations with type from special_types. Connected nodes is nodes that:
         1. Have path between nodes with only identity type nodes on it
@@ -207,9 +72,9 @@ def cluster_special_ops(graph: NNCFGraph, special_types: List[str], identity_typ
                          if node.node_type in special_types]
 
     # 0. Initially all nodes is a separate clusters
-    clusterization = Clusterization("node_id")
+    clusterization = Clusterization[NNCFNode](lambda x: x.node_id)
     for i, node in enumerate(all_special_nodes):
-        cluster = NodesCluster(i, [node], [get_position(topologically_sorted_nodes, node.node_id)])
+        cluster = Cluster[NNCFNode](i, [node], [get_position(topologically_sorted_nodes, node.node_id)])
         clusterization.add_cluster(cluster)
 
     for node in topologically_sorted_nodes:

@@ -106,6 +106,6 @@ class TFCompressionAlgorithmBuilder(CompressionAlgorithmBuilder):
             algorithm-specific compression during fine-tuning.
         """
         transformation_layout = self.get_transformation_layout(model)
-        transformer = TFModelTransformer(model, transformation_layout)
-        transformed_model = transformer.transform()
+        transformer = TFModelTransformer(model)
+        transformed_model = transformer.transform(transformation_layout)
         return transformed_model

@@ -17,8 +17,9 @@ from typing import List
 
 from nncf.torch.layers import NNCF_MODULES_DICT, NNCF_MODULES, \
     add_nncf_functionality_to_user_module, NNCF_WRAPPED_USER_MODULES_DICT
-from nncf.torch.utils import in_scope_list
-from nncf.torch.dynamic_graph.context import Scope, ScopeElement
+from nncf.common.utils.helpers import matches_any
+from nncf.torch.dynamic_graph.scope import ScopeElement
+from nncf.torch.dynamic_graph.scope import Scope
 
 from nncf.common.utils.logger import logger as nncf_logger
 
@@ -51,13 +52,13 @@ def replace_module_by_nncf_module(module: nn.Module):
 
 
 def replace_modules_by_nncf_modules(model: nn.Module, ignored_scopes=None, target_scopes=None,
-                                    eval_ops_exec_ctx_str: List[str] = None,
+                                    eval_op_scopes: List[Scope] = None,
                                     reset: bool = False) -> (nn.Module, List[Scope]):
     replace_fn = partial(replace_module_by_nncf_module)
     affected_scopes = []  # type: List
     return replace_modules(model, replace_fn, affected_scopes,
                            ignored_scopes=ignored_scopes, target_scopes=target_scopes,
-                           eval_ops_exec_ctx_str=eval_ops_exec_ctx_str, reset=reset)
+                           eval_op_scopes=eval_op_scopes, reset=reset)
 
 
 def set_replaced_module_by_name(model, name, replaced_module):
@@ -70,7 +71,7 @@ def set_replaced_module_by_name(model, name, replaced_module):
 
 # pylint: disable=too-many-branches
 def replace_modules(model: nn.Module, replace_fn, affected_scopes, ignored_scopes=None, target_scopes=None, memo=None,
-                    current_scope=None, eval_ops_exec_ctx_str: List[str] = None, reset: bool = False):
+                    current_scope=None, eval_op_scopes: List[Scope] = None, reset: bool = False):
     if memo is None:
         memo = set()
         current_scope = Scope()
@@ -94,25 +95,24 @@ def replace_modules(model: nn.Module, replace_fn, affected_scopes, ignored_scope
             replaced_scope = current_scope.copy()
             replaced_scope.push(replaced_scope_element)
             if module is not replaced_module:
-                if in_scope_list(str(child_scope), ignored_scopes):
+                if matches_any(str(child_scope), ignored_scopes):
                     nncf_logger.info("Ignored wrapping modules specified in scope: {}".format(child_scope))
                     continue
-                if eval_ops_exec_ctx_str is None:
-                    eval_ops_exec_ctx_str = []
+                if eval_op_scopes is None:
+                    eval_op_scopes = []
                 is_ignored = True
-                for op_ctx_str in eval_ops_exec_ctx_str:
-                    full_op_scope = Scope.from_str(op_ctx_str)
+                for eval_op_scope in eval_op_scopes:
                     # child_scope isn't ignored, if there's at least a single operation or a module called in eval mode
                     # inside it
-                    if full_op_scope in child_scope:
+                    if eval_op_scope in child_scope:
                         is_ignored = False
                         break
-                if is_ignored and eval_ops_exec_ctx_str:
+                if is_ignored and eval_op_scopes:
                     nncf_logger.info(
                         "Ignored wrapping modules not called in eval mode in scope: {}".format(child_scope))
                     continue
 
-                if target_scopes is None or in_scope_list(str(child_scope), target_scopes):
+                if target_scopes is None or matches_any(str(child_scope), target_scopes):
                     nncf_logger.info("Wrapping module {} by {}".format(str(child_scope),
                                                                        str(replaced_scope)))
                     set_replaced_module_by_name(model, name, replaced_module)
@@ -123,5 +123,5 @@ def replace_modules(model: nn.Module, replace_fn, affected_scopes, ignored_scope
                 if reset:
                     replaced_module.reset()
         _, affected_scopes = replace_modules(module, replace_fn, affected_scopes, ignored_scopes, target_scopes,
-                                             memo, child_scope, eval_ops_exec_ctx_str, reset=reset)
+                                             memo, child_scope, eval_op_scopes, reset=reset)
     return model, affected_scopes

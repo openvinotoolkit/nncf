@@ -13,7 +13,7 @@
 
 from typing import List
 
-from nncf.common.graph.graph import NNCFGraphNodeType
+from nncf.common.graph import NNCFGraphNodeType
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 
 

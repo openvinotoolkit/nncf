@@ -11,13 +11,15 @@
  limitations under the License.
 """
 
-from collections import namedtuple
 from typing import List
 
 from nncf.torch.algo_selector import ZeroCompressionLoss
+import torch
 from nncf.api.compression import CompressionStage
 from nncf.api.compression import CompressionLoss
 from nncf.api.compression import CompressionScheduler
+from nncf.common.graph import NNCFNode
+from nncf.common.graph import NNCFNodeName
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.sparsity.controller import SparsityController
 from nncf.torch.compression_method_api import PTCompressionAlgorithmBuilder
@@ -30,7 +32,13 @@ from nncf.torch.graph.transformations.commands import PTInsertionCommand
 from nncf.common.schedulers import BaseCompressionScheduler
 from nncf.torch.nncf_network import NNCFNetwork
 
-SparseModuleInfo = namedtuple('SparseModuleInfo', ['module_name', 'module', 'operand'])
+
+class SparseModuleInfo:
+    def __init__(self, module_node_name: NNCFNodeName, module: torch.nn.Module,
+                 operand):
+        self.module_node_name = module_node_name
+        self.module = module
+        self.operand = operand
 
 
 class BaseSparsityAlgoBuilder(PTCompressionAlgorithmBuilder):
@@ -47,28 +55,30 @@ class BaseSparsityAlgoBuilder(PTCompressionAlgorithmBuilder):
 
     def _sparsify_weights(self, target_model: NNCFNetwork) -> List[PTInsertionCommand]:
         device = next(target_model.parameters()).device
-        sparsified_modules = target_model.get_nncf_modules_by_module_names(self.compressed_nncf_module_names)
+        sparsified_module_nodes = target_model.get_weighted_original_graph_nodes(
+            nncf_module_names=self.compressed_nncf_module_names)
         insertion_commands = []
-        for module_scope, module in sparsified_modules.items():
-            scope_str = str(module_scope)
+        for module_node in sparsified_module_nodes:
+            node_name = module_node.node_name
 
-            if not self._should_consider_scope(scope_str):
-                nncf_logger.info("Ignored adding Weight Sparsifier in scope: {}".format(scope_str))
+            if not self._should_consider_scope(node_name):
+                nncf_logger.info("Ignored adding Weight Sparsifier in scope: {}".format(node_name))
                 continue
 
-            nncf_logger.info("Adding Weight Sparsifier in scope: {}".format(scope_str))
+            nncf_logger.info("Adding Weight Sparsifier in scope: {}".format(node_name))
             compression_lr_multiplier = self.config.get("compression_lr_multiplier", None)
-            operation = self.create_weight_sparsifying_operation(module, compression_lr_multiplier)
+            operation = self.create_weight_sparsifying_operation(module_node, compression_lr_multiplier)
             hook = operation.to(device)
             insertion_commands.append(PTInsertionCommand(PTTargetPoint(TargetType.OPERATION_WITH_WEIGHTS,
-                                                                       module_scope=module_scope),
+                                                                       target_node_name=node_name),
                                                          hook, TransformationPriority.SPARSIFICATION_PRIORITY))
+            sparsified_module = target_model.get_containing_module(node_name)
             self._sparsified_module_info.append(
-                SparseModuleInfo(scope_str, module, hook))
+                SparseModuleInfo(node_name, sparsified_module, hook))
 
         return insertion_commands
 
-    def create_weight_sparsifying_operation(self, target_module, compression_lr_multiplier):
+    def create_weight_sparsifying_operation(self, target_module_node: NNCFNode, compression_lr_multiplier: float):
         raise NotImplementedError
 
 

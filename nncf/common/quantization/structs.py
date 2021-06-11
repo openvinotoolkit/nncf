@@ -11,10 +11,12 @@
  limitations under the License.
 """
 
-from collections import namedtuple
 from copy import deepcopy
 from enum import Enum
 from typing import Dict, List, Optional
+
+from nncf.common.graph import NNCFNode
+from nncf.common.graph import NNCFNodeName
 
 
 class QuantizationMode:
@@ -216,4 +218,60 @@ class QuantizerGroup(Enum):
         raise RuntimeError("Unknown quantizer group string")
 
 
-QuantizableModule = namedtuple('QuantizableModule', 'module module_scope qconfig_list')
+class QuantizableWeightedLayerNode:
+    def __init__(self, node: NNCFNode, qconfig_list: List[QuantizerConfig]):
+        self.node = node
+        self.qconfig_list = qconfig_list
+
+
+class QuantizerId:
+    """
+    Unique identifier of a quantizer. It's used to store and search all quantizers in a single
+    structure.
+    """
+
+    def get_base(self):
+        raise NotImplementedError
+
+    def get_suffix(self) -> str:
+        raise NotImplementedError
+
+    def __str__(self):
+        return str(self.get_base()) + self.get_suffix()
+
+    def __hash__(self):
+        return hash((self.get_base(), self.get_suffix()))
+
+    def __eq__(self, other: 'QuantizerId'):
+        return (self.get_base() == other.get_base()) and (self.get_suffix() == other.get_suffix())
+
+
+class WeightQuantizerId(QuantizerId):
+    """ Unique identifier of a quantizer for weights."""
+
+    def __init__(self, target_node_name: NNCFNodeName):
+        self.target_node_name = target_node_name
+
+    def get_base(self) -> str:
+        return self.target_node_name
+
+    def get_suffix(self) -> str:
+        return '|WEIGHT'
+
+
+class NonWeightQuantizerId(QuantizerId):
+    """
+    Unique identifier of a quantizer, which corresponds to non-weight operations, such as
+    ordinary activation, function and input
+    """
+
+    def __init__(self, target_node_name: NNCFNodeName,
+                 input_port_id=None):
+        self.target_node_name = target_node_name
+        self.input_port_id = input_port_id
+
+    def get_base(self) -> str:
+        return self.target_node_name
+
+    def get_suffix(self) -> str:
+        return '|OUTPUT' if self.input_port_id is None else '|INPUT{}'.format(self.input_port_id)

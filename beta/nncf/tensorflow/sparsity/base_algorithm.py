@@ -17,7 +17,7 @@ from beta.nncf.tensorflow.graph.metatypes import keras_layers as layer_metatypes
 from beta.nncf.tensorflow.graph.metatypes import tf_ops as op_metatypes
 from beta.nncf.tensorflow.sparsity.utils import strip_model_from_masks
 
-SPARSITY_LAYERS = [
+SPARSITY_LAYER_METATYPES = [
     layer_metatypes.TFConv1DLayerMetatype,
     layer_metatypes.TFConv2DLayerMetatype,
     layer_metatypes.TFConv3DLayerMetatype,
@@ -36,7 +36,7 @@ SPARSITY_LAYERS = [
     layer_metatypes.TFDenseLayerMetatype
 ]
 
-SPARSITY_TF_OPS = [
+SPARSITY_TF_OP_METATYPES = [
     op_metatypes.TFConv2DOpMetatype,
     op_metatypes.TFConv3DOpMetatype,
     op_metatypes.TFDepthwiseConv2dNativeOpMetatype,

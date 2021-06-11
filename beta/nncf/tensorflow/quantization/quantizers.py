@@ -39,7 +39,7 @@ class TFQuantizerSpec(QuantizerSpec):
         self.per_channel = per_channel
 
     @classmethod
-    def from_config(cls, qconfig: QuantizerConfig, narrow_range: bool, half_range: bool):
+    def from_config(cls, qconfig: QuantizerConfig, narrow_range: bool, half_range: bool) -> 'TFQuantizerSpec':
         return cls(qconfig.num_bits,
                    qconfig.mode,
                    qconfig.signedness_to_force,

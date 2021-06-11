@@ -12,6 +12,7 @@
 """
 from typing import Tuple
 
+from nncf.common.graph import NNCFNode
 from nncf.common.sparsity.statistics import ConstSparsityStatistics
 from nncf.common.statistics import NNCFStatistics
 from nncf.torch.compression_method_api import PTCompressionAlgorithmController
@@ -24,8 +25,8 @@ from nncf.torch.algo_selector import COMPRESSION_ALGORITHMS
 
 @COMPRESSION_ALGORITHMS.register('const_sparsity')
 class ConstSparsityBuilder(BaseSparsityAlgoBuilder):
-    def create_weight_sparsifying_operation(self, module, compression_lr_multiplier):
-        return BinaryMask(module.weight.size())
+    def create_weight_sparsifying_operation(self, target_module_node: NNCFNode, compression_lr_multiplier: float):
+        return BinaryMask(target_module_node.module_attributes.get_weight_shape())
 
     def build_controller(self, target_model: NNCFNetwork) -> PTCompressionAlgorithmController:
         return ConstSparsityController(target_model, self._sparsified_module_info)

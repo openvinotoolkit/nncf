@@ -20,7 +20,7 @@ from beta.nncf.tensorflow.graph.metatypes.matcher import get_keras_layer_metatyp
 from beta.nncf.tensorflow.layers.data_layout import get_weight_channel_axis
 from beta.nncf.tensorflow.layers.wrapper import NNCFWrapper
 from nncf.common.graph import NNCFNode
-from nncf.common.graph.module_attributes import ConvolutionModuleAttributes
+from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
 
 
 def is_depthwise_conv(node: NNCFNode) -> bool:
@@ -28,7 +28,7 @@ def is_depthwise_conv(node: NNCFNode) -> bool:
 
 
 def is_conv_with_downsampling(node: NNCFNode) -> bool:
-    return isinstance(node.module_attributes, ConvolutionModuleAttributes) \
+    return isinstance(node.module_attributes, ConvolutionLayerAttributes) \
            and not np.all(np.array(node.module_attributes.stride) == 1) \
            and node.metatype not in DECONV_LAYER_METATYPES
 

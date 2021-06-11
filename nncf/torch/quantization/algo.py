@@ -28,14 +28,16 @@ import numpy as np
 import torch
 from torch import nn
 
+from nncf.common.graph import NNCFNodeName
 from nncf.torch.algo_selector import COMPRESSION_ALGORITHMS
 from nncf.torch.algo_selector import ZeroCompressionLoss
 from nncf.api.compression import CompressionStage
-from nncf.common.graph.graph import MODEL_INPUT_OP_NAME
-from nncf.common.graph.transformations.commands import TargetType
 from nncf.api.compression import CompressionLoss
 from nncf.api.compression import CompressionScheduler
-from nncf.common.quantization.structs import QuantizableModule
+from nncf.common.graph import MODEL_INPUT_OP_NAME
+from nncf.common.graph import NNCFNode
+from nncf.common.graph.transformations.commands import TargetType
+from nncf.common.quantization.structs import QuantizableWeightedLayerNode
 from nncf.common.quantization.structs import QuantizationConstraints
 from nncf.common.quantization.structs import QuantizerGroup
 from nncf.common.hardware.config import HWConfig
@@ -53,15 +55,12 @@ from nncf.config.utils import extract_bn_adaptation_init_params
 from nncf.torch.debug import CallCountTracker
 from nncf.torch.debug import DebugInterface
 from nncf.torch.debug import is_debug
-from nncf.torch.dynamic_graph.context import Scope
 from nncf.torch.dynamic_graph.context import TracingContext
-from nncf.torch.dynamic_graph.graph import InputAgnosticOperationExecutionContext
 from nncf.torch.graph.transformations.commands import PTInsertionCommand
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.graph.transformations.commands import TransformationPriority
 from nncf.torch.graph.transformations.layout import PTTransformationLayout
 from nncf.torch.initialization import SimpleDataLoaderRunner
-from nncf.torch.layer_utils import _NNCFModuleMixin
 from nncf.torch.module_operations import UpdatePaddingValue
 from nncf.torch.nncf_network import EXTERNAL_QUANTIZERS_STORAGE_NAME
 from nncf.torch.nncf_network import ExtraCompressionModuleType
@@ -96,9 +95,9 @@ from nncf.torch.quantization.precision_init.autoq_init import AutoQPrecisionInit
 from nncf.torch.quantization.precision_init.base_init import BasePrecisionInitParams
 from nncf.torch.quantization.precision_init.hawq_init import HAWQPrecisionInitParams
 from nncf.torch.quantization.precision_init.manual_init import ManualPrecisionInitParams
-from nncf.torch.quantization.quantizer_id import NonWeightQuantizerId
-from nncf.torch.quantization.quantizer_id import QuantizerId
-from nncf.torch.quantization.quantizer_id import WeightQuantizerId
+from nncf.common.quantization.structs import NonWeightQuantizerId
+from nncf.common.quantization.structs import QuantizerId
+from nncf.common.quantization.structs import WeightQuantizerId
 from nncf.torch.quantization.quantizer_propagation import QuantizerPropagationSolver
 from nncf.torch.quantization.quantizer_propagation import QuantizerPropagationStateGraph
 from nncf.torch.quantization.quantizer_setup import MultiConfigQuantizerSetup
@@ -118,9 +117,8 @@ from nncf.torch.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.torch.tensor_statistics.statistics import TensorStatistic
 from nncf.torch.utils import get_scale_shape
 from nncf.torch.utils import get_state_dict_names_with_modules
-from nncf.torch.utils import in_scope_list
+from nncf.common.utils.helpers import matches_any
 from nncf.torch.utils import is_main_process
-from nncf.torch.utils import should_consider_scope
 
 
 class QuantizerSetupGeneratorBase:
@@ -176,7 +174,7 @@ class QuantizerSetupGeneratorBase:
         if scope_overrides is None:
             scope_overrides = {}
         for overridden_scope in scope_overrides.keys():
-            if in_scope_list(parent_module_scope_str, overridden_scope):
+            if matches_any(parent_module_scope_str, overridden_scope):
                 config_overrides = scope_overrides[overridden_scope]
                 if config_overrides.get("bits") is not None:
                     qconfig.num_bits = config_overrides["bits"]
@@ -194,58 +192,56 @@ class QuantizerSetupGeneratorBase:
             qconfig = constraints.apply_constraints_to(qconfig)
         return qconfig
 
-    def _should_consider_scope_for_group(self, scope_str: str, group: QuantizerGroup) -> bool:
+    def _should_consider_scope_for_group(self, node_name: NNCFNodeName, group: QuantizerGroup) -> bool:
         if self.target_scopes is not None or self._target_scopes_per_group[group] is not None:
-            if in_scope_list(scope_str, self.target_scopes):
+            if matches_any(node_name, self.target_scopes):
                 return True
-            if in_scope_list(scope_str, self._target_scopes_per_group[group]):
+            if matches_any(node_name, self._target_scopes_per_group[group]):
                 return True
 
             return False
 
-        if in_scope_list(scope_str, self.ignored_scopes):
+        if matches_any(node_name, self.ignored_scopes):
             return False
-        if in_scope_list(scope_str, self._ignored_scopes_per_group[group]):
+        if matches_any(node_name, self._ignored_scopes_per_group[group]):
             return False
 
         return True
 
-    def _filter_by_ignored_algo(self, modules: Dict[Scope, _NNCFModuleMixin]):
-        retval = {}  # type: Dict[Scope, torch.nn.Module]
-        for module_scope, module in modules.items():
-            if 'quantization' in module.ignored_algorithms:
+    def _filter_by_ignored_algo(self, nodes: List[NNCFNode]) -> List[NNCFNode]:
+        retval = []
+        for node in nodes:
+            if 'quantization' in node.ignored_algorithms:
                 continue
-            retval[module_scope] = module
+            retval.append(node)
         return retval
 
-    def _filter_by_weight_ignored_target_scopes(self, modules: Dict[Scope, torch.nn.Module]):
-        retval = {}  # type: Dict[Scope, torch.nn.Module]
-        for module_scope, module in modules.items():
-            if not self._should_consider_scope_for_group(str(module_scope), QuantizerGroup.WEIGHTS):
-                nncf_logger.info("Ignored adding Weight quantizer in scope: {}".format(module_scope))
+    def _filter_by_weight_ignored_target_scopes(self, weighted_nodes: List[NNCFNode]) -> List[NNCFNode]:
+        retval = []
+        for node in weighted_nodes:
+            if not self._should_consider_scope_for_group(node.node_name, QuantizerGroup.WEIGHTS):
+                nncf_logger.info("Ignored adding Weight quantizer for: {}".format(node.node_name))
                 continue
-            retval[module_scope] = module
+            retval.append(node)
         return retval
 
-    def _assign_qconfig_lists_to_modules(self, modules: Dict[Scope, torch.nn.Module]) -> \
-        Dict[Scope, List[QuantizerConfig]]:
+    def _assign_qconfig_lists_to_modules(self, weighted_nodes: List[NNCFNode]) -> \
+        Dict[NNCFNode, List[QuantizerConfig]]:
         raise NotImplementedError
 
-    def get_quantizable_modules(self) -> List[QuantizableModule]:
-        modules = self._target_model.get_nncf_modules()
+    def get_quantizable_module_nodes(self) -> List[QuantizableWeightedLayerNode]:
+        weighted_nodes = self._target_model.get_weighted_original_graph_nodes()
         quantized_modules_with_potential_qconfig = []
 
-        modules = self._filter_by_ignored_algo(modules)
-        modules = self._filter_by_weight_ignored_target_scopes(modules)
-        module_scope_vs_qconfig_list = self._assign_qconfig_lists_to_modules(modules)
+        weighted_nodes = self._filter_by_ignored_algo(weighted_nodes)
+        weighted_nodes = self._filter_by_weight_ignored_target_scopes(weighted_nodes)
+        weighted_node_vs_qconfig_list = self._assign_qconfig_lists_to_modules(weighted_nodes)
 
-        for module_scope, qconfig_list in module_scope_vs_qconfig_list.items():
-            module = modules[module_scope]
+        for node, qconfig_list in weighted_node_vs_qconfig_list.items():
             if qconfig_list is not None:
                 qconfig_list_copy = deepcopy(qconfig_list)
-                quantized_modules_with_potential_qconfig.append(QuantizableModule(module,
-                                                                                  module_scope,
-                                                                                  qconfig_list_copy))
+                quantized_modules_with_potential_qconfig.append(QuantizableWeightedLayerNode(node,
+                                                                                             qconfig_list_copy))
         return quantized_modules_with_potential_qconfig
 
 
@@ -330,20 +326,20 @@ class PropagationBasedQuantizerSetupGenerator(QuantizerSetupGeneratorBase):
         self._unified_scale_ops = act_config.get('unified_scale_ops')
 
     def generate_setup(self) -> SingleConfigQuantizerSetup:
-        quantizable_modules = self.get_quantizable_modules()
+        quantizable_module_nodes = self.get_quantizable_module_nodes()
 
         insertion_point_graph = self._target_model.get_insertion_point_graph()
         if self._debug_interface:
             self._debug_interface.visualize_insertion_point_graph(insertion_point_graph)
         prop_graph_solver = QuantizerPropagationSolver(
             ignored_scopes=self.ignored_scopes,
+            target_scopes=self.target_scopes,
             debug_interface=self._debug_interface,
             hw_config=self.hw_config,
             default_qconfig_list=[self._get_default_qconfig(
                 constraints=self.global_quantizer_constraints[
                     QuantizerGroup.ACTIVATIONS])],
-            input_infos=self._target_model.get_input_infos(),
-            quantizable_modules=quantizable_modules,
+            quantizable_module_nodes=quantizable_module_nodes,
             scope_overrides=self._quantization_config.get("scope_overrides", {}),
             global_constraints=self.global_quantizer_constraints,
             additional_unified_scale_op_scopes=self._unified_scale_ops,
@@ -375,54 +371,23 @@ class PropagationBasedQuantizerSetupGenerator(QuantizerSetupGeneratorBase):
         finalized_quantizer_setup = self._handle_quantize_inputs_option(finalized_quantizer_setup)
         return finalized_quantizer_setup
 
-    @staticmethod
-    def _check_if_ip_graph_nodes_point_to_single_module(ip_graph_node_list: List[dict]):
-        """Does not access actual modules - only uses the InputAgnosticOperationExecutionContext info."""
-        ia_op_exec_contexts_list = []  # type: List[InputAgnosticOperationExecutionContext]
-        for ip_graph_op_node in ip_graph_node_list:
-            nncf_node = ip_graph_op_node[InsertionPointGraph.REGULAR_NODE_REF_NODE_ATTR]
-            ia_op_exec_context = nncf_node.ia_op_exec_context
-            ia_op_exec_contexts_list.append(ia_op_exec_context)
 
-        contexts_correspond_to_single_module = True
-        first_op_context = ia_op_exec_contexts_list[0]
-        for other_op_context in ia_op_exec_contexts_list:
-            if other_op_context.scope_in_model != first_op_context.scope_in_model:
-                contexts_correspond_to_single_module = False
-                break
-
-        if not contexts_correspond_to_single_module:
-            raise RuntimeError("NNCF module has more than 1 associated graph operation node corresponding"
-                               "to different module hierarchy locations - cannot make sure that weight "
-                               "quantization will be correct")
-
-    def _assign_qconfig_lists_to_modules(self, module_scope_vs_module_dict: Dict[Scope, torch.nn.Module]) -> Dict[
-            Scope, List[QuantizerConfig]]:
-        retval = {}  # type: Dict[Scope, List[QuantizerConfig]]
-        insertion_point_graph = self._target_model.get_insertion_point_graph()
+    def _assign_qconfig_lists_to_modules(self, nodes_with_weights: List[NNCFNode]) -> Dict[NNCFNode, QuantizerConfig]:
+        retval = {}  # type: Dict[NNCFNode, QuantizerConfig]
         global_constraints = self.global_quantizer_constraints[QuantizerGroup.WEIGHTS]
         default_qconfig = self._get_default_qconfig(constraints=global_constraints)
         scope_overrides_dict = self._quantization_config.get("scope_overrides", {})
+        weight_scope_overrides_dict = scope_overrides_dict.get("weights")
         if self.hw_config is not None:
             meta_vs_qconfig_map = self.hw_config.get_metatype_vs_quantizer_configs_map(for_weights=True)
-        for module_scope in module_scope_vs_module_dict:
+        for node in nodes_with_weights:
             qconfig_for_current_scope = self.get_scoped_quantizer_config(default_qconfig,
-                                                                         str(module_scope),
-                                                                         scope_overrides_dict)
+                                                                         node.node_name,
+                                                                         weight_scope_overrides_dict)
             if self.hw_config is None:
                 qconfig_list = [qconfig_for_current_scope]
             else:
-                associated_ops = insertion_point_graph.get_op_nodes_in_scope(module_scope)
-                if not associated_ops:
-                    raise RuntimeError(
-                        "Could not find a patched operation corresponding to NNCF module scope {}".format(
-                            str(module_scope)))
-
-                if len(associated_ops) > 1:
-                    self._check_if_ip_graph_nodes_point_to_single_module(associated_ops)
-                graph_operation = associated_ops[0]
-                nncf_node_ref = graph_operation[InsertionPointGraph.REGULAR_NODE_REF_NODE_ATTR]
-                metatype = PTOperatorMetatypeNodeMatcher.match(nncf_node_ref)
+                metatype = PTOperatorMetatypeNodeMatcher.match(node)
                 qconfig_list = meta_vs_qconfig_map[metatype]
                 if HWConfig.is_wildcard_quantization(qconfig_list):  # Empty list = wildcard quantization
                     qconfig_list = [default_qconfig]
@@ -431,7 +396,7 @@ class PropagationBasedQuantizerSetupGenerator(QuantizerSetupGeneratorBase):
                 try:
                     local_constraints = global_constraints
                     for overridden_scope, scoped_override_dict in scope_overrides_dict.items():
-                        if in_scope_list(str(module_scope), overridden_scope):
+                        if matches_any(node.node_name, overridden_scope):
                             scope_constraints = QuantizationConstraints.from_config_dict(scoped_override_dict)
                             local_constraints = local_constraints.get_updated_constraints(scope_constraints)
                     qconfig_list = local_constraints.constrain_qconfig_list(qconfig_list)
@@ -439,19 +404,20 @@ class PropagationBasedQuantizerSetupGenerator(QuantizerSetupGeneratorBase):
                 except RuntimeError as e:
                     err_msg = "Quantization parameter constraints specified in NNCF config are incompatible with HW "
                     err_msg += "capabilities as specified in HW config type '{}'. ".format(self.hw_config.target_device)
-                    err_msg += "First conflicting quantizer location: {}".format(str(module_scope))
+                    err_msg += "First conflicting quantizer location: {}".format(str(node.node_name))
                     raise RuntimeError(err_msg) from e
 
-            retval[module_scope] = qconfig_list
+            retval[node] = qconfig_list
         return retval
 
     def _handle_quantize_inputs_option(self, quantizer_setup: SingleConfigQuantizerSetup) -> SingleConfigQuantizerSetup:
+        nncf_graph = self._target_model.get_original_graph()
         qp_ids_to_discard = []
         for qp_id, qp in quantizer_setup.quantization_points.items():
             if qp.is_activation_quantization_point():
                 insertion_point = qp.insertion_point
-                ia_op_exec_context = insertion_point.ia_op_exec_context
-                if not self._quantize_inputs and ia_op_exec_context.operator_name == MODEL_INPUT_OP_NAME:
+                target_node = nncf_graph.get_node_by_name(insertion_point.target_node_name)
+                if not self._quantize_inputs and target_node.node_type == MODEL_INPUT_OP_NAME:
                     qp_ids_to_discard.append(qp_id)
         for qp_id in qp_ids_to_discard:
             quantizer_setup.discard(qp_id, keep_shared_input_qps=True)
@@ -716,36 +682,37 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
                                  target_model: NNCFNetwork,
                                  quantization_points: List[SingleConfigQuantizationPoint]) -> List[AdjustPaddingArgs]:
         result = []
-        for module_scope in quantization_point.scopes_of_directly_quantized_operators:
-            module = target_model.get_module_by_scope(module_scope)
+        for op_node_name in quantization_point.directly_quantized_operator_node_names:
+            module = target_model.get_containing_module(op_node_name)
             weight_bitwidth = None
             for qp in quantization_points:
                 is_weight = qp.is_weight_quantization_point()
-                if is_weight and (qp.insertion_point.module_scope == module_scope):
+                if is_weight and (qp.insertion_point.target_node_name == op_node_name):
                     weight_bitwidth = qp.qconfig.num_bits
                     break
             if weight_bitwidth:
-                result.append(AdjustPaddingArgs(weight_bitwidth, activation_quantizer, module, module_scope))
+                result.append(AdjustPaddingArgs(weight_bitwidth, activation_quantizer, module, op_node_name))
         return result
 
     @staticmethod
     def _add_adjust_padding_ops(adjust_padding_args: List[AdjustPaddingArgs], target_model: NNCFNetwork):
         commands = []
         for args in adjust_padding_args:
-            module_scope = args.module_scope
             if CalculatePaddingAdjustment.is_applicable(args):
                 ap = CalculatePaddingAdjustment(args.activation_quantizer)
                 device = next(target_model.parameters()).device
                 op = UpdatePaddingValue(ap).to(device)
                 insertion_point = PTTargetPoint(target_type=TargetType.PRE_LAYER_OPERATION,
-                                                module_scope=module_scope)
-                nncf_logger.warning('Padding will be adjusted for {}'.format(module_scope))
+                                                target_node_name=args.module_op_node_name)
+                nncf_logger.warning('Padding will be adjusted for {}'.format(args.module_op_node_name))
                 commands.append(PTInsertionCommand(insertion_point, op, TransformationPriority.DEFAULT_PRIORITY))
         return commands
 
     class ExternalQuantizerCallHook:
-        """Cannot simply register the quantizer module as a callable hook, since we need to call
-        a thread-local version of the quantizer module during base module execution."""
+        """
+        Cannot simply register the quantizer module as a callable hook, since we need to call
+        a thread-local version of the quantizer module during base module execution.
+        """
 
         def __init__(self, context: TracingContext, quantizer_storage_key: str,
                      debug_interface: 'QuantizationDebugInterface' = None):
@@ -821,6 +788,7 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
                                      qp_id_vs_quant_module_id_dict: Dict[QuantizationPointId, QuantizerId],
                                      quantizer_setup: SingleConfigQuantizerSetup,
                                      target_model: NNCFNetwork) -> List[AdjustPaddingArgs]:
+        nncf_graph = target_model.get_original_graph()
         def weight_qp_filter_fn(qp_id_):
             qp_ = quantizer_setup.quantization_points[qp_id_]
             return qp_.is_weight_quantization_point()
@@ -833,24 +801,20 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
         for wqp_id in weight_qps:
             wqp = quantizer_setup.quantization_points[wqp_id]
             ip = wqp.insertion_point
-            module_scope = ip.module_scope
-            nncf_graph = target_model.get_original_graph()
-            graph_node = nncf_graph.find_node_in_nx_graph_by_scope(module_scope)
-            if not graph_node:
-                raise RuntimeError(f'Internal error: failed to find node for by scope={module_scope}')
+            target_node = nncf_graph.get_node_by_name(ip.target_node_name)
 
-            op_type = PTOperatorMetatypeNodeMatcher.match(graph_node)
+            op_type = PTOperatorMetatypeNodeMatcher.match(target_node)
             is_adjust_padding_applicable = op_type in adjust_padding_operation_set
             if self._should_setup_adjust_pad_ops and is_adjust_padding_applicable:
                 gid = quantizer_setup.get_shared_inputs_group_id(wqp_id)
                 shared_input_group = quantizer_setup.shared_input_operation_set_groups[gid]
 
-                def activation_qp_matches_scope_filter_fn(qp_id_):
+                def is_qp_quantizing_same_op_as_wqp(qp_id_):
                     qp_ = quantizer_setup.quantization_points[qp_id_]
-                    is_scope_matched = module_scope in qp_.scopes_of_directly_quantized_operators
-                    return qp_.is_activation_quantization_point() and is_scope_matched
+                    node_matched = target_node.node_name in qp_.directly_quantized_operator_node_names
+                    return qp_.is_activation_quantization_point() and node_matched
 
-                for qp_id in filter(activation_qp_matches_scope_filter_fn, shared_input_group):
+                for qp_id in filter(is_qp_quantizing_same_op_as_wqp, shared_input_group):
                     quantizer_module_id = qp_id_vs_quant_module_id_dict[qp_id]
                     activation_quantizer = self._non_weight_quantizers[quantizer_module_id].quantizer_module_ref
                     args = self._get_adjust_padding_args(wqp, activation_quantizer, target_model,
@@ -932,7 +896,8 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
                                              qconfig: QuantizerConfig,
                                              range_init_minmax_values: Tuple[torch.Tensor, torch.Tensor] = None) -> \
             Tuple[QuantizerId, List[PTInsertionCommand]]:
-        """Will generate insertion commands for quantization at possibly multiple points
+        """
+        Will generate insertion commands for quantization at possibly multiple points
         in the network using one and the same trainable quantizer module. The trainable
         quantizer module will be saved either inside the weightable module which weights
         it quantizes (for single-point weight quantization), or in a NNCFNetwork wrapper
@@ -945,25 +910,29 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
         for initializing the quantizer's trainable parameters
         :return: A tuple with the identifier of the new quantizer module and a list of
         insertion commands registering this module for quantization at spots described by
-        insertion_points."""
+        insertion_points.
+        """
         #pylint:disable=too-many-branches
         #pylint:disable=too-many-statements
+        nncf_graph = target_model.get_original_graph()
         if not insertion_points:
             raise RuntimeError("No insertion points to put quantizers into!")
 
         def is_weights(ip: PTTargetPoint) -> bool:
-            return ip.module_scope is not None
+            return ip.target_type is TargetType.OPERATION_WITH_WEIGHTS
 
         # The scale shapes for all insertion points must match, otherwise it is impossible to quantize them all
         # using a single module
         scale_shapes = []  # type: List[List[int]]
         for ip in insertion_points:
             if is_weights(ip):
-                module = target_model.get_module_by_scope(ip.module_scope)
-                scale_shape = get_scale_shape(module.weight.shape, is_weights=True, per_channel=qconfig.per_channel)
+                target_node = nncf_graph.get_node_by_name(ip.target_node_name)
+                module_attributes = target_node.module_attributes
+                scale_shape = get_scale_shape(module_attributes.get_weight_shape(), is_weights=True,
+                                              per_channel=qconfig.per_channel)
                 scale_shapes.append(scale_shape)
             else:
-                input_shape = target_model.get_input_shape_for_insertion_point(ip)
+                input_shape = target_model.get_original_graph().get_input_shape_for_insertion_point(ip)
                 scale_shapes.append(get_scale_shape(list(input_shape),
                                                     is_weights=False, per_channel=qconfig.per_channel))
         if not all([shape == scale_shapes[0] for shape in scale_shapes]):
@@ -1005,9 +974,9 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
         qids = []  # type: List[QuantizerId]
         for ip in insertion_points:
             if is_weights(ip):
-                qids.append(WeightQuantizerId(ip.module_scope))
+                qids.append(WeightQuantizerId(ip.target_node_name))
             else:
-                qids.append(NonWeightQuantizerId(ip.ia_op_exec_context, ip.input_port_id))
+                qids.append(NonWeightQuantizerId(ip.target_node_name, ip.input_port_id))
 
         serialized_insertions_list = [str(x) for x in qids]
         external_quantizer_storage_key = ";".join(serialized_insertions_list)
@@ -1016,14 +985,14 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
                 "Processing linked quantizer group:\n {}\n".format("\n".join(serialized_insertions_list)))
 
         if is_weights(primary_ip):
-            primary_qid = WeightQuantizerId(primary_ip.module_scope)
+            primary_qid = WeightQuantizerId(primary_ip.target_node_name)
             self._weight_quantizers[primary_qid] = WeightQuantizerInfo(quantizer,
-                                                                       target_model.get_module_by_scope(
-                                                                           primary_ip.module_scope
+                                                                       target_model.get_containing_module(
+                                                                           primary_ip.target_node_name
                                                                        ),
                                                                        insertion_points)
         else:
-            primary_qid = NonWeightQuantizerId(primary_ip.ia_op_exec_context, primary_ip.input_port_id)
+            primary_qid = NonWeightQuantizerId(primary_ip.target_node_name, primary_ip.input_port_id)
             self._non_weight_quantizers[primary_qid] = \
                 NonWeightQuantizerInfo(quantizer, insertion_points)
 
@@ -1065,11 +1034,11 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
                     " logarithm_scale" if quantizer.is_using_log_scale_storage else "",
                     str(curr_insertion_point)
                 ))
-                # Hooks will be identical for each affected ia_op_exec_context in the linked scenario
+                # Hooks will be identical for each affected op_address in the linked scenario
                 # - will call one and the same quantizer
                 callable_obj = self.ExternalQuantizerCallHook(target_model.get_tracing_context(),
-                                                          external_quantizer_storage_key,
-                                                          self._debug_interface)
+                                                              external_quantizer_storage_key,
+                                                              self._debug_interface)
 
             insertion_commands.append(PTInsertionCommand(curr_insertion_point,
                                                          callable_obj,
@@ -1215,16 +1184,14 @@ class QuantizationController(QuantizationControllerBase):
     def _do_runtime_range_init(self, range_init_params: RangeInitParams):
         modules_to_init = OrderedDict()
         for wq_id, wq_info in self.weight_quantizers.items():
-            scope_str = str(wq_id)
             group = QuantizerGroup.WEIGHTS
-            init_config = range_init_params.get_init_config_for_scope_and_group(scope_str, group)
-            modules_to_init[scope_str] = (wq_info.quantizer_module_ref, init_config)
+            init_config = range_init_params.get_init_config_for_scope_and_group(wq_id, group)
+            modules_to_init[str(wq_id)] = (wq_info.quantizer_module_ref, init_config)
 
         for aq_id, aq_info in self.non_weight_quantizers.items():
-            scope_str = str(aq_id)
             group = QuantizerGroup.ACTIVATIONS
-            init_config = range_init_params.get_init_config_for_scope_and_group(scope_str, group)
-            modules_to_init[scope_str] = (aq_info.quantizer_module_ref, init_config)
+            init_config = range_init_params.get_init_config_for_scope_and_group(aq_id, group)
+            modules_to_init[str(aq_id)] = (aq_info.quantizer_module_ref, init_config)
 
         # NOTE: Order of modules must be the same to correctly broadcast parameters (e.g. input_low
         # and input_range)
@@ -1280,21 +1247,6 @@ class QuantizationController(QuantizationControllerBase):
         if self._distributed:
             self._broadcast_initialized_params_for_each_quantizer()
 
-    def update_range_config_by_default(self, init_range_config: Dict):
-        global_init_range_config = dict()
-        global_init_range_config.update(init_range_config)
-        if global_init_range_config.get("type") is None:
-            global_init_range_config["type"] = "mean_min_max"
-
-        if global_init_range_config.get("num_init_samples") is None:
-            global_init_range_config["num_init_samples"] = 256
-
-        num_init_samples = global_init_range_config.get('num_init_samples', 256)
-        if num_init_samples < 0:
-            raise AttributeError('Number of initialization samples must be >= 0')
-        return global_init_range_config
-
-
     def enable_activation_quantization(self):
         for m in self.non_weight_quantizers.values():
             m.quantizer_module_ref.enable_quantization()
@@ -1310,44 +1262,6 @@ class QuantizationController(QuantizationControllerBase):
     def disable_weight_quantization(self):
         for m in self.weight_quantizers.values():
             m.quantizer_module_ref.disable_quantization()
-
-    def _get_local_init_range_config(self, scope: Scope, scope_overrides: Dict[str, Dict],
-                                     global_init_range_config: Dict, quantizer_group: str):
-        if isinstance(global_init_range_config, dict):
-            module_init_range_config = global_init_range_config
-        else:
-            module_init_range_config = None
-            matched_init_range_config = []
-            for range_init_subconfig in global_init_range_config:
-                target_scopes = range_init_subconfig.get("target_scopes", None)
-                ignored_scopes = range_init_subconfig.get("ignored_scopes", None)
-                target_quantizer_group = range_init_subconfig.get("target_quantizer_group", quantizer_group)
-                if quantizer_group == target_quantizer_group and \
-                    should_consider_scope(str(scope), target_scopes, ignored_scopes):
-                    matched_init_range_config.append(range_init_subconfig)
-
-            if len(matched_init_range_config) > 1:
-                raise AssertionError("The range initialization configs conflict with each other. "
-                                     "Conflicting configs: {} for scope {}.".format(matched_init_range_config,
-                                                                                    str(scope)))
-
-            if len(matched_init_range_config) == 1:
-                module_init_range_config = matched_init_range_config[0]
-            else:
-                raise AssertionError("The range initialization configs conflict with each other. "
-                                     "Conflicting configs: {} for scope {}.".format(matched_init_range_config,
-                                                                                    str(scope)))
-
-        for overridden_scope in scope_overrides.keys():
-            if in_scope_list(str(scope), overridden_scope):
-                override_config = scope_overrides[overridden_scope].get('initializer', {}).get("range")
-                if override_config is not None:
-                    module_init_range_config = override_config
-
-        if module_init_range_config is None:
-            module_init_range_config = self.update_range_config_by_default({})
-
-        return module_init_range_config
 
     def statistics(self, quickly_collected_only=False) -> NNCFStatistics:
         num_enabled_quantization = len([1 for q in self.all_quantizations.values() if q.is_enabled_quantization()])

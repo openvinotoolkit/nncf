@@ -21,7 +21,9 @@ from beta.nncf.tensorflow.graph.metatypes.keras_layers import TFNNCFWrapperLayer
 from beta.nncf.tensorflow.graph.metatypes.matcher import get_keras_layer_metatype
 from beta.nncf.tensorflow.layers.wrapper import NNCFWrapper
 from beta.nncf.tensorflow.layers.operation import NNCFOperation
+from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
+from nncf.common.graph import NNCFNodeName
 
 SHARED_OPERATION_MARK = '^'
 
@@ -100,10 +102,8 @@ def collect_wrapped_layers(model):
     return wrapped_layers
 
 
-def get_expanded_node_name(layer_name, instance_index, is_shared):
-    if is_shared:
-        return '{}{}{}'.format(layer_name, SHARED_OPERATION_MARK, instance_index)
-    return layer_name
+def get_shared_node_name(layer_name: str, instance_index: int):
+    return '{}{}{}'.format(layer_name, SHARED_OPERATION_MARK, instance_index)
 
 
 def get_original_name_and_instance_index(node_name):
@@ -129,10 +129,11 @@ def get_layer_to_graph_nodes_map(model, node_names):
     return layer_to_nodes_map
 
 
-def get_weight_node_name(graph, node_name):
-    while list(graph.nx_graph.predecessors(node_name)):
-        node_name = list(graph.nx_graph.predecessors(node_name))[-1]
-    return node_name
+def get_weight_node_name(graph: NNCFGraph, node_name: NNCFNodeName) -> NNCFNodeName:
+    node = graph.get_node_by_name(node_name)
+    while list(graph.get_previous_nodes(node)):
+        node = list(graph.get_previous_nodes(node))[-1]
+    return node.node_name
 
 
 def get_layer_identifier(node: NNCFNode):

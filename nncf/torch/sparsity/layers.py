@@ -10,6 +10,7 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+from typing import List
 
 import torch
 import torch.nn as nn
@@ -21,9 +22,9 @@ from nncf.torch.utils import is_tracing_state, no_jit_trace
 
 @COMPRESSION_MODULES.register()
 class BinaryMask(nn.Module):
-    def __init__(self, size):
+    def __init__(self, shape: List[int]):
         super().__init__()
-        self.register_buffer("_binary_mask", torch.ones(size))
+        self.register_buffer("_binary_mask", torch.ones(shape))
         self.frozen = False
 
     @property

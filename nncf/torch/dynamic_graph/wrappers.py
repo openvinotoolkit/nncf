@@ -12,20 +12,31 @@
 """
 
 import warnings
+from copy import deepcopy
 
+from torch.nn import Conv1d
+from torch.nn import Conv2d
+from torch.nn import Conv3d
+from torch.nn import ConvTranspose1d
+from torch.nn import ConvTranspose2d
+from torch.nn import ConvTranspose3d
 from torch.nn import DataParallel, Module as TorchModule
+from torch.nn import Linear
 
-from nncf.common.graph.module_attributes import ConvolutionModuleAttributes
-from nncf.common.graph.module_attributes import GroupNormModuleAttributes
+from nncf.common.graph.layer_attributes import BaseLayerAttributes
+from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
+from nncf.common.graph.layer_attributes import GenericWeightedLayerAttributes
+from nncf.common.graph.layer_attributes import GroupNormLayerAttributes
+from nncf.common.graph.layer_attributes import LinearLayerAttributes
+from nncf.common.utils.logger import logger as nncf_logger
 from nncf.torch.debug import is_debug
 from nncf.torch.dynamic_graph.context import get_current_context
-from nncf.torch.dynamic_graph.context import OperatorInput
+from nncf.torch.dynamic_graph.op_input_processing import OperatorInput
 from nncf.torch.dynamic_graph.trace_tensor import make_tensor_metas
 from nncf.torch.dynamic_graph.trace_tensor import trace_tensors
-from nncf.torch.graph.graph import ModuleAttributes
+from nncf.torch.layer_utils import _NNCFModuleMixin
 from nncf.torch.layers import ITERATION_MODULES
-from nncf.torch.layers import NNCF_GENERAL_CONV_MODULES_DICT
-from nncf.torch.utils import nncf_logger
+from nncf.torch.layers import NNCF_MODULES_DICT
 
 _IGNORED_SCOPES = []
 
@@ -44,7 +55,7 @@ def ignore_scope(cls):
     return cls
 
 
-OP_NAMES_REQUIRING_MODULE_ATTRS = [v.op_func_name for v in NNCF_GENERAL_CONV_MODULES_DICT] + ["group_norm"]
+OP_NAMES_REQUIRING_MODULE_ATTRS = [v.op_func_name for v in NNCF_MODULES_DICT] + ["group_norm"]
 
 
 def wrap_operator(operator, operator_info: 'PatchedOperatorInfo'):
@@ -69,23 +80,26 @@ def wrap_operator(operator, operator_info: 'PatchedOperatorInfo'):
                 result = ForwardTraceOnly()(operator, *args, **kwargs)
             else:
                 op_name = operator_info.name
-                ia_op_exec_context = ctx.get_caller_context(op_name)
+                op_address = ctx.get_caller_context(op_name)
 
                 module_attrs = None
+                ignored_algos = []
                 # Collect module attributes, if required
                 if op_name in OP_NAMES_REQUIRING_MODULE_ATTRS:
                     curr_module = ctx.get_current_module()
                     if curr_module is None:
                         raise RuntimeError("Operation {} requires module attributes, "
                                            "but it was executed outside any module".format(op_name))
-                    module_attrs = _get_module_attributes(curr_module, op_name)
+                    module_attrs = _get_layer_attributes(curr_module, op_name)
+                    if isinstance(curr_module, _NNCFModuleMixin):
+                        ignored_algos = deepcopy(curr_module.ignored_algorithms)
 
-                ctx.register_operator_call(ia_op_exec_context.operator_name, ia_op_exec_context.scope_in_model)
+                ctx.register_operator_call(op_address.operator_name, op_address.scope_in_model)
                 op_input = OperatorInput(list(args), kwargs)
-                processed_input = ctx.execute_pre_hooks(ia_op_exec_context, op_input)
+                processed_input = ctx.execute_pre_hooks(op_address, op_input)
 
                 tensor_metas = make_tensor_metas(processed_input)
-                node = ctx.find_operator_node(tensor_metas, ia_op_exec_context)
+                node = ctx.find_operator_node(tensor_metas, op_address)
 
                 args = tuple(processed_input.op_args)
                 kwargs = processed_input.op_kwargs
@@ -94,13 +108,13 @@ def wrap_operator(operator, operator_info: 'PatchedOperatorInfo'):
                 if isinstance(result, type(NotImplemented)):
                     nncf_logger.debug("Operation {} returned NotImplemented".format(op_name))
                 elif node is None:
-                    node = ctx.maybe_add_node(processed_input, tensor_metas, ia_op_exec_context, module_attrs)
+                    node = ctx.maybe_add_node(processed_input, tensor_metas, op_address, module_attrs, ignored_algos)
 
                 if node is not None:
                     if is_debug():
                         ctx.register_node_call(node)
                     result = trace_tensors(result, node)
-                result = ctx.execute_post_hooks(ia_op_exec_context, result)
+                result = ctx.execute_post_hooks(op_address, result)
         except:
             # Looks like the __repr__ call made during IDE debug to display tensor contents does not exit properly,
             # but instead throws an exception. This try...except block handles such a situation.
@@ -133,18 +147,37 @@ def wrap_module_call(module_call):
     return wrapped
 
 
-def _get_module_attributes(module: TorchModule, operator_name: str) -> ModuleAttributes:
+def _get_layer_attributes(module: TorchModule, operator_name: str) -> BaseLayerAttributes:
     if operator_name == "group_norm":
-        return GroupNormModuleAttributes(
+        return GroupNormLayerAttributes(
             module.weight.requires_grad,
             module.num_channels,
             module.num_groups
         )
-    return ConvolutionModuleAttributes(
-        module.weight.requires_grad,
-        module.in_channels,
-        module.out_channels,
-        module.kernel_size,
-        module.stride,
-        module.groups
-    )
+    if isinstance(module, (Conv1d, Conv2d, Conv3d)):
+        return ConvolutionLayerAttributes(weight_requires_grad=module.weight.requires_grad,
+                                          in_channels=module.in_channels,
+                                          out_channels=module.out_channels,
+                                          kernel_size=module.kernel_size,
+                                          stride=module.stride,
+                                          groups=module.groups,
+                                          transpose=False)
+    if isinstance(module, (ConvTranspose1d, ConvTranspose2d, ConvTranspose3d)):
+        return ConvolutionLayerAttributes(weight_requires_grad=module.weight.requires_grad,
+                                          in_channels=module.in_channels,
+                                          out_channels=module.out_channels,
+                                          kernel_size=module.kernel_size,
+                                          stride=module.stride,
+                                          groups=module.groups,
+                                          transpose=True)
+    if isinstance(module, Linear):
+        return LinearLayerAttributes(weight_requires_grad=module.weight.requires_grad,
+                                     in_features=module.in_features,
+                                     out_features=module.out_features)
+
+    if hasattr(module, 'weight'):
+        return GenericWeightedLayerAttributes(weight_requires_grad=module.weight.requires_grad,
+                                              weight_shape=module.weight.shape)
+
+    return GenericWeightedLayerAttributes(weight_requires_grad=False,
+                                          weight_shape=[1, 1])

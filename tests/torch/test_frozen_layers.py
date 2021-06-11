@@ -10,8 +10,8 @@ from tests.torch.helpers import create_ones_mock_dataloader
 from tests.torch.helpers import get_empty_config
 from tests.torch.helpers import register_bn_adaptation_init_args
 
-FIRST_NNCF_CONV_SCOPE = 'TwoConvTestModel/Sequential[features]/Sequential[0]/NNCFConv2d[0]'
-FIRST_CONV_SCOPE = 'TwoConvTestModel/Sequential[features]/Sequential[0]/Conv2d[0]'
+FIRST_NNCF_CONV_SCOPE = 'TwoConvTestModel/Sequential[features]/Sequential[0]/NNCFConv2d[0]/conv2d_0'
+FIRST_CONV_SCOPE = 'TwoConvTestModel/Sequential[features]/Sequential[0]/Conv2d[0]/conv2d_0'
 
 
 class AlgoBuilder:
@@ -38,12 +38,12 @@ class AlgoBuilder:
                              }})
         return self
 
-    def ignore_first_conv(self, is_nncf=False):
-        self._config['ignored_scopes'] = FIRST_NNCF_CONV_SCOPE if is_nncf else FIRST_CONV_SCOPE
+    def ignore_first_conv(self):
+        self._config['ignored_scopes'] = FIRST_NNCF_CONV_SCOPE
         return self
 
-    def target_first_conv(self, is_nncf=False):
-        self._config['target_scopes'] = FIRST_NNCF_CONV_SCOPE if is_nncf else FIRST_CONV_SCOPE
+    def target_first_conv(self):
+        self._config['target_scopes'] = FIRST_NNCF_CONV_SCOPE
         return self
 
     def get_config(self):
@@ -99,12 +99,13 @@ class FrozenLayersTestStruct:
         self._config_updaters.append(add_range_init)
         return self
 
-    def ignore_first_conv(self, is_nncf=False):
-        self.config_update['ignored_scopes'] = FIRST_NNCF_CONV_SCOPE if is_nncf else FIRST_CONV_SCOPE
+    def ignore_first_conv(self):
+        self.config_update['ignored_scopes'] = FIRST_NNCF_CONV_SCOPE
         return self
 
-    def target_first_conv(self, is_nncf=False):
-        self.config_update['target_scopes'] = FIRST_NNCF_CONV_SCOPE if is_nncf else FIRST_CONV_SCOPE
+    def target_first_conv(self):
+        for algo_dict in self.config_update["compression"]:
+            algo_dict["target_scopes"] = FIRST_NNCF_CONV_SCOPE
         return self
 
     def expects_error(self):
@@ -131,9 +132,9 @@ TEST_PARAMS = [
     FrozenLayersTestStruct(name='8_bits_quantization_with_frozen_in_ignored_scope')
         .add_algo(AlgoBuilder().name('quantization').ignore_first_conv()),
     FrozenLayersTestStruct(name='8_bits_quantization_with_frozen_in_ignored_nncf_scope')
-        .add_algo(AlgoBuilder().name('quantization').ignore_first_conv(is_nncf=True)),
+        .add_algo(AlgoBuilder().name('quantization').ignore_first_conv()),
     FrozenLayersTestStruct(name='8_bits_quantization_with_not_all_frozen_in_ignored_scope')
-        .add_algo(AlgoBuilder().name('quantization').ignore_first_conv(is_nncf=True))
+        .add_algo(AlgoBuilder().name('quantization').ignore_first_conv())
         .freeze_all()
         .expects_warning(),
     FrozenLayersTestStruct(name='mixed_precision_quantization')
@@ -143,7 +144,7 @@ TEST_PARAMS = [
         .add_algo(AlgoBuilder().name('quantization').mixed_precision())
         .ignore_first_conv(),
     FrozenLayersTestStruct(name='mixed_precision_quantization_with_frozen_in_ignored_scope')
-        .add_algo(AlgoBuilder().name('quantization').mixed_precision().ignore_first_conv(is_nncf=True)),
+        .add_algo(AlgoBuilder().name('quantization').mixed_precision().ignore_first_conv()),
     FrozenLayersTestStruct(name='mixed_precision_quantization_with_not_all_frozen_in_ignored_scope')
         .add_algo(AlgoBuilder().name('quantization').mixed_precision())
         .ignore_first_conv()

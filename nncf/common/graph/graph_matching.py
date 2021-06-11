@@ -13,12 +13,13 @@
 
 from itertools import chain, combinations
 from typing import Callable, List
+from typing import Dict
 
 import numpy as np
 import networkx as nx
 
 
-def powerset(iterable, min_r=1, max_r=None):
+def powerset(iterable, min_r: int = 1, max_r: int = None):
     if not isinstance(iterable, list):
         s = list(iterable)
     else:
@@ -29,6 +30,13 @@ def powerset(iterable, min_r=1, max_r=None):
 
 
 class Expression:
+    """
+    A base class for objects that represent an expression to be matched against a subgraph of a directed
+    acyclic graph. Overloads certain Python operator to define a kind of a domain-specific mini-language for
+    specifying a DAG subgraph in a single line. `Expression`-based subgraph specification is not expressive
+    enough to cover all cases required by NNCF, e.g. in the case of the swish activation x * sigmoid(x), which
+    cannot be unambiguosly specified using `Expression`s.
+    """
     def _match(self, nodes, graph):
         return NotImplementedError
 
@@ -44,7 +52,7 @@ class Expression:
     def _iterate_alternatives(self, nodes):
         return powerset(nodes, min_r=1)
 
-    def _find_all_matches(self, nodes, graph):
+    def _find_all_matches(self,  nodes: List[Dict], graph: nx.DiGraph):
         all_matches = []
         for n in self._iterate_alternatives(nodes):
             result = self._match(n, graph)
@@ -61,10 +69,10 @@ class Expression:
                 all_matches.append((n, following))
         return all_matches
 
-    def all_matches(self, nodes, graph):
+    def all_matches(self, nodes: List[Dict], graph: nx.DiGraph):
         return self._find_all_matches(nodes, graph)
 
-    def match(self, nodes, graph):
+    def match(self, nodes: List[Dict], graph: nx.DiGraph):
         all_matches = self._find_all_matches(nodes, graph)
         if not all_matches:
             return None, None
@@ -72,7 +80,18 @@ class Expression:
 
 
 class ConcatExpression(Expression):
-    def __init__(self, expressions):
+    """
+    A composite expression that matches to a node path in the graph which is a concatenation
+    of the paths that each matches, in order, to the sub-expression of this expression.
+    E.g. a subgraph (conv2d) -> (batch_norm) will be matched to the expression:
+        ConcatExpression([NodeExpression('conv2d'), NodeExpression('batch_norm2d')])
+    or, equivalently, using the overloaded operator syntax:
+        NodeExpression('conv2d') + NodeExpression('batch_norm2d')
+    """
+    def __init__(self, expressions: List[Expression]):
+        """
+        :param expressions: A list of subexpressions to be matched in a concat-fashion
+        """
         self.expressions = expressions
 
     def _match(self, nodes, graph):
@@ -94,7 +113,21 @@ class ConcatExpression(Expression):
 
 
 class AlternatingExpression(Expression):
+    """
+    A composite expression that matches to any of the node path in the graph which matches to at least
+     one of the subexpressions.
+    E.g. in a graph (conv2d) -> (batch_norm) the expression:
+        AlternatingExpression([NodeExpression('conv2d'), NodeExpression('batch_norm2d')]),
+    or, equivalently,
+        NodeExpression('conv2d') | NodeExpression('batch_norm2d')
+    will match both to the (conv2d) node and the (batch_norm) node.
+    """
     def __init__(self, expressions, greedy_match=False, greedy_consume=True):
+        """
+        :param expressions: A list of subexpressions to be matched in an alternating-fashion
+        :param greedy_match:
+        :param greedy_consume:
+        """
         self.greedy_match = greedy_match
         self.greedy_consume = greedy_consume
         self.expressions = expressions
@@ -123,7 +156,24 @@ class AlternatingExpression(Expression):
 
 
 class BranchingExpression(Expression):
+    """
+    A composite expression that matches to a subgraph which is composed of separate branches, each matching
+    against a subexpression; the branches are united by one and the same sourcing node.
+    E.g. in a graph:
+                |--> (max_pool2d)
+         (conv2d)--> (batch_norm) the expression:
+                |--> (RELU)
+
+    the expression given by
+        BranchingExpression([NodeExpression('max_pool2d'), NodeExpression('batch_norm'), NodeExpression('RELU')])
+    or, alternatively,
+        NodeExpression('max_pool2d') & NodeExpression('batch_norm') & NodeExpression('RELU')
+    will match to the (max_pool2d), (batch_norm) and the (RELU) nodes.
+    """
     def __init__(self, expressions):
+        """
+        :param expressions: A list of subexpressions to be matched as branches
+        """
         self.expressions = expressions
 
     def _iterate_alternatives(self, nodes):
@@ -189,7 +239,19 @@ class BranchingExpression(Expression):
 
 
 class NodeExpression(Expression):
-    def __init__(self, node_type: str = None, filter_fn=None, node_type_fn: Callable[[dict], str] = None):
+    """
+    A basic Expression that is matched against a single node; the node descriptor is expected to be a dict commonly
+    seen in networkx graphs.
+    """
+    def __init__(self, node_type: str = None,
+                 filter_fn: Callable[[Dict], bool] = None,
+                 node_type_fn: Callable[[dict], str] = None):
+        """
+        :param node_type: A string value to be compared with a value returned by node_type_fn to determine
+        an expression match.
+        :param filter_fn: A predicate for nodes that are to be disregarded during matching.
+        :param node_type_fn: A function that accepts a node dict and returns a value to be matched against node_type
+        """
         self.filter = filter_fn
         self.node_type = node_type
         if node_type_fn is None:
@@ -201,7 +263,7 @@ class NodeExpression(Expression):
         for node in nodes:
             yield [node]
 
-    def _match(self, nodes, graph):
+    def _match(self, nodes: List[Dict], graph: nx.DiGraph):
         if len(nodes) != 1:
             return None
 
@@ -260,7 +322,7 @@ def find_whether_subgraph_has_inner_outgoing_edges(graph: nx.DiGraph, subgraph: 
     return False
 
 
-def find_subgraphs_match_expression(graph: nx.DiGraph, expression: Expression) -> List[List[str]]:
+def find_subgraphs_matching_expression(graph: nx.DiGraph, expression: Expression) -> List[List[str]]:
     """
     Find a list of subgraphs for the particular graph that match the pattern expression.
     :param graph: The model graph.

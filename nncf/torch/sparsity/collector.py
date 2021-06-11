@@ -44,7 +44,7 @@ class PTSparseModelStatisticsCollector(BaseSparseModelStatisticsCollector):
 
             weights_descriptions.append(
                 WeightDescription(
-                    minfo.module_name,
+                    minfo.module_node_name,
                     list(sparse_weight.shape),
                     sparse_weight.count_nonzero().item(),
                     is_sparse=True
@@ -53,7 +53,7 @@ class PTSparseModelStatisticsCollector(BaseSparseModelStatisticsCollector):
 
             if minfo.module.bias is not None:
                 bias = minfo.module.bias
-                name = f'{minfo.module_name}/bias'
+                name = f'{minfo.module_node_name}/bias'
                 weights_descriptions.append(
                     WeightDescription(name, list(bias.shape), bias.count_nonzero().item(), is_sparse=False)
                 )
