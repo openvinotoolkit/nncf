@@ -135,11 +135,7 @@ class RBSparsityController(BaseSparsityAlgoController):
 
         mean_sparse_prob = 1.0 - self.loss.mean_sparse_prob
 
-        masks_consistency = 1.0
-        if self._distributed and self._check_sparsity_masks:
-            masks_consistency = self._check_distributed_masks()
-
-        stats = RBSparsityStatistics(model_statistics, masks_consistency, target_sparsity_level, mean_sparse_prob)
+        stats = RBSparsityStatistics(model_statistics, target_sparsity_level, mean_sparse_prob)
 
         nncf_stats = NNCFStatistics()
         nncf_stats.register('rb_sparsity', stats)
