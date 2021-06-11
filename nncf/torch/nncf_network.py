@@ -30,9 +30,7 @@ from nncf.common.graph import MODEL_INPUT_OP_NAME
 from nncf.common.graph import MODEL_OUTPUT_OP_NAME
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
-from nncf.common.graph import NNCFNodeExpression
 from nncf.common.graph import NNCFNodeName
-from nncf.common.graph.graph_matching import NodeExpression
 from nncf.common.graph.model_transformer import ModelTransformer
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationPriority
@@ -40,6 +38,7 @@ from nncf.torch.graph.patterns import GraphPattern, FULL_PATTERN_GRAPH
 from nncf.common.hardware.config import HWConfig
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.common.utils.ordered_enum import OrderedEnum
+from nncf.common.graph.graph_matching import find_subgraphs_matching_expression
 from nncf.torch.debug import CombinedDebugInterface
 from nncf.torch.debug import debuggable_forward
 from nncf.torch.debug import is_debug
@@ -227,8 +226,7 @@ class InsertionPointGraph(nx.DiGraph):
             -> 'InsertionPointGraph':
         # pylint:disable=too-many-branches
         merged_ip_graph = deepcopy(self)
-        pattern = self._get_mergeable_operator_patterns(hw_config, additional_patterns)
-        from nncf.common.graph.graph_matching import find_subgraphs_match_expression
+        pattern = self._get_mergeable_operator_patterns(additional_patterns)
         matches = find_subgraphs_matching_expression(self._base_nx_graph, pattern)
         for match in matches:
             if len(match) <= 1:

@@ -60,7 +60,7 @@ def find_whether_subgraph_has_inner_outgoing_edges(graph: nx.DiGraph, subgraph: 
     return False
 
 
-def find_subgraphs_matching_expression(graph: nx.DiGraph, expression: Expression) -> List[List[str]]:
+def find_subgraphs_matching_expression(graph: nx.DiGraph, pattern_graph: GraphPattern) -> List[List[str]]:
     """
     Find a list of subgraphs for the particular graph that match the pattern expression.
     :param graph: The model graph.
