@@ -16,7 +16,6 @@ import numpy as np
 import tensorflow as tf
 
 from nncf.common.graph.transformations.commands import TransformationPriority
-from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.sparsity.schedulers import SPARSITY_SCHEDULERS
 from nncf.common.sparsity.schedulers import SparsityScheduler
 from nncf.common.sparsity.statistics import RBSparsityStatistics
@@ -25,6 +24,7 @@ from nncf.tensorflow.algorithm_selector import TF_COMPRESSION_ALGORITHMS
 from nncf.tensorflow.api.compression import TFCompressionAlgorithmBuilder
 from nncf.tensorflow.graph.transformations.commands import TFInsertionCommand
 from nncf.tensorflow.graph.transformations.commands import TFLayerWeight
+from nncf.tensorflow.graph.transformations.layout import TFTransformationLayout
 from nncf.tensorflow.graph.utils import get_original_name_and_instance_index
 from nncf.tensorflow.graph.utils import get_nncf_operations
 from nncf.tensorflow.graph.converter import convert_keras_model_to_nncf_graph
@@ -46,7 +46,7 @@ class RBSparsityBuilder(TFCompressionAlgorithmBuilder):
 
     def get_transformation_layout(self, model):
         nncf_graph = convert_keras_model_to_nncf_graph(model)
-        transformations = TransformationLayout()
+        transformations = TFTransformationLayout()
 
         processed_shared_layer_names = set()  # type: Set[str]
 
