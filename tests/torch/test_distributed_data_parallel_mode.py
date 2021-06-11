@@ -4,9 +4,9 @@ import torch.nn as nn
 import torch.multiprocessing as mp
 import time
 from typing import Tuple
-from nncf import create_compressed_model
-from nncf import register_default_init_args
 from nncf import NNCFConfig
+from nncf.torch import create_compressed_model
+from nncf.torch import register_default_init_args
 
 from tests.torch.helpers import create_random_mock_dataloader
 

@@ -15,7 +15,7 @@ from torch import nn
 from torch.utils.data import DataLoader
 
 from nncf.common.statistics import NNCFStatistics
-from nncf import register_default_init_args
+from nncf.torch import register_default_init_args
 from nncf.torch.dynamic_graph.graph_tracer import create_input_infos
 from nncf.torch.quantization.algo import QuantizationControllerBase
 from nncf.torch.quantization.schedulers import StagedQuantizationScheduler

@@ -33,8 +33,8 @@ if __nncf_backend__ == 'Torch':
     from nncf.torch.pruning.utils import is_depthwise_conv
     from nncf.torch.pruning.utils import is_conv_with_downsampling
 elif __nncf_backend__ == 'TensorFlow':
-    from beta.nncf.tensorflow.pruning.utils import is_depthwise_conv
-    from beta.nncf.tensorflow.pruning.utils import is_conv_with_downsampling
+    from nncf.tensorflow.pruning.utils import is_depthwise_conv
+    from nncf.tensorflow.pruning.utils import is_conv_with_downsampling
 
 
 class PruningNodeSelector:

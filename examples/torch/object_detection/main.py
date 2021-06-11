@@ -41,7 +41,8 @@ from examples.torch.object_detection.dataset import detection_collate, get_testi
 from examples.torch.object_detection.eval import test_net
 from examples.torch.object_detection.layers.modules import MultiBoxLoss
 from examples.torch.object_detection.model import build_ssd
-from nncf import create_compressed_model, load_state
+from nncf.torch import create_compressed_model
+from nncf.torch import load_state
 from nncf.torch.dynamic_graph.graph_tracer import create_input_infos
 from nncf.torch.utils import is_main_process
 

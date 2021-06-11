@@ -23,7 +23,7 @@ from torchvision.models import inception_v3
 from torchvision.models import mobilenet_v2
 from torchvision.models import resnet50
 
-from nncf import register_default_init_args
+from nncf.torch import register_default_init_args
 from nncf.common.quantization.structs import QuantizerGroup
 from nncf.torch.module_operations import UpdatePaddingValue
 from nncf.torch.utils import get_all_modules_by_type

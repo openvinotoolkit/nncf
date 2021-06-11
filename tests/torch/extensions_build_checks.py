@@ -8,14 +8,14 @@ if __name__ == '__main__':
     if mode == 'cpu':
         # Do not remove - the import here is for testing purposes.
         # pylint: disable=wrong-import-position
-        from nncf import force_build_cpu_extensions
+        from nncf.torch import force_build_cpu_extensions
 
         # pylint: enable=wrong-import-position
 
         force_build_cpu_extensions()
     elif mode == 'cuda':
         # pylint: disable=wrong-import-position
-        from nncf import force_build_cuda_extensions
+        from nncf.torch import force_build_cuda_extensions
 
         # pylint: enable=wrong-import-position
 

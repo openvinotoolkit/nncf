@@ -19,7 +19,7 @@ from functools import partial
 import examples.torch.common.models as custom_models
 from examples.torch.common.example_logger import logger
 import examples.torch.common.restricted_pickle_module as restricted_pickle_module
-from nncf import load_state
+from nncf.torch.checkpoint_loading import load_state
 from nncf.torch.utils import safe_thread_call
 from examples.torch.classification.models.mobilenet_v2_32x32 import MobileNetV2For32x32
 

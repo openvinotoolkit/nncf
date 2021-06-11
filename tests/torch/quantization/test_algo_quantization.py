@@ -555,7 +555,7 @@ def test_quantize_outputs_with_scope_overrides():
 
 @contextmanager
 def nncf_debug():
-    from nncf import set_log_level
+    from nncf.torch import set_log_level
     set_log_level(logging.DEBUG)
     yield
     set_log_level(logging.INFO)

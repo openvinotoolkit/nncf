@@ -18,7 +18,7 @@ import sys
 
 import pytest
 
-from nncf import BKC_TORCH_VERSION
+from nncf.torch import BKC_TORCH_VERSION
 from tests.torch.helpers import Command
 from tests.common.helpers import PROJECT_ROOT
 

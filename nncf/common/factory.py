@@ -29,7 +29,7 @@ def create_exporter(model: ModelType,
         from nncf.torch.exporter import PTExporter
         exporter = PTExporter(model, input_names, output_names, model_args)
     elif __nncf_backend__ == 'TensorFlow':
-        from beta.nncf.tensorflow.exporter import TFExporter
+        from nncf.tensorflow.exporter import TFExporter
         exporter = TFExporter(model, input_names, output_names, model_args)
 
     return exporter

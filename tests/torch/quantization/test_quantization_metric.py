@@ -16,7 +16,7 @@ from collections import namedtuple
 import pytest
 
 from nncf import NNCFConfig
-from nncf import create_compressed_model
+from nncf.torch import create_compressed_model
 from tests.torch import test_models
 from tests.torch.helpers import register_bn_adaptation_init_args
 

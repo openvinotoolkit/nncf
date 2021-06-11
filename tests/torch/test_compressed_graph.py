@@ -29,7 +29,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torchvision
 
-from nncf import nncf_model_input
+from nncf.torch import nncf_model_input
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNodeName
 from nncf.common.graph.transformations.commands import TargetType
