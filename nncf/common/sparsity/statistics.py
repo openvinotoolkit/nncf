@@ -158,31 +158,27 @@ class RBSparsityStatistics(Statistics):
 
     def __init__(self,
                  model_statistics: SparsifiedModelStatistics,
-                 masks_consistency: float,
                  target_sparsity_level: float,
                  mean_sparse_prob: float):
         """
         Initializes statistics of the RB-sparsity algorithm.
 
         :param model_statistics: Statistics of the sparsified model.
-        :param masks_consistency: TODO
         :param target_sparsity_level: A target level of the sparsity
             for the algorithm for the current epoch.
-        :param mean_sparse_prob: TODO
+        :param mean_sparse_prob: The probability that one weight
+            will be zeroed.
         """
         self.model_statistics = model_statistics
-        self.masks_consistency = masks_consistency
         self.target_sparsity_level = target_sparsity_level
         self.mean_sparse_prob = mean_sparse_prob
 
     def to_str(self) -> str:
-        # TODO(andrey-churkin): Add human-readable description.
         algorithm_string = create_table(
             header=['Statistic\'s name', 'Value'],
             rows=[
-                ['masks_consistency', self.masks_consistency],
                 ['A target level of the sparsity for the algorithm for the current epoch', self.target_sparsity_level],
-                ['mean_sparse_prob', self.mean_sparse_prob],
+                ['The probability that one weight will be zeroed', self.mean_sparse_prob],
             ]
         )
 

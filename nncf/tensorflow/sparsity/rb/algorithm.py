@@ -139,10 +139,7 @@ class RBSparsityController(BaseSparsityController):
 
         target_sparsity_level = self.scheduler.current_sparsity_level
 
-        # TODO(andrey-churkin): Should be calculated when the distributed mode will be supported
-        masks_consistency = 1.0
-
-        stats = RBSparsityStatistics(model_stats, masks_consistency, target_sparsity_level, mean_sparse_prob)
+        stats = RBSparsityStatistics(model_stats, target_sparsity_level, mean_sparse_prob)
 
         nncf_stats = NNCFStatistics()
         nncf_stats.register('rb_sparsity', stats)
