@@ -118,9 +118,10 @@ class GraphPattern:
     def graph(self):
         return self._graph
 
-    def add_node(self, t: List[str]) -> None:
+    def add_node(self, t: List[str]) -> int:
         self.graph.add_node(GraphPattern.NODE_COUNTER, type=t)
         GraphPattern.NODE_COUNTER += 1
+        return GraphPattern.NODE_COUNTER - 1
 
     def add_edge(self, u_name, v_name) -> None:
         self.graph.add_edge(u_name, v_name)
@@ -160,5 +161,3 @@ LINEAR_OPS_SWISH_ACTIVATION = (LINEAR_OPS + SIGMOID) * MUL | LINEAR_OPS + (BN + 
 
 FULL_PATTERN_GRAPH = LINEAR_OPS + ANY_BN_ACT_COMBO | ANY_BN_ACT_COMBO | \
                      ARITHMETIC + ANY_BN_ACT_COMBO | LINEAR_OPS_SWISH_ACTIVATION
-
-FULL_PATTERN_GRAPH.dump_graph('/home/aleksei/tmp/pattern.dot')
