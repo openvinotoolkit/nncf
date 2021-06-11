@@ -11,6 +11,8 @@
  limitations under the License.
 """
 
+from itertools import islice
+
 import numpy as np
 import tensorflow as tf
 
@@ -164,9 +166,7 @@ class MinMaxInitializer():
                             op.enabled = False
                             op_statistics.append((layer, op_name, op, minmax))
 
-        for step, (x, _) in enumerate(self.dataset):
-            if step >= self.num_steps:
-                break
+        for x, _ in islice(self.dataset, self.num_steps):
             model(x, training=False)
 
         for layer, minmax in layer_statistics:

@@ -36,7 +36,7 @@ from natsort import natsorted
 from sklearn.preprocessing import MinMaxScaler
 
 from nncf.common.quantization.structs import QuantizerConfig
-from nncf.config.utils import extract_bn_adaptation_init_params
+from nncf.config.extractors import extract_bn_adaptation_init_params
 from nncf.common.utils.logger import logger
 from nncf.common.hardware.config import HWConfigType
 from nncf.torch.debug import DEBUG_LOG_DIR

@@ -31,7 +31,7 @@ from nncf.torch.algo_selector import COMPRESSION_ALGORITHMS
 from nncf.api.compression import CompressionStage
 from nncf.api.compression import CompressionLoss
 from nncf.api.compression import CompressionScheduler
-from nncf.config.utils import extract_bn_adaptation_init_params
+from nncf.config.extractors import extract_bn_adaptation_init_params
 from nncf.common.graph import NNCFNodeName
 from nncf.common.graph import NNCFGraph
 from nncf.common.pruning.mask_propagation import MaskPropagationAlgorithm

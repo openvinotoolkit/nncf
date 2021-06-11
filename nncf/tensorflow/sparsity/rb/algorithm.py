@@ -45,7 +45,7 @@ class RBSparsityBuilder(TFCompressionAlgorithmBuilder):
         self.ignored_scopes = self.config.get('ignored_scopes', [])
         self._op_names = []
 
-    def get_transformation_layout(self, model):
+    def get_transformation_layout(self, model: tf.keras.Model) -> TFTransformationLayout:
         nncf_graph = convert_keras_model_to_nncf_graph(model)
         transformations = TFTransformationLayout()
 

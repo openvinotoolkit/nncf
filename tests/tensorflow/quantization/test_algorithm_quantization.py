@@ -133,7 +133,7 @@ def test_quantization_configs__disable_saturation_fix():
     config['compression'].update({
         'disable_saturation_fix': True
     })
-    compression_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
+    compression_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config, should_init=False)
 
     assert isinstance(compression_ctrl, QuantizationController)
     activation_quantizers, weight_quantizers = get_quantizers(compression_model)
@@ -164,7 +164,7 @@ def test_export_saturatuion_fix(disabled):
     config['compression'].update({
         'disable_saturation_fix': disabled
     })
-    compression_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
+    compression_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config, should_init=False)
     activation_quantizers_be, weight_quantizers_be = get_quantizers(compression_model)
     ref_weight_qspec = TFQuantizerSpec(mode=QuantizationMode.SYMMETRIC,
                                        num_bits=8,

@@ -45,12 +45,12 @@ class RangeInitConfig:
 
     @classmethod
     def from_dict(cls, dct: Dict) -> 'RangeInitConfig':
-        num_init_samples = dct.get("num_init_samples", 256)
+        num_init_samples = dct.get('num_init_samples', 256)
         if num_init_samples < 0:
-            raise ValueError("Number of initialization samples must be >= 0")
-        return cls(dct.get("type", "mean_min_max"),
+            raise ValueError('Number of initialization samples must be >= 0')
+        return cls(dct.get('type', 'mean_min_max'),
                    num_init_samples,
-                   dct.get("params"))
+                   dct.get('params'))
 
 
 class PerLayerRangeInitConfig(RangeInitConfig):
@@ -80,8 +80,8 @@ class PerLayerRangeInitConfig(RangeInitConfig):
         super().__init__(range_init_config.init_type, range_init_config.num_init_samples,
                          range_init_config.init_type_specific_params)
         if target_scopes is None and ignored_scopes is None:
-            raise ValueError("At least one of the (target_scopes, ignored_scopes) should be specified"
-                             " for a per-layer range init config!")
+            raise ValueError('At least one of the (target_scopes, ignored_scopes) should be specified'
+                             ' for a per-layer range init config!')
         self.target_scopes = target_scopes
         self.ignored_scopes = ignored_scopes
         self.target_group = target_quantizer_group
@@ -99,9 +99,9 @@ class PerLayerRangeInitConfig(RangeInitConfig):
             else:
                 retval_list = str_or_list
             return retval_list
-        target_scopes, ignored_scopes = get_list(dct, "target_scopes"), get_list(dct, "ignored_scopes")
+        target_scopes, ignored_scopes = get_list(dct, 'target_scopes'), get_list(dct, 'ignored_scopes')
 
-        target_group_str = dct.get("target_quantizer_group")
+        target_group_str = dct.get('target_quantizer_group')
         target_group = None
         if target_group_str is not None:
             target_group = QuantizerGroup.from_str(target_group_str)

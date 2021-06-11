@@ -344,7 +344,7 @@ class PruningOperationsMetatypeRegistry(Registry):
                     self._op_name_to_op_class[name] = obj
                 else:
                     assert self._op_name_to_op_class[name] == obj, \
-                        "Inconsistent operator type registry - single patched op name maps to multiple metatypes!"
+                        'Inconsistent operator type registry - single patched op name maps to multiple metatypes!'
             return obj
 
         return wrap

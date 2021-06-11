@@ -69,16 +69,16 @@ class NNCFConfig(dict):
         try:
             jsonschema.validate(loaded_json, schema=ROOT_NNCF_CONFIG_SCHEMA)
         except jsonschema.ValidationError as e:
-            logger.error("Invalid NNCF config supplied!")
+            logger.error('Invalid NNCF config supplied!')
 
             # The default exception's __str__ result will contain the entire schema,
             # which is too large to be readable.
             import nncf.config.schema as config_schema
-            msg = e.message + ". See documentation or {} for an NNCF configuration file JSON schema definition".format(
+            msg = e.message + '. See documentation or {} for an NNCF configuration file JSON schema definition'.format(
                 config_schema.__file__)
             raise jsonschema.ValidationError(msg)
 
-        compression_section = loaded_json.get("compression")
+        compression_section = loaded_json.get('compression')
         if compression_section is None:
             # No compression specified
             return
@@ -93,7 +93,7 @@ class NNCFConfig(dict):
         except jsonschema.ValidationError:
             # No need to trim the exception output here since only the compression algo
             # specific sub-schema will be shown, which is much shorter than the global schema
-            logger.error("Invalid NNCF config supplied!")
+            logger.error('Invalid NNCF config supplied!')
             raise
 
 

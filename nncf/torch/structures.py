@@ -30,7 +30,7 @@ class QuantizationPrecisionInitArgs(NNCFExtraConfigStruct):
     E.g. for inception-v3, the losses for two outputs of the model are combined with different weight.
     :param criterion: loss function, instance of descendant of `torch.nn.modules.loss._Loss`,
     :param data_loader: 'data_loader' - provides an iterable over the given dataset. Instance of
-                nncf.initialization.InitializingDataLoader; a regular 'torch.utils.data.DataLoader' may
+                nncf.initialization.PTInitializingDataLoader; a regular 'torch.utils.data.DataLoader' may
                 also be passed, but only in the simple case when it returns a tuple of (input, target) tensors.
                 *WARNING*: The final quantizer setup of the created compressed model is dependent on the data
                 provided by the data_loader. When using PyTorch's DistributedDataParallel with precision
@@ -57,7 +57,7 @@ class QuantizationPrecisionInitArgs(NNCFExtraConfigStruct):
 class AutoQPrecisionInitArgs(NNCFExtraConfigStruct):
     """
     :param data_loader: 'data_loader' - provides an iterable over the given dataset. Instance of
-                nncf.initialization.InitializingDataLoader; a regular 'torch.utils.data.DataLoader' may
+                nncf.initialization.PTInitializingDataLoader; a regular 'torch.utils.data.DataLoader' may
                 also be passed, but only in the simple case when it returns a tuple of (input, target) tensors.
                 *WARNING*: The final quantizer setup of the created compressed model is dependent on the data
                 provided by the data_loader. When using PyTorch's DistributedDataParallel with precision

@@ -60,8 +60,8 @@ def matches_any(tested_str: str,
 
     str_list = [str_or_list_to_match_to] if isinstance(str_or_list_to_match_to, str) else str_or_list_to_match_to
     for item in str_list:
-        if "{re}" in item:
-            regex = item.replace("{re}", "")
+        if '{re}' in item:
+            regex = item.replace('{re}', '')
             if re.search(regex, tested_str):
                 return True
         else:

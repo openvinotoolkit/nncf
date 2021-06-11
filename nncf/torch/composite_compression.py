@@ -10,8 +10,8 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-from copy import deepcopy
-from typing import List, TypeVar
+
+from typing import TypeVar
 
 import torch.nn
 
@@ -19,9 +19,7 @@ from nncf import NNCFConfig
 from nncf.common.composite_compression import CompositeCompressionAlgorithmBuilder
 from nncf.common.composite_compression import CompositeCompressionAlgorithmController
 from nncf.common.composite_compression import CompositeCompressionLoss
-from nncf.common.hardware.config import HWConfigType
-from nncf.common.hardware.config import HW_CONFIG_TYPE_TARGET_DEVICE_MAP
-from nncf.config.utils import extract_compression_algorithm_configs
+from nncf.config.extractors import extract_compression_algorithm_configs
 from nncf.torch.compression_method_api import PTCompressionAlgorithmBuilder
 from nncf.torch.compression_method_api import PTCompressionAlgorithmController
 from nncf.torch.compression_method_api import PTCompressionLoss

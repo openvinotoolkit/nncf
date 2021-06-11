@@ -76,7 +76,7 @@ def wrap_dataloader_for_init(data_loader) -> PTInitializingDataLoader:
                                   "produces a tuple/list of (*model_input*, *ground_truth*) and that no special "
                                   "forward arguments have to be set during init. If this is not the case, then instead "
                                   "of your regular data loader you need to pass a specialized version of "
-                                  "InitializingDataLoader that returns a general (args, kwargs) tuple for your "
+                                  "PTInitializingDataLoader that returns a general (args, kwargs) tuple for your "
                                   "model to be called with at each __next__ call.")
     return data_loader
 

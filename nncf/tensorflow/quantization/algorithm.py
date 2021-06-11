@@ -11,7 +11,7 @@
  limitations under the License.
 """
 
-from typing import Dict, List, Set
+from typing import List, Set
 
 import networkx as nx
 import tensorflow as tf
@@ -24,8 +24,6 @@ from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.graph.transformations.commands import TransformationPriority
 from nncf.common.initialization.batchnorm_adaptation import BatchnormAdaptationAlgorithm
-from nncf.common.quantization.initialization.range import PerLayerRangeInitConfig
-from nncf.common.quantization.initialization.range import RangeInitConfig
 from nncf.common.quantization.initialization.range import RangeInitParams
 from nncf.common.quantization.structs import QuantizationConstraints
 from nncf.common.quantization.structs import QuantizationMode
@@ -35,8 +33,8 @@ from nncf.common.schedulers import BaseCompressionScheduler
 from nncf.common.statistics import NNCFStatistics
 from nncf.common.utils.helpers import should_consider_scope
 from nncf.common.utils.logger import logger
-from nncf.config.structures import QuantizationRangeInitArgs
-from nncf.config.utils import extract_bn_adaptation_init_params
+from nncf.config.extractors import extract_range_init_params
+from nncf.config.extractors import extract_bn_adaptation_init_params
 from nncf.tensorflow.algorithm_selector import TF_COMPRESSION_ALGORITHMS
 from nncf.tensorflow.api.compression import TFCompressionAlgorithmBuilder
 from nncf.tensorflow.api.compression import TFCompressionAlgorithmController
@@ -59,6 +57,7 @@ from nncf.tensorflow.quantization.initializers.minmax import MinMaxInitializer
 from nncf.tensorflow.quantization.layers import FakeQuantize
 from nncf.tensorflow.quantization.quantizers import Quantizer
 from nncf.tensorflow.quantization.quantizers import TFQuantizerSpec
+from nncf.tensorflow.quantization.utils import apply_saturation_fix
 
 QUANTIZATION_LAYER_METATYPES = GENERAL_CONV_LAYER_METATYPES + LINEAR_LAYER_METATYPES
 
@@ -90,57 +89,12 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
         self._bn_adaptation = None
 
     def _parse_init_params(self):
-        init_config = self.config.get('initializer', {})
-        self._batchnorm_adaptation = 'batchnorm_adaptation' in init_config
-        self._range_init_params = self._parse_range_init_params(init_config)
+        self._batchnorm_adaptation = 'batchnorm_adaptation' in self.config.get('initializer', {})
+        self._range_init_params = self._parse_range_init_params()
 
-    def _parse_range_init_params(self, initializer_config: Dict) -> RangeInitParams:
-        init_range_config_dict_or_list = initializer_config.get('range', {})
-        if not init_range_config_dict_or_list:
-            try:
-                self.config.get_extra_struct(QuantizationRangeInitArgs)
-                has_range_init_args = True
-            except KeyError:
-                has_range_init_args = False
-
-            if has_range_init_args:
-                logger.warning("Enabling quantization range initialization with default parameters.")
-                num_init_samples = 100
-            else:
-                logger.warning("Initializer section not specified for quantization algorithm in NNCF config and "
-                               "quantization init args not supplied - quantizer range initialization will not be "
-                               "done")
-                return None
-
-            init_range_config_dict_or_list = {'num_init_samples': num_init_samples}
-
-        max_num_init_samples = 0
-        global_range_init_config = None
-        scope_overrides = []  # type: List[PerLayerRangeInitConfig]
-        if isinstance(init_range_config_dict_or_list, dict):
-            global_range_init_config = RangeInitConfig.from_dict(init_range_config_dict_or_list)
-            max_num_init_samples = global_range_init_config.num_init_samples
-        else:
-            for sub_init_range_config_dict in init_range_config_dict_or_list:
-                scope_overrides.append(PerLayerRangeInitConfig.from_dict(sub_init_range_config_dict))
-                max_num_init_samples_config = max(scope_overrides, key=lambda x: x.num_init_samples)
-                max_num_init_samples = max_num_init_samples_config.num_init_samples
-
-        if max_num_init_samples == 0:
-            return None
-
-        try:
-            range_init_args = self.config.get_extra_struct(QuantizationRangeInitArgs)
-        except KeyError as e:
-            raise ValueError(
-                'Should run range initialization as specified via config,'
-                'but the initializing data loader is not provided as an extra struct. '
-                'Refer to `NNCFConfig.register_extra_structs` and the `QuantizationRangeInitArgs` class') from e
-
-        return RangeInitParams(range_init_args.data_loader,
-                               range_init_args.device,
-                               global_range_init_config,
-                               scope_overrides)
+    def _parse_range_init_params(self) -> RangeInitParams:
+        range_init_params = extract_range_init_params(self.config)
+        return RangeInitParams(**range_init_params) if range_init_params is not None else None
 
     def _parse_group_params(self, config: NNCFConfig, quantizer_group: QuantizerGroup) -> None:
         group_name = quantizer_group.value
@@ -159,7 +113,7 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
             qconfig = constraints.apply_constraints_to(qconfig)
         return qconfig
 
-    def _get_half_range(self, qconfig):
+    def _get_half_range(self, qconfig: QuantizerConfig) -> bool:
         if not self._disable_saturation_fix:
             if self._target_device in ['CPU', 'ANY'] and qconfig.num_bits == 8:
                 logger.warning('A saturation issue fix will be applied. '
@@ -236,7 +190,7 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
         return transformations
 
     def build_controller(self, model: tf.keras.Model) -> 'QuantizationController':
-        return QuantizationController(model, self.config)
+        return QuantizationController(model, self.config, self._op_names)
 
     def initialize(self, model: tf.keras.Model) -> None:
         self._run_range_initialization(model)
@@ -366,6 +320,10 @@ class QuantizationController(TFCompressionAlgorithmController):
     @property
     def loss(self) -> CompressionLoss:
         return self._loss
+
+    def strip_model(self, model: tf.keras.Model) -> tf.keras.Model:
+        apply_saturation_fix(model, self._op_names)
+        return model
 
     def statistics(self, quickly_collected_only: bool = False) -> NNCFStatistics:
         return NNCFStatistics()

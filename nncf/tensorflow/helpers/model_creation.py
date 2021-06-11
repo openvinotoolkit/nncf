@@ -15,7 +15,7 @@ import tensorflow as tf
 
 from nncf import NNCFConfig
 from nncf.api.compression import CompressionAlgorithmBuilder
-from nncf.config.utils import extract_compression_algorithm_configs
+from nncf.config.extractors import extract_compression_algorithm_configs
 from nncf.tensorflow.algorithm_selector import get_compression_algorithm_builder
 from nncf.tensorflow.api.composite_compression import TFCompositeCompressionAlgorithmBuilder
 from nncf.tensorflow.helpers.utils import get_built_model

@@ -20,6 +20,7 @@ from pathlib import Path
 from string import Template
 from typing import Dict
 from typing import List
+from typing import Optional
 from typing import Set
 from typing import Tuple
 
@@ -40,8 +41,6 @@ from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.hardware.config import HWConfig
 from nncf.common.hardware.config import HWConfigType
-from nncf.common.quantization.initialization.range import PerLayerRangeInitConfig
-from nncf.common.quantization.initialization.range import RangeInitConfig
 from nncf.common.quantization.statistics import QuantizationStatistics
 from nncf.common.quantization.structs import NonWeightQuantizerId
 from nncf.common.quantization.structs import QuantizableWeightedLayerNode
@@ -55,8 +54,8 @@ from nncf.common.utils.helpers import matches_any
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.common.utils.os import safe_open
 from nncf.config import NNCFConfig
-from nncf.config.structures import QuantizationRangeInitArgs
-from nncf.config.utils import extract_bn_adaptation_init_params
+from nncf.config.extractors import extract_bn_adaptation_init_params
+from nncf.config.extractors import extract_range_init_params
 from nncf.torch.algo_selector import COMPRESSION_ALGORITHMS
 from nncf.torch.algo_selector import ZeroCompressionLoss
 from nncf.torch.compression_method_api import PTCompressionAlgorithmBuilder
@@ -482,63 +481,19 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
             precision_init_type = init_precision_config.get('type', 'manual')
             if precision_init_type == 'manual':
                 # range init is needed for correct setting of Adjust Padding ops as it considers sign of FQ
-                self._range_init_params = self._parse_range_init_params(init_config)
+                self._range_init_params = self._parse_range_init_params()
                 self.should_init = True
                 self._precision_init_type = precision_init_type
                 self._precision_init_params = ManualPrecisionInitParams.from_config(init_precision_config)
 
     def _parse_init_params(self):
-        init_config = self.config.get('initializer', {})
-        self._range_init_params = self._parse_range_init_params(init_config)
-        self._precision_init_type, self._precision_init_params = self._parse_precision_init_params(init_config)
+        self._range_init_params = self._parse_range_init_params()
+        self._precision_init_type, self._precision_init_params = self._parse_precision_init_params(
+            self.config.get('initializer', {}))
 
-    def _parse_range_init_params(self, initializer_config: Dict) -> PTRangeInitParams:
-        init_range_config_dict_or_list = initializer_config.get('range', {})
-        if not init_range_config_dict_or_list:
-            try:
-                self.config.get_extra_struct(QuantizationRangeInitArgs)
-                has_range_init_args = True
-            except KeyError:
-                has_range_init_args = False
-
-            if has_range_init_args:
-                nncf_logger.warning("Enabling quantization range initialization with default parameters.")
-                num_init_samples = 256
-            else:
-                nncf_logger.warning("Initializer section not specified for quantization algorithm in NNCF config and "
-                                    "quantization init args not supplied - quantizer range initialization will not be "
-                                    "done")
-                return None
-
-            init_range_config_dict_or_list = {'num_init_samples': num_init_samples}
-
-        max_num_init_samples = 0
-        global_range_init_config = None
-        scope_overrides = []  # type: List[PerLayerRangeInitConfig]
-        if isinstance(init_range_config_dict_or_list, dict):
-            global_range_init_config = RangeInitConfig.from_dict(init_range_config_dict_or_list)
-            max_num_init_samples = global_range_init_config.num_init_samples
-        else:
-            for sub_init_range_config_dict in init_range_config_dict_or_list:
-                scope_overrides.append(PerLayerRangeInitConfig.from_dict(sub_init_range_config_dict))
-                max_num_init_samples_config = max(scope_overrides, key=lambda x: x.num_init_samples)
-                max_num_init_samples = max_num_init_samples_config.num_init_samples
-
-        if max_num_init_samples == 0:
-            return None
-
-        try:
-            range_init_args = self.config.get_extra_struct(QuantizationRangeInitArgs)
-        except KeyError as e:
-            raise ValueError(
-                'Should run range initialization as specified via config,'
-                'but the initializing data loader is not provided as an extra struct. '
-                'Refer to `NNCFConfig.register_extra_structs` and the `QuantizationRangeInitArgs` class') from e
-
-        return PTRangeInitParams(range_init_args.data_loader,
-                                 range_init_args.device,
-                                 global_range_init_config,
-                                 scope_overrides)
+    def _parse_range_init_params(self) -> Optional[PTRangeInitParams]:
+        range_init_params = extract_range_init_params(self.config)
+        return PTRangeInitParams(**range_init_params) if range_init_params is not None else None
 
     def _parse_precision_init_params(self, initializer_config: Dict) -> Tuple[str, BasePrecisionInitParams]:
         init_precision_config = initializer_config.get('precision', None)

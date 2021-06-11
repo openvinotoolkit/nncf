@@ -11,8 +11,8 @@
  limitations under the License.
 """
 
-import os.path as osp
 import sys
+import os.path as osp
 from pathlib import Path
 
 import tensorflow as tf
@@ -38,7 +38,6 @@ from examples.tensorflow.common.utils import create_code_snapshot
 from examples.tensorflow.common.utils import get_saving_parameters
 from examples.tensorflow.common.utils import serialize_config
 from examples.tensorflow.common.utils import write_metrics
-
 
 
 def get_argument_parser():

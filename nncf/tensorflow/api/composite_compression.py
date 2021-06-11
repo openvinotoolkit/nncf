@@ -16,7 +16,7 @@ from typing import TypeVar
 from nncf import NNCFConfig
 from nncf.common.composite_compression import CompositeCompressionAlgorithmBuilder
 from nncf.common.composite_compression import CompositeCompressionAlgorithmController
-from nncf.config.utils import extract_compression_algorithm_configs
+from nncf.config.extractors import extract_compression_algorithm_configs
 from nncf.tensorflow.algorithm_selector import get_compression_algorithm_builder
 from nncf.tensorflow.api.compression import TFCompressionAlgorithmBuilder
 from nncf.tensorflow.api.compression import TFCompressionAlgorithmController

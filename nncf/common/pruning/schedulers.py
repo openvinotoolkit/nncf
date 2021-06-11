@@ -18,7 +18,7 @@ import scipy.optimize
 from nncf.common.utils.registry import Registry
 from nncf.common.schedulers import ExponentialDecaySchedule, BaseCompressionScheduler
 
-PRUNING_SCHEDULERS = Registry("pruning_schedulers")
+PRUNING_SCHEDULERS = Registry('pruning_schedulers')
 
 
 class PruningScheduler(BaseCompressionScheduler):
@@ -109,7 +109,7 @@ class PruningScheduler(BaseCompressionScheduler):
         return 0
 
 
-@PRUNING_SCHEDULERS.register("baseline")
+@PRUNING_SCHEDULERS.register('baseline')
 class BaselinePruningScheduler(PruningScheduler):
     """
     Pruning scheduler which applies the same pruning level for each epoch.
@@ -126,7 +126,7 @@ class BaselinePruningScheduler(PruningScheduler):
         return self.target_level
 
 
-@PRUNING_SCHEDULERS.register("exponential")
+@PRUNING_SCHEDULERS.register('exponential')
 class ExponentialPruningScheduler(PruningScheduler):
     """
     Pruning scheduler with an exponential decay schedule.
@@ -157,7 +157,7 @@ class ExponentialPruningScheduler(PruningScheduler):
         return min(current_level, self.target_level)
 
 
-@PRUNING_SCHEDULERS.register("exponential_with_bias")
+@PRUNING_SCHEDULERS.register('exponential_with_bias')
 class ExponentialWithBiasPruningScheduler(PruningScheduler):
     """
     Pruning scheduler which calculates pruning rate for the current epoch
