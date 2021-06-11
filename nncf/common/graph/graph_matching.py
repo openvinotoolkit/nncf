@@ -78,11 +78,10 @@ def find_subgraphs_matching_expression(graph: nx.DiGraph, expression: Expression
         patterns.append(pattern_graph.graph.subgraph(c))
     # Get all patterns sorted by their lengths
     # as we want match the longest patterns first
-    patterns = sorted(patterns, key=lambda x: len(x), reverse=True)
+    patterns = sorted(patterns, key=len, reverse=True)
     for pattern in patterns:
         matcher = ism.DiGraphMatcher(graph, pattern, node_match=are_nodes_matching)
-        gas = list(matcher.subgraph_isomorphisms_iter())
-        for subgraph in gas:
+        for subgraph in matcher.subgraph_isomorphisms_iter():
             subgraph = list(subgraph)
             is_visited_node = any(node in visited_nodes for node in subgraph)
             if is_visited_node:
@@ -92,4 +91,4 @@ def find_subgraphs_matching_expression(graph: nx.DiGraph, expression: Expression
             visited_nodes.update(subgraph)
             subgraphs.append(subgraph)
 
-    return subgraphs
+    return subgraphs if subgraphs else [[]]

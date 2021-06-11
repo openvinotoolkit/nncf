@@ -1,55 +1,6 @@
-import pytest
-
 from nncf.torch.graph.patterns import GraphPattern
+from nncf.torch.graph.graph_matching import find_subgraphs_match_expression
 import networkx as nx
-
-
-def test_add_two_patterns():
-    first_type = ['a', 'b']
-    second_type = ['c', 'd']
-
-    first_pattern = GraphPattern(first_type)
-    second_pattern = GraphPattern(second_type)
-
-    ref_pattern = GraphPattern(first_type)
-    added_node = ref_pattern.add_node(['c', 'd'])
-    for node in ref_pattern.graph.nodes:
-        if node != added_node:
-            ref_pattern.add_edge(node, added_node)
-
-    adding_pattern = first_pattern + second_pattern
-    assert ref_pattern == adding_pattern
-
-
-def test_or_two_patterns():
-    first_type = ['a', 'b']
-    second_type = ['c', 'd']
-
-    first_pattern = GraphPattern(first_type)
-    second_pattern = GraphPattern(second_type)
-
-    ref_pattern = GraphPattern(first_type)
-    _ = ref_pattern.add_node(['c', 'd'])
-
-    adding_pattern = first_pattern | second_pattern
-    assert ref_pattern == adding_pattern
-
-
-def test_mul_two_patterns():
-    first_type = ['a', 'b']
-    second_type = ['c', 'd']
-
-    first_pattern = GraphPattern(first_type)
-    second_pattern = GraphPattern(second_type)
-
-    ref_pattern = GraphPattern(first_type)
-    added_node = ref_pattern.add_node(['c', 'd'])
-    for node in ref_pattern.graph.nodes:
-        if node != added_node:
-            ref_pattern.add_edge(node, added_node)
-
-    adding_pattern = first_pattern * second_pattern
-    assert ref_pattern == adding_pattern
 
 
 def test_ops_combination_patterns():
@@ -61,55 +12,39 @@ def test_ops_combination_patterns():
     second_pattern = GraphPattern(second_type)
     third_pattern = GraphPattern(third_type)
 
-    ref_pattern = GraphPattern(first_type)
-    added_node = ref_pattern.add_node(second_type)
-    for node in ref_pattern.graph.nodes:
-        if node != added_node:
-            ref_pattern.add_edge(node, added_node)
-    _ = ref_pattern.add_node(third_type)
+    pattern = first_pattern + second_pattern
 
-    adding_pattern = first_pattern + second_pattern | third_pattern
-    assert ref_pattern == adding_pattern
+    ref_graph = nx.DiGraph()
+    ref_graph.add_node('1', type='a')
+    ref_graph.add_node('2', type='c')
+    ref_graph.add_edge('1', '2')
+    matches = find_subgraphs_match_expression(ref_graph, pattern)
+    assert matches == [['1', '2']]
 
-    ref_pattern = GraphPattern(first_type)
-    _ = ref_pattern.add_node(second_type)
-    _ = ref_pattern.add_node(third_type)
+    pattern = first_pattern + second_pattern | third_pattern
 
-    adding_pattern = first_pattern | second_pattern | third_pattern
-    assert ref_pattern == adding_pattern
+    ref_graph = nx.DiGraph()
+    ref_graph.add_node('1', type='a')
+    ref_graph.add_node('2', type='c')
+    ref_graph.add_edge('1', '2')
+    matches = find_subgraphs_match_expression(ref_graph, pattern)
+    assert matches == [['1', '2']]
 
-    ref_pattern = GraphPattern(first_type)
-    added_node = ref_pattern.add_node(second_type)
-    for node in ref_pattern.graph.nodes:
-        if node != added_node:
-            ref_pattern.add_edge(node, added_node)
-    added_node = ref_pattern.add_node(third_type)
-    for node in ref_pattern.graph.nodes:
-        if node != added_node:
-            ref_pattern.add_edge(node, added_node)
+    pattern = (first_pattern + second_pattern) * third_pattern
 
-    adding_pattern = (first_pattern + second_pattern) * third_pattern
-    assert ref_pattern == adding_pattern
+    ref_graph = nx.DiGraph()
+    ref_graph.add_node('1', type='a')
+    ref_graph.add_node('2', type='c')
+    ref_graph.add_node('3', type='e')
+    ref_graph.add_edge('1', '2')
+    ref_graph.add_edge('1', '3')
+    ref_graph.add_edge('2', '3')
+    matches = find_subgraphs_match_expression(ref_graph, pattern)
 
-    ref_pattern = GraphPattern(first_type)
-    added_node = ref_pattern.add_node(second_type)
-    for node in ref_pattern.graph.nodes:
-        if node != added_node:
-            ref_pattern.add_edge(node, added_node)
-    last_node = list(nx.topological_sort(ref_pattern.graph))[-1]
-    added_node = ref_pattern.add_node(third_type)
-    ref_pattern.add_edge(last_node, added_node)
-
-    added_node = ref_pattern.add_node(third_type)
-    for node in ref_pattern.graph.nodes:
-        if node != added_node:
-            ref_pattern.add_edge(node, added_node)
-
-    adding_pattern = (first_pattern + second_pattern + third_pattern) * third_pattern
-    assert ref_pattern == adding_pattern
+    assert matches == [['1', '2', '3']]
 
 
-def test_ops_combination_two_patterns():
+def test_no_mathces():
     first_type = ['a', 'b']
     second_type = ['c', 'd']
     third_type = ['e']
@@ -118,12 +53,38 @@ def test_ops_combination_two_patterns():
     second_pattern = GraphPattern(second_type)
     third_pattern = GraphPattern(third_type)
 
-    ref_pattern = GraphPattern(first_type)
-    added_node = ref_pattern.add_node(['c', 'd'])
-    for node in ref_pattern.graph.nodes:
-        if node != added_node:
-            ref_pattern.add_edge(node, added_node)
-    _ = ref_pattern.add_node(['e'])
+    pattern = (first_pattern + second_pattern + third_pattern) * third_pattern
 
-    adding_pattern = first_pattern + second_pattern | third_pattern
-    assert ref_pattern == adding_pattern
+    ref_graph = nx.DiGraph()
+    ref_graph.add_node('1', type='a')
+    ref_graph.add_node('2', type='c')
+    ref_graph.add_node('3', type='e')
+    ref_graph.add_edge('1', '2')
+    ref_graph.add_edge('2', '3')
+    matches = find_subgraphs_match_expression(ref_graph, pattern)
+
+    assert not matches[0]
+
+
+def test_two_matches():
+    first_type = ['a', 'b']
+    second_type = ['c', 'd']
+
+    first_pattern = GraphPattern(first_type)
+    second_pattern = GraphPattern(second_type)
+
+    pattern = first_pattern + second_pattern
+
+    ref_graph = nx.DiGraph()
+    ref_graph.add_node('1', type='a')
+    ref_graph.add_node('2', type='c')
+    ref_graph.add_node('3', type='e')
+    ref_graph.add_node('4', type='c')
+    ref_graph.add_node('5', type='a')
+    ref_graph.add_node('6', type='d')
+    ref_graph.add_edge('1', '2')
+    ref_graph.add_edge('2', '3')
+    ref_graph.add_edge('5', '6')
+
+    matches = find_subgraphs_match_expression(ref_graph, pattern)
+    assert matches == [['1', '2'], ['5', '6']]

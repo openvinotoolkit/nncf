@@ -12,7 +12,6 @@
 """
 import functools
 import inspect
-import operator
 from collections import OrderedDict
 from copy import deepcopy
 from enum import Enum
@@ -232,7 +231,7 @@ class InsertionPointGraph(nx.DiGraph):
         from nncf.common.graph.graph_matching import find_subgraphs_match_expression
         matches = find_subgraphs_matching_expression(self._base_nx_graph, pattern)
         for match in matches:
-            if len(match) == 1:
+            if len(match) <= 1:
                 continue
 
             input_node_key = match[0]
