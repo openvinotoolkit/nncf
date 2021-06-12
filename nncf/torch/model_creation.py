@@ -131,7 +131,7 @@ def create_compressed_model(model: Module, config: NNCFConfig,
         if resuming_state_dict is not None:
             load_state(compressed_model, resuming_state_dict, is_resume=True)
     finally:
-        if dump_graphs and is_main_process() and composite_builder:
+        if dump_graphs and is_main_process():
             if dummy_forward_fn is None:
                 compressed_graph_builder = GraphBuilder(custom_forward_fn=
                                                         create_dummy_forward_fn(input_info_list,
