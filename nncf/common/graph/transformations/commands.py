@@ -91,6 +91,7 @@ class TransformationType(OrderedEnum):
     MULTI_INSERT = 1
     REMOVE = 2
 
+
 class TargetPoint:
     """
     The base class for all target points.
@@ -116,9 +117,8 @@ class TargetPoint:
         return self._target_type
 
     def __eq__(self, other: Any) -> bool:
-        if self.__class__ is other.__class__:
-            return self.type == other.type
-        return False
+        return isinstance(other, TargetPoint) and \
+            self.type == other.type
 
     def __str__(self) -> str:
         return str(self.type)
@@ -152,7 +152,7 @@ class TransformationCommand:
         return self._target_point
 
     def check_command_compatibility(self, command: 'TransformationCommand') -> bool:
-        return self.__class__ == command.__class__ and \
+        return isinstance(command, TransformationCommand) and \
                self.type == command.type and \
                self.target_point == command.target_point
 

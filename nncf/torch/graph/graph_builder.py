@@ -88,6 +88,7 @@ class GraphConverter:
                 to_node_id=dynamic_graph_edge.to_node_id,
                 tensor_shape=dynamic_graph_edge.activation_shape,
                 input_port_id=dynamic_graph_edge.input_port_id,
+                output_port_id=dynamic_graph_edge.output_port_id,
                 dtype=Dtype.FLOAT
             )
         return nncf_graph

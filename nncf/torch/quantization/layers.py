@@ -616,3 +616,33 @@ class AsymmetricQuantizer(BaseQuantizer):
                                mode=QuantizationMode.ASYMMETRIC,
                                signedness_to_force=self.signed,
                                per_channel=self.per_channel)
+
+
+
+def get_per_channel_scale_shape(input_shape, is_weights, channel_idx: int = None):
+    scale_shape = [1 for _ in input_shape]
+    if channel_idx is None:
+        if is_weights:
+            channel_idx = 0  # Per weight channel scales
+        else:
+            channel_idx = 1  # Per activation channel scales
+    scale_shape[channel_idx] = input_shape[channel_idx]
+    return scale_shape
+
+
+def get_scale_shape(input_shape: List[int], is_weights: bool, per_channel: bool,
+                    channel_idx: int = None) -> List[int]:
+    """
+    Assumes that input_shape is supplied in either [B, C, H, W] or [N_out, N_in, H, W] format,
+    or derivatives.
+    :param input_shape: The input shape of the tensor; semantic meaning of dimensions should be as described above.
+    :param is_weights: Whether the tensor corresponds to weights, in which case the per-channel scaling dimension
+        is selected based on the [N_out, N_in, H, W] format
+    :param per_channel: If True, will generate a per-channel scale shape, otherwise will generate a scale shape
+        corresponding to per-tensor quantization
+    :param channel_idx: The index of the per-channel dimension among input_shape.
+    :return: The shape for the quantizer's scale tensors.
+    """
+    if not per_channel:
+        return [1]
+    return get_per_channel_scale_shape(input_shape, is_weights, channel_idx)

@@ -36,7 +36,7 @@ class PTNNCFGraph(NNCFGraph):
         retval = {}
         for in_edge in in_edges:
             edge_attr_dict = self._nx_graph.edges[in_edge]
-            port_id = edge_attr_dict[NNCFGraph.IN_PORT_NAME_EDGE_ATTR]
+            port_id = edge_attr_dict[NNCFGraph.INPUT_PORT_ID_EDGE_ATTR]
             assert port_id not in retval
             retval[port_id] = edge_attr_dict[NNCFGraph.ACTIVATION_SHAPE_EDGE_ATTR]
         return retval
