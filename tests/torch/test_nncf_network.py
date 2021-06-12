@@ -371,13 +371,13 @@ def get_nncf_graph_from_mock_nx_graph(nx_graph: nx.DiGraph) -> PTNNCFGraph:
             node_type = node[NNCFGraph.NODE_TYPE_ATTR]
         else:
             node_type = curr_node_key
-        module_attributes = node.get(NNCFGraph.MODULE_ATTRIBUTES)
+        layer_attributes = node.get(NNCFGraph.LAYER_ATTRIBUTES)
         node_id = idx
         node = mock_graph.add_nncf_node(
             node_name=node_name,
             node_type=node_type,
             node_metatype=NoopMetatype,
-            layer_attributes=module_attributes,
+            layer_attributes=layer_attributes,
             node_id_override=idx)
         key_vs_id[curr_node_key] = node_id
 
@@ -770,7 +770,7 @@ class TestModelMultipleForward(nn.Module):
 
 
 def test_multiple_forward():
-    # Check that all convolution nodes in model have op_address and module_attributes
+    # Check that all convolution nodes in model have op_address and layer_attributes
     # for case with multiple forward of one module
     model = TestModelMultipleForward()
     config = get_basic_sparsity_plus_quantization_config()
@@ -778,4 +778,4 @@ def test_multiple_forward():
     sparse_quantized_model, _ = create_compressed_model_and_algo_for_test(model, config)
     graph = sparse_quantized_model.get_original_graph()
     for node in list(graph.get_all_nodes())[1:-2]:
-        assert node.module_attributes is not None
+        assert node.layer_attributes is not None

@@ -586,7 +586,7 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
                     continue
             nodes_in_scope = self._original_graph.get_op_nodes_in_scope(nncf_module_scope)
             for node in nodes_in_scope:
-                if node.module_attributes is not None:  # TODO(vshampor): implement more explicit filtering
+                if node.layer_attributes is not None:  # TODO(vshampor): implement more explicit filtering
                     retval.append(node)
         return retval
 

@@ -82,7 +82,7 @@ def wrap_operator(operator, operator_info: 'PatchedOperatorInfo'):
                 op_name = operator_info.name
                 op_address = ctx.get_caller_context(op_name)
 
-                module_attrs = None
+                layer_attrs = None
                 ignored_algos = []
                 # Collect module attributes, if required
                 if op_name in OP_NAMES_REQUIRING_MODULE_ATTRS:
@@ -90,7 +90,7 @@ def wrap_operator(operator, operator_info: 'PatchedOperatorInfo'):
                     if curr_module is None:
                         raise RuntimeError("Operation {} requires module attributes, "
                                            "but it was executed outside any module".format(op_name))
-                    module_attrs = _get_layer_attributes(curr_module, op_name)
+                    layer_attrs = _get_layer_attributes(curr_module, op_name)
                     if isinstance(curr_module, _NNCFModuleMixin):
                         ignored_algos = deepcopy(curr_module.ignored_algorithms)
 
@@ -108,7 +108,7 @@ def wrap_operator(operator, operator_info: 'PatchedOperatorInfo'):
                 if isinstance(result, type(NotImplemented)):
                     nncf_logger.debug("Operation {} returned NotImplemented".format(op_name))
                 elif node is None:
-                    node = ctx.maybe_add_node(processed_input, tensor_metas, op_address, module_attrs, ignored_algos)
+                    node = ctx.maybe_add_node(processed_input, tensor_metas, op_address, layer_attrs, ignored_algos)
 
                 if node is not None:
                     if is_debug():
@@ -161,7 +161,8 @@ def _get_layer_attributes(module: TorchModule, operator_name: str) -> BaseLayerA
                                           kernel_size=module.kernel_size,
                                           stride=module.stride,
                                           groups=module.groups,
-                                          transpose=False)
+                                          transpose=False,
+                                          padding_values=module.padding)
     if isinstance(module, (ConvTranspose1d, ConvTranspose2d, ConvTranspose3d)):
         return ConvolutionLayerAttributes(weight_requires_grad=module.weight.requires_grad,
                                           in_channels=module.in_channels,
@@ -169,7 +170,8 @@ def _get_layer_attributes(module: TorchModule, operator_name: str) -> BaseLayerA
                                           kernel_size=module.kernel_size,
                                           stride=module.stride,
                                           groups=module.groups,
-                                          transpose=True)
+                                          transpose=True,
+                                          padding_values=module.padding)
     if isinstance(module, Linear):
         return LinearLayerAttributes(weight_requires_grad=module.weight.requires_grad,
                                      in_features=module.in_features,

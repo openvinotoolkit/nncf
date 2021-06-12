@@ -50,15 +50,15 @@ def get_bn_for_conv_node_by_name(target_model: NNCFNetwork, conv_node_name: NNCF
 
 
 def is_depthwise_conv(node: NNCFNode) -> bool:
-    return isinstance(node.module_attributes, ConvolutionLayerAttributes) \
-           and node.module_attributes.groups == node.module_attributes.in_channels \
-           and (node.module_attributes.out_channels % node.module_attributes.in_channels == 0) \
-           and node.module_attributes.in_channels > 1
+    return isinstance(node.layer_attributes, ConvolutionLayerAttributes) \
+           and node.layer_attributes.groups == node.layer_attributes.in_channels \
+           and (node.layer_attributes.out_channels % node.layer_attributes.in_channels == 0) \
+           and node.layer_attributes.in_channels > 1
 
 
 def is_conv_with_downsampling(node: NNCFNode) -> bool:
-    return isinstance(node.module_attributes, ConvolutionLayerAttributes) \
-           and not np.all(np.array(node.module_attributes.stride) == 1) \
+    return isinstance(node.layer_attributes, ConvolutionLayerAttributes) \
+           and not np.all(np.array(node.layer_attributes.stride) == 1) \
            and node.node_type not in [deconv.op_func_name for deconv in NNCF_DECONV_MODULES_DICT]
 
 

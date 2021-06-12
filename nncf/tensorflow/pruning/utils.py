@@ -28,8 +28,8 @@ def is_depthwise_conv(node: NNCFNode) -> bool:
 
 
 def is_conv_with_downsampling(node: NNCFNode) -> bool:
-    return isinstance(node.module_attributes, ConvolutionLayerAttributes) \
-           and not np.all(np.array(node.module_attributes.stride) == 1) \
+    return isinstance(node.layer_attributes, ConvolutionLayerAttributes) \
+           and not np.all(np.array(node.layer_attributes.stride) == 1) \
            and node.metatype not in DECONV_LAYER_METATYPES
 
 

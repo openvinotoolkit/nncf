@@ -97,7 +97,8 @@ class ConvolutionLayerAttributes(WeightedLayerAttributes):
                  kernel_size: Tuple[int, ...],
                  stride: Tuple[int, ...],
                  groups: int,
-                 transpose: bool):
+                 transpose: bool,
+                 padding_values: List[int]):
         super().__init__(weight_requires_grad)
         self.in_channels = in_channels
         self.out_channels = out_channels
@@ -105,6 +106,7 @@ class ConvolutionLayerAttributes(WeightedLayerAttributes):
         self.stride = stride
         self.groups = groups
         self.transpose = transpose
+        self.padding_values = padding_values
 
     def __eq__(self, other):
         return isinstance(other, ConvolutionLayerAttributes) \

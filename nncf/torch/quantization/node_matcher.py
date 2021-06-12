@@ -19,11 +19,11 @@ from nncf.torch.graph.operator_metatypes import PTOperatorMetatype
 class PTOperatorMetatypeNodeMatcher:
     @classmethod
     def match(cls, nncf_node: NNCFNode) -> PTOperatorMetatype:
-        module_attributes = nncf_node.module_attributes
+        layer_attributes = nncf_node.layer_attributes
         op_name = nncf_node.node_type
         op_arch = PT_OPERATOR_METATYPES.get_operator_metatype_by_op_name(op_name)
         if op_arch.subtypes:
-            subtype = op_arch.determine_subtype(module_attributes=module_attributes)
+            subtype = op_arch.determine_subtype(layer_attributes=layer_attributes)
             if subtype is not None:
                 op_arch = subtype
         return op_arch

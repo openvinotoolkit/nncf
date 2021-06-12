@@ -15,7 +15,6 @@ from typing import Dict
 from typing import List
 from typing import Optional
 from typing import Tuple
-from typing import TypeVar
 
 import networkx as nx
 import networkx.algorithms.isomorphism as iso
@@ -23,11 +22,11 @@ from torch import Tensor
 
 from nncf.common.graph.layer_attributes import BaseLayerAttributes
 from nncf.common.utils.logger import logger as nncf_logger
+from nncf.torch.dynamic_graph.scope import Scope
 from nncf.torch.dynamic_graph.trace_tensor import TensorMeta
 from nncf.torch.dynamic_graph.trace_tensor import TracedTensor
 from nncf.torch.dynamic_graph.operation_address import OperationAddress
 
-ModuleAttributes = TypeVar('ModuleAttributes', bound=BaseLayerAttributes)
 
 class TensorMetaComparator:
     def __call__(self, lhs: TensorMeta, rhs: TensorMeta) -> bool:
@@ -97,7 +96,7 @@ class OperationExecutionContext:
 
     def __init__(self,
                  operator_name: str,
-                 scope_in_model: 'Scope',
+                 scope_in_model: Scope,
                  call_order: int,
                  tensor_metas: List[TensorMeta],
                  tm_comparators: List[TensorMetaComparator] = None,
@@ -133,7 +132,7 @@ class OperationExecutionContext:
         return self.op_address.operator_name
 
     @property
-    def scope_in_model(self) -> 'Scope':
+    def scope_in_model(self) -> Scope:
         return self.op_address.scope_in_model
 
     @property
@@ -142,12 +141,12 @@ class OperationExecutionContext:
 
 
 class DynamicGraphNode:
-    def __init__(self, node_id: int, node_key: str, module_attributes: ModuleAttributes,
+    def __init__(self, node_id: int, node_key: str, layer_attributes: BaseLayerAttributes,
                  op_exec_context: OperationExecutionContext, ignored_algorithms: List[str],
                  is_in_iteration_scope: bool):
         self.node_id = node_id
         self.node_key = node_key
-        self.module_attributes = module_attributes
+        self.layer_attributes = layer_attributes
         self.op_exec_context = op_exec_context
         self.ignored_algorithms = ignored_algorithms
         self.is_in_iteration_scope = is_in_iteration_scope
@@ -202,7 +201,7 @@ class DefaultScopeNodeMatcher:
             node_candidates[nx_node_key] = DynamicGraphNode(
                 node_id=nx_node[DynamicGraph.ID_NODE_ATTR],
                 node_key=nx_node[DynamicGraph.KEY_NODE_ATTR],
-                module_attributes=nx_node.get(DynamicGraph.MODULE_ATTRIBUTES),
+                layer_attributes=nx_node.get(DynamicGraph.LAYER_ATTRIBUTES),
                 op_exec_context=nx_node[DynamicGraph.OP_EXEC_CONTEXT_NODE_ATTR],
                 ignored_algorithms=nx_node[DynamicGraph.IGNORED_ALGOS_NODE_ATTR],
                 is_in_iteration_scope=nx_node[DynamicGraph.IS_IN_ITERATION_SCOPE_NODE_ATTR])
@@ -210,7 +209,7 @@ class DefaultScopeNodeMatcher:
         return node_candidates
 
     def add_node(self, op_exec_context: OperationExecutionContext, inputs,
-                 module_attrs: ModuleAttributes = None,
+                 layer_attrs: BaseLayerAttributes = None,
                  ignored_algorithms: List[str] = None,
                  is_in_iteration_scope: bool = False) -> DynamicGraphNode:
         node_id = len(self._node_id_to_key_dict)
@@ -227,8 +226,8 @@ class DefaultScopeNodeMatcher:
             DynamicGraph.OP_EXEC_CONTEXT_NODE_ATTR: op_exec_context,
             DynamicGraph.IS_IN_ITERATION_SCOPE_NODE_ATTR: is_in_iteration_scope
         }
-        if module_attrs is not None:
-            attrs[DynamicGraph.MODULE_ATTRIBUTES] = module_attrs
+        if layer_attrs is not None:
+            attrs[DynamicGraph.LAYER_ATTRIBUTES] = layer_attrs
 
         if ignored_algorithms is not None:
             attrs[DynamicGraph.IGNORED_ALGOS_NODE_ATTR] = ignored_algorithms
@@ -250,7 +249,7 @@ class DefaultScopeNodeMatcher:
         nx_node_dict = self._nx_graph.nodes[node_key]
         node = DynamicGraphNode(node_id=nx_node_dict[DynamicGraph.ID_NODE_ATTR],
                                 node_key=nx_node_dict[DynamicGraph.KEY_NODE_ATTR],
-                                module_attributes=nx_node_dict.get(DynamicGraph.MODULE_ATTRIBUTES),
+                                layer_attributes=nx_node_dict.get(DynamicGraph.LAYER_ATTRIBUTES),
                                 op_exec_context=nx_node_dict[DynamicGraph.OP_EXEC_CONTEXT_NODE_ATTR],
                                 ignored_algorithms=nx_node_dict[DynamicGraph.IGNORED_ALGOS_NODE_ATTR],
                                 is_in_iteration_scope=nx_node_dict[DynamicGraph.IS_IN_ITERATION_SCOPE_NODE_ATTR])
@@ -333,10 +332,10 @@ class IterationScopeNodeMatcher(DefaultScopeNodeMatcher):
                     nncf_logger.debug('Found first iteration node: {} in scope: {}'.format(name, iter_scope))
 
     def add_node(self, op_exec_context: OperationExecutionContext, inputs,
-                 module_attrs: ModuleAttributes = None,
+                 layer_attrs: BaseLayerAttributes = None,
                  ignored_algorithms: List[str] = None,
                  is_in_iteration_scope: bool = True) -> DynamicGraphNode:
-        node = super().add_node(op_exec_context, inputs, module_attrs, ignored_algorithms,
+        node = super().add_node(op_exec_context, inputs, layer_attrs, ignored_algorithms,
                                 is_in_iteration_scope=True)
         self.save_first_iteration_node(inputs, node)
         return node
@@ -406,7 +405,7 @@ class NodeManager:
 
     # TODO: optimize by matching exact module type
     @staticmethod
-    def _within_iteration(scope: 'Scope'):
+    def _within_iteration(scope: Scope):
         scope_name = str(scope)
         from nncf.torch.layers import ITERATION_MODULES
         for iter_scope in ITERATION_MODULES.registry_dict:
@@ -442,7 +441,7 @@ class NodeManager:
                  tensor_metas: List[TensorMeta],
                  tm_comparators_per_scope: List[Tuple[TensorMetaComparator, List[str]]],
                  inputs,
-                 module_attrs: ModuleAttributes = None,
+                 layer_attrs: BaseLayerAttributes = None,
                  ignored_algorithms: List[str] = None) -> DynamicGraphNode:
         matcher = self.choose_matcher(op_address)
         tm_comparators = self.choose_tm_comparators(op_address, tm_comparators_per_scope)
@@ -452,7 +451,7 @@ class NodeManager:
                                                     tensor_metas,
                                                     tm_comparators=tm_comparators)
 
-        return matcher.add_node(op_exec_context, inputs, module_attrs, ignored_algorithms)
+        return matcher.add_node(op_exec_context, inputs, layer_attrs, ignored_algorithms)
 
 
 class DynamicGraph:
@@ -465,7 +464,7 @@ class DynamicGraph:
     """
     ID_NODE_ATTR = 'id'
     KEY_NODE_ATTR = 'key'
-    MODULE_ATTRIBUTES = 'module_attributes'
+    LAYER_ATTRIBUTES = 'layer_attributes'
     OP_EXEC_CONTEXT_NODE_ATTR = 'op_exec_context'
     ACTIVATION_SHAPE_EDGE_ATTR = 'activation_shape'
     IN_PORT_NAME_EDGE_ATTR = 'in_port'
@@ -483,7 +482,7 @@ class DynamicGraph:
         nm = iso.categorical_node_match([DynamicGraph.ID_NODE_ATTR,
                                          DynamicGraph.KEY_NODE_ATTR,
                                          DynamicGraph.OP_EXEC_CONTEXT_NODE_ATTR,
-                                         DynamicGraph.MODULE_ATTRIBUTES], [None, None, None])
+                                         DynamicGraph.LAYER_ATTRIBUTES], [None, None, None])
         em = iso.categorical_edge_match([DynamicGraph.ACTIVATION_SHAPE_EDGE_ATTR,
                                          DynamicGraph.IN_PORT_NAME_EDGE_ATTR], [None, None])
         return nx.is_isomorphic(self._nx_graph, other._nx_graph, node_match=nm, edge_match=em)
@@ -498,10 +497,10 @@ class DynamicGraph:
                  tensor_metas: List[TensorMeta],
                  input_comparators_per_scope: List[Tuple[TensorMetaComparator, List[str]]],
                  inputs,
-                 module_attrs: ModuleAttributes = None,
+                 layer_attrs: BaseLayerAttributes = None,
                  ignored_algorithms: List[str] = None) -> DynamicGraphNode:
         node = self.match_manager.add_node(op_address, tensor_metas, input_comparators_per_scope, inputs,
-                                           module_attrs, ignored_algorithms)
+                                           layer_attrs, ignored_algorithms)
 
         from nncf.common.graph import MODEL_OUTPUT_OP_NAME
         from nncf.common.graph import MODEL_INPUT_OP_NAME
@@ -528,7 +527,7 @@ class DynamicGraph:
             dynamic_graph_node = DynamicGraphNode(
                 node_id=nx_node[DynamicGraph.ID_NODE_ATTR],
                 node_key=nx_node[DynamicGraph.KEY_NODE_ATTR],
-                module_attributes=nx_node.get(DynamicGraph.MODULE_ATTRIBUTES),
+                layer_attributes=nx_node.get(DynamicGraph.LAYER_ATTRIBUTES),
                 op_exec_context=nx_node[DynamicGraph.OP_EXEC_CONTEXT_NODE_ATTR],
                 ignored_algorithms=nx_node[DynamicGraph.IGNORED_ALGOS_NODE_ATTR],
                 is_in_iteration_scope=nx_node[DynamicGraph.IS_IN_ITERATION_SCOPE_NODE_ATTR]

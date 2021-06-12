@@ -15,7 +15,6 @@ from typing import NamedTuple
 
 import networkx as nx
 import torch
-from torch import nn
 
 from nncf.common.graph import NNCFNodeName
 from nncf.torch.layers import NNCFConv2d
@@ -30,7 +29,6 @@ from nncf.torch.quantization.layers import SymmetricQuantizer
 class AdjustPaddingArgs(NamedTuple):
     weight_bitwidth: int
     activation_quantizer: BaseQuantizer
-    quantized_module: nn.Module
     module_op_node_name: NNCFNodeName
 
 
@@ -50,22 +48,6 @@ class CalculatePaddingAdjustment:
             raise RuntimeError('Padding adjustment is not supported for not symmetric quantization')
         self._activation_quantizer = activation_quantizer
         self._is_enabled = True
-
-    @staticmethod
-    def is_applicable(args: AdjustPaddingArgs):
-        weight_bitwidth, activation_quantizer, module, _ = args
-        result = False
-        if isinstance(module, NNCFConv2d):
-            padding_values = set(module.padding)
-            padding_enabled = len(padding_values) >= 1 and padding_values.pop()
-            if padding_enabled:
-                symmetric = isinstance(activation_quantizer, SymmetricQuantizer)
-                per_tensor = not activation_quantizer.per_channel
-                a_int4 = activation_quantizer.num_bits == 4
-                w_int24 = weight_bitwidth <= 4
-                unsigned = not activation_quantizer.signed
-                result = symmetric and per_tensor and a_int4 and w_int24 and unsigned
-        return result
 
     def __call__(self, previous_padding_value) -> torch.Tensor:
         if self._is_enabled:
