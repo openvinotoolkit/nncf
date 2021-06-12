@@ -180,7 +180,7 @@ class PTCompressionAlgorithmBuilder(CompressionAlgorithmBuilder):
     def _handle_frozen_layers(self, target_model: NNCFNetwork):
         scopes_of_frozen_layers = []
         for weighted_node in target_model.get_weighted_original_graph_nodes():
-            if not weighted_node.module_attributes.weight_requires_grad:
+            if not weighted_node.layer_attributes.weight_requires_grad:
                 if should_consider_scope(weighted_node.node_name, self.ignored_scopes, self.target_scopes):
                     scopes_of_frozen_layers.append(weighted_node.node_name)
         scopes_to_print = '\n'.join(scopes_of_frozen_layers)

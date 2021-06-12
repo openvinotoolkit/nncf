@@ -10,6 +10,7 @@ from typing import Tuple
 import numpy as np
 import torch
 
+from nncf.common.graph import NNCFGraph
 from nncf.common.quantization.structs import QuantizerGroup
 from nncf.common.utils.helpers import should_consider_scope
 from nncf.torch.initialization import DataLoaderBaseRunner
@@ -160,7 +161,7 @@ class RangeInitParams:
 
 class StatCollectorGenerator:
     @staticmethod
-    def generate_collectors_for_range_init_statistics_collection(target_model: NNCFNetwork,
+    def generate_collectors_for_range_init_statistics_collection(target_model_graph: NNCFGraph,
                                                                  quantizer_setup: QuantizerSetupBase,
                                                                  range_init_params: RangeInitParams) -> \
             Dict[TensorStatisticObservationPoint, TensorStatisticCollectorBase]:
@@ -171,12 +172,12 @@ class StatCollectorGenerator:
             num_batches = int(np.ceil(
                 init_config.num_init_samples / range_init_params.init_range_data_loader.batch_size))
             if is_weights:
-                module = target_model.get_containing_module(qp.insertion_point.target_node_name)
-                input_shape = module.weight.shape
+                module_node = target_model_graph.get_node_by_name(qp.insertion_point.target_node_name)
+                input_shape = module_node.layer_attributes.get_weight_shape()
                 # No need to store extra statistics in memory since weights won't change during range init
                 num_batches = 1
             else:
-                input_shape = target_model.get_original_graph().get_input_shape_for_insertion_point(qp.insertion_point)
+                input_shape = target_model_graph.get_input_shape_for_insertion_point(qp.insertion_point)
 
             obs_p = TensorStatisticObservationPoint(
                 qp.insertion_point,

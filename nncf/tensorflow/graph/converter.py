@@ -250,14 +250,14 @@ class FunctionalConverter(TFModelConverter):
             metatype = layer_info['metatype']
             layer = self._get_layer(layer_name)
             if metatype in GENERAL_CONV_LAYER_METATYPES:
-                module_attributes = _get_layer_attributes(self._get_layer(layer_name))
+                layer_attributes = _get_conv_layer_attributes(self._get_layer(layer_name))
             else:
-                module_attributes = None
+                layer_attributes = None
             is_shared = len(self._layer_name_to_node_names[layer_name]) > 1
             nncf_node = nncf_graph.add_nncf_node(node_name=node_name,
                                                  node_type=layer_info['type'],
                                                  node_metatype=metatype,
-                                                 layer_attributes=module_attributes,
+                                                 layer_attributes=layer_attributes,
                                                  layer_name=layer_name,
                                                  is_shared=is_shared)
             node_name_vs_nncf_node_ids[node_name] = nncf_node.node_id
@@ -322,15 +322,15 @@ class SequentialConverter(TFModelConverter):
                          out_ports=[0],
                          is_shared=False)
 
-            module_attributes = None
+            layer_attributes = None
             if layer_metatype in GENERAL_CONV_LAYER_METATYPES:
-                module_attributes = _get_layer_attributes(self._model.get_layer(layer_name))
-                attrs.update({NNCFGraph.MODULE_ATTRIBUTES: module_attributes})
+                layer_attributes = _get_conv_layer_attributes(self._model.get_layer(layer_name))
+                attrs.update({NNCFGraph.LAYER_ATTRIBUTES: layer_attributes})
 
             nncf_node = nncf_graph.add_nncf_node(layer_name,
                                                  node_type=layer_type,
                                                  node_metatype=layer_metatype,
-                                                 layer_attributes=module_attributes,
+                                                 layer_attributes=layer_attributes,
                                                  layer_name=layer_name,
                                                  is_shared=False)
 
@@ -358,7 +358,7 @@ class SequentialConverter(TFModelConverter):
         return nncf_graph
 
 
-def _get_layer_attributes(layer: tf.keras.layers.Layer) -> ConvolutionLayerAttributes:
+def _get_conv_layer_attributes(layer: tf.keras.layers.Layer) -> ConvolutionLayerAttributes:
     channel_axis = get_input_channel_axis(layer)
     layer_ = unwrap_layer(layer)
     layer_metatype = get_keras_layer_metatype(layer_, determine_subtype=False)
@@ -373,4 +373,5 @@ def _get_layer_attributes(layer: tf.keras.layers.Layer) -> ConvolutionLayerAttri
                                       layer.get_output_shape_at(0)[channel_axis],
                                       kernel_size,
                                       strides,
-                                      groups, transpose=transpose)
+                                      groups, transpose=transpose,
+                                      padding_values=([0, 0, 0, 0]))

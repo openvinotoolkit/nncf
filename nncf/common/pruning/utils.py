@@ -31,8 +31,8 @@ from nncf.common.utils.registry import Registry
 
 
 def is_grouped_conv(node: NNCFNode) -> bool:
-    return isinstance(node.module_attributes, ConvolutionLayerAttributes) \
-           and node.module_attributes.groups != 1
+    return isinstance(node.layer_attributes, ConvolutionLayerAttributes) \
+           and node.layer_attributes.groups != 1
 
 
 def get_sources_of_node(nncf_node: NNCFNode, graph: NNCFGraph, sources_types: List[str]) -> List[NNCFNode]:
@@ -209,12 +209,12 @@ def get_conv_in_out_channels(graph: NNCFGraph):
     """
     in_channels, out_channels = {}, {}
     for node in graph.get_all_nodes():
-        if isinstance(node.module_attributes, ConvolutionLayerAttributes):
+        if isinstance(node.layer_attributes, ConvolutionLayerAttributes):
             name = node.node_name
             if name in in_channels and name in out_channels:
                 continue
-            in_channels[name] = node.module_attributes.in_channels
-            out_channels[name] = node.module_attributes.out_channels
+            in_channels[name] = node.layer_attributes.in_channels
+            out_channels[name] = node.layer_attributes.out_channels
     return in_channels, out_channels
 
 
@@ -271,9 +271,9 @@ def count_flops_for_nodes(graph: NNCFGraph,
     output_channels = output_channels or {}
     for node in graph.get_nodes_by_metatypes(conv_op_metatypes):
         name = node.node_name
-        num_in_channels = input_channels.get(name, node.module_attributes.in_channels)
-        num_out_channels = output_channels.get(name, node.module_attributes.out_channels)
-        flops[name] = 2 * np.prod(node.module_attributes.kernel_size) * \
+        num_in_channels = input_channels.get(name, node.layer_attributes.in_channels)
+        num_out_channels = output_channels.get(name, node.layer_attributes.out_channels)
+        flops[name] = 2 * np.prod(node.layer_attributes.kernel_size) * \
                       num_in_channels * num_out_channels * np.prod(output_shapes[name])
 
     for node in graph.get_nodes_by_metatypes(linear_op_metatypes):

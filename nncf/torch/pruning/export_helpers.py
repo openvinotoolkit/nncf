@@ -329,8 +329,8 @@ class GroupNorm(PTDefaultMetaOp):
     @classmethod
     def accept_pruned_input(cls, node: NNCFNode):
         # For Instance Normalization
-        return isinstance(node.module_attributes, GroupNormLayerAttributes) \
-               and node.module_attributes.num_groups == node.module_attributes.num_channels
+        return isinstance(node.layer_attributes, GroupNormLayerAttributes) \
+               and node.layer_attributes.num_groups == node.layer_attributes.num_channels
 
     @classmethod
     def mask_propagation(cls, node: NNCFNode, graph: NNCFGraph):

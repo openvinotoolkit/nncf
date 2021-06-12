@@ -81,12 +81,12 @@ class PTOperatorMetatype(OperatorMetatype):
 
     @classmethod
     def determine_subtype(cls,
-                          module_attributes: Optional[ModuleAttributes] = None,
+                          layer_attributes: Optional[BaseLayerAttributes] = None,
                           function_args=None,
                           functions_kwargs=None) -> Optional['PTOperatorSubtype']:
         matches = []
         for subtype in cls.get_subtypes():
-            if subtype.matches(module_attributes,
+            if subtype.matches(layer_attributes,
                                function_args,
                                functions_kwargs):
                 matches.append(subtype)
@@ -122,7 +122,7 @@ class PTOperatorSubtype(PTOperatorMetatype):
     """
 
     @classmethod
-    def matches(cls, module_attributes: Optional[ModuleAttributes] = None,
+    def matches(cls, layer_attributes: Optional[BaseLayerAttributes] = None,
                 function_args=None,
                 functions_kwargs=None) -> bool:
         raise NotImplementedError
@@ -151,10 +151,10 @@ class DepthwiseConv1dSubtype(PTOperatorSubtype):
     hw_config_names = [HWConfigOpName.DEPTHWISECONVOLUTION]
 
     @classmethod
-    def matches(cls, module_attributes: Optional[ConvolutionLayerAttributes] = None,
+    def matches(cls, layer_attributes: Optional[ConvolutionLayerAttributes] = None,
                 function_args=None,
                 functions_kwargs=None) -> bool:
-        if module_attributes.groups == module_attributes.in_channels and module_attributes.in_channels > 1:
+        if layer_attributes.groups == layer_attributes.in_channels and layer_attributes.in_channels > 1:
             return True
         return False
 
@@ -172,10 +172,10 @@ class DepthwiseConv2dSubtype(PTOperatorSubtype):
     hw_config_names = [HWConfigOpName.DEPTHWISECONVOLUTION]
 
     @classmethod
-    def matches(cls, module_attributes: Optional[ConvolutionLayerAttributes] = None,
+    def matches(cls, layer_attributes: Optional[ConvolutionLayerAttributes] = None,
                 function_args=None,
                 functions_kwargs=None) -> bool:
-        if module_attributes.groups == module_attributes.in_channels and module_attributes.in_channels > 1:
+        if layer_attributes.groups == layer_attributes.in_channels and layer_attributes.in_channels > 1:
             return True
         return False
 
@@ -193,10 +193,10 @@ class DepthwiseConv3dSubtype(PTOperatorSubtype):
     hw_config_names = [HWConfigOpName.DEPTHWISECONVOLUTION]
 
     @classmethod
-    def matches(cls, module_attributes: Optional[ConvolutionLayerAttributes] = None,
+    def matches(cls, layer_attributes: Optional[ConvolutionLayerAttributes] = None,
                 function_args=None,
                 functions_kwargs=None) -> bool:
-        if module_attributes.groups == module_attributes.in_channels and module_attributes.in_channels > 1:
+        if layer_attributes.groups == layer_attributes.in_channels and layer_attributes.in_channels > 1:
             return True
         return False
 

@@ -59,7 +59,7 @@ class GraphConverter:
             layer_name = str(dynamic_graph_node.op_exec_context.op_address)
 
             metatype = PT_OPERATOR_METATYPES.get_operator_metatype_by_op_name(op_address.operator_name)
-            subtype = metatype.determine_subtype(dynamic_graph_node.module_attributes)
+            subtype = metatype.determine_subtype(dynamic_graph_node.layer_attributes)
             if subtype is not None:
                 metatype = subtype
 
@@ -74,7 +74,7 @@ class GraphConverter:
             nncf_graph.add_nncf_node(node_name=str(op_address),
                                      node_type=op_address.operator_name,
                                      node_metatype=metatype,
-                                     layer_attributes=dynamic_graph_node.module_attributes,
+                                     layer_attributes=dynamic_graph_node.layer_attributes,
                                      node_id_override=dynamic_graph_node.node_id,
                                      layer_name=str(op_address.scope_in_model),
                                      ignored_algorithms=dynamic_graph_node.ignored_algorithms,

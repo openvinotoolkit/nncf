@@ -38,7 +38,7 @@ class RBSparsityBuilder(BaseSparsityAlgoBuilder):
         return target_model
 
     def create_weight_sparsifying_operation(self, target_module_node: NNCFNode, compression_lr_multiplier: float):
-        return RBSparsifyingWeight(target_module_node.module_attributes.get_weight_shape(), frozen=False,
+        return RBSparsifyingWeight(target_module_node.layer_attributes.get_weight_shape(), frozen=False,
                                    compression_lr_multiplier=compression_lr_multiplier)
 
     def build_controller(self, target_model: NNCFNetwork) -> PTCompressionAlgorithmController:

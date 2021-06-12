@@ -66,8 +66,8 @@ class NNCFNode:
         return self.data.get(NNCFGraph.LAYER_NAME_ATTR)
 
     @property
-    def module_attributes(self) -> BaseLayerAttributes:
-        return self.data.get(NNCFGraph.MODULE_ATTRIBUTES)
+    def layer_attributes(self) -> BaseLayerAttributes:
+        return self.data.get(NNCFGraph.LAYER_ATTRIBUTES)
 
     @property
     def ignored_algorithms(self) -> List[str]:
@@ -96,7 +96,7 @@ class NNCFNode:
                and self.node_id == other.node_id \
                and self.data == other.data \
                and self.node_type == other.node_type \
-               and self.module_attributes == other.module_attributes
+               and self.layer_attributes == other.layer_attributes
 
 
 class NNCFGraphNodeType:
@@ -163,7 +163,7 @@ class NNCFGraph:
     NODE_TYPE_ATTR = 'type'
     METATYPE_ATTR = 'metatype'
     LAYER_NAME_ATTR = 'layer_name'
-    MODULE_ATTRIBUTES = 'module_attributes'
+    LAYER_ATTRIBUTES = 'layer_attributes'
     ACTIVATION_SHAPE_EDGE_ATTR = 'activation_shape'
     IN_PORT_NAME_EDGE_ATTR = 'in_port'
     IGNORED_ALGOS_ATTR = 'ignored_algos'
@@ -404,7 +404,7 @@ class NNCFGraph:
             NNCFGraph.IS_INTEGER_INPUT_NODE_ATTR: is_integer_input
         }
         if layer_attributes is not None:
-            attrs[NNCFGraph.MODULE_ATTRIBUTES] = layer_attributes
+            attrs[NNCFGraph.LAYER_ATTRIBUTES] = layer_attributes
 
         if ignored_algorithms is None:
             ignored_algorithms = []
@@ -557,7 +557,7 @@ class NNCFGraph:
     def __eq__(self, other: 'NNCFGraph'):
         nm = iso.categorical_node_match([NNCFGraph.ID_NODE_ATTR,
                                          NNCFGraph.KEY_NODE_ATTR,
-                                         NNCFGraph.MODULE_ATTRIBUTES], [None, None, None])
+                                         NNCFGraph.LAYER_ATTRIBUTES], [None, None, None])
         em = iso.categorical_edge_match([NNCFGraph.ACTIVATION_SHAPE_EDGE_ATTR,
                                          NNCFGraph.IN_PORT_NAME_EDGE_ATTR], [None, None])
         return nx.is_isomorphic(self._nx_graph, other._nx_graph, node_match=nm, edge_match=em)

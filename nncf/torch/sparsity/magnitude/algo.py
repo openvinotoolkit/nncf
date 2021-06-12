@@ -36,7 +36,7 @@ from nncf.config.utils import extract_bn_adaptation_init_params
 @COMPRESSION_ALGORITHMS.register('magnitude_sparsity')
 class MagnitudeSparsityBuilder(BaseSparsityAlgoBuilder):
     def create_weight_sparsifying_operation(self, target_module_node: NNCFNode, compression_lr_multiplier: float):
-        return BinaryMask(target_module_node.module_attributes.get_weight_shape())
+        return BinaryMask(target_module_node.layer_attributes.get_weight_shape())
 
     def build_controller(self, target_model: NNCFNetwork) -> PTCompressionAlgorithmController:
         return MagnitudeSparsityController(target_model, self._sparsified_module_info, self.config)

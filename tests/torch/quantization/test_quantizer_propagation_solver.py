@@ -74,7 +74,7 @@ def get_randomly_connected_model_graph(op_name_keys: List[str]) -> nx.DiGraph:
         node[NNCFGraph.NODE_NAME_ATTR] = str(get_mock_model_node_attrs_for_op_name(shuffled_op_names[idx]))
         node[NNCFGraph.NODE_TYPE_ATTR] = op_name
         if op_name in OP_NAMES_REQUIRING_MODULE_ATTRS:
-            node[NNCFGraph.MODULE_ATTRIBUTES] = MagicMock()
+            node[NNCFGraph.LAYER_ATTRIBUTES] = MagicMock()
     mark_input_ports_lexicographically_based_on_input_node_key(mock_graph)
     return mock_graph
 
@@ -92,7 +92,7 @@ def get_sequentially_connected_model_graph(op_name_keys: List[str]) -> nx.DiGrap
         }
 
         if node_key in OP_NAMES_REQUIRING_MODULE_ATTRS:
-            attrs[NNCFGraph.MODULE_ATTRIBUTES] = MagicMock()
+            attrs[NNCFGraph.LAYER_ATTRIBUTES] = MagicMock()
         actual_key = node_key + '_{}'.format(node_key_appearances[node_key])
         graph.add_node(actual_key, **attrs)
         node_key_appearances[node_key] += 1

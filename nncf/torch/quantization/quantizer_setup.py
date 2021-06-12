@@ -6,11 +6,11 @@ from typing import Optional
 from typing import Set
 from typing import Tuple
 
+from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNodeName
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.torch.graph.transformations.commands import PTTargetPoint
-from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.quantization.layers import QuantizerConfig
 from nncf.torch.quantization.structs import UnifiedScaleType
 from nncf.torch.tensor_statistics.collectors import ReductionShape
@@ -246,21 +246,20 @@ class SingleConfigQuantizerSetup(QuantizerSetupBase):
 
     def get_minmax_values(self,
                           tensor_statistics: Dict[PTTargetPoint, Dict[ReductionShape, TensorStatistic]],
-                          target_model: NNCFNetwork) -> \
+                          target_model_graph: NNCFGraph) -> \
             Dict[QuantizationPointId, MinMaxTensorStatistic]:
         retval = {}
-        nncf_graph = target_model.get_original_graph()
         for qp_id, qp in self.quantization_points.items():
             ip = qp.insertion_point
             if ip not in tensor_statistics:
                 nncf_logger.debug("IP {} not found in tensor statistics".format(ip))
                 retval[qp_id] = None
             else:
-                target_node = nncf_graph.get_node_by_name(qp.insertion_point.target_node_name)
+                target_node = target_model_graph.get_node_by_name(qp.insertion_point.target_node_name)
                 if qp.is_weight_quantization_point():
-                    input_shape = target_node.module_attributes.get_weight_shape()
+                    input_shape = target_node.layer_attributes.get_weight_shape()
                 else:
-                    input_shape = nncf_graph.get_input_shape_for_insertion_point(qp.insertion_point)
+                    input_shape = target_model_graph.get_input_shape_for_insertion_point(qp.insertion_point)
                 scale_shape = tuple(get_scale_shape(input_shape,
                                                     qp.is_weight_quantization_point(),
                                                     qp.qconfig.per_channel))
