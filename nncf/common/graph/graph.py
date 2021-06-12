@@ -527,7 +527,7 @@ class NNCFGraph:
         out_graph = nx.DiGraph()
         for node_name, node in self._nx_graph.nodes.items():
             attrs_node = {}
-            attrs_node['label'] = str(node[NNCFGraph.ID_NODE_ATTR]) + ' ' + str(NNCFGraph.NODE_NAME_ATTR)
+            attrs_node['label'] = str(node[NNCFGraph.ID_NODE_ATTR]) + ' ' + str(node[NNCFGraph.NODE_NAME_ATTR])
             out_graph.add_node(node_name, **attrs_node)
 
         for u, v in self._nx_graph.edges:
