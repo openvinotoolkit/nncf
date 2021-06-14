@@ -268,8 +268,26 @@ class KeyMatcher:
         normalized_keys_to_load = NormalizedKeys(list(self.state_dict_to_load.keys()))
 
         has_legacy_storage_keys = False
+
+        has_version_agnostic_names = False
+        cross_match_key_map = self._cross_match_version_agnostic_names(list(normalized_keys_to_load),
+                                                                       list(normalized_model_keys))
+
+        for matched_checkpoint_key, matched_model_key in cross_match_key_map.items():
+            if matched_checkpoint_key != matched_model_key:
+                has_version_agnostic_names = True
+
+        if has_version_agnostic_names:
+            warnings.warn('Legacy NNCF-enabled .pth checkpoint has been loaded! '
+                          'The version-agnostic `RELU` operator name entries in the state dict have been deprecated. '
+                          'The loader will try to match these entries to the correspoindig `relu` and `relu_` op '
+                          'names. The newly exported checkpoints will be adjusted to the new format.',
+                          category=DeprecationWarning)
+
         for normalized_key_to_load in normalized_keys_to_load:
             key_to_load = normalized_keys_to_load.get_orig_key(normalized_key_to_load)
+            normalized_key_to_load = cross_match_key_map.get(normalized_key_to_load, normalized_key_to_load)
+
             processed_key_to_load, did_replace = self._replace_legacy_act_quantizer_storage_name(
                 normalized_key_to_load
             )
@@ -322,6 +340,62 @@ class KeyMatcher:
             splits[0] = EXTERNAL_QUANTIZERS_STORAGE_NAME
         reconstructed_key = '.'.join(splits)
         return reconstructed_key, did_replace
+
+    @staticmethod
+    def _cross_match_version_agnostic_names(normalized_keys_to_load: List[str],
+                                            normalized_model_keys: List[str]) -> Dict[str, str]:
+        """
+        Handles the situation where the normalized_keys_to_load contain legacy version-agnostic names
+        of operations, such as `RELU`.
+
+        :param normalized_keys_to_load: A list of keys in the checkpoint, potentially with version-agnostic names
+        :param normalized_model_keys: A list of keys in the model, without version-agnostic names.
+        :return: A mapping of the checkpoint key to a model key that matches version-agnostic names with their
+            torch-specific counterparts.
+        """
+        version_agnostic_to_specific_names = {"RELU": {"relu", "relu_"}}
+        retval = {}
+        processed_keys_to_load = [KeyMatcher._replace_legacy_act_quantizer_storage_name(key)[0]
+                                  for key in normalized_keys_to_load]
+
+        for model_key in normalized_model_keys:
+            for agnostic_op_name, specific_op_name_set in version_agnostic_to_specific_names.items():
+                matches_for_curr_agnostic_op_name = []
+                has_specific_op_name = False
+                for specific_op_name in specific_op_name_set:
+                    # Have to take care not to replace the matches to the class names
+                    # The op names in existing checkpoint can only appear in external quantizers,
+                    # i.e. external_quantizers.ResNet/ReLU[relu]/relu_0.signed_tensor, so composing a regex to match
+                    # for that
+                    slash_split_str = model_key.split('/')
+                    last_portion = slash_split_str[-1]
+                    if specific_op_name in last_portion:
+                        last_portion = last_portion.replace(specific_op_name, agnostic_op_name, 1)
+                        has_specific_op_name = True
+                    slash_split_str[-1] = last_portion
+                    agnostic_version_of_model_key = '/'.join(slash_split_str)
+                    processed_agnostic_version_of_model_key, _ = KeyMatcher._replace_legacy_act_quantizer_storage_name(
+                        agnostic_version_of_model_key
+                    )
+                    if processed_agnostic_version_of_model_key in processed_keys_to_load:
+                        idx = processed_keys_to_load.index(processed_agnostic_version_of_model_key)
+                        matches_for_curr_agnostic_op_name.append(normalized_keys_to_load[idx])
+
+                if not has_specific_op_name:
+                    if matches_for_curr_agnostic_op_name:
+                        checkpoint_matched_key = next(iter(matches_for_curr_agnostic_op_name))
+                        retval[checkpoint_matched_key] = model_key
+                elif len(matches_for_curr_agnostic_op_name) == 1:
+                    checkpoint_matched_key = next(iter(matches_for_curr_agnostic_op_name))
+                    retval[checkpoint_matched_key] = model_key
+                elif len(matches_for_curr_agnostic_op_name) == 0:
+                    nncf_logger.debug("Failed to match a version-specific key: {}".format(model_key))
+                elif len(matches_for_curr_agnostic_op_name) > 1:
+                    nncf_logger.debug("More than one match for the version specific key: {}\n"
+                                      "Matches:\n"
+                                      "{}".format(model_key, ', '.join(matches_for_curr_agnostic_op_name)))
+
+        return retval
 
     def handle_problematic_keys(self):
         """
