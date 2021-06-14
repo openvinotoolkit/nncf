@@ -17,14 +17,17 @@ import torch.distributed as dist
 
 from nncf.torch.algo_selector import COMPRESSION_ALGORITHMS
 from nncf.api.compression import CompressionStage
+from nncf.common.graph import NNCFNode
 from nncf.torch.compression_method_api import PTCompressionAlgorithmController
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.sparsity.base_algo import BaseSparsityAlgoBuilder, BaseSparsityAlgoController, SparseModuleInfo
 from nncf.torch.sparsity.rb.layers import RBSparsifyingWeight
 from nncf.torch.sparsity.rb.loss import SparseLoss, SparseLossForPerLayerSparsity
 from nncf.torch.utils import get_world_size
-from nncf.common.sparsity.schedulers import SPARSITY_SCHEDULERS
 from nncf.common.accuracy_aware_training.training_loop import ADAPTIVE_COMPRESSION_CONTROLLERS
+from nncf.torch.sparsity.collector import PTSparseModelStatisticsCollector
+from nncf.common.sparsity.schedulers import SPARSITY_SCHEDULERS
+from nncf.common.schedulers import StubCompressionScheduler
 from nncf.common.sparsity.statistics import RBSparsityStatistics
 from nncf.common.statistics import NNCFStatistics
 
@@ -35,8 +38,8 @@ class RBSparsityBuilder(BaseSparsityAlgoBuilder):
         target_model = super().apply_to(target_model)
         return target_model
 
-    def create_weight_sparsifying_operation(self, module, compression_lr_multiplier):
-        return RBSparsifyingWeight(module.weight.size(), frozen=False,
+    def create_weight_sparsifying_operation(self, target_module_node: NNCFNode, compression_lr_multiplier: float):
+        return RBSparsifyingWeight(target_module_node.layer_attributes.get_weight_shape(), frozen=False,
                                    compression_lr_multiplier=compression_lr_multiplier)
 
     def build_controller(self, target_model: NNCFNetwork) -> PTCompressionAlgorithmController:
@@ -51,12 +54,12 @@ class RBSparsityController(BaseSparsityAlgoController):
 
         self._distributed = False
         self._mode = params.get('sparsity_level_setting_mode', 'global')
-        self._scheduler = None
         self._check_sparsity_masks = params.get('check_sparsity_masks', False)
 
         sparsify_operations = [m.operand for m in self.sparsified_module_info]
         if self._mode == 'local':
             self._loss = SparseLossForPerLayerSparsity(sparsify_operations)
+            self._scheduler = StubCompressionScheduler()
         else:
             self._loss = SparseLoss(sparsify_operations)
 
@@ -127,17 +130,23 @@ class RBSparsityController(BaseSparsityAlgoController):
         return ncor_values / nvalues
 
     def statistics(self, quickly_collected_only=False) -> NNCFStatistics:
-        model_statistics = self._calculate_sparsified_model_stats()
+        collector = PTSparseModelStatisticsCollector(self.model, self.sparsified_module_info)
+        model_statistics = collector.collect()
 
-        target_level = self.loss.target_sparsity_rate
+        target_sparsity_level = self.scheduler.current_sparsity_level if self._mode == 'global' else None
+
         mean_sparse_prob = 1.0 - self.loss.mean_sparse_prob
 
-        masks_consistency = 1.0
-        if self._distributed and self._check_sparsity_masks:
-            masks_consistency = self._check_distributed_masks()
-
-        stats = RBSparsityStatistics(model_statistics, masks_consistency, target_level, mean_sparse_prob)
+        stats = RBSparsityStatistics(model_statistics, target_sparsity_level, mean_sparse_prob)
 
         nncf_stats = NNCFStatistics()
         nncf_stats.register('rb_sparsity', stats)
         return nncf_stats
+
+    @property
+    def compression_rate(self):
+        return self._loss.target_sparsity_rate
+
+    @compression_rate.setter
+    def compression_rate(self, sparsity_level: float):
+        self.set_sparsity_level(sparsity_level)

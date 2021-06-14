@@ -10,23 +10,20 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+from nncf.common.graph import NNCFNode
 
-from typing import Type
-
-from nncf.torch.graph.graph import PTNNCFNode
 from nncf.torch.graph.operator_metatypes import PT_OPERATOR_METATYPES
 from nncf.torch.graph.operator_metatypes import PTOperatorMetatype
 
 
 class PTOperatorMetatypeNodeMatcher:
     @classmethod
-    def match(cls, nncf_node: PTNNCFNode) -> Type[PTOperatorMetatype]:
-        ia_op_exec_context = nncf_node.ia_op_exec_context
-        module_attributes = nncf_node.module_attributes
-        op_name = ia_op_exec_context.operator_name
+    def match(cls, nncf_node: NNCFNode) -> PTOperatorMetatype:
+        layer_attributes = nncf_node.layer_attributes
+        op_name = nncf_node.node_type
         op_arch = PT_OPERATOR_METATYPES.get_operator_metatype_by_op_name(op_name)
         if op_arch.subtypes:
-            subtype = op_arch.determine_subtype(module_attributes=module_attributes)
+            subtype = op_arch.determine_subtype(layer_attributes=layer_attributes)
             if subtype is not None:
                 op_arch = subtype
         return op_arch

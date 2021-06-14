@@ -10,21 +10,22 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-
+from copy import deepcopy
+from typing import List
 from typing import TypeVar
 
 import torch.nn
-from copy import deepcopy
 
+from nncf import NNCFConfig
 from nncf.common.composite_compression import CompositeCompressionAlgorithmBuilder
 from nncf.common.composite_compression import CompositeCompressionAlgorithmController
 from nncf.common.composite_compression import CompositeCompressionLoss
+from nncf.common.hardware.config import HWConfigType
+from nncf.common.hardware.config import HW_CONFIG_TYPE_TARGET_DEVICE_MAP
 from nncf.torch.compression_method_api import PTCompressionAlgorithmBuilder
 from nncf.torch.compression_method_api import PTCompressionAlgorithmController
 from nncf.torch.compression_method_api import PTCompressionLoss
 from nncf.torch.graph.transformations.layout import PTTransformationLayout
-from nncf.common.hardware.config import HW_CONFIG_TYPE_TARGET_DEVICE_MAP
-from nncf.common.hardware.config import HWConfigType
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.nncf_network import PTModelTransformer
 from nncf.torch.pruning.base_algo import BasePruningAlgoController
@@ -44,8 +45,7 @@ class PTCompositeCompressionLoss(CompositeCompressionLoss, PTCompressionLoss):
 
 class PTCompositeCompressionAlgorithmBuilder(
         CompositeCompressionAlgorithmBuilder, PTCompressionAlgorithmBuilder):
-    def __init__(self, config: 'NNCFConfig', should_init: bool = True):
-        from nncf import NNCFConfig
+    def __init__(self, config: NNCFConfig, should_init: bool = True):
         from nncf.torch.model_creation import get_compression_algorithm
 
         super().__init__(config, should_init)
@@ -59,31 +59,62 @@ class PTCompositeCompressionAlgorithmBuilder(
         if target_device != 'TRIAL':
             hw_config_type = HWConfigType.from_str(HW_CONFIG_TYPE_TARGET_DEVICE_MAP[target_device])
 
+        global_ignored_scopes = config.get("ignored_scopes")
+        global_target_scopes = config.get("target_scopes")
         if isinstance(compression_config_json_section, dict):
             compression_config = NNCFConfig(compression_config_json_section)
+            compression_config = self._extend_with_globals(
+                compression_config,
+                global_hw_config_type=hw_config_type,
+                global_ignored_scopes=global_ignored_scopes,
+                global_target_scopes=global_target_scopes,
+                global_compression_lr_multiplier=global_compression_lr_multiplier
+            )
             compression_config.register_extra_structs(config.get_all_extra_structs_for_copy())
-            compression_config["hw_config_type"] = hw_config_type
-            if "compression_lr_multiplier" not in compression_config:
-                compression_config["compression_lr_multiplier"] = global_compression_lr_multiplier
             self._child_builders = [
                 get_compression_algorithm(compression_config)(compression_config, should_init=should_init), ]
         else:
             for algo_config in compression_config_json_section:
                 algo_config = NNCFConfig(algo_config)
+                algo_config = self._extend_with_globals(
+                    algo_config,
+                    global_hw_config_type=hw_config_type,
+                    global_ignored_scopes=global_ignored_scopes,
+                    global_target_scopes=global_target_scopes,
+                    global_compression_lr_multiplier=global_compression_lr_multiplier)
                 algo_config.register_extra_structs(config.get_all_extra_structs_for_copy())
-                algo_config["hw_config_type"] = hw_config_type
-                if "compression_lr_multiplier" not in algo_config:
-                    algo_config["compression_lr_multiplier"] = global_compression_lr_multiplier
                 self._child_builders.append(
                     get_compression_algorithm(algo_config)(algo_config, should_init=should_init))
+
+    @staticmethod
+    def _extend_with_globals(algo_config: NNCFConfig,
+                             global_hw_config_type: HWConfigType,
+                             global_ignored_scopes: List[str],
+                             global_target_scopes: List[str],
+                             global_compression_lr_multiplier: float) -> NNCFConfig:
+        if global_hw_config_type is not None:
+            algo_config["hw_config_type"] = global_hw_config_type
+        if global_ignored_scopes is not None:
+            if "ignored_scopes" in algo_config:
+                algo_config["ignored_scopes"].extend(global_ignored_scopes)
+            else:
+                algo_config["ignored_scopes"] = global_ignored_scopes
+        if global_target_scopes is not None:
+            if "target_scopes" in algo_config:
+                algo_config["target_scopes"].extend(global_target_scopes)
+            else:
+                algo_config["target_scopes"] = global_target_scopes
+        if "compression_lr_multiplier" not in algo_config:
+            algo_config["compression_lr_multiplier"] = global_compression_lr_multiplier
+        return algo_config
 
     def __bool__(self):
         return bool(self.child_builders)
 
     def apply_to(self, target_model: NNCFNetwork) -> NNCFNetwork:
+        transformer = PTModelTransformer(target_model)
         layout = self.get_transformation_layout(target_model)
-        transformer = PTModelTransformer(target_model, layout)
-        transformed_model = transformer.transform()
+        transformed_model = transformer.transform(layout)
         return transformed_model
 
     def build_controller(self, model: ModelType) -> 'PTCompositeCompressionAlgorithmController':

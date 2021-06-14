@@ -15,10 +15,8 @@ from typing import NamedTuple
 
 import networkx as nx
 import torch
-from torch import nn
 
-from nncf.torch.dynamic_graph.context import Scope
-from nncf.torch.graph.graph import NNCFGraph
+from nncf.common.graph import NNCFNodeName
 from nncf.torch.layers import NNCFConv2d
 from nncf.torch.module_operations import UpdatePaddingValue
 from nncf.torch.nncf_network import NNCFNetwork
@@ -31,8 +29,7 @@ from nncf.torch.quantization.layers import SymmetricQuantizer
 class AdjustPaddingArgs(NamedTuple):
     weight_bitwidth: int
     activation_quantizer: BaseQuantizer
-    quantized_module: nn.Module
-    module_scope: Scope
+    module_op_node_name: NNCFNodeName
 
 
 class CalculatePaddingAdjustment:
@@ -52,22 +49,6 @@ class CalculatePaddingAdjustment:
         self._activation_quantizer = activation_quantizer
         self._is_enabled = True
 
-    @staticmethod
-    def is_applicable(args: AdjustPaddingArgs):
-        weight_bitwidth, activation_quantizer, module, _ = args
-        result = False
-        if isinstance(module, NNCFConv2d):
-            padding_values = set(module.padding)
-            padding_enabled = len(padding_values) >= 1 and padding_values.pop()
-            if padding_enabled:
-                symmetric = isinstance(activation_quantizer, SymmetricQuantizer)
-                per_tensor = not activation_quantizer.per_channel
-                a_int4 = activation_quantizer.num_bits == 4
-                w_int24 = weight_bitwidth <= 4
-                unsigned = not activation_quantizer.signed
-                result = symmetric and per_tensor and a_int4 and w_int24 and unsigned
-        return result
-
     def __call__(self, previous_padding_value) -> torch.Tensor:
         if self._is_enabled:
             scale = self._activation_quantizer.scale
@@ -82,16 +63,15 @@ class CalculatePaddingAdjustment:
                not qconfig.signedness_to_force and qconfig.mode == QuantizationMode.SYMMETRIC
 
 
-def add_adjust_padding_nodes(nncf_graph: NNCFGraph, model: NNCFNetwork) -> nx.DiGraph():
+def add_adjust_padding_nodes(bitwidth_graph: nx.DiGraph, model: NNCFNetwork) -> nx.DiGraph():
     # pylint:disable=protected-access
-    nx_graph = nncf_graph._get_graph_for_structure_analysis()
 
     NewNodeArgs = namedtuple('NewNodeArgs', ('node_key', 'attr', 'parent_node_key'))
-
+    nncf_graph = model.get_graph()
     args = []
-    for node_key, nx_node in nx_graph.nodes.items():
-        scope = Scope.from_str(nx_node['scope'])
-        module = model.get_module_by_scope(scope)
+    for node_key in bitwidth_graph.nodes:
+        node = nncf_graph.get_node_by_key(node_key)
+        module = model.get_containing_module(node.node_name)
         if isinstance(module, NNCFConv2d):
             adjust_padding_ops = filter(lambda x: isinstance(x, UpdatePaddingValue), module.pre_ops.values())
             for _ in adjust_padding_ops:
@@ -100,6 +80,6 @@ def add_adjust_padding_nodes(nncf_graph: NNCFGraph, model: NNCFNetwork) -> nx.Di
                 args.append(NewNodeArgs(new_node_key, attr, node_key))
 
     for arg in args:
-        nx_graph.add_node(arg.node_key, **arg.attr)
-        nx_graph.add_edge(arg.node_key, arg.parent_node_key)
-    return nx_graph
+        bitwidth_graph.add_node(arg.node_key, **arg.attr)
+        bitwidth_graph.add_edge(arg.node_key, arg.parent_node_key)
+    return bitwidth_graph

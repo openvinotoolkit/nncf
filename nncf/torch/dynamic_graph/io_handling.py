@@ -5,8 +5,8 @@ from typing import List
 
 import torch
 
-from nncf.common.graph.graph import MODEL_INPUT_OP_NAME
-from nncf.common.graph.graph import MODEL_OUTPUT_OP_NAME
+from nncf.common.graph import MODEL_INPUT_OP_NAME
+from nncf.common.graph import MODEL_OUTPUT_OP_NAME
 from nncf.torch.dynamic_graph.patch_pytorch import register_operator
 from nncf.torch.dynamic_graph.graph_tracer import ModelInputInfo, create_mock_tensor
 from nncf.torch.utils import is_tensor, objwalk, is_traced_tensor
@@ -32,10 +32,12 @@ def wrap_nncf_model_outputs_with_objwalk(model_outputs):
 
 
 def replicate_same_tensors(obj: Any) -> Any:
-    """Required to handle the situation when multiple references to one and the
+    """
+    Required to handle the situation when multiple references to one and the
     same tensor are present in the input. If tensor replication is not done, then
     at runtime one and the same tensor could be wrapped by input/output wrappers twice,
-    which will disrupt the traced graph structure and possibly hook calls."""
+    which will disrupt the traced graph structure and possibly hook calls.
+    """
     observed_tensor_object_ids = set()  # type: Set[int]
 
     def replicate_fn(tensor: torch.Tensor) -> torch.Tensor:

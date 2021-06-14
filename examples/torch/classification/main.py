@@ -36,7 +36,7 @@ from torchvision.datasets import CIFAR10, CIFAR100
 from torchvision.models import InceptionOutputs
 
 from nncf.common.utils.tensorboard import prepare_for_tensorboard
-from nncf.common.utils.helpers import is_accuracy_aware_training
+from nncf.config.utils import is_accuracy_aware_training
 from examples.torch.common.argparser import get_common_argument_parser
 from examples.torch.common.example_logger import logger
 from examples.torch.common.execution import ExecutionMode, get_execution_mode, \
@@ -48,8 +48,8 @@ from examples.torch.common.utils import configure_logging, configure_paths, crea
     print_args, make_additional_checkpoints, get_name, is_staged_quantization, \
     is_pretrained_model_requested, log_common_mlflow_params, SafeMLFLow, MockDataset, configure_device
 from examples.torch.common.utils import write_metrics
-from nncf import create_compressed_model
-from nncf import AdaptiveCompressionTrainingLoop
+from nncf.torch import AdaptiveCompressionTrainingLoop
+from nncf.torch import create_compressed_model
 from nncf.api.compression import CompressionStage
 from nncf.torch.dynamic_graph.graph_tracer import create_input_infos
 from nncf.torch.initialization import register_default_init_args, default_criterion_fn
@@ -215,9 +215,11 @@ def main_worker(current_gpu, config: SampleConfig):
                 return top1
 
             # training function that trains the model for one epoch (full training dataset pass)
+            # it is assumed that all the NNCF-related methods are properly called inside of
+            # this function (like e.g. the step and epoch_step methods of the compression scheduler)
             def train_epoch_fn(compression_ctrl, model, epoch, optimizer, lr_scheduler):
                 return train_epoch(train_loader, model, criterion, train_criterion_fn,
-                                optimizer, compression_ctrl, epoch, config)
+                                   optimizer, compression_ctrl, epoch, config)
 
             # function that initializes optimizers & lr schedulers to start training
             def configure_optimizers_fn():
@@ -235,7 +237,7 @@ def main_worker(current_gpu, config: SampleConfig):
                                                 log_dir=config.log_dir)
         else:
             train(config, compression_ctrl, model, criterion, train_criterion_fn, lr_scheduler, model_name, optimizer,
-              train_loader, train_sampler, val_loader, best_acc1)
+                  train_loader, train_sampler, val_loader, best_acc1)
 
     config.mlflow.end_run()
 

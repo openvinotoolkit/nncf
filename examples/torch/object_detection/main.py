@@ -37,14 +37,15 @@ from examples.torch.common.utils import get_name, make_additional_checkpoints, c
     create_code_snapshot, is_on_first_rank, configure_logging, print_args, is_pretrained_model_requested, \
     log_common_mlflow_params, SafeMLFLow, configure_device
 
-from nncf import AdaptiveCompressionTrainingLoop
-from nncf.common.utils.helpers import is_accuracy_aware_training
+from nncf.torch import AdaptiveCompressionTrainingLoop
+from nncf.config.utils import is_accuracy_aware_training
 from examples.torch.common.utils import write_metrics
 from examples.torch.object_detection.dataset import detection_collate, get_testing_dataset, get_training_dataset
 from examples.torch.object_detection.eval import test_net
 from examples.torch.object_detection.layers.modules import MultiBoxLoss
 from examples.torch.object_detection.model import build_ssd
-from nncf import create_compressed_model, load_state
+from nncf.torch import create_compressed_model
+from nncf.torch import load_state
 from nncf.torch.dynamic_graph.graph_tracer import create_input_infos
 from nncf.torch.utils import is_main_process
 
@@ -213,6 +214,8 @@ def main_worker(current_gpu, config):
             return mAP
 
         # training function that trains the model for one epoch (full training dataset pass)
+        # it is assumed that all the NNCF-related methods are properly called inside of
+        # this function (like e.g. the step and epoch_step methods of the compression scheduler)
         def train_epoch_fn(compression_ctrl, model, epoch, optimizer, lr_scheduler):
             loc_loss = 0
             conf_loss = 0
@@ -373,17 +376,17 @@ def train(net, compression_ctrl, train_data_loader, test_data_loader, criterion,
         if is_main_process():
             logger.info(compression_ctrl.statistics().to_str())
 
-        compression_level = compression_ctrl.compression_level()
+        compression_stage = compression_ctrl.compression_stage()
         is_best = False
         if (epoch + 1) % test_freq_in_epochs == 0:
             with torch.no_grad():
                 net.eval()
                 mAP = test_net(net, config.device, test_data_loader, distributed=config.multiprocessing_distributed)
-                is_best_by_mAP = mAP > best_mAp and compression_level == best_compression_level
-                is_best = is_best_by_mAP or compression_level > best_compression_level
+                is_best_by_mAP = mAP > best_mAp and compression_stage == best_compression_stage
+                is_best = is_best_by_mAP or compression_stage > best_compression_stage
                 if is_best:
                     best_mAp = mAP
-                best_compression_level = max(compression_level, best_compression_level)
+                best_compression_stage = max(compression_stage, best_compression_stage)
                 if isinstance(lr_scheduler, ReduceLROnPlateau):
                     lr_scheduler.step(mAP)
                 net.train()
@@ -397,7 +400,7 @@ def train(net, compression_ctrl, train_data_loader, test_data_loader, criterion,
                 'optimizer': optimizer.state_dict(),
                 'epoch': epoch,
                 'scheduler': compression_ctrl.scheduler.get_state(),
-                'compression_level': compression_level,
+                'compression_stage': compression_stage,
             }, str(checkpoint_file_path))
             make_additional_checkpoints(checkpoint_file_path,
                                         is_best=is_best,

@@ -13,7 +13,6 @@
 from collections import OrderedDict
 from typing import List, Callable
 
-import torch
 from texttable import Texttable
 from torch import nn
 
@@ -60,37 +59,40 @@ class BinarizationBuilder(PTCompressionAlgorithmBuilder):
     def __create_binarize_module(self):
         return BINARIZATION_MODULES.get(self.mode)()
 
+    def _nncf_module_types_to_compress(self) -> List[str]:
+        return [NNCFConv2d.__name__, ]
+
     def _binarize_weights_and_module_inputs(self, target_model: NNCFNetwork) -> List[PTInsertionCommand]:
         device = next(target_model.parameters()).device
-        modules = target_model.get_nncf_modules_by_module_names(self.compressed_nncf_module_names)
+
+        module_nodes = target_model.get_weighted_original_graph_nodes(
+            nncf_module_names=self.compressed_nncf_module_names)
 
         insertion_commands = []
-        for scope, module in modules.items():
-            scope_str = str(scope)
-
-            if not self._should_consider_scope(scope_str):
-                nncf_logger.info("Ignored adding binarizers in scope: {}".format(scope_str))
+        for module_node in module_nodes:
+            if not self._should_consider_scope(module_node.node_name):
+                nncf_logger.info("Ignored adding binarizers in scope: {}".format(module_node.node_name))
                 continue
 
-            if isinstance(module, torch.nn.modules.Conv2d):
-                nncf_logger.info("Adding Weight binarizer in scope: {}".format(scope_str))
-                op_weights = self.__create_binarize_module().to(device)
+            nncf_logger.info("Adding Weight binarizer in scope: {}".format(module_node.node_name))
+            op_weights = self.__create_binarize_module().to(device)
 
-                nncf_logger.info("Adding Activation binarizer in scope: {}".format(scope_str))
-                compression_lr_multiplier = self.config.get("compression_lr_multiplier", None)
-                op_inputs = UpdateInputs(ActivationBinarizationScaleThreshold(
-                    module.weight.shape,
-                    compression_lr_multiplier=compression_lr_multiplier
-                )).to(device)
+            nncf_logger.info("Adding Activation binarizer in scope: {}".format(module_node.node_name))
+            compression_lr_multiplier = self.config.get("compression_lr_multiplier", None)
+            op_inputs = UpdateInputs(ActivationBinarizationScaleThreshold(
+                module_node.layer_attributes.get_weight_shape(),
+                compression_lr_multiplier=compression_lr_multiplier
+            )).to(device)
 
-                ip_w = PTTargetPoint(TargetType.OPERATION_WITH_WEIGHTS,
-                                     module_scope=scope)
-                insertion_commands.append(PTInsertionCommand(ip_w, op_weights,
-                                                             TransformationPriority.QUANTIZATION_PRIORITY))
+            ip_w = PTTargetPoint(TargetType.OPERATION_WITH_WEIGHTS,
+                                 target_node_name=module_node.node_name)
+            insertion_commands.append(PTInsertionCommand(ip_w, op_weights,
+                                                         TransformationPriority.QUANTIZATION_PRIORITY))
 
-                ip_i = PTTargetPoint(TargetType.PRE_LAYER_OPERATION, module_scope=scope)
-                insertion_commands.append(PTInsertionCommand(ip_i, op_inputs,
-                                                             TransformationPriority.QUANTIZATION_PRIORITY))
+            ip_i = PTTargetPoint(TargetType.PRE_LAYER_OPERATION,
+                                 target_node_name=module_node.node_name, input_port_id=0)
+            insertion_commands.append(PTInsertionCommand(ip_i, op_inputs,
+                                                         TransformationPriority.QUANTIZATION_PRIORITY))
         return insertion_commands
 
     def build_controller(self, target_model: NNCFNetwork) -> PTCompressionAlgorithmController:

@@ -15,7 +15,8 @@ import pytest
 import torch
 from torch.utils.data import DataLoader
 
-from nncf import register_default_init_args, NNCFConfig
+from nncf import NNCFConfig
+from nncf.torch import register_default_init_args
 from nncf.torch.quantization.quantizer_setup import SingleConfigQuantizerSetup
 from nncf.torch.tensor_statistics.algo import TensorStatisticsCollectionBuilder, TensorStatisticsCollectionController
 

@@ -12,6 +12,7 @@
 """
 from typing import Dict
 
+from nncf.common.graph import NNCFNodeName
 from nncf.torch.quantization.quantizer_setup import QuantizationPointId
 from nncf.torch.quantization.quantizer_setup import SingleConfigQuantizerSetup
 
@@ -25,15 +26,15 @@ class CompressionRatioCalculator:
     """
     DEFAULT_NUMBER_OF_BITS = 8
 
-    def __init__(self, flops_per_module_scope: Dict['Scope', int],
+    def __init__(self, flops_per_weighted_module_node: Dict[NNCFNodeName, int],
                  quantizer_setup: SingleConfigQuantizerSetup,
                  weight_qp_id_per_activation_qp_id: Dict[QuantizationPointId, QuantizationPointId]):
         self._weight_qp_id_per_activation_qp_id = weight_qp_id_per_activation_qp_id
         self._flops_per_weight_qp_id = {}  # type: Dict[QuantizationPointId, float]
         for qp_id, qp in quantizer_setup.quantization_points.items():
             if qp.is_weight_quantization_point():
-                module_scope = qp.insertion_point.module_scope
-                self._flops_per_weight_qp_id[qp_id] = flops_per_module_scope[module_scope]
+                target_node_name = qp.insertion_point.target_node_name
+                self._flops_per_weight_qp_id[qp_id] = flops_per_weighted_module_node[target_node_name]
         self.maximum_bits_complexity = sum(self._flops_per_weight_qp_id.values()) * self.DEFAULT_NUMBER_OF_BITS
 
     def run_for_quantizer_setup(self, quantizer_setup: SingleConfigQuantizerSetup) -> float:

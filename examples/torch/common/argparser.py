@@ -92,7 +92,7 @@ def get_common_argument_parser():
                                      'using CPU only')
 
     parser.add_argument('--world-size', default=1, type=int,
-                        help='Sets the number of nodes participating in training')
+                        help='Sets the number of elements participating in training')
     parser.add_argument('--dist-url', default='tcp://127.0.0.1:8899',
                         help='URL used to set up distributed training')
     parser.add_argument('--rank', default=0, type=int,

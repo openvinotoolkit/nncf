@@ -99,15 +99,19 @@ class MagnitudeSparsityStatistics(Statistics):
 
     def __init__(self,
                  model_statistics: SparsifiedModelStatistics,
-                 thresholds: List[LayerThreshold]):
+                 thresholds: List[LayerThreshold],
+                 target_sparsity_level: float):
         """
         Initializes statistics of the magnitude sparsity algorithm.
 
         :param model_statistics: Statistics of the sparsified model.
         :param thresholds: List of the sparsity thresholds.
+        :param target_sparsity_level: A target level of the sparsity
+            for the algorithm for the current epoch.
         """
         self.model_statistics = model_statistics
         self.thresholds = thresholds
+        self.target_sparsity_level = target_sparsity_level
 
     def to_str(self) -> str:
         thresholds_string = create_table(
@@ -115,9 +119,16 @@ class MagnitudeSparsityStatistics(Statistics):
             [[s.name, s.threshold] for s in self.thresholds]
         )
 
+        algorithm_string = create_table(
+            header=['Statistic\'s name', 'Value'],
+            rows=[
+                ['A target level of the sparsity for the algorithm for the current epoch', self.target_sparsity_level],
+            ]
+        )
+
         pretty_string = (
             f'{self.model_statistics.to_str()}\n\n'
-            f'Statistics of the magnitude sparsity algorithm:\n{thresholds_string}'
+            f'Statistics of the magnitude sparsity algorithm:\n{algorithm_string}\n{thresholds_string}'
         )
         return pretty_string
 
@@ -147,30 +158,27 @@ class RBSparsityStatistics(Statistics):
 
     def __init__(self,
                  model_statistics: SparsifiedModelStatistics,
-                 masks_consistency: float,
-                 target_level: float,
+                 target_sparsity_level: float,
                  mean_sparse_prob: float):
         """
         Initializes statistics of the RB-sparsity algorithm.
 
         :param model_statistics: Statistics of the sparsified model.
-        :param masks_consistency: TODO
-        :param target_level: TODO
-        :param mean_sparse_prob: TODO
+        :param target_sparsity_level: A target level of the sparsity
+            for the algorithm for the current epoch.
+        :param mean_sparse_prob: The probability that one weight
+            will be zeroed.
         """
         self.model_statistics = model_statistics
-        self.masks_consistency = masks_consistency
-        self.target_level = target_level
+        self.target_sparsity_level = target_sparsity_level
         self.mean_sparse_prob = mean_sparse_prob
 
     def to_str(self) -> str:
-        # TODO(andrey-churkin): Add human-readable description.
         algorithm_string = create_table(
             header=['Statistic\'s name', 'Value'],
             rows=[
-                ['masks_consistency', self.masks_consistency],
-                ['target_level', self.target_level],
-                ['mean_sparse_prob', self.mean_sparse_prob],
+                ['A target level of the sparsity for the algorithm for the current epoch', self.target_sparsity_level],
+                ['The probability that one weight will be zeroed', self.mean_sparse_prob],
             ]
         )
 

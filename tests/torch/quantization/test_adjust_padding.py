@@ -53,10 +53,10 @@ class MultiBranchesModelDesc(GeneralModelDesc):
     @staticmethod
     def _get_scopes():
         w_scopes = [
-            'TargetType.OPERATION_WITH_WEIGHTS MultiBranchesModel/NNCFConv2d[conv_a]',
-            'TargetType.OPERATION_WITH_WEIGHTS MultiBranchesModel/NNCFConv2d[conv_b]',
-            'TargetType.OPERATION_WITH_WEIGHTS MultiBranchesModel/NNCFConv2d[conv_c]',
-            'TargetType.OPERATION_WITH_WEIGHTS MultiBranchesModel/NNCFConv2d[conv_d]',
+            'TargetType.OPERATION_WITH_WEIGHTS MultiBranchesModel/NNCFConv2d[conv_a]/conv2d_0',
+            'TargetType.OPERATION_WITH_WEIGHTS MultiBranchesModel/NNCFConv2d[conv_b]/conv2d_0',
+            'TargetType.OPERATION_WITH_WEIGHTS MultiBranchesModel/NNCFConv2d[conv_c]/conv2d_0',
+            'TargetType.OPERATION_WITH_WEIGHTS MultiBranchesModel/NNCFConv2d[conv_d]/conv2d_0',
         ]
         a_scopes = [
             'TargetType.OPERATOR_PRE_HOOK 0 MultiBranchesModel/NNCFConv2d[conv_a]/conv2d_0',

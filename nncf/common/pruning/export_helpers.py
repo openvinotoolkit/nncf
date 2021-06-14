@@ -10,9 +10,8 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-
-from nncf.common.graph import NNCFNode
 from nncf.common.graph import NNCFGraph
+from nncf.common.graph import NNCFNode
 
 
 class DefaultMetaOp:

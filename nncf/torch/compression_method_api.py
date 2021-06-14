@@ -22,6 +22,7 @@ from typing import List, Tuple, TypeVar, Dict
 import torch
 from torch import nn
 
+from nncf.common.graph import NNCFNodeName
 from nncf.config import NNCFConfig
 from nncf.torch.graph.transformations.layout import PTTransformationLayout
 from nncf.torch.layers import NNCF_MODULES_DICT, NNCF_WRAPPED_USER_MODULES_DICT
@@ -29,7 +30,7 @@ from nncf.common.utils.logger import logger as nncf_logger
 from nncf.common.compression import BaseCompressionAlgorithmController
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.nncf_network import PTModelTransformer
-from nncf.torch.utils import should_consider_scope
+from nncf.common.utils.helpers import should_consider_scope
 from nncf.api.compression import CompressionAlgorithmBuilder
 from nncf.api.compression import CompressionLoss
 from nncf.api.compression import CompressionLevel
@@ -81,10 +82,12 @@ class PTCompressionLoss(nn.Module, CompressionLoss):
 
 
 class PTCompressionAlgorithmController(BaseCompressionAlgorithmController):
-    """Serves as a handle to the additional modules, parameters and hooks inserted
+    """
+    Serves as a handle to the additional modules, parameters and hooks inserted
     into the original uncompressed model in order to enable algorithm-specific compression.
     Hosts entities that are to be used during the training process, such as compression scheduler and
-    compression loss."""
+    compression loss.
+    """
 
     def distributed(self):
         """
@@ -153,9 +156,9 @@ class PTCompressionAlgorithmBuilder(CompressionAlgorithmBuilder):
         self.compressed_nncf_module_names = self._nncf_module_types_to_compress()
 
     def apply_to(self, model: NNCFNetwork) -> NNCFNetwork:
+        transformer = PTModelTransformer(model)
         transformation_layout = self.get_transformation_layout(model)
-        transformer = PTModelTransformer(model, transformation_layout)
-        transformed_model = transformer.transform()
+        transformed_model = transformer.transform(transformation_layout)
         return transformed_model
 
     def get_transformation_layout(self, target_model: NNCFNetwork) -> PTTransformationLayout:
@@ -176,10 +179,10 @@ class PTCompressionAlgorithmBuilder(CompressionAlgorithmBuilder):
 
     def _handle_frozen_layers(self, target_model: NNCFNetwork):
         scopes_of_frozen_layers = []
-        for scope, module in target_model.get_nncf_modules().items():
-            if not module.weight.requires_grad:
-                if should_consider_scope(str(scope), self.target_scopes, self.ignored_scopes):
-                    scopes_of_frozen_layers.append(str(scope))
+        for weighted_node in target_model.get_weighted_original_graph_nodes():
+            if not weighted_node.layer_attributes.weight_requires_grad:
+                if should_consider_scope(weighted_node.node_name, self.ignored_scopes, self.target_scopes):
+                    scopes_of_frozen_layers.append(weighted_node.node_name)
         scopes_to_print = '\n'.join(scopes_of_frozen_layers)
         if len(scopes_of_frozen_layers) > 0:
             is_allowed, reason = self._are_frozen_layers_allowed()
@@ -193,9 +196,8 @@ class PTCompressionAlgorithmBuilder(CompressionAlgorithmBuilder):
                                    f'Frozen Layers:\n'
                                    f'{scopes_to_print}')
 
-
-    def _should_consider_scope(self, scope_str: str) -> bool:
-        return should_consider_scope(scope_str, self.target_scopes, self.ignored_scopes)
+    def _should_consider_scope(self, node_name: NNCFNodeName) -> bool:
+        return should_consider_scope(node_name, self.ignored_scopes, self.target_scopes)
 
     def _nncf_module_types_to_compress(self) -> List[str]:
         """
@@ -204,9 +206,9 @@ class PTCompressionAlgorithmBuilder(CompressionAlgorithmBuilder):
         :return: List of names of modules
         """
         filtered_nncf_module_names_list = list()
-        for module in list(NNCF_MODULES_DICT) + list(NNCF_WRAPPED_USER_MODULES_DICT.values()):
-            if self._registered_name not in module.ignored_algorithms:
-                filtered_nncf_module_names_list.append(module.__name__)
+        for module_cls in list(NNCF_MODULES_DICT) + list(NNCF_WRAPPED_USER_MODULES_DICT.values()):
+            if self._registered_name not in module_cls.ignored_algorithms:
+                filtered_nncf_module_names_list.append(module_cls.__name__)
         return filtered_nncf_module_names_list
 
     def _are_frozen_layers_allowed(self) -> Tuple[bool, str]:

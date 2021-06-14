@@ -20,11 +20,11 @@
                 "lr_poly_drop_duration_epochs": 30,
                 "disable_wd_start_epoch": 60
             },
-            "ignored_scopes": ["ResNet/Linear[fc]",
-                               "ResNet/Conv2d[conv1]",
-                               "ResNet/Sequential[layer2]/BasicBlock[0]/Sequential[downsample]",
-                               "ResNet/Sequential[layer3]/BasicBlock[0]/Sequential[downsample]",
-                               "ResNet/Sequential[layer4]/BasicBlock[0]/Sequential[downsample]"]
+            "ignored_scopes": ["{re}ResNet/NNCFLinear\\[fc\\]/.*",
+                               "{re}ResNet/NNCFConv2d\\[conv1\\]",
+                               "{re}ResNet/Sequential\\[layer2\\]/BasicBlock\\[0\\]/Sequential\\[downsample\\]/.*",
+                               "{re}ResNet/Sequential\\[layer3\\]/BasicBlock\\[0\\]/Sequential\\[downsample\\]/.*",
+                               "{re}ResNet/Sequential\\[layer4\\]/BasicBlock\\[0\\]/Sequential\\[downsample\\]/.*"]
         }
     ]
 }

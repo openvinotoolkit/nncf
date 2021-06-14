@@ -11,21 +11,20 @@
  limitations under the License.
 """
 
-from collections import namedtuple
 from typing import List
 
 from nncf.torch.algo_selector import ZeroCompressionLoss
+import torch
 from nncf.api.compression import CompressionStage
 from nncf.api.compression import CompressionLoss
 from nncf.api.compression import CompressionScheduler
+from nncf.common.graph import NNCFNode
+from nncf.common.graph import NNCFNodeName
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.sparsity.controller import SparsityController
-from nncf.common.sparsity.statistics import SparsifiedLayerSummary
-from nncf.common.sparsity.statistics import SparsifiedModelStatistics
 from nncf.torch.compression_method_api import PTCompressionAlgorithmBuilder
 from nncf.torch.compression_method_api import PTCompressionAlgorithmController
 from nncf.torch.graph.transformations.layout import PTTransformationLayout
-from nncf.torch.layer_utils import COMPRESSION_MODULES
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.torch.graph.transformations.commands import TransformationPriority
 from nncf.torch.graph.transformations.commands import PTTargetPoint
@@ -34,7 +33,13 @@ from nncf.common.schedulers import BaseCompressionScheduler
 from nncf.common.schedulers import StubCompressionScheduler
 from nncf.torch.nncf_network import NNCFNetwork
 
-SparseModuleInfo = namedtuple('SparseModuleInfo', ['module_name', 'module', 'operand'])
+
+class SparseModuleInfo:
+    def __init__(self, module_node_name: NNCFNodeName, module: torch.nn.Module,
+                 operand):
+        self.module_node_name = module_node_name
+        self.module = module
+        self.operand = operand
 
 
 class BaseSparsityAlgoBuilder(PTCompressionAlgorithmBuilder):
@@ -51,28 +56,30 @@ class BaseSparsityAlgoBuilder(PTCompressionAlgorithmBuilder):
 
     def _sparsify_weights(self, target_model: NNCFNetwork) -> List[PTInsertionCommand]:
         device = next(target_model.parameters()).device
-        sparsified_modules = target_model.get_nncf_modules_by_module_names(self.compressed_nncf_module_names)
+        sparsified_module_nodes = target_model.get_weighted_original_graph_nodes(
+            nncf_module_names=self.compressed_nncf_module_names)
         insertion_commands = []
-        for module_scope, module in sparsified_modules.items():
-            scope_str = str(module_scope)
+        for module_node in sparsified_module_nodes:
+            node_name = module_node.node_name
 
-            if not self._should_consider_scope(scope_str):
-                nncf_logger.info("Ignored adding Weight Sparsifier in scope: {}".format(scope_str))
+            if not self._should_consider_scope(node_name):
+                nncf_logger.info("Ignored adding Weight Sparsifier in scope: {}".format(node_name))
                 continue
 
-            nncf_logger.info("Adding Weight Sparsifier in scope: {}".format(scope_str))
+            nncf_logger.info("Adding Weight Sparsifier in scope: {}".format(node_name))
             compression_lr_multiplier = self.config.get("compression_lr_multiplier", None)
-            operation = self.create_weight_sparsifying_operation(module, compression_lr_multiplier)
+            operation = self.create_weight_sparsifying_operation(module_node, compression_lr_multiplier)
             hook = operation.to(device)
             insertion_commands.append(PTInsertionCommand(PTTargetPoint(TargetType.OPERATION_WITH_WEIGHTS,
-                                                                       module_scope=module_scope),
+                                                                       target_node_name=node_name),
                                                          hook, TransformationPriority.SPARSIFICATION_PRIORITY))
+            sparsified_module = target_model.get_containing_module(node_name)
             self._sparsified_module_info.append(
-                SparseModuleInfo(scope_str, module, hook))
+                SparseModuleInfo(node_name, sparsified_module, hook))
 
         return insertion_commands
 
-    def create_weight_sparsifying_operation(self, target_module, compression_lr_multiplier):
+    def create_weight_sparsifying_operation(self, target_module_node: NNCFNode, compression_lr_multiplier: float):
         raise NotImplementedError
 
 
@@ -91,86 +98,6 @@ class BaseSparsityAlgoController(PTCompressionAlgorithmController, SparsityContr
     @property
     def scheduler(self) -> CompressionScheduler:
         return self._scheduler
-
-    @property
-    def sparsified_weights_count(self):
-        count = 0
-        for minfo in self.sparsified_module_info:
-            count = count + minfo.module.weight.view(-1).size(0)
-        return max(count, 1)
-
-    def sparsity_rate_for_sparsified_modules(self, target_sparsified_module_info=None):
-        if target_sparsified_module_info is None:
-            target_sparsified_module_info = self.sparsified_module_info
-        else:
-            target_sparsified_module_info = [target_sparsified_module_info]
-
-        nonzero = 0
-        count = 0
-        for minfo in target_sparsified_module_info:
-            mask = minfo.operand.apply_binary_mask(minfo.module.weight)
-            nonzero = nonzero + mask.nonzero().size(0)
-            count = count + mask.view(-1).size(0)
-
-        return 1 - nonzero / max(count, 1)
-
-    @property
-    def sparsity_rate_for_model(self):
-        nonzero = 0
-        count = 0
-
-        for m in self._model.modules():
-            if isinstance(m, tuple(COMPRESSION_MODULES.registry_dict.values())):
-                continue
-
-            sparsified_module = False
-            for minfo in self.sparsified_module_info:
-                if minfo.module == m:
-                    mask = minfo.operand.apply_binary_mask(m.weight)
-                    nonzero = nonzero + mask.nonzero().size(0)
-                    count = count + mask.numel()
-
-                    if not m.bias is None:
-                        nonzero = nonzero + m.bias.nonzero().size(0)
-                        count = count + m.bias.numel()
-
-                    sparsified_module = True
-
-            if not sparsified_module:
-                for param in m.parameters(recurse=False):
-                    nonzero = nonzero + param.nonzero().size(0)
-                    count = count + param.numel()
-
-        return 1 - nonzero / max(count, 1)
-
-    def _calculate_sparsified_model_stats(self) -> SparsifiedModelStatistics:
-        sparsified_layers_summary = []
-        sparsified_weights_count = self.sparsified_weights_count
-
-        for minfo in self.sparsified_module_info:
-            mask = minfo.operand.apply_binary_mask(minfo.module.weight)
-            nonzero = mask.nonzero().size(0)
-            sparsity_level = 1.0 - nonzero / max(mask.view(-1).size(0), 1)
-            weight_percentage = (mask.view(-1).size(0) / sparsified_weights_count) * 100
-            weight_shape = list(minfo.module.weight.size())
-
-            sparsified_layers_summary.append(
-                SparsifiedLayerSummary(minfo.module_name, weight_shape, sparsity_level, weight_percentage)
-            )
-
-        model_statistics = SparsifiedModelStatistics(self.sparsity_rate_for_model,
-                                                     self.sparsity_rate_for_sparsified_modules(),
-                                                     sparsified_layers_summary)
-
-        return model_statistics
-
-    @property
-    def compression_rate(self):
-        return self.sparsity_rate_for_model
-
-    @compression_rate.setter
-    def compression_rate(self, sparsity_level: float):
-        self.set_sparsity_level(sparsity_level)
 
     def disable_scheduler(self):
         self._scheduler = StubCompressionScheduler()

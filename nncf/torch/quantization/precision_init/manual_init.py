@@ -51,7 +51,7 @@ class ManualPrecisionInitializer(BasePrecisionInitializer):
                   'because it is incompatible for the specified target hardware\n' \
                   'Supported quantization configs: {}'
             for qp_id, qp in quantizer_setup.quantization_points.items():
-                if str(qp.insertion_point) == scope_name:
+                if scope_name in str(qp.insertion_point):
                     if self._hw_precision_constraints:
                         q_id = self._algo.setup_to_module_id_translation_dict[qp_id]
                         q_configs = self._hw_precision_constraints.get(q_id)

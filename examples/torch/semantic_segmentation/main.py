@@ -28,7 +28,7 @@ from examples.torch.common.sample_config import create_sample_config
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 
 from nncf.common.utils.tensorboard import prepare_for_tensorboard
-from nncf.common.utils.helpers import is_accuracy_aware_training
+from nncf.config.utils import is_accuracy_aware_training
 import examples.torch.semantic_segmentation.utils.data as data_utils
 import examples.torch.semantic_segmentation.utils.loss_funcs as loss_funcs
 import examples.torch.semantic_segmentation.utils.transforms as JT
@@ -47,8 +47,8 @@ from examples.torch.semantic_segmentation.metric import IoU
 from examples.torch.semantic_segmentation.test import Test
 from examples.torch.semantic_segmentation.train import Train
 from examples.torch.semantic_segmentation.utils.checkpoint import save_checkpoint
-from nncf import create_compressed_model
-from nncf import AdaptiveCompressionTrainingLoop
+from nncf.torch import AdaptiveCompressionTrainingLoop
+from nncf.torch import create_compressed_model
 from nncf.torch.utils import is_main_process
 
 
@@ -544,6 +544,8 @@ def main_worker(current_gpu, config):
             return test(model, val_loader, criterion, color_encoding, config)
 
         # training function that trains the model for one epoch (full training dataset pass)
+        # it is assumed that all the NNCF-related methods are properly called inside of
+        # this function (like e.g. the step and epoch_step methods of the compression scheduler)
         def train_epoch_fn(compression_ctrl, model, epoch, optimizer, lr_scheduler):
             ignore_index = None
             ignore_unlabeled = config.get("ignore_unlabeled", True)

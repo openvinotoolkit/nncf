@@ -28,25 +28,35 @@ class TrainingRunner(ABC):
     def train_epoch(self, model: ModelType, compression_controller: CompressionAlgorithmController):
         """
         Train the supplied model for a single epoch (single dataset pass).
+        :param model: The model to be fine-tuned
+        :param compression_controller: The compression controller to be used during
+        model fine-tuning
         """
 
     @abstractmethod
     def validate(self, model: ModelType, compression_controller: CompressionAlgorithmController):
         """
         Compute the target metric value on the validation dataset for the supplied model
-        :return: Target validation metric value.
+        :param model: The model to be evaluated
+        :param compression_controller: The compression controller to be used during
+        model evaluation
+        :return: Target validation metric value (float).
         """
 
     @abstractmethod
     def dump_checkpoint(self, model: ModelType, compression_controller: CompressionAlgorithmController):
         """
         Dump current model checkpoint on disk.
+        :param model: The model to be saved
+        :param compression_controller: The compression controller to be used during
+        checkpoint saving
         """
 
     @abstractmethod
     def configure_optimizers(self):
         """
         Initialize the training optimizer object (and, optionally, the learning rate scheduler object).
+        :return: optimizer instance, learning rate scheduler instance (None if not applicable)
         """
 
     @abstractmethod
@@ -58,7 +68,8 @@ class TrainingRunner(ABC):
     @abstractmethod
     def retrieve_original_accuracy(self, model):
         """
-        Retrive the original uncompressed model accuracy from the model instance.
+        Retrive the original uncompressed model accuracy from the model instance and
+        set the obtained value to the `uncompressed_model_accuracy` attribute of the TrainingRunner
         """
 
     @abstractmethod
@@ -66,6 +77,14 @@ class TrainingRunner(ABC):
                                      tensorboard_writer=None, log_dir=None):
         """
         Register the user-supplied functions to be used to control the training process.
+        :param train_epoch_fn: a method to fine-tune the model for a single epoch
+        (to be called inside the `train_epoch` of the TrainingRunner)
+        :param validate: a method to evaluate the model on the validation dataset
+        (to be called inside the `train_epoch` of the TrainingRunner)
+        :param configure_optimizers_fn: a method to instantiate an optimizer and a learning
+        rate scheduler (to be called inside the `configure_optimizers` of the TrainingRunner)
+        :param tensorboard_writer: The tensorboard object to be used for logging
+        :param log_dir: The path to be used for logging and checkpoint saving
         """
 
 
@@ -75,7 +94,8 @@ class BaseAccuracyAwareTrainingRunner(TrainingRunner):
     accuracy-aware parameter values unless specified in the config.
     """
     def __init__(self, accuracy_aware_config, verbose=True,
-                 minimal_compression_rate=0.05, maximal_compression_rate=0.95):
+                 minimal_compression_rate=0.05, maximal_compression_rate=0.95,
+                 validate_every_n_epochs=None, dump_checkpoints=True):
 
         self.accuracy_bugdet = None
         self.validate_every_n_epochs = None
@@ -90,12 +110,14 @@ class BaseAccuracyAwareTrainingRunner(TrainingRunner):
 
         self.minimal_compression_rate = minimal_compression_rate
         self.maximal_compression_rate = maximal_compression_rate
+        self.validate_every_n_epochs = validate_every_n_epochs
+        self.dump_checkpoints = dump_checkpoints
         self.verbose = verbose
 
         default_parameter_values = {
             'is_higher_metric_better': True,
-            'initial_compression_rate_step': 0.1,
-            'compression_rate_step_reduction_factor': 0.5,
+            'compression_rate_step': 0.1,
+            'step_reduction_factor': 0.5,
             'minimal_compression_rate_step': 0.025,
             'patience_epochs': 10,
             'maximal_total_epochs': float('inf'),
@@ -106,9 +128,6 @@ class BaseAccuracyAwareTrainingRunner(TrainingRunner):
 
         self.maximal_accuracy_drop = accuracy_aware_config.get('maximal_accuracy_degradation')
         self.initial_training_phase_epochs = accuracy_aware_config.get('initial_training_phase_epochs')
-        # pylint: disable=no-member
-        self.compression_rate_step = self.initial_compression_rate_step
-        self.step_reduction_factor = self.compression_rate_step_reduction_factor
 
     def initialize_training_loop_fns(self, train_epoch_fn, validate_fn, configure_optimizers_fn,
                                      tensorboard_writer=None, log_dir=None):

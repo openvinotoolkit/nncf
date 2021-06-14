@@ -27,9 +27,9 @@ class TestModel(nn.Module):
         self.size = size
         self.layer = layer
         if frozen is None:
-            sparsifier = RBSparsifyingWeight(size=size)
+            sparsifier = RBSparsifyingWeight(weight_shape=size)
         else:
-            sparsifier = RBSparsifyingWeight(frozen=frozen, size=size)
+            sparsifier = RBSparsifyingWeight(frozen=frozen, weight_shape=size)
         self.op_key = self.layer.register_pre_forward_operation(UpdateWeight(sparsifier))
 
     @property

@@ -16,26 +16,31 @@ from collections import namedtuple
 from itertools import permutations
 from typing import Dict
 from typing import List
+from typing import Optional
+from typing import Set
 from typing import Tuple
+from typing import Type
 from unittest.mock import MagicMock
 
 import networkx as nx
 import pytest
 
-from nncf.common.graph.graph import MODEL_INPUT_OP_NAME, NNCFGraphNodeType
-from nncf.common.graph.graph import MODEL_OUTPUT_OP_NAME
+from nncf.common.graph import MODEL_INPUT_OP_NAME
+from nncf.common.graph import MODEL_OUTPUT_OP_NAME
+from nncf.common.graph import NNCFGraphNodeType
+from nncf.common.graph import NNCFNodeName
+from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.transformations.commands import TargetType
+from nncf.common.graph.version_agnostic_op_names import get_version_agnostic_name
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
-from nncf.torch.dynamic_graph.context import Scope
 from nncf.torch.dynamic_graph.graph import OperationExecutionContext
+from nncf.torch.dynamic_graph.operation_address import OperationAddress
+from nncf.torch.dynamic_graph.scope import Scope
 from nncf.torch.dynamic_graph.wrappers import OP_NAMES_REQUIRING_MODULE_ATTRS
-from nncf.torch.graph.graph import InputAgnosticOperationExecutionContext
 from nncf.torch.graph.graph import NNCFGraph
-from nncf.torch.graph.graph import PTNNCFGraph
 from nncf.torch.graph.operator_metatypes import get_operator_metatypes
 from nncf.torch.graph.transformations.commands import PTTargetPoint
-from nncf.torch.graph.version_agnostic_op_names import get_version_agnostic_name
 from nncf.torch.nncf_network import InsertionPointGraph
 from nncf.torch.quantization.quantizer_propagation import DEFAULT_QUANT_TRAIT_TO_OP_DICT
 from nncf.torch.quantization.quantizer_propagation import PropagatingQuantizer
@@ -46,16 +51,17 @@ from nncf.torch.quantization.quantizer_propagation import QuantizerPropagationSt
 from nncf.torch.quantization.quantizer_propagation import QuantizerPropagationStateGraphNodeType
 from nncf.torch.quantization.quantizer_propagation import TransitionStatus
 from nncf.torch.quantization.quantizer_setup import MultiConfigQuantizationPoint
+from nncf.torch.quantization.quantizer_setup import QuantizationPointId
 from tests.torch.quantization.test_quantizer_propagation_graph import get_edge_paths_for_propagation
 from tests.torch.test_nncf_network import get_mock_nncf_node_attrs
 from tests.torch.test_nncf_network import get_nncf_graph_from_mock_nx_graph
 from tests.torch.test_nncf_network import mark_input_ports_lexicographically_based_on_input_node_key
 
 
-def get_mock_model_node_attrs_for_op_name(op_name: str, call_order=0) -> InputAgnosticOperationExecutionContext:
-    return InputAgnosticOperationExecutionContext(op_name,
-                                                  Scope(),
-                                                  call_order)
+def get_mock_model_node_attrs_for_op_name(op_name: str, call_order=0) -> OperationAddress:
+    return OperationAddress(op_name,
+                            Scope(),
+                            call_order)
 
 
 def get_randomly_connected_model_graph(op_name_keys: List[str]) -> nx.DiGraph:
@@ -65,9 +71,10 @@ def get_randomly_connected_model_graph(op_name_keys: List[str]) -> nx.DiGraph:
     shuffled_op_names = random.sample(op_name_keys, len(op_name_keys))
     for idx, (_, node) in enumerate(mock_graph.nodes.items()):
         op_name = shuffled_op_names[idx]
-        node[PTNNCFGraph.IA_OP_EXEC_CONTEXT_NODE_ATTR] = get_mock_model_node_attrs_for_op_name(shuffled_op_names[idx])
+        node[NNCFGraph.NODE_NAME_ATTR] = str(get_mock_model_node_attrs_for_op_name(shuffled_op_names[idx]))
+        node[NNCFGraph.NODE_TYPE_ATTR] = op_name
         if op_name in OP_NAMES_REQUIRING_MODULE_ATTRS:
-            node[PTNNCFGraph.MODULE_ATTRIBUTES] = MagicMock()
+            node[NNCFGraph.LAYER_ATTRIBUTES] = MagicMock()
     mark_input_ports_lexicographically_based_on_input_node_key(mock_graph)
     return mock_graph
 
@@ -79,12 +86,13 @@ def get_sequentially_connected_model_graph(op_name_keys: List[str]) -> nx.DiGrap
     actual_keys = []
     for node_key in op_name_keys:
         attrs = {
-            PTNNCFGraph.IA_OP_EXEC_CONTEXT_NODE_ATTR:
-                get_mock_model_node_attrs_for_op_name(node_key, call_order=node_key_appearances[node_key]),
+            NNCFGraph.NODE_NAME_ATTR:
+                str(get_mock_model_node_attrs_for_op_name(node_key, call_order=node_key_appearances[node_key])),
+            NNCFGraph.NODE_TYPE_ATTR: node_key
         }
 
         if node_key in OP_NAMES_REQUIRING_MODULE_ATTRS:
-            attrs[PTNNCFGraph.MODULE_ATTRIBUTES] = MagicMock()
+            attrs[NNCFGraph.LAYER_ATTRIBUTES] = MagicMock()
         actual_key = node_key + '_{}'.format(node_key_appearances[node_key])
         graph.add_node(actual_key, **attrs)
         node_key_appearances[node_key] += 1
@@ -103,32 +111,38 @@ class TwoFcAfterDropout:
                                                                     Scope.from_str('TwoFcAfterDropoutModel'),
                                                                     0,
                                                                     [None])
+    DROPOUT_NODE_NAME = "TwoFcAfterDropoutModel/dropout"
+
     FC_1_OPERATION_EXECUTION_CONTEXT = OperationExecutionContext('linear',
                                                                  Scope.from_str(
                                                                      'TwoFcAfterDropoutModel/NNCFLinear[branch1]'),
                                                                  0,
                                                                  [None])
+    FC_1_NODE_NAME = 'TwoFcAfterDropoutModel/NNCFLinear[branch1]/linear_0'
 
     FC_2_SCOPE_STR = 'TwoFcAfterDropoutModel/NNCFLinear[branch2]'
     FC_2_OPERATION_EXECUTION_CONTEXT = OperationExecutionContext('linear',
                                                                  Scope.from_str(FC_2_SCOPE_STR),
                                                                  0,
                                                                  [None])
+    FC_2_NODE_NAME = 'TwoFcAfterDropoutModel/NNCFLinear[branch2]/linear_0'
 
     @staticmethod
     def get_graph():
         graph = nx.DiGraph()
         dropout_node_attrs = {
-            PTNNCFGraph.IA_OP_EXEC_CONTEXT_NODE_ATTR:
-                TwoFcAfterDropout.DROPOUT_OPERATION_EXECUTION_CONTEXT.input_agnostic
+            NNCFGraph.NODE_NAME_ATTR: str(TwoFcAfterDropout.DROPOUT_OPERATION_EXECUTION_CONTEXT.op_address),
+            NNCFGraph.NODE_TYPE_ATTR: TwoFcAfterDropout.DROPOUT_OPERATION_EXECUTION_CONTEXT.op_address.operator_name
         }
 
         fc_1_node_attrs = {
-            PTNNCFGraph.IA_OP_EXEC_CONTEXT_NODE_ATTR: TwoFcAfterDropout.FC_1_OPERATION_EXECUTION_CONTEXT.input_agnostic
+            NNCFGraph.NODE_NAME_ATTR: str(TwoFcAfterDropout.FC_1_OPERATION_EXECUTION_CONTEXT.op_address),
+            NNCFGraph.NODE_TYPE_ATTR: TwoFcAfterDropout.FC_1_OPERATION_EXECUTION_CONTEXT.op_address.operator_name
         }
 
         fc_2_node_attrs = {
-            PTNNCFGraph.IA_OP_EXEC_CONTEXT_NODE_ATTR: TwoFcAfterDropout.FC_2_OPERATION_EXECUTION_CONTEXT.input_agnostic
+            NNCFGraph.NODE_NAME_ATTR: str(TwoFcAfterDropout.FC_2_OPERATION_EXECUTION_CONTEXT.op_address),
+            NNCFGraph.NODE_TYPE_ATTR: TwoFcAfterDropout.FC_2_OPERATION_EXECUTION_CONTEXT.op_address.operator_name
         }
 
         graph.add_node('dropout', **dropout_node_attrs)
@@ -139,6 +153,75 @@ class TwoFcAfterDropout:
 
         mark_input_ports_lexicographically_based_on_input_node_key(graph)
         return graph
+
+
+def get_branching_model_graph() -> NNCFGraph:
+    mock_graph = nx.DiGraph()
+
+    #        (0 /O)  <-- treating this as an auxiliary "input" node
+    #           |
+    #        (1 /A)
+    #           |
+    #      /-(2 /B)---------\
+    #     /     |           |
+    # (3 /C)  (4 /D)     (5 /E)
+    #    |      |    \
+    # (6 /F)  (7 /G) (8 /H)
+    #            \   /
+    #            (9 /I)
+    #             |
+    #           (10 /J)
+
+    node_keys = ['O', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J']
+    for node_key in node_keys:
+        mock_node_attrs = get_mock_nncf_node_attrs(op_name=node_key)
+        mock_graph.add_node(node_key, **mock_node_attrs)
+
+    mock_graph.add_edges_from([('O', 'A'),
+                               ('A', 'B'), ('B', 'C'), ('B', 'D'), ('B', 'E'), ('C', 'F'),
+                               ('E', 'G'), ('E', 'H'), ('G', 'I'), ('H', 'I'), ('I', 'J')])
+
+    mark_input_ports_lexicographically_based_on_input_node_key(mock_graph)
+    return get_nncf_graph_from_mock_nx_graph(mock_graph)
+
+
+class MultiQPSerializedDataForTest:
+    def __init__(self, target_type: TargetType,
+                 node_name: NNCFNodeName,
+                 qconfigs: List[QuantizerConfig],
+                 input_port_id: int = None,
+                 directly_quantized_op_node_names: List[NNCFNodeName] = None):
+        self.target_type = target_type
+        self.node_name = node_name
+        self.qconfigs = qconfigs
+        self.input_port_id = input_port_id
+        if directly_quantized_op_node_names is None:
+            self.directly_quantized_op_node_names = []
+        else:
+            self.directly_quantized_op_node_names = directly_quantized_op_node_names
+
+class RunOnIpGraphTestStruct:
+    def __init__(self, base_nx_graph: nx.DiGraph,
+                 retval_qp_data: Dict[QuantizationPointId, MultiQPSerializedDataForTest],
+                 retval_unified_scale_qp_groups: List[Set[QuantizationPointId]],
+                 retval_shared_input_operation_set_groups: List[Set[QuantizationPointId]],
+                 expected_count_finished_quant: int,
+                 expected_count_active_quant: int,
+                 ignored_scopes: Optional[List[str]]):
+        self.base_graph = get_nncf_graph_from_mock_nx_graph(base_nx_graph)
+        self.retval_unified_scale_qp_groups = retval_unified_scale_qp_groups
+        self.retval_shared_input_operation_set_groups = retval_shared_input_operation_set_groups
+        self.expected_count_finished_quant = expected_count_finished_quant
+        self.expected_count_active_quant = expected_count_active_quant
+        self.ignored_scopes = ignored_scopes
+        self.retval_qps = {}  # type: Dict[QuantizationPointId, MultiConfigQuantizationPoint]
+        for id_, qp_data in retval_qp_data.items():
+            self.retval_qps[id_] = MultiConfigQuantizationPoint(
+                PTTargetPoint(qp_data.target_type,
+                              target_node_name=qp_data.node_name,
+                              input_port_id=qp_data.input_port_id),
+                possible_qconfigs=qp_data.qconfigs,
+                directly_quantized_operator_node_names=qp_data.directly_quantized_op_node_names)
 
 
 class TestQuantizerPropagationSolver:
@@ -156,7 +239,7 @@ class TestQuantizerPropagationSolver:
     def test_set_quantization_traits_for_quant_prop_graph_nodes(self):
         # Test all patchable metatypes. If a patchable metatype is not registered
         # in quantization trait-to-metatype dict, the test will fail.
-        tested_op_metatypes = get_operator_metatypes() # type: List[OperatorMetatype]
+        tested_op_metatypes = get_operator_metatypes()  # type: List[Type[OperatorMetatype]]
         tested_op_names = []
         for op_meta in tested_op_metatypes:
             aliases = op_meta.get_all_aliases()
@@ -201,8 +284,7 @@ class TestQuantizerPropagationSolver:
         qp_graph.run_consistency_check()
 
         for node_key in ops_to_quantize:
-            actual_key = nncf_graph.get_node_key_by_iap_context(
-                InputAgnosticOperationExecutionContext(node_key, Scope(), 0))
+            actual_key = nncf_graph.get_node_key_by_id(nncf_graph.get_node_by_name('/' + node_key + '_0').node_id)
             pred_ip_key = next(qp_graph.predecessors(actual_key))
             node = qp_graph.nodes[actual_key]
             pred_ip_node = qp_graph.nodes[pred_ip_key]
@@ -214,8 +296,8 @@ class TestQuantizerPropagationSolver:
             assert edge[QPSG.AFFECTING_PROPAGATING_QUANTIZERS_ATTR] == [prop_quant]
 
         for node_key in ops_not_to_quantize:
-            actual_key = nncf_graph.get_node_key_by_iap_context(
-                InputAgnosticOperationExecutionContext(node_key, Scope(), 0))
+            nncf_node = nncf_graph.get_node_by_name('/' + node_key + '_0')
+            actual_key = nncf_graph.get_node_key_by_id(nncf_node.node_id)
             pred_ip_key = next(qp_graph.predecessors(actual_key))
             node = qp_graph.nodes[actual_key]
             pred_ip_node = qp_graph.nodes[pred_ip_key]
@@ -792,34 +874,8 @@ class TestQuantizerPropagationSolver:
             test_merge_qconfig_list, _ = quant_prop_solver.get_merged_qconfigs_for_downward_branching_case(permutation)
             assert ref_merge_qconfig_list == test_merge_qconfig_list
 
-    def get_branching_model_graph(self) -> NNCFGraph:
-        mock_graph = nx.DiGraph()
 
-        #        (0 /O)  <-- treating this as an auxiliary "input" node
-        #           |
-        #        (1 /A)
-        #           |
-        #      /-(2 /B)---------\
-        #     /     |           |
-        # (3 /C)  (4 /D)     (5 /E)
-        #    |      |    \
-        # (6 /F)  (7 /G) (8 /H)
-        #            \   /
-        #            (9 /I)
-        #             |
-        #           (10 /J)
-
-        node_keys = ['O', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J']
-        for node_key in node_keys:
-            mock_node_attrs = get_mock_nncf_node_attrs(op_name=node_key)
-            mock_graph.add_node(node_key, **mock_node_attrs)
-
-        mock_graph.add_edges_from([('O', 'A'),
-                                   ('A', 'B'), ('B', 'C'), ('B', 'D'), ('B', 'E'), ('C', 'F'),
-                                   ('E', 'G'), ('E', 'H'), ('G', 'I'), ('H', 'I'), ('I', 'J')])
-
-        mark_input_ports_lexicographically_based_on_input_node_key(mock_graph)
-        return get_nncf_graph_from_mock_nx_graph(mock_graph)
+    BRANCHING_MODEL_GRAPH = get_branching_model_graph()
 
     BranchTransitionTestStruct = namedtuple('BranchTransitionTestStruct',
                                             (  # Unspecified nodes are marked as quantization agnostic
@@ -1049,7 +1105,7 @@ class TestQuantizerPropagationSolver:
         expected_status = branch_transition_test_struct.expected_status
 
         # Graph preparation
-        nncf_graph = self.get_branching_model_graph()
+        nncf_graph = get_branching_model_graph()
         ip_graph = InsertionPointGraph(nncf_graph)
         quant_prop_graph = QPSG(ip_graph)
         for node in quant_prop_graph.nodes.values():
@@ -1331,7 +1387,7 @@ class TestQuantizerPropagationSolver:
         ref_status = path_transition_test_struct.expected_status
 
         # Graph preparation
-        mock_graph = self.get_branching_model_graph()
+        mock_graph = get_branching_model_graph()
         ip_graph = InsertionPointGraph(mock_graph)
         _, quant_prop_graph = self.prepare_propagation_graph_state(ip_graph,
                                                                    init_node_to_trait_configs_and_target_node_dict)
@@ -1425,7 +1481,7 @@ class TestQuantizerPropagationSolver:
         expected_finished_status = propagation_step_test_struct.expected_finished_status
         current_location_node_key_for_propagated_quant = propagation_step_test_struct.current_location_node_key_for_propagated_quant
         # Graph preparation
-        mock_graph = self.get_branching_model_graph()
+        mock_graph = get_branching_model_graph()
         ip_graph = InsertionPointGraph(mock_graph)
         quant_prop_solver = QuantizerPropagationSolver(run_consistency_checks=True)
         # pylint:disable=line-too-long
@@ -1463,7 +1519,7 @@ class TestQuantizerPropagationSolver:
 
     def test_handling_upward_branching_path_with_no_transition_creates_no_extra_quantizers(self, mocker):
         # Graph preparation
-        mock_graph = self.get_branching_model_graph()
+        mock_graph = get_branching_model_graph()
         ip_graph = InsertionPointGraph(mock_graph)
         quant_prop_solver = QuantizerPropagationSolver()
         prep_data_dict = {
@@ -1501,97 +1557,86 @@ class TestQuantizerPropagationSolver:
                 assert (affecting_pq is pq) or (affecting_pq is None)
 
 
-    RunOnIpGraphTestStruct = namedtuple('RunOnIpGraphTestStruct',
-                                        ('base_graph',
-                                         'retval_qps',
-                                         'retval_unified_scale_qp_groups',
-                                         'retval_shared_input_operation_set_groups',
-                                         'expected_count_finished_quant',
-                                         'expected_count_active_quant',
-                                         'ignored_scope'))
-
-
     RUN_ON_IP_GRAPH_TEST_CASES = [
         RunOnIpGraphTestStruct(
-            base_graph=get_sequentially_connected_model_graph(['conv2d', 'batch_norm']),
-            retval_qps={1: MultiConfigQuantizationPoint(
-                PTTargetPoint(TargetType.OPERATOR_POST_HOOK,
-                              ia_op_exec_context=InputAgnosticOperationExecutionContext.from_str("/conv2d_0")),
-                [QuantizerConfig()],
-                [Scope()])},
+            base_nx_graph=get_sequentially_connected_model_graph(['conv2d', 'batch_norm']),
+            retval_qp_data={1: MultiQPSerializedDataForTest(TargetType.OPERATOR_POST_HOOK,
+                                                            "/conv2d_0",
+                                                            [QuantizerConfig()],
+                                                            directly_quantized_op_node_names=[
+                                                                "/batch_norm_0"
+                                                            ])},
             retval_unified_scale_qp_groups=[],
             retval_shared_input_operation_set_groups=[{1}],
             expected_count_finished_quant=1,
             expected_count_active_quant=0,
-            ignored_scope=None
+            ignored_scopes=None
         ),
         RunOnIpGraphTestStruct(
-            base_graph=get_sequentially_connected_model_graph(['conv2d', 'gelu', 'conv2d']),
-            retval_qps={1: MultiConfigQuantizationPoint(
-                PTTargetPoint(TargetType.OPERATOR_POST_HOOK,
-                              ia_op_exec_context=InputAgnosticOperationExecutionContext.from_str("/conv2d_0")),
-                [QuantizerConfig()],
-                [Scope()]),
-                        2: MultiConfigQuantizationPoint(
-                            PTTargetPoint(TargetType.OPERATOR_POST_HOOK,
-                                          ia_op_exec_context=InputAgnosticOperationExecutionContext.from_str(
-                                               "/gelu_0")),
-                            [QuantizerConfig()],
-                            [Scope()])},
+            base_nx_graph=get_sequentially_connected_model_graph(['conv2d', 'gelu', 'conv2d']),
+            retval_qp_data={1: MultiQPSerializedDataForTest(TargetType.OPERATOR_POST_HOOK,
+                                                            "/conv2d_0",
+                                                            [QuantizerConfig()],
+                                                            directly_quantized_op_node_names=[
+                                                                "/gelu_0"
+                                                            ]
+                                                            ),
+                            2: MultiQPSerializedDataForTest(TargetType.OPERATOR_POST_HOOK,
+                                                            "/gelu_0",
+                                                            [QuantizerConfig()],
+                                                            directly_quantized_op_node_names=[
+                                                                "/conv2d_1"])},
             retval_unified_scale_qp_groups=[],
             retval_shared_input_operation_set_groups=[{1}, {2}],
             expected_count_finished_quant=2,
             expected_count_active_quant=0,
-            ignored_scope=None
+            ignored_scopes=None
         ),
         RunOnIpGraphTestStruct(
-            base_graph=get_sequentially_connected_model_graph(['conv2d', 'matmul', 'gelu', 'softmax']),
-            retval_qps={1: MultiConfigQuantizationPoint(
-                PTTargetPoint(TargetType.OPERATOR_POST_HOOK,
-                              ia_op_exec_context=InputAgnosticOperationExecutionContext.from_str("/conv2d_0")),
-                [QuantizerConfig()],
-                [Scope()])},
+            base_nx_graph=get_sequentially_connected_model_graph(['conv2d', 'matmul', 'gelu', 'softmax']),
+            retval_qp_data={1: MultiQPSerializedDataForTest(TargetType.OPERATOR_POST_HOOK,
+                                                            "/conv2d_0", [QuantizerConfig()],
+                                                            directly_quantized_op_node_names=["/matmul_0"])},
             retval_unified_scale_qp_groups=[],
             retval_shared_input_operation_set_groups=[{1}],
             expected_count_finished_quant=1,
             expected_count_active_quant=0,
-            ignored_scope=['/gelu_0', '/conv2d_0']
+            ignored_scopes=['/gelu_0', '/conv2d_0']
         ),
         RunOnIpGraphTestStruct(
-            base_graph=get_sequentially_connected_model_graph(['conv2d', 'matmul']),
-            retval_qps={1: MultiConfigQuantizationPoint(
-                PTTargetPoint(TargetType.OPERATOR_POST_HOOK,
-                              ia_op_exec_context=InputAgnosticOperationExecutionContext.from_str("/conv2d_0")),
-                [QuantizerConfig()],
-                [Scope()])},
+            base_nx_graph=get_sequentially_connected_model_graph(['conv2d', 'matmul']),
+            retval_qp_data={1: MultiQPSerializedDataForTest(TargetType.OPERATOR_POST_HOOK,
+                                                            "/conv2d_0",
+                                                            [QuantizerConfig()],
+                                                            directly_quantized_op_node_names=["/matmul_0"])},
             retval_unified_scale_qp_groups=[],
             retval_shared_input_operation_set_groups=[{1}],
             expected_count_finished_quant=1,
             expected_count_active_quant=0,
-            ignored_scope=['/conv2d_0']
+            ignored_scopes=['/conv2d_0']
         ),
         RunOnIpGraphTestStruct(
-            base_graph=get_sequentially_connected_model_graph(['conv2d', 'matmul']),
-            retval_qps={},
+            base_nx_graph=get_sequentially_connected_model_graph(['conv2d', 'matmul']),
+            retval_qp_data={},
             retval_unified_scale_qp_groups=[],
             retval_shared_input_operation_set_groups=[],
             expected_count_finished_quant=0,
             expected_count_active_quant=0,
-            ignored_scope=['/conv2d_0', '/matmul_0']
+            ignored_scopes=['/conv2d_0', '/matmul_0']
         ),
         RunOnIpGraphTestStruct(
-            base_graph=TwoFcAfterDropout.get_graph(),
-            retval_qps={1: MultiConfigQuantizationPoint(
-                PTTargetPoint(TargetType.OPERATOR_PRE_HOOK,
-                              ia_op_exec_context=TwoFcAfterDropout.FC_1_OPERATION_EXECUTION_CONTEXT,
-                              input_port_id=0),
-                [QuantizerConfig()],
-                [TwoFcAfterDropout.FC_1_OPERATION_EXECUTION_CONTEXT.scope_in_model])},
+            base_nx_graph=TwoFcAfterDropout.get_graph(),
+            retval_qp_data={1: MultiQPSerializedDataForTest(TargetType.OPERATOR_PRE_HOOK,
+                                                            TwoFcAfterDropout.FC_1_NODE_NAME, [QuantizerConfig()],
+                                                            input_port_id=0,
+                                                            directly_quantized_op_node_names=[
+                                                                TwoFcAfterDropout.FC_1_NODE_NAME]
+                                                            )},
             retval_unified_scale_qp_groups=[],
             retval_shared_input_operation_set_groups=[{1}],
             expected_count_finished_quant=1,
             expected_count_active_quant=0,
-            ignored_scope=[TwoFcAfterDropout.FC_2_SCOPE_STR]
+            ignored_scopes=[TwoFcAfterDropout.FC_2_NODE_NAME]
         )
     ]
 
@@ -1605,11 +1650,10 @@ class TestQuantizerPropagationSolver:
         expected_count_active_quant = run_on_ip_graph_test_struct.expected_count_active_quant
 
         # Graph preparation
-        mock_nx_graph = run_on_ip_graph_test_struct.base_graph
-        nncf_graph = get_nncf_graph_from_mock_nx_graph(mock_nx_graph)
+        nncf_graph = run_on_ip_graph_test_struct.base_graph
         ip_graph = InsertionPointGraph(nncf_graph)
 
-        quant_prop_solver = QuantizerPropagationSolver(ignored_scopes=run_on_ip_graph_test_struct.ignored_scope,
+        quant_prop_solver = QuantizerPropagationSolver(ignored_scopes=run_on_ip_graph_test_struct.ignored_scopes,
                                                        run_consistency_checks=True)
         retval = quant_prop_solver.run_on_ip_graph(ip_graph)
 

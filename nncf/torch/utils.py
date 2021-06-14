@@ -11,79 +11,24 @@
  limitations under the License.
 """
 from collections import OrderedDict
-from typing import Dict, Callable, Any, Mapping, Sequence, Set, List, Union
+from typing import Dict, Callable, Any, Mapping, Sequence, Set, List
 from typing import Tuple
 from typing import Type
 
 import numpy as np
 import random
-import re
 import torch
 from torch import distributed as dist, nn
 from torch.nn import Module, Parameter
 
+from nncf.common.graph import NNCFNodeName
+from nncf.common.utils.helpers import matches_any
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.torch.dynamic_graph.graph_tracer import ModelInputInfo, create_dummy_forward_fn
 from nncf.torch.dynamic_graph.trace_tensor import TracedTensor
 from nncf.torch.graph.graph_builder import GraphBuilder
 from nncf.torch.layer_utils import _NNCFModuleMixin
 from contextlib import contextmanager
-
-
-def scopes_matched(scope_stack_0, scope_stack_1):
-    from nncf.torch.layers import NNCF_MODULES_MAP
-    if len(scope_stack_1) > len(scope_stack_0):
-        return False
-
-    for name0, name1 in zip(scope_stack_0, scope_stack_1):
-        if name0 != name1:
-            _, m_cls0, m_name0 = parse_node_name(name0)
-            _, m_cls1, m_name1 = parse_node_name(name1)
-            if m_name0 != m_name1 or not m_cls0 in NNCF_MODULES_MAP or m_cls1 != NNCF_MODULES_MAP[m_cls0]:
-                scope = scope_stack_0[1:]
-                if scope:
-                    _, m_cls, _ = parse_node_name(scope[0])
-                    scope[0] = m_cls
-                    return scopes_matched(scope, scope_stack_1)
-                return False
-    return True
-
-
-def in_scope_list(scope: str, scope_list: Union[List[str], str]) -> bool:
-    if scope_list is None:
-        return False
-
-    checked_scope_stack = scope.split('/')
-    for item in [scope_list] if isinstance(scope_list, str) else scope_list:
-        if "{re}" in item:
-            regex = item.replace("{re}", "")
-            if re.search(regex, scope):
-                return True
-        scope_stack = item.split('/') if isinstance(item, str) else item
-        if scopes_matched(checked_scope_stack, scope_stack):
-            return True
-    return False
-
-
-def parse_node_name(name):
-    slash_pos = -1
-    nbrackets = 0
-    for i, ch in enumerate(reversed(name)):
-        if ch == ']':
-            nbrackets += 1
-        elif ch == '[':
-            nbrackets -= 1
-        elif ch == '/' and nbrackets == 0:
-            slash_pos = len(name) - i - 1
-            break
-
-    prefix = None if slash_pos < 0 else name[:slash_pos]
-
-    last_name = name[slash_pos + 1:]
-    open_bracket_pos = last_name.find("[")
-    if open_bracket_pos < 0:
-        return prefix, last_name, None
-    return prefix, last_name[:open_bracket_pos], last_name[open_bracket_pos + 1:-1]
 
 
 def get_node_name(module, module_name, prefix):
@@ -115,8 +60,8 @@ def get_all_modules_by_type(model, module_types=None, current_scope=None,
     if isinstance(module_types, str):
         module_types = [module_types]
     found = OrderedDict()
-    from nncf.torch.dynamic_graph.context import Scope
-    from nncf.torch.dynamic_graph.context import ScopeElement
+    from nncf.torch.dynamic_graph.scope import Scope
+    from nncf.torch.dynamic_graph.scope import ScopeElement
     if current_scope is None:
         current_scope = Scope()
         current_scope.push(ScopeElement(model.__class__.__name__))
@@ -125,10 +70,10 @@ def get_all_modules_by_type(model, module_types=None, current_scope=None,
         child_scope = current_scope.copy()
         child_scope.push(child_scope_element)
 
-        if in_scope_list(str(child_scope), ignored_scopes):
+        if matches_any(str(child_scope), ignored_scopes):
             continue
 
-        if target_scopes is None or in_scope_list(str(child_scope), target_scopes):
+        if target_scopes is None or matches_any(str(child_scope), target_scopes):
             if module_types is None or module_types.count(str(type(module).__name__)) != 0:
                 found[child_scope] = module
             sub_found = get_all_modules_by_type(module, module_types,
@@ -181,16 +126,6 @@ def get_filters_num(module):
     if isinstance(module, _NNCFModuleMixin):
         return module.weight.size(module.target_weight_dim_for_compression)
     return module.weight.size(0)
-
-
-def apply_by_node_name(model, node_names, command=lambda x: x, prefix=None):
-    if prefix is None:
-        prefix = model.__class__.__name__
-    for name, module in model.named_children():
-        node_name = get_node_name(module, name, prefix)
-        if node_name in node_names:
-            command(module)
-        apply_by_node_name(module, node_names=node_names, command=command, prefix=node_name)
 
 
 def manual_seed(seed):
@@ -332,8 +267,10 @@ def is_named_tuple(obj) -> bool:
 
 
 def objwalk(obj, unary_predicate: Callable[[Any], bool], apply_fn: Callable, memo=None):
-    """Walks through the indexable container hierarchy of obj and replaces all sub-objects matching a criterion
-    with the result of a given function application."""
+    """
+    Walks through the indexable container hierarchy of obj and replaces all sub-objects matching a criterion
+    with the result of a given function application.
+    """
     #pylint:disable=too-many-nested-blocks
     #pylint:disable=too-many-branches
     if memo is None:
@@ -388,11 +325,6 @@ def objwalk(obj, unary_predicate: Callable[[Any], bool], apply_fn: Callable, mem
     return obj
 
 
-def should_consider_scope(scope_str: str, target_scopes: List[str], ignored_scopes: List[str]):
-    return (target_scopes is None or in_scope_list(scope_str, target_scopes)) \
-               and not in_scope_list(scope_str, ignored_scopes)
-
-
 class _ModuleState:
     def __init__(self, module: Module = None):
         self._training_state = {}
@@ -443,7 +375,7 @@ def training_mode_switcher(model: Module, is_training: bool = True):
         load_module_state(model, saved_state)
 
 
-def compute_FLOPs_hook(module, input_, output, dict_to_save, ctx: 'TracingContext'):
+def compute_FLOPs_hook(module, input_, output, dict_to_save, module_node_name: NNCFNodeName):
     if isinstance(module, (nn.Conv1d, nn.ConvTranspose1d, nn.Conv2d, nn.ConvTranspose2d, nn.Conv3d,
                            nn.ConvTranspose3d)):
         ks = module.weight.data.shape
@@ -456,7 +388,7 @@ def compute_FLOPs_hook(module, input_, output, dict_to_save, ctx: 'TracingContex
             mac_count = np.prod(input_[0].shape[1:]) * output.shape[-1]
     else:
         return
-    dict_to_save[ctx.scope] = 2 * mac_count
+    dict_to_save[module_node_name] = 2 * mac_count
 
 
 def add_domain(name_operator: str) -> str:

@@ -156,15 +156,15 @@ def test_magnitude_algo_binary_masks_are_applied():
 
 
 def test_magnitude_algo_set_independently_sparsity_level_for_one_module():
-    module_name_conv1 = 'MagnitudeTestModel/NNCFConv2d[conv1]'
-    module_name_conv2 = 'MagnitudeTestModel/NNCFConv2d[conv2]'
+    module_name_conv1 = 'MagnitudeTestModel/NNCFConv2d[conv1]/conv2d_0'
+    module_name_conv2 = 'MagnitudeTestModel/NNCFConv2d[conv2]/conv2d_0'
     config = get_basic_magnitude_sparsity_config()
     config['compression']['params'] = {"sparsity_level_setting_mode": 'local'}
     sparse_model, compression_ctrl = create_compressed_model_and_algo_for_test(MagnitudeTestModel(), config)
     sparse_info_conv1 = [sparse_info for sparse_info in compression_ctrl.sparsified_module_info\
-     if sparse_info.module_name == module_name_conv1]
+     if sparse_info.module_node_name == module_name_conv1]
     sparse_info_conv2 = [sparse_info for sparse_info in compression_ctrl.sparsified_module_info\
-     if sparse_info.module_name == module_name_conv2]
+     if sparse_info.module_node_name == module_name_conv2]
 
     compression_ctrl.set_sparsity_level(0.5, sparse_info_conv1[0])
 
@@ -230,29 +230,31 @@ def test_can_freeze_binary_masks():
     for sparse_layer in compression_ctrl.sparsified_module_info:
         assert sparse_layer.operand.frozen
 
+
 def test_create_magnitude_algo_with_local_sparsity_mode():
     config = get_empty_config()
     config['compression'] = {'algorithm': "magnitude_sparsity", "params": {"sparsity_level_setting_mode": 'local'}}
     _, compression_ctrl = create_compressed_model_and_algo_for_test(MockModel(), config)
     assert compression_ctrl.compression_stage() == CompressionStage.FULLY_COMPRESSED
 
+
 def test_magnitude_algo_can_calculate_correct_stats_for_local_mode():
-    module_name_conv1 = 'MagnitudeTestModel/NNCFConv2d[conv1]'
-    module_name_conv2 = 'MagnitudeTestModel/NNCFConv2d[conv2]'
+    module_node_name_conv1 = 'MagnitudeTestModel/NNCFConv2d[conv1]/conv2d_0'
+    module_node_name_conv2 = 'MagnitudeTestModel/NNCFConv2d[conv2]/conv2d_0'
     config = get_basic_magnitude_sparsity_config()
     config['compression']['params'] = {"sparsity_level_setting_mode": 'local'}
     _, compression_ctrl = create_compressed_model_and_algo_for_test(MagnitudeTestModel(), config)
     sparse_info_conv1 = [sparse_info for sparse_info in compression_ctrl.sparsified_module_info\
-     if sparse_info.module_name == module_name_conv1]
+     if sparse_info.module_node_name == module_node_name_conv1]
     sparse_info_conv2 = [sparse_info for sparse_info in compression_ctrl.sparsified_module_info\
-     if sparse_info.module_name == module_name_conv2]
+     if sparse_info.module_node_name == module_node_name_conv2]
 
     compression_ctrl.set_sparsity_level(0.5, sparse_info_conv1[0])
 
     compression_ctrl.set_sparsity_level(0.3, sparse_info_conv2[0])
     nncf_stats = compression_ctrl.statistics()
 
-    expected = [(module_name_conv1, 0.3344823), (module_name_conv2, 0.2191864)]
+    expected = [(module_node_name_conv1, 0.3344823), (module_node_name_conv2, 0.2191864)]
     for idx, layer_info in enumerate(nncf_stats.magnitude_sparsity.thresholds):
         expected_name, expected_threshold = expected[idx]
         assert layer_info.name == expected_name
@@ -260,13 +262,27 @@ def test_magnitude_algo_can_calculate_correct_stats_for_local_mode():
 
 
 def test_magnitude_algo_can_calculate_sparsity_rate_for_one_sparsified_module():
-    module_name_conv1 = 'MagnitudeTestModel/NNCFConv2d[conv1]'
+    module_node_name_conv1 = 'MagnitudeTestModel/NNCFConv2d[conv1]/conv2d_0'
     config = get_basic_magnitude_sparsity_config()
     config['compression']['params'] = {"sparsity_level_setting_mode": 'local'}
     _, compression_ctrl = create_compressed_model_and_algo_for_test(MagnitudeTestModel(), config)
     sparse_info_conv1 = [sparse_info for sparse_info in compression_ctrl.sparsified_module_info\
-     if sparse_info.module_name == module_name_conv1]
+     if sparse_info.module_node_name == module_node_name_conv1]
 
     compression_ctrl.set_sparsity_level(0.5, sparse_info_conv1[0])
 
-    assert pytest.approx(compression_ctrl.sparsity_rate_for_sparsified_modules(sparse_info_conv1[0]), 1e-2) == 0.5
+    nncf_stats = compression_ctrl.statistics()
+    sparse_model_stats = nncf_stats.magnitude_sparsity.model_statistics
+    module_name_to_sparsity_level_map = {
+        s.name: s.sparsity_level for s in sparse_model_stats.sparsified_layers_summary
+    }
+
+    module_name = sparse_info_conv1[0].module_node_name
+    assert pytest.approx(module_name_to_sparsity_level_map[module_name], 1e-2) == 0.5
+
+
+def test_can_set_compression_rate_for_magnitude_sparse_algo():
+    config = get_basic_magnitude_sparsity_config()
+    _, compression_ctrl = create_compressed_model_and_algo_for_test(MagnitudeTestModel(), config)
+    compression_ctrl.compression_rate = 0.65
+    assert pytest.approx(compression_ctrl.compression_rate, 1e-2) == 0.65

@@ -45,6 +45,7 @@ def _(stats, algorithm_name):
     tensorboard_stats = {
         f'{algorithm_name}/pruning_level_for_model': stats.model_statistics.pruning_level,
         f'{algorithm_name}/flops_pruning_level': stats.flops_pruning_level,
+        f'{algorithm_name}/target_pruning_level': stats.target_pruning_level,
     }
     return tensorboard_stats
 
@@ -57,4 +58,9 @@ def _(stats, algorithm_name):
         f'{algorithm_name}/sparsity_level_for_model': stats.model_statistics.sparsity_level,
         f'{algorithm_name}/sparsity_level_for_sparsified_layers': stats.model_statistics.sparsity_level_for_layers,
     }
+
+    target_sparsity_level = getattr(stats, 'target_sparsity_level', None)
+    if target_sparsity_level is not None:
+        tensorboard_stats[f'{algorithm_name}/target_sparsity_level'] = target_sparsity_level
+
     return tensorboard_stats

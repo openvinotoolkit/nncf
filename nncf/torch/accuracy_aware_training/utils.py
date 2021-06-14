@@ -11,10 +11,6 @@
  limitations under the License.
 """
 
-import os
-import datetime
-import os.path as osp
-
 from torch import distributed as dist
 
 
@@ -34,11 +30,3 @@ def get_rank():
 
 def is_main_process():
     return get_rank() == 0
-
-
-def configure_paths(log_dir):
-    d = datetime.datetime.now()
-    run_id = '{:%Y-%m-%d__%H-%M-%S}'.format(d)
-    log_dir = osp.join(log_dir, "accuracy_aware_training/{run_id}".format(run_id=run_id))
-    os.makedirs(log_dir)
-    return log_dir

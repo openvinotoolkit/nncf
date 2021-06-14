@@ -10,8 +10,7 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-
-
+from typing import List
 
 import torch
 
@@ -24,14 +23,14 @@ from nncf.torch.layer_utils import COMPRESSION_MODULES, CompressionParameter
 
 @COMPRESSION_MODULES.register()
 class RBSparsifyingWeight(BinaryMask):
-    def __init__(self, size, frozen=True, compression_lr_multiplier=None, eps=1e-6):
-        super().__init__(size)
+    def __init__(self, weight_shape: List[int], frozen=True, compression_lr_multiplier=None, eps=1e-6):
+        super().__init__(weight_shape)
         self.frozen = frozen
         self.eps = eps
-        self._mask = CompressionParameter(logit(torch.ones(size) * 0.99), requires_grad=not self.frozen,
+        self._mask = CompressionParameter(logit(torch.ones(weight_shape) * 0.99), requires_grad=not self.frozen,
                                           compression_lr_multiplier=compression_lr_multiplier)
         self.binary_mask = binary_mask(self._mask)
-        self.register_buffer("uniform", torch.zeros(size))
+        self.register_buffer("uniform", torch.zeros(weight_shape))
         self.mask_calculation_hook = MaskCalculationHook(self)
 
     @property

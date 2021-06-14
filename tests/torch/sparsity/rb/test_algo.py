@@ -131,11 +131,13 @@ def test_sparse_algo_can_calc_sparsity_rate__for_basic_model():
     config = get_basic_sparsity_config()
     _, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
 
-    assert compression_ctrl.sparsified_weights_count == model.weights_num
-    assert compression_ctrl.sparsity_rate_for_model == (
+    nncf_stats = compression_ctrl.statistics()
+    sparse_model_stats = nncf_stats.rb_sparsity.model_statistics
+
+    assert sparse_model_stats.sparsity_level == (
         1 - (model.nz_weights_num + model.nz_bias_num) / (model.weights_num + model.bias_num)
     )
-    assert compression_ctrl.sparsity_rate_for_sparsified_modules() == 1 - model.nz_weights_num / model.weights_num
+    assert sparse_model_stats.sparsity_level_for_layers == 1 - model.nz_weights_num / model.weights_num
     assert len(compression_ctrl.sparsified_module_info) == 1
 
 
@@ -154,11 +156,13 @@ def test_sparse_algo_can_calc_sparsity_rate__for_2_conv_model():
     config = get_basic_sparsity_config()
     _, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
 
-    assert compression_ctrl.sparsified_weights_count == model.weights_num
-    assert compression_ctrl.sparsity_rate_for_model == (
+    nncf_stats = compression_ctrl.statistics()
+    sparse_model_stats = nncf_stats.rb_sparsity.model_statistics
+
+    assert pytest.approx(sparse_model_stats.sparsity_level) == (
         1 - (model.nz_weights_num + model.nz_bias_num) / (model.weights_num + model.bias_num)
     )
-    assert compression_ctrl.sparsity_rate_for_sparsified_modules() == 1 - model.nz_weights_num / model.weights_num
+    assert sparse_model_stats.sparsity_level_for_layers == 1 - model.nz_weights_num / model.weights_num
 
 
 def test_scheduler_can_do_epoch_step__with_rb_algo():
@@ -208,6 +212,7 @@ def test_scheduler_can_do_epoch_step__with_rb_algo():
     for module_info in compression_ctrl.sparsified_module_info:
         assert module_info.operand.frozen
 
+
 def test_create_rb_algo_with_per_layer_loss():
     config = get_empty_config()
     config['compression'] = {'algorithm': 'rb_sparsity', "params": {"sparsity_level_setting_mode": 'local'}}
@@ -215,6 +220,7 @@ def test_create_rb_algo_with_per_layer_loss():
 
     # pylint: disable=protected-access
     assert isinstance(compression_ctrl._loss, SparseLossForPerLayerSparsity)
+
 
 def test_rb_sparsity__can_set_sparsity_level_for_module():
     config = get_empty_config()
@@ -227,8 +233,16 @@ def test_rb_sparsity__can_set_sparsity_level_for_module():
     compression_ctrl.set_sparsity_level(0.7, compression_ctrl.sparsified_module_info[0])
     assert list(compression_ctrl._loss.per_layer_target.values())[0] == pytest.approx(0.3)
 
+
 def test_create_rb_algo_with_local_sparsity_mode():
     config = get_empty_config()
     config['compression'] = {'algorithm': 'rb_sparsity', "params": {"sparsity_level_setting_mode": 'local'}}
     _, compression_ctrl = create_compressed_model_and_algo_for_test(MockModel(), config)
     assert compression_ctrl.compression_stage() == CompressionStage.FULLY_COMPRESSED
+
+
+def test_can_set_compression_rate_for_rb_sparsity_algo():
+    config = get_basic_sparsity_config()
+    _, compression_ctrl = create_compressed_model_and_algo_for_test(BasicConvTestModel(), config)
+    compression_ctrl.compression_rate = 0.65
+    assert pytest.approx(compression_ctrl.compression_rate, 1e-2) == 0.65

@@ -15,7 +15,8 @@ class ProxyModule:
 
 
 class _NNCFModuleMixin:
-    """Default class for modules that will be optimized by NNCF.
+    """
+    Default class for modules that will be optimized by NNCF.
 
         Attributes:
             op_func_name    Name of corresponding torch function.
@@ -23,7 +24,7 @@ class _NNCFModuleMixin:
             ignored_algorithms   List of algorithms that will skip the module.
             _custom_forward_fn  wrapper of the custom forward function that is called with `self` argument equals to the
                 ProxyModule
-        """
+    """
 
     op_func_name = ""
     target_weight_dim_for_compression = 0

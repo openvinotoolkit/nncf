@@ -20,10 +20,10 @@ class ExecutionMode:
     CPU_ONLY = "cpu_only"
     SINGLE_GPU = "single_gpu"
 
-    # Multiple nodes, each with 1 process utilising all local GPUs
+    # Multiple elements, each with 1 process utilising all local GPUs
     DISTRIBUTED = "distributed"
 
-    # Multiple nodes, each with 1 process for each local GPU
+    # Multiple elements, each with 1 process for each local GPU
     MULTIPROCESSING_DISTRIBUTED = "multiprocessing_distributed"
 
     # Single node with 1 process utilising all local GPUs

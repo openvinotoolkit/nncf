@@ -11,6 +11,7 @@
  limitations under the License.
 """
 
+import os
 import subprocess
 import pytest
 import shutil
@@ -44,13 +45,20 @@ def test_install(tmp_venv_with_nncf, install_type, tmp_path, package_type):
 
     # Do additional install step for sdist/bdist packages
     if package_type == "sdist":
+        for file_name in os.listdir(os.path.join(PROJECT_ROOT, 'dist')):
+            if file_name.endswith('.tar.gz'):
+                package_name = file_name
+                break
+        else:
+            raise FileNotFoundError('NNCF package not found')
         subprocess.run(
-            "{} install {}/dist/*.tar.gz ".format(pip_with_venv, PROJECT_ROOT), check=True, shell=True)
+            "{} install {}/dist/{}[torch] ".format(pip_with_venv, PROJECT_ROOT, package_name), check=True, shell=True)
     elif package_type == "bdist_wheel":
         subprocess.run(
             "{} install {}/dist/*.whl ".format(pip_with_venv, PROJECT_ROOT), check=True, shell=True)
 
     subprocess.run(
-        "{} {}/install_checks.py {}".format(python_executable_with_venv, run_path,
-                                            'cpu' if install_type == "CPU" else 'cuda'),
+        "{} {}/install_checks.py {} {}".format(python_executable_with_venv, run_path,
+                                               'cpu' if install_type == "CPU" else 'cuda',
+                                               package_type),
         check=True, shell=True, cwd=run_path)

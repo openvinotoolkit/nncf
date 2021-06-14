@@ -271,10 +271,21 @@ class CompressionAlgorithmController(ABC):
 
     @property
     def compression_rate(self) -> float:
+        """
+        Returns a float compression rate value ranging from 0 to 1 (e.g. the sparsity level or
+        the ratio of filters pruned).
+        :return: Compression rate value
+        """
         raise NotImplementedError
 
     @compression_rate.setter
     def compression_rate(self, compression_rate: float) -> None:
+        """
+        Set a float compression rate value in the model (e.g. the sparsity
+        level or the ratio of filters pruned).
+
+        :param compression_rate: The compressed rate value to be set.
+        """
         raise NotImplementedError
 
     def disable_scheduler(self):

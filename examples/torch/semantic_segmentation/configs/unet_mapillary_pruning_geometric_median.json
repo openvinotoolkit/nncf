@@ -45,12 +45,12 @@
             "weight_importance": "geometric_median"
         },
         "ignored_scopes": [
-            "UNet/ModuleList[up_path]/UNetUpBlock[0]/NNCFConvTranspose2d[up]",
-            "UNet/ModuleList[up_path]/UNetUpBlock[1]/NNCFConvTranspose2d[up]",
-            "UNet/ModuleList[up_path]/UNetUpBlock[2]/NNCFConvTranspose2d[up]",
-            "UNet/ModuleList[up_path]/UNetUpBlock[3]/NNCFConvTranspose2d[up]",
-            "UNet/ModuleList[up_path]/UNetUpBlock[3]/UNetConvBlock[conv_block]/Sequential[block]/NNCFConv2d[0]",
-            "UNet/ModuleList[up_path]/UNetUpBlock[3]/UNetConvBlock[conv_block]/Sequential[block]/NNCFConv2d[3]"
+            "{re}UNet/ModuleList\\[up_path\\]/UNetUpBlock\\[0\\]/NNCFConvTranspose2d\\[up\\].*",
+            "{re}UNet/ModuleList\\[up_path\\]/UNetUpBlock\\[1\\]/NNCFConvTranspose2d\\[up\\].*",
+            "{re}UNet/ModuleList\\[up_path\\]/UNetUpBlock\\[2\\]/NNCFConvTranspose2d\\[up\\].*",
+            "{re}UNet/ModuleList\\[up_path\\]/UNetUpBlock\\[3\\]/NNCFConvTranspose2d\\[up\\].*",
+            "{re}UNet/ModuleList\\[up_path\\]/UNetUpBlock\\[3\\]/UNetConvBlock\\[conv_block\\]/Sequential\\[block\\]/NNCFConv2d\\[0\\].*",
+            "{re}UNet/ModuleList\\[up_path\\]/UNetUpBlock\\[3\\]/UNetConvBlock\\[conv_block\\]/Sequential\\[block\\]/NNCFConv2d\\[3\\].*"
         ]
       }
     ]

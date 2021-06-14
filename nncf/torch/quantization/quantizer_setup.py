@@ -6,10 +6,11 @@ from typing import Optional
 from typing import Set
 from typing import Tuple
 
+from nncf.common.graph import NNCFGraph
+from nncf.common.graph import NNCFNodeName
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.torch.graph.transformations.commands import PTTargetPoint
-from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.quantization.layers import QuantizerConfig
 from nncf.torch.quantization.structs import UnifiedScaleType
 from nncf.torch.tensor_statistics.collectors import ReductionShape
@@ -22,9 +23,9 @@ QuantizationPointId = int
 
 class QuantizationPointBase:
     def __init__(self, insertion_point: PTTargetPoint,
-                 scopes_of_directly_quantized_operators: List['Scope']):
+                 directly_quantized_operator_node_names: List[NNCFNodeName]):
         self.insertion_point = insertion_point
-        self.scopes_of_directly_quantized_operators = scopes_of_directly_quantized_operators
+        self.directly_quantized_operator_node_names = directly_quantized_operator_node_names
 
     def is_activation_quantization_point(self) -> bool:
         return self.insertion_point.target_type == TargetType.OPERATOR_PRE_HOOK or \
@@ -42,8 +43,8 @@ class QuantizationPointBase:
 
 class SingleConfigQuantizationPoint(QuantizationPointBase):
     def __init__(self, insertion_point: PTTargetPoint, qconfig: QuantizerConfig,
-                 scopes_of_directly_quantized_operators: List['Scope']):
-        super().__init__(insertion_point, scopes_of_directly_quantized_operators)
+                 directly_quantized_operator_node_names: List[NNCFNodeName]):
+        super().__init__(insertion_point, directly_quantized_operator_node_names)
         self.qconfig = deepcopy(qconfig)
 
     def __str__(self):
@@ -57,8 +58,8 @@ class SingleConfigQuantizationPoint(QuantizationPointBase):
 
 class MultiConfigQuantizationPoint(QuantizationPointBase):
     def __init__(self, insertion_point: PTTargetPoint, possible_qconfigs: List[QuantizerConfig],
-                 scopes_of_directly_quantized_operators: List['Scope']):
-        super().__init__(insertion_point, scopes_of_directly_quantized_operators)
+                 directly_quantized_operator_node_names: List[NNCFNodeName]):
+        super().__init__(insertion_point, directly_quantized_operator_node_names)
         self.possible_qconfigs = possible_qconfigs
 
     @property
@@ -80,7 +81,7 @@ class MultiConfigQuantizationPoint(QuantizationPointBase):
                                                                         ",".join(
                                                                             [str(q) for q in self.possible_qconfigs])))
             qconfig = qconfig_any
-        return SingleConfigQuantizationPoint(self.insertion_point, qconfig, self.scopes_of_directly_quantized_operators)
+        return SingleConfigQuantizationPoint(self.insertion_point, qconfig, self.directly_quantized_operator_node_names)
 
     def __str__(self):
         return str(self.insertion_point) + ' ' + ';'.join([str(qc) for qc in self.possible_qconfigs])
@@ -245,7 +246,7 @@ class SingleConfigQuantizerSetup(QuantizerSetupBase):
 
     def get_minmax_values(self,
                           tensor_statistics: Dict[PTTargetPoint, Dict[ReductionShape, TensorStatistic]],
-                          target_model: NNCFNetwork) -> \
+                          target_model_graph: NNCFGraph) -> \
             Dict[QuantizationPointId, MinMaxTensorStatistic]:
         retval = {}
         for qp_id, qp in self.quantization_points.items():
@@ -254,11 +255,11 @@ class SingleConfigQuantizerSetup(QuantizerSetupBase):
                 nncf_logger.debug("IP {} not found in tensor statistics".format(ip))
                 retval[qp_id] = None
             else:
+                target_node = target_model_graph.get_node_by_name(qp.insertion_point.target_node_name)
                 if qp.is_weight_quantization_point():
-                    module = target_model.get_module_by_scope(qp.insertion_point.module_scope)
-                    input_shape = module.weight.shape
+                    input_shape = target_node.layer_attributes.get_weight_shape()
                 else:
-                    input_shape = target_model.get_input_shape_for_insertion_point(qp.insertion_point)
+                    input_shape = target_model_graph.get_input_shape_for_insertion_point(qp.insertion_point)
                 scale_shape = tuple(get_scale_shape(input_shape,
                                                     qp.is_weight_quantization_point(),
                                                     qp.qconfig.per_channel))
@@ -304,7 +305,7 @@ class MultiConfigQuantizerSetup(QuantizerSetupBase):
                 qconfig = qp_id_vs_selected_qconfig_dict[qp_id]
                 retval.quantization_points[qp_id] = SingleConfigQuantizationPoint(
                     multi_qp.insertion_point, qconfig,
-                    multi_qp.scopes_of_directly_quantized_operators)
+                    multi_qp.directly_quantized_operator_node_names)
 
         # Segregate the unified scale groups into sub-groups based on what exact config was chosen.
         for us_group in self.unified_scale_groups.values():
@@ -346,7 +347,7 @@ class MultiConfigQuantizerSetup(QuantizerSetupBase):
             multi_pt = MultiConfigQuantizationPoint(
                 insertion_point=qp.insertion_point,
                 possible_qconfigs=[deepcopy(qp.qconfig)],
-                scopes_of_directly_quantized_operators=qp.scopes_of_directly_quantized_operators)
+                directly_quantized_operator_node_names=qp.directly_quantized_operator_node_names)
             retval.quantization_points[qp_id] = multi_pt
         for qp_set in single_conf_setup.unified_scale_groups.values():
             qp_list = list(qp_set)

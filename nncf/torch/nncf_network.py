@@ -16,19 +16,29 @@ import operator
 from collections import OrderedDict
 from copy import deepcopy
 from enum import Enum
-from typing import Callable, Dict, List, Optional, Tuple, TypeVar
+from typing import Callable
+from typing import Dict
+from typing import List
+from typing import Optional
+from typing import Tuple
+from typing import TypeVar
 
 import networkx as nx
 import torch
 from torch import nn
 
-from nncf.common.graph.graph import MODEL_INPUT_OP_NAME
-from nncf.common.graph.graph import MODEL_OUTPUT_OP_NAME
-from nncf.common.graph.graph import NNCFGraph
+from nncf.common.graph import MODEL_INPUT_OP_NAME
+from nncf.common.graph import MODEL_OUTPUT_OP_NAME
+from nncf.common.graph import NNCFGraph
+from nncf.common.graph import NNCFNode
+from nncf.common.graph import NNCFNodeExpression
+from nncf.common.graph import NNCFNodeName
+from nncf.common.graph.graph_matching import NodeExpression
 from nncf.common.graph.model_transformer import ModelTransformer
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationPriority
 from nncf.common.hardware.config import HWConfig
+from nncf.common.utils.logger import logger as nncf_logger
 from nncf.common.utils.ordered_enum import OrderedEnum
 from nncf.torch.debug import CombinedDebugInterface
 from nncf.torch.debug import debuggable_forward
@@ -36,21 +46,24 @@ from nncf.torch.debug import is_debug
 from nncf.torch.dynamic_graph.context import TracingContext
 from nncf.torch.dynamic_graph.graph import DynamicGraph
 from nncf.torch.dynamic_graph.graph import ShapeIgnoringTensorMetaComparator
+from nncf.torch.dynamic_graph.graph_tracer import GraphTracer
 from nncf.torch.dynamic_graph.graph_tracer import ModelInputInfo
 from nncf.torch.dynamic_graph.graph_tracer import PostGraphBuildActing
 from nncf.torch.dynamic_graph.graph_tracer import create_dummy_forward_fn
 from nncf.torch.dynamic_graph.io_handling import InputInfoWrapManager
 from nncf.torch.dynamic_graph.io_handling import replicate_same_tensors
 from nncf.torch.dynamic_graph.io_handling import wrap_nncf_model_outputs_with_objwalk
+from nncf.torch.dynamic_graph.operation_address import OperationAddress
 from nncf.torch.dynamic_graph.patch_pytorch import ignore_scope
+from nncf.torch.dynamic_graph.scope import Scope
 from nncf.torch.dynamic_graph.trace_tensor import TracedTensor
 from nncf.torch.dynamic_graph.transform_graph import replace_modules_by_nncf_modules
-from nncf.torch.graph.graph import NNCFNodeExpression
 from nncf.torch.graph.graph import PTNNCFGraph
 from nncf.torch.graph.graph_builder import GraphBuilder
-from nncf.torch.graph.graph_matching import NodeExpression
+from nncf.torch.graph.graph_builder import GraphConverter
 from nncf.torch.graph.transformations.commands import PTInsertionCommand
 from nncf.torch.graph.transformations.commands import PTTargetPoint
+from nncf.torch.graph.transformations.layout import PTTransformationLayout
 from nncf.torch.layers import NNCF_MODULES
 from nncf.torch.layers import NNCF_WRAPPED_USER_MODULES_DICT
 from nncf.torch.module_operations import UpdateWeight
@@ -113,6 +126,8 @@ class InsertionPointGraph(nx.DiGraph):
     IS_IN_NNCF_MODULE_NODE_ATTR = "is_in_nncf_module"
     REGULAR_NODE_REF_NODE_ATTR = "regular_node_data"
     ASSOCIATED_IP_NODE_KEYS_NODE_ATTR = "associated_ip_node_keys"
+    IS_MERGED_NODE_ATTR = 'is_merged'
+    MERGED_NNCF_NODE_LIST_NODE_ATTR = 'merged_node_list'
 
     PRE_HOOK_ID_PREFIX = "PRE HOOK "  # NB: Do not use colon (':') in node keys! Causes trouble for .dot file export.
     POST_HOOK_ID_PREFIX = "POST HOOK "
@@ -125,12 +140,13 @@ class InsertionPointGraph(nx.DiGraph):
         for node_key, node in self._base_nx_graph.nodes.items():
             attrs = {InsertionPointGraph.REGULAR_NODE_REF_NODE_ATTR: nncf_graph._nx_node_to_nncf_node(node),
                      InsertionPointGraph.NODE_TYPE_NODE_ATTR: InsertionPointGraphNodeType.OPERATOR,
-                     InsertionPointGraph.ASSOCIATED_IP_NODE_KEYS_NODE_ATTR: set()}
+                     InsertionPointGraph.ASSOCIATED_IP_NODE_KEYS_NODE_ATTR: set(),
+                     InsertionPointGraph.IS_MERGED_NODE_ATTR: False}
             self.add_node(node_key, **attrs)
 
         IN_PORT_ID_ATTR_NAME = "in_port_id"
         for edge in self._base_nx_graph.edges:
-            in_port_id = self._base_nx_graph.edges[edge][PTNNCFGraph.IN_PORT_NAME_EDGE_ATTR]
+            in_port_id = self._base_nx_graph.edges[edge][NNCFGraph.IN_PORT_NAME_EDGE_ATTR]
             from_node, to_node = edge
             attrs = {IN_PORT_ID_ATTR_NAME: in_port_id}
             self.add_edge(from_node, to_node, **attrs)
@@ -145,8 +161,6 @@ class InsertionPointGraph(nx.DiGraph):
         node_keys_working_set = [deepcopy(node_key) for node_key in self.nodes.keys()]
         for operator_node_key in node_keys_working_set:
             original_node = self.nodes[operator_node_key][InsertionPointGraph.REGULAR_NODE_REF_NODE_ATTR]
-            ia_op_exec_context = original_node.ia_op_exec_context
-
             operator_node = self.nodes[operator_node_key]
 
             # Pre-hook insertion point nodes
@@ -159,7 +173,7 @@ class InsertionPointGraph(nx.DiGraph):
                 ip_node_key = self.get_pre_hook_node_key(str(operator_node_key), port_id)
 
                 pre_hook_insertion_point = PTTargetPoint(TargetType.OPERATOR_PRE_HOOK,
-                                                         ia_op_exec_context=ia_op_exec_context,
+                                                         target_node_name=original_node.node_name,
                                                          input_port_id=port_id)
                 pre_hook_ip_attrs = {
                     InsertionPointGraph.NODE_TYPE_NODE_ATTR: InsertionPointGraphNodeType.INSERTION_POINT,
@@ -173,7 +187,7 @@ class InsertionPointGraph(nx.DiGraph):
                 self.add_edge(ip_node_key, operator_node_key)
                 operator_node[InsertionPointGraph.ASSOCIATED_IP_NODE_KEYS_NODE_ATTR].add(ip_node_key)
 
-            if ia_op_exec_context.operator_name == 'chunk':
+            if original_node.node_type == 'chunk':
                 # chunk returns a tuple of tensors, which can only be handled in NNCF
                 # once post-hook ports are enabled. Work around it for now by disallowing post-hook
                 # insertion for chunks
@@ -182,7 +196,7 @@ class InsertionPointGraph(nx.DiGraph):
 
             # Post-hook insertion point nodes
             post_hook_insertion_point = PTTargetPoint(TargetType.OPERATOR_POST_HOOK,
-                                                      ia_op_exec_context=ia_op_exec_context)
+                                                      target_node_name=original_node.node_name)
             post_hook_ip_attrs = {
                 InsertionPointGraph.NODE_TYPE_NODE_ATTR: InsertionPointGraphNodeType.INSERTION_POINT,
                 InsertionPointGraph.INSERTION_POINT_DATA_NODE_ATTR: post_hook_insertion_point
@@ -203,24 +217,9 @@ class InsertionPointGraph(nx.DiGraph):
             operator_node = self.nodes[operator_node_key]
             operator_node[InsertionPointGraph.ASSOCIATED_IP_NODE_KEYS_NODE_ATTR].add(ip_node_key)
 
-            if ia_op_exec_context.operator_name == MODEL_INPUT_OP_NAME:
+            if original_node.node_type == MODEL_INPUT_OP_NAME:
                 self._input_ips.append(post_hook_insertion_point)
 
-    def _base_graph_match_has_breaking_edges(self, match):
-        # Breaking output edges
-        for node_key in match[:-1]:
-            succs = list(self._base_nx_graph.succ[node_key].keys())
-            for succ_key in succs:
-                if succ_key not in match:
-                    return True
-
-        # Breaking input edges
-        for node_key in match[1:]:
-            preds = list(self._base_nx_graph.pred[node_key].keys())
-            for pred_key in preds:
-                if pred_key not in match:
-                    return True
-        return False
 
     def get_ip_graph_with_merged_hw_optimized_operations(self,
                                                          hw_config: Optional[HWConfig] = None,
@@ -229,37 +228,14 @@ class InsertionPointGraph(nx.DiGraph):
         # pylint:disable=too-many-branches
         merged_ip_graph = deepcopy(self)
         pattern = self._get_mergeable_operator_patterns(hw_config, additional_patterns)
-        from nncf.torch.graph.graph_matching import search_all
-        matches = search_all(self._base_nx_graph, pattern)
+        from nncf.common.graph.graph_matching import find_subgraphs_matching_expression
+        matches = find_subgraphs_matching_expression(self._base_nx_graph, pattern)
         for match in matches:
             if len(match) == 1:
                 continue
 
             input_node_key = match[0]
             output_node_key = match[-1]
-
-            # If a subgraph has output edges in its middle, should skip merging it
-            # Example (conv2d + BN + relu pattern):
-            #       (conv2d)
-            #          |------\
-            #         (BN)    |
-            #          |      |
-            #        (RELU)   |
-            #          |      |
-            #        (cat)----/
-            #          |
-            #         ...
-
-            # Same for input edges (linear + add pattern):
-            # (linear)      (linear)
-            #     |            |
-            #     \----(add)---/
-            #            |
-            #           ...
-            has_breaking_output_edges = self._base_graph_match_has_breaking_edges(match)
-
-            if has_breaking_output_edges:
-                continue
 
             in_edges = list(self.in_edges(input_node_key))
             out_edges = list(self.out_edges(output_node_key))
@@ -275,7 +251,9 @@ class InsertionPointGraph(nx.DiGraph):
 
             merged_node_attrs = deepcopy(self.nodes[input_node_key])
             merged_node_attrs[InsertionPointGraph.ASSOCIATED_IP_NODE_KEYS_NODE_ATTR] = set()
+            merged_node_attrs[InsertionPointGraph.IS_MERGED_NODE_ATTR] = True
             merged_node_key = ""
+            merged_nncf_nodes = []
             for node_key in match:
                 ip_node_keys = self.nodes[node_key][InsertionPointGraph.ASSOCIATED_IP_NODE_KEYS_NODE_ATTR]
                 for ip_node_key in ip_node_keys:
@@ -288,9 +266,11 @@ class InsertionPointGraph(nx.DiGraph):
                         merged_node_attrs[InsertionPointGraph.ASSOCIATED_IP_NODE_KEYS_NODE_ATTR].add(ip_node_key)
                     else:
                         merged_ip_graph.remove_node(ip_node_key)
+                merged_nncf_nodes.append(self.nodes[node_key][InsertionPointGraph.REGULAR_NODE_REF_NODE_ATTR])
                 merged_ip_graph.remove_node(node_key)
                 merged_node_key += node_key + '\n'
 
+            merged_node_attrs[InsertionPointGraph.MERGED_NNCF_NODE_LIST_NODE_ATTR] = merged_nncf_nodes
             merged_ip_graph.add_node(merged_node_key, **merged_node_attrs)
             for in_edge_key, in_edge_attrs in in_edge_copies_dict.items():
                 merged_ip_graph.add_edge(in_edge_key[0], merged_node_key, **in_edge_attrs)
@@ -310,8 +290,10 @@ class InsertionPointGraph(nx.DiGraph):
 
     def _get_mergeable_operator_patterns(self, hw_config: Optional[HWConfig] = None,
                                          additional_patterns: Optional[List[str]] = None) -> NodeExpression:
-        """Resulting pattern should have single input; the operation with inputs to
-        quantize should be the input operation; outputs should only be produced by one output node."""
+        """
+        Resulting pattern should have single input; the operation with inputs to
+        quantize should be the input operation; outputs should only be produced by one output node.
+        """
         # TODO: Implement "repeating expressions" so that any number of "mergeable" operations
         # immediately following a linear/convolutional/matrix op are merged into one block
         import nncf.torch.graph.patterns as p
@@ -327,15 +309,6 @@ class InsertionPointGraph(nx.DiGraph):
                 full_pattern = full_pattern | custom_pattern
         return full_pattern
 
-    def get_op_nodes_in_scope(self, scope: 'Scope') -> List:
-        matching_ip_graph_op_nodes_list = []
-        for node in self.nodes().values():
-            if node[InsertionPointGraph.NODE_TYPE_NODE_ATTR] == InsertionPointGraphNodeType.OPERATOR:
-                nncf_graph_node = node[InsertionPointGraph.REGULAR_NODE_REF_NODE_ATTR]
-                op_scope = nncf_graph_node.ia_op_exec_context.scope_in_model
-                if op_scope in scope:
-                    matching_ip_graph_op_nodes_list.append(node)
-        return matching_ip_graph_op_nodes_list
 
     def get_input_insertion_points(self) -> List[PTTargetPoint]:
         return self._input_ips
@@ -363,15 +336,16 @@ class PTInsertionPoint:
             raise RuntimeError("Unsupported target type for PyTorch: {}".format(target_type))
         return PTInsertionPoint.TARGET_TYPE_VS_PT_INSERTION_TYPE_DICT[target_type]
 
-    def __init__(self, target_point: PTTargetPoint):
-        self.insertion_type = self._get_pt_insertion_type(target_point.target_type)
-        self.ia_op_exec_context = target_point.ia_op_exec_context
-        self.module_scope = target_point.module_scope
-        self.input_port_id = target_point.input_port_id
+    def __init__(self, target_type: TargetType, op_address: OperationAddress,
+                 input_port_id: int = None):
+        self.insertion_type = self._get_pt_insertion_type(target_type)
+        self.op_address = op_address
+        self.module_scope = op_address.scope_in_model
+        self.input_port_id = input_port_id
 
     def __eq__(self, other: 'PTInsertionPoint'):
         return self.insertion_type == other.insertion_type and \
-               self.ia_op_exec_context == other.ia_op_exec_context and \
+               self.op_address == other.op_address and \
                self.module_scope == other.module_scope and \
                self.input_port_id == other.input_port_id
 
@@ -430,13 +404,13 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
 
         _orig_graph_build_forward_fn = self._get_dummy_forward_fn_for_graph_building(with_input_tracing=True,
                                                                                      with_output_tracing=True)
-        self._graph_builder = GraphBuilder(_orig_graph_build_forward_fn)
 
         nncf_wrapped_model = self.get_nncf_wrapped_model()
-        eval_only_ops_exec_ctx = self.collect_eval_only_ops_exec_context(nncf_wrapped_model, self._graph_builder)
+        eval_only_op_scopes = self._collect_eval_only_op_scopes(nncf_wrapped_model,
+                                                                _orig_graph_build_forward_fn)
 
         # all modules called in eval mode should be replaced prior to graph building
-        self._replace_modules_by_nncf_modules(device, eval_only_ops_exec_ctx, reset)
+        self._replace_modules_by_nncf_modules(device, eval_only_op_scopes, reset)
 
         _orig_context = TracingContext()
 
@@ -446,13 +420,17 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
             _orig_context.add_node_comparators(scopes_without_shape_matching,
                                                ShapeIgnoringTensorMetaComparator())
 
-        self._original_graph = self._graph_builder.build_graph(nncf_wrapped_model, _orig_context,
-                                                               as_eval=True)
-        self._compressed_graph = None
+        self._original_dynamic_graph = GraphTracer(_orig_graph_build_forward_fn).trace_graph(nncf_wrapped_model,
+                                                                                             _orig_context,
+                                                                                             as_eval=True)
+        self._original_graph = GraphConverter.convert(self._original_dynamic_graph,
+                                                      input_infos=self.input_infos)
+        self._compressed_graph = None  # type: PTNNCFGraph
 
         self._compressed_context = TracingContext()
 
-        self._dummy_forward_fn = self._get_dummy_forward_fn_for_graph_building(with_input_tracing=False, with_output_tracing=False)
+        self._dummy_forward_fn = self._get_dummy_forward_fn_for_graph_building(with_input_tracing=False,
+                                                                               with_output_tracing=False)
         self._in_user_dummy_forward = False
 
         self._compressed_context.add_node_comparators([MODEL_INPUT_OP_NAME], ShapeIgnoringTensorMetaComparator())
@@ -526,9 +504,9 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
 
     def insert_at_point(self, point: PTInsertionPoint, fn_list: List[Callable]):
         if point.insertion_type == PTInsertionType.OPERATOR_PRE_HOOK:
-            self._compressed_context.register_pre_hooks(fn_list, point.ia_op_exec_context, point.input_port_id)
+            self._compressed_context.register_pre_hooks(fn_list, point.op_address, point.input_port_id)
         elif point.insertion_type == PTInsertionType.OPERATOR_POST_HOOK:
-            self._compressed_context.register_post_hooks(fn_list, point.ia_op_exec_context)
+            self._compressed_context.register_post_hooks(fn_list, point.op_address)
         elif point.insertion_type in [PTInsertionType.NNCF_MODULE_PRE_OP,
                                       PTInsertionType.NNCF_MODULE_POST_OP]:
             norm_target_scope = self._normalize_variable_recurrent_scope(point.module_scope)
@@ -587,11 +565,11 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
         return wrapped_user_dummy_forward_fn
 
 
-    def _replace_modules_by_nncf_modules(self, device, eval_only_ops_exec_ctx: List[str] = None,
+    def _replace_modules_by_nncf_modules(self, device, eval_only_op_scopes: List[Scope] = None,
                                          reset: bool = False):
         module, self._nncf_module_scopes = replace_modules_by_nncf_modules(
             self.get_nncf_wrapped_model(), ignored_scopes=self.ignored_scopes,
-            target_scopes=self.target_scopes, eval_ops_exec_ctx_str=eval_only_ops_exec_ctx,
+            target_scopes=self.target_scopes, eval_op_scopes=eval_only_op_scopes,
             reset=reset)
         self._set_nncf_wrapped_model(module.to(device))
 
@@ -602,6 +580,19 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
         nncf_module_names_list = NNCF_MODULES + [x.__name__ for x in NNCF_WRAPPED_USER_MODULES_DICT.values()]
         return get_all_modules_by_type(self.get_nncf_wrapped_model(), nncf_module_names_list)
 
+    def get_weighted_original_graph_nodes(self, nncf_module_names: List[str] = None) -> List[NNCFNode]:
+        retval = []
+        for nncf_module_scope in self._nncf_module_scopes:
+            if nncf_module_names is not None:
+                module_name = nncf_module_scope[-1].calling_module_class_name
+                if module_name not in nncf_module_names:
+                    continue
+            nodes_in_scope = self._original_graph.get_op_nodes_in_scope(nncf_module_scope)
+            for node in nodes_in_scope:
+                if node.layer_attributes is not None:  # TODO(vshampor): implement more explicit filtering
+                    retval.append(node)
+        return retval
+
     def get_nncf_modules_by_module_names(self, nncf_module_names_list: List[str]) -> Dict["Scope", torch.nn.Module]:
         return get_all_modules_by_type(self.get_nncf_wrapped_model(), nncf_module_names_list)
 
@@ -610,7 +601,8 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
         dummy_forward_fn = self._get_dummy_forward_fn_for_graph_building(with_input_tracing=False,
                                                                          with_output_tracing=False)
         builder = GraphBuilder(dummy_forward_fn)
-        self._compressed_graph = builder.build_graph(self, self._compressed_context)
+        self._compressed_graph = builder.build_graph(self, self._compressed_context,
+                                                     input_infos=self.input_infos)
 
     def post_build_graph_actions(self):
         # Reset initialization flags (`initialized`) for all quantization modules
@@ -654,8 +646,10 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
 
     @staticmethod
     def _compression_module_type_to_attr_name(compression_module_type: ExtraCompressionModuleType):
-        """Required for backward compatibility with checkpoints that store function and activation
-        quantizers directly under corresponding attributes of NNCFNetwork."""
+        """
+        Required for backward compatibility with checkpoints that store function and activation
+        quantizers directly under corresponding attributes of NNCFNetwork.
+        """
         if compression_module_type == ExtraCompressionModuleType.EXTERNAL_QUANTIZER:
             return EXTERNAL_QUANTIZERS_STORAGE_NAME
         raise RuntimeError("Unknown extra module type")
@@ -673,7 +667,7 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
     def _normalize_variable_recurrent_scope(scope: 'Scope'):
         """
         Two scopes pointing to an NNCF module that only differ in a Recurrent/VariableRecurrent/VariableRecurrentReverse
-        scope element actually point to one and the same module.
+        scope node actually point to one and the same module.
         """
         ret_scope = scope.copy()
         for scope_element in ret_scope:
@@ -683,8 +677,10 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
         return ret_scope
 
     def do_dummy_forward(self, force_eval=False):
-        """Attention: If run with force_eval=False, this may spoil the batchnorm statistics,
-        and an eval run of the model will perform much worse than the train run. """
+        """
+        Attention: If run with force_eval=False, this may spoil the batchnorm statistics,
+        and an eval run of the model will perform much worse than the train run.
+        """
         if force_eval:
             train_mode = self.training
             self.eval()
@@ -696,16 +692,6 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
             if train_mode:
                 self.train()
 
-    def get_input_shape_for_insertion_point(self, insertion_point: PTTargetPoint) -> Tuple[int]:
-        ia_op_exec_context = insertion_point.ia_op_exec_context
-        if insertion_point.input_port_id is not None:
-            quantizer_input_shape = self._original_graph.get_input_shapes_for_ia_op_exec_context(
-                ia_op_exec_context)[insertion_point.input_port_id]
-        else:
-            # Tailored for post-hook quantization and first output quantization only
-            quantizer_input_shape = self._original_graph.get_output_shapes_for_ia_op_exec_context(
-                ia_op_exec_context)[0]
-        return quantizer_input_shape
 
     def get_insertion_point_graph(self) -> InsertionPointGraph:
         ip_graph = InsertionPointGraph(self._original_graph)
@@ -728,6 +714,19 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
             curr_module = next_module
         return curr_module
 
+    def get_containing_module(self, node_name: NNCFNodeName) -> torch.nn.Module:
+        if self._compressed_graph is not None:
+            try:
+                scope = self._compressed_graph.get_scope_by_node_name(node_name)
+            except RuntimeError:
+                nncf_logger.debug("Node {} not found in compressed graph when trying to determine containing module, "
+                                  "trying the original graph to see if the node was present there "
+                                  "during graph building")
+                scope = self._original_graph.get_scope_by_node_name(node_name)
+        else:
+            scope = self._original_graph.get_scope_by_node_name(node_name)
+        return self.get_module_by_scope(scope)
+
     def get_parameters_count_in_model(self):
         """
         Return total amount of model parameters.
@@ -737,7 +736,7 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
             count = count + param.numel()
         return count
 
-    def get_flops_per_module(self) -> Dict['Scope', int]:
+    def get_flops_per_module(self) -> Dict[NNCFNodeName, int]:
         """
         Calculates FLOPS count for modules.
         """
@@ -745,11 +744,13 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
         flops_count_dict = {}
 
         def get_hook(name):
-            ctx = self._compressed_context
-            return functools.partial(compute_FLOPs_hook, dict_to_save=flops_count_dict, ctx=ctx)
+            return functools.partial(compute_FLOPs_hook, dict_to_save=flops_count_dict,
+                                     module_node_name=name)
 
-        hook_list = [m.register_forward_hook(get_hook(n)) for n, m in model.named_modules()]
-
+        hook_list = []
+        for nncf_node in self._original_graph.get_all_nodes():
+            node_module = self.get_containing_module(nncf_node.node_name)
+            hook_list.append(node_module.register_forward_hook(get_hook(nncf_node.node_name)))
         model.do_dummy_forward(force_eval=True)
 
         for h in hook_list:
@@ -796,30 +797,47 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
 
         return Mgr(self)
 
-    @staticmethod
-    def collect_eval_only_ops_exec_context(model: nn.Module, graph_builder) -> List[str]:
+    def _collect_eval_only_op_scopes(self, model: nn.Module, dummy_forward_fn: Callable) -> List[Scope]:
         """
         Returns scopes of the modules which are executed in evaluation mode only.
         """
+
+        tracer = GraphTracer(dummy_forward_fn)
         result = []
-        eval_graph = graph_builder.build_graph(model, as_eval=True)
-        for nncf_node in eval_graph.get_all_nodes():
-            ia_op_exec_context = nncf_node.ia_op_exec_context
-            if ia_op_exec_context:
-                result.append(str(ia_op_exec_context))
+        eval_graph = tracer.trace_graph(model, as_eval=True)
+        for dyn_graph_node in eval_graph.get_all_nodes():
+            result.append(dyn_graph_node.op_exec_context.scope_in_model)
         return result
 
     @property
     def original_model_accuracy(self):
         return self._original_model_accuracy
 
+    def get_node_to_op_address_mapping(self) -> Dict[NNCFNodeName, OperationAddress]:
+        # The IDs of corresponding nodes of the original dynamic graph and original NNCF graph
+        # must be equal for this to work.
+        retval = {}
+        for node in self._original_dynamic_graph.get_all_nodes():
+            node_id = node.node_id
+            op_address = node.op_exec_context.op_address
+            nncf_node = self._original_graph.get_node_by_id(node_id)
+            retval[nncf_node.node_name] = op_address
+        return retval
+
 
 class PTModelTransformer(ModelTransformer):
-    def transform(self) -> NNCFNetwork:
+    def __init__(self, model: NNCFNetwork):
+        super().__init__(model)
+        self._node_to_op_address_mapping = model.get_node_to_op_address_mapping()
+
+    def transform(self, transformation_layout: PTTransformationLayout) -> NNCFNetwork:
         fns_grouped_by_points = {}  # type: Dict[PTInsertionPoint, List[Tuple[Callable, TransformationPriority]]]
-        for transformation_command in self._transformations:  # type: PTInsertionCommand
-            target_point = transformation_command.target_point
-            pt_ip = PTInsertionPoint(target_point)
+        for transformation_command in transformation_layout.transformations:  # type: PTInsertionCommand
+            target_point = transformation_command.target_point  # type: PTTargetPoint
+            target_node_name = target_point.target_node_name
+            pt_ip = PTInsertionPoint(target_type=target_point.target_type,
+                                     op_address=self._node_to_op_address_mapping[target_node_name],
+                                     input_port_id=target_point.input_port_id)
             fn = transformation_command.fn
             if target_point.type is TargetType.OPERATION_WITH_WEIGHTS:
                 fn = UpdateWeight(fn)

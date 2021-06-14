@@ -30,8 +30,8 @@ from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.torch.composite_compression import PTCompositeCompressionAlgorithmBuilder
 from nncf.torch.compression_method_api import PTCompressionLoss
-from nncf.torch.dynamic_graph.context import Scope
-from nncf.torch.dynamic_graph.context import ScopeElement
+from nncf.torch.dynamic_graph.scope import Scope
+from nncf.torch.dynamic_graph.scope import ScopeElement
 from nncf.common.hardware.config import HWConfigType
 from nncf.torch.layers import NNCFConv2d
 from nncf.torch.module_operations import UpdateInputs
@@ -44,8 +44,8 @@ from nncf.torch.quantization.layers import PTQuantizerSpec
 from nncf.torch.quantization.layers import QUANTIZATION_MODULES
 from nncf.torch.quantization.layers import SymmetricQuantizer
 from nncf.torch.quantization.layers import AsymmetricQuantizer
-from nncf.torch.quantization.quantizer_id import NonWeightQuantizerId
-from nncf.torch.quantization.quantizer_id import WeightQuantizerId
+from nncf.common.quantization.structs import NonWeightQuantizerId
+from nncf.common.quantization.structs import WeightQuantizerId
 from nncf.torch.utils import get_all_modules_by_type
 from tests.torch.helpers import BasicConvTestModel
 from tests.torch.helpers import TwoConvTestModel
@@ -395,16 +395,16 @@ def test_quantize_inputs():
     actual_input_quantizer_str_scopes = []
     for aq_id, aq_info in qctrl.non_weight_quantizers.items():
         for target_point in aq_info.affected_insertions:
-            quantizer_location_str = str(target_point.ia_op_exec_context)
-            if 'nncf_model_input' in quantizer_location_str:
-                actual_input_quantizer_str_scopes.append(quantizer_location_str)
+            quantizer_target_node_name = str(target_point.target_node_name)
+            if 'nncf_model_input' in quantizer_target_node_name:
+                actual_input_quantizer_str_scopes.append(quantizer_target_node_name)
 
     assert len(REF_QUANTIZED_INPUT_MODULE_SCOPES) == len(actual_input_quantizer_str_scopes)
     for qinput_scope_str in actual_input_quantizer_str_scopes:
         matches = set()
         for aq_id, aq_info in qctrl.non_weight_quantizers.items():
             for target_point in aq_info.affected_insertions:
-                if qinput_scope_str in str(target_point):
+                if qinput_scope_str in str(target_point.target_node_name):
                     matches.add(aq_id)
         assert len(matches) == 1
         input_aq_id = next(iter(matches))
@@ -537,9 +537,11 @@ def test_quantize_outputs_with_scope_overrides():
     config['compression']['quantize_outputs'] = True
     config['target_device'] = "TRIAL"
     config['compression']['scope_overrides'] = {
-        "nncf_model_output_0": {
-            "bits": 4,
-            "mode": "asymmetric",
+        "activations": {
+            "/nncf_model_output_0": {
+                "bits": 4,
+                "mode": "asymmetric",
+            }
         }
     }
     register_bn_adaptation_init_args(config)
@@ -553,7 +555,7 @@ def test_quantize_outputs_with_scope_overrides():
 
 @contextmanager
 def nncf_debug():
-    from nncf import set_log_level
+    from nncf.torch import set_log_level
     set_log_level(logging.DEBUG)
     yield
     set_log_level(logging.INFO)

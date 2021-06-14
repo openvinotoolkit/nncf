@@ -60,3 +60,16 @@ def test_setting_pruning_rate(all_weights, pruning_rate_to_set, ref_pruning_rate
     groupwise_pruning_rates = list(pruning_controller.current_groupwise_pruning_rate.values())
     assert np.isclose(groupwise_pruning_rates, ref_pruning_rates).all()
     assert np.isclose(pruning_controller.pruning_rate, ref_global_pruning_rate).all()
+
+
+def test_can_set_compression_rate_in_filter_pruning_algo():
+    """
+    Test setting the global pruning rate via the compression_rate property.
+    """
+    # Creating algorithm with empty config
+    config = get_basic_pruning_config(input_sample_size=[1, 1, 8, 8])
+    config['compression']['pruning_init'] = 0.2
+
+    _, pruning_controller, _ = create_pruning_algo_with_config(config)
+    pruning_controller.compression_rate = 0.65
+    assert pytest.approx(pruning_controller.compression_rate, 1e-2) == 0.65

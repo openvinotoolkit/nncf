@@ -18,6 +18,7 @@ from typing import Union
 from typing import List
 from typing import Tuple
 from typing import TypeVar
+import contextlib
 
 import onnx
 import numpy as np
@@ -35,7 +36,7 @@ from nncf.config.structure import BNAdaptationInitArgs
 from nncf.torch.composite_compression import PTCompositeCompressionAlgorithmBuilder
 from nncf.torch.compression_method_api import PTCompressionAlgorithmController
 from nncf.config import NNCFConfig
-from nncf.torch.dynamic_graph.context import Scope
+from nncf.torch.dynamic_graph.scope import Scope
 from nncf.torch.dynamic_graph.graph_tracer import create_input_infos
 from nncf.torch.initialization import register_default_init_args
 from nncf.torch.layers import NNCF_MODULES_MAP
@@ -418,3 +419,11 @@ class DummyDataLoader(InitializingDataLoader):
 
 def register_bn_adaptation_init_args(config: NNCFConfig):
     config.register_extra_structs([BNAdaptationInitArgs(data_loader=DummyDataLoader(), device=None)])
+
+
+@contextlib.contextmanager
+def set_torch_seed(seed: int = 42):
+    saved_seed = torch.seed()
+    torch.manual_seed(seed)
+    yield
+    torch.manual_seed(saved_seed)

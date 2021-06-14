@@ -12,7 +12,7 @@
 """
 import pytest
 import torch
-from nncf.torch.dynamic_graph.context import Scope
+from nncf.torch.dynamic_graph.scope import Scope
 from torch import nn
 
 from nncf.torch.layers import NNCFConv2d
