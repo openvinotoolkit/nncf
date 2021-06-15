@@ -17,7 +17,6 @@ from typing import List
 import pytest
 from nncf.torch.quantization.algo import QuantizationController
 
-from nncf.common.quantization.statistics import BitwidthDistributionStatistics
 from examples.torch.common.model_loader import load_model
 from nncf import NNCFConfig
 from nncf.torch import register_default_init_args
@@ -59,6 +58,12 @@ class ManualSampleConfigTestParams(ManualConfigTestParamsBase):
 class ManualTestConfigTestParams(ManualConfigTestParamsBase):
     def _get_config_path(self):
         return TEST_ROOT.joinpath('torch', 'data', 'configs', 'hawq') / self.name
+
+
+class BitwidthDistributionStatistics:
+    def __init__(self, num_wq_per_bitwidth, num_aq_per_bitwidth):
+        self.num_wq_per_bitwidth = num_wq_per_bitwidth
+        self.num_aq_per_bitwidth = num_aq_per_bitwidth
 
 
 MANUAL_CONFIG_TEST_PARAMS = [
@@ -120,7 +125,7 @@ def test_hawq_manual_configs(manual_config_params):
     nncf_stats = compression_ctrl.statistics()
 
     expected = manual_config_params.bit_stats
-    actual = nncf_stats.quantization.bitwidth_distribution_statistics
+    actual = nncf_stats.quantization
 
     assert expected.num_wq_per_bitwidth == actual.num_wq_per_bitwidth
     assert expected.num_aq_per_bitwidth == actual.num_aq_per_bitwidth
@@ -238,7 +243,7 @@ class TestPrecisionInitDesc:
             assert quantizer.num_bits == expected_bit, 'Unexpected number of bits for {}'.format(str(qid))
 
         nncf_stats = compression_ctrl.statistics()
-        actual_stats = nncf_stats.quantization.bitwidth_distribution_statistics
+        actual_stats = nncf_stats.quantization
 
         assert self.expected_stats.num_wq_per_bitwidth == actual_stats.num_wq_per_bitwidth
         assert self.expected_stats.num_aq_per_bitwidth == actual_stats.num_aq_per_bitwidth

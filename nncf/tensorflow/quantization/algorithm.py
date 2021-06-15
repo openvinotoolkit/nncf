@@ -64,6 +64,7 @@ from nncf.tensorflow.quantization.layers import FakeQuantize
 from nncf.tensorflow.quantization.quantizers import Quantizer
 from nncf.tensorflow.quantization.quantizers import TFQuantizerSpec
 from nncf.tensorflow.quantization.utils import apply_saturation_fix
+from nncf.tensorflow.quantization.collectors import TFQuantizationStatisticsCollector
 
 QUANTIZATION_LAYER_METATYPES = GENERAL_CONV_LAYER_METATYPES + LINEAR_LAYER_METATYPES
 
@@ -483,4 +484,9 @@ class QuantizationController(BaseCompressionAlgorithmController):
         return model
 
     def statistics(self, quickly_collected_only: bool = False) -> NNCFStatistics:
-        return NNCFStatistics()
+        collector = TFQuantizationStatisticsCollector(self.model, self._op_names)
+        stats = collector.collect()
+
+        nncf_stats = NNCFStatistics()
+        nncf_stats.register('quantization', stats)
+        return nncf_stats

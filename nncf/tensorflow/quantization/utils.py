@@ -18,6 +18,7 @@ import tensorflow as tf
 from nncf.tensorflow.graph.utils import get_nncf_operations
 from nncf.tensorflow.layers.wrapper import NNCFWrapper
 from nncf.tensorflow.layers.operation import NNCFOperation
+from nncf.tensorflow.quantization.layers import FakeQuantize
 
 
 def apply_saturation_fix(model: tf.keras.Model, op_names: List[str]) -> None:
@@ -42,3 +43,19 @@ def apply_saturation_fix_to_layer(wrapped_layer: NNCFWrapper, weight_attr: str, 
     layer_weight_updated = tf.where(mask, [0.], layer_weight_updated)
     layer_weight.assign(layer_weight_updated)
     op.apply_saturation_fix(ops_weights)
+
+
+def collect_fake_quantize_layers(model: tf.keras.Model) -> List[FakeQuantize]:
+    """
+    Collects all fake quantize layers from the provided model.
+
+    :param model: An instance of the `tf.keras.Model` class.
+    :return: A list of fake quantize layers.
+    """
+    fq_layers = []
+    for layer in model.layers:
+        if isinstance(layer, tf.keras.Model):
+            fq_layers.extend(collect_fake_quantize_layers(layer))
+        if isinstance(layer, FakeQuantize):
+            fq_layers.append(layer)
+    return fq_layers
