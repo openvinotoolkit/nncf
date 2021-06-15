@@ -34,7 +34,6 @@ from nncf.common.graph.model_transformer import ModelTransformer
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationPriority
 from nncf.torch.graph.patterns import GraphPattern
-from nncf.common.hardware.config import HWConfig
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.common.utils.ordered_enum import OrderedEnum
 from nncf.common.graph.graph_matching import find_subgraphs_matching_expression

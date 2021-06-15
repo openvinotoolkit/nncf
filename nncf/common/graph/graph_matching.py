@@ -14,7 +14,7 @@
 from typing import List
 import networkx as nx
 import networkx.algorithms.isomorphism as ism
-from nncf.torch.graph.patterns import GraphPattern
+from nncf.common.graph.patterns import GraphPattern
 
 
 def get_edge_boundaries(match: List[str], graph: nx.DiGraph):

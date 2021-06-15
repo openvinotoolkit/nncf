@@ -356,7 +356,7 @@ class ShareEdgesQuantizedDataPathStatisticsCollector(StatisticsCollector):
         merged_graph = deepcopy(original_graph._nx_graph)
         nx.set_node_attributes(merged_graph, False, self.IS_MERGED_GRAPH_ATTR)
         for match in matches:
-            if len(match) == 1:
+            if len(match) <= 1:
                 continue
 
             input_node_key = match[0]
