@@ -32,7 +32,6 @@ from nncf.tensorflow.sparsity.base_algorithm import BaseSparsityController
 from nncf.tensorflow.sparsity.base_algorithm import SPARSITY_LAYER_METATYPES
 from nncf.tensorflow.sparsity.rb.loss import SparseLoss
 from nncf.tensorflow.sparsity.rb.operation import RBSparsifyingWeight
-from nncf.tensorflow.sparsity.utils import apply_fn_to_op_weights
 from nncf.tensorflow.sparsity.collector import TFSparseModelStatisticsCollector
 from nncf.common.utils.helpers import should_consider_scope
 
@@ -99,7 +98,12 @@ class RBSparsityController(BaseSparsityController):
         if sparsity_level_mode == 'local':
             raise NotImplementedError('RB sparsity algorithm do not support local sparsity loss')
 
-        target_ops = apply_fn_to_op_weights(target_model, op_names)
+        target_ops = []
+        for wrapped_layer, _, op in get_nncf_operations(self.model, self._op_names):
+            target_ops.append(
+                (op, wrapped_layer.get_operation_weights(op.name))
+            )
+
         self._loss = SparseLoss(target_ops)
         schedule_type = params.get('schedule', 'exponential')
 
