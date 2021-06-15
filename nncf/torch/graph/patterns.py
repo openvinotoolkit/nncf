@@ -218,7 +218,6 @@ def get_full_pattern_graph(pattern_views=None):
         for pattern_view in pattern_views:
             graph_pattern = create_graph_pattern_from_pattern_view(pattern_view)
             FULL_PATTERN_GRAPH = FULL_PATTERN_GRAPH | graph_pattern
-    FULL_PATTERN_GRAPH.dump_graph('/home/aleksei/tmp/pattern.dot')
 
     return FULL_PATTERN_GRAPH
 
