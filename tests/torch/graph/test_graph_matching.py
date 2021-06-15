@@ -1,5 +1,5 @@
 from nncf.torch.graph.patterns import GraphPattern
-from nncf.torch.graph.graph_matching import find_subgraphs_match_expression
+from nncf.common.graph.graph_matching import find_subgraphs_matching_expression
 import networkx as nx
 
 
@@ -18,7 +18,7 @@ def test_ops_combination_patterns():
     ref_graph.add_node('1', type='a')
     ref_graph.add_node('2', type='c')
     ref_graph.add_edge('1', '2')
-    matches = find_subgraphs_match_expression(ref_graph, pattern)
+    matches = find_subgraphs_matching_expression(ref_graph, pattern)
     assert matches == [['1', '2']]
 
     pattern = first_pattern + second_pattern | third_pattern
@@ -27,7 +27,7 @@ def test_ops_combination_patterns():
     ref_graph.add_node('1', type='a')
     ref_graph.add_node('2', type='c')
     ref_graph.add_edge('1', '2')
-    matches = find_subgraphs_match_expression(ref_graph, pattern)
+    matches = find_subgraphs_matching_expression(ref_graph, pattern)
     assert matches == [['1', '2']]
 
     pattern = (first_pattern + second_pattern) * third_pattern
@@ -39,7 +39,7 @@ def test_ops_combination_patterns():
     ref_graph.add_edge('1', '2')
     ref_graph.add_edge('1', '3')
     ref_graph.add_edge('2', '3')
-    matches = find_subgraphs_match_expression(ref_graph, pattern)
+    matches = find_subgraphs_matching_expression(ref_graph, pattern)
 
     assert matches == [['1', '2', '3']]
 
@@ -61,7 +61,7 @@ def test_no_mathces():
     ref_graph.add_node('3', type='e')
     ref_graph.add_edge('1', '2')
     ref_graph.add_edge('2', '3')
-    matches = find_subgraphs_match_expression(ref_graph, pattern)
+    matches = find_subgraphs_matching_expression(ref_graph, pattern)
 
     assert not matches[0]
 
@@ -86,5 +86,5 @@ def test_two_matches():
     ref_graph.add_edge('2', '3')
     ref_graph.add_edge('5', '6')
 
-    matches = find_subgraphs_match_expression(ref_graph, pattern)
+    matches = find_subgraphs_matching_expression(ref_graph, pattern)
     assert matches == [['1', '2'], ['5', '6']]
