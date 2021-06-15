@@ -18,7 +18,6 @@ from enum import Enum
 from typing import Callable
 from typing import Dict
 from typing import List
-from typing import Optional
 from typing import Tuple
 from typing import TypeVar
 
@@ -34,7 +33,7 @@ from nncf.common.graph import NNCFNodeName
 from nncf.common.graph.model_transformer import ModelTransformer
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationPriority
-from nncf.torch.graph.patterns import GraphPattern, FULL_PATTERN_GRAPH
+from nncf.torch.graph.patterns import GraphPattern
 from nncf.common.hardware.config import HWConfig
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.common.utils.ordered_enum import OrderedEnum
@@ -219,15 +218,10 @@ class InsertionPointGraph(nx.DiGraph):
             if original_node.node_type == MODEL_INPUT_OP_NAME:
                 self._input_ips.append(post_hook_insertion_point)
 
-
-    def get_ip_graph_with_merged_hw_optimized_operations(self,
-                                                         hw_config: Optional[HWConfig] = None,
-                                                         additional_patterns: Optional[List[str]] = None) \
-            -> 'InsertionPointGraph':
+    def get_ip_graph(self, pattern_fusing_graph: GraphPattern) -> 'InsertionPointGraph':
         # pylint:disable=too-many-branches
         merged_ip_graph = deepcopy(self)
-        pattern = self._get_mergeable_operator_patterns(additional_patterns)
-        matches = find_subgraphs_matching_expression(self._base_nx_graph, pattern)
+        matches = find_subgraphs_matching_expression(self._base_nx_graph, pattern_fusing_graph)
         for match in matches:
             if len(match) <= 1:
                 continue
@@ -277,7 +271,6 @@ class InsertionPointGraph(nx.DiGraph):
 
         return merged_ip_graph
 
-
     @staticmethod
     def get_pre_hook_node_key(node_key: str, in_port_id: int = 0) -> str:
         return InsertionPointGraph.PRE_HOOK_ID_PREFIX + str(in_port_id) + ' ' + node_key
@@ -286,24 +279,8 @@ class InsertionPointGraph(nx.DiGraph):
     def get_post_hook_node_key(node_key: str) -> str:
         return InsertionPointGraph.POST_HOOK_ID_PREFIX + node_key
 
-    def _get_mergeable_operator_patterns(self, additional_patterns: Optional[List[List[str]]] = None) -> GraphPattern:
-        """
-        Resulting pattern should have single input; the operation with inputs to
-        quantize should be the input operation; outputs should only be produced by one output node.
-        """
-        full_pattern = FULL_PATTERN_GRAPH
-        if additional_patterns is not None:
-            for pattern in additional_patterns:
-                custom_pattern = GraphPattern(pattern[0])
-                for layer_name in pattern[1:]:
-                    custom_pattern = custom_pattern + GraphPattern(layer_name)
-            full_pattern = full_pattern | custom_pattern
-        return full_pattern
-
-
     def get_input_insertion_points(self) -> List[PTTargetPoint]:
         return self._input_ips
-
 
 
 class PTInsertionType(OrderedEnum):
@@ -428,7 +405,6 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
                                                           ShapeIgnoringTensorMetaComparator())
         self._load_listener = None
 
-
     @debuggable_forward
     def forward(self, *args, **kwargs):
         with self._compressed_context as ctx:  # type: TracingContext
@@ -450,6 +426,7 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
             through NNCF's forward once and got turned into TracedTensors by reference access.
         """
         is_traced_tensor_predicate = lambda x: isinstance(x, TracedTensor)
+
         def strip_fn(tensor: TracedTensor) -> torch.Tensor:
             if hasattr(torch.Tensor, 'as_subclass'):
                 return torch.Tensor.as_subclass(tensor, torch.Tensor)
@@ -459,7 +436,6 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
         args = objwalk(args, is_traced_tensor_predicate, strip_fn)
         kwargs = objwalk(kwargs, is_traced_tensor_predicate, strip_fn)
         return args, kwargs
-
 
     # Cannnot use property syntax here, otherwise the wrapped module will end up
     # being twice in the same checkpoint with different prefixes
@@ -475,9 +451,9 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
         from nncf.torch.utils import save_module_state, load_module_state
         saved_state = save_module_state(self)
         model_copy = NNCFNetwork(self.get_nncf_wrapped_model(), self.input_infos,
-                    self._user_dummy_forward_fn, self._wrap_inputs_fn,
-                    self.scopes_without_shape_matching, self.ignored_scopes, self.target_scopes,
-                    reset=True)
+                                 self._user_dummy_forward_fn, self._wrap_inputs_fn,
+                                 self.scopes_without_shape_matching, self.ignored_scopes, self.target_scopes,
+                                 reset=True)
         load_module_state(model_copy, saved_state)
         return model_copy
 
@@ -551,7 +527,6 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
             return retval
 
         return wrapped_user_dummy_forward_fn
-
 
     def _replace_modules_by_nncf_modules(self, device, eval_only_op_scopes: List[Scope] = None,
                                          reset: bool = False):
@@ -679,7 +654,6 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
         if force_eval:
             if train_mode:
                 self.train()
-
 
     def get_insertion_point_graph(self) -> InsertionPointGraph:
         ip_graph = InsertionPointGraph(self._original_graph)

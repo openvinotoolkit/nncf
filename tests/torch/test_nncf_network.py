@@ -670,7 +670,7 @@ class TestInsertionPointGraph:
     def test_get_ip_graph_with_merged_operations(self, mock_graph_factory, dot_file_name):
         mock_graph = mock_graph_factory()
         ip_graph = InsertionPointGraph(mock_graph)
-        merged_ip_graph = ip_graph.get_ip_graph_with_merged_hw_optimized_operations()
+        merged_ip_graph = ip_graph.get_ip_graph()
 
         data_dir = TEST_ROOT / 'torch/data/reference_graphs/pattern_merging'  # type: Path
 

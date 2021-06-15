@@ -69,6 +69,7 @@ def find_subgraphs_matching_expression(graph: nx.DiGraph, pattern_graph: GraphPa
     """
 
     def are_nodes_matching(node_1, node_2):
+        assert not isinstance(node_1['type'], list)
         return node_1['type'] in node_2['type']
 
     subgraphs = []

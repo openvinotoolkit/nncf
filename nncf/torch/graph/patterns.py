@@ -11,6 +11,8 @@
  limitations under the License.
 """
 
+from typing import Dict
+from typing import Optional
 from typing import Union
 from typing import List
 
@@ -31,16 +33,17 @@ class GraphPattern:
     """
     NODE_COUNTER = 0
 
-    def __init__(self, types: Union[str, List[str]]):
+    def __init__(self, types: Optional[Union[str, List[str]]] = None):
         """
         :param types: List or signle string of backend operations names
          that should be considered as one single node
         """
         self._graph = nx.DiGraph()
-        if isinstance(types, str):
-            types = [types]
-        self._graph.add_node(GraphPattern.NODE_COUNTER, type=types)
-        GraphPattern.NODE_COUNTER += 1
+        if types is not None:
+            if isinstance(types, str):
+                types = [types]
+            self._graph.add_node(GraphPattern.NODE_COUNTER, type=types)
+            GraphPattern.NODE_COUNTER += 1
 
     def __add__(self, other):
         def _add_second_subgraph_to_first_with_connected_edge(first: nx.DiGraph, second: nx.DiGraph) -> nx.DiGraph:
@@ -133,31 +136,91 @@ class GraphPattern:
         nx.drawing.nx_pydot.write_dot(self.graph, path)
 
 
-# Basic Types
-LINEAR_OPS_type = ['linear', 'conv2d', 'conv_transpose2d', 'conv3d',
-                   'conv_transpose3d', 'conv1d', 'addmm']
-RELU_type = ['relu', 'relu_', 'hardtanh']
-BN_type = ['batch_norm', 'batch_norm3d']
-POOLING_type = ['adaptive_avg_pool2d', 'adaptive_avg_pool3d', 'avg_pool2d', 'avg_pool3d']
-RELU_type = ['RELU', 'hardtanh']
-NON_RELU_ACTIVATIONS_type = ['elu', 'elu_', 'prelu', 'sigmoid', 'gelu']
-ARITHMETIC_type = ['__iadd__', '__add__', '__mul__', '__rmul__']
+def create_graph_pattern_from_pattern_view(pattern_view: List[str]) -> GraphPattern:
+    def is_node_expression(expression: str):
+        if "->" not in expression:
+            return True
+        return False
 
-# Basic Graph Patterns
-LINEAR_OPS = GraphPattern(LINEAR_OPS_type)
+    def is_edge_expression(expression: str):
+        return not is_node_expression(expression)
 
-BN = GraphPattern(BN_type)
+    def parse_node_str(node: str):
+        id_num = node.split()[0]
+        start_index = node.find('[')
+        types = node[start_index + 1: -1]
+        types = types.split(',')
+        return id_num, types
 
-ACTIVATIONS = GraphPattern(RELU_type + NON_RELU_ACTIVATIONS_type)
+    def parse_edge_str(edge: str):
+        edge = edge.replace(" ", "")
+        out_node, in_node = edge.split('->')
+        return out_node, in_node
 
-ARITHMETIC = GraphPattern(ARITHMETIC_type)
+    graph_pattern = GraphPattern()
+    mapping_config_name_pattern_names = {}
+    for single_exp in pattern_view:
+        if is_node_expression(single_exp):
+            id_name, types = parse_node_str(single_exp)
+            node_num = graph_pattern.add_node(types)
+            mapping_config_name_pattern_names[id_name] = node_num
+        elif is_edge_expression(single_exp):
+            u_node, v_node = parse_edge_str(single_exp)
+            u_name = mapping_config_name_pattern_names[u_node]
+            v_name = mapping_config_name_pattern_names[v_node]
+            graph_pattern.add_edge(u_name, v_name)
+    return graph_pattern
 
-ANY_BN_ACT_COMBO = BN + ACTIVATIONS | ACTIVATIONS + BN | BN | ACTIVATIONS
 
-# Linear Types United with Swish Activation
-MUL = GraphPattern('__mul__')
-SIGMOID = GraphPattern('sigmoid')
-LINEAR_OPS_SWISH_ACTIVATION = (LINEAR_OPS + SIGMOID) * MUL | LINEAR_OPS + (BN + SIGMOID) * MUL
+class PatternFactory:
+    def __init__(self):
+        self.graph_full_pattern = None
+        self.pattern_views = None
 
-FULL_PATTERN_GRAPH = LINEAR_OPS + ANY_BN_ACT_COMBO | ANY_BN_ACT_COMBO | \
-                     ARITHMETIC + ANY_BN_ACT_COMBO | LINEAR_OPS_SWISH_ACTIVATION
+    def get_full_pattern_graph(self, pattern_views=None):
+        if self.graph_full_pattern is not None and self.pattern_views == pattern_views:
+            return self.graph_full_pattern
+        self.pattern_views = pattern_views
+        self.graph_full_pattern = get_full_pattern_graph(pattern_views)
+        return self.graph_full_pattern
+
+
+def get_full_pattern_graph(pattern_views=None):
+    # Basic Types
+    LINEAR_OPS_type = ['linear', 'conv2d', 'conv_transpose2d', 'conv3d',
+                       'conv_transpose3d', 'conv1d', 'addmm']
+    BN_type = ['batch_norm', 'batch_norm3d']
+    POOLING_type = ['adaptive_avg_pool2d', 'adaptive_avg_pool3d', 'avg_pool2d', 'avg_pool3d']
+    RELU_type = ['relu', 'relu_', 'hardtanh']
+    NON_RELU_ACTIVATIONS_type = ['elu', 'elu_', 'prelu', 'sigmoid', 'gelu']
+    ARITHMETIC_type = ['__iadd__', '__add__', '__mul__', '__rmul__']
+
+    # Basic Graph Patterns
+    LINEAR_OPS = GraphPattern(LINEAR_OPS_type)
+
+    BN = GraphPattern(BN_type)
+
+    ACTIVATIONS = GraphPattern(RELU_type + NON_RELU_ACTIVATIONS_type)
+
+    ARITHMETIC = GraphPattern(ARITHMETIC_type)
+
+    ANY_BN_ACT_COMBO = BN + ACTIVATIONS | ACTIVATIONS + BN | BN | ACTIVATIONS
+
+    # Linear Types United with Swish Activation
+    MUL = GraphPattern('__mul__')
+    SIGMOID = GraphPattern('sigmoid')
+    LINEAR_OPS_SWISH_ACTIVATION = (LINEAR_OPS + SIGMOID) * MUL | LINEAR_OPS + (BN + SIGMOID) * MUL
+
+    FULL_PATTERN_GRAPH = LINEAR_OPS + ANY_BN_ACT_COMBO | ANY_BN_ACT_COMBO | \
+                         ARITHMETIC + ANY_BN_ACT_COMBO | LINEAR_OPS_SWISH_ACTIVATION
+
+    if pattern_views is not None:
+        for pattern_view in pattern_views:
+            graph_pattern = create_graph_pattern_from_pattern_view(pattern_view)
+            FULL_PATTERN_GRAPH = FULL_PATTERN_GRAPH | graph_pattern
+    FULL_PATTERN_GRAPH.dump_graph('/home/aleksei/tmp/pattern.dot')
+
+    return FULL_PATTERN_GRAPH
+
+
+PATTERN_FACTORY = PatternFactory()
