@@ -437,7 +437,6 @@ QUANTIZATION_SCHEMA = {
             "items": {
                 "type": "array",
                 "items": {
-                    "type": ["object", "array"],
                     "items": [_STRING]
                 }
             },
@@ -445,11 +444,19 @@ QUANTIZATION_SCHEMA = {
                            "model control flow graph that will have a quantizer appended at the end of the "
                            "sequence",
             "examples": [
-                [{"1": ['linear', 'conv2d', 'conv_transpose2d', 'conv3d', 'conv_transpose3d', 'conv1d', 'addmm'],
-                 "2": ['batch_norm', 'batch_norm3d']},
-                ["1", "2"],
+                [
+                    "1 type=[conv2d, linear]",
+                    "2 type=[SILU]",
+                    "1 -> 2"
                 ],
-                "h_swish"]
+                [
+                    "4 type=[conv2d, linear]",
+                    "5 type=[sigmoid]",
+                    "6 type=[RELU]",
+                    "4 -> 5",
+                    "4 -> 6"
+                ]
+            ]
         },
         "scope_overrides": {
             "type": "object",
