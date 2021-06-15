@@ -25,8 +25,7 @@ from nncf.tensorflow.layers.wrapper import NNCFWrapper
 
 def strip_model_from_masks(model: tf.keras.Model, op_names: List[str]) -> tf.keras.Model:
     if not isinstance(model, tf.keras.Model):
-        raise ValueError(
-            'Expected model to be a `tf.keras.Model` instance but got: {}'.format(type(model)))
+        raise ValueError(f'Expected model to be a `tf.keras.Model` instance but got: {type(model)}')
 
     transformations = TFTransformationLayout()
 
@@ -48,7 +47,7 @@ def strip_model_from_masks(model: tf.keras.Model, op_names: List[str]) -> tf.ker
     return TFModelTransformer(model).transform(transformations)
 
 
-def apply_fn_to_op_weights(model: tf.keras.Model, op_names: List[str], fn = lambda x: x):
+def apply_fn_to_op_weights(model: tf.keras.Model, op_names: List[str], fn=lambda x: x):
     sparsifyed_layers = collect_wrapped_layers(model)
     target_ops = []
     for layer in sparsifyed_layers:

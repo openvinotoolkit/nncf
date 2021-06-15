@@ -64,10 +64,23 @@ def get_basic_conv_test_model(input_shape=(4, 4, 1), out_channels=2, kernel_size
     return tf.keras.Model(inputs=inputs, outputs=outputs)
 
 
-def get_basic_two_conv_test_model(input_shape=(4, 4, 1), out_channels=2, kernel_size=2, weight_init=-1., bias_init=-2.):
+def get_basic_two_conv_test_model(input_shape=(4, 4, 1), out_channels=2, kernel_size=2, weight_init=-1., bias_init=-2.,
+                                  transpose=False):
     inputs = tf.keras.Input(shape=input_shape)
-    outputs = create_conv(input_shape[-1], input_shape[-1], kernel_size, weight_init, bias_init)(inputs)
-    outputs = create_conv(input_shape[-1], out_channels, kernel_size, weight_init, bias_init)(outputs)
+    outputs = create_conv(input_shape[-1], input_shape[-1], kernel_size, weight_init, bias_init, transpose)(inputs)
+    outputs = create_conv(input_shape[-1], out_channels, kernel_size, weight_init, bias_init, transpose)(outputs)
+    return tf.keras.Model(inputs=inputs, outputs=outputs)
+
+
+def get_basic_n_conv_test_model(input_shape=(24, 24, 1), in_out_ch=((1, 3), (3, 5), (5, 7), (7, 10)),
+                                kernel_sizes=(2,) * 4, weight_init=-1., bias_init=-2., transpose=False):
+    # n = 2 * len(in_out_ch) conv model
+    inputs = tf.keras.Input(shape=input_shape)
+    outputs = inputs
+    for in_out, kernel_size in zip(in_out_ch, kernel_sizes):
+        outputs = create_conv(*in_out, kernel_size, weight_init, bias_init, transpose)(outputs)
+    for in_out, kernel_size in zip(in_out_ch[::-1], kernel_sizes[::-1]):
+        outputs = create_conv(*reversed(in_out), kernel_size, weight_init, bias_init, transpose)(outputs)
     return tf.keras.Model(inputs=inputs, outputs=outputs)
 
 

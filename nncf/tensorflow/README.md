@@ -81,19 +81,19 @@ Quick jump to the samples:
 
 |**Model**|**Compression algorithm**|**Dataset**|**TensorFlow FP32 baseline**|**TensorFlow compressed accuracy**|
 | :---: | :---: | :---: | :---: | :---: |
-|Inception V3|INT8 w:sym,per-tensor a:sym,per-tensor |ImageNet|77.9|78.41|
+|Inception V3|INT8 w:sym,per-tensor a:sym,per-tensor |ImageNet|77.9|78.35|
 |Inception V3|Sparsity 54% (Magnitude)|ImageNet|77.9|77.87|
-|Inception V3|INT8 w:sym,per-tensor a:sym,per-tensor + Sparsity 61% (RB)|ImageNet|77.9|77.55|
-|MobileNet V2|INT8 w:sym,per-tensor a:sym,per-tensor |ImageNet|71.85|71.96|
+|Inception V3|INT8 w:sym,per-tensor a:sym,per-tensor + Sparsity 61% (RB)|ImageNet|77.9|77.58|
+|MobileNet V2|INT8 w:sym,per-tensor a:sym,per-tensor |ImageNet|71.85|71.66|
 |MobileNet V2|Sparsity 50% (RB)|ImageNet|71.85|71.34|
-|MobileNet V2|INT8 w:sym,per-tensor a:sym,per-tensor + Sparsity 52% (RB)|ImageNet|71.85|71.05|
-|MobileNet V3 small|INT8 w:sym,per-channel a:sym,per-tensor |ImageNet|68.38|67.51|
+|MobileNet V2|INT8 w:sym,per-tensor a:sym,per-tensor + Sparsity 52% (RB)|ImageNet|71.85|71.0|
+|MobileNet V3 small|INT8 w:sym,per-channel a:asym,per-tensor |ImageNet|68.38|67.7|
 |MobileNet V3 small|INT8 w:sym,per-channel a:asym,per-tensor + Sparsity 35% (Magnitude)|ImageNet|68.38|67.81|
-|MobileNet V3 large|INT8 w:sym,per-channel a:asym,per-tensor |ImageNet|75.81|75.13|
-|MobileNet V3 large|INT8 w:sym,per-channel a:asym,per-tensor + Sparsity 35% (Magnitude)|ImageNet|75.81|74.94|
-|ResNet50|INT8 w:sym,per-tensor a:sym,per-tensor|ImageNet|75.04|75.04|
+|MobileNet V3 large|INT8 w:sym,per-channel a:asym,per-tensor |ImageNet|75.81|75.0|
+|MobileNet V3 large|INT8 w:sym,per-channel a:asym,per-tensor + Sparsity 42% (RB)|ImageNet|75.81|75.15|
+|ResNet50|INT8 w:sym,per-tensor a:sym,per-tensor|ImageNet|75.04|75.0|
 |ResNet50|Sparsity 80% (RB)|ImageNet|75.04|74.36|
-|ResNet50|INT8 w:sym,per-tensor a:sym,per-tensor + Sparsity 65% (RB)|ImageNet|75.04|74.38|
+|ResNet50|INT8 w:sym,per-tensor a:sym,per-tensor + Sparsity 65% (RB)|ImageNet|75.04|74.3|
 |ResNet50|Filter Pruning 40%|ImageNet|75.04|74.98|
 |TensorFlow Hub MobileNet V2|Sparsity 35% (Magnitude)|ImageNet|71.84|71.90|
 
@@ -101,7 +101,7 @@ Quick jump to the samples:
 
 |**Model**|**Compression algorithm**|**Dataset**|**TensorFlow FP32 baseline mAP**|**TensorFlow compressed mAP**|
 | :---: | :---: | :---: | :---: | :---: |
-|RetinaNet|INT8 w:sym,per-tensor a:sym,per-tensor |COCO2017|33.44|33.3|
+|RetinaNet|INT8 w:sym,per-tensor a:sym,per-tensor |COCO2017|33.44|33.26|
 |RetinaNet|Sparsity 50% (Magnitude)|COCO2017|33.44|33.13|
 |RetinaNet|Filter Pruning 40%|COCO2017|33.44|32.7|
 

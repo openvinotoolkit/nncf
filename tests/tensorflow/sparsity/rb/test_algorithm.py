@@ -23,8 +23,10 @@ from nncf.tensorflow.sparsity.rb.loss import SparseLoss
 from nncf.tensorflow.graph.utils import collect_wrapped_layers
 from nncf.tensorflow.sparsity.rb.operation import RBSparsifyingWeight
 from nncf.tensorflow.sparsity.rb.functions import logit
-from tests.tensorflow.helpers import get_basic_conv_test_model, \
-    create_compressed_model_and_algo_for_test, get_op_by_cls, get_basic_two_conv_test_model
+from tests.tensorflow.helpers import get_op_by_cls
+from tests.tensorflow.helpers import create_compressed_model_and_algo_for_test
+from tests.tensorflow.helpers import get_basic_two_conv_test_model
+from tests.tensorflow.helpers import get_basic_conv_test_model
 
 
 def get_basic_sparsity_config(model_size=4, input_sample_size=None,
@@ -35,22 +37,22 @@ def get_basic_sparsity_config(model_size=4, input_sample_size=None,
 
     config = NNCFConfig()
     config.update({
-        "model": "basic_sparse_conv",
-        "model_size": model_size,
-        "input_info":
+        'model': 'basic_sparse_conv',
+        'model_size': model_size,
+        'input_info':
             {
-                "sample_size": input_sample_size,
+                'sample_size': input_sample_size,
             },
-        "compression":
+        'compression':
             {
-                "algorithm": "rb_sparsity",
-                "sparsity_init": sparsity_init,
-                "params":
+                'algorithm': 'rb_sparsity',
+                'sparsity_init': sparsity_init,
+                'params':
                     {
-                        "schedule": "polynomial",
-                        "sparsity_target": sparsity_target,
-                        "sparsity_target_epoch": sparsity_target_epoch,
-                        "sparsity_freeze_epoch": sparsity_freeze_epoch
+                        'schedule': 'polynomial',
+                        'sparsity_target': sparsity_target,
+                        'sparsity_target_epoch': sparsity_target_epoch,
+                        'sparsity_freeze_epoch': sparsity_freeze_epoch
                     },
             }
     })

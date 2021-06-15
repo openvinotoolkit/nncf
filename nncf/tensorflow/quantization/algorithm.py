@@ -10,10 +10,11 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-from typing import List
-from typing import Set
+
+from typing import List, Set
 
 import networkx as nx
+import tensorflow as tf
 
 from nncf.tensorflow.algorithm_selector import TF_COMPRESSION_ALGORITHMS
 from nncf.tensorflow.api.compression import TFCompressionAlgorithmBuilder
@@ -36,6 +37,7 @@ from nncf.tensorflow.loss import TFZeroCompressionLoss
 from nncf.tensorflow.quantization.initializers.minmax import MinMaxInitializer
 from nncf.tensorflow.quantization.layers import FakeQuantize
 from nncf.tensorflow.quantization.quantizers import TFQuantizerSpec
+from nncf.tensorflow.quantization.utils import apply_saturation_fix
 from nncf.api.compression import CompressionLoss
 from nncf.api.compression import CompressionScheduler
 from nncf.common.graph import NNCFGraph
@@ -74,16 +76,19 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
 
         self.quantize_inputs = self.config.get('quantize_inputs', True)
         self.quantize_outputs = self.config.get('quantize_outputs', False)
+        self._disable_saturation_fix = self.config.get('disable_saturation_fix', False)
+        self._target_device = config.get('target_device')
 
         self.global_quantizer_constraints = {}
         self.ignored_scopes_per_group = {}
         self.target_scopes_per_group = {}
+        self._op_names = []
 
         for quantizer_group in QUANTIZER_GROUPS:
             self._parse_group_params(self.config, quantizer_group)
 
     def build_controller(self, model):
-        return QuantizationController(model, self.config)
+        return QuantizationController(model, self.config, self._op_names)
 
     def _parse_group_params(self, config, quantizer_group):
         params_dict = config.get(quantizer_group, {})
@@ -106,9 +111,19 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
             qconfig = constraints.apply_constraints_to(qconfig)
         return qconfig
 
-    def _create_quantizer(self, name: str, qconfig: TFQuantizerSpec):
-        quantizer_cls = NNCF_QUANTIZATION_OPERATONS.get(qconfig.mode)
-        return quantizer_cls(name, qconfig)
+    def _get_half_range(self, qconfig):
+        if not self._disable_saturation_fix:
+            if self._target_device in ['CPU', 'ANY'] and qconfig.num_bits == 8:
+                logger.warning('A saturation issue fix will be applied. '
+                               'Now all weight quantizers will effectively use only 7 bits out of 8 bits. '
+                               'This resolves the saturation issue problem on AVX2 and AVX-512 machines. '
+                               'Please take a look at the documentation for a detailed information.')
+                return True
+        return False
+
+    def _create_quantizer(self, name: str, qspec: TFQuantizerSpec):
+        quantizer_cls = NNCF_QUANTIZATION_OPERATONS.get(qspec.mode)
+        return quantizer_cls(name, qspec)
 
     def get_transformation_layout(self, model):
         nncf_graph = convert_keras_model_to_nncf_graph(model)
@@ -120,9 +135,9 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
 
         transformations = TFTransformationLayout()
         qconfig = self._get_default_qconfig(self.global_quantizer_constraints[WEIGHTS])
+        half_range = self._get_half_range(qconfig)
         processed_shared_layer_names = set()  # type: Set[str]
         for node in nodes:
-
             if node.is_shared():
                 target_layer_name, _ = get_original_name_and_instance_index(node.node_name)
                 if target_layer_name in processed_shared_layer_names:
@@ -140,10 +155,13 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
                 op_name = self._get_quantizer_operation_name(
                     node.node_name,
                     weight_def.weight_attr_name)
+                self._op_names.append(op_name)
 
                 operation = self._create_quantizer(
                     op_name,
-                    TFQuantizerSpec.from_config(qconfig, narrow_range=True, half_range=False))
+                    TFQuantizerSpec.from_config(qconfig,
+                                                narrow_range=not half_range,
+                                                half_range=half_range))
 
                 transformations.register(
                     TFInsertionCommand(
@@ -158,6 +176,7 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
             fake_quantize_layer = FakeQuantize(
                 TFQuantizerSpec.from_config(qconfig, narrow_range=False, half_range=False),
                 name=fake_quantize_name)
+            self._op_names.append(fake_quantize_layer.op_name)
 
             transformations.register(
                 TFInsertionCommand(
@@ -263,11 +282,12 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
 
 
 class QuantizationController(TFCompressionAlgorithmController):
-    def __init__(self, target_model, config):
+    def __init__(self, target_model, config, op_names: List[str]):
         super().__init__(target_model)
         self._initializer = MinMaxInitializer(config)
         self._scheduler = BaseCompressionScheduler()
         self._loss = TFZeroCompressionLoss()
+        self._op_names = op_names
         self._config = config
         self._bn_adaptation = None
 
@@ -285,6 +305,10 @@ class QuantizationController(TFCompressionAlgorithmController):
         init_bn_adapt_config = self._config.get('initializer', {}).get('batchnorm_adaptation', {})
         if init_bn_adapt_config:
             self._run_batchnorm_adaptation()
+
+    def strip_model(self, model: tf.keras.Model) -> tf.keras.Model:
+        apply_saturation_fix(model, self._op_names)
+        return model
 
     def statistics(self, quickly_collected_only: bool = False) -> NNCFStatistics:
         return NNCFStatistics()

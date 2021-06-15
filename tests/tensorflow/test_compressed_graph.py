@@ -224,7 +224,7 @@ def get_test_models_desc(algorithm):
             marks=SKIP_MAP[algorithm].get('xception', ())
         ),
         pytest.param(
-            ModelDesc(ref_name('retinanet.pb'), test_models.RetinaNet, [1, None, None, 3]),
+            ModelDesc(ref_name('retinanet.pb'), test_models.RetinaNet, [1, 603, 603, 3]),
             marks=SKIP_MAP[algorithm].get('retinanet', ())
         ),
         ModelDesc(ref_name('sequential_model.pb'), test_models.SequentialModel, [1, 224, 224, 3]),
@@ -246,7 +246,7 @@ def get_test_models_desc(algorithm):
             marks=SKIP_MAP[algorithm].get('mask_rcnn', ())
         ),
         pytest.param(
-            ModelDesc(ref_name('yolo_v4.pb'), test_models.YOLOv4, [1, None, None, 3]),
+            ModelDesc(ref_name('yolo_v4.pb'), test_models.YOLOv4, [1, 603, 603, 3]),
             marks=SKIP_MAP[algorithm].get('yolo_v4', ())
         ),
         pytest.param(
@@ -402,7 +402,7 @@ class TestModelsGraph:
 
 QUANTIZE_OUTPUTS = [
     ModelDesc('mobilenet_v2_quantize_outputs.pb', test_models.MobileNetV2, [1, 96, 96, 3]),
-    ModelDesc('retinanet_quantize_outputs.pb', test_models.RetinaNet, [1, None, None, 3]),
+    ModelDesc('retinanet_quantize_outputs.pb', test_models.RetinaNet, [1, 603, 603, 3]),
     ModelDesc('sequential_model_quantize_outputs.pb', test_models.SequentialModel, [1, 224, 224, 3]),
     ModelDesc('shared_layers_model_quantize_outputs.pb', test_models.SharedLayersModel, [1, 30, 30, 3]),
 ]

@@ -45,6 +45,7 @@
     },
     {
          "algorithm": "quantization",
+         "disable_saturation_fix": true,
          "weights": {
             "mode": "symmetric",
             "bits": 8,

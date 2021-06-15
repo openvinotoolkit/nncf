@@ -20,8 +20,10 @@ from nncf.common.sparsity.schedulers import PolynomialSparsityScheduler
 from nncf.common.sparsity.schedulers import ExponentialSparsityScheduler
 from nncf.common.sparsity.schedulers import MultiStepSparsityScheduler
 from nncf.common.sparsity.schedulers import AdaptiveSparsityScheduler
-from tests.tensorflow.helpers import get_basic_conv_test_model, get_empty_config, \
-    create_compressed_model_and_algo_for_test, get_mock_model
+from tests.tensorflow.helpers import create_compressed_model_and_algo_for_test
+from tests.tensorflow.helpers import get_basic_conv_test_model
+from tests.tensorflow.helpers import get_empty_config
+from tests.tensorflow.helpers import get_mock_model
 
 
 @pytest.mark.parametrize('algo',
