@@ -117,7 +117,7 @@ class TestQuantizedWeightsEqualAfterFixApplied:
             quant_len = range_len / (128 - (2 if narrow_range else 1))
             assert (np.abs(np.abs(w_int7 - new_w) - quant_len / 2) < 1e-6).all(), 'Middle points calculated incorrectly'
 
-        apply_saturation_fix_to_layer(layer, 'kernel', op_name)
+        apply_saturation_fix_to_layer(layer, 'kernel', quantizer)
         assert not quantizer._half_range # pylint: disable=protected-access
         w_int8 = layer(tf.ones((1, 1))).numpy()
 
@@ -163,7 +163,7 @@ class TestQuantizedWeightsEqualAfterFixApplied:
             quant_len = range_len / (128 - (2 if narrow_range else 1))
             assert (np.abs(np.abs(w_int7 - new_w) - quant_len / 2) < EPS).all(), 'Middle points calculated incorrectly'
 
-        apply_saturation_fix_to_layer(layer, 'kernel', op_name)
+        apply_saturation_fix_to_layer(layer, 'kernel', quantizer)
         assert not quantizer._half_range # pylint: disable=protected-access
         w_int8 = layer(tf.ones((1, 1))).numpy()
 

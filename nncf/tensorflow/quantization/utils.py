@@ -17,6 +17,7 @@ import tensorflow as tf
 
 from nncf.tensorflow.graph.utils import get_nncf_operations
 from nncf.tensorflow.layers.wrapper import NNCFWrapper
+from nncf.tensorflow.layers.operation import NNCFOperation
 
 
 def apply_saturation_fix(model: tf.keras.Model, op_names: List[str]) -> None:
@@ -25,13 +26,12 @@ def apply_saturation_fix(model: tf.keras.Model, op_names: List[str]) -> None:
 
     for wrapped_layer, weight_attr, op in get_nncf_operations(model, op_names):
         if op.half_range:
-            apply_saturation_fix_to_layer(wrapped_layer, weight_attr, op.name)
+            apply_saturation_fix_to_layer(wrapped_layer, weight_attr, op)
 
 
-def apply_saturation_fix_to_layer(wrapped_layer: NNCFWrapper, weight_attr: str, op_name: str) -> None:
+def apply_saturation_fix_to_layer(wrapped_layer: NNCFWrapper, weight_attr: str, op: NNCFOperation) -> None:
     layer_weight = wrapped_layer.layer_weights[weight_attr]
-    op = wrapped_layer.weights_attr_ops[weight_attr][op_name]
-    ops_weights = wrapped_layer.ops_weights[op_name]
+    ops_weights = wrapped_layer.get_operation_weights(op.name)
     layer_weight.assign(
         op.call(layer_weight, ops_weights, False)
     )
