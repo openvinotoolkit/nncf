@@ -56,7 +56,7 @@ INSTALL_REQUIRES = ["ninja>=1.10.0.post2",
                     "scikit-learn>=0.24.0",
                     "wheel>=0.36.1"]
 
-python_version = sys.version_info[:2]
+python_version = sys.version_info
 if python_version < (3, 6, 2):
     print("Only Python >= 3.6.2 is supported")
     sys.exit(0)
