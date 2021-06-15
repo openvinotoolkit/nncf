@@ -44,7 +44,7 @@ class CompressionRatioCalculator:
         :returns: compression ratio of mixed-precision model by relation to fully INT8
         """
         quantization_points = quantizer_setup.quantization_points
-        weight_qps = filter(lambda pair: pair[1].is_weight_quantization_point(), quantization_points.items())
+        weight_qps = list(filter(lambda pair: pair[1].is_weight_quantization_point(), quantization_points.items()))
         bits_complexity = 0
         for w_qp_id, w_qp in weight_qps:
             wq_num_bits = w_qp.qconfig.num_bits
