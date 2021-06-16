@@ -5,7 +5,7 @@ from tests.helpers import OnesDatasetMock
 from tests.helpers import create_compressed_model_and_algo_for_test
 from tests.helpers import create_mock_dataloader
 from tests.sparsity.magnitude.test_helpers import get_basic_magnitude_sparsity_config
-from tests.quantization.test_quantization_helpers import create_rank_dataloader
+from tests.quantization.test_quantization_helpers import create_rank_dataloader, post_compression_test_distr_init
 from tests.quantization.test_quantization_helpers import distributed_init_test_default
 
 import torch
@@ -153,7 +153,7 @@ def test_loss_outputs_parsing():
         assert torch.allclose(inner_kd_mse, loss)
 
 
-@pytest.mark.parametrize("inference_type", ['DDP', 'cpu', 'single_GPU', 'DP'])
+@pytest.mark.parametrize("inference_type", ['cpu', 'single_GPU', 'DP'])
 def test_training_process(inference_type):
     if not torch.cuda.is_available() and not inference_type == 'cpu':
         return
@@ -194,8 +194,6 @@ def test_training_process(inference_type):
             actual_model = torch.nn.DataParallel(actual_model)
             ref_model = torch.nn.DataParallel(ref_model)
             dumped_orig_model = torch.nn.DataParallel(dumped_orig_model)
-        elif inference_type == 'DDP':
-            actual_model = torch.nn.parallel.DistributedDataParallel(actual_model)
 
     actual_model.train()
     ref_model.train()
@@ -219,3 +217,38 @@ def test_training_process(inference_type):
         ref_optimizer.step()
 
         assert torch.allclose(ref_output, act_output)
+
+
+def test_training_process_ddp():
+
+    torch.manual_seed(1)
+    input_size = [1, 1, 8, 8]
+    sparsity_level = 0.3
+    config = get_kd_config(
+        get_sparsity_config_with_sparsity_init(get_basic_magnitude_sparsity_config(input_sample_size=input_size),
+                                               sparsity_level))
+    gpu = torch.cuda.device_count()
+    ngpus_per_node = torch.cuda.device_count()
+    config.world_size = ngpus_per_node
+    torch.multiprocessing.spawn(run_distributed_training,
+                                nprocs=ngpus_per_node,
+                                args=(ngpus_per_node, config),
+                                join=True)
+
+
+def run_distributed_training(gpu, ngpus_per_node, config):
+    distributed_init_test_default(gpu, ngpus_per_node, config)
+
+    mse = torch.nn.MSELoss()
+    model = TwoConvTestModel()
+    fill_params_of_model_by_normal(model)
+    dumped_orig_model = deepcopy(model)
+
+    model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
+    model = post_compression_test_distr_init(compression_ctrl, config, ngpus_per_node, model)
+    optimizer = SGD(model.parameters(), lr=1e-02, weight_decay=1)
+    number_of_iters = 100
+    mock_dataloader = create_rank_dataloader(config, gpu)
+    for i, (input_, target) in enumerate(mock_dataloader):
+        output = model(input_)
+
