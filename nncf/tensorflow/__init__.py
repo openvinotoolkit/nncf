@@ -27,6 +27,7 @@ from nncf.tensorflow.backend import backend
 
 from nncf.tensorflow.helpers import create_compressed_model
 from nncf.tensorflow.helpers.callback_creation import create_compression_callbacks
+from nncf.tensorflow.initialization import register_default_init_args
 
 # Required for correct COMPRESSION_ALGORITHMS registry functioning
 from nncf.tensorflow.quantization import algorithm as quantization_algorithm
