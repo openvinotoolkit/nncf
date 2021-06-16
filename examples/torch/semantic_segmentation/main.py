@@ -24,6 +24,7 @@ import os
 import torch
 import torchvision.transforms as T
 
+from examples.torch.common.execution import set_seed
 from examples.torch.common.sample_config import create_sample_config
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 
@@ -164,12 +165,19 @@ def load_dataset(dataset, config):
         image_set='val',
         transforms=transforms_val)
 
+    train_sampler = None
+
     # Samplers
     if config.distributed:
-        train_sampler = torch.utils.data.distributed.DistributedSampler(train_set)
+        sampler_seed = 0 if config.seed is None else config.seed
+        dist_sampler_shuffle = config.seed is None
+        train_sampler = torch.utils.data.distributed.DistributedSampler(train_set,
+                                                                        seed=sampler_seed,
+                                                                        shuffle=dist_sampler_shuffle)
     else:
         train_sampler = torch.utils.data.RandomSampler(train_set)
 
+    train_shuffle = train_sampler is None and config.seed is None
     batch_size = config.batch_size
     num_workers = config.workers
 
@@ -182,7 +190,8 @@ def load_dataset(dataset, config):
             train_set,
             batch_size=batch_size_,
             sampler=train_sampler, num_workers=num_workers,
-            collate_fn=data_utils.collate_fn, drop_last=True)
+            collate_fn=data_utils.collate_fn, drop_last=True,
+            shuffle=train_shuffle)
     # Loaders
     train_loader = create_train_data_loader(batch_size)
     if config.batch_size_init:
@@ -463,6 +472,7 @@ def main_worker(current_gpu, config):
         configure_logging(logger, config)
         print_args(config)
 
+    set_seed(config)
     logger.info(config)
 
     dataset = get_dataset(config.dataset)
