@@ -68,13 +68,11 @@ from nncf.utils import get_all_modules_by_type
 from nncf.utils import get_state_dict_names_with_modules
 from nncf.utils import objwalk
 
-from threading import Lock
 
 MODEL_WRAPPED_BY_NNCF_ATTR_NAME = 'nncf_module'
 LEGACY_ACT_STORAGE_NAME = "activation_quantizers"
 EXTERNAL_QUANTIZERS_STORAGE_NAME = "external_quantizers"
 KD_LOSS_STORAGE_NAME = 'kd_loss'
-KD_MODEL_STORAGE_NAME = 'kd_model'
 STORAGE_DEVICE = 'storage_device'
 
 Module = TypeVar('Module', bound=nn.Module)
@@ -405,7 +403,6 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
         self.target_scopes = target_scopes
         self._user_dummy_forward_fn = dummy_forward_fn
         self.kd_original_model = None
-        self.lock = Lock()
 
         try:
             device = next(module.parameters()).device
@@ -486,12 +483,7 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
             retval = self._wrap_outputs_fn(retval)
 
         if self.kd_original_model is not None and self.get_nncf_wrapped_model().training:
-            #self.lock.acquire()
             kd_model = self.kd_original_model
-            # if not (next(self._kd_original_model[0].parameters()).device == args[0].device):
-            #     kd_model = deepcopy(self._kd_original_model[0]).to(args[0].device)
-            # else:
-            #     kd_model = self._kd_original_model[0]
             with torch.no_grad():
                 kd_outputs = kd_model(*args, **kwargs)
             kd_loss = self._calculate_kdloss_fn(retval, kd_outputs)
@@ -500,8 +492,6 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
             else:
                self._compressed_context.global_buffer_store[KD_LOSS_STORAGE_NAME].append(kd_loss.to(
                     self._compressed_context.global_buffer_store[STORAGE_DEVICE]))
-            #self.lock.release()
-            return kd_outputs
         return retval
 
     def enable_knowledge_distillation(self, kd_original_model, calculate_kdloss_fn):

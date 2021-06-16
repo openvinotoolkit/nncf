@@ -38,11 +38,26 @@ class KDLossCalculator(PTCompressionLoss):
         self.kdloss_fn = kdloss_fn
 
     def calculate_kd_loss(self, compressed_model_outputs, orig_model_outputs):
+        """
+        Calculates KD Loss value from compressed_model_outputs and orig_model_outputs. First uses
+        nested_object_paths_generator to unpack input containers and numerate contents inside them.
+        Than checks compressed_model_outputs unpacked container for loss tensors (requires_grad=True)
+        and maps extracted structure of loss tensors to orig_model_outputs.
+        Finally computes KD loss with extracted loss tensors.
+
+        :param compressed_model_outputs: Output tensors of compressed model can be any type of container with
+            deterministic detour
+        :param orig_model_outputs: Output tensors of original model (used for distillation) can be any type of 
+            container with deterministic detour.
+        :return: KDLoss value
+        """
+
         compressed_model_outputs_struct = []
         orig_model_outputs_struct = []
         nested_object_paths_generator([compressed_model_outputs], compressed_model_outputs_struct)
         nested_object_paths_generator([orig_model_outputs], orig_model_outputs_struct)
-        compressed_model_loss_nested_obj_paths = list(filter(lambda x: self._is_loss(x.getter()), compressed_model_outputs_struct))
+        compressed_model_loss_nested_obj_paths = list(filter(lambda x: self._is_loss(x.getter()),
+                                                             compressed_model_outputs_struct))
         compressed_model_loss_outputs = list(map(lambda x: x.getter(), compressed_model_loss_nested_obj_paths))
         orig_model_loss_outputs = list(map(lambda x: x.getter(), filter(
             partial(self.match_func, to_match_with=compressed_model_loss_nested_obj_paths), orig_model_outputs_struct)))
@@ -92,6 +107,8 @@ class KnowledgeDistillationBuilder(PTCompressionAlgorithmBuilder):
 
     def _get_transformation_layout(self, target_model: NNCFNetwork) -> PTTransformationLayout:
         self.original_model = deepcopy(target_model.nncf_module)
+        for param in self.original_model.parameters():
+            param.requires_grad = False
         return PTTransformationLayout()
 
     def build_controller(self, target_model):

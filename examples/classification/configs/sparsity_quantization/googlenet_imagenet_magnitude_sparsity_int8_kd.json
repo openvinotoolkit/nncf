@@ -29,7 +29,7 @@
     "compression": [
         {
             "algorithm": "knowledge_distillation",
-            "type": "mse"
+            "type": "softmax"
         },
         {
             "algorithm": "magnitude_sparsity",
