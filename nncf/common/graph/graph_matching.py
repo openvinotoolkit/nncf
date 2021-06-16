@@ -83,7 +83,7 @@ def find_subgraphs_matching_expression(graph: nx.DiGraph, pattern_graph: GraphPa
     for pattern in patterns:
         matcher = ism.DiGraphMatcher(graph, pattern, node_match=are_nodes_matching)
         for subgraph in matcher.subgraph_isomorphisms_iter():
-            subgraph = list(subgraph)
+            subgraph = sorted(list(subgraph))
             is_visited_node = any(node in visited_nodes for node in subgraph)
             if is_visited_node:
                 continue

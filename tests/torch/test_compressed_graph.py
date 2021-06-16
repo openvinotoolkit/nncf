@@ -152,7 +152,6 @@ class QuantizeTestCaseConfiguration:
 
 QUANTIZERS = ['symmetric', 'asymmetric']
 
-
 @pytest.fixture(scope='function', params=QUANTIZERS)
 def _case_config(request):
     quantization_type = request.param
@@ -751,8 +750,8 @@ def test_custom_quantizable_subgraph_patterns(_case_config):
     config = get_basic_quantization_config(_case_config.quant_type, input_sample_sizes=input_shape)
 
     config["compression"].update({"quantize_outputs": False,
-                                  "quantizable_subgraph_patterns": [["sigmoid", "__mul__"],
-                                                                    ["__iadd__", "batch_norm"]]})
+                                  "quantize_patterns": [["1 sigmoid", "2 __mul__", "1 -> 2"],
+                                                        ["3 __iadd__", "4 batch_norm", "3 -> 4"]]})
     register_bn_adaptation_init_args(config)
 
     compressed_model, _ = create_compressed_model_and_algo_for_test(model, config)

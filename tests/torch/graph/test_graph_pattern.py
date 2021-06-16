@@ -2,14 +2,12 @@ from nncf.torch.graph.patterns import GraphPattern
 import networkx as nx
 
 
-def test_ops_combination_patterns():
+def test_ops_combination_two_patterns():
     first_type = ['a', 'b']
     second_type = ['c', 'd']
-    third_type = ['e']
 
     first_pattern = GraphPattern(first_type)
     second_pattern = GraphPattern(second_type)
-    third_pattern = GraphPattern(third_type)
 
     ref_pattern = GraphPattern(first_type)
     added_node = ref_pattern.add_node(['c', 'd'])
@@ -34,6 +32,16 @@ def test_ops_combination_patterns():
 
     adding_pattern = first_pattern * second_pattern
     assert ref_pattern == adding_pattern
+
+
+def test_ops_combination_three_patterns():
+    first_type = ['a', 'b']
+    second_type = ['c', 'd']
+    third_type = ['e']
+
+    first_pattern = GraphPattern(first_type)
+    second_pattern = GraphPattern(second_type)
+    third_pattern = GraphPattern(third_type)
 
     ref_pattern = GraphPattern(first_type)
     added_node = ref_pattern.add_node(second_type)

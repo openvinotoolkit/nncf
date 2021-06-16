@@ -13,8 +13,6 @@
 
 from nncf.common.graph.patterns import GraphPattern
 from nncf.common.graph.patterns import create_graph_pattern_from_pattern_view
-# TODO: How to use this func?
-from nncf.torch.graph.version_agnostic_op_names import get_version_agnostic_name
 
 
 class PatternFactory:
@@ -64,6 +62,7 @@ def get_full_pattern_graph(pattern_views=None):
             graph_pattern = create_graph_pattern_from_pattern_view(pattern_view)
             FULL_PATTERN_GRAPH = FULL_PATTERN_GRAPH | graph_pattern
 
+    FULL_PATTERN_GRAPH.dump_graph('/home/aleksei/tmp/pattern.dot')
     return FULL_PATTERN_GRAPH
 
 

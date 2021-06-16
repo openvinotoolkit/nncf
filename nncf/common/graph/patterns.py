@@ -143,10 +143,11 @@ def create_graph_pattern_from_pattern_view(pattern_view: List[str]) -> GraphPatt
 
     def parse_node_str(node: str):
         id_num = node.split()[0]
-        start_index = node.find('[')
-        types = node[start_index + 1: -1]
-        types = types.split(',')
-        return id_num, types
+        #start_index = node.find('[')
+
+        op_type = node.split()[1]
+        # types = types.split(',')
+        return id_num, op_type
 
     def parse_edge_str(edge: str):
         edge = edge.replace(" ", "")
@@ -158,7 +159,7 @@ def create_graph_pattern_from_pattern_view(pattern_view: List[str]) -> GraphPatt
     for single_exp in pattern_view:
         if is_node_expression(single_exp):
             id_name, types = parse_node_str(single_exp)
-            node_num = graph_pattern.add_node(types)
+            node_num = graph_pattern.add_node([types])
             mapping_config_name_pattern_names[id_name] = node_num
         elif is_edge_expression(single_exp):
             u_node, v_node = parse_edge_str(single_exp)

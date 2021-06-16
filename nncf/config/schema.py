@@ -445,14 +445,14 @@ QUANTIZATION_SCHEMA = {
                            "sequence",
             "examples": [
                 [
-                    "1 type=[conv2d, linear]",
-                    "2 type=[SILU]",
+                    "1 conv2d",
+                    "2 SILU",
                     "1 -> 2"
                 ],
                 [
-                    "4 type=[conv2d, linear]",
-                    "5 type=[sigmoid]",
-                    "6 type=[RELU]",
+                    "4 conv2d",
+                    "5 sigmoid",
+                    "6 RELU",
                     "4 -> 5",
                     "4 -> 6"
                 ]

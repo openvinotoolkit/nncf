@@ -352,8 +352,7 @@ class PropagationBasedQuantizerSetupGenerator(QuantizerSetupGeneratorBase):
             additional_unified_scale_op_scopes=self._unified_scale_ops,
             quantize_outputs=self._quantize_outputs)
 
-        merged_ip_graph = insertion_point_graph.get_ip_graph(
-            self._pattern_fusing_graph)
+        merged_ip_graph = insertion_point_graph.get_ip_graph(self._pattern_fusing_graph)
         quantization_proposal = prop_graph_solver.run_on_ip_graph(merged_ip_graph)
         self._num_potential_quantized_activations = prop_graph_solver.get_num_potential_quantized_activations()
 

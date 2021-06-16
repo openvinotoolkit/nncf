@@ -46,4 +46,4 @@ def test_config_parser(custom_patterns):
     for custom_pattern in custom_patterns:
         ref_graph = create_ref_graph(custom_pattern)
         subgraphs = find_subgraphs_matching_expression(ref_graph, pattern)
-        assert len(subgraphs[0])
+        assert subgraphs[0]
