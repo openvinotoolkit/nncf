@@ -477,12 +477,12 @@ class FilterPruningController(BasePruningAlgoController):
         tmp_out_channels = self._layers_out_channels.copy()
 
         for group in self._pruned_layer_groups_info.get_all_clusters():
-            assert all(tmp_out_channels[group.nodes[0].node_name] == tmp_out_channels[node.node_name] for node in
-                       group.nodes)
-            mask = self._original_graph.get_node_by_key(group.nodes[0].node_name).data['output_mask']
+            assert all(tmp_out_channels[group.elements[0].node_name] == tmp_out_channels[node.node_name] for node in
+                       group.elements)
+            mask = self._original_graph.get_node_by_key(group.elements[0].node_name).data['output_mask']
             new_out_channels_num = int(sum(mask))
             num_of_sparse_elems = len(mask) - new_out_channels_num
-            for node in group.nodes:
+            for node in group.elements:
                 tmp_out_channels[node.node_name] = new_out_channels_num
             # Prune in_channels in all next nodes of cluster
             for node_name in self._next_nodes[group.id]:
