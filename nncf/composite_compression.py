@@ -36,7 +36,7 @@ class PTCompositeCompressionLoss(CompositeCompressionLoss, PTCompressionLoss):
         super().__init__()
         self._child_losses = torch.nn.ModuleList()
 
-    def calculate(self, input_=None, target=None) -> Any:
+    def calculate(self) -> Any:
         """
         Traverses through all children and calculates the total compression
         loss value.
@@ -44,7 +44,7 @@ class PTCompositeCompressionLoss(CompositeCompressionLoss, PTCompressionLoss):
         """
         result_loss = 0
         for loss in self._child_losses:
-            result_loss += loss(input_, target)
+            result_loss += loss()
         return result_loss
 
     @property

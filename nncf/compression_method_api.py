@@ -49,19 +49,19 @@ class PTCompressionLoss(nn.Module, CompressionLoss):
     and fully-connected layers to construct the loss function.
     """
 
-    def calculate(self, input_=None, target=None) -> torch.Tensor:
+    def calculate(self) -> torch.Tensor:
         """
         Calculates the compression loss value.
         :return: The compression loss value.
         """
         return torch.zeros([])
 
-    def forward(self, input_=None, target=None) -> torch.Tensor:
+    def forward(self) -> torch.Tensor:
         """
         Overriding  forward function of the base nn.Module class
         :return: The compression loss value.
         """
-        return self.calculate(input_, target)
+        return self.calculate()
 
     def statistics(self, quickly_collected_only: bool = False) -> Dict[str, object]:
         """

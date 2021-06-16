@@ -71,7 +71,7 @@ class Train:
             # Loss computation
             loss = self.criterion(loss_outputs, labels)
 
-            compression_loss = self.compression_ctrl.loss(outputs, inputs)
+            compression_loss = self.compression_ctrl.loss()
             loss += compression_loss
 
             # Backpropagation
