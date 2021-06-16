@@ -1,5 +1,7 @@
 *.png filter=lfs diff=lfs merge=lfs -text
 *.pb filter=lfs diff=lfs merge=lfs -text
+
+* text=auto eol=lf
 /LICENSE filter=lfs diff=lfs merge=lfs -text
 /CODEOWNERS filter=lfs diff=lfs merge=lfs -text
 *.gitignore filter=lfs diff=lfs merge=lfs -text
