@@ -83,6 +83,9 @@ def find_subgraphs_matching_expression(graph: nx.DiGraph, pattern_graph: GraphPa
     for pattern in patterns:
         matcher = ism.DiGraphMatcher(graph, pattern, node_match=are_nodes_matching)
         for subgraph in matcher.subgraph_isomorphisms_iter():
+            # Sort operations in subgraph by their IDs
+            # This is needed for
+            # find_whether_subgraph_has_inner_outgoing_edges()
             subgraph = sorted(list(subgraph), key=lambda x: int(x.split()[0]))
             is_visited_node = any(node in visited_nodes for node in subgraph)
             if is_visited_node:
