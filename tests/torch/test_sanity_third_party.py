@@ -19,6 +19,7 @@ import sys
 import pytest
 
 from nncf.torch import BKC_TORCH_VERSION
+from nncf.torch import BKC_TORCHVISION_VERSION
 from tests.torch.helpers import Command
 from tests.common.helpers import PROJECT_ROOT
 
@@ -265,7 +266,7 @@ class TestMmdetection:
                            cwd=self.MMDET_PATH,
                            use_cache=False)
         pip_runner.run_pip("install onnx onnxruntime", cwd=self.MMDET_PATH)
-        pip_runner.run_pip("install torchvision==0.9.1", cwd=self.MMDET_PATH)
+        pip_runner.run_pip("install torchvision=={}".format(BKC_TORCHVISION_VERSION), cwd=self.MMDET_PATH)
         pip_runner.run_pip("install -r requirements/build.txt", cwd=self.MMDET_PATH)
         pip_runner.run_pip("install -v -e .", cwd=self.MMDET_PATH)
         pip_runner.run_pip("install -U \"git+https://github.com/open-mmlab/cocoapi.git#subdirectory=pycocotools\"",
