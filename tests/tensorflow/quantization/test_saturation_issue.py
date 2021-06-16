@@ -63,7 +63,7 @@ def get_weights_for_saturation_issue_test(low, range_len, narrow_range, init_w_a
             min_adj = Quantizer._min_adj(7, low, range_len, narrow_range).numpy() # pylint: disable=protected-access
             mid_points = [min_adj + (i + 1 / 2) * quant_len for i in range(127)]
 
-        new_w = mid_points * int(np.round(0.5 + DIM_SPLIT/128))
+        new_w = mid_points * int(np.round(0.5 + DIM_SPLIT / 128))
         new_w = tf.reshape(tf.constant(new_w[:DIM_SPLIT], dtype=tf.float32), (1, -1))
     else:
         new_w = tf.reshape(tf.constant(
