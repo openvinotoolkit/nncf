@@ -274,10 +274,10 @@ class QuantizationEnv:
 
 
     def _create_quantizer_table(self) -> pd.DataFrame:
-        def get_hook(qtuple, exec_ordereddict):
-            def register_quantizer_exec_order(module, input_, output, qtuple, exec_ordereddict):
-                exec_ordereddict[qtuple[0]] = qtuple[1]
-            return functools.partial(register_quantizer_exec_order, qtuple=qtuple, exec_ordereddict=exec_ordereddict)
+        def get_hook(qid, exec_order_list):
+            def register_quantizer_exec_order(module, input_, output, qid, exec_order_list):
+                exec_order_list.append(qid)
+            return functools.partial(register_quantizer_exec_order, qid=qid, exec_order_list=exec_order_list)
 
         # Create a mapping of qid to its adjacent quantizer group id
         adjq_gid_map = OrderedDict.fromkeys(self.qctrl.all_quantizations.keys())
@@ -288,12 +288,12 @@ class QuantizationEnv:
             "both qconfig_space_map and adjq_gid_map must have exact keys."
 
         # AutoQ requires quantizers in execution order
-        quantizers_in_exec_order = OrderedDict()
+        quantizers_in_exec_order = []
         hooklist = []
         for qid, qmod in self.qctrl.all_quantizations.items():
             hooklist.append(
                 qmod.register_forward_hook(
-                    get_hook((qid, qmod), quantizers_in_exec_order)
+                    get_hook(qid, quantizers_in_exec_order)
                 )
             )
         self.qmodel.do_dummy_forward(force_eval=True)
@@ -301,7 +301,7 @@ class QuantizationEnv:
             h.remove()
 
         d = OrderedDict()
-        for qid, qmod in quantizers_in_exec_order.items():
+        for qid in quantizers_in_exec_order:
             idx_str = str(qid)
             gid = adjq_gid_map[qid]
 
