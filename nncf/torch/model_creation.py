@@ -122,7 +122,7 @@ def create_compressed_model(model: Module, config: NNCFConfig,
     composite_builder.apply_to(compressed_model)
 
     compression_ctrl = composite_builder.build_controller(compressed_model)
-
+    compressed_model.rebuild_graph()
 
     try:
         if resuming_state_dict is not None:

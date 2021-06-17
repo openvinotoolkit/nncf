@@ -63,10 +63,6 @@ class PTCompositeCompressionAlgorithmBuilder(
 
         self.initialize(transformed_model)
 
-        # We must rebuild graph to ensure that RNNs like models have
-        # correct dynamic graph in their compressed context;
-        # It is essential for functioning pre- and post-hooks during model's forward pass
-        target_model.rebuild_graph()
         return transformed_model
 
     def build_controller(self, model: ModelType) -> 'PTCompositeCompressionAlgorithmController':
