@@ -122,6 +122,9 @@ def create_compressed_model(model: Module, config: NNCFConfig,
     composite_builder.apply_to(compressed_model)
 
     compression_ctrl = composite_builder.build_controller(compressed_model)
+
+    # Required to ensure that the model leaving create_compressed_model has correct compressed graph.
+    # In particular, this is currently required for correct functioning of RNNs.
     compressed_model.rebuild_graph()
 
     try:
