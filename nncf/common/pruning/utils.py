@@ -242,44 +242,84 @@ def get_cluster_next_nodes(graph: NNCFGraph, pruned_groups_info: Clusterization[
     return next_nodes
 
 
-def count_flops_for_nodes(graph: NNCFGraph,
-                          input_shapes: Dict[NNCFNodeName, List[int]],
-                          output_shapes:  Dict[NNCFNodeName, List[int]],
-                          conv_op_metatypes: List[Type[OperatorMetatype]],
-                          linear_op_metatypes: List[Type[OperatorMetatype]],
-                          input_channels: Dict[NNCFNodeName, int] = None,
-                          output_channels: Dict[NNCFNodeName, int] = None) -> Dict[NNCFNodeName, int]:
+def count_flops_and_weights(graph: NNCFGraph,
+                            input_shapes: Dict[NNCFNodeName, List[int]],
+                            output_shapes: Dict[NNCFNodeName, List[int]],
+                            conv_op_metatypes: List[Type[OperatorMetatype]],
+                            linear_op_metatypes: List[Type[OperatorMetatype]],
+                            input_channels: Dict[NNCFNodeName, int] = None,
+                            output_channels: Dict[NNCFNodeName, int] = None) -> Tuple[int, int]:
     """
-    Counts the number FLOPs in the model for convolution and fully connected layers.
+    Counts the number weights and FLOPs in the model for convolution and fully connected layers.
 
     :param graph: NNCFGraph.
     :param input_shapes: Dictionary of input dimension shapes for convolutions and
-                         fully connected layers. E.g {node_name: (height, width)}
+        fully connected layers. E.g {node_name: (height, width)}
     :param output_shapes: Dictionary of output dimension shapes for convolutions and
-                          fully connected layers. E.g {node_name: (height, width)}
+        fully connected layers. E.g {node_name: (height, width)}
     :param conv_op_metatypes: List of metatypes defining convolution operations.
     :param linear_op_metatypes: List of metatypes defining linear/fully connected operations.
     :param input_channels: Dictionary of input channels number in convolutions.
-                           If not specified, taken from the graph. {node_name: channels_num}
+        If not specified, taken from the graph. {node_name: channels_num}
     :param output_channels: Dictionary of output channels number in convolutions.
-                            If not specified, taken from the graph. {node_name: channels_num}
+        If not specified, taken from the graph. {node_name: channels_num}
+    :return number of FLOPs for the model
+            number of weights (params) in the model
+    """
+    flops_pers_node, weights_per_node = count_flops_and_weights_per_node(graph,
+                                                                         input_shapes, output_shapes,
+                                                                         conv_op_metatypes, linear_op_metatypes,
+                                                                         input_channels, output_channels)
+    return sum(flops_pers_node.values()), sum(weights_per_node.values())
+
+
+def count_flops_and_weights_per_node(graph: NNCFGraph,
+                                     input_shapes: Dict[NNCFNodeName, List[int]],
+                                     output_shapes: Dict[NNCFNodeName, List[int]],
+                                     conv_op_metatypes: List[Type[OperatorMetatype]],
+                                     linear_op_metatypes: List[Type[OperatorMetatype]],
+                                     input_channels: Dict[NNCFNodeName, int] = None,
+                                     output_channels: Dict[NNCFNodeName, int] = None) -> \
+        Tuple[Dict[NNCFNodeName, int], Dict[NNCFNodeName, int]]:
+    """
+    Counts the number weights and FLOPs per node in the model for convolution and fully connected layers.
+
+    :param graph: NNCFGraph.
+    :param input_shapes: Dictionary of input dimension shapes for convolutions and
+        fully connected layers. E.g {node_name: (height, width)}
+    :param output_shapes: Dictionary of output dimension shapes for convolutions and
+        fully connected layers. E.g {node_name: (height, width)}
+    :param conv_op_metatypes: List of metatypes defining convolution operations.
+    :param linear_op_metatypes: List of metatypes defining linear/fully connected operations.
+    :param input_channels: Dictionary of input channels number in convolutions.
+        If not specified, taken from the graph. {node_name: channels_num}
+    :param output_channels: Dictionary of output channels number in convolutions.
+        If not specified, taken from the graph. {node_name: channels_num}
     :return Dictionary of FLOPs number {node_name: flops_num}
+            Dictionary of weights number {node_name: weights_num}
     """
     flops = {}
+    weights = {}
     input_channels = input_channels or {}
     output_channels = output_channels or {}
     for node in graph.get_nodes_by_metatypes(conv_op_metatypes):
         name = node.node_name
         num_in_channels = input_channels.get(name, node.layer_attributes.in_channels)
         num_out_channels = output_channels.get(name, node.layer_attributes.out_channels)
-        flops[name] = 2 * np.prod(node.layer_attributes.kernel_size) * \
+        flops_numpy = 2 * np.prod(node.layer_attributes.kernel_size) * \
                       num_in_channels * num_out_channels * np.prod(output_shapes[name])
+        weights_numpy = np.prod(node.layer_attributes.kernel_size) * num_in_channels * num_out_channels
+        flops[name] = flops_numpy.astype(int).item()
+        weights[name] = weights_numpy.astype(int).item()
 
     for node in graph.get_nodes_by_metatypes(linear_op_metatypes):
         name = node.node_name
-        flops[name] = 2 * np.prod(input_shapes[name]) * np.prod(output_shapes[name])
+        flops_numpy = 2 * np.prod(input_shapes[name]) * np.prod(output_shapes[name])
+        weights_numpy = np.prod(input_shapes[name]) * np.prod(output_shapes[name])
+        flops[name] = flops_numpy.astype(int).item()
+        weights[name] = weights_numpy.astype(int).item()
 
-    return flops
+    return flops, weights
 
 
 def calculate_in_out_channels_in_uniformly_pruned_model(pruning_groups: List[Cluster[PrunedLayerInfoBase]],
