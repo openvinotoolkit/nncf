@@ -1,7 +1,6 @@
 from copy import deepcopy
 
 from tests.helpers import TwoConvTestModel
-from tests.helpers import OnesDatasetMock
 from tests.helpers import create_compressed_model_and_algo_for_test
 from tests.helpers import create_mock_dataloader
 from tests.sparsity.magnitude.test_helpers import get_basic_magnitude_sparsity_config
@@ -9,7 +8,7 @@ from tests.quantization.test_quantization_helpers import create_rank_dataloader,
 from tests.quantization.test_quantization_helpers import distributed_init_test_default
 
 import torch
-from torch.optim import Adam, SGD
+from torch.optim import SGD
 import pytest
 
 KEY_TO_KD_PARAMETERS = 'kd'
@@ -80,11 +79,6 @@ def create_sparsified_model_with_kd(model, input_size=[1, 1, 4, 4], sparsity_lev
     return model, compression_ctrl
 
 
-def test_kd_complex_output_container_unpacking():
-    pass
-
-
-# ToDo: add DDP
 @pytest.mark.parametrize("inference_type", ['cpu', 'single_GPU', 'DP'])
 def test_kd_model_weights(inference_type):
     torch.manual_seed(1)
@@ -158,8 +152,6 @@ def test_training_process(inference_type):
     if not torch.cuda.is_available() and not inference_type == 'cpu':
         return
 
-    gpu = torch.cuda.device_count()
-    ngpus_per_node = 1
     torch.manual_seed(1)
     input_size = [1, 1, 8, 8]
     sparsity_level = 0.3
@@ -179,13 +171,7 @@ def test_training_process(inference_type):
     number_of_iters = 100
     mock_dataloader = create_mock_dataloader(config, num_samples=torch.cuda.device_count() * number_of_iters,
                                              batch_size=torch.cuda.device_count())
-    if inference_type == 'DDP':
-        config.world_size = gpu
-        print(torch.distributed.is_nccl_available())
-        torch.distributed.init_process_group(backend="nccl", init_method='tcp://127.0.0.1:8899',
-                                             world_size=gpu, rank=0)
-        #distributed_init_test_default(gpu, ngpus_per_node, config)
-        mock_dataloader = create_rank_dataloader(config, gpu)
+
     if not inference_type == 'cpu':
         actual_model.to(torch.device('cuda:0'))
         ref_model.to(torch.device('cuda:0'))
@@ -219,15 +205,14 @@ def test_training_process(inference_type):
         assert torch.allclose(ref_output, act_output)
 
 
+@pytest.mark.skip(reason="WIP")
 def test_training_process_ddp():
 
     torch.manual_seed(1)
     input_size = [1, 1, 8, 8]
     sparsity_level = 0.3
-    config = get_kd_config(
-        get_sparsity_config_with_sparsity_init(get_basic_magnitude_sparsity_config(input_sample_size=input_size),
-                                               sparsity_level))
-    gpu = torch.cuda.device_count()
+    config = get_sparsity_config_with_sparsity_init(get_basic_magnitude_sparsity_config(input_sample_size=input_size),
+                                                    sparsity_level)
     ngpus_per_node = torch.cuda.device_count()
     config.world_size = ngpus_per_node
     torch.multiprocessing.spawn(run_distributed_training,
@@ -238,17 +223,51 @@ def test_training_process_ddp():
 
 def run_distributed_training(gpu, ngpus_per_node, config):
     distributed_init_test_default(gpu, ngpus_per_node, config)
-
+    config_without_kd = deepcopy(config)
+    config = get_kd_config(config)
     mse = torch.nn.MSELoss()
-    model = TwoConvTestModel()
-    fill_params_of_model_by_normal(model)
-    dumped_orig_model = deepcopy(model)
+    act_model = TwoConvTestModel()
+    fill_params_of_model_by_normal(act_model)
+    act_model = deepcopy(act_model)
+    ref_model = deepcopy(act_model)
+    orig_model = deepcopy(act_model)
 
-    model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
-    model = post_compression_test_distr_init(compression_ctrl, config, ngpus_per_node, model)
-    optimizer = SGD(model.parameters(), lr=1e-02, weight_decay=1)
-    number_of_iters = 100
+    act_model, act_compression_ctrl = create_compressed_model_and_algo_for_test(act_model, config)
+    ref_model, ref_compression_ctrl = create_compressed_model_and_algo_for_test(ref_model, config_without_kd)
+    act_model = post_compression_test_distr_init(act_compression_ctrl, config, ngpus_per_node, act_model)
+    ref_model = post_compression_test_distr_init(ref_compression_ctrl, config, ngpus_per_node, act_model)
+    act_optimizer = SGD(act_model.parameters(), lr=1e-02, weight_decay=1)
+    ref_optimizer = SGD(ref_model.parameters(), lr=1e-02, weight_decay=1)
+    number_of_iters = 10
     mock_dataloader = create_rank_dataloader(config, gpu)
+    orig_model.to(next(act_model.parameters()).device)
+    act_model.train()
+    ref_model.train()
+    orig_model.train()
     for i, (input_, target) in enumerate(mock_dataloader):
-        output = model(input_)
+        print(f'iter {i}')
+        act_output = act_model(input_)
+        ref_output = ref_model(input_)
+        # check stuff happening with device
+        kd_output = orig_model(deepcopy(input_).to((next(orig_model.parameters()).device)))
 
+        act_loss = act_compression_ctrl.loss()
+        ref_loss = mse(ref_output, kd_output)
+
+        act_optimizer.zero_grad()
+        ref_optimizer.zero_grad()
+        ref_loss.backward()
+        act_loss.backward()
+        act_optimizer.step()
+        ref_optimizer.step()
+
+
+@pytest.mark.skip(reason="WIP")
+def test_kd_outputs_contrainers_parsing():
+    pass
+
+
+@pytest.mark.skip(reason="WIP")
+@pytest.marl.pametrize('kdloss_type', ['mse', 'softmax'])
+def test_kdloss_types(kdloss_type):
+    pass

@@ -86,6 +86,9 @@ class KDLossCalculator(PTCompressionLoss):
         loss = self._target_model.get_kdloss()
         if isinstance(loss, int):
             return loss
+        if len(loss) == 0:
+            raise RuntimeError('Empty list of loss tensors for KDLoss. Most likely compression_ctrl.loss()'
+                               ' was called while model was in eval mode')
         for i in range(len(loss)):
             loss[i] = loss[i].unsqueeze(0)
         output = torch.cat(loss).mean()
