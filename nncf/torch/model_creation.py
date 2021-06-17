@@ -123,26 +123,14 @@ def create_compressed_model(model: Module, config: NNCFConfig,
 
     compression_ctrl = composite_builder.build_controller(compressed_model)
 
-    # Required to ensure that the model leaving create_compressed_model has correct compressed graph.
-    # In particular, this is currently required for correct functioning of RNNs.
-    compressed_model.rebuild_graph()
 
     try:
         if resuming_state_dict is not None:
             load_state(compressed_model, resuming_state_dict, is_resume=True)
     finally:
         if dump_graphs and is_main_process():
-            if dummy_forward_fn is None:
-                compressed_graph_builder = GraphBuilder(custom_forward_fn=
-                                                        create_dummy_forward_fn(input_info_list,
-                                                                                with_input_tracing=False,
-                                                                                with_output_tracing=False))
-            else:
-                compressed_graph_builder = GraphBuilder(custom_forward_fn=dummy_forward_fn)
-
-            graph = compressed_graph_builder.build_graph(compressed_model,
-                                                         compressed_model.get_tracing_context())
-            graph.visualize_graph(osp.join(config.get("log_dir", "."), "compressed_graph.dot"))
+            compressed_model_graph = compressed_model.get_graph()
+            compressed_model_graph.visualize_graph(osp.join(config.get("log_dir", "."), "compressed_graph.dot"))
 
     # Synchronize all processes if run in distributed mode
     if is_dist_avail_and_initialized():
