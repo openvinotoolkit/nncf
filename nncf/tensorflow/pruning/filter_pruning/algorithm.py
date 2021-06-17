@@ -10,18 +10,34 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-from typing import Set
 
 from math import floor
-from typing import Dict
-from typing import List
+from typing import Dict, List, Set
 
 import tensorflow as tf
 
+from nncf.api.compression import CompressionLoss
+from nncf.api.compression import CompressionScheduler
+from nncf.common.graph import NNCFGraph
+from nncf.common.graph import NNCFNodeName
+from nncf.common.initialization.batchnorm_adaptation import BatchnormAdaptationAlgorithm
+from nncf.common.pruning.clusterization import Cluster
+from nncf.common.pruning.clusterization import Clusterization
+from nncf.common.pruning.mask_propagation import MaskPropagationAlgorithm
+from nncf.common.pruning.schedulers import PRUNING_SCHEDULERS
+from nncf.common.pruning.statistics import FilterPruningStatistics
+from nncf.common.pruning.utils import calculate_in_out_channels_in_uniformly_pruned_model
+from nncf.common.pruning.utils import count_flops_for_nodes
+from nncf.common.pruning.utils import get_cluster_next_nodes
+from nncf.common.pruning.utils import get_conv_in_out_channels
+from nncf.common.pruning.utils import get_rounded_pruned_element_number
+from nncf.common.statistics import NNCFStatistics
+from nncf.common.utils.logger import logger as nncf_logger
+from nncf.config.extractors import extract_bn_adaptation_init_params
 from nncf.tensorflow.algorithm_selector import TF_COMPRESSION_ALGORITHMS
 from nncf.tensorflow.api.compression import TFCompressionAlgorithmController
-from nncf.tensorflow.graph.metatypes.common import LINEAR_LAYER_METATYPES
 from nncf.tensorflow.graph.metatypes.common import GENERAL_CONV_LAYER_METATYPES
+from nncf.tensorflow.graph.metatypes.common import LINEAR_LAYER_METATYPES
 from nncf.tensorflow.graph.metatypes.matcher import get_keras_layer_metatype
 from nncf.tensorflow.graph.utils import collect_wrapped_layers
 from nncf.tensorflow.graph.utils import get_layer_identifier
@@ -34,8 +50,8 @@ from nncf.tensorflow.pruning.base_algorithm import BasePruningAlgoBuilder
 from nncf.tensorflow.pruning.base_algorithm import BasePruningAlgoController
 from nncf.tensorflow.pruning.base_algorithm import PrunedLayerInfo
 from nncf.tensorflow.pruning.export_helpers import TF_PRUNING_OPERATOR_METATYPES
-from nncf.tensorflow.pruning.export_helpers import TFElementwise
 from nncf.tensorflow.pruning.export_helpers import TFConvolution
+from nncf.tensorflow.pruning.export_helpers import TFElementwise
 from nncf.tensorflow.pruning.export_helpers import TFTransposeConvolution
 from nncf.tensorflow.pruning.filter_pruning.functions import calculate_binary_mask
 from nncf.tensorflow.pruning.filter_pruning.functions import FILTER_IMPORTANCE_FUNCTIONS
@@ -45,24 +61,6 @@ from nncf.tensorflow.pruning.utils import get_filter_axis
 from nncf.tensorflow.pruning.utils import get_filters_num
 from nncf.tensorflow.pruning.utils import is_valid_shape
 from nncf.tensorflow.sparsity.magnitude.operation import BinaryMask
-from nncf.api.compression import CompressionLoss
-from nncf.api.compression import CompressionScheduler
-from nncf.common.graph import NNCFGraph
-from nncf.common.graph import NNCFNodeName
-from nncf.common.pruning.mask_propagation import MaskPropagationAlgorithm
-from nncf.common.pruning.clusterization import Clusterization
-from nncf.common.pruning.clusterization import Cluster
-from nncf.common.pruning.schedulers import PRUNING_SCHEDULERS
-from nncf.common.pruning.utils import calculate_in_out_channels_in_uniformly_pruned_model
-from nncf.common.pruning.utils import count_flops_for_nodes
-from nncf.common.pruning.utils import get_cluster_next_nodes
-from nncf.common.pruning.utils import get_conv_in_out_channels
-from nncf.common.pruning.utils import get_rounded_pruned_element_number
-from nncf.common.utils.logger import logger as nncf_logger
-from nncf.common.pruning.statistics import FilterPruningStatistics
-from nncf.common.statistics import NNCFStatistics
-from nncf.common.batchnorm_adaptation import BatchnormAdaptationAlgorithm
-from nncf.config.utils import extract_bn_adaptation_init_params
 
 
 @TF_COMPRESSION_ALGORITHMS.register('filter_pruning')

@@ -29,8 +29,8 @@ from nncf.common.sparsity.statistics import MagnitudeSparsityStatistics
 from nncf.common.schedulers import StubCompressionScheduler
 from nncf.common.statistics import NNCFStatistics
 from nncf.common.sparsity.statistics import LayerThreshold
-from nncf.common.batchnorm_adaptation import BatchnormAdaptationAlgorithm
-from nncf.config.utils import extract_bn_adaptation_init_params
+from nncf.common.initialization.batchnorm_adaptation import BatchnormAdaptationAlgorithm
+from nncf.config.extractors import extract_bn_adaptation_init_params
 
 
 @COMPRESSION_ALGORITHMS.register('magnitude_sparsity')

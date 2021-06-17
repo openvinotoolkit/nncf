@@ -424,9 +424,9 @@ index 0000000..c903a55
 +from collections import OrderedDict
 +
 +import torch
-+from nncf.torch.initialization import InitializingDataLoader
-+from nncf.torch.structures import QuantizationRangeInitArgs
-+from nncf.config.structure import BNAdaptationInitArgs
++from nncf.torch.initialization import PTInitializingDataLoader
++from nncf.config.structures import QuantizationRangeInitArgs
++from nncf.config.structures import BNAdaptationInitArgs
 +
 +from nncf import NNCFConfig
 +from nncf.torch import load_state
@@ -521,9 +521,9 @@ index 0000000..c903a55
 +    return checkpoint
 +
 +
-+class MMInitializeDataLoader(InitializingDataLoader):
++class MMInitializeDataLoader(PTInitializingDataLoader):
 +    def get_inputs(self, dataloader_output):
-+        # redefined InitializingDataLoader because
++        # redefined PTInitializingDataLoader because
 +        # of DataContainer format in mmdet
 +        kwargs = {k: v.data[0] for k, v in dataloader_output.items()}
 +        return (), kwargs

@@ -48,9 +48,9 @@ index d9465c37..9da9d30f 100644
  
 -logger = logging.getLogger(__name__)
 +from nncf import NNCFConfig
-+from nncf.torch.structures import QuantizationRangeInitArgs
-+from nncf.config.structure import BNAdaptationInitArgs
-+from nncf.torch.initialization import InitializingDataLoader
++from nncf.config.structures import QuantizationRangeInitArgs
++from nncf.config.structures import BNAdaptationInitArgs
++from nncf.torch.initialization import PTInitializingDataLoader
 +from transformers.trainer import get_train_dataloader_for_init
  
 +logger = logging.getLogger(__name__)
@@ -90,7 +90,7 @@ index d9465c37..9da9d30f 100644
 +            train_dataloader = get_train_dataloader_for_init(training_args, train_dataset,
 +                                                             data_collator)
 +
-+            class WikitextInitializingDataLoader(InitializingDataLoader):
++            class WikitextInitializingDataLoader(PTInitializingDataLoader):
 +                def get_inputs(self, dataloader_output):
 +                    return (), dataloader_output
 +
@@ -167,8 +167,8 @@ index 2bd4e90f..2b1a60e8 100644
  
  import numpy as np
  import torch
-+from nncf.config.structure import BNAdaptationInitArgs
-+from nncf.torch.structures import QuantizationRangeInitArgs
++from nncf.config.structures import BNAdaptationInitArgs
++from nncf.config.structures import QuantizationRangeInitArgs
 +from nncf.common.utils.tensorboard import prepare_for_tensorboard
  from torch.utils.data import DataLoader, RandomSampler, SequentialSampler
  from torch.utils.data.distributed import DistributedSampler
@@ -182,7 +182,7 @@ index 2bd4e90f..2b1a60e8 100644
      from tensorboardX import SummaryWriter
  
 +from nncf import NNCFConfig
-+from nncf.torch.initialization import InitializingDataLoader
++from nncf.torch.initialization import PTInitializingDataLoader
  
  logger = logging.getLogger(__name__)
  
@@ -325,7 +325,7 @@ index 2bd4e90f..2b1a60e8 100644
 +            train_dataset = load_and_cache_examples(args, tokenizer, evaluate=False, output_examples=False)
 +            train_dataloader = get_train_dataloader(args, train_dataset)
 +
-+            class SquadInitializingDataloader(InitializingDataLoader):
++            class SquadInitializingDataloader(PTInitializingDataLoader):
 +                def get_inputs(self, dataloader_output):
 +                    kwargs = {'attention_mask': dataloader_output[1],
 +                              'start_positions': dataloader_output[3],
@@ -439,9 +439,9 @@ index cf9b765a..957cdba2 100644
  
  import numpy as np
 +from nncf import NNCFConfig
-+from nncf.torch.structures import QuantizationRangeInitArgs
-+from nncf.config.structure import BNAdaptationInitArgs
-+from nncf.torch.initialization import InitializingDataLoader
++from nncf.config.structures import QuantizationRangeInitArgs
++from nncf.config.structures import BNAdaptationInitArgs
++from nncf.torch.initialization import PTInitializingDataLoader
  
  from transformers import AutoConfig, AutoModelForSequenceClassification, AutoTokenizer, EvalPrediction, GlueDataset
  from transformers import GlueDataTrainingArguments as DataTrainingArguments
@@ -473,7 +473,7 @@ index cf9b765a..957cdba2 100644
 +        if training_args.do_train:
 +            train_dataloader = get_train_dataloader_for_init(training_args, train_dataset)
 +
-+            class GlueInitializingDataLoader(InitializingDataLoader):
++            class GlueInitializingDataLoader(PTInitializingDataLoader):
 +                def get_inputs(self, dataloader_output):
 +                    return (), dataloader_output
 +
@@ -517,8 +517,8 @@ index c1db6fa3..ca44bd1c 100644
  
  import numpy as np
  import torch
-+from nncf.torch.structures import QuantizationRangeInitArgs
-+from nncf.config.structure import BNAdaptationInitArgs
++from nncf.config.structures import QuantizationRangeInitArgs
++from nncf.config.structures import BNAdaptationInitArgs
 +from nncf.common.utils.tensorboard import prepare_for_tensorboard
  from torch.utils.data import DataLoader, RandomSampler, SequentialSampler, TensorDataset
  from torch.utils.data.distributed import DistributedSampler
@@ -532,7 +532,7 @@ index c1db6fa3..ca44bd1c 100644
      from tensorboardX import SummaryWriter
  
 +from nncf import NNCFConfig
-+from nncf.torch.initialization import InitializingDataLoader
++from nncf.torch.initialization import PTInitializingDataLoader
  
  logger = logging.getLogger(__name__)
  
@@ -672,7 +672,7 @@ index c1db6fa3..ca44bd1c 100644
 +            train_dataset = load_and_cache_examples(args, args.task_name,  tokenizer, evaluate=False)
 +            train_dataloader = get_train_dataloader(args, train_dataset)
 +
-+            class XnliInitializingDataloader(InitializingDataLoader):
++            class XnliInitializingDataloader(PTInitializingDataLoader):
 +                def get_inputs(self, dataloader_output):
 +                    kwargs = {'attention_mask': dataloader_output[1],
 +                              'labels': dataloader_output[3]}

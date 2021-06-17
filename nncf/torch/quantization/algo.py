@@ -20,6 +20,7 @@ from pathlib import Path
 from string import Template
 from typing import Dict
 from typing import List
+from typing import Optional
 from typing import Set
 from typing import Tuple
 
@@ -31,7 +32,7 @@ from torch import nn
 from nncf.api.compression import CompressionLoss
 from nncf.api.compression import CompressionScheduler
 from nncf.api.compression import CompressionStage
-from nncf.common.batchnorm_adaptation import BatchnormAdaptationAlgorithm
+from nncf.common.initialization.batchnorm_adaptation import BatchnormAdaptationAlgorithm
 from nncf.common.graph import MODEL_INPUT_OP_NAME
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
@@ -53,7 +54,8 @@ from nncf.common.utils.helpers import matches_any
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.common.utils.os import safe_open
 from nncf.config import NNCFConfig
-from nncf.config.utils import extract_bn_adaptation_init_params
+from nncf.config.extractors import extract_bn_adaptation_init_params
+from nncf.config.extractors import extract_range_init_params
 from nncf.torch.algo_selector import COMPRESSION_ALGORITHMS
 from nncf.torch.algo_selector import ZeroCompressionLoss
 from nncf.torch.compression_method_api import PTCompressionAlgorithmBuilder
@@ -80,9 +82,7 @@ from nncf.torch.quantization.adjust_padding import AdjustPaddingArgs
 from nncf.torch.quantization.adjust_padding import CalculatePaddingAdjustment
 from nncf.torch.quantization.init_precision import PrecisionInitializerFactory
 from nncf.torch.quantization.init_range import DataLoaderRangeInitializeRunner
-from nncf.torch.quantization.init_range import PerLayerRangeInitConfig
-from nncf.torch.quantization.init_range import RangeInitConfig
-from nncf.torch.quantization.init_range import RangeInitParams
+from nncf.torch.quantization.init_range import PTRangeInitParams
 from nncf.torch.quantization.init_range import StatCollectorGenerator
 from nncf.torch.quantization.layers import BaseQuantizer
 from nncf.torch.quantization.layers import PTQuantizerSpec
@@ -116,7 +116,6 @@ from nncf.torch.quantization.structs import NonWeightQuantizerInfo
 from nncf.torch.quantization.structs import WeightQuantizerInfo
 from nncf.torch.structures import AutoQPrecisionInitArgs
 from nncf.torch.structures import QuantizationPrecisionInitArgs
-from nncf.torch.structures import QuantizationRangeInitArgs
 from nncf.torch.tensor_statistics.algo import TensorStatisticsCollectionBuilder
 from nncf.torch.tensor_statistics.collectors import ReductionShape
 from nncf.torch.tensor_statistics.statistics import MinMaxTensorStatistic
@@ -136,7 +135,7 @@ class QuantizerSetupGeneratorBase:
                  target_model: NNCFNetwork,
                  precision_init_type: str = None,
                  precision_init_params: BasePrecisionInitParams = None,
-                 range_init_params: RangeInitParams = None):
+                 range_init_params: PTRangeInitParams = None):
         self._target_model = target_model
         self._quantization_config = quant_config
 
@@ -259,7 +258,7 @@ class DefaultQuantizerSetupDisambiguator(IQuantizerSetupDisambiguator):
     def __init__(self, target_model: NNCFNetwork,
                  precision_init_type: str = None,
                  precision_init_params: BasePrecisionInitParams = None,
-                 range_init_params: RangeInitParams = None,
+                 range_init_params: PTRangeInitParams = None,
                  override_bit_options_with_precision_init: bool = False,
                  hw_config: HWConfig = None):
         self._precision_init_type = precision_init_type
@@ -316,7 +315,7 @@ class PropagationBasedQuantizerSetupGenerator(QuantizerSetupGeneratorBase):
                  hw_config: HWConfig = None,
                  precision_init_type: str = None,
                  precision_init_params: BasePrecisionInitParams = None,
-                 range_init_params: RangeInitParams = None,
+                 range_init_params: PTRangeInitParams = None,
                  debug_interface: 'QuantizationDebugInterface' = None):
         super().__init__(quant_config, target_model, precision_init_type, precision_init_params, range_init_params)
         self._quantizable_subgraph_patterns = quant_config.get('quantizable_subgraph_patterns', None)
@@ -482,63 +481,19 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
             precision_init_type = init_precision_config.get('type', 'manual')
             if precision_init_type == 'manual':
                 # range init is needed for correct setting of Adjust Padding ops as it considers sign of FQ
-                self._range_init_params = self._parse_range_init_params(init_config)
+                self._range_init_params = self._parse_range_init_params()
                 self.should_init = True
                 self._precision_init_type = precision_init_type
                 self._precision_init_params = ManualPrecisionInitParams.from_config(init_precision_config)
 
     def _parse_init_params(self):
-        init_config = self.config.get('initializer', {})
-        self._range_init_params = self._parse_range_init_params(init_config)
-        self._precision_init_type, self._precision_init_params = self._parse_precision_init_params(init_config)
+        self._range_init_params = self._parse_range_init_params()
+        self._precision_init_type, self._precision_init_params = self._parse_precision_init_params(
+            self.config.get('initializer', {}))
 
-    def _parse_range_init_params(self, initializer_config: Dict) -> RangeInitParams:
-        init_range_config_dict_or_list = initializer_config.get('range', {})
-        if not init_range_config_dict_or_list:
-            try:
-                self.config.get_extra_struct(QuantizationRangeInitArgs)
-                has_range_init_args = True
-            except KeyError:
-                has_range_init_args = False
-
-            if has_range_init_args:
-                nncf_logger.warning("Enabling quantization range initialization with default parameters.")
-                num_init_samples = 256
-            else:
-                nncf_logger.warning("Initializer section not specified for quantization algorithm in NNCF config and "
-                                    "quantization init args not supplied - quantizer range initialization will not be "
-                                    "done")
-                return None
-
-            init_range_config_dict_or_list = {'num_init_samples': num_init_samples}
-
-        max_num_init_samples = 0
-        global_range_init_config = None
-        scope_overrides = []  # type: List[PerLayerRangeInitConfig]
-        if isinstance(init_range_config_dict_or_list, dict):
-            global_range_init_config = RangeInitConfig.from_dict(init_range_config_dict_or_list)
-            max_num_init_samples = global_range_init_config.num_init_samples
-        else:
-            for sub_init_range_config_dict in init_range_config_dict_or_list:
-                scope_overrides.append(PerLayerRangeInitConfig.from_dict(sub_init_range_config_dict))
-                max_num_init_samples_config = max(scope_overrides, key=lambda x: x.num_init_samples)
-                max_num_init_samples = max_num_init_samples_config.num_init_samples
-
-        if max_num_init_samples == 0:
-            return None
-
-        try:
-            range_init_args = self.config.get_extra_struct(QuantizationRangeInitArgs)
-        except KeyError as e:
-            raise ValueError(
-                'Should run range initialization as specified via config,'
-                'but the initializing data loader is not provided as an extra struct. '
-                'Refer to `NNCFConfig.register_extra_structs` and the `QuantizationRangeInitArgs` class') from e
-
-        return RangeInitParams(range_init_args.data_loader,
-                               range_init_args.device,
-                               global_range_init_config,
-                               scope_overrides)
+    def _parse_range_init_params(self) -> Optional[PTRangeInitParams]:
+        range_init_params = extract_range_init_params(self.config)
+        return PTRangeInitParams(**range_init_params) if range_init_params is not None else None
 
     def _parse_precision_init_params(self, initializer_config: Dict) -> Tuple[str, BasePrecisionInitParams]:
         init_precision_config = initializer_config.get('precision', None)
@@ -629,7 +584,7 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
     @staticmethod
     def get_statistics_for_quantizer_setup(target_model: NNCFNetwork,
                                            quantizer_setup: QuantizerSetupBase,
-                                           range_init_params: RangeInitParams) \
+                                           range_init_params: PTRangeInitParams) \
         -> Dict[PTTargetPoint, Dict[ReductionShape, TensorStatistic]]:
         if range_init_params is None:
             return {}
@@ -655,7 +610,7 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
 
     def _get_statistics_for_final_range_init(self, target_model: NNCFNetwork,
                                              quantizer_setup: QuantizerSetupBase,
-                                             range_init_params: RangeInitParams) \
+                                             range_init_params: PTRangeInitParams) \
             -> Dict[PTTargetPoint, Dict[ReductionShape, TensorStatistic]]:
         return self.get_statistics_for_quantizer_setup(target_model, quantizer_setup, range_init_params)
 
@@ -674,7 +629,6 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
     def build_controller(self, target_model: NNCFNetwork) -> PTCompressionAlgorithmController:
         return QuantizationController(target_model,
                                       self.config,
-                                      self.should_init,
                                       self._debug_interface,
                                       self._weight_quantizers,
                                       self._non_weight_quantizers,
@@ -1083,6 +1037,12 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
             return False, message_template.substitute(denial=' not', algo_prefix=algo_prefix)
         return True, message_template.substitute(denial='', algo_prefix='empty')
 
+    def initialize(self, model: NNCFNetwork) -> None:
+        if is_main_process() and self.should_init:
+            bn_adaptation = BatchnormAdaptationAlgorithm(
+                **extract_bn_adaptation_init_params(self.config))
+            bn_adaptation.run(model)
+
 
 class QuantizationControllerBase(PTCompressionAlgorithmController):
     def enable_activation_quantization(self):
@@ -1104,14 +1064,13 @@ class QuantizationControllerBase(PTCompressionAlgorithmController):
 class QuantizationController(QuantizationControllerBase):
     def __init__(self, target_model: NNCFNetwork,
                  quantization_config: 'NNCFConfig',
-                 should_init: bool,
                  debug_interface: 'QuantizationDebugInterface',
                  weight_quantizers: Dict[WeightQuantizerId, WeightQuantizerInfo],
                  non_weight_quantizers: Dict[NonWeightQuantizerId, NonWeightQuantizerInfo],
                  groups_of_adjacent_quantizers: GroupsOfAdjacentQuantizers,
                  collect_compression_metrics: bool = True,
                  build_time_metric_info: QuantizationShareBuildTimeInfo = None,
-                 build_time_range_init_params: RangeInitParams = None):
+                 build_time_range_init_params: PTRangeInitParams = None):
         super().__init__(target_model)
         self._loss = ZeroCompressionLoss(next(target_model.parameters()).device)
         self._scheduler = BaseCompressionScheduler()
@@ -1160,8 +1119,6 @@ class QuantizationController(QuantizationControllerBase):
         params = quantization_config.get('params', None)
         self.is_staged_scheduler = bool(params)
 
-        if is_main_process() and should_init and self.quantization_config:
-            self._run_batchnorm_adaptation()
 
         # Staged scheduler must be created after initialized to prevent extra logic with disabled quantizations
         if self.is_staged_scheduler:
@@ -1202,7 +1159,7 @@ class QuantizationController(QuantizationControllerBase):
         for quantizer in sorted_quantizers.values():  # type: BaseQuantizer
             quantizer.broadcast_initialized_params()
 
-    def _do_runtime_range_init(self, range_init_params: RangeInitParams):
+    def _do_runtime_range_init(self, range_init_params: PTRangeInitParams):
         modules_to_init = OrderedDict()
         for wq_id, wq_info in self.weight_quantizers.items():
             group = QuantizerGroup.WEIGHTS
@@ -1248,7 +1205,7 @@ class QuantizationController(QuantizationControllerBase):
         nncf_logger.info("Initialization of quantization precisions")
         return initializer.apply_init()
 
-    def init_range(self, range_init_params: RangeInitParams = None):
+    def init_range(self, range_init_params: PTRangeInitParams = None):
         """
         Tracks input statistics for quantizers in the model and sets ranges of the quantizers to correspond to
         minimum and maximum input tensor levels observed.
@@ -1297,12 +1254,6 @@ class QuantizationController(QuantizationControllerBase):
         nncf_stats = NNCFStatistics()
         nncf_stats.register('quantization', stats)
         return nncf_stats
-
-    def _run_batchnorm_adaptation(self):
-        if self._bn_adaptation is None:
-            self._bn_adaptation = BatchnormAdaptationAlgorithm(
-                **extract_bn_adaptation_init_params(self.quantization_config))
-        self._bn_adaptation.run(self.model)
 
 
 class QuantizationDebugInterface(DebugInterface):
@@ -1480,7 +1431,7 @@ class ExperimentalQuantizationBuilder(QuantizationBuilder):
     def _get_statistics_for_final_range_init(self,
                                              target_model: NNCFNetwork,
                                              quantizer_setup: QuantizerSetupBase,
-                                             range_init_params: RangeInitParams) -> Dict[
+                                             range_init_params: PTRangeInitParams) -> Dict[
         PTTargetPoint, Dict[ReductionShape, TensorStatistic]]:
         return self._tensor_stats
 
@@ -1509,6 +1460,9 @@ class ExperimentalQuantizationBuilder(QuantizationBuilder):
                                                   self._should_setup_adjust_pad_ops,
                                                   self.hw_config)
 
+    def initialize(self, model: NNCFNetwork) -> None:
+        pass
+
 
 class ExperimentalQuantizationController(QuantizationController):
     def __init__(self, target_model: NNCFNetwork,
@@ -1524,7 +1478,6 @@ class ExperimentalQuantizationController(QuantizationController):
                  hw_config: HWConfig = None):
         super().__init__(target_model,
                          NNCFConfig(),
-                         should_init=False,
                          debug_interface=None,
                          weight_quantizers=weight_quantizers,
                          non_weight_quantizers=non_weight_quantizers,

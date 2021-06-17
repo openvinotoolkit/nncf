@@ -362,7 +362,7 @@ class TestModelsGraph:
         model = desc.model_builder(input_shape=tuple(desc.input_sample_sizes[1:]))
         config = get_basic_quantization_config(_quantization_case_config.qconfig,
                                                input_sample_sizes=desc.input_sample_sizes)
-        compressed_model, _ = create_compressed_model_and_algo_for_test(model, config)
+        compressed_model, _ = create_compressed_model_and_algo_for_test(model, config, should_init=False)
 
         check_model_graph(compressed_model, desc.ref_graph_filename, _quantization_case_config.graph_dir,
                           desc.rename_resource_nodes)
@@ -373,7 +373,7 @@ class TestModelsGraph:
         model = desc.model_builder(input_shape=tuple(desc.input_sample_sizes[1:]))
         config = get_basic_sparsity_config(desc.input_sample_sizes, SparsityAlgo.magnitude)
         config['compression']['params'] = {'schedule': 'multistep'}
-        compressed_model, _ = create_compressed_model_and_algo_for_test(model, config)
+        compressed_model, _ = create_compressed_model_and_algo_for_test(model, config, should_init=False)
 
         check_model_graph(compressed_model, desc.ref_graph_filename, _magnitude_sparsity_case_config.graph_dir,
                           desc.rename_resource_nodes)
@@ -384,7 +384,7 @@ class TestModelsGraph:
         model = desc.model_builder(input_shape=tuple(desc.input_sample_sizes[1:]))
         config = get_basic_sparsity_config(desc.input_sample_sizes, SparsityAlgo.rb)
         config['compression']['params'] = {'schedule': 'multistep'}
-        compressed_model, _ = create_compressed_model_and_algo_for_test(model, config)
+        compressed_model, _ = create_compressed_model_and_algo_for_test(model, config, should_init=False)
 
         check_model_graph(compressed_model, desc.ref_graph_filename, _rb_sparsity_case_config.graph_dir,
                           desc.rename_resource_nodes)
@@ -394,7 +394,7 @@ class TestModelsGraph:
     def test_pruning_network(self, desc: ModelDesc, _pruning_case_config):
         model = desc.model_builder(input_shape=tuple(desc.input_sample_sizes[1:]))
         config = get_basic_filter_pruning_config(desc.input_sample_sizes)
-        compressed_model, _ = create_compressed_model_and_algo_for_test(model, config)
+        compressed_model, _ = create_compressed_model_and_algo_for_test(model, config, should_init=False)
 
         check_model_graph(compressed_model, desc.ref_graph_filename, _pruning_case_config.graph_dir,
                           desc.rename_resource_nodes)
@@ -414,7 +414,7 @@ def test_quantize_outputs(desc: ModelDesc, _quantization_case_config):
     config = get_basic_quantization_config(_quantization_case_config.qconfig,
                                            input_sample_sizes=desc.input_sample_sizes)
     config['compression']['quantize_outputs'] = True
-    compressed_model, _ = create_compressed_model_and_algo_for_test(model, config)
+    compressed_model, _ = create_compressed_model_and_algo_for_test(model, config, should_init=False)
 
     check_model_graph(compressed_model, desc.ref_graph_filename, _quantization_case_config.graph_dir,
                       desc.rename_resource_nodes)

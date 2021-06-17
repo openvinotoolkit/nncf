@@ -98,6 +98,9 @@ class BinarizationBuilder(PTCompressionAlgorithmBuilder):
     def build_controller(self, target_model: NNCFNetwork) -> PTCompressionAlgorithmController:
         return BinarizationController(target_model, self.config)
 
+    def initialize(self, model: NNCFNetwork) -> None:
+        pass
+
 
 class BinarizationController(QuantizationControllerBase):
     def __init__(self, target_model: NNCFNetwork, config: NNCFConfig):

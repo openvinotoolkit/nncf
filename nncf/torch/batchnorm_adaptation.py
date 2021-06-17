@@ -11,7 +11,7 @@
  limitations under the License.
 """
 
-from nncf.common.batchnorm_adaptation import BatchnormAdaptationAlgorithmImpl
+from nncf.common.initialization.batchnorm_adaptation import BatchnormAdaptationAlgorithmImpl
 from nncf.torch.initialization import DataLoaderBNAdaptationRunner
 
 

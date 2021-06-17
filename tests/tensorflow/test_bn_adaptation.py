@@ -17,11 +17,11 @@ from copy import deepcopy
 import tensorflow as tf
 
 from nncf import NNCFConfig
-from nncf.tensorflow.initialization import register_default_init_args
-from nncf.common.batchnorm_adaptation import BatchnormAdaptationAlgorithm
-from nncf.config.utils import extract_bn_adaptation_init_params
-from nncf.tensorflow.graph.metatypes.matcher import get_keras_layer_metatype
+from nncf.common.initialization.batchnorm_adaptation import BatchnormAdaptationAlgorithm
+from nncf.config.extractors import extract_bn_adaptation_init_params
 from nncf.tensorflow.graph.metatypes.keras_layers import TFBatchNormalizationLayerMetatype
+from nncf.tensorflow.graph.metatypes.matcher import get_keras_layer_metatype
+from nncf.tensorflow.initialization import register_default_init_args
 
 
 def get_dataset_for_test(batch_size=10):

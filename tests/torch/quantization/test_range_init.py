@@ -31,22 +31,24 @@ from torchvision.models import squeezenet1_1
 
 from nncf.torch import utils
 from nncf.torch.checkpoint_loading import load_state
+from nncf.common.quantization.initialization.range import PerLayerRangeInitConfig
+from nncf.common.quantization.initialization.range import RangeInitConfig
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizerGroup
 from nncf.config import NNCFConfig
+from nncf.config.structures import QuantizationRangeInitArgs
 from nncf.torch.initialization import DefaultInitializingDataLoader
+from nncf.torch.initialization import wrap_dataloader_for_init
 from nncf.torch.nncf_network import EXTERNAL_QUANTIZERS_STORAGE_NAME
-from nncf.torch.quantization.init_range import PerLayerRangeInitConfig
-from nncf.torch.quantization.init_range import RangeInitConfig
-from nncf.torch.quantization.init_range import RangeInitParams
+from nncf.torch.quantization.init_range import PTRangeInitParams
+from nncf.torch.quantization.init_range import StatCollectorGenerator
 from nncf.torch.quantization.layers import AsymmetricQuantizer
 from nncf.torch.quantization.layers import BaseQuantizer
 from nncf.torch.quantization.layers import PTQuantizerSpec
 from nncf.torch.quantization.layers import QUANTIZATION_MODULES
 from nncf.torch.quantization.layers import SymmetricQuantizer
 from nncf.torch.quantization.quantizer_setup import SingleConfigQuantizationPoint
-from nncf.torch.structures import QuantizationRangeInitArgs
 from nncf.torch.tensor_statistics.collectors import MeanMinMaxStatisticCollector
 from nncf.torch.tensor_statistics.collectors import MedianMADStatisticCollector
 from nncf.torch.tensor_statistics.collectors import MinMaxStatisticCollector
@@ -72,7 +74,7 @@ def scale_signed_dumping_worker(gpu, ngpus_per_node, config, tmp_path):
     data_loader = create_rank_dataloader(config, gpu)
     model = safe_thread_call(partial(squeezenet1_1, pretrained=True))
 
-    config.register_extra_structs([QuantizationRangeInitArgs(data_loader)])
+    config.register_extra_structs([QuantizationRangeInitArgs(wrap_dataloader_for_init(data_loader))])
     quant_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
     compression_scheduler = compression_ctrl.scheduler
 
@@ -180,8 +182,8 @@ def generate_qp(node_name: NNCFNodeName,
 
 
 @pytest.mark.parametrize("wrap_dataloader",
-                         (True, False),
-                         ids=['wrapped_dataloader', 'standard_dataloader'])
+                         [True],
+                         ids=['wrapped_dataloader'])
 class TestRangeInit:
     @staticmethod
     def create_algo_and_compressed_model(config):
@@ -429,10 +431,10 @@ class TestRangeInit:
         for sub_init_range_config_dict in per_layer_range_init_test_struct.range_init_config:
             per_layer_configs.append(PerLayerRangeInitConfig.from_dict(sub_init_range_config_dict))
 
-        params = RangeInitParams(wrap_dataloader,
+        params = PTRangeInitParams(wrap_dataloader,
                                  '',
-                                 global_init_config=None,
-                                 per_layer_range_init_configs=per_layer_configs)
+                                   global_init_config=None,
+                                   per_layer_range_init_configs=per_layer_configs)
 
         for qp, ref_range_init_config in per_layer_range_init_test_struct.qps_vs_expected_init_config:
             assert params.get_init_config_for_quantization_point(qp) == ref_range_init_config
@@ -566,7 +568,7 @@ def test_init_ranges_are_set(quantization_mode: str, per_channel: bool,
 
     # Activations init check
     id_model = SingleConv2dIdentityModel()
-    config_with_init.register_extra_structs([QuantizationRangeInitArgs(data_loader)])
+    config_with_init.register_extra_structs([QuantizationRangeInitArgs(wrap_dataloader_for_init(data_loader))])
     register_bn_adaptation_init_args(config_with_init)
     _, compression_ctrl = create_compressed_model_and_algo_for_test(id_model, config_with_init)
 
@@ -666,7 +668,7 @@ def test_per_layer_range_init_collectors_are_called_the_required_number_of_times
                                                                                  mocker):
     config = create_config()
     config['compression']['initializer']['range'] = range_init_call_count_test_struct.range_init_config
-    data_loader = TestRangeInit.create_dataloader(False, config, 10)
+    data_loader = TestRangeInit.create_dataloader(True, config, 10)
     config.register_extra_structs([QuantizationRangeInitArgs(data_loader)])
 
     range_minmax_init_create_spy = mocker.spy(MinMaxStatisticCollector, '__init__')
@@ -763,7 +765,9 @@ def test_quantize_range_init_sets_correct_scale_shapes(quantizer_range_init_test
         q_cls = QUANTIZATION_MODULES.get(quantization_mode)
         quantizer = q_cls(qconfig)  # type: BaseQuantizer
         range_init_config = RangeInitConfig(init_type=initializer_type, num_init_samples=1)
-        collector = range_init_config.generate_stat_collector(reduction_shapes={tuple(quantizer.scale_shape)})
+        collector = StatCollectorGenerator.generate_stat_collector_for_range_init_config(
+            range_init_config,
+            reduction_shapes={tuple(quantizer.scale_shape)})
         collector.register_input(torch.ones(test_struct.input_shape))
         stat = collector.get_statistics()[tuple(quantizer.scale_shape)]
         minmax_values = MinMaxTensorStatistic.from_stat(stat)

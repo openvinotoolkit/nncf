@@ -239,7 +239,9 @@ def export(config):
     with TFOriginalModelManager(model_builder.build_model,
                                 weights=config.get('weights', None),
                                 is_training=False) as model:
-        compression_ctrl, compress_model = create_compressed_model(model, config.nncf_config)
+        compression_ctrl, compress_model = create_compressed_model(model,
+                                                                   config.nncf_config,
+                                                                   should_init=False)
 
     if config.ckpt_path:
         variables = get_variables(compress_model)

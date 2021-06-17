@@ -17,8 +17,8 @@ from nncf.tensorflow.utils.hook_handle import HookHandle
 
 
 class InputType:
-    INPUTS = "inputs"
-    WEIGHTS = "weights"
+    INPUTS = 'inputs'
+    WEIGHTS = 'weights'
 
 
 class NNCFOperation:

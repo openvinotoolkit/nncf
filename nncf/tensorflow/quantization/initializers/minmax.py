@@ -11,10 +11,12 @@
  limitations under the License.
 """
 
+from itertools import islice
+
 import numpy as np
 import tensorflow as tf
 
-from nncf.tensorflow.api.compression import TFCompressionAlgorithmInitializer
+from nncf.common.quantization.initialization.range import RangeInitParams
 from nncf.tensorflow.layers.custom_objects import NNCF_QUANTIZATION_OPERATONS
 from nncf.tensorflow.layers.wrapper import NNCFWrapper
 from nncf.tensorflow.layers.data_layout import get_channel_axis
@@ -22,7 +24,7 @@ from nncf.tensorflow.layers.operation import InputType
 from nncf.tensorflow.quantization.layers import FakeQuantize
 
 
-class MinMaxStatisticsCollector:
+class MeanMinMaxStatisticsCollector:
     def __init__(self, per_channel, channel_axes):
         self.per_channel = per_channel
         self.channel_axes = channel_axes if isinstance(channel_axes, (list, tuple)) else [channel_axes]
@@ -67,7 +69,7 @@ class MinMaxStatisticsCollector:
         self.call(*args, **kwargs)
 
 
-class MinMaxPercentileStatisticsCollector:
+class MeanPercentileStatisticsCollector:
     def __init__(self, per_channel, channel_axes, min_percentile=5, max_percentile=95):
         self.per_channel = per_channel
         self.channel_axes = channel_axes if isinstance(channel_axes, (list, tuple)) else [channel_axes]
@@ -128,22 +130,22 @@ class MinMaxPercentileStatisticsCollector:
         self.call(*args, **kwargs)
 
 
-class MinMaxInitializer(TFCompressionAlgorithmInitializer):
-    def __init__(self, config):
-        range_config = config.get('initializer', {}).get('range', {})
+class MinMaxInitializer():
+    def __init__(self, params: RangeInitParams):
+        self.dataset = params.init_range_data_loader
 
-        self.num_steps = range_config.get('num_init_samples', 100)
+        self.num_steps = params.global_init_config.num_init_samples
         self.nncf_quantization_operation_classes = NNCF_QUANTIZATION_OPERATONS.registry_dict.values()
 
-        range_type = range_config.get('type', 'minmax')
-        if range_type == 'minmax':
-            self.statistics_collector = MinMaxStatisticsCollector
-        elif range_type == 'minmax_percentile':
-            self.statistics_collector = MinMaxPercentileStatisticsCollector
+        range_type = params.global_init_config.init_type
+        if range_type == 'mean_min_max':
+            self.statistics_collector = MeanMinMaxStatisticsCollector
+        elif range_type == 'mean_percentile':
+            self.statistics_collector = MeanPercentileStatisticsCollector
         else:
             raise ValueError('Range type {} is not supported.'.format(range_type))
 
-    def call(self, model, dataset=None, loss=None):
+    def run(self, model):
         layer_statistics = []
         op_statistics = []
         handles = []
@@ -164,9 +166,7 @@ class MinMaxInitializer(TFCompressionAlgorithmInitializer):
                             op.enabled = False
                             op_statistics.append((layer, op_name, op, minmax))
 
-        for step, (x, _) in enumerate(dataset):
-            if step >= self.num_steps:
-                break
+        for x, _ in islice(self.dataset, self.num_steps):
             model(x, training=False)
 
         for layer, minmax in layer_statistics:
@@ -181,6 +181,6 @@ class MinMaxInitializer(TFCompressionAlgorithmInitializer):
         for handle in handles:
             handle.remove()
 
-        for x, _ in dataset:
+        for x, _ in self.dataset:
             model(x, training=False)
             break

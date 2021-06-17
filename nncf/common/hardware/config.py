@@ -45,7 +45,7 @@ class HWConfigType(Enum):
             return HWConfigType.GPU
         if config_value == HWConfigType.VPU.value:
             return HWConfigType.VPU
-        raise RuntimeError("Unknown HW config type string")
+        raise RuntimeError('Unknown HW config type string')
 
 
 HW_CONFIG_TYPE_TARGET_DEVICE_MAP = {
@@ -66,16 +66,16 @@ def get_metatypes_by_hw_config_name(hw_config_name: str) -> List[Type[OperatorMe
 
 
 class HWConfig(list):
-    QUANTIZATION_ALGORITHM_NAME = "quantization"
-    ATTRIBUTES_NAME = "attributes"
-    SCALE_ATTRIBUTE_NAME = "scales"
-    UNIFIED_TYPE_NAME = "unified"
-    ADJUST_PADDING_ATTRIBUTE_NAME = "adjust_padding"
+    QUANTIZATION_ALGORITHM_NAME = 'quantization'
+    ATTRIBUTES_NAME = 'attributes'
+    SCALE_ATTRIBUTE_NAME = 'scales'
+    UNIFIED_TYPE_NAME = 'unified'
+    ADJUST_PADDING_ATTRIBUTE_NAME = 'adjust_padding'
 
     TYPE_TO_CONF_NAME_DICT = {
-        HWConfigType.CPU: "cpu.json",
-        HWConfigType.VPU: "vpu.json",
-        HWConfigType.GPU: "gpu.json"
+        HWConfigType.CPU: 'cpu.json',
+        HWConfigType.VPU: 'vpu.json',
+        HWConfigType.GPU: 'gpu.json'
     }
 
     def __init__(self):
@@ -140,25 +140,25 @@ class HWConfig(list):
 
     @staticmethod
     def get_quantization_mode_from_config_value(str_val: str):
-        if str_val == "symmetric":
+        if str_val == 'symmetric':
             return QuantizationMode.SYMMETRIC
-        if str_val == "asymmetric":
+        if str_val == 'asymmetric':
             return QuantizationMode.ASYMMETRIC
-        raise RuntimeError("Invalid quantization type specified in HW config")
+        raise RuntimeError('Invalid quantization type specified in HW config')
 
     @staticmethod
     def get_is_per_channel_from_config_value(str_val: str):
-        if str_val == "perchannel":
+        if str_val == 'perchannel':
             return True
-        if str_val == "pertensor":
+        if str_val == 'pertensor':
             return False
-        raise RuntimeError("Invalid quantization granularity specified in HW config")
+        raise RuntimeError('Invalid quantization granularity specified in HW config')
 
     @staticmethod
     def get_qconf_from_hw_config_subdict(quantization_subdict: Dict):
-        bits = quantization_subdict["bits"]
-        mode = HWConfig.get_quantization_mode_from_config_value(quantization_subdict["mode"])
-        is_per_channel = HWConfig.get_is_per_channel_from_config_value(quantization_subdict["granularity"])
+        bits = quantization_subdict['bits']
+        mode = HWConfig.get_quantization_mode_from_config_value(quantization_subdict['mode'])
+        is_per_channel = HWConfig.get_is_per_channel_from_config_value(quantization_subdict['granularity'])
         signedness_to_force = None
         if 'level_low' in quantization_subdict and 'level_high' in quantization_subdict:
             signedness_to_force = False
@@ -171,11 +171,11 @@ class HWConfig(list):
                 true_level_low, true_level_high, _ = quant.calculate_asymmetric_level_ranges(bits)
 
             assert quantization_subdict['level_low'] == true_level_low, \
-                    "Invalid value of quantizer parameter `level_low`.\
-                         The parameter must be consistent with other parameters!"
+                    'Invalid value of quantizer parameter `level_low`.\
+                         The parameter must be consistent with other parameters!'
             assert quantization_subdict['level_high'] == true_level_high, \
-                    "Invalid value of quantizer parameter `level_high`.\
-                         The parameter must be consistent with other parameters!"
+                    'Invalid value of quantizer parameter `level_high`.\
+                         The parameter must be consistent with other parameters!'
 
         return QuantizerConfig(num_bits=bits,
                                mode=mode,
@@ -196,14 +196,14 @@ class HWConfig(list):
                                                                                Optional[List[QuantizerConfig]]]:
         # 'None' for ops unspecified in HW config, empty list for wildcard quantization ops
         retval = {k: None for k in get_operator_metatypes()}
-        config_key = "weights" if for_weights else "activations"
+        config_key = 'weights' if for_weights else 'activations'
         for op_dict in self:
             hw_config_op_name = op_dict.type
 
             metatypes = get_metatypes_by_hw_config_name(hw_config_op_name)
             if not metatypes:
-                warnings.warn("Operation name {} in HW config is not registered in NNCF under any supported operation "
-                              "metatype - will be ignored".format(hw_config_op_name))
+                warnings.warn('Operation name {} in HW config is not registered in NNCF under any supported operation '
+                              'metatype - will be ignored'.format(hw_config_op_name))
 
             if self.QUANTIZATION_ALGORITHM_NAME in op_dict:
                 allowed_qconfs = op_dict[self.QUANTIZATION_ALGORITHM_NAME][config_key]
@@ -236,8 +236,8 @@ class HWConfig(list):
                     metatypes = get_metatypes_by_hw_config_name(hw_config_op_name)
                     if not metatypes:
                         warnings.warn(
-                            "Operation name {} in HW config is not registered in NNCF under any supported "
-                            "operation metatype - will be ignored".format(hw_config_op_name))
+                            'Operation name {} in HW config is not registered in NNCF under any supported '
+                            'operation metatype - will be ignored'.format(hw_config_op_name))
                     result.update(metatypes)
         return result
 

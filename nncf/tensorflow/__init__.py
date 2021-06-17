@@ -18,7 +18,7 @@ import tensorflow
 from pkg_resources import parse_version
 if parse_version(BKC_TF_VERSION).base_version != parse_version(tensorflow.__version__).base_version:
     raise RuntimeError(
-         "NNCF only supports tensorflow=={bkc}, while current tensorflow version is {curr}".format(
+         'NNCF only supports tensorflow=={bkc}, while current tensorflow version is {curr}'.format(
          bkc=BKC_TF_VERSION,
          curr=tensorflow.__version__
     ))
@@ -27,6 +27,7 @@ from nncf.tensorflow.backend import backend
 
 from nncf.tensorflow.helpers import create_compressed_model
 from nncf.tensorflow.helpers.callback_creation import create_compression_callbacks
+from nncf.tensorflow.initialization import register_default_init_args
 
 # Required for correct COMPRESSION_ALGORITHMS registry functioning
 from nncf.tensorflow.quantization import algorithm as quantization_algorithm

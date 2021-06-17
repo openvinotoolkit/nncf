@@ -40,9 +40,8 @@ The framework is designed so that the modifications to your original training co
     criterion with 2 arguments: model outputs and targets).
 
     The initialization expects that the model is called with its first argument equal to the dataloader output.
-    If your model has more complex input arguments you can create and pass an instance of
-    `nncf.initialization.InitializingDataLoader` that overrides its `__next__` method to return
-    a tuple of (_single model input_ , _the rest of the model inputs as a kwargs dict_).
+    If your model has more complex input arguments you can create your own data loader implementing 
+    `nncf.common.initialization.dataloader.NNCFDataLoader` interface to return a tuple of (_single model input_ , _the rest of the model inputs as a kwargs dict_).
 
  4. Right after you create an instance of the original model and load its weights, **wrap the model** by making the following call
     ```python

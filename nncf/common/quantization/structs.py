@@ -20,8 +20,8 @@ from nncf.common.graph import NNCFNodeName
 
 
 class QuantizationMode:
-    SYMMETRIC = "symmetric"
-    ASYMMETRIC = "asymmetric"
+    SYMMETRIC = 'symmetric'
+    ASYMMETRIC = 'asymmetric'
 
 
 class QuantizerConfig:
@@ -51,7 +51,7 @@ class QuantizerConfig:
         return self.__dict__ == other.__dict__
 
     def __str__(self):
-        return "B:{bits} M:{mode} SGN:{signedness} PC:{per_channel}".format(
+        return 'B:{bits} M:{mode} SGN:{signedness} PC:{per_channel}'.format(
             bits=self.num_bits,
             mode='S' if self.mode == QuantizationMode.SYMMETRIC else 'A',
             signedness='ANY' if self.signedness_to_force is None else ('S' if self.signedness_to_force else 'U'),
@@ -158,7 +158,7 @@ class QuantizationConstraints:
         """
         for attr_name in kwargs:
             if not hasattr(QuantizationConstraints.REF_QCONF_OBJ, attr_name):
-                raise RuntimeError("Invalid constraint - QuantizerConfig has no attribute '{}'".format(attr_name))
+                raise RuntimeError('Invalid constraint - QuantizerConfig has no attribute \'{}\''.format(attr_name))
         self.qconf_attr_vs_constraint_dict = kwargs
 
     def apply_constraints_to(self, qconfig: QuantizerConfig) -> QuantizerConfig:
@@ -183,10 +183,10 @@ class QuantizationConstraints:
 
     @classmethod
     def from_config_dict(cls, config_dict: Dict) -> 'QuantizationConstraints':
-        return cls(num_bits=config_dict.get("bits"),
-                   mode=config_dict.get("mode"),
-                   per_channel=config_dict.get("per_channel"),
-                   signedness_to_force=config_dict.get("signed"))
+        return cls(num_bits=config_dict.get('bits'),
+                   mode=config_dict.get('mode'),
+                   per_channel=config_dict.get('per_channel'),
+                   signedness_to_force=config_dict.get('signed'))
 
     def constrain_qconfig_list(self, quantizer_config_list: List[QuantizerConfig]) -> List[QuantizerConfig]:
         assert quantizer_config_list is not None
@@ -206,8 +206,8 @@ class QuantizationConstraints:
 
 
 class QuantizerGroup(Enum):
-    ACTIVATIONS = "activations"
-    WEIGHTS = "weights"
+    ACTIVATIONS = 'activations'
+    WEIGHTS = 'weights'
 
     @staticmethod
     def from_str(str_: str) -> 'QuantizerGroup':
@@ -215,7 +215,7 @@ class QuantizerGroup(Enum):
             return QuantizerGroup.ACTIVATIONS
         if str_ == QuantizerGroup.WEIGHTS.value:
             return QuantizerGroup.WEIGHTS
-        raise RuntimeError("Unknown quantizer group string")
+        raise RuntimeError('Unknown quantizer group string')
 
 
 class QuantizableWeightedLayerNode:

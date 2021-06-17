@@ -64,14 +64,14 @@ def get_config_for_logarithm_scale(logarithm_scale: bool, quantization_type: str
 
     data_loader = torch.utils.data.DataLoader(RandDatasetMock(), batch_size=1, shuffle=False, drop_last=True)
 
-    class SquadInitializingDataloader(nncf.torch.initialization.InitializingDataLoader):
+    class SquadInitializingDataloader(nncf.torch.initialization.PTInitializingDataLoader):
         def get_inputs(self, batch):
             return batch, {}
         def get_target(self, batch):
             return None
 
     initializing_data_loader = SquadInitializingDataloader(data_loader)
-    init_range = nncf.torch.initialization.QuantizationRangeInitArgs(initializing_data_loader)
+    init_range = nncf.config.structures.QuantizationRangeInitArgs(initializing_data_loader)
     nncf_config.register_extra_structs([init_range])
     register_bn_adaptation_init_args(nncf_config)
 

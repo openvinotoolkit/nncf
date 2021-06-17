@@ -11,12 +11,12 @@
  limitations under the License.
 """
 
+import numpy as np
 import tensorflow as tf
 from tensorflow.python.ops.init_ops import Constant
-import numpy as np
 
-from nncf.tensorflow.helpers.model_creation import create_compressed_model
 from nncf import NNCFConfig
+from nncf.tensorflow.helpers.model_creation import create_compressed_model
 
 from examples.tensorflow.common.object_detection.datasets.builder import COCODatasetBuilder
 
@@ -84,10 +84,10 @@ def get_basic_n_conv_test_model(input_shape=(24, 24, 1), in_out_ch=((1, 3), (3, 
     return tf.keras.Model(inputs=inputs, outputs=outputs)
 
 
-def create_compressed_model_and_algo_for_test(model, config):
+def create_compressed_model_and_algo_for_test(model, config, should_init=True):
     assert isinstance(config, NNCFConfig)
     tf.keras.backend.clear_session()
-    algo, model = create_compressed_model(model, config)
+    algo, model = create_compressed_model(model, config, should_init)
     return model, algo
 
 

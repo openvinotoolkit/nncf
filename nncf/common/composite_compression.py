@@ -75,7 +75,7 @@ class CompositeCompressionLoss(CompressionLoss):
         """
 
         if len(self._child_losses) == 0:
-            raise RuntimeError("Cannot calculate the loss value because the number of child loss is 0.")
+            raise RuntimeError('Cannot calculate the loss value because the number of child loss is 0.')
 
         result_loss = 0
         for loss in self._child_losses:
