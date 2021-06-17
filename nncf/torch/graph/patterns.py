@@ -34,7 +34,7 @@ def get_full_pattern_graph(pattern_views=None):
                        'conv_transpose3d', 'conv1d', 'addmm']
     BN_type = ['batch_norm', 'batch_norm3d']
     # This type may be useful in the future
-    # pylint: disable=unused-argument
+    # pylint: disable=unused-variable
     POOLING_type = ['adaptive_avg_pool2d', 'adaptive_avg_pool3d', 'avg_pool2d', 'avg_pool3d']
     RELU_type = ['relu', 'relu_', 'hardtanh']
     NON_RELU_ACTIVATIONS_type = ['elu', 'elu_', 'prelu', 'sigmoid', 'gelu']
