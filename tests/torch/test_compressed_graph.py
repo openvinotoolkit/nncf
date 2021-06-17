@@ -28,7 +28,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torchvision
-
 from nncf.torch import nncf_model_input
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNodeName
@@ -40,7 +39,6 @@ from nncf.torch.dynamic_graph.graph_tracer import create_input_infos
 from nncf.torch.dynamic_graph.graph_tracer import create_mock_tensor
 from nncf.torch.graph.graph import PTNNCFGraph
 from nncf.torch.graph.graph_builder import GraphBuilder
-from nncf.common.graph.version_agnostic_op_names import get_version_agnostic_name
 from nncf.common.hardware.config import HWConfigType
 from nncf.torch.layers import LSTMCellNNCF
 from nncf.torch.layers import NNCF_RNN
@@ -84,28 +82,6 @@ def get_basic_quantization_config_with_hw_config_type(hw_config_type, input_samp
     config["target_device"] = hw_config_type
     config["compression"] = {"algorithm": "quantization", }
     return config
-
-
-def get_version_agnostic_graph(nx_graph):
-    done = False
-    while not done:
-        counter = 0
-        for node_name, node_data in nx_graph.nodes().data():
-            if "type" in node_data:
-                version_specific_name = node_data["type"]
-                version_agnostic_name = get_version_agnostic_name(version_specific_name)
-                if version_agnostic_name != version_specific_name:
-                    node_data["type"] = version_agnostic_name
-                    mapping = dict(zip(nx_graph, nx_graph))  # identity mapping
-                    new_node_name = node_name.replace(version_specific_name, version_agnostic_name)
-                    mapping[node_name] = new_node_name
-                    nx_graph = nx.relabel_nodes(nx_graph, mapping, copy=False)
-                    break  # Looks like iterators will be invalidated after relabel_nodes
-            counter += 1
-        if counter == len(nx_graph.nodes().data()):
-            done = True
-
-    return nx_graph
 
 
 def sort_dot(path):
@@ -154,7 +130,6 @@ def check_nx_graph(nx_graph: nx.DiGraph, path_to_dot, graph_dir, sort_dot_graph=
             sort_dot(path_to_dot)
 
     load_graph = nx.drawing.nx_pydot.read_dot(path_to_dot)
-    load_graph = get_version_agnostic_graph(load_graph)
 
     # nx_graph is expected to have version-agnostic operator names already
     for k, attrs in nx_graph.nodes.items():

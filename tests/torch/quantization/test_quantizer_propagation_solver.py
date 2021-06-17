@@ -31,7 +31,6 @@ from nncf.common.graph import NNCFGraphNodeType
 from nncf.common.graph import NNCFNodeName
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.transformations.commands import TargetType
-from nncf.common.graph.version_agnostic_op_names import get_version_agnostic_name
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.torch.dynamic_graph.graph import OperationExecutionContext
@@ -247,7 +246,7 @@ class TestQuantizerPropagationSolver:
                 if alias in [MODEL_INPUT_OP_NAME, MODEL_OUTPUT_OP_NAME,\
                      NNCFGraphNodeType.INPUT_NODE, NNCFGraphNodeType.OUTPUT_NODE]:
                     continue  # makes sure that no input/output nodes end up in the middle of the raph
-                tested_op_names.append(get_version_agnostic_name(alias))
+                tested_op_names.append(alias)
 
         # Edges should be irrelevant - using random graph
         mock_graph = get_randomly_connected_model_graph(tested_op_names)

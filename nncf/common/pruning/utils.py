@@ -23,7 +23,6 @@ from nncf.common.graph import NNCFNode
 from nncf.common.graph import NNCFNodeName
 from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
 from nncf.common.graph.operator_metatypes import OperatorMetatype
-from nncf.common.graph.version_agnostic_op_names import get_version_agnostic_name
 from nncf.common.pruning.clusterization import Cluster
 from nncf.common.pruning.clusterization import Clusterization
 from nncf.common.pruning.structs import PrunedLayerInfoBase
@@ -339,7 +338,6 @@ class PruningOperationsMetatypeRegistry(Registry):
             super_register(obj, cls_name)
             op_names = obj.get_all_op_aliases()
             for name in op_names:
-                name = get_version_agnostic_name(name)
                 if name not in self._op_name_to_op_class:
                     self._op_name_to_op_class[name] = obj
                 else:

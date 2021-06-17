@@ -11,6 +11,9 @@
  limitations under the License.
 """
 from copy import deepcopy
+
+from nncf.common.graph import MODEL_INPUT_OP_NAME
+from nncf.common.graph import MODEL_OUTPUT_OP_NAME
 from nncf.common.graph import NNCFGraphNodeType
 from typing import List
 from typing import Tuple
@@ -31,6 +34,7 @@ from nncf.torch.graph.graph_builder import GraphBuilder
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
 from tests.torch.helpers import register_bn_adaptation_init_args
 from tests.torch.test_compressed_graph import get_basic_quantization_config
+from tests.torch.test_get_modules_by_type import ModelForNameTest
 
 TEST_TRACING_CONTEXT = 'test'
 
@@ -164,29 +168,35 @@ input_shapes = [
 def test_activation_shape_tracing(input_shape: Tuple):
     model = ModelForTest()
     input_info = ModelInputInfo(input_shape)
-    graph_builder = GraphBuilder(create_dummy_forward_fn([input_info, ]))
+    graph_builder = GraphBuilder(create_dummy_forward_fn([input_info, ], with_input_tracing=True,
+                                                         with_output_tracing=True))
     graph = graph_builder.build_graph(model)
 
     shape1 = (input_shape[0], ModelForTest.CONV1_OUT_CHANNELS, input_shape[2], input_shape[3])
-    ref_node_ids_and_output_shapes = [
-        # TODO: extend with checking input tensor size once proper input node marking is implemented
-        ("0 ModelForTest/Conv2d[conv1]/conv2d_0", [shape1]),
-        ("1 ModelForTest/BatchNorm2d[bn1]/batch_norm_0", [shape1]),
-        ("2 ModelForTest/ReLU[relu1]/RELU_0", [shape1, shape1]),
-        ("3 ModelForTest/max_pool2d_0", [(shape1[0], shape1[1],
+    final_shape = (input_shape[0], ModelForTest.OUT_CHANNELS, input_shape[2], input_shape[3])
+    ref_maxpool_out_edge_shapes = [(shape1[0], shape1[1],
                                         shape1[2] // ModelForTest.MAXPOOL_SIZE,
-                                        shape1[3] // ModelForTest.MAXPOOL_SIZE)]),
-        ("4 ModelForTest/ConvTranspose2d[convt1]/conv_transpose2d_0", [input_shape]),
-        ("5 ModelForTest/cat_0", [(input_shape[0], ModelForTest.CONV2_IN_CHANNELS,
-                                 input_shape[2], input_shape[3])])
-
-        # TODO: extend with checking output tensor size once proper output node marking is implemented
+                                        shape1[3] // ModelForTest.MAXPOOL_SIZE)]
+    ref_cat_out_edge_shapes = [(input_shape[0], ModelForTest.CONV2_IN_CHANNELS, input_shape[2], input_shape[3])]
+    ref_node_ids_and_io_edge_shapes = [
+        (f"0 /{MODEL_INPUT_OP_NAME}_0", [], [input_shape]),
+        ("1 ModelForTest/Conv2d[conv1]/conv2d_0", [input_shape], [shape1]),
+        ("2 ModelForTest/BatchNorm2d[bn1]/batch_norm_0", [shape1], [shape1]),
+        ("3 ModelForTest/ReLU[relu1]/relu_0", [shape1], [shape1, shape1]),
+        ("4 ModelForTest/max_pool2d_0", [shape1], ref_maxpool_out_edge_shapes),
+        ("5 ModelForTest/ConvTranspose2d[convt1]/conv_transpose2d_0", ref_maxpool_out_edge_shapes, [input_shape]),
+        ("6 ModelForTest/cat_0", [shape1, input_shape], ref_cat_out_edge_shapes),
+        ("7 ModelForTest/Conv2d[conv2]/conv2d_0", ref_cat_out_edge_shapes, [final_shape]),
+        (f"8 /{MODEL_OUTPUT_OP_NAME}_0", [final_shape], []),
     ]
-    for node_id, ref_output_shapes in ref_node_ids_and_output_shapes:
+    for node_id, ref_input_shapes, ref_output_shapes in ref_node_ids_and_io_edge_shapes:
         # pylint:disable=protected-access
+        input_edges = graph.get_nncf_graph_pattern_io([node_id, ]).input_edges
         output_edges = graph.get_nncf_graph_pattern_io([node_id, ]).output_edges
-        output_shapes = [x.tensor_shape for x in output_edges]
-        assert output_shapes == ref_output_shapes, "Failed for {}".format(node_id)
+        input_tensor_shapes = [x.tensor_shape for x in input_edges]
+        output_tensor_shapes = [x.tensor_shape for x in output_edges]
+        assert input_tensor_shapes == ref_input_shapes, "Failed for node ID: {}".format(node_id)
+        assert output_tensor_shapes == ref_output_shapes, "Failed for node ID: {}".format(node_id)
 
 
 TEST_KEYWORD_1 = "keyword1"
@@ -396,3 +406,28 @@ def test_nncf_graph_auxiliary_node_structure():
 
     assert input_nodes[0].node_type == NNCFGraphNodeType.INPUT_NODE
     assert output_nodes[0].node_type == NNCFGraphNodeType.OUTPUT_NODE
+
+
+def test_get_all_nodes():
+    model = ModelForNameTest()
+    ref_list = [
+        'ModelForNameTest/Conv2d[conv1]/conv2d_0',
+        'ModelForNameTest/BatchNorm2d[bn1]/batch_norm_0',
+        'ModelForNameTest/ReLU/relu_0',
+        'ModelForNameTest/relu_0',
+        'ModelForNameTest/BatchNorm2d[bn2]/batch_norm_0',
+        'ModelForNameTest/Sequential[layer2]/Sequential[layer1]/Conv2d[conv01]/conv2d_0',
+        'ModelForNameTest/Sequential[layer2]/Sequential[layer1]/BatchNorm2d[norm01]/batch_norm_0',
+        'ModelForNameTest/Sequential[layer2]/Sequential[layer1]/ReLU[relu01]/relu_0',
+        'ModelForNameTest/Sequential[layer2]/Sequential[layer1]/MaxPool2d[pool01]/max_pool2d_0',
+        'ModelForNameTest/Sequential[layer2]/Conv2d[conv02]/conv2d_0',
+        'ModelForNameTest/Sequential[layer2]/ReLU[relu02]/relu_0',
+        'ModelForNameTest/Sequential[layer2]/BatchNorm2d[norm02]/batch_norm_0',
+        'ModelForNameTest/Sequential[layer2]/MaxPool2d[pool02]/max_pool2d_0',
+        'ModelForNameTest/AvgPool2d[avgpool]/avg_pool2d_0'
+    ]
+
+    builder = GraphBuilder(create_dummy_forward_fn([ModelInputInfo((1, 1, 4, 4)), ]))
+    graph = builder.build_graph(model)
+    test_list = [node_name.split(' ', 1)[1] for node_name in graph.get_all_node_keys()]
+    assert ref_list == test_list
