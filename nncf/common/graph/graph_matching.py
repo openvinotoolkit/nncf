@@ -45,17 +45,23 @@ def find_whether_subgraph_has_inner_outgoing_edges(graph: nx.DiGraph, subgraph: 
     :return: True if the subgraph contains outgoing edges starting not from the last node,
         False - otherwise.
     """
-    for node_key in subgraph[:-1]:
-        successors = list(graph.succ[node_key].keys())
-        for successors_key in successors:
-            if successors_key not in subgraph:
+    first_node = subgraph[0]
+    last_node = subgraph[-1]
+    for node_key in subgraph:
+        if node_key == last_node:
+            predecessors = list(graph.pred[node_key].keys())
+            if any(predecessor not in subgraph for predecessor in predecessors):
                 return True
-
-    # Breaking input edges
-    for node_key in subgraph[1:]:
-        predecessors = list(graph.pred[node_key].keys())
-        for predecessors_key in predecessors:
-            if predecessors_key not in subgraph:
+        elif node_key == first_node:
+            successors = list(graph.succ[node_key].keys())
+            if any(successor not in subgraph for successor in successors):
+                return True
+        else:
+            successors = list(graph.succ[node_key].keys())
+            predecessors = list(graph.pred[node_key].keys())
+            if any(successors_key not in subgraph for successors_key in successors):
+                return True
+            if any(predecessor not in subgraph for predecessor in predecessors):
                 return True
     return False
 
@@ -83,10 +89,7 @@ def find_subgraphs_matching_expression(graph: nx.DiGraph, pattern_graph: GraphPa
     for pattern in patterns:
         matcher = ism.DiGraphMatcher(graph, pattern, node_match=are_nodes_matching)
         for subgraph in matcher.subgraph_isomorphisms_iter():
-            # Sort operations in subgraph by their IDs
-            # This is needed for
-            # find_whether_subgraph_has_inner_outgoing_edges()
-            subgraph = sorted(list(subgraph), key=lambda x: int(x.split()[0]))
+            subgraph = list(nx.topological_sort(graph.subgraph(subgraph)))
             is_visited_node = any(node in visited_nodes for node in subgraph)
             if is_visited_node:
                 continue
