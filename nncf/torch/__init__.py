@@ -13,6 +13,7 @@
 
 # pylint: skip-file
 from nncf.version import BKC_TORCH_VERSION
+from nncf.version import BKC_TORCHVISION_VERSION
 
 import torch
 from pkg_resources import parse_version
