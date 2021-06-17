@@ -287,7 +287,12 @@ class QuantizationEnv:
         assert len(set(self.qconfig_space_map.keys()) - set(adjq_gid_map.keys())) == 0, \
             "both qconfig_space_map and adjq_gid_map must have exact keys."
 
-        # AutoQ requires quantizers in execution order
+        # By design, AutoQ requires quantizers in execution order.
+        # RL assumes that state satisfies Markov assumption in which
+        # the future is independent of the past given current state.
+        # Stated differently, curret state should represent well of historical dynamics.
+        # Given sequential nature of NN, state transition in the order of
+        # quantizer being executed is a natural design to conform the assumption.
         quantizers_in_exec_order = []
         hooklist = []
         for qid, qmod in self.qctrl.all_quantizations.items():
