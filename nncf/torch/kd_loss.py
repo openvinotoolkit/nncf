@@ -8,7 +8,7 @@ import torch
 from functools import reduce, partial
 from nncf import NNCFConfig
 
-from nncf.nncf_network import NNCFNetwork
+from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.dynamic_graph.utils import nested_object_paths_generator
 from nncf.torch.compression_method_api import PTCompressionAlgorithmBuilder
 from nncf.torch.compression_method_api import PTCompressionAlgorithmController

@@ -15,7 +15,7 @@ from typing import Tuple, Union, Callable
 
 from graphviz import Digraph
 
-from nncf.utils import maybe_get_iterator
+from nncf.torch.utils import maybe_get_iterator
 
 graph_theme = {
     "background_color": "#FFFFFF",
