@@ -184,7 +184,9 @@ def run_evaluation(config, eval_timeout=None):
                                 weights=config.get('weights', None),
                                 is_training=False) as model:
         with strategy.scope():
-            compression_ctrl, compress_model = create_compressed_model(model, config.nncf_config)
+            compression_ctrl, compress_model = create_compressed_model(model,
+                                                                       config.nncf_config,
+                                                                       should_init=False)
             variables = get_variables(compress_model)
             checkpoint = tf.train.Checkpoint(variables=variables,
                                              compression_ctrl=compression_ctrl,
