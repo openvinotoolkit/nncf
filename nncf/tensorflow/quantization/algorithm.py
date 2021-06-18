@@ -84,7 +84,9 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
         for quantizer_group in QuantizerGroup:
             self._parse_group_params(self.config, quantizer_group)
 
-        self._parse_init_params()
+        if self.should_init:
+            self._parse_init_params()
+
         self._range_initializer = None
         self._bn_adaptation = None
 

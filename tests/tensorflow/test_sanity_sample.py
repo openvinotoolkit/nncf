@@ -172,6 +172,7 @@ def generate_id(value):
 
 CONFIG_PARAMS = generate_config_params()
 
+
 @pytest.fixture(params=CONFIG_PARAMS, ids=generate_id)
 def _config(request, dataset_dir):
     sample_type, config_path, dataset_name, dataset_type, batch_size, tid = request.param
@@ -212,7 +213,6 @@ def test_model_eval(_config, tmp_path):
         '--log-dir': tmp_path,
         '--batch-size': _config['batch_size']
     }
-
     main = get_sample_fn(_config['sample_type'], modes=['test'])
     main(convert_to_argv(args))
 
