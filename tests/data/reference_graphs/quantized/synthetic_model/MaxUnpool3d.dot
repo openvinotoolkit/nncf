@@ -1,9 +1,0 @@
-strict digraph  {
-"0 /nncf_model_input" [id=0, scope="", type=nncf_model_input];
-"1 PoolUnPool/MaxPool3d[pool]/max_pool3d" [id=1, scope="PoolUnPool/MaxPool3d[pool]", type=max_pool3d];
-"2 PoolUnPool/MaxUnpool3d[unpool]/max_unpool3d" [id=2, scope="PoolUnPool/MaxUnpool3d[unpool]", type=max_unpool3d];
-"3 /nncf_model_output" [id=3, scope="", type=nncf_model_output];
-"0 /nncf_model_input" -> "1 PoolUnPool/MaxPool3d[pool]/max_pool3d";
-"1 PoolUnPool/MaxPool3d[pool]/max_pool3d" -> "2 PoolUnPool/MaxUnpool3d[unpool]/max_unpool3d";
-"2 PoolUnPool/MaxUnpool3d[unpool]/max_unpool3d" -> "3 /nncf_model_output";
-}

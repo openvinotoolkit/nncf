@@ -1,0 +1,38 @@
+{
+    "model": "MaskRCNN",
+    "input_info": {
+        "sample_size": [1, 1024, 1024, 3]
+    },
+
+    "epochs": 2,
+    "batch_size": 16,
+    "weight_decay": 0.0001,
+
+    "dataset": "coco/2017",
+
+     "optimizer": {
+        "type": "Adam",
+        "schedule_type": "piecewise_constant",
+        "schedule_params": {
+            "boundaries": [1],
+            "values": [1e-5, 1e-6]
+        }
+    },
+
+  "compression": {
+      "algorithm": "quantization",
+      "disable_saturation_fix": true,
+      "ignored_scopes": [
+              "{re}.*multilevel_propose_rois.*",
+              "{re}.*sample_proposals.*",
+              "{re}.*multilevel_crop_and_resize.*",
+              "{re}.*generate_detections.*",
+              "{re}.*sample_and_crop_foreground_masks.*",
+              "{re}.*decode_boxes.*",
+              "{re}.*encode_boxes.*",
+              "gt_boxes",
+              "gt_masks",
+              "image_info"
+      ]
+  }
+}

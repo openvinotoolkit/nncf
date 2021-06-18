@@ -1,0 +1,29 @@
+{
+    "model": "ResNet50",
+    "pretrained": true,
+    "input_info": {
+        "sample_size": [1, 224, 224, 3]
+    },
+    "batch_size": 128,
+    "epochs": 4,
+    "optimizer": {
+        "type": "Adam",
+        "schedule_type": "piecewise_constant",
+        "schedule_params": {
+            "boundaries": [2],
+            "values": [1e-5, 1e-6]
+        }
+    },
+    "dataset": "imagenet2012",
+    "dataset_type": "tfds",
+
+   "compression": {
+        "algorithm": "quantization",
+        "initializer": {
+            "batchnorm_adaptation": {
+                "num_bn_adaptation_samples": 2048,
+                "num_bn_forget_samples": 1024
+            }
+        }
+    }
+}

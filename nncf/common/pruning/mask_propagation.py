@@ -14,8 +14,8 @@ from typing import List
 from typing import Union
 from typing import TypeVar
 
-from nncf.common.graph.graph import NNCFGraph
-from nncf.common.graph.graph import NNCFNode
+from nncf.common.graph import NNCFGraph
+from nncf.common.graph import NNCFNode
 from nncf.common.pruning.export_helpers import DefaultMetaOp
 from nncf.common.pruning.utils import PruningOperationsMetatypeRegistry
 

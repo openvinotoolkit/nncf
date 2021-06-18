@@ -1,0 +1,4 @@
+strict digraph  {
+"0 /nncf_model_input_0" [id=0, type=nncf_model_input];
+"1 /nncf_model_input_1" [id=1, type=nncf_model_input];
+}

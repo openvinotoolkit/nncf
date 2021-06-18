@@ -17,8 +17,8 @@ import torch.multiprocessing as mp
 import torch.nn as nn
 
 from nncf.common.quantization.structs import QuantizationMode
-from nncf.quantization.layers import AsymmetricQuantizer, SymmetricQuantizer, PTQuantizerSpec
-from nncf.utils import sum_like, get_per_channel_scale_shape
+from nncf.torch.quantization.layers import AsymmetricQuantizer, SymmetricQuantizer, PTQuantizerSpec
+from nncf.torch.utils import sum_like, get_per_channel_scale_shape
 
 from tools.benchmark import run_profile, run_wall, run_worker
 

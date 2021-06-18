@@ -28,21 +28,20 @@ The framework is designed so that the modifications to your original training co
     ```python
     nncf_config = NNCFConfig.from_json("nncf_config.json")  # Specify a path to your own NNCF configuration file in place of "nncf_config.json"
     ```
- 3. (Optional) For certain algorithms such as quantization it is highly recommended to **initialize the algorithm** by  
+ 3. (Optional) For certain algorithms such as quantization it is highly recommended to **initialize the algorithm** by
  passing training data via `nncf_config` prior to starting the compression fine-tuning properly:
     ```python
     from nncf import register_default_init_args
     nncf_config = register_default_init_args(nncf_config, train_loader, criterion)
     ```
     Training data loaders should be attached to the NNCFConfig object as part of a library-defined structure. `register_default_init_args` is a helper
-    method that registers the necessary structures for all available initializations (currently quantizer range and precision initialization) by taking 
-    data loader, criterion and criterion function (for sophisticated calculation of loss different from direct call of the 
-    criterion with 2 arguments: model outputs and targets).  
+    method that registers the necessary structures for all available initializations (currently quantizer range and precision initialization) by taking
+    data loader, criterion and criterion function (for sophisticated calculation of loss different from direct call of the
+    criterion with 2 arguments: model outputs and targets).
 
     The initialization expects that the model is called with its first argument equal to the dataloader output.
-    If your model has more complex input arguments you can create and pass an instance of
-    `nncf.initialization.InitializingDataLoader` that overrides its `__next__` method to return
-    a tuple of (_single model input_ , _the rest of the model inputs as a kwargs dict_).
+    If your model has more complex input arguments you can create your own data loader implementing 
+    `nncf.common.initialization.dataloader.NNCFDataLoader` interface to return a tuple of (_single model input_ , _the rest of the model inputs as a kwargs dict_).
 
  4. Right after you create an instance of the original model and load its weights, **wrap the model** by making the following call
     ```python
@@ -50,7 +49,7 @@ The framework is designed so that the modifications to your original training co
     ```
     The `create_compressed_model` function parses the loaded configuration file and returns two objects. `compression_ctrl` is a "controller" object that can be used during compressed model training to adjust certain parameters of the compression algorithm (according to a scheduler, for instance), or to gather statistics related to your compression algorithm (such as the current level of sparsity in your model).
 
- 5. (Optional) Wrap your model with `DataParallel` or `DistributedDataParallel` classes for multi-GPU training. 
+ 5. (Optional) Wrap your model with `DataParallel` or `DistributedDataParallel` classes for multi-GPU training.
 If you use `DistributedDataParallel`, add the following call afterwards:
    ```python
    compression_ctrl.distributed()
@@ -86,7 +85,7 @@ Important points you should consider when training your networks with compressio
   - It is better to turn off additional regularization in the loss function (for example, L2 regularization via `weight_decay`) when training the network with RB sparsity, since it already imposes an L0 regularization term.
 
 #### Step 4 (optional): Export the compressed model to ONNX
-After the compressed model has been fine-tuned to acceptable accuracy and compression levels, you can export it to ONNX format.
+After the compressed model has been fine-tuned to acceptable accuracy and compression stages, you can export it to ONNX format.
 Since export process is in general algorithm-specific, you have to call the compression controller's `export_model` method to properly export the model with compression specifics into ONNX:
 ```python
 compression_ctrl.export_model("./compressed_model.onnx")
@@ -107,16 +106,16 @@ It will attempt to load a PyTorch state dict into a model by first stripping the
 Depending on the value of the `is_resume` argument, it will then fail if an exact match could not be made (when `is_resume == True`), or load the matching layer parameters and print a warning listing the mismatches (when `is_resume == False`).
 `is_resume=False` is most commonly used if you want to load the starting weights from an uncompressed model into a compressed model, and `is_resume=True` is used when you want to evaluate a compressed checkpoint or resume compressed checkpoint training without changing the compression algorithm parameters.
 
-To save the best compressed checkpoint use `compression_ctrl.compression_level()` to distinguish between 3 possible 
-levels of compression: `NONE`, `PARTIAL` and `FULL`. It is useful in case of `staged` compression. Model may achieve 
-the best accuracy on earlier stages of compression - tuning without compression or with intermediate compression rate,  
-but still fully compressed model with lower accuracy should be considered as the best compressed one. 
-`NONE` means that no compression is applied for the model, for instance, in case of stage quantization - when all 
-quantization are disabled, or in case of sparsity - when current sparsity rate is zero. `PARTIAL` stands for the 
-compressed model which haven't reached final compression ratio yet, e.g. magnitude sparsity algorithm has learnt 
-masking of 30% weights out of 51% of target rate. The controller returns `FULL` compression level when it finished 
-scheduling and tuning hyper parameters of the compression algorithm, for example when rb-sparsity method sets final 
-target sparsity rate for the loss. 
+To save the best compressed checkpoint use `compression_ctrl.compression_stage()` to distinguish between 3 possible
+levels of compression: `UNCOMPRESSED`, `PARTIALLY_COMPRESSED` and `FULLY_COMPRESSED`. It is useful in case of `staged` compression. Model may achieve
+the best accuracy on earlier stages of compression - tuning without compression or with intermediate compression rate,
+but still fully compressed model with lower accuracy should be considered as the best compressed one.
+`UNCOMPRESSED` means that no compression is applied for the model, for instance, in case of stage quantization - when all
+quantization are disabled, or in case of sparsity - when current sparsity rate is zero. `PARTIALLY_COMPRESSED` stands for the
+compressed model which haven't reached final compression ratio yet, e.g. magnitude sparsity algorithm has learnt
+masking of 30% weights out of 51% of target rate. The controller returns `FULLY_COMPRESSED` compression stage when it finished
+scheduling and tuning hyper parameters of the compression algorithm, for example when rb-sparsity method sets final
+target sparsity rate for the loss.
 
 ## Exploring the compressed model
 After a `create_compressed_model` call, the NNCF log directory will contain visualizations of internal representations for the original, uncompressed model (`original_graph.dot`) and for the model with the compression algorithms applied (`compressed_graph.dot`).
@@ -128,7 +127,7 @@ Below is the example of a LeNet network's `original_graph.dot` visualization:
 Same model's `compressed_graph.dot` visualization for symmetric INT8 quantization:
 
 ![alt text](pics/lenet_compressed_graph.png)
- 
+
 Visualize these .dot files using Graphviz and browse through the visualization to validate that this representation correctly reflects your model structure.
 Each node represents a single PyTorch function call - see [NNCFArchitecture.md](./NNCFArchitecture.md) section on graph tracing for details.
 In case you need to exclude some parts of the model from being considered in one algorithm or another, you can use the labels of the `compressed_graph.dot` nodes (excluding the numerical ID in the beginning) and specify these (globally or per-algorithm) within the corresponding specific sections in [configuration file](./ConfigFile.md)
@@ -137,7 +136,7 @@ For instance, below is the same LeNet INT8 model as above, but with `"ignored_sc
 
 ![alt text](pics/lenet_compressed_graph_ignored.png)
 
-Notice that all RELU operation outputs and the second convolution's weights are no longer quantized. 
+Notice that all RELU operation outputs and the second convolution's weights are no longer quantized.
 
 
 ## Advanced usage
@@ -158,4 +157,4 @@ class MyModule(torch.nn.Module):
 
 If registered module should be ignored by specific algorithms use `ignored_algorithms` parameter of decorator.
 
-In the example above, the NNCF-compressed models that contain instances of `MyModule` will have the corresponding modules extended with functionality that will allow NNCF to quantize, sparsify or prune the `weight` parameter of `MyModule` before it takes part in `MyModule`'s `forward` calculation. 
+In the example above, the NNCF-compressed models that contain instances of `MyModule` will have the corresponding modules extended with functionality that will allow NNCF to quantize, sparsify or prune the `weight` parameter of `MyModule` before it takes part in `MyModule`'s `forward` calculation.

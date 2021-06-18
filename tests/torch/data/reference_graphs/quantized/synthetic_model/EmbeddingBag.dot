@@ -1,0 +1,9 @@
+strict digraph  {
+"0 /nncf_model_input_0" [id=0, type=nncf_model_input];
+"1 TestModel/NNCFEmbeddingBag[_layer]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize_0" [id=1, type=symmetric_quantize];
+"2 TestModel/NNCFEmbeddingBag[_layer]/embedding_bag_0" [id=2, type=embedding_bag];
+"3 /nncf_model_output_0" [id=3, type=nncf_model_output];
+"0 /nncf_model_input_0" -> "2 TestModel/NNCFEmbeddingBag[_layer]/embedding_bag_0";
+"1 TestModel/NNCFEmbeddingBag[_layer]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize_0" -> "2 TestModel/NNCFEmbeddingBag[_layer]/embedding_bag_0";
+"2 TestModel/NNCFEmbeddingBag[_layer]/embedding_bag_0" -> "3 /nncf_model_output_0";
+}

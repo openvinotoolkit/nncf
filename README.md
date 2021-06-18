@@ -31,7 +31,8 @@ This function returns a wrapped model ready for compression fine-tuning, and han
 ```python
 import torch
 import nncf  # Important - should be imported directly after torch
-from nncf import create_compressed_model, NNCFConfig, register_default_init_args
+from nncf import NNCFConfig
+from nncf.torch import create_compressed_model, NNCFConfig, register_default_init_args
 
 # Instantiate your uncompressed model
 from torchvision.models.resnet import resnet50
@@ -65,9 +66,9 @@ For more details about the framework architecture, refer to the [NNCFArchitectur
 For a quicker start with NNCF-powered compression, you can also try the sample scripts, each of which provides a basic training pipeline for classification, semantic segmentation and object detection neural network training correspondingly.
 
 To run the samples please refer to the corresponding tutorials:
-- [Image Classification sample](examples/classification/README.md)
-- [Object Detection sample](examples/object_detection/README.md)
-- [Semantic Segmentation sample](examples/semantic_segmentation/README.md)
+- [Image Classification sample](examples/torch/classification/README.md)
+- [Object Detection sample](examples/torch/object_detection/README.md)
+- [Semantic Segmentation sample](examples/torch/semantic_segmentation/README.md)
 
 ## Third-party repository integration
 NNCF may be straightforwardly integrated into training/evaluation pipelines of third-party repositories.
@@ -76,7 +77,7 @@ See [third_party_integration](./third_party_integration) for examples of code mo
 
 ## System requirements
 - Ubuntu\* 18.04 or later (64-bit)
-- Python\* 3.7 or later
+- Python\* 3.6.2 or later
 - NVidia CUDA\* Toolkit 10.2 or later^
 - PyTorch\* 1.5 or later (1.8.0 not supported, 1.8.1 supported)
 
@@ -116,7 +117,7 @@ Use one of the Dockerfiles in the [docker](./docker) directory to build an image
 
 **NOTE**: If you want to use sample training scripts provided in the NNCF repository under `examples`, you should install the corresponding Python package dependencies:
 ```
-pip install -r examples/requirements.txt
+pip install -r examples/torch/requirements.txt
 ```
 
 ## Contributing

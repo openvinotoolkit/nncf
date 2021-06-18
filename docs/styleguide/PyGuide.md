@@ -122,6 +122,18 @@ Run [pylint](https://github.com/PyCQA/pylint) over your code using this [pylintr
 - Wildcard imports (`from module import *`) should be avoided, as they make it unclear which names are present 
   in the namespace, confusing both readers and many automated tools.
 
+- For classes from the typing module. You are explicitly allowed to import multiple specific classes on one line from the typing module.
+  ```python
+  # Recommended:
+  from typing import Any, Dict, Optional
+  ```
+  ```python
+  # Try to avoid, but this is also applicable:
+  from typing import Any 
+  from typing import Dict
+  from typing import Optional
+  ```
+
 <a id="s2.3-3rd-party-packages"></a>
 <a id="23-3rd-party-packages"></a>
 <a id="3rd-party-packages"></a>
