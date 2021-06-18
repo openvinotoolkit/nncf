@@ -1,15 +1,15 @@
 from copy import deepcopy
+from functools import reduce, partial
+
+from torch import nn
+import torch
 
 from nncf.common.schedulers import BaseCompressionScheduler
 from nncf.common.statistics import NNCFStatistics
 from nncf.torch.graph.transformations.layout import PTTransformationLayout
-from torch import nn
-import torch
-from functools import reduce, partial
 from nncf import NNCFConfig
-
 from nncf.torch.nncf_network import NNCFNetwork
-from nncf.torch.dynamic_graph.utils import nested_object_paths_generator
+from nncf.torch.dynamic_graph.op_input_processing import OperatorInput
 from nncf.torch.compression_method_api import PTCompressionAlgorithmBuilder
 from nncf.torch.compression_method_api import PTCompressionAlgorithmController
 from nncf.api.compression import CompressionLevel, CompressionLoss, CompressionScheduler
@@ -55,8 +55,8 @@ class KDLossCalculator(PTCompressionLoss):
 
         compressed_model_outputs_struct = []
         orig_model_outputs_struct = []
-        nested_object_paths_generator([compressed_model_outputs], compressed_model_outputs_struct)
-        nested_object_paths_generator([orig_model_outputs], orig_model_outputs_struct)
+        OperatorInput.nested_object_paths_generator([compressed_model_outputs], compressed_model_outputs_struct)
+        OperatorInput.nested_object_paths_generator([orig_model_outputs], orig_model_outputs_struct)
         compressed_model_loss_nested_obj_paths = list(filter(lambda x: self._is_loss(x.getter()),
                                                              compressed_model_outputs_struct))
         compressed_model_loss_outputs = list(map(lambda x: x.getter(), compressed_model_loss_nested_obj_paths))

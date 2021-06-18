@@ -52,17 +52,17 @@ class OperatorInput:
         self._index = OrderedDict()  # type: Dict[int, InputIndexEntry]
 
         op_args_index_entries = []
-        self._nested_object_paths_generator(self.op_args, op_args_index_entries,
-                                            previous_level_setter=partial(setattr, self, "op_args"))
+        self.nested_object_paths_generator(self.op_args, op_args_index_entries,
+                                           previous_level_setter=partial(setattr, self, "op_args"))
         op_kwargs_index_entries = []
-        self._nested_object_paths_generator(self.op_kwargs, op_kwargs_index_entries)
+        self.nested_object_paths_generator(self.op_kwargs, op_kwargs_index_entries)
 
         # pylint:disable=unnecessary-comprehension
         self._index = {idx: entry for idx, entry in
                        enumerate(op_args_index_entries + op_kwargs_index_entries)}
 
     @staticmethod
-    def _nested_object_paths_generator(obj, out_entries_list, path=(), memo=None, previous_level_setter=None):
+    def nested_object_paths_generator(obj, out_entries_list, path=(), memo=None, previous_level_setter=None):
         if memo is None:
             memo = set()
         iterator = maybe_get_iterator(obj)
@@ -85,9 +85,9 @@ class OperatorInput:
 
                 for idx, iterval in enumerate(iterator(obj)):
                     path_component, value = iterval
-                    retval = OperatorInput._nested_object_paths_generator(value, out_entries_list,
-                                                                          path + (path_component,), memo,
-                                                                          current_level_setters[idx])
+                    retval = OperatorInput.nested_object_paths_generator(value, out_entries_list,
+                                                                         path + (path_component,), memo,
+                                                                         current_level_setters[idx])
                     was_leaf = retval[1]
                     if was_leaf:
                         leaf_entry_path = retval
