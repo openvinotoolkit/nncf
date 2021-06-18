@@ -23,8 +23,6 @@ if parse_version(BKC_TF_VERSION).base_version != parse_version(tensorflow.__vers
          curr=tensorflow.__version__
     ))
 
-from nncf.tensorflow.backend import backend
-
 from nncf.tensorflow.helpers import create_compressed_model
 from nncf.tensorflow.helpers.callback_creation import create_compression_callbacks
 from nncf.tensorflow.initialization import register_default_init_args
