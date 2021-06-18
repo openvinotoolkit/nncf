@@ -18,10 +18,10 @@ from pathlib import Path
 import numpy as np
 import tensorflow as tf
 
-from nncf.common.utils.tensorboard import prepare_for_tensorboard
 from nncf.tensorflow import create_compressed_model
 from nncf.tensorflow.helpers.model_manager import TFOriginalModelManager
 from nncf.tensorflow.initialization import register_default_init_args
+from nncf.common.utils.tensorboard import prepare_for_tensorboard
 
 from examples.tensorflow.common.argparser import get_common_argument_parser
 from examples.tensorflow.common.distributed import get_distribution_strategy
