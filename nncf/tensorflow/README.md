@@ -109,7 +109,7 @@ Quick jump to the samples:
 
 |**Model**|**Compression algorithm**|**Dataset**|**TensorFlow FP32 baseline mAP**|**TensorFlow compressed mAP**|
 | :---: | :---: | :---: | :---: | :---: |
-|RetinaNet|INT8 w:sym,per-tensor a:sym,per-tensor |COCO2017|33.44|33.26|
+|RetinaNet|INT8 w:sym,per-tensor a:sym,per-tensor |COCO2017|33.44|33.22|
 |RetinaNet|Sparsity 50% (Magnitude)|COCO2017|33.44|33.13|
 |RetinaNet|Filter Pruning 40%|COCO2017|33.44|32.7|
 
@@ -117,7 +117,7 @@ Quick jump to the samples:
 
 |**Model**|**Compression algorithm**|**Dataset**|**TensorFlow FP32 baseline mAP**|**TensorFlow compressed mAP**|
 | :---: | :---: | :---: | :---: | :---: |
-|MaskRCNN|INT8 w:sym,per-tensor a:sym,per-tensor |COCO2017|bbox: 37.33<br/>segm: 33.56|bbox: 37.25<br/>segm: 33.59|
+|MaskRCNN|INT8 w:sym,per-tensor a:sym,per-tensor |COCO2017|bbox: 37.33<br/>segm: 33.56|bbox: 37.12<br/>segm: 33.39|
 |MaskRCNN|Sparsity 50% (Magnitude)|COCO2017|bbox: 37.33<br/>segm: 33.56|bbox: 36.93<br/>segm: 33.23|
 
 ## Legal Information
