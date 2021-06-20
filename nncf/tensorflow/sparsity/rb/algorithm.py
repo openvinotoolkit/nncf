@@ -15,8 +15,8 @@ from typing import Set, List
 import numpy as np
 import tensorflow as tf
 
+from nncf import NNCFConfig
 from nncf.common.graph.transformations.commands import TransformationPriority
-from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.sparsity.schedulers import SPARSITY_SCHEDULERS
 from nncf.common.sparsity.schedulers import SparsityScheduler
 from nncf.common.sparsity.statistics import RBSparsityStatistics
@@ -25,6 +25,7 @@ from nncf.tensorflow.algorithm_selector import TF_COMPRESSION_ALGORITHMS
 from nncf.tensorflow.api.compression import TFCompressionAlgorithmBuilder
 from nncf.tensorflow.graph.transformations.commands import TFInsertionCommand
 from nncf.tensorflow.graph.transformations.commands import TFLayerWeight
+from nncf.tensorflow.graph.transformations.layout import TFTransformationLayout
 from nncf.tensorflow.graph.utils import get_original_name_and_instance_index
 from nncf.tensorflow.graph.utils import get_nncf_operations
 from nncf.tensorflow.graph.converter import convert_keras_model_to_nncf_graph
@@ -32,7 +33,6 @@ from nncf.tensorflow.sparsity.base_algorithm import BaseSparsityController
 from nncf.tensorflow.sparsity.base_algorithm import SPARSITY_LAYER_METATYPES
 from nncf.tensorflow.sparsity.rb.loss import SparseLoss
 from nncf.tensorflow.sparsity.rb.operation import RBSparsifyingWeight
-from nncf.tensorflow.sparsity.utils import apply_fn_to_op_weights
 from nncf.tensorflow.sparsity.collector import TFSparseModelStatisticsCollector
 from nncf.common.utils.helpers import should_consider_scope
 from nncf.common.accuracy_aware_training.training_loop import ADAPTIVE_COMPRESSION_CONTROLLERS
@@ -40,14 +40,14 @@ from nncf.common.schedulers import StubCompressionScheduler
 
 @TF_COMPRESSION_ALGORITHMS.register('rb_sparsity')
 class RBSparsityBuilder(TFCompressionAlgorithmBuilder):
-    def __init__(self, config):
-        super().__init__(config)
+    def __init__(self, config: NNCFConfig, should_init: bool = True):
+        super().__init__(config, should_init)
         self.ignored_scopes = self.config.get('ignored_scopes', [])
         self._op_names = []
 
-    def get_transformation_layout(self, model):
+    def get_transformation_layout(self, model: tf.keras.Model) -> TFTransformationLayout:
         nncf_graph = convert_keras_model_to_nncf_graph(model)
-        transformations = TransformationLayout()
+        transformations = TFTransformationLayout()
 
         processed_shared_layer_names = set()  # type: Set[str]
 
@@ -78,15 +78,18 @@ class RBSparsityBuilder(TFCompressionAlgorithmBuilder):
 
         return transformations
 
-    def _get_rb_sparsity_operation_name(self, layer_name, weight_attr_name):
+    def _get_rb_sparsity_operation_name(self, layer_name: str, weight_attr_name: str) -> str:
         return f'{layer_name}_{weight_attr_name}_rb_sparsity_weight'
 
-    def build_controller(self, model) -> BaseSparsityController:
+    def build_controller(self, model: tf.keras.Model) -> 'RBSparsityController':
         """
         Should be called once the compressed model target_model is fully constructed
         """
 
         return RBSparsityController(model, self.config, self._op_names)
+
+    def initialize(self, model: tf.keras.Model) -> None:
+        pass
 
 
 @ADAPTIVE_COMPRESSION_CONTROLLERS.register('tf_rb_sparsity')
@@ -101,7 +104,12 @@ class RBSparsityController(BaseSparsityController):
         if sparsity_level_mode == 'local':
             raise NotImplementedError('RB sparsity algorithm do not support local sparsity loss')
 
-        target_ops = apply_fn_to_op_weights(target_model, op_names)
+        target_ops = []
+        for wrapped_layer, _, op in get_nncf_operations(self.model, self._op_names):
+            target_ops.append(
+                (op, wrapped_layer.get_operation_weights(op.name))
+            )
+
         self._loss = SparseLoss(target_ops)
         schedule_type = params.get('schedule', 'exponential')
 

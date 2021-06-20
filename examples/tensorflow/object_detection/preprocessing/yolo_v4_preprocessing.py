@@ -16,8 +16,12 @@ from PIL import Image
 
 import tensorflow as tf
 from examples.tensorflow.common.object_detection.utils import box_utils
-from examples.tensorflow.common.object_detection.utils.yolo_v4_utils import normalize_image, \
-    letterbox_resize, random_resize_crop_pad, reshape_boxes, random_horizontal_flip, random_mosaic_augment
+from examples.tensorflow.common.object_detection.utils.yolo_v4_utils import letterbox_resize
+from examples.tensorflow.common.object_detection.utils.yolo_v4_utils import reshape_boxes
+from examples.tensorflow.common.object_detection.utils.yolo_v4_utils import normalize_image
+from examples.tensorflow.common.object_detection.utils.yolo_v4_utils import random_resize_crop_pad
+from examples.tensorflow.common.object_detection.utils.yolo_v4_utils import random_horizontal_flip
+from examples.tensorflow.common.object_detection.utils.yolo_v4_utils import random_mosaic_augment
 from examples.tensorflow.common.object_detection.utils import dataloader_utils
 from examples.tensorflow.common.object_detection.utils import input_utils
 

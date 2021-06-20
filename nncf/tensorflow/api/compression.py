@@ -10,8 +10,8 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-from abc import ABC, abstractmethod
-from typing import Optional, TypeVar, Dict
+
+from typing import TypeVar, Dict
 
 import json
 import tensorflow as tf
@@ -21,22 +21,6 @@ from nncf.common.compression import BaseCompressionAlgorithmController
 from nncf.tensorflow.graph.model_transformer import TFModelTransformer
 
 ModelType = TypeVar('ModelType')
-DatasetType = TypeVar('DatasetType')
-LossType = TypeVar('LossType')
-
-
-class TFCompressionAlgorithmInitializer(ABC):
-    @abstractmethod
-    def call(self,
-             model: ModelType,
-             dataset: Optional[DatasetType] = None,
-             loss: Optional[LossType] = None) -> None:
-        """
-        Initializes minimum and maximum quantization ranges.
-        """
-
-    def __call__(self, *args, **kwargs) -> None:
-        self.call(*args, **kwargs)
 
 
 class TFCompressionAlgorithmController(BaseCompressionAlgorithmController, tf.train.experimental.PythonState):
@@ -46,11 +30,6 @@ class TFCompressionAlgorithmController(BaseCompressionAlgorithmController, tf.tr
     Hosts entities that are to be used during the training process, such as
     compression scheduler and compression loss.
     """
-
-    def initialize(self,
-                   dataset: Optional[DatasetType] = None,
-                   loss: Optional[LossType] = None) -> None:
-        pass
 
     def load_state(self, state: Dict[str, object]) -> None:
         """
@@ -108,4 +87,8 @@ class TFCompressionAlgorithmBuilder(CompressionAlgorithmBuilder):
         transformation_layout = self.get_transformation_layout(model)
         transformer = TFModelTransformer(model)
         transformed_model = transformer.transform(transformation_layout)
+
+        if self.should_init:
+            self.initialize(transformed_model)
+
         return transformed_model

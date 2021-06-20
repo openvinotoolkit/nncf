@@ -18,14 +18,15 @@ from pathlib import Path
 import tensorflow as tf
 import numpy as np
 
-from nncf.common.accuracy_aware_training.training_loop import AdaptiveCompressionTrainingLoop
-from nncf.common.structures import ModelEvaluationArgs
 from nncf.tensorflow.accuracy_aware_training.runner import TFAccuracyAwareTrainingRunner as \
         AccuracyAwareTrainingRunner
 from nncf.tensorflow import create_compressed_model
 from nncf.tensorflow.helpers.model_manager import TFOriginalModelManager
+from nncf.tensorflow.initialization import register_default_init_args
 from nncf.common.utils.tensorboard import prepare_for_tensorboard
+from nncf.common.accuracy_aware_training.training_loop import AdaptiveCompressionTrainingLoop
 from nncf.config.utils import is_accuracy_aware_training
+from nncf.config.structures import ModelEvaluationArgs
 
 from examples.tensorflow.common.argparser import get_common_argument_parser
 from examples.tensorflow.common.distributed import get_distribution_strategy
@@ -289,13 +290,22 @@ def run(config):
         metric_result = evaluate(test_step, model_builder.eval_metrics(), test_dist_dataset,
                                  num_test_batches, config.print_freq)
         return metric_result['AP']
+    # Register additional parameters in the NNCFConfig for initialization
+    # the compressed model during building
+    nncf_config = config.nncf_config
+    nncf_config = register_default_init_args(nncf_config=nncf_config,
+                                             data_loader=train_dataset,
+                                             batch_size=train_builder.global_batch_size)
+
+    resume_training = config.ckpt_path is not None
 
     with TFOriginalModelManager(model_builder.build_model,
                                 weights=config.get('weights', None)) as model:
         with strategy.scope():
             config.nncf_config.register_extra_structs([ModelEvaluationArgs(eval_fn=model_eval_fn)])
-            compression_ctrl, compress_model = create_compressed_model(model, config.nncf_config)
-
+            compression_ctrl, compress_model = create_compressed_model(model,
+                                                                       nncf_config,
+                                                                       should_init=not resume_training)
             scheduler = build_scheduler(
                 config=config,
                 steps_per_epoch=steps_per_epoch)
@@ -314,13 +324,10 @@ def run(config):
             checkpoint_manager = tf.train.CheckpointManager(checkpoint, config.checkpoint_save_dir, max_to_keep=None)
 
             initial_epoch = initial_step = 0
-            if config.ckpt_path:
+            if resume_training:
                 initial_epoch, initial_step = resume_from_checkpoint(checkpoint_manager,
                                                                      config.ckpt_path,
                                                                      steps_per_epoch)
-            else:
-                logger.info('Initialization...')
-                compression_ctrl.initialize(dataset=train_dataset)
 
     train_step = create_train_step_fn(strategy, compress_model, loss_fn, optimizer)
     test_step = create_test_step_fn(strategy, compress_model, predict_post_process_fn)
@@ -375,7 +382,9 @@ def export(config):
     model_builder = get_model_builder(config)
     model = model_builder.build_model(weights=config.get('weights', None))
 
-    compression_ctrl, compress_model = create_compressed_model(model, config.nncf_config)
+    compression_ctrl, compress_model = create_compressed_model(model,
+                                                               config.nncf_config,
+                                                               should_init=False)
 
     if config.ckpt_path:
         checkpoint = tf.train.Checkpoint(model=compress_model)

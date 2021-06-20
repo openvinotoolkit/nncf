@@ -25,7 +25,6 @@ import pytest
 import subprocess
 import re
 import shlex
-import sysconfig
 import yaml
 from prettytable import PrettyTable
 from collections import OrderedDict
@@ -48,6 +47,8 @@ if not os.path.exists(OPENVINO_DIR):
     OPENVINO_DIR = PROJECT_ROOT.parent / 'intel' / 'openvino_2021'
 ACC_CHECK_DIR = OPENVINO_DIR / 'deployment_tools' / 'open_model_zoo' / 'tools' / 'accuracy_checker'
 MO_DIR = OPENVINO_DIR / 'deployment_tools' / 'model_optimizer'
+MO_VENV_DIR = PROJECT_ROOT / 'model_optimizer'
+venv_activate_string = f'source {MO_VENV_DIR}/bin/activate && source {OPENVINO_DIR}/bin/setupvars.sh'
 
 MODE = 'TF2'
 
@@ -139,17 +140,19 @@ class TestSotaCheckpoints:
           {metrics_dump_file_path}'
 
     @staticmethod
-    def run_cmd(comm: str, cwd: str) -> Tuple[int, str]:
-        print()
-        print(comm)
-        print()
+    def run_cmd(comm: str, cwd: str, venv=None) -> Tuple[int, str]:
+        print('\n', comm, '\n')
         com_line = shlex.split(comm)
-
         env = os.environ.copy()
+
         if 'PYTHONPATH' in env:
             env['PYTHONPATH'] += ':' + str(PROJECT_ROOT)
         else:
             env['PYTHONPATH'] = str(PROJECT_ROOT)
+        if venv:
+            env['VIRTUAL_ENV'] = str(venv)
+            env['PATH'] = str(f'{venv}/bin') + ':' + env['PATH']
+
         result = subprocess.Popen(com_line, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                                   cwd=cwd, env=env)
         exit_code = result.poll()
@@ -517,9 +520,6 @@ class TestSotaCheckpoints:
         if eval_test_struct.sample_type_ == 'segmentation':
             file = 'evaluation.py'
         csv_result = f'{PROJECT_ROOT}/{eval_test_struct.model_name_}.csv'
-        if eval_test_struct.model_name_.startswith('mask_'):
-            self.write_error_in_csv('AC does not support mask models yet', csv_result, eval_test_struct.model_name_)
-            pytest.fail('AC does not support mask models yet')
         if eval_test_struct.reference_ and not config.is_file():
             self.make_config(config, eval_test_struct.reference_)
         save_cmd = f'{sys.executable} examples/tensorflow/{eval_test_struct.sample_type_}/{file}' \
@@ -540,7 +540,7 @@ class TestSotaCheckpoints:
                 mo_cmd += ' --mean_values={}'.format(eval_test_struct.mean_val_)
             if eval_test_struct.scale_val_:
                 mo_cmd += ' --scale_values={}'.format(eval_test_struct.scale_val_)
-            exit_code, err_str = self.run_cmd(mo_cmd, cwd=MO_DIR)
+            exit_code, err_str = self.run_cmd(mo_cmd, MO_DIR, MO_VENV_DIR)
 
             if exit_code == 0:
                 ac_cmd = f'accuracy_check' \
@@ -550,7 +550,7 @@ class TestSotaCheckpoints:
                          f' -d dataset_definitions.yml' \
                          f' -m {ir_model_folder}' \
                          f' --csv_result {csv_result}'
-                exit_code, err_str = self.run_cmd(ac_cmd, cwd=ACC_CHECK_DIR)
+                exit_code, err_str = self.run_cmd(ac_cmd, ACC_CHECK_DIR)
 
         if exit_code != 0:
             if err_str:
@@ -564,13 +564,11 @@ Tsc = TestSotaCheckpoints
 @pytest.fixture(autouse=True, scope='class')
 def openvino_preinstall(openvino):
     if openvino:
-        subprocess.run('pip install -r requirements_tf2.txt', cwd=MO_DIR, check=True, shell=True)
-        subprocess.run('pip install scikit-image==0.17.2', check=True, shell=True)
-        subprocess.run('{} setup.py install'.format(sys.executable), cwd=ACC_CHECK_DIR, check=True, shell=True)
-
-        # Workaround to fix protobuf error
-        subprocess.run('touch __init__.py', cwd=os.path.join(sysconfig.get_paths()['purelib'], 'google'),
-                       check=True, shell=True)
+        subprocess.run(f'virtualenv -ppython3.7 {MO_VENV_DIR}', cwd=PROJECT_ROOT, check=True, shell=True)
+        subprocess.run(f'{venv_activate_string} && {MO_VENV_DIR}/bin/pip install -r requirements_tf2.txt',
+                       cwd=MO_DIR, check=True, shell=True, executable='/bin/bash')
+        subprocess.run('pip install scikit-image!=0.18.2rc1', cwd=ACC_CHECK_DIR, check=True, shell=True)
+        subprocess.run(f'{sys.executable} setup.py install', cwd=ACC_CHECK_DIR, check=True, shell=True)
 
 
 # pylint:disable=line-too-long

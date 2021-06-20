@@ -1,21 +1,25 @@
-import os
-import json
-import sys
 import csv
 import datetime
-from typing import Tuple, List, Optional
-
-import pytest
-import subprocess
+import json
+import os
 import re
 import shlex
+import subprocess
+import sys
 import sysconfig
-from prettytable import PrettyTable
 from collections import OrderedDict
-from yattag import Doc
 from pathlib import Path
-from tests.common.helpers import TEST_ROOT, PROJECT_ROOT
+from typing import List
+from typing import Optional
+from typing import Tuple
+
+import pytest
+from prettytable import PrettyTable
+from yattag import Doc
+
 from nncf.config import NNCFConfig
+from tests.common.helpers import PROJECT_ROOT
+from tests.common.helpers import TEST_ROOT
 
 BG_COLOR_GREEN_HEX = 'ccffcc'
 BG_COLOR_YELLOW_HEX = 'ffffcc'

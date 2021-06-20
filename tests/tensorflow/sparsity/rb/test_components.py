@@ -11,27 +11,28 @@
  limitations under the License.
 """
 
-import pytest
 import os
-from pathlib import Path
-import tensorflow as tf
-from addict import Dict
 from collections import defaultdict
 from itertools import combinations
+from pathlib import Path
 from unittest.mock import patch
 
+import pytest
+import tensorflow as tf
+from addict import Dict
+
 from nncf import NNCFConfig
-from nncf.tensorflow.helpers.model_creation import create_compressed_model
 from nncf.tensorflow.helpers.callback_creation import create_compression_callbacks
+from nncf.tensorflow.helpers.model_creation import create_compressed_model
+from nncf.tensorflow.sparsity.rb.functions import calc_rb_binary_mask
 from nncf.tensorflow.sparsity.rb.loss import SparseLoss
 from nncf.tensorflow.sparsity.rb.operation import RBSparsifyingWeight
-from nncf.tensorflow.sparsity.rb.functions import calc_rb_binary_mask
-from tests.tensorflow.helpers import get_basic_conv_test_model
-from tests.tensorflow.helpers import get_op_by_cls
-from tests.tensorflow.helpers import get_weight_by_name
 from tests.tensorflow.helpers import create_compressed_model_and_algo_for_test
+from tests.tensorflow.helpers import get_basic_conv_test_model
 from tests.tensorflow.helpers import get_basic_fc_test_model
 from tests.tensorflow.helpers import get_empty_config
+from tests.tensorflow.helpers import get_op_by_cls
+from tests.tensorflow.helpers import get_weight_by_name
 
 CONF = Path(__file__).parent.parent.parent / 'data' / 'configs' / 'sequential_model_cifar10_rb_sparsity.json'
 MASKS_SEEDS_PATH = Path(__file__).parent / 'output_seeds.txt'
@@ -64,7 +65,7 @@ def get_basic_rb_sparse_model(model_name, local=False, config=CONF, freeze=False
         config = NNCFConfig.from_json(config)
     if local:
         config.update({"params": {"sparsity_level_setting_mode": 'local'}})
-    compress_model, algo = create_compressed_model_and_algo_for_test(model, config)
+    compress_model, algo = create_compressed_model_and_algo_for_test(model, config, should_init=False)
     if freeze:
         algo.freeze()
     return compress_model, algo, config
@@ -102,7 +103,7 @@ def test_distributed_masks_are_equal(quantization):
         if quantization:
             config.update({'compression': [config['compression'], {'algorithm': 'quantization'}]})
         model = TEST_MODELS['Conv2D']()
-        algo, model = create_compressed_model(model, config)
+        algo, model = create_compressed_model(model, config, should_init=False)
         model.add_loss(algo.loss)
         compression_callbacks = create_compression_callbacks(algo, log_tensorboard=False)
 

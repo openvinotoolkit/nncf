@@ -45,7 +45,6 @@ from nncf.torch.graph.transformations.commands import PTInsertionCommand
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.common.graph.transformations.commands import TransformationPriority
 from nncf.torch.graph.transformations.layout import PTTransformationLayout
-from nncf.torch.graph.version_agnostic_op_names import VersionAgnosticNames
 from nncf.torch.layer_utils import _NNCFModuleMixin
 from nncf.torch.module_operations import BaseOp
 from nncf.torch.nncf_network import EXTERNAL_QUANTIZERS_STORAGE_NAME
@@ -221,7 +220,7 @@ class TestInsertionCommands:
     point_for_linear_activation = PTTargetPoint(target_type=TargetType.OPERATOR_POST_HOOK,
                                                 target_node_name=linear_node_name)
 
-    relu_node_name = f'InsertionPointTestModel/ReLU[relu]/{VersionAgnosticNames.RELU}_0'
+    relu_node_name = 'InsertionPointTestModel/ReLU[relu]/relu_0'
     point_for_relu_inputs = PTTargetPoint(target_type=TargetType.OPERATOR_PRE_HOOK,
                                           target_node_name=relu_node_name, input_port_id=0)
     point_for_relu_activations = PTTargetPoint(target_type=TargetType.OPERATOR_POST_HOOK,
@@ -448,14 +447,14 @@ def get_mock_model_graph_with_mergeable_pattern() -> NNCFGraph:
     #    |
     #   (B)
 
-    node_keys = ['conv2d', 'batch_norm', VersionAgnosticNames.RELU, 'A', 'B']
+    node_keys = ['conv2d', 'batch_norm', 'relu', 'A', 'B']
     for node_key in node_keys:
         mock_nx_graph.add_node(node_key, **get_mock_nncf_node_attrs(op_name=node_key))
 
     mock_nx_graph.add_edges_from([('A', 'conv2d', {PTNNCFGraph.IN_PORT_NAME_EDGE_ATTR: 0}),
                                ('conv2d', 'batch_norm', {PTNNCFGraph.IN_PORT_NAME_EDGE_ATTR: 0}),
-                               ('batch_norm', VersionAgnosticNames.RELU, {PTNNCFGraph.IN_PORT_NAME_EDGE_ATTR: 0}),
-                               (VersionAgnosticNames.RELU, 'B', {PTNNCFGraph.IN_PORT_NAME_EDGE_ATTR: 0})])
+                               ('batch_norm', 'relu', {PTNNCFGraph.IN_PORT_NAME_EDGE_ATTR: 0}),
+                               ('relu', 'B', {PTNNCFGraph.IN_PORT_NAME_EDGE_ATTR: 0})])
     return get_nncf_graph_from_mock_nx_graph(mock_nx_graph)
 
 
@@ -476,7 +475,7 @@ def get_mock_model_graph_with_no_mergeable_pattern() -> NNCFGraph:
     #    |
     #   (B)
 
-    node_keys = ['conv2d', 'batch_norm', VersionAgnosticNames.RELU, 'A', 'B', 'C', 'D']
+    node_keys = ['conv2d', 'batch_norm', 'relu', 'A', 'B', 'C', 'D']
     for node_key in node_keys:
         mock_nx_graph.add_node(node_key, **get_mock_nncf_node_attrs(op_name=node_key))
 
@@ -484,8 +483,8 @@ def get_mock_model_graph_with_no_mergeable_pattern() -> NNCFGraph:
                                ('conv2d', 'C', {PTNNCFGraph.IN_PORT_NAME_EDGE_ATTR: 0}),
                                ('C', 'batch_norm', {PTNNCFGraph.IN_PORT_NAME_EDGE_ATTR: 0}),
                                ('batch_norm', 'D', {PTNNCFGraph.IN_PORT_NAME_EDGE_ATTR: 0}),
-                               ('D', VersionAgnosticNames.RELU, {PTNNCFGraph.IN_PORT_NAME_EDGE_ATTR: 0}),
-                               (VersionAgnosticNames.RELU, 'B', {PTNNCFGraph.IN_PORT_NAME_EDGE_ATTR: 0})])
+                               ('D', 'relu', {PTNNCFGraph.IN_PORT_NAME_EDGE_ATTR: 0}),
+                               ('relu', 'B', {PTNNCFGraph.IN_PORT_NAME_EDGE_ATTR: 0})])
     return get_nncf_graph_from_mock_nx_graph(mock_nx_graph)
 
 
@@ -504,15 +503,15 @@ def get_mock_model_graph_with_broken_output_edge_pattern() -> NNCFGraph:
     #    |
     #   (B)
 
-    node_keys = ['conv2d', 'batch_norm', VersionAgnosticNames.RELU, 'A', 'B', 'C']
+    node_keys = ['conv2d', 'batch_norm', 'relu', 'A', 'B', 'C']
     for node_key in node_keys:
         mock_nx_graph.add_node(node_key, **get_mock_nncf_node_attrs(op_name=node_key))
 
     mock_nx_graph.add_edges_from([('A', 'conv2d', {PTNNCFGraph.IN_PORT_NAME_EDGE_ATTR: 0}),
                                ('conv2d', 'batch_norm', {PTNNCFGraph.IN_PORT_NAME_EDGE_ATTR: 0}),
                                ('conv2d', 'C', {PTNNCFGraph.IN_PORT_NAME_EDGE_ATTR: 1}),
-                               ('batch_norm', VersionAgnosticNames.RELU, {PTNNCFGraph.IN_PORT_NAME_EDGE_ATTR: 0}),
-                               (VersionAgnosticNames.RELU, 'C', {PTNNCFGraph.IN_PORT_NAME_EDGE_ATTR: 0}),
+                               ('batch_norm', 'relu', {PTNNCFGraph.IN_PORT_NAME_EDGE_ATTR: 0}),
+                               ('relu', 'C', {PTNNCFGraph.IN_PORT_NAME_EDGE_ATTR: 0}),
                                ('C', 'B', {PTNNCFGraph.IN_PORT_NAME_EDGE_ATTR: 0})])
     return get_nncf_graph_from_mock_nx_graph(mock_nx_graph)
 
@@ -616,7 +615,7 @@ class TestInsertionPointGraph:
             "/" + MODEL_INPUT_OP_NAME + "_0": InputNoopMetatype,
             "ModelForMetatypeTesting/NNCFConv2d[conv_regular]/conv2d_0": Conv2dMetatype,
             "ModelForMetatypeTesting/BatchNorm2d[bn]/batch_norm_0": BatchNormMetatype,
-            "ModelForMetatypeTesting/RELU_0": RELUMetatype,
+            "ModelForMetatypeTesting/relu_0": RELUMetatype,
             "ModelForMetatypeTesting/MaxPool2d[max_pool2d]/max_pool2d_0": MaxPool2dMetatype,
             "ModelForMetatypeTesting/NNCFConvTranspose2d[conv_transpose]/conv_transpose2d_0": ConvTranspose2dMetatype,
             "ModelForMetatypeTesting/NNCFConv2d[conv_depthwise]/conv2d_0": DepthwiseConv2dSubtype,

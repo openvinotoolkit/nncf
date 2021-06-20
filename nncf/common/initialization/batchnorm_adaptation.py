@@ -17,7 +17,7 @@ from abc import ABC, abstractmethod
 import math
 
 from nncf.api.compression import ModelType
-from nncf.common.initialization import NNCFDataLoader
+from nncf.common.initialization.dataloader import NNCFDataLoader
 from nncf.common.utils.backend import __nncf_backend__
 
 

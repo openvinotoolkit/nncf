@@ -21,7 +21,7 @@ from nncf.common.schedulers import MultiStepSchedule
 from nncf.common.sparsity.controller import SparsityController
 from nncf.common.schedulers import BaseCompressionScheduler
 
-SPARSITY_SCHEDULERS = Registry("sparsity_schedulers")
+SPARSITY_SCHEDULERS = Registry('sparsity_schedulers')
 
 
 class SparsityScheduler(BaseCompressionScheduler):
@@ -90,7 +90,7 @@ class SparsityScheduler(BaseCompressionScheduler):
         return self._current_level
 
 
-@SPARSITY_SCHEDULERS.register("polynomial")
+@SPARSITY_SCHEDULERS.register('polynomial')
 class PolynomialSparsityScheduler(SparsityScheduler):
     """
     Sparsity scheduler with a polynomial decay schedule.
@@ -181,7 +181,7 @@ class PolynomialSparsityScheduler(SparsityScheduler):
                                'by a .epoch_step() call.')
 
 
-@SPARSITY_SCHEDULERS.register("exponential")
+@SPARSITY_SCHEDULERS.register('exponential')
 class ExponentialSparsityScheduler(SparsityScheduler):
     """
     Sparsity scheduler with an exponential decay schedule.
@@ -215,7 +215,7 @@ class ExponentialSparsityScheduler(SparsityScheduler):
         return min(current_level, self.target_level)
 
 
-@SPARSITY_SCHEDULERS.register("adaptive")
+@SPARSITY_SCHEDULERS.register('adaptive')
 class AdaptiveSparsityScheduler(SparsityScheduler):
     """
     Sparsity scheduler with an adaptive schedule.
@@ -260,7 +260,7 @@ class AdaptiveSparsityScheduler(SparsityScheduler):
         return state
 
 
-@SPARSITY_SCHEDULERS.register("multistep")
+@SPARSITY_SCHEDULERS.register('multistep')
 class MultiStepSparsityScheduler(SparsityScheduler):
     """
     Sparsity scheduler with a piecewise constant schedule.

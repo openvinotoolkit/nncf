@@ -10,52 +10,54 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+
 from typing import Set
 
 import tensorflow as tf
 
-from nncf.tensorflow.graph.converter import convert_layer_graph_to_nncf_graph
-from nncf.tensorflow.graph.utils import get_custom_layers
-from nncf.tensorflow.graph.utils import get_original_name_and_instance_index
-from nncf.tensorflow.graph.utils import get_weight_node_name
-from nncf.tensorflow.sparsity.base_algorithm import SPARSITY_TF_OP_METATYPES
+from nncf import NNCFConfig
+from nncf.api.compression import CompressionLoss
+from nncf.api.compression import CompressionScheduler
 from nncf.common.graph.transformations.commands import TransformationPriority
+from nncf.common.initialization.batchnorm_adaptation import BatchnormAdaptationAlgorithm
 from nncf.common.sparsity.schedulers import SPARSITY_SCHEDULERS
 from nncf.common.sparsity.statistics import LayerThreshold
 from nncf.common.sparsity.statistics import MagnitudeSparsityStatistics
 from nncf.common.statistics import NNCFStatistics
-from nncf.api.compression import CompressionScheduler
-from nncf.api.compression import CompressionLoss
+from nncf.common.utils.helpers import should_consider_scope
+from nncf.config.extractors import extract_bn_adaptation_init_params
 from nncf.tensorflow.algorithm_selector import TF_COMPRESSION_ALGORITHMS
 from nncf.tensorflow.api.compression import TFCompressionAlgorithmBuilder
-from nncf.tensorflow.loss import TFZeroCompressionLoss
 from nncf.tensorflow.graph.converter import convert_keras_model_to_nncf_graph
+from nncf.tensorflow.graph.converter import convert_layer_graph_to_nncf_graph
 from nncf.tensorflow.graph.transformations.commands import TFInsertionCommand
 from nncf.tensorflow.graph.transformations.commands import TFLayerWeight
 from nncf.tensorflow.graph.transformations.layout import TFTransformationLayout
 from nncf.tensorflow.graph.utils import collect_wrapped_layers
+from nncf.tensorflow.graph.utils import get_custom_layers
+from nncf.tensorflow.graph.utils import get_original_name_and_instance_index
+from nncf.tensorflow.graph.utils import get_weight_node_name
+from nncf.tensorflow.loss import TFZeroCompressionLoss
 from nncf.tensorflow.sparsity.base_algorithm import BaseSparsityController
 from nncf.tensorflow.sparsity.base_algorithm import SPARSITY_LAYER_METATYPES
+from nncf.tensorflow.sparsity.base_algorithm import SPARSITY_TF_OP_METATYPES
+from nncf.tensorflow.sparsity.collector import TFSparseModelStatisticsCollector
 from nncf.tensorflow.sparsity.magnitude.functions import calc_magnitude_binary_mask
 from nncf.tensorflow.sparsity.magnitude.functions import WEIGHT_IMPORTANCE_FUNCTIONS
 from nncf.tensorflow.sparsity.magnitude.operation import BinaryMask
 from nncf.tensorflow.sparsity.magnitude.operation import BinaryMaskWithWeightsBackup
-from nncf.tensorflow.sparsity.collector import TFSparseModelStatisticsCollector
-from nncf.common.batchnorm_adaptation import BatchnormAdaptationAlgorithm
-from nncf.config.utils import extract_bn_adaptation_init_params
-from nncf.common.utils.helpers import should_consider_scope
 from nncf.common.accuracy_aware_training.training_loop import ADAPTIVE_COMPRESSION_CONTROLLERS
 from nncf.common.schedulers import StubCompressionScheduler
 
 
 @TF_COMPRESSION_ALGORITHMS.register('magnitude_sparsity')
 class MagnitudeSparsityBuilder(TFCompressionAlgorithmBuilder):
-    def __init__(self, config):
-        super().__init__(config)
+    def __init__(self, config: NNCFConfig, should_init: bool = True):
+        super().__init__(config, should_init)
         self.ignored_scopes = self.config.get('ignored_scopes', [])
         self._op_names = []
 
-    def get_transformation_layout(self, model):
+    def get_transformation_layout(self, model: tf.keras.Model) -> TFTransformationLayout:
         nncf_graph = convert_keras_model_to_nncf_graph(model)
         transformations = TFTransformationLayout()
 
@@ -106,14 +108,17 @@ class MagnitudeSparsityBuilder(TFCompressionAlgorithmBuilder):
 
         return transformations
 
-    def _get_sparsity_operation_name(self, layer_name, weight_attr_name):
+    def _get_sparsity_operation_name(self, layer_name: str, weight_attr_name: str) -> str:
         return f'{layer_name}_{weight_attr_name}_sparsity_binary_mask'
 
-    def build_controller(self, model) -> BaseSparsityController:
+    def build_controller(self, model: tf.keras.Model) -> 'MagnitudeSparsityController':
         """
         Should be called once the compressed model target_model is fully constructed
         """
         return MagnitudeSparsityController(model, self.config, self._op_names)
+
+    def initialize(self, model: tf.keras.Model) -> None:
+        pass
 
 
 @ADAPTIVE_COMPRESSION_CONTROLLERS.register('tf_magnitude_sparsity')

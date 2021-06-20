@@ -77,7 +77,7 @@ See [third_party_integration](./third_party_integration) for examples of code mo
 
 ## System requirements
 - Ubuntu\* 18.04 or later (64-bit)
-- Python\* 3.7 or later
+- Python\* 3.6.2 or later
 - NVidia CUDA\* Toolkit 10.2 or later^
 - PyTorch\* 1.5 or later (1.8.0 not supported, 1.8.1 supported)
 

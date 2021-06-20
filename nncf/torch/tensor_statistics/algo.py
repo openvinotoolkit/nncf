@@ -69,6 +69,9 @@ class TensorStatisticsCollectionBuilder(PTCompressionAlgorithmBuilder):
     def _handle_frozen_layers(self, target_model: NNCFNetwork):
         pass
 
+    def initialize(self, model: NNCFNetwork) -> None:
+        pass
+
 
 class TensorStatisticsCollectionController(PTCompressionAlgorithmController):
     def __init__(self, target_model: NNCFNetwork,

@@ -19,53 +19,33 @@ from nncf.tensorflow.graph.model_transformer import TFModelTransformer
 from nncf.tensorflow.graph.transformations.commands import TFOperationWithWeights
 from nncf.tensorflow.graph.transformations.commands import TFRemovalCommand
 from nncf.tensorflow.graph.transformations.layout import TFTransformationLayout
-from nncf.tensorflow.graph.utils import collect_wrapped_layers
+from nncf.tensorflow.graph.utils import get_nncf_operations
 from nncf.tensorflow.layers.wrapper import NNCFWrapper
+from nncf.tensorflow.layers.operation import NNCFOperation
 
 
 def strip_model_from_masks(model: tf.keras.Model, op_names: List[str]) -> tf.keras.Model:
     if not isinstance(model, tf.keras.Model):
-        raise ValueError(
-            'Expected model to be a `tf.keras.Model` instance but got: {}'.format(type(model)))
+        raise ValueError(f'Expected model to be a `tf.keras.Model` instance but got: {type(model)}')
 
     transformations = TFTransformationLayout()
-
-    for layer in model.layers:
-        if isinstance(layer, NNCFWrapper):
-            for weight_attr, ops in layer.weights_attr_ops.items():
-                for op_name in ops:
-                    if op_name in op_names:
-                        apply_mask(layer, weight_attr, op_name)
-
-                        transformations.register(
-                            TFRemovalCommand(
-                                target_point=TFOperationWithWeights(
-                                    layer.name,
-                                    weights_attr_name=weight_attr,
-                                    operation_name=op_name)
-                            ))
+    for wrapped_layer, weight_attr, op in get_nncf_operations(model, op_names):
+        apply_mask(wrapped_layer, weight_attr, op)
+        transformations.register(
+            TFRemovalCommand(
+                target_point=TFOperationWithWeights(
+                    wrapped_layer.name,
+                    weights_attr_name=weight_attr,
+                    operation_name=op.name)
+            ))
 
     return TFModelTransformer(model).transform(transformations)
 
 
-def apply_fn_to_op_weights(model: tf.keras.Model, op_names: List[str], fn = lambda x: x):
-    sparsifyed_layers = collect_wrapped_layers(model)
-    target_ops = []
-    for layer in sparsifyed_layers:
-        for ops in layer.weights_attr_ops.values():
-            for op in ops.values():
-                if op.name in op_names:
-                    weight = layer.get_operation_weights(op.name)
-                    target_ops.append((op, fn(weight)))
-    return target_ops
-
-
-def apply_mask(wrapped_layer: NNCFWrapper, weight_attr: str, op_name: str):
+def apply_mask(wrapped_layer: NNCFWrapper, weight_attr: str, op: NNCFOperation) -> None:
     layer_weight = wrapped_layer.layer_weights[weight_attr]
-    op = wrapped_layer.weights_attr_ops[weight_attr][op_name]
+    op_weights = wrapped_layer.get_operation_weights(op.name)
     layer_weight.assign(
-        op(layer_weight,
-           wrapped_layer.ops_weights[op_name],
-           False)
+        op(layer_weight, op_weights, False)
     )
     wrapped_layer.set_layer_weight(weight_attr, layer_weight)

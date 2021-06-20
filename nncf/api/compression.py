@@ -270,15 +270,17 @@ class CompressionAlgorithmController(ABC):
         return model
 
     @property
+    @abstractmethod
     def compression_rate(self) -> float:
         """
         Returns a float compression rate value ranging from 0 to 1 (e.g. the sparsity level or
         the ratio of filters pruned).
+
         :return: Compression rate value
         """
-        raise NotImplementedError
 
     @compression_rate.setter
+    @abstractmethod
     def compression_rate(self, compression_rate: float) -> None:
         """
         Set a float compression rate value in the model (e.g. the sparsity
@@ -286,10 +288,13 @@ class CompressionAlgorithmController(ABC):
 
         :param compression_rate: The compressed rate value to be set.
         """
-        raise NotImplementedError
 
-    def disable_scheduler(self):
-        raise NotImplementedError
+    @abstractmethod
+    def disable_scheduler(self) -> None:
+        """
+        Disables current compression scheduler during training by changing
+        it to a dummy one that does not change the compression rate.
+        """
 
 
 class CompressionAlgorithmBuilder(ABC):
@@ -341,6 +346,15 @@ class CompressionAlgorithmBuilder(ABC):
         :param model: The original uncompressed model.
         :return: The instance of the `TransformationLayout` class containing
             a list of algorithm-specific modifications.
+        """
+
+    @abstractmethod
+    def initialize(self, model: ModelType) -> None:
+        """
+        Initialize model parameters before training
+
+        :param model: The model with additional modifications necessary to enable
+            algorithm-specific compression during fine-tuning.
         """
 
 

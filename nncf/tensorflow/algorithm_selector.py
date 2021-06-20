@@ -11,6 +11,9 @@
  limitations under the License.
 """
 
+import tensorflow as tf
+
+from nncf import NNCFConfig
 from nncf.api.compression import CompressionAlgorithmController
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.schedulers import StubCompressionScheduler
@@ -26,15 +29,18 @@ TF_COMPRESSION_ALGORITHMS = Registry('compression algorithm')
 
 @TF_COMPRESSION_ALGORITHMS.register('NoCompressionAlgorithm')
 class NoCompressionAlgorithmBuilder(TFCompressionAlgorithmBuilder):
-    def get_transformation_layout(self, _):
+    def get_transformation_layout(self, _) -> TransformationLayout:
         return TransformationLayout()
 
-    def build_controller(self, model) -> CompressionAlgorithmController:
+    def build_controller(self, model: tf.keras.Model) -> CompressionAlgorithmController:
         return NoCompressionAlgorithmController(model)
+
+    def initialize(self, model: tf.keras.Model) -> None:
+        pass
 
 
 class NoCompressionAlgorithmController(TFCompressionAlgorithmController):
-    def __init__(self, target_model):
+    def __init__(self, target_model: tf.keras.Model):
         super().__init__(target_model)
         self._loss = TFZeroCompressionLoss()
         self._scheduler = StubCompressionScheduler()
@@ -51,7 +57,7 @@ class NoCompressionAlgorithmController(TFCompressionAlgorithmController):
         return NNCFStatistics()
 
 
-def get_compression_algorithm_builder(config):
+def get_compression_algorithm_builder(config: NNCFConfig) -> TFCompressionAlgorithmBuilder:
     algorithm_key = config.get('algorithm', 'NoCompressionAlgorithm')
     logger.info('Creating compression algorithm: {}'.format(algorithm_key))
     return TF_COMPRESSION_ALGORITHMS.get(algorithm_key)

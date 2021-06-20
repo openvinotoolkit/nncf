@@ -159,6 +159,10 @@ class PTCompressionAlgorithmBuilder(CompressionAlgorithmBuilder):
         transformer = PTModelTransformer(model)
         transformation_layout = self.get_transformation_layout(model)
         transformed_model = transformer.transform(transformation_layout)
+
+        if self.should_init:
+            self.initialize(transformed_model)
+
         return transformed_model
 
     def get_transformation_layout(self, target_model: NNCFNetwork) -> PTTransformationLayout:

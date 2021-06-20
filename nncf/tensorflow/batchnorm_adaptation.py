@@ -15,10 +15,10 @@ from itertools import islice
 
 import tensorflow as tf
 
-from nncf.common.batchnorm_adaptation import BatchnormAdaptationAlgorithmImpl
+from nncf.common.initialization.batchnorm_adaptation import BatchnormAdaptationAlgorithmImpl
+from nncf.common.utils.progress_bar import ProgressBar
 from nncf.tensorflow.graph.metatypes.keras_layers import TFBatchNormalizationLayerMetatype
 from nncf.tensorflow.graph.metatypes.matcher import get_keras_layer_metatype
-from nncf.common.utils.progress_bar import ProgressBar
 
 
 class BNTrainingStateSwitcher:

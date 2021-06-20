@@ -21,7 +21,7 @@ from torch.nn import Parameter
 from torch.nn.modules.loss import _Loss
 from torch.utils.data import DataLoader
 
-from nncf.torch.initialization import wrap_dataloader_for_init, InitializingDataLoader
+from nncf.torch.initialization import wrap_dataloader_for_init, PTInitializingDataLoader
 from nncf.common.utils.logger import logger as nncf_logger
 
 
@@ -54,7 +54,7 @@ class ParameterHandler:
 class GradientsCalculator:
 
     def __init__(self, model: nn.Module, criterion_fn: Callable[[Any, Any, _Loss], torch.Tensor], criterion: _Loss,
-                 data_loader: InitializingDataLoader, num_data_iter: int,
+                 data_loader: PTInitializingDataLoader, num_data_iter: int,
                  paramerter_handler: ParameterHandler):
         self._model = model
         self._criterion_fn = criterion_fn

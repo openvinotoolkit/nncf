@@ -16,35 +16,36 @@ from typing import Tuple
 
 import tensorflow as tf
 
+from nncf import NNCFConfig
+from nncf.common.graph import NNCFNode
+from nncf.common.graph import NNCFGraph
+from nncf.common.graph import NNCFNodeName
+from nncf.common.graph.transformations.commands import TransformationPriority
+from nncf.common.pruning.clusterization import Cluster
+from nncf.common.pruning.clusterization import Clusterization
+from nncf.common.pruning.mask_propagation import MaskPropagationAlgorithm
+from nncf.common.pruning.pruning_node_selector import PruningNodeSelector
+from nncf.common.pruning.statistics import PrunedLayerSummary
+from nncf.common.pruning.statistics import PrunedModelStatistics
+from nncf.common.pruning.structs import PrunedLayerInfoBase
+from nncf.common.utils.logger import logger as nncf_logger
 from nncf.tensorflow.api.compression import TFCompressionAlgorithmController
 from nncf.tensorflow.api.compression import TFCompressionAlgorithmBuilder
 from nncf.tensorflow.graph.converter import convert_keras_model_to_nncf_graph
 from nncf.tensorflow.graph.metatypes.keras_layers import TFBatchNormalizationLayerMetatype
 from nncf.tensorflow.graph.model_transformer import TFModelTransformer
-from nncf.tensorflow.pruning.export_helpers import TFElementwise
-from nncf.tensorflow.pruning.export_helpers import TFIdentityMaskForwardOps
 from nncf.tensorflow.graph.transformations.commands import TFLayerWeight
 from nncf.tensorflow.graph.transformations.commands import TFInsertionCommand
 from nncf.tensorflow.graph.transformations.layout import TFTransformationLayout
 from nncf.tensorflow.graph.utils import get_layer_identifier
 from nncf.tensorflow.graph.utils import collect_wrapped_layers
+from nncf.tensorflow.pruning.export_helpers import TFElementwise
+from nncf.tensorflow.pruning.export_helpers import TFIdentityMaskForwardOps
+from nncf.tensorflow.pruning.export_helpers import TF_PRUNING_OPERATOR_METATYPES
 from nncf.tensorflow.pruning.utils import get_filter_axis
 from nncf.tensorflow.pruning.utils import get_filters_num
 from nncf.tensorflow.sparsity.magnitude.operation import BinaryMask
 from nncf.tensorflow.sparsity.utils import strip_model_from_masks
-from nncf.tensorflow.pruning.export_helpers import TF_PRUNING_OPERATOR_METATYPES
-from nncf.common.graph import NNCFNode
-from nncf.common.graph import NNCFGraph
-from nncf.common.graph import NNCFNodeName
-from nncf.common.graph.transformations.commands import TransformationPriority
-from nncf.common.pruning.pruning_node_selector import PruningNodeSelector
-from nncf.common.pruning.clusterization import Cluster
-from nncf.common.pruning.clusterization import Clusterization
-from nncf.common.pruning.mask_propagation import MaskPropagationAlgorithm
-from nncf.common.pruning.structs import PrunedLayerInfoBase
-from nncf.common.utils.logger import logger as nncf_logger
-from nncf.common.pruning.statistics import PrunedLayerSummary
-from nncf.common.pruning.statistics import PrunedModelStatistics
 
 
 class PrunedLayerInfo(PrunedLayerInfoBase):
@@ -59,8 +60,8 @@ class BasePruningAlgoBuilder(TFCompressionAlgorithmBuilder):
     order to enable pruning during fine-tuning.
     """
 
-    def __init__(self, config):
-        super().__init__(config)
+    def __init__(self, config: NNCFConfig, should_init: bool = True):
+        super().__init__(config, should_init)
         params = config.get('params', {})
         self._params = params
         self.ignored_scopes = self.config.get('ignored_scopes', [])
@@ -178,6 +179,9 @@ class BasePruningAlgoBuilder(TFCompressionAlgorithmBuilder):
             )
         return transformations
 
+    def initialize(self, model: tf.keras.Model) -> None:
+        pass
+
     def _get_insertion_command_binary_mask(self, layer_name: str, attr_name: str) -> TFInsertionCommand:
         op_name = self._get_pruning_operation_name(layer_name, attr_name)
         self._op_names.append(op_name)
@@ -233,7 +237,7 @@ class BasePruningAlgoBuilder(TFCompressionAlgorithmBuilder):
     def _get_types_of_grouping_ops(self) -> List[str]:
         raise NotImplementedError
 
-    def _get_pruning_operation_name(self, layer_name: str, weight_attr_name: str):
+    def _get_pruning_operation_name(self, layer_name: str, weight_attr_name: str) -> str:
         return f'{layer_name}_{weight_attr_name}_pruning_binary_mask'
 
 

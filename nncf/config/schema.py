@@ -373,20 +373,31 @@ QUANTIZATION_INITIALIZER_SCHEMA = {
 ACCURACY_AWARE_SCHEMA = {
     "maximal_accuracy_degradation": with_attributes(_NUMBER,
                                                     description="Maximally allowed accuracy degradation"
-                                                                " of the model"),
+                                                                " of the model (in percent relative to"
+                                                                " the original model accuracy)"),
     "initial_training_phase_epochs": with_attributes(_NUMBER,
-                                                     description="Number of epochs to tune during the initial"
-                                                                 "training phase"),
+                                                     description="Number of epochs to fine-tune during "
+                                                                 "the initial training phase of the "
+                                                                 "adaptive compression training loop"),
     "initial_compression_rate_step": with_attributes(_NUMBER,
-                                                      description="initial_compression_rate_step"),
+                                                     description="Initial value for the compression rate "
+                                                                 "increase/decrease training phase of the "
+                                                                 "compression training loop"),
     "compression_rate_step_reduction_factor":  with_attributes(_NUMBER,
-                                                      description="compression_rate_step_reduction_factor"),
+                                                               description="Factor used to reduce the compression rate "
+                                                                           "change step in the adaptive compression "
+                                                                           "training loop"),
     "minimal_compression_rate_step":  with_attributes(_NUMBER,
-                                                      description="minimal_compression_rate_step"),
+                                                      description="The minimal compression rate change "
+                                                                  "step value after which the training "
+                                                                  "loop is terminated"),
     "patience_epochs":  with_attributes(_NUMBER,
-                                        description="patience epochs"),
+                                        description="The number of epochs to fine-tune the model"
+                                                    " for a given compression rate after the initial"
+                                                    " training phase of the training loop"),
     "maximal_total_epochs":  with_attributes(_NUMBER,
-                                        description="maximal_total_epochs"),
+                                             description="The maximal total epoch budget for "
+                                                         "the adaptive compression training loop"),
 }
 
 COMMON_COMPRESSION_ALGORITHM_PROPERTIES = {

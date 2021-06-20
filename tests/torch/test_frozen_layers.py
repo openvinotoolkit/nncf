@@ -2,7 +2,8 @@ import pytest
 
 from nncf import NNCFConfig
 from nncf.common.utils.logger import logger as nncf_logger
-from nncf.torch.structures import QuantizationRangeInitArgs
+from nncf.config.structures import QuantizationRangeInitArgs
+from nncf.torch.initialization import wrap_dataloader_for_init
 from nncf.torch.utils import get_all_modules_by_type
 from tests.torch.helpers import TwoConvTestModel
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
@@ -93,7 +94,8 @@ class FrozenLayersTestStruct:
                     compression['initializer'].update({'range': {'num_init_samples': 1}})
                     data_loader = create_ones_mock_dataloader(config)
                     config = NNCFConfig.from_dict(config)
-                    config.register_extra_structs([QuantizationRangeInitArgs(data_loader)])
+                    config.register_extra_structs(
+                        [QuantizationRangeInitArgs(wrap_dataloader_for_init(data_loader))])
             return config
 
         self._config_updaters.append(add_range_init)

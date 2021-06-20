@@ -121,6 +121,9 @@ class BasePruningAlgoBuilder(PTCompressionAlgorithmBuilder):
     def get_types_of_grouping_ops(self):
         raise NotImplementedError
 
+    def initialize(self, model: NNCFNetwork) -> None:
+        pass
+
 
 class BasePruningAlgoController(PTCompressionAlgorithmController):
     def __init__(self, target_model: NNCFNetwork,

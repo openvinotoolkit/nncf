@@ -22,22 +22,23 @@ from nncf.config.utils import is_accuracy_aware_training
 from nncf.tensorflow.helpers.model_creation import create_compressed_model
 from nncf.tensorflow import create_compression_callbacks
 from nncf.tensorflow.helpers.model_manager import TFOriginalModelManager
+from nncf.tensorflow.initialization import register_default_init_args
 
 from examples.tensorflow.classification.datasets.builder import DatasetBuilder
 from examples.tensorflow.common.argparser import get_common_argument_parser
-from examples.tensorflow.common.callbacks import get_callbacks, get_progress_bar
+from examples.tensorflow.common.callbacks import get_callbacks
+from examples.tensorflow.common.callbacks import get_progress_bar
 from examples.tensorflow.common.distributed import get_distribution_strategy
 from examples.tensorflow.common.logger import logger
 from examples.tensorflow.common.model_loader import get_model
 from examples.tensorflow.common.optimizer import build_optimizer
 from examples.tensorflow.common.sample_config import create_sample_config
 from examples.tensorflow.common.scheduler import build_scheduler
-from examples.tensorflow.common.utils import serialize_config
-from examples.tensorflow.common.utils import create_code_snapshot
 from examples.tensorflow.common.utils import configure_paths
+from examples.tensorflow.common.utils import create_code_snapshot
 from examples.tensorflow.common.utils import get_saving_parameters
+from examples.tensorflow.common.utils import serialize_config
 from examples.tensorflow.common.utils import write_metrics
-from nncf.tensorflow.initialization import register_default_init_args
 
 
 def get_argument_parser():
@@ -148,25 +149,30 @@ def run(config):
     train_dataset, validation_dataset = datasets
 
     nncf_config = config.nncf_config
-    nncf_config = register_default_init_args(nncf_config,
-                                             train_dataset,
-                                             train_builder.global_batch_size)
+    nncf_config = register_default_init_args(nncf_config=nncf_config,
+                                             data_loader=train_dataset,
+                                             batch_size=train_builder.global_batch_size)
 
     train_epochs = config.epochs
     train_steps = train_builder.steps_per_epoch
     validation_steps = validation_builder.steps_per_epoch
 
-    with TFOriginalModelManager(model_fn, **model_params) as model:
-        with strategy.scope():
-            orig_model = model_fn(**model_params)
-            orig_model.compile(metrics=[tf.keras.metrics.CategoricalAccuracy(name='acc@1')])
-            results = orig_model.evaluate(
+    resume_training = config.ckpt_path is not None
+
+    if is_accuracy_aware_training(config):
+        with TFOriginalModelManager(model_fn, **model_params) as model:
+            model.compile(metrics=[tf.keras.metrics.CategoricalAccuracy(name='acc@1')])
+            results = model.evaluate(
                 validation_dataset,
                 steps=validation_steps,
                 return_dict=True)
             uncompressed_model_accuracy = 100 * results['acc@1']
 
-            compression_ctrl, compress_model = create_compressed_model(model, nncf_config)
+    with TFOriginalModelManager(model_fn, **model_params) as model:
+        with strategy.scope():
+            compression_ctrl, compress_model = create_compressed_model(model,
+                                                                       nncf_config,
+                                                                       should_init=not resume_training)
             compression_callbacks = create_compression_callbacks(compression_ctrl,
                                                                  log_dir=config.log_dir)
 
@@ -198,13 +204,10 @@ def run(config):
             checkpoint = tf.train.Checkpoint(model=compress_model, compression_ctrl=compression_ctrl)
 
             initial_epoch = 0
-            if config.ckpt_path is not None:
+            if resume_training:
                 initial_epoch = resume_from_checkpoint(checkpoint=checkpoint,
                                                        ckpt_path=config.ckpt_path,
                                                        steps_per_epoch=train_steps)
-            else:
-                logger.info('initialization...')
-                compression_ctrl.initialize(dataset=train_dataset)
 
     callbacks = get_callbacks(
         include_tensorboard=True,
@@ -276,7 +279,9 @@ def export(config):
                                     pretrained=config.get('pretrained', False),
                                     weights=config.get('weights', None))
     model = model(**model_params)
-    compression_ctrl, compress_model = create_compressed_model(model, config.nncf_config)
+    compression_ctrl, compress_model = create_compressed_model(model,
+                                                               config.nncf_config,
+                                                               should_init=False)
 
     metrics = [
         tf.keras.metrics.CategoricalAccuracy(name='acc@1'),

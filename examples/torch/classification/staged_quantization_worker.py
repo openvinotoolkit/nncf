@@ -24,6 +24,7 @@ import torch.utils.data
 import torch.utils.data.distributed
 from torchvision.models import InceptionOutputs
 
+from examples.torch.common.execution import set_seed
 from nncf.common.utils.tensorboard import prepare_for_tensorboard
 from examples.torch.classification.main import create_data_loaders, validate, AverageMeter, accuracy, get_lr, \
     create_datasets, inception_criterion_fn
@@ -38,7 +39,7 @@ from nncf.torch.initialization import register_default_init_args, default_criter
 from nncf.torch.model_creation import create_compressed_model
 from nncf.torch.quantization.algo import QuantizationController
 from nncf.torch.utils import is_main_process
-from examples.torch.classification.common import set_seed, load_resuming_checkpoint
+from examples.torch.classification.common import load_resuming_checkpoint
 
 
 class KDLossCalculator:

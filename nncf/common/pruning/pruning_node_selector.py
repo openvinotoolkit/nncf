@@ -209,19 +209,19 @@ class PruningNodeSelector:
             can_prune_nodes = [can_prune[node.node_id] for node in cluster.elements]
             if not all(can_prune[0] for can_prune in should_prune_nodes):
                 shouldnt_prune_msgs = [should_prune[1] for should_prune in should_prune_nodes if not should_prune[0]]
-                nncf_logger.info("Group of nodes [{}] can't be pruned, because some nodes should't be pruned, "
-                                 "error messages for this nodes: {}".format(", ".join(cluster_nodes_names),
-                                                                            ", ".join(shouldnt_prune_msgs)))
+                nncf_logger.info('Group of nodes [{}] can\'t be pruned, because some nodes should\'t be pruned, '
+                                 'error messages for this nodes: {}'.format(', '.join(cluster_nodes_names),
+                                                                            ', '.join(shouldnt_prune_msgs)))
                 pruned_nodes_clusterization.delete_cluster(cluster.id)
             elif not all(can_prune_nodes):
                 cant_prune_nodes_names = [node.node_name for node in cluster.elements
                                           if not can_prune[node.node_id]]
-                nncf_logger.info("Group of nodes [{}] can't be pruned, because {} nodes can't be pruned "
-                                 "according to model analysis"
-                                 .format(", ".join(cluster_nodes_names), ", ".join(cant_prune_nodes_names)))
+                nncf_logger.info('Group of nodes [{}] can\'t be pruned, because {} nodes can\'t be pruned '
+                                 'according to model analysis'
+                                 .format(', '.join(cluster_nodes_names), ', '.join(cant_prune_nodes_names)))
                 pruned_nodes_clusterization.delete_cluster(cluster.id)
             else:
-                nncf_logger.info("Group of nodes [{}] will be pruned together.".format(", ".join(cluster_nodes_names)))
+                nncf_logger.info('Group of nodes [{}] will be pruned together.'.format(", ".join(cluster_nodes_names)))
 
     def _is_module_prunable(self, graph: NNCFGraph, node: NNCFNode) -> Tuple[bool, str]:
         """
@@ -250,8 +250,8 @@ class PruningNodeSelector:
                              ' this scope is one of the first convolutions'.format(node_name)
             prune = False
         elif not self._prune_last and node in output_non_pruned_nodes:
-            msg = "Ignored adding Weight Pruner in: {} because"\
-                             " this scope is one of the last convolutions".format(node_name)
+            msg = 'Ignored adding Weight Pruner in: {} because'\
+                             ' this scope is one of the last convolutions'.format(node_name)
             prune = False
         elif is_grouped_conv(node) and not is_depthwise_conv(node):
             msg = 'Ignored adding Weight Pruner in: {} because' \

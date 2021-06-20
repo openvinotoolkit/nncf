@@ -224,7 +224,7 @@ def get_test_models_desc(algorithm):
             marks=SKIP_MAP[algorithm].get('xception', ())
         ),
         pytest.param(
-            ModelDesc(ref_name('retinanet.pb'), test_models.RetinaNet, [1, None, None, 3]),
+            ModelDesc(ref_name('retinanet.pb'), test_models.RetinaNet, [1, 603, 603, 3]),
             marks=SKIP_MAP[algorithm].get('retinanet', ())
         ),
         ModelDesc(ref_name('sequential_model.pb'), test_models.SequentialModel, [1, 224, 224, 3]),
@@ -246,7 +246,7 @@ def get_test_models_desc(algorithm):
             marks=SKIP_MAP[algorithm].get('mask_rcnn', ())
         ),
         pytest.param(
-            ModelDesc(ref_name('yolo_v4.pb'), test_models.YOLOv4, [1, None, None, 3]),
+            ModelDesc(ref_name('yolo_v4.pb'), test_models.YOLOv4, [1, 603, 603, 3]),
             marks=SKIP_MAP[algorithm].get('yolo_v4', ())
         ),
         pytest.param(
@@ -362,7 +362,7 @@ class TestModelsGraph:
         model = desc.model_builder(input_shape=tuple(desc.input_sample_sizes[1:]))
         config = get_basic_quantization_config(_quantization_case_config.qconfig,
                                                input_sample_sizes=desc.input_sample_sizes)
-        compressed_model, _ = create_compressed_model_and_algo_for_test(model, config)
+        compressed_model, _ = create_compressed_model_and_algo_for_test(model, config, should_init=False)
 
         check_model_graph(compressed_model, desc.ref_graph_filename, _quantization_case_config.graph_dir,
                           desc.rename_resource_nodes)
@@ -373,7 +373,7 @@ class TestModelsGraph:
         model = desc.model_builder(input_shape=tuple(desc.input_sample_sizes[1:]))
         config = get_basic_sparsity_config(desc.input_sample_sizes, SparsityAlgo.magnitude)
         config['compression']['params'] = {'schedule': 'multistep'}
-        compressed_model, _ = create_compressed_model_and_algo_for_test(model, config)
+        compressed_model, _ = create_compressed_model_and_algo_for_test(model, config, should_init=False)
 
         check_model_graph(compressed_model, desc.ref_graph_filename, _magnitude_sparsity_case_config.graph_dir,
                           desc.rename_resource_nodes)
@@ -384,7 +384,7 @@ class TestModelsGraph:
         model = desc.model_builder(input_shape=tuple(desc.input_sample_sizes[1:]))
         config = get_basic_sparsity_config(desc.input_sample_sizes, SparsityAlgo.rb)
         config['compression']['params'] = {'schedule': 'multistep'}
-        compressed_model, _ = create_compressed_model_and_algo_for_test(model, config)
+        compressed_model, _ = create_compressed_model_and_algo_for_test(model, config, should_init=False)
 
         check_model_graph(compressed_model, desc.ref_graph_filename, _rb_sparsity_case_config.graph_dir,
                           desc.rename_resource_nodes)
@@ -394,7 +394,7 @@ class TestModelsGraph:
     def test_pruning_network(self, desc: ModelDesc, _pruning_case_config):
         model = desc.model_builder(input_shape=tuple(desc.input_sample_sizes[1:]))
         config = get_basic_filter_pruning_config(desc.input_sample_sizes)
-        compressed_model, _ = create_compressed_model_and_algo_for_test(model, config)
+        compressed_model, _ = create_compressed_model_and_algo_for_test(model, config, should_init=False)
 
         check_model_graph(compressed_model, desc.ref_graph_filename, _pruning_case_config.graph_dir,
                           desc.rename_resource_nodes)
@@ -402,7 +402,7 @@ class TestModelsGraph:
 
 QUANTIZE_OUTPUTS = [
     ModelDesc('mobilenet_v2_quantize_outputs.pb', test_models.MobileNetV2, [1, 96, 96, 3]),
-    ModelDesc('retinanet_quantize_outputs.pb', test_models.RetinaNet, [1, None, None, 3]),
+    ModelDesc('retinanet_quantize_outputs.pb', test_models.RetinaNet, [1, 603, 603, 3]),
     ModelDesc('sequential_model_quantize_outputs.pb', test_models.SequentialModel, [1, 224, 224, 3]),
     ModelDesc('shared_layers_model_quantize_outputs.pb', test_models.SharedLayersModel, [1, 30, 30, 3]),
 ]
@@ -414,7 +414,7 @@ def test_quantize_outputs(desc: ModelDesc, _quantization_case_config):
     config = get_basic_quantization_config(_quantization_case_config.qconfig,
                                            input_sample_sizes=desc.input_sample_sizes)
     config['compression']['quantize_outputs'] = True
-    compressed_model, _ = create_compressed_model_and_algo_for_test(model, config)
+    compressed_model, _ = create_compressed_model_and_algo_for_test(model, config, should_init=False)
 
     check_model_graph(compressed_model, desc.ref_graph_filename, _quantization_case_config.graph_dir,
                       desc.rename_resource_nodes)

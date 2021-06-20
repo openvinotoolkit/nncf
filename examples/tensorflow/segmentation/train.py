@@ -15,16 +15,17 @@ import os
 import sys
 from pathlib import Path
 
-import tensorflow as tf
 import numpy as np
+import tensorflow as tf
 
 from nncf.tensorflow import create_compressed_model
 from nncf.tensorflow.helpers.model_manager import TFOriginalModelManager
+from nncf.tensorflow.initialization import register_default_init_args
 from nncf.common.utils.tensorboard import prepare_for_tensorboard
 
-from examples.tensorflow.common.logger import logger
 from examples.tensorflow.common.argparser import get_common_argument_parser
 from examples.tensorflow.common.distributed import get_distribution_strategy
+from examples.tensorflow.common.logger import logger
 from examples.tensorflow.common.object_detection.checkpoint_utils import get_variables
 from examples.tensorflow.common.object_detection.datasets.builder import COCODatasetBuilder
 from examples.tensorflow.common.optimizer import build_optimizer
@@ -36,8 +37,8 @@ from examples.tensorflow.common.utils import create_code_snapshot
 from examples.tensorflow.common.utils import serialize_config
 from examples.tensorflow.common.utils import SummaryWriter
 from examples.tensorflow.common.utils import Timer
-from examples.tensorflow.segmentation.models.model_selector import get_predefined_config
 from examples.tensorflow.segmentation.models.model_selector import get_model_builder
+from examples.tensorflow.segmentation.models.model_selector import get_predefined_config
 
 
 def get_argument_parser():
@@ -228,11 +229,22 @@ def run_train(config):
     # Create model builder
     model_builder = get_model_builder(config)
 
+    # Register additional parameters in the NNCFConfig for initialization
+    # the compressed model during building
+    nncf_config = config.nncf_config
+    nncf_config = register_default_init_args(nncf_config=nncf_config,
+                                             data_loader=calibration_dataset,
+                                             batch_size=train_builder.global_batch_size)
+
+    resume_training = config.ckpt_path is not None
+
     with TFOriginalModelManager(model_builder.build_model,
                                 weights=config.get('weights', None),
                                 is_training=True) as model:
         with strategy.scope():
-            compression_ctrl, compress_model = create_compressed_model(model, config.nncf_config)
+            compression_ctrl, compress_model = create_compressed_model(model,
+                                                                       nncf_config,
+                                                                       should_init=not resume_training)
 
             scheduler = build_scheduler(
                 config=config,
@@ -252,13 +264,10 @@ def run_train(config):
             checkpoint_manager = tf.train.CheckpointManager(checkpoint, config.checkpoint_save_dir, max_to_keep=None)
 
             initial_epoch = initial_step = 0
-            if config.ckpt_path:
+            if resume_training:
                 initial_epoch, initial_step = resume_from_checkpoint(checkpoint_manager,
                                                                      config.ckpt_path,
                                                                      steps_per_epoch)
-            else:
-                logger.info('Initialization...')
-                compression_ctrl.initialize(dataset=calibration_dataset)
 
     train_step = create_train_step_fn(strategy, compress_model, loss_fn, optimizer)
 

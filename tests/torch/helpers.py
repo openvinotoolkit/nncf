@@ -32,7 +32,7 @@ from torch.nn import Module
 from torch.utils.data import DataLoader
 from torch.utils.data import Dataset
 
-from nncf.config.structure import BNAdaptationInitArgs
+from nncf.config.structures import BNAdaptationInitArgs
 from nncf.torch.composite_compression import PTCompositeCompressionAlgorithmBuilder
 from nncf.torch.compression_method_api import PTCompressionAlgorithmController
 from nncf.config import NNCFConfig
@@ -43,7 +43,7 @@ from nncf.torch.layers import NNCF_MODULES_MAP
 from nncf.torch.model_creation import create_compressed_model
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.utils import get_all_modules_by_type
-from nncf.torch.initialization import InitializingDataLoader
+from nncf.torch.initialization import PTInitializingDataLoader
 from tests.common.command import Command as BaseCommand
 
 TensorType = TypeVar('TensorType', bound=Union[torch.Tensor, np.ndarray])
@@ -408,7 +408,7 @@ def module_scope_from_node_name(name):
     return Scope.from_str(module_name)
 
 
-class DummyDataLoader(InitializingDataLoader):
+class DummyDataLoader(PTInitializingDataLoader):
     def __init__(self):
         super().__init__([])
 

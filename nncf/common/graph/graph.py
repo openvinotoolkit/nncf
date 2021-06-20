@@ -31,8 +31,8 @@ from nncf.common.graph.operator_metatypes import get_input_metatypes
 from nncf.common.graph.operator_metatypes import get_output_metatypes
 from nncf.common.utils.logger import logger as nncf_logger
 
-MODEL_INPUT_OP_NAME = "nncf_model_input"
-MODEL_OUTPUT_OP_NAME = "nncf_model_output"
+MODEL_INPUT_OP_NAME = 'nncf_model_input'
+MODEL_OUTPUT_OP_NAME = 'nncf_model_output'
 
 NNCFNodeName = str
 LayerName = str
@@ -121,7 +121,7 @@ class NNCFGraphEdge:
         self.tensor_shape = tensor_shape
 
     def __str__(self):
-        return str(self.from_node) + " -> " + str(self.tensor_shape) + " -> " + str(self.to_node)
+        return str(self.from_node) + ' -> ' + str(self.tensor_shape) + ' -> ' + str(self.to_node)
 
     def __hash__(self):
         return hash(str(self))
@@ -387,7 +387,7 @@ class NNCFGraph:
                 node_id = 0
 
         if node_id in self._node_id_to_key_dict:
-            raise ValueError(f"NNCF node with id {node_id} is already in the NNCFGraph")
+            raise ValueError(f'NNCF node with id {node_id} is already in the NNCFGraph')
 
         node_key = f'{node_id} {node_name}'
 
@@ -445,16 +445,16 @@ class NNCFGraph:
         err_reason = None
 
         if from_node_key not in self._nx_graph.nodes:
-            err_reason = f"node {from_node_key} not in NNCFGraph"
+            err_reason = f'node {from_node_key} not in NNCFGraph'
         if to_node_key not in self._nx_graph.nodes:
-            err_reason = f"node {from_node_key} not in NNCFGraph"
+            err_reason = f'node {from_node_key} not in NNCFGraph'
         if from_node_id in self._output_nncf_nodes:
-            err_reason = "cannot add edges *from* output nodes"
+            err_reason = 'cannot add edges *from* output nodes'
         if to_node_id in self._input_nncf_nodes:
-            err_reason = "cannot add edges *to* input nodes"
+            err_reason = 'cannot add edges *to* input nodes'
 
         if err_reason is not None:
-            raise ValueError(f"Cannot add edge from {from_node_key} to {to_node_key} - {err_reason}!")
+            raise ValueError(f'Cannot add edge from {from_node_key} to {to_node_key} - {err_reason}!')
 
         attrs = {
             NNCFGraph.ACTIVATION_SHAPE_EDGE_ATTR: tensor_shape,
@@ -484,9 +484,9 @@ class NNCFGraph:
             png_path = os.path.splitext(path)[0]+'.png'
             A.draw(png_path)
         except ImportError:
-            nncf_logger.warning("Graphviz is not installed - only the .dot model visualization format will be used. "
-                                "Install pygraphviz into your Python environment and graphviz system-wide to enable "
-                                "PNG rendering.")
+            nncf_logger.warning('Graphviz is not installed - only the .dot model visualization format will be used. '
+                                'Install pygraphviz into your Python environment and graphviz system-wide to enable '
+                                'PNG rendering.')
 
     def get_graph_for_structure_analysis(self, extended: bool = False) -> nx.DiGraph:
         """
@@ -533,10 +533,10 @@ class NNCFGraph:
         for u, v in self._nx_graph.edges:
             out_graph.add_edge(u, v, label=self._nx_graph.edges[u, v][NNCFGraph.ACTIVATION_SHAPE_EDGE_ATTR])
 
-        mapping = {k: v["label"] for k, v in out_graph.nodes.items()}
+        mapping = {k: v['label'] for k, v in out_graph.nodes.items()}
         out_graph = nx.relabel_nodes(out_graph, mapping)
         for node in out_graph.nodes.values():
-            node.pop("label")
+            node.pop('label')
 
         return out_graph
 
@@ -546,9 +546,9 @@ class NNCFGraph:
             if nx_node[NNCFGraph.NODE_NAME_ATTR] == name:
                 matches.append(nx_node)
         if not matches:
-            raise RuntimeError("Could not find a node {} in NNCFGraph!".format(name))
+            raise RuntimeError('Could not find a node {} in NNCFGraph!'.format(name))
         if len(matches) > 1:
-            raise RuntimeError("More than one node in NNCFGraph matches name {}:\n{}".
+            raise RuntimeError('More than one node in NNCFGraph matches name {}:\n{}'.
                                format(name,
                                       '\t\n'.join(
                                           [n[NNCFGraph.KEY_NODE_ATTR] for n in matches])))
@@ -597,7 +597,7 @@ class NNCFGraph:
             elif to_node_key in match:
                 input_nncf_edges.append(nncf_edge)
             else:
-                raise RuntimeError("Invalid graph expression supplied!")
+                raise RuntimeError('Invalid graph expression supplied!')
 
         return NNCFGraphPatternIO(input_nncf_edges, output_nncf_edges)
 

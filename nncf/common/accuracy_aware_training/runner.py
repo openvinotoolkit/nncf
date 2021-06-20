@@ -28,6 +28,7 @@ class TrainingRunner(ABC):
     def train_epoch(self, model: ModelType, compression_controller: CompressionAlgorithmController):
         """
         Train the supplied model for a single epoch (single dataset pass).
+
         :param model: The model to be fine-tuned
         :param compression_controller: The compression controller to be used during
         model fine-tuning
@@ -36,7 +37,8 @@ class TrainingRunner(ABC):
     @abstractmethod
     def validate(self, model: ModelType, compression_controller: CompressionAlgorithmController):
         """
-        Compute the target metric value on the validation dataset for the supplied model
+        Compute the target metric value on the validation dataset for the supplied model.
+
         :param model: The model to be evaluated
         :param compression_controller: The compression controller to be used during
         model evaluation
@@ -47,6 +49,7 @@ class TrainingRunner(ABC):
     def dump_checkpoint(self, model: ModelType, compression_controller: CompressionAlgorithmController):
         """
         Dump current model checkpoint on disk.
+
         :param model: The model to be saved
         :param compression_controller: The compression controller to be used during
         checkpoint saving
@@ -56,6 +59,7 @@ class TrainingRunner(ABC):
     def configure_optimizers(self):
         """
         Initialize the training optimizer object (and, optionally, the learning rate scheduler object).
+
         :return: optimizer instance, learning rate scheduler instance (None if not applicable)
         """
 
@@ -68,6 +72,8 @@ class TrainingRunner(ABC):
     @abstractmethod
     def retrieve_original_accuracy(self, model):
         """
+        :param model: The model object to retrieve the original accuracy value from.
+
         Retrive the original uncompressed model accuracy from the model instance and
         set the obtained value to the `uncompressed_model_accuracy` attribute of the TrainingRunner
         """
@@ -77,14 +83,15 @@ class TrainingRunner(ABC):
                                      tensorboard_writer=None, log_dir=None):
         """
         Register the user-supplied functions to be used to control the training process.
+
         :param train_epoch_fn: a method to fine-tune the model for a single epoch
-        (to be called inside the `train_epoch` of the TrainingRunner)
+        (to be called inside the `train_epoch` of the TrainingRunner).
         :param validate: a method to evaluate the model on the validation dataset
-        (to be called inside the `train_epoch` of the TrainingRunner)
+        (to be called inside the `train_epoch` of the TrainingRunner).
         :param configure_optimizers_fn: a method to instantiate an optimizer and a learning
-        rate scheduler (to be called inside the `configure_optimizers` of the TrainingRunner)
-        :param tensorboard_writer: The tensorboard object to be used for logging
-        :param log_dir: The path to be used for logging and checkpoint saving
+        rate scheduler (to be called inside the `configure_optimizers` of the TrainingRunner).
+        :param tensorboard_writer: The tensorboard object to be used for logging.
+        :param log_dir: The path to be used for logging and checkpoint saving.
         """
 
 

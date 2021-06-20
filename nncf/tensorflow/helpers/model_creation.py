@@ -15,33 +15,56 @@ import types
 
 import tensorflow as tf
 
+from nncf import NNCFConfig
+from nncf.api.compression import CompressionAlgorithmBuilder
+from nncf.config.extractors import extract_compression_algorithm_configs
 from nncf.tensorflow.algorithm_selector import get_compression_algorithm_builder
 from nncf.tensorflow.api.composite_compression import TFCompositeCompressionAlgorithmBuilder
 from nncf.tensorflow.helpers.utils import get_built_model
-from nncf.config.config import NNCFConfig
 from nncf.tensorflow.accuracy_aware_training.keras_model_utils import accuracy_aware_fit
-from nncf.common.structures import ModelEvaluationArgs
+from nncf.config.structures import ModelEvaluationArgs
 from nncf.config.utils import is_accuracy_aware_training
 
 
-def create_compression_algorithm_builder(config):
-    compression_config = config.get('compression', {})
+def create_compression_algorithm_builder(config: NNCFConfig,
+                                         should_init: bool) -> CompressionAlgorithmBuilder:
+    """
+    Factory to create an instance of the compression algorithm builder
+    by NNCFConfig.
 
-    if isinstance(compression_config, dict):
-        compression_config = NNCFConfig(compression_config)
-        compression_config.register_extra_structs(config.get_all_extra_structs_for_copy())
-        return get_compression_algorithm_builder(compression_config)(compression_config)
-    if isinstance(compression_config, list):
-        composite_builder = TFCompositeCompressionAlgorithmBuilder()
-        for algo_config in compression_config:
-            algo_config = NNCFConfig(algo_config)
-            algo_config.register_extra_structs(config.get_all_extra_structs_for_copy())
-            composite_builder.add(get_compression_algorithm_builder(algo_config)(algo_config))
-        return composite_builder
+    :param config: An instance of NNCFConfig that defines compression methods.
+    :param should_init: The flag indicates that the generated compression builder
+        will initialize (True) or not (False) the training parameters of the model
+        during model building.
+    :return: An instance of the `CompressionAlgorithmBuilder`
+    """
+    compression_algorithm_configs = extract_compression_algorithm_configs(config)
+
+    number_compression_algorithms = len(compression_algorithm_configs)
+    if number_compression_algorithms == 1:
+        algo_config = compression_algorithm_configs[0]
+        return get_compression_algorithm_builder(algo_config)(algo_config, should_init)
+    if number_compression_algorithms > 1:
+        return TFCompositeCompressionAlgorithmBuilder(config, should_init)
     return None
 
 
-def create_compressed_model(model, config):
+def create_compressed_model(model: tf.keras.Model,
+                            config: NNCFConfig,
+                            should_init: bool = True) -> tf.keras.Model:
+    """
+    The main function used to produce a model ready for compression fine-tuning
+    from an original TensorFlow Keras model and a configuration object.
+
+    :param model: The original model. Should have its parameters already loaded
+        from a checkpoint or another source.
+    :param config: A configuration object used to determine the exact compression
+        modifications to be applied to the model.
+    :param should_init: If False, trainable parameter initialization will be
+        skipped during building.
+    :return: The model with additional modifications necessary to enable
+        algorithm-specific compression during fine-tuning.
+    """
     model = get_built_model(model, config)
     original_model_accuracy = None
 
@@ -50,7 +73,7 @@ def create_compressed_model(model, config):
             evaluation_args = config.get_extra_struct(ModelEvaluationArgs)
             original_model_accuracy = evaluation_args.eval_fn(model)
 
-    builder = create_compression_algorithm_builder(config)
+    builder = create_compression_algorithm_builder(config, should_init)
     if builder is None:
         return None, model
     compressed_model = builder.apply_to(model)

@@ -69,7 +69,7 @@ class BitwidthGraph:
                     operator_name += f'_FLOPS:{str(flops)}'
                     if len(affected_nodes) > 1:
                         node_ids = sorted([n.node_id for n in affected_nodes])
-                        operator_name += "(shared among nodes {}".format(",".join(
+                        operator_name += "(shared among nodes {})".format(",".join(
                             [str(node_id) for node_id in node_ids]))
             operator_name += '_#{}'.format(node.node_id)
             target_node_to_draw = self._nx_graph.nodes[node_key]

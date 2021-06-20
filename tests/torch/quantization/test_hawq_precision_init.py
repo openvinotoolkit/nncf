@@ -299,9 +299,15 @@ class HAWQTestStruct(NamedTuple):
 INCV3_FLOPS_PER_MODULE = [83886080, 100663296, 117440512,
                           56623104, 56623104, 198180864, 50331648,
                           56623104, 56623104]
-INCV3_BITWIDTH_PER_MODULE = [4, 8, 4,
-                             4, 8, 4, 4,
-                             8, 4]
+
+# WARNING: BITWIDTH_PER_MODULE should be set as max(weight_bits, act_bits) since this is how compression
+# ratio is calculated inside HAWQ
+
+# Currently the HAWQ sets up  4-bit weights but 8-bit activations for 117440512 module,
+# so effective flops would be computed as if the module had 8-bit weights, therefor "[8, 8, 8" instead of "[8, 8, 4"
+INCV3_BITWIDTH_PER_MODULE = [8, 8, 8,
+                             8, 4, 4, 4,
+                             4, 8]
 INCV3_BITS_COMPLEXITY = map(lambda x, y: x * y, INCV3_FLOPS_PER_MODULE, INCV3_BITWIDTH_PER_MODULE)
 INCV3_COMPRESSION_RATIO = sum(INCV3_FLOPS_PER_MODULE) * 8 / sum(INCV3_BITS_COMPLEXITY)
 
@@ -329,7 +335,7 @@ HAWQ_TEST_PARAMS = (
                    avg_traces_creator=lambda x, y: get_avg_traces(x, y)[:9],
                    config_builder=HAWQConfigBuilder().with_sample_size([2, 3, 299, 299]).for_vpu().liberal_mode().
                    with_target_scope([r'{re}.*InceptionE\[Mixed_7c\].*']).
-                   with_ratio(1.5).check_compression_ratio(INCV3_COMPRESSION_RATIO).add_flops()),
+                   with_ratio(1.3).check_compression_ratio(INCV3_COMPRESSION_RATIO).add_flops()),
     HAWQTestStruct(model_creator=inception_v3,
                    avg_traces_creator=lambda x, y: get_avg_traces(x, y)[:95],
                    config_builder=HAWQConfigBuilder().with_sample_size(
@@ -620,7 +626,7 @@ def test_hawq_behaviour__if_method_returns_none(mocker, method_name, expected_be
                                                                  criterion=mocker.stub(),
                                                                  data_loader=mock_train_loader,
                                                                  device=device)])
-    mocker.patch('nncf.common.batchnorm_adaptation.BatchnormAdaptationAlgorithm.run')
+    mocker.patch('nncf.common.initialization.batchnorm_adaptation.BatchnormAdaptationAlgorithm.run')
     mocked_calc_traces = mocker.patch(
         'nncf.torch.quantization.precision_init.hawq_init.HAWQPrecisionInitializer._calc_traces')
     stub = mocker.stub()

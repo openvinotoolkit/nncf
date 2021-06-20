@@ -14,10 +14,10 @@
 import pytest
 from addict import Dict
 
-from nncf.common.sparsity.schedulers import MultiStepSparsityScheduler
 from tests.tensorflow.helpers import get_empty_config, create_compressed_model_and_algo_for_test
-from tests.tensorflow.sparsity.magnitude.test_helpers import get_magnitude_test_model, \
-    get_basic_magnitude_sparsity_config
+from tests.tensorflow.sparsity.magnitude.test_helpers import get_magnitude_test_model
+from tests.tensorflow.sparsity.magnitude.test_helpers import get_basic_magnitude_sparsity_config
+from nncf.common.sparsity.schedulers import MultiStepSparsityScheduler
 
 
 def get_multistep_normed_abs_config():

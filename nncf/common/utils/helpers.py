@@ -63,8 +63,8 @@ def matches_any(tested_str: str,
 
     str_list = [str_or_list_to_match_to] if isinstance(str_or_list_to_match_to, str) else str_or_list_to_match_to
     for item in str_list:
-        if "{re}" in item:
-            regex = item.replace("{re}", "")
+        if '{re}' in item:
+            regex = item.replace('{re}', '')
             if re.search(regex, tested_str):
                 return True
         else:
@@ -73,9 +73,17 @@ def matches_any(tested_str: str,
     return False
 
 
-def configure_accuracy_aware_paths(log_dir):
+def configure_accuracy_aware_paths(log_dir: str) -> str:
+    """
+    Create a subdirectory inside of the passed log directory
+    to save checkpoints from the accuracy-aware training loop to.
+
+    :param log_dir: Path to the main log directory.
+    :return: Path to the accuracy-aware training subdirectory.
+    """
     d = datetime.datetime.now()
     run_id = '{:%Y-%m-%d__%H-%M-%S}'.format(d)
-    log_dir = osp.join(log_dir, "accuracy_aware_training/{run_id}".format(run_id=run_id))
-    os.makedirs(log_dir, exist_ok=True)
+    acc_aware_log_dir = osp.join(log_dir,
+                                 'accuracy_aware_training/{run_id}'.format(run_id=run_id))
+    os.makedirs(acc_aware_log_dir, exist_ok=True)
     return log_dir

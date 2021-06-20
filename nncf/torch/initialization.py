@@ -10,19 +10,19 @@ from functools import partial
 from torch.nn.modules.loss import _Loss
 from torch.utils.data import DataLoader
 
-from nncf.config.structure import BNAdaptationInitArgs
+from nncf.config.structures import BNAdaptationInitArgs
+from nncf.config.structures import QuantizationRangeInitArgs
+from nncf.config.structures import ModelEvaluationArgs
 from nncf.common.utils.progress_bar import ProgressBar
-from nncf.common.initialization import NNCFDataLoader
-from nncf.common.structures import ModelEvaluationArgs
+from nncf.common.initialization.dataloader import NNCFDataLoader
 from nncf.torch.structures import AutoQPrecisionInitArgs
 from nncf.torch.structures import QuantizationPrecisionInitArgs
-from nncf.torch.structures import QuantizationRangeInitArgs
 from nncf.torch.utils import is_tensor
 from nncf.torch.utils import objwalk
 from contextlib import contextmanager
 
 
-class InitializingDataLoader(NNCFDataLoader):
+class PTInitializingDataLoader(NNCFDataLoader):
     """
     This class wraps the torch.utils.data.DataLoader class,
     and defines methods to parse the general data loader output to
@@ -59,7 +59,7 @@ class InitializingDataLoader(NNCFDataLoader):
         raise NotImplementedError
 
 
-class DefaultInitializingDataLoader(InitializingDataLoader):
+class DefaultInitializingDataLoader(PTInitializingDataLoader):
 
     def get_inputs(self, dataloader_output: Any) -> Tuple[Tuple, Dict]:
         return (dataloader_output[0],), {}
@@ -68,8 +68,8 @@ class DefaultInitializingDataLoader(InitializingDataLoader):
         return dataloader_output[1]
 
 
-def wrap_dataloader_for_init(data_loader) -> InitializingDataLoader:
-    if not isinstance(data_loader, InitializingDataLoader):
+def wrap_dataloader_for_init(data_loader) -> PTInitializingDataLoader:
+    if not isinstance(data_loader, PTInitializingDataLoader):
         loaded_item = next(iter(data_loader))
         if isinstance(loaded_item, (tuple, list)) and len(loaded_item) == 2:
             return DefaultInitializingDataLoader(data_loader)
@@ -77,7 +77,7 @@ def wrap_dataloader_for_init(data_loader) -> InitializingDataLoader:
                                   "produces a tuple/list of (*model_input*, *ground_truth*) and that no special "
                                   "forward arguments have to be set during init. If this is not the case, then instead "
                                   "of your regular data loader you need to pass a specialized version of "
-                                  "InitializingDataLoader that returns a general (args, kwargs) tuple for your "
+                                  "PTInitializingDataLoader that returns a general (args, kwargs) tuple for your "
                                   "model to be called with at each __next__ call.")
     return data_loader
 
@@ -258,7 +258,7 @@ def register_default_init_args(nncf_config: 'NNCFConfig',
                                model_eval_fn: Callable[[torch.nn.Module, torch.utils.data.DataLoader], float] = None,
                                device: str = None,
                                ) -> 'NNCFConfig':
-    nncf_config.register_extra_structs([QuantizationRangeInitArgs(data_loader=train_loader,
+    nncf_config.register_extra_structs([QuantizationRangeInitArgs(data_loader=wrap_dataloader_for_init(train_loader),
                                                                   device=device),
                                         BNAdaptationInitArgs(data_loader=wrap_dataloader_for_init(train_loader),
                                                              device=device)])

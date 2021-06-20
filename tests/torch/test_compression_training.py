@@ -218,6 +218,9 @@ def test_compression_train(_params, tmp_path):
     args['seed'] = 1
 
     runner = Command(create_command_line(get_cli_dict_args(args), tc['sample_type']))
+    env_with_cuda_reproducibility = os.environ.copy()
+    env_with_cuda_reproducibility['CUBLAS_WORKSPACE_CONFIG'] = ':4096:8'
+    runner.kwargs.update(env=env_with_cuda_reproducibility)
     runner.run(timeout=tc['timeout'])
 
     checkpoint_path = os.path.join(args['checkpoint-save-dir'], tc['checkpoint_name'] + '_best.pth')
@@ -241,11 +244,20 @@ def test_compression_eval_trained(_params, tmp_path):
     args['seed'] = 1
     checkpoint_path = os.path.join(args['checkpoint-save-dir'], tc['checkpoint_name'] + '_best.pth')
     args['resume'] = checkpoint_path
+
+    METRIC_FILE_PATH = tmp_path / 'metrics.json'
+    args['metrics-dump'] = tmp_path / METRIC_FILE_PATH
+
     if 'weights' in args:
         del args['weights']
 
     runner = Command(create_command_line(get_cli_dict_args(args), tc['sample_type']))
+    env_with_cuda_reproducibility = os.environ.copy()
+    env_with_cuda_reproducibility['CUBLAS_WORKSPACE_CONFIG'] = ':4096:8'
+    runner.kwargs.update(env=env_with_cuda_reproducibility)
     runner.run(timeout=tc['timeout'])
 
-    acc1 = parse_best_acc1(tmp_path)
+    with open(str(METRIC_FILE_PATH)) as metric_file:
+        metrics = json.load(metric_file)
+    acc1 = metrics['Accuracy']
     assert torch.load(checkpoint_path)['best_acc1'] == approx(acc1, abs=tc['absolute_tolerance_eval'])

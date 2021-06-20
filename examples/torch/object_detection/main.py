@@ -21,6 +21,7 @@ import torch
 import torch.utils.data as data
 
 from examples.torch.common import restricted_pickle_module
+from examples.torch.common.execution import set_seed
 from examples.torch.common.model_loader import load_resuming_model_state_dict_and_checkpoint_from_path
 from examples.torch.common.sample_config import create_sample_config, SampleConfig
 from torch.optim.lr_scheduler import ReduceLROnPlateau
@@ -100,6 +101,8 @@ def main_worker(current_gpu, config):
     if is_on_first_rank(config):
         configure_logging(logger, config)
         print_args(config)
+
+    set_seed(config)
 
     config.start_iter = 0
     nncf_config = config.nncf_config
@@ -260,17 +263,23 @@ def create_dataloaders(config):
     train_dataset = get_training_dataset(config.dataset, config.train_anno, config.train_imgs, config)
     logger.info("Loaded {} training images".format(len(train_dataset)))
     if config.distributed:
+        sampler_seed = 0 if config.seed is None else config.seed
+        dist_sampler_shuffle = config.seed is None
         train_sampler = torch.utils.data.distributed.DistributedSampler(train_dataset,
                                                                         num_replicas=config.ngpus_per_node,
-                                                                        rank=config.rank)
+                                                                        rank=config.rank,
+                                                                        seed=sampler_seed,
+                                                                        shuffle=dist_sampler_shuffle)
     else:
         train_sampler = None
+
+    train_shuffle = train_sampler is None and config.seed is None
 
     def create_train_data_loader(batch_size):
         return data.DataLoader(
             train_dataset, batch_size,
             num_workers=config.workers,
-            shuffle=(train_sampler is None),
+            shuffle=train_shuffle,
             collate_fn=detection_collate,
             pin_memory=True,
             sampler=train_sampler

@@ -12,12 +12,11 @@
 """
 
 from nncf.common.graph import NNCFNodeExpression as N
-from nncf.torch.graph.version_agnostic_op_names import VersionAgnosticNames
 
 LINEAR_OPS = N('linear') | N('conv2d') | N('conv_transpose2d') | N('conv3d') | \
              N('conv_transpose3d') | N('conv1d') | N('addmm')
 
-RELU = N(VersionAgnosticNames.RELU) | N('hardtanh')
+RELU = N('relu') | N('relu_') | N('hardtanh')
 
 BN = N('batch_norm') | N('batch_norm3d')
 

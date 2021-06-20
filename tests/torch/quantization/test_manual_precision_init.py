@@ -230,7 +230,7 @@ def test_can_resume_with_manual_init(mocker):
 
     from nncf.torch.quantization.algo import QuantizationBuilder
     from nncf.torch.quantization.precision_init.manual_init import ManualPrecisionInitializer
-    from nncf.common.batchnorm_adaptation import BatchnormAdaptationAlgorithm
+    from nncf.common.initialization.batchnorm_adaptation import BatchnormAdaptationAlgorithm
     parse_range_init = mocker.spy(QuantizationBuilder, '_parse_range_init_params')
     get_stats = mocker.spy(QuantizationBuilder, '_get_statistics_for_final_range_init')
     run_bn_adapt = mocker.spy(BatchnormAdaptationAlgorithm, 'run')

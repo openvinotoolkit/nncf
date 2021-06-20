@@ -116,7 +116,6 @@ class AdaptiveCompressionTrainingLoop(TrainingLoop):
         return {remove_registry_prefix(algo_name): controller_cls for algo_name, controller_cls in
                 ADAPTIVE_COMPRESSION_CONTROLLERS.registry_dict.items()}
 
-    # pylint: disable=E1101
     def run(self, model, train_epoch_fn, validate_fn,
             configure_optimizers_fn=None, tensorboard_writer=None, log_dir=None):
         self.runner.initialize_training_loop_fns(train_epoch_fn, validate_fn, configure_optimizers_fn,

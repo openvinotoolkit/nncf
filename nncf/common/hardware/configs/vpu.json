@@ -4,7 +4,7 @@
         "quantization": {
             "q8_tn": {
                 "bits": 8,
-                "mode": "asymmetric",
+                "mode": ["asymmetric", "symmetric"],
                 "granularity": "pertensor"
             },
 
@@ -78,7 +78,7 @@
         {
             "type": "DepthWiseConvolution",
             "quantization": {
-                "activations": "q8_ch",
+                "activations": ["q8_ch", "q8_tn"],
                 "weights": ["q8_w", "q4_w", "q2_w"]
             }
         },
@@ -265,7 +265,7 @@
         {
             "type": "AvgPool",
             "quantization": {
-                "activations": "q8_ch"
+                "activations": ["q8_ch", "q8_tn"]
             }
         },
         {
@@ -321,7 +321,7 @@
             "type": "Embedding",
             "quantization": {
                 "weights": [
-                    "q8_tn"
+                    "q8_tn", "q8_w"
                 ]
             }
         },
@@ -329,7 +329,7 @@
             "type": "EmbeddingBag",
             "quantization": {
                 "weights": [
-                    "q8_tn"
+                    "q8_tn", "q8_w"
                 ]
             }
         }

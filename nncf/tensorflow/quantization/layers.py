@@ -30,7 +30,8 @@ class FakeQuantize(tf.keras.layers.Layer):
         self.mode = config.mode
         self.data_format = data_format
 
-        self._quantizer = self._create_quantizer(config)
+        self._op_name = f'{self.name}_quantizer'
+        self._quantizer = self._create_quantizer(config, self._op_name)
         self._quantizer_weights = {}
 
     @property
@@ -48,6 +49,10 @@ class FakeQuantize(tf.keras.layers.Layer):
     @property
     def signed(self):
         return getattr(self._quantizer, 'signed', None)
+
+    @property
+    def op_name(self):
+        return self._op_name
 
     @property
     def enabled(self):
@@ -71,8 +76,7 @@ class FakeQuantize(tf.keras.layers.Layer):
     def apply_minmax_initialization(self, min_values, max_values, min_range=0.1, eps=0.01):
         self._quantizer.apply_minmax_initialization(self._quantizer_weights, min_values, max_values, min_range, eps)
 
-    def _create_quantizer(self, qspec: TFQuantizerSpec) -> Quantizer:
-        op_name = f'{self.name}_quantizer'
+    def _create_quantizer(self, qspec: TFQuantizerSpec, op_name: str) -> Quantizer:
         quantizer_cls = NNCF_QUANTIZATION_OPERATONS.get(qspec.mode)
         return quantizer_cls(op_name, qspec)
 

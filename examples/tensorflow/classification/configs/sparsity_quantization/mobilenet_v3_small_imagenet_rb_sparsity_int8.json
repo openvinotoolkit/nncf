@@ -1,18 +1,18 @@
 {
-    "model": "MobileNetV3Large",
+    "model": "MobileNetV3Small",
     "pretrained": true,
     "input_info": {
         "sample_size": [1, 224, 224, 3]
     },
 
-    "batch_size": 200,
+    "batch_size": 256,
     "epochs": 90,
 
     "optimizer": {
         "type": "adam",
         "schedule_type": "piecewise_constant",
         "schedule_params": {
-            "boundaries": [40, 70],
+            "boundaries": [60, 85],
             "values": [1e-4, 1e-5, 1e-6]
         }
     },
@@ -21,8 +21,9 @@
     "dataset_type": "tfds",
 
     "compression":[
-    {
-        "algorithm": "magnitude_sparsity",
+        {
+            "algorithm": "rb_sparsity",
+            "sparsity_init": 0.01,
             "params": {
                 "schedule": "multistep",
                 "multistep_steps": [
@@ -30,17 +31,23 @@
                     10,
                     15,
                     20,
-                    25
+                    25,
+                    30,
+                    35,
+                    40
                 ],
                 "multistep_sparsity_levels": [
                     0.1,
-                    0.15,
-                    0.20,
-                    0.25,
+                    0.14,
+                    0.18,
+                    0.22,
+                    0.26,
                     0.30,
-                    0.35
+                    0.34,
+                    0.38,
+                    0.42
                 ],
-                "sparsity_freeze_epoch": 45
+                "sparsity_freeze_epoch": 50
             }
         },
         {
@@ -55,5 +62,5 @@
                 "bits": 8,
                 "per_channel": false
             }
-    }]
+        }]
 }

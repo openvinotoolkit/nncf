@@ -1,5 +1,5 @@
 """
- Copyright (c) 2020 Intel Corporation
+ Copyright (c) 2021 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -10,15 +10,3 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-from typing import Callable
-from nncf.config.structure import NNCFExtraConfigStruct
-
-
-class ModelEvaluationArgs(NNCFExtraConfigStruct):
-    def __init__(self,
-                 eval_fn: Callable):
-        self.eval_fn = eval_fn
-
-    @classmethod
-    def get_id(cls) -> str:
-        return "model_evaluation_args"
