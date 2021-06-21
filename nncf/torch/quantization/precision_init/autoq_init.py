@@ -33,8 +33,6 @@ import json
 import math
 import numpy as np
 import pandas as pd
-import re
-from io import StringIO
 from copy import deepcopy
 
 
@@ -289,10 +287,12 @@ class AutoQPrecisionInitializer(BasePrecisionInitializer):
                 delta = agent.get_delta()
 
                 nncf_stats = env.qctrl.statistics()
-                bit_stats_tt = nncf_stats.quantization.bitwidth_distribution_statistics.to_str()
-                bit_stats_df = pd.read_csv(
-                    StringIO(re.sub(
-                        r'[-+|=]', '', bit_stats_tt)), sep=r'\s{2,}', engine='python').reset_index(drop=True)
+                bit_stats_df = pd.DataFrame.from_dict(
+                    [nncf_stats.quantization.bitwidth_distribution_statistics.num_wq_per_bitwidth,
+                     nncf_stats.quantization.bitwidth_distribution_statistics.num_aq_per_bitwidth])\
+                         .fillna(0).astype(int).rename(index={0:'WQ',1:'AQ'}).transpose().sort_index(ascending=False)
+                bit_stats_df.index.name = 'bitwidth'
+                bit_stats_df=bit_stats_df.reset_index()
 
                 if final_reward > best_reward:
                     best_reward = final_reward
