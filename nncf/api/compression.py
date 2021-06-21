@@ -10,10 +10,12 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+
 from abc import ABC, abstractmethod
 from typing import Any, Dict, Optional, TypeVar, List, Tuple
 
 from nncf import NNCFConfig
+from nncf.api.statistics import Statistics
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.utils.ordered_enum import OrderedEnum
 
@@ -35,17 +37,6 @@ class CompressionLoss(ABC):
         Calculates the compression loss value.
 
         :return: The compression loss value.
-        """
-
-    @abstractmethod
-    def statistics(self, quickly_collected_only: bool = False) -> Dict[str, object]:
-        """
-        Returns a dictionary of printable statistics.
-
-        :param quickly_collected_only: Enables collection of the statistics that
-            don't take too much time to compute. Can be helpful for the case when
-            need to keep track of statistics on each training batch/step/iteration.
-        :return: A dictionary of printable statistics.
         """
 
     @abstractmethod
@@ -130,33 +121,33 @@ class CompressionScheduler(ABC):
         """
 
 
-class CompressionLevel(OrderedEnum):
+class CompressionStage(OrderedEnum):
     """
-    Specifies the compression level for the model.
+    Specifies the compression stage for the model.
     """
 
-    NONE = 0
-    PARTIAL = 1
-    FULL = 2
+    UNCOMPRESSED = 0
+    PARTIALLY_COMPRESSED = 1
+    FULLY_COMPRESSED = 2
 
-    def __add__(self, other: 'CompressionLevel') -> 'CompressionLevel':
+    def __add__(self, other: 'CompressionStage') -> 'CompressionStage':
         """
-        Defines compression level of a composite compression controller, consist of
-        two algorithms, where `self` is the compression level of the first algorithm
-        and other - compression level of the second one.
-            NONE    & NONE    = NONE
-            PARTIAL & PARTIAL = PARTIAL
-            FULL    & FULL    = FULL
-            NONE    & PARTIAL = PARTIAL
-            NONE    & FULL    = PARTIAL
-            PARTIAL & FULL    = PARTIAL
+        Defines compression stage of a composite compression controller, consist of
+        two algorithms, where `self` is the compression stage of the first algorithm
+        and other - compression stage of the second one.
+            UNCOMPRESSED    & UNCOMPRESSED    = UNCOMPRESSED
+            PARTIALLY_COMPRESSED & PARTIALLY_COMPRESSED = PARTIALLY_COMPRESSED
+            FULLY_COMPRESSED    & FULLY_COMPRESSED    = FULLY_COMPRESSED
+            UNCOMPRESSED    & PARTIALLY_COMPRESSED = PARTIALLY_COMPRESSED
+            UNCOMPRESSED    & FULLY_COMPRESSED    = PARTIALLY_COMPRESSED
+            PARTIALLY_COMPRESSED & FULLY_COMPRESSED    = PARTIALLY_COMPRESSED
 
-        :param other: An instance of another compression level.
-        :return: The common compression level of the two algorithms.
+        :param other: An instance of another compression stage.
+        :return: The common compression stage of the two algorithms.
         """
         if self == other:
             return self
-        return CompressionLevel.PARTIAL
+        return CompressionStage.PARTIALLY_COMPRESSED
 
 
 class CompressionAlgorithmController(ABC):
@@ -214,25 +205,25 @@ class CompressionAlgorithmController(ABC):
         :return: The compression controller state.
         """
 
-    def compression_level(self) -> CompressionLevel:
+    def compression_stage(self) -> CompressionStage:
         """
-        Returns the compression level. Should be used on saving best checkpoints
+        Returns the compression stage. Should be used on saving best checkpoints
         to distinguish between uncompressed, partially compressed, and fully
         compressed models.
 
-        :return: The compression level of the target model.
+        :return: The compression stage of the target model.
         """
 
-    def statistics(self, quickly_collected_only: bool = False) -> Dict[str, object]:
+    @abstractmethod
+    def statistics(self, quickly_collected_only: bool = False) -> Statistics:
         """
-        Returns a dictionary of printable statistics.
+        Returns a `Statistics` class instance that contains compression algorithm statistics.
 
         :param quickly_collected_only: Enables collection of the statistics that
             don't take too much time to compute. Can be helpful for the case when
             need to keep track of statistics on each training batch/step/iteration.
-        :return: A dictionary of printable statistics.
+        :return: A `Statistics` class instance that contains compression algorithm statistics.
         """
-        return self.loss.statistics(quickly_collected_only)
 
     def prepare_for_export(self) -> None:
         """
@@ -329,3 +320,32 @@ class CompressionAlgorithmBuilder(ABC):
         :return: The instance of the `TransformationLayout` class containing
             a list of algorithm-specific modifications.
         """
+
+    @abstractmethod
+    def initialize(self, model: ModelType) -> None:
+        """
+        Initialize model parameters before training
+
+        :param model: The model with additional modifications necessary to enable
+            algorithm-specific compression during fine-tuning.
+        """
+
+
+class CompressionLevel(OrderedEnum):
+    """
+    Legacy class, now replaced by CompressionStage.
+    Supports backward compatibility of older checkpoints produced with NNCF.
+    CompressionLevel is deprecated and will be removed in future releases.
+    """
+
+    NONE = 0
+    PARTIAL = 1
+    FULL = 2
+
+    @classmethod
+    def map_legacy_level_to_stage(cls):
+        return {
+            CompressionLevel.NONE: CompressionStage.UNCOMPRESSED,
+            CompressionLevel.PARTIAL: CompressionStage.PARTIALLY_COMPRESSED,
+            CompressionLevel.FULL: CompressionStage.FULLY_COMPRESSED,
+        }

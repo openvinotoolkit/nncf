@@ -1,9 +1,0 @@
-strict digraph  {
-"0 /nncf_model_input" [id=0, scope="", type=nncf_model_input];
-"1 SymmetricQuantizer/symmetric_quantize" [id=1, scope=SymmetricQuantizer, type=symmetric_quantize];
-"2 TestModel/BatchNorm3d[_layer]/batch_norm" [id=2, scope="TestModel/BatchNorm3d[_layer]", type=batch_norm];
-"3 /nncf_model_output" [id=3, scope="", type=nncf_model_output];
-"0 /nncf_model_input" -> "1 SymmetricQuantizer/symmetric_quantize";
-"1 SymmetricQuantizer/symmetric_quantize" -> "2 TestModel/BatchNorm3d[_layer]/batch_norm";
-"2 TestModel/BatchNorm3d[_layer]/batch_norm" -> "3 /nncf_model_output";
-}

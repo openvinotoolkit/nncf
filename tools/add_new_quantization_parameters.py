@@ -20,7 +20,7 @@ from os import listdir, makedirs
 from os.path import isfile, join, exists
 from shutil import copyfile
 
-from nncf.quantization.layers import SymmetricQuantizer, AsymmetricQuantizer
+from nncf.torch.quantization.layers import SymmetricQuantizer, AsymmetricQuantizer
 
 
 class ParameterToAdd(NamedTuple):

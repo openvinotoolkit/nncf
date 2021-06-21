@@ -280,7 +280,7 @@ index ad17a53..719e9bc 100644
                              replace_ImageToTensor)
  from mmdet.utils import get_root_logger
 
-+from nncf.utils import get_all_modules
++from nncf.torch.utils import get_all_modules
 +from mmdet.core.nncf import wrap_nncf_model
 +
 
@@ -397,7 +397,7 @@ new file mode 100644
 index 0000000..d6b3887
 --- /dev/null
 +++ b/mmdet/core/nncf/hooks.py
-@@ -0,0 +1,24 @@
+@@ -0,0 +1,16 @@
 +from texttable import Texttable
 +from mmcv.runner.hooks.hook import Hook
 +
@@ -413,32 +413,25 @@ index 0000000..d6b3887
 +        self.compression_ctrl.scheduler.epoch_step()
 +
 +    def before_run(self, runner):
-+        runner.logger.info(get_printable_stats(self.compression_ctrl.statistics()))
-+
-+
-+def get_printable_stats(stats):
-+    for key, val in stats.items():
-+        if isinstance(val, Texttable):
-+            return '{}\n{}'.format(key, val.draw())
-+        else:
-+            return '{}: {}'.format(key, val)
++        runner.logger.info(self.compression_ctrl.statistics().to_str())
 diff --git a/mmdet/core/nncf/utils.py b/mmdet/core/nncf/utils.py
 new file mode 100644
 index 0000000..c903a55
 --- /dev/null
 +++ b/mmdet/core/nncf/utils.py
-@@ -0,0 +1,105 @@
+@@ -0,0 +1,109 @@
 +import pathlib
 +from collections import OrderedDict
 +
 +import torch
-+from nncf.initialization import InitializingDataLoader
-+from nncf.structures import QuantizationRangeInitArgs
++from nncf.torch.initialization import PTInitializingDataLoader
++from nncf.config.structures import QuantizationRangeInitArgs
++from nncf.config.structures import BNAdaptationInitArgs
 +
 +from nncf import NNCFConfig
-+from nncf import load_state
-+from nncf import create_compressed_model
-+from nncf import nncf_model_input
++from nncf.torch import load_state
++from nncf.torch import create_compressed_model
++from nncf.torch import nncf_model_input
 +
 +
 +def wrap_nncf_model(model, cfg, data_loader_for_init=None):
@@ -448,7 +441,10 @@ index 0000000..c903a55
 +    if data_loader_for_init is not None:
 +        wrapped_loader = MMInitializeDataLoader(data_loader_for_init)
 +
-+        nncf_config.register_extra_structs([QuantizationRangeInitArgs(wrapped_loader)])
++        nncf_config.register_extra_structs([
++            QuantizationRangeInitArgs(wrapped_loader),
++            BNAdaptationInitArgs(wrapped_loader),
++        ])
 +
 +    input_size = nncf_config.get(
 +        'sample_size', (1, 3, cfg.input_size[0], cfg.input_size[1])
@@ -525,9 +521,9 @@ index 0000000..c903a55
 +    return checkpoint
 +
 +
-+class MMInitializeDataLoader(InitializingDataLoader):
++class MMInitializeDataLoader(PTInitializingDataLoader):
 +    def get_inputs(self, dataloader_output):
-+        # redefined InitializingDataLoader because
++        # redefined PTInitializingDataLoader because
 +        # of DataContainer format in mmdet
 +        kwargs = {k: v.data[0] for k, v in dataloader_output.items()}
 +        return (), kwargs
@@ -541,7 +537,7 @@ index a5bb413..48332a8 100644
  import torch.nn as nn
  from mmcv.cnn import normal_init
  from mmcv.runner import force_fp32
-+from nncf.dynamic_graph.context import no_nncf_trace
++from nncf.torch.dynamic_graph.context import no_nncf_trace
 
  from mmdet.core import (anchor_inside_flags, build_anchor_generator,
                          build_assigner, build_bbox_coder, build_sampler,
@@ -553,7 +549,7 @@ index de11e4a..0fcdc4d 100644
  from abc import ABCMeta, abstractmethod
 
  import torch.nn as nn
-+from nncf.dynamic_graph.context import no_nncf_trace
++from nncf.torch.dynamic_graph.context import no_nncf_trace
 
 
  class BaseDenseHead(nn.Module, metaclass=ABCMeta):
@@ -625,7 +621,7 @@ index 0cba3cd..d41b158 100644
  from mmdet.core import mask_target
  from mmdet.models.builder import HEADS, build_loss
 
-+from nncf.dynamic_graph.context import no_nncf_trace
++from nncf.torch.dynamic_graph.context import no_nncf_trace
 +
  BYTES_PER_FLOAT = 4
  # TODO: This memory limit may be too much or too little. It would be better to
@@ -654,7 +650,7 @@ index c530f2a..30d98a4 100644
 +++ b/mmdet/models/roi_heads/standard_roi_head.py
 @@ -1,4 +1,5 @@
  import torch
-+from nncf.dynamic_graph.context import no_nncf_trace
++from nncf.torch.dynamic_graph.context import no_nncf_trace
 
  from mmdet.core import bbox2result, bbox2roi, build_assigner, build_sampler
  from ..builder import HEADS, build_head, build_roi_extractor

@@ -28,4 +28,4 @@ ARG no_proxy
 ENV https_proxy=$https_proxy
 ENV no_proxy=$no_proxy
 
-ENTRYPOINT cd /home/nncf/ && python setup.py install --cpu-only && bash
+ENTRYPOINT cd /home/nncf/ && python setup.py install && bash

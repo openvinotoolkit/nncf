@@ -1,0 +1,289 @@
+"""
+ Copyright (c) 2021 Intel Corporation
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+      http://www.apache.org/licenses/LICENSE-2.0
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+"""
+
+from collections import namedtuple
+
+import pytest
+
+from nncf import NNCFConfig
+from nncf.torch import create_compressed_model
+from tests.torch import test_models
+from tests.torch.helpers import register_bn_adaptation_init_args
+
+
+def get_basic_quantization_config():
+    config = NNCFConfig()
+    config.update({
+        'model': 'AlexNet',
+        'input_info': {
+            'sample_size': [1, 3, 32, 32],
+        },
+        'compression': {
+            'algorithm': 'quantization',
+            'quantize_inputs': True,
+            'initializer': {
+                'range': {
+                    'num_init_samples': 0
+                }
+            }
+        }
+    })
+    register_bn_adaptation_init_args(config)
+
+    return config
+
+
+def as_dict(obj):
+    if isinstance(obj, list):
+        return [as_dict(value) for value in obj]
+    if isinstance(obj, dict):
+        return {key: as_dict(value) for key, value in obj.items()}
+    if hasattr(obj, '__dict__'):
+        return {key: as_dict(value) for key, value in obj.__dict__.items() if not key.startswith('_')}
+    return obj
+
+
+TestStruct = namedtuple(
+    'TestStruct', ('initializers', 'activations', 'weights', 'ignored_scopes', 'target_device', 'expected'))
+
+
+QUANTIZATION_SHARE_AND_BITWIDTH_DISTR_STATS_TEST_CASES = [
+    TestStruct(
+        initializers={},
+        activations={},
+        weights={},
+        ignored_scopes=[],
+        target_device='TRIAL',
+        expected={
+            'quantization_share_statistics': {
+                'wq_total_num': 8,
+                'aq_total_num': 8,
+                'wq_potential_num': 8,
+                'aq_potential_num': 15,
+                'wq_counter': {
+                    'num_symmetric': 8,
+                    'num_asymmetric': 0,
+                    'num_signed': 0,
+                    'num_unsigned': 8,
+                    'num_per_tensor': 8,
+                    'num_per_channel': 0
+                },
+                'aq_counter': {
+                    'num_symmetric': 8,
+                    'num_asymmetric': 0,
+                    'num_signed': 0,
+                    'num_unsigned': 8,
+                    'num_per_tensor': 8,
+                    'num_per_channel': 0
+                }
+            },
+            'bitwidth_distribution_statistics': {
+                'num_wq_per_bitwidth': {
+                    8: 8
+                },
+                'num_aq_per_bitwidth': {
+                    8: 8
+                }
+            },
+        }
+    ),
+    TestStruct(
+        initializers={},
+        activations={},
+        weights={},
+        ignored_scopes=[],
+        target_device='CPU',
+        expected={
+            'quantization_share_statistics': {
+                'wq_total_num': 8,
+                'aq_total_num': 8,
+                'wq_potential_num': 8,
+                'aq_potential_num': 15,
+                'wq_counter': {
+                    'num_symmetric': 8,
+                    'num_asymmetric': 0,
+                    'num_signed': 8,
+                    'num_unsigned': 0,
+                    'num_per_tensor': 0,
+                    'num_per_channel': 8
+                },
+                'aq_counter': {
+                    'num_symmetric': 8,
+                    'num_asymmetric': 0,
+                    'num_signed': 0,
+                    'num_unsigned': 8,
+                    'num_per_tensor': 8,
+                    'num_per_channel': 0
+                }
+            },
+            'bitwidth_distribution_statistics': {
+                'num_wq_per_bitwidth': {
+                    8: 8
+                },
+                'num_aq_per_bitwidth': {
+                    8: 8
+                }
+            },
+        }
+    ),
+]
+
+
+@pytest.mark.parametrize('data', QUANTIZATION_SHARE_AND_BITWIDTH_DISTR_STATS_TEST_CASES)
+def test_quantization_share_and_bitwidth_distribution_stats(data):
+    config = get_basic_quantization_config()
+    config['compression']['initializer'].update(data.initializers)
+    config['compression']['activations'] = data.activations
+    config['compression']['weights'] = data.weights
+    config['compression']['ignored_scopes'] = data.ignored_scopes
+    config['target_device'] = data.target_device
+
+    ctrl, _ = create_compressed_model(test_models.AlexNet(), config)
+    nncf_stats = ctrl.statistics()
+    quantization_stats = nncf_stats.quantization
+
+    for attr_name, expected_value in data.expected.items():
+        actual_value = as_dict(getattr(quantization_stats, attr_name))
+        assert expected_value == actual_value
+
+
+MEMORY_CONSUMPTION_STATS_TEST_CASES = [
+    TestStruct(
+        initializers={},
+        activations={},
+        weights={},
+        ignored_scopes=[],
+        target_device='TRIAL',
+        expected={
+            'memory_consumption_statistics': {
+                'fp32_weight_size': 88.74,
+                'quantized_weight_size': 22.18,
+                'max_fp32_activation_size': 0.0625,
+                'max_compressed_activation_size': 0.015625,
+                'weight_memory_consumption_decrease': 4.0
+            }
+        }
+    ),
+    TestStruct(
+        initializers={
+            'precision': {
+                'bitwidth_per_scope': [
+                    [2, 'TargetType.OPERATION_WITH_WEIGHTS AlexNet/Sequential[features]/NNCFConv2d[0]/conv2d_0'],
+                    [4, 'TargetType.OPERATION_WITH_WEIGHTS AlexNet/Sequential[features]/NNCFConv2d[6]/conv2d_0']
+                ]
+            }
+        },
+        activations={},
+        weights={
+            'bits': 8
+        },
+        ignored_scopes=[],
+        target_device='TRIAL',
+        expected={
+            'memory_consumption_statistics': {
+                'fp32_weight_size': 88.74,
+                'quantized_weight_size': 21.86,
+                'max_fp32_activation_size': 0.0625,
+                'max_compressed_activation_size': 0.015625,
+                'weight_memory_consumption_decrease': 4.05
+            }
+        }
+    ),
+    TestStruct(
+        initializers={},
+        activations={},
+        weights={},
+        ignored_scopes=[
+            'AlexNet/Sequential[features]/NNCFConv2d[0]/conv2d_0'
+        ],
+        target_device='TRIAL',
+        expected={
+            'memory_consumption_statistics': {
+                'fp32_weight_size': 88.74,
+                'quantized_weight_size': 22.19,
+                'max_fp32_activation_size': 0.0625,
+                'max_compressed_activation_size': 0.0625,
+                'weight_memory_consumption_decrease': 3.99
+            }
+        }
+    ),
+]
+
+
+@pytest.mark.parametrize('data', MEMORY_CONSUMPTION_STATS_TEST_CASES)
+def test_memory_consumption_stats(data):
+    config = get_basic_quantization_config()
+    config['compression']['initializer'].update(data.initializers)
+    config['compression']['weights'] = data.weights
+    config['compression']['ignored_scopes'] = data.ignored_scopes
+    config['target_device'] = data.target_device
+
+    ctrl, _ = create_compressed_model(test_models.AlexNet(), config)
+    nncf_stats = ctrl.statistics()
+    quantization_stats = nncf_stats.quantization
+
+    for attr_name, expected_value in data.expected.items():
+        actual_value = as_dict(getattr(quantization_stats, attr_name))
+        assert expected_value == pytest.approx(actual_value, rel=1e-2)
+
+
+QUANTIZATION_CONFIGURATION_STATS_TEST_CASES = [
+    TestStruct(
+        initializers={},
+        activations={},
+        weights={},
+        ignored_scopes=[],
+        target_device='TRIAL',
+        expected={
+            'quantization_configuration_statistics': {
+                'quantized_edges_in_cfg': 176,
+                'total_edges_in_cfg': 177
+            }
+        }
+    ),
+    TestStruct(
+        initializers={},
+        activations={},
+        weights={},
+        ignored_scopes=[
+            'Inception3/__add___0',
+            'Inception3/__add___1',
+            'Inception3/__add___2',
+            'Inception3/__mul___0',
+            'Inception3/__mul___1',
+            'Inception3/__mul___2',
+        ],
+        target_device='TRIAL',
+        expected={
+            'quantization_configuration_statistics': {
+                'quantized_edges_in_cfg': 173,
+                'total_edges_in_cfg': 177
+            }
+        }
+    ),
+]
+
+
+@pytest.mark.parametrize('data', QUANTIZATION_CONFIGURATION_STATS_TEST_CASES)
+def test_quantization_configuration_stats(data):
+    config = get_basic_quantization_config()
+    config['compression']['ignored_scopes'] = data.ignored_scopes
+    config['input_info']['sample_size'] = [2, 3, 299, 299]
+
+    ctrl, _ = create_compressed_model(test_models.Inception3(aux_logits=True, transform_input=True), config)
+    nncf_stats = ctrl.statistics()
+    quantization_stats = nncf_stats.quantization
+
+    for attr_name, expected_value in data.expected.items():
+        actual_value = as_dict(getattr(quantization_stats, attr_name))
+        assert expected_value == actual_value

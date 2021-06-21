@@ -1,0 +1,11 @@
+strict digraph  {
+"0 /nncf_model_input_0" [id=0, type=nncf_model_input];
+"1 MaskedFillModel/masked_fill__0" [id=1, type=masked_fill_];
+"2 MaskedFillModel/masked_fill_0" [id=2, type=masked_fill];
+"3 /nncf_model_output_0" [id=3, type=nncf_model_output];
+"4 /nncf_model_output_1" [id=4, type=nncf_model_output];
+"0 /nncf_model_input_0" -> "1 MaskedFillModel/masked_fill__0";
+"1 MaskedFillModel/masked_fill__0" -> "2 MaskedFillModel/masked_fill_0";
+"1 MaskedFillModel/masked_fill__0" -> "3 /nncf_model_output_0";
+"2 MaskedFillModel/masked_fill_0" -> "4 /nncf_model_output_1";
+}

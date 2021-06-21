@@ -1,0 +1,38 @@
+{
+    "model": "YOLOv4",
+    "input_info": {
+        "sample_size": [1, 608, 608, 3]
+    },
+
+    "epochs": 2,
+    "batch_size": 63,
+    "workers": 16,
+
+    "dataset": "coco/2017",
+    "dataset_type": "tfds",
+
+    "optimizer": {
+        "type": "Adam",
+        "schedule_type": "cosine",
+        "schedule_params": {
+            "base_lr": 5e-6
+        }
+    },
+
+    "compression": {
+        "algorithm": "quantization",
+        "weights": {
+            "per_channel": true
+        },
+        "activations": {
+            "mode": "asymmetric"
+        },
+	"initializer": {
+            "range": {
+                "num_init_samples": 200,
+                "type": "minmax_percentile"
+            }
+        }
+    }
+}
+

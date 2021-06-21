@@ -42,23 +42,24 @@ index d9465c37..9da9d30f 100644
  from transformers import (
      CONFIG_MAPPING,
      MODEL_WITH_LM_HEAD_MAPPING,
-@@ -43,8 +45,14 @@ from transformers import (
+@@ -43,8 +45,15 @@ from transformers import (
  )
  
  
 -logger = logging.getLogger(__name__)
 +from nncf import NNCFConfig
-+from nncf.structures import QuantizationRangeInitArgs
-+from nncf.initialization import InitializingDataLoader
++from nncf.config.structures import QuantizationRangeInitArgs
++from nncf.config.structures import BNAdaptationInitArgs
++from nncf.torch.initialization import PTInitializingDataLoader
 +from transformers.trainer import get_train_dataloader_for_init
  
 +logger = logging.getLogger(__name__)
-+# from nncf import set_log_level
++# from nncf.torch import set_log_level
 +# set_log_level(logging.DEBUG)
  
  MODEL_CONFIG_CLASSES = list(MODEL_WITH_LM_HEAD_MAPPING.keys())
  MODEL_TYPES = tuple(conf.model_type for conf in MODEL_CONFIG_CLASSES)
-@@ -192,16 +200,58 @@ def main():
+@@ -192,16 +200,60 @@ def main():
              "and load it from here, using --tokenizer_name"
          )
  
@@ -89,12 +90,14 @@ index d9465c37..9da9d30f 100644
 +            train_dataloader = get_train_dataloader_for_init(training_args, train_dataset,
 +                                                             data_collator)
 +
-+            class WikitextInitializingDataLoader(InitializingDataLoader):
++            class WikitextInitializingDataLoader(PTInitializingDataLoader):
 +                def get_inputs(self, dataloader_output):
 +                    return (), dataloader_output
 +
-+            nncf_config.register_extra_structs(
-+                [QuantizationRangeInitArgs(WikitextInitializingDataLoader(train_dataloader))])
++            nncf_config.register_extra_structs([
++                QuantizationRangeInitArgs(WikitextInitializingDataLoader(train_dataloader)),
++                BNAdaptationInitArgs(WikitextInitializingDataLoader(train_dataloader)),
++            ])
 +
      if model_args.model_name_or_path:
 -        model = AutoModelWithLMHead.from_pretrained(
@@ -160,11 +163,13 @@ diff --git a/examples/question-answering/run_squad.py b/examples/question-answer
 index 2bd4e90f..2b1a60e8 100644
 --- a/examples/question-answering/run_squad.py
 +++ b/examples/question-answering/run_squad.py
-@@ -25,9 +25,11 @@ import timeit
+@@ -25,9 +25,13 @@ import timeit
  
  import numpy as np
  import torch
-+from nncf.structures import QuantizationRangeInitArgs
++from nncf.config.structures import BNAdaptationInitArgs
++from nncf.config.structures import QuantizationRangeInitArgs
++from nncf.common.utils.tensorboard import prepare_for_tensorboard
  from torch.utils.data import DataLoader, RandomSampler, SequentialSampler
  from torch.utils.data.distributed import DistributedSampler
  from tqdm import tqdm, trange
@@ -177,7 +182,7 @@ index 2bd4e90f..2b1a60e8 100644
      from tensorboardX import SummaryWriter
  
 +from nncf import NNCFConfig
-+from nncf.initialization import InitializingDataLoader
++from nncf.torch.initialization import PTInitializingDataLoader
  
  logger = logging.getLogger(__name__)
  
@@ -253,17 +258,16 @@ index 2bd4e90f..2b1a60e8 100644
                  model.zero_grad()
                  global_step += 1
  
-@@ -237,12 +257,20 @@ def train(args, train_dataset, model, tokenizer):
+@@ -237,12 +257,19 @@ def train(args, train_dataset, model, tokenizer):
                      tb_writer.add_scalar("loss", (tr_loss - logging_loss) / args.logging_steps, global_step)
                      logging_loss = tr_loss
  
 +                    if compression_ctrl is not None:
 +                        tb_writer.add_scalar("compression_loss", compression_loss.item())
 +                        compression_stats = compression_ctrl.statistics()
-+                        for key, value in compression_stats.items():
-+                            if isinstance(value, (int, float)):
-+                                tb_writer.add_scalar("compression/statistics/{0}".format(key), value,
-+                                                     global_step)
++                        for key, value in prepare_for_tensorboard(compression_stats).items():
++                            tb_writer.add_scalar("compression/statistics/{0}".format(key), value,
++                                                 global_step)
 +
                  # Save model checkpoint
                  if args.local_rank in [-1, 0] and args.save_steps > 0 and global_step % args.save_steps == 0:
@@ -304,7 +308,7 @@ index 2bd4e90f..2b1a60e8 100644
      args = parser.parse_args()
  
      if args.doc_stride >= args.max_seq_length - args.max_query_length:
-@@ -732,19 +768,67 @@ def main():
+@@ -732,19 +768,69 @@ def main():
          do_lower_case=args.do_lower_case,
          cache_dir=args.cache_dir if args.cache_dir else None,
      )
@@ -321,7 +325,7 @@ index 2bd4e90f..2b1a60e8 100644
 +            train_dataset = load_and_cache_examples(args, tokenizer, evaluate=False, output_examples=False)
 +            train_dataloader = get_train_dataloader(args, train_dataset)
 +
-+            class SquadInitializingDataloader(InitializingDataLoader):
++            class SquadInitializingDataloader(PTInitializingDataLoader):
 +                def get_inputs(self, dataloader_output):
 +                    kwargs = {'attention_mask': dataloader_output[1],
 +                              'start_positions': dataloader_output[3],
@@ -333,8 +337,10 @@ index 2bd4e90f..2b1a60e8 100644
 +                                       'p_mask': dataloader_output[6]})
 +                    return (dataloader_output[0],), kwargs
 +
-+            initializing_data_loader = SquadInitializingDataloader(train_dataloader)
-+            nncf_config.register_extra_structs([QuantizationRangeInitArgs(initializing_data_loader)])
++            nncf_config.register_extra_structs([
++                QuantizationRangeInitArgs(SquadInitializingDataloader(train_dataloader)),
++                BNAdaptationInitArgs(SquadInitializingDataloader(train_dataloader)),
++            ])
 +
 +    retval = AutoModelForQuestionAnswering.from_pretrained(
          args.model_name_or_path,
@@ -428,13 +434,14 @@ diff --git a/examples/text-classification/run_glue.py b/examples/text-classifica
 index cf9b765a..957cdba2 100644
 --- a/examples/text-classification/run_glue.py
 +++ b/examples/text-classification/run_glue.py
-@@ -24,6 +24,9 @@ from dataclasses import dataclass, field
+@@ -24,6 +24,10 @@ from dataclasses import dataclass, field
  from typing import Callable, Dict, Optional
  
  import numpy as np
 +from nncf import NNCFConfig
-+from nncf.structures import QuantizationRangeInitArgs
-+from nncf.initialization import InitializingDataLoader
++from nncf.config.structures import QuantizationRangeInitArgs
++from nncf.config.structures import BNAdaptationInitArgs
++from nncf.torch.initialization import PTInitializingDataLoader
  
  from transformers import AutoConfig, AutoModelForSequenceClassification, AutoTokenizer, EvalPrediction, GlueDataset
  from transformers import GlueDataTrainingArguments as DataTrainingArguments
@@ -447,7 +454,7 @@ index cf9b765a..957cdba2 100644
  
  logger = logging.getLogger(__name__)
  
-@@ -126,14 +129,42 @@ def main():
+@@ -126,14 +129,44 @@ def main():
          model_args.tokenizer_name if model_args.tokenizer_name else model_args.model_name_or_path,
          cache_dir=model_args.cache_dir,
      )
@@ -466,12 +473,14 @@ index cf9b765a..957cdba2 100644
 +        if training_args.do_train:
 +            train_dataloader = get_train_dataloader_for_init(training_args, train_dataset)
 +
-+            class GlueInitializingDataLoader(InitializingDataLoader):
++            class GlueInitializingDataLoader(PTInitializingDataLoader):
 +                def get_inputs(self, dataloader_output):
 +                    return (), dataloader_output
 +
-+            nncf_config.register_extra_structs(
-+                [QuantizationRangeInitArgs(GlueInitializingDataLoader(train_dataloader))])
++            nncf_config.register_extra_structs([
++                QuantizationRangeInitArgs(GlueInitializingDataLoader(train_dataloader)),
++                BNAdaptationInitArgs(GlueInitializingDataLoader(train_dataloader)),
++            ])
 +
 +    retval = AutoModelForSequenceClassification.from_pretrained(
          model_args.model_name_or_path,
@@ -504,11 +513,13 @@ diff --git a/examples/text-classification/run_xnli.py b/examples/text-classifica
 index c1db6fa3..ca44bd1c 100644
 --- a/examples/text-classification/run_xnli.py
 +++ b/examples/text-classification/run_xnli.py
-@@ -25,8 +25,11 @@ import random
+@@ -25,8 +25,13 @@ import random
  
  import numpy as np
  import torch
-+from nncf.structures import QuantizationRangeInitArgs
++from nncf.config.structures import QuantizationRangeInitArgs
++from nncf.config.structures import BNAdaptationInitArgs
++from nncf.common.utils.tensorboard import prepare_for_tensorboard
  from torch.utils.data import DataLoader, RandomSampler, SequentialSampler, TensorDataset
  from torch.utils.data.distributed import DistributedSampler
 +from torch import onnx
@@ -521,7 +532,7 @@ index c1db6fa3..ca44bd1c 100644
      from tensorboardX import SummaryWriter
  
 +from nncf import NNCFConfig
-+from nncf.initialization import InitializingDataLoader
++from nncf.torch.initialization import PTInitializingDataLoader
  
  logger = logging.getLogger(__name__)
  
@@ -599,17 +610,16 @@ index c1db6fa3..ca44bd1c 100644
                  global_step += 1
  
                  if args.local_rank in [-1, 0] and args.logging_steps > 0 and global_step % args.logging_steps == 0:
-@@ -202,13 +224,21 @@ def train(args, train_dataset, model, tokenizer):
+@@ -202,13 +224,20 @@ def train(args, train_dataset, model, tokenizer):
                      tb_writer.add_scalar("loss", (tr_loss - logging_loss) / args.logging_steps, global_step)
                      logging_loss = tr_loss
  
 +                    if compression_ctrl is not None:
 +                        tb_writer.add_scalar("compression_loss", compression_loss.item())
 +                        compression_stats = compression_ctrl.statistics()
-+                        for key, value in compression_stats.items():
-+                            if isinstance(value, (int, float)):
-+                                tb_writer.add_scalar("compression/statistics/{0}".format(key), value,
-+                                                     global_step)
++                        for key, value in prepare_for_tensorboard(compression_stats).items():
++                            tb_writer.add_scalar("compression/statistics/{0}".format(key), value,
++                                                 global_step)
 +
                  if args.local_rank in [-1, 0] and args.save_steps > 0 and global_step % args.save_steps == 0:
                      # Save model checkpoint
@@ -644,7 +654,7 @@ index c1db6fa3..ca44bd1c 100644
      args = parser.parse_args()
  
      if (
-@@ -551,24 +589,72 @@ def main():
+@@ -551,24 +589,74 @@ def main():
          do_lower_case=args.do_lower_case,
          cache_dir=args.cache_dir,
      )
@@ -662,7 +672,7 @@ index c1db6fa3..ca44bd1c 100644
 +            train_dataset = load_and_cache_examples(args, args.task_name,  tokenizer, evaluate=False)
 +            train_dataloader = get_train_dataloader(args, train_dataset)
 +
-+            class XnliInitializingDataloader(InitializingDataLoader):
++            class XnliInitializingDataloader(PTInitializingDataLoader):
 +                def get_inputs(self, dataloader_output):
 +                    kwargs = {'attention_mask': dataloader_output[1],
 +                              'labels': dataloader_output[3]}
@@ -671,8 +681,10 @@ index c1db6fa3..ca44bd1c 100644
 +                            'bert'] else None  # XLM and DistilBERT don't use segment_ids
 +                    return (dataloader_output[0],), kwargs
 +
-+            initializing_data_loader = XnliInitializingDataloader(train_dataloader,)
-+            nncf_config.register_extra_structs([QuantizationRangeInitArgs(initializing_data_loader)])
++            nncf_config.register_extra_structs([
++                QuantizationRangeInitArgs(XnliInitializingDataloader(train_dataloader)),
++                BNAdaptationInitArgs(XnliInitializingDataloader(train_dataloader)),
++            ])
 +
 +
 +    retval = AutoModelForSequenceClassification.from_pretrained(
@@ -1124,7 +1136,7 @@ index 5b000c81..05df28a7 100644
  from torch.nn import CrossEntropyLoss
  from torch.nn import functional as F
  
-+from nncf import create_compressed_model
++from nncf.torch import create_compressed_model
 +
 +
  from .activations import get_activation
@@ -1200,7 +1212,7 @@ index 5b000c81..05df28a7 100644
  
 -
 +import nncf
-+@nncf.register_module()
++@nncf.torch.register_module()
  class Conv1D(nn.Module):
      def __init__(self, nf, nx):
          """ Conv1D layer as defined by Radford et al. for OpenAI GPT (and also used in GPT-2)
@@ -1221,11 +1233,12 @@ diff --git a/src/transformers/trainer.py b/src/transformers/trainer.py
 index 067f793d..f9ccb762 100644
 --- a/src/transformers/trainer.py
 +++ b/src/transformers/trainer.py
-@@ -10,6 +10,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+@@ -10,6 +10,8 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, Union
  
  import numpy as np
  import torch
-+from nncf.compression_method_api import PTCompressionAlgorithmController
++from nncf.torch.compression_method_api import PTCompressionAlgorithmController
++from nncf.common.utils.tensorboard import prepare_for_tensorboard
  from packaging import version
  from torch import nn
  from torch.utils.data.dataloader import DataLoader
@@ -1295,16 +1308,15 @@ index 067f793d..f9ccb762 100644
                      self.global_step += 1
                      self.epoch = epoch + (step + 1) / len(epoch_iterator)
  
-@@ -531,6 +545,13 @@ class Trainer:
+@@ -531,6 +545,12 @@ class Trainer:
                          )
                          logging_loss = tr_loss
  
 +                        if self.compression_ctrl is not None:
 +                            logs["compression_loss"] = self.compression_ctrl.loss()
 +                            compression_stats = self.compression_ctrl.statistics()
-+                            for key, value in compression_stats.items():
-+                                if isinstance(value, (int, float)):
-+                                    logs["compression/statistics/{0}".format(key)] = value
++                            for key, value in prepare_for_tensorboard(compression_stats).items():
++                                logs["compression/statistics/{0}".format(key)] = value
 +
                          self._log(logs)
  

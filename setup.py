@@ -43,43 +43,57 @@ def find_version(*file_paths):
 INSTALL_REQUIRES = ["ninja>=1.10.0.post2",
                     "addict>=2.4.0",
                     "texttable>=1.6.3",
-                    "scipy>=1.3.2",
+                    "scipy<=1.5.4, >=1.3.2; python_version<'3.7'",
+                    "scipy>=1.3.2; python_version>='3.7'",
+                    "matplotlib~=3.3.4; python_version<'3.7'",
+                    "matplotlib>=3.3.4; python_version>='3.7'",
                     "networkx>=2.5",
                     "graphviz>=0.15",
-                    "jsonschema>=3.2.0",
+                    "jsonschema==3.2.0",
                     "pydot>=1.4.1",
                     "jstyleson>=0.0.2",
-                    "numpy>=1.19",
+                    "numpy~=1.19.2",
                     "tqdm>=4.54.1",
                     "natsort>=7.1.0",
-                    "pandas>=1.1.5",
+                    "pandas~=1.1.5; python_version<'3.7'",
+                    "pandas>=1.1.5; python_version>='3.7'",
                     "scikit-learn>=0.24.0",
                     "wheel>=0.36.1"]
 
-python_version = sys.version_info[:2]
-if python_version < (3, 6):
-    print("Only Python >= 3.6 is supported")
+python_version = sys.version_info
+if python_version < (3, 6, 2):
+    print("Only Python >= 3.6.2 is supported")
     sys.exit(0)
 
 version_string = "{}{}".format(sys.version_info[0], sys.version_info[1])
 
-if "--cpu-only" in sys.argv:
-    print("WARNING: --cpu-only option for NNCF setup.py is deprecated and will "
-          "be ignored. CPU/GPU support will be determined by the torch package.")
-    sys.argv.remove("--cpu-only")
+_extra_deps = [
+    "tensorflow==2.4.0",
+    "torch>=1.5.0, <=1.8.1, !=1.8.0",
+]
 
-if not os.environ.get('NNCF_SKIP_INSTALLING_TORCH'):
-    INSTALL_REQUIRES.extend(["torch>=1.5.0, <=1.8.1, !=1.8.0"])
-else:
-    print("Skipping torch installation for NNCF.")
-    DEPENDENCY_LINKS = []
-
+extra_deps = {b: a for a, b in (re.findall(r"^(([^!=<>]+)(?:[!=<>].*)?$)", x)[0] for x in _extra_deps)}
 
 EXTRAS_REQUIRE = {
     "tests": [
         "pytest"],
-    "docs": []
+    "docs": [],
+    "tf": [
+        extra_deps["tensorflow"]],
+    "torch": [
+        extra_deps["torch"]],
+    "all": [
+        extra_deps["tensorflow"],
+        extra_deps["torch"]],
 }
+
+if "--torch" in sys.argv:
+    INSTALL_REQUIRES.extend(EXTRAS_REQUIRE["torch"])
+    sys.argv.remove("--torch")
+
+if "--tf" in sys.argv:
+    INSTALL_REQUIRES.extend(EXTRAS_REQUIRE["tf"])
+    sys.argv.remove("--tf")
 
 setup(
     name="nncf",
@@ -89,11 +103,10 @@ setup(
     description="Neural Networks Compression Framework",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/openvinotoolkit/nncf_pytorch",
+    url="https://github.com/openvinotoolkit/nncf",
     packages=find_packages(exclude=["tests", "tests.*",
                                     "examples", "examples.*",
-                                    "tools", "tools.*",
-                                    "beta", "beta.*"]),
+                                    "tools", "tools.*"]),
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: Apache Software License",
