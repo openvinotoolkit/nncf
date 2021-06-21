@@ -307,7 +307,7 @@ sparsity and filter pruning algorithms. It can be enabled by setting a non-zero 
     "initializer": {
         "range": {
             "num_init_samples": 256, // Number of samples from the training dataset to consume as sample model inputs for purposes of setting initial minimum and maximum quantization ranges
-            "type": "minmax" // Type of the initializer - determines which statistics gathered during initialization will be used to initialize the quantization ranges
+            "type": "min_max" // Type of the initializer - determines which statistics gathered during initialization will be used to initialize the quantization ranges. "mean_min_max" is used by default
         },
         "precision": {
             "type": "hawq", // Type of precision initialization - either "manual" or "hawq". With "manual", precisions are defined explicitly via "bitwidth_per_scope". With "hawq", these are determined automatically using the HAWQ algorithm.
