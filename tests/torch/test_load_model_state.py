@@ -26,8 +26,8 @@ from nncf.torch.dynamic_graph.transform_graph import replace_modules_by_nncf_mod
 from nncf.torch.layers import NNCF_PADDING_VALUE_ATTR_NAME
 from nncf.torch.nncf_network import EXTERNAL_QUANTIZERS_STORAGE_NAME
 from nncf.torch.nncf_network import LEGACY_ACT_STORAGE_NAME
+from tests.torch.helpers import PTTensorListComparator
 from tests.torch.helpers import BasicConvTestModel
-from tests.torch.helpers import check_equal
 
 
 def test_export_sq_11_is_ok(tmp_path):
@@ -49,8 +49,8 @@ def test_load_state_skips_not_matched_params__from_larger_to_smaller():
     act_bias = model_load.conv.bias.data
     act_weights = model_load.conv.weight.data
     assert num_loaded == 0
-    check_equal(act_bias, ref_bias)
-    check_equal(act_weights, ref_weights)
+    PTTensorListComparator.check_equal(act_bias, ref_bias)
+    PTTensorListComparator.check_equal(act_weights, ref_weights)
 
 
 def test_can_skip_padding_value():
@@ -93,8 +93,8 @@ def test_load_state_skips_not_matched_params__from_smaller_to_larger():
     assert num_loaded == 0
     act_bias = model_load.conv.bias.data
     act_weights = model_load.conv.weight.data
-    check_equal(act_bias, ref_bias)
-    check_equal(act_weights, ref_weights)
+    PTTensorListComparator.check_equal(act_bias, ref_bias)
+    PTTensorListComparator.check_equal(act_weights, ref_weights)
 
 
 class MatchKeyDesc:

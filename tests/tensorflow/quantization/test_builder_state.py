@@ -186,7 +186,8 @@ GROUND_TRUTH_STATE = {
                 "narrow_range": True,
                 "num_bits": 8,
                 "per_channel": True,
-                "signedness_to_force": None
+                "signedness_to_force": None,
+                "compression_lr_multiplier": None
             },
             "target_point": {
                 "target_type": {
@@ -203,7 +204,8 @@ GROUND_TRUTH_STATE = {
                 "narrow_range": True,
                 "num_bits": 8,
                 "per_channel": True,
-                "signedness_to_force": None
+                "signedness_to_force": None,
+                "compression_lr_multiplier": None
             },
             "target_point": {
                 "layer_name": "dummy_str",
@@ -221,7 +223,8 @@ GROUND_TRUTH_STATE = {
                 "narrow_range": True,
                 "num_bits": 8,
                 "per_channel": True,
-                "signedness_to_force": None
+                "signedness_to_force": None,
+                "compression_lr_multiplier": None
             },
             "target_point": {
                 "layer_name": "dummy_str"
@@ -236,7 +239,8 @@ GROUND_TRUTH_STATE = {
                 "narrow_range": True,
                 "num_bits": 8,
                 "per_channel": True,
-                "signedness_to_force": None
+                "signedness_to_force": None,
+                "compression_lr_multiplier": None
             },
             "target_point": {
                 "input_port_id": 0,
@@ -253,7 +257,8 @@ GROUND_TRUTH_STATE = {
                 "narrow_range": True,
                 "num_bits": 8,
                 "per_channel": True,
-                "signedness_to_force": None
+                "signedness_to_force": None,
+                "compression_lr_multiplier": None
             },
             "target_point": {
                 "instance_idx": 0,
@@ -270,7 +275,8 @@ GROUND_TRUTH_STATE = {
                 "narrow_range": True,
                 "num_bits": 8,
                 "per_channel": True,
-                "signedness_to_force": None
+                "signedness_to_force": None,
+                "compression_lr_multiplier": None
             },
             "target_point": {
                 "layer_name": "dummy_str",
@@ -286,7 +292,8 @@ GROUND_TRUTH_STATE = {
                 "narrow_range": True,
                 "num_bits": 8,
                 "per_channel": True,
-                "signedness_to_force": None
+                "signedness_to_force": None,
+                "compression_lr_multiplier": None
             },
             "target_point": {
                 "layer_name": "dummy_str",

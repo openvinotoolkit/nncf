@@ -12,6 +12,7 @@
 """
 
 import tensorflow as tf
+from typing import Callable
 
 
 @tf.function
@@ -24,3 +25,15 @@ def st_threshold(input_):
     def grad(upstream):
         return upstream
     return tf.round(input_), grad
+
+
+def get_id_with_multiplied_grad(grad_multiplier: float) -> Callable[[tf.Tensor], tf.Tensor]:
+    @tf.custom_gradient
+    def id_with_multiplied_grad(x):
+        def grad(upstream):
+            if grad_multiplier is None:
+                return upstream
+            return grad_multiplier * upstream
+        return x, grad
+
+    return id_with_multiplied_grad

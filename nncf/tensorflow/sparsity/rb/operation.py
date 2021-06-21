@@ -15,7 +15,9 @@ import tensorflow as tf
 import numpy as np
 
 from tensorflow.python.keras.utils.control_flow_util import smart_cond
+from typing import Dict, Optional
 
+from nncf.tensorflow.functions import get_id_with_multiplied_grad
 from nncf.tensorflow.functions import logit
 from nncf.tensorflow.layers.custom_objects import NNCF_CUSTOM_OBJECTS
 from nncf.tensorflow.layers.operation import InputType
@@ -25,9 +27,24 @@ from nncf.tensorflow.sparsity.rb.functions import calc_rb_binary_mask, st_binary
 from nncf.tensorflow.layers.wrapper import NNCFWrapper
 
 
+def add_id_with_multiplied_grad_op(weights: Dict[str, tf.Tensor], compression_lr_multiplier: Optional[float] = None):
+    if compression_lr_multiplier is None:
+        return weights
+
+    id_with_multiplied_grad = get_id_with_multiplied_grad(compression_lr_multiplier)
+
+    modified_weights = {}
+    for k in weights.keys():
+        if k == 'mask':
+            modified_weights[k] = id_with_multiplied_grad(weights[k])
+        else:
+            modified_weights[k] = weights[k]
+    return modified_weights
+
+
 @NNCF_CUSTOM_OBJECTS.register()
 class RBSparsifyingWeight(NNCFOperation):
-    def __init__(self, name: str, eps: float = 1e-6):
+    def __init__(self, name: str, eps: float = 1e-6, compression_lr_multiplier: Optional[float] = None):
         """
         :param name: Model scope unique operation name.
         :param eps: Minimum value and the gap from the maximum value
@@ -35,6 +52,7 @@ class RBSparsifyingWeight(NNCFOperation):
         """
         super().__init__(name)
         self.eps = eps
+        self.compression_lr_multiplier = compression_lr_multiplier
 
     def build(self, input_shape, input_type: InputType, name: str, layer: NNCFWrapper):
         """
@@ -49,20 +67,20 @@ class RBSparsifyingWeight(NNCFOperation):
                 'to input of the layer: {}'.format(layer.name))
 
         mask = layer.add_weight(
-            name + '_mask',
+            name + '_sparsity.rb.mask',
             shape=input_shape,
             initializer=tf.keras.initializers.Constant(logit(0.99)),
             trainable=True,
             aggregation=tf.VariableAggregation.MEAN)
 
         trainable = layer.add_weight(
-            name + '_trainable',
+            name + '_sparsity.rb.trainable',
             initializer=tf.keras.initializers.Constant(True),
             trainable=False,
             dtype=tf.bool)
 
         seed = layer.add_weight(
-            name + '_seed',
+            name + '_sparsity.rb.seed',
             shape=(2,),
             initializer=tf.keras.initializers.Constant(
                             np.random.randint(size=(2,), low=-2**31, high=2**31-1)),
@@ -85,6 +103,7 @@ class RBSparsifyingWeight(NNCFOperation):
         :param training: True if operation called in training mode
             else False
         """
+        op_weights = add_id_with_multiplied_grad_op(op_weights)
         true_fn = lambda: apply_mask(layer_weights, self._calc_rb_binary_mask(op_weights))
         false_fn = lambda: apply_mask(layer_weights, binary_mask(op_weights['mask']))
         return smart_cond(training,

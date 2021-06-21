@@ -10,12 +10,18 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-
-from pathlib import Path
+import numpy as np
 import os
 import shutil
 import subprocess
 import sys
+
+from abc import ABC
+from abc import abstractmethod
+from pathlib import Path
+from typing import Callable, List, TypeVar, Union
+
+TensorType = TypeVar('TensorType')
 
 TEST_ROOT = Path(__file__).absolute().parents[1]
 PROJECT_ROOT = TEST_ROOT.parent.absolute()
@@ -113,3 +119,52 @@ def run_install_checks(venv_path, tmp_path, package_type, test_dir, install_type
                                                install_mode,
                                                package_type),
         check=True, shell=True, cwd=run_path)
+
+
+class BaseTensorListComparator(ABC):
+    @classmethod
+    @abstractmethod
+    def _to_numpy(cls, tensor: TensorType) -> np.ndarray:
+        pass
+
+    @classmethod
+    def _compare_tensor_lists(cls, test: Union[TensorType, List[TensorType]],
+                              reference: Union[TensorType, List[TensorType]],
+                              assert_fn: Callable[[np.ndarray, np.ndarray], bool]):
+        if not isinstance(test, list):
+            test = [test]
+        if not isinstance(reference, list):
+            reference = [reference]
+        assert len(test) == len(reference)
+
+        for x, y in zip(test, reference):
+            x = cls._to_numpy(x)
+            y = cls._to_numpy(y)
+            assert_fn(x, y)
+
+    @classmethod
+    def check_equal(cls, test: Union[TensorType, List[TensorType]], reference: Union[TensorType, List[TensorType]],
+                    rtol: float = 1e-1):
+        cls._compare_tensor_lists(test, reference,
+                                  lambda x, y: np.testing.assert_allclose(x, y, rtol=rtol))
+
+    @classmethod
+    def check_not_equal(cls, test: Union[TensorType, List[TensorType]], reference: Union[TensorType, List[TensorType]],
+                        rtol: float = 1e-4):
+        cls._compare_tensor_lists(test, reference,
+                                  lambda x, y: np.testing.assert_raises(AssertionError,
+                                                                        np.testing.assert_allclose, x, y, rtol=rtol))
+
+    @classmethod
+    def check_less(cls, test: Union[TensorType, List[TensorType]], reference: Union[TensorType, List[TensorType]],
+                   rtol=1e-4):
+        cls.check_not_equal(test, reference, rtol=rtol)
+        cls._compare_tensor_lists(test, reference, np.testing.assert_array_less)
+
+    @classmethod
+    def check_greater(cls, test: Union[TensorType, List[TensorType]], reference: Union[TensorType, List[TensorType]],
+                      rtol=1e-4):
+        cls.check_not_equal(test, reference, rtol=rtol)
+        cls._compare_tensor_lists(test, reference,
+                                  lambda x, y: np.testing.assert_raises(AssertionError,
+                                                                        np.testing.assert_array_less, x, y))

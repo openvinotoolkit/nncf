@@ -51,6 +51,8 @@ class RBSparsityBuilder(TFCompressionAlgorithmBuilder):
         converter = TFModelConverterFactory.create(model)
         nncf_graph = converter.convert()
         transformations = TFTransformationLayout()
+        compression_lr_multiplier = \
+            self.config.get_redefinable_global_param_value_for_algo('compression_lr_multiplier', self.name)
 
         processed_shared_layer_names = set()  # type: Set[str]
 
@@ -74,7 +76,10 @@ class RBSparsityBuilder(TFCompressionAlgorithmBuilder):
                 transformations.register(
                     TFInsertionCommand(
                         target_point=TFLayerWeight(layer_info.layer_name, weight_def.weight_attr_name),
-                        callable_object=RBSparsifyingWeight(op_name),
+                        callable_object=RBSparsifyingWeight(
+                            op_name,
+                            compression_lr_multiplier=compression_lr_multiplier
+                        ),
                         priority=TransformationPriority.SPARSIFICATION_PRIORITY
                     ))
 

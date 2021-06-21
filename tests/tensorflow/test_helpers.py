@@ -13,7 +13,8 @@
 
 import tensorflow as tf
 
-from tests.tensorflow.helpers import get_basic_conv_test_model, check_equal
+from tests.tensorflow.helpers import TFTensorListComparator
+from tests.tensorflow.helpers import get_basic_conv_test_model
 
 
 def test_basic_model_has_expected_params():
@@ -28,8 +29,8 @@ def test_basic_model_has_expected_params():
     act_bias = model.layers[1].weights[1]
     ref_bias = default_bias
 
-    check_equal(act_bias, ref_bias)
-    check_equal(act_weights, ref_weights)
+    TFTensorListComparator.check_equal(act_bias, ref_bias)
+    TFTensorListComparator.check_equal(act_weights, ref_weights)
 
 
 def test_basic_model_is_valid():
@@ -37,4 +38,4 @@ def test_basic_model_is_valid():
     input_ = tf.ones([1, 4, 4, 1])
     ref_output = tf.ones((1, 3, 3, 2)) * (-4)
     act_output = model(input_)
-    check_equal(ref_output, act_output)
+    TFTensorListComparator.check_equal(ref_output, act_output)

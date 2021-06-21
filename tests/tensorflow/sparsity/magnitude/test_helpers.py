@@ -14,7 +14,8 @@
 import tensorflow as tf
 
 from nncf import NNCFConfig
-from tests.tensorflow.helpers import create_conv, check_equal
+from tests.tensorflow.helpers import TFTensorListComparator
+from tests.tensorflow.helpers import create_conv
 
 
 sub_tensor = tf.constant([[[[1., 0.],
@@ -58,11 +59,11 @@ def test_magnitude_model_has_expected_params():
     # OIHW -> HWIO
     ref_weights_2 = tf.transpose(ref_weights_2, (2, 3, 1, 0))
 
-    check_equal(act_weights_1, ref_weights_1)
-    check_equal(act_weights_2, ref_weights_2)
+    TFTensorListComparator.check_equal(act_weights_1, ref_weights_1)
+    TFTensorListComparator.check_equal(act_weights_2, ref_weights_2)
 
-    check_equal(act_bias_1, tf.constant([-2., -2]))
-    check_equal(act_bias_2, tf.constant([0]))
+    TFTensorListComparator.check_equal(act_bias_1, tf.constant([-2., -2]))
+    TFTensorListComparator.check_equal(act_bias_2, tf.constant([0]))
 
 
 def get_basic_magnitude_sparsity_config(input_sample_size=None):
