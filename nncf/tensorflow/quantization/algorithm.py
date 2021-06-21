@@ -198,8 +198,8 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
         if self._range_init_params is not None:
             self._run_range_initialization(model)
 
-        # if self._batchnorm_adaptation:
-        #     self._run_batchnorm_adaptation(model)
+        if self._batchnorm_adaptation:
+            self._run_batchnorm_adaptation(model)
 
     def _run_range_initialization(self, model: tf.keras.Model) -> None:
         if self._range_initializer is None:
