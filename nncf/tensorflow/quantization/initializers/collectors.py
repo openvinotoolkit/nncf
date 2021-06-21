@@ -171,12 +171,12 @@ class MedianMADStatisticCollector:
 
 
 class PercentileStatisticCollector:
-    def __init__(self, per_channel: bool, channel_axes: int):
+    def __init__(self, per_channel: bool, channel_axes: int, min_percentile: float, max_percentile: float):
         self.per_channel = per_channel
         self.channel_axes = channel_axes if isinstance(channel_axes, (list, tuple)) else [channel_axes]
         self._samples = []
-        self.min_percentile = 0.1
-        self.max_percentile = 99.9
+        self.min_percentile = min_percentile
+        self.max_percentile = max_percentile
 
     @property
     def min(self) -> np.ndarray:
@@ -222,14 +222,15 @@ class PercentileStatisticCollector:
 
 
 class MeanPercentileStatisticCollector:
-    def __init__(self, per_channel: bool, channel_axes: int, input_type: str):
+    def __init__(self, per_channel: bool, channel_axes: int, input_type: str,
+                 min_percentile: float, max_percentile: float):
         self.per_channel = per_channel
         self.channel_axes = channel_axes if isinstance(channel_axes, (list, tuple)) else [channel_axes]
         self.input_type = input_type
         self.all_min_values = []
         self.all_max_values = []
-        self.min_percentile = 0.1
-        self.max_percentile = 99.9
+        self.min_percentile = min_percentile
+        self.max_percentile = max_percentile
 
     @property
     def min(self) -> tf.Tensor:

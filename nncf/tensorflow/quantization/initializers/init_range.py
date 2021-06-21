@@ -22,35 +22,46 @@ from nncf.tensorflow.layers.wrapper import NNCFWrapper
 from nncf.tensorflow.layers.data_layout import get_channel_axis
 from nncf.tensorflow.layers.operation import InputType
 from nncf.tensorflow.quantization.layers import FakeQuantize
+from nncf.common.utils.progress_bar import ProgressBar
 from nncf.tensorflow.quantization.initializers.collectors import MinMaxStatisticsCollector
 from nncf.tensorflow.quantization.initializers.collectors import MeanMinMaxStatisticsCollector
 from nncf.tensorflow.quantization.initializers.collectors import MedianMADStatisticCollector
 from nncf.tensorflow.quantization.initializers.collectors import PercentileStatisticCollector
 from nncf.tensorflow.quantization.initializers.collectors import MeanPercentileStatisticCollector
-from nncf.common.utils.progress_bar import ProgressBar
 
 
 class RangeInitializer:
     def __init__(self, params: RangeInitParams):
+        self.params = params
         self.dataset = params.init_range_data_loader
-
         self.num_steps = math.ceil(params.global_init_config.num_init_samples / self.dataset.batch_size)
+
         self.nncf_quantization_operation_classes = NNCF_QUANTIZATION_OPERATONS.registry_dict.values()
 
-        self.range_type = params.global_init_config.init_type
-
     def generate_stat_collector(self, per_channel: bool, channel_axes: int, input_type: str):
-        if self.range_type == 'min_max':
+        range_type = self.params.global_init_config.init_type
+        if range_type == 'min_max':
             return MinMaxStatisticsCollector(per_channel, channel_axes, input_type)
-        if self.range_type == 'mean_min_max':
+        if range_type == 'mean_min_max':
             return MeanMinMaxStatisticsCollector(per_channel, channel_axes, input_type)
-        if self.range_type == 'threesigma':
+        if range_type == 'threesigma':
             return MedianMADStatisticCollector(per_channel, channel_axes)
-        if self.range_type == 'percentile':
-            return PercentileStatisticCollector(per_channel, channel_axes)
-        if self.range_type == 'mean_percentile':
-            return MeanPercentileStatisticCollector(per_channel, channel_axes, input_type)
-        raise ValueError('Range type {} is not supported.'.format(self.range_type))
+        if range_type == 'percentile':
+            min_percentile = self.params.global_init_config.init_type_specific_params.get("min_percentile", 0.1)
+            max_percentile = self.params.global_init_config.init_type_specific_params.get("max_percentile", 99.9)
+            return PercentileStatisticCollector(per_channel,
+                                                channel_axes,
+                                                min_percentile,
+                                                max_percentile)
+        if range_type == 'mean_percentile':
+            min_percentile = self.params.global_init_config.init_type_specific_params.get("min_percentile", 0.1)
+            max_percentile = self.params.global_init_config.init_type_specific_params.get("max_percentile", 99.9)
+            return MeanPercentileStatisticCollector(per_channel,
+                                                    channel_axes,
+                                                    input_type,
+                                                    min_percentile,
+                                                    max_percentile)
+        raise ValueError('Range type {} is not supported.'.format(range_type))
 
     def run(self, model: tf.keras.Model) -> None:
         layer_statistics = []
