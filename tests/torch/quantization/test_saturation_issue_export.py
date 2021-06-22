@@ -393,3 +393,15 @@ def test_is_pytorch_output_the_same_as_onnx_qdq_saturation_fix_applied(tmp_path,
         onnx_out = sess.run(None, {input_name: input_tensor.astype(np.float32)})[0]
 
         assert np.allclose(torch_out.numpy(), onnx_out, rtol=1e-5, atol=1e-3)
+
+
+def test_is_saturation_fix_applied_model_resumed_correctly(tmp_path):
+    model = TwoConvTestModel()
+    nncf_config = get_config_for_export_mode(False)
+    compressed_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, nncf_config)
+    state = compressed_model.state_dict()
+    # Must create new model as the previous one was somehow changed during create_compressed_model_and_algo_for_test()
+    model = TwoConvTestModel()
+    compressed_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, nncf_config,
+                                                                                   resuming_state_dict=state)
+    are_symmetric_fq_nodes_are_exported_correct_with_saturation_fix(tmp_path, compression_ctrl)
