@@ -431,33 +431,6 @@ QUANTIZATION_SCHEMA = {
         "quantize_outputs": with_attributes(_BOOLEAN,
                                             description="Whether the model outputs should be additionally quantized.",
                                             default=False),
-
-        "quantize_patterns": {
-            "type": "array",
-            "items": {
-                "type": "array",
-                "items": {
-                    "items": [_STRING]
-                }
-            },
-            "description": "Each sub-list in this list will correspond to a sequence of operations in the "
-                           "model control flow graph that will have a quantizer appended at the end of the "
-                           "sequence",
-            "examples": [
-                [
-                    "1 conv2d",
-                    "2 SILU",
-                    "1 -> 2"
-                ],
-                [
-                    "4 conv2d",
-                    "5 sigmoid",
-                    "6 RELU",
-                    "4 -> 5",
-                    "4 -> 6"
-                ]
-            ]
-        },
         "scope_overrides": {
             "type": "object",
             "properties": {

@@ -743,6 +743,8 @@ def test_output_quantization(_case_config):
 
 
 def test_custom_quantizable_subgraph_patterns(_case_config):
+    # Decided to remove quantize_patterns option
+    pytest.skip()
     model = test_models.SENet18()
 
     input_shape = [1, 3, 32, 32]

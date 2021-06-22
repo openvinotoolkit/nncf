@@ -12,59 +12,141 @@
 """
 
 from nncf.common.graph.patterns import GraphPattern
-from nncf.common.graph.patterns import create_graph_pattern_from_pattern_view
+from nncf.common.utils.registry import Registry
+
+from nncf.torch.graph.pattern_operations import LINEAR_OPERATIONS
+from nncf.torch.graph.pattern_operations import BATCH_NORMALIZATION_OPERATIONS
+from nncf.torch.graph.pattern_operations import ACTIVATIONS_OPERATIONS
+from nncf.torch.graph.pattern_operations import ARITHMETIC_OPERATIONS
+
+PATTERN_GRAPH = Registry('pattern_graph')
 
 
-class PatternFactory:
-    def __init__(self):
-        self.graph_full_pattern = None
-        self.pattern_views = None
+def create_linear_swish_act() -> GraphPattern:
+    main_pattern = GraphPattern()
 
-    def get_full_pattern_graph(self, pattern_views=None):
-        if self.graph_full_pattern is not None and self.pattern_views == pattern_views:
-            return self.graph_full_pattern
-        self.pattern_views = pattern_views
-        self.graph_full_pattern = get_full_pattern_graph(pattern_views)
-        return self.graph_full_pattern
+    pattern = GraphPattern()
+    linear_ops_node = pattern.add_node(LINEAR_OPERATIONS)
+    bn_node = pattern.add_node(BATCH_NORMALIZATION_OPERATIONS)
+    sigmoid_node = pattern.add_node(['sigmoid'])
+    mul_node = pattern.add_node(['__mul__'])
 
+    pattern.add_edge(linear_ops_node, bn_node)
+    pattern.add_edge(bn_node, sigmoid_node)
+    pattern.add_edge(linear_ops_node, mul_node)
 
-def get_full_pattern_graph(pattern_views=None):
-    # Basic Types
-    LINEAR_OPS_type = ['linear', 'conv2d', 'conv_transpose2d', 'conv3d',
-                       'conv_transpose3d', 'conv1d', 'addmm']
-    BN_type = ['batch_norm', 'batch_norm3d']
-    # This type may be useful in the future
-    # pylint: disable=unused-variable
-    POOLING_type = ['adaptive_avg_pool2d', 'adaptive_avg_pool3d', 'avg_pool2d', 'avg_pool3d']
-    RELU_type = ['relu', 'relu_', 'hardtanh']
-    NON_RELU_ACTIVATIONS_type = ['elu', 'elu_', 'prelu', 'sigmoid', 'gelu']
-    ARITHMETIC_type = ['__iadd__', '__add__', '__mul__', '__rmul__']
+    GraphPattern.add_subgraph_to_graph(main_pattern.graph, pattern.graph)
 
-    # Basic Graph Patterns
-    LINEAR_OPS = GraphPattern(LINEAR_OPS_type)
+    pattern = GraphPattern()
+    linear_ops_node = pattern.add_node(LINEAR_OPERATIONS)
+    sigmoid_node = pattern.add_node(['sigmoid'])
+    mul_node = pattern.add_node(['__mul__'])
 
-    BN = GraphPattern(BN_type)
+    pattern.add_edge(linear_ops_node, sigmoid_node)
+    pattern.add_edge(linear_ops_node, mul_node)
 
-    ACTIVATIONS = GraphPattern(RELU_type + NON_RELU_ACTIVATIONS_type)
+    GraphPattern.add_subgraph_to_graph(main_pattern.graph, pattern.graph)
 
-    ARITHMETIC = GraphPattern(ARITHMETIC_type)
-
-    ANY_BN_ACT_COMBO = BN + ACTIVATIONS | ACTIVATIONS + BN | BN | ACTIVATIONS
-
-    # Linear Types United with Swish Activation
-    MUL = GraphPattern('__mul__')
-    SIGMOID = GraphPattern('sigmoid')
-    LINEAR_OPS_SWISH_ACTIVATION = (LINEAR_OPS + SIGMOID) * MUL | LINEAR_OPS + (BN + SIGMOID) * MUL
-
-    FULL_PATTERN_GRAPH = LINEAR_OPS + ANY_BN_ACT_COMBO | ANY_BN_ACT_COMBO | \
-                         ARITHMETIC + ANY_BN_ACT_COMBO | LINEAR_OPS_SWISH_ACTIVATION
-
-    if pattern_views is not None:
-        for pattern_view in pattern_views:
-            graph_pattern = create_graph_pattern_from_pattern_view(pattern_view)
-            FULL_PATTERN_GRAPH = FULL_PATTERN_GRAPH | graph_pattern
-
-    return FULL_PATTERN_GRAPH
+    return main_pattern
 
 
-PATTERN_FACTORY = PatternFactory()
+@PATTERN_GRAPH.register('graph_pattern_factory')
+class GraphPatternFactory:
+    FULL_PATTERN_GRAPH = None
+
+    @staticmethod
+    def get_graph():
+        if GraphPatternFactory.FULL_PATTERN_GRAPH is None:
+            GraphPatternFactory.FULL_PATTERN_GRAPH = GraphPatternFactory._generate_full_pattern_graph()
+        return GraphPatternFactory.FULL_PATTERN_GRAPH
+
+    @staticmethod
+    def _generate_full_pattern_graph():
+        LINEAR_OPS = GraphPattern(LINEAR_OPERATIONS)
+
+        BN = GraphPattern(BATCH_NORMALIZATION_OPERATIONS)
+
+        ACTIVATIONS = GraphPattern(ACTIVATIONS_OPERATIONS)
+
+        ARITHMETIC = GraphPattern(ARITHMETIC_OPERATIONS)
+
+        ANY_BN_ACT_COMBO = BN + ACTIVATIONS | ACTIVATIONS + BN | BN | ACTIVATIONS
+
+        LINEAR_OPS_SWISH_ACTIVATION = create_linear_swish_act()
+
+        FULL_PATTERN_GRAPH = LINEAR_OPS + ANY_BN_ACT_COMBO | ANY_BN_ACT_COMBO | \
+                             ARITHMETIC + ANY_BN_ACT_COMBO | LINEAR_OPS_SWISH_ACTIVATION
+
+        return FULL_PATTERN_GRAPH
+
+
+def get_full_pattern_graph():
+    return PATTERN_GRAPH.get("graph_pattern_factory").get_graph()
+
+# def get_full_pattern_graph():
+#     p1 = create_linear_any_bn_act_combo()
+#     p2 = create_any_bn_act_combo()
+#     p3 = create_arithmetic_any_bn_act_combo()
+#     p4 = create_linear_swish_act()
+#     return p1 | p2 | p3 | p4
+#
+# def create_linear_any_bn_act_combo() -> GraphPattern:
+#     main_pattern = GraphPattern('linear_combination_batchnorm_activation')
+#     for combo in [(BN_type, ACTIVATIONS_type), (ACTIVATIONS_type, BN_type),
+#                   (BN_type), (ACTIVATIONS_type)]:
+#
+#         pattern = GraphPattern('test')
+#         linear_ops_node = pattern.add_node(LINEAR_OPS_type)
+#         bn_node = pattern.add_node(BN_type)
+#         activation_node = pattern.add_node(ACTIVATIONS_type)
+#
+#         name_mapping = {BN_type: bn_node, ACTIVATIONS_type: activation_node}
+#
+#         pattern.add_edge(linear_ops_node, name_mapping[combo[0]])
+#         if len(combo) > 1:
+#             pattern.add_edge(name_mapping[combo[0]], name_mapping[combo[1]])
+#
+#         GraphPattern.add_subgraph_to_graph(main_pattern, pattern)
+#
+#     return main_pattern
+#
+#
+# def create_any_bn_act_combo() -> GraphPattern:
+#     main_pattern = GraphPattern('combination_batchnorm_activation')
+#     for combo in [(BN_type, ACTIVATIONS_type), (ACTIVATIONS_type, BN_type),
+#                   (BN_type), (ACTIVATIONS_type)]:
+#
+#         pattern = GraphPattern('test')
+#         bn_node = pattern.add_node(BN_type)
+#         activation_node = pattern.add_node(ACTIVATIONS_type)
+#
+#         name_mapping = {BN_type: bn_node, ACTIVATIONS_type: activation_node}
+#
+#         if len(combo) > 1:
+#             pattern.add_edge(name_mapping[combo[0]], name_mapping[combo[1]])
+#
+#         GraphPattern.add_subgraph_to_graph(main_pattern, pattern)
+#
+#     return main_pattern
+#
+#
+# def create_arithmetic_any_bn_act_combo() -> GraphPattern:
+#     main_pattern = GraphPattern('arithmetic_combination_batchnorm_activation')
+#     for combo in [(BN_type, ACTIVATIONS_type), (ACTIVATIONS_type, BN_type),
+#                   (BN_type), (ACTIVATIONS_type)]:
+#
+#         pattern = GraphPattern('test')
+#         arithmetic_node = pattern.add_node(ARITHMETIC_type)
+#         bn_node = pattern.add_node(BN_type)
+#         activation_node = pattern.add_node(ACTIVATIONS_type)
+#
+#         name_mapping = {BN_type: bn_node, ACTIVATIONS_type: activation_node}
+#
+#         pattern.add_edge(arithmetic_node, name_mapping[combo[0]])
+#         if len(combo) > 1:
+#             pattern.add_edge(name_mapping[combo[0]], name_mapping[combo[1]])
+#
+#         GraphPattern.add_subgraph_to_graph(main_pattern, pattern)
+#     return pattern
+#
+#
