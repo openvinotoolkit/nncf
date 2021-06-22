@@ -18,6 +18,7 @@ from typing import Union
 from typing import List
 from typing import Tuple
 from typing import TypeVar
+import contextlib
 
 import onnx
 import numpy as np
@@ -418,3 +419,11 @@ class DummyDataLoader(PTInitializingDataLoader):
 
 def register_bn_adaptation_init_args(config: NNCFConfig):
     config.register_extra_structs([BNAdaptationInitArgs(data_loader=DummyDataLoader(), device=None)])
+
+
+@contextlib.contextmanager
+def set_torch_seed(seed: int = 42):
+    saved_seed = torch.seed()
+    torch.manual_seed(seed)
+    yield
+    torch.manual_seed(saved_seed)

@@ -117,3 +117,9 @@ To export a model to the OpenVINO IR and run it using the Intel® Deep Learning 
 |ResNet50|INT8 w:sym,per-tensor a:sym,per-tensor + Sparsity 65% (RB)|ImageNet|74.3|[resnet50_imagenet_rb_sparsity_int8.json](configs/sparsity_quantization/resnet50_imagenet_rb_sparsity_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/tensorflow/models/develop/resnet50_int8_w_sym_t_half_a_sym_t_rb_sparsity_65.tar.gz)|
 |ResNet50|Filter Pruning 40%|ImageNet|74.98|[resnet50_imagenet_pruning_geometric_median.json](configs/pruning/resnet50_imagenet_pruning_geometric_median.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/tensorflow/models/develop/resnet50_pruning_40.tar.gz)|
 |TensorFlow Hub MobileNet V2|Sparsity 35% (Magnitude)|ImageNet|71.90|[mobilenet_v2_hub_imagenet_magnitude_sparsity.json](configs/sparsity/mobilenet_v2_hub_imagenet_magnitude_sparsity.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/tensorflow/models/develop/tf1_mobilenet_v2_1.0_224_sparsity_35.tar.gz)|
+
+Results for accuracy-aware compressed training
+
+|**Model**|**Compression algorithm**|**Dataset**|**TensorFlow compressed accuracy**|**NNCF config file**|
+| :---: | :---: | :---: | :---: | :---: |
+|ResNet50|Sparsity 75% (magnitude)|ImageNet|74.42|[resnet50_imagenet_magnitude_sparsity_accuracy_aware.json](configs/sparsity/resnet50_imagenet_magnitude_sparsity_accuracy_aware.json)|

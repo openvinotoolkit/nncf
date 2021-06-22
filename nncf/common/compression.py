@@ -14,6 +14,7 @@
 from typing import Optional, List, Tuple, Any
 
 from nncf.api.compression import CompressionAlgorithmController
+from nncf.common.schedulers import StubCompressionScheduler
 import nncf.common.factory as factory
 
 
@@ -50,3 +51,14 @@ class BaseCompressionAlgorithmController(CompressionAlgorithmController):
         self.prepare_for_export()
         exporter = factory.create_exporter(self.model, input_names, output_names, model_args)
         exporter.export_model(save_path, save_format)
+
+    def disable_scheduler(self) -> None:
+        self._scheduler = StubCompressionScheduler()
+
+    @property
+    def compression_rate(self) -> float:
+        return None
+
+    @compression_rate.setter
+    def compression_rate(self) -> float:
+        pass

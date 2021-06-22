@@ -363,11 +363,14 @@ class PTInsertionPoint:
 class NNCFNetwork(nn.Module, PostGraphBuildActing):
     def __init__(self, module, input_infos: List[ModelInputInfo],
                  dummy_forward_fn=None, wrap_inputs_fn=None, scopes_without_shape_matching=None,
-                 ignored_scopes=None, target_scopes=None, reset: bool = False, wrap_outputs_fn=None):
+                 ignored_scopes=None, target_scopes=None, reset: bool = False, wrap_outputs_fn=None,
+                 original_model_accuracy=None):
         super().__init__()
         self._set_nncf_wrapped_model(module)
         self._forward_signature = inspect.signature(module.forward)
         self.input_infos = input_infos
+
+        self._original_model_accuracy = original_model_accuracy
 
         self.ignored_scopes = ignored_scopes
         self.target_scopes = target_scopes
@@ -805,6 +808,10 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
         for dyn_graph_node in eval_graph.get_all_nodes():
             result.append(dyn_graph_node.op_exec_context.scope_in_model)
         return result
+
+    @property
+    def original_model_accuracy(self):
+        return self._original_model_accuracy
 
     def get_node_to_op_address_mapping(self) -> Dict[NNCFNodeName, OperationAddress]:
         # The IDs of corresponding nodes of the original dynamic graph and original NNCF graph

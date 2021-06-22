@@ -11,7 +11,7 @@
  limitations under the License.
 """
 
-from typing import Optional
+from typing import Optional, Callable
 
 from nncf.common.initialization.dataloader import NNCFDataLoader
 
@@ -89,3 +89,13 @@ class BNAdaptationInitArgs(NNCFExtraConfigStruct):
     @classmethod
     def get_id(cls) -> str:
         return 'bn_adaptation_init_args'
+
+
+class ModelEvaluationArgs(NNCFExtraConfigStruct):
+    def __init__(self,
+                 eval_fn: Callable):
+        self.eval_fn = eval_fn
+
+    @classmethod
+    def get_id(cls) -> str:
+        return "model_evaluation_args"

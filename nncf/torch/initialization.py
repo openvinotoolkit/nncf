@@ -12,6 +12,7 @@ from torch.utils.data import DataLoader
 
 from nncf.config.structures import BNAdaptationInitArgs
 from nncf.config.structures import QuantizationRangeInitArgs
+from nncf.config.structures import ModelEvaluationArgs
 from nncf.common.utils.progress_bar import ProgressBar
 from nncf.common.initialization.dataloader import NNCFDataLoader
 from nncf.torch.structures import AutoQPrecisionInitArgs
@@ -254,13 +255,15 @@ def register_default_init_args(nncf_config: 'NNCFConfig',
                                criterion_fn: Callable[[Any, Any, _Loss], torch.Tensor] = None,
                                autoq_eval_fn: Callable[[torch.nn.Module, torch.utils.data.DataLoader], float] = None,
                                autoq_eval_loader: torch.utils.data.DataLoader = None,
-                               device: str = None) -> 'NNCFConfig':
+                               model_eval_fn: Callable[[torch.nn.Module, torch.utils.data.DataLoader], float] = None,
+                               device: str = None,
+                               ) -> 'NNCFConfig':
     nncf_config.register_extra_structs([QuantizationRangeInitArgs(data_loader=wrap_dataloader_for_init(train_loader),
                                                                   device=device),
                                         BNAdaptationInitArgs(data_loader=wrap_dataloader_for_init(train_loader),
                                                              device=device)])
 
-    if criterion:
+    if criterion is not None:
         if not criterion_fn:
             criterion_fn = default_criterion_fn
         nncf_config.register_extra_structs([QuantizationPrecisionInitArgs(criterion_fn=criterion_fn,
@@ -268,11 +271,14 @@ def register_default_init_args(nncf_config: 'NNCFConfig',
                                                                           data_loader=train_loader,
                                                                           device=device)])
 
-    if autoq_eval_fn:
+    if autoq_eval_fn is not None:
         if not autoq_eval_loader:
             autoq_eval_loader = train_loader
         nncf_config.register_extra_structs([AutoQPrecisionInitArgs(data_loader=autoq_eval_loader,
                                                                    eval_fn=autoq_eval_fn,
                                                                    nncf_config=nncf_config)])
+
+    if model_eval_fn is not None:
+        nncf_config.register_extra_structs([ModelEvaluationArgs(eval_fn=model_eval_fn)])
 
     return nncf_config

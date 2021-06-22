@@ -58,7 +58,9 @@ INSTALL_REQUIRES = ["ninja>=1.10.0.post2",
                     "pandas~=1.1.5; python_version<'3.7'",
                     "pandas>=1.1.5; python_version>='3.7'",
                     "scikit-learn>=0.24.0",
-                    "wheel>=0.36.1"]
+                    "wheel>=0.36.1",
+                    "tensorboard>=2.1"]
+
 
 python_version = sys.version_info
 if python_version < (3, 6, 2):

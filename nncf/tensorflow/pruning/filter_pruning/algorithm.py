@@ -34,6 +34,8 @@ from nncf.common.pruning.utils import get_conv_in_out_channels
 from nncf.common.pruning.utils import get_rounded_pruned_element_number
 from nncf.common.statistics import NNCFStatistics
 from nncf.common.utils.logger import logger as nncf_logger
+from nncf.common.schedulers import StubCompressionScheduler
+from nncf.common.accuracy_aware_training.training_loop import ADAPTIVE_COMPRESSION_CONTROLLERS
 from nncf.config.extractors import extract_bn_adaptation_init_params
 from nncf.tensorflow.algorithm_selector import TF_COMPRESSION_ALGORITHMS
 from nncf.tensorflow.api.compression import TFCompressionAlgorithmController
@@ -91,6 +93,7 @@ class FilterPruningBuilder(BasePruningAlgoBuilder):
         return TFElementwise.get_all_op_aliases()
 
 
+@ADAPTIVE_COMPRESSION_CONTROLLERS.register('tf_filter_pruning')
 class FilterPruningController(BasePruningAlgoController):
     """
     Serves as a handle to the additional modules, parameters and hooks inserted
@@ -142,6 +145,23 @@ class FilterPruningController(BasePruningAlgoController):
     def loss(self) -> CompressionLoss:
         return self._loss
 
+    @property
+    def compression_rate(self) -> float:
+        if self.prune_flops:
+            return 1 - self.current_flops / self.full_flops
+        return self.pruning_rate
+
+    @compression_rate.setter
+    def compression_rate(self, compression_rate: float) -> None:
+        is_pruning_controller_frozen = self.frozen
+        self.freeze(False)
+        self.set_pruning_rate(compression_rate)
+        self.freeze(is_pruning_controller_frozen)
+
+    def disable_scheduler(self):
+        self._scheduler = StubCompressionScheduler()
+        self._scheduler.current_pruning_level = 0.0
+
     def statistics(self, quickly_collected_only: bool = False) -> NNCFStatistics:
         model_statistics = self._calculate_pruned_model_stats()
         self._update_benchmark_statistics()
@@ -154,8 +174,8 @@ class FilterPruningController(BasePruningAlgoController):
         nncf_stats.register('filter_pruning', stats)
         return nncf_stats
 
-    def freeze(self):
-        self.frozen = True
+    def freeze(self, freeze: bool = True):
+        self.frozen = freeze
 
     def set_pruning_rate(self, pruning_rate: float,
                          run_batchnorm_adaptation: bool = False):

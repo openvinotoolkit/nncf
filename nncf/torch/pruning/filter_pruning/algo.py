@@ -46,6 +46,8 @@ from nncf.common.pruning.utils import get_conv_in_out_channels
 from nncf.common.pruning.utils import get_rounded_pruned_element_number
 from nncf.common.statistics import NNCFStatistics
 from nncf.common.utils.logger import logger as nncf_logger
+from nncf.common.accuracy_aware_training.training_loop import ADAPTIVE_COMPRESSION_CONTROLLERS
+from nncf.common.schedulers import StubCompressionScheduler
 from nncf.common.initialization.batchnorm_adaptation import BatchnormAdaptationAlgorithm
 from nncf.torch.compression_method_api import PTCompressionAlgorithmController
 from nncf.torch.layers import NNCF_PRUNING_MODULES_DICT
@@ -105,6 +107,7 @@ class FilterPruningBuilder(BasePruningAlgoBuilder):
         return PTElementwise.get_all_op_aliases()
 
 
+@ADAPTIVE_COMPRESSION_CONTROLLERS.register('pt_filter_pruning')
 class FilterPruningController(BasePruningAlgoController):
     def __init__(self, target_model: NNCFNetwork,
                  prunable_types: List[str],
@@ -183,8 +186,8 @@ class FilterPruningController(BasePruningAlgoController):
         """Global pruning rate in the model"""
         return self._pruning_rate
 
-    def freeze(self):
-        self.frozen = True
+    def freeze(self, freeze: bool = True):
+        self.frozen = freeze
 
     def step(self, next_step):
         self._apply_masks()
@@ -639,6 +642,22 @@ class FilterPruningController(BasePruningAlgoController):
         if actual_pruning_level >= target_pruning_level:
             return CompressionStage.FULLY_COMPRESSED
         return CompressionStage.PARTIALLY_COMPRESSED
+
+    @property
+    def compression_rate(self):
+        if self.prune_flops:
+            return 1 - self.current_flops / self.full_flops
+        return self.pruning_rate
+
+    @compression_rate.setter
+    def compression_rate(self, pruning_rate):
+        is_pruning_controller_frozen = self.frozen
+        self.freeze(False)
+        self.set_pruning_rate(pruning_rate)
+        self.freeze(is_pruning_controller_frozen)
+
+    def disable_scheduler(self):
+        self._scheduler = StubCompressionScheduler()
 
     def _update_benchmark_statistics(self):
         self.current_flops, self.current_params_num = self._calculate_flops_and_weights_pruned_model_by_masks()
