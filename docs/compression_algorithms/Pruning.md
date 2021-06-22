@@ -2,10 +2,11 @@
 
 #### Filter pruning    
 
-Filter pruning algorithm zeros output filters in Convolutional layers based on some filter importance criterion  (filters with smaller importance are pruned).     
-The framework contains three such criteria: `L1`, `L2` norm, and `Geometric Median`. Also, different schemes of pruning application are presented by different schedulers.    
+Filter pruning algorithm zeros output filters in Convolutional layers based on some filter importance criterion (filters with smaller importance are pruned).
+Not all Convolution layers in the model can be pruned. Such layers are determined by the model architecture.     
+The framework contains three filter importance criteria: `L1`, `L2` norm, and `Geometric Median`. Also, different schemes of pruning application are presented by different schedulers.    
 
-#### Filter importance criterions **L1, L2**
+#### Filter importance criteria **L1, L2**
 
  `L1`, `L2` filter importance criteria are based on the following assumption:    
 > Convolutional filters with small ![l_p](https://latex.codecogs.com/png.latex?l_p) norms do not significantly contribute to output activation values, and thus have a small impact on the final predictions of CNN models.   
@@ -29,13 +30,12 @@ Then during pruning filters with smaller ![G(F_i)](https://latex.codecogs.com/pn
 #### Schedulers
 
 **Baseline Scheduler**    
- Firstly, during `num_init_steps` epochs the model is trained without pruning. Secondly, the pruning algorithm calculates filter importances and prune a `pruning_target` part of the filters with the smallest importance in each convolution.   
+ Firstly, during `num_init_steps` epochs the model is trained without pruning. Secondly, the pruning algorithm calculates filter importances and prunes a `pruning_target` part of the filters with the smallest importance in each prunable convolution.   
 The zeroed filters are frozen afterwards and the remaining model parameters are fine-tuned.   
 
 **Parameters of the scheduler:**  
 - `num_init_steps` - number of epochs for model pretraining **before** pruning.
-- `pruning_target` - pruning rate target . For example, the value `0.5` means that right after pretraining, at the epoch
-with the number of `num_init_steps`, the model will have 50% of its convolutional filters zeroed.
+- `pruning_target` - pruning rate target. For example, the value `0.5` means that right after pretraining, convolutions that can be pruned will have 50% of their filters set to zero.
 
 
 **Exponential scheduler**   
@@ -49,9 +49,9 @@ Where ![a, k](https://latex.codecogs.com/svg.latex?a,%20k) - parameters.
 
 **Parameters of scheduler:**  
 - `num_init_steps` - number of epochs for model pretraining before pruning.
-- `pruning_steps` - the number of epochs during which the pruning rate target is increased from  `pruning_init` to `pruning_target` value.
-- `pruning_init` - initial pruning rate target. For example, value `0.1` means that at the begging of training, the model is trained to have 10% of convolutional filters zeroed.
-- `pruning_target` - pruning rate target at the end of the schedule. For example, the value `0.5` means that at the epoch with the number of `num_init_steps + pruning_steps`, the model is trained to have 50% of its convolutional filters zeroed.
+- `pruning_steps` - the number of epochs during which the pruning rate target is increased from `pruning_init` to `pruning_target` value.
+- `pruning_init` - initial pruning rate target. For example, value `0.1` means that at the begging of training, convolutions that can be pruned will have 10% of their filters set to zero.
+- `pruning_target` - pruning rate target at the end of the schedule. For example, the value `0.5` means that at the epoch with the number of `num_init_steps + pruning_steps`, convolutions that can be pruned will have 50% of their filters set to zero.
 
 **Exponential with bias scheduler**   
 Similar to the `Exponential scheduler`, but current pruning rate ![P_{i}](https://latex.codecogs.com/svg.latex?P_{i}) (on i-th epoch) during training calculates by equation:  
@@ -82,7 +82,7 @@ sparsity and filter pruning algorithms. It can be enabled by setting a non-zero 
     "pruning_init": 0.1, // Initial value of the pruning level applied to the model in 'create_compressed_model' function. 0.0 by default.
     "params": {
         "schedule": "baseline", // The type of scheduling to use for adjusting the target pruning level. Either `exponential`, `exponential_with_bias`,  or `baseline`, by default it is `baseline`"
-        "pruning_target": 0.4, // Target value of the pruning level for the model. 0.5 by default.
+        "pruning_target": 0.4, // Target value of the pruning level for the convolutions that can be pruned. These convolutions are determined by the model architecture. 0.5 by default.
         "num_init_steps": 3, // Number of epochs for model pretraining before starting filter pruning. 0 by default.
         "pruning_steps": 10, // Number of epochs during which the pruning rate is increased from `pruning_init` to `pruning_target` value.
         "weight_importance": "L2", // The type of filter importance metric. Can be one of `L1`, `L2`, `geometric_median`. `L2` by default.
