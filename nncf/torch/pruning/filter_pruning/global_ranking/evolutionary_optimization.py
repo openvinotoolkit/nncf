@@ -16,9 +16,8 @@ from functools import partial
 import numpy as np
 import torch
 from copy import deepcopy, copy
+from nncf.torch.utils import get_filters_num
 from torch import optim
-
-from nncf.utils import get_filters_num
 
 
 class EvolutionOptimizer:

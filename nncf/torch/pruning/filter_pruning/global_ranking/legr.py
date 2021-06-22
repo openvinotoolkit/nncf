@@ -10,8 +10,9 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+from nncf.torch.pruning.filter_pruning.global_ranking.evolutionary_optimization import LeGRPruner, EvolutionOptimizer, \
+    LeGREvolutionEnv
 
-from nncf.torch.pruning.filter_pruning.global_ranking import EvolutionOptimizer, LeGREvolutionEnv, LeGRPruner
 from nncf.common.utils.logger import logger as nncf_logger
 import time
 
