@@ -28,7 +28,9 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torchvision
+
 from nncf.torch import nncf_model_input
+from nncf.torch import nncf_model_output
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNodeName
 from nncf.common.graph.transformations.commands import TargetType
@@ -227,7 +229,7 @@ def sr_dummy_forward_fn(model_, input_sample_sizes: Tuple[List[int]]):
     tensor_list = [create_mock_tensor(info, device) for info in input_info_list]
     args = (tuple(tensor_list),)
     args, _ = sr_wrap_inputs_fn(args, {})
-    return model_(*args)
+    return nncf_model_output(model_(*args))
 
 
 TEST_MODELS_DESC = [
@@ -886,3 +888,18 @@ def prepare_potential_quantizer_graph(graph: PTNNCFGraph,
             nx_graph.add_edge(weight_quantizer_node_key, node_key)
 
     return nx_graph
+
+def test_output_quantization_with_user_forward(_case_config):
+    desc = TEST_MODELS_DESC[-1]
+    model = desc.model_builder()
+
+    input_shape = desc.input_sample_sizes
+
+    config = get_basic_quantization_config(_case_config.quant_type,
+                                            input_sample_sizes=input_shape)
+    config["compression"].update({"quantize_outputs": True})
+    register_bn_adaptation_init_args(config)
+    compressed_model, _ = create_compressed_model_and_algo_for_test(model, config,
+                                                                    dummy_forward_fn=desc.dummy_forward_fn,
+                                                                    wrap_inputs_fn=desc.wrap_inputs_fn)
+    check_model_graph(compressed_model, 'sr_small_model_qoutput.dot', _case_config.graph_dir)
