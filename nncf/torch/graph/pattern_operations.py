@@ -24,7 +24,8 @@ BATCH_NORMALIZATION_OPERATIONS = ['batch_norm',
                                   'batch_norm1d',
                                   'batch_norm2d',
                                   'batch_norm3d']
-RELU_OPERATIONS = ['RELU',
+RELU_OPERATIONS = ['relu',
+                   'relu_',
                    'hardtanh']
 
 NON_RELU_ACTIVATIONS_OPERATIONS = ['elu',
