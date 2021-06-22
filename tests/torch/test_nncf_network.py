@@ -43,7 +43,7 @@ from nncf.torch.graph.operator_metatypes import InputNoopMetatype
 from nncf.torch.graph.operator_metatypes import OutputNoopMetatype
 from nncf.torch.graph.transformations.commands import PTInsertionCommand
 from nncf.torch.graph.transformations.commands import PTTargetPoint
-from nncf.torch.graph.patterns import PATTERN_FACTORY
+from nncf.torch.graph.patterns import get_full_pattern_graph
 from nncf.common.graph.transformations.commands import TransformationPriority
 from nncf.torch.graph.transformations.layout import PTTransformationLayout
 from nncf.torch.layer_utils import _NNCFModuleMixin
@@ -671,7 +671,7 @@ class TestInsertionPointGraph:
     def test_get_ip_graph_with_merged_operations(self, mock_graph_factory, dot_file_name):
         mock_graph = mock_graph_factory()
         ip_graph = InsertionPointGraph(mock_graph)
-        pattern_graph = PATTERN_FACTORY.get_full_pattern_graph()
+        pattern_graph = get_full_pattern_graph()
         merged_ip_graph = ip_graph.get_ip_graph(pattern_graph)
 
         data_dir = TEST_ROOT / 'torch/data/reference_graphs/pattern_merging'  # type: Path
