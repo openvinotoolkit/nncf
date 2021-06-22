@@ -4,7 +4,7 @@ This sample demonstrates DL model compression capabilities for semantic segmenta
 ## Features:
 - UNet and ICNet with implementations as close as possible to the original papers
 - Loaders for CamVid, Cityscapes (20-class), Mapillary Vistas(20-class), Pascal VOC (reuses the loader integrated into torchvision)
-- Configuration file examples for sparsity and quantization
+- Configuration file examples for sparsity, quantization, filter pruning and quantization with sparsity
 - Export to ONNX compatible with OpenVINO
 - DataParallel and DistributedDataParallel modes
 - Tensorboard output
@@ -66,4 +66,9 @@ To export a model to OpenVINO IR and run it using Intel Deep Learning Deployment
 |UNet|None|Mapillary|56.23|[unet_mapillary.json](configs/unet_mapillary.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/unet_mapillary.pth)|
 |UNet|INT8|Mapillary|55.87|[unet_mapillary_int8.json](configs/unet_mapillary_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/unet_mapillary_int8.pth)|
 |UNet|INT8 + Sparsity 60% (Magnitude)|Mapillary|55.65|[unet_mapillary_magnitude_sparsity_int8.json](configs/unet_mapillary_magnitude_sparsity_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/unet_mapillary_magnitude_sparsity_int8.pth)|
-|UNet|Filter pruning, 25%, geometric median criterion, 589.4/875.0 GFLOPS, 18.6/31.0 MParams|Mapillary|55.62|[unet_mapillary_pruning_geometric_median.json](configs/unet_mapillary_pruning_geometric_median.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/unet_mapillary_pruning_geometric_median.pth)|
+|UNet|Filter pruning 25%, geometric median criterion,<br/>33% GFLOPS reduction,<br/>40% MParams reduction|Mapillary|55.62|[unet_mapillary_pruning_geometric_median.json](configs/unet_mapillary_pruning_geometric_median.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/unet_mapillary_pruning_geometric_median.pth)|
+
+#### Filter pruning
+|**Model**|**Compression algorithm**|**Pruning rate**|**GFLOPS full**|**GFLOPS reduced**|**GFLOPS reduction rate**|**MParams full**|**MParams reduced**|**MParams reduction rate**|
+| :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+|SSD300-VGG-BN|Filter Pruning,<br/>geometric median criterion|25% filter pruning rate|875.0|589.4|32.64%|31.0|18.6|40.00%|

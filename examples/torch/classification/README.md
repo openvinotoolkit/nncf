@@ -6,7 +6,7 @@ This sample demonstrates a DL model compression in case of an image-classificati
 
 - Torchvision models (ResNets, VGG, Inception, etc.) and datasets (ImageNet, CIFAR 10, CIFAR 100) support
 - Custom models support
-- Configuration file examples for sparsity, quantization, and quantization with sparsity
+- Configuration file examples for sparsity, quantization, filter pruning and quantization with sparsity
 - Export to ONNX that is supported by the OpenVINO™ toolkit
 - DataParallel and DistributedDataParallel modes
 - Tensorboard-compatible output
@@ -99,17 +99,17 @@ As an example of NNCF convolution binarization capabilities, you may use the con
 
 
 ### Results for filter pruning
-|Model|Compression algorithm|Dataset|PyTorch compressed accuracy|GFLOPS|MParams|NNCF config file|PyTorch Checkpoint|
-| :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-|ResNet-50|None|ImageNet|76.16|8.178|25.503|[resnet50_imagenet.json](configs/quantization/resnet50_imagenet.json)|-|
-|ResNet-50|Filter pruning, 40%, geometric median criterion|ImageNet|75.62|4.576|16.055|[resnet50_pruning_geometric_median.json](configs/pruning/resnet50_pruning_geometric_median.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/resnet50_imagenet_filter_pruning_geomean.pth)|
-|ResNet-18|None|ImageNet|69.8|3.628|11.679|[resnet18_imagenet.json](configs/binarization/resnet18_imagenet.json)|-|
-|ResNet-18|Filter pruning, 40%, magnitude criterion|ImageNet|69.26|2.754|9.227|[resnet18_pruning_magnitude.json](configs/pruning/resnet18_pruning_magnitude.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/resnet18_imagenet_filter_pruning_magnitude.pth)|
-|ResNet-18|Filter pruning, 40%, geometric median criterion|ImageNet|69.32|2.754|9.227|[resnet18_pruning_geometric_median.json](configs/pruning/resnet18_pruning_geometric_median.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/resnet18_imagenet_filter_pruning_geomean.pth)|
-|ResNet-34|None|ImageNet|73.26|7.328|21.780|[resnet34_imagenet.json](configs/pruning/resnet34_imagenet.json)|-|
-|ResNet-34|Filter pruning, 40%, geometric median criterion|ImageNet|72.72|5.059|15.467|[resnet34_pruning_geometric_median.json](configs/pruning/resnet34_pruning_geometric_median.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/resnet34_imagenet_filter_pruning_geomean.pth)|
-|GoogLeNet|None|ImageNet|69.72|2.997|6.609|[googlenet_imagenet.json](configs/pruning/googlenet_imagenet.json)|-|
-|GoogLeNet|Filter pruning, 40%, geometric median criterion|ImageNet|68.89|1.362|3.469|[googlenet_pruning_geometric_median.json](configs/pruning/googlenet_pruning_geometric_median.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/googlenet_imagenet_filter_pruning_geomean.pth)|
+|Model|Compression algorithm|Dataset|PyTorch compressed accuracy|GFLOPS|GFLOPS reduction rate|MParams|MParams reduction rate|NNCF config file|PyTorch Checkpoint|
+| :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+|ResNet-50|None|ImageNet|76.16|8.18|-|25.50|-|[resnet50_imagenet.json](configs/quantization/resnet50_imagenet.json)|-|
+|ResNet-50|Filter pruning, 40%, geometric median criterion|ImageNet|75.62|4.58|44.0%|16.06|37.0%|[resnet50_pruning_geometric_median.json](configs/pruning/resnet50_pruning_geometric_median.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/resnet50_imagenet_filter_pruning_geomean.pth)|
+|ResNet-18|None|ImageNet|69.8|3.63|-|11.68|-|[resnet18_imagenet.json](configs/binarization/resnet18_imagenet.json)|-|
+|ResNet-18|Filter pruning, 40%, magnitude criterion|ImageNet|69.26|2.75|24.09%|9.23|21.0%|[resnet18_pruning_magnitude.json](configs/pruning/resnet18_pruning_magnitude.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/resnet18_imagenet_filter_pruning_magnitude.pth)|
+|ResNet-18|Filter pruning, 40%, geometric median criterion|ImageNet|69.32|2.75|24.1%|9.23|21.0%|[resnet18_pruning_geometric_median.json](configs/pruning/resnet18_pruning_geometric_median.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/resnet18_imagenet_filter_pruning_geomean.pth)|
+|ResNet-34|None|ImageNet|73.26|7.33|-|21.78|-|[resnet34_imagenet.json](configs/pruning/resnet34_imagenet.json)|-|
+|ResNet-34|Filter pruning, 40%, geometric median criterion|ImageNet|72.72|5.06|31.0%|15.47|29.0%|[resnet34_pruning_geometric_median.json](configs/pruning/resnet34_pruning_geometric_median.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/resnet34_imagenet_filter_pruning_geomean.pth)|
+|GoogLeNet|None|ImageNet|69.72|2.99|-|6.61|-|[googlenet_imagenet.json](configs/pruning/googlenet_imagenet.json)|-|
+|GoogLeNet|Filter pruning, 40%, geometric median criterion|ImageNet|68.89|1.36|54.6%|3.47|47.5%|[googlenet_pruning_geometric_median.json](configs/pruning/googlenet_pruning_geometric_median.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/googlenet_imagenet_filter_pruning_geomean.pth)|
 
 
 ### Results for accuracy-aware compressed training
