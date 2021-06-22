@@ -14,19 +14,19 @@
 import os
 import torch
 
-from examples.torch.common import restricted_pickle_module
-from nncf.torch.checkpoint_loading import load_state
+from examples.torch.common.model_loader import COMPRESSION_STATE_ATTR
+from examples.torch.common.model_loader import MODEL_STATE_ATTR
 
 
-def save_checkpoint(model, optimizer, epoch, miou, compression_stage, compression_scheduler, config):
+def save_checkpoint(model, compression_ctrl, optimizer, epoch, miou, config):
     """Saves the model in a specified directory with a specified name.save
 
     Keyword arguments:
     - model (``nn.Module``): The model to save.
+    - compression_ctrl (``PTCompressionAlgorithmController``): The controller containing compression state to save.
     - optimizer (``torch.optim``): The optimizer state to save.
     - epoch (``int``): The current epoch for the model.
     - miou (``float``): The mean IoU obtained by the model.
-    - compression_stage (``CompressionStage``): level of compression
     - compression_scheduler: The compression scheduler associated with the model
     - config: Model config".
 
@@ -45,54 +45,9 @@ def save_checkpoint(model, optimizer, epoch, miou, compression_stage, compressio
     checkpoint = {
         'epoch': epoch,
         'miou': miou,
-        'compression_stage': compression_stage,
-        'state_dict': model.state_dict(),
-        'optimizer': optimizer.state_dict(),
-        'scheduler': compression_scheduler.get_state()
+        MODEL_STATE_ATTR: model.state_dict(),
+        COMPRESSION_STATE_ATTR: compression_ctrl.get_compression_state_dict(),
+        'optimizer': optimizer.state_dict()
     }
     torch.save(checkpoint, checkpoint_path)
     return checkpoint_path
-
-
-def load_checkpoint(model, model_path, device_name, optimizer=None, compression_scheduler=None):
-    """Loads the model from a specified directory with a specified name
-
-    Keyword arguments:
-    - model (``nn.Module``): The stored model state is copied to this model
-    instance.
-    - model_path: The model filename.
-    - device_name: Device name for the model to be loaded into.
-    - is_ddp: If true, model will be treated as a DistributedDataParallel instance
-              and the actual model will be loaded into model.module
-    - optimizer (``torch.optim``): The stored optimizer state is copied to this
-    optimizer instance.
-    - compression_ctrl: The compression scheduler for the saved state
-                        to be loaded into
-
-    Returns:
-    The ``model``, ``optimizer``, epoch, mean IoU and ``compression_scheduler``, loaded from the
-    checkpoint.
-
-    """
-    assert os.path.isfile(
-        model_path), "The model file \"{0}\" doesn't exist.".format(model_path)
-
-    # Load the stored model parameters to the model instance
-
-    #
-    # ** WARNING: torch.load functionality uses Python's pickling facilities that
-    # may be used to perform arbitrary code execution during unpickling. Only load the data you
-    # trust.
-    #
-    checkpoint = torch.load(model_path, map_location=device_name,
-                            pickle_module=restricted_pickle_module)
-    load_state(model, checkpoint['state_dict'], is_resume=True)
-    if optimizer is not None:
-        optimizer.load_state_dict(checkpoint['optimizer'])
-    epoch = checkpoint['epoch']
-    miou = checkpoint['miou']
-
-    if "scheduler" in checkpoint and compression_scheduler is not None:
-        compression_scheduler.load_state(checkpoint['scheduler'])
-
-    return model, optimizer, epoch, miou, compression_scheduler

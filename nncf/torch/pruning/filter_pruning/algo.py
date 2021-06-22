@@ -89,7 +89,7 @@ class FilterPruningBuilder(BasePruningAlgoBuilder):
     def create_weight_pruning_operation(self, module):
         return FilterPruningBlock(module.weight.size(module.target_weight_dim_for_compression))
 
-    def build_controller(self, target_model: NNCFNetwork) -> PTCompressionAlgorithmController:
+    def _build_controller(self, target_model: NNCFNetwork) -> PTCompressionAlgorithmController:
         return FilterPruningController(target_model,
                                        self._prunable_types,
                                        self.pruned_module_groups_info,

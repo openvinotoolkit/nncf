@@ -22,6 +22,11 @@ import torch.nn.parallel
 import torch.optim
 import torch.utils.data
 import torch.utils.data.distributed
+
+from examples.torch.common.model_loader import MODEL_STATE_ATTR
+from examples.torch.common.model_loader import extract_model_and_compression_state_dicts
+from examples.torch.common.model_loader import load_resuming_checkpoint
+from nncf.torch.checkpoint_loading import load_state
 from torchvision.models import InceptionOutputs
 
 from examples.torch.common.execution import set_seed
@@ -30,6 +35,7 @@ from examples.torch.classification.main import create_data_loaders, validate, Av
     create_datasets, inception_criterion_fn
 from examples.torch.common.example_logger import logger
 from examples.torch.common.execution import ExecutionMode, prepare_model_for_execution
+from examples.torch.common.model_loader import COMPRESSION_STATE_ATTR
 from examples.torch.common.model_loader import load_model
 from examples.torch.common.utils import configure_logging, print_args, make_additional_checkpoints, get_name, \
     is_pretrained_model_requested, log_common_mlflow_params, SafeMLFLow, configure_device
@@ -39,7 +45,6 @@ from nncf.torch.initialization import register_default_init_args, default_criter
 from nncf.torch.model_creation import create_compressed_model
 from nncf.torch.quantization.algo import QuantizationController
 from nncf.torch.utils import is_main_process
-from examples.torch.classification.common import load_resuming_checkpoint
 
 
 class KDLossCalculator:
@@ -155,9 +160,14 @@ def staged_quantization_main_worker(current_gpu, config):
 
     model.to(config.device)
 
-    resuming_model_sd, resuming_checkpoint = load_resuming_checkpoint(resuming_checkpoint_path)
+    resuming_checkpoint = None
+    if resuming_checkpoint_path is not None:
+        resuming_checkpoint = load_resuming_checkpoint(resuming_checkpoint_path)
+    model_state_dict, compression_state_dict = extract_model_and_compression_state_dicts(resuming_checkpoint)
+    compression_ctrl, model = create_compressed_model(model, nncf_config, compression_state_dict)
+    if model_state_dict is not None:
+        load_state(model, model_state_dict, is_resume=True)
 
-    compression_ctrl, model = create_compressed_model(model, nncf_config, resuming_model_sd)
     if not isinstance(compression_ctrl, (BinarizationController, QuantizationController)):
         raise RuntimeError(
             "The stage quantization sample worker may only be run with the binarization and quantization algorithms!")
@@ -167,8 +177,6 @@ def staged_quantization_main_worker(current_gpu, config):
 
     if config.distributed:
         compression_ctrl.distributed()
-
-    is_inception = 'inception' in model_name
 
     params_to_optimize = model.parameters()
 
@@ -184,7 +192,6 @@ def staged_quantization_main_worker(current_gpu, config):
         config.start_epoch = resuming_checkpoint['epoch']
         best_acc1 = resuming_checkpoint['best_acc1']
         kd_loss_calculator.original_model.load_state_dict(resuming_checkpoint['original_model_state_dict'])
-        compression_ctrl.load_state(resuming_checkpoint)
         if config.mode.lower() == 'train':
             optimizer.load_state_dict(resuming_checkpoint['optimizer'])
             optimizer_scheduler.load_state_dict(resuming_checkpoint['optimizer_scheduler'])
@@ -262,12 +269,11 @@ def train_staged(config, compression_ctrl, model, criterion, criterion_fn, optim
             checkpoint = {
                 'epoch': epoch + 1,
                 'arch': model_name,
-                'state_dict': model.state_dict(),
+                MODEL_STATE_ATTR: model.state_dict(),
+                COMPRESSION_STATE_ATTR: compression_ctrl.get_compression_state_dict(),
                 'original_model_state_dict': kd_loss_calculator.original_model.state_dict(),
                 'best_acc1': best_acc1,
-                'compression_stage': compression_stage,
                 'optimizer': optimizer.state_dict(),
-                'scheduler': compression_ctrl.scheduler.get_state(),
                 'optimizer_scheduler': optimizer_scheduler.state_dict()
             }
 

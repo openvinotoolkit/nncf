@@ -10,11 +10,8 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-import functools
 import inspect
-import operator
 from collections import OrderedDict
-from copy import deepcopy
 from enum import Enum
 from typing import Callable
 from typing import Dict
@@ -23,8 +20,11 @@ from typing import Optional
 from typing import Tuple
 from typing import TypeVar
 
+import functools
 import networkx as nx
+import operator
 import torch
+from copy import deepcopy
 from torch import nn
 
 from nncf.common.graph import MODEL_INPUT_OP_NAME
@@ -279,7 +279,6 @@ class InsertionPointGraph(nx.DiGraph):
 
         return merged_ip_graph
 
-
     @staticmethod
     def get_pre_hook_node_key(node_key: str, in_port_id: int = 0) -> str:
         return InsertionPointGraph.PRE_HOOK_ID_PREFIX + str(in_port_id) + ' ' + node_key
@@ -312,7 +311,6 @@ class InsertionPointGraph(nx.DiGraph):
 
     def get_input_insertion_points(self) -> List[PTTargetPoint]:
         return self._input_ips
-
 
 
 class PTInsertionType(OrderedEnum):
@@ -361,6 +359,9 @@ class PTInsertionPoint:
 
 @ignore_scope
 class NNCFNetwork(nn.Module, PostGraphBuildActing):
+    MODEL_STATE_VERSION_ATTR = '_nncf_model_state_version'
+    MODEL_STATE_VERSION = 1
+
     def __init__(self, module, input_infos: List[ModelInputInfo],
                  dummy_forward_fn=None, wrap_inputs_fn=None, scopes_without_shape_matching=None,
                  ignored_scopes=None, target_scopes=None, reset: bool = False, wrap_outputs_fn=None,
@@ -438,8 +439,6 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
         if self.scopes_without_shape_matching:
             self._compressed_context.add_node_comparators(scopes_without_shape_matching,
                                                           ShapeIgnoringTensorMetaComparator())
-        self._load_listener = None
-
 
     @debuggable_forward
     def forward(self, *args, **kwargs):
@@ -462,6 +461,7 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
             through NNCF's forward once and got turned into TracedTensors by reference access.
         """
         is_traced_tensor_predicate = lambda x: isinstance(x, TracedTensor)
+
         def strip_fn(tensor: TracedTensor) -> torch.Tensor:
             if hasattr(torch.Tensor, 'as_subclass'):
                 return torch.Tensor.as_subclass(tensor, torch.Tensor)
@@ -471,7 +471,6 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
         args = objwalk(args, is_traced_tensor_predicate, strip_fn)
         kwargs = objwalk(kwargs, is_traced_tensor_predicate, strip_fn)
         return args, kwargs
-
 
     # Cannnot use property syntax here, otherwise the wrapped module will end up
     # being twice in the same checkpoint with different prefixes
@@ -487,9 +486,9 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
         from nncf.torch.utils import save_module_state, load_module_state
         saved_state = save_module_state(self)
         model_copy = NNCFNetwork(self.get_nncf_wrapped_model(), self.input_infos,
-                    self._user_dummy_forward_fn, self._wrap_inputs_fn,
-                    self.scopes_without_shape_matching, self.ignored_scopes, self.target_scopes,
-                    reset=True)
+                                 self._user_dummy_forward_fn, self._wrap_inputs_fn,
+                                 self.scopes_without_shape_matching, self.ignored_scopes, self.target_scopes,
+                                 reset=True)
         load_module_state(model_copy, saved_state)
         return model_copy
 

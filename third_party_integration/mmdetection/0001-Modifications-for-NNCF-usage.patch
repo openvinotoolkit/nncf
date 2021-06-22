@@ -487,7 +487,7 @@ index 0000000..c903a55
 +    compression_ctrl, model = create_compressed_model(
 +        model,
 +        nncf_config,
-+        resuming_state_dict=checkpoint,
++        compression_state_dict=checkpoint,
 +        dummy_forward_fn=dummy_forward,
 +        wrap_inputs_fn=wrap_inputs,
 +    )

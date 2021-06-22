@@ -11,7 +11,7 @@
  limitations under the License.
 """
 
-from typing import Any
+from typing import Any, Dict
 
 from nncf.common.utils.ordered_enum import OrderedEnum
 
@@ -37,6 +37,9 @@ class TransformationPriority(OrderedEnum):
     PRUNING_PRIORITY = 2
     SPARSIFICATION_PRIORITY = 3
     QUANTIZATION_PRIORITY = 11
+
+
+TARGET_TYPE_STATE_ATTR = 'name'
 
 
 class TargetType(OrderedEnum):
@@ -78,6 +81,22 @@ class TargetType(OrderedEnum):
     OPERATOR_PRE_HOOK = 6
     OPERATOR_POST_HOOK = 7
 
+    def get_state(self) -> Dict[str, Any]:
+        """
+        Returns a dictionary with Python data structures (dict, list, tuple, str, int, float, True, False, None) that
+        represents state of the object.
+        """
+        return {TARGET_TYPE_STATE_ATTR: self.name}
+
+    @classmethod
+    def from_state(cls, state: Dict[str, Any]) -> 'TargetType':
+        """
+        Creates the object from its state.
+
+        :param state: Output of `get_state()` method.
+        """
+        return TargetType[state[TARGET_TYPE_STATE_ATTR]]
+
 
 class TransformationType(OrderedEnum):
     """
@@ -90,6 +109,7 @@ class TransformationType(OrderedEnum):
     INSERT = 0
     MULTI_INSERT = 1
     REMOVE = 2
+
 
 class TargetPoint:
     """

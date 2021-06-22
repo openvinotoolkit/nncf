@@ -16,11 +16,7 @@ from abc import ABC
 from abc import abstractmethod
 from copy import deepcopy
 from functools import partial
-from typing import Callable
-from typing import Dict
-from typing import List
-from typing import Tuple
-from typing import Union
+from typing import Callable, Dict, List, Tuple, Union
 
 import networkx as nx
 import pytest
@@ -32,7 +28,6 @@ from nncf.torch import nncf_model_input
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNodeName
 from nncf.common.graph.transformations.commands import TargetType
-from nncf.torch.composite_compression import PTCompositeCompressionAlgorithmBuilder
 from nncf.torch.dynamic_graph.graph_tracer import ModelInputInfo
 from nncf.torch.dynamic_graph.graph_tracer import create_dummy_forward_fn
 from nncf.torch.dynamic_graph.graph_tracer import create_input_infos
@@ -42,6 +37,7 @@ from nncf.torch.graph.graph_builder import GraphBuilder
 from nncf.common.hardware.config import HWConfigType
 from nncf.torch.layers import LSTMCellNNCF
 from nncf.torch.layers import NNCF_RNN
+from nncf.torch.model_creation import create_compression_algorithm_builder
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.quantization.quantizer_setup import SingleConfigQuantizerSetup
 from nncf.torch.utils import get_all_modules_by_type
@@ -382,8 +378,8 @@ def test_gnmt_quantization(_case_config):
                                    ['GNMT/ResidualRecurrentDecoder[decoder]/RecurrentAttention[att_rnn]/'
                                     'BahdanauAttention[attn]'])
 
-    composite_builder = PTCompositeCompressionAlgorithmBuilder(config)
-    composite_builder.apply_to(compressed_model)
+    builder = create_compression_algorithm_builder(config, should_init=False)
+    builder.apply_to(compressed_model)
 
     check_model_graph(compressed_model, 'gnmt_variable.dot', _case_config.graph_dir)
 
@@ -787,8 +783,8 @@ def test_compressed_graph_models_hw(desc, hw_config_type):
     input_info_list = create_input_infos(config)
     compressed_model = NNCFNetwork(model, input_infos=input_info_list)
 
+    quantization_builder = create_compression_algorithm_builder(config, should_init=False)  # type: QuantizationBuilder
     # pylint:disable=protected-access
-    quantization_builder = PTCompositeCompressionAlgorithmBuilder(config).child_builders[0]  # type: QuantizationBuilder
     single_config_quantizer_setup = quantization_builder._get_quantizer_setup(compressed_model)
     sketch_graph = compressed_model.get_original_graph()
 

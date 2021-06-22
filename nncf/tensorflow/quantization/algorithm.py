@@ -189,7 +189,7 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
 
         return transformations
 
-    def build_controller(self, model: tf.keras.Model) -> 'QuantizationController':
+    def _build_controller(self, model: tf.keras.Model) -> 'QuantizationController':
         return QuantizationController(model, self.config, self._op_names)
 
     def initialize(self, model: tf.keras.Model) -> None:

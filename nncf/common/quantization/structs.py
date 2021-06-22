@@ -13,7 +13,7 @@
 
 from copy import deepcopy
 from enum import Enum
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Any
 
 from nncf.common.graph import NNCFNode
 from nncf.common.graph import NNCFNodeName
@@ -103,6 +103,25 @@ class QuantizerConfig:
         return self.per_channel == other_qconfig.per_channel and \
                self.signedness_to_force == other_qconfig.signedness_to_force and \
                self.mode == other_qconfig.mode
+
+    def get_state(self) -> Dict[str, Any]:
+        """
+        Returns a dictionary with Python data structures (dict, list, tuple, str, int, float, True, False, None) that
+        represents state of the object.
+        """
+        return {'num_bits': self.num_bits,
+                'mode': self.mode,
+                'signedness_to_force': self.signedness_to_force,
+                'per_channel': self.per_channel}
+
+    @classmethod
+    def from_state(cls, state: Dict[str, Any]) -> 'QuantizerConfig':
+        """
+        Creates the object from its state.
+
+        :param state: Output of `get_state()` method.
+        """
+        return cls(**state)
 
 
 class QuantizerSpec:
