@@ -13,9 +13,9 @@
 
 from typing import List, Type
 
+import nncf.common.graph.operator_metatypes
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.tensorflow.graph.metatypes import keras_layers as layer_metatypes
-from nncf.tensorflow.graph.metatypes import nncf_op as nncf_op_metatypes
 from nncf.tensorflow.graph.metatypes import tf_ops as op_metatypes
 
 ALL_LAYER_METATYPES_WITH_WEIGHTS = [
@@ -114,39 +114,16 @@ ELEMENTWISE_LAYER_METATYPES = [
 ]
 
 INPUT_LAYER_METATYPES = [
-    nncf_op_metatypes.InputNoopMetatype,
+    nncf.common.graph.operator_metatypes.InputNoopMetatype,
     layer_metatypes.TFInputLayerMetatype
 ]
 
 OUTPUT_LAYER_METATYPES = [
-    nncf_op_metatypes.OutputNoopMetatype,
+    nncf.common.graph.operator_metatypes.OutputNoopMetatype,
 ]
 
 
 def get_operator_metatypes() -> List[Type[OperatorMetatype]]:
-    """
-    Returns a list of the operator metatypes.
-
-    :return: List of the operator metatypes .
-    """
     keras_metatypes_list = list(layer_metatypes.KERAS_LAYER_METATYPES.registry_dict.values())
     tf_metatypes_list = list(op_metatypes.TF_OPERATION_METATYPES.registry_dict.values())
     return keras_metatypes_list + tf_metatypes_list
-
-
-def get_input_metatypes() -> List[Type[OperatorMetatype]]:
-    """
-    Returns a list of the input operator metatypes.
-
-    :return: List of the input operator metatypes .
-    """
-    return INPUT_LAYER_METATYPES
-
-
-def get_output_metatypes() -> List[Type[OperatorMetatype]]:
-    """
-    Returns a list of the output operator metatypes.
-
-    :return: List of the output operator metatypes .
-    """
-    return OUTPUT_LAYER_METATYPES

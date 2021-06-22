@@ -19,7 +19,7 @@ from torch import nn
 from torch.optim import SGD
 from torch.nn import functional as F
 
-from nncf.torch import AdaptiveCompressionTrainingLoop
+from nncf.torch import PTAdaptiveCompressionTrainingLoop
 from nncf.torch.initialization import register_default_init_args
 
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
@@ -112,7 +112,7 @@ def test_adaptive_compression_training_loop(max_accuracy_degradation,
         optimizer = SGD(model.parameters(), lr=learning_rate)
         return optimizer, None
 
-    acc_aware_training_loop = AdaptiveCompressionTrainingLoop(config, compression_ctrl)
+    acc_aware_training_loop = PTAdaptiveCompressionTrainingLoop(config, compression_ctrl)
     model = acc_aware_training_loop.run(model,
                                         train_epoch_fn=train_fn,
                                         validate_fn=partial(validate_fn, train_loader=train_loader),

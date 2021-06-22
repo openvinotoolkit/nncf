@@ -5,8 +5,8 @@ from typing import List
 
 import torch
 
-from nncf.common.graph import MODEL_INPUT_OP_NAME
-from nncf.common.graph import MODEL_OUTPUT_OP_NAME
+from nncf.common.graph.definitions import MODEL_INPUT_OP_NAME
+from nncf.common.graph.definitions import MODEL_OUTPUT_OP_NAME
 from nncf.torch.dynamic_graph.patch_pytorch import register_operator
 from nncf.torch.dynamic_graph.graph_tracer import ModelInputInfo, create_mock_tensor
 from nncf.torch.utils import is_tensor, objwalk, is_traced_tensor
@@ -17,9 +17,11 @@ from nncf.common.utils.logger import logger as nncf_logger
 def nncf_model_input(tensor: 'torch.Tensor'):
     return tensor
 
+
 @register_operator(name=MODEL_OUTPUT_OP_NAME)
 def nncf_model_output(tensor: 'torch.Tensor'):
     return tensor
+
 
 def wrap_nncf_model_inputs_with_objwalk(model_args, model_kwargs):
     model_args = objwalk(model_args, is_tensor, nncf_model_input)

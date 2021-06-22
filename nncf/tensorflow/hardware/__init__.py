@@ -11,7 +11,6 @@
  limitations under the License.
 """
 
-__nncf_backend__ = 'Torch'
 
 
 def infer_backend_from_compression_controller(compression_controller):

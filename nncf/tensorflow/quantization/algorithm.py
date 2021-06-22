@@ -23,7 +23,6 @@ from nncf.common.graph import Dtype
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.graph.transformations.commands import TransformationPriority
-from nncf.common.initialization.batchnorm_adaptation import BatchnormAdaptationAlgorithm
 from nncf.tensorflow.quantization.initializers.init_range import TFRangeInitParams
 from nncf.common.quantization.structs import QuantizationConstraints
 from nncf.common.quantization.structs import QuantizationMode
@@ -38,6 +37,7 @@ from nncf.config.extractors import extract_bn_adaptation_init_params
 from nncf.tensorflow.algorithm_selector import TF_COMPRESSION_ALGORITHMS
 from nncf.tensorflow.api.compression import TFCompressionAlgorithmBuilder
 from nncf.tensorflow.api.compression import TFCompressionAlgorithmController
+from nncf.tensorflow.batchnorm_adaptation import TFBatchnormAdaptationAlgorithm
 from nncf.tensorflow.graph import patterns as p
 from nncf.tensorflow.graph.converter import convert_keras_model_to_nncf_graph
 from nncf.tensorflow.graph.metatypes.common import ELEMENTWISE_LAYER_METATYPES
@@ -208,7 +208,7 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
 
     def _run_batchnorm_adaptation(self, model: tf.keras.Model) -> None:
         if self._bn_adaptation is None:
-            self._bn_adaptation = BatchnormAdaptationAlgorithm(
+            self._bn_adaptation = TFBatchnormAdaptationAlgorithm(
                 **extract_bn_adaptation_init_params(self.config))
         self._bn_adaptation.run(model)
 

@@ -10,12 +10,18 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-
-from typing import Optional, List, Tuple, Any
+from abc import abstractmethod
+from typing import Any
+from typing import List
+from typing import Optional
+from typing import Tuple
+from typing import TypeVar
 
 from nncf.api.compression import CompressionAlgorithmController
+from nncf.common.exporter import Exporter
 from nncf.common.schedulers import StubCompressionScheduler
-import nncf.common.factory as factory
+
+ModelType = TypeVar('ModelType')
 
 
 class BaseCompressionAlgorithmController(CompressionAlgorithmController):
@@ -49,8 +55,16 @@ class BaseCompressionAlgorithmController(CompressionAlgorithmController):
                 - ({'x': None, 'y': y},) for keyword arguments only.
         """
         self.prepare_for_export()
-        exporter = factory.create_exporter(self.model, input_names, output_names, model_args)
+        exporter = self._create_exporter(self.model, input_names, output_names, model_args)
         exporter.export_model(save_path, save_format)
+
+    @abstractmethod
+    def _create_exporter(self,
+                         model: ModelType,
+                         input_names: Optional[List[str]] = None,
+                         output_names: Optional[List[str]] = None,
+                         model_args: Optional[Tuple[Any, ...]] = None) -> Exporter:
+        pass
 
     def disable_scheduler(self) -> None:
         self._scheduler = StubCompressionScheduler()

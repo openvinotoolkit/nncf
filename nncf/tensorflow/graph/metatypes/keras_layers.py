@@ -16,6 +16,7 @@ from typing import List, Optional, Type
 
 import tensorflow as tf
 
+from nncf.common.graph import InputNoopMetatype
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.operator_metatypes import OperatorMetatypeRegistry
 from nncf.common.hardware.opset import HWConfigOpName
@@ -82,7 +83,7 @@ class TFLayerWithWeightsMetatype(TFLayerMetatype):
 
 
 @KERAS_LAYER_METATYPES.register()
-class NoopMetatype(TFLayerMetatype):
+class TFLayerNoopMetatype(TFLayerMetatype):
     name = 'noop'
 
     @classmethod
@@ -538,8 +539,8 @@ class TFLayerNormalizationLayerMetatype(TFLayerMetatype):
 
 
 @KERAS_LAYER_METATYPES.register()
-class TFInputLayerMetatype(TFLayerMetatype):
-    name = 'InputLayer'
+class TFInputLayerMetatype(TFLayerMetatype, InputNoopMetatype):  # must inherit in this exact order so that
+    name = 'InputLayer'                                          # the TF version of get_all_aliases is called
     keras_layer_names = ['InputLayer']
 
 

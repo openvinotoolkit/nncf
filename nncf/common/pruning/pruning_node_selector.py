@@ -26,15 +26,9 @@ from nncf.common.pruning.clusterization import Clusterization
 from nncf.common.pruning.model_analysis import cluster_special_ops
 from nncf.common.pruning.clusterization import Cluster
 from nncf.common.utils.logger import logger as nncf_logger
-from nncf.common.utils.backend import __nncf_backend__
 from nncf.common.utils.helpers import should_consider_scope
-
-if __nncf_backend__ == 'Torch':
-    from nncf.torch.pruning.utils import is_depthwise_conv
-    from nncf.torch.pruning.utils import is_conv_with_downsampling
-elif __nncf_backend__ == 'TensorFlow':
-    from nncf.tensorflow.pruning.utils import is_depthwise_conv
-    from nncf.tensorflow.pruning.utils import is_conv_with_downsampling
+from nncf.common.pruning.utils import is_depthwise_conv
+from nncf.common.pruning.utils import is_conv_with_downsampling
 
 
 class PruningNodeSelector:

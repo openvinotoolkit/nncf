@@ -19,7 +19,6 @@ from nncf import NNCFConfig
 from nncf.api.compression import CompressionLoss
 from nncf.api.compression import CompressionScheduler
 from nncf.common.graph.transformations.commands import TransformationPriority
-from nncf.common.initialization.batchnorm_adaptation import BatchnormAdaptationAlgorithm
 from nncf.common.sparsity.schedulers import SPARSITY_SCHEDULERS
 from nncf.common.sparsity.statistics import LayerThreshold
 from nncf.common.sparsity.statistics import MagnitudeSparsityStatistics
@@ -28,6 +27,7 @@ from nncf.common.utils.helpers import should_consider_scope
 from nncf.config.extractors import extract_bn_adaptation_init_params
 from nncf.tensorflow.algorithm_selector import TF_COMPRESSION_ALGORITHMS
 from nncf.tensorflow.api.compression import TFCompressionAlgorithmBuilder
+from nncf.tensorflow.batchnorm_adaptation import TFBatchnormAdaptationAlgorithm
 from nncf.tensorflow.graph.converter import convert_keras_model_to_nncf_graph
 from nncf.tensorflow.graph.converter import convert_layer_graph_to_nncf_graph
 from nncf.tensorflow.graph.transformations.commands import TFInsertionCommand
@@ -241,5 +241,5 @@ class MagnitudeSparsityController(BaseSparsityController):
 
     def _run_batchnorm_adaptation(self):
         if self._bn_adaptation is None:
-            self._bn_adaptation = BatchnormAdaptationAlgorithm(**extract_bn_adaptation_init_params(self._config))
+            self._bn_adaptation = TFBatchnormAdaptationAlgorithm(**extract_bn_adaptation_init_params(self._config))
         self._bn_adaptation.run(self.model)

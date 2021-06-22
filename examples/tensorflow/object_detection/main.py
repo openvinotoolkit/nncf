@@ -19,10 +19,10 @@ import tensorflow as tf
 import numpy as np
 
 from nncf.tensorflow import create_compressed_model
+from nncf.tensorflow import TFAdaptiveCompressionTrainingLoop
 from nncf.tensorflow.helpers.model_manager import TFOriginalModelManager
 from nncf.tensorflow.initialization import register_default_init_args
 from nncf.common.utils.tensorboard import prepare_for_tensorboard
-from nncf.common.accuracy_aware_training.training_loop import AdaptiveCompressionTrainingLoop
 from nncf.config.utils import is_accuracy_aware_training
 from nncf.config.structures import ModelEvaluationArgs
 

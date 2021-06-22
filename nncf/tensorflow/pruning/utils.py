@@ -14,23 +14,10 @@
 import numpy as np
 import tensorflow as tf
 
-from nncf.tensorflow.graph.metatypes.common import DECONV_LAYER_METATYPES
-from nncf.tensorflow.graph.metatypes.common import DEPTHWISE_CONV_LAYER_METATYPES
+from nncf.common.graph import NNCFNode
 from nncf.tensorflow.graph.metatypes.matcher import get_keras_layer_metatype
 from nncf.tensorflow.layers.data_layout import get_weight_channel_axis
 from nncf.tensorflow.layers.wrapper import NNCFWrapper
-from nncf.common.graph import NNCFNode
-from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
-
-
-def is_depthwise_conv(node: NNCFNode) -> bool:
-    return node.metatype in DEPTHWISE_CONV_LAYER_METATYPES
-
-
-def is_conv_with_downsampling(node: NNCFNode) -> bool:
-    return isinstance(node.layer_attributes, ConvolutionLayerAttributes) \
-           and not np.all(np.array(node.layer_attributes.stride) == 1) \
-           and node.metatype not in DECONV_LAYER_METATYPES
 
 
 def is_shared(node: NNCFNode) -> bool:

@@ -24,12 +24,9 @@ from nncf.common.graph.graph_matching import get_edge_boundaries
 from nncf.common.graph.layer_attributes import BaseLayerAttributes
 from nncf.common.graph.layer_attributes import Dtype
 from nncf.common.graph.operator_metatypes import OperatorMetatype
-from nncf.common.graph.operator_metatypes import get_input_metatypes
-from nncf.common.graph.operator_metatypes import get_output_metatypes
+from nncf.common.graph.operator_metatypes import InputNoopMetatype
+from nncf.common.graph.operator_metatypes import OutputNoopMetatype
 from nncf.common.utils.logger import logger as nncf_logger
-
-MODEL_INPUT_OP_NAME = 'nncf_model_input'
-MODEL_OUTPUT_OP_NAME = 'nncf_model_output'
 
 NNCFNodeName = str
 LayerName = str
@@ -94,11 +91,6 @@ class NNCFNode:
                and self.data == other.data \
                and self.node_type == other.node_type \
                and self.layer_attributes == other.layer_attributes
-
-
-class NNCFGraphNodeType:
-    INPUT_NODE = MODEL_INPUT_OP_NAME
-    OUTPUT_NODE = MODEL_OUTPUT_OP_NAME
 
 
 class NNCFGraphEdge:
@@ -402,10 +394,10 @@ class NNCFGraph:
 
         node = NNCFNode(node_id, data=attrs)
 
-        if node.metatype in get_input_metatypes():
+        if issubclass(node.metatype, InputNoopMetatype):
             self._input_nncf_nodes[node_id] = node
 
-        if node.metatype in get_output_metatypes():
+        if issubclass(node.metatype, OutputNoopMetatype):
             self._output_nncf_nodes[node_id] = node
 
         if layer_name is not None:

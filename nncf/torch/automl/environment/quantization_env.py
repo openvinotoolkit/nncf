@@ -40,6 +40,7 @@ from nncf.common.quantization.structs import QuantizerConfig
 from nncf.config.extractors import extract_bn_adaptation_init_params
 from nncf.common.utils.logger import logger
 from nncf.common.hardware.config import HWConfigType
+from nncf.torch.batchnorm_adaptation import PTBatchnormAdaptationAlgorithm
 from nncf.torch.debug import DEBUG_LOG_DIR
 from nncf.torch.debug import is_debug
 from nncf.torch.initialization import PartialDataLoader
@@ -47,7 +48,6 @@ from nncf.torch.quantization.layers import BaseQuantizer
 from nncf.torch.quantization.algo import ExperimentalQuantizationController
 from nncf.torch.quantization.algo import NNCFNetwork
 from nncf.torch.quantization.algo import QuantizationController
-from nncf.common.initialization.batchnorm_adaptation import BatchnormAdaptationAlgorithm
 from nncf.common.utils.os import safe_open
 from nncf.torch.quantization.precision_constraints import HardwareQuantizationConstraints
 from nncf.torch.quantization.precision_init.compression_ratio import CompressionRatioCalculator
@@ -467,7 +467,7 @@ class QuantizationEnv:
 
     def _run_batchnorm_adaptation(self):
         if self._bn_adaptation is None:
-            self._bn_adaptation = BatchnormAdaptationAlgorithm(
+            self._bn_adaptation = PTBatchnormAdaptationAlgorithm(
             **extract_bn_adaptation_init_params(self.qctrl.quantization_config))
         self._bn_adaptation.run(self.qctrl.model)
 

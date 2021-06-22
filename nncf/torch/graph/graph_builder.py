@@ -64,7 +64,7 @@ class GraphConverter:
                 metatype = subtype
 
             is_integer_input = False
-            if metatype == InputNoopMetatype and input_infos is not None:
+            if issubclass(metatype, InputNoopMetatype) and input_infos is not None:
                 input_id = op_address.call_order
                 if input_infos[input_id].is_integer_input():
                     is_integer_input = True

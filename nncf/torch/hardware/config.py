@@ -12,22 +12,13 @@
 """
 
 from typing import List
+from typing import Type
 
-from nncf.common.graph import NNCFGraphNodeType
-from nncf.common.graph.operator_metatypes import OperatorMetatype
-
-
-class InputNoopMetatype(OperatorMetatype):
-    name = "input_noop"
-
-    @classmethod
-    def get_all_aliases(cls) -> List[str]:
-        return [NNCFGraphNodeType.INPUT_NODE]
+from nncf.common.graph import OperatorMetatype
+from nncf.common.hardware.config import HWConfig
+from nncf.torch.graph.operator_metatypes import get_operator_metatypes
 
 
-class OutputNoopMetatype(OperatorMetatype):
-    name = "output_noop"
-
-    @classmethod
-    def get_all_aliases(cls) -> List[str]:
-        return [NNCFGraphNodeType.OUTPUT_NODE]
+class PTHWConfig(HWConfig):
+    def _get_available_operator_metatypes_for_matching(self) -> List[Type[OperatorMetatype]]:
+        return get_operator_metatypes()

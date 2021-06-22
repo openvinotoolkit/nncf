@@ -17,8 +17,8 @@ from copy import deepcopy
 import tensorflow as tf
 
 from nncf import NNCFConfig
-from nncf.common.initialization.batchnorm_adaptation import BatchnormAdaptationAlgorithm
 from nncf.config.extractors import extract_bn_adaptation_init_params
+from nncf.tensorflow.batchnorm_adaptation import TFBatchnormAdaptationAlgorithm
 from nncf.tensorflow.graph.metatypes.keras_layers import TFBatchNormalizationLayerMetatype
 from nncf.tensorflow.graph.metatypes.matcher import get_keras_layer_metatype
 from nncf.tensorflow.initialization import register_default_init_args
@@ -94,7 +94,7 @@ def test_parameter_update():
 
     config = get_config_for_test()
 
-    bn_adaptation = BatchnormAdaptationAlgorithm(**extract_bn_adaptation_init_params(config))
+    bn_adaptation = TFBatchnormAdaptationAlgorithm(**extract_bn_adaptation_init_params(config))
     bn_adaptation.run(model)
 
     for layer in model.layers:
@@ -115,7 +115,7 @@ def test_all_parameter_keep():
 
     config = get_config_for_test(num_bn_adaptation_samples=0, num_bn_forget_samples=0)
 
-    bn_adaptation = BatchnormAdaptationAlgorithm(**extract_bn_adaptation_init_params(config))
+    bn_adaptation = TFBatchnormAdaptationAlgorithm(**extract_bn_adaptation_init_params(config))
     bn_adaptation.run(model)
 
     for layer in model.layers:

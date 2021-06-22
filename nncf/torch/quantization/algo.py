@@ -32,8 +32,7 @@ from torch import nn
 from nncf.api.compression import CompressionLoss
 from nncf.api.compression import CompressionScheduler
 from nncf.api.compression import CompressionStage
-from nncf.common.initialization.batchnorm_adaptation import BatchnormAdaptationAlgorithm
-from nncf.common.graph import MODEL_INPUT_OP_NAME
+from nncf.common.graph.definitions import MODEL_INPUT_OP_NAME
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.graph import NNCFNodeName
@@ -59,6 +58,7 @@ from nncf.config.extractors import extract_bn_adaptation_init_params
 from nncf.config.extractors import extract_range_init_params
 from nncf.torch.algo_selector import COMPRESSION_ALGORITHMS
 from nncf.torch.algo_selector import ZeroCompressionLoss
+from nncf.torch.batchnorm_adaptation import PTBatchnormAdaptationAlgorithm
 from nncf.torch.compression_method_api import PTCompressionAlgorithmBuilder
 from nncf.torch.compression_method_api import PTCompressionAlgorithmController
 from nncf.torch.debug import CallCountTracker
@@ -72,6 +72,7 @@ from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.graph.transformations.commands import TransformationPriority
 from nncf.torch.graph.transformations.layout import PTTransformationLayout
 from nncf.torch.graph.patterns import get_full_pattern_graph
+from nncf.torch.hardware.config import PTHWConfig
 from nncf.torch.initialization import SimpleDataLoaderRunner
 from nncf.torch.module_operations import UpdatePaddingValue
 from nncf.torch.nncf_network import EXTERNAL_QUANTIZERS_STORAGE_NAME
@@ -453,8 +454,8 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
 
         hw_config_type = self.config.get("hw_config_type")
         if hw_config_type is not None:
-            hw_config_path = HWConfig.get_path_to_hw_config(hw_config_type)
-            self.hw_config = HWConfig.from_json(hw_config_path)
+            hw_config_path = PTHWConfig.get_path_to_hw_config(hw_config_type)
+            self.hw_config = PTHWConfig.from_json(hw_config_path)
 
         self._range_init_params = None
         self._precision_init_type = None
@@ -1043,7 +1044,7 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
 
     def initialize(self, model: NNCFNetwork) -> None:
         if is_main_process() and self.should_init:
-            bn_adaptation = BatchnormAdaptationAlgorithm(
+            bn_adaptation = PTBatchnormAdaptationAlgorithm(
                 **extract_bn_adaptation_init_params(self.config))
             bn_adaptation.run(model)
 

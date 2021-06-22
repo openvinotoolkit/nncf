@@ -25,8 +25,8 @@ from typing import Tuple
 
 import networkx as nx
 
-from nncf.common.graph import MODEL_INPUT_OP_NAME
-from nncf.common.graph import MODEL_OUTPUT_OP_NAME
+from nncf.common.graph.definitions import MODEL_INPUT_OP_NAME
+from nncf.common.graph.definitions import MODEL_OUTPUT_OP_NAME
 from nncf.common.graph import NNCFNode
 from nncf.common.graph import NNCFNodeName
 from nncf.common.graph.transformations.commands import TargetType
@@ -321,7 +321,7 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
                 else:
                     qpg_node[self.OPERATOR_METATYPE_NODE_ATTR] = PTOperatorMetatypeNodeMatcher.match(nncf_node_ref)
 
-                if nncf_node_ref.metatype == InputNoopMetatype:
+                if issubclass(nncf_node_ref.metatype, InputNoopMetatype):
                     self._input_node_keys_vs_nncf_nodes[node_key] = nncf_node_ref
 
                 if nncf_node_ref.is_in_iteration_scope():
@@ -1609,7 +1609,8 @@ class QuantizerPropagationSolver:
         # Will handle the "wildcard" quantization situation for the time being
         if default_qconfig_list is not None:
             for op_meta, qconf_list in self._operator_allowed_qconfigs_map.items():
-                trait = self._operator_quantization_trait_map[op_meta]
+                trait = self._operator_quantization_trait_map.get(op_meta,
+                                                                  QuantizationTrait.QUANTIZATION_AGNOSTIC)
                 if trait == QuantizationTrait.INPUTS_QUANTIZABLE:
                     if HWConfig.is_qconf_list_corresponding_to_unspecified_op(qconf_list):
                         self._operator_allowed_qconfigs_map[op_meta] = default_qconfig_list
@@ -1912,7 +1913,8 @@ class QuantizerPropagationSolver:
                     warnings.warn("Unknown metatype for operator node: {}".format(node_key))
                     trait = QuantizationTrait.QUANTIZATION_AGNOSTIC
                 else:
-                    trait = self._operator_quantization_trait_map[quant_det_id]
+                    trait = self._operator_quantization_trait_map.get(quant_det_id,
+                                                                      QuantizationTrait.QUANTIZATION_AGNOSTIC)
                 node[QuantizerPropagationStateGraph.QUANTIZATION_TRAIT_NODE_ATTR] = trait
                 if trait == QuantizationTrait.INPUTS_QUANTIZABLE:
                     node[QuantizerPropagationStateGraph.ALLOWED_INPUT_QUANTIZATION_TYPES_NODE_ATTR] = \
@@ -1923,8 +1925,6 @@ class QuantizerPropagationSolver:
         # TODO: ensure that there are no name collisions between ops in different torch subpackages with the same name
         retval = {}
         if self._hw_config is None:
-            for op_meta in get_operator_metatypes():
-                retval[op_meta] = QuantizationTrait.QUANTIZATION_AGNOSTIC  # Default value
             for trait, meta_list in DEFAULT_QUANT_TRAIT_TO_OP_DICT.items():
                 for op_meta in meta_list:  # type: OperatorMetatype
                     retval[op_meta] = trait

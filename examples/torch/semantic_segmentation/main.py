@@ -38,6 +38,7 @@ from examples.torch.common.example_logger import logger
 from examples.torch.common.execution import get_execution_mode, \
     prepare_model_for_execution, start_worker
 from nncf.api.compression import CompressionStage
+from nncf.torch import PTAdaptiveCompressionTrainingLoop
 from nncf.torch.initialization import register_default_init_args
 from examples.torch.common.model_loader import load_model, load_resuming_model_state_dict_and_checkpoint_from_path
 from examples.torch.common.optimizer import make_optimizer
@@ -48,7 +49,6 @@ from examples.torch.semantic_segmentation.metric import IoU
 from examples.torch.semantic_segmentation.test import Test
 from examples.torch.semantic_segmentation.train import Train
 from examples.torch.semantic_segmentation.utils.checkpoint import save_checkpoint
-from nncf.torch import AdaptiveCompressionTrainingLoop
 from nncf.torch import create_compressed_model
 from nncf.torch.utils import is_main_process
 
@@ -575,7 +575,7 @@ def main_worker(current_gpu, config):
             optimizer, lr_scheduler = make_optimizer(params_to_optimize, config)
             return optimizer, lr_scheduler
 
-        acc_aware_training_loop = AdaptiveCompressionTrainingLoop(nncf_config, compression_ctrl)
+        acc_aware_training_loop = PTAdaptiveCompressionTrainingLoop(nncf_config, compression_ctrl)
         model = acc_aware_training_loop.run(model,
                                             train_epoch_fn=train_epoch_fn,
                                             validate_fn=validate_fn,

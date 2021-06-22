@@ -11,9 +11,11 @@
  limitations under the License.
 """
 
-from typing import List, Optional, Type
+from typing import List
+from typing import Optional
+from typing import Type
 
-from nncf.common.utils.backend import __nncf_backend__
+from nncf.common.graph.definitions import NNCFGraphNodeType
 from nncf.common.utils.registry import Registry
 
 
@@ -118,52 +120,25 @@ class OperatorMetatypeRegistry(Registry):
         return self._op_name_to_op_meta_dict[op_name]
 
 
-def get_operator_metatypes() -> List[Type[OperatorMetatype]]:
-    """
-    Returns a list of the operator metatypes.
+class NoopMetatype(OperatorMetatype):
+    name = "noop"
 
-    :return: List of operator metatypes .
-    """
-    if __nncf_backend__ == 'Torch':
-        from nncf.torch.graph.operator_metatypes \
-            import get_operator_metatypes as get_operator_metatypes_pt
-        operator_metatypes = get_operator_metatypes_pt()
-    elif __nncf_backend__ == 'TensorFlow':
-        from nncf.tensorflow.graph.metatypes.common \
-            import get_operator_metatypes as get_operator_metatypes_tf
-        operator_metatypes = get_operator_metatypes_tf()
-    return operator_metatypes
+    @classmethod
+    def get_all_aliases(cls) -> List[str]:
+        return [cls.name]
 
 
-def get_input_metatypes() -> List[Type[OperatorMetatype]]:
-    """
-    Returns a list of the input operator metatypes.
+class InputNoopMetatype(OperatorMetatype):
+    name = "input_noop"
 
-    :return: List of the input operator metatypes .
-    """
-    if __nncf_backend__ == 'Torch':
-        from nncf.torch.graph.operator_metatypes \
-            import get_input_metatypes as get_input_metatypes_pt
-        input_metatypes = get_input_metatypes_pt()
-    elif __nncf_backend__ == 'TensorFlow':
-        from nncf.tensorflow.graph.metatypes.common \
-            import get_input_metatypes as get_input_metatypes_tf
-        input_metatypes = get_input_metatypes_tf()
-    return input_metatypes
+    @classmethod
+    def get_all_aliases(cls) -> List[str]:
+        return [NNCFGraphNodeType.INPUT_NODE]
 
 
-def get_output_metatypes() -> List[Type[OperatorMetatype]]:
-    """
-    Returns a list of the output operator metatypes.
+class OutputNoopMetatype(OperatorMetatype):
+    name = "output_noop"
 
-    :return: List of the output operator metatypes .
-    """
-    if __nncf_backend__ == 'Torch':
-        from nncf.torch.graph.operator_metatypes \
-            import get_output_metatypes as get_output_metatypes_pt
-        output_metatypes = get_output_metatypes_pt()
-    if __nncf_backend__ == 'TensorFlow':
-        from nncf.tensorflow.graph.metatypes.common \
-            import get_output_metatypes as get_output_metatypes_tf
-        output_metatypes = get_output_metatypes_tf()
-    return output_metatypes
+    @classmethod
+    def get_all_aliases(cls) -> List[str]:
+        return [NNCFGraphNodeType.OUTPUT_NODE]

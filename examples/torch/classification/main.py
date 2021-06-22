@@ -49,9 +49,9 @@ from examples.torch.common.utils import configure_logging, configure_paths, crea
     print_args, make_additional_checkpoints, get_name, is_staged_quantization, \
     is_pretrained_model_requested, log_common_mlflow_params, SafeMLFLow, MockDataset, configure_device
 from examples.torch.common.utils import write_metrics
-from nncf.torch import AdaptiveCompressionTrainingLoop
 from nncf.torch import create_compressed_model
 from nncf.api.compression import CompressionStage
+from nncf.torch import PTAdaptiveCompressionTrainingLoop
 from nncf.torch.dynamic_graph.graph_tracer import create_input_infos
 from nncf.torch.initialization import register_default_init_args, default_criterion_fn
 from nncf.torch.utils import safe_thread_call, is_main_process
@@ -229,7 +229,7 @@ def main_worker(current_gpu, config: SampleConfig):
                 return optimizer, lr_scheduler
 
             # instantiate and run accuracy-aware training loop
-            acc_aware_training_loop = AdaptiveCompressionTrainingLoop(nncf_config, compression_ctrl)
+            acc_aware_training_loop = PTAdaptiveCompressionTrainingLoop(nncf_config, compression_ctrl)
             model = acc_aware_training_loop.run(model,
                                                 train_epoch_fn=train_epoch_fn,
                                                 validate_fn=validate_fn,

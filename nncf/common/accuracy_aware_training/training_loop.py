@@ -12,6 +12,7 @@
 """
 from abc import ABC
 from copy import copy
+from typing import Type
 from typing import TypeVar
 from functools import partial
 from abc import abstractmethod
@@ -20,12 +21,12 @@ import numpy as np
 from scipy.interpolate import interp1d
 
 from nncf.api.compression import CompressionAlgorithmController
+from nncf.common.accuracy_aware_training.runner import BaseAccuracyAwareTrainingRunner
 from nncf.common.composite_compression import CompositeCompressionAlgorithmController
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.common.utils.registry import Registry
 from nncf.common.utils.backend import infer_backend_from_compression_controller
 from nncf.config.config import NNCFConfig
-
 
 ModelType = TypeVar('ModelType')
 ADAPTIVE_COMPRESSION_CONTROLLERS = Registry('adaptive_compression_controllers')
@@ -85,6 +86,10 @@ class AdaptiveCompressionTrainingLoop(TrainingLoop):
         if self.adaptive_controller is None:
             raise RuntimeError('No compression algorithm supported by the accuracy-aware training '
                                'runner was specified in the config')
+
+    @abstractmethod
+    def _create_runner_cls(self) -> Type[BaseAccuracyAwareTrainingRunner]:
+        pass
 
     def _get_adaptive_compression_ctrl(self, compression_controller, nncf_config):
         adaptive_compression_controllers = self._adaptive_compression_controllers()

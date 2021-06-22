@@ -10,9 +10,23 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+from typing import Optional
 
+from nncf.common.initialization.batchnorm_adaptation import BatchnormAdaptationAlgorithm
 from nncf.common.initialization.batchnorm_adaptation import BatchnormAdaptationAlgorithmImpl
+from nncf.common.initialization.dataloader import NNCFDataLoader
 from nncf.torch.initialization import DataLoaderBNAdaptationRunner
+
+
+class PTBatchnormAdaptationAlgorithm(BatchnormAdaptationAlgorithm):
+    def _create_bn_adaptation_algorithm_impl(self, data_loader: NNCFDataLoader,
+                                             num_bn_adaptation_steps: int,
+                                             num_bn_forget_steps: int,
+                                             device: Optional[str] = None) -> BatchnormAdaptationAlgorithmImpl:
+        return PTBatchnormAdaptationAlgorithmImpl(data_loader,
+                                                  num_bn_adaptation_steps,
+                                                  num_bn_forget_steps,
+                                                  device)
 
 
 class PTBatchnormAdaptationAlgorithmImpl(BatchnormAdaptationAlgorithmImpl):

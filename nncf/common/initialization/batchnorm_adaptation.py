@@ -11,14 +11,14 @@
  limitations under the License.
 """
 
+from abc import ABC
+from abc import abstractmethod
 from typing import Optional
-from abc import ABC, abstractmethod
 
 import math
 
 from nncf.api.compression import ModelType
 from nncf.common.initialization.dataloader import NNCFDataLoader
-from nncf.common.utils.backend import __nncf_backend__
 
 
 class BatchnormAdaptationAlgorithmImpl(ABC):
@@ -58,32 +58,7 @@ class BatchnormAdaptationAlgorithmImpl(ABC):
         """
 
 
-def _create_bn_adaptation_algorithm_impl(data_loader: NNCFDataLoader,
-                                         num_bn_adaptation_steps: int,
-                                         num_bn_forget_steps: int,
-                                         device: Optional[str] = None) -> BatchnormAdaptationAlgorithmImpl:
-    """
-    Factory for building a batchnorm adaptation algorithm implementation.
-
-    :return: Implementation of the `BatchnormAdaptationAlgorithmImpl` class.
-    """
-    if __nncf_backend__ == 'Torch':
-        from nncf.torch.batchnorm_adaptation import PTBatchnormAdaptationAlgorithmImpl
-        bn_adaptation_algorithm_impl = PTBatchnormAdaptationAlgorithmImpl(data_loader,
-                                                                          num_bn_adaptation_steps,
-                                                                          num_bn_forget_steps,
-                                                                          device)
-    elif __nncf_backend__ == 'TensorFlow':
-        from nncf.tensorflow.batchnorm_adaptation import TFBatchnormAdaptationAlgorithmImpl
-        bn_adaptation_algorithm_impl = TFBatchnormAdaptationAlgorithmImpl(data_loader,
-                                                                          num_bn_adaptation_steps,
-                                                                          num_bn_forget_steps,
-                                                                          device)
-
-    return bn_adaptation_algorithm_impl
-
-
-class BatchnormAdaptationAlgorithm:
+class BatchnormAdaptationAlgorithm(ABC):
     """
     This algorithm updates the statistics of the batch normalization layers
     passing several batches of data through the model. This allows to correct
@@ -118,10 +93,10 @@ class BatchnormAdaptationAlgorithm:
         num_bn_adaptation_steps = math.ceil(num_bn_adaptation_samples / data_loader.batch_size)
         num_bn_forget_steps = math.ceil(num_bn_forget_samples / data_loader.batch_size)
 
-        self._impl = _create_bn_adaptation_algorithm_impl(data_loader,
-                                                          num_bn_adaptation_steps,
-                                                          num_bn_forget_steps,
-                                                          device)
+        self._impl = self._create_bn_adaptation_algorithm_impl(data_loader,
+                                                               num_bn_adaptation_steps,
+                                                               num_bn_forget_steps,
+                                                               device)
 
     def run(self, model: ModelType) -> None:
         """
@@ -130,3 +105,10 @@ class BatchnormAdaptationAlgorithm:
         :param model: A model for which the algorithm will be applied.
         """
         self._impl.run(model)
+
+    @abstractmethod
+    def _create_bn_adaptation_algorithm_impl(self, data_loader: NNCFDataLoader,
+                                         num_bn_adaptation_steps: int,
+                                         num_bn_forget_steps: int,
+                                         device: Optional[str] = None) -> BatchnormAdaptationAlgorithmImpl:
+        pass
