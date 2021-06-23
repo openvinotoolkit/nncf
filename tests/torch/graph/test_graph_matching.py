@@ -2,6 +2,8 @@ from nncf.torch.graph.patterns import GraphPattern
 from nncf.common.graph.graph_matching import find_subgraphs_matching_expression
 import networkx as nx
 
+import itertools
+
 
 def test_ops_combination_patterns():
     first_type = ['a', 'b']
@@ -30,7 +32,12 @@ def test_ops_combination_patterns():
     matches = find_subgraphs_matching_expression(ref_graph, pattern)
     assert matches == [['1', '2']]
 
-    pattern = (first_pattern + second_pattern) * third_pattern
+    # pattern = (first_pattern + second_pattern) * third_pattern
+    pattern = (first_pattern + second_pattern)
+    pattern_nodes = list(pattern.graph.nodes)
+    third_nodes = list(third_pattern.graph.nodes)
+    edges = list(itertools.product(pattern_nodes, third_nodes))
+    pattern.join_patterns(third_pattern, edges)
 
     ref_graph = nx.DiGraph()
     ref_graph.add_node('1', type='a')
@@ -44,7 +51,7 @@ def test_ops_combination_patterns():
     assert matches == [['1', '2', '3']]
 
 
-def test_no_mathces():
+def test_no_matches():
     first_type = ['a', 'b']
     second_type = ['c', 'd']
     third_type = ['e']
@@ -53,7 +60,12 @@ def test_no_mathces():
     second_pattern = GraphPattern(second_type)
     third_pattern = GraphPattern(third_type)
 
-    pattern = (first_pattern + second_pattern + third_pattern) * third_pattern
+    # pattern = (first_pattern + second_pattern + third_pattern) * third_pattern
+    pattern = (first_pattern + second_pattern + third_pattern)
+    pattern_nodes = list(pattern.graph.nodes)
+    third_nodes = list(third_pattern.graph.nodes)
+    edges = list(itertools.product(pattern_nodes, third_nodes))
+    pattern.join_patterns(third_pattern, edges)
 
     ref_graph = nx.DiGraph()
     ref_graph.add_node('1', type='a')
