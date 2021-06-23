@@ -160,7 +160,7 @@ def main_worker(current_gpu, config: SampleConfig):
         execution_params = ExecutionParameters(config.cpu_only, config.current_gpu)
 
         nncf_config = register_default_init_args(
-            nncf_config, init_loader,
+            nncf_config,
             train_loader=train_loader,
             criterion=criterion,
             criterion_fn=train_criterion_fn,

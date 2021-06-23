@@ -75,7 +75,7 @@ def test_valid_legr_init_struct():
     val_loader = create_ones_mock_dataloader(config)
     train_steps_fn = lambda *x: None
     validate_fn = lambda *x: (0, 0, 0)
-    nncf_config = register_default_init_args(config, init_loader, train_loader=train_loader, train_steps_fn=train_steps_fn,
+    nncf_config = register_default_init_args(config, train_loader=train_loader, train_steps_fn=train_steps_fn,
                                              val_loader=val_loader, validate_fn=validate_fn)
 
     legr_init_args = config.get_extra_struct(LeGRInitArgs)
