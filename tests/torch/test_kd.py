@@ -169,7 +169,7 @@ def test_loss_outputs_parsing():
     model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
     model.train()
     mock_dataloader = create_ones_mock_dataloader(config, num_samples=torch.cuda.device_count(),
-                                             batch_size=torch.cuda.device_count())
+                                                  batch_size=torch.cuda.device_count())
     compression_ctrl.scheduler.epoch_step()
     for i, (input_, target) in enumerate(mock_dataloader):
         input_ = input_.to(next(model.parameters()).device)
@@ -199,7 +199,7 @@ def test_kd_outputs_contrainers_parsing():
     model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
     model.train()
     mock_dataloader = create_ones_mock_dataloader(config, num_samples=torch.cuda.device_count(),
-                                             batch_size=torch.cuda.device_count())
+                                                  batch_size=torch.cuda.device_count())
     compression_ctrl.scheduler.epoch_step()
     for i, (input_, target) in enumerate(mock_dataloader):
         input_ = input_.to(next(model.parameters()).device)
@@ -237,7 +237,7 @@ def test_kd_loss_types(kd_loss_type):
     model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
     model.train()
     mock_dataloader = create_ones_mock_dataloader(config, num_samples=torch.cuda.device_count(),
-                                             batch_size=torch.cuda.device_count())
+                                                  batch_size=torch.cuda.device_count())
     compression_ctrl.scheduler.epoch_step()
     for i, (input_, target) in enumerate(mock_dataloader):
         input_ = input_.to(next(model.parameters()).device)
