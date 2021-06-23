@@ -17,7 +17,7 @@ from nncf.common.initialization.dataloader import NNCFDataLoader
 from nncf.torch.structures import AutoQPrecisionInitArgs
 from nncf.torch.structures import QuantizationPrecisionInitArgs
 from nncf.torch.utils import is_tensor
-from nncf.torch.utils import objwalk
+from nncf.torch.nested_objects_traversal import objwalk
 from contextlib import contextmanager
 
 

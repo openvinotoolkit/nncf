@@ -14,7 +14,8 @@ from functools import partial
 from typing import List, Union, Any, Callable
 
 import torch
-from nncf.torch.utils import objwalk, is_tensor
+from nncf.torch.utils import is_tensor
+from nncf.torch.nested_objects_traversal import objwalk
 from torch import Tensor
 from torch import nn
 from torch.nn import Parameter

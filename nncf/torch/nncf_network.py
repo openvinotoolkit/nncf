@@ -71,13 +71,13 @@ from nncf.torch.quantization.layers import QUANTIZATION_MODULES
 from nncf.torch.utils import compute_FLOPs_hook
 from nncf.torch.utils import get_all_modules_by_type
 from nncf.torch.utils import get_state_dict_names_with_modules
-from nncf.torch.utils import objwalk
+from nncf.torch.nested_objects_traversal import objwalk
 
 MODEL_WRAPPED_BY_NNCF_ATTR_NAME = 'nncf_module'
 LEGACY_ACT_STORAGE_NAME = "activation_quantizers"
 EXTERNAL_QUANTIZERS_STORAGE_NAME = "external_quantizers"
 KD_LOSS_STORAGE_NAME = 'kd_loss'
-STORAGE_DEVICE = 'storage_device'
+KD_STORAGE_DEVICE = 'kd_storage_device'
 
 Module = TypeVar('Module', bound=nn.Module)
 
@@ -386,7 +386,7 @@ class KDLossHandler(nn.Module):
             self._compressed_context.global_buffer_store[KD_LOSS_STORAGE_NAME].append(kd_loss)
         else:
             self._compressed_context.global_buffer_store[KD_LOSS_STORAGE_NAME].append(kd_loss.to(
-                self._compressed_context.global_buffer_store[STORAGE_DEVICE]))
+                self._compressed_context.global_buffer_store[KD_STORAGE_DEVICE]))
 
 # pylint: disable=too-many-public-methods
 
@@ -459,8 +459,6 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
 
         self._compressed_context = TracingContext()
 
-        self._compressed_context.register_global_buffer(STORAGE_DEVICE, device)
-
         self._dummy_forward_fn = self._get_dummy_forward_fn_for_graph_building(with_input_tracing=False,
                                                                                with_output_tracing=False)
         self._in_user_dummy_forward = False
@@ -509,6 +507,8 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
 
     def create_kd_loss_handler(self, kd_original_model, calculate_fn):
         self._kd_loss_handler = KDLossHandler(self._compressed_context, kd_original_model, calculate_fn)
+        self._compressed_context.register_global_buffer(KD_STORAGE_DEVICE,
+                                                        next(self.get_nncf_wrapped_model().parameters()).device)
         return self._kd_loss_handler
 
     # Cannnot use property syntax here, otherwise the wrapped module will end up

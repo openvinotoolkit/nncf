@@ -9,12 +9,12 @@ from nncf.common.statistics import NNCFStatistics
 from nncf.torch.graph.transformations.layout import PTTransformationLayout
 from nncf import NNCFConfig
 from nncf.torch.nncf_network import NNCFNetwork
-from nncf.torch.dynamic_graph.op_input_processing import OperatorInput
 from nncf.torch.compression_method_api import PTCompressionAlgorithmBuilder
 from nncf.torch.compression_method_api import PTCompressionAlgorithmController
 from nncf.api.compression import CompressionLevel, CompressionLoss, CompressionScheduler
 from nncf.torch.algo_selector import COMPRESSION_ALGORITHMS
 from nncf.torch.compression_method_api import PTCompressionLoss
+from nncf.torch.nested_objects_traversal import nested_object_paths_generator
 
 KD_MODULE_NAME = 'KD_FP32_MODULE'
 
@@ -23,6 +23,7 @@ class KnowledgeDistillationLoss(PTCompressionLoss):
     def __init__(self, target_model: NNCFNetwork, original_model, type_):
         super().__init__()
         original_model.train()
+        device = next(target_model.parameters()).device
         if type_ == 'softmax':
             def kd_loss_fn(ref_outputs, compressed_model_outputs):
                 return -(nn.functional.log_softmax(compressed_model_outputs, dim=1) *
@@ -35,7 +36,7 @@ class KnowledgeDistillationLoss(PTCompressionLoss):
             raise ValueError('Choose between mse/softmax options for Knowledge Distillation')
         self._kd_loss_handler = target_model.create_kd_loss_handler(original_model, partial(
             KnowledgeDistillationLoss.calculate_kd_loss,
-            device=next(target_model.parameters()).device,
+            device=device,
             kd_loss_fn=kd_loss_fn))
 
     @staticmethod
@@ -56,12 +57,18 @@ class KnowledgeDistillationLoss(PTCompressionLoss):
 
         compressed_model_outputs_struct = []
         orig_model_outputs_struct = []
-        OperatorInput.nested_object_paths_generator([compressed_model_outputs], compressed_model_outputs_struct)
-        OperatorInput.nested_object_paths_generator([orig_model_outputs], orig_model_outputs_struct)
+        nested_object_paths_generator([compressed_model_outputs], compressed_model_outputs_struct)
+        nested_object_paths_generator([orig_model_outputs], orig_model_outputs_struct)
         compressed_model_loss_nested_obj_paths = list(filter(lambda x: KnowledgeDistillationLoss._is_loss(x.getter()),
                                                              compressed_model_outputs_struct))
         compressed_model_loss_outputs = list(map(lambda x: x.getter(), compressed_model_loss_nested_obj_paths))
-        match_fn = partial(KnowledgeDistillationLoss._match_func, to_match_with=compressed_model_loss_nested_obj_paths)
+
+        def match_fn(obj):
+            for x in compressed_model_loss_nested_obj_paths:
+                if x.path == obj.path:
+                    return True
+            return False
+
         orig_model_loss_outputs = list(map(lambda x: x.getter(), filter(match_fn, orig_model_outputs_struct)))
         if len(orig_model_loss_outputs) == 0 or len(compressed_model_loss_outputs) == 0:
             return torch.zeros([], device=device)
@@ -75,13 +82,6 @@ class KnowledgeDistillationLoss(PTCompressionLoss):
             return False
         if obj.requires_grad:
             return True
-        return False
-
-    @staticmethod
-    def _match_func(obj, to_match_with):
-        for x in to_match_with:
-            if x.path == obj.path:
-                return True
         return False
 
     def forward(self):

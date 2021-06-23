@@ -31,7 +31,7 @@ from nncf.common.graph.layer_attributes import LinearLayerAttributes
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.torch.debug import is_debug
 from nncf.torch.dynamic_graph.context import get_current_context
-from nncf.torch.dynamic_graph.op_input_processing import OperatorInput
+from nncf.torch.dynamic_graph.context import OperatorInput
 from nncf.torch.dynamic_graph.trace_tensor import make_tensor_metas
 from nncf.torch.dynamic_graph.trace_tensor import trace_tensors
 from nncf.torch.layer_utils import _NNCFModuleMixin
