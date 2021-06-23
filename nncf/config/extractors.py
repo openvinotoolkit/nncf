@@ -84,7 +84,7 @@ def extract_range_init_params(config: NNCFConfig) -> Optional[Dict[str, object]]
     range_init_args = None
     try:
         range_init_args = config.get_extra_struct(QuantizationRangeInitArgs)
-    except KeyError as e:
+    except KeyError:
         if not init_range_config_dict_or_list:
             logger.warning('Initializer section not specified for quantization algorithm in NNCF config and '
                            'quantization init args not supplied - the necessary parameters are not specified '
@@ -113,7 +113,7 @@ def extract_range_init_params(config: NNCFConfig) -> Optional[Dict[str, object]]
         raise ValueError(
             'Should run range initialization as specified via config,'
             'but the initializing data loader is not provided as an extra struct. '
-            'Refer to `NNCFConfig.register_extra_structs` and the `QuantizationRangeInitArgs` class') from e
+            'Refer to `NNCFConfig.register_extra_structs` and the `QuantizationRangeInitArgs` class')
 
     params = {
         'init_range_data_loader': range_init_args.data_loader,
