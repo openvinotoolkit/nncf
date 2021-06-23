@@ -30,16 +30,6 @@ def get_kd_config(config):
 
 def get_sparsity_config_with_sparsity_init(config, sparsity_init=0.5):
     config['compression']['sparsity_init'] = sparsity_init
-    config['compression']['params'] = {
-        "schedule": "multistep",
-        "multistep_steps": [
-            2
-        ],
-        "multistep_sparsity_levels": [
-            sparsity_init,
-            sparsity_init + 0.5 * (1 - sparsity_init)
-        ]
-    }
     return config
 
 
@@ -49,7 +39,7 @@ def fill_params_of_model_by_normal(model, std=1.0):
 
 
 @pytest.mark.parametrize("inference_type", ['cpu', 'single_GPU', 'DP', 'DDP'])
-def test_training_process(inference_type):
+def test_knowledge_distillation_training_process(inference_type):
     if not torch.cuda.is_available() and not inference_type == 'cpu':
         return
     torch.manual_seed(1)
@@ -146,7 +136,7 @@ def run_test_training(gpu, config, inference_type, ngpus_per_node):
     reference_outputs = run_reference(model, config, inference_type, mock_dataloader, (gpu, ngpus_per_node))
     assert reduce(lambda a, b: a and torch.allclose(b[0], b[1]), zip(actual_outputs, reference_outputs), True), \
         "Outputs of model with actual KD implementation doesn't match outputs from model with reference " \
-        "KD implementation"
+        "Knowledge Distillation implementation"
 
     for param1, param2 in zip([param.to(torch.device('cpu')) for name, param in
                                filter(lambda x: KEY_TO_KD_PARAMETERS in x[0], actual_model.named_parameters())],
@@ -186,7 +176,7 @@ def test_loss_outputs_parsing():
         assert torch.allclose(reference_kd_loss, actual_kd_loss)
 
 
-def test_kd_outputs_contrainers_parsing():
+def test_knowledge_distillation_outputs_containers_parsing():
     mse = torch.nn.MSELoss()
     input_size = [1, 1, 8, 8]
     model = ContainersOutputsModel(input_size)
@@ -214,7 +204,7 @@ def test_kd_outputs_contrainers_parsing():
 
 
 @pytest.mark.parametrize('kd_loss_type', ['mse', 'softmax'])
-def test_kd_loss_types(kd_loss_type):
+def test_knowledge_distillation_loss_types(kd_loss_type):
     torch.manual_seed(2)
     if kd_loss_type == 'softmax':
         def kd_loss_fn(ref_outputs, compressed_model_outputs):

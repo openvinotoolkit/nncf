@@ -11,12 +11,10 @@ from nncf import NNCFConfig
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.compression_method_api import PTCompressionAlgorithmBuilder
 from nncf.torch.compression_method_api import PTCompressionAlgorithmController
-from nncf.api.compression import CompressionLevel, CompressionLoss, CompressionScheduler
+from nncf.api.compression import CompressionLoss, CompressionScheduler, CompressionStage
 from nncf.torch.algo_selector import COMPRESSION_ALGORITHMS
 from nncf.torch.compression_method_api import PTCompressionLoss
 from nncf.torch.nested_objects_traversal import nested_object_paths_generator
-
-KD_MODULE_NAME = 'KD_FP32_MODULE'
 
 
 class KnowledgeDistillationLoss(PTCompressionLoss):
@@ -34,25 +32,25 @@ class KnowledgeDistillationLoss(PTCompressionLoss):
                 return mse(ref_outputs, compressed_model_outputs)
         else:
             raise ValueError('Choose between mse/softmax options for Knowledge Distillation')
-        self._kd_loss_handler = target_model.create_kd_loss_handler(original_model, partial(
-            KnowledgeDistillationLoss.calculate_kd_loss,
+        self._kd_loss_handler = target_model.create_knowledge_distillation_loss_handler(original_model, partial(
+            KnowledgeDistillationLoss._calculate,
             device=device,
             kd_loss_fn=kd_loss_fn))
 
     @staticmethod
-    def calculate_kd_loss(compressed_model_outputs, orig_model_outputs, device, kd_loss_fn):
+    def _calculate(compressed_model_outputs, orig_model_outputs, device, kd_loss_fn):
         """
-        Calculates KD Loss value from compressed_model_outputs and orig_model_outputs. First uses
+        Calculates knowledge distillation loss value from compressed_model_outputs and orig_model_outputs. First uses
         nested_object_paths_generator to unpack input containers and numerate contents inside them.
         Than checks compressed_model_outputs unpacked container for loss tensors (requires_grad=True)
         and maps extracted structure of loss tensors to orig_model_outputs.
-        Finally computes KD loss with extracted loss tensors.
+        Finally computes knowledge distillation loss with extracted loss tensors.
 
-        :param compressed_model_outputs: Output tensors of compressed model can be any type of container with
-            deterministic detour
+        :param compressed_model_outputs: Output tensors of compressed model can be any type of container that
+            iterates over internal items in the deterministic way.
         :param orig_model_outputs: Output tensors of original model (used for distillation) can be any type of 
             container with deterministic detour.
-        :return: KDLoss value
+        :return: knowledge distillation loss value
         """
 
         compressed_model_outputs_struct = []
@@ -123,14 +121,18 @@ class KnowledgeDistillationBuilder(PTCompressionAlgorithmBuilder):
 
 
 class KnowledgeDistillationController(PTCompressionAlgorithmController):
-    def compression_level(self) -> CompressionLevel:
-        return CompressionLevel.FULL
-
     def __init__(self, target_model, original_model, type_):
         super().__init__(target_model)
         original_model.train()
         self._scheduler = BaseCompressionScheduler()
         self._loss = KnowledgeDistillationLoss(target_model=target_model, original_model=original_model, type_=type_)
+
+    def compression_stage(self) -> CompressionStage:
+        """
+        Returns level of compression. Should be used on saving best checkpoints to distinguish between
+        uncompressed, partially compressed and fully compressed models.
+        """
+        return CompressionStage.FULLY_COMPRESSED
 
     @property
     def scheduler(self) -> CompressionScheduler:

@@ -27,7 +27,7 @@ from torch.nn import DataParallel
 from nncf import NNCFConfig
 from nncf.torch.algo_selector import COMPRESSION_ALGORITHMS
 from nncf.torch.algo_selector import NoCompressionAlgorithmBuilder
-from nncf.torch.kd_loss import KnowledgeDistillationBuilder
+from nncf.torch.knowledge_distillation_loss import KnowledgeDistillationBuilder
 from nncf.api.compression import CompressionStage
 from nncf.torch.checkpoint_loading import load_state
 from nncf.common.hardware.config import HWConfigType

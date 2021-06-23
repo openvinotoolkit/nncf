@@ -720,7 +720,7 @@ KNOWLEDGE_DISTILLATION_SCHEMA = {
         "algorithm": {
             "const": KNOWLEDGE_DISTILLATION_ALGO_NAME_IN_CONFIG
         },
-        "type": with_attributes(_STRING, description="Type of KDLoss (mse/softmax)")
+        "type": with_attributes(_STRING, description="Type of Knowledge Distillation Loss (mse/softmax)")
     },
     "additionalProperties": False
 }
