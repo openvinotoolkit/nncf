@@ -90,7 +90,7 @@ class SSDHead(nn.Module):
 
         with no_nncf_trace():
             priors = self.prior_box(features, image_tensor).to(loc.device)
-        # to exclude priors from backpropagation graph
+        # non differential model outputs should be marked by requires_grad=False
         priors = priors.detach()
 
         loc = loc.permute(0, 2, 3, 1).contiguous()

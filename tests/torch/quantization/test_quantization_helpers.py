@@ -105,6 +105,6 @@ def post_compression_test_distr_init(compression_ctrl, config, ngpus_per_node, q
     quant_model.cuda(config.gpu)
     config.batch_size = int(config.batch_size / ngpus_per_node)
     config.workers = int(config.workers / ngpus_per_node)
-    quant_model = torch.nn.parallel.DistributedDataParallel(quant_model, device_ids=[config.gpu], find_unused_parameters=True)
+    quant_model = torch.nn.parallel.DistributedDataParallel(quant_model, device_ids=[config.gpu])
     compression_ctrl.distributed()
     return quant_model

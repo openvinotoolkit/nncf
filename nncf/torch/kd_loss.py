@@ -33,9 +33,10 @@ class KnowledgeDistillationLoss(PTCompressionLoss):
                 return mse(ref_outputs, compressed_model_outputs)
         else:
             raise ValueError('Choose between mse/softmax options for Knowledge Distillation')
-        self._kd_loss_handler = target_model.create_kd_loss_handler(original_model, partial(self.calculate_kd_loss,
-                                                                           device=next(target_model.parameters()).device,
-                                                                           kd_loss_fn=kd_loss_fn))
+        self._kd_loss_handler = target_model.create_kd_loss_handler(original_model, partial(
+            KnowledgeDistillationLoss.calculate_kd_loss,
+            device=next(target_model.parameters()).device,
+            kd_loss_fn=kd_loss_fn))
 
     @staticmethod
     def calculate_kd_loss(compressed_model_outputs, orig_model_outputs, device, kd_loss_fn):
@@ -60,10 +61,9 @@ class KnowledgeDistillationLoss(PTCompressionLoss):
         compressed_model_loss_nested_obj_paths = list(filter(lambda x: KnowledgeDistillationLoss._is_loss(x.getter()),
                                                              compressed_model_outputs_struct))
         compressed_model_loss_outputs = list(map(lambda x: x.getter(), compressed_model_loss_nested_obj_paths))
-        orig_model_loss_outputs = list(map(lambda x: x.getter(), filter(
-            partial(KnowledgeDistillationLoss.match_func, to_match_with=compressed_model_loss_nested_obj_paths),
-            orig_model_outputs_struct)))
-        if len(orig_model_outputs) == 0 or len(compressed_model_loss_outputs) == 0:
+        match_fn = partial(KnowledgeDistillationLoss._match_func, to_match_with=compressed_model_loss_nested_obj_paths)
+        orig_model_loss_outputs = list(map(lambda x: x.getter(), filter(match_fn, orig_model_outputs_struct)))
+        if len(orig_model_loss_outputs) == 0 or len(compressed_model_loss_outputs) == 0:
             return torch.zeros([], device=device)
         return reduce(
             lambda kd_loss, loss_tensors: kd_loss + kd_loss_fn(loss_tensors[0], loss_tensors[1]),
@@ -78,7 +78,7 @@ class KnowledgeDistillationLoss(PTCompressionLoss):
         return False
 
     @staticmethod
-    def match_func(obj, to_match_with):
+    def _match_func(obj, to_match_with):
         for x in to_match_with:
             if x.path == obj.path:
                 return True

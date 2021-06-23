@@ -87,16 +87,6 @@ def create_transpose_conv(in_channels, out_channels, kernel_size, weight_init, b
     return conv
 
 
-def create_mock_dataloader(config, num_samples=1, batch_size=1):
-    input_infos_list = create_input_infos(config)
-    input_sample_size = input_infos_list[0].shape
-    data_loader = torch.utils.data.DataLoader(OnesDatasetMock(input_sample_size[1:], num_samples),
-                                              batch_size=batch_size,
-                                              num_workers=0,  # Workaround
-                                              shuffle=False, drop_last=True)
-    return data_loader
-
-
 class BasicConvTestModel(nn.Module):
     INPUT_SIZE = [1, 1, 4, 4]
 
@@ -358,22 +348,23 @@ class RandomDatasetMock(BaseDatasetMock):
         return torch.rand(self._input_size), torch.zeros(1)
 
 
-def create_any_mock_dataloader(dataset_cls: type, config: NNCFConfig, num_samples: int = 1) -> DataLoader:
+def create_any_mock_dataloader(dataset_cls: type, config: NNCFConfig, num_samples: int = 1,
+                               batch_size: int = 1) -> DataLoader:
     input_infos_list = create_input_infos(config)
     input_sample_size = input_infos_list[0].shape
     data_loader = DataLoader(dataset_cls(input_sample_size[1:], num_samples),
-                             batch_size=1,
+                             batch_size=batch_size,
                              num_workers=0,  # Workaround
                              shuffle=False, drop_last=True)
     return data_loader
 
 
-def create_ones_mock_dataloader(config: NNCFConfig, num_samples: int = 1) -> DataLoader:
-    return create_any_mock_dataloader(OnesDatasetMock, config, num_samples)
+def create_ones_mock_dataloader(config: NNCFConfig, num_samples: int = 1, batch_size: int = 1) -> DataLoader:
+    return create_any_mock_dataloader(OnesDatasetMock, config, num_samples, batch_size)
 
 
-def create_random_mock_dataloader(config: NNCFConfig, num_samples: int = 1) -> DataLoader:
-    return create_any_mock_dataloader(RandomDatasetMock, config, num_samples)
+def create_random_mock_dataloader(config: NNCFConfig, num_samples: int = 1, batch_size: int = 1) -> DataLoader:
+    return create_any_mock_dataloader(RandomDatasetMock, config, num_samples, batch_size)
 
 
 # ONNX graph helpers

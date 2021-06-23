@@ -459,9 +459,7 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
 
         self._compressed_context = TracingContext()
 
-        self._compressed_context.register_global_buffer(STORAGE_DEVICE, next(
-            self.get_nncf_wrapped_model().parameters()).device)
-
+        self._compressed_context.register_global_buffer(STORAGE_DEVICE, device)
 
         self._dummy_forward_fn = self._get_dummy_forward_fn_for_graph_building(with_input_tracing=False,
                                                                                with_output_tracing=False)

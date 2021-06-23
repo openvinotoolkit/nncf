@@ -198,7 +198,7 @@ class HWConfig(list):
         retval = {k: None for k in get_operator_metatypes()}
         config_key = 'weights' if for_weights else 'activations'
         for op_dict in self:
-            hw_config_op_name = op_dict.type_
+            hw_config_op_name = op_dict.type
 
             metatypes = get_metatypes_by_hw_config_name(hw_config_op_name)
             if not metatypes:
@@ -232,7 +232,7 @@ class HWConfig(list):
                 is_value_matched = op_dict[self.ATTRIBUTES_NAME][attr_name] == attr_value
                 is_attr_set = attr_name in op_dict[self.ATTRIBUTES_NAME]
                 if is_value_matched and is_attr_set:
-                    hw_config_op_name = op_dict.type_
+                    hw_config_op_name = op_dict.type
                     metatypes = get_metatypes_by_hw_config_name(hw_config_op_name)
                     if not metatypes:
                         warnings.warn(

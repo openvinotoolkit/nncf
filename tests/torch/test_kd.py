@@ -5,7 +5,7 @@ from tests.torch.test_models.synthetic import PartlyNonDifferentialOutputsModel,
 from tests.torch.test_models.synthetic import ContainersOutputsModel
 from tests.torch.helpers import TwoConvTestModel
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
-from tests.torch.helpers import create_mock_dataloader
+from tests.torch.helpers import create_ones_mock_dataloader
 from tests.torch.sparsity.magnitude.test_helpers import get_basic_magnitude_sparsity_config
 from tests.torch.quantization.test_quantization_helpers import create_rank_dataloader, post_compression_test_distr_init
 from tests.torch.quantization.test_quantization_helpers import distributed_init_test_default
@@ -43,7 +43,7 @@ def get_sparsity_config_with_sparsity_init(config, sparsity_init=0.5):
     return config
 
 
-def fill_params_of_model_by_normal(model, std=1):
+def fill_params_of_model_by_normal(model, std=1.0):
     for param in model.parameters():
         param.data = torch.normal(0, std, size=param.data.size())
 
@@ -126,7 +126,7 @@ def run_reference(model, config, inference_type, mock_dataloader, ddp_info=None)
 
 
 def run_test_training(gpu, config, inference_type, ngpus_per_node):
-    torch.manual_seed(10)
+    torch.manual_seed(2)
     number_of_iters = 10
     batch_size = torch.cuda.device_count()
     config['input_info']['sample_size'] = [1, 1, 8, 8]
@@ -134,11 +134,11 @@ def run_test_training(gpu, config, inference_type, ngpus_per_node):
         distributed_init_test_default(gpu, ngpus_per_node, config)
         mock_dataloader = create_rank_dataloader(config, gpu, batch_size * number_of_iters, batch_size=batch_size)
     else:
-        mock_dataloader = create_mock_dataloader(config, num_samples=batch_size * number_of_iters,
-                                                 batch_size=batch_size)
+        mock_dataloader = create_ones_mock_dataloader(config, num_samples=batch_size * number_of_iters,
+                                                      batch_size=batch_size)
 
     model = TwoConvTestModel()
-    fill_params_of_model_by_normal(model, std=0.1)
+    fill_params_of_model_by_normal(model, std=0.5)
     dumped_orig_model = deepcopy(model)
 
     actual_outputs, actual_model = run_actual(deepcopy(model), config, inference_type, mock_dataloader,
@@ -168,7 +168,7 @@ def test_loss_outputs_parsing():
                                                sparsity_level))
     model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
     model.train()
-    mock_dataloader = create_mock_dataloader(config, num_samples=torch.cuda.device_count(),
+    mock_dataloader = create_ones_mock_dataloader(config, num_samples=torch.cuda.device_count(),
                                              batch_size=torch.cuda.device_count())
     compression_ctrl.scheduler.epoch_step()
     for i, (input_, target) in enumerate(mock_dataloader):
@@ -198,7 +198,7 @@ def test_kd_outputs_contrainers_parsing():
                                                sparsity_level))
     model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
     model.train()
-    mock_dataloader = create_mock_dataloader(config, num_samples=torch.cuda.device_count(),
+    mock_dataloader = create_ones_mock_dataloader(config, num_samples=torch.cuda.device_count(),
                                              batch_size=torch.cuda.device_count())
     compression_ctrl.scheduler.epoch_step()
     for i, (input_, target) in enumerate(mock_dataloader):
@@ -236,7 +236,7 @@ def test_kd_loss_types(kd_loss_type):
     config['compression'][-1]['type'] = kd_loss_type
     model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
     model.train()
-    mock_dataloader = create_mock_dataloader(config, num_samples=torch.cuda.device_count(),
+    mock_dataloader = create_ones_mock_dataloader(config, num_samples=torch.cuda.device_count(),
                                              batch_size=torch.cuda.device_count())
     compression_ctrl.scheduler.epoch_step()
     for i, (input_, target) in enumerate(mock_dataloader):
@@ -246,6 +246,4 @@ def test_kd_loss_types(kd_loss_type):
 
         reference_kd_loss = kd_loss_fn(kd_outputs, outputs)
         actual_kd_loss = compression_ctrl.loss()
-        print(reference_kd_loss)
-        print(actual_kd_loss)
         assert torch.allclose(reference_kd_loss, actual_kd_loss)
