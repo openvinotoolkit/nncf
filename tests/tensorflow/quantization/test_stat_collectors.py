@@ -129,8 +129,10 @@ class TestStatisticCollectorsWithStatAggregation:
         if per_channel:
             # Get reference values
             if input_type == InputType.INPUTS:
-                input_tensor_min_per_channel = tf.math.reduce_mean(tf.math.reduce_min(INPUT_TENSOR, axis=axis), axis=reduce_mean_axis)
-                input_tensor_max_per_channel = tf.math.reduce_mean(tf.math.reduce_max(INPUT_TENSOR, axis=axis), axis=reduce_mean_axis)
+                input_tensor_min_per_channel = tf.math.reduce_mean(tf.math.reduce_min(INPUT_TENSOR, axis=axis),
+                                                                   axis=reduce_mean_axis)
+                input_tensor_max_per_channel = tf.math.reduce_mean(tf.math.reduce_max(INPUT_TENSOR, axis=axis),
+                                                                   axis=reduce_mean_axis)
             if input_type == InputType.WEIGHTS:
                 input_tensor_min_per_channel = tf.math.reduce_min(INPUT_TENSOR, axis=axis)
                 input_tensor_max_per_channel = tf.math.reduce_max(INPUT_TENSOR, axis=axis)
@@ -140,8 +142,10 @@ class TestStatisticCollectorsWithStatAggregation:
                                 input_tensor_max_per_channel=input_tensor_max_per_channel)
         if not per_channel:
             # Get reference values
-            input_tensor_min = tf.math.reduce_mean(tf.math.reduce_min(INPUT_TENSOR, axis=axis), axis=reduce_mean_axis)
-            input_tensor_max = tf.math.reduce_mean(tf.math.reduce_max(INPUT_TENSOR, axis=axis), axis=reduce_mean_axis)
+            input_tensor_min = tf.math.reduce_mean(tf.math.reduce_min(INPUT_TENSOR, axis=axis),
+                                                   axis=reduce_mean_axis)
+            input_tensor_max = tf.math.reduce_mean(tf.math.reduce_max(INPUT_TENSOR, axis=axis),
+                                                   axis=reduce_mean_axis)
 
             self.run_all_checks(collector, input_type, per_channel,
                                input_tensor_min=input_tensor_min,
@@ -154,7 +158,8 @@ class TestStatisticCollectorsWithStatAggregation:
     def test_mean_percentile(self, per_channel, input_type, percentiles):
         min_percentile = percentiles[0]
         max_percentile = percentiles[1]
-        collector = MeanPercentileStatisticCollector(per_channel, CHANNEL_AXIS, input_type, min_percentile, max_percentile)
+        collector = MeanPercentileStatisticCollector(per_channel, CHANNEL_AXIS, input_type,
+                                                     min_percentile, max_percentile)
 
         axis = [0, 1, 2, 3]
         if per_channel:
@@ -270,7 +275,7 @@ class TestStatisticCollectorsWithDataAggregation:
         collector = MedianMADStatisticCollector(per_channel, CHANNEL_AXIS)
 
         input_tensor = tf.range(1, (BATCH_SIZE * HW_SIZE * HW_SIZE * NUM_CHANNELS + 1), dtype=tf.float32)
-        input_tensor = tf.reshape(input_tensor, [BATCH_SIZE, HW_SIZE, HW_SIZE, NUM_CHANNELS])  # NHWC: [2, 5, 5, 3]
+        input_tensor = tf.reshape(input_tensor, [BATCH_SIZE, HW_SIZE, HW_SIZE, NUM_CHANNELS])
 
         axis = [0, 1, 2, 3]
         # all input tensors are stacked together - one more dimension
