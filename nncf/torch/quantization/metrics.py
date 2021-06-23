@@ -38,7 +38,7 @@ from nncf.common.quantization.statistics import QuantizersCounter
 from nncf.common.quantization.statistics import BitwidthDistributionStatistics
 from nncf.common.quantization.statistics import MemoryConsumptionStatistics
 from nncf.common.quantization.statistics import QuantizationConfigurationStatistics
-from nncf.common.graph.graph_matching import find_subgraphs_matching_expression
+from nncf.common.graph.graph_matching import find_subgraphs_matching_pattern
 from nncf.torch.graph.patterns import get_full_pattern_graph
 
 
@@ -352,11 +352,11 @@ class ShareEdgesQuantizedDataPathStatisticsCollector(StatisticsCollector):
     def get_merged_original_graph_with_patterns(self, original_graph: PTNNCFGraph):
         pattern = get_full_pattern_graph()
         # pylint: disable=protected-access
-        matches = find_subgraphs_matching_expression(original_graph._nx_graph, pattern)
+        matches = find_subgraphs_matching_pattern(original_graph._nx_graph, pattern)
         merged_graph = deepcopy(original_graph._nx_graph)
         nx.set_node_attributes(merged_graph, False, self.IS_MERGED_GRAPH_ATTR)
         for match in matches:
-            if len(match) <= 1:
+            if len(match) == 1:
                 continue
 
             input_node_key = match[0]

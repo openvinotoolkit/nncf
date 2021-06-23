@@ -1,5 +1,5 @@
 from nncf.torch.graph.patterns import GraphPattern
-from nncf.common.graph.graph_matching import find_subgraphs_matching_expression
+from nncf.common.graph.graph_matching import find_subgraphs_matching_pattern
 import networkx as nx
 
 import itertools
@@ -10,9 +10,9 @@ def test_ops_combination_patterns():
     second_type = ['c', 'd']
     third_type = ['e']
 
-    first_pattern = GraphPattern(first_type)
-    second_pattern = GraphPattern(second_type)
-    third_pattern = GraphPattern(third_type)
+    first_pattern = GraphPattern('first', first_type)
+    second_pattern = GraphPattern('second', second_type)
+    third_pattern = GraphPattern('third', third_type)
 
     pattern = first_pattern + second_pattern
 
@@ -20,7 +20,7 @@ def test_ops_combination_patterns():
     ref_graph.add_node('1', type='a')
     ref_graph.add_node('2', type='c')
     ref_graph.add_edge('1', '2')
-    matches = find_subgraphs_matching_expression(ref_graph, pattern)
+    matches = find_subgraphs_matching_pattern(ref_graph, pattern)
     assert matches == [['1', '2']]
 
     pattern = first_pattern + second_pattern | third_pattern
@@ -29,7 +29,7 @@ def test_ops_combination_patterns():
     ref_graph.add_node('1', type='a')
     ref_graph.add_node('2', type='c')
     ref_graph.add_edge('1', '2')
-    matches = find_subgraphs_matching_expression(ref_graph, pattern)
+    matches = find_subgraphs_matching_pattern(ref_graph, pattern)
     assert matches == [['1', '2']]
 
     # pattern = (first_pattern + second_pattern) * third_pattern
@@ -46,7 +46,7 @@ def test_ops_combination_patterns():
     ref_graph.add_edge('1', '2')
     ref_graph.add_edge('1', '3')
     ref_graph.add_edge('2', '3')
-    matches = find_subgraphs_matching_expression(ref_graph, pattern)
+    matches = find_subgraphs_matching_pattern(ref_graph, pattern)
 
     assert matches == [['1', '2', '3']]
 
@@ -56,9 +56,9 @@ def test_no_matches():
     second_type = ['c', 'd']
     third_type = ['e']
 
-    first_pattern = GraphPattern(first_type)
-    second_pattern = GraphPattern(second_type)
-    third_pattern = GraphPattern(third_type)
+    first_pattern = GraphPattern('first', first_type)
+    second_pattern = GraphPattern('second', second_type)
+    third_pattern = GraphPattern('third', third_type)
 
     # pattern = (first_pattern + second_pattern + third_pattern) * third_pattern
     pattern = (first_pattern + second_pattern + third_pattern)
@@ -73,17 +73,17 @@ def test_no_matches():
     ref_graph.add_node('3', type='e')
     ref_graph.add_edge('1', '2')
     ref_graph.add_edge('2', '3')
-    matches = find_subgraphs_matching_expression(ref_graph, pattern)
+    matches = find_subgraphs_matching_pattern(ref_graph, pattern)
 
-    assert not matches[0]
+    assert not matches
 
 
 def test_two_matches():
     first_type = ['a', 'b']
     second_type = ['c', 'd']
 
-    first_pattern = GraphPattern(first_type)
-    second_pattern = GraphPattern(second_type)
+    first_pattern = GraphPattern('first', first_type)
+    second_pattern = GraphPattern('second', second_type)
 
     pattern = first_pattern + second_pattern
 
@@ -98,5 +98,5 @@ def test_two_matches():
     ref_graph.add_edge('2', '3')
     ref_graph.add_edge('5', '6')
 
-    matches = find_subgraphs_matching_expression(ref_graph, pattern)
+    matches = find_subgraphs_matching_pattern(ref_graph, pattern)
     assert matches in [[['1', '2'], ['5', '6']], [['5', '6'], ['1', '2']]]

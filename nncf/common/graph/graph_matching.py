@@ -24,7 +24,7 @@ def get_edge_boundaries(match: List[str], graph: nx.DiGraph):
     return sorted(in_edge_boundary), sorted(out_edge_boundary)
 
 
-def find_whether_subgraph_has_inner_outgoing_edges(graph: nx.DiGraph, subgraph: List[str]) -> bool:
+def is_subgraph_has_inner_outgoing_edges(graph: nx.DiGraph, subgraph: List[str]) -> bool:
     """
     Check out whether the subgraph has outgoing edges starting not from the last node.
     Example:
@@ -66,17 +66,30 @@ def find_whether_subgraph_has_inner_outgoing_edges(graph: nx.DiGraph, subgraph: 
     return False
 
 
-def find_subgraphs_matching_expression(graph: nx.DiGraph, pattern_graph: GraphPattern) -> List[List[str]]:
+def find_subgraphs_matching_pattern(graph: nx.DiGraph, pattern_graph: GraphPattern) -> List[List[str]]:
     """
     Find a list of subgraphs for the particular graph that match the pattern expression.
     :param graph: The model graph.
     :param pattern_graph: A graph consists of patterns for layer fusing logic.
-    :return: A list of subgraphs for the particular graph, matching the pattern expression.
+    :return: A list of subgraphs, matching the pattern expression.
+    Each subgraph is defined as a list of node keys.
     """
 
     def are_nodes_matching(node_1, node_2):
-        assert not isinstance(node_1['type'], list)
-        return node_1['type'] in node_2['type']
+        for attr in node_2:
+            # Special case for Input node
+            if attr == 'type' and node_1['type'] == GraphPattern.INPUT_NODE_TYPE or \
+                    attr == 'label':
+                continue
+            if node_1[attr] not in node_2[attr]:
+                return False
+        return True
+
+    def are_edges_matching(edge_1, edge_2):
+        for attr in edge_2:
+            if edge_1[attr] not in edge_2[attr]:
+                return False
+        return True
 
     subgraphs = []
     visited_nodes = set()
@@ -87,15 +100,18 @@ def find_subgraphs_matching_expression(graph: nx.DiGraph, pattern_graph: GraphPa
     # as we want match the longest patterns first
     patterns = sorted(patterns, key=len, reverse=True)
     for pattern in patterns:
-        matcher = ism.DiGraphMatcher(graph, pattern, node_match=are_nodes_matching)
+        matcher = ism.DiGraphMatcher(graph, pattern,
+                                     node_match=are_nodes_matching,
+                                     edge_match=are_edges_matching)
         for subgraph in matcher.subgraph_isomorphisms_iter():
-            subgraph = list(nx.topological_sort(graph.subgraph(subgraph)))
+            # Bottleneck that need to sort by id for result consistency
+            subgraph = list(nx.lexicographical_topological_sort(graph.subgraph(subgraph), key=lambda x: int(x.split()[0])))
             is_visited_node = any(node in visited_nodes for node in subgraph)
             if is_visited_node:
                 continue
-            if find_whether_subgraph_has_inner_outgoing_edges(graph, subgraph):
+            if is_subgraph_has_inner_outgoing_edges(graph, subgraph):
                 continue
             visited_nodes.update(subgraph)
             subgraphs.append(subgraph)
 
-    return subgraphs if subgraphs else [[]]
+    return subgraphs if subgraphs else []

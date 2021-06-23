@@ -22,83 +22,45 @@ from nncf.torch.graph.pattern_operations import ARITHMETIC_OPERATIONS
 PATTERN_GRAPH = Registry('pattern_graph')
 
 
-def create_linear_swish_act() -> GraphPattern:
-    main_pattern = GraphPattern()
+def create_swish_act() -> GraphPattern:
+    pattern = GraphPattern('SWISH')
+    input_pattern_node = pattern.add_node('*INPUT_NODE*', GraphPattern.INPUT_NODE_TYPE)
+    sigmoid_node = pattern.add_node('SIGMOID', 'sigmoid')
+    mul_node = pattern.add_node('MUL', '__mul__')
 
-    pattern = GraphPattern()
-    linear_ops_node = pattern.add_node(LINEAR_OPERATIONS)
-    bn_node = pattern.add_node(BATCH_NORMALIZATION_OPERATIONS)
-    sigmoid_node = pattern.add_node(['sigmoid'])
-    mul_node = pattern.add_node(['__mul__'])
-
-    pattern.add_edge(linear_ops_node, bn_node)
-    pattern.add_edge(bn_node, sigmoid_node)
-    pattern.add_edge(linear_ops_node, mul_node)
-
-    main_pattern.add_pattern_alternative(pattern)
-
-    pattern = GraphPattern()
-    linear_ops_node = pattern.add_node(LINEAR_OPERATIONS)
-    sigmoid_node = pattern.add_node(['sigmoid'])
-    mul_node = pattern.add_node(['__mul__'])
-
-    pattern.add_edge(linear_ops_node, sigmoid_node)
-    pattern.add_edge(linear_ops_node, mul_node)
-
-    main_pattern.add_pattern_alternative(pattern)
-
-    return main_pattern
+    pattern.add_edge(input_pattern_node, sigmoid_node)
+    pattern.add_edge(sigmoid_node, mul_node)
+    pattern.add_edge(input_pattern_node, mul_node)
+    return pattern
 
 
-def create_linear_h_swish_act() -> GraphPattern:
-    main_pattern = GraphPattern()
+def create_h_swish_act() -> GraphPattern:
+    pattern = GraphPattern('H_SWISH')
 
-    pattern = GraphPattern()
-    linear_ops_node = pattern.add_node(LINEAR_OPERATIONS)
-    bn_node = pattern.add_node(BATCH_NORMALIZATION_OPERATIONS)
-    __add__node = pattern.add_node(['__add__'])
-    hardtanh_node = pattern.add_node(['hardtanh'])
-    __truediv__node = pattern.add_node(['__truediv__'])
-    mul_node = pattern.add_node(['__mul__'])
+    input_pattern_node = pattern.add_node('*INPUT_NODE*', GraphPattern.INPUT_NODE_TYPE)
+    add_node = pattern.add_node('ADD', '__add__')
+    hardtanh_node = pattern.add_node('HARDTANH', 'hardtanh')
+    truediv_node = pattern.add_node('DIV', '__truediv__')
+    mul_node = pattern.add_node('MUL', '__mul__')
 
-    pattern.add_edge(linear_ops_node, bn_node)
-    pattern.add_edge(bn_node, __add__node)
-    pattern.add_edge(bn_node, mul_node)
-    pattern.add_edge(__add__node, hardtanh_node)
-    pattern.add_edge(hardtanh_node, __truediv__node)
-    pattern.add_edge(__truediv__node, mul_node)
-
-    main_pattern.add_pattern_alternative(pattern)
-
-    pattern = GraphPattern()
-    linear_ops_node = pattern.add_node(LINEAR_OPERATIONS)
-    __add__node = pattern.add_node(['__add__'])
-    hardtanh_node = pattern.add_node(['hardtanh'])
-    __truediv__node = pattern.add_node(['__truediv__'])
-    mul_node = pattern.add_node(['__mul__'])
-
-    pattern.add_edge(linear_ops_node, __add__node)
-    pattern.add_edge(linear_ops_node, mul_node)
-    pattern.add_edge(__add__node, hardtanh_node)
-    pattern.add_edge(hardtanh_node, __truediv__node)
-    pattern.add_edge(__truediv__node, mul_node)
-
-    main_pattern.add_pattern_alternative(pattern)
-
-    return main_pattern
+    pattern.add_edge(input_pattern_node, add_node)
+    pattern.add_edge(input_pattern_node, mul_node)
+    pattern.add_edge(add_node, hardtanh_node)
+    pattern.add_edge(hardtanh_node, truediv_node)
+    pattern.add_edge(truediv_node, mul_node)
+    return pattern
 
 
-def create_linear_h_sigmoid_act() -> GraphPattern:
-    pattern = GraphPattern()
-    linear_ops_node = pattern.add_node(LINEAR_OPERATIONS)
-    __add__node = pattern.add_node(['__add__'])
-    hardtanh_node = pattern.add_node(['hardtanh'])
-    __truediv__node = pattern.add_node(['__truediv__'])
+def create_h_sigmoid_act() -> GraphPattern:
+    pattern = GraphPattern('H_SIGMOID')
+    input_pattern_node = pattern.add_node('*INPUT_NODE*', GraphPattern.INPUT_NODE_TYPE)
+    add_node = pattern.add_node('ADD', '__add__')
+    hardtanh_node = pattern.add_node('HARTANH', 'hardtanh')
+    truediv_node = pattern.add_node('DIV', '__truediv__')
 
-    pattern.add_edge(linear_ops_node, __add__node)
-    pattern.add_edge(__add__node, hardtanh_node)
-    pattern.add_edge(hardtanh_node, __truediv__node)
-
+    pattern.add_edge(input_pattern_node, add_node)
+    pattern.add_edge(add_node, hardtanh_node)
+    pattern.add_edge(hardtanh_node, truediv_node)
     return pattern
 
 
@@ -114,25 +76,25 @@ class GraphPatternFactory:
 
     @staticmethod
     def _generate_full_pattern_graph():
-        LINEAR_OPS = GraphPattern(LINEAR_OPERATIONS)
+        LINEAR_OPS = GraphPattern('LINEAR', LINEAR_OPERATIONS)
 
-        BN = GraphPattern(BATCH_NORMALIZATION_OPERATIONS)
+        BN = GraphPattern('BATCH_NORM', BATCH_NORMALIZATION_OPERATIONS)
 
-        ACTIVATIONS = GraphPattern(ACTIVATIONS_OPERATIONS)
+        ATOMIC_ACTIVATIONS = GraphPattern('ACTIVATIONS', ACTIVATIONS_OPERATIONS)
 
-        ARITHMETIC = GraphPattern(ARITHMETIC_OPERATIONS)
+        SWISH = create_swish_act()
+
+        H_SIGMOID = create_h_sigmoid_act()
+
+        H_SWISH = create_h_swish_act()
+
+        ACTIVATIONS = ATOMIC_ACTIVATIONS | SWISH | H_SWISH | H_SIGMOID
+
+        ARITHMETIC = GraphPattern('ARITHMETIC', ARITHMETIC_OPERATIONS)
 
         ANY_BN_ACT_COMBO = BN + ACTIVATIONS | ACTIVATIONS + BN | BN | ACTIVATIONS
 
-        LINEAR_OPS_SWISH_ACTIVATION = create_linear_swish_act()
-
-        LINEAR_OPS_H_SWISH_ACTIVATION = create_linear_h_swish_act()
-
-        LINEAR_OPS_H_SIGMOID_ACTIVATION = create_linear_h_sigmoid_act()
-
-        FULL_PATTERN_GRAPH = LINEAR_OPS + ANY_BN_ACT_COMBO | ANY_BN_ACT_COMBO | \
-                             ARITHMETIC + ANY_BN_ACT_COMBO | LINEAR_OPS_SWISH_ACTIVATION | \
-                             LINEAR_OPS_H_SWISH_ACTIVATION | LINEAR_OPS_H_SIGMOID_ACTIVATION
+        FULL_PATTERN_GRAPH = LINEAR_OPS + ANY_BN_ACT_COMBO | ANY_BN_ACT_COMBO | ARITHMETIC + ANY_BN_ACT_COMBO
 
         return FULL_PATTERN_GRAPH
 
