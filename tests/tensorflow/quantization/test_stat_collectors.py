@@ -37,9 +37,10 @@ CHANNEL_AXIS = -1
 class TestStatisticCollectorsWithStatAggregation:
     def get_num_samples_per_step(self, input_type):
         if input_type == InputType.INPUTS:
-            return BATCH_SIZE
+            num_samples_per_step = BATCH_SIZE
         if input_type == InputType.WEIGHTS:
-            return 1
+            num_samples_per_step= 1
+        return num_samples_per_step
 
     def check_num_samples(self, collector, num_samples_per_step, step_num):
         assert len(collector.all_min_values) == num_samples_per_step * step_num
@@ -215,7 +216,7 @@ class TestStatisticCollectorsWithDataAggregation:
                        input_tensor_max_per_channel=None,
                        input_tensor_min=None,
                        input_tensor_max=None):
-        assert len(collector._samples) == step_num
+        assert len(collector.samples) == step_num
 
         if per_channel:
             self.check_stats_per_channel_np(collector,
@@ -242,7 +243,7 @@ class TestStatisticCollectorsWithDataAggregation:
             axis.pop()
 
         # Before first call - no samples
-        assert collector._samples == []
+        assert collector.samples == []
 
         for step_num in [1, 2]:
             collector(INPUT_TENSOR)
@@ -284,7 +285,7 @@ class TestStatisticCollectorsWithDataAggregation:
             axis.pop()
 
         # Before first call - no samples
-        assert collector._samples == []
+        assert collector.samples == []
 
         for step_num in [1, 2]:
             collector(input_tensor)

@@ -109,7 +109,7 @@ class MedianMADStatisticCollector:
     def __init__(self, per_channel: bool, channel_axes: int):
         self.per_channel = per_channel
         self.channel_axes = channel_axes if isinstance(channel_axes, (list, tuple)) else [channel_axes]
-        self._samples = []
+        self.samples = []
         self.median = None
         self.mad = None
 
@@ -122,10 +122,10 @@ class MedianMADStatisticCollector:
         return (self.median + 3 * 1.726 * self.mad).astype(np.float32)
 
     def prepare_statistics(self):
-        ndims = len(self._samples[0].shape)
+        ndims = len(self.samples[0].shape)
         axis = get_axes(ndims, self.per_channel, self.channel_axes, add_dim=True)
 
-        inputs_tensor = np.array(self._samples)
+        inputs_tensor = np.array(self.samples)
         if self.per_channel:
             per_channel_histories = get_per_channel_history(inputs_tensor, axis)
             per_channel_median = []
@@ -145,7 +145,7 @@ class MedianMADStatisticCollector:
             self.mad = np.median(abs(inputs_tensor_flat - self.median))
 
     def call(self, inputs: tf.Tensor):
-        self._samples.append(inputs.numpy())
+        self.samples.append(inputs.numpy())
 
     def __call__(self, *args, **kwargs):
         self.call(*args, **kwargs)
@@ -157,7 +157,7 @@ class PercentileStatisticCollector:
         self.channel_axes = channel_axes if isinstance(channel_axes, (list, tuple)) else [channel_axes]
         self.min_percentile = min_percentile
         self.max_percentile = max_percentile
-        self._samples = []
+        self.samples = []
         self.all_min_values = None
         self.all_max_values = None
 
@@ -170,10 +170,10 @@ class PercentileStatisticCollector:
         return self.all_max_values.astype(np.float32)
 
     def prepare_statistics(self):
-        ndims = len(self._samples[0].shape)
+        ndims = len(self.samples[0].shape)
         axis = get_axes(ndims, self.per_channel, self.channel_axes, add_dim=True)
 
-        inputs_tensor = np.array(self._samples)
+        inputs_tensor = np.array(self.samples)
         if self.per_channel:
             per_channel_histories = get_per_channel_history(inputs_tensor, axis)
             per_channel_max_vals = []
@@ -191,7 +191,7 @@ class PercentileStatisticCollector:
             self.all_max_values = np.percentile(inputs_tensor_flat, self.max_percentile)
 
     def call(self, inputs: tf.Tensor):
-        self._samples.append(inputs.numpy())
+        self.samples.append(inputs.numpy())
 
     def __call__(self, *args, **kwargs):
         self.call(*args, **kwargs)
