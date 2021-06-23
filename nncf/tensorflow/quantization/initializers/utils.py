@@ -27,3 +27,15 @@ def get_per_channel_history(inputs_tensor: np.ndarray, axis: list) -> np.ndarray
     for dim in axis:
         new_shape *= inputs_tensor_shape[dim]
     return np.transpose(np.reshape(inputs_tensor, (new_shape, -1)))
+
+
+def get_axes(ndims, per_channel, channel_axes, add_dim=False):
+    axis = list(range(ndims))
+    if per_channel:
+        for val in channel_axes:
+            val = (ndims + val) % ndims
+            axis.remove(val)
+    if add_dim:
+        # all input tensors are stacked together - one more dimension
+        axis.append(axis[-1] + 1)
+    return axis

@@ -17,6 +17,7 @@ import tensorflow as tf
 from nncf.tensorflow.layers.operation import InputType
 from nncf.tensorflow.quantization.initializers.utils import get_per_channel_history
 from nncf.tensorflow.quantization.initializers.utils import discard_zeros
+from nncf.tensorflow.quantization.initializers.utils import get_axes
 
 
 class MinMaxStatisticsCollector:
@@ -46,19 +47,8 @@ class MinMaxStatisticsCollector:
 
     def call(self, inputs: tf.Tensor):
         ndims = len(inputs.shape)
-        axis = list(range(ndims))
+        axis = get_axes(ndims, self.per_channel, self.channel_axes)
 
-        if self.per_channel:
-            for val in self.channel_axes:
-                val = (ndims + val) % ndims
-                axis.remove(val)
-
-        # # Per-batch statistics collection
-        # self.all_min_values.append(tf.reduce_min(inputs, axis=axis))
-        # self.all_max_values.append(tf.reduce_max(inputs, axis=axis))
-
-        # Per-sample statistics collection
-        # TODO (negvet): analize for a_ch case
         if self.input_type == InputType.INPUTS:
             axis.remove(0)
             self.all_min_values.extend(tf.unstack(tf.reduce_min(inputs, axis=axis)))
@@ -98,11 +88,7 @@ class MeanMinMaxStatisticsCollector:
 
     def call(self, inputs: tf.Tensor):
         ndims = len(inputs.shape)
-        axis = list(range(ndims))
-        if self.per_channel:
-            for val in self.channel_axes:
-                val = (ndims + val) % ndims
-                axis.remove(val)
+        axis = get_axes(ndims, self.per_channel, self.channel_axes)
 
         if self.input_type == InputType.INPUTS:
             axis.remove(0)
@@ -118,12 +104,14 @@ class MeanMinMaxStatisticsCollector:
 
 class MedianMADStatisticCollector:
     """Use three-sigma approach.
-    Constant factor depends on the distribution form - assuming normal and the factor 1.4826.
+    Constant factor depends on the distribution form. Assuming normal distribution - the factor is 1.4826.
     """
     def __init__(self, per_channel: bool, channel_axes: int):
         self.per_channel = per_channel
         self.channel_axes = channel_axes if isinstance(channel_axes, (list, tuple)) else [channel_axes]
         self._samples = []
+        self.median = None
+        self.mad = None
 
     @property
     def min(self) -> np.ndarray:
@@ -135,14 +123,7 @@ class MedianMADStatisticCollector:
 
     def prepare_statistics(self):
         ndims = len(self._samples[0].shape)
-        axis = list(range(ndims))
-
-        if self.per_channel:
-            for val in self.channel_axes:
-                val = (ndims + val) % ndims
-                axis.remove(val)
-        # all input tensors are stacked together - one more dimension
-        axis.append(axis[-1] + 1)
+        axis = get_axes(ndims, self.per_channel, self.channel_axes, add_dim=True)
 
         inputs_tensor = np.array(self._samples)
         if self.per_channel:
@@ -174,28 +155,23 @@ class PercentileStatisticCollector:
     def __init__(self, per_channel: bool, channel_axes: int, min_percentile: float, max_percentile: float):
         self.per_channel = per_channel
         self.channel_axes = channel_axes if isinstance(channel_axes, (list, tuple)) else [channel_axes]
-        self._samples = []
         self.min_percentile = min_percentile
         self.max_percentile = max_percentile
+        self._samples = []
+        self.all_min_values = None
+        self.all_max_values = None
 
     @property
     def min(self) -> np.ndarray:
-        return self._min_vals.astype(np.float32)
+        return self.all_min_values.astype(np.float32)
 
     @property
     def max(self) -> np.ndarray:
-        return self._max_vals.astype(np.float32)
+        return self.all_max_values.astype(np.float32)
 
     def prepare_statistics(self):
         ndims = len(self._samples[0].shape)
-        axis = list(range(ndims))
-
-        if self.per_channel:
-            for val in self.channel_axes:
-                val = (ndims + val) % ndims
-                axis.remove(val)
-        # all input tensors are stacked together - one more dimension
-        axis.append(axis[-1] + 1)
+        axis = get_axes(ndims, self.per_channel, self.channel_axes, add_dim=True)
 
         inputs_tensor = np.array(self._samples)
         if self.per_channel:
@@ -207,12 +183,12 @@ class PercentileStatisticCollector:
                 max_val = np.percentile(channel_history, self.max_percentile)
                 per_channel_min_vals.append(min_val)
                 per_channel_max_vals.append(max_val)
-            self._min_vals = np.array(per_channel_min_vals)
-            self._max_vals = np.array(per_channel_max_vals)
+            self.all_min_values = np.array(per_channel_min_vals)
+            self.all_max_values = np.array(per_channel_max_vals)
         else:
             inputs_tensor_flat = inputs_tensor.flatten()
-            self._min_vals = np.percentile(inputs_tensor_flat, self.min_percentile)
-            self._max_vals = np.percentile(inputs_tensor_flat, self.max_percentile)
+            self.all_min_values = np.percentile(inputs_tensor_flat, self.min_percentile)
+            self.all_max_values = np.percentile(inputs_tensor_flat, self.max_percentile)
 
     def call(self, inputs: tf.Tensor):
         self._samples.append(inputs.numpy())
@@ -226,11 +202,11 @@ class MeanPercentileStatisticCollector:
                  min_percentile: float, max_percentile: float):
         self.per_channel = per_channel
         self.channel_axes = channel_axes if isinstance(channel_axes, (list, tuple)) else [channel_axes]
+        self.min_percentile = min_percentile
+        self.max_percentile = max_percentile
         self.input_type = input_type
         self.all_min_values = []
         self.all_max_values = []
-        self.min_percentile = min_percentile
-        self.max_percentile = max_percentile
 
     @property
     def min(self) -> tf.Tensor:
@@ -249,16 +225,12 @@ class MeanPercentileStatisticCollector:
                 self.all_min_values[i] = tf.reshape(self.all_min_values[i], shape=(new_shape))
                 self.all_max_values[i] = tf.reshape(self.all_max_values[i], shape=(new_shape))
 
-    def _percentile(self, inputs: tf.Tensor, pc: int, axis: list):
+    def _percentile(self, inputs: tf.Tensor, pc: float, axis: list):
         return np.percentile(inputs.numpy(), pc, axis)
 
     def call(self, inputs: tf.Tensor):
         ndims = len(inputs.shape)
-        axis = list(range(ndims))
-        if self.per_channel:
-            for val in self.channel_axes:
-                val = (ndims + val) % ndims
-                axis.remove(val)
+        axis = get_axes(ndims, self.per_channel, self.channel_axes)
 
         if self.input_type == InputType.INPUTS:
             axis.remove(0)
