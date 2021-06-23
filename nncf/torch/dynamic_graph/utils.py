@@ -13,7 +13,6 @@
 
 from graphviz import Digraph
 
-
 graph_theme = {
     "background_color": "#FFFFFF",
     "fill_color": "#E8E8E8",
