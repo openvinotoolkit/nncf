@@ -115,15 +115,15 @@ To export a model to the OpenVINO IR and run it using the Intel® Deep Learning 
 |ResNet50|INT8 w:sym,per-tensor a:sym,per-tensor|ImageNet|75.0|[resnet50_imagenet_int8.json](configs/quantization/resnet50_imagenet_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/tensorflow/models/develop/resnet50_int8_w_sym_t_half_a_sym_t.tar.gz)|
 |ResNet50|Sparsity 80% (RB)|ImageNet|74.36|[resnet50_imagenet_rb_sparsity.json](configs/sparsity/resnet50_imagenet_rb_sparsity.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/tensorflow/models/develop/resnet50_rb_sparsity_80.tar.gz)|
 |ResNet50|INT8 w:sym,per-tensor a:sym,per-tensor + Sparsity 65% (RB)|ImageNet|74.3|[resnet50_imagenet_rb_sparsity_int8.json](configs/sparsity_quantization/resnet50_imagenet_rb_sparsity_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/tensorflow/models/develop/resnet50_int8_w_sym_t_half_a_sym_t_rb_sparsity_65.tar.gz)|
-|ResNet50|Filter Pruning 40%,<br/>45% GFLOPS reduction,<br/>38% MParams reduction|ImageNet|74.98|[resnet50_imagenet_pruning_geometric_median.json](configs/pruning/resnet50_imagenet_pruning_geometric_median.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/tensorflow/models/develop/resnet50_pruning_40.tar.gz)|
 |TensorFlow Hub MobileNet V2|Sparsity 35% (Magnitude)|ImageNet|71.90|[mobilenet_v2_hub_imagenet_magnitude_sparsity.json](configs/sparsity/mobilenet_v2_hub_imagenet_magnitude_sparsity.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/tensorflow/models/develop/tf1_mobilenet_v2_1.0_224_sparsity_35.tar.gz)|
 
-#### Filter pruning
-|**Model**|**Compression algorithm**|**Pruning rate**|**GFLOPS full**|**GFLOPS reduced**|**GFLOPS reduction rate**|**MParams full**|**MParams reduced**|**MParams reduction rate**|
-| :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-|ResNet50|Filter Pruning,<br/>geometric median criterion|40% filter pruning rate|7.75|4.29|44.65%|25.5|15.8|38.04%|
+#### Results for filter pruning
+|**Model**|**Compression algorithm**|**Dataset**|**TensorFlow compressed accuracy**|**GFLOPS**|**MParams**|**NNCF config file**|**TensorFlow checkpoint**|
+| :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+|ResNet50|None|ImageNet|75.04|7.75 (100%)|25.5 (100%)|-|-|
+|ResNet50|Filter Pruning 40%|ImageNet|74.98|4.29 (55.35%)|15.8 (61.96%)|[Config](configs/pruning/resnet50_imagenet_pruning_geometric_median.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/tensorflow/models/develop/resnet50_pruning_40.tar.gz)|
 
-Results for accuracy-aware compressed training
+#### Results for accuracy-aware compressed training
 
 |**Model**|**Compression algorithm**|**Dataset**|**TensorFlow compressed accuracy**|**NNCF config file**|
 | :---: | :---: | :---: | :---: | :---: |
