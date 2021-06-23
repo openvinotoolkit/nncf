@@ -84,19 +84,8 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
         for quantizer_group in QuantizerGroup:
             self._parse_group_params(self.config, quantizer_group)
 
-        if self.should_init:
-            self._parse_init_params()
-
         self._range_initializer = None
         self._bn_adaptation = None
-
-    def _parse_init_params(self):
-        self._batchnorm_adaptation = 'batchnorm_adaptation' in self.config.get('initializer', {})
-        self._range_init_params = self._parse_range_init_params()
-
-    def _parse_range_init_params(self) -> RangeInitParams:
-        range_init_params = extract_range_init_params(self.config)
-        return RangeInitParams(**range_init_params) if range_init_params is not None else None
 
     def _parse_group_params(self, config: NNCFConfig, quantizer_group: QuantizerGroup) -> None:
         group_name = quantizer_group.value
@@ -194,7 +183,17 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
     def build_controller(self, model: tf.keras.Model) -> 'QuantizationController':
         return QuantizationController(model, self.config, self._op_names)
 
+    def _parse_init_params(self):
+        self._batchnorm_adaptation = 'batchnorm_adaptation' in self.config.get('initializer', {})
+        self._range_init_params = self._parse_range_init_params()
+
+    def _parse_range_init_params(self) -> RangeInitParams:
+        range_init_params = extract_range_init_params(self.config)
+        return RangeInitParams(**range_init_params) if range_init_params is not None else None
+
     def initialize(self, model: tf.keras.Model) -> None:
+        self._parse_init_params()
+
         if self._range_init_params is not None:
             self._run_range_initialization(model)
 
