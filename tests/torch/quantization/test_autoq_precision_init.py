@@ -154,8 +154,8 @@ def test_autoq_precision_init(_seed, dataset_dir, tmp_path, mocker, params):
     autoq_obj_init_spy = mocker.spy(AutoQPrecisionInitializer, '__init__')
     adjust_pad_creation_spy = mocker.spy(UpdatePaddingValue, '__init__')
 
-    config = register_default_init_args(config, init_loader=train_loader,
-                                        validate_fn=lambda *x: (None, random(), None),
+    config = register_default_init_args(config, train_loader,
+                                        autoq_eval_fn=lambda *x: random(),
                                         val_loader=train_loader)
     model, algo_ctrl = create_compressed_model_and_algo_for_test(model, config)
 

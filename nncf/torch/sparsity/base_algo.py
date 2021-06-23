@@ -30,6 +30,7 @@ from nncf.torch.graph.transformations.commands import TransformationPriority
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.graph.transformations.commands import PTInsertionCommand
 from nncf.common.schedulers import BaseCompressionScheduler
+from nncf.common.schedulers import StubCompressionScheduler
 from nncf.torch.nncf_network import NNCFNetwork
 
 
@@ -100,6 +101,11 @@ class BaseSparsityAlgoController(PTCompressionAlgorithmController, SparsityContr
     @property
     def scheduler(self) -> CompressionScheduler:
         return self._scheduler
+
+    def disable_scheduler(self):
+        self._scheduler = StubCompressionScheduler()
+        self._scheduler.target_level = 0.0
+        self._scheduler.current_sparsity_level = 0.0
 
     def compression_stage(self) -> CompressionStage:
         return CompressionStage.FULLY_COMPRESSED

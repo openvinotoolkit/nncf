@@ -18,10 +18,15 @@ from pathlib import Path
 import tensorflow as tf
 import numpy as np
 
+from nncf.tensorflow.accuracy_aware_training.runner import TFAccuracyAwareTrainingRunner as \
+        AccuracyAwareTrainingRunner
 from nncf.tensorflow import create_compressed_model
 from nncf.tensorflow.helpers.model_manager import TFOriginalModelManager
 from nncf.tensorflow.initialization import register_default_init_args
 from nncf.common.utils.tensorboard import prepare_for_tensorboard
+from nncf.common.accuracy_aware_training.training_loop import AdaptiveCompressionTrainingLoop
+from nncf.config.utils import is_accuracy_aware_training
+from nncf.config.structures import ModelEvaluationArgs
 
 from examples.tensorflow.common.argparser import get_common_argument_parser
 from examples.tensorflow.common.distributed import get_distribution_strategy
@@ -165,6 +170,36 @@ def create_train_step_fn(strategy, model, loss_fn, optimizer):
     return train_step
 
 
+def train_epoch(train_step, compression_ctrl, epoch, initial_epoch, steps_per_epoch, optimizer, checkpoint_manager,
+                train_dist_dataset, train_summary_writer, initial_step, print_freq, timer):
+    compression_ctrl.scheduler.epoch_step(epoch)
+
+    for step, x in enumerate(train_dist_dataset):
+        if epoch == initial_epoch and step < initial_step % steps_per_epoch:
+            continue
+        if step == steps_per_epoch:
+            save_path = checkpoint_manager.save()
+            logger.info('Saved checkpoint for epoch={}: {}'.format(epoch, save_path))
+            break
+
+        compression_ctrl.scheduler.step()
+        train_loss = train_step(x)
+        train_metric_result = tf.nest.map_structure(lambda s: s.numpy().astype(float), train_loss)
+
+        if np.isnan(train_metric_result['total_loss']):
+            raise ValueError('total loss is NaN')
+
+        train_metric_result.update({'learning_rate': optimizer.lr(optimizer.iterations).numpy()})
+
+        train_summary_writer(metrics=train_metric_result, step=optimizer.iterations.numpy())
+
+        if step % print_freq == 0:
+            time = timer.toc(average=False)
+            logger.info('Step: {}/{} Time: {:.3f} sec'.format(step, steps_per_epoch, time))
+            logger.info('Training metric = {}'.format(train_metric_result))
+            timer.tic()
+
+
 def train(train_step, test_step, eval_metric, train_dist_dataset, test_dist_dataset, initial_epoch, initial_step,
     epochs, steps_per_epoch, checkpoint_manager, compression_ctrl, log_dir, optimizer, num_test_batches, print_freq):
 
@@ -178,32 +213,10 @@ def train(train_step, test_step, eval_metric, train_dist_dataset, test_dist_data
     logger.info('Training...')
     for epoch in range(initial_epoch, epochs):
         logger.info('Epoch: {}/{}'.format(epoch, epochs))
-        compression_ctrl.scheduler.epoch_step(epoch)
 
-        for step, x in enumerate(train_dist_dataset):
-            if epoch == initial_epoch and step < initial_step % steps_per_epoch:
-                continue
-            if step == steps_per_epoch:
-                save_path = checkpoint_manager.save()
-                logger.info('Saved checkpoint for epoch={}: {}'.format(epoch, save_path))
-                break
-
-            compression_ctrl.scheduler.step()
-            train_loss = train_step(x)
-            train_metric_result = tf.nest.map_structure(lambda s: s.numpy().astype(float), train_loss)
-
-            if np.isnan(train_metric_result['total_loss']):
-                raise ValueError('total loss is NaN')
-
-            train_metric_result.update({'learning_rate': optimizer.lr(optimizer.iterations).numpy()})
-
-            train_summary_writer(metrics=train_metric_result, step=optimizer.iterations.numpy())
-
-            if step % print_freq == 0:
-                time = timer.toc(average=False)
-                logger.info('Step: {}/{} Time: {:.3f} sec'.format(step, steps_per_epoch, time))
-                logger.info('Training metric = {}'.format(train_metric_result))
-                timer.tic()
+        train_epoch(train_step, compression_ctrl, epoch, initial_epoch, steps_per_epoch,
+                    optimizer, checkpoint_manager, train_dist_dataset, train_summary_writer,
+                    initial_step, print_freq, timer)
 
         test_metric_result = evaluate(test_step, eval_metric, test_dist_dataset, num_test_batches, print_freq)
         validation_summary_writer(metrics=test_metric_result, step=optimizer.iterations.numpy())
@@ -272,6 +285,11 @@ def run(config):
     # Create model builder
     model_builder = get_model_builder(config)
 
+    def model_eval_fn(model):
+        test_step = create_test_step_fn(strategy, model, model_builder.post_processing)
+        metric_result = evaluate(test_step, model_builder.eval_metrics(), test_dist_dataset,
+                                 num_test_batches, config.print_freq)
+        return metric_result['AP']
     # Register additional parameters in the NNCFConfig for initialization
     # the compressed model during building
     nncf_config = config.nncf_config
@@ -284,10 +302,10 @@ def run(config):
     with TFOriginalModelManager(model_builder.build_model,
                                 weights=config.get('weights', None)) as model:
         with strategy.scope():
+            config.nncf_config.register_extra_structs([ModelEvaluationArgs(eval_fn=model_eval_fn)])
             compression_ctrl, compress_model = create_compressed_model(model,
                                                                        nncf_config,
                                                                        should_init=not resume_training)
-
             scheduler = build_scheduler(
                 config=config,
                 steps_per_epoch=steps_per_epoch)
@@ -315,9 +333,36 @@ def run(config):
     test_step = create_test_step_fn(strategy, compress_model, predict_post_process_fn)
 
     if 'train' in config.mode:
-        train(train_step, test_step, eval_metric, train_dist_dataset, test_dist_dataset, initial_epoch, initial_step,
-            epochs, steps_per_epoch, checkpoint_manager, compression_ctrl, config.log_dir, optimizer, num_test_batches,
-            config.print_freq)
+        if is_accuracy_aware_training(config):
+            train_summary_writer = SummaryWriter(config.log_dir, 'train')
+            timer = Timer()
+            timer.tic()
+
+            def train_epoch_fn(compression_ctrl, model, epoch):
+                train_step = create_train_step_fn(strategy, model, loss_fn, optimizer)
+                train_epoch(train_step, compression_ctrl, epoch, initial_epoch, steps_per_epoch,
+                            optimizer, checkpoint_manager, train_dist_dataset, train_summary_writer,
+                            initial_step, config.print_freq, timer)
+
+            def validate_fn(model, epoch):
+                test_step = create_test_step_fn(strategy, model, predict_post_process_fn)
+                metric_result = evaluate(test_step, eval_metric, test_dist_dataset,
+                                         num_test_batches, config.print_freq)
+                return metric_result['AP']
+
+            # instantiate and run accuracy-aware training loop
+            acc_aware_training_loop = AdaptiveCompressionTrainingLoop(config.nncf_config, compression_ctrl,
+                                                                      runner_cls=AccuracyAwareTrainingRunner)
+            compress_model = acc_aware_training_loop.run(compress_model,
+                                                         train_epoch_fn=train_epoch_fn,
+                                                         validate_fn=validate_fn,
+                                                         tensorboard_writer=config.tb,
+                                                         log_dir=config.log_dir)
+
+        else:
+            train(train_step, test_step, eval_metric, train_dist_dataset, test_dist_dataset,
+                  initial_epoch, initial_step, epochs, steps_per_epoch, checkpoint_manager,
+                  compression_ctrl, config.log_dir, optimizer, num_test_batches, config.print_freq)
 
     statistics = compression_ctrl.statistics()
     logger.info(statistics.to_str())

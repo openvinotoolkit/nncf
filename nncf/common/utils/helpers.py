@@ -11,6 +11,9 @@
  limitations under the License.
 """
 import re
+import os
+import os.path as osp
+import datetime
 
 from typing import List, Any
 from typing import Optional
@@ -68,3 +71,19 @@ def matches_any(tested_str: str,
             if tested_str == item:
                 return True
     return False
+
+
+def configure_accuracy_aware_paths(log_dir: str) -> str:
+    """
+    Create a subdirectory inside of the passed log directory
+    to save checkpoints from the accuracy-aware training loop to.
+
+    :param log_dir: Path to the main log directory.
+    :return: Path to the accuracy-aware training subdirectory.
+    """
+    d = datetime.datetime.now()
+    run_id = '{:%Y-%m-%d__%H-%M-%S}'.format(d)
+    acc_aware_log_dir = osp.join(log_dir,
+                                 'accuracy_aware_training/{run_id}'.format(run_id=run_id))
+    os.makedirs(acc_aware_log_dir, exist_ok=True)
+    return log_dir

@@ -36,6 +36,7 @@ strict digraph  {
 "34 SmallModel/Conv2d[conv_output]/conv2d_0" [id=34, type=conv2d];
 "35 SmallModel/__mul___0" [id=35, type=__mul__];
 "36 SmallModel/add_0" [id=36, type=add];
+"37 /nncf_model_output_0" [id=37, type=nncf_model_output];
 "0 /nncf_model_input_0" -> "6 SmallModel/Conv2d[conv_input]/conv2d_0";
 "1 /nncf_model_input_1" -> "2 SmallModel/Conv2d[conv_cubic1]/conv2d_0";
 "2 SmallModel/Conv2d[conv_cubic1]/conv2d_0" -> "3 SmallModel/ReLU[relu]/relu_0";
@@ -81,4 +82,5 @@ strict digraph  {
 "33 SmallModel/Sequential[upscale]/ReLU[2]/relu__0" -> "34 SmallModel/Conv2d[conv_output]/conv2d_0";
 "34 SmallModel/Conv2d[conv_output]/conv2d_0" -> "35 SmallModel/__mul___0";
 "35 SmallModel/__mul___0" -> "36 SmallModel/add_0";
+"36 SmallModel/add_0" -> "37 /nncf_model_output_0";
 }

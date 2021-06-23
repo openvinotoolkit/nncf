@@ -279,3 +279,10 @@ def test_magnitude_algo_can_calculate_sparsity_rate_for_one_sparsified_module():
 
     module_name = sparse_info_conv1[0].module_node_name
     assert pytest.approx(module_name_to_sparsity_level_map[module_name], 1e-2) == 0.5
+
+
+def test_can_set_compression_rate_for_magnitude_sparse_algo():
+    config = get_basic_magnitude_sparsity_config()
+    _, compression_ctrl = create_compressed_model_and_algo_for_test(MagnitudeTestModel(), config)
+    compression_ctrl.compression_rate = 0.65
+    assert pytest.approx(compression_ctrl.compression_rate, 1e-2) == 0.65

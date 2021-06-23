@@ -110,3 +110,12 @@ As an example of NNCF convolution binarization capabilities, you may use the con
 |ResNet-34|Filter pruning, 40%, geometric median criterion|ImageNet|72.72|[resnet34_pruning_geometric_median.json](configs/pruning/resnet34_pruning_geometric_median.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/resnet34_imagenet_filter_pruning_geomean.pth)|
 |GoogLeNet|None|ImageNet|69.72|[googlenet_imagenet.json](configs/pruning/googlenet_imagenet.json)|-|
 |GoogLeNet|Filter pruning, 40%, geometric median criterion|ImageNet|68.89|[googlenet_pruning_geometric_median.json](configs/pruning/googlenet_pruning_geometric_median.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/googlenet_imagenet_filter_pruning_geomean.pth)|
+
+
+### Results for accuracy-aware compressed training
+|Model|Compression algorithm|Dataset|PyTorch compressed accuracy|NNCF config file|
+| :---: | :---: | :---: | :---: | :---: |
+|ResNet-50|None|ImageNet|76.16|[resnet50_imagenet.json](configs/quantization/resnet50_imagenet.json)|
+|ResNet-50|Filter pruning, 52.5%, geometric median criterion|ImageNet|75.23|[resnet50_imagenet_accuracy_aware.json](configs/pruning/resnet50_imagenet_accuracy_aware.json)|
+|ResNet-18|None|ImageNet|69.8|[resnet18_imagenet.json](configs/binarization/resnet18_imagenet.json)|
+|ResNet-18|Filter pruning, 50%, geometric median criterion|ImageNet|69.92|[resnet18_imagenet_accuracy_aware.json](configs/pruning/resnet18_imagenet_accuracy_aware.json)|

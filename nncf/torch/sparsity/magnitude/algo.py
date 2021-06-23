@@ -25,6 +25,7 @@ from nncf.torch.sparsity.layers import BinaryMask
 from nncf.torch.sparsity.magnitude.functions import WEIGHT_IMPORTANCE_FUNCTIONS, calc_magnitude_binary_mask
 from nncf.torch.sparsity.collector import PTSparseModelStatisticsCollector
 from nncf.common.sparsity.schedulers import SPARSITY_SCHEDULERS
+from nncf.common.accuracy_aware_training.training_loop import ADAPTIVE_COMPRESSION_CONTROLLERS
 from nncf.common.sparsity.statistics import MagnitudeSparsityStatistics
 from nncf.common.schedulers import StubCompressionScheduler
 from nncf.common.statistics import NNCFStatistics
@@ -42,6 +43,7 @@ class MagnitudeSparsityBuilder(BaseSparsityAlgoBuilder):
         return MagnitudeSparsityController(target_model, self._sparsified_module_info, self.config)
 
 
+@ADAPTIVE_COMPRESSION_CONTROLLERS.register('pt_magnitude_sparsity')
 class MagnitudeSparsityController(BaseSparsityAlgoController):
     def __init__(self, target_model: NNCFNetwork, sparsified_module_info: List[SparseModuleInfo], config):
         super().__init__(target_model, sparsified_module_info)
@@ -93,9 +95,19 @@ class MagnitudeSparsityController(BaseSparsityAlgoController):
         nncf_stats.register('magnitude_sparsity', stats)
         return nncf_stats
 
-    def freeze(self):
+    def freeze(self, freeze: bool = True):
         for layer in self.sparsified_module_info:
-            layer.operand.frozen = True
+            layer.operand.frozen = freeze
+
+    @property
+    def compression_rate(self):
+        return self.statistics().magnitude_sparsity.model_statistics.sparsity_level
+
+    @compression_rate.setter
+    def compression_rate(self, sparsity_level: float):
+        self.freeze(False)
+        self.set_sparsity_level(sparsity_level)
+        self.freeze(True)
 
     def set_sparsity_level(self, sparsity_level,
                            target_sparsified_module_info: SparseModuleInfo = None,

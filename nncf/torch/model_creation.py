@@ -13,6 +13,7 @@
 from os import path as osp
 from typing import Callable, Any, Tuple, Dict
 
+import torch
 from torch.nn import Module
 from torch.distributed import barrier
 
@@ -29,6 +30,8 @@ from nncf.torch.utils import is_dist_avail_and_initialized
 from nncf.torch.algo_selector import COMPRESSION_ALGORITHMS
 
 from nncf.common.utils.logger import logger
+from nncf.config.utils import is_accuracy_aware_training
+from nncf.config.structures import ModelEvaluationArgs
 
 
 def get_compression_algorithm(config):
@@ -37,12 +40,13 @@ def get_compression_algorithm(config):
     return COMPRESSION_ALGORITHMS.get(algorithm_key)
 
 
+# pylint: disable=too-many-branches
 def create_compressed_model(model: Module, config: NNCFConfig,
                             resuming_state_dict: dict = None,
                             dummy_forward_fn: Callable[[Module], Any] = None,
                             wrap_inputs_fn: Callable[[Tuple, Dict], Tuple[Tuple, Dict]] = None,
                             wrap_outputs_fn: Callable[[Tuple, Dict], Tuple[Tuple, Dict]] = None,
-                            dump_graphs=True, ) \
+                            dump_graphs=True) \
     -> Tuple[PTCompressionAlgorithmController, NNCFNetwork]:
     """
     The main function used to produce a model ready for compression fine-tuning from an original PyTorch
@@ -109,16 +113,25 @@ def create_compressed_model(model: Module, config: NNCFConfig,
     ignored_scopes = config.get('ignored_scopes')
     target_scopes = config.get('target_scopes')
 
+    original_model_accuracy = None
+    if is_accuracy_aware_training(config):
+        if config.has_extra_struct(ModelEvaluationArgs):
+            evaluation_args = config.get_extra_struct(ModelEvaluationArgs)
+            with torch.no_grad():
+                original_model_accuracy = evaluation_args.eval_fn(model)
+
     compressed_model = NNCFNetwork(model, input_infos=input_info_list,
                                    dummy_forward_fn=dummy_forward_fn,
                                    wrap_inputs_fn=wrap_inputs_fn,
                                    wrap_outputs_fn=wrap_outputs_fn,
                                    ignored_scopes=ignored_scopes,
                                    target_scopes=target_scopes,
-                                   scopes_without_shape_matching=scopes_without_shape_matching)
+                                   scopes_without_shape_matching=scopes_without_shape_matching,
+                                   original_model_accuracy=original_model_accuracy)
 
     should_init = resuming_state_dict is None
     composite_builder = PTCompositeCompressionAlgorithmBuilder(config, should_init=should_init)
+
     composite_builder.apply_to(compressed_model)
 
     compression_ctrl = composite_builder.build_controller(compressed_model)
@@ -132,17 +145,8 @@ def create_compressed_model(model: Module, config: NNCFConfig,
             load_state(compressed_model, resuming_state_dict, is_resume=True)
     finally:
         if dump_graphs and is_main_process():
-            if dummy_forward_fn is None:
-                compressed_graph_builder = GraphBuilder(custom_forward_fn=
-                                                        create_dummy_forward_fn(input_info_list,
-                                                                                with_input_tracing=False,
-                                                                                with_output_tracing=False))
-            else:
-                compressed_graph_builder = GraphBuilder(custom_forward_fn=dummy_forward_fn)
-
-            graph = compressed_graph_builder.build_graph(compressed_model,
-                                                         compressed_model.get_tracing_context())
-            graph.visualize_graph(osp.join(config.get("log_dir", "."), "compressed_graph.dot"))
+            compressed_model_graph = compressed_model.get_graph()
+            compressed_model_graph.visualize_graph(osp.join(config.get("log_dir", "."), "compressed_graph.dot"))
 
     # Synchronize all processes if run in distributed mode
     if is_dist_avail_and_initialized():

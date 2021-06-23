@@ -24,6 +24,7 @@ from typing import List
 from typing import Tuple
 from typing import Union
 
+import functools
 import numpy as np
 import pandas as pd
 import torch
@@ -273,6 +274,11 @@ class QuantizationEnv:
 
 
     def _create_quantizer_table(self) -> pd.DataFrame:
+        def get_hook(qid, exec_order_list):
+            def register_quantizer_exec_order(module, input_, output, qid, exec_order_list):
+                exec_order_list.append(qid)
+            return functools.partial(register_quantizer_exec_order, qid=qid, exec_order_list=exec_order_list)
+
         # Create a mapping of qid to its adjacent quantizer group id
         adjq_gid_map = OrderedDict.fromkeys(self.qctrl.all_quantizations.keys())
         for qid in self.qctrl.all_quantizations:
@@ -281,8 +287,26 @@ class QuantizationEnv:
         assert len(set(self.qconfig_space_map.keys()) - set(adjq_gid_map.keys())) == 0, \
             "both qconfig_space_map and adjq_gid_map must have exact keys."
 
+        # By design, AutoQ requires quantizers in execution order.
+        # RL assumes that state satisfies Markov assumption in which
+        # the future is independent of the past given current state.
+        # Stated differently, curret state should represent well of historical dynamics.
+        # Given sequential nature of NN, state transition in the order of
+        # quantizer being executed is a natural design to conform the assumption.
+        quantizers_in_exec_order = []
+        hooklist = []
+        for qid, qmod in self.qctrl.all_quantizations.items():
+            hooklist.append(
+                qmod.register_forward_hook(
+                    get_hook(qid, quantizers_in_exec_order)
+                )
+            )
+        self.qmodel.do_dummy_forward(force_eval=True)
+        for h in hooklist:
+            h.remove()
+
         d = OrderedDict()
-        for qid in self.qctrl.all_quantizations:
+        for qid in quantizers_in_exec_order:
             idx_str = str(qid)
             gid = adjq_gid_map[qid]
 
@@ -300,8 +324,7 @@ class QuantizationEnv:
         df['is_wt_quantizer'] = df['qid_obj'].apply(lambda x: x in self.qctrl.weight_quantizers)
         df['state_module'] = df['state_scope'].apply(self.qmodel.get_containing_module)
 
-        quantizer_table = df.loc[natsorted(df.index)]
-        return quantizer_table
+        return df
 
 
     def _get_state_space(self,

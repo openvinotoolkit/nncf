@@ -28,6 +28,7 @@ from torch.backends import cudnn
 from torch.nn.utils.rnn import PackedSequence
 
 from nncf.torch import nncf_model_input
+from nncf.torch.dynamic_graph.io_handling import wrap_nncf_model_outputs_with_objwalk
 from nncf.torch.dynamic_graph.context import TracingContext
 from nncf.torch.dynamic_graph.transform_graph import replace_modules
 from nncf.torch.layers import LSTMCellNNCF, NNCF_RNN, ITERATION_MODULES
@@ -501,7 +502,7 @@ class TestNumberOfNodes:
             input_encoder = x_data
             input_enc_len = seq_lens.to(device)
             input_decoder = gen_packed_sequence()[0]
-            model(input_encoder, input_enc_len, input_decoder)
+            wrap_nncf_model_outputs_with_objwalk(model(input_encoder, input_enc_len, input_decoder))
 
         def gnmt_wrap_inputs_fn(model_args, model_kwargs):
             # Assuming 3 args to wrap: input_encoder, input_enc_len, input_decoder, and 0 kwargs to wrap

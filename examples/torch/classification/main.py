@@ -37,6 +37,7 @@ from torchvision.models import InceptionOutputs
 
 from examples.torch.common.execution import set_seed
 from nncf.common.utils.tensorboard import prepare_for_tensorboard
+from nncf.config.utils import is_accuracy_aware_training
 from examples.torch.common.argparser import get_common_argument_parser
 from examples.torch.common.example_logger import logger
 from examples.torch.common.execution import ExecutionMode, get_execution_mode, \
@@ -48,6 +49,7 @@ from examples.torch.common.utils import configure_logging, configure_paths, crea
     print_args, make_additional_checkpoints, get_name, is_staged_quantization, \
     is_pretrained_model_requested, log_common_mlflow_params, SafeMLFLow, MockDataset, configure_device
 from examples.torch.common.utils import write_metrics
+from nncf.torch import AdaptiveCompressionTrainingLoop
 from nncf.torch import create_compressed_model
 from nncf.api.compression import CompressionStage
 from nncf.torch.dynamic_graph.graph_tracer import create_input_infos
@@ -59,6 +61,7 @@ from examples.torch.classification.common import load_resuming_checkpoint
 model_names = sorted(name for name in models.__dict__
                      if name.islower() and not name.startswith("__")
                      and callable(models.__dict__[name]))
+
 
 def get_argument_parser():
     parser = get_common_argument_parser()
@@ -113,7 +116,7 @@ def inception_criterion_fn(model_outputs: Any, target: Any, criterion: _Loss) ->
     return loss1 + 0.4 * loss2
 
 
-# pylint:disable=too-many-branches
+# pylint:disable=too-many-branches,too-many-statements
 def main_worker(current_gpu, config: SampleConfig):
     configure_device(current_gpu, config)
     config.mlflow = SafeMLFLow(config)
@@ -142,10 +145,6 @@ def main_worker(current_gpu, config: SampleConfig):
         train_dataset, val_dataset = create_datasets(config)
         train_loader, train_sampler, val_loader, init_loader = create_data_loaders(config, train_dataset, val_dataset)
 
-        def autoq_eval_fn(model, eval_loader):
-            _, top5 = validate(eval_loader, model, criterion, config)
-            return top5
-
         def train_steps_fn(loader, model, optimizer, compression_ctrl, train_steps):
             train_epoch(loader, model, criterion, train_criterion_fn, optimizer, compression_ctrl, 0, config,
                         train_iters=train_steps, log_training_info=False)
@@ -153,6 +152,10 @@ def main_worker(current_gpu, config: SampleConfig):
         def validate_fn(model, eval_loader, log=True):
             top1, top5, loss = validate(eval_loader, model, criterion, config, log)
             return top1, top5, loss
+
+        def model_eval_fn(model):
+            top1, _ = validate(val_loader, model, criterion, config)
+            return top1
 
         execution_params = ExecutionParameters(config.cpu_only, config.current_gpu)
 
@@ -163,7 +166,9 @@ def main_worker(current_gpu, config: SampleConfig):
             criterion_fn=train_criterion_fn,
             train_steps_fn=train_steps_fn,
             validate_fn=validate_fn,
+            autoq_eval_fn=lambda *x: validate_fn(*x)[1],
             val_loader=val_loader,
+            model_eval_fn=model_eval_fn,
             device=config.device,
             execution_parameters=execution_params,
         )
@@ -178,7 +183,8 @@ def main_worker(current_gpu, config: SampleConfig):
     model.to(config.device)
 
     resuming_model_sd, resuming_checkpoint = load_resuming_checkpoint(resuming_checkpoint_path)
-    compression_ctrl, model = create_compressed_model(model, nncf_config, resuming_state_dict=resuming_model_sd)
+    compression_ctrl, model = create_compressed_model(model, nncf_config,
+                                                      resuming_state_dict=resuming_model_sd)
 
     if config.to_onnx:
         compression_ctrl.export_model(config.to_onnx)
@@ -219,8 +225,38 @@ def main_worker(current_gpu, config: SampleConfig):
         validate(val_loader, model, criterion, config)
 
     if config.mode.lower() == 'train':
-        train(config, compression_ctrl, model, criterion, train_criterion_fn, lr_scheduler, model_name, optimizer,
-              train_loader, train_sampler, val_loader, best_acc1)
+        if is_accuracy_aware_training(config):
+            # validation function that returns the target metric value
+            # pylint: disable=E1123
+            def validate_fn(model, epoch):
+                top1, _ = validate(val_loader, model, criterion, config, epoch=epoch)
+                return top1
+
+            # training function that trains the model for one epoch (full training dataset pass)
+            # it is assumed that all the NNCF-related methods are properly called inside of
+            # this function (like e.g. the step and epoch_step methods of the compression scheduler)
+            def train_epoch_fn(compression_ctrl, model, epoch, optimizer, lr_scheduler):
+                return train_epoch(train_loader, model, criterion, train_criterion_fn,
+                                   optimizer, compression_ctrl, epoch, config)
+
+            # function that initializes optimizers & lr schedulers to start training
+            def configure_optimizers_fn():
+                params_to_optimize = get_parameter_groups(model, config)
+                optimizer, lr_scheduler = make_optimizer(params_to_optimize, config)
+                return optimizer, lr_scheduler
+
+            # instantiate and run accuracy-aware training loop
+            acc_aware_training_loop = AdaptiveCompressionTrainingLoop(nncf_config, compression_ctrl)
+            model = acc_aware_training_loop.run(model,
+                                                train_epoch_fn=train_epoch_fn,
+                                                validate_fn=validate_fn,
+                                                configure_optimizers_fn=configure_optimizers_fn,
+                                                tensorboard_writer=config.tb,
+                                                log_dir=config.log_dir)
+        else:
+            train(config, compression_ctrl, model, criterion, train_criterion_fn, lr_scheduler, model_name, optimizer,
+                  train_loader, train_sampler, val_loader, best_acc1)
+
     config.mlflow.end_run()
 
 
@@ -231,7 +267,6 @@ def train(config, compression_ctrl, model, criterion, criterion_fn, lr_scheduler
         # update compression scheduler state at the begin of the epoch
         compression_ctrl.scheduler.epoch_step()
 
-        config.cur_epoch = epoch
         if config.distributed:
             train_sampler.set_epoch(epoch)
 
@@ -247,7 +282,7 @@ def train(config, compression_ctrl, model, criterion, criterion_fn, lr_scheduler
         acc1 = best_acc1
         if epoch % config.test_every_n_epochs == 0:
             # evaluate on validation set
-            acc1, _, _ = validate(val_loader, model, criterion, config)
+            acc1, _, _ = validate(val_loader, model, criterion, config, epoch=epoch)
 
         compression_stage = compression_ctrl.compression_stage()
         # remember best acc@1, considering compression stage. If current acc@1 less then the best acc@1, checkpoint
@@ -495,7 +530,7 @@ def train_epoch(train_loader, model, criterion, criterion_fn, optimizer, compres
             break
 
 
-def validate(val_loader, model, criterion, config, log_validation_info=True):
+def validate(val_loader, model, criterion, config, epoch=0, log_validation_info=True):
     batch_time = AverageMeter()
     losses = AverageMeter()
     top1 = AverageMeter()
@@ -537,19 +572,20 @@ def validate(val_loader, model, criterion, config, log_validation_info=True):
                         rank='{}:'.format(config.rank) if config.multiprocessing_distributed else ''
                     ))
 
-        if is_main_process():
-            config.tb.add_scalar("val/loss", losses.avg, len(val_loader) * config.get('cur_epoch', 0))
-            config.tb.add_scalar("val/top1", top1.avg, len(val_loader) * config.get('cur_epoch', 0))
-            config.tb.add_scalar("val/top5", top5.avg, len(val_loader) * config.get('cur_epoch', 0))
-            config.mlflow.safe_call('log_metric', "val/loss", float(losses.avg), config.get('cur_epoch', 0))
-            config.mlflow.safe_call('log_metric', "val/top1", float(top1.avg), config.get('cur_epoch', 0))
-            config.mlflow.safe_call('log_metric', "val/top5", float(top5.avg), config.get('cur_epoch', 0))
+        if is_main_process() and log_validation_info:
+            config.tb.add_scalar("val/loss", losses.avg, len(val_loader) * epoch)
+            config.tb.add_scalar("val/top1", top1.avg, len(val_loader) * epoch)
+            config.tb.add_scalar("val/top5", top5.avg, len(val_loader) * epoch)
+            config.mlflow.safe_call('log_metric', "val/loss", float(losses.avg), epoch)
+            config.mlflow.safe_call('log_metric', "val/top1", float(top1.avg), epoch)
+            config.mlflow.safe_call('log_metric', "val/top5", float(top5.avg), epoch)
+
         if log_validation_info:
             logger.info(' * Acc@1 {top1.avg:.3f} Acc@5 {top5.avg:.3f}\n'.format(top1=top1, top5=top5))
 
-        acc = top1.avg / 100
-        if config.metrics_dump is not None:
-            write_metrics(acc, config.metrics_dump)
+            acc = top1.avg / 100
+            if config.metrics_dump is not None:
+                write_metrics(acc, config.metrics_dump)
 
     return top1.avg, top5.avg, losses.avg
 

@@ -11,7 +11,6 @@
  limitations under the License.
 """
 
-import contextlib
 import copy
 from typing import Callable
 from typing import Tuple
@@ -36,6 +35,7 @@ from tests.torch.helpers import check_greater
 from tests.torch.helpers import get_grads
 from tests.torch.helpers import LeNet
 from tests.torch.helpers import RandomDatasetMock
+from tests.torch.helpers import set_torch_seed
 from tests.torch.quantization.test_algo_quantization import get_quantization_config_without_range_init
 from tests.torch.sparsity.rb.test_algo import get_basic_sparsity_config
 
@@ -45,14 +45,6 @@ ALGO_NAME_TO_PATH_MAP = {
     'rb_sparsity': 'nncf.torch.sparsity.rb',
     'binarization': 'nncf.torch.binarization'
 }
-
-
-@contextlib.contextmanager
-def set_torch_seed(seed: int = 42):
-    saved_seed = torch.seed()
-    torch.manual_seed(seed)
-    yield
-    torch.manual_seed(saved_seed)
 
 
 def get_quantization_config() -> NNCFConfig:
