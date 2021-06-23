@@ -720,8 +720,6 @@ KNOWLEDGE_DISTILLATION_SCHEMA = {
         "algorithm": {
             "const": KNOWLEDGE_DISTILLATION_ALGO_NAME_IN_CONFIG
         },
-        "scale": with_attributes(_NUMBER,
-                                 description="Scale parameter for kdloss"),
         "type": with_attributes(_STRING, description="Type of KDLoss (mse/softmax)")
     },
     "additionalProperties": False

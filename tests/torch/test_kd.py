@@ -1,5 +1,8 @@
 from copy import deepcopy
+from functools import reduce
 
+from tests.torch.test_models.synthetic import PartlyNonDifferentialOutputsModel, EmbeddingCatLinearModel
+from tests.torch.test_models.synthetic import ContainersOutputsModel
 from tests.torch.helpers import TwoConvTestModel
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
 from tests.torch.helpers import create_mock_dataloader
@@ -8,28 +11,11 @@ from tests.torch.quantization.test_quantization_helpers import create_rank_datal
 from tests.torch.quantization.test_quantization_helpers import distributed_init_test_default
 
 import torch
+from torch import nn
 from torch.optim import SGD
 import pytest
 
 KEY_TO_KD_PARAMETERS = 'kd'
-
-
-class ComplexOutputsModel(torch.nn.Module):
-    def __init__(self, input_size=[1, 1, 4, 4]):
-        super().__init__()
-        self.input_size = input_size
-        self.Conv1 = torch.nn.Conv2d(in_channels=self.input_size[1], out_channels=1, kernel_size=3)
-        self.Conv2_1 = torch.nn.Conv2d(in_channels=1, out_channels=1, kernel_size=3)
-        self.Conv2_2 = torch.nn.Conv2d(in_channels=1, out_channels=1, kernel_size=3)
-
-    def forward(self, x):
-        # first and seconds outputs with requires_grad=True
-        # third output with requires_grad = False
-        x = self.Conv1(x)
-        output_1 = self.Conv2_1(x)
-        with torch.no_grad():
-            output_2 = self.Conv2_2(x)
-        return x, output_1, output_2
 
 
 def get_kd_config(config):
@@ -57,70 +43,123 @@ def get_sparsity_config_with_sparsity_init(config, sparsity_init=0.5):
     return config
 
 
-def change_parameters_of_model(model, keyword='conv'):
-    for name, module in model.named_modules():
-        if keyword in name:
-            module.weight = torch.nn.Parameter(module.weight / 2).to(module.weight.device)
-            return
-
-
-def fill_params_of_model_by_normal(model):
+def fill_params_of_model_by_normal(model, std=1):
     for param in model.parameters():
-        param.data = torch.normal(0, 1, size=param.data.size())
+        param.data = torch.normal(0, std, size=param.data.size())
 
 
-def create_sparsified_model_with_kd(model, input_size=[1, 1, 4, 4], sparsity_level=0.5):
-    fill_params_of_model_by_normal(model)
-    dumped_orig_model = deepcopy(model)
-    config = get_kd_config(
-        get_sparsity_config_with_sparsity_init(get_basic_magnitude_sparsity_config(input_sample_size=input_size),
-                                               sparsity_level))
-    model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
-    return model, compression_ctrl
-
-
-@pytest.mark.parametrize("inference_type", ['cpu', 'single_GPU', 'DP'])
-def test_kd_model_weights(inference_type):
-    torch.manual_seed(1)
-    input_size = [1, 1, 8, 8]
+@pytest.mark.parametrize("inference_type", ['cpu', 'single_GPU', 'DP', 'DDP'])
+def test_training_process(inference_type):
     if not torch.cuda.is_available() and not inference_type == 'cpu':
         return
-    model = TwoConvTestModel()
-    fill_params_of_model_by_normal(model)
-    dumped_orig_model = deepcopy(model)
+    torch.manual_seed(1)
+    input_size = [1, 1, 8, 8]
     sparsity_level = 0.3
-    config = get_kd_config(
-        get_sparsity_config_with_sparsity_init(get_basic_magnitude_sparsity_config(input_sample_size=input_size),
-                                               sparsity_level))
+    config = get_sparsity_config_with_sparsity_init(get_basic_magnitude_sparsity_config(input_sample_size=input_size),
+                                                    sparsity_level)
+    if inference_type == 'DDP':
+        ngpus_per_node = torch.cuda.device_count()
+        config.world_size = ngpus_per_node
+        torch.multiprocessing.spawn(run_test_training,
+                                    nprocs=ngpus_per_node,
+                                    args=(config, inference_type, ngpus_per_node),
+                                    join=True)
+    else:
+        run_test_training(None, config, inference_type, None)
+
+
+def run_actual(model, config, inference_type, mock_dataloader, ddp_info=None):
+    if inference_type == 'DDP':
+        gpu, ngpus_per_node = ddp_info
+    config = get_kd_config(config)
     model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
-    if not inference_type == 'cpu':
+    if inference_type == 'DDP':
+        model = post_compression_test_distr_init(compression_ctrl, config, ngpus_per_node, model)
+    elif inference_type == 'DP' or inference_type == 'single_GPU':
         model.to(torch.device('cuda:0'))
         if inference_type == 'DP':
             model = torch.nn.DataParallel(model)
+    optimizer = SGD(model.parameters(), lr=1e-02, weight_decay=1e-02)
     model.train()
-    optimizer = SGD(model.parameters(), lr=1e-02, weight_decay=1)
-    number_of_iters = 100
-    mock_dataloader = create_mock_dataloader(config, num_samples=torch.cuda.device_count() * number_of_iters,
-                                             batch_size=torch.cuda.device_count())
-    compression_ctrl.scheduler.epoch_step()
+    output_storage = []
     for i, (input_, target) in enumerate(mock_dataloader):
         input_ = input_.to(next(model.parameters()).device)
-        model(input_)
+        output = model(input_)
+        output_storage.append(output)
         loss = compression_ctrl.loss()
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
-        for param1, param2 in zip([param.to(torch.device('cpu')) for name, param in
-                                   filter(lambda x: KEY_TO_KD_PARAMETERS in x[0], model.named_parameters())],
-                                  dumped_orig_model.parameters()):
-            assert torch.allclose(param1, param2)
-            break
+    return output_storage, model
+
+
+def run_reference(model, config, inference_type, mock_dataloader, ddp_info=None):
+    if inference_type == 'DDP':
+        gpu, ngpus_per_node = ddp_info
+    model = deepcopy(model)
+    kd_model = deepcopy(model)
+    mse = torch.nn.MSELoss().cuda()
+    model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
+    if inference_type == 'DDP':
+        model = post_compression_test_distr_init(compression_ctrl, config, ngpus_per_node, model)
+        kd_model.to(torch.device(next(model.parameters()).device))
+    elif inference_type == 'DP' or inference_type == 'single_GPU':
+        model.to(torch.device('cuda:0'))
+        kd_model.to(torch.device('cuda:0'))
+        if inference_type == 'DP':
+            model = torch.nn.DataParallel(model)
+            kd_model = torch.nn.DataParallel(kd_model)
+    optimizer = SGD(model.parameters(), lr=1e-02, weight_decay=1e-02)
+    model.train()
+    kd_model.train()
+    output_storage = []
+    for i, (input_, target) in enumerate(mock_dataloader):
+        input_ = input_.to(next(model.parameters()).device)
+        output = model(input_)
+        kd_output = kd_model(input_)
+        output_storage.append(output)
+        loss = mse(output, kd_output)
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+    return output_storage
+
+
+def run_test_training(gpu, config, inference_type, ngpus_per_node):
+    torch.manual_seed(10)
+    number_of_iters = 10
+    batch_size = torch.cuda.device_count()
+    config['input_info']['sample_size'] = [1, 1, 8, 8]
+    if inference_type == 'DDP':
+        distributed_init_test_default(gpu, ngpus_per_node, config)
+        mock_dataloader = create_rank_dataloader(config, gpu, batch_size * number_of_iters, batch_size=batch_size)
+    else:
+        mock_dataloader = create_mock_dataloader(config, num_samples=batch_size * number_of_iters,
+                                                 batch_size=batch_size)
+
+    model = TwoConvTestModel()
+    fill_params_of_model_by_normal(model, std=0.1)
+    dumped_orig_model = deepcopy(model)
+
+    actual_outputs, actual_model = run_actual(deepcopy(model), config, inference_type, mock_dataloader,
+                                              (gpu, ngpus_per_node))
+    reference_outputs = run_reference(model, config, inference_type, mock_dataloader, (gpu, ngpus_per_node))
+    assert reduce(lambda a, b: a and torch.allclose(b[0], b[1]), zip(actual_outputs, reference_outputs), True), \
+        "Outputs of model with actual KD implementation doesn't match outputs from model with reference " \
+        "KD implementation"
+
+    for param1, param2 in zip([param.to(torch.device('cpu')) for name, param in
+                               filter(lambda x: KEY_TO_KD_PARAMETERS in x[0], actual_model.named_parameters())],
+                              dumped_orig_model.parameters()):
+        assert torch.allclose(param1, param2), "Weights of dumped original model doesn't match weights of original " \
+                                               "model used for distillation (most likely weights of original model" \
+                                               " are being corrupted due training)"
 
 
 def test_loss_outputs_parsing():
     mse = torch.nn.MSELoss()
     input_size = [1, 1, 8, 8]
-    model = ComplexOutputsModel(input_size)
+    model = PartlyNonDifferentialOutputsModel(input_size)
     fill_params_of_model_by_normal(model)
     dumped_orig_model = deepcopy(model)
     sparsity_level = 0.3
@@ -142,132 +181,71 @@ def test_loss_outputs_parsing():
             if tensor1.requires_grad:
                 loss_outputs.append((tensor1, tensor2))
 
-        inner_kd_mse = sum([mse(item[0], item[1]) for item in loss_outputs])
-        loss = compression_ctrl.loss()
-        assert torch.allclose(inner_kd_mse, loss)
+        reference_kd_loss = sum([mse(item[0], item[1]) for item in loss_outputs])
+        actual_kd_loss = compression_ctrl.loss()
+        assert torch.allclose(reference_kd_loss, actual_kd_loss)
 
 
-@pytest.mark.parametrize("inference_type", ['cpu', 'single_GPU', 'DP'])
-def test_training_process(inference_type):
-    if not torch.cuda.is_available() and not inference_type == 'cpu':
-        return
-
-    torch.manual_seed(1)
-    input_size = [1, 1, 8, 8]
-    sparsity_level = 0.3
+def test_kd_outputs_contrainers_parsing():
     mse = torch.nn.MSELoss()
-    actual_model = TwoConvTestModel()
-    fill_params_of_model_by_normal(actual_model)
-    dumped_orig_model = deepcopy(actual_model)
+    input_size = [1, 1, 8, 8]
+    model = ContainersOutputsModel(input_size)
+    fill_params_of_model_by_normal(model)
+    dumped_orig_model = deepcopy(model)
+    sparsity_level = 0.3
     config = get_kd_config(
         get_sparsity_config_with_sparsity_init(get_basic_magnitude_sparsity_config(input_sample_size=input_size),
                                                sparsity_level))
-    config_without_kd = get_sparsity_config_with_sparsity_init(get_basic_magnitude_sparsity_config(input_sample_size=input_size),
-                                               sparsity_level)
-    ref_model, ref_compression_ctrl = create_compressed_model_and_algo_for_test(deepcopy(actual_model), config_without_kd)
-    actual_model, actual_compression_ctrl = create_compressed_model_and_algo_for_test(actual_model, config)
-    act_optimizer = SGD(actual_model.parameters(), lr=1e-02, weight_decay=1)
-    ref_optimizer = SGD(ref_model.parameters(), lr=1e-02, weight_decay=1)
-    number_of_iters = 100
-    mock_dataloader = create_mock_dataloader(config, num_samples=torch.cuda.device_count() * number_of_iters,
+    model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
+    model.train()
+    mock_dataloader = create_mock_dataloader(config, num_samples=torch.cuda.device_count(),
                                              batch_size=torch.cuda.device_count())
-
-    if not inference_type == 'cpu':
-        actual_model.to(torch.device('cuda:0'))
-        ref_model.to(torch.device('cuda:0'))
-        dumped_orig_model.to(torch.device('cuda:0'))
-        if inference_type == 'DP':
-            actual_model = torch.nn.DataParallel(actual_model)
-            ref_model = torch.nn.DataParallel(ref_model)
-            dumped_orig_model = torch.nn.DataParallel(dumped_orig_model)
-
-    actual_model.train()
-    ref_model.train()
-    dumped_orig_model.train()
-    actual_compression_ctrl.scheduler.epoch_step()
-    ref_compression_ctrl.scheduler.epoch_step()
+    compression_ctrl.scheduler.epoch_step()
     for i, (input_, target) in enumerate(mock_dataloader):
-        input_ = input_.to(next(actual_model.parameters()).device)
-        act_output = actual_model(input_)
-
-        actual_loss = actual_compression_ctrl.loss()
-        act_optimizer.zero_grad()
-        actual_loss.backward()
-        act_optimizer.step()
-
-        ref_output = ref_model(input_)
+        input_ = input_.to(next(model.parameters()).device)
+        outputs = model(input_)
         kd_outputs = dumped_orig_model(input_)
-        ref_loss = mse(ref_output, kd_outputs)
-        ref_optimizer.zero_grad()
-        ref_loss.backward()
-        ref_optimizer.step()
 
-        assert torch.allclose(ref_output, act_output)
-
-
-@pytest.mark.skip(reason="WIP")
-def test_training_process_ddp():
-
-    torch.manual_seed(1)
-    input_size = [1, 1, 8, 8]
-    sparsity_level = 0.3
-    config = get_sparsity_config_with_sparsity_init(get_basic_magnitude_sparsity_config(input_sample_size=input_size),
-                                                    sparsity_level)
-    ngpus_per_node = torch.cuda.device_count()
-    config.world_size = ngpus_per_node
-    torch.multiprocessing.spawn(run_distributed_training,
-                                nprocs=ngpus_per_node,
-                                args=(ngpus_per_node, config),
-                                join=True)
+        reference_kd_loss = mse(outputs['xa'], kd_outputs['xa']) + \
+                            mse(outputs['xb_and_xc'][0], kd_outputs['xb_and_xc'][0]) + \
+                            mse(outputs['xb_and_xc'][1], kd_outputs['xb_and_xc'][1])
+        actual_kd_loss = compression_ctrl.loss()
+        assert torch.allclose(reference_kd_loss, actual_kd_loss)
 
 
-def run_distributed_training(gpu, ngpus_per_node, config):
-    distributed_init_test_default(gpu, ngpus_per_node, config)
-    config_without_kd = deepcopy(config)
-    config = get_kd_config(config)
-    mse = torch.nn.MSELoss()
-    act_model = TwoConvTestModel()
-    fill_params_of_model_by_normal(act_model)
-    act_model = deepcopy(act_model)
-    ref_model = deepcopy(act_model)
-    orig_model = deepcopy(act_model)
+@pytest.mark.parametrize('kd_loss_type', ['mse', 'softmax'])
+def test_kd_loss_types(kd_loss_type):
+    torch.manual_seed(2)
+    if kd_loss_type == 'softmax':
+        def kd_loss_fn(ref_outputs, compressed_model_outputs):
+            return -(nn.functional.log_softmax(compressed_model_outputs, dim=1) *
+                     nn.functional.softmax(ref_outputs, dim=1)).mean() * (compressed_model_outputs.shape[1])
+    else:
+        kd_loss_fn = torch.nn.MSELoss()
+    input_size = [1, 100]
 
-    act_model, act_compression_ctrl = create_compressed_model_and_algo_for_test(act_model, config)
-    ref_model, ref_compression_ctrl = create_compressed_model_and_algo_for_test(ref_model, config_without_kd)
-    act_model = post_compression_test_distr_init(act_compression_ctrl, config, ngpus_per_node, act_model)
-    ref_model = post_compression_test_distr_init(ref_compression_ctrl, config, ngpus_per_node, act_model)
-    act_optimizer = SGD(act_model.parameters(), lr=1e-02, weight_decay=1)
-    ref_optimizer = SGD(ref_model.parameters(), lr=1e-02, weight_decay=1)
-    number_of_iters = 10
-    mock_dataloader = create_rank_dataloader(config, gpu)
-    orig_model.to(next(act_model.parameters()).device)
-    act_model.train()
-    ref_model.train()
-    orig_model.train()
+    model = nn.Sequential(nn.Linear(in_features=input_size[-1], out_features=10),
+                          nn.Sigmoid())
+
+    fill_params_of_model_by_normal(model)
+    dumped_orig_model = deepcopy(model)
+    sparsity_level = 0.5
+    config = get_kd_config(
+        get_sparsity_config_with_sparsity_init(get_basic_magnitude_sparsity_config(input_sample_size=input_size),
+                                               sparsity_level))
+    config['compression'][-1]['type'] = kd_loss_type
+    model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
+    model.train()
+    mock_dataloader = create_mock_dataloader(config, num_samples=torch.cuda.device_count(),
+                                             batch_size=torch.cuda.device_count())
+    compression_ctrl.scheduler.epoch_step()
     for i, (input_, target) in enumerate(mock_dataloader):
-        print(f'iter {i}')
-        act_output = act_model(input_)
-        ref_output = ref_model(input_)
-        # check stuff happening with device
-        kd_output = orig_model(deepcopy(input_).to((next(orig_model.parameters()).device)))
+        input_ = input_.to(next(model.parameters()).device)
+        outputs = model(input_)
+        kd_outputs = dumped_orig_model(input_)
 
-        act_loss = act_compression_ctrl.loss()
-        ref_loss = mse(ref_output, kd_output)
-
-        act_optimizer.zero_grad()
-        ref_optimizer.zero_grad()
-        ref_loss.backward()
-        act_loss.backward()
-        act_optimizer.step()
-        ref_optimizer.step()
-
-
-@pytest.mark.skip(reason="WIP")
-def test_kd_outputs_contrainers_parsing():
-    pass
-
-
-@pytest.mark.skip(reason="WIP")
-@pytest.mark.pametrize('kdloss_type', ['mse', 'softmax'])
-def test_kdloss_types(kdloss_type):
-    pass
+        reference_kd_loss = kd_loss_fn(kd_outputs, outputs)
+        actual_kd_loss = compression_ctrl.loss()
+        print(reference_kd_loss)
+        print(actual_kd_loss)
+        assert torch.allclose(reference_kd_loss, actual_kd_loss)

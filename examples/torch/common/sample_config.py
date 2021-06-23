@@ -35,7 +35,7 @@ class ActionWrapper(argparse.Action):
     def __init__(self, action):
         self._action = action
         super().__init__(action.option_strings, action.dest, nargs=action.nargs, const=action.const,
-                         default=action.default, type=action.type, choices=action.choices, required=action.required,
+                         default=action.default, type=action.type_, choices=action.choices, required=action.required,
                          help=action.help, metavar=action.metavar)
         self._action = action
 

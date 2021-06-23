@@ -358,6 +358,36 @@ class PTInsertionPoint:
         return hash(str(self))
 
 
+class KDLossHandler(nn.Module):
+    def __init__(self, context, kd_original_model, calculate_kd_loss_fn):
+        super().__init__()
+        self._compressed_context = context
+        self.is_enabled = False
+        self._kd_original_model = kd_original_model
+        self._calculate_kd_loss_fn = calculate_kd_loss_fn
+        self._compressed_context.register_global_buffer(KD_LOSS_STORAGE_NAME, [])
+
+    def zero_kdloss(self):
+        if self.is_enabled is not None:
+            self._compressed_context.global_buffer_store[KD_LOSS_STORAGE_NAME] = []
+
+    def get_kdloss(self):
+        if self.is_enabled is not None:
+            return self._compressed_context.global_buffer_store[KD_LOSS_STORAGE_NAME]
+        else:
+            return 0
+
+    def forward(self, inputs, *args, **kwargs):
+        kd_model = self._kd_original_model
+        with torch.no_grad():
+            kd_outputs = kd_model(*args, **kwargs)
+        kd_loss = self._calculate_kd_loss_fn(inputs, kd_outputs)
+        if not isinstance(kd_loss, torch.Tensor):
+            self._compressed_context.global_buffer_store[KD_LOSS_STORAGE_NAME].append(kd_loss)
+        else:
+            self._compressed_context.global_buffer_store[KD_LOSS_STORAGE_NAME].append(kd_loss.to(
+                self._compressed_context.global_buffer_store[STORAGE_DEVICE]))
+
 # pylint: disable=too-many-public-methods
 
 
@@ -374,7 +404,7 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
         self.ignored_scopes = ignored_scopes
         self.target_scopes = target_scopes
         self._user_dummy_forward_fn = dummy_forward_fn
-        self._kd_original_model = None
+        self._kd_loss_handler = None
 
         try:
             device = next(module.parameters()).device
@@ -432,6 +462,7 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
         self._compressed_context.register_global_buffer(STORAGE_DEVICE, next(
             self.get_nncf_wrapped_model().parameters()).device)
 
+
         self._dummy_forward_fn = self._get_dummy_forward_fn_for_graph_building(with_input_tracing=False,
                                                                                with_output_tracing=False)
         self._in_user_dummy_forward = False
@@ -458,32 +489,9 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
             retval = replicate_same_tensors(retval)
             retval = self._wrap_outputs_fn(retval)
 
-        if self._kd_original_model is not None and self.get_nncf_wrapped_model().training:
-            kd_model = self._kd_original_model
-            with torch.no_grad():
-                kd_outputs = kd_model(*args, **kwargs)
-            kd_loss = self._calculate_kdloss_fn(retval, kd_outputs)
-            if not isinstance(kd_loss, torch.Tensor):
-                self._compressed_context.global_buffer_store[KD_LOSS_STORAGE_NAME].append(kd_loss)
-            else:
-               self._compressed_context.global_buffer_store[KD_LOSS_STORAGE_NAME].append(kd_loss.to(
-                    self._compressed_context.global_buffer_store[STORAGE_DEVICE]))
+        if self._kd_loss_handler is not None and self.get_nncf_wrapped_model().training:
+            self._kd_loss_handler(retval, *args, **kwargs)
         return retval
-
-    def enable_knowledge_distillation(self, kd_original_model, calculate_kdloss_fn):
-        self._kd_original_model = kd_original_model
-        self._calculate_kdloss_fn = calculate_kdloss_fn
-        self._compressed_context.register_global_buffer(KD_LOSS_STORAGE_NAME, [])
-
-    def zero_kdloss(self):
-        if self._kd_original_model is not None:
-            self._compressed_context.global_buffer_store[KD_LOSS_STORAGE_NAME] = []
-
-    def get_kdloss(self):
-        if self._kd_original_model is not None:
-            return self._compressed_context.global_buffer_store[KD_LOSS_STORAGE_NAME]
-        else:
-            return 0
 
     def _strip_traced_tensors(self, args: Tuple, kwargs: Dict) -> Tuple[Tuple, Dict]:
         """
@@ -501,6 +509,9 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
         kwargs = objwalk(kwargs, is_traced_tensor_predicate, strip_fn)
         return args, kwargs
 
+    def create_kd_loss_handler(self, kd_original_model, calculate_fn):
+        self._kd_loss_handler = KDLossHandler(self._compressed_context, kd_original_model, calculate_fn)
+        return self._kd_loss_handler
 
     # Cannnot use property syntax here, otherwise the wrapped module will end up
     # being twice in the same checkpoint with different prefixes
