@@ -11,33 +11,36 @@
  limitations under the License.
 """
 from collections import OrderedDict
-from typing import List, Callable
+from typing import Callable
+from typing import List
 
 from texttable import Texttable
 from torch import nn
 
-from nncf.torch.algo_selector import COMPRESSION_ALGORITHMS, ZeroCompressionLoss
-from nncf.api.compression import CompressionStage
 from nncf.api.compression import CompressionLoss
 from nncf.api.compression import CompressionScheduler
-from nncf.torch.binarization.layers import BINARIZATION_MODULES
-from nncf.torch.binarization.layers import BinarizationMode
-from nncf.torch.binarization.layers import WeightBinarizer
-from nncf.torch.binarization.layers import ActivationBinarizer
-from nncf.torch.binarization.layers import ActivationBinarizationScaleThreshold
-from nncf.torch.binarization.layers import BaseBinarizer
+from nncf.api.compression import CompressionStage
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationPriority
 from nncf.common.statistics import NNCFStatistics
+from nncf.common.utils.logger import logger as nncf_logger
+from nncf.config import NNCFConfig
+from nncf.config.extractors import extract_algo_specific_config
+from nncf.torch.algo_selector import COMPRESSION_ALGORITHMS
+from nncf.torch.algo_selector import ZeroCompressionLoss
+from nncf.torch.binarization.layers import ActivationBinarizationScaleThreshold
+from nncf.torch.binarization.layers import ActivationBinarizer
+from nncf.torch.binarization.layers import BINARIZATION_MODULES
+from nncf.torch.binarization.layers import BaseBinarizer
+from nncf.torch.binarization.layers import BinarizationMode
+from nncf.torch.binarization.layers import WeightBinarizer
 from nncf.torch.compression_method_api import PTCompressionAlgorithmBuilder
 from nncf.torch.compression_method_api import PTCompressionAlgorithmController
-from nncf.config import NNCFConfig
+from nncf.torch.graph.transformations.commands import PTInsertionCommand
+from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.graph.transformations.layout import PTTransformationLayout
 from nncf.torch.layers import NNCFConv2d
 from nncf.torch.module_operations import UpdateInputs
-from nncf.common.utils.logger import logger as nncf_logger
-from nncf.torch.graph.transformations.commands import PTTargetPoint
-from nncf.torch.graph.transformations.commands import PTInsertionCommand
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.quantization.algo import QuantizationControllerBase
 from nncf.torch.quantization.schedulers import QUANTIZATION_SCHEDULERS
@@ -47,7 +50,7 @@ from nncf.torch.quantization.schedulers import QUANTIZATION_SCHEDULERS
 class BinarizationBuilder(PTCompressionAlgorithmBuilder):
     def __init__(self, config, should_init: bool = True):
         super().__init__(config, should_init)
-        self.mode = self.config.get('mode', BinarizationMode.XNOR)
+        self.mode = self._algo_config.get('mode', BinarizationMode.XNOR)
 
     def _get_transformation_layout(self, target_model: NNCFNetwork) -> PTTransformationLayout:
         layout = PTTransformationLayout()
@@ -78,7 +81,11 @@ class BinarizationBuilder(PTCompressionAlgorithmBuilder):
             op_weights = self.__create_binarize_module().to(device)
 
             nncf_logger.info("Adding Activation binarizer in scope: {}".format(module_node.node_name))
-            compression_lr_multiplier = self.config.get("compression_lr_multiplier", None)
+
+            compression_lr_multiplier = self.config.get_redefinable_global_param_value_for_algo(
+                'compression_lr_multiplier',
+                self.name)
+
             op_inputs = UpdateInputs(ActivationBinarizationScaleThreshold(
                 module_node.layer_attributes.get_weight_shape(),
                 compression_lr_multiplier=compression_lr_multiplier
@@ -108,7 +115,8 @@ class BinarizationController(QuantizationControllerBase):
 
         self._loss = ZeroCompressionLoss(next(target_model.parameters()).device)
         scheduler_cls = QUANTIZATION_SCHEDULERS.get("staged")
-        self._scheduler = scheduler_cls(self, config.get("params", {}))
+        algo_config = extract_algo_specific_config(config, "binarization")
+        self._scheduler = scheduler_cls(self, algo_config.get("params", {}))
         from nncf.torch.utils import is_main_process
         if is_main_process():
             self._compute_and_display_flops_binarization_rate()

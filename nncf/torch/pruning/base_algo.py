@@ -17,6 +17,8 @@ from typing import List, Dict
 
 from torch import nn
 
+from nncf import NNCFConfig
+from nncf.config.extractors import extract_algo_specific_config
 from nncf.torch.algo_selector import ZeroCompressionLoss
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.torch.compression_method_api import PTCompressionAlgorithmBuilder
@@ -29,7 +31,6 @@ from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.graph.transformations.commands import PTInsertionCommand
 from nncf.torch.pruning.export_helpers import PT_PRUNING_OPERATOR_METATYPES
 from nncf.torch.pruning.filter_pruning.layers import apply_filter_binary_mask
-from nncf.common.pruning.pruning_node_selector import PruningNodeSelector
 from nncf.common.pruning.clusterization import Clusterization
 from nncf.common.pruning.clusterization import Cluster
 from nncf.torch.pruning.structs import PrunedModuleInfo
@@ -38,7 +39,7 @@ from nncf.torch.pruning.structs import PrunedModuleInfo
 class BasePruningAlgoBuilder(PTCompressionAlgorithmBuilder):
     def __init__(self, config, should_init: bool = True):
         super().__init__(config, should_init)
-        params = config.get('params', {})
+        params = self._algo_config.get('params', {})
         self._set_default_params_for_ranking_type(params)
         self._params = params
 
@@ -48,6 +49,8 @@ class BasePruningAlgoBuilder(PTCompressionAlgorithmBuilder):
         self.prune_downsample_convs = params.get('prune_downsample_convs', False)
 
         self._prunable_types = self.get_op_types_of_pruned_modules()
+
+        from nncf.common.pruning.pruning_node_selector import PruningNodeSelector
         self.pruning_node_selector = PruningNodeSelector(PT_PRUNING_OPERATOR_METATYPES,
                                                          self._prunable_types,
                                                          self.get_types_of_grouping_ops(),
@@ -142,12 +145,13 @@ class BasePruningAlgoController(PTCompressionAlgorithmController):
     def __init__(self, target_model: NNCFNetwork,
                  prunable_types: List[str],
                  pruned_module_groups_info: Clusterization[PrunedModuleInfo],
-                 config):
+                 config: NNCFConfig):
         super().__init__(target_model)
         self._loss = ZeroCompressionLoss(next(target_model.parameters()).device)
         self._prunable_types = prunable_types
         self.config = config
-        params = self.config.get("params", {})
+        self.pruning_config = extract_algo_specific_config(config, 'filter_pruning')
+        params = self.pruning_config.get('params', {})
         self.pruned_module_groups_info = pruned_module_groups_info
         self.prune_batch_norms = params.get('prune_batch_norms', True)
         self.prune_first = params.get('prune_first_conv', False)

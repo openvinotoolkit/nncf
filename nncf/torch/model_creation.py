@@ -25,8 +25,9 @@ from torch.nn import Module
 
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.common.compression import BaseCompressionAlgorithmController as BaseController
+from nncf.config.extractors import extract_algorithm_names
+from nncf.torch.algo_selector import NoCompressionAlgorithmBuilder
 from nncf.config import NNCFConfig
-from nncf.config.extractors import extract_compression_algorithm_configs
 from nncf.config.utils import is_accuracy_aware_training
 from nncf.api.compression import CompressionAlgorithmController
 from nncf.torch.algo_selector import COMPRESSION_ALGORITHMS
@@ -136,12 +137,14 @@ def create_compressed_model(model: Module,
                                    scopes_without_shape_matching=scopes_without_shape_matching,
                                    original_model_accuracy=original_model_accuracy)
 
-    compression_builder = create_compression_algorithm_builder(config, should_init=compression_state is None)
+    should_init = compression_state is None
+
+    builder = create_compression_algorithm_builder(config, should_init)
     is_state_loadable = not is_legacy_model_state_dict and compression_state is not None
     if is_state_loadable:
-        compression_builder.load_state(compression_state[BaseController.BUILDER_STATE])
-    compression_builder.apply_to(compressed_model)
-    compression_ctrl = compression_builder.build_controller(compressed_model)
+        builder.load_state(compression_state[BaseController.BUILDER_STATE])
+    builder.apply_to(compressed_model)
+    compression_ctrl = builder.build_controller(compressed_model)
     if is_state_loadable:
         compression_ctrl.load_state(compression_state[BaseController.CONTROLLER_STATE])
 
@@ -183,9 +186,15 @@ def get_compression_algorithm_builder(config):
 
 
 def create_compression_algorithm_builder(config, should_init=True) -> PTCompressionAlgorithmBuilder:
-    compression_algorithm_configs = extract_compression_algorithm_configs(config)
-    number_compression_algorithms = len(compression_algorithm_configs)
-    if number_compression_algorithms == 1:
-        algo_config = compression_algorithm_configs[0]
-        return get_compression_algorithm_builder(algo_config)(algo_config, should_init)
-    return PTCompositeCompressionAlgorithmBuilder(config, should_init)
+    algo_names = extract_algorithm_names(config)
+    if not algo_names:
+        algo_builder_classes = [NoCompressionAlgorithmBuilder]
+    else:
+        algo_builder_classes = [COMPRESSION_ALGORITHMS.get(algo_name) for algo_name in algo_names]
+
+    if len(algo_builder_classes) == 1:
+        builder = next(iter(algo_builder_classes))(config, should_init=should_init)
+    else:
+        builder = PTCompositeCompressionAlgorithmBuilder(config, should_init=should_init)
+
+    return builder

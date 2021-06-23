@@ -17,7 +17,6 @@ import tensorflow as tf
 
 from examples.tensorflow.classification.main import load_checkpoint
 from examples.tensorflow.classification.main import load_compression_state
-from nncf import NNCFConfig
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.quantization.structs import QuantizationMode
@@ -74,7 +73,7 @@ def test_quantization_configs__on_resume_with_compression_state(tmp_path, mocker
     gen_setup_spy.assert_not_called()
     check_default_qspecs(compression_model)
 
-    builder = QuantizationBuilder(NNCFConfig())
+    builder = QuantizationBuilder(config)
     builder.load_state(compression_state_to_load['builder_state'])
     # pylint:disable=protected-access
     loaded_quantizer_setup = builder._quantizer_setup
@@ -143,7 +142,7 @@ def test_checkpoint_callback_make_checkpoints(mocker, tmp_path):
     new_ckpt = tf.train.Checkpoint(model=new_model, compression_state=TFCompressionState(new_compression_ctrl))
     load_checkpoint(new_ckpt, ckpt_path)
 
-    builder = QuantizationBuilder(NNCFConfig())
+    builder = QuantizationBuilder(config)
     builder.load_state(new_compression_state['builder_state'])
     # pylint:disable=protected-access
     new_quantizer_setup = builder._quantizer_setup

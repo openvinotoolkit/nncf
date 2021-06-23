@@ -12,6 +12,8 @@
 """
 
 # pylint:disable=relative-beyond-top-level
+from typing import Dict
+
 import torch
 
 from nncf.torch.graph.transformations.layout import PTTransformationLayout
@@ -45,10 +47,16 @@ class NoCompressionAlgorithmBuilder(PTCompressionAlgorithmBuilder):
     def _get_transformation_layout(self, target_model: NNCFNetwork) -> PTTransformationLayout:
         return PTTransformationLayout()
 
+    def _get_algo_specific_config_section(self) -> Dict:
+        return {}
+
     def _build_controller(self, target_model: NNCFNetwork) -> PTCompressionAlgorithmController:
         return NoCompressionAlgorithmController(target_model)
 
     def initialize(self, model: NNCFNetwork) -> None:
+        pass
+
+    def _handle_frozen_layers(self, target_model: NNCFNetwork):
         pass
 
 

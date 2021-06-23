@@ -16,9 +16,9 @@ from nncf.torch.algo_selector import COMPRESSION_ALGORITHMS
 class KnowledgeDistillationBuilder(PTCompressionAlgorithmBuilder):
     def __init__(self, config: NNCFConfig, should_init: bool = True):
         super().__init__(config, should_init)
-        self.kd_type = config.get('type', None)
+        self.kd_type = self._algo_config.get('type', None)
         if self.kd_type is None:
-            raise ValueError('You have to choose type of KDLoss explicitly')
+            raise ValueError('Type of KDLoss must be selected explicitly')
 
     def _get_transformation_layout(self, target_model: NNCFNetwork) -> PTTransformationLayout:
         self.original_model = deepcopy(target_model.nncf_module)

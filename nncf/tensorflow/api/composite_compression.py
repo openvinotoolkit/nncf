@@ -16,7 +16,7 @@ from typing import TypeVar
 from nncf import NNCFConfig
 from nncf.common.composite_compression import CompositeCompressionAlgorithmBuilder
 from nncf.common.composite_compression import CompositeCompressionAlgorithmController
-from nncf.config.extractors import extract_compression_algorithm_configs
+from nncf.config.extractors import extract_algorithm_names
 from nncf.tensorflow.algorithm_selector import get_compression_algorithm_builder
 from nncf.tensorflow.api.compression import TFCompressionAlgorithmBuilder
 from nncf.tensorflow.graph.transformations.layout import TFTransformationLayout
@@ -29,10 +29,13 @@ class TFCompositeCompressionAlgorithmBuilder(
     def __init__(self, config: NNCFConfig, should_init: bool = True):
         super().__init__(config, should_init)
 
-        algorithm_configs = extract_compression_algorithm_configs(config)
-        for algo_config in algorithm_configs:
-            self._child_builders.append(
-                get_compression_algorithm_builder(algo_config)(algo_config, should_init=should_init))
+        algo_names = extract_algorithm_names(config)
+        if len(algo_names) < 2:
+            raise RuntimeError("Composite algorithm builder must be supplied with a config with more than one "
+                               "compression algo specified!")
+        for algo_name in algo_names:
+            algo_builder_cls = get_compression_algorithm_builder(algo_name)
+            self._child_builders.append(algo_builder_cls(config, should_init=should_init))
 
     def _build_controller(self, model: ModelType) -> CompositeCompressionAlgorithmController:
         composite_ctrl = CompositeCompressionAlgorithmController(model)

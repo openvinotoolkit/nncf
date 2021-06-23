@@ -15,7 +15,6 @@ from abc import ABC
 from abc import abstractmethod
 from typing import Any, Dict, List, Optional, Tuple, TypeVar
 
-from nncf import NNCFConfig
 from nncf.api.statistics import Statistics
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.utils.ordered_enum import OrderedEnum
@@ -322,18 +321,6 @@ class CompressionAlgorithmBuilder(ABC):
     Determines which modifications should be made to the original model in
     order to enable algorithm-specific compression during fine-tuning.
     """
-
-    def __init__(self, config: NNCFConfig, should_init: bool = True):
-        """
-        Initializes internal state of the compression algorithm builder
-
-        :param config: The dictionary that contains parameters of the compression
-            method.
-        :param should_init: If False, trainable parameter initialization will be
-            skipped during building.
-        """
-        self.config = config
-        self.should_init = should_init
 
     @property
     @abstractmethod

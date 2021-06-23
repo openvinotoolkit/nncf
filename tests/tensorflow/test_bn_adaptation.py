@@ -40,6 +40,7 @@ def get_config_for_test(batch_size=10, num_bn_adaptation_samples=100):
     config.update(Dict({
         "compression":
             {
+                "algorithm": "quantization",
                 "initializer": {
                     "batchnorm_adaptation": {
                         "num_bn_adaptation_samples": num_bn_adaptation_samples,
@@ -53,11 +54,7 @@ def get_config_for_test(batch_size=10, num_bn_adaptation_samples=100):
                                         dataset,
                                         batch_size)
 
-    compression_config = config.get('compression', {})
-    compression_config = NNCFConfig(compression_config)
-    compression_config.register_extra_structs(config.get_all_extra_structs_for_copy())
-
-    return compression_config
+    return config
 
 
 def get_model_for_test():
@@ -95,7 +92,8 @@ def test_parameter_update():
 
     config = get_config_for_test()
 
-    bn_adaptation = BatchnormAdaptationAlgorithm(**extract_bn_adaptation_init_params(config))
+    bn_adaptation = BatchnormAdaptationAlgorithm(**extract_bn_adaptation_init_params(config,
+                                                                                     "quantization"))
     bn_adaptation.run(model)
 
     for layer in model.layers:
@@ -116,7 +114,8 @@ def test_all_parameter_keep():
 
     config = get_config_for_test(num_bn_adaptation_samples=0)
 
-    bn_adaptation = BatchnormAdaptationAlgorithm(**extract_bn_adaptation_init_params(config))
+    bn_adaptation = BatchnormAdaptationAlgorithm(**extract_bn_adaptation_init_params(config,
+                                                                                     "quantization"))
     bn_adaptation.run(model)
 
     for layer in model.layers:

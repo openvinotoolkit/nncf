@@ -71,6 +71,9 @@ class TensorStatisticsCollectionBuilder(PTCompressionAlgorithmBuilder):
     def initialize(self, model: NNCFNetwork) -> None:
         pass
 
+    def _get_algo_specific_config_section(self) -> Dict:
+        return {}
+
 
 class TensorStatisticsCollectionController(PTCompressionAlgorithmController):
     def __init__(self, target_model: NNCFNetwork,

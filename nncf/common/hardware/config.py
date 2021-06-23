@@ -30,8 +30,8 @@ from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.quantization import quantizers as quant
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
+from nncf.common.utils.helpers import product_dict
 from nncf.common.utils.os import safe_open
-from nncf.config import product_dict
 from nncf.definitions import HW_CONFIG_RELATIVE_DIR
 from nncf.definitions import NNCF_PACKAGE_ROOT_DIR
 

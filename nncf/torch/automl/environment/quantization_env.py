@@ -468,11 +468,11 @@ class QuantizationEnv:
     def _run_batchnorm_adaptation(self):
         if self._bn_adaptation is None:
             self._bn_adaptation = BatchnormAdaptationAlgorithm(
-            **extract_bn_adaptation_init_params(self.qctrl.quantization_config))
+            **extract_bn_adaptation_init_params(self.qctrl.config, "quantization"))
         self._bn_adaptation.run(self.qctrl.model)
 
     def _run_quantization_pipeline(self, finetune=False) -> float:
-        if self.qctrl.quantization_config:
+        if self.qctrl.config:
             self._run_batchnorm_adaptation()
 
         if finetune:

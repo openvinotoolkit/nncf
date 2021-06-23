@@ -12,6 +12,8 @@
 """
 from typing import Any
 from typing import Dict
+from typing import List
+from typing import Union
 
 from nncf import NNCFConfig
 from nncf.api.compression import CompressionAlgorithmController
@@ -27,9 +29,9 @@ DIFF_STATE_ATTR = STATE_ATTR + '__'
 
 class A(BaseCompressionAlgorithmBuilder):
     def __init__(self, config: NNCFConfig, should_init: bool = True, state_value: int = 1, name: str = 'A'):
+        setattr(self, Registry.REGISTERED_NAME_ATTR, name)
         super().__init__(config, should_init)
         self.state_value = state_value
-        setattr(self, Registry.REGISTERED_NAME_ATTR, name)
 
     def _load_state_without_name(self, state: Dict[str, Any]):
         self.state_value = state.get(STATE_ATTR)
@@ -71,8 +73,26 @@ class CA(CompositeCompressionAlgorithmBuilder):
         pass
 
 
-def test_builder_state_load(mocker):
-    config = mocker.stub
+def _get_mock_config(algo_name: Union[List[str], str]) -> NNCFConfig:
+    config = NNCFConfig()
+    config["input_info"] = {
+                "sample_size": [1, 1]
+            }
+    if isinstance(algo_name, list):
+        lst = []
+        for alg_n in algo_name:
+            lst.append({"algorithm": alg_n})
+        config["compression"] = lst
+    else:
+        assert isinstance(algo_name, str)
+        config["compression"] = {
+                    "algorithm": algo_name
+                }
+    return config
+
+
+def test_builder_state_load():
+    config = _get_mock_config('A')
     builder = A(config, True, 1)
     builder.state_value += 1
 
@@ -84,9 +104,9 @@ def test_builder_state_load(mocker):
     assert builder.state_value == 2
 
 
-def test_basic_composite_builder_load(mocker):
+def test_basic_composite_builder_load():
     def create_builder():
-        config = mocker.stub
+        config = _get_mock_config(['A', 'A2'])
         c = CA(config, True)
         a = A(config, True, 1)
         b = A(config, True, 2, 'A2')
@@ -94,23 +114,23 @@ def test_basic_composite_builder_load(mocker):
         c.add(b)
         return c, a, b
 
-    composite_ctrl, ctrl1, ctrl2 = create_builder()
+    composite_bldr, bldr1, bldr2 = create_builder()
 
-    ctrl1.state_value += 1
-    ctrl2.state_value += 2
+    bldr1.state_value += 1
+    bldr2.state_value += 2
 
-    saved_state = composite_ctrl.get_state()
+    saved_state = composite_bldr.get_state()
 
-    composite_ctrl, ctrl1, ctrl2 = create_builder()
+    composite_bldr, bldr1, bldr2 = create_builder()
 
-    composite_ctrl.load_state(saved_state)
+    composite_bldr.load_state(saved_state)
 
-    assert ctrl1.state_value == 2
-    assert ctrl2.state_value == 4
+    assert bldr1.state_value == 2
+    assert bldr2.state_value == 4
 
 
-def test_advanced_composite_ctrl_load(mocker):
-    config = mocker.stub
+def test_advanced_composite_ctrl_load():
+    config = _get_mock_config(['A', 'A2', 'A3'])
     composite_builder = CA(config, True)
     ctrl1 = A(config, True, 1)
     ctrl2 = A(config, True, 2, name='A2')

@@ -19,7 +19,8 @@ from nncf import NNCFConfig
 from nncf.common.composite_compression import CompositeCompressionAlgorithmBuilder
 from nncf.common.composite_compression import CompositeCompressionAlgorithmController
 from nncf.common.composite_compression import CompositeCompressionLoss
-from nncf.config.extractors import extract_compression_algorithm_configs
+from nncf.config.extractors import extract_algorithm_names
+from nncf.torch.algo_selector import COMPRESSION_ALGORITHMS
 from nncf.torch.compression_method_api import PTCompressionAlgorithmBuilder
 from nncf.torch.compression_method_api import PTCompressionAlgorithmController
 from nncf.torch.compression_method_api import PTCompressionLoss
@@ -44,12 +45,19 @@ class PTCompositeCompressionLoss(CompositeCompressionLoss, PTCompressionLoss):
 class PTCompositeCompressionAlgorithmBuilder(
         CompositeCompressionAlgorithmBuilder, PTCompressionAlgorithmBuilder):
     def __init__(self, config: NNCFConfig, should_init: bool = True):
+
         super().__init__(config, should_init)
-        from nncf.torch.model_creation import get_compression_algorithm_builder
-        algorithm_configs = extract_compression_algorithm_configs(config)
-        for algo_config in algorithm_configs:
-            self._child_builders.append(
-                get_compression_algorithm_builder(algo_config)(algo_config, should_init=should_init))
+
+        algo_names = extract_algorithm_names(config)
+        if len(algo_names) < 2:
+            raise RuntimeError('Composite algorithm builder must be supplied with a config with more than one '
+                               'compression algo specified!')
+        for algo_name in algo_names:
+            algo_builder = COMPRESSION_ALGORITHMS.get(algo_name)
+            self._child_builders.append(algo_builder(config, should_init=should_init))
+
+    def __bool__(self):
+        return bool(self.child_builders)
 
     def apply_to(self, target_model: NNCFNetwork) -> NNCFNetwork:
         transformer = PTModelTransformer(target_model)
