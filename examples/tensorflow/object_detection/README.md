@@ -157,4 +157,4 @@ To export a model to the OpenVINO IR and run it using the Intel® Deep Learning 
 |**Model**|**Compression algorithm**|**Dataset**|**TensorFlow mAP, %**|**GFLOPS**|**MParams**|**NNCF config file**|**TensorFlow checkpoint**|
 | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
 |RetinaNet|None|COCO2017|33.44|194.1 (100%)|60.8 (100%)|[retinanet_coco.json](configs/retinanet_coco.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/tensorflow/models/develop/retinanet.tar.gz)|
-|RetinaNet|Filter Pruning 40%|COCO2017|32.7|107.7 (55.49%)|34.7 (57.07)|[retinanet_coco_pruning.json](configs/pruning/retinanet_coco_pruning.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/tensorflow/models/develop/retinanet_pruning_40.tar.gz)|
+|RetinaNet|Filter Pruning 40%|COCO2017|32.7|107.7 (55.49%)|34.7 (57.07%)|[retinanet_coco_pruning.json](configs/pruning/retinanet_coco_pruning.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/tensorflow/models/develop/retinanet_pruning_40.tar.gz)|
