@@ -670,8 +670,9 @@ FILTER_PRUNING_SCHEMA = {
         },
         "initializer": GENERIC_INITIALIZER_SCHEMA,
         "pruning_init": with_attributes(_NUMBER,
-                                        description="Initial value of the pruning level applied to the"
-                                                    " model. 0.0 by default."),
+                                        description="Initial value of the pruning level applied to the "
+                                                    "convolutions that can be pruned. "
+                                                    "0.0 by default."),
         "params":
             {
                 "type": "object",
@@ -681,7 +682,10 @@ FILTER_PRUNING_SCHEMA = {
                                                             " pruning level. Either `exponential`, `exponential_with"
                                                             "_bias`,  or `baseline`, by default it is `baseline`"),
                     "pruning_target": with_attributes(_NUMBER,
-                                                      description="Target value of the pruning level for the model."
+                                                      description="Target value of the pruning level for "
+                                                                  "the convolutions that can be pruned. "
+                                                                  "These convolutions are determined by the model "
+                                                                  "architecture."
                                                                   " 0.5 by default."),
                     "pruning_flops_target": with_attributes(_NUMBER,
                                                             description="Target value of the pruning level for model"

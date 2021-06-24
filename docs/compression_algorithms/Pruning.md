@@ -79,7 +79,7 @@ sparsity and filter pruning algorithms. It can be enabled by setting a non-zero 
             "num_bn_forget_samples": 1024, // Number of samples from the training dataset to pass through the model at initialization in order to erase batchnorm statistics of the original model (using large momentum value for rolling mean updates). The actual number of samples will be a closest multiple of the batch size.
         }
     }
-    "pruning_init": 0.1, // Initial value of the pruning level applied to the model in 'create_compressed_model' function. 0.0 by default.
+    "pruning_init": 0.1, // Initial value of the pruning level applied to the convolutions that can be pruned in 'create_compressed_model' function. 0.0 by default.
     "params": {
         "schedule": "baseline", // The type of scheduling to use for adjusting the target pruning level. Either `exponential`, `exponential_with_bias`,  or `baseline`, by default it is `baseline`"
         "pruning_target": 0.4, // Target value of the pruning level for the convolutions that can be pruned. These convolutions are determined by the model architecture. 0.5 by default.
