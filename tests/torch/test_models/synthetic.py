@@ -149,9 +149,9 @@ class MultiBranchesModel(nn.Module):
 
 
 class PartlyNonDifferentialOutputsModel(nn.Module):
-    def __init__(self, input_size=[1, 1, 4, 4]):
+    def __init__(self, input_size=None):
         super().__init__()
-        self.input_size = input_size
+        self.input_size = [1, 1, 4, 4] if input_size is None else input_size
         self.Conv1 = torch.nn.Conv2d(in_channels=self.input_size[1], out_channels=1, kernel_size=3)
         self.Conv2_1 = torch.nn.Conv2d(in_channels=1, out_channels=1, kernel_size=3)
         self.Conv2_2 = torch.nn.Conv2d(in_channels=1, out_channels=1, kernel_size=3)

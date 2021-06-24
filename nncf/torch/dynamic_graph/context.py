@@ -13,26 +13,23 @@
 
 import threading
 from collections import deque
-from collections import OrderedDict
 from contextlib import contextmanager
 from typing import Callable
 from typing import Dict
 from typing import List
 from typing import Optional
-from functools import partial
+
 import torch
 
 from nncf.common.graph.layer_attributes import BaseLayerAttributes
 from nncf.torch.debug import is_debug
 from nncf.torch.dynamic_graph.graph import DynamicGraph
 from nncf.torch.dynamic_graph.graph import DynamicGraphNode
+from nncf.torch.dynamic_graph.op_input_processing import OperatorInput
 from nncf.torch.dynamic_graph.operation_address import OperationAddress
 from nncf.torch.dynamic_graph.scope import Scope
 from nncf.torch.dynamic_graph.scope import ScopeElement
 from nncf.torch.dynamic_graph.trace_tensor import TensorMeta
-from nncf.common.graph.version_agnostic_op_names import get_version_agnostic_name
-from nncf.torch.nested_objects_traversal import nested_object_paths_generator
-from nncf.torch.nested_objects_traversal import InputIndexEntry
 
 _CURRENT_CONTEXT = None
 
@@ -51,35 +48,6 @@ class PreHookId:
 
     def __hash__(self):
         return hash(str(self))
-
-
-class OperatorInput:
-    def __init__(self, op_args, op_kwargs):
-        self.op_args = op_args
-        self.op_kwargs = op_kwargs
-        self._index = OrderedDict()  # type: Dict[int, InputIndexEntry]
-
-        op_args_index_entries = []
-        nested_object_paths_generator(self.op_args, op_args_index_entries,
-                                           previous_level_setter=partial(setattr, self, "op_args"))
-        op_kwargs_index_entries = []
-        nested_object_paths_generator(self.op_kwargs, op_kwargs_index_entries)
-
-        # pylint:disable=unnecessary-comprehension
-        self._index = {idx: entry for idx, entry in
-                       enumerate(op_args_index_entries + op_kwargs_index_entries)}
-
-    def __iter__(self):
-        return iter(self._index.values())
-
-    def __getitem__(self, n):
-        return self._index[n].getter()
-
-    def __setitem__(self, n, value):
-        self._index[n].setter(value)
-
-    def __len__(self):
-        return len(self._index)
 
 
 # pylint: disable=too-many-public-methods

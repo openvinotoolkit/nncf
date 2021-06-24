@@ -18,15 +18,15 @@ from nncf.torch.nested_objects_traversal import nested_object_paths_generator
 
 
 class KnowledgeDistillationLoss(PTCompressionLoss):
-    def __init__(self, target_model: NNCFNetwork, original_model, type_):
+    def __init__(self, target_model: NNCFNetwork, original_model, kd_type):
         super().__init__()
         original_model.train()
         device = next(target_model.parameters()).device
-        if type_ == 'softmax':
+        if kd_type == 'softmax':
             def kd_loss_fn(ref_outputs, compressed_model_outputs):
                 return -(nn.functional.log_softmax(compressed_model_outputs, dim=1) *
                          nn.functional.softmax(ref_outputs, dim=1)).mean() * (compressed_model_outputs.shape[1])
-        elif type_ == 'mse':
+        elif kd_type == 'mse':
             def kd_loss_fn(ref_outputs, compressed_model_outputs):
                 mse = torch.nn.MSELoss()
                 return mse(ref_outputs, compressed_model_outputs)
@@ -48,7 +48,7 @@ class KnowledgeDistillationLoss(PTCompressionLoss):
 
         :param compressed_model_outputs: Output tensors of compressed model can be any type of container that
             iterates over internal items in the deterministic way.
-        :param orig_model_outputs: Output tensors of original model (used for distillation) can be any type of 
+        :param orig_model_outputs: Output tensors of original model (used for distillation) can be any type of
             container with deterministic detour.
         :return: knowledge distillation loss value
         """
@@ -89,8 +89,8 @@ class KnowledgeDistillationLoss(PTCompressionLoss):
         if len(loss) == 0:
             raise RuntimeError('Empty list of loss tensors for KDLoss. Most likely compression_ctrl.loss()'
                                ' was called while model was in eval mode')
-        for i in range(len(loss)):
-            loss[i] = loss[i].unsqueeze(0)
+        for idx, _ in enumerate(loss):
+            loss[idx] = loss[idx].unsqueeze(0)
         output = torch.cat(loss).mean()
         self._kd_loss_handler.zero_kdloss()
         return output
@@ -103,8 +103,8 @@ class KnowledgeDistillationLoss(PTCompressionLoss):
 class KnowledgeDistillationBuilder(PTCompressionAlgorithmBuilder):
     def __init__(self, config: NNCFConfig, should_init: bool = True):
         super().__init__(config, should_init)
-        self.type_ = config.get('type', None)
-        if self.type_ is None:
+        self.kd_type = config.get('type', None)
+        if self.kd_type is None:
             raise ValueError('You have to choose type of KDLoss explicitly')
 
     def _get_transformation_layout(self, target_model: NNCFNetwork) -> PTTransformationLayout:
@@ -114,18 +114,20 @@ class KnowledgeDistillationBuilder(PTCompressionAlgorithmBuilder):
         return PTTransformationLayout()
 
     def build_controller(self, target_model):
-        return KnowledgeDistillationController(target_model, self.original_model, self.type_)
+        return KnowledgeDistillationController(target_model, self.original_model, self.kd_type)
 
     def initialize(self, model: NNCFNetwork) -> None:
         pass
 
 
 class KnowledgeDistillationController(PTCompressionAlgorithmController):
-    def __init__(self, target_model, original_model, type_):
+    def __init__(self, target_model, original_model, kd_type):
         super().__init__(target_model)
         original_model.train()
         self._scheduler = BaseCompressionScheduler()
-        self._loss = KnowledgeDistillationLoss(target_model=target_model, original_model=original_model, type_=type_)
+        self._loss = KnowledgeDistillationLoss(target_model=target_model,
+                                               original_model=original_model,
+                                               kd_type=kd_type)
 
     def compression_stage(self) -> CompressionStage:
         """

@@ -1,7 +1,7 @@
 from copy import deepcopy
 from functools import reduce
 
-from tests.torch.test_models.synthetic import PartlyNonDifferentialOutputsModel, EmbeddingCatLinearModel
+from tests.torch.test_models.synthetic import PartlyNonDifferentialOutputsModel
 from tests.torch.test_models.synthetic import ContainersOutputsModel
 from tests.torch.helpers import TwoConvTestModel
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
@@ -58,21 +58,19 @@ def test_knowledge_distillation_training_process(inference_type):
         run_test_training(None, config, inference_type, None)
 
 
-def run_actual(model, config, inference_type, mock_dataloader, ddp_info=None):
-    if inference_type == 'DDP':
-        gpu, ngpus_per_node = ddp_info
+def run_actual(model, config, inference_type, mock_dataloader, ngpus_per_node=None):
     config = get_kd_config(config)
     model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
     if inference_type == 'DDP':
         model = post_compression_test_distr_init(compression_ctrl, config, ngpus_per_node, model)
-    elif inference_type == 'DP' or inference_type == 'single_GPU':
+    elif inference_type in ('DP', 'single_GPU'):
         model.to(torch.device('cuda:0'))
         if inference_type == 'DP':
             model = torch.nn.DataParallel(model)
     optimizer = SGD(model.parameters(), lr=1e-02, weight_decay=1e-02)
     model.train()
     output_storage = []
-    for i, (input_, target) in enumerate(mock_dataloader):
+    for _, (input_, __) in enumerate(mock_dataloader):
         input_ = input_.to(next(model.parameters()).device)
         output = model(input_)
         output_storage.append(output)
@@ -83,9 +81,7 @@ def run_actual(model, config, inference_type, mock_dataloader, ddp_info=None):
     return output_storage, model
 
 
-def run_reference(model, config, inference_type, mock_dataloader, ddp_info=None):
-    if inference_type == 'DDP':
-        gpu, ngpus_per_node = ddp_info
+def run_reference(model, config, inference_type, mock_dataloader, ngpus_per_node=None):
     model = deepcopy(model)
     kd_model = deepcopy(model)
     mse = torch.nn.MSELoss().cuda()
@@ -93,7 +89,7 @@ def run_reference(model, config, inference_type, mock_dataloader, ddp_info=None)
     if inference_type == 'DDP':
         model = post_compression_test_distr_init(compression_ctrl, config, ngpus_per_node, model)
         kd_model.to(torch.device(next(model.parameters()).device))
-    elif inference_type == 'DP' or inference_type == 'single_GPU':
+    elif inference_type in ('DP', 'single_GPU'):
         model.to(torch.device('cuda:0'))
         kd_model.to(torch.device('cuda:0'))
         if inference_type == 'DP':
@@ -103,7 +99,7 @@ def run_reference(model, config, inference_type, mock_dataloader, ddp_info=None)
     model.train()
     kd_model.train()
     output_storage = []
-    for i, (input_, target) in enumerate(mock_dataloader):
+    for _, (input_, __) in enumerate(mock_dataloader):
         input_ = input_.to(next(model.parameters()).device)
         output = model(input_)
         kd_output = kd_model(input_)
@@ -161,11 +157,10 @@ def test_loss_outputs_parsing():
     mock_dataloader = create_ones_mock_dataloader(config, num_samples=torch.cuda.device_count(),
                                                   batch_size=torch.cuda.device_count())
     compression_ctrl.scheduler.epoch_step()
-    for i, (input_, target) in enumerate(mock_dataloader):
+    for _, (input_, __) in enumerate(mock_dataloader):
         input_ = input_.to(next(model.parameters()).device)
         outputs = model(input_)
         kd_outputs = dumped_orig_model(input_)
-
         loss_outputs = []
         for tensor1, tensor2 in zip(outputs, kd_outputs):
             if tensor1.requires_grad:
@@ -191,7 +186,7 @@ def test_knowledge_distillation_outputs_containers_parsing():
     mock_dataloader = create_ones_mock_dataloader(config, num_samples=torch.cuda.device_count(),
                                                   batch_size=torch.cuda.device_count())
     compression_ctrl.scheduler.epoch_step()
-    for i, (input_, target) in enumerate(mock_dataloader):
+    for _, (input_, __) in enumerate(mock_dataloader):
         input_ = input_.to(next(model.parameters()).device)
         outputs = model(input_)
         kd_outputs = dumped_orig_model(input_)
@@ -229,7 +224,7 @@ def test_knowledge_distillation_loss_types(kd_loss_type):
     mock_dataloader = create_ones_mock_dataloader(config, num_samples=torch.cuda.device_count(),
                                                   batch_size=torch.cuda.device_count())
     compression_ctrl.scheduler.epoch_step()
-    for i, (input_, target) in enumerate(mock_dataloader):
+    for _, (input_, __) in enumerate(mock_dataloader):
         input_ = input_.to(next(model.parameters()).device)
         outputs = model(input_)
         kd_outputs = dumped_orig_model(input_)
