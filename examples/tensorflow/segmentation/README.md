@@ -12,6 +12,14 @@ The sample receives a configuration file where the training schedule, hyper-para
 - Export to Frozen Graph or TensorFlow SavedModel that is supported by the OpenVINO™ toolkit.
 - Distributed training on multiple GPUs on one machine is supported using [tf.distribute.MirroredStrategy](https://www.tensorflow.org/api_docs/python/tf/distribute/MirroredStrategy).
 
+## Installation
+
+To work with the sample you should install the corresponding Python package dependencies
+
+```
+pip install -r examples/tensorflow/requirements.txt
+```
+
 ## Quantize Pretrained Model
 
 This scenario demonstrates quantization with fine-tuning of Mask R-CNN with ResNet-50 backbone on the COCO2017 dataset.
@@ -129,5 +137,5 @@ To export a model to the OpenVINO IR and run it using the Intel® Deep Learning 
 |**Model**|**Compression algorithm**|**Dataset**|**mAP (drop) %**|**NNCF config file**|**TensorFlow checkpoint**|
 | :---: | :---: | :---: | :---: | :---: | :---: |
 |MaskRCNN|None|COCO2017|bbox: 37.33<br/>segm: 33.56|[Link](configs/mask_rcnn_coco.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/tensorflow/models/develop/mask_rcnn_baseline.tar.gz)|
-|MaskRCNN|INT8 w:sym,per-tensor a:sym,per-tensor|COCO2017|bbox: 37.12 (-0.21)<br/>segm: 33.52 (-0.04)|[Link](configs/quantization/mask_rcnn_coco_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/tensorflow/models/develop/mask_rcnn_int8_w_sym_t_half_a_sym_t.tar.gz)|
-|MaskRCNN|Sparsity 50% (Magnitude)|COCO2017|bbox: 36.93 (-0.40)<br/>segm: 33.23 (-0.33)|[Link](configs/sparsity/mask_rcnn_coco_magnitude_sparsity.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/tensorflow/models/develop/mask_rcnn_sparsity_50.tar.gz)|
+|MaskRCNN|INT8 (per-tensor, symmetric for weights; per-tensor, symmetric for activations)|COCO2017|bbox: 37.12 (0.21)<br/>segm: 33.52 (0.04)|[Link](configs/quantization/mask_rcnn_coco_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/tensorflow/models/develop/mask_rcnn_int8_w_sym_t_half_a_sym_t.tar.gz)|
+|MaskRCNN|Sparsity 50% (Magnitude)|COCO2017|bbox: 36.93 (0.40)<br/>segm: 33.23 (0.33)|[Link](configs/sparsity/mask_rcnn_coco_magnitude_sparsity.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/tensorflow/models/develop/mask_rcnn_sparsity_50.tar.gz)|

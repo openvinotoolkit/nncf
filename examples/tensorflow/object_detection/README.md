@@ -12,6 +12,14 @@ The sample receives a configuration file where the training schedule, hyper-para
 - Export to Frozen Graph or TensorFlow SavedModel that is supported by the OpenVINO™ toolkit.
 - Distributed training on multiple GPUs on one machine is supported using [tf.distribute.MirroredStrategy](https://www.tensorflow.org/api_docs/python/tf/distribute/MirroredStrategy).
 
+## Installation
+
+To work with the sample you should install the corresponding Python package dependencies
+
+```
+pip install -r examples/tensorflow/requirements.txt
+```
+
 ## Quantize Pretrained Model
 
 This scenario demonstrates quantization with fine-tuning of RetinaNet with ResNet-50 backbone on the COCO2017 dataset.
@@ -147,15 +155,15 @@ To export a model to the OpenVINO IR and run it using the Intel® Deep Learning 
 |**Model**|**Compression algorithm**|**Dataset**|**mAP (drop) %**|**NNCF config file**|**TensorFlow checkpoint**|
 | :---: | :---: | :---: | :---: | :---: | :---: |
 |RetinaNet|None|COCO2017|33.44|[retinanet_coco.json](configs/retinanet_coco.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/tensorflow/models/develop/retinanet.tar.gz)|
-|RetinaNet|INT8 w:sym,per-tensor a:sym,per-tensor |COCO2017|33.22 (-0.22)|[retinanet_coco_int8.json](configs/quantization/retinanet_coco_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/tensorflow/models/develop/retinanet_int8_w_sym_t_half_a_sym_t.tar.gz)|
-|RetinaNet|Sparsity 50% (Magnitude)|COCO2017|33.13 (-0.31)|[retinanet_coco_magnitude_sparsity.json](configs/sparsity/retinanet_coco_magnitude_sparsity.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/tensorflow/models/develop/retinanet_sparsity_50.tar.gz)|
+|RetinaNet|INT8 (per-tensor, symmetric for weights; per-tensor, symmetric for activations)|COCO2017|33.22 (0.22)|[retinanet_coco_int8.json](configs/quantization/retinanet_coco_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/tensorflow/models/develop/retinanet_int8_w_sym_t_half_a_sym_t.tar.gz)|
+|RetinaNet|Sparsity 50% (Magnitude)|COCO2017|33.13 (0.31)|[retinanet_coco_magnitude_sparsity.json](configs/sparsity/retinanet_coco_magnitude_sparsity.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/tensorflow/models/develop/retinanet_sparsity_50.tar.gz)|
 |YOLOv4|None|COCO2017|47.04|[yolo_v4_coco.json](configs/yolo_v4_coco.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/tensorflow/models/develop/yolo_v4.tar.gz)|
-|YOLOv4|INT8 w:sym,per-channel a:asym,per-tensor |COCO2017|46.15 (-0.89)|[yolo_v4_coco_int8.json](configs/quantization/yolo_v4_coco_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/tensorflow/models/develop/yolo_v4_int8_w_sym_ch_half_a_asym_t.tar.gz)|
-|YOLOv4|Sparsity 50% (Magnitude)|COCO2017|46.54 (-0.50)|[yolo_v4_coco_magnitude_sparsity.json](configs/sparsity/yolo_v4_coco_magnitude_sparsity.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/tensorflow/models/develop/yolo_v4_sparsity_50.tar.gz)|
+|YOLOv4|INT8 (per-channel, symmetric for weights; per-tensor, asymmetric for activations)|COCO2017|46.15 (0.89)|[yolo_v4_coco_int8.json](configs/quantization/yolo_v4_coco_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/tensorflow/models/develop/yolo_v4_int8_w_sym_ch_half_a_asym_t.tar.gz)|
+|YOLOv4|Sparsity 50% (Magnitude)|COCO2017|46.54 (0.50)|[yolo_v4_coco_magnitude_sparsity.json](configs/sparsity/yolo_v4_coco_magnitude_sparsity.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/tensorflow/models/develop/yolo_v4_sparsity_50.tar.gz)|
 
 #### Results for filter pruning
 |**Model**|**Compression algorithm**|**Dataset**|**mAP (drop) %**|**GFLOPS**|**MParams**|**NNCF config file**|**TensorFlow checkpoint**|
 | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
 |RetinaNet|None|COCO2017|33.44|194.1 (100%)|60.8 (100%)|[retinanet_coco.json](configs/retinanet_coco.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/tensorflow/models/develop/retinanet.tar.gz)|
-|RetinaNet|Filter Pruning 40%|COCO2017|32.7 (-0.74)|107.7 (55.49%)|34.7 (57.07%)|[retinanet_coco_pruning.json](configs/pruning/retinanet_coco_pruning.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/tensorflow/models/develop/retinanet_pruning_40.tar.gz)|
-|RetinaNet|Filter Pruning 40% + INT8 w:sym,per-tensor a:sym,per-tensor|COCO2017|32.82 (-0.62)|107.6 (55.44%)|34.7 (57.07%)|[retinanet_coco_pruning_int8.json](configs/pruning_quantization/retinanet_coco_pruning_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/tensorflow/models/develop/retinanet_int8_w_sym_t_half_a_sym_t_pruning_40.tar.gz)|
+|RetinaNet|Filter Pruning 40%, geometric_median criterion|COCO2017|32.7 (0.74)|107.7 (55.49%)|34.7 (57.07%)|[retinanet_coco_pruning.json](configs/pruning/retinanet_coco_pruning.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/tensorflow/models/develop/retinanet_pruning_40.tar.gz)|
+|RetinaNet|Filter Pruning 40%, geometric_median criterion + INT8 (per-tensor, symmetric for weights; per-tensor, symmetric for activations)|COCO2017|32.82 (0.62)|107.6 (55.44%)|34.7 (57.07%)|[retinanet_coco_pruning_int8.json](configs/pruning_quantization/retinanet_coco_pruning_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/tensorflow/models/develop/retinanet_int8_w_sym_t_half_a_sym_t_pruning_40.tar.gz)|
