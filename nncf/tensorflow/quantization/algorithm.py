@@ -180,7 +180,9 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
         for quantizer_group in QuantizerGroup:
             self._parse_group_params(self.config, quantizer_group)
 
-        self._parse_init_params()
+        if self.should_init:
+            self._parse_init_params()
+
         self._range_initializer = None
         self._bn_adaptation = None
         self._quantizer_setup = None
@@ -320,7 +322,8 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
         return QuantizationController(model, self.config, self._op_names)
 
     def initialize(self, model: tf.keras.Model) -> None:
-        self._run_range_initialization(model)
+        if self._range_init_params is not None:
+            self._run_range_initialization(model)
 
         if self._batchnorm_adaptation:
             self._run_batchnorm_adaptation(model)

@@ -452,7 +452,8 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
                 args, kwargs = self._wrap_inputs_fn(args, kwargs)
             retval = self.get_nncf_wrapped_model()(*args, **kwargs)
             retval = replicate_same_tensors(retval)
-            retval = self._wrap_outputs_fn(retval)
+            if not self._in_user_dummy_forward:
+                retval = self._wrap_outputs_fn(retval)
         return retval
 
     def _strip_traced_tensors(self, args: Tuple, kwargs: Dict) -> Tuple[Tuple, Dict]:

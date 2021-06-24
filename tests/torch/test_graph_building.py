@@ -22,9 +22,11 @@ import pytest
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+
 from nncf.torch import nncf_model_input
 from nncf.torch.dynamic_graph.graph import DynamicGraph
 from nncf.torch.dynamic_graph.graph_tracer import GraphTracer
+from nncf.torch.dynamic_graph.io_handling import wrap_nncf_model_outputs_with_objwalk
 from nncf.torch.dynamic_graph.graph_tracer import ModelInputInfo
 from nncf.torch.dynamic_graph.graph_tracer import create_dummy_forward_fn
 from nncf.torch.dynamic_graph.context import get_current_context
@@ -154,7 +156,7 @@ class ModelForTest(torch.nn.Module):
         args = (mock_tensor, )
         kwargs = {}
         args, kwargs = ModelForTest.simple_wrap_fn(args, kwargs)
-        return model(*args, **kwargs)
+        return wrap_nncf_model_outputs_with_objwalk(model(*args, **kwargs))
 
 
 input_shapes = [
