@@ -24,7 +24,7 @@ from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.graph.transformations.commands import TransformationPriority
 from nncf.common.initialization.batchnorm_adaptation import BatchnormAdaptationAlgorithm
-from nncf.common.quantization.initialization.range import RangeInitParams
+from nncf.tensorflow.quantization.initializers.init_range import TFRangeInitParams
 from nncf.common.quantization.structs import QuantizationConstraints
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
@@ -187,9 +187,9 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
         self._batchnorm_adaptation = 'batchnorm_adaptation' in self.config.get('initializer', {})
         self._range_init_params = self._parse_range_init_params()
 
-    def _parse_range_init_params(self) -> RangeInitParams:
+    def _parse_range_init_params(self) -> TFRangeInitParams:
         range_init_params = extract_range_init_params(self.config)
-        return RangeInitParams(**range_init_params) if range_init_params is not None else None
+        return TFRangeInitParams(**range_init_params) if range_init_params is not None else None
 
     def initialize(self, model: tf.keras.Model) -> None:
         self._parse_init_params()

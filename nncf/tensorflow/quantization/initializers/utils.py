@@ -36,6 +36,6 @@ def get_axes(ndims, per_channel, channel_axes, add_dim=False):
             val = (ndims + val) % ndims
             axis.remove(val)
     if add_dim:
-        # all input tensors are stacked together - one more dimension
+        # if all input tensors are stacked together - one more dimension
         axis.append(axis[-1] + 1)
     return axis
