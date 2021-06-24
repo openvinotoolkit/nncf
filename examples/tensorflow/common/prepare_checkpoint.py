@@ -15,6 +15,7 @@ import sys
 
 import tensorflow as tf
 
+from nncf.tensorflow.api.compression import TFCompressionState
 from nncf.tensorflow.helpers.model_creation import create_compressed_model
 from examples.tensorflow.common.logger import logger
 from examples.tensorflow.common.sample_config import create_sample_config
@@ -62,9 +63,14 @@ def checkpoint_saver(config):
     model_builder = get_model_builder(config)
     model = model_builder.build_model()
 
-    compression_ctrl, compress_model = create_compressed_model(model, config.nncf_config)
+    compression_state = TFCompressionState()
+    checkpoint = tf.train.Checkpoint(compression_state=compression_state)
+    load_checkpoint(checkpoint, config.ckpt_path)
 
-    checkpoint = tf.train.Checkpoint(model=compress_model, compression_ctrl=compression_ctrl)
+    compression_ctrl, compress_model = create_compressed_model(model, config.nncf_config, compression_state)
+
+    compression_state = compression_ctrl.get_compression_state()
+    checkpoint = tf.train.Checkpoint(model=compress_model, compression_state=compression_state)
     load_checkpoint(checkpoint, config.ckpt_path)
 
     checkpoint_manager = tf.train.CheckpointManager(checkpoint, config.checkpoint_save_dir, max_to_keep=None)

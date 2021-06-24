@@ -8,17 +8,7 @@ from nncf.torch.dynamic_graph.context import Scope
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.quantization.quantizer_setup import SingleConfigQuantizationPoint
 from nncf.torch.quantization.quantizer_setup import SingleConfigQuantizerSetup
-
-
-def check_serialization(obj):
-    state = obj.get_state()
-
-    serialized_state = json.dumps(state, sort_keys=True, indent=4)
-    print(serialized_state)
-    deserialized_state = json.loads(serialized_state)
-
-    assert obj == obj.from_state(state)
-    assert obj == obj.from_state(deserialized_state)
+from tests.common.serialization import check_serialization
 
 
 def test_quantizer_setup_serialization():

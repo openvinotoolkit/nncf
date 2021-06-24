@@ -134,7 +134,7 @@ class PTCompressionAlgorithmController(BaseCompressionAlgorithmController):
         :return: The compression state.
         """
         ctrl_state = self.get_state()
-        if self._builder_state is None or self.name is None:
+        if self._builder_state is None:
             raise RuntimeError('Internal error: builder state is not set for the controller')
         return PTCompressionState(builder_state=self._builder_state, ctrl_state=ctrl_state)
 

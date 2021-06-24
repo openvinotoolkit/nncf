@@ -84,10 +84,10 @@ def get_basic_n_conv_test_model(input_shape=(24, 24, 1), in_out_ch=((1, 3), (3, 
     return tf.keras.Model(inputs=inputs, outputs=outputs)
 
 
-def create_compressed_model_and_algo_for_test(model, config, should_init=True):
+def create_compressed_model_and_algo_for_test(model, config, compression_state=None):
     assert isinstance(config, NNCFConfig)
     tf.keras.backend.clear_session()
-    algo, model = create_compressed_model(model, config, should_init)
+    algo, model = create_compressed_model(model, config, compression_state)
     return model, algo
 
 

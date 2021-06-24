@@ -16,6 +16,7 @@ import sys
 import tensorflow as tf
 
 from nncf.tensorflow import create_compressed_model
+from nncf.tensorflow.api.compression import TFCompressionState
 from nncf.tensorflow.helpers.model_manager import TFOriginalModelManager
 
 from examples.tensorflow.common.argparser import get_common_argument_parser
@@ -184,10 +185,21 @@ def run_evaluation(config, eval_timeout=None):
                                 weights=config.get('weights', None),
                                 is_training=False) as model:
         with strategy.scope():
-            compression_ctrl, compress_model = create_compressed_model(model, config.nncf_config)
+            compression_state = TFCompressionState()
+            checkpoint = tf.train.Checkpoint(compression_state=compression_state)
+            if 'test' in config.mode and config.ckpt_path:
+                load_checkpoint(checkpoint, config.ckpt_path)
+            elif 'train' in config.mode:
+                checkpoint_dir = config.checkpoint_save_dir
+                eval_timeout = config.eval_timeout
+                for checkpoint_path in tf.train.checkpoints_iterator(checkpoint_dir, timeout=eval_timeout):
+                    checkpoint.restore(checkpoint_path)
+
+            compression_ctrl, compress_model = create_compressed_model(model, config.nncf_config, compression_state)
+            compression_state = compression_ctrl.get_compression_state()
             variables = get_variables(compress_model)
             checkpoint = tf.train.Checkpoint(variables=variables,
-                                             compression_ctrl=compression_ctrl,
+                                             compression_state=compression_state,
                                              step=tf.Variable(0))
             eval_metric = model_builder.eval_metrics()
             predict_post_process_fn = model_builder.post_processing
@@ -239,9 +251,12 @@ def export(config):
     with TFOriginalModelManager(model_builder.build_model,
                                 weights=config.get('weights', None),
                                 is_training=False) as model:
-        compression_ctrl, compress_model = create_compressed_model(model,
-                                                                   config.nncf_config,
-                                                                   should_init=False)
+        compression_state = TFCompressionState()
+        if config.ckpt_path:
+            checkpoint = tf.train.Checkpoint(compression_state=compression_state)
+            load_checkpoint(checkpoint, config.ckpt_path)
+
+        compression_ctrl, compress_model = create_compressed_model(model, config.nncf_config, compression_state)
 
     if config.ckpt_path:
         variables = get_variables(compress_model)

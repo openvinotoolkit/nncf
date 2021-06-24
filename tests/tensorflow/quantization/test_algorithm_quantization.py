@@ -11,21 +11,22 @@
  limitations under the License.
 """
 
+import pytest
 import tensorflow as tf
 from tensorflow.python.keras import layers
-import pytest
 
+from nncf.common.quantization.structs import QuantizationMode
 from nncf.tensorflow.graph.metatypes.matcher import get_keras_layer_metatype
 from nncf.tensorflow.layers.custom_objects import NNCF_QUANTIZATION_OPERATONS
 from nncf.tensorflow.layers.operation import InputType
 from nncf.tensorflow.layers.wrapper import NNCFWrapper
 from nncf.tensorflow.quantization import FakeQuantize
 from nncf.tensorflow.quantization.algorithm import QuantizationController
-from nncf.tensorflow.quantization.quantizers import Quantizer, TFQuantizerSpec
+from nncf.tensorflow.quantization.quantizers import Quantizer
+from nncf.tensorflow.quantization.quantizers import TFQuantizerSpec
 from tests.tensorflow.helpers import create_compressed_model_and_algo_for_test
 from tests.tensorflow.helpers import get_basic_conv_test_model
 from tests.tensorflow.quantization.utils import get_basic_quantization_config
-from nncf.common.quantization.structs import QuantizationMode
 
 
 def compare_qspecs(qspec: TFQuantizerSpec, quantizer):
@@ -53,20 +54,8 @@ def get_quantizers(model):
     return activation_quantizers, weight_quantizers
 
 
-def test_quantization_configs__with_defaults():
-    model = get_basic_conv_test_model()
-    config = get_basic_quantization_config()
-    compression_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config, should_init=False)
-    assert isinstance(compression_ctrl, QuantizationController)
-
+def check_default_qspecs(compression_model):
     activation_quantizers, weight_quantizers = get_quantizers(compression_model)
-    for layer in compression_model.layers:
-        if isinstance(layer, NNCFWrapper):
-            for ops in layer.weights_attr_ops.values():
-                for op in ops.values():
-                    if isinstance(op, Quantizer):
-                        weight_quantizers.append(op)
-
     ref_weight_qspec = TFQuantizerSpec(mode=QuantizationMode.SYMMETRIC,
                                        num_bits=8,
                                        signedness_to_force=None,
@@ -75,7 +64,6 @@ def test_quantization_configs__with_defaults():
                                        half_range=True)
     for wq in weight_quantizers:
         compare_qspecs(ref_weight_qspec, wq)
-
     ref_activation_qspec = TFQuantizerSpec(mode=QuantizationMode.SYMMETRIC,
                                            num_bits=8,
                                            signedness_to_force=None,
@@ -84,6 +72,16 @@ def test_quantization_configs__with_defaults():
                                            half_range=False)
     for wq in activation_quantizers:
         compare_qspecs(ref_activation_qspec, wq)
+
+
+def test_quantization_configs__with_defaults():
+    model = get_basic_conv_test_model()
+    config = get_basic_quantization_config()
+
+    compression_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
+
+    assert isinstance(compression_ctrl, QuantizationController)
+    check_default_qspecs(compression_model)
 
 
 def test_quantization_configs__custom():
@@ -102,7 +100,7 @@ def test_quantization_configs__custom():
             "signed": True,
         },
     })
-    compression_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config, should_init=False)
+    compression_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
 
     assert isinstance(compression_ctrl, QuantizationController)
     activation_quantizers, weight_quantizers = get_quantizers(compression_model)
@@ -126,18 +124,8 @@ def test_quantization_configs__custom():
         compare_qspecs(ref_activation_qspec, wq)
 
 
-def test_quantization_configs__disable_saturation_fix():
-    model = get_basic_conv_test_model()
-
-    config = get_basic_quantization_config()
-    config['compression'].update({
-        'disable_saturation_fix': True
-    })
-    compression_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config, should_init=False)
-
-    assert isinstance(compression_ctrl, QuantizationController)
+def check_specs_for_disabled_saturation_fix(compression_model):
     activation_quantizers, weight_quantizers = get_quantizers(compression_model)
-
     ref_weight_qspec = TFQuantizerSpec(mode=QuantizationMode.SYMMETRIC,
                                        num_bits=8,
                                        signedness_to_force=None,
@@ -146,7 +134,6 @@ def test_quantization_configs__disable_saturation_fix():
                                        half_range=False)
     for wq in weight_quantizers:
         compare_qspecs(ref_weight_qspec, wq)
-
     ref_activation_qspec = TFQuantizerSpec(mode=QuantizationMode.SYMMETRIC,
                                            num_bits=8,
                                            signedness_to_force=None,
@@ -157,6 +144,19 @@ def test_quantization_configs__disable_saturation_fix():
         compare_qspecs(ref_activation_qspec, wq)
 
 
+def test_quantization_configs__disable_saturation_fix():
+    model = get_basic_conv_test_model()
+
+    config = get_basic_quantization_config()
+    config['compression'].update({
+        'disable_saturation_fix': True
+    })
+    compression_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
+
+    assert isinstance(compression_ctrl, QuantizationController)
+    check_specs_for_disabled_saturation_fix(compression_model)
+
+
 @pytest.mark.parametrize('disabled', [False, True], ids=['enabled', 'disabled'])
 def test_export_saturatuion_fix(disabled):
     model = get_basic_conv_test_model()
@@ -164,7 +164,7 @@ def test_export_saturatuion_fix(disabled):
     config['compression'].update({
         'disable_saturation_fix': disabled
     })
-    compression_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config, should_init=False)
+    compression_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
     activation_quantizers_be, weight_quantizers_be = get_quantizers(compression_model)
     ref_weight_qspec = TFQuantizerSpec(mode=QuantizationMode.SYMMETRIC,
                                        num_bits=8,
@@ -279,8 +279,8 @@ def test_quantize_inputs():
     input_shapes = [[2, 32, 32, 3] for i in range(5)]
     model = get_quantize_inputs_test_model(input_shapes)
 
-    model, _ = create_compressed_model_and_algo_for_test(model, config, should_init=False)
-    ref_fake_quantize_layers_for_inputs ={
+    model, _ = create_compressed_model_and_algo_for_test(model, config)
+    ref_fake_quantize_layers_for_inputs = {
         'rescaling/fake_quantize',
         'input_2/fake_quantize',
         'input_3/fake_quantize',
@@ -338,7 +338,7 @@ def test_quantize_outputs_removal():
     sample_size = [2, 32, 32, 3]
     model = get_quantize_outputs_removal_test_model(sample_size)
 
-    model, _ = create_compressed_model_and_algo_for_test(model, config, should_init=False)
+    model, _ = create_compressed_model_and_algo_for_test(model, config)
     ref_fake_quantize_layers = ['input/fake_quantize']
     actual_fake_quantize_layers = [layer.name for layer in model.layers if isinstance(layer, FakeQuantize)]
     assert actual_fake_quantize_layers == ref_fake_quantize_layers

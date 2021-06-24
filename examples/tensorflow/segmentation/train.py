@@ -19,6 +19,7 @@ import numpy as np
 import tensorflow as tf
 
 from nncf.tensorflow import create_compressed_model
+from nncf.tensorflow.api.compression import TFCompressionState
 from nncf.tensorflow.helpers.model_manager import TFOriginalModelManager
 from nncf.tensorflow.initialization import register_default_init_args
 from nncf.common.utils.tensorboard import prepare_for_tensorboard
@@ -242,9 +243,12 @@ def run_train(config):
                                 weights=config.get('weights', None),
                                 is_training=True) as model:
         with strategy.scope():
-            compression_ctrl, compress_model = create_compressed_model(model,
-                                                                       nncf_config,
-                                                                       should_init=not resume_training)
+            compression_state = TFCompressionState()
+            if resume_training:
+                checkpoint = tf.train.Checkpoint(compression_state=compression_state)
+                load_checkpoint(checkpoint, config.ckpt_path)
+
+            compression_ctrl, compress_model = create_compressed_model(model, nncf_config, compression_state)
 
             scheduler = build_scheduler(
                 config=config,
@@ -257,9 +261,10 @@ def run_train(config):
             loss_fn = model_builder.build_loss_fn(compress_model, compression_ctrl.loss)
 
             variables = get_variables(compress_model)
+            compression_state = compression_ctrl.get_compression_state()
             checkpoint = tf.train.Checkpoint(variables=variables,
                                              optimizer=optimizer,
-                                             compression_ctrl=compression_ctrl,
+                                             compression_state=compression_state,
                                              step=tf.Variable(0))
             checkpoint_manager = tf.train.CheckpointManager(checkpoint, config.checkpoint_save_dir, max_to_keep=None)
 
