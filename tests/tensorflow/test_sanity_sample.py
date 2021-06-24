@@ -13,6 +13,7 @@
 
 import json
 import os
+import shutil
 import tempfile
 from functools import partial
 import pytest
@@ -27,6 +28,7 @@ from examples.tensorflow.object_detection import main as od_main
 from examples.tensorflow.segmentation import train as seg_train
 from examples.tensorflow.segmentation import evaluation as seg_eval
 from examples.tensorflow.common.model_loader import AVAILABLE_MODELS
+from examples.tensorflow.common.prepare_checkpoint import main as prepare_checkpoint_main
 
 od_main.get_dataset_builders = partial(get_coco_dataset_builders, train=True, validation=True)
 seg_train.get_dataset_builders = partial(get_coco_dataset_builders, train=True, calibration=True)
@@ -362,3 +364,28 @@ def test_export_with_resume(_config, tmp_path, export_format, _case_common_dirs)
     model_path = os.path.join(export_path, 'saved_model.pb') \
         if export_format == 'saved-model' else export_path
     assert os.path.exists(model_path)
+
+
+def get_prepare_checkpoint_configs():
+    supported_model_types = ['object_detection', 'segmentation']
+    configs = []
+    for model_type, config_paths in CONFIGS.items():
+        if model_type in supported_model_types:
+            for config_path in config_paths:
+                configs.append((model_type, config_path))
+    return configs
+
+
+@pytest.mark.parametrize('model_type,config_path', get_prepare_checkpoint_configs(),
+                         ids=[x[0] for x in get_prepare_checkpoint_configs()])
+def test_prepare_checkpoint(model_type, config_path):
+    dirpath = tempfile.mkdtemp()
+    args = {
+        '--model-type': model_type,
+        '--config': config_path,
+        '--checkpoint-save-dir': dirpath,
+        '--resume': dirpath,
+    }
+
+    prepare_checkpoint_main(convert_to_argv(args))
+    shutil.rmtree(dirpath)
