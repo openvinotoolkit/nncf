@@ -23,11 +23,12 @@ from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.sparsity.base_algo import BaseSparsityAlgoBuilder, BaseSparsityAlgoController, SparseModuleInfo
 from nncf.torch.sparsity.rb.layers import RBSparsifyingWeight
 from nncf.torch.sparsity.rb.loss import SparseLoss, SparseLossForPerLayerSparsity
+from nncf.torch.utils import get_world_size
+from nncf.common.accuracy_aware_training.training_loop import ADAPTIVE_COMPRESSION_CONTROLLERS
 from nncf.torch.sparsity.collector import PTSparseModelStatisticsCollector
 from nncf.common.sparsity.schedulers import SPARSITY_SCHEDULERS
 from nncf.common.schedulers import StubCompressionScheduler
 from nncf.common.sparsity.statistics import RBSparsityStatistics
-from nncf.torch.utils import get_world_size
 from nncf.common.statistics import NNCFStatistics
 
 
@@ -45,6 +46,7 @@ class RBSparsityBuilder(BaseSparsityAlgoBuilder):
         return RBSparsityController(target_model, self._sparsified_module_info, self.config)
 
 
+@ADAPTIVE_COMPRESSION_CONTROLLERS.register('pt_rb_sparsity')
 class RBSparsityController(BaseSparsityAlgoController):
     def __init__(self, target_model: NNCFNetwork, sparsified_module_info: List[SparseModuleInfo], config):
         super().__init__(target_model, sparsified_module_info)
@@ -140,3 +142,11 @@ class RBSparsityController(BaseSparsityAlgoController):
         nncf_stats = NNCFStatistics()
         nncf_stats.register('rb_sparsity', stats)
         return nncf_stats
+
+    @property
+    def compression_rate(self):
+        return self._loss.target_sparsity_rate
+
+    @compression_rate.setter
+    def compression_rate(self, sparsity_level: float):
+        self.set_sparsity_level(sparsity_level)

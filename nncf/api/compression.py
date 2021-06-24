@@ -269,6 +269,33 @@ class CompressionAlgorithmController(ABC):
         """
         return model
 
+    @property
+    @abstractmethod
+    def compression_rate(self) -> float:
+        """
+        Returns a float compression rate value ranging from 0 to 1 (e.g. the sparsity level or
+        the ratio of filters pruned).
+
+        :return: Compression rate value
+        """
+
+    @compression_rate.setter
+    @abstractmethod
+    def compression_rate(self, compression_rate: float) -> None:
+        """
+        Set a float compression rate value in the model (e.g. the sparsity
+        level or the ratio of filters pruned).
+
+        :param compression_rate: The compressed rate value to be set.
+        """
+
+    @abstractmethod
+    def disable_scheduler(self) -> None:
+        """
+        Disables current compression scheduler during training by changing
+        it to a dummy one that does not change the compression rate.
+        """
+
 
 class CompressionAlgorithmBuilder(ABC):
     """

@@ -30,6 +30,7 @@ import torch.nn.functional as F
 import torchvision
 
 from nncf.torch import nncf_model_input
+from nncf.torch import nncf_model_output
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNodeName
 from nncf.common.graph.transformations.commands import TargetType
@@ -40,7 +41,6 @@ from nncf.torch.dynamic_graph.graph_tracer import create_input_infos
 from nncf.torch.dynamic_graph.graph_tracer import create_mock_tensor
 from nncf.torch.graph.graph import PTNNCFGraph
 from nncf.torch.graph.graph_builder import GraphBuilder
-from nncf.common.graph.version_agnostic_op_names import get_version_agnostic_name
 from nncf.common.hardware.config import HWConfigType
 from nncf.torch.layers import LSTMCellNNCF
 from nncf.torch.layers import NNCF_RNN
@@ -84,28 +84,6 @@ def get_basic_quantization_config_with_hw_config_type(hw_config_type, input_samp
     config["target_device"] = hw_config_type
     config["compression"] = {"algorithm": "quantization", }
     return config
-
-
-def get_version_agnostic_graph(nx_graph):
-    done = False
-    while not done:
-        counter = 0
-        for node_name, node_data in nx_graph.nodes().data():
-            if "type" in node_data:
-                version_specific_name = node_data["type"]
-                version_agnostic_name = get_version_agnostic_name(version_specific_name)
-                if version_agnostic_name != version_specific_name:
-                    node_data["type"] = version_agnostic_name
-                    mapping = dict(zip(nx_graph, nx_graph))  # identity mapping
-                    new_node_name = node_name.replace(version_specific_name, version_agnostic_name)
-                    mapping[node_name] = new_node_name
-                    nx_graph = nx.relabel_nodes(nx_graph, mapping, copy=False)
-                    break  # Looks like iterators will be invalidated after relabel_nodes
-            counter += 1
-        if counter == len(nx_graph.nodes().data()):
-            done = True
-
-    return nx_graph
 
 
 def sort_dot(path):
@@ -154,7 +132,6 @@ def check_nx_graph(nx_graph: nx.DiGraph, path_to_dot, graph_dir, sort_dot_graph=
             sort_dot(path_to_dot)
 
     load_graph = nx.drawing.nx_pydot.read_dot(path_to_dot)
-    load_graph = get_version_agnostic_graph(load_graph)
 
     # nx_graph is expected to have version-agnostic operator names already
     for k, attrs in nx_graph.nodes.items():
@@ -252,7 +229,7 @@ def sr_dummy_forward_fn(model_, input_sample_sizes: Tuple[List[int]]):
     tensor_list = [create_mock_tensor(info, device) for info in input_info_list]
     args = (tuple(tensor_list),)
     args, _ = sr_wrap_inputs_fn(args, {})
-    return model_(*args)
+    return nncf_model_output(model_(*args))
 
 
 TEST_MODELS_DESC = [
@@ -911,3 +888,18 @@ def prepare_potential_quantizer_graph(graph: PTNNCFGraph,
             nx_graph.add_edge(weight_quantizer_node_key, node_key)
 
     return nx_graph
+
+def test_output_quantization_with_user_forward(_case_config):
+    desc = TEST_MODELS_DESC[-1]
+    model = desc.model_builder()
+
+    input_shape = desc.input_sample_sizes
+
+    config = get_basic_quantization_config(_case_config.quant_type,
+                                            input_sample_sizes=input_shape)
+    config["compression"].update({"quantize_outputs": True})
+    register_bn_adaptation_init_args(config)
+    compressed_model, _ = create_compressed_model_and_algo_for_test(model, config,
+                                                                    dummy_forward_fn=desc.dummy_forward_fn,
+                                                                    wrap_inputs_fn=desc.wrap_inputs_fn)
+    check_model_graph(compressed_model, 'sr_small_model_qoutput.dot', _case_config.graph_dir)

@@ -17,6 +17,7 @@ from bisect import bisect_right
 import numpy as np
 
 from nncf.api.compression import CompressionScheduler
+from nncf.api.compression import CompressionStage
 
 
 class PolynomialDecaySchedule:
@@ -243,3 +244,6 @@ class StubCompressionScheduler(CompressionScheduler):
 
     def get_state(self) -> Dict[str, object]:
         return {}
+
+    def compression_stage(self) -> CompressionStage:
+        return CompressionStage.FULLY_COMPRESSED

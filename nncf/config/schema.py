@@ -370,11 +370,42 @@ QUANTIZATION_INITIALIZER_SCHEMA = {
     "additionalProperties": False,
 }
 
+ACCURACY_AWARE_SCHEMA = {
+    "maximal_accuracy_degradation": with_attributes(_NUMBER,
+                                                    description="Maximally allowed accuracy degradation"
+                                                                " of the model (in percent relative to"
+                                                                " the original model accuracy)"),
+    "initial_training_phase_epochs": with_attributes(_NUMBER,
+                                                     description="Number of epochs to fine-tune during "
+                                                                 "the initial training phase of the "
+                                                                 "adaptive compression training loop"),
+    "initial_compression_rate_step": with_attributes(_NUMBER,
+                                                     description="Initial value for the compression rate "
+                                                                 "increase/decrease training phase of the "
+                                                                 "compression training loop"),
+    "compression_rate_step_reduction_factor":  with_attributes(_NUMBER,
+                                                               description="Factor used to reduce the compression rate "
+                                                                           "change step in the adaptive compression "
+                                                                           "training loop"),
+    "minimal_compression_rate_step":  with_attributes(_NUMBER,
+                                                      description="The minimal compression rate change "
+                                                                  "step value after which the training "
+                                                                  "loop is terminated"),
+    "patience_epochs":  with_attributes(_NUMBER,
+                                        description="The number of epochs to fine-tune the model"
+                                                    " for a given compression rate after the initial"
+                                                    " training phase of the training loop"),
+    "maximal_total_epochs":  with_attributes(_NUMBER,
+                                             description="The maximal total epoch budget for "
+                                                         "the adaptive compression training loop"),
+}
+
 COMMON_COMPRESSION_ALGORITHM_PROPERTIES = {
     "ignored_scopes": with_attributes(make_string_or_array_of_strings_schema(),
                                       description=IGNORED_SCOPES_DESCRIPTION),
     "target_scopes": with_attributes(make_string_or_array_of_strings_schema(),
                                      description=TARGET_SCOPES_DESCRIPTION),
+    "accuracy_aware_training": ACCURACY_AWARE_SCHEMA,
 }
 
 BASIC_COMPRESSION_ALGO_SCHEMA = {
@@ -746,6 +777,7 @@ TARGET_DEVICE_SCHEMA = {
     "type": "string",
     "enum": ["ANY", "CPU", "GPU", "VPU", "TRIAL"]
 }
+
 
 ROOT_NNCF_CONFIG_SCHEMA = {
     "$schema": "http://json-schema.org/draft-07/schema",

@@ -19,6 +19,7 @@ import sys
 import pytest
 
 from nncf.torch import BKC_TORCH_VERSION
+from nncf.torch import BKC_TORCHVISION_VERSION
 from tests.torch.helpers import Command
 from tests.common.helpers import PROJECT_ROOT
 
@@ -52,8 +53,10 @@ class CachedPipRunner:
         self.venv_activate = venv_activation_script_path
         self.cache_dir = cache_dir
 
-    def run_pip(self, pip_command: str, cwd: str = None):
-        if self.cache_dir is not None:
+    def run_pip(self, pip_command: str, cwd: str = None, use_cache: bool = True):
+        if not use_cache:
+            cache_dir_entry = '--no-cache-dir'
+        elif self.cache_dir is not None:
             cache_dir_entry = "--cache-dir {}".format(self.cache_dir)
         else:
             cache_dir_entry = ""
@@ -233,7 +236,7 @@ class TestMmdetection:
         self.PATH_TO_PATCH = str(os.path.join(PROJECT_ROOT, "third_party_integration", "mmdetection",
                                               "0001-Modifications-for-NNCF-usage.patch"))
         self.VENV_MMDET_PATH = str(os.path.join(temp_folder["venv"], "mmdet"))
-        self.activate_venv = str(". {}/bin/activate".format(self.VENV_MMDET_PATH))
+        self.activate_venv = str("CUDA_HOME=/usr/local/cuda-10.2 . {}/bin/activate".format(self.VENV_MMDET_PATH))
         self.mmdet_python = str("{}/bin/python".format(self.VENV_MMDET_PATH))
         self.MMDET_PATH = str(os.path.join(self.VENV_MMDET_PATH, "mmdetection"))
 
@@ -245,7 +248,7 @@ class TestMmdetection:
 
         pip_runner.run_pip("install --upgrade pip")
         subprocess.run(
-            "{} && {}/bin/python setup.py develop".format(self.activate_venv, self.VENV_MMDET_PATH), check=True,
+            "{} && {}/bin/python setup.py --torch develop".format(self.activate_venv, self.VENV_MMDET_PATH), check=True,
             shell=True, cwd=PROJECT_ROOT)
         pip_runner.run_pip("uninstall setuptools -y")
         pip_runner.run_pip("install setuptools")
@@ -260,9 +263,10 @@ class TestMmdetection:
         pip_runner.run_pip("install mmcv-full==1.2.0 "
                            "-f https://download.openmmlab.com/mmcv/dist/cu102/torch{}/index.html".format(
             BKC_TORCH_VERSION),
-                           cwd=self.MMDET_PATH)
+                           cwd=self.MMDET_PATH,
+                           use_cache=False)
         pip_runner.run_pip("install onnx onnxruntime", cwd=self.MMDET_PATH)
-        pip_runner.run_pip("install torchvision", cwd=self.MMDET_PATH)
+        pip_runner.run_pip("install torchvision=={}".format(BKC_TORCHVISION_VERSION), cwd=self.MMDET_PATH)
         pip_runner.run_pip("install -r requirements/build.txt", cwd=self.MMDET_PATH)
         pip_runner.run_pip("install -v -e .", cwd=self.MMDET_PATH)
         pip_runner.run_pip("install -U \"git+https://github.com/open-mmlab/cocoapi.git#subdirectory=pycocotools\"",

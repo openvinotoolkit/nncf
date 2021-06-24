@@ -13,7 +13,6 @@
 
 from typing import List, Optional, Type
 
-from nncf.common.graph.version_agnostic_op_names import get_version_agnostic_name
 from nncf.common.utils.backend import __nncf_backend__
 from nncf.common.utils.registry import Registry
 
@@ -96,7 +95,6 @@ class OperatorMetatypeRegistry(Registry):
             super_register(obj, cls_name)
             op_names = obj.get_all_aliases()
             for name in op_names:
-                name = get_version_agnostic_name(name)
                 if name in self._op_name_to_op_meta_dict \
                         and not obj.subtype_check(self._op_name_to_op_meta_dict[name]):
                     raise RuntimeError(

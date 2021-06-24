@@ -24,22 +24,13 @@ from torch.nn import Module, Parameter
 from nncf.common.graph import NNCFNodeName
 from nncf.common.utils.helpers import matches_any
 from nncf.common.utils.logger import logger as nncf_logger
-from nncf.torch.dynamic_graph.graph_tracer import ModelInputInfo, create_dummy_forward_fn
 from nncf.torch.dynamic_graph.trace_tensor import TracedTensor
-from nncf.torch.graph.graph_builder import GraphBuilder
 from nncf.torch.layer_utils import _NNCFModuleMixin
 from contextlib import contextmanager
 
 
 def get_node_name(module, module_name, prefix):
     return "{prefix}/{cls}[{name}]".format(prefix=prefix, cls=module.__class__.__name__, name=module_name)
-
-
-def get_all_node_names(model, input_sample_size, builder=None):
-    if not builder:
-        builder = GraphBuilder(create_dummy_forward_fn([ModelInputInfo(input_sample_size), ]))
-    graph = builder.build_graph(model)
-    return [node_name.split(' ', 1)[1] for node_name in graph.get_all_node_keys()]
 
 
 def get_all_modules(model, prefix=None):
@@ -95,31 +86,6 @@ def get_state_dict_names_with_modules(model, str_types=None, prefix=''):
         if sub_found:
             found.update(sub_found)
     return found
-
-
-def set_module_by_node_name(model, node_name, module_to_set, prefix=None):
-    if prefix is None:
-        prefix = model.__class__.__name__
-
-    for name, module in model.named_children():
-        full_node_name = get_node_name(module, name, prefix)
-        if full_node_name == node_name:
-            # pylint: disable=protected-access
-            model._modules[name] = module_to_set
-        set_module_by_node_name(module, node_name, module_to_set, full_node_name)
-
-
-def get_module_by_node_name(model: torch.nn.Module, node_scope_str: str, prefix=None) -> torch.nn.Module:
-    if prefix is None:
-        prefix = model.__class__.__name__
-    for name, module in model.named_children():
-        full_node_name = get_node_name(module, name, prefix)
-        if full_node_name == node_scope_str:
-            return module
-        sub_result = get_module_by_node_name(module, node_scope_str, full_node_name)
-        if sub_result is not None:
-            return sub_result
-    return None
 
 
 def get_filters_num(module):

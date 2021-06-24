@@ -10,10 +10,6 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-from nncf.common.graph.version_agnostic_op_names import get_version_agnostic_name
-
-from nncf.common.pruning.utils import PruningOperationsMetatypeRegistry
-
 
 def get_input_masks(nx_node, nx_graph):
     """
@@ -32,9 +28,3 @@ def identity_mask_propagation(nx_node, nx_graph):
     assert len(input_masks) == 1
     nx_node['input_masks'] = input_masks
     nx_node['output_mask'] = input_masks[0]
-
-
-class PTPruningOperationsMetatypeRegistry(PruningOperationsMetatypeRegistry):
-    @staticmethod
-    def get_version_agnostic_name(name):
-        return get_version_agnostic_name(name)

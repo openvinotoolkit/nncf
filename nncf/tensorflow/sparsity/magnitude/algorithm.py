@@ -46,6 +46,8 @@ from nncf.tensorflow.sparsity.magnitude.functions import calc_magnitude_binary_m
 from nncf.tensorflow.sparsity.magnitude.functions import WEIGHT_IMPORTANCE_FUNCTIONS
 from nncf.tensorflow.sparsity.magnitude.operation import BinaryMask
 from nncf.tensorflow.sparsity.magnitude.operation import BinaryMaskWithWeightsBackup
+from nncf.common.accuracy_aware_training.training_loop import ADAPTIVE_COMPRESSION_CONTROLLERS
+from nncf.common.schedulers import StubCompressionScheduler
 
 
 @TF_COMPRESSION_ALGORITHMS.register('magnitude_sparsity')
@@ -119,6 +121,7 @@ class MagnitudeSparsityBuilder(TFCompressionAlgorithmBuilder):
         pass
 
 
+@ADAPTIVE_COMPRESSION_CONTROLLERS.register('tf_magnitude_sparsity')
 class MagnitudeSparsityController(BaseSparsityController):
     """
     Serves as a handle to the additional modules, parameters and hooks inserted
@@ -156,8 +159,8 @@ class MagnitudeSparsityController(BaseSparsityController):
     def loss(self) -> CompressionLoss:
         return self._loss
 
-    def freeze(self):
-        self._frozen = True
+    def freeze(self, freeze: bool = True):
+        self._frozen = freeze
 
     def set_sparsity_level(self, sparsity_level,
                            run_batchnorm_adaptation: bool = False):
@@ -204,6 +207,20 @@ class MagnitudeSparsityController(BaseSparsityController):
                             self._weight_importance_fn(wrapped_layer.layer_weights[weight_attr]),
                             [-1]))
         return all_weights
+
+    @property
+    def compression_rate(self) -> float:
+        return self.statistics().magnitude_sparsity.model_statistics.sparsity_level
+
+    @compression_rate.setter
+    def compression_rate(self, compression_rate: float) -> None:
+        self.freeze(False)
+        self.set_sparsity_level(compression_rate)
+        self.freeze(True)
+
+    def disable_scheduler(self):
+        self._scheduler = StubCompressionScheduler()
+        self._scheduler.current_sparsity_level = 0.0
 
     def statistics(self, quickly_collected_only: bool = False) -> NNCFStatistics:
         collector = TFSparseModelStatisticsCollector(self.model, self._op_names)

@@ -18,8 +18,9 @@ from pathlib import Path
 import tensorflow as tf
 import tensorflow_addons as tfa
 
-from nncf.tensorflow import create_compression_callbacks
+from nncf.config.utils import is_accuracy_aware_training
 from nncf.tensorflow.helpers.model_creation import create_compressed_model
+from nncf.tensorflow import create_compression_callbacks
 from nncf.tensorflow.helpers.model_manager import TFOriginalModelManager
 from nncf.tensorflow.initialization import register_default_init_args
 
@@ -158,6 +159,15 @@ def run(config):
 
     resume_training = config.ckpt_path is not None
 
+    if is_accuracy_aware_training(config):
+        with TFOriginalModelManager(model_fn, **model_params) as model:
+            model.compile(metrics=[tf.keras.metrics.CategoricalAccuracy(name='acc@1')])
+            results = model.evaluate(
+                validation_dataset,
+                steps=validation_steps,
+                return_dict=True)
+            uncompressed_model_accuracy = 100 * results['acc@1']
+
     with TFOriginalModelManager(model_fn, **model_params) as model:
         with strategy.scope():
             compression_ctrl, compress_model = create_compressed_model(model,
@@ -175,6 +185,8 @@ def run(config):
 
             loss_obj = tf.keras.losses.CategoricalCrossentropy(label_smoothing=0.1)
 
+            compress_model.add_loss(compression_ctrl.loss)
+
             metrics = [
                 tf.keras.metrics.CategoricalAccuracy(name='acc@1'),
                 tf.keras.metrics.TopKCategoricalAccuracy(k=5, name='acc@5'),
@@ -182,7 +194,6 @@ def run(config):
                 tfa.metrics.MeanMetricWrapper(compression_ctrl.loss, name='cr_loss')
             ]
 
-            compress_model.add_loss(compression_ctrl.loss)
             compress_model.compile(optimizer=optimizer,
                                    loss=loss_obj,
                                    metrics=metrics,
@@ -218,14 +229,29 @@ def run(config):
     }
 
     if 'train' in config.mode:
-        logger.info('training...')
-        compress_model.fit(
-            train_dataset,
-            epochs=train_epochs,
-            steps_per_epoch=train_steps,
-            initial_epoch=initial_epoch,
-            callbacks=callbacks,
-            **validation_kwargs)
+        if is_accuracy_aware_training(config):
+            logger.info('starting an accuracy-aware training loop...')
+            result_dict_to_val_metric_fn = lambda results: 100 * results['acc@1']
+            compress_model.accuracy_aware_fit(train_dataset,
+                                              compression_ctrl,
+                                              nncf_config=config.nncf_config,
+                                              callbacks=callbacks,
+                                              initial_epoch=initial_epoch,
+                                              steps_per_epoch=train_steps,
+                                              tensorboard_writer=config.tb,
+                                              log_dir=config.log_dir,
+                                              uncompressed_model_accuracy=uncompressed_model_accuracy,
+                                              result_dict_to_val_metric_fn=result_dict_to_val_metric_fn,
+                                              **validation_kwargs)
+        else:
+            logger.info('training...')
+            compress_model.fit(
+                train_dataset,
+                epochs=train_epochs,
+                steps_per_epoch=train_steps,
+                initial_epoch=initial_epoch,
+                callbacks=callbacks,
+                **validation_kwargs)
 
     logger.info('evaluation...')
     statistics = compression_ctrl.statistics()

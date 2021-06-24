@@ -13,6 +13,7 @@
 
 # pylint: skip-file
 from nncf.version import BKC_TORCH_VERSION
+from nncf.version import BKC_TORCHVISION_VERSION
 
 import torch
 from pkg_resources import parse_version
@@ -60,6 +61,7 @@ from nncf.torch.dynamic_graph.io_handling import nncf_model_input
 from nncf.torch.dynamic_graph.io_handling import nncf_model_output
 from nncf.torch.dynamic_graph.context import no_nncf_trace
 from nncf.torch.dynamic_graph.context import forward_nncf_trace
+from nncf.common.accuracy_aware_training.training_loop import AdaptiveCompressionTrainingLoop
 
 # NNCF relies on tracing PyTorch operations. Each code that uses NNCF
 # should be executed with PyTorch operators wrapped via a call to "patch_torch_operators",
