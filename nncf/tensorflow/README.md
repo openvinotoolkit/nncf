@@ -67,9 +67,9 @@ compression_ctrl.export_model("compressed_model.pb", save_format='frozen_graph')
 For a quick start with NNCF-powered compression, you can also try the sample scripts, each of them provides a basic training pipeline for Image Classification and Object Detection correspondingly.
 
 To run the samples please refer to the corresponding tutorials:
-- [Image Classification sample](/examples/tensorflow/classification/README.md)
-- [Object Detection sample](/examples/tensorflow/object_detection/README.md)
-- [Instance Segmentation sample](/examples/tensorflow/segmentation/README.md)
+- [Image Classification sample](../../examples/tensorflow/classification/README.md)
+- [Object Detection sample](../../examples/tensorflow/object_detection/README.md)
+- [Instance Segmentation sample](../../examples/tensorflow/segmentation/README.md)
 
 ## System requirements
 - Ubuntu\* 16.04 or later (64-bit)
