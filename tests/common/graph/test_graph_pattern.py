@@ -1,4 +1,4 @@
-from nncf.torch.graph.patterns import GraphPattern
+from nncf.common.graph.patterns import GraphPattern
 import networkx as nx
 
 import itertools

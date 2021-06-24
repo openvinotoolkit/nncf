@@ -1,4 +1,4 @@
-from nncf.torch.graph.patterns import GraphPattern
+from nncf.common.graph.patterns import GraphPattern
 from nncf.common.graph.graph_matching import find_subgraphs_matching_pattern
 import networkx as nx
 

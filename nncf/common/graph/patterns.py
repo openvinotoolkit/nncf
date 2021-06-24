@@ -164,7 +164,7 @@ class GraphPattern:
 
         :param other: GraphPattern that will be added
         :param edges: List of edges between self and other graphs.
-            Edges must begin at self and finish at other
+            Edges must begin at self and finish at other.
         """
         if edges is None:
             first_node_other = list(nx.lexicographical_topological_sort(other.graph, key=int))[0]

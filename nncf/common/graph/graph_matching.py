@@ -72,7 +72,7 @@ def find_subgraphs_matching_pattern(graph: nx.DiGraph, pattern_graph: GraphPatte
     :param graph: The model graph.
     :param pattern_graph: A graph consists of patterns for layer fusing logic.
     :return: A list of subgraphs, matching the pattern expression.
-    Each subgraph is defined as a list of node keys.
+        Each subgraph is defined as a list of node keys.
     """
 
     def are_nodes_matching(node_1, node_2):
@@ -105,7 +105,8 @@ def find_subgraphs_matching_pattern(graph: nx.DiGraph, pattern_graph: GraphPatte
                                      edge_match=are_edges_matching)
         for subgraph in matcher.subgraph_isomorphisms_iter():
             # Bottleneck that need to sort by id for result consistency
-            subgraph = list(nx.lexicographical_topological_sort(graph.subgraph(subgraph), key=lambda x: int(x.split()[0])))
+            subgraph = list(nx.lexicographical_topological_sort(graph.subgraph(subgraph),
+                                                                key=lambda x: int(x.split()[0])))
             is_visited_node = any(node in visited_nodes for node in subgraph)
             if is_visited_node:
                 continue
