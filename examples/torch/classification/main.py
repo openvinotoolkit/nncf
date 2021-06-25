@@ -149,8 +149,8 @@ def main_worker(current_gpu, config: SampleConfig):
             train_epoch(loader, model, criterion, train_criterion_fn, optimizer, compression_ctrl, 0, config,
                         train_iters=train_steps, log_training_info=False)
 
-        def validate_fn(model, eval_loader, log=True):
-            top1, top5, loss = validate(eval_loader, model, criterion, config, log)
+        def validate_fn(model, eval_loader):
+            top1, top5, loss = validate(eval_loader, model, criterion, config, log_validation_info=False)
             return top1, top5, loss
 
         def model_eval_fn(model):
@@ -551,7 +551,7 @@ def validate(val_loader, model, criterion, config, epoch=0, log_validation_info=
 
             # measure accuracy and record loss
             acc1, acc5 = accuracy(output, target, topk=(1, 5))
-            losses.update(loss, input_.size(0))
+            losses.update(loss.item(), input_.size(0))
             top1.update(acc1, input_.size(0))
             top5.update(acc5, input_.size(0))
 

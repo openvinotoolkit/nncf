@@ -93,7 +93,7 @@ class EvolutionOptimizer:
             self.mean_rewards.append(np.mean(self.population_rewards))
 
             # 1. Sampling  num_samples actions from population and choosing the best one
-            sampled_idxs = np.random.choice(self.population_rewards, self.num_samples)
+            sampled_idxs = np.random.choice(len(self.population_rewards), self.num_samples)
             sampled_rewards = self.population_rewards[sampled_idxs]
             best_action = self.population[sampled_idxs[np.argmax(sampled_rewards)]]
 
@@ -178,7 +178,6 @@ class LeGREvolutionEnv:
         self.train_steps(self.steps)
 
         acc, _, loss = self.get_reward()
-        loss = loss.item()
         if self.loss_as_reward:
             reward = -loss
         else:

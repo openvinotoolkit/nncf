@@ -279,7 +279,7 @@ def register_default_init_args(nncf_config: 'NNCFConfig',
             train_loader=train_loader,
             train_fn=train_steps_fn,
             val_loader=val_loader,
-            val_fn=partial(validate_fn, log=False),
+            val_fn=validate_fn,
             train_optimizer=legr_train_optimizer,
             nncf_config=nncf_config,
         )])

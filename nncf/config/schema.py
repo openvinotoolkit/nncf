@@ -697,9 +697,10 @@ FILTER_PRUNING_SCHEMA = {
                                                          description="The type of filter importance metric. Can be"
                                                                      " one of `L1`, `L2`, `geometric_median`."
                                                                      " `L2` by default."),
-                    "weight_importance": with_attributes(_STRING,
+                    "interlayer_ranking_type": with_attributes(_STRING,
                                                          description="The type of filter ranking across the layers."
-                                                                     " Can be one of `uniform` or `legr`."),
+                                                                     " Can be one of `unweighted_ranking` or "
+                                                                     "`learned_ranking`."),
                     "all_weights": with_attributes(_BOOLEAN,
                                                    description="Whether to prune layers independently (choose filters"
                                                                " with the smallest importance in each layer separately)"
