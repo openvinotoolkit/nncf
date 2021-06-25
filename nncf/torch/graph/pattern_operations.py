@@ -10,40 +10,59 @@
 # to the "third-party-programs.txt" or other similarly-named text file
 # included with the Software Package for additional details.
 
-LINEAR_OPERATIONS = ['linear',
-                     'conv1d',
-                     'conv2d',
-                     'conv3d',
-                     'conv_transpose1d',
-                     'conv_transpose2d',
-                     'conv_transpose3d',
-                     'addmm'
-                     ]
+def merge_two_types_of_operations(first_op, second_op, label):
+    res = {'type': first_op['type']}
+    res['type'].extend(second_op['type'])
+    res['label'] = label
+    return res
 
-BATCH_NORMALIZATION_OPERATIONS = ['batch_norm',
-                                  'batch_norm1d',
-                                  'batch_norm2d',
-                                  'batch_norm3d']
-RELU_OPERATIONS = ['relu',
-                   'relu_',
-                   'hardtanh']
 
-NON_RELU_ACTIVATIONS_OPERATIONS = ['elu',
-                                   'elu_',
-                                   'prelu',
-                                   'sigmoid',
-                                   'gelu']
+LINEAR_OPERATIONS = {'type': ['linear',
+                              'conv1d',
+                              'conv2d',
+                              'conv3d',
+                              'conv_transpose1d',
+                              'conv_transpose2d',
+                              'conv_transpose3d',
+                              'addmm'
+                              ],
+                     'label': 'LINEAR'}
 
-ACTIVATIONS_OPERATIONS = RELU_OPERATIONS + NON_RELU_ACTIVATIONS_OPERATIONS
+BATCH_NORMALIZATION_OPERATIONS = {'type': ['batch_norm',
+                                           'batch_norm1d',
+                                           'batch_norm2d',
+                                           'batch_norm3d'
+                                           ],
+                                  'label': 'BATCH_NORMALIZATION'
+                                  }
+RELU_OPERATIONS = {'type': ['relu',
+                            'relu_',
+                            'hardtanh'
+                            ],
+                   'label': 'RELU'
+                   }
 
-ARITHMETIC_OPERATIONS = ['__iadd__',
-                         '__add__',
-                         '__mul__',
-                         '__rmul__']
+NON_RELU_ACTIVATIONS_OPERATIONS = {'type': ['elu',
+                                            'elu_',
+                                            'prelu',
+                                            'sigmoid',
+                                            'gelu'],
+                                   'label': 'NON_RELU_ACTIVATIONS'}
+
+ACTIVATIONS_OPERATIONS = merge_two_types_of_operations(RELU_OPERATIONS,
+                                                       NON_RELU_ACTIVATIONS_OPERATIONS,
+                                                       'ACTIVATIONS')
+
+ARITHMETIC_OPERATIONS = {'type': ['__iadd__',
+                                  '__add__',
+                                  '__mul__',
+                                  '__rmul__'],
+                         'label': 'ARITHMETIC'}
 
 # This type may be useful in the future
 # pylint: disable=unused-variable
-POOLING_OPERATIONS = ['adaptive_avg_pool2d',
-                      'adaptive_avg_pool3d',
-                      'avg_pool2d',
-                      'avg_pool3d']
+POOLING_OPERATIONS = {'type': ['adaptive_avg_pool2d',
+                               'adaptive_avg_pool3d',
+                               'avg_pool2d',
+                               'avg_pool3d'],
+                      'label': 'POOLING'}

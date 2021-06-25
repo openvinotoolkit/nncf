@@ -12,21 +12,21 @@
 """
 
 from nncf.common.graph.patterns import GraphPattern
-from nncf.common.utils.registry import Registry
+from nncf.common.graph.patterns import QuantizationIgnorePatterns
 
 from nncf.torch.graph.pattern_operations import LINEAR_OPERATIONS
 from nncf.torch.graph.pattern_operations import BATCH_NORMALIZATION_OPERATIONS
 from nncf.torch.graph.pattern_operations import ACTIVATIONS_OPERATIONS
 from nncf.torch.graph.pattern_operations import ARITHMETIC_OPERATIONS
 
-PATTERN_GRAPH = Registry('pattern_graph')
+QUANTIZATION_IGNORE_PATTERNS = QuantizationIgnorePatterns()
 
 
 def create_swish_act() -> GraphPattern:
-    pattern = GraphPattern('SWISH')
-    input_pattern_node = pattern.add_node('*INPUT_NODE*', GraphPattern.INPUT_NODE_TYPE)
-    sigmoid_node = pattern.add_node('SIGMOID', 'sigmoid')
-    mul_node = pattern.add_node('MUL', '__mul__')
+    pattern = GraphPattern()
+    input_pattern_node = pattern.add_node(label='*INPUT_NODE*', type=GraphPattern.PATTERN_INPUT_NODE_TYPE)
+    sigmoid_node = pattern.add_node(label='SIGMOID', type='sigmoid')
+    mul_node = pattern.add_node(label='MUL', type='__mul__')
 
     pattern.add_edge(input_pattern_node, sigmoid_node)
     pattern.add_edge(sigmoid_node, mul_node)
@@ -35,13 +35,13 @@ def create_swish_act() -> GraphPattern:
 
 
 def create_h_swish_act() -> GraphPattern:
-    pattern = GraphPattern('H_SWISH')
+    pattern = GraphPattern()
 
-    input_pattern_node = pattern.add_node('*INPUT_NODE*', GraphPattern.INPUT_NODE_TYPE)
-    add_node = pattern.add_node('ADD', '__add__')
-    hardtanh_node = pattern.add_node('HARDTANH', 'hardtanh')
-    truediv_node = pattern.add_node('DIV', '__truediv__')
-    mul_node = pattern.add_node('MUL', '__mul__')
+    input_pattern_node = pattern.add_node(label='*INPUT_NODE*', type=GraphPattern.PATTERN_INPUT_NODE_TYPE)
+    add_node = pattern.add_node(label='ADD', type='__add__')
+    hardtanh_node = pattern.add_node(label='HARDTANH', type='hardtanh')
+    truediv_node = pattern.add_node(label='DIV', type='__truediv__')
+    mul_node = pattern.add_node(label='MUL', type='__mul__')
 
     pattern.add_edge(input_pattern_node, add_node)
     pattern.add_edge(input_pattern_node, mul_node)
@@ -52,11 +52,12 @@ def create_h_swish_act() -> GraphPattern:
 
 
 def create_h_sigmoid_act() -> GraphPattern:
-    pattern = GraphPattern('H_SIGMOID')
-    input_pattern_node = pattern.add_node('*INPUT_NODE*', GraphPattern.INPUT_NODE_TYPE)
-    add_node = pattern.add_node('ADD', '__add__')
-    hardtanh_node = pattern.add_node('HARTANH', 'hardtanh')
-    truediv_node = pattern.add_node('DIV', '__truediv__')
+    pattern = GraphPattern()
+
+    input_pattern_node = pattern.add_node(label='*INPUT_NODE*', type=GraphPattern.PATTERN_INPUT_NODE_TYPE)
+    add_node = pattern.add_node(label='ADD', type='__add__')
+    hardtanh_node = pattern.add_node(label='HARTANH', type='hardtanh')
+    truediv_node = pattern.add_node(label='DIV', type='__truediv__')
 
     pattern.add_edge(input_pattern_node, add_node)
     pattern.add_edge(add_node, hardtanh_node)
@@ -64,41 +65,42 @@ def create_h_sigmoid_act() -> GraphPattern:
     return pattern
 
 
-@PATTERN_GRAPH.register('graph_pattern_factory')
-class GraphPatternFactory:
-    FULL_PATTERN_GRAPH = None
+def register_all_patterns():
+    linear_ops = GraphPattern()
+    linear_ops.add_node(**LINEAR_OPERATIONS)
+    QUANTIZATION_IGNORE_PATTERNS.register(linear_ops, LINEAR_OPERATIONS['label'], match=False)
 
-    @staticmethod
-    def get_graph():
-        if GraphPatternFactory.FULL_PATTERN_GRAPH is None:
-            GraphPatternFactory.FULL_PATTERN_GRAPH = GraphPatternFactory._generate_full_pattern_graph()
-        return GraphPatternFactory.FULL_PATTERN_GRAPH
+    batch_norm = GraphPattern()
+    batch_norm.add_node(**BATCH_NORMALIZATION_OPERATIONS)
+    QUANTIZATION_IGNORE_PATTERNS.register(batch_norm, BATCH_NORMALIZATION_OPERATIONS['label'], match=False)
 
-    @staticmethod
-    def _generate_full_pattern_graph():
-        LINEAR_OPS = GraphPattern('LINEAR', LINEAR_OPERATIONS)
+    atomic_activations = GraphPattern()
+    atomic_activations.add_node(**ACTIVATIONS_OPERATIONS)
 
-        BN = GraphPattern('BATCH_NORM', BATCH_NORMALIZATION_OPERATIONS)
+    swish = create_swish_act()
 
-        ATOMIC_ACTIVATIONS = GraphPattern('ACTIVATIONS', ACTIVATIONS_OPERATIONS)
+    h_sigmoid = create_h_sigmoid_act()
 
-        SWISH = create_swish_act()
+    h_swish = create_h_swish_act()
 
-        H_SIGMOID = create_h_sigmoid_act()
+    activations = atomic_activations | swish | h_swish | h_sigmoid
+    QUANTIZATION_IGNORE_PATTERNS.register(activations, 'ACTIVATIONS', match=False)
 
-        H_SWISH = create_h_swish_act()
+    arithmetic_ops = GraphPattern()
+    arithmetic_ops.add_node(**ARITHMETIC_OPERATIONS)
+    QUANTIZATION_IGNORE_PATTERNS.register(arithmetic_ops, ARITHMETIC_OPERATIONS['label'], match=False)
 
-        ACTIVATIONS = ATOMIC_ACTIVATIONS | SWISH | H_SWISH | H_SIGMOID
+    batch_norm_activations_permutation = batch_norm + activations | activations + batch_norm | batch_norm | activations
+    QUANTIZATION_IGNORE_PATTERNS.register(batch_norm_activations_permutation, 'BN + ACTIVATIONS', match=False)
 
-        ARITHMETIC = GraphPattern('ARITHMETIC', ARITHMETIC_OPERATIONS)
+    full_ignore_quantization_pattern = linear_ops + batch_norm_activations_permutation | \
+                                       batch_norm + activations | activations + batch_norm | \
+                                       arithmetic_ops + batch_norm_activations_permutation
+    QUANTIZATION_IGNORE_PATTERNS.register(full_ignore_quantization_pattern, 'FULL_PATTERN_GRAPH', match=True)
 
-        ANY_BN_ACT_COMBO = BN + ACTIVATIONS | ACTIVATIONS + BN | BN | ACTIVATIONS
 
-        FULL_PATTERN_GRAPH = LINEAR_OPS + ANY_BN_ACT_COMBO | BN + ACTIVATIONS | ACTIVATIONS + BN | \
-                             ARITHMETIC + ANY_BN_ACT_COMBO
-
-        return FULL_PATTERN_GRAPH
+register_all_patterns()
 
 
 def get_full_pattern_graph():
-    return PATTERN_GRAPH.get("graph_pattern_factory").get_graph()
+    return QUANTIZATION_IGNORE_PATTERNS.get_full_pattern_graph()

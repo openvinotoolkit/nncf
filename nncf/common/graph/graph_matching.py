@@ -78,7 +78,7 @@ def find_subgraphs_matching_pattern(graph: nx.DiGraph, pattern_graph: GraphPatte
     def are_nodes_matching(node_1, node_2):
         for attr in node_2:
             # Special case for Input node
-            if attr == 'type' and node_1['type'] == GraphPattern.INPUT_NODE_TYPE or \
+            if attr == 'type' and node_1['type'] == GraphPattern.PATTERN_INPUT_NODE_TYPE or \
                     attr == 'label':
                 continue
             if node_1[attr] not in node_2[attr]:
@@ -115,4 +115,5 @@ def find_subgraphs_matching_pattern(graph: nx.DiGraph, pattern_graph: GraphPatte
             visited_nodes.update(subgraph)
             subgraphs.append(subgraph)
 
+    subgraphs.sort()
     return subgraphs if subgraphs else []

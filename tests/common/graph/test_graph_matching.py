@@ -10,9 +10,12 @@ def test_ops_combination_patterns():
     second_type = ['c', 'd']
     third_type = ['e']
 
-    first_pattern = GraphPattern('first', first_type)
-    second_pattern = GraphPattern('second', second_type)
-    third_pattern = GraphPattern('third', third_type)
+    first_pattern = GraphPattern()
+    first_pattern.add_node(label='first', type=first_type)
+    second_pattern = GraphPattern()
+    second_pattern.add_node(label='second', type=second_type)
+    third_pattern = GraphPattern()
+    third_pattern.add_node(label='third', type=third_type)
 
     pattern = first_pattern + second_pattern
 
@@ -32,7 +35,6 @@ def test_ops_combination_patterns():
     matches = find_subgraphs_matching_pattern(ref_graph, pattern)
     assert matches == [['1', '2']]
 
-    # pattern = (first_pattern + second_pattern) * third_pattern
     pattern = (first_pattern + second_pattern)
     pattern_nodes = list(pattern.graph.nodes)
     third_nodes = list(third_pattern.graph.nodes)
@@ -56,9 +58,12 @@ def test_no_matches():
     second_type = ['c', 'd']
     third_type = ['e']
 
-    first_pattern = GraphPattern('first', first_type)
-    second_pattern = GraphPattern('second', second_type)
-    third_pattern = GraphPattern('third', third_type)
+    first_pattern = GraphPattern()
+    first_pattern.add_node(label='first', type=first_type)
+    second_pattern = GraphPattern()
+    second_pattern.add_node(label='second', type=second_type)
+    third_pattern = GraphPattern()
+    third_pattern.add_node(label='third', type=third_type)
 
     # pattern = (first_pattern + second_pattern + third_pattern) * third_pattern
     pattern = (first_pattern + second_pattern + third_pattern)
@@ -82,8 +87,10 @@ def test_two_matches():
     first_type = ['a', 'b']
     second_type = ['c', 'd']
 
-    first_pattern = GraphPattern('first', first_type)
-    second_pattern = GraphPattern('second', second_type)
+    first_pattern = GraphPattern()
+    first_pattern.add_node(label='first', type=first_type)
+    second_pattern = GraphPattern()
+    second_pattern.add_node(label='second', type=second_type)
 
     pattern = first_pattern + second_pattern
 
@@ -99,4 +106,4 @@ def test_two_matches():
     ref_graph.add_edge('5', '6')
 
     matches = find_subgraphs_matching_pattern(ref_graph, pattern)
-    assert matches in [[['1', '2'], ['5', '6']], [['5', '6'], ['1', '2']]]
+    assert matches in [[['1', '2'], ['5', '6']]]

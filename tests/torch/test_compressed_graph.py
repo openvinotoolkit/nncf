@@ -743,24 +743,6 @@ def test_output_quantization(_case_config):
     check_model_graph(compressed_model, 'unet_qoutput.dot', _case_config.graph_dir)
 
 
-def test_custom_quantizable_subgraph_patterns(_case_config):
-    # Decided to remove quantize_patterns option
-    pytest.skip()
-    model = test_models.SENet18()
-
-    input_shape = [1, 3, 32, 32]
-
-    config = get_basic_quantization_config(_case_config.quant_type, input_sample_sizes=input_shape)
-
-    config["compression"].update({"quantize_outputs": False,
-                                  "quantize_patterns": [["1 sigmoid", "2 __mul__", "1 -> 2"],
-                                                        ["3 __iadd__", "4 batch_norm", "3 -> 4"]]})
-    register_bn_adaptation_init_args(config)
-
-    compressed_model, _ = create_compressed_model_and_algo_for_test(model, config)
-    check_model_graph(compressed_model, 'senet_custom_patterns.dot', _case_config.graph_dir)
-
-
 TEST_HW_MODELS_DESC = [
     ModelDesc("resnet50", test_models.ResNet50, [1, 3, 32, 32]),
     ModelDesc("inception_v3", partial(test_models.Inception3, aux_logits=True, transform_input=True),
