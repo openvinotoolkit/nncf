@@ -128,8 +128,8 @@ def run_test_training(gpu, config, inference_type, ngpus_per_node):
     dumped_orig_model = deepcopy(model)
 
     actual_outputs, actual_model = run_actual(deepcopy(model), config, inference_type, mock_dataloader,
-                                              (gpu, ngpus_per_node))
-    reference_outputs = run_reference(model, config, inference_type, mock_dataloader, (gpu, ngpus_per_node))
+                                              ngpus_per_node)
+    reference_outputs = run_reference(model, config, inference_type, mock_dataloader, ngpus_per_node)
     assert reduce(lambda a, b: a and torch.allclose(b[0], b[1]), zip(actual_outputs, reference_outputs), True), \
         "Outputs of model with actual KD implementation doesn't match outputs from model with reference " \
         "Knowledge Distillation implementation"

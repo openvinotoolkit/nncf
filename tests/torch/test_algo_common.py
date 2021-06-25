@@ -491,7 +491,7 @@ def test_target_device_is_propagated_to_algos(mocker, algo_name, target_device):
         },
         "target_device": target_device
     })
-    if algo_name == KnowledgeDistillationBuilder._registered_name:
+    if COMPRESSION_ALGORITHMS.get(algo_name) == KnowledgeDistillationBuilder:
         config["compression"]["type"] = "mse"
     register_bn_adaptation_init_args(config)
 

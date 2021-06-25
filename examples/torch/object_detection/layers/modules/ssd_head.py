@@ -90,8 +90,9 @@ class SSDHead(nn.Module):
 
         with no_nncf_trace():
             priors = self.prior_box(features, image_tensor).to(loc.device)
-        # Through usage of Knowledge Distillation Algo priors were incorrectly differentiated what was causing on error.
-        # Non differential model outputs should be marked by requires_grad=False.
+        # Knowledge Distillation Algo differentiates all model outputs with requires_grad=True.
+        # Priors shouldn't be differentiated so they are explicitly excluded from backpropagation graph.
+
         priors = priors.detach()
 
         loc = loc.permute(0, 2, 3, 1).contiguous()
