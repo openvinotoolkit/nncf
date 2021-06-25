@@ -177,14 +177,7 @@ GENERIC_INITIALIZER_SCHEMA = {
                                                                              "adaptation procedure for the compressed "
                                                                              "model. The actual number of samples will "
                                                                              "be a closest multiple of the batch "
-                                                                             "size."),
-                    "num_bn_forget_samples": with_attributes(_NUMBER,
-                                                             description="Number of samples from the training "
-                                                                         "dataset to use for model inference during "
-                                                                         "the BatchNorm statistics adaptation "
-                                                                         "in the initial statistics forgetting step. "
-                                                                         "The actual number of samples will be a "
-                                                                         "closest multiple of the batch size."),
+                                                                             "size.")
                 },
                 "additionalProperties": False,
             },
@@ -276,11 +269,6 @@ QUANTIZATION_INITIALIZER_SCHEMA = {
                                                                              "durung the BatchNorm statistics "
                                                                              "adaptation procedure for the compressed "
                                                                              "model"),
-                    "num_bn_forget_samples": with_attributes(_NUMBER,
-                                                             description="Number of samples from the training "
-                                                                         "dataset to use for model inference during "
-                                                                         "the BatchNorm statistics adaptation "
-                                                                         "in the initial statistics forgetting step"),
                 },
                 "additionalProperties": False,
             },

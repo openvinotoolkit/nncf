@@ -161,11 +161,9 @@ class SimpleDataLoaderRunner(DataLoaderBaseRunner):
 
 
 class DataLoaderBNAdaptationRunner(DataLoaderBaseRunner):
-    def __init__(self, model, init_device: str, num_bn_forget_steps):
+    def __init__(self, model, init_device: str):
         super().__init__(model, init_device)
         self.progressbar_description = 'BatchNorm statistics adaptation'
-        self.num_bn_forget_steps = num_bn_forget_steps
-        self.momentum_bn_forget = 0.9
         self.original_momenta_values = {}
         self.original_training_state = {}
 
@@ -197,37 +195,8 @@ class DataLoaderBNAdaptationRunner(DataLoaderBaseRunner):
         finally:
             self.model.apply(self._apply_to_batchnorms(restore_original_bn_training_state))
 
-    @contextmanager
-    def _bn_momentum_switcher(self) -> None:
-        def set_bn_momentum(module, momentum_value):
-            module.momentum = momentum_value
-
-        def save_original_bn_momentum(module: torch.nn.Module):
-            self.original_momenta_values[module] = module.momentum
-
-        def restore_original_bn_momentum(module: torch.nn.Module):
-            module.momentum = self.original_momenta_values[module]
-
-        self.model.apply(self._apply_to_batchnorms(save_original_bn_momentum))
-        self.model.apply(self._apply_to_batchnorms(partial(set_bn_momentum,
-                                                           momentum_value=self.momentum_bn_forget)))
-        try:
-            yield
-        finally:
-            self.model.apply(self._apply_to_batchnorms(restore_original_bn_momentum))
-
     def _run_model_inference(self, data_loader, num_init_steps, device):
-        num_bn_forget_steps = self.num_bn_forget_steps
-
         with self._bn_training_state_switcher():
-            if num_bn_forget_steps is not None and num_bn_forget_steps > 0:
-                with self._bn_momentum_switcher():
-                    for i, loaded_item in enumerate(data_loader):
-                        if i >= num_bn_forget_steps:
-                            break
-                        args_kwargs_tuple = data_loader.get_inputs(loaded_item)
-                        self._infer_batch(args_kwargs_tuple, device)
-
             for i, loaded_item in ProgressBar(
                     enumerate(data_loader),
                     total=num_init_steps,

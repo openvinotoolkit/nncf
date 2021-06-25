@@ -86,8 +86,7 @@ class AutoQConfigBuilder(BaseConfigBuilder):
                     'num_init_samples': num_init_samples
                 },
                 'batchnorm_adaptation': {
-                    'num_bn_adaptation_samples': 0,
-                    'num_bn_forget_samples': 0
+                    'num_bn_adaptation_samples': 0
                 }
             }})
         return config

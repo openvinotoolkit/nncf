@@ -78,7 +78,6 @@ The magnitude sparsity method implements a naive approach that is based on the a
     "initializer": {
         "batchnorm_adaptation": {
             "num_bn_adaptation_samples": 2048, // Number of samples from the training dataset to pass through the model at initialization in order to update batchnorm statistics of the original model. The actual number of samples will be a closest multiple of the batch size.
-            "num_bn_forget_samples": 1024, // Number of samples from the training dataset to pass through the model at initialization in order to erase batchnorm statistics of the original model (using large momentum value for rolling mean updates). The actual number of samples will be a closest multiple of the batch size.
         }
     }
     "sparsity_init": 0.05,// "Initial value of the sparsity level applied to the model in 'create_compressed_model' function

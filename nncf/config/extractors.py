@@ -135,7 +135,6 @@ def extract_bn_adaptation_init_params(config: NNCFConfig) -> Dict[str, object]:
     """
     params = config.get('initializer', {}).get('batchnorm_adaptation', {})
     num_bn_adaptation_samples = params.get('num_bn_adaptation_samples', 2000)
-    num_bn_forget_samples = params.get('num_bn_forget_samples', 1000)
 
     try:
         args = config.get_extra_struct(BNAdaptationInitArgs)
@@ -147,7 +146,6 @@ def extract_bn_adaptation_init_params(config: NNCFConfig) -> Dict[str, object]:
 
     params = {
         'num_bn_adaptation_samples': num_bn_adaptation_samples,
-        'num_bn_forget_samples': num_bn_forget_samples,
         'data_loader': args.data_loader,
         'device': args.device
     }

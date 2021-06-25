@@ -221,8 +221,7 @@ def test_can_resume_with_manual_init(mocker):
             'num_init_samples': 1
         },
         'batchnorm_adaptation': {
-            'num_bn_adaptation_samples': 1,
-            'num_bn_forget_samples': 1
+            'num_bn_adaptation_samples': 1
         },
     })
     config['target_device'] = 'TRIAL'
