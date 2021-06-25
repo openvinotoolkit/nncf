@@ -45,8 +45,12 @@ class WeightedLayerAttributes(BaseLayerAttributes):
     def get_weight_shape(self) -> List[int]:
         pass
 
-    @abstractmethod
     def get_num_filters(self) -> int:
+        weight_shape = self.get_weight_shape()
+        return weight_shape[self.get_target_dim_for_compression()]
+
+    @abstractmethod
+    def get_target_dim_for_compression(self) -> int:
         pass
 
 
@@ -64,8 +68,8 @@ class GenericWeightedLayerAttributes(WeightedLayerAttributes):
     def get_weight_shape(self) -> List[int]:
         return self.weight_shape
 
-    def get_num_filters(self) -> int:
-        return self.weight_shape[0]
+    def get_target_dim_for_compression(self) -> int:
+        return 0
 
 
 class LinearLayerAttributes(WeightedLayerAttributes):
@@ -80,8 +84,8 @@ class LinearLayerAttributes(WeightedLayerAttributes):
     def get_weight_shape(self) -> List[int]:
         return [self.out_features, self.in_features]
 
-    def get_num_filters(self) -> int:
-        return self.out_features
+    def get_target_dim_for_compression(self) -> int:
+        return 0
 
 
 class ConvolutionLayerAttributes(WeightedLayerAttributes):
@@ -123,8 +127,11 @@ class ConvolutionLayerAttributes(WeightedLayerAttributes):
             return [self.out_channels, self.in_channels // self.groups, *self.kernel_size]
         return [self.in_channels, self.out_channels // self.groups, *self.kernel_size]
 
-    def get_num_filters(self) -> int:
-        return self.out_channels
+    def get_target_dim_for_compression(self) -> int:
+        # Always quantize per each "out" channel
+        if self.transpose:
+            return 1
+        return 0
 
 
 class GroupNormLayerAttributes(WeightedLayerAttributes):
@@ -150,5 +157,5 @@ class GroupNormLayerAttributes(WeightedLayerAttributes):
     def get_weight_shape(self) -> List[int]:
         return [self.num_channels]
 
-    def get_num_filters(self) -> int:
-        return 1
+    def get_target_dim_for_compression(self) -> int:
+        return 0

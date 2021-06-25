@@ -1230,7 +1230,7 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
 
     def create_quantizer_setup(self, quantizable_module_node_names_vs_qconfigs: Dict[NNCFNodeName,
                                                                                      List[QuantizerConfig]]) \
-            -> 'MultiConfigQuantizerSetup':
+            -> MultiConfigQuantizerSetup:
         same_op_groups = self._get_all_quantizers_grouped_by_affecting_op_set()
         setup = MultiConfigQuantizerSetup()
 
