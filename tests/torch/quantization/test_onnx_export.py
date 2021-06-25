@@ -11,7 +11,9 @@
  limitations under the License.
 """
 from itertools import product
+from typing import Tuple
 
+import onnx
 import pytest
 import torch
 
@@ -20,9 +22,11 @@ from nncf.torch.quantization.layers import PTQuantizerSpec
 from nncf.torch.quantization.layers import QUANTIZATION_MODULES
 from nncf.torch.quantization.layers import QuantizationMode
 from nncf.torch.quantization.layers import QuantizerExportMode
+from tests.torch.helpers import get_nodes_by_type
+from tests.torch.helpers import register_bn_adaptation_init_args
+from tests.torch.helpers import resolve_constant_node_inputs_to_values
 from tests.torch.test_helpers import TwoConvTestModel
 from tests.torch.test_helpers import load_exported_onnx_version
-from tests.torch.helpers import  register_bn_adaptation_init_args
 
 
 def get_config_for_export_mode(should_be_onnx_standard: bool) -> NNCFConfig:
@@ -129,3 +133,63 @@ def test_onnx_export_to_quantize_dequantize_per_channel(per_channel: bool,
             quantizer.run_export_quantization(x)
     else:
         quantizer.run_export_quantization(x)
+
+
+class TargetCompressionIdxTestModel(torch.nn.Module):
+    CONV2D_TARGET_CHANNEL_COUNT = 5
+    CONV2D_TRANSPOSE_TARGET_CHANNEL_COUNT = 10
+
+    def __init__(self):
+        super().__init__()
+        self.conv = torch.nn.Conv2d(in_channels=1,
+                                    out_channels=self.CONV2D_TARGET_CHANNEL_COUNT,
+                                    kernel_size=(1, 1))
+        self.conv_t = torch.nn.ConvTranspose2d(in_channels=self.CONV2D_TARGET_CHANNEL_COUNT,
+                                               out_channels=self.CONV2D_TRANSPOSE_TARGET_CHANNEL_COUNT,
+                                               kernel_size=(1, 1))
+
+    def forward(self, x):
+        x = self.conv(x)
+        x = self.conv_t(x)
+        return x
+
+
+def get_weight_fq_for_conv_node(node: onnx.NodeProto, graph: onnx.GraphProto):
+    weight_input_tensor_id = node.input[1]
+    matches = [x for x in graph.node if weight_input_tensor_id in x.output]
+    assert len(matches) == 1
+    match = next(iter(matches))
+    assert match.op_type == "FakeQuantize"
+    return match
+
+
+def get_input_low_input_high_for_wfq_node(wfq_node: onnx.NodeProto, graph: onnx.GraphProto) \
+        -> Tuple[onnx.AttributeProto, onnx.AttributeProto]:
+    assert wfq_node.op_type == "FakeQuantize"
+    conv_wfq_inputs = list(resolve_constant_node_inputs_to_values(wfq_node, graph).values())
+    return conv_wfq_inputs[1], conv_wfq_inputs[2]
+
+
+def test_target_compression_idx(tmp_path):
+    model = TargetCompressionIdxTestModel()
+    nncf_config = get_config_for_export_mode(should_be_onnx_standard=False)
+    onnx_model_proto = load_exported_onnx_version(nncf_config, model,
+                                                  path_to_storage_dir=tmp_path)
+    onnx_graph = onnx_model_proto.graph  # pylint:disable=no-member
+    conv_nodes = get_nodes_by_type(onnx_model_proto, "Conv")
+    assert len(conv_nodes) == 1
+    conv_node = next(iter(conv_nodes))
+    conv_wfq_node = get_weight_fq_for_conv_node(conv_node, onnx_graph)
+    input_low_attr, input_high_attr = get_input_low_input_high_for_wfq_node(conv_wfq_node,
+                                                                            onnx_graph)
+    assert input_low_attr.shape == (TargetCompressionIdxTestModel.CONV2D_TARGET_CHANNEL_COUNT, 1, 1, 1)
+    assert input_low_attr.shape == input_high_attr.shape
+
+    conv_t_nodes = get_nodes_by_type(onnx_model_proto, "ConvTranspose")
+    assert len(conv_t_nodes) == 1
+    conv_t_node = next(iter(conv_t_nodes))
+    conv_t_wfq_node = get_weight_fq_for_conv_node(conv_t_node, onnx_graph)
+    input_low_t_attr, input_high_t_attr = get_input_low_input_high_for_wfq_node(conv_t_wfq_node,
+                                                                                onnx_graph)
+    assert input_low_t_attr.shape == (1, TargetCompressionIdxTestModel.CONV2D_TRANSPOSE_TARGET_CHANNEL_COUNT, 1, 1)
+    assert input_low_t_attr.shape == input_high_t_attr.shape

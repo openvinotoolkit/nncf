@@ -38,6 +38,7 @@ from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.graph import NNCFNodeName
 from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
+from nncf.common.graph.layer_attributes import WeightedLayerAttributes
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.hardware.config import HWConfig
 from nncf.common.hardware.config import HWConfigType
@@ -904,8 +905,11 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
             if is_weights(ip):
                 target_node = target_model_graph.get_node_by_name(ip.target_node_name)
                 layer_attributes = target_node.layer_attributes
-                scale_shape = get_scale_shape(layer_attributes.get_weight_shape(), is_weights=True,
-                                              per_channel=qconfig.per_channel)
+                assert isinstance(layer_attributes, WeightedLayerAttributes)
+                scale_shape = get_scale_shape(layer_attributes.get_weight_shape(),
+                                              is_weights=True,
+                                              per_channel=qconfig.per_channel,
+                                              channel_idx=layer_attributes.get_target_dim_for_compression())
                 scale_shapes.append(scale_shape)
             else:
                 input_shape = target_model_graph.get_input_shape_for_insertion_point(ip)
