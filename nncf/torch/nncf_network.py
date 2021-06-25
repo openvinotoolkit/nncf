@@ -372,7 +372,6 @@ class KnowledgeDistillationLossHandler(nn.Module):
         self._compressed_context.register_global_buffer(self.KD_LOSS_STORAGE_NAME, [])
         self._compressed_context.register_global_buffer(self.KD_STORAGE_DEVICE, storage_device)
 
-
     def zero_kdloss(self):
         if self.is_enabled is not None:
             self._compressed_context.global_buffer_store[self.KD_LOSS_STORAGE_NAME] = []
