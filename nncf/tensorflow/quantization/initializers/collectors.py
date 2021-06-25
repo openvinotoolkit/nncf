@@ -20,7 +20,11 @@ from nncf.tensorflow.quantization.initializers.utils import discard_zeros
 from nncf.tensorflow.quantization.initializers.utils import get_axes
 
 
-class MinMaxStatisticsCollector:
+class MinMaxStatisticCollector:
+    """
+    Collector uses min of minimum values and max of maximum values.
+    """
+
     def __init__(self, per_channel: bool, channel_axes: int, input_type: str):
         self.per_channel = per_channel
         self.channel_axes = channel_axes if isinstance(channel_axes, (list, tuple)) else [channel_axes]
@@ -46,22 +50,28 @@ class MinMaxStatisticsCollector:
                 self.all_max_values[i] = tf.reshape(self.all_max_values[i], shape=(new_shape))
 
     def call(self, inputs: tf.Tensor):
-        ndims = len(inputs.shape)
-        axis = get_axes(ndims, self.per_channel, self.channel_axes)
+        # No need to store extra statistics in memory since weights won't change during range init
+        if not self.all_min_values or self.input_type == InputType.INPUTS:
+            ndims = len(inputs.shape)
+            axis = get_axes(ndims, self.per_channel, self.channel_axes)
 
-        if self.input_type == InputType.INPUTS:
-            axis.remove(0)
-            self.all_min_values.extend(tf.unstack(tf.reduce_min(inputs, axis=axis)))
-            self.all_max_values.extend(tf.unstack(tf.reduce_max(inputs, axis=axis)))
-        elif self.input_type == InputType.WEIGHTS:
-            self.all_min_values.append(tf.reduce_min(inputs, axis=axis))
-            self.all_max_values.append(tf.reduce_max(inputs, axis=axis))
+            if self.input_type == InputType.INPUTS:
+                axis.remove(0)
+                self.all_min_values.extend(tf.unstack(tf.reduce_min(inputs, axis=axis)))
+                self.all_max_values.extend(tf.unstack(tf.reduce_max(inputs, axis=axis)))
+            elif self.input_type == InputType.WEIGHTS:
+                self.all_min_values.append(tf.reduce_min(inputs, axis=axis))
+                self.all_max_values.append(tf.reduce_max(inputs, axis=axis))
 
     def __call__(self, *args, **kwargs):
         self.call(*args, **kwargs)
 
 
 class MeanMinMaxStatisticsCollector:
+    """
+    Collector uses mean of minimum values and mean of maximum values.
+    """
+
     def __init__(self, per_channel: bool, channel_axes: int, input_type: str):
         self.per_channel = per_channel
         self.channel_axes = channel_axes if isinstance(channel_axes, (list, tuple)) else [channel_axes]
@@ -87,39 +97,46 @@ class MeanMinMaxStatisticsCollector:
                 self.all_max_values[i] = tf.reshape(self.all_max_values[i], shape=(new_shape))
 
     def call(self, inputs: tf.Tensor):
-        ndims = len(inputs.shape)
-        axis = get_axes(ndims, self.per_channel, self.channel_axes)
+        # No need to store extra statistics in memory since weights won't change during range init
+        if not self.all_min_values or self.input_type == InputType.INPUTS:
+            ndims = len(inputs.shape)
+            axis = get_axes(ndims, self.per_channel, self.channel_axes)
 
-        if self.input_type == InputType.INPUTS:
-            axis.remove(0)
-            self.all_min_values.extend(tf.unstack(tf.reduce_min(inputs, axis=axis)))
-            self.all_max_values.extend(tf.unstack(tf.reduce_max(inputs, axis=axis)))
-        elif self.input_type == InputType.WEIGHTS:
-            self.all_min_values.append(tf.reduce_min(inputs, axis=axis))
-            self.all_max_values.append(tf.reduce_max(inputs, axis=axis))
+            if self.input_type == InputType.INPUTS:
+                axis.remove(0)
+                self.all_min_values.extend(tf.unstack(tf.reduce_min(inputs, axis=axis)))
+                self.all_max_values.extend(tf.unstack(tf.reduce_max(inputs, axis=axis)))
+            elif self.input_type == InputType.WEIGHTS:
+                self.all_min_values.append(tf.reduce_min(inputs, axis=axis))
+                self.all_max_values.append(tf.reduce_max(inputs, axis=axis))
 
     def __call__(self, *args, **kwargs):
         self.call(*args, **kwargs)
 
 
 class MedianMADStatisticCollector:
-    """Use three-sigma approach.
-    Constant factor depends on the distribution form. Assuming normal distribution - the factor is 1.4826.
     """
-    def __init__(self, per_channel: bool, channel_axes: int):
+    Collector uses three-sigma approach with the assumption of normal distribution by default.
+    """
+
+    def __init__(self, per_channel: bool, channel_axes: int, input_type: str):
         self.per_channel = per_channel
         self.channel_axes = channel_axes if isinstance(channel_axes, (list, tuple)) else [channel_axes]
+        self.input_type = input_type
         self.samples = []
         self.median = None
         self.mad = None
 
+        # Constant factor depends on the distribution form. Assuming normal distribution - the factor is 1.4826.
+        self.distribution_factor = 1.4826
+
     @property
     def min(self) -> np.ndarray:
-        return (self.median - 3 * 1.726 * self.mad).astype(np.float32)
+        return (self.median - 3 * self.distribution_factor * self.mad).astype(np.float32)
 
     @property
     def max(self) -> np.ndarray:
-        return (self.median + 3 * 1.726 * self.mad).astype(np.float32)
+        return (self.median + 3 * self.distribution_factor * self.mad).astype(np.float32)
 
     def prepare_statistics(self):
         ndims = len(self.samples[0].shape)
@@ -145,29 +162,37 @@ class MedianMADStatisticCollector:
             self.mad = np.median(abs(inputs_tensor_flat - self.median))
 
     def call(self, inputs: tf.Tensor):
-        self.samples.append(inputs.numpy())
+        # No need to store extra statistics in memory since weights won't change during range init
+        if not self.samples or self.input_type == InputType.INPUTS:
+            self.samples.append(inputs.numpy())
 
     def __call__(self, *args, **kwargs):
         self.call(*args, **kwargs)
 
 
 class PercentileStatisticCollector:
-    def __init__(self, per_channel: bool, channel_axes: int, min_percentile: float, max_percentile: float):
+    """
+    Collector uses percentiles to estimate min and max of all data history.
+    """
+
+    def __init__(self, per_channel: bool, channel_axes: int, input_type: str,
+                 min_percentile: float, max_percentile: float):
         self.per_channel = per_channel
         self.channel_axes = channel_axes if isinstance(channel_axes, (list, tuple)) else [channel_axes]
+        self.input_type = input_type
         self.min_percentile = min_percentile
         self.max_percentile = max_percentile
         self.samples = []
-        self.all_min_values = None
-        self.all_max_values = None
+        self.min_values = None
+        self.max_values = None
 
     @property
     def min(self) -> np.ndarray:
-        return self.all_min_values.astype(np.float32)
+        return self.min_values.astype(np.float32)
 
     @property
     def max(self) -> np.ndarray:
-        return self.all_max_values.astype(np.float32)
+        return self.max_values.astype(np.float32)
 
     def prepare_statistics(self):
         ndims = len(self.samples[0].shape)
@@ -183,21 +208,28 @@ class PercentileStatisticCollector:
                 max_val = np.percentile(channel_history, self.max_percentile)
                 per_channel_min_vals.append(min_val)
                 per_channel_max_vals.append(max_val)
-            self.all_min_values = np.array(per_channel_min_vals)
-            self.all_max_values = np.array(per_channel_max_vals)
+            self.min_values = np.array(per_channel_min_vals)
+            self.max_values = np.array(per_channel_max_vals)
         else:
             inputs_tensor_flat = inputs_tensor.flatten()
-            self.all_min_values = np.percentile(inputs_tensor_flat, self.min_percentile)
-            self.all_max_values = np.percentile(inputs_tensor_flat, self.max_percentile)
+            self.min_values = np.percentile(inputs_tensor_flat, self.min_percentile)
+            self.max_values = np.percentile(inputs_tensor_flat, self.max_percentile)
 
     def call(self, inputs: tf.Tensor):
-        self.samples.append(inputs.numpy())
+        # No need to store extra statistics in memory since weights won't change during range init
+        if not self.samples or self.input_type == InputType.INPUTS:
+            self.samples.append(inputs.numpy())
 
     def __call__(self, *args, **kwargs):
         self.call(*args, **kwargs)
 
 
 class MeanPercentileStatisticCollector:
+    """
+    Collector uses percentiles to estimate min and max of data per step
+    and then averages the statistics.
+    """
+
     def __init__(self, per_channel: bool, channel_axes: int, input_type: str,
                  min_percentile: float, max_percentile: float):
         self.per_channel = per_channel
@@ -229,20 +261,22 @@ class MeanPercentileStatisticCollector:
         return np.percentile(inputs.numpy(), pc, axis)
 
     def call(self, inputs: tf.Tensor):
-        ndims = len(inputs.shape)
-        axis = get_axes(ndims, self.per_channel, self.channel_axes)
+        # No need to store extra statistics in memory since weights won't change during range init
+        if not self.all_min_values or self.input_type == InputType.INPUTS:
+            ndims = len(inputs.shape)
+            axis = get_axes(ndims, self.per_channel, self.channel_axes)
 
-        if self.input_type == InputType.INPUTS:
-            axis.remove(0)
-            min_vals = tf.py_function(self._percentile, [inputs, self.min_percentile, axis], Tout=tf.float32)
-            max_vals = tf.py_function(self._percentile, [inputs, self.max_percentile, axis], Tout=tf.float32)
-            self.all_min_values.extend(tf.unstack(min_vals))
-            self.all_max_values.extend(tf.unstack(max_vals))
-        elif self.input_type == InputType.WEIGHTS:
-            min_vals = tf.py_function(self._percentile, [inputs, self.min_percentile, axis], Tout=tf.float32)
-            max_vals = tf.py_function(self._percentile, [inputs, self.max_percentile, axis], Tout=tf.float32)
-            self.all_min_values.append(min_vals)
-            self.all_max_values.append(max_vals)
+            if self.input_type == InputType.INPUTS:
+                axis.remove(0)
+                min_vals = tf.py_function(self._percentile, [inputs, self.min_percentile, axis], Tout=tf.float32)
+                max_vals = tf.py_function(self._percentile, [inputs, self.max_percentile, axis], Tout=tf.float32)
+                self.all_min_values.extend(tf.unstack(min_vals))
+                self.all_max_values.extend(tf.unstack(max_vals))
+            elif self.input_type == InputType.WEIGHTS:
+                min_vals = tf.py_function(self._percentile, [inputs, self.min_percentile, axis], Tout=tf.float32)
+                max_vals = tf.py_function(self._percentile, [inputs, self.max_percentile, axis], Tout=tf.float32)
+                self.all_min_values.append(min_vals)
+                self.all_max_values.append(max_vals)
 
     def __call__(self, *args, **kwargs):
         self.call(*args, **kwargs)

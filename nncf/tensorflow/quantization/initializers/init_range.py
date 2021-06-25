@@ -28,7 +28,7 @@ from nncf.tensorflow.layers.wrapper import NNCFWrapper
 from nncf.tensorflow.layers.data_layout import get_channel_axis
 from nncf.tensorflow.layers.operation import InputType
 from nncf.tensorflow.quantization.layers import FakeQuantize
-from nncf.tensorflow.quantization.initializers.collectors import MinMaxStatisticsCollector
+from nncf.tensorflow.quantization.initializers.collectors import MinMaxStatisticCollector
 from nncf.tensorflow.quantization.initializers.collectors import MeanMinMaxStatisticsCollector
 from nncf.tensorflow.quantization.initializers.collectors import MedianMADStatisticCollector
 from nncf.tensorflow.quantization.initializers.collectors import PercentileStatisticCollector
@@ -88,15 +88,15 @@ class RangeInitializer:
     def generate_stat_collector(init_config, per_channel: bool, channel_axes: int, input_type: str):
         range_type = init_config.init_type
         if range_type == 'min_max':
-            return MinMaxStatisticsCollector(per_channel, channel_axes, input_type)
+            return MinMaxStatisticCollector(per_channel, channel_axes, input_type)
         if range_type == 'mean_min_max':
             return MeanMinMaxStatisticsCollector(per_channel, channel_axes, input_type)
         if range_type == 'threesigma':
-            return MedianMADStatisticCollector(per_channel, channel_axes)
+            return MedianMADStatisticCollector(per_channel, channel_axes, input_type)
         if range_type == 'percentile':
             min_percentile = init_config.init_type_specific_params.get("min_percentile", 0.1)
             max_percentile = init_config.init_type_specific_params.get("max_percentile", 99.9)
-            return PercentileStatisticCollector(per_channel, channel_axes,
+            return PercentileStatisticCollector(per_channel, channel_axes, input_type,
                                                 min_percentile, max_percentile)
         if range_type == 'mean_percentile':
             min_percentile = init_config.init_type_specific_params.get("min_percentile", 0.1)
