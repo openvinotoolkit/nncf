@@ -10,5 +10,36 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-
-DEFAULT_TF_QUANT_TRAIT_TO_OP_DICT = {}
+from nncf.common.quantization.quantizer_propagation.structs import QuantizationTrait
+from nncf.tensorflow.graph.metatypes import keras_layers as layer_metatypes
+from nncf.tensorflow.graph.metatypes import common
+DEFAULT_TF_QUANT_TRAIT_TO_OP_DICT = {
+    QuantizationTrait.INPUTS_QUANTIZABLE: [
+        *common.GENERAL_CONV_LAYER_METATYPES,
+        *common.DEPTHWISE_CONV_LAYER_METATYPES,
+        *common.DECONV_LAYER_METATYPES,
+        *common.LINEAR_LAYER_METATYPES,
+        *common.NORMALIZATION_LAYER_METATYPES,
+        *common.ELEMENTWISE_LAYER_METATYPES,
+        layer_metatypes.TFLocallyConnected1DLayerMetatype,
+        layer_metatypes.TFLocallyConnected2DLayerMetatype,
+        layer_metatypes.TFAveragePooling1DLayerMetatype,
+        layer_metatypes.TFAveragePooling2DLayerMetatype,
+        layer_metatypes.TFAveragePooling3DLayerMetatype,
+        layer_metatypes.TFGlobalAveragePooling1DLayerMetatype,
+        layer_metatypes.TFGlobalAveragePooling2DLayerMetatype,
+        layer_metatypes.TFGlobalAveragePooling3DLayerMetatype,
+        layer_metatypes.TFUpSampling1DLayerMetatype,
+        layer_metatypes.TFUpSampling2DLayerMetatype,
+        layer_metatypes.TFUpSampling3DLayerMetatype,
+        layer_metatypes.TFAverageLayerMetatype,
+        layer_metatypes.TFThresholdedReLULayerMetatype,
+        layer_metatypes.TFELULayerMetatype,
+        layer_metatypes.TFPReLULayerMetatype,
+        layer_metatypes.TFLeakyReLULayerMetatype,
+        layer_metatypes.TFActivationLayerMetatype
+    ],
+    QuantizationTrait.NON_QUANTIZABLE: [layer_metatypes.TFSoftmaxLayerMetatype],
+    QuantizationTrait.CONCAT: [layer_metatypes.TFConcatenateLayerMetatype],
+    QuantizationTrait.OUTPUT_QUANTIZATION_AS_WEIGHTS: [layer_metatypes.TFEmbeddingLayerMetatype]
+}

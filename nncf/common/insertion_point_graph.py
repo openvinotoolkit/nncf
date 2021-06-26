@@ -20,6 +20,7 @@ from typing import Set
 
 import networkx as nx
 
+from nncf.common.graph import Dtype
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNodeName
 from nncf.common.graph.graph_matching import find_subgraphs_matching_pattern
@@ -60,6 +61,7 @@ class InsertionPointGraph(nx.DiGraph):
     ASSOCIATED_IP_NODE_KEYS_NODE_ATTR = 'associated_ip_node_keys'
     IS_MERGED_NODE_ATTR = 'is_merged'
     MERGED_NNCF_NODE_LIST_NODE_ATTR = 'merged_node_list'
+    IS_INTEGER_PATH_EDGE_ATTR = 'is_integer'
 
     PRE_HOOK_ID_PREFIX = 'PRE HOOK '  # NB: Do not use colon (':') in node keys! Causes trouble for .dot file export.
     POST_HOOK_ID_PREFIX = 'POST HOOK '
@@ -115,8 +117,10 @@ class InsertionPointGraph(nx.DiGraph):
         INPUT_PORT_ID = "input_port_id"
         for edge in self._base_nx_graph.edges:
             input_port_id = self._base_nx_graph.edges[edge][NNCFGraph.INPUT_PORT_ID_EDGE_ATTR]
+            dtype = self._base_nx_graph.edges[edge][NNCFGraph.DTYPE_EDGE_ATTR]
             from_node, to_node = edge
-            attrs = {INPUT_PORT_ID: input_port_id}
+            attrs = {INPUT_PORT_ID: input_port_id,
+                     self.IS_INTEGER_PATH_EDGE_ATTR: dtype is Dtype.INTEGER}
             self.add_edge(from_node, to_node, **attrs)
 
         node_keys_working_set = [deepcopy(node_key) for node_key in nx.lexicographical_topological_sort(self)]

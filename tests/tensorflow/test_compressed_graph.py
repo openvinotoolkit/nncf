@@ -12,19 +12,23 @@
 """
 
 import os
+from typing import List
+
 import pytest
 from addict import Dict
 
 import tensorflow as tf
 import networkx as nx
 
+from nncf import NNCFConfig
+from nncf.common.debug import nncf_debug
 from tests.tensorflow import test_models
 from tests.tensorflow.helpers import get_empty_config, create_compressed_model_and_algo_for_test
 from tests.tensorflow.sparsity.magnitude.test_helpers import get_basic_filter_pruning_config
 from tests.tensorflow.sparsity.magnitude.test_helpers import get_basic_sparsity_config
 
 
-def get_basic_quantization_config(qconfig, input_sample_sizes=None):
+def get_basic_quantization_config(qconfig, input_sample_sizes=None) -> NNCFConfig:
     config = get_empty_config(input_sample_sizes=input_sample_sizes)
     config['compression'] = {'algorithm': 'quantization',
                              'activations': {
@@ -152,13 +156,16 @@ def _pruning_case_config(request):
 
 
 class ModelDesc:
-    def __init__(self, ref_graph_filename: str, model_builder, input_sample_sizes,
-                 rename_resource_nodes=False):
+    def __init__(self, ref_graph_filename: str, model_builder,
+                 input_sample_sizes,
+                 rename_resource_nodes=False,
+                 ignored_scopes: List[str] = None):
         self.model_name, _ = os.path.splitext(ref_graph_filename)
         self.model_builder = model_builder
         self.ref_graph_filename = ref_graph_filename
         self.input_sample_sizes = input_sample_sizes
         self.rename_resource_nodes = rename_resource_nodes
+        self.ignored_scopes = ignored_scopes
 
 
 SKIP_MAP = {
@@ -230,11 +237,67 @@ def get_test_models_desc(algorithm):
         ModelDesc(ref_name('sequential_model.pb'), test_models.SequentialModel, [1, 224, 224, 3]),
         ModelDesc(ref_name('sequential_no_input_model.pb'), test_models.SequentialModelNoInput, [1, 224, 224, 3]),
         pytest.param(
-            ModelDesc(ref_name('mobilenet_v3_small.pb'), test_models.MobileNetV3Small, [1, 32, 32, 3]),
+            ModelDesc(ref_name('mobilenet_v3_small.pb'), test_models.MobileNetV3Small, [1, 32, 32, 3],
+                      # TODO (vshampor): remove when proper swish pattern specification becomes possible
+                      ignored_scopes=["Conv/BatchNorm",
+                                      "multiply",
+                                      "{re}multiply_([1-9]|1[0-8])$",
+                                      "tf_op_layer_AddV2",
+                                      "tf_op_layer_AddV2_2",
+                                      "tf_op_layer_AddV2_3",
+                                      "tf_op_layer_AddV2_5",
+                                      "tf_op_layer_AddV2_6",
+                                      "tf_op_layer_AddV2_8",
+                                      "tf_op_layer_AddV2_9",
+                                      "tf_op_layer_AddV2_11",
+                                      "tf_op_layer_AddV2_12",
+                                      "tf_op_layer_AddV2_14",
+                                      "tf_op_layer_AddV2_15",
+                                      "tf_op_layer_AddV2_17",
+                                      "tf_op_layer_AddV2_18",
+                                      "tf_op_layer_AddV2_20",
+                                      "tf_op_layer_AddV2_21",
+                                      "tf_op_layer_AddV2_23",
+                                      "tf_op_layer_AddV2_24",
+                                      "tf_op_layer_AddV2_26",
+                                      "tf_op_layer_AddV2_27",
+                                      "Conv_1/BatchNorm",
+                                      "{re}expanded_conv_([3-9]|[1-9]\d)/depthwise/BatchNorm",
+                                      "expanded_conv/expand/BatchNorm",
+                                      "{re}expanded_conv_([3-9]|[1-9]\d)/expand/BatchNorm"]),
             marks=SKIP_MAP[algorithm].get('mobilenet_v3_small', ())
         ),
         pytest.param(
-            ModelDesc(ref_name('mobilenet_v3_large.pb'), test_models.MobileNetV3Large, [1, 32, 32, 3]),
+            ModelDesc(ref_name('mobilenet_v3_large.pb'), test_models.MobileNetV3Large, [1, 32, 32, 3],
+                      # TODO (vshampor): remove when proper swish pattern specification becomes possible
+                      ignored_scopes=["Conv/BatchNorm",
+                                      "multiply",
+                                      "{re}multiply_([1-9]|1[0-9]|20)$",
+                                      "tf_op_layer_AddV2",
+                                      "tf_op_layer_AddV2_4",
+                                      "tf_op_layer_AddV2_5",
+                                      "tf_op_layer_AddV2_6",
+                                      "tf_op_layer_AddV2_7",
+                                      "tf_op_layer_AddV2_8",
+                                      "tf_op_layer_AddV2_9",
+                                      "tf_op_layer_AddV2_10",
+                                      "tf_op_layer_AddV2_11",
+                                      "tf_op_layer_AddV2_12",
+                                      "tf_op_layer_AddV2_13",
+                                      "tf_op_layer_AddV2_15",
+                                      "tf_op_layer_AddV2_16",
+                                      "tf_op_layer_AddV2_18",
+                                      "tf_op_layer_AddV2_19",
+                                      "tf_op_layer_AddV2_21",
+                                      "tf_op_layer_AddV2_22",
+                                      "tf_op_layer_AddV2_24",
+                                      "tf_op_layer_AddV2_25",
+                                      "tf_op_layer_AddV2_27",
+                                      "tf_op_layer_AddV2_28",
+                                      "Conv_1/BatchNorm",
+                                      "{re}expanded_conv_([6-9]|[1-9]\d)/depthwise/BatchNorm",
+                                      "expanded_conv/expand/BatchNorm",
+                                      "{re}expanded_conv_([6-9]|[1-9]\d)/expand/BatchNorm"]),
             marks=SKIP_MAP[algorithm].get('mobilenet_v3_large', ())
         ),
         pytest.param(
@@ -362,7 +425,14 @@ class TestModelsGraph:
         model = desc.model_builder(input_shape=tuple(desc.input_sample_sizes[1:]))
         config = get_basic_quantization_config(_quantization_case_config.qconfig,
                                                input_sample_sizes=desc.input_sample_sizes)
-        compressed_model, _ = create_compressed_model_and_algo_for_test(model, config, force_no_init=True)
+        if desc.ignored_scopes is not None:
+            if "activations" in config["compression"]:
+                config["compression"]["activations"]["ignored_scopes"] = desc.ignored_scopes
+            else:
+                config["compression"]["activations"] = {"ignored_scopes": desc.ignored_scopes}
+
+        with nncf_debug():
+            compressed_model, _ = create_compressed_model_and_algo_for_test(model, config, force_no_init=True)
 
         check_model_graph(compressed_model, desc.ref_graph_filename, _quantization_case_config.graph_dir,
                           desc.rename_resource_nodes)

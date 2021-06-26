@@ -51,6 +51,8 @@ from nncf.common.quantization.structs import QuantizerGroup
 from nncf.common.quantization.structs import UnifiedScaleType
 from nncf.common.utils.helpers import matches_any
 from nncf.common.utils.logger import logger as nncf_logger
+from nncf.common.debug import DEBUG_LOG_DIR
+from nncf.common.debug import is_debug
 
 
 class TransitionStatus(Enum):
@@ -212,7 +214,6 @@ class QuantizerPropagationSolver:
                  target_scopes: List[str] = None,
                  hw_config: HWConfig = None,
                  default_trait_to_metatype_map: Dict[QuantizationTrait, List[OperatorMetatype]] = None,
-                 debug_interface: 'QuantizationDebugInterface' = None,
                  propagation_strategy: PropagationStrategy = None,
                  default_qconfig_list: List[QuantizerConfig] = None,
                  quantizable_layer_nodes: List[QuantizableWeightedLayerNode] = None,
@@ -236,8 +237,6 @@ class QuantizerPropagationSolver:
         :param default_trait_to_metatype_map: The mapping of QuantizationTrait's to the metatypes to be associated with
         these by default. Used if no HW config is passed, or if an operation that is unknown to HW config is
         encountered.
-        :param debug_interface: Optional - if supplied, then the debug information will be passed to the
-          corresponding debug interface object.
         :param propagation_strategy: The strategy to be used while propagating and merging quantizers.
         :param default_qconfig_list: The list of quantizer configurations that should be applied for quantizing
           inputs of operations for which the `hw_config` has no explicit or implicit information on how to
@@ -263,7 +262,10 @@ class QuantizerPropagationSolver:
             self._default_trait_to_metatype_map = default_trait_to_metatype_map
         self.default_global_qconfig_list = default_qconfig_list
         self._hw_config = hw_config  # type: HWConfig
-        self._debug_interface = debug_interface
+        self._visualizer = None
+        if is_debug():
+            from nncf.common.quantization.quantizer_propagation.visualizer import QuantizerPropagationVisualizer
+            self._visualizer = QuantizerPropagationVisualizer(DEBUG_LOG_DIR + "/quant_prop")
         self._propagation_strategy = propagation_strategy if propagation_strategy \
             else QuantizerPropagationSolver.DEFAULT_PROPAGATION_STRATEGY  # TODO (vshampor): determine from config
         self._operator_quantization_trait_map = self.get_operator_quantization_traits_map()
@@ -331,8 +333,8 @@ class QuantizerPropagationSolver:
 
         iteration_counter = 0
         while self._active_propagating_quantizers_queue:
-            if self._debug_interface is not None:
-                self._debug_interface.visualize_quantizer_propagation(self, quant_prop_graph, str(iteration_counter))
+            if self._visualizer is not None:
+                self._visualizer.visualize_quantizer_propagation(self, quant_prop_graph, str(iteration_counter))
             if self._run_consistency_checks:
                 quant_prop_graph.run_consistency_check()
             prop_quantizer = self._active_propagating_quantizers_queue.pop()
@@ -341,8 +343,8 @@ class QuantizerPropagationSolver:
 
         quant_prop_graph = self._filter_integer_input_quantizers(quant_prop_graph)
 
-        if self._debug_interface is not None:
-            self._debug_interface.visualize_quantizer_propagation(self, quant_prop_graph, "proposed")
+        if self._visualizer is not None:
+            self._visualizer.visualize_quantizer_propagation(self, quant_prop_graph, "proposed")
 
         if self._run_consistency_checks:
             quant_prop_graph.run_consistency_check()
@@ -381,8 +383,8 @@ class QuantizerPropagationSolver:
         quant_prop_graph = finalized_quantization_proposal.quant_prop_graph
         quant_prop_graph.merge_redundant_subsequent_quantizers_across_graph()
 
-        if self._debug_interface is not None:
-            self._debug_interface.visualize_quantizer_propagation(self, quant_prop_graph, "final")
+        if self._visualizer is not None:
+            self._visualizer.visualize_quantizer_propagation(self, quant_prop_graph, "final")
 
         if self._run_consistency_checks:
             quant_prop_graph.run_consistency_check()
@@ -1310,7 +1312,8 @@ class QuantizerPropagationSolver:
         integer_input_quantizer_ids = set()
 
         for input_node, input_quantizer_ids in input_node_vs_qid_dict.items():
-            assert input_node.node_type == MODEL_INPUT_OP_NAME
+            input_metatypes = get_input_metatypes()
+            assert any([issubclass(input_node.metatype, input_meta) for input_meta in input_metatypes])
             if input_node.is_integer_input():
                 integer_input_quantizer_ids.update(set(input_quantizer_ids))
 

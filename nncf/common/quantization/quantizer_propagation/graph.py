@@ -77,6 +77,7 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
     IS_IN_IGNORED_SCOPES = "is_ignored"
     IS_MERGED_NODE_ATTR = "is_merged"
     MERGED_NNCF_NODE_LIST_NODE_ATTR = "merged_node_list"
+    IS_INTEGER_PATH_EDGE_ATTR = "is_integer"
     BARRIER_NODE_KEY_POSTFIX = "BARRIER"
 
     def __init__(self, ip_graph: InsertionPointGraph,
@@ -787,6 +788,7 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
             if affecting_quantizers:
                 label = ", ".join([str(pq.id) for pq in affecting_quantizers])
                 attrs = {"color": "blue", "label": label}
+            is_integer_path = edge[QuantizerPropagationStateGraph.IS_INTEGER_PATH_EDGE_ATTR]
             out_graph.add_edge(u, v, **attrs)
 
         for gid, group_pq_node_keys in unified_scale_group_vs_pq_node_id_dict.items():

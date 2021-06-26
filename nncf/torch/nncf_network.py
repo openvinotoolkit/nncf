@@ -40,7 +40,7 @@ from nncf.common.utils.logger import logger as nncf_logger
 from nncf.common.utils.ordered_enum import OrderedEnum
 from nncf.torch.debug import CombinedDebugInterface
 from nncf.torch.debug import debuggable_forward
-from nncf.torch.debug import is_debug
+from nncf.common.debug import is_debug
 from nncf.torch.dynamic_graph.context import TracingContext
 from nncf.torch.dynamic_graph.graph import DynamicGraph
 from nncf.torch.dynamic_graph.graph import ShapeIgnoringTensorMetaComparator

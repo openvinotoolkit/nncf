@@ -14,11 +14,11 @@
 import operator
 from functools import reduce
 
+from nncf.common.graph import NNCFNodeExpression as N
 from nncf.tensorflow.graph.metatypes.common import ELEMENTWISE_LAYER_METATYPES
 from nncf.tensorflow.graph.metatypes.common import GENERAL_CONV_LAYER_METATYPES
 from nncf.tensorflow.graph.metatypes.common import LAYER_METATYPES_AGNOSTIC_TO_DATA_PRECISION_WITH_ONE_INPUT
 from nncf.tensorflow.graph.metatypes.common import LINEAR_LAYER_METATYPES
-from nncf.tensorflow.graph.pattern_matching import NodeExpression as N
 
 
 SET_CONV_LAYERS = {layer for m in GENERAL_CONV_LAYER_METATYPES for layer in m.get_all_aliases()}
@@ -38,11 +38,13 @@ AG = reduce(operator.or_, LIST_AGNOSTIC_OPS[1:], LIST_AGNOSTIC_OPS[0])
 BN = N('BatchNormalization') | N('SyncBatchNormalization')
 
 HARD_SIGMOID = (N('AddV2') + N('ReLU') + N('Mul'))
-HARD_SWISH = (N('Multiply') & (HARD_SIGMOID + N('Multiply')))
+# TODO (vshampor): commented this because it is unreliable. Restore when
+#  proper pattern matching is ready.
+# HARD_SWISH = (N('Multiply') & (HARD_SIGMOID + N('Multiply')))
 
 KERAS_ACTIVATIONS = N('ReLU') | N('ThresholdedReLU') | N('ELU') | N('PReLU') | N('LeakyReLU') | N('Activation')
 TF_ACTIVATIONS = N('Relu')
-ACT = KERAS_ACTIVATIONS | TF_ACTIVATIONS | HARD_SIGMOID | HARD_SWISH
+ACT = KERAS_ACTIVATIONS | TF_ACTIVATIONS | HARD_SIGMOID #| HARD_SWISH
 
 ANY_BN_ACT_COMBO = BN + ACT | ACT + BN | BN | ACT
 

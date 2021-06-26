@@ -41,8 +41,8 @@ from nncf.common.quantization.structs import QuantizerConfig
 from nncf.config.extractors import extract_bn_adaptation_init_params
 from nncf.common.utils.logger import logger
 from nncf.common.hardware.config import HWConfigType
-from nncf.torch.debug import DEBUG_LOG_DIR
-from nncf.torch.debug import is_debug
+from nncf.common.debug import DEBUG_LOG_DIR
+from nncf.common.debug import is_debug
 from nncf.torch.initialization import PartialDataLoader
 from nncf.torch.quantization.layers import BaseQuantizer
 from nncf.torch.quantization.algo import ExperimentalQuantizationController

@@ -10,7 +10,8 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-
+import functools
+import operator
 import shutil
 # pylint:disable=too-many-lines
 from collections import Counter
@@ -36,6 +37,7 @@ from nncf.api.compression import CompressionStage
 from nncf.common.graph.definitions import MODEL_INPUT_OP_NAME
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
+from nncf.common.graph import NNCFNodeExpression
 from nncf.common.graph import NNCFNodeName
 from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
 from nncf.common.graph.layer_attributes import WeightedLayerAttributes
@@ -47,7 +49,6 @@ from nncf.common.hardware.config import HW_CONFIG_TYPE_TARGET_DEVICE_MAP
 from nncf.common.initialization.batchnorm_adaptation import BatchnormAdaptationAlgorithm
 from nncf.common.insertion_point_graph import InsertionPointGraph
 from nncf.common.insertion_point_graph import InsertionPointGraphNodeType
-from nncf.common.quantization.quantizer_propagation.graph import QuantizerPropagationStateGraph
 from nncf.common.quantization.quantizer_propagation.solver import QuantizerPropagationSolver
 from nncf.common.quantization.quantizer_setup import MultiConfigQuantizerSetup
 from nncf.common.quantization.quantizer_setup import QuantizationPointId
@@ -56,6 +57,7 @@ from nncf.common.quantization.quantizer_setup import SingleConfigQuantizationPoi
 from nncf.common.quantization.quantizer_setup import SingleConfigQuantizerSetup
 from nncf.torch.quantization.default_quantization import DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT
 from nncf.torch.quantization.layers import get_scale_shape
+from nncf.common.quantization.statistics import QuantizationStatistics
 from nncf.common.quantization.structs import NonWeightQuantizerId
 from nncf.common.quantization.structs import QuantizableWeightedLayerNode
 from nncf.common.quantization.structs import QuantizationConstraints
@@ -77,7 +79,7 @@ from nncf.torch.compression_method_api import PTCompressionAlgorithmBuilder
 from nncf.torch.compression_method_api import PTCompressionAlgorithmController
 from nncf.torch.debug import CallCountTracker
 from nncf.torch.debug import DebugInterface
-from nncf.torch.debug import is_debug
+from nncf.common.debug import is_debug
 from nncf.torch.dynamic_graph.context import TracingContext
 from nncf.torch.graph.graph import PTNNCFGraph
 from nncf.torch.graph.operator_metatypes import Conv2dMetatype
@@ -86,7 +88,7 @@ from nncf.torch.graph.transformations.commands import PTInsertionCommand
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.graph.transformations.commands import TransformationPriority
 from nncf.torch.graph.transformations.layout import PTTransformationLayout
-from nncf.torch.graph.patterns import get_full_pattern_graph
+from nncf.torch.hardware.fused_patterns import TorchHWFusedPattern
 from nncf.torch.hardware.config import PTHWConfig
 from nncf.torch.initialization import SimpleDataLoaderRunner
 from nncf.torch.module_operations import UpdatePaddingValue
@@ -383,6 +385,22 @@ class PropagationBasedQuantizerSetupGenerator(QuantizerSetupGeneratorBase):
         finalized_quantizer_setup = prop_graph_solver.get_final_quantizer_setup(finalized_proposal)
         finalized_quantizer_setup = self._handle_quantize_inputs_option(finalized_quantizer_setup)
         return finalized_quantizer_setup
+
+    def _get_hw_fused_patterns(self) -> NNCFNodeExpression:
+        """
+        Resulting pattern should have single input; the operation with inputs to
+        quantize should be the input operation; outputs should only be produced by one output node.
+        """
+        full_pattern = TorchHWFusedPattern.get()
+        if self._quantizable_subgraph_patterns is not None:
+            for pattern in self._quantizable_subgraph_patterns:
+                if not isinstance(pattern, str):
+                    custom_pattern = functools.reduce(operator.add,
+                                                      [NNCFNodeExpression(node) for node in pattern])
+                else:
+                    custom_pattern = NNCFNodeExpression(pattern)
+                full_pattern = full_pattern | custom_pattern
+        return full_pattern
 
     def _assign_qconfig_lists_to_modules(self, nodes_with_weights: List[NNCFNode]) -> Dict[NNCFNode,
                                                                                            List[QuantizerConfig]]:
@@ -1337,16 +1355,13 @@ class QuantizationDebugInterface(DebugInterface):
         }
         self.graph_size = 0
 
-        from nncf.torch.debug import DEBUG_LOG_DIR
+        from nncf.common.debug import DEBUG_LOG_DIR
         self.dump_dir = Path(DEBUG_LOG_DIR) / Path("debug_dumps")
         self.dump_dir.mkdir(parents=True, exist_ok=True)
         self.scale_dump_dir = self.dump_dir / Path("scale")
         if self.scale_dump_dir.exists():
             shutil.rmtree(str(self.scale_dump_dir))
         self.scale_dump_dir.mkdir(parents=True, exist_ok=True)
-        self.prop_graph_dump_dir = self.dump_dir / Path("quant_prop")
-        if self.prop_graph_dump_dir.exists():
-            shutil.rmtree(str(self.prop_graph_dump_dir))
         self.forward_call_count = 0
         self._strict_forward = False
 
@@ -1442,15 +1457,6 @@ class QuantizationDebugInterface(DebugInterface):
 
     def register_forward_call(self):
         self.forward_call_count += 1
-
-    def visualize_quantizer_propagation(self,
-                                        prop_solver: QuantizerPropagationSolver,
-                                        prop_graph: QuantizerPropagationStateGraph,
-                                        iteration: str):
-        self.prop_graph_dump_dir.mkdir(parents=True, exist_ok=True)
-        fname = "quant_prop_iter_{}.dot".format(iteration)
-        prop_solver.debug_visualize(prop_graph,
-                                    self.prop_graph_dump_dir / Path(fname))
 
     def visualize_insertion_point_graph(self, insertion_point_graph: InsertionPointGraph):
         out_graph = nx.MultiDiGraph()

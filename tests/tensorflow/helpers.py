@@ -31,7 +31,7 @@ def get_conv_init_value(shape, value):
     return value
 
 
-def get_empty_config(input_sample_sizes=None):
+def get_empty_config(input_sample_sizes=None) -> NNCFConfig:
     if input_sample_sizes is None:
         input_sample_sizes = [1, 4, 4, 1]
 
