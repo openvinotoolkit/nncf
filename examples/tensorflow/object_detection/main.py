@@ -210,6 +210,9 @@ def train(train_step, test_step, eval_metric, train_dist_dataset, test_dist_data
     timer = Timer()
     timer.tic()
 
+    statistics = compression_ctrl.statistics()
+    logger.info(statistics.to_str())
+
     logger.info('Training...')
     for epoch in range(initial_epoch, epochs):
         logger.info('Epoch: {}/{}'.format(epoch, epochs))

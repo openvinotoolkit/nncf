@@ -228,6 +228,9 @@ def run(config):
         'validation_freq': 1,
     }
 
+    statistics = compression_ctrl.statistics()
+    logger.info(statistics.to_str())
+
     if 'train' in config.mode:
         if is_accuracy_aware_training(config):
             logger.info('starting an accuracy-aware training loop...')

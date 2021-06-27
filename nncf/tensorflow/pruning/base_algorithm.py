@@ -313,11 +313,8 @@ class BasePruningAlgoController(TFCompressionAlgorithmController):
 
         pruned_layers_summary = []
         for mask_name, weights_shape, mask_shape, pruning_rate in mask_pruning:
-            # TODO(andrey-churkin): Should be calculated
-            weight_pruning_level = -1
-            mask_pruning_level = -1
-            pruned_layers_summary.append(PrunedLayerSummary(mask_name, weights_shape, mask_shape,
-                                                            weight_pruning_level, mask_pruning_level, pruning_rate))
+            pruned_layers_summary.append(PrunedLayerSummary(mask_name, weights_shape,
+                                                            mask_shape, pruning_rate))
 
         return PrunedModelStatistics(self.pruning_rate, pruned_layers_summary)
 
