@@ -12,6 +12,7 @@
 """
 
 from typing import List
+from typing import Set
 import networkx as nx
 import networkx.algorithms.isomorphism as ism
 from nncf.common.graph.patterns import GraphPattern
@@ -91,9 +92,9 @@ def find_subgraphs_matching_pattern(graph: nx.DiGraph, pattern_graph: GraphPatte
                 return False
         return True
 
-    subgraphs = []
-    visited_nodes = set()
-    patterns = []
+    subgraphs = []  # type: List[List[str]]
+    visited_nodes = set()  # type: Set[str]
+    patterns = []  # type: List[nx.DiGraph]
     for c in nx.weakly_connected_components(pattern_graph.graph):
         patterns.append(pattern_graph.graph.subgraph(c))
     # Get all patterns sorted by their lengths

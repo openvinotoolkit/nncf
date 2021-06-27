@@ -12,14 +12,14 @@
 """
 
 from nncf.common.graph.patterns import GraphPattern
-from nncf.common.graph.patterns import QuantizationIgnorePatterns
+from nncf.common.graph.patterns import HWFusedPatterns
 
 from nncf.torch.graph.pattern_operations import LINEAR_OPERATIONS
 from nncf.torch.graph.pattern_operations import BATCH_NORMALIZATION_OPERATIONS
 from nncf.torch.graph.pattern_operations import ACTIVATIONS_OPERATIONS
 from nncf.torch.graph.pattern_operations import ARITHMETIC_OPERATIONS
 
-QUANTIZATION_IGNORE_PATTERNS = QuantizationIgnorePatterns()
+QUANTIZATION_IGNORE_PATTERNS = HWFusedPatterns()
 
 
 def create_swish_act() -> GraphPattern:
@@ -76,13 +76,9 @@ def register_all_patterns():
 
     atomic_activations = GraphPattern()
     atomic_activations.add_node(**ACTIVATIONS_OPERATIONS)
-
     swish = create_swish_act()
-
     h_sigmoid = create_h_sigmoid_act()
-
     h_swish = create_h_swish_act()
-
     activations = atomic_activations | swish | h_swish | h_sigmoid
     QUANTIZATION_IGNORE_PATTERNS.register(activations, 'ACTIVATIONS', match=False)
 
@@ -91,12 +87,13 @@ def register_all_patterns():
     QUANTIZATION_IGNORE_PATTERNS.register(arithmetic_ops, ARITHMETIC_OPERATIONS['label'], match=False)
 
     batch_norm_activations_permutation = batch_norm + activations | activations + batch_norm | batch_norm | activations
-    QUANTIZATION_IGNORE_PATTERNS.register(batch_norm_activations_permutation, 'BN + ACTIVATIONS', match=False)
 
-    full_ignore_quantization_pattern = linear_ops + batch_norm_activations_permutation | \
-                                       batch_norm + activations | activations + batch_norm | \
-                                       arithmetic_ops + batch_norm_activations_permutation
-    QUANTIZATION_IGNORE_PATTERNS.register(full_ignore_quantization_pattern, 'FULL_PATTERN_GRAPH', match=True)
+    QUANTIZATION_IGNORE_PATTERNS.register(linear_ops + batch_norm_activations_permutation, 'LINEAR + BN_ACT_PERM',
+                                          match=True)
+    QUANTIZATION_IGNORE_PATTERNS.register(batch_norm + activations, 'BN + ACTIVATIONS', match=True)
+    QUANTIZATION_IGNORE_PATTERNS.register(activations + batch_norm, 'ACTIVATIONS + BN', match=True)
+    QUANTIZATION_IGNORE_PATTERNS.register(arithmetic_ops + batch_norm_activations_permutation,
+                                          'ARITHMETIC + BN_ACT_PERM', match=True)
 
 
 register_all_patterns()

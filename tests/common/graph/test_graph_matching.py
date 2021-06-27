@@ -1,4 +1,4 @@
-from nncf.common.graph.patterns import GraphPattern
+from tests.common.graph.test_graph_pattern import TestPattern
 from nncf.common.graph.graph_matching import find_subgraphs_matching_pattern
 import networkx as nx
 
@@ -6,18 +6,7 @@ import itertools
 
 
 def test_ops_combination_patterns():
-    first_type = ['a', 'b']
-    second_type = ['c', 'd']
-    third_type = ['e']
-
-    first_pattern = GraphPattern()
-    first_pattern.add_node(label='first', type=first_type)
-    second_pattern = GraphPattern()
-    second_pattern.add_node(label='second', type=second_type)
-    third_pattern = GraphPattern()
-    third_pattern.add_node(label='third', type=third_type)
-
-    pattern = first_pattern + second_pattern
+    pattern = TestPattern.first_pattern + TestPattern.second_pattern
 
     ref_graph = nx.DiGraph()
     ref_graph.add_node('1', type='a')
@@ -26,7 +15,7 @@ def test_ops_combination_patterns():
     matches = find_subgraphs_matching_pattern(ref_graph, pattern)
     assert matches == [['1', '2']]
 
-    pattern = first_pattern + second_pattern | third_pattern
+    pattern = TestPattern.first_pattern + TestPattern.second_pattern | TestPattern.third_pattern
 
     ref_graph = nx.DiGraph()
     ref_graph.add_node('1', type='a')
@@ -35,11 +24,11 @@ def test_ops_combination_patterns():
     matches = find_subgraphs_matching_pattern(ref_graph, pattern)
     assert matches == [['1', '2']]
 
-    pattern = (first_pattern + second_pattern)
+    pattern = (TestPattern.first_pattern + TestPattern.second_pattern)
     pattern_nodes = list(pattern.graph.nodes)
-    third_nodes = list(third_pattern.graph.nodes)
+    third_nodes = list(TestPattern.third_pattern.graph.nodes)
     edges = list(itertools.product(pattern_nodes, third_nodes))
-    pattern.join_patterns(third_pattern, edges)
+    pattern.join_patterns(TestPattern.third_pattern, edges)
 
     ref_graph = nx.DiGraph()
     ref_graph.add_node('1', type='a')
@@ -54,23 +43,11 @@ def test_ops_combination_patterns():
 
 
 def test_no_matches():
-    first_type = ['a', 'b']
-    second_type = ['c', 'd']
-    third_type = ['e']
-
-    first_pattern = GraphPattern()
-    first_pattern.add_node(label='first', type=first_type)
-    second_pattern = GraphPattern()
-    second_pattern.add_node(label='second', type=second_type)
-    third_pattern = GraphPattern()
-    third_pattern.add_node(label='third', type=third_type)
-
-    # pattern = (first_pattern + second_pattern + third_pattern) * third_pattern
-    pattern = (first_pattern + second_pattern + third_pattern)
+    pattern = (TestPattern.first_pattern + TestPattern.second_pattern + TestPattern.third_pattern)
     pattern_nodes = list(pattern.graph.nodes)
-    third_nodes = list(third_pattern.graph.nodes)
+    third_nodes = list(TestPattern.third_pattern.graph.nodes)
     edges = list(itertools.product(pattern_nodes, third_nodes))
-    pattern.join_patterns(third_pattern, edges)
+    pattern.join_patterns(TestPattern.third_pattern, edges)
 
     ref_graph = nx.DiGraph()
     ref_graph.add_node('1', type='a')
@@ -84,15 +61,7 @@ def test_no_matches():
 
 
 def test_two_matches():
-    first_type = ['a', 'b']
-    second_type = ['c', 'd']
-
-    first_pattern = GraphPattern()
-    first_pattern.add_node(label='first', type=first_type)
-    second_pattern = GraphPattern()
-    second_pattern.add_node(label='second', type=second_type)
-
-    pattern = first_pattern + second_pattern
+    pattern = TestPattern.first_pattern + TestPattern.second_pattern
 
     ref_graph = nx.DiGraph()
     ref_graph.add_node('1', type='a')

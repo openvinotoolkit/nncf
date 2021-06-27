@@ -27,7 +27,6 @@ from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.utils import is_main_process
 from nncf.torch.utils import is_dist_avail_and_initialized
 from nncf.torch.algo_selector import COMPRESSION_ALGORITHMS
-from nncf.torch.graph.patterns import QUANTIZATION_IGNORE_PATTERNS
 
 from nncf.common.utils.logger import logger
 
@@ -135,9 +134,6 @@ def create_compressed_model(model: Module, config: NNCFConfig,
         if dump_graphs and is_main_process():
             compressed_model_graph = compressed_model.get_graph()
             compressed_model_graph.visualize_graph(osp.join(config.get("log_dir", "."), "compressed_graph.dot"))
-            QUANTIZATION_IGNORE_PATTERNS.visualize_all_matching_pattern(
-                osp.join(config.get("log_dir", "."), "full_pattern.dot"))
-            QUANTIZATION_IGNORE_PATTERNS.visualize_all_patterns(osp.join(config.get("log_dir", "."), "patterns"))
 
     # Synchronize all processes if run in distributed mode
     if is_dist_avail_and_initialized():

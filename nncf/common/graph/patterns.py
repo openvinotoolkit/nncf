@@ -23,25 +23,42 @@ import networkx as nx
 import networkx.algorithms.isomorphism as ism
 
 
-class QuantizationIgnorePatterns:
+class HWFusedPatterns:
+    """
+    Stores all layer patterns to be fused determined by hardware specific.
+    This essence is used in the quantization algorithm.
+    The operations in these patterns should be considered as a single
+    during the quantization algorithm.
+    """
+
     def __init__(self):
         self._patterns_dict = dict()
-        self.full_pattern_graph = GraphPattern()
+        self._full_pattern_graph = GraphPattern()
 
     def register(self, pattern: 'GraphPattern', name: str, match: bool = True) -> None:
+        """
+        Registers new pattern.
+
+        :param pattern: pattern to be added
+        :param name: name associated with the pattern
+        :param match: whether should the pattern used as fussing pattern
+        """
         if name in self._patterns_dict:
             raise KeyError('{} is already registered'.format(name))
         self._patterns_dict[name] = pattern
         if match:
-            self.full_pattern_graph.add_pattern_alternative(pattern)
+            self._full_pattern_graph.add_pattern_alternative(pattern)
 
     def get_full_pattern_graph(self) -> 'GraphPattern':
-        return self.full_pattern_graph
+        return self._full_pattern_graph
 
-    def visualize_all_matching_pattern(self, path: str) -> None:
-        self.full_pattern_graph.dump_graph(path)
+    def visualize_full_pattern_graph(self, path: str) -> None:
+        self._full_pattern_graph.dump_graph(path)
 
     def visualize_all_patterns(self, dir_path: str) -> None:
+        """
+        Dump graphs of all registered patterns to dir_path
+        """
         for patten_name, pattern in self._patterns_dict.items():
             pattern.dump_graph(os.path.join(dir_path, patten_name + '.dot'))
 
@@ -49,42 +66,18 @@ class QuantizationIgnorePatterns:
         self._patterns_dict[pattern_name].dump_graph(os.path.join(path))
 
 
-def _merge_two_patterns_alternative_to_this(first_pattern: 'GraphPattern', other_pattern: 'GraphPattern'):
-    first_pattern_graph = first_pattern.graph
-    other_graph = other_pattern.graph
-    node_mapping = {}
-    for node in other_graph.nodes:
-        node_mapping[node] = first_pattern.node_counter
-        first_pattern.node_counter += 1
-    other_graph_copy = nx.relabel_nodes(other_graph, node_mapping, copy=True)
-    return nx.union(first_pattern_graph, other_graph_copy)
-
-
-def create_copy_of_subgraph(pattern: 'GraphPattern', subgraph: nx.DiGraph) -> nx.DiGraph:
-    mapping = {}
-    for node in subgraph.nodes:
-        new_node = pattern.node_counter
-        mapping[node] = new_node
-        pattern.node_counter += 1
-    return nx.relabel_nodes(subgraph, mapping, copy=True)
-
-
 class GraphPattern:
     """
-    Describes layer patterns in model's graph that should be considered as a single node
-    during quantizer arrangement search algorithm
+    Describes layer patterns in model's graph.
+    This class is used in quantizer arrangement search algorithm, representing layer fusing patterns
 
-    :param _graph: Graph contains layer pattern/patterns
+    :param PATTERN_INPUT_NODE_TYPE: Special node type possible pattern input
     """
     PATTERN_INPUT_NODE_TYPE = 'INPUT_NODE'
 
     def __init__(self):
-        """
-        :param types: List or single string of backend operations names
-         that should be considered as one single node
-        """
         self._graph = nx.DiGraph()
-        self.node_counter = 0
+        self._node_counter = 0
 
     def __add__(self, other: 'GraphPattern') -> 'GraphPattern':
         """
@@ -95,36 +88,13 @@ class GraphPattern:
 
         For more complex cases that are not covered by this function, use `join_patterns()`.
 
-        :param other: GraphPattern that will be added
+        :param other: GraphPattern that will be added.
+        :return: resulted GraphPattern.
         """
 
-        def _add_second_subgraph_to_first_with_connected_edge(first_graph: nx.DiGraph,
-                                                              second_graph: nx.DiGraph) -> nx.DiGraph:
-
-            union_graph = nx.union(first_graph, second_graph)
-
-            first_graph_nodes = list(nx.lexicographical_topological_sort(first_graph, key=int))
-            last_node_first_graph = first_graph_nodes[-1]
-            assert first_graph.out_degree(last_node_first_graph) == 0
-            second_nodes = list(nx.lexicographical_topological_sort(second_graph, key=int))
-            first_node_second_graph = second_nodes[0]
-            assert second_graph.in_degree(first_node_second_graph) == 0
-            # Special case whtn first node is PATTERN_INPUT_NODE_TYPE
-            if second_graph.nodes[first_node_second_graph]['type'][0] == GraphPattern.PATTERN_INPUT_NODE_TYPE:
-                successors = union_graph.successors(first_node_second_graph)
-                new_edges = list(it.product([last_node_first_graph], successors))
-                union_graph.add_edges_from(new_edges)
-                union_graph.remove_node(first_node_second_graph)
-            else:
-                union_graph.add_edge(last_node_first_graph, first_node_second_graph)
-            return union_graph
-
-        # final_pattern = GraphPattern(self.name + '+' + other.name)
         final_pattern = GraphPattern()
-        weakly_self_components = self.get_weakly_connected_subgraphs()
-        weakly_other_components = other.get_weakly_connected_subgraphs()
-        for self_subgraph in weakly_self_components:
-            for other_subgraph in weakly_other_components:
+        for self_subgraph in self.get_weakly_connected_subgraphs():
+            for other_subgraph in other.get_weakly_connected_subgraphs():
                 # As this operation should output all graph combinations
                 # It is essential to create copies of subgraphs and
                 # add merge all possible connections
@@ -134,10 +104,9 @@ class GraphPattern:
                 # A + B ---->   |       |      |        |
                 #              (c)     (d)  (c_copy) (d_copy)
                 #
-                subgraph_copy = create_copy_of_subgraph(final_pattern, self_subgraph)
-                other_subgraph_copy = create_copy_of_subgraph(final_pattern, other_subgraph)
-                subgraph_copy = _add_second_subgraph_to_first_with_connected_edge(subgraph_copy, other_subgraph_copy)
-                final_pattern.graph = nx.union(final_pattern.graph, subgraph_copy)
+                subgraph_copy = final_pattern._unite_with_copy_of_graph(self_subgraph)
+                other_subgraph_copy = final_pattern._unite_with_copy_of_graph(other_subgraph)
+                final_pattern._add_edge_connected_subgraphs(subgraph_copy, other_subgraph_copy)
 
         return final_pattern
 
@@ -147,89 +116,116 @@ class GraphPattern:
         It is a syntax sugar of 'add_pattern_alternative()'
 
         :param other: GraphPattern that will be added
+        :return: resulted GraphPattern.
         """
         new_pattern = copy.deepcopy(self)
-        new_pattern.graph = _merge_two_patterns_alternative_to_this(new_pattern, other)
+        new_pattern._unite_with_copy_of_graph(other.graph)
         return new_pattern
 
     def __eq__(self, other: 'GraphPattern') -> bool:
-        return ism.is_isomorphic(self.graph, other.graph)
+        return ism.is_isomorphic(self._graph, other.graph)
 
     @property
     def graph(self) -> nx.DiGraph:
         return self._graph
 
-    @graph.setter
-    def graph(self, graph: nx.DiGraph):
-        self._graph = graph
+    def _unite_with_copy_of_graph(self, graph: nx.DiGraph) -> nx.DiGraph:
+        """
+        Creates a copy of 'graph', relabels node names according to self.node_counter
+        and then unites relabeled graph with graph of 'self'.
+
+        :param graph: graph, with which, self's graph will be united.
+        :return: resulted graph.
+        """
+        mapping = {}
+        for node in graph.nodes:
+            new_node = self._node_counter
+            mapping[node] = new_node
+            self._node_counter += 1
+        other_graph_copy = nx.relabel_nodes(graph, mapping, copy=True)
+        self._graph = nx.union(self._graph, other_graph_copy)
+        return other_graph_copy
+
+    def _add_edge_connected_subgraphs(self,
+                                      first_graph: nx.DiGraph,
+                                      second_graph: nx.DiGraph) -> None:
+        """
+        Adds an edge between last node of 'first_graph' and first node of 'second_graph',
+        which are found by nx.lexicographical_topological_sort().
+
+        :param first_graph: the graph which will be traversed the first in the united graph.
+        :param second_graph: the graph which will be traversed the second in the united graph.
+        """
+        self_graph = self._graph
+        last_node_first_graph = list(nx.lexicographical_topological_sort(first_graph, key=int))[-1]
+        assert first_graph.out_degree(last_node_first_graph) == 0
+        first_node_second_graph = list(nx.lexicographical_topological_sort(second_graph, key=int))[0]
+        assert second_graph.in_degree(first_node_second_graph) == 0
+
+        # Special case when first node is PATTERN_INPUT_NODE_TYPE
+        if second_graph.nodes[first_node_second_graph]['type'][0] == GraphPattern.PATTERN_INPUT_NODE_TYPE:
+            successors = self_graph.successors(first_node_second_graph)
+            new_edges = list(it.product([last_node_first_graph], successors))
+            self_graph.add_edges_from(new_edges)
+            self_graph.remove_node(first_node_second_graph)
+        else:
+            self_graph.add_edge(last_node_first_graph, first_node_second_graph)
 
     def add_pattern_alternative(self, other: 'GraphPattern') -> None:
         """
-        Add 'other' pattern as a connected weakly component to 'self' pattern.
+        Adds 'other' pattern as a weakly connected component to 'self' pattern.
 
         :param other: GraphPattern that will be added
         """
-        self.graph = _merge_two_patterns_alternative_to_this(self, other)
+        self._unite_with_copy_of_graph(other.graph)
 
     def join_patterns(self, other: 'GraphPattern',
                       edges: Optional[List[Tuple[Hashable, Hashable]]] = None) -> None:
         """
-        Add 'other' pattern to 'self' pattern and connect nodes from self to other determined by 'edges'.
-        If edges is None, add edge between
-        last node of self's graph and first node of other's graph.
+        Adds 'other' pattern to 'self' pattern and connect nodes from self to other specified by 'edges'.
 
-        The first and last nodes are found by nx.lexicographical_topological_sort().
+        If edges is None, adds an edge between
+        last node of self's graph and first node of other's graph,
+        which are found by nx.lexicographical_topological_sort().
 
         :param other: GraphPattern that will be added
         :param edges: List of edges between self and other graphs.
             Edges must begin at self and finish at other.
         """
-        self_graph = self.graph
+        # Unite nodes
         other_graph = other.graph
         node_mapping = {}
         for node in other_graph.nodes:
-            node_mapping[node] = self.node_counter
-            self.node_counter += 1
+            node_mapping[node] = self._node_counter
+            self._node_counter += 1
         other_graph_copy = nx.relabel_nodes(other.graph, node_mapping, copy=True)
 
-        if edges is not None:
-            new_edges = []
+        saved_graph = copy.deepcopy(self._graph)
+        self._graph = nx.union(saved_graph, other_graph_copy)
+
+        # Add edge/edges
+        if edges is None:
+            self._add_edge_connected_subgraphs(saved_graph, other_graph_copy)
+        else:
+            remapped_edges = []
             for edge in edges:
                 new_edge = (edge[0], node_mapping[edge[1]])
-                new_edges.append(new_edge)
-
-        union_graph = nx.union(self.graph, other_graph_copy)
-
-        if edges is None:
-            last_node_self = list(nx.lexicographical_topological_sort(self_graph, key=int))[-1]
-            assert self_graph.out_degree(last_node_self) == 0
-            first_node_other = list(nx.lexicographical_topological_sort(other_graph_copy, key=int))[0]
-            assert other_graph_copy.in_degree(first_node_other) == 0
-            # Special case with first node is PATTERN_INPUT_NODE_TYPE
-            if other_graph_copy.nodes[first_node_other]['type'][0] == GraphPattern.PATTERN_INPUT_NODE_TYPE:
-                successors = union_graph.successors(first_node_other)
-                new_edges = list(it.product([last_node_self], successors))
-                union_graph.add_edges_from(new_edges)
-                union_graph.remove_node(first_node_other)
-            else:
-                union_graph.add_edge(last_node_self, first_node_other)
-        else:
-            union_graph.add_edges_from(new_edges)
-        self._graph = union_graph
+                remapped_edges.append(new_edge)
+            self._graph.add_edges_from(remapped_edges)
 
     def add_node(self, **attrs) -> int:
         if 'type' in attrs:
             if not isinstance(attrs['type'], list):
                 attrs['type'] = [attrs['type']]
-        self.graph.add_node(self.node_counter, **attrs)
-        self.node_counter += 1
-        return self.node_counter - 1
+        self._graph.add_node(self._node_counter, **attrs)
+        self._node_counter += 1
+        return self._node_counter - 1
 
     def add_edge(self, u_name, v_name) -> None:
-        self.graph.add_edge(u_name, v_name)
+        self._graph.add_edge(u_name, v_name)
 
     def get_weakly_connected_subgraphs(self) -> List[nx.DiGraph]:
-        return [self.graph.subgraph(c) for c in nx.weakly_connected_components(self.graph)]
+        return [self._graph.subgraph(c) for c in nx.weakly_connected_components(self._graph)]
 
     def dump_graph(self, path: str) -> None:
-        nx.drawing.nx_pydot.write_dot(self.graph, path)
+        nx.drawing.nx_pydot.write_dot(self._graph, path)
