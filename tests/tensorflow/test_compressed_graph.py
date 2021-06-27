@@ -173,7 +173,8 @@ SKIP_MAP = {
         'inception_resnet_v2': pytest.mark.skip(reason='gitlab issue #17'),
         'nasnet_mobile': pytest.mark.skip(reason='gitlab issue #18'),
         'mobilenet_v2_slim': pytest.mark.skip(reason='ticket #46349'),
-        'xception': pytest.mark.skip(reason='gitlab issue #28')
+        'xception': pytest.mark.skip(reason='gitlab issue #28'),
+        'mask_rcnn': pytest.mark.skip(reason='ticket #58759')
     },
     'magnitude_sparsity': {
         'inception_resnet_v2': pytest.mark.skip(reason='gitlab issue #17'),
@@ -431,8 +432,7 @@ class TestModelsGraph:
             else:
                 config["compression"]["activations"] = {"ignored_scopes": desc.ignored_scopes}
 
-        with nncf_debug():
-            compressed_model, _ = create_compressed_model_and_algo_for_test(model, config, force_no_init=True)
+        compressed_model, _ = create_compressed_model_and_algo_for_test(model, config, force_no_init=True)
 
         check_model_graph(compressed_model, desc.ref_graph_filename, _quantization_case_config.graph_dir,
                           desc.rename_resource_nodes)

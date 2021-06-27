@@ -12,6 +12,7 @@
  limitations under the License.
 """
 import random
+from collections import Counter
 from collections import namedtuple
 from itertools import permutations
 from typing import Dict
@@ -30,7 +31,18 @@ from nncf.common.graph import OUTPUT_NOOP_METATYPES
 from nncf.common.graph import NNCFNodeName
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.transformations.commands import TargetType
+from nncf.common.insertion_point_graph import InsertionPointGraph
+from nncf.common.quantization.quantizer_propagation.graph import QuantizerPropagationStateGraph as QPSG
+from nncf.common.quantization.quantizer_propagation.solver import PropagationStrategy
+from nncf.common.quantization.quantizer_propagation.solver import QuantizerPropagationSolver
+from nncf.common.quantization.quantizer_propagation.solver import TransitionStatus
+from nncf.common.quantization.quantizer_propagation.structs import PropagatingQuantizer
+from nncf.common.quantization.quantizer_propagation.structs import PropagationPath
+from nncf.common.quantization.quantizer_propagation.structs import QuantizationTrait
+from nncf.common.quantization.quantizer_propagation.structs import QuantizerPropagationStateGraphNodeType
 from nncf.common.quantization.quantizer_setup import ActivationQuantizationInsertionPoint
+from nncf.common.quantization.quantizer_setup import MultiConfigQuantizationPoint
+from nncf.common.quantization.quantizer_setup import QuantizationPointId
 from nncf.common.quantization.quantizer_setup import WeightQuantizationInsertionPoint
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
@@ -40,16 +52,7 @@ from nncf.torch.dynamic_graph.scope import Scope
 from nncf.torch.dynamic_graph.wrappers import OP_NAMES_REQUIRING_MODULE_ATTRS
 from nncf.torch.graph.graph import NNCFGraph
 from nncf.torch.graph.operator_metatypes import get_operator_metatypes
-from nncf.common.insertion_point_graph import InsertionPointGraph
-from nncf.common.quantization.quantizer_propagation.structs import PropagatingQuantizer
-from nncf.common.quantization.quantizer_propagation.solver import PropagationStrategy
-from nncf.common.quantization.quantizer_propagation.structs import QuantizationTrait
-from nncf.common.quantization.quantizer_propagation.solver import QuantizerPropagationSolver
-from nncf.common.quantization.quantizer_propagation.graph import QuantizerPropagationStateGraph as QPSG
-from nncf.common.quantization.quantizer_propagation.structs import QuantizerPropagationStateGraphNodeType
-from nncf.common.quantization.quantizer_propagation.solver import TransitionStatus
-from nncf.common.quantization.quantizer_setup import MultiConfigQuantizationPoint
-from nncf.common.quantization.quantizer_setup import QuantizationPointId
+from nncf.torch.quantization.default_quantization import get_default_quant_traits_to_metatypes_map
 from nncf.torch.quantization.default_quantization import DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT
 from tests.torch.quantization.test_quantizer_propagation_graph import get_edge_paths_for_propagation
 from tests.torch.test_nncf_network import get_ip_graph_for_test
@@ -278,7 +281,6 @@ class TestQuantizerPropagationSolver:
         mock_graph = get_sequentially_connected_model_graph(node_keys)
         nncf_graph = get_nncf_graph_from_mock_nx_graph(mock_graph)
         ip_graph = get_ip_graph_for_test(nncf_graph)
-
 
         qp_graph = QPSG(ip_graph)
         quant_prop_solver = QuantizerPropagationSolver(default_trait_to_metatype_map=DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT,
@@ -1676,3 +1678,142 @@ class TestQuantizerPropagationSolver:
 
         assert len(quant_prop_solver.get_active_propagating_quantizers_queue()) == expected_count_active_quant
         assert len(quant_prop_solver.get_finished_propagating_quantizers()) == expected_count_finished_quant
+
+
+    @pytest.fixture()
+    def ip_graph_with_int_edges(self):
+        mock_graph = nx.DiGraph()
+
+        # Double edges stand for integer data flows
+        #        (0 /O_0)  <-- treating this as an auxiliary "input" node
+        #          ||
+        #        (1 /A_0)
+        #           |
+        #        (2 /B_0)
+        #       //    \
+        #    (3 /C_0) (4 /D_0)
+        #       \\    /
+        #        (5 /E_0)
+        #          |
+        #        (6 /F_0)
+
+        node_keys = ['O', 'A', 'B', 'C', 'D', 'E', 'F']
+        for node_key in node_keys:
+            mock_node_attrs = get_mock_nncf_node_attrs(op_name=node_key)
+            mock_graph.add_node(node_key, **mock_node_attrs)
+
+        mock_graph.add_edges_from([('O', 'A'),
+                                   ('A', 'B'), ('B', 'C'), ('B', 'D'), ('C', 'E'), ('D', 'E'),
+                                   ('E', 'F')])
+
+        for edge in [('O', 'A'), ('B', 'C'), ('C', 'E')]:
+            mock_graph.edges[edge][NNCFGraph.DTYPE_EDGE_ATTR] = Dtype.INTEGER
+
+        mark_input_ports_lexicographically_based_on_input_node_key(mock_graph)
+        nncf_graph = get_nncf_graph_from_mock_nx_graph(mock_graph)
+        ip_graph = get_ip_graph_for_test(nncf_graph)
+        return ip_graph
+
+    class IntEdgePropagationTestStruct:
+        def __init__(self, initial_node_name: str,
+                     target_node_name: Optional[str],
+                     path_to_propagate: PropagationPath,
+                     expected_status: TransitionStatus):
+            self.initial_node_name = initial_node_name
+            self.target_node_name = target_node_name
+            self.path_to_propagate = path_to_propagate
+            self.expected_status = expected_status
+
+    INT_EDGE_PROPAGATION_CASES = [
+        IntEdgePropagationTestStruct(
+            initial_node_name="2 /B_0",
+            target_node_name=InsertionPointGraph.get_post_hook_node_key("1 /A_0"),
+            path_to_propagate=[
+                (InsertionPointGraph.get_pre_hook_node_key("1 /A_0", in_port_id=0), "1 /A_0"),
+                ("1 /A_0", InsertionPointGraph.get_post_hook_node_key("1 /A_0"))
+            ],
+            expected_status=TransitionStatus.SHOULD_NOT_TRANSITION
+        ),
+
+        IntEdgePropagationTestStruct(
+            initial_node_name="6 /F_0",
+            target_node_name=InsertionPointGraph.get_post_hook_node_key("5 /E_0"),
+            path_to_propagate=[
+                (InsertionPointGraph.get_pre_hook_node_key("5 /E_0", in_port_id=0), "5 /E_0"),
+                ("5 /E_0", InsertionPointGraph.get_post_hook_node_key("5 /E_0"))
+            ],
+            expected_status=TransitionStatus.SHOULD_NOT_TRANSITION
+        ),
+
+        IntEdgePropagationTestStruct(
+            initial_node_name="6 /F_0",
+            target_node_name=InsertionPointGraph.get_post_hook_node_key("5 /E_0"),
+            path_to_propagate=[
+                (InsertionPointGraph.get_pre_hook_node_key("5 /E_0", in_port_id=1), "5 /E_0"),
+                ("5 /E_0", InsertionPointGraph.get_post_hook_node_key("5 /E_0"))
+            ],
+            expected_status=TransitionStatus.SHOULD_TRANSITION
+        ),
+
+        # In this case trying to transition to a post-hook of an op that has both integer
+        # and float outputs; since separate output port handling is currently not supported,
+        # prohibit the transition so that the quantizers stays at the safe floating point tensor
+        # edge.
+        IntEdgePropagationTestStruct(
+            initial_node_name="4 /D_0",
+            target_node_name=None,
+            path_to_propagate=[
+                (InsertionPointGraph.get_post_hook_node_key("2 /B_0"),
+                 InsertionPointGraph.get_pre_hook_node_key("4 /D_0", in_port_id=0)),
+            ],
+            expected_status=TransitionStatus.SHOULD_NOT_TRANSITION
+        )
+    ]
+
+    @pytest.fixture(params=INT_EDGE_PROPAGATION_CASES)
+    def int_prop_test_struct(self, request):
+        return request.param
+
+    def test_quantizers_are_not_propagated_through_integer_paths(self,
+                                                                 ip_graph_with_int_edges: InsertionPointGraph,
+                                                                 int_prop_test_struct: IntEdgePropagationTestStruct):
+        quant_prop_solver = QuantizerPropagationSolver()
+        prep_data_dict = {
+            int_prop_test_struct.initial_node_name: (QuantizationTrait.INPUTS_QUANTIZABLE,
+                                                     [QuantizerConfig()],
+                                                     int_prop_test_struct.target_node_name)
+        }
+
+        prop_quantizers, quant_prop_graph = self.prepare_propagation_graph_state(ip_graph_with_int_edges,
+                                                                                 prep_data_dict)
+        assert len(prop_quantizers) == 1
+        pq = next(iter(prop_quantizers))
+        quant_prop_graph.run_consistency_check()
+        status = quant_prop_solver.check_transition_via_path(pq, int_prop_test_struct.path_to_propagate,
+                                                             quant_prop_graph)
+        assert status == int_prop_test_struct.expected_status
+
+    def test_quantizers_are_not_set_up_for_integer_inputs(self, ip_graph_with_int_edges):
+        quant_prop_solver = QuantizerPropagationSolver()
+        quant_prop_graph = QPSG(ip_graph_with_int_edges)
+        for node in quant_prop_graph.nodes.values():
+            node[QPSG.QUANTIZATION_TRAIT_NODE_ATTR] = QuantizationTrait.QUANTIZATION_AGNOSTIC
+
+        quantizable_op_node_keys = ["1 /A_0", "4 /D_0", "5 /E_0"]
+        for node_key in quantizable_op_node_keys:
+            quant_prop_graph.nodes[node_key][QPSG.QUANTIZATION_TRAIT_NODE_ATTR] = QuantizationTrait.INPUTS_QUANTIZABLE
+        quant_prop_graph.run_consistency_check()
+
+        _ = quant_prop_solver.setup_initial_quantizers(quant_prop_graph)
+        all_pqs = list(quant_prop_solver.get_active_propagating_quantizers_queue())
+
+        # Set for the single-flop input op and for one of the two inputs of the double-input op, not set for the
+        # single-input int op
+        assert len(all_pqs) == 2
+        affected_op_nodes = [pq.affected_operator_nodes for pq in all_pqs]
+        assert all([len(node_key_list) == 1 for node_key_list in affected_op_nodes])
+        affected_op_node_per_pq = [next(iter(node_key_list)) for node_key_list in affected_op_nodes]
+        assert Counter(["4 /D_0", "5 /E_0"]) == Counter(affected_op_node_per_pq)
+        double_input_pq = all_pqs[affected_op_node_per_pq.index("5 /E_0")]
+        assert double_input_pq.current_location_node_key == InsertionPointGraph.get_pre_hook_node_key("5 /E_0",
+                                                                                                      in_port_id=1)

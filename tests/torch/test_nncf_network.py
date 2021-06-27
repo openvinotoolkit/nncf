@@ -401,10 +401,15 @@ def get_nncf_graph_from_mock_nx_graph(nx_graph: nx.DiGraph) -> PTNNCFGraph:
         for pred_idx, pred in enumerate(preds):
             in_edge = (pred, curr_node_key)
             out_idx, creator_id = edge_vs_output_idx_and_creator_id[in_edge]
+            edge_data = nx_graph.edges[in_edge]
+            if NNCFGraph.DTYPE_EDGE_ATTR in edge_data:
+                dtype = edge_data[NNCFGraph.DTYPE_EDGE_ATTR]
+            else:
+                dtype = Dtype.FLOAT
             mock_graph.add_edge_between_nncf_nodes(creator_id, node_id,
                                                    [1, 1, 1, 1], input_port_id=pred_idx,
                                                    output_port_id=out_idx,
-                                                   dtype=Dtype.FLOAT)
+                                                   dtype=dtype)
 
         for out_idx, out_edge in enumerate(nx_graph.out_edges(curr_node_key)):
             edge_vs_output_idx_and_creator_id[out_edge] = (out_idx, node.node_id)

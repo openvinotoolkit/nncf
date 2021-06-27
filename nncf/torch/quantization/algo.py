@@ -49,7 +49,6 @@ from nncf.common.hardware.config import HW_CONFIG_TYPE_TARGET_DEVICE_MAP
 from nncf.common.initialization.batchnorm_adaptation import BatchnormAdaptationAlgorithm
 from nncf.common.insertion_point_graph import InsertionPointGraph
 from nncf.common.insertion_point_graph import InsertionPointGraphNodeType
-from nncf.common.quantization.quantizer_propagation.solver import QuantizerPropagationSolver
 from nncf.common.quantization.quantizer_setup import MultiConfigQuantizerSetup
 from nncf.common.quantization.quantizer_setup import QuantizationPointId
 from nncf.common.quantization.quantizer_setup import QuantizerSetupBase
@@ -346,6 +345,7 @@ class PropagationBasedQuantizerSetupGenerator(QuantizerSetupGeneratorBase):
         insertion_point_graph = self._target_model.get_insertion_point_graph()
         if self._debug_interface:
             self._debug_interface.visualize_insertion_point_graph(insertion_point_graph)
+        from nncf.common.quantization.quantizer_propagation.solver import QuantizerPropagationSolver
         prop_graph_solver = QuantizerPropagationSolver(ignored_scopes=self.ignored_scopes,
                                                        target_scopes=self.target_scopes,
                                                        hw_config=self.hw_config,

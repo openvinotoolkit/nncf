@@ -149,6 +149,8 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
 
         for from_node, to_node, edge_data in ip_graph.edges(data=True):
             edge_data[self.AFFECTING_PROPAGATING_QUANTIZERS_ATTR] = []
+            is_integer = edge_data.pop(InsertionPointGraph.IS_INTEGER_PATH_EDGE_ATTR)
+            edge_data[self.IS_INTEGER_PATH_EDGE_ATTR] = is_integer
             self.add_edge(from_node, to_node, **edge_data)
 
         for barred_node_key in self.ignored_node_keys + iteration_scope_node_keys:
@@ -789,6 +791,8 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
                 label = ", ".join([str(pq.id) for pq in affecting_quantizers])
                 attrs = {"color": "blue", "label": label}
             is_integer_path = edge[QuantizerPropagationStateGraph.IS_INTEGER_PATH_EDGE_ATTR]
+            if is_integer_path:
+                attrs = {"color": "violet", "style": "bold"}
             out_graph.add_edge(u, v, **attrs)
 
         for gid, group_pq_node_keys in unified_scale_group_vs_pq_node_id_dict.items():

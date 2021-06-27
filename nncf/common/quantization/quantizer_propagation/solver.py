@@ -724,7 +724,9 @@ class QuantizerPropagationSolver:
                                                       next_id_str,
                                                       finished_ids_str),
             "labelloc": "t"}
-        nx.drawing.nx_pydot.write_dot(out_graph, dump_path)
+        pth = deepcopy(dump_path)
+        nx.drawing.nx_pydot.write_dot(out_graph, pth)
+
 
     def setup_initial_quantizers(self,
                                  quant_prop_graph: QuantizerPropagationStateGraph) -> QuantizerPropagationStateGraph:
@@ -928,7 +930,13 @@ class QuantizerPropagationSolver:
             assert QuantizerPropagationStateGraph.is_insertion_point(pred_node_type), \
                 "Invalid insertion point graph supplied for quantizer propagation!"
 
-            pred_ip_key_vs_qconf_dict[pred_ip_key] = qconf_list
+            edge = quant_prop_graph.edges[pred_ip_key, operator_node_key]
+            if not edge[QuantizerPropagationStateGraph.IS_INTEGER_PATH_EDGE_ATTR]:
+                pred_ip_key_vs_qconf_dict[pred_ip_key] = qconf_list
+
+        if not pred_ip_key_vs_qconf_dict:
+            # All inputs to the operator were integer
+            return
 
         # Cloning a single propagating quantizer onto all node inputs - revise if separate
         # quantizer configuration for different inputs is required
@@ -1068,8 +1076,12 @@ class QuantizerPropagationSolver:
                              QuantizationTrait.INPUTS_QUANTIZABLE]:
                     return TransitionStatus.SHOULD_NOT_TRANSITION
 
-            # Check if current edge to traverse is affected by any of the quantizers
             edge = quant_prop_graph.edges[from_node_key, to_node_key]
+            # Check if current edge to traverse corresponds to integer-valued tensors such as indices
+            if edge[QuantizerPropagationStateGraph.IS_INTEGER_PATH_EDGE_ATTR]:
+                return TransitionStatus.SHOULD_NOT_TRANSITION
+
+            # Check if current edge to traverse is affected by any of the quantizers
             potential_quantizers = edge[QuantizerPropagationStateGraph.AFFECTING_PROPAGATING_QUANTIZERS_ATTR]
             if potential_quantizers:
                 sts = self._check_for_affecting_quantizer_conflicts(prop_quantizer,

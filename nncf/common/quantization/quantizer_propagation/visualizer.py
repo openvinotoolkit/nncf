@@ -30,4 +30,4 @@ class QuantizerPropagationVisualizer:
         self.dump_dir.mkdir(parents=True, exist_ok=True)
         fname = "quant_prop_iter_{}.dot".format(iteration)
         prop_solver.debug_visualize(prop_graph,
-                                    self.dump_dir / Path(fname))
+                                    str(self.dump_dir / Path(fname)))
