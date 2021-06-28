@@ -68,7 +68,7 @@ To export a model to OpenVINO IR and run it using Intel Deep Learning Deployment
 |UNet|INT8 + Sparsity 60% (Magnitude)|Mapillary|55.65|[unet_mapillary_magnitude_sparsity_int8.json](configs/unet_mapillary_magnitude_sparsity_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/unet_mapillary_magnitude_sparsity_int8.pth)|
 
 #### Results for filter pruning
-|Model|Compression algorithm|Dataset|PyTorch compressed accuracy|GFLOPS|MParams|NNCF config file|PyTorch checkpoint|
+|Model|Compression algorithm|Dataset|Accuracy (Drop) %|GFLOPS|MParams|NNCF config file|PyTorch checkpoint|
 | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
 |UNet|None|Mapillary|56.23|875.0 (100%)|31.0 (100%)|[Link](configs/unet_mapillary.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/unet_mapillary.pth)|
-|UNet|Filter pruning 25%,<br/>geometric median criterion|Mapillary|55.62|589.4 (67.36%)|18.6 (60.00%)|[Link](configs/unet_mapillary_pruning_geometric_median.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/unet_mapillary_pruning_geometric_median.pth)|
+|UNet|Filter pruning 25%,<br/>geometric median criterion|Mapillary|55.62 (-0.61)|589.4 (67.36%)|18.6 (60.00%)|[Link](configs/unet_mapillary_pruning_geometric_median.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/unet_mapillary_pruning_geometric_median.pth)|

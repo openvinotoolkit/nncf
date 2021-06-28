@@ -118,10 +118,10 @@ To export a model to the OpenVINO IR and run it using the Intel® Deep Learning 
 |TensorFlow Hub MobileNet V2|Sparsity 35% (Magnitude)|ImageNet|71.90|[mobilenet_v2_hub_imagenet_magnitude_sparsity.json](configs/sparsity/mobilenet_v2_hub_imagenet_magnitude_sparsity.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/tensorflow/models/develop/tf1_mobilenet_v2_1.0_224_sparsity_35.tar.gz)|
 
 #### Results for filter pruning
-|**Model**|**Compression algorithm**|**Dataset**|**TensorFlow compressed accuracy**|**GFLOPS**|**MParams**|**NNCF config file**|**TensorFlow checkpoint**|
+|**Model**|**Compression algorithm**|**Dataset**|**Accuracy (Drop) %**|**GFLOPS**|**MParams**|**NNCF config file**|**TensorFlow checkpoint**|
 | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
 |ResNet50|None|ImageNet|75.04|7.75 (100%)|25.5 (100%)|-|-|
-|ResNet50|Filter Pruning 40%|ImageNet|74.98|4.29 (55.35%)|15.8 (61.96%)|[Link](configs/pruning/resnet50_imagenet_pruning_geometric_median.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/tensorflow/models/develop/resnet50_pruning_40.tar.gz)|
+|ResNet50|Filter Pruning 40%|ImageNet|74.98 (-0.06)|4.29 (55.35%)|15.8 (61.96%)|[Link](configs/pruning/resnet50_imagenet_pruning_geometric_median.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/tensorflow/models/develop/resnet50_pruning_40.tar.gz)|
 
 #### Results for accuracy-aware compressed training
 

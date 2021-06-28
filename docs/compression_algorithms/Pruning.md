@@ -2,8 +2,8 @@
 
 #### Filter pruning    
 
-Filter pruning algorithm zeros output filters in Convolutional layers based on some filter importance criterion (filters with smaller importance are pruned).
-Not all Convolution layers in the model can be pruned. Such layers are determined by the model architecture.     
+Filter pruning algorithm zeros output filters in Convolutional layers based on some filter importance criterion (filters with smaller importance are pruned).  
+Not all Convolution layers in the model can be pruned. Such layers are determined by the model architecture automatically as well as cross-layer dependencies that impose constraints on pruning filters.   
 The framework contains three filter importance criteria: `L1`, `L2` norm, and `Geometric Median`. Also, different schemes of pruning application are presented by different schedulers.    
 
 #### Filter importance criteria **L1, L2**
