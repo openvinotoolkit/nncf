@@ -44,12 +44,13 @@ CHANNEL_AXIS = -1
 
 class TestStatisticCollectorsWithStatAggregation:
     def check_num_samples(self, collector, num_samples_per_step, step_num, input_type):
+        # pylint: disable=protected-access
         if input_type == InputType.INPUTS:
-            assert len(collector.all_min_values) == num_samples_per_step * step_num
-            assert len(collector.all_max_values) == num_samples_per_step * step_num
+            assert len(collector._all_min_values) == num_samples_per_step * step_num
+            assert len(collector._all_max_values) == num_samples_per_step * step_num
         if input_type == InputType.WEIGHTS:
-            assert len(collector.all_min_values) == 1
-            assert len(collector.all_max_values) == 1
+            assert len(collector._all_min_values) == 1
+            assert len(collector._all_max_values) == 1
 
     def check_stats_per_channel_tf_tensor(self, collector,
                                           input_tensor_min_per_channel,
@@ -65,17 +66,18 @@ class TestStatisticCollectorsWithStatAggregation:
 
     def check_all_min_max_values_shape(self, per_channel, collector, num_samples_per_step_activation,
                                        step_num, input_type):
+        # pylint: disable=protected-access
         if input_type == InputType.INPUTS:
             if per_channel:
-                assert tf.stack(collector.all_min_values).shape == (num_samples_per_step_activation * step_num,
-                                                                    NUM_CHANNELS)
+                assert tf.stack(collector._all_min_values).shape == (num_samples_per_step_activation * step_num,
+                                                                     NUM_CHANNELS)
             if not per_channel:
-                assert tf.stack(collector.all_min_values).shape == (num_samples_per_step_activation * step_num,)
+                assert tf.stack(collector._all_min_values).shape == (num_samples_per_step_activation * step_num,)
         if input_type == InputType.WEIGHTS:
             if per_channel:
-                assert tf.stack(collector.all_min_values).shape == (1, NUM_CHANNELS)
+                assert tf.stack(collector._all_min_values).shape == (1, NUM_CHANNELS)
             if not per_channel:
-                assert tf.stack(collector.all_min_values).shape == (1,)
+                assert tf.stack(collector._all_min_values).shape == (1,)
 
     def run_all_checks(self, collector, input_type, per_channel,
                        input_tensor_min_per_channel=None,
@@ -83,8 +85,9 @@ class TestStatisticCollectorsWithStatAggregation:
                        input_tensor_min=None,
                        input_tensor_max=None):
         # Before first call - no statistics
-        assert collector.all_min_values == []
-        assert collector.all_max_values == []
+        # pylint: disable=protected-access
+        assert collector._all_min_values == []
+        assert collector._all_max_values == []
 
         num_samples_per_step_activation = BATCH_SIZE
         for step_num in [1, 2]:
@@ -230,10 +233,11 @@ class TestStatisticCollectorsWithDataAggregation:
                        input_tensor_max_per_channel=None,
                        input_tensor_min=None,
                        input_tensor_max=None):
+        # pylint: disable=protected-access
         if input_type == InputType.INPUTS:
-            assert len(collector.samples) == step_num
+            assert len(collector._samples) == step_num
         if input_type == InputType.WEIGHTS:
-            assert len(collector.samples) == 1
+            assert len(collector._samples) == 1
 
         if per_channel:
             self.check_stats_per_channel_np(collector,
@@ -260,7 +264,8 @@ class TestStatisticCollectorsWithDataAggregation:
             axis.pop()
 
         # Before first call - no samples
-        assert collector.samples == []
+        # pylint: disable=protected-access
+        assert collector._samples == []
 
         for step_num in [1, 2]:
             collector(INPUT_TENSOR)
@@ -306,7 +311,8 @@ class TestStatisticCollectorsWithDataAggregation:
             axis.pop()
 
         # Before first call - no samples
-        assert collector.samples == []
+        # pylint: disable=protected-access
+        assert collector._samples == []
 
         for step_num in [1, 2]:
             collector(input_tensor)

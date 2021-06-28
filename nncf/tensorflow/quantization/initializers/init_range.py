@@ -1,5 +1,5 @@
 """
- Copyright (c) 2020 Intel Corporation
+ Copyright (c) 2021 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -65,15 +65,15 @@ class TFRangeInitParams(RangeInitParams):
                     matches.append(RangeInitConfig(pl_config.init_type, pl_config.num_init_samples,
                                                    pl_config.init_type_specific_params))
         if len(matches) > 1:
-            raise ValueError("Location {} matches more than one per-layer initialization parameter "
-                             "definition!".format(str(node_name)))
+            raise ValueError('Location {} matches more than one per-layer initialization parameter '
+                             'definition!'.format(str(node_name)))
         if len(matches) == 1:
             return matches[0]
         if not matches and self.global_init_config is not None:
             return deepcopy(self.global_init_config)
 
-        raise ValueError("Location {} does not match any per-layer initialization parameter "
-                         "definition!".format(str(node_name)))
+        raise ValueError('Location {} does not match any per-layer initialization parameter '
+                         'definition!'.format(str(node_name)))
 
 
 class RangeInitializer:
@@ -94,16 +94,16 @@ class RangeInitializer:
         if range_type == 'threesigma':
             return MedianMADStatisticCollector(per_channel, channel_axes, input_type)
         if range_type == 'percentile':
-            min_percentile = init_config.init_type_specific_params.get("min_percentile", 0.1)
-            max_percentile = init_config.init_type_specific_params.get("max_percentile", 99.9)
+            min_percentile = init_config.init_type_specific_params.get('min_percentile', 0.1)
+            max_percentile = init_config.init_type_specific_params.get('max_percentile', 99.9)
             return PercentileStatisticCollector(per_channel, channel_axes, input_type,
                                                 min_percentile, max_percentile)
         if range_type == 'mean_percentile':
-            min_percentile = init_config.init_type_specific_params.get("min_percentile", 0.1)
-            max_percentile = init_config.init_type_specific_params.get("max_percentile", 99.9)
+            min_percentile = init_config.init_type_specific_params.get('min_percentile', 0.1)
+            max_percentile = init_config.init_type_specific_params.get('max_percentile', 99.9)
             return MeanPercentileStatisticCollector(per_channel, channel_axes, input_type,
                                                     min_percentile, max_percentile)
-        raise ValueError('Range type {} is not supported.'.format(range_type))
+        raise ValueError(f'Range type {range_type} is not supported.')
 
     def run(self, model: tf.keras.Model) -> None:
         layer_statistics = []
@@ -114,7 +114,7 @@ class RangeInitializer:
                 channel_axes = get_channel_axis(InputType.INPUTS, '', layer)
                 init_config = self.range_init_params.get_init_config_for_quantization_point(layer, InputType.INPUTS)
                 collector = RangeInitializer.generate_stat_collector(init_config, layer.per_channel,
-                                                         channel_axes, InputType.INPUTS)
+                                                                     channel_axes, InputType.INPUTS)
                 handles.append(layer.register_hook_pre_quantizer(collector))
                 layer.enabled = False
                 layer_statistics.append((layer, collector))
@@ -126,7 +126,7 @@ class RangeInitializer:
                             init_config = self.range_init_params.\
                                 get_init_config_for_quantization_point(layer, InputType.WEIGHTS)
                             collector = RangeInitializer.generate_stat_collector(init_config, op.per_channel,
-                                                                     channel_axes, InputType.WEIGHTS)
+                                                                                 channel_axes, InputType.WEIGHTS)
                             handles.append(op.register_hook_pre_call(collector))
                             op.enabled = False
                             op_statistics.append((layer, op_name, op, collector))
