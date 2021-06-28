@@ -11,6 +11,8 @@
  limitations under the License.
 """
 
+from typing import Tuple, List, Union
+
 import numpy as np
 import tensorflow as tf
 
@@ -25,7 +27,7 @@ class MinMaxStatisticCollector:
     Collector uses min of minimum values and max of maximum values.
     """
 
-    def __init__(self, per_channel: bool, channel_axes: int, input_type: str):
+    def __init__(self, per_channel: bool, channel_axes: Union[int, Tuple[int], List[int]], input_type: str):
         self._per_channel = per_channel
         self._channel_axes = channel_axes if isinstance(channel_axes, (list, tuple)) else [channel_axes]
         self._input_type = input_type
@@ -44,8 +46,8 @@ class MinMaxStatisticCollector:
         if self._per_channel:
             new_shape = np.prod(self._all_min_values[0].shape).item()
             for i, _ in enumerate(self._all_min_values):
-                self._all_min_values[i] = tf.reshape(self._all_min_values[i], shape=(new_shape))
-                self._all_max_values[i] = tf.reshape(self._all_max_values[i], shape=(new_shape))
+                self._all_min_values[i] = tf.reshape(self._all_min_values[i], shape=new_shape)
+                self._all_max_values[i] = tf.reshape(self._all_max_values[i], shape=new_shape)
 
     def call(self, inputs: tf.Tensor):
         # No need to store extra statistics in memory since weights won't change during range init
@@ -70,7 +72,7 @@ class MeanMinMaxStatisticsCollector:
     Collector uses mean of minimum values and mean of maximum values.
     """
 
-    def __init__(self, per_channel: bool, channel_axes: int, input_type: str):
+    def __init__(self, per_channel: bool, channel_axes: Union[int, Tuple[int], List[int]], input_type: str):
         self._per_channel = per_channel
         self._channel_axes = channel_axes if isinstance(channel_axes, (list, tuple)) else [channel_axes]
         self._input_type = input_type
@@ -89,8 +91,8 @@ class MeanMinMaxStatisticsCollector:
         if self._per_channel:
             new_shape = np.prod(self._all_min_values[0].shape).item()
             for i, _ in enumerate(self._all_min_values):
-                self._all_min_values[i] = tf.reshape(self._all_min_values[i], shape=(new_shape))
-                self._all_max_values[i] = tf.reshape(self._all_max_values[i], shape=(new_shape))
+                self._all_min_values[i] = tf.reshape(self._all_min_values[i], shape=new_shape)
+                self._all_max_values[i] = tf.reshape(self._all_max_values[i], shape=new_shape)
 
     def call(self, inputs: tf.Tensor):
         # No need to store extra statistics in memory since weights won't change during range init
@@ -115,7 +117,7 @@ class MedianMADStatisticCollector:
     Collector uses three-sigma approach with the assumption of normal distribution by default.
     """
 
-    def __init__(self, per_channel: bool, channel_axes: int, input_type: str):
+    def __init__(self, per_channel: bool, channel_axes: Union[int, Tuple[int], List[int]], input_type: str):
         self._per_channel = per_channel
         self._channel_axes = channel_axes if isinstance(channel_axes, (list, tuple)) else [channel_axes]
         self._input_type = input_type
@@ -171,7 +173,7 @@ class PercentileStatisticCollector:
     Collector uses percentiles to estimate min and max of all data history.
     """
 
-    def __init__(self, per_channel: bool, channel_axes: int, input_type: str,
+    def __init__(self, per_channel: bool, channel_axes: Union[int, Tuple[int], List[int]], input_type: str,
                  min_percentile: float, max_percentile: float):
         self._per_channel = per_channel
         self._channel_axes = channel_axes if isinstance(channel_axes, (list, tuple)) else [channel_axes]
@@ -226,7 +228,7 @@ class MeanPercentileStatisticCollector:
     and then averages the statistics.
     """
 
-    def __init__(self, per_channel: bool, channel_axes: int, input_type: str,
+    def __init__(self, per_channel: bool, channel_axes: Union[int, Tuple[int], List[int]], input_type: str,
                  min_percentile: float, max_percentile: float):
         self._per_channel = per_channel
         self._channel_axes = channel_axes if isinstance(channel_axes, (list, tuple)) else [channel_axes]
@@ -248,8 +250,8 @@ class MeanPercentileStatisticCollector:
         if self._per_channel:
             new_shape = np.prod(self._all_min_values[0].shape).item()
             for i, _ in enumerate(self._all_min_values):
-                self._all_min_values[i] = tf.reshape(self._all_min_values[i], shape=(new_shape))
-                self._all_max_values[i] = tf.reshape(self._all_max_values[i], shape=(new_shape))
+                self._all_min_values[i] = tf.reshape(self._all_min_values[i], shape=new_shape)
+                self._all_max_values[i] = tf.reshape(self._all_max_values[i], shape=new_shape)
 
     def _percentile(self, inputs: tf.Tensor, pc: float, axis: list):
         return np.percentile(inputs.numpy(), pc, axis)
