@@ -84,6 +84,9 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
         for quantizer_group in QuantizerGroup:
             self._parse_group_params(self.config, quantizer_group)
 
+        if self.should_init:
+            self._parse_init_params()
+
         self._range_initializer = None
         self._bn_adaptation = None
 
@@ -192,8 +195,6 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
         return TFRangeInitParams(**range_init_params) if range_init_params is not None else None
 
     def initialize(self, model: tf.keras.Model) -> None:
-        self._parse_init_params()
-
         if self._range_init_params is not None:
             self._run_range_initialization(model)
 
