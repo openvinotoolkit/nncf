@@ -228,10 +228,10 @@ def run(config):
         'validation_freq': 1,
     }
 
-    statistics = compression_ctrl.statistics()
-    logger.info(statistics.to_str())
-
     if 'train' in config.mode:
+        statistics = compression_ctrl.statistics()
+        logger.info(statistics.to_str())
+
         if is_accuracy_aware_training(config):
             logger.info('starting an accuracy-aware training loop...')
             result_dict_to_val_metric_fn = lambda results: 100 * results['acc@1']
