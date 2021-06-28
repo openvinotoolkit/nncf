@@ -535,8 +535,8 @@ class FilterPruningController(BasePruningAlgoController):
                     weight = self.weights_normalizer(weight)
                 filters_importance = self.filter_importance(weight,
                                                             minfo.module.target_weight_dim_for_compression)
-                scaled_importance = self.ranking_coeffs[minfo.module_scope][0] * filters_importance + \
-                                    self.ranking_coeffs[minfo.module_scope][1]
+                scaled_importance = self.ranking_coeffs[minfo.node_name][0] * filters_importance + \
+                                    self.ranking_coeffs[minfo.node_name][1]
                 cumulative_filters_importance += scaled_importance
 
             filter_importances.append(cumulative_filters_importance)

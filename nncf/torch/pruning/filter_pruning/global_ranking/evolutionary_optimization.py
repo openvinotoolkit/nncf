@@ -194,8 +194,8 @@ class LeGRPruner:
         self.model = model
         self.model_params_copy = None
         self._save_model_weights()
-        self.init_filter_ranks = {minfo.module_scope: self.filter_pruner.filter_importance(minfo.module.weight)
-                                  for minfo in self.filter_pruner.pruned_module_groups_info.get_all_nodes()}
+        self.init_filter_ranks = {node.node_name: self.filter_pruner.filter_importance(node.module.weight)
+                                  for node in self.filter_pruner.pruned_module_groups_info.get_all_nodes()}
 
     def loss(self):
         return self.filter_pruner.loss()
