@@ -144,14 +144,14 @@ To export a model to the OpenVINO IR and run it using the Intel® Deep Learning 
 
 ## Results
 
-|**Model**|**Compression algorithm**|**Dataset**|**TensorFlow mAP, %**|**NNCF config file**|**TensorFlow checkpoint**|
+|**Model**|**Compression algorithm**|**Dataset**|**mAP (drop) %**|**NNCF config file**|**TensorFlow checkpoint**|
 | :---: | :---: | :---: | :---: | :---: | :---: |
 |RetinaNet|None|COCO2017|33.44|[retinanet_coco.json](configs/retinanet_coco.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/tensorflow/models/develop/retinanet.tar.gz)|
-|RetinaNet|INT8 w:sym,per-tensor a:sym,per-tensor |COCO2017|33.22|[retinanet_coco_int8.json](configs/quantization/retinanet_coco_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/tensorflow/models/develop/retinanet_int8_w_sym_t_half_a_sym_t.tar.gz)|
-|RetinaNet|Sparsity 50% (Magnitude)|COCO2017|33.13|[retinanet_coco_magnitude_sparsity.json](configs/sparsity/retinanet_coco_magnitude_sparsity.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/tensorflow/models/develop/retinanet_sparsity_50.tar.gz)|
+|RetinaNet|INT8 w:sym,per-tensor a:sym,per-tensor |COCO2017|33.22 (-0.22)|[retinanet_coco_int8.json](configs/quantization/retinanet_coco_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/tensorflow/models/develop/retinanet_int8_w_sym_t_half_a_sym_t.tar.gz)|
+|RetinaNet|Sparsity 50% (Magnitude)|COCO2017|33.13 (-0.31)|[retinanet_coco_magnitude_sparsity.json](configs/sparsity/retinanet_coco_magnitude_sparsity.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/tensorflow/models/develop/retinanet_sparsity_50.tar.gz)|
 |YOLOv4|None|COCO2017|47.04|[yolo_v4_coco.json](configs/yolo_v4_coco.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/tensorflow/models/develop/yolo_v4.tar.gz)|
-|YOLOv4|INT8 w:sym,per-channel a:asym,per-tensor |COCO2017|46.15|[yolo_v4_coco_int8.json](configs/quantization/yolo_v4_coco_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/tensorflow/models/develop/yolo_v4_int8_w_sym_ch_half_a_asym_t.tar.gz)|
-|YOLOv4|Sparsity 50% (Magnitude)|COCO2017|46.54|[yolo_v4_coco_magnitude_sparsity.json](configs/sparsity/yolo_v4_coco_magnitude_sparsity.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/tensorflow/models/develop/yolo_v4_sparsity_50.tar.gz)|
+|YOLOv4|INT8 w:sym,per-channel a:asym,per-tensor |COCO2017|46.15 (-0.89)|[yolo_v4_coco_int8.json](configs/quantization/yolo_v4_coco_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/tensorflow/models/develop/yolo_v4_int8_w_sym_ch_half_a_asym_t.tar.gz)|
+|YOLOv4|Sparsity 50% (Magnitude)|COCO2017|46.54 (-0.50)|[yolo_v4_coco_magnitude_sparsity.json](configs/sparsity/yolo_v4_coco_magnitude_sparsity.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/tensorflow/models/develop/yolo_v4_sparsity_50.tar.gz)|
 
 #### Results for filter pruning
 |**Model**|**Compression algorithm**|**Dataset**|**mAP (drop) %**|**GFLOPS**|**MParams**|**NNCF config file**|**TensorFlow checkpoint**|

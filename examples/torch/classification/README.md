@@ -64,26 +64,26 @@ To export a model to the OpenVINO IR and run it using the Intel® Deep Learning 
 
 ### Results for quantization
 
-|Model|Compression algorithm|Dataset|PyTorch compressed accuracy|NNCF config file|PyTorch checkpoint|
+|Model|Compression algorithm|Dataset|Accuracy (Drop) %|NNCF config file|PyTorch checkpoint|
 | :---: | :---: | :---: | :---: | :---: | :---: |
 |ResNet-50|None|ImageNet|76.16|[resnet50_imagenet.json](configs/quantization/resnet50_imagenet.json)|-|
-|ResNet-50|INT8|ImageNet|76.42|[resnet50_imagenet_int8.json](configs/quantization/resnet50_imagenet_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/resnet50_imagenet_int8.pth)|
-|ResNet-50|INT8 (per-tensor only)|ImageNet|76.37|[resnet50_imagenet_int8_per_tensor.json](configs/quantization/resnet50_imagenet_int8_per_tensor.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/resnet50_imagenet_int8_per_tensor.pth)|
-|ResNet-50|Mixed, 44.8% INT8 / 55.2% INT4|ImageNet|76.2|[resnet50_imagenet_mixed_int_manual.json](configs/mixed_precision/resnet50_imagenet_mixed_int_manual.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/resnet50_imagenet_int4_int8.pth)|
-|ResNet-50|INT8 + Sparsity 61% (RB)|ImageNet|75.43|[resnet50_imagenet_rb_sparsity_int8.json](configs/sparsity_quantization/resnet50_imagenet_rb_sparsity_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/resnet50_imagenet_rb_sparsity_int8.pth)|
-|ResNet-50|INT8 + Sparsity 50% (RB)|ImageNet|75.55|[resnet50_imagenet_rb_sparsity50_int8.json](configs/sparsity_quantization/resnet50_imagenet_rb_sparsity50_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/resnet50_imagenet_rb_sparsity50_int8.pth)|
+|ResNet-50|INT8|ImageNet|76.42 (+0.26)|[resnet50_imagenet_int8.json](configs/quantization/resnet50_imagenet_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/resnet50_imagenet_int8.pth)|
+|ResNet-50|INT8 (per-tensor only)|ImageNet|76.37 (+0.21)|[resnet50_imagenet_int8_per_tensor.json](configs/quantization/resnet50_imagenet_int8_per_tensor.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/resnet50_imagenet_int8_per_tensor.pth)|
+|ResNet-50|Mixed, 44.8% INT8 / 55.2% INT4|ImageNet|76.2 (+0.04)|[resnet50_imagenet_mixed_int_manual.json](configs/mixed_precision/resnet50_imagenet_mixed_int_manual.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/resnet50_imagenet_int4_int8.pth)|
+|ResNet-50|INT8 + Sparsity 61% (RB)|ImageNet|75.43 (-0.73)|[resnet50_imagenet_rb_sparsity_int8.json](configs/sparsity_quantization/resnet50_imagenet_rb_sparsity_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/resnet50_imagenet_rb_sparsity_int8.pth)|
+|ResNet-50|INT8 + Sparsity 50% (RB)|ImageNet|75.55 (-0.61)|[resnet50_imagenet_rb_sparsity50_int8.json](configs/sparsity_quantization/resnet50_imagenet_rb_sparsity50_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/resnet50_imagenet_rb_sparsity50_int8.pth)|
 |Inception V3|None|ImageNet|77.34|[inception_v3_imagenet.json](configs/quantization/inception_v3_imagenet.json)|-|
-|Inception V3|INT8|ImageNet|78.25|[inception_v3_imagenet_int8.json](configs/quantization/inception_v3_imagenet_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/inception_v3_imagenet_int8.pth)|
-|Inception V3|INT8 + Sparsity 61% (RB)|ImageNet|77.58|[inception_v3_imagenet_rb_sparsity_int8.json](configs/sparsity_quantization/inception_v3_imagenet_rb_sparsity_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/inception_v3_imagenet_rb_sparsity_int8.pth)|
+|Inception V3|INT8|ImageNet|78.25 (+0.91)|[inception_v3_imagenet_int8.json](configs/quantization/inception_v3_imagenet_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/inception_v3_imagenet_int8.pth)|
+|Inception V3|INT8 + Sparsity 61% (RB)|ImageNet|77.58 (+0.24)|[inception_v3_imagenet_rb_sparsity_int8.json](configs/sparsity_quantization/inception_v3_imagenet_rb_sparsity_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/inception_v3_imagenet_rb_sparsity_int8.pth)|
 |MobileNet V2|None|ImageNet|71.93|[mobilenet_v2_imagenet.json](configs/quantization/mobilenet_v2_imagenet.json)|-|
-|MobileNet V2|INT8|ImageNet|71.35|[mobilenet_v2_imagenet_int8.json](configs/quantization/mobilenet_v2_imagenet_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/mobilenet_v2_imagenet_int8.pth)|
-|MobileNet V2|INT8 (per-tensor only)|ImageNet|71.3|[mobilenet_v2_imagenet_int8_per_tensor.json](configs/quantization/mobilenet_v2_imagenet_int8_per_tensor.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/mobilenet_v2_imagenet_int8_per_tensor.pth)|
-|MobileNet V2|Mixed, 46.6% INT8 / 53.4% INT4|ImageNet|70.92|[mobilenet_v2_imagenet_mixed_int_manual.json](configs/mixed_precision/mobilenet_v2_imagenet_mixed_int_manual.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/mobilenet_v2_imagenet_int4_int8.pth)|
-|MobileNet V2|INT8 + Sparsity 52% (RB)|ImageNet|71.11|[mobilenet_v2_imagenet_rb_sparsity_int8.json](configs/sparsity_quantization/mobilenet_v2_imagenet_rb_sparsity_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/mobilenet_v2_imagenet_rb_sparsity_int8.pth)|
+|MobileNet V2|INT8|ImageNet|71.35 (-0.58)|[mobilenet_v2_imagenet_int8.json](configs/quantization/mobilenet_v2_imagenet_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/mobilenet_v2_imagenet_int8.pth)|
+|MobileNet V2|INT8 (per-tensor only)|ImageNet|71.3 (-0.63)|[mobilenet_v2_imagenet_int8_per_tensor.json](configs/quantization/mobilenet_v2_imagenet_int8_per_tensor.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/mobilenet_v2_imagenet_int8_per_tensor.pth)|
+|MobileNet V2|Mixed, 46.6% INT8 / 53.4% INT4|ImageNet|70.92 (-1.01)|[mobilenet_v2_imagenet_mixed_int_manual.json](configs/mixed_precision/mobilenet_v2_imagenet_mixed_int_manual.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/mobilenet_v2_imagenet_int4_int8.pth)|
+|MobileNet V2|INT8 + Sparsity 52% (RB)|ImageNet|71.11 (-0.82)|[mobilenet_v2_imagenet_rb_sparsity_int8.json](configs/sparsity_quantization/mobilenet_v2_imagenet_rb_sparsity_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/mobilenet_v2_imagenet_rb_sparsity_int8.pth)|
 |SqueezeNet V1.1|None|ImageNet|58.24|[squeezenet1_1_imagenet.json](configs/quantization/squeezenet1_1_imagenet.json)|-|
-|SqueezeNet V1.1|INT8|ImageNet|58.28|[squeezenet1_1_imagenet_int8.json](configs/quantization/squeezenet1_1_imagenet_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/squeezenet1_1_imagenet_int8.pth)|
-|SqueezeNet V1.1|INT8 (per-tensor only)|ImageNet|58.26|[squeezenet1_1_imagenet_int8_per_tensor.json](configs/quantization/squeezenet1_1_imagenet_int8_per_tensor.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/squeezenet1_1_imagenet_int8_per_tensor.pth)|
-|SqueezeNet V1.1|Mixed, 54.7% INT8 / 45.3% INT4|ImageNet|58.9|[squeezenet1_1_imagenet_mixed_int_manual.json](configs/mixed_precision/squeezenet1_1_imagenet_mixed_int_manual.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/squeezenet1_1_imagenet_int4_int8.pth)|
+|SqueezeNet V1.1|INT8|ImageNet|58.28 (+0.04)|[squeezenet1_1_imagenet_int8.json](configs/quantization/squeezenet1_1_imagenet_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/squeezenet1_1_imagenet_int8.pth)|
+|SqueezeNet V1.1|INT8 (per-tensor only)|ImageNet|58.26 (+0.02)|[squeezenet1_1_imagenet_int8_per_tensor.json](configs/quantization/squeezenet1_1_imagenet_int8_per_tensor.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/squeezenet1_1_imagenet_int8_per_tensor.pth)|
+|SqueezeNet V1.1|Mixed, 54.7% INT8 / 45.3% INT4|ImageNet|58.9 (+0.66)|[squeezenet1_1_imagenet_mixed_int_manual.json](configs/mixed_precision/squeezenet1_1_imagenet_mixed_int_manual.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/squeezenet1_1_imagenet_int4_int8.pth)|
 
 
 #### Binarization
@@ -91,11 +91,11 @@ To export a model to the OpenVINO IR and run it using the Intel® Deep Learning 
 As an example of NNCF convolution binarization capabilities, you may use the configs in `examples/torch/classification/configs/binarization` to binarize ResNet18. Use the same steps/command line parameters as for quantization (for best results, specify `--pretrained`), except for the actual binarization config path.
 
 ### Results for binarization
-|Model|Compression algorithm|Dataset|PyTorch compressed accuracy|NNCF config file|PyTorch Checkpoint|
+|Model|Compression algorithm|Dataset|Accuracy (Drop) %|NNCF config file|PyTorch Checkpoint|
 | :---: | :---: | :---: | :---: | :---: | :---: |
 |ResNet-18|None|ImageNet|69.8|[resnet18_imagenet.json](configs/binarization/resnet18_imagenet.json)|-|
-|ResNet-18|XNOR (weights), scale/threshold (activations)|ImageNet|61.63|[resnet18_imagenet_binarization_xnor.json](configs/binarization/resnet18_imagenet_binarization_xnor.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/resnet18_imagenet_binarization_xnor.pth)|
-|ResNet-18|DoReFa (weights), scale/threshold (activations)|ImageNet|61.61|[resnet18_imagenet_binarization_dorefa.json](configs/binarization/resnet18_imagenet_binarization_dorefa.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/resnet18_imagenet_binarization_dorefa.pth)|
+|ResNet-18|XNOR (weights), scale/threshold (activations)|ImageNet|61.63 (-8.17)|[resnet18_imagenet_binarization_xnor.json](configs/binarization/resnet18_imagenet_binarization_xnor.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/resnet18_imagenet_binarization_xnor.pth)|
+|ResNet-18|DoReFa (weights), scale/threshold (activations)|ImageNet|61.61 (-8.19)|[resnet18_imagenet_binarization_dorefa.json](configs/binarization/resnet18_imagenet_binarization_dorefa.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/resnet18_imagenet_binarization_dorefa.pth)|
 
 
 ### Results for filter pruning
@@ -113,9 +113,9 @@ As an example of NNCF convolution binarization capabilities, you may use the con
 
 
 ### Results for accuracy-aware compressed training
-|Model|Compression algorithm|Dataset|PyTorch compressed accuracy|NNCF config file|
+|Model|Compression algorithm|Dataset|Accuracy (Drop) %|NNCF config file|
 | :---: | :---: | :---: | :---: | :---: |
 |ResNet-50|None|ImageNet|76.16|[resnet50_imagenet.json](configs/quantization/resnet50_imagenet.json)|
-|ResNet-50|Filter pruning, 52.5%, geometric median criterion|ImageNet|75.23|[resnet50_imagenet_accuracy_aware.json](configs/pruning/resnet50_imagenet_accuracy_aware.json)|
+|ResNet-50|Filter pruning, 52.5%, geometric median criterion|ImageNet|75.23 (-0.93)|[resnet50_imagenet_accuracy_aware.json](configs/pruning/resnet50_imagenet_accuracy_aware.json)|
 |ResNet-18|None|ImageNet|69.8|[resnet18_imagenet.json](configs/binarization/resnet18_imagenet.json)|
-|ResNet-18|Filter pruning, 50%, geometric median criterion|ImageNet|69.92|[resnet18_imagenet_accuracy_aware.json](configs/pruning/resnet18_imagenet_accuracy_aware.json)|
+|ResNet-18|Filter pruning, 50%, geometric median criterion|ImageNet|69.92 (+0.12)|[resnet18_imagenet_accuracy_aware.json](configs/pruning/resnet18_imagenet_accuracy_aware.json)|
