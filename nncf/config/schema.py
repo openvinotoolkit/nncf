@@ -462,15 +462,6 @@ QUANTIZATION_SCHEMA = {
         "quantize_outputs": with_attributes(_BOOLEAN,
                                             description="Whether the model outputs should be additionally quantized.",
                                             default=False),
-
-        "quantizable_subgraph_patterns": {
-            "type": "array",
-            "items": make_string_or_array_of_strings_schema(),
-            "description": "Each sub-list in this list will correspond to a sequence of operations in the "
-                           "model control flow graph that will have a quantizer appended at the end of the "
-                           "sequence",
-            "examples": [["cat", "batch_norm"], "h_swish"]
-        },
         "scope_overrides": {
             "type": "object",
             "properties": {

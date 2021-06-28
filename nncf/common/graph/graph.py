@@ -20,9 +20,6 @@ import networkx as nx
 import networkx.algorithms.isomorphism as iso
 from networkx.drawing.nx_agraph import to_agraph
 
-from nncf.common.graph.graph_matching import Expression
-from nncf.common.graph.graph_matching import NodeExpression
-from nncf.common.graph.graph_matching import find_subgraphs_matching_expression
 from nncf.common.graph.graph_matching import get_edge_boundaries
 from nncf.common.graph.layer_attributes import BaseLayerAttributes
 from nncf.common.graph.layer_attributes import Dtype
@@ -140,14 +137,6 @@ class NNCFGraphPatternIO:
         self.output_edges = output_edges
 
 
-class NNCFNodeExpression(NodeExpression):
-    """
-    A variation of NodeExpression that has a specific matcher function to work with nxgraph node dicts that
-    underlie the NNCFGraph.
-    """
-    def __init__(self, node_type: str = None, filter_fn=None):
-        node_type_fn = lambda x: x[NNCFGraph.NODE_TYPE_ATTR]
-        super().__init__(node_type, filter_fn, node_type_fn=node_type_fn)
 
 
 #pylint:disable=too-many-public-methods
@@ -564,11 +553,6 @@ class NNCFGraph:
 
     def get_nx_graph_copy(self) -> nx.DiGraph:
         return deepcopy(self._nx_graph)
-
-    def get_matching_nncf_graph_pattern_io_list(self, expression: Expression) -> List[NNCFGraphPatternIO]:
-        matched_node_key_sequences = find_subgraphs_matching_expression(self._nx_graph, expression)
-        pattern_ios = [self.get_nncf_graph_pattern_io(match) for match in matched_node_key_sequences]
-        return pattern_ios
 
     def get_nncf_graph_pattern_io(self, match: List[str]) -> NNCFGraphPatternIO:
         """
