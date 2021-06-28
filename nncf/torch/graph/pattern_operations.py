@@ -1,14 +1,15 @@
-#
-# Copyright 2020-2021 Intel Corporation.
-#
-# LEGAL NOTICE: Your use of this software and any required dependent software
-# (the "Software Package") is subject to the terms and conditions of
-# the Intel(R) OpenVINO(TM) Distribution License for the Software Package,
-# which may also include notices, disclaimers, or license terms for
-# third party or open source software included in or with the Software Package,
-# and your use indicates your acceptance of all such terms. Please refer
-# to the "third-party-programs.txt" or other similarly-named text file
-# included with the Software Package for additional details.
+"""
+ Copyright (c) 2021 Intel Corporation
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+      http://www.apache.org/licenses/LICENSE-2.0
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+"""
 
 def merge_two_types_of_operations(first_op, second_op, label):
     res = {'type': first_op['type']}

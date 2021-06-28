@@ -116,5 +116,4 @@ def find_subgraphs_matching_pattern(graph: nx.DiGraph, pattern_graph: GraphPatte
             visited_nodes.update(subgraph)
             subgraphs.append(subgraph)
 
-    subgraphs.sort()
     return subgraphs if subgraphs else []
