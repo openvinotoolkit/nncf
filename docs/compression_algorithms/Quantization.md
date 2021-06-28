@@ -360,15 +360,6 @@ sparsity and filter pruning algorithms. It can be enabled by setting a non-zero 
         "linked_quantizer_scopes": []
     },
     "quantize_inputs": true, // Whether the model inputs should be immediately quantized prior to any other model operations."
-    "quantizable_subgraph_patterns": [ // Each sub-list in this list will correspond to a sequence of operations in the model control flow graph that will have a quantizer appended at the end of the sequence
-        [
-            "cat",
-            "batch_norm"
-        ],
-        [
-            "h_swish"
-        ]
-    ]
     "scope_overrides": { // This option is used to specify overriding quantization constraints for specific scope, e.g. in case you need to quantize a single operation differently than the rest of the model.
         "{re}.*InvertedResidual.*": {
             "mode": "symmetric", // Mode of quantization

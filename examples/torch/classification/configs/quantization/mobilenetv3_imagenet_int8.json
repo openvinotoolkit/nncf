@@ -21,12 +21,6 @@
             "range": {
                 "num_init_samples": 2560
             }
-        },
-        // the following operation patterns are assumed to be treated as an
-        // individual operation by the quantization algorithm, so that FQ layers,
-        // are not inserted in between these operations
-        "quantizable_subgraph_patterns": [["__mul__", "h_swish"],
-                                          ["linear", "h_sigmoid"],
-                                          ["conv2d", "batch_norm", "h_swish"]]
+        }
     }
 }
