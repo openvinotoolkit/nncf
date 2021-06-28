@@ -60,7 +60,35 @@
             "activations": {
                 "mode": "asymmetric",
                 "bits": 8,
-                "per_channel": false
+                "per_channel": false,
+                "ignored_scopes": [
+                    "Conv/BatchNorm",
+                      "multiply",
+                      "{re}multiply_([1-9]|1[0-8])$",
+                      "tf_op_layer_AddV2",
+                      "tf_op_layer_AddV2_2",
+                      "tf_op_layer_AddV2_3",
+                      "tf_op_layer_AddV2_5",
+                      "tf_op_layer_AddV2_6",
+                      "tf_op_layer_AddV2_8",
+                      "tf_op_layer_AddV2_9",
+                      "tf_op_layer_AddV2_11",
+                      "tf_op_layer_AddV2_12",
+                      "tf_op_layer_AddV2_14",
+                      "tf_op_layer_AddV2_15",
+                      "tf_op_layer_AddV2_17",
+                      "tf_op_layer_AddV2_18",
+                      "tf_op_layer_AddV2_20",
+                      "tf_op_layer_AddV2_21",
+                      "tf_op_layer_AddV2_23",
+                      "tf_op_layer_AddV2_24",
+                      "tf_op_layer_AddV2_26",
+                      "tf_op_layer_AddV2_27",
+                      "Conv_1/BatchNorm",
+                      "{re}expanded_conv_([3-9]|[1-9]\\d)/depthwise/BatchNorm",
+                      "expanded_conv/expand/BatchNorm",
+                      "{re}expanded_conv_([3-9]|[1-9]\\d)/expand/BatchNorm"
+                ]
             }
         }]
 }
