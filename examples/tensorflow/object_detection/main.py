@@ -18,8 +18,8 @@ from pathlib import Path
 import tensorflow as tf
 import numpy as np
 
+from nncf.tensorflow import AdaptiveCompressionTrainingLoop
 from nncf.tensorflow import create_compressed_model
-from nncf.tensorflow import TFAdaptiveCompressionTrainingLoop
 from nncf.tensorflow.helpers.model_manager import TFOriginalModelManager
 from nncf.tensorflow.initialization import register_default_init_args
 from nncf.common.utils.tensorboard import prepare_for_tensorboard

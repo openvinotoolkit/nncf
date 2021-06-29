@@ -10,33 +10,3 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-
-
-
-def infer_backend_from_compression_controller(compression_controller):
-    """
-    Returns the NNCF backend name string inferred from the type of the model
-    stored in the passed compression controller.
-
-    :param compression_controller: Passed compression controller
-    (of CompressionAlgorithmController type).
-    :return: A string representing the NNCF backend name (either `Torch` or `TensorFlow`).
-    """
-    try:
-        import torch
-    except ImportError:
-        torch = None
-
-    try:
-        import tensorflow
-    except ImportError:
-        tensorflow = None
-
-    if torch is not None and isinstance(compression_controller.model, torch.nn.Module):
-        return 'Torch'
-
-    if tensorflow is not None and isinstance(compression_controller.model, tensorflow.Module):
-        return 'TensorFlow'
-
-    raise RuntimeError('Could not infer the backend framework from the model type because '
-                       'the framework is not available or the model type is unsupported.')

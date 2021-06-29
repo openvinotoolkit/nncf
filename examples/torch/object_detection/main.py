@@ -32,7 +32,7 @@ from examples.torch.common.example_logger import logger
 from examples.torch.common.execution import get_execution_mode
 from examples.torch.common.execution import prepare_model_for_execution, start_worker
 from nncf.api.compression import CompressionStage
-from nncf.torch import PTAdaptiveCompressionTrainingLoop
+from nncf.torch import AdaptiveCompressionTrainingLoop
 from nncf.torch.initialization import register_default_init_args
 from examples.torch.common.optimizer import get_parameter_groups, make_optimizer
 from examples.torch.common.utils import get_name, make_additional_checkpoints, configure_paths, \
@@ -233,7 +233,7 @@ def main_worker(current_gpu, config):
             return optimizer, lr_scheduler
 
         # instantiate and run accuracy-aware training loop
-        acc_aware_training_loop = PTAdaptiveCompressionTrainingLoop(nncf_config, compression_ctrl)
+        acc_aware_training_loop = AdaptiveCompressionTrainingLoop(nncf_config, compression_ctrl)
         net = acc_aware_training_loop.run(net,
                                           train_epoch_fn=train_epoch_fn,
                                           validate_fn=validate_fn,
