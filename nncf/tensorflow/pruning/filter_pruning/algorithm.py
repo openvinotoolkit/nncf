@@ -290,7 +290,7 @@ class FilterPruningController(BasePruningAlgoController):
         nncf_sorted_nodes = self._original_graph.topological_sort()
         for layer in wrapped_layers:
             nncf_node = [n for n in nncf_sorted_nodes
-                         if layer.name == get_layer_identifier(n)][0]
+                         if layer.name == n.layer_name][0]
             if nncf_node.data['output_mask'] is not None:
                 self._set_operation_masks([layer], nncf_node.data['output_mask'])
 

@@ -30,7 +30,7 @@ from nncf.common.graph import NNCFNodeName
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.common.utils.os import safe_open
-from nncf.common.debug import is_debug
+from nncf.common.utils.debug import is_debug
 from nncf.torch.quantization.hessian_trace import HessianTraceEstimator
 from nncf.torch.quantization.layers import QuantizersSwitcher
 from nncf.torch.quantization.precision_constraints import HardwareQuantizationConstraints
@@ -328,7 +328,7 @@ class HAWQPrecisionInitializer(BasePrecisionInitializer):
         bitwidth_per_scope = self.get_bitwidth_per_scope(final_quantizer_setup)
         str_bw = [str(element) for element in self.get_bitwidth_per_scope(final_quantizer_setup)]
         nncf_logger.info('\n'.join(['\n\"bitwidth_per_scope\": [', ',\n'.join(str_bw), ']']))
-        from nncf.common.debug import DEBUG_LOG_DIR
+        from nncf.common.utils.debug import DEBUG_LOG_DIR
         Path(DEBUG_LOG_DIR).mkdir(parents=True, exist_ok=True)
         with safe_open(Path(DEBUG_LOG_DIR) / 'bitwidth_per_scope.json', "w") as outfile:
             json.dump({'bitwidth_per_scope': bitwidth_per_scope}, outfile, indent=4, sort_keys=False)

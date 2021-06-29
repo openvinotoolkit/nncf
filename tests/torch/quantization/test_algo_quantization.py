@@ -21,7 +21,7 @@ import torch.utils.data
 from torchvision.models import resnet50
 from torchvision.models import squeezenet1_1
 
-from nncf.common.debug import nncf_debug
+from nncf.common.utils.debug import nncf_debug
 from nncf.api.compression import CompressionScheduler
 from nncf.torch.checkpoint_loading import load_state
 from nncf.common.quantization.structs import QuantizationMode

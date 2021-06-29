@@ -171,11 +171,11 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
         barrier_node_key = self.get_barrier_node_key(node_key)
         self.add_node(barrier_node_key, **qpg_node_barrier)
 
-        edge_attr = {QuantizerPropagationStateGraph.AFFECTING_PROPAGATING_QUANTIZERS_ATTR: []}
         next_node_keys = list(self.succ[node_key].keys())
         for next_node_key in next_node_keys:
-            self.add_edge(node_key, barrier_node_key, **edge_attr)
-            self.add_edge(barrier_node_key, next_node_key, **edge_attr)
+            edge_attrs = self.edges[node_key, next_node_key]
+            self.add_edge(node_key, barrier_node_key, **edge_attrs)
+            self.add_edge(barrier_node_key, next_node_key, **edge_attrs)
             self.remove_edge(node_key, next_node_key)
 
     @staticmethod
@@ -190,8 +190,8 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
         raise RuntimeError("Invalid insertion point graph node type.")
 
     @staticmethod
-    def get_barrier_node_key(node_key: str):
-        return QuantizerPropagationStateGraph.BARRIER_NODE_KEY_POSTFIX + node_key
+    def get_barrier_node_key(node_key: str) -> str:
+        return f"{QuantizerPropagationStateGraph.BARRIER_NODE_KEY_POSTFIX} {node_key}"
 
 
     def mark_act_quantizer_as_dependent_on_weights(self, pq: PropagatingQuantizer, operator_node_key: str):

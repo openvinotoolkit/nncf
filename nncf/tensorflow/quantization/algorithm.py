@@ -20,12 +20,17 @@ import tensorflow as tf
 from nncf import NNCFConfig
 from nncf.api.compression import CompressionLoss
 from nncf.api.compression import CompressionScheduler
+from nncf.common.graph import INPUT_NOOP_METATYPES
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.graph import NNCFNodeName
 from nncf.common.graph.layer_attributes import Dtype
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TransformationPriority
+from nncf.common.graph import OUTPUT_NOOP_METATYPES
+from nncf.common.graph.transformations.commands import TransformationPriority
+from nncf.tensorflow.quantization.default_quantization import DEFAULT_TF_QUANT_TRAIT_TO_OP_DICT
+from nncf.tensorflow.quantization.initializers.init_range import TFRangeInitParams
 from nncf.common.initialization.batchnorm_adaptation import BatchnormAdaptationAlgorithm
 from nncf.common.insertion_point_graph import InsertionPointGraph
 from nncf.common.quantization.quantizer_propagation.solver import QuantizerPropagationSolver
@@ -47,6 +52,7 @@ from nncf.config.extractors import extract_range_init_params
 from nncf.tensorflow.algorithm_selector import TF_COMPRESSION_ALGORITHMS
 from nncf.tensorflow.api.compression import TFCompressionAlgorithmBuilder
 from nncf.tensorflow.graph import patterns as p
+from nncf.tensorflow.api.compression import TFCompressionAlgorithmController
 from nncf.tensorflow.graph.converter import TFModelConverterFactory
 from nncf.tensorflow.graph.metatypes.common import ELEMENTWISE_LAYER_METATYPES
 from nncf.tensorflow.graph.metatypes.common import GENERAL_CONV_LAYER_METATYPES
@@ -54,14 +60,13 @@ from nncf.tensorflow.graph.metatypes.common import LAYER_METATYPES_AGNOSTIC_TO_D
 from nncf.tensorflow.graph.metatypes.common import LINEAR_LAYER_METATYPES
 from nncf.tensorflow.graph.metatypes.keras_layers import TFLambdaLayerMetatype
 from nncf.tensorflow.graph.metatypes.keras_layers import TFLayerWithWeightsMetatype
-from nncf.tensorflow.graph.metatypes.nncf_op import InputNoopMetatype
-from nncf.tensorflow.graph.metatypes.nncf_op import OutputNoopMetatype
 from nncf.tensorflow.graph.transformations.commands import TFAfterLayer
 from nncf.tensorflow.graph.transformations.commands import TFBeforeLayer
 from nncf.tensorflow.graph.transformations.commands import TFInsertionCommand
 from nncf.tensorflow.graph.transformations.commands import TFLayerWeight
 from nncf.tensorflow.graph.transformations.layout import TFTransformationLayout
 from nncf.tensorflow.graph.utils import get_original_name_and_instance_idx
+from nncf.tensorflow.hardware.fused_patterns import TF_HW_FUSED_PATTERNS
 from nncf.tensorflow.layers.custom_objects import NNCF_QUANTIZATION_OPERATONS
 from nncf.tensorflow.loss import TFZeroCompressionLoss
 from nncf.tensorflow.quantization.initializers.init_range import RangeInitializer
@@ -277,8 +282,8 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
         quantizer_cls = NNCF_QUANTIZATION_OPERATONS.get(qspec.mode)
         return quantizer_cls(name, qspec)
 
-    def _get_quantizer_setup(self, model: tf.keras.Model) -> QuantizationSetup:
-        setup = QuantizationSetup()
+    def get_transformation_layout(self, model: tf.keras.Model) -> TFTransformationLayout:
+        #pylint:disable=too-many-branches
         converter = TFModelConverterFactory.create(model)
         nncf_graph = converter.convert()
         nodes = nncf_graph.get_all_nodes()
@@ -295,7 +300,7 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
         custom_layer_nodes = []  # type: List[NNCFNodeName]
         for node in nodes:
             metatype = node.metatype
-            if issubclass(metatype, OutputNoopMetatype):
+            if metatype in OUTPUT_NOOP_METATYPES:
                 continue
 
             is_custom, _ = converter.get_layer_info_for_node(node.node_name)
@@ -367,7 +372,7 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
                     raise RuntimeError("Quantizing custom layer activations is currently unsupported!")
                 if input_port_id is not None:
                     tp = TFBeforeLayer(layer_info.layer_name,
-                                       instance_index=layer_info.instance_idx,
+                                       instance_idx=layer_info.instance_idx,
                                        input_port_id=input_port_id)
                 else:
                     tp = TFAfterLayer(layer_info.layer_name,
@@ -406,9 +411,7 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
         ip_graph = InsertionPointGraph(nncf_graph,
                                        [qn.node.node_name for qn in quantizable_weighted_layer_nodes])
 
-        pattern = p.CONV_LINEAR_OPS | p.ELEMENTWISE | p.ANY_BN_ACT_COMBO | \
-                  p.CONV_LINEAR_OPS + p.ANY_AG_BN_ACT_COMBO | p.ELEMENTWISE + p.ANY_AG_BN_ACT_COMBO | p.SINGLE_OPS
-
+        pattern = TF_HW_FUSED_PATTERNS.get_full_pattern_graph()
         ip_graph = ip_graph.get_ip_graph_with_merged_hw_optimized_operations(pattern)
 
         input_preprocessing_nodes = self._get_input_preprocessing_nodes(nncf_graph)
@@ -420,6 +423,7 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
             ignored_scopes=ignored_scopes_for_solver,
             target_scopes=self.target_scopes_per_group[QuantizerGroup.ACTIVATIONS],
             hw_config=None,
+            default_trait_to_metatype_map=DEFAULT_TF_QUANT_TRAIT_TO_OP_DICT,
             default_qconfig_list=[self._get_default_qconfig(
                 self.global_quantizer_constraints[QuantizerGroup.ACTIVATIONS])],
             quantizable_layer_nodes=quantizable_weighted_layer_nodes,
@@ -442,7 +446,7 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
             if qp.is_activation_quantization_point():
                 insertion_point = qp.insertion_point
                 target_node = nncf_graph.get_node_by_name(insertion_point.target_node_name)
-                if not self.quantize_inputs and issubclass(target_node.metatype, InputNoopMetatype):
+                if not self.quantize_inputs and target_node.metatype in INPUT_NOOP_METATYPES:
                     qp_ids_to_discard.append(qp_id)
         for qp_id in qp_ids_to_discard:
             quantizer_setup.discard(qp_id, keep_shared_input_qps=True)

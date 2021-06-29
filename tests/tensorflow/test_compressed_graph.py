@@ -21,7 +21,6 @@ import tensorflow as tf
 import networkx as nx
 
 from nncf import NNCFConfig
-from nncf.common.debug import nncf_debug
 from tests.tensorflow import test_models
 from tests.tensorflow.helpers import get_empty_config, create_compressed_model_and_algo_for_test
 from tests.tensorflow.sparsity.magnitude.test_helpers import get_basic_filter_pruning_config
@@ -238,67 +237,11 @@ def get_test_models_desc(algorithm):
         ModelDesc(ref_name('sequential_model.pb'), test_models.SequentialModel, [1, 224, 224, 3]),
         ModelDesc(ref_name('sequential_no_input_model.pb'), test_models.SequentialModelNoInput, [1, 224, 224, 3]),
         pytest.param(
-            ModelDesc(ref_name('mobilenet_v3_small.pb'), test_models.MobileNetV3Small, [1, 32, 32, 3],
-                      # TODO (vshampor): remove when proper swish pattern specification becomes possible
-                      ignored_scopes=["Conv/BatchNorm",
-                                      "multiply",
-                                      "{re}multiply_([1-9]|1[0-8])$",
-                                      "tf_op_layer_AddV2",
-                                      "tf_op_layer_AddV2_2",
-                                      "tf_op_layer_AddV2_3",
-                                      "tf_op_layer_AddV2_5",
-                                      "tf_op_layer_AddV2_6",
-                                      "tf_op_layer_AddV2_8",
-                                      "tf_op_layer_AddV2_9",
-                                      "tf_op_layer_AddV2_11",
-                                      "tf_op_layer_AddV2_12",
-                                      "tf_op_layer_AddV2_14",
-                                      "tf_op_layer_AddV2_15",
-                                      "tf_op_layer_AddV2_17",
-                                      "tf_op_layer_AddV2_18",
-                                      "tf_op_layer_AddV2_20",
-                                      "tf_op_layer_AddV2_21",
-                                      "tf_op_layer_AddV2_23",
-                                      "tf_op_layer_AddV2_24",
-                                      "tf_op_layer_AddV2_26",
-                                      "tf_op_layer_AddV2_27",
-                                      "Conv_1/BatchNorm",
-                                      "{re}expanded_conv_([3-9]|[1-9]\d)/depthwise/BatchNorm",
-                                      "expanded_conv/expand/BatchNorm",
-                                      "{re}expanded_conv_([3-9]|[1-9]\d)/expand/BatchNorm"]),
+            ModelDesc(ref_name('mobilenet_v3_small.pb'), test_models.MobileNetV3Small, [1, 32, 32, 3]),
             marks=SKIP_MAP[algorithm].get('mobilenet_v3_small', ())
         ),
         pytest.param(
-            ModelDesc(ref_name('mobilenet_v3_large.pb'), test_models.MobileNetV3Large, [1, 32, 32, 3],
-                      # TODO (vshampor): remove when proper swish pattern specification becomes possible
-                      ignored_scopes=["Conv/BatchNorm",
-                                      "multiply",
-                                      "{re}multiply_([1-9]|1[0-9]|20)$",
-                                      "tf_op_layer_AddV2",
-                                      "tf_op_layer_AddV2_4",
-                                      "tf_op_layer_AddV2_5",
-                                      "tf_op_layer_AddV2_6",
-                                      "tf_op_layer_AddV2_7",
-                                      "tf_op_layer_AddV2_8",
-                                      "tf_op_layer_AddV2_9",
-                                      "tf_op_layer_AddV2_10",
-                                      "tf_op_layer_AddV2_11",
-                                      "tf_op_layer_AddV2_12",
-                                      "tf_op_layer_AddV2_13",
-                                      "tf_op_layer_AddV2_15",
-                                      "tf_op_layer_AddV2_16",
-                                      "tf_op_layer_AddV2_18",
-                                      "tf_op_layer_AddV2_19",
-                                      "tf_op_layer_AddV2_21",
-                                      "tf_op_layer_AddV2_22",
-                                      "tf_op_layer_AddV2_24",
-                                      "tf_op_layer_AddV2_25",
-                                      "tf_op_layer_AddV2_27",
-                                      "tf_op_layer_AddV2_28",
-                                      "Conv_1/BatchNorm",
-                                      "{re}expanded_conv_([6-9]|[1-9]\d)/depthwise/BatchNorm",
-                                      "expanded_conv/expand/BatchNorm",
-                                      "{re}expanded_conv_([6-9]|[1-9]\d)/expand/BatchNorm"]),
+            ModelDesc(ref_name('mobilenet_v3_large.pb'), test_models.MobileNetV3Large, [1, 32, 32, 3]),
             marks=SKIP_MAP[algorithm].get('mobilenet_v3_large', ())
         ),
         pytest.param(

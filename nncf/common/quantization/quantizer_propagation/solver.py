@@ -27,10 +27,10 @@ from typing import Tuple
 
 import networkx as nx
 
+from nncf.common.graph import INPUT_NOOP_METATYPES
+from nncf.common.graph import OUTPUT_NOOP_METATYPES
 from nncf.common.graph import NNCFNodeName
 from nncf.common.graph import OperatorMetatype
-from nncf.common.graph.definitions import MODEL_INPUT_OP_NAME
-from nncf.common.graph.definitions import MODEL_OUTPUT_OP_NAME
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.hardware.config import HWConfig
 from nncf.common.insertion_point_graph import InsertionPointGraph
@@ -51,8 +51,8 @@ from nncf.common.quantization.structs import QuantizerGroup
 from nncf.common.quantization.structs import UnifiedScaleType
 from nncf.common.utils.helpers import matches_any
 from nncf.common.utils.logger import logger as nncf_logger
-from nncf.common.debug import DEBUG_LOG_DIR
-from nncf.common.debug import is_debug
+from nncf.common.utils.debug import DEBUG_LOG_DIR
+from nncf.common.utils.debug import is_debug
 
 
 class TransitionStatus(Enum):
@@ -868,6 +868,7 @@ class QuantizerPropagationSolver:
 
     def _setup_initial_quantizers_for_operator_node(self, operator_node_key: str,
                                                     quant_prop_graph: QuantizerPropagationStateGraph):
+        #pylint:disable=too-many-branches
         node = quant_prop_graph.nodes[operator_node_key]
 
         # preds are in sorted order for reproducibility
@@ -876,17 +877,18 @@ class QuantizerPropagationSolver:
         if not preds:
             return  # TODO (vshampor): remove this once module insertion points are included in the IP graph
 
-        if not self._quantize_outputs and MODEL_OUTPUT_OP_NAME in operator_node_key:
+        metatype = node[QuantizerPropagationStateGraph.OPERATOR_METATYPE_NODE_ATTR]
+        if not self._quantize_outputs and metatype in OUTPUT_NOOP_METATYPES:
             return
         # No need to place quantizers for FP32-forced ops, naturally
         if node[QuantizerPropagationStateGraph.QUANTIZATION_TRAIT_NODE_ATTR] in \
                 [QuantizationTrait.NON_QUANTIZABLE,
                  QuantizationTrait.QUANTIZATION_AGNOSTIC,
-                 QuantizationTrait.CONCAT] and MODEL_OUTPUT_OP_NAME not in operator_node_key:
+                 QuantizationTrait.CONCAT] and metatype not in OUTPUT_NOOP_METATYPES:
             return
         quant_det_id = node[QuantizerPropagationStateGraph.OPERATOR_METATYPE_NODE_ATTR]
         qconf_list = self.get_allowed_quantizer_configs_for_operator(quant_det_id)
-        if MODEL_OUTPUT_OP_NAME in operator_node_key:
+        if quant_det_id in OUTPUT_NOOP_METATYPES:
             qconf_list = self.default_global_qconfig_list
         assert qconf_list is not None
 
@@ -1063,6 +1065,7 @@ class QuantizerPropagationSolver:
           cloned before transition, which impacts the logic of the function.
         :return: The status of the transition determining how it should proceed.
         """
+        #pylint:disable=too-many-branches
         for from_node_key, to_node_key in path:
             from_node = quant_prop_graph.nodes[from_node_key]
 
@@ -1324,8 +1327,7 @@ class QuantizerPropagationSolver:
         integer_input_quantizer_ids = set()
 
         for input_node, input_quantizer_ids in input_node_vs_qid_dict.items():
-            input_metatypes = get_input_metatypes()
-            assert any([issubclass(input_node.metatype, input_meta) for input_meta in input_metatypes])
+            assert input_node.metatype in INPUT_NOOP_METATYPES
             if input_node.is_integer_input():
                 integer_input_quantizer_ids.update(set(input_quantizer_ids))
 

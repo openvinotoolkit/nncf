@@ -40,7 +40,7 @@ from nncf.torch.checkpoint_loading import load_state
 from nncf.common.graph import NNCFNodeName
 from nncf.common.hardware.config import HWConfigType
 from nncf.common.quantization.structs import QuantizerGroup
-from nncf.common.debug import set_debug_log_dir
+from nncf.common.utils.debug import set_debug_log_dir
 from nncf.torch.dynamic_graph.graph_tracer import create_input_infos
 from nncf.torch.initialization import default_criterion_fn
 from nncf.torch.quantization.adjust_padding import add_adjust_padding_nodes
@@ -74,7 +74,6 @@ from tests.torch.quantization.test_quantization_helpers import get_quantization_
 from tests.torch.quantization.test_quantization_helpers import get_squeezenet_quantization_config
 from tests.torch.quantization.test_quantization_helpers import post_compression_test_distr_init
 # pylint:disable=unused-import
-from tests.torch.modules.test_rnn import _seed
 from tests.torch.test_compressed_graph import check_nx_graph
 from tests.torch.test_models import squeezenet1_1
 

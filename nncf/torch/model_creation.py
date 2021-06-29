@@ -37,6 +37,7 @@ from nncf.torch.debug import set_debug_log_dir
 from nncf.torch.dynamic_graph.graph_tracer import create_dummy_forward_fn
 from nncf.torch.dynamic_graph.graph_tracer import create_input_infos
 from nncf.common.debug import set_debug_log_dir
+from nncf.common.utils.debug import set_debug_log_dir
 from nncf.torch.dynamic_graph.graph_tracer import create_input_infos, create_dummy_forward_fn
 from nncf.torch.graph.graph_builder import GraphBuilder
 from nncf.torch.nncf_network import NNCFNetwork

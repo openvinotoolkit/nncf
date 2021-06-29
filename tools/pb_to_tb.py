@@ -1,11 +1,12 @@
+#pylint:skip-file
 import shutil
 from pathlib import Path
 
 import tensorflow as tf
 from tensorflow.python.platform import gfile
 graph_paths = [
-    '../tests/tensorflow/data/reference_graphs/quantized/symmetric/per_tensor/resnet50_v2.old.pb',
-    '../tests/tensorflow/data/reference_graphs/quantized/symmetric/per_tensor/resnet50_v2.pb'
+    '../tests/tensorflow/data/reference_graphs/quantized/symmetric/per_tensor/retinanet_quantize_outputs.old.pb',
+    '../tests/tensorflow/data/reference_graphs/quantized/symmetric/per_tensor/retinanet_quantize_outputs.pb'
 ]
 
 graphs = {}

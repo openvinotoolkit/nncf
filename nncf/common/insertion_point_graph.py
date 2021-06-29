@@ -82,6 +82,8 @@ class InsertionPointGraph(nx.DiGraph):
         If left unspecified, every node in `nncf_graph` will be allowed to have a single post-hook for its output
          (post-hooking separate tensors in an operation's output is not currently supported)
         """
+        #pylint:disable=too-many-branches
+        #pylint:disable=too-many-statements
         super().__init__()
         self._base_nx_graph = deepcopy(nncf_graph.get_nx_graph_copy())
         if weight_modifiable_node_names is None:
@@ -180,7 +182,7 @@ class InsertionPointGraph(nx.DiGraph):
                     if original_edge_attrs[self.IS_INTEGER_PATH_EDGE_ATTR]:
                         has_integer_outputs = True
 
-                    # TODO: introduce separate insertion points for operator outputs if
+                    # TODO (vshampor): introduce separate insertion points for operator outputs if
                     # the outputs are semantically different
 
                 # TODO (vshampor): in multi-output case, some outputs may be integer and some float;

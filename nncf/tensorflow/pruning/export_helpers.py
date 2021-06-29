@@ -10,15 +10,16 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-
+from typing import Dict
+from typing import List
 from typing import Union
 
 import tensorflow as tf
 
 from nncf.common.pruning.utils import is_depthwise_conv
-from nncf.tensorflow.graph.patterns import KERAS_ACTIVATIONS
-from nncf.tensorflow.graph.patterns import SET_ELEMENTWISE_LAYERS
-from nncf.tensorflow.graph.patterns import TF_ACTIVATIONS
+from nncf.tensorflow.graph.pattern_operations import KERAS_ACTIVATIONS_OPERATIONS
+from nncf.tensorflow.graph.pattern_operations import ELEMENTWISE_OPERATIONS
+from nncf.tensorflow.graph.pattern_operations import TF_ACTIVATIONS_OPERATIONS
 from nncf.common.graph.definitions import NNCFGraphNodeType
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
@@ -32,14 +33,8 @@ from nncf.common.pruning.utils import PruningOperationsMetatypeRegistry
 TF_PRUNING_OPERATOR_METATYPES = PruningOperationsMetatypeRegistry("operator_metatypes")
 
 
-def _get_types(expression):
-    try:
-        return [expression.node_type]
-    except AttributeError:
-        types = []
-        for expr in expression.expressions:
-            types.extend(_get_types(expr))
-        return types
+def _get_types(operations_dict: Dict) -> List[str]:
+    return operations_dict['type']
 
 
 @TF_PRUNING_OPERATOR_METATYPES.register('model_input')
@@ -68,7 +63,7 @@ class TFOutput(DefaultMetaOp):
 
 @TF_PRUNING_OPERATOR_METATYPES.register('identity_mask_propagation')
 class TFIdentityMaskForwardOps(DefaultMetaOp):
-    additional_types = _get_types(KERAS_ACTIVATIONS | TF_ACTIVATIONS) \
+    additional_types = _get_types(KERAS_ACTIVATIONS_OPERATIONS) + _get_types(TF_ACTIVATIONS_OPERATIONS) \
                        + ['AvgPool2D', 'GlobalAvgPool2D', 'AveragePooling2D', 'GlobalAveragePooling2D'] \
                        + ['MaxPooling2D', 'GlobalMaxPooling2D', 'MaxPool2D', 'GlobalMaxPool2D'] \
                        + ['Dropout', 'ZeroPadding2D', 'Identity', 'Pad', 'UpSampling2D']
@@ -217,7 +212,7 @@ class TFConcat(DefaultMetaOp):
 
 @TF_PRUNING_OPERATOR_METATYPES.register('elementwise')
 class TFElementwise(DefaultMetaOp):
-    additional_types = list(SET_ELEMENTWISE_LAYERS)
+    additional_types = _get_types(ELEMENTWISE_OPERATIONS)
 
     @classmethod
     def accept_pruned_input(cls, node: NNCFNode):

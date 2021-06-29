@@ -11,49 +11,45 @@
  limitations under the License.
 """
 
-import operator
-from functools import reduce
-
-from nncf.common.graph import NNCFNodeExpression as N
-from nncf.tensorflow.graph.metatypes.common import ELEMENTWISE_LAYER_METATYPES
-from nncf.tensorflow.graph.metatypes.common import GENERAL_CONV_LAYER_METATYPES
-from nncf.tensorflow.graph.metatypes.common import LAYER_METATYPES_AGNOSTIC_TO_DATA_PRECISION_WITH_ONE_INPUT
-from nncf.tensorflow.graph.metatypes.common import LINEAR_LAYER_METATYPES
+from nncf.common.graph.patterns import GraphPattern
 
 
-SET_CONV_LAYERS = {layer for m in GENERAL_CONV_LAYER_METATYPES for layer in m.get_all_aliases()}
-LIST_CONV_OPS = [N(layer) for layer in SET_CONV_LAYERS]
-SET_LINEAR_LAYERS = {layer for m in LINEAR_LAYER_METATYPES for layer in m.get_all_aliases()}
-LIST_LINEAR_OPS = [N(layer) for layer in SET_LINEAR_LAYERS]
-LIST_CONV_LINEAR_OPS = LIST_CONV_OPS + LIST_LINEAR_OPS
-CONV_LINEAR_OPS = reduce(operator.or_, LIST_CONV_LINEAR_OPS[1:], LIST_CONV_LINEAR_OPS[0])
-CONV_LINEAR_OPS = CONV_LINEAR_OPS | CONV_LINEAR_OPS + N('Identity')
+def create_h_sigmoid_act() -> GraphPattern:
+    pattern = GraphPattern()
 
-SET_AGNOSTIC_LAYERS = {
-    layer for m in LAYER_METATYPES_AGNOSTIC_TO_DATA_PRECISION_WITH_ONE_INPUT for layer in m.get_all_aliases()
-}
-LIST_AGNOSTIC_OPS = [N(layer) for layer in SET_AGNOSTIC_LAYERS]
-AG = reduce(operator.or_, LIST_AGNOSTIC_OPS[1:], LIST_AGNOSTIC_OPS[0])
+    input_pattern_node = pattern.add_node(label='*INPUT_NODE*', type=GraphPattern.PATTERN_INPUT_NODE_TYPE)
+    add_node = pattern.add_node(label='ADD', type='AddV2')
+    relu_node = pattern.add_node(label='RELU', type='ReLU')
+    mul_node = pattern.add_node(label='TF_OP_MUL', type='Mul')
 
-BN = N('BatchNormalization') | N('SyncBatchNormalization')
+    pattern.add_edge(input_pattern_node, add_node)
+    pattern.add_edge(add_node, relu_node)
+    pattern.add_edge(relu_node, mul_node)
 
-HARD_SIGMOID = (N('AddV2') + N('ReLU') + N('Mul'))
-# TODO (vshampor): commented this because it is unreliable. Restore when
-#  proper pattern matching is ready.
-# HARD_SWISH = (N('Multiply') & (HARD_SIGMOID + N('Multiply')))
+    return pattern
 
-KERAS_ACTIVATIONS = N('ReLU') | N('ThresholdedReLU') | N('ELU') | N('PReLU') | N('LeakyReLU') | N('Activation')
-TF_ACTIVATIONS = N('Relu')
-ACT = KERAS_ACTIVATIONS | TF_ACTIVATIONS | HARD_SIGMOID #| HARD_SWISH
 
-ANY_BN_ACT_COMBO = BN + ACT | ACT + BN | BN | ACT
+def create_h_swish_act() -> GraphPattern:
+    pattern = GraphPattern()
 
-ANY_AG_BN_ACT_COMBO = AG + ACT | ANY_BN_ACT_COMBO
+    input_pattern_node = pattern.add_node(label='*INPUT_NODE*', type=GraphPattern.PATTERN_INPUT_NODE_TYPE)
 
-POOLING = N('AveragePooling2D') | N('AveragePooling3D') | N('GlobalAveragePooling2D') | N('GlobalAveragePooling3D')
+    # TODO (vshampor): current approach with join_patterns is deficient since it does not allow to reliably
+    #  connect nodes after a pattern has been joined. Along with the label and the type, the nodes created
+    #  in the pattern must allow a "name" or "address" attribute, which must be a unique human readable
+    #  string identifier of the node even if it has been joined multiple times, or perhaps each pattern
+    #  after joining must return a list of output nodes so that these can be joined to later.
+    #  Currently cannot specify h_swish in terms of h_sigmoid due to this.
+    add_node = pattern.add_node(label='ADD', type='AddV2')
+    relu_node = pattern.add_node(label='RELU', type='ReLU')
+    mul_node = pattern.add_node(label='TF_OP_MUL', type='Mul')
 
-SINGLE_OPS = POOLING | N('Average') | N('LayerNormalization') | N('UpSampling2D')
+    pattern.add_edge(input_pattern_node, add_node)
+    pattern.add_edge(add_node, relu_node)
+    pattern.add_edge(relu_node, mul_node)
 
-SET_ELEMENTWISE_LAYERS = {layer for m in ELEMENTWISE_LAYER_METATYPES for layer in m.get_all_aliases()}
-LIST_ELEMENTWISE_OPS = [N(layer) for layer in SET_ELEMENTWISE_LAYERS]
-ELEMENTWISE = reduce(operator.or_, LIST_ELEMENTWISE_OPS[1:], LIST_ELEMENTWISE_OPS[0])
+    mul_2_node = pattern.add_node(label='MULTIPLY', type='Multiply')
+    pattern.add_edge(input_pattern_node, mul_2_node)
+    pattern.add_edge(mul_node, mul_2_node)
+
+    return pattern

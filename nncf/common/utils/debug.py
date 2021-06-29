@@ -30,7 +30,7 @@ def set_debug_log_dir(dir_: str):
 
 @contextmanager
 def nncf_debug():
-    from nncf.torch import set_log_level
+    from nncf.common.utils.logger import set_log_level
     set_log_level(logging.DEBUG)
     yield
     set_log_level(logging.INFO)

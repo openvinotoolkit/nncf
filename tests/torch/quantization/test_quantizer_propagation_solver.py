@@ -26,6 +26,7 @@ from unittest.mock import MagicMock
 import networkx as nx
 import pytest
 
+from nncf.common.graph import Dtype
 from nncf.common.graph import INPUT_NOOP_METATYPES
 from nncf.common.graph import OUTPUT_NOOP_METATYPES
 from nncf.common.graph import NNCFNodeName
@@ -52,7 +53,6 @@ from nncf.torch.dynamic_graph.scope import Scope
 from nncf.torch.dynamic_graph.wrappers import OP_NAMES_REQUIRING_MODULE_ATTRS
 from nncf.torch.graph.graph import NNCFGraph
 from nncf.torch.graph.operator_metatypes import get_operator_metatypes
-from nncf.torch.quantization.default_quantization import get_default_quant_traits_to_metatypes_map
 from nncf.torch.quantization.default_quantization import DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT
 from tests.torch.quantization.test_quantizer_propagation_graph import get_edge_paths_for_propagation
 from tests.torch.test_nncf_network import get_ip_graph_for_test
@@ -1729,7 +1729,7 @@ class TestQuantizerPropagationSolver:
             initial_node_name="2 /B_0",
             target_node_name=InsertionPointGraph.get_post_hook_node_key("1 /A_0"),
             path_to_propagate=[
-                (InsertionPointGraph.get_pre_hook_node_key("1 /A_0", in_port_id=0), "1 /A_0"),
+                (InsertionPointGraph.get_pre_hook_node_key("1 /A_0", input_port_id=0), "1 /A_0"),
                 ("1 /A_0", InsertionPointGraph.get_post_hook_node_key("1 /A_0"))
             ],
             expected_status=TransitionStatus.SHOULD_NOT_TRANSITION
@@ -1739,7 +1739,7 @@ class TestQuantizerPropagationSolver:
             initial_node_name="6 /F_0",
             target_node_name=InsertionPointGraph.get_post_hook_node_key("5 /E_0"),
             path_to_propagate=[
-                (InsertionPointGraph.get_pre_hook_node_key("5 /E_0", in_port_id=0), "5 /E_0"),
+                (InsertionPointGraph.get_pre_hook_node_key("5 /E_0", input_port_id=0), "5 /E_0"),
                 ("5 /E_0", InsertionPointGraph.get_post_hook_node_key("5 /E_0"))
             ],
             expected_status=TransitionStatus.SHOULD_NOT_TRANSITION
@@ -1749,7 +1749,7 @@ class TestQuantizerPropagationSolver:
             initial_node_name="6 /F_0",
             target_node_name=InsertionPointGraph.get_post_hook_node_key("5 /E_0"),
             path_to_propagate=[
-                (InsertionPointGraph.get_pre_hook_node_key("5 /E_0", in_port_id=1), "5 /E_0"),
+                (InsertionPointGraph.get_pre_hook_node_key("5 /E_0", input_port_id=1), "5 /E_0"),
                 ("5 /E_0", InsertionPointGraph.get_post_hook_node_key("5 /E_0"))
             ],
             expected_status=TransitionStatus.SHOULD_TRANSITION
@@ -1764,7 +1764,7 @@ class TestQuantizerPropagationSolver:
             target_node_name=None,
             path_to_propagate=[
                 (InsertionPointGraph.get_post_hook_node_key("2 /B_0"),
-                 InsertionPointGraph.get_pre_hook_node_key("4 /D_0", in_port_id=0)),
+                 InsertionPointGraph.get_pre_hook_node_key("4 /D_0", input_port_id=0)),
             ],
             expected_status=TransitionStatus.SHOULD_NOT_TRANSITION
         )
@@ -1816,4 +1816,4 @@ class TestQuantizerPropagationSolver:
         assert Counter(["4 /D_0", "5 /E_0"]) == Counter(affected_op_node_per_pq)
         double_input_pq = all_pqs[affected_op_node_per_pq.index("5 /E_0")]
         assert double_input_pq.current_location_node_key == InsertionPointGraph.get_pre_hook_node_key("5 /E_0",
-                                                                                                      in_port_id=1)
+                                                                                                      input_port_id=1)

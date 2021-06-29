@@ -10,8 +10,6 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-import functools
-import operator
 import shutil
 # pylint:disable=too-many-lines
 from collections import Counter
@@ -37,7 +35,6 @@ from nncf.api.compression import CompressionStage
 from nncf.common.graph.definitions import MODEL_INPUT_OP_NAME
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
-from nncf.common.graph import NNCFNodeExpression
 from nncf.common.graph import NNCFNodeName
 from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
 from nncf.common.graph.layer_attributes import WeightedLayerAttributes
@@ -78,7 +75,7 @@ from nncf.torch.compression_method_api import PTCompressionAlgorithmBuilder
 from nncf.torch.compression_method_api import PTCompressionAlgorithmController
 from nncf.torch.debug import CallCountTracker
 from nncf.torch.debug import DebugInterface
-from nncf.common.debug import is_debug
+from nncf.common.utils.debug import is_debug
 from nncf.torch.dynamic_graph.context import TracingContext
 from nncf.torch.graph.graph import PTNNCFGraph
 from nncf.torch.graph.operator_metatypes import Conv2dMetatype
@@ -87,7 +84,7 @@ from nncf.torch.graph.transformations.commands import PTInsertionCommand
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.graph.transformations.commands import TransformationPriority
 from nncf.torch.graph.transformations.layout import PTTransformationLayout
-from nncf.torch.hardware.fused_patterns import TorchHWFusedPattern
+from nncf.torch.hardware.fused_patterns import PT_HW_FUSED_PATTERNS
 from nncf.torch.hardware.config import PTHWConfig
 from nncf.torch.initialization import SimpleDataLoaderRunner
 from nncf.torch.module_operations import UpdatePaddingValue
@@ -328,7 +325,7 @@ class PropagationBasedQuantizerSetupGenerator(QuantizerSetupGeneratorBase):
                  debug_interface: 'QuantizationDebugInterface' = None):
         super().__init__(quant_config, target_model, precision_init_type, precision_init_params, range_init_params)
 
-        self._pattern_fusing_graph = get_full_pattern_graph()
+        self._pattern_fusing_graph = PT_HW_FUSED_PATTERNS.get_full_pattern_graph()
 
         self.hw_config = hw_config
 
@@ -350,7 +347,6 @@ class PropagationBasedQuantizerSetupGenerator(QuantizerSetupGeneratorBase):
                                                        target_scopes=self.target_scopes,
                                                        hw_config=self.hw_config,
                                                        default_trait_to_metatype_map=DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT,
-                                                       debug_interface=self._debug_interface,
                                                        default_qconfig_list=[self._get_default_qconfig(
                                                            constraints=self.global_quantizer_constraints[
                                                                QuantizerGroup.ACTIVATIONS])],
@@ -385,22 +381,6 @@ class PropagationBasedQuantizerSetupGenerator(QuantizerSetupGeneratorBase):
         finalized_quantizer_setup = prop_graph_solver.get_final_quantizer_setup(finalized_proposal)
         finalized_quantizer_setup = self._handle_quantize_inputs_option(finalized_quantizer_setup)
         return finalized_quantizer_setup
-
-    def _get_hw_fused_patterns(self) -> NNCFNodeExpression:
-        """
-        Resulting pattern should have single input; the operation with inputs to
-        quantize should be the input operation; outputs should only be produced by one output node.
-        """
-        full_pattern = TorchHWFusedPattern.get()
-        if self._quantizable_subgraph_patterns is not None:
-            for pattern in self._quantizable_subgraph_patterns:
-                if not isinstance(pattern, str):
-                    custom_pattern = functools.reduce(operator.add,
-                                                      [NNCFNodeExpression(node) for node in pattern])
-                else:
-                    custom_pattern = NNCFNodeExpression(pattern)
-                full_pattern = full_pattern | custom_pattern
-        return full_pattern
 
     def _assign_qconfig_lists_to_modules(self, nodes_with_weights: List[NNCFNode]) -> Dict[NNCFNode,
                                                                                            List[QuantizerConfig]]:
@@ -1355,7 +1335,7 @@ class QuantizationDebugInterface(DebugInterface):
         }
         self.graph_size = 0
 
-        from nncf.common.debug import DEBUG_LOG_DIR
+        from nncf.common.utils.debug import DEBUG_LOG_DIR
         self.dump_dir = Path(DEBUG_LOG_DIR) / Path("debug_dumps")
         self.dump_dir.mkdir(parents=True, exist_ok=True)
         self.scale_dump_dir = self.dump_dir / Path("scale")

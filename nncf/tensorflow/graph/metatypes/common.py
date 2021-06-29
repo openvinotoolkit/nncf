@@ -14,6 +14,9 @@
 from typing import List
 from typing import Type
 
+from nncf.common.graph import INPUT_NOOP_METATYPES
+from nncf.common.graph import OUTPUT_NOOP_METATYPES
+from nncf.common.graph.operator_metatypes import NOOP_METATYPES
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.tensorflow.graph.metatypes import keras_layers as layer_metatypes
 from nncf.tensorflow.graph.metatypes import tf_ops as op_metatypes
@@ -118,5 +121,7 @@ def get_operator_metatypes() -> List[Type[OperatorMetatype]]:
     keras_metatypes_list = list(layer_metatypes.KERAS_LAYER_METATYPES.registry_dict.values())
     tf_metatypes_list = list(op_metatypes.TF_OPERATION_METATYPES.registry_dict.values())
     return list(set(keras_metatypes_list + tf_metatypes_list + \
-                    get_input_metatypes() + get_output_metatypes() + get_noop_metatypes()))
+                    list(INPUT_NOOP_METATYPES.registry_dict.values()) +
+                    list(OUTPUT_NOOP_METATYPES.registry_dict.values()) +
+                    list(NOOP_METATYPES.registry_dict.values())))
 
