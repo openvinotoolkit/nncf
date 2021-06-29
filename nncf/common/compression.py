@@ -10,18 +10,58 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+from abc import abstractmethod
 
-from typing import Optional, List, Tuple, Any
+from typing import Optional, List, Tuple, Any, Dict
 
-from nncf.api.compression import CompressionAlgorithmController
 from nncf.common.schedulers import StubCompressionScheduler
 import nncf.common.factory as factory
+from nncf.api.compression import CompressionAlgorithmBuilder
+from nncf.api.compression import CompressionAlgorithmController
+from nncf.api.compression import CompressionLevel
+from nncf.api.compression import ModelType
+from nncf.common.utils.logger import logger as nncf_logger
+from nncf.common.utils.registry import Registry
+
+
+class BaseControllerStateNames:
+    LOSS = 'loss_state'
+    SCHEDULER = 'scheduler_state'
+    COMPRESSION_STAGE = 'compression_stage'
+    COMPRESSION_LEVEL = 'compression_level'
 
 
 class BaseCompressionAlgorithmController(CompressionAlgorithmController):
     """
     Contains the implementation of the basic functionality of the compression controller.
     """
+
+    def __init__(self, target_model: ModelType):
+        """
+        Initializes the internal state of the compression algorithm controller.
+
+        :param target_model: The model with additional modifications necessary
+            to enable algorithm-specific compression during fine-tuning built
+            by the `CompressionAlgorithmBuilder`.
+        """
+        super().__init__(target_model)
+        self._name = None
+        self._builder_state = None
+        self._state_names = BaseControllerStateNames()
+
+    @property
+    def name(self):
+        if self._name is None:
+            raise RuntimeError('Internal error: name of the controller is not set!')
+        return self._name
+
+    @property
+    def compression_rate(self) -> float:
+        return None
+
+    @compression_rate.setter
+    def compression_rate(self) -> float:
+        pass
 
     def export_model(self,
                      save_path: str,
@@ -55,10 +95,124 @@ class BaseCompressionAlgorithmController(CompressionAlgorithmController):
     def disable_scheduler(self) -> None:
         self._scheduler = StubCompressionScheduler()
 
-    @property
-    def compression_rate(self) -> float:
-        return None
+    def set_builder_state_with_name(self, name: str, builder_state: Dict):
+        """
+        Sets state of the builder and the corresponding algorithm name. Should be called by the builder to set its
+        state and registered algorithm key.
+        """
+        self._name = name
+        self._builder_state = builder_state
 
-    @compression_rate.setter
-    def compression_rate(self) -> float:
-        pass
+    def load_state(self, state: Dict[str, Dict[str, Any]]) -> None:
+        """
+        Loads the compression controller state from the map of algorithm name to the dictionary with state attributes.
+
+        :param state: map of the algorithm name to the dictionary with the corresponding state attributes.
+        """
+        if self.name in state:
+            algo_state = state[self.name]
+            self._handle_legacy_compression_level(algo_state)
+            self.loss.load_state(algo_state[self._state_names.LOSS])
+            self.scheduler.load_state(algo_state[self._state_names.SCHEDULER])
+
+    def get_state(self) -> Dict[str, Dict[str, Any]]:
+        """
+        Returns compression controller state, which is the map of the algorithm name to the dictionary with the
+        corresponding state attributes.
+
+        :return: The compression controller state.
+        """
+        return {
+            self.name: {
+                self._state_names.LOSS: self.loss.get_state(),
+                self._state_names.SCHEDULER: self.scheduler.get_state(),
+                self._state_names.COMPRESSION_STAGE: self.compression_stage()
+            }
+        }
+
+    def _handle_legacy_compression_level(self, state: Dict[str, Any]) -> None:
+        if self._state_names.COMPRESSION_LEVEL in state:
+            if self._state_names.COMPRESSION_STAGE not in state:
+                compression_level = state[self._state_names.COMPRESSION_LEVEL]
+                compression_stage = CompressionLevel.map_legacy_level_to_stage()[compression_level]
+                state[self._state_names.COMPRESSION_STAGE] = compression_stage
+            else:
+                nncf_logger.warning('Both CompressionStage and (legacy) CompressionLevel attributes '
+                                    'are specified in the checkpoint. Proceeding with the value stored '
+                                    'in CompressionStage')
+        if self._state_names.COMPRESSION_STAGE in state:
+            if self.compression_stage() != state[self._state_names.COMPRESSION_STAGE]:
+                nncf_logger.warning('Current CompressionStage ({}) of the compression controller does '
+                                    'not correspond to the value found in '
+                                    'the checkpoint ({})'.format(self.compression_stage(),
+                                                                 state[self._state_names.COMPRESSION_STAGE]))
+
+
+class BaseCompressionAlgorithmBuilder(CompressionAlgorithmBuilder):
+    """
+    Contains the implementation of the basic functionality of the compression builder.
+    """
+
+    @property
+    def name(self) -> str:
+        return getattr(self, Registry.REGISTERED_NAME_ATTR, 'NOT_REGISTERED_' + self.__class__.__name__)
+
+    def load_state(self, state: Dict[str, Any]) -> None:
+        """
+        Initializes object from the state.
+
+        :param state: Output of `get_state()` method.
+        """
+        if self.name in state:
+            self._load_state_without_name(state[self.name])
+
+    def get_state(self) -> Dict[str, Any]:
+        """
+        Returns a dictionary with Python data structures (dict, list, tuple, str, int, float, True, False, None) that
+        represents state of the object.
+        """
+        return {self.name: self._get_state_without_name()}
+
+    @abstractmethod
+    def _build_controller(self, model: ModelType) -> BaseCompressionAlgorithmController:
+        """
+        Simple implementation of building controller without setting builder state and loading controller's one.
+
+        :param model: The model with additional modifications necessary to enable
+            algorithm-specific compression during fine-tuning.
+        :return: The instance of the `BaseCompressionAlgorithmController`.
+        """
+
+    def build_controller(self, model: ModelType) -> BaseCompressionAlgorithmController:
+        """
+        Builds `BaseCompressionAlgorithmController` to handle the additional modules,
+        parameters, and hooks inserted into the model to enable algorithm-specific
+        compression.
+
+        :param model: The model with additional modifications necessary to enable
+            algorithm-specific compression during fine-tuning.
+        :return: The instance of the `BaseCompressionAlgorithmController`.
+        """
+        ctrl = self._build_controller(model)
+        if not isinstance(ctrl, BaseCompressionAlgorithmController):
+            raise RuntimeError('Internal error: builder must create controller inherited from '
+                               '`BaseCompressionAlgorithmController` class')
+        ctrl.set_builder_state_with_name(self.name, self.get_state())
+        return ctrl
+
+    @abstractmethod
+    def _load_state_without_name(self, state_without_name: Dict[str, Any]):
+        """
+        Implementation of load state that takes state without builder name.
+
+        :param state_without_name: Output of `_get_state_without_name()` method.
+        """
+
+    @abstractmethod
+    def _get_state_without_name(self) -> Dict[str, Any]:
+        """
+        Implementation of get_state that returns state without builder name.
+
+        :return: Returns a dictionary with Python data structures
+            (dict, list, tuple, str, int, float, True, False, None) that represents state of the object.
+        """

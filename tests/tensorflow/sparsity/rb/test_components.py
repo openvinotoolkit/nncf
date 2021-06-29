@@ -65,7 +65,7 @@ def get_basic_rb_sparse_model(model_name, local=False, config=CONF, freeze=False
         config = NNCFConfig.from_json(config)
     if local:
         config.update({"params": {"sparsity_level_setting_mode": 'local'}})
-    compress_model, algo = create_compressed_model_and_algo_for_test(model, config, should_init=False)
+    compress_model, algo = create_compressed_model_and_algo_for_test(model, config)
     if freeze:
         algo.freeze()
     return compress_model, algo, config
@@ -103,7 +103,7 @@ def test_distributed_masks_are_equal(quantization):
         if quantization:
             config.update({'compression': [config['compression'], {'algorithm': 'quantization'}]})
         model = TEST_MODELS['Conv2D']()
-        algo, model = create_compressed_model(model, config, should_init=False)
+        algo, model = create_compressed_model(model, config)
         model.add_loss(algo.loss)
         compression_callbacks = create_compression_callbacks(algo, log_tensorboard=False)
 

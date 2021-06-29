@@ -20,19 +20,21 @@ from pathlib import Path
 import torch
 import torch.utils.data as data
 
-from examples.torch.common import restricted_pickle_module
 from examples.torch.common.execution import set_seed
-from examples.torch.common.model_loader import load_resuming_model_state_dict_and_checkpoint_from_path
-from examples.torch.common.sample_config import create_sample_config, SampleConfig
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 
+from examples.torch.common import restricted_pickle_module
 from examples.torch.common.argparser import get_common_argument_parser
 from examples.torch.common.distributed import DistributedSampler
 from examples.torch.common.example_logger import logger
 from examples.torch.common.execution import get_execution_mode
 from examples.torch.common.execution import prepare_model_for_execution, start_worker
-from nncf.api.compression import CompressionStage
-from nncf.torch.initialization import register_default_init_args
+from examples.torch.common.model_loader import COMPRESSION_STATE_ATTR
+from examples.torch.common.model_loader import MODEL_STATE_ATTR
+from examples.torch.common.model_loader import extract_model_and_compression_state_dicts
+from examples.torch.common.model_loader import load_resuming_checkpoint
+from examples.torch.common.sample_config import SampleConfig
+from examples.torch.common.sample_config import create_sample_config
 from examples.torch.common.optimizer import get_parameter_groups, make_optimizer
 from examples.torch.common.utils import get_name, make_additional_checkpoints, configure_paths, \
     create_code_snapshot, is_on_first_rank, configure_logging, print_args, is_pretrained_model_requested, \
@@ -41,13 +43,17 @@ from examples.torch.common.utils import get_name, make_additional_checkpoints, c
 from nncf.torch import AdaptiveCompressionTrainingLoop
 from nncf.config.utils import is_accuracy_aware_training
 from examples.torch.common.utils import write_metrics
-from examples.torch.object_detection.dataset import detection_collate, get_testing_dataset, get_training_dataset
+from examples.torch.object_detection.dataset import detection_collate
+from examples.torch.object_detection.dataset import get_testing_dataset
+from examples.torch.object_detection.dataset import get_training_dataset
 from examples.torch.object_detection.eval import test_net
 from examples.torch.object_detection.layers.modules import MultiBoxLoss
 from examples.torch.object_detection.model import build_ssd
 from nncf.torch import create_compressed_model
 from nncf.torch import load_state
+from nncf.api.compression import CompressionStage
 from nncf.torch.dynamic_graph.graph_tracer import create_input_infos
+from nncf.torch.initialization import register_default_init_args
 from nncf.torch.utils import is_main_process
 
 
@@ -168,12 +174,10 @@ def main_worker(current_gpu, config):
     ##################
     resuming_checkpoint_path = config.resuming_checkpoint_path
 
-    resuming_model_sd = None
+    resuming_checkpoint = None
     if resuming_checkpoint_path is not None:
-        resuming_model_sd, resuming_checkpoint = load_resuming_model_state_dict_and_checkpoint_from_path(
-            resuming_checkpoint_path)
-
-    compression_ctrl, net = create_model(config, resuming_model_sd)
+        resuming_checkpoint = load_resuming_checkpoint(resuming_checkpoint_path)
+    compression_ctrl, net = create_model(config, resuming_checkpoint)
     if config.distributed:
         config.batch_size //= config.ngpus_per_node
         config.workers //= config.ngpus_per_node
@@ -191,7 +195,6 @@ def main_worker(current_gpu, config):
     #################################
 
     if resuming_checkpoint_path is not None and config.mode.lower() == 'train' and config.to_onnx is None:
-        compression_ctrl.load_state(resuming_checkpoint)
         optimizer.load_state_dict(resuming_checkpoint.get('optimizer', optimizer.state_dict()))
         config.start_epoch = resuming_checkpoint.get('epoch', 0) + 1
 
@@ -312,7 +315,7 @@ def create_dataloaders(config):
 
 
 def create_model(config: SampleConfig,
-                 resuming_model_sd: dict = None):
+                 resuming_checkpoint: dict = None):
     input_info_list = create_input_infos(config.nncf_config)
     image_size = input_info_list[0].shape[-1]
     ssd_net = build_ssd(config.model, config.ssd_params, image_size, config.num_classes, config)
@@ -323,9 +326,11 @@ def create_model(config: SampleConfig,
         load_state(ssd_net, sd)
 
     ssd_net.to(config.device)
-
+    model_state_dict, compression_state_dict = extract_model_and_compression_state_dicts(resuming_checkpoint)
     compression_ctrl, compressed_model = create_compressed_model(ssd_net, config.nncf_config,
-                                                                 resuming_model_sd)
+                                                                 compression_state_dict)
+    if model_state_dict is not None:
+        load_state(compressed_model, model_state_dict, is_resume=True)
     compressed_model, _ = prepare_model_for_execution(compressed_model, config)
 
     compressed_model.train()
@@ -445,11 +450,10 @@ def train(net, compression_ctrl, train_data_loader, test_data_loader, criterion,
 
             checkpoint_file_path = osp.join(config.checkpoint_save_dir, "{}_last.pth".format(get_name(config)))
             torch.save({
-                'state_dict': net.state_dict(),
+                MODEL_STATE_ATTR: net.state_dict(),
+                COMPRESSION_STATE_ATTR: compression_ctrl.get_compression_state_dict(),
                 'optimizer': optimizer.state_dict(),
                 'epoch': epoch,
-                'scheduler': compression_ctrl.scheduler.get_state(),
-                'compression_stage': compression_stage,
             }, str(checkpoint_file_path))
             make_additional_checkpoints(checkpoint_file_path,
                                         is_best=is_best,

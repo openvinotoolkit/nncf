@@ -11,9 +11,7 @@
  limitations under the License.
 """
 from collections import OrderedDict
-from typing import Dict, Callable, Any, Mapping, Sequence, Set, List
-from typing import Tuple
-from typing import Type
+from typing import Dict, Callable, Any, Mapping, Sequence, Set, List, Tuple, Type
 
 import numpy as np
 import random

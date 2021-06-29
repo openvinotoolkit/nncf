@@ -22,7 +22,7 @@ from tests.tensorflow.quantization.test_algorithm_quantization import get_basic_
 def test_struct_auxiliary_nodes_nncf_graph():
     model = get_basic_conv_test_model()
     config = get_basic_quantization_config()
-    compressed_model, _ = create_compressed_model_and_algo_for_test(model, config, should_init=False)
+    compressed_model, _ = create_compressed_model_and_algo_for_test(model, config)
 
     nncf_graph = convert_keras_model_to_nncf_graph(compressed_model)
 

@@ -45,7 +45,7 @@ class NoCompressionAlgorithmBuilder(PTCompressionAlgorithmBuilder):
     def _get_transformation_layout(self, target_model: NNCFNetwork) -> PTTransformationLayout:
         return PTTransformationLayout()
 
-    def build_controller(self, target_model: NNCFNetwork) -> PTCompressionAlgorithmController:
+    def _build_controller(self, target_model: NNCFNetwork) -> PTCompressionAlgorithmController:
         return NoCompressionAlgorithmController(target_model)
 
     def initialize(self, model: NNCFNetwork) -> None:

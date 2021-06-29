@@ -15,6 +15,7 @@ import sys
 
 import tensorflow as tf
 
+from nncf.tensorflow.api.compression import TFCompressionState
 from nncf.tensorflow.helpers.model_creation import create_compressed_model
 from examples.tensorflow.common.logger import logger
 from examples.tensorflow.common.sample_config import create_sample_config
@@ -78,11 +79,12 @@ def od_checkpoint_saver(config):
     model_builder = get_model_od_builder(config)
     model = model_builder.build_model()
 
-    compression_ctrl, compress_model = create_compressed_model(model,
-                                                               config.nncf_config,
-                                                               should_init=False)
+    compression_state = load_compression_state_from_checkpoint(config.ckpt_path)
 
-    checkpoint = tf.train.Checkpoint(model=compress_model, compression_ctrl=compression_ctrl)
+    compression_ctrl, compress_model = create_compressed_model(model, config.nncf_config, compression_state)
+
+    compression_state = compression_ctrl.get_compression_state()
+    checkpoint = tf.train.Checkpoint(model=compress_model, compression_state=compression_state)
     load_and_save_checkpoint(checkpoint, config)
 
 
@@ -93,15 +95,22 @@ def seg_checkpoint_saver(config):
     model_builder = get_model_seg_builder(config)
     model = model_builder.build_model()
 
-    compression_ctrl, compress_model = create_compressed_model(model,
-                                                               config.nncf_config,
-                                                               should_init=False)
+    compression_state = load_compression_state_from_checkpoint(config.ckpt_path)
+    compression_ctrl, compress_model = create_compressed_model(model, config.nncf_config, compression_state)
 
     variables = get_variables(compress_model)
+    compression_state = compression_ctrl.get_compression_state()
     checkpoint = tf.train.Checkpoint(variables=variables,
-                                     compression_ctrl=compression_ctrl,
+                                     compression_state=compression_state,
                                      step=tf.Variable(0))
     load_and_save_checkpoint(checkpoint, config)
+
+
+def load_compression_state_from_checkpoint(checkpoint_path):
+    compression_state = TFCompressionState()
+    checkpoint = tf.train.Checkpoint(compression_state=compression_state)
+    load_checkpoint(checkpoint, checkpoint_path)
+    return compression_state
 
 
 def load_and_save_checkpoint(checkpoint, config):

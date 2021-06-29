@@ -24,7 +24,7 @@ from nncf.tensorflow.api.compression import TFCompressionAlgorithmBuilder
 from nncf.tensorflow.api.compression import TFCompressionAlgorithmController
 from nncf.tensorflow.loss import TFZeroCompressionLoss
 
-TF_COMPRESSION_ALGORITHMS = Registry('compression algorithm')
+TF_COMPRESSION_ALGORITHMS = Registry('compression algorithm', add_name_as_attr=True)
 
 
 @TF_COMPRESSION_ALGORITHMS.register('NoCompressionAlgorithm')
@@ -32,7 +32,7 @@ class NoCompressionAlgorithmBuilder(TFCompressionAlgorithmBuilder):
     def get_transformation_layout(self, _) -> TransformationLayout:
         return TransformationLayout()
 
-    def build_controller(self, model: tf.keras.Model) -> CompressionAlgorithmController:
+    def _build_controller(self, model: tf.keras.Model) -> CompressionAlgorithmController:
         return NoCompressionAlgorithmController(model)
 
     def initialize(self, model: tf.keras.Model) -> None:

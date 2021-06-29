@@ -14,11 +14,11 @@
 from typing import Any, Dict, List, Optional
 
 from nncf import NNCFConfig
-from nncf.api.compression import CompressionStage
-from nncf.api.compression import CompressionLoss
-from nncf.api.compression import CompressionScheduler
 from nncf.api.compression import CompressionAlgorithmBuilder
 from nncf.api.compression import CompressionAlgorithmController
+from nncf.api.compression import CompressionLoss
+from nncf.api.compression import CompressionScheduler
+from nncf.api.compression import CompressionStage
 from nncf.api.compression import ModelType
 from nncf.common.statistics import NNCFStatistics
 
@@ -46,7 +46,7 @@ class CompositeCompressionLoss(CompressionLoss):
         """
         self._child_losses.append(child_loss)
 
-    def load_state(self, states: List[Dict[str, object]]) -> None:
+    def load_state(self, states: List[Dict[str, Any]]) -> None:
         """
         Loads the composite compression loss state.
 
@@ -55,7 +55,7 @@ class CompositeCompressionLoss(CompressionLoss):
         for child_loss, child_state in zip(self._child_losses, states):
             child_loss.load_state(child_state)
 
-    def get_state(self) -> List[Dict[str, object]]:
+    def get_state(self) -> List[Dict[str, Any]]:
         """
         Returns the composite compression loss state.
 
@@ -128,7 +128,7 @@ class CompositeCompressionScheduler(CompressionScheduler):
         for scheduler in self._child_schedulers:
             scheduler.epoch_step(next_epoch)
 
-    def load_state(self, state: List[Dict[str, object]]) -> None:
+    def load_state(self, state: List[Dict[str, Any]]) -> None:
         """
         Calls `load_state()` method for all children.
 
@@ -137,7 +137,7 @@ class CompositeCompressionScheduler(CompressionScheduler):
         for child_scheduler, child_state in zip(self._child_schedulers, state):
             child_scheduler.load_state(child_state)
 
-    def get_state(self) -> List[Dict[str, object]]:
+    def get_state(self) -> List[Dict[str, Any]]:
         """
         Returns the composite compression scheduler state. This state contains
         the state of all children.
@@ -216,26 +216,27 @@ class CompositeCompressionAlgorithmController(CompressionAlgorithmController):
                 result += current_level
         return result
 
-    def load_state(self, states: List[Dict[str, object]]) -> None:
+    def load_state(self, state: Dict[str, Dict[str, Any]]) -> None:
         """
-        Calls `load_state()` method for all children.
+        Loads the composite compression controller state from the map of algorithm name to the dictionary with state
+        attributes.
 
-        :param states: Output of `get_state()` method.
+        :param state: map of the algorithm name to the dictionary with the corresponding state attributes.
         """
-        for child_ctrl, child_state in zip(self.child_ctrls, states):
-            child_ctrl.load_state(child_state)
+        for ctrl in self.child_ctrls:
+            ctrl.load_state(state)
 
-    def get_state(self) -> List[Dict[str, object]]:
+    def get_state(self) -> Dict[str, Dict[str, Any]]:
         """
-        Returns the composite compression controller state. This state contains
-        the state of all children.
+        Returns composite compression controller state, which is the map of the algorithm name to the dictionary with
+        the corresponding state attributes. This state contains the state of all children.
 
         :return: The composite compression controller state.
         """
-        composite_state = []
-        for child_ctrl in self.child_ctrls:
-            composite_state.append(child_ctrl.get_state())
-        return composite_state
+        result = dict()
+        for ctrl in self.child_ctrls:
+            result.update(ctrl.get_state())
+        return result
 
     def statistics(self, quickly_collected_only: bool = False) -> NNCFStatistics:
         """
@@ -287,3 +288,22 @@ class CompositeCompressionAlgorithmBuilder(CompressionAlgorithmBuilder):
     @property
     def child_builders(self) -> List[CompressionAlgorithmBuilder]:
         return self._child_builders
+
+    def load_state(self, state: Dict[str, Dict]) -> None:
+        """
+        Loads the compression builder state of children
+        :param state: Output of `get_state()` method.
+        """
+        for builder in self.child_builders:
+            builder.load_state(state)
+
+    def get_state(self) -> Dict[str, Dict]:
+        """
+        Returns the composite compression builder state. This state contains
+        the state of all children.
+        :return: The composite compression builder state.
+        """
+        result = dict()
+        for builder in self.child_builders:
+            result.update(builder.get_state())
+        return result

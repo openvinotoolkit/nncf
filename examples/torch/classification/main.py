@@ -30,6 +30,11 @@ import torchvision.transforms as transforms
 import warnings
 from functools import partial
 from shutil import copyfile
+
+from examples.torch.common.model_loader import MODEL_STATE_ATTR
+from examples.torch.common.model_loader import extract_model_and_compression_state_dicts
+from examples.torch.common.model_loader import load_resuming_checkpoint
+from nncf.torch.checkpoint_loading import load_state
 from torch.nn.modules.loss import _Loss
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torchvision.datasets import CIFAR10, CIFAR100
@@ -42,6 +47,7 @@ from examples.torch.common.argparser import get_common_argument_parser
 from examples.torch.common.example_logger import logger
 from examples.torch.common.execution import ExecutionMode, get_execution_mode, \
     prepare_model_for_execution, start_worker
+from examples.torch.common.model_loader import COMPRESSION_STATE_ATTR
 from examples.torch.common.model_loader import load_model
 from examples.torch.common.optimizer import get_parameter_groups, make_optimizer
 from examples.torch.common.sample_config import SampleConfig, create_sample_config
@@ -55,7 +61,6 @@ from nncf.api.compression import CompressionStage
 from nncf.torch.dynamic_graph.graph_tracer import create_input_infos
 from nncf.torch.initialization import register_default_init_args, default_criterion_fn
 from nncf.torch.utils import safe_thread_call, is_main_process
-from examples.torch.classification.common import load_resuming_checkpoint
 
 model_names = sorted(name for name in models.__dict__
                      if name.islower() and not name.startswith("__")
@@ -165,9 +170,13 @@ def main_worker(current_gpu, config: SampleConfig):
 
     model.to(config.device)
 
-    resuming_model_sd, resuming_checkpoint = load_resuming_checkpoint(resuming_checkpoint_path)
-    compression_ctrl, model = create_compressed_model(model, nncf_config,
-                                                      resuming_state_dict=resuming_model_sd)
+    resuming_checkpoint = None
+    if resuming_checkpoint_path is not None:
+        resuming_checkpoint = load_resuming_checkpoint(resuming_checkpoint_path)
+    model_state_dict, compression_state_dict = extract_model_and_compression_state_dicts(resuming_checkpoint)
+    compression_ctrl, model = create_compressed_model(model, nncf_config, compression_state_dict)
+    if model_state_dict is not None:
+        load_state(model, model_state_dict, is_resume=True)
 
     if config.to_onnx:
         compression_ctrl.export_model(config.to_onnx)
@@ -188,7 +197,6 @@ def main_worker(current_gpu, config: SampleConfig):
         if config.mode.lower() == 'train' and config.to_onnx is None:
             config.start_epoch = resuming_checkpoint['epoch']
             best_acc1 = resuming_checkpoint['best_acc1']
-            compression_ctrl.load_state(resuming_checkpoint)
             optimizer.load_state_dict(resuming_checkpoint['optimizer'])
             logger.info("=> loaded checkpoint '{}' (epoch: {}, best_acc1: {:.3f})"
                         .format(resuming_checkpoint_path, resuming_checkpoint['epoch'], best_acc1))
@@ -287,12 +295,11 @@ def train(config, compression_ctrl, model, criterion, criterion_fn, lr_scheduler
             checkpoint = {
                 'epoch': epoch + 1,
                 'arch': model_name,
-                'state_dict': model.state_dict(),
+                MODEL_STATE_ATTR:  model.state_dict(),
+                COMPRESSION_STATE_ATTR: compression_ctrl.get_compression_state_dict(),
                 'best_acc1': best_acc1,
-                'compression_stage': compression_stage,
                 'acc1': acc1,
                 'optimizer': optimizer.state_dict(),
-                'scheduler': compression_ctrl.scheduler.get_state()
             }
 
             torch.save(checkpoint, checkpoint_path)

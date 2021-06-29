@@ -17,10 +17,7 @@ from collections import OrderedDict
 from collections import namedtuple
 from functools import partial
 from pathlib import Path
-from typing import Callable
-from typing import Dict
-from typing import List
-from typing import NamedTuple
+from typing import Callable, Dict, List, NamedTuple
 
 import math
 import pytest
@@ -801,11 +798,12 @@ def test_staged_quantization_saves_enabled_quantizers_in_state_dict(tmp_path):
         "weights_quant_start_epoch": 1
     }
     register_bn_adaptation_init_args(config)
-    model_save, ctrl_save = create_compressed_model_and_algo_for_test(BasicConvTestModel(), config)
+    _, ctrl_save = create_compressed_model_and_algo_for_test(BasicConvTestModel(), config)
     ctrl_save.scheduler.epoch_step()
     ctrl_save.scheduler.epoch_step()
+    compression_state_dict = ctrl_save.get_compression_state_dict()
     _, ctrl_load = create_compressed_model_and_algo_for_test(BasicConvTestModel(), config,
-                                                             resuming_state_dict=model_save.state_dict())
+                                                             compression_state_dict=compression_state_dict)
     for quantizer_info in ctrl_load.non_weight_quantizers.values():
         assert not quantizer_info.quantizer_module_ref.is_enabled_quantization()
     for quantizer_info in ctrl_load.weight_quantizers.values():
