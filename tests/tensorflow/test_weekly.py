@@ -40,12 +40,12 @@ GLOBAL_CONFIG = {
             'imagenet': {
                     'configs': {
                         'quantization/inception_v3_imagenet_int8.json': {
-                            'expected_accuracy': 78.41,
+                            'expected_accuracy': 78.35,
                             'absolute_tolerance_train': 0.5,
                             'absolute_tolerance_test': 0.5
                         },
                         'sparsity_quantization/inception_v3_imagenet_rb_sparsity_int8.json': {
-                            'expected_accuracy': 77.55,
+                            'expected_accuracy': 77.58,
                             'absolute_tolerance_train': 0.5,
                             'absolute_tolerance_test': 0.5
                         },
@@ -55,12 +55,12 @@ GLOBAL_CONFIG = {
                             'absolute_tolerance_test': 0.5
                         },
                         'quantization/mobilenet_v2_imagenet_int8.json': {
-                            'expected_accuracy': 71.96,
+                            'expected_accuracy': 71.66,
                             'absolute_tolerance_train': 0.5,
                             'absolute_tolerance_test': 0.5
                         },
                         'sparsity_quantization/mobilenet_v2_imagenet_rb_sparsity_int8.json': {
-                            'expected_accuracy': 71.05,
+                            'expected_accuracy': 71.00,
                             'absolute_tolerance_train': 0.5,
                             'absolute_tolerance_test': 0.5
                         },
@@ -75,32 +75,32 @@ GLOBAL_CONFIG = {
                             'absolute_tolerance_test': 0.5
                         },
                         'quantization/mobilenet_v3_small_imagenet_int8.json': {
-                            'expected_accuracy': 67.51,
+                            'expected_accuracy': 67.70,
                             'absolute_tolerance_train': 0.5,
                             'absolute_tolerance_test': 0.5
                         },
-                        'sparsity_quantization/mobilenet_v3_small_imagenet_magnitude_sparsity_int8.json': {
-                            'expected_accuracy': 67.81,
+                        'sparsity_quantization/mobilenet_v3_small_imagenet_rb_sparsity_int8.json': {
+                            'expected_accuracy': 67.70,
                             'absolute_tolerance_train': 0.5,
                             'absolute_tolerance_test': 0.5
                         },
                         'quantization/mobilenet_v3_large_imagenet_int8.json': {
-                            'expected_accuracy': 75.13,
+                            'expected_accuracy': 75.00,
                             'absolute_tolerance_train': 0.5,
                             'absolute_tolerance_test': 0.5
                         },
-                        'sparsity_quantization/mobilenet_v3_large_imagenet_magnitude_sparsity_int8.json': {
-                            'expected_accuracy': 74.94,
+                        'sparsity_quantization/mobilenet_v3_large_imagenet_rb_sparsity_int8.json': {
+                            'expected_accuracy': 75.15,
                             'absolute_tolerance_train': 0.5,
                             'absolute_tolerance_test': 0.5
                         },
                         'quantization/resnet50_imagenet_int8.json': {
-                            'expected_accuracy': 75.04,
+                            'expected_accuracy': 75.00,
                             'absolute_tolerance_train': 0.5,
                             'absolute_tolerance_test': 0.5
                         },
                         'sparsity_quantization/resnet50_imagenet_rb_sparsity_int8.json': {
-                            'expected_accuracy': 74.38,
+                            'expected_accuracy': 74.30,
                             'absolute_tolerance_train': 0.5,
                             'absolute_tolerance_test': 0.5
                         },
@@ -121,7 +121,7 @@ GLOBAL_CONFIG = {
             'coco2017': {
                 'configs': {
                     'quantization/retinanet_coco_int8.json': {
-                        'expected_accuracy': 33.3,
+                        'expected_accuracy': 33.22,
                         'absolute_tolerance_train': 0.5,
                         'absolute_tolerance_test': 0.5,
                         'weights': 'retinanet/retinanet.h5',
@@ -139,7 +139,7 @@ GLOBAL_CONFIG = {
                         'weights': 'retinanet/retinanet.h5',
                     },
                     'quantization/yolo_v4_coco_int8.json': {
-                        'expected_accuracy': 46.30,
+                        'expected_accuracy': 46.15,
                         'absolute_tolerance_train': 0.5,
                         'absolute_tolerance_test': 0.5,
                         'weights': 'yolo_v4/yolo_v4.h5',
@@ -157,7 +157,7 @@ GLOBAL_CONFIG = {
         'coco2017': {
             'configs': {
                 'quantization/mask_rcnn_coco_int8.json': {
-                    'expected_accuracy': 37.25,
+                    'expected_accuracy': 37.12,
                     'absolute_tolerance_train': 0.5,
                     'absolute_tolerance_test': 0.5,
                     'weights': 'mask_rcnn_baseline',
