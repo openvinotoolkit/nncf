@@ -3,9 +3,10 @@ from functools import reduce
 
 from tests.torch.test_models.synthetic import PartlyNonDifferentialOutputsModel
 from tests.torch.test_models.synthetic import ContainersOutputsModel
-from tests.torch.helpers import TwoConvTestModel
+from tests.torch.helpers import TwoConvTestModel, get_empty_config
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
 from tests.torch.helpers import create_ones_mock_dataloader
+from tests.torch.helpers import fill_params_of_model_by_normal
 from tests.torch.sparsity.magnitude.test_helpers import get_basic_magnitude_sparsity_config
 from tests.torch.quantization.test_quantization_helpers import create_rank_dataloader, post_compression_test_distr_init
 from tests.torch.quantization.test_quantization_helpers import distributed_init_test_default
@@ -31,11 +32,6 @@ def get_kd_config(config):
 def get_sparsity_config_with_sparsity_init(config, sparsity_init=0.5):
     config['compression']['sparsity_init'] = sparsity_init
     return config
-
-
-def fill_params_of_model_by_normal(model, std=1.0):
-    for param in model.parameters():
-        param.data = torch.normal(0, std, size=param.data.size())
 
 
 @pytest.mark.parametrize("inference_type", ['cpu', 'single_GPU', 'DP', 'DDP'])
@@ -232,3 +228,25 @@ def test_knowledge_distillation_loss_types(kd_loss_type):
         reference_kd_loss = kd_loss_fn(kd_outputs, outputs)
         actual_kd_loss = compression_ctrl.loss()
         assert torch.allclose(reference_kd_loss, actual_kd_loss)
+
+
+@pytest.mark.parametrize('algo',
+                         ('magnitude_sparsity', 'rb_sparsity'))
+def test_kd_sparsity_statistics(algo):
+    model = TwoConvTestModel()
+    fill_params_of_model_by_normal(model)
+    model_with_kd = deepcopy(model)
+    config = get_empty_config()
+    sparsity_init = 0.5
+    config['compression'] = {'algorithm': algo, 'sparsity_init': sparsity_init}
+    config_with_kd = deepcopy(config)
+    config_with_kd = get_kd_config(config_with_kd)
+
+    model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
+    model_with_kd, compression_ctrl_with_kd = create_compressed_model_and_algo_for_test(model_with_kd, config_with_kd)
+    statistics = compression_ctrl.statistics()
+    statistics_with_kd = compression_ctrl_with_kd.statistics()
+    assert getattr(statistics, algo).model_statistics.sparsity_level ==\
+           getattr(statistics_with_kd, algo).model_statistics.sparsity_level
+    assert getattr(statistics, algo).model_statistics.sparsity_level_for_layers ==\
+           getattr(statistics_with_kd, algo).model_statistics.sparsity_level_for_layers

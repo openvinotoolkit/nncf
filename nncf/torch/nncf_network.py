@@ -330,6 +330,7 @@ class KnowledgeDistillationLossHandler(nn.Module):
     """
     KD_LOSS_STORAGE_NAME = 'kd_loss'
     KD_STORAGE_DEVICE = 'kd_storage_device'
+
     def __init__(self, context, kd_original_model, calculate_kd_loss_fn, storage_device):
         super().__init__()
         self._compressed_context = context

@@ -67,6 +67,11 @@ def fill_linear_weight(linear, value):
         linear.weight[:n, :n] += torch.eye(n)
 
 
+def fill_params_of_model_by_normal(model, std=1.0):
+    for param in model.parameters():
+        param.data = torch.normal(0, std, size=param.data.size())
+
+
 def create_conv(in_channels, out_channels, kernel_size, weight_init=1, bias_init=0, padding=0, stride=1):
     conv = nn.Conv2d(in_channels, out_channels, kernel_size, padding=padding, stride=stride)
     fill_conv_weight(conv, weight_init)
