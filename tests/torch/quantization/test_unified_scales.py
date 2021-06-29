@@ -19,7 +19,6 @@ import onnx
 import pytest
 import torch
 import torch.nn
-from onnx import numpy_helper
 
 from nncf.common.graph import NNCFNodeName
 from nncf.common.graph.transformations.commands import TargetType
@@ -32,6 +31,7 @@ from nncf.torch.quantization.quantizer_propagation import QuantizerPropagationSo
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
 from tests.torch.helpers import get_nodes_by_type
 from tests.torch.helpers import register_bn_adaptation_init_args
+from tests.torch.helpers import resolve_constant_node_inputs_to_values
 from tests.torch.quantization.test_quantization_helpers import get_quantization_config_without_range_init
 
 
@@ -684,17 +684,6 @@ class TestsWithONNXInspection:
             output_nodes[target_node_name].append(node)
         return list(output_nodes.values())
 
-    @staticmethod
-    def resolve_constant_node_inputs_to_values(node: onnx.NodeProto, graph: onnx.GraphProto) -> \
-            Dict[str, onnx.AttributeProto]:
-        retval = {}
-        for input_ in node.input:
-            constant_input_nodes = [x for x in graph.node if input_ in x.output and x.op_type == "Constant"]
-            for constant_input_node in constant_input_nodes:
-                assert len(constant_input_node.attribute) == 1
-                val = constant_input_node.attribute[0]
-                retval[input_] = numpy_helper.to_array(val.t)
-        return retval
 
     def test_unified_scales_are_identical_in_onnx(self, tmp_path):
         # pylint:disable=no-member
@@ -743,8 +732,7 @@ class TestsWithONNXInspection:
             onnx_model.graph)
 
         for unified_scale_group in fq_nodes_grouped_by_output:
-            inputs = [TestsWithONNXInspection.resolve_constant_node_inputs_to_values(fq_node,
-                                                                                     onnx_model.graph)
+            inputs = [resolve_constant_node_inputs_to_values(fq_node, onnx_model.graph)
                       for fq_node in unified_scale_group]
             for inputs_dict in inputs[1:]:
                 curr_values = list(inputs_dict.values())
@@ -795,8 +783,7 @@ class TestsWithONNXInspection:
 
         fq_nodes_with_expected_unified_scales = embedding_weight_fq_nodes + eltwise_fq_nodes
 
-        unified_fq_node_inputs = [TestsWithONNXInspection.resolve_constant_node_inputs_to_values(fq_node,
-                                                                                                 onnx_model.graph)
+        unified_fq_node_inputs = [resolve_constant_node_inputs_to_values(fq_node, onnx_model.graph)
                                   for fq_node in fq_nodes_with_expected_unified_scales]
         for inputs_dict in unified_fq_node_inputs[1:]:
             curr_values = list(inputs_dict.values())

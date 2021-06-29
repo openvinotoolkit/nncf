@@ -26,11 +26,10 @@ class StatefulClassesRegistry:
 
             if class_name in self._stateful_class_names:
                 raise ValueError(
-                    '%s has already been registered to %s'.format(class_name, self._stateful_classes[class_name]))
+                    '{} has already been registered to {}'.format(class_name, self._stateful_classes[class_name]))
 
             if cls in self._stateful_class_names:
-                raise ValueError('%s has already been registered to %s' %
-                                 (class_name, self._stateful_class_names[cls]))
+                raise ValueError('{} has already been registered to {}'.format(cls, self._stateful_class_names[cls]))
 
             if inspect.isclass(cls) and not hasattr(cls, self.REQUIRED_METHOD_NAME):
                 raise ValueError('Cannot register a class ({}) that does not have {}() method.'.format(

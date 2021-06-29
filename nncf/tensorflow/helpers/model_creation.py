@@ -12,6 +12,7 @@
 """
 
 import types
+from typing import Optional
 
 import tensorflow as tf
 
@@ -52,7 +53,7 @@ def create_compression_algorithm_builder(config: NNCFConfig,
 
 def create_compressed_model(model: tf.keras.Model,
                             config: NNCFConfig,
-                            compression_state: 'CompressionState' = None) -> tf.keras.Model:
+                            compression_state: Optional[CompressionState] = None) -> tf.keras.Model:
     """
     The main function used to produce a model ready for compression fine-tuning
     from an original TensorFlow Keras model and a configuration object.
@@ -75,14 +76,14 @@ def create_compressed_model(model: tf.keras.Model,
             evaluation_args = config.get_extra_struct(ModelEvaluationArgs)
             original_model_accuracy = evaluation_args.eval_fn(model)
 
-    builder = create_compression_algorithm_builder(config, should_init=bool(compression_state))
+    builder = create_compression_algorithm_builder(config, should_init=not compression_state)
     if builder is None:
         return None, model
-    if compression_state is not None and compression_state.builder_state is not None:
+    if compression_state:
         builder.load_state(compression_state.builder_state)
     compressed_model = builder.apply_to(model)
     compression_ctrl = builder.build_controller(compressed_model)
-    if compression_state is not None and compression_state.ctrl_state is not None:
+    if compression_state:
         compression_ctrl.load_state(compression_state.ctrl_state)
     compressed_model.original_model_accuracy = original_model_accuracy
     if isinstance(compressed_model, tf.keras.Model):

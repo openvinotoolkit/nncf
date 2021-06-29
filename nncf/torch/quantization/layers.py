@@ -465,11 +465,7 @@ class SymmetricQuantizer(BaseQuantizer):
             level_low = self.level_low
             level_high = self.level_high
             if self._half_range:
-                if self.scale_shape[0] > 1:
-                    for i in range(self.scale_shape[0]):
-                        x[i] = torch.clamp(x[i], min=input_low[i].item(), max=input_high[i].item())
-                else:
-                    x.data = torch.clamp(x, min=input_low.item(), max=input_high.item())
+                x = torch.min(torch.max(x, input_low), input_high)
                 level_low = 2 * self.level_low
                 level_high = 2 * self.level_high + 1
                 input_low, input_high = self._get_input_low_input_high(level_high / self.level_high * self.scale,
@@ -605,11 +601,7 @@ class AsymmetricQuantizer(BaseQuantizer):
             level_low = self.level_low
             level_high = self.level_high
             if self._half_range:
-                if self.scale_shape[0] > 1:
-                    for i in range(self.scale_shape[0]):
-                        x[i] = torch.clamp(x[i], min=input_low[i].item(), max=input_high[i].item())
-                else:
-                    x.data = torch.clamp(x, min=input_low.item(), max=input_high.item())
+                x = torch.min(torch.max(x, input_low), input_high)
                 level_low = 2 * level_low
                 level_high = 2 * level_high + 1
                 input_low, input_high = self._get_input_low_input_high(level_high / self.level_high * self.input_range,

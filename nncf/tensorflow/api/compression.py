@@ -99,6 +99,12 @@ class TFCompressionAlgorithmBuilder(BaseCompressionAlgorithmBuilder):
 
 
 class TFCompressionState(CompressionState, tf.train.experimental.PythonState):
+    """
+    Contains compression state of the TensorFlow model to unambiguously resume compression from it.
+    Consists of builder and controller state - a dictionaries with Python data structures,
+    defining how to setup and handle the compression correspondingly
+    """
+
     def __init__(self, compression_ctrl: TFCompressionAlgorithmController = None, builder_state: Dict = None):
         self._compression_ctrl = compression_ctrl
         self._builder_state = builder_state
@@ -140,6 +146,3 @@ class TFCompressionState(CompressionState, tf.train.experimental.PythonState):
         """
         state = json.loads(state)
         self.load_state(state)
-
-    def __bool__(self):
-        return self._ctrl_state is None and self._compression_ctrl is None

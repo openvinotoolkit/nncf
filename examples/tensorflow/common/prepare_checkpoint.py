@@ -20,19 +20,35 @@ from nncf.tensorflow.helpers.model_creation import create_compressed_model
 from examples.tensorflow.common.logger import logger
 from examples.tensorflow.common.sample_config import create_sample_config
 from examples.tensorflow.common.argparser import get_common_argument_parser
-from examples.tensorflow.object_detection.models.model_selector import get_predefined_config
-from examples.tensorflow.object_detection.models.model_selector import get_model_builder
+from examples.tensorflow.object_detection.models.model_selector import get_predefined_config as\
+                                                                       get_predefined_od_config
+from examples.tensorflow.object_detection.models.model_selector import get_model_builder as\
+                                                                       get_model_od_builder
+from examples.tensorflow.segmentation.models.model_selector import get_predefined_config as\
+                                                                   get_predefined_seg_config
+from examples.tensorflow.segmentation.models.model_selector import get_model_builder as\
+                                                                   get_model_seg_builder
+from examples.tensorflow.common.object_detection.checkpoint_utils import get_variables
 
 
-def get_config_from_argv(argv, parser):
+class ModelType:
+    object_detection = 'object_detection'
+    segmentation = 'segmentation'
+
+
+def get_config_and_model_type_from_argv(argv, parser):
     args = parser.parse_args(args=argv)
 
     config_from_json = create_sample_config(args, parser)
-    predefined_config = get_predefined_config(config_from_json.model)
+    if args.model_type == ModelType.object_detection:
+        predefined_config = get_predefined_od_config(config_from_json.model)
+    elif args.model_type == ModelType.segmentation:
+        predefined_config = get_predefined_seg_config(config_from_json.model)
+    else:
+        raise RuntimeError('Wrong model type specified')
 
     predefined_config.update(config_from_json)
-
-    return predefined_config
+    return predefined_config, args.model_type
 
 
 def load_checkpoint(checkpoint, ckpt_path):
@@ -56,23 +72,52 @@ def load_checkpoint(checkpoint, ckpt_path):
     return None
 
 
-def checkpoint_saver(config):
+def od_checkpoint_saver(config):
     """
-    Load checkpoint and re-save it without optimizer (memory footprint is reduced)
+    Load object detection checkpoint and re-save it without optimizer (memory footprint is reduced).
     """
-    model_builder = get_model_builder(config)
+    model_builder = get_model_od_builder(config)
     model = model_builder.build_model()
 
-    compression_state = TFCompressionState()
-    checkpoint = tf.train.Checkpoint(compression_state=compression_state)
-    load_checkpoint(checkpoint, config.ckpt_path)
+    compression_state = load_compression_state_from_checkpoint(config.ckpt_path)
 
     compression_ctrl, compress_model = create_compressed_model(model, config.nncf_config, compression_state)
 
     compression_state = compression_ctrl.get_compression_state()
     checkpoint = tf.train.Checkpoint(model=compress_model, compression_state=compression_state)
-    load_checkpoint(checkpoint, config.ckpt_path)
+    load_and_save_checkpoint(checkpoint, config)
 
+
+def seg_checkpoint_saver(config):
+    """
+    Load segmentation checkpoint and re-save it without optimizer (memory footprint is reduced).
+    """
+    model_builder = get_model_seg_builder(config)
+    model = model_builder.build_model()
+
+    compression_state = load_compression_state_from_checkpoint(config.ckpt_path)
+    compression_ctrl, compress_model = create_compressed_model(model, config.nncf_config, compression_state)
+
+    variables = get_variables(compress_model)
+    compression_state = compression_ctrl.get_compression_state()
+    checkpoint = tf.train.Checkpoint(variables=variables,
+                                     compression_state=compression_state,
+                                     step=tf.Variable(0))
+    load_and_save_checkpoint(checkpoint, config)
+
+
+def load_compression_state_from_checkpoint(checkpoint_path):
+    compression_state = TFCompressionState()
+    checkpoint = tf.train.Checkpoint(compression_state=compression_state)
+    load_checkpoint(checkpoint, checkpoint_path)
+    return compression_state
+
+
+def load_and_save_checkpoint(checkpoint, config):
+    """
+    Load checkpoint and re-save it.
+    """
+    load_checkpoint(checkpoint, config.ckpt_path)
     checkpoint_manager = tf.train.CheckpointManager(checkpoint, config.checkpoint_save_dir, max_to_keep=None)
     save_path = checkpoint_manager.save()
     logger.info('Saved checkpoint: {}'.format(save_path))
@@ -82,7 +127,6 @@ def main(argv):
     parser = get_common_argument_parser(metrics_dump=False,
                                         weights=False,
                                         execution_args=False,
-                                        batch_size=False,
                                         epochs=False,
                                         precision=False,
                                         dataset_dir=False,
@@ -91,10 +135,19 @@ def main(argv):
                                         save_checkpoint_freq=False,
                                         export_args=False,
                                         print_freq=False)
+    parser.add_argument(
+        '--model-type',
+        choices=[ModelType.object_detection,
+                 ModelType.segmentation],
+        help='Type of the model which checkpoint is being provided.',
+        required=True)
 
-    config = get_config_from_argv(argv, parser)
+    config, model_type = get_config_and_model_type_from_argv(argv, parser)
 
-    checkpoint_saver(config)
+    if model_type == ModelType.object_detection:
+        od_checkpoint_saver(config)
+    if model_type == ModelType.segmentation:
+        seg_checkpoint_saver(config)
 
 
 if __name__ == '__main__':

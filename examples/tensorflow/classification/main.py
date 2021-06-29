@@ -132,6 +132,7 @@ def resume_from_checkpoint(checkpoint, ckpt_path, steps_per_epoch):
     return initial_epoch
 
 
+# pylint: disable=too-many-statements
 def run(config):
     strategy = get_distribution_strategy(config)
     if config.metrics_dump is not None:

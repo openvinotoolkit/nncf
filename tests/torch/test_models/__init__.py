@@ -18,3 +18,4 @@ from .ssd_mobilenet import *
 from .unet import *
 from .vgg import *
 from .sr_small_model import *
+from .mobilenet_v3 import *

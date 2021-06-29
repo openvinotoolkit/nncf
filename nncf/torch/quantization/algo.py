@@ -39,6 +39,7 @@ from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.graph import NNCFNodeName
 from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
+from nncf.common.graph.layer_attributes import WeightedLayerAttributes
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.hardware.config import HWConfig
 from nncf.common.hardware.config import HWConfigType
@@ -71,6 +72,7 @@ from nncf.torch.graph.transformations.commands import PTInsertionCommand
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.graph.transformations.commands import TransformationPriority
 from nncf.torch.graph.transformations.layout import PTTransformationLayout
+from nncf.torch.graph.patterns import get_full_pattern_graph
 from nncf.torch.initialization import SimpleDataLoaderRunner
 from nncf.torch.module_operations import UpdatePaddingValue
 from nncf.torch.nncf_network import EXTERNAL_QUANTIZERS_STORAGE_NAME
@@ -319,7 +321,8 @@ class PropagationBasedQuantizerSetupGenerator(QuantizerSetupGeneratorBase):
                  range_init_params: PTRangeInitParams = None,
                  debug_interface: 'QuantizationDebugInterface' = None):
         super().__init__(quant_config, target_model, precision_init_type, precision_init_params, range_init_params)
-        self._quantizable_subgraph_patterns = quant_config.get('quantizable_subgraph_patterns', None)
+
+        self._pattern_fusing_graph = get_full_pattern_graph()
 
         self.hw_config = hw_config
 
@@ -350,9 +353,7 @@ class PropagationBasedQuantizerSetupGenerator(QuantizerSetupGeneratorBase):
             additional_unified_scale_op_scopes=self._unified_scale_ops,
             quantize_outputs=self._quantize_outputs)
 
-        merged_ip_graph = insertion_point_graph.get_ip_graph_with_merged_hw_optimized_operations(
-            self.hw_config,
-            additional_patterns=self._quantizable_subgraph_patterns)
+        merged_ip_graph = insertion_point_graph.get_ip_graph(self._pattern_fusing_graph)
         quantization_proposal = prop_graph_solver.run_on_ip_graph(merged_ip_graph)
         self._num_potential_quantized_activations = prop_graph_solver.get_num_potential_quantized_activations()
 
@@ -928,8 +929,11 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
             if is_weights(ip):
                 target_node = target_model_graph.get_node_by_name(ip.target_node_name)
                 layer_attributes = target_node.layer_attributes
-                scale_shape = get_scale_shape(layer_attributes.get_weight_shape(), is_weights=True,
-                                              per_channel=qconfig.per_channel)
+                assert isinstance(layer_attributes, WeightedLayerAttributes)
+                scale_shape = get_scale_shape(layer_attributes.get_weight_shape(),
+                                              is_weights=True,
+                                              per_channel=qconfig.per_channel,
+                                              channel_idx=layer_attributes.get_target_dim_for_compression())
                 scale_shapes.append(scale_shape)
             else:
                 input_shape = target_model_graph.get_input_shape_for_insertion_point(ip)

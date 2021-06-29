@@ -91,13 +91,13 @@ def create_compressed_model(model: Module,
                          "building, then the wrap_inputs_fn parameter MUST also be specified and be consistent with "
                          "the input wrapping done in dummy_forward_fn.")
 
-    state = PTCompressionState()
+    compression_state = PTCompressionState()
     is_legacy_model_state_dict = False
     if compression_state_dict is not None:
         is_legacy_model_state_dict = CompressionState.BUILDER_STATE not in compression_state_dict and \
                                      CompressionState.CONTROLLER_STATE not in compression_state_dict
         if not is_legacy_model_state_dict:
-            state.load_state(compression_state_dict)
+            compression_state.load_state(compression_state_dict)
 
     # Compress model that will be deployed for the inference on target device. No need to compress parts of the
     # model that are used on training stage only (e.g. AuxLogits of Inception-v3 model) or unused modules with weights.
@@ -140,13 +140,13 @@ def create_compressed_model(model: Module,
                                    scopes_without_shape_matching=scopes_without_shape_matching,
                                    original_model_accuracy=original_model_accuracy)
 
-    builder = create_compression_algorithm_builder(config, should_init=compression_state_dict is None)
-    if state.builder_state is not None:
-        builder.load_state(state.builder_state)
-    builder.apply_to(compressed_model)
-    compression_ctrl = builder.build_controller(compressed_model)
-    if state.ctrl_state is not None:
-        compression_ctrl.load_state(state.ctrl_state)
+    compression_builder = create_compression_algorithm_builder(config, should_init=not compression_state)
+    if compression_state:
+        compression_builder.load_state(compression_state.builder_state)
+    compression_builder.apply_to(compressed_model)
+    compression_ctrl = compression_builder.build_controller(compressed_model)
+    if compression_state:
+        compression_ctrl.load_state(compression_state.ctrl_state)
 
     # Required to ensure that the model leaving create_compressed_model has correct compressed graph.
     # In particular, this is currently required for correct functioning of RNNs.

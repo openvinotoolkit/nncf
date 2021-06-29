@@ -51,7 +51,7 @@ def test_quantization_configs__on_resume_with_compression_state(tmp_path, mocker
 
     _, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
     assert isinstance(compression_ctrl, QuantizationController)
-    init_spy.assert_not_called()
+    init_spy.assert_called()
     gen_setup_spy.assert_called()
     saved_quantizer_setup = gen_setup_spy.spy_return
     check_serialization(saved_quantizer_setup, _quantization_setup_cmp)

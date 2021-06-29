@@ -150,7 +150,6 @@ class QuantizeTestCaseConfiguration:
 
 QUANTIZERS = ['symmetric', 'asymmetric']
 
-
 @pytest.fixture(scope='function', params=QUANTIZERS)
 def _case_config(request):
     quantization_type = request.param
@@ -245,6 +244,7 @@ TEST_MODELS_DESC = [
     ModelDesc("ssd_vgg", test_models.ssd_vgg300, [2, 3, 300, 300]),
     ModelDesc("ssd_mobilenet", test_models.ssd_mobilenet, [2, 3, 300, 300]),
     ModelDesc("mobilenet_v2", torchvision.models.MobileNetV2, [2, 3, 32, 32]),
+    ModelDesc("mobilenet_v3_small", test_models.mobilenetv3, [2, 3, 32, 32]),
     ModelDesc("resnext29_32x4d", test_models.ResNeXt29_32x4d, [1, 3, 32, 32]),
     ModelDesc("pnasnetb", test_models.PNASNetB, [1, 3, 32, 32]),
     ModelDesc("senet18", test_models.SENet18, [1, 3, 32, 32]),
@@ -739,22 +739,6 @@ def test_output_quantization(_case_config):
 
     compressed_model, _ = create_compressed_model_and_algo_for_test(model, config)
     check_model_graph(compressed_model, 'unet_qoutput.dot', _case_config.graph_dir)
-
-
-def test_custom_quantizable_subgraph_patterns(_case_config):
-    model = test_models.SENet18()
-
-    input_shape = [1, 3, 32, 32]
-
-    config = get_basic_quantization_config(_case_config.quant_type, input_sample_sizes=input_shape)
-
-    config["compression"].update({"quantize_outputs": False,
-                                  "quantizable_subgraph_patterns": [["sigmoid", "__mul__"],
-                                                                    ["__iadd__", "batch_norm"]]})
-    register_bn_adaptation_init_args(config)
-
-    compressed_model, _ = create_compressed_model_and_algo_for_test(model, config)
-    check_model_graph(compressed_model, 'senet_custom_patterns.dot', _case_config.graph_dir)
 
 
 TEST_HW_MODELS_DESC = [

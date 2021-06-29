@@ -10,9 +10,11 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+from typing import Dict
 
 import numpy as np
 import tensorflow as tf
+from nncf.api.compression import CompressionState
 from tensorflow.python.ops.init_ops import Constant
 
 from nncf import NNCFConfig
@@ -84,9 +86,24 @@ def get_basic_n_conv_test_model(input_shape=(24, 24, 1), in_out_ch=((1, 3), (3, 
     return tf.keras.Model(inputs=inputs, outputs=outputs)
 
 
-def create_compressed_model_and_algo_for_test(model, config, compression_state=None):
+class DummyCompressionState(CompressionState):
+    @property
+    def builder_state(self) -> Dict:
+        return {}
+
+    @property
+    def ctrl_state(self) -> Dict:
+        return {}
+
+    def load_state(self, state: Dict):
+        pass
+
+
+def create_compressed_model_and_algo_for_test(model, config, compression_state=None, force_no_init=False):
     assert isinstance(config, NNCFConfig)
     tf.keras.backend.clear_session()
+    if force_no_init:
+        compression_state = DummyCompressionState()
     algo, model = create_compressed_model(model, config, compression_state)
     return model, algo
 

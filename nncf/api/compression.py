@@ -189,6 +189,9 @@ class CompressionState(ABC):
             self.CONTROLLER_STATE: self.ctrl_state
         }
 
+    def __bool__(self):
+        return self.ctrl_state is not None and self.builder_state is not None
+
 
 class CompressionAlgorithmController(ABC):
     """

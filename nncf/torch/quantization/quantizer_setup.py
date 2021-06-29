@@ -1,9 +1,10 @@
 from collections import Counter
 from copy import deepcopy
-from typing import Dict, List, Optional, Set, Tuple, Any
+from typing import Dict, List, Optional, Set, Any
 
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNodeName
+from nncf.common.graph.layer_attributes import WeightedLayerAttributes
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.torch.graph.transformations.commands import PTTargetPoint
@@ -30,7 +31,7 @@ class QuantizationPointBase:
     def is_weight_quantization_point(self) -> bool:
         return self.insertion_point.target_type == TargetType.OPERATION_WITH_WEIGHTS
 
-    def get_all_scale_shapes(self, input_shape: Tuple[int]) -> List[Tuple[int]]:
+    def get_all_configs_list(self) -> List[QuantizerConfig]:
         raise NotImplementedError
 
     def __eq__(self, other):
@@ -54,10 +55,31 @@ class SingleConfigQuantizationPoint(QuantizationPointBase):
     def __str__(self):
         return str(self.insertion_point) + ' ' + str(self.qconfig)
 
-    def get_all_scale_shapes(self, input_shape: Tuple[int]) -> List[Tuple[int]]:
-        return [tuple(get_scale_shape(
-            input_shape,
-            is_weights=self.is_weight_quantization_point(), per_channel=self.qconfig.per_channel))]
+    def get_all_configs_list(self) -> List[QuantizerConfig]:
+        return [self.qconfig]
+
+    def get_state(self) -> Dict[str, Any]:
+        """
+        Returns a dictionary with Python data structures (dict, list, tuple, str, int, float, True, False, None) that
+        represents state of the object.
+        """
+        return {
+            self._state_names.INSERTION_POINT: self.insertion_point.get_state(),
+            self._state_names.QCONFIG: self.qconfig.get_state(),
+            self._state_names.NAMES_OF_QUANTIZED_OPS: self.directly_quantized_operator_node_names
+        }
+
+    @classmethod
+    def from_state(cls, state: Dict[str, Any]) -> 'SingleConfigQuantizationPoint':
+        """
+        Creates the object from its state.
+
+        :param state: Output of `get_state()` method.
+        """
+        kwargs = {cls._state_names.INSERTION_POINT: PTTargetPoint.from_state(state[cls._state_names.INSERTION_POINT]),
+                  cls._state_names.QCONFIG: QuantizerConfig.from_state(state[cls._state_names.QCONFIG]),
+                  cls._state_names.NAMES_OF_QUANTIZED_OPS: state[cls._state_names.NAMES_OF_QUANTIZED_OPS]}
+        return cls(**kwargs)
 
     def get_state(self) -> Dict[str, Any]:
         """
@@ -113,13 +135,8 @@ class MultiConfigQuantizationPoint(QuantizationPointBase):
     def __str__(self):
         return str(self.insertion_point) + ' ' + ';'.join([str(qc) for qc in self.possible_qconfigs])
 
-    def get_all_scale_shapes(self, input_shape: Tuple[int]) -> List[Tuple[int]]:
-        scale_shapes_across_configs = set()  # type: Set[Tuple[int]]
-        for qc in self.possible_qconfigs:
-            scale_shapes_across_configs.add(tuple(get_scale_shape(
-                list(input_shape),
-                is_weights=self.is_weight_quantization_point(), per_channel=qc.per_channel)))
-        return list(scale_shapes_across_configs)
+    def get_all_configs_list(self) -> List[QuantizerConfig]:
+        return self.possible_qconfigs
 
 
 class QuantizerSetupBase:
@@ -298,17 +315,23 @@ class SingleConfigQuantizerSetup(QuantizerSetupBase):
             else:
                 target_node = target_model_graph.get_node_by_name(qp.insertion_point.target_node_name)
                 if qp.is_weight_quantization_point():
-                    input_shape = target_node.layer_attributes.get_weight_shape()
+                    layer_attrs = target_node.layer_attributes
+                    assert isinstance(layer_attrs, WeightedLayerAttributes)
+                    input_shape = layer_attrs.get_weight_shape()
+                    channel_idx = layer_attrs.get_target_dim_for_compression()
                 else:
                     input_shape = target_model_graph.get_input_shape_for_insertion_point(qp.insertion_point)
+                    channel_idx = 1  # channel dim for activations
                 scale_shape = tuple(get_scale_shape(input_shape,
                                                     qp.is_weight_quantization_point(),
-                                                    qp.qconfig.per_channel))
+                                                    qp.qconfig.per_channel,
+                                                    channel_idx))
                 if scale_shape not in tensor_statistics[ip]:
                     nncf_logger.debug("Did not collect tensor statistics at {} for shape {}".format(ip, scale_shape))
                     retval[qp_id] = None
-                minmax_stat = MinMaxTensorStatistic.from_stat(tensor_statistics[ip][scale_shape])
-                retval[qp_id] = minmax_stat
+                else:
+                    minmax_stat = MinMaxTensorStatistic.from_stat(tensor_statistics[ip][scale_shape])
+                    retval[qp_id] = minmax_stat
         return retval
 
     def get_state(self) -> Dict:

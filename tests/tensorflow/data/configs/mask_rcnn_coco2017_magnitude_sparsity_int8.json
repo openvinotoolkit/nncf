@@ -32,11 +32,6 @@
         },
         {
             "algorithm": "quantization",
-            "initializer": {
-                "range": {
-                    "num_init_samples": 1
-                }
-            },
             "ignored_scopes": [
                 "{re}.*multilevel_propose_rois.*",
                 "{re}.*sample_proposals.*",
