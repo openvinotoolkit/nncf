@@ -75,4 +75,5 @@ def test_two_matches():
     ref_graph.add_edge('5', '6')
 
     matches = find_subgraphs_matching_pattern(ref_graph, pattern)
-    assert matches in [[['5', '6'], ['1', '2']], [['1', '2'], ['5', '6']]]
+    matches.sort()
+    assert matches == [['1', '2'], ['5', '6']]
