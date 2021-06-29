@@ -81,29 +81,6 @@ class SingleConfigQuantizationPoint(QuantizationPointBase):
                   cls._state_names.NAMES_OF_QUANTIZED_OPS: state[cls._state_names.NAMES_OF_QUANTIZED_OPS]}
         return cls(**kwargs)
 
-    def get_state(self) -> Dict[str, Any]:
-        """
-        Returns a dictionary with Python data structures (dict, list, tuple, str, int, float, True, False, None) that
-        represents state of the object.
-        """
-        return {
-            self._state_names.INSERTION_POINT: self.insertion_point.get_state(),
-            self._state_names.QCONFIG: self.qconfig.get_state(),
-            self._state_names.NAMES_OF_QUANTIZED_OPS: self.directly_quantized_operator_node_names
-        }
-
-    @classmethod
-    def from_state(cls, state: Dict[str, Any]) -> 'SingleConfigQuantizationPoint':
-        """
-        Creates the object from its state.
-
-        :param state: Output of `get_state()` method.
-        """
-        kwargs = {cls._state_names.INSERTION_POINT: PTTargetPoint.from_state(state[cls._state_names.INSERTION_POINT]),
-                  cls._state_names.QCONFIG: QuantizerConfig.from_state(state[cls._state_names.QCONFIG]),
-                  cls._state_names.NAMES_OF_QUANTIZED_OPS: state[cls._state_names.NAMES_OF_QUANTIZED_OPS]}
-        return cls(**kwargs)
-
 
 class MultiConfigQuantizationPoint(QuantizationPointBase):
     def __init__(self, insertion_point: PTTargetPoint, possible_qconfigs: List[QuantizerConfig],
