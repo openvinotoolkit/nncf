@@ -68,7 +68,7 @@ from nncf.torch.quantization.layers import QUANTIZATION_MODULES
 from nncf.torch.utils import compute_FLOPs_hook
 from nncf.torch.utils import get_all_modules_by_type
 from nncf.torch.utils import get_state_dict_names_with_modules
-from nncf.torch.utils import objwalk
+from nncf.torch.nested_objects_traversal import objwalk
 
 MODEL_WRAPPED_BY_NNCF_ATTR_NAME = 'nncf_module'
 LEGACY_ACT_STORAGE_NAME = "activation_quantizers"
@@ -323,6 +323,42 @@ class PTInsertionPoint:
         return hash(str(self))
 
 
+class KnowledgeDistillationLossHandler(nn.Module):
+    """
+    Encapsulates knowledge distillation logic. Controls loss calculation, its proper storing in case of parallel
+        execution on multiple devices and provides API for external knowledge distillation algorithm.
+    """
+    KD_LOSS_STORAGE_NAME = 'kd_loss'
+    KD_STORAGE_DEVICE = 'kd_storage_device'
+    def __init__(self, context, kd_original_model, calculate_kd_loss_fn, storage_device):
+        super().__init__()
+        self._compressed_context = context
+        self.is_enabled = False
+        self._kd_original_model = kd_original_model
+        self._calculate_kd_loss_fn = calculate_kd_loss_fn
+        self._compressed_context.register_global_buffer(self.KD_LOSS_STORAGE_NAME, [])
+        self._compressed_context.register_global_buffer(self.KD_STORAGE_DEVICE, storage_device)
+
+    def zero_kdloss(self):
+        if self.is_enabled is not None:
+            self._compressed_context.global_buffer_store[self.KD_LOSS_STORAGE_NAME] = []
+
+    def get_kdloss(self):
+        if self.is_enabled is not None:
+            return self._compressed_context.global_buffer_store[self.KD_LOSS_STORAGE_NAME]
+        return 0
+
+    def forward(self, inputs, *args, **kwargs):
+        kd_model = self._kd_original_model
+        with torch.no_grad():
+            kd_outputs = kd_model(*args, **kwargs)
+        kd_loss = self._calculate_kd_loss_fn(inputs, kd_outputs)
+        if not isinstance(kd_loss, torch.Tensor):
+            self._compressed_context.global_buffer_store[self.KD_LOSS_STORAGE_NAME].append(kd_loss)
+        else:
+            self._compressed_context.global_buffer_store[self.KD_LOSS_STORAGE_NAME].append(kd_loss.to(
+                self._compressed_context.global_buffer_store[self.KD_STORAGE_DEVICE]))
+
 # pylint: disable=too-many-public-methods
 
 
@@ -342,6 +378,7 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
         self.ignored_scopes = ignored_scopes
         self.target_scopes = target_scopes
         self._user_dummy_forward_fn = dummy_forward_fn
+        self._kd_loss_handler = None
 
         try:
             device = next(module.parameters()).device
@@ -421,6 +458,9 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
             retval = replicate_same_tensors(retval)
             if not self._in_user_dummy_forward:
                 retval = self._wrap_outputs_fn(retval)
+
+        if self._kd_loss_handler is not None and self.get_nncf_wrapped_model().training:
+            self._kd_loss_handler(retval, *args, **kwargs)
         return retval
 
     def _strip_traced_tensors(self, args: Tuple, kwargs: Dict) -> Tuple[Tuple, Dict]:
@@ -439,6 +479,22 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
         args = objwalk(args, is_traced_tensor_predicate, strip_fn)
         kwargs = objwalk(kwargs, is_traced_tensor_predicate, strip_fn)
         return args, kwargs
+
+    def create_knowledge_distillation_loss_handler(self, kd_original_model, calculate_fn):
+        """
+        Creates KnowledgeDistillationLossHandler instance for enabling Knowledge Distillation feature.
+            Also returns created KnowledgeDistillationLossHandler for control over Knowledge Distillation logic.
+
+        :param kd_original_model: original non compressed model used for distillation
+        :param calculate_fn: function used to parse model outputs and calculate knowledge distillation loss
+        :return: KnowledgeDistillationLossHandler instance
+        """
+        device = next(self.get_nncf_wrapped_model().parameters()).device
+        self._kd_loss_handler = KnowledgeDistillationLossHandler(self._compressed_context,
+                                                                 kd_original_model,
+                                                                 calculate_fn,
+                                                                 device)
+        return self._kd_loss_handler
 
     # Cannnot use property syntax here, otherwise the wrapped module will end up
     # being twice in the same checkpoint with different prefixes

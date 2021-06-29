@@ -11,9 +11,7 @@
  limitations under the License.
 """
 from collections import OrderedDict
-from typing import Dict, Callable, Any, Mapping, Sequence, Set, List
-from typing import Tuple
-from typing import Type
+from typing import Dict, List
 
 import numpy as np
 import random
@@ -196,101 +194,11 @@ def safe_thread_call(main_call_fn, after_barrier_call_fn=None):
     return result
 
 
-string_types = (str, bytes)
-iteritems = lambda mapping: getattr(mapping, 'iteritems', mapping.items)()
-
-
 def is_tensor(obj):
     return isinstance(obj, torch.Tensor)
 
 def is_traced_tensor(obj):
     return isinstance(obj, TracedTensor)
-
-def maybe_get_iterator(obj):
-    it = None
-        # pylint:disable=isinstance-second-argument-not-valid-type
-    if isinstance(obj, Mapping):
-        it = iteritems
-        # pylint:disable=isinstance-second-argument-not-valid-type
-    elif isinstance(obj, (Sequence, Set)) and not isinstance(obj, string_types):
-        it = enumerate
-    return it
-
-
-def to_tuple(lst: List,
-             named_tuple_class: Type = None,
-             named_tuple_fields: List[str] = None) -> Tuple:
-    # Able to produce namedtuples if a corresponding parameter is given
-    if named_tuple_fields is None:
-        return tuple(lst)
-    return named_tuple_class(*lst)
-
-
-def is_tuple(obj) -> bool:
-    return isinstance(obj, tuple)
-
-
-def is_named_tuple(obj) -> bool:
-    return is_tuple(obj) and (obj.__class__ != tuple)
-
-
-def objwalk(obj, unary_predicate: Callable[[Any], bool], apply_fn: Callable, memo=None):
-    """
-    Walks through the indexable container hierarchy of obj and replaces all sub-objects matching a criterion
-    with the result of a given function application.
-    """
-    #pylint:disable=too-many-nested-blocks
-    #pylint:disable=too-many-branches
-    if memo is None:
-        memo = set()
-
-    named_tuple_class = None
-    named_tuple_fields = None
-    if is_named_tuple(obj):
-        named_tuple_class = obj.__class__
-        #pylint:disable=protected-access
-        named_tuple_fields = obj._fields
-
-    was_tuple = is_tuple(obj)
-    if was_tuple:
-        obj = list(obj)
-
-    iterator = maybe_get_iterator(obj)
-
-    if iterator is not None:
-        if id(obj) not in memo:
-            memo.add(id(obj))
-            indices_to_apply_fn_to = set()
-            indices_vs_named_tuple_data = {}  # type: Dict[Any, Tuple[list, Type, List[str]]]
-            for idx, value in iterator(obj):
-                next_level_it = maybe_get_iterator(value)
-                if next_level_it is None:
-                    if unary_predicate(value):
-                        indices_to_apply_fn_to.add(idx)
-                else:
-                    if is_tuple(value):
-                        processed_tuple = objwalk(value, unary_predicate, apply_fn, memo)
-                        if is_named_tuple(value):
-                            indices_vs_named_tuple_data[idx] = processed_tuple, value.__class__, value._fields
-                        else:
-                            indices_vs_named_tuple_data[idx] = processed_tuple, None, None
-                    else:
-                        objwalk(value, unary_predicate, apply_fn)
-            for idx in indices_to_apply_fn_to:
-                obj[idx] = apply_fn(obj[idx])
-            for idx, tpl_data in indices_vs_named_tuple_data.items():
-                tpl, n_tpl_class, n_tpl_fields = tpl_data
-                obj[idx] = to_tuple(tpl, n_tpl_class, n_tpl_fields)
-
-            memo.remove(id(obj))
-    else:
-        if unary_predicate(obj):
-            return apply_fn(obj)
-
-    if was_tuple:
-        return to_tuple(obj, named_tuple_class, named_tuple_fields)
-
-    return obj
 
 
 class _ModuleState:
