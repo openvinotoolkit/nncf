@@ -15,7 +15,6 @@ import pytest
 import tensorflow as tf
 from tensorflow.python.keras import layers
 
-from nncf.common.quantization.structs import QuantizationMode
 from nncf.tensorflow.graph.metatypes.matcher import get_keras_layer_metatype
 from nncf.tensorflow.layers.custom_objects import NNCF_QUANTIZATION_OPERATONS
 from nncf.tensorflow.layers.operation import InputType
@@ -27,7 +26,9 @@ from nncf.tensorflow.quantization.quantizers import TFQuantizerSpec
 from tests.tensorflow.helpers import create_compressed_model_and_algo_for_test
 from tests.tensorflow.helpers import get_basic_conv_test_model
 from tests.tensorflow.quantization.utils import get_basic_quantization_config
-
+# TODO(nlyalyus): WA for the bug 58886, should be imported after nncf.tensorflow.
+#  Otherwise test_quantize_inputs and test_quantize_outputs_removal will fail, because of invalid inputs quantization
+from nncf.common.quantization.structs import QuantizationMode
 
 def compare_qspecs(qspec: TFQuantizerSpec, quantizer):
     assert qspec.num_bits == quantizer.num_bits
