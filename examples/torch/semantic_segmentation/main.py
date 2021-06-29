@@ -504,7 +504,7 @@ def main_worker(current_gpu, config):
         criterion = get_criterion(w_class, config)
 
         def autoq_test_fn(model, eval_loader):
-            return 0, test(model, eval_loader, criterion, color_encoding, config), 0
+            return test(model, eval_loader, criterion, color_encoding, config)
 
         model_eval_fn = functools.partial(autoq_test_fn, eval_loader=val_loader)
 

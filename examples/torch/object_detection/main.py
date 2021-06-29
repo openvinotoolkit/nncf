@@ -150,8 +150,8 @@ def main_worker(current_gpu, config):
 
         def autoq_test_fn(model, eval_loader):
             # RL is maximization, change the loss polarity
-            return (0, -1 * test_net(model, config.device, eval_loader, distributed=config.distributed,
-                                 loss_inference=True, criterion=criterion), 0)
+            return -1 * test_net(model, config.device, eval_loader, distributed=config.distributed,
+                                 loss_inference=True, criterion=criterion)
 
         def model_eval_fn(model):
             model.eval()

@@ -39,7 +39,7 @@ class BasePruningAlgoBuilder(PTCompressionAlgorithmBuilder):
     def __init__(self, config, should_init: bool = True):
         super().__init__(config, should_init)
         params = config.get('params', {})
-        self._set_default_params(params)
+        self._set_default_params_for_ranking_type(params)
         self._params = params
 
         self.prune_first = params.get('prune_first_conv', False)
@@ -60,7 +60,7 @@ class BasePruningAlgoBuilder(PTCompressionAlgorithmBuilder):
         self.pruned_module_groups_info = []
 
     @staticmethod
-    def _set_default_params(params):
+    def _set_default_params_for_ranking_type(params):
         learned_ranking = 'interlayer_ranking_type' in params and params['interlayer_ranking_type'] == 'learned_ranking'
         if not learned_ranking:
             return

@@ -153,8 +153,12 @@ class FilterPruningController(BasePruningAlgoController):
             if params.get('load_ranking_coeffs_path'):
                 coeffs_path = params.get('load_ranking_coeffs_path')
                 nncf_logger.info('Loading ranking coefficients from file {}'.format(coeffs_path))
-                loaded_coeffs = json.load(open(coeffs_path, 'r'))
+                try:
+                    loaded_coeffs = json.load(open(coeffs_path, 'r'))
+                except:
+                    raise Exception('Can\'t load json with ranking coefficients. Please, check format of json file.')
                 ranking_coeffs = {key: tuple(loaded_coeffs[key]) for key in loaded_coeffs}
+                nncf_logger.info('Loaded ranking coefficients = {}'.format(ranking_coeffs))
                 self.ranking_coeffs = ranking_coeffs
             else:
                 # Wrapping model for parallelization
@@ -167,9 +171,8 @@ class FilterPruningController(BasePruningAlgoController):
                     legr_params['max_pruning'] = self._scheduler.target_level
                 self.legr = LeGR(self, target_model, legr_init_args, **legr_params)
                 self.ranking_coeffs = self.legr.train_global_ranking()
-                nncf_logger.info('Trained ranking coefficients = {}'.format({str(scope): self.ranking_coeffs[scope]
-                                                                             for scope in self.ranking_coeffs}))
-                # Unwrapping model
+                nncf_logger.info('Trained ranking coefficients = {}'.format(self.ranking_coeffs))
+                # Unwrapping parallelized model
                 target_model = distributed_wrapping_init_args.unwrap_model(target_model)
         else:
             self.ranking_coeffs = {node.node_name: (1, 0) for node in self.pruned_module_groups_info.get_all_nodes()}
