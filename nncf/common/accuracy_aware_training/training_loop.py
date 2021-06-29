@@ -23,6 +23,7 @@ from nncf.api.compression import CompressionAlgorithmController
 from nncf.common.composite_compression import CompositeCompressionAlgorithmController
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.common.utils.registry import Registry
+from nncf.common.utils.backend import infer_backend_from_compression_controller
 from nncf.config.config import NNCFConfig
 
 
@@ -30,28 +31,16 @@ ModelType = TypeVar('ModelType')
 ADAPTIVE_COMPRESSION_CONTROLLERS = Registry('adaptive_compression_controllers')
 
 
-def get_backend_specific_training_runner_cls(compression_controller: CompressionAlgorithmController,
-                                             nncf_backend: str = None):
-    try:
-        import torch
-    except ImportError:
-        torch = None
+def get_backend_specific_training_runner_cls(compression_controller: CompressionAlgorithmController):
+    nncf_backend = infer_backend_from_compression_controller(compression_controller)
 
-    try:
-        import tensorflow
-    except ImportError:
-        tensorflow = None
-
-    if torch is not None and isinstance(compression_controller.model, torch.nn.Module):
+    if nncf_backend == 'Torch':
         from nncf.torch.accuracy_aware_training.runner import PTAccuracyAwareTrainingRunner
         return PTAccuracyAwareTrainingRunner
-
-    if tensorflow is not None and isinstance(compression_controller.model, tensorflow.Module):
+    if nncf_backend == 'TensorFlow':
         from nncf.tensorflow.accuracy_aware_training.runner import TFAccuracyAwareTrainingRunner
         return TFAccuracyAwareTrainingRunner
-
-    raise RuntimeError('Could not infer the backend framework from the model type because '
-                       'the framework is not available or the model type is unsupported.')
+    raise RuntimeError('Got an unsupported value of nncf_backend')
 
 
 class TrainingLoop(ABC):
@@ -88,11 +77,10 @@ class AdaptiveCompressionTrainingLoop(TrainingLoop):
     """
     def __init__(self,
                  nncf_config: NNCFConfig,
-                 compression_controller: CompressionAlgorithmController,
-                 nncf_backend: str = None):
+                 compression_controller: CompressionAlgorithmController):
         self.adaptive_controller, accuracy_aware_config = self._get_adaptive_compression_ctrl(compression_controller,
                                                                                               nncf_config)
-        runner_cls = get_backend_specific_training_runner_cls(compression_controller, nncf_backend)
+        runner_cls = get_backend_specific_training_runner_cls(compression_controller)
         self.runner = runner_cls(accuracy_aware_config)
         if self.adaptive_controller is None:
             raise RuntimeError('No compression algorithm supported by the accuracy-aware training '
