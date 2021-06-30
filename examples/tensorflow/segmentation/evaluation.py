@@ -165,6 +165,29 @@ def create_test_step_fn(strategy, model, predict_post_process_fn):
     return test_step
 
 
+# Maybe `ckpt_path` should be the required parameter
+def restore_compressed_model(config, strategy, model_builder, ckpt_path = None):
+    with TFOriginalModelManager(model_builder.build_model,
+                                weights=config.get('weights', None),
+                                is_training=False) as model:
+        with strategy.scope():
+            compression_state = TFCompressionState()
+            checkpoint = tf.train.Checkpoint()
+            if ckpt_path:
+                load_checkpoint(checkpoint, ckpt_path)
+                checkpoint.compression_state = compression_state  # Compression state was restored
+            compression_ctrl, compress_model = create_compressed_model(model,
+                                                                       config.nncf_config,
+                                                                       compression_state)
+
+            variables = get_variables(compress_model)
+            checkpoint.variables = variables  # Compressed model was restored
+            checkpoint.compression_state = compression_ctrl.get_compression_state()  # New compression state was assigned
+            checkpoint.step = tf.Variable(0)  # Step was restored
+
+    return compression_ctrl, compress_model, checkpoint
+
+
 def run_evaluation(config, eval_timeout=None):
     """Runs evaluation on checkpoint save directory"""
     strategy = get_distribution_strategy(config)
@@ -180,35 +203,13 @@ def run_evaluation(config, eval_timeout=None):
     config.model_batch_size = dataset_builder.batch_size
 
     model_builder = get_model_builder(config)
-
-    with TFOriginalModelManager(model_builder.build_model,
-                                weights=config.get('weights', None),
-                                is_training=False) as model:
-        with strategy.scope():
-            compression_state = TFCompressionState()
-            checkpoint = tf.train.Checkpoint(compression_state=compression_state)
-            if 'test' in config.mode and config.ckpt_path:
-                load_checkpoint(checkpoint, config.ckpt_path)
-            elif 'train' in config.mode:
-                checkpoint_dir = config.checkpoint_save_dir
-                eval_timeout = config.eval_timeout
-                for checkpoint_path in tf.train.checkpoints_iterator(checkpoint_dir, timeout=eval_timeout):
-                    checkpoint.restore(checkpoint_path)
-
-            compression_ctrl, compress_model = create_compressed_model(model, config.nncf_config, compression_state)
-            compression_state = compression_ctrl.get_compression_state()
-            variables = get_variables(compress_model)
-            checkpoint = tf.train.Checkpoint(variables=variables,
-                                             compression_state=compression_state,
-                                             step=tf.Variable(0))
-            eval_metric = model_builder.eval_metrics()
-            predict_post_process_fn = model_builder.post_processing
-
-    test_step = create_test_step_fn(strategy, compress_model, predict_post_process_fn)
+    eval_metric = model_builder.eval_metrics()
+    predict_post_process_fn = model_builder.post_processing
 
     if 'test' in config.mode:
-        if config.ckpt_path:
-            load_checkpoint(checkpoint, config.ckpt_path)
+        compression_ctrl, compress_model, _ = restore_compressed_model(config, strategy, model_builder,
+                                                                       config.ckpt_path)
+        test_step = create_test_step_fn(strategy, compress_model, predict_post_process_fn)
 
         statistics = compression_ctrl.statistics()
         logger.info(statistics.to_str())
@@ -223,12 +224,17 @@ def run_evaluation(config, eval_timeout=None):
 
     elif 'train' in config.mode:
         validation_summary_writer = SummaryWriter(config.log_dir, 'validation')
-        checkpoint_dir = config.checkpoint_save_dir
-        eval_timeout = config.eval_timeout
 
-        for checkpoint_path in tf.train.checkpoints_iterator(checkpoint_dir, timeout=eval_timeout):
-            status = checkpoint.restore(checkpoint_path)
-            status.expect_partial()
+        is_first_checkpoint = True
+        for checkpoint_path in tf.train.checkpoints_iterator(config.checkpoint_save_dir, config.eval_timeout):
+            if is_first_checkpoint:
+                is_first_checkpoint = False
+                _, compress_model, checkpoint = restore_compressed_model(config, strategy, model_builder,
+                                                                         checkpoint_path)
+                test_step = create_test_step_fn(strategy, compress_model, predict_post_process_fn)
+            else:
+                checkpoint.restore(checkpoint_path).expect_partial()
+
             logger.info('Checkpoint file {} found and restoring from checkpoint'.format(checkpoint_path))
             logger.info('Checkpoint step: {}'.format(checkpoint.step.numpy()))
             metric_result = evaluate(test_step, eval_metric, test_dist_dataset, num_batches, config.print_freq)
@@ -248,20 +254,8 @@ def run_evaluation(config, eval_timeout=None):
 def export(config):
     model_builder = get_model_builder(config)
 
-    with TFOriginalModelManager(model_builder.build_model,
-                                weights=config.get('weights', None),
-                                is_training=False) as model:
-        compression_state = TFCompressionState()
-        if config.ckpt_path:
-            checkpoint = tf.train.Checkpoint(compression_state=compression_state)
-            load_checkpoint(checkpoint, config.ckpt_path)
-
-        compression_ctrl, compress_model = create_compressed_model(model, config.nncf_config, compression_state)
-
-    if config.ckpt_path:
-        variables = get_variables(compress_model)
-        checkpoint = tf.train.Checkpoint(variables=variables)
-        load_checkpoint(checkpoint, config.ckpt_path)
+    strategy = tf.distribute.get_strategy()
+    compression_ctrl, _, _ = restore_compressed_model(config, strategy, model_builder, config.ckpt_path)
 
     save_path, save_format = get_saving_parameters(config)
     compression_ctrl.export_model(save_path, save_format)
