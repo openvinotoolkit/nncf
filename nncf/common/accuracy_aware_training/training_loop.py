@@ -79,7 +79,7 @@ class CompressionTrainingLoop(TrainingLoop):
                  compression_controller: CompressionAlgorithmController,
                  runner_cls=None):
         runner_cls = AccuracyAwareTrainingRunner if runner_cls is None else runner_cls
-        self.runner = runner_cls(training_config)
+        self.runner = runner_cls(training_config.get('compression').get('accuracy_aware_training'))
         self.compression_controller = compression_controller
 
     def run(self, model, train_epoch_fn, validate_fn,
