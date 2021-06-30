@@ -13,17 +13,15 @@
 import re
 import warnings
 from enum import Enum
-from typing import Dict
-from typing import List
-from typing import Set
-from typing import Tuple
+from typing import Dict, List, Set, Tuple
 
 import torch
 
 from nncf.common.utils.logger import logger as nncf_logger
 
 
-def load_state(model: torch.nn.Module, state_dict_to_load: dict, is_resume: bool = False) -> int:
+def load_state(model: torch.nn.Module, state_dict_to_load: dict, is_resume: bool = False,
+               keys_to_ignore: List[str] = None) -> int:
     """
     Used to load a checkpoint containing a compressed model into an NNCFNetwork object, but can
     be used for any PyTorch module as well. Will do matching of state_dict_to_load parameters to
@@ -40,14 +38,13 @@ def load_state(model: torch.nn.Module, state_dict_to_load: dict, is_resume: bool
     Usually is_resume is specified as False when loading uncompressed model's weights into the model with
     compression algorithms already applied, and as True when loading a compressed model's weights into the model
     with compression algorithms applied to evaluate the model.
+    :param keys_to_ignore: A list of parameter names that should be skipped from matching process.
     :return: The number of state_dict_to_load entries successfully matched and loaded into model.
     """
 
-    if 'state_dict' in state_dict_to_load:
-        state_dict_to_load = state_dict_to_load['state_dict']
     model_state_dict = model.state_dict()
 
-    key_matcher = KeyMatcher(is_resume, state_dict_to_load, model_state_dict)
+    key_matcher = KeyMatcher(is_resume, state_dict_to_load, model_state_dict, keys_to_ignore)
     new_dict = key_matcher.run()
     num_loaded_params = len(new_dict)
     key_matcher.handle_problematic_keys()
@@ -57,24 +54,24 @@ def load_state(model: torch.nn.Module, state_dict_to_load: dict, is_resume: bool
     return num_loaded_params
 
 
-class OptionalParametersRegistry:
+class ParametersRegistry:
     """
-    Provides an interface to register optional parameters and get access to all of them.
-    If there is no optional parameters in a checkpoint, it can be loaded without an error in a strict mode.
-    New parameters can be introduced for the model without breaking backward compatibility with old checkpoint.
+    Provides an interface to register parameters and get access to all of them.
     """
 
     def __init__(self):
-        self._optional_parameters_names = set()
+        self._parameters_names = set()
 
     def register(self, parameter_name: str):
-        self._optional_parameters_names.add(parameter_name)
+        self._parameters_names.add(parameter_name)
 
-    def get_optional_parameters_names(self) -> Set[str]:
-        return self._optional_parameters_names
+    def get_parameters_names(self) -> Set[str]:
+        return self._parameters_names
 
 
-OPTIONAL_PARAMETERS_REGISTRY = OptionalParametersRegistry()
+# If optional parameter is missed in a checkpoint, it can be loaded without an error in a strict mode.
+# New parameters can be introduced for the model without breaking backward compatibility with old checkpoint.
+OPTIONAL_PARAMETERS_REGISTRY = ParametersRegistry()
 
 
 class ProcessedKeyStatus(Enum):
@@ -100,15 +97,17 @@ class ProcessedKeys:
     def extend_keys(self, keys: List[str], status: ProcessedKeyStatus):
         self._keys[status].update(keys)
 
-    def add_skipped_and_missing_keys(self, model_state_dict: Dict[str, torch.Tensor]):
+    def add_skipped_and_missing_keys(self,
+                                     model_state_dict: Dict[str, torch.Tensor]):
         all_processed_keys = []
-        params_to_skip = tuple('.' + name for name in OPTIONAL_PARAMETERS_REGISTRY.get_optional_parameters_names())
+        optional_param_names = OPTIONAL_PARAMETERS_REGISTRY.get_parameters_names()
+        params_to_skip = tuple('.' + name for name in optional_param_names)
         for keys in self._keys.values():
             all_processed_keys.extend(keys)
 
         for key in model_state_dict.keys():
             if key not in all_processed_keys:
-                if key.endswith(params_to_skip):
+                if key.endswith(params_to_skip) or key in optional_param_names:
                     self.add_key(key, ProcessedKeyStatus.SKIPPED)
                     nncf_logger.warning("The optional parameter {} is missed in the loaded state".format(key))
                 else:
@@ -150,11 +149,14 @@ class NormalizedKeys:
         unified compression parameters from the separate ones.
     """
 
-    def __init__(self, keys: List[str]):
+    def __init__(self, keys: List[str], keys_to_ignore: List[str]):
         self._unique_normalized_key_vs_orig_key_map = {}
         self.is_unified_group_detected = False
-        unique_clipped_key_vs_orig_key_list_map = self._clip_keys_without_collisions(keys)
-        self._normalize_keys_without_collisions(unique_clipped_key_vs_orig_key_list_map)
+        self.has_legacy_storage_keys = False
+        unique_clipped_key_vs_orig_key_map, ignored_keys = self._clip_keys_without_collisions(keys, keys_to_ignore)
+        self.ignored_orig_keys = ignored_keys
+        ignored_keys = self._normalize_keys_without_collisions(unique_clipped_key_vs_orig_key_map, keys_to_ignore)
+        self.ignored_orig_keys.extend(ignored_keys)
 
     def __contains__(self, key: str):
         return key in self._unique_normalized_key_vs_orig_key_map
@@ -165,7 +167,10 @@ class NormalizedKeys:
     def get_orig_key(self, normalized_key: str):
         return self._unique_normalized_key_vs_orig_key_map[normalized_key]
 
-    def _normalize_keys_without_collisions(self, unique_clipped_key_vs_orig_key_map: Dict[str, str]):
+    def _normalize_keys_without_collisions(self,
+                                           unique_clipped_key_vs_orig_key_map: Dict[str, str],
+                                           keys_to_ignore: List[str]) -> List[str]:
+        ignored_keys = []
         normalized_key_vs_clipped_key_list_map = {}
         for clipped_key in unique_clipped_key_vs_orig_key_map:
             replaced_keys = self._key_replacer(clipped_key)
@@ -173,6 +178,10 @@ class NormalizedKeys:
                 self.is_unified_group_detected = True
 
             for replaced_key in replaced_keys:
+                if replaced_key in keys_to_ignore:
+                    orig_key = unique_clipped_key_vs_orig_key_map[clipped_key]
+                    ignored_keys.append(orig_key)
+                    continue
                 if replaced_key in normalized_key_vs_clipped_key_list_map:
                     normalized_key_vs_clipped_key_list_map[replaced_key].append(clipped_key)
                 else:
@@ -188,12 +197,17 @@ class NormalizedKeys:
                 for clipped_key in list_clipped_keys:
                     orig_key = unique_clipped_key_vs_orig_key_map[clipped_key]
                     self._unique_normalized_key_vs_orig_key_map[clipped_key] = orig_key
+        return ignored_keys
 
     @staticmethod
-    def _clip_keys_without_collisions(keys: List[str]) -> Dict[str, str]:
+    def _clip_keys_without_collisions(keys: List[str], keys_to_ignore: List[str]) -> Tuple[Dict[str, str], List[str]]:
         clipped_key_vs_orig_key_list_map = {}
+        ignored_keys = []
         for orig_key in keys:
             clipped_key = NormalizedKeys._key_clipper(orig_key)
+            if clipped_key in keys_to_ignore:
+                ignored_keys.append(orig_key)
+                continue
             if clipped_key in clipped_key_vs_orig_key_list_map:
                 clipped_key_vs_orig_key_list_map[clipped_key].append(orig_key)
             else:
@@ -207,7 +221,7 @@ class NormalizedKeys:
             else:
                 for orig_key in list_orig_keys:
                     unique_clipped_key_vs_orig_key_map[orig_key] = orig_key
-        return unique_clipped_key_vs_orig_key_map
+        return unique_clipped_key_vs_orig_key_map, ignored_keys
 
     @staticmethod
     def _key_clipper(key: str) -> str:
@@ -218,18 +232,36 @@ class NormalizedKeys:
             new_key = new_key.replace(pattern, '')
         return new_key
 
-    @staticmethod
-    def _key_replacer(key: str) -> List[str]:
+    def _key_replacer(self, key: str) -> List[str]:
         new_key = key
 
         match = re.search('(pre_ops|post_ops)\\.(\\d+?)\\.op', key)
         new_key = new_key if not match else new_key.replace(match.group(), 'operation')
-        result = [new_key]
 
-        # cover unified FQ - external_quantizers.RELU_0;RELU_1;RELU_2.op
+        new_key, did_replace = self._replace_legacy_act_quantizer_storage_name(new_key)
+        if did_replace:
+            self.has_legacy_storage_keys = True
+
+        result = self._split_unified_parameters(new_key)
+        if len(result) > 1:
+            self.is_unified_group_detected = True
+        return result
+
+    @staticmethod
+    def _split_unified_parameters(new_key: str) -> List[str]:
+        """ covers unified activation quantizers case, e.g.
+                external_quantizers.RELU_0;RELU_1;RELU_2.op
+            Result of this function is full names of individual parameters:
+                external_quantizers.RELU_2.op
+                external_quantizers.RELU_1.op
+                external_quantizers.RELU_0.op
+            It's utilized to match parameters from checkpoints without unified operations to not start training
+            compression from scratch, but instead initialize group of parameters by one of the matched individual one.
+            Returns original key if there's no ';' and operation doesn't start with EXTERNAL_QUANTIZERS_STORAGE_NAME
+        """
+        result = [new_key]
         from nncf.torch.nncf_network import EXTERNAL_QUANTIZERS_STORAGE_NAME
-        from nncf.torch.nncf_network import LEGACY_ACT_STORAGE_NAME
-        if ';' in new_key and new_key.startswith((EXTERNAL_QUANTIZERS_STORAGE_NAME, LEGACY_ACT_STORAGE_NAME)):
+        if ';' in new_key and new_key.startswith(EXTERNAL_QUANTIZERS_STORAGE_NAME):
             group_of_keys = new_key.split(';')
             last_key = group_of_keys[-1]
             common_op = last_key.split('.')[-1]
@@ -237,9 +269,21 @@ class NormalizedKeys:
                 group_of_keys[0] + '.' + common_op,
                 EXTERNAL_QUANTIZERS_STORAGE_NAME + '.' + last_key
             ]
-            for middle_key in group_of_keys[1:-1]:
-                result.append(EXTERNAL_QUANTIZERS_STORAGE_NAME + '.' + middle_key + '.' + common_op)
+            for key in group_of_keys[1:-1]:
+                result.append(EXTERNAL_QUANTIZERS_STORAGE_NAME + '.' + key + '.' + common_op)
         return result
+
+    @staticmethod
+    def _replace_legacy_act_quantizer_storage_name(checkpoint_key: str) -> Tuple[str, bool]:
+        did_replace = False
+        splits = checkpoint_key.split('.')
+        from nncf.torch.nncf_network import LEGACY_ACT_STORAGE_NAME
+        from nncf.torch.nncf_network import EXTERNAL_QUANTIZERS_STORAGE_NAME
+        if splits[0] == LEGACY_ACT_STORAGE_NAME:
+            did_replace = True
+            splits[0] = EXTERNAL_QUANTIZERS_STORAGE_NAME
+        reconstructed_key = '.'.join(splits)
+        return reconstructed_key, did_replace
 
 
 class KeyMatcher:
@@ -251,7 +295,12 @@ class KeyMatcher:
     """
 
     def __init__(self, is_resume: bool,
-                 state_dict_to_load: Dict[str, torch.Tensor], model_state_dict: Dict[str, torch.Tensor]):
+                 state_dict_to_load: Dict[str, torch.Tensor], model_state_dict: Dict[str, torch.Tensor],
+                 ignored_keys: List[str] = None):
+        """
+        :param state_dict_to_load: A state dict containing the parameters to be loaded into the model.
+        :param ignored_keys: list of parameters to skip from matching process on loading.
+        """
         self._is_resume = is_resume
         self.state_dict_to_load = state_dict_to_load
 
@@ -259,15 +308,16 @@ class KeyMatcher:
         self._processed_keys = ProcessedKeys()
         self._new_dict = {}
         self._num_params_to_load = len(state_dict_to_load.items())
+        self.ignored_keys = ignored_keys if ignored_keys else []
 
     def run(self) -> Dict[str, torch.Tensor]:
         """
         :return: the model state dict with matched parameters
         """
-        normalized_model_keys = NormalizedKeys(list(self.model_state_dict.keys()))
-        normalized_keys_to_load = NormalizedKeys(list(self.state_dict_to_load.keys()))
-
-        has_legacy_storage_keys = False
+        normalized_model_keys = NormalizedKeys(list(self.model_state_dict.keys()),
+                                               keys_to_ignore=self.ignored_keys)
+        normalized_keys_to_load = NormalizedKeys(list(self.state_dict_to_load.keys()),
+                                                 keys_to_ignore=self.ignored_keys)
 
         has_version_agnostic_names = False
         cross_match_key_map = self._cross_match_version_agnostic_names(list(normalized_keys_to_load),
@@ -284,33 +334,8 @@ class KeyMatcher:
                           'names. The newly exported checkpoints will be adjusted to the new format.',
                           category=DeprecationWarning)
 
-        for normalized_key_to_load in normalized_keys_to_load:
-            key_to_load = normalized_keys_to_load.get_orig_key(normalized_key_to_load)
-            normalized_key_to_load = cross_match_key_map.get(normalized_key_to_load, normalized_key_to_load)
 
-            processed_key_to_load, did_replace = self._replace_legacy_act_quantizer_storage_name(
-                normalized_key_to_load
-            )
-
-            if did_replace:
-                has_legacy_storage_keys = True
-
-            if processed_key_to_load in normalized_model_keys:
-                model_key = normalized_model_keys.get_orig_key(processed_key_to_load)
-                value_to_load = self.state_dict_to_load[key_to_load]
-                size_of_value_to_load = value_to_load.size()
-                size_of_model_value = self.model_state_dict[model_key].size()
-                if size_of_value_to_load == size_of_model_value:
-                    self._new_dict[model_key] = value_to_load
-                    self._processed_keys.add_key(model_key, ProcessedKeyStatus.MATCHED)
-                else:
-                    nncf_logger.warning("Different size of value of '{}' in resuming dictionary ({}) and in model ({})"
-                                        .format(model_key, size_of_value_to_load, size_of_model_value, ))
-                    self._processed_keys.add_key(model_key, ProcessedKeyStatus.SIZE_MISMATCHED)
-            else:
-                self._processed_keys.add_key(key_to_load, ProcessedKeyStatus.UNEXPECTED)
-
-        if has_legacy_storage_keys:
+        if normalized_keys_to_load.has_legacy_storage_keys:
             warnings.warn('Legacy NNCF-enabled .pth checkpoint has been loaded! '
                           'The "activation_quantizers" storage key is replaced with '
                           '"external_quantizers" in newer versions of NNCF, and support '
@@ -324,22 +349,33 @@ class KeyMatcher:
                           'the corresponding separate parameter in the checkpoint. That may slightly degrade the '
                           'accuracy, but should allow to not start training compression from scratch with unified '
                           'params.', category=DeprecationWarning)
+        ignored_keys = normalized_model_keys.ignored_orig_keys + normalized_keys_to_load.ignored_orig_keys
+        self._processed_keys.extend_keys(ignored_keys, ProcessedKeyStatus.SKIPPED)
+        if ignored_keys:
+            ignored_keys_str = '\n'.join(set(ignored_keys))
+            nncf_logger.warning("The following parameters were skipped from matching checkpoint's keys:\n{}"
+                                .format(ignored_keys_str))
 
+        for normalized_key_to_load in normalized_keys_to_load:
+            key_to_load = normalized_keys_to_load.get_orig_key(normalized_key_to_load)
+            normalized_key_to_load = cross_match_key_map.get(normalized_key_to_load,
+                                                             normalized_key_to_load)
+            if normalized_key_to_load in normalized_model_keys:
+                model_key = normalized_model_keys.get_orig_key(normalized_key_to_load)
+                value_to_load = self.state_dict_to_load[key_to_load]
+                size_of_value_to_load = value_to_load.size()
+                size_of_model_value = self.model_state_dict[model_key].size()
+                if size_of_value_to_load == size_of_model_value:
+                    self._new_dict[model_key] = value_to_load
+                    self._processed_keys.add_key(model_key, ProcessedKeyStatus.MATCHED)
+                else:
+                    nncf_logger.warning("Different size of value of '{}' in resuming dictionary ({}) and in model ({})"
+                                        .format(model_key, size_of_value_to_load, size_of_model_value, ))
+                    self._processed_keys.add_key(model_key, ProcessedKeyStatus.SIZE_MISMATCHED)
+            else:
+                self._processed_keys.add_key(key_to_load, ProcessedKeyStatus.UNEXPECTED)
         self._processed_keys.add_skipped_and_missing_keys(self.model_state_dict)
         return self._new_dict
-
-    @staticmethod
-    def _replace_legacy_act_quantizer_storage_name(checkpoint_key: str) -> Tuple[str, bool]:
-
-        from nncf.torch.nncf_network import LEGACY_ACT_STORAGE_NAME
-        from nncf.torch.nncf_network import EXTERNAL_QUANTIZERS_STORAGE_NAME
-        did_replace = False
-        splits = checkpoint_key.split('.')
-        if splits[0] == LEGACY_ACT_STORAGE_NAME:
-            did_replace = True
-            splits[0] = EXTERNAL_QUANTIZERS_STORAGE_NAME
-        reconstructed_key = '.'.join(splits)
-        return reconstructed_key, did_replace
 
     @staticmethod
     def _cross_match_version_agnostic_names(normalized_keys_to_load: List[str],
@@ -355,8 +391,7 @@ class KeyMatcher:
         """
         version_agnostic_to_specific_names = {"RELU": {"relu", "relu_"}}
         retval = {}
-        processed_keys_to_load = [KeyMatcher._replace_legacy_act_quantizer_storage_name(key)[0]
-                                  for key in normalized_keys_to_load]
+        processed_keys_to_load = normalized_keys_to_load
 
         for model_key in normalized_model_keys:
             for agnostic_op_name, specific_op_name_set in version_agnostic_to_specific_names.items():
@@ -374,9 +409,7 @@ class KeyMatcher:
                         has_specific_op_name = True
                     slash_split_str[-1] = last_portion
                     agnostic_version_of_model_key = '/'.join(slash_split_str)
-                    processed_agnostic_version_of_model_key, _ = KeyMatcher._replace_legacy_act_quantizer_storage_name(
-                        agnostic_version_of_model_key
-                    )
+                    processed_agnostic_version_of_model_key = agnostic_version_of_model_key
                     if processed_agnostic_version_of_model_key in processed_keys_to_load:
                         idx = processed_keys_to_load.index(processed_agnostic_version_of_model_key)
                         matches_for_curr_agnostic_op_name.append(normalized_keys_to_load[idx])

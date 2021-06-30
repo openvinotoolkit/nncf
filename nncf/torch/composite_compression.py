@@ -44,17 +44,12 @@ class PTCompositeCompressionLoss(CompositeCompressionLoss, PTCompressionLoss):
 class PTCompositeCompressionAlgorithmBuilder(
         CompositeCompressionAlgorithmBuilder, PTCompressionAlgorithmBuilder):
     def __init__(self, config: NNCFConfig, should_init: bool = True):
-        from nncf.torch.model_creation import get_compression_algorithm
-
         super().__init__(config, should_init)
-
+        from nncf.torch.model_creation import get_compression_algorithm_builder
         algorithm_configs = extract_compression_algorithm_configs(config)
         for algo_config in algorithm_configs:
             self._child_builders.append(
-                get_compression_algorithm(algo_config)(algo_config, should_init=should_init))
-
-    def __bool__(self):
-        return bool(self.child_builders)
+                get_compression_algorithm_builder(algo_config)(algo_config, should_init=should_init))
 
     def apply_to(self, target_model: NNCFNetwork) -> NNCFNetwork:
         transformer = PTModelTransformer(target_model)
@@ -65,8 +60,9 @@ class PTCompositeCompressionAlgorithmBuilder(
 
         return transformed_model
 
-    def build_controller(self, model: ModelType) -> 'PTCompositeCompressionAlgorithmController':
+    def _build_controller(self, model: ModelType) -> PTCompressionAlgorithmController:
         """
+        Simple implementation of building controller without setting builder state and loading controller's one.
         Builds `PTCompositeCompressionAlgorithmController` to handle the additional
         modules, parameters, and hooks inserted into the model to enable
         algorithm-specific compression.
@@ -140,8 +136,3 @@ class PTCompositeCompressionAlgorithmController(
     @compression_rate.setter
     def compression_rate(self, compression_rate: float) -> None:
         raise NotImplementedError
-
-    def load_state(self, states):
-        self._check_loaded_compression_stage(states)
-        for child_ctrl, child_state in zip(self.child_ctrls, states['scheduler']):
-            child_ctrl.load_state({'scheduler': child_state})

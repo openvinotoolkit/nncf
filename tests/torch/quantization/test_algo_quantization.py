@@ -13,8 +13,7 @@
 import logging
 from contextlib import contextmanager
 from copy import deepcopy
-from typing import List
-from typing import Tuple
+from typing import List, Tuple
 
 import pytest
 import torch
@@ -28,12 +27,12 @@ from nncf.api.compression import CompressionScheduler
 from nncf.torch.checkpoint_loading import load_state
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
-from nncf.torch.composite_compression import PTCompositeCompressionAlgorithmBuilder
 from nncf.torch.compression_method_api import PTCompressionLoss
 from nncf.torch.dynamic_graph.scope import Scope
 from nncf.torch.dynamic_graph.scope import ScopeElement
 from nncf.common.hardware.config import HWConfigType
 from nncf.torch.layers import NNCFConv2d
+from nncf.torch.model_creation import create_compression_algorithm_builder
 from nncf.torch.module_operations import UpdateInputs
 from nncf.torch.module_operations import UpdateWeight
 from nncf.torch.nncf_network import ExtraCompressionModuleType
@@ -170,9 +169,8 @@ def test_can_load_quant_algo__with_defaults():
     model = BasicConvTestModel()
     config = get_quantization_config_without_range_init()
     register_bn_adaptation_init_args(config)
-    composite_builder = PTCompositeCompressionAlgorithmBuilder(config)
-    assert len(composite_builder.child_builders) == 1
-    assert isinstance(composite_builder.child_builders[0], QuantizationBuilder)
+    builder = create_compression_algorithm_builder(config)
+    assert isinstance(builder, QuantizationBuilder)
 
     quant_model, _ = create_compressed_model_and_algo_for_test(deepcopy(model), config)
 

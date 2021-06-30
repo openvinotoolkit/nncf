@@ -12,6 +12,8 @@
 """
 
 from functools import partial
+from typing import Any
+from typing import Dict
 from typing import Optional
 
 import tensorflow as tf
@@ -46,6 +48,27 @@ class TFQuantizerSpec(QuantizerSpec):
                    narrow_range,
                    half_range,
                    qconfig.per_channel)
+
+    def get_state(self) -> Dict[str, Any]:
+        """
+        Returns a dictionary with Python data structures (dict, list, tuple, str, int, float, True, False, None) that
+        represents state of the object.
+        """
+        return {'num_bits': self.num_bits,
+                'mode': self.mode,
+                'signedness_to_force': self.signedness_to_force,
+                'narrow_range': self.narrow_range,
+                'half_range': self.half_range,
+                'per_channel': self.per_channel}
+
+    @classmethod
+    def from_state(cls, state: Dict[str, Any]) -> 'TFQuantizerSpec':
+        """
+        Creates the object from its state.
+
+        :param state: Output of `get_state()` method.
+        """
+        return cls(**state)
 
 
 class Quantizer(NNCFOperation):

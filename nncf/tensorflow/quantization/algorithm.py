@@ -10,8 +10,10 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-
-from typing import List, Set
+from typing import Any
+from typing import Dict
+from typing import List
+from typing import Set
 
 import networkx as nx
 import tensorflow as tf
@@ -22,6 +24,7 @@ from nncf.api.compression import CompressionScheduler
 from nncf.common.graph import Dtype
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
+from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TransformationPriority
 from nncf.common.initialization.batchnorm_adaptation import BatchnormAdaptationAlgorithm
 from nncf.common.quantization.initialization.range import RangeInitParams
@@ -33,6 +36,7 @@ from nncf.common.schedulers import BaseCompressionScheduler
 from nncf.common.statistics import NNCFStatistics
 from nncf.common.utils.helpers import should_consider_scope
 from nncf.common.utils.logger import logger
+from nncf.common.stateful_classes_registry import TF_STATEFUL_CLASSES
 from nncf.config.extractors import extract_range_init_params
 from nncf.config.extractors import extract_bn_adaptation_init_params
 from nncf.tensorflow.algorithm_selector import TF_COMPRESSION_ALGORITHMS
@@ -66,8 +70,100 @@ NOT_SUPPORT_LAYER_METATYPES = [
 ]
 
 
+class QuantizationPointStateNames:
+    QUANTIZER_SPEC = 'quantizer_spec'
+    TARGET_POINT = 'target_point'
+    TARGET_POINT_CLASS_NAME = 'target_point_class_name'
+    OP_NAME = 'op_name'
+
+
+class QuantizationPoint:
+    _state_names = QuantizationPointStateNames
+
+    def __init__(self, op_name: str, quantizer_spec: TFQuantizerSpec, target_point: TargetPoint):
+        self.target_point = target_point
+        self.op_name = op_name
+        self.quantizer_spec = quantizer_spec
+
+    def is_weight_quantization(self) -> bool:
+        return isinstance(self.target_point, TFLayerWeight)
+
+    def get_state(self) -> Dict[str, Any]:
+        """
+        Returns a dictionary with Python data structures (dict, list, tuple, str, int, float, True, False, None) that
+        represents state of the object.
+        """
+        return {
+            self._state_names.TARGET_POINT: self.target_point.get_state(),
+            self._state_names.TARGET_POINT_CLASS_NAME: self.target_point.__class__.__name__,
+            self._state_names.QUANTIZER_SPEC: self.quantizer_spec.get_state(),
+            self._state_names.OP_NAME: self.op_name
+        }
+
+    @classmethod
+    def from_state(cls, state: Dict[str, Any]) -> 'QuantizationPoint':
+        """
+        Creates the object from its state.
+
+        :param state: Output of `get_state()` method.
+        """
+        target_point_cls = TF_STATEFUL_CLASSES.get_registered_class(state[cls._state_names.TARGET_POINT_CLASS_NAME])
+        kwargs = {cls._state_names.TARGET_POINT: target_point_cls.from_state(state[cls._state_names.TARGET_POINT]),
+                  cls._state_names.QUANTIZER_SPEC: TFQuantizerSpec.from_state(state[cls._state_names.QUANTIZER_SPEC]),
+                  cls._state_names.OP_NAME: state[cls._state_names.OP_NAME]}
+        return cls(**kwargs)
+
+
+class QuantizationSetupStateNames:
+    QUANTIZATION_POINTS = 'quantization_points'
+
+
+class QuantizationSetup:
+    _state_names = QuantizationSetupStateNames
+
+    def __init__(self):
+        super().__init__()
+        self._quantization_points = []  # type: List[QuantizationPoint]
+
+    def add_quantization_point(self, point: QuantizationPoint):
+        self._quantization_points.append(point)
+
+    def __iter__(self):
+        return iter(self._quantization_points)
+
+    def get_state(self) -> Dict:
+        """
+        Returns a dictionary with Python data structures (dict, list, tuple, str, int, float, True, False, None) that
+        represents state of the object.
+        """
+
+        quantization_points_state = [qp.get_state() for qp in self._quantization_points]
+        return {
+            self._state_names.QUANTIZATION_POINTS: quantization_points_state,
+        }
+
+    @classmethod
+    def from_state(cls, state: Dict) -> 'QuantizationSetup':
+        """
+        Creates the object from its state.
+
+        :param state: Output of `get_state()` method.
+        """
+        setup = QuantizationSetup()
+        for quantization_point_state in state[cls._state_names.QUANTIZATION_POINTS]:
+            quantization_point = QuantizationPoint.from_state(quantization_point_state)
+            setup.add_quantization_point(quantization_point)
+        return setup
+
+
+class QBuilderStateNames:
+    QUANTIZER_SETUP = 'quantizer_setup'
+
+
 @TF_COMPRESSION_ALGORITHMS.register('quantization')
 class QuantizationBuilder(TFCompressionAlgorithmBuilder):
+    _state_names = QBuilderStateNames
+
     def __init__(self, config: NNCFConfig, should_init: bool = True):
         super().__init__(config, should_init)
 
@@ -89,6 +185,24 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
 
         self._range_initializer = None
         self._bn_adaptation = None
+        self._quantizer_setup = None
+
+    def _load_state_without_name(self, state: Dict[str, Any]):
+        """
+        Initializes object from the state.
+
+        :param state: Output of `get_state()` method.
+        """
+        quantizer_setup_state = state[self._state_names.QUANTIZER_SETUP]
+        self._quantizer_setup = QuantizationSetup.from_state(quantizer_setup_state)
+
+    def _get_state_without_name(self) -> Dict[str, Any]:
+        """
+        Returns a dictionary with Python data structures (dict, list, tuple, str, int, float, True, False, None) that
+        represents state of the object.
+        """
+        quantizer_setup_state = self._quantizer_setup.get_state()
+        return {self._state_names.QUANTIZER_SETUP: quantizer_setup_state}
 
     def _parse_init_params(self):
         self._batchnorm_adaptation = 'batchnorm_adaptation' in self.config.get('initializer', {})
@@ -129,7 +243,8 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
         quantizer_cls = NNCF_QUANTIZATION_OPERATONS.get(qspec.mode)
         return quantizer_cls(name, qspec)
 
-    def get_transformation_layout(self, model: tf.keras.Model) -> TFTransformationLayout:
+    def _get_quantizer_setup(self, model: tf.keras.Model) -> QuantizationSetup:
+        setup = QuantizationSetup()
         nncf_graph = convert_keras_model_to_nncf_graph(model)
         nodes = nncf_graph.get_all_nodes()
         for node in nodes:
@@ -137,7 +252,6 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
                 logger.warning('The layer {} is not supported by the quantization algorithm'
                                .format(get_original_name_and_instance_index(node.node_name)[0]))
 
-        transformations = TFTransformationLayout()
         qconfig = self._get_default_qconfig(self.global_quantizer_constraints[QuantizerGroup.WEIGHTS])
         half_range = self._get_half_range(qconfig)
         processed_shared_layer_names = set()  # type: Set[str]
@@ -155,43 +269,56 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
                                               ignored_scopes=self.ignored_scopes_per_group[QuantizerGroup.WEIGHTS],
                                               target_scopes=None)):
                 continue
-
             for weight_def in node.metatype.weight_definitions:
                 op_name = self._get_quantizer_operation_name(
                     node.node_name,
                     weight_def.weight_attr_name)
                 self._op_names.append(op_name)
-
-                operation = self._create_quantizer(
-                    op_name,
-                    TFQuantizerSpec.from_config(qconfig,
-                                                narrow_range=not half_range,
-                                                half_range=half_range))
-
-                transformations.register(
-                    TFInsertionCommand(
-                        target_point=TFLayerWeight(target_layer_name, weight_def.weight_attr_name),
-                        callable_object=operation,
-                        priority=TransformationPriority.QUANTIZATION_PRIORITY))
+                quantizer_spec = TFQuantizerSpec.from_config(qconfig,
+                                                             narrow_range=not half_range,
+                                                             half_range=half_range)
+                target_point = TFLayerWeight(target_layer_name, weight_def.weight_attr_name)
+                qpoint = QuantizationPoint(op_name, quantizer_spec, target_point)
+                setup.add_quantization_point(qpoint)
 
         insertion_points = self._find_insertion_points(nncf_graph)
         qconfig = self._get_default_qconfig(self.global_quantizer_constraints[QuantizerGroup.ACTIVATIONS])
         for original_node_name, instance_index in insertion_points:
             fake_quantize_name = self._get_fake_quantize_name(original_node_name, instance_index)
-            fake_quantize_layer = FakeQuantize(
-                TFQuantizerSpec.from_config(qconfig, narrow_range=False, half_range=False),
-                name=fake_quantize_name)
-            self._op_names.append(fake_quantize_layer.op_name)
+            quantizer_spec = TFQuantizerSpec.from_config(qconfig, narrow_range=False, half_range=False)
+            target_point = TFAfterLayer(original_node_name, instance_index)
+            qpoint = QuantizationPoint(fake_quantize_name, quantizer_spec, target_point)
+            setup.add_quantization_point(qpoint)
+        return setup
 
-            transformations.register(
-                TFInsertionCommand(
-                    target_point=TFAfterLayer(original_node_name, instance_index),
-                    callable_object=fake_quantize_layer,
-                    priority=TransformationPriority.QUANTIZATION_PRIORITY))
+    def _build_insertion_commands_for_quantizer_setup(self,
+                                                      quantizer_setup: QuantizationSetup) -> List[TFInsertionCommand]:
+        insertion_commands = []
+        for quantization_point in quantizer_setup:
+            op_name = quantization_point.op_name
+            quantizer_spec = quantization_point.quantizer_spec
+            target_point = quantization_point.target_point
+            if quantization_point.is_weight_quantization():
+                quantizer = self._create_quantizer(op_name, quantizer_spec)
+            else:
+                quantizer = FakeQuantize(quantizer_spec, name=op_name)
+                self._op_names.append(quantizer.op_name)
+            command = TFInsertionCommand(target_point=target_point,
+                                         callable_object=quantizer,
+                                         priority=TransformationPriority.QUANTIZATION_PRIORITY)
+            insertion_commands.append(command)
+        return insertion_commands
 
+    def get_transformation_layout(self, model: tf.keras.Model) -> TFTransformationLayout:
+        if self._quantizer_setup is None:
+            self._quantizer_setup = self._get_quantizer_setup(model)
+        transformations = TFTransformationLayout()
+        insertion_commands = self._build_insertion_commands_for_quantizer_setup(self._quantizer_setup)
+        for command in insertion_commands:
+            transformations.register(command)
         return transformations
 
-    def build_controller(self, model: tf.keras.Model) -> 'QuantizationController':
+    def _build_controller(self, model: tf.keras.Model) -> 'QuantizationController':
         return QuantizationController(model, self.config, self._op_names)
 
     def initialize(self, model: tf.keras.Model) -> None:

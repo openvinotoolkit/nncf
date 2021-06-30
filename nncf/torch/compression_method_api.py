@@ -16,30 +16,59 @@
 This package defines the API for the NNCF compression methods so that the user could
 extend the existing algorithms.
 """
-
-from typing import List, Tuple, TypeVar, Dict
+from abc import abstractmethod
+from typing import List, Tuple, TypeVar, Dict, Any
 
 import torch
+
+from nncf.api.compression import CompressionState
+from nncf.common.compression import BaseCompressionAlgorithmBuilder
+from nncf.common.compression import BaseCompressionAlgorithmController
 from torch import nn
 
 from nncf.common.graph import NNCFNodeName
 from nncf.config import NNCFConfig
 from nncf.torch.graph.transformations.layout import PTTransformationLayout
-from nncf.torch.layers import NNCF_MODULES_DICT, NNCF_WRAPPED_USER_MODULES_DICT
-from nncf.common.utils.logger import logger as nncf_logger
-from nncf.common.compression import BaseCompressionAlgorithmController
+from nncf.torch.layers import NNCF_MODULES_DICT
+from nncf.torch.layers import NNCF_WRAPPED_USER_MODULES_DICT
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.nncf_network import PTModelTransformer
 from nncf.common.utils.helpers import should_consider_scope
-from nncf.api.compression import CompressionAlgorithmBuilder
 from nncf.api.compression import CompressionLoss
-from nncf.api.compression import CompressionLevel
-
+from nncf.common.utils.logger import logger as nncf_logger
 
 ModelType = TypeVar('ModelType')
 
 DOMAIN_CUSTOM_OPS_NAME = "org.openvinotoolkit"
 
+
+class PTCompressionState(CompressionState):
+    """
+    Contains compression state of the PyTorch model to unambiguously resume compression from it.
+    Consists of builder and controller state - a dictionaries with Python data structures,
+    defining how to setup and handle the compression correspondingly
+    """
+
+    def __init__(self, builder_state: Dict = None, ctrl_state: Dict = None):
+        self._builder_state = builder_state
+        self._ctrl_state = ctrl_state
+
+    @property
+    def builder_state(self) -> Dict:
+        return self._builder_state
+
+    @property
+    def ctrl_state(self):
+        return self._ctrl_state
+
+    def load_state(self, state: Dict):
+        """
+        Initializes object from the state.
+
+        :param state: Output of `get_state()` method.
+        """
+        self._builder_state = state[self.BUILDER_STATE]
+        self._ctrl_state = state[self.CONTROLLER_STATE]
 
 class PTCompressionLoss(nn.Module, CompressionLoss):
     """
@@ -66,7 +95,7 @@ class PTCompressionLoss(nn.Module, CompressionLoss):
         """
         return self.calculate()
 
-    def load_state(self, state: Dict[str, object]) -> None:
+    def load_state(self, state: Dict[str, Any]) -> None:
         """
         Loads the compression loss state.
 
@@ -97,49 +126,35 @@ class PTCompressionAlgorithmController(BaseCompressionAlgorithmController):
         should be made inside this function.
         """
 
-    def load_state(self, state: Dict[str, object]) -> None:
+    def get_compression_state(self) -> CompressionState:
         """
-        Loads the compression controller state.
-
-        :param state: Output of `get_state()` method.
+        Returns compression state - builder and controller state.
+        This state should be used to resume compression via `compression_state` argument of `create_compressed_model`
+        method
+        :return: The compression state.
         """
-        self._check_loaded_compression_stage(state)
-        if self.scheduler is not None:
-            self.scheduler.load_state(state['scheduler'])
+        ctrl_state = self.get_state()
+        if self._builder_state is None:
+            raise RuntimeError('Internal error: builder state is not set for the controller')
+        return PTCompressionState(builder_state=self._builder_state, ctrl_state=ctrl_state)
 
-    def _check_loaded_compression_stage(self, state: Dict[str, object]) -> None:
-        if 'compression_level' in state:
-            if 'compression_stage' not in state:
-                compression_level = state['compression_level']
-                state['compression_stage'] = CompressionLevel.map_legacy_level_to_stage()[compression_level]
-            else:
-                nncf_logger.warning('Both CompressionStage and (legacy) CompressionLevel attributes '
-                                    'are specified in the checkpoint. Proceeding with the value stored '
-                                    'in CompressionStage')
-        if 'compression_stage' in state and self.compression_stage() != state['compression_stage']:
-            nncf_logger.warning('Current CompressionStage ({}) of the compression controller does '
-                                'not correspond to the value found in '
-                                'the checkpoint ({})'.format(self.compression_stage(),
-                                                             state['compression_stage']))
-
-    def get_state(self) -> Dict[str, object]:
+    def get_compression_state_dict(self) -> Dict:
         """
-        Returns the compression controller state.
+        Returns a dictionary with Python data structures (dict, list, tuple, str, int, float, True, False, None) that
+        represents compression state - builder and controller state. This state should be used to resume compression
+        via `compression_state_dict` argument of `create_compressed_model` method.
 
-        :return: The compression controller state.
+        :return: dictionary that represents a compression state.
         """
-        return {'scheduler': self.scheduler.get_state(),
-                'compression_stage': self.compression_stage()}
+        return self.get_compression_state().get_state()
 
 
-class PTCompressionAlgorithmBuilder(CompressionAlgorithmBuilder):
+class PTCompressionAlgorithmBuilder(BaseCompressionAlgorithmBuilder):
     """
     Determines which modifications should be made to the original FP32 model in
     order to enable algorithm-specific compression during fine-tuning. Operates
     on an NNCFNetwork object wrapping a target PyTorch model (torch.nn.Module).
     """
-
-    _registered_name: str = None  # Attribute will set by COMPRESSION_ALGORITHMS registry
 
     def __init__(self, config: NNCFConfig, should_init: bool = True):
         """
@@ -178,6 +193,49 @@ class PTCompressionAlgorithmBuilder(CompressionAlgorithmBuilder):
         self._handle_frozen_layers(target_model)
         return layout
 
+    @abstractmethod
+    def _build_controller(self, model: ModelType) -> PTCompressionAlgorithmController:
+        """
+        Simple implementation of building controller without setting builder state and loading controller's one.
+
+        :param model: The model with additional modifications necessary to enable
+            algorithm-specific compression during fine-tuning.
+        :return: The instance of the `BaseCompressionAlgorithmController`.
+        """
+
+    def build_controller(self, model: ModelType) -> PTCompressionAlgorithmController:
+        """
+        Builds `PTCompressionAlgorithmController` to handle the additional modules,
+        parameters, and hooks inserted into the model to enable algorithm-specific
+        compression.
+
+        :param model: The model with additional modifications necessary to enable
+            algorithm-specific compression during fine-tuning.
+        :return: The instance of the `PTCompressionAlgorithmController`.
+        """
+        ctrl = self._build_controller(model)
+        if not isinstance(ctrl, PTCompressionAlgorithmController):
+            raise RuntimeError('Internal error: builder must create controller inherited from '
+                               '`PTCompressionAlgorithmController` class')
+        ctrl.set_builder_state_with_name(self.name, self.get_state())
+        return ctrl
+
+    def _get_state_without_name(self) -> Dict[str, Any]:
+        """
+        Implementation of get_state that returns state without builder name.
+
+        :return: Returns a dictionary with Python data structures
+            (dict, list, tuple, str, int, float, True, False, None) that represents state of the object.
+        """
+        return {}
+
+    def _load_state_without_name(self, state_without_name: Dict[str, Any]):
+        """
+        Implementation of load state that takes state without builder name.
+
+        :param state_without_name: Output of `_get_state_without_name()` method.
+        """
+
     def _get_transformation_layout(self, target_model: NNCFNetwork) -> PTTransformationLayout:
         raise NotImplementedError()
 
@@ -206,15 +264,15 @@ class PTCompressionAlgorithmBuilder(CompressionAlgorithmBuilder):
     def _nncf_module_types_to_compress(self) -> List[str]:
         """
         Return list of NNCF module types which should be compressed by specific algorithm.
-        As name of algorithm used self._registered_name that set by decorator @nncf.registry_module.
+        As name of algorithm used the value set by decorator @Registry.register() or default one.
         :return: List of names of modules
         """
         filtered_nncf_module_names_list = list()
         for module_cls in list(NNCF_MODULES_DICT) + list(NNCF_WRAPPED_USER_MODULES_DICT.values()):
-            if self._registered_name not in module_cls.ignored_algorithms:
+            if self.name not in module_cls.ignored_algorithms:
                 filtered_nncf_module_names_list.append(module_cls.__name__)
         return filtered_nncf_module_names_list
 
     def _are_frozen_layers_allowed(self) -> Tuple[bool, str]:
-        algo_name = self._registered_name.replace('_', ' ')
+        algo_name = self.name.replace('_', ' ')
         return False, f'Frozen layers are not allowed for {algo_name}'

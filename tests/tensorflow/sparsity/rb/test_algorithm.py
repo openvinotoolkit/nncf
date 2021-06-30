@@ -82,9 +82,10 @@ def test_can_load_sparse_algo__with_defaults():
 
 
 def test_compression_controller_state():
+    from nncf.common.compression import BaseControllerStateNames as CtrlStateNames
     model = get_basic_two_conv_test_model()
     config = get_basic_sparsity_config()
-
+    algo_name = config['compression']['algorithm']
     _, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
 
     # Test get state
@@ -92,23 +93,29 @@ def test_compression_controller_state():
     compression_ctrl.scheduler.current_epoch = 5
     compression_ctrl.set_sparsity_level(0.5)
     compression_ctrl.freeze()
-    assert compression_ctrl.get_state() == {'scheduler_state': {'current_step': 100, 'current_epoch': 5},
-                                            'loss_state': {'target': 0.5, 'disabled': True, 'p': 0.05}}
-
-
+    assert compression_ctrl.get_state() == {
+        algo_name: {
+            CtrlStateNames.SCHEDULER: {'current_step': 100, 'current_epoch': 5},
+            CtrlStateNames.LOSS: {'target': 0.5, 'disabled': True, 'p': 0.05},
+            CtrlStateNames.COMPRESSION_STAGE: None
+        }
+    }
     # Test load state
-    new_state = {'scheduler_state': {'current_step': 5000, 'current_epoch': 10},
-                 'loss_state': {'target': 0.9, 'disabled': False, 'p': 0.5}}
-    compression_ctrl.load_state(new_state)
-    assert tf.equal(compression_ctrl.loss.target, tf.constant(new_state['loss_state']['target']))
-    assert compression_ctrl.loss.disabled == new_state['loss_state']['disabled']
-    assert compression_ctrl.loss.p == pytest.approx(new_state['loss_state']['p'])
+    new_state = {
+        CtrlStateNames.SCHEDULER: {'current_step': 5000, 'current_epoch': 10},
+        CtrlStateNames.LOSS: {'target': 0.9, 'disabled': False, 'p': 0.5},
+        CtrlStateNames.COMPRESSION_STAGE: None
+    }
+    compression_ctrl.load_state({algo_name: new_state})
+    assert tf.equal(compression_ctrl.loss.target, tf.constant(new_state[CtrlStateNames.LOSS]['target']))
+    assert compression_ctrl.loss.disabled == new_state[CtrlStateNames.LOSS]['disabled']
+    assert compression_ctrl.loss.p == pytest.approx(new_state[CtrlStateNames.LOSS]['p'])
 
-    new_real_state = compression_ctrl.get_state()
-    assert new_real_state['scheduler_state'] == new_state['scheduler_state']
-    assert new_real_state['loss_state']['target'] == pytest.approx(new_state['loss_state']['target'])
-    assert new_real_state['loss_state']['disabled'] == new_state['loss_state']['disabled']
-    assert new_real_state['loss_state']['p'] == pytest.approx(new_state['loss_state']['p'])
+    new_real_state = compression_ctrl.get_state()[algo_name]
+    assert new_real_state[CtrlStateNames.SCHEDULER] == new_state[CtrlStateNames.SCHEDULER]
+    assert new_real_state[CtrlStateNames.LOSS]['target'] == pytest.approx(new_state[CtrlStateNames.LOSS]['target'])
+    assert new_real_state[CtrlStateNames.LOSS]['disabled'] == new_state[CtrlStateNames.LOSS]['disabled']
+    assert new_real_state[CtrlStateNames.LOSS]['p'] == pytest.approx(new_state[CtrlStateNames.LOSS]['p'])
 
 
 def test_can_set_sparse_layers_to_loss():

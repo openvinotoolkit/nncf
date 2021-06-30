@@ -95,7 +95,7 @@ class BinarizationBuilder(PTCompressionAlgorithmBuilder):
                                                          TransformationPriority.QUANTIZATION_PRIORITY))
         return insertion_commands
 
-    def build_controller(self, target_model: NNCFNetwork) -> PTCompressionAlgorithmController:
+    def _build_controller(self, target_model: NNCFNetwork) -> PTCompressionAlgorithmController:
         return BinarizationController(target_model, self.config)
 
     def initialize(self, model: NNCFNetwork) -> None:

@@ -419,6 +419,9 @@ def test_prepare_checkpoint(sample_type, config_path, config_eval, dataset_path,
         '--resume': checkpoint_save_dir
     }
 
+    # TODO(nlyalyus): a WA for 58902 issue with matching layer indexes from builder state and from loaded model
+    tf.keras.backend.clear_session()
+
     main = get_sample_fn(sample_type, modes=['test'])
     main(convert_to_argv(args))
     # Restore default soft_device_placement state

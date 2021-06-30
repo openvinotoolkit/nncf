@@ -14,6 +14,7 @@ import torch
 
 from nncf import NNCFConfig
 from nncf.torch.dynamic_graph.graph_tracer import create_input_infos
+from tests.torch.helpers import get_empty_config
 
 
 def compare_multi_gpu_dump(config, dump_dir, get_path_by_rank_fn):
@@ -46,25 +47,16 @@ class RankDatasetMock:
         return 100
 
 
-def get_quantization_config_without_range_init(model_size=4):
-    config = NNCFConfig()
-    config.update({
-        "model": "basic_quant_conv",
-        "model_size": model_size,
-        "input_info":
-            {
-                "sample_size": [1, 1, model_size, model_size],
-            },
-        "compression":
-            {
-                "algorithm": "quantization",
-                "initializer": {
-                    "range": {
-                        "num_init_samples": 0
-                    }
-                }
+def get_quantization_config_without_range_init(model_size=4) -> NNCFConfig:
+    config = get_empty_config(input_sample_sizes=[1, 1, model_size, model_size])
+    config["compression"] = {
+        "algorithm": "quantization",
+        "initializer": {
+            "range": {
+                "num_init_samples": 0
             }
-    })
+        }
+    }
     return config
 
 

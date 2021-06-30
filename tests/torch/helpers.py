@@ -11,13 +11,7 @@
  limitations under the License.
 """
 from abc import ABC, abstractmethod
-from typing import Dict
-from typing import Callable
-from typing import Any
-from typing import Union
-from typing import List
-from typing import Tuple
-from typing import TypeVar
+from typing import Dict, Callable, Any, Union, List, Tuple, TypeVar
 import contextlib
 
 import onnx
@@ -33,7 +27,6 @@ from torch.utils.data import DataLoader
 from torch.utils.data import Dataset
 
 from nncf.config.structures import BNAdaptationInitArgs
-from nncf.torch.composite_compression import PTCompositeCompressionAlgorithmBuilder
 from nncf.torch.compression_method_api import PTCompressionAlgorithmController
 from nncf.config import NNCFConfig
 from nncf.torch.dynamic_graph.scope import Scope
@@ -41,6 +34,7 @@ from nncf.torch.dynamic_graph.graph_tracer import create_input_infos
 from nncf.torch.initialization import register_default_init_args
 from nncf.torch.layers import NNCF_MODULES_MAP
 from nncf.torch.model_creation import create_compressed_model
+from nncf.torch.model_creation import create_compression_algorithm_builder
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.utils import get_all_modules_by_type
 from nncf.torch.initialization import PTInitializingDataLoader
@@ -190,7 +184,7 @@ class LeNet(nn.Module):
 
 
 def get_empty_config(model_size=4, input_sample_sizes: Union[Tuple[List[int]], List[int]] = None,
-                     input_info: Dict = None):
+                     input_info: Dict = None) -> NNCFConfig:
     if input_sample_sizes is None:
         input_sample_sizes = [1, 1, 4, 4]
 
@@ -250,23 +244,24 @@ def check_greater(test: List[TensorType], reference: List[TensorType], rtol=1e-4
                          lambda x, y: np.testing.assert_raises(AssertionError, np.testing.assert_array_less, x, y))
 
 
-def create_compressed_model_and_algo_for_test(model: Module, config: NNCFConfig,
+def create_compressed_model_and_algo_for_test(model: Module, config: NNCFConfig=None,
                                               dummy_forward_fn: Callable[[Module], Any] = None,
                                               wrap_inputs_fn: Callable[[Tuple, Dict], Tuple[Tuple, Dict]] = None,
-                                              resuming_state_dict: dict = None) \
+                                              compression_state_dict: dict = None) \
         -> Tuple[NNCFNetwork, PTCompressionAlgorithmController]:
-    assert isinstance(config, NNCFConfig)
-    NNCFConfig.validate(config)
+    if config is not None:
+        assert isinstance(config, NNCFConfig)
+        NNCFConfig.validate(config)
     algo, model = create_compressed_model(model, config, dump_graphs=False, dummy_forward_fn=dummy_forward_fn,
                                           wrap_inputs_fn=wrap_inputs_fn,
-                                          resuming_state_dict=resuming_state_dict)
+                                          compression_state_dict=compression_state_dict)
     return model, algo
 
 
 def create_nncf_model_and_algo_builder(model: Module, config: NNCFConfig,
                                        dummy_forward_fn: Callable[[Module], Any] = None,
                                        wrap_inputs_fn: Callable[[Tuple, Dict], Tuple[Tuple, Dict]] = None,
-                                       resuming_state_dict: dict = None):
+                                       nncf_checkpoint: dict = None):
     assert isinstance(config, NNCFConfig)
     NNCFConfig.validate(config)
     input_info_list = create_input_infos(config)
@@ -281,9 +276,9 @@ def create_nncf_model_and_algo_builder(model: Module, config: NNCFConfig,
                                    target_scopes=target_scopes,
                                    scopes_without_shape_matching=scopes_without_shape_matching)
 
-    should_init = resuming_state_dict is None
-    composite_builder = PTCompositeCompressionAlgorithmBuilder(config, should_init=should_init)
-    return compressed_model, composite_builder
+    should_init = nncf_checkpoint is None
+    compression_builder = create_compression_algorithm_builder(config, should_init=should_init)
+    return compressed_model, compression_builder
 
 
 def create_initialized_compressed_model(model: nn.Module, config: NNCFConfig, train_loader: DataLoader) -> nn.Module:

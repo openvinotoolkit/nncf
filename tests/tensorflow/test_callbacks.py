@@ -76,11 +76,11 @@ REF_CKPT_DIR = {
 }
 
 
-def get_simple_compressed_model():
+def get_simple_compressed_model(compression_state=None):
     model = get_basic_conv_test_model()
     config = get_empty_config()
     config.update({'compression': {'algorithm': 'magnitude_sparsity'}})
-    compression_ctrl, model = create_compressed_model(model, config)
+    compression_ctrl, model = create_compressed_model(model, config, compression_state=compression_state)
     return compression_ctrl, model
 
 

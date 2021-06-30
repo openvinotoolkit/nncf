@@ -39,7 +39,7 @@ class TFCompositeCompressionAlgorithmBuilder(
             self._child_builders.append(
                 get_compression_algorithm_builder(algo_config)(algo_config, should_init=should_init))
 
-    def build_controller(self, model: ModelType) -> TFCompositeCompressionAlgorithmController:
+    def _build_controller(self, model: ModelType) -> TFCompositeCompressionAlgorithmController:
         composite_ctrl = TFCompositeCompressionAlgorithmController(model)
         for builder in self.child_builders:
             composite_ctrl.add(builder.build_controller(model))
