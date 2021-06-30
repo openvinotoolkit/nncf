@@ -68,7 +68,12 @@ class TrainingLoop(ABC):
         """
 
 
-class EarlyExitCompressionTrainingLoop(TrainingLoop):
+class CompressionTrainingLoop(TrainingLoop):
+    """
+    Adaptive compression training loop allows an accuracy-aware training process
+    to reach the maximal accuracy drop
+    (the maximal allowed accuracy degradation criterion is satisfied).
+    """
     def __init__(self,
                  training_config: NNCFConfig,
                  compression_controller: CompressionAlgorithmController,
@@ -85,13 +90,18 @@ class EarlyExitCompressionTrainingLoop(TrainingLoop):
 
         self.runner.configure_optimizers()
         for epoch in range(self.runner.initial_training_phase_epochs):
-            self.runner.train_epoch(model, self.compression_controller)
             compressed_model_accuracy = self.runner.validate(model, self.compression_controller)
-            accuracy_bugdet = compressed_model_accuracy - self.runner.minimal_tolerable_accuracy
-            if accuracy_bugdet >= 0:
-                nncf_logger.info('Early-exiting the training loop on epoch {} with '
-                                 'compressed model accuracy value {}'.format(epoch, compressed_model_accuracy))
+            accuracy_budget = compressed_model_accuracy - self.runner.minimal_tolerable_accuracy
+            if accuracy_budget >= 0:
+                if epoch == 0:
+                    nncf_logger.info('Early-exiting the training loop after model initialization step '
+                                     'with compressed model accuracy value {}'.format(epoch, compressed_model_accuracy))
+                else:
+                    nncf_logger.info('Early-exiting the training loop on epoch {} with '
+                                     'compressed model accuracy value {}'.format(epoch, compressed_model_accuracy))
                 break
+            self.runner.train_epoch(model, self.compression_controller)
+
         return model
 
 
