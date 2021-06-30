@@ -61,6 +61,7 @@ from nncf.torch.graph.graph_builder import GraphConverter
 from nncf.torch.graph.transformations.commands import PTInsertionCommand
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.graph.transformations.layout import PTTransformationLayout
+from nncf.torch.knowledge_distillation.knowledge_distillation_handler import KnowledgeDistillationLossHandler
 from nncf.torch.layers import NNCF_MODULES
 from nncf.torch.layers import NNCF_WRAPPED_USER_MODULES_DICT
 from nncf.torch.module_operations import UpdateWeight
@@ -322,44 +323,6 @@ class PTInsertionPoint:
     def __hash__(self):
         return hash(str(self))
 
-
-class KnowledgeDistillationLossHandler(nn.Module):
-    """
-    Encapsulates knowledge distillation logic. Controls loss calculation, its proper storing in case of parallel
-        execution on multiple devices and provides API for external knowledge distillation algorithm.
-    """
-    KD_LOSS_STORAGE_NAME = 'kd_loss'
-    KD_STORAGE_DEVICE = 'kd_storage_device'
-
-    def __init__(self, context, kd_original_model, calculate_kd_loss_fn, storage_device):
-        super().__init__()
-        self._compressed_context = context
-        self.is_enabled = False
-        self._kd_original_model = kd_original_model
-        self._calculate_kd_loss_fn = calculate_kd_loss_fn
-        self._compressed_context.register_global_buffer(self.KD_LOSS_STORAGE_NAME, [])
-        self._compressed_context.register_global_buffer(self.KD_STORAGE_DEVICE, storage_device)
-
-    def zero_kdloss(self):
-        if self.is_enabled is not None:
-            self._compressed_context.global_buffer_store[self.KD_LOSS_STORAGE_NAME] = []
-
-    def get_kdloss(self):
-        if self.is_enabled is not None:
-            return self._compressed_context.global_buffer_store[self.KD_LOSS_STORAGE_NAME]
-        return 0
-
-    def forward(self, inputs, *args, **kwargs):
-        kd_model = self._kd_original_model
-        with torch.no_grad():
-            kd_outputs = kd_model(*args, **kwargs)
-        kd_loss = self._calculate_kd_loss_fn(inputs, kd_outputs)
-        if not isinstance(kd_loss, torch.Tensor):
-            self._compressed_context.global_buffer_store[self.KD_LOSS_STORAGE_NAME].append(kd_loss)
-        else:
-            self._compressed_context.global_buffer_store[self.KD_LOSS_STORAGE_NAME].append(kd_loss.to(
-                self._compressed_context.global_buffer_store[self.KD_STORAGE_DEVICE]))
-
 # pylint: disable=too-many-public-methods
 
 
@@ -481,7 +444,8 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
         kwargs = objwalk(kwargs, is_traced_tensor_predicate, strip_fn)
         return args, kwargs
 
-    def create_knowledge_distillation_loss_handler(self, kd_original_model, calculate_fn):
+    def create_knowledge_distillation_loss_handler(self, kd_original_model: nn.Module, calculate_fn)\
+            -> KnowledgeDistillationLossHandler:
         """
         Creates KnowledgeDistillationLossHandler instance for enabling Knowledge Distillation feature.
             Also returns created KnowledgeDistillationLossHandler for control over Knowledge Distillation logic.

@@ -1,6 +1,11 @@
 from copy import deepcopy
 from functools import reduce
+from collections.abc import Iterable
+from typing import List, Tuple
 
+
+from nncf.torch.nncf_network import NNCFNetwork
+from nncf import NNCFConfig
 from tests.torch.test_models.synthetic import PartlyNonDifferentialOutputsModel
 from tests.torch.test_models.synthetic import ContainersOutputsModel
 from tests.torch.helpers import TwoConvTestModel, get_empty_config
@@ -19,7 +24,7 @@ import pytest
 KEY_TO_KD_PARAMETERS = 'kd'
 
 
-def get_kd_config(config):
+def get_kd_config(config: NNCFConfig) -> NNCFConfig:
     if isinstance(config['compression'], dict):
         config['compression'] = [config['compression']]
     config['compression'].append({
@@ -29,13 +34,13 @@ def get_kd_config(config):
     return config
 
 
-def get_sparsity_config_with_sparsity_init(config, sparsity_init=0.5):
+def get_sparsity_config_with_sparsity_init(config: NNCFConfig, sparsity_init=0.5) -> NNCFConfig:
     config['compression']['sparsity_init'] = sparsity_init
     return config
 
 
 @pytest.mark.parametrize("inference_type", ['cpu', 'single_GPU', 'DP', 'DDP'])
-def test_knowledge_distillation_training_process(inference_type):
+def test_knowledge_distillation_training_process(inference_type: str):
     if not torch.cuda.is_available() and not inference_type == 'cpu':
         return
     torch.manual_seed(1)
@@ -54,7 +59,8 @@ def test_knowledge_distillation_training_process(inference_type):
         run_test_training(None, config, inference_type, None)
 
 
-def run_actual(model, config, inference_type, mock_dataloader, ngpus_per_node=None):
+def run_actual(model: nn.Module, config: NNCFConfig, inference_type: str, mock_dataloader: Iterable,
+               ngpus_per_node=None) -> Tuple[List[torch.Tensor], NNCFNetwork]:
     config = get_kd_config(config)
     model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
     if inference_type == 'DDP':
@@ -77,7 +83,8 @@ def run_actual(model, config, inference_type, mock_dataloader, ngpus_per_node=No
     return output_storage, model
 
 
-def run_reference(model, config, inference_type, mock_dataloader, ngpus_per_node=None):
+def run_reference(model: nn.Module, config: NNCFConfig, inference_type: str, mock_dataloader: Iterable,
+                  ngpus_per_node=None) -> List[torch.Tensor]:
     model = deepcopy(model)
     kd_model = deepcopy(model)
     mse = torch.nn.MSELoss().cuda()
@@ -107,7 +114,7 @@ def run_reference(model, config, inference_type, mock_dataloader, ngpus_per_node
     return output_storage
 
 
-def run_test_training(gpu, config, inference_type, ngpus_per_node):
+def run_test_training(gpu, config: NNCFConfig, inference_type: str, ngpus_per_node: int):
     torch.manual_seed(2)
     number_of_iters = 10
     batch_size = torch.cuda.device_count()
@@ -195,10 +202,10 @@ def test_knowledge_distillation_outputs_containers_parsing():
 
 
 @pytest.mark.parametrize('kd_loss_type', ['mse', 'softmax'])
-def test_knowledge_distillation_loss_types(kd_loss_type):
+def test_knowledge_distillation_loss_types(kd_loss_type: str):
     torch.manual_seed(2)
     if kd_loss_type == 'softmax':
-        def kd_loss_fn(ref_outputs, compressed_model_outputs):
+        def kd_loss_fn(ref_outputs, compressed_model_outputs) -> torch.Tensor:
             return -(nn.functional.log_softmax(compressed_model_outputs, dim=1) *
                      nn.functional.softmax(ref_outputs, dim=1)).mean() * (compressed_model_outputs.shape[1])
     else:
@@ -224,7 +231,6 @@ def test_knowledge_distillation_loss_types(kd_loss_type):
         input_ = input_.to(next(model.parameters()).device)
         outputs = model(input_)
         kd_outputs = dumped_orig_model(input_)
-
         reference_kd_loss = kd_loss_fn(kd_outputs, outputs)
         actual_kd_loss = compression_ctrl.loss()
         assert torch.allclose(reference_kd_loss, actual_kd_loss)
@@ -232,7 +238,7 @@ def test_knowledge_distillation_loss_types(kd_loss_type):
 
 @pytest.mark.parametrize('algo',
                          ('magnitude_sparsity', 'rb_sparsity'))
-def test_kd_sparsity_statistics(algo):
+def test_kd_sparsity_statistics(algo: str):
     model = TwoConvTestModel()
     fill_params_of_model_by_normal(model)
     model_with_kd = deepcopy(model)

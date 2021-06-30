@@ -27,7 +27,6 @@ from torch.nn import DataParallel
 from nncf import NNCFConfig
 from nncf.torch.algo_selector import COMPRESSION_ALGORITHMS
 from nncf.torch.algo_selector import NoCompressionAlgorithmBuilder
-from nncf.torch.knowledge_distillation_loss import KnowledgeDistillationBuilder
 from nncf.api.compression import CompressionStage
 from nncf.torch.checkpoint_loading import load_state
 from nncf.common.hardware.config import HWConfigType
@@ -491,7 +490,7 @@ def test_target_device_is_propagated_to_algos(mocker, algo_name, target_device):
         },
         "target_device": target_device
     })
-    if COMPRESSION_ALGORITHMS.get(algo_name) == KnowledgeDistillationBuilder:
+    if algo_name == 'knowledge_distillation':
         config["compression"]["type"] = "mse"
     register_bn_adaptation_init_args(config)
 

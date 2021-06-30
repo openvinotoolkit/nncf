@@ -152,17 +152,17 @@ class PartlyNonDifferentialOutputsModel(nn.Module):
     def __init__(self, input_size=None):
         super().__init__()
         self.input_size = [1, 1, 4, 4] if input_size is None else input_size
-        self.Conv1 = torch.nn.Conv2d(in_channels=self.input_size[1], out_channels=1, kernel_size=3)
-        self.Conv2_1 = torch.nn.Conv2d(in_channels=1, out_channels=1, kernel_size=3)
-        self.Conv2_2 = torch.nn.Conv2d(in_channels=1, out_channels=1, kernel_size=3)
+        self.conv1 = torch.nn.Conv2d(in_channels=self.input_size[1], out_channels=1, kernel_size=3)
+        self.conv2_1 = torch.nn.Conv2d(in_channels=1, out_channels=1, kernel_size=3)
+        self.conv2_2 = torch.nn.Conv2d(in_channels=1, out_channels=1, kernel_size=3)
 
     def forward(self, x):
         # first and seconds outputs with requires_grad=True
         # third output with requires_grad = False
-        xa = self.Conv1(x)
-        xb = self.Conv2_1(xa)
+        xa = self.conv1(x)
+        xb = self.conv2_1(xa)
         with torch.no_grad():
-            xc = self.Conv2_2(xa)
+            xc = self.conv2_2(xa)
         return xa, xb, xc
 
 
@@ -170,14 +170,14 @@ class ContainersOutputsModel(nn.Module):
     def __init__(self, input_size=None):
         super().__init__()
         self.input_size = [1, 1, 4, 4] if input_size is None else input_size
-        self.Conv1 = torch.nn.Conv2d(in_channels=self.input_size[1], out_channels=1, kernel_size=3)
-        self.Conv2_1 = torch.nn.Conv2d(in_channels=1, out_channels=1, kernel_size=3)
-        self.Conv2_2 = torch.nn.Conv2d(in_channels=1, out_channels=1, kernel_size=3)
+        self.conv1 = torch.nn.Conv2d(in_channels=self.input_size[1], out_channels=1, kernel_size=3)
+        self.conv2_1 = torch.nn.Conv2d(in_channels=1, out_channels=1, kernel_size=3)
+        self.conv2_2 = torch.nn.Conv2d(in_channels=1, out_channels=1, kernel_size=3)
 
     def forward(self, x):
-        xa = self.Conv1(x)
-        xb = self.Conv2_1(xa)
-        xc = self.Conv2_2(xa)
+        xa = self.conv1(x)
+        xb = self.conv2_1(xa)
+        xc = self.conv2_2(xa)
         return {"xa": xa, "xb_and_xc": (xb, xc)}
 
 

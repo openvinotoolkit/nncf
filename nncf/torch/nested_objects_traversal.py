@@ -57,49 +57,58 @@ class TupleRebuildingSetter:
         self._previous_level_setter(new_tuple)
 
 
-def nested_object_paths_generator(obj, out_entries_list, path=(), memo=None, previous_level_setter=None):
-    if memo is None:
-        memo = set()
-    iterator = maybe_get_iterator(obj)
-    if iterator is not None:
-        if id(obj) not in memo:
-            memo.add(id(obj))
-            current_level_getters = []
-            current_level_setters = []
-            for idx, iterval in enumerate(iterator(obj)):
-                path_component, value = iterval
-                current_level_getters.append(partial(obj.__getitem__, path_component))
-                if not isinstance(obj, tuple):
-                    # `range` objects, for instance, have no __setitem__ and should be disregarded
-                    if hasattr(obj, '__setitem__'):
-                        current_level_setters.append(partial(obj.__setitem__, path_component))
+class NestedObjectIndex:
+    def __init__(self, obj, path=(), memo=None, previous_level_setter=None):
+        self._flat_nested_obj_indexing = []  # type: List[InputIndexEntry]
+        self._nested_object_paths_generator(obj, self._flat_nested_obj_indexing, path, memo, previous_level_setter)
+
+    @staticmethod
+    def _nested_object_paths_generator(obj, out_entries_list, path=(), memo=None, previous_level_setter=None):
+        if memo is None:
+            memo = set()
+        iterator = maybe_get_iterator(obj)
+        if iterator is not None:
+            if id(obj) not in memo:
+                memo.add(id(obj))
+                current_level_getters = []
+                current_level_setters = []
+                for idx, iterval in enumerate(iterator(obj)):
+                    path_component, value = iterval
+                    current_level_getters.append(partial(obj.__getitem__, path_component))
+                    if not isinstance(obj, tuple):
+                        # `range` objects, for instance, have no __setitem__ and should be disregarded
+                        if hasattr(obj, '__setitem__'):
+                            current_level_setters.append(partial(obj.__setitem__, path_component))
+                        else:
+                            current_level_setters.append(None)
                     else:
-                        current_level_setters.append(None)
-                else:
-                    current_level_setters.append(TupleRebuildingSetter(idx, obj, previous_level_setter))
+                        current_level_setters.append(TupleRebuildingSetter(idx, obj, previous_level_setter))
 
-            for idx, iterval in enumerate(iterator(obj)):
-                path_component, value = iterval
-                retval = nested_object_paths_generator(value, out_entries_list,
-                                                                     path + (path_component,), memo,
-                                                                     current_level_setters[idx])
-                was_leaf = retval[1]
-                if was_leaf:
-                    leaf_entry_path = retval
-                    # getter = partial(obj.__getitem__, path_component)
-                    getter = current_level_getters[idx]
-                    setter = current_level_setters[idx]
-                    if setter is not None:  # see note above about non-settable objects
-                        out_entries_list.append(InputIndexEntry(leaf_entry_path,
-                                                                getter,
-                                                                setter))
+                for idx, iterval in enumerate(iterator(obj)):
+                    path_component, value = iterval
+                    retval = NestedObjectIndex._nested_object_paths_generator(value, out_entries_list,
+                                                                         path + (path_component,), memo,
+                                                                         current_level_setters[idx])
+                    was_leaf = retval[1]
+                    if was_leaf:
+                        leaf_entry_path = retval
+                        # getter = partial(obj.__getitem__, path_component)
+                        getter = current_level_getters[idx]
+                        setter = current_level_setters[idx]
+                        if setter is not None:  # see note above about non-settable objects
+                            out_entries_list.append(InputIndexEntry(leaf_entry_path,
+                                                                    getter,
+                                                                    setter))
 
-            memo.remove(id(obj))
-        is_leaf = False
+                memo.remove(id(obj))
+            is_leaf = False
+            return path, is_leaf
+
+        is_leaf = True
         return path, is_leaf
 
-    is_leaf = True
-    return path, is_leaf
+    def get_flat_nested_obj_indexing(self) -> List[InputIndexEntry]:
+        return self._flat_nested_obj_indexing
 
 
 def objwalk(obj, unary_predicate: Callable[[Any], bool], apply_fn: Callable, memo=None):
