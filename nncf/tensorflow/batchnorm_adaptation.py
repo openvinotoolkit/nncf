@@ -12,13 +12,10 @@
 """
 
 from itertools import islice
-from typing import Optional
 
 import tensorflow as tf
 
-from nncf.common.initialization.batchnorm_adaptation import BatchnormAdaptationAlgorithm
 from nncf.common.initialization.batchnorm_adaptation import BatchnormAdaptationAlgorithmImpl
-from nncf.common.initialization.dataloader import NNCFDataLoader
 from nncf.common.utils.progress_bar import ProgressBar
 from nncf.tensorflow.graph.metatypes.keras_layers import TFBatchNormalizationLayerMetatype
 from nncf.tensorflow.graph.metatypes.matcher import get_keras_layer_metatype
@@ -68,17 +65,6 @@ class BNMomentumSwitcher:
         for layer in self._model.layers:
             if get_keras_layer_metatype(layer) == TFBatchNormalizationLayerMetatype:
                 layer.momentum = self._original_momentum_values[layer]
-
-
-class TFBatchnormAdaptationAlgorithm(BatchnormAdaptationAlgorithm):
-    def _create_bn_adaptation_algorithm_impl(self, data_loader: NNCFDataLoader,
-                                             num_bn_adaptation_steps: int,
-                                             num_bn_forget_steps: int,
-                                             device: Optional[str] = None) -> BatchnormAdaptationAlgorithmImpl:
-        return TFBatchnormAdaptationAlgorithmImpl(data_loader,
-                                                  num_bn_adaptation_steps,
-                                                  num_bn_forget_steps,
-                                                  device)
 
 
 class TFBatchnormAdaptationAlgorithmImpl(BatchnormAdaptationAlgorithmImpl):

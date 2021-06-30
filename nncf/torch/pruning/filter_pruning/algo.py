@@ -16,7 +16,7 @@ from typing import Dict, List, Tuple, Union
 import torch
 from texttable import Texttable
 
-from nncf.torch.batchnorm_adaptation import PTBatchnormAdaptationAlgorithm
+from nncf.common.initialization.batchnorm_adaptation import BatchnormAdaptationAlgorithm
 from nncf.torch.graph.operator_metatypes import Conv1dMetatype
 from nncf.torch.graph.operator_metatypes import DepthwiseConv1dSubtype
 from nncf.torch.graph.operator_metatypes import Conv2dMetatype
@@ -664,5 +664,5 @@ class FilterPruningController(BasePruningAlgoController):
 
     def _run_batchnorm_adaptation(self):
         if self._bn_adaptation is None:
-            self._bn_adaptation = PTBatchnormAdaptationAlgorithm(**extract_bn_adaptation_init_params(self.config))
+            self._bn_adaptation = BatchnormAdaptationAlgorithm(**extract_bn_adaptation_init_params(self.config))
         self._bn_adaptation.run(self.model)

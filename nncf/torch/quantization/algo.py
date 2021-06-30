@@ -41,6 +41,7 @@ from nncf.common.graph.layer_attributes import WeightedLayerAttributes
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.hardware.config import HWConfig
 from nncf.common.hardware.config import HWConfigType
+from nncf.common.initialization.batchnorm_adaptation import BatchnormAdaptationAlgorithm
 from nncf.common.quantization.statistics import QuantizationStatistics
 from nncf.common.quantization.structs import NonWeightQuantizerId
 from nncf.common.quantization.structs import QuantizableWeightedLayerNode
@@ -58,7 +59,6 @@ from nncf.config.extractors import extract_bn_adaptation_init_params
 from nncf.config.extractors import extract_range_init_params
 from nncf.torch.algo_selector import COMPRESSION_ALGORITHMS
 from nncf.torch.algo_selector import ZeroCompressionLoss
-from nncf.torch.batchnorm_adaptation import PTBatchnormAdaptationAlgorithm
 from nncf.torch.compression_method_api import PTCompressionAlgorithmBuilder
 from nncf.torch.compression_method_api import PTCompressionAlgorithmController
 from nncf.torch.debug import CallCountTracker
@@ -1044,7 +1044,7 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
 
     def initialize(self, model: NNCFNetwork) -> None:
         if is_main_process() and self.should_init:
-            bn_adaptation = PTBatchnormAdaptationAlgorithm(
+            bn_adaptation = BatchnormAdaptationAlgorithm(
                 **extract_bn_adaptation_init_params(self.config))
             bn_adaptation.run(model)
 

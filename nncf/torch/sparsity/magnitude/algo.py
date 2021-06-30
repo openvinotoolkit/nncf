@@ -15,10 +15,10 @@ from typing import List
 
 import torch
 
+from nncf.common.initialization.batchnorm_adaptation import BatchnormAdaptationAlgorithm
 from nncf.torch.algo_selector import COMPRESSION_ALGORITHMS
 from nncf.api.compression import CompressionStage
 from nncf.common.graph import NNCFNode
-from nncf.torch.batchnorm_adaptation import PTBatchnormAdaptationAlgorithm
 from nncf.torch.compression_method_api import PTCompressionAlgorithmController
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.sparsity.base_algo import BaseSparsityAlgoBuilder, BaseSparsityAlgoController, SparseModuleInfo
@@ -158,5 +158,5 @@ class MagnitudeSparsityController(BaseSparsityAlgoController):
 
     def _run_batchnorm_adaptation(self):
         if self._bn_adaptation is None:
-            self._bn_adaptation = PTBatchnormAdaptationAlgorithm(**extract_bn_adaptation_init_params(self._config))
+            self._bn_adaptation = BatchnormAdaptationAlgorithm(**extract_bn_adaptation_init_params(self._config))
         self._bn_adaptation.run(self.model)
