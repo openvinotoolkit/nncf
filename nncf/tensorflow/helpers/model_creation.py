@@ -20,12 +20,12 @@ from nncf import NNCFConfig
 from nncf.api.compression import CompressionAlgorithmBuilder
 from nncf.api.compression import CompressionState
 from nncf.config.extractors import extract_compression_algorithm_configs
-from nncf.config.structures import ModelEvaluationArgs
-from nncf.config.utils import is_accuracy_aware_training
-from nncf.tensorflow.accuracy_aware_training.keras_model_utils import accuracy_aware_fit
 from nncf.tensorflow.algorithm_selector import get_compression_algorithm_builder
 from nncf.tensorflow.api.composite_compression import TFCompositeCompressionAlgorithmBuilder
 from nncf.tensorflow.helpers.utils import get_built_model
+from nncf.tensorflow.accuracy_aware_training.keras_model_utils import accuracy_aware_fit
+from nncf.config.structures import ModelEvaluationArgs
+from nncf.config.utils import is_accuracy_aware_training
 
 
 def create_compression_algorithm_builder(config: NNCFConfig,

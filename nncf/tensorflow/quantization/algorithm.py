@@ -36,8 +36,9 @@ from nncf.common.schedulers import BaseCompressionScheduler
 from nncf.common.statistics import NNCFStatistics
 from nncf.common.utils.helpers import should_consider_scope
 from nncf.common.utils.logger import logger
-from nncf.config.extractors import extract_bn_adaptation_init_params
+from nncf.common.stateful_classes_registry import TF_STATEFUL_CLASSES
 from nncf.config.extractors import extract_range_init_params
+from nncf.config.extractors import extract_bn_adaptation_init_params
 from nncf.tensorflow.algorithm_selector import TF_COMPRESSION_ALGORITHMS
 from nncf.tensorflow.api.compression import TFCompressionAlgorithmBuilder
 from nncf.tensorflow.api.compression import TFCompressionAlgorithmController
@@ -61,7 +62,6 @@ from nncf.tensorflow.quantization.layers import FakeQuantize
 from nncf.tensorflow.quantization.quantizers import Quantizer
 from nncf.tensorflow.quantization.quantizers import TFQuantizerSpec
 from nncf.tensorflow.quantization.utils import apply_saturation_fix
-from nncf.common.stateful_classes_registry import TF_STATEFUL_CLASSES
 
 QUANTIZATION_LAYER_METATYPES = GENERAL_CONV_LAYER_METATYPES + LINEAR_LAYER_METATYPES
 
