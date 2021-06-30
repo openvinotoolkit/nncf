@@ -272,6 +272,7 @@ class LayerNormMetatype(PTOperatorMetatype):
 class GroupNormMetatype(PTOperatorMetatype):
     name = "group_norm"
     torch_nn_functional_patch_spec = PTPatchSpec([name])
+    hw_config_names = [HWConfigOpName.MVN]
 
 
 @PT_OPERATOR_METATYPES.register()
