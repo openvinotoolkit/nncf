@@ -14,13 +14,15 @@ from typing import Dict
 
 import numpy as np
 import tensorflow as tf
-from nncf.api.compression import CompressionState
 from tensorflow.python.ops.init_ops import Constant
 
 from nncf import NNCFConfig
 from nncf.tensorflow.helpers.model_creation import create_compressed_model
 
 from examples.tensorflow.common.object_detection.datasets.builder import COCODatasetBuilder
+# TODO(nlyalyus): WA for the related bug 58886, CompressionState should be imported after nncf.tensorflow.
+#  Otherwise test_sanity for segmentation hangs
+from nncf.api.compression import CompressionState
 
 
 def get_conv_init_value(shape, value):
