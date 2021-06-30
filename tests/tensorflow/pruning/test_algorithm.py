@@ -11,78 +11,17 @@
  limitations under the License.
 """
 
-from addict import Dict
-
-from tensorflow.python.keras import layers
-import tensorflow as tf
 import numpy as np
 import pytest
 
-from nncf import NNCFConfig
 from tests.tensorflow.helpers import create_compressed_model_and_algo_for_test
 from nncf.tensorflow.graph.utils import collect_wrapped_layers
-
-
-def get_basic_pruning_config(model_size=8):
-    config = NNCFConfig()
-    config.update(Dict({
-        "model": "basic",
-        "input_info":
-            {
-                "sample_size": [1, model_size, model_size, 1],
-            },
-        "compression":
-            {
-                "algorithm": "filter_pruning",
-                "pruning_init": 0.5,
-                "params": {
-                    "prune_first_conv": True,
-                    "prune_last_conv": True
-                }
-            }
-    }))
-    return config
+from tests.tensorflow.pruning.helpers import get_basic_pruning_config
+from tests.tensorflow.pruning.helpers import get_concat_test_model
 
 
 def check_pruning_mask(mask, pruning_rate, layer_name):
     assert np.sum(mask) == mask.size * pruning_rate, f"Incorrect masks for {layer_name}"
-
-
-def get_concat_test_model(input_shape):
-    #             (input)
-    #                |
-    #             (conv1)
-    #        /       |       \
-    #    (conv2)  (conv3)  (conv4)
-    #       |        |       |
-    #       |    (gr_conv)   |
-    #         \    /         |
-    #        (concat)    (bn_conv4)
-    #             \       /
-    #              (concat)
-    #                 |
-    #            (bn_concat)
-    #                 |
-    #              (conv5)
-
-    inputs = tf.keras.Input(shape=input_shape[1:], name='input')
-    conv1 = layers.Conv2D(16, 1, name='conv1')
-    conv2 = layers.Conv2D(16, 1, name='conv2')
-    conv3 = layers.Conv2D(16, 1, name='conv3')
-    group_conv = layers.Conv2D(16, 1, groups=8, name='group_conv')
-    conv4 = layers.Conv2D(32, 1, name='conv4')
-    bn_conv4 = layers.BatchNormalization(name="bn_conv4")
-    bn_concat = layers.BatchNormalization(name="bn_concat")
-    conv5 = layers.Conv2D(64, 1, name='conv5')
-
-    x = conv1(inputs)
-    x1 = tf.concat([conv2(x), group_conv(conv3(x))], -1, name='tf_concat_1')
-    x = conv4(x)
-    x = bn_conv4(x)
-    x = tf.concat([x, x1], -1, name='tf_concat_2')
-    x = bn_concat(x)
-    outputs = conv5(x)
-    return tf.keras.Model(inputs=inputs, outputs=outputs)
 
 
 @pytest.mark.parametrize(('all_weights', 'prune_batch_norms', 'ref_num_wrapped_layer'),
