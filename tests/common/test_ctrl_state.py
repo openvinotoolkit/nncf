@@ -18,7 +18,6 @@ from typing import Tuple
 
 from nncf.api.compression import CompressionLoss
 from nncf.api.compression import CompressionScheduler
-from nncf.api.compression import CompressionState
 from nncf.api.statistics import Statistics
 from nncf.common.composite_compression import CompositeCompressionAlgorithmController
 from nncf.common.compression import BaseCompressionAlgorithmController
@@ -91,7 +90,7 @@ class A(BaseCompressionAlgorithmController):
     def scheduler(self) -> CompressionScheduler:
         return self._scheduler
 
-    def get_compression_state(self) -> CompressionState:
+    def get_compression_state(self) -> Dict[str, Any]:
         pass
 
     def statistics(self, quickly_collected_only: bool = False) -> Statistics:
@@ -117,7 +116,7 @@ class CA(CompositeCompressionAlgorithmController):
     def name(self) -> str:
         pass
 
-    def get_compression_state(self) -> CompressionState:
+    def get_compression_state(self) -> Dict[str, Any]:
         pass
 
     def export_model(self, save_path: str, save_format: Optional[str] = None, input_names: Optional[List[str]] = None,

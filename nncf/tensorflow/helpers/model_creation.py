@@ -12,20 +12,24 @@
 """
 
 import types
+from typing import Any
+from typing import Dict
 from typing import Optional
+from typing import Tuple
 
 import tensorflow as tf
 
 from nncf import NNCFConfig
 from nncf.api.compression import CompressionAlgorithmBuilder
-from nncf.api.compression import CompressionState
+from nncf.api.compression import CompressionAlgorithmController
+from nncf.common.compression import BaseCompressionAlgorithmController as BaseController
 from nncf.config.extractors import extract_compression_algorithm_configs
+from nncf.config.structures import ModelEvaluationArgs
+from nncf.config.utils import is_accuracy_aware_training
+from nncf.tensorflow.accuracy_aware_training.keras_model_utils import accuracy_aware_fit
 from nncf.tensorflow.algorithm_selector import get_compression_algorithm_builder
 from nncf.tensorflow.api.composite_compression import TFCompositeCompressionAlgorithmBuilder
 from nncf.tensorflow.helpers.utils import get_built_model
-from nncf.tensorflow.accuracy_aware_training.keras_model_utils import accuracy_aware_fit
-from nncf.config.structures import ModelEvaluationArgs
-from nncf.config.utils import is_accuracy_aware_training
 
 
 def create_compression_algorithm_builder(config: NNCFConfig,
@@ -46,14 +50,13 @@ def create_compression_algorithm_builder(config: NNCFConfig,
     if number_compression_algorithms == 1:
         algo_config = compression_algorithm_configs[0]
         return get_compression_algorithm_builder(algo_config)(algo_config, should_init)
-    if number_compression_algorithms > 1:
-        return TFCompositeCompressionAlgorithmBuilder(config, should_init)
-    return None
+    return TFCompositeCompressionAlgorithmBuilder(config, should_init)
 
 
 def create_compressed_model(model: tf.keras.Model,
                             config: NNCFConfig,
-                            compression_state: Optional[CompressionState] = None) -> tf.keras.Model:
+                            compression_state: Optional[Dict[str, Any]] = None) \
+        -> Tuple[CompressionAlgorithmController, tf.keras.Model]:
     """
     The main function used to produce a model ready for compression fine-tuning
     from an original TensorFlow Keras model and a configuration object.
@@ -77,14 +80,12 @@ def create_compressed_model(model: tf.keras.Model,
             original_model_accuracy = evaluation_args.eval_fn(model)
 
     builder = create_compression_algorithm_builder(config, should_init=not compression_state)
-    if builder is None:
-        return None, model
     if compression_state:
-        builder.load_state(compression_state.builder_state)
+        builder.load_state(compression_state[BaseController.BUILDER_STATE])
     compressed_model = builder.apply_to(model)
     compression_ctrl = builder.build_controller(compressed_model)
     if compression_state:
-        compression_ctrl.load_state(compression_state.ctrl_state)
+        compression_ctrl.load_state(compression_state[BaseController.CONTROLLER_STATE])
     compressed_model.original_model_accuracy = original_model_accuracy
     if isinstance(compressed_model, tf.keras.Model):
         compressed_model.accuracy_aware_fit = types.MethodType(accuracy_aware_fit, compressed_model)

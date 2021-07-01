@@ -11,51 +11,14 @@
  limitations under the License.
 """
 
-import json
 from typing import Any
 from typing import Dict
 from typing import TypeVar
 
-import tensorflow as tf
-
-from nncf.api.compression import CompressionState
 from nncf.common.compression import BaseCompressionAlgorithmBuilder
-from nncf.common.compression import BaseCompressionAlgorithmController
 from nncf.tensorflow.graph.model_transformer import TFModelTransformer
 
 ModelType = TypeVar('ModelType')
-
-
-class TFCompressionAlgorithmController(BaseCompressionAlgorithmController, tf.train.experimental.PythonState):
-    """
-    Serves as a handle to the additional modules, parameters and hooks inserted
-    into the original uncompressed model to enable algorithm-specific compression.
-    Hosts entities that are to be used during the training process, such as
-    compression scheduler and compression loss.
-    """
-
-    def get_compression_state(self) -> 'TFCompressionState':
-        if self._builder_state is None:
-            raise RuntimeError('Internal error: builder state is not set for the controller')
-        return TFCompressionState(builder_state=self._builder_state, compression_ctrl=self)
-
-    def serialize(self) -> str:
-        """
-        Callback to serialize the object by tf.train.experimental.PythonState.
-
-        :return: State of the compression controller.
-        """
-        string_value = json.dumps(self.get_state())
-        return string_value
-
-    def deserialize(self, state: str) -> None:
-        """
-        Callback to deserialize the object by tf.train.experimental.PythonState.
-
-        :param state: State of the compression controller.
-        """
-        state = json.loads(state)
-        self.load_state(state)
 
 
 class TFCompressionAlgorithmBuilder(BaseCompressionAlgorithmBuilder):
@@ -96,53 +59,3 @@ class TFCompressionAlgorithmBuilder(BaseCompressionAlgorithmBuilder):
             self.initialize(transformed_model)
 
         return transformed_model
-
-
-class TFCompressionState(CompressionState, tf.train.experimental.PythonState):
-    """
-    Contains compression state of the TensorFlow model to unambiguously resume compression from it.
-    Consists of builder and controller state - a dictionaries with Python data structures,
-    defining how to setup and handle the compression correspondingly
-    """
-
-    def __init__(self, compression_ctrl: TFCompressionAlgorithmController = None, builder_state: Dict = None):
-        self._compression_ctrl = compression_ctrl
-        self._builder_state = builder_state
-        self._ctrl_state = None
-
-    @property
-    def builder_state(self) -> Dict:
-        return self._builder_state
-
-    @property
-    def ctrl_state(self) -> Dict:
-        if self._compression_ctrl is not None:
-            return self._compression_ctrl.get_state()
-        return self._ctrl_state
-
-    def load_state(self, state: Dict):
-        """
-        Initializes object from the state.
-
-        :param state: Output of `get_state()` method.
-        """
-        self._builder_state = state[self.BUILDER_STATE]
-        self._ctrl_state = state[self.CONTROLLER_STATE]
-
-    def serialize(self) -> str:
-        """
-        Callback to serialize the object by tf.train.experimental.PythonState.
-
-        :return: Serialized compression state.
-        """
-        string_value = json.dumps(self.get_state())
-        return string_value
-
-    def deserialize(self, state: str) -> None:
-        """
-        Callback to deserialize the object by tf.train.experimental.PythonState.
-
-        :param state: Serialized compression state.
-        """
-        state = json.loads(state)
-        self.load_state(state)

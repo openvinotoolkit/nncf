@@ -801,9 +801,9 @@ def test_staged_quantization_saves_enabled_quantizers_in_state_dict(tmp_path):
     _, ctrl_save = create_compressed_model_and_algo_for_test(BasicConvTestModel(), config)
     ctrl_save.scheduler.epoch_step()
     ctrl_save.scheduler.epoch_step()
-    compression_state_dict = ctrl_save.get_compression_state_dict()
+    compression_state = ctrl_save.get_compression_state()
     _, ctrl_load = create_compressed_model_and_algo_for_test(BasicConvTestModel(), config,
-                                                             compression_state_dict=compression_state_dict)
+                                                             compression_state=compression_state)
     for quantizer_info in ctrl_load.non_weight_quantizers.values():
         assert not quantizer_info.quantizer_module_ref.is_enabled_quantization()
     for quantizer_info in ctrl_load.weight_quantizers.values():

@@ -20,9 +20,6 @@ from nncf import NNCFConfig
 from nncf.tensorflow.helpers.model_creation import create_compressed_model
 
 from examples.tensorflow.common.object_detection.datasets.builder import COCODatasetBuilder
-# TODO(nlyalyus): WA for the related bug 58886, CompressionState should be imported after nncf.tensorflow.
-#  Otherwise test_sanity for segmentation hangs
-from nncf.api.compression import CompressionState
 
 
 def get_conv_init_value(shape, value):
@@ -88,24 +85,11 @@ def get_basic_n_conv_test_model(input_shape=(24, 24, 1), in_out_ch=((1, 3), (3, 
     return tf.keras.Model(inputs=inputs, outputs=outputs)
 
 
-class DummyCompressionState(CompressionState):
-    @property
-    def builder_state(self) -> Dict:
-        return {}
-
-    @property
-    def ctrl_state(self) -> Dict:
-        return {}
-
-    def load_state(self, state: Dict):
-        pass
-
-
 def create_compressed_model_and_algo_for_test(model, config, compression_state=None, force_no_init=False):
     assert isinstance(config, NNCFConfig)
     tf.keras.backend.clear_session()
     if force_no_init:
-        compression_state = DummyCompressionState()
+        compression_state = dict()
     algo, model = create_compressed_model(model, config, compression_state)
     return model, algo
 

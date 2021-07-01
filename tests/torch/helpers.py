@@ -247,21 +247,20 @@ def check_greater(test: List[TensorType], reference: List[TensorType], rtol=1e-4
 def create_compressed_model_and_algo_for_test(model: Module, config: NNCFConfig=None,
                                               dummy_forward_fn: Callable[[Module], Any] = None,
                                               wrap_inputs_fn: Callable[[Tuple, Dict], Tuple[Tuple, Dict]] = None,
-                                              compression_state_dict: dict = None) \
+                                              compression_state: Dict[str, Any] = None) \
         -> Tuple[NNCFNetwork, PTCompressionAlgorithmController]:
     if config is not None:
         assert isinstance(config, NNCFConfig)
         NNCFConfig.validate(config)
     algo, model = create_compressed_model(model, config, dump_graphs=False, dummy_forward_fn=dummy_forward_fn,
                                           wrap_inputs_fn=wrap_inputs_fn,
-                                          compression_state_dict=compression_state_dict)
+                                          compression_state=compression_state)
     return model, algo
 
 
 def create_nncf_model_and_algo_builder(model: Module, config: NNCFConfig,
                                        dummy_forward_fn: Callable[[Module], Any] = None,
-                                       wrap_inputs_fn: Callable[[Tuple, Dict], Tuple[Tuple, Dict]] = None,
-                                       nncf_checkpoint: dict = None):
+                                       wrap_inputs_fn: Callable[[Tuple, Dict], Tuple[Tuple, Dict]] = None):
     assert isinstance(config, NNCFConfig)
     NNCFConfig.validate(config)
     input_info_list = create_input_infos(config)
@@ -276,8 +275,7 @@ def create_nncf_model_and_algo_builder(model: Module, config: NNCFConfig,
                                    target_scopes=target_scopes,
                                    scopes_without_shape_matching=scopes_without_shape_matching)
 
-    should_init = nncf_checkpoint is None
-    compression_builder = create_compression_algorithm_builder(config, should_init=should_init)
+    compression_builder = create_compression_algorithm_builder(config, should_init=True)
     return compressed_model, compression_builder
 
 

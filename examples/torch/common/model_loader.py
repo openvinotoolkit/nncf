@@ -68,9 +68,9 @@ def load_resuming_checkpoint(resuming_checkpoint_path: str):
     raise FileNotFoundError("no checkpoint found at '{}'".format(resuming_checkpoint_path))
 
 
-def extract_model_and_compression_state_dicts(resuming_checkpoint: Optional[Dict] = None):
+def extract_model_and_compression_states(resuming_checkpoint: Optional[Dict] = None):
     if resuming_checkpoint is None:
         return None, None
-    compression_state_dict = resuming_checkpoint.get(COMPRESSION_STATE_ATTR)
+    compression_state = resuming_checkpoint.get(COMPRESSION_STATE_ATTR)
     model_state_dict = resuming_checkpoint.get(MODEL_STATE_ATTR)
-    return model_state_dict, compression_state_dict
+    return model_state_dict, compression_state

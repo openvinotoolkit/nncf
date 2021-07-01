@@ -31,7 +31,7 @@ from examples.torch.common.execution import get_execution_mode
 from examples.torch.common.execution import prepare_model_for_execution, start_worker
 from examples.torch.common.model_loader import COMPRESSION_STATE_ATTR
 from examples.torch.common.model_loader import MODEL_STATE_ATTR
-from examples.torch.common.model_loader import extract_model_and_compression_state_dicts
+from examples.torch.common.model_loader import extract_model_and_compression_states
 from examples.torch.common.model_loader import load_resuming_checkpoint
 from examples.torch.common.sample_config import SampleConfig
 from examples.torch.common.sample_config import create_sample_config
@@ -326,9 +326,8 @@ def create_model(config: SampleConfig,
         load_state(ssd_net, sd)
 
     ssd_net.to(config.device)
-    model_state_dict, compression_state_dict = extract_model_and_compression_state_dicts(resuming_checkpoint)
-    compression_ctrl, compressed_model = create_compressed_model(ssd_net, config.nncf_config,
-                                                                 compression_state_dict)
+    model_state_dict, compression_state = extract_model_and_compression_states(resuming_checkpoint)
+    compression_ctrl, compressed_model = create_compressed_model(ssd_net, config.nncf_config, compression_state)
     if model_state_dict is not None:
         load_state(compressed_model, model_state_dict, is_resume=True)
     compressed_model, _ = prepare_model_for_execution(compressed_model, config)
@@ -451,7 +450,7 @@ def train(net, compression_ctrl, train_data_loader, test_data_loader, criterion,
             checkpoint_file_path = osp.join(config.checkpoint_save_dir, "{}_last.pth".format(get_name(config)))
             torch.save({
                 MODEL_STATE_ATTR: net.state_dict(),
-                COMPRESSION_STATE_ATTR: compression_ctrl.get_compression_state_dict(),
+                COMPRESSION_STATE_ATTR: compression_ctrl.get_compression_state(),
                 'optimizer': optimizer.state_dict(),
                 'epoch': epoch,
             }, str(checkpoint_file_path))

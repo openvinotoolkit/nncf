@@ -151,48 +151,6 @@ class CompressionStage(OrderedEnum):
         return CompressionStage.PARTIALLY_COMPRESSED
 
 
-class CompressionState(ABC):
-    """
-    Contains compression state of the model to unambiguously resume compression from it.
-    Consists of builder and controller state - a dictionaries with Python data structures,
-    defining how to setup and handle the compression correspondingly
-    """
-
-    BUILDER_STATE = 'builder_state'
-    CONTROLLER_STATE = 'ctrl_state'
-
-    @property
-    @abstractmethod
-    def builder_state(self) -> Dict:
-        pass
-
-    @property
-    @abstractmethod
-    def ctrl_state(self) -> Dict:
-        pass
-
-    @abstractmethod
-    def load_state(self, state: Dict):
-        """
-        Initializes object from the state.
-
-        :param state: Output of `get_state()` method.
-        """
-
-    def get_state(self) -> Dict:
-        """
-        :return: a dictionary with Python data structures (dict, list, tuple, str, int, float, True, False, None) that
-        represents state of the object.
-        """
-        return {
-            self.BUILDER_STATE: self.builder_state,
-            self.CONTROLLER_STATE: self.ctrl_state
-        }
-
-    def __bool__(self):
-        return self.ctrl_state is not None and self.builder_state is not None
-
-
 class CompressionAlgorithmController(ABC):
     """
     Serves as a handle to the additional modules, parameters and hooks inserted
@@ -258,8 +216,12 @@ class CompressionAlgorithmController(ABC):
         """
 
     @abstractmethod
-    def get_compression_state(self) -> CompressionState:
+    def get_compression_state(self) -> Dict[str, Any]:
         """
+        Returns compression state - builder and controller state.
+        This state should be used to resume compression via `compression_state` argument of `create_compressed_model`
+        method
+
         :return: Compression state of the model to unambiguously resume compression from it.
         """
 

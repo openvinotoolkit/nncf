@@ -179,4 +179,4 @@ def test_can_compress_with_config_and_resume_of_old_checkpoint():
         "sample_size": [1, 3, 100, 100]
     })
     register_bn_adaptation_init_args(config)
-    create_compressed_model_and_algo_for_test(model, config, compression_state_dict=old_style_sd)
+    create_compressed_model_and_algo_for_test(model, config, compression_state=old_style_sd)

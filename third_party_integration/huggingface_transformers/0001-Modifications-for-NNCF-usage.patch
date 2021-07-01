@@ -1189,7 +1189,7 @@ index 5b000c81..05df28a7 100644
  
 +        if nncf_config is not None and nncf_eval:
 +            compression_algo_controller, model = create_compressed_model(model, nncf_config,
-+                                                                         compression_state_dict=state_dict)
++                                                                         compression_state=state_dict)
 +            return compression_algo_controller, model
 +
          missing_keys = []

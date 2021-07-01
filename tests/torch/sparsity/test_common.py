@@ -14,7 +14,6 @@ from typing import List
 from typing import Optional
 
 import pytest
-from nncf.torch.compression_method_api import PTCompressionState
 
 from nncf.api.compression import CompressionStage
 from nncf.common.compression import BaseControllerStateNames
@@ -22,6 +21,7 @@ from nncf.common.sparsity.schedulers import AdaptiveSparsityScheduler
 from nncf.common.sparsity.schedulers import ExponentialSparsityScheduler
 from nncf.common.sparsity.schedulers import MultiStepSparsityScheduler
 from nncf.common.sparsity.schedulers import PolynomialSparsityScheduler
+from nncf.common.compression import BaseCompressionAlgorithmController as BaseController
 from tests.torch.helpers import BasicConvTestModel
 from tests.torch.helpers import MockModel
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
@@ -97,10 +97,8 @@ class TestSparseModules:
         # Test get state
         ctrl.scheduler.current_step = 100
         ctrl.scheduler.current_epoch = 5
-        saved_nncf_state_dict = ctrl.get_compression_state_dict()
-        compression_state = PTCompressionState()
-        compression_state.load_state(saved_nncf_state_dict)
-        saved_ctrl_state = compression_state.ctrl_state
+        compression_state = ctrl.get_compression_state()
+        saved_ctrl_state = compression_state[BaseController.CONTROLLER_STATE]
         assert saved_ctrl_state == ctrl.get_state()
         algo_state = next(iter(saved_ctrl_state.values()))
         assert algo_state == {
@@ -111,13 +109,11 @@ class TestSparseModules:
 
         # Test load state
         _, ctrl = create_compressed_model_and_algo_for_test(BasicConvTestModel(), config,
-                                                            compression_state_dict=saved_nncf_state_dict)
+                                                            compression_state=compression_state)
         assert ctrl.scheduler.current_step == 100
         assert ctrl.scheduler.current_epoch == 5
-        loaded_compression_state_dict = ctrl.get_compression_state_dict()
-        compression_state = PTCompressionState()
-        compression_state.load_state(loaded_compression_state_dict)
-        loaded_ctrl_state = compression_state.ctrl_state
+        compression_state = ctrl.get_compression_state()
+        loaded_ctrl_state = compression_state[BaseController.CONTROLLER_STATE]
         assert loaded_ctrl_state == ctrl.get_state()
         assert loaded_ctrl_state == saved_ctrl_state
 

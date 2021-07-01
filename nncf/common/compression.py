@@ -35,6 +35,8 @@ class BaseCompressionAlgorithmController(CompressionAlgorithmController):
     """
     Contains the implementation of the basic functionality of the compression controller.
     """
+    BUILDER_STATE = 'builder_state'
+    CONTROLLER_STATE = 'ctrl_state'
 
     def __init__(self, target_model: ModelType):
         """
@@ -128,6 +130,21 @@ class BaseCompressionAlgorithmController(CompressionAlgorithmController):
                 self._state_names.SCHEDULER: self.scheduler.get_state(),
                 self._state_names.COMPRESSION_STAGE: self.compression_stage()
             }
+        }
+
+    def get_compression_state(self) -> Dict[str, Any]:
+        """
+        Returns compression state - builder and controller state.
+        This state should be used to resume compression via `compression_state` argument of `create_compressed_model`
+        method
+        :return: The compression state.
+        """
+        if self._builder_state is None:
+            raise RuntimeError('Internal error: builder state is not set for the controller')
+
+        return {
+            self.BUILDER_STATE: self._builder_state,
+            self.CONTROLLER_STATE: self.get_state()
         }
 
     def _handle_legacy_compression_level(self, state: Dict[str, Any]) -> None:

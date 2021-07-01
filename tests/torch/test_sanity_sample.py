@@ -25,8 +25,6 @@ import pytest
 import torch
 
 # pylint: disable=redefined-outer-name
-from nncf.torch.compression_method_api import PTCompressionState
-
 from examples.torch.common.model_loader import COMPRESSION_STATE_ATTR
 
 from examples.torch.common.optimizer import get_default_weight_decay
@@ -35,6 +33,7 @@ from examples.torch.common.utils import get_name
 from examples.torch.common.utils import is_staged_quantization
 from nncf.api.compression import CompressionStage
 from nncf.common.compression import BaseControllerStateNames
+from nncf.common.compression import BaseCompressionAlgorithmController as BaseController
 from nncf.common.hardware.config import HWConfigType
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.config import NNCFConfig
@@ -328,10 +327,8 @@ def test_resume(request, config, tmp_path, multiprocessing_distributed, case_com
 
 
 def extract_compression_stage_from_checkpoint(last_checkpoint_path):
-    nnsf_state = torch.load(last_checkpoint_path)[COMPRESSION_STATE_ATTR]
-    compression_state = PTCompressionState()
-    compression_state.load_state(nnsf_state)
-    ctrl_state = compression_state.ctrl_state
+    compression_state = torch.load(last_checkpoint_path)[COMPRESSION_STATE_ATTR]
+    ctrl_state = compression_state[BaseController.CONTROLLER_STATE]
     compression_stage = next(iter(ctrl_state.values()))[BaseControllerStateNames.COMPRESSION_STAGE]
     return compression_stage
 

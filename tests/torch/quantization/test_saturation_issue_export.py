@@ -400,11 +400,11 @@ def test_is_saturation_fix_applied_model_resumed_correctly(tmp_path):
     model = TwoConvTestModel()
     nncf_config = get_config_for_export_mode(False)
     compressed_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, nncf_config)
-    compression_state_dict = compression_ctrl.get_compression_state_dict()
+    compression_state = compression_ctrl.get_compression_state()
     model_state_dict = compressed_model.state_dict()
     # Must create new model as the previous one was somehow changed during create_compressed_model_and_algo_for_test()
     model = TwoConvTestModel()
     compressed_model, compression_ctrl = create_compressed_model_and_algo_for_test(
-        model, nncf_config, compression_state_dict=compression_state_dict)
+        model, nncf_config, compression_state=compression_state)
     load_state(compressed_model, model_state_dict, is_resume=True)
     are_symmetric_fq_nodes_are_exported_correct_with_saturation_fix(tmp_path, compression_ctrl)

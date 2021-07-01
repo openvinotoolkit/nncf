@@ -13,6 +13,7 @@
 
 import tensorflow as tf
 
+
 from nncf import NNCFConfig
 from nncf.api.compression import CompressionAlgorithmController
 from nncf.common.graph.transformations.layout import TransformationLayout
@@ -20,8 +21,8 @@ from nncf.common.schedulers import StubCompressionScheduler
 from nncf.common.utils.logger import logger
 from nncf.common.utils.registry import Registry
 from nncf.common.statistics import NNCFStatistics
+from nncf.common.compression import BaseCompressionAlgorithmController
 from nncf.tensorflow.api.compression import TFCompressionAlgorithmBuilder
-from nncf.tensorflow.api.compression import TFCompressionAlgorithmController
 from nncf.tensorflow.loss import TFZeroCompressionLoss
 
 TF_COMPRESSION_ALGORITHMS = Registry('compression algorithm', add_name_as_attr=True)
@@ -39,7 +40,7 @@ class NoCompressionAlgorithmBuilder(TFCompressionAlgorithmBuilder):
         pass
 
 
-class NoCompressionAlgorithmController(TFCompressionAlgorithmController):
+class NoCompressionAlgorithmController(BaseCompressionAlgorithmController):
     def __init__(self, target_model: tf.keras.Model):
         super().__init__(target_model)
         self._loss = TFZeroCompressionLoss()

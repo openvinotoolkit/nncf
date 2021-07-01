@@ -25,7 +25,7 @@ import torch
 import torchvision.transforms as T
 
 from examples.torch.common.execution import set_seed
-from examples.torch.common.model_loader import extract_model_and_compression_state_dicts
+from examples.torch.common.model_loader import extract_model_and_compression_states
 from examples.torch.common.model_loader import load_resuming_checkpoint
 from examples.torch.common.sample_config import create_sample_config
 from torch.optim.lr_scheduler import ReduceLROnPlateau
@@ -521,8 +521,8 @@ def main_worker(current_gpu, config):
     resuming_checkpoint = None
     if resuming_checkpoint_path is not None:
         resuming_checkpoint = load_resuming_checkpoint(resuming_checkpoint_path)
-    model_state_dict, compression_state_dict = extract_model_and_compression_state_dicts(resuming_checkpoint)
-    compression_ctrl, model = create_compressed_model(model, nncf_config, compression_state_dict)
+    model_state_dict, compression_state = extract_model_and_compression_states(resuming_checkpoint)
+    compression_ctrl, model = create_compressed_model(model, nncf_config, compression_state)
     if model_state_dict is not None:
         load_state(model, model_state_dict, is_resume=True)
     model, model_without_dp = prepare_model_for_execution(model, config)

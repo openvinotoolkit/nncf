@@ -37,11 +37,11 @@ from nncf.common.statistics import NNCFStatistics
 from nncf.common.utils.helpers import should_consider_scope
 from nncf.common.utils.logger import logger
 from nncf.common.stateful_classes_registry import TF_STATEFUL_CLASSES
+from nncf.common.compression import BaseCompressionAlgorithmController
 from nncf.config.extractors import extract_range_init_params
 from nncf.config.extractors import extract_bn_adaptation_init_params
 from nncf.tensorflow.algorithm_selector import TF_COMPRESSION_ALGORITHMS
 from nncf.tensorflow.api.compression import TFCompressionAlgorithmBuilder
-from nncf.tensorflow.api.compression import TFCompressionAlgorithmController
 from nncf.tensorflow.graph import patterns as p
 from nncf.tensorflow.graph.converter import convert_keras_model_to_nncf_graph
 from nncf.tensorflow.graph.metatypes.common import ELEMENTWISE_LAYER_METATYPES
@@ -435,7 +435,7 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
         return f'{layer_name}_{weight_attr_name}_quantizer'
 
 
-class QuantizationController(TFCompressionAlgorithmController):
+class QuantizationController(BaseCompressionAlgorithmController):
     def __init__(self, target_model, config, op_names: List[str]):
         super().__init__(target_model)
         self._scheduler = BaseCompressionScheduler()

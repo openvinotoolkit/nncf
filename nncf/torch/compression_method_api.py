@@ -17,58 +17,32 @@ This package defines the API for the NNCF compression methods so that the user c
 extend the existing algorithms.
 """
 from abc import abstractmethod
-from typing import List, Tuple, TypeVar, Dict, Any
+from typing import Any
+from typing import Dict
+from typing import List
+from typing import Tuple
+from typing import TypeVar
 
 import torch
-
-from nncf.api.compression import CompressionState
-from nncf.common.compression import BaseCompressionAlgorithmBuilder
-from nncf.common.compression import BaseCompressionAlgorithmController
 from torch import nn
 
+from nncf.api.compression import CompressionLoss
+from nncf.common.compression import BaseCompressionAlgorithmBuilder
+from nncf.common.compression import BaseCompressionAlgorithmController
 from nncf.common.graph import NNCFNodeName
+from nncf.common.utils.helpers import should_consider_scope
+from nncf.common.utils.logger import logger as nncf_logger
 from nncf.config import NNCFConfig
 from nncf.torch.graph.transformations.layout import PTTransformationLayout
 from nncf.torch.layers import NNCF_MODULES_DICT
 from nncf.torch.layers import NNCF_WRAPPED_USER_MODULES_DICT
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.nncf_network import PTModelTransformer
-from nncf.common.utils.helpers import should_consider_scope
-from nncf.api.compression import CompressionLoss
-from nncf.common.utils.logger import logger as nncf_logger
 
 ModelType = TypeVar('ModelType')
 
 DOMAIN_CUSTOM_OPS_NAME = "org.openvinotoolkit"
 
-
-class PTCompressionState(CompressionState):
-    """
-    Contains compression state of the PyTorch model to unambiguously resume compression from it.
-    Consists of builder and controller state - a dictionaries with Python data structures,
-    defining how to setup and handle the compression correspondingly
-    """
-
-    def __init__(self, builder_state: Dict = None, ctrl_state: Dict = None):
-        self._builder_state = builder_state
-        self._ctrl_state = ctrl_state
-
-    @property
-    def builder_state(self) -> Dict:
-        return self._builder_state
-
-    @property
-    def ctrl_state(self):
-        return self._ctrl_state
-
-    def load_state(self, state: Dict):
-        """
-        Initializes object from the state.
-
-        :param state: Output of `get_state()` method.
-        """
-        self._builder_state = state[self.BUILDER_STATE]
-        self._ctrl_state = state[self.CONTROLLER_STATE]
 
 class PTCompressionLoss(nn.Module, CompressionLoss):
     """
@@ -125,28 +99,6 @@ class PTCompressionAlgorithmController(BaseCompressionAlgorithmController):
         Any special preparations for the algorithm to properly support distributed training
         should be made inside this function.
         """
-
-    def get_compression_state(self) -> CompressionState:
-        """
-        Returns compression state - builder and controller state.
-        This state should be used to resume compression via `compression_state` argument of `create_compressed_model`
-        method
-        :return: The compression state.
-        """
-        ctrl_state = self.get_state()
-        if self._builder_state is None:
-            raise RuntimeError('Internal error: builder state is not set for the controller')
-        return PTCompressionState(builder_state=self._builder_state, ctrl_state=ctrl_state)
-
-    def get_compression_state_dict(self) -> Dict:
-        """
-        Returns a dictionary with Python data structures (dict, list, tuple, str, int, float, True, False, None) that
-        represents compression state - builder and controller state. This state should be used to resume compression
-        via `compression_state_dict` argument of `create_compressed_model` method.
-
-        :return: dictionary that represents a compression state.
-        """
-        return self.get_compression_state().get_state()
 
 
 class PTCompressionAlgorithmBuilder(BaseCompressionAlgorithmBuilder):

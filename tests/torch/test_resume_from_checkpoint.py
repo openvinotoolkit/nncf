@@ -62,10 +62,10 @@ def test_can_resume_with_manual_init(mocker, desc, _nncf_caplog):
     get_setup_spy.assert_called()
     get_setup_spy.reset_mock()
 
-    nncf_checkpoint = compression_ctrl.get_compression_state_dict()
+    compression_state = compression_ctrl.get_compression_state()
     register_bn_adaptation_init_args(config_to_resume)
     _, compression_ctrl = create_compressed_model_and_algo_for_test(desc.model_creator(), config_to_resume,
-                                                                    compression_state_dict=nncf_checkpoint)
+                                                                    compression_state=compression_state)
 
     if config_to_resume is not None and config_to_resume['compression']['initializer']:
         assert not init_spy.call_args[0][2]
@@ -90,11 +90,11 @@ def test_can_resume_with_algo_mixing(mocker, is_strict):
     config['compression'] = [{'algorithm': 'const_sparsity'}, quantization_section]
 
     _, compression_ctrl = create_compressed_model_and_algo_for_test(desc.model_creator(), sparsity_config)
-    nncf_checkpoint = compression_ctrl.get_compression_state_dict()
+    compression_state = compression_ctrl.get_compression_state()
 
     config = register_default_init_args(config, train_loader=create_ones_mock_dataloader(config))
     fn = partial(create_compressed_model_and_algo_for_test,
-                 desc.model_creator(), config, compression_state_dict=nncf_checkpoint)
+                 desc.model_creator(), config, compression_state=compression_state)
     if is_strict:
         with pytest.raises(RuntimeError):
             fn()
@@ -256,7 +256,7 @@ def test_load_state__with_resume_checkpoint(_resume_algos, _model_wrapper, mocke
     num_model_params = len(orig_model.state_dict())
     model_save, compressed_ctrl_save = create_compressed_model_and_algo_for_test(orig_model, config_save)
     saved_model_state = model_save.state_dict()
-    saved_checkpoint = compressed_ctrl_save.get_compression_state_dict()
+    saved_checkpoint = compressed_ctrl_save.get_compression_state()
     ref_num_loaded = _resume_algos['ref_num_compression_params'] + num_model_params + 1  # padding_value
 
     config_resume = get_empty_config()
@@ -265,7 +265,7 @@ def test_load_state__with_resume_checkpoint(_resume_algos, _model_wrapper, mocke
     from nncf.torch.checkpoint_loading import KeyMatcher
     key_matcher_run_spy = mocker.spy(KeyMatcher, 'run')
     model, _ = create_compressed_model_and_algo_for_test(BasicConvTestModel(), config_resume,
-                                                          compression_state_dict=saved_checkpoint)
+                                                         compression_state=saved_checkpoint)
     load_state(model, saved_model_state, _resume_algos['is_strict'])
     key_matcher_run_spy.assert_called_once()
     act_num_loaded = len(key_matcher_run_spy.spy_return)

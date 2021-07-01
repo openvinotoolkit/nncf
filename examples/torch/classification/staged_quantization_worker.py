@@ -24,7 +24,7 @@ import torch.utils.data
 import torch.utils.data.distributed
 
 from examples.torch.common.model_loader import MODEL_STATE_ATTR
-from examples.torch.common.model_loader import extract_model_and_compression_state_dicts
+from examples.torch.common.model_loader import extract_model_and_compression_states
 from examples.torch.common.model_loader import load_resuming_checkpoint
 from nncf.torch.checkpoint_loading import load_state
 from torchvision.models import InceptionOutputs
@@ -163,8 +163,8 @@ def staged_quantization_main_worker(current_gpu, config):
     resuming_checkpoint = None
     if resuming_checkpoint_path is not None:
         resuming_checkpoint = load_resuming_checkpoint(resuming_checkpoint_path)
-    model_state_dict, compression_state_dict = extract_model_and_compression_state_dicts(resuming_checkpoint)
-    compression_ctrl, model = create_compressed_model(model, nncf_config, compression_state_dict)
+    model_state_dict, compression_state = extract_model_and_compression_states(resuming_checkpoint)
+    compression_ctrl, model = create_compressed_model(model, nncf_config, compression_state)
     if model_state_dict is not None:
         load_state(model, model_state_dict, is_resume=True)
 
@@ -270,7 +270,7 @@ def train_staged(config, compression_ctrl, model, criterion, criterion_fn, optim
                 'epoch': epoch + 1,
                 'arch': model_name,
                 MODEL_STATE_ATTR: model.state_dict(),
-                COMPRESSION_STATE_ATTR: compression_ctrl.get_compression_state_dict(),
+                COMPRESSION_STATE_ATTR: compression_ctrl.get_compression_state(),
                 'original_model_state_dict': kd_loss_calculator.original_model.state_dict(),
                 'best_acc1': best_acc1,
                 'optimizer': optimizer.state_dict(),
