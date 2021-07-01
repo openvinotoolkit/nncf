@@ -204,7 +204,7 @@ def staged_quantization_main_worker(current_gpu, config):
         config.start_epoch = resuming_checkpoint['epoch']
         best_acc1 = resuming_checkpoint['best_acc1']
         kd_loss_calculator.original_model.load_state_dict(resuming_checkpoint['original_model_state_dict'])
-        if config.mode.lower() == 'train':
+        if 'train' in config.mode:
             optimizer.load_state_dict(resuming_checkpoint['optimizer'])
             optimizer_scheduler.load_state_dict(resuming_checkpoint['optimizer_scheduler'])
             logger.info("=> loaded checkpoint '{}' (epoch: {}, best_acc1: {:.3f})"
@@ -214,7 +214,7 @@ def staged_quantization_main_worker(current_gpu, config):
 
     log_common_mlflow_params(config)
 
-    if config.to_onnx:
+    if 'export' in config.mode and ('train' not in config.mode and 'test' not in config.mode):
         compression_ctrl.export_model(config.to_onnx)
         logger.info("Saved to {}".format(config.to_onnx))
         return
@@ -226,14 +226,19 @@ def staged_quantization_main_worker(current_gpu, config):
         statistics = compression_ctrl.statistics()
         logger.info(statistics.to_str())
 
-    if config.mode.lower() == 'test':
-        validate(val_loader, model, criterion, config)
-
-    if config.mode.lower() == 'train':
+    if 'train' in config.mode:
         batch_multiplier = (quantization_config.get("params", {})).get("batch_multiplier", 1)
         train_staged(config, compression_ctrl, model, criterion, train_criterion_fn, optimizer_scheduler, model_name,
                      optimizer,
                      train_loader, train_sampler, val_loader, kd_loss_calculator, batch_multiplier, best_acc1)
+
+    if 'test' in config.mode:
+        validate(val_loader, model, criterion, config)
+
+    if 'export' in config.mode:
+        compression_ctrl.export_model(config.to_onnx)
+        logger.info("Saved to {}".format(config.to_onnx))
+
 
 
 def train_staged(config, compression_ctrl, model, criterion, criterion_fn, optimizer_scheduler, model_name, optimizer,

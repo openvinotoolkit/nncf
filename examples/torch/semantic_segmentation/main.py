@@ -23,6 +23,8 @@ from os import path as osp
 import numpy as np
 import torch
 import torchvision.transforms as T
+
+from examples.torch.common.argparser import parse_args
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 
 import examples.torch.semantic_segmentation.utils.data as data_utils
@@ -232,7 +234,7 @@ def load_dataset(dataset, config):
     logger.info("Validation dataset size: {}".format(len(val_set)))
 
     # Get a batch of samples to display
-    if config.mode.lower() == 'test':
+    if 'test' in config.mode and 'train' not in config.mode:
         images, labels = iter(val_loader).next()
     else:
         images, labels = iter(train_loader).next()
@@ -241,7 +243,7 @@ def load_dataset(dataset, config):
     logger.info("Class-color encoding: {}".format(class_encoding))
 
     # Show a batch of samples and labels
-    if config.imshow_batch and config.mode.lower() != 'test':
+    if config.imshow_batch and 'test' not in config.mode:
         logger.info("Close the figure window to continue...")
         label_to_rgb = T.Compose([
             data_utils.LongTensorToRGBPIL(class_encoding),
@@ -538,22 +540,16 @@ def main_worker(current_gpu, config):
 
     log_common_mlflow_params(config)
 
-    if config.to_onnx:
+    if 'export' in config.mode and ('train' not in config.mode and 'test' not in config.mode):
         compression_ctrl.export_model(config.to_onnx)
         logger.info("Saved to {}".format(config.to_onnx))
         return
+
     if is_main_process():
         statistics = compression_ctrl.statistics()
         logger.info(statistics.to_str())
 
-    if config.mode.lower() == 'test':
-        logger.info(model)
-        model_parameters = filter(lambda p: p.requires_grad, model.parameters())
-        params = sum([np.prod(p.size()) for p in model_parameters])
-        logger.info("Trainable argument count:{params}".format(params=params))
-        model = model.to(config.device)
-        test(model, val_loader, criterion, color_encoding, config)
-    elif is_accuracy_aware_training(config) and config.mode.lower() == 'train':
+    if is_accuracy_aware_training(config) and 'train' in config.mode:
         def validate_fn(model, epoch):
             return test(model, val_loader, criterion, color_encoding, config)
 
@@ -587,19 +583,26 @@ def main_worker(current_gpu, config):
                                             tensorboard_writer=config.tb,
                                             log_dir=config.log_dir)
 
-    elif config.mode.lower() == 'train':
+    elif 'train' in config.mode:
         train(model, model_without_dp, compression_ctrl, train_loader, val_loader, criterion, color_encoding, config,
               resuming_checkpoint)
-    else:
-        # Should never happen...but just in case it does
-        raise RuntimeError(
-            "\"{0}\" is not a valid choice for execution mode.".format(
-                config.mode))
+
+    if 'test' in config.mode:
+        logger.info(model)
+        model_parameters = filter(lambda p: p.requires_grad, model.parameters())
+        params = sum([np.prod(p.size()) for p in model_parameters])
+        logger.info("Trainable argument count:{params}".format(params=params))
+        model = model.to(config.device)
+        test(model, val_loader, criterion, color_encoding, config)
+
+    if 'export' in config.mode:
+        compression_ctrl.export_model(config.to_onnx)
+        logger.info("Saved to {}".format(config.to_onnx))
 
 
 def main(argv):
     parser = get_arguments_parser()
-    arguments = parser.parse_args(args=argv)
+    arguments = parse_args(parser, argv)
     config = create_sample_config(arguments, parser)
     if arguments.dist_url == "env://":
         config.update_from_env()

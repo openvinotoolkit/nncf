@@ -39,7 +39,8 @@ from examples.tensorflow.segmentation.models.model_selector import get_model_bui
 
 
 def get_argument_parser():
-    parser = get_common_argument_parser(weights=False,
+    parser = get_common_argument_parser(mode=False,
+                                        weights=False,
                                         epochs=False,
                                         precision=False,
                                         save_checkpoint_freq=False,
@@ -47,13 +48,15 @@ def get_argument_parser():
                                         dataset_type=False)
 
     parser.add_argument(
-        '--mode',
-        '-m',
-        nargs='+',
-        choices=['train', 'test', 'export'],
-        default='train',
-        help='train: performs validation during training; test: tests the model; export: exports the model.'
-    )
+                     '--mode',
+                     '-m',
+                     nargs='+',
+                     choices=['train', 'test', 'export'],
+                     default='train',
+                     help='train: performs validation of a checkpoint that was saved during training '
+                          '(use --checkpoint-save-dir to specify a path to the train-time checkpoint directory) ;'
+                          ' test: tests the model checkpoint (use --resume to specify the checkpoint file itself);'
+                          ' export: exports the model.')
 
     parser.add_argument(
         '--eval-timeout',

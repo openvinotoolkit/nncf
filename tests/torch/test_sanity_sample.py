@@ -385,7 +385,7 @@ def test_export_with_resume(request, config, tmp_path, multiprocessing_distribut
 
     onnx_path = os.path.join(str(tmp_path), "model.onnx")
     args = {
-        "--mode": "test",
+        "--mode": "export",
         "--config": config_factory.serialize(),
         "--resume": ckpt_path,
         "--to-onnx": onnx_path
@@ -414,7 +414,7 @@ def test_export_with_pretrained(tmp_path):
 
     onnx_path = os.path.join(str(tmp_path), "model.onnx")
     args = {
-        "--mode": "test",
+        "--mode": "export",
         "--config": config_factory.serialize(),
         "--pretrained": '',
         "--to-onnx": onnx_path

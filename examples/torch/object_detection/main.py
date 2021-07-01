@@ -19,6 +19,8 @@ from pathlib import Path
 
 import torch
 import torch.utils.data as data
+
+from examples.torch.common.argparser import parse_args
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 
 from examples.torch.common import restricted_pickle_module
@@ -91,7 +93,7 @@ def get_argument_parser():
 
 def main(argv):
     parser = get_argument_parser()
-    args = parser.parse_args(args=argv)
+    args = parse_args(parser, argv)
     config = create_sample_config(args, parser)
 
     configure_paths(config)
@@ -202,13 +204,13 @@ def main_worker(current_gpu, config):
     # Load additional checkpoint data
     #################################
 
-    if resuming_checkpoint_path is not None and config.mode.lower() == 'train' and config.to_onnx is None:
+    if resuming_checkpoint_path is not None and 'train' in config.mode:
         optimizer.load_state_dict(resuming_checkpoint.get('optimizer', optimizer.state_dict()))
         config.start_epoch = resuming_checkpoint.get('epoch', 0) + 1
 
     log_common_mlflow_params(config)
 
-    if config.to_onnx:
+    if 'export' in config.mode and ('train' not in config.mode and 'test' not in config.mode):
         compression_ctrl.export_model(config.to_onnx)
         logger.info("Saved to {}".format(config.to_onnx))
         return
@@ -217,7 +219,7 @@ def main_worker(current_gpu, config):
         statistics = compression_ctrl.statistics()
         logger.info(statistics.to_str())
 
-    if config.mode.lower() == 'train' and is_accuracy_aware_training(config):
+    if 'train' in config.mode and is_accuracy_aware_training(config):
         # validation function that returns the target metric value
         # pylint: disable=E1123
         def validate_fn(model, epoch):
@@ -251,9 +253,10 @@ def main_worker(current_gpu, config):
                                           configure_optimizers_fn=configure_optimizers_fn,
                                           tensorboard_writer=config.tb,
                                           log_dir=config.log_dir)
-        return
+    elif 'train' in config.mode:
+        train(net, compression_ctrl, train_data_loader, test_data_loader, criterion, optimizer, config, lr_scheduler)
 
-    if config.mode.lower() == 'test':
+    if 'test' in config.mode:
         with torch.no_grad():
             net.eval()
             if config['ssd_params'].get('loss_inference', False):
@@ -264,9 +267,10 @@ def main_worker(current_gpu, config):
                 mAp = test_net(net, config.device, test_data_loader, distributed=config.distributed)
                 if config.metrics_dump is not None:
                     write_metrics(mAp, config.metrics_dump)
-            return
 
-    train(net, compression_ctrl, train_data_loader, test_data_loader, criterion, optimizer, config, lr_scheduler)
+    if 'export' in config.mode:
+        compression_ctrl.export_model(config.to_onnx)
+        logger.info("Saved to {}".format(config.to_onnx))
 
 
 def create_dataloaders(config):

@@ -30,7 +30,6 @@ DIFF_TARGET_MAX_GLOBAL = 0.1
 DIFF_FP32_MIN_GLOBAL = -1.0
 DIFF_FP32_MAX_GLOBAL = 0.1
 
-ONNX_PATH = '/home/jenkins/workspace/NNCF/manual/Convert_ONNX/src/onnx/'
 OPENVINO_DIR = PROJECT_ROOT.parent / 'intel' / 'openvino'
 if not os.path.exists(OPENVINO_DIR):
     OPENVINO_DIR = PROJECT_ROOT.parent / 'intel' / 'openvino_2021'
@@ -437,7 +436,7 @@ class TestSotaCheckpoints:
             json.dump(self.q_dq_config(eval_test_struct.config_name_), outfile)
         if not os.path.exists(onnx_path):
             os.mkdir(onnx_path)
-        self.CMD_FORMAT_STRING = "{} examples/torch/{sample_type}/main.py --cpu-only --config {conf} \
+        CMD_FORMAT_STRING = "{} examples/torch/{sample_type}/main.py -m export --cpu-only --config {conf} \
              --data {dataset}/{data_name} --to-onnx={onnx_path}"
         self.test = "openvino_eval"
         if onnx_type == "q_dq":
@@ -450,11 +449,11 @@ class TestSotaCheckpoints:
         else:
             onnx_name = str(eval_test_struct.model_name_ + ".onnx")
             nncf_config_path = eval_test_struct.config_name_
-        onnx_cmd = self.CMD_FORMAT_STRING.format(sys.executable, conf=nncf_config_path,
-                                                 dataset=sota_data_dir,
-                                                 data_name=eval_test_struct.dataset_name_,
-                                                 sample_type=eval_test_struct.sample_type_,
-                                                 onnx_path=(onnx_path / onnx_name))
+        onnx_cmd = CMD_FORMAT_STRING.format(sys.executable, conf=nncf_config_path,
+                                            dataset=sota_data_dir,
+                                            data_name=eval_test_struct.dataset_name_,
+                                            sample_type=eval_test_struct.sample_type_,
+                                            onnx_path=(onnx_path / onnx_name))
         if eval_test_struct.resume_file_:
             resume_file_path = sota_checkpoints_dir + '/' + eval_test_struct.resume_file_
             onnx_cmd += " --resume {}".format(resume_file_path)

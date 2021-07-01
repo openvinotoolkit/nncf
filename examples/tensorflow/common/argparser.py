@@ -20,6 +20,18 @@ def get_common_argument_parser(**flags):
     """
     parser = CustomArgumentParser()
 
+    add_argument(parser=parser,
+                 condition=flags.get('mode', True),
+                 parameters=argument_parameters(
+                     '--mode',
+                     '-m',
+                     nargs='+',
+                     choices=['train', 'test', 'export'],
+                     default='train',
+                     help='train: performs training and validation; test: tests the model; export: exports the model.'
+                 )
+                 )
+
     parser.add_argument(
         '-c',
         '--config',
