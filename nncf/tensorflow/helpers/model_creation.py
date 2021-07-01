@@ -12,11 +12,13 @@
 """
 
 import types
+from typing import Tuple
 
 import tensorflow as tf
 
 from nncf import NNCFConfig
 from nncf.api.compression import CompressionAlgorithmBuilder
+from nncf.api.compression import CompressionAlgorithmController
 from nncf.config.extractors import extract_compression_algorithm_configs
 from nncf.tensorflow.algorithm_selector import get_compression_algorithm_builder
 from nncf.tensorflow.api.composite_compression import TFCompositeCompressionAlgorithmBuilder
@@ -44,14 +46,13 @@ def create_compression_algorithm_builder(config: NNCFConfig,
     if number_compression_algorithms == 1:
         algo_config = compression_algorithm_configs[0]
         return get_compression_algorithm_builder(algo_config)(algo_config, should_init)
-    if number_compression_algorithms > 1:
-        return TFCompositeCompressionAlgorithmBuilder(config, should_init)
-    return None
+
+    return TFCompositeCompressionAlgorithmBuilder(config, should_init)
 
 
 def create_compressed_model(model: tf.keras.Model,
                             config: NNCFConfig,
-                            should_init: bool = True) -> tf.keras.Model:
+                            should_init: bool = True) -> Tuple[CompressionAlgorithmController, tf.keras.Model]:
     """
     The main function used to produce a model ready for compression fine-tuning
     from an original TensorFlow Keras model and a configuration object.
@@ -62,8 +63,10 @@ def create_compressed_model(model: tf.keras.Model,
         modifications to be applied to the model.
     :param should_init: If False, trainable parameter initialization will be
         skipped during building.
-    :return: The model with additional modifications necessary to enable
-        algorithm-specific compression during fine-tuning.
+    :return: A tuple (compression_ctrl, compressed_model) where
+        - compression_ctrl: The controller of the compression algorithm.
+        - compressed_model: The model with additional modifications
+            necessary to enable algorithm-specific compression during fine-tuning.
     """
     model = get_built_model(model, config)
     original_model_accuracy = None
@@ -74,8 +77,6 @@ def create_compressed_model(model: tf.keras.Model,
             original_model_accuracy = evaluation_args.eval_fn(model)
 
     builder = create_compression_algorithm_builder(config, should_init)
-    if builder is None:
-        return None, model
     compressed_model = builder.apply_to(model)
     compression_ctrl = builder.build_controller(compressed_model)
     compressed_model.original_model_accuracy = original_model_accuracy
