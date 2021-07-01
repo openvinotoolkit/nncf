@@ -11,9 +11,7 @@
  limitations under the License.
 """
 import pytest
-import subprocess
-import sys
-from tests.common.helpers import PROJECT_ROOT
+from tests.common.helpers import create_venv_with_nncf
 try:
     import tensorflow as tf
 except ImportError:
@@ -57,6 +55,9 @@ def pytest_addoption(parser):
     parser.addoption(
         "--models-dir", type=str, default=None, help="Path to checkpoints directory for weekly tests"
     )
+    parser.addoption(
+        "--run-install-tests", type=str, help="To run installation tests"
+    )
 
 
 @pytest.fixture(scope="module")
@@ -99,43 +100,14 @@ def models_dir(request):
     return request.config.getoption("--models-dir")
 
 
+@pytest.fixture(scope="module")
+def install_tests(request):
+    return request.config.getoption("--run-install-tests")
+
+
 @pytest.fixture(scope="function")
-def tmp_venv_with_nncf(tmp_path, package_type, venv_type):  # pylint:disable=redefined-outer-name
-    venv_path = tmp_path / 'venv'
-    venv_path.mkdir()
-
-    python_executable_with_venv = ". {0}/bin/activate && {0}/bin/python".format(venv_path)
-    pip_with_venv = ". {0}/bin/activate && {0}/bin/pip".format(venv_path)
-
-    version_string = "{}.{}".format(sys.version_info[0], sys.version_info[1])
-    if venv_type == 'virtualenv':
-        subprocess.call("virtualenv -ppython{} {}".format(version_string, venv_path), shell=True)
-    elif venv_type == 'venv':
-        subprocess.call("python{} -m venv {}".format(version_string, venv_path), shell=True)
-        subprocess.call("{} install --upgrade pip".format(pip_with_venv), shell=True)
-        subprocess.call("{} install wheel".format(pip_with_venv), shell=True)
-
-    run_path = tmp_path / 'run'
-    run_path.mkdir()
-
-    if package_type == "pip_pypi":
-        subprocess.run(
-            f"{pip_with_venv} install nncf[tf]", check=True, shell=True)
-    elif package_type == "pip_local":
-        subprocess.run(
-            f"{pip_with_venv} install {PROJECT_ROOT}[tf]", check=True, shell=True)
-    elif package_type == "pip_e_local":
-        subprocess.run(
-            f"{pip_with_venv} install -e {PROJECT_ROOT}[tf]", check=True, shell=True)
-    else:
-
-        subprocess.run(
-            "{python} {nncf_repo_root}/setup.py {package_type} --tf".format(
-                python=python_executable_with_venv,
-                nncf_repo_root=PROJECT_ROOT,
-                package_type=package_type),
-            check=True,
-            shell=True,
-            cwd=PROJECT_ROOT)
-
+def tmp_venv_with_nncf(tmp_path, package_type, venv_type, install_tests):  # pylint:disable=redefined-outer-name
+    if install_tests is None:
+        pytest.skip('To test the installation, use --run-install-tests option.')
+    venv_path = create_venv_with_nncf(tmp_path, package_type, venv_type, extra_reqs='tf')
     return venv_path

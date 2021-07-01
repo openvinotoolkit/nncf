@@ -11,13 +11,8 @@
  limitations under the License.
 """
 
-import os
-import subprocess
 import pytest
-import shutil
-from tests.common.helpers import TEST_ROOT, PROJECT_ROOT
-
-INSTALL_CHECKS_FILENAME = 'install_checks.py'
+from tests.common.helpers import run_install_checks
 
 
 @pytest.fixture(name="venv_type",
@@ -34,29 +29,4 @@ def package_type_(request):
 
 
 def test_install(tmp_venv_with_nncf, tmp_path, package_type):
-    venv_path = tmp_venv_with_nncf
-
-    python_executable_with_venv = ". {0}/bin/activate && {0}/bin/python".format(venv_path)
-    pip_with_venv = ". {0}/bin/activate && {0}/bin/pip".format(venv_path)
-
-    run_path = tmp_path / 'run'
-
-    shutil.copy(TEST_ROOT / 'tensorflow' / INSTALL_CHECKS_FILENAME, run_path)
-
-    # Do additional install step for sdist/bdist packages
-    if package_type == "sdist":
-        for file_name in os.listdir(os.path.join(PROJECT_ROOT, 'dist')):
-            if file_name.endswith('.tar.gz'):
-                package_name = file_name
-                break
-        else:
-            raise FileNotFoundError('NNCF package not found')
-        subprocess.run(
-            "{} install {}/dist/{}[tf] ".format(pip_with_venv, PROJECT_ROOT, package_name), check=True, shell=True)
-    elif package_type == "bdist_wheel":
-        subprocess.run(
-            "{} install {}/dist/*.whl ".format(pip_with_venv, PROJECT_ROOT), check=True, shell=True)
-
-    subprocess.run(
-        "{} {}/install_checks.py {}".format(python_executable_with_venv, run_path, package_type),
-        check=True, shell=True, cwd=run_path)
+    run_install_checks(tmp_venv_with_nncf, tmp_path, package_type, test_dir='tensorflow')
