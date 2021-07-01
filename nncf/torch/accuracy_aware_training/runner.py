@@ -17,7 +17,12 @@ from shutil import copyfile
 
 import torch
 from torch.optim.lr_scheduler import ReduceLROnPlateau
-from torch.utils.tensorboard import SummaryWriter
+
+try:
+    from torch.utils.tensorboard import SummaryWriter
+    TENSORBOARD_AVAILABLE = True
+except ImportError:
+    TENSORBOARD_AVAILABLE = False
 
 try:
     import matplotlib.pyplot as plt
@@ -65,8 +70,7 @@ class PTAccuracyAwareTrainingRunner(BaseAccuracyAwareTrainingRunner):
             else 'runs'
         self._log_dir = configure_accuracy_aware_paths(self._log_dir)
         self._checkpoint_save_dir = self._log_dir
-        self._tensorboard_writer = self._tensorboard_writer
-        if self._tensorboard_writer is None:
+        if self._tensorboard_writer is None and TENSORBOARD_AVAILABLE:
             self._tensorboard_writer = SummaryWriter(self._log_dir)
 
     def retrieve_original_accuracy(self, model):
@@ -159,7 +163,7 @@ class PTAccuracyAwareTrainingRunner(BaseAccuracyAwareTrainingRunner):
             copyfile(checkpoint_path, best_path)
 
     def add_tensorboard_scalar(self, key, data, step):
-        if self.verbose:
+        if self.verbose and self._tensorboard_writer is not None:
             self._tensorboard_writer.add_scalar(key, data, step)
 
     def update_training_history(self, compression_rate, best_metric_value):
@@ -175,9 +179,10 @@ class PTAccuracyAwareTrainingRunner(BaseAccuracyAwareTrainingRunner):
             buf.seek(0)
             image = PIL.Image.open(buf)
             image = ToTensor()(image)
-            self._tensorboard_writer.add_image('compression/accuracy_aware/acc_budget_vs_comp_rate',
-                                            image,
-                                            global_step=len(self.compressed_training_history))
+            if self._tensorboard_writer is not None:
+                self._tensorboard_writer.add_image('compression/accuracy_aware/acc_budget_vs_comp_rate',
+                                                image,
+                                                global_step=len(self.compressed_training_history))
 
     @property
     def compressed_training_history(self):

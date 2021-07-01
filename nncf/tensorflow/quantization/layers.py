@@ -73,8 +73,8 @@ class FakeQuantize(tf.keras.layers.Layer):
     def register_hook_pre_quantizer(self, hook):
         return self._quantizer.register_hook_pre_call(hook)
 
-    def apply_minmax_initialization(self, min_values, max_values, min_range=0.1, eps=0.01):
-        self._quantizer.apply_minmax_initialization(self._quantizer_weights, min_values, max_values, min_range, eps)
+    def apply_range_initialization(self, min_values, max_values, min_range=0.1, eps=0.01):
+        self._quantizer.apply_range_initialization(self._quantizer_weights, min_values, max_values, min_range, eps)
 
     def _create_quantizer(self, qspec: TFQuantizerSpec, op_name: str) -> Quantizer:
         quantizer_cls = NNCF_QUANTIZATION_OPERATONS.get(qspec.mode)

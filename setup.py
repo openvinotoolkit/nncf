@@ -48,7 +48,6 @@ INSTALL_REQUIRES = ["ninja>=1.10.0.post2",
                     "matplotlib~=3.3.4; python_version<'3.7'",
                     "matplotlib>=3.3.4; python_version>='3.7'",
                     "networkx>=2.5",
-                    "graphviz>=0.15",
                     "jsonschema==3.2.0",
                     "pydot>=1.4.1",
                     "jstyleson>=0.0.2",
@@ -58,8 +57,7 @@ INSTALL_REQUIRES = ["ninja>=1.10.0.post2",
                     "pandas~=1.1.5; python_version<'3.7'",
                     "pandas>=1.1.5; python_version>='3.7'",
                     "scikit-learn>=0.24.0",
-                    "wheel>=0.36.1",
-                    "tensorboard>=2.1"]
+                    "wheel>=0.36.1"]
 
 
 python_version = sys.version_info
