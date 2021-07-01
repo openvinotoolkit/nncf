@@ -25,11 +25,11 @@ class LeGR:
         self.train_steps = train_steps
 
         self.pruner = LeGRPruner(pruning_ctrl, target_model)
-        initial_filter_ranks = self.pruner.init_filter_ranks
+        init_filter_norms = self.pruner.init_filter_norms
         agent_hparams = {
             'num_generations': self.num_generations
         }
-        self.agent = EvolutionOptimizer(initial_filter_ranks, agent_hparams, random_seed)
+        self.agent = EvolutionOptimizer(init_filter_norms, agent_hparams, random_seed)
         self.env = LeGREvolutionEnv(self.pruner, target_model, legr_init_args.train_loader,
                                     legr_init_args.val_loader, legr_init_args.train_steps_fn, legr_init_args.train_optimizer,
                                     legr_init_args.val_fn, legr_init_args.config,

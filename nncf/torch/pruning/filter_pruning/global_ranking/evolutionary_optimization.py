@@ -22,7 +22,7 @@ from torch import optim
 
 class EvolutionOptimizer:
     def __init__(self, initial_filter_norms, hparams, random_seed):
-        np.random.seed(random_seed)
+        self.random_seed = random_seed
         # Optimizer hyper-params
         self.population_size = hparams.get('population_size', 64)
         self.num_generations = hparams.get('num_generations', 400)
@@ -76,6 +76,7 @@ class EvolutionOptimizer:
         Predict action for the last state.
         :return: action
         """
+        np.random.seed(self.random_seed)
         episode_num = self.cur_episode
         action = {}
 
@@ -138,6 +139,7 @@ class LeGREvolutionEnv:
                  train_steps, pruning_max):
         self.loss_as_reward = True
         self.prune_target = pruning_max
+        self.steps = train_steps
 
         # Train/test params
         self.train_loader, self.val_loader = train_loader, val_loader
@@ -145,13 +147,11 @@ class LeGREvolutionEnv:
         self.train_optimizer = train_optimizer
         if self.train_optimizer is None:
             # Default optimizer when the user did not provide a custom optimizer
-            self.train_optimizer = partial(optim.SGD,lr=1e-2, momentum=0.9, weight_decay=5e-4, nesterov=True)
+            self.train_optimizer = partial(optim.SGD, lr=1e-2, momentum=0.9, weight_decay=5e-4, nesterov=True)
         self.validate_fn = val_fn
         self.config = config
 
         self.filter_pruner = filter_pruner
-        self.steps = train_steps
-
         self.model = model
 
     def reset(self):
@@ -160,14 +160,14 @@ class LeGREvolutionEnv:
 
         self.full_flops = self.filter_pruner.get_full_flops_number_in_model()
         self.rest = self.full_flops
-        self.last_act = (1, 0)
+        self.last_act = None
         return torch.zeros(1), [self.full_flops, self.rest]
 
-    def train_steps(self, steps):
+    def _train_steps(self, steps):
         optimizer = self.train_optimizer(self.model.parameters())
         self.train_fn(self.train_loader, self.model, optimizer, self.filter_pruner, steps)
 
-    def get_reward(self):
+    def _get_reward(self):
         return self.validate_fn(self.model, self.val_loader)
 
     def step(self, action):
@@ -175,9 +175,9 @@ class LeGREvolutionEnv:
         new_state = torch.zeros(1)
 
         reduced = self.filter_pruner.prune(self.prune_target, action)
-        self.train_steps(self.steps)
+        self._train_steps(self.steps)
 
-        acc, _, loss = self.get_reward()
+        acc, _, loss = self._get_reward()
         if self.loss_as_reward:
             reward = -loss
         else:
@@ -194,7 +194,7 @@ class LeGRPruner:
         self.model = model
         self.model_params_copy = None
         self._save_model_weights()
-        self.init_filter_ranks = {node.node_name: self.filter_pruner.filter_importance(node.module.weight)
+        self.init_filter_norms = {node.node_name: self.filter_pruner.filter_importance(node.module.weight)
                                   for node in self.filter_pruner.pruned_module_groups_info.get_all_nodes()}
 
     def loss(self):

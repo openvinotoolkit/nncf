@@ -162,6 +162,8 @@ class FilterPruningController(BasePruningAlgoController):
                 self.ranking_coeffs = ranking_coeffs
             else:
                 # Wrapping model for parallelization
+                if not config.has_extra_struct(LeGRInitArgs):
+                    raise Exception('Please, register LeGRInitArgs via register_default_init_args function.')
                 distributed_wrapping_init_args = config.get_extra_struct(DistributedCallbacksArgs)
                 target_model = distributed_wrapping_init_args.wrap_model(target_model)
 

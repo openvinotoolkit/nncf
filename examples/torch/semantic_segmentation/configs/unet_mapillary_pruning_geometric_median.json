@@ -42,7 +42,7 @@
             "schedule": "exponential",
             "pruning_target": 0.25,
             "pruning_steps": 10,
-            "weight_importance": "geometric_median"
+            "filter_importance": "geometric_median"
         },
         "ignored_scopes": [
             "{re}UNet/ModuleList\\[up_path\\]/UNetUpBlock\\[0\\]/NNCFConvTranspose2d\\[up\\].*",

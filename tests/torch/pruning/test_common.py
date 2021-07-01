@@ -15,13 +15,9 @@ import pytest
 from nncf.common.pruning.schedulers import BaselinePruningScheduler, ExponentialPruningScheduler, \
     ExponentialWithBiasPruningScheduler
 from nncf.torch import register_default_init_args
-from nncf.torch.structures import LeGRInitArgs, DistributedCallbacksArgs
+from nncf.torch.structures import LeGRInitArgs
 from tests.torch.pruning.helpers import PruningTestModel, get_basic_pruning_config
 from tests.torch.helpers import create_compressed_model_and_algo_for_test, create_ones_mock_dataloader
-from typing import Callable
-
-from functools import partial
-from torch import nn
 
 
 @pytest.mark.parametrize('algo',
@@ -70,7 +66,6 @@ def test_default_legr_init_struct():
 
 def test_valid_legr_init_struct():
     config = get_basic_pruning_config()
-    init_loader = create_ones_mock_dataloader(config)
     train_loader = create_ones_mock_dataloader(config)
     val_loader = create_ones_mock_dataloader(config)
     train_steps_fn = lambda *x: None
@@ -83,37 +78,3 @@ def test_valid_legr_init_struct():
     assert legr_init_args.train_loader == train_loader
     assert legr_init_args.val_loader == val_loader
     assert legr_init_args.train_steps_fn == train_steps_fn
-
-
-def test_default_distributed_init_struct():
-    config = get_basic_pruning_config()
-    init_loader = create_ones_mock_dataloader(config)
-    nncf_config = register_default_init_args(
-        config, init_loader)
-
-    dist_callbacks = config.get_extra_struct(DistributedCallbacksArgs)
-    assert isinstance(dist_callbacks.wrap_model, Callable)
-    assert isinstance(dist_callbacks.unwrap_model, Callable)
-
-
-def test_distributed_init_struct():
-    class FakeModelClass():
-        def __init__(self, model_: nn.Module):
-            self.model = model_
-
-        def unwrap(self):
-            return self.model
-
-    config = get_basic_pruning_config()
-    init_loader = create_ones_mock_dataloader(config)
-    wrapper_callback = lambda x: FakeModelClass(x)
-    unwrapper_callback = lambda x: x.unwrap()
-    nncf_config = register_default_init_args(
-        config, init_loader, distributed_callbacks=(wrapper_callback, unwrapper_callback))
-
-    dist_callbacks = config.get_extra_struct(DistributedCallbacksArgs)
-    model = PruningTestModel()
-    wrapped_model = dist_callbacks.wrap_model(model)
-    assert isinstance(wrapped_model, FakeModelClass)
-    unwrapped_model = dist_callbacks.unwrap_model(wrapped_model)
-    assert unwrapped_model == model
