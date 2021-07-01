@@ -388,14 +388,18 @@ ACCURACY_AWARE_SCHEMA = {
                                                          "the adaptive compression training loop"),
 }
 
-EARLY_STOPPING_TRAINING_SCHEMA = {
-    "maximal_accuracy_degradation": with_attributes(_NUMBER,
-                                                    description="Maximally allowed accuracy degradation"
-                                                                " of the model (in percent relative to"
-                                                                " the original model accuracy)"),
-    "maximal_total_epochs":  with_attributes(_NUMBER,
-                                             description="The maximal total epoch budget for "
-                                                         "the adaptive compression training loop"),
+BASIC_COMPRESSION_TRAINING_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "maximal_accuracy_degradation": with_attributes(_NUMBER,
+                                                        description="Maximally allowed accuracy degradation"
+                                                                    " of the model (in percent relative to"
+                                                                    " the original model accuracy)"),
+        "maximal_total_epochs": with_attributes(_NUMBER,
+                                                description="The maximal total epoch budget for "
+                                                            "the adaptive compression training loop"),
+        },
+    "required": ["maximal_total_epochs", "maximal_accuracy_degradation"],
 }
 
 COMMON_COMPRESSION_ALGORITHM_PROPERTIES = {
@@ -404,12 +408,23 @@ COMMON_COMPRESSION_ALGORITHM_PROPERTIES = {
     "target_scopes": with_attributes(make_string_or_array_of_strings_schema(),
                                      description=TARGET_SCOPES_DESCRIPTION),
     "accuracy_aware_training": ACCURACY_AWARE_SCHEMA,
-    "early_stopping_training": EARLY_STOPPING_TRAINING_SCHEMA,
+    "training": BASIC_COMPRESSION_TRAINING_SCHEMA,
 }
 
 BASIC_COMPRESSION_ALGO_SCHEMA = {
     "type": "object",
-    "required": ["algorithm"]
+    "required": ["algorithm"],
+}
+
+
+
+BASIC_COMPRESSION_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "algorithms": make_object_or_array_of_objects_schema(BASIC_COMPRESSION_ALGO_SCHEMA),
+    },
+    "required": ["algorithms"],
+    "training": BASIC_COMPRESSION_TRAINING_SCHEMA,
 }
 
 STAGED_QUANTIZATION_PARAMS = {
@@ -828,7 +843,8 @@ ROOT_NNCF_CONFIG_SCHEMA = {
         # This is required for better user feedback, since holistic schema validation is uninformative
         # if there is an error in one of the compression configs.
         **COMPRESSION_LR_MULTIPLIER_PROPERTY,
-        "compression": make_object_or_array_of_objects_schema(BASIC_COMPRESSION_ALGO_SCHEMA),
+        "compression": BASIC_COMPRESSION_ALGO_SCHEMA,
+                        # Dict('algorithms': List[algos], 'training': {} )
         "target_device": with_attributes(TARGET_DEVICE_SCHEMA,
                                          description="The target device, the specificity of which will be taken into "
                                                      "account while compressing in order to obtain the best "

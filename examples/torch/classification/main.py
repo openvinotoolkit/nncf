@@ -70,7 +70,7 @@ from nncf.api.compression import CompressionStage
 from nncf.common.utils.tensorboard import prepare_for_tensorboard
 from nncf.config.utils import is_accuracy_aware_training
 from nncf.torch import AdaptiveCompressionTrainingLoop
-from nncf.torch import CompressionTrainingLoop
+from nncf.torch import EarlyStoppingCompressionTrainingLoop
 from nncf.torch import create_compressed_model
 from nncf.torch.checkpoint_loading import load_state
 from nncf.torch.dynamic_graph.graph_tracer import create_input_infos
@@ -247,7 +247,7 @@ def main_worker(current_gpu, config: SampleConfig):
         logger.info(statistics.to_str())
 
     if 'train' in config.mode:
-        if is_accuracy_aware_training(config):
+        if is_nncf_training(config):
             # validation function that returns the target metric value
             # pylint: disable=E1123
             def validate_fn(model, epoch):
@@ -267,14 +267,18 @@ def main_worker(current_gpu, config: SampleConfig):
                 optimizer, lr_scheduler = make_optimizer(params_to_optimize, config)
                 return optimizer, lr_scheduler
 
-            # instantiate and run accuracy-aware training loop
-            acc_aware_training_loop = CompressionTrainingLoop(nncf_config, compression_ctrl)
-            model = acc_aware_training_loop.run(model,
-                                                train_epoch_fn=train_epoch_fn,
-                                                validate_fn=validate_fn,
-                                                configure_optimizers_fn=configure_optimizers_fn,
-                                                tensorboard_writer=config.tb,
-                                                log_dir=config.log_dir)
+            if is_accuracy_aware_training(config):
+                # instantiate and run accuracy-aware training loop
+                training_loop = AdaptiveCompressionTrainingLoop(nncf_config, compression_ctrl)
+            else:
+                # instantiate and run accuracy-aware training loop
+                training_loop = EarlyStoppingCompressionTrainingLoop(nncf_config, compression_ctrl)
+            model = training_loop.run(model,
+                                      train_epoch_fn=train_epoch_fn,
+                                      validate_fn=validate_fn,
+                                      configure_optimizers_fn=configure_optimizers_fn,
+                                      tensorboard_writer=config.tb,
+                                      log_dir=config.log_dir)
         else:
             train(config, compression_ctrl, model, criterion, train_criterion_fn, lr_scheduler, model_name, optimizer,
                   train_loader, train_sampler, val_loader, best_acc1)

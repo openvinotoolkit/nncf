@@ -37,12 +37,11 @@ from nncf.torch.accuracy_aware_training.utils import is_main_process
 from nncf.common.utils.helpers import configure_accuracy_aware_paths
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.common.utils.tensorboard import prepare_for_tensorboard
-from nncf.common.accuracy_aware_training.runner import TrainingRunner
+from nncf.common.accuracy_aware_training.runner import BaseTrainingRunner
 from nncf.common.accuracy_aware_training.runner import BaseAccuracyAwareTrainingRunner
-from nncf.common.accuracy_aware_training.runner import BaseEarlyStoppingTrainingRunner
 
 
-class BasePTTrainingRunner(TrainingRunner):
+class PTBaseTrainingRunner(BaseTrainingRunner):
     """
     The Training Runner implementation for PyTorch training code.
     """
@@ -190,7 +189,7 @@ class BasePTTrainingRunner(TrainingRunner):
         load_state(model, resuming_model_state_dict, is_resume=True)
 
 
-class PTAccuracyAwareTrainingRunner(BasePTTrainingRunner, BaseAccuracyAwareTrainingRunner):
+class PTAccuracyAwareTrainingRunner(PTBaseTrainingRunner, BaseAccuracyAwareTrainingRunner):
     def __init__(self, accuracy_aware_config,
                  lr_updates_needed=True, verbose=True,
                  minimal_compression_rate=0.05,
@@ -206,19 +205,23 @@ class PTAccuracyAwareTrainingRunner(BasePTTrainingRunner, BaseAccuracyAwareTrain
         self._base_lr_reduction_factor_during_search = 0.5
         self.lr_updates_needed = lr_updates_needed
 
+    def update_training_history(self, compression_rate, best_metric_value):
+        best_accuracy_budget = best_metric_value - self.minimal_tolerable_accuracy
+        self._compressed_training_history.append((compression_rate, best_accuracy_budget))
 
-class PTEarlyStoppingTrainingRunner(BasePTTrainingRunner, BaseEarlyStoppingTrainingRunner):
-    """
-    The Training Runner implementation for PyTorch training code.
-    """
+        if IMG_PACKAGES_AVAILABLE:
+            plt.figure()
+            plt.plot(self.compressed_training_history.keys(),
+                     self.compressed_training_history.values())
+            buf = io.BytesIO()
+            plt.savefig(buf, format='jpeg')
+            buf.seek(0)
+            image = PIL.Image.open(buf)
+            image = ToTensor()(image)
+            self._tensorboard_writer.add_image('compression/accuracy_aware/acc_budget_vs_comp_rate',
+                                               image,
+                                               global_step=len(self.compressed_training_history))
 
-    def __init__(self, early_stopping_config,
-                 lr_updates_needed=True, verbose=True,
-                 validate_every_n_epochs=None,
-                 dump_checkpoints=True):
-        super().__init__(early_stopping_config, verbose,
-                         validate_every_n_epochs,
-                         dump_checkpoints)
-
-        self._base_lr_reduction_factor_during_search = 0.5
-        self.lr_updates_needed = lr_updates_needed
+    @property
+    def compressed_training_history(self):
+        return dict(self._compressed_training_history)

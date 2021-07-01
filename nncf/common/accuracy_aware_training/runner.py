@@ -92,18 +92,19 @@ class TrainingRunner(ABC):
         """
 
 
-class BaseEarlyStoppingTrainingRunner(TrainingRunner):
+class BaseTrainingRunner(TrainingRunner):
     """
     The base early stopping training Runner object, initialized with the default
     parameter values unless specified in the config.
     """
 
-    def __init__(self, early_stopping_config, verbose=True,
-                 validate_every_n_epochs=None, dump_checkpoints=True):
+    def __init__(self, training_config, verbose=True,
+                 validate_every_n_epochs=None, dump_checkpoints=True, lr_updates_needed=False):
         self.accuracy_budget = None
         self.validate_every_n_epochs = None
         self._compressed_training_history = []
         self._best_checkpoints = {}
+        self.lr_updates_needed = lr_updates_needed
 
         self.training_epoch_count = 0
         self.cumulative_epoch_count = 0
@@ -119,10 +120,10 @@ class BaseEarlyStoppingTrainingRunner(TrainingRunner):
         }
 
         for key in default_parameter_values:
-            setattr(self, key, early_stopping_config.get(key, default_parameter_values[key]))
+            setattr(self, key, training_config.get(key, default_parameter_values[key]))
 
-        self.maximal_accuracy_drop = early_stopping_config.get('maximal_accuracy_degradation')
-        self.maximal_total_epochs = early_stopping_config.get('maximal_total_epochs')
+        self.maximal_accuracy_drop = training_config.get('maximal_accuracy_degradation')
+        self.maximal_total_epochs = training_config.get('maximal_total_epochs')
 
     def initialize_training_loop_fns(self, train_epoch_fn, validate_fn, configure_optimizers_fn,
                                      tensorboard_writer=None, log_dir=None):
@@ -133,7 +134,7 @@ class BaseEarlyStoppingTrainingRunner(TrainingRunner):
         self._log_dir = log_dir
 
 
-class BaseAccuracyAwareTrainingRunner(TrainingRunner):
+class BaseAccuracyAwareTrainingRunner(BaseTrainingRunner):
     """
     The base accuracy-aware training Runner object, initialized with the default
     accuracy-aware parameter values unless specified in the config.

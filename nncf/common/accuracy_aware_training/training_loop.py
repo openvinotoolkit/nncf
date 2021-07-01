@@ -106,7 +106,7 @@ class EarlyStoppingCompressionTrainingLoop(TrainingLoop):
 
     def _get_early_stopping_config(self, nncf_config: NNCFConfig):
         compression_configs = nncf_config.get('compression', {})
-        early_stopping_config = compression_configs.get('early_stopping_training', None)
+        early_stopping_config = compression_configs.get('training', None)
         if early_stopping_config is None:
             raise RuntimeError('')
         return early_stopping_config
