@@ -19,22 +19,23 @@ import sysconfig
 import codecs
 import os
 import re
-import setuptools
 from setuptools import setup, find_packages
-from pkg_resources import parse_version
 
 here = os.path.abspath(os.path.dirname(__file__))
 
 with open("{}/README.md".format(here), "r") as fh:
     long_description = fh.read()
 
-setuptools_version = parse_version(setuptools.__version__).base_version
-if setuptools_version < '43.0.0':
-    raise RuntimeError(
-        "To properly install NNCF, please install setuptools>=43.0.0, "
-        "while current setuptools version is {curr}".format(
-        curr=setuptools.__version__
-    ))
+if "--tf" in sys.argv:
+    import setuptools
+    from pkg_resources import parse_version
+    setuptools_version = parse_version(setuptools.__version__).base_version
+    if setuptools_version < '43.0.0':
+        raise RuntimeError(
+            "To properly install NNCF, please install setuptools>=43.0.0, "
+            "while current setuptools version is {curr}".format(
+            curr=setuptools.__version__
+        ))
 
 
 def read(*parts):
