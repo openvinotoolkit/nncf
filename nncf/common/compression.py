@@ -113,7 +113,12 @@ class BaseCompressionAlgorithmController(CompressionAlgorithmController):
         """
         if self.name in state:
             algo_state = state[self.name]
-            self._handle_legacy_compression_level(algo_state)
+            if self._state_names.COMPRESSION_STAGE in state:
+                if self.compression_stage() != state[self._state_names.COMPRESSION_STAGE]:
+                    nncf_logger.warning('Current CompressionStage ({}) of the compression controller does '
+                                        'not correspond to the value found in '
+                                        'the checkpoint ({})'.format(self.compression_stage(),
+                                                                     state[self._state_names.COMPRESSION_STAGE]))
             self.loss.load_state(algo_state[self._state_names.LOSS])
             self.scheduler.load_state(algo_state[self._state_names.SCHEDULER])
 
@@ -146,23 +151,6 @@ class BaseCompressionAlgorithmController(CompressionAlgorithmController):
             self.BUILDER_STATE: self._builder_state,
             self.CONTROLLER_STATE: self.get_state()
         }
-
-    def _handle_legacy_compression_level(self, state: Dict[str, Any]) -> None:
-        if self._state_names.COMPRESSION_LEVEL in state:
-            if self._state_names.COMPRESSION_STAGE not in state:
-                compression_level = state[self._state_names.COMPRESSION_LEVEL]
-                compression_stage = CompressionLevel.map_legacy_level_to_stage()[compression_level]
-                state[self._state_names.COMPRESSION_STAGE] = compression_stage
-            else:
-                nncf_logger.warning('Both CompressionStage and (legacy) CompressionLevel attributes '
-                                    'are specified in the checkpoint. Proceeding with the value stored '
-                                    'in CompressionStage')
-        if self._state_names.COMPRESSION_STAGE in state:
-            if self.compression_stage() != state[self._state_names.COMPRESSION_STAGE]:
-                nncf_logger.warning('Current CompressionStage ({}) of the compression controller does '
-                                    'not correspond to the value found in '
-                                    'the checkpoint ({})'.format(self.compression_stage(),
-                                                                 state[self._state_names.COMPRESSION_STAGE]))
 
 
 class BaseCompressionAlgorithmBuilder(CompressionAlgorithmBuilder):
