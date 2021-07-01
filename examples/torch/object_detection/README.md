@@ -4,7 +4,7 @@ This sample demonstrates DL model compression capabailites for object detection 
 ## Features:
 - Vanilla SSD300 / SSD512 (+ Batch Normalization), MobileNetSSD-300
 - VOC2007 / VOC2012, COCO datasets
-- Configuration file examples for sparsity and quantization
+- Configuration file examples for sparsity, quantization, filter pruning and quantization with sparsity
 - Export to ONNX compatible with OpenVINO (compatible with pre-shipped CPU extensions detection layers)
 - DataParallel and DistributedDataParallel modes
 - Tensorboard output
@@ -52,14 +52,19 @@ To export a model to OpenVINO IR and run it using Intel Deep Learning Deployment
 
 ### Results
 
-|Model|Compression algorithm|Dataset|PyTorch compressed accuracy|NNCF config file|PyTorch checkpoint|
+|Model|Compression algorithm|Dataset|mAP (drop) %|NNCF config file|PyTorch checkpoint|
 | :---: | :---: | :---: | :---: | :---: | :---: |
 |SSD300-MobileNet|None|VOC12+07 train, VOC07 eval|62.23|[ssd300_mobilenet_voc.json](configs/ssd300_mobilenet_voc.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/ssd300_mobilenet_voc.pth)|
-|SSD300-MobileNet|INT8 + Sparsity 70% (Magnitude)|VOC12+07 train, VOC07 eval|62.94|[ssd300_mobilenet_voc_magnitude_int8.json](configs/ssd300_mobilenet_voc_magnitude_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/ssd300_mobilenet_voc_magnitude_sparsity_int8.pth)|
+|SSD300-MobileNet|INT8 + Sparsity 70% (Magnitude)|VOC12+07 train, VOC07 eval|62.94 (+0.71)|[ssd300_mobilenet_voc_magnitude_int8.json](configs/ssd300_mobilenet_voc_magnitude_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/ssd300_mobilenet_voc_magnitude_sparsity_int8.pth)|
 |SSD300-VGG-BN|None|VOC12+07 train, VOC07 eval|78.28|[ssd300_vgg_voc.json](configs/ssd300_vgg_voc.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/ssd300_vgg_voc.pth)|
-|SSD300-VGG-BN|INT8|VOC12+07 train, VOC07 eval|77.96|[ssd300_vgg_voc_int8.json](configs/ssd300_vgg_voc_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/ssd300_vgg_voc_int8.pth)|
-|SSD300-VGG-BN|INT8 + Sparsity 70% (Magnitude)|VOC12+07 train, VOC07 eval|77.59|[ssd300_vgg_voc_magnitude_sparsity_int8.json](configs/ssd300_vgg_voc_magnitude_sparsity_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/ssd300_vgg_voc_magnitude_sparsity_int8.pth)|
-|SSD300-VGG-BN|Filter pruning, 40%, geometric median criterion|VOC12+07 train, VOC07 eval|77.72|[ssd300_vgg_voc_pruning_geometric_median.json](configs/ssd300_vgg_voc_pruning_geometric_median.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/ssd300_vgg_voc_pruning_geometric_median.pth)|
+|SSD300-VGG-BN|INT8|VOC12+07 train, VOC07 eval|77.96 (-0.32)|[ssd300_vgg_voc_int8.json](configs/ssd300_vgg_voc_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/ssd300_vgg_voc_int8.pth)|
+|SSD300-VGG-BN|INT8 + Sparsity 70% (Magnitude)|VOC12+07 train, VOC07 eval|77.59 (-0.69)|[ssd300_vgg_voc_magnitude_sparsity_int8.json](configs/ssd300_vgg_voc_magnitude_sparsity_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/ssd300_vgg_voc_magnitude_sparsity_int8.pth)|
 |SSD512-VGG-BN|None|VOC12+07 train, VOC07 eval|80.26|[ssd512_vgg_voc.json](configs/ssd512_vgg_voc.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/ssd512_vgg_voc.pth)|
-|SSD512-VGG-BN|INT8|VOC12+07 train, VOC07 eval|80.12|[ssd512_vgg_voc_int8.json](configs/ssd512_vgg_voc_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/ssd512_vgg_voc_int8.pth)|
-|SSD512-VGG-BN|INT8 + Sparsity 70% (Magnitude)|VOC12+07 train, VOC07 eval|79.67|[ssd512_vgg_voc_magnitude_sparsity_int8.json](configs/ssd512_vgg_voc_magnitude_sparsity_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/ssd512_vgg_voc_magnitude_sparsity_int8.pth)|
+|SSD512-VGG-BN|INT8|VOC12+07 train, VOC07 eval|80.12 (-0.14)|[ssd512_vgg_voc_int8.json](configs/ssd512_vgg_voc_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/ssd512_vgg_voc_int8.pth)|
+|SSD512-VGG-BN|INT8 + Sparsity 70% (Magnitude)|VOC12+07 train, VOC07 eval|79.67 (-0.59)|[ssd512_vgg_voc_magnitude_sparsity_int8.json](configs/ssd512_vgg_voc_magnitude_sparsity_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/ssd512_vgg_voc_magnitude_sparsity_int8.pth)|
+
+#### Results for filter pruning
+|Model|Compression algorithm|Dataset|mAP (drop) %|GFLOPS|MParams|NNCF config file|PyTorch checkpoint|
+| :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+|SSD300-VGG-BN|None|VOC12+07 train, VOC07 eval|78.28|61.1 (100%)|26.3 (100%)|[Link](configs/ssd300_vgg_voc.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/ssd300_vgg_voc.pth)|
+|SSD300-VGG-BN|Filter pruning 40%,<br/>geometric median criterion|VOC12+07 train, VOC07 eval|77.72 (-0.56)|25.8 (42.23%)|11.4 (43.35%)|[Link](configs/ssd300_vgg_voc_pruning_geometric_median.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/ssd300_vgg_voc_pruning_geometric_median.pth)|
