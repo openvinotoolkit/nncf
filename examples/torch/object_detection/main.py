@@ -409,11 +409,10 @@ def train(net, compression_ctrl, train_data_loader, test_data_loader, criterion,
 
             checkpoint_file_path = osp.join(config.checkpoint_save_dir, "{}_last.pth".format(get_name(config)))
             torch.save({
-                'state_dict': net.state_dict(),
+                MODEL_STATE_ATTR: net.state_dict(),
+                COMPRESSION_STATE_ATTR: compression_ctrl.get_compression_state(),
                 'optimizer': optimizer.state_dict(),
                 'epoch': epoch,
-                'scheduler': compression_ctrl.scheduler.get_state(),
-                'compression_stage': compression_stage,
             }, str(checkpoint_file_path))
             make_additional_checkpoints(checkpoint_file_path,
                                         is_best=is_best,
