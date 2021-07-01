@@ -68,7 +68,7 @@ if python_version < (3, 6, 2):
 version_string = "{}{}".format(sys.version_info[0], sys.version_info[1])
 
 _extra_deps = [
-    "tensorflow==2.4.0",
+    "tensorflow==2.4.2",
     "torch>=1.5.0, <=1.8.1, !=1.8.0",
 ]
 
