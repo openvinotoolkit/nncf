@@ -16,14 +16,15 @@ from abc import ABC
 from abc import abstractmethod
 from nncf.api.compression import CompressionAlgorithmController
 
-
 ModelType = TypeVar('ModelType')
+
 
 class TrainingRunner(ABC):
     """
     Runner is an object that is used by a TrainingLoop instance to control the training process
     via wrapping user-supplied functions such as `train_epoch_fn` and `validate_fn`.
     """
+
     @abstractmethod
     def train_epoch(self, model: ModelType, compression_controller: CompressionAlgorithmController):
         """
@@ -91,15 +92,56 @@ class TrainingRunner(ABC):
         """
 
 
+class BaseEarlyStoppingTrainingRunner(TrainingRunner):
+    """
+    The base early stopping training Runner object, initialized with the default
+    parameter values unless specified in the config.
+    """
+
+    def __init__(self, early_stopping_config, verbose=True,
+                 validate_every_n_epochs=None, dump_checkpoints=True):
+        self.accuracy_budget = None
+        self.validate_every_n_epochs = None
+        self._compressed_training_history = []
+        self._best_checkpoints = {}
+
+        self.training_epoch_count = 0
+        self.cumulative_epoch_count = 0
+        self.best_val_metric_value = 0
+
+        self.validate_every_n_epochs = validate_every_n_epochs
+        self.dump_checkpoints = dump_checkpoints
+        self.verbose = verbose
+
+        default_parameter_values = {
+            'is_higher_metric_better': True,
+            'maximal_total_epochs': float('inf'),
+        }
+
+        for key in default_parameter_values:
+            setattr(self, key, early_stopping_config.get(key, default_parameter_values[key]))
+
+        self.maximal_accuracy_drop = early_stopping_config.get('maximal_accuracy_degradation')
+        self.maximal_total_epochs = early_stopping_config.get('maximal_total_epochs')
+
+    def initialize_training_loop_fns(self, train_epoch_fn, validate_fn, configure_optimizers_fn,
+                                     tensorboard_writer=None, log_dir=None):
+        self._train_epoch_fn = train_epoch_fn
+        self._validate_fn = validate_fn
+        self._configure_optimizers_fn = configure_optimizers_fn
+        self._tensorboard_writer = tensorboard_writer
+        self._log_dir = log_dir
+
+
 class BaseAccuracyAwareTrainingRunner(TrainingRunner):
     """
     The base accuracy-aware training Runner object, initialized with the default
     accuracy-aware parameter values unless specified in the config.
     """
+
     def __init__(self, accuracy_aware_config, verbose=True,
                  minimal_compression_rate=0.05, maximal_compression_rate=0.95,
                  validate_every_n_epochs=None, dump_checkpoints=True):
-
         self.accuracy_bugdet = None
         self.validate_every_n_epochs = None
         self.compression_rate_target = None

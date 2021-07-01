@@ -37,30 +37,15 @@ from nncf.torch.accuracy_aware_training.utils import is_main_process
 from nncf.common.utils.helpers import configure_accuracy_aware_paths
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.common.utils.tensorboard import prepare_for_tensorboard
+from nncf.common.accuracy_aware_training.runner import TrainingRunner
 from nncf.common.accuracy_aware_training.runner import BaseAccuracyAwareTrainingRunner
+from nncf.common.accuracy_aware_training.runner import BaseEarlyStoppingTrainingRunner
 
 
-
-# pylint: disable=E1101
-class PTAccuracyAwareTrainingRunner(BaseAccuracyAwareTrainingRunner):
+class BasePTTrainingRunner(TrainingRunner):
     """
     The Training Runner implementation for PyTorch training code.
     """
-    def __init__(self, accuracy_aware_config,
-                 lr_updates_needed=True, verbose=True,
-                 minimal_compression_rate=0.05,
-                 maximal_compression_rate=0.95,
-                 validate_every_n_epochs=None,
-                 dump_checkpoints=True):
-
-        super().__init__(accuracy_aware_config, verbose,
-                         minimal_compression_rate,
-                         maximal_compression_rate,
-                         validate_every_n_epochs,
-                         dump_checkpoints)
-
-        self._base_lr_reduction_factor_during_search = 0.5
-        self.lr_updates_needed = lr_updates_needed
 
     def initialize_training_loop_fns(self, train_epoch_fn, validate_fn, configure_optimizers_fn,
                                      tensorboard_writer=None, log_dir=None):
@@ -173,7 +158,7 @@ class PTAccuracyAwareTrainingRunner(BaseAccuracyAwareTrainingRunner):
         if IMG_PACKAGES_AVAILABLE:
             plt.figure()
             plt.plot(self.compressed_training_history.keys(),
-                    self.compressed_training_history.values())
+                     self.compressed_training_history.values())
             buf = io.BytesIO()
             plt.savefig(buf, format='jpeg')
             buf.seek(0)
@@ -203,3 +188,37 @@ class PTAccuracyAwareTrainingRunner(BaseAccuracyAwareTrainingRunner):
         resuming_checkpoint = torch.load(resuming_checkpoint_path, map_location='cpu')
         resuming_model_state_dict = resuming_checkpoint.get('state_dict', resuming_checkpoint)
         load_state(model, resuming_model_state_dict, is_resume=True)
+
+
+class PTAccuracyAwareTrainingRunner(BasePTTrainingRunner, BaseAccuracyAwareTrainingRunner):
+    def __init__(self, accuracy_aware_config,
+                 lr_updates_needed=True, verbose=True,
+                 minimal_compression_rate=0.05,
+                 maximal_compression_rate=0.95,
+                 validate_every_n_epochs=None,
+                 dump_checkpoints=True):
+        super().__init__(accuracy_aware_config, verbose,
+                         minimal_compression_rate,
+                         maximal_compression_rate,
+                         validate_every_n_epochs,
+                         dump_checkpoints)
+
+        self._base_lr_reduction_factor_during_search = 0.5
+        self.lr_updates_needed = lr_updates_needed
+
+
+class PTEarlyStoppingTrainingRunner(BasePTTrainingRunner, BaseEarlyStoppingTrainingRunner):
+    """
+    The Training Runner implementation for PyTorch training code.
+    """
+
+    def __init__(self, early_stopping_config,
+                 lr_updates_needed=True, verbose=True,
+                 validate_every_n_epochs=None,
+                 dump_checkpoints=True):
+        super().__init__(early_stopping_config, verbose,
+                         validate_every_n_epochs,
+                         dump_checkpoints)
+
+        self._base_lr_reduction_factor_during_search = 0.5
+        self.lr_updates_needed = lr_updates_needed

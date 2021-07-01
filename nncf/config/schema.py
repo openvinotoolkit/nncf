@@ -388,12 +388,23 @@ ACCURACY_AWARE_SCHEMA = {
                                                          "the adaptive compression training loop"),
 }
 
+EARLY_STOPPING_TRAINING_SCHEMA = {
+    "maximal_accuracy_degradation": with_attributes(_NUMBER,
+                                                    description="Maximally allowed accuracy degradation"
+                                                                " of the model (in percent relative to"
+                                                                " the original model accuracy)"),
+    "maximal_total_epochs":  with_attributes(_NUMBER,
+                                             description="The maximal total epoch budget for "
+                                                         "the adaptive compression training loop"),
+}
+
 COMMON_COMPRESSION_ALGORITHM_PROPERTIES = {
     "ignored_scopes": with_attributes(make_string_or_array_of_strings_schema(),
                                       description=IGNORED_SCOPES_DESCRIPTION),
     "target_scopes": with_attributes(make_string_or_array_of_strings_schema(),
                                      description=TARGET_SCOPES_DESCRIPTION),
     "accuracy_aware_training": ACCURACY_AWARE_SCHEMA,
+    "early_stopping_training": EARLY_STOPPING_TRAINING_SCHEMA,
 }
 
 BASIC_COMPRESSION_ALGO_SCHEMA = {

@@ -29,4 +29,6 @@ def is_accuracy_aware_training(config: NNCFConfig,
         return False
     if compression_config.get("accuracy_aware_training") is not None:
         return True
+    if compression_config.get("early_stopping_training") is not None:
+        return True
     return False
