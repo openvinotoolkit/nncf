@@ -91,7 +91,8 @@ def create_compressed_model(model: Module,
                          "building, then the wrap_inputs_fn parameter MUST also be specified and be consistent with "
                          "the input wrapping done in dummy_forward_fn.")
 
-    is_legacy_model_state_dict = BaseController.BUILDER_STATE not in compression_state and \
+    is_legacy_model_state_dict = compression_state is not None and \
+                                 BaseController.BUILDER_STATE not in compression_state and \
                                  BaseController.CONTROLLER_STATE not in compression_state
 
     # Compress model that will be deployed for the inference on target device. No need to compress parts of the
@@ -135,12 +136,13 @@ def create_compressed_model(model: Module,
                                    scopes_without_shape_matching=scopes_without_shape_matching,
                                    original_model_accuracy=original_model_accuracy)
 
-    compression_builder = create_compression_algorithm_builder(config, should_init=not compression_state)
-    if compression_state:
+    compression_builder = create_compression_algorithm_builder(config, should_init=compression_state is None)
+    is_state_loadable = not is_legacy_model_state_dict and compression_state is not None
+    if is_state_loadable:
         compression_builder.load_state(compression_state[BaseController.BUILDER_STATE])
     compression_builder.apply_to(compressed_model)
     compression_ctrl = compression_builder.build_controller(compressed_model)
-    if compression_state:
+    if is_state_loadable:
         compression_ctrl.load_state(compression_state[BaseController.CONTROLLER_STATE])
 
     # Required to ensure that the model leaving create_compressed_model has correct compressed graph.
