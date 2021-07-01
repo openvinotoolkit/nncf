@@ -20,11 +20,11 @@ from typing import TypeVar
 from nncf.common.graph.definitions import NNCFGraphNodeType
 from nncf.common.graph.layer_attributes import BaseLayerAttributes
 from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
-from nncf.common.graph.operator_metatypes import InputNoopMetatype
-from nncf.common.graph.operator_metatypes import NoopMetatype
+from nncf.common.graph.operator_metatypes import INPUT_NOOP_METATYPES
+from nncf.common.graph.operator_metatypes import NOOP_METATYPES
+from nncf.common.graph.operator_metatypes import OUTPUT_NOOP_METATYPES
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.operator_metatypes import OperatorMetatypeRegistry
-from nncf.common.graph.operator_metatypes import OutputNoopMetatype
 from nncf.common.hardware.opset import HWConfigOpName
 from nncf.torch.dynamic_graph.trace_functions import CustomTraceFunction
 from nncf.torch.dynamic_graph.trace_functions import ForwardTraceOnly
@@ -133,19 +133,22 @@ class PTOperatorSubtype(PTOperatorMetatype):
 
 
 @PT_OPERATOR_METATYPES.register()
-class PTInputNoopMetatype(InputNoopMetatype, PTOperatorMetatype):
+@INPUT_NOOP_METATYPES.register()
+class PTInputNoopMetatype(PTOperatorMetatype):
     name = "input_noop"
     external_op_names = [name, NNCFGraphNodeType.INPUT_NODE]
 
 
 @PT_OPERATOR_METATYPES.register()
-class PTOutputNoopMetatype(OutputNoopMetatype, PTOperatorMetatype):
+@OUTPUT_NOOP_METATYPES.register()
+class PTOutputNoopMetatype(PTOperatorMetatype):
     name = "output_noop"
     external_op_names = [name, NNCFGraphNodeType.OUTPUT_NODE]
 
 
 @PT_OPERATOR_METATYPES.register()
-class PTNoopMetatype(NoopMetatype, PTOperatorMetatype):
+@NOOP_METATYPES.register()
+class PTNoopMetatype(PTOperatorMetatype):
     name = "noop"
     external_op_names = [name]
 

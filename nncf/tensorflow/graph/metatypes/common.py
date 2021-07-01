@@ -13,7 +13,6 @@
 
 from typing import List, Type
 
-import nncf.common.graph.operator_metatypes
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.tensorflow.graph.metatypes import keras_layers as layer_metatypes
 from nncf.tensorflow.graph.metatypes import tf_ops as op_metatypes
@@ -111,15 +110,6 @@ ELEMENTWISE_LAYER_METATYPES = [
     layer_metatypes.TFRescalingLayerMetatype,
     op_metatypes.TFAddOpMetatype,
     op_metatypes.TFMulOpMetatype
-]
-
-INPUT_LAYER_METATYPES = [
-    nncf.common.graph.operator_metatypes.InputNoopMetatype,
-    layer_metatypes.TFInputLayerMetatype
-]
-
-OUTPUT_LAYER_METATYPES = [
-    nncf.common.graph.operator_metatypes.OutputNoopMetatype,
 ]
 
 

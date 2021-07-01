@@ -46,3 +46,6 @@ class Registry:
 
     def _key_not_found(self, name):
         raise KeyError('{} is unknown type of {} '.format(name, self._name))
+
+    def __contains__(self, item):
+        return item in self._registry_dict.values()

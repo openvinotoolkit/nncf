@@ -16,17 +16,13 @@
 This package defines the API for the NNCF compression methods so that the user could
 extend the existing algorithms.
 """
-from typing import Any
 from typing import List, Tuple, TypeVar, Dict
-from typing import Optional
 
 import torch
 from torch import nn
 
-from nncf.common.exporter import Exporter
 from nncf.common.graph import NNCFNodeName
 from nncf.config import NNCFConfig
-from nncf.torch.exporter import PTExporter
 from nncf.torch.graph.transformations.layout import PTTransformationLayout
 from nncf.torch.layers import NNCF_MODULES_DICT, NNCF_WRAPPED_USER_MODULES_DICT
 from nncf.common.utils.logger import logger as nncf_logger
@@ -133,14 +129,6 @@ class PTCompressionAlgorithmController(BaseCompressionAlgorithmController):
         """
         return {'scheduler': self.scheduler.get_state(),
                 'compression_stage': self.compression_stage()}
-
-    def _create_exporter(self,
-                         model: ModelType,
-                         input_names: Optional[List[str]] = None,
-                         output_names: Optional[List[str]] = None,
-                         model_args: Optional[Tuple[Any, ...]] = None) -> Exporter:
-        return PTExporter(model, input_names, output_names, model_args)
-
 
 
 class PTCompressionAlgorithmBuilder(CompressionAlgorithmBuilder):

@@ -23,9 +23,9 @@ from networkx.drawing.nx_agraph import to_agraph
 from nncf.common.graph.graph_matching import get_edge_boundaries
 from nncf.common.graph.layer_attributes import BaseLayerAttributes
 from nncf.common.graph.layer_attributes import Dtype
+from nncf.common.graph.operator_metatypes import INPUT_NOOP_METATYPES
+from nncf.common.graph.operator_metatypes import OUTPUT_NOOP_METATYPES
 from nncf.common.graph.operator_metatypes import OperatorMetatype
-from nncf.common.graph.operator_metatypes import InputNoopMetatype
-from nncf.common.graph.operator_metatypes import OutputNoopMetatype
 from nncf.common.utils.logger import logger as nncf_logger
 
 NNCFNodeName = str
@@ -394,10 +394,10 @@ class NNCFGraph:
 
         node = NNCFNode(node_id, data=attrs)
 
-        if issubclass(node.metatype, InputNoopMetatype):
+        if node.metatype in INPUT_NOOP_METATYPES:
             self._input_nncf_nodes[node_id] = node
 
-        if issubclass(node.metatype, OutputNoopMetatype):
+        if node.metatype in OUTPUT_NOOP_METATYPES:
             self._output_nncf_nodes[node_id] = node
 
         if layer_name is not None:

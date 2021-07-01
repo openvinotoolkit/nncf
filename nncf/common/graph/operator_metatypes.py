@@ -120,6 +120,12 @@ class OperatorMetatypeRegistry(Registry):
         return self._op_name_to_op_meta_dict[op_name]
 
 
+NOOP_METATYPES = Registry('noop_metatypes')
+INPUT_NOOP_METATYPES = Registry('input_noop_metatypes')
+OUTPUT_NOOP_METATYPES = Registry('output_noop_metatypes')
+
+
+@NOOP_METATYPES.register()
 class NoopMetatype(OperatorMetatype):
     name = "noop"
 
@@ -128,6 +134,8 @@ class NoopMetatype(OperatorMetatype):
         return [cls.name]
 
 
+@NOOP_METATYPES.register()
+@INPUT_NOOP_METATYPES.register()
 class InputNoopMetatype(OperatorMetatype):
     name = "input_noop"
 
@@ -136,6 +144,8 @@ class InputNoopMetatype(OperatorMetatype):
         return [NNCFGraphNodeType.INPUT_NODE]
 
 
+@NOOP_METATYPES.register()
+@OUTPUT_NOOP_METATYPES.register()
 class OutputNoopMetatype(OperatorMetatype):
     name = "output_noop"
 

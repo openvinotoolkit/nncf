@@ -19,7 +19,14 @@ class BackendType(Enum):
     TORCH = 'Torch'
     TENSORFLOW = 'Tensorflow'
 
+
 def infer_backend_from_model(model) -> BackendType:
+    """
+    Returns the NNCF backend name string inferred from the type of the model object passed into this function.
+
+    :param model: The framework-specific object representing the trainable model.
+    :return: A BackendType representing the correct NNCF backend to be used when working with the framework.
+    """
     try:
         import torch
     except ImportError:

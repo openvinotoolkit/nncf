@@ -10,10 +10,6 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-from typing import Any
-from typing import List
-from typing import Optional
-from typing import Tuple
 from typing import TypeVar, Dict
 
 import json
@@ -21,8 +17,6 @@ import tensorflow as tf
 
 from nncf.api.compression import CompressionAlgorithmBuilder
 from nncf.common.compression import BaseCompressionAlgorithmController
-from nncf.common.exporter import Exporter
-from nncf.tensorflow.exporter import TFExporter
 from nncf.tensorflow.graph.model_transformer import TFModelTransformer
 
 ModelType = TypeVar('ModelType')
@@ -73,13 +67,6 @@ class TFCompressionAlgorithmController(BaseCompressionAlgorithmController, tf.tr
         """
         state = json.loads(state)
         self.load_state(state)
-
-    def _create_exporter(self,
-                         model: ModelType,
-                         input_names: Optional[List[str]] = None,
-                         output_names: Optional[List[str]] = None,
-                         model_args: Optional[Tuple[Any, ...]] = None) -> Exporter:
-        return TFExporter(model, input_names, output_names, model_args)
 
 
 class TFCompressionAlgorithmBuilder(CompressionAlgorithmBuilder):

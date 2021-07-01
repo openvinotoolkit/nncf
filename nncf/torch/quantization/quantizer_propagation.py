@@ -29,6 +29,7 @@ from nncf.common.graph.definitions import MODEL_INPUT_OP_NAME
 from nncf.common.graph.definitions import MODEL_OUTPUT_OP_NAME
 from nncf.common.graph import NNCFNode
 from nncf.common.graph import NNCFNodeName
+from nncf.common.graph.operator_metatypes import NoopMetatype
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.hardware.config import HWConfig
 from nncf.common.quantization.structs import QuantizableWeightedLayerNode
@@ -321,7 +322,7 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
                 else:
                     qpg_node[self.OPERATOR_METATYPE_NODE_ATTR] = PTOperatorMetatypeNodeMatcher.match(nncf_node_ref)
 
-                if issubclass(nncf_node_ref.metatype, InputNoopMetatype):
+                if nncf_node_ref.metatype in INPUT_NOOP_METATYPES:
                     self._input_node_keys_vs_nncf_nodes[node_key] = nncf_node_ref
 
                 if nncf_node_ref.is_in_iteration_scope():
