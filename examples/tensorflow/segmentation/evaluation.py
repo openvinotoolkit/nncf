@@ -16,8 +16,9 @@ import sys
 import tensorflow as tf
 
 from nncf.tensorflow import create_compressed_model
-from nncf.tensorflow.api.compression import TFCompressionState
 from nncf.tensorflow.helpers.model_manager import TFOriginalModelManager
+from nncf.tensorflow.utils.state import TFCompressionState
+from nncf.tensorflow.utils.state import TFCompressionStateLoader
 
 from examples.tensorflow.common.argparser import get_common_argument_parser
 from examples.tensorflow.common.distributed import get_distribution_strategy
@@ -116,6 +117,12 @@ def load_checkpoint(checkpoint, ckpt_path):
     return None
 
 
+def extract_compression_state(ckpt_path: str):
+    checkpoint = tf.train.Checkpoint(compression_state=TFCompressionStateLoader())
+    load_checkpoint(checkpoint, ckpt_path)
+    return checkpoint.compression_state.state
+
+
 def evaluate(test_step, metric, test_dist_dataset, num_batches, print_freq):
     """Runs evaluation steps and aggregate metrics"""
     timer = Timer()
@@ -165,25 +172,25 @@ def create_test_step_fn(strategy, model, predict_post_process_fn):
     return test_step
 
 
-# Maybe `ckpt_path` should be the required parameter
 def restore_compressed_model(config, strategy, model_builder, ckpt_path = None):
+    compression_state = None
+    if ckpt_path:
+        compression_state = extract_compression_state(ckpt_path)
+
     with TFOriginalModelManager(model_builder.build_model,
                                 weights=config.get('weights', None),
                                 is_training=False) as model:
         with strategy.scope():
-            compression_state = TFCompressionState()
-            checkpoint = tf.train.Checkpoint()
-            if ckpt_path:
-                load_checkpoint(checkpoint, ckpt_path)
-                checkpoint.compression_state = compression_state  # Compression state was restored
             compression_ctrl, compress_model = create_compressed_model(model,
                                                                        config.nncf_config,
                                                                        compression_state)
 
             variables = get_variables(compress_model)
-            checkpoint.variables = variables  # Compressed model was restored
-            checkpoint.compression_state = compression_ctrl.get_compression_state()  # New compression state was assigned
-            checkpoint.step = tf.Variable(0)  # Step was restored
+            checkpoint = tf.train.Checkpoint(variables=variables,
+                                             compression_state=TFCompressionState(compression_ctrl),
+                                             step=tf.Variable(0))
+            if ckpt_path:
+                load_checkpoint(checkpoint, config.ckpt_path)
 
     return compression_ctrl, compress_model, checkpoint
 

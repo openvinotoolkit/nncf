@@ -16,12 +16,14 @@ from functools import partial
 import tensorflow as tf
 
 from examples.tensorflow.classification.main import load_checkpoint
+from examples.tensorflow.classification.main import extract_compression_state
 from nncf import NNCFConfig
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.tensorflow import create_compression_callbacks
-from nncf.tensorflow.api.compression import TFCompressionState
+from nncf.tensorflow.utils.state import TFCompressionState
+from nncf.tensorflow.utils.state import TFCompressionStateLoader
 from nncf.tensorflow.callbacks.checkpoint_callback import CheckpointManagerCallback
 from nncf.tensorflow.graph.transformations.commands import TFAfterLayer
 from nncf.tensorflow.graph.transformations.commands import TFBeforeLayer
@@ -57,7 +59,6 @@ def test_quantization_configs__on_resume_with_compression_state(tmp_path, mocker
     check_serialization(saved_quantizer_setup, _quantization_setup_cmp)
 
     compression_state_to_load = _save_and_load_compression_state(compression_ctrl, tmp_path)
-    loaded_builder_state = compression_state_to_load.builder_state
 
     init_spy.reset_mock()
     gen_setup_spy.reset_mock()
@@ -71,7 +72,7 @@ def test_quantization_configs__on_resume_with_compression_state(tmp_path, mocker
     check_default_qspecs(compression_model)
 
     builder = QuantizationBuilder(NNCFConfig())
-    builder.load_state(loaded_builder_state)
+    builder.load_state(compression_state_to_load['builder_state'])
     # pylint:disable=protected-access
     loaded_quantizer_setup = builder._quantizer_setup
     assert _quantization_setup_cmp(loaded_quantizer_setup, saved_quantizer_setup)
@@ -79,13 +80,12 @@ def test_quantization_configs__on_resume_with_compression_state(tmp_path, mocker
 
 def _save_and_load_compression_state(compression_ctrl, tmp_path):
     checkpoint_path = tmp_path / 'compression_state'
-    compression_state_to_save = compression_ctrl.get_compression_state()
-    checkpoint_to_save = tf.train.Checkpoint(compression_state=compression_state_to_save)
+    checkpoint_to_save = tf.train.Checkpoint(compression_state=TFCompressionState(compression_ctrl))
     checkpoint_to_save.save(checkpoint_path)
-    compression_state_to_load = TFCompressionState()
-    checkpoint_to_load = tf.train.Checkpoint(compression_state=compression_state_to_load)
-    load_checkpoint(checkpoint=checkpoint_to_load, ckpt_path=str(checkpoint_path.parent))
-    return compression_state_to_load
+
+    compression_state = extract_compression_state(str(checkpoint_path.parent))
+
+    return compression_state
 
 
 def test_quantization_configs__disable_saturation_fix_and_resume_from_compression_state(tmp_path):
@@ -124,8 +124,7 @@ def test_checkpoint_callback_make_checkpoints(mocker, tmp_path):
     model.compile(loss=tf.losses.CategoricalCrossentropy())
 
     ckpt_path = tmp_path / 'checkpoint'
-    compression_state = compression_ctrl.get_compression_state()
-    ckpt = tf.train.Checkpoint(model=model, compression_state=compression_state)
+    ckpt = tf.train.Checkpoint(model=model, compression_state=TFCompressionState(compression_ctrl))
     model.fit(dummy_x, dummy_y,
               epochs=5,
               batch_size=2,
@@ -133,18 +132,16 @@ def test_checkpoint_callback_make_checkpoints(mocker, tmp_path):
 
     assert sorted(os.listdir(ckpt_path)) == REF_CKPT_DIR[save_freq]
 
-    new_compression_state = TFCompressionState()
-    compression_ckpt = tf.train.Checkpoint(compression_state=new_compression_state)
-    compression_ckpt.restore(tf.train.latest_checkpoint(ckpt_path))
+    new_compression_state = extract_compression_state(ckpt_path)
 
     new_model, new_compression_ctrl = create_compressed_model_and_algo_for_test(get_basic_conv_test_model(),
                                                                                 config, new_compression_state)
     new_model.compile(loss=tf.losses.CategoricalCrossentropy())
-    new_ckpt = tf.train.Checkpoint(model=new_model, compression_state=compression_state)
-    new_ckpt.restore(tf.train.latest_checkpoint(ckpt_path))
+    new_ckpt = tf.train.Checkpoint(model=new_model, compression_state=TFCompressionState(new_compression_ctrl))
+    load_checkpoint(new_ckpt, ckpt_path)
 
     builder = QuantizationBuilder(NNCFConfig())
-    builder.load_state(new_compression_state.builder_state)
+    builder.load_state(new_compression_state['builder_state'])
     # pylint:disable=protected-access
     new_quantizer_setup = builder._quantizer_setup
 

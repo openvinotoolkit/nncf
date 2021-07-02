@@ -35,6 +35,7 @@ class BaseCompressionAlgorithmController(CompressionAlgorithmController):
     """
     Contains the implementation of the basic functionality of the compression controller.
     """
+
     BUILDER_STATE = 'builder_state'
     CONTROLLER_STATE = 'ctrl_state'
 
@@ -199,9 +200,6 @@ class BaseCompressionAlgorithmBuilder(CompressionAlgorithmBuilder):
         :return: The instance of the `BaseCompressionAlgorithmController`.
         """
         ctrl = self._build_controller(model)
-        if not isinstance(ctrl, BaseCompressionAlgorithmController):
-            raise RuntimeError('Internal error: builder must create controller inherited from '
-                               '`BaseCompressionAlgorithmController` class')
         ctrl.set_builder_state_with_name(self.name, self.get_state())
         return ctrl
 
