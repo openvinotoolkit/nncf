@@ -402,5 +402,4 @@ def default_distributed_unwrapper(model: nn.Module):
     """
     if isinstance(model, (torch.nn.parallel.DataParallel, torch.nn.parallel.DistributedDataParallel)):
         return model.module
-    else:
-        return model
+    return model

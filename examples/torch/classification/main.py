@@ -10,13 +10,12 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-import os.path as osp
 import sys
 import time
-from copy import deepcopy
 from pathlib import Path
 from typing import Any
 
+import os.path as osp
 import torch
 import torch.backends.cudnn as cudnn
 import torch.nn as nn
@@ -28,6 +27,7 @@ import torchvision.datasets as datasets
 import torchvision.models as models
 import torchvision.transforms as transforms
 import warnings
+from copy import deepcopy
 from functools import partial
 from shutil import copyfile
 from torch.nn.modules.loss import _Loss
@@ -35,13 +35,12 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torchvision.datasets import CIFAR10, CIFAR100
 from torchvision.models import InceptionOutputs
 
-from examples.torch.common.execution import set_seed
-from nncf.common.utils.tensorboard import prepare_for_tensorboard
-from nncf.config.utils import is_accuracy_aware_training
+from examples.torch.classification.common import load_resuming_checkpoint
 from examples.torch.common.argparser import get_common_argument_parser
 from examples.torch.common.example_logger import logger
 from examples.torch.common.execution import ExecutionMode, get_execution_mode, \
     prepare_model_for_execution, start_worker
+from examples.torch.common.execution import set_seed
 from examples.torch.common.model_loader import load_model
 from examples.torch.common.optimizer import get_parameter_groups, make_optimizer
 from examples.torch.common.sample_config import SampleConfig, create_sample_config
@@ -49,14 +48,15 @@ from examples.torch.common.utils import configure_logging, configure_paths, crea
     print_args, make_additional_checkpoints, get_name, is_staged_quantization, \
     is_pretrained_model_requested, log_common_mlflow_params, SafeMLFLow, MockDataset, configure_device
 from examples.torch.common.utils import write_metrics
+from nncf.api.compression import CompressionStage
+from nncf.common.utils.tensorboard import prepare_for_tensorboard
+from nncf.config.utils import is_accuracy_aware_training
 from nncf.torch import AdaptiveCompressionTrainingLoop
 from nncf.torch import create_compressed_model
-from nncf.api.compression import CompressionStage
 from nncf.torch.dynamic_graph.graph_tracer import create_input_infos
 from nncf.torch.initialization import register_default_init_args, default_criterion_fn
 from nncf.torch.structures import ExecutionParameters
 from nncf.torch.utils import safe_thread_call, is_main_process
-from examples.torch.classification.common import load_resuming_checkpoint
 
 model_names = sorted(name for name in models.__dict__
                      if name.islower() and not name.startswith("__")
@@ -149,7 +149,7 @@ def main_worker(current_gpu, config: SampleConfig):
             train_epoch(loader, model, criterion, train_criterion_fn, optimizer, compression_ctrl, 0, config,
                         train_iters=train_steps, log_training_info=False)
 
-        def validate_fn(model, eval_loader):
+        def validate_model_fn(model, eval_loader):
             top1, top5, loss = validate(eval_loader, model, criterion, config, log_validation_info=False)
             return top1, top5, loss
 
@@ -165,8 +165,8 @@ def main_worker(current_gpu, config: SampleConfig):
             criterion=criterion,
             criterion_fn=train_criterion_fn,
             train_steps_fn=train_steps_fn,
-            validate_fn=validate_fn,
-            autoq_eval_fn=lambda *x: validate_fn(*x)[1],
+            validate_fn=validate_model_fn,
+            autoq_eval_fn=lambda *x: validate_model_fn(*x)[1],
             val_loader=val_loader,
             model_eval_fn=model_eval_fn,
             device=config.device,
@@ -229,7 +229,7 @@ def main_worker(current_gpu, config: SampleConfig):
             # validation function that returns the target metric value
             # pylint: disable=E1123
             def validate_fn(model, epoch):
-                top1, _ = validate(val_loader, model, criterion, config, epoch=epoch)
+                top1, _, _ = validate(val_loader, model, criterion, config, epoch=epoch)
                 return top1
 
             # training function that trains the model for one epoch (full training dataset pass)

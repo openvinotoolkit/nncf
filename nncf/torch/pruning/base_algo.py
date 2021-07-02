@@ -205,7 +205,7 @@ class BasePruningAlgoController(PTCompressionAlgorithmController):
             h.remove()
         self._hooks = []
 
-    def _get_mask(self, minfo: PrunedModuleInfo):
+    def get_mask(self, minfo: PrunedModuleInfo):
         """
         Returns pruning mask for minfo.module.
         """
@@ -232,12 +232,12 @@ class BasePruningAlgoController(PTCompressionAlgorithmController):
         return pruning_rate
 
     def pruning_rate_for_mask(self, minfo: PrunedModuleInfo):
-        mask = self._get_mask(minfo)
+        mask = self.get_mask(minfo)
         pruning_rate = 1 - mask.nonzero().size(0) / max(mask.view(-1).size(0), 1)
         return pruning_rate
 
     def mask_shape(self, minfo: PrunedModuleInfo):
-        mask = self._get_mask(minfo)
+        mask = self.get_mask(minfo)
         return mask.shape
 
     def get_stats_for_pruned_modules(self):

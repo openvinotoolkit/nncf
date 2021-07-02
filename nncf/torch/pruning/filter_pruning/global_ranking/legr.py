@@ -10,11 +10,11 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-from nncf.torch.pruning.filter_pruning.global_ranking.evolutionary_optimization import LeGRPruner, EvolutionOptimizer, \
-    LeGREvolutionEnv
+import time
 
 from nncf.common.utils.logger import logger as nncf_logger
-import time
+from nncf.torch.pruning.filter_pruning.global_ranking.evolutionary_optimization import LeGRPruner, EvolutionOptimizer, \
+    LeGREvolutionEnv
 
 
 class LeGR:
@@ -31,7 +31,8 @@ class LeGR:
         }
         self.agent = EvolutionOptimizer(init_filter_norms, agent_hparams, random_seed)
         self.env = LeGREvolutionEnv(self.pruner, target_model, legr_init_args.train_loader,
-                                    legr_init_args.val_loader, legr_init_args.train_steps_fn, legr_init_args.train_optimizer,
+                                    legr_init_args.val_loader, legr_init_args.train_steps_fn,
+                                    legr_init_args.train_optimizer,
                                     legr_init_args.val_fn, legr_init_args.config,
                                     train_steps, max_pruning)
 

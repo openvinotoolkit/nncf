@@ -1,4 +1,5 @@
 import math
+from contextlib import contextmanager
 from typing import Any
 from typing import Callable
 from typing import Dict
@@ -10,17 +11,16 @@ from functools import partial
 from torch.nn.modules.loss import _Loss
 from torch.utils.data import DataLoader
 
-from nncf.common.utils.logger import logger as nncf_logger
-from nncf.config.structures import BNAdaptationInitArgs
-from nncf.config.structures import QuantizationRangeInitArgs
-from nncf.config.structures import ModelEvaluationArgs
-from nncf.common.utils.progress_bar import ProgressBar
 from nncf.common.initialization.dataloader import NNCFDataLoader
+from nncf.common.utils.logger import logger as nncf_logger
+from nncf.common.utils.progress_bar import ProgressBar
+from nncf.config.structures import BNAdaptationInitArgs
+from nncf.config.structures import ModelEvaluationArgs
+from nncf.config.structures import QuantizationRangeInitArgs
 from nncf.torch.structures import AutoQPrecisionInitArgs, LeGRInitArgs, DistributedCallbacksArgs
 from nncf.torch.structures import QuantizationPrecisionInitArgs
 from nncf.torch.utils import is_tensor, default_distributed_wrapper, default_distributed_unwrapper
 from nncf.torch.utils import objwalk
-from contextlib import contextmanager
 
 
 class PTInitializingDataLoader(NNCFDataLoader):
@@ -265,9 +265,7 @@ def register_default_init_args(nncf_config: 'NNCFConfig',
                                distributed_callbacks: Tuple[Callable, Callable] = None,
                                execution_parameters: 'ExecutionParameters' = None,
                                legr_train_optimizer: torch.optim.Optimizer = None,
-                               device: str = None,) -> 'NNCFConfig':
-
-    # nncf_config.register_extra_structs([QuantizationRangeInitArgs(data_loader=init_loader,
+                               device: str = None, ) -> 'NNCFConfig':
     nncf_config.register_extra_structs([QuantizationRangeInitArgs(data_loader=wrap_dataloader_for_init(train_loader),
                                                                   device=device),
                                         BNAdaptationInitArgs(data_loader=wrap_dataloader_for_init(train_loader),

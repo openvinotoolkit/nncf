@@ -26,7 +26,7 @@ from tests.common.helpers import TEST_ROOT
 from tests.torch.helpers import Command
 from tests.common.helpers import get_cli_dict_args
 from tests.torch.test_sanity_sample import create_command_line, update_compression_algo_dict_with_legr_save_load_params
-
+# pylint: disable=redefined-outer-name
 # sample
 # ├── dataset
 # │   ├── path
@@ -228,7 +228,6 @@ def case_common_dirs(tmp_path_factory):
     return {
         "save_coeffs_path": str(tmp_path_factory.mktemp("ranking_coeffs")),
     }
-
 
 
 @pytest.mark.dependency(name="train")

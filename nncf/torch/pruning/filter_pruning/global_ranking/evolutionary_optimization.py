@@ -11,13 +11,14 @@
  limitations under the License.
 """
 import queue
-from functools import partial
 
 import numpy as np
 import torch
 from copy import deepcopy, copy
-from nncf.torch.utils import get_filters_num
+from functools import partial
 from torch import optim
+
+from nncf.torch.utils import get_filters_num
 
 
 class EvolutionOptimizer:
@@ -209,8 +210,8 @@ class LeGRPruner:
     def _reset_masks(self):
         for minfo in self.filter_pruner.pruned_module_groups_info.get_all_nodes():
             new_mask = torch.ones(get_filters_num(minfo.module)).to(
-                    minfo.module.weight.device)
-            self.filter_pruner._set_mask(minfo, new_mask)
+                minfo.module.weight.device)
+            self.filter_pruner.set_mask(minfo, new_mask)
 
     def reset(self):
         self._restore_model_weights()

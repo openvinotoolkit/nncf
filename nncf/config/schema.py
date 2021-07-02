@@ -698,9 +698,9 @@ FILTER_PRUNING_SCHEMA = {
                                                                      " one of `L1`, `L2`, `geometric_median`."
                                                                      " `L2` by default."),
                     "interlayer_ranking_type": with_attributes(_STRING,
-                                                         description="The type of filter ranking across the layers."
-                                                                     " Can be one of `unweighted_ranking` or "
-                                                                     "`learned_ranking`."),
+                                                               description="The type of filter ranking across the "
+                                                                           "layers. Can be one of `unweighted_ranking`"
+                                                                           " or `learned_ranking`."),
                     "all_weights": with_attributes(_BOOLEAN,
                                                    description="Whether to prune layers independently (choose filters"
                                                                " with the smallest importance in each layer separately)"
@@ -715,7 +715,7 @@ FILTER_PRUNING_SCHEMA = {
                                                         default=False
                                                         ),
                     "prune_last_conv": with_attributes(_BOOLEAN,
-                                                       description="whether to prune last Convolutional layers or not."
+                                                       description="Whether to prune last Convolutional layers or not."
                                                                    "  Last means that it is a Convolutional layer such"
                                                                    " that there is a path from this layer to the model"
                                                                    " output such that there are no other convolution"
@@ -723,13 +723,13 @@ FILTER_PRUNING_SCHEMA = {
                                                        default=False
                                                        ),
                     "prune_downsample_convs": with_attributes(_BOOLEAN,
-                                                              description="whether to prune downsample Convolutional"
+                                                              description="Whether to prune downsample Convolutional"
                                                                           " layers (with stride > 1) or not. `False`"
                                                                           " by default.",
                                                               default=False
                                                               ),
                     "prune_batch_norms": with_attributes(_BOOLEAN,
-                                                         description="whether to nullifies parameters of Batch Norm"
+                                                         description="Whether to nullifies parameters of Batch Norm"
                                                                      " layer corresponds to zeroed filters of"
                                                                      " convolution corresponding to this Batch Norm."
                                                                      " `False` by default.",
@@ -742,23 +742,23 @@ FILTER_PRUNING_SCHEMA = {
                     "save_ranking_coeffs_path": with_attributes(_STRING),
                     "load_ranking_coeffs_path": with_attributes(_STRING),
                     "legr_params":
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "generations": with_attributes(_NUMBER,
-                                                                       description="Number of generations for evolution"
-                                                                                   "algorithm."),
-                                        "train_steps": with_attributes(_NUMBER,
-                                                                       description="Number of training steps to estimate"
-                                                                                   "pruned model accuracy."),
-                                        "max_pruning": with_attributes(_NUMBER,
-                                                                       description="Maximum possible pruning level for "
-                                                                                   "the model to train LeGR algo on it."),
-                                        "random_seed": with_attributes(_NUMBER,
-                                                                       description="Random seed for LeGR coefficients"
-                                                                                   " generation.")
-                                    }
-                                },
+                        {
+                            "type": "object",
+                            "properties": {
+                                "generations": with_attributes(_NUMBER,
+                                                               description="Number of generations for evolution"
+                                                                           "algorithm."),
+                                "train_steps": with_attributes(_NUMBER,
+                                                               description="Number of training steps to estimate"
+                                                                           "pruned model accuracy."),
+                                "max_pruning": with_attributes(_NUMBER,
+                                                               description="Maximum possible pruning level for "
+                                                                           "the model to train LeGR algo on it."),
+                                "random_seed": with_attributes(_NUMBER,
+                                                               description="Random seed for LeGR coefficients"
+                                                                           " generation.")
+                            }
+                        },
 
                 },
                 "additionalProperties": False,

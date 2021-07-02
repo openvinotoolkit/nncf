@@ -11,14 +11,13 @@
  limitations under the License.
 """
 import json
+
 import numpy as np
+
 from nncf.torch.initialization import register_default_init_args
-
 from nncf.torch.pruning.filter_pruning.functions import l2_filter_norm
-
-from tests.torch.pruning.helpers import PruningTestModel, get_basic_pruning_config
-
 from tests.torch.helpers import create_compressed_model_and_algo_for_test, create_ones_mock_dataloader
+from tests.torch.pruning.helpers import PruningTestModel, get_basic_pruning_config
 
 
 def create_default_legr_config():
@@ -27,7 +26,7 @@ def create_default_legr_config():
     config['compression']['params']['interlayer_ranking_type'] = 'learned_ranking'
     return config
 
-
+#pylint:disable=protected-access
 def test_legr_coeffs_loading(tmp_path):
     file_name = tmp_path / 'ranking_coeffs.json'
     model = PruningTestModel()
@@ -66,7 +65,7 @@ def test_legr_coeffs_save_and_load(tmp_path):
 
     model = PruningTestModel()
     ref_ranking_coeffs = {str(model.CONV_1_NODE_NAME): (np.random.normal(), np.random.normal()),
-                      str(model.CONV_2_NODE_NAME): (np.random.normal(), np.random.normal())}
+                          str(model.CONV_2_NODE_NAME): (np.random.normal(), np.random.normal())}
     json.dump(ref_ranking_coeffs, open(file_name_save, 'w'))
 
     config = create_default_legr_config()
@@ -110,7 +109,7 @@ def test_legr_class_default_params(tmp_path):
     validate_fn = lambda *x: (0, 0, 0)
     nncf_config = register_default_init_args(config, train_loader=train_loader, train_steps_fn=train_steps_fn,
                                              val_loader=val_loader, validate_fn=validate_fn)
-    _, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
+    _, compression_ctrl = create_compressed_model_and_algo_for_test(model, nncf_config)
 
     compression_ctrl.legr.num_generations = 400
     compression_ctrl.legr.max_pruning = 0.8
@@ -137,7 +136,7 @@ def test_legr_class_setting_params(tmp_path):
     validate_fn = lambda *x: (0, 0, 0)
     nncf_config = register_default_init_args(config, train_loader=train_loader, train_steps_fn=train_steps_fn,
                                              val_loader=val_loader, validate_fn=validate_fn)
-    _, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
+    _, compression_ctrl = create_compressed_model_and_algo_for_test(model, nncf_config)
 
     compression_ctrl.legr.num_generations = generations_ref
     compression_ctrl.legr.max_pruning = max_pruning_ref
@@ -156,7 +155,7 @@ def test_legr_reproducibility():
     nncf_config = register_default_init_args(config, train_loader=train_loader, train_steps_fn=train_steps_fn,
                                              val_loader=val_loader, validate_fn=validate_fn)
     model_1 = PruningTestModel()
-    _, compression_ctrl_1 = create_compressed_model_and_algo_for_test(model_1, config)
+    _, compression_ctrl_1 = create_compressed_model_and_algo_for_test(model_1, nncf_config)
 
     model_2 = PruningTestModel()
     _, compression_ctrl_2 = create_compressed_model_and_algo_for_test(model_2, config)

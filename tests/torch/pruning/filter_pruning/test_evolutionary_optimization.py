@@ -12,15 +12,14 @@
 """
 from typing import Callable
 
+import torch
 from functools import partial
+from torch import optim
 
 from nncf.torch import register_default_init_args
 from tests.torch.helpers import create_ones_mock_dataloader, create_compressed_model_and_algo_for_test
 from tests.torch.pruning.filter_pruning.test_legr import create_default_legr_config
-
 from tests.torch.pruning.helpers import PruningTestModel
-from torch import optim
-import torch
 
 
 def get_model_and_controller_for_legr_test():
@@ -37,18 +36,18 @@ def get_model_and_controller_for_legr_test():
 
 
 def test_evolution_optimizer_default_params():
-    config, compressed_model, compression_ctrl = get_model_and_controller_for_legr_test()
+    _, _, compression_ctrl = get_model_and_controller_for_legr_test()
     evo_optimizer = compression_ctrl.legr.agent
 
-    evo_optimizer.population_size == 64
-    evo_optimizer.num_generations = 400
-    evo_optimizer.num_samples = 16
-    evo_optimizer.mutate_percent = 0.1
+    assert evo_optimizer.population_size == 64
+    assert evo_optimizer.num_generations == 400
+    assert evo_optimizer.num_samples == 16
+    assert evo_optimizer.mutate_percent == 0.1
 
 
 def test_evolution_optimizer_interface():
     # That optimizer has all necessary functions: ask, tell
-    config, compressed_model, compression_ctrl = get_model_and_controller_for_legr_test()
+    _, _, compression_ctrl = get_model_and_controller_for_legr_test()
     evo_optimizer = compression_ctrl.legr.agent
     assert hasattr(evo_optimizer, 'ask')
     assert hasattr(evo_optimizer, 'tell')
@@ -56,17 +55,17 @@ def test_evolution_optimizer_interface():
 
 def test_evolution_optimizer_reproducibility():
     # Check that optimizer generates same actions
-    config_1, _, compression_ctrl_1 = get_model_and_controller_for_legr_test()
+    _, _, compression_ctrl_1 = get_model_and_controller_for_legr_test()
     evo_optimizer_1 = compression_ctrl_1.legr.agent
 
-    config_2, _, compression_ctrl_2 = get_model_and_controller_for_legr_test()
+    _, _, compression_ctrl_2 = get_model_and_controller_for_legr_test()
     evo_optimizer_2 = compression_ctrl_2.legr.agent
     assert compression_ctrl_1.ranking_coeffs == compression_ctrl_2.ranking_coeffs
     assert evo_optimizer_1.population == evo_optimizer_2.population
 
     cur_episode = evo_optimizer_1.cur_episode
     assert cur_episode == evo_optimizer_2.cur_episode
-    for i in range(10):
+    for _ in range(10):
         cur_episode += 1
         assert evo_optimizer_1.ask(cur_episode) == evo_optimizer_2.ask(cur_episode)
 
@@ -80,7 +79,7 @@ def test_evolution_env_default_params():
     validate_fn = lambda *x: (0, 0, 0)
     nncf_config = register_default_init_args(config, train_loader=train_loader, train_steps_fn=train_steps_fn,
                                              val_loader=val_loader, validate_fn=validate_fn)
-    compressed_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
+    _, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
     evolution_env = compression_ctrl.legr.env
 
     assert evolution_env.loss_as_reward is True
@@ -109,8 +108,9 @@ def test_evolution_env_setting_params():
     train_steps_fn = lambda *x: None
     validate_fn = lambda *x: (0, 0, 0)
     nncf_config = register_default_init_args(config, train_loader=train_loader, train_steps_fn=train_steps_fn,
-                                             val_loader=val_loader, validate_fn=validate_fn, legr_train_optimizer=train_optimizer)
-    compressed_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
+                                             val_loader=val_loader, validate_fn=validate_fn,
+                                             legr_train_optimizer=train_optimizer)
+    _, compression_ctrl = create_compressed_model_and_algo_for_test(model, nncf_config)
     evolution_env = compression_ctrl.legr.env
 
     assert evolution_env.prune_target == prune_target_ref
@@ -119,8 +119,8 @@ def test_evolution_env_setting_params():
 
 
 def test_evolution_env_interface():
-    config_1, _, compression_ctrl_1 = get_model_and_controller_for_legr_test()
-    evolution_env = compression_ctrl_1.legr.env
+    _, _, compression_ctrl = get_model_and_controller_for_legr_test()
+    evolution_env = compression_ctrl.legr.env
 
     assert hasattr(evolution_env, 'reset')
     assert hasattr(evolution_env, 'step')
@@ -129,7 +129,7 @@ def test_evolution_env_interface():
 
 
 def test_pruner_default_params():
-    config_1, compressed_model, compression_ctrl = get_model_and_controller_for_legr_test()
+    _, compressed_model, compression_ctrl = get_model_and_controller_for_legr_test()
     legr_pruner = compression_ctrl.legr.pruner
 
     assert legr_pruner.filter_pruner == compression_ctrl
@@ -137,11 +137,12 @@ def test_pruner_default_params():
 
     ref_model_state_dict = list(compressed_model.state_dict().values())
     saved_model_state_dict = list(legr_pruner.model_params_copy.values())
-    assert all([torch.equal(ref_model_state_dict[i], saved_model_state_dict[i]) for i in range(len(ref_model_state_dict))])
+    assert all(
+        [torch.equal(ref_model_state_dict[i], saved_model_state_dict[i]) for i in range(len(ref_model_state_dict))])
 
 
 def test_pruner_interface():
-    config_1, compressed_model, compression_ctrl = get_model_and_controller_for_legr_test()
+    _, _, compression_ctrl = get_model_and_controller_for_legr_test()
     legr_pruner = compression_ctrl.legr.pruner
 
     assert hasattr(legr_pruner, 'reset')
@@ -151,5 +152,3 @@ def test_pruner_interface():
     assert isinstance(legr_pruner.reset, Callable)
     assert isinstance(legr_pruner.prune, Callable)
     assert isinstance(legr_pruner.get_full_flops_number_in_model, Callable)
-
-

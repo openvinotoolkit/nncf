@@ -12,17 +12,18 @@
 """
 
 import json
-import os
 import shlex
 import sys
-import tempfile
-from enum import Enum
-from enum import auto
 from pathlib import Path
 from typing import Dict
 
+import os
 import pytest
+import tempfile
 import torch
+from enum import Enum
+from enum import auto
+from pytest_dependency import depends
 
 # pylint: disable=redefined-outer-name
 from examples.torch.common.optimizer import get_default_weight_decay
@@ -33,7 +34,6 @@ from nncf.api.compression import CompressionStage
 from nncf.common.hardware.config import HWConfigType
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.config import NNCFConfig
-from pytest_dependency import depends
 from tests.common.helpers import EXAMPLES_DIR
 from tests.common.helpers import PROJECT_ROOT
 from tests.common.helpers import TEST_ROOT
@@ -140,7 +140,8 @@ def update_compression_algo_dict_with_legr_save_load_params(nncf_config, tmp_pat
         if algo_dict["algorithm"] != "filter_pruning":
             continue
 
-        if "interlayer_ranking_type" in algo_dict['params'] and algo_dict['params']["interlayer_ranking_type"] == 'learned_ranking':
+        if "interlayer_ranking_type" in algo_dict['params'] and algo_dict['params'][
+            "interlayer_ranking_type"] == 'learned_ranking':
             if save:
                 algo_dict['params']['save_ranking_coeffs_path'] = os.path.join(tmp_path, 'ranking_coeffs.json')
             else:
@@ -150,6 +151,7 @@ def update_compression_algo_dict_with_legr_save_load_params(nncf_config, tmp_pat
 
 def _get_test_case_id(p) -> str:
     return "-".join([p[0], p[1].name, p[2], str(p[3])])
+
 
 @pytest.fixture(params=CONFIG_PARAMS,
                 ids=[_get_test_case_id(p) for p in CONFIG_PARAMS])
@@ -197,7 +199,9 @@ def case_common_dirs(tmp_path_factory):
                          ids=['distributed', 'dataparallel'])
 def test_pretrained_model_eval(config, tmp_path, multiprocessing_distributed, case_common_dirs):
     config_factory = ConfigFactory(config['nncf_config'], tmp_path / 'config.json')
-    config_factory.config = update_compression_algo_dict_with_legr_save_load_params(config_factory.config, case_common_dirs['save_coeffs_path'])
+    config_factory.config = update_compression_algo_dict_with_legr_save_load_params(config_factory.config,
+                                                                                    case_common_dirs[
+                                                                                        'save_coeffs_path'])
     args = {
         "--mode": "test",
         "--data": config["dataset_path"],
@@ -226,7 +230,8 @@ def test_pretrained_model_train(config, tmp_path, multiprocessing_distributed, c
                                        "distributed" if multiprocessing_distributed else "data_parallel")
     config_factory = ConfigFactory(config['nncf_config'], tmp_path / 'config.json')
     config_factory.config = update_compression_algo_dict_with_legr_save_load_params(config_factory.config,
-                                                                                    case_common_dirs['save_coeffs_path'])
+                                                                                    case_common_dirs[
+                                                                                        'save_coeffs_path'])
 
     args = {
         "--mode": "train",
@@ -273,7 +278,9 @@ def depends_on_pretrained_train(request, test_case_id: str, current_multiprocess
 def test_trained_model_eval(request, config, tmp_path, multiprocessing_distributed, case_common_dirs):
     depends_on_pretrained_train(request, config["test_case_id"], multiprocessing_distributed)
     config_factory = ConfigFactory(config['nncf_config'], tmp_path / 'config.json')
-    config_factory.config = update_compression_algo_dict_with_legr_save_load_params(config_factory.config, case_common_dirs['save_coeffs_path'])
+    config_factory.config = update_compression_algo_dict_with_legr_save_load_params(config_factory.config,
+                                                                                    case_common_dirs[
+                                                                                        'save_coeffs_path'])
 
     ckpt_path = os.path.join(case_common_dirs["checkpoint_save_dir"],
                              "distributed" if multiprocessing_distributed else "data_parallel",
@@ -312,7 +319,9 @@ def test_resume(request, config, tmp_path, multiprocessing_distributed, case_com
     depends_on_pretrained_train(request, config["test_case_id"], multiprocessing_distributed)
     checkpoint_save_dir = os.path.join(str(tmp_path), "models")
     config_factory = ConfigFactory(config['nncf_config'], tmp_path / 'config.json')
-    config_factory.config = update_compression_algo_dict_with_legr_save_load_params(config_factory.config, case_common_dirs['save_coeffs_path'], False)
+    config_factory.config = update_compression_algo_dict_with_legr_save_load_params(config_factory.config,
+                                                                                    case_common_dirs[
+                                                                                        'save_coeffs_path'], False)
 
     ckpt_path = get_resuming_checkpoint_path(config_factory, multiprocessing_distributed,
                                              case_common_dirs["checkpoint_save_dir"])
@@ -354,7 +363,9 @@ def test_resume(request, config, tmp_path, multiprocessing_distributed, case_com
 def test_export_with_resume(request, config, tmp_path, multiprocessing_distributed, case_common_dirs):
     depends_on_pretrained_train(request, config["test_case_id"], multiprocessing_distributed)
     config_factory = ConfigFactory(config['nncf_config'], tmp_path / 'config.json')
-    config_factory.config = update_compression_algo_dict_with_legr_save_load_params(config_factory.config, case_common_dirs['save_coeffs_path'], False)
+    config_factory.config = update_compression_algo_dict_with_legr_save_load_params(config_factory.config,
+                                                                                    case_common_dirs[
+                                                                                        'save_coeffs_path'], False)
 
     ckpt_path = get_resuming_checkpoint_path(config_factory, multiprocessing_distributed,
                                              case_common_dirs["checkpoint_save_dir"])
@@ -450,7 +461,6 @@ def test_cpu_only_mode_produces_cpu_only_model(config, tmp_path, mocker):
     elif config["sample_type"] == "object_detection":
         import examples.torch.object_detection.main as sample
         mocker.spy(sample, "train")
-
 
     sample.main(shlex.split(command_line))
 

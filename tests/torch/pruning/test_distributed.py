@@ -10,20 +10,26 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+import json
 from typing import Callable
 
+import numpy as np
+import torch
 from torch import nn
 
+import examples.torch.classification.main as sample
 from nncf.torch import register_default_init_args
+from nncf.torch.initialization import default_criterion_fn
 from nncf.torch.structures import DistributedCallbacksArgs
-from tests.torch.helpers import create_ones_mock_dataloader
+from tests.torch.helpers import create_ones_mock_dataloader, create_compressed_model_and_algo_for_test
+from tests.torch.pruning.filter_pruning.test_legr import create_default_legr_config
 from tests.torch.pruning.helpers import get_basic_pruning_config, PruningTestModel
 
 
 def test_default_distributed_init_struct():
     config = get_basic_pruning_config()
     init_loader = create_ones_mock_dataloader(config)
-    nncf_config = register_default_init_args(
+    register_default_init_args(
         config, init_loader)
 
     dist_callbacks = config.get_extra_struct(DistributedCallbacksArgs)
@@ -41,15 +47,14 @@ def test_distributed_init_struct():
 
     config = get_basic_pruning_config()
     init_loader = create_ones_mock_dataloader(config)
-    wrapper_callback = lambda x: FakeModelClass(x)
+    wrapper_callback = FakeModelClass
     unwrapper_callback = lambda x: x.unwrap()
     nncf_config = register_default_init_args(
         config, init_loader, distributed_callbacks=(wrapper_callback, unwrapper_callback))
 
-    dist_callbacks = config.get_extra_struct(DistributedCallbacksArgs)
+    dist_callbacks = nncf_config.get_extra_struct(DistributedCallbacksArgs)
     model = PruningTestModel()
     wrapped_model = dist_callbacks.wrap_model(model)
     assert isinstance(wrapped_model, FakeModelClass)
     unwrapped_model = dist_callbacks.unwrap_model(wrapped_model)
     assert unwrapped_model == model
-

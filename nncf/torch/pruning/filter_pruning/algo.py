@@ -11,65 +11,64 @@
  limitations under the License.
 """
 
+import json
 from typing import Dict, List, Tuple, Union
 
+import numpy as np
 import torch
 from texttable import Texttable
-import json
-import numpy as np
 
-from nncf.torch.dynamic_graph.scope import Scope
-from nncf.torch.graph.operator_metatypes import Conv1dMetatype
-from nncf.torch.graph.operator_metatypes import DepthwiseConv1dSubtype
-from nncf.torch.graph.operator_metatypes import Conv2dMetatype
-from nncf.torch.graph.operator_metatypes import DepthwiseConv2dSubtype
-from nncf.torch.graph.operator_metatypes import Conv3dMetatype
-from nncf.torch.graph.operator_metatypes import DepthwiseConv3dSubtype
-from nncf.torch.graph.operator_metatypes import ConvTranspose2dMetatype
-from nncf.torch.graph.operator_metatypes import ConvTranspose3dMetatype
-from nncf.torch.graph.operator_metatypes import LinearMetatype
-from nncf.torch.algo_selector import COMPRESSION_ALGORITHMS
-from nncf.api.compression import CompressionStage
 from nncf.api.compression import CompressionLoss
 from nncf.api.compression import CompressionScheduler
-from nncf.config.extractors import extract_bn_adaptation_init_params
-from nncf.common.graph import NNCFNodeName
+from nncf.api.compression import CompressionStage
+from nncf.common.accuracy_aware_training.training_loop import ADAPTIVE_COMPRESSION_CONTROLLERS
 from nncf.common.graph import NNCFGraph
-from nncf.common.pruning.mask_propagation import MaskPropagationAlgorithm
+from nncf.common.graph import NNCFNodeName
+from nncf.common.initialization.batchnorm_adaptation import BatchnormAdaptationAlgorithm
 from nncf.common.pruning.clusterization import Clusterization
+from nncf.common.pruning.mask_propagation import MaskPropagationAlgorithm
 from nncf.common.pruning.schedulers import PRUNING_SCHEDULERS
+from nncf.common.pruning.statistics import FilterPruningStatistics
 from nncf.common.pruning.statistics import PrunedLayerSummary
 from nncf.common.pruning.statistics import PrunedModelStatistics
-from nncf.common.pruning.statistics import FilterPruningStatistics
 from nncf.common.pruning.utils import calculate_in_out_channels_in_uniformly_pruned_model
 from nncf.common.pruning.utils import count_flops_and_weights
 from nncf.common.pruning.utils import count_flops_and_weights_per_node
 from nncf.common.pruning.utils import get_cluster_next_nodes
 from nncf.common.pruning.utils import get_conv_in_out_channels
 from nncf.common.pruning.utils import get_rounded_pruned_element_number
+from nncf.common.schedulers import StubCompressionScheduler
 from nncf.common.statistics import NNCFStatistics
 from nncf.common.utils.logger import logger as nncf_logger
-from nncf.common.accuracy_aware_training.training_loop import ADAPTIVE_COMPRESSION_CONTROLLERS
-from nncf.common.schedulers import StubCompressionScheduler
-from nncf.common.initialization.batchnorm_adaptation import BatchnormAdaptationAlgorithm
+from nncf.config.extractors import extract_bn_adaptation_init_params
+from nncf.torch.algo_selector import COMPRESSION_ALGORITHMS
 from nncf.torch.compression_method_api import PTCompressionAlgorithmController
-from nncf.torch.layers import NNCF_PRUNING_MODULES_DICT
+from nncf.torch.graph.operator_metatypes import Conv1dMetatype
+from nncf.torch.graph.operator_metatypes import Conv2dMetatype
+from nncf.torch.graph.operator_metatypes import Conv3dMetatype
+from nncf.torch.graph.operator_metatypes import ConvTranspose2dMetatype
+from nncf.torch.graph.operator_metatypes import ConvTranspose3dMetatype
+from nncf.torch.graph.operator_metatypes import DepthwiseConv1dSubtype
+from nncf.torch.graph.operator_metatypes import DepthwiseConv2dSubtype
+from nncf.torch.graph.operator_metatypes import DepthwiseConv3dSubtype
+from nncf.torch.graph.operator_metatypes import LinearMetatype
+from nncf.torch.layer_utils import _NNCFModuleMixin
 from nncf.torch.layers import NNCF_GENERAL_CONV_MODULES_DICT
 from nncf.torch.layers import NNCF_LINEAR_MODULES_DICT
-from nncf.torch.layer_utils import _NNCFModuleMixin
+from nncf.torch.layers import NNCF_PRUNING_MODULES_DICT
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.pruning.base_algo import BasePruningAlgoBuilder
-from nncf.torch.pruning.filter_pruning.global_ranking.legr import LeGR
-from nncf.torch.pruning.structs import PrunedModuleInfo
 from nncf.torch.pruning.base_algo import BasePruningAlgoController
 from nncf.torch.pruning.export_helpers import ModelPruner
 from nncf.torch.pruning.export_helpers import PTElementwise
 from nncf.torch.pruning.export_helpers import PT_PRUNING_OPERATOR_METATYPES
-from nncf.torch.pruning.filter_pruning.functions import calculate_binary_mask
 from nncf.torch.pruning.filter_pruning.functions import FILTER_IMPORTANCE_FUNCTIONS
+from nncf.torch.pruning.filter_pruning.functions import calculate_binary_mask
 from nncf.torch.pruning.filter_pruning.functions import tensor_l2_normalizer
+from nncf.torch.pruning.filter_pruning.global_ranking.legr import LeGR
 from nncf.torch.pruning.filter_pruning.layers import FilterPruningBlock
 from nncf.torch.pruning.filter_pruning.layers import inplace_apply_filter_binary_mask
+from nncf.torch.pruning.structs import PrunedModuleInfo
 from nncf.torch.pruning.utils import init_output_masks_in_graph
 from nncf.torch.structures import LeGRInitArgs, DistributedCallbacksArgs
 from nncf.torch.utils import get_filters_num
@@ -197,11 +196,11 @@ class FilterPruningController(BasePruningAlgoController):
         return self._scheduler
 
     @staticmethod
-    def _get_mask(minfo: PrunedModuleInfo):
+    def get_mask(minfo: PrunedModuleInfo):
         return minfo.operand.binary_filter_pruning_mask
 
     @staticmethod
-    def _set_mask(minfo: PrunedModuleInfo, mask):
+    def set_mask(minfo: PrunedModuleInfo, mask):
         minfo.operand.binary_filter_pruning_mask = mask
 
     def statistics(self, quickly_collected_only: bool = False) -> NNCFStatistics:
@@ -223,7 +222,6 @@ class FilterPruningController(BasePruningAlgoController):
 
         stats = FilterPruningStatistics(model_statistics, self.full_flops, self.current_flops,
                                         self.full_params_num, self.current_params_num, target_pruning_level)
-
 
         nncf_stats = NNCFStatistics()
         nncf_stats.register('filter_pruning', stats)
@@ -251,7 +249,7 @@ class FilterPruningController(BasePruningAlgoController):
         # 3. Init pruning quotas
         for cluster in self.pruned_module_groups_info.get_all_clusters():
             self.pruning_quotas[cluster.id] = np.floor(self._modules_out_channels[cluster.elements[0].node_name] \
-                                              * self.pruning_quota)
+                                                       * self.pruning_quota)
 
     def flops_count_init(self) -> None:
         graph = self._model.get_original_graph()
@@ -520,7 +518,7 @@ class FilterPruningController(BasePruningAlgoController):
         for minfo in self.pruned_module_groups_info.get_all_nodes():
             new_mask = torch.ones(get_filters_num(minfo.module)).to(
                 minfo.module.weight.device)
-            self._set_mask(minfo, new_mask)
+            self.set_mask(minfo, new_mask)
 
         # 2. Calculate filter importances for all prunable groups
         filter_importances = []
