@@ -26,6 +26,17 @@ here = os.path.abspath(os.path.dirname(__file__))
 with open("{}/README.md".format(here), "r") as fh:
     long_description = fh.read()
 
+if "--tf" in sys.argv:
+    import setuptools
+    from pkg_resources import parse_version
+    setuptools_version = parse_version(setuptools.__version__).base_version
+    if setuptools_version < '43.0.0':
+        raise RuntimeError(
+            "To properly install NNCF, please install setuptools>=43.0.0, "
+            "while current setuptools version is {curr}".format(
+            curr=setuptools.__version__
+        ))
+
 
 def read(*parts):
     with codecs.open(os.path.join(here, *parts), 'r') as fp:
@@ -57,8 +68,7 @@ INSTALL_REQUIRES = ["ninja>=1.10.0.post2",
                     "pandas~=1.1.5; python_version<'3.7'",
                     "pandas>=1.1.5; python_version>='3.7'",
                     "scikit-learn>=0.24.0",
-                    "wheel>=0.36.1",
-                    "tensorboard>=2.1"]
+                    "wheel>=0.36.1"]
 
 
 python_version = sys.version_info
@@ -69,7 +79,7 @@ if python_version < (3, 6, 2):
 version_string = "{}{}".format(sys.version_info[0], sys.version_info[1])
 
 _extra_deps = [
-    "tensorflow==2.4.0",
+    "tensorflow==2.4.2",
     "torch>=1.5.0, <=1.8.1, !=1.8.0",
 ]
 

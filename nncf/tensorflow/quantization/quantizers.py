@@ -115,7 +115,7 @@ class Quantizer(NNCFOperation):
         """
         raise NotImplementedError
 
-    def apply_minmax_initialization(self, weights, min_values, max_values, min_range=0.1, eps=0.01):
+    def apply_range_initialization(self, weights, min_values, max_values, min_range=0.1, eps=0.01):
         """
         Initialize quantizer parameters using minimum and maximum weight values.
 
@@ -337,7 +337,7 @@ class SymmetricQuantizer(Quantizer):
 
         return _default_quantize()
 
-    def apply_minmax_initialization(self, weights, min_values, max_values, min_range=0.1, eps=0.01):
+    def apply_range_initialization(self, weights, min_values, max_values, min_range=0.1, eps=0.01):
         if self.signedness_to_force is None:
             sign = tf.reduce_any(tf.less(min_values, 0))
             weights['signed_var'].assign(-1.0 if sign else 0.0)
@@ -463,7 +463,7 @@ class AsymmetricQuantizer(Quantizer):
 
         return _default_quantize()
 
-    def apply_minmax_initialization(self, weights, min_values, max_values, min_range=0.1, eps=0.01):
+    def apply_range_initialization(self, weights, min_values, max_values, min_range=0.1, eps=0.01):
         ranges = max_values - min_values
         max_range = tf.reduce_max(ranges)
         lower_threshold = tf.maximum(eps * max_range, min_range)

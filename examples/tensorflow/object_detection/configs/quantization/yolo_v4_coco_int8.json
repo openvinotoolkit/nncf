@@ -26,12 +26,6 @@
         },
         "activations": {
             "mode": "asymmetric"
-        },
-	"initializer": {
-            "range": {
-                "num_init_samples": 200,
-                "type": "minmax_percentile"
-            }
         }
     }
 }

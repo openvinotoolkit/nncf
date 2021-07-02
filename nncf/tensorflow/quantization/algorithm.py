@@ -27,7 +27,7 @@ from nncf.common.graph import NNCFNode
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TransformationPriority
 from nncf.common.initialization.batchnorm_adaptation import BatchnormAdaptationAlgorithm
-from nncf.common.quantization.initialization.range import RangeInitParams
+from nncf.tensorflow.quantization.initializers.init_range import TFRangeInitParams
 from nncf.common.quantization.structs import QuantizationConstraints
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
@@ -57,7 +57,7 @@ from nncf.tensorflow.graph.transformations.layout import TFTransformationLayout
 from nncf.tensorflow.graph.utils import get_original_name_and_instance_index
 from nncf.tensorflow.layers.custom_objects import NNCF_QUANTIZATION_OPERATONS
 from nncf.tensorflow.loss import TFZeroCompressionLoss
-from nncf.tensorflow.quantization.initializers.minmax import MinMaxInitializer
+from nncf.tensorflow.quantization.initializers.init_range import RangeInitializer
 from nncf.tensorflow.quantization.layers import FakeQuantize
 from nncf.tensorflow.quantization.quantizers import Quantizer
 from nncf.tensorflow.quantization.quantizers import TFQuantizerSpec
@@ -208,9 +208,9 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
         self._batchnorm_adaptation = 'batchnorm_adaptation' in self.config.get('initializer', {})
         self._range_init_params = self._parse_range_init_params()
 
-    def _parse_range_init_params(self) -> RangeInitParams:
+    def _parse_range_init_params(self) -> TFRangeInitParams:
         range_init_params = extract_range_init_params(self.config)
-        return RangeInitParams(**range_init_params) if range_init_params is not None else None
+        return TFRangeInitParams(**range_init_params) if range_init_params is not None else None
 
     def _parse_group_params(self, config: NNCFConfig, quantizer_group: QuantizerGroup) -> None:
         group_name = quantizer_group.value
@@ -330,7 +330,7 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
 
     def _run_range_initialization(self, model: tf.keras.Model) -> None:
         if self._range_initializer is None:
-            self._range_initializer = MinMaxInitializer(self._range_init_params)
+            self._range_initializer = RangeInitializer(self._range_init_params)
         self._range_initializer.run(model)
 
     def _run_batchnorm_adaptation(self, model: tf.keras.Model) -> None:
