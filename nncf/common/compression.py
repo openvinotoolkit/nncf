@@ -18,7 +18,6 @@ from nncf.common.schedulers import StubCompressionScheduler
 import nncf.common.factory as factory
 from nncf.api.compression import CompressionAlgorithmBuilder
 from nncf.api.compression import CompressionAlgorithmController
-from nncf.api.compression import CompressionLevel
 from nncf.api.compression import ModelType
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.common.utils.registry import Registry

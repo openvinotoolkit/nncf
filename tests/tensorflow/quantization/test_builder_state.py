@@ -23,7 +23,6 @@ from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.tensorflow import create_compression_callbacks
 from nncf.tensorflow.utils.state import TFCompressionState
-from nncf.tensorflow.utils.state import TFCompressionStateLoader
 from nncf.tensorflow.callbacks.checkpoint_callback import CheckpointManagerCallback
 from nncf.tensorflow.graph.transformations.commands import TFAfterLayer
 from nncf.tensorflow.graph.transformations.commands import TFBeforeLayer

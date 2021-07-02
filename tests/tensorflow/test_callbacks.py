@@ -21,7 +21,6 @@ from nncf.tensorflow.callbacks.checkpoint_callback import CheckpointManagerCallb
 from nncf.tensorflow.helpers.callback_creation import create_compression_callbacks
 from nncf.tensorflow.helpers.model_creation import create_compressed_model
 from nncf.tensorflow.utils.state import TFCompressionState
-from nncf.tensorflow.utils.state import TFCompressionStateLoader
 from tests.tensorflow.helpers import get_basic_conv_test_model
 from tests.tensorflow.helpers import get_empty_config
 
