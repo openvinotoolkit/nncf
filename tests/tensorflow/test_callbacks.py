@@ -20,6 +20,8 @@ import tensorflow as tf
 from nncf.tensorflow.callbacks.checkpoint_callback import CheckpointManagerCallback
 from nncf.tensorflow.helpers.callback_creation import create_compression_callbacks
 from nncf.tensorflow.helpers.model_creation import create_compressed_model
+from nncf.tensorflow.utils.state import TFCompressionState
+from nncf.tensorflow.utils.state import TFCompressionStateLoader
 from tests.tensorflow.helpers import get_basic_conv_test_model
 from tests.tensorflow.helpers import get_empty_config
 
@@ -96,7 +98,8 @@ def test_checkpoint_callback_make_checkpoints(save_freq):
     model.compile(loss=tf.losses.CategoricalCrossentropy())
 
     ckpt_path = tempfile.mkdtemp()
-    ckpt = tf.train.Checkpoint(model=model, compression_ctrl=compression_ctrl)
+    ckpt = tf.train.Checkpoint(model=model,
+                               compression_state=TFCompressionState(compression_ctrl))
     model.fit(dummy_x, dummy_y,
               epochs=5,
               batch_size=2,
@@ -106,7 +109,8 @@ def test_checkpoint_callback_make_checkpoints(save_freq):
     assert sorted(os.listdir(ckpt_path)) == REF_CKPT_DIR[save_freq]
 
     new_compression_ctrl, new_model = get_simple_compressed_model()
-    new_ckpt = tf.train.Checkpoint(model=new_model, compression_ctrl=new_compression_ctrl)
+    new_ckpt = tf.train.Checkpoint(model=new_model,
+                                   compression_state=TFCompressionState(new_compression_ctrl))
     new_ckpt.restore(tf.train.latest_checkpoint(ckpt_path))
     assert new_compression_ctrl.get_state() == compression_ctrl.get_state()
     assert tf.reduce_all([tf.reduce_all(w_new == w) for w_new, w in zip(new_model.weights, model.weights)])

@@ -12,10 +12,7 @@
 """
 
 import types
-from typing import Any
-from typing import Dict
-from typing import Optional
-from typing import Tuple
+from typing import Any, Dict, Optional, Tuple
 
 import tensorflow as tf
 
@@ -84,8 +81,6 @@ def create_compressed_model(model: tf.keras.Model,
         builder.load_state(compression_state[BaseController.BUILDER_STATE])
     compressed_model = builder.apply_to(model)
     compression_ctrl = builder.build_controller(compressed_model)
-    if compression_state:
-        compression_ctrl.load_state(compression_state[BaseController.CONTROLLER_STATE])
     compressed_model.original_model_accuracy = original_model_accuracy
     if isinstance(compressed_model, tf.keras.Model):
         compressed_model.accuracy_aware_fit = types.MethodType(accuracy_aware_fit, compressed_model)

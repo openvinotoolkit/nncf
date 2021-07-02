@@ -11,7 +11,7 @@
  limitations under the License.
 """
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from nncf import NNCFConfig
 from nncf.api.compression import CompressionAlgorithmBuilder
@@ -21,6 +21,7 @@ from nncf.api.compression import CompressionScheduler
 from nncf.api.compression import CompressionStage
 from nncf.api.compression import ModelType
 from nncf.common.statistics import NNCFStatistics
+import nncf.common.factory as factory
 
 
 class CompositeCompressionLoss(CompressionLoss):
@@ -157,6 +158,9 @@ class CompositeCompressionAlgorithmController(CompressionAlgorithmController):
     treated the same way as a single `CompressionAlgorithmController` instance.
     """
 
+    BUILDER_STATE = 'builder_state'
+    CONTROLLER_STATE = 'ctrl_state'
+
     def __init__(self, target_model: ModelType):
         """
         Initializes the internal state of the composite compression algorithm
@@ -170,6 +174,8 @@ class CompositeCompressionAlgorithmController(CompressionAlgorithmController):
         self._child_ctrls = []
         self._loss = CompositeCompressionLoss()
         self._scheduler = CompositeCompressionScheduler()
+        self._builder_state = None
+        self._name = None
 
     @property
     def loss(self) -> CompressionLoss:
@@ -182,6 +188,10 @@ class CompositeCompressionAlgorithmController(CompressionAlgorithmController):
     @property
     def child_ctrls(self) -> List[CompressionAlgorithmController]:
         return self._child_ctrls
+
+    @property
+    def name(self) -> str:
+        raise self._name
 
     def add(self, child_ctrl: CompressionAlgorithmController) -> None:
         """
@@ -264,6 +274,66 @@ class CompositeCompressionAlgorithmController(CompressionAlgorithmController):
         for ctrl in self.child_ctrls:
             stripped_model = ctrl.strip_model(stripped_model)
         self._model = stripped_model
+
+    @property
+    def compression_rate(self) -> float:
+        raise NotImplementedError
+
+    @compression_rate.setter
+    def compression_rate(self, compression_rate: float) -> None:
+        raise NotImplementedError
+
+    def export_model(self,
+                     save_path: str,
+                     save_format: Optional[str] = None,
+                     input_names: Optional[List[str]] = None,
+                     output_names: Optional[List[str]] = None,
+                     model_args: Optional[Tuple[Any, ...]] = None) -> None:
+        """
+        Exports the compressed model to the specified format for deployment.
+
+        Makes method-specific preparations of the model, (e.g. removing auxiliary
+        layers that were used for the model compression), then exports the model to
+        the specified path.
+
+        :param save_path: The path where the model will be saved.
+        :param save_format: Saving format. The default format will
+            be used if `save_format` is not specified.
+        :param input_names: Names to be assigned to the input tensors of the model.
+        :param output_names: Names to be assigned to the output tensors of the model.
+        :param model_args: Tuple of additional positional and keyword arguments
+            which are required for the model's forward during export. Should be
+            specified in the following format:
+                - (a, b, {'x': None, 'y': y}) for positional and keyword arguments.
+                - (a, b, {}) for positional arguments only.
+                - ({'x': None, 'y': y},) for keyword arguments only.
+        """
+        self.prepare_for_export()
+        exporter = factory.create_exporter(self.model, input_names, output_names, model_args)
+        exporter.export_model(save_path, save_format)
+
+    def disable_scheduler(self) -> None:
+        self._scheduler = CompositeCompressionScheduler()
+        for ctrl in self.child_ctrls:
+            ctrl.disable_scheduler()
+            self._scheduler.add(ctrl.scheduler)
+
+    def get_compression_state(self) -> Dict[str, Any]:
+        if self._builder_state is None:
+            raise RuntimeError('Internal error: builder state is not set for the controller')
+
+        return {
+            self.BUILDER_STATE: self._builder_state,
+            self.CONTROLLER_STATE: self.get_state()
+        }
+
+    def set_builder_state_with_name(self, name: str, builder_state: Dict):
+        """
+        Sets state of the builder and the corresponding algorithm name. Should be called by the builder to set its
+        state and registered algorithm key.
+        """
+        self._name = name
+        self._builder_state = builder_state
 
 
 class CompositeCompressionAlgorithmBuilder(CompressionAlgorithmBuilder):

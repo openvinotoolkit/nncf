@@ -124,15 +124,3 @@ class PTCompositeCompressionAlgorithmController(
         for ctrl in self.child_ctrls:
             target_model = ctrl.apply_to(target_model)
         return target_model
-
-    def disable_scheduler(self):
-        for ctrl in self.child_ctrls:
-            ctrl.disable_scheduler()
-
-    @property
-    def compression_rate(self) -> float:
-        raise NotImplementedError
-
-    @compression_rate.setter
-    def compression_rate(self, compression_rate: float) -> None:
-        raise NotImplementedError
