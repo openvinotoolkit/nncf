@@ -161,7 +161,7 @@ def main_worker(current_gpu, config: SampleConfig):
 
         nncf_config = register_default_init_args(
             nncf_config,
-            train_loader=train_loader,
+            init_loader,
             criterion=criterion,
             criterion_fn=train_criterion_fn,
             train_steps_fn=train_steps_fn,
