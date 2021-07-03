@@ -28,5 +28,5 @@ def package_type_(request):
     return request.param
 
 
-def test_install(tmp_venv_with_nncf, install_type, tmp_path, package_type):
-    run_install_checks(tmp_venv_with_nncf, tmp_path, package_type, test_dir='torch', install_type=install_type)
+def test_install(tmp_venv_with_nncf, tmp_path, package_type):
+    run_install_checks(tmp_venv_with_nncf, tmp_path, package_type, test_dir='tensorflow')
