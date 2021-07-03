@@ -10,26 +10,30 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-
-import addict as ad
-import jstyleson as json
 import warnings
-
-from typing import Any, Dict, List, Optional, Set, Type
+from abc import ABC
+from abc import abstractmethod
 from collections import OrderedDict
 from enum import Enum
 from pathlib import Path
+from typing import Any
+from typing import Dict
+from typing import List
+from typing import Optional
+from typing import Set
+from typing import Type
+
+import addict as ad
+import jstyleson as json
 
 from nncf.common.graph.operator_metatypes import OperatorMetatype
-from nncf.common.graph.operator_metatypes import get_operator_metatypes
+from nncf.common.quantization import quantizers as quant
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.utils.os import safe_open
 from nncf.config import product_dict
 from nncf.definitions import HW_CONFIG_RELATIVE_DIR
 from nncf.definitions import NNCF_PACKAGE_ROOT_DIR
-
-from nncf.common.quantization import quantizers as quant
 
 
 class HWConfigType(Enum):
@@ -57,15 +61,10 @@ HW_CONFIG_TYPE_TARGET_DEVICE_MAP = {
 }
 
 
-def get_metatypes_by_hw_config_name(hw_config_name: str) -> List[Type[OperatorMetatype]]:
-    retval = []
-    for op_meta in get_operator_metatypes():
-        if hw_config_name in op_meta.hw_config_names:
-            retval.append(op_meta)
-    return retval
+HWConfigOpName = str
 
 
-class HWConfig(list):
+class HWConfig(list, ABC):
     QUANTIZATION_ALGORITHM_NAME = 'quantization'
     ATTRIBUTES_NAME = 'attributes'
     SCALE_ATTRIBUTE_NAME = 'scales'
@@ -82,6 +81,10 @@ class HWConfig(list):
         super().__init__()
         self.registered_algorithm_configs = {}
         self.target_device = None
+
+    @abstractmethod
+    def _get_available_operator_metatypes_for_matching(self) -> List[Type[OperatorMetatype]]:
+        pass
 
     @staticmethod
     def get_path_to_hw_config(hw_config_type: HWConfigType):
@@ -136,7 +139,7 @@ class HWConfig(list):
         file_path = Path(path).resolve()
         with safe_open(file_path) as f:
             json_config = json.load(f, object_pairs_hook=OrderedDict)
-            return HWConfig.from_dict(json_config)
+            return cls.from_dict(json_config)
 
     @staticmethod
     def get_quantization_mode_from_config_value(str_val: str):
@@ -195,12 +198,12 @@ class HWConfig(list):
     def get_metatype_vs_quantizer_configs_map(self, for_weights=False) -> Dict[Type[OperatorMetatype],
                                                                                Optional[List[QuantizerConfig]]]:
         # 'None' for ops unspecified in HW config, empty list for wildcard quantization ops
-        retval = {k: None for k in get_operator_metatypes()}
+        retval = {k: None for k in self._get_available_operator_metatypes_for_matching()}
         config_key = 'weights' if for_weights else 'activations'
         for op_dict in self:
             hw_config_op_name = op_dict.type
 
-            metatypes = get_metatypes_by_hw_config_name(hw_config_op_name)
+            metatypes = self._get_metatypes_for_hw_config_op(hw_config_op_name)
             if not metatypes:
                 warnings.warn('Operation name {} in HW config is not registered in NNCF under any supported operation '
                               'metatype - will be ignored'.format(hw_config_op_name))
@@ -222,18 +225,18 @@ class HWConfig(list):
 
         return retval
 
-    def _get_operations_with_attribute_values(self, attribute_name_per_its_value: Dict[str, Any]) -> \
+    def _get_operations_with_attribute_values(self, attribute_name_vs_required_value: Dict[str, Any]) -> \
         Set[Type[OperatorMetatype]]:
         result = set()
         for op_dict in self:
             if self.ATTRIBUTES_NAME not in op_dict:
                 continue
-            for attr_name, attr_value in attribute_name_per_its_value.items():
+            for attr_name, attr_value in attribute_name_vs_required_value.items():
                 is_value_matched = op_dict[self.ATTRIBUTES_NAME][attr_name] == attr_value
                 is_attr_set = attr_name in op_dict[self.ATTRIBUTES_NAME]
                 if is_value_matched and is_attr_set:
                     hw_config_op_name = op_dict.type
-                    metatypes = get_metatypes_by_hw_config_name(hw_config_op_name)
+                    metatypes = self._get_metatypes_for_hw_config_op(hw_config_op_name)
                     if not metatypes:
                         warnings.warn(
                             'Operation name {} in HW config is not registered in NNCF under any supported '
@@ -246,3 +249,14 @@ class HWConfig(list):
 
     def get_operations_with_adjusted_paddings(self) -> Set[Type[OperatorMetatype]]:
         return self._get_operations_with_attribute_values({self.ADJUST_PADDING_ATTRIBUTE_NAME: True})
+
+    def _get_metatypes_for_hw_config_op(self, hw_config_op: HWConfigOpName) -> Set[Type[OperatorMetatype]]:
+        metatypes = set()
+        for op_meta in self._get_available_operator_metatypes_for_matching():
+            if hw_config_op in op_meta.hw_config_names:
+                metatypes.add(op_meta)
+        if not metatypes:
+            warnings.warn(
+                'Operation name {} in HW config is not registered in NNCF under any supported '
+                'operation metatype - will be ignored'.format(hw_config_op))
+        return metatypes

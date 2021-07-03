@@ -11,11 +11,14 @@
  limitations under the License.
 """
 
-import math
-
 from functools import partial
-from typing import Dict, List, Optional, Tuple, Type
+from typing import Dict
+from typing import List
+from typing import Optional
+from typing import Tuple
+from typing import Type
 
+import math
 import numpy as np
 
 from nncf.common.graph import NNCFGraph
@@ -391,3 +394,18 @@ class PruningOperationsMetatypeRegistry(Registry):
         if op_name in self._op_name_to_op_class:
             return self._op_name_to_op_class[op_name]
         return None
+
+
+def is_depthwise_conv(node: NNCFNode) -> bool:
+    return isinstance(node.layer_attributes, ConvolutionLayerAttributes) \
+           and node.layer_attributes.groups == node.layer_attributes.in_channels \
+           and (node.layer_attributes.out_channels % node.layer_attributes.in_channels == 0) \
+           and node.layer_attributes.in_channels > 1
+
+
+def is_conv_with_downsampling(node: NNCFNode) -> bool:
+    layer_attrs = node.layer_attributes
+    if isinstance(layer_attrs, ConvolutionLayerAttributes):
+        return not np.all(np.array(layer_attrs.stride) == 1) \
+           and not layer_attrs.transpose
+    return False

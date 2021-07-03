@@ -32,8 +32,7 @@ from torch import nn
 from nncf.api.compression import CompressionLoss
 from nncf.api.compression import CompressionScheduler
 from nncf.api.compression import CompressionStage
-from nncf.common.initialization.batchnorm_adaptation import BatchnormAdaptationAlgorithm
-from nncf.common.graph import MODEL_INPUT_OP_NAME
+from nncf.common.graph.definitions import MODEL_INPUT_OP_NAME
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.graph import NNCFNodeName
@@ -42,6 +41,7 @@ from nncf.common.graph.layer_attributes import WeightedLayerAttributes
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.hardware.config import HWConfig
 from nncf.common.hardware.config import HWConfigType
+from nncf.common.initialization.batchnorm_adaptation import BatchnormAdaptationAlgorithm
 from nncf.common.quantization.statistics import QuantizationStatistics
 from nncf.common.quantization.structs import NonWeightQuantizerId
 from nncf.common.quantization.structs import QuantizableWeightedLayerNode
@@ -72,6 +72,7 @@ from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.graph.transformations.commands import TransformationPriority
 from nncf.torch.graph.transformations.layout import PTTransformationLayout
 from nncf.torch.graph.patterns import get_full_pattern_graph
+from nncf.torch.hardware.config import PTHWConfig
 from nncf.torch.initialization import SimpleDataLoaderRunner
 from nncf.torch.module_operations import UpdatePaddingValue
 from nncf.torch.nncf_network import EXTERNAL_QUANTIZERS_STORAGE_NAME
@@ -453,8 +454,8 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
 
         hw_config_type = self.config.get("hw_config_type")
         if hw_config_type is not None:
-            hw_config_path = HWConfig.get_path_to_hw_config(hw_config_type)
-            self.hw_config = HWConfig.from_json(hw_config_path)
+            hw_config_path = PTHWConfig.get_path_to_hw_config(hw_config_type)
+            self.hw_config = PTHWConfig.from_json(hw_config_path)
 
         self._range_init_params = None
         self._precision_init_type = None

@@ -11,21 +11,21 @@
  limitations under the License.
 """
 from abc import ABC
-from copy import copy
-from typing import TypeVar
-from functools import partial
 from abc import abstractmethod
+from copy import copy
+from functools import partial
+from typing import TypeVar
 
 import numpy as np
 from scipy.interpolate import interp1d
 
 from nncf.api.compression import CompressionAlgorithmController
 from nncf.common.composite_compression import CompositeCompressionAlgorithmController
+from nncf.common.utils.backend import BackendType
+from nncf.common.utils.backend import infer_backend_from_compression_controller
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.common.utils.registry import Registry
-from nncf.common.utils.backend import infer_backend_from_compression_controller
 from nncf.config.config import NNCFConfig
-
 
 ModelType = TypeVar('ModelType')
 ADAPTIVE_COMPRESSION_CONTROLLERS = Registry('adaptive_compression_controllers')
@@ -34,10 +34,10 @@ ADAPTIVE_COMPRESSION_CONTROLLERS = Registry('adaptive_compression_controllers')
 def get_backend_specific_training_runner_cls(compression_controller: CompressionAlgorithmController):
     nncf_backend = infer_backend_from_compression_controller(compression_controller)
 
-    if nncf_backend == 'Torch':
+    if nncf_backend is BackendType.TORCH:
         from nncf.torch.accuracy_aware_training.runner import PTAccuracyAwareTrainingRunner
         return PTAccuracyAwareTrainingRunner
-    if nncf_backend == 'TensorFlow':
+    if nncf_backend == BackendType.TENSORFLOW:
         from nncf.tensorflow.accuracy_aware_training.runner import TFAccuracyAwareTrainingRunner
         return TFAccuracyAwareTrainingRunner
     raise RuntimeError('Got an unsupported value of nncf_backend')

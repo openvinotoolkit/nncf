@@ -15,11 +15,11 @@ from typing import Union
 
 import tensorflow as tf
 
-from nncf.tensorflow.pruning.utils import is_depthwise_conv
+from nncf.common.pruning.utils import is_depthwise_conv
 from nncf.tensorflow.graph.patterns import KERAS_ACTIVATIONS
 from nncf.tensorflow.graph.patterns import SET_ELEMENTWISE_LAYERS
 from nncf.tensorflow.graph.patterns import TF_ACTIVATIONS
-from nncf.common.graph import NNCFGraphNodeType
+from nncf.common.graph.definitions import NNCFGraphNodeType
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.pruning.export_helpers import DefaultMetaOp

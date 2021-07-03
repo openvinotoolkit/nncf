@@ -11,24 +11,22 @@
  limitations under the License.
 """
 
-import pytest
 from typing import Tuple
 
+import pytest
 import torch
 from torch import nn
-from torch.optim import SGD
 from torch.nn import functional as F
+from torch.optim import SGD
 from torch.utils.data import DataLoader
 
 from nncf.config import NNCFConfig
-from nncf.torch.accuracy_aware_training.runner import PTAccuracyAwareTrainingRunner as \
-        AccuracyAwareTrainingRunner
-
-from tests.torch.helpers import create_compressed_model_and_algo_for_test
+from nncf.torch.accuracy_aware_training.runner import PTAccuracyAwareTrainingRunner
 from tests.torch.helpers import LeNet
+from tests.torch.helpers import create_compressed_model_and_algo_for_test
 from tests.torch.helpers import create_random_mock_dataloader
-from tests.torch.sparsity.magnitude.test_helpers import get_basic_magnitude_sparsity_config
 from tests.torch.helpers import set_torch_seed
+from tests.torch.sparsity.magnitude.test_helpers import get_basic_magnitude_sparsity_config
 
 
 def create_initialized_lenet_model_and_dataloader(config: NNCFConfig) -> Tuple[nn.Module, DataLoader]:
@@ -48,9 +46,9 @@ def create_initialized_lenet_model_and_dataloader(config: NNCFConfig) -> Tuple[n
     )
 )
 def test_runner(num_steps, learning_rate, reference_metric):
-    runner = AccuracyAwareTrainingRunner(accuracy_aware_config=dict(),
-                                         dump_checkpoints=False,
-                                         validate_every_n_epochs=1)
+    runner = PTAccuracyAwareTrainingRunner(accuracy_aware_config=dict(),
+                                           dump_checkpoints=False,
+                                           validate_every_n_epochs=1)
     input_sample_size = [1, 1, LeNet.INPUT_SIZE[-1], LeNet.INPUT_SIZE[-1]]
     config = get_basic_magnitude_sparsity_config(input_sample_size=input_sample_size)
     model, train_loader, compression_ctrl = create_initialized_lenet_model_and_dataloader(config)

@@ -10,12 +10,18 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-
-from typing import Optional, List, Tuple, Any
+from typing import Any
+from typing import List
+from typing import Optional
+from typing import Tuple
+from typing import TypeVar
 
 from nncf.api.compression import CompressionAlgorithmController
 from nncf.common.schedulers import StubCompressionScheduler
-import nncf.common.factory as factory
+from nncf.common.utils.backend import BackendType
+from nncf.common.utils.backend import infer_backend_from_model
+
+ModelType = TypeVar('ModelType')
 
 
 class BaseCompressionAlgorithmController(CompressionAlgorithmController):
@@ -49,7 +55,14 @@ class BaseCompressionAlgorithmController(CompressionAlgorithmController):
                 - ({'x': None, 'y': y},) for keyword arguments only.
         """
         self.prepare_for_export()
-        exporter = factory.create_exporter(self.model, input_names, output_names, model_args)
+        backend = infer_backend_from_model(self.model)
+        if backend is BackendType.TENSORFLOW:
+            from nncf.tensorflow.exporter import TFExporter
+            exporter = TFExporter(self.model, input_names, output_names, model_args)
+        else:
+            assert backend is BackendType.TORCH
+            from nncf.torch.exporter import PTExporter
+            exporter = PTExporter(self.model, input_names, output_names, model_args)
         exporter.export_model(save_path, save_format)
 
     def disable_scheduler(self) -> None:

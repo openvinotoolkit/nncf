@@ -21,30 +21,29 @@ from typing import Tuple
 import networkx as nx
 import pytest
 import torch
-
-from nncf.torch.graph.operator_metatypes import NoopMetatype
-from nncf.torch.graph.operator_metatypes import ReshapeMetatype
 from torch import nn
 
-from nncf.torch import register_module
-from nncf.common.graph import MODEL_INPUT_OP_NAME
-from nncf.common.graph import MODEL_OUTPUT_OP_NAME
+from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
+from nncf.common.graph.definitions import MODEL_INPUT_OP_NAME
+from nncf.common.graph.definitions import MODEL_OUTPUT_OP_NAME
 from nncf.common.graph.layer_attributes import Dtype
+from nncf.common.graph.operator_metatypes import NoopMetatype
 from nncf.common.graph.transformations.commands import TargetType
+from nncf.common.graph.transformations.commands import TransformationPriority
+from nncf.torch import register_module
 from nncf.torch.dynamic_graph.context import PreHookId
 from nncf.torch.dynamic_graph.graph_tracer import ModelInputInfo
 from nncf.torch.dynamic_graph.operation_address import OperationAddress
 from nncf.torch.dynamic_graph.scope import Scope
-from nncf.common.graph import NNCFGraph
 from nncf.torch.graph.graph import PTNNCFGraph
 from nncf.torch.graph.graph_builder import GraphBuilder
-from nncf.torch.graph.operator_metatypes import InputNoopMetatype
-from nncf.torch.graph.operator_metatypes import OutputNoopMetatype
+from nncf.torch.graph.operator_metatypes import PTInputNoopMetatype
+from nncf.torch.graph.operator_metatypes import PTOutputNoopMetatype
+from nncf.torch.graph.operator_metatypes import ReshapeMetatype
 from nncf.torch.graph.transformations.commands import PTInsertionCommand
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.graph.patterns import get_full_pattern_graph
-from nncf.common.graph.transformations.commands import TransformationPriority
 from nncf.torch.graph.transformations.layout import PTTransformationLayout
 from nncf.torch.layer_utils import _NNCFModuleMixin
 from nncf.torch.module_operations import BaseOp
@@ -56,8 +55,8 @@ from nncf.torch.nncf_network import PTInsertionPoint
 from nncf.torch.nncf_network import PTInsertionType
 from nncf.torch.nncf_network import PTModelTransformer
 from nncf.torch.quantization.node_matcher import PTOperatorMetatypeNodeMatcher
-from tests.torch.composite.test_sparsity_quantization import get_basic_sparsity_plus_quantization_config
 from tests.common.helpers import TEST_ROOT
+from tests.torch.composite.test_sparsity_quantization import get_basic_sparsity_plus_quantization_config
 from tests.torch.helpers import BasicConvTestModel
 from tests.torch.helpers import TwoConvTestModel
 from tests.torch.helpers import check_correct_nncf_modules_replacement
@@ -613,7 +612,7 @@ class TestInsertionPointGraph:
             MaxPool2dMetatype, \
             ConvTranspose2dMetatype, DepthwiseConv2dSubtype, AddMetatype, AvgPool2dMetatype, LinearMetatype
         ref_scope_vs_metatype_dict = {
-            "/" + MODEL_INPUT_OP_NAME + "_0": InputNoopMetatype,
+            "/" + MODEL_INPUT_OP_NAME + "_0": PTInputNoopMetatype,
             "ModelForMetatypeTesting/NNCFConv2d[conv_regular]/conv2d_0": Conv2dMetatype,
             "ModelForMetatypeTesting/BatchNorm2d[bn]/batch_norm_0": BatchNormMetatype,
             "ModelForMetatypeTesting/relu_0": RELUMetatype,
@@ -624,7 +623,7 @@ class TestInsertionPointGraph:
             "ModelForMetatypeTesting/AdaptiveAvgPool2d[adaptive_avg_pool]/adaptive_avg_pool2d_0": AvgPool2dMetatype,
             "ModelForMetatypeTesting/NNCFLinear[linear]/linear_0": LinearMetatype,
             'ModelForMetatypeTesting/flatten_0': ReshapeMetatype,
-            "/" + MODEL_OUTPUT_OP_NAME + "_0": OutputNoopMetatype,
+            "/" + MODEL_OUTPUT_OP_NAME + "_0": PTOutputNoopMetatype,
         }
 
         class ModelForMetatypeTesting(torch.nn.Module):

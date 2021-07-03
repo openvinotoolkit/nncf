@@ -12,18 +12,22 @@
 """
 
 from copy import copy
-from typing import List, Optional, Type
+from typing import List
+from typing import Optional
+from typing import Type
 from typing import TypeVar
 
-from nncf.common.graph import NNCFGraphNodeType
+from nncf.common.graph.definitions import NNCFGraphNodeType
 from nncf.common.graph.layer_attributes import BaseLayerAttributes
 from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
+from nncf.common.graph.operator_metatypes import INPUT_NOOP_METATYPES
+from nncf.common.graph.operator_metatypes import NOOP_METATYPES
+from nncf.common.graph.operator_metatypes import OUTPUT_NOOP_METATYPES
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.operator_metatypes import OperatorMetatypeRegistry
 from nncf.common.hardware.opset import HWConfigOpName
 from nncf.torch.dynamic_graph.trace_functions import CustomTraceFunction
 from nncf.torch.dynamic_graph.trace_functions import ForwardTraceOnly
-
 
 ModuleAttributes = TypeVar('ModuleAttributes', bound=BaseLayerAttributes)
 
@@ -129,19 +133,22 @@ class PTOperatorSubtype(PTOperatorMetatype):
 
 
 @PT_OPERATOR_METATYPES.register()
-class InputNoopMetatype(PTOperatorMetatype):
+@INPUT_NOOP_METATYPES.register()
+class PTInputNoopMetatype(PTOperatorMetatype):
     name = "input_noop"
     external_op_names = [name, NNCFGraphNodeType.INPUT_NODE]
 
 
 @PT_OPERATOR_METATYPES.register()
-class OutputNoopMetatype(PTOperatorMetatype):
+@OUTPUT_NOOP_METATYPES.register()
+class PTOutputNoopMetatype(PTOperatorMetatype):
     name = "output_noop"
     external_op_names = [name, NNCFGraphNodeType.OUTPUT_NODE]
 
 
 @PT_OPERATOR_METATYPES.register()
-class NoopMetatype(PTOperatorMetatype):
+@NOOP_METATYPES.register()
+class PTNoopMetatype(PTOperatorMetatype):
     name = "noop"
     external_op_names = [name]
 
@@ -642,21 +649,3 @@ def get_operator_metatypes() -> List[Type[OperatorMetatype]]:
     :return: List of operator metatypes .
     """
     return list(PT_OPERATOR_METATYPES.registry_dict.values())
-
-
-def get_input_metatypes() -> List[Type[OperatorMetatype]]:
-    """
-    Returns a list of the input operator metatypes.
-
-    :return: List of the input operator metatypes .
-    """
-    return [InputNoopMetatype]
-
-
-def get_output_metatypes() -> List[Type[OperatorMetatype]]:
-    """
-    Returns a list of the output operator metatypes.
-
-    :return: List of the output operator metatypes .
-    """
-    return [OutputNoopMetatype]

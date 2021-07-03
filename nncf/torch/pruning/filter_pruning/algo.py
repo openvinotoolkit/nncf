@@ -16,6 +16,7 @@ from typing import Dict, List, Tuple, Union
 import torch
 from texttable import Texttable
 
+from nncf.common.initialization.batchnorm_adaptation import BatchnormAdaptationAlgorithm
 from nncf.torch.graph.operator_metatypes import Conv1dMetatype
 from nncf.torch.graph.operator_metatypes import DepthwiseConv1dSubtype
 from nncf.torch.graph.operator_metatypes import Conv2dMetatype
@@ -48,7 +49,6 @@ from nncf.common.statistics import NNCFStatistics
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.common.accuracy_aware_training.training_loop import ADAPTIVE_COMPRESSION_CONTROLLERS
 from nncf.common.schedulers import StubCompressionScheduler
-from nncf.common.initialization.batchnorm_adaptation import BatchnormAdaptationAlgorithm
 from nncf.torch.compression_method_api import PTCompressionAlgorithmController
 from nncf.torch.layers import NNCF_PRUNING_MODULES_DICT
 from nncf.torch.layers import NNCF_GENERAL_CONV_MODULES_DICT

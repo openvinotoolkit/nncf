@@ -32,13 +32,13 @@ from examples.torch.common.example_logger import logger
 from examples.torch.common.execution import get_execution_mode
 from examples.torch.common.execution import prepare_model_for_execution, start_worker
 from nncf.api.compression import CompressionStage
+from nncf.torch import AdaptiveCompressionTrainingLoop
 from nncf.torch.initialization import register_default_init_args
 from examples.torch.common.optimizer import get_parameter_groups, make_optimizer
 from examples.torch.common.utils import get_name, make_additional_checkpoints, configure_paths, \
     create_code_snapshot, is_on_first_rank, configure_logging, print_args, is_pretrained_model_requested, \
     log_common_mlflow_params, SafeMLFLow, configure_device
 
-from nncf.torch import AdaptiveCompressionTrainingLoop
 from nncf.config.utils import is_accuracy_aware_training
 from examples.torch.common.utils import write_metrics
 from examples.torch.object_detection.dataset import detection_collate, get_testing_dataset, get_training_dataset

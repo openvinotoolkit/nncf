@@ -16,7 +16,7 @@ from typing import List
 import pytest
 import torch
 
-from nncf.common.hardware.config import HWConfig
+from nncf.torch.hardware.config import PTHWConfig
 from nncf.torch.layers import NNCFConv2d
 from nncf.torch.module_operations import UpdatePaddingValue
 from nncf.torch.module_operations import UpdateWeight
@@ -178,7 +178,7 @@ def test_adjust_padding_on_synthetic_models(desc: MultiBranchesModelDesc, mocker
 
     if desc.custom_hw_config_dict:
         hw_config_from_json = mocker.patch('nncf.common.hardware.config.HWConfig.from_json')
-        hw_config_from_json.return_value = HWConfig.from_dict(desc.custom_hw_config_dict)
+        hw_config_from_json.return_value = PTHWConfig.from_dict(desc.custom_hw_config_dict)
 
     monkeypatch.setattr(QuantizerPropagationSolver, 'DEFAULT_PROPAGATION_STRATEGY', desc.propagation_strategy)
 

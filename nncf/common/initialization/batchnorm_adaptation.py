@@ -11,14 +11,16 @@
  limitations under the License.
 """
 
+from abc import ABC
+from abc import abstractmethod
 from typing import Optional
-from abc import ABC, abstractmethod
 
 import math
 
 from nncf.api.compression import ModelType
 from nncf.common.initialization.dataloader import NNCFDataLoader
-from nncf.common.utils.backend import __nncf_backend__
+from nncf.common.utils.backend import BackendType
+from nncf.common.utils.backend import infer_backend_from_model
 
 
 class BatchnormAdaptationAlgorithmImpl(ABC):
@@ -58,31 +60,6 @@ class BatchnormAdaptationAlgorithmImpl(ABC):
         """
 
 
-def _create_bn_adaptation_algorithm_impl(data_loader: NNCFDataLoader,
-                                         num_bn_adaptation_steps: int,
-                                         num_bn_forget_steps: int,
-                                         device: Optional[str] = None) -> BatchnormAdaptationAlgorithmImpl:
-    """
-    Factory for building a batchnorm adaptation algorithm implementation.
-
-    :return: Implementation of the `BatchnormAdaptationAlgorithmImpl` class.
-    """
-    if __nncf_backend__ == 'Torch':
-        from nncf.torch.batchnorm_adaptation import PTBatchnormAdaptationAlgorithmImpl
-        bn_adaptation_algorithm_impl = PTBatchnormAdaptationAlgorithmImpl(data_loader,
-                                                                          num_bn_adaptation_steps,
-                                                                          num_bn_forget_steps,
-                                                                          device)
-    elif __nncf_backend__ == 'TensorFlow':
-        from nncf.tensorflow.batchnorm_adaptation import TFBatchnormAdaptationAlgorithmImpl
-        bn_adaptation_algorithm_impl = TFBatchnormAdaptationAlgorithmImpl(data_loader,
-                                                                          num_bn_adaptation_steps,
-                                                                          num_bn_forget_steps,
-                                                                          device)
-
-    return bn_adaptation_algorithm_impl
-
-
 class BatchnormAdaptationAlgorithm:
     """
     This algorithm updates the statistics of the batch normalization layers
@@ -115,13 +92,10 @@ class BatchnormAdaptationAlgorithm:
         if num_bn_adaptation_samples < 0:
             raise ValueError('Number of adaptation samples must be >= 0')
 
-        num_bn_adaptation_steps = math.ceil(num_bn_adaptation_samples / data_loader.batch_size)
-        num_bn_forget_steps = math.ceil(num_bn_forget_samples / data_loader.batch_size)
-
-        self._impl = _create_bn_adaptation_algorithm_impl(data_loader,
-                                                          num_bn_adaptation_steps,
-                                                          num_bn_forget_steps,
-                                                          device)
+        self._data_loader = data_loader
+        self._device = device
+        self._num_bn_adaptation_steps = math.ceil(num_bn_adaptation_samples / data_loader.batch_size)
+        self._num_bn_forget_steps = math.ceil(num_bn_forget_samples / data_loader.batch_size)
 
     def run(self, model: ModelType) -> None:
         """
@@ -129,4 +103,16 @@ class BatchnormAdaptationAlgorithm:
 
         :param model: A model for which the algorithm will be applied.
         """
-        self._impl.run(model)
+        backend = infer_backend_from_model(model)
+        if backend is BackendType.TORCH:
+            from nncf.torch.batchnorm_adaptation import PTBatchnormAdaptationAlgorithmImpl
+            impl_cls = PTBatchnormAdaptationAlgorithmImpl
+        else:
+            assert backend is BackendType.TENSORFLOW
+            from nncf.tensorflow.batchnorm_adaptation import TFBatchnormAdaptationAlgorithmImpl
+            impl_cls = TFBatchnormAdaptationAlgorithmImpl
+        impl = impl_cls(self._data_loader,
+                        self._num_bn_adaptation_steps,
+                        self._num_bn_forget_steps,
+                        self._device)
+        impl.run(model)
