@@ -12,14 +12,17 @@
 """
 import time
 
+import torch.nn as nn
+
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.torch.pruning.filter_pruning.global_ranking.evolutionary_optimization import LeGRPruner, EvolutionOptimizer, \
     LeGREvolutionEnv
+from nncf.torch.structures import LeGRInitArgs
 
 
 class LeGR:
-    def __init__(self, pruning_ctrl, target_model, legr_init_args, train_steps=200, generations=400, max_pruning=0.8,
-                 random_seed=42):
+    def __init__(self, pruning_ctrl: 'FilterPruningController', target_model: nn.Module, legr_init_args: LeGRInitArgs,
+                 train_steps: int = 200, generations: int = 400, max_pruning: float = 0.8, random_seed: int = 42):
         self.num_generations = generations
         self.max_pruning = max_pruning
         self.train_steps = train_steps

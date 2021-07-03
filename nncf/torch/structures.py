@@ -10,7 +10,7 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-from typing import Callable, Any, Optional
+from typing import Callable, Any, Optional, Tuple
 
 import torch
 import torch.nn as nn
@@ -81,11 +81,14 @@ class AutoQPrecisionInitArgs(NNCFExtraConfigStruct):
 
 class LeGRInitArgs(NNCFExtraConfigStruct):
     def __init__(self,
-                 train_loader,
-                 train_fn,
-                 val_loader,
-                 val_fn,
-                 train_optimizer,
+                 train_loader: torch.utils.data.DataLoader,
+                 train_fn: Callable[[torch.utils.data.DataLoader, torch.nn.Module,
+                                     torch.optim.Optimizer, 'CompressionAlgorithmController',
+                                     Optional[int]], type(None)],
+                 val_loader: torch.utils.data.DataLoader,
+                 val_fn: Callable[[torch.nn.Module, torch.utils.data.DataLoader],
+                                  Tuple[float, float, float]],
+                 train_optimizer: torch.optim.Optimizer,
                  nncf_config: 'NNCFConfig'):
         self.train_loader = train_loader
         self.train_steps_fn = train_fn

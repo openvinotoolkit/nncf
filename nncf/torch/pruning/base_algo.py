@@ -10,10 +10,10 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-
+import torch
 from functools import partial
 from functools import update_wrapper
-from typing import List
+from typing import List, Dict
 
 from torch import nn
 
@@ -60,7 +60,7 @@ class BasePruningAlgoBuilder(PTCompressionAlgorithmBuilder):
         self.pruned_module_groups_info = []
 
     @staticmethod
-    def _set_default_params_for_ranking_type(params):
+    def _set_default_params_for_ranking_type(params: Dict) -> None:
         learned_ranking = 'interlayer_ranking_type' in params and params['interlayer_ranking_type'] == 'learned_ranking'
         if not learned_ranking:
             return
@@ -205,7 +205,7 @@ class BasePruningAlgoController(PTCompressionAlgorithmController):
             h.remove()
         self._hooks = []
 
-    def get_mask(self, minfo: PrunedModuleInfo):
+    def get_mask(self, minfo: PrunedModuleInfo) -> torch.Tensor:
         """
         Returns pruning mask for minfo.module.
         """

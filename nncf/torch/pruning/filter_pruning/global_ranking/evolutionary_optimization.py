@@ -11,18 +11,21 @@
  limitations under the License.
 """
 import queue
+from typing import List, Callable, Optional, Tuple, Dict
 
 import numpy as np
 import torch
+import torch.nn as nn
 from copy import deepcopy, copy
 from functools import partial
 from torch import optim
 
+from nncf.config.config import NNCFConfig
 from nncf.torch.utils import get_filters_num
 
 
 class EvolutionOptimizer:
-    def __init__(self, initial_filter_norms, hparams, random_seed):
+    def __init__(self, initial_filter_norms: Dict, hparams: Dict, random_seed: int):
         self.random_seed = random_seed
         # Optimizer hyper-params
         self.population_size = hparams.get('population_size', 64)
@@ -52,7 +55,7 @@ class EvolutionOptimizer:
         self.cur_episode = None
         self.cur_info = None
 
-    def _save_episode_info(self, reward):
+    def _save_episode_info(self, reward: float) -> None:
         """
         Savin episode information
         :param reward:
@@ -72,7 +75,7 @@ class EvolutionOptimizer:
             self.population[self.oldest_index] = self.last_action
             self.population_rewards[self.oldest_index] = reward
 
-    def _predict_action(self):
+    def _predict_action(self) -> Dict:
         """
         Predict action for the last state.
         :return: action
@@ -111,7 +114,7 @@ class EvolutionOptimizer:
             self.oldest_index = self.indexes_queue.get()
         return action
 
-    def ask(self, episode_num):
+    def ask(self, episode_num: int) -> Dict:
         """
         Predict and returns action for the last told episode information: state, reward, episode_num and info
         :return:
@@ -121,7 +124,7 @@ class EvolutionOptimizer:
         self.last_action = action
         return action
 
-    def tell(self, state, reward, end_of_episode, episode_num, info):
+    def tell(self, state: torch.Tensor, reward: float, end_of_episode: bool, episode_num: int, info: List) -> None:
         """
         Getting info about episode step and save it every end of episode
         """
@@ -136,8 +139,10 @@ class EvolutionOptimizer:
 
 
 class LeGREvolutionEnv:
-    def __init__(self, filter_pruner, model, train_loader, val_loader, train_fn, train_optimizer, val_fn, config,
-                 train_steps, pruning_max):
+    def __init__(self, filter_pruner: 'LeGRPruner', model: nn.Module, train_loader: torch.utils.data.DataLoader,
+                 val_loader: torch.utils.data.DataLoader, train_fn: Callable,
+                 train_optimizer: Optional[torch.optim.Optimizer], val_fn: Callable, config: NNCFConfig,
+                 train_steps: int, pruning_max: float):
         self.loss_as_reward = True
         self.prune_target = pruning_max
         self.steps = train_steps
@@ -155,7 +160,7 @@ class LeGREvolutionEnv:
         self.filter_pruner = filter_pruner
         self.model = model
 
-    def reset(self):
+    def reset(self) -> Tuple[torch.Tensor, List]:
         self.filter_pruner.reset()
         self.model.eval()
 
@@ -164,14 +169,14 @@ class LeGREvolutionEnv:
         self.last_act = None
         return torch.zeros(1), [self.full_flops, self.rest]
 
-    def _train_steps(self, steps):
+    def _train_steps(self, steps: int) -> None:
         optimizer = self.train_optimizer(self.model.parameters())
         self.train_fn(self.train_loader, self.model, optimizer, self.filter_pruner, steps)
 
-    def _get_reward(self):
+    def _get_reward(self) -> Tuple[float, float, float]:
         return self.validate_fn(self.model, self.val_loader)
 
-    def step(self, action):
+    def step(self, action: Dict) -> Tuple[torch.Tensor, float, bool, List]:
         self.last_act = action
         new_state = torch.zeros(1)
 
@@ -189,7 +194,7 @@ class LeGREvolutionEnv:
 
 
 class LeGRPruner:
-    def __init__(self, filter_pruner_ctrl, model):
+    def __init__(self, filter_pruner_ctrl: 'FilterPruningController', model: nn.Module):
         self.filter_pruner = filter_pruner_ctrl
         self.scheduler = copy(self.filter_pruner.scheduler)
         self.model = model
@@ -198,29 +203,29 @@ class LeGRPruner:
         self.init_filter_norms = {node.node_name: self.filter_pruner.filter_importance(node.module.weight)
                                   for node in self.filter_pruner.pruned_module_groups_info.get_all_nodes()}
 
-    def loss(self):
+    def loss(self) -> float:
         return self.filter_pruner.loss()
 
-    def _save_model_weights(self):
+    def _save_model_weights(self) -> None:
         self.model_params_copy = deepcopy(self.model.state_dict())
 
     def _restore_model_weights(self):
         self.model.load_state_dict(self.model_params_copy)
 
-    def _reset_masks(self):
+    def _reset_masks(self) -> None:
         for minfo in self.filter_pruner.pruned_module_groups_info.get_all_nodes():
             new_mask = torch.ones(get_filters_num(minfo.module)).to(
                 minfo.module.weight.device)
             self.filter_pruner.set_mask(minfo, new_mask)
 
-    def reset(self):
+    def reset(self) -> None:
         self._restore_model_weights()
         self._reset_masks()
         self.scheduler = copy(self.filter_pruner.scheduler)
 
-    def get_full_flops_number_in_model(self):
+    def get_full_flops_number_in_model(self) -> float:
         return self.filter_pruner.full_flops
 
-    def prune(self, flops_pruning_target, ranking_coeffs):
+    def prune(self, flops_pruning_target: float, ranking_coeffs: Dict) -> None:
         self.filter_pruner.ranking_coeffs = ranking_coeffs
         self.filter_pruner.set_pruning_rate(flops_pruning_target)

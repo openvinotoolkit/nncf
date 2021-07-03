@@ -196,11 +196,11 @@ class FilterPruningController(BasePruningAlgoController):
         return self._scheduler
 
     @staticmethod
-    def get_mask(minfo: PrunedModuleInfo):
+    def get_mask(minfo: PrunedModuleInfo) -> torch.Tensor:
         return minfo.operand.binary_filter_pruning_mask
 
     @staticmethod
-    def set_mask(minfo: PrunedModuleInfo, mask):
+    def set_mask(minfo: PrunedModuleInfo, mask: torch.Tensor) -> None:
         minfo.operand.binary_filter_pruning_mask = mask
 
     def statistics(self, quickly_collected_only: bool = False) -> NNCFStatistics:

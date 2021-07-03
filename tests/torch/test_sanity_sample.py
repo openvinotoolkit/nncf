@@ -131,10 +131,12 @@ def update_compression_algo_dict_with_reduced_bn_adapt_params(algo_dict):
 
 
 def update_compression_algo_dict_with_legr_save_load_params(nncf_config, tmp_path, save=True):
+    if 'compression' not in nncf_config:
+        return nncf_config
     if isinstance(nncf_config["compression"], list):
         algos_list = nncf_config["compression"]
     else:
-        algos_list = nncf_config["compression"]
+        algos_list = [nncf_config["compression"]]
 
     for algo_dict in algos_list:
         if algo_dict["algorithm"] != "filter_pruning":
