@@ -67,6 +67,11 @@ def fill_linear_weight(linear, value):
         linear.weight[:n, :n] += torch.eye(n)
 
 
+def fill_params_of_model_by_normal(model, std=1.0):
+    for param in model.parameters():
+        param.data = torch.normal(0, std, size=param.data.size())
+
+
 def create_conv(in_channels, out_channels, kernel_size, weight_init=1, bias_init=0, padding=0, stride=1):
     conv = nn.Conv2d(in_channels, out_channels, kernel_size, padding=padding, stride=stride)
     fill_conv_weight(conv, weight_init)
@@ -349,22 +354,23 @@ class RandomDatasetMock(BaseDatasetMock):
         return torch.rand(self._input_size), torch.zeros(1)
 
 
-def create_any_mock_dataloader(dataset_cls: type, config: NNCFConfig, num_samples: int = 1) -> DataLoader:
+def create_any_mock_dataloader(dataset_cls: type, config: NNCFConfig, num_samples: int = 1,
+                               batch_size: int = 1) -> DataLoader:
     input_infos_list = create_input_infos(config)
     input_sample_size = input_infos_list[0].shape
     data_loader = DataLoader(dataset_cls(input_sample_size[1:], num_samples),
-                             batch_size=1,
+                             batch_size=batch_size,
                              num_workers=0,  # Workaround
                              shuffle=False, drop_last=True)
     return data_loader
 
 
-def create_ones_mock_dataloader(config: NNCFConfig, num_samples: int = 1) -> DataLoader:
-    return create_any_mock_dataloader(OnesDatasetMock, config, num_samples)
+def create_ones_mock_dataloader(config: NNCFConfig, num_samples: int = 1, batch_size: int = 1) -> DataLoader:
+    return create_any_mock_dataloader(OnesDatasetMock, config, num_samples, batch_size)
 
 
-def create_random_mock_dataloader(config: NNCFConfig, num_samples: int = 1) -> DataLoader:
-    return create_any_mock_dataloader(RandomDatasetMock, config, num_samples)
+def create_random_mock_dataloader(config: NNCFConfig, num_samples: int = 1, batch_size: int = 1) -> DataLoader:
+    return create_any_mock_dataloader(RandomDatasetMock, config, num_samples, batch_size)
 
 
 # ONNX graph helpers

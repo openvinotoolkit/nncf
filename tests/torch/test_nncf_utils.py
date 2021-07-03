@@ -15,7 +15,7 @@ from typing import Any
 
 import pytest
 from functools import partial
-from nncf.torch.utils import objwalk
+from nncf.torch.nested_objects_traversal import objwalk
 
 
 class ObjwalkTestClass:

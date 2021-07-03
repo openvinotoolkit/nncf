@@ -739,19 +739,34 @@ FILTER_PRUNING_SCHEMA = {
     "additionalProperties": False
 }
 
+KNOWLEDGE_DISTILLATION_ALGO_NAME_IN_CONFIG = 'knowledge_distillation'
+KNOWLEDGE_DISTILLATION_SCHEMA = {
+    **BASIC_COMPRESSION_ALGO_SCHEMA,
+    "properties": {
+        "algorithm": {
+            "const": KNOWLEDGE_DISTILLATION_ALGO_NAME_IN_CONFIG
+        },
+        "type": with_attributes(_STRING, description="Type of Knowledge Distillation Loss (mse/softmax)")
+    },
+    "additionalProperties": False
+}
+
+
 ALL_SUPPORTED_ALGO_SCHEMA = [BINARIZATION_SCHEMA,
                              QUANTIZATION_SCHEMA,
                              CONST_SPARSITY_SCHEMA,
                              MAGNITUDE_SPARSITY_SCHEMA,
                              RB_SPARSITY_SCHEMA,
-                             FILTER_PRUNING_SCHEMA]
+                             FILTER_PRUNING_SCHEMA,
+                             KNOWLEDGE_DISTILLATION_SCHEMA]
 
 REF_VS_ALGO_SCHEMA = {BINARIZATION_ALGO_NAME_IN_CONFIG: BINARIZATION_SCHEMA,
                       QUANTIZATION_ALGO_NAME_IN_CONFIG: QUANTIZATION_SCHEMA,
                       CONST_SPARSITY_ALGO_NAME_IN_CONFIG: CONST_SPARSITY_SCHEMA,
                       MAGNITUDE_SPARSITY_ALGO_NAME_IN_CONFIG: MAGNITUDE_SPARSITY_SCHEMA,
                       RB_SPARSITY_ALGO_NAME_IN_CONFIG: RB_SPARSITY_SCHEMA,
-                      FILTER_PRUNING_ALGO_NAME_IN_CONFIG: FILTER_PRUNING_SCHEMA}
+                      FILTER_PRUNING_ALGO_NAME_IN_CONFIG: FILTER_PRUNING_SCHEMA,
+                      KNOWLEDGE_DISTILLATION_ALGO_NAME_IN_CONFIG: KNOWLEDGE_DISTILLATION_SCHEMA}
 
 TARGET_DEVICE_SCHEMA = {
     "type": "string",

@@ -9,7 +9,8 @@ from nncf.common.graph.definitions import MODEL_INPUT_OP_NAME
 from nncf.common.graph.definitions import MODEL_OUTPUT_OP_NAME
 from nncf.torch.dynamic_graph.patch_pytorch import register_operator
 from nncf.torch.dynamic_graph.graph_tracer import ModelInputInfo, create_mock_tensor
-from nncf.torch.utils import is_tensor, objwalk, is_traced_tensor
+from nncf.torch.utils import is_tensor, is_traced_tensor
+from nncf.torch.nested_objects_traversal import objwalk
 from nncf.common.utils.logger import logger as nncf_logger
 
 

@@ -61,6 +61,7 @@ from nncf.torch.graph.graph_builder import GraphConverter
 from nncf.torch.graph.transformations.commands import PTInsertionCommand
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.graph.transformations.layout import PTTransformationLayout
+from nncf.torch.knowledge_distillation.knowledge_distillation_handler import KnowledgeDistillationLossHandler
 from nncf.torch.layers import NNCF_MODULES
 from nncf.torch.layers import NNCF_WRAPPED_USER_MODULES_DICT
 from nncf.torch.module_operations import UpdateWeight
@@ -68,7 +69,7 @@ from nncf.torch.quantization.layers import QUANTIZATION_MODULES
 from nncf.torch.utils import compute_FLOPs_hook
 from nncf.torch.utils import get_all_modules_by_type
 from nncf.torch.utils import get_state_dict_names_with_modules
-from nncf.torch.utils import objwalk
+from nncf.torch.nested_objects_traversal import objwalk
 
 MODEL_WRAPPED_BY_NNCF_ATTR_NAME = 'nncf_module'
 LEGACY_ACT_STORAGE_NAME = "activation_quantizers"
@@ -322,7 +323,6 @@ class PTInsertionPoint:
     def __hash__(self):
         return hash(str(self))
 
-
 # pylint: disable=too-many-public-methods
 
 
@@ -342,6 +342,7 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
         self.ignored_scopes = ignored_scopes
         self.target_scopes = target_scopes
         self._user_dummy_forward_fn = dummy_forward_fn
+        self._kd_loss_handler = None
 
         try:
             device = next(module.parameters()).device
@@ -421,6 +422,9 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
             retval = replicate_same_tensors(retval)
             if not self._in_user_dummy_forward:
                 retval = self._wrap_outputs_fn(retval)
+
+        if self._kd_loss_handler is not None and self.get_nncf_wrapped_model().training:
+            self._kd_loss_handler(retval, *args, **kwargs)
         return retval
 
     def _strip_traced_tensors(self, args: Tuple, kwargs: Dict) -> Tuple[Tuple, Dict]:
@@ -439,6 +443,23 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
         args = objwalk(args, is_traced_tensor_predicate, strip_fn)
         kwargs = objwalk(kwargs, is_traced_tensor_predicate, strip_fn)
         return args, kwargs
+
+    def create_knowledge_distillation_loss_handler(self, kd_original_model: nn.Module, calculate_fn)\
+            -> KnowledgeDistillationLossHandler:
+        """
+        Creates KnowledgeDistillationLossHandler instance for enabling Knowledge Distillation feature.
+            Also returns created KnowledgeDistillationLossHandler for control over Knowledge Distillation logic.
+
+        :param kd_original_model: original non compressed model used for distillation
+        :param calculate_fn: function used to parse model outputs and calculate knowledge distillation loss
+        :return: KnowledgeDistillationLossHandler instance
+        """
+        device = next(self.get_nncf_wrapped_model().parameters()).device
+        self._kd_loss_handler = KnowledgeDistillationLossHandler(self._compressed_context,
+                                                                 kd_original_model,
+                                                                 calculate_fn,
+                                                                 device)
+        return self._kd_loss_handler
 
     # Cannnot use property syntax here, otherwise the wrapped module will end up
     # being twice in the same checkpoint with different prefixes
