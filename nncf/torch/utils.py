@@ -11,7 +11,7 @@
  limitations under the License.
 """
 from collections import OrderedDict
-from typing import Dict, List
+from typing import Dict
 
 import numpy as np
 import random
@@ -126,24 +126,6 @@ def sum_like(tensor_to_sum, ref_tensor):
             else:
                 tensor_to_sum = tensor_to_sum.sum(dim, keepdim=True)
     return tensor_to_sum
-
-
-def get_per_channel_scale_shape(input_shape, is_weights, channel_idx: int = None):
-    scale_shape = [1 for _ in input_shape]
-    if channel_idx is None:
-        if is_weights:
-            channel_idx = 0  # Per weight channel scales
-        else:
-            channel_idx = 1  # Per activation channel scales
-    scale_shape[channel_idx] = input_shape[channel_idx]
-    return scale_shape
-
-
-def get_scale_shape(input_shape: List[int], is_weights: bool, per_channel: bool,
-                    channel_idx: int = None) -> List[int]:
-    if not per_channel:
-        return [1]
-    return get_per_channel_scale_shape(input_shape, is_weights, channel_idx)
 
 
 def get_flat_tensor_contents_string(input_tensor):

@@ -17,7 +17,7 @@ from torch.utils.data import DataLoader
 
 from nncf import NNCFConfig
 from nncf.torch import register_default_init_args
-from nncf.torch.quantization.quantizer_setup import SingleConfigQuantizerSetup
+from nncf.common.quantization.quantizer_setup import SingleConfigQuantizerSetup
 from nncf.torch.tensor_statistics.algo import TensorStatisticsCollectionBuilder, TensorStatisticsCollectionController
 
 from tests.torch.helpers import TwoConvTestModel, BasicConvTestModel, create_compressed_model_and_algo_for_test, \

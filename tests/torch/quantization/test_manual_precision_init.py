@@ -125,7 +125,7 @@ def test_hawq_manual_configs(manual_config_params):
 
 
 class ManualSingleConvTestParams:
-    ACTIVATION_SCOPE = 'TargetType.OPERATOR_POST_HOOK /nncf_model_input_0'
+    ACTIVATION_SCOPE = '/nncf_model_input_0|OUTPUT'
 
     def __init__(self, name: str):
         self.name = name
@@ -179,8 +179,8 @@ def test_quantization_configs__with_precisions_list():
     config['compression']['initializer'].update({
         "precision": {
             "bitwidth_per_scope":
-                [[2, 'TargetType.OPERATION_WITH_WEIGHTS AddTwoConv/NNCFConv2d[conv1]/conv2d_0'],
-                 [4, 'TargetType.OPERATION_WITH_WEIGHTS AddTwoConv/NNCFConv2d[conv2]/conv2d_0']]
+                [[2, 'AddTwoConv/NNCFConv2d[conv1]/conv2d_0|WEIGHT'],
+                 [4, 'AddTwoConv/NNCFConv2d[conv2]/conv2d_0|WEIGHT']]
         }})
     config['target_device'] = 'TRIAL'
     config['compression']["activations"] = {"bits": 6}
@@ -214,8 +214,8 @@ def test_can_resume_with_manual_init(mocker):
     config['compression']['initializer'].update({
         'precision': {
             'bitwidth_per_scope':
-                [[2, 'TargetType.OPERATION_WITH_WEIGHTS AddTwoConv/NNCFConv2d[conv1]/conv2d_0'],
-                 [4, 'TargetType.OPERATION_WITH_WEIGHTS AddTwoConv/NNCFConv2d[conv2]/conv2d_0']]
+                [[2, 'AddTwoConv/NNCFConv2d[conv1]/conv2d_0|WEIGHT'],
+                 [4, 'AddTwoConv/NNCFConv2d[conv2]/conv2d_0|WEIGHT']]
         },
         'range': {
             'num_init_samples': 1

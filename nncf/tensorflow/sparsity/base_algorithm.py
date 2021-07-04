@@ -14,7 +14,6 @@
 from nncf.common.sparsity.controller import SparsityController
 from nncf.tensorflow.api.compression import TFCompressionAlgorithmController
 from nncf.tensorflow.graph.metatypes import keras_layers as layer_metatypes
-from nncf.tensorflow.graph.metatypes import tf_ops as op_metatypes
 from nncf.tensorflow.sparsity.utils import strip_model_from_masks
 
 SPARSITY_LAYER_METATYPES = [
@@ -34,13 +33,6 @@ SPARSITY_LAYER_METATYPES = [
     layer_metatypes.TFLocallyConnected1DLayerMetatype,
     layer_metatypes.TFLocallyConnected2DLayerMetatype,
     layer_metatypes.TFDenseLayerMetatype
-]
-
-SPARSITY_TF_OP_METATYPES = [
-    op_metatypes.TFConv2DOpMetatype,
-    op_metatypes.TFConv3DOpMetatype,
-    op_metatypes.TFDepthwiseConv2dNativeOpMetatype,
-    op_metatypes.TFQuantizedConv2DOpMetatype,
 ]
 
 

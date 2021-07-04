@@ -61,7 +61,7 @@ from nncf.torch.quantization.precision_init.perturbations import PerturbationObs
 from nncf.torch.quantization.precision_init.perturbations import Perturbations
 from nncf.torch.quantization.precision_init.traces_order import TracesOrder
 from nncf.torch.quantization.precision_init.traces_order import TracesPerLayer
-from nncf.torch.quantization.quantizer_setup import SingleConfigQuantizerSetup
+from nncf.common.quantization.quantizer_setup import SingleConfigQuantizerSetup
 from nncf.torch.structures import QuantizationPrecisionInitArgs
 from nncf.torch.utils import get_all_modules_by_type
 from nncf.torch.utils import safe_thread_call
@@ -694,10 +694,10 @@ def get_quantization_config_with_ignored_scope():
 
 class RatioCalculatorTestDesc:
     NAMES_OF_INSERTION_POINTS = [
-        'TargetType.OPERATOR_POST_HOOK /nncf_model_input_0',
-        'TargetType.OPERATION_WITH_WEIGHTS ConvLinear/NNCFConv2d[conv1]/conv2d_0',
-        'TargetType.OPERATOR_POST_HOOK ConvLinear/NNCFConv2d[conv1]/conv2d_0',
-        'TargetType.OPERATION_WITH_WEIGHTS ConvLinear/NNCFLinear[fc]/linear_0'
+        '/nncf_model_input_0|OUTPUT',
+        'ConvLinear/NNCFConv2d[conv1]/conv2d_0|WEIGHT',
+        'ConvLinear/NNCFConv2d[conv1]/conv2d_0|OUTPUT',
+        'ConvLinear/NNCFLinear[fc]/linear_0|WEIGHT'
     ]
 
     def __init__(self, ref_ratio: float = 1):

@@ -22,7 +22,7 @@ from nncf.common.utils.logger import logger
 from nncf.common.utils.os import safe_open
 from nncf.torch.quantization.precision_constraints import HardwareQuantizationConstraints
 from nncf.torch.quantization.precision_init.base_init import BasePrecisionInitializer, BasePrecisionInitParams
-from nncf.torch.quantization.quantizer_setup import SingleConfigQuantizerSetup
+from nncf.common.quantization.quantizer_setup import SingleConfigQuantizerSetup
 from nncf.torch.structures import AutoQPrecisionInitArgs
 
 from pathlib import Path

@@ -129,9 +129,9 @@ class BitwidthGraph:
             nncf_node = nncf_graph.get_node_by_name(nncf_node_name)
             node_id = nncf_node.node_id
 
-            in_port_id = target_point.input_port_id
+            input_port_id = target_point.input_port_id
 
-            if in_port_id is None:
+            if input_port_id is None:
                 # Post-hooking used for activation quantization
                 # Currently only a single post-hook can immediately follow an operation
                 succs = list(nncf_graph.get_next_nodes(nncf_node))
@@ -143,7 +143,7 @@ class BitwidthGraph:
                 target_node = None
                 for prev_node in previous_nodes:
                     prev_edge = nncf_graph.get_nx_edge(prev_node, nncf_node)
-                    if prev_edge[NNCFGraph.IN_PORT_NAME_EDGE_ATTR] == in_port_id:
+                    if prev_edge[NNCFGraph.INPUT_PORT_ID_EDGE_ATTR] == input_port_id:
                         target_node = prev_node
                         break
 

@@ -16,6 +16,7 @@ import sys
 import inspect
 
 import tensorflow as tf
+from tensorflow.python.keras.engine.base_layer import TensorFlowOpLayer
 
 from nncf.tensorflow.graph.metatypes.keras_layers import TFNNCFWrapperLayerMetatype
 from nncf.tensorflow.graph.metatypes.matcher import get_keras_layer_metatype
@@ -70,15 +71,6 @@ def get_custom_objects(model):
     return custom_objects
 
 
-def get_custom_layers(model):
-    keras_layers = get_keras_layers_class_names()
-    custom_layers = []
-    for layer in model.submodules:
-        if layer.__class__.__name__ not in keras_layers:
-            custom_layers.append(layer)
-    return custom_layers
-
-
 def get_weight_name(name, layer_name=None):
     if layer_name and layer_name in name:
         return name.split(layer_name + '/')[-1]
@@ -102,19 +94,19 @@ def collect_wrapped_layers(model):
     return wrapped_layers
 
 
-def get_shared_node_name(layer_name: str, instance_index: int):
-    return '{}{}{}'.format(layer_name, SHARED_OPERATION_MARK, instance_index)
+def get_shared_node_name(layer_name: str, instance_idx: int):
+    return '{}{}{}'.format(layer_name, SHARED_OPERATION_MARK, instance_idx)
 
 
-def get_original_name_and_instance_index(node_name):
+def get_original_name_and_instance_idx(node_name: NNCFNodeName):
     result = node_name.split(SHARED_OPERATION_MARK)
     original_name = result[0]
-    instance_index = 0 if len(result) == 1 else int(result[1])
-    return original_name, instance_index
+    instance_idx = 0 if len(result) == 1 else int(result[1])
+    return original_name, instance_idx
 
 
 def get_original_name(node_name):
-    return get_original_name_and_instance_index(node_name)[0]
+    return get_original_name_and_instance_idx(node_name)[0]
 
 
 def get_layer_to_graph_nodes_map(model, node_names):
@@ -137,7 +129,7 @@ def get_weight_node_name(graph: NNCFGraph, node_name: NNCFNodeName) -> NNCFNodeN
 
 
 def get_layer_identifier(node: NNCFNode):
-    layer_name, _ = get_original_name_and_instance_index(node.node_name)
+    layer_name, _ = get_original_name_and_instance_idx(node.node_name)
     return layer_name
 
 
@@ -165,3 +157,16 @@ def get_nncf_operations(model: tf.keras.Model, operation_names: List[str]) -> Tu
             for op in ops.values():
                 if op.name in operation_names:
                     yield wrapped_layer, weight_attr, op
+
+
+def _was_specially_wrapped_with_keras_export(layer, attr_name) -> bool:
+    return hasattr(layer, attr_name) and \
+           getattr(layer, attr_name) != ('keras.layers.Layer', )
+
+
+def is_builtin_layer(layer) -> bool:
+    # A similar logic is actually what gets used in TF as
+    # tensorflow.python.keras.utils.layer_utils.is_builtin_layer.
+    return isinstance(layer, TensorFlowOpLayer) or \
+           _was_specially_wrapped_with_keras_export(layer, '_keras_api_names') or \
+           _was_specially_wrapped_with_keras_export(layer, '_keras_api_names_v1')

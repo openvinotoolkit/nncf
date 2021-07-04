@@ -22,9 +22,8 @@ from nncf.api.compression import CompressionLoss
 from nncf.api.compression import CompressionScheduler
 from nncf.api.compression import CompressionStage
 from nncf.common.accuracy_aware_training.training_loop import ADAPTIVE_COMPRESSION_CONTROLLERS
-from nncf.common.graph import NNCFGraph
-from nncf.common.graph import NNCFNodeName
 from nncf.common.initialization.batchnorm_adaptation import BatchnormAdaptationAlgorithm
+from nncf.common.graph import NNCFNodeName
 from nncf.common.pruning.clusterization import Clusterization
 from nncf.common.pruning.mask_propagation import MaskPropagationAlgorithm
 from nncf.common.pruning.schedulers import PRUNING_SCHEDULERS
@@ -255,17 +254,17 @@ class FilterPruningController(BasePruningAlgoController):
     def flops_count_init(self) -> None:
         graph = self._model.get_original_graph()
         for node in graph.get_nodes_by_types([v.op_func_name for v in NNCF_GENERAL_CONV_MODULES_DICT]):
-            out_edge = list(graph.get_output_edges(node).values())[0]
-            out_shape = out_edge[NNCFGraph.ACTIVATION_SHAPE_EDGE_ATTR]
+            out_edge = graph.get_output_edges(node)[0]
+            out_shape = out_edge.tensor_shape
             self._modules_out_shapes[node.node_name] = out_shape[2:]
 
         for node in graph.get_nodes_by_types([v.op_func_name for v in NNCF_LINEAR_MODULES_DICT]):
-            out_edge = list(graph.get_output_edges(node).values())[0]
-            out_shape = out_edge[NNCFGraph.ACTIVATION_SHAPE_EDGE_ATTR]
+            out_edge = graph.get_output_edges(node)[0]
+            out_shape = out_edge.tensor_shape
             self._modules_out_shapes[node.node_name] = out_shape[-1]
 
-            in_edge = list(graph.get_input_edges(node).values())[0]
-            in_shape = in_edge[NNCFGraph.ACTIVATION_SHAPE_EDGE_ATTR]
+            in_edge = graph.get_input_edges(node)[0]
+            in_shape = in_edge.tensor_shape
             if len(in_shape) == 1:
                 self._modules_in_shapes[node.node_name] = in_shape[0]
             else:
