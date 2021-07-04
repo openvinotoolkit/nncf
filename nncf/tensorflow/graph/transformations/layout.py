@@ -18,6 +18,7 @@ from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.graph.transformations.commands import TransformationType
 from nncf.common.graph.transformations.layout import TransformationLayout
+from nncf.tensorflow.graph.transformations.commands import TFLayerPoint
 from nncf.tensorflow.graph.transformations.commands import TFMultipleInsertionCommands
 from nncf.tensorflow.graph.transformations.commands import TFLayer
 
@@ -116,6 +117,7 @@ class TFTransformationLayout(TransformationLayout):
 def check_target_points(tp0: TargetPoint, tp1: TargetPoint) -> bool:
     return tp0.type in GRAPH_NODE_TYPES and \
            tp1.type in GRAPH_NODE_TYPES and \
+           isinstance(tp0, TFLayerPoint) and isinstance(tp1, TFLayerPoint) and \
            tp0.layer_name == tp1.layer_name
 
 

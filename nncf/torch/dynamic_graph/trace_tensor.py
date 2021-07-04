@@ -19,13 +19,18 @@ import numpy as np
 import torch
 
 
-
 class TensorMeta:
     @staticmethod
     def default_comparator(lhs: 'TensorMeta', rhs: 'TensorMeta'):
         return lhs.index == rhs.index and lhs.creator_id == rhs.creator_id and lhs.shape[1:] == rhs.shape[1:]
 
-    def __init__(self, creator_id, index, shape):
+    def __init__(self, creator_id: int, index: int, shape):
+        """
+        :param creator_id: An ID of the node in DynamicGraph that corresponds to an operation that created the
+            tensor.
+        :param index: The index of this tensor in the creator operation's output.
+        :param shape: The shape of the tensor.
+        """
         self.creator_id = creator_id
         self.index = index
         self.shape = tuple(int(dim) for dim in shape)  # Handle cases when shape is a tuple of Tensors

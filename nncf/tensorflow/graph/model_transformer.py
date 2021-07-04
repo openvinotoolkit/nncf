@@ -13,13 +13,23 @@
 
 from collections import OrderedDict
 from collections import namedtuple
+from typing import Callable
+from typing import Dict
+from typing import List
+from typing import Set
 
 import tensorflow as tf
 
-from nncf.tensorflow.graph.transformations.layout import TFTransformationLayout
 from nncf.common.graph.model_transformer import ModelTransformer
+from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
+from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.graph.transformations.commands import TransformationType
+from nncf.tensorflow.graph.transformations.commands import TFAfterLayer
+from nncf.tensorflow.graph.transformations.commands import TFLayer
+from nncf.tensorflow.graph.transformations.commands import TFLayerWeight
+from nncf.tensorflow.graph.transformations.commands import TFOperationWithWeights
+from nncf.tensorflow.graph.transformations.layout import TFTransformationLayout
 from nncf.tensorflow.graph.utils import get_custom_objects
 from nncf.tensorflow.graph.utils import get_weight_name
 from nncf.tensorflow.graph.utils import is_functional_model
@@ -83,7 +93,8 @@ class TFModelTransformer(ModelTransformer):
 
         return weights_map
 
-    def _set_layer_weights(self, layer, weights_map):
+    @staticmethod
+    def _set_layer_weights(layer, weights_map: Dict):
         weight_value_tuples = []
         for weight_tensor in layer.weights:
             weight_name = get_weight_name(weight_tensor.name, layer.name)
@@ -93,7 +104,13 @@ class TFModelTransformer(ModelTransformer):
 
         tf.keras.backend.batch_set_value(weight_value_tuples)
 
-    def _get_layer(self, layer_name):
+    def _get_layer(self, layer_name: str):
+        # For purposes of performance, will try to get the original unmodified layer
+        # first. This function could have been made to return the modified layer state by
+        # first trying to deserialize the corresponding name from the config (which is potentially
+        # compression-modified at this stage), but then the time required to process e.g. all of the weight
+        # insertions in complex custom layers becomes prohibitive since for each weight adjustment in the same layer
+        # we would have to deserialize the layer object.
         for layer in self._model.layers:
             if layer.name == layer_name:
                 return layer
@@ -105,7 +122,7 @@ class TFModelTransformer(ModelTransformer):
 
         return None
 
-    def _find_layer_config(self, layer_name):
+    def _find_layer_config(self, layer_name: str):
         for idx, layer in enumerate(self._model_config['layers']):
             layer_name_ = layer['name'] if is_functional_model(self._model) \
                 else layer['config']['name']
@@ -113,7 +130,7 @@ class TFModelTransformer(ModelTransformer):
                 return idx, layer
         return None, None
 
-    def _update_layer_mapping(self, src_layer_name, dst_layer_name):
+    def _update_layer_mapping(self, src_layer_name: str, dst_layer_name: str):
         if src_layer_name in self._name_mapping.values():
             for orig_layer_name in self._name_mapping:
                 if self._name_mapping[orig_layer_name] == src_layer_name:
@@ -121,7 +138,7 @@ class TFModelTransformer(ModelTransformer):
         else:
             self._name_mapping[src_layer_name] = dst_layer_name
 
-    def _apply_transformation(self, transformation):
+    def _apply_transformation(self, transformation: TransformationCommand):
         if transformation.type == TransformationType.INSERT:
             self._insert(transformation.target_point, transformation.insertion_objects)
         elif transformation.type == TransformationType.MULTI_INSERT:
@@ -132,32 +149,24 @@ class TFModelTransformer(ModelTransformer):
             raise TypeError('Transformation type {} does not support'
                             .format(transformation.type))
 
-    def _get_target_layer_name(self, target_point):
-        target_layer_name = target_point.layer_name
-        if target_layer_name in self._name_mapping:
-            return self._name_mapping[target_layer_name]
-        return target_layer_name
-
-    def _insert(self, target_point, insertion_objects):
-        target_layer_name = self._get_target_layer_name(target_point)
-
-        if target_point.type == TargetType.OPERATION_WITH_WEIGHTS:
+    def _insert(self, target_point: TargetPoint, insertion_objects: List[Callable]):
+        if isinstance(target_point, TFLayerWeight):
             weight_operations = [
                 WeightOperations(target_point.weights_attr_name, insertion_objects)]
-            self._insert_weight_operations(target_layer_name, weight_operations)
-        elif target_point.type == TargetType.AFTER_LAYER:
-            self._insert_layers_after(target_layer_name, target_point.instance_index,
-                                      target_point.out_port, insertion_objects)
+            self._insert_weight_operations(target_point.layer_name, weight_operations)
+        elif isinstance(target_point, TFAfterLayer):
+            self._insert_layers_after(target_point.layer_name,
+                                      target_point.instance_idx,
+                                      target_point.output_port_id,
+                                      insertion_objects)
         else:
             raise TypeError('Insertion transform does not support {} '
                             'target point type'.format(target_point.type))
 
-    def _multi_insertion(self, target_point, commands):
-        if target_point.type != TargetType.LAYER:
+    def _multi_insertion(self, target_point: TargetPoint, commands: List[TransformationCommand]):
+        if not isinstance(target_point, TFLayer):
             raise TypeError('Multiple insertion transform does not support '
                             '{} target point type'.format(target_point.type))
-
-        target_layer_name = self._get_target_layer_name(target_point)
 
         weight_operations = []
         for cmd in commands:
@@ -172,12 +181,11 @@ class TFModelTransformer(ModelTransformer):
                     cmd.insertion_objects
                 ))
 
-        self._insert_weight_operations(target_layer_name, weight_operations)
+        self._insert_weight_operations(target_point.layer_name, weight_operations)
 
-    def _remove(self, target_point):
-        target_layer_name = self._get_target_layer_name(target_point)
-
-        if target_point.type == TargetType.OPERATION_WITH_WEIGHTS:
+    def _remove(self, target_point: TargetPoint):
+        if isinstance(target_point, TFOperationWithWeights):
+            target_layer_name = target_point.layer_name
             self._remove_weight_operation(
                 target_layer_name,
                 target_point.weights_attr_name,
@@ -185,7 +193,7 @@ class TFModelTransformer(ModelTransformer):
         else:
             raise TypeError('{} removal does not support'.format(target_point.type))
 
-    def _remove_weight_operation(self, layer_name, weights_attr_name, operation_name):
+    def _remove_weight_operation(self, layer_name: str, weights_attr_name: str, operation_name: str):
         _, layer_config = self._find_layer_config(layer_name)
         weights_operations = layer_config['config']['weights_attr_operations'].pop(weights_attr_name)
 
@@ -203,7 +211,14 @@ class TFModelTransformer(ModelTransformer):
         elif not layer_config['config']['weights_attr_operations']:
             self._replace_config(layer_name, layer_config['config']['layer'])
 
-    def _insert_weight_operations(self, layer_name, weight_operations):
+    def _insert_weight_operations(self, layer_name: str, weight_operations: List[WeightOperations]):
+        """
+        Assigns the operations to be executed with a layer weight while accessing it.
+        Any operation that have already been associated with the weight will be replaced with the
+        new operation(s).
+        :param layer_name: The name of the weighted layer.
+        :param weight_operations: The operations to be executed with the weight
+        """
         layer = self._get_layer(layer_name)
         wrapper = layer if isinstance(layer, NNCFWrapper) else NNCFWrapper(layer)
 
@@ -213,11 +228,13 @@ class TFModelTransformer(ModelTransformer):
 
         self._replace(layer_name, wrapper)
 
-    def _replace(self, layer_name, replace_layer):
+    def _replace(self, layer_name: str, replace_layer):
+        # NOTE: the change to the layer will only get propagated to self._model.layers
+        # once the model is deserialized from config, i.e. not immediately.
         replace_layer_config = tf.keras.utils.serialize_keras_object(replace_layer)
         self._replace_config(layer_name, replace_layer_config)
 
-    def _replace_config(self, layer_name, replace_layer_config):
+    def _replace_config(self, layer_name: str, replace_layer_config: Dict):
         replace_layer_name = replace_layer_config['config']['name']
         if is_functional_model(self._model):
             if 'name' not in replace_layer_config:
@@ -228,7 +245,7 @@ class TFModelTransformer(ModelTransformer):
 
         self._update_layer_mapping(layer_name, replace_layer_name)
 
-    def _replace_functional(self, layer_name, replace_layer_config):
+    def _replace_functional(self, layer_name: str, replace_layer_config: Dict):
         replace_layer_name = replace_layer_config['name']
         for layer in self._model_config['layers']:
             for inbound_node in layer['inbound_nodes']:
@@ -240,11 +257,11 @@ class TFModelTransformer(ModelTransformer):
         replace_layer_config['inbound_nodes'] = layer_config['inbound_nodes']
         self._model_config['layers'][idx] = replace_layer_config
 
-    def _replace_sequential(self, layer_name, replace_layer_config):
+    def _replace_sequential(self, layer_name: str, replace_layer_config: Dict):
         idx, _ = self._find_layer_config(layer_name)
         self._model_config['layers'][idx] = replace_layer_config
 
-    def _insert_layers_after(self, layer_name, instance_index, out_port, layers):
+    def _insert_layers_after(self, layer_name: str, instance_idx: int, out_port: int, layers: List):
         functional_model = is_functional_model(self._model)
 
         layer_configs = []
@@ -252,64 +269,70 @@ class TFModelTransformer(ModelTransformer):
             config = tf.keras.utils.serialize_keras_object(layer)
             if functional_model:
                 config['name'] = config['config']['name']
-                config['inbound_nodes'] = [[[layer_name, instance_index, out_port, {}]]]
+                config['inbound_nodes'] = [[[layer_name, instance_idx, out_port, {}]]]
             layer_configs.append(config)
 
         for config in layer_configs:
             if functional_model:
-                self._insert_layer_after_functional(layer_name, instance_index, config)
+                self._insert_layer_after_functional(layer_name, instance_idx, config)
             else:
                 self._insert_layer_after_sequential(layer_name, config)
 
-    def _insert_layer_after_functional(self, layer_name, instance_index, layer_config):
+    def _insert_layer_after_functional(self, layer_name: str, instance_idx: int, layer_config: Dict):
         layer_out_ports = set()
         replace_layer_name = layer_config['name']
         for layer in self._model_config['layers']:
             for inbound_node in layer['inbound_nodes']:
-                self._process_insertion_after(inbound_node, layer_name, instance_index,
+                self._process_insertion_after(inbound_node, layer_name, instance_idx,
                                               layer_out_ports, replace_layer_name)
 
-        self._insert_after_model_outputs(layer_name, instance_index, layer_out_ports, replace_layer_name)
+        self._insert_after_model_outputs(layer_name, instance_idx, layer_out_ports, replace_layer_name)
         if len(layer_out_ports) > 1:
             raise RuntimeError('Insertion after layer ({}) with multiple ports '
                                'is not supported'.format(layer_name))
 
         self._insert_layer_after_sequential(layer_name, layer_config)
 
-    def _insert_layer_after_sequential(self, layer_name, layer_configs):
+    def _insert_layer_after_sequential(self, layer_name: str, layer_configs):
         idx, _ = self._find_layer_config(layer_name)
         self._model_config['layers'].insert(idx + 1, layer_configs)
 
     @staticmethod
-    def _process_insertion_after(connection_infos, layer_name, instance_index, layer_out_ports, replace_layer_name):
+    def _process_insertion_after(connection_infos, layer_name: str,
+                                 instance_idx: int,
+                                 layer_out_ports: Set,
+                                 replace_layer_name: str):
         for connection_info in connection_infos:
             if connection_info[0] == layer_name:
                 layer_out_ports.add(connection_info[2])
-                if connection_info[1] == instance_index:
+                if connection_info[1] == instance_idx:
                     connection_info[0] = replace_layer_name
                     connection_info[1] = 0
 
-    def _insert_after_model_outputs(self, layer_name, instance_index, layer_out_ports, replace_layer_name):
+    def _insert_after_model_outputs(self, layer_name: str,
+                                    instance_idx: int,
+                                    layer_out_ports: Set,
+                                    replace_layer_name: str):
         output_layers = self._model_config['output_layers']
         if isinstance(output_layers, list):
-            self._process_insertion_after(output_layers, layer_name, instance_index,
+            self._process_insertion_after(output_layers, layer_name, instance_idx,
                                           layer_out_ports, replace_layer_name)
         elif isinstance(output_layers, dict):
             for out_layers in output_layers.values():
                 if isinstance(out_layers, list):
-                    self._process_insertion_after([out_layers], layer_name, instance_index,
+                    self._process_insertion_after([out_layers], layer_name, instance_idx,
                                                   layer_out_ports, replace_layer_name)
                 elif isinstance(out_layers, dict):
-                    self._process_insertion_after(out_layers.values(), layer_name, instance_index,
+                    self._process_insertion_after(out_layers.values(), layer_name, instance_idx,
                                                   layer_out_ports, replace_layer_name)
 
     @staticmethod
-    def _process_replacement(connection_infos, layer_name, replace_layer_name):
+    def _process_replacement(connection_infos, layer_name: str, replace_layer_name: str):
         for connection_info in connection_infos:
             if connection_info[0] == layer_name:
                 connection_info[0] = replace_layer_name
 
-    def _replace_in_model_outputs(self, layer_name, replace_layer_name):
+    def _replace_in_model_outputs(self, layer_name: str, replace_layer_name: str):
         output_layers = self._model_config['output_layers']
         if isinstance(output_layers, list):
             self._process_replacement(output_layers, layer_name, replace_layer_name)

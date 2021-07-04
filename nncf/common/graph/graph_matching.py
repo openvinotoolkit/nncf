@@ -22,7 +22,7 @@ def get_edge_boundaries(match: List[str], graph: nx.DiGraph):
     out_edge_boundary = list(nx.edge_boundary(graph, match, data=True))
     complement = list(filter(lambda x: x not in match, graph.nodes.keys()))
     in_edge_boundary = list(nx.edge_boundary(graph, complement, data=True))
-    return sorted(in_edge_boundary), sorted(out_edge_boundary)
+    return sorted(in_edge_boundary), sorted(out_edge_boundary)  # must be sorted for determinism
 
 
 def is_subgraph_has_inner_outgoing_edges(graph: nx.DiGraph, subgraph: List[str]) -> bool:

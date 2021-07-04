@@ -11,33 +11,33 @@
  limitations under the License.
 """
 import itertools
+import re
 from collections import namedtuple
+from functools import partial
 from typing import List
 from typing import Tuple
 
 import pytest
-import re
 import torch
 import torch.nn as nn
 import torch.utils.data
-from functools import partial
 from pytest import approx
-
-from nncf.common.graph import NNCFNodeName
-from nncf.common.graph.transformations.commands import TargetType
-from nncf.torch.graph.transformations.commands import PTTargetPoint
 from torch.utils.data import DataLoader
 from torchvision.models import squeezenet1_1
 
-from nncf.torch import utils
-from nncf.torch.checkpoint_loading import load_state
+from nncf.common.graph import NNCFNodeName
 from nncf.common.quantization.initialization.range import PerLayerRangeInitConfig
 from nncf.common.quantization.initialization.range import RangeInitConfig
+from nncf.common.quantization.quantizer_setup import ActivationQuantizationInsertionPoint
+from nncf.common.quantization.quantizer_setup import SingleConfigQuantizationPoint
+from nncf.common.quantization.quantizer_setup import WeightQuantizationInsertionPoint
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizerGroup
 from nncf.config import NNCFConfig
 from nncf.config.structures import QuantizationRangeInitArgs
+from nncf.torch import utils
+from nncf.torch.checkpoint_loading import load_state
 from nncf.torch.initialization import DefaultInitializingDataLoader
 from nncf.torch.initialization import wrap_dataloader_for_init
 from nncf.torch.nncf_network import EXTERNAL_QUANTIZERS_STORAGE_NAME
@@ -48,7 +48,6 @@ from nncf.torch.quantization.layers import BaseQuantizer
 from nncf.torch.quantization.layers import PTQuantizerSpec
 from nncf.torch.quantization.layers import QUANTIZATION_MODULES
 from nncf.torch.quantization.layers import SymmetricQuantizer
-from nncf.torch.quantization.quantizer_setup import SingleConfigQuantizationPoint
 from nncf.torch.tensor_statistics.collectors import MeanMinMaxStatisticCollector
 from nncf.torch.tensor_statistics.collectors import MedianMADStatisticCollector
 from nncf.torch.tensor_statistics.collectors import MinMaxStatisticCollector
@@ -65,6 +64,7 @@ from tests.torch.quantization.test_quantization_helpers import create_rank_datal
 from tests.torch.quantization.test_quantization_helpers import distributed_init_test_default
 from tests.torch.quantization.test_quantization_helpers import get_squeezenet_quantization_config
 from tests.torch.quantization.test_quantization_helpers import post_compression_test_distr_init
+
 
 # pylint:disable=unused-import
 
@@ -169,16 +169,14 @@ def create_config():
 
 def generate_qp(node_name: NNCFNodeName,
                 target: QuantizerGroup,
-                in_port_id: int = None) -> SingleConfigQuantizationPoint:
+                input_port_id: int = None) -> SingleConfigQuantizationPoint:
     if target is QuantizerGroup.WEIGHTS:
-        ip = PTTargetPoint(TargetType.OPERATION_WITH_WEIGHTS, target_node_name=node_name)
+        qip = WeightQuantizationInsertionPoint(target_node_name=node_name)
     elif target is QuantizerGroup.ACTIVATIONS:
-        ip = PTTargetPoint(TargetType.OPERATOR_POST_HOOK if in_port_id is None else TargetType.OPERATOR_PRE_HOOK,
-                           target_node_name=node_name,
-                           input_port_id=in_port_id)
+        qip = ActivationQuantizationInsertionPoint(target_node_name=node_name, input_port_id=input_port_id)
     else:
         raise RuntimeError()
-    return SingleConfigQuantizationPoint(ip, QuantizerConfig(), [node_name])
+    return SingleConfigQuantizationPoint(qip, QuantizerConfig(), [node_name])
 
 
 @pytest.mark.parametrize("wrap_dataloader",
@@ -432,7 +430,7 @@ class TestRangeInit:
             per_layer_configs.append(PerLayerRangeInitConfig.from_dict(sub_init_range_config_dict))
 
         params = PTRangeInitParams(wrap_dataloader,
-                                 '',
+                                   '',
                                    global_init_config=None,
                                    per_layer_range_init_configs=per_layer_configs)
 

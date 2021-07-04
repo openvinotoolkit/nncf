@@ -22,7 +22,7 @@ from nncf.torch.hardware.config import PTHWConfig
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.quantization.algo import ExperimentalQuantizationBuilder, PropagationBasedQuantizerSetupGenerator
 from nncf.torch.quantization.precision_constraints import HardwareQuantizationConstraints
-from nncf.torch.quantization.quantizer_setup import MultiConfigQuantizerSetup
+from nncf.common.quantization.quantizer_setup import MultiConfigQuantizerSetup
 from tests.torch.helpers import create_ones_mock_dataloader, create_conv, BasicConvTestModel
 
 import torch

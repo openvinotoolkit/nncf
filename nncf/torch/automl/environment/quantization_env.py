@@ -54,7 +54,7 @@ from nncf.torch.quantization.precision_init.compression_ratio import Compression
 from nncf.common.quantization.structs import NonWeightQuantizerId
 from nncf.common.quantization.structs import QuantizerId
 from nncf.common.quantization.structs import WeightQuantizerId
-from nncf.torch.quantization.quantizer_setup import QuantizationPointId
+from nncf.common.quantization.quantizer_setup import QuantizationPointId
 
 
 def find_qid_by_str(qctrl: QuantizationController, qid_str: str) -> QuantizerId:

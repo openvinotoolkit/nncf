@@ -13,12 +13,14 @@
 
 from collections import OrderedDict
 from inspect import getfullargspec
+from typing import Dict
 
 import tensorflow as tf
 
 from nncf.tensorflow.layers.custom_objects import get_nncf_custom_objects
 from nncf.tensorflow.layers.custom_objects import NNCF_CUSTOM_OBJECTS
 from nncf.tensorflow.layers.operation import InputType
+from nncf.tensorflow.layers.operation import NNCFOperation
 
 
 @NNCF_CUSTOM_OBJECTS.register()
@@ -50,7 +52,7 @@ class NNCFWrapper(tf.keras.layers.Wrapper):
         super().__init__(layer, **kwargs)
         self._track_trackable(layer, name='layer')
 
-        self.weights_attr_ops = {}
+        self.weights_attr_ops = {}  # type: Dict[str, Dict[str, NNCFOperation]]
 
         self._init_layer_call_fn_args()
         self._trainable_weights = []
@@ -199,12 +201,12 @@ class NNCFWrapper(tf.keras.layers.Wrapper):
                                   training)
             self.set_layer_weight(weight_attr, layer_weight)
 
-    def registry_weight_operation(self, weights_attr, op):
+    def registry_weight_operation(self, weights_attr: str, op: NNCFOperation):
         if weights_attr not in self.weights_attr_ops:
             self.weights_attr_ops[weights_attr] = OrderedDict()
 
         if op.name in self.weights_attr_ops[weights_attr]:
-            raise RuntimeError('Attempt to apply one operation on layer weight twice')
+            raise RuntimeError(f'Attempt to apply an operation with the same name {op.name} on layer weight twice')
 
         self.weights_attr_ops[weights_attr][op.name] = op
 

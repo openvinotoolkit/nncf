@@ -178,8 +178,8 @@ MEMORY_CONSUMPTION_STATS_TEST_CASES = [
         initializers={
             'precision': {
                 'bitwidth_per_scope': [
-                    [2, 'TargetType.OPERATION_WITH_WEIGHTS AlexNet/Sequential[features]/NNCFConv2d[0]/conv2d_0'],
-                    [4, 'TargetType.OPERATION_WITH_WEIGHTS AlexNet/Sequential[features]/NNCFConv2d[6]/conv2d_0']
+                    [2, 'AlexNet/Sequential[features]/NNCFConv2d[0]/conv2d_0|WEIGHT'],
+                    [4, 'AlexNet/Sequential[features]/NNCFConv2d[6]/conv2d_0|WEIGHT']
                 ]
             }
         },
