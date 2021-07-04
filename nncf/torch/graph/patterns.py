@@ -14,10 +14,12 @@
 from nncf.common.graph.patterns import GraphPattern
 from nncf.common.graph.patterns import HWFusedPatterns
 
-from nncf.torch.graph.pattern_operations import LINEAR_OPERATIONS
-from nncf.torch.graph.pattern_operations import BATCH_NORMALIZATION_OPERATIONS
 from nncf.torch.graph.pattern_operations import ACTIVATIONS_OPERATIONS
 from nncf.torch.graph.pattern_operations import ARITHMETIC_OPERATIONS
+from nncf.torch.graph.pattern_operations import BATCH_NORMALIZATION_OPERATIONS
+from nncf.torch.graph.pattern_operations import GROUP_NORMALIZATION_OPERATIONS
+from nncf.torch.graph.pattern_operations import RELU_OPERATIONS
+from nncf.torch.graph.pattern_operations import LINEAR_OPERATIONS
 
 QUANTIZATION_IGNORE_PATTERNS = HWFusedPatterns()
 
@@ -94,6 +96,12 @@ def register_all_patterns():
     QUANTIZATION_IGNORE_PATTERNS.register(activations + batch_norm, 'ACTIVATIONS + BN', match=True)
     QUANTIZATION_IGNORE_PATTERNS.register(arithmetic_ops + batch_norm_activations_permutation,
                                           'ARITHMETIC + BN_ACT_PERM', match=True)
+
+    group_norm = GraphPattern()
+    group_norm.add_node(**GROUP_NORMALIZATION_OPERATIONS)
+    relu = GraphPattern()
+    relu.add_node(**RELU_OPERATIONS)
+    QUANTIZATION_IGNORE_PATTERNS.register(group_norm + relu, 'GROUP_NORM + RELU', match=True)
 
 
 register_all_patterns()
