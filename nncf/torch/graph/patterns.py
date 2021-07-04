@@ -37,8 +37,9 @@ def create_swish_act() -> GraphPattern:
 
 
 def create_h_swish_act() -> GraphPattern:
-    pattern = GraphPattern()
+    main_pattern = GraphPattern()
 
+    pattern = GraphPattern()
     input_pattern_node = pattern.add_node(label='*INPUT_NODE*', type=GraphPattern.PATTERN_INPUT_NODE_TYPE)
     add_node = pattern.add_node(label='ADD', type='__add__')
     hardtanh_node = pattern.add_node(label='HARDTANH', type='hardtanh')
@@ -50,7 +51,23 @@ def create_h_swish_act() -> GraphPattern:
     pattern.add_edge(add_node, hardtanh_node)
     pattern.add_edge(hardtanh_node, truediv_node)
     pattern.add_edge(truediv_node, mul_node)
-    return pattern
+
+    main_pattern.add_pattern_alternative(pattern)
+
+    pattern = GraphPattern()
+    input_pattern_node = pattern.add_node(label='*INPUT_NODE*', type=GraphPattern.PATTERN_INPUT_NODE_TYPE)
+    add_node = pattern.add_node(label='ADD', type='__add__')
+    hardtanh_node = pattern.add_node(label='HARDTANH', type='hardtanh')
+    mul_node = pattern.add_node(label='MUL', type='__mul__')
+    truediv_node = pattern.add_node(label='DIV', type='__truediv__')
+
+    pattern.add_edge(input_pattern_node, add_node)
+    pattern.add_edge(input_pattern_node, mul_node)
+    pattern.add_edge(add_node, hardtanh_node)
+    pattern.add_edge(hardtanh_node, mul_node)
+    pattern.add_edge(mul_node, truediv_node)
+    main_pattern.add_pattern_alternative(pattern)
+    return main_pattern
 
 
 def create_h_sigmoid_act() -> GraphPattern:
