@@ -153,9 +153,9 @@ class FilterPruningController(BasePruningAlgoController):
                 nncf_logger.info('Loading ranking coefficients from file {}'.format(coeffs_path))
                 try:
                     loaded_coeffs = json.load(open(coeffs_path, 'r'))
-                except (ValueError, FileNotFoundError):
+                except (ValueError, FileNotFoundError) as err:
                     raise Exception('Can\'t load json with ranking coefficients. Please, check format of json file '
-                                    'and path to the file.')
+                                    'and path to the file.') from err
                 ranking_coeffs = {key: tuple(loaded_coeffs[key]) for key in loaded_coeffs}
                 nncf_logger.info('Loaded ranking coefficients = {}'.format(ranking_coeffs))
                 self.ranking_coeffs = ranking_coeffs
