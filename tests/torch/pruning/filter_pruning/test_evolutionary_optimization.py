@@ -10,7 +10,6 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-from typing import Callable
 
 import torch
 from functools import partial
@@ -51,6 +50,8 @@ def test_evolution_optimizer_interface():
     evo_optimizer = compression_ctrl.legr.agent
     assert hasattr(evo_optimizer, 'ask')
     assert hasattr(evo_optimizer, 'tell')
+    assert callable(evo_optimizer.ask)
+    assert callable(evo_optimizer.tell)
 
 
 def test_evolution_optimizer_reproducibility():
@@ -124,8 +125,8 @@ def test_evolution_env_interface():
 
     assert hasattr(evolution_env, 'reset')
     assert hasattr(evolution_env, 'step')
-    assert isinstance(evolution_env.reset, Callable)
-    assert isinstance(evolution_env.step, Callable)
+    assert callable(evolution_env.reset)
+    assert callable(evolution_env.step)
 
 
 def test_pruner_default_params():
@@ -148,7 +149,6 @@ def test_pruner_interface():
     assert hasattr(legr_pruner, 'reset')
     assert hasattr(legr_pruner, 'prune')
     assert hasattr(legr_pruner, 'get_full_flops_number_in_model')
-
-    assert isinstance(legr_pruner.reset, Callable)
-    assert isinstance(legr_pruner.prune, Callable)
-    assert isinstance(legr_pruner.get_full_flops_number_in_model, Callable)
+    assert callable(legr_pruner.reset)
+    assert callable(legr_pruner.prune)
+    assert callable(legr_pruner.get_full_flops_number_in_model)

@@ -10,19 +10,12 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-import json
-from typing import Callable
 
-import numpy as np
-import torch
 from torch import nn
 
-import examples.torch.classification.main as sample
 from nncf.torch import register_default_init_args
-from nncf.torch.initialization import default_criterion_fn
 from nncf.torch.structures import DistributedCallbacksArgs
-from tests.torch.helpers import create_ones_mock_dataloader, create_compressed_model_and_algo_for_test
-from tests.torch.pruning.filter_pruning.test_legr import create_default_legr_config
+from tests.torch.helpers import create_ones_mock_dataloader
 from tests.torch.pruning.helpers import get_basic_pruning_config, PruningTestModel
 
 
@@ -33,8 +26,8 @@ def test_default_distributed_init_struct():
         config, init_loader)
 
     dist_callbacks = config.get_extra_struct(DistributedCallbacksArgs)
-    assert isinstance(dist_callbacks.wrap_model, Callable)
-    assert isinstance(dist_callbacks.unwrap_model, Callable)
+    assert callable(dist_callbacks.wrap_model)
+    assert callable(dist_callbacks.unwrap_model)
 
 
 def test_distributed_init_struct():

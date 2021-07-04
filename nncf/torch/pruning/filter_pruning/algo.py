@@ -18,21 +18,9 @@ import numpy as np
 import torch
 from texttable import Texttable
 
-
-from nncf.common.initialization.batchnorm_adaptation import BatchnormAdaptationAlgorithm
-from nncf.torch.graph.operator_metatypes import Conv1dMetatype
-from nncf.torch.graph.operator_metatypes import DepthwiseConv1dSubtype
-from nncf.torch.graph.operator_metatypes import Conv2dMetatype
-from nncf.torch.graph.operator_metatypes import DepthwiseConv2dSubtype
-from nncf.torch.graph.operator_metatypes import Conv3dMetatype
-from nncf.torch.graph.operator_metatypes import DepthwiseConv3dSubtype
-from nncf.torch.graph.operator_metatypes import ConvTranspose2dMetatype
-from nncf.torch.graph.operator_metatypes import ConvTranspose3dMetatype
-from nncf.torch.graph.operator_metatypes import LinearMetatype
-from nncf.torch.algo_selector import COMPRESSION_ALGORITHMS
-from nncf.api.compression import CompressionStage
 from nncf.api.compression import CompressionLoss
 from nncf.api.compression import CompressionScheduler
+from nncf.api.compression import CompressionStage
 from nncf.common.accuracy_aware_training.training_loop import ADAPTIVE_COMPRESSION_CONTROLLERS
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNodeName
@@ -53,9 +41,17 @@ from nncf.common.schedulers import StubCompressionScheduler
 from nncf.common.statistics import NNCFStatistics
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.config.extractors import extract_bn_adaptation_init_params
-from nncf.common.accuracy_aware_training.training_loop import ADAPTIVE_COMPRESSION_CONTROLLERS
-from nncf.common.schedulers import StubCompressionScheduler
+from nncf.torch.algo_selector import COMPRESSION_ALGORITHMS
 from nncf.torch.compression_method_api import PTCompressionAlgorithmController
+from nncf.torch.graph.operator_metatypes import Conv1dMetatype
+from nncf.torch.graph.operator_metatypes import Conv2dMetatype
+from nncf.torch.graph.operator_metatypes import Conv3dMetatype
+from nncf.torch.graph.operator_metatypes import ConvTranspose2dMetatype
+from nncf.torch.graph.operator_metatypes import ConvTranspose3dMetatype
+from nncf.torch.graph.operator_metatypes import DepthwiseConv1dSubtype
+from nncf.torch.graph.operator_metatypes import DepthwiseConv2dSubtype
+from nncf.torch.graph.operator_metatypes import DepthwiseConv3dSubtype
+from nncf.torch.graph.operator_metatypes import LinearMetatype
 from nncf.torch.layer_utils import _NNCFModuleMixin
 from nncf.torch.layers import NNCF_GENERAL_CONV_MODULES_DICT
 from nncf.torch.layers import NNCF_LINEAR_MODULES_DICT
@@ -158,8 +154,9 @@ class FilterPruningController(BasePruningAlgoController):
                 nncf_logger.info('Loading ranking coefficients from file {}'.format(coeffs_path))
                 try:
                     loaded_coeffs = json.load(open(coeffs_path, 'r'))
-                except:
-                    raise Exception('Can\'t load json with ranking coefficients. Please, check format of json file.')
+                except (ValueError, FileNotFoundError):
+                    raise Exception('Can\'t load json with ranking coefficients. Please, check format of json file '
+                                    'and path to the file.')
                 ranking_coeffs = {key: tuple(loaded_coeffs[key]) for key in loaded_coeffs}
                 nncf_logger.info('Loaded ranking coefficients = {}'.format(ranking_coeffs))
                 self.ranking_coeffs = ranking_coeffs
