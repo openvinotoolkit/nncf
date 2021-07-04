@@ -29,7 +29,7 @@ class TFOpMetatype(OperatorMetatype):
 
 
 @TF_OPERATION_METATYPES.register()
-class NoopMetatype(OperatorMetatype):
+class TFNoopMetatype(OperatorMetatype):
     name = 'noop'
 
     @classmethod

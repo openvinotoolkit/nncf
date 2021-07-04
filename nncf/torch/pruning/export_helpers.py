@@ -41,7 +41,7 @@ from nncf.torch.graph.operator_metatypes import (
     GELUMetatype,
     GroupNormMetatype,
     HardTanhMetatype,
-    InputNoopMetatype,
+    PTInputNoopMetatype,
     LinearMetatype,
     MatMulMetatype,
     MaxMetatype,
@@ -49,7 +49,7 @@ from nncf.torch.graph.operator_metatypes import (
     MeanMetatype,
     MinMetatype,
     MulMetatype,
-    OutputNoopMetatype,
+    PTOutputNoopMetatype,
     PRELUMetatype,
     RELUMetatype,
     SigmoidMetatype,
@@ -60,7 +60,7 @@ from nncf.torch.graph.operator_metatypes import (
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.layers import NNCF_WRAPPED_USER_MODULES_DICT
-from nncf.torch.pruning.utils import is_depthwise_conv
+from nncf.common.pruning.utils import is_depthwise_conv
 
 PT_PRUNING_OPERATOR_METATYPES = PruningOperationsMetatypeRegistry("operator_metatypes")
 
@@ -102,7 +102,7 @@ class PTDefaultMetaOp(DefaultMetaOp):
 
 @PT_PRUNING_OPERATOR_METATYPES.register('model_input')
 class PTInput(PTDefaultMetaOp):
-    subtypes = [InputNoopMetatype]
+    subtypes = [PTInputNoopMetatype]
 
     @classmethod
     def accept_pruned_input(cls, node: NNCFNode):
@@ -116,7 +116,7 @@ class PTInput(PTDefaultMetaOp):
 
 @PT_PRUNING_OPERATOR_METATYPES.register('model_output')
 class PTOutput(PTDefaultMetaOp):
-    subtypes = [OutputNoopMetatype]
+    subtypes = [PTOutputNoopMetatype]
 
     @classmethod
     def accept_pruned_input(cls, node: NNCFNode):

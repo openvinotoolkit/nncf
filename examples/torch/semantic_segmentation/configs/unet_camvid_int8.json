@@ -1,7 +1,7 @@
 {
     "model": "unet",
     "dataset" : "camvid",
-
+    "epochs": 10,
     "preprocessing": {
         "resize": {
             "height": 368,

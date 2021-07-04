@@ -20,6 +20,7 @@ The samples demonstrate the usage of compression algorithms for two different us
 - Support of various compression algorithms, applied during a model fine-tuning process to achieve best compression parameters and accuracy:
     - Quantization
     - Sparsity
+    - Filter pruning
 - Automatic, configurable model graph transformation to obtain the compressed model. The model is wrapped by the custom class and additional compression-specific layers are inserted in the graph.
   > **NOTE**: Only Keras models created using Sequential or Keras Functional API are supported.
 - Common interface for compression methods.
@@ -66,15 +67,15 @@ compression_ctrl.export_model("compressed_model.pb", save_format='frozen_graph')
 For a quick start with NNCF-powered compression, you can also try the sample scripts, each of them provides a basic training pipeline for Image Classification and Object Detection correspondingly.
 
 To run the samples please refer to the corresponding tutorials:
-- [Image Classification sample](examples/tensorflow/classification/README.md)
-- [Object Detection sample](examples/tensorflow/object_detection/README.md)
-- [Instance Segmentation sample](examples/tensorflow/segmentation/README.md)
+- [Image Classification sample](../../examples/tensorflow/classification/README.md)
+- [Object Detection sample](../../examples/tensorflow/object_detection/README.md)
+- [Instance Segmentation sample](../../examples/tensorflow/segmentation/README.md)
 
 ## System requirements
 - Ubuntu\* 16.04 or later (64-bit)
 - Python\* 3.6.2 or later
-- NVidia CUDA\* Toolkit 11.0
-- TensorFlow\* 2.4.0
+- NVIDIA CUDA\* Toolkit 11.0
+- TensorFlow\* 2.4.2
 
 ## NNCF TF compression results
 
@@ -109,7 +110,7 @@ Quick jump to the samples:
 
 |**Model**|**Compression algorithm**|**Dataset**|**TensorFlow FP32 baseline mAP**|**TensorFlow compressed mAP**|
 | :---: | :---: | :---: | :---: | :---: |
-|RetinaNet|INT8 w:sym,per-tensor a:sym,per-tensor |COCO2017|33.44|33.26|
+|RetinaNet|INT8 w:sym,per-tensor a:sym,per-tensor |COCO2017|33.44|33.22|
 |RetinaNet|Sparsity 50% (Magnitude)|COCO2017|33.44|33.13|
 |RetinaNet|Filter Pruning 40%|COCO2017|33.44|32.7|
 
@@ -117,7 +118,7 @@ Quick jump to the samples:
 
 |**Model**|**Compression algorithm**|**Dataset**|**TensorFlow FP32 baseline mAP**|**TensorFlow compressed mAP**|
 | :---: | :---: | :---: | :---: | :---: |
-|MaskRCNN|INT8 w:sym,per-tensor a:sym,per-tensor |COCO2017|bbox: 37.33<br/>segm: 33.56|bbox: 37.25<br/>segm: 33.59|
+|MaskRCNN|INT8 w:sym,per-tensor a:sym,per-tensor |COCO2017|bbox: 37.33<br/>segm: 33.56|bbox: 37.12<br/>segm: 33.39|
 |MaskRCNN|Sparsity 50% (Magnitude)|COCO2017|bbox: 37.33<br/>segm: 33.56|bbox: 36.93<br/>segm: 33.23|
 
 ## Legal Information

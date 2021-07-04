@@ -15,8 +15,8 @@ from collections import Counter
 from nncf.common.graph import NNCFGraphEdge
 from nncf.common.graph import NNCFGraphPatternIO
 from nncf.common.graph.layer_attributes import Dtype
+from nncf.common.graph.operator_metatypes import NoopMetatype
 from nncf.torch.graph.graph import PTNNCFGraph
-from nncf.torch.graph.operator_metatypes import NoopMetatype
 
 
 def test_graph_pattern_io_building():

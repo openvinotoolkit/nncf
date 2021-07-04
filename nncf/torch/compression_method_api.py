@@ -16,7 +16,6 @@
 This package defines the API for the NNCF compression methods so that the user could
 extend the existing algorithms.
 """
-
 from typing import List, Tuple, TypeVar, Dict
 
 import torch

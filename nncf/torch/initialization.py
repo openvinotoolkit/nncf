@@ -20,7 +20,8 @@ from nncf.config.structures import QuantizationRangeInitArgs
 from nncf.torch.structures import AutoQPrecisionInitArgs, LeGRInitArgs, DistributedCallbacksArgs
 from nncf.torch.structures import QuantizationPrecisionInitArgs
 from nncf.torch.utils import is_tensor, default_distributed_wrapper, default_distributed_unwrapper
-from nncf.torch.utils import objwalk
+from nncf.torch.nested_objects_traversal import objwalk
+from contextlib import contextmanager
 
 
 class PTInitializingDataLoader(NNCFDataLoader):

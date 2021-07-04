@@ -32,7 +32,13 @@ def apply_saturation_fix(model: tf.keras.Model, op_names: List[str]) -> None:
 def apply_saturation_fix_to_layer(wrapped_layer: NNCFWrapper, weight_attr: str, op: NNCFOperation) -> None:
     layer_weight = wrapped_layer.layer_weights[weight_attr]
     ops_weights = wrapped_layer.get_operation_weights(op.name)
-    layer_weight.assign(
-        op.call(layer_weight, ops_weights, False)
-    )
+    # Keep zero weights to prevent
+    # zero quant calculation arithmetic errors
+    mask = layer_weight == 0.
+    layer_weight_updated = op.call(layer_weight, ops_weights, False)
+
+    # Assign exact zero to weights which
+    # was exact zero before saturation fix
+    layer_weight_updated = tf.where(mask, [0.], layer_weight_updated)
+    layer_weight.assign(layer_weight_updated)
     op.apply_saturation_fix(ops_weights)

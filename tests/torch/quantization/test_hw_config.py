@@ -14,10 +14,10 @@
 import torch
 
 from nncf.config import NNCFConfig
-from nncf.common.graph import MODEL_INPUT_OP_NAME
-from nncf.common.hardware.config import HWConfig
+from nncf.common.graph.definitions import MODEL_INPUT_OP_NAME
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.torch.dynamic_graph.graph_tracer import ModelInputInfo
+from nncf.torch.hardware.config import PTHWConfig
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.quantization.algo import QuantizationBuilder
 from nncf.torch.quantization.algo import QuantizationController
@@ -52,7 +52,7 @@ class TestHWConfigRules:
         nncf_config["target_device"] = "mock"
 
         net = NNCFNetwork(model, input_infos=[ModelInputInfo([1, 2, 1, 1])])
-        hw_config = HWConfig.from_dict(hw_config_dict)
+        hw_config = PTHWConfig.from_dict(hw_config_dict)
         qbuilder = QuantizationBuilder(NNCFConfig(nncf_config["compression"]), should_init=False)
         qbuilder.hw_config = hw_config
         net = qbuilder.apply_to(net)

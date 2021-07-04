@@ -307,7 +307,7 @@ sparsity and filter pruning algorithms. It can be enabled by setting a non-zero 
     "initializer": {
         "range": {
             "num_init_samples": 256, // Number of samples from the training dataset to consume as sample model inputs for purposes of setting initial minimum and maximum quantization ranges
-            "type": "minmax" // Type of the initializer - determines which statistics gathered during initialization will be used to initialize the quantization ranges
+            "type": "min_max" // Type of the initializer - determines which statistics gathered during initialization will be used to initialize the quantization ranges. "mean_min_max" is used by default
         },
         "precision": {
             "type": "hawq", // Type of precision initialization - either "manual" or "hawq". With "manual", precisions are defined explicitly via "bitwidth_per_scope". With "hawq", these are determined automatically using the HAWQ algorithm.
@@ -360,15 +360,6 @@ sparsity and filter pruning algorithms. It can be enabled by setting a non-zero 
         "linked_quantizer_scopes": []
     },
     "quantize_inputs": true, // Whether the model inputs should be immediately quantized prior to any other model operations."
-    "quantizable_subgraph_patterns": [ // Each sub-list in this list will correspond to a sequence of operations in the model control flow graph that will have a quantizer appended at the end of the sequence
-        [
-            "cat",
-            "batch_norm"
-        ],
-        [
-            "h_swish"
-        ]
-    ]
     "scope_overrides": { // This option is used to specify overriding quantization constraints for specific scope, e.g. in case you need to quantize a single operation differently than the rest of the model.
         "{re}.*InvertedResidual.*": {
             "mode": "symmetric", // Mode of quantization

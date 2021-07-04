@@ -25,9 +25,9 @@ from unittest.mock import MagicMock
 import networkx as nx
 import pytest
 
-from nncf.common.graph import MODEL_INPUT_OP_NAME
-from nncf.common.graph import MODEL_OUTPUT_OP_NAME
-from nncf.common.graph import NNCFGraphNodeType
+from nncf.common.graph.definitions import MODEL_INPUT_OP_NAME
+from nncf.common.graph.definitions import MODEL_OUTPUT_OP_NAME
+from nncf.common.graph.definitions import NNCFGraphNodeType
 from nncf.common.graph import NNCFNodeName
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.transformations.commands import TargetType
@@ -262,7 +262,8 @@ class TestQuantizerPropagationSolver:
             if qpg_node[QPSG.NODE_TYPE_NODE_ATTR] == QuantizerPropagationStateGraphNodeType.OPERATOR:
                 quant_det_id = qpg_node[QPSG.OPERATOR_METATYPE_NODE_ATTR]
                 quant_types = qpg_node[QPSG.ALLOWED_INPUT_QUANTIZATION_TYPES_NODE_ATTR]
-                if op_quant_traits_map[quant_det_id] == QuantizationTrait.INPUTS_QUANTIZABLE:
+                if op_quant_traits_map.get(quant_det_id, QuantizationTrait.QUANTIZATION_AGNOSTIC) == \
+                        QuantizationTrait.INPUTS_QUANTIZABLE:
                     # TODO: check for correspondence of operator type and HW config to initial
                     # quantization types
                     assert quant_types == QuantizerPropagationSolver.DEFAULT_QUANTIZATION_TYPES

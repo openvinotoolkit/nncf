@@ -15,6 +15,7 @@ import json
 import os
 import tempfile
 from functools import partial
+from pathlib import Path
 import pytest
 import tensorflow as tf
 
@@ -27,6 +28,7 @@ from examples.tensorflow.object_detection import main as od_main
 from examples.tensorflow.segmentation import train as seg_train
 from examples.tensorflow.segmentation import evaluation as seg_eval
 from examples.tensorflow.common.model_loader import AVAILABLE_MODELS
+from examples.tensorflow.common.prepare_checkpoint import main as prepare_checkpoint_main
 
 od_main.get_dataset_builders = partial(get_coco_dataset_builders, train=True, validation=True)
 seg_train.get_dataset_builders = partial(get_coco_dataset_builders, train=True, calibration=True)
@@ -172,6 +174,7 @@ def generate_id(value):
 
 CONFIG_PARAMS = generate_config_params()
 
+
 @pytest.fixture(params=CONFIG_PARAMS, ids=generate_id)
 def _config(request, dataset_dir):
     sample_type, config_path, dataset_name, dataset_type, batch_size, tid = request.param
@@ -212,7 +215,6 @@ def test_model_eval(_config, tmp_path):
         '--log-dir': tmp_path,
         '--batch-size': _config['batch_size']
     }
-
     main = get_sample_fn(_config['sample_type'], modes=['test'])
     main(convert_to_argv(args))
 
@@ -362,3 +364,62 @@ def test_export_with_resume(_config, tmp_path, export_format, _case_common_dirs)
     model_path = os.path.join(export_path, 'saved_model.pb') \
         if export_format == 'saved-model' else export_path
     assert os.path.exists(model_path)
+
+
+def get_prepare_checkpoint_configs():
+    supported_model_types = ['object_detection', 'segmentation']
+    config_params = []
+    for sample_type in supported_model_types:
+        config_paths, batch_sizes = CONFIGS[sample_type], GLOBAL_BATCH_SIZE[sample_type]
+        dataset_names, dataset_types = zip(*DATASETS[sample_type])
+
+        for config_path, dataset_name, dataset_type, batch_size in \
+                zip(config_paths, dataset_names, dataset_types, batch_sizes):
+            dataset_path = DATASET_PATHS[sample_type][dataset_name](None)
+
+            with config_path.open() as f:
+                jconfig = json.load(f)
+
+            if 'checkpoint_save_dir' in jconfig.keys():
+                del jconfig['checkpoint_save_dir']
+
+            jconfig['dataset'] = dataset_name
+            jconfig['dataset_type'] = dataset_type
+            config_params.append((sample_type, config_path, jconfig, dataset_path, batch_size))
+    return config_params
+
+
+@pytest.mark.parametrize('sample_type,config_path,config_eval,dataset_path,batch_size',
+                         get_prepare_checkpoint_configs(),
+                         ids=[x[0] for x in get_prepare_checkpoint_configs()])
+def test_prepare_checkpoint(sample_type, config_path, config_eval, dataset_path, batch_size, tmp_path):
+    # Keep default soft_device_placement state
+    default_soft_device_placement = tf.config.get_soft_device_placement()
+    tf.config.set_soft_device_placement(True)
+    checkpoint_save_dir = tmp_path
+    log_dir = tempfile.mkdtemp()
+    args = {
+        '--model-type': sample_type,
+        '--config': config_path,
+        '--checkpoint-save-dir': checkpoint_save_dir,
+        '--resume': tempfile.mkdtemp(),
+    }
+
+    prepare_checkpoint_main(convert_to_argv(args))
+
+    assert tf.io.gfile.isdir(checkpoint_save_dir)
+    assert tf.train.latest_checkpoint(checkpoint_save_dir)
+    config_factory = ConfigFactory(config_eval, Path(tempfile.gettempdir()) / 'config.json')
+    args = {
+        '--mode': 'test',
+        '--data': dataset_path,
+        '--config': config_factory.serialize(),
+        '--log-dir': log_dir,
+        '--batch-size': batch_size,
+        '--resume': checkpoint_save_dir
+    }
+
+    main = get_sample_fn(sample_type, modes=['test'])
+    main(convert_to_argv(args))
+    # Restore default soft_device_placement state
+    tf.config.set_soft_device_placement(default_soft_device_placement)

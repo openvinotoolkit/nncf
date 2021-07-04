@@ -36,6 +36,7 @@ import torch.utils.data.distributed
 from natsort import natsorted
 from sklearn.preprocessing import MinMaxScaler
 
+from nncf.common.initialization.batchnorm_adaptation import BatchnormAdaptationAlgorithm
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.config.extractors import extract_bn_adaptation_init_params
 from nncf.common.utils.logger import logger
@@ -47,7 +48,6 @@ from nncf.torch.quantization.layers import BaseQuantizer
 from nncf.torch.quantization.algo import ExperimentalQuantizationController
 from nncf.torch.quantization.algo import NNCFNetwork
 from nncf.torch.quantization.algo import QuantizationController
-from nncf.common.initialization.batchnorm_adaptation import BatchnormAdaptationAlgorithm
 from nncf.common.utils.os import safe_open
 from nncf.torch.quantization.precision_constraints import HardwareQuantizationConstraints
 from nncf.torch.quantization.precision_init.compression_ratio import CompressionRatioCalculator

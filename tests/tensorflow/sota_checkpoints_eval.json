@@ -253,7 +253,7 @@
                 "retinanet_int8_w_sym_t_half_a_sym_t": {
                     "config": "examples/tensorflow/object_detection/configs/quantization/retinanet_coco_int8.json",
                     "reference": "retinanet",
-                    "target": 33.26,
+                    "target": 33.22,
                     "resume": "retinanet_int8_w_sym_t_half_a_sym_t",
                     "metric_type": "mAP",
                     "model_description": "retinanet_int8_w_sym_t_half_a_sym_t",
@@ -304,7 +304,7 @@
                 "yolo_v4_int8_w_sym_ch_half_a_asym_t": {
                     "config":"examples/tensorflow/object_detection/configs/quantization/yolo_v4_coco_int8.json",
                     "reference":"yolo_v4",
-                    "target":46.16,
+                    "target":46.15,
                     "resume":"yolo_v4_int8_w_sym_ch_half_a_asym_t",
                     "metric_type":"mAP",
                     "model_description":"yolo_v4_int8_w_sym_ch_half_a_asym_t",
@@ -343,13 +343,13 @@
                     "reverse_input_channels": true,
                     "batch": 16
                 },
-                "mask_rcnn_int8_w_sym_t_a_sym_t": {
+                "mask_rcnn_int8_w_sym_t_half_a_sym_t": {
                     "config": "examples/tensorflow/segmentation/configs/quantization/mask_rcnn_coco_int8.json",
                     "reference": "mask_rcnn_baseline",
-                    "target": 37.25,
-                    "resume": "mask_rcnn_int8_w_sym_t_a_sym_t",
+                    "target": 37.12,
+                    "resume": "mask_rcnn_int8_w_sym_t_half_a_sym_t",
                     "metric_type": "mAP",
-                    "model_description": "mask_rcnn_int8_w_sym_t_a_sym_t",
+                    "model_description": "mask_rcnn_int8_w_sym_t_half_a_sym_t",
                     "compression_description": "INT8",
                     "batch_per_gpu": 4,
                     "reverse_input_channels": true

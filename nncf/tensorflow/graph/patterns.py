@@ -27,6 +27,7 @@ SET_LINEAR_LAYERS = {layer for m in LINEAR_LAYER_METATYPES for layer in m.get_al
 LIST_LINEAR_OPS = [N(layer) for layer in SET_LINEAR_LAYERS]
 LIST_CONV_LINEAR_OPS = LIST_CONV_OPS + LIST_LINEAR_OPS
 CONV_LINEAR_OPS = reduce(operator.or_, LIST_CONV_LINEAR_OPS[1:], LIST_CONV_LINEAR_OPS[0])
+CONV_LINEAR_OPS = CONV_LINEAR_OPS | CONV_LINEAR_OPS + N('Identity')
 
 SET_AGNOSTIC_LAYERS = {
     layer for m in LAYER_METATYPES_AGNOSTIC_TO_DATA_PRECISION_WITH_ONE_INPUT for layer in m.get_all_aliases()
@@ -49,7 +50,7 @@ ANY_AG_BN_ACT_COMBO = AG + ACT | ANY_BN_ACT_COMBO
 
 POOLING = N('AveragePooling2D') | N('AveragePooling3D') | N('GlobalAveragePooling2D') | N('GlobalAveragePooling3D')
 
-SINGLE_OPS = POOLING | N('Average') | N('LayerNormalization')
+SINGLE_OPS = POOLING | N('Average') | N('LayerNormalization') | N('UpSampling2D')
 
 SET_ELEMENTWISE_LAYERS = {layer for m in ELEMENTWISE_LAYER_METATYPES for layer in m.get_all_aliases()}
 LIST_ELEMENTWISE_OPS = [N(layer) for layer in SET_ELEMENTWISE_LAYERS]

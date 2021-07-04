@@ -148,6 +148,39 @@ class MultiBranchesModel(nn.Module):
         return xa, xb, xc, xd
 
 
+class PartlyNonDifferentialOutputsModel(nn.Module):
+    def __init__(self, input_size=None):
+        super().__init__()
+        self.input_size = [1, 1, 4, 4] if input_size is None else input_size
+        self.conv1 = torch.nn.Conv2d(in_channels=self.input_size[1], out_channels=1, kernel_size=3)
+        self.conv2_1 = torch.nn.Conv2d(in_channels=1, out_channels=1, kernel_size=3)
+        self.conv2_2 = torch.nn.Conv2d(in_channels=1, out_channels=1, kernel_size=3)
+
+    def forward(self, x):
+        # first and seconds outputs with requires_grad=True
+        # third output with requires_grad = False
+        xa = self.conv1(x)
+        xb = self.conv2_1(xa)
+        with torch.no_grad():
+            xc = self.conv2_2(xa)
+        return xa, xb, xc
+
+
+class ContainersOutputsModel(nn.Module):
+    def __init__(self, input_size=None):
+        super().__init__()
+        self.input_size = [1, 1, 4, 4] if input_size is None else input_size
+        self.conv1 = torch.nn.Conv2d(in_channels=self.input_size[1], out_channels=1, kernel_size=3)
+        self.conv2_1 = torch.nn.Conv2d(in_channels=1, out_channels=1, kernel_size=3)
+        self.conv2_2 = torch.nn.Conv2d(in_channels=1, out_channels=1, kernel_size=3)
+
+    def forward(self, x):
+        xa = self.conv1(x)
+        xb = self.conv2_1(xa)
+        xc = self.conv2_2(xa)
+        return {"xa": xa, "xb_and_xc": (xb, xc)}
+
+
 class EmbeddingSumModel(nn.Module):
     def __init__(self):
         super().__init__()

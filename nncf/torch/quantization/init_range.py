@@ -21,6 +21,7 @@ import torch
 from nncf.common.graph import NNCFGraph
 from nncf.common.quantization.initialization.range import RangeInitConfig
 from nncf.common.quantization.initialization.range import RangeInitParams
+from nncf.common.graph.layer_attributes import WeightedLayerAttributes
 from nncf.common.quantization.structs import NonWeightQuantizerId
 from nncf.common.quantization.structs import QuantizerGroup
 from nncf.common.quantization.structs import QuantizerId
@@ -40,6 +41,7 @@ from nncf.torch.tensor_statistics.collectors import PercentileStatisticCollector
 from nncf.torch.tensor_statistics.collectors import ReductionShape
 from nncf.torch.tensor_statistics.collectors import TensorStatisticCollectorBase
 from nncf.torch.tensor_statistics.statistics import MinMaxTensorStatistic
+from nncf.torch.utils import get_scale_shape
 
 
 class PTRangeInitParams(RangeInitParams):
@@ -95,16 +97,13 @@ class StatCollectorGenerator:
             num_batches = int(np.ceil(
                 init_config.num_init_samples / range_init_params.init_range_data_loader.batch_size))
             if is_weights:
-                module_node = target_model_graph.get_node_by_name(qp.insertion_point.target_node_name)
-                input_shape = module_node.layer_attributes.get_weight_shape()
                 # No need to store extra statistics in memory since weights won't change during range init
                 num_batches = 1
-            else:
-                input_shape = target_model_graph.get_input_shape_for_insertion_point(qp.insertion_point)
 
             obs_p = TensorStatisticObservationPoint(
                 qp.insertion_point,
-                reduction_shapes=set(qp.get_all_scale_shapes(input_shape)))
+                reduction_shapes=set(StatCollectorGenerator.get_all_scale_shapes(qp,
+                                                                                 target_model_graph)))
 
             collector = StatCollectorGenerator.generate_stat_collector_for_range_init_config(
                 init_config,
@@ -136,6 +135,28 @@ class StatCollectorGenerator:
             max_percentile = init_config.init_type_specific_params.get("max_percentile", 99.9)
             return MeanPercentileStatisticCollector([min_percentile, max_percentile], reduction_shapes, num_samples)
         raise RuntimeError("Unknown range init type: {}".format(init_config.init_type))
+
+    @staticmethod
+    def get_all_scale_shapes(qp: QuantizationPointBase,
+                             target_nncf_graph: NNCFGraph) -> List[Tuple[int]]:
+        qconfigs = qp.get_all_configs_list()
+        if qp.is_weight_quantization_point():
+            module_node = target_nncf_graph.get_node_by_name(qp.insertion_point.target_node_name)
+            layer_attributes = module_node.layer_attributes
+            assert isinstance(layer_attributes, WeightedLayerAttributes)
+            input_shape = layer_attributes.get_weight_shape()
+            channel_idx = layer_attributes.get_target_dim_for_compression()
+        else:
+            input_shape = target_nncf_graph.get_input_shape_for_insertion_point(qp.insertion_point)
+            channel_idx = 1  # channel dim for activations
+
+        retval = []
+        for qconfig in qconfigs:
+            retval.append(tuple(get_scale_shape(input_shape,
+                                                is_weights=qp.is_weight_quantization_point(),
+                                                per_channel=qconfig.per_channel,
+                                                channel_idx=channel_idx)))
+        return retval
 
 
 class DataLoaderRangeInitializeRunner(DataLoaderBaseRunner):

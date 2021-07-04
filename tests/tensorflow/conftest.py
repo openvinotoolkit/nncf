@@ -11,6 +11,7 @@
  limitations under the License.
 """
 import pytest
+from tests.common.helpers import create_venv_with_nncf
 try:
     import tensorflow as tf
 except ImportError:
@@ -54,6 +55,9 @@ def pytest_addoption(parser):
     parser.addoption(
         "--models-dir", type=str, default=None, help="Path to checkpoints directory for weekly tests"
     )
+    parser.addoption(
+        "--run-install-tests", type=str, help="To run installation tests"
+    )
 
 
 @pytest.fixture(scope="module")
@@ -94,3 +98,16 @@ def weekly_tests(request):
 @pytest.fixture(scope="module")
 def models_dir(request):
     return request.config.getoption("--models-dir")
+
+
+@pytest.fixture(scope="module")
+def install_tests(request):
+    return request.config.getoption("--run-install-tests")
+
+
+@pytest.fixture(scope="function")
+def tmp_venv_with_nncf(tmp_path, package_type, venv_type, install_tests):  # pylint:disable=redefined-outer-name
+    if install_tests is None:
+        pytest.skip('To test the installation, use --run-install-tests option.')
+    venv_path = create_venv_with_nncf(tmp_path, package_type, venv_type, extra_reqs='tf')
+    return venv_path

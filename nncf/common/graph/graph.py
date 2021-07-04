@@ -20,19 +20,13 @@ import networkx as nx
 import networkx.algorithms.isomorphism as iso
 from networkx.drawing.nx_agraph import to_agraph
 
-from nncf.common.graph.graph_matching import Expression
-from nncf.common.graph.graph_matching import NodeExpression
-from nncf.common.graph.graph_matching import find_subgraphs_matching_expression
 from nncf.common.graph.graph_matching import get_edge_boundaries
 from nncf.common.graph.layer_attributes import BaseLayerAttributes
 from nncf.common.graph.layer_attributes import Dtype
+from nncf.common.graph.operator_metatypes import INPUT_NOOP_METATYPES
+from nncf.common.graph.operator_metatypes import OUTPUT_NOOP_METATYPES
 from nncf.common.graph.operator_metatypes import OperatorMetatype
-from nncf.common.graph.operator_metatypes import get_input_metatypes
-from nncf.common.graph.operator_metatypes import get_output_metatypes
 from nncf.common.utils.logger import logger as nncf_logger
-
-MODEL_INPUT_OP_NAME = 'nncf_model_input'
-MODEL_OUTPUT_OP_NAME = 'nncf_model_output'
 
 NNCFNodeName = str
 LayerName = str
@@ -99,11 +93,6 @@ class NNCFNode:
                and self.layer_attributes == other.layer_attributes
 
 
-class NNCFGraphNodeType:
-    INPUT_NODE = MODEL_INPUT_OP_NAME
-    OUTPUT_NODE = MODEL_OUTPUT_OP_NAME
-
-
 class NNCFGraphEdge:
     """
     A structure describing an edge in NNCFGraph. Since nodes of the NNCFGraph are operations
@@ -140,14 +129,6 @@ class NNCFGraphPatternIO:
         self.output_edges = output_edges
 
 
-class NNCFNodeExpression(NodeExpression):
-    """
-    A variation of NodeExpression that has a specific matcher function to work with nxgraph node dicts that
-    underlie the NNCFGraph.
-    """
-    def __init__(self, node_type: str = None, filter_fn=None):
-        node_type_fn = lambda x: x[NNCFGraph.NODE_TYPE_ATTR]
-        super().__init__(node_type, filter_fn, node_type_fn=node_type_fn)
 
 
 #pylint:disable=too-many-public-methods
@@ -413,10 +394,10 @@ class NNCFGraph:
 
         node = NNCFNode(node_id, data=attrs)
 
-        if node.metatype in get_input_metatypes():
+        if node.metatype in INPUT_NOOP_METATYPES:
             self._input_nncf_nodes[node_id] = node
 
-        if node.metatype in get_output_metatypes():
+        if node.metatype in OUTPUT_NOOP_METATYPES:
             self._output_nncf_nodes[node_id] = node
 
         if layer_name is not None:
@@ -564,11 +545,6 @@ class NNCFGraph:
 
     def get_nx_graph_copy(self) -> nx.DiGraph:
         return deepcopy(self._nx_graph)
-
-    def get_matching_nncf_graph_pattern_io_list(self, expression: Expression) -> List[NNCFGraphPatternIO]:
-        matched_node_key_sequences = find_subgraphs_matching_expression(self._nx_graph, expression)
-        pattern_ios = [self.get_nncf_graph_pattern_io(match) for match in matched_node_key_sequences]
-        return pattern_ios
 
     def get_nncf_graph_pattern_io(self, match: List[str]) -> NNCFGraphPatternIO:
         """

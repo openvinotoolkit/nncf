@@ -462,15 +462,6 @@ QUANTIZATION_SCHEMA = {
         "quantize_outputs": with_attributes(_BOOLEAN,
                                             description="Whether the model outputs should be additionally quantized.",
                                             default=False),
-
-        "quantizable_subgraph_patterns": {
-            "type": "array",
-            "items": make_string_or_array_of_strings_schema(),
-            "description": "Each sub-list in this list will correspond to a sequence of operations in the "
-                           "model control flow graph that will have a quantizer appended at the end of the "
-                           "sequence",
-            "examples": [["cat", "batch_norm"], "h_swish"]
-        },
         "scope_overrides": {
             "type": "object",
             "properties": {
@@ -670,8 +661,9 @@ FILTER_PRUNING_SCHEMA = {
         },
         "initializer": GENERIC_INITIALIZER_SCHEMA,
         "pruning_init": with_attributes(_NUMBER,
-                                        description="Initial value of the pruning level applied to the"
-                                                    " model. 0.0 by default."),
+                                        description="Initial value of the pruning level applied to the "
+                                                    "convolutions that can be pruned. "
+                                                    "0.0 by default."),
         "params":
             {
                 "type": "object",
@@ -681,7 +673,10 @@ FILTER_PRUNING_SCHEMA = {
                                                             " pruning level. Either `exponential`, `exponential_with"
                                                             "_bias`,  or `baseline`, by default it is `baseline`"),
                     "pruning_target": with_attributes(_NUMBER,
-                                                      description="Target value of the pruning level for the model."
+                                                      description="Target value of the pruning level for "
+                                                                  "the convolutions that can be pruned. "
+                                                                  "These convolutions are determined by the model "
+                                                                  "architecture."
                                                                   " 0.5 by default."),
                     "pruning_flops_target": with_attributes(_NUMBER,
                                                             description="Target value of the pruning level for model"
@@ -768,19 +763,34 @@ FILTER_PRUNING_SCHEMA = {
     "additionalProperties": False
 }
 
+KNOWLEDGE_DISTILLATION_ALGO_NAME_IN_CONFIG = 'knowledge_distillation'
+KNOWLEDGE_DISTILLATION_SCHEMA = {
+    **BASIC_COMPRESSION_ALGO_SCHEMA,
+    "properties": {
+        "algorithm": {
+            "const": KNOWLEDGE_DISTILLATION_ALGO_NAME_IN_CONFIG
+        },
+        "type": with_attributes(_STRING, description="Type of Knowledge Distillation Loss (mse/softmax)")
+    },
+    "additionalProperties": False
+}
+
+
 ALL_SUPPORTED_ALGO_SCHEMA = [BINARIZATION_SCHEMA,
                              QUANTIZATION_SCHEMA,
                              CONST_SPARSITY_SCHEMA,
                              MAGNITUDE_SPARSITY_SCHEMA,
                              RB_SPARSITY_SCHEMA,
-                             FILTER_PRUNING_SCHEMA]
+                             FILTER_PRUNING_SCHEMA,
+                             KNOWLEDGE_DISTILLATION_SCHEMA]
 
 REF_VS_ALGO_SCHEMA = {BINARIZATION_ALGO_NAME_IN_CONFIG: BINARIZATION_SCHEMA,
                       QUANTIZATION_ALGO_NAME_IN_CONFIG: QUANTIZATION_SCHEMA,
                       CONST_SPARSITY_ALGO_NAME_IN_CONFIG: CONST_SPARSITY_SCHEMA,
                       MAGNITUDE_SPARSITY_ALGO_NAME_IN_CONFIG: MAGNITUDE_SPARSITY_SCHEMA,
                       RB_SPARSITY_ALGO_NAME_IN_CONFIG: RB_SPARSITY_SCHEMA,
-                      FILTER_PRUNING_ALGO_NAME_IN_CONFIG: FILTER_PRUNING_SCHEMA}
+                      FILTER_PRUNING_ALGO_NAME_IN_CONFIG: FILTER_PRUNING_SCHEMA,
+                      KNOWLEDGE_DISTILLATION_ALGO_NAME_IN_CONFIG: KNOWLEDGE_DISTILLATION_SCHEMA}
 
 TARGET_DEVICE_SCHEMA = {
     "type": "string",

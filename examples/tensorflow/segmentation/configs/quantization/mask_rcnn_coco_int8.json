@@ -21,7 +21,6 @@
 
   "compression": {
       "algorithm": "quantization",
-      "disable_saturation_fix": true,
       "ignored_scopes": [
               "{re}.*multilevel_propose_rois.*",
               "{re}.*sample_proposals.*",

@@ -21,17 +21,18 @@ import tensorflow as tf
 from tensorflow.python.framework.convert_to_constants import convert_variables_to_constants_v2
 
 from nncf.tensorflow.graph.metatypes.common import DECONV_LAYER_METATYPES
+from nncf.tensorflow.graph.metatypes.common import DEPTHWISE_CONV_LAYER_METATYPES
 from nncf.tensorflow.graph.metatypes.common import GENERAL_CONV_LAYER_METATYPES
 from nncf.tensorflow.graph.metatypes.matcher import get_keras_layer_metatype
 from nncf.tensorflow.graph.metatypes.matcher import get_op_metatype
-from nncf.tensorflow.graph.metatypes.nncf_op import OutputNoopMetatype
+from nncf.common.graph.operator_metatypes import OutputNoopMetatype
 from nncf.tensorflow.graph.utils import get_shared_node_name
 from nncf.tensorflow.graph.utils import is_functional_model
 from nncf.tensorflow.graph.utils import is_sequential_model
 from nncf.tensorflow.graph.utils import unwrap_layer
 from nncf.tensorflow.layers.data_layout import get_input_channel_axis
 from nncf.common.graph import NNCFGraph
-from nncf.common.graph import NNCFGraphNodeType
+from nncf.common.graph.definitions import NNCFGraphNodeType
 from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
 from nncf.common.graph.layer_attributes import Dtype
 
@@ -249,8 +250,10 @@ class FunctionalConverter(TFModelConverter):
             layer_info = self._layer_info[layer_name]
             metatype = layer_info['metatype']
             layer = self._get_layer(layer_name)
-            if metatype in GENERAL_CONV_LAYER_METATYPES:
-                layer_attributes = _get_conv_layer_attributes(self._get_layer(layer_name))
+            if metatype in DEPTHWISE_CONV_LAYER_METATYPES:
+                layer_attributes = _get_conv_layer_attributes(self._get_layer(layer_name), is_depthwise=True)
+            elif metatype in GENERAL_CONV_LAYER_METATYPES:
+                layer_attributes = _get_conv_layer_attributes(self._get_layer(layer_name), is_depthwise=False)
             else:
                 layer_attributes = None
             is_shared = len(self._layer_name_to_node_names[layer_name]) > 1
@@ -323,8 +326,12 @@ class SequentialConverter(TFModelConverter):
                          is_shared=False)
 
             layer_attributes = None
-            if layer_metatype in GENERAL_CONV_LAYER_METATYPES:
-                layer_attributes = _get_conv_layer_attributes(self._model.get_layer(layer_name))
+            if layer_metatype in DEPTHWISE_CONV_LAYER_METATYPES:
+                layer_attributes = _get_conv_layer_attributes(self._get_layer(layer_name), is_depthwise=True)
+            elif layer_metatype in GENERAL_CONV_LAYER_METATYPES:
+                layer_attributes = _get_conv_layer_attributes(self._get_layer(layer_name), is_depthwise=False)
+
+            if layer_attributes is not None:
                 attrs.update({NNCFGraph.LAYER_ATTRIBUTES: layer_attributes})
 
             nncf_node = nncf_graph.add_nncf_node(layer_name,
@@ -358,19 +365,25 @@ class SequentialConverter(TFModelConverter):
         return nncf_graph
 
 
-def _get_conv_layer_attributes(layer: tf.keras.layers.Layer) -> ConvolutionLayerAttributes:
+def _get_conv_layer_attributes(layer: tf.keras.layers.Layer, is_depthwise: bool = False) -> ConvolutionLayerAttributes:
     channel_axis = get_input_channel_axis(layer)
     layer_ = unwrap_layer(layer)
     layer_metatype = get_keras_layer_metatype(layer_, determine_subtype=False)
     strides = layer_.strides[0]
-    groups = layer_.groups
+    in_channels = layer.get_input_shape_at(0)[channel_axis]
+    out_channels = layer.get_output_shape_at(0)[channel_axis]
+
+    # TF does not deign to properly set the groups attribute on a depthwise layer, and for compatibility
+    # with common code the groups attribute of the returned ConvolutionLayerAttribute must be set equal
+    # to the in_channels attribute in order for the layer to be detected as depthwise
+    groups = layer_.groups if not is_depthwise else in_channels
     kernel_size = layer_.kernel_size
 
     transpose = layer_metatype in DECONV_LAYER_METATYPES
 
     return ConvolutionLayerAttributes(layer.trainable,
-                                      layer.get_input_shape_at(0)[channel_axis],
-                                      layer.get_output_shape_at(0)[channel_axis],
+                                      in_channels,
+                                      out_channels,
                                       kernel_size,
                                       strides,
                                       groups, transpose=transpose,
