@@ -47,7 +47,7 @@
             }
         },
         {
-            "algorithm": "quantization",
+            "algorithm": "quantization"
         }
     ]
 }
