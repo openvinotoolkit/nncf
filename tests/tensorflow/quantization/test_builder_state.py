@@ -23,7 +23,6 @@ from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.tensorflow import create_compression_callbacks
 from nncf.tensorflow import register_default_init_args
-from nncf.tensorflow.utils.state import TFCompressionState
 from nncf.tensorflow.callbacks.checkpoint_callback import CheckpointManagerCallback
 from nncf.tensorflow.graph.transformations.commands import TFAfterLayer
 from nncf.tensorflow.graph.transformations.commands import TFBeforeLayer
@@ -36,6 +35,7 @@ from nncf.tensorflow.quantization.algorithm import QuantizationController
 from nncf.tensorflow.quantization.algorithm import QuantizationPoint
 from nncf.tensorflow.quantization.algorithm import QuantizationSetup
 from nncf.tensorflow.quantization.quantizers import TFQuantizerSpec
+from nncf.tensorflow.utils.state import TFCompressionState
 from tests.common.serialization import check_serialization
 from tests.tensorflow.helpers import create_compressed_model_and_algo_for_test
 from tests.tensorflow.helpers import get_basic_conv_test_model
@@ -51,7 +51,7 @@ def test_quantization_configs__on_resume_with_compression_state(tmp_path, mocker
     config = get_basic_quantization_config()
     init_spy = mocker.spy(QuantizationBuilder, 'initialize')
     gen_setup_spy = mocker.spy(QuantizationBuilder, '_get_quantizer_setup')
-    dataset = get_dataset_for_test()
+    dataset = get_dataset_for_test(shape=[4, 4, 1])
     config = register_default_init_args(config, dataset, 10)
 
     _, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
