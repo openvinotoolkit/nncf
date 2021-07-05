@@ -59,7 +59,7 @@ def get_argument_parser():
     parser.add_argument(
         '--dataset',
         help='Dataset to use.',
-        choices=['imagenet', 'cifar100', 'cifar10'],
+        choices=['imagenet2012', 'cifar100', 'cifar10'],
         default=None
     )
     parser.add_argument('--test-every-n-epochs', default=1, type=int,
