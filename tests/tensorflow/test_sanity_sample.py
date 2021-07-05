@@ -389,6 +389,7 @@ def get_prepare_checkpoint_configs():
     return config_params
 
 
+@pytest.mark.skip('59320 ticket to resolve not correct testing of prepare_checkpoint')
 @pytest.mark.parametrize('sample_type,config_path,config_eval,dataset_path,batch_size',
                          get_prepare_checkpoint_configs(),
                          ids=[x[0] for x in get_prepare_checkpoint_configs()])

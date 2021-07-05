@@ -14,7 +14,6 @@
 import sys
 
 import tensorflow as tf
-from nncf.common.compression import BaseCompressionAlgorithmController
 
 from nncf.tensorflow.helpers.model_creation import create_compressed_model
 from nncf.tensorflow.utils.state import TFCompressionState
@@ -87,9 +86,8 @@ def od_checkpoint_saver(config):
     model_builder = get_model_od_builder(config)
     model = model_builder.build_model()
 
-    compression_state_to_skip_init = {BaseCompressionAlgorithmController.BUILDER_STATE: dict()}
-    compression_ctrl, compress_model = create_compressed_model(model, config.nncf_config,
-                                                               compression_state_to_skip_init)
+    compression_state = load_compression_state(config.ckpt_path)
+    compression_ctrl, compress_model = create_compressed_model(model, config.nncf_config, compression_state)
 
     checkpoint = tf.train.Checkpoint(model=compress_model,
                                      compression_state=TFCompressionState(compression_ctrl))
@@ -103,9 +101,8 @@ def seg_checkpoint_saver(config):
     model_builder = get_model_seg_builder(config)
     model = model_builder.build_model()
 
-    compression_state_to_skip_init = {BaseCompressionAlgorithmController.BUILDER_STATE: dict()}
-    compression_ctrl, compress_model = create_compressed_model(model, config.nncf_config,
-                                                               compression_state_to_skip_init)
+    compression_state = load_compression_state(config.ckpt_path)
+    compression_ctrl, compress_model = create_compressed_model(model, config.nncf_config, compression_state)
 
     variables = get_variables(compress_model)
     checkpoint = tf.train.Checkpoint(variables=variables,
