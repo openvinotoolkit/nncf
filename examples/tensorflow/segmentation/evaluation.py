@@ -27,6 +27,7 @@ from examples.tensorflow.common.sample_config import create_sample_config
 from examples.tensorflow.common.sample_config import SampleConfig
 from examples.tensorflow.common.utils import configure_paths
 from examples.tensorflow.common.utils import get_saving_parameters
+from examples.tensorflow.common.utils import print_args
 from examples.tensorflow.common.utils import SummaryWriter
 from examples.tensorflow.common.utils import write_metrics
 from examples.tensorflow.common.utils import Timer
@@ -259,6 +260,7 @@ def main(argv):
     tf.get_logger().setLevel('INFO')
     parser = get_argument_parser()
     config = get_config_from_argv(argv, parser)
+    print_args(config)
 
     if config.dataset_type != 'tfrecords':
         raise RuntimeError('The train.py does not support TensorFlow Datasets (TFDS). '

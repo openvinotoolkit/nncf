@@ -109,8 +109,9 @@ def create_code_snapshot(root, dst_path, extensions=(".py", ".json", ".cpp", ".c
 
 
 def print_args(config, logger=default_logger):
-    for arg in sorted(config):
-        logger.info("{: <27s}: {}".format(arg, config.get(arg)))
+    args = 'Command line arguments\n'
+    args += '\n'.join(["{: <27s}: {}".format(arg, config.get(arg)) for arg in sorted(config)])
+    logger.info(args)
 
 
 def serialize_config(config, log_dir):
