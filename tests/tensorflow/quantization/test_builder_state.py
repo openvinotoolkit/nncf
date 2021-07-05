@@ -22,6 +22,7 @@ from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.tensorflow import create_compression_callbacks
+from nncf.tensorflow import register_default_init_args
 from nncf.tensorflow.utils.state import TFCompressionState
 from nncf.tensorflow.callbacks.checkpoint_callback import CheckpointManagerCallback
 from nncf.tensorflow.graph.transformations.commands import TFAfterLayer
@@ -41,16 +42,17 @@ from tests.tensorflow.helpers import get_basic_conv_test_model
 from tests.tensorflow.quantization.test_algorithm_quantization import check_default_qspecs
 from tests.tensorflow.quantization.test_algorithm_quantization import check_specs_for_disabled_saturation_fix
 from tests.tensorflow.quantization.utils import get_basic_quantization_config
+from tests.tensorflow.test_bn_adaptation import get_dataset_for_test
 from tests.tensorflow.test_callbacks import REF_CKPT_DIR
-from tests.torch.helpers import register_bn_adaptation_init_args
 
 
 def test_quantization_configs__on_resume_with_compression_state(tmp_path, mocker):
     model = get_basic_conv_test_model()
     config = get_basic_quantization_config()
-    register_bn_adaptation_init_args(config)
     init_spy = mocker.spy(QuantizationBuilder, 'initialize')
     gen_setup_spy = mocker.spy(QuantizationBuilder, '_get_quantizer_setup')
+    dataset = get_dataset_for_test()
+    config = register_default_init_args(config, dataset, 10)
 
     _, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
     assert isinstance(compression_ctrl, QuantizationController)
