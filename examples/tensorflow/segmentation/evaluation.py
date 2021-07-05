@@ -117,7 +117,7 @@ def load_checkpoint(checkpoint, ckpt_path):
     return None
 
 
-def extract_compression_state(ckpt_path: str):
+def load_compression_state(ckpt_path: str):
     checkpoint = tf.train.Checkpoint(compression_state=TFCompressionStateLoader())
     load_checkpoint(checkpoint, ckpt_path)
     return checkpoint.compression_state.state
@@ -175,7 +175,7 @@ def create_test_step_fn(strategy, model, predict_post_process_fn):
 def restore_compressed_model(config, strategy, model_builder, ckpt_path = None):
     compression_state = None
     if ckpt_path:
-        compression_state = extract_compression_state(ckpt_path)
+        compression_state = load_compression_state(ckpt_path)
 
     with TFOriginalModelManager(model_builder.build_model,
                                 weights=config.get('weights', None),

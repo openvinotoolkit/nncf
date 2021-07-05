@@ -129,7 +129,7 @@ def resume_from_checkpoint(checkpoint_manager, ckpt_path, steps_per_epoch):
     return initial_epoch, initial_step
 
 
-def extract_compression_state(ckpt_path: str):
+def load_compression_state(ckpt_path: str):
     checkpoint = tf.train.Checkpoint(compression_state=TFCompressionStateLoader())
     load_checkpoint(checkpoint, ckpt_path)
     return checkpoint.compression_state.state
@@ -248,7 +248,7 @@ def run_train(config):
 
     compression_state = None
     if resume_training:
-        compression_state = extract_compression_state(config.ckpt_path)
+        compression_state = load_compression_state(config.ckpt_path)
 
     with TFOriginalModelManager(model_builder.build_model,
                                 weights=config.get('weights', None),

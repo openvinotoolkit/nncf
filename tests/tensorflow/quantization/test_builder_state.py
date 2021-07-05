@@ -16,7 +16,7 @@ from functools import partial
 import tensorflow as tf
 
 from examples.tensorflow.classification.main import load_checkpoint
-from examples.tensorflow.classification.main import extract_compression_state
+from examples.tensorflow.classification.main import load_compression_state
 from nncf import NNCFConfig
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
@@ -82,7 +82,7 @@ def _save_and_load_compression_state(compression_ctrl, tmp_path):
     checkpoint_to_save = tf.train.Checkpoint(compression_state=TFCompressionState(compression_ctrl))
     checkpoint_to_save.save(checkpoint_path)
 
-    compression_state = extract_compression_state(str(checkpoint_path.parent))
+    compression_state = load_compression_state(str(checkpoint_path.parent))
 
     return compression_state
 
@@ -131,7 +131,7 @@ def test_checkpoint_callback_make_checkpoints(mocker, tmp_path):
 
     assert sorted(os.listdir(ckpt_path)) == REF_CKPT_DIR[save_freq]
 
-    new_compression_state = extract_compression_state(ckpt_path)
+    new_compression_state = load_compression_state(ckpt_path)
 
     new_model, new_compression_ctrl = create_compressed_model_and_algo_for_test(get_basic_conv_test_model(),
                                                                                 config, new_compression_state)

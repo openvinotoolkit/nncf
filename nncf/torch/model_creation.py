@@ -189,25 +189,3 @@ def create_compression_algorithm_builder(config, should_init=True) -> PTCompress
         algo_config = compression_algorithm_configs[0]
         return get_compression_algorithm_builder(algo_config)(algo_config, should_init)
     return PTCompositeCompressionAlgorithmBuilder(config, should_init)
-
-
-def _extend_with_globals(algo_config: NNCFConfig,
-                         global_hw_config_type: HWConfigType,
-                         global_ignored_scopes: List[str],
-                         global_target_scopes: List[str],
-                         global_compression_lr_multiplier: float) -> NNCFConfig:
-    if global_hw_config_type is not None:
-        algo_config['hw_config_type'] = global_hw_config_type
-    if global_ignored_scopes is not None:
-        if 'ignored_scopes' in algo_config:
-            algo_config['ignored_scopes'].extend(global_ignored_scopes)
-        else:
-            algo_config['ignored_scopes'] = global_ignored_scopes
-    if global_target_scopes is not None:
-        if 'target_scopes' in algo_config:
-            algo_config['target_scopes'].extend(global_target_scopes)
-        else:
-            algo_config['target_scopes'] = global_target_scopes
-    if 'compression_lr_multiplier' not in algo_config:
-        algo_config['compression_lr_multiplier'] = global_compression_lr_multiplier
-    return algo_config

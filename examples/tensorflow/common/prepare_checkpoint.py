@@ -73,7 +73,7 @@ def load_checkpoint(checkpoint, ckpt_path):
     return None
 
 
-def extract_compression_state(ckpt_path: str):
+def load_compression_state(ckpt_path: str):
     checkpoint = tf.train.Checkpoint(compression_state=TFCompressionStateLoader())
     load_checkpoint(checkpoint, ckpt_path)
     return checkpoint.compression_state.state
@@ -86,7 +86,7 @@ def od_checkpoint_saver(config):
     model_builder = get_model_od_builder(config)
     model = model_builder.build_model()
 
-    compression_state = extract_compression_state(config.ckpt_path)
+    compression_state = load_compression_state(config.ckpt_path)
     compression_ctrl, compress_model = create_compressed_model(model, config.nncf_config, compression_state)
 
     checkpoint = tf.train.Checkpoint(model=compress_model,
@@ -101,7 +101,7 @@ def seg_checkpoint_saver(config):
     model_builder = get_model_seg_builder(config)
     model = model_builder.build_model()
 
-    compression_state = extract_compression_state(config.ckpt_path)
+    compression_state = load_compression_state(config.ckpt_path)
     compression_ctrl, compress_model = create_compressed_model(model, config.nncf_config, compression_state)
 
     variables = get_variables(compress_model)
