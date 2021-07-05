@@ -13,6 +13,7 @@
 
 from typing import Any
 from typing import Callable
+from typing import Dict
 from typing import List
 from typing import Optional
 
@@ -21,8 +22,15 @@ from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.graph.transformations.commands import TransformationPriority
 from nncf.common.graph.transformations.commands import TransformationType
+from nncf.common.stateful_classes_registry import TF_STATEFUL_CLASSES
 
 
+class TFLayerPointStateNames:
+    LAYER_NAME = 'layer_name'
+    TARGET_TYPE = 'target_type'
+
+
+@TF_STATEFUL_CLASSES.register()
 class TFLayerPoint(TargetPoint):
     """
     `TFLayerPoint` defines an object or spot relative to the layer in the
@@ -30,6 +38,8 @@ class TFLayerPoint(TargetPoint):
     spots in the model graph, for example, insertion spots before/after layer
     and etc.
     """
+
+    _state_names = TFLayerPointStateNames
 
     def __init__(self, target_type: TargetType, layer_name: str):
         super().__init__(target_type)
@@ -47,7 +57,31 @@ class TFLayerPoint(TargetPoint):
     def __str__(self) -> str:
         return super().__str__() + ' ' + self.layer_name
 
+    def get_state(self) -> Dict[str, Any]:
+        """
+        Returns a dictionary with Python data structures (dict, list, tuple, str, int, float, True, False, None) that
+        represents state of the object.
+        """
+        return {
+            self._state_names.TARGET_TYPE: self._target_type.get_state(),
+            self._state_names.LAYER_NAME: self.layer_name,
+        }
 
+    @classmethod
+    def from_state(cls, state: Dict[str, Any]) -> 'TFLayerPoint':
+        """
+        Creates the object from its state.
+
+        :param state: Output of `get_state()` method.
+        """
+        kwargs = {
+            cls._state_names.TARGET_TYPE: TargetType.from_state(state[cls._state_names.TARGET_TYPE]),
+            cls._state_names.LAYER_NAME: state[cls._state_names.LAYER_NAME],
+        }
+        return cls(**kwargs)
+
+
+@TF_STATEFUL_CLASSES.register()
 class TFLayer(TFLayerPoint):
     """
     `TFLayer` defines a layer in the TensorFlow model graph.
@@ -59,7 +93,26 @@ class TFLayer(TFLayerPoint):
     def __init__(self, layer_name: str):
         super().__init__(TargetType.LAYER, layer_name)
 
+    def get_state(self) -> Dict[str, Any]:
+        """
+        Returns a dictionary with Python data structures (dict, list, tuple, str, int, float, True, False, None) that
+        represents state of the object.
+        """
+        return {
+            'layer_name': self.layer_name,
+        }
 
+    @classmethod
+    def from_state(cls, state: Dict[str, Any]) -> 'TFLayer':
+        """
+        Creates the object from its state.
+
+        :param state: Output of `get_state()` method.
+        """
+        return cls(**state)
+
+
+@TF_STATEFUL_CLASSES.register()
 class TFBeforeLayer(TFLayerPoint):
     """
     `TFBeforeLayer` defines a spot before the layer in the TensorFlow model graph.
@@ -95,7 +148,28 @@ class TFBeforeLayer(TFLayerPoint):
     def __hash__(self) -> int:
         return hash(str(self))
 
+    def get_state(self) -> Dict[str, Any]:
+        """
+        Returns a dictionary with Python data structures (dict, list, tuple, str, int, float, True, False, None) that
+        represents state of the object.
+        """
+        return {
+            'layer_name': self.layer_name,
+            'instance_idx': self.instance_idx,
+            'input_port_id': self.input_port_id
+        }
 
+    @classmethod
+    def from_state(cls, state: Dict[str, Any]) -> 'TFBeforeLayer':
+        """
+        Creates the object from its state.
+
+        :param state: Output of `get_state()` method.
+        """
+        return cls(**state)
+
+
+@TF_STATEFUL_CLASSES.register()
 class TFAfterLayer(TFLayerPoint):
     """
     `TFAfterLayer` defines a spot after the layer in the TensorFlow model graph.
@@ -132,7 +206,28 @@ class TFAfterLayer(TFLayerPoint):
     def __hash__(self) -> int:
         return hash(str(self))
 
+    def get_state(self) -> Dict[str, Any]:
+        """
+        Returns a dictionary with Python data structures (dict, list, tuple, str, int, float, True, False, None) that
+        represents state of the object.
+        """
+        return {
+            'layer_name': self.layer_name,
+            'instance_idx': self.instance_idx,
+            'output_port_id': self.output_port_id,
+        }
 
+    @classmethod
+    def from_state(cls, state: Dict[str, Any]) -> 'TFAfterLayer':
+        """
+        Creates the object from its state.
+
+        :param state: Output of `get_state()` method.
+        """
+        return cls(**state)
+
+
+@TF_STATEFUL_CLASSES.register()
 class TFLayerWeight(TFLayerPoint):
     """
     `TFLayerWeight` defines the layer weights.
@@ -161,7 +256,27 @@ class TFLayerWeight(TFLayerPoint):
     def __hash__(self) -> int:
         return hash(str(self))
 
+    def get_state(self) -> Dict[str, Any]:
+        """
+        Returns a dictionary with Python data structures (dict, list, tuple, str, int, float, True, False, None) that
+        represents state of the object.
+        """
+        return {
+            'layer_name': self.layer_name,
+            'weights_attr_name': self.weights_attr_name,
+        }
 
+    @classmethod
+    def from_state(cls, state: Dict[str, Any]) -> 'TFLayerWeight':
+        """
+        Creates the object from its state.
+
+        :param state: Output of `get_state()` method.
+        """
+        return cls(**state)
+
+
+@TF_STATEFUL_CLASSES.register()
 class TFOperationWithWeights(TFLayerWeight):
     """
     `TFOperationWithWeights` defines an operation with weights.
@@ -190,6 +305,26 @@ class TFOperationWithWeights(TFLayerWeight):
 
     def __hash__(self) -> int:
         return hash(str(self))
+
+    def get_state(self) -> Dict[str, Any]:
+        """
+        Returns a dictionary with Python data structures (dict, list, tuple, str, int, float, True, False, None) that
+        represents state of the object.
+        """
+        return {
+            'layer_name': self._layer_name,
+            'weights_attr_name': self._weights_attr_name,
+            'operation_name': self._operation_name
+        }
+
+    @classmethod
+    def from_state(cls, state: Dict[str, Any]) -> 'TFOperationWithWeights':
+        """
+        Creates the object from its state.
+
+        :param state: Output of `get_state()` method.
+        """
+        return cls(**state)
 
 
 class TFInsertionCommand(TransformationCommand):

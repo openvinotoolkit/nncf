@@ -3,6 +3,7 @@ import onnx
 import onnxruntime as rt
 import torch
 import torch.nn as nn
+from nncf.torch.checkpoint_loading import load_state
 
 from nncf.torch.quantization.layers import PTQuantizerSpec, QuantizationMode, SymmetricQuantizer, AsymmetricQuantizer
 from tests.torch.helpers import TwoConvTestModel, create_compressed_model_and_algo_for_test, create_conv, \
@@ -393,3 +394,17 @@ def test_is_pytorch_output_the_same_as_onnx_qdq_saturation_fix_applied(tmp_path,
         onnx_out = sess.run(None, {input_name: input_tensor.astype(np.float32)})[0]
 
         assert np.allclose(torch_out.numpy(), onnx_out, rtol=1e-5, atol=1e-3)
+
+
+def test_is_saturation_fix_applied_model_resumed_correctly(tmp_path):
+    model = TwoConvTestModel()
+    nncf_config = get_config_for_export_mode(False)
+    compressed_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, nncf_config)
+    compression_state = compression_ctrl.get_compression_state()
+    model_state_dict = compressed_model.state_dict()
+    # Must create new model as the previous one was somehow changed during create_compressed_model_and_algo_for_test()
+    model = TwoConvTestModel()
+    compressed_model, compression_ctrl = create_compressed_model_and_algo_for_test(
+        model, nncf_config, compression_state=compression_state)
+    load_state(compressed_model, model_state_dict, is_resume=True)
+    are_symmetric_fq_nodes_are_exported_correct_with_saturation_fix(tmp_path, compression_ctrl)

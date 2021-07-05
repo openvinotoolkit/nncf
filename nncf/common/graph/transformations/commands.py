@@ -12,8 +12,10 @@
 """
 
 from typing import Any
+from typing import Dict
 
 from nncf.common.utils.ordered_enum import OrderedEnum
+from nncf.common.stateful_classes_registry import CommonStatefulClassesRegistry
 
 
 class TransformationPriority(OrderedEnum):
@@ -37,6 +39,9 @@ class TransformationPriority(OrderedEnum):
     PRUNING_PRIORITY = 2
     SPARSIFICATION_PRIORITY = 3
     QUANTIZATION_PRIORITY = 11
+
+
+TARGET_TYPE_STATE_ATTR = 'name'
 
 
 class TargetType(OrderedEnum):
@@ -78,6 +83,22 @@ class TargetType(OrderedEnum):
     OPERATOR_PRE_HOOK = 6
     OPERATOR_POST_HOOK = 7
 
+    def get_state(self) -> Dict[str, Any]:
+        """
+        Returns a dictionary with Python data structures (dict, list, tuple, str, int, float, True, False, None) that
+        represents state of the object.
+        """
+        return {TARGET_TYPE_STATE_ATTR: self.name}
+
+    @classmethod
+    def from_state(cls, state: Dict[str, Any]) -> 'TargetType':
+        """
+        Creates the object from its state.
+
+        :param state: Output of `get_state()` method.
+        """
+        return TargetType[state[TARGET_TYPE_STATE_ATTR]]
+
 
 class TransformationType(OrderedEnum):
     """
@@ -92,6 +113,11 @@ class TransformationType(OrderedEnum):
     REMOVE = 2
 
 
+class TargetPointStateNames:
+    TARGET_TYPE = 'target_type'
+
+
+@CommonStatefulClassesRegistry.register()
 class TargetPoint:
     """
     The base class for all target points.
@@ -103,6 +129,7 @@ class TargetPoint:
     the target point in the model graph to which the transformation command
     will be applied.
     """
+    _state_names = TargetPointStateNames
 
     def __init__(self, target_type: TargetType):
         """
@@ -125,6 +152,23 @@ class TargetPoint:
 
     def __hash__(self) -> int:
         return hash(str(self))
+
+    def get_state(self) -> Dict[str, Any]:
+        """
+        Returns a dictionary with Python data structures (dict, list, tuple, str, int, float, True, False, None) that
+        represents state of the object.
+        """
+        return {self._state_names.TARGET_TYPE: self._target_type.get_state()}
+
+    @classmethod
+    def from_state(cls, state: Dict[str, Any]) -> 'TargetPoint':
+        """
+        Creates the object from its state.
+
+        :param state: Output of `get_state()` method.
+        """
+        kwargs = {cls._state_names.TARGET_TYPE: TargetType.from_state(state[cls._state_names.TARGET_TYPE])}
+        return cls(**kwargs)
 
 
 class TransformationCommand:

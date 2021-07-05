@@ -13,6 +13,7 @@
 
 import numpy as np
 import tensorflow as tf
+from nncf.common.compression import BaseCompressionAlgorithmController
 from tensorflow.python.ops.init_ops import Constant
 
 from nncf import NNCFConfig
@@ -84,10 +85,12 @@ def get_basic_n_conv_test_model(input_shape=(24, 24, 1), in_out_ch=((1, 3), (3, 
     return tf.keras.Model(inputs=inputs, outputs=outputs)
 
 
-def create_compressed_model_and_algo_for_test(model, config, should_init=True):
+def create_compressed_model_and_algo_for_test(model, config, compression_state=None, force_no_init=False):
     assert isinstance(config, NNCFConfig)
     tf.keras.backend.clear_session()
-    algo, model = create_compressed_model(model, config, should_init)
+    if force_no_init:
+        compression_state = {BaseCompressionAlgorithmController.BUILDER_STATE: dict()}
+    algo, model = create_compressed_model(model, config, compression_state)
     return model, algo
 
 

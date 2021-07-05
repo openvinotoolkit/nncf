@@ -26,4 +26,4 @@ outputs = tf.keras.layers.Conv2D(filters=3, kernel_size=3)(inputs)
 model = tf.keras.Model(inputs=inputs, outputs=outputs)
 
 config = get_basic_quantization_config()
-compression_model, compression_ctrl = create_compressed_model(model, config, should_init=False)
+compression_model, compression_ctrl = create_compressed_model(model, config, force_no_init=True)

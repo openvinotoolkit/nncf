@@ -22,6 +22,8 @@ from nncf.tensorflow import create_compressed_model
 from nncf.tensorflow.helpers.model_manager import TFOriginalModelManager
 from nncf.tensorflow.initialization import register_default_init_args
 from nncf.common.utils.tensorboard import prepare_for_tensorboard
+from nncf.tensorflow.utils.state import TFCompressionState
+from nncf.tensorflow.utils.state import TFCompressionStateLoader
 
 from examples.tensorflow.common.argparser import get_common_argument_parser
 from examples.tensorflow.common.distributed import get_distribution_strategy
@@ -125,6 +127,12 @@ def resume_from_checkpoint(checkpoint_manager, ckpt_path, steps_per_epoch):
 
     logger.info('Resuming from epoch %d (global step %d)', initial_epoch, initial_step)
     return initial_epoch, initial_step
+
+
+def load_compression_state(ckpt_path: str):
+    checkpoint = tf.train.Checkpoint(compression_state=TFCompressionStateLoader())
+    load_checkpoint(checkpoint, ckpt_path)
+    return checkpoint.compression_state.state
 
 
 def create_train_step_fn(strategy, model, loss_fn, optimizer):
@@ -238,13 +246,15 @@ def run_train(config):
 
     resume_training = config.ckpt_path is not None
 
+    compression_state = None
+    if resume_training:
+        compression_state = load_compression_state(config.ckpt_path)
+
     with TFOriginalModelManager(model_builder.build_model,
                                 weights=config.get('weights', None),
                                 is_training=True) as model:
         with strategy.scope():
-            compression_ctrl, compress_model = create_compressed_model(model,
-                                                                       nncf_config,
-                                                                       should_init=not resume_training)
+            compression_ctrl, compress_model = create_compressed_model(model, nncf_config, compression_state)
 
             scheduler = build_scheduler(
                 config=config,
@@ -259,7 +269,7 @@ def run_train(config):
             variables = get_variables(compress_model)
             checkpoint = tf.train.Checkpoint(variables=variables,
                                              optimizer=optimizer,
-                                             compression_ctrl=compression_ctrl,
+                                             compression_state=TFCompressionState(compression_ctrl),
                                              step=tf.Variable(0))
             checkpoint_manager = tf.train.CheckpointManager(checkpoint, config.checkpoint_save_dir, max_to_keep=None)
 

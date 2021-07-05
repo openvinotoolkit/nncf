@@ -52,11 +52,8 @@ def create_nncf_model_and_builder(model, config_params):
     nncf_config['compression']['algorithm'] = 'filter_pruning'
     for key, value in config_params.items():
         nncf_config['compression']['params'][key] = value
-    nncf_model, composite_builder = create_nncf_model_and_algo_builder(model, nncf_config)
-
-    assert len(composite_builder.child_builders) == 1
-    algo_builder = composite_builder.child_builders[0]
-    return nncf_model, algo_builder
+    nncf_model, compression_builder = create_nncf_model_and_algo_builder(model, nncf_config)
+    return nncf_model, compression_builder
 
 
 class GroupPruningModulesTestStruct:

@@ -19,14 +19,9 @@ from nncf.common.composite_compression import CompositeCompressionAlgorithmContr
 from nncf.config.extractors import extract_compression_algorithm_configs
 from nncf.tensorflow.algorithm_selector import get_compression_algorithm_builder
 from nncf.tensorflow.api.compression import TFCompressionAlgorithmBuilder
-from nncf.tensorflow.api.compression import TFCompressionAlgorithmController
 from nncf.tensorflow.graph.transformations.layout import TFTransformationLayout
 
 ModelType = TypeVar('ModelType')
-
-class TFCompositeCompressionAlgorithmController(
-    CompositeCompressionAlgorithmController, TFCompressionAlgorithmController):
-    pass
 
 
 class TFCompositeCompressionAlgorithmBuilder(
@@ -39,8 +34,8 @@ class TFCompositeCompressionAlgorithmBuilder(
             self._child_builders.append(
                 get_compression_algorithm_builder(algo_config)(algo_config, should_init=should_init))
 
-    def build_controller(self, model: ModelType) -> TFCompositeCompressionAlgorithmController:
-        composite_ctrl = TFCompositeCompressionAlgorithmController(model)
+    def _build_controller(self, model: ModelType) -> CompositeCompressionAlgorithmController:
+        composite_ctrl = CompositeCompressionAlgorithmController(model)
         for builder in self.child_builders:
             composite_ctrl.add(builder.build_controller(model))
         return composite_ctrl
