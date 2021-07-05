@@ -190,6 +190,8 @@ class BaseCompressionAlgorithmBuilder(CompressionAlgorithmBuilder):
         """
         Returns a dictionary with Python data structures (dict, list, tuple, str, int, float, True, False, None) that
         represents state of the object.
+
+        :return: state of the object
         """
         return {self.name: self._get_state_without_name()}
 

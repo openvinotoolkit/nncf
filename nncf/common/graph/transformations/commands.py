@@ -87,6 +87,8 @@ class TargetType(OrderedEnum):
         """
         Returns a dictionary with Python data structures (dict, list, tuple, str, int, float, True, False, None) that
         represents state of the object.
+
+        :return: state of the object
         """
         return {TARGET_TYPE_STATE_ATTR: self.name}
 
@@ -157,6 +159,8 @@ class TargetPoint:
         """
         Returns a dictionary with Python data structures (dict, list, tuple, str, int, float, True, False, None) that
         represents state of the object.
+
+        :return: state of the object
         """
         return {self._state_names.TARGET_TYPE: self._target_type.get_state()}
 

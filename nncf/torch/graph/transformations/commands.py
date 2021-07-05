@@ -56,6 +56,8 @@ class PTTargetPoint(TargetPoint):
         """
         Returns a dictionary with Python data structures (dict, list, tuple, str, int, float, True, False, None) that
         represents state of the object.
+
+        :return: state of the object
         """
         return {self._state_names.TARGET_TYPE: self.target_type.get_state(),
                  self._state_names.INPUT_PORT: self.input_port_id,

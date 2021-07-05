@@ -502,6 +502,8 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
         """
         Returns a dictionary with Python data structures (dict, list, tuple, str, int, float, True, False, None) that
         represents state of the object.
+
+        :return: state of the object
         """
         build_time_metric_infos_state = {}
         if self._build_time_metric_infos:

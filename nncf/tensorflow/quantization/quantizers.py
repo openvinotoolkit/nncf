@@ -53,6 +53,8 @@ class TFQuantizerSpec(QuantizerSpec):
         """
         Returns a dictionary with Python data structures (dict, list, tuple, str, int, float, True, False, None) that
         represents state of the object.
+
+        :return: state of the object
         """
         return {'num_bits': self.num_bits,
                 'mode': self.mode,

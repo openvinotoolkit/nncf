@@ -94,6 +94,8 @@ class QuantizationPoint:
         """
         Returns a dictionary with Python data structures (dict, list, tuple, str, int, float, True, False, None) that
         represents state of the object.
+
+        :return: state of the object
         """
         return {
             self._state_names.TARGET_POINT: self.target_point.get_state(),
@@ -137,6 +139,8 @@ class QuantizationSetup:
         """
         Returns a dictionary with Python data structures (dict, list, tuple, str, int, float, True, False, None) that
         represents state of the object.
+
+        :return: state of the object
         """
 
         quantization_points_state = [qp.get_state() for qp in self._quantization_points]
@@ -202,6 +206,8 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
         """
         Returns a dictionary with Python data structures (dict, list, tuple, str, int, float, True, False, None) that
         represents state of the object.
+
+        :return: state of the object
         """
         quantizer_setup_state = self._quantizer_setup.get_state()
         return {self._state_names.QUANTIZER_SETUP: quantizer_setup_state}

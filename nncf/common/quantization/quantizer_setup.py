@@ -51,6 +51,8 @@ class QuantizationInsertionPointBase(ABC):
         """
         Returns a dictionary with Python data structures (dict, list, tuple, str, int, float, True, False, None) that
         represents state of the object.
+
+        :return: state of the object
         """
         return {self._state_names.TARGET_NODE_NAME: self.target_node_name}
 
@@ -105,6 +107,8 @@ class ActivationQuantizationInsertionPoint(QuantizationInsertionPointBase):
         """
         Returns a dictionary with Python data structures (dict, list, tuple, str, int, float, True, False, None) that
         represents state of the object.
+
+        :return: state of the object
         """
         return {self._state_names.TARGET_NODE_NAME: self.target_node_name,
                 self._state_names.INPUT_PORT_ID: self.input_port_id}
@@ -154,6 +158,8 @@ class SingleConfigQuantizationPoint(QuantizationPointBase):
         """
         Returns a dictionary with Python data structures (dict, list, tuple, str, int, float, True, False, None) that
         represents state of the object.
+
+        :return: state of the object
         """
         return {
             self._state_names.INSERTION_POINT: self.insertion_point.get_state(),
@@ -372,6 +378,8 @@ class SingleConfigQuantizerSetup(QuantizerSetupBase):
         """
         Returns a dictionary with Python data structures (dict, list, tuple, str, int, float, True, False, None) that
         represents state of the object.
+
+        :return: state of the object
         """
 
         def set2list(pair):

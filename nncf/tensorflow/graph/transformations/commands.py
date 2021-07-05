@@ -61,6 +61,8 @@ class TFLayerPoint(TargetPoint):
         """
         Returns a dictionary with Python data structures (dict, list, tuple, str, int, float, True, False, None) that
         represents state of the object.
+
+        :return: state of the object
         """
         return {
             self._state_names.TARGET_TYPE: self._target_type.get_state(),
@@ -97,6 +99,8 @@ class TFLayer(TFLayerPoint):
         """
         Returns a dictionary with Python data structures (dict, list, tuple, str, int, float, True, False, None) that
         represents state of the object.
+
+        :return: state of the object
         """
         return {
             'layer_name': self.layer_name,
@@ -152,6 +156,8 @@ class TFBeforeLayer(TFLayerPoint):
         """
         Returns a dictionary with Python data structures (dict, list, tuple, str, int, float, True, False, None) that
         represents state of the object.
+
+        :return: state of the object
         """
         return {
             'layer_name': self.layer_name,
@@ -210,6 +216,8 @@ class TFAfterLayer(TFLayerPoint):
         """
         Returns a dictionary with Python data structures (dict, list, tuple, str, int, float, True, False, None) that
         represents state of the object.
+
+        :return: state of the object
         """
         return {
             'layer_name': self.layer_name,
@@ -260,6 +268,8 @@ class TFLayerWeight(TFLayerPoint):
         """
         Returns a dictionary with Python data structures (dict, list, tuple, str, int, float, True, False, None) that
         represents state of the object.
+
+        :return: state of the object
         """
         return {
             'layer_name': self.layer_name,
@@ -310,6 +320,8 @@ class TFOperationWithWeights(TFLayerWeight):
         """
         Returns a dictionary with Python data structures (dict, list, tuple, str, int, float, True, False, None) that
         represents state of the object.
+
+        :return: state of the object
         """
         return {
             'layer_name': self._layer_name,
