@@ -25,16 +25,12 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torchvision
 
-from nncf.common.graph import NNCFNodeName
 from nncf.common.hardware.config import HWConfigType
 from nncf.common.quantization.quantizer_setup import ActivationQuantizationInsertionPoint
 from nncf.common.quantization.quantizer_setup import SingleConfigQuantizerSetup
 from nncf.torch import nncf_model_input
 from nncf.torch import nncf_model_output
-from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNodeName
-from nncf.common.graph.transformations.commands import TargetType
-from nncf.torch.composite_compression import PTCompositeCompressionAlgorithmBuilder
 from nncf.torch.dynamic_graph.graph_tracer import ModelInputInfo
 from nncf.torch.dynamic_graph.graph_tracer import create_dummy_forward_fn
 from nncf.torch.dynamic_graph.graph_tracer import create_input_infos
