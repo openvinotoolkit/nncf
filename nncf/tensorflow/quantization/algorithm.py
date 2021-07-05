@@ -11,10 +11,10 @@
  limitations under the License.
 """
 
-from typing import List
-from typing import Set
 from typing import Any
 from typing import Dict
+from typing import List
+from typing import Set
 
 import networkx as nx
 import tensorflow as tf
@@ -28,17 +28,16 @@ from nncf.common.graph import NNCFNodeName
 from nncf.common.graph.layer_attributes import Dtype
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TransformationPriority
-from nncf.tensorflow.quantization.initializers.init_range import TFRangeInitParams
 from nncf.common.initialization.batchnorm_adaptation import BatchnormAdaptationAlgorithm
 from nncf.common.quantization.structs import QuantizationConstraints
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizerGroup
 from nncf.common.schedulers import BaseCompressionScheduler
+from nncf.common.stateful_classes_registry import TF_STATEFUL_CLASSES
 from nncf.common.statistics import NNCFStatistics
 from nncf.common.utils.helpers import should_consider_scope
 from nncf.common.utils.logger import logger
-from nncf.common.stateful_classes_registry import TF_STATEFUL_CLASSES
 from nncf.common.compression import BaseCompressionAlgorithmController
 from nncf.config.extractors import extract_bn_adaptation_init_params
 from nncf.config.extractors import extract_range_init_params
@@ -60,6 +59,7 @@ from nncf.tensorflow.graph.utils import get_original_name_and_instance_idx
 from nncf.tensorflow.layers.custom_objects import NNCF_QUANTIZATION_OPERATONS
 from nncf.tensorflow.loss import TFZeroCompressionLoss
 from nncf.tensorflow.quantization.initializers.init_range import RangeInitializer
+from nncf.tensorflow.quantization.initializers.init_range import TFRangeInitParams
 from nncf.tensorflow.quantization.layers import FakeQuantize
 from nncf.tensorflow.quantization.quantizers import Quantizer
 from nncf.tensorflow.quantization.quantizers import TFQuantizerSpec
@@ -80,6 +80,9 @@ class QuantizationPointStateNames:
 
 
 class QuantizationPoint:
+    """
+    Characterizes where and how to insert a single quantization node to the model's graph
+    """
     _state_names = QuantizationPointStateNames
 
     def __init__(self, op_name: str, quantizer_spec: TFQuantizerSpec, target_point: TargetPoint):
@@ -88,6 +91,10 @@ class QuantizationPoint:
         self.quantizer_spec = quantizer_spec
 
     def is_weight_quantization(self) -> bool:
+        """
+        Determines whether quantization point is for weights
+        :return: true, if quantization for weights, false - for activations
+        """
         return isinstance(self.target_point, TFLayerWeight)
 
     def get_state(self) -> Dict[str, Any]:
@@ -112,9 +119,11 @@ class QuantizationPoint:
         :param state: Output of `get_state()` method.
         """
         target_point_cls = TF_STATEFUL_CLASSES.get_registered_class(state[cls._state_names.TARGET_POINT_CLASS_NAME])
-        kwargs = {cls._state_names.TARGET_POINT: target_point_cls.from_state(state[cls._state_names.TARGET_POINT]),
-                  cls._state_names.QUANTIZER_SPEC: TFQuantizerSpec.from_state(state[cls._state_names.QUANTIZER_SPEC]),
-                  cls._state_names.OP_NAME: state[cls._state_names.OP_NAME]}
+        kwargs = {
+            cls._state_names.TARGET_POINT: target_point_cls.from_state(state[cls._state_names.TARGET_POINT]),
+            cls._state_names.QUANTIZER_SPEC: TFQuantizerSpec.from_state(state[cls._state_names.QUANTIZER_SPEC]),
+            cls._state_names.OP_NAME: state[cls._state_names.OP_NAME]
+        }
         return cls(**kwargs)
 
 
@@ -123,6 +132,9 @@ class QuantizationSetupStateNames:
 
 
 class QuantizationSetup:
+    """
+    Characterizes where and how to insert all quantization nodes to the model's graph
+    """
     _state_names = QuantizationSetupStateNames
 
     def __init__(self):
@@ -130,6 +142,11 @@ class QuantizationSetup:
         self._quantization_points = []  # type: List[QuantizationPoint]
 
     def add_quantization_point(self, point: QuantizationPoint):
+        """
+        Adds quantization point to the setup
+
+        :param point: quantization point
+        """
         self._quantization_points.append(point)
 
     def __iter__(self):
@@ -224,7 +241,7 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
         params_dict = config.get(group_name, {})
         self.global_quantizer_constraints[quantizer_group] = QuantizationConstraints.from_config_dict(params_dict)
         self.ignored_scopes_per_group[quantizer_group] = config.get('ignored_scopes', []) \
-                                                    + params_dict.get('ignored_scopes', [])
+                                                         + params_dict.get('ignored_scopes', [])
         self.target_scopes_per_group[quantizer_group] = params_dict.get('target_scopes')
 
     def _get_default_qconfig(self, constraints: QuantizationConstraints = None) -> QuantizerConfig:

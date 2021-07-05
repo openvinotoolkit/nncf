@@ -171,7 +171,9 @@ class TargetPoint:
 
         :param state: Output of `get_state()` method.
         """
-        kwargs = {cls._state_names.TARGET_TYPE: TargetType.from_state(state[cls._state_names.TARGET_TYPE])}
+        kwargs = {
+            cls._state_names.TARGET_TYPE: TargetType.from_state(state[cls._state_names.TARGET_TYPE])
+        }
         return cls(**kwargs)
 
 

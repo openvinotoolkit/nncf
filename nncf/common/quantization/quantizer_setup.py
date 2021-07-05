@@ -110,8 +110,10 @@ class ActivationQuantizationInsertionPoint(QuantizationInsertionPointBase):
 
         :return: state of the object
         """
-        return {self._state_names.TARGET_NODE_NAME: self.target_node_name,
-                self._state_names.INPUT_PORT_ID: self.input_port_id}
+        return {
+            self._state_names.TARGET_NODE_NAME: self.target_node_name,
+            self._state_names.INPUT_PORT_ID: self.input_port_id
+        }
 
 
 class QuantizationPointBase:
@@ -178,9 +180,11 @@ class SingleConfigQuantizationPoint(QuantizationPointBase):
         insertion_point_cls_name = state[cls._state_names.INSERTION_POINT_CLASS_NAME]
         insertion_point_cls = CommonStatefulClassesRegistry.get_registered_class(insertion_point_cls_name)
         insertion_point = insertion_point_cls.from_state(state[cls._state_names.INSERTION_POINT])
-        kwargs = {cls._state_names.INSERTION_POINT: insertion_point,
-                  cls._state_names.QCONFIG: QuantizerConfig.from_state(state[cls._state_names.QCONFIG]),
-                  cls._state_names.NAMES_OF_QUANTIZED_OPS: state[cls._state_names.NAMES_OF_QUANTIZED_OPS]}
+        kwargs = {
+            cls._state_names.INSERTION_POINT: insertion_point,
+            cls._state_names.QCONFIG: QuantizerConfig.from_state(state[cls._state_names.QCONFIG]),
+            cls._state_names.NAMES_OF_QUANTIZED_OPS: state[cls._state_names.NAMES_OF_QUANTIZED_OPS]
+        }
         return cls(**kwargs)
 
 

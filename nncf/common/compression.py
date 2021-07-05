@@ -116,6 +116,9 @@ class BaseCompressionAlgorithmController(CompressionAlgorithmController):
         """
         Sets state of the builder and the corresponding algorithm name. Should be called by the builder to set its
         state and registered algorithm key.
+
+        :param name: algorithm name, the string that was used to register the builder
+        :param builder_state: state of the builder
         """
         self._name = name
         self._builder_state = builder_state
@@ -156,7 +159,8 @@ class BaseCompressionAlgorithmController(CompressionAlgorithmController):
         """
         Returns compression state - builder and controller state.
         This state should be used to resume compression via `compression_state` argument of `create_compressed_model`
-        method
+        method.
+
         :return: The compression state.
         """
         if self._builder_state is None:

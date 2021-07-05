@@ -220,7 +220,7 @@ class CompressionAlgorithmController(ABC):
         """
         Returns compression state - builder and controller state.
         This state should be used to resume compression via `compression_state` argument of `create_compressed_model`
-        method
+        method.
 
         :return: Compression state of the model to unambiguously resume compression from it.
         """
@@ -386,7 +386,7 @@ class CompressionAlgorithmBuilder(ABC):
         """
 
     @abstractmethod
-    def load_state(self, state: Dict[str, Any]):
+    def load_state(self, state: Dict[str, Any]) -> None:
         """
         Initializes object from the state.
 

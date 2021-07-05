@@ -1,4 +1,6 @@
-from typing import Any, Callable, Dict
+from typing import Any
+from typing import Callable
+from typing import Dict
 
 from nncf.common.graph import NNCFNodeName
 from nncf.common.graph.transformations.commands import TargetPoint
@@ -70,9 +72,11 @@ class PTTargetPoint(TargetPoint):
 
         :param state: Output of `get_state()` method.
         """
-        kwargs = {cls._state_names.TARGET_TYPE: TargetType.from_state(state[cls._state_names.TARGET_TYPE]),
-                  cls._state_names.INPUT_PORT: state[cls._state_names.INPUT_PORT],
-                  cls._state_names.TARGET_NODE_NAME: state[cls._state_names.TARGET_NODE_NAME]}
+        kwargs = {
+            cls._state_names.TARGET_TYPE: TargetType.from_state(state[cls._state_names.TARGET_TYPE]),
+            cls._state_names.INPUT_PORT: state[cls._state_names.INPUT_PORT],
+            cls._state_names.TARGET_NODE_NAME: state[cls._state_names.TARGET_NODE_NAME]
+        }
         return cls(**kwargs)
 
 

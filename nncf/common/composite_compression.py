@@ -343,6 +343,9 @@ class CompositeCompressionAlgorithmController(CompressionAlgorithmController):
         """
         Sets state of the builder and the corresponding algorithm name. Should be called by the builder to set its
         state and registered algorithm key.
+
+        :param name: algorithm name, the string that was used to register the builder
+        :param builder_state: state of the builder
         """
         self._name = name
         self._builder_state = builder_state
@@ -374,6 +377,7 @@ class CompositeCompressionAlgorithmBuilder(CompressionAlgorithmBuilder):
     def load_state(self, state: Dict[str, Dict]) -> None:
         """
         Loads the compression builder state of children
+
         :param state: Output of `get_state()` method.
         """
         for builder in self.child_builders:
@@ -383,6 +387,7 @@ class CompositeCompressionAlgorithmBuilder(CompressionAlgorithmBuilder):
         """
         Returns the composite compression builder state. This state contains
         the state of all children.
+
         :return: The composite compression builder state.
         """
         result = dict()

@@ -11,51 +11,87 @@
  limitations under the License.
 """
 import inspect
+from typing import Callable
+from typing import Dict
 
 
 class StatefulClassesRegistry:
+    """
+    Registry for the stateful classes  - classes that can be restored from their state by `from_state` method.
+    """
     REQUIRED_METHOD_NAME = 'from_state'
 
     def __init__(self):
-        self._stateful_classes = dict()
-        self._stateful_class_names = dict()
+        self._name_vs_class_map = dict()  # type: Dict[str, object]
+        self._class_vs_name_map = dict()  # type: Dict[object, str]
 
-    def register(self, name=None):
+    def register(self, name: str = None) -> Callable:
+        """
+        Decorator to map class with some name - specified in the argument or name of the class.
+
+        :param name: The registration name. By default, it's name of the class.
+        :return: The inner function for registration.
+        """
+
         def decorator(cls):
-            class_name = name if name is not None else cls.__name__
+            registered_name = name if name is not None else cls.__name__
 
-            if class_name in self._stateful_class_names:
-                raise ValueError(
-                    '{} has already been registered to {}'.format(class_name, self._stateful_classes[class_name]))
+            if registered_name in self._name_vs_class_map:
+                raise ValueError('{} has already been registered to {}'.format(
+                    registered_name, self._name_vs_class_map[registered_name]))
 
-            if cls in self._stateful_class_names:
-                raise ValueError('{} has already been registered to {}'.format(cls, self._stateful_class_names[cls]))
+            if cls in self._class_vs_name_map:
+                raise ValueError('{} has already been registered to {}'.format(
+                    cls, self._class_vs_name_map[cls]))
 
             if inspect.isclass(cls) and not hasattr(cls, self.REQUIRED_METHOD_NAME):
                 raise ValueError('Cannot register a class ({}) that does not have {}() method.'.format(
-                    class_name, self.REQUIRED_METHOD_NAME))
+                    registered_name, self.REQUIRED_METHOD_NAME))
 
-            self._stateful_class_names[cls] = class_name
-            self._stateful_classes[class_name] = cls
+            self._class_vs_name_map[cls] = registered_name
+            self._name_vs_class_map[registered_name] = cls
 
             return cls
 
         return decorator
 
-    def get_registered_class(self, class_name):
-        if class_name in self._stateful_classes:
-            return self._stateful_classes[class_name]
-        raise KeyError('No registered stateful classes with {} name'.format(class_name))
+    def get_registered_class(self, registered_name: str) -> object:
+        """
+        Provides a class that was registered with the given name.
 
-    def get_registered_class_name(self, stateful_cls):
-        if stateful_cls in self._stateful_class_names:
-            return self._stateful_class_names[stateful_cls]
-        raise KeyError('No registered stateful class names for {} class'.format(stateful_cls.__name__))
+        :param registered_name: name
+        :return: class that was registered with the given name
+        """
+        if registered_name in self._name_vs_class_map:
+            return self._name_vs_class_map[registered_name]
+        raise KeyError('No registered stateful classes with {} name'.format(registered_name))
+
+    def get_registered_name(self, stateful_cls: object) -> str:
+        """
+        Provides a name that was used to register the given stateful class.
+
+        :param stateful_cls: class
+        :return: name that was used on registration of the given class
+        """
+        if stateful_cls in self._class_vs_name_map:
+            return self._class_vs_name_map[stateful_cls]
+        raise KeyError('The class {} was not registered.'.format(stateful_cls.__name__))
 
 
 class CommonStatefulClassesRegistry:
+    """
+    Common for TF and PT registry for the stateful classes.
+    """
+
     @staticmethod
-    def register(name=None):
+    def register(name: str = None) -> Callable:
+        """
+        Decorator to map class with some name - specified in the argument or name of the class.
+
+        :param name: The registration name. By default, it's name of the class.
+        :return: The inner function for registration.
+        """
+
         def decorator(cls):
             PT_STATEFUL_CLASSES.register(name)(cls)
             TF_STATEFUL_CLASSES.register(name)(cls)
@@ -64,12 +100,24 @@ class CommonStatefulClassesRegistry:
         return decorator
 
     @staticmethod
-    def get_registered_class(class_name):
-        return PT_STATEFUL_CLASSES.get_registered_class(class_name)
+    def get_registered_class(registered_name: str) -> object:
+        """
+        Provides a class that was registered with the given name.
+
+        :param registered_name: name
+        :return: class that was registered with the given name
+        """
+        return PT_STATEFUL_CLASSES.get_registered_class(registered_name)
 
     @staticmethod
-    def get_registered_class_name(stateful_cls):
-        return PT_STATEFUL_CLASSES.get_registered_class_name(stateful_cls)
+    def get_registered_name(stateful_cls: object) -> str:
+        """
+        Provides a name that was used to register the given stateful class.
+
+        :param stateful_cls: class
+        :return: name that was used on registration of the given class
+        """
+        return PT_STATEFUL_CLASSES.get_registered_name(stateful_cls)
 
 
 PT_STATEFUL_CLASSES = StatefulClassesRegistry()
