@@ -11,43 +11,41 @@
  limitations under the License.
 """
 
-import os.path as osp
 import sys
 import time
-from copy import deepcopy
 from pathlib import Path
 
+import os.path as osp
 import torch
 import torch.utils.data as data
-
-from examples.torch.common import restricted_pickle_module
-from examples.torch.common.execution import set_seed
-from examples.torch.common.model_loader import load_resuming_model_state_dict_and_checkpoint_from_path
-from examples.torch.common.sample_config import create_sample_config, SampleConfig
+from copy import deepcopy
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 
+from examples.torch.common import restricted_pickle_module
 from examples.torch.common.argparser import get_common_argument_parser
 from examples.torch.common.distributed import DistributedSampler
 from examples.torch.common.example_logger import logger
 from examples.torch.common.execution import get_execution_mode
 from examples.torch.common.execution import prepare_model_for_execution, start_worker
-from nncf.api.compression import CompressionStage
-from nncf.torch import AdaptiveCompressionTrainingLoop
-from nncf.torch.initialization import register_default_init_args
+from examples.torch.common.execution import set_seed
+from examples.torch.common.model_loader import load_resuming_model_state_dict_and_checkpoint_from_path
 from examples.torch.common.optimizer import get_parameter_groups, make_optimizer
+from examples.torch.common.sample_config import create_sample_config, SampleConfig
 from examples.torch.common.utils import get_name, make_additional_checkpoints, configure_paths, \
     create_code_snapshot, is_on_first_rank, configure_logging, print_args, is_pretrained_model_requested, \
     log_common_mlflow_params, SafeMLFLow, configure_device
-
-from nncf.config.utils import is_accuracy_aware_training
 from examples.torch.common.utils import write_metrics
 from examples.torch.object_detection.dataset import detection_collate, get_testing_dataset, get_training_dataset
 from examples.torch.object_detection.eval import test_net
 from examples.torch.object_detection.layers.modules import MultiBoxLoss
 from examples.torch.object_detection.model import build_ssd
+from nncf.api.compression import CompressionStage
+from nncf.config.utils import is_accuracy_aware_training
+from nncf.torch import AdaptiveCompressionTrainingLoop
 from nncf.torch import create_compressed_model
 from nncf.torch import load_state
 from nncf.torch.dynamic_graph.graph_tracer import create_input_infos
+from nncf.torch.initialization import register_default_init_args
 from nncf.torch.utils import is_main_process
 
 
@@ -160,8 +158,8 @@ def main_worker(current_gpu, config):
             return mAP
 
         nncf_config = register_default_init_args(
-            nncf_config, init_data_loader, criterion, criterion_fn,
-            autoq_test_fn, test_data_loader, model_eval_fn, config.device)
+            nncf_config, init_data_loader, criterion=criterion, criterion_fn=criterion_fn,
+            autoq_eval_fn=autoq_test_fn, val_loader=test_data_loader, model_eval_fn=model_eval_fn, device=config.device)
 
     ##################
     # Prepare model
@@ -212,7 +210,7 @@ def main_worker(current_gpu, config):
         def validate_fn(model, epoch):
             model.eval()
             mAP = test_net(model, config.device, test_data_loader,
-                            distributed=config.distributed)
+                           distributed=config.distributed)
             model.train()
             return mAP
 

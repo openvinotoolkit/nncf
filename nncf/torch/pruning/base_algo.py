@@ -10,10 +10,10 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-
+import torch
 from functools import partial
 from functools import update_wrapper
-from typing import List
+from typing import List, Dict
 
 from torch import nn
 
@@ -39,6 +39,7 @@ class BasePruningAlgoBuilder(PTCompressionAlgorithmBuilder):
     def __init__(self, config, should_init: bool = True):
         super().__init__(config, should_init)
         params = config.get('params', {})
+        self._set_default_params_for_ranking_type(params)
         self._params = params
 
         self.prune_first = params.get('prune_first_conv', False)
@@ -57,6 +58,18 @@ class BasePruningAlgoBuilder(PTCompressionAlgorithmBuilder):
                                                          self.prune_downsample_convs)
 
         self.pruned_module_groups_info = []
+
+    @staticmethod
+    def _set_default_params_for_ranking_type(params: Dict) -> None:
+        learned_ranking = 'interlayer_ranking_type' in params and params['interlayer_ranking_type'] == 'learned_ranking'
+        if not learned_ranking:
+            return
+        nncf_logger.info('For learning global ranking `prune_first_conv`, `prune_last_conv`, `prune_downsample_convs`, '
+                         '`all_weights` are setting to True by default.')
+        params.setdefault('prune_first_conv', True)
+        params.setdefault('prune_last_conv', True)
+        params.setdefault('prune_downsample_convs', True)
+        params.setdefault('all_weights', True)
 
     def _get_transformation_layout(self, target_model: NNCFNetwork) -> PTTransformationLayout:
         layout = PTTransformationLayout()
@@ -139,6 +152,7 @@ class BasePruningAlgoController(PTCompressionAlgorithmController):
         self.prune_batch_norms = params.get('prune_batch_norms', True)
         self.prune_first = params.get('prune_first_conv', False)
         self.prune_last = params.get('prune_last_conv', False)
+        self.prune_downsample_convs = params.get('prune_downsample_convs', False)
         self.zero_grad = params.get('zero_grad', True)
         self.prune_flops = False
         self.check_pruning_rate(params)
@@ -191,7 +205,7 @@ class BasePruningAlgoController(PTCompressionAlgorithmController):
             h.remove()
         self._hooks = []
 
-    def _get_mask(self, minfo: PrunedModuleInfo):
+    def get_mask(self, minfo: PrunedModuleInfo) -> torch.Tensor:
         """
         Returns pruning mask for minfo.module.
         """
@@ -218,12 +232,12 @@ class BasePruningAlgoController(PTCompressionAlgorithmController):
         return pruning_rate
 
     def pruning_rate_for_mask(self, minfo: PrunedModuleInfo):
-        mask = self._get_mask(minfo)
+        mask = self.get_mask(minfo)
         pruning_rate = 1 - mask.nonzero().size(0) / max(mask.view(-1).size(0), 1)
         return pruning_rate
 
     def mask_shape(self, minfo: PrunedModuleInfo):
-        mask = self._get_mask(minfo)
+        mask = self.get_mask(minfo)
         return mask.shape
 
     def get_stats_for_pruned_modules(self):

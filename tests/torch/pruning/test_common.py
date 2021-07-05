@@ -14,8 +14,10 @@ import pytest
 
 from nncf.common.pruning.schedulers import BaselinePruningScheduler, ExponentialPruningScheduler, \
     ExponentialWithBiasPruningScheduler
+from nncf.torch import register_default_init_args
+from nncf.torch.structures import LeGRInitArgs
 from tests.torch.pruning.helpers import PruningTestModel, get_basic_pruning_config
-from tests.torch.helpers import create_compressed_model_and_algo_for_test
+from tests.torch.helpers import create_compressed_model_and_algo_for_test, create_ones_mock_dataloader
 
 
 @pytest.mark.parametrize('algo',
@@ -50,3 +52,28 @@ def test_check_default_scheduler_params(algo, ref_scheduler, ref_scheduler_param
     assert isinstance(scheduler, ref_scheduler)
     for key, value in ref_scheduler_params.items():
         assert getattr(scheduler, key) == value
+
+
+def test_default_legr_init_struct():
+    config = get_basic_pruning_config()
+    init_loader = create_ones_mock_dataloader(config)
+    nncf_config = register_default_init_args(config, init_loader)
+
+    with pytest.raises(KeyError):
+        nncf_config.get_extra_struct(LeGRInitArgs)
+
+
+def test_valid_legr_init_struct():
+    config = get_basic_pruning_config()
+    train_loader = create_ones_mock_dataloader(config)
+    val_loader = create_ones_mock_dataloader(config)
+    train_steps_fn = lambda *x: None
+    validate_fn = lambda *x: (0, 0, 0)
+    nncf_config = register_default_init_args(config, train_loader=train_loader, train_steps_fn=train_steps_fn,
+                                             val_loader=val_loader, validate_fn=validate_fn)
+
+    legr_init_args = config.get_extra_struct(LeGRInitArgs)
+    assert legr_init_args.config == nncf_config
+    assert legr_init_args.train_loader == train_loader
+    assert legr_init_args.val_loader == val_loader
+    assert legr_init_args.train_steps_fn == train_steps_fn

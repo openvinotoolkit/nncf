@@ -67,7 +67,7 @@ def nncf_config_with_default_init_args_(mocker):
     mocker_criterion = mocker.stub()
     mocker_criterion.batch_size = 1
 
-    config = register_default_init_args(config, train_loader, mocker_criterion)
+    config = register_default_init_args(config, train_loader, criterion=mocker_criterion)
     return config
 
 

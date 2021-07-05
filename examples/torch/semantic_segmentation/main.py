@@ -509,8 +509,8 @@ def main_worker(current_gpu, config):
         model_eval_fn = functools.partial(autoq_test_fn, eval_loader=val_loader)
 
         nncf_config = register_default_init_args(
-            nncf_config, init_loader, criterion, criterion_fn,
-            autoq_test_fn, val_loader, model_eval_fn, config.device)
+            nncf_config, init_loader, criterion=criterion, criterion_fn=criterion_fn,
+            autoq_eval_fn=autoq_test_fn, val_loader=val_loader, model_eval_fn=model_eval_fn, device=config.device)
 
     model = load_model(config.model,
                        pretrained=pretrained,
