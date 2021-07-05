@@ -19,6 +19,7 @@ import tensorflow as tf
 import tensorflow_addons as tfa
 
 from nncf import NNCFConfig
+from nncf.common.compression import BaseCompressionAlgorithmController
 from nncf.common.composite_compression import CompositeCompressionAlgorithmController
 from nncf.tensorflow.helpers.callback_creation import create_compression_callbacks
 from nncf.tensorflow.helpers.model_creation import create_compressed_model
@@ -141,7 +142,8 @@ def test_rb_sparse_target_lenet(distributed, quantized):
         if quantized:
             config.update({'compression': [config['compression'], {'algorithm': 'quantization'}]})
 
-        compress_algo, compress_model = create_compressed_model(model, config)
+        compression_state_to_skip_init = {BaseCompressionAlgorithmController.BUILDER_STATE: dict()}
+        compress_algo, compress_model = create_compressed_model(model, config, compression_state_to_skip_init)
         compression_callbacks = create_compression_callbacks(compress_algo, log_tensorboard=True, log_dir='logdir/')
 
         sparse_algo = compress_algo.child_ctrls[0] \

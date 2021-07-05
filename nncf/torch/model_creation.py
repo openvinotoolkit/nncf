@@ -14,21 +14,21 @@ from os import path as osp
 from typing import Any
 from typing import Callable
 from typing import Dict
-from typing import List
 from typing import Optional
 from typing import Tuple
 
 import torch
+
 from torch.distributed import barrier
 from torch.nn import Module
 
-from nncf.api.compression import CompressionAlgorithmController
-from nncf.common.hardware.config import HWConfigType
+
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.common.compression import BaseCompressionAlgorithmController as BaseController
 from nncf.config import NNCFConfig
 from nncf.config.extractors import extract_compression_algorithm_configs
 from nncf.config.utils import is_accuracy_aware_training
+from nncf.api.compression import CompressionAlgorithmController
 from nncf.torch.algo_selector import COMPRESSION_ALGORITHMS
 from nncf.torch.composite_compression import PTCompositeCompressionAlgorithmBuilder
 from nncf.torch.compression_method_api import PTCompressionAlgorithmBuilder

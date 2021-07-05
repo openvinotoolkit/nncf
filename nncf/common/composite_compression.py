@@ -11,7 +11,11 @@
  limitations under the License.
 """
 
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
+from typing import Dict
+from typing import List
+from typing import Optional
+from typing import Tuple
 
 from nncf import NNCFConfig
 from nncf.api.compression import CompressionAlgorithmBuilder
@@ -21,7 +25,8 @@ from nncf.api.compression import CompressionScheduler
 from nncf.api.compression import CompressionStage
 from nncf.api.compression import ModelType
 from nncf.common.statistics import NNCFStatistics
-import nncf.common.factory as factory
+from nncf.common.utils.backend import BackendType
+from nncf.common.utils.backend import infer_backend_from_model
 
 
 class CompositeCompressionLoss(CompressionLoss):
@@ -309,7 +314,14 @@ class CompositeCompressionAlgorithmController(CompressionAlgorithmController):
                 - ({'x': None, 'y': y},) for keyword arguments only.
         """
         self.prepare_for_export()
-        exporter = factory.create_exporter(self.model, input_names, output_names, model_args)
+        backend = infer_backend_from_model(self.model)
+        if backend is BackendType.TENSORFLOW:
+            from nncf.tensorflow.exporter import TFExporter
+            exporter = TFExporter(self.model, input_names, output_names, model_args)
+        else:
+            assert backend is BackendType.TORCH
+            from nncf.torch.exporter import PTExporter
+            exporter = PTExporter(self.model, input_names, output_names, model_args)
         exporter.export_model(save_path, save_format)
 
     def disable_scheduler(self) -> None:

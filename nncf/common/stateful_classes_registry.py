@@ -63,6 +63,14 @@ class CommonStatefulClassesRegistry:
 
         return decorator
 
+    @staticmethod
+    def get_registered_class(class_name):
+        return PT_STATEFUL_CLASSES.get_registered_class(class_name)
+
+    @staticmethod
+    def get_registered_class_name(stateful_cls):
+        return PT_STATEFUL_CLASSES.get_registered_class_name(stateful_cls)
+
 
 PT_STATEFUL_CLASSES = StatefulClassesRegistry()
 TF_STATEFUL_CLASSES = StatefulClassesRegistry()

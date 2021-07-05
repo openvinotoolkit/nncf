@@ -16,21 +16,18 @@ from typing import Optional
 import pytest
 
 from nncf.api.compression import CompressionStage
+from nncf.common.compression import BaseCompressionAlgorithmController as BaseController
 from nncf.common.compression import BaseControllerStateNames
 from nncf.common.sparsity.schedulers import AdaptiveSparsityScheduler
 from nncf.common.sparsity.schedulers import ExponentialSparsityScheduler
 from nncf.common.sparsity.schedulers import MultiStepSparsityScheduler
 from nncf.common.sparsity.schedulers import PolynomialSparsityScheduler
-from nncf.common.compression import BaseCompressionAlgorithmController as BaseController
 from tests.torch.helpers import BasicConvTestModel
 from tests.torch.helpers import MockModel
+from tests.torch.helpers import TwoConvTestModel
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
-from tests.torch.helpers import get_empty_config
-from nncf.common.sparsity.schedulers import PolynomialSparsityScheduler, ExponentialSparsityScheduler, \
-    AdaptiveSparsityScheduler, MultiStepSparsityScheduler
-from tests.torch.helpers import BasicConvTestModel, get_empty_config, create_compressed_model_and_algo_for_test, \
-    MockModel, TwoConvTestModel
 from tests.torch.helpers import fill_params_of_model_by_normal
+from tests.torch.helpers import get_empty_config
 
 
 @pytest.mark.parametrize('algo',

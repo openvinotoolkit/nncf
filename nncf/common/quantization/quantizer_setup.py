@@ -15,6 +15,7 @@ from abc import ABC
 from collections import Counter
 from copy import deepcopy
 from enum import Enum
+from typing import Any
 from typing import Dict
 from typing import List
 from typing import Optional
@@ -25,6 +26,7 @@ from nncf.common.quantization.structs import NonWeightQuantizerId
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import UnifiedScaleType
 from nncf.common.quantization.structs import WeightQuantizerId
+from nncf.common.stateful_classes_registry import CommonStatefulClassesRegistry
 from nncf.common.utils.logger import logger as nncf_logger
 
 QuantizationPointId = int
@@ -35,11 +37,34 @@ class QuantizationPointType(Enum):
     ACTIVATION_QUANTIZATION = 1
 
 
+class QIPointStateNames:
+    TARGET_NODE_NAME = 'target_node_name'
+
+
 class QuantizationInsertionPointBase(ABC):
+    _state_names = QIPointStateNames
+
     def __init__(self, target_node_name: NNCFNodeName):
         self.target_node_name = target_node_name
 
+    def get_state(self) -> Dict[str, Any]:
+        """
+        Returns a dictionary with Python data structures (dict, list, tuple, str, int, float, True, False, None) that
+        represents state of the object.
+        """
+        return {self._state_names.TARGET_NODE_NAME: self.target_node_name}
 
+    @classmethod
+    def from_state(cls, state: Dict[str, Any]) -> 'QuantizationInsertionPointBase':
+        """
+        Creates the object from its state.
+
+        :param state: Output of `get_state()` method.
+        """
+        return cls(**state)
+
+
+@CommonStatefulClassesRegistry.register()
 class WeightQuantizationInsertionPoint(QuantizationInsertionPointBase):
     def __eq__(self, other: 'WeightQuantizationInsertionPoint'):
         return isinstance(other, WeightQuantizationInsertionPoint) and \
@@ -52,7 +77,15 @@ class WeightQuantizationInsertionPoint(QuantizationInsertionPointBase):
         return hash(str(self))
 
 
+class AQIPointStateNames:
+    INPUT_PORT_ID = 'input_port_id'
+    TARGET_NODE_NAME = 'target_node_name'
+
+
+@CommonStatefulClassesRegistry.register()
 class ActivationQuantizationInsertionPoint(QuantizationInsertionPointBase):
+    _state_names = AQIPointStateNames
+
     def __init__(self, target_node_name: NNCFNodeName, input_port_id: Optional[int] = None):
         super().__init__(target_node_name)
         self.input_port_id = input_port_id
@@ -67,6 +100,14 @@ class ActivationQuantizationInsertionPoint(QuantizationInsertionPointBase):
 
     def __hash__(self):
         return hash(str(self))
+
+    def get_state(self) -> Dict[str, Any]:
+        """
+        Returns a dictionary with Python data structures (dict, list, tuple, str, int, float, True, False, None) that
+        represents state of the object.
+        """
+        return {self._state_names.TARGET_NODE_NAME: self.target_node_name,
+                self._state_names.INPUT_PORT_ID: self.input_port_id}
 
 
 class QuantizationPointBase:
@@ -90,7 +131,8 @@ class QuantizationPointBase:
 
 class SCQPointStateNames:
     QCONFIG = 'qconfig'
-    INSERTION_POINT = 'insertion_point'
+    INSERTION_POINT = 'qip'
+    INSERTION_POINT_CLASS_NAME = 'qip_class'
     NAMES_OF_QUANTIZED_OPS = 'directly_quantized_operator_node_names'
 
 
@@ -115,6 +157,7 @@ class SingleConfigQuantizationPoint(QuantizationPointBase):
         """
         return {
             self._state_names.INSERTION_POINT: self.insertion_point.get_state(),
+            self._state_names.INSERTION_POINT_CLASS_NAME: self.insertion_point.__class__.__name__,
             self._state_names.QCONFIG: self.qconfig.get_state(),
             self._state_names.NAMES_OF_QUANTIZED_OPS: self.directly_quantized_operator_node_names
         }
@@ -126,7 +169,10 @@ class SingleConfigQuantizationPoint(QuantizationPointBase):
 
         :param state: Output of `get_state()` method.
         """
-        kwargs = {cls._state_names.INSERTION_POINT: PTTargetPoint.from_state(state[cls._state_names.INSERTION_POINT]),
+        insertion_point_cls_name = state[cls._state_names.INSERTION_POINT_CLASS_NAME]
+        insertion_point_cls = CommonStatefulClassesRegistry.get_registered_class(insertion_point_cls_name)
+        insertion_point = insertion_point_cls.from_state(state[cls._state_names.INSERTION_POINT])
+        kwargs = {cls._state_names.INSERTION_POINT: insertion_point,
                   cls._state_names.QCONFIG: QuantizerConfig.from_state(state[cls._state_names.QCONFIG]),
                   cls._state_names.NAMES_OF_QUANTIZED_OPS: state[cls._state_names.NAMES_OF_QUANTIZED_OPS]}
         return cls(**kwargs)

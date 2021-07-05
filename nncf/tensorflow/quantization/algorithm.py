@@ -40,7 +40,6 @@ from nncf.common.utils.helpers import should_consider_scope
 from nncf.common.utils.logger import logger
 from nncf.common.stateful_classes_registry import TF_STATEFUL_CLASSES
 from nncf.common.compression import BaseCompressionAlgorithmController
-from nncf.config.extractors import extract_range_init_params
 from nncf.config.extractors import extract_bn_adaptation_init_params
 from nncf.config.extractors import extract_range_init_params
 from nncf.tensorflow.algorithm_selector import TF_COMPRESSION_ALGORITHMS

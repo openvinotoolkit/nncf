@@ -615,7 +615,7 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
                                                                              self._single_config_quantizer_setup,
                                                                              self._range_init_params)
             minmax_values_for_range_init = self._get_minmax_values_for_quantizer_locations(
-                single_config_quantizer_setup,
+                self._single_config_quantizer_setup,
                 stats_for_range_init,
                 target_model_graph)
         insertion_commands, setup_to_module_id_translation_dict = \

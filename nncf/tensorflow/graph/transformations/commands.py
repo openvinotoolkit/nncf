@@ -155,8 +155,8 @@ class TFBeforeLayer(TFLayerPoint):
         """
         return {
             'layer_name': self.layer_name,
-            'instance_index': self.instance_index,
-            'in_port': self.in_port
+            'instance_idx': self.instance_idx,
+            'input_port_id': self.input_port_id
         }
 
     @classmethod
@@ -213,8 +213,8 @@ class TFAfterLayer(TFLayerPoint):
         """
         return {
             'layer_name': self.layer_name,
-            'instance_index': self.instance_index,
-            'out_port': self.out_port,
+            'instance_idx': self.instance_idx,
+            'output_port_id': self.output_port_id,
         }
 
     @classmethod

@@ -14,6 +14,7 @@ from typing import Dict
 
 import numpy as np
 import tensorflow as tf
+from nncf.common.compression import BaseCompressionAlgorithmController
 from tensorflow.python.ops.init_ops import Constant
 
 from nncf import NNCFConfig
@@ -89,7 +90,7 @@ def create_compressed_model_and_algo_for_test(model, config, compression_state=N
     assert isinstance(config, NNCFConfig)
     tf.keras.backend.clear_session()
     if force_no_init:
-        compression_state = dict()
+        compression_state = {BaseCompressionAlgorithmController.BUILDER_STATE: dict()}
     algo, model = create_compressed_model(model, config, compression_state)
     return model, algo
 

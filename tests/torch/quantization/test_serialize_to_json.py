@@ -3,12 +3,23 @@ import json
 import torch
 
 from nncf.common.graph.transformations.commands import TargetType
+from nncf.common.quantization.quantizer_setup import ActivationQuantizationInsertionPoint
+from nncf.common.quantization.quantizer_setup import SingleConfigQuantizationPoint
+from nncf.common.quantization.quantizer_setup import SingleConfigQuantizerSetup
+from nncf.common.quantization.quantizer_setup import WeightQuantizationInsertionPoint
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.torch.dynamic_graph.context import Scope
 from nncf.torch.graph.transformations.commands import PTTargetPoint
-from nncf.torch.quantization.quantizer_setup import SingleConfigQuantizationPoint
-from nncf.torch.quantization.quantizer_setup import SingleConfigQuantizerSetup
 from tests.common.serialization import check_serialization
+
+DUMMY_STR = 'dummy'
+
+
+def single_config_quantizer_setup_cmp(self, other):
+    return all(
+        map(lambda x: x[0] == x[1], zip(self.quantization_points.values(), other.quantization_points.values()))) \
+           and self.unified_scale_groups == other.unified_scale_groups \
+           and self.shared_input_operation_set_groups == other.shared_input_operation_set_groups
 
 
 def test_quantizer_setup_serialization():
@@ -24,17 +35,27 @@ def test_quantizer_setup_serialization():
     pttp_1 = PTTargetPoint(target_type_1, target_node_name=str(scope), input_port_id=7)
     check_serialization(pttp_1)
 
+    wqip = WeightQuantizationInsertionPoint(target_node_name=DUMMY_STR)
+    check_serialization(wqip)
+
+    aqip = ActivationQuantizationInsertionPoint(target_node_name=DUMMY_STR, input_port_id=0)
+    check_serialization(aqip)
+
     qc = QuantizerConfig()
     check_serialization(qc)
 
-    scqp_1 = SingleConfigQuantizationPoint(pttp_1, qc, directly_quantized_operator_node_names=[str(scope)])
+    scqp_1 = SingleConfigQuantizationPoint(wqip, qc, directly_quantized_operator_node_names=[str(scope)])
     check_serialization(scqp_1)
 
+    scqp_2 = SingleConfigQuantizationPoint(aqip, qc, directly_quantized_operator_node_names=[str(scope)])
+    check_serialization(scqp_2)
+
     scqs = SingleConfigQuantizerSetup()
-    scqs.quantization_points = {0: scqp_1, 1: scqp_1}
+    scqs.quantization_points = {0: scqp_1, 1: scqp_2}
     scqs.unified_scale_groups = {2: {0, 1}}
     scqs.shared_input_operation_set_groups = {2: {0, 1}}
-    check_serialization(scqs)
+
+    check_serialization(scqs, comparator=single_config_quantizer_setup_cmp)
 
 
 def test_precision_float():

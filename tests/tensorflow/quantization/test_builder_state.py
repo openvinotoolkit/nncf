@@ -42,11 +42,13 @@ from tests.tensorflow.quantization.test_algorithm_quantization import check_defa
 from tests.tensorflow.quantization.test_algorithm_quantization import check_specs_for_disabled_saturation_fix
 from tests.tensorflow.quantization.utils import get_basic_quantization_config
 from tests.tensorflow.test_callbacks import REF_CKPT_DIR
+from tests.torch.helpers import register_bn_adaptation_init_args
 
 
 def test_quantization_configs__on_resume_with_compression_state(tmp_path, mocker):
     model = get_basic_conv_test_model()
     config = get_basic_quantization_config()
+    register_bn_adaptation_init_args(config)
     init_spy = mocker.spy(QuantizationBuilder, 'initialize')
     gen_setup_spy = mocker.spy(QuantizationBuilder, '_get_quantizer_setup')
 
@@ -94,7 +96,7 @@ def test_quantization_configs__disable_saturation_fix_and_resume_from_compressio
     config['compression'].update({
         'disable_saturation_fix': True
     })
-    compression_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
+    compression_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config, force_no_init=True)
 
     compression_state_to_load = _save_and_load_compression_state(compression_ctrl, tmp_path)
 
@@ -110,7 +112,7 @@ def test_checkpoint_callback_make_checkpoints(mocker, tmp_path):
     gen_setup_spy = mocker.spy(QuantizationBuilder, '_get_quantizer_setup')
 
     model, compression_ctrl = create_compressed_model_and_algo_for_test(get_basic_conv_test_model(),
-                                                                        config)
+                                                                        config, force_no_init=True)
     assert isinstance(compression_ctrl, QuantizationController)
 
     quantizer_setup = gen_setup_spy.spy_return
