@@ -68,6 +68,7 @@ class TracingContext:
         self._is_forwarding = False
         self._may_add_nodes = True
         self._input_comparators_per_scope = []
+        self.global_buffer_store = {}
 
     def __enter__(self):
         global _CURRENT_CONTEXT
@@ -94,6 +95,9 @@ class TracingContext:
             self._n_instances_searching_graph -= 1
             self._cond.notify_all()
         return node
+
+    def register_global_buffer(self, name: str, buffer):
+        self.global_buffer_store[name] = buffer
 
     def maybe_add_node(self, inputs: OperatorInput, tensor_metas: List[Optional[TensorMeta]],
                        op_address: OperationAddress,

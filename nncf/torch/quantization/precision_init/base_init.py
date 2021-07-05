@@ -28,7 +28,7 @@ from nncf.torch.quantization.layers import QUANTIZATION_MODULES
 from nncf.torch.quantization.precision_constraints import HardwareQuantizationConstraints
 from nncf.common.quantization.structs import QuantizerId
 from nncf.common.quantization.structs import WeightQuantizerId
-from nncf.torch.quantization.quantizer_setup import SingleConfigQuantizerSetup
+from nncf.common.quantization.quantizer_setup import SingleConfigQuantizerSetup
 from nncf.torch.quantization.structs import WeightQuantizerInfo
 from nncf.torch.structures import NNCFExtraConfigStruct
 from nncf.torch.utils import get_all_modules_by_type

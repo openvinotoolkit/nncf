@@ -43,7 +43,7 @@ from nncf.tensorflow.graph.metatypes.common import LINEAR_LAYER_METATYPES
 from nncf.tensorflow.graph.metatypes.matcher import get_keras_layer_metatype
 from nncf.tensorflow.graph.utils import collect_wrapped_layers
 from nncf.tensorflow.graph.utils import get_layer_identifier
-from nncf.tensorflow.graph.utils import get_original_name_and_instance_index
+from nncf.tensorflow.graph.utils import get_original_name_and_instance_idx
 from nncf.tensorflow.graph.utils import unwrap_layer
 from nncf.tensorflow.layers.data_layout import get_input_channel_axis
 from nncf.tensorflow.layers.wrapper import NNCFWrapper
@@ -128,7 +128,7 @@ class FilterPruningController(BasePruningAlgoController):
         self.current_params_num = self.full_params_num
 
         self._weights_normalizer = tensor_l2_normalizer  # for all weights in common case
-        self._filter_importance = FILTER_IMPORTANCE_FUNCTIONS.get(params.get('weight_importance', 'L2'))
+        self._filter_importance = FILTER_IMPORTANCE_FUNCTIONS.get(params.get('filter_importance', 'L2'))
         self.all_weights = params.get('all_weights', False)
         scheduler_cls = PRUNING_SCHEDULERS.get(params.get('schedule', 'exponential'))
         self._scheduler = scheduler_cls(self, params)
@@ -220,7 +220,7 @@ class FilterPruningController(BasePruningAlgoController):
         calculates corresponding layerwise FLOPs
         """
         for node in self._original_graph.get_nodes_by_metatypes(GENERAL_CONV_LAYER_METATYPES):
-            node_name, node_index = get_original_name_and_instance_index(node.node_name)
+            node_name, node_index = get_original_name_and_instance_idx(node.node_name)
             layer = self._model.get_layer(node_name)
             layer_ = unwrap_layer(layer)
 
@@ -237,7 +237,7 @@ class FilterPruningController(BasePruningAlgoController):
             self._layers_out_shapes[node.node_name] = out_shape
 
         for node in self._original_graph.get_nodes_by_metatypes(LINEAR_LAYER_METATYPES):
-            node_name, node_index = get_original_name_and_instance_index(node.node_name)
+            node_name, node_index = get_original_name_and_instance_idx(node.node_name)
             layer = self._model.get_layer(node_name)
 
             in_shape = layer.get_input_shape_at(node_index)[1:]

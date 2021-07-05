@@ -12,9 +12,9 @@
 """
 from copy import deepcopy
 
-from nncf.common.graph import MODEL_INPUT_OP_NAME
-from nncf.common.graph import MODEL_OUTPUT_OP_NAME
-from nncf.common.graph import NNCFGraphNodeType
+from nncf.common.graph.definitions import MODEL_INPUT_OP_NAME
+from nncf.common.graph.definitions import MODEL_OUTPUT_OP_NAME
+from nncf.common.graph.definitions import NNCFGraphNodeType
 from typing import List
 from typing import Tuple
 

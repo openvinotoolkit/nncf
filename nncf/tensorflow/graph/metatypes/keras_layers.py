@@ -16,6 +16,8 @@ from typing import List, Optional, Type
 
 import tensorflow as tf
 
+from nncf.common.graph.operator_metatypes import INPUT_NOOP_METATYPES
+from nncf.common.graph.operator_metatypes import NOOP_METATYPES
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.operator_metatypes import OperatorMetatypeRegistry
 from nncf.common.hardware.opset import HWConfigOpName
@@ -82,7 +84,8 @@ class TFLayerWithWeightsMetatype(TFLayerMetatype):
 
 
 @KERAS_LAYER_METATYPES.register()
-class NoopMetatype(TFLayerMetatype):
+@NOOP_METATYPES.register()
+class TFLayerNoopMetatype(TFLayerMetatype):
     name = 'noop'
 
     @classmethod
@@ -538,6 +541,7 @@ class TFLayerNormalizationLayerMetatype(TFLayerMetatype):
 
 
 @KERAS_LAYER_METATYPES.register()
+@INPUT_NOOP_METATYPES.register()
 class TFInputLayerMetatype(TFLayerMetatype):
     name = 'InputLayer'
     keras_layer_names = ['InputLayer']

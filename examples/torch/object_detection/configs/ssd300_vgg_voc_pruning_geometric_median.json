@@ -43,7 +43,7 @@
       "schedule": "exponential",
       "pruning_steps": 50,
       "pruning_target": 0.4,
-      "weight_importance": "geometric_median"
+      "filter_importance": "geometric_median"
     },
     "ignored_scopes": [
       "SSD_VGG/SSDDetectionOutput[detection_head]/ModuleList[heads]/SSDHead[0]/NNCFConv2d[loc]",

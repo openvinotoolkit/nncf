@@ -61,7 +61,7 @@ class PTSparseModelStatisticsCollector(BaseSparseModelStatisticsCollector):
             processed_modules.append(minfo.module)
 
         compression_types = tuple(COMPRESSION_MODULES.registry_dict.values())
-        for module_name, module in self._model.named_modules():
+        for module_name, module in self._model.get_nncf_wrapped_model().named_modules():
             if isinstance(module, compression_types) or module in processed_modules:
                 continue
 

@@ -16,14 +16,14 @@ from typing import List
 import pytest
 import torch
 
-from nncf.common.hardware.config import HWConfig
+from nncf.torch.hardware.config import PTHWConfig
 from nncf.torch.layers import NNCFConv2d
 from nncf.torch.module_operations import UpdatePaddingValue
 from nncf.torch.module_operations import UpdateWeight
 from nncf.torch.quantization.adjust_padding import CalculatePaddingAdjustment
 from nncf.torch.quantization.layers import SymmetricQuantizer
-from nncf.torch.quantization.quantizer_propagation import PropagationStrategy
-from nncf.torch.quantization.quantizer_propagation import QuantizerPropagationSolver
+from nncf.common.quantization.quantizer_propagation.solver import PropagationStrategy
+from nncf.common.quantization.quantizer_propagation.solver import QuantizerPropagationSolver
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
 from tests.torch.helpers import create_conv
 from tests.torch.helpers import get_empty_config
@@ -64,16 +64,16 @@ class MultiBranchesModelDesc(GeneralModelDesc):
     @staticmethod
     def _get_scopes():
         w_scopes = [
-            'TargetType.OPERATION_WITH_WEIGHTS MultiBranchesModel/NNCFConv2d[conv_a]/conv2d_0',
-            'TargetType.OPERATION_WITH_WEIGHTS MultiBranchesModel/NNCFConv2d[conv_b]/conv2d_0',
-            'TargetType.OPERATION_WITH_WEIGHTS MultiBranchesModel/NNCFConv2d[conv_c]/conv2d_0',
-            'TargetType.OPERATION_WITH_WEIGHTS MultiBranchesModel/NNCFConv2d[conv_d]/conv2d_0',
+            'MultiBranchesModel/NNCFConv2d[conv_a]/conv2d_0|WEIGHT',
+            'MultiBranchesModel/NNCFConv2d[conv_b]/conv2d_0|WEIGHT',
+            'MultiBranchesModel/NNCFConv2d[conv_c]/conv2d_0|WEIGHT',
+            'MultiBranchesModel/NNCFConv2d[conv_d]/conv2d_0|WEIGHT',
         ]
         a_scopes = [
-            'TargetType.OPERATOR_PRE_HOOK 0 MultiBranchesModel/NNCFConv2d[conv_a]/conv2d_0',
-            'TargetType.OPERATOR_PRE_HOOK 0 MultiBranchesModel/MaxPool2d[max_pool_b]/max_pool2d_0',
-            'TargetType.OPERATOR_PRE_HOOK 0 MultiBranchesModel/NNCFConv2d[conv_c]/conv2d_0',
-            'TargetType.OPERATOR_PRE_HOOK 0 MultiBranchesModel/NNCFConv2d[conv_d]/conv2d_0'
+            'MultiBranchesModel/NNCFConv2d[conv_a]/conv2d_0|INPUT0',
+            'MultiBranchesModel/MaxPool2d[max_pool_b]/max_pool2d_0|INPUT0',
+            'MultiBranchesModel/NNCFConv2d[conv_c]/conv2d_0|INPUT0',
+            'MultiBranchesModel/NNCFConv2d[conv_d]/conv2d_0|INPUT0'
         ]
         return w_scopes, a_scopes
 
@@ -178,7 +178,7 @@ def test_adjust_padding_on_synthetic_models(desc: MultiBranchesModelDesc, mocker
 
     if desc.custom_hw_config_dict:
         hw_config_from_json = mocker.patch('nncf.common.hardware.config.HWConfig.from_json')
-        hw_config_from_json.return_value = HWConfig.from_dict(desc.custom_hw_config_dict)
+        hw_config_from_json.return_value = PTHWConfig.from_dict(desc.custom_hw_config_dict)
 
     monkeypatch.setattr(QuantizerPropagationSolver, 'DEFAULT_PROPAGATION_STRATEGY', desc.propagation_strategy)
 

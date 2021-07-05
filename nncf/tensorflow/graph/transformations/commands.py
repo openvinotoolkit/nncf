@@ -49,8 +49,8 @@ class TFLayerPoint(TargetPoint):
     def layer_name(self) -> str:
         return self._layer_name
 
-    def __eq__(self, other: Any) -> bool:
-        if self.__class__ is other.__class__:
+    def __eq__(self, other: 'TFLayerPoint') -> bool:
+        if isinstance(other, TFLayerPoint):
             return self.type == other.type and self.layer_name == other.layer_name
         return False
 
@@ -121,31 +121,32 @@ class TFBeforeLayer(TFLayerPoint):
     where the new object should be inserted.
     """
 
-    def __init__(self, layer_name: str, instance_index: int = 0, in_port: int = 0):
+    def __init__(self, layer_name: str, instance_idx: int = 0, input_port_id: int = 0):
         super().__init__(TargetType.BEFORE_LAYER, layer_name)
-        self._instance_index = instance_index
-        self._in_port = in_port
+        self._instance_idx = instance_idx
+        self._input_port_id = input_port_id
 
     @property
-    def instance_index(self) -> int:
-        return self._instance_index
+    def instance_idx(self) -> int:
+        return self._instance_idx
 
     @property
-    def in_port(self) -> int:
-        return self._in_port
+    def input_port_id(self) -> int:
+        return self._input_port_id
 
     def __eq__(self, other: Any) -> bool:
-        if self.__class__ is other.__class__:
-            return self.type == other.type \
-                   and self.layer_name == other.layer_name \
-                   and self.instance_index == other.instance_index \
-                   and self.in_port == other.in_port
-        return False
+        return isinstance(other, TFBeforeLayer) \
+               and self.layer_name == other.layer_name \
+               and self.instance_idx == other.instance_idx \
+               and self.input_port_id == other.input_port_id
 
     def __str__(self) -> str:
         return ' '.join([super().__str__(),
-                         self.instance_index,
-                         self.in_port])
+                         self.instance_idx,
+                         str(self.input_port_id)])
+
+    def __hash__(self) -> int:
+        return hash(str(self))
 
     def get_state(self) -> Dict[str, Any]:
         """
@@ -177,31 +178,33 @@ class TFAfterLayer(TFLayerPoint):
     where the new object should be inserted.
     """
 
-    def __init__(self, layer_name: str, instance_index: int = 0, out_port: int = 0):
+    def __init__(self, layer_name: str, instance_idx: int = 0, output_port_id: int = 0):
         super().__init__(TargetType.AFTER_LAYER, layer_name)
-        self._instance_index = instance_index
-        self._out_port = out_port
+        self._instance_idx = instance_idx
+        self._output_port_id = output_port_id
 
     @property
-    def instance_index(self) -> int:
-        return self._instance_index
+    def instance_idx(self) -> int:
+        return self._instance_idx
 
     @property
-    def out_port(self) -> int:
-        return self._out_port
+    def output_port_id(self) -> int:
+        return self._output_port_id
 
     def __eq__(self, other: Any) -> bool:
-        if self.__class__ is other.__class__:
-            return self.type == other.type \
-                   and self.layer_name == other.layer_name \
-                   and self.instance_index == other.instance_index \
-                   and self._out_port == other.out_port
-        return False
+        return isinstance(other, TFAfterLayer) \
+               and self.type == other.type \
+               and self.layer_name == other.layer_name \
+               and self.instance_idx == other.instance_idx \
+               and self._output_port_id == other.output_port_id
 
     def __str__(self) -> str:
         return ' '.join([super().__str__(),
-                         self.instance_index,
-                         self.out_port])
+                         self.instance_idx,
+                         str(self.output_port_id)])
+
+    def __hash__(self) -> int:
+        return hash(str(self))
 
     def get_state(self) -> Dict[str, Any]:
         """
@@ -242,14 +245,16 @@ class TFLayerWeight(TFLayerPoint):
         return self._weights_attr_name
 
     def __eq__(self, other: Any) -> bool:
-        if self.__class__ is other.__class__:
-            return self.type == other.type and \
-                   self.layer_name == other.layer_name and \
-                   self.weights_attr_name == other.weights_attr_name
-        return False
+        return isinstance(other, TFLayerWeight) and \
+               self.type == other.type and \
+               self.layer_name == other.layer_name and \
+               self.weights_attr_name == other.weights_attr_name
 
     def __str__(self) -> str:
         return super().__str__() + ' ' + self.weights_attr_name
+
+    def __hash__(self) -> int:
+        return hash(str(self))
 
     def get_state(self) -> Dict[str, Any]:
         """
@@ -289,15 +294,17 @@ class TFOperationWithWeights(TFLayerWeight):
         return self._operation_name
 
     def __eq__(self, other: Any) -> bool:
-        if self.__class__ is other.__class__:
-            return self.type == other.type and \
-                   self.layer_name == other.layer_name and \
-                   self.weights_attr_name == other.weights_attr_name and \
-                   self.operation_name == other.operation_name
-        return False
+        return isinstance(other, TFOperationWithWeights) and \
+               self.type == other.type and \
+               self.layer_name == other.layer_name and \
+               self.weights_attr_name == other.weights_attr_name and \
+               self.operation_name == other.operation_name
 
     def __str__(self) -> str:
         return super().__str__() + ' ' + self.operation_name
+
+    def __hash__(self) -> int:
+        return hash(str(self))
 
     def get_state(self) -> Dict[str, Any]:
         """

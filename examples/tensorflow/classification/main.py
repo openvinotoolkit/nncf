@@ -235,7 +235,7 @@ def run(config):
     validation_kwargs = {
         'validation_data': validation_dataset,
         'validation_steps': validation_steps,
-        'validation_freq': 1,
+        'validation_freq': config.test_every_n_epochs,
     }
 
     if 'train' in config.mode:

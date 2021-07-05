@@ -58,7 +58,7 @@ from nncf.torch.quantization.precision_init.perturbations import PerturbationObs
 from nncf.torch.quantization.precision_init.perturbations import Perturbations
 from nncf.torch.quantization.precision_init.traces_order import TracesOrder
 from nncf.torch.quantization.precision_init.traces_order import TracesPerLayer
-from nncf.torch.quantization.quantizer_setup import SingleConfigQuantizerSetup
+from nncf.common.quantization.quantizer_setup import SingleConfigQuantizerSetup
 from nncf.torch.structures import QuantizationPrecisionInitArgs
 from nncf.torch.utils import get_all_modules_by_type
 from nncf.torch.utils import safe_thread_call
@@ -244,8 +244,7 @@ class HAWQConfigBuilder(BaseConfigBuilder):
                     'num_init_samples': 1
                 },
                 'batchnorm_adaptation': {
-                    'num_bn_adaptation_samples': 0,
-                    'num_bn_forget_samples': 0
+                    'num_bn_adaptation_samples': 0
                 }
             }})
         return config
@@ -362,7 +361,7 @@ def test_hawq_precision_init(_seed, dataset_dir, tmp_path, mocker, params):
     if not dataset_dir:
         dataset_dir = str(tmp_path)
     train_loader, _ = create_test_dataloaders(config, dataset_dir)
-    config = register_default_init_args(config, train_loader, criterion)
+    config = register_default_init_args(config, train_loader, criterion=criterion)
 
     mocked_trace = mocker.patch('nncf.torch.quantization.hessian_trace.HessianTraceEstimator.get_average_traces',
                                 autospec=True)
@@ -427,7 +426,7 @@ def test_hawq_hw_vpu_config_e2e(_seed, dataset_dir, tmp_path):
     if not dataset_dir:
         dataset_dir = str(tmp_path)
     train_loader, _ = create_test_dataloaders(config, dataset_dir)
-    config = register_default_init_args(config, train_loader, criterion)
+    config = register_default_init_args(config, train_loader, criterion=criterion)
 
     create_compressed_model_and_algo_for_test(model, config)
 
@@ -580,8 +579,8 @@ def precision_init_dumping_worker(gpu, ngpus_per_node, config, tmp_path):
     model = safe_thread_call(partial(mobilenet_v2, pretrained=True))
     model.eval()
     criterion = torch.nn.MSELoss().cuda(config.gpu)
-    config = register_default_init_args(config, data_loader, criterion,
-                                        autoq_eval_fn=lambda *x: 0, autoq_eval_loader=data_loader)
+    config = register_default_init_args(config, data_loader, criterion=criterion,
+                                        autoq_eval_fn=lambda *x: 0, val_loader=data_loader)
     quant_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
 
     quant_model = post_compression_test_distr_init(compression_ctrl, config, ngpus_per_node, quant_model)
@@ -691,10 +690,10 @@ def get_quantization_config_with_ignored_scope():
 
 class RatioCalculatorTestDesc:
     NAMES_OF_INSERTION_POINTS = [
-        'TargetType.OPERATOR_POST_HOOK /nncf_model_input_0',
-        'TargetType.OPERATION_WITH_WEIGHTS ConvLinear/NNCFConv2d[conv1]/conv2d_0',
-        'TargetType.OPERATOR_POST_HOOK ConvLinear/NNCFConv2d[conv1]/conv2d_0',
-        'TargetType.OPERATION_WITH_WEIGHTS ConvLinear/NNCFLinear[fc]/linear_0'
+        '/nncf_model_input_0|OUTPUT',
+        'ConvLinear/NNCFConv2d[conv1]/conv2d_0|WEIGHT',
+        'ConvLinear/NNCFConv2d[conv1]/conv2d_0|OUTPUT',
+        'ConvLinear/NNCFLinear[fc]/linear_0|WEIGHT'
     ]
 
     def __init__(self, ref_ratio: float = 1):

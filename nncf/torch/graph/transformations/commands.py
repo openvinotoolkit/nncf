@@ -23,19 +23,20 @@ class PTTargetPoint(TargetPoint):
 
     _state_names = PTTargetPointStateNames
 
-    def __init__(self, target_type: TargetType, *,
-                 target_node_name: NNCFNodeName,
+    def __init__(self, target_type: TargetType, target_node_name: NNCFNodeName,
+                 *,
                  input_port_id: int = None):
         super().__init__(target_type)
+        self.target_node_name = target_node_name
         self.target_type = target_type
         if self.target_type not in self._OPERATION_TYPES + self._HOOK_TYPES:
             raise NotImplementedError("Unsupported target type: {}".format(target_type))
 
-        self.target_node_name = target_node_name
         self.input_port_id = input_port_id
 
     def __eq__(self, other: 'PTTargetPoint'):
-        return self.target_type == other.target_type and self.target_node_name == other.target_node_name
+        return isinstance(other, PTTargetPoint) and \
+               self.target_type == other.target_type and self.target_node_name == other.target_node_name
 
     def __str__(self):
         prefix = str(self.target_type)

@@ -25,23 +25,26 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torchvision
 
+from nncf.common.graph import NNCFNodeName
+from nncf.common.hardware.config import HWConfigType
+from nncf.common.quantization.quantizer_setup import ActivationQuantizationInsertionPoint
+from nncf.common.quantization.quantizer_setup import SingleConfigQuantizerSetup
 from nncf.torch import nncf_model_input
 from nncf.torch import nncf_model_output
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNodeName
 from nncf.common.graph.transformations.commands import TargetType
+from nncf.torch.composite_compression import PTCompositeCompressionAlgorithmBuilder
 from nncf.torch.dynamic_graph.graph_tracer import ModelInputInfo
 from nncf.torch.dynamic_graph.graph_tracer import create_dummy_forward_fn
 from nncf.torch.dynamic_graph.graph_tracer import create_input_infos
 from nncf.torch.dynamic_graph.graph_tracer import create_mock_tensor
 from nncf.torch.graph.graph import PTNNCFGraph
 from nncf.torch.graph.graph_builder import GraphBuilder
-from nncf.common.hardware.config import HWConfigType
 from nncf.torch.layers import LSTMCellNNCF
 from nncf.torch.layers import NNCF_RNN
 from nncf.torch.model_creation import create_compression_algorithm_builder
 from nncf.torch.nncf_network import NNCFNetwork
-from nncf.torch.quantization.quantizer_setup import SingleConfigQuantizerSetup
 from nncf.torch.utils import get_all_modules_by_type
 from tests.torch import test_models
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
@@ -804,10 +807,11 @@ def prepare_potential_quantizer_graph(graph: PTNNCFGraph,
             target_node_name = qp.insertion_point.target_node_name
             qconfig = qp.qconfig
             str_qconfig = str(qconfig)
-            if qp.insertion_point.target_type is TargetType.OPERATOR_PRE_HOOK:
+            assert isinstance(qp.insertion_point, ActivationQuantizationInsertionPoint)
+            if qp.insertion_point.input_port_id is not None:
                 pre_hooked_quantizers_activations_attr[target_node_name] = \
                     (qp.insertion_point.input_port_id, str_qconfig)
-            elif qp.insertion_point.target_type is TargetType.OPERATOR_POST_HOOK:
+            else:
                 post_hooked_quantizers_activations_attr[target_node_name] = str_qconfig
 
     nx_graph = graph.get_graph_for_structure_analysis()
@@ -815,7 +819,7 @@ def prepare_potential_quantizer_graph(graph: PTNNCFGraph,
         node_key = graph.get_node_key_by_id(nncf_node.node_id)
         node_name = nncf_node.node_name
         if node_name in pre_hooked_quantizers_activations_attr:
-            in_port_id, qconf_str = pre_hooked_quantizers_activations_attr[node_name]
+            input_port_id, qconf_str = pre_hooked_quantizers_activations_attr[node_name]
             label = "Quantizer: {}".format(qconf_str)
             additional_node_attrs = dict(
                 label=label,
@@ -823,18 +827,19 @@ def prepare_potential_quantizer_graph(graph: PTNNCFGraph,
                 id=nncf_node.node_id
             )
 
-            pre_hook_quantizer_node_key = node_name + '|IN' + str(in_port_id)
+            pre_hook_quantizer_node_key = node_name + '|IN' + str(input_port_id)
             nx_graph.add_node(pre_hook_quantizer_node_key, **additional_node_attrs)
             # Adding a pre-hook quantizer to a corresponding input port
-            edges_with_matching_in_port_id = []
+            edges_with_matching_input_port_id = []
 
-            for edge, edge_attrs in graph.get_input_edges(nncf_node).items():
-                from_key, to_key = edge
-                if edge_attrs[NNCFGraph.IN_PORT_NAME_EDGE_ATTR] == in_port_id:
-                    edges_with_matching_in_port_id.append((from_key, to_key))
+            for edge in graph.get_input_edges(nncf_node):
+                from_key = graph.get_node_key_by_id(edge.from_node.node_id)
+                to_key = graph.get_node_key_by_id(edge.to_node.node_id)
+                if edge.input_port_id == input_port_id:
+                    edges_with_matching_input_port_id.append((from_key, to_key))
 
-            assert len(edges_with_matching_in_port_id) == 1
-            input_edge_to_break = edges_with_matching_in_port_id[0]
+            assert len(edges_with_matching_input_port_id) == 1
+            input_edge_to_break = edges_with_matching_input_port_id[0]
 
             existing_edge_attrs = deepcopy(nx_graph.edges[input_edge_to_break])
             nx_graph.remove_edge(input_edge_to_break[0], input_edge_to_break[1])

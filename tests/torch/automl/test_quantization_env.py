@@ -18,10 +18,11 @@ from nncf import NNCFConfig
 from nncf.torch.automl.environment.quantization_env import QuantizationEnv, ModelSizeCalculator, QuantizationEnvParams
 from nncf.torch.dynamic_graph.graph_tracer import create_input_infos
 from nncf.common.hardware.config import HWConfigType, HWConfig
+from nncf.torch.hardware.config import PTHWConfig
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.quantization.algo import ExperimentalQuantizationBuilder, PropagationBasedQuantizerSetupGenerator
 from nncf.torch.quantization.precision_constraints import HardwareQuantizationConstraints
-from nncf.torch.quantization.quantizer_setup import MultiConfigQuantizerSetup
+from nncf.common.quantization.quantizer_setup import MultiConfigQuantizerSetup
 from tests.torch.helpers import create_ones_mock_dataloader, create_conv, BasicConvTestModel
 
 import torch
@@ -37,7 +38,7 @@ def create_test_quantization_env(model_creator=BasicConvTestModel, input_info_cf
     nncf_network = NNCFNetwork(model, input_infos=create_input_infos(input_info_cfg))
     hw_config_type = HWConfigType.VPU
     hw_config_path = HWConfig.get_path_to_hw_config(hw_config_type)
-    hw_config = HWConfig.from_json(hw_config_path)
+    hw_config = PTHWConfig.from_json(hw_config_path)
     setup = PropagationBasedQuantizerSetupGenerator(NNCFConfig(),
                                                     nncf_network,
                                                     hw_config=hw_config).generate_setup()

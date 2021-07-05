@@ -14,13 +14,10 @@ from typing import Optional
 from typing import List
 
 import torch
-import numpy as np
 
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNodeName
-from nncf.torch.layers import NNCF_DECONV_MODULES_DICT
 from nncf.torch.graph.graph import NNCFNode
-from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
 from nncf.torch.nncf_network import NNCFNetwork
 
 
@@ -47,19 +44,6 @@ def get_bn_for_conv_node_by_name(target_model: NNCFNetwork, conv_node_name: NNCF
         return None
     bn_module = target_model.get_containing_module(bn_node.node_name)
     return bn_module
-
-
-def is_depthwise_conv(node: NNCFNode) -> bool:
-    return isinstance(node.layer_attributes, ConvolutionLayerAttributes) \
-           and node.layer_attributes.groups == node.layer_attributes.in_channels \
-           and (node.layer_attributes.out_channels % node.layer_attributes.in_channels == 0) \
-           and node.layer_attributes.in_channels > 1
-
-
-def is_conv_with_downsampling(node: NNCFNode) -> bool:
-    return isinstance(node.layer_attributes, ConvolutionLayerAttributes) \
-           and not np.all(np.array(node.layer_attributes.stride) == 1) \
-           and node.node_type not in [deconv.op_func_name for deconv in NNCF_DECONV_MODULES_DICT]
 
 
 def init_output_masks_in_graph(graph: NNCFGraph, nodes: List):

@@ -128,24 +128,6 @@ def sum_like(tensor_to_sum, ref_tensor):
     return tensor_to_sum
 
 
-def get_per_channel_scale_shape(input_shape, is_weights, channel_idx: int = None):
-    scale_shape = [1 for _ in input_shape]
-    if channel_idx is None:
-        if is_weights:
-            channel_idx = 0  # Per weight channel scales
-        else:
-            channel_idx = 1  # Per activation channel scales
-    scale_shape[channel_idx] = input_shape[channel_idx]
-    return scale_shape
-
-
-def get_scale_shape(input_shape: List[int], is_weights: bool, per_channel: bool,
-                    channel_idx: int = None) -> List[int]:
-    if not per_channel:
-        return [1]
-    return get_per_channel_scale_shape(input_shape, is_weights, channel_idx)
-
-
 def get_flat_tensor_contents_string(input_tensor):
     retval = "["
     for idx, el in enumerate(input_tensor.view(-1)):
@@ -194,101 +176,11 @@ def safe_thread_call(main_call_fn, after_barrier_call_fn=None):
     return result
 
 
-string_types = (str, bytes)
-iteritems = lambda mapping: getattr(mapping, 'iteritems', mapping.items)()
-
-
 def is_tensor(obj):
     return isinstance(obj, torch.Tensor)
 
 def is_traced_tensor(obj):
     return isinstance(obj, TracedTensor)
-
-def maybe_get_iterator(obj):
-    it = None
-        # pylint:disable=isinstance-second-argument-not-valid-type
-    if isinstance(obj, Mapping):
-        it = iteritems
-        # pylint:disable=isinstance-second-argument-not-valid-type
-    elif isinstance(obj, (Sequence, Set)) and not isinstance(obj, string_types):
-        it = enumerate
-    return it
-
-
-def to_tuple(lst: List,
-             named_tuple_class: Type = None,
-             named_tuple_fields: List[str] = None) -> Tuple:
-    # Able to produce namedtuples if a corresponding parameter is given
-    if named_tuple_fields is None:
-        return tuple(lst)
-    return named_tuple_class(*lst)
-
-
-def is_tuple(obj) -> bool:
-    return isinstance(obj, tuple)
-
-
-def is_named_tuple(obj) -> bool:
-    return is_tuple(obj) and (obj.__class__ != tuple)
-
-
-def objwalk(obj, unary_predicate: Callable[[Any], bool], apply_fn: Callable, memo=None):
-    """
-    Walks through the indexable container hierarchy of obj and replaces all sub-objects matching a criterion
-    with the result of a given function application.
-    """
-    #pylint:disable=too-many-nested-blocks
-    #pylint:disable=too-many-branches
-    if memo is None:
-        memo = set()
-
-    named_tuple_class = None
-    named_tuple_fields = None
-    if is_named_tuple(obj):
-        named_tuple_class = obj.__class__
-        #pylint:disable=protected-access
-        named_tuple_fields = obj._fields
-
-    was_tuple = is_tuple(obj)
-    if was_tuple:
-        obj = list(obj)
-
-    iterator = maybe_get_iterator(obj)
-
-    if iterator is not None:
-        if id(obj) not in memo:
-            memo.add(id(obj))
-            indices_to_apply_fn_to = set()
-            indices_vs_named_tuple_data = {}  # type: Dict[Any, Tuple[list, Type, List[str]]]
-            for idx, value in iterator(obj):
-                next_level_it = maybe_get_iterator(value)
-                if next_level_it is None:
-                    if unary_predicate(value):
-                        indices_to_apply_fn_to.add(idx)
-                else:
-                    if is_tuple(value):
-                        processed_tuple = objwalk(value, unary_predicate, apply_fn, memo)
-                        if is_named_tuple(value):
-                            indices_vs_named_tuple_data[idx] = processed_tuple, value.__class__, value._fields
-                        else:
-                            indices_vs_named_tuple_data[idx] = processed_tuple, None, None
-                    else:
-                        objwalk(value, unary_predicate, apply_fn)
-            for idx in indices_to_apply_fn_to:
-                obj[idx] = apply_fn(obj[idx])
-            for idx, tpl_data in indices_vs_named_tuple_data.items():
-                tpl, n_tpl_class, n_tpl_fields = tpl_data
-                obj[idx] = to_tuple(tpl, n_tpl_class, n_tpl_fields)
-
-            memo.remove(id(obj))
-    else:
-        if unary_predicate(obj):
-            return apply_fn(obj)
-
-    if was_tuple:
-        return to_tuple(obj, named_tuple_class, named_tuple_fields)
-
-    return obj
 
 
 class _ModuleState:
@@ -360,3 +252,46 @@ def compute_FLOPs_hook(module, input_, output, dict_to_save, module_node_name: N
 def add_domain(name_operator: str) -> str:
     from nncf.torch.compression_method_api import DOMAIN_CUSTOM_OPS_NAME
     return DOMAIN_CUSTOM_OPS_NAME + "::" + name_operator
+
+
+def default_distributed_wrapper(model: nn.Module, execution_parameters: 'ExecutionParameters'):
+    """
+    Wrapping model for distributed training with DataParallel or DistributedDataParallel depending on execution mode
+    chosen by user.
+    :param execution_parameters: execution parameters
+    :param model: model to wrap  in accordance with execution mode chosen by user
+    :return: wrapped model
+    """
+    if not execution_parameters or execution_parameters.cpu_only:
+        # If execution params is not set or in cpu_only mode model can't be optimized by parallelization
+        return model
+
+    current_gpu = execution_parameters.current_gpu
+    if not is_dist_avail_and_initialized():
+        if current_gpu is not None:
+            # ExecutionMode.SINGLE_GPU
+            torch.cuda.set_device(current_gpu)
+        else:
+            # ExecutionMode.GPU_DATAPARALLEL
+            model = torch.nn.DataParallel(model)
+    else:
+        if current_gpu is None:
+            # ExecutionMode.DISTRIBUTED
+            model = torch.nn.parallel.DistributedDataParallel(model)
+        else:
+            # ExecutionMode.MULTIPROCESSING_DISTRIBUTED
+            torch.cuda.set_device(current_gpu)
+            model = torch.nn.parallel.distributed.DistributedDataParallel(model, device_ids=[current_gpu])
+    return model
+
+
+def default_distributed_unwrapper(model: nn.Module):
+    """
+    Unwrapping model prepared from distributed training in Pytorch
+    (and wrapped with Dataparallel or DistributedDataParallel).
+    :param model: model to unwrap.
+    :return: model without parallelization
+    """
+    if isinstance(model, (torch.nn.parallel.DataParallel, torch.nn.parallel.DistributedDataParallel)):
+        return model.module
+    return model

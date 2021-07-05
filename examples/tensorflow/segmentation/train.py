@@ -279,6 +279,9 @@ def run_train(config):
                                                                      config.ckpt_path,
                                                                      steps_per_epoch)
 
+    statistics = compression_ctrl.statistics()
+    logger.info(statistics.to_str())
+
     train_step = create_train_step_fn(strategy, compress_model, loss_fn, optimizer)
 
     train(train_step, train_dist_dataset, initial_epoch, initial_step,

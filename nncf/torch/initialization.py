@@ -1,4 +1,5 @@
 import math
+from contextlib import contextmanager
 from typing import Any
 from typing import Callable
 from typing import Dict
@@ -10,16 +11,16 @@ from functools import partial
 from torch.nn.modules.loss import _Loss
 from torch.utils.data import DataLoader
 
-from nncf.config.structures import BNAdaptationInitArgs
-from nncf.config.structures import QuantizationRangeInitArgs
-from nncf.config.structures import ModelEvaluationArgs
-from nncf.common.utils.progress_bar import ProgressBar
 from nncf.common.initialization.dataloader import NNCFDataLoader
-from nncf.torch.structures import AutoQPrecisionInitArgs
+from nncf.common.utils.logger import logger as nncf_logger
+from nncf.common.utils.progress_bar import ProgressBar
+from nncf.config.structures import BNAdaptationInitArgs
+from nncf.config.structures import ModelEvaluationArgs
+from nncf.config.structures import QuantizationRangeInitArgs
+from nncf.torch.nested_objects_traversal import objwalk
+from nncf.torch.structures import AutoQPrecisionInitArgs, LeGRInitArgs, DistributedCallbacksArgs
 from nncf.torch.structures import QuantizationPrecisionInitArgs
-from nncf.torch.utils import is_tensor
-from nncf.torch.utils import objwalk
-from contextlib import contextmanager
+from nncf.torch.utils import is_tensor, default_distributed_wrapper, default_distributed_unwrapper
 
 
 class PTInitializingDataLoader(NNCFDataLoader):
@@ -161,11 +162,9 @@ class SimpleDataLoaderRunner(DataLoaderBaseRunner):
 
 
 class DataLoaderBNAdaptationRunner(DataLoaderBaseRunner):
-    def __init__(self, model, init_device: str, num_bn_forget_steps):
+    def __init__(self, model, init_device: str):
         super().__init__(model, init_device)
         self.progressbar_description = 'BatchNorm statistics adaptation'
-        self.num_bn_forget_steps = num_bn_forget_steps
-        self.momentum_bn_forget = 0.9
         self.original_momenta_values = {}
         self.original_training_state = {}
 
@@ -197,37 +196,8 @@ class DataLoaderBNAdaptationRunner(DataLoaderBaseRunner):
         finally:
             self.model.apply(self._apply_to_batchnorms(restore_original_bn_training_state))
 
-    @contextmanager
-    def _bn_momentum_switcher(self) -> None:
-        def set_bn_momentum(module, momentum_value):
-            module.momentum = momentum_value
-
-        def save_original_bn_momentum(module: torch.nn.Module):
-            self.original_momenta_values[module] = module.momentum
-
-        def restore_original_bn_momentum(module: torch.nn.Module):
-            module.momentum = self.original_momenta_values[module]
-
-        self.model.apply(self._apply_to_batchnorms(save_original_bn_momentum))
-        self.model.apply(self._apply_to_batchnorms(partial(set_bn_momentum,
-                                                           momentum_value=self.momentum_bn_forget)))
-        try:
-            yield
-        finally:
-            self.model.apply(self._apply_to_batchnorms(restore_original_bn_momentum))
-
     def _run_model_inference(self, data_loader, num_init_steps, device):
-        num_bn_forget_steps = self.num_bn_forget_steps
-
         with self._bn_training_state_switcher():
-            if num_bn_forget_steps is not None and num_bn_forget_steps > 0:
-                with self._bn_momentum_switcher():
-                    for i, loaded_item in enumerate(data_loader):
-                        if i >= num_bn_forget_steps:
-                            break
-                        args_kwargs_tuple = data_loader.get_inputs(loaded_item)
-                        self._infer_batch(args_kwargs_tuple, device)
-
             for i, loaded_item in ProgressBar(
                     enumerate(data_loader),
                     total=num_init_steps,
@@ -253,15 +223,33 @@ def register_default_init_args(nncf_config: 'NNCFConfig',
                                train_loader: torch.utils.data.DataLoader,
                                criterion: _Loss = None,
                                criterion_fn: Callable[[Any, Any, _Loss], torch.Tensor] = None,
+                               train_steps_fn: Callable[[torch.utils.data.DataLoader, torch.nn.Module,
+                                                         torch.optim.Optimizer, 'CompressionAlgorithmController',
+                                                         Optional[int]], type(None)] = None,
+                               validate_fn: Callable[[torch.nn.Module, torch.utils.data.DataLoader],
+                                                     Tuple[float, float, float]] = None,
+                               val_loader: torch.utils.data.DataLoader = None,
                                autoq_eval_fn: Callable[[torch.nn.Module, torch.utils.data.DataLoader], float] = None,
-                               autoq_eval_loader: torch.utils.data.DataLoader = None,
                                model_eval_fn: Callable[[torch.nn.Module, torch.utils.data.DataLoader], float] = None,
-                               device: str = None,
-                               ) -> 'NNCFConfig':
+                               distributed_callbacks: Tuple[Callable, Callable] = None,
+                               execution_parameters: 'ExecutionParameters' = None,
+                               legr_train_optimizer: torch.optim.Optimizer = None,
+                               device: str = None, ) -> 'NNCFConfig':
     nncf_config.register_extra_structs([QuantizationRangeInitArgs(data_loader=wrap_dataloader_for_init(train_loader),
                                                                   device=device),
                                         BNAdaptationInitArgs(data_loader=wrap_dataloader_for_init(train_loader),
-                                                             device=device)])
+                                                             device=device),
+
+                                        ])
+    if train_loader and train_steps_fn and val_loader and validate_fn:
+        nncf_config.register_extra_structs([LeGRInitArgs(
+            train_loader=train_loader,
+            train_fn=train_steps_fn,
+            val_loader=val_loader,
+            val_fn=validate_fn,
+            train_optimizer=legr_train_optimizer,
+            nncf_config=nncf_config,
+        )])
 
     if criterion is not None:
         if not criterion_fn:
@@ -272,13 +260,19 @@ def register_default_init_args(nncf_config: 'NNCFConfig',
                                                                           device=device)])
 
     if autoq_eval_fn is not None:
-        if not autoq_eval_loader:
-            autoq_eval_loader = train_loader
-        nncf_config.register_extra_structs([AutoQPrecisionInitArgs(data_loader=autoq_eval_loader,
+        if not val_loader:
+            val_loader = train_loader
+        nncf_config.register_extra_structs([AutoQPrecisionInitArgs(data_loader=val_loader,
                                                                    eval_fn=autoq_eval_fn,
                                                                    nncf_config=nncf_config)])
 
     if model_eval_fn is not None:
         nncf_config.register_extra_structs([ModelEvaluationArgs(eval_fn=model_eval_fn)])
 
+    if distributed_callbacks is None:
+        if execution_parameters is None:
+            nncf_logger.info('Please, provide execution parameters for optimal model initialization')
+        distributed_callbacks = (partial(default_distributed_wrapper, execution_parameters=execution_parameters),
+                                 default_distributed_unwrapper)
+    nncf_config.register_extra_structs([DistributedCallbacksArgs(*distributed_callbacks)])
     return nncf_config

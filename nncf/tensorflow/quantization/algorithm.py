@@ -10,10 +10,11 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-from typing import Any
-from typing import Dict
+
 from typing import List
 from typing import Set
+from typing import Any
+from typing import Dict
 
 import networkx as nx
 import tensorflow as tf
@@ -21,13 +22,14 @@ import tensorflow as tf
 from nncf import NNCFConfig
 from nncf.api.compression import CompressionLoss
 from nncf.api.compression import CompressionScheduler
-from nncf.common.graph import Dtype
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
+from nncf.common.graph import NNCFNodeName
+from nncf.common.graph.layer_attributes import Dtype
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TransformationPriority
-from nncf.common.initialization.batchnorm_adaptation import BatchnormAdaptationAlgorithm
 from nncf.tensorflow.quantization.initializers.init_range import TFRangeInitParams
+from nncf.common.initialization.batchnorm_adaptation import BatchnormAdaptationAlgorithm
 from nncf.common.quantization.structs import QuantizationConstraints
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
@@ -40,10 +42,11 @@ from nncf.common.stateful_classes_registry import TF_STATEFUL_CLASSES
 from nncf.common.compression import BaseCompressionAlgorithmController
 from nncf.config.extractors import extract_range_init_params
 from nncf.config.extractors import extract_bn_adaptation_init_params
+from nncf.config.extractors import extract_range_init_params
 from nncf.tensorflow.algorithm_selector import TF_COMPRESSION_ALGORITHMS
 from nncf.tensorflow.api.compression import TFCompressionAlgorithmBuilder
 from nncf.tensorflow.graph import patterns as p
-from nncf.tensorflow.graph.converter import convert_keras_model_to_nncf_graph
+from nncf.tensorflow.graph.converter import TFModelConverterFactory
 from nncf.tensorflow.graph.metatypes.common import ELEMENTWISE_LAYER_METATYPES
 from nncf.tensorflow.graph.metatypes.common import GENERAL_CONV_LAYER_METATYPES
 from nncf.tensorflow.graph.metatypes.common import LAYER_METATYPES_AGNOSTIC_TO_DATA_PRECISION
@@ -54,7 +57,7 @@ from nncf.tensorflow.graph.transformations.commands import TFAfterLayer
 from nncf.tensorflow.graph.transformations.commands import TFInsertionCommand
 from nncf.tensorflow.graph.transformations.commands import TFLayerWeight
 from nncf.tensorflow.graph.transformations.layout import TFTransformationLayout
-from nncf.tensorflow.graph.utils import get_original_name_and_instance_index
+from nncf.tensorflow.graph.utils import get_original_name_and_instance_idx
 from nncf.tensorflow.layers.custom_objects import NNCF_QUANTIZATION_OPERATONS
 from nncf.tensorflow.loss import TFZeroCompressionLoss
 from nncf.tensorflow.quantization.initializers.init_range import RangeInitializer
@@ -205,7 +208,6 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
         return {self._state_names.QUANTIZER_SETUP: quantizer_setup_state}
 
     def _parse_init_params(self):
-        self._batchnorm_adaptation = 'batchnorm_adaptation' in self.config.get('initializer', {})
         self._range_init_params = self._parse_range_init_params()
 
     def _parse_range_init_params(self) -> TFRangeInitParams:
@@ -245,26 +247,25 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
 
     def _get_quantizer_setup(self, model: tf.keras.Model) -> QuantizationSetup:
         setup = QuantizationSetup()
-        nncf_graph = convert_keras_model_to_nncf_graph(model)
+        converter = TFModelConverterFactory.create(model)
+        nncf_graph = converter.convert()
         nodes = nncf_graph.get_all_nodes()
         for node in nodes:
             if node.metatype in NOT_SUPPORT_LAYER_METATYPES:
                 logger.warning('The layer {} is not supported by the quantization algorithm'
-                               .format(get_original_name_and_instance_index(node.node_name)[0]))
+                               .format(get_original_name_and_instance_idx(node.node_name)[0]))
 
         qconfig = self._get_default_qconfig(self.global_quantizer_constraints[QuantizerGroup.WEIGHTS])
         half_range = self._get_half_range(qconfig)
         processed_shared_layer_names = set()  # type: Set[str]
         for node in nodes:
             if node.is_shared():
-                target_layer_name, _ = get_original_name_and_instance_index(node.node_name)
+                target_layer_name, _ = get_original_name_and_instance_idx(node.node_name)
                 if target_layer_name in processed_shared_layer_names:
                     continue
                 processed_shared_layer_names.add(target_layer_name)
-            else:
-                target_layer_name = node.node_name
 
-            if not (node.metatype in QUANTIZATION_LAYER_METATYPES \
+            if not (node.metatype in QUANTIZATION_LAYER_METATYPES
                     and should_consider_scope(node.node_name,
                                               ignored_scopes=self.ignored_scopes_per_group[QuantizerGroup.WEIGHTS],
                                               target_scopes=None)):
@@ -277,16 +278,20 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
                 quantizer_spec = TFQuantizerSpec.from_config(qconfig,
                                                              narrow_range=not half_range,
                                                              half_range=half_range)
-                target_point = TFLayerWeight(target_layer_name, weight_def.weight_attr_name)
+                _, layer_info = converter.get_layer_info_for_node(node.node_name)
+                target_point = TFLayerWeight(layer_info.layer_name, weight_def.weight_attr_name)
                 qpoint = QuantizationPoint(op_name, quantizer_spec, target_point)
                 setup.add_quantization_point(qpoint)
 
         insertion_points = self._find_insertion_points(nncf_graph)
         qconfig = self._get_default_qconfig(self.global_quantizer_constraints[QuantizerGroup.ACTIVATIONS])
-        for original_node_name, instance_index in insertion_points:
-            fake_quantize_name = self._get_fake_quantize_name(original_node_name, instance_index)
+        for original_node_name in insertion_points:
+            fake_quantize_name = self._get_fake_quantize_name(original_node_name)
             quantizer_spec = TFQuantizerSpec.from_config(qconfig, narrow_range=False, half_range=False)
-            target_point = TFAfterLayer(original_node_name, instance_index)
+            _, layer_info = converter.get_layer_info_for_node(original_node_name)
+            target_point = TFAfterLayer(layer_info.layer_name,
+                                        instance_idx=layer_info.instance_idx,
+                                        output_port_id=0)
             qpoint = QuantizationPoint(fake_quantize_name, quantizer_spec, target_point)
             setup.add_quantization_point(qpoint)
         return setup
@@ -324,9 +329,7 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
     def initialize(self, model: tf.keras.Model) -> None:
         if self._range_init_params is not None:
             self._run_range_initialization(model)
-
-        if self._batchnorm_adaptation:
-            self._run_batchnorm_adaptation(model)
+        self._run_batchnorm_adaptation(model)
 
     def _run_range_initialization(self, model: tf.keras.Model) -> None:
         if self._range_initializer is None:
@@ -339,12 +342,12 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
                 **extract_bn_adaptation_init_params(self.config))
         self._bn_adaptation.run(model)
 
-    def _find_insertion_points(self, nncf_graph: NNCFGraph) -> List[str]:
+    def _find_insertion_points(self, nncf_graph: NNCFGraph) -> List[NNCFNodeName]:
         def _filter_fn(node: NNCFNode):
-            ignored = not should_consider_scope(
+            ignored = (not should_consider_scope(
                 node.node_name,
                 ignored_scopes=self.ignored_scopes_per_group[QuantizerGroup.ACTIVATIONS],
-                target_scopes=None)
+                target_scopes=None)) or 'quantization' in node.ignored_algorithms
             # Works if the insertion is done as an operation after the corresponding node.
             out_nodes = nncf_graph.get_next_nodes(node)
             is_float_dtype = True
@@ -385,9 +388,10 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
 
         insertion_point_node_keys = [point for point in insertion_point_node_keys
                                      if _filter_fn(nncf_graph.get_node_by_key(point))]
-        insertion_point_layer_names = [nncf_graph.get_node_by_key(ip).node_name for ip in insertion_point_node_keys]
+        insertion_point_layer_node_names = [nncf_graph.get_node_by_key(ip).node_name
+                                            for ip in insertion_point_node_keys]
 
-        return [get_original_name_and_instance_index(ip) for ip in insertion_point_layer_names]
+        return insertion_point_layer_node_names
 
     def _get_input_preprocessing_nodes(self, nncf_graph: NNCFGraph, node_key: str,
                                        preprocessing_nodes: List[NNCFNode] = None) -> List[NNCFNode]:
@@ -426,10 +430,11 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
                 quantized_nodes_for_output.append(predecessor)
         return quantized_nodes_for_output
 
-    def _get_fake_quantize_name(self, node_name, instance_index):
-        if instance_index == 0:
-            return '{}/fake_quantize'.format(node_name)
-        return '{}/fake_quantize_{}'.format(node_name, instance_index)
+    def _get_fake_quantize_name(self, node_name: NNCFNodeName):
+        original_node_name, instance_idx = get_original_name_and_instance_idx(node_name)
+        if instance_idx == 0:
+            return '{}/fake_quantize'.format(original_node_name)
+        return '{}/fake_quantize_{}'.format(original_node_name, instance_idx)
 
     def _get_quantizer_operation_name(self, layer_name, weight_attr_name):
         return f'{layer_name}_{weight_attr_name}_quantizer'

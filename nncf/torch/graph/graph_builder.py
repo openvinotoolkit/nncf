@@ -19,13 +19,13 @@ from typing import Optional
 
 import torch
 
+from nncf.common.graph import INPUT_NOOP_METATYPES
 from nncf.common.graph import LayerName
 from nncf.common.graph.layer_attributes import Dtype
 from nncf.torch.dynamic_graph.graph import DynamicGraph
 from nncf.torch.dynamic_graph.graph_tracer import GraphTracer
 from nncf.torch.dynamic_graph.graph_tracer import ModelInputInfo
 from nncf.torch.graph.graph import PTNNCFGraph
-from nncf.torch.graph.operator_metatypes import InputNoopMetatype
 from nncf.torch.graph.operator_metatypes import PT_OPERATOR_METATYPES
 
 
@@ -64,7 +64,7 @@ class GraphConverter:
                 metatype = subtype
 
             is_integer_input = False
-            if metatype == InputNoopMetatype and input_infos is not None:
+            if metatype in INPUT_NOOP_METATYPES and input_infos is not None:
                 input_id = op_address.call_order
                 if input_infos[input_id].is_integer_input():
                     is_integer_input = True
@@ -88,6 +88,7 @@ class GraphConverter:
                 to_node_id=dynamic_graph_edge.to_node_id,
                 tensor_shape=dynamic_graph_edge.activation_shape,
                 input_port_id=dynamic_graph_edge.input_port_id,
+                output_port_id=dynamic_graph_edge.output_port_id,
                 dtype=Dtype.FLOAT
             )
         return nncf_graph

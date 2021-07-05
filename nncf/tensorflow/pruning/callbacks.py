@@ -27,6 +27,7 @@ class PruningStatisticsCallback(StatisticsCallback):
         ms = nncf_stats.filter_pruning.model_statistics
         tensorboard_stats = {
             f'{base_prefix}/pruning_level_for_model': ms.pruning_level,
+            f'{base_prefix}/flops_pruning_level': nncf_stats.filter_pruning.flops_pruning_level,
             f'{base_prefix}/target_pruning_level': nncf_stats.filter_pruning.target_pruning_level,
         }
 

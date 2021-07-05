@@ -11,6 +11,8 @@
  limitations under the License.
 """
 
+import functools
+import os
 # Major parts of this sample reuse code from:
 # https://github.com/davidtvs/PyTorch-ENet
 # https://github.com/pytorch/vision/tree/master/references/segmentation
@@ -18,41 +20,45 @@ import sys
 from copy import deepcopy
 from os import path as osp
 
-import functools
 import numpy as np
-import os
 import torch
 import torchvision.transforms as T
-
-from examples.torch.common.execution import set_seed
-from examples.torch.common.model_loader import extract_model_and_compression_states
-from examples.torch.common.model_loader import load_resuming_checkpoint
-from examples.torch.common.sample_config import create_sample_config
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 
-from nncf.common.utils.tensorboard import prepare_for_tensorboard
-from nncf.config.utils import is_accuracy_aware_training
 import examples.torch.semantic_segmentation.utils.data as data_utils
 import examples.torch.semantic_segmentation.utils.loss_funcs as loss_funcs
 import examples.torch.semantic_segmentation.utils.transforms as JT
 from examples.torch.common.argparser import get_common_argument_parser
 from examples.torch.common.example_logger import logger
-from examples.torch.common.execution import get_execution_mode, \
-    prepare_model_for_execution, start_worker
-from nncf.api.compression import CompressionStage
-from nncf.torch import load_state
-from nncf.torch.initialization import register_default_init_args
+from examples.torch.common.execution import get_execution_mode
+from examples.torch.common.execution import prepare_model_for_execution
+from examples.torch.common.execution import set_seed
+from examples.torch.common.execution import start_worker
+from examples.torch.common.model_loader import extract_model_and_compression_states
 from examples.torch.common.model_loader import load_model
+from examples.torch.common.model_loader import load_resuming_checkpoint
 from examples.torch.common.optimizer import make_optimizer
-from examples.torch.common.utils import configure_logging, configure_paths, make_additional_checkpoints, print_args, \
-    write_metrics, is_pretrained_model_requested, log_common_mlflow_params, SafeMLFLow, \
-    configure_device
+from examples.torch.common.sample_config import create_sample_config
+from examples.torch.common.utils import SafeMLFLow
+from examples.torch.common.utils import configure_device
+from examples.torch.common.utils import configure_logging
+from examples.torch.common.utils import configure_paths
+from examples.torch.common.utils import is_pretrained_model_requested
+from examples.torch.common.utils import log_common_mlflow_params
+from examples.torch.common.utils import make_additional_checkpoints
+from examples.torch.common.utils import print_args
+from examples.torch.common.utils import write_metrics
 from examples.torch.semantic_segmentation.metric import IoU
 from examples.torch.semantic_segmentation.test import Test
 from examples.torch.semantic_segmentation.train import Train
 from examples.torch.semantic_segmentation.utils.checkpoint import save_checkpoint
+from nncf.api.compression import CompressionStage
+from nncf.common.utils.tensorboard import prepare_for_tensorboard
+from nncf.config.utils import is_accuracy_aware_training
 from nncf.torch import AdaptiveCompressionTrainingLoop
 from nncf.torch import create_compressed_model
+from nncf.torch import load_state
+from nncf.torch.initialization import register_default_init_args
 from nncf.torch.utils import is_main_process
 
 
@@ -507,8 +513,8 @@ def main_worker(current_gpu, config):
         model_eval_fn = functools.partial(autoq_test_fn, eval_loader=val_loader)
 
         nncf_config = register_default_init_args(
-            nncf_config, init_loader, criterion, criterion_fn,
-            autoq_test_fn, val_loader, model_eval_fn, config.device)
+            nncf_config, init_loader, criterion=criterion, criterion_fn=criterion_fn,
+            autoq_eval_fn=autoq_test_fn, val_loader=val_loader, model_eval_fn=model_eval_fn, device=config.device)
 
     model = load_model(config.model,
                        pretrained=pretrained,

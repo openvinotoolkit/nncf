@@ -17,7 +17,7 @@ from torch.utils.data import DataLoader
 
 from nncf import NNCFConfig
 from nncf.torch import register_default_init_args
-from nncf.torch.quantization.quantizer_setup import SingleConfigQuantizerSetup
+from nncf.common.quantization.quantizer_setup import SingleConfigQuantizerSetup
 from nncf.torch.tensor_statistics.algo import TensorStatisticsCollectionBuilder, TensorStatisticsCollectionController
 
 from tests.torch.helpers import TwoConvTestModel, BasicConvTestModel, create_compressed_model_and_algo_for_test, \
@@ -50,8 +50,7 @@ CONFIG_WITH_ALL_INIT_TYPES = {
                     'num_init_samples': 1
                 },
                 'batchnorm_adaptation': {
-                    'num_bn_adaptation_samples': 5,
-                    'num_bn_forget_samples': 0
+                    'num_bn_adaptation_samples': 5
                 }
             }
         }
@@ -68,7 +67,7 @@ def nncf_config_with_default_init_args_(mocker):
     mocker_criterion = mocker.stub()
     mocker_criterion.batch_size = 1
 
-    config = register_default_init_args(config, train_loader, mocker_criterion)
+    config = register_default_init_args(config, train_loader, criterion=mocker_criterion)
     return config
 
 

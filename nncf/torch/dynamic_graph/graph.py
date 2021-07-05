@@ -160,11 +160,12 @@ class DynamicGraphNode:
 
 class DynamicGraphEdge:
     def __init__(self, from_node_id: int, to_node_id: int,
-                 activation_shape: List[int], input_port_id: int):
+                 activation_shape: List[int], input_port_id: int, output_port_id: int):
         self.from_node_id = from_node_id
         self.to_node_id = to_node_id
         self.activation_shape = activation_shape
         self.input_port_id = input_port_id
+        self.output_port_id = output_port_id
 
 
 class DefaultScopeNodeMatcher:
@@ -244,7 +245,8 @@ class DefaultScopeNodeMatcher:
             self._nx_graph.add_edge(parent, node_key)
             has_traced_inputs = True
             self._nx_graph.edges[parent, node_key][DynamicGraph.ACTIVATION_SHAPE_EDGE_ATTR] = info.shape
-            self._nx_graph.edges[parent, node_key][DynamicGraph.IN_PORT_NAME_EDGE_ATTR] = i
+            self._nx_graph.edges[parent, node_key][DynamicGraph.INPUT_PORT_ID_EDGE_ATTR] = i
+            self._nx_graph.edges[parent, node_key][DynamicGraph.OUTPUT_PORT_ID_EDGE_ATTR] = info.index
 
         nx_node_dict = self._nx_graph.nodes[node_key]
         node = DynamicGraphNode(node_id=nx_node_dict[DynamicGraph.ID_NODE_ATTR],
@@ -467,7 +469,8 @@ class DynamicGraph:
     LAYER_ATTRIBUTES = 'layer_attributes'
     OP_EXEC_CONTEXT_NODE_ATTR = 'op_exec_context'
     ACTIVATION_SHAPE_EDGE_ATTR = 'activation_shape'
-    IN_PORT_NAME_EDGE_ATTR = 'in_port'
+    INPUT_PORT_ID_EDGE_ATTR = 'input_port_id'
+    OUTPUT_PORT_ID_EDGE_ATTR = 'output_port_id'
     IGNORED_ALGOS_NODE_ATTR = 'ignored_algos'
     IS_IN_ITERATION_SCOPE_NODE_ATTR = 'is_in_iteration_scope'
 
@@ -484,7 +487,7 @@ class DynamicGraph:
                                          DynamicGraph.OP_EXEC_CONTEXT_NODE_ATTR,
                                          DynamicGraph.LAYER_ATTRIBUTES], [None, None, None])
         em = iso.categorical_edge_match([DynamicGraph.ACTIVATION_SHAPE_EDGE_ATTR,
-                                         DynamicGraph.IN_PORT_NAME_EDGE_ATTR], [None, None])
+                                         DynamicGraph.INPUT_PORT_ID_EDGE_ATTR], [None, None])
         return nx.is_isomorphic(self._nx_graph, other._nx_graph, node_match=nm, edge_match=em)
 
     def find_node(self,
@@ -502,8 +505,8 @@ class DynamicGraph:
         node = self.match_manager.add_node(op_address, tensor_metas, input_comparators_per_scope, inputs,
                                            layer_attrs, ignored_algorithms)
 
-        from nncf.common.graph import MODEL_OUTPUT_OP_NAME
-        from nncf.common.graph import MODEL_INPUT_OP_NAME
+        from nncf.common.graph.definitions import MODEL_OUTPUT_OP_NAME
+        from nncf.common.graph.definitions import MODEL_INPUT_OP_NAME
         if node.op_exec_context.operator_name == MODEL_INPUT_OP_NAME:
             self._input_nncf_nodes.append(node)
 
@@ -547,7 +550,8 @@ class DynamicGraph:
                 from_node_id=from_node_id,
                 to_node_id=to_node_id,
                 activation_shape=nx_edge_attrs[DynamicGraph.ACTIVATION_SHAPE_EDGE_ATTR],
-                input_port_id=nx_edge_attrs[DynamicGraph.IN_PORT_NAME_EDGE_ATTR])
+                input_port_id=nx_edge_attrs[DynamicGraph.INPUT_PORT_ID_EDGE_ATTR],
+                output_port_id=nx_edge_attrs[DynamicGraph.OUTPUT_PORT_ID_EDGE_ATTR])
 
             all_edges.append(dynamic_graph_edge)
         return all_edges

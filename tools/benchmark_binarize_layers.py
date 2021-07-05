@@ -17,7 +17,7 @@ import torch.nn as nn
 
 from nncf.torch.binarization.layers import XNORBinarize, DOREFABinarize, ActivationBinarizationScaleThreshold
 from tools.benchmark import run_profile
-from nncf.torch.utils import get_per_channel_scale_shape
+from nncf.torch.quantization.layers import get_per_channel_scale_shape
 
 NBITS = 8
 GPU_RUNS_LOW_BATCH = 10000

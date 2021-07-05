@@ -1,35 +1,85 @@
+"""
+ Copyright (c) 2021 Intel Corporation
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+      http://www.apache.org/licenses/LICENSE-2.0
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+"""
+
+from abc import ABC
 from collections import Counter
 from copy import deepcopy
-from typing import Dict, List, Optional, Set, Any
+from enum import Enum
+from typing import Dict
+from typing import List
+from typing import Optional
+from typing import Set
 
-from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNodeName
-from nncf.common.graph.layer_attributes import WeightedLayerAttributes
-from nncf.common.graph.transformations.commands import TargetType
+from nncf.common.quantization.structs import NonWeightQuantizerId
+from nncf.common.quantization.structs import QuantizerConfig
+from nncf.common.quantization.structs import UnifiedScaleType
+from nncf.common.quantization.structs import WeightQuantizerId
 from nncf.common.utils.logger import logger as nncf_logger
-from nncf.torch.graph.transformations.commands import PTTargetPoint
-from nncf.torch.quantization.layers import QuantizerConfig
-from nncf.torch.quantization.structs import UnifiedScaleType
-from nncf.torch.tensor_statistics.collectors import ReductionShape
-from nncf.torch.tensor_statistics.statistics import MinMaxTensorStatistic
-from nncf.torch.tensor_statistics.statistics import TensorStatistic
-from nncf.torch.utils import get_scale_shape
 
 QuantizationPointId = int
 
 
+class QuantizationPointType(Enum):
+    WEIGHT_QUANTIZATION = 0
+    ACTIVATION_QUANTIZATION = 1
+
+
+class QuantizationInsertionPointBase(ABC):
+    def __init__(self, target_node_name: NNCFNodeName):
+        self.target_node_name = target_node_name
+
+
+class WeightQuantizationInsertionPoint(QuantizationInsertionPointBase):
+    def __eq__(self, other: 'WeightQuantizationInsertionPoint'):
+        return isinstance(other, WeightQuantizationInsertionPoint) and \
+               self.target_node_name == other.target_node_name
+
+    def __str__(self):
+        return str(WeightQuantizerId(self.target_node_name))
+
+    def __hash__(self):
+        return hash(str(self))
+
+
+class ActivationQuantizationInsertionPoint(QuantizationInsertionPointBase):
+    def __init__(self, target_node_name: NNCFNodeName, input_port_id: Optional[int] = None):
+        super().__init__(target_node_name)
+        self.input_port_id = input_port_id
+
+    def __eq__(self, other: 'ActivationQuantizationInsertionPoint'):
+        return isinstance(other, ActivationQuantizationInsertionPoint) and \
+               self.target_node_name == other.target_node_name and \
+               self.input_port_id == other.input_port_id
+
+    def __str__(self):
+        return str(NonWeightQuantizerId(self.target_node_name, self.input_port_id))
+
+    def __hash__(self):
+        return hash(str(self))
+
+
 class QuantizationPointBase:
-    def __init__(self, insertion_point: PTTargetPoint,
+    def __init__(self, quant_insertion_point: QuantizationInsertionPointBase,
                  directly_quantized_operator_node_names: List[NNCFNodeName]):
-        self.insertion_point = insertion_point
+        self.insertion_point = quant_insertion_point
         self.directly_quantized_operator_node_names = directly_quantized_operator_node_names
 
     def is_activation_quantization_point(self) -> bool:
-        return self.insertion_point.target_type == TargetType.OPERATOR_PRE_HOOK or \
-               self.insertion_point.target_type == TargetType.OPERATOR_POST_HOOK
+        return not self.is_weight_quantization_point()
 
     def is_weight_quantization_point(self) -> bool:
-        return self.insertion_point.target_type == TargetType.OPERATION_WITH_WEIGHTS
+        return isinstance(self.insertion_point, WeightQuantizationInsertionPoint)
 
     def get_all_configs_list(self) -> List[QuantizerConfig]:
         raise NotImplementedError
@@ -47,9 +97,9 @@ class SCQPointStateNames:
 class SingleConfigQuantizationPoint(QuantizationPointBase):
     _state_names = SCQPointStateNames
 
-    def __init__(self, insertion_point: PTTargetPoint, qconfig: QuantizerConfig,
+    def __init__(self, qip: QuantizationInsertionPointBase, qconfig: QuantizerConfig,
                  directly_quantized_operator_node_names: List[NNCFNodeName]):
-        super().__init__(insertion_point, directly_quantized_operator_node_names)
+        super().__init__(qip, directly_quantized_operator_node_names)
         self.qconfig = deepcopy(qconfig)
 
     def __str__(self):
@@ -83,9 +133,9 @@ class SingleConfigQuantizationPoint(QuantizationPointBase):
 
 
 class MultiConfigQuantizationPoint(QuantizationPointBase):
-    def __init__(self, insertion_point: PTTargetPoint, possible_qconfigs: List[QuantizerConfig],
+    def __init__(self, qip: QuantizationInsertionPointBase, possible_qconfigs: List[QuantizerConfig],
                  directly_quantized_operator_node_names: List[NNCFNodeName]):
-        super().__init__(insertion_point, directly_quantized_operator_node_names)
+        super().__init__(qip, directly_quantized_operator_node_names)
         self.possible_qconfigs = possible_qconfigs
 
     @property
@@ -114,7 +164,6 @@ class MultiConfigQuantizationPoint(QuantizationPointBase):
 
     def get_all_configs_list(self) -> List[QuantizerConfig]:
         return self.possible_qconfigs
-
 
 class QuantizerSetupBase:
     def __init__(self):
@@ -273,49 +322,12 @@ class SingleConfigQuantizerSetup(QuantizerSetupBase):
         super().__init__()
         self.quantization_points = {}  # type: Dict[QuantizationPointId, SingleConfigQuantizationPoint]
 
-    def __eq__(self, other):
-        return all(
-            map(lambda x: x[0] == x[1], zip(self.quantization_points.values(), other.quantization_points.values()))) \
-               and self.unified_scale_groups == other.unified_scale_groups \
-               and self.shared_input_operation_set_groups == other.shared_input_operation_set_groups
-
-    def get_minmax_values(self,
-                          tensor_statistics: Dict[PTTargetPoint, Dict[ReductionShape, TensorStatistic]],
-                          target_model_graph: NNCFGraph) -> \
-            Dict[QuantizationPointId, MinMaxTensorStatistic]:
-        retval = {}
-        for qp_id, qp in self.quantization_points.items():
-            ip = qp.insertion_point
-            if ip not in tensor_statistics:
-                nncf_logger.debug("IP {} not found in tensor statistics".format(ip))
-                retval[qp_id] = None
-            else:
-                target_node = target_model_graph.get_node_by_name(qp.insertion_point.target_node_name)
-                if qp.is_weight_quantization_point():
-                    layer_attrs = target_node.layer_attributes
-                    assert isinstance(layer_attrs, WeightedLayerAttributes)
-                    input_shape = layer_attrs.get_weight_shape()
-                    channel_idx = layer_attrs.get_target_dim_for_compression()
-                else:
-                    input_shape = target_model_graph.get_input_shape_for_insertion_point(qp.insertion_point)
-                    channel_idx = 1  # channel dim for activations
-                scale_shape = tuple(get_scale_shape(input_shape,
-                                                    qp.is_weight_quantization_point(),
-                                                    qp.qconfig.per_channel,
-                                                    channel_idx))
-                if scale_shape not in tensor_statistics[ip]:
-                    nncf_logger.debug("Did not collect tensor statistics at {} for shape {}".format(ip, scale_shape))
-                    retval[qp_id] = None
-                else:
-                    minmax_stat = MinMaxTensorStatistic.from_stat(tensor_statistics[ip][scale_shape])
-                    retval[qp_id] = minmax_stat
-        return retval
-
     def get_state(self) -> Dict:
         """
         Returns a dictionary with Python data structures (dict, list, tuple, str, int, float, True, False, None) that
         represents state of the object.
         """
+
         def set2list(pair):
             i, qp_id_set = pair
             return i, list(qp_id_set)
@@ -427,7 +439,7 @@ class MultiConfigQuantizerSetup(QuantizerSetupBase):
         retval = cls()
         for qp_id, qp in single_conf_setup.quantization_points.items():
             multi_pt = MultiConfigQuantizationPoint(
-                insertion_point=qp.insertion_point,
+                qip=qp.insertion_point,
                 possible_qconfigs=[deepcopy(qp.qconfig)],
                 directly_quantized_operator_node_names=qp.directly_quantized_operator_node_names)
             retval.quantization_points[qp_id] = multi_pt

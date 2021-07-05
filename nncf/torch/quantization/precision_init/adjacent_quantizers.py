@@ -19,8 +19,8 @@ from nncf.common.graph import NNCFNodeName
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.torch.quantization.layers import BaseQuantizer
 from nncf.common.quantization.structs import QuantizerId
-from nncf.torch.quantization.quantizer_setup import QuantizationPointId
-from nncf.torch.quantization.quantizer_setup import QuantizerSetupBase
+from nncf.common.quantization.quantizer_setup import QuantizationPointId
+from nncf.common.quantization.quantizer_setup import QuantizerSetupBase
 
 
 class AdjacentQuantizers(NamedTuple):

@@ -34,9 +34,10 @@ def compare_multi_gpu_dump(config, dump_dir, get_path_by_rank_fn):
 
 
 class RankDatasetMock:
-    def __init__(self, input_size, rank):
+    def __init__(self, input_size, rank, num_samples: int = 10):
         self.input_size = input_size
         self.rank = rank
+        self._len = num_samples
         super().__init__()
 
     def __getitem__(self, index):
@@ -44,7 +45,7 @@ class RankDatasetMock:
         return dummy_input, torch.ones(1)
 
     def __len__(self):
-        return 100
+        return self._len
 
 
 def get_quantization_config_without_range_init(model_size=4) -> NNCFConfig:
@@ -81,11 +82,11 @@ def distributed_init_test_default(gpu, ngpus_per_node, config):
                                          world_size=config.world_size, rank=config.rank)
 
 
-def create_rank_dataloader(config, rank):
+def create_rank_dataloader(config, rank, num_samples=10, batch_size=3):
     input_infos_list = create_input_infos(config)
     input_sample_size = input_infos_list[0].shape
-    data_loader = torch.utils.data.DataLoader(RankDatasetMock(input_sample_size[1:], rank),
-                                              batch_size=3,
+    data_loader = torch.utils.data.DataLoader(RankDatasetMock(input_sample_size[1:], rank, num_samples),
+                                              batch_size=batch_size,
                                               num_workers=0,  # workaround
                                               shuffle=False, drop_last=True)
     return data_loader

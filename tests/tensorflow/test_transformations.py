@@ -12,12 +12,22 @@
 """
 
 import pytest
+import tensorflow as tf
+from tensorflow.python.keras import layers
+from tensorflow.python.keras import models
 
-from nncf.tensorflow.graph.transformations import commands
-from nncf.tensorflow.graph.transformations.layout import TFTransformationLayout
+from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationPriority
 from nncf.common.graph.transformations.commands import TransformationType
-from nncf.common.graph.transformations.commands import TargetType
+from nncf.tensorflow.graph.model_transformer import TFModelTransformer
+from nncf.tensorflow.graph.transformations import commands
+from nncf.tensorflow.graph.transformations.commands import TFInsertionCommand
+from nncf.tensorflow.graph.transformations.commands import TFLayer
+from nncf.tensorflow.graph.transformations.commands import TFLayerWeight
+from nncf.tensorflow.graph.transformations.commands import TFMultipleInsertionCommands
+from nncf.tensorflow.graph.transformations.layout import TFTransformationLayout
+from nncf.tensorflow.layers.custom_objects import NNCF_CUSTOM_OBJECTS
+from nncf.tensorflow.layers.operation import NNCFOperation
 
 
 def test_insertion_commands_union_invalid_input():
@@ -148,7 +158,7 @@ def test_multiple_insertion_commands_union_invalid_input():
 
 def test_multiple_insertion_commands_union():
     check_fn_0 = lambda src, dst: \
-        dst.type ==  TargetType.OPERATION_WITH_WEIGHTS and \
+        dst.type == TargetType.OPERATION_WITH_WEIGHTS and \
         src.layer_name == dst.layer_name and \
         dst.weights_attr_name == 'weight_0'
 
@@ -195,7 +205,7 @@ def test_transformation_layout_insertion_case():
     transformation_layout = TFTransformationLayout()
 
     check_fn = lambda src, dst: \
-        dst.type ==  TargetType.OPERATION_WITH_WEIGHTS and \
+        dst.type == TargetType.OPERATION_WITH_WEIGHTS and \
         src.layer_name == dst.layer_name
 
     command_list = [
@@ -320,3 +330,76 @@ def test_transformation_layout_removal_case():
     assert res_transformations[4].target_point.type == TargetType.OPERATION_WITH_WEIGHTS
     assert res_transformations[4].target_point.layer_name == 'layer_0'
     assert res_transformations[4].target_point.weights_attr_name == 'weight_0'
+
+
+CUSTOM_LAYER_NAME = "custom_layer_for_test"
+class TwoWeightCustomLayerForTest(tf.keras.layers.Layer):
+    WEIGHT_1_NAME = 'w1'
+    WEIGHT_2_NAME = 'w2'
+    def __init__(self, name=CUSTOM_LAYER_NAME, trainable=True, dtype='float32'):
+        super().__init__(name=name, trainable=trainable, dtype=dtype)
+        self.w1 = self.add_weight(shape=(3, 1, 1, 3), name=self.WEIGHT_1_NAME)
+        self.w2 = self.add_weight(shape=(3, 1, 1, 3), name=self.WEIGHT_2_NAME)
+
+    def call(self, inputs, **kwargs):
+        x = tf.nn.conv2d(inputs, self.w1, strides=[1, 1, 1, 1], padding='SAME')
+        x = tf.nn.conv2d(x, self.w2, strides=[1, 1, 1, 1], padding='SAME')
+        return x
+
+
+def ModelWithTwoWeightCustomLayer():
+    input_shape = (None, None, 3)
+    img_input = layers.Input(name='input', shape=input_shape)
+    x = img_input
+    x = TwoWeightCustomLayerForTest()(x)  # custom!
+    model = models.Model(img_input, x, name='ModelForCustomLayerTest')
+    model.build([16, 16, 3])
+    return model
+
+
+def create_transformed_model(transformation_layout: TFTransformationLayout):
+    model = ModelWithTwoWeightCustomLayer()
+    transformer = TFModelTransformer(model)
+    model = transformer.transform(transformation_layout)
+    return model
+
+
+@NNCF_CUSTOM_OBJECTS.register()
+class MockIdentityOp(NNCFOperation):
+    def build(self, input_shape, input_type, name, layer):
+        return {}
+
+    def call(self, inputs, weights, _):
+        return inputs
+
+
+def test_multiple_insertion_command_has_same_effect_as_multiple_single_insertions():
+    check_fn = lambda src, dst: dst.type == TargetType.OPERATION_WITH_WEIGHTS
+
+    insertion_command_1 = TFInsertionCommand(
+        TFLayerWeight(CUSTOM_LAYER_NAME,
+                      TwoWeightCustomLayerForTest.WEIGHT_1_NAME),
+        MockIdentityOp('mock_nncf_op_1'),
+        TransformationPriority.PRUNING_PRIORITY)
+    insertion_command_2 = TFInsertionCommand(
+        TFLayerWeight(CUSTOM_LAYER_NAME,
+                      TwoWeightCustomLayerForTest.WEIGHT_2_NAME),
+        MockIdentityOp('mock_nncf_op_2'),
+        TransformationPriority.PRUNING_PRIORITY)
+    multiple_insertion_command = TFMultipleInsertionCommands(
+        target_point=TFLayer(CUSTOM_LAYER_NAME),
+        commands=[insertion_command_1, insertion_command_2],
+        check_target_points_fn=check_fn)
+
+    transformation_layout_multi = TFTransformationLayout()
+    transformation_layout_multi.register(multiple_insertion_command)
+    transformation_layout_two_single = TFTransformationLayout()
+    transformation_layout_two_single.register(insertion_command_1)
+    transformation_layout_two_single.register(insertion_command_2)
+
+    model_with_multi = create_transformed_model(transformation_layout_multi)
+    model_with_two_single = create_transformed_model(transformation_layout_two_single)
+
+    multi_config = model_with_multi.get_config()
+    two_single_config = model_with_two_single.get_config()
+    assert multi_config == two_single_config

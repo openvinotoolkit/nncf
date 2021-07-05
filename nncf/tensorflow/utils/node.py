@@ -13,11 +13,11 @@
 
 import re
 
-from nncf.tensorflow.graph.utils import get_original_name_and_instance_index
+from nncf.tensorflow.graph.utils import get_original_name_and_instance_idx
 
 
 def is_ignored(node_name, ignored_scopes):
-    original_name, _ = get_original_name_and_instance_index(node_name)
+    original_name, _ = get_original_name_and_instance_idx(node_name)
     return any(re.fullmatch(ignored.replace('{re}', ''), original_name) if ignored.startswith('{re}')
                else ignored == original_name
                for ignored in ignored_scopes)

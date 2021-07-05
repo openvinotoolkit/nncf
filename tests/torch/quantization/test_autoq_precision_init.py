@@ -86,8 +86,7 @@ class AutoQConfigBuilder(BaseConfigBuilder):
                     'num_init_samples': num_init_samples
                 },
                 'batchnorm_adaptation': {
-                    'num_bn_adaptation_samples': 0,
-                    'num_bn_forget_samples': 0
+                    'num_bn_adaptation_samples': 0
                 }
             }})
         return config
@@ -154,9 +153,9 @@ def test_autoq_precision_init(_seed, dataset_dir, tmp_path, mocker, params):
     autoq_obj_init_spy = mocker.spy(AutoQPrecisionInitializer, '__init__')
     adjust_pad_creation_spy = mocker.spy(UpdatePaddingValue, '__init__')
 
-    config = register_default_init_args(config, train_loader=train_loader,
+    config = register_default_init_args(config, train_loader,
                                         autoq_eval_fn=lambda *x: random(),
-                                        autoq_eval_loader=train_loader)
+                                        val_loader=train_loader)
     model, algo_ctrl = create_compressed_model_and_algo_for_test(model, config)
 
     bw_init_config = config['compression']['initializer']['precision']

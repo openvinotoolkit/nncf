@@ -36,6 +36,10 @@ BATCH_NORMALIZATION_OPERATIONS = {'type': ['batch_norm',
                                            ],
                                   'label': 'BATCH_NORMALIZATION'
                                   }
+
+GROUP_NORMALIZATION_OPERATIONS = {'type': ['group_norm'],
+                                  'label': 'GROUP_NORMALIZATION'}
+
 RELU_OPERATIONS = {'type': ['relu',
                             'relu_',
                             'hardtanh'

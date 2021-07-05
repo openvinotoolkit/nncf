@@ -47,6 +47,7 @@ def create_compression_algorithm_builder(config: NNCFConfig,
     if number_compression_algorithms == 1:
         algo_config = compression_algorithm_configs[0]
         return get_compression_algorithm_builder(algo_config)(algo_config, should_init)
+
     return TFCompositeCompressionAlgorithmBuilder(config, should_init)
 
 
@@ -65,8 +66,10 @@ def create_compressed_model(model: tf.keras.Model,
     :param compression_state: compression state to unambiguously restore the compressed model.
         Includes builder and controller states. If it is specified, trainable parameter initialization will be skipped
         during building.
-    :return: The model with additional modifications necessary to enable
-        algorithm-specific compression during fine-tuning.
+    :return: A tuple (compression_ctrl, compressed_model) where
+        - compression_ctrl: The controller of the compression algorithm.
+        - compressed_model: The model with additional modifications
+            necessary to enable algorithm-specific compression during fine-tuning.
     """
     model = get_built_model(model, config)
     original_model_accuracy = None

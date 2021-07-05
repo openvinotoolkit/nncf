@@ -23,12 +23,12 @@ from nncf.common.sparsity.statistics import RBSparsityStatistics
 from nncf.common.statistics import NNCFStatistics
 from nncf.tensorflow.algorithm_selector import TF_COMPRESSION_ALGORITHMS
 from nncf.tensorflow.api.compression import TFCompressionAlgorithmBuilder
+from nncf.tensorflow.graph.converter import TFModelConverterFactory
 from nncf.tensorflow.graph.transformations.commands import TFInsertionCommand
 from nncf.tensorflow.graph.transformations.commands import TFLayerWeight
 from nncf.tensorflow.graph.transformations.layout import TFTransformationLayout
-from nncf.tensorflow.graph.utils import get_original_name_and_instance_index
+from nncf.tensorflow.graph.utils import get_original_name_and_instance_idx
 from nncf.tensorflow.graph.utils import get_nncf_operations
-from nncf.tensorflow.graph.converter import convert_keras_model_to_nncf_graph
 from nncf.tensorflow.sparsity.base_algorithm import BaseSparsityController
 from nncf.tensorflow.sparsity.base_algorithm import SPARSITY_LAYER_METATYPES
 from nncf.tensorflow.sparsity.rb.loss import SparseLoss
@@ -46,24 +46,24 @@ class RBSparsityBuilder(TFCompressionAlgorithmBuilder):
         self._op_names = []
 
     def get_transformation_layout(self, model: tf.keras.Model) -> TFTransformationLayout:
-        nncf_graph = convert_keras_model_to_nncf_graph(model)
+        converter = TFModelConverterFactory.create(model)
+        nncf_graph = converter.convert()
         transformations = TFTransformationLayout()
 
         processed_shared_layer_names = set()  # type: Set[str]
 
         for node in nncf_graph.get_all_nodes():
             if node.is_shared():
-                target_layer_name, _ = get_original_name_and_instance_index(node.node_name)
+                target_layer_name, _ = get_original_name_and_instance_idx(node.node_name)
                 if target_layer_name in processed_shared_layer_names:
                     continue
                 processed_shared_layer_names.add(target_layer_name)
-            else:
-                target_layer_name = node.node_name
 
             if not (node.metatype in SPARSITY_LAYER_METATYPES and
                     should_consider_scope(node.node_name, ignored_scopes=self.ignored_scopes)):
                 continue
 
+            _, layer_info = converter.get_layer_info_for_node(node.node_name)
             for weight_def in node.metatype.weight_definitions:
                 op_name = self._get_rb_sparsity_operation_name(node.node_name,
                                                                weight_def.weight_attr_name)
@@ -71,7 +71,7 @@ class RBSparsityBuilder(TFCompressionAlgorithmBuilder):
 
                 transformations.register(
                     TFInsertionCommand(
-                        target_point=TFLayerWeight(target_layer_name, weight_def.weight_attr_name),
+                        target_point=TFLayerWeight(layer_info.layer_name, weight_def.weight_attr_name),
                         callable_object=RBSparsifyingWeight(op_name),
                         priority=TransformationPriority.SPARSIFICATION_PRIORITY
                     ))

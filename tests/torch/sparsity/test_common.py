@@ -26,6 +26,11 @@ from tests.torch.helpers import BasicConvTestModel
 from tests.torch.helpers import MockModel
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
 from tests.torch.helpers import get_empty_config
+from nncf.common.sparsity.schedulers import PolynomialSparsityScheduler, ExponentialSparsityScheduler, \
+    AdaptiveSparsityScheduler, MultiStepSparsityScheduler
+from tests.torch.helpers import BasicConvTestModel, get_empty_config, create_compressed_model_and_algo_for_test, \
+    MockModel, TwoConvTestModel
+from tests.torch.helpers import fill_params_of_model_by_normal
 
 
 @pytest.mark.parametrize('algo',
@@ -362,3 +367,23 @@ def test_scheduler_get_state(scheduler_cls):
     if scheduler_cls == AdaptiveSparsityScheduler:
         assert new_scheduler.num_bad_epochs == 1
         assert new_scheduler.current_sparsity_level == pytest.approx(0.3)
+
+
+@pytest.mark.parametrize('algo',
+                         ('magnitude_sparsity', 'rb_sparsity'))
+def test_sparsity_statistics_add_module(algo):
+    config = get_empty_config()
+    sparsity_init = 0.5
+    config['compression'] = {'algorithm': algo, 'sparsity_init': sparsity_init}
+    model = TwoConvTestModel()
+    fill_params_of_model_by_normal(model)
+    submodule = TwoConvTestModel()
+    fill_params_of_model_by_normal(submodule)
+    model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
+    statistics_before = compression_ctrl.statistics()
+    model.add_module('submodule', submodule)
+    statistics_after = compression_ctrl.statistics()
+    assert getattr(statistics_before, algo).model_statistics.sparsity_level == \
+           getattr(statistics_after, algo).model_statistics.sparsity_level
+    assert getattr(statistics_before, algo).model_statistics.sparsity_level_for_layers == \
+           getattr(statistics_after, algo).model_statistics.sparsity_level_for_layers

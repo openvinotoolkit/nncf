@@ -13,25 +13,31 @@
 
 from collections import OrderedDict
 from copy import deepcopy
-from typing import Callable, Dict, List, Set, Tuple
+from typing import Callable
+from typing import Dict
+from typing import List
+from typing import Set
+from typing import Tuple
 
 import numpy as np
 import torch
 
-from nncf.common.graph import NNCFGraph
+from nncf.common.graph.layer_attributes import WeightedLayerAttributes
 from nncf.common.quantization.initialization.range import RangeInitConfig
 from nncf.common.quantization.initialization.range import RangeInitParams
-from nncf.common.graph.layer_attributes import WeightedLayerAttributes
+from nncf.common.quantization.quantizer_setup import QuantizationPointBase
+from nncf.common.quantization.quantizer_setup import QuantizerSetupBase
+from nncf.torch.quantization.layers import get_scale_shape
 from nncf.common.quantization.structs import NonWeightQuantizerId
 from nncf.common.quantization.structs import QuantizerGroup
 from nncf.common.quantization.structs import QuantizerId
 from nncf.common.quantization.structs import WeightQuantizerId
 from nncf.common.utils.helpers import should_consider_scope
+from nncf.torch.graph.graph import PTNNCFGraph
 from nncf.torch.initialization import DataLoaderBaseRunner
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.quantization.layers import BaseQuantizer
-from nncf.torch.quantization.quantizer_setup import QuantizationPointBase
-from nncf.torch.quantization.quantizer_setup import QuantizerSetupBase
+from nncf.torch.quantization.translator import PTTargetPointTranslator
 from nncf.torch.tensor_statistics.algo import TensorStatisticObservationPoint
 from nncf.torch.tensor_statistics.collectors import MeanMinMaxStatisticCollector
 from nncf.torch.tensor_statistics.collectors import MeanPercentileStatisticCollector
@@ -41,7 +47,6 @@ from nncf.torch.tensor_statistics.collectors import PercentileStatisticCollector
 from nncf.torch.tensor_statistics.collectors import ReductionShape
 from nncf.torch.tensor_statistics.collectors import TensorStatisticCollectorBase
 from nncf.torch.tensor_statistics.statistics import MinMaxTensorStatistic
-from nncf.torch.utils import get_scale_shape
 
 
 class PTRangeInitParams(RangeInitParams):
@@ -86,7 +91,7 @@ class PTRangeInitParams(RangeInitParams):
 
 class StatCollectorGenerator:
     @staticmethod
-    def generate_collectors_for_range_init_statistics_collection(target_model_graph: NNCFGraph,
+    def generate_collectors_for_range_init_statistics_collection(target_model_graph: PTNNCFGraph,
                                                                  quantizer_setup: QuantizerSetupBase,
                                                                  range_init_params: PTRangeInitParams) -> \
             Dict[TensorStatisticObservationPoint, TensorStatisticCollectorBase]:
@@ -100,8 +105,10 @@ class StatCollectorGenerator:
                 # No need to store extra statistics in memory since weights won't change during range init
                 num_batches = 1
 
+            tp = PTTargetPointTranslator.translate(qp.insertion_point)
+
             obs_p = TensorStatisticObservationPoint(
-                qp.insertion_point,
+                tp,
                 reduction_shapes=set(StatCollectorGenerator.get_all_scale_shapes(qp,
                                                                                  target_model_graph)))
 
@@ -138,7 +145,7 @@ class StatCollectorGenerator:
 
     @staticmethod
     def get_all_scale_shapes(qp: QuantizationPointBase,
-                             target_nncf_graph: NNCFGraph) -> List[Tuple[int]]:
+                             target_nncf_graph: PTNNCFGraph) -> List[Tuple[int]]:
         qconfigs = qp.get_all_configs_list()
         if qp.is_weight_quantization_point():
             module_node = target_nncf_graph.get_node_by_name(qp.insertion_point.target_node_name)

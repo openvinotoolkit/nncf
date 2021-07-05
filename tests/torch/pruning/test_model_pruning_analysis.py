@@ -31,7 +31,7 @@ from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.pruning.export_helpers import PTElementwise
 from nncf.torch.pruning.export_helpers import PTIdentityMaskForwardOps
 from nncf.torch.pruning.export_helpers import PT_PRUNING_OPERATOR_METATYPES
-from nncf.torch.pruning.utils import is_depthwise_conv
+from nncf.common.pruning.utils import is_depthwise_conv
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
 from tests.torch.helpers import create_nncf_model_and_algo_builder
 from tests.torch.pruning.helpers import PruningTestModelEltwise

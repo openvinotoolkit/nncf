@@ -25,12 +25,13 @@ from unittest.mock import MagicMock
 import networkx as nx
 import pytest
 
-from nncf.common.graph import MODEL_INPUT_OP_NAME
-from nncf.common.graph import MODEL_OUTPUT_OP_NAME
-from nncf.common.graph import NNCFGraphNodeType
+from nncf.common.graph import INPUT_NOOP_METATYPES
+from nncf.common.graph import OUTPUT_NOOP_METATYPES
 from nncf.common.graph import NNCFNodeName
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.transformations.commands import TargetType
+from nncf.common.quantization.quantizer_setup import ActivationQuantizationInsertionPoint
+from nncf.common.quantization.quantizer_setup import WeightQuantizationInsertionPoint
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.torch.dynamic_graph.graph import OperationExecutionContext
@@ -39,19 +40,19 @@ from nncf.torch.dynamic_graph.scope import Scope
 from nncf.torch.dynamic_graph.wrappers import OP_NAMES_REQUIRING_MODULE_ATTRS
 from nncf.torch.graph.graph import NNCFGraph
 from nncf.torch.graph.operator_metatypes import get_operator_metatypes
-from nncf.torch.graph.transformations.commands import PTTargetPoint
-from nncf.torch.nncf_network import InsertionPointGraph
-from nncf.torch.quantization.quantizer_propagation import DEFAULT_QUANT_TRAIT_TO_OP_DICT
-from nncf.torch.quantization.quantizer_propagation import PropagatingQuantizer
-from nncf.torch.quantization.quantizer_propagation import PropagationStrategy
-from nncf.torch.quantization.quantizer_propagation import QuantizationTrait
-from nncf.torch.quantization.quantizer_propagation import QuantizerPropagationSolver
-from nncf.torch.quantization.quantizer_propagation import QuantizerPropagationStateGraph as QPSG
-from nncf.torch.quantization.quantizer_propagation import QuantizerPropagationStateGraphNodeType
-from nncf.torch.quantization.quantizer_propagation import TransitionStatus
-from nncf.torch.quantization.quantizer_setup import MultiConfigQuantizationPoint
-from nncf.torch.quantization.quantizer_setup import QuantizationPointId
+from nncf.common.insertion_point_graph import InsertionPointGraph
+from nncf.common.quantization.quantizer_propagation.structs import PropagatingQuantizer
+from nncf.common.quantization.quantizer_propagation.solver import PropagationStrategy
+from nncf.common.quantization.quantizer_propagation.structs import QuantizationTrait
+from nncf.common.quantization.quantizer_propagation.solver import QuantizerPropagationSolver
+from nncf.common.quantization.quantizer_propagation.graph import QuantizerPropagationStateGraph as QPSG
+from nncf.common.quantization.quantizer_propagation.structs import QuantizerPropagationStateGraphNodeType
+from nncf.common.quantization.quantizer_propagation.solver import TransitionStatus
+from nncf.common.quantization.quantizer_setup import MultiConfigQuantizationPoint
+from nncf.common.quantization.quantizer_setup import QuantizationPointId
+from nncf.torch.quantization.default_quantization import DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT
 from tests.torch.quantization.test_quantizer_propagation_graph import get_edge_paths_for_propagation
+from tests.torch.test_nncf_network import get_ip_graph_for_test
 from tests.torch.test_nncf_network import get_mock_nncf_node_attrs
 from tests.torch.test_nncf_network import get_nncf_graph_from_mock_nx_graph
 from tests.torch.test_nncf_network import mark_input_ports_lexicographically_based_on_input_node_key
@@ -63,7 +64,7 @@ def get_mock_model_node_attrs_for_op_name(op_name: str, call_order=0) -> Operati
                             call_order)
 
 
-def get_randomly_connected_model_graph(op_name_keys: List[str]) -> nx.DiGraph:
+def get_randomly_connected_model_graph(op_name_keys: Set[str]) -> nx.DiGraph:
     graph_len = len(op_name_keys)
     mock_graph = nx.generators.gnc_graph(graph_len, None, 0)
 
@@ -215,10 +216,13 @@ class RunOnIpGraphTestStruct:
         self.ignored_scopes = ignored_scopes
         self.retval_qps = {}  # type: Dict[QuantizationPointId, MultiConfigQuantizationPoint]
         for id_, qp_data in retval_qp_data.items():
-            self.retval_qps[id_] = MultiConfigQuantizationPoint(
-                PTTargetPoint(qp_data.target_type,
-                              target_node_name=qp_data.node_name,
-                              input_port_id=qp_data.input_port_id),
+            if qp_data.target_type is TargetType.OPERATION_WITH_WEIGHTS:
+                qip = WeightQuantizationInsertionPoint(qp_data.node_name)
+            else:
+                assert qp_data.target_type in [TargetType.OPERATOR_PRE_HOOK, TargetType.OPERATOR_POST_HOOK]
+                qip = ActivationQuantizationInsertionPoint(qp_data.node_name, qp_data.input_port_id)
+
+            self.retval_qps[id_] = MultiConfigQuantizationPoint(qip,
                 possible_qconfigs=qp_data.qconfigs,
                 directly_quantized_operator_node_names=qp_data.directly_quantized_op_node_names)
 
@@ -226,7 +230,7 @@ class RunOnIpGraphTestStruct:
 class TestQuantizerPropagationSolver:
     def test_quantization_traits_are_unambiguous_for_op_names(self):
         op_name_to_trait_dict = {}  # type: Dict[str, QuantizationTrait]
-        for trait, arches in DEFAULT_QUANT_TRAIT_TO_OP_DICT.items():
+        for trait, arches in DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT.items():
             for op_meta in arches:
                 aliases = op_meta.get_all_aliases()
                 for alias in aliases:
@@ -239,22 +243,21 @@ class TestQuantizerPropagationSolver:
         # Test all patchable metatypes. If a patchable metatype is not registered
         # in quantization trait-to-metatype dict, the test will fail.
         tested_op_metatypes = get_operator_metatypes()  # type: List[Type[OperatorMetatype]]
-        tested_op_names = []
+        tested_op_names = set()
         for op_meta in tested_op_metatypes:
-            aliases = op_meta.get_all_aliases()
-            for alias in aliases:
-                if alias in [MODEL_INPUT_OP_NAME, MODEL_OUTPUT_OP_NAME,\
-                     NNCFGraphNodeType.INPUT_NODE, NNCFGraphNodeType.OUTPUT_NODE]:
-                    continue  # makes sure that no input/output nodes end up in the middle of the raph
-                tested_op_names.append(alias)
+            if op_meta not in INPUT_NOOP_METATYPES and op_meta not in OUTPUT_NOOP_METATYPES:
+                aliases = op_meta.get_all_aliases()
+                for alias in aliases:
+                    tested_op_names.add(alias)
 
         # Edges should be irrelevant - using random graph
         mock_graph = get_randomly_connected_model_graph(tested_op_names)
         nncf_graph = get_nncf_graph_from_mock_nx_graph(mock_graph)
-        ip_graph = InsertionPointGraph(nncf_graph)
+        ip_graph = get_ip_graph_for_test(nncf_graph)
 
         quant_prop_graph = QPSG(ip_graph)
-        quant_prop_solver = QuantizerPropagationSolver(run_consistency_checks=True)
+        quant_prop_solver = QuantizerPropagationSolver(default_trait_to_metatype_map=DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT,
+                                                       run_consistency_checks=True)
         quant_prop_graph = quant_prop_solver.set_allowed_quantization_types_for_operator_nodes(quant_prop_graph)
         op_quant_traits_map = quant_prop_solver.get_operator_quantization_traits_map()
 
@@ -262,7 +265,8 @@ class TestQuantizerPropagationSolver:
             if qpg_node[QPSG.NODE_TYPE_NODE_ATTR] == QuantizerPropagationStateGraphNodeType.OPERATOR:
                 quant_det_id = qpg_node[QPSG.OPERATOR_METATYPE_NODE_ATTR]
                 quant_types = qpg_node[QPSG.ALLOWED_INPUT_QUANTIZATION_TYPES_NODE_ATTR]
-                if op_quant_traits_map[quant_det_id] == QuantizationTrait.INPUTS_QUANTIZABLE:
+                if op_quant_traits_map.get(quant_det_id, QuantizationTrait.QUANTIZATION_AGNOSTIC) == \
+                        QuantizationTrait.INPUTS_QUANTIZABLE:
                     # TODO: check for correspondence of operator type and HW config to initial
                     # quantization types
                     assert quant_types == QuantizerPropagationSolver.DEFAULT_QUANTIZATION_TYPES
@@ -273,11 +277,12 @@ class TestQuantizerPropagationSolver:
         node_keys = ['nncf_model_input'] + ops_to_quantize + ops_not_to_quantize
         mock_graph = get_sequentially_connected_model_graph(node_keys)
         nncf_graph = get_nncf_graph_from_mock_nx_graph(mock_graph)
-        ip_graph = InsertionPointGraph(nncf_graph)
+        ip_graph = get_ip_graph_for_test(nncf_graph)
 
 
         qp_graph = QPSG(ip_graph)
-        quant_prop_solver = QuantizerPropagationSolver(run_consistency_checks=True)
+        quant_prop_solver = QuantizerPropagationSolver(default_trait_to_metatype_map=DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT,
+                                                       run_consistency_checks=True)
         qp_graph = quant_prop_solver.set_allowed_quantization_types_for_operator_nodes(qp_graph)
         qp_graph = quant_prop_solver.setup_initial_quantizers(qp_graph)
         qp_graph.run_consistency_check()
@@ -846,8 +851,10 @@ class TestQuantizerPropagationSolver:
 
     def test_get_merged_qconfigs(self, qconfig_merge_test_struct: MergeQConfigTestStruct):
         for strategy in PropagationStrategy:
-            quant_prop_solver = QuantizerPropagationSolver(propagation_strategy=strategy,
-                                                           run_consistency_checks=True)
+            quant_prop_solver = QuantizerPropagationSolver(
+                default_trait_to_metatype_map=DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT,
+                propagation_strategy=strategy,
+                run_consistency_checks=True)
             solution_for_strategy = qconfig_merge_test_struct.strategy_vs_solution_dict[strategy]
             ref_merge_qconfig_list = solution_for_strategy.merge_qconfig_list
             ref_branch_qconfig_lists_after_merge = solution_for_strategy.branch_qconfig_lists_after_merge
@@ -864,7 +871,8 @@ class TestQuantizerPropagationSolver:
                                                                              qconfig_merge_test_struct:
                                                                              MergeQConfigTestStruct):
         quant_prop_solver = QuantizerPropagationSolver(
-            propagation_strategy=PropagationStrategy.MERGE_WITH_POTENTIAL_REQUANTIZATION)
+            propagation_strategy=PropagationStrategy.MERGE_WITH_POTENTIAL_REQUANTIZATION,
+            default_trait_to_metatype_map=DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT)
         branch_qconfig_lists_before_merge = qconfig_merge_test_struct.branch_qconfig_lists_before_merge
         ref_merge_qconfig_list, _ = quant_prop_solver.get_merged_qconfigs_for_downward_branching_case(
             branch_qconfig_lists_before_merge)
@@ -1105,7 +1113,7 @@ class TestQuantizerPropagationSolver:
 
         # Graph preparation
         nncf_graph = get_branching_model_graph()
-        ip_graph = InsertionPointGraph(nncf_graph)
+        ip_graph = get_ip_graph_for_test(nncf_graph)
         quant_prop_graph = QPSG(ip_graph)
         for node in quant_prop_graph.nodes.values():
             node[QPSG.QUANTIZATION_TRAIT_NODE_ATTR] = QuantizationTrait.QUANTIZATION_AGNOSTIC
@@ -1123,8 +1131,8 @@ class TestQuantizerPropagationSolver:
                     primary_prop_quant = prop_quant
             elif trait == QuantizationTrait.CONCAT and qconfigs:
                 # Assuming two-port concat nodes are used in the test graph, adjust as necessary
-                for in_port_id in [0, 1]:
-                    ip_node_key = InsertionPointGraph.get_pre_hook_node_key(node_key, in_port_id=in_port_id)
+                for input_port_id in [0, 1]:
+                    ip_node_key = InsertionPointGraph.get_pre_hook_node_key(node_key, input_port_id=input_port_id)
                     quant_prop_graph.add_propagating_quantizer(qconfigs,
                                                                ip_node_key)
 
@@ -1136,7 +1144,8 @@ class TestQuantizerPropagationSolver:
         quant_prop_graph.run_consistency_check()
 
         # The propagating quantizers are in place, now check the transition
-        solver = QuantizerPropagationSolver(run_consistency_checks=True)
+        solver = QuantizerPropagationSolver(run_consistency_checks=True,
+                                            default_trait_to_metatype_map=DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT)
         status = solver.check_branching_transition(quant_prop_graph,
                                                    primary_prop_quant,
                                                    target_node)
@@ -1387,7 +1396,7 @@ class TestQuantizerPropagationSolver:
 
         # Graph preparation
         mock_graph = get_branching_model_graph()
-        ip_graph = InsertionPointGraph(mock_graph)
+        ip_graph = get_ip_graph_for_test(mock_graph)
         _, quant_prop_graph = self.prepare_propagation_graph_state(ip_graph,
                                                                    init_node_to_trait_configs_and_target_node_dict)
 
@@ -1398,7 +1407,8 @@ class TestQuantizerPropagationSolver:
                                               target_node,
                                               starting_primary_quantizer_ip_node)[0]
 
-        solver = QuantizerPropagationSolver(run_consistency_checks=True)
+        solver = QuantizerPropagationSolver(run_consistency_checks=True,
+                                            default_trait_to_metatype_map=DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT)
         status = solver.check_transition_via_path(primary_prop_quant,
                                                   path,
                                                   quant_prop_graph)
@@ -1465,7 +1475,7 @@ class TestQuantizerPropagationSolver:
             },
             expected_finished_status=False,
             current_location_node_key_for_propagated_quant=InsertionPointGraph.get_post_hook_node_key('9 /I_0'),
-            added_quantizer_location_node_keys=[InsertionPointGraph.get_pre_hook_node_key('9 /I_0', in_port_id=1)]
+            added_quantizer_location_node_keys=[InsertionPointGraph.get_pre_hook_node_key('9 /I_0', input_port_id=1)]
         )
     ]
 
@@ -1481,8 +1491,9 @@ class TestQuantizerPropagationSolver:
         current_location_node_key_for_propagated_quant = propagation_step_test_struct.current_location_node_key_for_propagated_quant
         # Graph preparation
         mock_graph = get_branching_model_graph()
-        ip_graph = InsertionPointGraph(mock_graph)
-        quant_prop_solver = QuantizerPropagationSolver(run_consistency_checks=True)
+        ip_graph = get_ip_graph_for_test(mock_graph)
+        quant_prop_solver = QuantizerPropagationSolver(run_consistency_checks=True,
+                                                       default_trait_to_metatype_map=DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT)
         # pylint:disable=line-too-long
         prop_quantizers, quant_prop_graph = self.prepare_propagation_graph_state(ip_graph,
                                                                                  init_node_to_trait_configs_and_target_node_dict)
@@ -1519,8 +1530,8 @@ class TestQuantizerPropagationSolver:
     def test_handling_upward_branching_path_with_no_transition_creates_no_extra_quantizers(self, mocker):
         # Graph preparation
         mock_graph = get_branching_model_graph()
-        ip_graph = InsertionPointGraph(mock_graph)
-        quant_prop_solver = QuantizerPropagationSolver()
+        ip_graph = get_ip_graph_for_test(mock_graph)
+        quant_prop_solver = QuantizerPropagationSolver(default_trait_to_metatype_map=DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT)
         prep_data_dict = {
 
             '9 /I_0': (QuantizationTrait.NON_QUANTIZABLE,
@@ -1551,7 +1562,7 @@ class TestQuantizerPropagationSolver:
             affecting_quantizers = edge_attrs[QPSG.AFFECTING_PROPAGATING_QUANTIZERS_ATTR]
             assert (not affecting_quantizers) or (len(affecting_quantizers) == 1 and pq in affecting_quantizers)
         for node_attrs in quant_prop_graph.nodes.values():
-            if node_attrs[QPSG.NODE_TYPE_NODE_ATTR] == QuantizerPropagationStateGraphNodeType.INSERTION_POINT:
+            if QPSG.is_insertion_point(node_attrs[QPSG.NODE_TYPE_NODE_ATTR]):
                 affecting_pq = node_attrs[QPSG.PROPAGATING_QUANTIZER_NODE_ATTR]
                 assert (affecting_pq is pq) or (affecting_pq is None)
 
@@ -1650,9 +1661,10 @@ class TestQuantizerPropagationSolver:
 
         # Graph preparation
         nncf_graph = run_on_ip_graph_test_struct.base_graph
-        ip_graph = InsertionPointGraph(nncf_graph)
+        ip_graph = get_ip_graph_for_test(nncf_graph)
 
         quant_prop_solver = QuantizerPropagationSolver(ignored_scopes=run_on_ip_graph_test_struct.ignored_scopes,
+                                                       default_trait_to_metatype_map=DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT,
                                                        run_consistency_checks=True)
         retval = quant_prop_solver.run_on_ip_graph(ip_graph)
 

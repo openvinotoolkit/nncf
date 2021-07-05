@@ -13,8 +13,8 @@
 from typing import Dict
 
 from nncf.common.graph import NNCFNodeName
-from nncf.torch.quantization.quantizer_setup import QuantizationPointId
-from nncf.torch.quantization.quantizer_setup import SingleConfigQuantizerSetup
+from nncf.common.quantization.quantizer_setup import QuantizationPointId
+from nncf.common.quantization.quantizer_setup import SingleConfigQuantizerSetup
 
 
 class CompressionRatioCalculator:

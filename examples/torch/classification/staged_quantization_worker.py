@@ -11,10 +11,10 @@
  limitations under the License.
 """
 
+import copy
 import os.path as osp
 import time
 
-import copy
 import torch
 import torch.backends.cudnn as cudnn
 import torch.nn as nn
@@ -22,26 +22,38 @@ import torch.nn.parallel
 import torch.optim
 import torch.utils.data
 import torch.utils.data.distributed
-
-from examples.torch.common.model_loader import MODEL_STATE_ATTR
-from examples.torch.common.model_loader import extract_model_and_compression_states
-from examples.torch.common.model_loader import load_resuming_checkpoint
-from nncf.torch.checkpoint_loading import load_state
 from torchvision.models import InceptionOutputs
 
-from examples.torch.common.execution import set_seed
-from nncf.common.utils.tensorboard import prepare_for_tensorboard
-from examples.torch.classification.main import create_data_loaders, validate, AverageMeter, accuracy, get_lr, \
-    create_datasets, inception_criterion_fn
+from examples.torch.classification.main import AverageMeter
+from examples.torch.classification.main import accuracy
+from examples.torch.classification.main import create_data_loaders
+from examples.torch.classification.main import create_datasets
+from examples.torch.classification.main import get_lr
+from examples.torch.classification.main import inception_criterion_fn
+from examples.torch.classification.main import validate
 from examples.torch.common.example_logger import logger
-from examples.torch.common.execution import ExecutionMode, prepare_model_for_execution
+from examples.torch.common.execution import ExecutionMode
+from examples.torch.common.execution import prepare_model_for_execution
+from examples.torch.common.execution import set_seed
 from examples.torch.common.model_loader import COMPRESSION_STATE_ATTR
+from examples.torch.common.model_loader import MODEL_STATE_ATTR
+from examples.torch.common.model_loader import extract_model_and_compression_states
 from examples.torch.common.model_loader import load_model
-from examples.torch.common.utils import configure_logging, print_args, make_additional_checkpoints, get_name, \
-    is_pretrained_model_requested, log_common_mlflow_params, SafeMLFLow, configure_device
-from nncf.torch.binarization.algo import BinarizationController
+from examples.torch.common.model_loader import load_resuming_checkpoint
+from examples.torch.common.utils import SafeMLFLow
+from examples.torch.common.utils import configure_device
+from examples.torch.common.utils import configure_logging
+from examples.torch.common.utils import get_name
+from examples.torch.common.utils import is_pretrained_model_requested
+from examples.torch.common.utils import log_common_mlflow_params
+from examples.torch.common.utils import make_additional_checkpoints
+from examples.torch.common.utils import print_args
 from nncf.api.compression import CompressionStage
-from nncf.torch.initialization import register_default_init_args, default_criterion_fn
+from nncf.common.utils.tensorboard import prepare_for_tensorboard
+from nncf.torch.binarization.algo import BinarizationController
+from nncf.torch.checkpoint_loading import load_state
+from nncf.torch.initialization import default_criterion_fn
+from nncf.torch.initialization import register_default_init_args
 from nncf.torch.model_creation import create_compressed_model
 from nncf.torch.quantization.algo import QuantizationController
 from nncf.torch.utils import is_main_process
@@ -142,12 +154,12 @@ def staged_quantization_main_worker(current_gpu, config):
         train_loader, train_sampler, val_loader, init_loader = create_data_loaders(config, train_dataset, val_dataset)
 
         def autoq_eval_fn(model, eval_loader):
-            _, top5 = validate(eval_loader, model, criterion, config)
+            _, top5, _ = validate(eval_loader, model, criterion, config)
             return top5
 
         nncf_config = register_default_init_args(
-            nncf_config, init_loader, criterion, train_criterion_fn,
-            autoq_eval_fn, val_loader, config.device)
+            nncf_config, init_loader, criterion=criterion, criterion_fn=train_criterion_fn,
+            autoq_eval_fn=autoq_eval_fn, val_loader=val_loader, device=config.device)
 
     # create model
     model_name = config['model']
@@ -245,7 +257,7 @@ def train_staged(config, compression_ctrl, model, criterion, criterion_fn, optim
         if epoch % config.test_every_n_epochs == 0:
             # evaluate on validation set
             # pylint: disable=E1123
-            acc1, _ = validate(val_loader, model, criterion, config, epoch=epoch)
+            acc1, _, _ = validate(val_loader, model, criterion, config, epoch=epoch)
 
         compression_stage = compression_ctrl.compression_stage()
         # remember best acc@1, considering compression stage. If current acc@1 less then the best acc@1, checkpoint

@@ -11,7 +11,6 @@
  limitations under the License.
 """
 import os
-from collections import OrderedDict
 from collections import defaultdict
 from copy import deepcopy
 from typing import Any, Callable, Dict, KeysView, List, Tuple, Type, ValuesView
@@ -23,13 +22,10 @@ from networkx.drawing.nx_agraph import to_agraph
 from nncf.common.graph.graph_matching import get_edge_boundaries
 from nncf.common.graph.layer_attributes import BaseLayerAttributes
 from nncf.common.graph.layer_attributes import Dtype
+from nncf.common.graph.operator_metatypes import INPUT_NOOP_METATYPES
+from nncf.common.graph.operator_metatypes import OUTPUT_NOOP_METATYPES
 from nncf.common.graph.operator_metatypes import OperatorMetatype
-from nncf.common.graph.operator_metatypes import get_input_metatypes
-from nncf.common.graph.operator_metatypes import get_output_metatypes
 from nncf.common.utils.logger import logger as nncf_logger
-
-MODEL_INPUT_OP_NAME = 'nncf_model_input'
-MODEL_OUTPUT_OP_NAME = 'nncf_model_output'
 
 NNCFNodeName = str
 LayerName = str
@@ -42,9 +38,11 @@ class NNCFNode:
 
     def __init__(self,
                  node_id: int,
+                 node_name: NNCFNodeName,
                  data: dict = None):
         self.node_id = node_id
         self.data = data if data else {}
+        self.data[NNCFGraph.NODE_NAME_ATTR] = node_name
 
     @property
     def node_name(self) -> NNCFNodeName:
@@ -96,25 +94,28 @@ class NNCFNode:
                and self.layer_attributes == other.layer_attributes
 
 
-class NNCFGraphNodeType:
-    INPUT_NODE = MODEL_INPUT_OP_NAME
-    OUTPUT_NODE = MODEL_OUTPUT_OP_NAME
-
-
 class NNCFGraphEdge:
     """
     A structure describing an edge in NNCFGraph. Since nodes of the NNCFGraph are operations
     on (activation) tensors, an edge in NNCFGraph is a representation of an activation tensor produced or
     consumed by an operation.
     """
-    def __init__(self, from_node: NNCFNode, to_node: NNCFNode, tensor_shape: List[int]):
+
+    def __init__(self, from_node: NNCFNode, to_node: NNCFNode,
+                 input_port_id: int,
+                 output_port_id: int,
+                 tensor_shape: List[int]):
         """
         :param from_node: An NNCFNode that sources the directed edge.
         :param to_node: An NNCFNode that sinks the directed edge.
+        :param input_port_id: The ID of the tensor input to the `to_node` that this edge corresponds to.
+        :param output_port_id: The ID of the tensor output of the `from_node` that this edge corresponds to..
         :param tensor_shape: The shape of the activation tensor the edge represents.
         """
         self.from_node = from_node
         self.to_node = to_node
+        self.input_port_id = input_port_id
+        self.output_port_id = output_port_id
         self.tensor_shape = tensor_shape
 
     def __str__(self):
@@ -154,7 +155,8 @@ class NNCFGraph:
     LAYER_NAME_ATTR = 'layer_name'
     LAYER_ATTRIBUTES = 'layer_attributes'
     ACTIVATION_SHAPE_EDGE_ATTR = 'activation_shape'
-    IN_PORT_NAME_EDGE_ATTR = 'in_port'
+    INPUT_PORT_ID_EDGE_ATTR = 'input_port_id'
+    OUTPUT_PORT_ID_EDGE_ATTR = 'output_port_id'
     IGNORED_ALGOS_ATTR = 'ignored_algos'
     IS_IN_ITERATION_SCOPE_NODE_ATTR = 'is_in_iteration_scope'
     IS_INTEGER_INPUT_NODE_ATTR = 'is_integer_input'
@@ -202,9 +204,7 @@ class NNCFGraph:
         :return: List of nodes with provided types.
         """
         all_nodes_of_type = []
-        for node_key in self.get_all_node_keys():
-            nx_node = self._nx_graph.nodes[node_key]
-            nncf_node = self._nx_node_to_nncf_node(nx_node)
+        for nncf_node in self.get_all_nodes():
             if nncf_node.node_type in type_list:
                 all_nodes_of_type.append(nncf_node)
         return all_nodes_of_type
@@ -217,9 +217,7 @@ class NNCFGraph:
         :return: List of nodes with provided metatypes.
         """
         all_nodes_of_type = []
-        for node_key in self.get_all_node_keys():
-            nx_node = self._nx_graph.nodes[node_key]
-            nncf_node = self._nx_node_to_nncf_node(nx_node)
+        for nncf_node in self.get_all_nodes():
             if nncf_node.metatype in metatype_list:
                 all_nodes_of_type.append(nncf_node)
         return all_nodes_of_type
@@ -250,7 +248,9 @@ class NNCFGraph:
 
     @staticmethod
     def _nx_node_to_nncf_node(nx_node: dict) -> NNCFNode:
-        return NNCFNode(nx_node[NNCFGraph.ID_NODE_ATTR], nx_node)
+        return NNCFNode(node_id=nx_node[NNCFGraph.ID_NODE_ATTR],
+                        node_name=nx_node[NNCFGraph.NODE_NAME_ATTR],
+                        data=nx_node)
 
     def get_node_key_by_id(self, node_id: id) -> str:
         """
@@ -282,28 +282,28 @@ class NNCFGraph:
         nx_node_keys = self._nx_graph.pred[self._node_id_to_key_dict[node.node_id]]
         return [self._nx_node_to_nncf_node(self._nx_graph.nodes[key]) for key in nx_node_keys]
 
-    def get_input_edges(self, node: NNCFNode) -> Dict[Tuple[str, str], dict]:
+    def get_input_edges(self, node: NNCFNode) -> List[NNCFGraphEdge]:
         """
-        Returns edges of input tensors with description sorted by 'in_port'.
+        Returns edges of input tensors with description sorted by input port ID.
 
         :param node: Consumer node.
-        :return: Dictionary of input edges for node sorted by in_port.
+        :return: List of input edges for the node sorted by input port ID.
         """
-        nx_node_key = self._node_id_to_key_dict[node.node_id]
-        input_edges = sorted(list(self._nx_graph.in_edges(nx_node_key)),
-                             key=lambda edge: self._nx_graph.edges[edge][NNCFGraph.IN_PORT_NAME_EDGE_ATTR])
+        input_nodes = self.get_previous_nodes(node)
+        edges = [self.get_edge(from_node, node) for from_node in input_nodes]
+        return sorted(edges, key=lambda x: x.input_port_id)
 
-        return OrderedDict((edge, self._nx_graph.edges[edge]) for edge in input_edges)
-
-    def get_output_edges(self, node: NNCFNode) -> Dict[Tuple[str, str], dict]:
+    def get_output_edges(self, node: NNCFNode) -> List[NNCFGraphEdge]:
         """
-        Returns edges of output tensors with description. Unordered.
+        Returns edges of output tensors sorted by output port ID.
 
         :param node: Producer node.
-        :return: Dictionary of output edges for the node.
+        :return:  List of output edges for the node sorted by output port ID.
         """
-        nx_node_key = self._node_id_to_key_dict[node.node_id]
-        return {edge: self._nx_graph.edges[edge] for edge in self._nx_graph.out_edges(nx_node_key)}
+
+        output_nodes = self.get_next_nodes(node)
+        edges = [self.get_edge(node, to_node) for to_node in output_nodes]
+        return sorted(edges, key=lambda x: x.output_port_id)
 
     def traverse_graph(self,
                        curr_node: NNCFNode,
@@ -383,8 +383,8 @@ class NNCFGraph:
         self._node_id_to_key_dict[node_id] = node_key
         attrs = {
             NNCFGraph.ID_NODE_ATTR: node_id,
-            NNCFGraph.KEY_NODE_ATTR: node_key,
             NNCFGraph.NODE_NAME_ATTR: node_name,
+            NNCFGraph.KEY_NODE_ATTR: node_key,
             NNCFGraph.NODE_TYPE_ATTR: node_type,
             NNCFGraph.LAYER_NAME_ATTR: layer_name,
             NNCFGraph.METATYPE_ATTR: node_metatype,
@@ -400,12 +400,12 @@ class NNCFGraph:
         attrs[NNCFGraph.IGNORED_ALGOS_ATTR] = ignored_algorithms
         self._nx_graph.add_node(node_key, **attrs)
 
-        node = NNCFNode(node_id, data=attrs)
+        node = NNCFNode(node_id, node_name, data=attrs)
 
-        if node.metatype in get_input_metatypes():
+        if node.metatype in INPUT_NOOP_METATYPES:
             self._input_nncf_nodes[node_id] = node
 
-        if node.metatype in get_output_metatypes():
+        if node.metatype in OUTPUT_NOOP_METATYPES:
             self._output_nncf_nodes[node_id] = node
 
         if layer_name is not None:
@@ -417,6 +417,7 @@ class NNCFGraph:
     def add_edge_between_nncf_nodes(self, from_node_id: int, to_node_id: int,
                                     tensor_shape: List[int],
                                     input_port_id: int,
+                                    output_port_id: int,
                                     dtype: Dtype):
         """
         Adds a directed edge between two `NNCFNode`s that are already present in the graph.
@@ -426,6 +427,8 @@ class NNCFGraph:
         :param tensor_shape: The shape of the tensor represented by the edge.
         :param input_port_id: Specifies the index among the possible inputs of the `to_node_id` node' that this tensor
             should correspond to.
+        :param output_port_id: Specifies the index among the possible outputs of the `from_node_id` node' that this
+            tensor should correspond to.
         :param dtype: The data type of the tensor.
         """
         from_node_key = self._node_id_to_key_dict[from_node_id]
@@ -447,7 +450,8 @@ class NNCFGraph:
 
         attrs = {
             NNCFGraph.ACTIVATION_SHAPE_EDGE_ATTR: tensor_shape,
-            NNCFGraph.IN_PORT_NAME_EDGE_ATTR: input_port_id,
+            NNCFGraph.INPUT_PORT_ID_EDGE_ATTR: input_port_id,
+            NNCFGraph.OUTPUT_PORT_ID_EDGE_ATTR: output_port_id,
             NNCFGraph.DTYPE_EDGE_ATTR: dtype
         }
         self._nx_graph.add_edge(from_node_key, to_node_key, **attrs)
@@ -514,10 +518,11 @@ class NNCFGraph:
         ignored/target scopes.
         """
         out_graph = nx.DiGraph()
-        for node_name, node in self._nx_graph.nodes.items():
+        for node in self.get_all_nodes():
             attrs_node = {}
-            attrs_node['label'] = str(node[NNCFGraph.ID_NODE_ATTR]) + ' ' + str(node[NNCFGraph.NODE_NAME_ATTR])
-            out_graph.add_node(node_name, **attrs_node)
+            attrs_node['label'] = f"{node.node_id} {node.node_name}"
+            node_key = self.get_node_key_by_id(node.node_id)
+            out_graph.add_node(node_key, **attrs_node)
 
         for u, v in self._nx_graph.edges:
             out_graph.add_edge(u, v, label=self._nx_graph.edges[u, v][NNCFGraph.ACTIVATION_SHAPE_EDGE_ATTR])
@@ -530,25 +535,22 @@ class NNCFGraph:
         return out_graph
 
     def get_node_by_name(self, name: NNCFNodeName) -> NNCFNode:
-        matches = []
-        for nx_node in self._nx_graph.nodes.values():
-            if nx_node[NNCFGraph.NODE_NAME_ATTR] == name:
-                matches.append(nx_node)
+        matches = [node for node in self.get_all_nodes() if node.node_name == name]
         if not matches:
             raise RuntimeError('Could not find a node {} in NNCFGraph!'.format(name))
         if len(matches) > 1:
             raise RuntimeError('More than one node in NNCFGraph matches name {}:\n{}'.
                                format(name,
                                       '\t\n'.join(
-                                          [n[NNCFGraph.KEY_NODE_ATTR] for n in matches])))
-        return self._nx_node_to_nncf_node(next(iter(matches)))
+                                          [str(n.node_id) for n in matches])))
+        return next(iter(matches))
 
     def __eq__(self, other: 'NNCFGraph'):
         nm = iso.categorical_node_match([NNCFGraph.ID_NODE_ATTR,
                                          NNCFGraph.KEY_NODE_ATTR,
                                          NNCFGraph.LAYER_ATTRIBUTES], [None, None, None])
         em = iso.categorical_edge_match([NNCFGraph.ACTIVATION_SHAPE_EDGE_ATTR,
-                                         NNCFGraph.IN_PORT_NAME_EDGE_ATTR], [None, None])
+                                         NNCFGraph.INPUT_PORT_ID_EDGE_ATTR], [None, None])
         return nx.is_isomorphic(self._nx_graph, other._nx_graph, node_match=nm, edge_match=em)
 
     def get_nx_graph_copy(self) -> nx.DiGraph:
@@ -575,7 +577,9 @@ class NNCFGraph:
             data = nx_edge[2]
             nncf_edge = NNCFGraphEdge(self._nx_node_to_nncf_node(self._nx_graph.nodes[from_node_key]),
                                       self._nx_node_to_nncf_node(self._nx_graph.nodes[to_node_key]),
-                                      data[NNCFGraph.ACTIVATION_SHAPE_EDGE_ATTR])
+                                      input_port_id=data[NNCFGraph.INPUT_PORT_ID_EDGE_ATTR],
+                                      output_port_id=data[NNCFGraph.OUTPUT_PORT_ID_EDGE_ATTR],
+                                      tensor_shape=data[NNCFGraph.ACTIVATION_SHAPE_EDGE_ATTR])
             if from_node_key in match:
                 output_nncf_edges.append(nncf_edge)
             elif to_node_key in match:
@@ -592,3 +596,18 @@ class NNCFGraph:
 
     def get_nodes_count(self):
         return self._nx_graph.number_of_nodes()
+
+    def get_edge(self, from_node: NNCFNode, to_node: NNCFNode) -> NNCFGraphEdge:
+        """
+        Returns an NNCFGraphEdge object that corresponds to an edge connecting two given NNCFNodes in this
+        graph.
+        :param from_node: The NNCFNode in this graph that sources the edge.
+        :param to_node: The NNCFNode in this graph that sinks the edge.
+        :return: The NNCFGraphEdge object representing the edge between `from_node` and `to_node`.
+        """
+        data = self.get_nx_edge(from_node, to_node)
+        return NNCFGraphEdge(from_node,
+                             to_node,
+                             data[NNCFGraph.INPUT_PORT_ID_EDGE_ATTR],
+                             data[NNCFGraph.OUTPUT_PORT_ID_EDGE_ATTR],
+                             data[NNCFGraph.ACTIVATION_SHAPE_EDGE_ATTR])

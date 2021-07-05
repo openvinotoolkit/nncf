@@ -61,6 +61,14 @@ class StatisticsCallback(tf.keras.callbacks.Callback):
         if self._log_text:
             nncf_logger.info(nncf_stats.to_str())
 
+    def on_train_begin(self, logs: dict = None):
+        nncf_stats = self._statistics_fn()
+        if self._log_tensorboard:
+            self._dump_to_tensorboard(self._prepare_for_tensorboard(nncf_stats),
+                                      self.model.optimizer.iterations.numpy())
+        if self._log_text:
+            nncf_logger.info(nncf_stats.to_str())
+
     def on_train_end(self, logs: dict = None):
         if self._file_writer:
             self._file_writer.close()

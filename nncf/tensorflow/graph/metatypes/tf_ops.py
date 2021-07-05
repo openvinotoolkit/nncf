@@ -29,7 +29,7 @@ class TFOpMetatype(OperatorMetatype):
 
 
 @TF_OPERATION_METATYPES.register()
-class NoopMetatype(OperatorMetatype):
+class TFNoopMetatype(OperatorMetatype):
     name = 'noop'
 
     @classmethod
@@ -153,3 +153,11 @@ class TFReshapeOpMetatype(TFOpMetatype):
     name = 'ReshapeOp'
     op_names = ['Reshape']
     hw_config_names = [HWConfigOpName.RESHAPE]
+
+
+WEIGHTABLE_TF_OP_METATYPES = [
+    TFConv2DOpMetatype,
+    TFConv3DOpMetatype,
+    TFDepthwiseConv2dNativeOpMetatype,
+    TFQuantizedConv2DOpMetatype,
+]

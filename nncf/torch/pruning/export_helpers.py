@@ -41,7 +41,7 @@ from nncf.torch.graph.operator_metatypes import (
     GELUMetatype,
     GroupNormMetatype,
     HardTanhMetatype,
-    InputNoopMetatype,
+    PTInputNoopMetatype,
     LinearMetatype,
     MatMulMetatype,
     MaxMetatype,
@@ -49,7 +49,7 @@ from nncf.torch.graph.operator_metatypes import (
     MeanMetatype,
     MinMetatype,
     MulMetatype,
-    OutputNoopMetatype,
+    PTOutputNoopMetatype,
     PRELUMetatype,
     RELUMetatype,
     SigmoidMetatype,
@@ -60,7 +60,7 @@ from nncf.torch.graph.operator_metatypes import (
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.layers import NNCF_WRAPPED_USER_MODULES_DICT
-from nncf.torch.pruning.utils import is_depthwise_conv
+from nncf.common.pruning.utils import is_depthwise_conv
 
 PT_PRUNING_OPERATOR_METATYPES = PruningOperationsMetatypeRegistry("operator_metatypes")
 
@@ -102,7 +102,7 @@ class PTDefaultMetaOp(DefaultMetaOp):
 
 @PT_PRUNING_OPERATOR_METATYPES.register('model_input')
 class PTInput(PTDefaultMetaOp):
-    subtypes = [InputNoopMetatype]
+    subtypes = [PTInputNoopMetatype]
 
     @classmethod
     def accept_pruned_input(cls, node: NNCFNode):
@@ -116,7 +116,7 @@ class PTInput(PTDefaultMetaOp):
 
 @PT_PRUNING_OPERATOR_METATYPES.register('model_output')
 class PTOutput(PTDefaultMetaOp):
-    subtypes = [OutputNoopMetatype]
+    subtypes = [PTOutputNoopMetatype]
 
     @classmethod
     def accept_pruned_input(cls, node: NNCFNode):
@@ -400,8 +400,7 @@ class PTConcat(PTDefaultMetaOp):
         :return: Filled input masks.
         """
         input_edges = graph.get_input_edges(node)
-        input_edges_desc = list(input_edges.values())
-        previous_nodes = [graph.get_node_by_key(edge[0]) for edge in input_edges]
+        previous_nodes = [edge.from_node for edge in input_edges]
         input_masks = [input_node.data['output_mask'] for input_node in previous_nodes]
 
         if all(mask is None for mask in input_masks):
@@ -412,7 +411,7 @@ class PTConcat(PTDefaultMetaOp):
         filled_input_masks = []
         for i, mask in enumerate(input_masks):
             if mask is None:
-                mask = torch.ones(input_edges_desc[i][NNCFGraph.ACTIVATION_SHAPE_EDGE_ATTR][1], device=device)
+                mask = torch.ones(input_edges[i].tensor_shape[1], device=device)
             filled_input_masks.append(mask)
         return filled_input_masks
 
