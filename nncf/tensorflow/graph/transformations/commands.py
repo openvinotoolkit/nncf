@@ -83,6 +83,10 @@ class TFLayerPoint(TargetPoint):
         return cls(**kwargs)
 
 
+class TFLayerStateNames:
+    LAYER_NAME = 'layer_name'
+
+
 @TF_STATEFUL_CLASSES.register()
 class TFLayer(TFLayerPoint):
     """
@@ -91,6 +95,8 @@ class TFLayer(TFLayerPoint):
     For example, `TFLayer` is used to specify the layer in the removal command
     to remove from the model.
     """
+
+    _state_names = TFLayerStateNames
 
     def __init__(self, layer_name: str):
         super().__init__(TargetType.LAYER, layer_name)
@@ -103,7 +109,7 @@ class TFLayer(TFLayerPoint):
         :return: state of the object
         """
         return {
-            'layer_name': self.layer_name,
+            self._state_names.LAYER_NAME: self.layer_name,
         }
 
     @classmethod
@@ -116,6 +122,12 @@ class TFLayer(TFLayerPoint):
         return cls(**state)
 
 
+class TFBeforeLayerStateNames:
+    LAYER_NAME = 'layer_name'
+    INSTANCE_IDX = 'instance_idx'
+    INPUT_PORT_ID = 'input_port_id'
+
+
 @TF_STATEFUL_CLASSES.register()
 class TFBeforeLayer(TFLayerPoint):
     """
@@ -124,6 +136,8 @@ class TFBeforeLayer(TFLayerPoint):
     For example, `TFBeforeLayer` is used in the insertion commands to specify
     where the new object should be inserted.
     """
+
+    _state_names = TFBeforeLayerStateNames
 
     def __init__(self, layer_name: str, instance_idx: int = 0, input_port_id: int = 0):
         super().__init__(TargetType.BEFORE_LAYER, layer_name)
@@ -160,9 +174,9 @@ class TFBeforeLayer(TFLayerPoint):
         :return: state of the object
         """
         return {
-            'layer_name': self.layer_name,
-            'instance_idx': self.instance_idx,
-            'input_port_id': self.input_port_id
+            self._state_names.LAYER_NAME: self.layer_name,
+            self._state_names.INSTANCE_IDX: self.instance_idx,
+            self._state_names.INPUT_PORT_ID: self.input_port_id
         }
 
     @classmethod
@@ -175,6 +189,12 @@ class TFBeforeLayer(TFLayerPoint):
         return cls(**state)
 
 
+class TFAfterLayerStateNames:
+    LAYER_NAME = 'layer_name'
+    INSTANCE_IDX = 'instance_idx'
+    OUTPUT_PORT_ID = 'output_port_id'
+
+
 @TF_STATEFUL_CLASSES.register()
 class TFAfterLayer(TFLayerPoint):
     """
@@ -183,6 +203,8 @@ class TFAfterLayer(TFLayerPoint):
     For example, `TFAfterLayer` is used in the insertion commands to specify
     where the new object should be inserted.
     """
+
+    _state_names = TFAfterLayerStateNames
 
     def __init__(self, layer_name: str, instance_idx: int = 0, output_port_id: int = 0):
         super().__init__(TargetType.AFTER_LAYER, layer_name)
@@ -220,9 +242,9 @@ class TFAfterLayer(TFLayerPoint):
         :return: state of the object
         """
         return {
-            'layer_name': self.layer_name,
-            'instance_idx': self.instance_idx,
-            'output_port_id': self.output_port_id,
+            self._state_names.LAYER_NAME: self.layer_name,
+            self._state_names.INSTANCE_IDX: self.instance_idx,
+            self._state_names.OUTPUT_PORT_ID: self.output_port_id,
         }
 
     @classmethod
@@ -235,6 +257,11 @@ class TFAfterLayer(TFLayerPoint):
         return cls(**state)
 
 
+class TFLayerWeightsStateNames:
+    LAYER_NAME = 'layer_name'
+    WEIGHTS_ATTR_NAME = 'weights_attr_name'
+
+
 @TF_STATEFUL_CLASSES.register()
 class TFLayerWeight(TFLayerPoint):
     """
@@ -243,6 +270,8 @@ class TFLayerWeight(TFLayerPoint):
     For example, `TFLayerWeight` is used in the insertion command to specify
     the layer weights for which an operation with weights should be inserted.
     """
+
+    _state_names = TFLayerWeightsStateNames
 
     def __init__(self, layer_name: str, weights_attr_name: str):
         super().__init__(TargetType.OPERATION_WITH_WEIGHTS, layer_name)
@@ -272,8 +301,8 @@ class TFLayerWeight(TFLayerPoint):
         :return: state of the object
         """
         return {
-            'layer_name': self.layer_name,
-            'weights_attr_name': self.weights_attr_name,
+            self._state_names.LAYER_NAME: self.layer_name,
+            self._state_names.WEIGHTS_ATTR_NAME: self.weights_attr_name,
         }
 
     @classmethod
@@ -286,6 +315,12 @@ class TFLayerWeight(TFLayerPoint):
         return cls(**state)
 
 
+class TFOperationWithWeightsStateNames:
+    LAYER_NAME = 'layer_name'
+    WEIGHTS_ATTR_NAME = 'weights_attr_name'
+    OPERATION_NAME = 'operation_name'
+
+
 @TF_STATEFUL_CLASSES.register()
 class TFOperationWithWeights(TFLayerWeight):
     """
@@ -294,6 +329,8 @@ class TFOperationWithWeights(TFLayerWeight):
     For example, `TFOperationWithWeights` is used to specify the operation with
     weights in the removal command to remove from the model.
     """
+
+    _state_names = TFOperationWithWeightsStateNames
 
     def __init__(self, layer_name: str, weights_attr_name: str, operation_name: str):
         super().__init__(layer_name, weights_attr_name)
@@ -324,9 +361,9 @@ class TFOperationWithWeights(TFLayerWeight):
         :return: state of the object
         """
         return {
-            'layer_name': self._layer_name,
-            'weights_attr_name': self._weights_attr_name,
-            'operation_name': self._operation_name
+            self._state_names.LAYER_NAME: self._layer_name,
+            self._state_names.WEIGHTS_ATTR_NAME: self._weights_attr_name,
+            self._state_names.OPERATION_NAME: self._operation_name
         }
 
     @classmethod
@@ -412,8 +449,8 @@ class TFMultipleInsertionCommands(TransformationCommand):
 
     def check_insertion_command(self, command: TransformationCommand) -> bool:
         if isinstance(command, TransformationCommand) and \
-                command.type == TransformationType.INSERT and \
-                self.check_target_points_fn(self.target_point, command.target_point):
+            command.type == TransformationType.INSERT and \
+            self.check_target_points_fn(self.target_point, command.target_point):
             return True
         return False
 
@@ -437,6 +474,7 @@ class TFMultipleInsertionCommands(TransformationCommand):
         def make_check_target_points_fn(fn1, fn2):
             def check_target_points(tp0, tp1):
                 return fn1(tp0, tp1) or fn2(tp0, tp1)
+
             return check_target_points
 
         check_target_points_fn = self.check_target_points_fn \
