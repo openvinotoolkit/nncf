@@ -40,7 +40,7 @@ def test_flops_calulation_for_spec_layers(model, all_weights, ref_full_flops, re
     input_shape = [1, 8, 8, 1]
     model = model(input_shape)
     model.compile()
-    compressed_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
+    _, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
 
     assert compression_ctrl.full_flops == ref_full_flops
     assert compression_ctrl.full_params_num == ref_full_params
