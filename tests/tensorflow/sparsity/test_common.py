@@ -11,15 +11,16 @@
  limitations under the License.
 """
 
-from typing import List, Optional
+from typing import List
+from typing import Optional
 
 import pytest
 from addict import Dict
 
-from nncf.common.sparsity.schedulers import PolynomialSparsityScheduler
+from nncf.common.sparsity.schedulers import AdaptiveSparsityScheduler
 from nncf.common.sparsity.schedulers import ExponentialSparsityScheduler
 from nncf.common.sparsity.schedulers import MultiStepSparsityScheduler
-from nncf.common.sparsity.schedulers import AdaptiveSparsityScheduler
+from nncf.common.sparsity.schedulers import PolynomialSparsityScheduler
 from tests.tensorflow.helpers import create_compressed_model_and_algo_for_test
 from tests.tensorflow.helpers import get_basic_conv_test_model
 from tests.tensorflow.helpers import get_empty_config
@@ -262,7 +263,7 @@ class TestAdaptiveSparsityScheduler:
             scheduler.step()
 
     @pytest.mark.parametrize('ref_sparsity_levels', [([pytest.approx(x) for x in \
-                                                          [0.25, 0.25, 0.3, 0.35, 0.4, 0.4, 0.4, 0.4, 0.4]])])
+                                                       [0.25, 0.25, 0.3, 0.35, 0.4, 0.4, 0.4, 0.4, 0.4]])])
     def test_adaptive_scheduler_per_epoch_step(self, rb_algo_mock, ref_sparsity_levels):
         params = {
             'sparsity_target': 0.4,

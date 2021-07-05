@@ -10,20 +10,20 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-
-from typing import Any, Dict
-
-import tensorflow as tf
-
-from nncf.api.compression import CompressionLoss
+import json
 
 
-class TFZeroCompressionLoss(CompressionLoss):
-    def calculate(self, *args, **kwargs) -> Any:
-        return tf.constant(0.)
+def check_serialization(obj, comparator=None):
+    state = obj.get_state()
 
-    def load_state(self, state: Dict[str, Any]) -> None:
-        pass
+    serialized_state = json.dumps(state, sort_keys=True, indent=4)
+    deserialized_state = json.loads(serialized_state)
 
-    def get_state(self) -> Dict[str, Any]:
-        return {}
+    obj_from_state = obj.from_state(state)
+    obj_from_deserialized_state = obj.from_state(deserialized_state)
+    if comparator:
+        assert comparator(obj, obj_from_state)
+        assert comparator(obj, obj_from_deserialized_state)
+    else:
+        assert obj == obj_from_state
+        assert obj == obj_from_deserialized_state

@@ -20,6 +20,7 @@ from unittest.mock import patch
 import pytest
 import tensorflow as tf
 from addict import Dict
+from nncf.common.compression import BaseCompressionAlgorithmController
 
 from nncf import NNCFConfig
 from nncf.tensorflow.helpers.callback_creation import create_compression_callbacks
@@ -65,7 +66,7 @@ def get_basic_rb_sparse_model(model_name, local=False, config=CONF, freeze=False
         config = NNCFConfig.from_json(config)
     if local:
         config.update({"params": {"sparsity_level_setting_mode": 'local'}})
-    compress_model, algo = create_compressed_model_and_algo_for_test(model, config, should_init=False)
+    compress_model, algo = create_compressed_model_and_algo_for_test(model, config, force_no_init=True)
     if freeze:
         algo.freeze()
     return compress_model, algo, config
@@ -103,7 +104,8 @@ def test_distributed_masks_are_equal(quantization):
         if quantization:
             config.update({'compression': [config['compression'], {'algorithm': 'quantization'}]})
         model = TEST_MODELS['Conv2D']()
-        algo, model = create_compressed_model(model, config, should_init=False)
+        compression_state_to_skip_init = {BaseCompressionAlgorithmController.BUILDER_STATE: dict()}
+        algo, model = create_compressed_model(model, config, compression_state_to_skip_init)
         model.add_loss(algo.loss)
         compression_callbacks = create_compression_callbacks(algo, log_tensorboard=False)
 

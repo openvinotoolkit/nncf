@@ -38,7 +38,6 @@ from nncf.common.schedulers import StubCompressionScheduler
 from nncf.common.accuracy_aware_training.training_loop import ADAPTIVE_COMPRESSION_CONTROLLERS
 from nncf.config.extractors import extract_bn_adaptation_init_params
 from nncf.tensorflow.algorithm_selector import TF_COMPRESSION_ALGORITHMS
-from nncf.tensorflow.api.compression import TFCompressionAlgorithmController
 from nncf.tensorflow.graph.metatypes.common import GENERAL_CONV_LAYER_METATYPES
 from nncf.tensorflow.graph.metatypes.common import LINEAR_LAYER_METATYPES
 from nncf.tensorflow.graph.metatypes.matcher import get_keras_layer_metatype
@@ -73,7 +72,7 @@ class FilterPruningBuilder(BasePruningAlgoBuilder):
     order to enable filter pruning during fine-tuning.
     """
 
-    def build_controller(self, target_model: tf.keras.Model) -> TFCompressionAlgorithmController:
+    def _build_controller(self, target_model: tf.keras.Model):
         return FilterPruningController(target_model,
                                        self._graph,
                                        self._op_names,
