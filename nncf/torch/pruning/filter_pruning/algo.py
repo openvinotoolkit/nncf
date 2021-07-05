@@ -212,9 +212,7 @@ class FilterPruningController(BasePruningAlgoController):
                     PrunedLayerSummary(layer_name,
                                        list(minfo.module.weight.size()),
                                        list(self.mask_shape(minfo)),
-                                       self.pruning_rate_for_weight(minfo),
-                                       self.pruning_rate_for_mask(minfo),
-                                       self.pruning_rate_for_filters(minfo))
+                                       self.pruning_rate_for_mask(minfo))
 
         model_statistics = PrunedModelStatistics(self._pruning_rate, list(pruned_layers_summary.values()))
         self._update_benchmark_statistics()
