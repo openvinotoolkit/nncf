@@ -93,8 +93,12 @@ def get_dataset_builders(config, num_devices):
     val_builder = COCODatasetBuilder(config=config,
                                      is_train=False,
                                      num_devices=num_devices)
-
-    return val_builder
+    config_ = config.deepcopy()
+    config_.batch_size = val_builder.batch_size
+    calibration_builder = COCODatasetBuilder(config=config_,
+                                             is_train=True,
+                                             num_devices=1)
+    return val_builder, calibration_builder
 
 
 def load_checkpoint(checkpoint, ckpt_path):
@@ -202,17 +206,18 @@ def run_evaluation(config, eval_timeout=None):
     if config.metrics_dump is not None:
         write_metrics(0, config.metrics_dump)
 
-    dataset_builder = get_dataset_builders(config, strategy.num_replicas_in_sync)
-    dataset = dataset_builder.build()
-    num_batches = dataset_builder.steps_per_epoch
-    test_dist_dataset = strategy.experimental_distribute_dataset(dataset)
+    validation_builder, calibration_builder = get_dataset_builders(config, strategy.num_replicas_in_sync)
+    calibration_dataset = calibration_builder.build()
+    val_dataset = validation_builder.build()
+    num_batches = validation_builder.steps_per_epoch
+    test_dist_dataset = strategy.experimental_distribute_dataset(val_dataset)
 
     config.nncf_config = register_default_init_args(nncf_config=config.nncf_config,
-                                                    data_loader=test_dist_dataset,
-                                                    batch_size=dataset_builder.global_batch_size)
+                                                    data_loader=calibration_dataset,
+                                                    batch_size=validation_builder.global_batch_size)
 
     # We use `model_batch_size` to create input layer for model
-    config.model_batch_size = dataset_builder.batch_size
+    config.model_batch_size = validation_builder.batch_size
 
     model_builder = get_model_builder(config)
     eval_metric = model_builder.eval_metrics()

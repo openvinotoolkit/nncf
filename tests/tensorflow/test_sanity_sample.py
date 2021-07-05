@@ -32,7 +32,7 @@ from examples.tensorflow.common.prepare_checkpoint import main as prepare_checkp
 
 od_main.get_dataset_builders = partial(get_coco_dataset_builders, train=True, validation=True)
 seg_train.get_dataset_builders = partial(get_coco_dataset_builders, train=True, calibration=True)
-seg_eval.get_dataset_builders = partial(get_coco_dataset_builders, validation=True)
+seg_eval.get_dataset_builders = partial(get_coco_dataset_builders, validation=True, calibration=True)
 
 AVAILABLE_MODELS.update({
     'SequentialModel': SequentialModel,
