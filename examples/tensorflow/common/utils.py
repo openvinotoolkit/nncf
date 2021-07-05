@@ -35,9 +35,7 @@ FROZEN_GRAPH_FORMAT = 'frozen_graph'
 
 
 def get_name(config):
-    dataset = config.get('dataset', 'imagenet')
-    if dataset is None:
-        dataset = 'imagenet'
+    dataset = config.get('dataset', 'imagenet2012')
     retval = config["model"] + "_" + dataset
     compression_config = config.get('compression', [])
     if not isinstance(compression_config, list):
