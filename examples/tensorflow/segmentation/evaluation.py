@@ -16,6 +16,7 @@ import sys
 import tensorflow as tf
 
 from nncf.tensorflow import create_compressed_model
+from nncf.tensorflow import register_default_init_args
 from nncf.tensorflow.helpers.model_manager import TFOriginalModelManager
 from nncf.tensorflow.utils.state import TFCompressionState
 from nncf.tensorflow.utils.state import TFCompressionStateLoader
@@ -205,6 +206,10 @@ def run_evaluation(config, eval_timeout=None):
     dataset = dataset_builder.build()
     num_batches = dataset_builder.steps_per_epoch
     test_dist_dataset = strategy.experimental_distribute_dataset(dataset)
+
+    config.nncf_config = register_default_init_args(nncf_config=config.nncf_config,
+                                                    data_loader=test_dist_dataset,
+                                                    batch_size=dataset_builder.global_batch_size)
 
     # We use `model_batch_size` to create input layer for model
     config.model_batch_size = dataset_builder.batch_size
