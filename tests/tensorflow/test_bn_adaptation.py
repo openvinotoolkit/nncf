@@ -33,7 +33,7 @@ def get_dataset_for_test(batch_size=10):
     return dataset
 
 
-def get_config_for_test(batch_size=10, num_bn_adaptation_samples=100, num_bn_forget_samples=50):
+def get_config_for_test(batch_size=10, num_bn_adaptation_samples=100):
     config = NNCFConfig()
     config.update(Dict({
         "compression":
@@ -41,7 +41,6 @@ def get_config_for_test(batch_size=10, num_bn_adaptation_samples=100, num_bn_for
                 "initializer": {
                     "batchnorm_adaptation": {
                         "num_bn_adaptation_samples": num_bn_adaptation_samples,
-                        "num_bn_forget_samples": num_bn_forget_samples
                     }
                 }
             }
@@ -113,7 +112,7 @@ def test_all_parameter_keep():
     for layer in model.layers:
         original_all_param_values[layer] = deepcopy(layer.weights)
 
-    config = get_config_for_test(num_bn_adaptation_samples=0, num_bn_forget_samples=0)
+    config = get_config_for_test(num_bn_adaptation_samples=0)
 
     bn_adaptation = BatchnormAdaptationAlgorithm(**extract_bn_adaptation_init_params(config))
     bn_adaptation.run(model)

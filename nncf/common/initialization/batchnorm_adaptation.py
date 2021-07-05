@@ -32,7 +32,6 @@ class BatchnormAdaptationAlgorithmImpl(ABC):
     def __init__(self,
                  data_loader: NNCFDataLoader,
                  num_bn_adaptation_steps: int,
-                 num_bn_forget_steps: int,
                  device: Optional[str] = None):
         """
         Initializes the batch-norm statistics adaptation algorithm implementation.
@@ -41,15 +40,11 @@ class BatchnormAdaptationAlgorithmImpl(ABC):
         :param num_bn_adaptation_steps: Number of batches from the training dataset to pass
             through the model at initialization in order to update batch-norm statistics of
             the original model.
-        :param num_bn_forget_steps: Number of batches from the training dataset to pass
-            through the model at initialization in order to erase batch-norm statistics of
-            the original model.
         :param device: Device to perform initialization. If `device` is `None` then the device
             of the model parameters will be used.
         """
         self._data_loader = data_loader
         self._num_bn_adaptation_steps = num_bn_adaptation_steps
-        self._num_bn_forget_steps = num_bn_forget_steps
         self._device = device
 
     @abstractmethod
@@ -71,7 +66,6 @@ class BatchnormAdaptationAlgorithm:
     def __init__(self,
                  data_loader: NNCFDataLoader,
                  num_bn_adaptation_samples: int,
-                 num_bn_forget_samples: int,
                  device: Optional[str] = None):
         """
         Initializes the batch-norm statistics adaptation algorithm.
@@ -81,21 +75,15 @@ class BatchnormAdaptationAlgorithm:
             dataset to pass through the model at initialization in order to update
             batch-norm statistics of the original model. The actual number of samples
             will be a closest multiple of the batch size.
-        :param num_bn_forget_samples: Number of samples from the training dataset to
-            pass through the model at initialization in order to erase batch-norm
-            statistics of the original model (using large momentum value for rolling
-            mean updates). The actual number of samples will be a closest multiple of
-            the batch size.
         :param device: Device to perform initialization. If `device` is `None` then the device
             of the model parameters will be used.
         """
         if num_bn_adaptation_samples < 0:
             raise ValueError('Number of adaptation samples must be >= 0')
 
-        self._data_loader = data_loader
         self._device = device
+        self._data_loader = data_loader
         self._num_bn_adaptation_steps = math.ceil(num_bn_adaptation_samples / data_loader.batch_size)
-        self._num_bn_forget_steps = math.ceil(num_bn_forget_samples / data_loader.batch_size)
 
     def run(self, model: ModelType) -> None:
         """
@@ -113,6 +101,5 @@ class BatchnormAdaptationAlgorithm:
             impl_cls = TFBatchnormAdaptationAlgorithmImpl
         impl = impl_cls(self._data_loader,
                         self._num_bn_adaptation_steps,
-                        self._num_bn_forget_steps,
                         self._device)
         impl.run(model)

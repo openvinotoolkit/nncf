@@ -64,7 +64,7 @@ def test_bn_training_state_switcher(_seed, model: nn.Module):
             else:
                 assert ch.training == saved_state.training_state[ch]
 
-    runner = DataLoaderBNAdaptationRunner(model, 'cuda', 0)
+    runner = DataLoaderBNAdaptationRunner(model, 'cuda')
 
     randomly_change_model_state(model)
     saved_state = save_module_state(model)

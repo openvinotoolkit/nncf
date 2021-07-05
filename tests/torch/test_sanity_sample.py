@@ -122,11 +122,9 @@ def update_compression_algo_dict_with_reduced_bn_adapt_params(algo_dict):
     if algo_dict["algorithm"] == "rb_sparsity":
         return
     if 'initializer' not in algo_dict:
-        algo_dict['initializer'] = {'batchnorm_adaptation': {'num_bn_adaptation_samples': 5,
-                                                             'num_bn_forget_samples': 5}}
+        algo_dict['initializer'] = {'batchnorm_adaptation': {'num_bn_adaptation_samples': 5}}
     else:
-        algo_dict['initializer'].update({'batchnorm_adaptation': {'num_bn_adaptation_samples': 5,
-                                                                  'num_bn_forget_samples': 5}})
+        algo_dict['initializer'].update({'batchnorm_adaptation': {'num_bn_adaptation_samples': 5}})
 
 def _get_test_case_id(p) -> str:
     return "-".join([p[0], p[1].name, p[2], str(p[3])])
@@ -513,7 +511,6 @@ class TestCaseDescriptor:
                     },
                     "batchnorm_adaptation": {
                         "num_bn_adaptation_samples": 1,
-                        "num_bn_forget_samples": 1
                     }
                 },
                 'params': self.quantization_algo_params,
