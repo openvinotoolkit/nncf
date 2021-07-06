@@ -49,6 +49,9 @@ def get_config_and_model_type_from_argv(argv, parser):
         raise RuntimeError('Wrong model type specified')
 
     predefined_config.update(config_from_json)
+    if not predefined_config.ckpt_path:
+        raise RuntimeError('Checkpoint path should be specified')
+
     return predefined_config, args.model_type
 
 
