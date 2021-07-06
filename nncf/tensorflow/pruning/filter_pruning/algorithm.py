@@ -353,7 +353,7 @@ class FilterPruningController(BasePruningAlgoController):
         nncf_logger.debug('Setting new binary masks for pruned layers.')
         target_flops = self.full_flops * (1 - target_flops_pruning_rate)
         wrapped_layers = collect_wrapped_layers(self._model)
-        masks = []
+        masks = {}
 
         nncf_sorted_nodes = self._original_graph.topological_sort()
         for layer in wrapped_layers:
@@ -381,7 +381,7 @@ class FilterPruningController(BasePruningAlgoController):
         for _, group_id, filter_index in sorted_importances:
             if self._pruning_quotas[group_id] == 0:
                 continue
-            masks[group_id][filter_index] = 0
+            masks[group_id] = tf.tensor_scatter_nd_update(masks[group_id], [[filter_index]], [0])
             self._pruning_quotas[group_id] -= 1
 
             # Update input/output shapes of pruned elements
