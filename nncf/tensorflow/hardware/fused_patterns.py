@@ -40,7 +40,7 @@ def _get_tf_hw_fused_patterns() -> HWFusedPatterns:
     any_ag_bn_act_combo = agnostic_ops + activations | any_bn_act_combo
 
     retval.register(linear_ops_maybe_followed_by_identity, name='LINEAR', match=True)
-    retval.register(batch_norm_activations_permutation, name="BN_ACT_OR_ACT_BN", match=True)
+    retval.register(batch_norm_activations_permutation, name='BN_ACT_OR_ACT_BN', match=True)
     retval.register(linear_ops_maybe_followed_by_identity + any_ag_bn_act_combo, 'LINEAR + ANY_AG_BN_ACT_COMBO',
                     match=True)
     retval.register(eltwise_ops + any_ag_bn_act_combo, 'ELTWISE + ANY_AG_BN_ACT_COMBO',

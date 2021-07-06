@@ -20,17 +20,14 @@ import tensorflow as tf
 from nncf import NNCFConfig
 from nncf.api.compression import CompressionLoss
 from nncf.api.compression import CompressionScheduler
+from nncf.common.compression import BaseCompressionAlgorithmController
 from nncf.common.graph import INPUT_NOOP_METATYPES
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.graph import NNCFNodeName
-from nncf.common.graph.layer_attributes import Dtype
+from nncf.common.graph import OUTPUT_NOOP_METATYPES
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TransformationPriority
-from nncf.common.graph import OUTPUT_NOOP_METATYPES
-from nncf.common.graph.transformations.commands import TransformationPriority
-from nncf.tensorflow.quantization.default_quantization import DEFAULT_TF_QUANT_TRAIT_TO_OP_DICT
-from nncf.tensorflow.quantization.initializers.init_range import TFRangeInitParams
 from nncf.common.initialization.batchnorm_adaptation import BatchnormAdaptationAlgorithm
 from nncf.common.insertion_point_graph import InsertionPointGraph
 from nncf.common.quantization.quantizer_propagation.solver import QuantizerPropagationSolver
@@ -46,13 +43,11 @@ from nncf.common.stateful_classes_registry import TF_STATEFUL_CLASSES
 from nncf.common.statistics import NNCFStatistics
 from nncf.common.utils.helpers import should_consider_scope
 from nncf.common.utils.logger import logger
-from nncf.common.compression import BaseCompressionAlgorithmController
 from nncf.config.extractors import extract_bn_adaptation_init_params
 from nncf.config.extractors import extract_range_init_params
 from nncf.tensorflow.algorithm_selector import TF_COMPRESSION_ALGORITHMS
 from nncf.tensorflow.api.compression import TFCompressionAlgorithmBuilder
-from nncf.tensorflow.graph import patterns as p
-from nncf.tensorflow.api.compression import TFCompressionAlgorithmController
+from nncf.tensorflow.graph.converter import TFModelConverter
 from nncf.tensorflow.graph.converter import TFModelConverterFactory
 from nncf.tensorflow.graph.metatypes.common import ELEMENTWISE_LAYER_METATYPES
 from nncf.tensorflow.graph.metatypes.common import GENERAL_CONV_LAYER_METATYPES
@@ -69,6 +64,7 @@ from nncf.tensorflow.graph.utils import get_original_name_and_instance_idx
 from nncf.tensorflow.hardware.fused_patterns import TF_HW_FUSED_PATTERNS
 from nncf.tensorflow.layers.custom_objects import NNCF_QUANTIZATION_OPERATONS
 from nncf.tensorflow.loss import TFZeroCompressionLoss
+from nncf.tensorflow.quantization.default_quantization import DEFAULT_TF_QUANT_TRAIT_TO_OP_DICT
 from nncf.tensorflow.quantization.initializers.init_range import RangeInitializer
 from nncf.tensorflow.quantization.initializers.init_range import TFRangeInitParams
 from nncf.tensorflow.quantization.layers import FakeQuantize
@@ -139,58 +135,6 @@ class QuantizationPoint:
         return cls(**kwargs)
 
 
-class QuantizationSetupStateNames:
-    QUANTIZATION_POINTS = 'quantization_points'
-
-
-class QuantizationSetup:
-    """
-    Characterizes where and how to insert all quantization nodes to the model's graph
-    """
-    _state_names = QuantizationSetupStateNames
-
-    def __init__(self):
-        super().__init__()
-        self._quantization_points = []  # type: List[QuantizationPoint]
-
-    def add_quantization_point(self, point: QuantizationPoint):
-        """
-        Adds quantization point to the setup
-
-        :param point: quantization point
-        """
-        self._quantization_points.append(point)
-
-    def __iter__(self):
-        return iter(self._quantization_points)
-
-    def get_state(self) -> Dict:
-        """
-        Returns a dictionary with Python data structures (dict, list, tuple, str, int, float, True, False, None) that
-        represents state of the object.
-
-        :return: state of the object
-        """
-
-        quantization_points_state = [qp.get_state() for qp in self._quantization_points]
-        return {
-            self._state_names.QUANTIZATION_POINTS: quantization_points_state,
-        }
-
-    @classmethod
-    def from_state(cls, state: Dict) -> 'QuantizationSetup':
-        """
-        Creates the object from its state.
-
-        :param state: Output of `get_state()` method.
-        """
-        setup = QuantizationSetup()
-        for quantization_point_state in state[cls._state_names.QUANTIZATION_POINTS]:
-            quantization_point = QuantizationPoint.from_state(quantization_point_state)
-            setup.add_quantization_point(quantization_point)
-        return setup
-
-
 class QBuilderStateNames:
     QUANTIZER_SETUP = 'quantizer_setup'
 
@@ -257,6 +201,8 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
             self.ignored_scopes_per_group[quantizer_group] += self.ignored_scopes
         target_scopes = params_dict.get('target_scopes')
         if target_scopes is None and self.target_scopes is not None:
+            self.target_scopes_per_group[quantizer_group] = self.target_scopes
+        else:
             self.target_scopes_per_group[quantizer_group] = target_scopes
 
     def _get_default_qconfig(self, constraints: QuantizationConstraints = None) -> QuantizerConfig:
@@ -283,7 +229,6 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
         return quantizer_cls(name, qspec)
 
     def get_transformation_layout(self, model: tf.keras.Model) -> TFTransformationLayout:
-        #pylint:disable=too-many-branches
         converter = TFModelConverterFactory.create(model)
         nncf_graph = converter.convert()
         nodes = nncf_graph.get_all_nodes()
@@ -294,32 +239,14 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
 
         transformations = TFTransformationLayout()
 
-        w_qconfig = self._get_default_qconfig(self.global_quantizer_constraints[QuantizerGroup.WEIGHTS])
-        half_range = self._get_half_range(w_qconfig)
-        quantizable_weighted_layer_nodes = []  # type: List[QuantizableWeightedLayerNode]
-        custom_layer_nodes = []  # type: List[NNCFNodeName]
-        for node in nodes:
-            metatype = node.metatype
-            if metatype in OUTPUT_NOOP_METATYPES:
-                continue
-
-            is_custom, _ = converter.get_layer_info_for_node(node.node_name)
-            if is_custom:
-                custom_layer_nodes.append(node.node_name)
-            if not (metatype in QUANTIZATION_LAYER_METATYPES
-                    and should_consider_scope(node.node_name,
-                                              ignored_scopes=self.ignored_scopes_per_group[QuantizerGroup.WEIGHTS],
-                                              target_scopes=None)):
-                continue
-
-            assert issubclass(metatype, TFLayerWithWeightsMetatype)
-            quantizable_weighted_layer_nodes.append(QuantizableWeightedLayerNode(node,
-                                                                                 [w_qconfig]))
-        quantizer_setup = self._get_quantizer_setup(nncf_graph, quantizable_weighted_layer_nodes,
-                                                    custom_layer_nodes)
+        quantizable_weighted_layer_nodes = self._get_quantizable_weighted_layer_nodes(nncf_graph)
+        custom_layer_nodes = self._get_custom_layer_node_names(nncf_graph, converter)
+        if self._quantizer_setup is None:
+            self._quantizer_setup = self._get_quantizer_setup(nncf_graph, quantizable_weighted_layer_nodes,
+                                                              custom_layer_nodes)
 
         quantized_layer_names_vs_qconfigs = {}  # type: Dict[str, QuantizerConfig]
-        for qp_id, qp in quantizer_setup.quantization_points.items():
+        for qp_id, qp in self._quantizer_setup.quantization_points.items():
             if qp.is_weight_quantization_point():
                 target_node = nncf_graph.get_node_by_name(qp.insertion_point.target_node_name)
                 is_custom, layer_info = converter.get_layer_info_for_node(target_node.node_name)
@@ -344,6 +271,7 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
                         weight_def.weight_attr_name)
                     self._op_names.append(op_name)
 
+                    half_range = self._get_half_range(qconfig)
                     operation = self._create_quantizer(
                         op_name,
                         TFQuantizerSpec.from_config(qconfig,
@@ -384,6 +312,36 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
                         priority=TransformationPriority.QUANTIZATION_PRIORITY))
 
         return transformations
+
+    def _get_quantizable_weighted_layer_nodes(self, nncf_graph: NNCFGraph) -> List[QuantizableWeightedLayerNode]:
+        retval = []
+        w_qconfig = self._get_default_qconfig(self.global_quantizer_constraints[QuantizerGroup.WEIGHTS])
+        for node in nncf_graph.get_all_nodes():
+            metatype = node.metatype
+            if metatype in OUTPUT_NOOP_METATYPES:
+                continue
+
+            if not (metatype in QUANTIZATION_LAYER_METATYPES
+                    and should_consider_scope(node.node_name,
+                                              ignored_scopes=self.ignored_scopes_per_group[QuantizerGroup.WEIGHTS],
+                                              target_scopes=None)):
+                continue
+
+            assert issubclass(metatype, TFLayerWithWeightsMetatype)
+            retval.append(QuantizableWeightedLayerNode(node,
+                                                       [w_qconfig]))
+        return retval
+
+    def _get_custom_layer_node_names(self, nncf_graph: NNCFGraph, converter: TFModelConverter) -> List[NNCFNodeName]:
+        retval = []
+        for node in nncf_graph.get_all_nodes():
+            metatype = node.metatype
+            if metatype in OUTPUT_NOOP_METATYPES:
+                continue
+            is_custom, _ = converter.get_layer_info_for_node(node.node_name)
+            if is_custom:
+                retval.append(node.node_name)
+        return retval
 
     def _build_controller(self, model: tf.keras.Model) -> 'QuantizationController':
         return QuantizationController(model, self.config, self._op_names)

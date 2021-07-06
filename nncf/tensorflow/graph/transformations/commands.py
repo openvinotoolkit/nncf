@@ -124,8 +124,8 @@ class TFLayer(TFLayerPoint):
 
 class TFBeforeLayerStateNames:
     LAYER_NAME = 'layer_name'
-    INSTANCE_IDX = 'instance_index'
-    INPUT_PORT_ID = 'in_port'
+    INSTANCE_IDX = 'instance_idx'
+    INPUT_PORT_ID = 'input_port_id'
 
 
 @TF_STATEFUL_CLASSES.register()
@@ -139,10 +139,10 @@ class TFBeforeLayer(TFLayerPoint):
 
     _state_names = TFBeforeLayerStateNames
 
-    def __init__(self, layer_name: str, instance_index: int = 0, in_port: int = 0):
+    def __init__(self, layer_name: str, instance_idx: int = 0, input_port_id: int = 0):
         super().__init__(TargetType.BEFORE_LAYER, layer_name)
-        self._instance_idx = instance_index
-        self._input_port_id = in_port
+        self._instance_idx = instance_idx
+        self._input_port_id = input_port_id
 
     @property
     def instance_idx(self) -> int:
@@ -191,8 +191,8 @@ class TFBeforeLayer(TFLayerPoint):
 
 class TFAfterLayerStateNames:
     LAYER_NAME = 'layer_name'
-    INSTANCE_IDX = 'instance_index'
-    OUTPUT_PORT_ID = 'out_port'
+    INSTANCE_IDX = 'instance_idx'
+    OUTPUT_PORT_ID = 'output_port_id'
 
 
 @TF_STATEFUL_CLASSES.register()
@@ -203,13 +203,12 @@ class TFAfterLayer(TFLayerPoint):
     For example, `TFAfterLayer` is used in the insertion commands to specify
     where the new object should be inserted.
     """
-
     _state_names = TFAfterLayerStateNames
 
-    def __init__(self, layer_name: str, instance_index: int = 0, out_port: int = 0):
+    def __init__(self, layer_name: str, instance_idx: int = 0, output_port_id: int = 0):
         super().__init__(TargetType.AFTER_LAYER, layer_name)
-        self._instance_idx = instance_index
-        self._output_port_id = out_port
+        self._instance_idx = instance_idx
+        self._output_port_id = output_port_id
 
     @property
     def instance_idx(self) -> int:

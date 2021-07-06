@@ -21,6 +21,7 @@ from collections import deque
 from copy import deepcopy
 
 from nncf.common.graph import NNCFGraph
+from nncf.common.utils.debug import is_debug
 from nncf.torch.hardware.fused_patterns import PT_HW_FUSED_PATTERNS
 from nncf.torch.quantization.default_quantization import DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT
 from nncf.torch.quantization.layers import BaseQuantizer
@@ -28,7 +29,6 @@ from nncf.torch.quantization.layers import SymmetricQuantizer
 from nncf.torch.nncf_network import NNCFNetwork, PTNNCFGraph
 from nncf.torch.dynamic_graph.transform_graph import is_nncf_module
 from nncf.common.quantization.quantizer_propagation.structs import QuantizationTrait
-from nncf.torch.debug import is_debug
 from nncf.common.quantization.structs import WeightQuantizerId
 from nncf.common.quantization.structs import NonWeightQuantizerId
 from nncf.torch.quantization.structs import WeightQuantizerInfo

@@ -11,29 +11,17 @@
  limitations under the License.
 """
 import os
-from functools import partial
 
 import tensorflow as tf
 
 from examples.tensorflow.classification.main import load_checkpoint
 from examples.tensorflow.classification.main import load_compression_state
-from nncf.common.graph.transformations.commands import TargetPoint
-from nncf.common.graph.transformations.commands import TargetType
-from nncf.common.quantization.structs import QuantizationMode
+from nncf.common.quantization.quantizer_setup import SingleConfigQuantizerSetup
 from nncf.tensorflow import create_compression_callbacks
 from nncf.tensorflow import register_default_init_args
 from nncf.tensorflow.callbacks.checkpoint_callback import CheckpointManagerCallback
-from nncf.tensorflow.graph.transformations.commands import TFAfterLayer
-from nncf.tensorflow.graph.transformations.commands import TFBeforeLayer
-from nncf.tensorflow.graph.transformations.commands import TFLayer
-from nncf.tensorflow.graph.transformations.commands import TFLayerPoint
-from nncf.tensorflow.graph.transformations.commands import TFLayerWeight
-from nncf.tensorflow.graph.transformations.commands import TFOperationWithWeights
 from nncf.tensorflow.quantization.algorithm import QuantizationBuilder
 from nncf.tensorflow.quantization.algorithm import QuantizationController
-from nncf.tensorflow.quantization.algorithm import QuantizationPoint
-from nncf.tensorflow.quantization.algorithm import QuantizationSetup
-from nncf.tensorflow.quantization.quantizers import TFQuantizerSpec
 from nncf.tensorflow.utils.state import TFCompressionState
 from tests.common.serialization import check_serialization
 from tests.tensorflow.helpers import create_compressed_model_and_algo_for_test
@@ -58,7 +46,7 @@ def test_quantization_configs__on_resume_with_compression_state(tmp_path, mocker
     init_spy.assert_called()
     gen_setup_spy.assert_called()
     saved_quantizer_setup = gen_setup_spy.spy_return
-    check_serialization(saved_quantizer_setup, _quantization_setup_cmp)
+    check_serialization(saved_quantizer_setup, SingleConfigQuantizerSetup.equivalent_to)
 
     compression_state_to_load = _save_and_load_compression_state(compression_ctrl, tmp_path)
 
@@ -77,7 +65,7 @@ def test_quantization_configs__on_resume_with_compression_state(tmp_path, mocker
     builder.load_state(compression_state_to_load['builder_state'])
     # pylint:disable=protected-access
     loaded_quantizer_setup = builder._quantizer_setup
-    assert _quantization_setup_cmp(loaded_quantizer_setup, saved_quantizer_setup)
+    assert loaded_quantizer_setup.equivalent_to(saved_quantizer_setup)
 
 
 def _save_and_load_compression_state(compression_ctrl, tmp_path):
@@ -147,179 +135,6 @@ def test_checkpoint_callback_make_checkpoints(mocker, tmp_path):
     # pylint:disable=protected-access
     new_quantizer_setup = builder._quantizer_setup
 
-    assert _quantization_setup_cmp(quantizer_setup, new_quantizer_setup)
+    assert quantizer_setup.equivalent_to(new_quantizer_setup)
     assert new_compression_ctrl.get_state() == compression_ctrl.get_state()
     assert tf.reduce_all([tf.reduce_all(w_new == w) for w_new, w in zip(new_model.weights, model.weights)])
-
-
-DUMMY_STR = 'dummy_str'
-
-
-def _quantization_setup_cmp(qs1: QuantizationSetup, qs2: QuantizationSetup):
-    if qs1.__class__ is qs2.__class__:
-        return all(_quantization_point_cmp(qp1, qp2) for qp1, qp2 in zip(iter(qs1), iter(qs2)))
-    return False
-
-
-def _quantization_point_cmp(qp1: QuantizationPoint, qp2: QuantizationPoint):
-    if qp1.__class__ is qp2.__class__:
-        return qp1.target_point == qp2.target_point and \
-               qp1.quantizer_spec == qp2.quantizer_spec and \
-               qp1.op_name == qp2.op_name
-    return False
-
-
-def _check_and_add_insertion_point(quantization_point_factory, setup, target_point):
-    point = quantization_point_factory(target_point=target_point)
-    setup.add_quantization_point(point)
-    check_serialization(target_point)
-    check_serialization(point, _quantization_point_cmp)
-
-
-GROUND_TRUTH_STATE = {
-    "quantization_points": [
-        {
-            "op_name": "dummy_str",
-            "quantizer_spec": {
-                "half_range": True,
-                "mode": "symmetric",
-                "narrow_range": True,
-                "num_bits": 8,
-                "per_channel": True,
-                "signedness_to_force": None
-            },
-            "target_point": {
-                "target_type": {
-                    "name": "OPERATOR_POST_HOOK"
-                }
-            },
-            "target_point_class_name": "TargetPoint"
-        },
-        {
-            "op_name": "dummy_str",
-            "quantizer_spec": {
-                "half_range": True,
-                "mode": "symmetric",
-                "narrow_range": True,
-                "num_bits": 8,
-                "per_channel": True,
-                "signedness_to_force": None
-            },
-            "target_point": {
-                "layer_name": "dummy_str",
-                "target_type": {
-                    "name": "OPERATOR_POST_HOOK"
-                }
-            },
-            "target_point_class_name": "TFLayerPoint"
-        },
-        {
-            "op_name": "dummy_str",
-            "quantizer_spec": {
-                "half_range": True,
-                "mode": "symmetric",
-                "narrow_range": True,
-                "num_bits": 8,
-                "per_channel": True,
-                "signedness_to_force": None
-            },
-            "target_point": {
-                "layer_name": "dummy_str"
-            },
-            "target_point_class_name": "TFLayer"
-        },
-        {
-            "op_name": "dummy_str",
-            "quantizer_spec": {
-                "half_range": True,
-                "mode": "symmetric",
-                "narrow_range": True,
-                "num_bits": 8,
-                "per_channel": True,
-                "signedness_to_force": None
-            },
-            "target_point": {
-                "in_port": 0,
-                "instance_index": 0,
-                "layer_name": "dummy_str"
-            },
-            "target_point_class_name": "TFBeforeLayer"
-        },
-        {
-            "op_name": "dummy_str",
-            "quantizer_spec": {
-                "half_range": True,
-                "mode": "symmetric",
-                "narrow_range": True,
-                "num_bits": 8,
-                "per_channel": True,
-                "signedness_to_force": None
-            },
-            "target_point": {
-                "instance_index": 0,
-                "layer_name": "dummy_str",
-                "out_port": 0
-            },
-            "target_point_class_name": "TFAfterLayer"
-        },
-        {
-            "op_name": "dummy_str",
-            "quantizer_spec": {
-                "half_range": True,
-                "mode": "symmetric",
-                "narrow_range": True,
-                "num_bits": 8,
-                "per_channel": True,
-                "signedness_to_force": None
-            },
-            "target_point": {
-                "layer_name": "dummy_str",
-                "weights_attr_name": "dummy_str"
-            },
-            "target_point_class_name": "TFLayerWeight"
-        },
-        {
-            "op_name": "dummy_str",
-            "quantizer_spec": {
-                "half_range": True,
-                "mode": "symmetric",
-                "narrow_range": True,
-                "num_bits": 8,
-                "per_channel": True,
-                "signedness_to_force": None
-            },
-            "target_point": {
-                "layer_name": "dummy_str",
-                "operation_name": "dummy_str",
-                "weights_attr_name": "dummy_str"
-            },
-            "target_point_class_name": "TFOperationWithWeights"
-        }
-    ]
-}
-
-
-def test_quantizer_setup_serialization():
-    setup = QuantizationSetup()
-
-    quantizer_spec = TFQuantizerSpec(num_bits=8, mode=QuantizationMode.SYMMETRIC, signedness_to_force=None,
-                                     narrow_range=True, half_range=True, per_channel=True)
-    check_serialization(quantizer_spec)
-
-    target_type = TargetType.OPERATOR_POST_HOOK
-    check_serialization(target_type)
-
-    quantization_point_factory = partial(QuantizationPoint, op_name=DUMMY_STR, quantizer_spec=quantizer_spec)
-    check_insertion_point = partial(_check_and_add_insertion_point, quantization_point_factory, setup)
-
-    check_insertion_point(TargetPoint(target_type))
-    check_insertion_point(TFLayerPoint(target_type, layer_name=DUMMY_STR))
-    check_insertion_point(TFLayer(layer_name=DUMMY_STR))
-    check_insertion_point(TFBeforeLayer(layer_name=DUMMY_STR))
-    check_insertion_point(TFAfterLayer(layer_name=DUMMY_STR))
-    check_insertion_point(TFLayerWeight(layer_name=DUMMY_STR, weights_attr_name=DUMMY_STR))
-    check_insertion_point(TFOperationWithWeights(layer_name=DUMMY_STR, weights_attr_name=DUMMY_STR,
-                                                 operation_name=DUMMY_STR))
-
-    check_serialization(setup, _quantization_setup_cmp)
-    assert setup.get_state() == GROUND_TRUTH_STATE

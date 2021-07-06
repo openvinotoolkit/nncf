@@ -27,8 +27,6 @@ from torch import nn
 from nncf.common.graph import BaseLayerAttributes
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
-from nncf.common.graph.definitions import MODEL_INPUT_OP_NAME
-from nncf.common.graph.definitions import MODEL_OUTPUT_OP_NAME
 from nncf.common.graph import NNCFNodeName
 from nncf.common.graph.definitions import MODEL_INPUT_OP_NAME
 from nncf.common.graph.definitions import MODEL_OUTPUT_OP_NAME

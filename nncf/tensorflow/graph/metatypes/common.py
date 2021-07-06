@@ -124,4 +124,3 @@ def get_operator_metatypes() -> List[Type[OperatorMetatype]]:
                     list(INPUT_NOOP_METATYPES.registry_dict.values()) +
                     list(OUTPUT_NOOP_METATYPES.registry_dict.values()) +
                     list(NOOP_METATYPES.registry_dict.values())))
-

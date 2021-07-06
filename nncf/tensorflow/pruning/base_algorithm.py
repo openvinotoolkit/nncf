@@ -215,7 +215,7 @@ class BasePruningAlgoBuilder(TFCompressionAlgorithmBuilder):
         Note: Single node per layer for shared bactchnorm layers
         """
         layer_nodes = [node_ for node_ in group.elements
-                       if get_layer_identifier(node_) == layer_name]
+                       if node_.layer_name == layer_name]
         bn_nodes = []
         bn_layer_names = []
         for layer_node in layer_nodes:

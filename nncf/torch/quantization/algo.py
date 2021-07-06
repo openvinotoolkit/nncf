@@ -53,7 +53,6 @@ from nncf.common.quantization.quantizer_setup import SingleConfigQuantizationPoi
 from nncf.common.quantization.quantizer_setup import SingleConfigQuantizerSetup
 from nncf.torch.quantization.default_quantization import DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT
 from nncf.torch.quantization.layers import get_scale_shape
-from nncf.common.quantization.statistics import QuantizationStatistics
 from nncf.common.quantization.structs import NonWeightQuantizerId
 from nncf.common.quantization.structs import QuantizableWeightedLayerNode
 from nncf.common.quantization.structs import QuantizationConstraints

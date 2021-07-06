@@ -18,6 +18,9 @@ from nncf.common.quantization.quantizer_propagation.solver import QuantizerPropa
 
 
 class QuantizerPropagationVisualizer:
+    """
+    An object performing visualization of the quantizer propagation algorithm's state into a chosen directory.
+    """
     def __init__(self, dump_dir: str = None):
         self.dump_dir = Path(dump_dir)
         if self.dump_dir.exists():

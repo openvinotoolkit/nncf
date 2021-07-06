@@ -727,7 +727,6 @@ class QuantizerPropagationSolver:
         pth = deepcopy(dump_path)
         nx.drawing.nx_pydot.write_dot(out_graph, pth)
 
-
     def setup_initial_quantizers(self,
                                  quant_prop_graph: QuantizerPropagationStateGraph) -> QuantizerPropagationStateGraph:
         """
