@@ -23,6 +23,8 @@ from nncf.tensorflow.helpers.model_creation import create_compressed_model
 from nncf.tensorflow import create_compression_callbacks
 from nncf.tensorflow.helpers.model_manager import TFOriginalModelManager
 from nncf.tensorflow.initialization import register_default_init_args
+from nncf.tensorflow.utils.state import TFCompressionState
+from nncf.tensorflow.utils.state import TFCompressionStateLoader
 
 from examples.tensorflow.classification.datasets.builder import DatasetBuilder
 from examples.tensorflow.common.argparser import get_common_argument_parser
@@ -132,6 +134,12 @@ def resume_from_checkpoint(checkpoint, ckpt_path, steps_per_epoch):
     return initial_epoch
 
 
+def load_compression_state(ckpt_path: str):
+    checkpoint = tf.train.Checkpoint(compression_state=TFCompressionStateLoader())
+    load_checkpoint(checkpoint, ckpt_path)
+    return checkpoint.compression_state.state
+
+
 def run(config):
     strategy = get_distribution_strategy(config)
     if config.metrics_dump is not None:
@@ -169,13 +177,14 @@ def run(config):
                 return_dict=True)
             uncompressed_model_accuracy = 100 * results['acc@1']
 
+    compression_state = None
+    if resume_training:
+        compression_state = load_compression_state(config.ckpt_path)
+
     with TFOriginalModelManager(model_fn, **model_params) as model:
         with strategy.scope():
-            compression_ctrl, compress_model = create_compressed_model(model,
-                                                                       nncf_config,
-                                                                       should_init=not resume_training)
-            compression_callbacks = create_compression_callbacks(compression_ctrl,
-                                                                 log_dir=config.log_dir)
+            compression_ctrl, compress_model = create_compressed_model(model, nncf_config, compression_state)
+            compression_callbacks = create_compression_callbacks(compression_ctrl, log_dir=config.log_dir)
 
             scheduler = build_scheduler(
                 config=config,
@@ -202,7 +211,8 @@ def run(config):
 
             compress_model.summary()
 
-            checkpoint = tf.train.Checkpoint(model=compress_model, compression_ctrl=compression_ctrl)
+            checkpoint = tf.train.Checkpoint(model=compress_model,
+                                             compression_state=TFCompressionState(compression_ctrl))
 
             initial_epoch = 0
             if resume_training:
@@ -280,9 +290,12 @@ def export(config):
                                     pretrained=config.get('pretrained', False),
                                     weights=config.get('weights', None))
     model = model(**model_params)
-    compression_ctrl, compress_model = create_compressed_model(model,
-                                                               config.nncf_config,
-                                                               should_init=False)
+
+    compression_state = None
+    if config.ckpt_path:
+        compression_state = load_compression_state(config.ckpt_path)
+
+    compression_ctrl, compress_model = create_compressed_model(model, config.nncf_config, compression_state)
 
     metrics = [
         tf.keras.metrics.CategoricalAccuracy(name='acc@1'),
@@ -294,7 +307,8 @@ def export(config):
                            metrics=metrics)
     compress_model.summary()
 
-    checkpoint = tf.train.Checkpoint(model=compress_model, compression_ctrl=compression_ctrl)
+    checkpoint = tf.train.Checkpoint(model=compress_model,
+                                     compression_state=TFCompressionState(compression_ctrl))
 
     if config.ckpt_path is not None:
         load_checkpoint(checkpoint=checkpoint,

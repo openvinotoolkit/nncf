@@ -24,8 +24,10 @@ from nncf.tensorflow.graph.metatypes.matcher import get_keras_layer_metatype
 from nncf.tensorflow.initialization import register_default_init_args
 
 
-def get_dataset_for_test(batch_size=10):
-    rand_image = tf.random.uniform(shape=[5, 5, 1], dtype=tf.float32)
+def get_dataset_for_test(batch_size=10, shape=None):
+    if shape is None:
+        shape = [5, 5, 1]
+    rand_image = tf.random.uniform(shape=shape, dtype=tf.float32)
     dataset1 = tf.data.Dataset.from_tensors(rand_image)
     rand_label = tf.random.uniform(shape=[], dtype=tf.float32)
     dataset2 = tf.data.Dataset.from_tensors(rand_label)

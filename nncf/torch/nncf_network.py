@@ -10,10 +10,9 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-import functools
+
 import inspect
 from collections import OrderedDict
-from copy import deepcopy
 from enum import Enum
 from typing import Callable
 from typing import Dict
@@ -22,7 +21,9 @@ from typing import Optional
 from typing import Tuple
 from typing import TypeVar
 
+import functools
 import torch
+from copy import deepcopy
 from torch import nn
 
 from nncf.common.graph.definitions import MODEL_INPUT_OP_NAME
@@ -151,6 +152,9 @@ class PTInsertionPoint:
 
 @ignore_scope
 class NNCFNetwork(nn.Module, PostGraphBuildActing):
+    MODEL_STATE_VERSION_ATTR = '_nncf_model_state_version'
+    MODEL_STATE_VERSION = 1
+
     def __init__(self, module, input_infos: List[ModelInputInfo],
                  dummy_forward_fn=None, wrap_inputs_fn=None, scopes_without_shape_matching=None,
                  ignored_scopes=None, target_scopes=None, reset: bool = False, wrap_outputs_fn=None,

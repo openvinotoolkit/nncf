@@ -32,7 +32,7 @@ from examples.tensorflow.common.prepare_checkpoint import main as prepare_checkp
 
 od_main.get_dataset_builders = partial(get_coco_dataset_builders, train=True, validation=True)
 seg_train.get_dataset_builders = partial(get_coco_dataset_builders, train=True, calibration=True)
-seg_eval.get_dataset_builders = partial(get_coco_dataset_builders, validation=True)
+seg_eval.get_dataset_builders = partial(get_coco_dataset_builders, validation=True, calibration=True)
 
 AVAILABLE_MODELS.update({
     'SequentialModel': SequentialModel,
@@ -389,6 +389,7 @@ def get_prepare_checkpoint_configs():
     return config_params
 
 
+@pytest.mark.skip('59320 ticket to resolve not correct testing of prepare_checkpoint')
 @pytest.mark.parametrize('sample_type,config_path,config_eval,dataset_path,batch_size',
                          get_prepare_checkpoint_configs(),
                          ids=[x[0] for x in get_prepare_checkpoint_configs()])
@@ -418,6 +419,9 @@ def test_prepare_checkpoint(sample_type, config_path, config_eval, dataset_path,
         '--batch-size': batch_size,
         '--resume': checkpoint_save_dir
     }
+
+    # TODO(nlyalyus): a WA for 58902 issue with matching layer indexes from builder state and from loaded model
+    tf.keras.backend.clear_session()
 
     main = get_sample_fn(sample_type, modes=['test'])
     main(convert_to_argv(args))

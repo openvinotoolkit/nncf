@@ -12,20 +12,21 @@
 """
 
 import types
-from typing import Tuple
+from typing import Any, Dict, Optional, Tuple
 
 import tensorflow as tf
 
 from nncf import NNCFConfig
 from nncf.api.compression import CompressionAlgorithmBuilder
 from nncf.api.compression import CompressionAlgorithmController
+from nncf.common.compression import BaseCompressionAlgorithmController as BaseController
 from nncf.config.extractors import extract_compression_algorithm_configs
+from nncf.config.structures import ModelEvaluationArgs
+from nncf.config.utils import is_accuracy_aware_training
+from nncf.tensorflow.accuracy_aware_training.keras_model_utils import accuracy_aware_fit
 from nncf.tensorflow.algorithm_selector import get_compression_algorithm_builder
 from nncf.tensorflow.api.composite_compression import TFCompositeCompressionAlgorithmBuilder
 from nncf.tensorflow.helpers.utils import get_built_model
-from nncf.tensorflow.accuracy_aware_training.keras_model_utils import accuracy_aware_fit
-from nncf.config.structures import ModelEvaluationArgs
-from nncf.config.utils import is_accuracy_aware_training
 
 
 def create_compression_algorithm_builder(config: NNCFConfig,
@@ -52,7 +53,8 @@ def create_compression_algorithm_builder(config: NNCFConfig,
 
 def create_compressed_model(model: tf.keras.Model,
                             config: NNCFConfig,
-                            should_init: bool = True) -> Tuple[CompressionAlgorithmController, tf.keras.Model]:
+                            compression_state: Optional[Dict[str, Any]] = None) \
+        -> Tuple[CompressionAlgorithmController, tf.keras.Model]:
     """
     The main function used to produce a model ready for compression fine-tuning
     from an original TensorFlow Keras model and a configuration object.
@@ -61,8 +63,9 @@ def create_compressed_model(model: tf.keras.Model,
         from a checkpoint or another source.
     :param config: A configuration object used to determine the exact compression
         modifications to be applied to the model.
-    :param should_init: If False, trainable parameter initialization will be
-        skipped during building.
+    :param compression_state: compression state to unambiguously restore the compressed model.
+        Includes builder and controller states. If it is specified, trainable parameter initialization will be skipped
+        during building.
     :return: A tuple (compression_ctrl, compressed_model) where
         - compression_ctrl: The controller of the compression algorithm.
         - compressed_model: The model with additional modifications
@@ -76,7 +79,9 @@ def create_compressed_model(model: tf.keras.Model,
             evaluation_args = config.get_extra_struct(ModelEvaluationArgs)
             original_model_accuracy = evaluation_args.eval_fn(model)
 
-    builder = create_compression_algorithm_builder(config, should_init)
+    builder = create_compression_algorithm_builder(config, should_init=not compression_state)
+    if compression_state:
+        builder.load_state(compression_state[BaseController.BUILDER_STATE])
     compressed_model = builder.apply_to(model)
     compression_ctrl = builder.build_controller(compressed_model)
     compressed_model.original_model_accuracy = original_model_accuracy

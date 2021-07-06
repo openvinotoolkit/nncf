@@ -26,11 +26,15 @@ from enum import auto
 from pytest_dependency import depends
 
 # pylint: disable=redefined-outer-name
+from examples.torch.common.model_loader import COMPRESSION_STATE_ATTR
+
 from examples.torch.common.optimizer import get_default_weight_decay
 from examples.torch.common.sample_config import SampleConfig
 from examples.torch.common.utils import get_name
 from examples.torch.common.utils import is_staged_quantization
 from nncf.api.compression import CompressionStage
+from nncf.common.compression import BaseControllerStateNames
+from nncf.common.compression import BaseCompressionAlgorithmController as BaseController
 from nncf.common.hardware.config import HWConfigType
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.config import NNCFConfig
@@ -262,7 +266,8 @@ def test_pretrained_model_train(config, tmp_path, multiprocessing_distributed, c
         allowed_compression_stages = (CompressionStage.FULLY_COMPRESSED, CompressionStage.PARTIALLY_COMPRESSED)
     else:
         allowed_compression_stages = (CompressionStage.UNCOMPRESSED,)
-    assert torch.load(last_checkpoint_path)['compression_stage'] in allowed_compression_stages
+    compression_stage = extract_compression_stage_from_checkpoint(last_checkpoint_path)
+    assert compression_stage in allowed_compression_stages
 
 
 def depends_on_pretrained_train(request, test_case_id: str, current_multiprocessing_distributed: bool):
@@ -353,7 +358,15 @@ def test_resume(request, config, tmp_path, multiprocessing_distributed, case_com
         allowed_compression_stages = (CompressionStage.FULLY_COMPRESSED, CompressionStage.PARTIALLY_COMPRESSED)
     else:
         allowed_compression_stages = (CompressionStage.UNCOMPRESSED,)
-    assert torch.load(last_checkpoint_path)['compression_stage'] in allowed_compression_stages
+    compression_stage = extract_compression_stage_from_checkpoint(last_checkpoint_path)
+    assert compression_stage in allowed_compression_stages
+
+
+def extract_compression_stage_from_checkpoint(last_checkpoint_path):
+    compression_state = torch.load(last_checkpoint_path)[COMPRESSION_STATE_ATTR]
+    ctrl_state = compression_state[BaseController.CONTROLLER_STATE]
+    compression_stage = next(iter(ctrl_state.values()))[BaseControllerStateNames.COMPRESSION_STAGE]
+    return compression_stage
 
 
 @pytest.mark.dependency()
@@ -647,7 +660,7 @@ class AutoQDescriptor(TestCaseDescriptor):
         ctrl = self.builder_spy.spy_return
         final_bits = [qm.num_bits for qm in ctrl.all_quantizations.values()]
         assert set(final_bits) != {QuantizerConfig().num_bits}
-        assert all([bit in AutoQDescriptor.BITS for bit in final_bits])
+        assert all(bit in AutoQDescriptor.BITS for bit in final_bits)
 
 
 def resnet18_desc(x: TestCaseDescriptor):
