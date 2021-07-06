@@ -37,6 +37,7 @@ from examples.tensorflow.common.scheduler import build_scheduler
 from examples.tensorflow.common.utils import configure_paths
 from examples.tensorflow.common.utils import create_code_snapshot
 from examples.tensorflow.common.utils import get_saving_parameters
+from examples.tensorflow.common.utils import print_args
 from examples.tensorflow.common.utils import serialize_config
 from examples.tensorflow.common.utils import write_metrics
 
@@ -307,6 +308,7 @@ def export(config):
 def main(argv):
     parser = get_argument_parser()
     config = get_config_from_argv(argv, parser)
+    print_args(config)
 
     serialize_config(config, config.log_dir)
 
