@@ -504,6 +504,8 @@ class TestSotaCheckpoints:
         # pylint: disable=too-many-branches
         if not openvino:
             pytest.skip()
+        # WA to avoid OS error
+        os.environ['HDF5_USE_FILE_LOCKING']='FALSE'
         tf_checkpoint = PROJECT_ROOT / 'frozen_graph' / f'{eval_test_struct.model_name_}.pb'
         ir_model_folder = PROJECT_ROOT / 'ir_models' / eval_test_struct.model_name_
         config = PROJECT_ROOT / 'tests' / 'tensorflow' / 'data' / 'ac_configs' / f'{eval_test_struct.model_name_}.yml'
@@ -520,6 +522,9 @@ class TestSotaCheckpoints:
         if eval_test_struct.sample_type_ == 'segmentation':
             file = 'evaluation.py'
         csv_result = f'{PROJECT_ROOT}/{eval_test_struct.model_name_}.csv'
+        if eval_test_struct.model_name_.startswith('mask_'):
+            self.write_error_in_csv('AC does not support mask models yet', csv_result, eval_test_struct.model_name_)
+            pytest.skip('AC does not support mask models yet')
         if eval_test_struct.reference_ and not config.is_file():
             self.make_config(config, eval_test_struct.reference_)
         save_cmd = f'{sys.executable} examples/tensorflow/{eval_test_struct.sample_type_}/{file}' \
@@ -564,7 +569,7 @@ Tsc = TestSotaCheckpoints
 @pytest.fixture(autouse=True, scope='class')
 def openvino_preinstall(openvino):
     if openvino:
-        subprocess.run(f'virtualenv -ppython3.7 {MO_VENV_DIR}', cwd=PROJECT_ROOT, check=True, shell=True)
+        subprocess.run(f'virtualenv -ppython3.8 {MO_VENV_DIR}', cwd=PROJECT_ROOT, check=True, shell=True)
         subprocess.run(f'{venv_activate_string} && {MO_VENV_DIR}/bin/pip install -r requirements_tf2.txt',
                        cwd=MO_DIR, check=True, shell=True, executable='/bin/bash')
         subprocess.run('pip install scikit-image!=0.18.2rc1', cwd=ACC_CHECK_DIR, check=True, shell=True)
