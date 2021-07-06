@@ -22,6 +22,55 @@ def single_config_quantizer_setup_cmp(self, other):
            and self.shared_input_operation_set_groups == other.shared_input_operation_set_groups
 
 
+GROUND_TRUTH_STATE = {
+    "quantization_points": {
+        0: {
+            "directly_quantized_operator_node_names": [
+                "MyConv/1[2]/3[4]/5"
+            ],
+            "qconfig": {
+                "mode": "symmetric",
+                "num_bits": 8,
+                "per_channel": False,
+                "signedness_to_force": None
+            },
+            "qip": {
+                "target_node_name": "dummy"
+            },
+            "qip_class": "WeightQuantizationInsertionPoint"
+        },
+        1: {
+            "directly_quantized_operator_node_names": [
+                "MyConv/1[2]/3[4]/5"
+            ],
+            "qconfig": {
+                "mode": "symmetric",
+                "num_bits": 8,
+                "per_channel": False,
+                "signedness_to_force": None
+            },
+            "qip": {
+                "input_port_id": 0,
+                "target_node_name": "dummy"
+            },
+            "qip_class": "ActivationQuantizationInsertionPoint"
+        }
+    },
+    "shared_input_operation_set_groups": {
+        2: [
+            0,
+            1
+        ]
+    },
+    "unified_scale_groups": {
+        2: [
+            0,
+            1
+        ]
+    }
+}
+
+
 def test_quantizer_setup_serialization():
     target_type_1 = TargetType.OPERATOR_POST_HOOK
     check_serialization(target_type_1)
@@ -56,6 +105,7 @@ def test_quantizer_setup_serialization():
     scqs.shared_input_operation_set_groups = {2: {0, 1}}
 
     check_serialization(scqs, comparator=single_config_quantizer_setup_cmp)
+    assert scqs.get_state() == GROUND_TRUTH_STATE
 
 
 def test_precision_float():

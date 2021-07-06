@@ -177,6 +177,129 @@ def _check_and_add_insertion_point(quantization_point_factory, setup, target_poi
     check_serialization(point, _quantization_point_cmp)
 
 
+GROUND_TRUTH_STATE = {
+    "quantization_points": [
+        {
+            "op_name": "dummy_str",
+            "quantizer_spec": {
+                "half_range": True,
+                "mode": "symmetric",
+                "narrow_range": True,
+                "num_bits": 8,
+                "per_channel": True,
+                "signedness_to_force": None
+            },
+            "target_point": {
+                "target_type": {
+                    "name": "OPERATOR_POST_HOOK"
+                }
+            },
+            "target_point_class_name": "TargetPoint"
+        },
+        {
+            "op_name": "dummy_str",
+            "quantizer_spec": {
+                "half_range": True,
+                "mode": "symmetric",
+                "narrow_range": True,
+                "num_bits": 8,
+                "per_channel": True,
+                "signedness_to_force": None
+            },
+            "target_point": {
+                "layer_name": "dummy_str",
+                "target_type": {
+                    "name": "OPERATOR_POST_HOOK"
+                }
+            },
+            "target_point_class_name": "TFLayerPoint"
+        },
+        {
+            "op_name": "dummy_str",
+            "quantizer_spec": {
+                "half_range": True,
+                "mode": "symmetric",
+                "narrow_range": True,
+                "num_bits": 8,
+                "per_channel": True,
+                "signedness_to_force": None
+            },
+            "target_point": {
+                "layer_name": "dummy_str"
+            },
+            "target_point_class_name": "TFLayer"
+        },
+        {
+            "op_name": "dummy_str",
+            "quantizer_spec": {
+                "half_range": True,
+                "mode": "symmetric",
+                "narrow_range": True,
+                "num_bits": 8,
+                "per_channel": True,
+                "signedness_to_force": None
+            },
+            "target_point": {
+                "in_port": 0,
+                "instance_index": 0,
+                "layer_name": "dummy_str"
+            },
+            "target_point_class_name": "TFBeforeLayer"
+        },
+        {
+            "op_name": "dummy_str",
+            "quantizer_spec": {
+                "half_range": True,
+                "mode": "symmetric",
+                "narrow_range": True,
+                "num_bits": 8,
+                "per_channel": True,
+                "signedness_to_force": None
+            },
+            "target_point": {
+                "instance_index": 0,
+                "layer_name": "dummy_str",
+                "out_port": 0
+            },
+            "target_point_class_name": "TFAfterLayer"
+        },
+        {
+            "op_name": "dummy_str",
+            "quantizer_spec": {
+                "half_range": True,
+                "mode": "symmetric",
+                "narrow_range": True,
+                "num_bits": 8,
+                "per_channel": True,
+                "signedness_to_force": None
+            },
+            "target_point": {
+                "layer_name": "dummy_str",
+                "weights_attr_name": "dummy_str"
+            },
+            "target_point_class_name": "TFLayerWeight"
+        },
+        {
+            "op_name": "dummy_str",
+            "quantizer_spec": {
+                "half_range": True,
+                "mode": "symmetric",
+                "narrow_range": True,
+                "num_bits": 8,
+                "per_channel": True,
+                "signedness_to_force": None
+            },
+            "target_point": {
+                "layer_name": "dummy_str",
+                "operation_name": "dummy_str",
+                "weights_attr_name": "dummy_str"
+            },
+            "target_point_class_name": "TFOperationWithWeights"
+        }
+    ]
+}
+
+
 def test_quantizer_setup_serialization():
     setup = QuantizationSetup()
 
@@ -200,3 +323,4 @@ def test_quantizer_setup_serialization():
                                                  operation_name=DUMMY_STR))
 
     check_serialization(setup, _quantization_setup_cmp)
+    assert setup.get_state() == GROUND_TRUTH_STATE
