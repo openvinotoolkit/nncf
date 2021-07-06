@@ -312,8 +312,8 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
             quantizer_spec = TFQuantizerSpec.from_config(qconfig, narrow_range=False, half_range=False)
             _, layer_info = converter.get_layer_info_for_node(original_node_name)
             target_point = TFAfterLayer(layer_info.layer_name,
-                                        instance_idx=layer_info.instance_idx,
-                                        output_port_id=0)
+                                        instance_index=layer_info.instance_idx,
+                                        out_port=0)
             qpoint = QuantizationPoint(fake_quantize_name, quantizer_spec, target_point)
             setup.add_quantization_point(qpoint)
         return setup
