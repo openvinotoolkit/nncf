@@ -433,7 +433,7 @@ def create_data_loaders(config, train_dataset, val_dataset):
         val_dataset,
         batch_size=batch_size, shuffle=False,
         num_workers=workers, pin_memory=pin_memory,
-        sampler=val_sampler, drop_last=True)
+        sampler=val_sampler, drop_last=False)
 
     train_sampler = None
     if config.distributed:
