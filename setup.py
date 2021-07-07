@@ -106,6 +106,10 @@ if "--tf" in sys.argv:
     INSTALL_REQUIRES.extend(EXTRAS_REQUIRE["tf"])
     sys.argv.remove("--tf")
 
+if "--all" in sys.argv:
+    INSTALL_REQUIRES.extend(EXTRAS_REQUIRE["all"])
+    sys.argv.remove("--all")
+
 setup(
     name="nncf",
     version=find_version(os.path.join(here, "nncf/version.py")),
