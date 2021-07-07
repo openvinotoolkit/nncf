@@ -41,6 +41,7 @@ def _get_basic_quantization_config(mode: str,
     }
 
     config['compression'] = compression_section
+    config['target_device'] = 'TRIAL'
     return config
 
 

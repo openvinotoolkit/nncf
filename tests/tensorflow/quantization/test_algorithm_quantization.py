@@ -59,8 +59,8 @@ def check_default_qspecs(compression_model):
     activation_quantizers, weight_quantizers = get_quantizers(compression_model)
     ref_weight_qspec = TFQuantizerSpec(mode=QuantizationMode.SYMMETRIC,
                                        num_bits=8,
-                                       signedness_to_force=None,
-                                       per_channel=False,
+                                       signedness_to_force=True,
+                                       per_channel=True,
                                        narrow_range=False,
                                        half_range=True)
     for wq in weight_quantizers:
@@ -89,6 +89,7 @@ def test_quantization_configs__custom():
     model = get_basic_conv_test_model()
 
     config = get_basic_quantization_config()
+    config['target_device'] = 'TRIAL'
     config['compression'].update({
         "weights": {
             "mode": "asymmetric",
@@ -129,8 +130,8 @@ def check_specs_for_disabled_saturation_fix(compression_model):
     activation_quantizers, weight_quantizers = get_quantizers(compression_model)
     ref_weight_qspec = TFQuantizerSpec(mode=QuantizationMode.SYMMETRIC,
                                        num_bits=8,
-                                       signedness_to_force=None,
-                                       per_channel=False,
+                                       signedness_to_force=True,
+                                       per_channel=True,
                                        narrow_range=True,
                                        half_range=False)
     for wq in weight_quantizers:
@@ -159,7 +160,7 @@ def test_quantization_configs__disable_saturation_fix():
 
 
 @pytest.mark.parametrize('disabled', [False, True], ids=['enabled', 'disabled'])
-def test_export_saturatuion_fix(disabled):
+def test_export_saturation_fix(disabled):
     model = get_basic_conv_test_model()
     config = get_basic_quantization_config()
     config['compression'].update({
@@ -169,8 +170,8 @@ def test_export_saturatuion_fix(disabled):
     activation_quantizers_be, weight_quantizers_be = get_quantizers(compression_model)
     ref_weight_qspec = TFQuantizerSpec(mode=QuantizationMode.SYMMETRIC,
                                        num_bits=8,
-                                       signedness_to_force=None,
-                                       per_channel=False,
+                                       signedness_to_force=True,
+                                       per_channel=True,
                                        narrow_range=disabled,
                                        half_range=not disabled)
     for wq in weight_quantizers_be:
@@ -190,8 +191,8 @@ def test_export_saturatuion_fix(disabled):
 
     ref_weight_qspec = TFQuantizerSpec(mode=QuantizationMode.SYMMETRIC,
                                        num_bits=8,
-                                       signedness_to_force=None,
-                                       per_channel=False,
+                                       signedness_to_force=True,
+                                       per_channel=True,
                                        narrow_range=disabled,
                                        half_range=False)
     for wq in weight_quantizers_ae:

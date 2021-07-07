@@ -10,6 +10,7 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+from copy import deepcopy
 from typing import Any
 from typing import Dict
 from typing import List
@@ -28,8 +29,11 @@ from nncf.common.graph import NNCFNodeName
 from nncf.common.graph import OUTPUT_NOOP_METATYPES
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TransformationPriority
+from nncf.common.hardware.config import HWConfigType
+from nncf.common.hardware.config import HW_CONFIG_TYPE_TARGET_DEVICE_MAP
 from nncf.common.initialization.batchnorm_adaptation import BatchnormAdaptationAlgorithm
 from nncf.common.insertion_point_graph import InsertionPointGraph
+from nncf.common.quantization.config_assignment import assign_qconfig_lists_to_modules
 from nncf.common.quantization.quantizer_propagation.solver import QuantizerPropagationSolver
 from nncf.common.quantization.quantizer_setup import ActivationQuantizationInsertionPoint
 from nncf.common.quantization.quantizer_setup import SingleConfigQuantizerSetup
@@ -61,6 +65,7 @@ from nncf.tensorflow.graph.transformations.commands import TFInsertionCommand
 from nncf.tensorflow.graph.transformations.commands import TFLayerWeight
 from nncf.tensorflow.graph.transformations.layout import TFTransformationLayout
 from nncf.tensorflow.graph.utils import get_original_name_and_instance_idx
+from nncf.tensorflow.hardware.config import TFHWConfig
 from nncf.tensorflow.hardware.fused_patterns import TF_HW_FUSED_PATTERNS
 from nncf.tensorflow.layers.custom_objects import NNCF_QUANTIZATION_OPERATONS
 from nncf.tensorflow.loss import TFZeroCompressionLoss
@@ -195,6 +200,11 @@ class QBuilderStateNames:
 class QuantizationBuilder(TFCompressionAlgorithmBuilder):
     _state_names = QBuilderStateNames
 
+    DEFAULT_QCONFIG = QuantizerConfig(num_bits=8,
+                                      mode=QuantizationMode.SYMMETRIC,
+                                      signedness_to_force=None,
+                                      per_channel=False)
+
     def __init__(self, config: NNCFConfig, should_init: bool = True):
         super().__init__(config, should_init)
 
@@ -217,6 +227,12 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
         self._range_initializer = None
         self._bn_adaptation = None
         self._quantizer_setup = None
+
+        self.hw_config = None
+        if self._target_device != "TRIAL":
+            hw_config_type = HWConfigType.from_str(HW_CONFIG_TYPE_TARGET_DEVICE_MAP[self._target_device])
+            hw_config_path = TFHWConfig.get_path_to_hw_config(hw_config_type)
+            self.hw_config = TFHWConfig.from_json(hw_config_path)
 
     def _load_state_without_name(self, state_without_name: Dict[str, Any]):
         """
@@ -258,10 +274,7 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
             self.target_scopes_per_group[quantizer_group] = target_scopes
 
     def _get_default_qconfig(self, constraints: QuantizationConstraints = None) -> QuantizerConfig:
-        qconfig = QuantizerConfig(num_bits=8,
-                                  mode=QuantizationMode.SYMMETRIC,
-                                  signedness_to_force=None,
-                                  per_channel=False)
+        qconfig = deepcopy(self.DEFAULT_QCONFIG)
         if constraints is not None:
             qconfig = constraints.apply_constraints_to(qconfig)
         return qconfig
@@ -441,6 +454,30 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
 
         return setup
 
+    def _get_quantizable_weighted_layer_nodes(self, nncf_graph: NNCFGraph) -> List[QuantizableWeightedLayerNode]:
+        nodes_with_weights = []
+        for node in nncf_graph.get_all_nodes():
+            metatype = node.metatype
+            if metatype in OUTPUT_NOOP_METATYPES:
+                continue
+
+            if not (metatype in QUANTIZATION_LAYER_METATYPES
+                    and should_consider_scope(node.node_name,
+                                              ignored_scopes=self.ignored_scopes_per_group[QuantizerGroup.WEIGHTS],
+                                              target_scopes=None)):
+                continue
+
+            assert issubclass(metatype, TFLayerWithWeightsMetatype)
+            nodes_with_weights.append(node)
+        weighted_node_and_qconf_lists = assign_qconfig_lists_to_modules(nodes_with_weights,
+                                                                        self.DEFAULT_QCONFIG,
+                                                                        self.global_quantizer_constraints[
+                                                                            QuantizerGroup.WEIGHTS],
+                                                                        scope_overrides_dict=None,
+                                                                        hw_config=self.hw_config)
+        return [QuantizableWeightedLayerNode(node, qconf_list) for node, qconf_list
+                in weighted_node_and_qconf_lists.items()]
+
     def _get_quantizer_propagation_solution(self, nncf_graph: NNCFGraph,
                                             quantizable_weighted_layer_nodes: List[QuantizableWeightedLayerNode],
                                             custom_layer_node_names: List[NNCFNodeName]) \
@@ -463,7 +500,7 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
         solver = QuantizerPropagationSolver(
             ignored_scopes=ignored_scopes_for_solver,
             target_scopes=self.target_scopes_per_group[QuantizerGroup.ACTIVATIONS],
-            hw_config=None,
+            hw_config=self.hw_config,
             default_trait_to_metatype_map=DEFAULT_TF_QUANT_TRAIT_TO_OP_DICT,
             default_qconfig_list=[self._get_default_qconfig(
                 self.global_quantizer_constraints[QuantizerGroup.ACTIVATIONS])],

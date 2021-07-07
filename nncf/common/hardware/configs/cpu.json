@@ -51,6 +51,13 @@
             }
         },
         {
+            "type": "ConvolutionBackpropData",
+            "quantization": {
+                "activations": "q8_a",
+                "weights": ["q8_w_sym", "q8_w_asym"]
+            }
+        },
+        {
             "type": "MatMul",
             "quantization": {
                 "activations": "q8_a",
@@ -189,6 +196,12 @@
             }
         },
         {
+            "type": "NormalizeL2",
+            "quantization": {
+                "activations": "q8_a"
+            }
+        },
+        {
             "type": "ReduceMean",
             "quantization": {
                 "activations": "q8_a"
@@ -202,17 +215,8 @@
         },
         {
             "type": "Interpolate",
-            "attributes": {
-                "mode": "linear"
-            },
             "quantization": {
                 "activations": "q8_a"
-            }
-        },
-        {
-            "type": "Interpolate",
-            "attributes": {
-                "mode": "nearest"
             }
         },
         {
@@ -232,10 +236,15 @@
         {"type": "Squeeze"},
         {"type": "Unsqueeze"},
         {"type": "Split"},
+        {"type": "VariadicSplit"},
         {"type": "Crop"},
         {"type": "Transpose"},
         {"type": "Tile"},
         {"type": "StridedSlice"},
+        {"type": "ShuffleChannels"},
+        {"type": "Broadcast"},
+        {"type": "Pad"},
+        {"type": "ConvertLike"},
         // NNCF-specific extensions are below:
         {"type": "Embedding"}, // relying on the rule to use default config for weighted ops with unspecified quantization
         {"type": "EmbeddingBag"}

@@ -367,6 +367,9 @@ class TestModelsGraph:
         get_model_name(m) for m in get_test_models_desc('quantization')])
     def test_quantize_network(self, desc: ModelDesc, _quantization_case_config):
         model = desc.model_builder(input_shape=tuple(desc.input_sample_sizes[1:]))
+        if _quantization_case_config.qconfig.mode == "asymmetric" and \
+            _quantization_case_config.qconfig.per_channel:
+            pytest.skip("Ticket #59642")
         config = get_basic_quantization_config(_quantization_case_config.qconfig,
                                                input_sample_sizes=desc.input_sample_sizes)
         if desc.ignored_scopes is not None:
@@ -423,6 +426,9 @@ QUANTIZE_OUTPUTS = [
 
 @pytest.mark.parametrize('desc', QUANTIZE_OUTPUTS, ids=[m.model_name for m in QUANTIZE_OUTPUTS])
 def test_quantize_outputs(desc: ModelDesc, _quantization_case_config):
+    if _quantization_case_config.qconfig.mode == "asymmetric" and \
+            _quantization_case_config.qconfig.per_channel:
+        pytest.skip("Ticket #59642")
     model = desc.model_builder(input_shape=tuple(desc.input_sample_sizes[1:]))
     config = get_basic_quantization_config(_quantization_case_config.qconfig,
                                            input_sample_sizes=desc.input_sample_sizes)

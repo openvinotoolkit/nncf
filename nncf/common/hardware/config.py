@@ -10,7 +10,6 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-import warnings
 from abc import ABC
 from abc import abstractmethod
 from collections import OrderedDict
@@ -34,7 +33,7 @@ from nncf.common.utils.helpers import product_dict
 from nncf.common.utils.os import safe_open
 from nncf.definitions import HW_CONFIG_RELATIVE_DIR
 from nncf.definitions import NNCF_PACKAGE_ROOT_DIR
-
+from nncf.common.utils.logger import logger as nncf_logger
 
 class HWConfigType(Enum):
     CPU = 'CPU'
@@ -205,8 +204,9 @@ class HWConfig(list, ABC):
 
             metatypes = self._get_metatypes_for_hw_config_op(hw_config_op_name)
             if not metatypes:
-                warnings.warn('Operation name {} in HW config is not registered in NNCF under any supported operation '
-                              'metatype - will be ignored'.format(hw_config_op_name))
+                nncf_logger.debug(
+                    'Operation name {} in HW config is not registered in NNCF under any supported operation '
+                    'metatype - will be ignored'.format(hw_config_op_name))
 
             if self.QUANTIZATION_ALGORITHM_NAME in op_dict:
                 allowed_qconfs = op_dict[self.QUANTIZATION_ALGORITHM_NAME][config_key]
@@ -238,7 +238,7 @@ class HWConfig(list, ABC):
                     hw_config_op_name = op_dict.type
                     metatypes = self._get_metatypes_for_hw_config_op(hw_config_op_name)
                     if not metatypes:
-                        warnings.warn(
+                        nncf_logger.debug(
                             'Operation name {} in HW config is not registered in NNCF under any supported '
                             'operation metatype - will be ignored'.format(hw_config_op_name))
                     result.update(metatypes)
@@ -256,7 +256,7 @@ class HWConfig(list, ABC):
             if hw_config_op in op_meta.hw_config_names:
                 metatypes.add(op_meta)
         if not metatypes:
-            warnings.warn(
+            nncf_logger.debug(
                 'Operation name {} in HW config is not registered in NNCF under any supported '
                 'operation metatype - will be ignored'.format(hw_config_op))
         return metatypes

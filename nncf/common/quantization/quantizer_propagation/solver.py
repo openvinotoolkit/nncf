@@ -28,8 +28,8 @@ from typing import Tuple
 import networkx as nx
 
 from nncf.common.graph import INPUT_NOOP_METATYPES
-from nncf.common.graph import OUTPUT_NOOP_METATYPES
 from nncf.common.graph import NNCFNodeName
+from nncf.common.graph import OUTPUT_NOOP_METATYPES
 from nncf.common.graph import OperatorMetatype
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.hardware.config import HWConfig
@@ -49,10 +49,10 @@ from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizerGroup
 from nncf.common.quantization.structs import UnifiedScaleType
-from nncf.common.utils.helpers import matches_any
-from nncf.common.utils.logger import logger as nncf_logger
 from nncf.common.utils.debug import DEBUG_LOG_DIR
 from nncf.common.utils.debug import is_debug
+from nncf.common.utils.helpers import matches_any
+from nncf.common.utils.logger import logger as nncf_logger
 
 
 class TransitionStatus(Enum):
@@ -674,9 +674,9 @@ class QuantizerPropagationSolver:
                     break
             else:
                 trait = QuantizationTrait.QUANTIZATION_AGNOSTIC
-                nncf_logger.warning("Operation metatype {} encountered, but it has no default "
-                                    "quantization trait and the HW config entry is not given for it - "
-                                    "assuming quantization-agnostic.".format(op_meta))
+                nncf_logger.debug("Operation metatype {} encountered, but it has no default "
+                                  "quantization trait and the HW config entry is not given for it - "
+                                  "assuming quantization-agnostic.".format(op_meta))
         else:
             # There IS a valid HW config name for the metatype, but it is deliberately not specified
             # in the config, which means that it should execute in FP32
