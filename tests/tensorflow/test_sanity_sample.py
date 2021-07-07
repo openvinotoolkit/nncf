@@ -201,7 +201,8 @@ def _config(request, dataset_dir):
 @pytest.fixture(scope='module')
 def _case_common_dirs(tmp_path_factory):
     return {
-        'checkpoint_save_dir': str(tmp_path_factory.mktemp('models'))
+        'checkpoint_save_dir': str(tmp_path_factory.mktemp('models')),
+        'optimized_checkpoint_save_dir': str(tmp_path_factory.mktemp('optimized_models'))
     }
 
 
@@ -368,17 +369,13 @@ def test_export_with_resume(_config, tmp_path, export_format, _case_common_dirs)
 PREPARE_CHECKPOINTS_SUPPORTED_SAMPLE_TYPES = ['object_detection', 'segmentation']
 
 
-@pytest.mark.dependency(depends=['tf_test_model_train'])
+@pytest.mark.dependency(name='tf_test_prepare_checkpoint', depends=['tf_test_model_train'])
 def test_prepare_checkpoint(_config, tmp_path, _case_common_dirs):
     if _config['sample_type'] not in PREPARE_CHECKPOINTS_SUPPORTED_SAMPLE_TYPES:
         pytest.skip('Unsupported sample type for test_prepare_checkpoints')
 
-    # Keep default soft_device_placement state
-    default_soft_device_placement = tf.config.get_soft_device_placement()
-    tf.config.set_soft_device_placement(True)
-    checkpoint_save_dir = tmp_path
-    log_dir = tempfile.mkdtemp()
     resume_path = os.path.join(_case_common_dirs['checkpoint_save_dir'], _config['tid'])
+    checkpoint_save_dir = os.path.join(_case_common_dirs['optimized_checkpoint_save_dir'], _config['tid'])
     config_factory = ConfigFactory(_config['nncf_config'], tmp_path / 'config.json')
     args = {
         '--model-type': _config['sample_type'],
@@ -391,19 +388,23 @@ def test_prepare_checkpoint(_config, tmp_path, _case_common_dirs):
 
     assert tf.io.gfile.isdir(checkpoint_save_dir)
     assert tf.train.latest_checkpoint(checkpoint_save_dir)
+
+
+@pytest.mark.dependency(depends=['tf_test_prepare_checkpoint'])
+def test_eval_prepared_checkpoint(_config, tmp_path, _case_common_dirs):
+    if _config['sample_type'] not in PREPARE_CHECKPOINTS_SUPPORTED_SAMPLE_TYPES:
+        pytest.skip('Unsupported sample type for test_prepare_checkpoints')
+
+    config_factory = ConfigFactory(_config['nncf_config'], tmp_path / 'config.json')
+    resume_path = os.path.join(_case_common_dirs['optimized_checkpoint_save_dir'], _config['tid'])
+
     args = {
         '--mode': 'test',
         '--data': _config['dataset_path'],
         '--config': config_factory.serialize(),
-        '--log-dir': log_dir,
         '--batch-size': _config['batch_size'],
-        '--resume': checkpoint_save_dir
+        '--resume': resume_path,
     }
-
-    # TODO(nlyalyus): a WA for 58902 issue with matching layer indexes from builder state and from loaded model
-    tf.keras.backend.clear_session()
 
     main = get_sample_fn(_config['sample_type'], modes=['test'])
     main(convert_to_argv(args))
-    # Restore default soft_device_placement state
-    tf.config.set_soft_device_placement(default_soft_device_placement)

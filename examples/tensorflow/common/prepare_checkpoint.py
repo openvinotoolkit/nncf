@@ -49,9 +49,6 @@ def get_config_and_model_type_from_argv(argv, parser):
         raise RuntimeError('Wrong model type specified')
 
     predefined_config.update(config_from_json)
-    if not predefined_config.ckpt_path:
-        raise RuntimeError('Checkpoint path should be specified')
-
     return predefined_config, args.model_type
 
 
@@ -126,7 +123,7 @@ def load_and_save_checkpoint(checkpoint, config):
 
 def main(argv):
     parser = get_common_argument_parser(metrics_dump=False,
-                                        weights=False,
+                                        resume_args=False,
                                         execution_args=False,
                                         epochs=False,
                                         precision=False,
@@ -141,6 +138,15 @@ def main(argv):
         choices=[ModelType.object_detection,
                  ModelType.segmentation],
         help='Type of the model which checkpoint is being provided.',
+        required=True)
+
+    parser.add_argument(
+        '--resume',
+        metavar='PATH',
+        type=str,
+        default=None,
+        dest='ckpt_path',
+        help='Specifies the path to the checkpoint which should be optimized.',
         required=True)
 
     config, model_type = get_config_and_model_type_from_argv(argv, parser)
