@@ -185,9 +185,9 @@ def test_rb_sparse_target_lenet(distributed, quantized):
                                   *get_callbacks(
                                       include_tensorboard=True,
                                       track_lr=False,
-                                      write_model_weights=False,
+                                      profile_batch=0,
                                       initial_step=0,
-                                      model_dir='logdir/',
+                                      log_dir='logdir/',
                                       ckpt_dir='logdir/cpt/'),
                                   compression_callbacks,
                                   SparsityRateTestCallback()])

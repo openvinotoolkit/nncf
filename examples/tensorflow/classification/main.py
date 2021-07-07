@@ -223,9 +223,9 @@ def run(config):
     callbacks = get_callbacks(
         include_tensorboard=True,
         track_lr=True,
-        write_model_weights=False,
+        profile_batch=0,
         initial_step=initial_epoch * train_steps,
-        model_dir=config.log_dir,
+        log_dir=config.log_dir,
         ckpt_dir=config.checkpoint_save_dir,
         checkpoint=checkpoint)
 
