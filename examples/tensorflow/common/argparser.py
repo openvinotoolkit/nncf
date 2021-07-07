@@ -34,29 +34,30 @@ def get_common_argument_parser(**flags):
             type=str,
             help='Name of metrics collecting .json file'))
 
-    model_init_mode = parser.add_mutually_exclusive_group()
+    if flags.get('resume_args', True):
+        model_init_mode = parser.add_mutually_exclusive_group()
 
-    add_argument(
-        parser=model_init_mode,
-        condition=flags.get('resume', True),
-        parameters=argument_parameters(
-            '--resume',
-            metavar='PATH',
-            type=str,
-            default=None,
-            dest='ckpt_path',
-            help='Specifies the path to the checkpoint to resume training, test or export model '
-                'from the defined checkpoint or folder with checkpoints to resume training, test '
-                'or export from the last checkpoint.'))
+        add_argument(
+            parser=model_init_mode,
+            condition=flags.get('resume', True),
+            parameters=argument_parameters(
+                '--resume',
+                metavar='PATH',
+                type=str,
+                default=None,
+                dest='ckpt_path',
+                help='Specifies the path to the checkpoint to resume training, test or export model '
+                    'from the defined checkpoint or folder with checkpoints to resume training, test '
+                    'or export from the last checkpoint.'))
 
-    add_argument(
-        parser=model_init_mode,
-        condition=flags.get('weights', True),
-        parameters=argument_parameters(
-            '--weights',
-            default=None,
-            type=str,
-            help='Path to pretrained weights in H5 format.'))
+        add_argument(
+            parser=model_init_mode,
+            condition=flags.get('weights', True),
+            parameters=argument_parameters(
+                '--weights',
+                default=None,
+                type=str,
+                help='Path to pretrained weights in H5 format.'))
 
     add_argument(
         parser=parser,
