@@ -13,6 +13,7 @@
 
 import tensorflow as tf
 
+from nncf.common.quantization.structs import QuantizationMode
 from nncf.tensorflow.layers.custom_objects import NNCF_CUSTOM_OBJECTS
 from nncf.tensorflow.layers.custom_objects import NNCF_QUANTIZATION_OPERATONS
 from nncf.tensorflow.layers.operation import InputType
@@ -27,7 +28,7 @@ class FakeQuantize(tf.keras.layers.Layer):
         Create a FakeQuantize layer.
         """
         super().__init__(**kwargs)
-        self.mode = config.mode
+        self._mode = config.mode
         self.data_format = data_format
 
         self._op_name = f'{self.name}_quantizer'
@@ -47,8 +48,24 @@ class FakeQuantize(tf.keras.layers.Layer):
         return getattr(self._quantizer, 'narrow_range', None)
 
     @property
-    def signed(self):
-        return getattr(self._quantizer, 'signed', None)
+    def signed(self) -> bool:
+        """
+        Returns `True` for signed quantization, `False` for unsigned.
+
+        :return: `True` for signed quantization, `False` for unsigned.
+        """
+        if self._quantizer.mode == QuantizationMode.SYMMETRIC:
+            return self._quantizer.signed(self._quantizer_weights)
+        return True
+
+    @property
+    def mode(self) -> str:
+        """
+        Returns mode of the quantization (symmetric or asymmetric).
+
+        :return: The mode of the quantization.
+        """
+        return self._mode
 
     @property
     def op_name(self):

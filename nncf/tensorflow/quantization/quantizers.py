@@ -91,6 +91,15 @@ class Quantizer(NNCFOperation):
         self._pre_processing_fn = self._make_pre_processing_fn()
         self._post_processing_fn = self._make_post_processing_fn()
 
+    @property
+    def mode(self) -> str:
+        """
+        Returns mode of the quantization (symmetric or asymmetric).
+
+        :return: The mode of the quantization.
+        """
+        raise NotImplementedError
+
     def call(self, inputs, weights, training):
         """
         The method applies quantization to the input tensor if the quantizer is enabled,
@@ -281,6 +290,19 @@ class SymmetricQuantizer(Quantizer):
     def half_range(self):
         return self._half_range
 
+    @property
+    def mode(self) -> str:
+        return QuantizationMode.SYMMETRIC
+
+    def signed(self, op_weights) -> bool:
+        """
+        Returns `True` for signed quantization, `False` for unsigned.
+
+        :return: `True` for signed quantization, `False` for unsigned.
+        """
+        signed_var = op_weights['signed_var']
+        return signed_var.numpy() < 0.0
+
     def build(self, input_shape, input_type, name, layer):
         shape = None
         if self.per_channel:
@@ -401,6 +423,10 @@ class AsymmetricQuantizer(Quantizer):
     @property
     def half_range(self):
         return self._half_range
+
+    @property
+    def mode(self) -> str:
+        return QuantizationMode.ASYMMETRIC
 
     def build(self, input_shape, input_type, name, layer):
         shape = None
