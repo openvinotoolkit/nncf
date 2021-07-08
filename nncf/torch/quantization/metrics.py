@@ -10,35 +10,33 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-from typing import Dict
-from typing import Optional
+
+from typing import Dict, List, Tuple, Optional, Any
+from itertools import chain
 
 import networkx as nx
 import torch
 import numpy as np
-from collections import Counter
 from collections import deque
 from copy import deepcopy
 
 from nncf.common.graph import NNCFGraph
 from nncf.torch.quantization.default_quantization import DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT
 from nncf.torch.quantization.layers import BaseQuantizer
-from nncf.common.quantization.structs import QuantizerId
-
 from nncf.torch.quantization.layers import SymmetricQuantizer
 from nncf.torch.nncf_network import NNCFNetwork, PTNNCFGraph
 from nncf.torch.dynamic_graph.transform_graph import is_nncf_module
 from nncf.common.quantization.quantizer_propagation.structs import QuantizationTrait
+from nncf.torch.debug import is_debug
 from nncf.common.quantization.structs import WeightQuantizerId
 from nncf.common.quantization.structs import NonWeightQuantizerId
 from nncf.torch.quantization.structs import WeightQuantizerInfo
 from nncf.torch.quantization.structs import NonWeightQuantizerInfo
 from nncf.common.collector import StatisticsCollector
-from nncf.common.quantization.statistics import QuantizationShareStatistics
-from nncf.common.quantization.statistics import QuantizersCounter
-from nncf.common.quantization.statistics import BitwidthDistributionStatistics
-from nncf.common.quantization.statistics import MemoryConsumptionStatistics
-from nncf.common.quantization.statistics import QuantizationConfigurationStatistics
+from nncf.torch.quantization.statistics import MemoryConsumptionStatistics
+from nncf.torch.quantization.statistics import QuantizationConfigurationStatistics
+from nncf.common.quantization.collectors import QuantizerDescription
+from nncf.common.quantization.collectors import QuantizationStatisticsCollector
 from nncf.common.graph.graph_matching import find_subgraphs_matching_pattern
 from nncf.torch.graph.patterns import get_full_pattern_graph
 
@@ -48,97 +46,83 @@ class QuantizationShareBuildTimeInfo:
         self.aq_potential_num = aq_potential_num
         self.wq_potential_num = wq_potential_num
 
+    def get_state(self) -> Dict[str, Any]:
+        """
+        Returns a dictionary with Python data structures (dict, list, tuple, str, int, float, True, False, None) that
+        represents state of the object.
 
-class QuantizationShareStatisticsCollector(StatisticsCollector):
+        :return: state of the object
+        """
+        return {
+            'aq_potential_num': self.aq_potential_num,
+            'wq_potential_num': self.wq_potential_num
+        }
+
+    @classmethod
+    def from_state(cls, state: Dict[str, Any]) -> 'QuantizationShareBuildTimeInfo':
+        """
+        Creates the object from its state.
+
+        :param state: Output of `get_state()` method.
+        """
+        return cls(**state)
+
+
+class PTQuantizationStatisticsCollector(QuantizationStatisticsCollector):
     """
-    This is a metric representing the share of the model that has been quantized.
-    It includes the calculation of the following numbers:
-    - Percentage of symmetric/asymmetric/per-channel/per-tensor weight quantizers relative
-      to the number of placed weight quantizers
-    - Percentage of symmetric/asymmetric/per-channel/per-tensor non weight quantizers relative
-      to the number of placed non weight quantizers
-    - Percentage of weight quantizers and non weight quantizers for each precision relative
-      to the number potential* quantizers / placed quantizers
-    Bitwidth distribution data is also collected.
-
-    * The maximum possible number of potential quantizers depends on the presence of ignored
-    scopes and the mode of quantizer setup that is used at the time of collecting the metric.
+    Implementation of the quantization statistics collector for the PyTorch backend.
     """
-
-    NAME_STR = 'quantization_share_statistics'
 
     def __init__(self,
                  weight_quantizers: Dict[WeightQuantizerId, WeightQuantizerInfo],
                  non_weight_quantizers: Dict[NonWeightQuantizerId, NonWeightQuantizerInfo],
                  build_time_info: QuantizationShareBuildTimeInfo):
+        """
+        Initializes a collector of the quantization statistics.
+        """
         self._weight_quantizers = {k: v.quantizer_module_ref for k, v in weight_quantizers.items()}
         self._non_weight_quantizers = {k: v.quantizer_module_ref for k, v in non_weight_quantizers.items()}
         self._info = build_time_info
 
-    def collect(self) -> QuantizationShareStatistics:
+    def _collect_quantizers_descriptions(self) -> List[QuantizerDescription]:
         """
-        Collects quantization share statistics.
+        Collects descriptions of the quantizers.
+
+        :return: Descriptions of the quantizers.
         """
-        all_quantizers = {**self._weight_quantizers, **self._non_weight_quantizers}
+        # `True` for weight quantizer, `False` otherwise.
+        quantizers = chain(
+            map(lambda x: (True, x), self._weight_quantizers.values()),
+            map(lambda x: (False, x), self._non_weight_quantizers.values())
+        )
 
-        wq_counter = QuantizersCounter()
-        aq_counter = QuantizersCounter()
-        for qid, quantizer in all_quantizers.items():  # type: Tuple[QuantizerId, BaseQuantizer]
-            counter = wq_counter if qid in self._weight_quantizers else aq_counter
+        quantizers_descriptions = []
+        for is_weight_quantizer, q in quantizers:
+            is_symmetric = isinstance(q, SymmetricQuantizer)
 
-            if quantizer.per_channel:
-                counter.num_per_channel += 1
-            else:
-                counter.num_per_tensor += 1
+            quantizers_descriptions.append(
+                QuantizerDescription(
+                    q.num_bits,
+                    q.per_channel,
+                    q.signed,
+                    is_symmetric,
+                    is_weight_quantizer,
+                    q.is_enabled_quantization()
+                )
+            )
 
-            if quantizer.signed:
-                counter.num_signed += 1
-            else:
-                counter.num_unsigned += 1
+        return quantizers_descriptions
 
-            if isinstance(quantizer, SymmetricQuantizer):
-                counter.num_symmetric += 1
-            else:
-                counter.num_asymmetric += 1
-
-        wq_total_num = len(self._weight_quantizers)
-        aq_total_num = len(self._non_weight_quantizers)
-
-        return QuantizationShareStatistics(wq_total_num, aq_total_num, self._info.wq_potential_num,
-                                           self._info.aq_potential_num, wq_counter, aq_counter)
-
-
-class BitwidthDistributionStatisticsCollector(StatisticsCollector):
-    """
-    Collects bit width distribution statistics.
-    """
-
-    NAME_STR = 'bitwidth_distribution_statistics'
-
-    def __init__(self,
-                 weight_quantizers: Dict[WeightQuantizerId, WeightQuantizerInfo],
-                 non_weight_quantizers: Dict[NonWeightQuantizerId, NonWeightQuantizerInfo]):
+    def _get_potential_quantizers_num(self) -> Tuple[int, int]:
         """
-        Initializes collector of the bit width distribution statistics.
-        """
-        self._weight_quantizers = {k: v.quantizer_module_ref for k, v in weight_quantizers.items()}
-        self._non_weight_quantizers = {k: v.quantizer_module_ref for k, v in non_weight_quantizers.items()}
+        Returns a potential number of quantizers for weights and activations.
 
-    def collect(self) -> BitwidthDistributionStatistics:
+        :return: A tuple (wq_potential_num, aq_potential_num) where
+            - `wq_potential_num` is a potential number of quantizers for weights.
+            - `aq_potential_num` is a potential number of quantizers for activations.
         """
-        Collects bit width distribution statistics.
-        """
-        all_quantizers = {**self._weight_quantizers, **self._non_weight_quantizers}
-        wq_bitwidths = []
-        aq_bitwidths = []
-        for qid, quantizer in all_quantizers.items():
-            if qid in self._weight_quantizers:
-                wq_bitwidths.append(quantizer.num_bits)
-            else:
-                aq_bitwidths.append(quantizer.num_bits)
-
-        return BitwidthDistributionStatistics(dict(Counter(wq_bitwidths)),
-                                              dict(Counter(aq_bitwidths)))
+        aq_potential_num = self._info.aq_potential_num if is_debug() else None
+        return self._info.wq_potential_num, aq_potential_num
 
 
 class MemoryConsumptionStatisticsCollector(StatisticsCollector):
@@ -150,8 +134,6 @@ class MemoryConsumptionStatisticsCollector(StatisticsCollector):
     * Reflects host memory consumption, assuming only the final low-precision output activation tensors are stored
       in host memory (i.e. assuming intermediate accumulation results are only stored in device memory)
     """
-
-    NAME_STR = 'memory_consumption_statistics'
 
     def __init__(self,
                  compressed_model: NNCFNetwork,
@@ -246,7 +228,6 @@ class ShareEdgesQuantizedDataPathStatisticsCollector(StatisticsCollector):
     in the original network graph. "Quantized edge" is an edge representing a quantized activation tensor.
     """
 
-    NAME_STR = 'quantization_configuration_statistics'
     QUANTIZED_EDGES_ATTR = 'quantized'
     PASSED_EDGES_ATTR = 'passed'
     NODES_GRAPH_ATTR = 'nodes'

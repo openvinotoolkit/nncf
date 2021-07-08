@@ -12,10 +12,15 @@
 """
 
 from functools import partial
+from typing import Any
+from typing import Dict
 from typing import Optional
 
 import tensorflow as tf
 
+from nncf.common.quantization.structs import QuantizationMode
+from nncf.common.quantization.structs import QuantizerConfig
+from nncf.common.quantization.structs import QuantizerSpec
 from nncf.tensorflow.layers.custom_objects import NNCF_CUSTOM_OBJECTS
 from nncf.tensorflow.layers.custom_objects import NNCF_QUANTIZATION_OPERATONS
 from nncf.tensorflow.layers.data_layout import get_channel_axis
@@ -23,9 +28,6 @@ from nncf.tensorflow.layers.data_layout import get_channel_size
 from nncf.tensorflow.layers.operation import NNCFOperation
 from nncf.tensorflow.quantization.functions import asymmetric_quantize
 from nncf.tensorflow.quantization.functions import symmetric_quantize
-from nncf.common.quantization.structs import QuantizationMode
-from nncf.common.quantization.structs import QuantizerConfig
-from nncf.common.quantization.structs import QuantizerSpec
 
 
 class TFQuantizerSpec(QuantizerSpec):
@@ -47,6 +49,31 @@ class TFQuantizerSpec(QuantizerSpec):
                    half_range,
                    qconfig.per_channel)
 
+    def get_state(self) -> Dict[str, Any]:
+        """
+        Returns a dictionary with Python data structures (dict, list, tuple, str, int, float, True, False, None) that
+        represents state of the object.
+
+        :return: state of the object
+        """
+        return {
+            'num_bits': self.num_bits,
+            'mode': self.mode,
+            'signedness_to_force': self.signedness_to_force,
+            'narrow_range': self.narrow_range,
+            'half_range': self.half_range,
+            'per_channel': self.per_channel
+        }
+
+    @classmethod
+    def from_state(cls, state: Dict[str, Any]) -> 'TFQuantizerSpec':
+        """
+        Creates the object from its state.
+
+        :param state: Output of `get_state()` method.
+        """
+        return cls(**state)
+
 
 class Quantizer(NNCFOperation):
     """
@@ -63,6 +90,15 @@ class Quantizer(NNCFOperation):
         self._eps = 1e-16
         self._pre_processing_fn = self._make_pre_processing_fn()
         self._post_processing_fn = self._make_post_processing_fn()
+
+    @property
+    def mode(self) -> str:
+        """
+        Returns mode of the quantization (symmetric or asymmetric).
+
+        :return: The mode of the quantization.
+        """
+        raise NotImplementedError
 
     def call(self, inputs, weights, training):
         """
@@ -254,6 +290,19 @@ class SymmetricQuantizer(Quantizer):
     def half_range(self):
         return self._half_range
 
+    @property
+    def mode(self) -> str:
+        return QuantizationMode.SYMMETRIC
+
+    def signed(self, op_weights) -> bool:
+        """
+        Returns `True` for signed quantization, `False` for unsigned.
+
+        :return: `True` for signed quantization, `False` for unsigned.
+        """
+        signed_var = op_weights['signed_var']
+        return signed_var.numpy() < 0.0
+
     def build(self, input_shape, input_type, name, layer):
         shape = None
         if self.per_channel:
@@ -374,6 +423,10 @@ class AsymmetricQuantizer(Quantizer):
     @property
     def half_range(self):
         return self._half_range
+
+    @property
+    def mode(self) -> str:
+        return QuantizationMode.ASYMMETRIC
 
     def build(self, input_shape, input_type, name, layer):
         shape = None

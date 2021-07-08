@@ -21,14 +21,14 @@ class DummyScheduler(CompressionScheduler):
         super().__init__()
         self.delta = delta
 
+    def load_state(self, state):
+        self.delta = state['delta']
+
     def get_state(self):
         state = {
             'delta': self.delta
         }
         return state
-
-    def load_state(self, state):
-        self.delta = state['delta']
 
     def step(self, next_step: Optional[int] = None) -> None:
         pass

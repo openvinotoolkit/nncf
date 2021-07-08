@@ -11,7 +11,7 @@
  limitations under the License.
 """
 
-from typing import Optional, Dict
+from typing import Optional, Dict, Any
 
 from nncf.common.utils.logger import logger
 from nncf.common.utils.registry import Registry
@@ -146,12 +146,12 @@ class PolynomialSparsityScheduler(SparsityScheduler):
         local_step = max(self._steps_in_current_epoch - 1, 0)
         return self.schedule(self.current_epoch, local_step, self._steps_per_epoch)
 
-    def load_state(self, state: Dict[str, object]) -> None:
+    def load_state(self, state: Dict[str, Any]) -> None:
         super().load_state(state)
         if self._update_per_optimizer_step:
             self._steps_per_epoch = state['_steps_per_epoch']
 
-    def get_state(self) -> Dict[str, object]:
+    def get_state(self) -> Dict[str, Any]:
         state = super().get_state()
         if self._update_per_optimizer_step:
             state['_steps_per_epoch'] = self._steps_per_epoch
@@ -248,12 +248,12 @@ class AdaptiveSparsityScheduler(SparsityScheduler):
 
         return min(current_level, self.target_level)
 
-    def load_state(self, state: Dict[str, object]) -> None:
+    def load_state(self, state: Dict[str, Any]) -> None:
         super().load_state(state)
         self.num_bad_epochs = state['num_bad_epochs']
         self._current_level = state['current_sparsity_level']
 
-    def get_state(self) -> Dict[str, object]:
+    def get_state(self) -> Dict[str, Any]:
         state = super().get_state()
         state['num_bad_epochs'] = self.num_bad_epochs
         state['current_sparsity_level'] = self._current_level

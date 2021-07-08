@@ -10,18 +10,20 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+from functools import partial
 from os import path as osp
+from typing import Dict
+from typing import Optional
 
 import torch
 import torchvision.models
-from functools import partial
 
 import examples.torch.common.models as custom_models
+from examples.torch.classification.models.mobilenet_v2_32x32 import MobileNetV2For32x32
 from examples.torch.common.example_logger import logger
 import examples.torch.common.restricted_pickle_module as restricted_pickle_module
 from nncf.torch.checkpoint_loading import load_state
 from nncf.torch.utils import safe_thread_call
-from examples.torch.classification.models.mobilenet_v2_32x32 import MobileNetV2For32x32
 
 
 def load_model(model, pretrained=True, num_classes=1000, model_params=None,
@@ -53,14 +55,8 @@ def load_model(model, pretrained=True, num_classes=1000, model_params=None,
     return loaded_model
 
 
-def load_resuming_model_state_dict_and_checkpoint_from_path(resuming_checkpoint_path):
-    logger.info('Resuming from checkpoint {}...'.format(resuming_checkpoint_path))
-    resuming_checkpoint = torch.load(resuming_checkpoint_path, map_location='cpu',
-                                     pickle_module=restricted_pickle_module)
-    # use checkpoint itself in case only the state dict was saved,
-    # i.e. the checkpoint was created with `torch.save(module.state_dict())`
-    resuming_model_state_dict = resuming_checkpoint.get('state_dict', resuming_checkpoint)
-    return resuming_model_state_dict, resuming_checkpoint
+MODEL_STATE_ATTR = 'state_dict'
+COMPRESSION_STATE_ATTR = 'compression_state'
 
 
 def load_resuming_checkpoint(resuming_checkpoint_path: str):
@@ -70,3 +66,11 @@ def load_resuming_checkpoint(resuming_checkpoint_path: str):
                                 pickle_module=restricted_pickle_module)
         return checkpoint
     raise FileNotFoundError("no checkpoint found at '{}'".format(resuming_checkpoint_path))
+
+
+def extract_model_and_compression_states(resuming_checkpoint: Optional[Dict] = None):
+    if resuming_checkpoint is None:
+        return None, None
+    compression_state = resuming_checkpoint.get(COMPRESSION_STATE_ATTR)
+    model_state_dict = resuming_checkpoint.get(MODEL_STATE_ATTR)
+    return model_state_dict, compression_state

@@ -122,6 +122,7 @@ To export a model to the OpenVINO IR and run it using the Intel® Deep Learning 
 | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
 |ResNet50|None|ImageNet|75.04|7.75 (100%)|25.5 (100%)|-|-|
 |ResNet50|Filter Pruning 40%|ImageNet|74.98 (-0.06)|4.29 (55.35%)|15.8 (61.96%)|[Link](configs/pruning/resnet50_imagenet_pruning_geometric_median.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/tensorflow/models/develop/resnet50_pruning_40.tar.gz)|
+|ResNet50|Filter Pruning 40% + INT8 w:sym,per-tensor a:sym,per-tensor|ImageNet|75.08 (+0.04)|4.27 (55.10%)|15.8 (61.96%)|[Link](configs/pruning_quantization/resnet50_imagenet_pruning_geometric_median_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/tensorflow/models/develop/resnet50_int8_w_sym_t_half_a_sym_t_pruning_40.tar.gz)|
 
 #### Results for accuracy-aware compressed training
 

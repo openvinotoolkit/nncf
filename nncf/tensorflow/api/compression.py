@@ -10,70 +10,38 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-from typing import TypeVar, Dict
 
-import json
-import tensorflow as tf
+from typing import Any
+from typing import Dict
+from typing import TypeVar
 
-from nncf.api.compression import CompressionAlgorithmBuilder
-from nncf.common.compression import BaseCompressionAlgorithmController
+from nncf.common.compression import BaseCompressionAlgorithmBuilder
 from nncf.tensorflow.graph.model_transformer import TFModelTransformer
 
 ModelType = TypeVar('ModelType')
 
 
-class TFCompressionAlgorithmController(BaseCompressionAlgorithmController, tf.train.experimental.PythonState):
-    """
-    Serves as a handle to the additional modules, parameters and hooks inserted
-    into the original uncompressed model to enable algorithm-specific compression.
-    Hosts entities that are to be used during the training process, such as
-    compression scheduler and compression loss.
-    """
-
-    def load_state(self, state: Dict[str, object]) -> None:
-        """
-        Loads the compression controller state.
-
-        :param state: Output of `get_state()` method.
-        """
-        self.scheduler.load_state(state['scheduler_state'])
-        self.loss.load_state(state['loss_state'])
-
-    def get_state(self) -> Dict[str, object]:
-        """
-        Returns the compression controller state.
-
-        :return: The compression controller state.
-        """
-        return {
-            'scheduler_state': self.scheduler.get_state(),
-            'loss_state': self.loss.get_state()
-        }
-
-    def serialize(self) -> str:
-        """
-        Callback to serialize the object by tf.train.experimental.PythonState.
-
-        :return: State of the compression controller.
-        """
-        string_value = json.dumps(self.get_state())
-        return string_value
-
-    def deserialize(self, state: str) -> None:
-        """
-        Callback to deserialize the object by tf.train.experimental.PythonState.
-
-        :param state: State of the compression controller.
-        """
-        state = json.loads(state)
-        self.load_state(state)
-
-
-class TFCompressionAlgorithmBuilder(CompressionAlgorithmBuilder):
+class TFCompressionAlgorithmBuilder(BaseCompressionAlgorithmBuilder):
     """
     Determines which modifications should be made to the original model in
     order to enable algorithm-specific compression during fine-tuning.
     """
+
+    def _get_state_without_name(self) -> Dict[str, Any]:
+        """
+        Implementation of get_state that returns state without builder name.
+
+        :return: Returns a dictionary with Python data structures
+            (dict, list, tuple, str, int, float, True, False, None) that represents state of the object.
+        """
+        return {}
+
+    def _load_state_without_name(self, state_without_name: Dict[str, Any]):
+        """
+        Implementation of load state that takes state without builder name.
+
+        :param state_without_name: Output of `_get_state_without_name()` method.
+        """
 
     def apply_to(self, model: ModelType) -> ModelType:
         """

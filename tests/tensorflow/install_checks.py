@@ -17,6 +17,7 @@ import nncf
 
 import tensorflow as tf
 
+from nncf.common.compression import BaseCompressionAlgorithmController
 from nncf.tensorflow.helpers.model_creation import create_compressed_model
 from tests.tensorflow.quantization.utils import get_basic_quantization_config
 
@@ -26,4 +27,5 @@ outputs = tf.keras.layers.Conv2D(filters=3, kernel_size=3)(inputs)
 model = tf.keras.Model(inputs=inputs, outputs=outputs)
 
 config = get_basic_quantization_config()
-compression_model, compression_ctrl = create_compressed_model(model, config, should_init=False)
+compression_state_to_skip_init = {BaseCompressionAlgorithmController.BUILDER_STATE: dict()}
+compression_model, compression_ctrl = create_compressed_model(model, config, compression_state_to_skip_init)

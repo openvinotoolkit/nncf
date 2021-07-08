@@ -25,7 +25,6 @@ from nncf.common.pruning.clusterization import Cluster
 from nncf.common.pruning.clusterization import Clusterization
 from nncf.common.pruning.model_analysis import ModelAnalyzer
 from nncf.common.pruning.model_analysis import cluster_special_ops
-from nncf.common.pruning.pruning_node_selector import PruningNodeSelector
 from nncf.torch.dynamic_graph.graph_tracer import ModelInputInfo
 from nncf.torch.layers import NNCF_PRUNING_MODULES_DICT
 from nncf.torch.nncf_network import NNCFNetwork
@@ -52,11 +51,8 @@ def create_nncf_model_and_builder(model, config_params):
     nncf_config['compression']['algorithm'] = 'filter_pruning'
     for key, value in config_params.items():
         nncf_config['compression']['params'][key] = value
-    nncf_model, composite_builder = create_nncf_model_and_algo_builder(model, nncf_config)
-
-    assert len(composite_builder.child_builders) == 1
-    algo_builder = composite_builder.child_builders[0]
-    return nncf_model, algo_builder
+    nncf_model, compression_builder = create_nncf_model_and_algo_builder(model, nncf_config)
+    return nncf_model, compression_builder
 
 
 class GroupPruningModulesTestStruct:
@@ -187,6 +183,7 @@ def test_pruning_node_selector(test_input_info_struct_: GroupPruningModulesTestS
 
     pruning_operations = [v.op_func_name for v in NNCF_PRUNING_MODULES_DICT]
     grouping_operations = PTElementwise.get_all_op_aliases()
+    from nncf.common.pruning.pruning_node_selector import PruningNodeSelector
     pruning_node_selector = PruningNodeSelector(PT_PRUNING_OPERATOR_METATYPES,
                                                 pruning_operations,
                                                 grouping_operations,
