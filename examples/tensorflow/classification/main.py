@@ -101,6 +101,18 @@ def get_dataset_builders(config, num_devices, one_hot=True):
     return [train_builder, val_builder]
 
 
+def get_num_classes(dataset):
+    if 'imagenet' in dataset:
+        num_classes = 1000
+    elif dataset == 'cifar100':
+        num_classes = 100
+    elif dataset == 'cifar10':
+        num_classes = 10
+    else:
+        raise RuntimeError('Could not determine number of classes by dataset name')
+    return num_classes
+
+
 def load_checkpoint(checkpoint, ckpt_path):
     logger.info('Load from checkpoint is enabled.')
     if tf.io.gfile.isdir(ckpt_path):
@@ -147,7 +159,7 @@ def run(config):
 
     model_fn, model_params = get_model(config.model,
                                        input_shape=config.get('input_info', {}).get('sample_size', None),
-                                       num_classes=config.get('num_classes', 1000),
+                                       num_classes=config.get('num_classes', get_num_classes(config.dataset)),
                                        pretrained=config.get('pretrained', False),
                                        weights=config.get('weights', None))
 
@@ -286,7 +298,7 @@ def run(config):
 def export(config):
     model, model_params = get_model(config.model,
                                     input_shape=config.get('input_info', {}).get('sample_size', None),
-                                    num_classes=config.get('num_classes', 1000),
+                                    num_classes=config.get('num_classes', get_num_classes(config.dataset)),
                                     pretrained=config.get('pretrained', False),
                                     weights=config.get('weights', None))
     model = model(**model_params)
