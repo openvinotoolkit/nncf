@@ -268,11 +268,12 @@ class TFModelTransformer(ModelTransformer):
         self._model_config['layers'][idx] = replace_layer_config
 
     def _insert_layers_before(self, layer_name: str, instance_idx: int, inp_port: int, layers: List):
-        for layer in self._model_config['input_layers']:
-            if layer_name == layer[0]:
-                raise RuntimeError('Insertion before input layer: {} is not supported'.format(layer_name))
-
         functional_model = is_functional_model(self._model)
+
+        if functional_model:
+            for layer in self._model_config['input_layers']:
+                if layer_name == layer[0]:
+                    raise RuntimeError('Insertion before input layer: {} is not supported'.format(layer_name))
 
         layer_configs = []
         idx, input_layer_cfg = self._find_layer_config(layer_name)
