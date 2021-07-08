@@ -78,8 +78,8 @@ def configure_paths(config):
     compression_config = config.get('compression', [])
     if not isinstance(compression_config, list):
         compression_config = [compression_config, ]
-    for algo_config in compression_config:
-        algo_config.log_dir = config.log_dir
+    if config.nncf_config is not None:
+        config.nncf_config["log_dir"] = config.log_dir
 
     if config.checkpoint_save_dir is None:
         config.checkpoint_save_dir = config.log_dir
