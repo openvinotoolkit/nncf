@@ -95,8 +95,8 @@ def test_adaptive_compression_training_loop(max_accuracy_degradation,
                                                                                         validate_fn,
                                                                                         init_finetuning_steps)
 
-    def train_fn(compression_ctrl, model, epoch, optimizer, lr_scheduler,
-                 train_loader=train_loader):
+    def train_fn(compression_ctrl, model, optimizer,
+                 train_loader=train_loader, **kwargs):
         with set_torch_seed():
             train_loader = iter(train_loader)
             for _ in range(num_steps):

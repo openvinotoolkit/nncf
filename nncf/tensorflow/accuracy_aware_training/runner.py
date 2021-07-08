@@ -45,25 +45,25 @@ class TFAccuracyAwareTrainingRunner(BaseAccuracyAwareTrainingRunner):
         # assuming that epoch number is only used for logging in train_fn:
         self._train_epoch_fn(compression_controller,
                              model,
-                             self.cumulative_epoch_count)
+                             epoch=self.cumulative_epoch_count)
 
         statistics = compression_controller.statistics()
 
         self.current_val_metric_value = None
         if self.validate_every_n_epochs is not None and \
             self.training_epoch_count % self.validate_every_n_epochs == 0:
-            self.current_val_metric_value = self.validate(model, compression_controller)
+            self.current_val_metric_value = self.validate(model)
 
         if self.verbose:
             nncf_logger.info(statistics.to_str())
         # dump best checkpoint for current target compression rate
-        self.dump_checkpoint(model, compression_controller)
+        self.dump_checkpoint(model)
 
         self.training_epoch_count += 1
         self.cumulative_epoch_count += 1
         return self.current_val_metric_value
 
-    def validate(self, model, compression_controller):
+    def validate(self, model):
         val_metric_value = self._validate_fn(model, epoch=self.cumulative_epoch_count)
         is_best = (not self.is_higher_metric_better) != (val_metric_value > self.best_val_metric_value)
         if is_best:
@@ -78,7 +78,7 @@ class TFAccuracyAwareTrainingRunner(BaseAccuracyAwareTrainingRunner):
         self.training_epoch_count = 0
         self.best_val_metric_value = 0
 
-    def dump_checkpoint(self, model, compression_controller):
+    def dump_checkpoint(self, model):
         checkpoint_path = osp.join(self._checkpoint_save_dir, 'acc_aware_checkpoint_last.pb')
         model.save_weights(checkpoint_path)
 

@@ -340,13 +340,13 @@ def run(config):
             timer = Timer()
             timer.tic()
 
-            def train_epoch_fn(compression_ctrl, model, epoch):
+            def train_epoch_fn(compression_ctrl, model, epoch, **kwargs):
                 train_step = create_train_step_fn(strategy, model, loss_fn, optimizer)
                 train_epoch(train_step, compression_ctrl, epoch, initial_epoch, steps_per_epoch,
                             optimizer, checkpoint_manager, train_dist_dataset, train_summary_writer,
                             initial_step, config.print_freq, timer)
 
-            def validate_fn(model, epoch):
+            def validate_fn(model, **kwargs):
                 test_step = create_test_step_fn(strategy, model, predict_post_process_fn)
                 metric_result = evaluate(test_step, eval_metric, test_dist_dataset,
                                          num_test_batches, config.print_freq)

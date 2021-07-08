@@ -22,6 +22,7 @@ The samples demonstrate the usage of compression algorithms for three different 
 - Configuration file examples for each supported compression algorithm.
 - Git patches for prominent third-party repositories ([mmdetection](https://github.com/open-mmlab/mmdetection), [huggingface-transformers](https://github.com/huggingface/transformers)) demonstrating the process of integrating NNCF into custom training pipelines
 - Exporting compressed models to ONNX\* checkpoints ready for usage with [OpenVINO&trade; toolkit](https://github.com/openvinotoolkit/).
+- Support for compression-aware model training via the [adaptive-compression training loop](./docs/Usage.md#accuracy-aware-model-training).
 
 ## Usage
 The NNCF is organized as a regular Python package that can be imported in your target training pipeline script.
