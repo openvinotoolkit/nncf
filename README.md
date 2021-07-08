@@ -165,7 +165,7 @@ Install NNCF and TensorFlow in one line:
 python setup.py install --tf
 ```
 
-_NB_: For launching example scripts in this repository, we need to  recommend replacing the `install` option above with `develop` and setting the `PYTHONPATH` variable to the root of the checked-out repository.
+_NB_: For launching example scripts in this repository, we recommend replacing the `install` option above with `develop` and setting the `PYTHONPATH` variable to the root of the checked-out repository.
 
 #### As a PyPI package:
 
