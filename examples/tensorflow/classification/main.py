@@ -109,7 +109,9 @@ def get_num_classes(dataset):
     elif dataset == 'cifar10':
         num_classes = 10
     else:
-        raise RuntimeError('Could not determine number of classes by dataset name')
+        num_classes = 1000
+      
+    logger.info('The sample is started with {} classes'.format(num_classes)) 
     return num_classes
 
 
