@@ -61,14 +61,25 @@ class BasePruningAlgoBuilder(PTCompressionAlgorithmBuilder):
 
     @staticmethod
     def _set_default_params_for_ranking_type(params: Dict) -> None:
+        """
+        Setting default parameter values of pruning algorithm depends on the ranking type:
+        for learned_ranking `all_weights` must be True (in case of False was set by the user, an Exception will be raised),
+        `prune_first_conv`, `prune_last_conv`, `prune_downsample_convs` are recommended to be True (this params will
+        be set to True by default (and remain unchanged if the user sets some value).
+        :param params: dict with parameters of the algorithm from config
+        """
         learned_ranking = 'interlayer_ranking_type' in params and params['interlayer_ranking_type'] == 'learned_ranking'
         if not learned_ranking:
             return
         nncf_logger.info('For learning global ranking `prune_first_conv`, `prune_last_conv`, `prune_downsample_convs`, '
-                         '`all_weights` are setting to True by default.')
+                         '`all_weights` are setting to True by default. It is not recommended to set this params'
+                         ' to False.')
         params.setdefault('prune_first_conv', True)
         params.setdefault('prune_last_conv', True)
         params.setdefault('prune_downsample_convs', True)
+        if params.get('all_weights') is False:
+            raise Exception('In case of `interlayer_ranking_type`=`learned_ranking`, `all_weights` must be set to True,'
+                            ' plese, change this in config settings.')
         params.setdefault('all_weights', True)
 
     def _get_transformation_layout(self, target_model: NNCFNetwork) -> PTTransformationLayout:
