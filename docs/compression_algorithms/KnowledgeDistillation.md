@@ -3,7 +3,7 @@
 #### The algorithm description
 The Knowledge Distillation [Hinton et al., 2015](https://arxiv.org/pdf/1503.02531.pdf)
 implies that a small model (student) is trained to mimic a pre-trained large model (teacher) through knowledge 
-transferring. The goal is to improve the accuracy of the student network. 
+transfer. The goal is to improve the accuracy of the student network. 
 
 The NNCF for PyTorch supports Knowledge Distillation out of the box along with all supported compression algorithm 
 (quantization, sparsity, filter pruning), when a student is a model being compressed and teacher - original 
