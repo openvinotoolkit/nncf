@@ -36,6 +36,7 @@ from torchvision.datasets import CIFAR10
 from torchvision.datasets import CIFAR100
 from torchvision.models import InceptionOutputs
 
+from examples.torch.common.argparser import parse_args
 from examples.torch.common.argparser import get_common_argument_parser
 from examples.torch.common.example_logger import logger
 from examples.torch.common.execution import ExecutionMode
@@ -98,7 +99,7 @@ def get_argument_parser():
 
 def main(argv):
     parser = get_argument_parser()
-    args = parser.parse_args(args=argv)
+    args = parse_args(parser, argv)
     config = create_sample_config(args, parser)
 
     if config.dist_url == "env://":
@@ -210,7 +211,7 @@ def main_worker(current_gpu, config: SampleConfig):
     if model_state_dict is not None:
         load_state(model, model_state_dict, is_resume=True)
 
-    if config.to_onnx:
+    if 'export' in config.mode and ('train' not in config.mode and 'test' not in config.mode):
         compression_ctrl.export_model(config.to_onnx)
         logger.info("Saved to {}".format(config.to_onnx))
         return
@@ -226,7 +227,7 @@ def main_worker(current_gpu, config: SampleConfig):
     best_acc1 = 0
     # optionally resume from a checkpoint
     if resuming_checkpoint_path is not None:
-        if config.mode.lower() == 'train' and config.to_onnx is None:
+        if 'train' in config.mode:
             config.start_epoch = resuming_checkpoint['epoch']
             best_acc1 = resuming_checkpoint['best_acc1']
             optimizer.load_state_dict(resuming_checkpoint['optimizer'])
@@ -244,10 +245,7 @@ def main_worker(current_gpu, config: SampleConfig):
         statistics = compression_ctrl.statistics()
         logger.info(statistics.to_str())
 
-    if config.mode.lower() == 'test':
-        validate(val_loader, model, criterion, config)
-
-    if config.mode.lower() == 'train':
+    if 'train' in config.mode:
         if is_accuracy_aware_training(config):
             # validation function that returns the target metric value
             # pylint: disable=E1123
@@ -280,7 +278,14 @@ def main_worker(current_gpu, config: SampleConfig):
             train(config, compression_ctrl, model, criterion, train_criterion_fn, lr_scheduler, model_name, optimizer,
                   train_loader, train_sampler, val_loader, best_acc1)
 
+    if 'test' in config.mode:
+        validate(val_loader, model, criterion, config)
+
     config.mlflow.end_run()
+
+    if 'export' in config.mode:
+        compression_ctrl.export_model(config.to_onnx)
+        logger.info("Saved to {}".format(config.to_onnx))
 
 
 def train(config, compression_ctrl, model, criterion, criterion_fn, lr_scheduler, model_name, optimizer,

@@ -45,7 +45,8 @@ from examples.tensorflow.segmentation.models.model_selector import get_predefine
 
 
 def get_argument_parser():
-    parser = get_common_argument_parser(weights=False,
+    parser = get_common_argument_parser(mode=False,
+                                        weights=False,
                                         precision=False,
                                         save_checkpoint_freq=False,
                                         export_args=False,

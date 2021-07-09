@@ -51,15 +51,6 @@ def get_argument_parser():
     parser = get_common_argument_parser(precision=False,
                                         save_checkpoint_freq=False)
 
-    parser.add_argument(
-        '--mode',
-        '-m',
-        nargs='+',
-        choices=['train', 'test', 'export'],
-        default='train',
-        help='train: performs training and validation; test: tests the model; export: exports the model.'
-    )
-
     parser.add_argument('--backbone-checkpoint',
                         default=None,
                         type=str,

@@ -50,14 +50,6 @@ def get_argument_parser():
                                         print_freq=False)
 
     parser.add_argument(
-        '--mode',
-        '-m',
-        nargs='+',
-        choices=['train', 'test', 'export'],
-        default='train',
-        help='train: performs training and validation; test: tests the model; export: exports the model.'
-    )
-    parser.add_argument(
         '--dataset',
         help='Dataset to use.',
         choices=['imagenet2012', 'cifar100', 'cifar10'],
