@@ -1,30 +1,26 @@
 # Neural Network Compression Framework (NNCF)
 
-NNCF provides a suite of advanced compression algorithms, applied during a model fine-tuning and samples for models 
-compression. It is highly aligned with [OpenVINO&trade;](https://github.com/openvinotoolkit/openvino) and is aimed 
-to improve runtime performance of models in OpenVINO&trade; with minimal accuracy drop.
+NNCF provides a suite of advanced algorithms for Neural Networks inference optimization in [OpenVINO&trade;](https://github.com/openvinotoolkit/openvino) with minimal accuracy drop.
 
-NNCF is designed to work with models from the two most popular deep learning frameworks, [PyTorch](https://pytorch.org/) 
-and [TensorFlow](https://www.tensorflow.org/).
+NNCF is designed to work with models from [PyTorch](https://pytorch.org/) and [TensorFlow](https://www.tensorflow.org/).
+
+NNCF provides samples that demonstrate the usage of compression algorithms for three different use cases on public PyTorch and 
+TensorFlow models and datasets: Image Classification, Object Detection and Semantic Segmentation. 
+[Compression results](#nncf-compressed-model-zoo) achievable with the NNCF-powered samples can be found in a table at 
+the end of this document.
 
 The framework is organized as a Python\* package that can be built and used in a standalone mode. The framework 
 architecture is unified to make it easy to add different compression algorithms for both PyTorch and TensorFlow deep 
 learning frameworks.
 
-The samples demonstrate the usage of compression algorithms for three different use cases on public PyTorch and 
-TensorFlow models and datasets: Image Classification, Object Detection and Semantic Segmentation. 
-[Compression results](#nncf-compressed-model-zoo) achievable with the NNCF-powered samples can be found in a table at 
-the end of this document.
-
 ## Key Features
 
-- Support of various compression algorithms, applied during a model fine-tuning process to achieve best compression 
-  parameters and accuracy:
+- Support of various compression algorithms, applied during a model fine-tuning process to achieve a better performance-accuracy trade-off:
   
   |Compression algorithm|PyTorch|TensorFlow|
   | :--- | :---: | :---: |
   |[Quantization](./docs/compression_algorithms/Quantization.md) | Supported | Supported |
-  |[Mixed-Precision Quantization](./docs/compression_algorithms/Quantization.md#mixed_precision_quantization) | Supported | Support planned |
+  |[Mixed-Precision Quantization](./docs/compression_algorithms/Quantization.md#mixed_precision_quantization) | Supported | Not supported |
   |[Binarization](./docs/compression_algorithms/Binarization.md) | Supported | Not supported |
   |[Sparsity](./docs/compression_algorithms/Sparsity.md) | Supported | Supported |
   |[Filter pruning](./docs/compression_algorithms/Pruning.md) | Supported | Supported |
@@ -144,11 +140,8 @@ This repository is tested on Python* 3.6.2+, PyTorch* 1.8.1 (NVidia CUDA\* Toolk
 ## Installation
 We suggest to install or use the package in the [Python virtual environment](https://docs.python.org/3/tutorial/venv.html).
 
-First, create a virtual environment with the version of Python you're going to use and activate it.
-
-Then you need to install one of the deep learning frameworks [PyTorch](https://pytorch.org/) or [TensorFlow](https://www.tensorflow.org/). Please follow to [TensorFlow installation guide](https://www.tensorflow.org/install/) or [PyTorch installation guide](https://pytorch.org/get-started/locally/#start-locally).
-
-When one of those backends has been installed, NNCF can be installed as follow: 
+If you want to optimize a model from PyTorch, install PyTorch by following [PyTorch installation guide](https://pytorch.org/get-started/locally/#start-locally). 
+If you want to optimize a model from TensorFlow, install TensorFlow by following [TensorFlow installation guide](https://www.tensorflow.org/install/).
 
 #### As a package built from a checked-out repository:
 
