@@ -106,13 +106,6 @@ def create_sample_config(args, parser) -> SampleConfig:
 
     sample_config = SampleConfig.from_json(args.config)
     sample_config.update_from_args(args, parser)
-
-    for key, val in sample_config.items():
-        if key in nncf_config:
-            nncf_config[key] = val
-    if 'batch_size' not in nncf_config:
-        nncf_config['batch_size'] = sample_config['batch_size']
-
     sample_config.nncf_config = nncf_config
 
     return sample_config

@@ -38,6 +38,7 @@ from examples.tensorflow.common.utils import configure_paths
 from examples.tensorflow.common.utils import create_code_snapshot
 from examples.tensorflow.common.utils import print_args
 from examples.tensorflow.common.utils import serialize_config
+from examples.tensorflow.common.utils import serialize_cli_args
 from examples.tensorflow.common.utils import SummaryWriter
 from examples.tensorflow.common.utils import Timer
 from examples.tensorflow.segmentation.models.model_selector import get_model_builder
@@ -300,6 +301,7 @@ def main(argv):
     print_args(config)
 
     serialize_config(config.nncf_config, config.log_dir)
+    serialize_cli_args(parser, argv, config.log_dir)
 
     nncf_root = Path(__file__).absolute().parents[3]
     create_code_snapshot(nncf_root, os.path.join(config.log_dir, "snapshot.tar.gz"))
