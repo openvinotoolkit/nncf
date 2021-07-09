@@ -26,6 +26,7 @@ from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.graph.transformations.commands import TransformationType
 from nncf.tensorflow.graph.transformations.commands import TFAfterLayer
+from nncf.tensorflow.graph.transformations.commands import TFBeforeLayer
 from nncf.tensorflow.graph.transformations.commands import TFLayer
 from nncf.tensorflow.graph.transformations.commands import TFLayerWeight
 from nncf.tensorflow.graph.transformations.commands import TFOperationWithWeights
@@ -154,6 +155,11 @@ class TFModelTransformer(ModelTransformer):
             weight_operations = [
                 WeightOperations(target_point.weights_attr_name, insertion_objects)]
             self._insert_weight_operations(target_point.layer_name, weight_operations)
+        elif isinstance(target_point, TFBeforeLayer):
+            self._insert_layers_before(target_point.layer_name,
+                                       target_point.instance_idx,
+                                       target_point.input_port_id,
+                                       insertion_objects)
         elif isinstance(target_point, TFAfterLayer):
             self._insert_layers_after(target_point.layer_name,
                                       target_point.instance_idx,
@@ -260,6 +266,27 @@ class TFModelTransformer(ModelTransformer):
     def _replace_sequential(self, layer_name: str, replace_layer_config: Dict):
         idx, _ = self._find_layer_config(layer_name)
         self._model_config['layers'][idx] = replace_layer_config
+
+    def _insert_layers_before(self, layer_name: str, instance_idx: int, inp_port: int, layers: List):
+        functional_model = is_functional_model(self._model)
+
+        if functional_model:
+            for layer in self._model_config['input_layers']:
+                if layer_name == layer[0]:
+                    raise RuntimeError('Insertion before input layer: {} is not supported'.format(layer_name))
+
+        layer_configs = []
+        idx, input_layer_cfg = self._find_layer_config(layer_name)
+        for layer in layers:
+            config = tf.keras.utils.serialize_keras_object(layer)
+            if functional_model:
+                config['name'] = config['config']['name']
+                config['inbound_nodes'] = [input_layer_cfg['inbound_nodes'][instance_idx][inp_port]]
+                self._model_config['layers'][idx]['inbound_nodes'][instance_idx][inp_port] = [config['name'], 0, 0, {}]
+            layer_configs.append(config)
+
+        for config in layer_configs:
+            self._model_config['layers'].insert(idx, config)
 
     def _insert_layers_after(self, layer_name: str, instance_idx: int, out_port: int, layers: List):
         functional_model = is_functional_model(self._model)
