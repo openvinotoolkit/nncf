@@ -362,13 +362,17 @@ class CompositeCompressionAlgorithmBuilder(CompressionAlgorithmBuilder):
         """
         Initializes internal state of the composite compression algorithm builder
 
-        :param config: The dictionary that contains parameters of the compression
-            methods.
+        :param config: The top-level NNCFConfig object (i.e. parsed from a .json and extended with
+            all necessary objects required for compression such as initialization data loaders).
         :param should_init: If False, trainable parameter initialization will be
             skipped during building.
         """
-        super().__init__(config, should_init)
+        self._config = config
+        self.should_init = should_init
         self._child_builders = []
+
+    def _get_algo_specific_config_section(self) -> Dict:
+        return {}
 
     @property
     def child_builders(self) -> List[CompressionAlgorithmBuilder]:

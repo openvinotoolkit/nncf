@@ -16,6 +16,7 @@ from typing import Dict, List, Set
 
 import tensorflow as tf
 
+from nncf import NNCFConfig
 from nncf.api.compression import CompressionLoss
 from nncf.api.compression import CompressionScheduler
 from nncf.common.graph import NNCFGraph
@@ -105,10 +106,10 @@ class FilterPruningController(BasePruningAlgoController):
                  op_names: List[str],
                  prunable_types: List[str],
                  pruned_layer_groups: Clusterization[PrunedLayerInfo],
-                 config):
+                 config: NNCFConfig):
         super().__init__(target_model, op_names, prunable_types, pruned_layer_groups, config)
         self._original_graph = graph
-        params = self.config.get('params', {})
+        params = self.pruning_config.get('params', {})
         self.frozen = False
         self.pruning_quota = 0.9
 
@@ -533,5 +534,6 @@ class FilterPruningController(BasePruningAlgoController):
 
     def _run_batchnorm_adaptation(self):
         if self._bn_adaptation is None:
-            self._bn_adaptation = BatchnormAdaptationAlgorithm(**extract_bn_adaptation_init_params(self.config))
+            self._bn_adaptation = BatchnormAdaptationAlgorithm(**extract_bn_adaptation_init_params(self.config,
+                                                                                                   'filter_pruning'))
         self._bn_adaptation.run(self.model)

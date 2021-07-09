@@ -10,7 +10,7 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-
+from copy import deepcopy
 from typing import Set
 
 import tensorflow as tf
@@ -19,13 +19,16 @@ from nncf import NNCFConfig
 from nncf.api.compression import CompressionLoss
 from nncf.api.compression import CompressionScheduler
 from nncf.common.graph import OUTPUT_NOOP_METATYPES
+from nncf.common.accuracy_aware_training.training_loop import ADAPTIVE_COMPRESSION_CONTROLLERS
 from nncf.common.graph.transformations.commands import TransformationPriority
 from nncf.common.initialization.batchnorm_adaptation import BatchnormAdaptationAlgorithm
+from nncf.common.schedulers import StubCompressionScheduler
 from nncf.common.sparsity.schedulers import SPARSITY_SCHEDULERS
 from nncf.common.sparsity.statistics import LayerThreshold
 from nncf.common.sparsity.statistics import MagnitudeSparsityStatistics
 from nncf.common.statistics import NNCFStatistics
 from nncf.common.utils.helpers import should_consider_scope
+from nncf.config.extractors import extract_algo_specific_config
 from nncf.config.extractors import extract_bn_adaptation_init_params
 from nncf.tensorflow.algorithm_selector import TF_COMPRESSION_ALGORITHMS
 from nncf.tensorflow.api.compression import TFCompressionAlgorithmBuilder
@@ -44,15 +47,13 @@ from nncf.tensorflow.sparsity.magnitude.functions import WEIGHT_IMPORTANCE_FUNCT
 from nncf.tensorflow.sparsity.magnitude.functions import calc_magnitude_binary_mask
 from nncf.tensorflow.sparsity.magnitude.operation import BinaryMask
 from nncf.tensorflow.sparsity.magnitude.operation import BinaryMaskWithWeightsBackup
-from nncf.common.accuracy_aware_training.training_loop import ADAPTIVE_COMPRESSION_CONTROLLERS
-from nncf.common.schedulers import StubCompressionScheduler
 
 
 @TF_COMPRESSION_ALGORITHMS.register('magnitude_sparsity')
 class MagnitudeSparsityBuilder(TFCompressionAlgorithmBuilder):
     def __init__(self, config: NNCFConfig, should_init: bool = True):
         super().__init__(config, should_init)
-        self.ignored_scopes = self.config.get('ignored_scopes', [])
+        self.ignored_scopes = self._algo_config.get('ignored_scopes', [])
         self._op_names = []
 
     def get_transformation_layout(self, model: tf.keras.Model) -> TFTransformationLayout:
@@ -133,14 +134,16 @@ class MagnitudeSparsityController(BaseSparsityController):
     compression loss.
     """
 
-    def __init__(self, target_model, config, op_names):
+    def __init__(self, target_model, config: NNCFConfig, op_names):
         super().__init__(target_model, op_names)
-        params = config.get('params', {})
+        algo_config = extract_algo_specific_config(config,
+                                                   'magnitude_sparsity')
+        params = deepcopy(algo_config.get('params', {}))
         self._threshold = 0
         self._frozen = False
         self._weight_importance_fn = WEIGHT_IMPORTANCE_FUNCTIONS[params.get('weight_importance', 'normed_abs')]
 
-        sparsity_init = config.get('sparsity_init', 0)
+        sparsity_init = algo_config.get('sparsity_init', 0)
         params['sparsity_init'] = sparsity_init
         scheduler_type = params.get('schedule', 'polynomial')
 
@@ -244,5 +247,7 @@ class MagnitudeSparsityController(BaseSparsityController):
 
     def _run_batchnorm_adaptation(self):
         if self._bn_adaptation is None:
-            self._bn_adaptation = BatchnormAdaptationAlgorithm(**extract_bn_adaptation_init_params(self._config))
+            self._bn_adaptation = BatchnormAdaptationAlgorithm(
+                **extract_bn_adaptation_init_params(self._config,
+                                                    'magnitude_sparsity'))
         self._bn_adaptation.run(self.model)

@@ -172,6 +172,7 @@ class BaseConfigBuilder:
 
     def with_target_scope(self, target_scopes=List[str]):
         self._config['target_scopes'] = target_scopes
+        self._config['compression']['target_scopes'] = target_scopes
         self._options['with'] = 'target_scopes'
         return self
 

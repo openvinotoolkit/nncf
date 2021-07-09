@@ -115,11 +115,6 @@ class PTCompressionAlgorithmBuilder(BaseCompressionAlgorithmBuilder):
           `should_init` - if False, trainable parameter initialization will be skipped during building
         """
         super().__init__(config, should_init)
-        self.ignored_scopes = None
-        self.target_scopes = None
-        if not isinstance(self.config, list):
-            self.ignored_scopes = self.config.get('ignored_scopes')
-            self.target_scopes = self.config.get('target_scopes')
         self.compressed_nncf_module_names = self._nncf_module_types_to_compress()
 
     def apply_to(self, model: NNCFNetwork) -> NNCFNetwork:
@@ -195,7 +190,7 @@ class PTCompressionAlgorithmBuilder(BaseCompressionAlgorithmBuilder):
         scopes_of_frozen_layers = []
         for weighted_node in target_model.get_weighted_original_graph_nodes():
             if not weighted_node.layer_attributes.weight_requires_grad:
-                if should_consider_scope(weighted_node.node_name, self.ignored_scopes, self.target_scopes):
+                if self._should_consider_scope(weighted_node.node_name):
                     scopes_of_frozen_layers.append(weighted_node.node_name)
         scopes_to_print = '\n'.join(scopes_of_frozen_layers)
         if len(scopes_of_frozen_layers) > 0:

@@ -39,8 +39,8 @@ from nncf.torch.graph.graph import PTNNCFGraph
 from nncf.torch.graph.graph_builder import GraphBuilder
 from nncf.torch.layers import LSTMCellNNCF
 from nncf.torch.layers import NNCF_RNN
-from nncf.torch.model_creation import create_compression_algorithm_builder
 from nncf.torch.nncf_network import NNCFNetwork
+from nncf.torch.quantization.algo import QuantizationBuilder
 from nncf.torch.utils import get_all_modules_by_type
 from tests.torch import test_models
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
@@ -379,7 +379,7 @@ def test_gnmt_quantization(_case_config):
                                    ['GNMT/ResidualRecurrentDecoder[decoder]/RecurrentAttention[att_rnn]/'
                                     'BahdanauAttention[attn]'])
 
-    builder = create_compression_algorithm_builder(config, should_init=False)
+    builder = QuantizationBuilder(config, should_init=False)
     builder.apply_to(compressed_model)
 
     check_model_graph(compressed_model, 'gnmt_variable.dot', _case_config.graph_dir)
@@ -768,8 +768,8 @@ def test_compressed_graph_models_hw(desc, hw_config_type):
     input_info_list = create_input_infos(config)
     compressed_model = NNCFNetwork(model, input_infos=input_info_list)
 
-    quantization_builder = create_compression_algorithm_builder(config, should_init=False)  # type: QuantizationBuilder
     # pylint:disable=protected-access
+    quantization_builder = QuantizationBuilder(config, should_init=False)
     single_config_quantizer_setup = quantization_builder._get_quantizer_setup(compressed_model)
     sketch_graph = compressed_model.get_original_graph()
 

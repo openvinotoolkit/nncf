@@ -13,24 +13,25 @@
 
 from typing import List
 
-from nncf.torch.algo_selector import ZeroCompressionLoss
 import torch
-from nncf.api.compression import CompressionStage
+
 from nncf.api.compression import CompressionLoss
 from nncf.api.compression import CompressionScheduler
+from nncf.api.compression import CompressionStage
 from nncf.common.graph import NNCFNode
 from nncf.common.graph import NNCFNodeName
 from nncf.common.graph.transformations.commands import TargetType
-from nncf.common.sparsity.controller import SparsityController
-from nncf.torch.compression_method_api import PTCompressionAlgorithmBuilder
-from nncf.torch.compression_method_api import PTCompressionAlgorithmController
-from nncf.torch.graph.transformations.layout import PTTransformationLayout
-from nncf.common.utils.logger import logger as nncf_logger
-from nncf.torch.graph.transformations.commands import TransformationPriority
-from nncf.torch.graph.transformations.commands import PTTargetPoint
-from nncf.torch.graph.transformations.commands import PTInsertionCommand
 from nncf.common.schedulers import BaseCompressionScheduler
 from nncf.common.schedulers import StubCompressionScheduler
+from nncf.common.sparsity.controller import SparsityController
+from nncf.common.utils.logger import logger as nncf_logger
+from nncf.torch.algo_selector import ZeroCompressionLoss
+from nncf.torch.compression_method_api import PTCompressionAlgorithmBuilder
+from nncf.torch.compression_method_api import PTCompressionAlgorithmController
+from nncf.torch.graph.transformations.commands import PTInsertionCommand
+from nncf.torch.graph.transformations.commands import PTTargetPoint
+from nncf.torch.graph.transformations.commands import TransformationPriority
+from nncf.torch.graph.transformations.layout import PTTransformationLayout
 from nncf.torch.nncf_network import NNCFNetwork
 
 
@@ -67,7 +68,9 @@ class BaseSparsityAlgoBuilder(PTCompressionAlgorithmBuilder):
                 continue
 
             nncf_logger.info("Adding Weight Sparsifier in scope: {}".format(node_name))
-            compression_lr_multiplier = self.config.get("compression_lr_multiplier", None)
+            compression_lr_multiplier = \
+                self.config.get_redefinable_global_param_value_for_algo('compression_lr_multiplier',
+                                                                        self.name)
             operation = self.create_weight_sparsifying_operation(module_node, compression_lr_multiplier)
             hook = operation.to(device)
             insertion_commands.append(PTInsertionCommand(PTTargetPoint(TargetType.OPERATION_WITH_WEIGHTS,

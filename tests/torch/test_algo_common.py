@@ -11,7 +11,6 @@
  limitations under the License.
 """
 import copy
-import itertools
 import os
 from functools import reduce
 from typing import Dict, List
@@ -22,10 +21,7 @@ from torch import cuda
 from torch import nn
 
 from nncf import NNCFConfig
-from nncf.torch.algo_selector import COMPRESSION_ALGORITHMS
-from nncf.torch.algo_selector import NoCompressionAlgorithmBuilder
 from nncf.api.compression import CompressionStage
-from nncf.common.hardware.config import HWConfigType
 from nncf.torch.compression_method_api import DOMAIN_CUSTOM_OPS_NAME
 from tests.torch.helpers import BasicConvTestModel
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
@@ -99,7 +95,7 @@ class TestConfigCreator:
             if params:
                 algo_section['params'] = params
             self._config['compression'].append(algo_section)
-        return self._config
+        return copy.deepcopy(self._config)
 
     def add_algo(self, name: str, params: Dict = None):
         self._algorithm_sections[name] = params
@@ -345,31 +341,3 @@ def test_compression_loss_gpu_device_compatibility(config):
     register_bn_adaptation_init_args(config)
     _, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
     compression_ctrl.loss()
-
-
-@pytest.mark.parametrize('algo_name, target_device',
-                         list(itertools.product(
-                             list(COMPRESSION_ALGORITHMS.registry_dict.keys()),
-                             list(x.value for x in HWConfigType))))
-def test_target_device_is_propagated_to_algos(mocker, algo_name, target_device):
-    if algo_name == NoCompressionAlgorithmBuilder.__name__:
-        pytest.skip()
-    model = BasicConvTestModel()
-    config = NNCFConfig.from_dict({
-        "input_info":
-            {
-                "sample_size": [1, 1, 32, 32],
-            },
-        "compression": {
-            "algorithm": algo_name
-        },
-        "target_device": target_device
-    })
-    if algo_name == 'knowledge_distillation':
-        config["compression"]["type"] = "mse"
-    register_bn_adaptation_init_args(config)
-
-    import nncf
-    compression_builder_init_spy = mocker.spy(nncf.api.compression.CompressionAlgorithmBuilder, '__init__')
-    create_compressed_model_and_algo_for_test(model, config)
-    assert compression_builder_init_spy.call_args[0][1]["hw_config_type"] == HWConfigType.from_str(target_device)

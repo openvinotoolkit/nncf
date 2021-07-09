@@ -18,6 +18,7 @@ import numpy as np
 import torch
 from texttable import Texttable
 
+from nncf import NNCFConfig
 from nncf.api.compression import CompressionLoss
 from nncf.api.compression import CompressionScheduler
 from nncf.api.compression import CompressionStage
@@ -115,12 +116,12 @@ class FilterPruningController(BasePruningAlgoController):
     def __init__(self, target_model: NNCFNetwork,
                  prunable_types: List[str],
                  pruned_module_groups: Clusterization[PrunedModuleInfo],
-                 config):
+                 config: NNCFConfig):
         super().__init__(target_model, prunable_types, pruned_module_groups, config)
-        params = self.config.get("params", {})
+        params = self.pruning_config.get('params', {})
         self.frozen = False
         self._pruning_rate = 0
-        self.pruning_init = config.get("pruning_init", 0)
+        self.pruning_init = self.pruning_config.get('pruning_init', 0)
         self.pruning_quota = 0.9
         self.normalize_weights = True
 
@@ -714,5 +715,6 @@ class FilterPruningController(BasePruningAlgoController):
 
     def _run_batchnorm_adaptation(self):
         if self._bn_adaptation is None:
-            self._bn_adaptation = BatchnormAdaptationAlgorithm(**extract_bn_adaptation_init_params(self.config))
+            self._bn_adaptation = BatchnormAdaptationAlgorithm(**extract_bn_adaptation_init_params(self.config,
+                                                                                                   'filter_pruning'))
         self._bn_adaptation.run(self.model)

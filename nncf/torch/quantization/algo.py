@@ -43,6 +43,7 @@ from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.hardware.config import HWConfig
 from nncf.common.hardware.config import HWConfigType
+from nncf.common.hardware.config import HW_CONFIG_TYPE_TARGET_DEVICE_MAP
 from nncf.common.initialization.batchnorm_adaptation import BatchnormAdaptationAlgorithm
 from nncf.common.insertion_point_graph import InsertionPointGraph
 from nncf.common.insertion_point_graph import InsertionPointGraphNodeType
@@ -67,6 +68,7 @@ from nncf.common.utils.helpers import matches_any
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.common.utils.os import safe_open
 from nncf.config import NNCFConfig
+from nncf.config.extractors import extract_algo_specific_config
 from nncf.config.extractors import extract_bn_adaptation_init_params
 from nncf.config.extractors import extract_range_init_params
 from nncf.torch.algo_selector import COMPRESSION_ALGORITHMS
@@ -136,7 +138,7 @@ class QuantizerSetupGeneratorBase:
                                                signedness_to_force=None,
                                                per_channel=False)
 
-    def __init__(self, quant_config: NNCFConfig,
+    def __init__(self, quant_config: Dict,
                  target_model: NNCFNetwork,
                  precision_init_type: str = None,
                  precision_init_params: BasePrecisionInitParams = None,
@@ -168,7 +170,7 @@ class QuantizerSetupGeneratorBase:
     def get_build_time_metric_infos(self):
         raise NotImplementedError
 
-    def _parse_group_params(self, quant_config: 'NNCFConfig', quantizer_group: QuantizerGroup):
+    def _parse_group_params(self, quant_config: Dict, quantizer_group: QuantizerGroup):
         group_name = quantizer_group.value
         params_dict = quant_config.get(group_name, {})
         self.global_quantizer_constraints[quantizer_group] = QuantizationConstraints.from_config_dict(params_dict)
@@ -297,7 +299,8 @@ class DefaultQuantizerSetupDisambiguator(IQuantizerSetupDisambiguator):
                 init_setup = bitwidth_varying_only_multi_setup.select_first_qconfig_for_each_point()
                 intermediate_builder = ExperimentalQuantizationBuilder(bitwidth_varying_only_multi_setup,
                                                                        init_setup,
-                                                                       stats, hw_config=self.hw_config)
+                                                                       stats,
+                                                                       hw_config=self.hw_config)
                 intermediate_builder.apply_to(intermediate_model)
                 intermediate_ctrl = intermediate_builder.build_controller(intermediate_model)
 
@@ -316,7 +319,7 @@ class DefaultQuantizerSetupDisambiguator(IQuantizerSetupDisambiguator):
 
 
 class PropagationBasedQuantizerSetupGenerator(QuantizerSetupGeneratorBase):
-    def __init__(self, quant_config: NNCFConfig, target_model: NNCFNetwork,
+    def __init__(self, quant_config: Dict, target_model: NNCFNetwork,
                  hw_config: HWConfig = None,
                  precision_init_type: str = None,
                  precision_init_params: BasePrecisionInitParams = None,
@@ -463,7 +466,10 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
         # noise on model evaluation (e.g. in AutoQ)
         self._should_setup_adjust_pad_ops = True
 
-        hw_config_type = self.config.get("hw_config_type")
+        hw_config_type = None
+        target_device = self.config.get('target_device', 'ANY')
+        if target_device != 'TRIAL':
+            hw_config_type = HWConfigType.from_str(HW_CONFIG_TYPE_TARGET_DEVICE_MAP[target_device])
         if hw_config_type is not None:
             hw_config_path = PTHWConfig.get_path_to_hw_config(hw_config_type)
             self.hw_config = PTHWConfig.from_json(hw_config_path)
@@ -478,10 +484,10 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
 
         for quantizer_group in QuantizerGroup:
             group_name = quantizer_group.value
-            params_dict = self.config.get(group_name, {})
+            params_dict = self._algo_config.get(group_name, {})
             self._use_logarithm_scale_per_group[quantizer_group] = params_dict.get('logarithm_scale', False)
 
-        self._disable_saturation_fix = self.config.get('disable_saturation_fix', False)
+        self._disable_saturation_fix = self._algo_config.get('disable_saturation_fix', False)
         self._device_for_callable_obj_creation = 'cpu'
         self._single_config_quantizer_setup = None  # type: Optional[SingleConfigQuantizerSetup]
 
@@ -517,7 +523,7 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
     def _parse_init_params(self):
         self._range_init_params = self._parse_range_init_params()
         self._precision_init_type, self._precision_init_params = self._parse_precision_init_params(
-            self.config.get('initializer', {}))
+            self._algo_config.get('initializer', {}))
 
     def _parse_range_init_params(self) -> Optional[PTRangeInitParams]:
         range_init_params = extract_range_init_params(self.config)
@@ -684,7 +690,7 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
         return self.get_statistics_for_quantizer_setup(target_model, quantizer_setup, range_init_params)
 
     def _get_quantizer_setup(self, target_model: NNCFNetwork) -> SingleConfigQuantizerSetup:
-        setup_generator = PropagationBasedQuantizerSetupGenerator(self.config,
+        setup_generator = PropagationBasedQuantizerSetupGenerator(self._algo_config,
                                                                   target_model,
                                                                   self.hw_config,
                                                                   self._precision_init_type,
@@ -999,7 +1005,7 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
             use_logarithm_scale = self._use_logarithm_scale_per_group[QuantizerGroup.ACTIVATIONS]
             narrow_range = False
 
-        compression_lr_multiplier = self.config.get('compression_lr_multiplier', None)
+        compression_lr_multiplier = self._get_compression_lr_multiplier()
 
         half_range = False
         if self.hw_config and not self._disable_saturation_fix and is_weights(primary_ip):
@@ -1113,10 +1119,14 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
             return False, message_template.substitute(denial=' not', algo_prefix=algo_prefix)
         return True, message_template.substitute(denial='', algo_prefix='empty')
 
+    def _get_compression_lr_multiplier(self) -> Optional[float]:
+        return self.config.get_redefinable_global_param_value_for_algo('compression_lr_multiplier',
+                                                                       self.name)
+
     def initialize(self, model: NNCFNetwork) -> None:
         if is_main_process() and self.should_init:
             bn_adaptation = BatchnormAdaptationAlgorithm(
-                **extract_bn_adaptation_init_params(self.config))
+                **extract_bn_adaptation_init_params(self.config, 'quantization'))
             bn_adaptation.run(model)
 
 
@@ -1139,7 +1149,7 @@ class QuantizationControllerBase(PTCompressionAlgorithmController):
 
 class QuantizationController(QuantizationControllerBase):
     def __init__(self, target_model: NNCFNetwork,
-                 quantization_config: 'NNCFConfig',
+                 config: NNCFConfig,
                  debug_interface: 'QuantizationDebugInterface',
                  weight_quantizers: Dict[WeightQuantizerId, WeightQuantizerInfo],
                  non_weight_quantizers: Dict[NonWeightQuantizerId, NonWeightQuantizerInfo],
@@ -1150,7 +1160,8 @@ class QuantizationController(QuantizationControllerBase):
         self._loss = ZeroCompressionLoss(next(target_model.parameters()).device)
         self._scheduler = BaseCompressionScheduler()
         self.debug_interface = debug_interface
-        self.quantization_config = quantization_config
+        self.config = config
+        algo_config = self._get_algo_config()
         self._build_time_range_init_params = build_time_range_init_params
 
         self.weight_quantizers = weight_quantizers  # type: Dict[WeightQuantizerId, WeightQuantizerInfo]
@@ -1163,8 +1174,8 @@ class QuantizationController(QuantizationControllerBase):
         self._bn_adaptation = None
         self._build_time_metric_info = build_time_metric_info
 
-        should_export_to_onnx_qdq = quantization_config.get("export_to_onnx_standard_ops",
-                                                            False)
+        should_export_to_onnx_qdq = algo_config.get('export_to_onnx_standard_ops',
+                                                    False)
         if should_export_to_onnx_qdq:
             export_mode = QuantizerExportMode.ONNX_QUANTIZE_DEQUANTIZE_PAIRS
         else:
@@ -1173,7 +1184,7 @@ class QuantizationController(QuantizationControllerBase):
         for quantizer in self.all_quantizations.values():  # type: BaseQuantizer
             quantizer.set_export_mode(export_mode)
 
-        params = quantization_config.get('params', None)
+        params = algo_config.get('params', None)
         self.is_staged_scheduler = bool(params)
 
         # Staged scheduler must be created after initialized to prevent extra logic with disabled quantizations
@@ -1201,6 +1212,9 @@ class QuantizationController(QuantizationControllerBase):
     def distributed(self):
         self._distributed = True
         self._broadcast_initialized_params_for_each_quantizer()
+
+    def _get_algo_config(self) -> Dict:
+        return extract_algo_specific_config(self.config, 'quantization')
 
     def _broadcast_initialized_params_for_each_quantizer(self):
         # NOTE: Order of quantization modules must be the same on GPUs to correctly broadcast num_bits
@@ -1516,6 +1530,15 @@ class ExperimentalQuantizationBuilder(QuantizationBuilder):
     def initialize(self, model: NNCFNetwork) -> None:
         pass
 
+    def _get_algo_specific_config_section(self) -> Dict:
+        return {}
+
+    def _parse_range_init_params(self) -> Optional[PTRangeInitParams]:
+        return None
+
+    def _get_compression_lr_multiplier(self) -> Optional[float]:
+        return None
+
 
 class ExperimentalQuantizationController(QuantizationController):
     def __init__(self, target_model: NNCFNetwork,
@@ -1604,3 +1627,6 @@ class ExperimentalQuantizationController(QuantizationController):
         new_builder.apply_to(new_model)
         new_ctrl = new_builder.build_controller(new_model)
         return new_ctrl, new_model
+
+    def _get_algo_config(self) -> Dict:
+        return {}

@@ -13,13 +13,10 @@
 
 from abc import abstractmethod
 
-from typing import Any
 from typing import Dict
-from typing import List
-from typing import Optional
-from typing import Tuple
-from typing import TypeVar
+from typing import Optional, List, Tuple, Any, TypeVar
 
+from nncf import NNCFConfig
 from nncf.common.schedulers import StubCompressionScheduler
 from nncf.api.compression import CompressionAlgorithmBuilder
 from nncf.api.compression import CompressionAlgorithmController
@@ -27,6 +24,7 @@ from nncf.common.utils.logger import logger as nncf_logger
 from nncf.common.utils.registry import Registry
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import infer_backend_from_model
+from nncf.config.extractors import extract_algo_specific_config
 
 ModelType = TypeVar('ModelType')
 
@@ -174,8 +172,41 @@ class BaseCompressionAlgorithmController(CompressionAlgorithmController):
 
 class BaseCompressionAlgorithmBuilder(CompressionAlgorithmBuilder):
     """
-    Contains the implementation of the basic functionality of the compression builder.
+    Contains the implementation of the basic functionality of a single compression algorithm builder.
     """
+
+    def __init__(self, config: NNCFConfig, should_init: bool = True):
+        """
+        Initializes internal state of the compression algorithm builder
+
+        :param config: The top-level NNCFConfig object (i.e. parsed from a .json and extended with
+            all necessary objects required for compression such as initialization data loaders).
+        :param should_init: If False, trainable parameter initialization will be
+            skipped during building.
+        """
+        super().__init__()
+        self.config = config
+        self.should_init = should_init
+        self._algo_config = self._get_algo_specific_config_section()
+
+        self.ignored_scopes = self.config.get('ignored_scopes')
+
+        if 'ignored_scopes' in self._algo_config:
+            algo_ignored_scopes = self._algo_config['ignored_scopes']
+            if self.ignored_scopes is not None:
+                self.ignored_scopes.extend(algo_ignored_scopes)
+            else:
+                self.ignored_scopes = algo_ignored_scopes
+
+        self._global_target_scopes = self.config.get('target_scopes')
+        self.target_scopes = self._global_target_scopes
+        if 'target_scopes' in self._algo_config:
+            algo_target_scopes = self._algo_config['target_scopes']
+            if self.target_scopes is None:
+                self.target_scopes = algo_target_scopes
+
+    def _get_algo_specific_config_section(self) -> Dict:
+        return extract_algo_specific_config(self.config, self.name)
 
     @property
     def name(self) -> str:

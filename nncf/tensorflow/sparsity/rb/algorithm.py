@@ -10,6 +10,7 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+from copy import deepcopy
 from typing import Set, List
 
 import numpy as np
@@ -21,6 +22,7 @@ from nncf.common.sparsity.schedulers import SPARSITY_SCHEDULERS
 from nncf.common.sparsity.schedulers import SparsityScheduler
 from nncf.common.sparsity.statistics import RBSparsityStatistics
 from nncf.common.statistics import NNCFStatistics
+from nncf.config.extractors import extract_algo_specific_config
 from nncf.tensorflow.algorithm_selector import TF_COMPRESSION_ALGORITHMS
 from nncf.tensorflow.api.compression import TFCompressionAlgorithmBuilder
 from nncf.tensorflow.graph.converter import TFModelConverterFactory
@@ -42,7 +44,7 @@ from nncf.common.schedulers import StubCompressionScheduler
 class RBSparsityBuilder(TFCompressionAlgorithmBuilder):
     def __init__(self, config: NNCFConfig, should_init: bool = True):
         super().__init__(config, should_init)
-        self.ignored_scopes = self.config.get('ignored_scopes', [])
+        self.ignored_scopes = self._algo_config.get('ignored_scopes', [])
         self._op_names = []
 
     def get_transformation_layout(self, model: tf.keras.Model) -> TFTransformationLayout:
@@ -99,10 +101,11 @@ class RBSparsityBuilder(TFCompressionAlgorithmBuilder):
 
 @ADAPTIVE_COMPRESSION_CONTROLLERS.register('tf_rb_sparsity')
 class RBSparsityController(BaseSparsityController):
-    def __init__(self, target_model, config, op_names: List[str]):
+    def __init__(self, target_model, config: NNCFConfig, op_names: List[str]):
         super().__init__(target_model, op_names)
-        sparsity_init = config.get('sparsity_init', 0)
-        params = config.get('params', {})
+        algo_config = extract_algo_specific_config(config, "rb_sparsity")
+        sparsity_init = algo_config.get('sparsity_init', 0)
+        params = deepcopy(algo_config.get('params', {}))
         params['sparsity_init'] = sparsity_init
         sparsity_level_mode = params.get('sparsity_level_setting_mode', 'global')
 

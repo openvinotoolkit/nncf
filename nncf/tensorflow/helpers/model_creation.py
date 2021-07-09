@@ -20,10 +20,11 @@ from nncf import NNCFConfig
 from nncf.api.compression import CompressionAlgorithmBuilder
 from nncf.api.compression import CompressionAlgorithmController
 from nncf.common.compression import BaseCompressionAlgorithmController as BaseController
-from nncf.config.extractors import extract_compression_algorithm_configs
 from nncf.config.structures import ModelEvaluationArgs
 from nncf.config.utils import is_accuracy_aware_training
 from nncf.tensorflow.accuracy_aware_training.keras_model_utils import accuracy_aware_fit
+from nncf.config.extractors import extract_algorithm_names
+from nncf.tensorflow.algorithm_selector import NoCompressionAlgorithmBuilder
 from nncf.tensorflow.algorithm_selector import get_compression_algorithm_builder
 from nncf.tensorflow.api.composite_compression import TFCompositeCompressionAlgorithmBuilder
 from nncf.tensorflow.helpers.utils import get_built_model
@@ -41,12 +42,13 @@ def create_compression_algorithm_builder(config: NNCFConfig,
         during model building.
     :return: An instance of the `CompressionAlgorithmBuilder`
     """
-    compression_algorithm_configs = extract_compression_algorithm_configs(config)
-
-    number_compression_algorithms = len(compression_algorithm_configs)
+    algo_names = extract_algorithm_names(config)
+    number_compression_algorithms = len(algo_names)
+    if number_compression_algorithms == 0:
+        return NoCompressionAlgorithmBuilder(config, should_init)
     if number_compression_algorithms == 1:
-        algo_config = compression_algorithm_configs[0]
-        return get_compression_algorithm_builder(algo_config)(algo_config, should_init)
+        algo_name = next(iter(algo_names))
+        return get_compression_algorithm_builder(algo_name)(config, should_init)
 
     return TFCompositeCompressionAlgorithmBuilder(config, should_init)
 

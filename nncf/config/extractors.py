@@ -11,64 +11,59 @@
  limitations under the License.
 """
 
-from copy import deepcopy
-from typing import Dict, List, Optional
+from typing import Dict
+from typing import List
+from typing import Optional
 
-from nncf.common.hardware.config import HW_CONFIG_TYPE_TARGET_DEVICE_MAP
-from nncf.common.hardware.config import HWConfigType
 from nncf.common.quantization.initialization.range import PerLayerRangeInitConfig
 from nncf.common.quantization.initialization.range import RangeInitConfig
 from nncf.common.utils.logger import logger
-from nncf.config import NNCFConfig
+from nncf.config.config import NNCFConfig
 from nncf.config.structures import BNAdaptationInitArgs
 from nncf.config.structures import QuantizationRangeInitArgs
 
 
-def extract_compression_algorithm_configs(config: NNCFConfig) -> List[NNCFConfig]:
+def extract_algorithm_names(config: NNCFConfig) -> List[str]:
+    retval = []
+    compression_config_json_section = config.get('compression', [])
+    if isinstance(compression_config_json_section, dict):
+        compression_config_json_section = [compression_config_json_section]
+    for algo_config in compression_config_json_section:
+        retval.append(algo_config['algorithm'])
+    return retval
+
+
+def extract_algo_specific_config(config: NNCFConfig, algo_name_to_match: str) -> Dict:
     """
-    Extracts specific algorithm parameters for each compression algorithm from the
+    Extracts a .json sub-dictionary for a given compression algorithm from the
     common NNCFConfig.
 
     :param config: An instance of the NNCFConfig.
-    :return: List of the NNCFConfigs, each of which contains specific algorithm
-        parameters related only to this algorithm
+    :param algo_name_to_match: The name of the algorithm for which the algorithm-specific section
+      should be extracted.
+    :return: The sub-dictionary, exactly as it is specified in the NNCF configuration of the .json file,
+    that corresponds to the algorithm-specific data (i.e. {"algorithm": "quantization", ... })
     """
-    compression_config_json_section = config.get('compression', {})
-    compression_config_json_section = deepcopy(compression_config_json_section)
+    compression_section = config['compression']
+    if isinstance(compression_section, list):
+        algo_list = compression_section
+    else:
+        assert isinstance(compression_section, dict)
+        algo_list = [compression_section]
 
-    hw_config_type = None
-    target_device = config.get('target_device', 'ANY')
-    if target_device != 'TRIAL':
-        hw_config_type = HWConfigType.from_str(HW_CONFIG_TYPE_TARGET_DEVICE_MAP[target_device])
-    global_compression_lr_multiplier = config.get('compression_lr_multiplier', None)
-    global_ignored_scopes = config.get("ignored_scopes")
-    global_target_scopes = config.get("target_scopes")
+    matches = []
+    for compression_algo_dict in algo_list:
+        algo_name = compression_algo_dict['algorithm']
+        if algo_name == algo_name_to_match:
+            matches.append(compression_algo_dict)
 
-    if isinstance(compression_config_json_section, dict):
-        compression_config_json_section = [compression_config_json_section]
-
-    compression_algorithm_configs = []
-    for algo_config in compression_config_json_section:
-        algo_config = NNCFConfig(algo_config)
-        algo_config.register_extra_structs(config.get_all_extra_structs_for_copy())
-        if hw_config_type is not None:
-            algo_config["hw_config_type"] = hw_config_type
-        if global_ignored_scopes is not None:
-            if "ignored_scopes" in algo_config:
-                algo_config["ignored_scopes"].extend(global_ignored_scopes)
-            else:
-                algo_config["ignored_scopes"] = global_ignored_scopes
-        if global_target_scopes is not None:
-            if "target_scopes" in algo_config:
-                algo_config["target_scopes"].extend(global_target_scopes)
-            else:
-                algo_config["target_scopes"] = global_target_scopes
-        if 'compression_lr_multiplier' not in algo_config:
-            algo_config['compression_lr_multiplier'] = global_compression_lr_multiplier
-        algo_config['target_device'] = target_device
-        compression_algorithm_configs.append(algo_config)
-
-    return compression_algorithm_configs
+    if len(matches) > 1:
+        raise RuntimeError(f'Multiple algorithm configurations specified for the same '
+                           f'algo {algo_name_to_match} in the NNCF config!')
+    if not matches:
+        raise RuntimeError(f'Did not find an algorithm configuration for '
+                           f'algo {algo_name_to_match} in the NNCF config!')
+    return next(iter(matches))
 
 
 def extract_range_init_params(config: NNCFConfig) -> Optional[Dict[str, object]]:
@@ -79,7 +74,8 @@ def extract_range_init_params(config: NNCFConfig) -> Optional[Dict[str, object]]
     :param config: An instance of the NNCFConfig.
     :return: Parameters of the quantization range initialization algorithm.
     """
-    init_range_config_dict_or_list = config.get('initializer', {}).get('range', {})
+    algo_config = extract_algo_specific_config(config, 'quantization')
+    init_range_config_dict_or_list = algo_config.get('initializer', {}).get('range', {})
 
     range_init_args = None
     try:
@@ -125,15 +121,18 @@ def extract_range_init_params(config: NNCFConfig) -> Optional[Dict[str, object]]
     return params
 
 
-def extract_bn_adaptation_init_params(config: NNCFConfig) -> Dict[str, object]:
+def extract_bn_adaptation_init_params(config: NNCFConfig, algo_name: str) -> Dict[str, object]:
     """
     Extracts parameters for initialization of an object of the class `BatchnormAdaptationAlgorithm`
     from the compression algorithm NNCFconfig.
 
     :param config: An instance of the NNCFConfig.
-    :return: Parameters for initialization of an object of the class `BatchnormAdaptationAlgorithm`.
+    :param algo_name: The name of the algorithm for which the params have to be extracted.
+    :return: Parameters for initialization of an object of the class `BatchnormAdaptationAlgorithm` specific
+      to the supplied algorithm.
     """
-    params = config.get('initializer', {}).get('batchnorm_adaptation', {})
+    algo_config = extract_algo_specific_config(config, algo_name)
+    params = algo_config.get('initializer', {}).get('batchnorm_adaptation', {})
     num_bn_adaptation_samples = params.get('num_bn_adaptation_samples', 2000)
 
     try:

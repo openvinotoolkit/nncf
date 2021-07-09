@@ -11,33 +11,33 @@
  limitations under the License.
 """
 from abc import ABC, abstractmethod
+from copy import deepcopy
 from typing import Dict, Callable, Any, Union, List, Tuple, TypeVar
 import contextlib
 
-import onnx
 import numpy as np
+import onnx
 import torch
-
-from copy import deepcopy
 from onnx import numpy_helper
 from torch import nn
-from torch.nn import functional as F
 from torch.nn import Module
+from torch.nn import functional as F
 from torch.utils.data import DataLoader
 from torch.utils.data import Dataset
 
-from nncf.config.structures import BNAdaptationInitArgs
-from nncf.torch.compression_method_api import PTCompressionAlgorithmController
 from nncf.config import NNCFConfig
-from nncf.torch.dynamic_graph.scope import Scope
+from nncf.config.extractors import extract_algorithm_names
+from nncf.config.structures import BNAdaptationInitArgs
+from nncf.torch.algo_selector import COMPRESSION_ALGORITHMS
+from nncf.torch.compression_method_api import PTCompressionAlgorithmController
 from nncf.torch.dynamic_graph.graph_tracer import create_input_infos
+from nncf.torch.dynamic_graph.scope import Scope
+from nncf.torch.initialization import PTInitializingDataLoader
 from nncf.torch.initialization import register_default_init_args
 from nncf.torch.layers import NNCF_MODULES_MAP
 from nncf.torch.model_creation import create_compressed_model
-from nncf.torch.model_creation import create_compression_algorithm_builder
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.utils import get_all_modules_by_type
-from nncf.torch.initialization import PTInitializingDataLoader
 from tests.common.command import Command as BaseCommand
 
 TensorType = TypeVar('TensorType', bound=Union[torch.Tensor, np.ndarray])
@@ -263,9 +263,10 @@ def create_compressed_model_and_algo_for_test(model: Module, config: NNCFConfig=
     return model, algo
 
 
-def create_nncf_model_and_algo_builder(model: Module, config: NNCFConfig,
-                                       dummy_forward_fn: Callable[[Module], Any] = None,
-                                       wrap_inputs_fn: Callable[[Tuple, Dict], Tuple[Tuple, Dict]] = None):
+def create_nncf_model_and_single_algo_builder(model: Module, config: NNCFConfig,
+                                              dummy_forward_fn: Callable[[Module], Any] = None,
+                                              wrap_inputs_fn: Callable[[Tuple, Dict], Tuple[Tuple, Dict]] = None) \
+        -> Tuple[NNCFNetwork, PTCompressionAlgorithmController]:
     assert isinstance(config, NNCFConfig)
     NNCFConfig.validate(config)
     input_info_list = create_input_infos(config)
@@ -280,8 +281,12 @@ def create_nncf_model_and_algo_builder(model: Module, config: NNCFConfig,
                                    target_scopes=target_scopes,
                                    scopes_without_shape_matching=scopes_without_shape_matching)
 
-    compression_builder = create_compression_algorithm_builder(config, should_init=True)
-    return compressed_model, compression_builder
+    algo_names = extract_algorithm_names(config)
+    assert len(algo_names) == 1
+    algo_name = next(iter(algo_names))
+    builder_cls = COMPRESSION_ALGORITHMS.get(algo_name)
+    builder = builder_cls(config, should_init=True)
+    return compressed_model, builder
 
 
 def create_initialized_compressed_model(model: nn.Module, config: NNCFConfig, train_loader: DataLoader) -> nn.Module:

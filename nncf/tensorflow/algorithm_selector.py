@@ -10,11 +10,11 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+from typing import Dict
+from typing import Type
 
 import tensorflow as tf
 
-
-from nncf import NNCFConfig
 from nncf.api.compression import CompressionAlgorithmController
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.schedulers import StubCompressionScheduler
@@ -39,6 +39,9 @@ class NoCompressionAlgorithmBuilder(TFCompressionAlgorithmBuilder):
     def initialize(self, model: tf.keras.Model) -> None:
         pass
 
+    def _get_algo_specific_config_section(self) -> Dict:
+        return {}
+
 
 class NoCompressionAlgorithmController(BaseCompressionAlgorithmController):
     def __init__(self, target_model: tf.keras.Model):
@@ -58,7 +61,6 @@ class NoCompressionAlgorithmController(BaseCompressionAlgorithmController):
         return NNCFStatistics()
 
 
-def get_compression_algorithm_builder(config: NNCFConfig) -> TFCompressionAlgorithmBuilder:
-    algorithm_key = config.get('algorithm', 'NoCompressionAlgorithm')
-    logger.info('Creating compression algorithm: {}'.format(algorithm_key))
-    return TF_COMPRESSION_ALGORITHMS.get(algorithm_key)
+def get_compression_algorithm_builder(algo_name: str) -> Type[TFCompressionAlgorithmBuilder]:
+    logger.info('Creating compression algorithm: {}'.format(algo_name))
+    return TF_COMPRESSION_ALGORITHMS.get(algo_name)

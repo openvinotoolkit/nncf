@@ -10,6 +10,7 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+from collections import Counter
 
 import tensorflow as tf
 import tensorflow.keras.layers as layers
@@ -53,5 +54,5 @@ def test_ignored_scopes():
 
     fake_quantize_names = [layer.name for layer in compressed_model.layers if isinstance(layer, FakeQuantize)]
     nncf_wrapper_names = [layer.name for layer in compressed_model.layers if isinstance(layer, NNCFWrapper)]
-    assert fake_quantize_names == ref_fake_quantize_names
-    assert nncf_wrapper_names == ref_nncf_wrapper_names
+    assert Counter(fake_quantize_names) == Counter(ref_fake_quantize_names)
+    assert Counter(nncf_wrapper_names) == Counter(ref_nncf_wrapper_names)

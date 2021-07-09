@@ -12,4 +12,3 @@
 """
 
 from nncf.config.config import NNCFConfig
-from nncf.config.config import product_dict

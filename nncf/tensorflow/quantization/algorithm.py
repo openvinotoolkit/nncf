@@ -191,10 +191,10 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
     def __init__(self, config: NNCFConfig, should_init: bool = True):
         super().__init__(config, should_init)
 
-        self.quantize_inputs = self.config.get('quantize_inputs', True)
-        self.quantize_outputs = self.config.get('quantize_outputs', False)
-        self._disable_saturation_fix = self.config.get('disable_saturation_fix', False)
-        self._target_device = config.get('target_device')
+        self.quantize_inputs = self._algo_config.get('quantize_inputs', True)
+        self.quantize_outputs = self._algo_config.get('quantize_outputs', False)
+        self._disable_saturation_fix = self._algo_config.get('disable_saturation_fix', False)
+        self._target_device = config.get('target_device', 'ANY')
 
         self.global_quantizer_constraints = {}
         self.ignored_scopes_per_group = {}
@@ -202,7 +202,7 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
         self._op_names = []
 
         for quantizer_group in QuantizerGroup:
-            self._parse_group_params(self.config, quantizer_group)
+            self._parse_group_params(self._algo_config, quantizer_group)
 
         if self.should_init:
             self._parse_init_params()
@@ -237,13 +237,16 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
         range_init_params = extract_range_init_params(self.config)
         return TFRangeInitParams(**range_init_params) if range_init_params is not None else None
 
-    def _parse_group_params(self, config: NNCFConfig, quantizer_group: QuantizerGroup) -> None:
+    def _parse_group_params(self, quant_config: Dict, quantizer_group: QuantizerGroup) -> None:
         group_name = quantizer_group.value
-        params_dict = config.get(group_name, {})
+        params_dict = quant_config.get(group_name, {})
         self.global_quantizer_constraints[quantizer_group] = QuantizationConstraints.from_config_dict(params_dict)
-        self.ignored_scopes_per_group[quantizer_group] = config.get('ignored_scopes', []) \
-                                                         + params_dict.get('ignored_scopes', [])
-        self.target_scopes_per_group[quantizer_group] = params_dict.get('target_scopes')
+        self.ignored_scopes_per_group[quantizer_group] = params_dict.get('ignored_scopes', [])
+        if self.ignored_scopes is not None:
+            self.ignored_scopes_per_group[quantizer_group] += self.ignored_scopes
+        target_scopes = params_dict.get('target_scopes')
+        if target_scopes is None and self.target_scopes is not None:
+            self.target_scopes_per_group[quantizer_group] = target_scopes
 
     def _get_default_qconfig(self, constraints: QuantizationConstraints = None) -> QuantizerConfig:
         qconfig = QuantizerConfig(num_bits=8,
@@ -362,7 +365,7 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
     def _run_batchnorm_adaptation(self, model: tf.keras.Model) -> None:
         if self._bn_adaptation is None:
             self._bn_adaptation = BatchnormAdaptationAlgorithm(
-                **extract_bn_adaptation_init_params(self.config))
+                **extract_bn_adaptation_init_params(self.config, self.name))
         self._bn_adaptation.run(model)
 
     def _find_insertion_points(self, nncf_graph: NNCFGraph) -> List[NNCFNodeName]:
