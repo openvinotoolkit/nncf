@@ -211,13 +211,13 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
         self._bn_adaptation = None
         self._quantizer_setup = None
 
-    def _load_state_without_name(self, state: Dict[str, Any]):
+    def _load_state_without_name(self, state_without_name: Dict[str, Any]):
         """
         Initializes object from the state.
 
-        :param state: Output of `get_state()` method.
+        :param state_without_name: Output of `get_state()` method.
         """
-        quantizer_setup_state = state[self._state_names.QUANTIZER_SETUP]
+        quantizer_setup_state = state_without_name[self._state_names.QUANTIZER_SETUP]
         self._quantizer_setup = QuantizationSetup.from_state(quantizer_setup_state)
 
     def _get_state_without_name(self) -> Dict[str, Any]:

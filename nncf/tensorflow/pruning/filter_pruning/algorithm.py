@@ -73,8 +73,8 @@ class FilterPruningBuilder(BasePruningAlgoBuilder):
     order to enable filter pruning during fine-tuning.
     """
 
-    def _build_controller(self, target_model: tf.keras.Model):
-        return FilterPruningController(target_model,
+    def _build_controller(self, model: tf.keras.Model):
+        return FilterPruningController(model,
                                        self._graph,
                                        self._op_names,
                                        self._prunable_types,

@@ -33,8 +33,8 @@ class A(BaseCompressionAlgorithmBuilder):
         super().__init__(config, should_init)
         self.state_value = state_value
 
-    def _load_state_without_name(self, state: Dict[str, Any]):
-        self.state_value = state.get(STATE_ATTR)
+    def _load_state_without_name(self, state_without_name: Dict[str, Any]):
+        self.state_value = state_without_name.get(STATE_ATTR)
 
     def _get_state_without_name(self) -> Dict[str, Any]:
         return {STATE_ATTR: self.state_value}

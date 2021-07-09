@@ -127,17 +127,17 @@ class PTCompressionAlgorithmBuilder(BaseCompressionAlgorithmBuilder):
 
         return transformed_model
 
-    def get_transformation_layout(self, target_model: NNCFNetwork) -> PTTransformationLayout:
+    def get_transformation_layout(self, model: NNCFNetwork) -> PTTransformationLayout:
         """
         Applies algorithm-specific modifications to the model. Hooks to be executed during model
         forward operation may be registered using NNCFNetwork command insertion methods. Additional
         compression modules that are expected to be saved along with the network via torch.save should also be
         registered and added to the model here.
-        :param target_model: An instance of NNCFNetwork for the algorithm to be applied to.
+        :param model: An instance of NNCFNetwork for the algorithm to be applied to.
         :return: NNCFNetwork with algorithm-specific modifications applied
         """
-        layout = self._get_transformation_layout(target_model)
-        self._handle_frozen_layers(target_model)
+        layout = self._get_transformation_layout(model)
+        self._handle_frozen_layers(model)
         return layout
 
     @abstractmethod

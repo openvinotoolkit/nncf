@@ -44,8 +44,8 @@ class MagnitudeSparsityBuilder(BaseSparsityAlgoBuilder):
     def create_weight_sparsifying_operation(self, target_module_node: NNCFNode, compression_lr_multiplier: float):
         return BinaryMask(target_module_node.layer_attributes.get_weight_shape())
 
-    def _build_controller(self, target_model: NNCFNetwork) -> PTCompressionAlgorithmController:
-        return MagnitudeSparsityController(target_model, self._sparsified_module_info, self.config)
+    def _build_controller(self, model: NNCFNetwork) -> PTCompressionAlgorithmController:
+        return MagnitudeSparsityController(model, self._sparsified_module_info, self.config)
 
 
 @ADAPTIVE_COMPRESSION_CONTROLLERS.register('pt_magnitude_sparsity')

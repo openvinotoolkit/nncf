@@ -50,8 +50,8 @@ class NoCompressionAlgorithmBuilder(PTCompressionAlgorithmBuilder):
     def _get_algo_specific_config_section(self) -> Dict:
         return {}
 
-    def _build_controller(self, target_model: NNCFNetwork) -> PTCompressionAlgorithmController:
-        return NoCompressionAlgorithmController(target_model)
+    def _build_controller(self, model: NNCFNetwork) -> PTCompressionAlgorithmController:
+        return NoCompressionAlgorithmController(model)
 
     def initialize(self, model: NNCFNetwork) -> None:
         pass
