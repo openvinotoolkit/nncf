@@ -10,12 +10,16 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+import os.path as osp
 import sys
 import time
+import warnings
+from copy import deepcopy
+from functools import partial
 from pathlib import Path
+from shutil import copyfile
 from typing import Any
 
-import os.path as osp
 import torch
 import torch.backends.cudnn as cudnn
 import torch.nn as nn
@@ -26,37 +30,53 @@ import torch.utils.data.distributed
 import torchvision.datasets as datasets
 import torchvision.models as models
 import torchvision.transforms as transforms
-import warnings
-from copy import deepcopy
-from functools import partial
-from shutil import copyfile
 from torch.nn.modules.loss import _Loss
 from torch.optim.lr_scheduler import ReduceLROnPlateau
-from torchvision.datasets import CIFAR10, CIFAR100
+from torchvision.datasets import CIFAR10
+from torchvision.datasets import CIFAR100
 from torchvision.models import InceptionOutputs
 
-from examples.torch.classification.common import load_resuming_checkpoint
 from examples.torch.common.argparser import get_common_argument_parser
 from examples.torch.common.example_logger import logger
-from examples.torch.common.execution import ExecutionMode, get_execution_mode, \
-    prepare_model_for_execution, start_worker
+from examples.torch.common.execution import ExecutionMode
+from examples.torch.common.execution import get_execution_mode
+from examples.torch.common.execution import prepare_model_for_execution
 from examples.torch.common.execution import set_seed
+from examples.torch.common.execution import start_worker
+from examples.torch.common.model_loader import COMPRESSION_STATE_ATTR
+from examples.torch.common.model_loader import MODEL_STATE_ATTR
+from examples.torch.common.model_loader import extract_model_and_compression_states
 from examples.torch.common.model_loader import load_model
-from examples.torch.common.optimizer import get_parameter_groups, make_optimizer
-from examples.torch.common.sample_config import SampleConfig, create_sample_config
-from examples.torch.common.utils import configure_logging, configure_paths, create_code_snapshot, \
-    print_args, make_additional_checkpoints, get_name, is_staged_quantization, \
-    is_pretrained_model_requested, log_common_mlflow_params, SafeMLFLow, MockDataset, configure_device
+from examples.torch.common.model_loader import load_resuming_checkpoint
+from examples.torch.common.optimizer import get_parameter_groups
+from examples.torch.common.optimizer import make_optimizer
+from examples.torch.common.sample_config import SampleConfig
+from examples.torch.common.sample_config import create_sample_config
+from examples.torch.common.utils import MockDataset
+from examples.torch.common.utils import SafeMLFLow
+from examples.torch.common.utils import configure_device
+from examples.torch.common.utils import configure_logging
+from examples.torch.common.utils import configure_paths
+from examples.torch.common.utils import create_code_snapshot
+from examples.torch.common.utils import get_name
+from examples.torch.common.utils import is_pretrained_model_requested
+from examples.torch.common.utils import is_staged_quantization
+from examples.torch.common.utils import log_common_mlflow_params
+from examples.torch.common.utils import make_additional_checkpoints
+from examples.torch.common.utils import print_args
 from examples.torch.common.utils import write_metrics
+from nncf.api.compression import CompressionStage
 from nncf.common.utils.tensorboard import prepare_for_tensorboard
 from nncf.config.utils import is_accuracy_aware_training
-from nncf.torch import create_compressed_model
-from nncf.api.compression import CompressionStage
 from nncf.torch import AdaptiveCompressionTrainingLoop
+from nncf.torch import create_compressed_model
+from nncf.torch.checkpoint_loading import load_state
 from nncf.torch.dynamic_graph.graph_tracer import create_input_infos
-from nncf.torch.initialization import register_default_init_args, default_criterion_fn
+from nncf.torch.initialization import default_criterion_fn
+from nncf.torch.initialization import register_default_init_args
 from nncf.torch.structures import ExecutionParameters
-from nncf.torch.utils import safe_thread_call, is_main_process
+from nncf.torch.utils import is_main_process
+from nncf.torch.utils import safe_thread_call
 
 model_names = sorted(name for name in models.__dict__
                      if name.islower() and not name.startswith("__")
@@ -182,9 +202,13 @@ def main_worker(current_gpu, config: SampleConfig):
 
     model.to(config.device)
 
-    resuming_model_sd, resuming_checkpoint = load_resuming_checkpoint(resuming_checkpoint_path)
-    compression_ctrl, model = create_compressed_model(model, nncf_config,
-                                                      resuming_state_dict=resuming_model_sd)
+    resuming_checkpoint = None
+    if resuming_checkpoint_path is not None:
+        resuming_checkpoint = load_resuming_checkpoint(resuming_checkpoint_path)
+    model_state_dict, compression_state = extract_model_and_compression_states(resuming_checkpoint)
+    compression_ctrl, model = create_compressed_model(model, nncf_config, compression_state)
+    if model_state_dict is not None:
+        load_state(model, model_state_dict, is_resume=True)
 
     if config.to_onnx:
         compression_ctrl.export_model(config.to_onnx)
@@ -205,7 +229,6 @@ def main_worker(current_gpu, config: SampleConfig):
         if config.mode.lower() == 'train' and config.to_onnx is None:
             config.start_epoch = resuming_checkpoint['epoch']
             best_acc1 = resuming_checkpoint['best_acc1']
-            compression_ctrl.load_state(resuming_checkpoint)
             optimizer.load_state_dict(resuming_checkpoint['optimizer'])
             logger.info("=> loaded checkpoint '{}' (epoch: {}, best_acc1: {:.3f})"
                         .format(resuming_checkpoint_path, resuming_checkpoint['epoch'], best_acc1))
@@ -304,12 +327,11 @@ def train(config, compression_ctrl, model, criterion, criterion_fn, lr_scheduler
             checkpoint = {
                 'epoch': epoch + 1,
                 'arch': model_name,
-                'state_dict': model.state_dict(),
+                MODEL_STATE_ATTR: model.state_dict(),
+                COMPRESSION_STATE_ATTR: compression_ctrl.get_compression_state(),
                 'best_acc1': best_acc1,
-                'compression_stage': compression_stage,
                 'acc1': acc1,
                 'optimizer': optimizer.state_dict(),
-                'scheduler': compression_ctrl.scheduler.get_state()
             }
 
             torch.save(checkpoint, checkpoint_path)
@@ -411,7 +433,7 @@ def create_data_loaders(config, train_dataset, val_dataset):
         val_dataset,
         batch_size=batch_size, shuffle=False,
         num_workers=workers, pin_memory=pin_memory,
-        sampler=val_sampler, drop_last=True)
+        sampler=val_sampler, drop_last=False)
 
     train_sampler = None
     if config.distributed:
@@ -422,6 +444,7 @@ def create_data_loaders(config, train_dataset, val_dataset):
                                                                         shuffle=dist_sampler_shuffle)
 
     train_shuffle = train_sampler is None and config.seed is None
+
     def create_train_data_loader(batch_size_):
         return torch.utils.data.DataLoader(
             train_dataset, batch_size=batch_size_, shuffle=train_shuffle,

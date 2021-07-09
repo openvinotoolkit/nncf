@@ -81,9 +81,14 @@ class RBSparsityBuilder(TFCompressionAlgorithmBuilder):
     def _get_rb_sparsity_operation_name(self, layer_name: str, weight_attr_name: str) -> str:
         return f'{layer_name}_{weight_attr_name}_rb_sparsity_weight'
 
-    def build_controller(self, model: tf.keras.Model) -> 'RBSparsityController':
+    def _build_controller(self, model: tf.keras.Model) -> 'RBSparsityController':
         """
-        Should be called once the compressed model target_model is fully constructed
+        Simple implementation of building controller without setting builder state and loading controller's one.
+        Should be called once the compressed model target_model is fully constructed.
+
+        :param model: The model with additional modifications necessary to enable
+            algorithm-specific compression during fine-tuning.
+        :return: The instance of the `RBSparsityController`.
         """
 
         return RBSparsityController(model, self.config, self._op_names)

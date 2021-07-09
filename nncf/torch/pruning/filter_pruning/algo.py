@@ -92,7 +92,7 @@ class FilterPruningBuilder(BasePruningAlgoBuilder):
     def create_weight_pruning_operation(self, module):
         return FilterPruningBlock(module.weight.size(module.target_weight_dim_for_compression))
 
-    def build_controller(self, target_model: NNCFNetwork) -> PTCompressionAlgorithmController:
+    def _build_controller(self, target_model: NNCFNetwork) -> PTCompressionAlgorithmController:
         return FilterPruningController(target_model,
                                        self._prunable_types,
                                        self.pruned_module_groups_info,
@@ -140,7 +140,7 @@ class FilterPruningController(BasePruningAlgoController):
         self.current_params_num = self.full_params_num
 
         self.weights_normalizer = tensor_l2_normalizer  # for all weights in common case
-        self.filter_importance = FILTER_IMPORTANCE_FUNCTIONS.get(params.get('weight_importance', 'L2'))
+        self.filter_importance = FILTER_IMPORTANCE_FUNCTIONS.get(params.get('filter_importance', 'L2'))
         self.ranking_type = params.get('interlayer_ranking_type', 'unweighted_ranking')
         self.all_weights = params.get("all_weights", False)
         scheduler_cls = PRUNING_SCHEDULERS.get(params.get("schedule", "baseline"))

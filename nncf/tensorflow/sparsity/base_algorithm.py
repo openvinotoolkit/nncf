@@ -12,7 +12,7 @@
 """
 
 from nncf.common.sparsity.controller import SparsityController
-from nncf.tensorflow.api.compression import TFCompressionAlgorithmController
+from nncf.common.compression import BaseCompressionAlgorithmController
 from nncf.tensorflow.graph.metatypes import keras_layers as layer_metatypes
 from nncf.tensorflow.sparsity.utils import strip_model_from_masks
 
@@ -36,7 +36,7 @@ SPARSITY_LAYER_METATYPES = [
 ]
 
 
-class BaseSparsityController(TFCompressionAlgorithmController, SparsityController):
+class BaseSparsityController(BaseCompressionAlgorithmController, SparsityController):
     """
     Serves as a handle to the additional modules, parameters and hooks inserted
     into the original uncompressed model to enable sparsity-specific compression.

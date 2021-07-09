@@ -11,8 +11,7 @@
  limitations under the License.
 """
 
-from typing import Any
-from typing import Dict
+from typing import Any, Dict
 
 import tensorflow as tf
 
@@ -23,8 +22,8 @@ class TFZeroCompressionLoss(CompressionLoss):
     def calculate(self, *args, **kwargs) -> Any:
         return tf.constant(0.)
 
-    def load_state(self, state: Dict[str, object]) -> None:
+    def load_state(self, state: Dict[str, Any]) -> None:
         pass
 
-    def get_state(self) -> Dict[str, object]:
+    def get_state(self) -> Dict[str, Any]:
         return {}

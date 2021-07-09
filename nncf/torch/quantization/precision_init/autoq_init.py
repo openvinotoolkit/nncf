@@ -288,8 +288,8 @@ class AutoQPrecisionInitializer(BasePrecisionInitializer):
 
                 nncf_stats = env.qctrl.statistics()
                 bit_stats_df = pd.DataFrame.from_dict(
-                    [nncf_stats.quantization.bitwidth_distribution_statistics.num_wq_per_bitwidth,
-                     nncf_stats.quantization.bitwidth_distribution_statistics.num_aq_per_bitwidth])\
+                    [nncf_stats.quantization.num_wq_per_bitwidth,
+                     nncf_stats.quantization.num_aq_per_bitwidth])\
                          .fillna(0).astype(int).rename(index={0:'WQ',1:'AQ'}).transpose().sort_index(ascending=False)
                 bit_stats_df.index.name = 'bitwidth'
                 bit_stats_df=bit_stats_df.reset_index()

@@ -29,7 +29,7 @@ from nncf.common.pruning.statistics import PrunedLayerSummary
 from nncf.common.pruning.statistics import PrunedModelStatistics
 from nncf.common.pruning.structs import PrunedLayerInfoBase
 from nncf.common.utils.logger import logger as nncf_logger
-from nncf.tensorflow.api.compression import TFCompressionAlgorithmController
+from nncf.common.compression import BaseCompressionAlgorithmController
 from nncf.tensorflow.api.compression import TFCompressionAlgorithmBuilder
 from nncf.tensorflow.graph.converter import TFModelConverterFactory
 from nncf.tensorflow.graph.metatypes.keras_layers import TFBatchNormalizationLayerMetatype
@@ -247,7 +247,7 @@ class BasePruningAlgoBuilder(TFCompressionAlgorithmBuilder):
         return f'{layer_name}_{weight_attr_name}_pruning_binary_mask'
 
 
-class BasePruningAlgoController(TFCompressionAlgorithmController):
+class BasePruningAlgoController(BaseCompressionAlgorithmController):
     """
     Serves as a handle to the additional modules, parameters and hooks inserted
     into the original uncompressed model to enable pruning.

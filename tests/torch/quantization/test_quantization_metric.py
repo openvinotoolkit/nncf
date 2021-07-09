@@ -17,6 +17,8 @@ import pytest
 
 from nncf import NNCFConfig
 from nncf.torch import create_compressed_model
+from nncf.torch.quantization.metrics import MemoryConsumptionStatisticsCollector
+from nncf.torch.quantization.metrics import ShareEdgesQuantizedDataPathStatisticsCollector
 from tests.torch import test_models
 from tests.torch.helpers import register_bn_adaptation_init_args
 
@@ -65,36 +67,32 @@ QUANTIZATION_SHARE_AND_BITWIDTH_DISTR_STATS_TEST_CASES = [
         ignored_scopes=[],
         target_device='TRIAL',
         expected={
-            'quantization_share_statistics': {
-                'wq_total_num': 8,
-                'aq_total_num': 8,
-                'wq_potential_num': 8,
-                'aq_potential_num': 15,
-                'wq_counter': {
-                    'num_symmetric': 8,
-                    'num_asymmetric': 0,
-                    'num_signed': 0,
-                    'num_unsigned': 8,
-                    'num_per_tensor': 8,
-                    'num_per_channel': 0
-                },
-                'aq_counter': {
-                    'num_symmetric': 8,
-                    'num_asymmetric': 0,
-                    'num_signed': 0,
-                    'num_unsigned': 8,
-                    'num_per_tensor': 8,
-                    'num_per_channel': 0
-                }
+            'wq_counter': {
+                'num_symmetric': 8,
+                'num_asymmetric': 0,
+                'num_signed': 0,
+                'num_unsigned': 8,
+                'num_per_tensor': 8,
+                'num_per_channel': 0,
+                'total_count': 8,
+                'potential_count': 8,
             },
-            'bitwidth_distribution_statistics': {
-                'num_wq_per_bitwidth': {
-                    8: 8
-                },
-                'num_aq_per_bitwidth': {
-                    8: 8
-                }
+            'aq_counter': {
+                'num_symmetric': 8,
+                'num_asymmetric': 0,
+                'num_signed': 0,
+                'num_unsigned': 8,
+                'num_per_tensor': 8,
+                'num_per_channel': 0,
+                'total_count': 8,
+                'potential_count': None,
             },
+            'num_wq_per_bitwidth': {
+                8: 8
+            },
+            'num_aq_per_bitwidth': {
+                8: 8
+            }
         }
     ),
     TestStruct(
@@ -104,35 +102,31 @@ QUANTIZATION_SHARE_AND_BITWIDTH_DISTR_STATS_TEST_CASES = [
         ignored_scopes=[],
         target_device='CPU',
         expected={
-            'quantization_share_statistics': {
-                'wq_total_num': 8,
-                'aq_total_num': 8,
-                'wq_potential_num': 8,
-                'aq_potential_num': 15,
-                'wq_counter': {
-                    'num_symmetric': 8,
-                    'num_asymmetric': 0,
-                    'num_signed': 8,
-                    'num_unsigned': 0,
-                    'num_per_tensor': 0,
-                    'num_per_channel': 8
-                },
-                'aq_counter': {
-                    'num_symmetric': 8,
-                    'num_asymmetric': 0,
-                    'num_signed': 0,
-                    'num_unsigned': 8,
-                    'num_per_tensor': 8,
-                    'num_per_channel': 0
-                }
+            'wq_counter': {
+                'num_symmetric': 8,
+                'num_asymmetric': 0,
+                'num_signed': 8,
+                'num_unsigned': 0,
+                'num_per_tensor': 0,
+                'num_per_channel': 8,
+                'total_count': 8,
+                'potential_count': 8,
             },
-            'bitwidth_distribution_statistics': {
-                'num_wq_per_bitwidth': {
-                    8: 8
-                },
-                'num_aq_per_bitwidth': {
-                    8: 8
-                }
+            'aq_counter': {
+                'num_symmetric': 8,
+                'num_asymmetric': 0,
+                'num_signed': 0,
+                'num_unsigned': 8,
+                'num_per_tensor': 8,
+                'num_per_channel': 0,
+                'total_count': 8,
+                'potential_count': None,
+            },
+            'num_wq_per_bitwidth': {
+                8: 8
+            },
+            'num_aq_per_bitwidth': {
+                8: 8
             },
         }
     ),
@@ -165,13 +159,11 @@ MEMORY_CONSUMPTION_STATS_TEST_CASES = [
         ignored_scopes=[],
         target_device='TRIAL',
         expected={
-            'memory_consumption_statistics': {
-                'fp32_weight_size': 88.74,
-                'quantized_weight_size': 22.18,
-                'max_fp32_activation_size': 0.0625,
-                'max_compressed_activation_size': 0.015625,
-                'weight_memory_consumption_decrease': 4.0
-            }
+            'fp32_weight_size': 88.74,
+            'quantized_weight_size': 22.18,
+            'max_fp32_activation_size': 0.0625,
+            'max_compressed_activation_size': 0.015625,
+            'weight_memory_consumption_decrease': 4.0
         }
     ),
     TestStruct(
@@ -190,13 +182,11 @@ MEMORY_CONSUMPTION_STATS_TEST_CASES = [
         ignored_scopes=[],
         target_device='TRIAL',
         expected={
-            'memory_consumption_statistics': {
-                'fp32_weight_size': 88.74,
-                'quantized_weight_size': 21.86,
-                'max_fp32_activation_size': 0.0625,
-                'max_compressed_activation_size': 0.015625,
-                'weight_memory_consumption_decrease': 4.05
-            }
+            'fp32_weight_size': 88.74,
+            'quantized_weight_size': 21.86,
+            'max_fp32_activation_size': 0.0625,
+            'max_compressed_activation_size': 0.015625,
+            'weight_memory_consumption_decrease': 4.05
         }
     ),
     TestStruct(
@@ -208,13 +198,11 @@ MEMORY_CONSUMPTION_STATS_TEST_CASES = [
         ],
         target_device='TRIAL',
         expected={
-            'memory_consumption_statistics': {
-                'fp32_weight_size': 88.74,
-                'quantized_weight_size': 22.19,
-                'max_fp32_activation_size': 0.0625,
-                'max_compressed_activation_size': 0.0625,
-                'weight_memory_consumption_decrease': 3.99
-            }
+            'fp32_weight_size': 88.74,
+            'quantized_weight_size': 22.19,
+            'max_fp32_activation_size': 0.0625,
+            'max_compressed_activation_size': 0.0625,
+            'weight_memory_consumption_decrease': 3.99
         }
     ),
 ]
@@ -229,11 +217,12 @@ def test_memory_consumption_stats(data):
     config['target_device'] = data.target_device
 
     ctrl, _ = create_compressed_model(test_models.AlexNet(), config)
-    nncf_stats = ctrl.statistics()
-    quantization_stats = nncf_stats.quantization
+    stats = MemoryConsumptionStatisticsCollector(ctrl.model,
+                                                 ctrl.weight_quantizers,
+                                                 ctrl.non_weight_quantizers).collect()
 
     for attr_name, expected_value in data.expected.items():
-        actual_value = as_dict(getattr(quantization_stats, attr_name))
+        actual_value = getattr(stats, attr_name)
         assert expected_value == pytest.approx(actual_value, rel=1e-2)
 
 
@@ -245,10 +234,8 @@ QUANTIZATION_CONFIGURATION_STATS_TEST_CASES = [
         ignored_scopes=[],
         target_device='TRIAL',
         expected={
-            'quantization_configuration_statistics': {
-                'quantized_edges_in_cfg': 176,
-                'total_edges_in_cfg': 177
-            }
+            'quantized_edges_in_cfg': 176,
+            'total_edges_in_cfg': 177
         }
     ),
     TestStruct(
@@ -265,10 +252,8 @@ QUANTIZATION_CONFIGURATION_STATS_TEST_CASES = [
         ],
         target_device='TRIAL',
         expected={
-            'quantization_configuration_statistics': {
-                'quantized_edges_in_cfg': 173,
-                'total_edges_in_cfg': 177
-            }
+            'quantized_edges_in_cfg': 173,
+            'total_edges_in_cfg': 177
         }
     ),
 ]
@@ -281,9 +266,8 @@ def test_quantization_configuration_stats(data):
     config['input_info']['sample_size'] = [2, 3, 299, 299]
 
     ctrl, _ = create_compressed_model(test_models.Inception3(aux_logits=True, transform_input=True), config)
-    nncf_stats = ctrl.statistics()
-    quantization_stats = nncf_stats.quantization
+    stats = ShareEdgesQuantizedDataPathStatisticsCollector(ctrl.model, ctrl).collect()
 
     for attr_name, expected_value in data.expected.items():
-        actual_value = as_dict(getattr(quantization_stats, attr_name))
+        actual_value = as_dict(getattr(stats, attr_name))
         assert expected_value == actual_value
