@@ -102,7 +102,7 @@ def get_dataset_builders(config, num_devices, one_hot=True):
 
 
 def get_num_classes(dataset):
-    if 'imagenet' in dataset:
+    if 'imagenet2012' in dataset:
         num_classes = 1000
     elif dataset == 'cifar100':
         num_classes = 100
