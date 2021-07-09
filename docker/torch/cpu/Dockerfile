@@ -24,11 +24,6 @@ RUN apt-get update && \
     ln -s python3.8 python && \
     rm -rf /var/lib/apt/lists/*
 
-ARG https_proxy
-ARG no_proxy
-ENV https_proxy=$https_proxy
-ENV no_proxy=$no_proxy
-
 ENTRYPOINT cd /home/nncf \
                && python setup.py install --torch \
                && pip3 install -r examples/torch/requirements.txt \

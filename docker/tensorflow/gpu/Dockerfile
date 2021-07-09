@@ -36,11 +36,6 @@ ENV LD_LIBRARY_PATH /usr/local/nvidia/lib:/usr/local/nvidia/lib64
 ENV NVIDIA_VISIBLE_DEVICES all
 ENV NVIDIA_DRIVER_CAPABILITIES compute,utility
 
-ARG https_proxy
-ARG no_proxy
-ENV https_proxy=$https_proxy
-ENV no_proxy=$no_proxy
-
 ENTRYPOINT cd /home/nncf \
                && python setup.py install --tf \
                && pip3 install -r examples/tensorflow/requirements.txt \
