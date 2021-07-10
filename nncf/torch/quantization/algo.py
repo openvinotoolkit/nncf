@@ -51,6 +51,7 @@ from nncf.common.quantization.quantizer_setup import QuantizationPointId
 from nncf.common.quantization.quantizer_setup import QuantizerSetupBase
 from nncf.common.quantization.quantizer_setup import SingleConfigQuantizationPoint
 from nncf.common.quantization.quantizer_setup import SingleConfigQuantizerSetup
+from nncf.common.utils.logger import DuplicateFilter
 from nncf.torch.quantization.default_quantization import DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT
 from nncf.torch.quantization.layers import get_scale_shape
 from nncf.common.quantization.structs import NonWeightQuantizerId
@@ -621,10 +622,14 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
                 self._single_config_quantizer_setup,
                 stats_for_range_init,
                 target_model_graph)
+
+        dup_filter = DuplicateFilter()  # so that the saturation fix warning is only logged once
+        nncf_logger.addFilter(dup_filter)
         insertion_commands, setup_to_module_id_translation_dict = \
             self._build_insertion_commands_list_for_quantizer_setup(self._single_config_quantizer_setup,
                                                                     target_model,
                                                                     minmax_values_for_range_init)
+        nncf_logger.removeFilter(dup_filter)
 
         transformation_layout = PTTransformationLayout()
         for command in insertion_commands:
@@ -1007,7 +1012,7 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
         half_range = False
         if self.hw_config and not self._disable_saturation_fix and is_weights(primary_ip):
             if self.hw_config.target_device in ['CPU', 'ANY'] and qconfig.num_bits == 8:
-                nncf_logger.warning('A saturation issue fix will be applied. '
+                nncf_logger.warning('The saturation issue fix will be applied. '
                                     'Now all weight quantizers will effectively use only 7 bits out of 8 bits. '
                                     'This resolves the saturation issue problem on AVX2 and AVX-512 machines. '
                                     'Please take a look at the documentation for a detailed information.')

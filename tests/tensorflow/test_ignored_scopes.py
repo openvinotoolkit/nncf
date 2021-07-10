@@ -40,6 +40,7 @@ def test_ignored_scopes():
         layers.Conv2D(3, 3, name='c3_1'),
         layers.Conv2D(3, 3, name='end')
     ])
+
     compressed_model, _ = create_compressed_model_and_algo_for_test(model, config, force_no_init=True)
 
     ref_fake_quantize_names = [

@@ -64,6 +64,7 @@ from nncf.tensorflow.graph.utils import get_original_name_and_instance_idx
 from nncf.tensorflow.hardware.fused_patterns import TF_HW_FUSED_PATTERNS
 from nncf.tensorflow.layers.custom_objects import NNCF_QUANTIZATION_OPERATONS
 from nncf.tensorflow.loss import TFZeroCompressionLoss
+from nncf.tensorflow.quantization.collectors import TFQuantizationStatisticsCollector
 from nncf.tensorflow.quantization.default_quantization import DEFAULT_TF_QUANT_TRAIT_TO_OP_DICT
 from nncf.tensorflow.quantization.initializers.init_range import RangeInitializer
 from nncf.tensorflow.quantization.initializers.init_range import TFRangeInitParams
@@ -71,7 +72,6 @@ from nncf.tensorflow.quantization.layers import FakeQuantize
 from nncf.tensorflow.quantization.quantizers import Quantizer
 from nncf.tensorflow.quantization.quantizers import TFQuantizerSpec
 from nncf.tensorflow.quantization.utils import apply_saturation_fix
-from nncf.tensorflow.quantization.collectors import TFQuantizationStatisticsCollector
 
 QUANTIZATION_LAYER_METATYPES = GENERAL_CONV_LAYER_METATYPES + LINEAR_LAYER_METATYPES
 
@@ -80,18 +80,18 @@ NOT_SUPPORT_LAYER_METATYPES = [
 ]
 
 
-class QuantizationPointStateNames:
+class TFQuantizationPointStateNames:
     QUANTIZER_SPEC = 'quantizer_spec'
     TARGET_POINT = 'target_point'
     TARGET_POINT_CLASS_NAME = 'target_point_class_name'
     OP_NAME = 'op_name'
 
 
-class QuantizationPoint:
+class TFQuantizationPoint:
     """
-    Characterizes where and how to insert a single quantization node to the model's graph
+    Characterizes where and how to insert a single quantization node to the model's graph. Stores TF-specific data.
     """
-    _state_names = QuantizationPointStateNames
+    _state_names = TFQuantizationPointStateNames
 
     def __init__(self, op_name: str, quantizer_spec: TFQuantizerSpec, target_point: TargetPoint):
         self.target_point = target_point
@@ -120,7 +120,7 @@ class QuantizationPoint:
         }
 
     @classmethod
-    def from_state(cls, state: Dict[str, Any]) -> 'QuantizationPoint':
+    def from_state(cls, state: Dict[str, Any]) -> 'TFQuantizationPoint':
         """
         Creates the object from its state.
 
@@ -133,6 +133,58 @@ class QuantizationPoint:
             cls._state_names.OP_NAME: state[cls._state_names.OP_NAME]
         }
         return cls(**kwargs)
+
+
+class TFQuantizationSetupStateNames:
+    QUANTIZATION_POINTS = 'quantization_points'
+
+
+class TFQuantizationSetup:
+    """
+    Characterizes where and how to insert all quantization nodes to the model's graph
+    """
+    _state_names = TFQuantizationSetupStateNames
+
+    def __init__(self):
+        super().__init__()
+        self._quantization_points = []  # type: List[TFQuantizationPoint]
+
+    def add_quantization_point(self, point: TFQuantizationPoint):
+        """
+        Adds quantization point to the setup
+
+        :param point: quantization point
+        """
+        self._quantization_points.append(point)
+
+    def __iter__(self):
+        return iter(self._quantization_points)
+
+    def get_state(self) -> Dict:
+        """
+        Returns a dictionary with Python data structures (dict, list, tuple, str, int, float, True, False, None) that
+        represents state of the object.
+
+        :return: state of the object
+        """
+
+        quantization_points_state = [qp.get_state() for qp in self._quantization_points]
+        return {
+            self._state_names.QUANTIZATION_POINTS: quantization_points_state,
+        }
+
+    @classmethod
+    def from_state(cls, state: Dict) -> 'TFQuantizationSetup':
+        """
+        Creates the object from its state.
+
+        :param state: Output of `get_state()` method.
+        """
+        setup = TFQuantizationSetup()
+        for quantization_point_state in state[cls._state_names.QUANTIZATION_POINTS]:
+            quantization_point = TFQuantizationPoint.from_state(quantization_point_state)
+            setup.add_quantization_point(quantization_point)
+        return setup
 
 
 class QBuilderStateNames:
@@ -173,7 +225,7 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
         :param state_without_name: Output of `get_state()` method.
         """
         quantizer_setup_state = state_without_name[self._state_names.QUANTIZER_SETUP]
-        self._quantizer_setup = QuantizationSetup.from_state(quantizer_setup_state)
+        self._quantizer_setup = TFQuantizationSetup.from_state(quantizer_setup_state)
 
     def _get_state_without_name(self) -> Dict[str, Any]:
         """
@@ -217,10 +269,6 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
     def _get_half_range(self, qconfig: QuantizerConfig) -> bool:
         if not self._disable_saturation_fix:
             if self._target_device in ['CPU', 'ANY'] and qconfig.num_bits == 8:
-                logger.warning('A saturation issue fix will be applied. '
-                               'Now all weight quantizers will effectively use only 7 bits out of 8 bits. '
-                               'This resolves the saturation issue problem on AVX2 and AVX-512 machines. '
-                               'Please take a look at the documentation for a detailed information.')
                 return True
         return False
 
@@ -228,90 +276,34 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
         quantizer_cls = NNCF_QUANTIZATION_OPERATONS.get(qspec.mode)
         return quantizer_cls(name, qspec)
 
-    def get_transformation_layout(self, model: tf.keras.Model) -> TFTransformationLayout:
-        converter = TFModelConverterFactory.create(model)
-        nncf_graph = converter.convert()
-        nodes = nncf_graph.get_all_nodes()
-        for node in nodes:
-            if node.metatype in NOT_SUPPORT_LAYER_METATYPES:
-                logger.warning('The layer {} is not supported by the quantization algorithm'
-                               .format(get_original_name_and_instance_idx(node.node_name)[0]))
-
-        transformations = TFTransformationLayout()
-
-        quantizable_weighted_layer_nodes = self._get_quantizable_weighted_layer_nodes(nncf_graph)
-        custom_layer_nodes = self._get_custom_layer_node_names(nncf_graph, converter)
-        if self._quantizer_setup is None:
-            self._quantizer_setup = self._get_quantizer_setup(nncf_graph, quantizable_weighted_layer_nodes,
-                                                              custom_layer_nodes)
-
-        quantized_layer_names_vs_qconfigs = {}  # type: Dict[str, QuantizerConfig]
-        for qp_id, qp in self._quantizer_setup.quantization_points.items():
-            if qp.is_weight_quantization_point():
-                target_node = nncf_graph.get_node_by_name(qp.insertion_point.target_node_name)
-                is_custom, layer_info = converter.get_layer_info_for_node(target_node.node_name)
-                if is_custom:
-                    raise RuntimeError("Quantizing custom layer weights is currently unsupported!")
-                layer_name = layer_info.layer_name
-                qconfig = qp.qconfig
-                if layer_name in quantized_layer_names_vs_qconfigs:
-                    assigned_qconfig = quantized_layer_names_vs_qconfigs[layer_name]
-                    if qconfig != assigned_qconfig:
-                        raise RuntimeError(f"Inconsistent quantizer configurations selected by solver for one and the "
-                                           f"same quantizable layer! Tried to assign {qconfig} to {layer_name} as "
-                                           f"specified by QP {qp_id}, but the layer already has quantizer "
-                                           f"config {assigned_qconfig} assigned to it!")
-                    continue  # The layer has already been quantized
-                quantized_layer_names_vs_qconfigs[layer_name] = qconfig
-                metatype = target_node.metatype
-                assert issubclass(metatype, TFLayerWithWeightsMetatype)
-                for weight_def in metatype.weight_definitions:
-                    op_name = self._get_quantizer_operation_name(
-                        target_node.node_name,
-                        weight_def.weight_attr_name)
-                    self._op_names.append(op_name)
-
-                    half_range = self._get_half_range(qconfig)
-                    operation = self._create_quantizer(
-                        op_name,
-                        TFQuantizerSpec.from_config(qconfig,
-                                                    narrow_range=not half_range,
-                                                    half_range=half_range))
-
-                    transformations.register(
-                        TFInsertionCommand(
-                            target_point=TFLayerWeight(layer_info.layer_name, weight_def.weight_attr_name),
-                            callable_object=operation,
-                            priority=TransformationPriority.QUANTIZATION_PRIORITY))
+    def _build_insertion_commands_for_quantizer_setup(self,
+                                                      quantizer_setup: TFQuantizationSetup) \
+            -> List[TFInsertionCommand]:
+        insertion_commands = []
+        for quantization_point in quantizer_setup:
+            op_name = quantization_point.op_name
+            quantizer_spec = quantization_point.quantizer_spec
+            target_point = quantization_point.target_point
+            if quantization_point.is_weight_quantization():
+                quantizer = self._create_quantizer(op_name, quantizer_spec)
             else:
-                assert qp.is_activation_quantization_point()
-                ip = qp.insertion_point
-                assert isinstance(ip, ActivationQuantizationInsertionPoint)
-                target_node_name = ip.target_node_name
-                input_port_id = ip.input_port_id
-                fake_quantize_name = self._get_fake_quantize_name(target_node_name, input_port_id)
-                fake_quantize_layer = FakeQuantize(
-                    TFQuantizerSpec.from_config(qp.qconfig, narrow_range=False, half_range=False),
-                    name=fake_quantize_name)
-                self._op_names.append(fake_quantize_layer.op_name)
+                quantizer = FakeQuantize(quantizer_spec, name=op_name)
+                self._op_names.append(quantizer.op_name)
+            command = TFInsertionCommand(target_point=target_point,
+                                         callable_object=quantizer,
+                                         priority=TransformationPriority.QUANTIZATION_PRIORITY)
+            insertion_commands.append(command)
+        return insertion_commands
 
-                is_custom, layer_info = converter.get_layer_info_for_node(target_node_name)
-                if is_custom:
-                    raise RuntimeError("Quantizing custom layer activations is currently unsupported!")
-                if input_port_id is not None:
-                    tp = TFBeforeLayer(layer_info.layer_name,
-                                       instance_idx=layer_info.instance_idx,
-                                       input_port_id=input_port_id)
-                else:
-                    tp = TFAfterLayer(layer_info.layer_name,
-                                      instance_idx=layer_info.instance_idx,
-                                      output_port_id=0)
-                transformations.register(TFInsertionCommand(
-                        target_point=tp,
-                        callable_object=fake_quantize_layer,
-                        priority=TransformationPriority.QUANTIZATION_PRIORITY))
-
+    def get_transformation_layout(self, model: tf.keras.Model) -> TFTransformationLayout:
+        transformations = TFTransformationLayout()
+        if self._quantizer_setup is None:
+            self._quantizer_setup = self._get_quantizer_setup(model)
+        insertion_commands = self._build_insertion_commands_for_quantizer_setup(self._quantizer_setup)
+        for command in insertion_commands:
+            transformations.register(command)
         return transformations
+
 
     def _get_quantizable_weighted_layer_nodes(self, nncf_graph: NNCFGraph) -> List[QuantizableWeightedLayerNode]:
         retval = []
@@ -327,7 +319,6 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
                                               target_scopes=None)):
                 continue
 
-            assert issubclass(metatype, TFLayerWithWeightsMetatype)
             retval.append(QuantizableWeightedLayerNode(node,
                                                        [w_qconfig]))
         return retval
@@ -362,9 +353,97 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
                 **extract_bn_adaptation_init_params(self.config, self.name))
         self._bn_adaptation.run(model)
 
-    def _get_quantizer_setup(self, nncf_graph: NNCFGraph,
-                             quantizable_weighted_layer_nodes: List[QuantizableWeightedLayerNode],
-                             custom_layer_node_names: List[NNCFNodeName]) \
+    def _get_quantizer_setup(self, model: tf.keras.Model) -> TFQuantizationSetup:
+        converter = TFModelConverterFactory.create(model)
+        nncf_graph = converter.convert()
+        nodes = nncf_graph.get_all_nodes()
+        for node in nodes:
+            if node.metatype in NOT_SUPPORT_LAYER_METATYPES:
+                logger.warning('The layer {} is not supported by the quantization algorithm'
+                               .format(get_original_name_and_instance_idx(node.node_name)[0]))
+
+        quantizable_weighted_layer_nodes = self._get_quantizable_weighted_layer_nodes(nncf_graph)
+        custom_layer_nodes = self._get_custom_layer_node_names(nncf_graph, converter)
+
+        quantizer_setup = self._get_quantizer_propagation_solution(nncf_graph,
+                                                                   quantizable_weighted_layer_nodes,
+                                                                   custom_layer_nodes)
+        setup = TFQuantizationSetup()
+
+        quantized_layer_names_vs_qconfigs = {}  # type: Dict[str, QuantizerConfig]
+
+        applied_saturation_fix = False
+        for qp_id, qp in quantizer_setup.quantization_points.items():
+            if qp.is_weight_quantization_point():
+                target_node = nncf_graph.get_node_by_name(qp.insertion_point.target_node_name)
+                is_custom, layer_info = converter.get_layer_info_for_node(target_node.node_name)
+                if is_custom:
+                    raise RuntimeError("Quantizing custom layer weights is currently unsupported!")
+                layer_name = layer_info.layer_name
+                qconfig = qp.qconfig
+                if layer_name in quantized_layer_names_vs_qconfigs:
+                    assigned_qconfig = quantized_layer_names_vs_qconfigs[layer_name]
+                    if qconfig != assigned_qconfig:
+                        raise RuntimeError(f"Inconsistent quantizer configurations selected by solver for one and the "
+                                           f"same quantizable layer! Tried to assign {qconfig} to {layer_name} as "
+                                           f"specified by QP {qp_id}, but the layer already has quantizer "
+                                           f"config {assigned_qconfig} assigned to it!")
+                    continue  # The layer has already been quantized
+                quantized_layer_names_vs_qconfigs[layer_name] = qconfig
+                metatype = target_node.metatype
+                assert issubclass(metatype, TFLayerWithWeightsMetatype)
+                for weight_def in metatype.weight_definitions:
+                    op_name = self._get_quantizer_operation_name(
+                        target_node.node_name,
+                        weight_def.weight_attr_name)
+                    self._op_names.append(op_name)
+
+                    half_range = self._get_half_range(qconfig)
+                    applied_saturation_fix = applied_saturation_fix or half_range
+                    quantizer_spec = TFQuantizerSpec.from_config(qconfig,
+                                                                 narrow_range=not half_range,
+                                                                 half_range=half_range)
+                    target_point = TFLayerWeight(layer_info.layer_name, weight_def.weight_attr_name)
+                    qpoint = TFQuantizationPoint(op_name, quantizer_spec, target_point)
+                    setup.add_quantization_point(qpoint)
+            else:
+                assert qp.is_activation_quantization_point()
+                ip = qp.insertion_point
+                assert isinstance(ip, ActivationQuantizationInsertionPoint)
+                target_node_name = ip.target_node_name
+                input_port_id = ip.input_port_id
+                fake_quantize_name = self._get_fake_quantize_name(target_node_name, input_port_id)
+                quantizer_spec = TFQuantizerSpec.from_config(qp.qconfig, narrow_range=False, half_range=False)
+                fake_quantize_layer = FakeQuantize(
+                    quantizer_spec,
+                    name=fake_quantize_name)
+                self._op_names.append(fake_quantize_layer.op_name)
+
+                is_custom, layer_info = converter.get_layer_info_for_node(target_node_name)
+                if is_custom:
+                    raise RuntimeError("Quantizing custom layer activations is currently unsupported!")
+                if input_port_id is not None:
+                    target_point = TFBeforeLayer(layer_info.layer_name,
+                                                 instance_idx=layer_info.instance_idx,
+                                                 input_port_id=input_port_id)
+                else:
+                    target_point = TFAfterLayer(layer_info.layer_name,
+                                                instance_idx=layer_info.instance_idx,
+                                                output_port_id=0)
+                qpoint = TFQuantizationPoint(fake_quantize_name, quantizer_spec, target_point)
+                setup.add_quantization_point(qpoint)
+
+        if applied_saturation_fix:
+            logger.warning('The saturation issue fix will be applied. '
+                           'Now all weight quantizers will effectively use only 7 bits out of 8 bits. '
+                           'This resolves the saturation issue problem on AVX2 and AVX-512 machines. '
+                           'Please take a look at the documentation for a detailed information.')
+
+        return setup
+
+    def _get_quantizer_propagation_solution(self, nncf_graph: NNCFGraph,
+                                            quantizable_weighted_layer_nodes: List[QuantizableWeightedLayerNode],
+                                            custom_layer_node_names: List[NNCFNodeName]) \
             -> SingleConfigQuantizerSetup:
         ip_graph = InsertionPointGraph(nncf_graph,
                                        [qn.node.node_name for qn in quantizable_weighted_layer_nodes])
@@ -374,6 +453,10 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
 
         input_preprocessing_nodes = self._get_input_preprocessing_nodes(nncf_graph)
         input_preprocessing_node_names = [n.node_name for n in input_preprocessing_nodes]
+        if custom_layer_node_names:
+            logger.warning('Custom layers [{}] '
+                           'will be ignored during quantization since it is not yet supported in NNCF'.format(
+                ", ".join([str(l) for l in custom_layer_node_names])))
         ignored_scopes_for_solver = self.ignored_scopes_per_group[QuantizerGroup.ACTIVATIONS] + \
                                     input_preprocessing_node_names + custom_layer_node_names
 

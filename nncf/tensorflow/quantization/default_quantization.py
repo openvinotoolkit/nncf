@@ -13,6 +13,7 @@
 from nncf.common.quantization.quantizer_propagation.structs import QuantizationTrait
 from nncf.tensorflow.graph.metatypes import keras_layers as layer_metatypes
 from nncf.tensorflow.graph.metatypes import common
+
 DEFAULT_TF_QUANT_TRAIT_TO_OP_DICT = {
     QuantizationTrait.INPUTS_QUANTIZABLE: [
         *common.GENERAL_CONV_LAYER_METATYPES,
