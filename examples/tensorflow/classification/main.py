@@ -110,8 +110,8 @@ def get_num_classes(dataset):
         num_classes = 10
     else:
         num_classes = 1000
-      
-    logger.info('The sample is started with {} classes'.format(num_classes)) 
+
+    logger.info('The sample is started with {} classes'.format(num_classes))
     return num_classes
 
 
