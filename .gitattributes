@@ -31,3 +31,6 @@
 *.tfrecord filter=lfs diff=lfs merge=lfs -text
 *.h5 filter=lfs diff=lfs merge=lfs -text
 *.orig filter=lfs diff=lfs merge=lfs -text
+/docker/tensorflow/gpu/Dockerfile filter=lfs diff=lfs merge=lfs -text
+/docker/torch/cpu/Dockerfile filter=lfs diff=lfs merge=lfs -text
+/docker/torch/gpu/Dockerfile filter=lfs diff=lfs merge=lfs -text
