@@ -21,11 +21,11 @@ RUN apt-get update && \
         openssh-server \
         openssh-client \
         sudo \
-		python3 \
-		python3-dev \
-		python3-pip &&\
-	cd /usr/bin && \
-	ln -s python3.8 python && \
+        python3 \
+        python3-dev \
+        python3-pip && \
+    cd /usr/bin && \
+    ln -s python3.8 python && \
     rm -rf /var/lib/apt/lists/*
 
 ENV PATH /usr/local/nvidia/bin:/usr/local/cuda/bin:${PATH}
@@ -35,9 +35,7 @@ ENV LD_LIBRARY_PATH /usr/local/nvidia/lib:/usr/local/nvidia/lib64
 ENV NVIDIA_VISIBLE_DEVICES all
 ENV NVIDIA_DRIVER_CAPABILITIES compute,utility
 
-ARG https_proxy
-ARG no_proxy
-ENV https_proxy=$https_proxy
-ENV no_proxy=$no_proxy
-
-ENTRYPOINT cd /home/nncf/ && python setup.py install && bash
+ENTRYPOINT cd /home/nncf \
+               && python setup.py install --torch \
+               && pip3 install -r examples/torch/requirements.txt \
+               && bash
