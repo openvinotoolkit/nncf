@@ -491,16 +491,16 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
         self._device_for_callable_obj_creation = 'cpu'
         self._single_config_quantizer_setup = None  # type: Optional[SingleConfigQuantizerSetup]
 
-    def _load_state_without_name(self, state: Dict[str, Any]):
+    def _load_state_without_name(self, state_without_name: Dict[str, Any]):
         """
         Initializes object from the state.
 
-        :param state: Output of `get_state()` method.
+        :param state_without_name: Output of `get_state()` method.
         """
-        quantizer_setup_state = state[self._state_names.QUANTIZER_SETUP]
+        quantizer_setup_state = state_without_name[self._state_names.QUANTIZER_SETUP]
         self._single_config_quantizer_setup = SingleConfigQuantizerSetup.from_state(quantizer_setup_state)
         self._build_time_metric_infos = QuantizationShareBuildTimeInfo.from_state(
-            state[self._state_names.BUILD_TIME_METRIC_INFOS])
+            state_without_name[self._state_names.BUILD_TIME_METRIC_INFOS])
 
     def _get_state_without_name(self) -> Dict[str, Any]:
         """
@@ -701,8 +701,8 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
         self._build_time_metric_infos = setup_generator.get_build_time_metric_infos()
         return single_config_quantizer_setup
 
-    def _build_controller(self, target_model: NNCFNetwork) -> PTCompressionAlgorithmController:
-        return QuantizationController(target_model,
+    def _build_controller(self, model: NNCFNetwork) -> PTCompressionAlgorithmController:
+        return QuantizationController(model,
                                       self.config,
                                       self._debug_interface,
                                       self._weight_quantizers,
@@ -1502,7 +1502,7 @@ class ExperimentalQuantizationBuilder(QuantizationBuilder):
         PTTargetPoint, Dict[ReductionShape, TensorStatistic]]:
         return self._tensor_stats
 
-    def _build_controller(self, target_model: NNCFNetwork) -> 'ExperimentalQuantizationController':
+    def _build_controller(self, model: NNCFNetwork) -> 'ExperimentalQuantizationController':
         groups_of_adjacent_quantizers = GroupsOfAdjacentQuantizers()
         all_quantizations = {}  # type: Dict[QuantizerId, BaseQuantizer]
         all_quantizations.update({k: v.quantizer_module_ref for k, v in self._weight_quantizers.items()})
@@ -1515,7 +1515,7 @@ class ExperimentalQuantizationBuilder(QuantizationBuilder):
         build_time_metric_infos = QuantizationShareBuildTimeInfo(len(self._non_weight_quantizers),
                                                                  len(self._weight_quantizers))
 
-        return ExperimentalQuantizationController(target_model,
+        return ExperimentalQuantizationController(model,
                                                   self._weight_quantizers,
                                                   self._non_weight_quantizers,
                                                   groups_of_adjacent_quantizers,

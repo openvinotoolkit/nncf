@@ -37,16 +37,12 @@ from nncf.common.statistics import NNCFStatistics
 
 @COMPRESSION_ALGORITHMS.register('rb_sparsity')
 class RBSparsityBuilder(BaseSparsityAlgoBuilder):
-    def apply_to(self, target_model: NNCFNetwork) -> NNCFNetwork:
-        target_model = super().apply_to(target_model)
-        return target_model
-
     def create_weight_sparsifying_operation(self, target_module_node: NNCFNode, compression_lr_multiplier: float):
         return RBSparsifyingWeight(target_module_node.layer_attributes.get_weight_shape(), frozen=False,
                                    compression_lr_multiplier=compression_lr_multiplier)
 
-    def _build_controller(self, target_model: NNCFNetwork) -> PTCompressionAlgorithmController:
-        return RBSparsityController(target_model, self._sparsified_module_info, self.config)
+    def _build_controller(self, model: NNCFNetwork) -> PTCompressionAlgorithmController:
+        return RBSparsityController(model, self._sparsified_module_info, self.config)
 
 
 @ADAPTIVE_COMPRESSION_CONTROLLERS.register('pt_rb_sparsity')

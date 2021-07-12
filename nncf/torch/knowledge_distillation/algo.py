@@ -39,8 +39,8 @@ class KnowledgeDistillationBuilder(PTCompressionAlgorithmBuilder):
             param.requires_grad = False
         return PTTransformationLayout()
 
-    def _build_controller(self, target_model):
-        return KnowledgeDistillationController(target_model, self.original_model, self.kd_type)
+    def _build_controller(self, model):
+        return KnowledgeDistillationController(model, self.original_model, self.kd_type)
 
     def initialize(self, model: NNCFNetwork) -> None:
         pass

@@ -52,13 +52,13 @@ class CompositeCompressionLoss(CompressionLoss):
         """
         self._child_losses.append(child_loss)
 
-    def load_state(self, states: List[Dict[str, Any]]) -> None:
+    def load_state(self, state: List[Dict[str, Any]]) -> None:
         """
         Loads the composite compression loss state.
 
-        :param states: Output of `get_state()` method.
+        :param state: Output of `get_state()` method.
         """
-        for child_loss, child_state in zip(self._child_losses, states):
+        for child_loss, child_state in zip(self._child_losses, state):
             child_loss.load_state(child_state)
 
     def get_state(self) -> List[Dict[str, Any]]:

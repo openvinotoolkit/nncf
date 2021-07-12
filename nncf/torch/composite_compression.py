@@ -59,9 +59,9 @@ class PTCompositeCompressionAlgorithmBuilder(
     def __bool__(self):
         return bool(self.child_builders)
 
-    def apply_to(self, target_model: NNCFNetwork) -> NNCFNetwork:
-        transformer = PTModelTransformer(target_model)
-        layout = self.get_transformation_layout(target_model)
+    def apply_to(self, model: NNCFNetwork) -> NNCFNetwork:
+        transformer = PTModelTransformer(model)
+        layout = self.get_transformation_layout(model)
         transformed_model = transformer.transform(layout)
 
         self.initialize(transformed_model)
@@ -127,8 +127,3 @@ class PTCompositeCompressionAlgorithmController(
 
         for child_ctrl in self.child_ctrls:
             child_ctrl.prepare_for_export()
-
-    def apply_to(self, target_model: NNCFNetwork) -> NNCFNetwork:
-        for ctrl in self.child_ctrls:
-            target_model = ctrl.apply_to(target_model)
-        return target_model
