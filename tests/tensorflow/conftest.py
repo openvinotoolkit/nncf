@@ -56,7 +56,7 @@ def pytest_addoption(parser):
         "--models-dir", type=str, default=None, help="Path to checkpoints directory for weekly tests"
     )
     parser.addoption(
-        "--run-install-tests", type=str, help="To run installation tests"
+        "--run-install-tests", action="store_true", default=False, help="To run installation tests"
     )
 
 
