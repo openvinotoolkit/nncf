@@ -28,9 +28,9 @@ class EvolutionOptimizer:
     """
     Class for optimizing ranking coefficients for the model with evolution algorithm (agent).
     The evolution algorithm works as follows:
-    1. For the first population_size steps it generates and returns random actions (generated with some prior information).
-     For every action, it gets a reward (some measure whether this action is good or not). During these generations all
-     action - reward pairs saving to the population.
+    1. For the first population_size steps it generates and returns random actions (generated with some prior
+    information). For every action, it gets a reward (some measure whether this action is good or not). During these
+    generations all action - reward pairs saving to the population.
     2. During remaining (generations - population_size) generations it predict action by next scheme:
         - Choosing random num_samples actions from population
         - Choosing the best one from sampled and mutate it
@@ -39,6 +39,7 @@ class EvolutionOptimizer:
 
     After all generations, the best action (with the best reward value) is returned.
     """
+
     def __init__(self, initial_filter_norms: Dict, hparams: Dict, random_seed: int):
         """
         :param initial_filter_norms: Initial filter norms needed to get std and var of filter norms in each leyer.
@@ -167,6 +168,7 @@ class LeGREvolutionEnv:
     During 'step' environment doing step with received action calculates current reward and useful info and return it
     During 'reset' resetting Pruner and environment params changed during iteration.
     """
+
     def __init__(self, filter_pruner: 'LeGRPruner', model: nn.Module, train_loader: torch.utils.data.DataLoader,
                  val_loader: torch.utils.data.DataLoader, train_fn: Callable,
                  train_optimizer: Optional[torch.optim.Optimizer], val_fn: Callable, config: NNCFConfig,
@@ -202,7 +204,8 @@ class LeGREvolutionEnv:
 
     def reset(self) -> Tuple[torch.Tensor, List]:
         """
-        Resetting pruner params (all changes in the model made by training) and environment params changed during the step.
+        Resetting pruner params (all changes in the model made by training) and environment params changed during
+        the step.
         :return: tuple with state and info : full flops in the model and number of flops that is rest in the model
         """
         self.filter_pruner.reset()
@@ -258,6 +261,7 @@ class LeGRPruner:
     Wrapper for pruning controller with a simplified interface, allowing prune model with received ranking coefficients
     and resetting all changes in the model made by the environment.
     """
+
     def __init__(self, filter_pruner_ctrl: 'FilterPruningController', model: nn.Module):
         self.filter_pruner = filter_pruner_ctrl
         self.scheduler = copy(self.filter_pruner.scheduler)
@@ -296,8 +300,8 @@ class LeGRPruner:
 
     def reset(self) -> None:
         """
-        Resetting all changes made in the model (and model masks during environment step) by restoring the original model
-        weights, resetting masks.
+        Resetting all changes made in the model (and model masks during environment step) by restoring the original
+        model weights, resetting masks.
         """
         self._restore_model_weights()
         self._reset_masks()

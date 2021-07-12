@@ -63,9 +63,9 @@ class BasePruningAlgoBuilder(PTCompressionAlgorithmBuilder):
     def _set_default_params_for_ranking_type(params: Dict) -> None:
         """
         Setting default parameter values of pruning algorithm depends on the ranking type:
-        for learned_ranking `all_weights` must be True (in case of False was set by the user, an Exception will be raised),
-        `prune_first_conv`, `prune_last_conv`, `prune_downsample_convs` are recommended to be True (this params will
-        be set to True by default (and remain unchanged if the user sets some value).
+        for learned_ranking `all_weights` must be True (in case of False was set by the user, an Exception will be
+        raised), `prune_first_conv`, `prune_last_conv`, `prune_downsample_convs` are recommended to be True (this
+        params will be set to True by default (and remain unchanged if the user sets some value).
         :param params: dict with parameters of the algorithm from config
         """
         learned_ranking = 'interlayer_ranking_type' in params and params['interlayer_ranking_type'] == 'learned_ranking'
