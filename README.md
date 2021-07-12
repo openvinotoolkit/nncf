@@ -31,7 +31,7 @@ learning frameworks.
 - GPU-accelerated layers for faster compressed model fine-tuning.
 - Distributed training support.
 - Configuration file examples for each supported compression algorithm.
-- Git patches for prominent third-party repository [huggingface-transformers](https://github.com/huggingface/transformers)) demonstrating the process of integrating NNCF into custom training pipelines.
+- Git patches for prominent third-party repository ([huggingface-transformers](https://github.com/huggingface/transformers)) demonstrating the process of integrating NNCF into custom training pipelines.
 - Exporting PyTorch compressed models to ONNX\* checkpoints and TensorFlow compressed models to SavedModel or Frozen Graph format, ready to use with [OpenVINO&trade; toolkit](https://github.com/openvinotoolkit/).
 
 ## Usage
@@ -125,8 +125,16 @@ To run the samples please refer to the corresponding tutorials:
 
 ## Third-party repository integration
 NNCF may be straightforwardly integrated into training/evaluation pipelines of third-party repositories.
-See [third_party_integration](./third_party_integration) for examples of code modifications (Git patches and base commit IDs are provided) that are necessary to integrate NNCF into select repositories.
 
+### Used by
+
+- [OpenVINO Training Extensions](https://github.com/openvinotoolkit/training_extensions)
+  
+  NNCF is integrated into OpenVINO Training Extensions as model optimization backend. So you can train, optimize and export new models based on the available model templates as well as run exported models with OpenVINO.
+
+### Git patches for third-party repository
+See [third_party_integration](./third_party_integration) for examples of code modifications (Git patches and base commit IDs are provided) that are necessary to integrate NNCF into the following repositories:
+  - [huggingface-transformers](https://github.com/huggingface/transformers)
 
 ## System requirements
 - Ubuntu\* 18.04 or later (64-bit)
@@ -194,7 +202,7 @@ to find instruction and links to exact configuration files and final checkpoints
 - [TensorFlow models](#tensorflow-models)
   * [Classification](#tensorflow_classification)
   * [Object detection](#tensorflow_object_detection)
-  * [Instance segmentation](#tensorflow_instance_segmentation)  
+  * [Instance segmentation](#tensorflow_instance_segmentation)
 
 ### PyTorch models
 
