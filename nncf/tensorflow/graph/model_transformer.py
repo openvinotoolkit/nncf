@@ -267,7 +267,7 @@ class TFModelTransformer(ModelTransformer):
         idx, _ = self._find_layer_config(layer_name)
         self._model_config['layers'][idx] = replace_layer_config
 
-    def _insert_layers_before(self, layer_name: str, instance_idx: int, inp_port: int, layers: List):
+    def _insert_layers_before(self, layer_name: str, instance_idx: int, input_port_id: int, layers: List):
         functional_model = is_functional_model(self._model)
 
         if functional_model:
@@ -281,14 +281,15 @@ class TFModelTransformer(ModelTransformer):
             config = tf.keras.utils.serialize_keras_object(layer)
             if functional_model:
                 config['name'] = config['config']['name']
-                config['inbound_nodes'] = [input_layer_cfg['inbound_nodes'][instance_idx][inp_port]]
-                self._model_config['layers'][idx]['inbound_nodes'][instance_idx][inp_port] = [config['name'], 0, 0, {}]
+                config['inbound_nodes'] = [input_layer_cfg['inbound_nodes'][instance_idx][input_port_id]]
+                self._model_config['layers'][idx]['inbound_nodes'][instance_idx][input_port_id] = \
+                    [config['name'], 0, 0, {}]
             layer_configs.append(config)
 
         for config in layer_configs:
             self._model_config['layers'].insert(idx, config)
 
-    def _insert_layers_after(self, layer_name: str, instance_idx: int, out_port: int, layers: List):
+    def _insert_layers_after(self, layer_name: str, instance_idx: int, output_port_id: int, layers: List):
         functional_model = is_functional_model(self._model)
 
         layer_configs = []
@@ -296,7 +297,7 @@ class TFModelTransformer(ModelTransformer):
             config = tf.keras.utils.serialize_keras_object(layer)
             if functional_model:
                 config['name'] = config['config']['name']
-                config['inbound_nodes'] = [[[layer_name, instance_idx, out_port, {}]]]
+                config['inbound_nodes'] = [[[layer_name, instance_idx, output_port_id, {}]]]
             layer_configs.append(config)
 
         for config in layer_configs:

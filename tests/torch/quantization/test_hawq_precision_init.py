@@ -40,7 +40,7 @@ from nncf.torch.checkpoint_loading import load_state
 from nncf.common.graph import NNCFNodeName
 from nncf.common.hardware.config import HWConfigType
 from nncf.common.quantization.structs import QuantizerGroup
-from nncf.torch.debug import set_debug_log_dir
+from nncf.common.utils.debug import set_debug_log_dir
 from nncf.torch.dynamic_graph.graph_tracer import create_input_infos
 from nncf.torch.initialization import default_criterion_fn
 from nncf.torch.quantization.adjust_padding import add_adjust_padding_nodes

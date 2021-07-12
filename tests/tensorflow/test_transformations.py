@@ -485,8 +485,8 @@ def apply_insert_after(model):
         transformations.register(
             TFInsertionCommand(
                 target_point=commands.TFAfterLayer(original_node_name,
-                                                   instance_index=instance_idx,
-                                                   out_port=0),
+                                                   instance_idx=instance_idx,
+                                                   output_port_id=0),
                 callable_object=fake_quantize_layer,
                 priority=TransformationPriority.QUANTIZATION_PRIORITY))
 
@@ -528,8 +528,8 @@ def apply_insert_before(model):
             transformations.register(
                 TFInsertionCommand(
                     target_point=commands.TFBeforeLayer(original_node_name,
-                                            instance_index=instance_idx,
-                                            in_port=port),
+                                            instance_idx=instance_idx,
+                                            input_port_id=port),
                     callable_object=fake_quantize_layer,
                     priority=TransformationPriority.QUANTIZATION_PRIORITY))
 

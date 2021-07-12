@@ -40,11 +40,12 @@ def test_ignored_scopes():
         layers.Conv2D(3, 3, name='c3_1'),
         layers.Conv2D(3, 3, name='end')
     ])
+
     compressed_model, _ = create_compressed_model_and_algo_for_test(model, config, force_no_init=True)
 
     ref_fake_quantize_names = [
-        'conv1_input/fake_quantize',
-        'some_scope/conv3/c2/fake_quantize',
+        'some_scope/conv2/c1/fake_quantize',
+        'some_scope/conv3/c3/fake_quantize',
         'c3_1/fake_quantize'
     ]
     ref_nncf_wrapper_names = [

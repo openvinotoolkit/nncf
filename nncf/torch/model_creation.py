@@ -33,9 +33,8 @@ from nncf.api.compression import CompressionAlgorithmController
 from nncf.torch.algo_selector import COMPRESSION_ALGORITHMS
 from nncf.torch.composite_compression import PTCompositeCompressionAlgorithmBuilder
 from nncf.torch.compression_method_api import PTCompressionAlgorithmBuilder
-from nncf.torch.debug import set_debug_log_dir
-from nncf.torch.dynamic_graph.graph_tracer import create_dummy_forward_fn
-from nncf.torch.dynamic_graph.graph_tracer import create_input_infos
+from nncf.common.utils.debug import set_debug_log_dir
+from nncf.torch.dynamic_graph.graph_tracer import create_input_infos, create_dummy_forward_fn
 from nncf.torch.graph.graph_builder import GraphBuilder
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.utils import is_dist_avail_and_initialized

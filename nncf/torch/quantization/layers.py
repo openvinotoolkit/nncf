@@ -22,7 +22,7 @@ from nncf.torch.dynamic_graph.context import no_nncf_trace
 from torch import distributed
 
 from nncf.torch.checkpoint_loading import OPTIONAL_PARAMETERS_REGISTRY
-from nncf.torch.debug import is_debug
+from nncf.common.utils.debug import is_debug
 from nncf.torch.functions import clamp
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.common.quantization.structs import QuantizationMode, QuantizerConfig, QuantizerSpec

@@ -43,7 +43,6 @@ from nncf.tensorflow.graph.metatypes.common import GENERAL_CONV_LAYER_METATYPES
 from nncf.tensorflow.graph.metatypes.common import LINEAR_LAYER_METATYPES
 from nncf.tensorflow.graph.metatypes.matcher import get_keras_layer_metatype
 from nncf.tensorflow.graph.utils import collect_wrapped_layers
-from nncf.tensorflow.graph.utils import get_layer_identifier
 from nncf.tensorflow.graph.utils import get_original_name_and_instance_idx
 from nncf.tensorflow.graph.utils import unwrap_layer
 from nncf.tensorflow.layers.data_layout import get_input_channel_axis
@@ -290,7 +289,7 @@ class FilterPruningController(BasePruningAlgoController):
         nncf_sorted_nodes = self._original_graph.topological_sort()
         for layer in wrapped_layers:
             nncf_node = [n for n in nncf_sorted_nodes
-                         if layer.name == get_layer_identifier(n)][0]
+                         if layer.name == n.layer_name][0]
             if nncf_node.data['output_mask'] is not None:
                 self._set_operation_masks([layer], nncf_node.data['output_mask'])
 
@@ -337,7 +336,7 @@ class FilterPruningController(BasePruningAlgoController):
         nncf_sorted_nodes = self._original_graph.topological_sort()
         for layer in wrapped_layers:
             nncf_node = [n for n in nncf_sorted_nodes
-                         if layer.name == get_layer_identifier(n)][0]
+                         if layer.name == n.layer_name][0]
             if nncf_node.data['output_mask'] is not None:
                 self._set_operation_masks([layer], nncf_node.data['output_mask'])
 
@@ -358,7 +357,7 @@ class FilterPruningController(BasePruningAlgoController):
         nncf_sorted_nodes = self._original_graph.topological_sort()
         for layer in wrapped_layers:
             nncf_node = [n for n in nncf_sorted_nodes
-                         if layer.name == get_layer_identifier(n)][0]
+                         if layer.name == n.layer_name][0]
             nncf_node.data['output_mask'] = tf.ones(get_filters_num(layer))
 
         # 1. Calculate importances for all groups of filters. Initialize masks.
@@ -414,7 +413,7 @@ class FilterPruningController(BasePruningAlgoController):
                 nncf_sorted_nodes = self._original_graph.topological_sort()
                 for layer in wrapped_layers:
                     nncf_node = [n for n in nncf_sorted_nodes
-                                 if layer.name == get_layer_identifier(n)][0]
+                                 if layer.name == n.layer_name][0]
                     if nncf_node.data['output_mask'] is not None:
                         self._set_operation_masks([layer], nncf_node.data['output_mask'])
                 return

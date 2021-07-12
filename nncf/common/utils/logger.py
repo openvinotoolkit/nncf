@@ -35,3 +35,13 @@ def set_log_level(level):
 
 def disable_logging():
     logger.handlers = []
+
+
+class DuplicateFilter:
+    def __init__(self):
+        self.msgs = set()
+
+    def filter(self, rec):
+        retval = rec.msg not in self.msgs
+        self.msgs.add(rec.msg)
+        return retval

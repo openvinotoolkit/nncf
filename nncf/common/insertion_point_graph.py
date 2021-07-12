@@ -20,6 +20,7 @@ from typing import Set
 
 import networkx as nx
 
+from nncf.common.graph import Dtype
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNodeName
 from nncf.common.graph.graph_matching import find_subgraphs_matching_pattern
@@ -60,6 +61,7 @@ class InsertionPointGraph(nx.DiGraph):
     ASSOCIATED_IP_NODE_KEYS_NODE_ATTR = 'associated_ip_node_keys'
     IS_MERGED_NODE_ATTR = 'is_merged'
     MERGED_NNCF_NODE_LIST_NODE_ATTR = 'merged_node_list'
+    IS_INTEGER_PATH_EDGE_ATTR = 'is_integer'
 
     PRE_HOOK_ID_PREFIX = 'PRE HOOK '  # NB: Do not use colon (':') in node keys! Causes trouble for .dot file export.
     POST_HOOK_ID_PREFIX = 'POST HOOK '
@@ -80,6 +82,8 @@ class InsertionPointGraph(nx.DiGraph):
         If left unspecified, every node in `nncf_graph` will be allowed to have a single post-hook for its output
          (post-hooking separate tensors in an operation's output is not currently supported)
         """
+        #pylint:disable=too-many-branches
+        #pylint:disable=too-many-statements
         super().__init__()
         self._base_nx_graph = deepcopy(nncf_graph.get_nx_graph_copy())
         if weight_modifiable_node_names is None:
@@ -115,8 +119,10 @@ class InsertionPointGraph(nx.DiGraph):
         INPUT_PORT_ID = "input_port_id"
         for edge in self._base_nx_graph.edges:
             input_port_id = self._base_nx_graph.edges[edge][NNCFGraph.INPUT_PORT_ID_EDGE_ATTR]
+            dtype = self._base_nx_graph.edges[edge][NNCFGraph.DTYPE_EDGE_ATTR]
             from_node, to_node = edge
-            attrs = {INPUT_PORT_ID: input_port_id}
+            attrs = {INPUT_PORT_ID: input_port_id,
+                     self.IS_INTEGER_PATH_EDGE_ATTR: dtype is Dtype.INTEGER}
             self.add_edge(from_node, to_node, **attrs)
 
         node_keys_working_set = [deepcopy(node_key) for node_key in nx.lexicographical_topological_sort(self)]
@@ -138,6 +144,7 @@ class InsertionPointGraph(nx.DiGraph):
                 input_port_id_vs_edge = {self.edges[edge][INPUT_PORT_ID]: edge for edge in in_edges}
                 for pre_hook_point in pre_hook_ips:
                     edge = input_port_id_vs_edge[pre_hook_point.input_port_id]
+                    original_edge_attrs = self.edges[edge]
                     from_node_key, to_node_key = edge
                     ip_node_key = self.get_pre_hook_node_key(str(operator_node_key), pre_hook_point.input_port_id)
 
@@ -149,8 +156,8 @@ class InsertionPointGraph(nx.DiGraph):
                     self.add_node(ip_node_key, **pre_hook_ip_attrs)
 
                     self.remove_edge(from_node_key, to_node_key)
-                    self.add_edge(from_node_key, ip_node_key)
-                    self.add_edge(ip_node_key, operator_node_key)
+                    self.add_edge(from_node_key, ip_node_key, **original_edge_attrs)
+                    self.add_edge(ip_node_key, operator_node_key, **original_edge_attrs)
                     operator_node[InsertionPointGraph.ASSOCIATED_IP_NODE_KEYS_NODE_ATTR].add(ip_node_key)
 
             if original_node.node_name in target_node_name_vs_post_hook_ips:
@@ -164,6 +171,7 @@ class InsertionPointGraph(nx.DiGraph):
                 ip_node_key = self.get_post_hook_node_key(str(operator_node_key))
                 self.add_node(ip_node_key, **post_hook_ip_attrs)
                 out_edges = list(self.out_edges(operator_node_key))
+                has_integer_outputs = False
                 for out_edge in out_edges:
                     # Need to preserve original edge attributes in order not to lose
                     # input port ID information
@@ -171,11 +179,38 @@ class InsertionPointGraph(nx.DiGraph):
                     from_node_key, to_node_key = out_edge
                     self.remove_edge(from_node_key, to_node_key)
                     self.add_edge(ip_node_key, to_node_key, **original_edge_attrs)
+                    if original_edge_attrs[self.IS_INTEGER_PATH_EDGE_ATTR]:
+                        has_integer_outputs = True
+
                     # TODO (vshampor): introduce separate insertion points for operator outputs if
                     # the outputs are semantically different
-                self.add_edge(operator_node_key, ip_node_key)
+
+                # TODO (vshampor): in multi-output case, some outputs may be integer and some float;
+                #  need to switch to using output ports to cover this correctly. For safety, mark
+                #  the edge from op to post-hook as integer if at least one output edge of the op was integer
+                is_integer_attrs = {InsertionPointGraph.IS_INTEGER_PATH_EDGE_ATTR: has_integer_outputs}
+                self.add_edge(operator_node_key, ip_node_key, **is_integer_attrs)
                 operator_node = self.nodes[operator_node_key]
                 operator_node[InsertionPointGraph.ASSOCIATED_IP_NODE_KEYS_NODE_ATTR].add(ip_node_key)
+
+        for edge in self.edges:
+            # Mark all edges from post-hook to pre-hook as integer if at least one was integer.
+            # Until output ports are ready, the post-hook for output will treat op as having a single
+            # tensor output. In multi-output case when some of tensors are integer, need to make
+            # sure that the propagation won't happen from a pre-hook of the op consuming the floating part
+            # of the output into the post-hook of the operation that produces both int and float tensors.
+            from_node_key, to_node_key = edge
+            from_node = self.nodes[from_node_key]
+            to_node = self.nodes[to_node_key]
+            if from_node[self.NODE_TYPE_NODE_ATTR] is InsertionPointGraphNodeType.POST_HOOK and \
+               to_node[self.NODE_TYPE_NODE_ATTR] is InsertionPointGraphNodeType.PRE_HOOK:
+                post_hook_has_integer_outputs = False
+                for follower_node_key in self.successors(from_node_key):
+                    if self.edges[from_node_key, follower_node_key][self.IS_INTEGER_PATH_EDGE_ATTR]:
+                        post_hook_has_integer_outputs = True
+                if post_hook_has_integer_outputs:
+                    for follower_node_key in self.successors(from_node_key):
+                        self.edges[from_node_key, follower_node_key][self.IS_INTEGER_PATH_EDGE_ATTR] = True
 
     @property
     def weight_modifiable_node_names(self) -> List[NNCFNodeName]:

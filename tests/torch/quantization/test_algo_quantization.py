@@ -10,8 +10,6 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-import logging
-from contextlib import contextmanager
 from copy import deepcopy
 from typing import List, Tuple
 
@@ -23,6 +21,7 @@ import torch.utils.data
 from torchvision.models import resnet50
 from torchvision.models import squeezenet1_1
 
+from nncf.common.utils.debug import nncf_debug
 from nncf.api.compression import CompressionScheduler
 from nncf.torch.checkpoint_loading import load_state
 from nncf.common.quantization.structs import QuantizationMode
@@ -549,14 +548,6 @@ def test_quantize_outputs_with_scope_overrides():
     for q in output_quantizers:
         assert q.num_bits == 4
         assert isinstance(q, AsymmetricQuantizer)
-
-
-@contextmanager
-def nncf_debug():
-    from nncf.torch import set_log_level
-    set_log_level(logging.DEBUG)
-    yield
-    set_log_level(logging.INFO)
 
 
 def test_debug_mode():

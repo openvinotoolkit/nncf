@@ -77,6 +77,7 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
     IS_IN_IGNORED_SCOPES = "is_ignored"
     IS_MERGED_NODE_ATTR = "is_merged"
     MERGED_NNCF_NODE_LIST_NODE_ATTR = "merged_node_list"
+    IS_INTEGER_PATH_EDGE_ATTR = "is_integer"
     BARRIER_NODE_KEY_POSTFIX = "BARRIER"
 
     def __init__(self, ip_graph: InsertionPointGraph,
@@ -148,6 +149,8 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
 
         for from_node, to_node, edge_data in ip_graph.edges(data=True):
             edge_data[self.AFFECTING_PROPAGATING_QUANTIZERS_ATTR] = []
+            is_integer = edge_data.pop(InsertionPointGraph.IS_INTEGER_PATH_EDGE_ATTR)
+            edge_data[self.IS_INTEGER_PATH_EDGE_ATTR] = is_integer
             self.add_edge(from_node, to_node, **edge_data)
 
         for barred_node_key in self.ignored_node_keys + iteration_scope_node_keys:
@@ -168,11 +171,11 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
         barrier_node_key = self.get_barrier_node_key(node_key)
         self.add_node(barrier_node_key, **qpg_node_barrier)
 
-        edge_attr = {QuantizerPropagationStateGraph.AFFECTING_PROPAGATING_QUANTIZERS_ATTR: []}
         next_node_keys = list(self.succ[node_key].keys())
         for next_node_key in next_node_keys:
-            self.add_edge(node_key, barrier_node_key, **edge_attr)
-            self.add_edge(barrier_node_key, next_node_key, **edge_attr)
+            edge_attrs = self.edges[node_key, next_node_key]
+            self.add_edge(node_key, barrier_node_key, **edge_attrs)
+            self.add_edge(barrier_node_key, next_node_key, **edge_attrs)
             self.remove_edge(node_key, next_node_key)
 
     @staticmethod
@@ -187,8 +190,8 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
         raise RuntimeError("Invalid insertion point graph node type.")
 
     @staticmethod
-    def get_barrier_node_key(node_key: str):
-        return QuantizerPropagationStateGraph.BARRIER_NODE_KEY_POSTFIX + node_key
+    def get_barrier_node_key(node_key: str) -> str:
+        return f"{QuantizerPropagationStateGraph.BARRIER_NODE_KEY_POSTFIX} {node_key}"
 
 
     def mark_act_quantizer_as_dependent_on_weights(self, pq: PropagatingQuantizer, operator_node_key: str):
@@ -787,6 +790,9 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
             if affecting_quantizers:
                 label = ", ".join([str(pq.id) for pq in affecting_quantizers])
                 attrs = {"color": "blue", "label": label}
+            is_integer_path = edge[QuantizerPropagationStateGraph.IS_INTEGER_PATH_EDGE_ATTR]
+            if is_integer_path:
+                attrs = {"color": "violet", "style": "bold"}
             out_graph.add_edge(u, v, **attrs)
 
         for gid, group_pq_node_keys in unified_scale_group_vs_pq_node_id_dict.items():

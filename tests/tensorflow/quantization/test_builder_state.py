@@ -31,8 +31,8 @@ from nncf.tensorflow.graph.transformations.commands import TFLayerWeight
 from nncf.tensorflow.graph.transformations.commands import TFOperationWithWeights
 from nncf.tensorflow.quantization.algorithm import QuantizationBuilder
 from nncf.tensorflow.quantization.algorithm import QuantizationController
-from nncf.tensorflow.quantization.algorithm import QuantizationPoint
-from nncf.tensorflow.quantization.algorithm import QuantizationSetup
+from nncf.tensorflow.quantization.algorithm import TFQuantizationPoint
+from nncf.tensorflow.quantization.algorithm import TFQuantizationSetup
 from nncf.tensorflow.quantization.quantizers import TFQuantizerSpec
 from nncf.tensorflow.utils.state import TFCompressionState
 from tests.common.serialization import check_serialization
@@ -155,13 +155,13 @@ def test_checkpoint_callback_make_checkpoints(mocker, tmp_path):
 DUMMY_STR = 'dummy_str'
 
 
-def _quantization_setup_cmp(qs1: QuantizationSetup, qs2: QuantizationSetup):
+def _quantization_setup_cmp(qs1: TFQuantizationSetup, qs2: TFQuantizationSetup):
     if qs1.__class__ is qs2.__class__:
         return all(_quantization_point_cmp(qp1, qp2) for qp1, qp2 in zip(iter(qs1), iter(qs2)))
     return False
 
 
-def _quantization_point_cmp(qp1: QuantizationPoint, qp2: QuantizationPoint):
+def _quantization_point_cmp(qp1: TFQuantizationPoint, qp2: TFQuantizationPoint):
     if qp1.__class__ is qp2.__class__:
         return qp1.target_point == qp2.target_point and \
                qp1.quantizer_spec == qp2.quantizer_spec and \
@@ -239,8 +239,8 @@ GROUND_TRUTH_STATE = {
                 "signedness_to_force": None
             },
             "target_point": {
-                "in_port": 0,
-                "instance_index": 0,
+                "input_port_id": 0,
+                "instance_idx": 0,
                 "layer_name": "dummy_str"
             },
             "target_point_class_name": "TFBeforeLayer"
@@ -256,9 +256,9 @@ GROUND_TRUTH_STATE = {
                 "signedness_to_force": None
             },
             "target_point": {
-                "instance_index": 0,
+                "instance_idx": 0,
                 "layer_name": "dummy_str",
-                "out_port": 0
+                "output_port_id": 0
             },
             "target_point_class_name": "TFAfterLayer"
         },
@@ -300,7 +300,7 @@ GROUND_TRUTH_STATE = {
 
 
 def test_quantizer_setup_serialization():
-    setup = QuantizationSetup()
+    setup = TFQuantizationSetup()
 
     quantizer_spec = TFQuantizerSpec(num_bits=8, mode=QuantizationMode.SYMMETRIC, signedness_to_force=None,
                                      narrow_range=True, half_range=True, per_channel=True)
@@ -309,7 +309,7 @@ def test_quantizer_setup_serialization():
     target_type = TargetType.OPERATOR_POST_HOOK
     check_serialization(target_type)
 
-    quantization_point_factory = partial(QuantizationPoint, op_name=DUMMY_STR, quantizer_spec=quantizer_spec)
+    quantization_point_factory = partial(TFQuantizationPoint, op_name=DUMMY_STR, quantizer_spec=quantizer_spec)
     check_insertion_point = partial(_check_and_add_insertion_point, quantization_point_factory, setup)
 
     check_insertion_point(TargetPoint(target_type))

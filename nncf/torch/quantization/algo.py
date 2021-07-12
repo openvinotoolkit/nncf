@@ -10,7 +10,6 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-
 import shutil
 # pylint:disable=too-many-lines
 from collections import Counter
@@ -47,13 +46,12 @@ from nncf.common.hardware.config import HW_CONFIG_TYPE_TARGET_DEVICE_MAP
 from nncf.common.initialization.batchnorm_adaptation import BatchnormAdaptationAlgorithm
 from nncf.common.insertion_point_graph import InsertionPointGraph
 from nncf.common.insertion_point_graph import InsertionPointGraphNodeType
-from nncf.common.quantization.quantizer_propagation.graph import QuantizerPropagationStateGraph
-from nncf.common.quantization.quantizer_propagation.solver import QuantizerPropagationSolver
 from nncf.common.quantization.quantizer_setup import MultiConfigQuantizerSetup
 from nncf.common.quantization.quantizer_setup import QuantizationPointId
 from nncf.common.quantization.quantizer_setup import QuantizerSetupBase
 from nncf.common.quantization.quantizer_setup import SingleConfigQuantizationPoint
 from nncf.common.quantization.quantizer_setup import SingleConfigQuantizerSetup
+from nncf.common.utils.logger import DuplicateFilter
 from nncf.torch.quantization.default_quantization import DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT
 from nncf.torch.quantization.layers import get_scale_shape
 from nncf.common.quantization.structs import NonWeightQuantizerId
@@ -77,7 +75,7 @@ from nncf.torch.compression_method_api import PTCompressionAlgorithmBuilder
 from nncf.torch.compression_method_api import PTCompressionAlgorithmController
 from nncf.torch.debug import CallCountTracker
 from nncf.torch.debug import DebugInterface
-from nncf.torch.debug import is_debug
+from nncf.common.utils.debug import is_debug
 from nncf.torch.dynamic_graph.context import TracingContext
 from nncf.torch.graph.graph import PTNNCFGraph
 from nncf.torch.graph.operator_metatypes import Conv2dMetatype
@@ -86,7 +84,7 @@ from nncf.torch.graph.transformations.commands import PTInsertionCommand
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.graph.transformations.commands import TransformationPriority
 from nncf.torch.graph.transformations.layout import PTTransformationLayout
-from nncf.torch.graph.patterns import get_full_pattern_graph
+from nncf.torch.hardware.fused_patterns import PT_HW_FUSED_PATTERNS
 from nncf.torch.hardware.config import PTHWConfig
 from nncf.torch.initialization import SimpleDataLoaderRunner
 from nncf.torch.module_operations import UpdatePaddingValue
@@ -327,7 +325,7 @@ class PropagationBasedQuantizerSetupGenerator(QuantizerSetupGeneratorBase):
                  debug_interface: 'QuantizationDebugInterface' = None):
         super().__init__(quant_config, target_model, precision_init_type, precision_init_params, range_init_params)
 
-        self._pattern_fusing_graph = get_full_pattern_graph()
+        self._pattern_fusing_graph = PT_HW_FUSED_PATTERNS.get_full_pattern_graph()
 
         self.hw_config = hw_config
 
@@ -344,11 +342,11 @@ class PropagationBasedQuantizerSetupGenerator(QuantizerSetupGeneratorBase):
         insertion_point_graph = self._target_model.get_insertion_point_graph()
         if self._debug_interface:
             self._debug_interface.visualize_insertion_point_graph(insertion_point_graph)
+        from nncf.common.quantization.quantizer_propagation.solver import QuantizerPropagationSolver
         prop_graph_solver = QuantizerPropagationSolver(ignored_scopes=self.ignored_scopes,
                                                        target_scopes=self.target_scopes,
                                                        hw_config=self.hw_config,
                                                        default_trait_to_metatype_map=DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT,
-                                                       debug_interface=self._debug_interface,
                                                        default_qconfig_list=[self._get_default_qconfig(
                                                            constraints=self.global_quantizer_constraints[
                                                                QuantizerGroup.ACTIVATIONS])],
@@ -624,10 +622,14 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
                 self._single_config_quantizer_setup,
                 stats_for_range_init,
                 target_model_graph)
+
+        dup_filter = DuplicateFilter()  # so that the saturation fix warning is only logged once
+        nncf_logger.addFilter(dup_filter)
         insertion_commands, setup_to_module_id_translation_dict = \
             self._build_insertion_commands_list_for_quantizer_setup(self._single_config_quantizer_setup,
                                                                     target_model,
                                                                     minmax_values_for_range_init)
+        nncf_logger.removeFilter(dup_filter)
 
         transformation_layout = PTTransformationLayout()
         for command in insertion_commands:
@@ -1010,7 +1012,7 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
         half_range = False
         if self.hw_config and not self._disable_saturation_fix and is_weights(primary_ip):
             if self.hw_config.target_device in ['CPU', 'ANY'] and qconfig.num_bits == 8:
-                nncf_logger.warning('A saturation issue fix will be applied. '
+                nncf_logger.warning('The saturation issue fix will be applied. '
                                     'Now all weight quantizers will effectively use only 7 bits out of 8 bits. '
                                     'This resolves the saturation issue problem on AVX2 and AVX-512 machines. '
                                     'Please take a look at the documentation for a detailed information.')
@@ -1337,16 +1339,13 @@ class QuantizationDebugInterface(DebugInterface):
         }
         self.graph_size = 0
 
-        from nncf.torch.debug import DEBUG_LOG_DIR
+        from nncf.common.utils.debug import DEBUG_LOG_DIR
         self.dump_dir = Path(DEBUG_LOG_DIR) / Path("debug_dumps")
         self.dump_dir.mkdir(parents=True, exist_ok=True)
         self.scale_dump_dir = self.dump_dir / Path("scale")
         if self.scale_dump_dir.exists():
             shutil.rmtree(str(self.scale_dump_dir))
         self.scale_dump_dir.mkdir(parents=True, exist_ok=True)
-        self.prop_graph_dump_dir = self.dump_dir / Path("quant_prop")
-        if self.prop_graph_dump_dir.exists():
-            shutil.rmtree(str(self.prop_graph_dump_dir))
         self.forward_call_count = 0
         self._strict_forward = False
 
@@ -1442,15 +1441,6 @@ class QuantizationDebugInterface(DebugInterface):
 
     def register_forward_call(self):
         self.forward_call_count += 1
-
-    def visualize_quantizer_propagation(self,
-                                        prop_solver: QuantizerPropagationSolver,
-                                        prop_graph: QuantizerPropagationStateGraph,
-                                        iteration: str):
-        self.prop_graph_dump_dir.mkdir(parents=True, exist_ok=True)
-        fname = "quant_prop_iter_{}.dot".format(iteration)
-        prop_solver.debug_visualize(prop_graph,
-                                    self.prop_graph_dump_dir / Path(fname))
 
     def visualize_insertion_point_graph(self, insertion_point_graph: InsertionPointGraph):
         out_graph = nx.MultiDiGraph()
