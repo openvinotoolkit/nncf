@@ -31,7 +31,7 @@ learning frameworks.
 - GPU-accelerated layers for faster compressed model fine-tuning.
 - Distributed training support.
 - Configuration file examples for each supported compression algorithm.
-- Git patches for prominent third-party repositories ([mmdetection](https://github.com/open-mmlab/mmdetection), [huggingface-transformers](https://github.com/huggingface/transformers)) demonstrating the process of integrating NNCF into custom training pipelines
+- Git patches for prominent third-party repository [huggingface-transformers](https://github.com/huggingface/transformers)) demonstrating the process of integrating NNCF into custom training pipelines.
 - Exporting PyTorch compressed models to ONNX\* checkpoints and TensorFlow compressed models to SavedModel or Frozen Graph format, ready to use with [OpenVINO&trade; toolkit](https://github.com/openvinotoolkit/).
 
 ## Usage
@@ -132,7 +132,7 @@ See [third_party_integration](./third_party_integration) for examples of code mo
 - Ubuntu\* 18.04 or later (64-bit)
 - Python\* 3.6.2 or later
 - Supported frameworks:
-  - PyTorch\* 1.5 or later (1.8.0 not supported, 1.8.1 supported)
+  - PyTorch\* >=1.5.0, <=1.8.1 (1.8.0 not supported)
   - TensorFlow\* 2.4.2
 
 This repository is tested on Python* 3.6.2+, PyTorch* 1.8.1 (NVidia CUDA\* Toolkit 10.2) and TensorFlow* 2.4.2 (NVidia CUDA\* Toolkit 11.0).
@@ -191,8 +191,6 @@ to find instruction and links to exact configuration files and final checkpoints
   * [Object detection](#pytorch_object_detection)
   * [Semantic segmentation](#pytorch_semantic_segmentation)
   * [Natural language processing (3rd-party training pipelines)](#pytorch_nlp)
-  * [Object detection (3rd-party training pipelines)](#pytorch_object_detection_mmdetection)
-  * [Instance Segmentation (3rd-party training pipelines)](#pytorch_instance_segmentation_mmdetection)
 - [TensorFlow models](#tensorflow-models)
   * [Classification](#tensorflow_classification)
   * [Object detection](#tensorflow_object_detection)
@@ -263,22 +261,6 @@ to find instruction and links to exact configuration files and final checkpoints
 |DistilBERT-base|INT8|SST-2|90.3 (0.8)|
 |MobileBERT|INT8|SQuAD v1.1|F1: 89.4 (0.58)|
 |GPT-2|INT8|WikiText-2 (raw)|perplexity: 20.9 (-1.17)|
-
-<a name="pytorch_object_detection_mmdetection"></a>
-#### Object detection (MMDetection)
-
-|PyTorch Model|<img width="60" height="1">Compression algorithm<img width="60" height="1">|Dataset|mAP (drop) %|
-| :---: | :---: | :---: | :---: |
-|RetinaNet-ResNet50-FPN|INT8|COCO2017|bbox: 35.3 (0.3)|
-|RetinaNet-ResNet50-FPN|INT8 + Sparsity 50%|COCO2017|bbox: 34.7 (0.9)|
-|RetinaNet-ResNeXt101-64x4d-FPN|INT8|COCO2017|bbox: 39.1 (0.5)|
-
-<a name="pytorch_instance_segmentation_mmdetection"></a>
-#### Instance Segmentation (MMDetection)
-
-|PyTorch Model|<img width="85" height="1">Compression algorithm<img width="85" height="1">|Dataset|mAP (drop) %|
-| :---: | :---: | :---: | :---: |
-|Mask-RCNN-ResNet50-FPN|INT8|COCO2017|bbox: 40.6 (0.2)<br/>segm: 36.5 (0.5)|
 
 ### TensorFlow models
 
