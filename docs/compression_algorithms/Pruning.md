@@ -73,13 +73,13 @@ sparsity and filter pruning algorithms. It can be enabled by setting a non-zero 
 
 
 Interlayer ranking type can be one of `unweighted_ranking` or `learned_ranking`.  
- In the case of `unweighted_ranking` and with  
+ In case of `unweighted_ranking` and with  
  `all_weights=True` all filter norms will be collected together and sorted to choose less important ones. But this approach may not be optimal because filter norms are a good measure of filter importance inside a layer, but not across layers.   
-In the case of `learned_ranking`, a set of ranking coefficients will be learned for comparing filters across different layers.  
+In case of `learned_ranking`, a set of ranking coefficients will be learned for comparing filters across different layers.  
 The ![(a_i, b_i)](https://latex.codecogs.com/png.image?%5Cdpi%7B110%7D%20(a_i,%20b_i)) pair of scalars will be learned for each (![i](https://latex.codecogs.com/png.image?%5Cdpi%7B110%7D%20i)-th) layer and used to transform norms of ![i](https://latex.codecogs.com/png.image?%5Cdpi%7B110%7D%20i)-th layer filters before sorting all filter norms together as follows:  
  ![a_i * N_i + b_i](https://latex.codecogs.com/png.image?%5Cdpi%7B110%7D%20a_i%20*%20N_i%20&plus;%20b_i)  
 where ![N_i](https://latex.codecogs.com/png.image?%5Cdpi%7B110%7D%20N_i) - is vector of filter norma of ![i](https://latex.codecogs.com/png.image?%5Cdpi%7B110%7D%20i)-th layer, ![(a_i, b_i)](https://latex.codecogs.com/png.image?%5Cdpi%7B110%7D%20(a_i,%20b_i)) is ranking coefficients for ![i](https://latex.codecogs.com/png.image?%5Cdpi%7B110%7D%20i)-th layer.  
-This approach allows to prune the model taking into account the importance of the layers and get pruned models with higher accuracy.
+This approach allows pruning the model taking into account the importance of the layers and get pruned models with higher accuracy.
 
 **Filter pruning configuration file parameters**:
 ```
@@ -94,11 +94,11 @@ This approach allows to prune the model taking into account the importance of th
     "params": {
         "schedule": "baseline", // The type of scheduling to use for adjusting the target pruning level. Either `exponential`, `exponential_with_bias`,  or `baseline`, by default it is `baseline`"
         "pruning_target": 0.4, // Target value of the pruning level for the convolutions that can be pruned. These convolutions are determined by the model architecture. 0.5 by default.
-        "pruning_flops_target": 0.4, // Target value of the pruning level by FLOPs in the whole model. Only one parameter from `pruning_target` and `pruning_flops_target` can be set. If if none of them are specified, `pruning_target` = 0.5 will be default value. 
+        "pruning_flops_target": 0.4, // Target value of the pruning level by FLOPs in the whole model. Only one parameter from `pruning_target` and `pruning_flops_target` can be set. If none of them is specified, `pruning_target` = 0.5 is used as the default value. 
         "num_init_steps": 3, // Number of epochs for model pretraining before starting filter pruning. 0 by default.
         "pruning_steps": 10, // Number of epochs during which the pruning rate is increased from `pruning_init` to `pruning_target` value.
         "filter_importance": "L2", // The type of filter importance metric. Can be one of `L1`, `L2`, `geometric_median`. `L2` by default.
-        "interlayer_ranking_type": "unweighted_ranking", // The type of filter ranking across the layers. Can be one of `unweighted_ranking` or `learned_ranking`.
+        "interlayer_ranking_type": "unweighted_ranking", // The type of filter ranking across the layers. Can be one of `unweighted_ranking`, `learned_ranking`. `unweighted_ranking` by default.
         "all_weights": false, // Whether to prune layers independently (choose filters with the smallest importance in each layer separately) or not. `False` by default.
         "prune_first_conv": false, // Whether to prune first Convolutional layers or not. First means that it is a convolutional layer such that there is a path from model input to this layer such that there are no other convolution operations on it. `False` by default.
         "prune_last_conv": false, // Whether to prune last Convolutional layers or not.  Last means that it is a Convolutional layer such that there is a path from this layer to the model output such that there are no other convolution operations on it. `False` by default.
@@ -110,7 +110,7 @@ This approach allows to prune the model taking into account the importance of th
         "legr_params": { // Set of parameters, that can be set for 'learned_ranking' interlayer_ranking_type case
             "generations": 200, //  Number of generations for evolution algorithm optimizing. 400 by default
             "train_steps": 150, // Number of training steps to estimate pruned model accuracy. 200 by default 
-            "max_pruning": 0.6, // Pruning level for the model to train LeGR algorithm on it. If you want to use learned ranking for multiple pruning rates, you should use the highest for LeGR training for best results or use the target pruning rate value instead.
+            "max_pruning": 0.6, // Pruning level for the model to train LeGR algorithm on it. If learned ranking will be used for multiple pruning rates, the highest should be used as `max_pruning`. If model will be pruned with one pruning rate, target pruning rate should be used.
             "random_seed": 42, // Random seed for ranking coefficients generation during optimization 
         },
     },
