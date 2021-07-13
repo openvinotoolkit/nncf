@@ -136,6 +136,7 @@ This regime is used when `"target_device": "CPU"` or `"target_device": "ANY"` se
 
 ---
 
+<a name="mixed_precision_quantization"></a>
 #### Mixed-Precision Quantization
 
 Quantization to lower precisions (e.g. 6, 4, 2 bits) is an efficient way to accelerate inference of neural networks.
