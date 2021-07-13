@@ -229,7 +229,7 @@
                     "diff_fp32_min": -1,
                     "diff_fp32_max": 0.1
                 },
-                "resnet50__int8_w_sym_t_half_a_sym_t_pruning_40": {
+                "resnet50_int8_w_sym_t_half_a_sym_t_pruning_40": {
                     "config": "examples/tensorflow/classification/configs/pruning_quantization/resnet50_imagenet_pruning_geometric_median_int8.json",
                     "reference": "resnet50",
                     "target": 75.08,
