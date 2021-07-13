@@ -114,12 +114,12 @@ class LeGRInitArgs(NNCFExtraConfigStruct):
 
 class DistributedCallbacksArgs(NNCFExtraConfigStruct):
     """
-    Pair of callbacks that needed for distributed training of the model: wrapping model with wrapping_callback for
+    A pair of callbacks that is needed for distributed training of the model: wrapping model with wrapping_callback for
     distributed training, and after all training steps unwrapping model to the initial not-distributed state with
     unwrapping_callback.
-    :param wrapping_callback: Callback that wraps model for distributed training with any necessary structure (for
+    :param wrapping_callback: Callback that wraps the model for distributed training with any necessary structure (for
     example, torch.nn.DataParallel or any custom class), returns wrapped model ready for distributed training
-    :param unwrapping_callback: Callback for unwrapping model wrapped with wrapping_callback, returns original model
+    :param unwrapping_callback: Callback for unwrapping the model wrapped with wrapping_callback, returns original model
     """
     def __init__(self,
                  wrapping_callback: Callable[[nn.Module], nn.Module],
@@ -134,7 +134,7 @@ class DistributedCallbacksArgs(NNCFExtraConfigStruct):
 
 class ExecutionParameters:
     """
-    Parameters that is necessary for distributed training of the model.
+    Parameters that are necessary for distributed training of the model.
     :param cpu_only: whether cpu-only mode is using for training
     :param current_gpu: id of GPU that should be used for training (if only one of all is used)
     """

@@ -72,10 +72,10 @@ sparsity and filter pruning algorithms. It can be enabled by setting a non-zero 
 #### Interlayer ranking types
 
 Interlayer ranking type can be one of `unweighted_ranking` or `learned_ranking`.
-- In case of `unweighted_ranking` and with  `all_weights=True` all filter norms will be collected together and sorted to choose less important ones. But this approach may not be optimal because filter norms are a good measure of filter importance inside a layer, but not across layers.
+- In case of `unweighted_ranking` and with  `all_weights=True` all filter norms will be collected together and sorted to choose the least important ones. But this approach may not be optimal because filter norms are a good measure of filter importance inside a layer, but not across layers.
 - In case of `learned_ranking`, a set of ranking coefficients will be learned for comparing filters across different layers.
 The ![(a_i, b_i)](https://latex.codecogs.com/png.image?%5Cdpi%7B110%7D%20(a_i,%20b_i)) pair of scalars will be learned for each (![i](https://latex.codecogs.com/png.image?%5Cdpi%7B110%7D%20i)-th) layer and used to transform norms of ![i](https://latex.codecogs.com/png.image?%5Cdpi%7B110%7D%20i)-th layer filters before sorting all filter norms together as ![a_i * N_i + b_i](https://latex.codecogs.com/png.image?%5Cdpi%7B110%7D%20a_i%20*%20N_i%20&plus;%20b_i) , where ![N_i](https://latex.codecogs.com/png.image?%5Cdpi%7B110%7D%20N_i) - is vector of filter norma of ![i](https://latex.codecogs.com/png.image?%5Cdpi%7B110%7D%20i)-th layer, ![(a_i, b_i)](https://latex.codecogs.com/png.image?%5Cdpi%7B110%7D%20(a_i,%20b_i)) is ranking coefficients for ![i](https://latex.codecogs.com/png.image?%5Cdpi%7B110%7D%20i)-th layer.
-This approach allows pruning the model taking into account the importance of the layers and get pruned models with higher accuracy.
+This approach allows pruning the model taking into account layer-specific sensitivity to weight perturbations and get pruned models with higher accuracy.
 
 >  The `learned_ranking`  interlayer ranking method is called Learned Global Ranking and described in [paper](https://arxiv.org/abs/1904.12368).
 
