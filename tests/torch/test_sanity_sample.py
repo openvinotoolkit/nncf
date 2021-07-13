@@ -565,7 +565,7 @@ class TestCaseDescriptor:
                         "num_init_samples": 2
                     },
                     "batchnorm_adaptation": {
-                        "num_bn_adaptation_samples": 1,
+                        "num_bn_adaptation_samples": 1
                     }
                 },
                 'params': self.quantization_algo_params,

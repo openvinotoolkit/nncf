@@ -46,6 +46,7 @@ from nncf.common.hardware.config import HW_CONFIG_TYPE_TARGET_DEVICE_MAP
 from nncf.common.initialization.batchnorm_adaptation import BatchnormAdaptationAlgorithm
 from nncf.common.insertion_point_graph import InsertionPointGraph
 from nncf.common.insertion_point_graph import InsertionPointGraphNodeType
+from nncf.common.quantization.config_assignment import assign_qconfig_lists_to_modules
 from nncf.common.quantization.quantizer_setup import MultiConfigQuantizerSetup
 from nncf.common.quantization.quantizer_setup import QuantizationPointId
 from nncf.common.quantization.quantizer_setup import QuantizerSetupBase
@@ -175,25 +176,6 @@ class QuantizerSetupGeneratorBase:
         self._ignored_scopes_per_group[quantizer_group] = params_dict.get('ignored_scopes')
         self._target_scopes_per_group[quantizer_group] = params_dict.get('target_scopes')
 
-    @staticmethod
-    def get_scoped_quantizer_config(base_config: QuantizerConfig,
-                                    parent_module_scope_str: str,
-                                    scope_overrides: Dict = None) -> QuantizerConfig:
-        qconfig = deepcopy(base_config)
-        if scope_overrides is None:
-            scope_overrides = {}
-        for overridden_scope in scope_overrides.keys():
-            if matches_any(parent_module_scope_str, overridden_scope):
-                config_overrides = scope_overrides[overridden_scope]
-                if config_overrides.get("bits") is not None:
-                    qconfig.num_bits = config_overrides["bits"]
-                if config_overrides.get("mode") is not None:
-                    qconfig.mode = config_overrides["mode"]
-                if config_overrides.get("per_channel") is not None:
-                    qconfig.per_channel = config_overrides["per_channel"]
-                if config_overrides.get("signed") is not None:
-                    qconfig.signedness_to_force = config_overrides["signed"]
-        return qconfig
 
     def _get_default_qconfig(self, constraints: QuantizationConstraints = None):
         qconfig = deepcopy(self.DEFAULT_QUANTIZER_CONFIG)
@@ -384,42 +366,13 @@ class PropagationBasedQuantizerSetupGenerator(QuantizerSetupGeneratorBase):
 
     def _assign_qconfig_lists_to_modules(self, nodes_with_weights: List[NNCFNode]) -> Dict[NNCFNode,
                                                                                            List[QuantizerConfig]]:
-        retval = {}  # type: Dict[NNCFNode, List[QuantizerConfig]]
         global_constraints = self.global_quantizer_constraints[QuantizerGroup.WEIGHTS]
-        default_qconfig = self._get_default_qconfig(constraints=global_constraints)
         scope_overrides_dict = self._quantization_config.get("scope_overrides", {})
-        weight_scope_overrides_dict = scope_overrides_dict.get("weights")
-        if self.hw_config is not None:
-            meta_vs_qconfig_map = self.hw_config.get_metatype_vs_quantizer_configs_map(for_weights=True)
-        for node in nodes_with_weights:
-            qconfig_for_current_scope = self.get_scoped_quantizer_config(default_qconfig,
-                                                                         node.node_name,
-                                                                         weight_scope_overrides_dict)
-            if self.hw_config is None:
-                qconfig_list = [qconfig_for_current_scope]
-            else:
-                metatype = node.metatype
-                qconfig_list = meta_vs_qconfig_map[metatype]
-                if HWConfig.is_wildcard_quantization(qconfig_list):  # Empty list = wildcard quantization
-                    qconfig_list = [default_qconfig]
-                elif HWConfig.is_qconf_list_corresponding_to_unspecified_op(qconfig_list):
-                    continue  # The module will not have its weights quantized
-                try:
-                    local_constraints = global_constraints
-                    for overridden_scope, scoped_override_dict in scope_overrides_dict.items():
-                        if matches_any(node.node_name, overridden_scope):
-                            scope_constraints = QuantizationConstraints.from_config_dict(scoped_override_dict)
-                            local_constraints = local_constraints.get_updated_constraints(scope_constraints)
-                    qconfig_list = local_constraints.constrain_qconfig_list(qconfig_list)
-
-                except RuntimeError as e:
-                    err_msg = "Quantization parameter constraints specified in NNCF config are incompatible with HW "
-                    err_msg += "capabilities as specified in HW config type '{}'. ".format(self.hw_config.target_device)
-                    err_msg += "First conflicting quantizer location: {}".format(str(node.node_name))
-                    raise RuntimeError(err_msg) from e
-
-            retval[node] = qconfig_list
-        return retval
+        return assign_qconfig_lists_to_modules(nodes_with_weights,
+                                               self.DEFAULT_QUANTIZER_CONFIG,
+                                               global_constraints,
+                                               scope_overrides_dict,
+                                               self.hw_config)
 
     def _handle_quantize_inputs_option(self, quantizer_setup: SingleConfigQuantizerSetup) -> SingleConfigQuantizerSetup:
         nncf_graph = self._target_model.get_original_graph()
