@@ -3,4 +3,5 @@ tensorflow_datasets==4.2.0
 tensorflow_hub
 tensorflow_addons==0.12.1
 opencv-python
+protobuf==3.17.3
 git+https://github.com/alexsu52/cocoapi.git#egg=pycocotools&subdirectory=PythonAPI

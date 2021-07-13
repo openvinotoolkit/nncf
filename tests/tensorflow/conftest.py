@@ -56,7 +56,7 @@ def pytest_addoption(parser):
         "--models-dir", type=str, default=None, help="Path to checkpoints directory for weekly tests"
     )
     parser.addoption(
-        "--run-install-tests", type=str, help="To run installation tests"
+        "--run-install-tests", action="store_true", default=False, help="To run installation tests"
     )
 
 
@@ -107,7 +107,7 @@ def install_tests(request):
 
 @pytest.fixture(scope="function")
 def tmp_venv_with_nncf(tmp_path, package_type, venv_type, install_tests):  # pylint:disable=redefined-outer-name
-    if install_tests is None:
+    if not install_tests:
         pytest.skip('To test the installation, use --run-install-tests option.')
     venv_path = create_venv_with_nncf(tmp_path, package_type, venv_type, extra_reqs='tf')
     return venv_path
