@@ -675,10 +675,6 @@ class FilterPruningController(BasePruningAlgoController):
         flops = model.get_MACs_in_model()
         pruned_layers_stats = self.get_stats_for_pruned_modules()
 
-        init_output_masks_in_graph(graph, self.pruned_module_groups_info.get_all_nodes())
-        model_pruner = ModelPruner(model, graph, PT_PRUNING_OPERATOR_METATYPES)
-        model_pruner.prune_model()
-
         parameters_count_after = model.get_parameters_count_in_model()
         flops_after = model.get_MACs_in_model()
         new_pruned_layers_stats = self.get_stats_for_pruned_modules()
