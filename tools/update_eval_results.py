@@ -25,6 +25,7 @@ limitations under the License.
 
 #pylint:skip-file
 import json
+import sys
 from collections import OrderedDict
 from typing import List, Optional
 
@@ -32,8 +33,8 @@ from typing import List, Optional
 from mdutils import MdUtils
 import argparse
 
-from tests.test_sota_checkpoints import DIFF_FP32_MAX_GLOBAL
-from tests.test_sota_checkpoints import DIFF_FP32_MIN_GLOBAL
+from tests.torch.test_sota_checkpoints import DIFF_FP32_MAX_GLOBAL
+from tests.torch.test_sota_checkpoints import DIFF_FP32_MIN_GLOBAL
 
 BASE_PYTORCH_CHECKPOINT_URL = 'https://storage.openvinotoolkit.org/repositories/nncf/models/v1.7.0/'
 
@@ -47,43 +48,53 @@ SAMPLE_TYPE_TO_SAMPLE_DISPLAY_NAME_DICT = {
 def get_fp32_and_compressed_metrics(model_name_to_metric_dict,
                                     model_name,
                                     reference,
-                                    table_format):
+                                    target):
     if reference is None:
-        fp32_ref_metric_str = str(model_name_to_metric_dict[model_name])
-        compressed_metric_str = '-' if table_format == 'overview' else fp32_ref_metric_str
+        fp32_ref_metric = float(target)
+        compressed_metric = None
     else:
-        fp32_ref_metric_str = str(model_name_to_metric_dict[reference])
-        compressed_metric_str = str(model_name_to_metric_dict[model_name])
-    return fp32_ref_metric_str, compressed_metric_str
+        fp32_ref_metric = float(model_name_to_metric_dict[reference])
+        compressed_metric = float(model_name_to_metric_dict[model_name])
+    return fp32_ref_metric, compressed_metric
 
 
 # Not perfect - better switch to building a complete table and then excluding
 # columns, or use a better table manager in the future
-def get_header_row(with_links: bool, with_fp32_baseline: bool):
-    header = ["Model", "Compression algorithm", "Dataset"]
-    if with_fp32_baseline:
-        header.append("PyTorch FP32 baseline")
-    header.append("PyTorch compressed accuracy")
-    if with_links:
-        header.append("Config path")
+def get_header_row(table_format: str, sample_type: str):
+    assert table_format in ['overview', 'per_sample'], "Unsupported table format!"
+
+    header = ["PyTorch Model"] if table_format == 'overview' else ["Model"]
+    header.append('Compression algorithm')
+    header.append('Dataset')
+    if sample_type in ['classification', 'semantic_segmentation']:
+        header.append('Accuracy (Drop) %')
+    elif sample_type in 'object_detection':
+        header.append('mAP (drop) %')
+    else:
+        raise RuntimeError(f'{sample_type} sample type is not supported!')
+
+    if table_format == 'per_sample':
+        header.append("NNCF config file")
         header.append("PyTorch checkpoint")
     return header
 
 
-def build_per_model_row(with_links: bool, with_fp32_baseline: bool,
+def build_per_model_row(table_format:str,
                         model_display_name: str,
                         compression_algo_display_name: str,
                         dataset_display_name: str,
-                        fp32_metric: str,
-                        compressed_metric: str,
+                        fp32_metric: float,
+                        compressed_metric: float,
                         config_path: str,
                         checkpoint_url: Optional[str]):
     row = [model_display_name, compression_algo_display_name, dataset_display_name]
-    if with_fp32_baseline:
-        row.append(fp32_metric)
-    row.append(compressed_metric)
-    if with_links:
-        local_config_path = '/'.join(config_path.split('/')[2:])
+    if compression_algo_display_name == 'None':
+        row.append(f'{fp32_metric:.2f}')
+    else:
+        drop = fp32_metric - compressed_metric
+        row.append(f'{fp32_metric:.2f}({drop:.2f})')
+    if table_format == 'per_sample':
+        local_config_path = '/'.join(config_path.split('/')[3:])
         config_name = local_config_path.split('/')[-1]
         row.append('[{}]({})'.format(config_name, local_config_path))
         if checkpoint_url is not None:
@@ -95,17 +106,12 @@ def build_per_model_row(with_links: bool, with_fp32_baseline: bool,
 
 def get_results_table_rows(per_sample_config_dict,
                            model_name_to_metric_dict,
+                           sample_type,
                            table_format: str) -> List[List[str]]:
     rows = []
     assert table_format in ['overview', 'per_sample'], "Unsupported table format!"
-    if table_format == 'overview':
-        with_links = False
-        with_fp32_baseline = True
-    else:
-        with_links = True
-        with_fp32_baseline = False
 
-    header = get_header_row(with_links=with_links, with_fp32_baseline=with_fp32_baseline)
+    header = get_header_row(table_format=table_format, sample_type=sample_type)
     rows.append(header)
 
     for data_name_ in per_sample_config_dict:
@@ -114,8 +120,11 @@ def get_results_table_rows(per_sample_config_dict,
         for model_name in model_dicts:
             conf_file = model_dicts[model_name].get('config', {})
             reference = None
+            target = None
             if model_dicts[model_name].get('reference', {}):
                 reference = model_dicts[model_name].get('reference', {})
+            if model_dicts[model_name].get('target', {}):
+                target = model_dicts[model_name]['target']
             if model_dicts[model_name].get('resume', {}):
                 resume = model_dicts[model_name].get('resume', {})
             else:
@@ -129,18 +138,18 @@ def get_results_table_rows(per_sample_config_dict,
 
             checkpoint_link = (BASE_PYTORCH_CHECKPOINT_URL + resume) if resume is not None else None
 
-            fp32_ref_metric_str, compressed_metric_str = get_fp32_and_compressed_metrics(model_name_to_metric_dict,
-                                                                                         model_name,
-                                                                                         reference,
-                                                                                         table_format)
+            fp32_ref_metric, compressed_metric = get_fp32_and_compressed_metrics(model_name_to_metric_dict,
+                                                                                 model_name,
+                                                                                 reference,
+                                                                                 target)
             if table_format == 'overview' and compression == 'None':
                 continue  # The overview already has baseline results as a separate column
-            rows.append(build_per_model_row(with_links, with_fp32_baseline,
+            rows.append(build_per_model_row(table_format,
                                             model_display_name,
                                             compression,
                                             dataset_name,
-                                            fp32_ref_metric_str,
-                                            compressed_metric_str,
+                                            fp32_ref_metric,
+                                            compressed_metric,
                                             conf_file,
                                             checkpoint_link))
 
@@ -222,57 +231,62 @@ def header_name_to_link(header_name_: str):
     link = '#' + link
     return link
 
-parser = argparse.ArgumentParser()
-parser.add_argument('--results', '-r', help='A metrics.json file from a latest checkpoint evaluation run')
-parser.add_argument('--config', '-c',
-                    help='A .json file with definitions of tested checkpoints (sota_checkpoints_eval.json)')
-parser.add_argument('--output', '-o',
-                    help="If specified, will output a config file specified in -c with target metric values updated "
-                         "to what was measured in the metrics.json file supplied via -r")
-args = parser.parse_args()
-results = args.results
-config = args.config
-output = args.output
 
-measured_metrics = json.load(open(results, 'r'))
-sota_checkpoints_eval = json.load(open(config), object_pairs_hook=OrderedDict)
+def main(argv):
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--results', '-r', help='A metrics.json file from a latest checkpoint evaluation run')
+    parser.add_argument('--config', '-c',
+                        help='A .json file with definitions of tested checkpoints (sota_checkpoints_eval.json)')
+    parser.add_argument('--output', '-o',
+                        help="If specified, will output a config file specified in -c with target metric values updated "
+                             "to what was measured in the metrics.json file supplied via -r")
+    args = parser.parse_args(args=argv)
+    results = args.results
+    config = args.config
+    output = args.output
 
-# Output tables for per-sample README files
-for sample_type in sota_checkpoints_eval:
-    table_rows = get_results_table_rows(sota_checkpoints_eval[sample_type],
-                                        measured_metrics,
-                                        table_format='per_sample')
-    file_name = 'results_{}.md'.format(sample_type)
-    mdfile = MdUtils(file_name=file_name)
-    write_table_to_md_file(mdfile, table_rows)
+    measured_metrics = json.load(open(results, 'r'))
+    sota_checkpoints_eval = json.load(open(config), object_pairs_hook=OrderedDict)
+
+    # Output tables for per-sample README files
+    for sample_type in sota_checkpoints_eval:
+        table_rows = get_results_table_rows(sota_checkpoints_eval[sample_type],
+                                            measured_metrics,
+                                            sample_type,
+                                            table_format='per_sample')
+        file_name = 'results_{}.md'.format(sample_type)
+        mdfile = MdUtils(file_name=file_name)
+        write_table_to_md_file(mdfile, table_rows)
+        mdfile.create_md_file()
+        # Somehow the MDUtils outputs 4 empty lines prior to the actual table in the target file.
+        delete_four_head_lines(file_name)
+
+    # Output the overview table for the top-level README file
+    overview_file_name = 'results_overview.md'
+    mdfile = MdUtils(file_name=overview_file_name)
+
+    # Compose a mini-TOC
+    mdfile.new_line('### PyTorch models')
+    mdfile.new_line()
+    for sample_type in sota_checkpoints_eval:
+        mdfile.new_line('<a name = "pytorch_object_detection" > </a>')
+        mdfile.new_line()
+        mdfile.new_line(f'#### {SAMPLE_TYPE_TO_SAMPLE_DISPLAY_NAME_DICT[sample_type]}')
+        mdfile.new_line()
+
+        table_rows = get_results_table_rows(sota_checkpoints_eval[sample_type],
+                                            measured_metrics,
+                                            sample_type,
+                                            table_format='overview')
+        write_table_to_md_file(mdfile, table_rows)
     mdfile.create_md_file()
-    # Somehow the MDUtils outputs 4 empty lines prior to the actual table in the target file.
-    delete_four_head_lines(file_name)
+    delete_four_head_lines(overview_file_name)
+
+    if args.output is not None:
+        update_target_metrics_and_thresholds(sota_checkpoints_eval, measured_metrics)
+        with open(output, "w") as write_file:
+            json.dump(sota_checkpoints_eval, write_file, indent=4)
 
 
-# Output the overview table for the top-level README file
-overview_file_name = 'results_overview.md'
-mdfile = MdUtils(file_name=overview_file_name)
-
-# Compose a mini-TOC
-mdfile.new_line("Quick jump to sample type:")
-mdfile.new_line("==========================")
-for sample_type in sota_checkpoints_eval:
-    header_name = SAMPLE_TYPE_TO_SAMPLE_DISPLAY_NAME_DICT[sample_type]
-    mdfile.new_line("[{}]({})\n".format(header_name, header_name_to_link(header_name)))
-mdfile.new_line()
-
-for sample_type in sota_checkpoints_eval:
-    mdfile.new_header(level=4, title=SAMPLE_TYPE_TO_SAMPLE_DISPLAY_NAME_DICT[sample_type])
-
-    table_rows = get_results_table_rows(sota_checkpoints_eval[sample_type],
-                                        measured_metrics,
-                                        table_format='overview')
-    write_table_to_md_file(mdfile, table_rows)
-mdfile.create_md_file()
-delete_four_head_lines(overview_file_name)
-
-if args.output is not None:
-    update_target_metrics_and_thresholds(sota_checkpoints_eval, measured_metrics)
-    with open(output, "w") as write_file:
-        json.dump(sota_checkpoints_eval, write_file, indent=4)
+if __name__ == '__main__':
+    main(sys.argv[1:])
