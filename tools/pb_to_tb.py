@@ -10,7 +10,7 @@ graph_paths = [
 ]
 
 graphs = {}
-tb_log_path = Path("/tmp/tb")
+tb_log_path = Path("/tmp/tb")  # nosec
 if tb_log_path.exists():
     shutil.rmtree(tb_log_path)
     tb_log_path.mkdir()
