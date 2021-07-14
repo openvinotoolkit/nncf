@@ -7,6 +7,34 @@ samples distributed with the code.  The samples demonstrate the usage of compres
 public models and datasets for three different use cases: Image Classification, Object Detection,
 and Semantic Segmentation.
 
+## New in Release 2.0:
+- Added TensorFlow 2.4.2 support - NNCF can now be used to apply the compression algorithms to models originally trained in TensorFlow.
+Current NNCF TF features include:
+    - Quantization (INT8 only, with HW-specific targeting aligned with PyTorch, custom layers not supported)
+    - Sparsity
+    - Filter pruning
+    - Batchnorm adaptation
+    - Algo mixing (quantization + pruning only)
+
+- Accuracy-aware training available for filter pruning and sparsity in order to achieve best compression results within a given accuracy drop threshold in a fully automated fashion.
+- Framework-specific checkpoints produced with NNCF now have NNCF-specific compression state information included, so that the exact compressed model state can be restored/loaded without having to provide the same NNCF config file that was used during the creation of the NNCF-compressed checkpoint 
+- (PyTorch) Added an option to specify an effective learning rate multiplier for the trainable parameters of the compression algorithms via NNCF config, for finer control over which should tune faster - the underlying FP32 model weights or the compression parameters.
+- (PyTorch) Unified scales for concat operations - the per-tensor quantizers that affect the concat operations will now have identical scales so that the resulting concatenated tensor can be represented without loss of accuracy w.r.t. the concatenated subcomponents.
+- (Experimental, PyTorch) [Learned Global Ranking]((https://arxiv.org/abs/1904.12368)) filter pruning mechanism for better pruning ratios with less accuracy drop for a broad range of models has been implemented.
+- (Experimental, PyTorch) Knowledge distillation supported, ready to be used with any compression algorithm to produce an additional loss source of the compressed model against the uncompressed version
+
+Breaking changes:
+- `CompressionLevel` has been renamed to `CompressionStage`
+- `"ignored_scopes"` and "target_scopes" no longer allow prefix matching - use full-fledged regular expression approach via {re} if anything more than an exact match is desired.
+- (PyTorch) Removed version-agnostic name mapping for ReLU operations, i.e. the NNCF configs that referenced "RELU" (all caps) as an operation name will now have to reference an exact ReLU PyTorch function name such as "relu" or "relu_"
+- Batchnorm adaptation "forgetting" step has been removed since it has been observed to introduce accuracy degradation; the "num_bn_forget_steps" parameter in the corresponding NNCF config section has been removed.
+- Framework-specific requirements no longer installed during `pip install nncf` or `python setup.py install` and are assumed to be present in the user's environment; the pip's "extras" syntax must be used to install the BKC requirements, e.g. by executing `pip install nncf[tf]`, `pip install nncf[torch]` or `pip install nncf[tf,torch]`
+- `"quantizable_subgraph_patterns"` option removed from the NNCF config
+
+Bugfixes:
+- (PyTorch) Fixed a hang with batchnorm adaptation being applied in DDP mode
+- (PyTorch) Fixed tracing of the operations that return NotImplemented
+
 ## New in Release 1.7.1:
 Bugfixes:
 - Fixed a bug with where compressed models that were supposed to return named tuples actually returned regular tuples
