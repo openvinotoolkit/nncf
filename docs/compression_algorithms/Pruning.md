@@ -73,11 +73,9 @@ sparsity and filter pruning algorithms. It can be enabled by setting a non-zero 
 
 Interlayer ranking type can be one of `unweighted_ranking` or `learned_ranking`.
 - In case of `unweighted_ranking` and with  `all_weights=True` all filter norms will be collected together and sorted to choose the least important ones. But this approach may not be optimal because filter norms are a good measure of filter importance inside a layer, but not across layers.
-- In case of `learned_ranking`, a set of ranking coefficients will be learned for comparing filters across different layers.
+- In the case of `learned_ranking` that uses re-implementation of [Learned Global Ranking method](https://arxiv.org/abs/1904.12368), a set of ranking coefficients will be learned for comparing filters across different layers.
 The ![(a_i, b_i)](https://latex.codecogs.com/png.image?%5Cdpi%7B110%7D%20(a_i,%20b_i)) pair of scalars will be learned for each (![i](https://latex.codecogs.com/png.image?%5Cdpi%7B110%7D%20i)-th) layer and used to transform norms of ![i](https://latex.codecogs.com/png.image?%5Cdpi%7B110%7D%20i)-th layer filters before sorting all filter norms together as ![a_i * N_i + b_i](https://latex.codecogs.com/png.image?%5Cdpi%7B110%7D%20a_i%20*%20N_i%20&plus;%20b_i) , where ![N_i](https://latex.codecogs.com/png.image?%5Cdpi%7B110%7D%20N_i) - is vector of filter norma of ![i](https://latex.codecogs.com/png.image?%5Cdpi%7B110%7D%20i)-th layer, ![(a_i, b_i)](https://latex.codecogs.com/png.image?%5Cdpi%7B110%7D%20(a_i,%20b_i)) is ranking coefficients for ![i](https://latex.codecogs.com/png.image?%5Cdpi%7B110%7D%20i)-th layer.
 This approach allows pruning the model taking into account layer-specific sensitivity to weight perturbations and get pruned models with higher accuracy.
-
->  The `learned_ranking`  interlayer ranking method is called Learned Global Ranking and described in [paper](https://arxiv.org/abs/1904.12368).
 
 **Filter pruning configuration file parameters**:
 ```
@@ -122,23 +120,3 @@ This approach allows pruning the model taking into account layer-specific sensit
 ```
 
 > **NOTE:**  In all our pruning experiments we used SGD optimizer.
-
-
-#### Export pruning algorithm description:
-This algorithm transforms model trained with `Filter pruning` algorithm (when convolution size is still the same but some filters are zeroed by mask) to smaller model with actually pruned operations.
-
-The algorithm consists of 3 stages:
-1. On the first stage, channel-wise masks from pruned operations is propagated through the graph. Every operation has a function that can calculate the output mask by its attributes and the input masks. These calculated masks determine how the operations will be pruned.
- There are three groups of operations:
- - Operations that just pass the mask further unchanged. These operations include all activations and elementwise operations with one input, BatchNorm, Pooling.
- - Operations that cannot work with pruned input and do not skip the mask further. These operations includes Reshape, MatMul, Reduce.
- - Operations that transform mask in some way. These operations include Convolutions (passes on a mask for this convolution), Concat (concatenates input masks),
-  Elementwise (currently not supported, but potentially can intersect masks).
-
-2. In the second stage, a decision is made about which parts of the network will be pruned in accordance with the masks.
-This is necessary since some operations do not accept the pruned input and the path leading to it cannot be pruned.
-To do this, the special `can_prune` attribute is propagated through the network. For every operation, with information about
-    whether inputs and outputs accept pruned inputs and can be pruned, algorithm marks whether this operation can be pruned or not.
-The result is a valid graph for the pruned and non-pruned parts: that is, there is no operation that does not accept a pruned input.
-
-3. On the final stage, there is a direct pruning of operations according to the obtained `can_prune` attribute values.
