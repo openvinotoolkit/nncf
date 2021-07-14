@@ -10,10 +10,13 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+import itertools
 import re
 import os
 import os.path as osp
 import datetime
+from typing import Dict
+from typing import Hashable
 
 from typing import List, Any
 from typing import Optional
@@ -87,3 +90,19 @@ def configure_accuracy_aware_paths(log_dir: str) -> str:
                                  'accuracy_aware_training/{run_id}'.format(run_id=run_id))
     os.makedirs(acc_aware_log_dir, exist_ok=True)
     return log_dir
+
+
+def product_dict(d: Dict[Hashable, List]) -> Dict:
+    """
+    Generates dicts which enumerate the options for keys given in the input dict;
+    options are represented by list values in the input dict.
+
+    :param d: A list-valued dict, such as {'key': ['option1', 'option2'],
+                                           'key2': ['option3', 'option4'] }
+    :return: Generated dicts enumerating options, i.e.
+      {'key': 'option1', 'key2': 'option3'}, {'key': 'option2', 'key2': 'option3'}, ...
+    """
+    keys = d.keys()
+    vals = d.values()
+    for instance in itertools.product(*vals):
+        yield dict(zip(keys, instance))

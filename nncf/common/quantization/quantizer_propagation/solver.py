@@ -27,10 +27,10 @@ from typing import Tuple
 
 import networkx as nx
 
+from nncf.common.graph import INPUT_NOOP_METATYPES
 from nncf.common.graph import NNCFNodeName
+from nncf.common.graph import OUTPUT_NOOP_METATYPES
 from nncf.common.graph import OperatorMetatype
-from nncf.common.graph.definitions import MODEL_INPUT_OP_NAME
-from nncf.common.graph.definitions import MODEL_OUTPUT_OP_NAME
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.hardware.config import HWConfig
 from nncf.common.insertion_point_graph import InsertionPointGraph
@@ -49,6 +49,8 @@ from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizerGroup
 from nncf.common.quantization.structs import UnifiedScaleType
+from nncf.common.utils.debug import DEBUG_LOG_DIR
+from nncf.common.utils.debug import is_debug
 from nncf.common.utils.helpers import matches_any
 from nncf.common.utils.logger import logger as nncf_logger
 
@@ -212,7 +214,6 @@ class QuantizerPropagationSolver:
                  target_scopes: List[str] = None,
                  hw_config: HWConfig = None,
                  default_trait_to_metatype_map: Dict[QuantizationTrait, List[OperatorMetatype]] = None,
-                 debug_interface: 'QuantizationDebugInterface' = None,
                  propagation_strategy: PropagationStrategy = None,
                  default_qconfig_list: List[QuantizerConfig] = None,
                  quantizable_layer_nodes: List[QuantizableWeightedLayerNode] = None,
@@ -236,8 +237,6 @@ class QuantizerPropagationSolver:
         :param default_trait_to_metatype_map: The mapping of QuantizationTrait's to the metatypes to be associated with
         these by default. Used if no HW config is passed, or if an operation that is unknown to HW config is
         encountered.
-        :param debug_interface: Optional - if supplied, then the debug information will be passed to the
-          corresponding debug interface object.
         :param propagation_strategy: The strategy to be used while propagating and merging quantizers.
         :param default_qconfig_list: The list of quantizer configurations that should be applied for quantizing
           inputs of operations for which the `hw_config` has no explicit or implicit information on how to
@@ -263,7 +262,10 @@ class QuantizerPropagationSolver:
             self._default_trait_to_metatype_map = default_trait_to_metatype_map
         self.default_global_qconfig_list = default_qconfig_list
         self._hw_config = hw_config  # type: HWConfig
-        self._debug_interface = debug_interface
+        self._visualizer = None
+        if is_debug():
+            from nncf.common.quantization.quantizer_propagation.visualizer import QuantizerPropagationVisualizer
+            self._visualizer = QuantizerPropagationVisualizer(DEBUG_LOG_DIR + "/quant_prop")
         self._propagation_strategy = propagation_strategy if propagation_strategy \
             else QuantizerPropagationSolver.DEFAULT_PROPAGATION_STRATEGY  # TODO (vshampor): determine from config
         self._operator_quantization_trait_map = self.get_operator_quantization_traits_map()
@@ -331,8 +333,8 @@ class QuantizerPropagationSolver:
 
         iteration_counter = 0
         while self._active_propagating_quantizers_queue:
-            if self._debug_interface is not None:
-                self._debug_interface.visualize_quantizer_propagation(self, quant_prop_graph, str(iteration_counter))
+            if self._visualizer is not None:
+                self._visualizer.visualize_quantizer_propagation(self, quant_prop_graph, str(iteration_counter))
             if self._run_consistency_checks:
                 quant_prop_graph.run_consistency_check()
             prop_quantizer = self._active_propagating_quantizers_queue.pop()
@@ -341,8 +343,8 @@ class QuantizerPropagationSolver:
 
         quant_prop_graph = self._filter_integer_input_quantizers(quant_prop_graph)
 
-        if self._debug_interface is not None:
-            self._debug_interface.visualize_quantizer_propagation(self, quant_prop_graph, "proposed")
+        if self._visualizer is not None:
+            self._visualizer.visualize_quantizer_propagation(self, quant_prop_graph, "proposed")
 
         if self._run_consistency_checks:
             quant_prop_graph.run_consistency_check()
@@ -381,8 +383,8 @@ class QuantizerPropagationSolver:
         quant_prop_graph = finalized_quantization_proposal.quant_prop_graph
         quant_prop_graph.merge_redundant_subsequent_quantizers_across_graph()
 
-        if self._debug_interface is not None:
-            self._debug_interface.visualize_quantizer_propagation(self, quant_prop_graph, "final")
+        if self._visualizer is not None:
+            self._visualizer.visualize_quantizer_propagation(self, quant_prop_graph, "final")
 
         if self._run_consistency_checks:
             quant_prop_graph.run_consistency_check()
@@ -672,9 +674,9 @@ class QuantizerPropagationSolver:
                     break
             else:
                 trait = QuantizationTrait.QUANTIZATION_AGNOSTIC
-                nncf_logger.warning("Operation metatype {} encountered, but it has no default "
-                                    "quantization trait and the HW config entry is not given for it - "
-                                    "assuming quantization-agnostic.".format(op_meta))
+                nncf_logger.debug("Operation metatype {} encountered, but it has no default "
+                                  "quantization trait and the HW config entry is not given for it - "
+                                  "assuming quantization-agnostic.".format(op_meta))
         else:
             # There IS a valid HW config name for the metatype, but it is deliberately not specified
             # in the config, which means that it should execute in FP32
@@ -722,7 +724,8 @@ class QuantizerPropagationSolver:
                                                       next_id_str,
                                                       finished_ids_str),
             "labelloc": "t"}
-        nx.drawing.nx_pydot.write_dot(out_graph, dump_path)
+        pth = deepcopy(dump_path)
+        nx.drawing.nx_pydot.write_dot(out_graph, pth)
 
     def setup_initial_quantizers(self,
                                  quant_prop_graph: QuantizerPropagationStateGraph) -> QuantizerPropagationStateGraph:
@@ -864,6 +867,7 @@ class QuantizerPropagationSolver:
 
     def _setup_initial_quantizers_for_operator_node(self, operator_node_key: str,
                                                     quant_prop_graph: QuantizerPropagationStateGraph):
+        #pylint:disable=too-many-branches
         node = quant_prop_graph.nodes[operator_node_key]
 
         # preds are in sorted order for reproducibility
@@ -872,17 +876,18 @@ class QuantizerPropagationSolver:
         if not preds:
             return  # TODO (vshampor): remove this once module insertion points are included in the IP graph
 
-        if not self._quantize_outputs and MODEL_OUTPUT_OP_NAME in operator_node_key:
+        metatype = node[QuantizerPropagationStateGraph.OPERATOR_METATYPE_NODE_ATTR]
+        if not self._quantize_outputs and metatype in OUTPUT_NOOP_METATYPES:
             return
         # No need to place quantizers for FP32-forced ops, naturally
         if node[QuantizerPropagationStateGraph.QUANTIZATION_TRAIT_NODE_ATTR] in \
                 [QuantizationTrait.NON_QUANTIZABLE,
                  QuantizationTrait.QUANTIZATION_AGNOSTIC,
-                 QuantizationTrait.CONCAT] and MODEL_OUTPUT_OP_NAME not in operator_node_key:
+                 QuantizationTrait.CONCAT] and metatype not in OUTPUT_NOOP_METATYPES:
             return
         quant_det_id = node[QuantizerPropagationStateGraph.OPERATOR_METATYPE_NODE_ATTR]
         qconf_list = self.get_allowed_quantizer_configs_for_operator(quant_det_id)
-        if MODEL_OUTPUT_OP_NAME in operator_node_key:
+        if quant_det_id in OUTPUT_NOOP_METATYPES:
             qconf_list = self.default_global_qconfig_list
         assert qconf_list is not None
 
@@ -926,7 +931,13 @@ class QuantizerPropagationSolver:
             assert QuantizerPropagationStateGraph.is_insertion_point(pred_node_type), \
                 "Invalid insertion point graph supplied for quantizer propagation!"
 
-            pred_ip_key_vs_qconf_dict[pred_ip_key] = qconf_list
+            edge = quant_prop_graph.edges[pred_ip_key, operator_node_key]
+            if not edge[QuantizerPropagationStateGraph.IS_INTEGER_PATH_EDGE_ATTR]:
+                pred_ip_key_vs_qconf_dict[pred_ip_key] = qconf_list
+
+        if not pred_ip_key_vs_qconf_dict:
+            # All inputs to the operator were integer
+            return
 
         # Cloning a single propagating quantizer onto all node inputs - revise if separate
         # quantizer configuration for different inputs is required
@@ -1053,6 +1064,7 @@ class QuantizerPropagationSolver:
           cloned before transition, which impacts the logic of the function.
         :return: The status of the transition determining how it should proceed.
         """
+        #pylint:disable=too-many-branches
         for from_node_key, to_node_key in path:
             from_node = quant_prop_graph.nodes[from_node_key]
 
@@ -1066,8 +1078,12 @@ class QuantizerPropagationSolver:
                              QuantizationTrait.INPUTS_QUANTIZABLE]:
                     return TransitionStatus.SHOULD_NOT_TRANSITION
 
-            # Check if current edge to traverse is affected by any of the quantizers
             edge = quant_prop_graph.edges[from_node_key, to_node_key]
+            # Check if current edge to traverse corresponds to integer-valued tensors such as indices
+            if edge[QuantizerPropagationStateGraph.IS_INTEGER_PATH_EDGE_ATTR]:
+                return TransitionStatus.SHOULD_NOT_TRANSITION
+
+            # Check if current edge to traverse is affected by any of the quantizers
             potential_quantizers = edge[QuantizerPropagationStateGraph.AFFECTING_PROPAGATING_QUANTIZERS_ATTR]
             if potential_quantizers:
                 sts = self._check_for_affecting_quantizer_conflicts(prop_quantizer,
@@ -1310,7 +1326,7 @@ class QuantizerPropagationSolver:
         integer_input_quantizer_ids = set()
 
         for input_node, input_quantizer_ids in input_node_vs_qid_dict.items():
-            assert input_node.node_type == MODEL_INPUT_OP_NAME
+            assert input_node.metatype in INPUT_NOOP_METATYPES
             if input_node.is_integer_input():
                 integer_input_quantizer_ids.update(set(input_quantizer_ids))
 

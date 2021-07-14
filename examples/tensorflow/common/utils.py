@@ -25,6 +25,7 @@ import tensorflow as tf
 
 from nncf.common.utils.logger import logger as nncf_logger
 from examples.tensorflow.common.logger import logger as default_logger
+from examples.tensorflow.common.sample_config import CustomArgumentParser
 
 GENERAL_LOG_FILE_NAME = "output.log"
 NNCF_LOG_FILE_NAME = "nncf_output.log"
@@ -78,8 +79,8 @@ def configure_paths(config):
     compression_config = config.get('compression', [])
     if not isinstance(compression_config, list):
         compression_config = [compression_config, ]
-    for algo_config in compression_config:
-        algo_config.log_dir = config.log_dir
+    if config.nncf_config is not None:
+        config.nncf_config["log_dir"] = config.log_dir
 
     if config.checkpoint_save_dir is None:
         config.checkpoint_save_dir = config.log_dir
@@ -117,6 +118,16 @@ def print_args(config, logger=default_logger):
 def serialize_config(config, log_dir):
     with open(osp.join(log_dir, 'config.json'), 'w') as f:
         json.dump(config, f, indent=4)
+
+
+def serialize_cli_args(argparser, argv, log_dir):
+    args = argparser.parse_args(args=argv)
+    if isinstance(argparser, CustomArgumentParser):
+        cli_args = {k:v for k, v in vars(args).items() if k in argparser.seen_actions}
+    else:
+        cli_args = {k:v for k, v in vars(args).items() if v is not None}
+    with open(osp.join(log_dir, 'cli_args.json'), 'w') as f:
+        json.dump(cli_args, f, indent=4)
 
 
 def get_saving_parameters(config):

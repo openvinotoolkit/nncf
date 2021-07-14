@@ -16,6 +16,7 @@ from typing import Dict, List, Set
 
 import tensorflow as tf
 
+from nncf import NNCFConfig
 from nncf.api.compression import CompressionLoss
 from nncf.api.compression import CompressionScheduler
 from nncf.common.graph import NNCFGraph
@@ -38,12 +39,10 @@ from nncf.common.schedulers import StubCompressionScheduler
 from nncf.common.accuracy_aware_training.training_loop import ADAPTIVE_COMPRESSION_CONTROLLERS
 from nncf.config.extractors import extract_bn_adaptation_init_params
 from nncf.tensorflow.algorithm_selector import TF_COMPRESSION_ALGORITHMS
-from nncf.tensorflow.api.compression import TFCompressionAlgorithmController
 from nncf.tensorflow.graph.metatypes.common import GENERAL_CONV_LAYER_METATYPES
 from nncf.tensorflow.graph.metatypes.common import LINEAR_LAYER_METATYPES
 from nncf.tensorflow.graph.metatypes.matcher import get_keras_layer_metatype
 from nncf.tensorflow.graph.utils import collect_wrapped_layers
-from nncf.tensorflow.graph.utils import get_layer_identifier
 from nncf.tensorflow.graph.utils import get_original_name_and_instance_idx
 from nncf.tensorflow.graph.utils import unwrap_layer
 from nncf.tensorflow.layers.data_layout import get_input_channel_axis
@@ -73,8 +72,8 @@ class FilterPruningBuilder(BasePruningAlgoBuilder):
     order to enable filter pruning during fine-tuning.
     """
 
-    def build_controller(self, target_model: tf.keras.Model) -> TFCompressionAlgorithmController:
-        return FilterPruningController(target_model,
+    def _build_controller(self, model: tf.keras.Model):
+        return FilterPruningController(model,
                                        self._graph,
                                        self._op_names,
                                        self._prunable_types,
@@ -106,10 +105,10 @@ class FilterPruningController(BasePruningAlgoController):
                  op_names: List[str],
                  prunable_types: List[str],
                  pruned_layer_groups: Clusterization[PrunedLayerInfo],
-                 config):
+                 config: NNCFConfig):
         super().__init__(target_model, op_names, prunable_types, pruned_layer_groups, config)
         self._original_graph = graph
-        params = self.config.get('params', {})
+        params = self.pruning_config.get('params', {})
         self.frozen = False
         self.pruning_quota = 0.9
 
@@ -290,7 +289,7 @@ class FilterPruningController(BasePruningAlgoController):
         nncf_sorted_nodes = self._original_graph.topological_sort()
         for layer in wrapped_layers:
             nncf_node = [n for n in nncf_sorted_nodes
-                         if layer.name == get_layer_identifier(n)][0]
+                         if layer.name == n.layer_name][0]
             if nncf_node.data['output_mask'] is not None:
                 self._set_operation_masks([layer], nncf_node.data['output_mask'])
 
@@ -337,7 +336,7 @@ class FilterPruningController(BasePruningAlgoController):
         nncf_sorted_nodes = self._original_graph.topological_sort()
         for layer in wrapped_layers:
             nncf_node = [n for n in nncf_sorted_nodes
-                         if layer.name == get_layer_identifier(n)][0]
+                         if layer.name == n.layer_name][0]
             if nncf_node.data['output_mask'] is not None:
                 self._set_operation_masks([layer], nncf_node.data['output_mask'])
 
@@ -358,7 +357,7 @@ class FilterPruningController(BasePruningAlgoController):
         nncf_sorted_nodes = self._original_graph.topological_sort()
         for layer in wrapped_layers:
             nncf_node = [n for n in nncf_sorted_nodes
-                         if layer.name == get_layer_identifier(n)][0]
+                         if layer.name == n.layer_name][0]
             nncf_node.data['output_mask'] = tf.ones(get_filters_num(layer))
 
         # 1. Calculate importances for all groups of filters. Initialize masks.
@@ -414,7 +413,7 @@ class FilterPruningController(BasePruningAlgoController):
                 nncf_sorted_nodes = self._original_graph.topological_sort()
                 for layer in wrapped_layers:
                     nncf_node = [n for n in nncf_sorted_nodes
-                                 if layer.name == get_layer_identifier(n)][0]
+                                 if layer.name == n.layer_name][0]
                     if nncf_node.data['output_mask'] is not None:
                         self._set_operation_masks([layer], nncf_node.data['output_mask'])
                 return
@@ -534,5 +533,6 @@ class FilterPruningController(BasePruningAlgoController):
 
     def _run_batchnorm_adaptation(self):
         if self._bn_adaptation is None:
-            self._bn_adaptation = BatchnormAdaptationAlgorithm(**extract_bn_adaptation_init_params(self.config))
+            self._bn_adaptation = BatchnormAdaptationAlgorithm(**extract_bn_adaptation_init_params(self.config,
+                                                                                                   'filter_pruning'))
         self._bn_adaptation.run(self.model)

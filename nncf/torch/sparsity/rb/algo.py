@@ -10,11 +10,14 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+from copy import deepcopy
 from typing import List
 
 import torch
 import torch.distributed as dist
 
+from nncf import NNCFConfig
+from nncf.config.extractors import extract_algo_specific_config
 from nncf.torch.algo_selector import COMPRESSION_ALGORITHMS
 from nncf.api.compression import CompressionStage
 from nncf.common.graph import NNCFNode
@@ -34,23 +37,21 @@ from nncf.common.statistics import NNCFStatistics
 
 @COMPRESSION_ALGORITHMS.register('rb_sparsity')
 class RBSparsityBuilder(BaseSparsityAlgoBuilder):
-    def apply_to(self, target_model: NNCFNetwork) -> NNCFNetwork:
-        target_model = super().apply_to(target_model)
-        return target_model
-
     def create_weight_sparsifying_operation(self, target_module_node: NNCFNode, compression_lr_multiplier: float):
         return RBSparsifyingWeight(target_module_node.layer_attributes.get_weight_shape(), frozen=False,
                                    compression_lr_multiplier=compression_lr_multiplier)
 
-    def build_controller(self, target_model: NNCFNetwork) -> PTCompressionAlgorithmController:
-        return RBSparsityController(target_model, self._sparsified_module_info, self.config)
+    def _build_controller(self, model: NNCFNetwork) -> PTCompressionAlgorithmController:
+        return RBSparsityController(model, self._sparsified_module_info, self.config)
 
 
 @ADAPTIVE_COMPRESSION_CONTROLLERS.register('pt_rb_sparsity')
 class RBSparsityController(BaseSparsityAlgoController):
-    def __init__(self, target_model: NNCFNetwork, sparsified_module_info: List[SparseModuleInfo], config):
+    def __init__(self, target_model: NNCFNetwork, sparsified_module_info: List[SparseModuleInfo],
+                 config: NNCFConfig):
         super().__init__(target_model, sparsified_module_info)
-        params = config.get('params', {})
+        algo_config = extract_algo_specific_config(config, 'rb_sparsity')
+        params = deepcopy(algo_config.get('params', {}))
 
         self._distributed = False
         self._mode = params.get('sparsity_level_setting_mode', 'global')
@@ -63,7 +64,7 @@ class RBSparsityController(BaseSparsityAlgoController):
         else:
             self._loss = SparseLoss(sparsify_operations)
 
-            sparsity_init = config.get('sparsity_init', 0)
+            sparsity_init = algo_config.get('sparsity_init', 0)
             params['sparsity_init'] = sparsity_init
             scheduler_cls = SPARSITY_SCHEDULERS.get(params.get('schedule', 'exponential'))
             self._scheduler = scheduler_cls(self, params)

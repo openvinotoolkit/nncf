@@ -21,24 +21,24 @@ from nncf.tensorflow.callbacks.checkpoint_callback import CheckpointManagerCallb
 
 def get_callbacks(include_tensorboard: bool = True,
                   track_lr: bool = True,
-                  write_model_weights: bool = True,
                   initial_step: int = 0,
-                  model_dir: str = None,
+                  profile_batch: int = 0,
+                  log_dir: str = None,
                   ckpt_dir: str = None,
                   checkpoint: tf.train.Checkpoint = None) -> List[tf.keras.callbacks.Callback]:
     """Get all callbacks."""
-    model_dir = model_dir or ''
-    ckpt_dir = ckpt_dir or model_dir
+    log_dir = log_dir or ''
+    ckpt_dir = ckpt_dir or log_dir
     callbacks = []
     if checkpoint:
         callbacks.append(CheckpointManagerCallback(checkpoint, ckpt_dir))
     if include_tensorboard:
         callbacks.append(
             CustomTensorBoard(
-                log_dir=model_dir,
+                log_dir=log_dir,
                 track_lr=track_lr,
                 initial_step=initial_step,
-                write_images=write_model_weights))
+                profile_batch = profile_batch))
     return callbacks
 
 

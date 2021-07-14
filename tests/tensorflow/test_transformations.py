@@ -11,7 +11,9 @@
  limitations under the License.
 """
 
+import os
 import pytest
+import networkx as nx
 import tensorflow as tf
 from tensorflow.python.keras import layers
 from tensorflow.python.keras import models
@@ -19,6 +21,9 @@ from tensorflow.python.keras import models
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationPriority
 from nncf.common.graph.transformations.commands import TransformationType
+from nncf.common.quantization.structs import QuantizerConfig
+from nncf.common.quantization.structs import QuantizationMode
+from nncf.tensorflow.graph.converter import TFModelConverterFactory
 from nncf.tensorflow.graph.model_transformer import TFModelTransformer
 from nncf.tensorflow.graph.transformations import commands
 from nncf.tensorflow.graph.transformations.commands import TFInsertionCommand
@@ -26,8 +31,14 @@ from nncf.tensorflow.graph.transformations.commands import TFLayer
 from nncf.tensorflow.graph.transformations.commands import TFLayerWeight
 from nncf.tensorflow.graph.transformations.commands import TFMultipleInsertionCommands
 from nncf.tensorflow.graph.transformations.layout import TFTransformationLayout
+from nncf.tensorflow.graph.utils import is_functional_model
 from nncf.tensorflow.layers.custom_objects import NNCF_CUSTOM_OBJECTS
 from nncf.tensorflow.layers.operation import NNCFOperation
+from nncf.tensorflow.quantization.layers import FakeQuantize
+from nncf.tensorflow.quantization.quantizers import TFQuantizerSpec
+from tests.tensorflow.test_compressed_graph import keras_model_to_tf_graph
+from tests.tensorflow.test_compressed_graph import check_nx_graph
+from tests.tensorflow.test_compressed_graph import get_nx_graph_from_tf_graph
 
 
 def test_insertion_commands_union_invalid_input():
@@ -403,3 +414,166 @@ def test_multiple_insertion_command_has_same_effect_as_multiple_single_insertion
     multi_config = model_with_multi.get_config()
     two_single_config = model_with_two_single.get_config()
     assert multi_config == two_single_config
+
+
+def create_functional_model():
+    img_input = layers.Input(name='input', shape=(None, None, 3), dtype='float32')
+    x = layers.Conv2D(filters=16,
+                        kernel_size=(3, 3),
+                        strides=1,
+                        padding="same",
+                        activation='relu')(img_input)
+
+    residual = layers.Conv2D(filters=64,
+                             kernel_size=(1, 1),
+                             strides=2)(x)
+    residual = layers.BatchNormalization()(residual)
+
+    x = layers.Conv2D(filters=64,
+                        kernel_size=(3, 3),
+                        strides=2,
+                        padding="same")(x)
+    x = layers.BatchNormalization()(x)
+    x = layers.ReLU()(x)
+    x = layers.Conv2D(filters=64,
+                        kernel_size=(3, 3),
+                        strides=1,
+                        padding="same")(x)
+    x = layers.BatchNormalization()(x)
+    x = tf.keras.layers.Add()([residual, x])
+
+    x = layers.Dense(units=10, activation='softmax')(x)
+    model = models.Model(img_input, x, name='ResnetBlockTest')
+    return model
+
+
+def create_sequential_model():
+    model = tf.keras.Sequential()
+    model.add(layers.Input(shape=(None, None, 3)))
+    model.add(layers.Conv2D(filters=64,
+                            kernel_size=(1, 1),
+                            strides=2,
+                            activation='relu'))
+    model.add(layers.BatchNormalization())
+    model.add(layers.Dense(2, activation="relu"))
+    return model
+
+
+def apply_insert_after(model):
+    converter = TFModelConverterFactory.create(model)
+    transformations = TFTransformationLayout()
+    qconfig = QuantizerConfig(num_bits=8,
+                              mode=QuantizationMode.SYMMETRIC,
+                              signedness_to_force=None,
+                              per_channel=False)
+
+    functional_model = is_functional_model(model)
+    for i, layer in enumerate(model.layers):
+        original_node_name = layer.name
+
+        if functional_model:
+            _, layer_info = converter.get_layer_info_for_node(original_node_name)
+            instance_idx = layer_info.instance_idx
+        else:
+            instance_idx = 0
+
+        fake_quantize_name = f'FakeQuantize_{i}/{original_node_name}'
+        fake_quantize_layer = FakeQuantize(
+            TFQuantizerSpec.from_config(qconfig, narrow_range=False, half_range=False),
+            name=fake_quantize_name)
+
+        transformations.register(
+            TFInsertionCommand(
+                target_point=commands.TFAfterLayer(original_node_name,
+                                                   instance_idx=instance_idx,
+                                                   output_port_id=0),
+                callable_object=fake_quantize_layer,
+                priority=TransformationPriority.QUANTIZATION_PRIORITY))
+
+    transformer = TFModelTransformer(model)
+    transformed_model = transformer.transform(transformations)
+    return transformed_model
+
+
+def apply_insert_before(model):
+    converter = TFModelConverterFactory.create(model)
+
+    transformations = TFTransformationLayout()
+    qconfig = QuantizerConfig(num_bits=8,
+                              mode=QuantizationMode.SYMMETRIC,
+                              signedness_to_force=None,
+                              per_channel=False)
+
+    functional_model = is_functional_model(model)
+    for i, layer in enumerate(model.layers):
+        # Insertion before input layer is not supported
+        if isinstance(layer, layers.InputLayer):
+            continue
+
+        original_node_name = layer.name
+        if functional_model:
+            _, layer_info = converter.get_layer_info_for_node(original_node_name)
+            instance_idx = layer_info.instance_idx
+        else:
+            instance_idx = 0
+
+        inputs = [layer.input] if isinstance(layer.input, tf.Tensor) else layer.input
+
+        for port, _ in enumerate(inputs):
+            fake_quantize_name = f'FakeQuantize_{i}.{port}/{original_node_name}'
+            fake_quantize_layer = FakeQuantize(
+                TFQuantizerSpec.from_config(qconfig, narrow_range=False, half_range=False),
+                name=fake_quantize_name)
+
+            transformations.register(
+                TFInsertionCommand(
+                    target_point=commands.TFBeforeLayer(original_node_name,
+                                            instance_idx=instance_idx,
+                                            input_port_id=port),
+                    callable_object=fake_quantize_layer,
+                    priority=TransformationPriority.QUANTIZATION_PRIORITY))
+
+    transformer = TFModelTransformer(model)
+    transformed_model = transformer.transform(transformations)
+    return transformed_model
+
+
+def check_graphs(model, ref_graph_filename):
+    data_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'model_transormer')
+    ref_graph_path = os.path.abspath(os.path.join(data_dir, ref_graph_filename))
+
+    graph, graph_to_layer_var_names_map = keras_model_to_tf_graph(model)
+    nx_graph = get_nx_graph_from_tf_graph(graph, graph_to_layer_var_names_map)
+
+    if not os.path.exists(ref_graph_path) and os.getenv("NNCF_TEST_REGEN_DOT") is not None:
+        nx.drawing.nx_pydot.write_dot(nx_graph, ref_graph_path)
+
+    check_nx_graph(nx_graph, ref_graph_path)
+
+
+def test_functional_insert_after():
+    model = create_functional_model()
+    transformed_model = apply_insert_after(model)
+
+    check_graphs(transformed_model, 'functional_insert_after.dot')
+
+
+def test_functional_insert_before():
+    model = create_functional_model()
+    transformed_model = apply_insert_before(model)
+
+    check_graphs(transformed_model, 'functional_insert_before.dot')
+
+
+def test_sequential_insert_after():
+    model = create_sequential_model()
+    transformed_model = apply_insert_after(model)
+
+    check_graphs(transformed_model, 'sequential_block_insert_after.dot')
+
+
+def test_sequential_insert_before():
+    model = create_sequential_model()
+    transformed_model = apply_insert_before(model)
+
+    check_graphs(transformed_model, 'sequential_block_insert_before.dot')

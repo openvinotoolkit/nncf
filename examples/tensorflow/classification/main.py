@@ -23,6 +23,8 @@ from nncf.tensorflow.helpers.model_creation import create_compressed_model
 from nncf.tensorflow import create_compression_callbacks
 from nncf.tensorflow.helpers.model_manager import TFOriginalModelManager
 from nncf.tensorflow.initialization import register_default_init_args
+from nncf.tensorflow.utils.state import TFCompressionState
+from nncf.tensorflow.utils.state import TFCompressionStateLoader
 
 from examples.tensorflow.classification.datasets.builder import DatasetBuilder
 from examples.tensorflow.common.argparser import get_common_argument_parser
@@ -39,6 +41,7 @@ from examples.tensorflow.common.utils import create_code_snapshot
 from examples.tensorflow.common.utils import get_saving_parameters
 from examples.tensorflow.common.utils import print_args
 from examples.tensorflow.common.utils import serialize_config
+from examples.tensorflow.common.utils import serialize_cli_args
 from examples.tensorflow.common.utils import write_metrics
 
 
@@ -47,14 +50,6 @@ def get_argument_parser():
                                         save_checkpoint_freq=False,
                                         print_freq=False)
 
-    parser.add_argument(
-        '--mode',
-        '-m',
-        nargs='+',
-        choices=['train', 'test', 'export'],
-        default='train',
-        help='train: performs training and validation; test: tests the model; export: exports the model.'
-    )
     parser.add_argument(
         '--dataset',
         help='Dataset to use.',
@@ -99,6 +94,20 @@ def get_dataset_builders(config, num_devices, one_hot=True):
     return [train_builder, val_builder]
 
 
+def get_num_classes(dataset):
+    if 'imagenet2012' in dataset:
+        num_classes = 1000
+    elif dataset == 'cifar100':
+        num_classes = 100
+    elif dataset == 'cifar10':
+        num_classes = 10
+    else:
+        num_classes = 1000
+
+    logger.info('The sample is started with {} classes'.format(num_classes))
+    return num_classes
+
+
 def load_checkpoint(checkpoint, ckpt_path):
     logger.info('Load from checkpoint is enabled.')
     if tf.io.gfile.isdir(ckpt_path):
@@ -132,6 +141,12 @@ def resume_from_checkpoint(checkpoint, ckpt_path, steps_per_epoch):
     return initial_epoch
 
 
+def load_compression_state(ckpt_path: str):
+    checkpoint = tf.train.Checkpoint(compression_state=TFCompressionStateLoader())
+    load_checkpoint(checkpoint, ckpt_path)
+    return checkpoint.compression_state.state
+
+
 def run(config):
     strategy = get_distribution_strategy(config)
     if config.metrics_dump is not None:
@@ -139,7 +154,7 @@ def run(config):
 
     model_fn, model_params = get_model(config.model,
                                        input_shape=config.get('input_info', {}).get('sample_size', None),
-                                       num_classes=config.get('num_classes', 1000),
+                                       num_classes=config.get('num_classes', get_num_classes(config.dataset)),
                                        pretrained=config.get('pretrained', False),
                                        weights=config.get('weights', None))
 
@@ -169,13 +184,14 @@ def run(config):
                 return_dict=True)
             uncompressed_model_accuracy = 100 * results['acc@1']
 
+    compression_state = None
+    if resume_training:
+        compression_state = load_compression_state(config.ckpt_path)
+
     with TFOriginalModelManager(model_fn, **model_params) as model:
         with strategy.scope():
-            compression_ctrl, compress_model = create_compressed_model(model,
-                                                                       nncf_config,
-                                                                       should_init=not resume_training)
-            compression_callbacks = create_compression_callbacks(compression_ctrl,
-                                                                 log_dir=config.log_dir)
+            compression_ctrl, compress_model = create_compressed_model(model, nncf_config, compression_state)
+            compression_callbacks = create_compression_callbacks(compression_ctrl, log_dir=config.log_dir)
 
             scheduler = build_scheduler(
                 config=config,
@@ -202,7 +218,8 @@ def run(config):
 
             compress_model.summary()
 
-            checkpoint = tf.train.Checkpoint(model=compress_model, compression_ctrl=compression_ctrl)
+            checkpoint = tf.train.Checkpoint(model=compress_model,
+                                             compression_state=TFCompressionState(compression_ctrl))
 
             initial_epoch = 0
             if resume_training:
@@ -213,9 +230,9 @@ def run(config):
     callbacks = get_callbacks(
         include_tensorboard=True,
         track_lr=True,
-        write_model_weights=False,
+        profile_batch=0,
         initial_step=initial_epoch * train_steps,
-        model_dir=config.log_dir,
+        log_dir=config.log_dir,
         ckpt_dir=config.checkpoint_save_dir,
         checkpoint=checkpoint)
 
@@ -276,13 +293,16 @@ def run(config):
 def export(config):
     model, model_params = get_model(config.model,
                                     input_shape=config.get('input_info', {}).get('sample_size', None),
-                                    num_classes=config.get('num_classes', 1000),
+                                    num_classes=config.get('num_classes', get_num_classes(config.dataset)),
                                     pretrained=config.get('pretrained', False),
                                     weights=config.get('weights', None))
     model = model(**model_params)
-    compression_ctrl, compress_model = create_compressed_model(model,
-                                                               config.nncf_config,
-                                                               should_init=False)
+
+    compression_state = None
+    if config.ckpt_path:
+        compression_state = load_compression_state(config.ckpt_path)
+
+    compression_ctrl, compress_model = create_compressed_model(model, config.nncf_config, compression_state)
 
     metrics = [
         tf.keras.metrics.CategoricalAccuracy(name='acc@1'),
@@ -294,7 +314,8 @@ def export(config):
                            metrics=metrics)
     compress_model.summary()
 
-    checkpoint = tf.train.Checkpoint(model=compress_model, compression_ctrl=compression_ctrl)
+    checkpoint = tf.train.Checkpoint(model=compress_model,
+                                     compression_state=TFCompressionState(compression_ctrl))
 
     if config.ckpt_path is not None:
         load_checkpoint(checkpoint=checkpoint,
@@ -310,7 +331,8 @@ def main(argv):
     config = get_config_from_argv(argv, parser)
     print_args(config)
 
-    serialize_config(config, config.log_dir)
+    serialize_config(config.nncf_config, config.log_dir)
+    serialize_cli_args(parser, argv, config.log_dir)
 
     nncf_root = Path(__file__).absolute().parents[3]
     create_code_snapshot(nncf_root, osp.join(config.log_dir, 'snapshot.tar.gz'))

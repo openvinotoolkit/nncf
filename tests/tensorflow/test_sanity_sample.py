@@ -15,7 +15,6 @@ import json
 import os
 import tempfile
 from functools import partial
-from pathlib import Path
 import pytest
 import tensorflow as tf
 
@@ -32,7 +31,7 @@ from examples.tensorflow.common.prepare_checkpoint import main as prepare_checkp
 
 od_main.get_dataset_builders = partial(get_coco_dataset_builders, train=True, validation=True)
 seg_train.get_dataset_builders = partial(get_coco_dataset_builders, train=True, calibration=True)
-seg_eval.get_dataset_builders = partial(get_coco_dataset_builders, validation=True)
+seg_eval.get_dataset_builders = partial(get_coco_dataset_builders, validation=True, calibration=True)
 
 AVAILABLE_MODELS.update({
     'SequentialModel': SequentialModel,
@@ -202,11 +201,14 @@ def _config(request, dataset_dir):
 @pytest.fixture(scope='module')
 def _case_common_dirs(tmp_path_factory):
     return {
-        'checkpoint_save_dir': str(tmp_path_factory.mktemp('models'))
+        'checkpoint_save_dir': str(tmp_path_factory.mktemp('models')),
+        'optimized_checkpoint_save_dir': str(tmp_path_factory.mktemp('optimized_models'))
     }
 
 
 def test_model_eval(_config, tmp_path):
+    if _config['sample_type'] == 'segmentation':
+        pytest.skip("ticket #58759")
     config_factory = ConfigFactory(_config['nncf_config'], tmp_path / 'config.json')
     args = {
         '--mode': 'test',
@@ -221,6 +223,8 @@ def test_model_eval(_config, tmp_path):
 
 @pytest.mark.dependency(name='tf_test_model_train')
 def test_model_train(_config, tmp_path, _case_common_dirs):
+    if _config['sample_type'] == 'segmentation':
+        pytest.skip("ticket #58759")
     checkpoint_save_dir = os.path.join(_case_common_dirs['checkpoint_save_dir'], _config['tid'])
     config_factory = ConfigFactory(_config['nncf_config'], tmp_path / 'config.json')
     args = {
@@ -366,60 +370,45 @@ def test_export_with_resume(_config, tmp_path, export_format, _case_common_dirs)
     assert os.path.exists(model_path)
 
 
-def get_prepare_checkpoint_configs():
-    supported_model_types = ['object_detection', 'segmentation']
-    config_params = []
-    for sample_type in supported_model_types:
-        config_paths, batch_sizes = CONFIGS[sample_type], GLOBAL_BATCH_SIZE[sample_type]
-        dataset_names, dataset_types = zip(*DATASETS[sample_type])
-
-        for config_path, dataset_name, dataset_type, batch_size in \
-                zip(config_paths, dataset_names, dataset_types, batch_sizes):
-            dataset_path = DATASET_PATHS[sample_type][dataset_name](None)
-
-            with config_path.open() as f:
-                jconfig = json.load(f)
-
-            if 'checkpoint_save_dir' in jconfig.keys():
-                del jconfig['checkpoint_save_dir']
-
-            jconfig['dataset'] = dataset_name
-            jconfig['dataset_type'] = dataset_type
-            config_params.append((sample_type, config_path, jconfig, dataset_path, batch_size))
-    return config_params
+PREPARE_CHECKPOINTS_SUPPORTED_SAMPLE_TYPES = ['object_detection', 'segmentation']
 
 
-@pytest.mark.parametrize('sample_type,config_path,config_eval,dataset_path,batch_size',
-                         get_prepare_checkpoint_configs(),
-                         ids=[x[0] for x in get_prepare_checkpoint_configs()])
-def test_prepare_checkpoint(sample_type, config_path, config_eval, dataset_path, batch_size, tmp_path):
-    # Keep default soft_device_placement state
-    default_soft_device_placement = tf.config.get_soft_device_placement()
-    tf.config.set_soft_device_placement(True)
-    checkpoint_save_dir = tmp_path
-    log_dir = tempfile.mkdtemp()
+@pytest.mark.dependency(name='tf_test_prepare_checkpoint', depends=['tf_test_model_train'])
+def test_prepare_checkpoint(_config, tmp_path, _case_common_dirs):
+    if _config['sample_type'] not in PREPARE_CHECKPOINTS_SUPPORTED_SAMPLE_TYPES:
+        pytest.skip('Unsupported sample type for test_prepare_checkpoints')
+
+    resume_path = os.path.join(_case_common_dirs['checkpoint_save_dir'], _config['tid'])
+    checkpoint_save_dir = os.path.join(_case_common_dirs['optimized_checkpoint_save_dir'], _config['tid'])
+    config_factory = ConfigFactory(_config['nncf_config'], tmp_path / 'config.json')
     args = {
-        '--model-type': sample_type,
-        '--config': config_path,
+        '--model-type': _config['sample_type'],
+        '--config': config_factory.serialize(),
         '--checkpoint-save-dir': checkpoint_save_dir,
-        '--resume': tempfile.mkdtemp(),
+        '--resume': resume_path,
     }
 
     prepare_checkpoint_main(convert_to_argv(args))
 
     assert tf.io.gfile.isdir(checkpoint_save_dir)
     assert tf.train.latest_checkpoint(checkpoint_save_dir)
-    config_factory = ConfigFactory(config_eval, Path(tempfile.gettempdir()) / 'config.json')
+
+
+@pytest.mark.dependency(depends=['tf_test_prepare_checkpoint'])
+def test_eval_prepared_checkpoint(_config, tmp_path, _case_common_dirs):
+    if _config['sample_type'] not in PREPARE_CHECKPOINTS_SUPPORTED_SAMPLE_TYPES:
+        pytest.skip('Unsupported sample type for test_prepare_checkpoints')
+
+    config_factory = ConfigFactory(_config['nncf_config'], tmp_path / 'config.json')
+    resume_path = os.path.join(_case_common_dirs['optimized_checkpoint_save_dir'], _config['tid'])
+
     args = {
         '--mode': 'test',
-        '--data': dataset_path,
+        '--data': _config['dataset_path'],
         '--config': config_factory.serialize(),
-        '--log-dir': log_dir,
-        '--batch-size': batch_size,
-        '--resume': checkpoint_save_dir
+        '--batch-size': _config['batch_size'],
+        '--resume': resume_path,
     }
 
-    main = get_sample_fn(sample_type, modes=['test'])
+    main = get_sample_fn(_config['sample_type'], modes=['test'])
     main(convert_to_argv(args))
-    # Restore default soft_device_placement state
-    tf.config.set_soft_device_placement(default_soft_device_placement)

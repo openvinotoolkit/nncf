@@ -11,10 +11,10 @@
  limitations under the License.
 """
 
+import copy
 import os.path as osp
 import time
 
-import copy
 import torch
 import torch.backends.cudnn as cudnn
 import torch.nn as nn
@@ -24,22 +24,39 @@ import torch.utils.data
 import torch.utils.data.distributed
 from torchvision.models import InceptionOutputs
 
-from examples.torch.common.execution import set_seed
-from nncf.common.utils.tensorboard import prepare_for_tensorboard
-from examples.torch.classification.main import create_data_loaders, validate, AverageMeter, accuracy, get_lr, \
-    create_datasets, inception_criterion_fn
+from examples.torch.classification.main import AverageMeter
+from examples.torch.classification.main import accuracy
+from examples.torch.classification.main import create_data_loaders
+from examples.torch.classification.main import create_datasets
+from examples.torch.classification.main import get_lr
+from examples.torch.classification.main import inception_criterion_fn
+from examples.torch.classification.main import validate
 from examples.torch.common.example_logger import logger
-from examples.torch.common.execution import ExecutionMode, prepare_model_for_execution
+from examples.torch.common.execution import ExecutionMode
+from examples.torch.common.execution import prepare_model_for_execution
+from examples.torch.common.execution import set_seed
+from examples.torch.common.model_loader import COMPRESSION_STATE_ATTR
+from examples.torch.common.model_loader import MODEL_STATE_ATTR
+from examples.torch.common.model_loader import extract_model_and_compression_states
 from examples.torch.common.model_loader import load_model
-from examples.torch.common.utils import configure_logging, print_args, make_additional_checkpoints, get_name, \
-    is_pretrained_model_requested, log_common_mlflow_params, SafeMLFLow, configure_device
-from nncf.torch.binarization.algo import BinarizationController
+from examples.torch.common.model_loader import load_resuming_checkpoint
+from examples.torch.common.utils import SafeMLFLow
+from examples.torch.common.utils import configure_device
+from examples.torch.common.utils import configure_logging
+from examples.torch.common.utils import get_name
+from examples.torch.common.utils import is_pretrained_model_requested
+from examples.torch.common.utils import log_common_mlflow_params
+from examples.torch.common.utils import make_additional_checkpoints
+from examples.torch.common.utils import print_args
 from nncf.api.compression import CompressionStage
-from nncf.torch.initialization import register_default_init_args, default_criterion_fn
+from nncf.common.utils.tensorboard import prepare_for_tensorboard
+from nncf.torch.binarization.algo import BinarizationController
+from nncf.torch.checkpoint_loading import load_state
+from nncf.torch.initialization import default_criterion_fn
+from nncf.torch.initialization import register_default_init_args
 from nncf.torch.model_creation import create_compressed_model
 from nncf.torch.quantization.algo import QuantizationController
 from nncf.torch.utils import is_main_process
-from examples.torch.classification.common import load_resuming_checkpoint
 
 
 class KDLossCalculator:
@@ -155,9 +172,14 @@ def staged_quantization_main_worker(current_gpu, config):
 
     model.to(config.device)
 
-    resuming_model_sd, resuming_checkpoint = load_resuming_checkpoint(resuming_checkpoint_path)
+    resuming_checkpoint = None
+    if resuming_checkpoint_path is not None:
+        resuming_checkpoint = load_resuming_checkpoint(resuming_checkpoint_path)
+    model_state_dict, compression_state = extract_model_and_compression_states(resuming_checkpoint)
+    compression_ctrl, model = create_compressed_model(model, nncf_config, compression_state)
+    if model_state_dict is not None:
+        load_state(model, model_state_dict, is_resume=True)
 
-    compression_ctrl, model = create_compressed_model(model, nncf_config, resuming_model_sd)
     if not isinstance(compression_ctrl, (BinarizationController, QuantizationController)):
         raise RuntimeError(
             "The stage quantization sample worker may only be run with the binarization and quantization algorithms!")
@@ -167,8 +189,6 @@ def staged_quantization_main_worker(current_gpu, config):
 
     if config.distributed:
         compression_ctrl.distributed()
-
-    is_inception = 'inception' in model_name
 
     params_to_optimize = model.parameters()
 
@@ -184,8 +204,7 @@ def staged_quantization_main_worker(current_gpu, config):
         config.start_epoch = resuming_checkpoint['epoch']
         best_acc1 = resuming_checkpoint['best_acc1']
         kd_loss_calculator.original_model.load_state_dict(resuming_checkpoint['original_model_state_dict'])
-        compression_ctrl.load_state(resuming_checkpoint)
-        if config.mode.lower() == 'train':
+        if 'train' in config.mode:
             optimizer.load_state_dict(resuming_checkpoint['optimizer'])
             optimizer_scheduler.load_state_dict(resuming_checkpoint['optimizer_scheduler'])
             logger.info("=> loaded checkpoint '{}' (epoch: {}, best_acc1: {:.3f})"
@@ -195,7 +214,7 @@ def staged_quantization_main_worker(current_gpu, config):
 
     log_common_mlflow_params(config)
 
-    if config.to_onnx:
+    if 'export' in config.mode and ('train' not in config.mode and 'test' not in config.mode):
         compression_ctrl.export_model(config.to_onnx)
         logger.info("Saved to {}".format(config.to_onnx))
         return
@@ -207,14 +226,19 @@ def staged_quantization_main_worker(current_gpu, config):
         statistics = compression_ctrl.statistics()
         logger.info(statistics.to_str())
 
-    if config.mode.lower() == 'test':
-        validate(val_loader, model, criterion, config)
-
-    if config.mode.lower() == 'train':
+    if 'train' in config.mode:
         batch_multiplier = (quantization_config.get("params", {})).get("batch_multiplier", 1)
         train_staged(config, compression_ctrl, model, criterion, train_criterion_fn, optimizer_scheduler, model_name,
                      optimizer,
                      train_loader, train_sampler, val_loader, kd_loss_calculator, batch_multiplier, best_acc1)
+
+    if 'test' in config.mode:
+        validate(val_loader, model, criterion, config)
+
+    if 'export' in config.mode:
+        compression_ctrl.export_model(config.to_onnx)
+        logger.info("Saved to {}".format(config.to_onnx))
+
 
 
 def train_staged(config, compression_ctrl, model, criterion, criterion_fn, optimizer_scheduler, model_name, optimizer,
@@ -262,12 +286,11 @@ def train_staged(config, compression_ctrl, model, criterion, criterion_fn, optim
             checkpoint = {
                 'epoch': epoch + 1,
                 'arch': model_name,
-                'state_dict': model.state_dict(),
+                MODEL_STATE_ATTR: model.state_dict(),
+                COMPRESSION_STATE_ATTR: compression_ctrl.get_compression_state(),
                 'original_model_state_dict': kd_loss_calculator.original_model.state_dict(),
                 'best_acc1': best_acc1,
-                'compression_stage': compression_stage,
                 'optimizer': optimizer.state_dict(),
-                'scheduler': compression_ctrl.scheduler.get_state(),
                 'optimizer_scheduler': optimizer_scheduler.state_dict()
             }
 

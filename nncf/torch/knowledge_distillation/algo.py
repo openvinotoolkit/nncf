@@ -1,3 +1,16 @@
+"""
+ Copyright (c) 2021 Intel Corporation
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+      http://www.apache.org/licenses/LICENSE-2.0
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+"""
+
 from copy import deepcopy
 
 from nncf.common.schedulers import BaseCompressionScheduler
@@ -16,9 +29,9 @@ from nncf.torch.algo_selector import COMPRESSION_ALGORITHMS
 class KnowledgeDistillationBuilder(PTCompressionAlgorithmBuilder):
     def __init__(self, config: NNCFConfig, should_init: bool = True):
         super().__init__(config, should_init)
-        self.kd_type = config.get('type', None)
+        self.kd_type = self._algo_config.get('type', None)
         if self.kd_type is None:
-            raise ValueError('You have to choose type of KDLoss explicitly')
+            raise ValueError('Type of KDLoss must be selected explicitly')
 
     def _get_transformation_layout(self, target_model: NNCFNetwork) -> PTTransformationLayout:
         self.original_model = deepcopy(target_model.nncf_module)
@@ -26,8 +39,8 @@ class KnowledgeDistillationBuilder(PTCompressionAlgorithmBuilder):
             param.requires_grad = False
         return PTTransformationLayout()
 
-    def build_controller(self, target_model):
-        return KnowledgeDistillationController(target_model, self.original_model, self.kd_type)
+    def _build_controller(self, model):
+        return KnowledgeDistillationController(model, self.original_model, self.kd_type)
 
     def initialize(self, model: NNCFNetwork) -> None:
         pass

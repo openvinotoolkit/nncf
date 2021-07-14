@@ -24,8 +24,10 @@ from nncf.tensorflow.graph.metatypes.matcher import get_keras_layer_metatype
 from nncf.tensorflow.initialization import register_default_init_args
 
 
-def get_dataset_for_test(batch_size=10):
-    rand_image = tf.random.uniform(shape=[5, 5, 1], dtype=tf.float32)
+def get_dataset_for_test(batch_size=10, shape=None):
+    if shape is None:
+        shape = [5, 5, 1]
+    rand_image = tf.random.uniform(shape=shape, dtype=tf.float32)
     dataset1 = tf.data.Dataset.from_tensors(rand_image)
     rand_label = tf.random.uniform(shape=[], dtype=tf.float32)
     dataset2 = tf.data.Dataset.from_tensors(rand_label)
@@ -38,6 +40,7 @@ def get_config_for_test(batch_size=10, num_bn_adaptation_samples=100):
     config.update(Dict({
         "compression":
             {
+                "algorithm": "quantization",
                 "initializer": {
                     "batchnorm_adaptation": {
                         "num_bn_adaptation_samples": num_bn_adaptation_samples,
@@ -51,11 +54,7 @@ def get_config_for_test(batch_size=10, num_bn_adaptation_samples=100):
                                         dataset,
                                         batch_size)
 
-    compression_config = config.get('compression', {})
-    compression_config = NNCFConfig(compression_config)
-    compression_config.register_extra_structs(config.get_all_extra_structs_for_copy())
-
-    return compression_config
+    return config
 
 
 def get_model_for_test():
@@ -93,7 +92,8 @@ def test_parameter_update():
 
     config = get_config_for_test()
 
-    bn_adaptation = BatchnormAdaptationAlgorithm(**extract_bn_adaptation_init_params(config))
+    bn_adaptation = BatchnormAdaptationAlgorithm(**extract_bn_adaptation_init_params(config,
+                                                                                     "quantization"))
     bn_adaptation.run(model)
 
     for layer in model.layers:
@@ -114,7 +114,8 @@ def test_all_parameter_keep():
 
     config = get_config_for_test(num_bn_adaptation_samples=0)
 
-    bn_adaptation = BatchnormAdaptationAlgorithm(**extract_bn_adaptation_init_params(config))
+    bn_adaptation = BatchnormAdaptationAlgorithm(**extract_bn_adaptation_init_params(config,
+                                                                                     "quantization"))
     bn_adaptation.run(model)
 
     for layer in model.layers:

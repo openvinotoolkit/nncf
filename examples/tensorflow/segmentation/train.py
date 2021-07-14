@@ -22,6 +22,8 @@ from nncf.tensorflow import create_compressed_model
 from nncf.tensorflow.helpers.model_manager import TFOriginalModelManager
 from nncf.tensorflow.initialization import register_default_init_args
 from nncf.common.utils.tensorboard import prepare_for_tensorboard
+from nncf.tensorflow.utils.state import TFCompressionState
+from nncf.tensorflow.utils.state import TFCompressionStateLoader
 
 from examples.tensorflow.common.argparser import get_common_argument_parser
 from examples.tensorflow.common.distributed import get_distribution_strategy
@@ -36,6 +38,7 @@ from examples.tensorflow.common.utils import configure_paths
 from examples.tensorflow.common.utils import create_code_snapshot
 from examples.tensorflow.common.utils import print_args
 from examples.tensorflow.common.utils import serialize_config
+from examples.tensorflow.common.utils import serialize_cli_args
 from examples.tensorflow.common.utils import SummaryWriter
 from examples.tensorflow.common.utils import Timer
 from examples.tensorflow.segmentation.models.model_selector import get_model_builder
@@ -43,7 +46,8 @@ from examples.tensorflow.segmentation.models.model_selector import get_predefine
 
 
 def get_argument_parser():
-    parser = get_common_argument_parser(weights=False,
+    parser = get_common_argument_parser(mode=False,
+                                        weights=False,
                                         precision=False,
                                         save_checkpoint_freq=False,
                                         export_args=False,
@@ -126,6 +130,12 @@ def resume_from_checkpoint(checkpoint_manager, ckpt_path, steps_per_epoch):
 
     logger.info('Resuming from epoch %d (global step %d)', initial_epoch, initial_step)
     return initial_epoch, initial_step
+
+
+def load_compression_state(ckpt_path: str):
+    checkpoint = tf.train.Checkpoint(compression_state=TFCompressionStateLoader())
+    load_checkpoint(checkpoint, ckpt_path)
+    return checkpoint.compression_state.state
 
 
 def create_train_step_fn(strategy, model, loss_fn, optimizer):
@@ -239,13 +249,15 @@ def run_train(config):
 
     resume_training = config.ckpt_path is not None
 
+    compression_state = None
+    if resume_training:
+        compression_state = load_compression_state(config.ckpt_path)
+
     with TFOriginalModelManager(model_builder.build_model,
                                 weights=config.get('weights', None),
                                 is_training=True) as model:
         with strategy.scope():
-            compression_ctrl, compress_model = create_compressed_model(model,
-                                                                       nncf_config,
-                                                                       should_init=not resume_training)
+            compression_ctrl, compress_model = create_compressed_model(model, nncf_config, compression_state)
 
             scheduler = build_scheduler(
                 config=config,
@@ -260,7 +272,7 @@ def run_train(config):
             variables = get_variables(compress_model)
             checkpoint = tf.train.Checkpoint(variables=variables,
                                              optimizer=optimizer,
-                                             compression_ctrl=compression_ctrl,
+                                             compression_state=TFCompressionState(compression_ctrl),
                                              step=tf.Variable(0))
             checkpoint_manager = tf.train.CheckpointManager(checkpoint, config.checkpoint_save_dir, max_to_keep=None)
 
@@ -288,7 +300,8 @@ def main(argv):
     config = get_config_from_argv(argv, parser)
     print_args(config)
 
-    serialize_config(config, config.log_dir)
+    serialize_config(config.nncf_config, config.log_dir)
+    serialize_cli_args(parser, argv, config.log_dir)
 
     nncf_root = Path(__file__).absolute().parents[3]
     create_code_snapshot(nncf_root, os.path.join(config.log_dir, "snapshot.tar.gz"))

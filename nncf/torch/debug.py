@@ -10,23 +10,11 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-import logging
 import warnings
 from typing import List, Dict
 
 from torch.nn import Module
 from nncf.common.utils.logger import logger as nncf_logger
-
-DEBUG_LOG_DIR = "./nncf_debug"
-
-
-def is_debug():
-    return nncf_logger.getEffectiveLevel() == logging.DEBUG
-
-
-def set_debug_log_dir(dir_: str):
-    global DEBUG_LOG_DIR
-    DEBUG_LOG_DIR = dir_
 
 
 class CallCountTracker:

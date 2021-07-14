@@ -41,8 +41,8 @@ from nncf.common.quantization.structs import QuantizerConfig
 from nncf.config.extractors import extract_bn_adaptation_init_params
 from nncf.common.utils.logger import logger
 from nncf.common.hardware.config import HWConfigType
-from nncf.torch.debug import DEBUG_LOG_DIR
-from nncf.torch.debug import is_debug
+from nncf.common.utils.debug import DEBUG_LOG_DIR
+from nncf.common.utils.debug import is_debug
 from nncf.torch.initialization import PartialDataLoader
 from nncf.torch.quantization.layers import BaseQuantizer
 from nncf.torch.quantization.algo import ExperimentalQuantizationController
@@ -468,11 +468,11 @@ class QuantizationEnv:
     def _run_batchnorm_adaptation(self):
         if self._bn_adaptation is None:
             self._bn_adaptation = BatchnormAdaptationAlgorithm(
-            **extract_bn_adaptation_init_params(self.qctrl.quantization_config))
+            **extract_bn_adaptation_init_params(self.qctrl.config, "quantization"))
         self._bn_adaptation.run(self.qctrl.model)
 
     def _run_quantization_pipeline(self, finetune=False) -> float:
-        if self.qctrl.quantization_config:
+        if self.qctrl.config:
             self._run_batchnorm_adaptation()
 
         if finetune:

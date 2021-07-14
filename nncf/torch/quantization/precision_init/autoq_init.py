@@ -16,7 +16,7 @@ from typing import Dict, Tuple, List, Optional
 
 import os
 
-from nncf.torch.debug import is_debug
+from nncf.common.utils.debug import is_debug
 from nncf.common.hardware.config import HWConfigType
 from nncf.common.utils.logger import logger
 from nncf.common.utils.os import safe_open
@@ -104,7 +104,7 @@ class AutoQPrecisionInitializer(BasePrecisionInitializer):
     def apply_init(self) -> SingleConfigQuantizerSetup:
         from nncf.torch.automl.environment.quantization_env import QuantizationEnv
         from nncf.torch.automl.agent.ddpg.ddpg import DDPG
-        from nncf.torch.debug import DEBUG_LOG_DIR
+        from nncf.common.utils.debug import DEBUG_LOG_DIR
 
         if self._dump_autoq_data or is_debug():
             dump_dir = self._init_args.config.get('log_dir', None)
@@ -288,8 +288,8 @@ class AutoQPrecisionInitializer(BasePrecisionInitializer):
 
                 nncf_stats = env.qctrl.statistics()
                 bit_stats_df = pd.DataFrame.from_dict(
-                    [nncf_stats.quantization.bitwidth_distribution_statistics.num_wq_per_bitwidth,
-                     nncf_stats.quantization.bitwidth_distribution_statistics.num_aq_per_bitwidth])\
+                    [nncf_stats.quantization.num_wq_per_bitwidth,
+                     nncf_stats.quantization.num_aq_per_bitwidth])\
                          .fillna(0).astype(int).rename(index={0:'WQ',1:'AQ'}).transpose().sort_index(ascending=False)
                 bit_stats_df.index.name = 'bitwidth'
                 bit_stats_df=bit_stats_df.reset_index()

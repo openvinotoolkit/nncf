@@ -32,10 +32,11 @@ def get_common_argument_parser():
     parser.add_argument(
         "--mode",
         "-m",
-        choices=['train', 'test'],
+        nargs='+',
+        choices=['train', 'test', 'export'],
         default='train',
         help=("train: performs training and validation; test: tests the model"
-              "found in \"--save_dir\" with name \"--name\" on the validation split of \"--dataset\"; "))
+              "on the validation split of \"--dataset\"; export: exports the model to .onnx"))
 
     parser.add_argument('--metrics-dump', type=str, help='Name of metrics collecting .json file')
     model_init_mode = parser.add_mutually_exclusive_group()
@@ -173,3 +174,10 @@ def get_common_argument_parser():
                                           'Default: 10)')
 
     return parser
+
+
+def parse_args(parser, argv):
+    args = parser.parse_args(argv)
+    if 'export' in args.mode and args.to_onnx is None:
+        raise RuntimeError("--mode export requires --to-onnx argument to be set")
+    return args

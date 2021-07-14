@@ -103,7 +103,7 @@ class SafeMLFLow:
     """ Wrapper to encapsulate safe access to mlflow methods without checking for None and with automatic closing """
 
     def __init__(self, config):
-        self.is_suitable_mode = config.mode.lower() == 'train' and config.to_onnx is None
+        self.is_suitable_mode = 'train' in config.mode
         root_log_dir = osp.dirname(osp.dirname(config.log_dir))
         self.safe_call('set_tracking_uri', osp.join(root_log_dir, 'mlruns'))
 

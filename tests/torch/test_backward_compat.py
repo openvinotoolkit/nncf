@@ -11,13 +11,15 @@
  limitations under the License.
 """
 import json
-
 import os
+
 import pytest
 import torch
 
 from examples.torch.common.distributed import configure_distributed
-from examples.torch.common.execution import ExecutionMode, prepare_model_for_execution, get_device
+from examples.torch.common.execution import ExecutionMode
+from examples.torch.common.execution import get_device
+from examples.torch.common.execution import prepare_model_for_execution
 from examples.torch.common.model_loader import load_model
 from examples.torch.common.sample_config import SampleConfig
 from nncf.torch import register_default_init_args
@@ -145,19 +147,21 @@ def test_loaded_model_evals_according_to_saved_acc(_params, tmp_path, dataset_di
         assert torch.load(checkpoint_path)['best_acc1'] == pytest.approx(metrics['Accuracy'], abs=1e-2)
 
 
+old_style_sd = {
+    f'{MODEL_WRAPPED_BY_NNCF_ATTR_NAME}.conv2d.weight': torch.ones([3, 3, 1, 1]),
+    f'{MODEL_WRAPPED_BY_NNCF_ATTR_NAME}.conv2d.bias': torch.ones([3]),
+    f'{MODEL_WRAPPED_BY_NNCF_ATTR_NAME}.conv2d.pre_ops.0.op._num_bits': 8 * torch.ones([1], dtype=torch.int32),
+    f'{MODEL_WRAPPED_BY_NNCF_ATTR_NAME}.conv2d.pre_ops.0.op.signed_tensor': torch.ones([1], dtype=torch.int32),
+    f'{MODEL_WRAPPED_BY_NNCF_ATTR_NAME}.conv2d.pre_ops.0.op.enabled': torch.ones([1], dtype=torch.int32),
+    f'{MODEL_WRAPPED_BY_NNCF_ATTR_NAME}.conv2d.pre_ops.0.op.scale': torch.ones([3, 1, 1, 1]),
+    f'{LEGACY_ACT_STORAGE_NAME}./{MODEL_INPUT_OP_NAME}_0|OUTPUT._num_bits': 8 * torch.ones([1], dtype=torch.int32),
+    f'{LEGACY_ACT_STORAGE_NAME}./{MODEL_INPUT_OP_NAME}_0|OUTPUT.signed_tensor': torch.zeros([1], dtype=torch.int32),
+    f'{LEGACY_ACT_STORAGE_NAME}./{MODEL_INPUT_OP_NAME}_0|OUTPUT.enabled': torch.ones([1], dtype=torch.int32),
+    f'{LEGACY_ACT_STORAGE_NAME}./{MODEL_INPUT_OP_NAME}_0|OUTPUT.scale': torch.ones([1]),
+}
+
+
 def test_renamed_activation_quantizer_storage_in_state_dict():
-    old_style_sd = {
-        f'{MODEL_WRAPPED_BY_NNCF_ATTR_NAME}.conv2d.weight': torch.ones([3, 3, 1, 1]),
-        f'{MODEL_WRAPPED_BY_NNCF_ATTR_NAME}.conv2d.bias': torch.ones([3]),
-        f'{MODEL_WRAPPED_BY_NNCF_ATTR_NAME}.conv2d.pre_ops.0.op._num_bits': 8 * torch.ones([1], dtype=torch.int32),
-        f'{MODEL_WRAPPED_BY_NNCF_ATTR_NAME}.conv2d.pre_ops.0.op.signed_tensor': torch.ones([1], dtype=torch.int32),
-        f'{MODEL_WRAPPED_BY_NNCF_ATTR_NAME}.conv2d.pre_ops.0.op.enabled': torch.ones([1], dtype=torch.int32),
-        f'{MODEL_WRAPPED_BY_NNCF_ATTR_NAME}.conv2d.pre_ops.0.op.scale': torch.ones([3, 1, 1, 1]),
-        f'{LEGACY_ACT_STORAGE_NAME}./{MODEL_INPUT_OP_NAME}_0|OUTPUT._num_bits': 8 * torch.ones([1], dtype=torch.int32),
-        f'{LEGACY_ACT_STORAGE_NAME}./{MODEL_INPUT_OP_NAME}_0|OUTPUT.signed_tensor': torch.zeros([1], dtype=torch.int32),
-        f'{LEGACY_ACT_STORAGE_NAME}./{MODEL_INPUT_OP_NAME}_0|OUTPUT.enabled': torch.ones([1], dtype=torch.int32),
-        f'{LEGACY_ACT_STORAGE_NAME}./{MODEL_INPUT_OP_NAME}_0|OUTPUT.scale': torch.ones([1]),
-    }
     model = SingleConv2dIdentityModel()
     config = get_basic_quantization_config(input_info={
         "sample_size": [1, 3, 100, 100]
@@ -167,3 +171,12 @@ def test_renamed_activation_quantizer_storage_in_state_dict():
 
     with pytest.deprecated_call():
         _ = load_state(compressed_model, old_style_sd, is_resume=True)
+
+
+def test_can_compress_with_config_and_resume_of_old_checkpoint():
+    model = SingleConv2dIdentityModel()
+    config = get_basic_quantization_config(input_info={
+        "sample_size": [1, 3, 100, 100]
+    })
+    register_bn_adaptation_init_args(config)
+    create_compressed_model_and_algo_for_test(model, config, compression_state=old_style_sd)

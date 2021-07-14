@@ -10,8 +10,7 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-from typing import Dict
-from typing import List
+from typing import Dict, List
 
 from nncf.common.quantization.quantizer_propagation.structs import QuantizationTrait
 from nncf.torch.graph import operator_metatypes

@@ -554,7 +554,7 @@ class FunctionalConverter(TFModelConverter):
             # output nodes without changing the name of the corresponding output, which won't be obvious to the user.
             nncf_node = nncf_graph.get_node_by_id(output_node_id)
             if not nncf_graph.get_next_nodes(nncf_node):
-                output_aux_node_name = PREFIX_AUXILIARY_OUTPUT_NODE + '_{}'.format(model_output_idx)
+                output_aux_node_name = f'{nncf_node.node_name}_{PREFIX_AUXILIARY_OUTPUT_NODE}_{model_output_idx}'
                 output_node = nncf_graph.add_nncf_node(
                     node_name=output_aux_node_name,
                     node_type=NNCFGraphNodeType.OUTPUT_NODE,

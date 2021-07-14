@@ -12,19 +12,22 @@
 """
 
 import os
+from typing import List
+
 import pytest
 from addict import Dict
 
 import tensorflow as tf
 import networkx as nx
 
+from nncf import NNCFConfig
 from tests.tensorflow import test_models
 from tests.tensorflow.helpers import get_empty_config, create_compressed_model_and_algo_for_test
 from tests.tensorflow.sparsity.magnitude.test_helpers import get_basic_filter_pruning_config
 from tests.tensorflow.sparsity.magnitude.test_helpers import get_basic_sparsity_config
 
 
-def get_basic_quantization_config(qconfig, input_sample_sizes=None):
+def get_basic_quantization_config(qconfig, input_sample_sizes=None) -> NNCFConfig:
     config = get_empty_config(input_sample_sizes=input_sample_sizes)
     config['compression'] = {'algorithm': 'quantization',
                              'activations': {
@@ -152,13 +155,16 @@ def _pruning_case_config(request):
 
 
 class ModelDesc:
-    def __init__(self, ref_graph_filename: str, model_builder, input_sample_sizes,
-                 rename_resource_nodes=False):
+    def __init__(self, ref_graph_filename: str, model_builder,
+                 input_sample_sizes,
+                 rename_resource_nodes=False,
+                 ignored_scopes: List[str] = None):
         self.model_name, _ = os.path.splitext(ref_graph_filename)
         self.model_builder = model_builder
         self.ref_graph_filename = ref_graph_filename
         self.input_sample_sizes = input_sample_sizes
         self.rename_resource_nodes = rename_resource_nodes
+        self.ignored_scopes = ignored_scopes
 
 
 SKIP_MAP = {
@@ -166,7 +172,8 @@ SKIP_MAP = {
         'inception_resnet_v2': pytest.mark.skip(reason='gitlab issue #17'),
         'nasnet_mobile': pytest.mark.skip(reason='gitlab issue #18'),
         'mobilenet_v2_slim': pytest.mark.skip(reason='ticket #46349'),
-        'xception': pytest.mark.skip(reason='gitlab issue #28')
+        'xception': pytest.mark.skip(reason='gitlab issue #28'),
+        'mask_rcnn': pytest.mark.skip(reason='ticket #58759')
     },
     'magnitude_sparsity': {
         'inception_resnet_v2': pytest.mark.skip(reason='gitlab issue #17'),
@@ -360,9 +367,18 @@ class TestModelsGraph:
         get_model_name(m) for m in get_test_models_desc('quantization')])
     def test_quantize_network(self, desc: ModelDesc, _quantization_case_config):
         model = desc.model_builder(input_shape=tuple(desc.input_sample_sizes[1:]))
+        if _quantization_case_config.qconfig.mode == "asymmetric" and \
+            _quantization_case_config.qconfig.per_channel:
+            pytest.skip("Ticket #59642")
         config = get_basic_quantization_config(_quantization_case_config.qconfig,
                                                input_sample_sizes=desc.input_sample_sizes)
-        compressed_model, _ = create_compressed_model_and_algo_for_test(model, config, should_init=False)
+        if desc.ignored_scopes is not None:
+            if "activations" in config["compression"]:
+                config["compression"]["activations"]["ignored_scopes"] = desc.ignored_scopes
+            else:
+                config["compression"]["activations"] = {"ignored_scopes": desc.ignored_scopes}
+
+        compressed_model, _ = create_compressed_model_and_algo_for_test(model, config, force_no_init=True)
 
         check_model_graph(compressed_model, desc.ref_graph_filename, _quantization_case_config.graph_dir,
                           desc.rename_resource_nodes)
@@ -373,7 +389,7 @@ class TestModelsGraph:
         model = desc.model_builder(input_shape=tuple(desc.input_sample_sizes[1:]))
         config = get_basic_sparsity_config(desc.input_sample_sizes, SparsityAlgo.magnitude)
         config['compression']['params'] = {'schedule': 'multistep'}
-        compressed_model, _ = create_compressed_model_and_algo_for_test(model, config, should_init=False)
+        compressed_model, _ = create_compressed_model_and_algo_for_test(model, config, force_no_init=True)
 
         check_model_graph(compressed_model, desc.ref_graph_filename, _magnitude_sparsity_case_config.graph_dir,
                           desc.rename_resource_nodes)
@@ -384,7 +400,7 @@ class TestModelsGraph:
         model = desc.model_builder(input_shape=tuple(desc.input_sample_sizes[1:]))
         config = get_basic_sparsity_config(desc.input_sample_sizes, SparsityAlgo.rb)
         config['compression']['params'] = {'schedule': 'multistep'}
-        compressed_model, _ = create_compressed_model_and_algo_for_test(model, config, should_init=False)
+        compressed_model, _ = create_compressed_model_and_algo_for_test(model, config, force_no_init=True)
 
         check_model_graph(compressed_model, desc.ref_graph_filename, _rb_sparsity_case_config.graph_dir,
                           desc.rename_resource_nodes)
@@ -394,7 +410,7 @@ class TestModelsGraph:
     def test_pruning_network(self, desc: ModelDesc, _pruning_case_config):
         model = desc.model_builder(input_shape=tuple(desc.input_sample_sizes[1:]))
         config = get_basic_filter_pruning_config(desc.input_sample_sizes)
-        compressed_model, _ = create_compressed_model_and_algo_for_test(model, config, should_init=False)
+        compressed_model, _ = create_compressed_model_and_algo_for_test(model, config, force_no_init=True)
 
         check_model_graph(compressed_model, desc.ref_graph_filename, _pruning_case_config.graph_dir,
                           desc.rename_resource_nodes)
@@ -410,11 +426,14 @@ QUANTIZE_OUTPUTS = [
 
 @pytest.mark.parametrize('desc', QUANTIZE_OUTPUTS, ids=[m.model_name for m in QUANTIZE_OUTPUTS])
 def test_quantize_outputs(desc: ModelDesc, _quantization_case_config):
+    if _quantization_case_config.qconfig.mode == "asymmetric" and \
+            _quantization_case_config.qconfig.per_channel:
+        pytest.skip("Ticket #59642")
     model = desc.model_builder(input_shape=tuple(desc.input_sample_sizes[1:]))
     config = get_basic_quantization_config(_quantization_case_config.qconfig,
                                            input_sample_sizes=desc.input_sample_sizes)
     config['compression']['quantize_outputs'] = True
-    compressed_model, _ = create_compressed_model_and_algo_for_test(model, config, should_init=False)
+    compressed_model, _ = create_compressed_model_and_algo_for_test(model, config, force_no_init=True)
 
     check_model_graph(compressed_model, desc.ref_graph_filename, _quantization_case_config.graph_dir,
                       desc.rename_resource_nodes)

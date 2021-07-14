@@ -10,13 +10,7 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-
-def merge_two_types_of_operations(first_op, second_op, label):
-    res = {'type': first_op['type']}
-    res['type'].extend(second_op['type'])
-    res['label'] = label
-    return res
-
+from nncf.common.graph.patterns import merge_two_types_of_operations
 
 LINEAR_OPERATIONS = {'type': ['linear',
                               'conv1d',
@@ -54,9 +48,9 @@ NON_RELU_ACTIVATIONS_OPERATIONS = {'type': ['elu',
                                             'gelu'],
                                    'label': 'NON_RELU_ACTIVATIONS'}
 
-ACTIVATIONS_OPERATIONS = merge_two_types_of_operations(RELU_OPERATIONS,
-                                                       NON_RELU_ACTIVATIONS_OPERATIONS,
-                                                       'ACTIVATIONS')
+ATOMIC_ACTIVATIONS_OPERATIONS = merge_two_types_of_operations(RELU_OPERATIONS,
+                                                              NON_RELU_ACTIVATIONS_OPERATIONS,
+                                                              'ATOMIC_ACTIVATIONS')
 
 ARITHMETIC_OPERATIONS = {'type': ['__iadd__',
                                   '__add__',

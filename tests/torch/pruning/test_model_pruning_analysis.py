@@ -25,7 +25,6 @@ from nncf.common.pruning.clusterization import Cluster
 from nncf.common.pruning.clusterization import Clusterization
 from nncf.common.pruning.model_analysis import ModelAnalyzer
 from nncf.common.pruning.model_analysis import cluster_special_ops
-from nncf.common.pruning.pruning_node_selector import PruningNodeSelector
 from nncf.torch.dynamic_graph.graph_tracer import ModelInputInfo
 from nncf.torch.layers import NNCF_PRUNING_MODULES_DICT
 from nncf.torch.nncf_network import NNCFNetwork
@@ -33,8 +32,9 @@ from nncf.torch.pruning.export_helpers import PTElementwise
 from nncf.torch.pruning.export_helpers import PTIdentityMaskForwardOps
 from nncf.torch.pruning.export_helpers import PT_PRUNING_OPERATOR_METATYPES
 from nncf.common.pruning.utils import is_depthwise_conv
+from nncf.torch.pruning.filter_pruning.algo import FilterPruningBuilder
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
-from tests.torch.helpers import create_nncf_model_and_algo_builder
+from tests.torch.helpers import create_nncf_model_and_single_algo_builder
 from tests.torch.pruning.helpers import PruningTestModelEltwise
 from tests.torch.pruning.helpers import PruningTestModelSharedConvs
 from tests.torch.pruning.helpers import TestModelBranching
@@ -47,16 +47,14 @@ from tests.torch.pruning.helpers import get_basic_pruning_config
 
 
 # pylint: disable=protected-access
-def create_nncf_model_and_builder(model, config_params):
+def create_nncf_model_and_pruning_builder(model: torch.nn.Module, config_params: Dict) -> Tuple[NNCFNetwork,
+                                                                                                FilterPruningBuilder]:
     nncf_config = get_basic_pruning_config(input_sample_size=[1, 1, 8, 8])
     nncf_config['compression']['algorithm'] = 'filter_pruning'
     for key, value in config_params.items():
         nncf_config['compression']['params'][key] = value
-    nncf_model, composite_builder = create_nncf_model_and_algo_builder(model, nncf_config)
-
-    assert len(composite_builder.child_builders) == 1
-    algo_builder = composite_builder.child_builders[0]
-    return nncf_model, algo_builder
+    nncf_model, pruning_builder = create_nncf_model_and_single_algo_builder(model, nncf_config)
+    return nncf_model, pruning_builder
 
 
 class GroupPruningModulesTestStruct:
@@ -187,6 +185,7 @@ def test_pruning_node_selector(test_input_info_struct_: GroupPruningModulesTestS
 
     pruning_operations = [v.op_func_name for v in NNCF_PRUNING_MODULES_DICT]
     grouping_operations = PTElementwise.get_all_op_aliases()
+    from nncf.common.pruning.pruning_node_selector import PruningNodeSelector
     pruning_node_selector = PruningNodeSelector(PT_PRUNING_OPERATOR_METATYPES,
                                                 pruning_operations,
                                                 grouping_operations,
@@ -247,7 +246,9 @@ def test_special_ops_struct_(request):
 
 def test_group_special_nodes(test_special_ops_struct: GroupSpecialModulesTestStruct):
     model = test_special_ops_struct.model()
-    nncf_model, algo_builder = create_nncf_model_and_builder(model, {'prune_first_conv': True, 'prune_last_conv': True})
+    nncf_model, algo_builder = create_nncf_model_and_pruning_builder(model,
+                                                                     {'prune_first_conv': True,
+                                                                      'prune_last_conv': True})
 
     special_ops_clusterization = cluster_special_ops(nncf_model.get_original_graph(),
                                                      algo_builder.get_types_of_grouping_ops(),
@@ -280,7 +281,7 @@ def test_struct_(request):
 
 def test_model_analyzer(test_struct: GroupSpecialModulesTestStruct):
     model = test_struct.model()
-    nncf_model, _ = create_nncf_model_and_builder(model, {'prune_first_conv': True, 'prune_last_conv': True})
+    nncf_model, _ = create_nncf_model_and_pruning_builder(model, {'prune_first_conv': True, 'prune_last_conv': True})
 
     model_analyser = ModelAnalyzer(nncf_model.get_original_graph(), PT_PRUNING_OPERATOR_METATYPES, is_depthwise_conv)
     can_prune_analysis = model_analyser.analyse_model_before_pruning()
@@ -367,7 +368,7 @@ def test_prunable_struct_(request):
 
 def test_is_module_prunable(test_prunable_struct: ModulePrunableTestStruct):
     model = test_prunable_struct.model()
-    nncf_model, algo_builder = create_nncf_model_and_builder(model, test_prunable_struct.config_params)
+    nncf_model, algo_builder = create_nncf_model_and_pruning_builder(model, test_prunable_struct.config_params)
     graph = nncf_model.get_original_graph()
     for module_node_name in test_prunable_struct.is_module_prunable:
         nncf_node = graph.get_node_by_name(module_node_name)

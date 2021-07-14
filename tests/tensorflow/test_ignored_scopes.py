@@ -10,6 +10,7 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+from collections import Counter
 
 import tensorflow as tf
 import tensorflow.keras.layers as layers
@@ -39,11 +40,12 @@ def test_ignored_scopes():
         layers.Conv2D(3, 3, name='c3_1'),
         layers.Conv2D(3, 3, name='end')
     ])
-    compressed_model, _ = create_compressed_model_and_algo_for_test(model, config, should_init=False)
+
+    compressed_model, _ = create_compressed_model_and_algo_for_test(model, config, force_no_init=True)
 
     ref_fake_quantize_names = [
-        'conv1_input/fake_quantize',
-        'some_scope/conv3/c2/fake_quantize',
+        'some_scope/conv2/c1/fake_quantize',
+        'some_scope/conv3/c3/fake_quantize',
         'c3_1/fake_quantize'
     ]
     ref_nncf_wrapper_names = [
@@ -53,5 +55,5 @@ def test_ignored_scopes():
 
     fake_quantize_names = [layer.name for layer in compressed_model.layers if isinstance(layer, FakeQuantize)]
     nncf_wrapper_names = [layer.name for layer in compressed_model.layers if isinstance(layer, NNCFWrapper)]
-    assert fake_quantize_names == ref_fake_quantize_names
-    assert nncf_wrapper_names == ref_nncf_wrapper_names
+    assert Counter(fake_quantize_names) == Counter(ref_fake_quantize_names)
+    assert Counter(nncf_wrapper_names) == Counter(ref_nncf_wrapper_names)

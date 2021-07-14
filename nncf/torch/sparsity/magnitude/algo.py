@@ -10,28 +10,33 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-
+from copy import deepcopy
 from typing import List
 
 import torch
 
-from nncf.common.initialization.batchnorm_adaptation import BatchnormAdaptationAlgorithm
-from nncf.torch.algo_selector import COMPRESSION_ALGORITHMS
+from nncf import NNCFConfig
 from nncf.api.compression import CompressionStage
+from nncf.common.accuracy_aware_training.training_loop import ADAPTIVE_COMPRESSION_CONTROLLERS
 from nncf.common.graph import NNCFNode
+from nncf.common.initialization.batchnorm_adaptation import BatchnormAdaptationAlgorithm
+from nncf.common.schedulers import StubCompressionScheduler
+from nncf.common.sparsity.schedulers import SPARSITY_SCHEDULERS
+from nncf.common.sparsity.statistics import LayerThreshold
+from nncf.common.sparsity.statistics import MagnitudeSparsityStatistics
+from nncf.common.statistics import NNCFStatistics
+from nncf.config.extractors import extract_algo_specific_config
+from nncf.config.extractors import extract_bn_adaptation_init_params
+from nncf.torch.algo_selector import COMPRESSION_ALGORITHMS
 from nncf.torch.compression_method_api import PTCompressionAlgorithmController
 from nncf.torch.nncf_network import NNCFNetwork
-from nncf.torch.sparsity.base_algo import BaseSparsityAlgoBuilder, BaseSparsityAlgoController, SparseModuleInfo
-from nncf.torch.sparsity.layers import BinaryMask
-from nncf.torch.sparsity.magnitude.functions import WEIGHT_IMPORTANCE_FUNCTIONS, calc_magnitude_binary_mask
+from nncf.torch.sparsity.base_algo import BaseSparsityAlgoBuilder
+from nncf.torch.sparsity.base_algo import BaseSparsityAlgoController
+from nncf.torch.sparsity.base_algo import SparseModuleInfo
 from nncf.torch.sparsity.collector import PTSparseModelStatisticsCollector
-from nncf.common.sparsity.schedulers import SPARSITY_SCHEDULERS
-from nncf.common.accuracy_aware_training.training_loop import ADAPTIVE_COMPRESSION_CONTROLLERS
-from nncf.common.sparsity.statistics import MagnitudeSparsityStatistics
-from nncf.common.schedulers import StubCompressionScheduler
-from nncf.common.statistics import NNCFStatistics
-from nncf.common.sparsity.statistics import LayerThreshold
-from nncf.config.extractors import extract_bn_adaptation_init_params
+from nncf.torch.sparsity.layers import BinaryMask
+from nncf.torch.sparsity.magnitude.functions import WEIGHT_IMPORTANCE_FUNCTIONS
+from nncf.torch.sparsity.magnitude.functions import calc_magnitude_binary_mask
 
 
 @COMPRESSION_ALGORITHMS.register('magnitude_sparsity')
@@ -39,26 +44,29 @@ class MagnitudeSparsityBuilder(BaseSparsityAlgoBuilder):
     def create_weight_sparsifying_operation(self, target_module_node: NNCFNode, compression_lr_multiplier: float):
         return BinaryMask(target_module_node.layer_attributes.get_weight_shape())
 
-    def build_controller(self, target_model: NNCFNetwork) -> PTCompressionAlgorithmController:
-        return MagnitudeSparsityController(target_model, self._sparsified_module_info, self.config)
+    def _build_controller(self, model: NNCFNetwork) -> PTCompressionAlgorithmController:
+        return MagnitudeSparsityController(model, self._sparsified_module_info, self.config)
 
 
 @ADAPTIVE_COMPRESSION_CONTROLLERS.register('pt_magnitude_sparsity')
 class MagnitudeSparsityController(BaseSparsityAlgoController):
-    def __init__(self, target_model: NNCFNetwork, sparsified_module_info: List[SparseModuleInfo], config):
+    def __init__(self, target_model: NNCFNetwork, sparsified_module_info: List[SparseModuleInfo],
+                 config: NNCFConfig):
         super().__init__(target_model, sparsified_module_info)
         self._config = config
-        params = self._config.get('params', {})
+        self._algo_config = extract_algo_specific_config(self._config, 'magnitude_sparsity')
+        params = self._algo_config.get('params', {})
 
         self._weight_importance_fn = WEIGHT_IMPORTANCE_FUNCTIONS[params.get('weight_importance', 'normed_abs')]
         self._mode = params.get('sparsity_level_setting_mode', 'global')
         self._scheduler = None
-        sparsity_init = self._config.get('sparsity_init', 0)
+        sparsity_init = self._algo_config.get('sparsity_init', 0)
 
         if self._mode == 'global':
-            params['sparsity_init'] = sparsity_init
+            scheduler_params = deepcopy(params)
+            scheduler_params['sparsity_init'] = sparsity_init
             scheduler_cls = SPARSITY_SCHEDULERS.get(params.get('schedule', 'polynomial'))
-            self._scheduler = scheduler_cls(self, params)
+            self._scheduler = scheduler_cls(self, scheduler_params)
         else:
             self._scheduler = StubCompressionScheduler()
 
@@ -158,5 +166,7 @@ class MagnitudeSparsityController(BaseSparsityAlgoController):
 
     def _run_batchnorm_adaptation(self):
         if self._bn_adaptation is None:
-            self._bn_adaptation = BatchnormAdaptationAlgorithm(**extract_bn_adaptation_init_params(self._config))
+            self._bn_adaptation = BatchnormAdaptationAlgorithm(
+                **extract_bn_adaptation_init_params(self._config,
+                                                    'magnitude_sparsity'))
         self._bn_adaptation.run(self.model)

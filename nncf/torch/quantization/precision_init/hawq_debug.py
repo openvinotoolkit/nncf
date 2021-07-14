@@ -42,7 +42,7 @@ class HAWQDebugger:
         self._num_weights = len(traces_per_layer.traces_order)
         self._perturbations = perturbations
 
-        from nncf.torch.debug import DEBUG_LOG_DIR
+        from nncf.common.utils.debug import DEBUG_LOG_DIR
         self._dump_dir = Path(DEBUG_LOG_DIR) / Path("hawq_dumps")
         self._dump_dir.mkdir(parents=True, exist_ok=True)
 

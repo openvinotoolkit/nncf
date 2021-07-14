@@ -10,6 +10,7 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+from typing import Dict
 from typing import Optional
 from typing import List
 from typing import Tuple
@@ -188,17 +189,20 @@ class GraphPattern:
         last node of self's graph and first node of other's graph,
         which are found by nx.lexicographical_topological_sort().
 
+        If other starts from a node with the PATTERN_INPUT_NODE_TYPE type, the input node of the other will be
+        discarded from the final pattern.
+
         :param other: GraphPattern that will be added
         :param edges: List of edges between self and other graphs.
             Edges must begin at self and finish at other.
         """
         # Unite nodes
-        other_graph = other.graph
+        other_graph_copy = copy.deepcopy(other.graph)
         node_mapping = {}
-        for node in other_graph.nodes:
-            node_mapping[node] = self._node_counter
+        for node_key in other_graph_copy.nodes:
+            node_mapping[node_key] = self._node_counter
             self._node_counter += 1
-        other_graph_copy = nx.relabel_nodes(other.graph, node_mapping, copy=True)
+        other_graph_copy = nx.relabel_nodes(other_graph_copy, node_mapping, copy=True)
 
         saved_graph = copy.deepcopy(self._graph)
         self._graph = nx.union(saved_graph, other_graph_copy)
@@ -229,3 +233,10 @@ class GraphPattern:
 
     def dump_graph(self, path: str) -> None:
         nx.drawing.nx_pydot.write_dot(self._graph, path)
+
+
+def merge_two_types_of_operations(first_op: Dict, second_op: Dict, label: str) -> Dict:
+    res = {'type': first_op['type']}
+    res['type'].extend(second_op['type'])
+    res['label'] = label
+    return res

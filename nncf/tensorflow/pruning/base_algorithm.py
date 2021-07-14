@@ -29,7 +29,8 @@ from nncf.common.pruning.statistics import PrunedLayerSummary
 from nncf.common.pruning.statistics import PrunedModelStatistics
 from nncf.common.pruning.structs import PrunedLayerInfoBase
 from nncf.common.utils.logger import logger as nncf_logger
-from nncf.tensorflow.api.compression import TFCompressionAlgorithmController
+from nncf.common.compression import BaseCompressionAlgorithmController
+from nncf.config.extractors import extract_algo_specific_config
 from nncf.tensorflow.api.compression import TFCompressionAlgorithmBuilder
 from nncf.tensorflow.graph.converter import TFModelConverterFactory
 from nncf.tensorflow.graph.metatypes.keras_layers import TFBatchNormalizationLayerMetatype
@@ -62,10 +63,8 @@ class BasePruningAlgoBuilder(TFCompressionAlgorithmBuilder):
 
     def __init__(self, config: NNCFConfig, should_init: bool = True):
         super().__init__(config, should_init)
-        params = config.get('params', {})
+        params = self._algo_config.get('params', {})
         self._params = params
-        self.ignored_scopes = self.config.get('ignored_scopes', [])
-        self.target_scopes = self.config.get('target_scopes')
 
         self._ignore_frozen_layers = True
         self._prune_first = params.get('prune_first_conv', False)
@@ -216,7 +215,7 @@ class BasePruningAlgoBuilder(TFCompressionAlgorithmBuilder):
         Note: Single node per layer for shared bactchnorm layers
         """
         layer_nodes = [node_ for node_ in group.elements
-                       if get_layer_identifier(node_) == layer_name]
+                       if node_.layer_name == layer_name]
         bn_nodes = []
         bn_layer_names = []
         for layer_node in layer_nodes:
@@ -247,7 +246,7 @@ class BasePruningAlgoBuilder(TFCompressionAlgorithmBuilder):
         return f'{layer_name}_{weight_attr_name}_pruning_binary_mask'
 
 
-class BasePruningAlgoController(TFCompressionAlgorithmController):
+class BasePruningAlgoController(BaseCompressionAlgorithmController):
     """
     Serves as a handle to the additional modules, parameters and hooks inserted
     into the original uncompressed model to enable pruning.
@@ -263,8 +262,10 @@ class BasePruningAlgoController(TFCompressionAlgorithmController):
         self._op_names = op_names
         self._prunable_types = prunable_types
         self.config = config
-        params = self.config.get('params', {})
-        self.pruning_init = config.get('pruning_init', 0)
+        self.pruning_config = extract_algo_specific_config(config,
+                                                           "filter_pruning")
+        params = self.pruning_config.get('params', {})
+        self.pruning_init = self.pruning_config.get('pruning_init', 0)
         self.pruning_rate = self.pruning_init
         self._pruned_layer_groups_info = pruned_layer_groups_info
         self.prune_flops = False

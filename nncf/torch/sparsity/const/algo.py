@@ -28,8 +28,8 @@ class ConstSparsityBuilder(BaseSparsityAlgoBuilder):
     def create_weight_sparsifying_operation(self, target_module_node: NNCFNode, compression_lr_multiplier: float):
         return BinaryMask(target_module_node.layer_attributes.get_weight_shape())
 
-    def build_controller(self, target_model: NNCFNetwork) -> PTCompressionAlgorithmController:
-        return ConstSparsityController(target_model, self._sparsified_module_info)
+    def _build_controller(self, model: NNCFNetwork) -> PTCompressionAlgorithmController:
+        return ConstSparsityController(model, self._sparsified_module_info)
 
     def _are_frozen_layers_allowed(self) -> Tuple[bool, str]:
         return True, 'Frozen layers are allowed for const sparsity'

@@ -11,14 +11,16 @@
  limitations under the License.
 """
 
+import os.path as osp
 import sys
 import time
+from copy import deepcopy
 from pathlib import Path
 
-import os.path as osp
 import torch
 import torch.utils.data as data
-from copy import deepcopy
+
+from examples.torch.common.argparser import parse_args
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 
 from examples.torch.common import restricted_pickle_module
@@ -26,16 +28,32 @@ from examples.torch.common.argparser import get_common_argument_parser
 from examples.torch.common.distributed import DistributedSampler
 from examples.torch.common.example_logger import logger
 from examples.torch.common.execution import get_execution_mode
-from examples.torch.common.execution import prepare_model_for_execution, start_worker
+from examples.torch.common.execution import prepare_model_for_execution
 from examples.torch.common.execution import set_seed
-from examples.torch.common.model_loader import load_resuming_model_state_dict_and_checkpoint_from_path
-from examples.torch.common.optimizer import get_parameter_groups, make_optimizer
-from examples.torch.common.sample_config import create_sample_config, SampleConfig
-from examples.torch.common.utils import get_name, make_additional_checkpoints, configure_paths, \
-    create_code_snapshot, is_on_first_rank, configure_logging, print_args, is_pretrained_model_requested, \
-    log_common_mlflow_params, SafeMLFLow, configure_device
+from examples.torch.common.execution import start_worker
+from examples.torch.common.model_loader import COMPRESSION_STATE_ATTR
+from examples.torch.common.model_loader import MODEL_STATE_ATTR
+from examples.torch.common.model_loader import extract_model_and_compression_states
+from examples.torch.common.model_loader import load_resuming_checkpoint
+from examples.torch.common.optimizer import get_parameter_groups
+from examples.torch.common.optimizer import make_optimizer
+from examples.torch.common.sample_config import SampleConfig
+from examples.torch.common.sample_config import create_sample_config
+from examples.torch.common.utils import SafeMLFLow
+from examples.torch.common.utils import configure_device
+from examples.torch.common.utils import configure_logging
+from examples.torch.common.utils import configure_paths
+from examples.torch.common.utils import create_code_snapshot
+from examples.torch.common.utils import get_name
+from examples.torch.common.utils import is_on_first_rank
+from examples.torch.common.utils import is_pretrained_model_requested
+from examples.torch.common.utils import log_common_mlflow_params
+from examples.torch.common.utils import make_additional_checkpoints
+from examples.torch.common.utils import print_args
 from examples.torch.common.utils import write_metrics
-from examples.torch.object_detection.dataset import detection_collate, get_testing_dataset, get_training_dataset
+from examples.torch.object_detection.dataset import detection_collate
+from examples.torch.object_detection.dataset import get_testing_dataset
+from examples.torch.object_detection.dataset import get_training_dataset
 from examples.torch.object_detection.eval import test_net
 from examples.torch.object_detection.layers.modules import MultiBoxLoss
 from examples.torch.object_detection.model import build_ssd
@@ -75,7 +93,7 @@ def get_argument_parser():
 
 def main(argv):
     parser = get_argument_parser()
-    args = parser.parse_args(args=argv)
+    args = parse_args(parser, argv)
     config = create_sample_config(args, parser)
 
     configure_paths(config)
@@ -166,12 +184,10 @@ def main_worker(current_gpu, config):
     ##################
     resuming_checkpoint_path = config.resuming_checkpoint_path
 
-    resuming_model_sd = None
+    resuming_checkpoint = None
     if resuming_checkpoint_path is not None:
-        resuming_model_sd, resuming_checkpoint = load_resuming_model_state_dict_and_checkpoint_from_path(
-            resuming_checkpoint_path)
-
-    compression_ctrl, net = create_model(config, resuming_model_sd)
+        resuming_checkpoint = load_resuming_checkpoint(resuming_checkpoint_path)
+    compression_ctrl, net = create_model(config, resuming_checkpoint)
     if config.distributed:
         config.batch_size //= config.ngpus_per_node
         config.workers //= config.ngpus_per_node
@@ -188,14 +204,13 @@ def main_worker(current_gpu, config):
     # Load additional checkpoint data
     #################################
 
-    if resuming_checkpoint_path is not None and config.mode.lower() == 'train' and config.to_onnx is None:
-        compression_ctrl.load_state(resuming_checkpoint)
+    if resuming_checkpoint_path is not None and 'train' in config.mode:
         optimizer.load_state_dict(resuming_checkpoint.get('optimizer', optimizer.state_dict()))
         config.start_epoch = resuming_checkpoint.get('epoch', 0) + 1
 
     log_common_mlflow_params(config)
 
-    if config.to_onnx:
+    if 'export' in config.mode and ('train' not in config.mode and 'test' not in config.mode):
         compression_ctrl.export_model(config.to_onnx)
         logger.info("Saved to {}".format(config.to_onnx))
         return
@@ -204,7 +219,7 @@ def main_worker(current_gpu, config):
         statistics = compression_ctrl.statistics()
         logger.info(statistics.to_str())
 
-    if config.mode.lower() == 'train' and is_accuracy_aware_training(config):
+    if 'train' in config.mode and is_accuracy_aware_training(config):
         # validation function that returns the target metric value
         # pylint: disable=E1123
         def validate_fn(model, epoch):
@@ -238,9 +253,10 @@ def main_worker(current_gpu, config):
                                           configure_optimizers_fn=configure_optimizers_fn,
                                           tensorboard_writer=config.tb,
                                           log_dir=config.log_dir)
-        return
+    elif 'train' in config.mode:
+        train(net, compression_ctrl, train_data_loader, test_data_loader, criterion, optimizer, config, lr_scheduler)
 
-    if config.mode.lower() == 'test':
+    if 'test' in config.mode:
         with torch.no_grad():
             net.eval()
             if config['ssd_params'].get('loss_inference', False):
@@ -251,9 +267,10 @@ def main_worker(current_gpu, config):
                 mAp = test_net(net, config.device, test_data_loader, distributed=config.distributed)
                 if config.metrics_dump is not None:
                     write_metrics(mAp, config.metrics_dump)
-            return
 
-    train(net, compression_ctrl, train_data_loader, test_data_loader, criterion, optimizer, config, lr_scheduler)
+    if 'export' in config.mode:
+        compression_ctrl.export_model(config.to_onnx)
+        logger.info("Saved to {}".format(config.to_onnx))
 
 
 def create_dataloaders(config):
@@ -310,7 +327,7 @@ def create_dataloaders(config):
 
 
 def create_model(config: SampleConfig,
-                 resuming_model_sd: dict = None):
+                 resuming_checkpoint: dict = None):
     input_info_list = create_input_infos(config.nncf_config)
     image_size = input_info_list[0].shape[-1]
     ssd_net = build_ssd(config.model, config.ssd_params, image_size, config.num_classes, config)
@@ -321,9 +338,10 @@ def create_model(config: SampleConfig,
         load_state(ssd_net, sd)
 
     ssd_net.to(config.device)
-
-    compression_ctrl, compressed_model = create_compressed_model(ssd_net, config.nncf_config,
-                                                                 resuming_model_sd)
+    model_state_dict, compression_state = extract_model_and_compression_states(resuming_checkpoint)
+    compression_ctrl, compressed_model = create_compressed_model(ssd_net, config.nncf_config, compression_state)
+    if model_state_dict is not None:
+        load_state(compressed_model, model_state_dict, is_resume=True)
     compressed_model, _ = prepare_model_for_execution(compressed_model, config)
 
     compressed_model.train()
@@ -403,11 +421,10 @@ def train(net, compression_ctrl, train_data_loader, test_data_loader, criterion,
 
             checkpoint_file_path = osp.join(config.checkpoint_save_dir, "{}_last.pth".format(get_name(config)))
             torch.save({
-                'state_dict': net.state_dict(),
+                MODEL_STATE_ATTR: net.state_dict(),
+                COMPRESSION_STATE_ATTR: compression_ctrl.get_compression_state(),
                 'optimizer': optimizer.state_dict(),
                 'epoch': epoch,
-                'scheduler': compression_ctrl.scheduler.get_state(),
-                'compression_stage': compression_stage,
             }, str(checkpoint_file_path))
             make_additional_checkpoints(checkpoint_file_path,
                                         is_best=is_best,
@@ -443,11 +460,10 @@ def train(net, compression_ctrl, train_data_loader, test_data_loader, criterion,
 
             checkpoint_file_path = osp.join(config.checkpoint_save_dir, "{}_last.pth".format(get_name(config)))
             torch.save({
-                'state_dict': net.state_dict(),
+                MODEL_STATE_ATTR: net.state_dict(),
+                COMPRESSION_STATE_ATTR: compression_ctrl.get_compression_state(),
                 'optimizer': optimizer.state_dict(),
                 'epoch': epoch,
-                'scheduler': compression_ctrl.scheduler.get_state(),
-                'compression_stage': compression_stage,
             }, str(checkpoint_file_path))
             make_additional_checkpoints(checkpoint_file_path,
                                         is_best=is_best,

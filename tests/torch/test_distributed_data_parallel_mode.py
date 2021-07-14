@@ -57,7 +57,7 @@ def worker(rank: int, world_size: int) -> None:
                     "num_init_samples": 10
                 },
                 "batchnorm_adaptation": {
-                    "num_bn_adaptation_samples": 10,
+                    "num_bn_adaptation_samples": 10
                 }
             }
         }
