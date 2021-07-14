@@ -40,7 +40,7 @@ The framework is designed so that the modifications to your original training co
     criterion with 2 arguments: model outputs and targets).
 
     The initialization expects that the model is called with its first argument equal to the dataloader output.
-    If your model has more complex input arguments you can create your own data loader implementing 
+    If your model has more complex input arguments you can create your own data loader implementing
     `nncf.common.initialization.dataloader.NNCFDataLoader` interface to return a tuple of (_single model input_ , _the rest of the model inputs as a kwargs dict_).
 
  4. Right after you create an instance of the original model and load its weights, **wrap the model** by making the following call
@@ -158,3 +158,86 @@ class MyModule(torch.nn.Module):
 If registered module should be ignored by specific algorithms use `ignored_algorithms` parameter of decorator.
 
 In the example above, the NNCF-compressed models that contain instances of `MyModule` will have the corresponding modules extended with functionality that will allow NNCF to quantize, sparsify or prune the `weight` parameter of `MyModule` before it takes part in `MyModule`'s `forward` calculation.
+
+### Accuracy-aware model training
+NNCF has the capability to apply the model compression algorithms while satisfying the user-defined accuracy constraints. This is done by executing an internal custom compression-aware training loop, which also helps to automate away some of the manual hyperparameter search related to model training such as setting the total number of epochs, the target compression rate for the model, etc. The currently supported training loop (encapsulated in the `AdaptiveCompressionTrainingLoop` class) is targeted for the automated discovery of the compression rate for the model given that it satisfies the user-specified maximal tolerable accuracy drop due to compression. The training loop could be run with either PyTorch or TensorFlow backend with the same user interface of the training loop (except for the TF case where the Keras API is used for training).
+
+The following import is required to run the accuracy-aware adaptive training loop
+```python
+from nncf import AdaptiveCompressionTrainingLoop
+```
+In order to instantiate an `AdaptiveCompressionTrainingLoop` object, one has to pass the `NNCFConfig` object and the compression controller (that is returned upon compressed model creation, see above) to the training loop constructor
+```python
+training_loop = AdaptiveCompressionTrainingLoop(nncf_config, compression_ctrl)
+```
+In order to properly instantiate the adaptive compression training loop, the user has to specify the single compression algorithm to perform the compression rate search for. The search can be only done for a single compression algorithm in the pipeline (i.e. several compression algorithms could be applied to the model and the search is going to be performed for a single one); currently supported algorithms for compression rate search are magnitude sparsity and filter pruning. The exact compression algorithm for which the search is done is determined from `"accuracy_aware_training"` config section added to the target compression algorithm section. Below is an example of a filter pruning configuration with added `"accuracy_aware_training"` parameters. The parameters to be set by the user in this config section are (i) `maximal_accuracy_degradation` - the maximal allowed accuracy metric drop relative to the original model (in percent), (ii) `initial_training_phase_epochs` - the number of epochs to train the model with the compression schedule specified in the  `"params"` section, (iii) `patience_epochs` - the number of epochs to train the model for a compression rate level set by the search algorithm before switching to another compression rate value.
+
+```
+"compression": [
+    {
+        "algorithm": "filter_pruning",
+        "accuracy_aware_training": {
+            "maximal_accuracy_degradation": 1.0,
+            "initial_training_phase_epochs": 100,
+            "patience_epochs": 30
+        },
+        "pruning_init": 0.05,
+        "params": {
+            "schedule": "exponential",
+            "pruning_target": 0.1,
+            "pruning_steps": 50,
+            "weight_importance": "geometric_median"
+        }
+    }
+]
+
+```
+
+The training loop is launched by calling its `run` method. Before the start of the training loop, the user is expected to define several functions related to the training of the model and pass them as arguments to the `run` method of the training loop instance:
+
+```python
+
+def train_epoch_fn(compression_ctrl, model, **kwargs):
+    '''
+    A function that takes the compression controller and the
+    compressed model instance and trains it for a single epoch.
+    Optional arguments, that are packed into the kwargs dictionary
+    unless explicitly specified as arguments, are the following:
+    `optimizer` - the optimizer instance, if it is defined in the training
+    pipeline; `lr_scheduler` - the learning rate scheduler instance, in case
+    it is defined in the training pipeline and used during single-epoch training,
+    e.g. to adjust the learning rate on every iteration; `epoch` - current epoch
+    count (in case it is needed for logging). Other entities used in this function
+    are expected to be supplied as nonlocal variables of the outer function scope
+    (i.e. `train_epoch_fn` to be used as a closure, see training samples for examples).
+    Note that all of the NNCF-related integration code should be in place inside of this
+    function to properly execute compression-aware training.
+    '''
+
+def validate_fn(model, **kwargs):
+    '''
+    A function that takes the model, runs its evaluation on the validation set
+    and returns the float value of the target accuracy metric. Defined similarly
+    to the `train_epoch_fn` above. The optional argument is `epoch` - current epoch
+    number, if required for logging.
+    '''
+
+def configure_optimizers_fn():
+    '''
+    An (optional) function that instantiates an optimizer and a learning rate
+    scheduler before fine-tuning. Should be registered in all of the cases when
+    an explicit optimizer/LR scheduler object is used for training. The `optimizer`
+    and `lr_scheduler` arguments should be defined in the `train_epoch_fn` function
+    in this case as well. The `configure_optimizers_fn` should return a tuple consisting
+    of an optimizer instance and an LR scheduler instance (replace with None if the latter
+    is not applicable).
+```
+Once the above functions are defined, you could pass them to the `run` method of the `AdaptiveCompressionTrainingLoop` instance:
+```python
+
+model = training_loop.run(model,
+                          train_epoch_fn=train_epoch_fn,
+                          validate_fn=validate_fn,
+                          configure_optimizers_fn=configure_optimizers_fn)
+```
+The above call executes the acccuracy-aware adaptive compression training loop and return the compressed model with the maximal found compression rate and satisfying the defined accuracy drop criteria. For more details on how to use the accuracy-aware training loop functionality of NNCF, please refer to its [documentation](./accuracy_aware_model_training/TrainingLoop.md).

@@ -35,24 +35,20 @@ class TrainingRunner(ABC):
         """
 
     @abstractmethod
-    def validate(self, model: ModelType, compression_controller: CompressionAlgorithmController):
+    def validate(self, model: ModelType):
         """
         Compute the target metric value on the validation dataset for the supplied model.
 
         :param model: The model to be evaluated
-        :param compression_controller: The compression controller to be used during
-        model evaluation
         :return: Target validation metric value (float).
         """
 
     @abstractmethod
-    def dump_checkpoint(self, model: ModelType, compression_controller: CompressionAlgorithmController):
+    def dump_checkpoint(self, model: ModelType):
         """
         Dump current model checkpoint on disk.
 
         :param model: The model to be saved
-        :param compression_controller: The compression controller to be used during
-        checkpoint saving
         """
 
     @abstractmethod

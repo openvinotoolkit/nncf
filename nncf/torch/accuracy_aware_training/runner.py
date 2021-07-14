@@ -88,9 +88,9 @@ class PTAccuracyAwareTrainingRunner(BaseAccuracyAwareTrainingRunner):
         # assuming that epoch number is only used for logging in train_fn:
         self._train_epoch_fn(compression_controller,
                              model,
-                             self.cumulative_epoch_count,
-                             self.optimizer,
-                             self.lr_scheduler)
+                             epoch=self.cumulative_epoch_count,
+                             optimizer=self.optimizer,
+                             lr_scheduler=self.lr_scheduler)
         if self.lr_scheduler is not None and self.lr_updates_needed:
             self.lr_scheduler.step(self.training_epoch_count if not isinstance(self.lr_scheduler, ReduceLROnPlateau)
                                    else self.best_val_metric_value)
@@ -100,7 +100,7 @@ class PTAccuracyAwareTrainingRunner(BaseAccuracyAwareTrainingRunner):
         self.current_val_metric_value = None
         if self.validate_every_n_epochs is not None and \
             self.training_epoch_count % self.validate_every_n_epochs == 0:
-            self.current_val_metric_value = self.validate(model, compression_controller)
+            self.current_val_metric_value = self.validate(model)
 
         if is_main_process():
             if self.verbose:
@@ -118,7 +118,7 @@ class PTAccuracyAwareTrainingRunner(BaseAccuracyAwareTrainingRunner):
 
         return self.current_val_metric_value
 
-    def validate(self, model, compression_controller):
+    def validate(self, model):
         with torch.no_grad():
             val_metric_value = self._validate_fn(model, epoch=self.cumulative_epoch_count)
         is_better_by_accuracy = (not self.is_higher_metric_better) != (val_metric_value > self.best_val_metric_value)
