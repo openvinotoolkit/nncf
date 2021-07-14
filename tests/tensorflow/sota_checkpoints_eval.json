@@ -306,7 +306,7 @@
                 "retinanet_int8_w_sym_t_half_a_sym_t_pruning_40": {
                     "config": "examples/tensorflow/object_detection/configs/pruning_quantization/retinanet_coco_pruning_int8.json",
                     "reference": "retinanet",
-                    "target": 32.82,
+                    "target": 32.53,
                     "resume": "retinanet_int8_w_sym_t_half_a_sym_t_pruning_40",
                     "metric_type": "mAP",
                     "model_description": "retinanet_int8_w_sym_t_half_a_sym_t_pruning_40",
