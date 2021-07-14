@@ -106,7 +106,7 @@ def test_legr_class_default_params(tmp_path):
     train_loader = create_ones_mock_dataloader(config)
     val_loader = create_ones_mock_dataloader(config)
     train_steps_fn = lambda *x: None
-    validate_fn = lambda *x: (0, 0, 0)
+    validate_fn = lambda *x: (0, 0)
     nncf_config = register_default_init_args(config, train_loader=train_loader, train_steps_fn=train_steps_fn,
                                              val_loader=val_loader, validate_fn=validate_fn)
     _, compression_ctrl = create_compressed_model_and_algo_for_test(model, nncf_config)
@@ -133,7 +133,7 @@ def test_legr_class_setting_params(tmp_path):
     train_loader = create_ones_mock_dataloader(config)
     val_loader = create_ones_mock_dataloader(config)
     train_steps_fn = lambda *x: None
-    validate_fn = lambda *x: (0, 0, 0)
+    validate_fn = lambda *x: (0, 0)
     nncf_config = register_default_init_args(config, train_loader=train_loader, train_steps_fn=train_steps_fn,
                                              val_loader=val_loader, validate_fn=validate_fn)
     _, compression_ctrl = create_compressed_model_and_algo_for_test(model, nncf_config)
@@ -151,7 +151,7 @@ def test_legr_reproducibility():
     train_loader = create_ones_mock_dataloader(config)
     val_loader = create_ones_mock_dataloader(config)
     train_steps_fn = lambda *x: None
-    validate_fn = lambda *x: (0, 0, np.random.random())
+    validate_fn = lambda *x: (0, np.random.random())
     nncf_config = register_default_init_args(config, train_loader=train_loader, train_steps_fn=train_steps_fn,
                                              val_loader=val_loader, validate_fn=validate_fn)
     model_1 = PruningTestModel()

@@ -69,6 +69,14 @@ and reduce the corresponding accuracy drop even before model training. This opti
 sparsity and filter pruning algorithms. It can be enabled by setting a non-zero value of `num_bn_adaptation_samples` in the
 `batchnorm_adaptation` section of the `initializer` configuration (see example below).
 
+#### Interlayer ranking types
+
+Interlayer ranking type can be one of `unweighted_ranking` or `learned_ranking`.
+- In case of `unweighted_ranking` and with  `all_weights=True` all filter norms will be collected together and sorted to choose the least important ones. But this approach may not be optimal because filter norms are a good measure of filter importance inside a layer, but not across layers.
+- In the case of `learned_ranking` that uses re-implementation of [Learned Global Ranking method](https://arxiv.org/abs/1904.12368), a set of ranking coefficients will be learned for comparing filters across different layers.
+The ![(a_i, b_i)](https://latex.codecogs.com/png.image?%5Cdpi%7B110%7D%20(a_i,%20b_i)) pair of scalars will be learned for each (![i](https://latex.codecogs.com/png.image?%5Cdpi%7B110%7D%20i)-th) layer and used to transform norms of ![i](https://latex.codecogs.com/png.image?%5Cdpi%7B110%7D%20i)-th layer filters before sorting all filter norms together as ![a_i * N_i + b_i](https://latex.codecogs.com/png.image?%5Cdpi%7B110%7D%20a_i%20*%20N_i%20&plus;%20b_i) , where ![N_i](https://latex.codecogs.com/png.image?%5Cdpi%7B110%7D%20N_i) - is vector of filter norma of ![i](https://latex.codecogs.com/png.image?%5Cdpi%7B110%7D%20i)-th layer, ![(a_i, b_i)](https://latex.codecogs.com/png.image?%5Cdpi%7B110%7D%20(a_i,%20b_i)) is ranking coefficients for ![i](https://latex.codecogs.com/png.image?%5Cdpi%7B110%7D%20i)-th layer.
+This approach allows pruning the model taking into account layer-specific sensitivity to weight perturbations and get pruned models with higher accuracy.
+
 **Filter pruning configuration file parameters**:
 ```
 {
@@ -82,15 +90,25 @@ sparsity and filter pruning algorithms. It can be enabled by setting a non-zero 
     "params": {
         "schedule": "baseline", // The type of scheduling to use for adjusting the target pruning level. Either `exponential`, `exponential_with_bias`,  or `baseline`, by default it is `baseline`"
         "pruning_target": 0.4, // Target value of the pruning level for the convolutions that can be pruned. These convolutions are determined by the model architecture. 0.5 by default.
+        "pruning_flops_target": 0.4, // Target value of the pruning level by FLOPs in the whole model. Only one parameter from `pruning_target` and `pruning_flops_target` can be set. If none of them is specified, `pruning_target` = 0.5 is used as the default value. 
         "num_init_steps": 3, // Number of epochs for model pretraining before starting filter pruning. 0 by default.
         "pruning_steps": 10, // Number of epochs during which the pruning rate is increased from `pruning_init` to `pruning_target` value.
         "filter_importance": "L2", // The type of filter importance metric. Can be one of `L1`, `L2`, `geometric_median`. `L2` by default.
+        "interlayer_ranking_type": "unweighted_ranking", // The type of filter ranking across the layers. Can be one of `unweighted_ranking`, `learned_ranking`. `unweighted_ranking` by default.
         "all_weights": false, // Whether to prune layers independently (choose filters with the smallest importance in each layer separately) or not. `False` by default.
-        "prune_first_conv": false, // Whether to prune first Convolutional layers or not. First means that it is a convolutional layer such that there is a path from model input to this layer such that there are no other convolution operations on it. `False` by default.
-        "prune_last_conv": false, // Whether to prune last Convolutional layers or not.  Last means that it is a Convolutional layer such that there is a path from this layer to the model output such that there are no other convolution operations on it. `False` by default.
-        "prune_downsample_convs": false, // Whether to prune downsample Convolutional layers (with stride > 1) or not. `False` by default.
+        "prune_first_conv": false, // Whether to prune first Convolutional layers or not. First means that it is a convolutional layer such that there is a path from model input to this layer such that there are no other convolution operations on it. `False` by default (`True` by default in case of 'learned_ranking' interlayer_ranking_type).
+        "prune_last_conv": false, // Whether to prune last Convolutional layers or not.  Last means that it is a Convolutional layer such that there is a path from this layer to the model output such that there are no other convolution operations on it. `False` by default (`True` by default in case of 'learned_ranking' interlayer_ranking_type).
+        "prune_downsample_convs": false, // Whether to prune downsample Convolutional layers (with stride > 1) or not. `False` by default (`True` by default in case of 'learned_ranking' interlayer_ranking_type).
         "prune_batch_norms": true, // Whether to nullifies parameters of Batch Norm layer corresponds to zeroed filters of convolution corresponding to this Batch Norm. `True` by default.
         "zero_grad": true // Whether to setting gradients corresponding to zeroed filters to zero during training, `True` by default.
+        "save_ranking_coeffs_path": "path/coeffs.json", // Path to save .json file with interlayer ranking coefficients.
+        "load_ranking_coeffs_path": "PATH/learned_coeffs.json", // Path to loading interlayer ranking coefficients .json file, pretrained earlier.
+        "legr_params": { // Set of parameters, that can be set for 'learned_ranking' interlayer_ranking_type case
+            "generations": 200, //  Number of generations for evolution algorithm optimizing. 400 by default
+            "train_steps": 150, // Number of training steps to estimate pruned model accuracy. 200 by default 
+            "max_pruning": 0.6, // Pruning level for the model to train LeGR algorithm on it. If learned ranking will be used for multiple pruning rates, the highest should be used as `max_pruning`. If model will be pruned with one pruning rate, target pruning rate should be used.
+            "random_seed": 42, // Random seed for ranking coefficients generation during optimization 
+        },
     },
 
     // A list of model control flow graph node scopes to be ignored for this operation - functions as a 'denylist'. Optional.
@@ -102,23 +120,3 @@ sparsity and filter pruning algorithms. It can be enabled by setting a non-zero 
 ```
 
 > **NOTE:**  In all our pruning experiments we used SGD optimizer.
-
-
-#### Export pruning algorithm description:
-This algorithm transforms model trained with `Filter pruning` algorithm (when convolution size is still the same but some filters are zeroed by mask) to smaller model with actually pruned operations.
-
-The algorithm consists of 3 stages:
-1. On the first stage, channel-wise masks from pruned operations is propagated through the graph. Every operation has a function that can calculate the output mask by its attributes and the input masks. These calculated masks determine how the operations will be pruned.
- There are three groups of operations:
- - Operations that just pass the mask further unchanged. These operations include all activations and elementwise operations with one input, BatchNorm, Pooling.
- - Operations that cannot work with pruned input and do not skip the mask further. These operations includes Reshape, MatMul, Reduce.
- - Operations that transform mask in some way. These operations include Convolutions (passes on a mask for this convolution), Concat (concatenates input masks),
-  Elementwise (currently not supported, but potentially can intersect masks).
-
-2. In the second stage, a decision is made about which parts of the network will be pruned in accordance with the masks.
-This is necessary since some operations do not accept the pruned input and the path leading to it cannot be pruned.
-To do this, the special `can_prune` attribute is propagated through the network. For every operation, with information about
-    whether inputs and outputs accept pruned inputs and can be pruned, algorithm marks whether this operation can be pruned or not.
-The result is a valid graph for the pruned and non-pruned parts: that is, there is no operation that does not accept a pruned input.
-
-3. On the final stage, there is a direct pruning of operations according to the obtained `can_prune` attribute values.

@@ -258,7 +258,7 @@ def default_distributed_wrapper(model: nn.Module, execution_parameters: 'Executi
     """
     Wrapping model for distributed training with DataParallel or DistributedDataParallel depending on execution mode
     chosen by user.
-    :param execution_parameters: execution parameters
+    :param execution_parameters: structure with necessary execution parameters
     :param model: model to wrap  in accordance with execution mode chosen by user
     :return: wrapped model
     """

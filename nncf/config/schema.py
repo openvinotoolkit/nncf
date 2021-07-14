@@ -735,8 +735,13 @@ FILTER_PRUNING_SCHEMA = {
                                                                description="Number of training steps to estimate"
                                                                            "pruned model accuracy."),
                                 "max_pruning": with_attributes(_NUMBER,
-                                                               description="Maximum possible pruning level for "
-                                                                           "the model to train LeGR algo on it."),
+                                                               description="Pruning level for the model to train"
+                                                                           " LeGR algorithm on it. If learned ranking"
+                                                                           " will be used for multiple pruning"
+                                                                           " rates, the highest should be used as"
+                                                                           "`max_pruning`. If model will be pruned"
+                                                                           " with one pruning rate, this target should"
+                                                                           "be used."),
                                 "random_seed": with_attributes(_NUMBER,
                                                                description="Random seed for LeGR coefficients"
                                                                            " generation.")

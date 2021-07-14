@@ -27,7 +27,7 @@ def get_model_and_controller_for_legr_test():
     train_loader = create_ones_mock_dataloader(config)
     val_loader = create_ones_mock_dataloader(config)
     train_steps_fn = lambda *x: None
-    validate_fn = lambda *x: (0, 0, 0)
+    validate_fn = lambda *x: (0, 0)
     nncf_config = register_default_init_args(config, train_loader=train_loader, train_steps_fn=train_steps_fn,
                                              val_loader=val_loader, validate_fn=validate_fn)
     compressed_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
@@ -77,7 +77,7 @@ def test_evolution_env_default_params():
     train_loader = create_ones_mock_dataloader(config)
     val_loader = create_ones_mock_dataloader(config)
     train_steps_fn = lambda *x: None
-    validate_fn = lambda *x: (0, 0, 0)
+    validate_fn = lambda *x: (0, 0)
     nncf_config = register_default_init_args(config, train_loader=train_loader, train_steps_fn=train_steps_fn,
                                              val_loader=val_loader, validate_fn=validate_fn)
     _, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
@@ -107,7 +107,7 @@ def test_evolution_env_setting_params():
     train_loader = create_ones_mock_dataloader(config)
     val_loader = create_ones_mock_dataloader(config)
     train_steps_fn = lambda *x: None
-    validate_fn = lambda *x: (0, 0, 0)
+    validate_fn = lambda *x: (0, 0)
     nncf_config = register_default_init_args(config, train_loader=train_loader, train_steps_fn=train_steps_fn,
                                              val_loader=val_loader, validate_fn=validate_fn,
                                              legr_train_optimizer=train_optimizer)

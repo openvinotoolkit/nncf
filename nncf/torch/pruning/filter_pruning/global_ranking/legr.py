@@ -21,8 +21,23 @@ from nncf.torch.structures import LeGRInitArgs
 
 
 class LeGR:
+    """
+    Class for training global ranking coefficients with Evolution optimization agent (but this agent can be easily
+    replaced by any other RL agent with a similar interface) and LeGR-optimization environment.
+    """
     def __init__(self, pruning_ctrl: 'FilterPruningController', target_model: nn.Module, legr_init_args: LeGRInitArgs,
                  train_steps: int = 200, generations: int = 400, max_pruning: float = 0.8, random_seed: int = 42):
+        """
+        Initializing all necessary structures for optimization- LeGREvolutionEnv environment and EvolutionOptimizer
+         agent.
+        :param pruning_ctrl: pruning controller, an instance of FilterPruningController class
+        :param target_model: model for which layers ranking coefficient will be trained
+        :param legr_init_args: initial arguments for LeGR algorithm
+        :param train_steps: number of training steps to evaluate accuracy of some ranking coefficients (action of agent)
+        :param generations: number of generations in evolution algorithm optimization
+        :param max_pruning: pruning level of the model for which ranking coefficient will be optimized
+        :param random_seed: random seed, that will be set during ranking coefficients generation
+        """
         self.num_generations = generations
         self.max_pruning = max_pruning
         self.train_steps = train_steps
@@ -40,6 +55,17 @@ class LeGR:
                                     train_steps, max_pruning)
 
     def train_global_ranking(self):
+        """
+        Training of ranking coefficients. During every generation:
+        1. Environment (LeGREvolutionEnv) send reward and useful info from the previous generation to the
+        agent (EvolutionOptimizer)
+        2. Agent generates new action (considering this information)
+        3. Environment makes step with this action, calculates and return current reward from this
+         action and some useful info
+
+         In the end, an optimal action from the agent is returned.
+        :return: optimal ranking coefficients (action)
+        """
         reward_list = []
 
         nncf_logger.info('Start training LeGR ranking coefficients...')
@@ -74,5 +100,5 @@ class LeGR:
         nncf_logger.info('Finished training LeGR ranking coefficients.')
         nncf_logger.info('Evolution algorithm rewards history = {}'.format(reward_list))
 
-        best_ranking = self.agent.best_action
+        best_ranking = self.agent.get_best_action()
         return best_ranking
