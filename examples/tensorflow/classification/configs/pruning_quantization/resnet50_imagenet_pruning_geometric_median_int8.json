@@ -34,7 +34,15 @@
             }
         },
         {
-            "algorithm": "quantization"
+            "algorithm": "quantization",
+            "initializer": {
+                "batchnorm_adaptation": {
+                    "num_bn_adaptation_samples": 2048
+                }
+            },
+            "weights": {
+                "per_channel": false
+            }
         }
     ]
 }
