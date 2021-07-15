@@ -303,7 +303,7 @@ to find instruction and links to exact configuration files and final checkpoints
 |RetinaNet|INT8 (per-tensor for weights)|COCO2017|33.22 (0.22)|
 |RetinaNet|Sparsity 50% (Magnitude)|COCO2017|33.13 (0.31)|
 |RetinaNet|Filter Pruning 40%, geometric_median criterion|COCO2017|32.7 (0.74)|
-|RetinaNet|Filter Pruning 40%, geometric_median criterion + INT8 (per-tensor for weights)|COCO2017|32.82 (0.62)|
+|RetinaNet|Filter Pruning 40%, geometric_median criterion + INT8 (per-tensor for weights)|COCO2017|32.53 (0.91)|
 |YOLOv4|INT8 (per-channel, symmetric for weights; per-tensor, asymmetric for activations)|COCO2017|46.15 (0.89)|
 |YOLOv4|Sparsity 50% (Magnitude)|COCO2017|46.54 (0.50)|
 
