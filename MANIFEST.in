@@ -1,3 +1,4 @@
 graft nncf/torch/extensions
 graft nncf/common/hardware/configs
 include LICENSE
+include licensing/third-party-programs.txt
