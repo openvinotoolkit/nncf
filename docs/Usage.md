@@ -95,16 +95,77 @@ In some cases it is possible to export a compressed model with ONNX standard ope
 Refer to [compression algorithm documentation](./compression_algorithms) for details.
 
 ## Saving and loading compressed models in PyTorch
-You can save the `compressed_model` object using `torch.save` as usual.
-However, keep in mind that in order to load the resulting checkpoint file the `compressed_model` object should have the
-same structure with regards to PyTorch module and parameters as it was when the checkpoint was saved.
-In practice this means that you should use the same compression algorithms (i.e. the same NNCF configuration file) when loading a compressed model checkpoint.
-Use the optional `resuming_checkpoint` argument of the `create_compressed_model` helper function to specify a PyTorch state dict to be loaded into your model once it is created.
 
-Alternatively, you can use the `nncf.load_state` function.
-It will attempt to load a PyTorch state dict into a model by first stripping the irrelevant prefixes, such as `module.` or `nncf_module.`, from both the checkpoint and the model layer identifiers, and then do the matching between the layers.
-Depending on the value of the `is_resume` argument, it will then fail if an exact match could not be made (when `is_resume == True`), or load the matching layer parameters and print a warning listing the mismatches (when `is_resume == False`).
-`is_resume=False` is most commonly used if you want to load the starting weights from an uncompressed model into a compressed model, and `is_resume=True` is used when you want to evaluate a compressed checkpoint or resume compressed checkpoint training without changing the compression algorithm parameters.
+Deprecated API
+```python
+# save part
+compression_ctrl, compressed_model = create_compressed_model(model, nncf_config)
+checkpoint = {
+    'state_dict': compressed_model.state_dict(),
+    'scheduler_state': compression_ctrl.scheduler.get_state(),
+    'compression_stage': compression_ctrl.compression_stage(),
+    ...
+}
+torch.save(checkpoint, path)
+
+# load part
+resuming_checkpoint = torch.load(path)
+state_dict = resuming_checkpoint['state_dict'] 
+compression_ctrl, compressed_model = create_compressed_model(model, nncf_config, resuming_state_dict=state_dict)
+compression_ctrl.scheduler.load_state(resuming_checkpoint['scheduler_state'])
+
+```
+
+New API
+```python
+# save part
+compression_ctrl, compressed_model = create_compressed_model(model, nncf_config)
+checkpoint = {
+    'state_dict': compressed_model.state_dict(),
+    'compression_state': compression_ctrl.get_compression_state(),
+    ...
+}
+torch.save(checkpoint, path)
+
+# load part
+resuming_checkpoint = torch.load(path)
+compression_state = resuming_checkpoint['compression_state'] 
+compression_ctrl, compressed_model = create_compressed_model(model, nncf_config, compression_state=compression_state)
+state_dict = resuming_checkpoint['state_dict'] 
+
+load_state(compressed_model, state_dict, is_resume=True) 
+# or when execution mode on loading is the same as on saving: 
+# save and load in a single GPU mode or save and load in the (Distributed)DataParallel one, not in a mixed way  
+compressed_model.load_state_dict(state_dict)
+```
+
+You can save the `compressed_model` object `torch.save` as usual: via `state_dict` and `load_state_dict` methods. 
+Alternatively, you can use the `nncf.load_state` function on loading. It will attempt to load a PyTorch state dict into 
+a model by first stripping the irrelevant prefixes, such as `module.` or `nncf_module.`, from both the checkpoint and 
+the model layer identifiers, and then do the matching between the layers.
+Depending on the value of the `is_resume` argument, it will then fail if an exact match could not be made 
+(when `is_resume == True`), or load the matching layer parameters and print a warning listing the mismatches 
+(when `is_resume == False`). `is_resume=False` is most commonly used if you want to load the starting weights from an 
+uncompressed model into a compressed model and `is_resume=True` is used when you want to evaluate a compressed 
+checkpoint or resume compressed checkpoint training without changing the compression algorithm parameters.
+
+In addition to that, NNCF-specific compression state information should be saved so that
+the exact compressed model state can be restored/loaded without having to provide the same NNCF config file that was 
+used during the creation of the NNCF-compressed checkpoint. 
+Compression state information is represented by a dictionary of Python objects that can be serialized to JSON or simply 
+saved as is via `torch.save`. Use `compression_ctrl.get_compression_state()` to get it on saving and use the optional 
+`compression_state` argument of the `create_compressed_model` helper function to restore the compression setting.
+
+In the previous releases of the NNCF, model can be loaded without compression state information: 
+by saving the model state dictionary `compressed_model.state_dict` and loading it via `nncf.load_state` and  
+`compressed_model.load_state_dict` methods or using optional `resuming_state_dict` argument of the 
+`create_compressed_model`.
+This way of loading is deprecated, and we highly recommend to not use this way as it does not guarantee the exact loading
+of compression model state for algorithms with sophisticated initialization - e.g. HAWQ and AutoQ. 
+Also in this case, keep in mind that in order to load the resulting checkpoint file the `compressed_model` object should
+have the same structure with regard to PyTorch module and parameters as it was when the checkpoint was saved.
+In practice this means that you should use the same compression algorithms (i.e. the same NNCF configuration file) when 
+loading a compressed model checkpoint. 
 
 To save the best compressed checkpoint use `compression_ctrl.compression_stage()` to distinguish between 3 possible
 levels of compression: `UNCOMPRESSED`, `PARTIALLY_COMPRESSED` and `FULLY_COMPRESSED`. It is useful in case of `staged` compression. Model may achieve
