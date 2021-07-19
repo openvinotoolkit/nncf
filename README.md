@@ -199,6 +199,7 @@ to find instruction and links to exact configuration files and final checkpoints
   * [Classification](#pytorch_classification)
   * [Object detection](#pytorch_object_detection)
   * [Semantic segmentation](#pytorch_semantic_segmentation)
+  * [Instance segmentation](#pytorch_instance_segmentation)
   * [Natural language processing (3rd-party training pipelines)](#pytorch_nlp)
 - [TensorFlow models](#tensorflow-models)
   * [Classification](#tensorflow_classification)
@@ -245,6 +246,8 @@ to find instruction and links to exact configuration files and final checkpoints
 |SSD300-VGG-BN|Filter pruning, 40%, geometric median criterion|VOC12+07 train, VOC07 eval|77.72 (0.56)|
 |SSD512-VGG-BN|INT8|VOC12+07 train, VOC07 eval|80.12 (0.14)|
 |SSD512-VGG-BN|INT8 + Sparsity 70% (Magnitude)|VOC12+07 train, VOC07 eval|79.67 (0.59)|
+|MobileNet V2-FCOS|INT8|WiderFace|AP for faces > 64x64 (%): 93.44 (-0.59)|
+|ResNet-152b-ATSS|INT8|WiderFace|AP for faces > 64x64 (%): 94.05 (-0.24)|
 
 <a name="pytorch_semantic_segmentation"></a>
 #### Semantic segmentation
@@ -258,6 +261,15 @@ to find instruction and links to exact configuration files and final checkpoints
 |UNet|INT8|Mapillary|55.87 (0.36)|
 |UNet|INT8 + Sparsity 60% (Magnitude)|Mapillary|55.65 (0.58)|
 |UNet|Filter pruning, 25%, geometric median criterion|Mapillary|55.62 (0.61)|
+
+
+<a name="pytorch_instance_segmentation"></a>
+#### Instance segmentation
+
+|PyTorch Model|Compression algorithm|Dataset|mAP (drop) %|
+| :---: | :---: | :---: | :---: |
+|ResNet-50-MaskRCNN (768x1024)|INT8|COCO2017|bbox: 40.8(0.0)<br/>segm: 36.9(0.0)|
+|ResNet-101-MaskRCNN (608x608)|INT8|COCO2017|bbox: 39.1(0.25)<br/>segm: 33.9(0.0)|
 
 <a name="pytorch_nlp"></a>
 #### NLP
