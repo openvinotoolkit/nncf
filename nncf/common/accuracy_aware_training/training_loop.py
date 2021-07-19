@@ -106,8 +106,17 @@ class EarlyStoppingCompressionTrainingLoop(TrainingLoop):
 
     def _get_early_stopping_config(self, nncf_config: NNCFConfig):
         compression_configs = nncf_config.get('compression', {})
-        early_stopping_config = compression_configs.get('training', None)
-        if early_stopping_config is None:
+        if isinstance(compression_configs, list):
+            comp_algorithm_params_dict = {compression_config['algorithm']: compression_config
+                                          for compression_config in compression_configs}
+        else:
+            comp_algorithm_params_dict = {compression_configs['algorithm']: compression_configs}
+        quantization_config = comp_algorithm_params_dict.get('quantization', None)
+        if quantization_config is not None:
+            early_stopping_config = quantization_config.get('accuracy_aware_training', None)
+            if early_stopping_config is None:
+                raise RuntimeError('')
+        else:
             raise RuntimeError('')
         return early_stopping_config
 

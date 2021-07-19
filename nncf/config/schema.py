@@ -12,6 +12,7 @@
 """
 import logging
 from typing import Dict
+from typing import List
 
 import jsonschema
 
@@ -407,8 +408,22 @@ COMMON_COMPRESSION_ALGORITHM_PROPERTIES = {
                                       description=IGNORED_SCOPES_DESCRIPTION),
     "target_scopes": with_attributes(make_string_or_array_of_strings_schema(),
                                      description=TARGET_SCOPES_DESCRIPTION),
+}
+
+
+QUANTIZATION_COMPRESSION_ALGORITHM_PROPERTIES = {
+    **COMMON_COMPRESSION_ALGORITHM_PROPERTIES,
+    "accuracy_aware_training": BASIC_COMPRESSION_TRAINING_SCHEMA,
+}
+
+FILTER_PRUNING_COMPRESSION_ALGORITHM_PROPERTIES = {
+    **COMMON_COMPRESSION_ALGORITHM_PROPERTIES,
     "accuracy_aware_training": ACCURACY_AWARE_SCHEMA,
-    "training": BASIC_COMPRESSION_TRAINING_SCHEMA,
+}
+
+SPARSITY_COMPRESSION_ALGORITHM_PROPERTIES = {
+    **COMMON_COMPRESSION_ALGORITHM_PROPERTIES,
+    "accuracy_aware_training": ACCURACY_AWARE_SCHEMA,
 }
 
 BASIC_COMPRESSION_ALGO_SCHEMA = {
@@ -416,16 +431,6 @@ BASIC_COMPRESSION_ALGO_SCHEMA = {
     "required": ["algorithm"],
 }
 
-
-
-BASIC_COMPRESSION_SCHEMA = {
-    "type": "object",
-    "properties": {
-        "algorithms": make_object_or_array_of_objects_schema(BASIC_COMPRESSION_ALGO_SCHEMA),
-    },
-    "required": ["algorithms"],
-    "training": BASIC_COMPRESSION_TRAINING_SCHEMA,
-}
 
 STAGED_QUANTIZATION_PARAMS = {
     "params": {
@@ -528,7 +533,7 @@ QUANTIZATION_SCHEMA = {
                                                               "the fix will be applied. For a detailed information "
                                                               ", please, take look at the docs"),
         **STAGED_QUANTIZATION_PARAMS,
-        **COMMON_COMPRESSION_ALGORITHM_PROPERTIES,
+        **QUANTIZATION_COMPRESSION_ALGORITHM_PROPERTIES,
     },
     "additionalProperties": False
 }
@@ -546,7 +551,7 @@ BINARIZATION_SCHEMA = {
                                 description="Selects the mode of binarization - either 'xnor' for XNOR binarization,"
                                             "or 'dorefa' for DoReFa binarization"),
         **STAGED_QUANTIZATION_PARAMS,
-        **COMMON_COMPRESSION_ALGORITHM_PROPERTIES
+        **SPARSITY_COMPRESSION_ALGORITHM_PROPERTIES
     },
     "additionalProperties": False
 }
@@ -558,7 +563,7 @@ CONST_SPARSITY_SCHEMA = {
         "algorithm": {
             "const": CONST_SPARSITY_ALGO_NAME_IN_CONFIG
         },
-        **COMMON_COMPRESSION_ALGORITHM_PROPERTIES,
+        **SPARSITY_COMPRESSION_ALGORITHM_PROPERTIES,
     },
     "additionalProperties": False,
     "description": "This algorithm takes no additional parameters and is used when you want to load "
@@ -639,7 +644,7 @@ MAGNITUDE_SPARSITY_SCHEMA = {
                 },
                 "additionalProperties": False
             },
-        **COMMON_COMPRESSION_ALGORITHM_PROPERTIES
+        **SPARSITY_COMPRESSION_ALGORITHM_PROPERTIES
     },
     "additionalProperties": False
 }
@@ -661,7 +666,7 @@ RB_SPARSITY_SCHEMA = {
                 "properties": COMMON_SPARSITY_PARAM_PROPERTIES,
                 "additionalProperties": False
             },
-        **COMMON_COMPRESSION_ALGORITHM_PROPERTIES
+        **SPARSITY_COMPRESSION_ALGORITHM_PROPERTIES
     },
     "additionalProperties": False
 }
@@ -777,7 +782,7 @@ FILTER_PRUNING_SCHEMA = {
                 },
                 "additionalProperties": False,
             },
-        **COMMON_COMPRESSION_ALGORITHM_PROPERTIES
+        **FILTER_PRUNING_COMPRESSION_ALGORITHM_PROPERTIES
     },
     "additionalProperties": False
 }
@@ -873,3 +878,21 @@ def validate_single_compression_algo_schema(single_compression_algo_dict: Dict):
     except Exception as e:
         import sys
         raise type(e)("For algorithm: '{}'\n".format(algo_name) + str(e)).with_traceback(sys.exc_info()[2])
+
+
+def validate_accuracy_aware_schema(compression_algos: List):
+    ACCURACY_AWARE_ALGOS_PRIORITY_ORDER = ['filter_pruning', 'sparsity', 'quantization']
+    algos_with_accuracy_aware = []
+    for compression_algo in compression_algos:
+        algo_name = compression_algo["algorithm"]
+        if compression_algo.get("accuracy_aware_training", None) is not None:
+            algos_with_accuracy_aware.append(algo_name)
+    if len(algos_with_accuracy_aware) > 1:
+        raise RuntimeError(f"Training with only one accuracy aware compression algorithm is supported. "
+                           f"Please, choose only one accuracy aware algorithm.")
+        # for algo in ACCURACY_AWARE_ALGOS_PRIORITY_ORDER:
+        #     if algo in algos_with_accuracy_aware:
+        #         logger.log(f"Accuracy aware training will be used only for {algo} "
+        #                    f"because currently only one compression algorithm is supported"
+        #                    f" with accuracy aware training.")
+

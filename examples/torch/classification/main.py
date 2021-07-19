@@ -247,7 +247,8 @@ def main_worker(current_gpu, config: SampleConfig):
         logger.info(statistics.to_str())
 
     if 'train' in config.mode:
-        if is_nncf_training(config):
+        accuracy_aware_algo = get_algo_with_accuracy_aware_training(config)
+        if accuracy_aware_algo is not None:
             # validation function that returns the target metric value
             # pylint: disable=E1123
             def validate_fn(model, epoch):
@@ -267,12 +268,12 @@ def main_worker(current_gpu, config: SampleConfig):
                 optimizer, lr_scheduler = make_optimizer(params_to_optimize, config)
                 return optimizer, lr_scheduler
 
-            if is_accuracy_aware_training(config):
-                # instantiate and run accuracy-aware training loop
-                training_loop = AdaptiveCompressionTrainingLoop(nncf_config, compression_ctrl)
-            else:
-                # instantiate and run accuracy-aware training loop
+            # instantiate and run accuracy-aware training loop
+            # TODO(kshpv) change algo name to const variable
+            if accuracy_aware_algo == 'quantization':
                 training_loop = EarlyStoppingCompressionTrainingLoop(nncf_config, compression_ctrl)
+            else:
+                training_loop = AdaptiveCompressionTrainingLoop(nncf_config, compression_ctrl)
             model = training_loop.run(model,
                                       train_epoch_fn=train_epoch_fn,
                                       validate_fn=validate_fn,
