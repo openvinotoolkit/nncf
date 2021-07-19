@@ -94,7 +94,63 @@ The exported ONNX file may contain special, non-ONNX-standard operations and lay
 In some cases it is possible to export a compressed model with ONNX standard operations only (so that it can be run using `onnxruntime`, for example) - this is the case for the 8-bit symmetric quantization and sparsity/filter pruning algorithms.
 Refer to [compression algorithm documentation](./compression_algorithms) for details.
 
-## Saving and loading compressed models in PyTorch
+## Saving and loading compressed models
+The complete information about compression is defined by a compressed model and a compression state.
+The model characterizes the weights and topology of the network. The compression state - how to restore the setting of 
+compression layers in the model and how to restore the compression schedule and the compression loss.
+The latter can be obtained by `compression_ctrl.get_compression_state()` on saving and passed to the 
+`create_compressed_model` helper function by the optional `compression_state` argument on loading. 
+The compressed model should be loaded once it's created.
+
+Saving and loading of the compressed model and compression state is framework-specific and can be done in an arbitrary 
+way. NNCF provides one possible way of doing it with helper functions in samples.
+
+To save the best compressed checkpoint use `compression_ctrl.compression_stage()` to distinguish between 3 possible
+levels of compression: `UNCOMPRESSED`, `PARTIALLY_COMPRESSED` and `FULLY_COMPRESSED`. It is useful in case of `staged` 
+compression. Model may achieve the best accuracy on earlier stages of compression - tuning without compression or with 
+intermediate compression rate, but still fully compressed model with lower accuracy should be considered as the best 
+compressed one. `UNCOMPRESSED` means that no compression is applied for the model, for instance, in case of stage 
+quantization - when all quantization are disabled, or in case of sparsity - when current sparsity rate is zero. 
+`PARTIALLY_COMPRESSED` stands for the compressed model which haven't reached final compression ratio yet, e.g. magnitude
+sparsity algorithm has learnt masking of 30% weights out of 51% of target rate. The controller returns 
+`FULLY_COMPRESSED` compression stage when it finished scheduling and tuning hyper parameters of the compression 
+algorithm, for example when rb-sparsity method sets final target sparsity rate for the loss.
+
+### Saving and loading compressed models in TensorFlow
+```python
+# save part
+compression_ctrl, compress_model = create_compressed_model(model, nncf_config)
+checkpoint = tf.train.Checkpoint(model=compress_model,
+                                 compression_state=TFCompressionState(compression_ctrl),
+                                 ...)
+
+# save checkpoint in a preferable way
+    # using checkpoint manager
+    checkpoint_manager = tf.train.CheckpointManager(checkpoint, path_to_checkpoint)
+    checkpoint_manager.save()
+    # or via the corresponding callback
+    callbacks = []
+    callbacks.append(CheckpointManagerCallback(checkpoint, ckpt_dir))
+    ...
+    compress_model.fit(..., callbacks=callbacks)
+
+# load part
+checkpoint = tf.train.Checkpoint(compression_state=TFCompressionStateLoader())
+checkpoint.restore(path_to_checkpoint)
+compression_state = checkpoint.compression_state.state
+
+compression_ctrl, compress_model = create_compressed_model(model, nncf_config, compression_state)
+
+checkpoint = tf.train.Checkpoint(model=compress_model,
+                                 ...)
+checkpoint.restore(path_to_checkpoint)
+```
+
+Since the compression state is a dictionary of Python JSON-serializable objects, we convert it to JSON 
+string within `tf.train.Checkpoint`. There are 2 helper classes: `TFCompressionState` - for saving compression state and 
+`TFCompressionStateLoader` - for loading.
+
+### Saving and loading compressed models in PyTorch
 
 Deprecated API
 ```python
@@ -113,7 +169,6 @@ resuming_checkpoint = torch.load(path)
 state_dict = resuming_checkpoint['state_dict'] 
 compression_ctrl, compressed_model = create_compressed_model(model, nncf_config, resuming_state_dict=state_dict)
 compression_ctrl.scheduler.load_state(resuming_checkpoint['scheduler_state'])
-
 ```
 
 New API
@@ -133,10 +188,11 @@ compression_state = resuming_checkpoint['compression_state']
 compression_ctrl, compressed_model = create_compressed_model(model, nncf_config, compression_state=compression_state)
 state_dict = resuming_checkpoint['state_dict'] 
 
-load_state(compressed_model, state_dict, is_resume=True) 
-# or when execution mode on loading is the same as on saving: 
-# save and load in a single GPU mode or save and load in the (Distributed)DataParallel one, not in a mixed way  
-compressed_model.load_state_dict(state_dict)
+# load model in a preferable way
+    load_state(compressed_model, state_dict, is_resume=True)     
+    # or when execution mode on loading is the same as on saving: 
+    # save and load in a single GPU mode or save and load in the (Distributed)DataParallel one, not in a mixed way  
+    compressed_model.load_state_dict(state_dict)
 ```
 
 You can save the `compressed_model` object `torch.save` as usual: via `state_dict` and `load_state_dict` methods. 
@@ -149,14 +205,9 @@ Depending on the value of the `is_resume` argument, it will then fail if an exac
 uncompressed model into a compressed model and `is_resume=True` is used when you want to evaluate a compressed 
 checkpoint or resume compressed checkpoint training without changing the compression algorithm parameters.
 
-In addition to that, NNCF-specific compression state information should be saved so that
-the exact compressed model state can be restored/loaded without having to provide the same NNCF config file that was 
-used during the creation of the NNCF-compressed checkpoint. 
-Compression state information is represented by a dictionary of Python objects that can be serialized to JSON or simply 
-saved as is via `torch.save`. Use `compression_ctrl.get_compression_state()` to get it on saving and use the optional 
-`compression_state` argument of the `create_compressed_model` helper function to restore the compression setting.
+The compression state can be directly pickled by `torch.save` as well, since it is a dictionary of Python objects.
 
-In the previous releases of the NNCF, model can be loaded without compression state information: 
+In the previous releases of the NNCF, model can be loaded without compression state information 
 by saving the model state dictionary `compressed_model.state_dict` and loading it via `nncf.load_state` and  
 `compressed_model.load_state_dict` methods or using optional `resuming_state_dict` argument of the 
 `create_compressed_model`.
@@ -167,16 +218,6 @@ have the same structure with regard to PyTorch module and parameters as it was w
 In practice this means that you should use the same compression algorithms (i.e. the same NNCF configuration file) when 
 loading a compressed model checkpoint. 
 
-To save the best compressed checkpoint use `compression_ctrl.compression_stage()` to distinguish between 3 possible
-levels of compression: `UNCOMPRESSED`, `PARTIALLY_COMPRESSED` and `FULLY_COMPRESSED`. It is useful in case of `staged` compression. Model may achieve
-the best accuracy on earlier stages of compression - tuning without compression or with intermediate compression rate,
-but still fully compressed model with lower accuracy should be considered as the best compressed one.
-`UNCOMPRESSED` means that no compression is applied for the model, for instance, in case of stage quantization - when all
-quantization are disabled, or in case of sparsity - when current sparsity rate is zero. `PARTIALLY_COMPRESSED` stands for the
-compressed model which haven't reached final compression ratio yet, e.g. magnitude sparsity algorithm has learnt
-masking of 30% weights out of 51% of target rate. The controller returns `FULLY_COMPRESSED` compression stage when it finished
-scheduling and tuning hyper parameters of the compression algorithm, for example when rb-sparsity method sets final
-target sparsity rate for the loss.
 
 ## Exploring the compressed model
 After a `create_compressed_model` call, the NNCF log directory will contain visualizations of internal representations for the original, uncompressed model (`original_graph.dot`) and for the model with the compression algorithms applied (`compressed_graph.dot`).
