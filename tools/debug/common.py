@@ -17,11 +17,10 @@ import torch
 from functools import partial
 from torch import nn
 
-from examples.common.model_loader import load_model
-from examples.common.utils import print_statistics
-from nncf.checkpoint_loading import load_state
-from nncf.layers import NNCFConv1d, NNCFConv2d, NNCFLinear
-from nncf.model_creation import create_compressed_model
+from examples.torch.common.model_loader import load_model
+from nncf.torch.checkpoint_loading import load_state
+from nncf.torch.layers import NNCFConv1d, NNCFConv2d, NNCFLinear
+from nncf.torch.model_creation import create_compressed_model
 
 
 def dump_in_out_hook(module, inputs, output):
@@ -78,8 +77,8 @@ def is_weightable(layer):
 
 
 def has_sparse_quant_weights(layer, name):
-    from nncf.quantization.layers import SymmetricQuantizer
-    from nncf.sparsity.rb.layers import RBSparsifyingWeight
+    from nncf.torch.quantization.layers import SymmetricQuantizer
+    from nncf.torch.sparsity.rb.layers import RBSparsifyingWeight
     return (isinstance(layer, RBSparsifyingWeight) and ('sparsified_weight' in name)) or \
            (isinstance(layer, SymmetricQuantizer) and ('quantized_weight' in name))
 
@@ -149,7 +148,7 @@ def load_torch_model(config, cuda=False):
     if cuda:
         model = model.cuda()
         model = torch.nn.DataParallel(model)
-    print_statistics(compression_ctrl.statistics())
+    print(compression_ctrl.statistics().to_str())
     return model
 
 

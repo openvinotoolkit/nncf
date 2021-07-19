@@ -1,7 +1,0 @@
-strict digraph  {
-"0 /nncf_model_input" [id=0, scope="", type=nncf_model_input];
-"1 TestModel/Threshold[_layer]/threshold" [id=1, scope="TestModel/Threshold[_layer]", type=threshold];
-"2 /nncf_model_output" [id=2, scope="", type=nncf_model_output];
-"0 /nncf_model_input" -> "1 TestModel/Threshold[_layer]/threshold";
-"1 TestModel/Threshold[_layer]/threshold" -> "2 /nncf_model_output";
-}

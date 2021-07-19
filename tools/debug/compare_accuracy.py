@@ -18,7 +18,7 @@ from functools import partial
 from openvino.inference_engine import IENetwork, IEPlugin, get_version
 
 from nncf.config import NNCFConfig
-from nncf.dynamic_graph.graph_tracer import create_input_infos
+from nncf.torch.dynamic_graph.graph_tracer import create_input_infos
 from tools.ir_utils import get_ir_paths
 
 
@@ -113,7 +113,7 @@ def infer_pytorch_model(model, inputs):
 
 
 def validate_general(val_loader, model, infer_model_fn, cuda=False):
-    from examples.classification.main import AverageMeter, accuracy
+    from examples.torch.classification.main import AverageMeter, accuracy
     top1 = AverageMeter()
     top5 = AverageMeter()
 

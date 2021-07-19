@@ -1,0 +1,32 @@
+models:
+  - name: unet_mapillary
+
+    launchers:
+      - framework: dlsdk
+        adapter: segmentation
+        device: CPU
+
+    datasets:
+      - name: mapillary_vistas
+        reader: pillow_imread
+
+        preprocessing:
+          - type: resize
+            dst_height: 512
+            dst_width: 1024
+            use_pillow: True
+            interpolation: BILINEAR
+          - type: rgb_to_bgr
+
+        postprocessing:
+          - type: resize_segmentation_mask
+            apply_to: annotation
+            dst_height: 512
+            dst_width: 1024
+          - type: encode_segmentation_mask
+            apply_to: annotation
+
+        metrics:
+          - type: mean_iou
+            use_argmax: True
+            ignore_label: 0

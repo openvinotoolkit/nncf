@@ -13,10 +13,16 @@
 
 
 class Registry:
+    REGISTERED_NAME_ATTR = '_registered_name'
+
     def __init__(self, name, add_name_as_attr=False):
         self._name = name
         self._registry_dict = dict()
         self._add_name_as_attr = add_name_as_attr
+
+    @property
+    def registry_dict(self):
+        return self._registry_dict
 
     def _register(self, obj, name):
         if name in self._registry_dict:
@@ -29,7 +35,7 @@ class Registry:
             if cls_name is None:
                 cls_name = obj.__name__
             if self._add_name_as_attr:
-                setattr(obj, "_registered_name", name)
+                setattr(obj, self.REGISTERED_NAME_ATTR, name)
             self._register(obj, cls_name)
             return obj
 
@@ -41,8 +47,7 @@ class Registry:
         return self._registry_dict[name]
 
     def _key_not_found(self, name):
-        raise KeyError("{} is unknown type of {} ".format(name, self._name))
+        raise KeyError('{} is unknown type of {} '.format(name, self._name))
 
-    @property
-    def registry_dict(self):
-        return self._registry_dict
+    def __contains__(self, item):
+        return item in self._registry_dict.values()

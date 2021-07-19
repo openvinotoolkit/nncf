@@ -1,12 +1,27 @@
-from collections import namedtuple
+"""
+ Copyright (c) 2021 Intel Corporation
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+      http://www.apache.org/licenses/LICENSE-2.0
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+"""
+
 from copy import deepcopy
 from enum import Enum
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Any
+
+from nncf.common.graph import NNCFNode
+from nncf.common.graph import NNCFNodeName
 
 
 class QuantizationMode:
-    SYMMETRIC = "symmetric"
-    ASYMMETRIC = "asymmetric"
+    SYMMETRIC = 'symmetric'
+    ASYMMETRIC = 'asymmetric'
 
 
 class QuantizerConfig:
@@ -36,7 +51,7 @@ class QuantizerConfig:
         return self.__dict__ == other.__dict__
 
     def __str__(self):
-        return "B:{bits} M:{mode} SGN:{signedness} PC:{per_channel}".format(
+        return 'B:{bits} M:{mode} SGN:{signedness} PC:{per_channel}'.format(
             bits=self.num_bits,
             mode='S' if self.mode == QuantizationMode.SYMMETRIC else 'A',
             signedness='ANY' if self.signedness_to_force is None else ('S' if self.signedness_to_force else 'U'),
@@ -88,6 +103,27 @@ class QuantizerConfig:
         return self.per_channel == other_qconfig.per_channel and \
                self.signedness_to_force == other_qconfig.signedness_to_force and \
                self.mode == other_qconfig.mode
+
+    def get_state(self) -> Dict[str, Any]:
+        """
+        Returns a dictionary with Python data structures (dict, list, tuple, str, int, float, True, False, None) that
+        represents state of the object.
+
+        :return: state of the object
+        """
+        return {'num_bits': self.num_bits,
+                'mode': self.mode,
+                'signedness_to_force': self.signedness_to_force,
+                'per_channel': self.per_channel}
+
+    @classmethod
+    def from_state(cls, state: Dict[str, Any]) -> 'QuantizerConfig':
+        """
+        Creates the object from its state.
+
+        :param state: Output of `get_state()` method.
+        """
+        return cls(**state)
 
 
 class QuantizerSpec:
@@ -143,7 +179,7 @@ class QuantizationConstraints:
         """
         for attr_name in kwargs:
             if not hasattr(QuantizationConstraints.REF_QCONF_OBJ, attr_name):
-                raise RuntimeError("Invalid constraint - QuantizerConfig has no attribute '{}'".format(attr_name))
+                raise RuntimeError('Invalid constraint - QuantizerConfig has no attribute \'{}\''.format(attr_name))
         self.qconf_attr_vs_constraint_dict = kwargs
 
     def apply_constraints_to(self, qconfig: QuantizerConfig) -> QuantizerConfig:
@@ -168,10 +204,10 @@ class QuantizationConstraints:
 
     @classmethod
     def from_config_dict(cls, config_dict: Dict) -> 'QuantizationConstraints':
-        return cls(num_bits=config_dict.get("bits"),
-                   mode=config_dict.get("mode"),
-                   per_channel=config_dict.get("per_channel"),
-                   signedness_to_force=config_dict.get("signed"))
+        return cls(num_bits=config_dict.get('bits'),
+                   mode=config_dict.get('mode'),
+                   per_channel=config_dict.get('per_channel'),
+                   signedness_to_force=config_dict.get('signed'))
 
     def constrain_qconfig_list(self, quantizer_config_list: List[QuantizerConfig]) -> List[QuantizerConfig]:
         assert quantizer_config_list is not None
@@ -191,8 +227,8 @@ class QuantizationConstraints:
 
 
 class QuantizerGroup(Enum):
-    ACTIVATIONS = "activations"
-    WEIGHTS = "weights"
+    ACTIVATIONS = 'activations'
+    WEIGHTS = 'weights'
 
     @staticmethod
     def from_str(str_: str) -> 'QuantizerGroup':
@@ -200,7 +236,79 @@ class QuantizerGroup(Enum):
             return QuantizerGroup.ACTIVATIONS
         if str_ == QuantizerGroup.WEIGHTS.value:
             return QuantizerGroup.WEIGHTS
-        raise RuntimeError("Unknown quantizer group string")
+        raise RuntimeError('Unknown quantizer group string')
 
 
-QuantizableModule = namedtuple('QuantizableModule', 'module module_scope qconfig_list')
+class QuantizableWeightedLayerNode:
+    def __init__(self, node: NNCFNode, qconfig_list: List[QuantizerConfig]):
+        self.node = node
+        self.qconfig_list = qconfig_list
+
+
+class QuantizerId:
+    """
+    Unique identifier of a quantizer. It's used to store and search all quantizers in a single
+    structure.
+    """
+
+    def get_base(self):
+        raise NotImplementedError
+
+    def get_suffix(self) -> str:
+        raise NotImplementedError
+
+    def __str__(self):
+        return str(self.get_base()) + self.get_suffix()
+
+    def __hash__(self):
+        return hash((self.get_base(), self.get_suffix()))
+
+    def __eq__(self, other: 'QuantizerId'):
+        return (self.get_base() == other.get_base()) and (self.get_suffix() == other.get_suffix())
+
+
+class WeightQuantizerId(QuantizerId):
+    """ Unique identifier of a quantizer for weights."""
+
+    def __init__(self, target_node_name: NNCFNodeName):
+        self.target_node_name = target_node_name
+
+    def get_base(self) -> str:
+        return self.target_node_name
+
+    def get_suffix(self) -> str:
+        return '|WEIGHT'
+
+
+class NonWeightQuantizerId(QuantizerId):
+    """
+    Unique identifier of a quantizer, which corresponds to non-weight operations, such as
+    ordinary activation, function and input
+    """
+
+    def __init__(self, target_node_name: NNCFNodeName,
+                 input_port_id=None):
+        self.target_node_name = target_node_name
+        self.input_port_id = input_port_id
+
+    def get_base(self) -> str:
+        return self.target_node_name
+
+    def get_suffix(self) -> str:
+        return '|OUTPUT' if self.input_port_id is None else '|INPUT{}'.format(self.input_port_id)
+
+
+class UnifiedScaleType(Enum):
+    """
+    UNIFY_ONLY_PER_TENSOR - only results in scale unification if per-tensor quantization is ultimately applied.
+    This is the target scenario for concat unified scales since the channel count between the concatenated tensors
+    may be mismatching and, more importantly, the concatenation might occur on exactly the channel dimension which
+    means that the concatenated tensor must reuse all quantization scales of the input per-channel
+    quantized tensors.
+    UNIFY_ALWAYS - results in scale unification for both per-channel and per-tensor quantization. This is the
+    target scenario for eltwise unified scales, as it is assumed that the eltwise ops have matching input
+    tensor shapes and therefore the quantization channel count is the same.
+    """
+
+    UNIFY_ONLY_PER_TENSOR = 0
+    UNIFY_ALWAYS = 1

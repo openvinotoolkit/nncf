@@ -1,2 +1,5 @@
 *.png filter=lfs diff=lfs merge=lfs -text
 *.pb filter=lfs diff=lfs merge=lfs -text
+
+* text=auto eol=lf
+*.{tfrecord,h5} binary

@@ -11,7 +11,7 @@
  limitations under the License.
 """
 
-from typing import Optional, Dict
+from typing import Optional, Dict, Any
 
 from nncf.common.utils.logger import logger
 from nncf.common.utils.registry import Registry
@@ -21,7 +21,7 @@ from nncf.common.schedulers import MultiStepSchedule
 from nncf.common.sparsity.controller import SparsityController
 from nncf.common.schedulers import BaseCompressionScheduler
 
-SPARSITY_SCHEDULERS = Registry("sparsity_schedulers")
+SPARSITY_SCHEDULERS = Registry('sparsity_schedulers')
 
 
 class SparsityScheduler(BaseCompressionScheduler):
@@ -90,7 +90,7 @@ class SparsityScheduler(BaseCompressionScheduler):
         return self._current_level
 
 
-@SPARSITY_SCHEDULERS.register("polynomial")
+@SPARSITY_SCHEDULERS.register('polynomial')
 class PolynomialSparsityScheduler(SparsityScheduler):
     """
     Sparsity scheduler with a polynomial decay schedule.
@@ -146,12 +146,12 @@ class PolynomialSparsityScheduler(SparsityScheduler):
         local_step = max(self._steps_in_current_epoch - 1, 0)
         return self.schedule(self.current_epoch, local_step, self._steps_per_epoch)
 
-    def load_state(self, state: Dict[str, object]) -> None:
+    def load_state(self, state: Dict[str, Any]) -> None:
         super().load_state(state)
         if self._update_per_optimizer_step:
             self._steps_per_epoch = state['_steps_per_epoch']
 
-    def get_state(self) -> Dict[str, object]:
+    def get_state(self) -> Dict[str, Any]:
         state = super().get_state()
         if self._update_per_optimizer_step:
             state['_steps_per_epoch'] = self._steps_per_epoch
@@ -181,7 +181,7 @@ class PolynomialSparsityScheduler(SparsityScheduler):
                                'by a .epoch_step() call.')
 
 
-@SPARSITY_SCHEDULERS.register("exponential")
+@SPARSITY_SCHEDULERS.register('exponential')
 class ExponentialSparsityScheduler(SparsityScheduler):
     """
     Sparsity scheduler with an exponential decay schedule.
@@ -215,7 +215,7 @@ class ExponentialSparsityScheduler(SparsityScheduler):
         return min(current_level, self.target_level)
 
 
-@SPARSITY_SCHEDULERS.register("adaptive")
+@SPARSITY_SCHEDULERS.register('adaptive')
 class AdaptiveSparsityScheduler(SparsityScheduler):
     """
     Sparsity scheduler with an adaptive schedule.
@@ -248,19 +248,19 @@ class AdaptiveSparsityScheduler(SparsityScheduler):
 
         return min(current_level, self.target_level)
 
-    def load_state(self, state: Dict[str, object]) -> None:
+    def load_state(self, state: Dict[str, Any]) -> None:
         super().load_state(state)
         self.num_bad_epochs = state['num_bad_epochs']
         self._current_level = state['current_sparsity_level']
 
-    def get_state(self) -> Dict[str, object]:
+    def get_state(self) -> Dict[str, Any]:
         state = super().get_state()
         state['num_bad_epochs'] = self.num_bad_epochs
         state['current_sparsity_level'] = self._current_level
         return state
 
 
-@SPARSITY_SCHEDULERS.register("multistep")
+@SPARSITY_SCHEDULERS.register('multistep')
 class MultiStepSparsityScheduler(SparsityScheduler):
     """
     Sparsity scheduler with a piecewise constant schedule.

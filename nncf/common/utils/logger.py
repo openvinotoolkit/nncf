@@ -14,13 +14,13 @@
 import logging
 import sys
 
-NNCF_LOGGER_NAME = "nncf"
+NNCF_LOGGER_NAME = 'nncf'
 
 logger = logging.getLogger(NNCF_LOGGER_NAME)
 logger.propagate = False
 
 stdout_handler = logging.StreamHandler(sys.stdout)
-fmt = logging.Formatter("%(levelname)s:%(name)s:%(message)s")
+fmt = logging.Formatter('%(levelname)s:%(name)s:%(message)s')
 stdout_handler.setFormatter(fmt)
 stdout_handler.setLevel(logging.INFO)
 logger.addHandler(stdout_handler)
@@ -35,3 +35,13 @@ def set_log_level(level):
 
 def disable_logging():
     logger.handlers = []
+
+
+class DuplicateFilter:
+    def __init__(self):
+        self.msgs = set()
+
+    def filter(self, rec):
+        retval = rec.msg not in self.msgs
+        self.msgs.add(rec.msg)
+        return retval

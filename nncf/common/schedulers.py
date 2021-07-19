@@ -11,12 +11,13 @@
  limitations under the License.
 """
 
-from typing import List, Optional, Dict
+from typing import List, Optional, Dict, Any
 from bisect import bisect_right
 
 import numpy as np
 
 from nncf.api.compression import CompressionScheduler
+from nncf.api.compression import CompressionStage
 
 
 class PolynomialDecaySchedule:
@@ -208,7 +209,7 @@ class BaseCompressionScheduler(CompressionScheduler):
             next_epoch = self.current_epoch + 1
         self.current_epoch = next_epoch
 
-    def load_state(self, state: Dict[str, object]) -> None:
+    def load_state(self, state: Dict[str, Any]) -> None:
         """
         Loads the compression scheduler state, but does not update the state of the
         compression method.
@@ -218,7 +219,7 @@ class BaseCompressionScheduler(CompressionScheduler):
         self.current_step = state['current_step']
         self.current_epoch = state['current_epoch']
 
-    def get_state(self) -> Dict[str, object]:
+    def get_state(self) -> Dict[str, Any]:
         """
         Returns the compression scheduler state.
 
@@ -238,8 +239,11 @@ class StubCompressionScheduler(CompressionScheduler):
     def epoch_step(self, next_epoch: Optional[int] = None) -> None:
         pass
 
-    def load_state(self, state: Dict[str, object]) -> None:
+    def load_state(self, state: Dict[str, Any]) -> None:
         pass
 
-    def get_state(self) -> Dict[str, object]:
-        pass
+    def get_state(self) -> Dict[str, Any]:
+        return {}
+
+    def compression_stage(self) -> CompressionStage:
+        return CompressionStage.FULLY_COMPRESSED

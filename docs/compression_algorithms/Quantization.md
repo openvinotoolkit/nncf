@@ -84,21 +84,21 @@ For better accuracy, floating-point zero should be within quantization range and
 You can use the `num_init_samples` parameter from the `initializer` group to initialize the values of `input_low` and `input_range` from the collected statistics using given number of samples.
 
 #### Quantizer setup and hardware config files
-NNCF allows to quantize models for best results on a given Intel hardware type when executed using OpenVINO runtime. 
+NNCF allows to quantize models for best results on a given Intel hardware type when executed using OpenVINO runtime.
 To achieve this, the quantizer setup should be performed with following considerations in mind:
 1) every operation that can accept quantized inputs on a given HW (i.e. can be executed using quantized input values) should have its inputs quantized in NNCF
 2) the quantized inputs should be quantized with a configuration that is supported on a given HW for a given operation (e.g. per-tensor vs per-channel quantization, or 8 bits vs. 4 bits)
 3) for operations that are agnostic to quantization, the execution should handle quantized tensors rather than full-precision tensors.
 4) certain operation sequences will be runtime-optimized to execute in a single kernel call ("fused"), and additional quantizer insertion/quantization simulation within such operation sequences will be detrimental to overall performance
 
-These requirements are fulfilled by the quantizer propagation algorithm. 
+These requirements are fulfilled by the quantizer propagation algorithm.
 The algorithm first searches the internal NNCF representation of the model's control flow graph for predefined patterns that are "fusable", and apply the fusing to the internal graph representation as well.
 Next, the operations in the graph that can be associated to input-quantizable operations on a given target hardware are assigned a single quantizer for each its quantizable activation input, with a number of possible quantizer configurations attached to it (that are feasible on target HW).
 The quantizers are then "propagated" against the data flow in the model's control flow graph as far as possible, potentially merging with other quantizers.
 Once all quantizers have reached a standstill in their propagation process, each will have a final (possibly reduced) set of possible quantizer configurations, from which a single one is either chosen manually, or using a precision initialization algorithm (which accepts the potential quantizer locations and associated potential quantizer configuration sets).
-The resulting configuration is then applied as a final quantizer setup configuration. 
+The resulting configuration is then applied as a final quantizer setup configuration.
 
-Note that this algorithm applies to activation quantization only - the weight quantizers do not require propagation. 
+Note that this algorithm applies to activation quantization only - the weight quantizers do not require propagation.
 However, the possible configurations of weight quantizers themselves are also sourced from the HW config file definitions.
 
 The HW to target for a given quantization algorithm run can be specified in NNCF config using the global `"target_device"` option.
@@ -131,15 +131,16 @@ There is a known issue with AVX2 and AVX512 CPU devices. The issue appears with 
 AVX2 and AVX512 utilize a 16-bit register to store the result of operations on tensors. In case when tensors are saturated the buffer overflow happens.
 This leads to accuracy degradation.
 
-To fix this issue inside NNCF, weight tensors are quantized in 8 bits but only 7 bits are effectively used. 
+To fix this issue inside NNCF, weight tensors are quantized in 8 bits but only 7 bits are effectively used.
 This regime is used when `"target_device": "CPU"` or `"target_device": "ANY"` set.
 
 ---
 
+<a name="mixed_precision_quantization"></a>
 #### Mixed-Precision Quantization
 
-Quantization to lower precisions (e.g. 6, 4, 2 bits) is an efficient way to accelerate inference of neural networks. 
-Although NNCF supports quantization with an arbitrary number of bits to represent weights and activations values, 
+Quantization to lower precisions (e.g. 6, 4, 2 bits) is an efficient way to accelerate inference of neural networks.
+Although NNCF supports quantization with an arbitrary number of bits to represent weights and activations values,
 choosing ultra-low bitwidth could noticeably affect the model's accuracy. A good trade-off between accuracy and performance is achieved by assigning different precisions to different layers. NNCF provides two automatic precision assignment algorithms, namely **HAWQ** and **AutoQ**.
 
 #### HAWQ
@@ -150,23 +151,23 @@ calculated by multiplying the average Hessian trace with the L2 norm of quantiza
 
 ![\overline{Tr}(H_{i}) * \left \| Q(W_{i}) - W_{i} \right \|^2_2](https://latex.codecogs.com/png.latex?%5Coverline%7BTr%7D%28H_%7Bi%7D%29%20*%20%5Cleft%20%5C%7C%20Q%28W_%7Bi%7D%29%20-%20W_%7Bi%7D%20%5Cright%20%5C%7C%5E2_2)
 
-The sum of the sensitivities for each layer forms a metric which serves as a proxy to the accuracy of the compressed 
-model: the lower the metric, the more accurate should be the corresponding mixed precision model on the validation 
-dataset. 
+The sum of the sensitivities for each layer forms a metric which serves as a proxy to the accuracy of the compressed
+model: the lower the metric, the more accurate should be the corresponding mixed precision model on the validation
+dataset.
 
-To find the optimal trade-off between accuracy and performance of the mixed precision model we also compute a 
-compression ratio - the ratio between **bit complexity** of a fully INT8 model and mixed-precision lower bitwidth one. 
-The bit complexity of the model is a sum of bit complexities for each quantized layer, which are defined as a product 
-of the layer FLOPS and the quantization bitwidth. The optimal configuration is found by calculating the sensitivity 
-metric and the compression ratio for all possible bitwidth settings and selecting the one with the minimal metric value 
+To find the optimal trade-off between accuracy and performance of the mixed precision model we also compute a
+compression ratio - the ratio between **bit complexity** of a fully INT8 model and mixed-precision lower bitwidth one.
+The bit complexity of the model is a sum of bit complexities for each quantized layer, which are defined as a product
+of the layer FLOPS and the quantization bitwidth. The optimal configuration is found by calculating the sensitivity
+metric and the compression ratio for all possible bitwidth settings and selecting the one with the minimal metric value
 among all configurations with a compression ratio below the specified threshold.
 
-By default, the compression ratio is 1.5. It should be enough to compress the model with no more than 1% accuracy drop. 
-But if it doesn't happen, the lower ratio can be set by `compression_ratio` parameter in the `precision` section of 
+By default, the compression ratio is 1.5. It should be enough to compress the model with no more than 1% accuracy drop.
+But if it doesn't happen, the lower ratio can be set by `compression_ratio` parameter in the `precision` section of
 configuration file.
 
-To avoid the exponential search procedure, we apply the following restriction: layers with a small average Hessian 
-trace value are quantized to lower bitwidth and vice versa. 
+To avoid the exponential search procedure, we apply the following restriction: layers with a small average Hessian
+trace value are quantized to lower bitwidth and vice versa.
 
 The Hessian trace is estimated with the randomized [Hutchinson algorithm](https://www.researchgate.net/publication/220432178_Randomized_Algorithms_for_Estimating_the_Trace_of_an_Implicit_Symmetric_Positive_Semi-Definite_Matrix).
 Given Rademacher distributed random vector v, the trace of symmetric matrix H is equal to the estimation of a quadratic form:
@@ -188,14 +189,14 @@ a random vector v, which is independent of ![W_i](https://latex.codecogs.com/png
 where ![H_i](https://latex.codecogs.com/png.latex?H_i) is the Hessian matrix of loss with respect to
 ![W_i](https://latex.codecogs.com/png.latex?W_i). Hence ![Hv](https://latex.codecogs.com/png.latex?Hv) can be
 computed by 2 backpropagation passes: first  - with respect to the loss and second - with respect to the product of the
-gradients and a random vector.   
+gradients and a random vector.
 
-The aforementioned procedure sets bitwidth for weight quantizers only. Bitwidth for activation quantizers is assigned 
-on the next step in two ways: strict or liberal. All quantizers between modules with quantizable inputs have the same 
-bitwidth in the strict mode. Liberal mode allows different precisions within the group. For both cases, bitwidth is 
-assigned based on the rules of the hardware config. If multiple variants are possible the minimal compatible bitwidth 
-is chosen. By default, liberal mode is used as it does not reject a large number of possible bitwidth settings.   
-The `bitwidth_assignment_mode` parameter can override it to the strict one. 
+The aforementioned procedure sets bitwidth for weight quantizers only. Bitwidth for activation quantizers is assigned
+on the next step in two ways: strict or liberal. All quantizers between modules with quantizable inputs have the same
+bitwidth in the strict mode. Liberal mode allows different precisions within the group. For both cases, bitwidth is
+assigned based on the rules of the hardware config. If multiple variants are possible the minimal compatible bitwidth
+is chosen. By default, liberal mode is used as it does not reject a large number of possible bitwidth settings.
+The `bitwidth_assignment_mode` parameter can override it to the strict one.
 
 For automatic mixed-precision selection it's recommended to use the following template of configuration file:
 ```
@@ -223,13 +224,13 @@ For automatic mixed-precision selection it's recommended to use the following te
 
 Note, optimizer parameters are model specific, this template contains optimal ones for ResNet-like models.
 
-Here's an [example](../../examples/classification/configs/mixed_precision/squeezenet1_1_imagenet_mixed_int_hawq.json) of 
+Here's an [example](../../examples/torch/classification/configs/mixed_precision/squeezenet1_1_imagenet_mixed_int_hawq.json) of
 using the template in the full configuration file.
 
-This template uses `plateau` scheduler. Though it usually leads to a lot of epochs of tuning for achieving a good 
-model's accuracy, this is the most reliable way. Staged quantization is an alternative approach and can be more than 
-two times faster, but it may require tweaking of hyper-parameters for each model. Please refer to configuration files 
-ending by `*_staged` for an example of this method.     
+This template uses `plateau` scheduler. Though it usually leads to a lot of epochs of tuning for achieving a good
+model's accuracy, this is the most reliable way. Staged quantization is an alternative approach and can be more than
+two times faster, but it may require tweaking of hyper-parameters for each model. Please refer to configuration files
+ending by `*_staged` for an example of this method.
 
 The manual mode of mixed-precision quantization is also available by explicitly setting the bitwidth per layer
  through `bitwidth_per_scope` parameter.
@@ -237,13 +238,13 @@ The manual mode of mixed-precision quantization is also available by explicitly 
 ---
 **NOTE**
 
-Precision initialization overrides bits settings specified in `weights` and `activations` sections of configuration 
-file. 
+Precision initialization overrides bits settings specified in `weights` and `activations` sections of configuration
+file.
 
 ---
 
 #### AutoQ
-NNCF provides an alternate mode, namely AutoQ, for mixed-precision automation. It is an AutoML-based technique that automatically learns the layer-wise bitwidth with explored experiences. Based on [HAQ](https://openaccess.thecvf.com/content_CVPR_2019/papers/Wang_HAQ_Hardware-Aware_Automated_Quantization_With_Mixed_Precision_CVPR_2019_paper.pdf), AutoQ utilizes an actor-critic algorithm, Deep Deterministic Policy Gradient (DDPG) for efficient search over the bitwidth space. DDPG is trained in an episodic fashion, converging to a deterministic mixed-precision policy after a number of episodes. An episode is constituted by stepping, the DDPG transitions from quantizer to quantizer sequentially to predict a precision of a layer. Each quantizer essentially denotes a state in RL framework and it is represented by attributes of the associated layers. For example, a quantizer for 2D Convolution is represented by its quantizer Id (integer), input and output channel size, feature map dimension, stride size, if it is depthwise, number of parameters etc. It is recommended to check out ```_get_layer_attr``` in [```quantization_env.py```](https://github.com/openvinotoolkit/nncf/blob/develop/nncf/automl/environment/quantization_env.py#L333) for the featurization of different network layer types. 
+NNCF provides an alternate mode, namely AutoQ, for mixed-precision automation. It is an AutoML-based technique that automatically learns the layer-wise bitwidth with explored experiences. Based on [HAQ](https://openaccess.thecvf.com/content_CVPR_2019/papers/Wang_HAQ_Hardware-Aware_Automated_Quantization_With_Mixed_Precision_CVPR_2019_paper.pdf), AutoQ utilizes an actor-critic algorithm, Deep Deterministic Policy Gradient (DDPG) for efficient search over the bitwidth space. DDPG is trained in an episodic fashion, converging to a deterministic mixed-precision policy after a number of episodes. An episode is constituted by stepping, the DDPG transitions from quantizer to quantizer sequentially to predict a precision of a layer. Each quantizer essentially denotes a state in RL framework and it is represented by attributes of the associated layers. For example, a quantizer for 2D Convolution is represented by its quantizer Id (integer), input and output channel size, feature map dimension, stride size, if it is depthwise, number of parameters etc. It is recommended to check out ```_get_layer_attr``` in [```quantization_env.py```](https://github.com/openvinotoolkit/nncf/blob/develop/nncf/automl/environment/quantization_env.py#L333) for the featurization of different network layer types.
 
 When the agent enters a state/quantizer, it receives the state features and forward passes them through its network. The output of the forward pass is a scalar continuous action output which is subsequently mapped to the bitwidth options of the particular quantizer. The episode terminates after the prediction of the last quantizer and a complete layer-wise mixed-precision policy is obtained. To ensure a policy fits in the user-specified compression ratio, the policy is post processed by reducing the precision sequentially from the last quantizer until the compression ratio is met.
 
@@ -266,7 +267,7 @@ To evaluate the goodness of a policy, NNCF backend quantizes the workload accord
     }
 ```
 
-The snippet above demonstrates the specification of AutoQ in NNCF config. ```target_device``` determines the bitwidth choices available for a particular layer. ```bits``` also defines the precision space of quantizer but it is only active in the absence of target device. 
+The snippet above demonstrates the specification of AutoQ in NNCF config. ```target_device``` determines the bitwidth choices available for a particular layer. ```bits``` also defines the precision space of quantizer but it is only active in the absence of target device.
 
 ```iter_number``` is synonymous to the number of episodes. A good choice depends on the number of quantizers in a workload and also the number of bitwidth choice. The larger the number, more episodes are required.
 
@@ -307,7 +308,7 @@ sparsity and filter pruning algorithms. It can be enabled by setting a non-zero 
     "initializer": {
         "range": {
             "num_init_samples": 256, // Number of samples from the training dataset to consume as sample model inputs for purposes of setting initial minimum and maximum quantization ranges
-            "type": "minmax" // Type of the initializer - determines which statistics gathered during initialization will be used to initialize the quantization ranges
+            "type": "min_max" // Type of the initializer - determines which statistics gathered during initialization will be used to initialize the quantization ranges. "mean_min_max" is used by default
         },
         "precision": {
             "type": "hawq", // Type of precision initialization - either "manual" or "hawq". With "manual", precisions are defined explicitly via "bitwidth_per_scope". With "hawq", these are determined automatically using the HAWQ algorithm.
@@ -329,7 +330,6 @@ sparsity and filter pruning algorithms. It can be enabled by setting a non-zero 
         }
         "batchnorm_adaptation": {
             "num_bn_adaptation_samples": 2048, // Number of samples from the training dataset to pass through the model at initialization in order to update batchnorm statistics of the original model. The actual number of samples will be a closest multiple of the batch size.
-            "num_bn_forget_samples": 1024, // Number of samples from the training dataset to pass through the model at initialization in order to erase batchnorm statistics of the original model (using large momentum value for rolling mean updates). The actual number of samples will be a closest multiple of the batch size.
         }
     }
     "weights": { // Constraints to be applied to model weights quantization only.
@@ -360,15 +360,6 @@ sparsity and filter pruning algorithms. It can be enabled by setting a non-zero 
         "linked_quantizer_scopes": []
     },
     "quantize_inputs": true, // Whether the model inputs should be immediately quantized prior to any other model operations."
-    "quantizable_subgraph_patterns": [ // Each sub-list in this list will correspond to a sequence of operations in the model control flow graph that will have a quantizer appended at the end of the sequence
-        [
-            "cat",
-            "batch_norm"
-        ],
-        [
-            "h_swish"
-        ]
-    ]
     "scope_overrides": { // This option is used to specify overriding quantization constraints for specific scope, e.g. in case you need to quantize a single operation differently than the rest of the model.
         "{re}.*InvertedResidual.*": {
             "mode": "symmetric", // Mode of quantization

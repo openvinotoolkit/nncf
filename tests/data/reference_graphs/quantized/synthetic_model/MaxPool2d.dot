@@ -1,7 +1,0 @@
-strict digraph  {
-"0 /nncf_model_input" [id=0, scope="", type=nncf_model_input];
-"1 TestModel/MaxPool2d[_layer]/max_pool2d" [id=1, scope="TestModel/MaxPool2d[_layer]", type=max_pool2d];
-"2 /nncf_model_output" [id=2, scope="", type=nncf_model_output];
-"0 /nncf_model_input" -> "1 TestModel/MaxPool2d[_layer]/max_pool2d";
-"1 TestModel/MaxPool2d[_layer]/max_pool2d" -> "2 /nncf_model_output";
-}
