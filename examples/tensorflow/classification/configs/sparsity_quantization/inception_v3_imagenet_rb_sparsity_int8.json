@@ -31,13 +31,15 @@
         }
       },
       {
-        "algorithm": "quantization",
-        "weights": {
-            "per_channel": false
-        },
-        "activations": {
-            "per_channel": false
+            "algorithm": "quantization",
+            "initializer": {
+                "batchnorm_adaptation": {
+                    "num_bn_adaptation_samples": 2048
+                }
+            },
+            "weights": {
+                "per_channel": false
+            }
         }
-      }
     ]
 }
