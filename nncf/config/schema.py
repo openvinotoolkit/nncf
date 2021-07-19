@@ -456,7 +456,8 @@ QUANTIZATION_SCHEMA = {
                                             description="Whether the model outputs should be additionally quantized.",
                                             default=False),
         "preset": with_attributes(QUANTIZATION_PRESETS_SCHEMA,
-                                  description="The preset defines the quantization schema for weights and activations."),
+                                  description="The preset defines the quantization schema "
+                                              "for weights and activations."),
         "scope_overrides": {
             "type": "object",
             "properties": {

@@ -142,10 +142,11 @@ class QuantizerSetupGeneratorBase:
                  precision_init_type: str = None,
                  precision_init_params: BasePrecisionInitParams = None,
                  range_init_params: PTRangeInitParams = None,
-                 target_device=None):
+                 hw_config: HWConfig = None):
         self._target_model = target_model
         self._quantization_config = quant_config
-        self._target_device = target_device
+        self.hw_config = hw_config
+        self._target_device = None if hw_config is None else hw_config.target_device
         self._quantize_inputs = self._quantization_config.get('quantize_inputs', True)
         self._quantize_outputs = self._quantization_config.get('quantize_outputs', False)
 
@@ -313,11 +314,10 @@ class PropagationBasedQuantizerSetupGenerator(QuantizerSetupGeneratorBase):
                  debug_interface: 'QuantizationDebugInterface' = None):
         super().__init__(quant_config, target_model, precision_init_type,
                          precision_init_params, range_init_params,
-                         hw_config.target_device)
+                         hw_config)
 
         self._pattern_fusing_graph = PT_HW_FUSED_PATTERNS.get_full_pattern_graph()
 
-        self.hw_config = hw_config
 
         self._hw_precision_constraints = HardwareQuantizationConstraints()
         self._debug_interface = debug_interface
