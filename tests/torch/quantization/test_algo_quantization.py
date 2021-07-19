@@ -562,7 +562,6 @@ def test_debug_mode():
         model.forward(torch.zeros(BasicConvTestModel.INPUT_SIZE,
                                   device=next(model.parameters()).device))
 
-
 class SharedLayersModel(torch.nn.Module):
     def __init__(self):
         super().__init__()
@@ -582,3 +581,30 @@ def test_shared_layers_are_weight_quantized_only_once():
     register_bn_adaptation_init_args(config)
     model, qctrl = create_compressed_model_and_algo_for_test(model, config)
     assert len(qctrl.weight_quantizers) == 1
+
+
+TEST_QUANTIZATION_PRESET_STRUCT = [
+    {
+        'preset': 'performance',
+        'expected_weights_q': SymmetricQuantizer,
+        'expected_activations_q': SymmetricQuantizer
+    },
+    {
+        'preset': 'mixed',
+        'expected_weights_q': SymmetricQuantizer,
+        'expected_activations_q': AsymmetricQuantizer
+    }]
+
+@pytest.mark.parametrize('data', TEST_QUANTIZATION_PRESET_STRUCT)
+def test_quantization_preset(data):
+    model = BasicConvTestModel()
+    config = get_empty_config(input_sample_sizes=[1, 1, 4, 4])
+    config['compression'] = {'algorithm': 'quantization', 'preset': data['preset']}
+    register_bn_adaptation_init_args(config)
+    _, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
+
+    for wq_info in compression_ctrl.weight_quantizers.values():
+        assert isinstance(wq_info.quantizer_module_ref, data['expected_weights_q'])
+
+    for aq_info in compression_ctrl.non_weight_quantizers.values():
+        assert isinstance(aq_info.quantizer_module_ref, data['expected_activations_q'])

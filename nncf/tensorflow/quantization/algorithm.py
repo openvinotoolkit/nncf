@@ -38,6 +38,7 @@ from nncf.common.quantization.quantizer_propagation.solver import QuantizerPropa
 from nncf.common.quantization.quantizer_setup import ActivationQuantizationInsertionPoint
 from nncf.common.quantization.quantizer_setup import SingleConfigQuantizerSetup
 from nncf.common.quantization.structs import QuantizableWeightedLayerNode
+from nncf.common.quantization.structs import QuantizationPreset
 from nncf.common.quantization.structs import QuantizationConstraints
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
@@ -263,6 +264,12 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
     def _parse_group_params(self, quant_config: Dict, quantizer_group: QuantizerGroup) -> None:
         group_name = quantizer_group.value
         params_dict = quant_config.get(group_name, {})
+        q_mode = params_dict.get('mode')
+        if q_mode is not None and 'preset' in quant_config:
+            raise RuntimeError("Global constraints cannot be parsed. Only quantize mode or preset must be set.")
+        if q_mode is None and self._target_device != 'VPU':
+            preset = QuantizationPreset.from_str(quant_config.get('preset', 'performance'))
+            params_dict['mode'] = preset.get_quantization_mode(quantizer_group)
         self.global_quantizer_constraints[quantizer_group] = QuantizationConstraints.from_config_dict(params_dict)
         self.ignored_scopes_per_group[quantizer_group] = params_dict.get('ignored_scopes', [])
         if self.ignored_scopes is not None:

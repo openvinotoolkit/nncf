@@ -623,3 +623,31 @@ def test_quantize_pre_post_processing(layer_name, input_type, data_type):
     postprocess = q._post_processing_fn(preprocess)
     assert tf.math.reduce_all(preprocess == layer_desk.inputs_transformed)
     assert tf.math.reduce_all(postprocess == layer_desk.inputs)
+
+TEST_QUANTIZATION_PRESET_STRUCT = [
+    {
+        'preset': 'performance',
+        'expected_weights_q': 'symmetric',
+        'expected_activations_q': 'symmetric'
+    },
+    {
+        'preset': 'mixed',
+        'expected_weights_q': 'symmetric',
+        'expected_activations_q': 'asymmetric'
+    }]
+
+@pytest.mark.parametrize('data', TEST_QUANTIZATION_PRESET_STRUCT)
+def test_quantization_preset(data):
+    model = get_basic_conv_test_model()
+
+    config = get_basic_quantization_config()
+    config['compression'].update({
+        'preset': data['preset']
+    })
+    compression_model, _ = create_compressed_model_and_algo_for_test(model, config, force_no_init=True)
+
+    activation_quantizers, weight_quantizers = get_quantizers(compression_model)
+    for aq in activation_quantizers:
+        assert aq.mode == data['expected_activations_q']
+    for wq in weight_quantizers:
+        assert wq.mode == data['expected_weights_q']
