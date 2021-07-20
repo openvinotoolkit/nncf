@@ -68,7 +68,7 @@ from examples.torch.common.utils import print_args
 from examples.torch.common.utils import write_metrics
 from nncf.api.compression import CompressionStage
 from nncf.common.utils.tensorboard import prepare_for_tensorboard
-from nncf.config.utils import is_accuracy_aware_training
+from nncf.config.utils import get_algo_with_accuracy_aware_training
 from nncf.torch import AdaptiveCompressionTrainingLoop
 from nncf.torch import EarlyStoppingCompressionTrainingLoop
 from nncf.torch import create_compressed_model
@@ -271,10 +271,10 @@ def main_worker(current_gpu, config: SampleConfig):
             # instantiate and run accuracy-aware training loop
             # TODO(kshpv) change algo name to const variable
             if accuracy_aware_algo == 'quantization':
-                training_loop = EarlyStoppingCompressionTrainingLoop(nncf_config, compression_ctrl)
+                acc_aware_training_loop = EarlyStoppingCompressionTrainingLoop(nncf_config, compression_ctrl)
             else:
-                training_loop = AdaptiveCompressionTrainingLoop(nncf_config, compression_ctrl)
-            model = training_loop.run(model,
+                acc_aware_training_loop = AdaptiveCompressionTrainingLoop(nncf_config, compression_ctrl)
+            model = acc_aware_training_loop.run(model,
                                       train_epoch_fn=train_epoch_fn,
                                       validate_fn=validate_fn,
                                       configure_optimizers_fn=configure_optimizers_fn,

@@ -153,9 +153,9 @@ def test_adaptive_compression_training_loop(max_accuracy_degradation, final_comp
     )
 )
 def test_early_stopping_compression_training_loop(max_accuracy_degradation,
-                                            reference_final_metric,
-                                            maximal_total_epochs=100, uncompressed_model_accuracy=0.2,
-                                            steps_per_epoch=20, img_size=10):
+                                                  reference_final_metric,
+                                                  maximal_total_epochs=100, uncompressed_model_accuracy=0.2,
+                                                  steps_per_epoch=20, img_size=10):
     set_random_seed(42)
     model = get_simple_conv_regression_model(img_size)
     dataset = get_const_target_mock_regression_dataset(img_size=img_size,
