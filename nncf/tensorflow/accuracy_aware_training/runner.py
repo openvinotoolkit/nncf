@@ -21,10 +21,11 @@ from nncf.common.utils.helpers import configure_accuracy_aware_paths
 
 
 # pylint: disable=E1101
-class TFAccuracyAwareTrainingRunner(BaseAccuracyAwareTrainingRunner):
+class TFBaseTrainingRunner(BaseAccuracyAwareTrainingRunner):
     """
     The Training Runner implementation for TensorFlow training code.
     """
+
     def initialize_training_loop_fns(self, train_epoch_fn, validate_fn, configure_optimizers_fn=None,
                                      tensorboard_writer=None, log_dir=None):
         super().initialize_training_loop_fns(train_epoch_fn, validate_fn, configure_optimizers_fn,
@@ -51,7 +52,7 @@ class TFAccuracyAwareTrainingRunner(BaseAccuracyAwareTrainingRunner):
 
         self.current_val_metric_value = None
         if self.validate_every_n_epochs is not None and \
-            self.training_epoch_count % self.validate_every_n_epochs == 0:
+                self.training_epoch_count % self.validate_every_n_epochs == 0:
             self.current_val_metric_value = self.validate(model)
 
         if self.verbose:
@@ -92,14 +93,6 @@ class TFAccuracyAwareTrainingRunner(BaseAccuracyAwareTrainingRunner):
     def add_tensorboard_scalar(self, key, data, step):
         tf.summary.scalar(key, data=data, step=step)
 
-    def update_training_history(self, compression_rate, best_metric_value):
-        best_accuracy_budget = best_metric_value - self.minimal_tolerable_accuracy
-        self._compressed_training_history.append((compression_rate, best_accuracy_budget))
-
-    @property
-    def compressed_training_history(self):
-        return dict(self._compressed_training_history)
-
     def load_best_checkpoint(self, model):
         # load checkpoint with highest compression rate and positive acc budget
         possible_checkpoint_rates = [comp_rate for (comp_rate, acc_budget) in self._compressed_training_history
@@ -116,3 +109,14 @@ class TFAccuracyAwareTrainingRunner(BaseAccuracyAwareTrainingRunner):
 
     def configure_optimizers(self):
         pass
+
+
+class TFAccuracyAwareTrainingRunner(TFBaseTrainingRunner, BaseAccuracyAwareTrainingRunner):
+
+    def update_training_history(self, compression_rate, best_metric_value):
+        best_accuracy_budget = best_metric_value - self.minimal_tolerable_accuracy
+        self._compressed_training_history.append((compression_rate, best_accuracy_budget))
+
+    @property
+    def compressed_training_history(self):
+        return dict(self._compressed_training_history)

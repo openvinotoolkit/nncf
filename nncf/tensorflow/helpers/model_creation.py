@@ -21,7 +21,7 @@ from nncf.api.compression import CompressionAlgorithmBuilder
 from nncf.api.compression import CompressionAlgorithmController
 from nncf.common.compression import BaseCompressionAlgorithmController as BaseController
 from nncf.config.structures import ModelEvaluationArgs
-from nncf.config.utils import is_accuracy_aware_training
+from nncf.config.utils import get_algo_with_accuracy_aware_training
 from nncf.tensorflow.accuracy_aware_training.keras_model_utils import accuracy_aware_fit
 from nncf.config.extractors import extract_algorithm_names
 from nncf.tensorflow.algorithm_selector import NoCompressionAlgorithmBuilder
@@ -76,7 +76,7 @@ def create_compressed_model(model: tf.keras.Model,
     model = get_built_model(model, config)
     original_model_accuracy = None
 
-    if is_accuracy_aware_training(config, compression_config_passed=True):
+    if get_algo_with_accuracy_aware_training(config) is not None:
         if config.has_extra_struct(ModelEvaluationArgs):
             evaluation_args = config.get_extra_struct(ModelEvaluationArgs)
             original_model_accuracy = evaluation_args.eval_fn(model)

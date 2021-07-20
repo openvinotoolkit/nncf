@@ -79,39 +79,40 @@ class EarlyStoppingCompressionTrainingLoop(TrainingLoop):
         self.runner.retrieve_original_accuracy(model)
 
         self.runner.configure_optimizers()
-        for epoch in range(self.runner.initial_training_phase_epochs):
-            compressed_model_accuracy = self.runner.validate(model, self.compression_controller)
+        for epoch in range(self.runner.maximal_total_epochs):
+            compressed_model_accuracy = self.runner.validate(model)
             accuracy_budget = compressed_model_accuracy - self.runner.minimal_tolerable_accuracy
             if accuracy_budget >= 0:
                 if epoch == 0:
                     nncf_logger.info('Early-exiting the training loop after model initialization step '
                                      'with compressed model accuracy value {}.'
                                      ' The accuracy drop is {}'.format(compressed_model_accuracy,
-                                                                       accuracy_budget))
+                                                                       compressed_model_accuracy - self.runner.uncompressed_model_accuracy))
                 else:
                     nncf_logger.info('Early-exiting the training loop on epoch {} with '
                                      'compressed model accuracy value {}.'
                                      ' The accuracy drop is {}'.format(epoch,
                                                                        compressed_model_accuracy,
-                                                                       accuracy_budget))
+                                                                       compressed_model_accuracy - self.runner.uncompressed_model_accuracy))
                 break
             self.runner.train_epoch(model, self.compression_controller)
 
         return model
 
+    @staticmethod
     def _get_backend_specific_training_runner_cls(compression_controller: CompressionAlgorithmController):
         nncf_backend = infer_backend_from_compression_controller(compression_controller)
 
         if nncf_backend is BackendType.TORCH:
-            from nncf.torch.accuracy_aware_training.runner import PTEarlyStoppingTrainingRunner
-            return PTEarlyStoppingTrainingRunner
+            from nncf.torch.accuracy_aware_training.runner import PTBaseTrainingRunner
+            return PTBaseTrainingRunner
         if nncf_backend == BackendType.TENSORFLOW:
-            pass
-            # from nncf.tensorflow.accuracy_aware_training.runner import TFAccuracyAwareTrainingRunner
-            # return TFAccuracyAwareTrainingRunner
+            from nncf.tensorflow.accuracy_aware_training.runner import TFBaseTrainingRunner
+            return TFBaseTrainingRunner
         raise RuntimeError('Got an unsupported value of nncf_backend')
 
-    def _get_early_stopping_config(self, nncf_config: NNCFConfig):
+    @staticmethod
+    def _get_early_stopping_config(nncf_config: NNCFConfig):
         compression_configs = nncf_config.get('compression', {})
         if isinstance(compression_configs, list):
             comp_algorithm_params_dict = {compression_config['algorithm']: compression_config
@@ -147,6 +148,7 @@ class AdaptiveCompressionTrainingLoop(TrainingLoop):
             raise RuntimeError('No compression algorithm supported by the accuracy-aware training '
                                'runner was specified in the config')
 
+    @staticmethod
     def _get_backend_specific_training_runner_cls(compression_controller: CompressionAlgorithmController):
         nncf_backend = infer_backend_from_compression_controller(compression_controller)
 
@@ -251,7 +253,7 @@ class AdaptiveCompressionTrainingLoop(TrainingLoop):
         runner.configure_optimizers()
         for _ in range(runner.initial_training_phase_epochs):
             runner.train_epoch(model, accuracy_aware_controller)
-        compressed_model_accuracy = runner.validate(model, accuracy_aware_controller)
+        compressed_model_accuracy = runner.validate(model)
         runner.accuracy_bugdet = compressed_model_accuracy - runner.minimal_tolerable_accuracy
         runner.add_tensorboard_scalar('val/accuracy_aware/accuracy_bugdet',
                                       runner.accuracy_bugdet, runner.cumulative_epoch_count)

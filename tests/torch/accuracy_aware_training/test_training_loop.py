@@ -133,7 +133,7 @@ def test_adaptive_compression_training_loop(max_accuracy_degradation,
 def test_compression_training_loop(max_accuracy_degradation,
                                    reference_final_metric,
                                    num_steps=10, learning_rate=1e-3,
-                                   maximal_total_epochs=5,
+                                   maximal_total_epochs=100,
                                    init_finetuning_steps=10):
     def validate_fn(model, epoch=0, train_loader=None):
         with set_torch_seed():

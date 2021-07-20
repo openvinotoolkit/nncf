@@ -28,7 +28,6 @@ from nncf.common.compression import BaseCompressionAlgorithmController as BaseCo
 from nncf.config.extractors import extract_algorithm_names
 from nncf.torch.algo_selector import NoCompressionAlgorithmBuilder
 from nncf.config import NNCFConfig
-from nncf.config.utils import is_accuracy_aware_training
 from nncf.api.compression import CompressionAlgorithmController
 from nncf.torch.algo_selector import COMPRESSION_ALGORITHMS
 from nncf.torch.composite_compression import PTCompositeCompressionAlgorithmBuilder
