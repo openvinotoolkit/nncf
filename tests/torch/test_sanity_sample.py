@@ -88,7 +88,8 @@ CONFIGS = {
                        TEST_ROOT.joinpath("torch", "data", "configs", "resnet18_cifar100_bin_xnor.json"),
                        TEST_ROOT.joinpath("torch", "data", "configs", "resnet18_cifar10_staged_quant.json"),
                        TEST_ROOT.joinpath("torch", "data", "configs", "resnet18_pruning_magnitude.json"),
-                       TEST_ROOT.joinpath("torch", "data", "configs", "resnet18_pruning_learned_ranking.json")],
+                       TEST_ROOT.joinpath("torch", "data", "configs", "resnet18_pruning_learned_ranking.json"),
+                       TEST_ROOT.joinpath("torch", "data", "configs", "resnet18_pruning_accuracy_aware.json")],
     "semantic_segmentation": [TEST_ROOT.joinpath("torch", "data", "configs", "unet_camvid_int8.json"),
                               TEST_ROOT.joinpath("torch", "data", "configs", "unet_camvid_rb_sparsity.json")],
     "object_detection": [TEST_ROOT.joinpath("torch", "data", "configs", "ssd300_vgg_voc_int8.json")]

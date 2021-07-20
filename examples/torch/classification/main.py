@@ -176,7 +176,7 @@ def main_worker(current_gpu, config: SampleConfig):
             return top1, top5, loss
 
         def model_eval_fn(model):
-            top1, _ = validate(val_loader, model, criterion, config)
+            top1, _, _ = validate(val_loader, model, criterion, config)
             return top1
 
         execution_params = ExecutionParameters(config.cpu_only, config.current_gpu)
