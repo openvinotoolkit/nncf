@@ -888,7 +888,7 @@ class QuantizerPropagationSolver:
         quant_det_id = node[QuantizerPropagationStateGraph.OPERATOR_METATYPE_NODE_ATTR]
         qconf_list = self.get_allowed_quantizer_configs_for_operator(quant_det_id)
         if quant_det_id in OUTPUT_NOOP_METATYPES:
-            qconf_list = self.default_global_qconfig_list
+            qconf_list = deepcopy(self.default_global_qconfig_list)
         assert qconf_list is not None
 
         if not HWConfig.is_wildcard_quantization(qconf_list):
