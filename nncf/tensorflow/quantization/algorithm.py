@@ -317,25 +317,6 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
             transformations.register(command)
         return transformations
 
-
-    def _get_quantizable_weighted_layer_nodes(self, nncf_graph: NNCFGraph) -> List[QuantizableWeightedLayerNode]:
-        retval = []
-        w_qconfig = self._get_default_qconfig(self.global_quantizer_constraints[QuantizerGroup.WEIGHTS])
-        for node in nncf_graph.get_all_nodes():
-            metatype = node.metatype
-            if metatype in OUTPUT_NOOP_METATYPES:
-                continue
-
-            if not (metatype in QUANTIZATION_LAYER_METATYPES
-                    and should_consider_scope(node.node_name,
-                                              ignored_scopes=self.ignored_scopes_per_group[QuantizerGroup.WEIGHTS],
-                                              target_scopes=None)):
-                continue
-
-            retval.append(QuantizableWeightedLayerNode(node,
-                                                       [w_qconfig]))
-        return retval
-
     def _get_custom_layer_node_names(self, nncf_graph: NNCFGraph, converter: TFModelConverter) -> List[NNCFNodeName]:
         retval = []
         for node in nncf_graph.get_all_nodes():
