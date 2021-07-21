@@ -96,6 +96,8 @@ CONFIGS = {
         TEST_CONFIG_ROOT.joinpath('resnet50_cifar10_magnitude_sparsity_int8.json'),
         TEST_CONFIG_ROOT.joinpath('sequential_model_cifar10_magnitude_sparsity_int8.json'),
         TEST_CONFIG_ROOT.joinpath('sequential_model_no_input_cifar10_magnitude_sparsity_int8.json'),
+        TEST_CONFIG_ROOT.joinpath('resnet50_pruning_accuracy_aware.json'),
+        TEST_CONFIG_ROOT.joinpath('resnet50_int8_accuracy_aware.json'),
     ],
     'object_detection': [
         TEST_CONFIG_ROOT.joinpath('retinanet_coco2017_magnitude_sparsity_int8.json'),
