@@ -299,6 +299,7 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
             target_point = quantization_point.target_point
             if quantization_point.is_weight_quantization():
                 quantizer = self._create_quantizer(op_name, quantizer_spec)
+                self._op_names.append(op_name)
             else:
                 quantizer = FakeQuantize(quantizer_spec, name=op_name)
                 self._op_names.append(quantizer.op_name)
