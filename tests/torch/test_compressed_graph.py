@@ -10,7 +10,7 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-
+import logging
 import os
 from abc import ABC
 from abc import abstractmethod
@@ -308,9 +308,7 @@ class TestModelsGraph:
             create_compressed_model_and_algo_for_test(model, config, dummy_forward_fn=desc.dummy_forward_fn,
                                                       wrap_inputs_fn=desc.wrap_inputs_fn)
 
-        # counts wrapped NNCF modules to ignore the ones that are called in the training mode only
-        sparsifiable_modules = list(NNCF_MODULES_MAP.keys())
-        ref_num_sparsed = len(get_all_modules_by_type(model, sparsifiable_modules))
+        ref_num_sparsed = len(get_all_modules_by_type(model, ['BinaryMask', 'RBSparsifyingWeight']))
         assert ref_num_sparsed == len(compression_ctrl.sparsified_module_info)
         check_model_graph(compressed_model, desc.dot_filename, algo)
 
@@ -326,7 +324,6 @@ class TestModelsGraph:
     def test_sparse_quantize_network(self, desc: ModelDesc):
         model = desc.model_builder()
 
-        from nncf.torch.layers import NNCF_MODULES_MAP
         config = get_empty_config(input_sample_sizes=desc.input_sample_sizes)
         config["compression"] = [
             {"algorithm": "rb_sparsity"},
@@ -338,9 +335,7 @@ class TestModelsGraph:
             create_compressed_model_and_algo_for_test(model, config, dummy_forward_fn=desc.dummy_forward_fn,
                                                       wrap_inputs_fn=desc.wrap_inputs_fn)
 
-        # counts wrapped NNCF modules to ignore the ones that are called in the training mode only
-        sparsifiable_modules = list(NNCF_MODULES_MAP.keys())
-        ref_num_sparsed = len(get_all_modules_by_type(compressed_model, sparsifiable_modules))
+        ref_num_sparsed = len(get_all_modules_by_type(compressed_model, 'RBSparsifyingWeight'))
 
         assert ref_num_sparsed == len(compression_ctrl.child_ctrls[0].sparsified_module_info)
         check_model_graph(compressed_model, desc.dot_filename, "quantized_rb_sparsity")

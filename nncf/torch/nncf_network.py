@@ -201,11 +201,7 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
                                                                                      with_output_tracing=True)
 
         nncf_wrapped_model = self.get_nncf_wrapped_model()
-        eval_only_op_scopes = self._collect_eval_only_op_scopes(nncf_wrapped_model,
-                                                                _orig_graph_build_forward_fn)
-
-        # all modules called in eval mode should be replaced prior to graph building
-        self._replace_modules_by_nncf_modules(device, eval_only_op_scopes, reset)
+        self._replace_modules_by_nncf_modules(device, reset)
 
         _orig_context = TracingContext()
 
@@ -379,12 +375,10 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
 
         return wrapped_user_dummy_forward_fn
 
-    def _replace_modules_by_nncf_modules(self, device, eval_only_op_scopes: List[Scope] = None,
-                                         reset: bool = False):
+    def _replace_modules_by_nncf_modules(self, device, reset: bool = False):
         module, self._nncf_module_scopes = replace_modules_by_nncf_modules(
             self.get_nncf_wrapped_model(), ignored_scopes=self.ignored_scopes,
-            target_scopes=self.target_scopes, eval_op_scopes=eval_only_op_scopes,
-            reset=reset)
+            target_scopes=self.target_scopes, reset=reset)
         self._set_nncf_wrapped_model(module.to(device))
 
     def get_nncf_module_scopes(self) -> List[Scope]:
