@@ -169,8 +169,8 @@ def test_adaptive_compression_training_loop(max_accuracy_degradation, final_comp
     ('max_accuracy_degradation',
      'reference_final_metric'),
     (
-            (30.0, 0.160190),
-            (1.0, 0.202863),
+            (30.0, 0.151178),
+            (1.0, 0.201807),
     )
 )
 def test_early_stopping_compression_training_loop(max_accuracy_degradation,
