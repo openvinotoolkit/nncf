@@ -11,6 +11,7 @@
  limitations under the License.
 """
 
+import os
 import random
 import contextlib
 
@@ -26,9 +27,28 @@ from tests.tensorflow.quantization.utils import get_basic_quantization_config
 
 
 def set_random_seed(seed):
+    os.environ['PYTHONHASHSEED'] = str(seed)
     random.seed(seed)
     np.random.seed(seed)
     tf.random.set_seed(seed)
+
+
+def set_global_determinism(seed, fast_n_close=False):
+    """
+        Enable 100% reproducibility on operations related to tensor and randomness.
+        Parameters:
+        seed (int): seed value for global randomness
+        fast_n_close (bool): whether to achieve efficient at the cost of determinism/reproducibility
+    """
+    set_random_seed(seed=seed)
+    if fast_n_close:
+        return
+
+    os.environ['TF_DETERMINISTIC_OPS'] = '1'
+    os.environ['TF_CUDNN_DETERMINISTIC'] = '1'
+    # https://www.tensorflow.org/api_docs/python/tf/config/threading/set_inter_op_parallelism_threads
+    tf.config.threading.set_inter_op_parallelism_threads(1)
+    tf.config.threading.set_intra_op_parallelism_threads(1)
 
 
 def get_simple_conv_regression_model(img_size=10):
@@ -156,7 +176,7 @@ def test_early_stopping_compression_training_loop(max_accuracy_degradation,
                                                   reference_final_metric,
                                                   maximal_total_epochs=100, uncompressed_model_accuracy=0.2,
                                                   steps_per_epoch=20, img_size=10):
-    set_random_seed(42)
+    set_global_determinism(42)
     model = get_simple_conv_regression_model(img_size)
     dataset = get_const_target_mock_regression_dataset(img_size=img_size,
                                                        num_samples=steps_per_epoch)
