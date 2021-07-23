@@ -75,7 +75,7 @@ def test_adaptive_compression_training_loop(max_accuracy_degradation,
     def validate_fn(model, epoch=0, train_loader=None):
         with set_torch_seed():
             train_loader = iter(train_loader)
-            loss = 0
+            loss = torch.FloatTensor([0])
             with torch.no_grad():
                 for _ in range(num_steps):
                     x, y_gt = next(train_loader)
@@ -123,22 +123,17 @@ def test_adaptive_compression_training_loop(max_accuracy_degradation,
 
 
 @pytest.mark.parametrize(
-    ('max_accuracy_degradation',
-     'reference_final_metric'),
-    (
-            (0.01, 0.998766),
-            (100., 0.891062),
-    )
+    ('max_accuracy_degradation',),
+    ((30.0,), (1.0,))
 )
 def test_compression_training_loop(max_accuracy_degradation,
-                                   reference_final_metric,
                                    num_steps=10, learning_rate=1e-3,
                                    maximal_total_epochs=100,
                                    init_finetuning_steps=10):
     def validate_fn(model, epoch=0, train_loader=None):
         with set_torch_seed():
             train_loader = iter(train_loader)
-            loss = 0
+            loss = torch.FloatTensor([0])
             with torch.no_grad():
                 for _ in range(num_steps):
                     x, y_gt = next(train_loader)
@@ -179,4 +174,7 @@ def test_compression_training_loop(max_accuracy_degradation,
                                              train_epoch_fn=train_fn,
                                              validate_fn=partial(validate_fn, train_loader=train_loader),
                                              configure_optimizers_fn=configure_optimizers_fn)
-    assert validate_fn(model, train_loader=train_loader) == pytest.approx(reference_final_metric, 1e-4)
+    original_model_accuracy = model.original_model_accuracy
+    compressed_model_accuracy = validate_fn(model, train_loader=train_loader)
+
+    assert (original_model_accuracy - compressed_model_accuracy) * 100 <= max_accuracy_degradation

@@ -83,17 +83,18 @@ class EarlyStoppingCompressionTrainingLoop(TrainingLoop):
             compressed_model_accuracy = self.runner.validate(model)
             accuracy_budget = compressed_model_accuracy - self.runner.minimal_tolerable_accuracy
             if accuracy_budget >= 0:
+                accuracy_drop = compressed_model_accuracy - self.runner.uncompressed_model_accuracy
                 if epoch == 0:
                     nncf_logger.info('Early-exiting the training loop after model initialization step '
                                      'with compressed model accuracy value {}.'
                                      ' The accuracy drop is {}'.format(compressed_model_accuracy,
-                                                                       compressed_model_accuracy - self.runner.uncompressed_model_accuracy))
+                                                                       accuracy_drop))
                 else:
                     nncf_logger.info('Early-exiting the training loop on epoch {} with '
                                      'compressed model accuracy value {}.'
                                      ' The accuracy drop is {}'.format(epoch,
                                                                        compressed_model_accuracy,
-                                                                       compressed_model_accuracy - self.runner.uncompressed_model_accuracy))
+                                                                       accuracy_drop))
                 break
             self.runner.train_epoch(model, self.compression_controller)
 

@@ -94,7 +94,7 @@ class TrainingRunner(ABC):
 
 class BaseTrainingRunner(TrainingRunner):
     """
-    The base early stopping training Runner object, initialized with the default
+    The base training Runner object, initialized with the default
     parameter values unless specified in the config.
     """
 
@@ -116,11 +116,12 @@ class BaseTrainingRunner(TrainingRunner):
 
         default_parameter_values = {
             'is_higher_metric_better': True,
+            'maximal_accuracy_degradation': 1.0,
             'maximal_total_epochs': float('inf'),
         }
 
-        for key in default_parameter_values:
-            setattr(self, key, training_config.get(key, default_parameter_values[key]))
+        for key, value in default_parameter_values.items():
+            setattr(self, key, training_config.get(key, value))
 
         self.maximal_accuracy_drop = training_config.get('maximal_accuracy_degradation')
         self.maximal_total_epochs = training_config.get('maximal_total_epochs')
@@ -134,7 +135,7 @@ class BaseTrainingRunner(TrainingRunner):
         self._log_dir = log_dir
 
 
-class BaseAccuracyAwareTrainingRunner(BaseTrainingRunner):
+class BaseAccuracyAwareTrainingRunner(TrainingRunner):
     """
     The base accuracy-aware training Runner object, initialized with the default
     accuracy-aware parameter values unless specified in the config.
@@ -166,11 +167,12 @@ class BaseAccuracyAwareTrainingRunner(BaseTrainingRunner):
             'step_reduction_factor': 0.5,
             'minimal_compression_rate_step': 0.025,
             'patience_epochs': 10,
+            'maximal_accuracy_drop': 1.0,
             'maximal_total_epochs': float('inf'),
         }
 
-        for key in default_parameter_values:
-            setattr(self, key, accuracy_aware_config.get(key, default_parameter_values[key]))
+        for key, value in default_parameter_values.items():
+            setattr(self, key, accuracy_aware_config.get(key, value))
 
         self.maximal_accuracy_drop = accuracy_aware_config.get('maximal_accuracy_degradation')
         self.initial_training_phase_epochs = accuracy_aware_config.get('initial_training_phase_epochs')

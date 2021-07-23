@@ -189,7 +189,7 @@ class PTBaseTrainingRunner(BaseTrainingRunner):
         load_state(model, resuming_model_state_dict, is_resume=True)
 
 
-class PTAccuracyAwareTrainingRunner(PTBaseTrainingRunner, BaseAccuracyAwareTrainingRunner):
+class PTAccuracyAwareTrainingRunner(BaseAccuracyAwareTrainingRunner, PTBaseTrainingRunner):
     def __init__(self, accuracy_aware_config,
                  lr_updates_needed=True, verbose=True,
                  minimal_compression_rate=0.05,
@@ -199,6 +199,10 @@ class PTAccuracyAwareTrainingRunner(PTBaseTrainingRunner, BaseAccuracyAwareTrain
         super().__init__(accuracy_aware_config, verbose,
                          minimal_compression_rate,
                          maximal_compression_rate,
+                         validate_every_n_epochs,
+                         dump_checkpoints)
+
+        super().__init__(accuracy_aware_config, verbose,
                          validate_every_n_epochs,
                          dump_checkpoints)
 

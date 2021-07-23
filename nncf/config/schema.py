@@ -881,18 +881,17 @@ def validate_single_compression_algo_schema(single_compression_algo_dict: Dict):
 
 
 def validate_accuracy_aware_schema(compression_algos: List):
-    ACCURACY_AWARE_ALGOS_PRIORITY_ORDER = ['filter_pruning', 'sparsity', 'quantization']
+    # ACCURACY_AWARE_ALGOS_PRIORITY_ORDER = ['filter_pruning', 'sparsity', 'quantization']
     algos_with_accuracy_aware = []
     for compression_algo in compression_algos:
         algo_name = compression_algo["algorithm"]
         if compression_algo.get("accuracy_aware_training", None) is not None:
             algos_with_accuracy_aware.append(algo_name)
     if len(algos_with_accuracy_aware) > 1:
-        raise RuntimeError(f"Training with only one accuracy aware compression algorithm is supported. "
-                           f"Please, choose only one accuracy aware algorithm.")
+        raise RuntimeError("Training with only one accuracy aware compression algorithm is supported. "
+                           "Please, choose only one accuracy aware algorithm.")
         # for algo in ACCURACY_AWARE_ALGOS_PRIORITY_ORDER:
         #     if algo in algos_with_accuracy_aware:
         #         logger.log(f"Accuracy aware training will be used only for {algo} "
         #                    f"because currently only one compression algorithm is supported"
         #                    f" with accuracy aware training.")
-

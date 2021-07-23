@@ -119,4 +119,4 @@ class TFAccuracyAwareTrainingRunner(TFBaseTrainingRunner, BaseAccuracyAwareTrain
 
     @property
     def compressed_training_history(self):
-        return dict(self._compressed_training_history)
+        return self._compressed_training_history

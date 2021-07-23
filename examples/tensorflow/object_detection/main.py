@@ -24,7 +24,7 @@ from nncf.tensorflow import create_compressed_model
 from nncf.tensorflow.helpers.model_manager import TFOriginalModelManager
 from nncf.tensorflow.initialization import register_default_init_args
 from nncf.common.utils.tensorboard import prepare_for_tensorboard
-from nncf.config.utils import get_algo_with_accuracy_aware_training
+from nncf.config.extractors import extract_algo_with_accuracy_aware_training
 from nncf.config.structures import ModelEvaluationArgs
 from nncf.tensorflow.utils.state import TFCompressionState
 from nncf.tensorflow.utils.state import TFCompressionStateLoader
@@ -337,12 +337,8 @@ def run(config):
     test_step = create_test_step_fn(strategy, compress_model, predict_post_process_fn)
 
     if 'train' in config.mode:
-        accuracy_aware_algo = get_algo_with_accuracy_aware_training(config)
+        accuracy_aware_algo = extract_algo_with_accuracy_aware_training(config)
         if accuracy_aware_algo is not None:
-            train_summary_writer = SummaryWriter(config.log_dir, 'train')
-            timer = Timer()
-            timer.tic()
-
             def train_epoch_fn(compression_ctrl, model, epoch, **kwargs):
                 train_step = create_train_step_fn(strategy, model, loss_fn, optimizer)
                 train_epoch(train_step, compression_ctrl, epoch, initial_epoch, steps_per_epoch,
@@ -355,13 +351,17 @@ def run(config):
                                          num_test_batches, config.print_freq)
                 return metric_result['AP']
 
+            train_summary_writer = SummaryWriter(config.log_dir, 'train')
             # instantiate and run accuracy-aware training loop
             # TODO(kshpv) change algo name to const variable
             if accuracy_aware_algo == 'quantization':
                 acc_aware_training_loop = EarlyStoppingCompressionTrainingLoop(nncf_config, compression_ctrl)
             else:
                 acc_aware_training_loop = AdaptiveCompressionTrainingLoop(nncf_config, compression_ctrl)
-            compress_model = acc_aware_training_loop.run(compress_model,
+
+            timer = Timer()
+            timer.tic()
+            compressed_model = acc_aware_training_loop.run(compress_model,
                                                          train_epoch_fn=train_epoch_fn,
                                                          validate_fn=validate_fn,
                                                          tensorboard_writer=config.tb,

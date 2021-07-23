@@ -58,7 +58,7 @@ from examples.torch.object_detection.eval import test_net
 from examples.torch.object_detection.layers.modules import MultiBoxLoss
 from examples.torch.object_detection.model import build_ssd
 from nncf.api.compression import CompressionStage
-from nncf.config.utils import get_algo_with_accuracy_aware_training
+from nncf.config.extractors import extract_algo_with_accuracy_aware_training
 from nncf.torch import AdaptiveCompressionTrainingLoop
 from nncf.torch import EarlyStoppingCompressionTrainingLoop
 from nncf.torch import create_compressed_model
@@ -221,7 +221,7 @@ def main_worker(current_gpu, config):
         logger.info(statistics.to_str())
 
     if 'train' in config.mode:
-        accuracy_aware_algo = get_algo_with_accuracy_aware_training(config)
+        accuracy_aware_algo = extract_algo_with_accuracy_aware_training(config)
         if accuracy_aware_algo is not None:
             # validation function that returns the target metric value
             # pylint: disable=E1123
@@ -261,7 +261,8 @@ def main_worker(current_gpu, config):
                                     tensorboard_writer=config.tb,
                                     log_dir=config.log_dir)
         else:
-            train(net, compression_ctrl, train_data_loader, test_data_loader, criterion, optimizer, config, lr_scheduler)
+            train(net, compression_ctrl, train_data_loader, test_data_loader,
+                  criterion, optimizer, config, lr_scheduler)
 
     if 'test' in config.mode:
         with torch.no_grad():

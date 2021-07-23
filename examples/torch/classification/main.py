@@ -68,7 +68,7 @@ from examples.torch.common.utils import print_args
 from examples.torch.common.utils import write_metrics
 from nncf.api.compression import CompressionStage
 from nncf.common.utils.tensorboard import prepare_for_tensorboard
-from nncf.config.utils import get_algo_with_accuracy_aware_training
+from nncf.config.extractors import extract_algo_with_accuracy_aware_training
 from nncf.torch import AdaptiveCompressionTrainingLoop
 from nncf.torch import EarlyStoppingCompressionTrainingLoop
 from nncf.torch import create_compressed_model
@@ -247,7 +247,7 @@ def main_worker(current_gpu, config: SampleConfig):
         logger.info(statistics.to_str())
 
     if 'train' in config.mode:
-        accuracy_aware_algo = get_algo_with_accuracy_aware_training(config)
+        accuracy_aware_algo = extract_algo_with_accuracy_aware_training(config)
         if accuracy_aware_algo is not None:
             # validation function that returns the target metric value
             # pylint: disable=E1123

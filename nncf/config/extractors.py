@@ -150,3 +150,17 @@ def extract_bn_adaptation_init_params(config: NNCFConfig, algo_name: str) -> Dic
     }
 
     return params
+
+
+def extract_algo_with_accuracy_aware_training(config: NNCFConfig) -> str:
+    """
+    Extracts an algorithm name if the algorithm's compression part contains an accuracy-aware
+    training related section, None otherwise.
+    The function assumes that the the config has only one accuracy-aware algorithm
+    """
+    algorithms = extract_algorithm_names(config)
+    for algorithm in algorithms:
+        algorithm_config = extract_algo_specific_config(config, algorithm)
+        if algorithm_config.get("accuracy_aware_training") is not None:
+            return algorithm
+    return None
