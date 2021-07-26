@@ -24,7 +24,10 @@ from nncf.api.compression import CompressionScheduler
 from nncf.api.compression import CompressionStage
 from nncf.common.accuracy_aware_training.training_loop import ADAPTIVE_COMPRESSION_CONTROLLERS
 from nncf.common.initialization.batchnorm_adaptation import BatchnormAdaptationAlgorithm
+from nncf.common.graph import NNCFGraph
+from nncf.common.graph import NNCFNode
 from nncf.common.graph import NNCFNodeName
+from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
 from nncf.common.pruning.clusterization import Clusterization
 from nncf.common.pruning.mask_propagation import MaskPropagationAlgorithm
 from nncf.common.pruning.schedulers import PRUNING_SCHEDULERS
@@ -253,12 +256,36 @@ class FilterPruningController(BasePruningAlgoController):
             self.pruning_quotas[cluster.id] = np.floor(self._modules_out_channels[cluster.elements[0].node_name] \
                                                        * self.pruning_quota)
 
+    def _calculate_output_shape(self, graph: NNCFGraph, node: NNCFNode) -> Tuple[int, ...]:
+        """
+        Calculates output shape of convolution layer by input edge.
+        :param graph: the model graph
+        :param node: node from NNCF graph
+        :return: output shape
+        """
+        in_edge = graph.get_input_edges(node)[0]
+        shape = list(in_edge.tensor_shape)[2:]
+        attrs = node.layer_attributes
+
+        assert isinstance(attrs, ConvolutionLayerAttributes)
+
+        for i, _ in enumerate(shape):
+            if attrs.transpose:
+                shape[i] = (shape[i] - 1) * attrs.stride[i] - 2 * attrs.padding_values[i] + attrs.kernel_size[i]
+            else:
+                shape[i] = (shape[i] + 2 * attrs.padding_values[i] - attrs.kernel_size[i]) // attrs.stride[i] + 1
+        return tuple(shape)
+
     def flops_count_init(self) -> None:
         graph = self._model.get_original_graph()
         for node in graph.get_nodes_by_types([v.op_func_name for v in NNCF_GENERAL_CONV_MODULES_DICT]):
-            out_edge = graph.get_output_edges(node)[0]
-            out_shape = out_edge.tensor_shape
-            self._modules_out_shapes[node.node_name] = out_shape[2:]
+            if graph.get_output_edges(node):
+                out_edge = graph.get_output_edges(node)[0]
+                out_shape = out_edge.tensor_shape[2:]
+            else:
+                # For disconnected NNCFGraph when convolution layers have no output edge
+                out_shape = self._calculate_output_shape(graph, node)
+            self._modules_out_shapes[node.node_name] = out_shape
 
         for node in graph.get_nodes_by_types([v.op_func_name for v in NNCF_LINEAR_MODULES_DICT]):
             out_edge = graph.get_output_edges(node)[0]
