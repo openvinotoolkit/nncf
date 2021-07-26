@@ -342,4 +342,4 @@ model = training_loop.run(model,
                           validate_fn=validate_fn,
                           configure_optimizers_fn=configure_optimizers_fn)
 ```
-The above call executes the acccuracy-aware adaptive compression training loop and return the compressed model with the maximal found compression rate and satisfying the defined accuracy drop criteria. For more details on how to use the accuracy-aware training loop functionality of NNCF, please refer to its [documentation](./accuracy_aware_model_training/TrainingLoop.md).
+The above call executes the acccuracy-aware adaptive compression training loop and return the compressed model with the maximal found compression rate and satisfying the defined accuracy drop criteria. For more details on how to use the accuracy-aware training loop functionality of NNCF, please refer to its [documentation](./accuracy_aware_model_training/AdaptiveCompressionTraining.md).
