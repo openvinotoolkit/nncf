@@ -46,6 +46,17 @@ class PTBaseTrainingRunner(BaseTrainingRunner):
     The Training Runner implementation for PyTorch training code.
     """
 
+    def __init__(self, accuracy_aware_config,
+                 lr_updates_needed=True, verbose=True,
+                 validate_every_n_epochs=None,
+                 dump_checkpoints=True):
+        super().__init__(accuracy_aware_config, verbose,
+                         validate_every_n_epochs,
+                         dump_checkpoints)
+
+        self._base_lr_reduction_factor_during_search = 0.5
+        self.lr_updates_needed = lr_updates_needed
+
     def initialize_training_loop_fns(self, train_epoch_fn, validate_fn, configure_optimizers_fn,
                                      tensorboard_writer=None, log_dir=None):
         super().initialize_training_loop_fns(train_epoch_fn, validate_fn, configure_optimizers_fn,
@@ -140,10 +151,9 @@ class PTBaseTrainingRunner(BaseTrainingRunner):
         }
         torch.save(checkpoint, checkpoint_path)
         if self.best_val_metric_value == self.current_val_metric_value:
-            best_checkpoint_filename = 'acc_aware_checkpoint_best_compression_rate_' \
-                                       '{comp_rate:.3f}.pth'.format(comp_rate=self.compression_rate_target)
+            best_checkpoint_filename = 'acc_aware_checkpoint_best.pth'
             best_path = osp.join(self._checkpoint_save_dir, best_checkpoint_filename)
-            self._best_checkpoints[self.compression_rate_target] = best_path
+            self._best_checkpoint = best_path
             copyfile(checkpoint_path, best_path)
 
     def add_tensorboard_scalar(self, key, data, step):
@@ -173,15 +183,7 @@ class PTBaseTrainingRunner(BaseTrainingRunner):
         return dict(self._compressed_training_history)
 
     def load_best_checkpoint(self, model):
-        # load checkpoint with highest compression rate and positive acc budget
-        possible_checkpoint_rates = [comp_rate for (comp_rate, acc_budget) in self._compressed_training_history
-                                     if acc_budget >= 0]
-        if not possible_checkpoint_rates:
-            nncf_logger.warning('Could not produce a compressed model satisfying the set accuracy '
-                                'degradation criterion during training. Increasing the number of training '
-                                'epochs')
-        best_checkpoint_compression_rate = max(possible_checkpoint_rates)
-        resuming_checkpoint_path = self._best_checkpoints[best_checkpoint_compression_rate]
+        resuming_checkpoint_path = self._best_checkpoint
         nncf_logger.info('Loading the best checkpoint found during training '
                          '{}...'.format(resuming_checkpoint_path))
         resuming_checkpoint = torch.load(resuming_checkpoint_path, map_location='cpu')
@@ -189,25 +191,25 @@ class PTBaseTrainingRunner(BaseTrainingRunner):
         load_state(model, resuming_model_state_dict, is_resume=True)
 
 
-class PTAccuracyAwareTrainingRunner(BaseAccuracyAwareTrainingRunner, PTBaseTrainingRunner):
+class PTAccuracyAwareTrainingRunner(PTBaseTrainingRunner, BaseAccuracyAwareTrainingRunner):
     def __init__(self, accuracy_aware_config,
                  lr_updates_needed=True, verbose=True,
                  minimal_compression_rate=0.05,
                  maximal_compression_rate=0.95,
                  validate_every_n_epochs=None,
                  dump_checkpoints=True):
-        super().__init__(accuracy_aware_config, verbose,
-                         minimal_compression_rate,
-                         maximal_compression_rate,
-                         validate_every_n_epochs,
-                         dump_checkpoints)
 
-        super().__init__(accuracy_aware_config, verbose,
-                         validate_every_n_epochs,
-                         dump_checkpoints)
+        PTBaseTrainingRunner.__init__(self, accuracy_aware_config,
+                                      lr_updates_needed, verbose,
+                                      validate_every_n_epochs,
+                                      dump_checkpoints)
 
-        self._base_lr_reduction_factor_during_search = 0.5
-        self.lr_updates_needed = lr_updates_needed
+        BaseAccuracyAwareTrainingRunner.__init__(self, accuracy_aware_config,
+                                                 verbose,
+                                                 minimal_compression_rate=minimal_compression_rate,
+                                                 maximal_compression_rate=maximal_compression_rate,
+                                                 validate_every_n_epochs=validate_every_n_epochs,
+                                                 dump_checkpoints=dump_checkpoints)
 
     def update_training_history(self, compression_rate, best_metric_value):
         best_accuracy_budget = best_metric_value - self.minimal_tolerable_accuracy
@@ -225,6 +227,40 @@ class PTAccuracyAwareTrainingRunner(BaseAccuracyAwareTrainingRunner, PTBaseTrain
             self._tensorboard_writer.add_image('compression/accuracy_aware/acc_budget_vs_comp_rate',
                                                image,
                                                global_step=len(self.compressed_training_history))
+
+    def dump_checkpoint(self, model, compression_controller):
+        checkpoint_path = osp.join(self._checkpoint_save_dir, 'acc_aware_checkpoint_last.pth')
+        checkpoint = {
+            'epoch': self.cumulative_epoch_count + 1,
+            'state_dict': model.state_dict(),
+            'best_metric_val': self.best_val_metric_value,
+            'current_val_metric_value': self.current_val_metric_value,
+            'optimizer': self.optimizer.state_dict(),
+            'scheduler': compression_controller.scheduler.get_state()
+        }
+        torch.save(checkpoint, checkpoint_path)
+        if self.best_val_metric_value == self.current_val_metric_value:
+            best_checkpoint_filename = 'acc_aware_checkpoint_best_compression_rate_' \
+                                       '{comp_rate:.3f}.pth'.format(comp_rate=self.compression_rate_target)
+            best_path = osp.join(self._checkpoint_save_dir, best_checkpoint_filename)
+            self._best_checkpoints[self.compression_rate_target] = best_path
+            copyfile(checkpoint_path, best_path)
+
+    def load_best_checkpoint(self, model):
+        # load checkpoint with highest compression rate and positive acc budget
+        possible_checkpoint_rates = [comp_rate for (comp_rate, acc_budget) in self._compressed_training_history
+                                     if acc_budget >= 0]
+        if not possible_checkpoint_rates:
+            nncf_logger.warning('Could not produce a compressed model satisfying the set accuracy '
+                                'degradation criterion during training. Increasing the number of training '
+                                'epochs')
+        best_checkpoint_compression_rate = max(possible_checkpoint_rates)
+        resuming_checkpoint_path = self._best_checkpoints[best_checkpoint_compression_rate]
+        nncf_logger.info('Loading the best checkpoint found during training '
+                         '{}...'.format(resuming_checkpoint_path))
+        resuming_checkpoint = torch.load(resuming_checkpoint_path, map_location='cpu')
+        resuming_model_state_dict = resuming_checkpoint.get('state_dict', resuming_checkpoint)
+        load_state(model, resuming_model_state_dict, is_resume=True)
 
     @property
     def compressed_training_history(self):

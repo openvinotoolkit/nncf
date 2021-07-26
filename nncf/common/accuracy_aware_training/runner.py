@@ -99,32 +99,22 @@ class BaseTrainingRunner(TrainingRunner):
     """
 
     def __init__(self, training_config, verbose=True,
-                 validate_every_n_epochs=None, dump_checkpoints=True, lr_updates_needed=False):
+                 validate_every_n_epochs=None, dump_checkpoints=True):
+        self.maximal_accuracy_drop = training_config.get('maximal_accuracy_degradation', 1.0)
+        self.maximal_total_epochs = training_config.get('maximal_total_epochs', float('inf'))
+
+        self.verbose = verbose
+        self.validate_every_n_epochs = validate_every_n_epochs
+        self.dump_checkpoints = dump_checkpoints
+
         self.accuracy_budget = None
-        self.validate_every_n_epochs = None
+        self.is_higher_metric_better = True
         self._compressed_training_history = []
-        self._best_checkpoints = {}
-        self.lr_updates_needed = lr_updates_needed
+        self._best_checkpoint = None
 
         self.training_epoch_count = 0
         self.cumulative_epoch_count = 0
         self.best_val_metric_value = 0
-
-        self.validate_every_n_epochs = validate_every_n_epochs
-        self.dump_checkpoints = dump_checkpoints
-        self.verbose = verbose
-
-        default_parameter_values = {
-            'is_higher_metric_better': True,
-            'maximal_accuracy_degradation': 1.0,
-            'maximal_total_epochs': float('inf'),
-        }
-
-        for key, value in default_parameter_values.items():
-            setattr(self, key, training_config.get(key, value))
-
-        self.maximal_accuracy_drop = training_config.get('maximal_accuracy_degradation')
-        self.maximal_total_epochs = training_config.get('maximal_total_epochs')
 
     def initialize_training_loop_fns(self, train_epoch_fn, validate_fn, configure_optimizers_fn,
                                      tensorboard_writer=None, log_dir=None):
@@ -135,7 +125,7 @@ class BaseTrainingRunner(TrainingRunner):
         self._log_dir = log_dir
 
 
-class BaseAccuracyAwareTrainingRunner(TrainingRunner):
+class BaseAccuracyAwareTrainingRunner(BaseTrainingRunner):
     """
     The base accuracy-aware training Runner object, initialized with the default
     accuracy-aware parameter values unless specified in the config.
@@ -144,38 +134,20 @@ class BaseAccuracyAwareTrainingRunner(TrainingRunner):
     def __init__(self, accuracy_aware_config, verbose=True,
                  minimal_compression_rate=0.05, maximal_compression_rate=0.95,
                  validate_every_n_epochs=None, dump_checkpoints=True):
-        self.accuracy_bugdet = None
-        self.validate_every_n_epochs = None
-        self.compression_rate_target = None
-        self.was_compression_increased_on_prev_step = None
-        self._compressed_training_history = []
-        self._best_checkpoints = {}
+        super().__init__(accuracy_aware_config, verbose, validate_every_n_epochs, dump_checkpoints)
 
-        self.training_epoch_count = 0
-        self.cumulative_epoch_count = 0
-        self.best_val_metric_value = 0
+        self.compression_rate_step = accuracy_aware_config.get('initial_compression_rate_step', 0.1)
+        self.step_reduction_factor = accuracy_aware_config.get('compression_rate_step_reduction_factor', 0.5)
+        self.minimal_compression_rate_step = accuracy_aware_config.get('minimal_compression_rate_step', 0.025)
+        self.patience_epochs = accuracy_aware_config.get('patience_epochs', 10)
+        self.initial_training_phase_epochs = accuracy_aware_config.get('initial_training_phase_epochs')
 
         self.minimal_compression_rate = minimal_compression_rate
         self.maximal_compression_rate = maximal_compression_rate
-        self.validate_every_n_epochs = validate_every_n_epochs
-        self.dump_checkpoints = dump_checkpoints
-        self.verbose = verbose
 
-        default_parameter_values = {
-            'is_higher_metric_better': True,
-            'compression_rate_step': 0.1,
-            'step_reduction_factor': 0.5,
-            'minimal_compression_rate_step': 0.025,
-            'patience_epochs': 10,
-            'maximal_accuracy_drop': 1.0,
-            'maximal_total_epochs': float('inf'),
-        }
-
-        for key, value in default_parameter_values.items():
-            setattr(self, key, accuracy_aware_config.get(key, value))
-
-        self.maximal_accuracy_drop = accuracy_aware_config.get('maximal_accuracy_degradation')
-        self.initial_training_phase_epochs = accuracy_aware_config.get('initial_training_phase_epochs')
+        self._best_checkpoints = {}
+        self.compression_rate_target = None
+        self.was_compression_increased_on_prev_step = None
 
     def initialize_training_loop_fns(self, train_epoch_fn, validate_fn, configure_optimizers_fn,
                                      tensorboard_writer=None, log_dir=None):
