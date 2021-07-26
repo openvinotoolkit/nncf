@@ -180,7 +180,7 @@ class FilterPruningController(BasePruningAlgoController):
                 # Unwrapping parallelized model
                 target_model = distributed_wrapping_init_args.unwrap_model(target_model)
         else:
-            self.ranking_coeffs = {node.node_name: (1, 0) for node in self.pruned_module_groups_info.get_all_eval_nodes()}
+            self.ranking_coeffs = {node.node_name: (1, 0) for node in self.pruned_module_groups_info.get_all_nodes()}
 
         # Saving ranking coefficients to the specified file
         if params.get('save_ranking_coeffs_path'):
@@ -209,7 +209,7 @@ class FilterPruningController(BasePruningAlgoController):
 
     def statistics(self, quickly_collected_only: bool = False) -> NNCFStatistics:
         pruned_layers_summary = {}
-        for minfo in self.pruned_module_groups_info.get_all_eval_nodes():
+        for minfo in self.pruned_module_groups_info.get_all_nodes():
             layer_name = str(minfo.module_scope)
             if layer_name not in pruned_layers_summary:
                 pruned_layers_summary[layer_name] = \
@@ -409,7 +409,7 @@ class FilterPruningController(BasePruningAlgoController):
     def _calculate_global_weight_pruning_rate(self) -> float:
         full_param_count = 0
         pruned_param_count = 0
-        for minfo in self.pruned_module_groups_info.get_all_eval_nodes():
+        for minfo in self.pruned_module_groups_info.get_all_nodes():
             layer_param_count = sum(p.numel() for p in minfo.module.parameters() if p.requires_grad)
             layer_weight_pruning_rate = self.pruning_rate_for_weight(minfo)
             full_param_count += layer_param_count
@@ -517,7 +517,7 @@ class FilterPruningController(BasePruningAlgoController):
         target_flops = self.full_flops * (1 - target_flops_pruning_rate)
 
         # 1. Initialize masks
-        for minfo in self.pruned_module_groups_info.get_all_eval_nodes():
+        for minfo in self.pruned_module_groups_info.get_all_nodes():
             new_mask = torch.ones(get_filters_num(minfo.module)).to(
                 minfo.module.weight.device)
             self.set_mask(minfo, new_mask)
@@ -611,7 +611,7 @@ class FilterPruningController(BasePruningAlgoController):
         # 1. Propagate masks for all modules
         graph = self.model.get_original_graph()
 
-        init_output_masks_in_graph(graph, self.pruned_module_groups_info.get_all_eval_nodes())
+        init_output_masks_in_graph(graph, self.pruned_module_groups_info.get_all_nodes())
         MaskPropagationAlgorithm(graph, PT_PRUNING_OPERATOR_METATYPES).mask_propagation()
 
         # 2. Apply the masks
@@ -675,7 +675,7 @@ class FilterPruningController(BasePruningAlgoController):
         flops = model.get_MACs_in_model()
         pruned_layers_stats = self.get_stats_for_pruned_modules()
 
-        init_output_masks_in_graph(graph, self.pruned_module_groups_info.get_all_eval_nodes())
+        init_output_masks_in_graph(graph, self.pruned_module_groups_info.get_all_nodes())
         model_pruner = ModelPruner(model, graph, PT_PRUNING_OPERATOR_METATYPES)
         model_pruner.prune_model()
 

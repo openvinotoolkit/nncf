@@ -95,7 +95,7 @@ def test_disable_shape_matching():
 
     assert graph_1 == graph_2
 
-    nodes_1 = list(graph_1.get_all_eval_nodes())
+    nodes_1 = list(graph_1.get_all_nodes())
     assert len(nodes_1) == 3  # 1 input node + 1 operation node + 1 output node
 
     qnet = NNCFNetwork(model, input_infos=[ModelInputInfo(input_shape_1), ])  # type: NNCFNetwork
@@ -761,7 +761,7 @@ class TestInsertionPointGraph:
 def test_can_collect_scopes_of_train_only_modules():
     model = ManyNonEvalModules()
     graph_builder = GraphBuilder(custom_forward_fn=lambda model_: model_(torch.randn([1, 1, 1, 1])))
-    graph = graph_builder.build_graph(model, as_eval=True)
+    graph = graph_builder.build_graph(model)
     actual_scopes = [n.node_name for n in graph.get_all_eval_nodes()]
     ref_scopes = {
         'ManyNonEvalModules/AvgPool2d[avg_pool]/avg_pool2d_0',

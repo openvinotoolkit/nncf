@@ -160,7 +160,7 @@ def test_groups(test_input_info_struct_: GroupPruningModulesTestStruct):
 
     # 1. Check all not pruned modules
     clusters = compression_ctrl.pruned_module_groups_info
-    all_pruned_modules_info = clusters.get_all_eval_nodes()
+    all_pruned_modules_info = clusters.get_all_nodes()
     all_pruned_modules = [info.module for info in all_pruned_modules_info]
     print([minfo.node_name for minfo in all_pruned_modules_info])
     for node_name in non_pruned_module_nodes:
@@ -201,7 +201,7 @@ def test_pruning_node_selector(test_input_info_struct_: GroupPruningModulesTestS
     pruning_groups = pruning_node_selector.create_pruning_groups(graph)
 
     # 1. Check all not pruned modules
-    all_pruned_nodes = pruning_groups.get_all_eval_nodes()
+    all_pruned_nodes = pruning_groups.get_all_nodes()
     all_pruned_modules = [nncf_network.get_containing_module(node.node_name)
                           for node in all_pruned_nodes]
     for node_name in non_pruned_module_nodes:
@@ -441,7 +441,7 @@ def test_clusterization():
     assert clusterization.get_all_clusters() == [cluster_1, cluster_2]
 
     # test get_all_nodes
-    assert clusterization.get_all_eval_nodes() == nodes_1 + nodes_2
+    assert clusterization.get_all_nodes() == nodes_1 + nodes_2
 
     # test merge clusters
     clusterization.merge_clusters(1, 2)
@@ -449,4 +449,4 @@ def test_clusterization():
     with pytest.raises(IndexError) as err:
         clusterization.get_cluster_by_id(1)
 
-    assert set(clusterization.get_all_eval_nodes()) == set(nodes_1 + nodes_2)
+    assert set(clusterization.get_all_nodes()) == set(nodes_1 + nodes_2)
