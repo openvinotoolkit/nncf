@@ -320,7 +320,7 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
 
     def _get_custom_layer_node_names(self, nncf_graph: NNCFGraph, converter: TFModelConverter) -> List[NNCFNodeName]:
         retval = []
-        for node in nncf_graph.get_all_nodes():
+        for node in nncf_graph.get_all_eval_nodes():
             metatype = node.metatype
             if metatype in OUTPUT_NOOP_METATYPES:
                 continue
@@ -351,7 +351,7 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
     def _get_quantizer_setup(self, model: tf.keras.Model) -> TFQuantizationSetup:
         converter = TFModelConverterFactory.create(model)
         nncf_graph = converter.convert()
-        nodes = nncf_graph.get_all_nodes()
+        nodes = nncf_graph.get_all_eval_nodes()
         for node in nodes:
             if node.metatype in NOT_SUPPORT_LAYER_METATYPES:
                 logger.warning('The layer {} is not supported by the quantization algorithm'
@@ -438,7 +438,7 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
 
     def _get_quantizable_weighted_layer_nodes(self, nncf_graph: NNCFGraph) -> List[QuantizableWeightedLayerNode]:
         nodes_with_weights = []
-        for node in nncf_graph.get_all_nodes():
+        for node in nncf_graph.get_all_eval_nodes():
             metatype = node.metatype
             if metatype in OUTPUT_NOOP_METATYPES:
                 continue

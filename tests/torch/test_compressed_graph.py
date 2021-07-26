@@ -806,7 +806,7 @@ def prepare_potential_quantizer_graph(graph: PTNNCFGraph,
                 post_hooked_quantizers_activations_attr[target_node_name] = str_qconfig
 
     nx_graph = graph.get_graph_for_structure_analysis()
-    for nncf_node in graph.get_all_nodes():
+    for nncf_node in graph.get_all_eval_nodes():
         node_key = graph.get_node_key_by_id(nncf_node.node_id)
         node_name = nncf_node.node_name
         if node_name in pre_hooked_quantizers_activations_attr:

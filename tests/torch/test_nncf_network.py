@@ -95,7 +95,7 @@ def test_disable_shape_matching():
 
     assert graph_1 == graph_2
 
-    nodes_1 = list(graph_1.get_all_nodes())
+    nodes_1 = list(graph_1.get_all_eval_nodes())
     assert len(nodes_1) == 3  # 1 input node + 1 operation node + 1 output node
 
     qnet = NNCFNetwork(model, input_infos=[ModelInputInfo(input_shape_1), ])  # type: NNCFNetwork
@@ -653,7 +653,7 @@ class TestInsertionPointGraph:
 
         ip_graph = get_ip_graph_for_test(nncf_graph)
 
-        for nncf_node in nncf_graph.get_all_nodes():
+        for nncf_node in nncf_graph.get_all_eval_nodes():
             node_id = nncf_node.node_id
             node_key = nncf_graph.get_node_key_by_id(node_id)
             preds = list(ip_graph.predecessors(node_key))
@@ -722,7 +722,7 @@ class TestInsertionPointGraph:
         nncf_network = NNCFNetwork(model, [ModelInputInfo([1, 3, 300, 300])])
         nncf_graph = nncf_network.get_original_graph()
 
-        for nncf_node in nncf_graph.get_all_nodes():  # type: NNCFNode
+        for nncf_node in nncf_graph.get_all_eval_nodes():  # type: NNCFNode
             assert nncf_node.node_name in ref_scope_vs_metatype_dict
             ref_metatype = ref_scope_vs_metatype_dict[nncf_node.node_name]
             assert nncf_node.metatype == ref_metatype
@@ -762,7 +762,7 @@ def test_can_collect_scopes_of_train_only_modules():
     model = ManyNonEvalModules()
     graph_builder = GraphBuilder(custom_forward_fn=lambda model_: model_(torch.randn([1, 1, 1, 1])))
     graph = graph_builder.build_graph(model, as_eval=True)
-    actual_scopes = [n.node_name for n in graph.get_all_nodes()]
+    actual_scopes = [n.node_name for n in graph.get_all_eval_nodes()]
     ref_scopes = {
         'ManyNonEvalModules/AvgPool2d[avg_pool]/avg_pool2d_0',
         'ManyNonEvalModules/ModuleWithMixedModules[mixed_modules]/Dropout/dropout_0',
@@ -840,7 +840,7 @@ def test_multiple_forward():
     register_bn_adaptation_init_args(config)
     sparse_quantized_model, _ = create_compressed_model_and_algo_for_test(model, config)
     graph = sparse_quantized_model.get_original_graph()
-    for node in list(graph.get_all_nodes())[1:-2]:
+    for node in list(graph.get_all_eval_nodes())[1:-2]:
         assert node.layer_attributes is not None
 
 
@@ -848,7 +848,7 @@ def get_ip_graph_for_test(nncf_graph: NNCFGraph,
                           weighted_node_names: List[NNCFNodeName] = None) -> InsertionPointGraph:
     pre_hooks = []
     post_hooks = []
-    for node in nncf_graph.get_all_nodes():
+    for node in nncf_graph.get_all_eval_nodes():
         in_edges = nncf_graph.get_input_edges(node)
         for in_edge in in_edges:
             ip = PreHookInsertionPoint(node.node_name, in_edge.input_port_id)

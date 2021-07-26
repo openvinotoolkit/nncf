@@ -53,7 +53,7 @@ def init_output_masks_in_graph(graph: NNCFGraph, nodes: List):
     :param graph: NNCFNetwork
     :param nodes: list with pruned nodes
     """
-    for node in graph.get_all_nodes():
+    for node in graph.get_all_eval_nodes():
         node.data.pop('input_mask', None)
         node.data.pop('output_mask', None)
 

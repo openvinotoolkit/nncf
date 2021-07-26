@@ -220,7 +220,7 @@ class InsertionPointGraph(nx.DiGraph):
     def _get_default_pre_hook_ip_list(nncf_graph: NNCFGraph) -> List[PreHookInsertionPoint]:
         # Pre-hook all input ports of all nodes
         allowed_pre_hook_insertion_points = []
-        for nncf_node in nncf_graph.get_all_nodes():
+        for nncf_node in nncf_graph.get_all_eval_nodes():
             pred_nodes = nncf_graph.get_previous_nodes(nncf_node)
 
             for pred_node in pred_nodes:
@@ -233,7 +233,7 @@ class InsertionPointGraph(nx.DiGraph):
     def _get_default_post_hook_ip_list(nncf_graph: NNCFGraph) -> List[PostHookInsertionPoint]:
         # Post-hook all nodes, post hook applies to the entire op output
         allowed_post_hook_insertion_points = []
-        for nncf_node in nncf_graph.get_all_nodes():
+        for nncf_node in nncf_graph.get_all_eval_nodes():
             allowed_post_hook_insertion_points.append(PostHookInsertionPoint(nncf_node.node_name))
         return allowed_post_hook_insertion_points
 

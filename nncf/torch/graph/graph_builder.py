@@ -34,19 +34,24 @@ class GraphBuilder:
         self.custom_forward_fn = custom_forward_fn
 
     def build_graph(self, model: torch.nn.Module, context_to_use: Optional['TracingContext'] = None,
-                    as_eval: bool = False,
                     input_infos: List[ModelInputInfo] = None) -> PTNNCFGraph:
         tracer = GraphTracer(self.custom_forward_fn)
-        dynamic_graph = tracer.trace_graph(model, context_to_use, as_eval)
-        return GraphConverter.convert(dynamic_graph, input_infos)
+        eval_dynamic_graph = tracer.trace_graph(model, context_to_use, True)
+        train_dynamic_graph = tracer.trace_graph(model, context_to_use, False)
+        return GraphConverter.convert(eval_dynamic_graph, train_dynamic_graph, input_infos)
 
 
 class GraphConverter:
     @staticmethod
-    def convert(dynamic_graph: DynamicGraph, input_infos: List[ModelInputInfo] = None) -> PTNNCFGraph:
+    def convert(eval_dynamic_graph: DynamicGraph, train_dynamic_graph: DynamicGraph,
+                input_infos: List[ModelInputInfo] = None) -> PTNNCFGraph:
         layer_name_vs_node_counts = {}  # type: Dict[LayerName, int]
+        eval_graph_nodes = []
+        for dynamic_graph_node in eval_dynamic_graph.get_all_nodes():
+            layer_name = str(dynamic_graph_node.op_exec_context.op_address)
+            eval_graph_nodes.append(layer_name)
 
-        for dynamic_graph_node in dynamic_graph.get_all_nodes():
+        for dynamic_graph_node in train_dynamic_graph.get_all_nodes():
             layer_name = str(dynamic_graph_node.op_exec_context.op_address)
             if layer_name not in layer_name_vs_node_counts:
                 layer_name_vs_node_counts[layer_name] = 1
@@ -54,7 +59,7 @@ class GraphConverter:
                 layer_name_vs_node_counts[layer_name] += 1
 
         nncf_graph = PTNNCFGraph()
-        for dynamic_graph_node in dynamic_graph.get_all_nodes():
+        for dynamic_graph_node in train_dynamic_graph.get_all_nodes():
             op_address = dynamic_graph_node.op_exec_context.op_address
             layer_name = str(dynamic_graph_node.op_exec_context.op_address)
 
@@ -70,7 +75,7 @@ class GraphConverter:
                     is_integer_input = True
 
             is_shared = layer_name in layer_name_vs_node_counts and layer_name_vs_node_counts[layer_name] > 1
-
+            is_train_only_node = layer_name not in eval_graph_nodes
             nncf_graph.add_nncf_node(node_name=str(op_address),
                                      node_type=op_address.operator_name,
                                      node_metatype=metatype,
@@ -80,9 +85,10 @@ class GraphConverter:
                                      ignored_algorithms=dynamic_graph_node.ignored_algorithms,
                                      is_in_iteration_scope=dynamic_graph_node.is_in_iteration_scope,
                                      is_integer_input=is_integer_input,
-                                     is_shared=is_shared)
+                                     is_shared=is_shared,
+                                     is_train_only_node=is_train_only_node)
 
-        for dynamic_graph_edge in dynamic_graph.get_all_edges():
+        for dynamic_graph_edge in train_dynamic_graph.get_all_edges():
             nncf_graph.add_edge_between_nncf_nodes(
                 from_node_id=dynamic_graph_edge.from_node_id,
                 to_node_id=dynamic_graph_edge.to_node_id,

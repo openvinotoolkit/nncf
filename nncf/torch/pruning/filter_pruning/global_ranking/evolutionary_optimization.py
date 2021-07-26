@@ -269,7 +269,7 @@ class LeGRPruner:
         self.model_params_copy = None
         self._save_model_weights()
         self.init_filter_norms = {node.node_name: self.filter_pruner.filter_importance(node.module.weight)
-                                  for node in self.filter_pruner.pruned_module_groups_info.get_all_nodes()}
+                                  for node in self.filter_pruner.pruned_module_groups_info.get_all_eval_nodes()}
 
     def loss(self) -> float:
         """
@@ -293,7 +293,7 @@ class LeGRPruner:
         """
         Resetting masks for all pruned nodes
         """
-        for minfo in self.filter_pruner.pruned_module_groups_info.get_all_nodes():
+        for minfo in self.filter_pruner.pruned_module_groups_info.get_all_eval_nodes():
             new_mask = torch.ones(get_filters_num(minfo.module)).to(
                 minfo.module.weight.device)
             self.filter_pruner.set_mask(minfo, new_mask)

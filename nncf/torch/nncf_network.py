@@ -211,11 +211,13 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
             _orig_context.add_node_comparators(scopes_without_shape_matching,
                                                ShapeIgnoringTensorMetaComparator())
 
-        self._original_dynamic_graph = GraphTracer(_orig_graph_build_forward_fn).trace_graph(nncf_wrapped_model,
-                                                                                             _orig_context,
-                                                                                             as_eval=True)
-        self._original_graph = GraphConverter.convert(self._original_dynamic_graph,
-                                                      input_infos=self.input_infos)
+        self._original_dynamic_train_graph = GraphTracer(_orig_graph_build_forward_fn)\
+            .trace_graph(nncf_wrapped_model, _orig_context, as_eval=False)
+        original_dynamic_eval_graph = GraphTracer(_orig_graph_build_forward_fn) \
+            .trace_graph(nncf_wrapped_model, _orig_context, as_eval=True)
+
+        self._original_train_graph = GraphConverter.convert(
+            original_dynamic_eval_graph, self._original_dynamic_train_graph, input_infos=self.input_infos)
         self._compressed_graph = None  # type: PTNNCFGraph
 
         self._compressed_context = TracingContext()
@@ -348,7 +350,7 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
         return self._compressed_context.graph
 
     def get_original_graph(self) -> PTNNCFGraph:
-        return self._original_graph
+        return self._original_train_graph
 
     def get_tracing_context(self) -> TracingContext:
         return self._compressed_context
@@ -395,7 +397,7 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
                 module_name = nncf_module_scope[-1].calling_module_class_name
                 if module_name not in nncf_module_names:
                     continue
-            nodes_in_scope = self._original_graph.get_op_nodes_in_scope(nncf_module_scope)
+            nodes_in_scope = self._original_train_graph.get_op_nodes_in_scope(nncf_module_scope)
             for node in nodes_in_scope:
                 if node.layer_attributes is not None:  # TODO(vshampor): implement more explicit filtering
                     retval.append(node)
@@ -505,7 +507,7 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
         nncf_graph = self.get_original_graph()
         pre_hooks = []  # type: List[PreHookInsertionPoint]
         post_hooks = []  # type: List[PostHookInsertionPoint]
-        for node in nncf_graph.get_all_nodes():
+        for node in nncf_graph.get_all_eval_nodes():
             # Pre-hook insertion point nodes
             # Will insert a pre-hook IP for each input edge. The input edge must be marked with
             # a port ID attribute.
@@ -530,7 +532,7 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
         weighted_nodes = self.get_weighted_original_graph_nodes()
         weighted_node_names = [weighted_node.node_name for weighted_node in weighted_nodes]
 
-        ip_graph = InsertionPointGraph(self._original_graph, weight_modifiable_node_names=weighted_node_names,
+        ip_graph = InsertionPointGraph(self._original_train_graph, weight_modifiable_node_names=weighted_node_names,
                                        allowed_pre_hook_insertion_points=pre_hooks,
                                        allowed_post_hook_insertion_points=post_hooks)
         return ip_graph
@@ -560,9 +562,9 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
                 nncf_logger.debug("Node {} not found in compressed graph when trying to determine containing module, "
                                   "trying the original graph to see if the node was present there "
                                   "during graph building")
-                scope = self._original_graph.get_scope_by_node_name(node_name)
+                scope = self._original_train_graph.get_scope_by_node_name(node_name)
         else:
-            scope = self._original_graph.get_scope_by_node_name(node_name)
+            scope = self._original_train_graph.get_scope_by_node_name(node_name)
         return self.get_module_by_scope(scope)
 
     def get_parameters_count_in_model(self):
@@ -586,7 +588,7 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
                                      module_node_name=name)
 
         hook_list = []
-        for nncf_node in self._original_graph.get_all_nodes():
+        for nncf_node in self._original_train_graph.get_all_eval_nodes():
             node_module = self.get_containing_module(nncf_node.node_name)
             hook_list.append(node_module.register_forward_hook(get_hook(nncf_node.node_name)))
         model.do_dummy_forward(force_eval=True)
@@ -635,18 +637,6 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
 
         return Mgr(self)
 
-    def _collect_eval_only_op_scopes(self, model: nn.Module, dummy_forward_fn: Callable) -> List[Scope]:
-        """
-        Returns scopes of the modules which are executed in evaluation mode only.
-        """
-
-        tracer = GraphTracer(dummy_forward_fn)
-        result = []
-        eval_graph = tracer.trace_graph(model, as_eval=True)
-        for dyn_graph_node in eval_graph.get_all_nodes():
-            result.append(dyn_graph_node.op_exec_context.scope_in_model)
-        return result
-
     @property
     def original_model_accuracy(self):
         return self._original_model_accuracy
@@ -655,10 +645,10 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
         # The IDs of corresponding nodes of the original dynamic graph and original NNCF graph
         # must be equal for this to work.
         retval = {}
-        for node in self._original_dynamic_graph.get_all_nodes():
+        for node in self._original_dynamic_train_graph.get_all_nodes():
             node_id = node.node_id
             op_address = node.op_exec_context.op_address
-            nncf_node = self._original_graph.get_node_by_id(node_id)
+            nncf_node = self._original_train_graph.get_node_by_id(node_id)
             retval[nncf_node.node_name] = op_address
         return retval
 

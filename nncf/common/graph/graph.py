@@ -162,6 +162,7 @@ class NNCFGraph:
     IS_INTEGER_INPUT_NODE_ATTR = 'is_integer_input'
     DTYPE_EDGE_ATTR = 'dtype'
     IS_SHARED_ATTR = 'is_shared'
+    IS_TRAIN_ONLY_NODE = 'is_train_only_node'
 
     def __init__(self):
         self._nx_graph = nx.DiGraph()
@@ -204,7 +205,7 @@ class NNCFGraph:
         :return: List of nodes with provided types.
         """
         all_nodes_of_type = []
-        for nncf_node in self.get_all_nodes():
+        for nncf_node in self.get_all_eval_nodes():
             if nncf_node.node_type in type_list:
                 all_nodes_of_type.append(nncf_node)
         return all_nodes_of_type
@@ -217,7 +218,7 @@ class NNCFGraph:
         :return: List of nodes with provided metatypes.
         """
         all_nodes_of_type = []
-        for nncf_node in self.get_all_nodes():
+        for nncf_node in self.get_all_eval_nodes():
             if nncf_node.metatype in metatype_list:
                 all_nodes_of_type.append(nncf_node)
         return all_nodes_of_type
@@ -245,6 +246,12 @@ class NNCFGraph:
             nncf_node = self._nx_node_to_nncf_node(nx_node)
             all_nodes.append(nncf_node)
         return all_nodes
+
+    def get_all_eval_nodes(self) -> List[NNCFNode]:
+        """
+        Returns list of all graph nodes that are executed in eval mode.
+        """
+        return list(filter(lambda x: not x.data[NNCFGraph.IS_TRAIN_ONLY_NODE], self.get_all_nodes()))
 
     @staticmethod
     def _nx_node_to_nncf_node(nx_node: dict) -> NNCFNode:
@@ -339,7 +346,8 @@ class NNCFGraph:
                       ignored_algorithms: List[str] = None,
                       is_in_iteration_scope: bool = False,
                       is_integer_input: bool = False,
-                      is_shared: bool = False) -> NNCFNode:
+                      is_shared: bool = False,
+                      is_train_only_node: bool = False) -> NNCFNode:
         """
         Adds a node into the graph. A node represents an operation being performed on tensors.
         :param node_name: The name of the node to add - will serve as a human-readable and specifiable ID.
@@ -362,6 +370,7 @@ class NNCFGraph:
         :param is_shared: Whether the node corresponds to an operation that accesses the weights that are also accessed
             by another operation (represented by a separate node) in NNCFGraph. Examples would be repeated applications
             of a convolution layer with the same weights at different stages in the network.
+        :param is_train_only_node: Whether the node is executed in train mode and not executed in eval.
         :return: An NNCFNode object representing the newly created node in the graph. The node will still have
             to be connected to the rest of the nodes with edges using the `NNCFGraph.add_edge_between_nncf_nodes`
             method.
@@ -390,7 +399,8 @@ class NNCFGraph:
             NNCFGraph.METATYPE_ATTR: node_metatype,
             NNCFGraph.IS_SHARED_ATTR: is_shared,
             NNCFGraph.IS_IN_ITERATION_SCOPE_NODE_ATTR: is_in_iteration_scope,
-            NNCFGraph.IS_INTEGER_INPUT_NODE_ATTR: is_integer_input
+            NNCFGraph.IS_INTEGER_INPUT_NODE_ATTR: is_integer_input,
+            NNCFGraph.IS_TRAIN_ONLY_NODE: is_train_only_node
         }
         if layer_attributes is not None:
             attrs[NNCFGraph.LAYER_ATTRIBUTES] = layer_attributes
@@ -518,7 +528,7 @@ class NNCFGraph:
         ignored/target scopes.
         """
         out_graph = nx.DiGraph()
-        for node in self.get_all_nodes():
+        for node in self.get_all_eval_nodes():
             attrs_node = {}
             attrs_node['label'] = f"{node.node_id} {node.node_name}"
             node_key = self.get_node_key_by_id(node.node_id)

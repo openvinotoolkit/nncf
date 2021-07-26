@@ -193,7 +193,7 @@ class BasePruningAlgoController(PTCompressionAlgorithmController):
             mask = mask.to(grad.device)
             return apply_filter_binary_mask(mask, grad, dim=dim)
 
-        for minfo in self.pruned_module_groups_info.get_all_nodes():
+        for minfo in self.pruned_module_groups_info.get_all_eval_nodes():
             mask = minfo.operand.binary_filter_pruning_mask
             weight = minfo.module.weight
             dim = minfo.module.target_weight_dim_for_compression
@@ -264,7 +264,7 @@ class BasePruningAlgoController(PTCompressionAlgorithmController):
          'mask_pr': proportion of zero elements in filter pruning mask.
         """
         stats = {}
-        for minfo in self.pruned_module_groups_info.get_all_nodes():
+        for minfo in self.pruned_module_groups_info.get_all_eval_nodes():
             layer_info = {}
             layer_info["w_shape"] = list(minfo.module.weight.size())
             layer_info["b_shape"] = list(minfo.module.bias.size()) if minfo.module.bias is not None else []

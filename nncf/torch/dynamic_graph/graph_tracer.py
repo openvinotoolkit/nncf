@@ -99,10 +99,7 @@ class GraphTracer:
         context_to_use.base_module_thread_local_replica = model
         with context_to_use as _ctx:
             with torch.no_grad():
-                if as_eval:
-                    with training_mode_switcher(model, is_training=False):
-                        self.custom_forward_fn(model)
-                else:
+                with training_mode_switcher(model, is_training=not as_eval):
                     self.custom_forward_fn(model)
         model.load_state_dict(sd)
 

@@ -54,7 +54,7 @@ class RBSparsityBuilder(TFCompressionAlgorithmBuilder):
 
         processed_shared_layer_names = set()  # type: Set[str]
 
-        for node in nncf_graph.get_all_nodes():
+        for node in nncf_graph.get_all_eval_nodes():
             if node.is_shared():
                 target_layer_name, _ = get_original_name_and_instance_idx(node.node_name)
                 if target_layer_name in processed_shared_layer_names:

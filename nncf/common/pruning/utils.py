@@ -210,7 +210,7 @@ def get_conv_in_out_channels(graph: NNCFGraph):
             {node_name: output_channels_num}
     """
     in_channels, out_channels = {}, {}
-    for node in graph.get_all_nodes():
+    for node in graph.get_all_eval_nodes():
         if isinstance(node.layer_attributes, ConvolutionLayerAttributes):
             name = node.node_name
             if name in in_channels and name in out_channels:
