@@ -28,6 +28,7 @@ from nncf.tensorflow.algorithm_selector import NoCompressionAlgorithmBuilder
 from nncf.tensorflow.algorithm_selector import get_compression_algorithm_builder
 from nncf.tensorflow.api.composite_compression import TFCompositeCompressionAlgorithmBuilder
 from nncf.tensorflow.helpers.utils import get_built_model
+from nncf.tensorflow.nncf_network import NNCFNetwork
 
 
 def create_compression_algorithm_builder(config: NNCFConfig,
@@ -76,17 +77,22 @@ def create_compressed_model(model: tf.keras.Model,
     model = get_built_model(model, config)
     original_model_accuracy = None
 
+    nncf_network = NNCFNetwork(model)
+    nncf_network = get_built_model(nncf_network, config)
+    compressed_model = nncf_network
+
     if is_accuracy_aware_training(config, compression_config_passed=True):
         if config.has_extra_struct(ModelEvaluationArgs):
             evaluation_args = config.get_extra_struct(ModelEvaluationArgs)
-            original_model_accuracy = evaluation_args.eval_fn(model)
+            original_model_accuracy = evaluation_args.eval_fn(compressed_model)
 
     builder = create_compression_algorithm_builder(config, should_init=not compression_state)
     if compression_state:
         builder.load_state(compression_state[BaseController.BUILDER_STATE])
-    compressed_model = builder.apply_to(model)
+    compressed_model.nncf_wrapped_model = builder.apply_to(compressed_model)
     compression_ctrl = builder.build_controller(compressed_model)
     compressed_model.original_model_accuracy = original_model_accuracy
     if isinstance(compressed_model, tf.keras.Model):
-        compressed_model.accuracy_aware_fit = types.MethodType(accuracy_aware_fit, compressed_model)
+        compressed_model.accuracy_aware_fit = types.MethodType(accuracy_aware_fit, compressed_model.nncf_wrapped_model)
+
     return compression_ctrl, compressed_model

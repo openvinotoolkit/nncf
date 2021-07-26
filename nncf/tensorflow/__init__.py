@@ -35,6 +35,7 @@ from nncf.tensorflow.quantization import algorithm as quantization_algorithm
 from nncf.tensorflow.sparsity.magnitude import algorithm as magnitude_sparsity_algorithm
 from nncf.tensorflow.pruning.filter_pruning import algorithm as filter_pruning_algorithm
 from nncf.tensorflow.sparsity.rb import algorithm as rb_sparsity_algorithm
+from nncf.tensorflow import distiller as knowledge_distillation_algorithm
 
 from tensorflow.python.keras.engine import keras_tensor
 keras_tensor.disable_keras_tensors()

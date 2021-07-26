@@ -94,8 +94,8 @@ class BasePruningAlgoBuilder(TFCompressionAlgorithmBuilder):
         :param model: The original uncompressed model.
         :return: The model with pruning masks.
         """
-        transformer = TFModelTransformer(model)
-        transformation_layout = self.get_transformation_layout(model)
+        transformer = TFModelTransformer(model.nncf_wrapped_model)
+        transformation_layout = self.get_transformation_layout(model.nncf_wrapped_model)
         return transformer.transform(transformation_layout)
 
     def get_transformation_layout(self, model: tf.keras.Model) -> TFTransformationLayout:

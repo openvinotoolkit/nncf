@@ -221,7 +221,7 @@ class FilterPruningController(BasePruningAlgoController):
         """
         for node in self._original_graph.get_nodes_by_metatypes(GENERAL_CONV_LAYER_METATYPES):
             node_name, node_index = get_original_name_and_instance_idx(node.node_name)
-            layer = self._model.get_layer(node_name)
+            layer = self._model.nncf_wrapped_model.get_layer(node_name)
             layer_ = unwrap_layer(layer)
 
             channel_axis = get_input_channel_axis(layer)
@@ -238,7 +238,7 @@ class FilterPruningController(BasePruningAlgoController):
 
         for node in self._original_graph.get_nodes_by_metatypes(LINEAR_LAYER_METATYPES):
             node_name, node_index = get_original_name_and_instance_idx(node.node_name)
-            layer = self._model.get_layer(node_name)
+            layer = self._model.nncf_wrapped_model.get_layer(node_name)
 
             in_shape = layer.get_input_shape_at(node_index)[1:]
             out_shape = layer.get_output_shape_at(node_index)[1:]
@@ -471,7 +471,7 @@ class FilterPruningController(BasePruningAlgoController):
         :param group: Nodes cluster
         :return a list of filter importance scores
         """
-        group_layers = [self._model.get_layer(node.layer_name) for node in group.elements]
+        group_layers = [self._model.nncf_wrapped_model.get_layer(node.layer_name) for node in group.elements]
         group_filters_num = tf.constant([get_filters_num(layer) for layer in group_layers])
         filters_num = group_filters_num[0]
         assert tf.reduce_all(group_filters_num == filters_num)
@@ -486,7 +486,7 @@ class FilterPruningController(BasePruningAlgoController):
             nncf_node = self._original_graph.get_node_by_id(minfo.nncf_node_id)
             if nncf_node.is_shared():
                 shared_nodes.add(layer_name)
-            filters_importance = self._layer_filter_importance(self._model.get_layer(layer_name))
+            filters_importance = self._layer_filter_importance(self._model.nncf_wrapped_model.get_layer(layer_name))
             cumulative_filters_importance += filters_importance
 
         return cumulative_filters_importance
