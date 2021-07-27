@@ -380,7 +380,7 @@ class TestModelsGraph:
 
         compressed_model, _ = create_compressed_model_and_algo_for_test(model, config, force_no_init=True)
 
-        check_model_graph(compressed_model, desc.ref_graph_filename, _quantization_case_config.graph_dir,
+        check_model_graph(compressed_model.nncf_wrapped_model, desc.ref_graph_filename, _quantization_case_config.graph_dir,
                           desc.rename_resource_nodes)
 
     @pytest.mark.parametrize('desc', get_test_models_desc(SparsityAlgo.magnitude), ids=[
@@ -391,7 +391,7 @@ class TestModelsGraph:
         config['compression']['params'] = {'schedule': 'multistep'}
         compressed_model, _ = create_compressed_model_and_algo_for_test(model, config, force_no_init=True)
 
-        check_model_graph(compressed_model, desc.ref_graph_filename, _magnitude_sparsity_case_config.graph_dir,
+        check_model_graph(compressed_model.nncf_wrapped_model, desc.ref_graph_filename, _magnitude_sparsity_case_config.graph_dir,
                           desc.rename_resource_nodes)
 
     @pytest.mark.parametrize('desc', get_test_models_desc(SparsityAlgo.rb), ids=[
@@ -402,7 +402,7 @@ class TestModelsGraph:
         config['compression']['params'] = {'schedule': 'multistep'}
         compressed_model, _ = create_compressed_model_and_algo_for_test(model, config, force_no_init=True)
 
-        check_model_graph(compressed_model, desc.ref_graph_filename, _rb_sparsity_case_config.graph_dir,
+        check_model_graph(compressed_model.nncf_wrapped_model, desc.ref_graph_filename, _rb_sparsity_case_config.graph_dir,
                           desc.rename_resource_nodes)
 
     @pytest.mark.parametrize('desc', get_test_models_desc('filter_pruning'), ids=[
@@ -412,7 +412,7 @@ class TestModelsGraph:
         config = get_basic_filter_pruning_config(desc.input_sample_sizes)
         compressed_model, _ = create_compressed_model_and_algo_for_test(model, config, force_no_init=True)
 
-        check_model_graph(compressed_model, desc.ref_graph_filename, _pruning_case_config.graph_dir,
+        check_model_graph(compressed_model.nncf_wrapped_model, desc.ref_graph_filename, _pruning_case_config.graph_dir,
                           desc.rename_resource_nodes)
 
 
@@ -435,5 +435,5 @@ def test_quantize_outputs(desc: ModelDesc, _quantization_case_config):
     config['compression']['quantize_outputs'] = True
     compressed_model, _ = create_compressed_model_and_algo_for_test(model, config, force_no_init=True)
 
-    check_model_graph(compressed_model, desc.ref_graph_filename, _quantization_case_config.graph_dir,
+    check_model_graph(compressed_model.nncf_wrapped_model, desc.ref_graph_filename, _quantization_case_config.graph_dir,
                       desc.rename_resource_nodes)
