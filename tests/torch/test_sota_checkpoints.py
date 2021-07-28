@@ -6,7 +6,6 @@ import re
 import shlex
 import subprocess
 import sys
-import sysconfig
 from collections import OrderedDict
 from pathlib import Path
 from typing import List
@@ -537,12 +536,7 @@ Tsc = TestSotaCheckpoints
 def openvino_preinstall(ov_data_dir):
     if ov_data_dir:
         subprocess.run("pip install -r requirements_onnx.txt", cwd=MO_DIR, check=True, shell=True)
-        subprocess.run("pip install scikit-image==0.17.2", check=True, shell=True)
-        subprocess.run("{} setup.py install".format(sys.executable), cwd=ACC_CHECK_DIR, check=True, shell=True)
-
-        # Workaround to fix protobuf error
-        subprocess.run("touch __init__.py", cwd=os.path.join(sysconfig.get_paths()["purelib"], 'google'),
-                       check=True, shell=True)
+        subprocess.run(f"{sys.executable} setup.py install", cwd=ACC_CHECK_DIR, check=True, shell=True)
 
 
 @pytest.fixture(autouse=True, scope="class")
