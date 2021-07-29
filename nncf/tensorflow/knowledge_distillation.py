@@ -12,25 +12,6 @@ from nncf.tensorflow.api.compression import TFCompressionAlgorithmBuilder
 from nncf.api.compression import CompressionLoss, CompressionAlgorithmController
 
 
-class Distiller(tf.keras.Model):
-    def __init__(self, compressed_model, original_model):
-        super().__init__()
-        self.compressed_model = compressed_model
-        self.original_model = original_model
-        self.kd_storage = None
-        self.kd_loss_fn = tf.keras.losses.MeanSquaredError()
-
-    def call(self, inputs, training=None, mask=None):
-        compressed_output = self.compressed_model(inputs)
-        kd_outputs = self.original_model(inputs)
-        self.kd_storage = self.kd_loss_fn(compressed_output, kd_outputs)
-        return compressed_output
-        # distilaltion loss just calls kd_storage
-
-    def get_knowledge_distillation_loss_value(self):
-        return self.kd_storage
-
-
 class KnowledgeDistillationLoss(CompressionLoss):
     def __init__(self, target_model, original_model):
         self.target_model = target_model

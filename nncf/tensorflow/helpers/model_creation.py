@@ -77,9 +77,8 @@ def create_compressed_model(model: tf.keras.Model,
     model = get_built_model(model, config)
     original_model_accuracy = None
 
-    nncf_network = NNCFNetwork(model)
-    nncf_network = get_built_model(nncf_network, config)
-    compressed_model = nncf_network
+    compressed_model = NNCFNetwork(model)
+    compressed_model = get_built_model(compressed_model, config)
 
     if is_accuracy_aware_training(config, compression_config_passed=True):
         if config.has_extra_struct(ModelEvaluationArgs):
