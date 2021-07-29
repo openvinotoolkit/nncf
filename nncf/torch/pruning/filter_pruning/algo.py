@@ -259,6 +259,7 @@ class FilterPruningController(BasePruningAlgoController):
     def _calculate_output_shape(self, graph: NNCFGraph, node: NNCFNode) -> Tuple[int, ...]:
         """
         Calculates output shape of convolution layer by input edge.
+
         :param graph: the model graph
         :param node: node from NNCF graph
         :return: output shape
@@ -308,6 +309,7 @@ class FilterPruningController(BasePruningAlgoController):
     def _calculate_flops_and_weights_pruned_model_by_masks(self) -> Tuple[int, int]:
         """
         Calculates number of weights and flops for pruned model by using binary_filter_pruning_mask.
+
         :return: number of flops in model
         """
         tmp_in_channels = self._modules_in_channels.copy()
@@ -337,6 +339,7 @@ class FilterPruningController(BasePruningAlgoController):
         """
         Prune all prunable modules in model with pruning_rate rate and returns number of weights and
         flops of the pruned model.
+
         :param pruning_rate: proportion of zero filters in all modules
         :return: flops number in pruned model
         """
@@ -360,6 +363,7 @@ class FilterPruningController(BasePruningAlgoController):
         """
         Searching for the minimal uniform layer-wise weight pruning rate (proportion of zero filters in a layer)
          needed to achieve the target pruning rate in flops.
+
         :param target_flops_pruning_rate: target proportion of flops that should be pruned in the model
         :return: uniform pruning rate for all layers
         """
@@ -539,6 +543,7 @@ class FilterPruningController(BasePruningAlgoController):
         Sorting all prunable filters in the network by importance and pruning the amount of the
         least important filters sufficient to achieve the target pruning rate by flops.
         Filters are pruned one-by-one and the corresponding flops value is checked.
+
         :param target_flops_pruning_rate: target proportion of flops removed from the model
         :return:
         """
@@ -660,6 +665,7 @@ class FilterPruningController(BasePruningAlgoController):
     def create_stats_table_for_pruning_export(old_modules_info, new_modules_info):
         """
         Creating a table with comparison of model params number before and after pruning.
+
         :param old_modules_info: Information about pruned layers before actually prune layers.
         :param new_modules_info: Information about pruned layers after actually prune layers.
         """
