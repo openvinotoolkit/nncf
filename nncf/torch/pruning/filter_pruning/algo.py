@@ -285,6 +285,7 @@ class FilterPruningController(BasePruningAlgoController):
             else:
                 # For disconnected NNCFGraph when convolution layers have no output edge
                 out_shape = self._calculate_output_shape(graph, node)
+                nncf_logger.error("Node %s have no output edge in NNCFGraph", node.node_name)
             self._modules_out_shapes[node.node_name] = out_shape
 
         for node in graph.get_nodes_by_types([v.op_func_name for v in NNCF_LINEAR_MODULES_DICT]):

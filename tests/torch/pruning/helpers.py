@@ -11,6 +11,7 @@
  limitations under the License.
 """
 
+import copy
 import torch
 from torch import nn
 
@@ -411,6 +412,25 @@ class PruningTestModelSharedConvs(nn.Module):
         out2 = self.conv2(in2)
         return self.conv3(out1), self.conv3(out2)
 
+
+class DisconectedGraphModel(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.conv1 = create_conv(1, 16, 1, 1, -2)
+        for i in range(16):
+            self.conv1.weight.data[i] += i
+        self.conv2 = create_conv(16, 16, 1, 1, -2)
+        for i in range(16):
+            self.conv2.weight.data[i] += i
+        self.relu = nn.ReLU()
+
+    def forward(self, x):
+        x = self.conv1(x)
+        # Broke tracing graph by copy function
+        x = copy.copy(x)
+        x = self.relu(x)
+        x = self.conv2(x)
+        return x
 
 def get_basic_pruning_config(input_sample_size=None) -> NNCFConfig:
     if input_sample_size is None:
