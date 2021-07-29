@@ -18,7 +18,7 @@ from pathlib import Path
 import tensorflow as tf
 import tensorflow_addons as tfa
 
-from nncf.config.extractors import extract_algo_with_accuracy_aware_training
+from nncf.config.extractors import extract_accuracy_aware_training_config
 from nncf.tensorflow.helpers.model_creation import create_compressed_model
 from nncf.tensorflow import create_compression_callbacks
 from nncf.tensorflow.helpers.model_manager import TFOriginalModelManager
@@ -175,7 +175,7 @@ def run(config):
 
     resume_training = config.ckpt_path is not None
 
-    accuracy_aware_algo = extract_algo_with_accuracy_aware_training(config)
+    accuracy_aware_algo = extract_accuracy_aware_training_config(config)
     if accuracy_aware_algo is not None:
         with TFOriginalModelManager(model_fn, **model_params) as model:
             model.compile(metrics=[tf.keras.metrics.CategoricalAccuracy(name='acc@1')])

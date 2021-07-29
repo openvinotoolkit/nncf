@@ -359,11 +359,22 @@ QUANTIZATION_INITIALIZER_SCHEMA = {
     "additionalProperties": False,
 }
 
-ACCURACY_AWARE_SCHEMA = {
-    "maximal_accuracy_degradation": with_attributes(_NUMBER,
-                                                    description="Maximally allowed accuracy degradation"
-                                                                " of the model (in percent relative to"
-                                                                " the original model accuracy)"),
+ACCURACY_AWARE_TRAINING_TYPE_SCHEMA = {
+    "type": "string",
+    "enum": ["adaptive_compression_level", "early_exit"]
+}
+
+ACCURACY_AWARE_TRAINING_SCHEMA = {
+    "type": "object",
+    "mode": with_attributes(ACCURACY_AWARE_TRAINING_TYPE_SCHEMA,
+                            description=""),
+    "params": with_attributes({"type": "object"},
+                            description=""),
+    "required": ["mode", "params"]
+}
+
+
+ADAPTIVE_COMPRESSION_LEVEL_TRAINING = {
     "initial_training_phase_epochs": with_attributes(_NUMBER,
                                                      description="Number of epochs to fine-tune during "
                                                                  "the initial training phase of the "
@@ -372,35 +383,28 @@ ACCURACY_AWARE_SCHEMA = {
                                                      description="Initial value for the compression rate "
                                                                  "increase/decrease training phase of the "
                                                                  "compression training loop"),
-    "compression_rate_step_reduction_factor":  with_attributes(_NUMBER,
-                                                               description="Factor used to reduce the compression rate "
-                                                                           "change step in the adaptive compression "
-                                                                           "training loop"),
-    "minimal_compression_rate_step":  with_attributes(_NUMBER,
-                                                      description="The minimal compression rate change "
-                                                                  "step value after which the training "
-                                                                  "loop is terminated"),
-    "patience_epochs":  with_attributes(_NUMBER,
-                                        description="The number of epochs to fine-tune the model"
-                                                    " for a given compression rate after the initial"
-                                                    " training phase of the training loop"),
+    "compression_rate_step_reduction_factor": with_attributes(_NUMBER,
+                                                              description="Factor used to reduce the compression rate "
+                                                                          "change step in the adaptive compression "
+                                                                          "training loop"),
+    "minimal_compression_rate_step": with_attributes(_NUMBER,
+                                                     description="The minimal compression rate change "
+                                                                 "step value after which the training "
+                                                                 "loop is terminated"),
+    "patience_epochs": with_attributes(_NUMBER,
+                                       description="The number of epochs to fine-tune the model"
+                                                   " for a given compression rate after the initial"
+                                                   " training phase of the training loop"),
+}
+
+EARLY_EXIT_TRAINING = {
+    "maximal_accuracy_degradation": with_attributes(_NUMBER,
+                                                    description="Maximally allowed accuracy degradation"
+                                                                " of the model (in percent relative to"
+                                                                " the original model accuracy)"),
     "maximal_total_epochs":  with_attributes(_NUMBER,
                                              description="The maximal total epoch budget for "
                                                          "the adaptive compression training loop"),
-}
-
-BASIC_COMPRESSION_TRAINING_SCHEMA = {
-    "type": "object",
-    "properties": {
-        "maximal_accuracy_degradation": with_attributes(_NUMBER,
-                                                        description="Maximally allowed accuracy degradation"
-                                                                    " of the model (in percent relative to"
-                                                                    " the original model accuracy)"),
-        "maximal_total_epochs": with_attributes(_NUMBER,
-                                                description="The maximal total epoch budget for "
-                                                            "the adaptive compression training loop"),
-        },
-    "required": ["maximal_total_epochs", "maximal_accuracy_degradation"],
 }
 
 COMMON_COMPRESSION_ALGORITHM_PROPERTIES = {
@@ -410,27 +414,10 @@ COMMON_COMPRESSION_ALGORITHM_PROPERTIES = {
                                      description=TARGET_SCOPES_DESCRIPTION),
 }
 
-
-QUANTIZATION_COMPRESSION_ALGORITHM_PROPERTIES = {
-    **COMMON_COMPRESSION_ALGORITHM_PROPERTIES,
-    "accuracy_aware_training": BASIC_COMPRESSION_TRAINING_SCHEMA,
-}
-
-FILTER_PRUNING_COMPRESSION_ALGORITHM_PROPERTIES = {
-    **COMMON_COMPRESSION_ALGORITHM_PROPERTIES,
-    "accuracy_aware_training": ACCURACY_AWARE_SCHEMA,
-}
-
-SPARSITY_COMPRESSION_ALGORITHM_PROPERTIES = {
-    **COMMON_COMPRESSION_ALGORITHM_PROPERTIES,
-    "accuracy_aware_training": ACCURACY_AWARE_SCHEMA,
-}
-
 BASIC_COMPRESSION_ALGO_SCHEMA = {
     "type": "object",
-    "required": ["algorithm"],
+    "required": ["algorithm"]
 }
-
 
 STAGED_QUANTIZATION_PARAMS = {
     "params": {
@@ -533,7 +520,7 @@ QUANTIZATION_SCHEMA = {
                                                               "the fix will be applied. For a detailed information "
                                                               ", please, take look at the docs"),
         **STAGED_QUANTIZATION_PARAMS,
-        **QUANTIZATION_COMPRESSION_ALGORITHM_PROPERTIES,
+        **COMMON_COMPRESSION_ALGORITHM_PROPERTIES,
     },
     "additionalProperties": False
 }
@@ -551,7 +538,7 @@ BINARIZATION_SCHEMA = {
                                 description="Selects the mode of binarization - either 'xnor' for XNOR binarization,"
                                             "or 'dorefa' for DoReFa binarization"),
         **STAGED_QUANTIZATION_PARAMS,
-        **SPARSITY_COMPRESSION_ALGORITHM_PROPERTIES
+        **COMMON_COMPRESSION_ALGORITHM_PROPERTIES
     },
     "additionalProperties": False
 }
@@ -563,7 +550,7 @@ CONST_SPARSITY_SCHEMA = {
         "algorithm": {
             "const": CONST_SPARSITY_ALGO_NAME_IN_CONFIG
         },
-        **SPARSITY_COMPRESSION_ALGORITHM_PROPERTIES,
+        **COMMON_COMPRESSION_ALGORITHM_PROPERTIES,
     },
     "additionalProperties": False,
     "description": "This algorithm takes no additional parameters and is used when you want to load "
@@ -644,7 +631,7 @@ MAGNITUDE_SPARSITY_SCHEMA = {
                 },
                 "additionalProperties": False
             },
-        **SPARSITY_COMPRESSION_ALGORITHM_PROPERTIES
+        **COMMON_COMPRESSION_ALGORITHM_PROPERTIES
     },
     "additionalProperties": False
 }
@@ -666,7 +653,7 @@ RB_SPARSITY_SCHEMA = {
                 "properties": COMMON_SPARSITY_PARAM_PROPERTIES,
                 "additionalProperties": False
             },
-        **SPARSITY_COMPRESSION_ALGORITHM_PROPERTIES
+        **COMMON_COMPRESSION_ALGORITHM_PROPERTIES
     },
     "additionalProperties": False
 }
@@ -782,7 +769,7 @@ FILTER_PRUNING_SCHEMA = {
                 },
                 "additionalProperties": False,
             },
-        **FILTER_PRUNING_COMPRESSION_ALGORITHM_PROPERTIES
+        **COMMON_COMPRESSION_ALGORITHM_PROPERTIES
     },
     "additionalProperties": False
 }
@@ -848,8 +835,8 @@ ROOT_NNCF_CONFIG_SCHEMA = {
         # This is required for better user feedback, since holistic schema validation is uninformative
         # if there is an error in one of the compression configs.
         **COMPRESSION_LR_MULTIPLIER_PROPERTY,
+        "accuracy_aware_training": ACCURACY_AWARE_TRAINING_SCHEMA,
         "compression": make_object_or_array_of_objects_schema(BASIC_COMPRESSION_ALGO_SCHEMA),
-                        # Dict('algorithms': List[algos], 'training': {} )
         "target_device": with_attributes(TARGET_DEVICE_SCHEMA,
                                          description="The target device, the specificity of which will be taken into "
                                                      "account while compressing in order to obtain the best "

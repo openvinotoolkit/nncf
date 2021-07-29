@@ -20,7 +20,7 @@ from torch.optim import SGD
 from torch.nn import functional as F
 
 from nncf.torch import AdaptiveCompressionTrainingLoop
-from nncf.torch import EarlyStoppingCompressionTrainingLoop
+from nncf.torch import EarlyExitCompressionTrainingLoop
 from nncf.torch.initialization import register_default_init_args
 
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
@@ -85,12 +85,20 @@ def test_adaptive_compression_training_loop(max_accuracy_degradation,
 
     input_sample_size = [1, 1, LeNet.INPUT_SIZE[-1], LeNet.INPUT_SIZE[-1]]
     config = get_basic_magnitude_sparsity_config(input_sample_size=input_sample_size)
-    acc_aware_config = {
+
+    params = {
         "maximal_accuracy_degradation": max_accuracy_degradation,
         "initial_training_phase_epochs": initial_training_phase_epochs,
         "patience_epochs": patience_epochs,
     }
-    config['compression']['accuracy_aware_training'] = acc_aware_config
+    accuracy_aware_config = {
+        "accuracy_aware_training": {
+            "mode": "adaptive_compression_level",
+            "params": params
+        }
+    }
+
+    config.update(accuracy_aware_config)
 
     model, train_loader, compression_ctrl = create_finetuned_lenet_model_and_dataloader(config,
                                                                                         validate_fn,
@@ -142,11 +150,19 @@ def test_compression_training_loop(max_accuracy_degradation,
         return 1 - loss.item()
 
     config = get_quantization_config_without_range_init(LeNet.INPUT_SIZE[-1])
-    training_config = {
+
+    params = {
         "maximal_accuracy_degradation": max_accuracy_degradation,
         "maximal_total_epochs": maximal_total_epochs,
     }
-    config['compression']['accuracy_aware_training'] = training_config
+    accuracy_aware_config = {
+        "accuracy_aware_training": {
+            "mode": "early_exit",
+            "params": params
+        }
+    }
+
+    config.update(accuracy_aware_config)
 
     model, train_loader, compression_ctrl = create_finetuned_lenet_model_and_dataloader(config,
                                                                                         validate_fn,
@@ -169,7 +185,7 @@ def test_compression_training_loop(max_accuracy_degradation,
         optimizer = SGD(model.parameters(), lr=learning_rate)
         return optimizer, None
 
-    early_stopping_training_loop = EarlyStoppingCompressionTrainingLoop(config, compression_ctrl)
+    early_stopping_training_loop = EarlyExitCompressionTrainingLoop(config, compression_ctrl)
     model = early_stopping_training_loop.run(model,
                                              train_epoch_fn=train_fn,
                                              validate_fn=partial(validate_fn, train_loader=train_loader),

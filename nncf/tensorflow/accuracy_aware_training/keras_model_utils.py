@@ -17,9 +17,9 @@ from tensorflow.python.eager import context
 from tensorflow.python.keras import callbacks as callbacks_module
 from tensorflow.python.keras.engine import data_adapter
 
-from nncf.config.extractors import extract_algo_with_accuracy_aware_training
+from nncf.config.extractors import extract_accuracy_aware_training_config
 from nncf.common.accuracy_aware_training.training_loop import AdaptiveCompressionTrainingLoop
-from nncf.common.accuracy_aware_training.training_loop import EarlyStoppingCompressionTrainingLoop
+from nncf.common.accuracy_aware_training.training_loop import EarlyExitCompressionTrainingLoop
 
 
 def accuracy_aware_fit(cls_instance, train_dataset, compression_ctrl,
@@ -107,11 +107,12 @@ def accuracy_aware_fit(cls_instance, train_dataset, compression_ctrl,
 
     cls_instance.original_model_accuracy = uncompressed_model_accuracy
     # instantiate and run accuracy-aware training loop
-    algo = extract_algo_with_accuracy_aware_training(nncf_config)
+    accuracy_aware_training_config = extract_accuracy_aware_training_config(nncf_config)
+    accuracy_aware_training_mode = accuracy_aware_training_config.get('mode')
     # TODO(kshpv): need to remove str comparision
-    if algo == 'quantization':
-        acc_aware_training_loop = EarlyStoppingCompressionTrainingLoop(nncf_config, compression_ctrl)
-    else:
+    if accuracy_aware_training_mode == 'early_exit':
+        acc_aware_training_loop = EarlyExitCompressionTrainingLoop(nncf_config, compression_ctrl)
+    elif accuracy_aware_training_mode == 'adaptive_compression_level':
         acc_aware_training_loop = AdaptiveCompressionTrainingLoop(nncf_config, compression_ctrl)
     cls_instance = acc_aware_training_loop.run(cls_instance,
                                                train_epoch_fn=train_epoch_fn,

@@ -15,6 +15,7 @@ from abc import abstractmethod
 from copy import copy
 from functools import partial
 from typing import TypeVar
+from typing import Dict
 
 import numpy as np
 from scipy.interpolate import interp1d
@@ -26,6 +27,7 @@ from nncf.common.utils.backend import infer_backend_from_compression_controller
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.common.utils.registry import Registry
 from nncf.config.config import NNCFConfig
+from nncf.config.extractors import extract_accuracy_aware_training_config
 
 ModelType = TypeVar('ModelType')
 ADAPTIVE_COMPRESSION_CONTROLLERS = Registry('adaptive_compression_controllers')
@@ -57,7 +59,7 @@ class TrainingLoop(ABC):
         """
 
 
-class EarlyStoppingCompressionTrainingLoop(TrainingLoop):
+class EarlyExitCompressionTrainingLoop(TrainingLoop):
     """
     Adaptive compression training loop allows an accuracy-aware training process
     to reach the maximal accuracy drop
@@ -68,8 +70,8 @@ class EarlyStoppingCompressionTrainingLoop(TrainingLoop):
                  training_config: NNCFConfig,
                  compression_controller: CompressionAlgorithmController):
         runner_cls = self._get_backend_specific_training_runner_cls(compression_controller)
-        early_stopping_config = self._get_early_stopping_config(training_config)
-        self.runner = runner_cls(early_stopping_config)
+        early_exit_params = self._get_early_exit_params(training_config)
+        self.runner = runner_cls(early_exit_params)
         self.compression_controller = compression_controller
 
     def run(self, model, train_epoch_fn, validate_fn,
@@ -113,21 +115,10 @@ class EarlyStoppingCompressionTrainingLoop(TrainingLoop):
         raise RuntimeError('Got an unsupported value of nncf_backend')
 
     @staticmethod
-    def _get_early_stopping_config(nncf_config: NNCFConfig):
-        compression_configs = nncf_config.get('compression', {})
-        if isinstance(compression_configs, list):
-            comp_algorithm_params_dict = {compression_config['algorithm']: compression_config
-                                          for compression_config in compression_configs}
-        else:
-            comp_algorithm_params_dict = {compression_configs['algorithm']: compression_configs}
-        quantization_config = comp_algorithm_params_dict.get('quantization', None)
-        if quantization_config is not None:
-            early_stopping_config = quantization_config.get('accuracy_aware_training', None)
-            if early_stopping_config is None:
-                raise RuntimeError('')
-        else:
-            raise RuntimeError('')
-        return early_stopping_config
+    def _get_early_exit_params(nncf_config: NNCFConfig) -> Dict:
+        accuracy_aware_config = nncf_config.get('accuracy_aware_training', {})
+        early_exit_params = accuracy_aware_config.get('params', {})
+        return early_exit_params
 
 
 class AdaptiveCompressionTrainingLoop(TrainingLoop):
@@ -163,26 +154,21 @@ class AdaptiveCompressionTrainingLoop(TrainingLoop):
 
     def _get_adaptive_compression_ctrl(self, compression_controller, nncf_config):
         adaptive_compression_controllers = self._adaptive_compression_controllers()
-        compression_configs = nncf_config.get('compression', {})
-        if isinstance(compression_configs, list):
-            comp_algorithm_params_dict = {compression_config['algorithm']: compression_config
-                                          for compression_config in compression_configs}
-        else:
-            comp_algorithm_params_dict = {compression_configs['algorithm']: compression_configs}
+        accuracy_aware_training_config = extract_accuracy_aware_training_config(nncf_config)
+        accuracy_aware_training_params = accuracy_aware_training_config.get('params', None)
 
-        if not isinstance(compression_controller, CompositeCompressionAlgorithmController):
-            for algo_name, ctrl_type in adaptive_compression_controllers.items():
-                if isinstance(compression_controller, ctrl_type):
-                    acc_aware_config = comp_algorithm_params_dict[algo_name].get('accuracy_aware_training', None)
-                    return compression_controller, acc_aware_config
         if isinstance(compression_controller, CompositeCompressionAlgorithmController):
+            # TODO:(kshpv) check if both algo in the config
+            if 'filter_pruning' in adaptive_compression_controllers['algo_name'] and \
+                    'sparsity' in adaptive_compression_controllers['algo_name']:
+                raise RuntimeError('No compression algorithm that supports adaptive compression '
+                                   'accuracy-aware training was specified')
+
             for controller in compression_controller.child_ctrls:
-                for algo_name, ctrl_type in adaptive_compression_controllers.items():
-                    if isinstance(controller, ctrl_type):
-                        acc_aware_config = comp_algorithm_params_dict[algo_name].get('accuracy_aware_training', None)
-                        return controller, acc_aware_config
-        raise RuntimeError('No compression algorithm that supports adaptive compression '
-                           'accuracy-aware training was specified')
+                if controller in adaptive_compression_controllers:
+                    return controller, accuracy_aware_training_params
+
+        return compression_controller, accuracy_aware_training_params
 
     def _adaptive_compression_controllers(self):
         def remove_registry_prefix(algo_name):

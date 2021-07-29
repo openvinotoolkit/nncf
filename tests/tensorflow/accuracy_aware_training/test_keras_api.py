@@ -104,12 +104,19 @@ def test_adaptive_compression_training_loop(max_accuracy_degradation, final_comp
                                                        num_samples=steps_per_epoch)
     config = get_basic_magnitude_sparsity_config(input_sample_size=[1, img_size, img_size, 1])
 
-    acc_aware_config = {
-        'maximal_accuracy_degradation': max_accuracy_degradation,
-        'initial_training_phase_epochs': initial_training_phase_epochs,
-        'patience_epochs': patience_epochs,
+    params = {
+        "maximal_accuracy_degradation": max_accuracy_degradation,
+        "initial_training_phase_epochs": initial_training_phase_epochs,
+        "patience_epochs": patience_epochs,
     }
-    config['compression']['accuracy_aware_training'] = acc_aware_config
+    accuracy_aware_config = {
+        "accuracy_aware_training": {
+            "mode": "adaptive_compression_level",
+            "params": params
+        }
+    }
+
+    config.update(accuracy_aware_config)
 
     compress_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
     compression_callbacks = create_compression_callbacks(compression_ctrl, log_tensorboard=False)
@@ -149,20 +156,26 @@ def test_adaptive_compression_training_loop(max_accuracy_degradation, final_comp
     ('max_accuracy_degradation',),
     ((30.0,), (1.0,))
 )
-def test_early_stopping_compression_training_loop(max_accuracy_degradation,
-                                                  maximal_total_epochs=100, uncompressed_model_accuracy=0.2,
-                                                  steps_per_epoch=20, img_size=10):
+def test_early_exit_compression_training_loop(max_accuracy_degradation,
+                                              maximal_total_epochs=100, uncompressed_model_accuracy=0.2,
+                                              steps_per_epoch=20, img_size=10):
     set_random_seed(42)
     model = get_simple_conv_regression_model(img_size)
     dataset = get_const_target_mock_regression_dataset(img_size=img_size,
                                                        num_samples=steps_per_epoch)
 
     config = get_basic_quantization_config(img_size)
-    acc_aware_config = {
+    params = {
         "maximal_accuracy_degradation": max_accuracy_degradation,
         "maximal_total_epochs": maximal_total_epochs,
     }
-    config['compression']['accuracy_aware_training'] = acc_aware_config
+    accuracy_aware_config = {
+        "accuracy_aware_training": {
+            "mode": "early_exit",
+            "params": params
+        }
+    }
+    config.update(accuracy_aware_config)
     config = register_default_init_args(config, dataset, batch_size=1)
     compress_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
     compression_callbacks = create_compression_callbacks(compression_ctrl, log_tensorboard=False)

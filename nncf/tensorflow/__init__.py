@@ -39,4 +39,4 @@ from tensorflow.python.keras.engine import keras_tensor
 keras_tensor.disable_keras_tensors()
 
 from nncf.common.accuracy_aware_training.training_loop import AdaptiveCompressionTrainingLoop
-from nncf.common.accuracy_aware_training.training_loop import EarlyStoppingCompressionTrainingLoop
+from nncf.common.accuracy_aware_training.training_loop import EarlyExitCompressionTrainingLoop

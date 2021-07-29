@@ -46,11 +46,11 @@ class PTBaseTrainingRunner(BaseTrainingRunner):
     The Training Runner implementation for PyTorch training code.
     """
 
-    def __init__(self, accuracy_aware_config,
+    def __init__(self, accuracy_aware_training_params,
                  lr_updates_needed=True, verbose=True,
                  validate_every_n_epochs=None,
                  dump_checkpoints=True):
-        super().__init__(accuracy_aware_config, verbose,
+        super().__init__(accuracy_aware_training_params, verbose,
                          validate_every_n_epochs,
                          dump_checkpoints)
 
@@ -192,19 +192,19 @@ class PTBaseTrainingRunner(BaseTrainingRunner):
 
 
 class PTAccuracyAwareTrainingRunner(PTBaseTrainingRunner, BaseAccuracyAwareTrainingRunner):
-    def __init__(self, accuracy_aware_config,
+    def __init__(self, accuracy_aware_training_params,
                  lr_updates_needed=True, verbose=True,
                  minimal_compression_rate=0.05,
                  maximal_compression_rate=0.95,
                  validate_every_n_epochs=None,
                  dump_checkpoints=True):
 
-        PTBaseTrainingRunner.__init__(self, accuracy_aware_config,
+        PTBaseTrainingRunner.__init__(self, accuracy_aware_training_params,
                                       lr_updates_needed, verbose,
                                       validate_every_n_epochs,
                                       dump_checkpoints)
 
-        BaseAccuracyAwareTrainingRunner.__init__(self, accuracy_aware_config,
+        BaseAccuracyAwareTrainingRunner.__init__(self, accuracy_aware_training_params,
                                                  verbose,
                                                  minimal_compression_rate=minimal_compression_rate,
                                                  maximal_compression_rate=maximal_compression_rate,
