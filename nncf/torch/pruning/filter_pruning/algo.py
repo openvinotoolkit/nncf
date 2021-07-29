@@ -280,19 +280,26 @@ class FilterPruningController(BasePruningAlgoController):
     def flops_count_init(self) -> None:
         graph = self._model.get_original_graph()
         for node in graph.get_nodes_by_types([v.op_func_name for v in NNCF_GENERAL_CONV_MODULES_DICT]):
-            if graph.get_output_edges(node):
-                out_edge = graph.get_output_edges(node)[0]
+            output_edges = graph.get_output_edges(node)
+            if output_edges:
+                out_edge = output_edges[0]
                 out_shape = out_edge.tensor_shape[2:]
             else:
-                # For disconnected NNCFGraph when convolution layers have no output edge
+                # For disconnected NNCFGraph when node have no output edge
                 out_shape = self._calculate_output_shape(graph, node)
                 nncf_logger.error("Node %s have no output edge in NNCFGraph", node.node_name)
             self._modules_out_shapes[node.node_name] = out_shape
 
         for node in graph.get_nodes_by_types([v.op_func_name for v in NNCF_LINEAR_MODULES_DICT]):
-            out_edge = graph.get_output_edges(node)[0]
-            out_shape = out_edge.tensor_shape
-            self._modules_out_shapes[node.node_name] = out_shape[-1]
+            output_edges = graph.get_output_edges(node)
+            if output_edges:
+                out_edge = graph.get_output_edges(node)[0]
+                out_shape = out_edge.tensor_shape
+                self._modules_out_shapes[node.node_name] = out_shape[-1]
+            else:
+                # For disconnected NNCFGraph when node have no output edge
+                nncf_logger.error("Node %s have no output edge in NNCFGraph", node.node_name)
+                self._modules_out_shapes[node.node_name] = node.layer_attributes.out_features
 
             in_edge = graph.get_input_edges(node)[0]
             in_shape = in_edge.tensor_shape

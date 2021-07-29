@@ -422,7 +422,9 @@ class DisconectedGraphModel(nn.Module):
         self.conv2 = create_conv(16, 16, 1, 1, -2)
         for i in range(16):
             self.conv2.weight.data[i] += i
+        self.conv3 = create_conv(16, 1, 1, 1, -2)
         self.relu = nn.ReLU()
+        self.fc = nn.Linear(64, 3)
 
     def forward(self, x):
         x = self.conv1(x)
@@ -430,6 +432,11 @@ class DisconectedGraphModel(nn.Module):
         x = copy.copy(x)
         x = self.relu(x)
         x = self.conv2(x)
+        x = self.conv3(x)
+        x = x.view(-1, 64)
+        x = self.fc(x)
+        # Broke tracing graph by copy function
+        x = copy.copy(x)
         return x
 
 def get_basic_pruning_config(input_sample_size=None) -> NNCFConfig:
