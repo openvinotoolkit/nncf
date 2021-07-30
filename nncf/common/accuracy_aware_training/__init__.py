@@ -21,15 +21,15 @@ from nncf.common.accuracy_aware_training.training_loop import AdaptiveCompressio
 
 
 class AccuracyAwareTrainingMode(Enum):
-    early_exit = 1
-    adaptive_compression_level = 2
+    early_exit = 'early_exit'
+    adaptive_compression_level = 'adaptive_compression_level'
 
 
 def create_accuracy_aware_training_loop(nncf_config: NNCFConfig,
                                         compression_ctrl: CompressionAlgorithmController) -> TrainingLoop:
     accuracy_aware_training_config = extract_accuracy_aware_training_config(nncf_config)
     accuracy_aware_training_mode = accuracy_aware_training_config.mode
-    if accuracy_aware_training_mode == AccuracyAwareTrainingMode.early_exit:
+    if accuracy_aware_training_mode == AccuracyAwareTrainingMode.early_exit.value:
         return EarlyExitCompressionTrainingLoop(nncf_config, compression_ctrl)
-    elif accuracy_aware_training_mode == AccuracyAwareTrainingMode.adaptive_compression_level:
+    elif accuracy_aware_training_mode == AccuracyAwareTrainingMode.adaptive_compression_level.value:
         return AdaptiveCompressionTrainingLoop(nncf_config, compression_ctrl)
