@@ -28,7 +28,7 @@
     }
   },
   "accuracy_aware_training": {
-    "type": "adaptive_accuracy_degradation",
+    "mode": "adaptive_accuracy_degradation",
     "params": {
         "maximal_accuracy_degradation": 1.0,
         "initial_training_phase_epochs": 100,

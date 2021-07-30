@@ -46,7 +46,7 @@ def create_initialized_lenet_model_and_dataloader(config: NNCFConfig) -> Tuple[n
     )
 )
 def test_runner(num_steps, learning_rate, reference_metric):
-    runner = PTAccuracyAwareTrainingRunner(accuracy_aware_config=dict(),
+    runner = PTAccuracyAwareTrainingRunner(accuracy_aware_training_params=dict(),
                                            dump_checkpoints=False,
                                            validate_every_n_epochs=1)
     input_sample_size = [1, 1, LeNet.INPUT_SIZE[-1], LeNet.INPUT_SIZE[-1]]

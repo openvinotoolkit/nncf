@@ -37,12 +37,15 @@
     "top_k": 200,
     "loss_inference": false
   },
-  "compression": {
-    "algorithm": "quantization",
-    "accuracy_aware_training": {
+  "accuracy_aware_training": {
+    "mode": "early_exit",
+    "params": {
       "maximal_accuracy_degradation": 1.0,
       "maximal_total_epochs": 2
-    },
+    }
+  },
+  "compression": {
+    "algorithm": "quantization",
     "initializer": {
       "range": {
         "num_init_samples": 1280
