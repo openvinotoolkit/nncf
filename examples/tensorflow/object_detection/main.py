@@ -18,8 +18,7 @@ from pathlib import Path
 import tensorflow as tf
 import numpy as np
 
-from nncf.tensorflow import AdaptiveCompressionTrainingLoop
-from nncf.tensorflow import EarlyExitCompressionTrainingLoop
+from nncf.common.accuracy_aware_training import create_accuracy_aware_training_loop
 from nncf.tensorflow import create_compressed_model
 from nncf.tensorflow.helpers.model_manager import TFOriginalModelManager
 from nncf.tensorflow.initialization import register_default_init_args
@@ -337,8 +336,8 @@ def run(config):
     test_step = create_test_step_fn(strategy, compress_model, predict_post_process_fn)
 
     if 'train' in config.mode:
-        accuracy_aware_algo = extract_accuracy_aware_training_config(config)
-        if accuracy_aware_algo is not None:
+        accuracy_aware_training = extract_accuracy_aware_training_config(config)
+        if accuracy_aware_training is not None:
             def train_epoch_fn(compression_ctrl, model, epoch, **kwargs):
                 train_step = create_train_step_fn(strategy, model, loss_fn, optimizer)
                 train_epoch(train_step, compression_ctrl, epoch, initial_epoch, steps_per_epoch,
@@ -352,12 +351,7 @@ def run(config):
                 return metric_result['AP']
 
             train_summary_writer = SummaryWriter(config.log_dir, 'train')
-            # instantiate and run accuracy-aware training loop
-            # TODO(kshpv) change algo name to const variable
-            if accuracy_aware_algo == 'quantization':
-                acc_aware_training_loop = EarlyExitCompressionTrainingLoop(nncf_config, compression_ctrl)
-            else:
-                acc_aware_training_loop = AdaptiveCompressionTrainingLoop(nncf_config, compression_ctrl)
+            acc_aware_training_loop = create_accuracy_aware_training_loop(nncf_config, compression_ctrl)
 
             timer = Timer()
             timer.tic()

@@ -175,8 +175,8 @@ def run(config):
 
     resume_training = config.ckpt_path is not None
 
-    accuracy_aware_algo = extract_accuracy_aware_training_config(config)
-    if accuracy_aware_algo is not None:
+    accuracy_aware_training = extract_accuracy_aware_training_config(config)
+    if accuracy_aware_training is not None:
         with TFOriginalModelManager(model_fn, **model_params) as model:
             model.compile(metrics=[tf.keras.metrics.CategoricalAccuracy(name='acc@1')])
             results = model.evaluate(
@@ -248,7 +248,7 @@ def run(config):
     }
 
     if 'train' in config.mode:
-        if accuracy_aware_algo is not None:
+        if accuracy_aware_training is not None:
             logger.info('starting an accuracy-aware training loop...')
             result_dict_to_val_metric_fn = lambda results: 100 * results['acc@1']
             compress_model.accuracy_aware_fit(train_dataset,

@@ -59,8 +59,7 @@ from examples.torch.object_detection.layers.modules import MultiBoxLoss
 from examples.torch.object_detection.model import build_ssd
 from nncf.api.compression import CompressionStage
 from nncf.config.extractors import extract_accuracy_aware_training_config
-from nncf.torch import AdaptiveCompressionTrainingLoop
-from nncf.torch import EarlyExitCompressionTrainingLoop
+from nncf.common.accuracy_aware_training import create_accuracy_aware_training_loop
 from nncf.torch import create_compressed_model
 from nncf.torch import load_state
 from nncf.torch.dynamic_graph.graph_tracer import create_input_infos
@@ -221,8 +220,8 @@ def main_worker(current_gpu, config):
         logger.info(statistics.to_str())
 
     if 'train' in config.mode:
-        accuracy_aware_algo = extract_accuracy_aware_training_config(config)
-        if accuracy_aware_algo is not None:
+        accuracy_aware_training = extract_accuracy_aware_training_config(config)
+        if accuracy_aware_training is not None:
             # validation function that returns the target metric value
             # pylint: disable=E1123
             def validate_fn(model, epoch):
@@ -248,12 +247,7 @@ def main_worker(current_gpu, config):
                 optimizer, lr_scheduler = make_optimizer(params_to_optimize, config)
                 return optimizer, lr_scheduler
 
-            # instantiate and run accuracy-aware training loop
-            # TODO(kshpv) change algo name to const variable
-            if accuracy_aware_algo == 'quantization':
-                acc_aware_training_loop = EarlyExitCompressionTrainingLoop(nncf_config, compression_ctrl)
-            else:
-                acc_aware_training_loop = AdaptiveCompressionTrainingLoop(nncf_config, compression_ctrl)
+            acc_aware_training_loop = create_accuracy_aware_training_loop(config, compression_ctrl)
             net = acc_aware_training_loop.run(net,
                                     train_epoch_fn=train_epoch_fn,
                                     validate_fn=validate_fn,
