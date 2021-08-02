@@ -31,12 +31,12 @@ def get_basic_quantization_config(qconfig, input_sample_sizes=None) -> NNCFConfi
     config = get_empty_config(input_sample_sizes=input_sample_sizes)
     config['compression'] = {'algorithm': 'quantization',
                              'activations': {
-                                 'mode': qconfig.mode,
-                                 'per_channel': qconfig.per_channel
+                                 'mode': qconfig.a_mode,
+                                 'per_channel': qconfig.a_per_channel
                              },
                              'weights': {
-                                 'mode': qconfig.mode,
-                                 'per_channel': qconfig.per_channel
+                                 'mode': qconfig.w_mode,
+                                 'per_channel': qconfig.w_per_channel
                              }}
     return config
 
@@ -92,23 +92,48 @@ def check_nx_graph(nx_graph: nx.DiGraph, graph_path: str):
 
 
 class QuantizeTestCaseConfiguration:
-    def __init__(self, quant_mode, quant_granularity, graph_dir):
+    def __init__(self, quant_params, graph_dir):
+        a_mode, a_per_channel = quant_params['activations']
+        w_mode, w_per_channel = quant_params['weights']
         self.qconfig = Dict()
-        self.qconfig.mode = quant_mode
-        self.qconfig.per_channel = (quant_granularity == 'per_channel')
+        self.qconfig.a_mode = a_mode
+        self.qconfig.w_mode = w_mode
+        self.qconfig.a_per_channel = (a_per_channel == 'per_channel')
+        self.qconfig.w_per_channel = (w_per_channel == 'per_channel')
         self.graph_dir = graph_dir
 
 
-QUANTIZERS = [('symmetric', 'per_tensor'), ('asymmetric', 'per_channel')]
+QUANTIZERS = [
+    {
+        'activations': ('symmetric', 'per_tensor'),
+        'weights': ('symmetric', 'per_tensor')
+    },
+    {
+        'activations': ('asymmetric', 'per_tensor'),
+        'weights': ('symmetric', 'per_channel')
+    }
+]
+
+
+def create_test_name(quant_params):
+    a_mode, a_per_ch = quant_params['activations']
+    w_mode, w_per_ch = quant_params['weights']
+
+    test_name = 'w_{}_{}_a_{}_{}'.format(
+        'sym' if w_mode == 'symmetric' else 'asym',
+        'ch' if w_per_ch == 'per_channel' else 't',
+        'sym' if a_mode == 'symmetric' else 'asym',
+        'ch' if a_per_ch == 'per_channel' else 't'
+    )
+    return test_name
 
 
 @pytest.fixture(
-    scope='function', params=QUANTIZERS, ids=['{}_{}'.format(mode, granularity) for mode, granularity in QUANTIZERS]
+    scope='function', params=QUANTIZERS, ids=[create_test_name(quant_params) for quant_params in QUANTIZERS]
 )
 def _quantization_case_config(request):
-    quant_mode, quant_granularity = request.param
-    graph_dir = os.path.join('quantized', quant_mode, quant_granularity)
-    return QuantizeTestCaseConfiguration(quant_mode, quant_granularity, graph_dir)
+    graph_dir = os.path.join('quantized',create_test_name(request.param))
+    return QuantizeTestCaseConfiguration(request.param, graph_dir)
 
 
 class SparsityTestCaseConfiguration:
@@ -367,9 +392,6 @@ class TestModelsGraph:
         get_model_name(m) for m in get_test_models_desc('quantization')])
     def test_quantize_network(self, desc: ModelDesc, _quantization_case_config):
         model = desc.model_builder(input_shape=tuple(desc.input_sample_sizes[1:]))
-        if _quantization_case_config.qconfig.mode == "asymmetric" and \
-            _quantization_case_config.qconfig.per_channel:
-            pytest.skip("Ticket #59642")
         config = get_basic_quantization_config(_quantization_case_config.qconfig,
                                                input_sample_sizes=desc.input_sample_sizes)
         if desc.ignored_scopes is not None:
@@ -426,9 +448,6 @@ QUANTIZE_OUTPUTS = [
 
 @pytest.mark.parametrize('desc', QUANTIZE_OUTPUTS, ids=[m.model_name for m in QUANTIZE_OUTPUTS])
 def test_quantize_outputs(desc: ModelDesc, _quantization_case_config):
-    if _quantization_case_config.qconfig.mode == "asymmetric" and \
-            _quantization_case_config.qconfig.per_channel:
-        pytest.skip("Ticket #59642")
     model = desc.model_builder(input_shape=tuple(desc.input_sample_sizes[1:]))
     config = get_basic_quantization_config(_quantization_case_config.qconfig,
                                            input_sample_sizes=desc.input_sample_sizes)
