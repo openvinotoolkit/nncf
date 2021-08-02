@@ -152,7 +152,7 @@ def extract_bn_adaptation_init_params(config: NNCFConfig, algo_name: str) -> Dic
     return params
 
 
-def extract_accuracy_aware_training_config(config: NNCFConfig) -> str:
+def extract_accuracy_aware_training_config(config: NNCFConfig) -> Dict:
     """
     Extracts accuracy_aware_training part of a config or return None if it doesn't exist.
     """

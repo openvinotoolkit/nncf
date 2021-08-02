@@ -355,7 +355,7 @@ def run(config):
 
             timer = Timer()
             timer.tic()
-            compressed_model = acc_aware_training_loop.run(compress_model,
+            _ = acc_aware_training_loop.run(compress_model,
                                                          train_epoch_fn=train_epoch_fn,
                                                          validate_fn=validate_fn,
                                                          tensorboard_writer=config.tb,

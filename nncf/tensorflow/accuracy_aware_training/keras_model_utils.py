@@ -17,7 +17,6 @@ from tensorflow.python.eager import context
 from tensorflow.python.keras import callbacks as callbacks_module
 from tensorflow.python.keras.engine import data_adapter
 
-from nncf.config.extractors import extract_accuracy_aware_training_config
 from nncf.common.accuracy_aware_training import create_accuracy_aware_training_loop
 
 
