@@ -11,7 +11,6 @@
  limitations under the License.
 """
 
-import os
 import random
 import contextlib
 

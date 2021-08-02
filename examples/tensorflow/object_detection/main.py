@@ -266,6 +266,7 @@ def evaluate(test_step, metric, test_dist_dataset, num_batches, print_freq):
     return result
 
 
+#pylint: disable=R0913
 def run(config):
     strategy = get_distribution_strategy(config)
     if config.metrics_dump is not None:

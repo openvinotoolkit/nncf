@@ -147,6 +147,7 @@ def load_compression_state(ckpt_path: str):
     return checkpoint.compression_state.state
 
 
+#pylint: disable=R0913
 def run(config):
     strategy = get_distribution_strategy(config)
     if config.metrics_dump is not None:

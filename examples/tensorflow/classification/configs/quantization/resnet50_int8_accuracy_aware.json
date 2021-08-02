@@ -16,13 +16,15 @@
     },
     "dataset": "imagenet2012",
     "dataset_type": "tfds",
-
-    "compression": {
-        "algorithm": "quantization",
-         "accuracy_aware_training": {
+    "accuracy_aware_training": {
+        "mode": "early_exit",
+        "params": {
             "maximal_accuracy_degradation": 1.0,
             "maximal_total_epochs": 100
-         },
+        }
+    },
+    "compression": {
+        "algorithm": "quantization",
         "initializer": {
             "range": {
                 "num_init_samples": 850

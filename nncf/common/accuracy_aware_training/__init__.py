@@ -26,12 +26,12 @@ class AccuracyAwareTrainingMode(Enum):
 
 
 def create_accuracy_aware_training_loop(nncf_config: NNCFConfig,
-                                        compression_ctrl: CompressionAlgorithmController) -> TrainingLoop:
+                                        compression_ctrl: CompressionAlgorithmController,
+                                        **kwargs) -> TrainingLoop:
     accuracy_aware_training_config = extract_accuracy_aware_training_config(nncf_config)
     accuracy_aware_training_mode = accuracy_aware_training_config.get('mode', None)
     if accuracy_aware_training_mode == AccuracyAwareTrainingMode.early_exit.value:
-        return EarlyExitCompressionTrainingLoop(nncf_config, compression_ctrl)
+        return EarlyExitCompressionTrainingLoop(nncf_config, compression_ctrl, **kwargs)
     if accuracy_aware_training_mode == AccuracyAwareTrainingMode.adaptive_compression_level.value:
-        return AdaptiveCompressionTrainingLoop(nncf_config, compression_ctrl)
-    else:
-        raise RuntimeError('Incorrect accuracy_aware_training mode')
+        return AdaptiveCompressionTrainingLoop(nncf_config, compression_ctrl, **kwargs)
+    raise RuntimeError('Incorrect accuracy_aware_training mode')

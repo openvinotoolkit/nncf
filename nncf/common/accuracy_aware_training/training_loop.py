@@ -68,10 +68,14 @@ class EarlyExitCompressionTrainingLoop(TrainingLoop):
 
     def __init__(self,
                  training_config: NNCFConfig,
-                 compression_controller: CompressionAlgorithmController):
+                 compression_controller: CompressionAlgorithmController,
+                 lr_updates_needed=True, verbose=True,
+                 validate_every_n_epochs=None,
+                 dump_checkpoints=True):
         runner_cls = self._get_backend_specific_training_runner_cls(compression_controller)
         early_exit_params = self._get_early_exit_params(training_config)
-        self.runner = runner_cls(early_exit_params)
+        self.runner = runner_cls(early_exit_params, lr_updates_needed,
+                                 verbose, validate_every_n_epochs, dump_checkpoints)
         self.compression_controller = compression_controller
 
     def run(self, model, train_epoch_fn, validate_fn,
@@ -131,11 +135,21 @@ class AdaptiveCompressionTrainingLoop(TrainingLoop):
 
     def __init__(self,
                  nncf_config: NNCFConfig,
-                 compression_controller: CompressionAlgorithmController):
+                 compression_controller: CompressionAlgorithmController,
+                 lr_updates_needed=True, verbose=True,
+                 minimal_compression_rate=0.05,
+                 maximal_compression_rate=0.95,
+                 validate_every_n_epochs=None,
+                 dump_checkpoints=True):
         self.adaptive_controller, accuracy_aware_config = self._get_adaptive_compression_ctrl(compression_controller,
                                                                                               nncf_config)
         runner_cls = self._get_backend_specific_training_runner_cls(compression_controller)
-        self.runner = runner_cls(accuracy_aware_config)
+        self.runner = runner_cls(accuracy_aware_config,
+                                 lr_updates_needed, verbose,
+                                 minimal_compression_rate,
+                                 maximal_compression_rate,
+                                 validate_every_n_epochs,
+                                 dump_checkpoints)
         if self.adaptive_controller is None:
             raise RuntimeError('No compression algorithm supported by the accuracy-aware training '
                                'runner was specified in the config')
