@@ -16,15 +16,22 @@ import os.path as osp
 import tensorflow as tf
 
 from nncf.common.utils.logger import logger as nncf_logger
+from nncf.common.accuracy_aware_training.runner import BaseTrainingRunner
 from nncf.common.accuracy_aware_training.runner import BaseAccuracyAwareTrainingRunner
 from nncf.common.utils.helpers import configure_accuracy_aware_paths
 
 
-# pylint: disable=E1101
-class TFBaseTrainingRunner(BaseAccuracyAwareTrainingRunner):
+class TFBaseTrainingRunner(BaseTrainingRunner):
     """
     The Training Runner implementation for TensorFlow training code.
     """
+    # TODO(kshpv):: Should remove  *lr_updates_needed* param or keep it to save consistency with
+    #  PyTorch?
+    def __init__(self, training_params, verbose=True,
+                 validate_every_n_epochs=None, dump_checkpoints=True, lr_updates_needed=True):
+        super().__init__(training_params, verbose,
+                         validate_every_n_epochs,
+                         dump_checkpoints)
 
     def initialize_training_loop_fns(self, train_epoch_fn, validate_fn, configure_optimizers_fn=None,
                                      tensorboard_writer=None, log_dir=None):
@@ -84,14 +91,55 @@ class TFBaseTrainingRunner(BaseAccuracyAwareTrainingRunner):
         model.save_weights(checkpoint_path)
 
         if self.best_val_metric_value == self.current_val_metric_value:
+            best_checkpoint_filename = 'acc_aware_checkpoint_best.pth'
+            best_path = osp.join(self._checkpoint_save_dir, best_checkpoint_filename)
+            self._best_checkpoint = best_path
+            model.save_weights(best_path)
+
+    def add_tensorboard_scalar(self, key, data, step):
+        tf.summary.scalar(key, data=data, step=step)
+
+    def load_best_checkpoint(self, model):
+        resuming_checkpoint_path = self._best_checkpoint
+        nncf_logger.info('Loading the best checkpoint found during training '
+                         '{}...'.format(resuming_checkpoint_path))
+        model.load_weights(resuming_checkpoint_path)
+
+    def configure_optimizers(self):
+        pass
+
+
+class TFAccuracyAwareTrainingRunner(TFBaseTrainingRunner, BaseAccuracyAwareTrainingRunner):
+
+    def __init__(self, accuracy_aware_params, lr_updates_needed=True, verbose=True,
+                 minimal_compression_rate=0.05, maximal_compression_rate=0.95,
+                 validate_every_n_epochs=None, dump_checkpoints=True):
+        TFBaseTrainingRunner.__init__(self, accuracy_aware_params,
+                                      verbose,
+                                      validate_every_n_epochs,
+                                      dump_checkpoints,
+                                      lr_updates_needed)
+        BaseAccuracyAwareTrainingRunner.__init__(self, accuracy_aware_params,
+                                                 verbose,
+                                                 minimal_compression_rate,
+                                                 maximal_compression_rate,
+                                                 validate_every_n_epochs,
+                                                 dump_checkpoints)
+
+    def update_training_history(self, compression_rate, best_metric_value):
+        best_accuracy_budget = best_metric_value - self.minimal_tolerable_accuracy
+        self._compressed_training_history.append((compression_rate, best_accuracy_budget))
+
+    def dump_checkpoint(self, model):
+        checkpoint_path = osp.join(self._checkpoint_save_dir, 'acc_aware_checkpoint_last.pb')
+        model.save_weights(checkpoint_path)
+
+        if self.best_val_metric_value == self.current_val_metric_value:
             best_path = osp.join(self._checkpoint_save_dir,
                                  'acc_aware_checkpoint_best_compression_rate_'
                                  '{comp_rate:.3f}.pth'.format(comp_rate=self.compression_rate_target))
             self._best_checkpoints[self.compression_rate_target] = best_path
             model.save_weights(best_path)
-
-    def add_tensorboard_scalar(self, key, data, step):
-        tf.summary.scalar(key, data=data, step=step)
 
     def load_best_checkpoint(self, model):
         # load checkpoint with highest compression rate and positive acc budget
@@ -106,16 +154,6 @@ class TFBaseTrainingRunner(BaseAccuracyAwareTrainingRunner):
         nncf_logger.info('Loading the best checkpoint found during training '
                          '{}...'.format(resuming_checkpoint_path))
         model.load_weights(resuming_checkpoint_path)
-
-    def configure_optimizers(self):
-        pass
-
-
-class TFAccuracyAwareTrainingRunner(TFBaseTrainingRunner, BaseAccuracyAwareTrainingRunner):
-
-    def update_training_history(self, compression_rate, best_metric_value):
-        best_accuracy_budget = best_metric_value - self.minimal_tolerable_accuracy
-        self._compressed_training_history.append((compression_rate, best_accuracy_budget))
 
     @property
     def compressed_training_history(self):
