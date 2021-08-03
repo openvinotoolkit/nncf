@@ -30,6 +30,7 @@ from tests.torch.pruning.helpers import PruningTestModel
 from tests.torch.pruning.helpers import BigPruningTestModel
 from tests.torch.pruning.helpers import TestModelMultipleForward
 from tests.torch.pruning.helpers import PruningTestModelConcatBN
+from tests.torch.pruning.helpers import DisconectedGraphModel
 
 
 def create_pruning_algo_with_config(config):
@@ -361,3 +362,48 @@ def test_clusters_for_multiple_forward():
     assert sorted([n.nncf_node_id for n in clusters[0].elements]) == [1, 2, 3]
     # Nodes that associate with one module should be in one cluster
     assert sorted([n.nncf_node_id for n in clusters[1].elements]) == [4, 5, 6]
+
+
+
+@pytest.mark.parametrize(
+    ("model"),
+    (
+        BigPruningTestModel,
+        PruningTestModelConcatBN
+    )
+)
+def test_func_calulation_flops_for_conv(model):
+    # Check _calculate_output_shape that used for disconnected graph
+    config = get_basic_pruning_config([1, 1, 8, 8])
+    config['compression']['algorithm'] = 'filter_pruning'
+    config['compression']['pruning_init'] = 0.4
+    config['compression']['params']['pruning_flops_target'] = 0.4
+    model = model()
+    pruned_model, pruning_algo = create_compressed_model_and_algo_for_test(model, config)
+
+    graph = pruned_model.get_original_graph()
+
+    # pylint:disable=protected-access
+    for node_name, ref_shape in pruning_algo._modules_out_shapes.items():
+        # ref_shape get from tracing graph
+        node = graph.get_node_by_name(node_name)
+        shape = pruning_algo._calculate_output_shape(graph, node)
+        assert ref_shape == shape, f"Incorrect calculation output name for {node_name}"
+
+
+def test_disconnected_graph():
+    config = get_basic_pruning_config([1, 1, 8, 8])
+    config['compression']['algorithm'] = 'filter_pruning'
+    config['compression']['pruning_init'] = 0.5
+    config['compression']['params']['pruning_target'] = 0.5
+    config['compression']['params']['prune_first_conv'] = True
+    config['compression']['params']['prune_last_conv'] = True
+    model = DisconectedGraphModel()
+    pruned_model, _ = create_compressed_model_and_algo_for_test(model, config)
+    graph = pruned_model.get_original_graph()
+
+    conv1 = graph.get_node_by_name('DisconectedGraphModel/NNCFConv2d[conv1]/conv2d_0')
+    conv2 = graph.get_node_by_name('DisconectedGraphModel/NNCFConv2d[conv2]/conv2d_0')
+
+    assert sum(conv1.data['output_mask']) == 8
+    assert sum(conv2.data['output_mask']) == 8
