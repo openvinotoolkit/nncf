@@ -89,6 +89,7 @@ class PruningNodeSelector:
         :param graph: Graph to work with and their initialization parameters as values.
         :return: Clusterization of pruned nodes.
         """
+        # pylint:disable=too-many-branches
         all_nodes_to_prune = graph.get_nodes_by_types(self._prune_operations)  # NNCFNodes here
 
         # 1. Clusters for special ops
@@ -157,7 +158,9 @@ class PruningNodeSelector:
             for node in list_of_nodes:
                 nncf_node = graph.get_node_by_id(node.node_id)
                 previous_conv = get_previous_conv(graph, nncf_node, self._prune_operations, stop_propagation_ops)
-                previous_convs.append(previous_conv)
+                if previous_conv:
+                    previous_convs.append(previous_conv)
+
             previous_clusters = [
                 pruned_nodes_clusterization.get_cluster_containing_element(node.node_id).id
                 for node in previous_convs

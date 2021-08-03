@@ -77,6 +77,9 @@ def identity_mask_propagation(node: NNCFNode, graph: NNCFGraph):
     Propagates input mask through nx_node.
     """
     input_masks = get_input_masks(node, graph)
+    if not input_masks:
+        # In case for disconnected NNCFGraph
+        input_masks = [None]
     assert len(input_masks) == 1
     node.data['input_masks'] = input_masks
     node.data['output_mask'] = input_masks[0]
