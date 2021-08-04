@@ -102,8 +102,8 @@ class KnowledgeDistillationLoss(PTCompressionLoss):
         """
         loss = self._kd_loss_handler.get_kd_loss()
         if len(loss) == 0:
-            raise RuntimeError('Empty list of loss tensors for KDLoss. Most likely compression_ctrl.loss()'
-                               ' was called while model was in eval mode')
+            raise RuntimeError('Empty list of loss tensors for KDLoss. Most likely an excess compression_ctrl.loss()'
+                               ' was called (may be in eval mode)')
         for idx, _ in enumerate(loss):
             loss[idx] = loss[idx].unsqueeze(0)
         output = torch.cat(loss).mean()

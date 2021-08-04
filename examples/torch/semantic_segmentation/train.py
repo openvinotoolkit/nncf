@@ -56,6 +56,7 @@ class Train:
 
         self.model.train()
         epoch_loss = 0.0
+        epoch_cr_loss = 0.0
         self.metric.reset()
         for step, batch_data in enumerate(self.data_loader):
             compression_scheduler.step()
@@ -82,6 +83,7 @@ class Train:
 
             # Keep track of loss for current epoch
             epoch_loss += loss.item()
+            epoch_cr_loss += compression_loss
 
             # Keep track of the evaluation metric
             self.metric.add(metric_outputs.detach(), labels.detach())
@@ -89,4 +91,4 @@ class Train:
             if iteration_loss:
                 logger.info("[Step: {}] Iteration loss: {:.4f}".format(step, loss.item()))
 
-        return epoch_loss / len(self.data_loader), self.metric.value()
+        return (epoch_loss / len(self.data_loader), epoch_cr_loss / len(self.data_loader)), self.metric.value()

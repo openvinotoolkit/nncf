@@ -351,7 +351,7 @@ def train(model, model_without_dp, compression_ctrl, train_loader, val_loader, c
         if config.distributed:
             train_loader.sampler.set_epoch(epoch)
 
-        epoch_loss, (iou, miou) = train_obj.run_epoch(config.print_step)
+        (epoch_loss, epoch_cr_loss), (iou, miou) = train_obj.run_epoch(config.print_step)
         if not isinstance(lr_scheduler, ReduceLROnPlateau):
             # Learning rate scheduling should be applied after optimizer’s update
             lr_scheduler.step(epoch)
@@ -363,7 +363,7 @@ def train(model, model_without_dp, compression_ctrl, train_loader, val_loader, c
             config.tb.add_scalar("train/loss", epoch_loss, epoch)
             config.tb.add_scalar("train/mIoU", miou, epoch)
             config.tb.add_scalar("train/learning_rate", optimizer.param_groups[0]['lr'], epoch)
-            config.tb.add_scalar("train/compression_loss", compression_ctrl.loss(), epoch)
+            config.tb.add_scalar("train/compression_loss", epoch_cr_loss, epoch)
 
             statistics = compression_ctrl.statistics(quickly_collected_only=True)
             for key, value in prepare_for_tensorboard(statistics).items():
