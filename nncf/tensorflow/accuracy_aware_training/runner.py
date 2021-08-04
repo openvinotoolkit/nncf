@@ -64,7 +64,6 @@ class TFBaseTrainingRunner(BaseTrainingRunner):
 
         if self.verbose:
             nncf_logger.info(statistics.to_str())
-        # dump best checkpoint for current target compression rate
         self.dump_checkpoint(model)
 
         self.training_epoch_count += 1

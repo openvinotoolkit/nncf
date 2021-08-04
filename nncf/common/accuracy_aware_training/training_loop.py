@@ -83,27 +83,36 @@ class EarlyExitCompressionTrainingLoop(TrainingLoop):
         self.runner.initialize_training_loop_fns(train_epoch_fn, validate_fn, configure_optimizers_fn,
                                                  tensorboard_writer, log_dir)
         self.runner.retrieve_original_accuracy(model)
+        uncompressed_model_accuracy = self.runner.uncompressed_model_accuracy
 
         self.runner.configure_optimizers()
         for epoch in range(self.runner.maximal_total_epochs):
             compressed_model_accuracy = self.runner.validate(model)
             accuracy_budget = compressed_model_accuracy - self.runner.minimal_tolerable_accuracy
+            accuracy_drop = uncompressed_model_accuracy - compressed_model_accuracy
+            rel_accuracy_drop = 100 * self.runner.uncompressed_model_accuracy * accuracy_drop
             if accuracy_budget >= 0:
-                accuracy_drop = compressed_model_accuracy - self.runner.uncompressed_model_accuracy
                 if epoch == 0:
-                    nncf_logger.info('Early-exiting the training loop after model initialization step '
-                                     'with compressed model accuracy value {}.'
-                                     ' The accuracy drop is {}'.format(compressed_model_accuracy,
-                                                                       accuracy_drop))
+                    nncf_logger.info('The accuracy criteria is reached. '
+                                     'Exiting the training loop after initialization step '
+                                     'with compressed model accuracy value {:.4f}. Original model accuracy is {:.4f} '
+                                     'The absolute accuracy drop is {:.4f}. '
+                                     'The relative accuracy drop is {:.2f}%.'.format(compressed_model_accuracy,
+                                                                                     uncompressed_model_accuracy,
+                                                                                     accuracy_drop, rel_accuracy_drop))
                 else:
-                    nncf_logger.info('Early-exiting the training loop on epoch {} with '
-                                     'compressed model accuracy value {}.'
-                                     ' The accuracy drop is {}'.format(epoch,
-                                                                       compressed_model_accuracy,
-                                                                       accuracy_drop))
+                    nncf_logger.info('The accuracy criteria is reached. '
+                                     'Exiting the training loop on epoch {} with '
+                                     'compressed model accuracy value {:.4f}. . Original model accuracy is {:.4f} '
+                                     'The absolute accuracy drop is {:.4f}. '
+                                     'The relative accuracy drop is {:.2f}%.'.format(epoch,
+                                                                                     compressed_model_accuracy,
+                                                                                     uncompressed_model_accuracy,
+                                                                                     accuracy_drop, rel_accuracy_drop))
                 break
+            nncf_logger.info('The absolute accuracy drop is {:.4f}. '
+                             'The relative accuracy drop is {:.2f}%.'.format(accuracy_drop, rel_accuracy_drop))
             self.runner.train_epoch(model, self.compression_controller)
-
         return model
 
     @staticmethod
