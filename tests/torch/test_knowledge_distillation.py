@@ -37,6 +37,15 @@ import pytest
 KEY_TO_KD_PARAMETERS = 'kd'
 
 
+def get_model_device(inference_type, gpu):
+    if inference_type == 'cpu':
+        return "cpu"
+    if gpu is not None:
+        return "cuda:{}".format(gpu)
+
+    return "cuda"
+
+
 def get_kd_config(config: NNCFConfig) -> NNCFConfig:
     if isinstance(config['compression'], dict):
         config['compression'] = [config['compression']]
@@ -79,7 +88,6 @@ def run_actual(model: nn.Module, config: NNCFConfig, inference_type: str, mock_d
     if inference_type == 'DDP':
         model = post_compression_test_distr_init(compression_ctrl, config, ngpus_per_node, model)
     elif inference_type in ('DP', 'single_GPU'):
-        model.to(torch.device('cuda:0'))
         if inference_type == 'DP':
             model = torch.nn.DataParallel(model)
     optimizer = SGD(model.parameters(), lr=1e-02, weight_decay=1e-02)
@@ -104,10 +112,7 @@ def run_reference(model: nn.Module, config: NNCFConfig, inference_type: str, moc
     model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
     if inference_type == 'DDP':
         model = post_compression_test_distr_init(compression_ctrl, config, ngpus_per_node, model)
-        kd_model.to(torch.device(next(model.parameters()).device))
     elif inference_type in ('DP', 'single_GPU'):
-        model.to(torch.device('cuda:0'))
-        kd_model.to(torch.device('cuda:0'))
         if inference_type == 'DP':
             model = torch.nn.DataParallel(model)
             kd_model = torch.nn.DataParallel(kd_model)
@@ -130,7 +135,7 @@ def run_reference(model: nn.Module, config: NNCFConfig, inference_type: str, moc
 def run_test_training(gpu, config: NNCFConfig, inference_type: str, ngpus_per_node: int):
     torch.manual_seed(2)
     number_of_iters = 10
-    batch_size = torch.cuda.device_count()
+    batch_size = 1 if torch.cuda.device_count() == 0 else torch.cuda.device_count()
     config['input_info']['sample_size'] = [1, 1, 8, 8]
     if inference_type == 'DDP':
         distributed_init_test_default(gpu, ngpus_per_node, config)
@@ -138,9 +143,10 @@ def run_test_training(gpu, config: NNCFConfig, inference_type: str, ngpus_per_no
     else:
         mock_dataloader = create_ones_mock_dataloader(config, num_samples=batch_size * number_of_iters,
                                                       batch_size=batch_size)
-
+    model_device = get_model_device(inference_type, gpu)
     model = TwoConvTestModel()
     fill_params_of_model_by_normal(model, std=0.5)
+    model.to(model_device)
     dumped_orig_model = deepcopy(model)
 
     actual_outputs, actual_model = run_actual(deepcopy(model), config, inference_type, mock_dataloader,
@@ -150,7 +156,7 @@ def run_test_training(gpu, config: NNCFConfig, inference_type: str, ngpus_per_no
         "Outputs of model with actual KD implementation doesn't match outputs from model with reference " \
         "Knowledge Distillation implementation"
 
-    for param1, param2 in zip([param.to(torch.device('cpu')) for name, param in
+    for param1, param2 in zip([param for name, param in
                                filter(lambda x: KEY_TO_KD_PARAMETERS in x[0], actual_model.named_parameters())],
                               dumped_orig_model.parameters()):
         assert torch.allclose(param1, param2), "Weights of dumped original model doesn't match weights of original " \
@@ -165,13 +171,14 @@ def test_loss_outputs_parsing():
     fill_params_of_model_by_normal(model)
     dumped_orig_model = deepcopy(model)
     sparsity_level = 0.3
+    batch_size = 1 if torch.cuda.device_count() == 0 else torch.cuda.device_count()
     config = get_kd_config(
         get_sparsity_config_with_sparsity_init(get_basic_magnitude_sparsity_config(input_sample_size=input_size),
                                                sparsity_level))
     model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
     model.train()
     mock_dataloader = create_ones_mock_dataloader(config, num_samples=torch.cuda.device_count(),
-                                                  batch_size=torch.cuda.device_count())
+                                                  batch_size=batch_size)
     compression_ctrl.scheduler.epoch_step()
     for _, (input_, __) in enumerate(mock_dataloader):
         input_ = input_.to(next(model.parameters()).device)
@@ -194,13 +201,14 @@ def test_knowledge_distillation_outputs_containers_parsing():
     fill_params_of_model_by_normal(model)
     dumped_orig_model = deepcopy(model)
     sparsity_level = 0.3
+    batch_size = 1 if torch.cuda.device_count() == 0 else torch.cuda.device_count()
     config = get_kd_config(
         get_sparsity_config_with_sparsity_init(get_basic_magnitude_sparsity_config(input_sample_size=input_size),
                                                sparsity_level))
     model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
     model.train()
     mock_dataloader = create_ones_mock_dataloader(config, num_samples=torch.cuda.device_count(),
-                                                  batch_size=torch.cuda.device_count())
+                                                  batch_size=batch_size)
     compression_ctrl.scheduler.epoch_step()
     for _, (input_, __) in enumerate(mock_dataloader):
         input_ = input_.to(next(model.parameters()).device)
@@ -224,6 +232,7 @@ def test_knowledge_distillation_loss_types(kd_loss_type: str):
     else:
         kd_loss_fn = torch.nn.MSELoss()
     input_size = [1, 100]
+    batch_size = 1 if torch.cuda.device_count() == 0 else torch.cuda.device_count()
 
     model = nn.Sequential(nn.Linear(in_features=input_size[-1], out_features=10),
                           nn.Sigmoid())
@@ -238,7 +247,7 @@ def test_knowledge_distillation_loss_types(kd_loss_type: str):
     model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
     model.train()
     mock_dataloader = create_ones_mock_dataloader(config, num_samples=torch.cuda.device_count(),
-                                                  batch_size=torch.cuda.device_count())
+                                                  batch_size=batch_size)
     compression_ctrl.scheduler.epoch_step()
     for _, (input_, __) in enumerate(mock_dataloader):
         input_ = input_.to(next(model.parameters()).device)
