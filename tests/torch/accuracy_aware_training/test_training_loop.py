@@ -196,29 +196,22 @@ def test_early_exit_training_loop(max_accuracy_degradation,
     assert (original_model_accuracy - compressed_model_accuracy) * 100 <= max_accuracy_degradation
 
 
-# mock validation func
-
-# 6 epoch give correct val metric and
-
-# assert (stop_epoch_num == 6)
-
 @pytest.mark.parametrize(
     ('max_accuracy_degradation', 'exit_epoch_number'),
     ((1.0, 6), (30.0, 10))
 )
 def test_early_exit_with_mock_validation(max_accuracy_degradation, exit_epoch_number,
                                          maximal_total_epochs=100):
-    def mock_validate_fn(model, epoch_counter=None, init_step=False, epoch=0):
-        if epoch_counter is None:
-            epoch_counter = epoch
+
+    def mock_validate_fn(model, init_step=False, epoch=0):
         original_metric = 0.85
         if init_step:
             return original_metric
-        epoch_counter[0] = epoch
+        nonlocal epoch_counter
+        epoch_counter = epoch
         return original_metric * (1 - 0.01 * max_accuracy_degradation) * (epoch / exit_epoch_number)
 
-    epoch_counter = [0]
-
+    epoch_counter = 0
     config = get_quantization_config_without_range_init(LeNet.INPUT_SIZE[-1])
 
     params = {
@@ -254,7 +247,7 @@ def test_early_exit_with_mock_validation(max_accuracy_degradation, exit_epoch_nu
                                                                     dump_checkpoints=False)
     model = early_stopping_training_loop.run(model,
                                              train_epoch_fn=train_fn,
-                                             validate_fn=partial(mock_validate_fn, epoch_counter=epoch_counter),
+                                             validate_fn=partial(mock_validate_fn),
                                              configure_optimizers_fn=configure_optimizers_fn)
     # Epoch number starts from 0
-    assert epoch_counter[0] == exit_epoch_number
+    assert epoch_counter == exit_epoch_number
