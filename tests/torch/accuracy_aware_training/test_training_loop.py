@@ -214,9 +214,8 @@ def test_early_exit_with_mock_validation(max_accuracy_degradation, exit_epoch_nu
         original_metric = 0.85
         if init_step:
             return original_metric
-        else:
-            epoch_counter[0] = epoch
-            return original_metric * (1 - 0.01 * max_accuracy_degradation) * (epoch / exit_epoch_number)
+        epoch_counter[0] = epoch
+        return original_metric * (1 - 0.01 * max_accuracy_degradation) * (epoch / exit_epoch_number)
 
     epoch_counter = [0]
 

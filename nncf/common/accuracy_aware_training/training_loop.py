@@ -118,7 +118,6 @@ class EarlyExitCompressionTrainingLoop(TrainingLoop):
     @staticmethod
     def _get_backend_specific_training_runner_cls(compression_controller: CompressionAlgorithmController):
         nncf_backend = infer_backend_from_compression_controller(compression_controller)
-
         if nncf_backend is BackendType.TORCH:
             from nncf.torch.accuracy_aware_training.runner import PTBaseTrainingRunner
             return PTBaseTrainingRunner

@@ -169,6 +169,7 @@ def create_train_step_fn(strategy, model, loss_fn, optimizer):
     return train_step
 
 
+# pylint: disable=R0913
 def train_epoch(train_step, compression_ctrl, epoch, initial_epoch, steps_per_epoch, optimizer, checkpoint_manager,
                 train_dist_dataset, train_summary_writer, initial_step, print_freq, timer):
     compression_ctrl.scheduler.epoch_step(epoch)
@@ -199,6 +200,7 @@ def train_epoch(train_step, compression_ctrl, epoch, initial_epoch, steps_per_ep
             timer.tic()
 
 
+# pylint: disable=R0913
 def train(train_step, test_step, eval_metric, train_dist_dataset, test_dist_dataset, initial_epoch, initial_step,
     epochs, steps_per_epoch, checkpoint_manager, compression_ctrl, log_dir, optimizer, num_test_batches, print_freq):
 
@@ -266,7 +268,8 @@ def evaluate(test_step, metric, test_dist_dataset, num_batches, print_freq):
     return result
 
 
-#pylint: disable=R0913
+# pylint: disable=R0913
+# pylint: disable=R0915
 def run(config):
     strategy = get_distribution_strategy(config)
     if config.metrics_dump is not None:

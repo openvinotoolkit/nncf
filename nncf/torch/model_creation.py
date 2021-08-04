@@ -126,7 +126,7 @@ def create_compressed_model(model: Module,
             evaluation_args = config.get_extra_struct(ModelEvaluationArgs)
             with torch.no_grad():
                 original_model_accuracy = evaluation_args.eval_fn(model)
-                nncf_logger.info(f"Non-compressed model accuracy = {original_model_accuracy}")
+                nncf_logger.info("Non-compressed model accuracy = {}".format(original_model_accuracy))
 
     compressed_model = NNCFNetwork(model, input_infos=input_info_list,
                                    dummy_forward_fn=dummy_forward_fn,
