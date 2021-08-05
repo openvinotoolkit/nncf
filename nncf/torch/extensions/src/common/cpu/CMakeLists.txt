@@ -13,7 +13,7 @@ add_executable(tensor_funcs.o tensor_funcs.cpp)
 list(APPEND cflags
     "-MMD"
     "-MF"
-    "functions_cpu.o.d"
+    "tensor_funcs.o.d"
     "-DTORCH_EXTENSION_NAME=binarized_functions_cpu"
     "-DTORCH_API_INCLUDE_EXTENSION_H"
     "-DPYBIND11_COMPILER_TYPE=\"_gcc\""

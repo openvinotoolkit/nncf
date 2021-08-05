@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.9 FATAL_ERROR)
-project(functions_cpu.o LANGUAGES CXX)
+project(functions_cpu.so LANGUAGES CXX)
 
 find_package(PythonInterp 3.7 REQUIRED)
 execute_process (
@@ -7,7 +7,9 @@ execute_process (
     OUTPUT_VARIABLE PYTHON_SITE_PACKAGES OUTPUT_STRIP_TRAILING_WHITESPACE
     )
 
-add_executable(functions_cpu.o functions_cpu.cpp)
+add_library(tensor_funcs.o ../../common/cpu/tensor_funcs.cpp)
+
+add_executable(functions_cpu.so functions_cpu.cpp)
 
 list(APPEND cflags
     "-MMD"
@@ -37,13 +39,19 @@ list(APPEND ldflags
     "-ltorch"
     "-ltorch_python"
     )
-
-target_compile_options(functions_cpu.o
+target_compile_options(tensor_funcs.o
     PRIVATE
         ${cflags}
-        )
+    )
 
-target_link_libraries(functions_cpu.o
+target_compile_options(functions_cpu.so
     PRIVATE
+
+        ${cflags}
+    )
+
+target_link_libraries(functions_cpu.so
+    PRIVATE
+        tensor_funcs.o
         ${ldflags}
-        )
+    )
