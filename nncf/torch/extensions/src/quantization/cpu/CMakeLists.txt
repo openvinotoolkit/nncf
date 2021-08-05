@@ -1,17 +1,17 @@
-cmake_minimum_required(VERSION 3.9 FATAL_ERROR)
-project(functions_cpu.so LANGUAGES CXX)
+cmake_minimum_required (VERSION 3.9 FATAL_ERROR)
+project (quantized_functions_cpu.so LANGUAGES CXX)
 
-find_package(PythonInterp 3.7 REQUIRED)
+find_package (PythonInterp 3.7 REQUIRED)
 execute_process (
     COMMAND ${PYTHON_EXECUTABLE} -c "from distutils.sysconfig import get_python_lib; print (get_python_lib())"
     OUTPUT_VARIABLE PYTHON_SITE_PACKAGES OUTPUT_STRIP_TRAILING_WHITESPACE
     )
 
-add_library(tensor_funcs.o ../../common/cpu/tensor_funcs.cpp)
+add_library (tensor_funcs.o ../../common/cpu/tensor_funcs.cpp)
 
-add_executable(functions_cpu.so functions_cpu.cpp)
+add_executable (quantized_functions_cpu.so functions_cpu.cpp)
 
-list(APPEND cflags
+list (APPEND cflags
     "-MMD"
     "-MF"
     "functions_cpu.o.d"
@@ -31,7 +31,7 @@ list(APPEND cflags
     "-std=c++14"
     )
 
-list(APPEND ldflags
+list (APPEND ldflags
     "-shared"
     "-L${PYTHON_SITE_PACKAGES}/torch/lib"
     "-lc10"
@@ -39,18 +39,17 @@ list(APPEND ldflags
     "-ltorch"
     "-ltorch_python"
     )
-target_compile_options(tensor_funcs.o
+target_compile_options (tensor_funcs.o
     PRIVATE
         ${cflags}
     )
 
-target_compile_options(functions_cpu.so
+target_compile_options (quantized_functions_cpu.so
     PRIVATE
-
         ${cflags}
     )
 
-target_link_libraries(functions_cpu.so
+target_link_libraries (quantized_functions_cpu.so
     PRIVATE
         tensor_funcs.o
         ${ldflags}

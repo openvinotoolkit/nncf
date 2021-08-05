@@ -1,16 +1,16 @@
-cmake_minimum_required(VERSION 3.9 FATAL_ERROR)
-project(tensor_funcs.o LANGUAGES CXX)
+cmake_minimum_required (VERSION 3.9 FATAL_ERROR)
+project (tensor_funcs.o LANGUAGES CXX)
 
-find_package(PythonInterp 3.7 REQUIRED)
+find_package (PythonInterp 3.7 REQUIRED)
 
 execute_process (
     COMMAND ${PYTHON_EXECUTABLE} -c "from distutils.sysconfig import get_python_lib; print (get_python_lib())"
     OUTPUT_VARIABLE PYTHON_SITE_PACKAGES OUTPUT_STRIP_TRAILING_WHITESPACE
     )
 
-add_executable(tensor_funcs.o tensor_funcs.cpp)
+add_executable (tensor_funcs.o tensor_funcs.cpp)
 
-list(APPEND cflags
+list (APPEND cflags
     "-MMD"
     "-MF"
     "tensor_funcs.o.d"
@@ -30,7 +30,7 @@ list(APPEND cflags
     "-std=c++14"
     )
 
-list(APPEND ldflags
+list (APPEND ldflags
     "-shared"
     "-L${PYTHON_SITE_PACKAGES}/torch/lib"
     "-lc10"
@@ -39,12 +39,12 @@ list(APPEND ldflags
     "-ltorch_python"
     )
 
-target_compile_options(tensor_funcs.o
+target_compile_options (tensor_funcs.o
     PRIVATE
         ${cflags}
-        )
+    )
 
-target_link_libraries(tensor_funcs.o
+target_link_libraries (tensor_funcs.o
     PRIVATE
         ${ldflags}
-        )
+    )

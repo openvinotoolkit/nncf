@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.9 FATAL_ERROR)
-project(functions_cpu.so LANGUAGES CXX)
+project(binarized_functions_cpu.so LANGUAGES CXX)
 
 find_package(PythonInterp 3.7 REQUIRED)
 execute_process (
@@ -9,7 +9,7 @@ execute_process (
 
 add_library(tensor_funcs.o ../../common/cpu/tensor_funcs.cpp)
 
-add_executable(functions_cpu.so functions_cpu.cpp)
+add_executable(binarized_functions_cpu.so functions_cpu.cpp)
 
 list(APPEND cflags
     "-MMD"
@@ -44,13 +44,13 @@ target_compile_options(tensor_funcs.o
         ${cflags}
     )
 
-target_compile_options(functions_cpu.so
+target_compile_options(binarized_functions_cpu.so
     PRIVATE
 
         ${cflags}
     )
 
-target_link_libraries(functions_cpu.so
+target_link_libraries(binarized_functions_cpu.so
     PRIVATE
         tensor_funcs.o
         ${ldflags}
