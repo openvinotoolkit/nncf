@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.9 FATAL_ERROR)
 set (CMAKE_CUDA_COMPILER /usr/local/cuda/bin/nvcc)
 set (CUDA_INCLUDE_DIRS /usr/local/cuda/include/ ${CUDA_INCLUDE_DIRS})
 
-project(binarized_functions_cuda.so LANGUAGES CXX CUDA)
+project(quantized_functions_cuda.so LANGUAGES CXX CUDA)
 
 find_package(PythonInterp 3.7 REQUIRED)
 
@@ -20,7 +20,7 @@ list(APPEND cflags
     -MMD
     -MF
     functions_cuda.o.d
-    -DTORCH_EXTENSION_NAME=binarized_functions_cuda
+    -DTORCH_EXTENSION_NAME=quantized_functions_cuda
     -DTORCH_API_INCLUDE_EXTENSION_H
     -DPYBIND11_COMPILER_TYPE=\"_gcc\"
     -DPYBIND11_STDLIB=\"_libstdcpp\"
@@ -58,14 +58,14 @@ target_compile_features(functions_cuda.o PUBLIC cxx_std_14)
 set_target_properties( functions_cuda.o
                        PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
 
-add_executable(binarized_functions_cuda.so functions_cuda_impl.cu)
+add_executable(quantized_functions_cuda.so functions_cuda_impl.cu)
 
-set_property(TARGET binarized_functions_cuda.so
+set_property(TARGET quantized_functions_cuda.so
              PROPERTY CUDA_SEPARABLE_COMPILATION ON)
 
-target_compile_options(binarized_functions_cuda.so
+target_compile_options(quantized_functions_cuda.so
     PRIVATE
-    -DTORCH_EXTENSION_NAME=binarized_functions_cuda
+    -DTORCH_EXTENSION_NAME=quantized_functions_cuda
     -DTORCH_API_INCLUDE_EXTENSION_H
     -DPYBIND11_COMPILER_TYPE=\"_gcc\"
     -DPYBIND11_STDLIB=\"_libstdcpp\"
@@ -83,7 +83,7 @@ target_compile_options(binarized_functions_cuda.so
     -std=c++14
 )
 
-target_link_libraries(binarized_functions_cuda.so
+target_link_libraries(quantized_functions_cuda.so
     PRIVATE
         functions_cuda.o
         ${ldflags}
