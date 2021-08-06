@@ -561,3 +561,24 @@ def test_debug_mode():
         model, _ = create_compressed_model_and_algo_for_test(model, config)
         model.forward(torch.zeros(BasicConvTestModel.INPUT_SIZE,
                                   device=next(model.parameters()).device))
+
+
+class SharedLayersModel(torch.nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.shared_conv = torch.nn.Conv2d(1, 1, 1)
+
+    def forward(self, x):
+        x = self.shared_conv(x)
+        x = x + x
+        x = self.shared_conv(x)
+        x = x * x
+        return x
+
+
+def test_shared_layers_are_weight_quantized_once():
+    model = SharedLayersModel()
+    config = get_quantization_config_without_range_init(model_size=1)
+    register_bn_adaptation_init_args(config)
+    model, qctrl = create_compressed_model_and_algo_for_test(model, config)
+    assert len(qctrl.weight_quantizers) == 1
