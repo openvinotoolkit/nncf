@@ -10,6 +10,7 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+import warnings
 
 from functools import reduce, partial
 
@@ -102,7 +103,8 @@ class KnowledgeDistillationLoss(PTCompressionLoss):
         """
         loss = self._kd_loss_handler.get_kd_loss()
         if len(loss) == 0:
-            raise RuntimeError('Empty list of loss tensors for Knowledge Distillation Loss.')
+            warnings.warn("Empty list of loss tensors for Knowledge Distillation Loss.", RuntimeWarning)
+            return torch.zeros([])
         for idx, _ in enumerate(loss):
             loss[idx] = loss[idx].unsqueeze(0)
         output = torch.cat(loss).mean()
