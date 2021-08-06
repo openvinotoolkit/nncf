@@ -22,7 +22,7 @@ from nncf.torch import BKC_TORCH_VERSION
 from tests.torch.helpers import Command
 from tests.common.helpers import PROJECT_ROOT
 
-TRANSFORMERS_COMMIT = "b0892fa0e8df02d683e05e625b3903209bff362d"
+TRANSFORMERS_COMMIT = "bff1c71e84e392af9625c345f9ea71f7b6d75fb3"
 INSTALL_PATH = PROJECT_ROOT.parent
 DATASET_PATH = os.path.join(PROJECT_ROOT, "tests", "torch", "data", "mock_datasets")
 
@@ -91,7 +91,8 @@ class TestTransformers:
                        check=True, shell=True, cwd=self.TRANS_PATH)
         pip_runner.run_pip("install .", cwd=self.TRANS_PATH)
         pip_runner.run_pip("install -e \".[testing]\"", cwd=self.TRANS_PATH)
-        pip_runner.run_pip("install -r examples/requirements.txt", cwd=self.TRANS_PATH)
+        for sample_folder in ['question-answering', 'text-classification', 'language-modeling']:
+            pip_runner.run_pip(f"install -r examples/pytorch/{sample_folder}/requirements.txt", cwd=self.TRANS_PATH)
         pip_runner.run_pip("install boto3", cwd=self.TRANS_PATH)
         subprocess.run(
             "{} && {}/bin/python setup.py develop".format(self.activate_venv, self.VENV_TRANS_PATH), check=True,
@@ -99,7 +100,7 @@ class TestTransformers:
 
     @pytest.mark.dependency(depends=['install_trans'], name='xnli_train')
     def test_xnli_train(self, temp_folder):
-        com_line = "examples/text-classification/run_xnli.py --model_name_or_path bert-base-chinese" \
+        com_line = "examples/pytorch/text-classification/run_xnli.py --model_name_or_path bert-base-chinese" \
                    " --language zh --train_language zh --do_train --data_dir {} --per_gpu_train_batch_size 24" \
                    " --learning_rate 5e-5 --num_train_epochs 1.0 --max_seq_length 128 --output_dir {}" \
                    " --save_steps 200 --nncf_config nncf_bert_config_xnli.json" \
@@ -111,7 +112,7 @@ class TestTransformers:
 
     @pytest.mark.dependency(depends=['install_trans', 'xnli_train'])
     def test_xnli_eval(self, temp_folder):
-        com_line = "examples/text-classification/run_xnli.py --model_name_or_path {output}" \
+        com_line = "examples/pytorch/text-classification/run_xnli.py --model_name_or_path {output}" \
                    " --language zh --do_eval --data_dir {} --learning_rate 5e-5 --max_seq_length 128 --output_dir" \
                    " {output} --nncf_config nncf_bert_config_xnli.json --per_gpu_eval_batch_size 24" \
             .format(DATASET_PATH, output=os.path.join(temp_folder["models"], "xnli"))
@@ -121,8 +122,8 @@ class TestTransformers:
 
     @pytest.mark.dependency(depends=['install_trans'], name='squad_train')
     def test_squad_train(self, temp_folder):
-        com_line = "examples/question-answering/run_squad.py --model_type bert --model_name_or_path " \
-                   "bert-large-uncased-whole-word-masking-finetuned-squad --do_train --do_lower_case " \
+        com_line = "examples/pytorch/question-answering/run_qa.py --model_name_or_path " \
+                   "bert-large-uncased-whole-word-masking-finetuned-squad --do_train " \
                    "--train_file {}/squad/train-v1.1.json" \
                    " --learning_rate 3e-5 --num_train_epochs 1 --max_seq_length 384 --doc_stride 128 --output_dir " \
                    "{} --per_gpu_train_batch_size=1 --save_steps=200 --nncf_config" \
@@ -134,8 +135,8 @@ class TestTransformers:
 
     @pytest.mark.dependency(depends=['install_trans', 'squad_train'])
     def test_squad_eval(self, temp_folder):
-        com_line = "examples/question-answering/run_squad.py --model_type bert --model_name_or_path {output}" \
-                   " --do_eval --do_lower_case  --predict_file {}/squad/dev-v1.1.json --learning_rate 3e-5" \
+        com_line = "examples/pytorch/question-answering/run_qa.py --model_name_or_path {output}" \
+                   " --do_eval --do_lower_case  --validation_file {}/squad/dev-v1.1.json --learning_rate 3e-5" \
                    " --max_seq_length 384 --doc_stride 128 --per_gpu_eval_batch_size=4 --output_dir {output} " \
                    "--nncf_config nncf_bert_config_squad.json" \
             .format(DATASET_PATH, output=os.path.join(temp_folder["models"], "squad"))
@@ -145,7 +146,7 @@ class TestTransformers:
 
     @pytest.mark.dependency(depends=['install_trans'], name='glue_roberta_train')
     def test_glue_train(self, temp_folder):
-        com_line = "examples/text-classification/run_glue.py --model_name_or_path" \
+        com_line = "examples/pytorch/text-classification/run_glue.py --model_name_or_path" \
                    " roberta-large-mnli --task_name mnli --do_train --data_dir {}/glue/glue_data/MNLI" \
                    " --per_gpu_train_batch_size 4 --learning_rate 2e-5 --num_train_epochs 1.0 --max_seq_length 128 " \
                    "--output_dir {} --save_steps 200 --nncf_config" \
@@ -158,7 +159,7 @@ class TestTransformers:
 
     @pytest.mark.dependency(depends=['install_trans', 'glue_roberta_train'])
     def test_glue_eval(self, temp_folder):
-        com_line = "examples/text-classification/run_glue.py --model_name_or_path {output}" \
+        com_line = "examples/pytorch/text-classification/run_glue.py --model_name_or_path {output}" \
                    " --task_name mnli --do_eval --data_dir {}/glue/glue_data/MNLI --learning_rate 2e-5" \
                    " --num_train_epochs 1.0 --max_seq_length 128 --output_dir {output}" \
                    " --nncf_config nncf_roberta_config_mnli.json" \
@@ -169,7 +170,7 @@ class TestTransformers:
 
     @pytest.mark.dependency(depends=['install_trans'], name='glue_distilbert_train')
     def test_glue_distilbert_train(self, temp_folder):
-        com_line = "examples/text-classification/run_glue.py --model_name_or_path" \
+        com_line = "examples/pytorch/text-classification/run_glue.py --model_name_or_path" \
                    " distilbert-base-uncased" \
                    " --task_name SST-2 --do_train --max_seq_length 128 --per_gpu_train_batch_size 8" \
                    " --data_dir {}/glue/glue_data/SST-2 --learning_rate 5e-5 --num_train_epochs 3.0" \
@@ -183,7 +184,7 @@ class TestTransformers:
 
     @pytest.mark.dependency(depends=['install_trans', 'glue_distilbert_train'])
     def test_glue_distilbert_eval(self, temp_folder):
-        com_line = "examples/text-classification/run_glue.py --model_name_or_path {output}" \
+        com_line = "examples/pytorch/text-classification/run_glue.py --model_name_or_path {output}" \
                    " --task_name SST-2 --do_eval --max_seq_length 128" \
                    " --output_dir {output} --data_dir {}/glue/glue_data/SST-2" \
                    " --nncf_config nncf_distilbert_config_sst2.json" \
@@ -194,7 +195,7 @@ class TestTransformers:
 
     @pytest.mark.dependency(depends=['install_trans'], name='lm_train')
     def test_lm_train(self, temp_folder):
-        com_line = "examples/language-modeling/run_language_modeling.py --model_type gpt2 --model_name_or_path gpt2" \
+        com_line = "examples/pytorch/language-modeling/run_clm.py --model_name_or_path gpt2" \
                    " --do_train --per_gpu_train_batch_size 8" \
                    " --train_data_file {}/wikitext-2-raw/wiki.train.raw " \
                    " --output_dir {} --nncf_config" \
@@ -207,7 +208,7 @@ class TestTransformers:
 
     @pytest.mark.dependency(depends=['install_trans', 'lm_train'])
     def test_lm_eval(self, temp_folder):
-        com_line = "examples/language-modeling/run_language_modeling.py --model_type gpt2 " \
+        com_line = "examples/language-modeling/run_clm.py " \
                    "--model_name_or_path {output} --do_eval " \
                    " --output_dir {output} --eval_data_file {}/wikitext-2-raw/wiki.train.raw" \
                    " --nncf_config nncf_gpt2_config_wikitext_hw_config.json" \
@@ -218,7 +219,7 @@ class TestTransformers:
 
     @pytest.mark.dependency(depends=['install_trans'])
     def test_convert_to_onnx(self, temp_folder):
-        com_line = "examples/question-answering/run_squad.py --model_type bert --model_name_or_path {output}" \
+        com_line = "examples/pytorch/question-answering/run_qa.py --model_name_or_path {output}" \
                    " --output_dir {output}" \
                    " --to_onnx {output}/model.onnx".format(output=os.path.join(temp_folder["models"], "squad"))
         runner = Command(create_command_line(com_line, self.activate_venv, self.trans_python,
