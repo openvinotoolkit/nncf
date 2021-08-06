@@ -122,7 +122,7 @@ To run the samples please refer to the corresponding tutorials:
 - TensorFlow samples:
   - [Image Classification sample](examples/tensorflow/classification/README.md)
   - [Object Detection sample](examples/tensorflow/object_detection/README.md)
-  - [Instance Segmentation sample](examples/tensorflow/semantic_segmentation/README.md)
+  - [Instance Segmentation sample](examples/tensorflow/segmentation/README.md)
 
 ## Third-party repository integration
 NNCF may be straightforwardly integrated into training/evaluation pipelines of third-party repositories.
