@@ -43,7 +43,7 @@ list (APPEND cflags_cuda
     -DPYBIND11_COMPILER_TYPE=\"_gcc\"
     -DPYBIND11_STDLIB=\"_libstdcpp\"
     -DPYBIND11_BUILD_ABI=\"_cxxabi1011\"
-    -I${PYTHON_SITE_PACKAGES}/nncf/torch/extensions/include
+    -I../../../../include
     --system-include ${PYTHON_SITE_PACKAGES}/torch/include,${PYTHON_SITE_PACKAGES}/torch/include/torch/csrc/api/include,${PYTHON_SITE_PACKAGES}/torch/include/TH,${PYTHON_SITE_PACKAGES}/torch/include/THC,/localdisk/fk/venv/include/python3.7m
     -D_GLIBCXX_USE_CXX11_ABI=0
     -D__CUDA_NO_HALF_OPERATORS__
