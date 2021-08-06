@@ -55,6 +55,7 @@ class KnowledgeDistillationLossHandler(nn.Module):
 
         :param inputs: Results of compressed model forward used for knowledge distillation loss calculations.
         """
+        self.zero_kd_loss()
         with torch.no_grad():
             kd_outputs = self._kd_original_model(*args, **kwargs)
         kd_loss = self._calculate_kd_loss_fn(inputs, kd_outputs)
