@@ -1,0 +1,97 @@
+"""
+ Copyright (c) 2020 Intel Corporation
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+      http://www.apache.org/licenses/LICENSE-2.0
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+"""
+
+import itertools
+import pytest
+
+import tensorflow as tf
+from tensorflow.python.keras import layers
+
+from nncf.common.hardware.config import HWConfigType
+from nncf.tensorflow.quantization.utils import collect_fake_quantize_layers
+from tests.tensorflow.helpers import create_compressed_model_and_algo_for_test
+from tests.tensorflow.quantization.utils import get_basic_asym_quantization_config
+
+
+def get_single_concat_test_model(input_shapes):
+    inputs = []
+    for i, input_shape in enumerate(input_shapes):
+        inputs.append(tf.keras.Input(shape=input_shape[1:], name='input_{}'.format(i + 1)))
+    # pylint: disable=unbalanced-tuple-unpacking
+    input_1, input_2 = inputs
+
+    x_1 = layers.Multiply()([input_1, input_1])
+    x_2 = layers.Multiply()([input_2, input_2])
+
+    outputs = layers.Concatenate(1)([x_1, x_2])
+    outputs = layers.Conv2D(filters=1, kernel_size=1, use_bias=False)(outputs)
+    return tf.keras.Model(inputs=inputs, outputs=outputs)
+
+
+def get_double_concat_test_model(input_shapes):
+    inputs = []
+    for i, input_shape in enumerate(input_shapes):
+        inputs.append(tf.keras.Input(shape=input_shape[1:], name='input_{}'.format(i + 1)))
+    # pylint: disable=unbalanced-tuple-unpacking
+    input_1, input_2 = inputs
+
+    x_1 = input_1 * input_1
+    x_2 = input_2 * input_2
+
+    cat_1 = layers.Concatenate(1)([x_1, x_2])
+    cat_2 = layers.Concatenate(1)([x_1, cat_1])
+    outputs = layers.Conv2D(filters=3, kernel_size=3, strides=2, padding='same')(cat_2)
+    return tf.keras.Model(inputs=inputs, outputs=outputs)
+
+
+def get_unet_like_test_model(input_shapes):
+    inputs = []
+    for i, input_shape in enumerate(input_shapes):
+        inputs.append(tf.keras.Input(shape=input_shape[1:], name='input_{}'.format(i + 1)))
+    # pylint: disable=unbalanced-tuple-unpacking
+    input_1, _ = inputs
+
+    conv_1 = layers.Conv2D(filters=8, kernel_size=1)(input_1)
+    conv_2 = layers.Conv2D(filters=16, kernel_size=1)(conv_1)
+    conv_3 = layers.Conv2D(filters=32, kernel_size=1)(conv_2)
+    conv_t_3 = layers.Conv2DTranspose(filters=16, kernel_size=1)(conv_3)
+
+    cat_1 = layers.Concatenate(0)([conv_t_3, conv_2])
+    conv_t_2 = layers.Conv2DTranspose(filters=8, kernel_size=1)(cat_1)
+
+    cat_2 = layers.Concatenate(0)([conv_t_2, conv_1])
+    outputs = layers.Conv2DTranspose(filters=4, kernel_size=1)(cat_2)
+    return tf.keras.Model(inputs=inputs, outputs=outputs)
+
+
+CAT_UNIFIED_SCALE_TEST_STRUCTS = [(get_single_concat_test_model, 3),
+                                  (get_double_concat_test_model, 3),
+                                  (get_unet_like_test_model, 4)
+                                  ]
+
+
+@pytest.mark.parametrize("target_device, model_creator, ref_aq_module_count",
+                         [(t_dev, ) + rest for t_dev, rest in
+                             itertools.product([x.value for x in HWConfigType],
+                                               CAT_UNIFIED_SCALE_TEST_STRUCTS)])
+def test_unified_scales_with_concat(target_device, model_creator, ref_aq_module_count):
+    nncf_config = get_basic_asym_quantization_config()
+    x_shape = [1, 4, 1, 1]
+    y_shape = [1, 4, 1, 1]
+    nncf_config["target_device"] = target_device
+
+    model = model_creator([x_shape, y_shape])
+    compressed_model, _ = create_compressed_model_and_algo_for_test(model, nncf_config, force_no_init=True)
+
+    non_weight_quantizers = len(collect_fake_quantize_layers(compressed_model))
+    assert non_weight_quantizers == ref_aq_module_count
