@@ -23,7 +23,7 @@ from nncf.tensorflow import create_compressed_model
 from nncf.tensorflow.helpers.model_manager import TFOriginalModelManager
 from nncf.tensorflow.initialization import register_default_init_args
 from nncf.common.utils.tensorboard import prepare_for_tensorboard
-from nncf.config.extractors import extract_accuracy_aware_training_config
+from nncf.config.utils import is_accuracy_aware_training
 from nncf.config.structures import ModelEvaluationArgs
 from nncf.tensorflow.utils.state import TFCompressionState
 from nncf.tensorflow.utils.state import TFCompressionStateLoader
@@ -169,7 +169,6 @@ def create_train_step_fn(strategy, model, loss_fn, optimizer):
     return train_step
 
 
-# pylint: disable=R0913
 def train_epoch(train_step, compression_ctrl, epoch, initial_epoch, steps_per_epoch, optimizer, checkpoint_manager,
                 train_dist_dataset, train_summary_writer, initial_step, print_freq, timer):
     compression_ctrl.scheduler.epoch_step(epoch)
@@ -200,7 +199,6 @@ def train_epoch(train_step, compression_ctrl, epoch, initial_epoch, steps_per_ep
             timer.tic()
 
 
-# pylint: disable=R0913
 def train(train_step, test_step, eval_metric, train_dist_dataset, test_dist_dataset, initial_epoch, initial_step,
     epochs, steps_per_epoch, checkpoint_manager, compression_ctrl, log_dir, optimizer, num_test_batches, print_freq):
 
@@ -268,8 +266,6 @@ def evaluate(test_step, metric, test_dist_dataset, num_batches, print_freq):
     return result
 
 
-# pylint: disable=R0913
-# pylint: disable=R0915
 def run(config):
     strategy = get_distribution_strategy(config)
     if config.metrics_dump is not None:
@@ -340,8 +336,11 @@ def run(config):
     test_step = create_test_step_fn(strategy, compress_model, predict_post_process_fn)
 
     if 'train' in config.mode:
-        accuracy_aware_training = extract_accuracy_aware_training_config(config)
-        if accuracy_aware_training is not None:
+        if is_accuracy_aware_training(config):
+            train_summary_writer = SummaryWriter(config.log_dir, 'train')
+            timer = Timer()
+            timer.tic()
+
             def train_epoch_fn(compression_ctrl, model, epoch, **kwargs):
                 train_step = create_train_step_fn(strategy, model, loss_fn, optimizer)
                 train_epoch(train_step, compression_ctrl, epoch, initial_epoch, steps_per_epoch,
@@ -354,12 +353,8 @@ def run(config):
                                          num_test_batches, config.print_freq)
                 return metric_result['AP']
 
-            train_summary_writer = SummaryWriter(config.log_dir, 'train')
             acc_aware_training_loop = create_accuracy_aware_training_loop(nncf_config, compression_ctrl)
-
-            timer = Timer()
-            timer.tic()
-            _ = acc_aware_training_loop.run(compress_model,
+            compress_model = acc_aware_training_loop.run(compress_model,
                                                          train_epoch_fn=train_epoch_fn,
                                                          validate_fn=validate_fn,
                                                          tensorboard_writer=config.tb,

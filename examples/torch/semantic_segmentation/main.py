@@ -56,7 +56,7 @@ from examples.torch.semantic_segmentation.train import Train
 from examples.torch.semantic_segmentation.utils.checkpoint import save_checkpoint
 from nncf.api.compression import CompressionStage
 from nncf.common.utils.tensorboard import prepare_for_tensorboard
-from nncf.config.extractors import extract_accuracy_aware_training_config
+from nncf.config.utils import is_accuracy_aware_training
 from nncf.common.accuracy_aware_training import create_accuracy_aware_training_loop
 from nncf.torch import create_compressed_model
 from nncf.torch import load_state
@@ -549,8 +549,7 @@ def main_worker(current_gpu, config):
         statistics = compression_ctrl.statistics()
         logger.info(statistics.to_str())
 
-    accuracy_aware_training = extract_accuracy_aware_training_config(config)
-    if accuracy_aware_training is not None:
+    if is_accuracy_aware_training(config) and 'train' in config.mode:
         def validate_fn(model, epoch):
             return test(model, val_loader, criterion, color_encoding, config)
 

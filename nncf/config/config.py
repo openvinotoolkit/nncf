@@ -22,7 +22,6 @@ from nncf.common.utils.logger import logger
 from nncf.common.utils.os import safe_open
 from nncf.config.schema import ROOT_NNCF_CONFIG_SCHEMA
 from nncf.config.schema import validate_single_compression_algo_schema
-from nncf.config.schema import validate_accuracy_aware_schema
 from nncf.config.structures import NNCFExtraConfigStruct
 
 
@@ -112,7 +111,6 @@ class NNCFConfig(dict):
                 validate_single_compression_algo_schema(compression_section)
             else:
                 # Passed a list of dicts
-                validate_accuracy_aware_schema(compression_section)
                 for compression_algo_dict in compression_section:
                     validate_single_compression_algo_schema(compression_algo_dict)
         except jsonschema.ValidationError:

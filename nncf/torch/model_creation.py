@@ -39,7 +39,7 @@ from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.utils import is_dist_avail_and_initialized
 from nncf.torch.utils import is_main_process
 from nncf.config.structures import ModelEvaluationArgs
-from nncf.config.extractors import extract_accuracy_aware_training_config
+from nncf.config.utils import is_accuracy_aware_training
 
 
 # pylint:disable=too-many-branches
@@ -121,7 +121,7 @@ def create_compressed_model(model: Module,
     target_scopes = config.get('target_scopes')
 
     original_model_accuracy = None
-    if extract_accuracy_aware_training_config(config) is not None:
+    if is_accuracy_aware_training(config) is not None:
         if config.has_extra_struct(ModelEvaluationArgs):
             evaluation_args = config.get_extra_struct(ModelEvaluationArgs)
             with torch.no_grad():

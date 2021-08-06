@@ -58,7 +58,7 @@ from examples.torch.object_detection.eval import test_net
 from examples.torch.object_detection.layers.modules import MultiBoxLoss
 from examples.torch.object_detection.model import build_ssd
 from nncf.api.compression import CompressionStage
-from nncf.config.extractors import extract_accuracy_aware_training_config
+from nncf.config.utils import is_accuracy_aware_training
 from nncf.common.accuracy_aware_training import create_accuracy_aware_training_loop
 from nncf.torch import create_compressed_model
 from nncf.torch import load_state
@@ -219,44 +219,41 @@ def main_worker(current_gpu, config):
         statistics = compression_ctrl.statistics()
         logger.info(statistics.to_str())
 
-    if 'train' in config.mode:
-        accuracy_aware_training = extract_accuracy_aware_training_config(config)
-        if accuracy_aware_training is not None:
-            # validation function that returns the target metric value
-            # pylint: disable=E1123
-            def validate_fn(model, epoch):
-                model.eval()
-                mAP = test_net(model, config.device, test_data_loader,
-                               distributed=config.distributed)
-                model.train()
-                return mAP
+    if 'train' in config.mode and is_accuracy_aware_training(config):
+        # validation function that returns the target metric value
+        # pylint: disable=E1123
+        def validate_fn(model, epoch):
+            model.eval()
+            mAP = test_net(model, config.device, test_data_loader,
+                           distributed=config.distributed)
+            model.train()
+            return mAP
 
-            # training function that trains the model for one epoch (full training dataset pass)
-            # it is assumed that all the NNCF-related methods are properly called inside of
-            # this function (like e.g. the step and epoch_step methods of the compression scheduler)
-            def train_epoch_fn(compression_ctrl, model, epoch, optimizer, **kwargs):
-                loc_loss = 0
-                conf_loss = 0
-                epoch_size = len(train_data_loader)
-                train_epoch(compression_ctrl, model, config, train_data_loader, criterion, optimizer,
-                            epoch_size, epoch, loc_loss, conf_loss)
+        # training function that trains the model for one epoch (full training dataset pass)
+        # it is assumed that all the NNCF-related methods are properly called inside of
+        # this function (like e.g. the step and epoch_step methods of the compression scheduler)
+        def train_epoch_fn(compression_ctrl, model, epoch, optimizer, **kwargs):
+            loc_loss = 0
+            conf_loss = 0
+            epoch_size = len(train_data_loader)
+            train_epoch(compression_ctrl, model, config, train_data_loader, criterion, optimizer,
+                        epoch_size, epoch, loc_loss, conf_loss)
 
-            # function that initializes optimizers & lr schedulers to start training
-            def configure_optimizers_fn():
-                params_to_optimize = get_parameter_groups(net, config)
-                optimizer, lr_scheduler = make_optimizer(params_to_optimize, config)
-                return optimizer, lr_scheduler
+        # function that initializes optimizers & lr schedulers to start training
+        def configure_optimizers_fn():
+            params_to_optimize = get_parameter_groups(net, config)
+            optimizer, lr_scheduler = make_optimizer(params_to_optimize, config)
+            return optimizer, lr_scheduler
 
-            acc_aware_training_loop = create_accuracy_aware_training_loop(config, compression_ctrl)
-            net = acc_aware_training_loop.run(net,
-                                    train_epoch_fn=train_epoch_fn,
-                                    validate_fn=validate_fn,
-                                    configure_optimizers_fn=configure_optimizers_fn,
-                                    tensorboard_writer=config.tb,
-                                    log_dir=config.log_dir)
-        else:
-            train(net, compression_ctrl, train_data_loader, test_data_loader,
-                  criterion, optimizer, config, lr_scheduler)
+        acc_aware_training_loop = create_accuracy_aware_training_loop(config, compression_ctrl)
+        net = acc_aware_training_loop.run(net,
+                                          train_epoch_fn=train_epoch_fn,
+                                          validate_fn=validate_fn,
+                                          configure_optimizers_fn=configure_optimizers_fn,
+                                          tensorboard_writer=config.tb,
+                                          log_dir=config.log_dir)
+    elif 'train' in config.mode:
+        train(net, compression_ctrl, train_data_loader, test_data_loader, criterion, optimizer, config, lr_scheduler)
 
     if 'test' in config.mode:
         with torch.no_grad():

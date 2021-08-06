@@ -68,7 +68,7 @@ from examples.torch.common.utils import print_args
 from examples.torch.common.utils import write_metrics
 from nncf.api.compression import CompressionStage
 from nncf.common.utils.tensorboard import prepare_for_tensorboard
-from nncf.config.extractors import extract_accuracy_aware_training_config
+from nncf.config.utils import is_accuracy_aware_training
 from nncf.common.accuracy_aware_training import create_accuracy_aware_training_loop
 from nncf.torch import create_compressed_model
 from nncf.torch.checkpoint_loading import load_state
@@ -246,8 +246,7 @@ def main_worker(current_gpu, config: SampleConfig):
         logger.info(statistics.to_str())
 
     if 'train' in config.mode:
-        accuracy_aware_training = extract_accuracy_aware_training_config(config)
-        if accuracy_aware_training is not None:
+        if is_accuracy_aware_training(config):
             # validation function that returns the target metric value
             # pylint: disable=E1123
             def validate_fn(model, epoch):
@@ -269,11 +268,11 @@ def main_worker(current_gpu, config: SampleConfig):
 
             acc_aware_training_loop = create_accuracy_aware_training_loop(config, compression_ctrl)
             model = acc_aware_training_loop.run(model,
-                                      train_epoch_fn=train_epoch_fn,
-                                      validate_fn=validate_fn,
-                                      configure_optimizers_fn=configure_optimizers_fn,
-                                      tensorboard_writer=config.tb,
-                                      log_dir=config.log_dir)
+                                                train_epoch_fn=train_epoch_fn,
+                                                validate_fn=validate_fn,
+                                                configure_optimizers_fn=configure_optimizers_fn,
+                                                tensorboard_writer=config.tb,
+                                                log_dir=config.log_dir)
         else:
             train(config, compression_ctrl, model, criterion, train_criterion_fn, lr_scheduler, model_name, optimizer,
                   train_loader, train_sampler, val_loader, best_acc1)

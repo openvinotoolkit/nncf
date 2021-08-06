@@ -27,7 +27,7 @@ from nncf.common.utils.backend import infer_backend_from_compression_controller
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.common.utils.registry import Registry
 from nncf.config.config import NNCFConfig
-from nncf.config.extractors import extract_accuracy_aware_training_config
+from nncf.config.extractors import extract_accuracy_aware_training_params
 
 ModelType = TypeVar('ModelType')
 ADAPTIVE_COMPRESSION_CONTROLLERS = Registry('adaptive_compression_controllers')
@@ -176,8 +176,7 @@ class AdaptiveCompressionTrainingLoop(TrainingLoop):
 
     def _get_adaptive_compression_ctrl(self, compression_controller, nncf_config):
         adaptive_compression_controllers = self._adaptive_compression_controllers()
-        accuracy_aware_training_config = extract_accuracy_aware_training_config(nncf_config)
-        accuracy_aware_training_params = accuracy_aware_training_config.get('params', None)
+        accuracy_aware_training_params = extract_accuracy_aware_training_params(nncf_config)
 
         if isinstance(compression_controller, CompositeCompressionAlgorithmController):
             # TODO:(kshpv) check if both algo in the config

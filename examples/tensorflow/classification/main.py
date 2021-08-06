@@ -18,7 +18,7 @@ from pathlib import Path
 import tensorflow as tf
 import tensorflow_addons as tfa
 
-from nncf.config.extractors import extract_accuracy_aware_training_config
+from nncf.config.utils import is_accuracy_aware_training
 from nncf.tensorflow.helpers.model_creation import create_compressed_model
 from nncf.tensorflow import create_compression_callbacks
 from nncf.tensorflow.helpers.model_manager import TFOriginalModelManager
@@ -147,8 +147,6 @@ def load_compression_state(ckpt_path: str):
     return checkpoint.compression_state.state
 
 
-# pylint: disable=R0913
-# pylint: disable=R0915
 def run(config):
     strategy = get_distribution_strategy(config)
     if config.metrics_dump is not None:
@@ -177,8 +175,7 @@ def run(config):
 
     resume_training = config.ckpt_path is not None
 
-    accuracy_aware_training = extract_accuracy_aware_training_config(config)
-    if accuracy_aware_training is not None:
+    if is_accuracy_aware_training(config):
         with TFOriginalModelManager(model_fn, **model_params) as model:
             model.compile(metrics=[tf.keras.metrics.CategoricalAccuracy(name='acc@1')])
             results = model.evaluate(
@@ -250,7 +247,7 @@ def run(config):
     }
 
     if 'train' in config.mode:
-        if accuracy_aware_training is not None:
+        if is_accuracy_aware_training(config):
             logger.info('starting an accuracy-aware training loop...')
             result_dict_to_val_metric_fn = lambda results: 100 * results['acc@1']
             compress_model.accuracy_aware_fit(train_dataset,
