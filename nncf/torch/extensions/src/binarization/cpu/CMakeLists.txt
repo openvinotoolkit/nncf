@@ -12,33 +12,34 @@ add_library(tensor_funcs.o ../../common/cpu/tensor_funcs.cpp)
 add_executable(binarized_functions_cpu.so functions_cpu.cpp)
 
 list(APPEND cflags
-    "-MMD"
-    "-MF"
-    "functions_cpu.o.d"
-    "-DTORCH_EXTENSION_NAME=binarized_functions_cpu"
-    "-DTORCH_API_INCLUDE_EXTENSION_H"
-    "-DPYBIND11_COMPILER_TYPE=\"_gcc\""
-    "-DPYBIND11_STDLIB=\"_libstdcpp\""
-    "-DPYBIND11_BUILD_ABI=\"_cxxabi1011\""
-    "-I${PYTHON_SITE_PACKAGES}/nncf/torch/extensions/include"
-    "-isystem${PYTHON_SITE_PACKAGES}/torch/include"
-    "-isystem${PYTHON_SITE_PACKAGES}/torch/include/torch/csrc/api/include"
-    "-isystem${PYTHON_SITE_PACKAGES}/torch/include/TH"
-    "-isystem${PYTHON_SITE_PACKAGES}/torch/include/THC"
-    "-isystem/localdisk/fk/venv/include/python3.7m"
-    "-D_GLIBCXX_USE_CXX11_ABI=0"
-    "-fPIC"
-    "-std=c++14"
+    -MMD
+    -MF
+    functions_cpu.o.d
+    -DTORCH_EXTENSION_NAME=binarized_functions_cuda
+    -DTORCH_API_INCLUDE_EXTENSION_H
+    -DPYBIND11_COMPILER_TYPE=\"_gcc\"
+    -DPYBIND11_STDLIB=\"_libstdcpp\"
+    -DPYBIND11_BUILD_ABI=\"_cxxabi1011\"
+    -I../../../../include
+    -isystem${PYTHON_SITE_PACKAGES}/torch/include
+    -isystem${PYTHON_SITE_PACKAGES}/torch/include/torch/csrc/api/include
+    -isystem${PYTHON_SITE_PACKAGES}/torch/include/TH
+    -isystem${PYTHON_SITE_PACKAGES}/torch/include/THC
+    -isystem/localdisk/fk/venv/include/python3.7m
+    -D_GLIBCXX_USE_CXX11_ABI=0
+    -fPIC
+    -std=c++14
     )
 
 list(APPEND ldflags
-    "-shared"
-    "-L${PYTHON_SITE_PACKAGES}/torch/lib"
-    "-lc10"
-    "-ltorch_cpu"
-    "-ltorch"
-    "-ltorch_python"
+    -shared
+    -L${PYTHON_SITE_PACKAGES}/torch/lib
+    -lc10
+    -ltorch_cpu
+    -ltorch
+    -ltorch_python
     )
+
 target_compile_options(tensor_funcs.o
     PRIVATE
         ${cflags}

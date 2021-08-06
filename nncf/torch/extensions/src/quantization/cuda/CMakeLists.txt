@@ -26,7 +26,7 @@ list (APPEND cflags
     -DPYBIND11_COMPILER_TYPE=\"_gcc\"
     -DPYBIND11_STDLIB=\"_libstdcpp\"
     -DPYBIND11_BUILD_ABI=\"_cxxabi1011\"
-    -I${PYTHON_SITE_PACKAGES}/nncf/torch/extensions/include
+    -I../../../../include
     -isystem${PYTHON_SITE_PACKAGES}/torch/include
     -isystem${PYTHON_SITE_PACKAGES}/torch/include/torch/csrc/api/include
     -isystem${PYTHON_SITE_PACKAGES}/torch/include/TH

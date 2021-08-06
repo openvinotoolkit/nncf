@@ -26,7 +26,7 @@ list (APPEND cflags
     -DPYBIND11_COMPILER_TYPE=\"_gcc\"
     -DPYBIND11_STDLIB=\"_libstdcpp\"
     -DPYBIND11_BUILD_ABI=\"_cxxabi1011\"
-    -I${PYTHON_SITE_PACKAGES}/nncf/torch/extensions/include
+    -I../../../../include
     -isystem${PYTHON_SITE_PACKAGES}/torch/include
     -isystem${PYTHON_SITE_PACKAGES}/torch/include/torch/csrc/api/include
     -isystem${PYTHON_SITE_PACKAGES}/torch/include/TH
@@ -34,6 +34,25 @@ list (APPEND cflags
     -isystem/localdisk/fk/venv/include/python3.7m
     -D_GLIBCXX_USE_CXX11_ABI=0
     -fPIC
+    -std=c++14
+    )
+
+list (APPEND cflags_cuda
+    -DTORCH_EXTENSION_NAME=binarized_functions_cuda
+    -DTORCH_API_INCLUDE_EXTENSION_H
+    -DPYBIND11_COMPILER_TYPE=\"_gcc\"
+    -DPYBIND11_STDLIB=\"_libstdcpp\"
+    -DPYBIND11_BUILD_ABI=\"_cxxabi1011\"
+    -I${PYTHON_SITE_PACKAGES}/nncf/torch/extensions/include
+    --system-include ${PYTHON_SITE_PACKAGES}/torch/include,${PYTHON_SITE_PACKAGES}/torch/include/torch/csrc/api/include,${PYTHON_SITE_PACKAGES}/torch/include/TH,${PYTHON_SITE_PACKAGES}/torch/include/THC,/localdisk/fk/venv/include/python3.7m
+    -D_GLIBCXX_USE_CXX11_ABI=0
+    -D__CUDA_NO_HALF_OPERATORS__
+    -D__CUDA_NO_HALF_CONVERSIONS__
+    -D__CUDA_NO_BFLOAT16_CONVERSIONS__
+    -D__CUDA_NO_HALF2_OPERATORS__
+    --expt-relaxed-constexpr
+    -gencode=arch=compute_75,code=compute_75
+    --compiler-options '-fPIC'
     -std=c++14
     )
 
@@ -68,22 +87,7 @@ set_property (TARGET binarized_functions_cuda.so
 
 target_compile_options (binarized_functions_cuda.so
     PRIVATE
-    -DTORCH_EXTENSION_NAME=binarized_functions_cuda
-    -DTORCH_API_INCLUDE_EXTENSION_H
-    -DPYBIND11_COMPILER_TYPE=\"_gcc\"
-    -DPYBIND11_STDLIB=\"_libstdcpp\"
-    -DPYBIND11_BUILD_ABI=\"_cxxabi1011\"
-    -I${PYTHON_SITE_PACKAGES}/nncf/torch/extensions/include
-    --system-include ${PYTHON_SITE_PACKAGES}/torch/include,${PYTHON_SITE_PACKAGES}/torch/include/torch/csrc/api/include,${PYTHON_SITE_PACKAGES}/torch/include/TH,${PYTHON_SITE_PACKAGES}/torch/include/THC,/localdisk/fk/venv/include/python3.7m
-    -D_GLIBCXX_USE_CXX11_ABI=0
-    -D__CUDA_NO_HALF_OPERATORS__
-    -D__CUDA_NO_HALF_CONVERSIONS__
-    -D__CUDA_NO_BFLOAT16_CONVERSIONS__
-    -D__CUDA_NO_HALF2_OPERATORS__
-    --expt-relaxed-constexpr
-    -gencode=arch=compute_75,code=compute_75
-    --compiler-options '-fPIC'
-    -std=c++14
+        ${cflags_cuda}
     )
 
 target_link_libraries(binarized_functions_cuda.so
