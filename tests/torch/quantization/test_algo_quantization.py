@@ -576,7 +576,7 @@ class SharedLayersModel(torch.nn.Module):
         return x
 
 
-def test_shared_layers_are_weight_quantized_once():
+def test_shared_layers_are_weight_quantized_only_once():
     model = SharedLayersModel()
     config = get_quantization_config_without_range_init(model_size=1)
     register_bn_adaptation_init_args(config)
