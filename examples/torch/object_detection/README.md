@@ -21,7 +21,7 @@ pip install -r examples/torch/requirements.txt
 This scenario demonstrates quantization with fine-tuning of SSD300 on VOC dataset.
 
 #### Dataset preparation
-- Download and extract VOC2007 and VOC2012 train/val and test data + devkit from [here](http://host.robots.ox.ac.uk/pascal/VOC/voc2012/index.html#devkit) and [here](http://host.robots.ox.ac.uk/pascal/VOC/voc2007/index.html#devkit)
+- Download and extract VOC2007 and VOC2012 train/val and test data + devkit from [here](https://pjreddie.com/projects/pascal-voc-dataset-mirror/)
 
 #### Run object detection sample
 - If you did not install the package then add the repository root folder to the `PYTHONPATH` environment variable
@@ -37,7 +37,7 @@ om scratch.
 
 #### Validate your model checkpoint
 To estimate the test scores of your model checkpoint use the following command:
-`python main.py -m test --config=configs/ssd300_vgg_int8_voc.json --data <path_to_dataset> --resume <path_to_trained_model_checkpoint>`
+`python main.py -m test --config=configs/ssd300_vgg_voc_int8.json --data <path_to_dataset> --resume <path_to_trained_model_checkpoint>`
 If you want to validate an FP32 model checkpoint, make sure the compression algorithm settings are empty in the configuration file or `pretrained=True` is set.
 
 **WARNING**: The samples use `torch.load` functionality for checkpoint loading which, in turn, uses pickle facilities by default which are known to be vulnerable to arbitrary code execution attacks. **Only load the data you trust**
