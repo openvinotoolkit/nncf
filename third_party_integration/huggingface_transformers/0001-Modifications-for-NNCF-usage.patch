@@ -1,4 +1,4 @@
-From 4e4bbd43ef22f6c6dd40732d038b2ebe01fbc87c Mon Sep 17 00:00:00 2001
+From 51d68f53847816391e7758595c35ff0e32b8ef03 Mon Sep 17 00:00:00 2001
 From: Vasily Shamporov <vasily.shamporov@intel.com>
 Date: Mon, 2 Aug 2021 17:46:48 +0300
 Subject: [PATCH] Modifications for NNCF usage
@@ -7,7 +7,7 @@ Subject: [PATCH] Modifications for NNCF usage
  examples/pytorch/language-modeling/run_clm.py | 75 +++++++++++++++----
  examples/pytorch/question-answering/run_qa.py | 63 ++++++++++++++--
  .../pytorch/text-classification/run_glue.py   | 70 ++++++++++++++---
- .../pytorch/text-classification/run_xnli.py   | 68 +++++++++++++++--
+ .../pytorch/text-classification/run_xnli.py   | 69 +++++++++++++++--
  nncf_bert_config_squad.json                   | 44 +++++++++++
  ...config_squad_magnitude_sparsity_cubic.json | 31 ++++++++
  nncf_bert_config_xnli.json                    | 36 +++++++++
@@ -19,7 +19,7 @@ Subject: [PATCH] Modifications for NNCF usage
  src/transformers/trainer.py                   | 71 ++++++++++++++++--
  src/transformers/trainer_callback.py          |  2 +
  src/transformers/training_args.py             |  6 ++
- 15 files changed, 605 insertions(+), 49 deletions(-)
+ 15 files changed, 606 insertions(+), 49 deletions(-)
  create mode 100644 nncf_bert_config_squad.json
  create mode 100644 nncf_bert_config_squad_magnitude_sparsity_cubic.json
  create mode 100644 nncf_bert_config_xnli.json
@@ -381,10 +381,10 @@ index 6e66af923..71fda991f 100755
      if training_args.do_train:
          checkpoint = None
 diff --git a/examples/pytorch/text-classification/run_xnli.py b/examples/pytorch/text-classification/run_xnli.py
-index d7e5dfd83..75cfc0b70 100755
+index d7e5dfd83..f45eee787 100755
 --- a/examples/pytorch/text-classification/run_xnli.py
 +++ b/examples/pytorch/text-classification/run_xnli.py
-@@ -26,9 +26,13 @@ from typing import Optional
+@@ -26,9 +26,14 @@ from typing import Optional
  
  import datasets
  import numpy as np
@@ -395,10 +395,11 @@ index d7e5dfd83..75cfc0b70 100755
 +from nncf import NNCFConfig
 +from nncf.config.structures import QuantizationRangeInitArgs
 +from nncf.torch.initialization import PTInitializingDataLoader
++
  from transformers import (
      AutoConfig,
      AutoModelForSequenceClassification,
-@@ -41,6 +45,7 @@ from transformers import (
+@@ -41,6 +46,7 @@ from transformers import (
      default_data_collator,
      set_seed,
  )
@@ -406,7 +407,7 @@ index d7e5dfd83..75cfc0b70 100755
  from transformers.trainer_utils import get_last_checkpoint
  from transformers.utils import check_min_version
  from transformers.utils.versions import require_version
-@@ -250,14 +255,6 @@ def main():
+@@ -250,14 +256,6 @@ def main():
          revision=model_args.model_revision,
          use_auth_token=True if model_args.use_auth_token else None,
      )
@@ -421,7 +422,7 @@ index d7e5dfd83..75cfc0b70 100755
  
      # Preprocessing the datasets
      # Padding strategy
-@@ -331,6 +328,56 @@ def main():
+@@ -331,6 +329,56 @@ def main():
      else:
          data_collator = None
  
@@ -478,7 +479,7 @@ index d7e5dfd83..75cfc0b70 100755
      # Initialize our Trainer
      trainer = Trainer(
          model=model,
-@@ -340,8 +387,13 @@ def main():
+@@ -340,8 +388,13 @@ def main():
          compute_metrics=compute_metrics,
          tokenizer=tokenizer,
          data_collator=data_collator,
@@ -819,7 +820,7 @@ index 000000000..edbe0f84d
 +    }
 +}
 diff --git a/src/transformers/modeling_utils.py b/src/transformers/modeling_utils.py
-index b34637b02..cbe06b06d 100644
+index b34637b02..02f18dd11 100644
 --- a/src/transformers/modeling_utils.py
 +++ b/src/transformers/modeling_utils.py
 @@ -23,6 +23,7 @@ from dataclasses import dataclass
@@ -868,7 +869,7 @@ index b34637b02..cbe06b06d 100644
  
 -
 +import nncf
-+@nncf.register_module()
++@nncf.torch.register_module()
  class Conv1D(nn.Module):
      """
      1D-convolutional layer as defined by Radford et al. for OpenAI GPT (and also used in GPT-2).

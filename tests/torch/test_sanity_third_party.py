@@ -28,7 +28,7 @@ DATASET_PATH = os.path.join(PROJECT_ROOT, "tests", "torch", "data", "mock_datase
 
 
 def create_command_line(args, venv_activate, python=sys.executable, cuda_string=""):
-    line = ". {venv_activate} && {cuda} {python_exe} {args}" \
+    line = "{venv_activate} && {cuda} {python_exe} {args}" \
         .format(venv_activate=venv_activate, cuda=cuda_string, args=args, python_exe=python)
     return line
 
@@ -92,7 +92,8 @@ class TestTransformers:
         pip_runner.run_pip("install .", cwd=self.TRANSFORMERS_REPO_PATH)
         pip_runner.run_pip("install -e \".[testing]\"", cwd=self.TRANSFORMERS_REPO_PATH)
         for sample_folder in ['question-answering', 'text-classification', 'language-modeling']:
-            pip_runner.run_pip(f"install -r examples/pytorch/{sample_folder}/requirements.txt", cwd=self.TRANSFORMERS_REPO_PATH)
+            pip_runner.run_pip(f"install -r examples/pytorch/{sample_folder}/requirements.txt",
+                               cwd=self.TRANSFORMERS_REPO_PATH)
         pip_runner.run_pip("install boto3", cwd=self.TRANSFORMERS_REPO_PATH)
         subprocess.run(
             "{} && {} setup.py develop".format(self.VENV_ACTIVATE, self.PYTHON_EXECUTABLE), check=True,
@@ -101,10 +102,10 @@ class TestTransformers:
     @pytest.mark.dependency(depends=['install_trans'], name='xnli_train')
     def test_xnli_train(self, temp_folder):
         com_line = "examples/pytorch/text-classification/run_xnli.py --model_name_or_path bert-base-chinese" \
-                   " --language zh --train_language zh --do_train --data_dir {} --per_gpu_train_batch_size 24" \
+                   " --language zh --train_language zh --do_train --per_gpu_train_batch_size 24" \
                    " --learning_rate 5e-5 --num_train_epochs 1.0 --max_seq_length 128 --output_dir {}" \
                    " --save_steps 200 --nncf_config nncf_bert_config_xnli.json" \
-            .format(DATASET_PATH, os.path.join(temp_folder["models"], "xnli"))
+            .format(os.path.join(temp_folder["models"], "xnli"))
         runner = Command(create_command_line(com_line, self.VENV_ACTIVATE, self.PYTHON_EXECUTABLE,
                                              self.CUDA_VISIBLE_STRING), self.TRANSFORMERS_REPO_PATH)
         runner.run()
@@ -113,9 +114,9 @@ class TestTransformers:
     @pytest.mark.dependency(depends=['install_trans', 'xnli_train'])
     def test_xnli_eval(self, temp_folder):
         com_line = "examples/pytorch/text-classification/run_xnli.py --model_name_or_path {output}" \
-                   " --language zh --do_eval --data_dir {} --learning_rate 5e-5 --max_seq_length 128 --output_dir" \
+                   " --language zh --do_eval --learning_rate 5e-5 --max_seq_length 128 --output_dir" \
                    " {output} --nncf_config nncf_bert_config_xnli.json --per_gpu_eval_batch_size 24" \
-            .format(DATASET_PATH, output=os.path.join(temp_folder["models"], "xnli"))
+            .format(output=os.path.join(temp_folder["models"], "xnli"))
         runner = Command(create_command_line(com_line, self.VENV_ACTIVATE, self.PYTHON_EXECUTABLE,
                                              self.CUDA_VISIBLE_STRING), self.TRANSFORMERS_REPO_PATH)
         runner.run()
@@ -147,11 +148,11 @@ class TestTransformers:
     @pytest.mark.dependency(depends=['install_trans'], name='glue_roberta_train')
     def test_glue_train(self, temp_folder):
         com_line = "examples/pytorch/text-classification/run_glue.py --model_name_or_path" \
-                   " roberta-large-mnli --task_name mnli --do_train --data_dir {}/glue/glue_data/MNLI" \
+                   " roberta-large-mnli --task_name mnli --do_train " \
                    " --per_gpu_train_batch_size 4 --learning_rate 2e-5 --num_train_epochs 1.0 --max_seq_length 128 " \
                    "--output_dir {} --save_steps 200 --nncf_config" \
                    " nncf_roberta_config_mnli.json" \
-            .format(DATASET_PATH, os.path.join(temp_folder["models"], "roberta_mnli"))
+            .format(os.path.join(temp_folder["models"], "roberta_mnli"))
         runner = Command(create_command_line(com_line, self.VENV_ACTIVATE, self.PYTHON_EXECUTABLE,
                                              self.CUDA_VISIBLE_STRING), self.TRANSFORMERS_REPO_PATH)
         runner.run()
@@ -160,10 +161,10 @@ class TestTransformers:
     @pytest.mark.dependency(depends=['install_trans', 'glue_roberta_train'])
     def test_glue_eval(self, temp_folder):
         com_line = "examples/pytorch/text-classification/run_glue.py --model_name_or_path {output}" \
-                   " --task_name mnli --do_eval --data_dir {}/glue/glue_data/MNLI --learning_rate 2e-5" \
+                   " --task_name mnli --do_eval --learning_rate 2e-5" \
                    " --num_train_epochs 1.0 --max_seq_length 128 --output_dir {output}" \
                    " --nncf_config nncf_roberta_config_mnli.json" \
-            .format(DATASET_PATH, output=os.path.join(temp_folder["models"], "roberta_mnli"))
+            .format(output=os.path.join(temp_folder["models"], "roberta_mnli"))
         runner = Command(create_command_line(com_line, self.VENV_ACTIVATE, self.PYTHON_EXECUTABLE,
                                              self.CUDA_VISIBLE_STRING), self.TRANSFORMERS_REPO_PATH)
         runner.run()
@@ -172,10 +173,10 @@ class TestTransformers:
     def test_glue_distilbert_train(self, temp_folder):
         com_line = "examples/pytorch/text-classification/run_glue.py --model_name_or_path" \
                    " distilbert-base-uncased" \
-                   " --task_name SST-2 --do_train --max_seq_length 128 --per_gpu_train_batch_size 8" \
-                   " --data_dir {}/glue/glue_data/SST-2 --learning_rate 5e-5 --num_train_epochs 3.0" \
+                   " --task_name sst2 --do_train --max_seq_length 128 --per_gpu_train_batch_size 8" \
+                   " --learning_rate 5e-5 --num_train_epochs 3.0" \
                    " --output_dir {} --save_steps 200 --nncf_config" \
-                   " nncf_distilbert_config_sst2.json".format(DATASET_PATH, os.path.join(temp_folder["models"],
+                   " nncf_distilbert_config_sst2.json".format(os.path.join(temp_folder["models"],
                                                                                          "distilbert_output"))
         runner = Command(create_command_line(com_line, self.VENV_ACTIVATE, self.PYTHON_EXECUTABLE,
                                              self.CUDA_VISIBLE_STRING), self.TRANSFORMERS_REPO_PATH)
@@ -185,10 +186,10 @@ class TestTransformers:
     @pytest.mark.dependency(depends=['install_trans', 'glue_distilbert_train'])
     def test_glue_distilbert_eval(self, temp_folder):
         com_line = "examples/pytorch/text-classification/run_glue.py --model_name_or_path {output}" \
-                   " --task_name SST-2 --do_eval --max_seq_length 128" \
-                   " --output_dir {output} --data_dir {}/glue/glue_data/SST-2" \
+                   " --task_name sst2 --do_eval --max_seq_length 128" \
+                   " --output_dir {output} " \
                    " --nncf_config nncf_distilbert_config_sst2.json" \
-            .format(DATASET_PATH, output=os.path.join(temp_folder["models"], "distilbert_output"))
+            .format(output=os.path.join(temp_folder["models"], "distilbert_output"))
         runner = Command(create_command_line(com_line, self.VENV_ACTIVATE, self.PYTHON_EXECUTABLE,
                                              self.CUDA_VISIBLE_STRING), self.TRANSFORMERS_REPO_PATH)
         runner.run()
