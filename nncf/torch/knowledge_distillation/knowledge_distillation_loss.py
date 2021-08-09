@@ -78,8 +78,6 @@ class KnowledgeDistillationLoss(PTCompressionLoss):
 
         orig_model_loss_outputs = list(map(lambda x: x.getter(), filter(
             match_fn, orig_model_outputs_nested_obj_indexing.get_flat_nested_obj_indexing())))
-        if len(orig_model_loss_outputs) == 0 or len(compressed_model_loss_outputs) == 0:
-            return torch.zeros([], device='cpu')
         return reduce(
             lambda kd_loss, loss_tensors: kd_loss + kd_loss_fn(loss_tensors[0], loss_tensors[1]),
             zip(orig_model_loss_outputs, compressed_model_loss_outputs),
@@ -103,8 +101,7 @@ class KnowledgeDistillationLoss(PTCompressionLoss):
         """
         loss = self._kd_loss_handler.get_kd_loss()
         if len(loss) == 0:
-            warnings.warn("Empty list of loss tensors for Knowledge Distillation Loss.", RuntimeWarning)
-            return torch.zeros([])
+            raise RuntimeError("Knowledge Distillation Loss is not calculated.")
         for idx, _ in enumerate(loss):
             loss[idx] = loss[idx].unsqueeze(0)
         output = torch.cat(loss).mean()

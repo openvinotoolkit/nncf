@@ -47,8 +47,8 @@ def get_model_device(inference_type, gpu):
 
 
 def get_kd_config(config: NNCFConfig) -> NNCFConfig:
-    if isinstance(config['compression'], dict):
-        config['compression'] = [config['compression']]
+    if isinstance(config.get('compression', {}), dict):
+        config['compression'] = [config['compression']] if config.get('compression', None) is not None else []
     config['compression'].append({
         'algorithm': 'knowledge_distillation',
         'type': 'mse'
@@ -278,3 +278,71 @@ def test_kd_sparsity_statistics(algo: str):
            getattr(statistics_with_kd, algo).model_statistics.sparsity_level
     assert getattr(statistics, algo).model_statistics.sparsity_level_for_layers ==\
            getattr(statistics_with_kd, algo).model_statistics.sparsity_level_for_layers
+
+
+@pytest.mark.parametrize("device_placing", ['before', 'after'])
+@pytest.mark.parametrize("inference_type", ['cpu', 'single_GPU', 'DP', 'DDP'])
+def test_model_device_before_create_compressed_model(device_placing, inference_type):
+    if not torch.cuda.is_available() and not inference_type == 'cpu':
+        return
+    input_size = [1, 1, 8, 8]
+    config = NNCFConfig()
+    config = get_kd_config(config)
+    config.update({
+        "input_info":
+            {
+                "sample_size": input_size,
+            },
+        }
+    )
+    if inference_type == 'DDP':
+        ngpus_per_node = torch.cuda.device_count()
+        config.world_size = ngpus_per_node
+        torch.multiprocessing.spawn(run_training_for_device_testing,
+                                    nprocs=ngpus_per_node,
+                                    args=(config, inference_type, ngpus_per_node, device_placing),
+                                    join=True)
+    else:
+        run_training_for_device_testing(None, config, inference_type, None, device_placing=device_placing)
+
+
+def run_training_for_device_testing(gpu, config: NNCFConfig, inference_type: str, ngpus_per_node: int,
+                                    device_placing: str):
+    number_of_iters = 1
+    batch_size = 1 if torch.cuda.device_count() == 0 else torch.cuda.device_count()
+    config['input_info']['sample_size'] = [1, 1, 8, 8]
+    if inference_type == 'DDP':
+        distributed_init_test_default(gpu, ngpus_per_node, config)
+        mock_dataloader = create_rank_dataloader(config, gpu, batch_size * number_of_iters, batch_size=batch_size)
+    else:
+        mock_dataloader = create_ones_mock_dataloader(config, num_samples=batch_size * number_of_iters,
+                                                      batch_size=batch_size)
+    model_device = get_model_device(inference_type, gpu)
+    model = TwoConvTestModel()
+    fill_params_of_model_by_normal(model, std=0.5)
+
+    if device_placing == 'before':
+        model.to(model_device)
+
+    model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
+
+    if inference_type == 'DDP':
+        model = post_compression_test_distr_init(compression_ctrl, config, ngpus_per_node, model)
+    elif inference_type == 'DP':
+        model = torch.nn.DataParallel(model)
+
+    optimizer = SGD(model.parameters(), lr=1e-02)
+    model.train()
+    output_storage = []
+
+    if device_placing == 'after':
+        model.to(model_device)
+
+    for _, (input_, __) in enumerate(mock_dataloader):
+        input_ = input_.to(next(model.parameters()).device)
+        output = model(input_)
+        output_storage.append(output)
+        loss = compression_ctrl.loss()
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
