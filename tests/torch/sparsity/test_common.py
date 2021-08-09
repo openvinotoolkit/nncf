@@ -14,7 +14,9 @@ from typing import List
 from typing import Optional
 
 import pytest
+import torch
 
+from nncf import NNCFConfig
 from nncf.api.compression import CompressionStage
 from nncf.common.compression import BaseCompressionAlgorithmController as BaseController
 from nncf.common.compression import BaseControllerStateNames
@@ -384,3 +386,30 @@ def test_sparsity_statistics_add_module(algo):
            getattr(statistics_after, algo).model_statistics.sparsity_level
     assert getattr(statistics_before, algo).model_statistics.sparsity_level_for_layers == \
            getattr(statistics_after, algo).model_statistics.sparsity_level_for_layers
+
+
+class EmbeddingOnlyModel(torch.nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.embedding = torch.nn.Embedding(10, 10)
+
+    def forward(self, x):
+        return self.embedding(x)
+
+@pytest.mark.parametrize('algo',
+                         ('magnitude_sparsity', 'rb_sparsity'))
+def test_can_sparsify_embedding(algo):
+    config = {
+        "input_info": {
+            "sample_size": [1, 10],
+            "type": "long"
+        }
+    }
+    sparsity_init = 0.5
+    config['compression'] = {'algorithm': algo, 'sparsity_init': sparsity_init}
+    nncf_config = NNCFConfig.from_dict(config)
+    model = EmbeddingOnlyModel()
+    model, compression_ctrl = create_compressed_model_and_algo_for_test(model, nncf_config)
+
+    # Should pass
+    stats = compression_ctrl.statistics()
