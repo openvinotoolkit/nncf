@@ -179,7 +179,7 @@ class AdaptiveCompressionTrainingLoop(TrainingLoop):
 
         if isinstance(compression_controller, CompositeCompressionAlgorithmController):
             for controller in compression_controller.child_ctrls:
-                for algo_name, ctrl_type in adaptive_compression_controllers.items():
+                for ctrl_type in adaptive_compression_controllers.values():
                     if isinstance(controller, ctrl_type):
                         return controller, accuracy_aware_training_params
         elif isinstance(compression_controller, CompressionAlgorithmController):
