@@ -119,17 +119,16 @@ class EarlyExitCompressionTrainingLoop(TrainingLoop):
     def _get_backend_specific_training_runner_cls(compression_controller: CompressionAlgorithmController):
         nncf_backend = infer_backend_from_compression_controller(compression_controller)
         if nncf_backend is BackendType.TORCH:
-            from nncf.torch.accuracy_aware_training.runner import PTBaseTrainingRunner
-            return PTBaseTrainingRunner
+            from nncf.torch.accuracy_aware_training.runner import PTAccuracyAwareTrainingRunner
+            return PTAccuracyAwareTrainingRunner
         if nncf_backend == BackendType.TENSORFLOW:
-            from nncf.tensorflow.accuracy_aware_training.runner import TFBaseTrainingRunner
-            return TFBaseTrainingRunner
+            from nncf.tensorflow.accuracy_aware_training.runner import TFAccuracyAwareTrainingRunner
+            return TFAccuracyAwareTrainingRunner
         raise RuntimeError('Got an unsupported value of nncf_backend')
 
     @staticmethod
     def _get_early_exit_params(nncf_config: NNCFConfig) -> Dict:
-        accuracy_aware_config = nncf_config.get('accuracy_aware_training', {})
-        early_exit_params = accuracy_aware_config.get('params', {})
+        early_exit_params = extract_accuracy_aware_training_params(nncf_config)
         return early_exit_params
 
 
@@ -167,11 +166,11 @@ class AdaptiveCompressionTrainingLoop(TrainingLoop):
         nncf_backend = infer_backend_from_compression_controller(compression_controller)
 
         if nncf_backend is BackendType.TORCH:
-            from nncf.torch.accuracy_aware_training.runner import PTAccuracyAwareTrainingRunner
-            return PTAccuracyAwareTrainingRunner
+            from nncf.torch.accuracy_aware_training.runner import PTAdaptiveCompressionLevelTrainingRunner
+            return PTAdaptiveCompressionLevelTrainingRunner
         if nncf_backend == BackendType.TENSORFLOW:
-            from nncf.tensorflow.accuracy_aware_training.runner import TFAccuracyAwareTrainingRunner
-            return TFAccuracyAwareTrainingRunner
+            from nncf.tensorflow.accuracy_aware_training.runner import TFAdaptiveCompressionLevelTrainingRunner
+            return TFAdaptiveCompressionLevelTrainingRunner
         raise RuntimeError('Got an unsupported value of nncf_backend')
 
     def _get_adaptive_compression_ctrl(self, compression_controller, nncf_config):
@@ -179,17 +178,16 @@ class AdaptiveCompressionTrainingLoop(TrainingLoop):
         accuracy_aware_training_params = extract_accuracy_aware_training_params(nncf_config)
 
         if isinstance(compression_controller, CompositeCompressionAlgorithmController):
-            # TODO:(kshpv) check if both algo in the config
-            if 'filter_pruning' in adaptive_compression_controllers['algo_name'] and \
-                    'sparsity' in adaptive_compression_controllers['algo_name']:
-                raise RuntimeError('No compression algorithm that supports adaptive compression '
-                                   'accuracy-aware training was specified')
-
             for controller in compression_controller.child_ctrls:
-                if controller in adaptive_compression_controllers:
-                    return controller, accuracy_aware_training_params
+                for algo_name, ctrl_type in adaptive_compression_controllers.items():
+                    if isinstance(controller, ctrl_type):
+                        return controller, accuracy_aware_training_params
+        elif isinstance(compression_controller, CompressionAlgorithmController):
+            if compression_controller.name in adaptive_compression_controllers:
+                return compression_controller, accuracy_aware_training_params
 
-        return compression_controller, accuracy_aware_training_params
+        raise RuntimeError('No compression algorithm that supports adaptive compression '
+                           'accuracy-aware training was specified')
 
     def _adaptive_compression_controllers(self):
         def remove_registry_prefix(algo_name):

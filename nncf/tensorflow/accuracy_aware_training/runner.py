@@ -16,15 +16,16 @@ import os.path as osp
 import tensorflow as tf
 
 from nncf.common.utils.logger import logger as nncf_logger
-from nncf.common.accuracy_aware_training.runner import BaseTrainingRunner
 from nncf.common.accuracy_aware_training.runner import BaseAccuracyAwareTrainingRunner
+from nncf.common.accuracy_aware_training.runner import BaseAdaptiveCompressionLevelTrainingRunner
 from nncf.common.utils.helpers import configure_accuracy_aware_paths
 
 
-class TFBaseTrainingRunner(BaseTrainingRunner):
+class TFAccuracyAwareTrainingRunner(BaseAccuracyAwareTrainingRunner):
     """
     The Training Runner implementation for TensorFlow training code.
     """
+
     # TODO(kshpv):: Should remove  *lr_updates_needed* param or keep it to save consistency with
     #  PyTorch?
     def __init__(self, training_params, verbose=True,
@@ -108,22 +109,23 @@ class TFBaseTrainingRunner(BaseTrainingRunner):
         pass
 
 
-class TFAccuracyAwareTrainingRunner(TFBaseTrainingRunner, BaseAccuracyAwareTrainingRunner):
+class TFAdaptiveCompressionLevelTrainingRunner(TFAccuracyAwareTrainingRunner,
+                                               BaseAdaptiveCompressionLevelTrainingRunner):
 
     def __init__(self, accuracy_aware_params, lr_updates_needed=True, verbose=True,
                  minimal_compression_rate=0.05, maximal_compression_rate=0.95,
                  validate_every_n_epochs=None, dump_checkpoints=True):
-        TFBaseTrainingRunner.__init__(self, accuracy_aware_params,
-                                      verbose,
-                                      validate_every_n_epochs,
-                                      dump_checkpoints,
-                                      lr_updates_needed)
-        BaseAccuracyAwareTrainingRunner.__init__(self, accuracy_aware_params,
-                                                 verbose,
-                                                 minimal_compression_rate,
-                                                 maximal_compression_rate,
-                                                 validate_every_n_epochs,
-                                                 dump_checkpoints)
+        TFAccuracyAwareTrainingRunner.__init__(self, accuracy_aware_params,
+                                               verbose,
+                                               validate_every_n_epochs,
+                                               dump_checkpoints,
+                                               lr_updates_needed)
+        BaseAdaptiveCompressionLevelTrainingRunner.__init__(self, accuracy_aware_params,
+                                                            verbose,
+                                                            minimal_compression_rate,
+                                                            maximal_compression_rate,
+                                                            validate_every_n_epochs,
+                                                            dump_checkpoints)
 
     def update_training_history(self, compression_rate, best_metric_value):
         best_accuracy_budget = best_metric_value - self.minimal_tolerable_accuracy

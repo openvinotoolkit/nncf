@@ -11,6 +11,7 @@
  limitations under the License.
 """
 
+from typing import Dict
 from typing import TypeVar
 from abc import ABC
 from abc import abstractmethod
@@ -45,11 +46,13 @@ class TrainingRunner(ABC):
         """
 
     @abstractmethod
-    def dump_checkpoint(self, model: ModelType):
+    def dump_checkpoint(self, model: ModelType, compression_controller: CompressionAlgorithmController):
         """
         Dump current model checkpoint on disk.
 
         :param model: The model to be saved
+        :param compression_controller: The compression controller to be used during
+        model fine-tuning
         """
 
     @abstractmethod
@@ -92,16 +95,16 @@ class TrainingRunner(ABC):
         """
 
 
-class BaseTrainingRunner(TrainingRunner):
+class BaseAccuracyAwareTrainingRunner(TrainingRunner):
     """
-    The base training Runner object, initialized with the default
-    parameter values unless specified in the config.
+    The base accuracy-aware training Runner object,
+    initialized with the default parameters unless specified in the config.
     """
 
-    def __init__(self, training_params, verbose=True,
+    def __init__(self, accuracy_aware_params: Dict[str, object], verbose=True,
                  validate_every_n_epochs=None, dump_checkpoints=True):
-        self.maximal_accuracy_drop = training_params.get('maximal_accuracy_degradation', 1.0)
-        self.maximal_total_epochs = training_params.get('maximal_total_epochs', float('inf'))
+        self.maximal_accuracy_drop = accuracy_aware_params.get('maximal_accuracy_degradation', 1.0)
+        self.maximal_total_epochs = accuracy_aware_params.get('maximal_total_epochs', float('inf'))
 
         self.verbose = verbose
         self.validate_every_n_epochs = validate_every_n_epochs
@@ -125,13 +128,13 @@ class BaseTrainingRunner(TrainingRunner):
         self._log_dir = log_dir
 
 
-class BaseAccuracyAwareTrainingRunner(BaseTrainingRunner):
+class BaseAdaptiveCompressionLevelTrainingRunner(BaseAccuracyAwareTrainingRunner):
     """
-    The base accuracy-aware training Runner object, initialized with the default
-    accuracy-aware parameter values unless specified in the config.
+    The base adaptive compression level accuracy-aware training Runner object,
+    initialized with the default parameters unless specified in the config.
     """
 
-    def __init__(self, accuracy_aware_params, verbose=True,
+    def __init__(self, accuracy_aware_params: Dict[str, object], verbose=True,
                  minimal_compression_rate=0.05, maximal_compression_rate=0.95,
                  validate_every_n_epochs=None, dump_checkpoints=True):
         super().__init__(accuracy_aware_params, verbose, validate_every_n_epochs, dump_checkpoints)

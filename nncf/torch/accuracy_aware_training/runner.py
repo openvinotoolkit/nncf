@@ -37,12 +37,13 @@ from nncf.torch.accuracy_aware_training.utils import is_main_process
 from nncf.common.utils.helpers import configure_accuracy_aware_paths
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.common.utils.tensorboard import prepare_for_tensorboard
-from nncf.common.accuracy_aware_training.runner import BaseTrainingRunner
 from nncf.common.accuracy_aware_training.runner import BaseAccuracyAwareTrainingRunner
+from nncf.common.accuracy_aware_training.runner import BaseAdaptiveCompressionLevelTrainingRunner
 
 
-class PTBaseTrainingRunner(BaseTrainingRunner):
+class PTAccuracyAwareTrainingRunner(BaseAccuracyAwareTrainingRunner):
     """
+    BaseAccuracyAwareTrainingRunner
     The Training Runner implementation for PyTorch training code.
     """
 
@@ -94,7 +95,7 @@ class PTBaseTrainingRunner(BaseTrainingRunner):
 
         self.current_val_metric_value = None
         if self.validate_every_n_epochs is not None and \
-            self.training_epoch_count % self.validate_every_n_epochs == 0:
+                self.training_epoch_count % self.validate_every_n_epochs == 0:
             self.current_val_metric_value = self.validate(model)
 
         if is_main_process():
@@ -175,8 +176,8 @@ class PTBaseTrainingRunner(BaseTrainingRunner):
             image = ToTensor()(image)
             if self._tensorboard_writer is not None:
                 self._tensorboard_writer.add_image('compression/accuracy_aware/acc_budget_vs_comp_rate',
-                                                image,
-                                                global_step=len(self.compressed_training_history))
+                                                   image,
+                                                   global_step=len(self.compressed_training_history))
 
     @property
     def compressed_training_history(self):
@@ -191,7 +192,8 @@ class PTBaseTrainingRunner(BaseTrainingRunner):
         load_state(model, resuming_model_state_dict, is_resume=True)
 
 
-class PTAccuracyAwareTrainingRunner(PTBaseTrainingRunner, BaseAccuracyAwareTrainingRunner):
+class PTAdaptiveCompressionLevelTrainingRunner(PTAccuracyAwareTrainingRunner,
+                                               BaseAdaptiveCompressionLevelTrainingRunner):
     def __init__(self, accuracy_aware_training_params,
                  lr_updates_needed=True, verbose=True,
                  minimal_compression_rate=0.05,
@@ -199,17 +201,17 @@ class PTAccuracyAwareTrainingRunner(PTBaseTrainingRunner, BaseAccuracyAwareTrain
                  validate_every_n_epochs=None,
                  dump_checkpoints=True):
 
-        PTBaseTrainingRunner.__init__(self, accuracy_aware_training_params,
-                                      lr_updates_needed, verbose,
-                                      validate_every_n_epochs,
-                                      dump_checkpoints)
+        PTAccuracyAwareTrainingRunner.__init__(self, accuracy_aware_training_params,
+                                               lr_updates_needed, verbose,
+                                               validate_every_n_epochs,
+                                               dump_checkpoints)
 
-        BaseAccuracyAwareTrainingRunner.__init__(self, accuracy_aware_training_params,
-                                                 verbose,
-                                                 minimal_compression_rate=minimal_compression_rate,
-                                                 maximal_compression_rate=maximal_compression_rate,
-                                                 validate_every_n_epochs=validate_every_n_epochs,
-                                                 dump_checkpoints=dump_checkpoints)
+        BaseAdaptiveCompressionLevelTrainingRunner.__init__(self, accuracy_aware_training_params,
+                                                            verbose,
+                                                            minimal_compression_rate=minimal_compression_rate,
+                                                            maximal_compression_rate=maximal_compression_rate,
+                                                            validate_every_n_epochs=validate_every_n_epochs,
+                                                            dump_checkpoints=dump_checkpoints)
 
     def update_training_history(self, compression_rate, best_metric_value):
         best_accuracy_budget = best_metric_value - self.minimal_tolerable_accuracy

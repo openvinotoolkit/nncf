@@ -202,6 +202,7 @@ def test_early_exit_training_loop(max_accuracy_degradation,
 )
 def test_early_exit_with_mock_validation(max_accuracy_degradation, exit_epoch_number,
                                          maximal_total_epochs=100):
+    epoch_counter = 0
 
     def mock_validate_fn(model, init_step=False, epoch=0):
         original_metric = 0.85
@@ -211,7 +212,6 @@ def test_early_exit_with_mock_validation(max_accuracy_degradation, exit_epoch_nu
         epoch_counter = epoch
         return original_metric * (1 - 0.01 * max_accuracy_degradation) * (epoch / exit_epoch_number)
 
-    epoch_counter = 0
     config = get_quantization_config_without_range_init(LeNet.INPUT_SIZE[-1])
 
     params = {

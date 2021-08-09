@@ -153,16 +153,22 @@ def extract_bn_adaptation_init_params(config: NNCFConfig, algo_name: str) -> Dic
 
 
 def extract_accuracy_aware_training_params(config: NNCFConfig) -> Dict[str, object]:
+    """
+    Extracts accuracy aware training parameters from NNCFConfig.
+
+    :param: config: An instance of the NNCFConfig.
+    :return: Accuracy aware training parameters.
+    """
     class NNCFAlgorithmNames:
         QUANTIZATION = 'quantization'
         FILTER_PRUNING = 'filter_pruning'
-        SPARSITY = ['rb_sparsity', 'magnitude_sparsity']
+        SPARSITY = ['rb_sparsity', 'magnitude_sparsity', 'const_sparsity']
 
     def validate_accuracy_aware_schema(config: NNCFConfig, params: Dict[str, object]):
         from nncf.common.accuracy_aware_training import AccuracyAwareTrainingMode
         if params["mode"] == AccuracyAwareTrainingMode.EARLY_EXIT:
             return
-        elif params["mode"] == AccuracyAwareTrainingMode.ADAPTIVE_COMPRESSION_LEVEL:
+        if params["mode"] == AccuracyAwareTrainingMode.ADAPTIVE_COMPRESSION_LEVEL:
             algorithms = extract_algorithm_names(config)
             if NNCFAlgorithmNames.FILTER_PRUNING in algorithms and \
                     any(algo in NNCFAlgorithmNames.SPARSITY for algo in algorithms):

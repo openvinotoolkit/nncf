@@ -121,7 +121,7 @@ def create_compressed_model(model: Module,
     target_scopes = config.get('target_scopes')
 
     original_model_accuracy = None
-    if is_accuracy_aware_training(config) is not None:
+    if is_accuracy_aware_training(config):
         if config.has_extra_struct(ModelEvaluationArgs):
             evaluation_args = config.get_extra_struct(ModelEvaluationArgs)
             with torch.no_grad():

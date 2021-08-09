@@ -27,10 +27,16 @@ class AccuracyAwareTrainingMode:
 def create_accuracy_aware_training_loop(nncf_config: NNCFConfig,
                                         compression_ctrl: CompressionAlgorithmController,
                                         **kwargs) -> TrainingLoop:
+    """
+    Creates an accuracy aware training loop corresponding to NNCFConfig and CompressionAlgorithmController.
+    :param: nncf_config: An instance of the NNCFConfig.
+    :compression_ctrl: An instance of thr CompressionAlgorithmController.
+    :return: Accuracy aware training loop.
+    """
     accuracy_aware_training_params = extract_accuracy_aware_training_params(nncf_config)
     accuracy_aware_training_mode = accuracy_aware_training_params.get('mode')
     if accuracy_aware_training_mode == AccuracyAwareTrainingMode.EARLY_EXIT:
         return EarlyExitCompressionTrainingLoop(nncf_config, compression_ctrl, **kwargs)
     if accuracy_aware_training_mode == AccuracyAwareTrainingMode.ADAPTIVE_COMPRESSION_LEVEL:
         return AdaptiveCompressionTrainingLoop(nncf_config, compression_ctrl, **kwargs)
-    raise RuntimeError('Incorrect accuracy aware mode')
+    raise RuntimeError('Incorrect accuracy aware mode in the config file')
