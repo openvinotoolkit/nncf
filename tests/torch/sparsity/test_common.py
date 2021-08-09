@@ -412,4 +412,4 @@ def test_can_sparsify_embedding(algo):
     model, compression_ctrl = create_compressed_model_and_algo_for_test(model, nncf_config)
 
     # Should pass
-    stats = compression_ctrl.statistics()
+    _ = compression_ctrl.statistics()
