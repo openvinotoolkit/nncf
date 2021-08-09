@@ -573,6 +573,7 @@ def openvino_preinstall(openvino):
         subprocess.run(f'{venv_activate_string} && {MO_VENV_DIR}/bin/pip install -r requirements_tf2.txt',
                        cwd=MO_DIR, check=True, shell=True, executable='/bin/bash')
         subprocess.run('pip install scikit-image!=0.18.2rc1', cwd=ACC_CHECK_DIR, check=True, shell=True)
+        subprocess.run('pip install opencv-python', cwd=ACC_CHECK_DIR, check=True, shell=True)
         subprocess.run(f'{sys.executable} setup.py install', cwd=ACC_CHECK_DIR, check=True, shell=True)
 
 
