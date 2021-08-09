@@ -20,7 +20,7 @@ from tensorflow.python.keras import layers
 from nncf.common.hardware.config import HWConfigType
 from nncf.tensorflow.quantization.utils import collect_fake_quantize_layers
 from tests.tensorflow.helpers import create_compressed_model_and_algo_for_test
-from tests.tensorflow.quantization.utils import get_basic_asym_quantization_config
+from tests.tensorflow.quantization.utils import get_basic_quantization_config
 
 
 def get_single_concat_test_model(input_shapes):
@@ -85,7 +85,7 @@ CAT_UNIFIED_SCALE_TEST_STRUCTS = [(get_single_concat_test_model, 3),
                              itertools.product([x.value for x in HWConfigType],
                                                CAT_UNIFIED_SCALE_TEST_STRUCTS)])
 def test_unified_scales_with_concat(target_device, model_creator, ref_aq_module_count):
-    nncf_config = get_basic_asym_quantization_config()
+    nncf_config = get_basic_quantization_config()
     x_shape = [1, 4, 1, 1]
     y_shape = [1, 4, 1, 1]
     nncf_config["target_device"] = target_device
@@ -95,3 +95,35 @@ def test_unified_scales_with_concat(target_device, model_creator, ref_aq_module_
 
     non_weight_quantizers = len(collect_fake_quantize_layers(compressed_model))
     assert non_weight_quantizers == ref_aq_module_count
+
+
+def get_eltwise_quantizer_linking_test_model(input_shapes):
+    inputs = []
+    for i, input_shape in enumerate(input_shapes):
+        inputs.append(tf.keras.Input(shape=input_shape[1:], name='input_{}'.format(i + 1)))
+    # pylint: disable=unbalanced-tuple-unpacking
+    input_1, input_2 = inputs
+
+    def path(input_1, input_2):
+        retval0 = input_1 + input_2
+        retval1 = retval0 * input_2
+        retval2 = retval0 + retval1
+        return retval0, retval1, retval2
+
+    path1_results = path(input_1, input_2)
+    path2_results = path(input_1, input_2)
+    outputs =  tuple(x + y for x, y in zip(path1_results, path2_results))
+    return tf.keras.Model(inputs=inputs, outputs=outputs)
+
+
+def test_eltwise_unified_scales_for_vpu():
+    nncf_config = nncf_config = get_basic_quantization_config()
+    x_shape = [1, 1, 1, 1]
+    y_shape = [1, 1, 1, 1]
+    nncf_config["target_device"] = "VPU"
+
+    model = get_eltwise_quantizer_linking_test_model([x_shape, y_shape])
+    compressed_model, _ = create_compressed_model_and_algo_for_test(model, nncf_config, force_no_init=True)
+
+    non_weight_quantizers = len(collect_fake_quantize_layers(compressed_model))
+    assert non_weight_quantizers == 2
