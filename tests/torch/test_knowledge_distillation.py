@@ -64,7 +64,7 @@ def get_sparsity_config_with_sparsity_init(config: NNCFConfig, sparsity_init=0.5
 @pytest.mark.parametrize("inference_type", ['cpu', 'single_GPU', 'DP', 'DDP'])
 def test_knowledge_distillation_training_process(inference_type: str):
     if not torch.cuda.is_available() and not inference_type == 'cpu':
-        return
+        pytest.skip("Skipping CUDA test cases for CPU only setups")
     torch.manual_seed(1)
     input_size = [1, 1, 8, 8]
     sparsity_level = 0.3
@@ -284,7 +284,7 @@ def test_kd_sparsity_statistics(algo: str):
 @pytest.mark.parametrize("inference_type", ['cpu', 'single_GPU', 'DP', 'DDP'])
 def test_model_device_before_create_compressed_model(device_placing, inference_type):
     if not torch.cuda.is_available() and not inference_type == 'cpu':
-        return
+        pytest.skip("Skipping CUDA test cases for CPU only setups")
     input_size = [1, 1, 8, 8]
     config = NNCFConfig()
     config = get_kd_config(config)
