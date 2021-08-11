@@ -284,12 +284,11 @@ def test_quantize_inputs():
     model, _ = create_compressed_model_and_algo_for_test(model, config, force_no_init=True)
     ref_fake_quantize_layers_for_inputs = {
         'rescaling/fake_quantize',
-        'input_2/fake_quantize',
+        'input_2/fake_quantize/unified_scale_group',
         'input_3/fake_quantize',
-        'input_4/fake_quantize',
-        'input_5/fake_quantize'
+        'input_5/fake_quantize/unified_scale_group'
     }
-    ref_fake_quantize_layers = 17
+    ref_fake_quantize_layers = 12
 
     actual_fake_quantize_layers = {layer.name for layer in model.layers if isinstance(layer, FakeQuantize)}
     assert ref_fake_quantize_layers_for_inputs.issubset(actual_fake_quantize_layers)

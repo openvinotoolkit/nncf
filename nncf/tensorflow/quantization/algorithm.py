@@ -155,47 +155,52 @@ class TFQuantizationSetup:
 
     def __init__(self):
         super().__init__()
-        self.quantization_points = {}  # type: Dict[QuantizationPointId, TFQuantizationPoint]
-        self.unified_scale_groups = {}  # type: Dict[int, Set[QuantizationPointId]]
+        self._quantization_points = []  # type: List[TFQuantizationPoint]
+        self._unified_scale_groups = []  # type: List[Set[QuantizationPointId]]
+
+    def add_quantization_point(self, point: TFQuantizationPoint):
+        """
+        Adds quantization point to the setup
+        :param point: quantization point
+        """
+        self._quantization_points.append(point)
+
+    def register_unified_scale_group(self, point_ids: List[Set[QuantizationPointId]]):
+        """
+        Adds unified scale group to the setup
+        :param point_ids: quantization point indexes
+        """
+        self._unified_scale_groups.append(point_ids)
+
+    def __iter__(self):
+        return iter(self._quantization_points)
 
     def get_state(self) -> Dict:
         """
         Returns a dictionary with Python data structures (dict, list, tuple, str, int, float, True, False, None) that
         represents state of the object.
-
         :return: state of the object
         """
 
-        def set2list(pair):
-            i, qp_id_set = pair
-            return i, list(qp_id_set)
-
-        quantization_points_state = {qp_id: qp.get_state() for qp_id, qp in self.quantization_points.items()}
-        unified_scale_groups_state = dict(map(set2list, self.unified_scale_groups.items()))
+        quantization_points_state = [qp.get_state() for qp in self._quantization_points]
         return {
             self._state_names.QUANTIZATION_POINTS: quantization_points_state,
-            self._state_names.UNIFIED_SCALE_GROUPS: unified_scale_groups_state,
+            self._state_names.UNIFIED_SCALE_GROUPS: self._unified_scale_groups
         }
 
     @classmethod
     def from_state(cls, state: Dict) -> 'TFQuantizationSetup':
         """
         Creates the object from its state.
-
         :param state: Output of `get_state()` method.
         """
         setup = TFQuantizationSetup()
+        for quantization_point_state in state[cls._state_names.QUANTIZATION_POINTS]:
+            quantization_point = TFQuantizationPoint.from_state(quantization_point_state)
+            setup.add_quantization_point(quantization_point)
 
-        def decode_qp(pair):
-            str_qp_id, qp_state = pair
-            return int(str_qp_id), TFQuantizationPoint.from_state(qp_state)
-
-        def list2set(pair):
-            str_idx, qp_id_list = pair
-            return int(str_idx), set(qp_id_list)
-
-        setup.quantization_points = dict(map(decode_qp, state[cls._state_names.QUANTIZATION_POINTS].items()))
-        setup.unified_scale_groups = dict(map(list2set, state[cls._state_names.UNIFIED_SCALE_GROUPS].items()))
+        for quantization_group in state[cls._state_names.UNIFIED_SCALE_GROUPS]:
+            setup.register_unified_scale_group(quantization_group)
         return setup
 
 
@@ -300,14 +305,14 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
                                                       quantizer_setup: TFQuantizationSetup) \
             -> List[TFInsertionCommand]:
         insertion_commands = []
-        non_unified_scales_quantization_point_ids = set(quantizer_setup.quantization_points.keys())
+        non_unified_scales_quantization_point_ids = set(range(len(quantizer_setup._quantization_points)))
 
-        for unified_scales_group in quantizer_setup.unified_scale_groups.values():
+        for unified_scales_group in quantizer_setup._unified_scale_groups:
             quantizer = None
             quantizer_spec = None
-            for us_qp_id in unified_scales_group:
+            for instance_idx, us_qp_id in enumerate(unified_scales_group):
                 non_unified_scales_quantization_point_ids.discard(us_qp_id)
-                qp = quantizer_setup.quantization_points[us_qp_id]
+                qp = quantizer_setup._quantization_points[us_qp_id]
                 if quantizer_spec is None:
                     quantizer_spec = qp.quantizer_spec
                 else:
@@ -320,12 +325,13 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
 
                 command = TFInsertionCommand(target_point=qp.target_point,
                                              callable_object=quantizer,
-                                             priority=TransformationPriority.QUANTIZATION_PRIORITY)
+                                             priority=TransformationPriority.QUANTIZATION_PRIORITY,
+                                             quantizer_instance_idx=instance_idx)
                 insertion_commands.append(command)
 
         # for quantization_point in quantizer_setup.quantization_points.values():
         for qp_id in non_unified_scales_quantization_point_ids:
-            quantization_point = quantizer_setup.quantization_points[qp_id]
+            quantization_point = quantizer_setup._quantization_points[qp_id]
             op_name = quantization_point.op_name
             quantizer_spec = quantization_point.quantizer_spec
             target_point = quantization_point.target_point
@@ -398,7 +404,8 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
         setup = TFQuantizationSetup()
 
         quantized_layer_names_vs_qconfigs = {}  # type: Dict[str, QuantizerConfig]
-
+        quantization_points_id_to_index = {} # type: Dict[QuantizationPointId, int]
+        index = 0
         applied_saturation_fix = False
         for qp_id, qp in quantizer_setup.quantization_points.items():
             if qp.is_weight_quantization_point():
@@ -432,7 +439,9 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
                                                                  half_range=half_range)
                     target_point = TFLayerWeight(layer_info.layer_name, weight_def.weight_attr_name)
                     qpoint = TFQuantizationPoint(op_name, quantizer_spec, target_point)
-                    setup.quantization_points[qp_id] = qpoint
+                    setup.add_quantization_point(qpoint)
+                    quantization_points_id_to_index[qp_id] = index
+                    index += 1
             else:
                 assert qp.is_activation_quantization_point()
                 ip = qp.insertion_point
@@ -458,9 +467,16 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
                                                 instance_idx=layer_info.instance_idx,
                                                 output_port_id=0)
                 qpoint = TFQuantizationPoint(fake_quantize_name, quantizer_spec, target_point)
-                setup.quantization_points[qp_id] = qpoint
+                setup.add_quantization_point(qpoint)
+                quantization_points_id_to_index[qp_id] = index
+                index += 1
 
-        setup.unified_scale_groups = deepcopy(quantizer_setup.unified_scale_groups)
+        for unified_group in quantizer_setup.unified_scale_groups.values():
+            tf_qp_points = set()
+            for qp_id in unified_group:
+                tf_qp_points.add(quantization_points_id_to_index[qp_id])
+            setup.register_unified_scale_group(tf_qp_points)
+
         if applied_saturation_fix:
             logger.warning('The saturation issue fix will be applied. '
                            'Now all weight quantizers will effectively use only 7 bits out of 8 bits. '
