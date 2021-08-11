@@ -31,7 +31,6 @@ class KnowledgeDistillationLoss(PTCompressionLoss):
     def __init__(self, target_model: NNCFNetwork, original_model: nn.Module, kd_type: str):
         super().__init__()
         original_model.train()
-        device = next(target_model.parameters()).device
         if kd_type == 'softmax':
             def kd_loss_fn(ref_outputs, compressed_model_outputs):
                 return -(nn.functional.log_softmax(compressed_model_outputs, dim=1) *
@@ -44,11 +43,10 @@ class KnowledgeDistillationLoss(PTCompressionLoss):
             raise ValueError('Choose between mse/softmax options for Knowledge Distillation')
         self._kd_loss_handler = target_model.create_knowledge_distillation_loss_handler(original_model, partial(
             KnowledgeDistillationLoss._calculate,
-            device=device,
             kd_loss_fn=kd_loss_fn))
 
     @staticmethod
-    def _calculate(compressed_model_outputs, orig_model_outputs, device: torch.device, kd_loss_fn) -> torch.Tensor:
+    def _calculate(compressed_model_outputs, orig_model_outputs, kd_loss_fn) -> torch.Tensor:
         """
         Calculates knowledge distillation loss value from compressed_model_outputs and orig_model_outputs. First uses
         nested_object_paths_generator to unpack input containers and numerate contents inside them.
@@ -79,11 +77,10 @@ class KnowledgeDistillationLoss(PTCompressionLoss):
 
         orig_model_loss_outputs = list(map(lambda x: x.getter(), filter(
             match_fn, orig_model_outputs_nested_obj_indexing.get_flat_nested_obj_indexing())))
-        if len(orig_model_loss_outputs) == 0 or len(compressed_model_loss_outputs) == 0:
-            return torch.zeros([], device=device)
         return reduce(
             lambda kd_loss, loss_tensors: kd_loss + kd_loss_fn(loss_tensors[0], loss_tensors[1]),
-            zip(orig_model_loss_outputs, compressed_model_loss_outputs), torch.zeros([], device=device))
+            zip(orig_model_loss_outputs, compressed_model_loss_outputs),
+            torch.zeros([], device=orig_model_loss_outputs[0].device))
 
     @staticmethod
     def _is_loss(obj):
@@ -103,12 +100,10 @@ class KnowledgeDistillationLoss(PTCompressionLoss):
         """
         loss = self._kd_loss_handler.get_kd_loss()
         if len(loss) == 0:
-            raise RuntimeError('Empty list of loss tensors for KDLoss. Most likely compression_ctrl.loss()'
-                               ' was called while model was in eval mode')
+            raise RuntimeError("Knowledge Distillation Loss is not calculated.")
         for idx, _ in enumerate(loss):
             loss[idx] = loss[idx].unsqueeze(0)
         output = torch.cat(loss).mean()
-        self._kd_loss_handler.zero_kd_loss()
         return output
 
     def statistics(self, quickly_collected_only=False):
