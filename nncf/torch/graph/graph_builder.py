@@ -47,7 +47,7 @@ class GraphConverter:
         layer_name_vs_node_counts = {}  # type: Dict[LayerName, int]
 
         for dynamic_graph_node in dynamic_graph.get_all_nodes():
-            layer_name = str(dynamic_graph_node.op_exec_context.op_address)
+            layer_name = str(dynamic_graph_node.op_exec_context.op_address.scope_in_model)
             if layer_name not in layer_name_vs_node_counts:
                 layer_name_vs_node_counts[layer_name] = 1
             else:
@@ -56,7 +56,7 @@ class GraphConverter:
         nncf_graph = PTNNCFGraph()
         for dynamic_graph_node in dynamic_graph.get_all_nodes():
             op_address = dynamic_graph_node.op_exec_context.op_address
-            layer_name = str(dynamic_graph_node.op_exec_context.op_address)
+            layer_name = str(dynamic_graph_node.op_exec_context.op_address.scope_in_model)
 
             metatype = PT_OPERATOR_METATYPES.get_operator_metatype_by_op_name(op_address.operator_name)
             subtype = metatype.determine_subtype(dynamic_graph_node.layer_attributes)
