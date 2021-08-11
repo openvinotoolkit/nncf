@@ -100,19 +100,20 @@ class EarlyExitCompressionTrainingLoop(TrainingLoop):
                                      'The relative accuracy drop is {:.2f}%.'.format(compressed_model_accuracy,
                                                                                      uncompressed_model_accuracy,
                                                                                      accuracy_drop, rel_accuracy_drop))
-                else:
-                    nncf_logger.info('The accuracy criteria is reached. '
-                                     'Exiting the training loop on epoch {} with '
-                                     'compressed model accuracy value {:.4f}. Original model accuracy is {:.4f} '
-                                     'The absolute accuracy drop is {:.4f}. '
-                                     'The relative accuracy drop is {:.2f}%.'.format(epoch,
-                                                                                     compressed_model_accuracy,
-                                                                                     uncompressed_model_accuracy,
-                                                                                     accuracy_drop, rel_accuracy_drop))
-                break
+                    return model
+                nncf_logger.info('The accuracy criteria is reached. '
+                                 'Exiting the training loop on epoch {} with '
+                                 'compressed model accuracy value {:.4f}. Original model accuracy is {:.4f} '
+                                 'The absolute accuracy drop is {:.4f}. '
+                                 'The relative accuracy drop is {:.2f}%.'.format(epoch,
+                                                                                 compressed_model_accuracy,
+                                                                                 uncompressed_model_accuracy,
+                                                                                 accuracy_drop, rel_accuracy_drop))
+                return model
             nncf_logger.info('The absolute accuracy drop is {:.4f}. '
                              'The relative accuracy drop is {:.2f}%.'.format(accuracy_drop, rel_accuracy_drop))
             self.runner.train_epoch(model, self.compression_controller)
+        self.runner.load_best_checkpoint(model)
         return model
 
     @staticmethod
