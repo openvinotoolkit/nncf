@@ -789,3 +789,34 @@ class TestsWithONNXInspection:
             curr_values = list(inputs_dict.values())
             ref_values = list(unified_fq_node_inputs[0].values())
             assert curr_values == ref_values  # All inputs for unified scale quantizers must be equal
+
+
+class SharedEmbeddingAddModel(torch.nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.shared_embedding = torch.nn.Embedding(10, 10)
+
+    def forward(self, x):
+        y1 = self.shared_embedding(x)
+        y2 = self.shared_embedding(x)
+        return y1 + y2
+
+
+def test_unified_scales_with_shared_nodes():
+    nncf_config = get_quantization_config_without_range_init(model_size=1)
+    nncf_config["input_info"] = [
+        {
+            "sample_size": [1, 5],
+            "type": "long",
+            "filler": "zeros"
+        },
+    ]
+    nncf_config["target_device"] = "VPU"
+    register_bn_adaptation_init_args(nncf_config)
+
+    _, compression_ctrl = create_compressed_model_and_algo_for_test(
+        SharedEmbeddingAddModel(),
+        nncf_config)  # type: NNCFNetwork, QuantizationController
+
+    assert len(compression_ctrl.weight_quantizers) == 1  # The two embedding nodes point to a single shared layer
+    assert len(compression_ctrl.non_weight_quantizers) == 0  # The "add" operation has its inputs already quantized

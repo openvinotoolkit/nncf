@@ -353,7 +353,7 @@ class NNCFGraph:
         :param node_id_override: The numerical ID to be associated with the new node; if unspecified, will
             assign a unique ID.
         :param layer_name: The name of the framework-specific "layer" object that houses the operation represented by
-            the node.
+            the node and associated trainable weights, if any.
         :param ignored_algorithms: A list of compression algorithm names (from the same set of strings that are
             specified in the `"algorithm": ...` section of the .json NNCF config) which should ignore this operation.
         :param is_in_iteration_scope: Whether the node to be currently added corresponds to an iteration of an RNN
