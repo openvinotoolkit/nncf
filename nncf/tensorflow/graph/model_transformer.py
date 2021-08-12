@@ -141,7 +141,9 @@ class TFModelTransformer(ModelTransformer):
 
     def _apply_transformation(self, transformation: TransformationCommand):
         if transformation.type == TransformationType.INSERT:
-            self._insert(transformation.target_point, transformation.insertion_objects, transformation.quantizer_instance_idx)
+            self._insert(transformation.target_point,
+                         transformation.insertion_objects,
+                         transformation.quantizer_instance_idx)
         elif transformation.type == TransformationType.MULTI_INSERT:
             self._multi_insertion(transformation.target_point, transformation.commands)
         elif transformation.type == TransformationType.REMOVE:
