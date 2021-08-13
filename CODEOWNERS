@@ -3,5 +3,5 @@
 CODEOWNERS  @openvinotoolkit/openvino-admins
 
 # Control 3d party dependencies
-*requirements*  @openvino-configuration-mgmt
-*setup.py  @openvino-configuration-mgmt
+**/*requirements*.*  @openvino-configuration-mgmt
+**/setup.py  @openvino-configuration-mgmt
