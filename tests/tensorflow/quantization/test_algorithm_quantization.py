@@ -285,8 +285,8 @@ def test_quantize_inputs():
     ref_fake_quantize_layers_for_inputs = {
         'rescaling/fake_quantize',
         'input_2/fake_quantize/unified_scale_group',
-        'input_3/fake_quantize',
-        'input_5/fake_quantize/unified_scale_group'
+        'input_4/fake_quantize/unified_scale_group',
+        'input_3/fake_quantize'
     }
     ref_fake_quantize_layers = 12
 

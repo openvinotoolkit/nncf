@@ -419,7 +419,8 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
 
         quantizer_setup = self._get_quantizer_propagation_solution(nncf_graph,
                                                                    quantizable_weighted_layer_nodes,
-                                                                   custom_layer_nodes)
+                                                                   custom_layer_nodes,
+                                                                   model)
         setup = TFQuantizationSetup()
 
         quantized_layer_names_vs_qconfigs = {}  # type: Dict[str, QuantizerConfig]
@@ -543,7 +544,8 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
 
     def _get_quantizer_propagation_solution(self, nncf_graph: NNCFGraph,
                                             quantizable_weighted_layer_nodes: List[QuantizableWeightedLayerNode],
-                                            custom_layer_node_names: List[NNCFNodeName]) \
+                                            custom_layer_node_names: List[NNCFNodeName],
+                                            model: tf.keras.Model) \
             -> SingleConfigQuantizerSetup:
         ip_graph = InsertionPointGraph(nncf_graph,
                                        [qn.node.node_name for qn in quantizable_weighted_layer_nodes])
@@ -551,7 +553,7 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
         pattern = TF_HW_FUSED_PATTERNS.get_full_pattern_graph()
         ip_graph = ip_graph.get_ip_graph_with_merged_hw_optimized_operations(pattern)
 
-        input_preprocessing_nodes = self._get_input_preprocessing_nodes(nncf_graph)
+        input_preprocessing_nodes = self._get_input_preprocessing_nodes(nncf_graph, model)
         input_preprocessing_node_names = [n.node_name for n in input_preprocessing_nodes]
         if custom_layer_node_names:
             logger.warning('Custom layers [{}] '
@@ -593,7 +595,7 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
             quantizer_setup.discard(qp_id, keep_shared_input_qps=True)
         return quantizer_setup
 
-    def _get_input_preprocessing_nodes(self, nncf_graph: NNCFGraph) -> List[NNCFNode]:
+    def _get_input_preprocessing_nodes(self, nncf_graph: NNCFGraph, model: tf.keras.Model) -> List[NNCFNode]:
         retval = []
 
         def traverse_fn(node: NNCFNode, preprocessing_nodes: List[NNCFNode]) -> Tuple[bool, List[NNCFNode]]:
@@ -601,8 +603,11 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
             successors = nncf_graph.get_next_nodes(node)
             if len(successors) == 1:
                 successor = next(iter(successors))
-                if successor.metatype in ELEMENTWISE_LAYER_METATYPES and len(
-                        nncf_graph.get_previous_nodes(successor)) == 1:
+                # It is necessary to determine the number of input nodes from the model
+                # in order to correctly count the duplicated edges
+                layer = model.get_layer(name=successor.node_name)
+                num_previous_nodes = len(layer.input) if isinstance(layer.input, list) else 1
+                if successor.metatype in ELEMENTWISE_LAYER_METATYPES and num_previous_nodes == 1:
                     preprocessing_nodes.append(successor)
                     is_finished = False
             return is_finished, preprocessing_nodes
