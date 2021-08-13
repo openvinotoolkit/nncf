@@ -26,10 +26,8 @@ class TFAccuracyAwareTrainingRunner(BaseAccuracyAwareTrainingRunner):
     The Training Runner implementation for TensorFlow training code.
     """
 
-    # TODO(kshpv):: Should remove  *lr_updates_needed* param or keep it to save consistency with
-    #  PyTorch?
     def __init__(self, training_params, verbose=True,
-                 validate_every_n_epochs=None, dump_checkpoints=True, lr_updates_needed=True):
+                 validate_every_n_epochs=None, dump_checkpoints=True):
         super().__init__(training_params, verbose,
                          validate_every_n_epochs,
                          dump_checkpoints)
@@ -65,7 +63,7 @@ class TFAccuracyAwareTrainingRunner(BaseAccuracyAwareTrainingRunner):
 
         if self.verbose:
             nncf_logger.info(statistics.to_str())
-        self.dump_checkpoint(model)
+        self.dump_checkpoint(model, compression_controller)
 
         self.training_epoch_count += 1
         self.cumulative_epoch_count += 1
@@ -86,12 +84,12 @@ class TFAccuracyAwareTrainingRunner(BaseAccuracyAwareTrainingRunner):
         self.training_epoch_count = 0
         self.best_val_metric_value = 0
 
-    def dump_checkpoint(self, model):
+    def dump_checkpoint(self, model, compression_controller):
         checkpoint_path = osp.join(self._checkpoint_save_dir, 'acc_aware_checkpoint_last.pb')
         model.save_weights(checkpoint_path)
 
         if self.best_val_metric_value == self.current_val_metric_value:
-            best_checkpoint_filename = 'acc_aware_checkpoint_best.pth'
+            best_checkpoint_filename = 'acc_aware_checkpoint_best.ckpt'
             best_path = osp.join(self._checkpoint_save_dir, best_checkpoint_filename)
             self._best_checkpoint = best_path
             model.save_weights(best_path)
@@ -112,14 +110,13 @@ class TFAccuracyAwareTrainingRunner(BaseAccuracyAwareTrainingRunner):
 class TFAdaptiveCompressionLevelTrainingRunner(TFAccuracyAwareTrainingRunner,
                                                BaseAdaptiveCompressionLevelTrainingRunner):
 
-    def __init__(self, accuracy_aware_params, lr_updates_needed=True, verbose=True,
+    def __init__(self, accuracy_aware_params, verbose=True,
                  minimal_compression_rate=0.05, maximal_compression_rate=0.95,
                  validate_every_n_epochs=None, dump_checkpoints=True):
         TFAccuracyAwareTrainingRunner.__init__(self, accuracy_aware_params,
                                                verbose,
                                                validate_every_n_epochs,
-                                               dump_checkpoints,
-                                               lr_updates_needed)
+                                               dump_checkpoints)
         BaseAdaptiveCompressionLevelTrainingRunner.__init__(self, accuracy_aware_params,
                                                             verbose,
                                                             minimal_compression_rate,
@@ -131,14 +128,14 @@ class TFAdaptiveCompressionLevelTrainingRunner(TFAccuracyAwareTrainingRunner,
         best_accuracy_budget = best_metric_value - self.minimal_tolerable_accuracy
         self._compressed_training_history.append((compression_rate, best_accuracy_budget))
 
-    def dump_checkpoint(self, model):
+    def dump_checkpoint(self, model, compression_controller):
         checkpoint_path = osp.join(self._checkpoint_save_dir, 'acc_aware_checkpoint_last.pb')
         model.save_weights(checkpoint_path)
 
         if self.best_val_metric_value == self.current_val_metric_value:
             best_path = osp.join(self._checkpoint_save_dir,
                                  'acc_aware_checkpoint_best_compression_rate_'
-                                 '{comp_rate:.3f}.pth'.format(comp_rate=self.compression_rate_target))
+                                 '{comp_rate:.3f}.ckpt'.format(comp_rate=self.compression_rate_target))
             self._best_checkpoints[self.compression_rate_target] = best_path
             model.save_weights(best_path)
 

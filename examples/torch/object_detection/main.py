@@ -245,7 +245,7 @@ def main_worker(current_gpu, config):
             optimizer, lr_scheduler = make_optimizer(params_to_optimize, config)
             return optimizer, lr_scheduler
 
-        acc_aware_training_loop = create_accuracy_aware_training_loop(config, compression_ctrl)
+        acc_aware_training_loop = create_accuracy_aware_training_loop(nncf_config, compression_ctrl)
         net = acc_aware_training_loop.run(net,
                                           train_epoch_fn=train_epoch_fn,
                                           validate_fn=validate_fn,

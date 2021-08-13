@@ -16,6 +16,8 @@ from typing import TypeVar
 from abc import ABC
 from abc import abstractmethod
 from nncf.api.compression import CompressionAlgorithmController
+from nncf.common.utils.backend import infer_backend_from_compression_controller
+from nncf.common.utils.backend import BackendType
 
 ModelType = TypeVar('ModelType')
 
@@ -93,6 +95,87 @@ class TrainingRunner(ABC):
         :param tensorboard_writer: The tensorboard object to be used for logging.
         :param log_dir: The path to be used for logging and checkpoint saving.
         """
+
+
+class TrainingRunnerCreator(ABC):
+    """
+
+    """
+
+    @abstractmethod
+    def create_training_loop(self) -> TrainingRunner:
+        """
+
+        """
+        pass
+
+
+class EarlyExitTrainingRunnerCreator(TrainingRunnerCreator):
+    def __init__(self, accuracy_aware_training_params, compression_controller,
+                 lr_updates_needed, verbose, validate_every_n_epochs,
+                 dump_checkpoints):
+        self.accuracy_aware_training_params = accuracy_aware_training_params
+        self.compression_controller = compression_controller
+        self.lr_updates_needed = lr_updates_needed
+        self.verbose = verbose
+        self.validate_every_n_epochs = validate_every_n_epochs
+        self.dump_checkpoints = dump_checkpoints
+
+    def create_training_loop(self) -> TrainingRunner:
+        """
+
+        """
+        nncf_backend = infer_backend_from_compression_controller(self.compression_controller)
+        if nncf_backend is BackendType.TORCH:
+            from nncf.torch.accuracy_aware_training.runner import PTAccuracyAwareTrainingRunner
+            return PTAccuracyAwareTrainingRunner(self.accuracy_aware_training_params, self.lr_updates_needed,
+                                                 self.verbose, self.validate_every_n_epochs,
+                                                 self.dump_checkpoints)
+        if nncf_backend == BackendType.TENSORFLOW:
+            from nncf.tensorflow.accuracy_aware_training.runner import TFAccuracyAwareTrainingRunner
+            return TFAccuracyAwareTrainingRunner(self.accuracy_aware_training_params,
+                                                 self.verbose, self.validate_every_n_epochs,
+                                                 self.dump_checkpoints)
+        raise RuntimeError('Got an unsupported value of nncf_backend')
+
+
+class AdaptiveCompressionLevelTrainingRunnerCreator(TrainingRunnerCreator):
+    def __init__(self, accuracy_aware_training_params, compression_controller,
+                 lr_updates_needed, verbose, minimal_compression_rate,
+                 maximal_compression_rate, validate_every_n_epochs,
+                 dump_checkpoints):
+        self.accuracy_aware_training_params = accuracy_aware_training_params
+        self.compression_controller = compression_controller
+        self.lr_updates_needed = lr_updates_needed
+        self.verbose = verbose
+        self.minimal_compression_rate = minimal_compression_rate
+        self.maximal_compression_rate = maximal_compression_rate
+        self.validate_every_n_epochs = validate_every_n_epochs
+        self.dump_checkpoints = dump_checkpoints
+
+    def create_training_loop(self) -> TrainingRunner:
+        """
+
+        """
+        nncf_backend = infer_backend_from_compression_controller(self.compression_controller)
+
+        if nncf_backend is BackendType.TORCH:
+            from nncf.torch.accuracy_aware_training.runner import PTAdaptiveCompressionLevelTrainingRunner
+            return PTAdaptiveCompressionLevelTrainingRunner(self.accuracy_aware_training_params,
+                                                            self.lr_updates_needed, self.verbose,
+                                                            self.minimal_compression_rate,
+                                                            self.maximal_compression_rate,
+                                                            self.validate_every_n_epochs,
+                                                            self.dump_checkpoints)
+        if nncf_backend == BackendType.TENSORFLOW:
+            from nncf.tensorflow.accuracy_aware_training.runner import TFAdaptiveCompressionLevelTrainingRunner
+            return TFAdaptiveCompressionLevelTrainingRunner(self.accuracy_aware_training_params,
+                                                            self.verbose,
+                                                            self.minimal_compression_rate,
+                                                            self.maximal_compression_rate,
+                                                            self.validate_every_n_epochs,
+                                                            self.dump_checkpoints)
+        raise RuntimeError('Got an unsupported value of nncf_backend')
 
 
 class BaseAccuracyAwareTrainingRunner(TrainingRunner):
