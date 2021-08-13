@@ -51,7 +51,7 @@ class PTSparseModelStatisticsCollector(BaseSparseModelStatisticsCollector):
                 )
             )
 
-            if minfo.module.bias is not None:
+            if hasattr(minfo.module, 'bias') and minfo.module.bias is not None:
                 bias = minfo.module.bias
                 name = f'{minfo.module_node_name}/bias'
                 weights_descriptions.append(
