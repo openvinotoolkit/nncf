@@ -39,6 +39,11 @@ def get_filters_num(layer: NNCFWrapper):
     weight_def = layer_metatype.weight_definitions[0]
     weight_attr = weight_def.weight_attr_name
 
+    # For BatchNormalization layers:
+    # If layer.scale=False then gamma parameter is fused - use beta to get filter number
+    if isinstance(layer.layer, tf.keras.layers.BatchNormalization) and not layer.layer.scale:
+        weight_attr = 'beta'
+
     filter_axis = get_filter_axis(layer, weight_attr)
     filters_num = layer.layer_weights[weight_attr].shape[filter_axis]
     return filters_num
