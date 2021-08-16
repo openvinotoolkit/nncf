@@ -202,6 +202,13 @@ class NNCFWrapper(tf.keras.layers.Wrapper):
             self.set_layer_weight(weight_attr, layer_weight)
 
     def registry_weight_operation(self, weights_attr: str, op: NNCFOperation):
+        # For BatchNormalization layers:
+        # If layer.scale=False then gamma parameter is fused - no need to apply the mask to it
+        if isinstance(self.layer, tf.keras.layers.BatchNormalization) \
+                and not self.layer.scale \
+                and weights_attr == 'gamma':
+            return None
+
         if weights_attr not in self.weights_attr_ops:
             self.weights_attr_ops[weights_attr] = OrderedDict()
 
