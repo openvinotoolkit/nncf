@@ -30,7 +30,7 @@
     "accuracy_aware_training": {
         "mode": "early_exit",
         "params": {
-            "maximal_accuracy_degradation": 1.0,
+            "maximal_relative_accuracy_degradation": 1.0,
             "maximal_total_epochs": 100
         }
     },

@@ -118,7 +118,6 @@ IGNORED_SCOPES_DESCRIPTION = "A list of model control flow graph node scopes to 
 TARGET_SCOPES_DESCRIPTION = "A list of model control flow graph node scopes to be considered for this operation" \
                             " - functions as a 'denylist'. Optional."
 
-
 QUANTIZER_GROUP_PROPERTIES = {
     **QUANTIZER_CONFIG_PROPERTIES,
     "ignored_scopes": with_attributes(make_object_or_array_of_objects_schema(_STRING),
@@ -315,12 +314,12 @@ QUANTIZATION_INITIALIZER_SCHEMA = {
                                                                      "register_default_init_args.",
                                                          default=1.0),
                     "warmup_iter_number": with_attributes(_NUMBER,
-                                                         description="The number of random policy at the beginning of "
-                                                                     "of AutoQ precision initialization to populate "
-                                                                     "replay buffer with experiences. This key is "
-                                                                     "meant for internal testing use. Users need not "
-                                                                     "to configure.",
-                                                         default=20),
+                                                          description="The number of random policy at the beginning of "
+                                                                      "of AutoQ precision initialization to populate "
+                                                                      "replay buffer with experiences. This key is "
+                                                                      "meant for internal testing use. Users need not "
+                                                                      "to configure.",
+                                                          default=20),
                     "bitwidth_per_scope": {
                         "type": "array",
                         "items": {
@@ -343,13 +342,13 @@ QUANTIZATION_INITIALIZER_SCHEMA = {
                                                                          "initialization by using average Hessian "
                                                                          "traces from previous run of HAWQ algorithm."),
                     "dump_init_precision_data": with_attributes(_BOOLEAN,
-                                                      description="Whether to dump data related to Precision "
-                                                                  "Initialization algorithm. HAWQ dump includes "
-                                                                  "bitwidth graph, average traces and different "
-                                                                  "plots. AutoQ dump includes DDPG agent "
-                                                                  "learning trajectory in tensorboard and "
-                                                                  "mixed-precision environment metadata.",
-                                                      default=True),
+                                                                description="Whether to dump data related to Precision "
+                                                                            "Initialization algorithm. HAWQ dump includes "
+                                                                            "bitwidth graph, average traces and different "
+                                                                            "plots. AutoQ dump includes DDPG agent "
+                                                                            "learning trajectory in tensorboard and "
+                                                                            "mixed-precision environment metadata.",
+                                                                default=True),
                     "bitwidth_assignment_mode": BITWIDTH_ASSIGNMENT_MODE_SCHEMA,
                 },
                 "additionalProperties": False,
@@ -358,52 +357,76 @@ QUANTIZATION_INITIALIZER_SCHEMA = {
     "additionalProperties": False,
 }
 
-ACCURACY_AWARE_TRAINING_TYPE_SCHEMA = {
-    "type": "string",
-    "enum": ["adaptive_compression_level", "early_exit"]
+maximal_relative_accuracy_degradation = {
+    "maximal_relative_accuracy_degradation": with_attributes(_NUMBER,
+                                                             description="Maximally allowed accuracy degradation"
+                                                                         " of the model in percent relative to"
+                                                                         " the original model accuracy.")
+}
+maximal_absolute_accuracy_degradation = {
+    "maximal_absolute_accuracy_degradation": with_attributes(_NUMBER,
+                                                             description="Maximally allowed accuracy degradation"
+                                                                         " of the model in absolute metric values of"
+                                                                         " the original model.")
+}
+
+ADAPTIVE_COMPRESSION_LEVEL_TRAINING = {
+    "properties": {
+        "mode": "adaptive_compression_level",
+        "params": {
+            "initial_training_phase_epochs": with_attributes(_NUMBER,
+                                                             description="Number of epochs to fine-tune during "
+                                                                         "the initial training phase of the "
+                                                                         "adaptive compression training loop."),
+            "initial_compression_rate_step": with_attributes(_NUMBER,
+                                                             description="Initial value for the compression rate "
+                                                                         "increase/decrease training phase of the "
+                                                                         "compression training loop."),
+            "compression_rate_step_reduction_factor": with_attributes(_NUMBER,
+                                                                      description="Factor used to reduce "
+                                                                                  "the compression rate "
+                                                                                  "change step in "
+                                                                                  "the adaptive compression "
+                                                                                  "training loop."),
+            "minimal_compression_rate_step": with_attributes(_NUMBER,
+                                                             description="The minimal compression rate change "
+                                                                         "step value after which the training "
+                                                                         "loop is terminated."),
+            "patience_epochs": with_attributes(_NUMBER,
+                                               description="The number of epochs to fine-tune the model"
+                                                           " for a given compression rate after the initial"
+                                                           " training phase of the training loop."),
+            "oneof": [
+                maximal_relative_accuracy_degradation, maximal_absolute_accuracy_degradation
+            ],
+        }
+    },
+    "required": ["mode", "params"],
+    "additionalProperties": False
+}
+
+EARLY_EXIT_TRAINING = {
+    "properties": {
+        "mode": "early_exit",
+        "params": {
+            "oneof": [
+                maximal_relative_accuracy_degradation, maximal_absolute_accuracy_degradation
+            ],
+            "maximal_total_epochs": with_attributes(_NUMBER,
+                                                    description="The maximal total fine-tuning epoch count. "
+                                                                "If the accuracy criteria wouldn't reach during "
+                                                                "fine-tuning the most accurate model "
+                                                                "will be returned."),
+        }
+    },
+    "required": ["mode", "params"],
+    "additionalProperties": False
 }
 
 ACCURACY_AWARE_TRAINING_SCHEMA = {
     "type": "object",
-    "mode": with_attributes(ACCURACY_AWARE_TRAINING_TYPE_SCHEMA,
-                            description=""),
-    "params": with_attributes({"type": "object"},
-                            description=""),
-    "required": ["mode", "params"]
-}
-
-
-ADAPTIVE_COMPRESSION_LEVEL_TRAINING = {
-    "initial_training_phase_epochs": with_attributes(_NUMBER,
-                                                     description="Number of epochs to fine-tune during "
-                                                                 "the initial training phase of the "
-                                                                 "adaptive compression training loop"),
-    "initial_compression_rate_step": with_attributes(_NUMBER,
-                                                     description="Initial value for the compression rate "
-                                                                 "increase/decrease training phase of the "
-                                                                 "compression training loop"),
-    "compression_rate_step_reduction_factor": with_attributes(_NUMBER,
-                                                              description="Factor used to reduce the compression rate "
-                                                                          "change step in the adaptive compression "
-                                                                          "training loop"),
-    "minimal_compression_rate_step": with_attributes(_NUMBER,
-                                                     description="The minimal compression rate change "
-                                                                 "step value after which the training "
-                                                                 "loop is terminated"),
-    "patience_epochs": with_attributes(_NUMBER,
-                                       description="The number of epochs to fine-tune the model"
-                                                   " for a given compression rate after the initial"
-                                                   " training phase of the training loop"),
-}
-
-EARLY_EXIT_TRAINING = {
-    "maximal_accuracy_degradation": with_attributes(_NUMBER,
-                                                    description="Maximally allowed accuracy degradation"
-                                                                " of the model (in percent relative to"
-                                                                " the original model accuracy)"),
-    "maximal_total_epochs":  with_attributes(_NUMBER,
-                                             description="The maximal total epoch budget for "
-                                                         "the adaptive compression training loop"),
+    "oneof": [EARLY_EXIT_TRAINING,
+              ADAPTIVE_COMPRESSION_LEVEL_TRAINING],
 }
 
 COMMON_COMPRESSION_ALGORITHM_PROPERTIES = {
@@ -598,10 +621,10 @@ COMMON_SPARSITY_PARAM_PROPERTIES = {
                                                              "immediately, so the length of this list "
                                                              "should be larger than the length of the "
                                                              "'steps' by one."),
-    "sparsity_level_setting_mode":with_attributes(_STRING,
-                                                  description="The mode of sparsity level setting( "
-                                                              "'global' - one sparsity level is set for all layer, "
-                                                              "'local' - sparsity level is set per-layer.)"),
+    "sparsity_level_setting_mode": with_attributes(_STRING,
+                                                   description="The mode of sparsity level setting( "
+                                                               "'global' - one sparsity level is set for all layer, "
+                                                               "'local' - sparsity level is set per-layer.)"),
 }
 
 MAGNITUDE_SPARSITY_ALGO_NAME_IN_CONFIG = "magnitude_sparsity"
@@ -785,7 +808,6 @@ KNOWLEDGE_DISTILLATION_SCHEMA = {
     "additionalProperties": False
 }
 
-
 ALL_SUPPORTED_ALGO_SCHEMA = [BINARIZATION_SCHEMA,
                              QUANTIZATION_SCHEMA,
                              CONST_SPARSITY_SCHEMA,
@@ -806,7 +828,6 @@ TARGET_DEVICE_SCHEMA = {
     "type": "string",
     "enum": ["ANY", "CPU", "GPU", "VPU", "TRIAL"]
 }
-
 
 ROOT_NNCF_CONFIG_SCHEMA = {
     "$schema": "http://json-schema.org/draft-07/schema",
@@ -834,7 +855,9 @@ ROOT_NNCF_CONFIG_SCHEMA = {
         # This is required for better user feedback, since holistic schema validation is uninformative
         # if there is an error in one of the compression configs.
         **COMPRESSION_LR_MULTIPLIER_PROPERTY,
-        "accuracy_aware_training": ACCURACY_AWARE_TRAINING_SCHEMA,
+        "accuracy_aware_training": with_attributes(ACCURACY_AWARE_TRAINING_SCHEMA,
+                                                   description="Accuracy Aware training pipeline's options. "
+                                                               "This section required to define *mode* and *params*"),
         "compression": make_object_or_array_of_objects_schema(BASIC_COMPRESSION_ALGO_SCHEMA),
         "target_device": with_attributes(TARGET_DEVICE_SCHEMA,
                                          description="The target device, the specificity of which will be taken into "

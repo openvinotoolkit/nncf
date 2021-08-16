@@ -22,7 +22,6 @@ from torch.nn import functional as F
 from nncf.torch import AdaptiveCompressionTrainingLoop
 from nncf.torch import EarlyExitCompressionTrainingLoop
 from nncf.torch.initialization import register_default_init_args
-from nncf.common.accuracy_aware_training import create_accuracy_aware_training_loop
 
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
 from tests.torch.helpers import LeNet

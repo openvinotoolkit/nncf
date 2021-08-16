@@ -99,14 +99,11 @@ class TrainingRunner(ABC):
 
 class TrainingRunnerCreator(ABC):
     """
-
+    Declares the factory method returning TrainingRunner object
     """
 
     @abstractmethod
     def create_training_loop(self) -> TrainingRunner:
-        """
-
-        """
         pass
 
 
@@ -123,7 +120,9 @@ class EarlyExitTrainingRunnerCreator(TrainingRunnerCreator):
 
     def create_training_loop(self) -> TrainingRunner:
         """
+        Creates an object of AccuracyAwareTrainingRunner depending on user backend
 
+        :return: AccuracyAwareTrainingRunner object
         """
         nncf_backend = infer_backend_from_compression_controller(self.compression_controller)
         if nncf_backend is BackendType.TORCH:
@@ -155,7 +154,9 @@ class AdaptiveCompressionLevelTrainingRunnerCreator(TrainingRunnerCreator):
 
     def create_training_loop(self) -> TrainingRunner:
         """
+        Creates an object of AdaptiveCompressionLevelTrainingRunner depending on user backend
 
+        :return: AdaptiveCompressionLevelTrainingRunner object
         """
         nncf_backend = infer_backend_from_compression_controller(self.compression_controller)
 

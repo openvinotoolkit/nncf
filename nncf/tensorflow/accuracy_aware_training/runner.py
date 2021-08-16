@@ -26,12 +26,6 @@ class TFAccuracyAwareTrainingRunner(BaseAccuracyAwareTrainingRunner):
     The Training Runner implementation for TensorFlow training code.
     """
 
-    def __init__(self, training_params, verbose=True,
-                 validate_every_n_epochs=None, dump_checkpoints=True):
-        super().__init__(training_params, verbose,
-                         validate_every_n_epochs,
-                         dump_checkpoints)
-
     def initialize_training_loop_fns(self, train_epoch_fn, validate_fn, configure_optimizers_fn=None,
                                      tensorboard_writer=None, log_dir=None):
         super().initialize_training_loop_fns(train_epoch_fn, validate_fn, configure_optimizers_fn,

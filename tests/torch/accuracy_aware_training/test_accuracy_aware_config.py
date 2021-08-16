@@ -52,6 +52,8 @@ from tests.torch.quantization.test_quantization_helpers import get_quantization_
              "accuracy_aware_training": {
                  "mode": "early_exit",
                  "params": {
+                     "maximal_relative_accuracy_degradation": 1,
+                     "maximal_total_epochs": 1
                  }
              },
              "compression": [
