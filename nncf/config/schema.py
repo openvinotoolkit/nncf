@@ -343,9 +343,10 @@ QUANTIZATION_INITIALIZER_SCHEMA = {
                                                                          "traces from previous run of HAWQ algorithm."),
                     "dump_init_precision_data": with_attributes(_BOOLEAN,
                                                                 description="Whether to dump data related to Precision "
-                                                                            "Initialization algorithm. HAWQ dump includes "
-                                                                            "bitwidth graph, average traces and different "
-                                                                            "plots. AutoQ dump includes DDPG agent "
+                                                                            "Initialization algorithm. "
+                                                                            "HAWQ dump includes bitwidth graph,"
+                                                                            " average traces and different plots. "
+                                                                            "AutoQ dump includes DDPG agent "
                                                                             "learning trajectory in tensorboard and "
                                                                             "mixed-precision environment metadata.",
                                                                 default=True),

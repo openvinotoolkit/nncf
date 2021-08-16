@@ -32,4 +32,4 @@ There is an example of config file needed to be provided to create_accuracy_awar
 
 ```
  
-There are only two parameters of Early-Exit training loop: maximal_accuracy_degradation - relative accuracy drop in percentage with original, uncompressed model less than that is user tolerant. And maximal_total_expochs - number of trainig epochs, if the training epoch reaches this number, the loop finishes trainig and return the model with the least accuracy drop 
+There are only two parameters of Early-Exit training loop: maximal_relative_accuracy_degradation or maximal_absolute_accuracy_degradation- relative/absolute accuracy drop in percentage/in original metric with original, uncompressed model less than that is user tolerant. And maximal_total_epochs - number of training epochs, if the fine-tuning epoch reaches this number, the loop finishes the fine-tuning and return the model with the least accuracy drop 
