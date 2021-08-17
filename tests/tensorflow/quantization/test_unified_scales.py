@@ -80,9 +80,8 @@ CAT_UNIFIED_SCALE_TEST_STRUCTS = [(get_single_concat_test_model, 3, 4),
                                   ]
 
 
-def get_total_quantizations(compressed_model: tf.keras.Model) -> int:
-    layers = compressed_model.get_config()['layers']
-    fq_layers = [layer for layer in layers if layer['class_name'] == 'FakeQuantize']
+def get_total_quantizations(model: tf.keras.Model) -> int:
+    fq_layers = [layer for layer in model.get_config()['layers'] if layer['class_name'] == 'FakeQuantize']
     total_quantizations  = sum([len(layer['inbound_nodes']) for layer in fq_layers])
     return total_quantizations
 

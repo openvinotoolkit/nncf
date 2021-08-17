@@ -384,10 +384,10 @@ class TFInsertionCommand(TransformationCommand):
                  target_point: TargetPoint,
                  callable_object: Optional[Callable] = None,
                  priority: Optional[TransformationPriority] = None,
-                 quantizer_instance_idx: int = 0):
+                 callable_object_instance_idx: int = 0):
         super().__init__(TransformationType.INSERT, target_point)
         self.callable_objects = []
-        self.quantizer_instance_idx = quantizer_instance_idx
+        self.callable_object_instance_indices = [callable_object_instance_idx]
         if callable_object is not None:
             _priority = TransformationPriority.DEFAULT_PRIORITY \
                 if priority is None else priority
