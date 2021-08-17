@@ -17,7 +17,6 @@ import os
 # https://github.com/davidtvs/PyTorch-ENet
 # https://github.com/pytorch/vision/tree/master/references/segmentation
 import sys
-from copy import deepcopy
 from os import path as osp
 
 import numpy as np
@@ -207,12 +206,9 @@ def load_dataset(dataset, config):
             shuffle=train_shuffle)
     # Loaders
     train_loader = create_train_data_loader(batch_size)
+    init_loader = train_loader
     if config.batch_size_init:
         init_loader = create_train_data_loader(config.batch_size_init)
-    else:
-        init_loader = deepcopy(train_loader)
-    if config.distributed:
-        init_loader.num_workers = 0  # PyTorch multiprocessing dataloader issue WA
 
     val_sampler = torch.utils.data.SequentialSampler(val_set)
     val_loader = torch.utils.data.DataLoader(
