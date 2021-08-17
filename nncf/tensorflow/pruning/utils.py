@@ -15,6 +15,7 @@ import numpy as np
 import tensorflow as tf
 
 from nncf.common.graph import NNCFNode
+from nncf.common.utils.logger import logger as nncf_logger
 from nncf.tensorflow.graph.metatypes.matcher import get_keras_layer_metatype
 from nncf.tensorflow.layers.data_layout import get_weight_channel_axis
 from nncf.tensorflow.layers.wrapper import NNCFWrapper
@@ -42,6 +43,8 @@ def get_filters_num(layer: NNCFWrapper):
     # For BatchNormalization layers:
     # If layer.scale=False then gamma parameter is fused - use beta to get filter number
     if isinstance(layer.layer, tf.keras.layers.BatchNormalization) and not layer.layer.scale:
+        nncf_logger.debug('Fused gamma parameter encountered in BatchNormalization layer. '
+                          'Use beta parameter to calculate the number of filters.')
         weight_attr = 'beta'
 
     filter_axis = get_filter_axis(layer, weight_attr)

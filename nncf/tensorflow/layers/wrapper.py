@@ -17,6 +17,7 @@ from typing import Dict
 
 import tensorflow as tf
 
+from nncf.common.utils.logger import logger as nncf_logger
 from nncf.tensorflow.layers.custom_objects import get_nncf_custom_objects
 from nncf.tensorflow.layers.custom_objects import NNCF_CUSTOM_OBJECTS
 from nncf.tensorflow.layers.operation import InputType
@@ -207,7 +208,9 @@ class NNCFWrapper(tf.keras.layers.Wrapper):
         if isinstance(self.layer, tf.keras.layers.BatchNormalization) \
                 and not self.layer.scale \
                 and weights_attr == 'gamma':
-            return None
+            nncf_logger.debug('Fused gamma parameter encountered in BatchNormalization layer. '
+                              'Skip the registration of weight operation for it.')
+            return
 
         if weights_attr not in self.weights_attr_ops:
             self.weights_attr_ops[weights_attr] = OrderedDict()
