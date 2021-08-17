@@ -93,8 +93,9 @@ class EarlyExitCompressionTrainingLoop(TrainingLoop):
             configure_optimizers_fn=None, tensorboard_writer=None, log_dir=None):
         self.runner.initialize_training_loop_fns(train_epoch_fn, validate_fn, configure_optimizers_fn,
                                                  tensorboard_writer, log_dir)
-        self.runner.retrieve_original_accuracy(model)
+        self.runner.retrieve_uncompressed_model_accuracy(model)
         uncompressed_model_accuracy = self.runner.uncompressed_model_accuracy
+        self.runner.calculate_minimal_tolerable_accuracy(uncompressed_model_accuracy)
 
         self.runner.configure_optimizers()
         for epoch in range(self.runner.maximal_total_epochs):
@@ -190,7 +191,9 @@ class AdaptiveCompressionTrainingLoop(TrainingLoop):
             configure_optimizers_fn=None, tensorboard_writer=None, log_dir=None):
         self.runner.initialize_training_loop_fns(train_epoch_fn, validate_fn, configure_optimizers_fn,
                                                  tensorboard_writer, log_dir)
-        self.runner.retrieve_original_accuracy(model)
+        self.runner.retrieve_uncompressed_model_accuracy(model)
+        uncompressed_model_accuracy = self.runner.uncompressed_model_accuracy
+        self.runner.calculate_minimal_tolerable_accuracy(uncompressed_model_accuracy)
         self._run_initial_training_phase(model, self.adaptive_controller, self.runner)
         self.runner.add_tensorboard_scalar('compression/accuracy_aware/target_compression_rate',
                                            self.adaptive_controller.compression_rate,

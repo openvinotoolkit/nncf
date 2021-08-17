@@ -72,12 +72,21 @@ class TrainingRunner(ABC):
         """
 
     @abstractmethod
-    def retrieve_original_accuracy(self, model):
+    def retrieve_uncompressed_model_accuracy(self, model):
         """
         :param model: The model object to retrieve the original accuracy value from.
 
         Retrive the original uncompressed model accuracy from the model instance and
-        set the obtained value to the `uncompressed_model_accuracy` attribute of the TrainingRunner
+        set the obtained value to the `uncompressed_model_accuracy` attribute of the TrainingRunner.
+        """
+
+    @abstractmethod
+    def calculate_minimal_tolerable_accuracy(self, uncompressed_model_accuracy):
+        """
+        :param uncompressed_model_accuracy: The uncompressed model accuracy.
+
+        Calculate the minimal tolerable accuracy from thr uncompressed_model_accuracy and
+        set the obtained value to the `minimal_tolerable_accuracy` attribute of the TrainingRunner.
         """
 
     @abstractmethod
@@ -219,6 +228,13 @@ class BaseAccuracyAwareTrainingRunner(TrainingRunner):
         self._configure_optimizers_fn = configure_optimizers_fn
         self._tensorboard_writer = tensorboard_writer
         self._log_dir = log_dir
+
+    def calculate_minimal_tolerable_accuracy(self, uncompressed_model_accuracy):
+        if self.maximal_absolute_accuracy_drop is not None:
+            self.minimal_tolerable_accuracy = uncompressed_model_accuracy - self.maximal_absolute_accuracy_drop
+        else:
+            self.minimal_tolerable_accuracy = uncompressed_model_accuracy * \
+                                              (1 - 0.01 * self.maximal_relative_accuracy_drop)
 
 
 class BaseAdaptiveCompressionLevelTrainingRunner(BaseAccuracyAwareTrainingRunner):

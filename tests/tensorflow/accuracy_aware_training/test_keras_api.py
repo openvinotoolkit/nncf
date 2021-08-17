@@ -88,8 +88,9 @@ def get_const_target_mock_regression_dataset(num_samples=20, img_size=10, target
      'reference_final_metric',
      'should_raise_runtime_error'),
     (
-            (30.0, 0.846153, 0.1419714, False),
-            (1.0, 0.0, 0.0, True),
+            ({'maximal_relative_accuracy_degradation': 30.0}, 0.846153, 0.1419714, False),
+            ({'maximal_relative_accuracy_degradation': 1.0}, 0.0, 0.0, True),
+            ({'maximal_absolute_accuracy_degradation': 0.10}, 0.846153, 0.141971, False),
     )
 )
 def test_adaptive_compression_training_loop(max_accuracy_degradation, final_compression_rate,
@@ -104,10 +105,10 @@ def test_adaptive_compression_training_loop(max_accuracy_degradation, final_comp
     config = get_basic_magnitude_sparsity_config(input_sample_size=[1, img_size, img_size, 1])
 
     params = {
-        "maximal_accuracy_degradation": max_accuracy_degradation,
         "initial_training_phase_epochs": initial_training_phase_epochs,
         "patience_epochs": patience_epochs,
     }
+    params.update(max_accuracy_degradation)
     accuracy_aware_config = {
         "accuracy_aware_training": {
             "mode": "adaptive_compression_level",
@@ -152,8 +153,11 @@ def test_adaptive_compression_training_loop(max_accuracy_degradation, final_comp
 
 
 @pytest.mark.parametrize(
-    ('max_accuracy_degradation',),
-    ((30.0,), (1.0,))
+    'max_accuracy_degradation',
+    (({'maximal_relative_accuracy_degradation': 30.0}),
+     ({'maximal_relative_accuracy_degradation': 1.0}),
+     ({'maximal_absolute_accuracy_degradation': 0.1})
+     )
 )
 def test_early_exit_compression_training_loop(max_accuracy_degradation,
                                               maximal_total_epochs=100, uncompressed_model_accuracy=0.2,
@@ -165,9 +169,9 @@ def test_early_exit_compression_training_loop(max_accuracy_degradation,
 
     config = get_basic_quantization_config(img_size)
     params = {
-        "maximal_accuracy_degradation": max_accuracy_degradation,
         "maximal_total_epochs": maximal_total_epochs,
     }
+    params.update(max_accuracy_degradation)
     accuracy_aware_config = {
         "accuracy_aware_training": {
             "mode": "early_exit",
@@ -200,4 +204,9 @@ def test_early_exit_compression_training_loop(max_accuracy_degradation,
     original_model_accuracy = compress_model.original_model_accuracy
     compressed_model_accuracy = result_dict_to_val_metric_fn(compress_model.evaluate(dataset, return_dict=True))
 
-    assert (original_model_accuracy - compressed_model_accuracy) * 100 <= max_accuracy_degradation
+    if "maximal_absolute_accuracy_degradation" in max_accuracy_degradation:
+        assert (original_model_accuracy - compressed_model_accuracy) <= \
+               max_accuracy_degradation["maximal_absolute_accuracy_degradation"]
+    else:
+        assert (original_model_accuracy - compressed_model_accuracy) / original_model_accuracy * 100 <= \
+               max_accuracy_degradation["maximal_relative_accuracy_degradation"]

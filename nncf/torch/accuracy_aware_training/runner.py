@@ -69,17 +69,12 @@ class PTAccuracyAwareTrainingRunner(BaseAccuracyAwareTrainingRunner):
         if self._tensorboard_writer is None and TENSORBOARD_AVAILABLE:
             self._tensorboard_writer = SummaryWriter(self._log_dir)
 
-    def retrieve_original_accuracy(self, model):
+    def retrieve_uncompressed_model_accuracy(self, model):
         if hasattr(model, 'original_model_accuracy') or hasattr(model.module, 'original_model_accuracy'):
             if isinstance(model, (torch.nn.DataParallel, torch.nn.parallel.DistributedDataParallel)):
                 self.uncompressed_model_accuracy = model.module.original_model_accuracy
             else:
                 self.uncompressed_model_accuracy = model.original_model_accuracy
-            if self.maximal_absolute_accuracy_drop is not None:
-                self.minimal_tolerable_accuracy = self.uncompressed_model_accuracy - self.maximal_absolute_accuracy_drop
-            else:
-                self.minimal_tolerable_accuracy = self.uncompressed_model_accuracy * \
-                                                  (1 - 0.01 * self.maximal_relative_accuracy_drop)
         else:
             raise RuntimeError('Original model does not contain the pre-calculated reference metric value')
 

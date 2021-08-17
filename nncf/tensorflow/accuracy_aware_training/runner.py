@@ -35,11 +35,10 @@ class TFAccuracyAwareTrainingRunner(BaseAccuracyAwareTrainingRunner):
         self._log_dir = configure_accuracy_aware_paths(self._log_dir)
         self._checkpoint_save_dir = self._log_dir
 
-    def retrieve_original_accuracy(self, model):
+    def retrieve_uncompressed_model_accuracy(self, model):
         if not hasattr(model, 'original_model_accuracy'):
             raise RuntimeError('Original model does not contain the pre-calculated reference metric value')
         self.uncompressed_model_accuracy = model.original_model_accuracy
-        self.minimal_tolerable_accuracy = self.uncompressed_model_accuracy * (1 - 0.01 * self.maximal_accuracy_drop)
 
     def train_epoch(self, model, compression_controller):
         compression_controller.scheduler.epoch_step()
