@@ -61,8 +61,9 @@ def create_finetuned_lenet_model_and_dataloader(config, eval_fn, finetuning_step
      'final_compression_rate',
      'reference_final_metric'),
     (
-            (0.01, 0.66742, 0.996252),
-            (100., 0.94136, 0.876409),
+            ({'maximal_relative_accuracy_degradation': 0.01}, 0.66742, 0.996252),
+            ({'maximal_relative_accuracy_degradation': 100.0}, 0.94136, 0.876409),
+            ({'maximal_absolute_accuracy_degradation': 0.10}, 0.767040, 0.938572),
     )
 )
 def test_adaptive_compression_training_loop(max_accuracy_degradation,
@@ -87,10 +88,10 @@ def test_adaptive_compression_training_loop(max_accuracy_degradation,
     config = get_basic_magnitude_sparsity_config(input_sample_size=input_sample_size)
 
     params = {
-        "maximal_accuracy_degradation": max_accuracy_degradation,
         "initial_training_phase_epochs": initial_training_phase_epochs,
         "patience_epochs": patience_epochs,
     }
+    params.update(max_accuracy_degradation)
     accuracy_aware_config = {
         "accuracy_aware_training": {
             "mode": "adaptive_compression_level",
@@ -131,8 +132,9 @@ def test_adaptive_compression_training_loop(max_accuracy_degradation,
 
 
 @pytest.mark.parametrize(
-    ('max_accuracy_degradation',),
-    ((30.0,), (1.0,))
+    'max_accuracy_degradation',
+    (({'maximal_relative_accuracy_degradation': 30.0}), ({'maximal_relative_accuracy_degradation': 1.0}),
+     ({'maximal_absolute_accuracy_degradation': 0.30}), ({'maximal_absolute_accuracy_degradation': 0.05}))
 )
 def test_early_exit_training_loop(max_accuracy_degradation,
                                   num_steps=10, learning_rate=1e-3,
@@ -150,11 +152,11 @@ def test_early_exit_training_loop(max_accuracy_degradation,
         return 1 - loss.item()
 
     config = get_quantization_config_without_range_init(LeNet.INPUT_SIZE[-1])
-
     params = {
-        "maximal_accuracy_degradation": max_accuracy_degradation,
         "maximal_total_epochs": maximal_total_epochs,
     }
+    params.update(max_accuracy_degradation)
+
     accuracy_aware_config = {
         "accuracy_aware_training": {
             "mode": "early_exit",
@@ -192,13 +194,19 @@ def test_early_exit_training_loop(max_accuracy_degradation,
                                              configure_optimizers_fn=configure_optimizers_fn)
     original_model_accuracy = model.original_model_accuracy
     compressed_model_accuracy = validate_fn(model, train_loader=train_loader)
-
-    assert (original_model_accuracy - compressed_model_accuracy) * 100 <= max_accuracy_degradation
+    if "maximal_absolute_accuracy_degradation" in max_accuracy_degradation:
+        assert (original_model_accuracy - compressed_model_accuracy) <= \
+               max_accuracy_degradation["maximal_absolute_accuracy_degradation"]
+    else:
+        assert (original_model_accuracy - compressed_model_accuracy) / original_model_accuracy * 100 <= \
+               max_accuracy_degradation["maximal_relative_accuracy_degradation"]
 
 
 @pytest.mark.parametrize(
     ('max_accuracy_degradation', 'exit_epoch_number'),
-    ((1.0, 6), (30.0, 10))
+    (({'maximal_relative_accuracy_degradation': 1.0}, 6),
+     ({'maximal_relative_accuracy_degradation': 30.0}, 10),
+     ({'maximal_absolute_accuracy_degradation': 0.1}, 3))
 )
 def test_early_exit_with_mock_validation(max_accuracy_degradation, exit_epoch_number,
                                          maximal_total_epochs=100):
@@ -210,14 +218,18 @@ def test_early_exit_with_mock_validation(max_accuracy_degradation, exit_epoch_nu
             return original_metric
         nonlocal epoch_counter
         epoch_counter = epoch
-        return original_metric * (1 - 0.01 * max_accuracy_degradation) * (epoch / exit_epoch_number)
+        if "maximal_relative_accuracy_degradation" in max_accuracy_degradation:
+            return original_metric * (1 - 0.01 * max_accuracy_degradation['maximal_relative_accuracy_degradation']) * (
+                        epoch / exit_epoch_number)
+        return (original_metric - max_accuracy_degradation['maximal_absolute_accuracy_degradation']) * \
+               epoch / exit_epoch_number
 
     config = get_quantization_config_without_range_init(LeNet.INPUT_SIZE[-1])
 
     params = {
-        "maximal_accuracy_degradation": max_accuracy_degradation,
         "maximal_total_epochs": maximal_total_epochs
     }
+    params.update(max_accuracy_degradation)
     accuracy_aware_config = {
         "accuracy_aware_training": {
             "mode": "early_exit",

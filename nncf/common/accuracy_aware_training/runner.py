@@ -96,6 +96,14 @@ class TrainingRunner(ABC):
         :param log_dir: The path to be used for logging and checkpoint saving.
         """
 
+    @abstractmethod
+    def load_best_checkpoint(self, model):
+        """
+        Load the most accurate model state from the fine-tuning history.
+
+        :param model: The model object in which the state will be loaded.
+        """
+
 
 class TrainingRunnerCreator(ABC):
     """
@@ -187,8 +195,9 @@ class BaseAccuracyAwareTrainingRunner(TrainingRunner):
 
     def __init__(self, accuracy_aware_params: Dict[str, object], verbose=True,
                  validate_every_n_epochs=None, dump_checkpoints=True):
-        self.maximal_accuracy_drop = accuracy_aware_params.get('maximal_accuracy_degradation', 1.0)
-        self.maximal_total_epochs = accuracy_aware_params.get('maximal_total_epochs', float('inf'))
+        self.maximal_relative_accuracy_drop = accuracy_aware_params.get('maximal_relative_accuracy_degradation', 1.0)
+        self.maximal_absolute_accuracy_drop = accuracy_aware_params.get('maximal_absolute_accuracy_degradation')
+        self.maximal_total_epochs = accuracy_aware_params.get('maximal_total_epochs', 10000)
 
         self.verbose = verbose
         self.validate_every_n_epochs = validate_every_n_epochs

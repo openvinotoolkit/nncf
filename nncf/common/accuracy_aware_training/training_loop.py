@@ -61,7 +61,9 @@ class TrainingLoop(ABC):
 
     def _create_runner(self, creator: TrainingRunnerCreator) -> TrainingRunner:
         """
+        Creates TrainingRunner that is used during run() method.
 
+        :param creator: Instance of TrainingRunnerCreator who creates TrainingRunner object.
         """
         return creator.create_training_loop()
 

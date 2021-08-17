@@ -75,7 +75,11 @@ class PTAccuracyAwareTrainingRunner(BaseAccuracyAwareTrainingRunner):
                 self.uncompressed_model_accuracy = model.module.original_model_accuracy
             else:
                 self.uncompressed_model_accuracy = model.original_model_accuracy
-            self.minimal_tolerable_accuracy = self.uncompressed_model_accuracy * (1 - 0.01 * self.maximal_accuracy_drop)
+            if self.maximal_absolute_accuracy_drop is not None:
+                self.minimal_tolerable_accuracy = self.uncompressed_model_accuracy - self.maximal_absolute_accuracy_drop
+            else:
+                self.minimal_tolerable_accuracy = self.uncompressed_model_accuracy * \
+                                                  (1 - 0.01 * self.maximal_relative_accuracy_drop)
         else:
             raise RuntimeError('Original model does not contain the pre-calculated reference metric value')
 
