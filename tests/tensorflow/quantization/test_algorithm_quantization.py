@@ -278,17 +278,19 @@ def get_quantize_inputs_test_model(input_shapes):
 
 def test_quantize_inputs():
     config = get_basic_quantization_config()
+    config['target_device'] = 'TRIAL'
     input_shapes = [[2, 32, 32, 3] for i in range(5)]
     model = get_quantize_inputs_test_model(input_shapes)
 
     model, _ = create_compressed_model_and_algo_for_test(model, config, force_no_init=True)
     ref_fake_quantize_layers_for_inputs = {
         'rescaling/fake_quantize',
-        'input_2/fake_quantize/unified_scale_group',
-        'input_4/fake_quantize/unified_scale_group',
-        'input_3/fake_quantize'
+        'input_2/fake_quantize',
+        'input_3/fake_quantize',
+        'input_4/fake_quantize',
+        'input_5/fake_quantize'
     }
-    ref_fake_quantize_layers = 12
+    ref_fake_quantize_layers = 17
 
     actual_fake_quantize_layers = {layer.name for layer in model.layers if isinstance(layer, FakeQuantize)}
     assert ref_fake_quantize_layers_for_inputs.issubset(actual_fake_quantize_layers)

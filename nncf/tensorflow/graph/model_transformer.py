@@ -152,7 +152,7 @@ class TFModelTransformer(ModelTransformer):
             raise TypeError('Transformation type {} does not support'
                             .format(transformation.type))
 
-    def _insert(self, target_point: TargetPoint, insertion_objects: List[Callable], inserted_instance_idx: int):
+    def _insert(self, target_point: TargetPoint, insertion_objects: List[Callable], insert_with_instance_idx: int):
         if isinstance(target_point, TFLayerWeight):
             weight_operations = [
                 WeightOperations(target_point.weights_attr_name, insertion_objects)]
@@ -162,13 +162,13 @@ class TFModelTransformer(ModelTransformer):
                                        target_point.instance_idx,
                                        target_point.input_port_id,
                                        insertion_objects,
-                                       inserted_instance_idx)
+                                       insert_with_instance_idx)
         elif isinstance(target_point, TFAfterLayer):
             self._insert_layers_after(target_point.layer_name,
                                       target_point.instance_idx,
                                       target_point.output_port_id,
                                       insertion_objects,
-                                      inserted_instance_idx)
+                                      insert_with_instance_idx)
         else:
             raise TypeError('Insertion transform does not support {} '
                             'target point type'.format(target_point.type))
@@ -272,7 +272,7 @@ class TFModelTransformer(ModelTransformer):
         self._model_config['layers'][idx] = replace_layer_config
 
     def _insert_layers_before(self, layer_name: str, instance_idx: int, input_port_id: int, layers: List,
-                              inserted_instance_idx: int):
+                              insert_with_instance_idx: int):
         functional_model = is_functional_model(self._model)
 
         if functional_model:
@@ -288,14 +288,14 @@ class TFModelTransformer(ModelTransformer):
                 config['name'] = config['config']['name']
                 config['inbound_nodes'] = [input_layer_cfg['inbound_nodes'][instance_idx][input_port_id]]
                 self._model_config['layers'][idx]['inbound_nodes'][instance_idx][input_port_id] = \
-                    [config['name'], inserted_instance_idx, 0, {}]
+                    [config['name'], insert_with_instance_idx, 0, {}]
             layer_configs.append(config)
 
         for config in layer_configs:
             self._model_config['layers'].insert(idx, config)
 
     def _insert_layers_after(self, layer_name: str, instance_idx: int, output_port_id: int,
-                             layers: List, inserted_instance_idx: int):
+                             layers: List, insert_with_instance_idx: int):
         functional_model = is_functional_model(self._model)
 
         layer_configs = []
@@ -308,21 +308,21 @@ class TFModelTransformer(ModelTransformer):
 
         for config in layer_configs:
             if functional_model:
-                self._insert_layer_after_functional(layer_name, instance_idx, config, inserted_instance_idx)
+                self._insert_layer_after_functional(layer_name, instance_idx, config, insert_with_instance_idx)
             else:
                 self._insert_layer_after_sequential(layer_name, config)
 
     def _insert_layer_after_functional(self, layer_name: str, instance_idx: int, layer_config: Dict,
-                                       inserted_instance_idx: int):
+                                       insert_with_instance_idx: int):
         layer_out_ports = set()
         replace_layer_name = layer_config['name']
         for layer in self._model_config['layers']:
             for inbound_node in layer['inbound_nodes']:
                 self._process_insertion_after(inbound_node, layer_name, instance_idx,
-                                              layer_out_ports, replace_layer_name, inserted_instance_idx)
+                                              layer_out_ports, replace_layer_name, insert_with_instance_idx)
 
         self._insert_after_model_outputs(layer_name, instance_idx, layer_out_ports,
-                                         replace_layer_name, inserted_instance_idx)
+                                         replace_layer_name, insert_with_instance_idx)
         if len(layer_out_ports) > 1:
             raise RuntimeError('Insertion after layer ({}) with multiple ports '
                                'is not supported'.format(layer_name))
@@ -338,19 +338,19 @@ class TFModelTransformer(ModelTransformer):
                                  instance_idx: int,
                                  layer_out_ports: Set,
                                  replace_layer_name: str,
-                                 inserted_instance_idx: int = 0):
+                                 insert_with_instance_idx: int = 0):
         for connection_info in connection_infos:
             if connection_info[0] == layer_name:
                 layer_out_ports.add(connection_info[2])
                 if connection_info[1] == instance_idx:
                     connection_info[0] = replace_layer_name
-                    connection_info[1] = inserted_instance_idx
+                    connection_info[1] = insert_with_instance_idx
 
     def _insert_after_model_outputs(self, layer_name: str,
                                     instance_idx: int,
                                     layer_out_ports: Set,
                                     replace_layer_name: str,
-                                    inserted_instance_idx: int):
+                                    insert_with_instance_idx: int):
         output_layers = self._model_config['output_layers']
         if isinstance(output_layers, list):
             self._process_insertion_after(output_layers, layer_name, instance_idx,
@@ -359,10 +359,10 @@ class TFModelTransformer(ModelTransformer):
             for out_layers in output_layers.values():
                 if isinstance(out_layers, list):
                     self._process_insertion_after([out_layers], layer_name, instance_idx,
-                                                  layer_out_ports, replace_layer_name, inserted_instance_idx)
+                                                  layer_out_ports, replace_layer_name, insert_with_instance_idx)
                 elif isinstance(out_layers, dict):
                     self._process_insertion_after(out_layers.values(), layer_name, instance_idx,
-                                                  layer_out_ports, replace_layer_name, inserted_instance_idx)
+                                                  layer_out_ports, replace_layer_name, insert_with_instance_idx)
 
     @staticmethod
     def _process_replacement(connection_infos, layer_name: str, replace_layer_name: str):

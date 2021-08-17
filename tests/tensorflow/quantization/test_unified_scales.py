@@ -74,17 +74,24 @@ def get_unet_like_test_model(input_shapes):
     return tf.keras.Model(inputs=inputs, outputs=outputs)
 
 
-CAT_UNIFIED_SCALE_TEST_STRUCTS = [(get_single_concat_test_model, 3),
-                                  (get_double_concat_test_model, 3),
-                                  (get_unet_like_test_model, 4)
+CAT_UNIFIED_SCALE_TEST_STRUCTS = [(get_single_concat_test_model, 3, 4),
+                                  (get_double_concat_test_model, 3, 4),
+                                  (get_unet_like_test_model, 4, 6)
                                   ]
 
 
-@pytest.mark.parametrize("target_device, model_creator, ref_aq_module_count",
+def get_total_quantizations(compressed_model: tf.keras.Model) -> int:
+    layers = compressed_model.get_config()['layers']
+    fq_layers = [layer for layer in layers if layer['class_name'] == 'FakeQuantize']
+    total_quantizations  = sum([len(layer['inbound_nodes']) for layer in fq_layers])
+    return total_quantizations
+
+
+@pytest.mark.parametrize("target_device, model_creator, ref_aq_module_count, ref_quantizations",
                          [(t_dev, ) + rest for t_dev, rest in
                              itertools.product([x.value for x in HWConfigType],
                                                CAT_UNIFIED_SCALE_TEST_STRUCTS)])
-def test_unified_scales_with_concat(target_device, model_creator, ref_aq_module_count):
+def test_unified_scales_with_concat(target_device, model_creator, ref_aq_module_count, ref_quantizations):
     nncf_config = get_basic_quantization_config()
     x_shape = [1, 4, 1, 1]
     y_shape = [1, 4, 1, 1]
@@ -95,3 +102,6 @@ def test_unified_scales_with_concat(target_device, model_creator, ref_aq_module_
 
     non_weight_quantizers = len(collect_fake_quantize_layers(compressed_model))
     assert non_weight_quantizers == ref_aq_module_count
+
+    total_quantizations = get_total_quantizations(compressed_model)
+    assert total_quantizations == ref_quantizations

@@ -425,7 +425,7 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
 
         quantized_layer_names_vs_qconfigs = {}  # type: Dict[str, QuantizerConfig]
         qp_id_to_index = {} # type: Dict[QuantizationPointId, int]
-        index = 0
+        tf_setup_qp_index = 0
         applied_saturation_fix = False
         for qp_id, qp in quantizer_setup.quantization_points.items():
             if qp.is_weight_quantization_point():
@@ -486,10 +486,10 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
                 qpoint = TFQuantizationPoint(fake_quantize_name, quantizer_spec, target_point)
 
             setup.add_quantization_point(qpoint)
-            qp_id_to_index[qp_id] = index
-            index += 1
+            qp_id_to_index[qp_id] = tf_setup_qp_index
+            tf_setup_qp_index += 1
 
-        self._generate_unified_scale_groups(model, quantizer_setup, qp_id_to_index, setup)
+        setup = self._generate_unified_scale_groups(model, quantizer_setup, qp_id_to_index, setup)
 
         if applied_saturation_fix:
             logger.warning('The saturation issue fix will be applied. '
@@ -503,7 +503,7 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
                                        model: tf.keras.Model,
                                        quantizer_setup: SingleConfigQuantizerSetup,
                                        qp_id_to_index: Dict[QuantizationPointId, int],
-                                       setup: TFQuantizationSetup):
+                                       setup: TFQuantizationSetup) -> TFQuantizationSetup:
         # To properly set the instance indices for FQ need to save layers order like in the model config
         layer_names = [layer.name for layer in model.layers]
         for unified_group in quantizer_setup.unified_scale_groups.values():
@@ -517,6 +517,7 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
 
             sorted_unified_group = sorted(sorted_unified_group, key=lambda x: x[1])
             setup.register_unified_scale_group([setup_index for setup_index, _ in sorted_unified_group])
+        return setup
 
     def _get_quantizable_weighted_layer_nodes(self, nncf_graph: NNCFGraph) -> List[QuantizableWeightedLayerNode]:
         nodes_with_weights = []
