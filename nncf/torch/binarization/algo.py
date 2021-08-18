@@ -26,7 +26,7 @@ from nncf.common.statistics import NNCFStatistics
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.config import NNCFConfig
 from nncf.config.extractors import extract_algo_specific_config
-from nncf.torch.algo_selector import COMPRESSION_ALGORITHMS
+from nncf.torch.algo_selector import PT_COMPRESSION_ALGORITHMS
 from nncf.torch.algo_selector import ZeroCompressionLoss
 from nncf.torch.binarization.layers import ActivationBinarizationScaleThreshold
 from nncf.torch.binarization.layers import ActivationBinarizer
@@ -46,7 +46,7 @@ from nncf.torch.quantization.algo import QuantizationControllerBase
 from nncf.torch.quantization.schedulers import QUANTIZATION_SCHEDULERS
 
 
-@COMPRESSION_ALGORITHMS.register('binarization')
+@PT_COMPRESSION_ALGORITHMS.register('binarization')
 class BinarizationBuilder(PTCompressionAlgorithmBuilder):
     def __init__(self, config, should_init: bool = True):
         super().__init__(config, should_init)

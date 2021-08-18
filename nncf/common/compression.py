@@ -28,6 +28,8 @@ from nncf.config.extractors import extract_algo_specific_config
 
 ModelType = TypeVar('ModelType')
 
+NO_COMPRESSION_ALGORITHM_NAME = 'NoCompressionAlgorithm'
+
 
 class BaseControllerStateNames:
     LOSS = 'loss_state'

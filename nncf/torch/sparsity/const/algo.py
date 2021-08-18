@@ -20,10 +20,10 @@ from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.sparsity.layers import BinaryMask
 from nncf.torch.sparsity.base_algo import BaseSparsityAlgoBuilder, BaseSparsityAlgoController
 from nncf.torch.sparsity.collector import PTSparseModelStatisticsCollector
-from nncf.torch.algo_selector import COMPRESSION_ALGORITHMS
+from nncf.torch.algo_selector import PT_COMPRESSION_ALGORITHMS
 
 
-@COMPRESSION_ALGORITHMS.register('const_sparsity')
+@PT_COMPRESSION_ALGORITHMS.register('const_sparsity')
 class ConstSparsityBuilder(BaseSparsityAlgoBuilder):
     def create_weight_sparsifying_operation(self, target_module_node: NNCFNode, compression_lr_multiplier: float):
         return BinaryMask(target_module_node.layer_attributes.get_weight_shape())
