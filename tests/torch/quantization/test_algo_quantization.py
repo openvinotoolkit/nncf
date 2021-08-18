@@ -562,6 +562,7 @@ def test_debug_mode():
         model.forward(torch.zeros(BasicConvTestModel.INPUT_SIZE,
                                   device=next(model.parameters()).device))
 
+
 class SharedLayersModel(torch.nn.Module):
     def __init__(self):
         super().__init__()
