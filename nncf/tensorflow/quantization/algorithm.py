@@ -218,8 +218,9 @@ class TFQuantizationSetup:
             quantization_point = TFQuantizationPoint.from_state(quantization_point_state)
             setup.add_quantization_point(quantization_point)
 
-        for quantization_group in state[cls._state_names.UNIFIED_SCALE_GROUPS]:
-            setup.register_unified_scale_group(quantization_group)
+        if cls._state_names.UNIFIED_SCALE_GROUPS in state:
+            for quantization_group in state[cls._state_names.UNIFIED_SCALE_GROUPS]:
+                setup.register_unified_scale_group(quantization_group)
         return setup
 
 
