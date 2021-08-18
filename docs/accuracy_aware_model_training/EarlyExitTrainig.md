@@ -16,7 +16,7 @@ There is an example of config file needed to be provided to create_accuracy_awar
     "accuracy_aware_training": {
         "mode": "early_exit",
         "params": {
-            "maximal_accuracy_degradation": 1.0,
+            "maximal_relative_accuracy_degradation": 1.0,
             "maximal_total_expochs": 100,
         }
     },
