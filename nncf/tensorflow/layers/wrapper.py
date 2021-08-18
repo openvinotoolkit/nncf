@@ -205,8 +205,8 @@ class NNCFWrapper(tf.keras.layers.Wrapper):
     def registry_weight_operation(self, weights_attr: str, op: NNCFOperation):
         # For BatchNormalization layers:
         # If layer.scale=False then gamma parameter is fused - no need to apply the mask to it
-        if (isinstance(self.layer, tf.keras.layers.BatchNormalization)
-            or isinstance(self.layer, tf.keras.layers.experimental.SyncBatchNormalization)) \
+        if isinstance(self.layer,
+                      (tf.keras.layers.BatchNormalization, tf.keras.layers.experimental.SyncBatchNormalization)) \
                 and not self.layer.scale \
                 and weights_attr == 'gamma':
             nncf_logger.debug('Fused gamma parameter encountered in BatchNormalization layer. '
