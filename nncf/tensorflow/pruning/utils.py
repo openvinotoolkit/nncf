@@ -42,7 +42,8 @@ def get_filters_num(layer: NNCFWrapper):
 
     # For BatchNormalization layers:
     # If layer.scale=False then gamma parameter is fused - use beta to get filter number
-    if isinstance(layer.layer, tf.keras.layers.BatchNormalization) and not layer.layer.scale:
+    if (isinstance(layer.layer, tf.keras.layers.BatchNormalization)
+        or isinstance(layer.layer, tf.keras.layers.experimental.SyncBatchNormalization)) and not layer.layer.scale:
         nncf_logger.debug('Fused gamma parameter encountered in BatchNormalization layer. '
                           'Use beta parameter to calculate the number of filters.')
         weight_attr = 'beta'
