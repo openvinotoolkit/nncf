@@ -46,7 +46,7 @@ def get_filters_num(layer: NNCFWrapper):
                   (tf.keras.layers.BatchNormalization, tf.keras.layers.experimental.SyncBatchNormalization)) \
             and not layer.layer.scale:
         nncf_logger.debug('Fused gamma parameter encountered in BatchNormalization layer. '
-                          'Use beta parameter to calculate the number of filters.')
+                          'Use beta parameter instead to calculate the number of filters.')
         weight_attr = 'beta'
 
     filter_axis = get_filter_axis(layer, weight_attr)
