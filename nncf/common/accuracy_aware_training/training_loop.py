@@ -102,7 +102,10 @@ class EarlyExitCompressionTrainingLoop(TrainingLoop):
             compressed_model_accuracy = self.runner.validate(model)
             accuracy_budget = compressed_model_accuracy - self.runner.minimal_tolerable_accuracy
             accuracy_drop = uncompressed_model_accuracy - compressed_model_accuracy
-            rel_accuracy_drop = 100 * (accuracy_drop / self.runner.uncompressed_model_accuracy)
+            try:
+                rel_accuracy_drop = 100 * (accuracy_drop / uncompressed_model_accuracy)
+            except ZeroDivisionError:
+                rel_accuracy_drop = 0
             if accuracy_budget >= 0:
                 if epoch == 0:
                     nncf_logger.info('The accuracy criteria is reached. '
