@@ -27,7 +27,7 @@ from nncf.common.sparsity.statistics import MagnitudeSparsityStatistics
 from nncf.common.statistics import NNCFStatistics
 from nncf.config.extractors import extract_algo_specific_config
 from nncf.config.extractors import extract_bn_adaptation_init_params
-from nncf.torch.algo_selector import COMPRESSION_ALGORITHMS
+from nncf.torch.algo_selector import PT_COMPRESSION_ALGORITHMS
 from nncf.torch.compression_method_api import PTCompressionAlgorithmController
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.sparsity.base_algo import BaseSparsityAlgoBuilder
@@ -39,7 +39,7 @@ from nncf.torch.sparsity.magnitude.functions import WEIGHT_IMPORTANCE_FUNCTIONS
 from nncf.torch.sparsity.magnitude.functions import calc_magnitude_binary_mask
 
 
-@COMPRESSION_ALGORITHMS.register('magnitude_sparsity')
+@PT_COMPRESSION_ALGORITHMS.register('magnitude_sparsity')
 class MagnitudeSparsityBuilder(BaseSparsityAlgoBuilder):
     def create_weight_sparsifying_operation(self, target_module_node: NNCFNode, compression_lr_multiplier: float):
         return BinaryMask(target_module_node.layer_attributes.get_weight_shape())

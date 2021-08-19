@@ -51,6 +51,13 @@ def extract_algo_specific_config(config: NNCFConfig, algo_name_to_match: str) ->
         assert isinstance(compression_section, dict)
         algo_list = [compression_section]
 
+    from nncf.common.compression import NO_COMPRESSION_ALGORITHM_NAME
+    if algo_name_to_match == NO_COMPRESSION_ALGORITHM_NAME:
+        if len(algo_list) > 0:
+            raise RuntimeError(f'No algorithm configuration should be specified '
+                               f'when you try to extract {algo_name_to_match} from the NNCF config!')
+        return {}
+
     matches = []
     for compression_algo_dict in algo_list:
         algo_name = compression_algo_dict['algorithm']
