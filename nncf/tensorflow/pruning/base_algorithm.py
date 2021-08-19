@@ -174,7 +174,8 @@ class BasePruningAlgoBuilder(TFCompressionAlgorithmBuilder):
 
             _, layer_info = converter.get_layer_info_for_node(spec_node.node_name)
             for weight_def in spec_node.metatype.weight_definitions:
-                if not layer.scale and weight_def.weight_attr_name == 'gamma':
+                if spec_node.metatype is TFBatchNormalizationLayerMetatype \
+                        and not layer.scale and weight_def.weight_attr_name == 'gamma':
                     nncf_logger.debug('Fused gamma parameter encountered in BatchNormalization layer. '
                                       'Do not add mask to it.')
                     continue
