@@ -183,7 +183,6 @@ class BasePruningAlgoBuilder(TFCompressionAlgorithmBuilder):
                     self._get_insertion_command_binary_mask(
                         layer_info.layer_name, weight_def.weight_attr_name)
                 )
-
             transformations.register(
                 self._get_insertion_command_binary_mask(
                     layer_info.layer_name, spec_node.metatype.bias_attr_name)
