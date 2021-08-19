@@ -28,7 +28,7 @@ from torch.utils.data import Dataset
 from nncf.config import NNCFConfig
 from nncf.config.extractors import extract_algorithm_names
 from nncf.config.structures import BNAdaptationInitArgs
-from nncf.torch.algo_selector import COMPRESSION_ALGORITHMS
+from nncf.torch.algo_selector import PT_COMPRESSION_ALGORITHMS
 from nncf.torch.compression_method_api import PTCompressionAlgorithmController
 from nncf.torch.dynamic_graph.graph_tracer import create_input_infos
 from nncf.torch.dynamic_graph.scope import Scope
@@ -284,7 +284,7 @@ def create_nncf_model_and_single_algo_builder(model: Module, config: NNCFConfig,
     algo_names = extract_algorithm_names(config)
     assert len(algo_names) == 1
     algo_name = next(iter(algo_names))
-    builder_cls = COMPRESSION_ALGORITHMS.get(algo_name)
+    builder_cls = PT_COMPRESSION_ALGORITHMS.get(algo_name)
     builder = builder_cls(config, should_init=True)
     return compressed_model, builder
 

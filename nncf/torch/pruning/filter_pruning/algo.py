@@ -44,7 +44,7 @@ from nncf.common.schedulers import StubCompressionScheduler
 from nncf.common.statistics import NNCFStatistics
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.config.extractors import extract_bn_adaptation_init_params
-from nncf.torch.algo_selector import COMPRESSION_ALGORITHMS
+from nncf.torch.algo_selector import PT_COMPRESSION_ALGORITHMS
 from nncf.torch.compression_method_api import PTCompressionAlgorithmController
 from nncf.torch.graph.operator_metatypes import Conv1dMetatype
 from nncf.torch.graph.operator_metatypes import Conv2dMetatype
@@ -91,7 +91,7 @@ LINEAR_LAYER_METATYPES = [
 ]
 
 
-@COMPRESSION_ALGORITHMS.register('filter_pruning')
+@PT_COMPRESSION_ALGORITHMS.register('filter_pruning')
 class FilterPruningBuilder(BasePruningAlgoBuilder):
     def create_weight_pruning_operation(self, module):
         return FilterPruningBlock(module.weight.size(module.target_weight_dim_for_compression))
