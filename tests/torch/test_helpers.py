@@ -17,8 +17,8 @@ import torch
 from nncf import NNCFConfig
 from tests.torch.helpers import BasicConvTestModel
 from tests.torch.helpers import TwoConvTestModel
-from tests.torch.helpers import check_equal
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
+from tests.torch.helpers import PTTensorListComparator
 
 
 def test_basic_model_has_expected_params():
@@ -28,8 +28,8 @@ def test_basic_model_has_expected_params():
     act_bias = model.conv.bias.data
     ref_bias = BasicConvTestModel.default_bias()
 
-    check_equal(act_bias, ref_bias)
-    check_equal(act_weights, ref_weights)
+    PTTensorListComparator.check_equal(act_bias, ref_bias)
+    PTTensorListComparator.check_equal(act_weights, ref_weights)
 
     assert act_weights.nonzero().size(0) == model.nz_weights_num
     assert act_bias.nonzero().size(0) == model.nz_bias_num
@@ -42,7 +42,7 @@ def test_basic_model_is_valid():
     input_ = torch.ones([1, 1, 4, 4])
     ref_output = torch.ones((1, 2, 3, 3)) * (-4)
     act_output = model(input_)
-    check_equal(act_output, ref_output)
+    PTTensorListComparator.check_equal(act_output, ref_output)
 
 
 def test_two_conv_model_has_expected_params():
@@ -56,11 +56,11 @@ def test_two_conv_model_has_expected_params():
     channel = torch.eye(3, 3).reshape([1, 1, 3, 3])
     ref_weights_2 = torch.cat((channel, channel), 1)
 
-    check_equal(act_weights_1, ref_weights_1)
-    check_equal(act_weights_2, ref_weights_2)
+    PTTensorListComparator.check_equal(act_weights_1, ref_weights_1)
+    PTTensorListComparator.check_equal(act_weights_2, ref_weights_2)
 
-    check_equal(act_bias_1, BasicConvTestModel.default_bias())
-    check_equal(act_bias_2, torch.tensor([0]))
+    PTTensorListComparator.check_equal(act_bias_1, BasicConvTestModel.default_bias())
+    PTTensorListComparator.check_equal(act_bias_2, torch.tensor([0]))
 
     assert act_weights_1.nonzero().size(0) + act_weights_2.nonzero().size(0) == model.nz_weights_num
     assert act_bias_1.nonzero().size(0) + act_bias_2.nonzero().size(0) == model.nz_bias_num
@@ -73,7 +73,7 @@ def test_two_conv_model_is_valid():
     input_ = torch.ones([1, 1, 4, 4])
     ref_output = torch.tensor(-24).reshape((1, 1, 1, 1))
     act_output = model(input_)
-    check_equal([act_output], [ref_output])
+    PTTensorListComparator.check_equal(act_output, ref_output)
 
 
 def load_exported_onnx_version(nncf_config: NNCFConfig, model: torch.nn.Module,
