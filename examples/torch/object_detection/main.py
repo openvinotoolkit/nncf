@@ -10,6 +10,7 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+from copy import deepcopy
 
 import os.path as osp
 import sys
@@ -300,7 +301,7 @@ def create_dataloaders(config):
         )
 
     train_data_loader = create_train_data_loader(config.batch_size)
-    init_data_loader = train_data_loader
+    init_data_loader = deepcopy(train_data_loader)
     if config.batch_size_init:
         init_data_loader = create_train_data_loader(config.batch_size_init)
 

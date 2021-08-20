@@ -234,7 +234,7 @@ class TestSotaCheckpoints:
         f.close()
 
     @staticmethod
-    def threshold_check(is_ok, diff_target, diff_fp32_min_=None, diff_fp32_max_=None, fp32_metric=None,
+    def threshold_check(err, diff_target, diff_fp32_min_=None, diff_fp32_max_=None, fp32_metric=None,
                         diff_fp32=None, diff_target_min=None, diff_target_max=None):
         color = BG_COLOR_RED_HEX
         within_thresholds = False
@@ -246,7 +246,7 @@ class TestSotaCheckpoints:
             diff_fp32_min_ = DIFF_FP32_MIN_GLOBAL
         if not diff_fp32_max_:
             diff_fp32_max_ = DIFF_FP32_MAX_GLOBAL
-        if is_ok:
+        if err is None:
             if fp32_metric is not None:
                 if diff_fp32_min_ < diff_fp32 < diff_fp32_max_ and diff_target_min < diff_target < diff_target_max:
                     color = BG_COLOR_GREEN_HEX
@@ -369,7 +369,7 @@ class TestSotaCheckpoints:
             cmd += " -b {}".format(eval_test_struct.batch_)
         exit_code, err_str = self.run_cmd(cmd, cwd=PROJECT_ROOT)
 
-        is_ok = (exit_code == 0 and metrics_dump_file_path.exists())
+        is_ok = (exit_code == 0 and err_str is None)
         if is_ok:
             metric_value = self.read_metric(str(metrics_dump_file_path))
         else:
@@ -407,7 +407,7 @@ class TestSotaCheckpoints:
                                                                           fp32_metric,
                                                                           diff_fp32,
                                                                           metric_type_from_json)
-        retval = self.threshold_check(is_ok,
+        retval = self.threshold_check(err_str,
                                       diff_target,
                                       eval_test_struct.diff_fp32_min_,
                                       eval_test_struct.diff_fp32_max_,
@@ -524,7 +524,7 @@ class TestSotaCheckpoints:
         diff_target = round((metric_value - expected_), 2)
         self.row_dict[model_name_] = self.make_table_row(test, expected_, metric_type_, model_name_, err_str,
                                                          metric_value, diff_target)
-        self.color_dict[model_name_], is_accuracy_within_thresholds = self.threshold_check(err_str is not None,
+        self.color_dict[model_name_], is_accuracy_within_thresholds = self.threshold_check(err_str,
                                                                                            diff_target)
         assert is_accuracy_within_thresholds
 

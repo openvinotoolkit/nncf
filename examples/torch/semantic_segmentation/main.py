@@ -10,6 +10,7 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+from copy import deepcopy
 
 import functools
 import os
@@ -206,7 +207,7 @@ def load_dataset(dataset, config):
             shuffle=train_shuffle)
     # Loaders
     train_loader = create_train_data_loader(batch_size)
-    init_loader = train_loader
+    init_loader = deepcopy(train_loader)
     if config.batch_size_init:
         init_loader = create_train_data_loader(config.batch_size_init)
 
