@@ -346,8 +346,8 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
 
                 command = TFInsertionCommand(target_point=qp.target_point,
                                              callable_object=quantizer,
-                                             priority=TransformationPriority.QUANTIZATION_PRIORITY,
-                                             callable_object_instance_idx=instance_idx)
+                                             callable_object_instance_idx=instance_idx,
+                                             priority=TransformationPriority.QUANTIZATION_PRIORITY)
                 insertion_commands.append(command)
 
         for qp_id in non_unified_scales_quantization_point_ids:

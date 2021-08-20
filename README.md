@@ -278,7 +278,7 @@ to find instruction and links to exact configuration files and final checkpoints
 
 |Tensorflow Model|Compression algorithm|Dataset|Accuracy (Drop) %|
 | :---: | :---: | :---: | :---: |
-|Inception V3|INT8 (per-tensor for weights)|ImageNet|78.35 (-0.45)|
+|Inception V3|INT8 (per-tensor for weights)|ImageNet|78.36 (-0.44)|
 |Inception V3|Sparsity 54% (Magnitude)|ImageNet|77.87 (0.03)|
 |Inception V3|INT8 (per-tensor for weights) + Sparsity 61% (RB)|ImageNet|77.58 (0.32)|
 |MobileNet V2|INT8 (per-tensor for weights)|ImageNet|71.66 (0.19)|
@@ -304,7 +304,7 @@ to find instruction and links to exact configuration files and final checkpoints
 |RetinaNet|Sparsity 50% (Magnitude)|COCO2017|33.13 (0.31)|
 |RetinaNet|Filter Pruning 40%, geometric_median criterion|COCO2017|32.7 (0.74)|
 |RetinaNet|Filter Pruning 40%, geometric_median criterion + INT8 (per-tensor for weights)|COCO2017|32.53 (0.91)|
-|YOLOv4|INT8 (per-channel, symmetric for weights; per-tensor, asymmetric for activations)|COCO2017|46.15 (0.89)|
+|YOLOv4|INT8 (per-channel, symmetric for weights; per-tensor, asymmetric for activations)|COCO2017|46.33 (0.71)|
 |YOLOv4|Sparsity 50% (Magnitude)|COCO2017|46.54 (0.50)|
 
 <a name="tensorflow_instance_segmentation"></a>

@@ -13,7 +13,6 @@
 
 from collections import OrderedDict
 from collections import namedtuple
-from typing import Callable
 from typing import Dict
 from typing import List
 from typing import Set
@@ -25,6 +24,7 @@ from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.graph.transformations.commands import TransformationType
+from nncf.tensorflow.graph.transformations.commands import CallableObject
 from nncf.tensorflow.graph.transformations.commands import TFAfterLayer
 from nncf.tensorflow.graph.transformations.commands import TFBeforeLayer
 from nncf.tensorflow.graph.transformations.commands import TFLayer
@@ -141,9 +141,7 @@ class TFModelTransformer(ModelTransformer):
 
     def _apply_transformation(self, transformation: TransformationCommand):
         if transformation.type == TransformationType.INSERT:
-            self._insert(transformation.target_point,
-                         transformation.insertion_objects,
-                         transformation.callable_object_instance_indices)
+            self._insert(transformation.target_point, transformation.insertion_objects)
         elif transformation.type == TransformationType.MULTI_INSERT:
             self._multi_insertion(transformation.target_point, transformation.commands)
         elif transformation.type == TransformationType.REMOVE:
@@ -152,24 +150,25 @@ class TFModelTransformer(ModelTransformer):
             raise TypeError('Transformation type {} does not support'
                             .format(transformation.type))
 
-    def _insert(self, target_point: TargetPoint, insertion_objects: List[Callable],
-                insert_with_instance_indices: List[int]):
+    def _insert(self, target_point: TargetPoint, insertion_objects: List[CallableObject]):
+        callable_objects = [obj.callable for obj in insertion_objects]
+        callable_object_instance_indices = [obj.instance_idx for obj in insertion_objects]
         if isinstance(target_point, TFLayerWeight):
             weight_operations = [
-                WeightOperations(target_point.weights_attr_name, insertion_objects)]
+                WeightOperations(target_point.weights_attr_name, callable_objects)]
             self._insert_weight_operations(target_point.layer_name, weight_operations)
         elif isinstance(target_point, TFBeforeLayer):
             self._insert_layers_before(target_point.layer_name,
                                        target_point.instance_idx,
                                        target_point.input_port_id,
-                                       insertion_objects,
-                                       insert_with_instance_indices)
+                                       callable_objects,
+                                       callable_object_instance_indices)
         elif isinstance(target_point, TFAfterLayer):
             self._insert_layers_after(target_point.layer_name,
                                       target_point.instance_idx,
                                       target_point.output_port_id,
-                                      insertion_objects,
-                                      insert_with_instance_indices)
+                                      callable_objects,
+                                      callable_object_instance_indices)
         else:
             raise TypeError('Insertion transform does not support {} '
                             'target point type'.format(target_point.type))
@@ -189,7 +188,7 @@ class TFModelTransformer(ModelTransformer):
             weight_operations.append(
                 WeightOperations(
                     cmd.target_point.weights_attr_name,
-                    cmd.insertion_objects
+                    [obj.callable for obj in cmd.insertion_objects]
                 ))
 
         self._insert_weight_operations(target_point.layer_name, weight_operations)
@@ -272,8 +271,8 @@ class TFModelTransformer(ModelTransformer):
         idx, _ = self._find_layer_config(layer_name)
         self._model_config['layers'][idx] = replace_layer_config
 
-    def _insert_layers_before(self, layer_name: str, instance_idx: int, input_port_id: int, layers: List,
-                              insert_with_instance_indices: List[int]):
+    def _insert_layers_before(self, layer_name: str, instance_idx: int, input_port_id: int,
+                              layers: List, callable_object_instance_indices: List[int]):
         functional_model = is_functional_model(self._model)
 
         if functional_model:
@@ -283,7 +282,7 @@ class TFModelTransformer(ModelTransformer):
 
         layer_configs = []
         idx, input_layer_cfg = self._find_layer_config(layer_name)
-        for layer, insert_with_instance_idx in zip(layers, insert_with_instance_indices):
+        for layer, insert_with_instance_idx in zip(layers, callable_object_instance_indices):
             config = tf.keras.utils.serialize_keras_object(layer)
             if functional_model:
                 config['name'] = config['config']['name']
@@ -307,9 +306,9 @@ class TFModelTransformer(ModelTransformer):
                 config['inbound_nodes'] = [[[layer_name, instance_idx, output_port_id, {}]]]
             layer_configs.append(config)
 
-        for config, insert_with_instance_idx in zip(layer_configs, insert_with_instance_indices):
+        for config, layer_instance_idx in zip(layer_configs, insert_with_instance_indices):
             if functional_model:
-                self._insert_layer_after_functional(layer_name, instance_idx, config, insert_with_instance_idx)
+                self._insert_layer_after_functional(layer_name, instance_idx, config, layer_instance_idx)
             else:
                 self._insert_layer_after_sequential(layer_name, config)
 
