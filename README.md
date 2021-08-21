@@ -304,7 +304,7 @@ to find instruction and links to exact configuration files and final checkpoints
 |RetinaNet|Sparsity 50% (Magnitude)|COCO2017|33.13 (0.31)|
 |RetinaNet|Filter Pruning 40%, geometric_median criterion|COCO2017|32.7 (0.74)|
 |RetinaNet|Filter Pruning 40%, geometric_median criterion + INT8 (per-tensor for weights)|COCO2017|32.53 (0.91)|
-|YOLOv4|INT8 (per-channel, symmetric for weights; per-tensor, asymmetric for activations)|COCO2017|46.33 (0.71)|
+|YOLOv4|INT8 (per-channel, symmetric for weights; per-tensor, asymmetric for activations)|COCO2017|46.30 (0.74)|
 |YOLOv4|Sparsity 50% (Magnitude)|COCO2017|46.54 (0.50)|
 
 <a name="tensorflow_instance_segmentation"></a>
