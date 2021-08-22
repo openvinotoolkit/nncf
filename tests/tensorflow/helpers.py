@@ -10,17 +10,20 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-from typing import Dict
-
+import numbers
 import numpy as np
 import tensorflow as tf
 from nncf.common.compression import BaseCompressionAlgorithmController
 from tensorflow.python.ops.init_ops import Constant
+from typing import Union
 
 from nncf import NNCFConfig
 from nncf.tensorflow.helpers.model_creation import create_compressed_model
 
 from examples.tensorflow.common.object_detection.datasets.builder import COCODatasetBuilder
+from tests.common.helpers import BaseTensorListComparator
+
+TensorType = Union[tf.Tensor, tf.Variable, numbers.Number, np.ndarray]
 
 
 def get_conv_init_value(shape, value):
@@ -86,6 +89,20 @@ def get_basic_n_conv_test_model(input_shape=(24, 24, 1), in_out_ch=((1, 3), (3, 
     return tf.keras.Model(inputs=inputs, outputs=outputs)
 
 
+def get_lenet_model():
+    model = tf.keras.Sequential([
+        tf.keras.layers.Conv2D(filters=6, kernel_size=(5, 5), activation='relu', input_shape=(32, 32, 1)),
+        tf.keras.layers.MaxPool2D(padding='valid'),
+        tf.keras.layers.Conv2D(filters=16, kernel_size=(5, 5), activation='relu'),
+        tf.keras.layers.AveragePooling2D(),
+        tf.keras.layers.Flatten(),
+        tf.keras.layers.Dense(units=120, activation='relu'),
+        tf.keras.layers.Dense(units=84, activation='relu'),
+        tf.keras.layers.Dense(units=10, activation='softmax')
+    ])
+    return model
+
+
 def create_compressed_model_and_algo_for_test(model, config, compression_state=None, force_no_init=False):
     assert isinstance(config, NNCFConfig)
     tf.keras.backend.clear_session()
@@ -106,13 +123,6 @@ def create_conv(in_channels, out_channels, kernel_size, weight_init, bias_init, 
     else:
         conv_cls = tf.keras.layers.Conv2DTranspose
     return conv_cls(**args)
-
-
-def check_equal(test, reference, rtol=1e-4):
-    test = test.numpy()
-    reference = reference.numpy()
-    for i, (x, y) in enumerate(zip(test, reference)):
-        np.testing.assert_allclose(x, y, rtol=rtol, err_msg="Index: {}".format(i))
 
 
 class MockCOCODatasetBuilder(COCODatasetBuilder):
@@ -157,3 +167,13 @@ def get_op_by_cls(wrapper, cls):
             if isinstance(op, cls):
                 return op
     return None
+
+
+class TFTensorListComparator(BaseTensorListComparator):
+    @classmethod
+    def _to_numpy(cls, tensor: TensorType) -> Union[np.ndarray, numbers.Number]:
+        if isinstance(tensor, (tf.Tensor, tf.Variable)):
+            return tensor.numpy()
+        if isinstance(tensor, (np.ndarray, numbers.Number)):
+            return tensor
+        raise Exception(f'Tensor must be numbers.Number, np.ndarray, tf.Tensor or tf.Variable, not {type(tensor)}')

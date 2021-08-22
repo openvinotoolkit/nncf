@@ -190,10 +190,12 @@ class BasePruningAlgoBuilder(TFCompressionAlgorithmBuilder):
                                            attr_name: str) -> TFInsertionCommand:
         op_name = self._get_pruning_operation_name(layer_name, attr_name)
         self._op_names.append(op_name)
+        compression_lr_multiplier = \
+            self.config.get_redefinable_global_param_value_for_algo('compression_lr_multiplier', self.name)
 
         return TFInsertionCommand(
             target_point=TFLayerWeight(layer_name, attr_name),
-            callable_object=BinaryMask(op_name),
+            callable_object=BinaryMask(op_name, compression_lr_multiplier=compression_lr_multiplier),
             priority=TransformationPriority.PRUNING_PRIORITY
         )
 

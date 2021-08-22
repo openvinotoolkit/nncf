@@ -12,8 +12,9 @@
 """
 from abc import ABC, abstractmethod
 from copy import deepcopy
-from typing import Dict, Callable, Any, Union, List, Tuple, TypeVar
+from typing import Dict, Callable, Any, Union, List, Tuple
 import contextlib
+import numbers
 
 import numpy as np
 import onnx
@@ -39,8 +40,9 @@ from nncf.torch.model_creation import create_compressed_model
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.utils import get_all_modules_by_type
 from tests.common.command import Command as BaseCommand
+from tests.common.helpers import BaseTensorListComparator
 
-TensorType = TypeVar('TensorType', bound=Union[torch.Tensor, np.ndarray])
+TensorType = Union[torch.Tensor, np.ndarray, numbers.Number]
 
 
 def fill_conv_weight(conv, value):
@@ -208,48 +210,14 @@ def get_empty_config(model_size=4, input_sample_sizes: Union[Tuple[List[int]], L
 
 
 def get_grads(variables: List[nn.Parameter]) -> List[torch.Tensor]:
-    return [var.grad.clone() for var in variables]
+    grads = [var.grad for var in variables]
+    for i, grad in enumerate(grads):
+        if grad is not None:
+            grads[i] = grad.clone()
+    return grads
 
 
-def to_numpy(tensor: TensorType) -> np.ndarray:
-    if isinstance(tensor, torch.Tensor):
-        return tensor.cpu().detach().numpy()
-    return tensor
-
-
-def compare_tensor_lists(test: List[TensorType], reference: List[TensorType],
-                         assert_fn: Callable[[np.ndarray, np.ndarray], bool]):
-    assert len(test) == len(reference)
-
-    for x, y in zip(test, reference):
-        x = to_numpy(x)
-        y = to_numpy(y)
-        assert_fn(x, y)
-
-
-def check_equal(test: List[TensorType], reference: List[TensorType], rtol: float = 1e-1):
-    compare_tensor_lists(test, reference,
-                         lambda x, y: np.testing.assert_allclose(x, y, rtol=rtol))
-
-
-def check_not_equal(test: List[TensorType], reference: List[TensorType], rtol: float = 1e-4):
-    compare_tensor_lists(test, reference,
-                         lambda x, y: np.testing.assert_raises(AssertionError,
-                                                               np.testing.assert_allclose, x, y, rtol=rtol))
-
-
-def check_less(test: List[TensorType], reference: List[TensorType], rtol=1e-4):
-    check_not_equal(test, reference, rtol=rtol)
-    compare_tensor_lists(test, reference, np.testing.assert_array_less)
-
-
-def check_greater(test: List[TensorType], reference: List[TensorType], rtol=1e-4):
-    check_not_equal(test, reference, rtol=rtol)
-    compare_tensor_lists(test, reference,
-                         lambda x, y: np.testing.assert_raises(AssertionError, np.testing.assert_array_less, x, y))
-
-
-def create_compressed_model_and_algo_for_test(model: Module, config: NNCFConfig=None,
+def create_compressed_model_and_algo_for_test(model: Module, config: NNCFConfig,
                                               dummy_forward_fn: Callable[[Module], Any] = None,
                                               wrap_inputs_fn: Callable[[Tuple, Dict], Tuple[Tuple, Dict]] = None,
                                               compression_state: Dict[str, Any] = None) \
@@ -443,3 +411,13 @@ def set_torch_seed(seed: int = 42):
     torch.manual_seed(seed)
     yield
     torch.manual_seed(saved_seed)
+
+
+class PTTensorListComparator(BaseTensorListComparator):
+    @classmethod
+    def _to_numpy(cls, tensor: TensorType) -> Union[np.ndarray, numbers.Number]:
+        if isinstance(tensor, torch.Tensor):
+            return tensor.cpu().detach().numpy()
+        if isinstance(tensor, (np.ndarray, numbers.Number)):
+            return tensor
+        raise Exception(f'Tensor must be np.ndarray or torch.Tensor, not {type(tensor)}')

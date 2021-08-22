@@ -59,17 +59,15 @@ class PTQuantizerSpec(QuantizerSpec):
                  half_range: bool,
                  scale_shape: Tuple[int, ...],
                  logarithm_scale: bool,
-                 compression_lr_multiplier: float = None):
-        super().__init__(num_bits, mode, signedness_to_force, narrow_range, half_range)
+                 compression_lr_multiplier: Optional[float] = None):
+        super().__init__(num_bits, mode, signedness_to_force, narrow_range, half_range, compression_lr_multiplier)
         self.scale_shape = scale_shape
         self.logarithm_scale = logarithm_scale
-        self.compression_lr_multiplier = compression_lr_multiplier
-
 
     @classmethod
     def from_config(cls, qconfig: QuantizerConfig, narrow_range: bool,
                     half_range: bool, scale_shape: Tuple[int],
-                    logarithm_scale: bool, compression_lr_multiplier: float) -> 'PTQuantizerSpec':
+                    logarithm_scale: bool, compression_lr_multiplier: Optional[float] = None) -> 'PTQuantizerSpec':
         return cls(qconfig.num_bits,
                    qconfig.mode,
                    qconfig.signedness_to_force,

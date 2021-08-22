@@ -21,7 +21,7 @@ from nncf.torch.module_operations import UpdateWeight
 from nncf.torch.sparsity.layers import BinaryMask
 from nncf.torch.sparsity.magnitude.algo import MagnitudeSparsityController
 from nncf.torch.sparsity.magnitude.functions import normed_magnitude
-from tests.torch.quantization.test_functions import check_equal
+from tests.torch.helpers import PTTensorListComparator
 from tests.torch.sparsity.const.test_algo import ref_mask_2, ref_mask_1
 from tests.torch.sparsity.magnitude.test_helpers import MagnitudeTestModel, get_basic_magnitude_sparsity_config
 from tests.torch.helpers import create_compressed_model_and_algo_for_test, MockModel, BasicConvTestModel, \
@@ -122,10 +122,10 @@ def test_magnitude_algo_set_binary_mask_on_forward():
         sparse_model(torch.ones([1, 1, 10, 10]))
 
     op = sparse_model.conv1.pre_ops['0']
-    check_equal(ref_mask_1, op.operand.binary_mask)
+    PTTensorListComparator.check_equal(ref_mask_1, op.operand.binary_mask)
 
     op = sparse_model.conv2.pre_ops['0']
-    check_equal(ref_mask_2, op.operand.binary_mask)
+    PTTensorListComparator.check_equal(ref_mask_2, op.operand.binary_mask)
 
 
 def test_magnitude_algo_binary_masks_are_applied():

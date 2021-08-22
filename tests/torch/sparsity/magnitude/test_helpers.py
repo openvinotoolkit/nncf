@@ -15,8 +15,8 @@ import torch
 from torch import nn
 
 from nncf.config import NNCFConfig
-from tests.torch.quantization.test_functions import check_equal
 from tests.torch.helpers import create_conv
+from tests.torch.helpers import PTTensorListComparator
 
 
 class MagnitudeTestModel(nn.Module):
@@ -44,11 +44,11 @@ def test_magnitude_model_has_expected_params():
                                  [-10., -10., -9.]]]])
     ref_weights_2 = torch.cat((sub_tensor, sub_tensor), 1)
 
-    check_equal(act_weights_1, ref_weights_1)
-    check_equal(act_weights_2, ref_weights_2)
+    PTTensorListComparator.check_equal(act_weights_1, ref_weights_1)
+    PTTensorListComparator.check_equal(act_weights_2, ref_weights_2)
 
-    check_equal(act_bias_1, torch.tensor([-2., -2]))
-    check_equal(act_bias_2, torch.tensor([0]))
+    PTTensorListComparator.check_equal(act_bias_1, torch.tensor([-2., -2]))
+    PTTensorListComparator.check_equal(act_bias_2, torch.tensor([0]))
 
 
 def get_basic_magnitude_sparsity_config(input_sample_size=None):

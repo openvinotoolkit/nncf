@@ -12,6 +12,9 @@
 """
 
 import tensorflow as tf
+from typing import Dict, Optional
+
+from nncf.tensorflow.functions import get_id_with_multiplied_grad
 
 
 def symmetric_quantize(inputs,
@@ -44,6 +47,18 @@ def asymmetric_quantize(inputs,
         max_var = input_low + input_range_safe
         return _fake_quant_with_min_max_vars(inputs, min_var, max_var, num_bits,
                                              narrow_range, per_channel)
+
+
+def add_id_with_multiplied_grad_op(weights: Dict[str, tf.Tensor], compression_lr_multiplier: Optional[float] = None):
+    if compression_lr_multiplier is None:
+        return weights
+
+    id_with_multiplied_grad = get_id_with_multiplied_grad(compression_lr_multiplier)
+
+    modified_weights = {}
+    for k in weights.keys():
+        modified_weights[k] = id_with_multiplied_grad(weights[k])
+    return modified_weights
 
 
 def _fake_quant_with_min_max_vars(inputs, min_var, max_var, num_bits, narrow_range,

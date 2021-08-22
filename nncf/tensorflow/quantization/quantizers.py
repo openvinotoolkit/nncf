@@ -26,6 +26,7 @@ from nncf.tensorflow.layers.custom_objects import NNCF_QUANTIZATION_OPERATONS
 from nncf.tensorflow.layers.data_layout import get_channel_axis
 from nncf.tensorflow.layers.data_layout import get_channel_size
 from nncf.tensorflow.layers.operation import NNCFOperation
+from nncf.tensorflow.quantization.functions import add_id_with_multiplied_grad_op
 from nncf.tensorflow.quantization.functions import asymmetric_quantize
 from nncf.tensorflow.quantization.functions import symmetric_quantize
 
@@ -36,18 +37,21 @@ class TFQuantizerSpec(QuantizerSpec):
                  signedness_to_force: Optional[bool],
                  narrow_range: bool,
                  half_range: bool,
-                 per_channel: bool):
-        super().__init__(num_bits, mode, signedness_to_force, narrow_range, half_range)
+                 per_channel: bool,
+                 compression_lr_multiplier: Optional[float] = None):
+        super().__init__(num_bits, mode, signedness_to_force, narrow_range, half_range, compression_lr_multiplier)
         self.per_channel = per_channel
 
     @classmethod
-    def from_config(cls, qconfig: QuantizerConfig, narrow_range: bool, half_range: bool) -> 'TFQuantizerSpec':
+    def from_config(cls, qconfig: QuantizerConfig, narrow_range: bool, half_range: bool,
+                    compression_lr_multiplier: Optional[float] = None) -> 'TFQuantizerSpec':
         return cls(qconfig.num_bits,
                    qconfig.mode,
                    qconfig.signedness_to_force,
                    narrow_range,
                    half_range,
-                   qconfig.per_channel)
+                   qconfig.per_channel,
+                   compression_lr_multiplier)
 
     def get_state(self) -> Dict[str, Any]:
         """
@@ -62,7 +66,8 @@ class TFQuantizerSpec(QuantizerSpec):
             'signedness_to_force': self.signedness_to_force,
             'narrow_range': self.narrow_range,
             'half_range': self.half_range,
-            'per_channel': self.per_channel
+            'per_channel': self.per_channel,
+            'compression_lr_multiplier': self.compression_lr_multiplier
         }
 
     @classmethod
@@ -285,6 +290,7 @@ class SymmetricQuantizer(Quantizer):
         self.narrow_range = qspec.narrow_range
         self.signedness_to_force = qspec.signedness_to_force
         self._half_range = qspec.half_range
+        self.compression_lr_multiplier = qspec.compression_lr_multiplier
 
     @property
     def half_range(self):
@@ -310,12 +316,12 @@ class SymmetricQuantizer(Quantizer):
             shape = (get_channel_size(input_shape, input_type, name, layer),)
 
         scale = layer.add_weight(
-            name + '_scale',
+            name + '_quantization.scale',
             shape=shape,
             initializer=tf.keras.initializers.Constant(1.0),
             trainable=True)
         signed = layer.add_weight(
-            name + '_signed',
+            name + '_quantization.signed',
             initializer=tf.keras.initializers.Constant(
                 -1.0 if self.signedness_to_force in (True, None) else 0.0),
             trainable=False)
@@ -336,6 +342,8 @@ class SymmetricQuantizer(Quantizer):
         self._half_range = False
 
     def quantize(self, inputs, weights, _):
+        weights = add_id_with_multiplied_grad_op(weights, self.compression_lr_multiplier)
+
         def _half_range_quantize():
             return symmetric_quantize(
                 inputs,
@@ -389,6 +397,7 @@ class SymmetricQuantizer(Quantizer):
             'narrow_range': self.narrow_range,
             'half_range': self._half_range,
             'per_channel': self.per_channel,
+            'compression_lr_multiplier': self.compression_lr_multiplier,
         }
         config = {
             'quantizer_spec': qspec_dict,
@@ -404,10 +413,10 @@ class SymmetricQuantizer(Quantizer):
                                 signedness_to_force=qspec_dict['signedness_to_force'],
                                 narrow_range=qspec_dict['narrow_range'],
                                 half_range=qspec_dict['half_range'],
-                                per_channel=qspec_dict['per_channel'])
+                                per_channel=qspec_dict['per_channel'],
+                                compression_lr_multiplier=qspec_dict['compression_lr_multiplier'])
         name = config['name']
         return cls(name, qspec)
-
 
 
 @NNCF_CUSTOM_OBJECTS.register()
@@ -419,6 +428,7 @@ class AsymmetricQuantizer(Quantizer):
         self.narrow_range = qspec.narrow_range
         self.per_channel = qspec.per_channel
         self._half_range = qspec.half_range
+        self.compression_lr_multiplier = qspec.compression_lr_multiplier
 
     @property
     def half_range(self):
@@ -435,12 +445,12 @@ class AsymmetricQuantizer(Quantizer):
             shape = (get_channel_size(input_shape, input_type, name, layer),)
 
         input_low = layer.add_weight(
-            name + '_input_low',
+            name + '_quantization.input_low',
             shape=shape,
             initializer=tf.keras.initializers.Constant(0.0),
             trainable=True)
         input_range = layer.add_weight(
-            name + '_input_range',
+            name + '_quantization.input_range',
             shape=shape,
             initializer=tf.keras.initializers.Constant(1.0),
             trainable=True)
@@ -466,6 +476,8 @@ class AsymmetricQuantizer(Quantizer):
         self._half_range = False
 
     def quantize(self, inputs, weights, _):
+        weights = add_id_with_multiplied_grad_op(weights, self.compression_lr_multiplier)
+
         def _half_range_quantize():
             return asymmetric_quantize(
                 inputs,
@@ -519,6 +531,7 @@ class AsymmetricQuantizer(Quantizer):
             'narrow_range': self.narrow_range,
             'half_range': self._half_range,
             'per_channel': self.per_channel,
+            'compression_lr_multiplier': self.compression_lr_multiplier,
         }
         config = {
             'quantizer_spec': qspec_dict,
@@ -534,6 +547,7 @@ class AsymmetricQuantizer(Quantizer):
                                 signedness_to_force=None,
                                 narrow_range=qspec_dict['narrow_range'],
                                 half_range=qspec_dict['half_range'],
-                                per_channel=qspec_dict['per_channel'])
+                                per_channel=qspec_dict['per_channel'],
+                                compression_lr_multiplier=qspec_dict['compression_lr_multiplier'])
         name = config['name']
         return cls(name, qspec)

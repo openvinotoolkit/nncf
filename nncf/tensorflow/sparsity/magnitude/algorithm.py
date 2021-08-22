@@ -60,6 +60,8 @@ class MagnitudeSparsityBuilder(TFCompressionAlgorithmBuilder):
         converter = TFModelConverterFactory.create(model)
         nncf_graph = converter.convert()
         transformations = TFTransformationLayout()
+        compression_lr_multiplier = \
+            self.config.get_redefinable_global_param_value_for_algo('compression_lr_multiplier', self.name)
 
         processed_shared_layer_names = set()  # type: Set[str]
 
@@ -87,7 +89,7 @@ class MagnitudeSparsityBuilder(TFCompressionAlgorithmBuilder):
                     transformations.register(
                         TFInsertionCommand(
                             target_point=TFLayerWeight(layer_info.layer_name, weight_def.weight_attr_name),
-                            callable_object=BinaryMask(op_name),
+                            callable_object=BinaryMask(op_name, compression_lr_multiplier=compression_lr_multiplier),
                             priority=TransformationPriority.SPARSIFICATION_PRIORITY
                         ))
             elif node.metatype in WEIGHTABLE_TF_OP_METATYPES:
@@ -101,7 +103,11 @@ class MagnitudeSparsityBuilder(TFCompressionAlgorithmBuilder):
                 transformations.register(
                     TFInsertionCommand(
                         target_point=TFLayerWeight(layer_info.layer_name, weight_attr_name),
-                        callable_object=BinaryMaskWithWeightsBackup(op_name, weight_attr_name),
+                        callable_object=BinaryMaskWithWeightsBackup(
+                            op_name,
+                            weight_attr_name,
+                            compression_lr_multiplier=compression_lr_multiplier
+                        ),
                         priority=TransformationPriority.SPARSIFICATION_PRIORITY
                     ))
 

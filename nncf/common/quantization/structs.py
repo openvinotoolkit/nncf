@@ -136,7 +136,8 @@ class QuantizerSpec:
                  mode: QuantizationMode,
                  signedness_to_force: bool,
                  narrow_range: bool,
-                 half_range: bool):
+                 half_range: bool,
+                 compression_lr_multiplier: Optional[float] = None):
         """
         :param num_bits: Bitwidth of the quantization.
         :param mode: The mode of quantization (symmetric or asymmetric).
@@ -147,23 +148,28 @@ class QuantizerSpec:
             naive case, False if all 2^`num_bits` quantizations should be used.
         :param half_range: If ``True`` effectively only a half of an quantizer range are used.
             False - the full range are used.
+        :compression_lr_multiplier: Multiplier for gradient values
         """
         self.num_bits = num_bits
         self.mode = mode
         self.signedness_to_force = signedness_to_force
         self.narrow_range = narrow_range
         self.half_range = half_range
+        self.compression_lr_multiplier = compression_lr_multiplier
 
     def __eq__(self, other: 'QuantizerSpec'):
         return self.__dict__ == other.__dict__
 
     @classmethod
-    def from_config(cls, qconfig: QuantizerConfig, narrow_range: bool, half_range: bool) -> 'QuantizerSpec':
+    def from_config(cls, qconfig: QuantizerConfig,
+                    narrow_range: bool, half_range: bool,
+                    compression_lr_multiplier: Optional[float]) -> 'QuantizerSpec':
         return cls(qconfig.num_bits,
                    qconfig.mode,
                    qconfig.signedness_to_force,
                    narrow_range,
-                   half_range)
+                   half_range,
+                   compression_lr_multiplier)
 
 
 class QuantizationConstraints:

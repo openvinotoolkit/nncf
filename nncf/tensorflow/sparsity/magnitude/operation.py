@@ -12,16 +12,22 @@
 """
 
 import tensorflow as tf
+from typing import Optional
 
 from nncf.tensorflow.graph.utils import get_weight_by_name
 from nncf.tensorflow.layers.custom_objects import NNCF_CUSTOM_OBJECTS
 from nncf.tensorflow.layers.operation import InputType
 from nncf.tensorflow.layers.operation import NNCFOperation
 from nncf.tensorflow.sparsity.magnitude.functions import apply_mask
+from nncf.tensorflow.sparsity.rb.operation import add_id_with_multiplied_grad_op
 
 
 @NNCF_CUSTOM_OBJECTS.register()
 class BinaryMask(NNCFOperation):
+    def __init__(self, name: str, compression_lr_multiplier: Optional[float] = None):
+        super().__init__(name)
+        self.compression_lr_multiplier = compression_lr_multiplier
+
     def build(self, input_shape, input_type, name, layer):
         if input_type is not InputType.WEIGHTS:
             raise ValueError(
@@ -29,7 +35,7 @@ class BinaryMask(NNCFOperation):
                     format(layer.name))
 
         mask = layer.add_weight(
-            name + '_mask',
+            name + '_sparsity.magnitude.mask',
             shape=input_shape,
             initializer=tf.keras.initializers.Constant(1.0),
             trainable=False,
@@ -40,6 +46,7 @@ class BinaryMask(NNCFOperation):
         }
 
     def call(self, inputs, weights, _):
+        weights = add_id_with_multiplied_grad_op(weights)
         return apply_mask(inputs, weights['mask'])
 
     @staticmethod
@@ -55,8 +62,8 @@ class BinaryMask(NNCFOperation):
 
 @NNCF_CUSTOM_OBJECTS.register()
 class BinaryMaskWithWeightsBackup(BinaryMask):
-    def __init__(self, name: str, w_name_to_bkup: str = None):
-        super().__init__(name)
+    def __init__(self, name: str, w_name_to_bkup: str = None, compression_lr_multiplier: Optional[float] = None):
+        super().__init__(name, compression_lr_multiplier)
         self.w_name_to_bkup = w_name_to_bkup
         self.bkup_var = None
 
@@ -72,7 +79,7 @@ class BinaryMaskWithWeightsBackup(BinaryMask):
     def _create_bkup_weights(layer, w_name):
         var = get_weight_by_name(layer, w_name)
         bkup_var = layer.add_weight(
-            w_name + '_bkup',
+            w_name + '_sparsity.magnitude.bkup',
             shape=var.shape,
             trainable=False,
             aggregation=tf.VariableAggregation.MEAN)
