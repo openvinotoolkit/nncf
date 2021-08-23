@@ -247,6 +247,6 @@ def conv2d_bn(x,
         use_bias=False,
         name=conv_name)(
         x)
-    x = layers.BatchNormalization(axis=bn_axis, name=bn_name)(x)
+    x = layers.BatchNormalization(axis=bn_axis, scale=False, name=bn_name)(x)
     x = layers.Activation('relu', name=name)(x)
     return x
