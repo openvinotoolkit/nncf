@@ -1,5 +1,5 @@
 """
- Copyright (c) 2020 Intel Corporation
+ Copyright (c) 2021 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -82,7 +82,7 @@ CAT_UNIFIED_SCALE_TEST_STRUCTS = [(get_single_concat_test_model, 3, 4),
 
 def get_total_quantizations(model: tf.keras.Model) -> int:
     fq_layers = [layer for layer in model.get_config()['layers'] if layer['class_name'] == 'FakeQuantize']
-    total_quantizations  = sum([len(layer['inbound_nodes']) for layer in fq_layers])
+    total_quantizations  = sum(len(layer['inbound_nodes']) for layer in fq_layers)
     return total_quantizations
 
 

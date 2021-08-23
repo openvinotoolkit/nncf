@@ -379,11 +379,12 @@ class CallableObject:
     """
     Stores the callable object and instance index
     """
-    def __init__(self, callable_obj: Optional[Callable] = None, instance_idx: int = 0):
+
+    def __init__(self, callable_obj: Callable, instance_idx: int):
         self.callable = callable_obj
         self.instance_idx = instance_idx
 
-    def __call__(self) -> Optional[Callable]:
+    def __call__(self):
         return self.callable()
 
 

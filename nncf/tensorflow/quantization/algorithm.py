@@ -425,7 +425,7 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
         setup = TFQuantizationSetup()
 
         quantized_layer_names_vs_qconfigs = {}  # type: Dict[str, QuantizerConfig]
-        qp_id_to_index = {} # type: Dict[QuantizationPointId, int]
+        qp_id_to_index = {}  # type: Dict[QuantizationPointId, int]
         tf_setup_qp_index = 0
         applied_saturation_fix = False
         for qp_id, qp in quantizer_setup.quantization_points.items():
