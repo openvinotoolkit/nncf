@@ -512,7 +512,8 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
             for qp_id in unified_group:
                 qp = quantizer_setup.quantization_points[qp_id]
                 qp_layer_name = qp.insertion_point.target_node_name
-                layer_idx = layer_names.index(qp_layer_name)
+                original_name, _ = get_original_name_and_instance_idx(qp_layer_name)
+                layer_idx = layer_names.index(original_name)
                 tf_setup_index = qp_id_to_index[qp_id]
                 sorted_unified_group.append((tf_setup_index, layer_idx))
 
