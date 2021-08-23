@@ -10,6 +10,7 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+
 from nncf import NNCFConfig
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
 from tests.torch.helpers import TwoConvTestModel
