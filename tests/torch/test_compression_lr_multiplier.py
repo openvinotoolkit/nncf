@@ -28,12 +28,9 @@ from nncf import NNCFConfig
 from nncf.torch.layer_utils import CompressionParameter
 from tests.torch.helpers import create_initialized_compressed_model
 from tests.torch.helpers import create_random_mock_dataloader
-from tests.torch.helpers import check_equal
-from tests.torch.helpers import check_not_equal
-from tests.torch.helpers import check_less
-from tests.torch.helpers import check_greater
 from tests.torch.helpers import get_grads
 from tests.torch.helpers import LeNet
+from tests.torch.helpers import PTTensorListComparator
 from tests.torch.helpers import RandomDatasetMock
 from tests.torch.helpers import set_torch_seed
 from tests.torch.quantization.test_algo_quantization import get_quantization_config_without_range_init
@@ -429,7 +426,7 @@ def check_if_grads_are_multiplied(ref_params: List[nn.Parameter], target_params:
     ref_grads = [multiplier * grad for grad in ref_grads]
     target_grads = get_grads(target_params)
 
-    check_equal(ref_grads, target_grads)
+    PTTensorListComparator.check_equal(ref_grads, target_grads)
 
 
 def test_if_setting_multipliers_in_config_multiplies_grads_values(
@@ -464,9 +461,9 @@ def test_if_setting_multiplier_in_parameter_multiplies_grads_values(
 def check_if_zero_multiplier_freezes_training(orig_params: List[nn.Parameter], params: List[nn.Parameter],
                                               multiplier: float):
     if multiplier == 0:
-        check_equal(orig_params, params)
+        PTTensorListComparator.check_equal(orig_params, params)
     else:
-        check_not_equal(orig_params, params)
+        PTTensorListComparator.check_not_equal(orig_params, params)
 
 
 def get_params_diff(orig_params: List[nn.Parameter], params: List[nn.Parameter]) -> List[torch.Tensor]:
@@ -486,11 +483,11 @@ def check_params_affect_training_speed(orig_params: List[nn.Parameter],
     target_diff = get_params_diff(target_params, orig_params)
 
     if pytest.approx(compression_lr_multiplier) == 1:
-        check_equal(target_diff, ref_diff)
+        PTTensorListComparator.check_equal(target_diff, ref_diff)
     elif compression_lr_multiplier < 1:
-        check_less(target_diff, ref_diff)
+        PTTensorListComparator.check_less(target_diff, ref_diff)
     else:
-        check_greater(target_diff, ref_diff)
+        PTTensorListComparator.check_greater(target_diff, ref_diff)
 
 
 def test_if_setting_multipliers_in_config_affect_training_speed(

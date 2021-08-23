@@ -18,7 +18,8 @@ from torch.autograd import Variable
 
 from nncf.torch.quantization.quantize_functions import asymmetric_quantize, symmetric_quantize
 from nncf.torch.utils import sum_like
-from tests.torch.helpers import get_grads, check_equal
+from tests.torch.helpers import get_grads
+from tests.torch.helpers import PTTensorListComparator
 
 EPS = 1e-6
 
@@ -127,7 +128,7 @@ def check_outputs_for_quantization_functions(test_val: torch.Tensor, ref_val: np
         # tensor equality - the test passes for FP32 cases, and the kernel implementation
         # is exactly the same for FP16 calculations-wise.
         return
-    check_equal(test_val, ref_val, rtol)
+    PTTensorListComparator.check_equal(test_val, ref_val, rtol)
 
 
 @pytest.mark.parametrize('input_size',

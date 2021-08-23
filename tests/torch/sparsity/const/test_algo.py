@@ -18,10 +18,10 @@ from nncf.torch.checkpoint_loading import load_state
 from nncf.torch.module_operations import UpdateWeight
 from nncf.torch.sparsity.const.algo import ConstSparsityController
 from nncf.torch.sparsity.layers import BinaryMask
-from tests.torch.quantization.test_functions import check_equal
 from tests.torch.sparsity.magnitude.test_helpers import MagnitudeTestModel
 from tests.torch.helpers import BasicConvTestModel, get_empty_config, create_compressed_model_and_algo_for_test, \
     check_correct_nncf_modules_replacement
+from tests.torch.helpers import PTTensorListComparator
 from tests.torch.helpers import register_bn_adaptation_init_args
 
 sub_tensor = torch.tensor([[[[1., 0.],
@@ -71,10 +71,10 @@ def test_can_restore_binary_mask_on_magnitude_algo_resume():
     load_state(const_sparse_model, sparse_model.state_dict())
 
     op = const_sparse_model.conv1.pre_ops['0']
-    check_equal(ref_mask_1, op.operand.binary_mask)
+    PTTensorListComparator.check_equal(ref_mask_1, op.operand.binary_mask)
 
     op = const_sparse_model.conv2.pre_ops['0']
-    check_equal(ref_mask_2, op.operand.binary_mask)
+    PTTensorListComparator.check_equal(ref_mask_2, op.operand.binary_mask)
 
 
 @pytest.mark.parametrize("use_data_parallel", [True, False], ids=["dataparallel", "regular"])
@@ -105,7 +105,7 @@ def test_can_restore_binary_mask_on_magnitude_quant_algo_resume(tmp_path, use_da
     load_state(const_sparse_model, sparse_model.state_dict())
 
     op = const_sparse_model.get_nncf_wrapped_model().conv1.pre_ops['0']
-    check_equal(ref_mask_1, op.operand.binary_mask)
+    PTTensorListComparator.check_equal(ref_mask_1, op.operand.binary_mask)
 
     op = const_sparse_model.get_nncf_wrapped_model().conv2.pre_ops['0']
-    check_equal(ref_mask_2, op.operand.binary_mask)
+    PTTensorListComparator.check_equal(ref_mask_2, op.operand.binary_mask)
