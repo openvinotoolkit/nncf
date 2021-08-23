@@ -47,20 +47,8 @@ class TFAccuracyAwareTrainingRunner(BaseAccuracyAwareTrainingRunner):
                              model,
                              epoch=self.cumulative_epoch_count)
 
-        statistics = compression_controller.statistics()
-
-        self.current_val_metric_value = None
-        if self.validate_every_n_epochs is not None and \
-                self.training_epoch_count % self.validate_every_n_epochs == 0:
-            self.current_val_metric_value = self.validate(model)
-
-        if self.verbose:
-            nncf_logger.info(statistics.to_str())
-        self.dump_checkpoint(model, compression_controller)
-
         self.training_epoch_count += 1
         self.cumulative_epoch_count += 1
-        return self.current_val_metric_value
 
     def validate(self, model):
         val_metric_value = self._validate_fn(model, epoch=self.cumulative_epoch_count)
@@ -76,6 +64,13 @@ class TFAccuracyAwareTrainingRunner(BaseAccuracyAwareTrainingRunner):
     def reset_training(self):
         self.training_epoch_count = 0
         self.best_val_metric_value = 0
+
+    def dump_statistics(self, model, compression_controller):
+        statistics = compression_controller.statistics()
+
+        if self.verbose:
+            nncf_logger.info(statistics.to_str())
+        self.dump_checkpoint(model, compression_controller)
 
     def dump_checkpoint(self, model, compression_controller):
         checkpoint_path = osp.join(self._checkpoint_save_dir, 'acc_aware_checkpoint_last.pb')

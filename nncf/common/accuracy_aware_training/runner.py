@@ -31,7 +31,7 @@ class TrainingRunner(ABC):
     @abstractmethod
     def train_epoch(self, model: ModelType, compression_controller: CompressionAlgorithmController):
         """
-        Train the supplied model for a single epoch (single dataset pass).
+        Calls train_epoch_fn and compression_controller.scheduler.epoch_step()
 
         :param model: The model to be fine-tuned
         :param compression_controller: The compression controller to be used during
@@ -45,6 +45,16 @@ class TrainingRunner(ABC):
 
         :param model: The model to be evaluated
         :return: Target validation metric value (float).
+        """
+
+    @abstractmethod
+    def dump_statistics(self, model: ModelType, compression_controller: CompressionAlgorithmController):
+        """
+        Dumps current statistics from compression_controller and dumps model's checkpoint.
+
+        :param model: The model
+        :param compression_controller: The compression controller to be used during
+        model fine-tuning
         """
 
     @abstractmethod

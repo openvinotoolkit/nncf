@@ -89,42 +89,22 @@ class PTAccuracyAwareTrainingRunner(BaseAccuracyAwareTrainingRunner):
         if self.lr_scheduler is not None and self.lr_updates_needed:
             self.lr_scheduler.step(self.training_epoch_count if not isinstance(self.lr_scheduler, ReduceLROnPlateau)
                                    else self.best_val_metric_value)
-
-        statistics = compression_controller.statistics()
-
-        self.current_val_metric_value = None
-        if self.validate_every_n_epochs is not None and \
-                self.training_epoch_count % self.validate_every_n_epochs == 0:
-            self.current_val_metric_value = self.validate(model)
-
-        if is_main_process():
-            if self.verbose:
-                nncf_logger.info(statistics.to_str())
-                # dump best checkpoint for current target compression rate
-            if self.dump_checkpoints:
-                self.dump_checkpoint(model, compression_controller)
-            for key, value in prepare_for_tensorboard(statistics).items():
-                if isinstance(value, (int, float)):
-                    self.add_tensorboard_scalar('compression/statistics/{0}'.format(key),
-                                                value, self.cumulative_epoch_count)
-
         self.training_epoch_count += 1
         self.cumulative_epoch_count += 1
 
-        return self.current_val_metric_value
-
     def validate(self, model):
         with torch.no_grad():
-            val_metric_value = self._validate_fn(model, epoch=self.cumulative_epoch_count)
-        is_better_by_accuracy = (not self.is_higher_metric_better) != (val_metric_value > self.best_val_metric_value)
+            self.current_val_metric_value = self._validate_fn(model, epoch=self.cumulative_epoch_count)
+        is_better_by_accuracy = (not self.is_higher_metric_better) != (
+                    self.current_val_metric_value > self.best_val_metric_value)
         if is_better_by_accuracy:
-            self.best_val_metric_value = val_metric_value
+            self.best_val_metric_value = self.current_val_metric_value
 
         if is_main_process():
             self.add_tensorboard_scalar('val/accuracy_aware/metric_value',
-                                        val_metric_value, self.cumulative_epoch_count)
+                                        self.current_val_metric_value, self.cumulative_epoch_count)
 
-        return val_metric_value
+        return self.current_val_metric_value
 
     def configure_optimizers(self):
         self.optimizer, self.lr_scheduler = self._configure_optimizers_fn()
@@ -139,11 +119,27 @@ class PTAccuracyAwareTrainingRunner(BaseAccuracyAwareTrainingRunner):
         self.training_epoch_count = 0
         self.best_val_metric_value = 0
 
+    def dump_statistics(self, model, compression_controller):
+        statistics = compression_controller.statistics()
+
+        if is_main_process():
+            if self.verbose:
+                nncf_logger.info(statistics.to_str())
+                # dump best checkpoint for current target compression rate
+            if self.dump_checkpoints:
+                self.dump_checkpoint(model, compression_controller)
+            for key, value in prepare_for_tensorboard(statistics).items():
+                if isinstance(value, (int, float)):
+                    self.add_tensorboard_scalar('compression/statistics/{0}'.format(key),
+                                                value, self.cumulative_epoch_count)
+
+
     def dump_checkpoint(self, model, compression_controller):
         checkpoint_path = osp.join(self._checkpoint_save_dir, 'acc_aware_checkpoint_last.pth')
         checkpoint = {
             'epoch': self.cumulative_epoch_count + 1,
             'state_dict': model.state_dict(),
+            'compression_state': compression_controller.get_compression_state(),
             'best_metric_val': self.best_val_metric_value,
             'current_val_metric_value': self.current_val_metric_value,
             'optimizer': self.optimizer.state_dict(),
@@ -234,6 +230,7 @@ class PTAdaptiveCompressionLevelTrainingRunner(PTAccuracyAwareTrainingRunner,
         checkpoint = {
             'epoch': self.cumulative_epoch_count + 1,
             'state_dict': model.state_dict(),
+            'compression_state': compression_controller.get_compression_state(),
             'best_metric_val': self.best_val_metric_value,
             'current_val_metric_value': self.current_val_metric_value,
             'optimizer': self.optimizer.state_dict(),

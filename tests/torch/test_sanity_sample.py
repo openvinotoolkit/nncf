@@ -796,3 +796,68 @@ def test_sample_propagates_target_device_cl_param_to_nncf_config(mocker, tmp_pat
 
     config = start_worker_mock.call_args[0][1].nncf_config
     assert config["target_device"] == target_device
+
+
+@pytest.fixture(params=[TEST_ROOT.joinpath("torch", "data", "configs", "resnet18_pruning_accuracy_aware.json"),
+                        TEST_ROOT.joinpath("torch", "data", "configs", "resnet18_int8_accuracy_aware.json")])
+def accuracy_aware_config(request):
+    config_path = request.param
+    with config_path.open() as f:
+        jconfig = json.load(f)
+
+    dataset_name = 'mock_32x32'
+    TEST_ROOT.joinpath("torch", "data", "mock_datasets", dataset_name)
+    dataset_path = os.path.join('/tmp', 'mock_32x32')
+    sample_type = 'classification'
+
+    jconfig["dataset"] = dataset_name
+
+    return {
+        "sample_type": sample_type,
+        'nncf_config': jconfig,
+        "model_name": jconfig["model"],
+        "dataset_path": dataset_path,
+        "batch_size": 12,
+    }
+
+
+@pytest.mark.dependency()
+@pytest.mark.parametrize(
+    "multiprocessing_distributed", [True, False],
+    ids=['distributed', 'dataparallel'])
+def test_accuracy_aware_training_pipeline(accuracy_aware_config, tmp_path, multiprocessing_distributed):
+    config_factory = ConfigFactory(accuracy_aware_config['nncf_config'], tmp_path / 'config.json')
+
+    args = {
+        "--mode": "train",
+        "--data": accuracy_aware_config["dataset_path"],
+        "--config": config_factory.serialize(),
+        "--log-dir": tmp_path,
+        "--batch-size": accuracy_aware_config["batch_size"] * NUM_DEVICES,
+        "--workers": 0,  # Workaround for the PyTorch MultiProcessingDataLoader issue
+        "--epochs": 2,
+        "--dist-url": "tcp://127.0.0.1:8989"
+    }
+
+    if not torch.cuda.is_available():
+        args["--cpu-only"] = True
+    elif multiprocessing_distributed:
+        args["--multiprocessing-distributed"] = True
+
+    runner = Command(create_command_line(args, accuracy_aware_config["sample_type"]))
+    runner.run()
+
+    from glob import glob
+    time_dir_1 = glob(os.path.join(tmp_path, get_name(config_factory.config), '*/'))[0].split('/')[-2]
+    time_dir_2 = glob(os.path.join(tmp_path, get_name(config_factory.config), time_dir_1,
+                      'accuracy_aware_training', '*/'))[0].split('/')[-2]
+    last_checkpoint_path = os.path.join(tmp_path, get_name(config_factory.config), time_dir_1,
+                                        'accuracy_aware_training',
+                                        time_dir_2, 'acc_aware_checkpoint_last.pth')
+    assert os.path.exists(last_checkpoint_path)
+    if 'compression' in accuracy_aware_config['nncf_config']:
+        allowed_compression_stages = (CompressionStage.FULLY_COMPRESSED, CompressionStage.PARTIALLY_COMPRESSED)
+    else:
+        allowed_compression_stages = (CompressionStage.UNCOMPRESSED,)
+    compression_stage = extract_compression_stage_from_checkpoint(last_checkpoint_path)
+    assert compression_stage in allowed_compression_stages

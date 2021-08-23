@@ -144,6 +144,8 @@ def main_worker(current_gpu, config: SampleConfig):
     if is_main_process():
         configure_logging(logger, config)
         print_args(config)
+    else:
+        config.tb = None
 
     set_seed(config)
 

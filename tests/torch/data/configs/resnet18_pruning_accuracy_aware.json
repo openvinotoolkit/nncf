@@ -36,12 +36,13 @@
     "compression": [
         {
             "algorithm": "filter_pruning",
-            "pruning_init": 0.1,
+            "pruning_init": 0.95,
             "params": {
                 "schedule": "exponential",
-                "pruning_target": 0.4,
-                "pruning_steps": 15,
-                "filter_importance": "geometric_median"
+                "pruning_target": 0.1,
+                "pruning_steps": 1,
+                "num_init_steps": 0,
+                "filter_importance": "L2"
             }
         }
     ]

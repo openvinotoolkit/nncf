@@ -115,6 +115,7 @@ class EarlyExitCompressionTrainingLoop(TrainingLoop):
                                      'The relative accuracy drop is {:.2f}%.'.format(compressed_model_accuracy,
                                                                                      uncompressed_model_accuracy,
                                                                                      accuracy_drop, rel_accuracy_drop))
+                    self.runner.dump_statistics(model, self.compression_controller)
                     return model
                 nncf_logger.info('The accuracy criteria is reached. '
                                  'Exiting the training loop on epoch {} with '
@@ -128,6 +129,8 @@ class EarlyExitCompressionTrainingLoop(TrainingLoop):
             nncf_logger.info('The absolute accuracy drop is {:.4f}. '
                              'The relative accuracy drop is {:.2f}%.'.format(accuracy_drop, rel_accuracy_drop))
             self.runner.train_epoch(model, self.compression_controller)
+            self.runner.dump_statistics(model, self.compression_controller)
+
         self.runner.load_best_checkpoint(model)
         return model
 
@@ -238,7 +241,9 @@ class AdaptiveCompressionTrainingLoop(TrainingLoop):
                                                    self.runner.compression_rate_step,
                                                    self.runner.cumulative_epoch_count)
 
-            compressed_model_accuracy = self.runner.train_epoch(model, self.adaptive_controller)
+            self.runner.train_epoch(model, self.adaptive_controller)
+            self.runner.dump_statistics(model, self.adaptive_controller)
+            compressed_model_accuracy = self.runner.validate(model)
             self.runner.accuracy_bugdet = compressed_model_accuracy - self.runner.minimal_tolerable_accuracy
             self.runner.add_tensorboard_scalar('val/accuracy_aware/accuracy_bugdet', self.runner.accuracy_bugdet,
                                                self.runner.cumulative_epoch_count)
@@ -264,7 +269,8 @@ class AdaptiveCompressionTrainingLoop(TrainingLoop):
                                              self._determine_compression_rate_step_value(runner,
                                                                                          current_compression_rate)
             runner.was_compression_increased_on_prev_step = np.sign(best_accuracy_budget)
-            accuracy_aware_controller.disable_scheduler()
+            # TODO(kshpv, lzrvch) Do we need this call?
+            #accuracy_aware_controller.disable_scheduler()
             return True
         if runner.training_epoch_count >= runner.patience_epochs:
             runner.compression_rate_target += self._determine_compression_rate_step_value(runner,
