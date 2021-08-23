@@ -44,7 +44,7 @@ def extract_algo_specific_config(config: NNCFConfig, algo_name_to_match: str) ->
     :return: The sub-dictionary, exactly as it is specified in the NNCF configuration of the .json file,
     that corresponds to the algorithm-specific data (i.e. {"algorithm": "quantization", ... })
     """
-    compression_section = config['compression']
+    compression_section = config.get('compression', [])
     if isinstance(compression_section, list):
         algo_list = compression_section
     else:
