@@ -83,5 +83,6 @@ def test_runner(num_steps, learning_rate, reference_metric):
 
     runner.initialize_training_loop_fns(train_fn, validate_fn, configure_optimizers_fn)
     runner.reset_training()
-    metric_value = runner.train_epoch(model, compression_ctrl)
+    runner.train_epoch(model, compression_ctrl)
+    metric_value = runner.validate(model)
     assert metric_value == pytest.approx(reference_metric, 1e-3)

@@ -51,15 +51,15 @@ class TFAccuracyAwareTrainingRunner(BaseAccuracyAwareTrainingRunner):
         self.cumulative_epoch_count += 1
 
     def validate(self, model):
-        val_metric_value = self._validate_fn(model, epoch=self.cumulative_epoch_count)
-        is_best = (not self.is_higher_metric_better) != (val_metric_value > self.best_val_metric_value)
+        self.current_val_metric_value = self._validate_fn(model, epoch=self.cumulative_epoch_count)
+        is_best = (not self.is_higher_metric_better) != (self.current_val_metric_value > self.best_val_metric_value)
         if is_best:
-            self.best_val_metric_value = val_metric_value
+            self.best_val_metric_value = self.current_val_metric_value
 
         self.add_tensorboard_scalar('val/accuracy_aware/metric_value',
-                                    data=val_metric_value, step=self.cumulative_epoch_count)
+                                    data=self.current_val_metric_value, step=self.cumulative_epoch_count)
 
-        return val_metric_value
+        return self.current_val_metric_value
 
     def reset_training(self):
         self.training_epoch_count = 0
