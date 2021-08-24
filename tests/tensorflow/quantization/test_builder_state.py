@@ -295,7 +295,8 @@ GROUND_TRUTH_STATE = {
             },
             "target_point_class_name": "TFOperationWithWeights"
         }
-    ]
+    ],
+    'unified_scale_groups': []
 }
 
 

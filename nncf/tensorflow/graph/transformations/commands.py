@@ -375,6 +375,19 @@ class TFOperationWithWeights(TFLayerWeight):
         return cls(**state)
 
 
+class CallableObject:
+    """
+    Stores the callable object and instance index
+    """
+
+    def __init__(self, callable_obj: Callable, instance_idx: int):
+        self.callable = callable_obj
+        self.instance_idx = instance_idx
+
+    def __call__(self):
+        return self.callable()
+
+
 class TFInsertionCommand(TransformationCommand):
     """
     Inserts objects at the target point in the TensorFlow model graph.
@@ -383,13 +396,15 @@ class TFInsertionCommand(TransformationCommand):
     def __init__(self,
                  target_point: TargetPoint,
                  callable_object: Optional[Callable] = None,
-                 priority: Optional[TransformationPriority] = None):
+                 priority: Optional[TransformationPriority] = None,
+                 callable_object_instance_idx: int = 0):
         super().__init__(TransformationType.INSERT, target_point)
         self.callable_objects = []
         if callable_object is not None:
             _priority = TransformationPriority.DEFAULT_PRIORITY \
                 if priority is None else priority
-            self.callable_objects.append((callable_object, _priority))
+            obj = CallableObject(callable_object, callable_object_instance_idx)
+            self.callable_objects.append((obj, _priority))
 
     @property
     def insertion_objects(self) -> List[Callable]:
