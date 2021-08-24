@@ -43,7 +43,8 @@ def test_distributed_init_struct():
     wrapper_callback = FakeModelClass
     unwrapper_callback = lambda x: x.unwrap()
     nncf_config = register_default_init_args(
-        config, init_loader=init_loader, train_loader=init_loader, distributed_callbacks=(wrapper_callback, unwrapper_callback))
+        config, init_loader=init_loader, train_loader=init_loader, distributed_callbacks=(wrapper_callback,
+                                                                                          unwrapper_callback))
 
     dist_callbacks = nncf_config.get_extra_struct(DistributedCallbacksArgs)
     model = PruningTestModel()
