@@ -412,3 +412,50 @@ def test_eval_prepared_checkpoint(_config, tmp_path, _case_common_dirs):
 
     main = get_sample_fn(_config['sample_type'], modes=['test'])
     main(convert_to_argv(args))
+
+@pytest.fixture(params=[TEST_ROOT.joinpath("tensorflow", "data", "configs", "resnet50_pruning_accuracy_aware.json"),
+                        TEST_ROOT.joinpath("tensorflow", "data", "configs", "resnet50_int8_accuracy_aware.json")])
+def accuracy_aware_config(request):
+    config_path = request.param
+    sample_type = 'classification'
+    with config_path.open() as f:
+        jconfig = json.load(f)
+    # sample_type, config_path, dataset_name, dataset_type, batch_size, tid = request.param
+
+    dataset_name = 'cifar10'
+    dataset_path = os.path.join('/tmp', dataset_name)
+
+
+    jconfig['dataset'] = dataset_name
+
+    return {
+        'sample_type': sample_type,
+        'nncf_config': jconfig,
+        'model_name': jconfig['model'],
+        'dataset_path': dataset_path,
+        'batch_size': 12,
+    }
+
+
+@pytest.mark.dependency(name='tf_test_model_train')
+def test_model_accuracy_aware_train(accuracy_aware_config, tmp_path, _case_common_dirs):
+    checkpoint_save_dir = tmp_path
+    config_factory = ConfigFactory(accuracy_aware_config['nncf_config'], tmp_path / 'config.json')
+    args = {
+        '--data': accuracy_aware_config['dataset_path'],
+        '--config': config_factory.serialize(),
+        '--log-dir': tmp_path,
+        '--batch-size': accuracy_aware_config['batch_size'],
+        '--epochs': 1,
+        '--checkpoint-save-dir': tmp_path
+    }
+
+    main = get_sample_fn(accuracy_aware_config['sample_type'], modes=['train'])
+    main(convert_to_argv(args))
+
+    assert tf.io.gfile.isdir(checkpoint_save_dir)
+    from glob import glob
+    time_dir_1 = os.path.join(checkpoint_save_dir, glob(os.path.join(checkpoint_save_dir, '*/'))[0].split('/')[-2])
+    time_dir_1 = os.path.join(time_dir_1, glob(os.path.join(time_dir_1, '*/'))[0].split('/')[-2], 'accuracy_aware_training')
+    time_dir_2 = os.path.join(time_dir_1, glob(os.path.join(time_dir_1, '*/'))[0].split('/')[-2])
+    assert tf.train.latest_checkpoint(time_dir_2)

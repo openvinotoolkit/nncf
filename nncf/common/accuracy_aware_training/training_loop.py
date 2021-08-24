@@ -230,6 +230,7 @@ class AdaptiveCompressionTrainingLoop(TrainingLoop):
                 if self.runner.compression_rate_target > self.runner.maximal_compression_rate:
                     nncf_logger.info('Reached maximal possible compression rate '
                                      '{max_rate}'.format(max_rate=self.runner.maximal_compression_rate))
+                    self.runner.dump_statistics(model, self.adaptive_controller)
                     return model
 
                 self.runner.reset_training()
@@ -269,8 +270,9 @@ class AdaptiveCompressionTrainingLoop(TrainingLoop):
                                              self._determine_compression_rate_step_value(runner,
                                                                                          current_compression_rate)
             runner.was_compression_increased_on_prev_step = np.sign(best_accuracy_budget)
-            # TODO(kshpv, lzrvch) Do we need this call?
-            #accuracy_aware_controller.disable_scheduler()
+            accuracy_aware_controller.disable_scheduler()
+            # TODO(kshpv) fix this incorrect work of disable_scheduler()
+            accuracy_aware_controller.scheduler.target_level = runner.compression_rate_target
             return True
         if runner.training_epoch_count >= runner.patience_epochs:
             runner.compression_rate_target += self._determine_compression_rate_step_value(runner,

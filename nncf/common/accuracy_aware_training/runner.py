@@ -28,6 +28,10 @@ class TrainingRunner(ABC):
     via wrapping user-supplied functions such as `train_epoch_fn` and `validate_fn`.
     """
 
+    uncompressed_model_accuracy: float
+    maximal_total_epochs: int
+    minimal_tolerable_accuracy: float
+
     @abstractmethod
     def train_epoch(self, model: ModelType, compression_controller: CompressionAlgorithmController):
         """

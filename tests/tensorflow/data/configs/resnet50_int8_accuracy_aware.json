@@ -1,5 +1,6 @@
 {
     "model": "ResNet50V2",
+    "pretrained": false,
     "batch_size": 512,
     "epochs": 100,
     "input_info": {
@@ -29,14 +30,14 @@
     "accuracy_aware_training": {
         "mode": "early_exit",
         "params": {
-            "maximal_total_epochs": 100
+            "maximal_total_epochs": 2
         }
     },
     "compression": {
         "algorithm": "quantization",
         "initializer": {
             "range": {
-                "num_init_samples": 850
+                "num_init_samples": 0
             }
         }
     }
