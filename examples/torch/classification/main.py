@@ -189,6 +189,7 @@ def main_worker(current_gpu, config: SampleConfig):
             validate_fn=lambda *x: validate_model_fn(*x)[::2],
             autoq_eval_fn=lambda *x: validate_model_fn(*x)[1],
             val_loader=val_loader,
+            train_loader=train_loader,
             model_eval_fn=model_eval_fn,
             device=config.device,
             execution_parameters=execution_params,

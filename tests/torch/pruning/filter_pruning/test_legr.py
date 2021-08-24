@@ -26,7 +26,8 @@ def create_default_legr_config():
     config['compression']['params']['interlayer_ranking_type'] = 'learned_ranking'
     return config
 
-#pylint:disable=protected-access
+
+# pylint:disable=protected-access
 def test_legr_coeffs_loading(tmp_path):
     file_name = tmp_path / 'ranking_coeffs.json'
     model = PruningTestModel()
@@ -107,7 +108,8 @@ def test_legr_class_default_params(tmp_path):
     val_loader = create_ones_mock_dataloader(config)
     train_steps_fn = lambda *x: None
     validate_fn = lambda *x: (0, 0)
-    nncf_config = register_default_init_args(config, train_loader=train_loader, train_steps_fn=train_steps_fn,
+    nncf_config = register_default_init_args(config, init_loader=train_loader, train_loader=train_loader,
+                                             train_steps_fn=train_steps_fn,
                                              val_loader=val_loader, validate_fn=validate_fn)
     _, compression_ctrl = create_compressed_model_and_algo_for_test(model, nncf_config)
 
@@ -134,7 +136,8 @@ def test_legr_class_setting_params(tmp_path):
     val_loader = create_ones_mock_dataloader(config)
     train_steps_fn = lambda *x: None
     validate_fn = lambda *x: (0, 0)
-    nncf_config = register_default_init_args(config, train_loader=train_loader, train_steps_fn=train_steps_fn,
+    nncf_config = register_default_init_args(config, init_loader=train_loader, train_loader=train_loader,
+                                             train_steps_fn=train_steps_fn,
                                              val_loader=val_loader, validate_fn=validate_fn)
     _, compression_ctrl = create_compressed_model_and_algo_for_test(model, nncf_config)
 
@@ -152,7 +155,8 @@ def test_legr_reproducibility():
     val_loader = create_ones_mock_dataloader(config)
     train_steps_fn = lambda *x: None
     validate_fn = lambda *x: (0, np.random.random())
-    nncf_config = register_default_init_args(config, train_loader=train_loader, train_steps_fn=train_steps_fn,
+    nncf_config = register_default_init_args(config, init_loader=train_loader,
+                                             train_loader=train_loader, train_steps_fn=train_steps_fn,
                                              val_loader=val_loader, validate_fn=validate_fn)
     model_1 = PruningTestModel()
     _, compression_ctrl_1 = create_compressed_model_and_algo_for_test(model_1, nncf_config)

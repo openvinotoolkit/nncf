@@ -28,7 +28,8 @@ def get_model_and_controller_for_legr_test():
     val_loader = create_ones_mock_dataloader(config)
     train_steps_fn = lambda *x: None
     validate_fn = lambda *x: (0, 0)
-    nncf_config = register_default_init_args(config, train_loader=train_loader, train_steps_fn=train_steps_fn,
+    nncf_config = register_default_init_args(config, init_loader=train_loader, train_loader=train_loader,
+                                             train_steps_fn=train_steps_fn,
                                              val_loader=val_loader, validate_fn=validate_fn)
     compressed_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
     return nncf_config, compressed_model, compression_ctrl
@@ -78,7 +79,8 @@ def test_evolution_env_default_params():
     val_loader = create_ones_mock_dataloader(config)
     train_steps_fn = lambda *x: None
     validate_fn = lambda *x: (0, 0)
-    nncf_config = register_default_init_args(config, train_loader=train_loader, train_steps_fn=train_steps_fn,
+    nncf_config = register_default_init_args(config, init_loader=train_loader, train_loader=train_loader,
+                                             train_steps_fn=train_steps_fn,
                                              val_loader=val_loader, validate_fn=validate_fn)
     _, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
     evolution_env = compression_ctrl.legr.env
@@ -108,7 +110,8 @@ def test_evolution_env_setting_params():
     val_loader = create_ones_mock_dataloader(config)
     train_steps_fn = lambda *x: None
     validate_fn = lambda *x: (0, 0)
-    nncf_config = register_default_init_args(config, train_loader=train_loader, train_steps_fn=train_steps_fn,
+    nncf_config = register_default_init_args(config, init_loader=train_loader, train_loader=train_loader,
+                                             train_steps_fn=train_steps_fn,
                                              val_loader=val_loader, validate_fn=validate_fn,
                                              legr_train_optimizer=train_optimizer)
     _, compression_ctrl = create_compressed_model_and_algo_for_test(model, nncf_config)

@@ -100,7 +100,7 @@ def test_model_can_be_loaded_with_resume(_params):
                        pretrained=False,
                        num_classes=config.get('num_classes', 1000),
                        model_params=config.get('model_params'))
-    nncf_config = register_default_init_args(nncf_config, train_loader=create_ones_mock_dataloader(nncf_config))
+    nncf_config = register_default_init_args(nncf_config, init_loader=create_ones_mock_dataloader(nncf_config))
 
     model.to(config.device)
     model, compression_ctrl = create_compressed_model_and_algo_for_test(model, nncf_config)

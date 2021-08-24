@@ -220,7 +220,7 @@ def default_criterion_fn(outputs: Any, target: Any, criterion: Any) -> torch.Ten
 
 
 def register_default_init_args(nncf_config: 'NNCFConfig',
-                               train_loader: torch.utils.data.DataLoader,
+                               init_loader: torch.utils.data.DataLoader,
                                criterion: _Loss = None,
                                criterion_fn: Callable[[Any, Any, _Loss], torch.Tensor] = None,
                                train_steps_fn: Callable[[torch.utils.data.DataLoader, torch.nn.Module,
@@ -231,13 +231,14 @@ def register_default_init_args(nncf_config: 'NNCFConfig',
                                val_loader: torch.utils.data.DataLoader = None,
                                autoq_eval_fn: Callable[[torch.nn.Module, torch.utils.data.DataLoader], float] = None,
                                model_eval_fn: Callable[[torch.nn.Module, torch.utils.data.DataLoader], float] = None,
+                               train_loader: torch.utils.data.DataLoader = None,
                                distributed_callbacks: Tuple[Callable, Callable] = None,
                                execution_parameters: 'ExecutionParameters' = None,
                                legr_train_optimizer: torch.optim.Optimizer = None,
                                device: str = None, ) -> 'NNCFConfig':
-    nncf_config.register_extra_structs([QuantizationRangeInitArgs(data_loader=wrap_dataloader_for_init(train_loader),
+    nncf_config.register_extra_structs([QuantizationRangeInitArgs(data_loader=wrap_dataloader_for_init(init_loader),
                                                                   device=device),
-                                        BNAdaptationInitArgs(data_loader=wrap_dataloader_for_init(train_loader),
+                                        BNAdaptationInitArgs(data_loader=wrap_dataloader_for_init(init_loader),
                                                              device=device),
 
                                         ])
@@ -256,12 +257,12 @@ def register_default_init_args(nncf_config: 'NNCFConfig',
             criterion_fn = default_criterion_fn
         nncf_config.register_extra_structs([QuantizationPrecisionInitArgs(criterion_fn=criterion_fn,
                                                                           criterion=criterion,
-                                                                          data_loader=train_loader,
+                                                                          data_loader=init_loader,
                                                                           device=device)])
 
     if autoq_eval_fn is not None:
         if not val_loader:
-            val_loader = train_loader
+            val_loader = init_loader
         nncf_config.register_extra_structs([AutoQPrecisionInitArgs(data_loader=val_loader,
                                                                    eval_fn=autoq_eval_fn,
                                                                    nncf_config=nncf_config)])
