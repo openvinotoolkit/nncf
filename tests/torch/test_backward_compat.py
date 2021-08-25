@@ -28,14 +28,14 @@ from nncf.common.graph.definitions import MODEL_INPUT_OP_NAME
 from nncf.config import NNCFConfig
 from nncf.torch.nncf_network import LEGACY_ACT_STORAGE_NAME
 from nncf.torch.nncf_network import MODEL_WRAPPED_BY_NNCF_ATTR_NAME
-from tests.common.helpers import TEST_ROOT
+from tests.common.helpers_without_dependencies import TEST_ROOT
 from tests.torch.helpers import create_ones_mock_dataloader
 from tests.torch.helpers import register_bn_adaptation_init_args
 from tests.torch.quantization.test_range_init import SingleConv2dIdentityModel
 from tests.torch.test_compressed_graph import get_basic_quantization_config
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
 from tests.torch.helpers import Command
-from tests.common.helpers import get_cli_dict_args
+from tests.common.helpers_without_dependencies import get_cli_dict_args
 from tests.torch.test_sanity_sample import create_command_line
 
 GLOBAL_CONFIG = {

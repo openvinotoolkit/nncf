@@ -22,8 +22,8 @@ from nncf import NNCFConfig
 from nncf.torch import register_default_init_args
 from nncf.common.quantization.structs import NonWeightQuantizerId
 from nncf.common.quantization.structs import WeightQuantizerId
-from tests.common.helpers import EXAMPLES_DIR
-from tests.common.helpers import TEST_ROOT
+from tests.common.helpers_without_dependencies import EXAMPLES_DIR
+from tests.common.helpers_without_dependencies import TEST_ROOT
 from tests.torch.helpers import BasicConvTestModel
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
 from tests.torch.helpers import create_ones_mock_dataloader

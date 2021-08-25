@@ -30,8 +30,8 @@ from prettytable import PrettyTable
 from collections import OrderedDict
 from yattag import Doc
 from pathlib import Path
-from tests.common.helpers import TEST_ROOT
-from tests.common.helpers import PROJECT_ROOT
+from tests.common.helpers_without_dependencies import TEST_ROOT
+from tests.common.helpers_without_dependencies import PROJECT_ROOT
 
 BG_COLOR_GREEN_HEX = 'ccffcc'
 BG_COLOR_YELLOW_HEX = 'ffffcc'

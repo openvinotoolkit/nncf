@@ -14,7 +14,7 @@
 from examples.tensorflow.common.sample_config import SampleConfig
 from examples.tensorflow.object_detection.models.model_selector import get_model_builder
 from examples.tensorflow.object_detection.models.model_selector import get_predefined_config
-from tests.common.helpers import TEST_ROOT
+from tests.common.helpers_without_dependencies import TEST_ROOT
 
 
 def YOLOv4(input_shape=None):

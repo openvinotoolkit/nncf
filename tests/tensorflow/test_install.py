@@ -14,8 +14,8 @@
 import pytest
 import subprocess
 
-from tests.common.helpers import PROJECT_ROOT
-from tests.common.helpers import run_install_checks
+from tests.common.helpers_without_dependencies import PROJECT_ROOT
+from tests.common.helpers_without_dependencies import run_install_checks
 
 
 @pytest.fixture(name="venv_type",

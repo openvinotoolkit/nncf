@@ -12,7 +12,7 @@
 """
 import os
 
-from tests.common.helpers import create_venv_with_nncf
+from tests.common.helpers_without_dependencies import create_venv_with_nncf
 
 import pytest
 

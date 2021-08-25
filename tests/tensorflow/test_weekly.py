@@ -18,7 +18,7 @@ import tempfile
 import pytest
 from pytest import approx
 
-from tests.common.helpers import PROJECT_ROOT
+from tests.common.helpers_without_dependencies import PROJECT_ROOT
 from tests.tensorflow.test_sanity_sample import get_sample_fn
 
 

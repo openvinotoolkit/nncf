@@ -14,7 +14,7 @@
 from examples.tensorflow.common.sample_config import SampleConfig
 from examples.tensorflow.segmentation.models.model_selector import get_model_builder
 from examples.tensorflow.segmentation.models.model_selector import get_predefined_config
-from tests.common.helpers import TEST_ROOT
+from tests.common.helpers_without_dependencies import TEST_ROOT
 
 
 def MaskRCNN(input_shape=None): # pylint: disable=W0613

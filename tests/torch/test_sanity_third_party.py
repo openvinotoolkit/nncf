@@ -20,7 +20,7 @@ import pytest
 
 from nncf.torch import BKC_TORCH_VERSION
 from tests.torch.helpers import Command
-from tests.common.helpers import PROJECT_ROOT
+from tests.common.helpers_without_dependencies import PROJECT_ROOT
 
 TRANSFORMERS_COMMIT = "b0892fa0e8df02d683e05e625b3903209bff362d"
 INSTALL_PATH = PROJECT_ROOT.parent

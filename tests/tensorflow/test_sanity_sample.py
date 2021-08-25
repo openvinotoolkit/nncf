@@ -18,7 +18,7 @@ from functools import partial
 import pytest
 import tensorflow as tf
 
-from tests.common.helpers import TEST_ROOT
+from tests.common.helpers_without_dependencies import TEST_ROOT
 from tests.tensorflow.helpers import get_coco_dataset_builders
 from tests.tensorflow.test_models import SequentialModel, SequentialModelNoInput
 

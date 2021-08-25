@@ -60,7 +60,7 @@ from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.nncf_network import PTInsertionPoint
 from nncf.torch.nncf_network import PTInsertionType
 from nncf.torch.nncf_network import PTModelTransformer
-from tests.common.helpers import TEST_ROOT
+from tests.common.helpers_without_dependencies import TEST_ROOT
 from tests.torch.composite.test_sparsity_quantization import get_basic_sparsity_plus_quantization_config
 from tests.torch.helpers import BasicConvTestModel
 from tests.torch.helpers import TwoConvTestModel

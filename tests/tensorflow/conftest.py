@@ -11,7 +11,7 @@
  limitations under the License.
 """
 import pytest
-from tests.common.helpers import create_venv_with_nncf
+from tests.common.helpers_without_dependencies import create_venv_with_nncf
 try:
     import tensorflow as tf
 except ImportError:

@@ -17,8 +17,8 @@ from prettytable import PrettyTable
 from yattag import Doc
 
 from nncf.config import NNCFConfig
-from tests.common.helpers import PROJECT_ROOT
-from tests.common.helpers import TEST_ROOT
+from tests.common.helpers_without_dependencies import PROJECT_ROOT
+from tests.common.helpers_without_dependencies import TEST_ROOT
 
 BG_COLOR_GREEN_HEX = 'ccffcc'
 BG_COLOR_YELLOW_HEX = 'ffffcc'

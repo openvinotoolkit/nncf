@@ -38,9 +38,9 @@ from nncf.common.compression import BaseCompressionAlgorithmController as BaseCo
 from nncf.common.hardware.config import HWConfigType
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.config import NNCFConfig
-from tests.common.helpers import EXAMPLES_DIR
-from tests.common.helpers import PROJECT_ROOT
-from tests.common.helpers import TEST_ROOT
+from tests.common.helpers_without_dependencies import EXAMPLES_DIR
+from tests.common.helpers_without_dependencies import PROJECT_ROOT
+from tests.common.helpers_without_dependencies import TEST_ROOT
 from tests.torch.helpers import Command
 
 NUM_DEVICES = torch.cuda.device_count() if torch.cuda.is_available() else 1
