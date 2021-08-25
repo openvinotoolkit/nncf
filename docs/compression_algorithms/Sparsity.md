@@ -52,7 +52,7 @@ sparsity and filter pruning algorithms. It can be enabled by setting a non-zero 
             "sparsity_target_epoch": 3, // Index of the epoch from which the sparsity level of the model will be equal to spatsity_target value
             "sparsity_freeze_epoch": 50, // Index of the epoch from which the sparsity mask will be frozen and no longer trained
             "multistep_steps": [10, 20], // A list of scheduler steps at which to transition to the next scheduled sparsity level (multistep scheduler only).
-            "multistep_sparsity_levels": [0.2, 0.5] //Levels of sparsity to use at each step of the scheduler as specified in the 'multistep_steps' attribute. The firstsparsity level will be applied immediately, so the length of this list should be larger than the length of the 'steps' by one."
+            "multistep_sparsity_levels": [0.2, 0.5, 0.7] // Levels of sparsity to use at each step of the scheduler as specified in the 'multistep_steps' attribute. The first sparsity level will be applied immediately, so the length of this list should be larger than the length of the 'steps' by one. The last sparsity level will function as the ultimate sparsity target, overriding the "sparsity_target" setting if it is present.
     },
 
     // A list of model control flow graph node scopes to be ignored for this operation - functions as a 'denylist'. Optional.
@@ -88,7 +88,7 @@ The magnitude sparsity method implements a naive approach that is based on the a
             "sparsity_target_epoch": 3, // Index of the epoch from which the sparsity level of the model will be equal to spatsity_target value
             "sparsity_freeze_epoch": 50, // Index of the epoch from which the sparsity mask will be frozen and no longer trained
             "multistep_steps": [10, 20], // A list of scheduler steps at which to transition to the next scheduled sparsity level (multistep scheduler only).
-            "multistep_sparsity_levels": [0.2, 0.5] //Levels of sparsity to use at each step of the scheduler as specified in the 'multistep_steps' attribute. The firstsparsity level will be applied immediately, so the length of this list should be larger than the length of the 'steps' by one."
+            "multistep_sparsity_levels": [0.2, 0.5, 0.7] // Levels of sparsity to use at each step of the scheduler as specified in the 'multistep_steps' attribute. The first sparsity level will be applied immediately, so the length of this list should be larger than the length of the 'steps' by one. The last sparsity level will function as the ultimate sparsity target, overriding the "sparsity_target" setting if it is present.
     },
 
     // A list of model control flow graph node scopes to be ignored for this operation - functions as a 'denylist'. Optional.
