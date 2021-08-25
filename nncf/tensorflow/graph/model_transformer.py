@@ -339,6 +339,9 @@ class TFModelTransformer(ModelTransformer):
                                  layer_out_ports: Set,
                                  replace_layer_name: str,
                                  insert_with_instance_idx: int = 0):
+        if not isinstance(connection_infos[0], list):
+            connection_infos = [connection_infos[0]]
+
         for connection_info in connection_infos:
             if connection_info[0] == layer_name:
                 layer_out_ports.add(connection_info[2])
@@ -361,11 +364,14 @@ class TFModelTransformer(ModelTransformer):
                     self._process_insertion_after([out_layers], layer_name, instance_idx,
                                                   layer_out_ports, replace_layer_name, insert_with_instance_idx)
                 elif isinstance(out_layers, dict):
-                    self._process_insertion_after(out_layers.values(), layer_name, instance_idx,
+                    self._process_insertion_after(list(out_layers.values()), layer_name, instance_idx,
                                                   layer_out_ports, replace_layer_name, insert_with_instance_idx)
 
     @staticmethod
     def _process_replacement(connection_infos, layer_name: str, replace_layer_name: str):
+        if not isinstance(connection_infos[0], list):
+            connection_infos = [connection_infos[0]]
+
         for connection_info in connection_infos:
             if connection_info[0] == layer_name:
                 connection_info[0] = replace_layer_name
@@ -379,4 +385,4 @@ class TFModelTransformer(ModelTransformer):
                 if isinstance(out_layers, list):
                     self._process_replacement([out_layers], layer_name, replace_layer_name)
                 elif isinstance(out_layers, dict):
-                    self._process_replacement(out_layers.values(), layer_name, replace_layer_name)
+                    self._process_replacement(list(out_layers.values()), layer_name, replace_layer_name)
