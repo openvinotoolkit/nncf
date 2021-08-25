@@ -30,7 +30,7 @@
     "accuracy_aware_training": {
         "mode": "early_exit",
         "params": {
-            "maximal_total_epochs": 2
+            "maximal_total_epochs": 1
         }
     },
     "compression": {

@@ -418,9 +418,11 @@ def _accuracy_aware_config(request):
         jconfig = json.load(f)
 
     dataset_name = 'cifar10'
+    dataset_type = 'tfds'
     dataset_path = os.path.join('/tmp', dataset_name)
 
     jconfig['dataset'] = dataset_name
+    jconfig['dataset_type'] = dataset_type
 
     return {
         'sample_type': sample_type,
