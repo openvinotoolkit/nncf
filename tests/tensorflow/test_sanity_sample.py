@@ -84,7 +84,7 @@ SAMPLES = {
 
 
 DATASETS = {
-    'classification': [('cifar10', 'tfds'), ('cifar10', 'tfds'), ('cifar10', 'tfds')],
+    'classification': [('cifar10', 'tfrecords'), ('cifar10', 'tfds'), ('cifar10', 'tfds')],
     'object_detection': [('coco2017', 'tfrecords')],
     'segmentation': [('coco2017', 'tfrecords')],
 }
@@ -127,10 +127,11 @@ GLOBAL_BATCH_SIZE = get_global_batch_size()
 
 DATASET_PATHS = {
     'classification': {
-        x: lambda dataset_root, dataset_name=x:
-        os.path.join(dataset_root, dataset_name) if dataset_root else
-        os.path.join(tempfile.gettempdir(), dataset_name)
-        for x, _ in DATASETS['classification']
+        'cifar10': lambda dataset_root: TEST_ROOT.joinpath('tensorflow', 'data', 'mock_datasets', 'cifar10')
+        # x: lambda dataset_root, dataset_name=x:
+        # os.path.join(dataset_root, dataset_name) if dataset_root else
+        # os.path.join(tempfile.gettempdir(), dataset_name)
+        # for x, _ in DATASETS['classification']
     },
     'object_detection': {
         'coco2017': lambda dataset_root: TEST_ROOT.joinpath('tensorflow', 'data', 'mock_datasets', 'coco2017')
