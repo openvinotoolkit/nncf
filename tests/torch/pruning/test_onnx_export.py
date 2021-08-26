@@ -16,6 +16,8 @@ from tests.torch.pruning.helpers import BigPruningTestModel, get_basic_pruning_c
     PruningTestModelConcat, PruningTestModelEltwise, TestModelDiffConvs, TestModelGroupNorm
 from tests.torch.test_helpers import load_exported_onnx_version
 
+pytestmark = pytest.mark.skip(reason="Export as actually deleting filters from the model is currently disabled.")
+
 
 def find_value_by_name_in_list(obj_list, name):
     for obj in obj_list:
