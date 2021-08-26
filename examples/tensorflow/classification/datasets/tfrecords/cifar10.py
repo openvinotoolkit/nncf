@@ -16,7 +16,7 @@ import tensorflow as tf
 
 from examples.tensorflow.common.tfrecords_dataset import TFRecordDataset
 
-__all__ = ['cifar10']
+__all__ = ['cifar10', 'mock_cifar10']
 
 # CIFAR-10 specifications
 NUM_TRAIN_EXAMPLES = 50000
@@ -26,6 +26,10 @@ NUM_CLASSES = 10
 
 def cifar10(config, is_train):
     return Cifar10(config, is_train)
+
+
+def mock_cifar10(config, is_train):
+    return MockCifar10(config, is_train)
 
 
 def parse_record(record: tf.Tensor):
@@ -76,3 +80,17 @@ class Cifar10(TFRecordDataset):
     @property
     def decoder(self):
         return parse_record
+
+
+# MOCK_CIFAR specifications
+MOCK_NUM_TRAIN_EXAMPLES = 10
+MOCK_NUM_EVAL_EXAMPLES = 10
+MOCK_NUM_CLASSES = 10
+
+
+class MockCifar10(Cifar10):
+    @property
+    def num_examples(self):
+        if self.is_train:
+            return MOCK_NUM_TRAIN_EXAMPLES
+        return MOCK_NUM_EVAL_EXAMPLES
