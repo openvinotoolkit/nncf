@@ -10,6 +10,8 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+import os
+
 import os.path as osp
 import sys
 import time
@@ -461,7 +463,8 @@ def create_data_loaders(config, train_dataset, val_dataset):
         init_loader = create_train_data_loader(config.batch_size_init)
     else:
         init_loader = deepcopy(train_loader)
-    if config.distributed:
+
+    if config.distributed and 'NNCF_ZERO_DISTRIBUTED_WORKERS' in os.environ:
         init_loader.num_workers = 0  # PyTorch multiprocessing dataloader issue WA
 
     return train_loader, train_sampler, val_loader, init_loader
