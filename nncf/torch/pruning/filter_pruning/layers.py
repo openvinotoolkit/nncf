@@ -41,6 +41,33 @@ class FilterPruningBlock(nn.Module):
         return conv_weight
 
 
+@COMPRESSION_MODULES.register()
+class PruningBlock(nn.Module):
+    def __init__(self, size, name, dim):
+        super().__init__()
+        self.register_buffer("_binary_filter_pruning_mask", torch.ones(size))
+        self.name = name
+        self.dim = dim
+
+    @property
+    def binary_filter_pruning_mask(self):
+        return self._binary_filter_pruning_mask
+
+    @binary_filter_pruning_mask.setter
+    def binary_filter_pruning_mask(self, mask):
+        with torch.no_grad():
+            self._binary_filter_pruning_mask.set_(mask)
+
+    def __call__(self, module, *args):
+        new_weights = apply_filter_binary_mask(self.binary_filter_pruning_mask, module.weight,
+                                               self.name, self.dim)
+        setattr(module, 'weight', new_weights)
+        if module.bias is not None:
+            new_bias = apply_filter_binary_mask(self.binary_filter_pruning_mask, module.bias,
+                                               self.name)
+            setattr(module, 'bias', new_bias)
+
+
 def broadcast_filter_mask(filter_mask, shape, dim=0):
     broadcasted_shape = np.ones(len(shape), dtype=np.int64)
     broadcasted_shape[dim] = filter_mask.size(0)

@@ -15,6 +15,7 @@ from functools import partial
 from functools import update_wrapper
 from typing import List, Dict
 
+from nncf.torch.layer_utils import _NNCFModuleMixin
 from torch import nn
 from texttable import Texttable
 
@@ -31,7 +32,7 @@ from nncf.torch.graph.transformations.commands import TransformationPriority
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.graph.transformations.commands import PTInsertionCommand
 from nncf.torch.pruning.export_helpers import PT_PRUNING_OPERATOR_METATYPES
-from nncf.torch.pruning.filter_pruning.layers import apply_filter_binary_mask
+from nncf.torch.pruning.filter_pruning.layers import apply_filter_binary_mask, PruningBlock
 from nncf.common.pruning.clusterization import Clusterization
 from nncf.common.pruning.clusterization import Cluster
 from nncf.torch.pruning.structs import PrunedModuleInfo
@@ -111,11 +112,13 @@ class BasePruningAlgoBuilder(PTCompressionAlgorithmBuilder):
                 assert self._is_pruned_module(module)
 
                 nncf_logger.info("Adding Weight Pruner in scope: {}".format(node_name))
-                operation = self.create_weight_pruning_operation(module)
+                # operation = self.create_weight_pruning_operation(module)
+                dim = module.target_weight_dim_for_compression if isinstance(module, _NNCFModuleMixin) else 0
+                operation = PruningBlock(module.weight.size(dim), name= node_name, dim=dim)
                 hook = operation.to(device)
                 insertion_commands.append(
                     PTInsertionCommand(
-                        PTTargetPoint(TargetType.OPERATION_WITH_WEIGHTS,
+                        PTTargetPoint(TargetType.PRE_LAYER_OPERATION,
                                       target_node_name=node_name),
                         hook,
                         TransformationPriority.PRUNING_PRIORITY
@@ -127,8 +130,30 @@ class BasePruningAlgoBuilder(PTCompressionAlgorithmBuilder):
                                                      module=module,
                                                      operand=hook,
                                                      node_id=node.node_id))
+
             cluster = Cluster[PrunedModuleInfo](i, group_minfos, [n.node_id for n in group.elements])
             self.pruned_module_groups_info.add_cluster(cluster)
+
+        norms_operators = {}
+        # Adding binary masks also for Batch/Group Norms to allow applying masks after propagation
+        all_norm_layers = target_model_graph.get_nodes_by_types(['batch_norm', 'group_norm'])  # NNCFNodes here
+        for node in all_norm_layers:
+            node_name = node.node_name
+            module = target_model.get_containing_module(node_name)
+
+            dim = 0
+            operation = PruningBlock(module.weight.size(dim), name= node_name, dim=dim)
+            hook = operation.to(device)
+            insertion_commands.append(
+                PTInsertionCommand(
+                    PTTargetPoint(TargetType.PRE_LAYER_OPERATION,
+                                  target_node_name=node_name),
+                    hook,
+                    TransformationPriority.PRUNING_PRIORITY
+                )
+            )
+            norms_operators[node_name] = (operation, module)
+        self.other_operators = norms_operators
         return insertion_commands
 
     def create_weight_pruning_operation(self, module):

@@ -98,6 +98,7 @@ class FilterPruningBuilder(BasePruningAlgoBuilder):
         return FilterPruningController(model,
                                        self._prunable_types,
                                        self.pruned_module_groups_info,
+                                       self.other_operators,
                                        self.config)
 
     def _is_pruned_module(self, module) -> bool:
@@ -117,9 +118,11 @@ class FilterPruningController(BasePruningAlgoController):
     def __init__(self, target_model: NNCFNetwork,
                  prunable_types: List[str],
                  pruned_module_groups: Clusterization[PrunedModuleInfo],
+                 other_pruning_operators,
                  config: NNCFConfig):
         super().__init__(target_model, prunable_types, pruned_module_groups, config)
         params = self.pruning_config.get('params', {})
+        self.other_pruning_operators = other_pruning_operators
         self.frozen = False
         self._pruning_rate = 0
         self.pruning_init = self.pruning_config.get('pruning_init', 0)
@@ -655,8 +658,9 @@ class FilterPruningController(BasePruningAlgoController):
         init_output_masks_in_graph(graph, self.pruned_module_groups_info.get_all_nodes())
         MaskPropagationAlgorithm(graph, PT_PRUNING_OPERATOR_METATYPES).mask_propagation()
 
+        # TODO: THIS STEP SHOULD BE DELETED SINCE MASK APPLYING WILL BE PLACED IN PRUNING BLOCK
         # 2. Apply the masks
-        types_to_apply_mask = [v.op_func_name for v in NNCF_GENERAL_CONV_MODULES_DICT] + ['group_norm']
+        types_to_apply_mask = ['group_norm']
         if self.prune_batch_norms:
             types_to_apply_mask.append('batch_norm')
 
@@ -666,7 +670,9 @@ class FilterPruningController(BasePruningAlgoController):
                 continue
             node_module = self.model.get_containing_module(node.node_name)
             if node.data['output_mask'] is not None and node_module not in pruned_node_modules:
-                _apply_binary_mask_to_module_weight_and_bias(node_module, node.data['output_mask'], node.node_name)
+                # Setting masks for BN nodes
+                self.other_pruning_operators[node.node_name][0].binary_filter_pruning_mask = node.data['output_mask']
+                # _apply_binary_mask_to_module_weight_and_bias(node_module, node.data['output_mask'], node.node_name)
                 pruned_node_modules.append(node_module)
 
     def prepare_for_export(self):
