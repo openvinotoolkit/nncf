@@ -48,7 +48,7 @@ def test_can_resume_with_manual_init(mocker, desc, _nncf_caplog):
     config = desc.config
     config_to_resume = desc.config_to_resume
 
-    config = register_default_init_args(config, init_loader=create_ones_mock_dataloader(config))
+    config = register_default_init_args(config, train_loader=create_ones_mock_dataloader(config))
     all_spies = desc.setup_init_spies(mocker)
     init_spy = mocker.spy(PTCompressionAlgorithmBuilder, '__init__')
     get_setup_spy = mocker.spy(QuantizationBuilder, '_get_quantizer_setup')
@@ -92,7 +92,7 @@ def test_can_resume_with_algo_mixing(mocker, is_strict):
     _, compression_ctrl = create_compressed_model_and_algo_for_test(desc.model_creator(), sparsity_config)
     compression_state = compression_ctrl.get_compression_state()
 
-    config = register_default_init_args(config, init_loader=create_ones_mock_dataloader(config))
+    config = register_default_init_args(config, train_loader=create_ones_mock_dataloader(config))
     fn = partial(create_compressed_model_and_algo_for_test,
                  desc.model_creator(), config, compression_state=compression_state)
     if is_strict:

@@ -48,7 +48,7 @@ def create_finetuned_lenet_model_and_dataloader(config, eval_fn, finetuning_step
             optimizer.step()
 
     config = register_default_init_args(config,
-                                        init_loader=train_loader,
+                                        train_loader=train_loader,
                                         model_eval_fn=partial(eval_fn, train_loader=train_loader))
     model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
     return model, train_loader, compression_ctrl

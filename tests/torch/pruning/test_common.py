@@ -16,17 +16,17 @@ from nncf.common.pruning.schedulers import BaselinePruningScheduler, Exponential
     ExponentialWithBiasPruningScheduler
 from nncf.torch import register_default_init_args
 from nncf.torch.structures import LeGRInitArgs
-from tests.torch.helpers import create_compressed_model_and_algo_for_test, create_ones_mock_dataloader
 from tests.torch.pruning.helpers import PruningTestModel, get_basic_pruning_config
+from tests.torch.helpers import create_compressed_model_and_algo_for_test, create_ones_mock_dataloader
 
 
 @pytest.mark.parametrize('algo',
-                         ('filter_pruning',))
+                         ('filter_pruning', ))
 @pytest.mark.parametrize(('scheduler', 'scheduler_class'),
                          (
-                                 ('baseline', BaselinePruningScheduler),
-                                 ('exponential', ExponentialPruningScheduler),
-                                 ('exponential_with_bias', ExponentialWithBiasPruningScheduler),
+                             ('baseline', BaselinePruningScheduler),
+                             ('exponential', ExponentialPruningScheduler),
+                             ('exponential_with_bias', ExponentialWithBiasPruningScheduler),
                          ))
 def test_can_choose_scheduler(algo, scheduler, scheduler_class):
     config = get_basic_pruning_config()
@@ -57,7 +57,7 @@ def test_check_default_scheduler_params(algo, ref_scheduler, ref_scheduler_param
 def test_default_legr_init_struct():
     config = get_basic_pruning_config()
     init_loader = create_ones_mock_dataloader(config)
-    nncf_config = register_default_init_args(config, init_loader=init_loader, train_loader=init_loader)
+    nncf_config = register_default_init_args(config, init_loader)
 
     with pytest.raises(KeyError):
         nncf_config.get_extra_struct(LeGRInitArgs)
@@ -69,8 +69,7 @@ def test_valid_legr_init_struct():
     val_loader = create_ones_mock_dataloader(config)
     train_steps_fn = lambda *x: None
     validate_fn = lambda *x: (0, 0, 0)
-    nncf_config = register_default_init_args(config, init_loader=train_loader, train_loader=train_loader,
-                                             train_steps_fn=train_steps_fn,
+    nncf_config = register_default_init_args(config, train_loader=train_loader, train_steps_fn=train_steps_fn,
                                              val_loader=val_loader, validate_fn=validate_fn)
 
     legr_init_args = config.get_extra_struct(LeGRInitArgs)
