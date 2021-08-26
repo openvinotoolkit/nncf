@@ -21,6 +21,7 @@ import tensorflow as tf
 import networkx as nx
 
 from nncf import NNCFConfig
+from nncf.common.hardware.config import HWConfigType
 from tests.tensorflow import test_models
 from tests.tensorflow.helpers import get_empty_config, create_compressed_model_and_algo_for_test
 from tests.tensorflow.sparsity.magnitude.test_helpers import get_basic_filter_pruning_config
@@ -452,6 +453,42 @@ def test_quantize_outputs(desc: ModelDesc, _quantization_case_config):
     config = get_basic_quantization_config(_quantization_case_config.qconfig,
                                            input_sample_sizes=desc.input_sample_sizes)
     config['compression']['quantize_outputs'] = True
+    compressed_model, _ = create_compressed_model_and_algo_for_test(model, config, force_no_init=True)
+
+    check_model_graph(compressed_model, desc.ref_graph_filename, _quantization_case_config.graph_dir,
+                      desc.rename_resource_nodes)
+
+
+TYPE_HW = [(HWConfigType.CPU), (HWConfigType.GPU), (HWConfigType.VPU)]
+
+TEST_HW_MODELS_DESC = [
+    ModelDesc('resnet50.pb', test_models.ResNet50, [1, 32, 32, 3]),
+    ModelDesc('inception_v3.pb', test_models.InceptionV3, [1, 75, 75, 3]),
+    ModelDesc('mobilenet_v2.pb', test_models.MobileNetV2, [1, 96, 96, 3]),
+]
+
+
+@pytest.mark.parametrize('desc', TEST_HW_MODELS_DESC, ids=[m.model_name for m in TEST_HW_MODELS_DESC])
+@pytest.mark.parametrize('hw_config_type', TYPE_HW, ids=[hw.value for hw in TYPE_HW])
+def test_compressed_graph_models_hw(desc: ModelDesc, hw_config_type):
+    model = desc.model_builder(input_shape=tuple(desc.input_sample_sizes[1:]))
+
+    quant_params = {
+        'activations': ('asymmetric', 'per_tensor'),
+        'weights': ('symmetric', 'per_channel')
+    }
+    _quantization_case_config = QuantizeTestCaseConfiguration(quant_params,
+                                                              os.path.join('quantized', 'hw', hw_config_type.value))
+    config = get_basic_quantization_config(_quantization_case_config.qconfig,
+                                           input_sample_sizes=desc.input_sample_sizes)
+    config["target_device"] = hw_config_type.value
+
+    if desc.ignored_scopes is not None:
+        if "activations" in config["compression"]:
+            config["compression"]["activations"]["ignored_scopes"] = desc.ignored_scopes
+        else:
+            config["compression"]["activations"] = {"ignored_scopes": desc.ignored_scopes}
+
     compressed_model, _ = create_compressed_model_and_algo_for_test(model, config, force_no_init=True)
 
     check_model_graph(compressed_model, desc.ref_graph_filename, _quantization_case_config.graph_dir,
