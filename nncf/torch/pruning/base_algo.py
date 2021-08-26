@@ -16,6 +16,7 @@ from functools import update_wrapper
 from typing import List, Dict
 
 from torch import nn
+from texttable import Texttable
 
 from nncf import NNCFConfig
 from nncf.config.extractors import extract_algo_specific_config
@@ -257,21 +258,19 @@ class BasePruningAlgoController(PTCompressionAlgorithmController):
 
     def get_stats_for_pruned_modules(self):
         """
-        Return dict with information about pruned modules. Keys in dict is module names, values is dicts with next keys:
-         'w_shape': shape of module weight,
-         'b_shape': shape of module bias,
-         'params_count': total number of params in module
-         'mask_pr': proportion of zero elements in filter pruning mask.
+        Creates a table with layer pruning rate statistics
         """
-        stats = {}
+        table = Texttable()
+        table.set_cols_width([33, 20, 6, 8])
+        header = ["Name", "Weight's shape", "Bias shape", "Layer PR"]
+        data = [header]
         for minfo in self.pruned_module_groups_info.get_all_nodes():
-            layer_info = {}
-            layer_info["w_shape"] = list(minfo.module.weight.size())
-            layer_info["b_shape"] = list(minfo.module.bias.size()) if minfo.module.bias is not None else []
-            layer_info["params_count"] = sum(p.numel() for p in minfo.module.parameters() if p.requires_grad)
-
-            layer_info["mask_pr"] = self.pruning_rate_for_mask(minfo)
-
-            stats[str(minfo.module_scope)] = layer_info
-
-        return stats
+            drow = {h: 0 for h in header}
+            drow["Name"] = str(minfo.module_scope)
+            drow["Weight's shape"] = list(minfo.module.weight.size())
+            drow["Bias shape"] = list(minfo.module.bias.size()) if minfo.module.bias is not None else []
+            drow["Layer PR"] = self.pruning_rate_for_filters(minfo)
+            row = [drow[h] for h in header]
+            data.append(row)
+        table.add_rows(data)
+        return table

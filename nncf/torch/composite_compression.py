@@ -27,7 +27,6 @@ from nncf.torch.compression_method_api import PTCompressionLoss
 from nncf.torch.graph.transformations.layout import PTTransformationLayout
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.nncf_network import PTModelTransformer
-from nncf.torch.pruning.base_algo import BasePruningAlgoController
 
 ModelType = TypeVar('ModelType')
 
@@ -120,10 +119,5 @@ class PTCompositeCompressionAlgorithmController(
             ctrl.distributed()
 
     def prepare_for_export(self):
-        if len(self.child_ctrls) > 1 and any(isinstance(x, BasePruningAlgoController) for x in self.child_ctrls):
-            # Waiting for the implementation of the related function in OpenVINO
-            raise NotImplementedError("Exporting a model that was compressed by filter pruning algorithm "
-                                      "in combination with another compression algorithm is not yet supporting")
-
         for child_ctrl in self.child_ctrls:
             child_ctrl.prepare_for_export()
