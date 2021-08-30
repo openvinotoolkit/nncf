@@ -278,6 +278,7 @@ def get_quantize_inputs_test_model(input_shapes):
 
 def test_quantize_inputs():
     config = get_basic_quantization_config()
+    config['target_device'] = 'TRIAL'
     input_shapes = [[2, 32, 32, 3] for i in range(5)]
     model = get_quantize_inputs_test_model(input_shapes)
 

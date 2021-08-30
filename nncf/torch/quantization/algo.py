@@ -67,7 +67,7 @@ from nncf.config import NNCFConfig
 from nncf.config.extractors import extract_algo_specific_config
 from nncf.config.extractors import extract_bn_adaptation_init_params
 from nncf.config.extractors import extract_range_init_params
-from nncf.torch.algo_selector import COMPRESSION_ALGORITHMS
+from nncf.torch.algo_selector import PT_COMPRESSION_ALGORITHMS
 from nncf.torch.algo_selector import ZeroCompressionLoss
 from nncf.torch.compression_method_api import PTCompressionAlgorithmBuilder
 from nncf.torch.compression_method_api import PTCompressionAlgorithmController
@@ -396,7 +396,7 @@ class QBuilderStateNames:
     QUANTIZER_SETUP = 'quantizer_setup'
 
 
-@COMPRESSION_ALGORITHMS.register('quantization')
+@PT_COMPRESSION_ALGORITHMS.register('quantization')
 class QuantizationBuilder(PTCompressionAlgorithmBuilder):
     _state_names = QBuilderStateNames
 

@@ -83,6 +83,22 @@ def test_insertion_command_priority(case):
     assert all(res[i]() <= res[i + 1]() for i in range(len(res) - 1))
 
 
+def test_union_with_instance_idx_priority():
+    cmd = commands.TFAfterLayer('layer_0')
+    callable_object = lambda: 'insert_after'
+    cmd_0 = commands.TFInsertionCommand(cmd, callable_object, callable_object_instance_idx=0,
+                                        priority=TransformationPriority.QUANTIZATION_PRIORITY)
+    cmd_1 = commands.TFInsertionCommand(cmd, callable_object, callable_object_instance_idx=1,
+                                        priority=TransformationPriority.DEFAULT_PRIORITY)
+    cmd_union = cmd_0.union(cmd_1)
+    res = cmd_union.insertion_objects
+
+    assert len(res) == 2
+    assert res[0].callable == res[1].callable
+    assert res[0].instance_idx == 1
+    assert res[1].instance_idx == 0
+
+
 def test_removal_command_union():
     cmd_0 = commands.TFRemovalCommand(commands.TFLayer('layer_0'))
     cmd_1 = commands.TFRemovalCommand(commands.TFLayer('layer_1'))

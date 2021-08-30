@@ -615,13 +615,14 @@ COMMON_SPARSITY_PARAM_PROPERTIES = {
                                                    "to the next scheduled sparsity level (multistep "
                                                    "scheduler only)."),
     "multistep_sparsity_levels": with_attributes(_ARRAY_OF_NUMBERS,
-                                                 description="Levels of sparsity to use at each step "
-                                                             "of the scheduler as specified in the "
-                                                             "'multistep_steps' attribute. The first"
-                                                             "sparsity level will be applied "
-                                                             "immediately, so the length of this list "
-                                                             "should be larger than the length of the "
-                                                             "'steps' by one."),
+                                                 description="Levels of sparsity to use at each step of the scheduler "
+                                                             "as specified in the 'multistep_steps' attribute. The "
+                                                             "first sparsity level will be applied immediately, "
+                                                             "so the length of this list should be larger than the "
+                                                             "length of the 'steps' by one. The last sparsity level "
+                                                             "will function as the ultimate sparsity target, "
+                                                             "overriding the \"sparsity_target\" setting if it is "
+                                                             "present."),
     "sparsity_level_setting_mode": with_attributes(_STRING,
                                                    description="The mode of sparsity level setting( "
                                                                "'global' - one sparsity level is set for all layer, "

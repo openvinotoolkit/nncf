@@ -12,9 +12,10 @@
 """
 from abc import ABC, abstractmethod
 from copy import deepcopy
-from typing import Dict, Callable, Any, Union, List, Tuple, TypeVar
+from typing import Dict, Callable, Any, Union, List, Tuple
 import contextlib
 
+import numbers
 import numpy as np
 import onnx
 import torch
@@ -28,7 +29,7 @@ from torch.utils.data import Dataset
 from nncf.config import NNCFConfig
 from nncf.config.extractors import extract_algorithm_names
 from nncf.config.structures import BNAdaptationInitArgs
-from nncf.torch.algo_selector import COMPRESSION_ALGORITHMS
+from nncf.torch.algo_selector import PT_COMPRESSION_ALGORITHMS
 from nncf.torch.compression_method_api import PTCompressionAlgorithmController
 from nncf.torch.dynamic_graph.graph_tracer import create_input_infos
 from nncf.torch.dynamic_graph.scope import Scope
@@ -39,8 +40,9 @@ from nncf.torch.model_creation import create_compressed_model
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.utils import get_all_modules_by_type
 from tests.common.command import Command as BaseCommand
+from tests.common.helpers import BaseTensorListComparator
 
-TensorType = TypeVar('TensorType', bound=Union[torch.Tensor, np.ndarray])
+TensorType = Union[torch.Tensor, np.ndarray, numbers.Number]
 
 
 def fill_conv_weight(conv, value):
@@ -211,42 +213,14 @@ def get_grads(variables: List[nn.Parameter]) -> List[torch.Tensor]:
     return [var.grad.clone() for var in variables]
 
 
-def to_numpy(tensor: TensorType) -> np.ndarray:
-    if isinstance(tensor, torch.Tensor):
-        return tensor.cpu().detach().numpy()
-    return tensor
-
-
-def compare_tensor_lists(test: List[TensorType], reference: List[TensorType],
-                         assert_fn: Callable[[np.ndarray, np.ndarray], bool]):
-    assert len(test) == len(reference)
-
-    for x, y in zip(test, reference):
-        x = to_numpy(x)
-        y = to_numpy(y)
-        assert_fn(x, y)
-
-
-def check_equal(test: List[TensorType], reference: List[TensorType], rtol: float = 1e-1):
-    compare_tensor_lists(test, reference,
-                         lambda x, y: np.testing.assert_allclose(x, y, rtol=rtol))
-
-
-def check_not_equal(test: List[TensorType], reference: List[TensorType], rtol: float = 1e-4):
-    compare_tensor_lists(test, reference,
-                         lambda x, y: np.testing.assert_raises(AssertionError,
-                                                               np.testing.assert_allclose, x, y, rtol=rtol))
-
-
-def check_less(test: List[TensorType], reference: List[TensorType], rtol=1e-4):
-    check_not_equal(test, reference, rtol=rtol)
-    compare_tensor_lists(test, reference, np.testing.assert_array_less)
-
-
-def check_greater(test: List[TensorType], reference: List[TensorType], rtol=1e-4):
-    check_not_equal(test, reference, rtol=rtol)
-    compare_tensor_lists(test, reference,
-                         lambda x, y: np.testing.assert_raises(AssertionError, np.testing.assert_array_less, x, y))
+class PTTensorListComparator(BaseTensorListComparator):
+    @classmethod
+    def _to_numpy(cls, tensor: TensorType) -> Union[np.ndarray, numbers.Number]:
+        if isinstance(tensor, torch.Tensor):
+            return tensor.cpu().detach().numpy()
+        if isinstance(tensor, (np.ndarray, numbers.Number)):
+            return tensor
+        raise Exception(f'Tensor must be np.ndarray or torch.Tensor, not {type(tensor)}')
 
 
 def create_compressed_model_and_algo_for_test(model: Module, config: NNCFConfig=None,
@@ -284,7 +258,7 @@ def create_nncf_model_and_single_algo_builder(model: Module, config: NNCFConfig,
     algo_names = extract_algorithm_names(config)
     assert len(algo_names) == 1
     algo_name = next(iter(algo_names))
-    builder_cls = COMPRESSION_ALGORITHMS.get(algo_name)
+    builder_cls = PT_COMPRESSION_ALGORITHMS.get(algo_name)
     builder = builder_cls(config, should_init=True)
     return compressed_model, builder
 

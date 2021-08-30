@@ -44,12 +44,19 @@ def extract_algo_specific_config(config: NNCFConfig, algo_name_to_match: str) ->
     :return: The sub-dictionary, exactly as it is specified in the NNCF configuration of the .json file,
     that corresponds to the algorithm-specific data (i.e. {"algorithm": "quantization", ... })
     """
-    compression_section = config['compression']
+    compression_section = config.get('compression', [])
     if isinstance(compression_section, list):
         algo_list = compression_section
     else:
         assert isinstance(compression_section, dict)
         algo_list = [compression_section]
+
+    from nncf.common.compression import NO_COMPRESSION_ALGORITHM_NAME
+    if algo_name_to_match == NO_COMPRESSION_ALGORITHM_NAME:
+        if len(algo_list) > 0:
+            raise RuntimeError(f'No algorithm configuration should be specified '
+                               f'when you try to extract {algo_name_to_match} from the NNCF config!')
+        return {}
 
     matches = []
     for compression_algo_dict in algo_list:
