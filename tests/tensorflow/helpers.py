@@ -23,6 +23,7 @@ from nncf.tensorflow.helpers.model_creation import create_compressed_model
 from tests.common.helpers import BaseTensorListComparator
 
 from examples.tensorflow.common.object_detection.datasets.builder import COCODatasetBuilder
+from examples.tensorflow.classification.datasets.builder import DatasetBuilder
 
 TensorType = Union[tf.Tensor, tf.Variable, np.ndarray, numbers.Number]
 
@@ -152,6 +153,32 @@ def get_coco_dataset_builders(config, num_devices, **kwargs):
         builders = builders[0]
 
     return builders
+
+
+class MockCIFAR10DatasetBuilder(DatasetBuilder):
+    @property
+    def num_examples(self):
+        return 10
+
+
+def get_cifar10_dataset_builders(config, num_devices, one_hot=True):
+    image_size = config.input_info.sample_size[-2]
+
+    train_builder = MockCIFAR10DatasetBuilder(
+        config,
+        image_size=image_size,
+        num_devices=num_devices,
+        one_hot=one_hot,
+        is_train=True)
+
+    val_builder = MockCIFAR10DatasetBuilder(
+        config,
+        image_size=image_size,
+        num_devices=num_devices,
+        one_hot=one_hot,
+        is_train=False)
+
+    return [train_builder, val_builder]
 
 
 def get_weight_by_name(layer, name):
