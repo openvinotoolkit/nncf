@@ -184,6 +184,11 @@ Install NNCF and TensorFlow in one line:
 pip install nncf[tf]
 ```
 
+NNCF is also available via [conda](https://anaconda.org/conda-forge/nncf):
+```
+conda install -c conda-forge nncf
+```
+
 #### As a Docker image
 Use one of the Dockerfiles in the [docker](./docker) directory to build an image with an environment already set up and ready for running NNCF [sample scripts](#model-compression-samples).
 
