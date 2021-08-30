@@ -25,12 +25,13 @@ from nncf.torch.compression_method_api import PTCompressionAlgorithmBuilder
 from nncf.torch.compression_method_api import PTCompressionAlgorithmController
 
 from nncf.torch.compression_method_api import PTCompressionLoss
+from nncf.common.compression import NO_COMPRESSION_ALGORITHM_NAME
 from nncf.common.schedulers import StubCompressionScheduler
 from nncf.common.utils.registry import Registry
 from nncf.common.statistics import NNCFStatistics
 
 
-COMPRESSION_ALGORITHMS = Registry('compression algorithm', add_name_as_attr=True)
+PT_COMPRESSION_ALGORITHMS = Registry('compression algorithm', add_name_as_attr=True)
 
 
 class ZeroCompressionLoss(PTCompressionLoss):
@@ -42,7 +43,7 @@ class ZeroCompressionLoss(PTCompressionLoss):
         return torch.zeros([], device=self._device)
 
 
-@COMPRESSION_ALGORITHMS.register('NoCompressionAlgorithmBuilder')
+@PT_COMPRESSION_ALGORITHMS.register(NO_COMPRESSION_ALGORITHM_NAME)
 class NoCompressionAlgorithmBuilder(PTCompressionAlgorithmBuilder):
     def _get_transformation_layout(self, target_model: NNCFNetwork) -> PTTransformationLayout:
         return PTTransformationLayout()

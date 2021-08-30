@@ -154,7 +154,7 @@ class BasePruningAlgoBuilder(TFCompressionAlgorithmBuilder):
         mask_propagator = MaskPropagationAlgorithm(self._graph, TF_PRUNING_OPERATOR_METATYPES)
         mask_propagator.mask_propagation()
 
-        # Add masks for all spec modules, because prunable batchnorm layers can be determines
+        # Add masks for all spec modules, because prunable batchnorm layers can be determined
         # at the moment of mask propagation
         types_spec_layers = [TFBatchNormalizationLayerMetatype] \
             if self._prune_batch_norms else []
@@ -162,6 +162,7 @@ class BasePruningAlgoBuilder(TFCompressionAlgorithmBuilder):
         spec_nodes = self._graph.get_nodes_by_metatypes(types_spec_layers)
         for spec_node in spec_nodes:
             layer_name = get_layer_identifier(spec_node)
+            layer = model.get_layer(layer_name)
             if spec_node.data['output_mask'] is None:
                 # Skip elements that will not be pruned
                 continue
@@ -173,6 +174,12 @@ class BasePruningAlgoBuilder(TFCompressionAlgorithmBuilder):
 
             _, layer_info = converter.get_layer_info_for_node(spec_node.node_name)
             for weight_def in spec_node.metatype.weight_definitions:
+                if spec_node.metatype is TFBatchNormalizationLayerMetatype \
+                        and not layer.scale and weight_def.weight_attr_name == 'gamma':
+                    nncf_logger.debug('Fused gamma parameter encountered in BatchNormalization layer. '
+                                      'Do not add mask to it.')
+                    continue
+
                 transformations.register(
                     self._get_insertion_command_binary_mask(
                         layer_info.layer_name, weight_def.weight_attr_name)

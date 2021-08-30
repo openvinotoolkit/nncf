@@ -21,11 +21,11 @@ from nncf.tensorflow.layers.wrapper import NNCFWrapper
 from nncf.tensorflow.sparsity.magnitude.algorithm import MagnitudeSparsityController
 from nncf.tensorflow.sparsity.magnitude.functions import normed_magnitude
 from nncf.tensorflow.sparsity.magnitude.operation import BinaryMask
-from tests.tensorflow.helpers import check_equal
 from tests.tensorflow.helpers import create_compressed_model_and_algo_for_test
 from tests.tensorflow.helpers import get_basic_conv_test_model
 from tests.tensorflow.helpers import get_empty_config
 from tests.tensorflow.helpers import get_mock_model
+from tests.tensorflow.helpers import TFTensorListComparator
 from tests.tensorflow.sparsity.magnitude.test_helpers import get_basic_magnitude_sparsity_config
 from tests.tensorflow.sparsity.magnitude.test_helpers import get_magnitude_test_model
 from tests.tensorflow.sparsity.magnitude.test_helpers import ref_mask_1
@@ -131,8 +131,8 @@ def test_magnitude_algo_set_binary_mask_on_forward():
     sparse_model, compression_ctrl = create_compressed_model_and_algo_for_test(get_magnitude_test_model(), config)
     compression_ctrl.set_sparsity_level(0.3)
 
-    check_equal(ref_mask_1, sparse_model.layers[1].weights[-1])
-    check_equal(ref_mask_2, sparse_model.layers[2].weights[-1])
+    TFTensorListComparator.check_equal(ref_mask_1, sparse_model.layers[1].weights[-1])
+    TFTensorListComparator.check_equal(ref_mask_2, sparse_model.layers[2].weights[-1])
 
 
 def test_magnitude_algo_binary_masks_are_applied():

@@ -27,15 +27,13 @@ from typing import Tuple
 import networkx as nx
 import numpy as np
 import torch
-from torch import nn
-
 from nncf.api.compression import CompressionLoss
 from nncf.api.compression import CompressionScheduler
 from nncf.api.compression import CompressionStage
-from nncf.common.graph.definitions import MODEL_INPUT_OP_NAME
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.graph import NNCFNodeName
+from nncf.common.graph.definitions import MODEL_INPUT_OP_NAME
 from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
 from nncf.common.graph.layer_attributes import WeightedLayerAttributes
 from nncf.common.graph.transformations.commands import TargetPoint
@@ -52,9 +50,6 @@ from nncf.common.quantization.quantizer_setup import QuantizationPointId
 from nncf.common.quantization.quantizer_setup import QuantizerSetupBase
 from nncf.common.quantization.quantizer_setup import SingleConfigQuantizationPoint
 from nncf.common.quantization.quantizer_setup import SingleConfigQuantizerSetup
-from nncf.common.utils.logger import DuplicateFilter
-from nncf.torch.quantization.default_quantization import DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT
-from nncf.torch.quantization.layers import get_scale_shape
 from nncf.common.quantization.structs import NonWeightQuantizerId
 from nncf.common.quantization.structs import QuantizableWeightedLayerNode
 from nncf.common.quantization.structs import QuantizationConstraints
@@ -63,20 +58,21 @@ from nncf.common.quantization.structs import QuantizerId
 from nncf.common.quantization.structs import WeightQuantizerId
 from nncf.common.schedulers import BaseCompressionScheduler
 from nncf.common.statistics import NNCFStatistics
+from nncf.common.utils.debug import is_debug
 from nncf.common.utils.helpers import matches_any
+from nncf.common.utils.logger import DuplicateFilter
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.common.utils.os import safe_open
 from nncf.config import NNCFConfig
 from nncf.config.extractors import extract_algo_specific_config
 from nncf.config.extractors import extract_bn_adaptation_init_params
 from nncf.config.extractors import extract_range_init_params
-from nncf.torch.algo_selector import COMPRESSION_ALGORITHMS
+from nncf.torch.algo_selector import PT_COMPRESSION_ALGORITHMS
 from nncf.torch.algo_selector import ZeroCompressionLoss
 from nncf.torch.compression_method_api import PTCompressionAlgorithmBuilder
 from nncf.torch.compression_method_api import PTCompressionAlgorithmController
 from nncf.torch.debug import CallCountTracker
 from nncf.torch.debug import DebugInterface
-from nncf.common.utils.debug import is_debug
 from nncf.torch.dynamic_graph.context import TracingContext
 from nncf.torch.graph.graph import PTNNCFGraph
 from nncf.torch.graph.operator_metatypes import Conv2dMetatype
@@ -85,8 +81,8 @@ from nncf.torch.graph.transformations.commands import PTInsertionCommand
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.graph.transformations.commands import TransformationPriority
 from nncf.torch.graph.transformations.layout import PTTransformationLayout
-from nncf.torch.hardware.fused_patterns import PT_HW_FUSED_PATTERNS
 from nncf.torch.hardware.config import PTHWConfig
+from nncf.torch.hardware.fused_patterns import PT_HW_FUSED_PATTERNS
 from nncf.torch.initialization import SimpleDataLoaderRunner
 from nncf.torch.module_operations import UpdatePaddingValue
 from nncf.torch.nncf_network import EXTERNAL_QUANTIZERS_STORAGE_NAME
@@ -95,6 +91,7 @@ from nncf.torch.nncf_network import LoadStateListener
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.quantization.adjust_padding import AdjustPaddingArgs
 from nncf.torch.quantization.adjust_padding import CalculatePaddingAdjustment
+from nncf.torch.quantization.default_quantization import DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT
 from nncf.torch.quantization.init_precision import PrecisionInitializerFactory
 from nncf.torch.quantization.init_range import DataLoaderRangeInitializeRunner
 from nncf.torch.quantization.init_range import PTRangeInitParams
@@ -107,8 +104,9 @@ from nncf.torch.quantization.layers import QuantizerConfig
 from nncf.torch.quantization.layers import QuantizerExportMode
 from nncf.torch.quantization.layers import QuantizersSwitcher
 from nncf.torch.quantization.layers import SymmetricQuantizer
-from nncf.torch.quantization.metrics import PTQuantizationStatisticsCollector
+from nncf.torch.quantization.layers import get_scale_shape
 from nncf.torch.quantization.metrics import MemoryConsumptionStatisticsCollector
+from nncf.torch.quantization.metrics import PTQuantizationStatisticsCollector
 from nncf.torch.quantization.metrics import QuantizationShareBuildTimeInfo
 from nncf.torch.quantization.metrics import ShareEdgesQuantizedDataPathStatisticsCollector
 from nncf.torch.quantization.precision_constraints import HardwareQuantizationConstraints
@@ -129,6 +127,7 @@ from nncf.torch.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.torch.tensor_statistics.statistics import TensorStatistic
 from nncf.torch.utils import get_state_dict_names_with_modules
 from nncf.torch.utils import is_main_process
+from torch import nn
 
 
 class QuantizerSetupGeneratorBase:
@@ -397,7 +396,7 @@ class QBuilderStateNames:
     QUANTIZER_SETUP = 'quantizer_setup'
 
 
-@COMPRESSION_ALGORITHMS.register('quantization')
+@PT_COMPRESSION_ALGORITHMS.register('quantization')
 class QuantizationBuilder(PTCompressionAlgorithmBuilder):
     _state_names = QBuilderStateNames
 
@@ -743,22 +742,44 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
         qp_id_vs_quant_module_id_dict = {}  # type: Dict[QuantizationPointId, QuantizerId]
         target_model_graph = target_model.get_original_graph()
         non_unified_scales_quantization_point_ids = set(quantizer_setup.quantization_points.keys())
+        already_weight_quantized_shared_layers = {}  # type: Dict[str, QuantizerId]
 
         for unified_scales_group in quantizer_setup.unified_scale_groups.values():
             for us_qp_id in unified_scales_group:
                 non_unified_scales_quantization_point_ids.discard(us_qp_id)
 
+            filtered_unified_scales_group, shared_weight_quantized_layers_in_group = \
+                self._remove_shared_layer_weight_quantization_point_duplicates(unified_scales_group,
+                                                                               quantizer_setup,
+                                                                               target_model_graph)
+
             quant_module_id, commands = self._build_commands_for_single_unified_scale_group(
                 target_model,
                 quantizer_setup,
-                unified_scales_group,
+                filtered_unified_scales_group,
                 minmax_values_for_range_init)
+
+            for layer_name in shared_weight_quantized_layers_in_group:
+                if layer_name in already_weight_quantized_shared_layers:
+                    raise RuntimeError("Attempted to assign a unified-scale quantizer to a shared layer node that has "
+                                       "already had its weights quantized by another unified-scale quantizer!")
+                already_weight_quantized_shared_layers[layer_name] = quant_module_id
+
             for us_qp_id in unified_scales_group:
                 qp_id_vs_quant_module_id_dict[us_qp_id] = quant_module_id
             insertion_commands += commands
 
         for qp_id in non_unified_scales_quantization_point_ids:
             qp = quantizer_setup.quantization_points[qp_id]
+            nncf_node = target_model_graph.get_node_by_name(qp.insertion_point.target_node_name)
+            if qp.is_weight_quantization_point() and nncf_node.is_shared():
+                layer_name = nncf_node.layer_name
+                if layer_name in already_weight_quantized_shared_layers:
+                    nncf_logger.debug("Filtering a regular weight quantization point {} - already "
+                                      "quantized as a shared layer {}".format(qp_id, nncf_node.layer_name))
+                    qp_id_vs_quant_module_id_dict[qp_id] = already_weight_quantized_shared_layers[layer_name]
+                    continue
+
             qip = qp.insertion_point
             tp = PTTargetPointTranslator.translate(qip)
             qconfig = quantizer_setup.quantization_points[qp_id].qconfig
@@ -777,6 +798,10 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
                                                                                       qconfig,
                                                                                       range_init_minmax_values)
 
+            if qp.is_weight_quantization_point() and nncf_node.is_shared() and \
+                    nncf_node.layer_name not in already_weight_quantized_shared_layers:
+                already_weight_quantized_shared_layers[nncf_node.layer_name] = quantizer_module_id
+
             qp_id_vs_quant_module_id_dict[qp_id] = quantizer_module_id
             insertion_commands += commands
 
@@ -789,6 +814,29 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
             insertion_commands += commands
 
         return insertion_commands, qp_id_vs_quant_module_id_dict
+
+    def _remove_shared_layer_weight_quantization_point_duplicates(
+            self,
+            unified_scales_group: Set[QuantizationPointId],
+            quantizer_setup: SingleConfigQuantizerSetup,
+            target_model_graph: NNCFGraph) -> Tuple[Set[QuantizationPointId], Set[str]]:
+        observed_shared_layer_names = set()
+        retval = set()
+        for us_qp_id in unified_scales_group:
+            qp = quantizer_setup.quantization_points[us_qp_id]
+            if qp.is_weight_quantization_point():
+                nncf_node = target_model_graph.get_node_by_name(qp.insertion_point.target_node_name)
+                if nncf_node.is_shared():
+                    if nncf_node.layer_name not in observed_shared_layer_names:
+                        observed_shared_layer_names.add(nncf_node.layer_name)
+                    else:
+                        nncf_logger.debug("Filtering a unified-scale weight quantization point {} - already "
+                                          "quantized as a shared layer {}".format(us_qp_id,
+                                                                                  nncf_node.layer_name))
+                        continue
+            retval.add(us_qp_id)
+        return retval, observed_shared_layer_names
+
 
     def _collect_adjust_padding_args(self,
                                      non_unified_scales_quantization_point_ids: Set[QuantizationPointId],

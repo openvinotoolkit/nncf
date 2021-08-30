@@ -17,7 +17,8 @@ import torch
 from torch.autograd import Variable
 
 from nncf.torch.binarization.layers import xnor_binarize_op, dorefa_binarize_op, activation_bin_scale_threshold_op
-from tests.torch.helpers import check_equal, get_grads
+from tests.torch.helpers import get_grads
+from tests.torch.helpers import PTTensorListComparator
 
 
 # reference impl
@@ -138,7 +139,7 @@ class TestParametrized:
                 ref_value = ReferenceDOREFABinarize.forward(ref_input)
                 test_value = dorefa_binarize_op(test_input)
 
-            check_equal(test_value, ref_value, rtol=1e-3)
+            PTTensorListComparator.check_equal(test_value, ref_value, rtol=1e-3)
 
     def test_binarize_activations_forward(self, _seed, input_size, use_cuda):
         if not torch.cuda.is_available() and use_cuda is True:
@@ -151,7 +152,7 @@ class TestParametrized:
         ref_value = ReferenceActivationBinarize.forward(ref_input, ref_scale, ref_threshold)
         test_value = activation_bin_scale_threshold_op(test_input, test_scale, test_threshold)
 
-        check_equal(test_value, ref_value, rtol=1e-3)
+        PTTensorListComparator.check_equal(test_value, ref_value, rtol=1e-3)
 
     def test_binarize_activations_backward(self, _seed, input_size, use_cuda):
         if not torch.cuda.is_available() and use_cuda is True:
@@ -169,4 +170,4 @@ class TestParametrized:
         test_value.sum().backward()
         test_grads = get_grads([test_input, test_scale, test_threshold])
 
-        check_equal(test_grads, ref_grads, rtol=1e-3)
+        PTTensorListComparator.check_equal(test_grads, ref_grads, rtol=1e-3)

@@ -22,7 +22,7 @@ import torch
 from torch.distributed import barrier
 from torch.nn import Module
 
-
+from nncf.common.compression import NO_COMPRESSION_ALGORITHM_NAME
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.common.compression import BaseCompressionAlgorithmController as BaseController
 from nncf.config.extractors import extract_algorithm_names
@@ -30,7 +30,7 @@ from nncf.torch.algo_selector import NoCompressionAlgorithmBuilder
 from nncf.config import NNCFConfig
 from nncf.config.utils import is_accuracy_aware_training
 from nncf.api.compression import CompressionAlgorithmController
-from nncf.torch.algo_selector import COMPRESSION_ALGORITHMS
+from nncf.torch.algo_selector import PT_COMPRESSION_ALGORITHMS
 from nncf.torch.composite_compression import PTCompositeCompressionAlgorithmBuilder
 from nncf.torch.compression_method_api import PTCompressionAlgorithmBuilder
 from nncf.common.utils.debug import set_debug_log_dir
@@ -179,17 +179,18 @@ def create_compressed_model(model: Module,
 
 
 def get_compression_algorithm_builder(config):
-    algorithm_key = config.get('algorithm', 'NoCompressionAlgorithmBuilder')
+    algorithm_key = config.get('algorithm', NO_COMPRESSION_ALGORITHM_NAME)
     nncf_logger.info("Creating compression algorithm: {}".format(algorithm_key))
-    return COMPRESSION_ALGORITHMS.get(algorithm_key)
+    return PT_COMPRESSION_ALGORITHMS.get(algorithm_key)
 
 
-def create_compression_algorithm_builder(config, should_init=True) -> PTCompressionAlgorithmBuilder:
+def create_compression_algorithm_builder(config: NNCFConfig,
+                                         should_init: bool = True) -> PTCompressionAlgorithmBuilder:
     algo_names = extract_algorithm_names(config)
     if not algo_names:
         algo_builder_classes = [NoCompressionAlgorithmBuilder]
     else:
-        algo_builder_classes = [COMPRESSION_ALGORITHMS.get(algo_name) for algo_name in algo_names]
+        algo_builder_classes = [PT_COMPRESSION_ALGORITHMS.get(algo_name) for algo_name in algo_names]
 
     if len(algo_builder_classes) == 1:
         builder = next(iter(algo_builder_classes))(config, should_init=should_init)

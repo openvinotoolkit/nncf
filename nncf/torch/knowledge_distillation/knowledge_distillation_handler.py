@@ -55,11 +55,9 @@ class KnowledgeDistillationLossHandler(nn.Module):
 
         :param inputs: Results of compressed model forward used for knowledge distillation loss calculations.
         """
+        self.zero_kd_loss()
         with torch.no_grad():
             kd_outputs = self._kd_original_model(*args, **kwargs)
         kd_loss = self._calculate_kd_loss_fn(inputs, kd_outputs)
-        if not isinstance(kd_loss, torch.Tensor):
-            self._compressed_context.global_buffer_store[self.KD_LOSS_STORAGE_NAME].append(kd_loss)
-        else:
-            self._compressed_context.global_buffer_store[self.KD_LOSS_STORAGE_NAME].append(kd_loss.to(
-                self._compressed_context.global_buffer_store[self.KD_STORAGE_DEVICE]))
+        self._compressed_context.global_buffer_store[self.KD_LOSS_STORAGE_NAME].append(kd_loss.to(
+            self._compressed_context.global_buffer_store[self.KD_STORAGE_DEVICE]))

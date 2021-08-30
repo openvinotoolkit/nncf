@@ -10,7 +10,9 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+from typing import Union
 
+import numbers
 import numpy as np
 import tensorflow as tf
 from nncf.common.compression import BaseCompressionAlgorithmController
@@ -18,9 +20,12 @@ from tensorflow.python.ops.init_ops import Constant
 
 from nncf import NNCFConfig
 from nncf.tensorflow.helpers.model_creation import create_compressed_model
+from tests.common.helpers import BaseTensorListComparator
 
 from examples.tensorflow.common.object_detection.datasets.builder import COCODatasetBuilder
 from examples.tensorflow.classification.datasets.builder import DatasetBuilder
+
+TensorType = Union[tf.Tensor, tf.Variable, np.ndarray, numbers.Number]
 
 
 def get_conv_init_value(shape, value):
@@ -108,11 +113,14 @@ def create_conv(in_channels, out_channels, kernel_size, weight_init, bias_init, 
     return conv_cls(**args)
 
 
-def check_equal(test, reference, rtol=1e-4):
-    test = test.numpy()
-    reference = reference.numpy()
-    for i, (x, y) in enumerate(zip(test, reference)):
-        np.testing.assert_allclose(x, y, rtol=rtol, err_msg="Index: {}".format(i))
+class TFTensorListComparator(BaseTensorListComparator):
+    @classmethod
+    def _to_numpy(cls, tensor: TensorType) -> Union[np.ndarray, numbers.Number]:
+        if isinstance(tensor, (tf.Tensor, tf.Variable)):
+            return tensor.numpy()
+        if isinstance(tensor, (np.ndarray, numbers.Number)):
+            return tensor
+        raise Exception(f'Tensor must be numbers.Number, np.ndarray, tf.Tensor or tf.Variable, not {type(tensor)}')
 
 
 class MockCOCODatasetBuilder(COCODatasetBuilder):

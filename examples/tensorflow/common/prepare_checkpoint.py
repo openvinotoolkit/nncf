@@ -116,6 +116,8 @@ def load_and_save_checkpoint(checkpoint, config):
     Load checkpoint and re-save it.
     """
     load_checkpoint(checkpoint, config.ckpt_path)
+    if config.checkpoint_save_dir is None:
+        config.checkpoint_save_dir = config.log_dir
     checkpoint_manager = tf.train.CheckpointManager(checkpoint, config.checkpoint_save_dir, max_to_keep=None)
     save_path = checkpoint_manager.save()
     logger.info('Saved checkpoint: {}'.format(save_path))
