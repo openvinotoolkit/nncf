@@ -427,12 +427,15 @@ def _accuracy_aware_config(request, dataset_dir):
     jconfig['dataset'] = dataset_name
     jconfig['dataset_type'] = dataset_type
 
+    num_gpus = len(tf.config.list_physical_devices('GPU'))
+    batch_size = num_gpus if num_gpus else 1
+
     return {
         'sample_type': sample_type,
         'nncf_config': jconfig,
         'model_name': jconfig['model'],
         'dataset_path': dataset_path,
-        'batch_size': 1,
+        'batch_size': batch_size,
     }
 
 
