@@ -414,17 +414,15 @@ def test_eval_prepared_checkpoint(_config, tmp_path, _case_common_dirs):
     main(convert_to_argv(args))
 
 
-@pytest.fixture(params=[TEST_ROOT.joinpath("tensorflow", "data", "configs", "resnet50_pruning_accuracy_aware.json"),
-                        TEST_ROOT.joinpath("tensorflow", "data", "configs", "resnet50_int8_accuracy_aware.json")])
-def _accuracy_aware_config(request):
+@pytest.fixture(params=[TEST_ROOT.joinpath("tensorflow", "data", "configs", "sequential_pruning_accuracy_aware.json"),
+                        TEST_ROOT.joinpath("tensorflow", "data", "configs", "sequential_int8_accuracy_aware.json")])
+def _accuracy_aware_config(request, dataset_dir):
     config_path = request.param
     sample_type = 'classification'
+    dataset_name, dataset_type = 'cifar10', 'tfrecords'
+    dataset_path = DATASET_PATHS[sample_type][dataset_name](dataset_dir)
     with config_path.open() as f:
         jconfig = json.load(f)
-
-    dataset_name = 'cifar10'
-    dataset_type = 'tfds'
-    dataset_path = os.path.join('/tmp', dataset_name)
 
     jconfig['dataset'] = dataset_name
     jconfig['dataset_type'] = dataset_type
@@ -434,7 +432,7 @@ def _accuracy_aware_config(request):
         'nncf_config': jconfig,
         'model_name': jconfig['model'],
         'dataset_path': dataset_path,
-        'batch_size': 12,
+        'batch_size': 1,
     }
 
 

@@ -1,5 +1,5 @@
 {
-    "model": "ResNet50V2",
+    "model": "SequentialModel",
     "pretrained": false,
     "batch_size": 512,
     "epochs": 100,
@@ -28,23 +28,17 @@
         }
     },
     "accuracy_aware_training": {
-        "mode": "adaptive_compression_level",
+        "mode": "early_exit",
         "params": {
-            "initial_training_phase_epochs": 0,
-            "patience_epochs": 1
+            "maximal_total_epochs": 1
         }
     },
-    "compression": [
-        {
-            "algorithm": "filter_pruning",
-            "pruning_init": 0.95,
-            "params": {
-                "schedule": "exponential",
-                "pruning_target": 0.1,
-                "pruning_steps": 1,
-                "num_init_steps": 0,
-                "filter_importance": "geometric_median"
+    "compression": {
+        "algorithm": "quantization",
+        "initializer": {
+            "range": {
+                "num_init_samples": 0
             }
         }
-    ]
+    }
 }
