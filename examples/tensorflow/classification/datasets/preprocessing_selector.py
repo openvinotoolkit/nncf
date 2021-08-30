@@ -22,9 +22,7 @@ PREPROCESSING_FN_MAP = {
     'imagenet2012': imagenet_preprocess_image,
     'cifar10': cifar10_preprocess_image,
     'cifar100': cifar100_preprocess_image,
-    'imagenet2012_slim': imagenet_slim_preprocess_image,
-    # For testing purpose
-    'mock_cifar10': cifar10_preprocess_image,
+    'imagenet2012_slim': imagenet_slim_preprocess_image
 }
 
 LABEL_PREPROCESSING_FN_MAP = {
