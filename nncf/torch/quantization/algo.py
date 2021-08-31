@@ -173,13 +173,18 @@ class QuantizerSetupGeneratorBase:
 
     def _parse_group_params(self, quant_config: Dict, quantizer_group: QuantizerGroup):
         group_name = quantizer_group.value
-        params_dict = quant_config.get(group_name, {})
-        if not params_dict and self._target_device != 'VPU':
+        params_dict = {}
+        params_dict_from_config = quant_config.get(group_name, {})
+        if self._target_device != 'VPU':
             preset = QuantizationPreset.from_str(quant_config.get('preset', 'performance'))
-            params_dict['mode'] = preset.get_quantization_mode(quantizer_group)
+            params_dict = preset.get_params_configured_by_preset(quantizer_group)
+            overrided_params = params_dict.keys() & params_dict_from_config.keys()
+            if overrided_params:
+                nncf_logger.warning('Preset quantizer parameters {} explicitly overrided.'.format(overrided_params))
+        params_dict.update(params_dict_from_config)
         self.global_quantizer_constraints[quantizer_group] = QuantizationConstraints.from_config_dict(params_dict)
-        self._ignored_scopes_per_group[quantizer_group] = params_dict.get('ignored_scopes')
-        self._target_scopes_per_group[quantizer_group] = params_dict.get('target_scopes')
+        self._ignored_scopes_per_group[quantizer_group] = params_dict_from_config.get('ignored_scopes')
+        self._target_scopes_per_group[quantizer_group] = params_dict_from_config.get('target_scopes')
 
     def _get_default_qconfig(self, constraints: QuantizationConstraints = None):
         qconfig = deepcopy(self.DEFAULT_QUANTIZER_CONFIG)
@@ -374,7 +379,7 @@ class PropagationBasedQuantizerSetupGenerator(QuantizerSetupGeneratorBase):
         global_constraints = self.global_quantizer_constraints[QuantizerGroup.WEIGHTS]
         scope_overrides_dict = self._quantization_config.get("scope_overrides", {})
         return assign_qconfig_lists_to_modules(nodes_with_weights,
-                                               self.DEFAULT_QUANTIZER_CONFIG,
+                                               self._get_default_qconfig(),
                                                global_constraints,
                                                scope_overrides_dict,
                                                self.hw_config)
@@ -428,6 +433,10 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
         if hw_config_type is not None:
             hw_config_path = PTHWConfig.get_path_to_hw_config(hw_config_type)
             self.hw_config = PTHWConfig.from_json(hw_config_path)
+
+        algo_config = self._get_algo_specific_config_section()
+        if target_device == 'VPU' and 'preset' in algo_config:
+            raise RuntimeError("The VPU target device does not support presets.")
 
         self._range_init_params = None
         self._precision_init_type = None

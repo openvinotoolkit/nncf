@@ -325,7 +325,7 @@ class QuantizationPreset(Enum):
             return QuantizationPreset.MIXED
         raise RuntimeError('Unknown preset string.')
 
-    def get_quantization_mode(self, quant_group: QuantizerGroup):
+    def get_params_configured_by_preset(self, quant_group: QuantizerGroup) -> Dict:
         if quant_group == QuantizerGroup.ACTIVATIONS and self == QuantizationPreset.MIXED:
-            return QuantizationMode.ASYMMETRIC
-        return QuantizationMode.SYMMETRIC
+            return  {'mode': QuantizationMode.ASYMMETRIC}
+        return {'mode' : QuantizationMode.SYMMETRIC}

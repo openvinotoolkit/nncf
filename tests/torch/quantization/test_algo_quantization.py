@@ -587,20 +587,47 @@ def test_shared_layers_are_weight_quantized_only_once():
 TEST_QUANTIZATION_PRESET_STRUCT = [
     {
         'preset': 'performance',
+        'target_device': 'CPU',
+        'overrided_param' : {},
         'expected_weights_q': SymmetricQuantizer,
         'expected_activations_q': SymmetricQuantizer
     },
     {
         'preset': 'mixed',
+        'target_device': 'CPU',
+        'overrided_param' : {},
         'expected_weights_q': SymmetricQuantizer,
         'expected_activations_q': AsymmetricQuantizer
+    },
+    {
+        'preset': 'performance',
+        'target_device': 'GPU',
+        'overrided_param' : {},
+        'expected_weights_q': SymmetricQuantizer,
+        'expected_activations_q': SymmetricQuantizer
+    },
+    {
+        'preset': 'mixed',
+        'target_device': 'GPU',
+        'overrided_param' : {},
+        'expected_weights_q': SymmetricQuantizer,
+        'expected_activations_q': AsymmetricQuantizer
+    },
+    {
+        'preset': 'performance',
+        'target_device': 'CPU',
+        'overrided_param' : {'weights': {'mode': 'asymmetric'}},
+        'expected_weights_q': AsymmetricQuantizer,
+        'expected_activations_q': SymmetricQuantizer
     }]
 
 @pytest.mark.parametrize('data', TEST_QUANTIZATION_PRESET_STRUCT)
 def test_quantization_preset(data):
     model = BasicConvTestModel()
     config = get_empty_config(input_sample_sizes=[1, 1, 4, 4])
+    config['target_device']  = data['target_device']
     config['compression'] = {'algorithm': 'quantization', 'preset': data['preset']}
+    config['compression'].update(data['overrided_param'])
     register_bn_adaptation_init_args(config)
     _, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
 
@@ -609,3 +636,28 @@ def test_quantization_preset(data):
 
     for aq_info in compression_ctrl.non_weight_quantizers.values():
         assert isinstance(aq_info.quantizer_module_ref, data['expected_activations_q'])
+
+def test_quantization_preset_with_scope_overrides():
+    model = QuantizeOutputsTestModel()
+    config = get_empty_config(input_sample_sizes=[2, 3, 32, 32])
+    config['target_device'] = "TRIAL"
+    config['compression'] = {'algorithm': 'quantization',
+                             'preset': 'mixed',
+                             'scope_overrides': {
+                                 'weights': {
+                                    'QuantizeOutputsTestModel/NNCFConv2d[conv5]/conv2d_0': {
+                                        "mode": "asymmetric",
+                                    }}
+                             }}
+    register_bn_adaptation_init_args(config)
+    _, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
+
+    for wq_info in compression_ctrl.weight_quantizers.values():
+        if wq_info.affected_insertions[0].target_node_name !=\
+             'QuantizeOutputsTestModel/NNCFConv2d[conv5]/conv2d_0':
+            assert isinstance(wq_info.quantizer_module_ref, SymmetricQuantizer)
+        else:
+            assert isinstance(wq_info.quantizer_module_ref, AsymmetricQuantizer)
+
+    for aq_info in compression_ctrl.non_weight_quantizers.values():
+        assert isinstance(aq_info.quantizer_module_ref, AsymmetricQuantizer)
