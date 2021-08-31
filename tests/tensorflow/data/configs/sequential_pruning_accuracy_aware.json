@@ -30,8 +30,8 @@
     "accuracy_aware_training": {
         "mode": "adaptive_compression_level",
         "params": {
-            "maximal_relative_accuracy_degradation": 1.0,
-            "initial_training_phase_epochs": 0,
+            "maximal_relative_accuracy_degradation": 100.0,
+            "initial_training_phase_epochs": 1,
             "patience_epochs": 1,
             "minimal_compression_rate_step": 0.05
         }
