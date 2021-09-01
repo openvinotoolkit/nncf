@@ -441,7 +441,8 @@ def _accuracy_aware_config(request, dataset_dir):
 
 @pytest.mark.dependency(name='tf_test_model_train')
 def test_model_accuracy_aware_train(_accuracy_aware_config, tmp_path):
-    if _accuracy_aware_config.get('nncf_config').get('accuracy_aware_training').get('mode') == 'adaptive_compression_level':
+    if _accuracy_aware_config.get('nncf_config').get('accuracy_aware_training').get('mode')\
+            == 'adaptive_compression_level':
         pytest.skip('ticket #63626')
     checkpoint_save_dir = tmp_path
     config_factory = ConfigFactory(_accuracy_aware_config['nncf_config'], tmp_path / 'config.json')
