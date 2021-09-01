@@ -338,10 +338,34 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
             raise RuntimeError("Unsupported insertion type: {}".format(point.insertion_type))
 
     def __getattr__(self, name):
-        wrapped_module = super().__getattr__(MODEL_WRAPPED_BY_NNCF_ATTR_NAME)
-        if hasattr(wrapped_module, name):
-            return getattr(wrapped_module, name)
-        return super().__getattr__(name)
+        def get_NNCFNetwork_attr(self, name):
+            if name in self.__dict__:
+                return self.__dict__[name]
+            return None
+
+        def get_nncf_module_attr(self, name):
+            if hasattr(self.__dict__['_modules'][MODEL_WRAPPED_BY_NNCF_ATTR_NAME], name):
+                attr = getattr(self.__dict__['_modules'][MODEL_WRAPPED_BY_NNCF_ATTR_NAME], name)
+                if hasattr(attr, '__self__'):  # If it is a bound function
+                    from functools import partial
+                    attr = partial(attr, self)
+                    return attr
+                else:
+                    # If it is not a bound function
+                    return attr
+            return None
+
+        def get_nn_module_attr(self, name):
+            return super().__getattr__(name)
+
+        attr = get_NNCFNetwork_attr(self, name)
+        if attr is not None:
+            return attr
+        attr = get_nncf_module_attr(self, name)
+        if attr is not None:
+            return attr
+        return get_nn_module_attr(self, name)
+
 
     def get_graph(self) -> PTNNCFGraph:
         if self._compressed_context.graph.get_nodes_count() == 0 or self._compressed_graph is None:
