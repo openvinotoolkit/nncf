@@ -19,7 +19,19 @@ disable = arguments-differ,
           wrong-import-order,
           attribute-defined-outside-init,
           import-outside-toplevel,
-          duplicate-code
+          duplicate-code,
+          arguments-renamed,
+          unspecified-encoding,
+          consider-using-from-import,
+          consider-using-with,
+          metatype,
+          consider-using-enumerate,
+          ref_model_state_dict,
+          saved_coeffs_in_file[key],
+          unsubscriptable-object,
+          node_key_list,
+          unsupported-membership-test
+
 
 max-line-length = 120
 ignore-docstrings = yes
