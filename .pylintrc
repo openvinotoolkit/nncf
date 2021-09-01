@@ -30,7 +30,13 @@ disable = arguments-differ,
           saved_coeffs_in_file[key],
           unsubscriptable-object,
           node_key_list,
-          unsupported-membership-test
+          unsupported-membership-test,
+          deprecated-decorator,
+          consider-using-dict-items,
+          use-list-literal,
+          use-dict-literal,
+          use-a-generator,
+          use-maxsplit-arg,
 
 
 max-line-length = 120
