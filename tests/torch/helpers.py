@@ -443,3 +443,27 @@ def set_torch_seed(seed: int = 42):
     torch.manual_seed(seed)
     yield
     torch.manual_seed(saved_seed)
+
+
+def create_dataloader_with_num_workers(create_dataloader, num_workers, sample_type):
+    def create_dataloader_classification(*args, **kwargs):
+        train_loader, train_sampler, val_loader, init_loader = create_dataloader(*args, **kwargs)
+        init_loader.num_workers = num_workers
+        return train_loader, train_sampler, val_loader, init_loader
+
+    def create_dataloader_semantic_segmentation(*args, **kwargs):
+        (train_loader, val_loader, init_loader), class_weights = create_dataloader(*args, **kwargs)
+        init_loader.num_workers = num_workers
+        return (train_loader, val_loader, init_loader), class_weights
+
+    def create_dataloader_object_detection(*args, **kwargs):
+        test_data_loader, train_data_loader, init_data_loader = create_dataloader(*args, **kwargs)
+        init_data_loader.num_workers = num_workers
+        return test_data_loader, train_data_loader, init_data_loader
+
+    if sample_type == 'classification':
+        return create_dataloader_classification
+    elif sample_type == 'semantic_segmentation':
+        return create_dataloader_semantic_segmentation
+    elif sample_type == 'object_detection':
+        return create_dataloader_object_detection

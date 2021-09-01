@@ -85,9 +85,10 @@ class TestSotaCheckpoints:
     def get_metric_file_name(model_name: str):
         return "{}.metrics.json".format(model_name)
 
-    CMD_FORMAT_STRING = "{} examples/torch/{sample_type}/main.py -m {} --config {conf} \
+    CMD_FORMAT_STRING = "{} tests/torch/run_examples_for_test_sota.py {sample_type} -m {} --config {conf} \
          --data {dataset}/{data_name}/ --log-dir={log_dir} --metrics-dump \
           {metrics_dump_file_path}"
+
 
     @staticmethod
     def q_dq_config(config):
@@ -111,7 +112,7 @@ class TestSotaCheckpoints:
         return nncf_config
 
     @staticmethod
-    def run_cmd(comm: str, cwd: str, env_params: dict = None) -> Tuple[int, str]:
+    def run_cmd(comm: str, cwd: str) -> Tuple[int, str]:
         print()
         print(comm)
         print()
@@ -122,9 +123,7 @@ class TestSotaCheckpoints:
             env["PYTHONPATH"] += ":" + str(PROJECT_ROOT)
         else:
             env["PYTHONPATH"] = str(PROJECT_ROOT)
-        if env_params is not None:
-            for key, val in env_params.items():
-                env[key] = val
+
         result = subprocess.Popen(com_line, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                                   cwd=cwd, env=env)
         exit_code = result.poll()
@@ -370,7 +369,7 @@ class TestSotaCheckpoints:
             cmd += " --pretrained"
         if eval_test_struct.batch_:
             cmd += " -b {}".format(eval_test_struct.batch_)
-        exit_code, err_str = self.run_cmd(cmd, cwd=PROJECT_ROOT, env_params={'NNCF_ZERO_DISTRIBUTED_WORKERS': '1'})
+        exit_code, err_str = self.run_cmd(cmd, cwd=PROJECT_ROOT)
 
         is_ok = (exit_code == 0 and metrics_dump_file_path.exists())
         if is_ok:

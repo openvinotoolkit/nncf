@@ -305,8 +305,6 @@ def create_dataloaders(config):
         init_data_loader = create_train_data_loader(config.batch_size_init)
     else:
         init_data_loader = deepcopy(train_data_loader)
-    if config.distributed and 'NNCF_ZERO_DISTRIBUTED_WORKERS' in os.environ:
-        init_data_loader.num_workers = 0  # PyTorch multiprocessing dataloader issue WA
 
     test_dataset = get_testing_dataset(config.dataset, config.test_anno, config.test_imgs, config)
     logger.info("Loaded {} testing images".format(len(test_dataset)))
