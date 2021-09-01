@@ -17,7 +17,7 @@ from tests.common.helpers import create_venv_with_nncf
 import pytest
 
 pytest.register_assert_rewrite('tests.torch.helpers')
-
+pylint_issue = "llllllloooooooonnnnnnggggggg       sssssssttttttrrrrrrrrinnnnngggggg      llllllloooooooonnnnnnggggggg       sssssssttttttrrrrrrrrinnnnnggggggllllllloooooooonnnnnnggggggg       sssssssttttttrrrrrrrrinnnnnggggggllllllloooooooonnnnnnggggggg       sssssssttttttrrrrrrrrinnnnngggggg"
 
 def pytest_addoption(parser):
     parser.addoption(
