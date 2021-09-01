@@ -16,7 +16,6 @@ from typing import Dict, List, Tuple, Union
 
 import numpy as np
 import torch
-from texttable import Texttable
 
 from nncf import NNCFConfig
 from nncf.api.compression import CompressionLoss
@@ -62,7 +61,6 @@ from nncf.torch.layers import NNCF_PRUNING_MODULES_DICT
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.pruning.base_algo import BasePruningAlgoBuilder
 from nncf.torch.pruning.base_algo import BasePruningAlgoController
-from nncf.torch.pruning.export_helpers import ModelPruner
 from nncf.torch.pruning.export_helpers import PTElementwise
 from nncf.torch.pruning.export_helpers import PT_PRUNING_OPERATOR_METATYPES
 from nncf.torch.pruning.filter_pruning.functions import FILTER_IMPORTANCE_FUNCTIONS
@@ -668,66 +666,14 @@ class FilterPruningController(BasePruningAlgoController):
                 _apply_binary_mask_to_module_weight_and_bias(node_module, node.data['output_mask'], node.node_name)
                 pruned_node_modules.append(node_module)
 
-    @staticmethod
-    def create_stats_table_for_pruning_export(old_modules_info, new_modules_info):
-        """
-        Creating a table with comparison of model params number before and after pruning.
-
-        :param old_modules_info: Information about pruned layers before actually prune layers.
-        :param new_modules_info: Information about pruned layers after actually prune layers.
-        """
-        table = Texttable()
-        header = ["Name", "Weight's shape", "New weight's shape", "Bias shape", "New bias shape",
-                  "Weight's params count", "New weight's params count",
-                  "Mask zero %", "Layer PR"]
-        data = [header]
-
-        for layer in old_modules_info.keys():
-            assert layer in new_modules_info
-
-            drow = {h: 0 for h in header}
-            drow["Name"] = layer
-            drow["Weight's shape"] = old_modules_info[layer]['w_shape']
-            drow["New weight's shape"] = new_modules_info[layer]['w_shape']
-            drow["Bias shape"] = old_modules_info[layer]['b_shape']
-            drow["New bias shape"] = new_modules_info[layer]['b_shape']
-
-            drow["Weight's params count"] = old_modules_info[layer]['params_count']
-            drow["New weight's params count"] = new_modules_info[layer]['params_count']
-
-            drow["Mask zero %"] = old_modules_info[layer]['mask_pr']
-
-            drow["Layer PR"] = 1 - new_modules_info[layer]['params_count'] / old_modules_info[layer]['params_count']
-            row = [drow[h] for h in header]
-            data.append(row)
-        table.add_rows(data)
-        return table
-
     def prepare_for_export(self):
         """
-        This function discards the pruned filters based on the binary masks
-        before exporting the model to ONNX.
+        Applies pruning masks to layer weights before exporting the model to ONNX.
         """
         self._apply_masks()
-        model = self._model.eval().cpu()
-        graph = model.get_original_graph()
 
-        parameters_count_before = model.get_parameters_count_in_model()
-        flops = model.get_MACs_in_model()
         pruned_layers_stats = self.get_stats_for_pruned_modules()
-
-        init_output_masks_in_graph(graph, self.pruned_module_groups_info.get_all_nodes())
-        model_pruner = ModelPruner(model, graph, PT_PRUNING_OPERATOR_METATYPES)
-        model_pruner.prune_model()
-
-        parameters_count_after = model.get_parameters_count_in_model()
-        flops_after = model.get_MACs_in_model()
-        new_pruned_layers_stats = self.get_stats_for_pruned_modules()
-        stats = self.create_stats_table_for_pruning_export(pruned_layers_stats, new_pruned_layers_stats)
-
-        nncf_logger.info(stats.draw())
-        nncf_logger.info('Final Model Pruning Rate = %.3f', 1 - parameters_count_after / parameters_count_before)
-        nncf_logger.info('Total MAC pruning level = %.3f', 1 - flops_after / flops)
+        nncf_logger.debug('Pruned layers statistics: \n%s', pruned_layers_stats.draw())
 
     def compression_stage(self) -> CompressionStage:
         target_pruning_level = self.scheduler.target_level
