@@ -14,6 +14,7 @@
 from tensorflow.keras import Sequential, layers
 from tensorflow.keras.initializers import Constant
 
+
 def SequentialModel(**kwargs):
     return Sequential([
         layers.InputLayer(kwargs['input_shape']),
