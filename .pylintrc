@@ -36,8 +36,7 @@ disable = arguments-differ,
           use-list-literal,
           use-dict-literal,
           use-a-generator,
-          use-maxsplit-arg,
-
+          use-maxsplit-arg
 
 max-line-length = 120
 ignore-docstrings = yes
