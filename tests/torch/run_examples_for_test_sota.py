@@ -1,8 +1,9 @@
+import sys
+
 from examples.torch.classification import main as cls_main
 from examples.torch.object_detection import main as od_main
 from examples.torch.semantic_segmentation import main as seg_main
 from tests.torch.helpers import create_dataloader_with_num_workers
-import sys
 
 cls_main.create_datasets = create_dataloader_with_num_workers(cls_main.create_datasets, num_workers=0,
                                                               sample_type='classification')
