@@ -25,6 +25,7 @@ from nncf.tensorflow.quantization.quantizers import Quantizer
 from nncf.tensorflow.quantization.quantizers import TFQuantizerSpec
 from tests.tensorflow.helpers import create_compressed_model_and_algo_for_test
 from tests.tensorflow.helpers import get_basic_conv_test_model
+from tests.tensorflow.helpers import get_basic_two_conv_test_model
 from tests.tensorflow.quantization.utils import get_basic_quantization_config
 # TODO(nlyalyus): WA for the bug 58886, QuantizationMode should be imported after nncf.tensorflow.
 #  Otherwise test_quantize_inputs and test_quantize_outputs_removal will fail, because of invalid inputs quantization
@@ -624,3 +625,81 @@ def test_quantize_pre_post_processing(layer_name, input_type, data_type):
     postprocess = q._post_processing_fn(preprocess)
     assert tf.math.reduce_all(preprocess == layer_desk.inputs_transformed)
     assert tf.math.reduce_all(postprocess == layer_desk.inputs)
+
+TEST_QUANTIZATION_PRESET_STRUCT = [
+    {
+        'preset': 'performance',
+        'target_device': 'CPU',
+        'overrided_param' : {},
+        'expected_weights_q': 'symmetric',
+        'expected_activations_q': 'symmetric'
+    },
+    {
+        'preset': 'mixed',
+        'target_device': 'CPU',
+        'overrided_param' : {},
+        'expected_weights_q': 'symmetric',
+        'expected_activations_q': 'asymmetric'
+    },
+    {
+        'preset': 'performance',
+        'target_device': 'GPU',
+        'overrided_param' : {},
+        'expected_weights_q': 'symmetric',
+        'expected_activations_q': 'symmetric'
+    },
+    {
+        'preset': 'mixed',
+        'target_device': 'GPU',
+        'overrided_param' : {},
+        'expected_weights_q': 'symmetric',
+        'expected_activations_q': 'asymmetric'
+    },
+    {
+        'preset': 'performance',
+        'target_device': 'CPU',
+        'overrided_param' : {'weights': {'mode': 'asymmetric'}},
+        'expected_weights_q': 'asymmetric',
+        'expected_activations_q': 'symmetric'
+    }]
+
+@pytest.mark.parametrize('data', TEST_QUANTIZATION_PRESET_STRUCT)
+def test_quantization_preset(data):
+    model = get_basic_conv_test_model()
+
+    config = get_basic_quantization_config()
+    config['target_device']  = data['target_device']
+    config['compression'] = {'algorithm': 'quantization', 'preset': data['preset']}
+    config['compression'].update(data['overrided_param'])
+    compression_model, _ = create_compressed_model_and_algo_for_test(model, config, force_no_init=True)
+
+    activation_quantizers, weight_quantizers = get_quantizers(compression_model)
+    for aq in activation_quantizers:
+        assert aq.mode == data['expected_activations_q']
+    for wq in weight_quantizers:
+        assert wq.mode == data['expected_weights_q']
+
+
+def test_quantization_preset_with_scope_overrides():
+    model = get_basic_two_conv_test_model()
+    config = get_basic_quantization_config()
+    config['target_device'] = "TRIAL"
+    config['compression'] = {'algorithm': 'quantization',
+                             'preset': 'mixed',
+                             'scope_overrides': {
+                                 'weights': {
+                                    'conv2d': {
+                                        "mode": "asymmetric",
+                                    }}
+                             }
+                             }
+    compression_model, _ = create_compressed_model_and_algo_for_test(model, config, force_no_init=True)
+
+    activation_quantizers, weight_quantizers = get_quantizers(compression_model)
+    for aq in activation_quantizers:
+        assert aq.mode == 'asymmetric'
+    for wq in weight_quantizers:
+        if wq.name == 'conv2d_kernel_quantizer':
+            assert wq.mode == 'asymmetric'
+        else:
+            assert wq.mode == 'symmetric'

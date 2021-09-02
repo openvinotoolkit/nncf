@@ -38,6 +38,7 @@ from nncf.common.quantization.quantizer_propagation.solver import QuantizerPropa
 from nncf.common.quantization.quantizer_setup import ActivationQuantizationInsertionPoint
 from nncf.common.quantization.quantizer_setup import SingleConfigQuantizerSetup
 from nncf.common.quantization.structs import QuantizableWeightedLayerNode
+from nncf.common.quantization.structs import QuantizationPreset
 from nncf.common.quantization.structs import QuantizationConstraints
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.quantizer_setup import QuantizationPointId
@@ -244,6 +245,9 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
         self.quantize_outputs = self._algo_config.get('quantize_outputs', False)
         self._disable_saturation_fix = self._algo_config.get('disable_saturation_fix', False)
         self._target_device = config.get('target_device', 'ANY')
+        algo_config = self._get_algo_specific_config_section()
+        if self._target_device == 'VPU' and 'preset' in algo_config:
+            raise RuntimeError("The VPU target device does not support presets.")
 
         self.global_quantizer_constraints = {}
         self.ignored_scopes_per_group = {}
@@ -294,12 +298,20 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
 
     def _parse_group_params(self, quant_config: Dict, quantizer_group: QuantizerGroup) -> None:
         group_name = quantizer_group.value
-        params_dict = quant_config.get(group_name, {})
+        params_dict = {}
+        params_dict_from_config = quant_config.get(group_name, {})
+        if self._target_device != 'VPU':
+            preset = QuantizationPreset.from_str(quant_config.get('preset', 'performance'))
+            params_dict = preset.get_params_configured_by_preset(quantizer_group)
+            overrided_params = params_dict.keys() & params_dict_from_config.keys()
+            if overrided_params:
+                logger.warning('Preset quantizer parameters {} explicitly overrided.'.format(overrided_params))
+        params_dict.update(params_dict_from_config)
         self.global_quantizer_constraints[quantizer_group] = QuantizationConstraints.from_config_dict(params_dict)
-        self.ignored_scopes_per_group[quantizer_group] = params_dict.get('ignored_scopes', [])
+        self.ignored_scopes_per_group[quantizer_group] = params_dict_from_config.get('ignored_scopes', [])
         if self.ignored_scopes is not None:
             self.ignored_scopes_per_group[quantizer_group] += self.ignored_scopes
-        target_scopes = params_dict.get('target_scopes')
+        target_scopes = params_dict_from_config.get('target_scopes')
         if target_scopes is None and self.target_scopes is not None:
             self.target_scopes_per_group[quantizer_group] = self.target_scopes
         else:
@@ -536,11 +548,12 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
 
             assert issubclass(metatype, TFLayerWithWeightsMetatype)
             nodes_with_weights.append(node)
+        scope_overrides_dict = self._get_algo_specific_config_section().get('scope_overrides', {})
         weighted_node_and_qconf_lists = assign_qconfig_lists_to_modules(nodes_with_weights,
                                                                         self.DEFAULT_QCONFIG,
                                                                         self.global_quantizer_constraints[
                                                                             QuantizerGroup.WEIGHTS],
-                                                                        scope_overrides_dict=None,
+                                                                        scope_overrides_dict,
                                                                         hw_config=self.hw_config)
         return [QuantizableWeightedLayerNode(node, qconf_list) for node, qconf_list
                 in weighted_node_and_qconf_lists.items()]

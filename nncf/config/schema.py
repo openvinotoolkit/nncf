@@ -472,6 +472,11 @@ STAGED_QUANTIZATION_PARAMS = {
 
 QUANTIZATION_ALGO_NAME_IN_CONFIG = "quantization"
 
+QUANTIZATION_PRESETS_SCHEMA = {
+    "type": "string",
+    "enum": ["performance", "mixed"]
+}
+
 QUANTIZATION_SCHEMA = {
     **BASIC_COMPRESSION_ALGO_SCHEMA,
     "properties": {
@@ -491,6 +496,11 @@ QUANTIZATION_SCHEMA = {
         "quantize_outputs": with_attributes(_BOOLEAN,
                                             description="Whether the model outputs should be additionally quantized.",
                                             default=False),
+        "preset": with_attributes(QUANTIZATION_PRESETS_SCHEMA,
+                                  description="The preset defines the quantization schema for weights and activations. "
+                                              "The parameter takes values 'permormance' or 'mixed'. The mode "
+                                              "'performance' defines symmetric weights and activations. The mode "
+                                              "'mixed' defines symmetric 'weights' and asymmetric activations."),
         "scope_overrides": {
             "type": "object",
             "properties": {
@@ -521,7 +531,6 @@ QUANTIZATION_SCHEMA = {
                     },
                 }
             },
-
             "description": "This option is used to specify overriding quantization constraints for specific scope,"
                            "e.g. in case you need to quantize a single operation differently than the rest of the "
                            "model."

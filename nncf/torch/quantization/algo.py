@@ -53,6 +53,7 @@ from nncf.common.quantization.quantizer_setup import SingleConfigQuantizerSetup
 from nncf.common.quantization.structs import NonWeightQuantizerId
 from nncf.common.quantization.structs import QuantizableWeightedLayerNode
 from nncf.common.quantization.structs import QuantizationConstraints
+from nncf.common.quantization.structs import QuantizationPreset
 from nncf.common.quantization.structs import QuantizerGroup
 from nncf.common.quantization.structs import QuantizerId
 from nncf.common.quantization.structs import WeightQuantizerId
@@ -140,10 +141,12 @@ class QuantizerSetupGeneratorBase:
                  target_model: NNCFNetwork,
                  precision_init_type: str = None,
                  precision_init_params: BasePrecisionInitParams = None,
-                 range_init_params: PTRangeInitParams = None):
+                 range_init_params: PTRangeInitParams = None,
+                 hw_config: HWConfig = None):
         self._target_model = target_model
         self._quantization_config = quant_config
-
+        self.hw_config = hw_config
+        self._target_device = None if hw_config is None else hw_config.target_device
         self._quantize_inputs = self._quantization_config.get('quantize_inputs', True)
         self._quantize_outputs = self._quantization_config.get('quantize_outputs', False)
 
@@ -170,11 +173,18 @@ class QuantizerSetupGeneratorBase:
 
     def _parse_group_params(self, quant_config: Dict, quantizer_group: QuantizerGroup):
         group_name = quantizer_group.value
-        params_dict = quant_config.get(group_name, {})
+        params_dict = {}
+        params_dict_from_config = quant_config.get(group_name, {})
+        if self._target_device != 'VPU':
+            preset = QuantizationPreset.from_str(quant_config.get('preset', 'performance'))
+            params_dict = preset.get_params_configured_by_preset(quantizer_group)
+            overrided_params = params_dict.keys() & params_dict_from_config.keys()
+            if overrided_params:
+                nncf_logger.warning('Preset quantizer parameters {} explicitly overrided.'.format(overrided_params))
+        params_dict.update(params_dict_from_config)
         self.global_quantizer_constraints[quantizer_group] = QuantizationConstraints.from_config_dict(params_dict)
-        self._ignored_scopes_per_group[quantizer_group] = params_dict.get('ignored_scopes')
-        self._target_scopes_per_group[quantizer_group] = params_dict.get('target_scopes')
-
+        self._ignored_scopes_per_group[quantizer_group] = params_dict_from_config.get('ignored_scopes')
+        self._target_scopes_per_group[quantizer_group] = params_dict_from_config.get('target_scopes')
 
     def _get_default_qconfig(self, constraints: QuantizationConstraints = None):
         qconfig = deepcopy(self.DEFAULT_QUANTIZER_CONFIG)
@@ -304,11 +314,12 @@ class PropagationBasedQuantizerSetupGenerator(QuantizerSetupGeneratorBase):
                  precision_init_params: BasePrecisionInitParams = None,
                  range_init_params: PTRangeInitParams = None,
                  debug_interface: 'QuantizationDebugInterface' = None):
-        super().__init__(quant_config, target_model, precision_init_type, precision_init_params, range_init_params)
+        super().__init__(quant_config, target_model, precision_init_type,
+                         precision_init_params, range_init_params,
+                         hw_config)
 
         self._pattern_fusing_graph = PT_HW_FUSED_PATTERNS.get_full_pattern_graph()
 
-        self.hw_config = hw_config
 
         self._hw_precision_constraints = HardwareQuantizationConstraints()
         self._debug_interface = debug_interface
@@ -368,7 +379,7 @@ class PropagationBasedQuantizerSetupGenerator(QuantizerSetupGeneratorBase):
         global_constraints = self.global_quantizer_constraints[QuantizerGroup.WEIGHTS]
         scope_overrides_dict = self._quantization_config.get("scope_overrides", {})
         return assign_qconfig_lists_to_modules(nodes_with_weights,
-                                               self.DEFAULT_QUANTIZER_CONFIG,
+                                               self._get_default_qconfig(),
                                                global_constraints,
                                                scope_overrides_dict,
                                                self.hw_config)
@@ -415,7 +426,6 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
         # can be False to disable setting of adjust padding operations on precision init, because it may add unnecessary
         # noise on model evaluation (e.g. in AutoQ)
         self._should_setup_adjust_pad_ops = True
-
         hw_config_type = None
         target_device = self.config.get('target_device', 'ANY')
         if target_device != 'TRIAL':
@@ -423,6 +433,10 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
         if hw_config_type is not None:
             hw_config_path = PTHWConfig.get_path_to_hw_config(hw_config_type)
             self.hw_config = PTHWConfig.from_json(hw_config_path)
+
+        algo_config = self._get_algo_specific_config_section()
+        if target_device == 'VPU' and 'preset' in algo_config:
+            raise RuntimeError("The VPU target device does not support presets.")
 
         self._range_init_params = None
         self._precision_init_type = None
