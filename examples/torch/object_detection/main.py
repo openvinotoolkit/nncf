@@ -59,7 +59,7 @@ from examples.torch.object_detection.layers.modules import MultiBoxLoss
 from examples.torch.object_detection.model import build_ssd
 from nncf.api.compression import CompressionStage
 from nncf.config.utils import is_accuracy_aware_training
-from nncf.torch import AdaptiveCompressionTrainingLoop
+from nncf.common.accuracy_aware_training import create_accuracy_aware_training_loop
 from nncf.torch import create_compressed_model
 from nncf.torch import load_state
 from nncf.torch.dynamic_graph.graph_tracer import create_input_infos
@@ -245,8 +245,7 @@ def main_worker(current_gpu, config):
             optimizer, lr_scheduler = make_optimizer(params_to_optimize, config)
             return optimizer, lr_scheduler
 
-        # instantiate and run accuracy-aware training loop
-        acc_aware_training_loop = AdaptiveCompressionTrainingLoop(nncf_config, compression_ctrl)
+        acc_aware_training_loop = create_accuracy_aware_training_loop(nncf_config, compression_ctrl)
         net = acc_aware_training_loop.run(net,
                                           train_epoch_fn=train_epoch_fn,
                                           validate_fn=validate_fn,

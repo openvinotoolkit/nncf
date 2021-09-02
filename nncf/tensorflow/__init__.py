@@ -28,7 +28,6 @@ from nncf.tensorflow.helpers import create_compressed_model
 from nncf.tensorflow.helpers.callback_creation import create_compression_callbacks
 from nncf.tensorflow.initialization import register_default_init_args
 
-from nncf.tensorflow.accuracy_aware_training.runner import TFAccuracyAwareTrainingRunner
 
 # Required for correct COMPRESSION_ALGORITHMS registry functioning
 from nncf.tensorflow.quantization import algorithm as quantization_algorithm
@@ -40,3 +39,4 @@ from tensorflow.python.keras.engine import keras_tensor
 keras_tensor.disable_keras_tensors()
 
 from nncf.common.accuracy_aware_training.training_loop import AdaptiveCompressionTrainingLoop
+from nncf.common.accuracy_aware_training.training_loop import EarlyExitCompressionTrainingLoop

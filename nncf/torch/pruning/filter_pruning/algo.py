@@ -699,6 +699,7 @@ class FilterPruningController(BasePruningAlgoController):
 
     def disable_scheduler(self):
         self._scheduler = StubCompressionScheduler()
+        self._scheduler.current_pruning_level = 0.0
 
     def _update_benchmark_statistics(self):
         self.current_flops, self.current_params_num = self._calculate_flops_and_weights_pruned_model_by_masks()

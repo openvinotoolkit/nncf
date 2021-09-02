@@ -21,26 +21,17 @@ from scipy.interpolate import interp1d
 
 from nncf.api.compression import CompressionAlgorithmController
 from nncf.common.composite_compression import CompositeCompressionAlgorithmController
-from nncf.common.utils.backend import BackendType
-from nncf.common.utils.backend import infer_backend_from_compression_controller
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.common.utils.registry import Registry
 from nncf.config.config import NNCFConfig
+from nncf.config.extractors import extract_accuracy_aware_training_params
+from nncf.common.accuracy_aware_training.runner import TrainingRunner
+from nncf.common.accuracy_aware_training.runner import TrainingRunnerCreator
+from nncf.common.accuracy_aware_training.runner import EarlyExitTrainingRunnerCreator
+from nncf.common.accuracy_aware_training.runner import AdaptiveCompressionLevelTrainingRunnerCreator
 
 ModelType = TypeVar('ModelType')
 ADAPTIVE_COMPRESSION_CONTROLLERS = Registry('adaptive_compression_controllers')
-
-
-def get_backend_specific_training_runner_cls(compression_controller: CompressionAlgorithmController):
-    nncf_backend = infer_backend_from_compression_controller(compression_controller)
-
-    if nncf_backend is BackendType.TORCH:
-        from nncf.torch.accuracy_aware_training.runner import PTAccuracyAwareTrainingRunner
-        return PTAccuracyAwareTrainingRunner
-    if nncf_backend == BackendType.TENSORFLOW:
-        from nncf.tensorflow.accuracy_aware_training.runner import TFAccuracyAwareTrainingRunner
-        return TFAccuracyAwareTrainingRunner
-    raise RuntimeError('Got an unsupported value of nncf_backend')
 
 
 class TrainingLoop(ABC):
@@ -48,6 +39,7 @@ class TrainingLoop(ABC):
     The training loop object is instantiated by the user, the training process
     is launched via the `run` method.
     """
+
     @abstractmethod
     def run(self, model: ModelType, train_epoch_fn, validate_fn,
             configure_optimizers_fn=None, tensorboard_writer=None, log_dir=None):
@@ -67,6 +59,81 @@ class TrainingLoop(ABC):
         :return: The fine-tuned model
         """
 
+    def _create_runner(self, creator: TrainingRunnerCreator) -> TrainingRunner:
+        """
+        Creates TrainingRunner that is used during run() method.
+
+        :param creator: Instance of TrainingRunnerCreator who creates TrainingRunner object.
+        """
+        return creator.create_training_loop()
+
+
+class EarlyExitCompressionTrainingLoop(TrainingLoop):
+    """
+    Adaptive compression training loop allows an accuracy-aware training process
+    to reach the maximal accuracy drop
+    (the maximal allowed accuracy degradation criterion is satisfied).
+    """
+
+    def __init__(self,
+                 nncf_config: NNCFConfig,
+                 compression_controller: CompressionAlgorithmController,
+                 lr_updates_needed=True, verbose=True,
+                 validate_every_n_epochs=None,
+                 dump_checkpoints=True):
+        accuracy_aware_training_params = extract_accuracy_aware_training_params(nncf_config)
+        self.runner = self._create_runner(EarlyExitTrainingRunnerCreator(accuracy_aware_training_params,
+                                                                         compression_controller,
+                                                                         lr_updates_needed, verbose,
+                                                                         validate_every_n_epochs,
+                                                                         dump_checkpoints))
+        self.compression_controller = compression_controller
+
+    def run(self, model, train_epoch_fn, validate_fn,
+            configure_optimizers_fn=None, tensorboard_writer=None, log_dir=None):
+        self.runner.initialize_training_loop_fns(train_epoch_fn, validate_fn, configure_optimizers_fn,
+                                                 tensorboard_writer, log_dir)
+        self.runner.retrieve_uncompressed_model_accuracy(model)
+        uncompressed_model_accuracy = self.runner.uncompressed_model_accuracy
+        self.runner.calculate_minimal_tolerable_accuracy(uncompressed_model_accuracy)
+
+        self.runner.configure_optimizers()
+        for epoch in range(self.runner.maximal_total_epochs):
+            compressed_model_accuracy = self.runner.validate(model)
+            accuracy_budget = compressed_model_accuracy - self.runner.minimal_tolerable_accuracy
+            accuracy_drop = uncompressed_model_accuracy - compressed_model_accuracy
+            try:
+                rel_accuracy_drop = 100 * (accuracy_drop / uncompressed_model_accuracy)
+            except ZeroDivisionError:
+                rel_accuracy_drop = 0
+            if accuracy_budget >= 0:
+                if epoch == 0:
+                    nncf_logger.info('The accuracy criteria is reached. '
+                                     'Exiting the training loop after initialization step '
+                                     'with compressed model accuracy value {:.4f}. Original model accuracy is {:.4f} '
+                                     'The absolute accuracy drop is {:.4f}. '
+                                     'The relative accuracy drop is {:.2f}%.'.format(compressed_model_accuracy,
+                                                                                     uncompressed_model_accuracy,
+                                                                                     accuracy_drop, rel_accuracy_drop))
+                    self.runner.dump_statistics(model, self.compression_controller)
+                    return model
+                nncf_logger.info('The accuracy criteria is reached. '
+                                 'Exiting the training loop on epoch {} with '
+                                 'compressed model accuracy value {:.4f}. Original model accuracy is {:.4f} '
+                                 'The absolute accuracy drop is {:.4f}. '
+                                 'The relative accuracy drop is {:.2f}%.'.format(epoch,
+                                                                                 compressed_model_accuracy,
+                                                                                 uncompressed_model_accuracy,
+                                                                                 accuracy_drop, rel_accuracy_drop))
+                return model
+            nncf_logger.info('The absolute accuracy drop is {:.4f}. '
+                             'The relative accuracy drop is {:.2f}%.'.format(accuracy_drop, rel_accuracy_drop))
+            self.runner.train_epoch(model, self.compression_controller)
+            self.runner.dump_statistics(model, self.compression_controller)
+
+        self.runner.load_best_checkpoint(model)
+        return model
+
 
 class AdaptiveCompressionTrainingLoop(TrainingLoop):
     """
@@ -75,57 +142,64 @@ class AdaptiveCompressionTrainingLoop(TrainingLoop):
     possible compression rate with a positive accuracy budget
     (the maximal allowed accuracy degradation criterion is satisfied).
     """
+
     def __init__(self,
                  nncf_config: NNCFConfig,
-                 compression_controller: CompressionAlgorithmController):
-        self.adaptive_controller, accuracy_aware_config = self._get_adaptive_compression_ctrl(compression_controller,
-                                                                                              nncf_config)
-        runner_cls = get_backend_specific_training_runner_cls(compression_controller)
-        self.runner = runner_cls(accuracy_aware_config)
+                 compression_controller: CompressionAlgorithmController,
+                 lr_updates_needed=True, verbose=True,
+                 minimal_compression_rate=0.05,
+                 maximal_compression_rate=0.95,
+                 validate_every_n_epochs=None,
+                 dump_checkpoints=True):
+        accuracy_aware_training_params = extract_accuracy_aware_training_params(nncf_config)
+        self.adaptive_controller = self._get_adaptive_compression_ctrl(compression_controller)
+        self.runner = self._create_runner(
+            AdaptiveCompressionLevelTrainingRunnerCreator(accuracy_aware_training_params,
+                                                          compression_controller,
+                                                          lr_updates_needed, verbose,
+                                                          minimal_compression_rate,
+                                                          maximal_compression_rate,
+                                                          validate_every_n_epochs,
+                                                          dump_checkpoints))
+
         if self.adaptive_controller is None:
             raise RuntimeError('No compression algorithm supported by the accuracy-aware training '
                                'runner was specified in the config')
 
-    def _get_adaptive_compression_ctrl(self, compression_controller, nncf_config):
-        adaptive_compression_controllers = self._adaptive_compression_controllers()
-        compression_configs = nncf_config.get('compression', {})
-        if isinstance(compression_configs, list):
-            comp_algorithm_params_dict = {compression_config['algorithm']: compression_config
-                                          for compression_config in compression_configs}
-        else:
-            comp_algorithm_params_dict = {compression_configs['algorithm']: compression_configs}
+    def _get_adaptive_compression_ctrl(self, compression_controller):
+        def _adaptive_compression_controllers():
+            def remove_registry_prefix(algo_name):
+                for prefix in ('pt_', 'tf_'):
+                    if algo_name.startswith(prefix):
+                        return algo_name[len(prefix):]
+                raise RuntimeError('Compression algorithm names in the adaptive controllers '
+                                   'registry should be prefixed with "pt_" or "tf_" depending on the '
+                                   'backend framework')
 
-        if not isinstance(compression_controller, CompositeCompressionAlgorithmController):
-            for algo_name, ctrl_type in adaptive_compression_controllers.items():
-                if isinstance(compression_controller, ctrl_type):
-                    acc_aware_config = comp_algorithm_params_dict[algo_name].get('accuracy_aware_training', None)
-                    return compression_controller, acc_aware_config
+            return {remove_registry_prefix(algo_name): controller_cls for algo_name, controller_cls in
+                    ADAPTIVE_COMPRESSION_CONTROLLERS.registry_dict.items()}
+
+        adaptive_compression_controllers = _adaptive_compression_controllers()
+
         if isinstance(compression_controller, CompositeCompressionAlgorithmController):
             for controller in compression_controller.child_ctrls:
-                for algo_name, ctrl_type in adaptive_compression_controllers.items():
+                for ctrl_type in adaptive_compression_controllers.values():
                     if isinstance(controller, ctrl_type):
-                        acc_aware_config = comp_algorithm_params_dict[algo_name].get('accuracy_aware_training', None)
-                        return controller, acc_aware_config
+                        return controller
+        elif isinstance(compression_controller, CompressionAlgorithmController):
+            if compression_controller.name in adaptive_compression_controllers:
+                return compression_controller
+
         raise RuntimeError('No compression algorithm that supports adaptive compression '
                            'accuracy-aware training was specified')
 
-    def _adaptive_compression_controllers(self):
-        def remove_registry_prefix(algo_name):
-            for prefix in ('pt_', 'tf_'):
-                if algo_name.startswith(prefix):
-                    return algo_name[len(prefix):]
-            raise RuntimeError('Compression algorithm names in the adaptive controllers '
-                               'registry should be prefixed with "pt_" or "tf_" depending on the '
-                               'backend framework')
-        return {remove_registry_prefix(algo_name): controller_cls for algo_name, controller_cls in
-                ADAPTIVE_COMPRESSION_CONTROLLERS.registry_dict.items()}
-
-    # pylint: disable=no-member
     def run(self, model, train_epoch_fn, validate_fn,
             configure_optimizers_fn=None, tensorboard_writer=None, log_dir=None):
         self.runner.initialize_training_loop_fns(train_epoch_fn, validate_fn, configure_optimizers_fn,
                                                  tensorboard_writer, log_dir)
-        self.runner.retrieve_original_accuracy(model)
+        self.runner.retrieve_uncompressed_model_accuracy(model)
+        uncompressed_model_accuracy = self.runner.uncompressed_model_accuracy
+        self.runner.calculate_minimal_tolerable_accuracy(uncompressed_model_accuracy)
         self._run_initial_training_phase(model, self.adaptive_controller, self.runner)
         self.runner.add_tensorboard_scalar('compression/accuracy_aware/target_compression_rate',
                                            self.adaptive_controller.compression_rate,
@@ -135,7 +209,7 @@ class AdaptiveCompressionTrainingLoop(TrainingLoop):
 
         self.runner.validate_every_n_epochs = 1
         while self.runner.compression_rate_step >= self.runner.minimal_compression_rate_step and \
-            self.runner.cumulative_epoch_count < self.runner.maximal_total_epochs:
+                self.runner.cumulative_epoch_count < self.runner.maximal_total_epochs:
 
             if self.runner.compression_rate_target is not None:
                 self.runner.update_training_history(compression_rate=copy(self.runner.compression_rate_target),
@@ -156,6 +230,7 @@ class AdaptiveCompressionTrainingLoop(TrainingLoop):
                 if self.runner.compression_rate_target > self.runner.maximal_compression_rate:
                     nncf_logger.info('Reached maximal possible compression rate '
                                      '{max_rate}'.format(max_rate=self.runner.maximal_compression_rate))
+                    self.runner.dump_statistics(model, self.adaptive_controller)
                     return model
 
                 self.runner.reset_training()
@@ -167,7 +242,9 @@ class AdaptiveCompressionTrainingLoop(TrainingLoop):
                                                    self.runner.compression_rate_step,
                                                    self.runner.cumulative_epoch_count)
 
-            compressed_model_accuracy = self.runner.train_epoch(model, self.adaptive_controller)
+            self.runner.train_epoch(model, self.adaptive_controller)
+            self.runner.dump_statistics(model, self.adaptive_controller)
+            compressed_model_accuracy = self.runner.validate(model)
             self.runner.accuracy_bugdet = compressed_model_accuracy - self.runner.minimal_tolerable_accuracy
             self.runner.add_tensorboard_scalar('val/accuracy_aware/accuracy_bugdet', self.runner.accuracy_bugdet,
                                                self.runner.cumulative_epoch_count)
@@ -190,9 +267,12 @@ class AdaptiveCompressionTrainingLoop(TrainingLoop):
         best_accuracy_budget = runner.best_val_metric_value - runner.minimal_tolerable_accuracy
         if runner.compression_rate_target is None:
             runner.compression_rate_target = current_compression_rate + \
-                self._determine_compression_rate_step_value(runner, current_compression_rate)
+                                             self._determine_compression_rate_step_value(runner,
+                                                                                         current_compression_rate)
             runner.was_compression_increased_on_prev_step = np.sign(best_accuracy_budget)
             accuracy_aware_controller.disable_scheduler()
+            # TODO(kshpv) fix this incorrect work of disable_scheduler()
+            accuracy_aware_controller.scheduler.target_level = runner.compression_rate_target
             return True
         if runner.training_epoch_count >= runner.patience_epochs:
             runner.compression_rate_target += self._determine_compression_rate_step_value(runner,
@@ -214,7 +294,7 @@ class AdaptiveCompressionTrainingLoop(TrainingLoop):
     def _uniform_decrease_compression_step_update(runner):
         best_accuracy_budget_sign = np.sign(runner.best_val_metric_value - runner.minimal_tolerable_accuracy)
         if runner.was_compression_increased_on_prev_step is not None and \
-            runner.was_compression_increased_on_prev_step != best_accuracy_budget_sign:
+                runner.was_compression_increased_on_prev_step != best_accuracy_budget_sign:
             runner.compression_rate_step *= runner.step_reduction_factor
         return best_accuracy_budget_sign * runner.compression_rate_step
 
@@ -239,9 +319,32 @@ class AdaptiveCompressionTrainingLoop(TrainingLoop):
         target_compression_rate = rate_interval[np.argmin(np.abs(acc_budget_values))]
         nncf_logger.info('Predicted compression rate {}, '
                          'current compression rate {}'.format(target_compression_rate,
-                                                             current_compression_rate))
+                                                              current_compression_rate))
         if runner.compression_rate_target is None:
             runner.compression_rate_step = np.abs(target_compression_rate - current_compression_rate)
             return target_compression_rate - current_compression_rate
         runner.compression_rate_step = np.abs(target_compression_rate - runner.compression_rate_target)
         return target_compression_rate - runner.compression_rate_target
+
+
+class AccuracyAwareTrainingMode:
+    EARLY_EXIT = 'early_exit'
+    ADAPTIVE_COMPRESSION_LEVEL = 'adaptive_compression_level'
+
+
+def create_accuracy_aware_training_loop(nncf_config: NNCFConfig,
+                                        compression_ctrl: CompressionAlgorithmController,
+                                        **additional_runner_args) -> TrainingLoop:
+    """
+    Creates an accuracy aware training loop corresponding to NNCFConfig and CompressionAlgorithmController.
+    :param: nncf_config: An instance of the NNCFConfig.
+    :compression_ctrl: An instance of thr CompressionAlgorithmController.
+    :return: Accuracy aware training loop.
+    """
+    accuracy_aware_training_params = extract_accuracy_aware_training_params(nncf_config)
+    accuracy_aware_training_mode = accuracy_aware_training_params.get('mode')
+    if accuracy_aware_training_mode == AccuracyAwareTrainingMode.EARLY_EXIT:
+        return EarlyExitCompressionTrainingLoop(nncf_config, compression_ctrl, **additional_runner_args)
+    if accuracy_aware_training_mode == AccuracyAwareTrainingMode.ADAPTIVE_COMPRESSION_LEVEL:
+        return AdaptiveCompressionTrainingLoop(nncf_config, compression_ctrl, **additional_runner_args)
+    raise RuntimeError('Incorrect accuracy aware mode in the config file')

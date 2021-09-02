@@ -1,14 +1,14 @@
 {
-    "model": "resnet18",
-    "pretrained": true,
+    "model": "SequentialModel",
+    "pretrained": false,
     "batch_size": 512,
     "epochs": 100,
     "input_info": {
         "sample_size": [
             1,
-            3,
-            224,
-            224
+            32,
+            32,
+            3
         ]
     },
     "optimizer": {
@@ -28,21 +28,17 @@
         }
     },
     "accuracy_aware_training": {
-        "mode": "adaptive_compression_level",
+        "mode": "early_exit",
         "params": {
-            "maximal_relative_accuracy_degradation": 1.0,
-            "initial_training_phase_epochs": 100,
-            "patience_epochs": 30
+            "maximal_total_epochs": 1
         }
     },
     "compression": {
-        "algorithm": "filter_pruning",
-        "pruning_init": 0.1,
-        "params": {
-            "schedule": "exponential",
-            "pruning_target": 0.4,
-            "pruning_steps": 15,
-            "filter_importance": "geometric_median"
+        "algorithm": "quantization",
+        "initializer": {
+            "range": {
+                "num_init_samples": 0
+            }
         }
     }
 }

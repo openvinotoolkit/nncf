@@ -70,7 +70,6 @@ SAMPLE_TYPES = [
     'segmentation',
 ]
 
-
 SAMPLES = {
     'classification': {
         'train-test-export': cls_main.main
@@ -84,13 +83,11 @@ SAMPLES = {
     },
 }
 
-
 DATASETS = {
     'classification': [('cifar10', 'tfrecords'), ('cifar10', 'tfrecords'), ('cifar10', 'tfrecords')],
     'object_detection': [('coco2017', 'tfrecords')],
     'segmentation': [('coco2017', 'tfrecords')],
 }
-
 
 TEST_CONFIG_ROOT = TEST_ROOT.joinpath('tensorflow', 'data', 'configs')
 CONFIGS = {
@@ -106,7 +103,6 @@ CONFIGS = {
         TEST_CONFIG_ROOT.joinpath('mask_rcnn_coco2017_magnitude_sparsity_int8.json'),
     ],
 }
-
 
 BATCH_SIZE_PER_GPU = {
     'classification': [1, 1, 1],
@@ -125,7 +121,6 @@ def get_global_batch_size():
 
 
 GLOBAL_BATCH_SIZE = get_global_batch_size()
-
 
 DATASET_PATHS = {
     'classification': {
@@ -417,3 +412,53 @@ def test_eval_prepared_checkpoint(_config, tmp_path, _case_common_dirs):
 
     main = get_sample_fn(_config['sample_type'], modes=['test'])
     main(convert_to_argv(args))
+
+
+@pytest.fixture(params=[TEST_ROOT.joinpath("tensorflow", "data", "configs", "sequential_pruning_accuracy_aware.json"),
+                        TEST_ROOT.joinpath("tensorflow", "data", "configs", "sequential_int8_accuracy_aware.json")])
+def _accuracy_aware_config(request, dataset_dir):
+    config_path = request.param
+    sample_type = 'classification'
+    dataset_name, dataset_type = 'cifar10', 'tfrecords'
+    dataset_path = DATASET_PATHS[sample_type][dataset_name](dataset_dir)
+    with config_path.open() as f:
+        jconfig = json.load(f)
+
+    jconfig['dataset'] = dataset_name
+    jconfig['dataset_type'] = dataset_type
+
+    num_gpus = len(tf.config.list_physical_devices('GPU'))
+    batch_size = num_gpus if num_gpus else 1
+
+    return {
+        'sample_type': sample_type,
+        'nncf_config': jconfig,
+        'model_name': jconfig['model'],
+        'dataset_path': dataset_path,
+        'batch_size': batch_size,
+    }
+
+
+@pytest.mark.dependency(name='tf_test_model_train')
+def test_model_accuracy_aware_train(_accuracy_aware_config, tmp_path):
+    checkpoint_save_dir = tmp_path
+    config_factory = ConfigFactory(_accuracy_aware_config['nncf_config'], tmp_path / 'config.json')
+    args = {
+        '--data': _accuracy_aware_config['dataset_path'],
+        '--config': config_factory.serialize(),
+        '--log-dir': tmp_path,
+        '--batch-size': _accuracy_aware_config['batch_size'],
+        '--epochs': 1,
+        '--checkpoint-save-dir': tmp_path
+    }
+
+    main = get_sample_fn(_accuracy_aware_config['sample_type'], modes=['train'])
+    main(convert_to_argv(args))
+
+    assert tf.io.gfile.isdir(checkpoint_save_dir)
+    from glob import glob
+    time_dir_1 = os.path.join(checkpoint_save_dir, glob(os.path.join(checkpoint_save_dir, '*/'))[0].split('/')[-2])
+    time_dir_1 = os.path.join(time_dir_1, glob(os.path.join(time_dir_1, '*/'))[0].split('/')[-2],
+                              'accuracy_aware_training')
+    time_dir_2 = os.path.join(time_dir_1, glob(os.path.join(time_dir_1, '*/'))[0].split('/')[-2])
+    assert tf.train.latest_checkpoint(time_dir_2)

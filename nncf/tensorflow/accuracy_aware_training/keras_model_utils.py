@@ -17,7 +17,7 @@ from tensorflow.python.eager import context
 from tensorflow.python.keras import callbacks as callbacks_module
 from tensorflow.python.keras.engine import data_adapter
 
-from nncf.common.accuracy_aware_training.training_loop import AdaptiveCompressionTrainingLoop
+from nncf.common.accuracy_aware_training import create_accuracy_aware_training_loop
 
 
 def accuracy_aware_fit(cls_instance, train_dataset, compression_ctrl,
@@ -104,8 +104,7 @@ def accuracy_aware_fit(cls_instance, train_dataset, compression_ctrl,
 
 
     cls_instance.original_model_accuracy = uncompressed_model_accuracy
-    # instantiate and run accuracy-aware training loop
-    acc_aware_training_loop = AdaptiveCompressionTrainingLoop(nncf_config, compression_ctrl)
+    acc_aware_training_loop = create_accuracy_aware_training_loop(nncf_config, compression_ctrl)
     cls_instance = acc_aware_training_loop.run(cls_instance,
                                                train_epoch_fn=train_epoch_fn,
                                                validate_fn=validate_fn,

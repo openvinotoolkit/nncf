@@ -28,7 +28,6 @@ from nncf.common.compression import BaseCompressionAlgorithmController as BaseCo
 from nncf.config.extractors import extract_algorithm_names
 from nncf.torch.algo_selector import NoCompressionAlgorithmBuilder
 from nncf.config import NNCFConfig
-from nncf.config.utils import is_accuracy_aware_training
 from nncf.api.compression import CompressionAlgorithmController
 from nncf.torch.algo_selector import PT_COMPRESSION_ALGORITHMS
 from nncf.torch.composite_compression import PTCompositeCompressionAlgorithmBuilder
@@ -40,6 +39,7 @@ from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.utils import is_dist_avail_and_initialized
 from nncf.torch.utils import is_main_process
 from nncf.config.structures import ModelEvaluationArgs
+from nncf.config.utils import is_accuracy_aware_training
 
 
 # pylint:disable=too-many-branches
@@ -126,6 +126,7 @@ def create_compressed_model(model: Module,
             evaluation_args = config.get_extra_struct(ModelEvaluationArgs)
             with torch.no_grad():
                 original_model_accuracy = evaluation_args.eval_fn(model)
+                nncf_logger.info("Non-compressed model accuracy = {}".format(original_model_accuracy))
 
     compressed_model = NNCFNetwork(model, input_infos=input_info_list,
                                    dummy_forward_fn=dummy_forward_fn,
