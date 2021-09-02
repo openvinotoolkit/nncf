@@ -463,6 +463,7 @@ def create_dataloader_with_num_workers(create_dataloader, num_workers, sample_ty
 
     if sample_type == 'classification':
         return create_dataloader_classification
-    elif sample_type == 'semantic_segmentation':
+    if sample_type == 'semantic_segmentation':
         return create_dataloader_semantic_segmentation
-    return create_dataloader_object_detection
+    if sample_type == 'object_detection':
+        return create_dataloader_object_detection
