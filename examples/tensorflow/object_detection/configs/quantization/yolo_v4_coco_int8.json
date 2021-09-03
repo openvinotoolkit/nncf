@@ -18,14 +18,11 @@
             "base_lr": 5e-6
         }
     },
-
     "compression": {
         "algorithm": "quantization",
+        "preset": "mixed",
         "weights": {
             "per_channel": true
-        },
-        "activations": {
-            "mode": "asymmetric"
         }
     }
 }
