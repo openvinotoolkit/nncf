@@ -10,6 +10,8 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+
+from collections import Counter
 from typing import Callable
 from typing import Dict
 from typing import List
@@ -35,6 +37,7 @@ from nncf.common.pruning.utils import is_depthwise_conv
 from nncf.torch.pruning.filter_pruning.algo import FilterPruningBuilder
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
 from tests.torch.helpers import create_nncf_model_and_single_algo_builder
+from tests.torch.pruning.helpers import DepthwiseConvolutionModel
 from tests.torch.pruning.helpers import PruningTestModelEltwise
 from tests.torch.pruning.helpers import PruningTestModelSharedConvs
 from tests.torch.pruning.helpers import TestModelBranching
@@ -134,6 +137,14 @@ GROUP_PRUNING_MODULES_TEST_CASES = [
                                   pruned_groups=[['PruningTestModelSharedConvs/NNCFConv2d[conv2]/conv2d_0',
                                                   'PruningTestModelSharedConvs/NNCFConv2d[conv2]/conv2d_1']],
                                   pruned_groups_by_node_id=[[3, 4]],
+                                  prune_params=(False, False, False)),
+    GroupPruningModulesTestStruct(model=DepthwiseConvolutionModel,
+                                  non_pruned_module_nodes=['DepthwiseConvolutionModel/NNCFConv2d[conv1]/conv2d_0',
+                                                           'DepthwiseConvolutionModel/NNCFConv2d[conv4]/conv2d_0'],
+                                  pruned_groups=[['DepthwiseConvolutionModel/NNCFConv2d[conv2]/conv2d_0',
+                                                  'DepthwiseConvolutionModel/NNCFConv2d[conv3]/conv2d_0',
+                                                  'DepthwiseConvolutionModel/NNCFConv2d[depthwise_conv]/conv2d_0']],
+                                  pruned_groups_by_node_id=[[2, 3, 5]],
                                   prune_params=(False, False, False))
 ]
 
@@ -174,7 +185,7 @@ def test_groups(test_input_info_struct_: GroupPruningModulesTestStruct):
         cluster_modules = [n.module for n in cluster.elements]
         group_modules = [compressed_model.get_containing_module(node_name) for node_name in group]
 
-        assert cluster_modules == group_modules
+        assert Counter(cluster_modules) == Counter(group_modules)
 
 
 def test_pruning_node_selector(test_input_info_struct_: GroupPruningModulesTestStruct):
@@ -215,7 +226,8 @@ def test_pruning_node_selector(test_input_info_struct_: GroupPruningModulesTestS
         cluster_node_ids = [n.node_id for n in cluster.elements]
         cluster_node_ids.sort()
 
-        assert cluster_node_ids == group_by_id
+        assert Counter(cluster_node_ids) == Counter(group_by_id)
+
 
 class GroupSpecialModulesTestStruct:
     def __init__(self, model: Callable, eltwise_clusters):
