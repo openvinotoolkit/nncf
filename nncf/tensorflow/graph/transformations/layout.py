@@ -115,9 +115,9 @@ class TFTransformationLayout(TransformationLayout):
 
 
 def check_target_points(tp0: TargetPoint, tp1: TargetPoint) -> bool:
-    return tp0.type in GRAPH_NODE_TYPES and \
+    return isinstance(tp0, TFLayerPoint) and isinstance(tp1, TFLayerPoint) and \
+           tp0.type in GRAPH_NODE_TYPES and \
            tp1.type in GRAPH_NODE_TYPES and \
-           isinstance(tp0, TFLayerPoint) and isinstance(tp1, TFLayerPoint) and \
            tp0.layer_name == tp1.layer_name
 
 

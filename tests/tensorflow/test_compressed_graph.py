@@ -276,16 +276,7 @@ def get_test_models_desc(algorithm):
         pytest.param(
             ModelDesc('mask_rcnn.dot', test_models.MaskRCNN, [1, 1024, 1024, 3],
                       ignored_scopes=[
-                            "{re}.*multilevel_propose_rois.*",
-                            "{re}.*sample_proposals.*",
-                            "{re}.*multilevel_crop_and_resize.*",
-                            "{re}.*generate_detections.*",
-                            "{re}.*sample_and_crop_foreground_masks.*",
-                            "{re}.*decode_boxes.*",
-                            "{re}.*encode_boxes.*",
-                            "gt_boxes",
-                            "gt_masks",
-                            "image_info"
+                            "{re}.*clip_boxes.*", # skip due to https://github.com/tensorflow/tensorflow/issues/51793
                       ]
             ),
             marks=SKIP_MAP[algorithm].get('mask_rcnn', ())
