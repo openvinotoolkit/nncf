@@ -16,7 +16,7 @@ import sys
 import threading
 import time
 import os
-
+pylint_issue_long_line = "---------------------------------------------------------------------------------------------------------------------"
 
 class Command:
     def __init__(self, cmd, path=None):
