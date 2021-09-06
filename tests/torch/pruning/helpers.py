@@ -439,6 +439,32 @@ class DisconectedGraphModel(nn.Module):
         x = copy.copy(x)
         return x
 
+
+class DepthwiseConvolutionModel(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.conv1 = create_conv(1, 512, 1, 1, 1)
+        self.conv4 = create_conv(1024, 512, 2, 1, 1)
+        for i in range(512):
+            self.conv1.weight.data[i] += i
+            self.conv4.weight.data[i] += i
+        self.conv2 = create_conv(512, 1024, 3, 1, 1)
+        self.conv3 = create_conv(512, 1024, 3, 1, 1)
+        self.depthwise_conv = create_depthwise_conv(1024, 5, 1, 1)
+        for i in range(1024):
+            self.conv2.weight.data[i] += i
+            self.conv3.weight.data[i] += i
+            self.depthwise_conv.weight.data[i] += i
+
+    def forward(self, x):
+        x = self.conv1(x)
+        x1 = self.conv2(x)
+        x2 = self.conv3(x)
+        x = x1 + x2
+        x = self.depthwise_conv(x)
+        return self.conv4(x)
+
+
 def get_basic_pruning_config(input_sample_size=None) -> NNCFConfig:
     if input_sample_size is None:
         input_sample_size = [1, 1, 4, 4]
