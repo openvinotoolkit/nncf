@@ -13,10 +13,10 @@
 
 from collections import OrderedDict
 from collections import namedtuple
+from typing import Callable
 from typing import Dict
 from typing import List
 from typing import Set
-from typing import Callable
 from typing import Union
 
 import tensorflow as tf
@@ -180,8 +180,7 @@ class TFModelTransformer(ModelTransformer):
             for layer in self._model_config['input_layers']:
                 for tp in target_points:
                     if isinstance(tp, TFBeforeLayer) and tp.layer_name == layer[0]:
-                        raise RuntimeError(
-                            'Insertion before input layer: {} is not supported'.format(tp.layer_name))
+                        raise RuntimeError(f'Insertion before input layer: {tp.layer_name} is not supported')
 
         layer_configs = []
         for layer in layers:
@@ -199,8 +198,8 @@ class TFModelTransformer(ModelTransformer):
                         self._model_config['layers'][idx]['inbound_nodes'][tp.instance_idx][tp.input_port_id] = \
                                 [config['name'], i, 0, {}]
                     else:
-                        raise TypeError('Insertion transform does not support {} '
-                            'target point type'.format(target_points[0].type))
+                        raise TypeError(
+                            f'Insertion transform does not support {target_points[0].type} target point type')
 
             layer_configs.append(config)
 
@@ -218,7 +217,7 @@ class TFModelTransformer(ModelTransformer):
                                                      replace_layer_name, i)
                     if len(layer_out_ports) > 1:
                         raise RuntimeError('Insertion after layer ({}) with multiple ports '
-                                        'is not supported'.format(tp.layer_name))
+                                           'is not supported'.format(tp.layer_name))
 
             layer_name = target_points[0].layer_name
             self._insert_layer_after_sequential(layer_name, config)

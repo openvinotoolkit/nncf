@@ -330,7 +330,7 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
         non_unified_scales_quantization_point_ids = set(range(len(quantization_points)))
 
         for unified_scales_group in quantizer_setup.get_unified_scale_groups():
-            us_qp_id = next(iter(unified_scales_group))
+            us_qp_id = unified_scales_group[0]
             qp = quantization_points[us_qp_id]
             quantizer_spec = qp.quantizer_spec
             op_name = qp.op_name + '/unified_scale_group'
