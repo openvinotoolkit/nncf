@@ -85,9 +85,10 @@ class TestSotaCheckpoints:
     def get_metric_file_name(model_name: str):
         return "{}.metrics.json".format(model_name)
 
-    CMD_FORMAT_STRING = "{} examples/torch/{sample_type}/main.py -m {} --config {conf} \
+    CMD_FORMAT_STRING = "{} tests/torch/run_examples_for_test_sota.py {sample_type} -m {} --config {conf} \
          --data {dataset}/{data_name}/ --log-dir={log_dir} --metrics-dump \
           {metrics_dump_file_path}"
+
 
     @staticmethod
     def q_dq_config(config):
@@ -122,6 +123,7 @@ class TestSotaCheckpoints:
             env["PYTHONPATH"] += ":" + str(PROJECT_ROOT)
         else:
             env["PYTHONPATH"] = str(PROJECT_ROOT)
+
         result = subprocess.Popen(com_line, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                                   cwd=cwd, env=env)
         exit_code = result.poll()
