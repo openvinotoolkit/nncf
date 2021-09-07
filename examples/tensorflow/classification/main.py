@@ -43,6 +43,7 @@ from examples.tensorflow.common.utils import print_args
 from examples.tensorflow.common.utils import serialize_config
 from examples.tensorflow.common.utils import serialize_cli_args
 from examples.tensorflow.common.utils import write_metrics
+from examples.tensorflow.common.utils import SummaryWriter
 
 
 def get_argument_parser():
@@ -248,6 +249,7 @@ def run(config):
 
     if 'train' in config.mode:
         if is_accuracy_aware_training(config):
+            accuracy_aware_writer = SummaryWriter(config.log_dir, 'accuracy_aware_training')
             logger.info('starting an accuracy-aware training loop...')
             result_dict_to_val_metric_fn = lambda results: 100 * results['acc@1']
             compress_model.accuracy_aware_fit(train_dataset,
@@ -256,7 +258,7 @@ def run(config):
                                               callbacks=callbacks,
                                               initial_epoch=initial_epoch,
                                               steps_per_epoch=train_steps,
-                                              tensorboard_writer=config.tb,
+                                              tensorboard_writer=accuracy_aware_writer,
                                               log_dir=config.log_dir,
                                               uncompressed_model_accuracy=uncompressed_model_accuracy,
                                               result_dict_to_val_metric_fn=result_dict_to_val_metric_fn,

@@ -353,11 +353,13 @@ def run(config):
                                          num_test_batches, config.print_freq)
                 return metric_result['AP']
 
+            accuracy_aware_writer = SummaryWriter(config.log_dir, 'accuracy_aware_training')
+
             acc_aware_training_loop = create_accuracy_aware_training_loop(nncf_config, compression_ctrl)
             compress_model = acc_aware_training_loop.run(compress_model,
                                                          train_epoch_fn=train_epoch_fn,
                                                          validate_fn=validate_fn,
-                                                         tensorboard_writer=config.tb,
+                                                         tensorboard_writer=accuracy_aware_writer,
                                                          log_dir=config.log_dir)
         else:
             train(train_step, test_step, eval_metric, train_dist_dataset, test_dist_dataset,
