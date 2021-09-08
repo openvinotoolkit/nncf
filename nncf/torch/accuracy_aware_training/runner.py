@@ -135,7 +135,7 @@ class PTAccuracyAwareTrainingRunner(BaseAccuracyAwareTrainingRunner):
                     self.add_tensorboard_scalar('compression/statistics/{0}'.format(key),
                                                 value, self.cumulative_epoch_count)
 
-    def dump_checkpoint(self, model, compression_controller):
+    def _collect_checkpoint_info(self, model, compression_controller) -> Dict:
         checkpoint = {
             'epoch': self.cumulative_epoch_count + 1,
             'state_dict': model.state_dict(),
@@ -145,6 +145,17 @@ class PTAccuracyAwareTrainingRunner(BaseAccuracyAwareTrainingRunner):
             'optimizer': self.optimizer.state_dict(),
             'scheduler': compression_controller.scheduler.get_state()
         }
+        return checkpoint
+
+    def _save_best_checkpoint(self, checkpoint_path):
+        if self.best_val_metric_value == self.current_val_metric_value:
+            best_checkpoint_filename = 'acc_aware_checkpoint_best.pth'
+            best_path = osp.join(self._checkpoint_save_dir, best_checkpoint_filename)
+            self._best_checkpoint = best_path
+            copyfile(checkpoint_path, best_path)
+
+    def dump_checkpoint(self, model, compression_controller):
+        checkpoint = self._collect_checkpoint_info(model, compression_controller)
         if self._dump_checkpoint_fn is not None:
             del checkpoint['state_dict']
             accuracy_aware_metainfo = {
@@ -153,14 +164,10 @@ class PTAccuracyAwareTrainingRunner(BaseAccuracyAwareTrainingRunner):
                 }
             }
             self._dump_checkpoint_fn(model, self._log_dir, accuracy_aware_metainfo)
-            return
-        checkpoint_path = osp.join(self._checkpoint_save_dir, 'acc_aware_checkpoint_last.pth')
-        torch.save(checkpoint, checkpoint_path)
-        if self.best_val_metric_value == self.current_val_metric_value:
-            best_checkpoint_filename = 'acc_aware_checkpoint_best.pth'
-            best_path = osp.join(self._checkpoint_save_dir, best_checkpoint_filename)
-            self._best_checkpoint = best_path
-            copyfile(checkpoint_path, best_path)
+        else:
+            checkpoint_path = osp.join(self._checkpoint_save_dir, 'acc_aware_checkpoint_last.pth')
+            torch.save(checkpoint, checkpoint_path)
+            self._save_best_checkpoint(checkpoint_path)
 
     def add_tensorboard_scalar(self, key, data, step):
         if self.verbose and self._tensorboard_writer is not None:
@@ -235,18 +242,7 @@ class PTAdaptiveCompressionLevelTrainingRunner(PTAccuracyAwareTrainingRunner,
                                                image,
                                                global_step=len(self.compressed_training_history))
 
-    def dump_checkpoint(self, model, compression_controller):
-        checkpoint_path = osp.join(self._checkpoint_save_dir, 'acc_aware_checkpoint_last.pth')
-        checkpoint = {
-            'epoch': self.cumulative_epoch_count + 1,
-            'state_dict': model.state_dict(),
-            'compression_state': compression_controller.get_compression_state(),
-            'best_metric_val': self.best_val_metric_value,
-            'current_val_metric_value': self.current_val_metric_value,
-            'optimizer': self.optimizer.state_dict(),
-            'scheduler': compression_controller.scheduler.get_state()
-        }
-        torch.save(checkpoint, checkpoint_path)
+    def _save_best_checkpoint(self, checkpoint_path):
         if self.best_val_metric_value == self.current_val_metric_value:
             best_checkpoint_filename = 'acc_aware_checkpoint_best_compression_rate_' \
                                        '{comp_rate:.3f}.pth'.format(comp_rate=self.compression_rate_target)
