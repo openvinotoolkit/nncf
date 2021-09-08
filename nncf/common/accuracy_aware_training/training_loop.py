@@ -41,8 +41,8 @@ class TrainingLoop(ABC):
     """
 
     @abstractmethod
-    def run(self, model: ModelType, train_epoch_fn, validate_fn, dump_checkpoint_fn,
-            configure_optimizers_fn=None, tensorboard_writer=None, log_dir=None):
+    def run(self, model: ModelType, train_epoch_fn, validate_fn, configure_optimizers_fn=None,
+            dump_checkpoint_fn=None, tensorboard_writer=None, log_dir=None):
         """
         Implements the custom logic to run a training loop for model fine-tuning
         by using the provided `train_epoch_fn`, `validate_fn` and `configure_optimizers_fn` methods.

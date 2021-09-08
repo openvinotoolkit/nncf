@@ -135,7 +135,7 @@ class PTAccuracyAwareTrainingRunner(BaseAccuracyAwareTrainingRunner):
                     self.add_tensorboard_scalar('compression/statistics/{0}'.format(key),
                                                 value, self.cumulative_epoch_count)
 
-    def _collect_checkpoint_info(self, model, compression_controller) -> Dict:
+    def _collect_checkpoint_info(self, model, compression_controller):
         checkpoint = {
             'epoch': self.cumulative_epoch_count + 1,
             'state_dict': model.state_dict(),
