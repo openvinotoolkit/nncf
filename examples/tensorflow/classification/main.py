@@ -156,8 +156,8 @@ def run(config):
     model_fn, model_params = get_model(config.model,
                                        input_shape=config.get('input_info', {}).get('sample_size', None),
                                        num_classes=config.get('num_classes', get_num_classes(config.dataset)),
-                                       pretrained=False,
-                                       weights=None)
+                                       pretrained=config.get('pretrained', False),
+                                       weights=config.get('weights', None))
 
     builders = get_dataset_builders(config, strategy.num_replicas_in_sync)
     datasets = [builder.build() for builder in builders]
@@ -168,11 +168,11 @@ def run(config):
     nncf_config = config.nncf_config
     nncf_config = register_default_init_args(nncf_config=nncf_config,
                                              data_loader=train_dataset,
-                                             batch_size=500)
+                                             batch_size=batch_size=train_builder.global_batch_size))
 
     train_epochs = config.epochs
-    train_steps = 2
-    validation_steps = 2
+    train_steps = train_builder.steps_per_epoch
+    validation_steps = validation_builder.steps_per_epoch
 
     resume_training = config.ckpt_path is not None
 
@@ -286,10 +286,10 @@ def run(config):
     if config.metrics_dump is not None:
         write_metrics(results[1], config.metrics_dump)
 
-    # if 'export' in config.mode:
-    save_path, save_format = get_saving_parameters(config)
-    compression_ctrl.export_model(save_path, save_format)
-    logger.info('Saved to {}'.format(save_path))
+    if 'export' in config.mode:
+        save_path, save_format = get_saving_parameters(config)
+        compression_ctrl.export_model(save_path, save_format)
+        logger.info('Saved to {}'.format(save_path))
 
 
 def export(config):
