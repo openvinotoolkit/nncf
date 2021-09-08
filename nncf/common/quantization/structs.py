@@ -326,6 +326,11 @@ class QuantizationPreset(Enum):
         raise RuntimeError('Unknown preset string.')
 
     def get_params_configured_by_preset(self, quant_group: QuantizerGroup) -> Dict:
+        res_config = {
+            'mode' : QuantizationMode.SYMMETRIC,
+            'num_bits': 8}
         if quant_group == QuantizerGroup.ACTIVATIONS and self == QuantizationPreset.MIXED:
-            return  {'mode': QuantizationMode.ASYMMETRIC}
-        return {'mode' : QuantizationMode.SYMMETRIC}
+            res_config.update({'mode': QuantizationMode.ASYMMETRIC})
+        if quant_group == QuantizerGroup.WEIGHTS:
+            res_config.update({"per_channel": True})
+        return res_config
