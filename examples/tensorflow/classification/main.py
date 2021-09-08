@@ -156,8 +156,8 @@ def run(config):
     model_fn, model_params = get_model(config.model,
                                        input_shape=config.get('input_info', {}).get('sample_size', None),
                                        num_classes=config.get('num_classes', get_num_classes(config.dataset)),
-                                       pretrained=config.get('pretrained', False),
-                                       weights=config.get('weights', None))
+                                       pretrained=False,
+                                       weights=None)
 
     builders = get_dataset_builders(config, strategy.num_replicas_in_sync)
     datasets = [builder.build() for builder in builders]
@@ -168,11 +168,11 @@ def run(config):
     nncf_config = config.nncf_config
     nncf_config = register_default_init_args(nncf_config=nncf_config,
                                              data_loader=train_dataset,
-                                             batch_size=train_builder.global_batch_size)
+                                             batch_size=500)
 
     train_epochs = config.epochs
-    train_steps = train_builder.steps_per_epoch
-    validation_steps = validation_builder.steps_per_epoch
+    train_steps = 2
+    validation_steps = 2
 
     resume_training = config.ckpt_path is not None
 
@@ -249,7 +249,6 @@ def run(config):
 
     if 'train' in config.mode:
         if is_accuracy_aware_training(config):
-            accuracy_aware_writer = SummaryWriter(config.log_dir, 'accuracy_aware_training')
             logger.info('starting an accuracy-aware training loop...')
             result_dict_to_val_metric_fn = lambda results: 100 * results['acc@1']
             compress_model.accuracy_aware_fit(train_dataset,
@@ -258,7 +257,8 @@ def run(config):
                                               callbacks=callbacks,
                                               initial_epoch=initial_epoch,
                                               steps_per_epoch=train_steps,
-                                              tensorboard_writer=accuracy_aware_writer,
+                                              tensorboard_writer=SummaryWriter(config.log_dir,
+                                                                               'accuracy_aware_training'),
                                               log_dir=config.log_dir,
                                               uncompressed_model_accuracy=uncompressed_model_accuracy,
                                               result_dict_to_val_metric_fn=result_dict_to_val_metric_fn,
@@ -286,10 +286,10 @@ def run(config):
     if config.metrics_dump is not None:
         write_metrics(results[1], config.metrics_dump)
 
-    if 'export' in config.mode:
-        save_path, save_format = get_saving_parameters(config)
-        compression_ctrl.export_model(save_path, save_format)
-        logger.info('Saved to {}'.format(save_path))
+    # if 'export' in config.mode:
+    save_path, save_format = get_saving_parameters(config)
+    compression_ctrl.export_model(save_path, save_format)
+    logger.info('Saved to {}'.format(save_path))
 
 
 def export(config):

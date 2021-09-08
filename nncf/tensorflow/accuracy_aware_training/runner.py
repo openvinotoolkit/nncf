@@ -13,8 +13,6 @@
 
 import os.path as osp
 
-import tensorflow as tf
-
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.common.accuracy_aware_training.runner import BaseAccuracyAwareTrainingRunner
 from nncf.common.accuracy_aware_training.runner import BaseAdaptiveCompressionLevelTrainingRunner
