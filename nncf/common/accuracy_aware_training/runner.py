@@ -104,17 +104,18 @@ class TrainingRunner(ABC):
         """
 
     @abstractmethod
-    def initialize_training_loop_fns(self, train_epoch_fn, validate_fn, configure_optimizers_fn,
+    def initialize_training_loop_fns(self, train_epoch_fn, validate_fn, configure_optimizers_fn, dump_checkpoint_fn,
                                      tensorboard_writer=None, log_dir=None):
         """
         Register the user-supplied functions to be used to control the training process.
 
         :param train_epoch_fn: a method to fine-tune the model for a single epoch
         (to be called inside the `train_epoch` of the TrainingRunner).
-        :param validate: a method to evaluate the model on the validation dataset
+        :param validate_fn: a method to evaluate the model on the validation dataset
         (to be called inside the `train_epoch` of the TrainingRunner).
         :param configure_optimizers_fn: a method to instantiate an optimizer and a learning
         rate scheduler (to be called inside the `configure_optimizers` of the TrainingRunner).
+        :param dump_checkpoint_fn: a method to dump checkpoint with all necessary information
         :param tensorboard_writer: The tensorboard object to be used for logging.
         :param log_dir: The path to be used for logging and checkpoint saving.
         """
@@ -235,11 +236,12 @@ class BaseAccuracyAwareTrainingRunner(TrainingRunner):
         self.cumulative_epoch_count = 0
         self.best_val_metric_value = 0
 
-    def initialize_training_loop_fns(self, train_epoch_fn, validate_fn, configure_optimizers_fn,
+    def initialize_training_loop_fns(self, train_epoch_fn, validate_fn, configure_optimizers_fn, dump_checkpoint_fn,
                                      tensorboard_writer=None, log_dir=None):
         self._train_epoch_fn = train_epoch_fn
         self._validate_fn = validate_fn
         self._configure_optimizers_fn = configure_optimizers_fn
+        self._dump_checkpoint_fn = dump_checkpoint_fn
         self._tensorboard_writer = tensorboard_writer
         self._log_dir = log_dir
 
@@ -275,10 +277,3 @@ class BaseAdaptiveCompressionLevelTrainingRunner(BaseAccuracyAwareTrainingRunner
         self.compression_rate_target = None
         self.was_compression_increased_on_prev_step = None
 
-    def initialize_training_loop_fns(self, train_epoch_fn, validate_fn, configure_optimizers_fn,
-                                     tensorboard_writer=None, log_dir=None):
-        self._train_epoch_fn = train_epoch_fn
-        self._validate_fn = validate_fn
-        self._configure_optimizers_fn = configure_optimizers_fn
-        self._tensorboard_writer = tensorboard_writer
-        self._log_dir = log_dir

@@ -27,8 +27,8 @@ class TFAccuracyAwareTrainingRunner(BaseAccuracyAwareTrainingRunner):
     """
 
     def initialize_training_loop_fns(self, train_epoch_fn, validate_fn, configure_optimizers_fn=None,
-                                     tensorboard_writer=None, log_dir=None):
-        super().initialize_training_loop_fns(train_epoch_fn, validate_fn, configure_optimizers_fn,
+                                     dump_checkpoint_fn=None, tensorboard_writer=None, log_dir=None):
+        super().initialize_training_loop_fns(train_epoch_fn, validate_fn, configure_optimizers_fn, dump_checkpoint_fn,
                                              tensorboard_writer=tensorboard_writer, log_dir=log_dir)
         self._log_dir = self._log_dir if self._log_dir is not None \
             else 'runs'
