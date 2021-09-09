@@ -276,4 +276,3 @@ class BaseAdaptiveCompressionLevelTrainingRunner(BaseAccuracyAwareTrainingRunner
         self._best_checkpoints = {}
         self.compression_rate_target = None
         self.was_compression_increased_on_prev_step = None
-
