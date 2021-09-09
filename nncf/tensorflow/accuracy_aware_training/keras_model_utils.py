@@ -10,13 +10,11 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-import copy
 
 from tensorflow.python.keras.engine import training_utils
 from tensorflow.python.profiler import trace
 from tensorflow.python.eager import context
 from tensorflow.python.keras import callbacks as callbacks_module
-from tensorflow.python.keras.callbacks import History
 from tensorflow.python.keras.engine import data_adapter
 
 from nncf.common.accuracy_aware_training import create_accuracy_aware_training_loop
@@ -27,6 +25,7 @@ def accuracy_aware_fit(cls_instance, train_dataset, compression_ctrl,
                        steps_per_epoch=None, batch_size=None, tensorboard_writer=None,
                        log_dir=None, validation_data=None, validation_steps=None,
                        result_dict_to_val_metric_fn=None, **kwargs):
+
     if result_dict_to_val_metric_fn is None:
         result_dict_to_val_metric_fn = lambda metric: metric
 
@@ -63,14 +62,6 @@ def accuracy_aware_fit(cls_instance, train_dataset, compression_ctrl,
                 steps=data_handler.inferred_steps
             )
 
-        # Check if callbacks.on_train_begin() has been called before the first epoch.
-        # If it is not - call it.
-        for callback in callbacks_container:
-            if isinstance(callback, History):
-                if not hasattr(callback, 'epoch'):
-                    callbacks_container.on_train_begin()
-                    break
-
         if model.train_function is None:
             model.train_function = model.make_train_function()
         _, iterator = next(data_handler.enumerate_epochs())
@@ -85,6 +76,7 @@ def accuracy_aware_fit(cls_instance, train_dataset, compression_ctrl,
                     batch_size=None,
                     _r=1):
                     callbacks_container.on_train_batch_begin(step)
+
                     tmp_logs = model.train_function(iterator)
                     if data_handler.should_sync:
                         context.async_wait()
@@ -93,11 +85,6 @@ def accuracy_aware_fit(cls_instance, train_dataset, compression_ctrl,
                     callbacks_container.on_train_batch_end(end_step, logs)
                     if model.stop_training:
                         break
-
-        if logs is None:
-            raise ValueError('Expect x to be a non-empty array or dataset.')
-        epoch_logs = copy.copy(logs)
-        callbacks_container.on_epoch_end(epoch, epoch_logs)
 
     if validation_data is None:
         validation_data = train_dataset
