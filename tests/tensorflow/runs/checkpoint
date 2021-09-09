@@ -1,0 +1,2 @@
+model_checkpoint_path: "acc_aware_checkpoint_best_compression_rate_0.108.pth"
+all_model_checkpoint_paths: "acc_aware_checkpoint_best_compression_rate_0.108.pth"
