@@ -106,6 +106,72 @@ def test_unified_scales_with_concat(target_device, model_creator, ref_aq_module_
     assert total_quantizations == ref_quantizations
 
 
+def get_shared_conv_test_model():
+    rpn_conv = tf.keras.layers.Conv2D(
+                    filters=1,
+                    kernel_size=(3, 3),
+                    activation=None,
+                    padding='same',
+                    name='rpn')
+
+    rpn_box_conv = tf.keras.layers.Conv2D(
+                        filters=12,
+                        kernel_size=(3, 3),
+                        padding='same',
+                        name='rpn-box')
+
+    rpn_class_conv = tf.keras.layers.Conv2D(
+                        filters=3,
+                        kernel_size=(1, 1),
+                        padding='valid',
+                        name='rpn-class')
+
+    inputs = []
+    for i in range(1, 3):
+        inputs.append(tf.keras.Input(shape=(i* 5, i * 5, 3)))
+
+    rois = []
+    for inp in inputs:
+        rpn = rpn_conv(inp)
+        box_conv = rpn_box_conv(rpn)
+        class_conv= rpn_class_conv(rpn)
+
+        _, feature_h, feature_w, num_anchors_per_location = (
+            class_conv.get_shape().as_list())
+
+        num_boxes = feature_h * feature_w * num_anchors_per_location
+        this_level_scores = tf.reshape(class_conv, [-1, num_boxes, 1])
+        this_level_boxes = tf.reshape(box_conv, [-1, num_boxes, 4])
+
+        cat = tf.concat([this_level_scores, this_level_boxes], -1)
+        rois.append(cat)
+
+    all_rois = tf.concat(rois, 1)
+    out = all_rois[:, :, 3] * all_rois[:, :, 2]
+    return tf.keras.Model(inputs=inputs, outputs=out)
+
+
+@pytest.mark.parametrize("target_device", [t_dev.value for t_dev in HWConfigType])
+def test_shared_op_unified_scales(target_device):
+    nncf_config = get_basic_quantization_config()
+    nncf_config["target_device"] = target_device
+
+    model = get_shared_conv_test_model()
+    compressed_model, _ = create_compressed_model_and_algo_for_test(model, nncf_config, force_no_init=True)
+
+    non_weight_quantizers = len(collect_fake_quantize_layers(compressed_model))
+    assert non_weight_quantizers == 5
+
+    total_quantizations = get_total_quantizations(compressed_model)
+    assert total_quantizations == 8
+
+    input_1 = tf.random.uniform(shape=(1, 5, 5, 3), dtype=tf.float32)
+    input_2 = tf.random.uniform(shape=(1, 10, 10, 3), dtype=tf.float32)
+    inputs = [input_1, input_2]
+    out = compressed_model.predict(inputs)
+    assert out.shape == (1, 375)
+
+
 def get_eltwise_quantizer_linking_test_model(input_shapes):
     inputs = []
     for i, input_shape in enumerate(input_shapes):

@@ -64,6 +64,7 @@ from nncf.tensorflow.graph.metatypes.keras_layers import TFLayerWithWeightsMetat
 from nncf.tensorflow.graph.transformations.commands import TFAfterLayer
 from nncf.tensorflow.graph.transformations.commands import TFBeforeLayer
 from nncf.tensorflow.graph.transformations.commands import TFInsertionCommand
+from nncf.tensorflow.graph.transformations.commands import TFMultiLayerPoint
 from nncf.tensorflow.graph.transformations.commands import TFLayerWeight
 from nncf.tensorflow.graph.transformations.layout import TFTransformationLayout
 from nncf.tensorflow.graph.utils import get_original_name_and_instance_idx
@@ -341,26 +342,24 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
         non_unified_scales_quantization_point_ids = set(range(len(quantization_points)))
 
         for unified_scales_group in quantizer_setup.get_unified_scale_groups():
-            quantizer = None
-            quantizer_spec = None
-            for instance_idx, us_qp_id in enumerate(unified_scales_group):
+            us_qp_id = unified_scales_group[0]
+            qp = quantization_points[us_qp_id]
+            quantizer_spec = qp.quantizer_spec
+            op_name = qp.op_name + '/unified_scale_group'
+            quantizer = FakeQuantize(quantizer_spec, name=op_name)
+            self._op_names.append(quantizer.op_name)
+            target_points = []
+            for us_qp_id in unified_scales_group:
                 non_unified_scales_quantization_point_ids.discard(us_qp_id)
                 qp = quantization_points[us_qp_id]
-                if quantizer_spec is None:
-                    quantizer_spec = qp.quantizer_spec
-                else:
-                    assert quantizer_spec.get_state() == qp.quantizer_spec.get_state()
+                assert quantizer_spec.get_state() == qp.quantizer_spec.get_state()
+                target_points.append(qp.target_point)
 
-                if quantizer is None:
-                    op_name = qp.op_name + '/unified_scale_group'
-                    quantizer = FakeQuantize(quantizer_spec, name=op_name)
-                    self._op_names.append(quantizer.op_name)
+            command = TFInsertionCommand(target_point=TFMultiLayerPoint(target_points),
+                                         callable_object=quantizer,
+                                         priority=TransformationPriority.QUANTIZATION_PRIORITY)
 
-                command = TFInsertionCommand(target_point=qp.target_point,
-                                             callable_object=quantizer,
-                                             callable_object_instance_idx=instance_idx,
-                                             priority=TransformationPriority.QUANTIZATION_PRIORITY)
-                insertion_commands.append(command)
+            insertion_commands.append(command)
 
         for qp_id in non_unified_scales_quantization_point_ids:
             quantization_point = quantization_points[qp_id]
@@ -621,7 +620,8 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
                 successor = next(iter(successors))
                 # It is necessary to determine the number of input nodes from the model
                 # in order to correctly count the duplicated edges
-                layer = model.get_layer(name=successor.node_name)
+                original_name, _ = get_original_name_and_instance_idx(successor.node_name)
+                layer = model.get_layer(name=original_name)
                 num_previous_nodes = len(layer.input) if isinstance(layer.input, list) else 1
                 if successor.metatype in ELEMENTWISE_LAYER_METATYPES and num_previous_nodes == 1:
                     preprocessing_nodes.append(successor)

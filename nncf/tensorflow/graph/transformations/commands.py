@@ -16,6 +16,7 @@ from typing import Callable
 from typing import Dict
 from typing import List
 from typing import Optional
+from typing import Union
 
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
@@ -82,6 +83,20 @@ class TFLayerPoint(TargetPoint):
         }
         return cls(**kwargs)
 
+
+class TFMultiLayerPoint:
+    """
+    `TFMultiLayerPoint` stores a list of target points that will be
+    combined into shared callable object. Each point can be spots in the model
+    graph: insertion spots before/after layer.
+    """
+
+    def __init__(self, target_points: List[TargetPoint]):
+        self._target_points = target_points
+
+    @property
+    def target_points(self) -> List[TargetPoint]:
+        return self._target_points
 
 class TFLayerStateNames:
     LAYER_NAME = 'layer_name'
@@ -375,42 +390,31 @@ class TFOperationWithWeights(TFLayerWeight):
         return cls(**state)
 
 
-class CallableObject:
-    """
-    Stores the callable object and instance index
-    """
-
-    def __init__(self, callable_obj: Callable, instance_idx: int):
-        self.callable = callable_obj
-        self.instance_idx = instance_idx
-
-    def __call__(self):
-        return self.callable()
-
-
 class TFInsertionCommand(TransformationCommand):
     """
     Inserts objects at the target point in the TensorFlow model graph.
     """
 
     def __init__(self,
-                 target_point: TargetPoint,
+                 target_point: Union[TargetPoint, TFMultiLayerPoint],
                  callable_object: Optional[Callable] = None,
-                 priority: Optional[TransformationPriority] = None,
-                 callable_object_instance_idx: int = 0):
+                 priority: Optional[TransformationPriority] = None):
         super().__init__(TransformationType.INSERT, target_point)
         self.callable_objects = []
         if callable_object is not None:
             _priority = TransformationPriority.DEFAULT_PRIORITY \
                 if priority is None else priority
-            obj = CallableObject(callable_object, callable_object_instance_idx)
-            self.callable_objects.append((obj, _priority))
+            self.callable_objects.append((callable_object, _priority))
 
     @property
     def insertion_objects(self) -> List[Callable]:
         return [x for x, _ in self.callable_objects]
 
     def union(self, other: TransformationCommand) -> 'TFInsertionCommand':
+        if isinstance(self.target_point, TFMultiLayerPoint):
+            raise NotImplementedError('A command of TFInsertionCommand type with TFMultiLayerPoint '
+                                      'could not be united with another command')
+
         if not self.check_command_compatibility(other):
             raise ValueError('{} and {} commands could not be united'.format(
                 type(self).__name__, type(other).__name__))
