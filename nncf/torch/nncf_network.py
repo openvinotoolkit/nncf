@@ -353,9 +353,8 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
                     from functools import partial
                     attr = partial(attr.__func__, self)
                     return attr
-                else:
-                    # If it is not a bound function
-                    return attr
+                # If it is not a bound function
+                return attr
             return NotFound
 
         def get_nn_module_attr(self, name):

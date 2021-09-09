@@ -795,6 +795,35 @@ def test_get_clean_shallow_copy():
     assert clean_copy.get_graph().get_nodes_count() == clean_copy.get_original_graph().get_nodes_count()
 
 
+class TwoConvTestModelWithUniqueFunction(TwoConvTestModel):
+    def __init__(self):
+        super().__init__()
+        self.unique_attr = 'unique_attr'
+        self.non_unique_attr = 'model_non_unique_attr'
+
+    def train_step(self):
+        ...
+
+    @staticmethod
+    def static_func():
+        ...
+
+
+def test_get_attr():
+    from functools import partial
+    model = TwoConvTestModelWithUniqueFunction()
+    config = get_basic_sparsity_plus_quantization_config()
+    register_bn_adaptation_init_args(config)
+    sparse_quantized_model, _ = create_compressed_model_and_algo_for_test(model, config)
+    sparse_quantized_model.non_unique_attr = 'NNCFNetwork_non_unique_attr'
+    assert hasattr(sparse_quantized_model, 'unique_attr')
+    assert hasattr(sparse_quantized_model, 'non_unique_attr')
+    assert sparse_quantized_model.non_unique_attr == 'NNCFNetwork_non_unique_attr'
+    assert isinstance(sparse_quantized_model.train_step, partial)
+    assert isinstance(sparse_quantized_model.train_step.args[0], NNCFNetwork)
+    assert not isinstance(sparse_quantized_model.static_func, partial)
+
+
 def test_temporary_clean_view():
     model = TwoConvTestModelWithUserModule()
     config = get_basic_sparsity_plus_quantization_config()
