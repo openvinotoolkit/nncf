@@ -302,7 +302,7 @@ def test_early_exit_with_mock_validation(max_accuracy_degradation, exit_epoch_nu
 def test__mock_dump_checkpoint(aa_config):
     is_called_dump_checkpoint_fn = False
 
-    def mock_dump_checkpoint_fn(model, dir, acc_aware_info):
+    def mock_dump_checkpoint_fn(model, aa_log_dir, acc_aware_info):
         nonlocal is_called_dump_checkpoint_fn
         is_called_dump_checkpoint_fn = True
 
