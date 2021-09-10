@@ -38,9 +38,7 @@ def get_test_model_pairs():
         (test_models.ResNet50, tf.keras.applications.ResNet50),
         (test_models.ResNet50V2, tf.keras.applications.resnet_v2.ResNet50V2),
         (test_models.VGG16, tf.keras.applications.vgg16.VGG16),
-        (test_models.Xception, tf.keras.applications.xception.Xception),
-        (test_models.MobileNetV3Small, tf.keras.applications.MobileNetV3Small),
-        (test_models.MobileNetV3Large, tf.keras.applications.MobileNetV3Large)
+        (test_models.Xception, tf.keras.applications.xception.Xception)
     ]
 
 
