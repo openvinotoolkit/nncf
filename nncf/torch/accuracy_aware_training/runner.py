@@ -135,7 +135,7 @@ class PTAccuracyAwareTrainingRunner(BaseAccuracyAwareTrainingRunner):
                     self.add_tensorboard_scalar('compression/statistics/{0}'.format(key),
                                                 value, self.cumulative_epoch_count)
 
-    def _collect_checkpoint_info(self, model, compression_controller):
+    def _collect_checkpoint(self, model, compression_controller):
         checkpoint = {
             'epoch': self.cumulative_epoch_count + 1,
             'state_dict': model.state_dict(),
@@ -155,7 +155,7 @@ class PTAccuracyAwareTrainingRunner(BaseAccuracyAwareTrainingRunner):
             copyfile(checkpoint_path, best_path)
 
     def dump_checkpoint(self, model, compression_controller):
-        checkpoint = self._collect_checkpoint_info(model, compression_controller)
+        checkpoint = self._collect_checkpoint(model, compression_controller)
         if self._dump_checkpoint_fn is not None:
             del checkpoint['state_dict']
             accuracy_aware_metainfo = {
