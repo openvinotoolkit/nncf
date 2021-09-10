@@ -61,7 +61,7 @@ def MobileNetV3(stack_fn, last_point_ch, input_shape=None, model_type='large', *
     se_ratio = 0.25
 
     x = img_input
-    x = layers.Rescaling(1. / 255.)(x)
+    x = layers.Rescaling(scale=1. / 127.5, offset=-1.)(x)
     x = layers.Conv2D(
         16,
         kernel_size=3,
@@ -88,6 +88,13 @@ def MobileNetV3(stack_fn, last_point_ch, input_shape=None, model_type='large', *
         axis=channel_axis, epsilon=1e-3,
         momentum=0.999, name='Conv_1/BatchNorm')(x)
     x = activation(x)
+
+    x = layers.GlobalAveragePooling2D()(x)
+    if channel_axis == 1:
+        x = layers.Reshape((last_conv_ch, 1, 1))(x)
+    else:
+        x = layers.Reshape((1, 1, last_conv_ch))(x)
+
     x = layers.Conv2D(
         last_point_ch,
         kernel_size=1,
@@ -95,12 +102,6 @@ def MobileNetV3(stack_fn, last_point_ch, input_shape=None, model_type='large', *
         use_bias=True,
         name='Conv_2')(x)
     x = activation(x)
-
-    x = layers.GlobalAveragePooling2D()(x)
-    if channel_axis == 1:
-        x = layers.Reshape((last_point_ch, 1, 1))(x)
-    else:
-        x = layers.Reshape((1, 1, last_point_ch))(x)
 
     x = layers.Dropout(0.2)(x)
     x = layers.Conv2D(1000, kernel_size=1, padding='same', name='Logits')(x)
