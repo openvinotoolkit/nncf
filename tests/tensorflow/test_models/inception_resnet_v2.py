@@ -123,7 +123,7 @@ def conv2d_bn(x,
     if not use_bias:
         bn_axis = 1 if backend.image_data_format() == 'channels_first' else 3
         bn_name = None if name is None else name + '_bn'
-        x = layers.BatchNormalization(axis=bn_axis, name=bn_name)(x)
+        x = layers.BatchNormalization(axis=bn_axis, scale=False, name=bn_name)(x)
     if activation is not None:
         ac_name = None if name is None else name + '_ac'
         x = layers.Activation(activation, name=ac_name)(x)

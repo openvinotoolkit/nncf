@@ -211,7 +211,7 @@ SKIP_MAP = {
         'nasnet_mobile': pytest.mark.skip(reason='gitlab issue #18'),
         'xception': pytest.mark.skip(reason='gitlab issue #28'),
         'mask_rcnn': pytest.mark.skip(reason='ticket #50605'),
-        'resnet50_v2': pytest.mark.skip(resason='Several masks on one weight'),
+        'resnet50v2': pytest.mark.skip(resason='Several masks on one weight'),
         'mobilenet_v2_slim': pytest.mark.skip(reason='ticket #46349')
     },
     'rb_sparsity': {
@@ -247,8 +247,8 @@ def get_test_models_desc(algorithm):
         ),
         ModelDesc(ref_name('resnet50.pb'), test_models.ResNet50, [1, 32, 32, 3]),
         pytest.param(
-            ModelDesc(ref_name('resnet50_v2.pb'), test_models.ResNet50V2, [1, 32, 32, 3]),
-            marks=SKIP_MAP[algorithm].get('resnet50_v2', ())
+            ModelDesc(ref_name('resnet50v2.pb'), test_models.ResNet50V2, [1, 32, 32, 3]),
+            marks=SKIP_MAP[algorithm].get('resnet50v2', ())
         ),
         ModelDesc(ref_name('vgg16.pb'), test_models.VGG16, [1, 32, 32, 3]),
         pytest.param(
