@@ -177,7 +177,7 @@ class QuantizerSetupGeneratorBase:
         group_name = quantizer_group.value
         params_dict = {}
         params_dict_from_config = quant_config.get(group_name, {})
-        if self._target_device != 'VPU':
+        if self._target_device in ['ANY', 'CPU', 'GPU']:
             preset = QuantizationPreset.from_str(quant_config.get('preset', 'performance'))
             params_dict = preset.get_params_configured_by_preset(quantizer_group)
             overrided_params = params_dict.keys() & params_dict_from_config.keys()
