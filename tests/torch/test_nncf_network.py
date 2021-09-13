@@ -11,6 +11,7 @@
  limitations under the License.
 """
 import itertools
+from functools import partial
 import os
 from collections import Counter
 from copy import deepcopy
@@ -810,12 +811,22 @@ class TwoConvTestModelWithUniqueFunction(TwoConvTestModel):
 
 
 def test_get_attr():
-    from functools import partial
+    is_called_mock_forward = False
+
+    def mock_forward(*args, **kwargs):
+        nonlocal is_called_mock_forward
+        is_called_mock_forward = True
+
     model = TwoConvTestModelWithUniqueFunction()
     config = get_basic_sparsity_plus_quantization_config()
     register_bn_adaptation_init_args(config)
     sparse_quantized_model, _ = create_compressed_model_and_algo_for_test(model, config)
+
     sparse_quantized_model.non_unique_attr = 'NNCFNetwork_non_unique_attr'
+    sparse_quantized_model.forward = mock_forward
+    sparse_quantized_model.forward()
+    assert is_called_mock_forward
+
     assert hasattr(sparse_quantized_model, 'unique_attr')
     assert hasattr(sparse_quantized_model, 'non_unique_attr')
     assert sparse_quantized_model.non_unique_attr == 'NNCFNetwork_non_unique_attr'
