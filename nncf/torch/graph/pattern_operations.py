@@ -55,7 +55,8 @@ ATOMIC_ACTIVATIONS_OPERATIONS = merge_two_types_of_operations(RELU_OPERATIONS,
 ARITHMETIC_OPERATIONS = {'type': ['__iadd__',
                                   '__add__',
                                   '__mul__',
-                                  '__rmul__'],
+                                  '__rmul__',
+                                  '__truediv__'],
                          'label': 'ARITHMETIC'}
 
 # This type may be useful in the future
@@ -65,3 +66,8 @@ POOLING_OPERATIONS = {'type': ['adaptive_avg_pool2d',
                                'avg_pool2d',
                                'avg_pool3d'],
                       'label': 'POOLING'}
+
+MATMUL_OPERATIONS = {'type': ['bmm',
+                              'matmul'
+                              ],
+                     'label': 'MATMUL'}
