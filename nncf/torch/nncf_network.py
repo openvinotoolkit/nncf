@@ -339,7 +339,7 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
 
     def __getattr__(self, name):
         class NotFound:
-            ...
+            pass
 
         def get_NNCFNetwork_attr(self, name):
             if name in self.__dict__:

@@ -802,11 +802,11 @@ class TwoConvTestModelWithUniqueFunction(TwoConvTestModel):
         self.non_unique_attr = 'model_non_unique_attr'
 
     def train_step(self):
-        ...
+        pass
 
     @staticmethod
     def static_func():
-        ...
+        pass
 
 
 def test_get_attr():
