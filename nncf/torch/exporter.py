@@ -80,7 +80,7 @@ class PTExporter(Exporter):
                               input_names=self._input_names,
                               output_names=self._output_names,
                               enable_onnx_checker=False,
-                              opset_version=10,
+                              opset_version=13,
                               # Do not fuse Conv+BN in ONNX. May cause dropout elements to appear in ONNX.
                               training=True)
             model.enable_dynamic_graph_building()
