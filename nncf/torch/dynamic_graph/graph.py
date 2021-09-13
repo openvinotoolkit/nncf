@@ -106,7 +106,7 @@ class OperationExecutionContext:
         # "None" values in this list correspond to non-tensor input nodes.
         self.tensor_metas = tensor_metas
         self.tm_comparators = tm_comparators if tm_comparators else [
-            DefaultTensorMetaComparator()]
+            ShapeIgnoringTensorMetaComparator()]
         self.input_matcher = input_matcher if input_matcher else DefaultInputsMatcher()
 
     def __eq__(self, other: 'OperationExecutionContext'):
