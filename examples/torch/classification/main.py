@@ -404,10 +404,13 @@ def create_datasets(config):
     elif dataset_config in ['mock_32x32', 'mock_299x299']:
         val_transform = transforms.Compose([
             transforms.Resize(size),
+            transforms.CenterCrop(image_size),
             transforms.ToTensor(),
             normalize,
         ])
         train_transforms = transforms.Compose([
+            transforms.Resize(size),
+            transforms.CenterCrop(image_size),
             transforms.ToTensor(),
             normalize,
         ])
