@@ -17,10 +17,9 @@ import subprocess
 import sys
 
 import pytest
-
 from nncf.torch import BKC_TORCH_VERSION
-from tests.torch.helpers import Command
 from tests.common.helpers import PROJECT_ROOT
+from tests.torch.helpers import Command
 
 TRANSFORMERS_COMMIT = "bff1c71e84e392af9625c345f9ea71f7b6d75fb3"
 INSTALL_PATH = PROJECT_ROOT.parent
@@ -148,11 +147,11 @@ class TestTransformers:
     @pytest.mark.dependency(depends=['install_trans'], name='glue_roberta_train')
     def test_glue_train(self, temp_folder):
         com_line = "examples/pytorch/text-classification/run_glue.py --model_name_or_path" \
-                   " roberta-large-mnli --task_name mnli --do_train " \
+                   " roberta-large-mnli --task_name mnli --do_train --train_file {}/glue/glue_data/MNLI/train.tsv" \
                    " --per_gpu_train_batch_size 4 --learning_rate 2e-5 --num_train_epochs 1.0 --max_seq_length 128 " \
                    "--output_dir {} --save_steps 200 --nncf_config" \
                    " nncf_roberta_config_mnli.json" \
-            .format(os.path.join(temp_folder["models"], "roberta_mnli"))
+            .format(DATASET_PATH, os.path.join(temp_folder["models"], "roberta_mnli"))
         runner = Command(create_command_line(com_line, self.VENV_ACTIVATE, self.PYTHON_EXECUTABLE,
                                              self.CUDA_VISIBLE_STRING), self.TRANSFORMERS_REPO_PATH)
         runner.run()
@@ -161,10 +160,11 @@ class TestTransformers:
     @pytest.mark.dependency(depends=['install_trans', 'glue_roberta_train'])
     def test_glue_eval(self, temp_folder):
         com_line = "examples/pytorch/text-classification/run_glue.py --model_name_or_path {output}" \
-                   " --task_name mnli --do_eval --learning_rate 2e-5" \
+                   " --task_name mnli --do_eval --validation_file {}/glue/glue_data/MNLI/dev_matched.tsv " \
+                   "--learning_rate 2e-5" \
                    " --num_train_epochs 1.0 --max_seq_length 128 --output_dir {output}" \
                    " --nncf_config nncf_roberta_config_mnli.json" \
-            .format(output=os.path.join(temp_folder["models"], "roberta_mnli"))
+            .format(DATASET_PATH, output=os.path.join(temp_folder["models"], "roberta_mnli"))
         runner = Command(create_command_line(com_line, self.VENV_ACTIVATE, self.PYTHON_EXECUTABLE,
                                              self.CUDA_VISIBLE_STRING), self.TRANSFORMERS_REPO_PATH)
         runner.run()
@@ -172,11 +172,11 @@ class TestTransformers:
     @pytest.mark.dependency(depends=['install_trans'], name='glue_distilbert_train')
     def test_glue_distilbert_train(self, temp_folder):
         com_line = "examples/pytorch/text-classification/run_glue.py --model_name_or_path" \
-                   " distilbert-base-uncased" \
+                   " distilbert-base-uncased --train_file {}/glue/glue_data/SST-2/train.tsv" \
                    " --task_name sst2 --do_train --max_seq_length 128 --per_gpu_train_batch_size 8" \
                    " --learning_rate 5e-5 --num_train_epochs 3.0" \
                    " --output_dir {} --save_steps 200 --nncf_config" \
-                   " nncf_distilbert_config_sst2.json".format(os.path.join(temp_folder["models"],
+                   " nncf_distilbert_config_sst2.json".format(DATASET_PATH, os.path.join(temp_folder["models"],
                                                                                          "distilbert_output"))
         runner = Command(create_command_line(com_line, self.VENV_ACTIVATE, self.PYTHON_EXECUTABLE,
                                              self.CUDA_VISIBLE_STRING), self.TRANSFORMERS_REPO_PATH)
@@ -187,9 +187,9 @@ class TestTransformers:
     def test_glue_distilbert_eval(self, temp_folder):
         com_line = "examples/pytorch/text-classification/run_glue.py --model_name_or_path {output}" \
                    " --task_name sst2 --do_eval --max_seq_length 128" \
-                   " --output_dir {output} " \
+                   " --output_dir {output} --validation_file {}/glue/glue_data/SST-2/test.tsv" \
                    " --nncf_config nncf_distilbert_config_sst2.json" \
-            .format(output=os.path.join(temp_folder["models"], "distilbert_output"))
+            .format(DATASET_PATH, output=os.path.join(temp_folder["models"], "distilbert_output"))
         runner = Command(create_command_line(com_line, self.VENV_ACTIVATE, self.PYTHON_EXECUTABLE,
                                              self.CUDA_VISIBLE_STRING), self.TRANSFORMERS_REPO_PATH)
         runner.run()
