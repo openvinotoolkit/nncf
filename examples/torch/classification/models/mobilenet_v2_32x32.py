@@ -14,7 +14,7 @@ from typing import Callable
 from typing import List
 from typing import Optional
 
-import torch.nn as nn
+from torch import nn
 from torch import Tensor
 
 

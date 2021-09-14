@@ -16,8 +16,8 @@ import os.path as osp
 import time
 
 import torch
-import torch.backends.cudnn as cudnn
-import torch.nn as nn
+from torch.backends import cudnn
+from torch import nn
 import torch.nn.parallel
 import torch.optim
 import torch.utils.data

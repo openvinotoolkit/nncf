@@ -14,7 +14,7 @@
 # ENet implementation from:
 # https://github.com/davidtvs/PyTorch-ENet
 
-import torch.nn as nn
+from torch import nn
 import torch
 
 from examples.torch.common.example_logger import logger

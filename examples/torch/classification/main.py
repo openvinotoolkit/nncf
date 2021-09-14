@@ -21,15 +21,15 @@ from shutil import copyfile
 from typing import Any
 
 import torch
-import torch.backends.cudnn as cudnn
-import torch.nn as nn
+from torch.backends import cudnn
+from torch import nn
 import torch.nn.parallel
 import torch.optim
 import torch.utils.data
 import torch.utils.data.distributed
-import torchvision.datasets as datasets
-import torchvision.models as models
-import torchvision.transforms as transforms
+from torchvision import datasets
+from torchvision import models
+from torchvision import transforms
 from torch.nn.modules.loss import _Loss
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torchvision.datasets import CIFAR10
@@ -79,7 +79,7 @@ from nncf.torch.structures import ExecutionParameters
 from nncf.torch.utils import is_main_process
 from nncf.torch.utils import safe_thread_call
 
-model_names = sorted(name for name in models.__dict__
+model_names = sorted(name for name in models.__dict__.items()
                      if name.islower() and not name.startswith("__")
                      and callable(models.__dict__[name]))
 

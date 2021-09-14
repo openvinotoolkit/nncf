@@ -18,7 +18,7 @@ import sys
 import cv2
 import numpy as np
 import torch
-import torch.utils.data as data
+from torch.utils import data
 
 if sys.version_info[0] == 2:
     import defusedxml.cElementTree as ET
@@ -115,12 +115,13 @@ class VOCDetection(data.Dataset):
         self.return_image_info = return_image_info
         self._annopath = os.path.join('%s', 'Annotations', '%s.xml')
         self._imgpath = os.path.join('%s', 'JPEGImages', '%s.jpg')
-        self.ids = list()
+        self.ids = []
 
         for (year, name) in self.image_set:
             rootpath = os.path.join(self.root, 'VOC' + year)
-            for line in open(os.path.join(rootpath, 'ImageSets', 'Main', name + '.txt')):
-                self.ids.append((rootpath, line.strip()))
+            with open(os.path.join(rootpath, 'ImageSets', 'Main', name + '.txt'), encoding='utf8') as lines:
+                for line in lines:
+                    self.ids.append((rootpath, line.strip()))
 
     def __getitem__(self, index):
         """
