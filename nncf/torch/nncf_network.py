@@ -24,6 +24,8 @@ from typing import TypeVar
 import functools
 import torch
 from copy import deepcopy
+
+from nncf.torch.dynamic_graph.io_handling import replicate_all_tensors
 from torch import nn
 
 from nncf.common.graph.definitions import MODEL_INPUT_OP_NAME
@@ -239,11 +241,10 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
     def forward(self, *args, **kwargs):
         with self._compressed_context as ctx:  # type: TracingContext
             ctx.base_module_thread_local_replica = self
-            args, kwargs = replicate_same_tensors((args, kwargs))
+            args, kwargs = replicate_all_tensors((args, kwargs))
             if not self._in_user_dummy_forward:
                 # If a user supplies own dummy forward, he is responsible for
                 # correctly wrapping inputs inside it as well.
-                args, kwargs = self._strip_traced_tensors(args, kwargs)
                 args, kwargs = self._wrap_inputs_fn(args, kwargs)
             retval = self.get_nncf_wrapped_model()(*args, **kwargs)
             retval = replicate_same_tensors(retval)

@@ -53,6 +53,19 @@ def replicate_same_tensors(obj: Any) -> Any:
     return obj
 
 
+def replicate_all_tensors(obj: Any) -> Any:
+    """
+    Required to handle the situation when multiple references to one and the
+    same tensor are present in the input. If tensor replication is not done, then
+    at runtime one and the same tensor could be wrapped by input/output wrappers twice,
+    which will disrupt the traced graph structure and possibly hook calls.
+    """
+    def replicate_fn(tensor: torch.Tensor) -> torch.Tensor:
+        return tensor.clone()
+    obj = objwalk(obj, is_tensor, replicate_fn)
+    return obj
+
+
 class InputInfoWrapManager:
     INPUTS_MISMATCH_WARNING_TEXT = "Compression with regards to this input may occur incorrectly. Make sure " \
                                    "you call the compressed model with inputs that correspond to what NNCF was " \
