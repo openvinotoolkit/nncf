@@ -341,7 +341,7 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
         class NotFound:
             pass
 
-        def get_NNCFNetwork_attr(self, name):
+        def get_nncf_network_attr(self, name):
             if name in self.__dict__:
                 return self.__dict__[name]
             return NotFound
@@ -360,7 +360,7 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
         def get_nn_module_attr(self, name):
             return super().__getattr__(name)
 
-        attr = get_NNCFNetwork_attr(self, name)
+        attr = get_nncf_network_attr(self, name)
         if attr != NotFound:
             return attr
         attr = get_nncf_module_attr(self, name)
