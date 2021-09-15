@@ -118,6 +118,7 @@ class FilterPruningController(BasePruningAlgoController):
                  prunable_types: List[str],
                  pruned_module_groups: Clusterization[PrunedModuleInfo],
                  config: NNCFConfig):
+        #pylint:disable=too-many-statements
         super().__init__(target_model, prunable_types, pruned_module_groups, config)
         params = self.pruning_config.get('params', {})
         self.frozen = False
@@ -140,6 +141,10 @@ class FilterPruningController(BasePruningAlgoController):
         self.current_flops = self.full_flops
         self.full_params_num = sum(self.nodes_params_num.values())
         self.current_params_num = self.full_params_num
+        self._pruned_layers_num = len(self.pruned_module_groups_info.get_all_nodes())
+        self._prunable_layers_num = len(self._model.get_graph().get_nodes_by_types(self._prunable_types))
+        self._minimum_possible_flops, self._minimum_possible_params =\
+            self._calculate_flops_and_weights_in_uniformly_pruned_model(1.)
 
         self.weights_normalizer = tensor_l2_normalizer  # for all weights in common case
         self.filter_importance = FILTER_IMPORTANCE_FUNCTIONS.get(params.get('filter_importance', 'L2'))
@@ -224,7 +229,9 @@ class FilterPruningController(BasePruningAlgoController):
         target_pruning_level = self.scheduler.current_pruning_level
 
         stats = FilterPruningStatistics(model_statistics, self.full_flops, self.current_flops,
-                                        self.full_params_num, self.current_params_num, target_pruning_level)
+                                        self.full_params_num, self.current_params_num, target_pruning_level,
+                                        self._pruned_layers_num, self._prunable_layers_num,
+                                        self._minimum_possible_flops, self._minimum_possible_params)
 
         nncf_stats = NNCFStatistics()
         nncf_stats.register('filter_pruning', stats)
