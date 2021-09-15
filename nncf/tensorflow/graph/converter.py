@@ -268,7 +268,8 @@ class TFModelConverter(ABC):
     def _get_layer_dtype(layer_config: Dict) -> str:
         dtype = layer_config['config']['dtype']
         if layer_config['class_name'] == 'TensorFlowOpLayer':
-            dtype = layer_config['config']['node_def'].get('attr', {}).get('T', {}).get('type') or dtype
+            attrs = layer_config['config']['node_def'].get('attr', {})
+            dtype = attrs.get('DstT', {}).get('type') or attrs.get('T', {}).get('type') or dtype
         return dtype
 
     @staticmethod
