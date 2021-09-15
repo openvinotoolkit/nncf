@@ -79,6 +79,7 @@ class TestTransformers:
         pip_runner = CachedPipRunner(self.VENV_ACTIVATE, pip_cache_dir)
         pip_runner.run_pip("uninstall setuptools -y")
         pip_runner.run_pip("install setuptools")
+        pip_runner.run_pip("install onnx")
         pip_runner.run_pip("install torch=={}".format(BKC_TORCH_VERSION))
         subprocess.run("git clone https://github.com/huggingface/transformers {}".format(self.TRANSFORMERS_REPO_PATH),
                        check=True, shell=True)
@@ -220,9 +221,11 @@ class TestTransformers:
 
     @pytest.mark.dependency(depends=['install_trans'])
     def test_convert_to_onnx(self, temp_folder):
-        com_line = "examples/pytorch/question-answering/run_qa.py --model_name_or_path {output}" \
+        com_line = "examples/pytorch/question-answering/run_qa.py --model_name_or_path {output} " \
+                   " --validation_file {}/squad/dev-v1.1.json" \
                    " --output_dir {output}" \
-                   " --to_onnx {output}/model.onnx".format(output=os.path.join(temp_folder["models"], "squad"))
+                   " --to_onnx {output}/model.onnx".format(DATASET_PATH,
+                                                           output=os.path.join(temp_folder["models"], "squad"))
         runner = Command(create_command_line(com_line, self.VENV_ACTIVATE, self.PYTHON_EXECUTABLE,
                                              self.CUDA_VISIBLE_STRING), self.TRANSFORMERS_REPO_PATH)
         runner.run()

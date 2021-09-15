@@ -1,26 +1,26 @@
-From 5be86242c6eac0326d7255c950bc4c85542ed249 Mon Sep 17 00:00:00 2001
+From 52b197d7bdf3f4ec2abbc64744634b3de251c34c Mon Sep 17 00:00:00 2001
 From: Vasily Shamporov <vasily.shamporov@intel.com>
 Date: Mon, 2 Aug 2021 17:46:48 +0300
 Subject: [PATCH] Modifications for NNCF usage
 
 ---
- examples/pytorch/language-modeling/run_clm.py | 75 +++++++++++---
- examples/pytorch/question-answering/run_qa.py | 63 ++++++++++--
- .../pytorch/text-classification/run_glue.py   | 99 ++++++++++++++++---
- .../pytorch/text-classification/run_xnli.py   | 69 +++++++++++--
- nncf_bert_config_squad.json                   | 44 +++++++++
- ...config_squad_magnitude_sparsity_cubic.json | 31 ++++++
- nncf_bert_config_xnli.json                    | 36 +++++++
- nncf_distilbert_config_sst2.json              | 33 +++++++
- nncf_gpt2_config_wikitext_hw_config.json      | 58 +++++++++++
- nncf_mobilebert_config_squad_int8.json        | 46 +++++++++
- nncf_roberta_config_mnli.json                 | 36 +++++++
- src/transformers/file_utils.py                |  1 +
- src/transformers/modeling_utils.py            | 29 +++++-
- src/transformers/trainer.py                   | 72 ++++++++++++--
- src/transformers/trainer_callback.py          |  2 +
- src/transformers/training_args.py             |  6 ++
- 16 files changed, 651 insertions(+), 49 deletions(-)
+ examples/pytorch/language-modeling/run_clm.py |  75 +++++++++---
+ examples/pytorch/question-answering/run_qa.py |  63 +++++++++--
+ .../pytorch/text-classification/run_glue.py   | 107 ++++++++++++++++--
+ .../pytorch/text-classification/run_xnli.py   |  69 +++++++++--
+ nncf_bert_config_squad.json                   |  44 +++++++
+ ...config_squad_magnitude_sparsity_cubic.json |  31 +++++
+ nncf_bert_config_xnli.json                    |  36 ++++++
+ nncf_distilbert_config_sst2.json              |  33 ++++++
+ nncf_gpt2_config_wikitext_hw_config.json      |  58 ++++++++++
+ nncf_mobilebert_config_squad_int8.json        |  46 ++++++++
+ nncf_roberta_config_mnli.json                 |  36 ++++++
+ src/transformers/file_utils.py                |   1 +
+ src/transformers/modeling_utils.py            |  29 ++++-
+ src/transformers/trainer.py                   |  72 +++++++++++-
+ src/transformers/trainer_callback.py          |   2 +
+ src/transformers/training_args.py             |   6 +
+ 16 files changed, 659 insertions(+), 49 deletions(-)
  create mode 100644 nncf_bert_config_squad.json
  create mode 100644 nncf_bert_config_squad_magnitude_sparsity_cubic.json
  create mode 100644 nncf_bert_config_xnli.json
@@ -253,7 +253,7 @@ index b8559bb72..d894142d2 100755
  
      # Training
 diff --git a/examples/pytorch/text-classification/run_glue.py b/examples/pytorch/text-classification/run_glue.py
-index 6e66af923..4a610f936 100755
+index 6e66af923..2f31ed532 100755
 --- a/examples/pytorch/text-classification/run_glue.py
 +++ b/examples/pytorch/text-classification/run_glue.py
 @@ -28,6 +28,10 @@ import numpy as np
@@ -316,7 +316,7 @@ index 6e66af923..4a610f936 100755
  
      if data_args.max_seq_length > tokenizer.model_max_length:
          logger.warning(
-@@ -414,6 +411,79 @@ def main():
+@@ -414,6 +411,87 @@ def main():
          if data_args.max_train_samples is not None:
              train_dataset = train_dataset.select(range(data_args.max_train_samples))
  
@@ -337,7 +337,6 @@ index 6e66af923..4a610f936 100755
 +
 +            class SST2InitializingDataLoader(PTInitializingDataLoader):
 +                def get_inputs(self, dataloader_output):
-+                    # Filtering the "idx" field of SST-2 which is unused in DistilBERT
 +                    return (), {
 +                        "labels": dataloader_output["labels"],
 +                        "attention_mask": dataloader_output["attention_mask"],
@@ -346,7 +345,6 @@ index 6e66af923..4a610f936 100755
 +
 +            class MRPCInitializingDataLoader(PTInitializingDataLoader):
 +                def get_inputs(self, dataloader_output):
-+                    # Filtering the "idx" field of SST-2 which is unused in DistilBERT
 +                    return (), {
 +                        "labels": dataloader_output["labels"],
 +                        "attention_mask": dataloader_output["attention_mask"],
@@ -354,10 +352,20 @@ index 6e66af923..4a610f936 100755
 +                        "token_type_ids": dataloader_output["token_type_ids"]
 +                    }
 +
++            class MNLIInitializingDataLoader(PTInitializingDataLoader):
++                def get_inputs(self, dataloader_output):
++                    return (), {
++                        "labels": dataloader_output["labels"],
++                        "attention_mask": dataloader_output["attention_mask"],
++                        "input_ids": dataloader_output["input_ids"]
++                    }
++
 +            if data_args.task_name == "sst-2":
 +                initializing_data_loader_cls = SST2InitializingDataLoader
 +            elif data_args.task_name == "mrpc":
 +                initializing_data_loader_cls = MRPCInitializingDataLoader
++            elif data_args.task_name == "mnli":
++                initializing_data_loader_cls = MNLIInitializingDataLoader
 +            initializing_data_loader = initializing_data_loader_cls(train_dataloader)
 +            nncf_config.register_extra_structs([QuantizationRangeInitArgs(initializing_data_loader),
 +                                                BNAdaptationInitArgs(initializing_data_loader)])
@@ -396,7 +404,7 @@ index 6e66af923..4a610f936 100755
      if training_args.do_eval:
          if "validation" not in raw_datasets and "validation_matched" not in raw_datasets:
              raise ValueError("--do_eval requires a validation dataset")
-@@ -471,8 +541,13 @@ def main():
+@@ -471,8 +549,13 @@ def main():
          compute_metrics=compute_metrics,
          tokenizer=tokenizer,
          data_collator=data_collator,
