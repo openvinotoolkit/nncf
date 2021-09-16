@@ -103,7 +103,7 @@ class PruningNodeSelector:
         for i, cluster in enumerate(special_ops_clusterization.get_all_clusters()):
             all_pruned_inputs = []
             pruned_inputs_idxs = set()
-            clusters_to_merge = list()
+            clusters_to_merge = []
 
             for node in cluster.elements:
                 sources = get_sources_of_node(node, graph, self._prune_operations)

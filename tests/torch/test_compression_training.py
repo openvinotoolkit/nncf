@@ -119,12 +119,14 @@ GLOBAL_CONFIG = {
 
 
 def update_compression_config_with_legr_save_load_params(nncf_config_path, tmp_path, save=True):
-    nncf_config = json.load(open(nncf_config_path, 'r'))
+    with open(nncf_config_path, 'r', encoding='utf8') as f:
+        nncf_config = json.load()
     updated_nncf_config = update_compression_algo_dict_with_legr_save_load_params(deepcopy(nncf_config), tmp_path, save)
     new_nncf_config_path = nncf_config_path
     if updated_nncf_config != nncf_config:
         new_nncf_config_path = os.path.join(tmp_path, os.path.basename(nncf_config_path))
-        json.dump(updated_nncf_config, open(str(new_nncf_config_path), 'w'))
+        with open(str(new_nncf_config_path), 'w', encoding='utf8') as f:
+            json.dump(updated_nncf_config, f)
     return new_nncf_config_path
 
 
@@ -136,7 +138,7 @@ def parse_best_acc1(tmp_path):
                 output_path = os.path.join(root, name)
 
     assert os.path.exists(output_path)
-    with open(output_path, "r") as f:
+    with open(output_path, "r", encoding='utf8') as f:
         for line in reversed(f.readlines()):
             if line != '\n':
                 matches = re.findall("\\d+\\.\\d+", line)
@@ -148,7 +150,7 @@ def parse_best_acc1(tmp_path):
 
 
 CONFIG_PARAMS = []
-for sample_type_ in GLOBAL_CONFIG:
+for sample_type_ in GLOBAL_CONFIG.items():
     datasets = GLOBAL_CONFIG[sample_type_]
     for dataset_name_ in datasets:
         dataset_path = datasets[dataset_name_].get('path', os.path.join(tempfile.gettempdir(), dataset_name_))
@@ -286,7 +288,7 @@ def test_compression_eval_trained(_params, tmp_path, case_common_dirs):
     runner.kwargs.update(env=env_with_cuda_reproducibility)
     runner.run(timeout=tc['timeout'])
 
-    with open(str(METRIC_FILE_PATH)) as metric_file:
+    with open(str(METRIC_FILE_PATH), encoding='utf8') as metric_file:
         metrics = json.load(metric_file)
     acc1 = metrics['Accuracy']
     assert torch.load(checkpoint_path)['best_acc1'] == approx(acc1, abs=tc['absolute_tolerance_eval'])

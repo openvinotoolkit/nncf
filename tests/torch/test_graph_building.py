@@ -20,7 +20,7 @@ from typing import Tuple
 
 import pytest
 import torch
-import torch.nn as nn
+from torch import nn
 import torch.nn.functional as F
 
 from nncf.torch import nncf_model_input

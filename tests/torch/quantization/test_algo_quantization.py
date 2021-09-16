@@ -15,7 +15,7 @@ from typing import List, Tuple
 
 import pytest
 import torch
-import torch.nn as nn
+from torch import nn
 import torch.nn.functional as F
 import torch.utils.data
 from torchvision.models import resnet50
@@ -212,7 +212,7 @@ def activation_quantizers_dumping_worker(current_gpu, config, tmp_path):
     _, qctrl = create_compressed_model_and_algo_for_test(model, config)
     path = get_path_to_keys(tmp_path, current_gpu)
     print(path)
-    with open(path, 'w') as f:
+    with open(path, 'w', encoding='utf8') as f:
         for aq_id in qctrl.non_weight_quantizers:
             f.writelines("%s\n" % str(aq_id))
 
@@ -230,10 +230,10 @@ def test_activation_quantizers_order_is_the_same__for_resnet50(tmp_path, runs_su
                                 args=(config, tmp_path),
                                 join=True)
 
-    with open(get_path_to_keys(tmp_path, 0), 'r') as f:
+    with open(get_path_to_keys(tmp_path, 0), 'r', encoding='utf8') as f:
         ref_list = f.readlines()
     for i in range(1, ngpus_per_node):
-        with open(get_path_to_keys(tmp_path, i), 'r') as f:
+        with open(get_path_to_keys(tmp_path, i), 'r', encoding='utf8') as f:
             curr_list = f.readlines()
             assert curr_list == ref_list
 

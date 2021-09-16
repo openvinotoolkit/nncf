@@ -15,7 +15,7 @@ from typing import Dict, List, Tuple, Optional
 
 import numpy as np
 import torch
-import torch.nn as nn
+from torch import nn
 from functools import partial
 
 from nncf.torch.dynamic_graph.context import no_nncf_trace

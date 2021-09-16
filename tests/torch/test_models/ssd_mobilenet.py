@@ -12,7 +12,7 @@
 """
 
 import torch
-import torch.nn as nn
+from torch import nn
 from examples.torch.common.sample_config import SampleConfig
 
 from examples.torch.object_detection.layers.modules.ssd_head import MultiOutputSequential, SSDDetectionOutput

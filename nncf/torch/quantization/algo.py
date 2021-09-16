@@ -374,11 +374,11 @@ class PropagationBasedQuantizerSetupGenerator(QuantizerSetupGeneratorBase):
         finalized_quantizer_setup = self._handle_quantize_inputs_option(finalized_quantizer_setup)
         return finalized_quantizer_setup
 
-    def _assign_qconfig_lists_to_modules(self, nodes_with_weights: List[NNCFNode]) -> Dict[NNCFNode,
+    def _assign_qconfig_lists_to_modules(self, weighted_nodes: List[NNCFNode]) -> Dict[NNCFNode,
                                                                                            List[QuantizerConfig]]:
         global_constraints = self.global_quantizer_constraints[QuantizerGroup.WEIGHTS]
         scope_overrides_dict = self._quantization_config.get("scope_overrides", {})
-        return assign_qconfig_lists_to_modules(nodes_with_weights,
+        return assign_qconfig_lists_to_modules(weighted_nodes,
                                                self._get_default_qconfig(),
                                                global_constraints,
                                                scope_overrides_dict,

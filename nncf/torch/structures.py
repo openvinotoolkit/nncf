@@ -13,7 +13,7 @@
 from typing import Callable, Any, Optional, Tuple
 
 import torch
-import torch.nn as nn
+from torch import nn
 from torch.nn.modules.loss import _Loss
 from torch.utils.data import DataLoader
 

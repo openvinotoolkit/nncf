@@ -231,14 +231,14 @@ class MeanPercentileStatisticCollector(OfflineTensorStatisticCollector):
 
     def _register_input(self, x: torch.Tensor):
         with no_nncf_trace():
-            for pct in self._all_pct_values:
+            for pct in self._all_pct_values.items():
                 for reduction_shape in self._reduction_shapes:
                     if reduction_shape not in self._all_pct_values[pct]:
                         self._all_pct_values[pct][reduction_shape] = deque(maxlen=self._window_size)
                     self._all_pct_values[pct][reduction_shape].append(percentile_reduce_like(x, reduction_shape, pct))
 
     def _reset(self):
-        for pct in self._all_pct_values:
+        for pct in self._all_pct_values.items():
             for rs in self._reduction_shapes:
                 self._all_pct_values[pct][rs].clear()
 
@@ -246,7 +246,7 @@ class MeanPercentileStatisticCollector(OfflineTensorStatisticCollector):
         retval = {}
         for rs in self._reduction_shapes:
             mean_percentile_values = {}
-            for pct in self._all_pct_values:
+            for pct in self._all_pct_values.items():
                 stacked_pct_vals = torch.stack(list(self._all_pct_values[pct][rs]))
                 mean_percentile_values[pct] = stacked_pct_vals.mean(dim=0).view(rs)
             retval[rs] = PercentileTensorStatistic(mean_percentile_values)

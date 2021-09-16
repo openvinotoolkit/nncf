@@ -179,7 +179,7 @@ def convert_to_argv(args):
 
 
 CONFIG_PARAMS = []
-for sample_type_ in GLOBAL_CONFIG:
+for sample_type_ in GLOBAL_CONFIG.items():
     datasets = GLOBAL_CONFIG[sample_type_]
     for dataset_name_ in datasets:
         dataset_path = datasets[dataset_name_].get('path', os.path.join(tempfile.gettempdir(), dataset_name_))
@@ -215,7 +215,7 @@ def get_config_name(config_path):
 
 def get_actual_acc(metrics_path):
     assert os.path.exists(metrics_path)
-    with open(metrics_path) as metrics_file:
+    with open(metrics_path, encoding='utf8') as metrics_file:
         metrics = json.load(metrics_file)
         actual_acc = metrics['Accuracy']
     return actual_acc
@@ -229,7 +229,7 @@ def _params(request, tmp_path_factory, dataset_dir, models_dir, weekly_tests):
     test_config, args, execution_arg, _ = request.param
     if dataset_dir:
         args['data'] =  os.path.join(dataset_dir, os.path.split(args['data'])[-1])
-    with open(args['config']) as config_file:
+    with open(args['config'], encoding='utf8') as config_file:
         config = json.load(config_file)
         if config.get('dataset') != 'imagenet2012' or config.get('dataset_type') != 'tfrecords':
             args['data'] += '_{}'.format(config.get('dataset_type', 'tfrecords'))

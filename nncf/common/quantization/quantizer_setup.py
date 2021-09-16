@@ -447,7 +447,7 @@ class MultiConfigQuantizerSetup(QuantizerSetupBase):
         if Counter(qp_id_vs_selected_qconfig_dict.keys()) != Counter(self.quantization_points.keys()):
             raise ValueError("The set of quantization points for a selection is inconsistent with quantization"
                              "points in the quantizer setup!")
-        for qp_id in self.quantization_points:
+        for qp_id in self.quantization_points.items():
             if strict:
                 retval.quantization_points[qp_id] = self.quantization_points[qp_id].select_qconfig(
                     qp_id_vs_selected_qconfig_dict[qp_id]

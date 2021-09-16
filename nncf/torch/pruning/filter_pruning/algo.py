@@ -155,7 +155,8 @@ class FilterPruningController(BasePruningAlgoController):
                 coeffs_path = params.get('load_ranking_coeffs_path')
                 nncf_logger.info('Loading ranking coefficients from file {}'.format(coeffs_path))
                 try:
-                    loaded_coeffs = json.load(open(coeffs_path, 'r'))
+                    with open(coeffs_path, 'r', encoding='utf8') as coeffs_file:
+                        loaded_coeffs = json.load(coeffs_file)
                 except (ValueError, FileNotFoundError) as err:
                     raise Exception('Can\'t load json with ranking coefficients. Please, check format of json file '
                                     'and path to the file.') from err
@@ -187,7 +188,8 @@ class FilterPruningController(BasePruningAlgoController):
         if params.get('save_ranking_coeffs_path'):
             nncf_logger.info(
                 'Saving ranking coefficients to the file {}'.format(params.get('save_ranking_coeffs_path')))
-            json.dump(self.ranking_coeffs, open(params.get('save_ranking_coeffs_path'), 'w'))
+            with open(params.get('save_ranking_coeffs_path'), 'w', encoding='utf8') as f:
+                json.dump(self.ranking_coeffs, f)
 
         self.set_pruning_rate(self.pruning_init)
         self._bn_adaptation = None
@@ -657,7 +659,7 @@ class FilterPruningController(BasePruningAlgoController):
         if self.prune_batch_norms:
             types_to_apply_mask.append('batch_norm')
 
-        pruned_node_modules = list()
+        pruned_node_modules = []
         for node in graph.get_all_nodes():
             if node.node_type not in types_to_apply_mask:
                 continue

@@ -124,9 +124,9 @@ class TestSotaCheckpoints:
         else:
             env["PYTHONPATH"] = str(PROJECT_ROOT)
 
-        result = subprocess.Popen(com_line, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                                  cwd=cwd, env=env)
-        exit_code = result.poll()
+        with subprocess.Popen(com_line, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                                  cwd=cwd, env=env) as result:
+            exit_code = result.poll()
 
         def process_line(decoded_line: str, error_lines: List):
             if re.search('Error|(No module named)', decoded_line):
@@ -188,7 +188,7 @@ class TestSotaCheckpoints:
 
     @staticmethod
     def write_error_in_csv(error_message, filename):
-        with open(f'{filename}.csv', 'w', newline='') as csvfile:
+        with open(f'{filename}.csv', 'w', newline='', encoding='utf8') as csvfile:
             fieldnames = ['model', 'launcher', 'device', 'dataset', 'tags', 'metric_name', 'metric_type',
                           'metric_value']
             writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
@@ -231,9 +231,9 @@ class TestSotaCheckpoints:
                             i = '-'
                         with tag('td'):
                             text(i)
-        f = open(path / 'results.html', 'w')
-        f.write(doc.getvalue())
-        f.close()
+        with open(path / 'results.html', 'w', encoding='utf8') as f:
+            f.write(doc.getvalue())
+
 
     @staticmethod
     def threshold_check(is_ok, diff_target, diff_fp32_min_=None, diff_fp32_max_=None, fp32_metric=None,
@@ -267,9 +267,9 @@ class TestSotaCheckpoints:
         for root, dirs, files in os.walk(per_model_metric_file_dump_path):
             for file in files:
                 metric_file_path = per_model_metric_file_dump_path / file
-                with open(str(metric_file_path)) as metric_file:
+                with open(str(metric_file_path), encoding='utf8') as metric_file:
                     metrics = json.load(metric_file)
-                model_name = str(file).split('.')[0]
+                model_name = str(file).split('.', maxsplit=1)[0]
                 metric_value[model_name] = metrics['Accuracy']
                 common_metrics_file_path = per_model_metric_file_dump_path / 'metrics.json'
                 if common_metrics_file_path.is_file():
@@ -277,18 +277,18 @@ class TestSotaCheckpoints:
                     data.update(metric_value)
                     common_metrics_file_path.write_text(json.dumps(data, indent=4), encoding='utf-8')
                 else:
-                    with open(str(common_metrics_file_path), 'w') as outfile:
+                    with open(str(common_metrics_file_path), 'w', encoding='utf8') as outfile:
                         json.dump(metric_value, outfile)
                 dirs.clear()
 
     @staticmethod
     def read_metric(metric_file_name: str):
-        with open(metric_file_name) as metric_file:
+        with open(metric_file_name, encoding='utf8') as metric_file:
             metrics = json.load(metric_file)
         return metrics['Accuracy']
 
-    sota_eval_config = json.load(open('{}/sota_checkpoints_eval.json'.format(os.path.join(TEST_ROOT, 'torch'))),
-                                 object_pairs_hook=OrderedDict)
+    with open('{}/sota_checkpoints_eval.json'.format(os.path.join(TEST_ROOT, 'torch')), encoding='utf8') as f:
+        sota_eval_config = json.load(f, object_pairs_hook=OrderedDict)
     for sample_type_ in sota_eval_config:
         datasets = sota_eval_config[sample_type_]
         for dataset_name in datasets:
@@ -385,7 +385,7 @@ class TestSotaCheckpoints:
             reference_metric_file_path = pytest.metrics_dump_path / \
                                          self.get_metric_file_name(eval_test_struct.reference_)
             if os.path.exists(reference_metric_file_path):
-                with open(str(reference_metric_file_path)) as ref_metric:
+                with open(str(reference_metric_file_path), encoding='utf8') as ref_metric:
                     metrics = json.load(ref_metric)
                 if metrics['Accuracy'] != 0:
                     fp32_metric = metrics['Accuracy']
@@ -433,7 +433,7 @@ class TestSotaCheckpoints:
         onnx_path = PROJECT_ROOT / 'onnx'
         q_dq_config_path = tmpdir / os.path.basename(eval_test_struct.config_name_)
 
-        with open(str(q_dq_config_path), 'w') as outfile:
+        with open(str(q_dq_config_path), 'w', encoding='utf8') as outfile:
             json.dump(self.q_dq_config(eval_test_struct.config_name_), outfile)
         if not os.path.exists(onnx_path):
             os.mkdir(onnx_path)
@@ -444,7 +444,7 @@ class TestSotaCheckpoints:
             if not os.path.exists(onnx_path / 'q_dq'):
                 os.mkdir(onnx_path / 'q_dq')
             onnx_name = str("q_dq/" + eval_test_struct.model_name_ + ".onnx")
-            with open(str(q_dq_config_path), 'w') as outfile:
+            with open(str(q_dq_config_path), 'w', encoding='utf8') as outfile:
                 json.dump(self.q_dq_config(eval_test_struct.config_name_), outfile)
             nncf_config_path = q_dq_config_path
         else:

@@ -214,7 +214,7 @@ class PTCompressionAlgorithmBuilder(BaseCompressionAlgorithmBuilder):
         As name of algorithm used the value set by decorator @Registry.register() or default one.
         :return: List of names of modules
         """
-        filtered_nncf_module_names_list = list()
+        filtered_nncf_module_names_list = []
         for module_cls in list(NNCF_MODULES_DICT) + list(NNCF_WRAPPED_USER_MODULES_DICT.values()):
             if self.name not in module_cls.ignored_algorithms:
                 filtered_nncf_module_names_list.append(module_cls.__name__)

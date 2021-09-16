@@ -54,7 +54,7 @@ class ConfigFactory:
         self.config_path = str(config_path)
 
     def serialize(self):
-        with open(self.config_path, 'w') as f:
+        with open(self.config_path, 'w', encoding='utf8') as f:
             json.dump(self.config, f)
         return self.config_path
 
@@ -120,7 +120,7 @@ DATASET_PATHS = {
     },
 }
 
-CONFIG_PARAMS = list()
+CONFIG_PARAMS = []
 for sample_type in SAMPLE_TYPES:
     for tpl in list(zip(CONFIGS[sample_type], DATASETS[sample_type], BATCHSIZE_PER_GPU[sample_type])):
         CONFIG_PARAMS.append((sample_type,) + tpl)

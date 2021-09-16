@@ -135,7 +135,7 @@ class TFModelTransformer(ModelTransformer):
 
     def _update_layer_mapping(self, src_layer_name: str, dst_layer_name: str):
         if src_layer_name in self._name_mapping.values():
-            for orig_layer_name in self._name_mapping:
+            for orig_layer_name in self._name_mapping.items():
                 if self._name_mapping[orig_layer_name] == src_layer_name:
                     self._name_mapping[orig_layer_name] = dst_layer_name
         else:

@@ -158,7 +158,7 @@ def patch_extension_build_function():
     """
     import torch.utils.cpp_extension
     try:
-        torch_version_numbers = torch.__version__.split('+')[0]
+        torch_version_numbers = torch.__version__.split('+', maxsplit=1)[0]
         split_torch_version = list(map(int, torch_version_numbers.split('.')))
     except ValueError as e:
         logger.warning('Skip applying a patch to building extension with a reason: '

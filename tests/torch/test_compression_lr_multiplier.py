@@ -439,7 +439,7 @@ def test_if_setting_multipliers_in_config_multiplies_grads_values(
     multipliers = get_multipliers_from_config(target_config)
     multipliers['regular'] = 1
 
-    for algo in ref_params:
+    for algo in ref_params.items():
         check_if_grads_are_multiplied(ref_params[algo], target_params[algo], multipliers[algo])
 
 
@@ -500,7 +500,7 @@ def test_if_setting_multipliers_in_config_affect_training_speed(
     multipliers = get_multipliers_from_config(target_config)
     multipliers['regular'] = 1
 
-    for algo in orig_params:
+    for algo in orig_params.items():
         check_if_zero_multiplier_freezes_training(orig_params[algo], target_params[algo], multipliers[algo])
 
 
