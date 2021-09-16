@@ -126,10 +126,7 @@ class FilterPruningController(BasePruningAlgoController):
         self.pruning_quota = 0.9
         self.normalize_weights = True
 
-        self._modules_in_channels = {}  # type: Dict[NNCFNodeName, int]
-        self._modules_out_channels = {}  # type: Dict[NNCFNodeName, int]
-        self._modules_in_shapes = {}  # type: Dict[NNCFNodeName, List[int]]
-        self._modules_out_shapes = {}  # type: Dict[NNCFNodeName, List[int]]
+        self._init_module_channels_and_shapes()
         self.pruning_quotas = {}
         self.nodes_flops = {}  # type: Dict[NNCFNodeName, int]
         self.nodes_params_num = {}  # type: Dict[NNCFNodeName, int]
@@ -170,7 +167,6 @@ class FilterPruningController(BasePruningAlgoController):
                 # Wrapping model for parallelization
                 distributed_wrapping_init_args = config.get_extra_struct(DistributedCallbacksArgs)
                 target_model = distributed_wrapping_init_args.wrap_model(target_model)
-
                 legr_init_args = config.get_extra_struct(LeGRInitArgs)
                 legr_params = params.get("legr_params", {})
                 if 'max_pruning' not in legr_params:
@@ -178,7 +174,6 @@ class FilterPruningController(BasePruningAlgoController):
                 self.legr = LeGR(self, target_model, legr_init_args, **legr_params)
                 self.ranking_coeffs = self.legr.train_global_ranking()
                 nncf_logger.info('Trained ranking coefficients = {}'.format(self.ranking_coeffs))
-
                 # Unwrapping parallelized model
                 target_model = distributed_wrapping_init_args.unwrap_model(target_model)
         else:
@@ -242,6 +237,12 @@ class FilterPruningController(BasePruningAlgoController):
 
     def step(self, next_step):
         self._apply_masks()
+
+    def _init_module_channels_and_shapes(self):
+        self._modules_in_channels = {}  # type: Dict[NNCFNodeName, int]
+        self._modules_out_channels = {}  # type: Dict[NNCFNodeName, int]
+        self._modules_in_shapes = {}  # type: Dict[NNCFNodeName, List[int]]
+        self._modules_out_shapes = {}  # type: Dict[NNCFNodeName, List[int]]
 
     def _init_pruned_modules_params(self):
         # 1. Init in/out channels for potentially prunable modules

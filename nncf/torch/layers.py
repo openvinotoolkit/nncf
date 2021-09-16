@@ -96,6 +96,7 @@ class NNCFConv2d(_NNCFModuleMixin, nn.Conv2d):
         proxy_weight = self.weight
         return self._conv_forward(input_, proxy_weight, proxy_padding_value)
 
+    # pylint: disable=W0237
     def _conv_forward(self, input_, weight, padding_value):
         self.get_padding_value_ref().data.fill_(padding_value.item())
         if self.padding_mode != 'zeros':
