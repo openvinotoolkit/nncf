@@ -45,7 +45,8 @@ def main():
 
     ir_weights = collect_IR_weights(os.path.join(args.output_dir, "IR"), model_xml, model_bin, args.num_layers)
 
-    config = json.load(open(args.config))
+    with open(args.config, encoding='utf8') as f:
+        config = json.load(f)
     torch_weights = collect_torch_weights(os.path.join(args.output_dir, "PTH"), config, args.num_layers)
 
     assert len(ir_weights) == len(torch_weights), '{} vs {}'.format(len(ir_weights), len(torch_weights))
