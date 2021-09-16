@@ -120,7 +120,7 @@ GLOBAL_CONFIG = {
 
 def update_compression_config_with_legr_save_load_params(nncf_config_path, tmp_path, save=True):
     with open(nncf_config_path, 'r', encoding='utf8') as f:
-        nncf_config = json.load()
+        nncf_config = json.load(f)
     updated_nncf_config = update_compression_algo_dict_with_legr_save_load_params(deepcopy(nncf_config), tmp_path, save)
     new_nncf_config_path = nncf_config_path
     if updated_nncf_config != nncf_config:
