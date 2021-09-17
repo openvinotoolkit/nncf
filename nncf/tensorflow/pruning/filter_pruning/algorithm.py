@@ -34,6 +34,8 @@ from nncf.common.pruning.utils import get_cluster_next_nodes
 from nncf.common.pruning.utils import get_conv_in_out_channels
 from nncf.common.pruning.utils import get_rounded_pruned_element_number
 from nncf.common.statistics import NNCFStatistics
+from nncf.common.pruning.statistics import PrunedModelTheoreticalBorderline
+from nncf.common.utils.debug import is_debug
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.common.schedulers import StubCompressionScheduler
 from nncf.common.accuracy_aware_training.training_loop import ADAPTIVE_COMPRESSION_CONTROLLERS
@@ -166,14 +168,19 @@ class FilterPruningController(BasePruningAlgoController):
         self._scheduler.current_pruning_level = 0.0
 
     def statistics(self, quickly_collected_only: bool = False) -> NNCFStatistics:
+        if not quickly_collected_only and is_debug():
+            stats = PrunedModelTheoreticalBorderline(
+                self._pruned_layers_num, self._prunable_layers_num, self._minimum_possible_flops,
+                self._minimum_possible_params, self.full_flops, self.full_params_num)
+
+            nncf_logger.debug(stats.to_str())
+
         model_statistics = self._calculate_pruned_model_stats()
         self._update_benchmark_statistics()
         target_pruning_level = self.scheduler.current_pruning_level
 
         stats = FilterPruningStatistics(model_statistics, self.full_flops, self.current_flops,
-                                        self.full_params_num, self.current_params_num, target_pruning_level,
-                                        self._pruned_layers_num, self._prunable_layers_num,
-                                        self._minimum_possible_flops, self._minimum_possible_params)
+                                        self.full_params_num, self.current_params_num, target_pruning_level)
 
         nncf_stats = NNCFStatistics()
         nncf_stats.register('filter_pruning', stats)

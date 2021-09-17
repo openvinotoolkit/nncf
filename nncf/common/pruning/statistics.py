@@ -93,11 +93,7 @@ class FilterPruningStatistics(Statistics):
                  current_flops: int,
                  full_params_num: int,
                  current_params_num: int,
-                 target_pruning_level: float,
-                 pruned_layers_num: int,
-                 prunable_layers_num: int,
-                 minimum_possible_flops: float,
-                 minimum_possible_params: float):
+                 target_pruning_level: float):
         """
         Initializes statistics of the filter pruning algorithm.
 
@@ -108,14 +104,6 @@ class FilterPruningStatistics(Statistics):
         :param current_params_num: Current number of weights.
         :param target_pruning_level: A target level of the pruning
             for the algorithm for the current epoch.
-        :param pruned_layers_num: number of layers which was actually
-            pruned.
-        :param prunable_layers_num: number of layers which have
-            prunable type.
-        :param minimum_possible_flops: number of flops for pruned
-            model with pruning rate = 1.
-        :param minimum_possible_params: number of params for pruned
-            model with pruning rate = 1.
         """
         self._giga = 1e9
         self._mega = 1e6
@@ -126,10 +114,6 @@ class FilterPruningStatistics(Statistics):
         self.full_params_num = full_params_num
         self.current_params_num = current_params_num
         self.target_pruning_level = target_pruning_level
-        self.pruned_layers_num = pruned_layers_num
-        self.prunable_layers_num = prunable_layers_num
-        self.minimum_possible_flops = minimum_possible_flops
-        self.minimum_possible_params = minimum_possible_params
 
     def to_str(self) -> str:
         algorithm_string = create_table(
@@ -141,6 +125,53 @@ class FilterPruningStatistics(Statistics):
                 ['MParams current / full', f'{self.current_params_num / self._mega:.3f} /'
                                            f' {self.full_params_num / self._mega:.3f}'],
                 ['A target level of the pruning for the algorithm for the current epoch', self.target_pruning_level],
+            ]
+        )
+
+        pretty_string = (
+            f'{self.model_statistics.to_str()}\n\n'
+            f'Statistics of the filter pruning algorithm:\n{algorithm_string}'
+        )
+        return pretty_string
+
+
+class PrunedModelTheoreticalBorderline(Statistics):
+    """
+    Contains theoretical borderline statistics of the filter pruning algorithm.
+    """
+
+    def __init__(self,
+                 pruned_layers_num: int,
+                 prunable_layers_num: int,
+                 minimum_possible_flops: float,
+                 minimum_possible_params: float,
+                 full_flops: int,
+                 full_params_num: int):
+        """
+        Initializes statistics of the filter pruning theoretical borderline.
+
+        :param pruned_layers_num: number of layers which was actually
+            pruned.
+        :param prunable_layers_num: number of layers which have
+            prunable type.
+        :param minimum_possible_flops: number of flops for pruned
+            model with pruning rate = 1.
+        :param minimum_possible_params: number of params for pruned
+            model with pruning rate = 1.
+        """
+        self._giga = 1e9
+        self._mega = 1e6
+        self.pruned_layers_num = pruned_layers_num
+        self.prunable_layers_num = prunable_layers_num
+        self.minimum_possible_flops = minimum_possible_flops
+        self.minimum_possible_params = minimum_possible_params
+        self.full_flops = full_flops
+        self.full_params_num = full_params_num
+
+    def to_str(self) -> str:
+        algorithm_string = create_table(
+            header=['Statistic\'s name', 'Value'],
+            rows=[
                 ['Pruned layers count / prunable layers count', f'{self.pruned_layers_num} /'
                                                                 f' {self.prunable_layers_num}'],
                 ['GFLOPS minimum possible after pruning / full', f'{self.minimum_possible_flops / self._giga:.3f} /'
@@ -151,7 +182,6 @@ class FilterPruningStatistics(Statistics):
         )
 
         pretty_string = (
-            f'{self.model_statistics.to_str()}\n\n'
-            f'Statistics of the filter pruning algorithm:\n{algorithm_string}'
+            f'Theoretical borderline of the filter pruning algorithm\nfor current model:\n{algorithm_string}'
         )
         return pretty_string

@@ -31,6 +31,7 @@ from nncf.common.pruning.clusterization import Clusterization
 from nncf.common.pruning.mask_propagation import MaskPropagationAlgorithm
 from nncf.common.pruning.schedulers import PRUNING_SCHEDULERS
 from nncf.common.pruning.statistics import FilterPruningStatistics
+from nncf.common.pruning.statistics import PrunedModelTheoreticalBorderline
 from nncf.common.pruning.statistics import PrunedLayerSummary
 from nncf.common.pruning.statistics import PrunedModelStatistics
 from nncf.common.pruning.utils import calculate_in_out_channels_in_uniformly_pruned_model
@@ -41,6 +42,7 @@ from nncf.common.pruning.utils import get_conv_in_out_channels
 from nncf.common.pruning.utils import get_rounded_pruned_element_number
 from nncf.common.schedulers import StubCompressionScheduler
 from nncf.common.statistics import NNCFStatistics
+from nncf.common.utils.debug import is_debug
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.config.extractors import extract_bn_adaptation_init_params
 from nncf.torch.algo_selector import PT_COMPRESSION_ALGORITHMS
@@ -214,6 +216,13 @@ class FilterPruningController(BasePruningAlgoController):
         minfo.operand.binary_filter_pruning_mask = mask
 
     def statistics(self, quickly_collected_only: bool = False) -> NNCFStatistics:
+        if not quickly_collected_only and is_debug():
+            stats = PrunedModelTheoreticalBorderline(
+                self._pruned_layers_num, self._prunable_layers_num, self._minimum_possible_flops,
+                self._minimum_possible_params, self.full_flops, self.full_params_num)
+
+            nncf_logger.debug(stats.to_str())
+
         pruned_layers_summary = {}
         for minfo in self.pruned_module_groups_info.get_all_nodes():
             layer_name = str(minfo.module_scope)
@@ -229,9 +238,7 @@ class FilterPruningController(BasePruningAlgoController):
         target_pruning_level = self.scheduler.current_pruning_level
 
         stats = FilterPruningStatistics(model_statistics, self.full_flops, self.current_flops,
-                                        self.full_params_num, self.current_params_num, target_pruning_level,
-                                        self._pruned_layers_num, self._prunable_layers_num,
-                                        self._minimum_possible_flops, self._minimum_possible_params)
+                                        self.full_params_num, self.current_params_num, target_pruning_level)
 
         nncf_stats = NNCFStatistics()
         nncf_stats.register('filter_pruning', stats)
