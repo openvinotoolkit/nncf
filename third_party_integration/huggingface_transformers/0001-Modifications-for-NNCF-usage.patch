@@ -1,4 +1,4 @@
-From 52b197d7bdf3f4ec2abbc64744634b3de251c34c Mon Sep 17 00:00:00 2001
+From f7062c168da6c81a40d272887f5319438bb2d65d Mon Sep 17 00:00:00 2001
 From: Vasily Shamporov <vasily.shamporov@intel.com>
 Date: Mon, 2 Aug 2021 17:46:48 +0300
 Subject: [PATCH] Modifications for NNCF usage
@@ -7,7 +7,7 @@ Subject: [PATCH] Modifications for NNCF usage
  examples/pytorch/language-modeling/run_clm.py |  75 +++++++++---
  examples/pytorch/question-answering/run_qa.py |  63 +++++++++--
  .../pytorch/text-classification/run_glue.py   | 107 ++++++++++++++++--
- .../pytorch/text-classification/run_xnli.py   |  69 +++++++++--
+ .../pytorch/text-classification/run_xnli.py   |  70 ++++++++++--
  nncf_bert_config_squad.json                   |  44 +++++++
  ...config_squad_magnitude_sparsity_cubic.json |  31 +++++
  nncf_bert_config_xnli.json                    |  36 ++++++
@@ -17,10 +17,10 @@ Subject: [PATCH] Modifications for NNCF usage
  nncf_roberta_config_mnli.json                 |  36 ++++++
  src/transformers/file_utils.py                |   1 +
  src/transformers/modeling_utils.py            |  29 ++++-
- src/transformers/trainer.py                   |  72 +++++++++++-
+ src/transformers/trainer.py                   |  75 ++++++++++--
  src/transformers/trainer_callback.py          |   2 +
  src/transformers/training_args.py             |   6 +
- 16 files changed, 659 insertions(+), 49 deletions(-)
+ 16 files changed, 662 insertions(+), 50 deletions(-)
  create mode 100644 nncf_bert_config_squad.json
  create mode 100644 nncf_bert_config_squad_magnitude_sparsity_cubic.json
  create mode 100644 nncf_bert_config_xnli.json
@@ -146,7 +146,7 @@ index 0c002deeb..f9e4f4171 100755
  
      # Training
 diff --git a/examples/pytorch/question-answering/run_qa.py b/examples/pytorch/question-answering/run_qa.py
-index b8559bb72..d894142d2 100755
+index b8559bb72..3b8b280c1 100755
 --- a/examples/pytorch/question-answering/run_qa.py
 +++ b/examples/pytorch/question-answering/run_qa.py
 @@ -25,6 +25,7 @@ from dataclasses import dataclass, field
@@ -238,7 +238,7 @@ index b8559bb72..d894142d2 100755
 +            compression_ctrl.export_model(training_args.to_onnx)
 +        else:
 +            model.to('cpu')
-+            dummy_tensor = torch.ones([1, config.n_positions], dtype=torch.long)
++            dummy_tensor = torch.ones([1, 384], dtype=torch.long)
 +            onnx.export(model, dummy_tensor, training_args.to_onnx)
 +
      # Initialize our Trainer
@@ -253,7 +253,7 @@ index b8559bb72..d894142d2 100755
  
      # Training
 diff --git a/examples/pytorch/text-classification/run_glue.py b/examples/pytorch/text-classification/run_glue.py
-index 6e66af923..2f31ed532 100755
+index 6e66af923..bfb9503f5 100755
 --- a/examples/pytorch/text-classification/run_glue.py
 +++ b/examples/pytorch/text-classification/run_glue.py
 @@ -28,6 +28,10 @@ import numpy as np
@@ -360,7 +360,7 @@ index 6e66af923..2f31ed532 100755
 +                        "input_ids": dataloader_output["input_ids"]
 +                    }
 +
-+            if data_args.task_name == "sst-2":
++            if data_args.task_name == "sst2":
 +                initializing_data_loader_cls = SST2InitializingDataLoader
 +            elif data_args.task_name == "mrpc":
 +                initializing_data_loader_cls = MRPCInitializingDataLoader
@@ -419,10 +419,10 @@ index 6e66af923..2f31ed532 100755
      if training_args.do_train:
          checkpoint = None
 diff --git a/examples/pytorch/text-classification/run_xnli.py b/examples/pytorch/text-classification/run_xnli.py
-index d7e5dfd83..f45eee787 100755
+index d7e5dfd83..6947317f8 100755
 --- a/examples/pytorch/text-classification/run_xnli.py
 +++ b/examples/pytorch/text-classification/run_xnli.py
-@@ -26,9 +26,14 @@ from typing import Optional
+@@ -26,9 +26,15 @@ from typing import Optional
  
  import datasets
  import numpy as np
@@ -432,12 +432,13 @@ index d7e5dfd83..f45eee787 100755
  import transformers
 +from nncf import NNCFConfig
 +from nncf.config.structures import QuantizationRangeInitArgs
++from nncf.torch import register_default_init_args
 +from nncf.torch.initialization import PTInitializingDataLoader
 +
  from transformers import (
      AutoConfig,
      AutoModelForSequenceClassification,
-@@ -41,6 +46,7 @@ from transformers import (
+@@ -41,6 +47,7 @@ from transformers import (
      default_data_collator,
      set_seed,
  )
@@ -445,7 +446,7 @@ index d7e5dfd83..f45eee787 100755
  from transformers.trainer_utils import get_last_checkpoint
  from transformers.utils import check_min_version
  from transformers.utils.versions import require_version
-@@ -250,14 +256,6 @@ def main():
+@@ -250,14 +257,6 @@ def main():
          revision=model_args.model_revision,
          use_auth_token=True if model_args.use_auth_token else None,
      )
@@ -460,7 +461,7 @@ index d7e5dfd83..f45eee787 100755
  
      # Preprocessing the datasets
      # Padding strategy
-@@ -331,6 +329,56 @@ def main():
+@@ -331,6 +330,56 @@ def main():
      else:
          data_collator = None
  
@@ -484,7 +485,7 @@ index d7e5dfd83..f45eee787 100755
 +                    return (), dataloader_output
 +
 +            initializing_data_loader = KwargBasedInitializingDataloader(train_dataloader)
-+            nncf_config.register_extra_structs([QuantizationRangeInitArgs(initializing_data_loader)])
++            nncf_config = register_default_init_args(nncf_config, initializing_data_loader)
 +
 +
 +    retval = AutoModelForSequenceClassification.from_pretrained(
@@ -517,7 +518,7 @@ index d7e5dfd83..f45eee787 100755
      # Initialize our Trainer
      trainer = Trainer(
          model=model,
-@@ -340,8 +388,13 @@ def main():
+@@ -340,8 +389,13 @@ def main():
          compute_metrics=compute_metrics,
          tokenizer=tokenizer,
          data_collator=data_collator,
@@ -954,7 +955,7 @@ index b34637b02..29ae259d6 100644
      """
      1D-convolutional layer as defined by Radford et al. for OpenAI GPT (and also used in GPT-2).
 diff --git a/src/transformers/trainer.py b/src/transformers/trainer.py
-index d6e0d51c4..1db6af40d 100755
+index d6e0d51c4..f7cd81faf 100755
 --- a/src/transformers/trainer.py
 +++ b/src/transformers/trainer.py
 @@ -30,6 +30,7 @@ from logging import StreamHandler
@@ -1042,16 +1043,23 @@ index d6e0d51c4..1db6af40d 100755
              model = nn.parallel.DistributedDataParallel(
                  model,
                  device_ids=[self.args.local_rank],
-@@ -1231,6 +1266,8 @@ class Trainer:
+@@ -1231,11 +1266,14 @@ class Trainer:
                      break
  
          for epoch in range(epochs_trained, num_train_epochs):
 +            if self.compression_ctrl is not None:
 +                self.compression_ctrl.scheduler.epoch_step()
++                print(self.compression_ctrl.statistics().to_str())
++                print(f"LOSS:{self.compression_ctrl.loss().item()}")
              if isinstance(train_dataloader, DataLoader) and isinstance(train_dataloader.sampler, DistributedSampler):
                  train_dataloader.sampler.set_epoch(epoch)
              elif isinstance(train_dataloader.dataset, IterableDatasetShard):
-@@ -1275,9 +1312,11 @@ class Trainer:
+                 train_dataloader.dataset.set_epoch(epoch)
+-
+             if is_torch_tpu_available():
+                 parallel_loader = pl.ParallelLoader(train_dataloader, [args.device]).per_device_loader(args.device)
+                 epoch_iterator = parallel_loader
+@@ -1275,9 +1313,11 @@ class Trainer:
                  ):
                      # Avoid unnecessary DDP synchronization since there will be no backward pass on this example.
                      with model.no_sync():
@@ -1065,7 +1073,7 @@ index d6e0d51c4..1db6af40d 100755
                  self.current_flos += float(self.floating_point_ops(inputs))
  
                  # Optimizer step for deepspeed must be called on every step regardless of the value of gradient_accumulation_steps
-@@ -1311,6 +1350,8 @@ class Trainer:
+@@ -1311,6 +1351,8 @@ class Trainer:
                              )
  
                      # Optimizer step
@@ -1074,7 +1082,7 @@ index d6e0d51c4..1db6af40d 100755
                      optimizer_was_run = True
                      if self.deepspeed:
                          pass  # called outside the loop
-@@ -1331,6 +1372,7 @@ class Trainer:
+@@ -1331,6 +1373,7 @@ class Trainer:
                      model.zero_grad()
                      self.state.global_step += 1
                      self.state.epoch = epoch + (step + 1) / steps_in_epoch
@@ -1082,7 +1090,7 @@ index d6e0d51c4..1db6af40d 100755
                      self.control = self.callback_handler.on_step_end(args, self.state, self.control)
  
                      self._maybe_log_save_evaluate(tr_loss, model, trial, epoch, ignore_keys_for_eval)
-@@ -1426,6 +1468,13 @@ class Trainer:
+@@ -1426,6 +1469,13 @@ class Trainer:
              logs["loss"] = round(tr_loss_scalar / (self.state.global_step - self._globalstep_last_logged), 4)
              logs["learning_rate"] = self._get_learning_rate()
  
@@ -1096,7 +1104,7 @@ index d6e0d51c4..1db6af40d 100755
              self._total_loss_scalar += tr_loss_scalar
              self._globalstep_last_logged = self.state.global_step
              self.store_flos()
-@@ -1779,6 +1828,10 @@ class Trainer:
+@@ -1779,6 +1829,10 @@ class Trainer:
              # deepspeed handles loss scaling by gradient_accumulation_steps in its `backward`
              loss = loss / self.args.gradient_accumulation_steps
  
@@ -1107,7 +1115,7 @@ index d6e0d51c4..1db6af40d 100755
          if self.use_amp:
              self.scaler.scale(loss).backward()
          elif self.use_apex:
-@@ -1917,13 +1970,20 @@ class Trainer:
+@@ -1917,13 +1971,20 @@ class Trainer:
          output_dir = output_dir if output_dir is not None else self.args.output_dir
          os.makedirs(output_dir, exist_ok=True)
          logger.info(f"Saving model checkpoint to {output_dir}")
