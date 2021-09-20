@@ -158,8 +158,9 @@ class ModelAnalyzer:
         """
         Propagating can_prune attribute in reversed topological order.
         This attribute depends on accept_pruned_input and can_prune attributes of output nodes.
-        Node can_prune is True if all outputs accept_pruned_input is True and all outputs
-        (except convs because conv can be pruned by input and output independently).
+        Node can_prune is True if all outputs accept_pruned_input is True and
+        all outputs can_prune is True except not depthwise convs because
+        such convs can be pruned by input and output independently.
         """
         reversed_sorted_nodes = reversed(self.graph.topological_sort())
         for node in reversed_sorted_nodes:
