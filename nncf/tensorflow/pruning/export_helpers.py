@@ -227,6 +227,32 @@ class TFElementwise(DefaultMetaOp):
         node.data['output_mask'] = input_masks[0]
 
 
+@TF_PRUNING_OPERATOR_METATYPES.register('reshape')
+class TFReshapeOps(DefaultMetaOp):
+    additional_types = ['Reshape']
+
+    @classmethod
+    def accept_pruned_input(cls, node: NNCFNode):
+        def _max_channels_dim(shape):
+            res = 0
+            for dim in shape:
+                if dim is not None:
+                    res = max(res, dim)
+            return res
+
+        input_shape = node.layer_attributes.input_shape
+        output_shape = node.layer_attributes.output_shape
+        # Check if this reshape is just squeeze or transpose
+        return _max_channels_dim(input_shape) == _max_channels_dim(output_shape)
+
+    @classmethod
+    def mask_propagation(cls, node: NNCFNode, graph: NNCFGraph):
+        if cls.accept_pruned_input(node):
+            identity_mask_propagation(node, graph)
+        else:
+            node.data['output_mask'] = None
+
+
 @TF_PRUNING_OPERATOR_METATYPES.register('stop_propagation_ops')
 class TFStopMaskForwardOps(DefaultMetaOp):
     additional_types = ['Dense', 'MatMul']
