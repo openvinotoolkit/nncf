@@ -63,8 +63,8 @@ class Unpickler(pickle.Unpickler):
             return getattr(builtins, class_name)
         if module_name == "collections" and class_name in Unpickler.safe_collections:
             return getattr(collections, class_name)
-        for allowed_module_name in Unpickler.allowed_classes.items():
-            if module_name == allowed_module_name and class_name in Unpickler.allowed_classes[allowed_module_name]:
+        for allowed_module_name, val in Unpickler.allowed_classes.items():
+            if module_name == allowed_module_name and class_name in val:
                 module = importlib.import_module(module_name)
                 return getattr(module, class_name)
 

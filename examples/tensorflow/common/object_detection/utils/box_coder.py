@@ -13,7 +13,6 @@
 
 from abc import ABCMeta
 from abc import abstractmethod
-from abc import abstractproperty
 
 import tensorflow as tf
 

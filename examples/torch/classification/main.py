@@ -79,9 +79,9 @@ from nncf.torch.structures import ExecutionParameters
 from nncf.torch.utils import is_main_process
 from nncf.torch.utils import safe_thread_call
 
-model_names = sorted(name for name in models.__dict__.items()
+model_names = sorted(name for name, val in models.__dict__.items()
                      if name.islower() and not name.startswith("__")
-                     and callable(models.__dict__[name]))
+                     and callable(val))
 
 
 def get_argument_parser():

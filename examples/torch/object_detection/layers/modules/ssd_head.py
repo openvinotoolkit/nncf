@@ -106,8 +106,8 @@ class MultiOutputSequential(nn.Sequential):
         super().__init__(*modules)
         self.outputs = [str(o) for o in outputs]
 
-    #pylint:disable=W0237
-    def forward(self, x):
+
+    def forward(self, x): #pylint:disable=W0237
         outputs = []
         for name, module in self._modules.items():
             x = module(x)
