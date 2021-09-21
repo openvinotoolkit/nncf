@@ -13,6 +13,7 @@
 from typing import Dict
 from typing import List
 from typing import Union
+from collections import Counter
 
 import tensorflow as tf
 
@@ -233,17 +234,14 @@ class TFReshapeOps(DefaultMetaOp):
 
     @classmethod
     def accept_pruned_input(cls, node: NNCFNode):
-        def _max_channels_dim(shape):
-            res = 0
-            for dim in shape:
-                if dim is not None:
-                    res = max(res, dim)
-            return res
+        def _filtered_counter(shape):
+            filtered = [dim for dim in shape if dim not in [None, 1]]
+            return Counter(filtered)
 
         input_shape = node.layer_attributes.input_shape
         output_shape = node.layer_attributes.output_shape
-        # Check if this reshape is just squeeze or transpose
-        return _max_channels_dim(input_shape) == _max_channels_dim(output_shape)
+        # Check if this reshape is just squeeze / expand or transpose
+        return _filtered_counter(input_shape) == _filtered_counter(output_shape)
 
     @classmethod
     def mask_propagation(cls, node: NNCFNode, graph: NNCFGraph):
