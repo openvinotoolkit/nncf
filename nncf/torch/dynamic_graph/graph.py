@@ -10,7 +10,7 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-
+from collections import Counter
 from typing import Dict
 from typing import List
 from typing import Optional
@@ -124,9 +124,14 @@ class OperationExecutionContext:
             DefaultTensorMetaComparator()]
         self.input_matcher = input_matcher if input_matcher else DefaultInputsMatcher()
 
-    def __eq__(self, other: 'OperationExecutionContext'):
-        return (self.op_address == other.op_address) and \
-               self.input_matcher(self.tensor_metas, other.tensor_metas, self.tm_comparators)
+    def __eq__(self, other):
+        return self.op_address == other.op_address and Counter(self.tensor_metas) == Counter(other.tensor_metas)
+
+    def matches_saved_inputs_from(self, other: 'OperationExecutionContext'):
+        # WARNING: not commutative
+        return self.op_address == other.op_address and self.input_matcher(other.tensor_metas,
+                                                                          self.tensor_metas,
+                                                                          self.tm_comparators)
 
     def __hash__(self):
         return hash((self.operator_name, tuple(self.scope_in_model), self.call_order,
@@ -196,7 +201,7 @@ class DefaultScopeNodeMatcher:
             -> Dict[str, DynamicGraphNode]:
         node_candidates = {}
         for nx_node_key, node in self._inputless_nodes.items():
-            if node.op_exec_context == op_exec_context:
+            if op_exec_context.matches_saved_inputs_from(node.op_exec_context):
                 node_candidates[nx_node_key] = node
         return node_candidates
 
@@ -209,7 +214,7 @@ class DefaultScopeNodeMatcher:
             creator_id = info.creator_id
             for successor_node_key in self._nx_graph.successors(self._node_id_to_key_dict[creator_id]):
                 successor_node = self._nx_graph.nodes[successor_node_key]
-                if successor_node[DynamicGraph.OP_EXEC_CONTEXT_NODE_ATTR] == op_exec_context:
+                if op_exec_context.matches_saved_inputs_from(successor_node[DynamicGraph.OP_EXEC_CONTEXT_NODE_ATTR]):
                     nx_node_candidates[successor_node_key] = successor_node
 
         node_candidates = {}  # type: Dict[str, DynamicGraphNode]
@@ -407,7 +412,7 @@ class IterationScopeNodeMatcher(DefaultScopeNodeMatcher):
         for iter_scope in iter_scopes:
             if iter_scope in self._first_iteration_nodes:
                 for name, node in self._first_iteration_nodes[iter_scope].items():
-                    if op_exec_context == node.op_exec_context:
+                    if op_exec_context.matches_saved_inputs_from(node.op_exec_context):
                         node_candidates[name] = node
                         break
                 if node_candidates:
