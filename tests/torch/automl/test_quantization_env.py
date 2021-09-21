@@ -26,7 +26,7 @@ from nncf.common.quantization.quantizer_setup import MultiConfigQuantizerSetup
 from tests.torch.helpers import create_ones_mock_dataloader, create_conv, BasicConvTestModel
 
 import torch
-import torch.nn as nn
+from torch import nn
 import numpy as np
 
 

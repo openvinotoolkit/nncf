@@ -179,11 +179,10 @@ def convert_to_argv(args):
 
 
 CONFIG_PARAMS = []
-for sample_type_ in GLOBAL_CONFIG.items():
-    datasets = GLOBAL_CONFIG[sample_type_]
-    for dataset_name_ in datasets:
-        dataset_path = datasets[dataset_name_].get('path', os.path.join(tempfile.gettempdir(), dataset_name_))
-        configs = datasets[dataset_name_].get('configs', {})
+for sample_type_, datasets in GLOBAL_CONFIG.items():
+    for dataset_name_, dataset in datasets.items():
+        dataset_path = dataset.get('path', os.path.join(tempfile.gettempdir(), dataset_name_))
+        configs = dataset.get('configs', {})
         for config_name in configs:
             config_params = configs[config_name]
             execution_args = config_params.get('execution_arg', [''])

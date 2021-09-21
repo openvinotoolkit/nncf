@@ -1,7 +1,7 @@
 import math
 
 import torch
-import torch.nn as nn
+from torch import nn
 import torch.nn.functional as F
 from nncf.torch.dynamic_graph.context import no_nncf_trace
 from torch.nn.parameter import Parameter
