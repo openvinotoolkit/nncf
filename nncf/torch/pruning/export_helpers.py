@@ -12,6 +12,7 @@
 """
 from typing import Union
 from typing import List
+from collections import Counter
 
 import torch
 
@@ -56,6 +57,7 @@ from nncf.torch.graph.operator_metatypes import (
     SoftmaxMetatype,
     SubMetatype,
     TanhMetatype,
+    ReshapeMetatype,
 )
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.torch.nncf_network import NNCFNetwork
@@ -141,6 +143,29 @@ class PTIdentityMaskForwardOps(PTDefaultMetaOp):
     @classmethod
     def mask_propagation(cls, node: NNCFNode, graph: NNCFGraph):
         identity_mask_propagation(node, graph)
+
+
+@PT_PRUNING_OPERATOR_METATYPES.register('reshape')
+class PTIdentityMaskForwardOps(PTDefaultMetaOp):
+    subtypes = [ReshapeMetatype]
+
+    @classmethod
+    def accept_pruned_input(cls, node: NNCFNode):
+        def _filtered_counter(shape):
+            filtered = [dim for dim in shape if dim not in [None, 1]]
+            return Counter(filtered)
+
+        input_shape = node.layer_attributes.input_shape
+        output_shape = node.layer_attributes.output_shape
+        # Check if this reshape is just squeeze / expand or transpose
+        return _filtered_counter(input_shape) == _filtered_counter(output_shape)
+
+    @classmethod
+    def mask_propagation(cls, node: NNCFNode, graph: NNCFGraph):
+        if cls.accept_pruned_input(node):
+            identity_mask_propagation(node, graph)
+        else:
+            node.data['output_mask'] = None
 
 
 @PT_PRUNING_OPERATOR_METATYPES.register('convolution')
@@ -467,9 +492,26 @@ class PTElementwise(PTDefaultMetaOp):
                              ' {}.'.format(node.data['key'], old_num_clannels, new_num_channels))
 
 
+@PT_PRUNING_OPERATOR_METATYPES.register('linear')
+class PTStopMaskForwardOps(PTDefaultMetaOp):
+    subtypes = [LinearMetatype]
+
+    @classmethod
+    def accept_pruned_input(cls, node: NNCFNode):
+        return True
+
+    @classmethod
+    def mask_propagation(cls, node: NNCFNode, graph: NNCFGraph):
+        input_masks = get_input_masks(node, graph)
+        output_mask = node.data.get('output_mask', None)
+
+        node.data['input_masks'] = input_masks
+        node.data['output_mask'] = output_mask
+
+
 @PT_PRUNING_OPERATOR_METATYPES.register('stop_propagation_ops')
 class PTStopMaskForwardOps(PTDefaultMetaOp):
-    subtypes = [MeanMetatype, MaxMetatype, MinMetatype, LinearMetatype, MatMulMetatype]
+    subtypes = [MeanMetatype, MaxMetatype, MinMetatype, MatMulMetatype]
 
     @classmethod
     def accept_pruned_input(cls, node: NNCFNode):

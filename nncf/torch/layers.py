@@ -237,6 +237,7 @@ NNCF_PRUNING_MODULES_DICT = {
     NNCFConv3d: nn.Conv3d,
     NNCFConvTranspose2d: nn.ConvTranspose2d,
     NNCFConvTranspose3d: nn.ConvTranspose3d,
+    NNCFLinear: nn.Linear,
 }
 NNCF_PRUNING_MODULES_MAP = {k.__name__: v.__name__ for k, v in NNCF_CONV_MODULES_DICT.items()}
 NNCF_PRUNING_MODULES = list(NNCF_CONV_MODULES_MAP.keys())

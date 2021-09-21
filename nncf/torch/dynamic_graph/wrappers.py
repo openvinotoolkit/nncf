@@ -28,6 +28,7 @@ from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
 from nncf.common.graph.layer_attributes import GenericWeightedLayerAttributes
 from nncf.common.graph.layer_attributes import GroupNormLayerAttributes
 from nncf.common.graph.layer_attributes import LinearLayerAttributes
+from nncf.common.graph.layer_attributes import ReshapeLayerAttributes
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.common.utils.debug import is_debug
 from nncf.torch.dynamic_graph.context import get_current_context
@@ -93,6 +94,14 @@ def wrap_operator(operator, operator_info: 'PatchedOperatorInfo'):
                     layer_attrs = _get_layer_attributes(curr_module, op_name)
                     if isinstance(curr_module, _NNCFModuleMixin):
                         ignored_algos = deepcopy(curr_module.ignored_algorithms)
+
+                if op_name in ["reshape", "view", "flatten", "squeeze", "unsqueeze"]:
+                    input_tensor = args[0]
+                    output_shape = args[1:]
+
+                    layer_attrs = ReshapeLayerAttributes(input_tensor.shape,
+                                                         output_shape)
+
 
                 ctx.register_operator_call(op_address.operator_name, op_address.scope_in_model)
                 op_input = OperatorInput(list(args), kwargs)
@@ -176,6 +185,9 @@ def _get_layer_attributes(module: TorchModule, operator_name: str) -> BaseLayerA
         return LinearLayerAttributes(weight_requires_grad=module.weight.requires_grad,
                                      in_features=module.in_features,
                                      out_features=module.out_features)
+
+
+
 
     if hasattr(module, 'weight'):
         return GenericWeightedLayerAttributes(weight_requires_grad=module.weight.requires_grad,
