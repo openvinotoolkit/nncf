@@ -70,13 +70,13 @@ class FirstInputsMatcher(InputsMatcher):
 
 
 class DefaultInputsMatcher(InputsMatcher):
-    def __call__(self, node_inputs: List[TensorMeta], real_inputs: List[TensorMeta],
+    def __call__(self, saved_inputs: List[TensorMeta], actual_inputs: List[TensorMeta],
                  tm_comparators: List[TensorMetaComparator]) -> bool:
-        if node_inputs is None and real_inputs:
+        if saved_inputs is None and actual_inputs:
             return False
 
         matched_with_unexpected_tensors = False
-        for saved_input, actual_input in zip(node_inputs, real_inputs):
+        for saved_input, actual_input in zip(saved_inputs, actual_inputs):
             if saved_input is None and actual_input is None:
                 continue
             if (saved_input is None) and (actual_input is not None):
@@ -96,7 +96,7 @@ class DefaultInputsMatcher(InputsMatcher):
         if matched_with_unexpected_tensors:
             nncf_logger.debug("Had to match a node to an op which has tensors at positions where there were no tensors "
                               "at graph building time:\nNode input metas: {}, but op input metas: {}".format(
-                node_inputs, real_inputs
+                saved_inputs, actual_inputs
             ))
         return True
 
