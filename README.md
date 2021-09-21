@@ -312,7 +312,7 @@ to find instruction and links to exact configuration files and final checkpoints
 
 |TensorFlow Model|<img width="110" height="1">Compression algorithm<img width="110" height="1">|Dataset|mAP (drop) %|
 | :---: | :---: | :---: | :---: |
-|MaskRCNN|INT8 (per-tensor for weights)|COCO2017|bbox: 37.12 (0.21)<br/>segm: 33.52 (0.04)|
+|MaskRCNN|INT8 (per-tensor for weights)|COCO2017|bbox: 37.14 (0.19)<br/>segm: 33.53 (0.03)|
 |MaskRCNN|Sparsity 50% (Magnitude)|COCO2017|bbox: 36.93 (0.40)<br/>segm: 33.23 (0.33)|
 
 ## Citing

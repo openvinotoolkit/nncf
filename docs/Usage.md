@@ -275,7 +275,7 @@ In order to properly instantiate the accuracy-aware training loop, the user has 
 ```
 {
     "accuracy_aware_training": {
-        "mode": adaptive_compression_level,
+        "mode": "adaptive_compression_level",
         "params": {
             "maximal_relative_accuracy_degradation": 1.0,
             "initial_training_phase_epochs": 100,

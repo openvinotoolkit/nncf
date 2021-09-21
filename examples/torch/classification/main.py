@@ -389,7 +389,7 @@ def create_datasets(config):
 
     input_info_list = create_input_infos(config)
     image_size = input_info_list[0].shape[-1]
-
+    size = int(image_size / 0.875)
     if dataset_config in ['cifar10', 'cifar100']:
         val_transform = transforms.Compose([
             transforms.ToTensor(),
@@ -401,8 +401,20 @@ def create_datasets(config):
             transforms.ToTensor(),
             normalize,
         ])
+    elif dataset_config in ['mock_32x32', 'mock_299x299']:
+        val_transform = transforms.Compose([
+            transforms.Resize(size),
+            transforms.CenterCrop(image_size),
+            transforms.ToTensor(),
+            normalize,
+        ])
+        train_transforms = transforms.Compose([
+            transforms.Resize(size),
+            transforms.CenterCrop(image_size),
+            transforms.ToTensor(),
+            normalize,
+        ])
     else:
-        size = int(image_size / 0.875)
         val_transform = transforms.Compose([
             transforms.Resize(size),
             transforms.CenterCrop(image_size),

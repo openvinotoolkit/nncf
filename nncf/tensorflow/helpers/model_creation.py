@@ -76,7 +76,7 @@ def create_compressed_model(model: tf.keras.Model,
     model = get_built_model(model, config)
     original_model_accuracy = None
 
-    if is_accuracy_aware_training(config) is not None:
+    if is_accuracy_aware_training(config):
         if config.has_extra_struct(ModelEvaluationArgs):
             evaluation_args = config.get_extra_struct(ModelEvaluationArgs)
             original_model_accuracy = evaluation_args.eval_fn(model)

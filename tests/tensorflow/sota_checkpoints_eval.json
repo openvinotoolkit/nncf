@@ -371,7 +371,7 @@
                 "mask_rcnn_int8_w_sym_t_half_a_sym_t": {
                     "config": "examples/tensorflow/segmentation/configs/quantization/mask_rcnn_coco_int8.json",
                     "reference": "mask_rcnn_baseline",
-                    "target": 37.12,
+                    "target": 37.14,
                     "resume": "mask_rcnn_int8_w_sym_t_half_a_sym_t",
                     "metric_type": "mAP",
                     "model_description": "mask_rcnn_int8_w_sym_t_half_a_sym_t",
