@@ -28,11 +28,13 @@ from nncf.common.graph import NNCFNodeName
 from nncf.common.graph import OperatorMetatype
 from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
 from nncf.common.graph.layer_attributes import ReshapeLayerAttributes
+from nncf.common.graph.layer_attributes import LinearLayerAttributes
 from nncf.common.graph.layer_attributes import Dtype
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.tensorflow.graph.metatypes.common import DECONV_LAYER_METATYPES
 from nncf.tensorflow.graph.metatypes.common import DEPTHWISE_CONV_LAYER_METATYPES
 from nncf.tensorflow.graph.metatypes.common import GENERAL_CONV_LAYER_METATYPES
+from nncf.tensorflow.graph.metatypes.common import LINEAR_LAYER_METATYPES
 from nncf.tensorflow.graph.metatypes.common import RESHAPE_METATYPES
 from nncf.tensorflow.graph.metatypes.matcher import get_keras_layer_metatype
 from nncf.tensorflow.graph.metatypes.matcher import get_op_metatype
@@ -515,6 +517,8 @@ class FunctionalConverter(TFModelConverter):
                 layer_attributes = _get_conv_layer_attributes(self._get_layer(layer_name), is_depthwise=True)
             elif metatype in GENERAL_CONV_LAYER_METATYPES:
                 layer_attributes = _get_conv_layer_attributes(self._get_layer(layer_name), is_depthwise=False)
+            elif metatype in LINEAR_LAYER_METATYPES:
+                layer_attributes = _get_dense_layer_attributes(layer)
             elif metatype in RESHAPE_METATYPES:
                 layer_attributes = _get_reshape_layer_attributes(layer)
             else:
@@ -607,6 +611,8 @@ class SequentialConverter(TFModelConverter):
                 layer_attributes = _get_conv_layer_attributes(self._get_layer(layer_name), is_depthwise=True)
             elif layer_metatype in GENERAL_CONV_LAYER_METATYPES:
                 layer_attributes = _get_conv_layer_attributes(self._get_layer(layer_name), is_depthwise=False)
+            elif layer_metatype in LINEAR_LAYER_METATYPES:
+                layer_attributes = _get_dense_layer_attributes(model_layer)
             elif layer_metatype in RESHAPE_METATYPES:
                 layer_attributes = _get_reshape_layer_attributes(model_layer)
 
@@ -679,6 +685,15 @@ def _get_conv_layer_attributes(layer: tf.keras.layers.Layer, is_depthwise: bool 
                                       strides,
                                       groups, transpose=transpose,
                                       padding_values=([0, 0, 0, 0]))
+
+
+def _get_dense_layer_attributes(layer: tf.keras.layers.Layer):
+    channel_axis = get_input_channel_axis(layer)
+    in_features = layer.get_input_shape_at(0)[channel_axis]
+    out_features = layer.get_output_shape_at(0)[channel_axis]
+    return LinearLayerAttributes(layer.trainable,
+                                 in_features,
+                                 out_features)
 
 
 def _get_reshape_layer_attributes(layer: tf.keras.layers.Layer):

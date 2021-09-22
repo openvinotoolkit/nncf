@@ -1,0 +1,50 @@
+{
+    "model": "mobilenet_v3_small",
+    "dataset": "CIFAR100",
+    "batch_size" : 320,
+    "epochs": 100,
+    "input_info": {
+      "sample_size": [1, 3, 32, 32]
+    },
+    "optimizer": {
+        "type": "SGD",
+        "base_lr": 0.1,
+        "weight_decay": 1e-4,
+        "schedule_type": "multistep",
+        "steps": [
+            20,
+            40,
+            60,
+            80
+        ],
+        "optimizer_params":
+        {
+            "momentum": 0.9,
+            "nesterov": true
+        }
+    },
+     "compression": [
+       {
+          "algorithm": "filter_pruning",
+          "pruning_init": 0.05,
+          "params": {
+          "schedule": "exponential",
+              "prune_downsample_convs": true,
+              "pruning_target": 0.2,
+              "pruning_steps": 15,
+              "filter_importance": "geometric_median"
+          }
+        },
+       {
+         "algorithm": "quantization",
+          "initializer": {
+            "range": {
+              "num_init_samples": 0
+            },
+            "batchnorm_adaptation": {
+              "num_bn_adaptation_samples": 0
+            }
+          }
+       }
+     ]
+}

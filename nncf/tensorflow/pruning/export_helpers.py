@@ -251,9 +251,23 @@ class TFReshapeOps(DefaultMetaOp):
             node.data['output_mask'] = None
 
 
+@TF_PRUNING_OPERATOR_METATYPES.register('linear')
+class TFLinear(DefaultMetaOp):
+    additional_types = ['Dense']
+
+    @classmethod
+    def accept_pruned_input(cls, node: NNCFNode):
+        return True
+
+    @classmethod
+    def mask_propagation(cls, node: NNCFNode, graph: NNCFGraph):
+        output_mask = node.data.get('output_mask', None)
+        node.data['output_mask'] = output_mask
+
+
 @TF_PRUNING_OPERATOR_METATYPES.register('stop_propagation_ops')
 class TFStopMaskForwardOps(DefaultMetaOp):
-    additional_types = ['Dense', 'MatMul']
+    additional_types = ['MatMul']
 
     @classmethod
     def accept_pruned_input(cls, node: NNCFNode):

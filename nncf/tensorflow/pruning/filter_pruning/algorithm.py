@@ -53,6 +53,7 @@ from nncf.tensorflow.pruning.base_algorithm import BasePruningAlgoController
 from nncf.tensorflow.pruning.base_algorithm import PrunedLayerInfo
 from nncf.tensorflow.pruning.export_helpers import TF_PRUNING_OPERATOR_METATYPES
 from nncf.tensorflow.pruning.export_helpers import TFConvolution
+from nncf.tensorflow.pruning.export_helpers import TFLinear
 from nncf.tensorflow.pruning.export_helpers import TFElementwise
 from nncf.tensorflow.pruning.export_helpers import TFTransposeConvolution
 from nncf.tensorflow.pruning.filter_pruning.functions import calculate_binary_mask
@@ -85,7 +86,7 @@ class FilterPruningBuilder(BasePruningAlgoBuilder):
         return layer.__class__.__name__ in self._prunable_types
 
     def _get_op_types_of_pruned_layers(self) -> List[str]:
-        return [op_name for meta_op in [TFConvolution, TFTransposeConvolution]
+        return [op_name for meta_op in [TFConvolution, TFTransposeConvolution, TFLinear]
                 for op_name in meta_op.get_all_op_aliases()]
 
     def _get_types_of_grouping_ops(self) -> List[str]:
