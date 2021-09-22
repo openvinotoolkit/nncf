@@ -141,30 +141,32 @@ class PrunedModelTheoreticalBorderline(Statistics):
     """
 
     def __init__(self,
-                 pruned_layers_num: int,
-                 prunable_layers_num: int,
-                 minimum_possible_flops: float,
-                 minimum_possible_params: float,
+                 num_pruned_layers: int,
+                 num_prunable_layers: int,
+                 max_prunable_flops: float,
+                 max_prunable_params: float,
                  full_flops: int,
                  full_params_num: int):
         """
         Initializes statistics of the filter pruning theoretical borderline.
 
-        :param pruned_layers_num: number of layers which was actually
+        :param num_pruned_layers: number of layers which was actually
             pruned.
-        :param prunable_layers_num: number of layers which have
+        :param num_prunable_layers: number of layers which have
             prunable type.
-        :param minimum_possible_flops: number of flops for pruned
+        :param max_prunable_flops: number of flops for pruned
             model with pruning rate = 1.
-        :param minimum_possible_params: number of params for pruned
+        :param max_prunable_params: number of weights for pruned
             model with pruning rate = 1.
+        :param full_flops: Full FLOPS.
+        :param full_params_num: Full number of weights.
         """
         self._giga = 1e9
         self._mega = 1e6
-        self.pruned_layers_num = pruned_layers_num
-        self.prunable_layers_num = prunable_layers_num
-        self.minimum_possible_flops = minimum_possible_flops
-        self.minimum_possible_params = minimum_possible_params
+        self.pruned_layers_num = num_pruned_layers
+        self.prunable_layers_num = num_prunable_layers
+        self.minimum_possible_flops = max_prunable_flops
+        self.minimum_possible_params = max_prunable_params
         self.full_flops = full_flops
         self.full_params_num = full_params_num
 
