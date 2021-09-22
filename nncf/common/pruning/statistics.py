@@ -98,10 +98,10 @@ class FilterPruningStatistics(Statistics):
         Initializes statistics of the filter pruning algorithm.
 
         :param model_statistics: Statistics of the pruned model.
-        :param full_flops: Full FLOPS.
-        :param current_flops: Current FLOPS.
-        :param full_params_num: Full number of weights.
-        :param current_params_num: Current number of weights.
+        :param full_flops: The total amount of FLOPS in the model.
+        :param current_flops: Current amount of FLOPS in the model.
+        :param full_params_num: The total amount of weights in the model.
+        :param current_params_num: Current amount of weights in the model.
         :param target_pruning_level: A target level of the pruning
             for the algorithm for the current epoch.
         """
@@ -150,16 +150,16 @@ class PrunedModelTheoreticalBorderline(Statistics):
         """
         Initializes statistics of the filter pruning theoretical borderline.
 
-        :param num_pruned_layers: number of layers which was actually
+        :param num_pruned_layers: Number of layers which was actually
             pruned.
-        :param num_prunable_layers: number of layers which have
+        :param num_prunable_layers: Number of layers which have
             prunable type.
-        :param max_prunable_flops: number of flops for pruned
+        :param max_prunable_flops: Number of flops for pruned
             model with pruning rate = 1.
-        :param max_prunable_params: number of weights for pruned
+        :param max_prunable_params: Number of weights for pruned
             model with pruning rate = 1.
-        :param full_flops: Full FLOPS.
-        :param full_params_num: Full number of weights.
+        :param full_flops: The total amount of FLOPS in the model.
+        :param full_params_num: The total amount of weights in the model.
         """
         self._giga = 1e9
         self._mega = 1e6
