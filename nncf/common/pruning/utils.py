@@ -25,11 +25,20 @@ from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.graph import NNCFNodeName
 from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
+from nncf.common.graph.layer_attributes import LinearLayerAttributes
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.pruning.clusterization import Cluster
 from nncf.common.pruning.clusterization import Clusterization
 from nncf.common.pruning.structs import PrunedLayerInfoBase
 from nncf.common.utils.registry import Registry
+
+
+PRUNABLE_LAYERS_ATTRIBUTES = {
+    ConvolutionLayerAttributes: {'in_channels': 'in_channels',
+                                 'out_channels': 'out_channels'},
+    LinearLayerAttributes: {'in_channels': 'in_features',
+                            'out_channels': 'out_features'}
+}
 
 
 def is_grouped_conv(node: NNCFNode) -> bool:
@@ -196,11 +205,13 @@ def get_previous_convs(graph: NNCFGraph, nncf_node: NNCFNode,
     return sources
 
 
-def get_conv_in_out_channels(graph: NNCFGraph):
+def get_prunable_ops_in_out_channels(graph: NNCFGraph, pruning_types: List[str]):
     """
-    Collects the number of input and output channels for each convolution in the graph.
+    Collects the number of input and output channels for each prunable operation
+       in the graph.
 
     :param graph: NNCFGraph
+    :pruning_types: NNCFNodes prunable operations types list.
     :return Dictionary with the number of input channels to convolution layers:
             {node_name: input_channels_num}
             Dictionary with the number of output channels from convolution layers:
@@ -208,12 +219,14 @@ def get_conv_in_out_channels(graph: NNCFGraph):
     """
     in_channels, out_channels = {}, {}
     for node in graph.get_all_nodes():
-        if isinstance(node.layer_attributes, ConvolutionLayerAttributes):
+        if node.node_type in pruning_types:
             name = node.node_name
             if name in in_channels and name in out_channels:
                 continue
-            in_channels[name] = node.layer_attributes.in_channels
-            out_channels[name] = node.layer_attributes.out_channels
+
+            prunable_attrs = PRUNABLE_LAYERS_ATTRIBUTES[node.layer_attributes.__class__]
+            in_channels[name] = getattr(node.layer_attributes, prunable_attrs['in_channels'])
+            out_channels[name] = getattr(node.layer_attributes, prunable_attrs['out_channels'])
     return in_channels, out_channels
 
 
