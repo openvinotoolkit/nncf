@@ -83,7 +83,7 @@ class CustomTensorBoard(tf.keras.callbacks.TensorBoard):
         self.step = initial_step
         self._track_lr = track_lr
 
-    # pylint: disable=W0613
+    # pylint: disable=W0237
     def on_train_batch_begin(self,
                              epoch: int,
                              logs: MutableMapping[str, Any] = None) -> None:
