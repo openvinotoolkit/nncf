@@ -11,7 +11,7 @@
  limitations under the License.
 """
 
-import torch.nn as nn
+from torch import nn
 
 from nncf.torch.layers import NNCF_PADDING_VALUE_ATTR_NAME
 

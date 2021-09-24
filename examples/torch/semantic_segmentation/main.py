@@ -28,7 +28,7 @@ from examples.torch.common.argparser import parse_args
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 
 import examples.torch.semantic_segmentation.utils.data as data_utils
-import examples.torch.semantic_segmentation.utils.loss_funcs as loss_funcs
+from examples.torch.semantic_segmentation.utils import loss_funcs
 import examples.torch.semantic_segmentation.utils.transforms as JT
 from examples.torch.common.argparser import get_common_argument_parser
 from examples.torch.common.example_logger import logger

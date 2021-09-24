@@ -128,10 +128,7 @@ class FilterPruningController(BasePruningAlgoController):
         self.pruning_quota = 0.9
         self.normalize_weights = True
 
-        self._modules_in_channels = {}  # type: Dict[NNCFNodeName, int]
-        self._modules_out_channels = {}  # type: Dict[NNCFNodeName, int]
-        self._modules_in_shapes = {}  # type: Dict[NNCFNodeName, List[int]]
-        self._modules_out_shapes = {}  # type: Dict[NNCFNodeName, List[int]]
+        self._init_module_channels_and_shapes()
         self.pruning_quotas = {}
         self.nodes_flops = {}  # type: Dict[NNCFNodeName, int]
         self.nodes_params_num = {}  # type: Dict[NNCFNodeName, int]
@@ -157,7 +154,8 @@ class FilterPruningController(BasePruningAlgoController):
                 coeffs_path = params.get('load_ranking_coeffs_path')
                 nncf_logger.info('Loading ranking coefficients from file {}'.format(coeffs_path))
                 try:
-                    loaded_coeffs = json.load(open(coeffs_path, 'r'))
+                    with open(coeffs_path, 'r', encoding='utf8') as coeffs_file:
+                        loaded_coeffs = json.load(coeffs_file)
                 except (ValueError, FileNotFoundError) as err:
                     raise Exception('Can\'t load json with ranking coefficients. Please, check format of json file '
                                     'and path to the file.') from err
@@ -171,7 +169,6 @@ class FilterPruningController(BasePruningAlgoController):
                 # Wrapping model for parallelization
                 distributed_wrapping_init_args = config.get_extra_struct(DistributedCallbacksArgs)
                 target_model = distributed_wrapping_init_args.wrap_model(target_model)
-
                 legr_init_args = config.get_extra_struct(LeGRInitArgs)
                 legr_params = params.get("legr_params", {})
                 if 'max_pruning' not in legr_params:
@@ -179,7 +176,6 @@ class FilterPruningController(BasePruningAlgoController):
                 self.legr = LeGR(self, target_model, legr_init_args, **legr_params)
                 self.ranking_coeffs = self.legr.train_global_ranking()
                 nncf_logger.info('Trained ranking coefficients = {}'.format(self.ranking_coeffs))
-
                 # Unwrapping parallelized model
                 target_model = distributed_wrapping_init_args.unwrap_model(target_model)
         else:
@@ -189,7 +185,8 @@ class FilterPruningController(BasePruningAlgoController):
         if params.get('save_ranking_coeffs_path'):
             nncf_logger.info(
                 'Saving ranking coefficients to the file {}'.format(params.get('save_ranking_coeffs_path')))
-            json.dump(self.ranking_coeffs, open(params.get('save_ranking_coeffs_path'), 'w'))
+            with open(params.get('save_ranking_coeffs_path'), 'w', encoding='utf8') as f:
+                json.dump(self.ranking_coeffs, f)
 
         self.set_pruning_rate(self.pruning_init)
         self._bn_adaptation = None
@@ -242,6 +239,12 @@ class FilterPruningController(BasePruningAlgoController):
 
     def step(self, next_step):
         self._apply_masks()
+
+    def _init_module_channels_and_shapes(self):
+        self._modules_in_channels = {}  # type: Dict[NNCFNodeName, int]
+        self._modules_out_channels = {}  # type: Dict[NNCFNodeName, int]
+        self._modules_in_shapes = {}  # type: Dict[NNCFNodeName, List[int]]
+        self._modules_out_shapes = {}  # type: Dict[NNCFNodeName, List[int]]
 
     def _init_pruned_modules_params(self):
         # 1. Init in/out channels for potentially prunable modules
@@ -659,7 +662,7 @@ class FilterPruningController(BasePruningAlgoController):
         if self.prune_batch_norms:
             types_to_apply_mask.append('batch_norm')
 
-        pruned_node_modules = list()
+        pruned_node_modules = []
         for node in graph.get_all_nodes():
             if node.node_type not in types_to_apply_mask:
                 continue

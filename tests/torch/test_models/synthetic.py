@@ -88,8 +88,8 @@ class PoolUnPool(ModelWithDummyParameter):
         self.pool = nn.MaxPool3d(3, stride=2, return_indices=True)
         self.unpool = nn.MaxUnpool3d(3, stride=2)
 
-    def forward(self, input_):
-        output, indices = self.pool(input_)
+    def forward(self, x):
+        output, indices = self.pool(x)
         return self.unpool(output, indices)
 
 

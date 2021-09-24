@@ -13,7 +13,7 @@
 
 import os
 from collections import OrderedDict
-import torch.utils.data as data
+from torch.utils import data
 import examples.torch.semantic_segmentation.utils.data as data_utils
 
 

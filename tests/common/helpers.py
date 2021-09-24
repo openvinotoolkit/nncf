@@ -30,7 +30,7 @@ EXAMPLES_DIR = PROJECT_ROOT / 'examples'
 
 
 def get_cli_dict_args(args):
-    cli_args = dict()
+    cli_args = {}
     for key, val in args.items():
         cli_key = '--{}'.format(str(key))
         cli_args[cli_key] = None

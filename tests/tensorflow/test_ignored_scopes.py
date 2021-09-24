@@ -13,7 +13,7 @@
 from collections import Counter
 
 import tensorflow as tf
-import tensorflow.keras.layers as layers
+from tensorflow.keras import layers
 
 from nncf.tensorflow.layers.wrapper import NNCFWrapper
 from nncf.tensorflow.quantization import FakeQuantize

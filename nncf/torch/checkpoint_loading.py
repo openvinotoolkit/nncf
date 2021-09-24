@@ -187,8 +187,8 @@ class NormalizedKeys:
                 else:
                     normalized_key_vs_clipped_key_list_map[replaced_key] = [clipped_key]
         # keep clipped keys if their normalization led to a collisions
-        for normalized_key in normalized_key_vs_clipped_key_list_map:
-            list_clipped_keys = normalized_key_vs_clipped_key_list_map[normalized_key]
+        for normalized_key, value in normalized_key_vs_clipped_key_list_map.items():
+            list_clipped_keys = value
             if len(list_clipped_keys) == 1:
                 clipped_key = list_clipped_keys[0]
                 orig_key = unique_clipped_key_vs_orig_key_map[clipped_key]
@@ -214,8 +214,8 @@ class NormalizedKeys:
                 clipped_key_vs_orig_key_list_map[clipped_key] = [orig_key]
         # keep original keys if their clipping led to a collisions
         unique_clipped_key_vs_orig_key_map = {}
-        for clipped_key in clipped_key_vs_orig_key_list_map:
-            list_orig_keys = clipped_key_vs_orig_key_list_map[clipped_key]
+        for clipped_key, val in clipped_key_vs_orig_key_list_map.items():
+            list_orig_keys = val
             if len(list_orig_keys) == 1:
                 unique_clipped_key_vs_orig_key_map[clipped_key] = list_orig_keys[0]
             else:

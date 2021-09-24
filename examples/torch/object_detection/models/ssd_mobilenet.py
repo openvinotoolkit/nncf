@@ -12,7 +12,7 @@
 """
 
 import torch
-import torch.nn as nn
+from torch import nn
 
 from examples.torch.common import restricted_pickle_module
 from examples.torch.common.example_logger import logger

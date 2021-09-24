@@ -1,7 +1,7 @@
 import itertools
 
 import torch
-import torch.nn as nn
+from torch import nn
 
 from tests.torch.modules.seq2seq.attention import BahdanauAttention
 from tests.torch.modules.seq2seq.seq2seq_base import PAD

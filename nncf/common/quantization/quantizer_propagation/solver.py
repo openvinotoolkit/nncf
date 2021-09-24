@@ -140,7 +140,7 @@ class QuantizationProposal:
           of the quantizer configs for the quantization point defined by `quantization_point_id`.
         """
         prior_list = self.quantizer_setup.quantization_points[quantization_point_id].possible_qconfigs
-        if not all([qc in prior_list for qc in constrained_config_list]):
+        if not all(qc in prior_list for qc in constrained_config_list):
             raise RuntimeError('Constrained config list is incompatible with the result of the quantizer propagation!')
         # TODO (vshampor): only allow to constrain 'input-group'-wise?
         self.quantizer_setup.quantization_points[quantization_point_id].possible_qconfigs = constrained_config_list
@@ -1193,7 +1193,7 @@ class QuantizerPropagationSolver:
             raise RuntimeError("Unknown propagation strategy: {}".format(self._propagation_strategy))
 
         for qconf in qconfigs_union:
-            if all([compatible_fn(qconf, qconf_list) for qconf_list in potential_qconfigs_for_each_branch]):
+            if all(compatible_fn(qconf, qconf_list) for qconf_list in potential_qconfigs_for_each_branch):
                 merged_qconfig_list.append(qconf)
 
         nncf_logger.debug("Merged list before sorting: {}".format(";".join([str(qc) for qc in merged_qconfig_list])))

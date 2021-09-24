@@ -13,7 +13,6 @@
 
 from abc import ABCMeta
 from abc import abstractmethod
-from abc import abstractproperty
 
 import tensorflow as tf
 
@@ -28,7 +27,8 @@ class BoxCoder:
     """Abstract base class for box coder."""
     __metaclass__ = ABCMeta
 
-    @abstractproperty
+    @property
+    @abstractmethod
     def code_size(self):
         """Return the size of each code.
 

@@ -2,7 +2,7 @@ import numpy as np
 import onnx
 import onnxruntime as rt
 import torch
-import torch.nn as nn
+from torch import nn
 from nncf.torch.checkpoint_loading import load_state
 
 from nncf.torch.quantization.layers import PTQuantizerSpec, QuantizationMode, SymmetricQuantizer, AsymmetricQuantizer

@@ -23,8 +23,8 @@ class StatefulClassesRegistry:
     REQUIRED_METHOD_NAME = 'from_state'
 
     def __init__(self):
-        self._name_vs_class_map = dict()  # type: Dict[str, object]
-        self._class_vs_name_map = dict()  # type: Dict[object, str]
+        self._name_vs_class_map = {}  # type: Dict[str, object]
+        self._class_vs_name_map = {}  # type: Dict[object, str]
 
     def register(self, name: str = None) -> Callable:
         """

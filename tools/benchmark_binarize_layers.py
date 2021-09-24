@@ -13,7 +13,7 @@
 
 
 import torch
-import torch.nn as nn
+from torch import nn
 
 from nncf.torch.binarization.layers import XNORBinarize, DOREFABinarize, ActivationBinarizationScaleThreshold
 from tools.benchmark import run_profile

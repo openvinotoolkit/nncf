@@ -12,7 +12,7 @@
 """
 import time
 
-import torch.nn as nn
+from torch import nn
 
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.torch.pruning.filter_pruning.global_ranking.evolutionary_optimization import LeGRPruner, EvolutionOptimizer, \

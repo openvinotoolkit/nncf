@@ -65,7 +65,7 @@ def get_name(config):
 def write_metrics(acc, filename):
     avg = round(acc * 100, 2)
     metrics = {"Accuracy": avg}
-    with open(filename, 'w') as outfile:
+    with open(filename, 'w', encoding='utf8') as outfile:
         json.dump(metrics, outfile)
 
 
@@ -116,7 +116,7 @@ def print_args(config, logger=default_logger):
 
 
 def serialize_config(config, log_dir):
-    with open(osp.join(log_dir, 'config.json'), 'w') as f:
+    with open(osp.join(log_dir, 'config.json'), 'w', encoding='utf8') as f:
         json.dump(config, f, indent=4)
 
 
@@ -126,7 +126,7 @@ def serialize_cli_args(argparser, argv, log_dir):
         cli_args = {k:v for k, v in vars(args).items() if k in argparser.seen_actions}
     else:
         cli_args = {k:v for k, v in vars(args).items() if v is not None}
-    with open(osp.join(log_dir, 'cli_args.json'), 'w') as f:
+    with open(osp.join(log_dir, 'cli_args.json'), 'w', encoding='utf8') as f:
         json.dump(cli_args, f, indent=4)
 
 

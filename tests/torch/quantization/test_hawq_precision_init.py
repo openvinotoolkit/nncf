@@ -22,7 +22,7 @@ from typing import Callable, Dict, List, NamedTuple
 import math
 import pytest
 import torch
-import torch.nn as nn
+from torch import nn
 import torch.utils.data
 from numpy.random import random_sample
 from torch.utils import model_zoo
@@ -112,10 +112,10 @@ def get_bitwidth_per_scope(model, all_quantizations=None):
 
 def compare_with_ref_if_exists(actual_state, path_to_ref):
     if os.path.exists(path_to_ref):
-        with open(path_to_ref, 'r') as f:
+        with open(path_to_ref, 'r', encoding='utf8') as f:
             assert json.load(f) == actual_state
     else:
-        with open(path_to_ref, 'w') as f:
+        with open(path_to_ref, 'w', encoding='utf8') as f:
             json.dump(actual_state, f)
 
 

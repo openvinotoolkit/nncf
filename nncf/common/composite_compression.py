@@ -248,7 +248,7 @@ class CompositeCompressionAlgorithmController(CompressionAlgorithmController):
 
         :return: The composite compression controller state.
         """
-        result = dict()
+        result = {}
         for ctrl in self.child_ctrls:
             result.update(ctrl.get_state())
         return result
@@ -394,7 +394,7 @@ class CompositeCompressionAlgorithmBuilder(CompressionAlgorithmBuilder):
 
         :return: The composite compression builder state.
         """
-        result = dict()
+        result = {}
         for builder in self.child_builders:
             result.update(builder.get_state())
         return result

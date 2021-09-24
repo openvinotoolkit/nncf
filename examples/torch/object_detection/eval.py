@@ -217,11 +217,11 @@ def load_detection_annotations(cachedir, dataset):
             # save
             logger.info('Saving cached annotations to {:s}'.format(cachefile))
             pathlib.Path(cachedir).mkdir(parents=True, exist_ok=True)
-            with open(cachefile, 'w') as f:
+            with open(cachefile, 'w', encoding='utf8') as f:
                 json.dump(gt, f)
     if is_dist_avail_and_initialized():
         dist.barrier()
-    with open(cachefile, 'r') as f:
+    with open(cachefile, 'r', encoding='utf8') as f:
         gt = json.load(f)
     return gt, imagenames
 

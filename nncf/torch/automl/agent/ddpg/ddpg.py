@@ -15,7 +15,7 @@
 import numpy as np
 
 import torch
-import torch.nn as nn
+from torch import nn
 from torch.autograd import Variable
 from torch.optim import Adam
 from types import SimpleNamespace

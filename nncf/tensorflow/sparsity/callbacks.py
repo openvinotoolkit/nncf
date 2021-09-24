@@ -34,14 +34,14 @@ class SparsityStatisticsCallback(StatisticsCallback):
     Callback for logging sparsity compression statistics to tensorboard and stdout.
     """
 
-    def _prepare_for_tensorboard(self, nncf_stats: NNCFStatistics):
+    def _prepare_for_tensorboard(self, stats: NNCFStatistics):
         base_prefix = '2.compression/statistics'
         detailed_prefix = '3.compression_details/statistics'
 
-        if nncf_stats.magnitude_sparsity:
-            stats = nncf_stats.magnitude_sparsity
+        if stats.magnitude_sparsity:
+            stats = stats.magnitude_sparsity
         else:
-            stats = nncf_stats.rb_sparsity
+            stats = stats.rb_sparsity
 
         ms = stats.model_statistics
         tensorboard_stats = {

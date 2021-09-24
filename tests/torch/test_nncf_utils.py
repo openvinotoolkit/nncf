@@ -102,8 +102,8 @@ def test_objwalk(objwalk_objects):
 def assert_named_tuples_are_equal(ref_named_tuple: tuple, test_obj: Any):
     assert test_obj.__class__.__qualname__ == ref_named_tuple.__class__.__qualname__
     assert hasattr(test_obj, "_fields")
-    assert all([f in test_obj._fields for f in ref_named_tuple._fields])
-    assert all([f in ref_named_tuple._fields for f in test_obj._fields])
+    assert all(f in test_obj._fields for f in ref_named_tuple._fields)
+    assert all(f in ref_named_tuple._fields for f in test_obj._fields)
 
 
 def test_objwalk_retains_named_tuple():

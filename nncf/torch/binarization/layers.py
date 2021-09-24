@@ -12,7 +12,7 @@
 """
 
 import torch
-import torch.nn as nn
+from torch import nn
 
 from nncf.torch.dynamic_graph.patch_pytorch import register_operator
 from nncf.torch.layer_utils import COMPRESSION_MODULES, CompressionParameter

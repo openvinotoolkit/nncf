@@ -104,7 +104,7 @@ def test_distributed_masks_are_equal(quantization):
         if quantization:
             config.update({'compression': [config['compression'], {'algorithm': 'quantization'}]})
         model = TEST_MODELS['Conv2D']()
-        compression_state_to_skip_init = {BaseCompressionAlgorithmController.BUILDER_STATE: dict()}
+        compression_state_to_skip_init = {BaseCompressionAlgorithmController.BUILDER_STATE: {}}
         algo, model = create_compressed_model(model, config, compression_state_to_skip_init)
         model.add_loss(algo.loss)
         compression_callbacks = create_compression_callbacks(algo, log_tensorboard=False)
@@ -126,7 +126,8 @@ def test_distributed_masks_are_equal(quantization):
         model.fit(dataset, epochs=1, validation_split=0,
                   callbacks=[compression_callbacks])
     # Check seeds in file
-    seeds = open(MASKS_SEEDS_PATH, 'r').readlines()
+    with open(MASKS_SEEDS_PATH, 'r', encoding='utf8') as f:
+        seeds = f.readlines()
     seeds_per_replica = defaultdict(list)
     for row in seeds:
         replica_id, *seed = row.split()
@@ -259,7 +260,7 @@ class TestSparseModules:
                 loss = algo.loss()
             grads = tape.gradient(loss, model.trainable_weights)
             if frozen:
-                assert all([x is None for x in grads])
+                assert all(x is None for x in grads)
             else:
                 for grad, weight in zip(grads, model.trainable_weights):
                     if 'mask' in weight.name:

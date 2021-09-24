@@ -153,11 +153,11 @@ def load_torch_model(config, cuda=False):
 
 
 def compare_activations(ir_dump_txt, torch_dump_npy):
-    with open(ir_dump_txt, 'r') as fin:
+    with open(ir_dump_txt, 'r', encoding='utf8') as fin:
         first_line = fin.readline()
         if "shape:" in first_line:
             data = fin.read().splitlines(True)
-            with open(ir_dump_txt, 'w') as fout:
+            with open(ir_dump_txt, 'w', encoding='utf8') as fout:
                 fout.writelines(data)
     ie = np.loadtxt(ir_dump_txt, dtype=np.float32)
     pt = np.load(torch_dump_npy)
