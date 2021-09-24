@@ -70,6 +70,8 @@ class TracingContext:
         self._input_comparators_per_scope = []
         self.global_buffer_store = {}
 
+        self._trace_dynamic_graph = False
+
     def __enter__(self):
         global _CURRENT_CONTEXT
         self._save_context = _CURRENT_CONTEXT
@@ -289,6 +291,16 @@ class TracingContext:
     def relative_scopes_stack(self) -> List[Scope]:
         self._init_thread_local()
         return self._thread_local.scopes
+
+    @property
+    def trace_dynamic_graph(self) -> bool:
+        return self._trace_dynamic_graph
+
+    def disable_trace_dynamic_graph(self):
+        self._trace_dynamic_graph = False
+
+    def enable_trace_dynamic_graph(self):
+        self._trace_dynamic_graph = True
 
     def _init_thread_local(self):
         # todo: primary node part!

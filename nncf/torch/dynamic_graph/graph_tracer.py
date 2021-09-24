@@ -95,6 +95,7 @@ class GraphTracer:
         if context_to_use is None:
             context_to_use = TracingContext()
 
+        context_to_use.enable_trace_dynamic_graph()
         from nncf.torch.utils import training_mode_switcher
         context_to_use.base_module_thread_local_replica = model
         with context_to_use as _ctx:
@@ -108,6 +109,7 @@ class GraphTracer:
 
         if isinstance(model, PostGraphBuildActing):
             model.post_build_graph_actions()
+        context_to_use.disable_trace_dynamic_graph()
         return context_to_use.graph
 
 
