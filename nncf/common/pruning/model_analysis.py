@@ -116,7 +116,8 @@ class ModelAnalyzer:
         pruning_op_metatypes_dict = self._pruning_operator_metatypes.registry_dict
         self._stop_propagation_op_metatype = pruning_op_metatypes_dict['stop_propagation_ops']
         self._concat_op_metatype = pruning_op_metatypes_dict['concat']
-        self._convolution_op_metatype = pruning_op_metatypes_dict['convolution']
+        self._convolution_op_metatype = [pruning_op_metatypes_dict['convolution'],
+                                         pruning_op_metatypes_dict['linear']]
 
         self._is_depthwise_conv_fn = is_depthwise_conv_fn
 
@@ -132,7 +133,8 @@ class ModelAnalyzer:
         :return: Propagates this node can_prune throw or not.
         """
         node_type = nncf_node.node_type
-        is_conv = node_type in self._convolution_op_metatype.get_all_op_aliases()
+        is_conv = node_type in [alias for metatype in self._convolution_op_metatype
+                                for alias in metatype.get_all_op_aliases()]
         return not is_conv or (is_conv and self._is_depthwise_conv_fn(nncf_node))
 
     def node_accept_different_inputs(self, nncf_node: NNCFNode) -> bool:
