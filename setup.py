@@ -23,7 +23,7 @@ from setuptools import setup, find_packages
 
 here = os.path.abspath(os.path.dirname(__file__))
 
-with open("{}/README.md".format(here), "r") as fh:
+with open("{}/README.md".format(here), "r", encoding="utf8") as fh:
     long_description = fh.read()
 
 if "--tf" in sys.argv:

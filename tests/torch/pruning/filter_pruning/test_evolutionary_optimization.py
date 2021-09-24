@@ -139,7 +139,7 @@ def test_pruner_default_params():
     ref_model_state_dict = list(compressed_model.state_dict().values())
     saved_model_state_dict = list(legr_pruner.model_params_copy.values())
     assert all(
-        [torch.equal(ref_model_state_dict[i], saved_model_state_dict[i]) for i in range(len(ref_model_state_dict))])
+        torch.equal(ref_model_state_dict[i], saved_model_state_dict[i]) for i in range(len(ref_model_state_dict)))
 
 
 def test_pruner_interface():

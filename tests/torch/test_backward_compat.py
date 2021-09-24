@@ -141,7 +141,7 @@ def test_loaded_model_evals_according_to_saved_acc(_params, tmp_path, dataset_di
     runner = Command(create_command_line(get_cli_dict_args(args), "classification"))
     runner.run()
 
-    with open(metrics_path) as metric_file:
+    with open(metrics_path, encoding='utf8') as metric_file:
         metrics = json.load(metric_file)
         # accuracy is rounded to hundredths
         assert torch.load(checkpoint_path)['best_acc1'] == pytest.approx(metrics['Accuracy'], abs=1e-2)

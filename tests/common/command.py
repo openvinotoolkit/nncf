@@ -48,21 +48,22 @@ class Command:
     def run(self, timeout=3600, assert_returncode_zero=True):
         def target():
             start_time = time.time()
-            self.process = subprocess.Popen(self.cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True,
-                                            bufsize=1, cwd=self.path, **self.kwargs)
-            self.timeout = False
+            with subprocess.Popen(self.cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True,
+                                            bufsize=1, cwd=self.path, **self.kwargs) as p:
+                self.process = p
+                self.timeout = False
 
-            self.output = []
-            for line in self.process.stdout:
-                line = line.decode('utf-8')
-                self.output.append(line)
-                sys.stdout.write(line)
+                self.output = []
+                for line in self.process.stdout:
+                    line = line.decode('utf-8')
+                    self.output.append(line)
+                    sys.stdout.write(line)
 
-            sys.stdout.flush()
-            self.process.stdout.close()
+                sys.stdout.flush()
+                self.process.stdout.close()
 
-            self.process.wait()
-            self.exec_time = time.time() - start_time
+                self.process.wait()
+                self.exec_time = time.time() - start_time
 
         thread = threading.Thread(target=target)
         thread.start()

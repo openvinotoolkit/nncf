@@ -33,7 +33,8 @@ def test_legr_coeffs_loading(tmp_path):
     # Generate random ranking coefficients and save them
     ranking_coeffs = {str(model.CONV_1_NODE_NAME): (np.random.normal(), np.random.normal()),
                       str(model.CONV_2_NODE_NAME): (np.random.normal(), np.random.normal())}
-    json.dump(ranking_coeffs, open(file_name, 'w'))
+    with open(file_name, 'w', encoding='utf8') as f:
+        json.dump(ranking_coeffs, f)
 
     config = create_default_legr_config()
     config['compression']['params']['load_ranking_coeffs_path'] = str(file_name)
@@ -56,8 +57,9 @@ def test_legr_coeffs_saving(tmp_path):
     assert compression_ctrl.ranking_coeffs == ref_ranking_coeffs
 
     # check that in specified file some coeffs are saved (1, 0 in case of not-legr)
-    saved_coeffs_in_file = json.load(open(file_name, 'r'))
-    assert all([ref_ranking_coeffs[key] == tuple(saved_coeffs_in_file[key]) for key in saved_coeffs_in_file])
+    with open(file_name, 'r', encoding='utf8') as f:
+        saved_coeffs_in_file = json.load(f)
+    assert all(ref_ranking_coeffs[key] == tuple(saved_coeffs_in_file[key]) for key in saved_coeffs_in_file)
 
 
 def test_legr_coeffs_save_and_load(tmp_path):
@@ -66,7 +68,8 @@ def test_legr_coeffs_save_and_load(tmp_path):
     model = PruningTestModel()
     ref_ranking_coeffs = {str(model.CONV_1_NODE_NAME): (np.random.normal(), np.random.normal()),
                           str(model.CONV_2_NODE_NAME): (np.random.normal(), np.random.normal())}
-    json.dump(ref_ranking_coeffs, open(file_name_save, 'w'))
+    with open(file_name_save, 'w', encoding='utf8') as f:
+        json.dump(ref_ranking_coeffs, f)
 
     config = create_default_legr_config()
     config['compression']['params']['save_ranking_coeffs_path'] = str(file_name_save)
@@ -74,9 +77,9 @@ def test_legr_coeffs_save_and_load(tmp_path):
 
     _, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
     assert compression_ctrl.ranking_coeffs == ref_ranking_coeffs
-
-    saved_coeffs_in_file = json.load(open(file_name_save, 'r'))
-    assert all([ref_ranking_coeffs[key] == tuple(saved_coeffs_in_file[key]) for key in saved_coeffs_in_file])
+    with open(file_name_save, 'r', encoding='utf8') as f:
+        saved_coeffs_in_file = json.load(f)
+    assert all(ref_ranking_coeffs[key] == tuple(saved_coeffs_in_file[key]) for key in saved_coeffs_in_file)
 
 
 def test_default_pruning_params_for_legr(tmp_path):
@@ -85,7 +88,8 @@ def test_default_pruning_params_for_legr(tmp_path):
     # Generate random ranking coefficients and save them
     ranking_coeffs = {str(model.CONV_1_NODE_NAME): (0, 1),
                       str(model.CONV_2_NODE_NAME): (0, 1)}
-    json.dump(ranking_coeffs, open(file_name_save, 'w'))
+    with open(file_name_save, 'w', encoding='utf8') as f:
+        json.dump(ranking_coeffs, f)
 
     config = create_default_legr_config()
     config['compression']['params']['load_ranking_coeffs_path'] = str(file_name_save)

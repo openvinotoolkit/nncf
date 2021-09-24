@@ -12,8 +12,8 @@
 """
 
 import torch
-import torch.nn as nn
-import torch.nn.init as init
+from torch import nn
+from torch.nn import init
 
 from nncf.torch.utils import add_domain
 from nncf.torch import register_module

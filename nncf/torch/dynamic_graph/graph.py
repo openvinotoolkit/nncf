@@ -172,7 +172,7 @@ class DefaultScopeNodeMatcher:
     def __init__(self, node_id_to_key_dict, nx_graph):
         self._node_id_to_key_dict = node_id_to_key_dict
         self._nx_graph = nx_graph
-        self._inputless_nodes = dict()  # type: Dict[str, DynamicGraphNode]
+        self._inputless_nodes = {}  # type: Dict[str, DynamicGraphNode]
 
     def get_node_by_id(self, node_id):
         return self._nx_graph.nodes[self._node_id_to_key_dict[node_id]]
@@ -476,7 +476,7 @@ class DynamicGraph:
 
     def __init__(self):
         self._nx_graph = nx.DiGraph()
-        self._node_id_to_key_dict = dict()
+        self._node_id_to_key_dict = {}
         self.match_manager = NodeManager(self._node_id_to_key_dict, self._nx_graph)
         self._input_nncf_nodes = []
         self._output_nncf_nodes = []

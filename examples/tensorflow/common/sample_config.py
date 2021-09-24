@@ -74,7 +74,7 @@ class CustomArgumentParser(CustomActionContainer, argparse.ArgumentParser):
 class SampleConfig(Dict):
     @classmethod
     def from_json(cls, path) -> 'SampleConfig':
-        with open(path) as f:
+        with open(path, encoding='utf8') as f:
             loaded_json = json.load(f)
         return cls(loaded_json)
 

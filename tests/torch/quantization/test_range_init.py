@@ -19,7 +19,7 @@ from typing import Tuple
 
 import pytest
 import torch
-import torch.nn as nn
+from torch import nn
 import torch.utils.data
 from pytest import approx
 from torch.utils.data import DataLoader

@@ -698,7 +698,7 @@ class YOLOv4Loss:
 
     def get_anchors(self, anchors_path):
         """loads the anchors from a file"""
-        with open(anchors_path) as f:
+        with open(anchors_path, encoding='utf8') as f:
             anchors = f.readline()
         anchors = [float(x) for x in anchors.split(',')]
         return np.array(anchors).reshape(-1, 2)

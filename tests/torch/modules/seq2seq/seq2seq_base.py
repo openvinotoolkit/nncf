@@ -1,4 +1,4 @@
-import torch.nn as nn
+from torch import nn
 from torch.nn.functional import log_softmax
 
 PAD = 0

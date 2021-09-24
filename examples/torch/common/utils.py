@@ -25,7 +25,7 @@ from shutil import copyfile
 from typing import Tuple
 
 from PIL import Image
-import torch.utils.data as data
+from torch.utils import data
 
 from examples.torch.common.distributed import configure_distributed
 from examples.torch.common.execution import ExecutionMode, get_device
@@ -76,7 +76,7 @@ def get_name(config):
 def write_metrics(acc, filename):
     avg = round(acc * 100, 2)
     metrics = {"Accuracy": avg}
-    with open(filename, 'w') as outfile:
+    with open(filename, 'w', encoding='utf8') as outfile:
         json.dump(metrics, outfile)
 
 
@@ -223,8 +223,9 @@ class ForkedPdb(pdb.Pdb):
     def interaction(self, *args, **kwargs):
         _stdin = sys.stdin
         try:
-            sys.stdin = open('/dev/stdin')
-            pdb.Pdb.interaction(self, *args, **kwargs)
+            with open('/dev/stdin', encoding='utf8') as file:
+                sys.stdin = file
+                pdb.Pdb.interaction(self, *args, **kwargs)
         finally:
             sys.stdin = _stdin
 

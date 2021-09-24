@@ -96,8 +96,8 @@ class DetectionOutputFunction(torch.autograd.Function):
                 conf_scores = conf_preds[i].clone()
 
                 total_detections_count = 0
-                all_indices = dict()  # indices of confident detections for each class
-                boxes = dict()
+                all_indices = {} # indices of confident detections for each class
+                boxes = {}
                 for cl in range(0, detection_output_params.num_classes):
                     if cl == detection_output_params.background_label_id:
                         continue
@@ -115,7 +115,7 @@ class DetectionOutputFunction(torch.autograd.Function):
                     all_indices[cl] = all_indices[cl][:count]
                     total_detections_count += count
 
-                score_index_pairs = list()  # list of tuples (score, label, idx)
+                score_index_pairs = []  # list of tuples (score, label, idx)
                 for label, indices in all_indices.items():
                     indices = indices.cpu().numpy()
                     for idx in indices:
@@ -124,7 +124,7 @@ class DetectionOutputFunction(torch.autograd.Function):
                 score_index_pairs.sort(key=lambda tup: tup[0], reverse=True)
                 score_index_pairs = score_index_pairs[:detection_output_params.keep_top_k]
 
-                all_indices_new = dict()
+                all_indices_new = {}
                 for _, label, idx in score_index_pairs:
                     if label not in all_indices_new:
                         all_indices_new[label] = [idx]

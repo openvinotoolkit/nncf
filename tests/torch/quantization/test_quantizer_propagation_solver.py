@@ -1811,7 +1811,7 @@ class TestQuantizerPropagationSolver:
         # single-input int op
         assert len(all_pqs) == 2
         affected_op_nodes = [pq.affected_operator_nodes for pq in all_pqs]
-        assert all([len(node_key_list) == 1 for node_key_list in affected_op_nodes])
+        assert all(len(node_key_list) == 1 for node_key_list in affected_op_nodes)
         affected_op_node_per_pq = [next(iter(node_key_list)) for node_key_list in affected_op_nodes]
         assert Counter(["4 /D_0", "5 /E_0"]) == Counter(affected_op_node_per_pq)
         double_input_pq = all_pqs[affected_op_node_per_pq.index("5 /E_0")]

@@ -12,8 +12,8 @@
 """
 
 import torch
-import torch.nn as nn
-import torch.nn.init as init
+from torch import nn
+from torch.nn import init
 
 __all__ = ['SqueezeNet', 'squeezenet1_0', 'squeezenet1_1']
 

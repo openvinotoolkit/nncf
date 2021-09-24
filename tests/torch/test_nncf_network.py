@@ -852,8 +852,8 @@ def test_temporary_clean_view():
                intermediate_model.get_original_graph().get_nodes_count()
     sd_after_tmp_clean_view = sparse_quantized_model.state_dict()
     for key in old_sd.keys():
-        assert key in sd_after_tmp_clean_view
-        assert torch.all(torch.eq(sd_after_tmp_clean_view[key], old_sd[key]))
+        assert key in sd_after_tmp_clean_view # pylint: disable=E1135
+        assert torch.all(torch.eq(sd_after_tmp_clean_view[key], old_sd[key])) # pylint: disable=E1136
     sparse_quantized_model.rebuild_graph()
     graph_after_tmp_clean_view = sparse_quantized_model.get_graph()
     assert graph_after_tmp_clean_view == old_graph

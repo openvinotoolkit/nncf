@@ -3,7 +3,7 @@ import time
 
 import torch
 import torch.distributed as dist
-import torch.nn as nn
+from torch import nn
 
 TIME_SCALES = {'ms': 1000}
 

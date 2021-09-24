@@ -14,7 +14,7 @@
 from contextlib import contextmanager
 from pathlib import Path
 
-
+# pylint: disable=W1514
 @contextmanager
 def safe_open(file: Path, *args, **kwargs):
     """

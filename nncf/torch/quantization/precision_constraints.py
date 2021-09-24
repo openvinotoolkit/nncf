@@ -27,7 +27,7 @@ class HardwareQuantizationConstraints:
     def get(self, quantizer_id: QuantizerId) -> List[QuantizerConfig]:
         if quantizer_id in self._constraints:
             return deepcopy(self._constraints[quantizer_id])
-        return list()
+        return []
 
     def get_bitwidth_vs_qconfigs_dict(self, quantizer_id: QuantizerId) -> Dict[int, List[QuantizerConfig]]:
         bitwidths_vs_qconfigs = {}  # type: Dict[int, List[QuantizerConfig]]

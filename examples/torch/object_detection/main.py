@@ -17,7 +17,7 @@ from copy import deepcopy
 from pathlib import Path
 
 import torch
-import torch.utils.data as data
+from torch.utils import data
 
 from examples.torch.common.argparser import parse_args
 from torch.optim.lr_scheduler import ReduceLROnPlateau

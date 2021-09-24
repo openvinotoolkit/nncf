@@ -75,8 +75,8 @@ def main():
     net = IENetwork(model=model_xml, weights=model_bin)
     exec_net = getExecNet(plugin, net)
     from torch.utils.data import DataLoader
-    import torchvision.datasets as datasets
-    import torchvision.transforms as transforms
+    from torchvision import datasets
+    from torchvision import transforms
 
     val_loader = DataLoader(
         datasets.ImageFolder(args.data, transforms.Compose([

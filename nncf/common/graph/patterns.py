@@ -33,7 +33,7 @@ class HWFusedPatterns:
     """
 
     def __init__(self):
-        self._patterns_dict = dict()
+        self._patterns_dict = {}
         self._full_pattern_graph = GraphPattern()
 
     def register(self, pattern: 'GraphPattern', name: str, match: bool = True) -> None:
