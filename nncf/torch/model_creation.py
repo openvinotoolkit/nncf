@@ -176,6 +176,7 @@ def create_compressed_model(model: Module,
                 "If your training pipeline demands the processes be synchronized, please, "
                 "keep attention to that error")
             return compression_ctrl, compressed_model
+    compressed_model._compressed_context.disable_trace_dynamic_graph()
     return compression_ctrl, compressed_model
 
 

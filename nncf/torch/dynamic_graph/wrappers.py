@@ -79,6 +79,7 @@ def wrap_operator(operator, operator_info: 'PatchedOperatorInfo'):
                 from nncf.torch.dynamic_graph.patch_pytorch import ForwardTraceOnly
                 result = ForwardTraceOnly()(operator, *args, **kwargs)
             else:
+                node = None
                 op_name = operator_info.name
                 op_address = ctx.get_caller_context(op_name)
 
@@ -115,7 +116,7 @@ def wrap_operator(operator, operator_info: 'PatchedOperatorInfo'):
                 if ctx.trace_dynamic_graph and node is not None:
                     if is_debug():
                         ctx.register_node_call(node)
-                    result = trace_tensors(result, node)
+                result = trace_tensors(result, node)
                 result = ctx.execute_post_hooks(op_address, result)
         except:
             # Looks like the __repr__ call made during IDE debug to display tensor contents does not exit properly,
