@@ -266,12 +266,13 @@ class TFFlattenOps(DefaultMetaOp):
     def mask_propagation(cls, node: NNCFNode, graph: NNCFGraph):
         output_mask = None
         input_masks = get_input_masks(node, graph)
-        if input_masks:
-            assert len(input_masks) == 1
+        assert len(input_masks) == 1
+        input_mask = input_masks[0]
+        if input_mask:
             flatten_channels = int(np.prod(node.layer_attributes.input_shape))
-            mask_len = input_masks[0].shape[0]
+            mask_len = input_mask.shape[0]
             assert flatten_channels % mask_len == 0
-            output_mask = tf.repeat(input_masks[0], repeats=flatten_channels // mask_len)
+            output_mask = tf.repeat(input_mask, repeats=flatten_channels // mask_len)
         node.data['output_mask'] = output_mask
 
 
