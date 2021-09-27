@@ -88,6 +88,9 @@ def test_disable_shape_matching():
 
     qnet_no_shape = NNCFNetwork(deepcopy(model), input_infos=[ModelInputInfo(input_shape_1), ],
                                 scopes_without_shape_matching=['MatMulModel'])  # type: NNCFNetwork
+
+    context = qnet_no_shape.get_tracing_context()
+    context.enable_trace_dynamic_graph()
     _ = qnet_no_shape(torch.zeros(*input_shape_1))
     graph_1 = deepcopy(qnet_no_shape.get_dynamic_graph())
 
@@ -100,6 +103,8 @@ def test_disable_shape_matching():
     assert len(nodes_1) == 3  # 1 input node + 1 operation node + 1 output node
 
     qnet = NNCFNetwork(model, input_infos=[ModelInputInfo(input_shape_1), ])  # type: NNCFNetwork
+    context = qnet.get_tracing_context()
+    context.enable_trace_dynamic_graph()
     _ = qnet(torch.zeros(*input_shape_1))
     _ = qnet(torch.zeros(*input_shape_2))
     # The second forward run should have led to an increase in registered node counts

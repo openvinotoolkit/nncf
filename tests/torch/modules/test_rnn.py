@@ -586,6 +586,7 @@ class TestNumberOfNodes:
 
         test_module = LoopModule()
         context = TracingContext()
+        context.enable_trace_dynamic_graph()
         with context as ctx:
             _ = test_module(torch.zeros(1))
             assert ctx.graph.get_nodes_count() == test_module.nodes_number()
@@ -619,6 +620,7 @@ class TestNumberOfNodes:
 
         test_module = LoopModule()
         context = TracingContext()
+        context.enable_trace_dynamic_graph()
         with context as ctx:
             _ = test_module(torch.zeros(1))
             assert ctx.graph.get_nodes_count() == test_module.nodes_number()
@@ -676,6 +678,7 @@ class TestNumberOfNodes:
 
         test_module = TestIterModule()
         context = TracingContext()
+        context.enable_trace_dynamic_graph()
         with context as ctx:
             _ = test_module(torch.zeros(1))
             assert ctx.graph.get_nodes_count() == num_iter
@@ -698,6 +701,7 @@ class TestNumberOfNodes:
 
         test_module = LoopModule()
         context = TracingContext()
+        context.enable_trace_dynamic_graph()
         with context as ctx:
             x = test_module(torch.zeros(1, 1, 1, 1))
             assert ctx.graph.get_nodes_count() == 4  # NB: may always fail in debug due to superfluous 'cat' nodes

@@ -113,9 +113,8 @@ def wrap_operator(operator, operator_info: 'PatchedOperatorInfo'):
                 elif ctx.trace_dynamic_graph and node is None:
                     node = ctx.maybe_add_node(processed_input, tensor_metas, op_address, layer_attrs, ignored_algos)
 
-                if ctx.trace_dynamic_graph and node is not None:
-                    if is_debug():
-                        ctx.register_node_call(node)
+                if is_debug() and ctx.trace_dynamic_graph and node is not None:
+                    ctx.register_node_call(node)
                 result = trace_tensors(result, node)
                 result = ctx.execute_post_hooks(op_address, result)
         except:
