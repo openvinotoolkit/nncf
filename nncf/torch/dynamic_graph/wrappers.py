@@ -95,14 +95,6 @@ def wrap_operator(operator, operator_info: 'PatchedOperatorInfo'):
                     if isinstance(curr_module, _NNCFModuleMixin):
                         ignored_algos = deepcopy(curr_module.ignored_algorithms)
 
-                if op_name in ["reshape", "view", "flatten", "squeeze", "unsqueeze"]:
-                    input_tensor = args[0]
-                    output_shape = args[1:]
-
-                    layer_attrs = ReshapeLayerAttributes(input_tensor.shape,
-                                                         output_shape)
-
-
                 ctx.register_operator_call(op_address.operator_name, op_address.scope_in_model)
                 op_input = OperatorInput(list(args), kwargs)
                 processed_input = ctx.execute_pre_hooks(op_address, op_input)
