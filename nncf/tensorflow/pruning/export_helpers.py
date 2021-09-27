@@ -13,8 +13,10 @@
 from typing import Dict
 from typing import List
 from typing import Union
+from collections import Counter
 
 import tensorflow as tf
+import numpy as np
 
 from nncf.common.pruning.utils import is_depthwise_conv
 from nncf.tensorflow.graph.pattern_operations import KERAS_ACTIVATIONS_OPERATIONS
@@ -49,6 +51,7 @@ class TFInput(DefaultMetaOp):
     def mask_propagation(cls, node: NNCFNode, graph: NNCFGraph):
         node.data['output_mask'] = None
 
+
 @TF_PRUNING_OPERATOR_METATYPES.register('model_output')
 class TFOutput(DefaultMetaOp):
     additional_types = [NNCFGraphNodeType.OUTPUT_NODE]
@@ -60,6 +63,7 @@ class TFOutput(DefaultMetaOp):
     @classmethod
     def mask_propagation(cls, node: NNCFNode, graph: NNCFGraph):
         node.data['output_mask'] = None
+
 
 @TF_PRUNING_OPERATOR_METATYPES.register('identity_mask_propagation')
 class TFIdentityMaskForwardOps(DefaultMetaOp):
@@ -225,6 +229,50 @@ class TFElementwise(DefaultMetaOp):
             for input_mask in input_masks[1:]:
                 tf.debugging.assert_near(input_masks[0], input_mask)
         node.data['output_mask'] = input_masks[0]
+
+
+@TF_PRUNING_OPERATOR_METATYPES.register('reshape')
+class TFReshapeOps(DefaultMetaOp):
+    additional_types = ['Reshape']
+
+    @classmethod
+    def accept_pruned_input(cls, node: NNCFNode):
+        def _filtered_counter(shape):
+            filtered = [dim for dim in shape if dim not in [None, 1]]
+            return Counter(filtered)
+
+        input_shape = node.layer_attributes.input_shape
+        output_shape = node.layer_attributes.output_shape
+        # Check if this reshape is just squeeze / expand or transpose
+        return _filtered_counter(input_shape) == _filtered_counter(output_shape)
+
+    @classmethod
+    def mask_propagation(cls, node: NNCFNode, graph: NNCFGraph):
+        if cls.accept_pruned_input(node):
+            identity_mask_propagation(node, graph)
+        else:
+            node.data['output_mask'] = None
+
+
+@TF_PRUNING_OPERATOR_METATYPES.register('flatten')
+class TFFlattenOps(DefaultMetaOp):
+    additional_types = ['Flatten']
+
+    @classmethod
+    def accept_pruned_input(cls, node: NNCFNode):
+        return True
+
+    @classmethod
+    def mask_propagation(cls, node: NNCFNode, graph: NNCFGraph):
+        output_mask = None
+        input_masks = get_input_masks(node, graph)
+        if input_masks:
+            assert len(input_masks) == 1
+            flatten_channels = int(np.prod(node.layer_attributes.input_shape))
+            mask_len = input_masks[0].shape[0]
+            assert flatten_channels % mask_len == 0
+            output_mask = tf.repeat(input_masks[0], repeats=flatten_channels // mask_len)
+        node.data['output_mask'] = output_mask
 
 
 @TF_PRUNING_OPERATOR_METATYPES.register('stop_propagation_ops')

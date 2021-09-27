@@ -101,9 +101,8 @@ class PruningNodeSelector:
 
         # 2. Clusters for nodes that should be pruned together (taking into account clusters for special ops)
         for i, cluster in enumerate(special_ops_clusterization.get_all_clusters()):
-            all_pruned_inputs = []
-            pruned_inputs_idxs = set()
-            clusters_to_merge = []
+            all_pruned_inputs = dict()
+            clusters_to_merge = list()
 
             for node in cluster.elements:
                 sources = get_sources_of_node(node, graph, self._prune_operations)
@@ -112,12 +111,11 @@ class PruningNodeSelector:
                         # Merge clusters if some node already added in another cluster
                         cluster = pruned_nodes_clusterization.get_cluster_containing_element(source_node.node_id)
                         clusters_to_merge.append(cluster.id)
-                    elif source_node.node_id not in pruned_inputs_idxs:
-                        all_pruned_inputs.append(source_node)
-                        pruned_inputs_idxs.add(source_node.node_id)
+                    elif source_node.node_id not in all_pruned_inputs:
+                        all_pruned_inputs[source_node.node_id] = source_node
 
             if all_pruned_inputs:
-                cluster = Cluster[NNCFNode](i, all_pruned_inputs, [n.node_id for n in all_pruned_inputs])
+                cluster = Cluster[NNCFNode](i, all_pruned_inputs.values(), [node_id for node_id in all_pruned_inputs])
                 clusters_to_merge.append(cluster.id)
                 pruned_nodes_clusterization.add_cluster(cluster)
 

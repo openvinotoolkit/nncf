@@ -12,8 +12,10 @@
 """
 from typing import Union
 from typing import List
+from collections import Counter
 
 import torch
+import numpy as np
 
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
@@ -56,6 +58,7 @@ from nncf.torch.graph.operator_metatypes import (
     SoftmaxMetatype,
     SubMetatype,
     TanhMetatype,
+    ReshapeMetatype,
 )
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.torch.nncf_network import NNCFNetwork
@@ -141,6 +144,41 @@ class PTIdentityMaskForwardOps(PTDefaultMetaOp):
     @classmethod
     def mask_propagation(cls, node: NNCFNode, graph: NNCFGraph):
         identity_mask_propagation(node, graph)
+
+
+@PT_PRUNING_OPERATOR_METATYPES.register('reshape')
+class PTReshape(PTDefaultMetaOp):
+    subtypes = [ReshapeMetatype]
+
+    @classmethod
+    def accept_pruned_input(cls, node: NNCFNode):
+        def _filtered_counter(shape):
+            filtered = [dim for dim in shape if dim not in [None, 1]]
+            return Counter(filtered)
+
+        if node.node_type == 'flatten':
+            return True
+
+        input_shape = node.layer_attributes.input_shape
+        output_shape = node.layer_attributes.output_shape
+        # Check if this reshape is just squeeze / expand or transpose
+        return _filtered_counter(input_shape) == _filtered_counter(output_shape)
+
+    @classmethod
+    #TODO: test it!
+    def mask_propagation(cls, node: NNCFNode, graph: NNCFGraph):
+        if node.node_type == 'flatten':
+            input_masks = get_input_masks(node, graph)
+            assert len(input_masks) == 1
+            flatten_channels = int(np.prod(node.layer_attributes.input_shape))
+            mask_len = input_masks[0].shape[0]
+            assert flatten_channels % mask_len == 0
+            output_mask = torch.repeat_interleave(input_masks[0], flatten_channels // mask_len)
+            node.data['output_mask'] = output_mask
+        elif cls.accept_pruned_input(node):
+            identity_mask_propagation(node, graph)
+        else:
+            node.data['output_mask'] = None
 
 
 @PT_PRUNING_OPERATOR_METATYPES.register('convolution')

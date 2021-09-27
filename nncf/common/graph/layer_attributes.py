@@ -159,3 +159,11 @@ class GroupNormLayerAttributes(WeightedLayerAttributes):
 
     def get_target_dim_for_compression(self) -> int:
         return 0
+
+
+class ReshapeLayerAttributes(BaseLayerAttributes):
+    def __init__(self,
+                 input_shape,
+                 output_shape):
+        self.input_shape = input_shape
+        self.output_shape = output_shape

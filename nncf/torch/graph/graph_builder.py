@@ -27,6 +27,8 @@ from nncf.torch.dynamic_graph.graph_tracer import GraphTracer
 from nncf.torch.dynamic_graph.graph_tracer import ModelInputInfo
 from nncf.torch.graph.graph import PTNNCFGraph
 from nncf.torch.graph.operator_metatypes import PT_OPERATOR_METATYPES
+from nncf.torch.graph.operator_metatypes import ReshapeMetatype
+from nncf.common.graph.layer_attributes import ReshapeLayerAttributes
 
 
 class GraphBuilder:
@@ -91,4 +93,13 @@ class GraphConverter:
                 output_port_id=dynamic_graph_edge.output_port_id,
                 dtype=Dtype.FLOAT
             )
+
+        for node in nncf_graph.get_all_nodes():
+            if node.metatype is ReshapeMetatype:
+                input_node = nncf_graph.get_input_edges(node)[0]
+                output_node = nncf_graph.get_output_edges(node)[0]
+                layer_attributes = ReshapeLayerAttributes(input_node.tensor_shape,
+                                                          output_node.tensor_shape)
+                node.layer_attributes = layer_attributes
+
         return nncf_graph
