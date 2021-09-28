@@ -145,8 +145,8 @@ class PrunedModelTheoreticalBorderline(Statistics):
                  num_prunable_layers: int,
                  max_prunable_flops: float,
                  max_prunable_params: float,
-                 full_flops: int,
-                 full_params_num: int):
+                 total_flops: int,
+                 total_params: int):
         """
         Initializes statistics of the filter pruning theoretical borderline.
 
@@ -158,8 +158,8 @@ class PrunedModelTheoreticalBorderline(Statistics):
             model with pruning rate = 1.
         :param max_prunable_params: Number of weights for pruned
             model with pruning rate = 1.
-        :param full_flops: The total amount of FLOPS in the model.
-        :param full_params_num: The total amount of weights in the model.
+        :param total_flops: The total amount of FLOPS in the model.
+        :param total_params: The total amount of weights in the model.
         """
         self._giga = 1e9
         self._mega = 1e6
@@ -167,8 +167,8 @@ class PrunedModelTheoreticalBorderline(Statistics):
         self.prunable_layers_num = num_prunable_layers
         self.minimum_possible_flops = max_prunable_flops
         self.minimum_possible_params = max_prunable_params
-        self.full_flops = full_flops
-        self.full_params_num = full_params_num
+        self.total_flops = total_flops
+        self.total_params = total_params
 
     def to_str(self) -> str:
         algorithm_string = create_table(
@@ -176,10 +176,10 @@ class PrunedModelTheoreticalBorderline(Statistics):
             rows=[
                 ['Pruned layers count / prunable layers count', f'{self.pruned_layers_num} /'
                                                                 f' {self.prunable_layers_num}'],
-                ['GFLOPS minimum possible after pruning / full', f'{self.minimum_possible_flops / self._giga:.3f} /'
-                                                                 f' {self.full_flops / self._giga:.3f}'],
-                ['MParams minimum possible after pruning / full', f'{self.minimum_possible_params / self._mega:.3f} /'
-                                                                  f' {self.full_params_num / self._mega:.3f}'],
+                ['GFLOPS minimum possible after pruning / total', f'{self.minimum_possible_flops / self._giga:.3f} /'
+                                                                  f' {self.total_flops / self._giga:.3f}'],
+                ['MParams minimum possible after pruning / total', f'{self.minimum_possible_params / self._mega:.3f} /'
+                                                                   f' {self.total_params / self._mega:.3f}'],
             ]
         )
 
