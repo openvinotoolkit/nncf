@@ -128,28 +128,28 @@ class TestSotaCheckpoints:
                                   cwd=cwd, env=env) as result:
             exit_code = result.poll()
 
-        def process_line(decoded_line: str, error_lines: List):
-            if re.search('Error|(No module named)', decoded_line):
-                # WA for tensorboardX multiprocessing bug (https://github.com/lanpa/tensorboardX/issues/598)
-                if not re.search('EOFError', decoded_line):
-                    error_lines.append(decoded_line)
-            if decoded_line != "":
-                print(decoded_line)
+            def process_line(decoded_line: str, error_lines: List):
+                if re.search('Error|(No module named)', decoded_line):
+                    # WA for tensorboardX multiprocessing bug (https://github.com/lanpa/tensorboardX/issues/598)
+                    if not re.search('EOFError', decoded_line):
+                        error_lines.append(decoded_line)
+                if decoded_line != "":
+                    print(decoded_line)
 
-        error_lines = []
-        while exit_code is None:
-            decoded_line = result.stdout.readline().decode('utf-8').strip()
-            process_line(decoded_line, error_lines)
-            exit_code = result.poll()
+            error_lines = []
+            while exit_code is None:
+                decoded_line = result.stdout.readline().decode('utf-8').strip()
+                process_line(decoded_line, error_lines)
+                exit_code = result.poll()
 
-        # The process may exit before the first process_line is executed, handling this case here
-        outs, _ = result.communicate()
-        remaining_lines = outs.decode('utf-8').strip().split('\n')
-        for output_line in remaining_lines:
-            process_line(output_line, error_lines)
+            # The process may exit before the first process_line is executed, handling this case here
+            outs, _ = result.communicate()
+            remaining_lines = outs.decode('utf-8').strip().split('\n')
+            for output_line in remaining_lines:
+                process_line(output_line, error_lines)
 
-        err_string = "\n".join(error_lines) if error_lines else None
-        return exit_code, err_string
+            err_string = "\n".join(error_lines) if error_lines else None
+            return exit_code, err_string
 
     # pylint:disable=unused-variable
     @staticmethod
