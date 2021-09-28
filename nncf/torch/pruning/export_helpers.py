@@ -150,13 +150,19 @@ class PTIdentityMaskForwardOps(PTDefaultMetaOp):
 class PTReshape(PTDefaultMetaOp):
     subtypes = [ReshapeMetatype]
 
+    @staticmethod
+    def _is_flatten(node: NNCFNode):
+        return node.node_type == 'flatten' or \
+            sum([dim for dim in node.layer_attributes.output_shape if dim]) == 1
+
     @classmethod
     def accept_pruned_input(cls, node: NNCFNode):
         def _filtered_counter(shape):
             filtered = [dim for dim in shape if dim not in [None, 1]]
             return Counter(filtered)
 
-        if node.node_type == 'flatten':
+        # Check if this reshape is flatten
+        if cls._is_flatten(node):
             return True
 
         input_shape = node.layer_attributes.input_shape
@@ -165,9 +171,8 @@ class PTReshape(PTDefaultMetaOp):
         return _filtered_counter(input_shape) == _filtered_counter(output_shape)
 
     @classmethod
-    #TODO: test it!
     def mask_propagation(cls, node: NNCFNode, graph: NNCFGraph):
-        if node.node_type == 'flatten':
+        if cls._is_flatten(node):
             input_masks = get_input_masks(node, graph)
             assert len(input_masks) == 1
             flatten_channels = int(np.prod(node.layer_attributes.input_shape))
