@@ -154,7 +154,8 @@ def main_worker(current_gpu, config):
 
     pretrained = is_pretrained_model_requested(config)
 
-    if config.to_onnx is not None:
+    is_export_only = 'export' in config.mode and ('train' not in config.mode and 'test' not in config.mode)
+    if is_export_only:
         assert pretrained or (resuming_checkpoint_path is not None)
     else:
         test_data_loader, train_data_loader, init_data_loader = create_dataloaders(config)
@@ -209,7 +210,7 @@ def main_worker(current_gpu, config):
 
     log_common_mlflow_params(config)
 
-    if 'export' in config.mode and ('train' not in config.mode and 'test' not in config.mode):
+    if is_export_only:
         compression_ctrl.export_model(config.to_onnx)
         logger.info("Saved to {}".format(config.to_onnx))
         return
