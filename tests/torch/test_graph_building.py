@@ -15,6 +15,7 @@ from copy import deepcopy
 from nncf.common.graph.definitions import MODEL_INPUT_OP_NAME
 from nncf.common.graph.definitions import MODEL_OUTPUT_OP_NAME
 from nncf.common.graph.definitions import NNCFGraphNodeType
+from nncf.common.graph.layer_attributes import ReshapeLayerAttributes
 from typing import List
 from typing import Tuple
 
@@ -199,6 +200,43 @@ def test_activation_shape_tracing(input_shape: Tuple):
         output_tensor_shapes = [x.tensor_shape for x in output_edges]
         assert input_tensor_shapes == ref_input_shapes, "Failed for node ID: {}".format(node_id)
         assert output_tensor_shapes == ref_output_shapes, "Failed for node ID: {}".format(node_id)
+
+
+class ModelForTestWithReshapeAndFlatten(ModelForTest):
+    def forward(self, x):
+        y = super().forward(x)
+        size = y.size()
+        y = y.view(size + (1, 1))
+        y = torch.flatten(y)
+        _ = y.view(-1)
+        return y
+
+
+@pytest.mark.parametrize("input_shape", input_shapes)
+def test_reshape_attributes_saved_during_graph_building(input_shape):
+    model = ModelForTestWithReshapeAndFlatten()
+    input_info = ModelInputInfo(input_shape)
+    graph_builder = GraphBuilder(create_dummy_forward_fn([input_info, ], with_input_tracing=True,
+                                                         with_output_tracing=True))
+    graph = graph_builder.build_graph(model)
+    reshape_nodes_with_attributes = {
+        '8 ModelForTestWithReshapeAndFlatten/view_0':
+            {'input_shape': (input_shape[0], ModelForTest.OUT_CHANNELS, input_shape[2], input_shape[3]),
+             'output_shape': (input_shape[0], ModelForTest.OUT_CHANNELS, input_shape[2], input_shape[3], 1, 1)},
+        '9 ModelForTestWithReshapeAndFlatten/flatten_0':
+            {'input_shape': (input_shape[0], ModelForTest.OUT_CHANNELS, input_shape[2], input_shape[3], 1, 1),
+             'output_shape': (input_shape[0] * ModelForTest.OUT_CHANNELS * input_shape[2] * input_shape[3],)}
+    }
+    reshape_nodes_without_attributes = ['10 ModelForTestWithReshapeAndFlatten/view_1']
+    for key, shapes in reshape_nodes_with_attributes.items():
+        node = graph.get_node_by_key(key)
+        assert isinstance(node.layer_attributes, ReshapeLayerAttributes)
+        assert node.layer_attributes.input_shape == shapes['input_shape']
+        assert node.layer_attributes.output_shape == shapes['output_shape']
+
+    for key in reshape_nodes_without_attributes:
+        node = graph.get_node_by_key(key)
+        assert node.layer_attributes is None
 
 
 TEST_KEYWORD_1 = "keyword1"

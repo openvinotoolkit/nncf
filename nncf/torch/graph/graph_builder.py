@@ -96,10 +96,12 @@ class GraphConverter:
 
         for node in nncf_graph.get_all_nodes():
             if node.metatype is ReshapeMetatype:
-                input_node = nncf_graph.get_input_edges(node)[0]
-                output_node = nncf_graph.get_output_edges(node)[0]
-                layer_attributes = ReshapeLayerAttributes(input_node.tensor_shape,
-                                                          output_node.tensor_shape)
-                node.layer_attributes = layer_attributes
+                input_nodes = nncf_graph.get_input_edges(node)
+                output_nodes = nncf_graph.get_output_edges(node)
+                # In case ReshapeMetatype op is intermediate node
+                if input_nodes and output_nodes:
+                    layer_attributes = ReshapeLayerAttributes(input_nodes[0].tensor_shape,
+                                                              output_nodes[0].tensor_shape)
+                    node.layer_attributes = layer_attributes
 
         return nncf_graph
