@@ -124,6 +124,12 @@ To run the samples please refer to the corresponding tutorials:
   - [Object Detection sample](examples/tensorflow/object_detection/README.md)
   - [Instance Segmentation sample](examples/tensorflow/segmentation/README.md)
 
+## Model Compression Notebooks 
+
+A collection of ready-to-run Jupyter* notebooks are also available to demonstrate how to use NNCF compression algorithms
+to optimize models for inference with the OpenVINO Toolkit.
+- [Optimizing PyTorch models with NNCF of OpenVINO by 8-bit quantization](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/302-pytorch-quantization-aware-training)
+
 ## Third-party repository integration
 NNCF may be straightforwardly integrated into training/evaluation pipelines of third-party repositories.
 
