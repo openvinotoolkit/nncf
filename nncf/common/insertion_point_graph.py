@@ -133,7 +133,6 @@ class InsertionPointGraph(nx.DiGraph):
         # edges using a corresponding NNCFGraph function; add a pre-op insertion point node as the
         # sink for input edges and connect it to input edge destinations, then add a post-op
         # insertion point as the source of output edges and connect it to output edge origins.
-
         for operator_node_key in node_keys_working_set:
             operator_node = self.nodes[operator_node_key]
             original_node = operator_node[InsertionPointGraph.REGULAR_NODE_REF_NODE_ATTR]
