@@ -161,6 +161,9 @@ class PTReshape(PTDefaultMetaOp):
             filtered = [dim for dim in shape if dim not in [None, 1]]
             return Counter(filtered)
 
+        if node.layer_attributes is None:
+            return False
+
         # Check if this reshape is flatten
         if cls._is_flatten(node):
             return True
@@ -172,16 +175,21 @@ class PTReshape(PTDefaultMetaOp):
 
     @classmethod
     def mask_propagation(cls, node: NNCFNode, graph: NNCFGraph):
-        if cls._is_flatten(node):
-            input_masks = get_input_masks(node, graph)
-            assert len(input_masks) == 1
-            flatten_channels = int(np.prod(node.layer_attributes.input_shape))
-            mask_len = input_masks[0].shape[0]
-            assert flatten_channels % mask_len == 0
-            output_mask = torch.repeat_interleave(input_masks[0], flatten_channels // mask_len)
-            node.data['output_mask'] = output_mask
-        elif cls.accept_pruned_input(node):
-            identity_mask_propagation(node, graph)
+        if cls.accept_pruned_input(node):
+            if cls._is_flatten(node):
+                input_masks = get_input_masks(node, graph)
+                assert len(input_masks) == 1
+                input_mask = input_masks[0]
+                output_mask = None
+                if input_mask is not None:
+                    flatten_channels = int(np.prod(node.layer_attributes.input_shape))
+                    mask_len = input_mask.shape[0]
+                    assert flatten_channels % mask_len == 0
+                    output_mask = torch.repeat_interleave(input_mask, flatten_channels // mask_len)
+
+                node.data['output_mask'] = output_mask
+            else:
+                identity_mask_propagation(node, graph)
         else:
             node.data['output_mask'] = None
 

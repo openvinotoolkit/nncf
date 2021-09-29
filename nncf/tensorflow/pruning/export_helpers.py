@@ -235,11 +235,22 @@ class TFElementwise(DefaultMetaOp):
 class TFReshapeOps(DefaultMetaOp):
     additional_types = ['Reshape']
 
+    @staticmethod
+    def _is_flatten(node: NNCFNode):
+        return sum([dim for dim in node.layer_attributes.output_shape if dim]) == 1
+
     @classmethod
     def accept_pruned_input(cls, node: NNCFNode):
         def _filtered_counter(shape):
             filtered = [dim for dim in shape if dim not in [None, 1]]
             return Counter(filtered)
+
+        if node.layer_attributes is None:
+            return False
+
+        # Check if this reshape is flatten
+        if cls._is_flatten(node):
+            return True
 
         input_shape = node.layer_attributes.input_shape
         output_shape = node.layer_attributes.output_shape
@@ -249,7 +260,10 @@ class TFReshapeOps(DefaultMetaOp):
     @classmethod
     def mask_propagation(cls, node: NNCFNode, graph: NNCFGraph):
         if cls.accept_pruned_input(node):
-            identity_mask_propagation(node, graph)
+            if cls._is_flatten(node):
+                TFFlattenOps.mask_propagation(node, graph)
+            else:
+                identity_mask_propagation(node, graph)
         else:
             node.data['output_mask'] = None
 
@@ -260,7 +274,9 @@ class TFFlattenOps(DefaultMetaOp):
 
     @classmethod
     def accept_pruned_input(cls, node: NNCFNode):
-        return True
+        if node.layer_attributes is not None:
+            return True
+        return False
 
     @classmethod
     def mask_propagation(cls, node: NNCFNode, graph: NNCFGraph):
@@ -268,7 +284,7 @@ class TFFlattenOps(DefaultMetaOp):
         input_masks = get_input_masks(node, graph)
         assert len(input_masks) == 1
         input_mask = input_masks[0]
-        if input_mask:
+        if input_mask is not None and node.layer_attributes is not None:
             flatten_channels = int(np.prod(node.layer_attributes.input_shape))
             mask_len = input_mask.shape[0]
             assert flatten_channels % mask_len == 0

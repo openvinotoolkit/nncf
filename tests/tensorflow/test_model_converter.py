@@ -19,6 +19,7 @@ from tensorflow.python.keras import models
 
 from nncf.common.graph import INPUT_NOOP_METATYPES
 from nncf.common.graph import OUTPUT_NOOP_METATYPES
+from nncf.tensorflow.graph.metatypes.common import RESHAPE_METATYPES
 from nncf.tensorflow.graph.converter import TFModelConverter
 from nncf.tensorflow.graph.converter import convert_keras_model_to_nncf_graph
 from tests.tensorflow.helpers import get_basic_conv_test_model
@@ -84,3 +85,30 @@ def test_get_custom_layers():
     assert len(custom_layers) == 1
     assert CustomLayerForTest.CUSTOM_LAYER_NAME in custom_layers
     assert isinstance(custom_layers[CustomLayerForTest.CUSTOM_LAYER_NAME], CustomLayerForTest)
+
+
+def ModelWithReshapes():
+    input =layers.Input((64, ))
+    x = tf.reshape(input, (32, -1))
+    x = layers.Reshape((8, 8, -1))(x)
+    y = layers.Flatten()(x)
+    dummy_y = tf.reshape(input, (16, -1))
+    return models.Model(input, y, name='ModelWithReshape')
+
+
+def test_model_with_reshape():
+    model = ModelWithReshapes()
+    model.build((64,))
+    graph = convert_keras_model_to_nncf_graph(model)
+    ref_reshape_nodes = {'tf_op_layer_Reshape': {'input_shape': (None, 64),
+                                                 'output_shape': (32, None)},
+                         'reshape': {'input_shape': (32, None),
+                                     'output_shape': (32, 8, 8, None)},
+                         'flatten': {'input_shape': (32, 8, 8, None),
+                                     'output_shape': (32, None)}}
+    for node in graph.get_all_nodes():
+        if node.metatype in RESHAPE_METATYPES:
+            assert node.node_name in ref_reshape_nodes
+            assert node.layer_attributes is not None
+            assert node.layer_attributes.input_shape == ref_reshape_nodes[node.node_name]['input_shape']
+            assert node.layer_attributes.output_shape == ref_reshape_nodes[node.node_name]['output_shape']

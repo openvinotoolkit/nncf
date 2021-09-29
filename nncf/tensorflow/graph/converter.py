@@ -685,4 +685,6 @@ def _get_conv_layer_attributes(layer: tf.keras.layers.Layer, is_depthwise: bool 
 def _get_reshape_layer_attributes(layer: tf.keras.layers.Layer):
     input_shape = layer.input_shape
     output_shape = layer.output_shape
+    if isinstance(output_shape, list):
+        output_shape = output_shape[0]
     return ReshapeLayerAttributes(input_shape, output_shape)

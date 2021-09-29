@@ -118,7 +118,8 @@ ELEMENTWISE_LAYER_METATYPES = [
 
 RESHAPE_METATYPES = [
     layer_metatypes.TFReshapeLayerMetatype,
-    layer_metatypes.TFFlattenLayerMetatype
+    layer_metatypes.TFFlattenLayerMetatype,
+    op_metatypes.TFReshapeOpMetatype
 ]
 
 def get_operator_metatypes() -> List[Type[OperatorMetatype]]:
