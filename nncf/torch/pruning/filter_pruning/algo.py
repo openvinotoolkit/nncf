@@ -31,6 +31,7 @@ from nncf.common.pruning.clusterization import Clusterization
 from nncf.common.pruning.mask_propagation import MaskPropagationAlgorithm
 from nncf.common.pruning.schedulers import PRUNING_SCHEDULERS
 from nncf.common.pruning.statistics import FilterPruningStatistics
+from nncf.common.pruning.statistics import PrunedModelTheoreticalBorderline
 from nncf.common.pruning.statistics import PrunedLayerSummary
 from nncf.common.pruning.statistics import PrunedModelStatistics
 from nncf.common.pruning.utils import calculate_in_out_channels_in_uniformly_pruned_model
@@ -41,6 +42,7 @@ from nncf.common.pruning.utils import get_conv_in_out_channels
 from nncf.common.pruning.utils import get_rounded_pruned_element_number
 from nncf.common.schedulers import StubCompressionScheduler
 from nncf.common.statistics import NNCFStatistics
+from nncf.common.utils.debug import is_debug
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.config.extractors import extract_bn_adaptation_init_params
 from nncf.torch.algo_selector import PT_COMPRESSION_ALGORITHMS
@@ -118,6 +120,7 @@ class FilterPruningController(BasePruningAlgoController):
                  prunable_types: List[str],
                  pruned_module_groups: Clusterization[PrunedModuleInfo],
                  config: NNCFConfig):
+        #pylint:disable=too-many-statements
         super().__init__(target_model, prunable_types, pruned_module_groups, config)
         params = self.pruning_config.get('params', {})
         self.frozen = False
@@ -137,6 +140,10 @@ class FilterPruningController(BasePruningAlgoController):
         self.current_flops = self.full_flops
         self.full_params_num = sum(self.nodes_params_num.values())
         self.current_params_num = self.full_params_num
+        self._pruned_layers_num = len(self.pruned_module_groups_info.get_all_nodes())
+        self._prunable_layers_num = len(self._model.get_graph().get_nodes_by_types(self._prunable_types))
+        self._max_prunable_flops, self._max_prunable_params =\
+            self._calculate_flops_and_weights_in_uniformly_pruned_model(1.)
 
         self.weights_normalizer = tensor_l2_normalizer  # for all weights in common case
         self.filter_importance = FILTER_IMPORTANCE_FUNCTIONS.get(params.get('filter_importance', 'L2'))
@@ -206,6 +213,13 @@ class FilterPruningController(BasePruningAlgoController):
         minfo.operand.binary_filter_pruning_mask = mask
 
     def statistics(self, quickly_collected_only: bool = False) -> NNCFStatistics:
+        if not quickly_collected_only and is_debug():
+            stats = PrunedModelTheoreticalBorderline(
+                self._pruned_layers_num, self._prunable_layers_num, self._max_prunable_flops,
+                self._max_prunable_params, self.full_flops, self.full_params_num)
+
+            nncf_logger.debug(stats.to_str())
+
         pruned_layers_summary = {}
         for minfo in self.pruned_module_groups_info.get_all_nodes():
             layer_name = str(minfo.module_scope)
