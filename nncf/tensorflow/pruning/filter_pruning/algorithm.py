@@ -34,6 +34,8 @@ from nncf.common.pruning.utils import get_cluster_next_nodes
 from nncf.common.pruning.utils import get_conv_in_out_channels
 from nncf.common.pruning.utils import get_rounded_pruned_element_number
 from nncf.common.statistics import NNCFStatistics
+from nncf.common.pruning.statistics import PrunedModelTheoreticalBorderline
+from nncf.common.utils.debug import is_debug
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.common.schedulers import StubCompressionScheduler
 from nncf.common.accuracy_aware_training.training_loop import ADAPTIVE_COMPRESSION_CONTROLLERS
@@ -126,6 +128,10 @@ class FilterPruningController(BasePruningAlgoController):
         self.current_flops = self.full_flops
         self.full_params_num = sum(self._nodes_params_num.values())
         self.current_params_num = self.full_params_num
+        self._pruned_layers_num = len(self._pruned_layer_groups_info.get_all_nodes())
+        self._prunable_layers_num = len(self._original_graph.get_nodes_by_types(self._prunable_types))
+        self._max_prunable_flops, self._max_prunable_params = \
+            self._calculate_flops_and_weights_in_uniformly_pruned_model(1.)
 
         self._weights_normalizer = tensor_l2_normalizer  # for all weights in common case
         self._filter_importance = FILTER_IMPORTANCE_FUNCTIONS.get(params.get('filter_importance', 'L2'))
@@ -162,6 +168,13 @@ class FilterPruningController(BasePruningAlgoController):
         self._scheduler.current_pruning_level = 0.0
 
     def statistics(self, quickly_collected_only: bool = False) -> NNCFStatistics:
+        if not quickly_collected_only and is_debug():
+            stats = PrunedModelTheoreticalBorderline(
+                self._pruned_layers_num, self._prunable_layers_num, self._max_prunable_flops,
+                self._max_prunable_params, self.full_flops, self.full_params_num)
+
+            nncf_logger.debug(stats.to_str())
+
         model_statistics = self._calculate_pruned_model_stats()
         self._update_benchmark_statistics()
         target_pruning_level = self.scheduler.current_pruning_level
