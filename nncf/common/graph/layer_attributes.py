@@ -29,6 +29,19 @@ class BaseLayerAttributes(ABC):
     """
 
 
+class MultipleInputLayerAttributes(BaseLayerAttributes):
+    """
+    Represents a layer with multiple inputs.
+    """
+    def __init__(self,
+                 axis: int):
+        self.axis = axis
+
+    def __eq__(self, other):
+        return isinstance(other, MultipleInputLayerAttributes) \
+               and self.axis == other.axis
+
+
 class WeightedLayerAttributes(BaseLayerAttributes):
     """
     Represents a layer with weights.

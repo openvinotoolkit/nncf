@@ -76,6 +76,19 @@ PT_PRUNING_OPERATOR_METATYPES = PruningOperationsMetatypeRegistry("operator_meta
 
 class PTDefaultMetaOp(DefaultMetaOp):
     @classmethod
+    def mask_propagation(cls, node: NNCFNode, graph: NNCFGraph):
+        """
+        Propagate mask through a node using masks of all inputs and pruning mask of current node (if any).
+        Should set the following attributes:
+            input_masks - list of masks of input nodes (None if there is no mask in some input);
+            output_mask - resulting mask of node operation.
+
+        :param node: Node from NNCF graph to propagate mask through it.
+        :param graph: Graph of model to prune.
+        """
+        raise NotImplementedError
+
+    @classmethod
     def input_prune(cls, model: NNCFNetwork, node: NNCFNode, graph: NNCFGraph):
         """
         Prune node by input_masks (if masks is not none and operation support it).
