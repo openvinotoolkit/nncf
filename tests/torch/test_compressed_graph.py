@@ -21,6 +21,7 @@ from typing import Callable, Dict, List, Tuple, Union
 import networkx as nx
 import pytest
 import torch
+from tests.torch.test_models.synthetic import MatMulDivConv
 from torch import nn
 import torch.nn.functional as F
 import torchvision
@@ -708,7 +709,8 @@ SYNTHETIC_MODEL_DESC_LIST = [
     GeneralModelDesc(model_builder=EmbeddingCatLinearModel, input_info={"sample_size": [1, 1],
                                                                   "type": "long",
                                                                   "filler": "zeros"}),
-    GeneralModelDesc(model_builder=MultiOutputSameTensorModel)
+    GeneralModelDesc(model_builder=MultiOutputSameTensorModel),
+    GeneralModelDesc(model_builder=MatMulDivConv, input_sample_sizes=([1, 1, 5, 5], [1, 1, 5, 5]))
 ]
 
 

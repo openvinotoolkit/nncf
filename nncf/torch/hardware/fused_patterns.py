@@ -5,6 +5,7 @@ from nncf.torch.graph.pattern_operations import ATOMIC_ACTIVATIONS_OPERATIONS
 from nncf.torch.graph.pattern_operations import BATCH_NORMALIZATION_OPERATIONS
 from nncf.torch.graph.pattern_operations import GROUP_NORMALIZATION_OPERATIONS
 from nncf.torch.graph.pattern_operations import LINEAR_OPERATIONS
+from nncf.torch.graph.pattern_operations import MATMUL_OPERATIONS
 from nncf.torch.graph.pattern_operations import RELU_OPERATIONS
 from nncf.torch.graph.patterns import create_h_sigmoid_act
 from nncf.torch.graph.patterns import create_h_swish_act
@@ -16,6 +17,10 @@ def _get_torch_hw_fused_patterns() -> HWFusedPatterns:
     linear_ops = GraphPattern()
     linear_ops.add_node(**LINEAR_OPERATIONS)
     retval.register(linear_ops, LINEAR_OPERATIONS['label'], match=False)
+
+    matmul_ops = GraphPattern()
+    matmul_ops.add_node(**MATMUL_OPERATIONS)
+    retval.register(linear_ops, MATMUL_OPERATIONS['label'], match=False)
 
     batch_norm = GraphPattern()
     batch_norm.add_node(**BATCH_NORMALIZATION_OPERATIONS)
@@ -36,6 +41,8 @@ def _get_torch_hw_fused_patterns() -> HWFusedPatterns:
     batch_norm_activations_permutation = batch_norm + activations | activations + batch_norm | batch_norm | activations
 
     retval.register(linear_ops + batch_norm_activations_permutation, 'LINEAR + BN_ACT_PERM',
+                    match=True)
+    retval.register(matmul_ops + arithmetic_ops, 'MATMUL + ARITHMETIC',
                     match=True)
     retval.register(batch_norm + activations, 'BN + ACTIVATIONS', match=True)
     retval.register(activations + batch_norm, 'ACTIVATIONS + BN', match=True)
