@@ -181,7 +181,7 @@ class OpConcat(DefaultMetaOp):
 
         for input_node in graph.get_previous_nodes(node):
             # If input has mask ->  it went from convolution (source of this node is a convolution)
-            if input_node.data.get('output_mask', None) is None:
+            if input_node.data.get('output_mask', None) is not None:
                 continue
 
             source_nodes = get_sources_of_node(input_node, graph, cls.ConvolutionOp.get_all_op_aliases() +

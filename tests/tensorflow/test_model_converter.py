@@ -84,3 +84,32 @@ def test_get_custom_layers():
     assert len(custom_layers) == 1
     assert CustomLayerForTest.CUSTOM_LAYER_NAME in custom_layers
     assert isinstance(custom_layers[CustomLayerForTest.CUSTOM_LAYER_NAME], CustomLayerForTest)
+
+
+def ModelWithReshapes():
+    input =layers.Input((64, ))
+    x = tf.reshape(input, (32, -1))
+    x = layers.Reshape((16, -1))(x)
+    ones = tf.ones_like(x)
+    t1 = layers.concatenate([x, ones])
+    t2 = tf.concat([x, ones], axis=-1)
+    y = tf.concat([t1, t2], axis=-1)
+    return models.Model(input, y, name='ModelWithReshape')
+
+
+def test_model_with_reshape_and_concat():
+    model = ModelWithReshapes()
+    model.build((64,))
+    graph = convert_keras_model_to_nncf_graph(model)
+    ref_reshape_nodes = {'tf_op_layer_Reshape': {'input_shape': (None, 64),
+                                                 'output_shape': (32, None)},
+                         'reshape': {'input_shape': (32, None),
+                                     'output_shape': (32, 8, 8, None)},
+                         'flatten': {'input_shape': (32, 8, 8, None),
+                                     'output_shape': (32, None)}}
+    for node in graph.get_all_nodes():
+        if node.metatype in RESHAPE_METATYPES:
+            assert node.node_name in ref_reshape_nodes
+            assert node.layer_attributes is not None
+            assert node.layer_attributes.input_shape == ref_reshape_nodes[node.node_name]['input_shape']
+            assert node.layer_attributes.output_shape == ref_reshape_nodes[node.node_name]['output_shape']
