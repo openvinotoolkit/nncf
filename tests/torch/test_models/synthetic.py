@@ -231,3 +231,13 @@ class AddTwoConv(nn.Module):
 
     def forward(self, x):
         return self.conv1(x) + self.conv2(x)
+
+
+class MatMulDivConv(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.conv = create_conv(1, 2, 2, 2)
+
+    def forward(self, x: torch.Tensor, y: torch.Tensor):
+        z = torch.matmul(x, y) / 2
+        return self.conv(z)
