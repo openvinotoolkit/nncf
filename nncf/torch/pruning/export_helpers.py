@@ -12,21 +12,14 @@
 """
 from typing import Union
 from typing import List
-from collections import Counter
 
 import torch
-import numpy as np
 
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
-from nncf.common.pruning.export_helpers import DefaultMetaOp
-from nncf.common.pruning.utils import is_grouped_conv
-from nncf.common.pruning.utils import get_sources_of_node
 from nncf.common.pruning.utils import PruningOperationsMetatypeRegistry
-from nncf.common.pruning.mask_propagation import identity_mask_propagation
 from nncf.common.pruning.mask_propagation import get_input_masks
 from nncf.common.pruning.mask_propagation import MaskPropagationAlgorithm
-from nncf.common.graph.layer_attributes import GroupNormLayerAttributes
 from nncf.torch.graph.operator_metatypes import (
     AddMetatype,
     AvgPool2dMetatype,
@@ -61,6 +54,7 @@ from nncf.torch.graph.operator_metatypes import (
     TanhMetatype,
 )
 from nncf.common.pruning.export_helpers import (
+    DefaultMetaOp,
     OpInput,
     OpOutput,
     OpIdentityMaskForwardOps,
@@ -80,25 +74,47 @@ from nncf.common.pruning.utils import is_depthwise_conv
 PT_PRUNING_OPERATOR_METATYPES = PruningOperationsMetatypeRegistry("operator_metatypes")
 
 
+class PTDefaultMetaOp(DefaultMetaOp):
+    @classmethod
+    def input_prune(cls, model: NNCFNetwork, node: NNCFNode, graph: NNCFGraph):
+        """
+        Prune node by input_masks (if masks is not none and operation support it).
+
+        :param model: NNCF network.
+        :param node: Node from NNCF graph that will be prune.
+        :param graph: Graph of model.
+        """
+
+    @classmethod
+    def output_prune(cls, model: NNCFNetwork, node: NNCFNode, graph: NNCFGraph):
+        """
+        Prune node by output_mask (if mask is not none and operation support it).
+
+        :param model: NNCF network.
+        :param node: Node from NNCF graph that will be prune.
+        :param graph: Graph of model.
+        """
+
+
 @PT_PRUNING_OPERATOR_METATYPES.register('model_input')
-class PTInput(OpInput):
+class PTInput(PTDefaultMetaOp, OpInput):
     subtypes = [PTInputNoopMetatype]
 
 
 @PT_PRUNING_OPERATOR_METATYPES.register('model_output')
-class PTOutput(OpOutput):
+class PTOutput(PTDefaultMetaOp, OpOutput):
     subtypes = [PTOutputNoopMetatype]
 
 
 @PT_PRUNING_OPERATOR_METATYPES.register('identity_mask_propagation')
-class PTIdentityMaskForwardOps(OpIdentityMaskForwardOps):
+class PTIdentityMaskForwardOps(PTDefaultMetaOp, OpIdentityMaskForwardOps):
     subtypes = [HardTanhMetatype, TanhMetatype, RELUMetatype, PRELUMetatype, ELUMetatype, GELUMetatype, SigmoidMetatype,
                 SoftmaxMetatype, AvgPool2dMetatype, MaxPool2dMetatype, DropoutMetatype, SILUMetatype]
     additional_types = ['h_sigmoid', 'h_swish', 'RELU']
 
 
 @PT_PRUNING_OPERATOR_METATYPES.register('convolution')
-class PTConvolution(OpConvolution):
+class PTConvolution(PTDefaultMetaOp, OpConvolution):
     subtypes = [Conv1dMetatype, Conv2dMetatype, Conv3dMetatype]
 
     @classmethod
@@ -152,7 +168,7 @@ class PTConvolution(OpConvolution):
 
 
 @PT_PRUNING_OPERATOR_METATYPES.register('transpose_convolution')
-class PTTransposeConvolution(OpTransposeConvolution):
+class PTTransposeConvolution(PTDefaultMetaOp, OpTransposeConvolution):
     subtypes = [ConvTranspose2dMetatype, ConvTranspose3dMetatype]
 
     @classmethod
@@ -199,7 +215,7 @@ class PTTransposeConvolution(OpTransposeConvolution):
 
 
 @PT_PRUNING_OPERATOR_METATYPES.register('batch_norm')
-class PTBatchNorm(OpBatchNorm):
+class PTBatchNorm(PTDefaultMetaOp, OpBatchNorm):
     subtypes = [BatchNormMetatype]
 
     @classmethod
@@ -225,7 +241,7 @@ class PTBatchNorm(OpBatchNorm):
 
 
 @PT_PRUNING_OPERATOR_METATYPES.register('group_norm')
-class GroupNorm(OpGroupNorm):
+class GroupNorm(PTDefaultMetaOp, OpGroupNorm):
     subtypes = [GroupNormMetatype]
 
     @classmethod
@@ -251,7 +267,7 @@ class GroupNorm(OpGroupNorm):
 
 
 @PT_PRUNING_OPERATOR_METATYPES.register('elementwise')
-class PTElementwise(OpElementwise):
+class PTElementwise(PTDefaultMetaOp, OpElementwise):
     subtypes = [AddMetatype, SubMetatype, DivMetatype, MulMetatype]
 
     @classmethod
@@ -285,12 +301,12 @@ class PTElementwise(OpElementwise):
 
 
 @PT_PRUNING_OPERATOR_METATYPES.register('stop_propagation_ops')
-class PTStopMaskForwardOps(OpStopMaskForwardOps):
+class PTStopMaskForwardOps(PTDefaultMetaOp, OpStopMaskForwardOps):
     subtypes = [MeanMetatype, MaxMetatype, MinMetatype, LinearMetatype, MatMulMetatype]
 
 
 @PT_PRUNING_OPERATOR_METATYPES.register('concat')
-class PTConcat(OpConcat):
+class PTConcat(PTDefaultMetaOp, OpConcat):
     subtypes = [CatMetatype]
 
     ConvolutionOp = PTConvolution
@@ -335,9 +351,6 @@ class PTConcat(OpConcat):
 
         node.data['input_masks'] = input_masks
         node.data['output_mask'] = output_mask
-    ConvolutionOp = PTConvolution
-    StopMaskForwardOp = PTStopMaskForwardOps
-    InputOp = PTInput
 
 
 class ModelPruner(MaskPropagationAlgorithm):
