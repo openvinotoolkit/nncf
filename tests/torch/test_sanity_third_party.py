@@ -201,7 +201,7 @@ class TestTransformers:
     @pytest.mark.dependency(depends=['install_trans'], name='lm_train')
     def test_lm_train(self, temp_folder):
         com_line = "examples/pytorch/language-modeling/run_clm.py --model_name_or_path gpt2" \
-                   " --do_train --per_gpu_train_batch_size 2" \
+                   " --do_train --per_gpu_train_batch_size 1" \
                    " --dataset_name wikitext --dataset_config_name wikitext-2-raw-v1 " \
                    " --num_train_epochs 0.001" \
                    " --output_dir {} --nncf_config" \
@@ -214,7 +214,7 @@ class TestTransformers:
 
     @pytest.mark.dependency(depends=['install_trans', 'lm_train'])
     def test_lm_eval(self, temp_folder):
-        com_line = "examples/language-modeling/run_clm.py " \
+        com_line = "examples/pytorch/language-modeling/run_clm.py " \
                    " --model_name_or_path {output} --do_eval " \
                    " --output_dir {output} --dataset_name wikitext --dataset_config_name wikitext-2-raw-v1" \
                    " --max_eval_samples 10" \
