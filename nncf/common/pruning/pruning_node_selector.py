@@ -168,7 +168,7 @@ class PruningNodeSelector:
             pruned_nodes_clusterization.merge_list_of_clusters(previous_clusters)
 
         # 6. Checks for groups (all nodes in group can be pruned or all group can't be pruned).
-        model_analyser = ModelAnalyzer(graph, self._prune_operations, self._pruning_operator_metatypes, is_depthwise_conv)
+        model_analyser = ModelAnalyzer(graph, self._pruning_operator_metatypes, is_depthwise_conv)
         can_prune_analysis = model_analyser.analyse_model_before_pruning()
         self._check_pruning_groups(graph, pruned_nodes_clusterization, can_prune_analysis)
         return pruned_nodes_clusterization

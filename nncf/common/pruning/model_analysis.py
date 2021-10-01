@@ -11,8 +11,6 @@
  limitations under the License.
 """
 
-import numpy as np
-
 from typing import Callable, List
 
 from nncf.common.graph import NNCFGraph
@@ -22,16 +20,6 @@ from nncf.common.pruning.clusterization import Clusterization
 from nncf.common.pruning.export_helpers import DefaultMetaOp
 from nncf.common.pruning.utils import find_next_nodes_not_of_types
 from nncf.common.pruning.utils import PruningOperationsMetatypeRegistry
-
-
-class SymbolicMask(np.ndarray):
-    def __init__(self, mask_producer: int, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self._mask_producer = mask_producer
-
-    @property
-    def mask_producer(self):
-        return self._mask_producer
 
 
 def get_position(nodes_list: List[NNCFNode], idx: int):
@@ -120,11 +108,9 @@ class ModelAnalyzer:
     """
 
     def __init__(self, graph: NNCFGraph,
-                 prune_operations: List[str],
                  pruning_operator_metatypes: PruningOperationsMetatypeRegistry,
                  is_depthwise_conv_fn: Callable[[NNCFNode], bool]):
         self.graph = graph
-        self._prune_operations = prune_operations
 
         self._pruning_operator_metatypes = pruning_operator_metatypes
         pruning_op_metatypes_dict = self._pruning_operator_metatypes.registry_dict
@@ -208,15 +194,8 @@ class ModelAnalyzer:
             cls = self.get_meta_operation_by_type_name(nncf_node.node_type)
             self.accept_pruned_input[nncf_node.node_id] = cls.accept_pruned_input(nncf_node)
 
-    def check_pruned_dimentions(self):
-        # Init output_masks for each prunable layer
-        for node in self.graph.get_all_nodes():
-            if node.node_type in self._prune_operations and self.can_prune[node.node_id]:
-                node.data['output_mask'] = None
-
     def analyse_model_before_pruning(self):
         self.set_accept_pruned_input_attr()
         self.propagate_can_prune_attr_up()
         self.propagate_can_prune_attr_down()
-        self.check_pruned_dimentions()
         return self.can_prune

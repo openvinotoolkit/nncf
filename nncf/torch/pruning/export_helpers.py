@@ -58,7 +58,6 @@ from nncf.torch.graph.operator_metatypes import (
     SoftmaxMetatype,
     SubMetatype,
     TanhMetatype,
-    ReshapeMetatype,
 )
 from nncf.common.pruning.export_helpers import (
     OpInput,
@@ -70,7 +69,6 @@ from nncf.common.pruning.export_helpers import (
     OpGroupNorm,
     OpConcat,
     OpElementwise,
-    OpReshape,
     OpStopMaskForwardOps
 )
 from nncf.common.utils.logger import logger as nncf_logger
@@ -96,11 +94,6 @@ class PTIdentityMaskForwardOps(OpIdentityMaskForwardOps):
     subtypes = [HardTanhMetatype, TanhMetatype, RELUMetatype, PRELUMetatype, ELUMetatype, GELUMetatype, SigmoidMetatype,
                 SoftmaxMetatype, AvgPool2dMetatype, MaxPool2dMetatype, DropoutMetatype]
     additional_types = ['h_sigmoid', 'h_swish', 'RELU']
-
-
-@PT_PRUNING_OPERATOR_METATYPES.register('reshape')
-class PTReshape(OpReshape):
-    subtypes = [ReshapeMetatype]
 
 
 @PT_PRUNING_OPERATOR_METATYPES.register('convolution')
@@ -256,50 +249,6 @@ class GroupNorm(OpGroupNorm):
                          ' {}.'.format(node.data['key'], old_num_clannels, new_num_channels))
 
 
-@PT_PRUNING_OPERATOR_METATYPES.register('concat')
-class PTConcat(OpConcat):
-    subtypes = [CatMetatype]
-
-    @classmethod
-    def fill_input_masks(cls, node: NNCFNode, graph: NNCFGraph) -> Union[List[torch.Tensor], None]:
-        """
-        Fill input masks with all None replaced by identity masks.
-        If all input masks is None return None.
-
-        :param node: Node to determine it's sources.
-        :param graph: NNCF graph to work with.
-        :return: Filled input masks.
-        """
-        input_edges = graph.get_input_edges(node)
-        previous_nodes = [edge.from_node for edge in input_edges]
-        input_masks = [input_node.data['output_mask'] for input_node in previous_nodes]
-
-        if all(mask is None for mask in input_masks):
-            return None
-
-        device = [m for m in input_masks if m is not None][0].device
-
-        filled_input_masks = []
-        for i, mask in enumerate(input_masks):
-            if mask is None:
-                mask = torch.ones(input_edges[i].tensor_shape[1], device=device)
-            filled_input_masks.append(mask)
-        return filled_input_masks
-
-    @classmethod
-    def mask_propagation(cls, node: NNCFNode, graph: NNCFGraph):
-        input_masks = None
-        output_mask = None
-
-        if cls.check_concat(node, graph):
-            input_masks = cls.fill_input_masks(node, graph)
-            if input_masks:
-                output_mask = torch.cat(input_masks)
-
-        node.data['input_masks'] = input_masks
-        node.data['output_mask'] = output_mask
-
-
 @PT_PRUNING_OPERATOR_METATYPES.register('elementwise')
 class PTElementwise(OpElementwise):
     subtypes = [AddMetatype, SubMetatype, DivMetatype, MulMetatype]
@@ -343,6 +292,48 @@ class PTStopMaskForwardOps(OpStopMaskForwardOps):
 class PTConcat(OpConcat):
     subtypes = [CatMetatype]
 
+    ConvolutionOp = PTConvolution
+    StopMaskForwardOp = PTStopMaskForwardOps
+    InputOp = PTInput
+
+    @classmethod
+    def fill_input_masks(cls, node: NNCFNode, graph: NNCFGraph) -> Union[List[torch.Tensor], None]:
+        """
+        Fill input masks with all None replaced by identity masks.
+        If all input masks is None return None.
+
+        :param node: Node to determine it's sources.
+        :param graph: NNCF graph to work with.
+        :return: Filled input masks.
+        """
+        input_edges = graph.get_input_edges(node)
+        previous_nodes = [edge.from_node for edge in input_edges]
+        input_masks = [input_node.data['output_mask'] for input_node in previous_nodes]
+
+        if all(mask is None for mask in input_masks):
+            return None
+
+        device = [m for m in input_masks if m is not None][0].device
+
+        filled_input_masks = []
+        for i, mask in enumerate(input_masks):
+            if mask is None:
+                mask = torch.ones(input_edges[i].tensor_shape[1], device=device)
+            filled_input_masks.append(mask)
+        return filled_input_masks
+
+    @classmethod
+    def mask_propagation(cls, node: NNCFNode, graph: NNCFGraph):
+        input_masks = None
+        output_mask = None
+
+        if cls.check_concat(node, graph):
+            input_masks = cls.fill_input_masks(node, graph)
+            if input_masks:
+                output_mask = torch.cat(input_masks)
+
+        node.data['input_masks'] = input_masks
+        node.data['output_mask'] = output_mask
     ConvolutionOp = PTConvolution
     StopMaskForwardOp = PTStopMaskForwardOps
     InputOp = PTInput

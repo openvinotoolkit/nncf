@@ -33,8 +33,6 @@ from nncf.common.pruning.export_helpers import (
     OpBatchNorm,
     OpConcat,
     OpElementwise,
-    OpReshape,
-    OpFlatten,
     OpStopMaskForwardOps
 )
 
@@ -89,16 +87,6 @@ class TFElementwise(OpElementwise):
             for input_mask in input_masks[1:]:
                 tf.debugging.assert_near(input_masks[0], input_mask)
         node.data['output_mask'] = input_masks[0]
-
-
-@TF_PRUNING_OPERATOR_METATYPES.register('reshape')
-class TFReshapeOps(OpReshape):
-    additional_types = ['Reshape']
-
-
-@TF_PRUNING_OPERATOR_METATYPES.register('flatten')
-class TFFlattenOps(OpFlatten):
-    additional_types = ['Flatten']
 
 
 @TF_PRUNING_OPERATOR_METATYPES.register('stop_propagation_ops')

@@ -242,49 +242,6 @@ class OpElementwise(DefaultMetaOp):
         node.data['output_mask'] = input_masks[0]
 
 
-class OpReshape(DefaultMetaOp):
-    @staticmethod
-    def _is_flatten(node: NNCFNode):
-        return sum([dim for dim in node.layer_attributes.output_shape if dim]) == 1
-
-    @classmethod
-    def accept_pruned_input(cls, node: NNCFNode):
-        if node.layer_attributes is None:
-            return False
-        return True
-
-    @classmethod
-    def mask_propagation(cls, node: NNCFNode, graph: NNCFGraph):
-        if cls.accept_pruned_input(node):
-            if cls._is_flatten(node):
-                OpFlatten.mask_propagation(node, graph)
-            else:
-                identity_mask_propagation(node, graph)
-        else:
-            node.data['output_mask'] = None
-
-
-class OpFlatten(DefaultMetaOp):
-    @classmethod
-    def accept_pruned_input(cls, node: NNCFNode):
-        if node.layer_attributes is not None:
-            return True
-        return False
-
-    @classmethod
-    def mask_propagation(cls, node: NNCFNode, graph: NNCFGraph):
-        output_mask = None
-        input_masks = get_input_masks(node, graph)
-        assert len(input_masks) == 1
-        input_mask = input_masks[0]
-        if input_mask is not None and node.layer_attributes is not None:
-            flatten_channels = int(np.prod(node.layer_attributes.input_shape))
-            mask_len = input_mask.shape[0]
-            assert flatten_channels % mask_len == 0
-            output_mask = np.repeat(input_mask, repeats=flatten_channels // mask_len)
-        node.data['output_mask'] = output_mask
-
-
 class OpStopMaskForwardOps(DefaultMetaOp):
     @classmethod
     def accept_pruned_input(cls, node: NNCFNode):
