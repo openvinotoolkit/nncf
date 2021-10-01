@@ -500,7 +500,8 @@ def main_worker(current_gpu, config):
             loss_funcs.do_model_specific_postprocessing(config.model, target, model_outputs)
         return criterion_(loss_outputs, labels)
 
-    if config.to_onnx is not None:
+    is_export_only = 'export' in config.mode and ('train' not in config.mode and 'test' not in config.mode)
+    if is_export_only:
         assert pretrained or (resuming_checkpoint_path is not None)
     else:
         loaders, w_class = load_dataset(dataset, config)
@@ -538,7 +539,7 @@ def main_worker(current_gpu, config):
 
     log_common_mlflow_params(config)
 
-    if 'export' in config.mode and ('train' not in config.mode and 'test' not in config.mode):
+    if is_export_only:
         compression_ctrl.export_model(config.to_onnx)
         logger.info("Saved to {}".format(config.to_onnx))
         return

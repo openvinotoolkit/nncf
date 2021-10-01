@@ -158,8 +158,9 @@ def main_worker(current_gpu, config: SampleConfig):
     resuming_checkpoint_path = config.resuming_checkpoint_path
     nncf_config = config.nncf_config
     pretrained = is_pretrained_model_requested(config)
+    is_export_only = 'export' in config.mode and ('train' not in config.mode and 'test' not in config.mode)
 
-    if config.to_onnx is not None:
+    if is_export_only:
         assert pretrained or (resuming_checkpoint_path is not None)
     else:
         # Data loading code
@@ -211,7 +212,7 @@ def main_worker(current_gpu, config: SampleConfig):
     if model_state_dict is not None:
         load_state(model, model_state_dict, is_resume=True)
 
-    if 'export' in config.mode and ('train' not in config.mode and 'test' not in config.mode):
+    if is_export_only:
         compression_ctrl.export_model(config.to_onnx)
         logger.info("Saved to {}".format(config.to_onnx))
         return

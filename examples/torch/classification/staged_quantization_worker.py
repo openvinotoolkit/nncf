@@ -54,7 +54,7 @@ from nncf.torch.binarization.algo import BinarizationController
 from nncf.torch.checkpoint_loading import load_state
 from nncf.torch.initialization import default_criterion_fn
 from nncf.torch.initialization import register_default_init_args
-from nncf.torch.model_creation import create_compressed_model
+from nncf.torch import create_compressed_model
 from nncf.torch.quantization.algo import QuantizationController
 from nncf.torch.utils import is_main_process
 
@@ -145,8 +145,9 @@ def staged_quantization_main_worker(current_gpu, config):
     nncf_config = config.nncf_config
 
     pretrained = is_pretrained_model_requested(config)
+    is_export_only = 'export' in config.mode and ('train' not in config.mode and 'test' not in config.mode)
 
-    if config.to_onnx is not None:
+    if is_export_only:
         assert pretrained or (resuming_checkpoint_path is not None)
     else:
         # Data loading code
@@ -214,7 +215,7 @@ def staged_quantization_main_worker(current_gpu, config):
 
     log_common_mlflow_params(config)
 
-    if 'export' in config.mode and ('train' not in config.mode and 'test' not in config.mode):
+    if is_export_only:
         compression_ctrl.export_model(config.to_onnx)
         logger.info("Saved to {}".format(config.to_onnx))
         return
