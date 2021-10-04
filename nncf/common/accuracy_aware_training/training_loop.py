@@ -54,7 +54,7 @@ class TrainingLoop(ABC):
         (to be called inside the `train_epoch` of the TrainingRunner)
         :param validate_fn: a method to evaluate the model on the validation dataset
         (to be called inside the `train_epoch` of the TrainingRunner)
-        :param dump_checkpoint_fn: a method to dump a checkpoint with all necessary information
+        :param dump_checkpoint_fn: a method to dump a checkpoint
         :param configure_optimizers_fn: a method to instantiate an optimizer and a learning
         rate scheduler (to be called inside the `configure_optimizers` of the TrainingRunner)
         :return: The fine-tuned model

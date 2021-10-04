@@ -11,6 +11,7 @@
  limitations under the License.
 """
 
+from typing import Callable
 from typing import Dict
 from typing import TypeVar
 from abc import ABC
@@ -115,7 +116,7 @@ class TrainingRunner(ABC):
         (to be called inside the `train_epoch` of the TrainingRunner).
         :param configure_optimizers_fn: a method to instantiate an optimizer and a learning
         rate scheduler (to be called inside the `configure_optimizers` of the TrainingRunner).
-        :param dump_checkpoint_fn: a method to dump checkpoint with all necessary information
+        :param dump_checkpoint_fn: a method to dump a checkpoint.
         :param tensorboard_writer: The tensorboard object to be used for logging.
         :param log_dir: The path to be used for logging and checkpoint saving.
         """
@@ -236,7 +237,8 @@ class BaseAccuracyAwareTrainingRunner(TrainingRunner):
         self.cumulative_epoch_count = 0
         self.best_val_metric_value = 0
 
-    def initialize_training_loop_fns(self, train_epoch_fn, validate_fn, configure_optimizers_fn, dump_checkpoint_fn,
+    def initialize_training_loop_fns(self, train_epoch_fn, validate_fn, configure_optimizers_fn,
+                                     dump_checkpoint_fn: Callable[[ModelType, str, Dict[str, object]], None],
                                      tensorboard_writer=None, log_dir=None):
         self._train_epoch_fn = train_epoch_fn
         self._validate_fn = validate_fn
