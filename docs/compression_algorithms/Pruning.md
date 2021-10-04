@@ -88,7 +88,7 @@ This approach allows pruning the model taking into account layer-specific sensit
     }
     "pruning_init": 0.1, // Initial value of the pruning level applied to the convolutions that can be pruned in 'create_compressed_model' function. 0.0 by default.
     "params": {
-        "schedule": "baseline", // The type of scheduling to use for adjusting the target pruning level. Either `exponential`, `exponential_with_bias`,  or `baseline`, by default it is `baseline`"
+        "schedule": "exponential", // The type of scheduling to use for adjusting the target pruning level. Either `exponential`, `exponential_with_bias`,  or `baseline`, by default it is `exponential`"
         "pruning_target": 0.4, // Target value of the pruning level for the convolutions that can be pruned. These convolutions are determined by the model architecture. 0.5 by default.
         "pruning_flops_target": 0.4, // Target value of the pruning level by FLOPs in the whole model. Only one parameter from `pruning_target` and `pruning_flops_target` can be set. If none of them is specified, `pruning_target` = 0.5 is used as the default value. 
         "num_init_steps": 3, // Number of epochs for model pretraining before starting filter pruning. 0 by default.
