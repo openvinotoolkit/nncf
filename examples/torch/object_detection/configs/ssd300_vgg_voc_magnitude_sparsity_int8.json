@@ -17,6 +17,7 @@
   "iter_size": 1,
   "save_freq": 10,
   "epochs": 130,
+  "multiprocessing_distributed" : true,
   "optimizer": {
     "type": "Adam",
     "base_lr": 1e-4,

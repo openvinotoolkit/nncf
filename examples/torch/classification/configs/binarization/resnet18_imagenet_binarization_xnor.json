@@ -8,6 +8,7 @@
     "num_classes": 1000,
     "batch_size": 384,
     "epochs": 90,
+    "multiprocessing_distributed" : true,
     "compression": [
         {
             "algorithm": "binarization",

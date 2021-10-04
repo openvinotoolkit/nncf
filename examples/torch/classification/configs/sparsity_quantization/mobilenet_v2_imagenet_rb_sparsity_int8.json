@@ -8,6 +8,7 @@
     "batch_size" : 256,
     "checkpoint_save_dir": "results/snapshots",
     "epochs": 40,
+    "multiprocessing_distributed" : true,
     "optimizer": {
         "type": "Adam",
         "base_lr": 0.001,

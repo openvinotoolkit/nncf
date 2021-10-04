@@ -8,6 +8,7 @@
     "input_info": {
       "sample_size": [2, 3, 32, 32]
     },
+    "multiprocessing_distributed" : true,
     "optimizer": {
         "type": "Adam",
         "base_lr": 0.0001,

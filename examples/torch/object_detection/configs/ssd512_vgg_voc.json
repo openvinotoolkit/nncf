@@ -18,6 +18,7 @@
   "max_iter": 120000,
   "iter_size": 1,
   "save_freq": 50, // in epochs
+  "multiprocessing_distributed" : true,
   "optimizer": {
     "type": "Adam",
     "base_lr": 1e-4,

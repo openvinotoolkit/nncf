@@ -16,6 +16,7 @@
   "batch_size": 256,
   "iter_size": 1,
   "save_freq": 50,
+  "multiprocessing_distributed" : true,
   "optimizer": {
     "type": "Adam",
     "base_lr": 1e-4,

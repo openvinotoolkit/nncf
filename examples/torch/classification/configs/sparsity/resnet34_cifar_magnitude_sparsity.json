@@ -8,6 +8,7 @@
     "batch_size" : 256,
     "dataset": "CIFAR100",
     "epochs": 70,
+    "multiprocessing_distributed" : true,
     "optimizer": {
         "type": "SGD",
         "base_lr": 0.001,

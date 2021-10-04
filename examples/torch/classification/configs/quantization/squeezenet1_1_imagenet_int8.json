@@ -9,6 +9,7 @@
     "batch_size" : 256,
     "weight_decay": 1e-5,
     "epochs": 5,
+    "multiprocessing_distributed" : true,
     "optimizer": {
         "type": "Adam",
         "base_lr": 0.00001,

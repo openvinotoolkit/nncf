@@ -11,6 +11,7 @@
             224
         ]
     },
+    "multiprocessing_distributed" : true,
     "optimizer":{
         "type":"SGD",
         "base_lr":0.1,
