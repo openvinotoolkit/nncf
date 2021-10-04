@@ -2,9 +2,11 @@ import networkx as nx
 import onnx
 
 from nncf.common.graph import NNCFGraph
+from nncf.common.graph.definitions import NNCFGraphNodeType
 from nncf.common.graph.layer_attributes import Dtype
 
-from nncf.experimental.onnx.graph.helpers import find_nodes_by_input, find_nx_graph_node_by_label, find_output_shape
+from nncf.experimental.onnx.graph.onnx_graph_helpers import find_nodes_by_input, find_nx_graph_node_by_label, \
+    find_output_shape
 from nncf.experimental.onnx.graph.metatypes.onnx_ops import ONNX_OPERATION_METATYPES
 
 
@@ -20,13 +22,32 @@ class GraphConverter:
         nx_graph = nx.DiGraph()
         node_cnt = 0
         for node in onnx_model.graph.node:
-            params = {}
-            params["input"] = node.input
-            params["output"] = node.output
-            params["label"] = node.name
-            params["type"] = node.op_type
-            params["op_attrs"] = node.attribute
-            nx_graph.add_node(node_cnt, **params)
+            if node_cnt == 0:
+                params = {}
+                params["input"] = node.input
+                params["output"] = 'input_output'
+                params["label"] = 'input_node'
+                params["type"] = NNCFGraphNodeType.INPUT_NODE
+                params["op_attrs"] = ''
+                nx_graph.add_node(node_cnt, **params)
+                node_cnt += 1
+
+                params = {}
+                params["input"] = 'input_output'
+                params["output"] = node.output
+                params["label"] = node.name
+                params["type"] = node.op_type
+                params["op_attrs"] = node.attribute
+                nx_graph.add_node(node_cnt, **params)
+            else:
+                params = {}
+                params["input"] = node.input
+                params["output"] = node.output
+                params["label"] = node.name
+                params["type"] = node.op_type
+                params["op_attrs"] = node.attribute
+                nx_graph.add_node(node_cnt, **params)
+
             node_cnt += 1
 
         inferred_model = onnx.shape_inference.infer_shapes(onnx_model)
@@ -40,8 +61,16 @@ class GraphConverter:
                     nx_graph_in_node = find_nx_graph_node_by_label(in_node.name, nx_graph)
                     nx_graph.add_edge(node, nx_graph_in_node, activation_shape=shape)
 
-        return nx_graph
+        for i, (node, attrs) in enumerate(nx_graph.nodes(data=True)):
+            if i == 0:
+                input_node = node
+            elif i == 1:
+                first_conv_node = node
+            else:
+                break
+        nx_graph.add_edge(input_node, first_conv_node, activation_shape=[1,3,224,224])
 
+        return nx_graph
 
     @staticmethod
     def convert_from_digraph_to_nncf_graph(digraph):
@@ -76,4 +105,17 @@ class GraphConverter:
                 output_port_id=output_counter[u],
                 dtype=Dtype.FLOAT
             )
+        # for u, v, a in digraph.edges(data=True):
+        #     input_shape = [1,3,224,224]
+        #     input_node = nncf_graph.get_nodes_by_types(['nncf_model_input'])[0]
+        #     nncf_graph.add_edge_between_nncf_nodes(
+        #         from_node_id=input_node.node_id,
+        #         to_node_id=u,
+        #         tensor_shape=input_shape,
+        #         input_port_id=0,
+        #         output_port_id=0,
+        #         dtype=Dtype.FLOAT
+        #     )
+        #     break
+
         return nncf_graph

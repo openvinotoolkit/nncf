@@ -1,6 +1,7 @@
 from typing import List
 
 from nncf.common.graph.operator_metatypes import NOOP_METATYPES
+from nncf.common.graph.operator_metatypes import INPUT_NOOP_METATYPES
 
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.operator_metatypes import OperatorMetatypeRegistry
@@ -27,9 +28,21 @@ class ONNXLayerNoopMetatype(ONNXOpMetatype):
 
 
 @ONNX_OPERATION_METATYPES.register()
+@INPUT_NOOP_METATYPES.register()
+class ONNXInputLayerMetatype(ONNXOpMetatype):
+    name = 'InputLayer'
+
+
+@ONNX_OPERATION_METATYPES.register()
 class ConvolutionMetatype(ONNXOpMetatype):
     name = 'ConvOp'
     op_names = ['Conv']
+
+
+@ONNX_OPERATION_METATYPES.register()
+class LinearMetatype(ONNXOpMetatype):
+    name = 'LinearOp'
+    op_names = ['Gemm']
 
 
 @ONNX_OPERATION_METATYPES.register()
@@ -38,6 +51,13 @@ class ReluMetatype(ONNXOpMetatype):
     op_names = ['Relu']
 
 
-GENERAL_CONV_LAYER_METATYPES = [ConvolutionMetatype]
+@ONNX_OPERATION_METATYPES.register()
+class GlobalAveragePoolMetatype(ONNXOpMetatype):
+    name = 'GlobalAveragePool'
+    op_names = ['GlobalAveragePool']
+
+
+GENERAL_WIGHT_LAYER_METATYPES = [ConvolutionMetatype,
+                                 LinearMetatype]
 
 
