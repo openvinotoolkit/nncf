@@ -187,7 +187,7 @@ class OpConcat(DefaultMetaOp):
             source_nodes = get_sources_of_node(input_node, graph, cls.ConvolutionOp.get_all_op_aliases() +
                                                cls.StopMaskForwardOp.get_all_op_aliases() +
                                                cls.InputOp.get_all_op_aliases())
-            sources_types = [node.node_type for node in source_nodes]
+            sources_types = [node.node_type for node in source_nodes] + [input_node.node_type]
             if any(t in sources_types for t in cls.StopMaskForwardOp.get_all_op_aliases()):
                 return False
         return True
@@ -213,7 +213,8 @@ class OpConcat(DefaultMetaOp):
         filled_input_masks = []
         for i, mask in enumerate(input_masks):
             if mask is None:
-                mask = np.ones(input_edges[i].tensor_shape[-1])
+                concat_axis = node.layer_attributes.axis
+                mask = np.ones(input_edges[i].tensor_shape[concat_axis])
             filled_input_masks.append(mask)
         result_mask = np.concatenate(filled_input_masks, 0)
         return result_mask
