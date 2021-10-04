@@ -11,6 +11,7 @@
  limitations under the License.
 """
 
+import pytest
 import tensorflow as tf
 from tensorflow.python.keras import backend
 from tensorflow.python.keras import layers
@@ -19,8 +20,10 @@ from tensorflow.python.keras import models
 
 from nncf.common.graph import INPUT_NOOP_METATYPES
 from nncf.common.graph import OUTPUT_NOOP_METATYPES
+from nncf.common.graph.layer_attributes import MultipleInputLayerAttributes
 from nncf.tensorflow.graph.converter import TFModelConverter
 from nncf.tensorflow.graph.converter import convert_keras_model_to_nncf_graph
+from nncf.tensorflow.graph.metatypes.common import LAYER_METATYPES_AGNOSTIC_TO_DATA_PRECISION_WITH_MULTIPLE_INPUTS
 from tests.tensorflow.helpers import get_basic_conv_test_model
 from tests.tensorflow.helpers import create_compressed_model_and_algo_for_test
 from tests.tensorflow.quantization.test_algorithm_quantization import get_basic_quantization_config
@@ -86,8 +89,8 @@ def test_get_custom_layers():
     assert isinstance(custom_layers[CustomLayerForTest.CUSTOM_LAYER_NAME], CustomLayerForTest)
 
 
-def ModelWithReshapes():
-    input =layers.Input((64, ))
+def ModelWithReshapesAndConcats(batch_size=None):
+    input =layers.Input((64, ), batch_size=batch_size)
     x = tf.reshape(input, (32, -1))
     x = layers.Reshape((16, -1))(x)
     ones = tf.ones_like(x)
@@ -97,19 +100,17 @@ def ModelWithReshapes():
     return models.Model(input, y, name='ModelWithReshape')
 
 
-def test_model_with_reshape_and_concat():
-    model = ModelWithReshapes()
+@pytest.mark.parametrize('batch_size', [None, 8], ids=['no_batch_size', 'with_batch_size'])
+def test_model_with_reshape_and_concat(batch_size):
+    model = ModelWithReshapesAndConcats(batch_size)
     model.build((64,))
     graph = convert_keras_model_to_nncf_graph(model)
-    ref_reshape_nodes = {'tf_op_layer_Reshape': {'input_shape': (None, 64),
-                                                 'output_shape': (32, None)},
-                         'reshape': {'input_shape': (32, None),
-                                     'output_shape': (32, 8, 8, None)},
-                         'flatten': {'input_shape': (32, 8, 8, None),
-                                     'output_shape': (32, None)}}
+    ref_concat_nodes = {'concatenate': {'axis': [-1, 2]},
+                        'tf_op_layer_concat': {'axis': [-1, 2]},
+                        'tf_op_layer_concat_1': {'axis': [-1, 2]}}
     for node in graph.get_all_nodes():
-        if node.metatype in RESHAPE_METATYPES:
-            assert node.node_name in ref_reshape_nodes
+        if node.metatype in LAYER_METATYPES_AGNOSTIC_TO_DATA_PRECISION_WITH_MULTIPLE_INPUTS:
+            assert node.node_name in ref_concat_nodes
             assert node.layer_attributes is not None
-            assert node.layer_attributes.input_shape == ref_reshape_nodes[node.node_name]['input_shape']
-            assert node.layer_attributes.output_shape == ref_reshape_nodes[node.node_name]['output_shape']
+            assert isinstance(node.layer_attributes, MultipleInputLayerAttributes)
+            assert node.layer_attributes.axis in ref_concat_nodes[node.node_name]['axis']

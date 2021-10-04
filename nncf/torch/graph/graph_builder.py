@@ -21,10 +21,12 @@ import torch
 
 from nncf.common.graph import INPUT_NOOP_METATYPES
 from nncf.common.graph import LayerName
+from nncf.common.graph.layer_attributes import MultipleInputLayerAttributes
 from nncf.torch.dynamic_graph.graph import DynamicGraph
 from nncf.torch.dynamic_graph.graph_tracer import GraphTracer
 from nncf.torch.dynamic_graph.graph_tracer import ModelInputInfo
 from nncf.torch.graph.graph import PTNNCFGraph
+from nncf.torch.graph.operator_metatypes import CatMetatype
 from nncf.torch.graph.operator_metatypes import PT_OPERATOR_METATYPES
 
 
@@ -90,4 +92,24 @@ class GraphConverter:
                 output_port_id=dynamic_graph_edge.output_port_id,
                 dtype=dynamic_graph_edge.dtype
             )
+
+        for node in nncf_graph.get_all_nodes():
+            if node.metatype is CatMetatype:
+                input_edges = nncf_graph.get_input_edges(node)
+                output_edges = nncf_graph.get_output_edges(node)
+                # In case is intermediate node
+                if input_edges and output_edges:
+                    axis = None
+                    if len(input_edges) == 1:
+                        axis = -1
+                    input_shape = input_edges[0].tensor_shape
+                    output_shape = output_edges[0].tensor_shape
+                    for idx, (dim_in, dim_out) in enumerate(zip(input_shape, output_shape)):
+                        if dim_in is None or dim_in != dim_out:
+                            axis = idx
+                            break
+                    if axis is None:
+                        raise RuntimeError('Unexpected behaviour for concat op')
+                    layer_attributes = MultipleInputLayerAttributes(axis)
+                    node.layer_attributes = layer_attributes
         return nncf_graph

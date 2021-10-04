@@ -55,7 +55,7 @@ def ignore_scope(cls):
     return cls
 
 
-OP_NAMES_REQUIRING_MODULE_ATTRS = [v.op_func_name for v in NNCF_MODULES_DICT] + ["group_norm"]
+OP_NAMES_REQUIRING_MODULE_ATTRS = [v.op_func_name for v in NNCF_MODULES_DICT] + ['group_norm']
 
 
 def wrap_operator(operator, operator_info: 'PatchedOperatorInfo'):
