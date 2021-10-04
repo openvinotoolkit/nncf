@@ -660,9 +660,19 @@ def _get_multiple_input_layer_attributes(layer: tf.keras.layers.Layer) -> Multip
     if hasattr(layer, 'axis'):
         axis = layer.axis
     else:
-        #TODO
-        axis = -1
-    return MultipleInputLayerAttributes()
+        input_shape = layer.input_shape
+        output_shape = layer.output_shape
+        axis = None
+        # If it's dummy concat of one tensor
+        if len(input_shape) == 1:
+            axis = -1
+        for idx, (dim_in, dim_out) in enumerate(zip(input_shape[0], output_shape[0])):
+            if dim_in is None or dim_in != dim_out:
+                axis = idx
+                break
+        if axis is None:
+            raise RuntimeError('Unexpected behaviour for concat op')
+    return MultipleInputLayerAttributes(axis)
 
 
 def _get_conv_layer_attributes(layer: tf.keras.layers.Layer, is_depthwise: bool = False) -> ConvolutionLayerAttributes:
