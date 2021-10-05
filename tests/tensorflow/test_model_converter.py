@@ -13,6 +13,7 @@
 
 import pytest
 import tensorflow as tf
+from functools import partial
 from tensorflow.python.keras import backend
 from tensorflow.python.keras import layers
 from tensorflow.python.keras import models
@@ -27,6 +28,7 @@ from nncf.tensorflow.graph.metatypes.common import LAYER_METATYPES_AGNOSTIC_TO_D
 from tests.tensorflow.helpers import get_basic_conv_test_model
 from tests.tensorflow.helpers import create_compressed_model_and_algo_for_test
 from tests.tensorflow.quantization.test_algorithm_quantization import get_basic_quantization_config
+from tests.tensorflow.pruning.helpers import get_concat_test_model
 
 
 def test_struct_auxiliary_nodes_nncf_graph():
@@ -89,7 +91,7 @@ def test_get_custom_layers():
     assert isinstance(custom_layers[CustomLayerForTest.CUSTOM_LAYER_NAME], CustomLayerForTest)
 
 
-def ModelWithReshapesAndConcats(batch_size=None):
+def get_model_with_reshapes_and_concats(batch_size=None):
     input =layers.Input((64, ), batch_size=batch_size)
     x = tf.reshape(input, (32, -1))
     x = layers.Reshape((16, -1))(x)
@@ -100,17 +102,22 @@ def ModelWithReshapesAndConcats(batch_size=None):
     return models.Model(input, y, name='ModelWithReshape')
 
 
-@pytest.mark.parametrize('batch_size', [None, 8], ids=['no_batch_size', 'with_batch_size'])
-def test_model_with_reshape_and_concat(batch_size):
-    model = ModelWithReshapesAndConcats(batch_size)
-    model.build((64,))
-    graph = convert_keras_model_to_nncf_graph(model)
-    ref_concat_nodes = {'concatenate': {'axis': [-1, 2]},
+CONCAT_MODELS = [partial(get_concat_test_model, input_shape=[1, 8, 8, 1]),
+                 get_model_with_reshapes_and_concats]
+REF_CONCAT_ATTRS = [{'tf_op_layer_tf_concat_1': {'axis': [-1, 3]},
+                     'tf_op_layer_tf_concat_2': {'axis': [-1, 3]}},
+                    {'concatenate': {'axis': [-1, 2]},
                         'tf_op_layer_concat': {'axis': [-1, 2]},
-                        'tf_op_layer_concat_1': {'axis': [-1, 2]}}
+                        'tf_op_layer_concat_1': {'axis': [-1, 2]}}]
+
+
+@pytest.mark.parametrize('model, ref_attrs', [(m, r) for m, r in zip(CONCAT_MODELS, REF_CONCAT_ATTRS)])
+def test_model_with_reshape_and_concat(model, ref_attrs):
+    model = model()
+    graph = convert_keras_model_to_nncf_graph(model)
     for node in graph.get_all_nodes():
         if node.metatype in LAYER_METATYPES_AGNOSTIC_TO_DATA_PRECISION_WITH_MULTIPLE_INPUTS:
-            assert node.node_name in ref_concat_nodes
+            assert node.node_name in ref_attrs
             assert node.layer_attributes is not None
             assert isinstance(node.layer_attributes, MultipleInputLayerAttributes)
-            assert node.layer_attributes.axis in ref_concat_nodes[node.node_name]['axis']
+            assert node.layer_attributes.axis in ref_attrs[node.node_name]['axis']

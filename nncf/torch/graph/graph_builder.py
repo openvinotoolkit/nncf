@@ -23,6 +23,7 @@ from nncf.common.graph import INPUT_NOOP_METATYPES
 from nncf.common.graph import LayerName
 from nncf.common.graph.layer_attributes import Dtype
 from nncf.common.graph.layer_attributes import MultipleInputLayerAttributes
+from nncf.common.graph.utils import get_concat_axis
 from nncf.torch.dynamic_graph.graph import DynamicGraph
 from nncf.torch.dynamic_graph.graph_tracer import GraphTracer
 from nncf.torch.dynamic_graph.graph_tracer import ModelInputInfo
@@ -100,17 +101,9 @@ class GraphConverter:
                 output_edges = nncf_graph.get_output_edges(node)
                 # In case is intermediate node
                 if input_edges and output_edges:
-                    axis = None
-                    if len(input_edges) == 1:
-                        axis = -1
                     input_shape = input_edges[0].tensor_shape
                     output_shape = output_edges[0].tensor_shape
-                    for idx, (dim_in, dim_out) in enumerate(zip(input_shape, output_shape)):
-                        if dim_in is None or dim_in != dim_out:
-                            axis = idx
-                            break
-                    if axis is None:
-                        raise RuntimeError('Unexpected behaviour for concat op')
+                    axis = get_concat_axis(input_shape, output_shape)
                     layer_attributes = MultipleInputLayerAttributes(axis)
                     node.layer_attributes = layer_attributes
         return nncf_graph
