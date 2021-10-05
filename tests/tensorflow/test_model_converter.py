@@ -92,14 +92,15 @@ def test_get_custom_layers():
 
 
 def get_model_with_reshapes_and_concats(batch_size=None):
-    input =layers.Input((64, ), batch_size=batch_size)
-    x = tf.reshape(input, (32, -1))
+    inputs = layers.Input((64, ), batch_size=batch_size)
+    x = tf.reshape(inputs, (32, -1))
     x = layers.Reshape((16, -1))(x)
     ones = tf.ones_like(x)
     t1 = layers.concatenate([x, ones])
+    # pylint: disable=E1120,E1123
     t2 = tf.concat([x, ones], axis=-1)
     y = tf.concat([t1, t2], axis=-1)
-    return models.Model(input, y, name='ModelWithReshape')
+    return models.Model(inputs, y, name='ModelWithReshape')
 
 
 CONCAT_MODELS = [partial(get_concat_test_model, input_shape=[1, 8, 8, 1]),
@@ -107,11 +108,11 @@ CONCAT_MODELS = [partial(get_concat_test_model, input_shape=[1, 8, 8, 1]),
 REF_CONCAT_ATTRS = [{'tf_op_layer_tf_concat_1': {'axis': [-1, 3]},
                      'tf_op_layer_tf_concat_2': {'axis': [-1, 3]}},
                     {'concatenate': {'axis': [-1, 2]},
-                        'tf_op_layer_concat': {'axis': [-1, 2]},
-                        'tf_op_layer_concat_1': {'axis': [-1, 2]}}]
+                     'tf_op_layer_concat': {'axis': [-1, 2]},
+                     'tf_op_layer_concat_1': {'axis': [-1, 2]}}]
 
 
-@pytest.mark.parametrize('model, ref_attrs', [(m, r) for m, r in zip(CONCAT_MODELS, REF_CONCAT_ATTRS)])
+@pytest.mark.parametrize('model, ref_attrs', list(zip(CONCAT_MODELS, REF_CONCAT_ATTRS)))
 def test_model_with_reshape_and_concat(model, ref_attrs):
     model = model()
     graph = convert_keras_model_to_nncf_graph(model)

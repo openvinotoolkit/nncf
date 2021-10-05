@@ -70,7 +70,7 @@ from nncf.common.pruning.utils import is_depthwise_conv
 PT_PRUNING_OPERATOR_METATYPES = PruningOperationsMetatypeRegistry("operator_metatypes")
 
 
-class PTPruner(object):
+class PTPruner:
     @classmethod
     def input_prune(cls, model: NNCFNetwork, node: NNCFNode, graph: NNCFGraph):
         """
@@ -237,7 +237,7 @@ class PTBatchNormPruningOp(BatchNormPruningOp, PTPruner):
 
 
 @PT_PRUNING_OPERATOR_METATYPES.register('group_norm')
-class GroupNormPruningOp(GroupNormPruningOp, PTPruner):
+class PTGroupNormPruningOp(GroupNormPruningOp, PTPruner):
     subtypes = [GroupNormMetatype]
 
     @classmethod
