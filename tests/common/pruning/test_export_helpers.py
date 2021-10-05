@@ -3,8 +3,8 @@ import pytest
 
 from functools import partial
 
-import tests.common.pruning.dummy_types as dummy_types
 
+from tests.common.pruning import dummy_types
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.layer_attributes import Dtype
@@ -131,6 +131,11 @@ class DummyMaskProducerMetatype(dummy_types.DummyDefaultMetatype):
 @dummy_types.DUMMY_PRUNING_OPERATOR_METATYPES.register(DummyMaskProducerMetatype.name)
 class MockOpMaskProducer(DefaultPruningOp):
     additional_types = [DummyMaskProducerMetatype.name]
+
+    @classmethod
+    def accept_pruned_input(cls, node: NNCFNode):
+        pass
+
     @classmethod
     def mask_propagation(cls, node: NNCFNode, graph: NNCFGraph):
         pass

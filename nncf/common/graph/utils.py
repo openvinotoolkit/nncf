@@ -32,7 +32,7 @@ def get_concat_axis(input_shapes: List[List[int]], output_shapes: List[List[int]
             if dim_in != dim_out:
                 axis = idx
                 break
-            elif dim_in is None:
+            if dim_in is None:
                 none_dim = idx
         if not axis:
             axis = none_dim

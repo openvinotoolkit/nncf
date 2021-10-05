@@ -51,5 +51,3 @@ class DefaultPruningOp:
             op_types.extend(subtype.get_all_aliases())
         op_types = list(set(op_types)) + cls.additional_types
         return op_types
-
-
