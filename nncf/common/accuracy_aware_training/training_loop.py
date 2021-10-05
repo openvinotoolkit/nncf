@@ -243,8 +243,8 @@ class AdaptiveCompressionTrainingLoop(TrainingLoop):
                                                    self.runner.cumulative_epoch_count)
 
             self.runner.train_epoch(model, self.adaptive_controller)
-            self.runner.dump_statistics(model, self.adaptive_controller)
             compressed_model_accuracy = self.runner.validate(model)
+            self.runner.dump_statistics(model, self.adaptive_controller)
             self.runner.accuracy_bugdet = compressed_model_accuracy - self.runner.minimal_tolerable_accuracy
             self.runner.add_tensorboard_scalar('val/accuracy_aware/accuracy_bugdet', self.runner.accuracy_bugdet,
                                                self.runner.cumulative_epoch_count)
