@@ -17,6 +17,8 @@ from typing import TypeVar
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.pruning.utils import PruningOperationsMetatypeRegistry
+from nncf.common.pruning.default_pruning_op import DefaultPruningOp
+
 
 TensorType = TypeVar('TensorType')
 
@@ -39,7 +41,7 @@ class MaskPropagationAlgorithm:
         self._graph = graph
         self._pruning_operator_metatypes = pruning_operator_metatypes
 
-    def get_meta_operation_by_type_name(self, type_name: str) -> 'DefaultMetaOp':
+    def get_meta_operation_by_type_name(self, type_name: str) -> DefaultPruningOp:
         """
         Returns class of metaop that corresponds to `type_name` type.
 

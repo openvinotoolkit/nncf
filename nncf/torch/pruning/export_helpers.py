@@ -51,16 +51,16 @@ from nncf.torch.graph.operator_metatypes import (
     TanhMetatype,
 )
 from nncf.common.pruning.export_helpers import (
-    OpInput,
-    OpOutput,
-    OpIdentityMaskForwardOps,
-    OpConvolution,
-    OpTransposeConvolution,
-    OpBatchNorm,
-    OpGroupNorm,
-    OpConcat,
-    OpElementwise,
-    OpStopMaskForwardOps
+    InputPruningOp,
+    OutputPruningOp,
+    IdentityMaskForwardPruningOp,
+    ConvolutionPruningOp,
+    TransposeConvolutionPruningOp,
+    BatchNormPruningOp,
+    GroupNormPruningOp,
+    ConcatPruningOp,
+    ElementwisePruningOp,
+    StopMaskForwardPruningOp
 )
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.torch.nncf_network import NNCFNetwork
@@ -93,24 +93,24 @@ class PTPruner(object):
 
 
 @PT_PRUNING_OPERATOR_METATYPES.register('model_input')
-class PTInput(OpInput, PTPruner):
+class PTInputPruningOp(InputPruningOp, PTPruner):
     subtypes = [PTInputNoopMetatype]
 
 
 @PT_PRUNING_OPERATOR_METATYPES.register('model_output')
-class PTOutput(OpOutput, PTPruner):
+class PTOutputPruningOp(OutputPruningOp, PTPruner):
     subtypes = [PTOutputNoopMetatype]
 
 
 @PT_PRUNING_OPERATOR_METATYPES.register('identity_mask_propagation')
-class PTIdentityMaskForwardOps(OpIdentityMaskForwardOps, PTPruner):
+class PTIdentityMaskForwardPruningOp(IdentityMaskForwardPruningOp, PTPruner):
     subtypes = [HardTanhMetatype, TanhMetatype, RELUMetatype, PRELUMetatype, ELUMetatype, GELUMetatype, SigmoidMetatype,
                 SoftmaxMetatype, AvgPool2dMetatype, MaxPool2dMetatype, DropoutMetatype, SILUMetatype]
     additional_types = ['h_sigmoid', 'h_swish', 'RELU']
 
 
 @PT_PRUNING_OPERATOR_METATYPES.register('convolution')
-class PTConvolution(OpConvolution, PTPruner):
+class PTConvolutionPruningOp(ConvolutionPruningOp, PTPruner):
     subtypes = [Conv1dMetatype, Conv2dMetatype, Conv3dMetatype]
 
     @classmethod
@@ -164,7 +164,7 @@ class PTConvolution(OpConvolution, PTPruner):
 
 
 @PT_PRUNING_OPERATOR_METATYPES.register('transpose_convolution')
-class PTTransposeConvolution(OpTransposeConvolution, PTPruner):
+class PTTransposeConvolutionPruningOp(TransposeConvolutionPruningOp, PTPruner):
     subtypes = [ConvTranspose2dMetatype, ConvTranspose3dMetatype]
 
     @classmethod
@@ -211,7 +211,7 @@ class PTTransposeConvolution(OpTransposeConvolution, PTPruner):
 
 
 @PT_PRUNING_OPERATOR_METATYPES.register('batch_norm')
-class PTBatchNorm(OpBatchNorm, PTPruner):
+class PTBatchNormPruningOp(BatchNormPruningOp, PTPruner):
     subtypes = [BatchNormMetatype]
 
     @classmethod
@@ -237,7 +237,7 @@ class PTBatchNorm(OpBatchNorm, PTPruner):
 
 
 @PT_PRUNING_OPERATOR_METATYPES.register('group_norm')
-class GroupNorm(OpGroupNorm, PTPruner):
+class GroupNormPruningOp(GroupNormPruningOp, PTPruner):
     subtypes = [GroupNormMetatype]
 
     @classmethod
@@ -263,7 +263,7 @@ class GroupNorm(OpGroupNorm, PTPruner):
 
 
 @PT_PRUNING_OPERATOR_METATYPES.register('elementwise')
-class PTElementwise(OpElementwise, PTPruner):
+class PTElementwisePruningOp(ElementwisePruningOp, PTPruner):
     subtypes = [AddMetatype, SubMetatype, DivMetatype, MulMetatype]
 
     @classmethod
@@ -293,17 +293,17 @@ class PTElementwise(OpElementwise, PTPruner):
 
 
 @PT_PRUNING_OPERATOR_METATYPES.register('stop_propagation_ops')
-class PTStopMaskForwardOps(OpStopMaskForwardOps, PTPruner):
+class PTStopMaskForwardPruningOp(StopMaskForwardPruningOp, PTPruner):
     subtypes = [MeanMetatype, MaxMetatype, MinMetatype, LinearMetatype, MatMulMetatype]
 
 
 @PT_PRUNING_OPERATOR_METATYPES.register('concat')
-class PTConcat(OpConcat, PTPruner):
+class PTConcatPruningOp(ConcatPruningOp, PTPruner):
     subtypes = [CatMetatype]
 
-    ConvolutionOp = PTConvolution
-    StopMaskForwardOp = PTStopMaskForwardOps
-    InputOp = PTInput
+    ConvolutionOp = PTConvolutionPruningOp
+    StopMaskForwardOp = PTStopMaskForwardPruningOp
+    InputOp = PTInputPruningOp
 
     @classmethod
     def _get_unit_mask(cls, dim, device):

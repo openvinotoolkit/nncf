@@ -54,9 +54,9 @@ from nncf.tensorflow.pruning.base_algorithm import BasePruningAlgoBuilder
 from nncf.tensorflow.pruning.base_algorithm import BasePruningAlgoController
 from nncf.tensorflow.pruning.base_algorithm import PrunedLayerInfo
 from nncf.tensorflow.pruning.export_helpers import TF_PRUNING_OPERATOR_METATYPES
-from nncf.tensorflow.pruning.export_helpers import TFConvolution
-from nncf.tensorflow.pruning.export_helpers import TFElementwise
-from nncf.tensorflow.pruning.export_helpers import TFTransposeConvolution
+from nncf.tensorflow.pruning.export_helpers import TFConvolutionPruningOp
+from nncf.tensorflow.pruning.export_helpers import TFElementwisePruningOp
+from nncf.tensorflow.pruning.export_helpers import TFTransposeConvolutionPruningOp
 from nncf.tensorflow.pruning.filter_pruning.functions import calculate_binary_mask
 from nncf.tensorflow.pruning.filter_pruning.functions import FILTER_IMPORTANCE_FUNCTIONS
 from nncf.tensorflow.pruning.filter_pruning.functions import tensor_l2_normalizer
@@ -87,11 +87,11 @@ class FilterPruningBuilder(BasePruningAlgoBuilder):
         return layer.__class__.__name__ in self._prunable_types
 
     def _get_op_types_of_pruned_layers(self) -> List[str]:
-        return [op_name for meta_op in [TFConvolution, TFTransposeConvolution]
+        return [op_name for meta_op in [TFConvolutionPruningOp, TFTransposeConvolutionPruningOp]
                 for op_name in meta_op.get_all_op_aliases()]
 
     def _get_types_of_grouping_ops(self) -> List[str]:
-        return TFElementwise.get_all_op_aliases()
+        return TFElementwisePruningOp.get_all_op_aliases()
 
 
 @ADAPTIVE_COMPRESSION_CONTROLLERS.register('tf_filter_pruning')
