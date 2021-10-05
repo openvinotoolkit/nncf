@@ -13,7 +13,7 @@
 
 import numpy as np
 
-from typing import Union
+from typing import Union, List
 
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
@@ -193,14 +193,26 @@ class OpConcat(DefaultMetaOp):
         return True
 
     @classmethod
-    def generate_output_mask(cls, node: NNCFNode, graph: NNCFGraph) -> Union[np.array, None]:
+    def _get_unit_mask(cls, dim, device):
+        return np.ones(dim)
+
+    @classmethod
+    def _get_masks_device(cls, input_masks):
+        return None
+
+    @classmethod
+    def _concat_masks(cls, filled_input_masks):
+        return np.concatenate(filled_input_masks, 0)
+
+    @classmethod
+    def generate_output_mask(cls, node: NNCFNode, graph: NNCFGraph) -> Union[List[np.array], None]:
         """
         Generate output mask from input masks with all None replaced by identity masks.
         If all input masks is None return None.
 
-        :param node: Node to determine it's sources
-        :param graph: NNCF graph to work with
-        :return: Output mask
+        :param node: Node to determine it's sources.
+        :param graph: NNCF graph to work with.
+        :return: Filled input masks.
         """
         input_edges = graph.get_input_edges(node)
         previous_nodes = [edge.from_node for edge in input_edges]
@@ -209,14 +221,15 @@ class OpConcat(DefaultMetaOp):
         if all(mask is None for mask in input_masks):
             return None
 
-
         filled_input_masks = []
         for i, mask in enumerate(input_masks):
             if mask is None:
                 concat_axis = node.layer_attributes.axis
-                mask = np.ones(input_edges[i].tensor_shape[concat_axis])
+                concat_dim = input_edges[i].tensor_shape[concat_axis]
+                device = cls._get_masks_device(input_masks)
+                mask = cls._get_unit_mask(concat_dim, device)
             filled_input_masks.append(mask)
-        result_mask = np.concatenate(filled_input_masks, 0)
+        result_mask = cls._concat_masks(filled_input_masks)
         return result_mask
 
     @classmethod
@@ -235,11 +248,17 @@ class OpElementwise(DefaultMetaOp):
         return True
 
     @classmethod
+    def _assert_input_masks_close(cls, input_masks):
+        for input_mask in input_masks[1:]:
+            np.testing.assert_allclose(input_masks[0], input_mask)
+
+    @classmethod
     def mask_propagation(cls, node: NNCFNode, graph: NNCFGraph):
         input_masks = get_input_masks(node, graph)
+
+        node.data['input_masks'] = input_masks
         if input_masks[0] is not None:
-            for input_mask in input_masks[1:]:
-                np.testing.assert_allclose(input_masks[0], input_mask)
+            cls._assert_input_masks_close(input_masks)
         node.data['output_mask'] = input_masks[0]
 
 
