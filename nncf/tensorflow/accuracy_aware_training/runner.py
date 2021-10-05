@@ -13,8 +13,6 @@
 
 import os.path as osp
 
-import tensorflow as tf
-
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.common.accuracy_aware_training.runner import BaseAccuracyAwareTrainingRunner
 from nncf.common.utils.helpers import configure_accuracy_aware_paths
@@ -90,7 +88,8 @@ class TFAccuracyAwareTrainingRunner(BaseAccuracyAwareTrainingRunner):
             model.save_weights(best_path)
 
     def add_tensorboard_scalar(self, key, data, step):
-        tf.summary.scalar(key, data=data, step=step)
+        if self.verbose and self._tensorboard_writer is not None:
+            self._tensorboard_writer({key: data}, step)
 
     def update_training_history(self, compression_rate, best_metric_value):
         best_accuracy_budget = best_metric_value - self.minimal_tolerable_accuracy

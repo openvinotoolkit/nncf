@@ -126,8 +126,8 @@ class BaseAccuracyAwareTrainingRunner(TrainingRunner):
             'maximal_total_epochs': float('inf'),
         }
 
-        for key in default_parameter_values:
-            setattr(self, key, accuracy_aware_config.get(key, default_parameter_values[key]))
+        for key, default_val in default_parameter_values.items():
+            setattr(self, key, accuracy_aware_config.get(key, default_val))
 
         self.maximal_accuracy_drop = accuracy_aware_config.get('maximal_accuracy_degradation')
         self.initial_training_phase_epochs = accuracy_aware_config.get('initial_training_phase_epochs')
