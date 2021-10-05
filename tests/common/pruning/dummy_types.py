@@ -3,16 +3,16 @@ from typing import List
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.pruning.utils import PruningOperationsMetatypeRegistry
 from nncf.common.pruning.export_helpers import (
-    OpInput,
-    OpOutput,
-    OpIdentityMaskForwardOps,
-    OpConvolution,
-    OpTransposeConvolution,
-    OpBatchNorm,
-    OpGroupNorm,
-    OpConcat,
-    OpElementwise,
-    OpStopMaskForwardOps,
+    InputPruningOp,
+    OutputPruningOp,
+    IdentityMaskForwardPruningOp,
+    ConvolutionPruningOp,
+    TransposeConvolutionPruningOp,
+    BatchNormPruningOp,
+    GroupNormPruningOp,
+    ConcatPruningOp,
+    ElementwisePruningOp,
+    StopMaskForwardPruningOp,
 )
 
 
@@ -68,53 +68,53 @@ DUMMY_PRUNING_OPERATOR_METATYPES = PruningOperationsMetatypeRegistry("operator_m
 
 
 @DUMMY_PRUNING_OPERATOR_METATYPES.register(DummyInputMetatype.name)
-class DummyOpInput(OpInput):
+class DummyInputPruningOp(InputPruningOp):
     additional_types = [DummyInputMetatype.name]
 
 
 @DUMMY_PRUNING_OPERATOR_METATYPES.register(DummyOutputMetatype.name)
-class DummyOpOutput(OpOutput):
+class DummyOutputPruningOp(OutputPruningOp):
     additional_types = [DummyOutputMetatype.name]
 
 
 @DUMMY_PRUNING_OPERATOR_METATYPES.register(DymmyIdentityMaskForwardMetatype.name)
-class DummyOpIdentityMaskForward(OpIdentityMaskForwardOps):
+class DummyIdentityMaskForward(IdentityMaskForwardPruningOp):
     additional_types = [DymmyIdentityMaskForwardMetatype.name]
 
 
 @DUMMY_PRUNING_OPERATOR_METATYPES.register(DummyStopPropoagtionMetatype.name)
-class DummyOpStopMaskForward(OpStopMaskForwardOps):
+class DummyStopMaskForward(StopMaskForwardPruningOp):
     additional_types = [DummyStopPropoagtionMetatype.name]
 
 
 @DUMMY_PRUNING_OPERATOR_METATYPES.register(DummyConvMetatype.name)
-class DummyOpConv(OpConvolution):
+class DummyConvPruningOp(ConvolutionPruningOp):
     additional_types = [DummyConvMetatype.name]
 
 
 @DUMMY_PRUNING_OPERATOR_METATYPES.register(DummyTransposeConvolutionMetatype.name)
-class DummyOpTransposeConv(OpTransposeConvolution):
+class DummyTransposeConvPruningOp(TransposeConvolutionPruningOp):
     additional_types = [DummyTransposeConvolutionMetatype.name]
 
 
 @DUMMY_PRUNING_OPERATOR_METATYPES.register(DummyBatchNormMetatype.name)
-class DummyOpBatchNorm(OpBatchNorm):
+class DummyBatchNormPruningOp(BatchNormPruningOp):
     additional_types = [DummyBatchNormMetatype.name]
 
 
 @DUMMY_PRUNING_OPERATOR_METATYPES.register(DummyGroupNormMetatype.name)
-class DummyOpGroupNorm(OpGroupNorm):
+class DummyGroupNormPruningOp(GroupNormPruningOp):
     additional_types = [DummyGroupNormMetatype.name]
 
 
 @DUMMY_PRUNING_OPERATOR_METATYPES.register(DummyElementwiseMetatype.name)
-class DummyOpElementwise(OpElementwise):
+class DummyElementwisePruningOp(ElementwisePruningOp):
     additional_types = [DummyElementwiseMetatype.name]
 
 
 @DUMMY_PRUNING_OPERATOR_METATYPES.register(DummyConcatMetatype.name)
-class DummyOpConcat(OpConcat):
-    ConvolutionOp = DummyOpConv
-    StopMaskForwardOp = DummyOpStopMaskForward
-    InputOp = DummyOpInput
+class DummyConcatPruningOp(ConcatPruningOp):
+    ConvolutionOp = DummyConvPruningOp
+    StopMaskForwardOp = DummyStopMaskForward
+    InputOp = DummyInputPruningOp
     additional_types = [DummyConcatMetatype.name]

@@ -11,13 +11,13 @@ from nncf.common.graph.layer_attributes import Dtype
 from nncf.common.graph.layer_attributes import MultipleInputLayerAttributes
 from nncf.common.graph.layer_attributes import GroupNormLayerAttributes
 from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
-from nncf.common.pruning.export_helpers import DefaultMetaOp
+from nncf.common.pruning.export_helpers import DefaultPruningOp
 from nncf.common.pruning.mask_propagation import MaskPropagationAlgorithm
 
 
-@pytest.mark.parametrize('dummy_op_class,accept_pruned_input', [(dummy_types.DummyOpInput, False),
-                                                                (dummy_types.DummyOpOutput, True),
-                                                                (dummy_types.DummyOpStopMaskForward, False)])
+@pytest.mark.parametrize('dummy_op_class,accept_pruned_input', [(dummy_types.DummyInputPruningOp, False),
+                                                                (dummy_types.DummyOutputPruningOp, True),
+                                                                (dummy_types.DummyStopMaskForward, False)])
 def test_stop_propagate_ops(dummy_op_class, accept_pruned_input):
     node = NNCFNode(0, 'dummy_node')
     assert dummy_op_class.accept_pruned_input(node) == accept_pruned_input
@@ -25,7 +25,7 @@ def test_stop_propagate_ops(dummy_op_class, accept_pruned_input):
     assert node.data['output_mask'] is None
 
 
-@pytest.mark.parametrize('dummy_op_class', [dummy_types.DummyOpIdentityMaskForward, dummy_types.DummyOpBatchNorm])
+@pytest.mark.parametrize('dummy_op_class', [dummy_types.DummyIdentityMaskForward, dummy_types.DummyBatchNormPruningOp])
 def test_identity_mask_propogation_prune_ops(dummy_op_class):
     assert dummy_op_class.accept_pruned_input(None)
     graph = NNCFGraph()
@@ -107,7 +107,7 @@ def test_group_norm_pruning_ops(num_channels, num_groups, accept_pruned_input_re
     group_norm_op = graph.add_nncf_node('identity', dummy_types.DummyGroupNormMetatype.name,
                                         dummy_types.DummyGroupNormMetatype,
                                         layer_attributes=group_norm_layer_attributes)
-    assert dummy_types.DummyOpGroupNorm.accept_pruned_input(group_norm_op) == accept_pruned_input_ref
+    assert dummy_types.DummyGroupNormPruningOp.accept_pruned_input(group_norm_op) == accept_pruned_input_ref
     graph.add_edge_between_nncf_nodes(
         from_node_id=conv_op.node_id,
         to_node_id=group_norm_op.node_id,
@@ -129,7 +129,7 @@ class DummyMaskProducerMetatype(dummy_types.DummyDefaultMetatype):
 
 
 @dummy_types.DUMMY_PRUNING_OPERATOR_METATYPES.register(DummyMaskProducerMetatype.name)
-class MockOpMaskProducer(DefaultMetaOp):
+class MockOpMaskProducer(DefaultPruningOp):
     additional_types = [DummyMaskProducerMetatype.name]
     @classmethod
     def mask_propagation(cls, node: NNCFNode, graph: NNCFGraph):
@@ -172,7 +172,7 @@ def test_conv_pruning_ops(transpose, layer_attributes, ref_accept_pruned_input, 
                                       input_port_id=0,
                                       output_port_id=0,
                                       dtype=Dtype.FLOAT)
-    pruning_op_class = dummy_types.DummyOpTransposeConv if transpose else dummy_types.DummyOpConv
+    pruning_op_class = dummy_types.DummyTransposeConvPruningOp if transpose else dummy_types.DummyConvPruningOp
     assert pruning_op_class.accept_pruned_input(conv_op_target) == ref_accept_pruned_input
     ones_input_mask = np.ones((layer_attributes['in_channels'],))
     ones_output_mask = np.ones((layer_attributes['out_channels'],))
@@ -231,7 +231,7 @@ def test_stop_ops_elementwise_source_before_concat(with_elementwise):
         add_node(from_node_id=elementwise_op.node_id,
                  to_node_id=concat_node.node_id)
 
-    assert not dummy_types.DummyOpConcat.check_concat(concat_node, graph)
+    assert not dummy_types.DummyConcatPruningOp.check_concat(concat_node, graph)
     MaskPropagationAlgorithm(graph, dummy_types.DUMMY_PRUNING_OPERATOR_METATYPES).mask_propagation()
     concat_node = graph.get_node_by_id(concat_node.node_id)
     assert concat_node.data['output_mask'] is None
@@ -270,7 +270,7 @@ def test_convs_elementwise_source_before_concat(empty_mask_branch):
              to_node_id=concat_node.node_id)
 
     # Check without masks
-    assert dummy_types.DummyOpConcat.check_concat(concat_node, graph)
+    assert dummy_types.DummyConcatPruningOp.check_concat(concat_node, graph)
     # Set masks
     masked_convs = [conv_op_0, conv_op_1]
     if not empty_mask_branch:
@@ -284,6 +284,6 @@ def test_convs_elementwise_source_before_concat(empty_mask_branch):
     MaskPropagationAlgorithm(graph, dummy_types.DUMMY_PRUNING_OPERATOR_METATYPES).mask_propagation()
     # Check with masks
     concat_node = graph.get_node_by_id(concat_node.node_id)
-    assert dummy_types.DummyOpConcat.check_concat(concat_node, graph)
+    assert dummy_types.DummyConcatPruningOp.check_concat(concat_node, graph)
     reference_mask = np.ones((20,))
     np.testing.assert_equal(concat_node.data['output_mask'], reference_mask)

@@ -21,15 +21,15 @@ from nncf.tensorflow.graph.pattern_operations import TF_ACTIVATIONS_OPERATIONS
 from nncf.common.graph.definitions import NNCFGraphNodeType
 from nncf.common.pruning.utils import PruningOperationsMetatypeRegistry
 from nncf.common.pruning.export_helpers import (
-    OpInput,
-    OpOutput,
-    OpIdentityMaskForwardOps,
-    OpConvolution,
-    OpTransposeConvolution,
-    OpBatchNorm,
-    OpConcat,
-    OpElementwise,
-    OpStopMaskForwardOps
+    InputPruningOp,
+    OutputPruningOp,
+    IdentityMaskForwardPruningOp,
+    ConvolutionPruningOp,
+    TransposeConvolutionPruningOp,
+    BatchNormPruningOp,
+    ConcatPruningOp,
+    ElementwisePruningOp,
+    StopMaskForwardPruningOp
 )
 
 TF_PRUNING_OPERATOR_METATYPES = PruningOperationsMetatypeRegistry("operator_metatypes")
@@ -40,17 +40,17 @@ def _get_types(operations_dict: Dict) -> List[str]:
 
 
 @TF_PRUNING_OPERATOR_METATYPES.register('model_input')
-class TFInput(OpInput):
+class TFInputPruningOp(InputPruningOp):
     additional_types = ['InputLayer', NNCFGraphNodeType.INPUT_NODE]
 
 
 @TF_PRUNING_OPERATOR_METATYPES.register('model_output')
-class TFOutput(OpOutput):
+class TFOutputPruningOp(OutputPruningOp):
     additional_types = [NNCFGraphNodeType.OUTPUT_NODE]
 
 
 @TF_PRUNING_OPERATOR_METATYPES.register('identity_mask_propagation')
-class TFIdentityMaskForwardOps(OpIdentityMaskForwardOps):
+class TFIdentityMaskForwardPruningOp(IdentityMaskForwardPruningOp):
     additional_types = _get_types(KERAS_ACTIVATIONS_OPERATIONS) + _get_types(TF_ACTIVATIONS_OPERATIONS) \
                        + ['AvgPool2D', 'GlobalAvgPool2D', 'AveragePooling2D', 'GlobalAveragePooling2D'] \
                        + ['MaxPooling2D', 'GlobalMaxPooling2D', 'MaxPool2D', 'GlobalMaxPool2D'] \
@@ -58,22 +58,22 @@ class TFIdentityMaskForwardOps(OpIdentityMaskForwardOps):
 
 
 @TF_PRUNING_OPERATOR_METATYPES.register('convolution')
-class TFConvolution(OpConvolution):
+class TFConvolutionPruningOp(ConvolutionPruningOp):
     additional_types = ['Conv1D', 'Conv2D', 'Conv3D', 'DepthwiseConv2D']
 
 
 @TF_PRUNING_OPERATOR_METATYPES.register('transpose_convolution')
-class TFTransposeConvolution(OpTransposeConvolution):
+class TFTransposeConvolutionPruningOp(TransposeConvolutionPruningOp):
     additional_types = ['Conv1DTranspose', 'Conv2DTranspose', 'Conv3DTranspose']
 
 
 @TF_PRUNING_OPERATOR_METATYPES.register('batch_norm')
-class TFBatchNorm(OpBatchNorm):
+class TFBatchNormPruningOp(BatchNormPruningOp):
     additional_types = ['BatchNormalization', 'SyncBatchNormalization']
 
 
 @TF_PRUNING_OPERATOR_METATYPES.register('elementwise')
-class TFElementwise(OpElementwise):
+class TFElementwisePruningOp(ElementwisePruningOp):
     additional_types = _get_types(ELEMENTWISE_OPERATIONS)
 
     @classmethod
@@ -83,17 +83,17 @@ class TFElementwise(OpElementwise):
 
 
 @TF_PRUNING_OPERATOR_METATYPES.register('stop_propagation_ops')
-class TFStopMaskForwardOps(OpStopMaskForwardOps):
+class TFStopMaskForwardPruningOp(StopMaskForwardPruningOp):
     additional_types = ['Dense', 'MatMul']
 
 
 @TF_PRUNING_OPERATOR_METATYPES.register('concat')
-class TFConcat(OpConcat):
+class TFConcatPruningOp(ConcatPruningOp):
     additional_types = ['Concatenate', 'ConcatV2']
 
-    ConvolutionOp = TFConvolution
-    StopMaskForwardOp = TFStopMaskForwardOps
-    InputOp = TFInput
+    ConvolutionOp = TFConvolutionPruningOp
+    StopMaskForwardOp = TFStopMaskForwardPruningOp
+    InputOp = TFInputPruningOp
 
     @classmethod
     def _get_unit_mask(cls, dim, device):
