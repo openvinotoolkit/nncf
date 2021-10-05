@@ -12,7 +12,6 @@
 """
 from typing import Dict
 from typing import List
-from typing import Union
 
 import tensorflow as tf
 
@@ -20,9 +19,6 @@ from nncf.tensorflow.graph.pattern_operations import KERAS_ACTIVATIONS_OPERATION
 from nncf.tensorflow.graph.pattern_operations import ELEMENTWISE_OPERATIONS
 from nncf.tensorflow.graph.pattern_operations import TF_ACTIVATIONS_OPERATIONS
 from nncf.common.graph.definitions import NNCFGraphNodeType
-from nncf.common.graph import NNCFGraph
-from nncf.common.graph import NNCFNode
-from nncf.common.pruning.mask_propagation import get_input_masks
 from nncf.common.pruning.utils import PruningOperationsMetatypeRegistry
 from nncf.common.pruning.export_helpers import (
     OpInput,
@@ -81,12 +77,9 @@ class TFElementwise(OpElementwise):
     additional_types = _get_types(ELEMENTWISE_OPERATIONS)
 
     @classmethod
-    def mask_propagation(cls, node: NNCFNode, graph: NNCFGraph):
-        input_masks = get_input_masks(node, graph)
-        if input_masks[0] is not None:
-            for input_mask in input_masks[1:]:
-                tf.debugging.assert_near(input_masks[0], input_mask)
-        node.data['output_mask'] = input_masks[0]
+    def _assert_input_masks_close(cls, input_masks):
+        for input_mask in input_masks[1:]:
+            tf.debugging.assert_near(input_masks[0], input_mask)
 
 
 @TF_PRUNING_OPERATOR_METATYPES.register('stop_propagation_ops')
@@ -103,38 +96,15 @@ class TFConcat(OpConcat):
     InputOp = TFInput
 
     @classmethod
-    def generate_output_mask(cls, node: NNCFNode, graph: NNCFGraph) -> Union[tf.Tensor, None]:
-        """
-        Generate output mask from input masks with all None replaced by identity masks.
-        If all input masks is None return None.
-
-        :param node: Node to determine it's sources
-        :param graph: NNCF graph to work with
-        :return: Output mask
-        """
-        input_edges = graph.get_input_edges(node)
-        previous_nodes = [edge.from_node for edge in input_edges]
-        input_masks = [input_node.data['output_mask'] for input_node in previous_nodes]
-
-        if all(mask is None for mask in input_masks):
-            return None
-
-        device = [m for m in input_masks if m is not None][0].device
-
-        filled_input_masks = []
-        for i, mask in enumerate(input_masks):
-            if mask is None:
-                with tf.device(device):
-                    mask = tf.ones(input_edges[i].tensor_shape[-1])
-            filled_input_masks.append(mask)
-        result_mask = tf.concat(filled_input_masks, 0)
-        return result_mask
+    def _get_unit_mask(cls, dim, device):
+        with tf.device(device):
+            mask = tf.ones(dim)
+        return mask
 
     @classmethod
-    def mask_propagation(cls, node: NNCFNode, graph: NNCFGraph):
-        result_mask = None
+    def _get_masks_device(cls, input_masks):
+        return [m for m in input_masks if m is not None][0].device
 
-        if cls.check_concat(node, graph):
-            result_mask = cls.generate_output_mask(node, graph)
-
-        node.data['output_mask'] = result_mask
+    @classmethod
+    def _concat_masks(cls, filled_input_masks):
+        return tf.concat(filled_input_masks, 0)

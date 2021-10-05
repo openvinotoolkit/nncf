@@ -10,15 +10,12 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-from typing import Union
-from typing import List
 
 import torch
 
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.pruning.utils import PruningOperationsMetatypeRegistry
-from nncf.common.pruning.mask_propagation import get_input_masks
 from nncf.common.pruning.mask_propagation import MaskPropagationAlgorithm
 from nncf.torch.graph.operator_metatypes import (
     AddMetatype,
@@ -54,7 +51,6 @@ from nncf.torch.graph.operator_metatypes import (
     TanhMetatype,
 )
 from nncf.common.pruning.export_helpers import (
-    DefaultMetaOp,
     OpInput,
     OpOutput,
     OpIdentityMaskForwardOps,
@@ -271,13 +267,9 @@ class PTElementwise(OpElementwise, PTPruner):
     subtypes = [AddMetatype, SubMetatype, DivMetatype, MulMetatype]
 
     @classmethod
-    def mask_propagation(cls, node: NNCFNode, graph: NNCFGraph):
-        input_masks = get_input_masks(node, graph)
+    def _assert_input_masks_close(cls, input_masks):
+        assert all(torch.allclose(input_masks[0], mask) for mask in input_masks)
 
-        node.data['input_masks'] = input_masks
-        if input_masks[0] is not None:
-            assert all(torch.allclose(input_masks[0], mask) for mask in input_masks)
-        node.data['output_mask'] = input_masks[0]
 
     @classmethod
     def input_prune(cls, model: NNCFNetwork, node: NNCFNode, graph: NNCFGraph):
@@ -314,43 +306,16 @@ class PTConcat(OpConcat, PTPruner):
     InputOp = PTInput
 
     @classmethod
-    def fill_input_masks(cls, node: NNCFNode, graph: NNCFGraph) -> Union[List[torch.Tensor], None]:
-        """
-        Fill input masks with all None replaced by identity masks.
-        If all input masks is None return None.
-
-        :param node: Node to determine it's sources.
-        :param graph: NNCF graph to work with.
-        :return: Filled input masks.
-        """
-        input_edges = graph.get_input_edges(node)
-        previous_nodes = [edge.from_node for edge in input_edges]
-        input_masks = [input_node.data['output_mask'] for input_node in previous_nodes]
-
-        if all(mask is None for mask in input_masks):
-            return None
-
-        device = [m for m in input_masks if m is not None][0].device
-
-        filled_input_masks = []
-        for i, mask in enumerate(input_masks):
-            if mask is None:
-                mask = torch.ones(input_edges[i].tensor_shape[1], device=device)
-            filled_input_masks.append(mask)
-        return filled_input_masks
+    def _get_unit_mask(cls, dim, device):
+        return torch.ones(dim, device=device)
 
     @classmethod
-    def mask_propagation(cls, node: NNCFNode, graph: NNCFGraph):
-        input_masks = None
-        output_mask = None
+    def _get_masks_device(cls, input_masks):
+        return [m for m in input_masks if m is not None][0].device
 
-        if cls.check_concat(node, graph):
-            input_masks = cls.fill_input_masks(node, graph)
-            if input_masks:
-                output_mask = torch.cat(input_masks)
-
-        node.data['input_masks'] = input_masks
-        node.data['output_mask'] = output_mask
+    @classmethod
+    def _concat_masks(cls, filled_input_masks):
+        return torch.cat(filled_input_masks, 0)
 
 
 class ModelPruner(MaskPropagationAlgorithm):
