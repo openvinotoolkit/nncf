@@ -29,6 +29,7 @@ from nncf.common.graph import OperatorMetatype
 from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
 from nncf.common.graph.layer_attributes import MultipleInputLayerAttributes
 from nncf.common.graph.layer_attributes import Dtype
+from nncf.common.graph.utils import get_concat_axis
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.tensorflow.graph.metatypes.common import DECONV_LAYER_METATYPES
 from nncf.tensorflow.graph.metatypes.common import DEPTHWISE_CONV_LAYER_METATYPES
@@ -663,16 +664,7 @@ def _get_multiple_input_layer_attributes(layer: tf.keras.layers.Layer) -> Multip
     else:
         input_shape = layer.input_shape
         output_shape = layer.output_shape
-        axis = None
-        # If it's dummy concat of one tensor
-        if len(input_shape) == 1:
-            axis = -1
-        for idx, (dim_in, dim_out) in enumerate(zip(input_shape[0], output_shape[0])):
-            if dim_in is None or dim_in != dim_out:
-                axis = idx
-                break
-        if axis is None:
-            raise RuntimeError('Unexpected behaviour for concat op')
+        axis = get_concat_axis(input_shape, output_shape)
     return MultipleInputLayerAttributes(axis)
 
 
