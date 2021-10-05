@@ -98,10 +98,13 @@ class GraphConverter:
             if node.metatype is CatMetatype:
                 input_edges = nncf_graph.get_input_edges(node)
                 output_edges = nncf_graph.get_output_edges(node)
-                # In case is intermediate node
+                # Case of intermediate node
                 if input_edges and output_edges:
                     input_shapes = [edge.tensor_shape for edge in input_edges]
                     output_shapes = [edge.tensor_shape for edge in output_edges]
+                    # Case node is stack
+                    if len(input_shapes[0]) != len(output_shapes[0]):
+                        continue
                     axis = get_concat_axis(input_shapes, output_shapes)
                     layer_attributes = MultipleInputLayerAttributes(axis)
                     node.layer_attributes = layer_attributes

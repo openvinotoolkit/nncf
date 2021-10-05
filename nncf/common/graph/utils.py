@@ -13,6 +13,8 @@
 
 from typing import List
 
+from nncf.common.utils.logger import logger
+
 
 def get_concat_axis(input_shapes: List[List[int]], output_shapes: List[List[int]]) -> int:
     """
@@ -23,21 +25,19 @@ def get_concat_axis(input_shapes: List[List[int]], output_shapes: List[List[int]
     :returns: Concatenation axis of given concat node.
     """
     axis = None
-    # If it's dummy concat of one tensor
-    if len(input_shapes) == 1:
-        axis = -1
-    else:
-        none_dim = None
-        for idx, (dim_in, dim_out) in enumerate(zip(input_shapes[0], output_shapes[0])):
-            if dim_in != dim_out:
-                axis = idx
-                break
-            if dim_in is None:
-                none_dim = idx
-        if not axis:
-            axis = none_dim
+    none_dim = None
+    for idx, (dim_in, dim_out) in enumerate(zip(input_shapes[0], output_shapes[0])):
+        if dim_in != dim_out:
+            axis = idx
+            break
+        if dim_in is None:
+            none_dim = idx
 
     if axis is None:
-        raise RuntimeError('Unexpected behaviour for concat op')
+        if none_dim is None:
+            axis = -1
+            logger.warning('Identity concat node detected')
+        else:
+            axis = none_dim
 
     return axis
