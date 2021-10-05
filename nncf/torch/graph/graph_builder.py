@@ -100,9 +100,9 @@ class GraphConverter:
                 output_edges = nncf_graph.get_output_edges(node)
                 # In case is intermediate node
                 if input_edges and output_edges:
-                    input_shape = input_edges[0].tensor_shape
-                    output_shape = output_edges[0].tensor_shape
-                    axis = get_concat_axis(input_shape, output_shape)
+                    input_shapes = [edge.tensor_shape for edge in input_edges]
+                    output_shapes = [edge.tensor_shape for edge in output_edges]
+                    axis = get_concat_axis(input_shapes, output_shapes)
                     layer_attributes = MultipleInputLayerAttributes(axis)
                     node.layer_attributes = layer_attributes
         return nncf_graph
