@@ -4,6 +4,7 @@ from nncf.common.graph.utils import get_concat_axis
 
 
 TEST_CASES = [
+    ([(1, 1), (1, 1)], [(2, 1)], [0]),
     ([(None, 1, 1, 5)], [(None, 1, 1, 7)], [3, -1]),
     ([(None, 1, 1, 5), (None, 1, 1, 5)], [(None, 1, 1, 10)], [3, -1]),
     ([(1, 1, None), (1, 1, None)], [(1, 1, None)], [2, -1]),
