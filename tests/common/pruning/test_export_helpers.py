@@ -193,7 +193,6 @@ def test_conv_pruning_ops(transpose, layer_attributes, ref_accept_pruned_input, 
                 assert np.all(conv_op_target.data['output_mask'] == input_mask)
 
 
-
 @pytest.mark.parametrize('with_elementwise', [False, True])
 def test_stop_ops_elementwise_source_before_concat(with_elementwise):
     graph = NNCFGraph()
