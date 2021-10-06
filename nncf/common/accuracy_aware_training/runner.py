@@ -238,7 +238,8 @@ class BaseAccuracyAwareTrainingRunner(TrainingRunner):
         self.best_val_metric_value = 0
 
     def initialize_training_loop_fns(self, train_epoch_fn, validate_fn, configure_optimizers_fn,
-                                     dump_checkpoint_fn: Callable[[ModelType, str, Dict[str, object]], None],
+                                     dump_checkpoint_fn: Callable[
+                                         [ModelType, CompressionAlgorithmController, TrainingRunner, str], None],
                                      tensorboard_writer=None, log_dir=None):
         self._train_epoch_fn = train_epoch_fn
         self._validate_fn = validate_fn

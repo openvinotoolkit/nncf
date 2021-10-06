@@ -299,10 +299,16 @@ def test_early_exit_with_mock_validation(max_accuracy_degradation, exit_epoch_nu
         }
 )
                          )
-def test__mock_dump_checkpoint(aa_config):
+def test_mock_dump_checkpoint(aa_config):
     is_called_dump_checkpoint_fn = False
 
-    def mock_dump_checkpoint_fn(model, aa_log_dir, acc_aware_info):
+    def mock_dump_checkpoint_fn(model, compression_controller, accuracy_aware_runner, aa_log_dir):
+        from nncf.api.compression import CompressionAlgorithmController
+        from nncf.common.accuracy_aware_training.runner import TrainingRunner
+        assert isinstance(model, torch.nn.Module)
+        assert isinstance(compression_controller, CompressionAlgorithmController)
+        assert isinstance(accuracy_aware_runner, TrainingRunner)
+        assert isinstance(aa_log_dir, str)
         nonlocal is_called_dump_checkpoint_fn
         is_called_dump_checkpoint_fn = True
 
