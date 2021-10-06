@@ -181,6 +181,7 @@ def test_conv_pruning_ops(transpose, layer_attributes, ref_accept_pruned_input, 
     assert pruning_op_class.accept_pruned_input(conv_op_target) == ref_accept_pruned_input
     ones_input_mask = np.ones((layer_attributes['in_channels'],))
     ones_output_mask = np.ones((layer_attributes['out_channels'],))
+    # Check all combinations of masks
     for input_mask in [None, ones_input_mask]:
         for output_mask in [None, ones_output_mask]:
             dummy_op_before = graph.get_node_by_id(dummy_op_before.node_id)
@@ -242,7 +243,8 @@ def test_stop_ops_elementwise_source_before_concat(with_elementwise):
 
 
 @pytest.mark.parametrize('empty_mask_branch', [False, True])
-def test_convs_elementwise_source_before_concat(empty_mask_branch):
+@pytest.mark.parametrize('right_branch_output_channels', [5, 10])
+def test_convs_elementwise_source_before_concat(empty_mask_branch, right_branch_output_channels):
     graph = NNCFGraph()
     conv_op_0 = graph.add_nncf_node('conv_op_0', 'conv', dummy_types.DummyConvMetatype)
     conv_op_1 = graph.add_nncf_node('conv_op_1', 'conv', dummy_types.DummyConvMetatype)
@@ -252,42 +254,45 @@ def test_convs_elementwise_source_before_concat(empty_mask_branch):
     concat_node = graph.add_nncf_node('concat_node', 'concat', dummy_types.DummyConcatMetatype,
                                       layer_attributes=concat_layer_attributes)
     add_node = partial(graph.add_edge_between_nncf_nodes,
-                       tensor_shape=[10] * 4,
                        input_port_id=0,
                        output_port_id=0,
                        dtype=Dtype.FLOAT)
 
     # conv_op_0 -> elementwise_node
     add_node(from_node_id=conv_op_0.node_id,
-             to_node_id=elementwise_node.node_id)
+             to_node_id=elementwise_node.node_id,
+             tensor_shape=[10] * 4)
 
     # conv_op_1 -> elementwise_node
     add_node(from_node_id=conv_op_1.node_id,
-             to_node_id=elementwise_node.node_id)
+             to_node_id=elementwise_node.node_id,
+             tensor_shape=[10] * 4)
 
     # elementwise_node -> concat_node
     add_node(from_node_id=elementwise_node.node_id,
-             to_node_id=concat_node.node_id)
+             to_node_id=concat_node.node_id,
+             tensor_shape=[10] * 4)
 
     # conv_op_2 -> concat_node
     add_node(from_node_id=conv_op_2.node_id,
-             to_node_id=concat_node.node_id)
+             to_node_id=concat_node.node_id,
+             tensor_shape=[10, 10, right_branch_output_channels, 10])
 
     # Check without masks
     assert dummy_types.DummyConcatPruningOp.check_concat(concat_node, graph)
     # Set masks
-    masked_convs = [conv_op_0, conv_op_1]
-    if not empty_mask_branch:
-        masked_convs.append(conv_op_2)
-
-    for conv_op in masked_convs:
+    for conv_op in [conv_op_0, conv_op_1]:
         conv_op = graph.get_node_by_id(conv_op.node_id)
         conv_op.data['output_mask'] = np.ones(10)
+
+    if not empty_mask_branch:
+        conv_op = graph.get_node_by_id(conv_op_2.node_id)
+        conv_op.data['output_mask'] = np.ones(right_branch_output_channels)
 
     # Propagate masks
     MaskPropagationAlgorithm(graph, dummy_types.DUMMY_PRUNING_OPERATOR_METATYPES).mask_propagation()
     # Check with masks
     concat_node = graph.get_node_by_id(concat_node.node_id)
     assert dummy_types.DummyConcatPruningOp.check_concat(concat_node, graph)
-    reference_mask = np.ones((20,))
+    reference_mask = np.ones((10 + right_branch_output_channels,))
     np.testing.assert_equal(concat_node.data['output_mask'], reference_mask)
