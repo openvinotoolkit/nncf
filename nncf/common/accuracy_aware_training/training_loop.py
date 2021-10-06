@@ -41,8 +41,8 @@ class TrainingLoop(ABC):
     """
 
     @abstractmethod
-    def run(self, model: ModelType, train_epoch_fn, validate_fn,
-            configure_optimizers_fn=None, tensorboard_writer=None, log_dir=None):
+    def run(self, model: ModelType, train_epoch_fn, validate_fn, configure_optimizers_fn=None,
+            dump_checkpoint_fn=None, tensorboard_writer=None, log_dir=None):
         """
         Implements the custom logic to run a training loop for model fine-tuning
         by using the provided `train_epoch_fn`, `validate_fn` and `configure_optimizers_fn` methods.
@@ -52,8 +52,9 @@ class TrainingLoop(ABC):
         :param model: The model instance before fine-tuning
         :param train_epoch_fn: a method to fine-tune the model for a single epoch
         (to be called inside the `train_epoch` of the TrainingRunner)
-        :param validate: a method to evaluate the model on the validation dataset
+        :param validate_fn: a method to evaluate the model on the validation dataset
         (to be called inside the `train_epoch` of the TrainingRunner)
+        :param dump_checkpoint_fn: a method to dump a checkpoint
         :param configure_optimizers_fn: a method to instantiate an optimizer and a learning
         rate scheduler (to be called inside the `configure_optimizers` of the TrainingRunner)
         :return: The fine-tuned model
@@ -89,10 +90,10 @@ class EarlyExitCompressionTrainingLoop(TrainingLoop):
                                                                          dump_checkpoints))
         self.compression_controller = compression_controller
 
-    def run(self, model, train_epoch_fn, validate_fn,
-            configure_optimizers_fn=None, tensorboard_writer=None, log_dir=None):
+    def run(self, model, train_epoch_fn, validate_fn, configure_optimizers_fn=None,
+            dump_checkpoint_fn=None, tensorboard_writer=None, log_dir=None):
         self.runner.initialize_training_loop_fns(train_epoch_fn, validate_fn, configure_optimizers_fn,
-                                                 tensorboard_writer, log_dir)
+                                                 dump_checkpoint_fn, tensorboard_writer, log_dir)
         self.runner.retrieve_uncompressed_model_accuracy(model)
         uncompressed_model_accuracy = self.runner.uncompressed_model_accuracy
         self.runner.calculate_minimal_tolerable_accuracy(uncompressed_model_accuracy)
@@ -193,10 +194,10 @@ class AdaptiveCompressionTrainingLoop(TrainingLoop):
         raise RuntimeError('No compression algorithm that supports adaptive compression '
                            'accuracy-aware training was specified')
 
-    def run(self, model, train_epoch_fn, validate_fn,
-            configure_optimizers_fn=None, tensorboard_writer=None, log_dir=None):
+    def run(self, model, train_epoch_fn, validate_fn, configure_optimizers_fn=None,
+            dump_checkpoint_fn=None, tensorboard_writer=None, log_dir=None):
         self.runner.initialize_training_loop_fns(train_epoch_fn, validate_fn, configure_optimizers_fn,
-                                                 tensorboard_writer, log_dir)
+                                                 dump_checkpoint_fn, tensorboard_writer, log_dir)
         self.runner.retrieve_uncompressed_model_accuracy(model)
         uncompressed_model_accuracy = self.runner.uncompressed_model_accuracy
         self.runner.calculate_minimal_tolerable_accuracy(uncompressed_model_accuracy)
