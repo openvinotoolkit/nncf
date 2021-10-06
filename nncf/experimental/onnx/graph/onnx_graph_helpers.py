@@ -2,6 +2,9 @@ import networkx as nx
 import onnx
 from skl2onnx.helpers.onnx_helper import select_model_inputs_outputs
 
+from nncf.common.quantization.structs import QuantizerConfig
+
+
 def find_node_by_output(output: str, graph: onnx.GraphProto):
     retval = []
     for node in graph.node:
@@ -17,27 +20,33 @@ def find_nodes_by_input(input: str, graph: onnx.GraphProto):
             retval.append(node)
     return retval
 
-# TODO: add a possbility to change graph edges
-def add_quantize_dequantize(is_weight, qp_id, qp, onnx_model, weight_tensor_name, scale, zero_point):
+
+def add_quantize_dequantize(nncf_network, quantizer_config: QuantizerConfig, qp_id, weight_tensor_name, scale,
+                            zero_point):
     def find_node_index(node_name, onnx_model):
         for i, node in enumerate(onnx_model.graph.node):
             if node.name == node_name:
                 return i
+        return 0
 
+    onnx_model = nncf_network.onnx_compressed_model
     name = str(qp_id)
-    scale = onnx.helper.make_tensor('scale_' + name, onnx.TensorProto.FLOAT, [], [scale])
-    if is_weight:
-        zero_point = onnx.helper.make_tensor('zero_point_' + name, onnx.TensorProto.INT8, [], [zero_point])
+    if quantizer_config.per_channel:
+        onnx_scale = onnx.helper.make_tensor('scale_' + name, onnx.TensorProto.FLOAT, scale.shape, scale)
     else:
-        zero_point = onnx.helper.make_tensor('zero_point_' + name, onnx.TensorProto.INT8, [], [zero_point])
-        # is_unsigned = False
-        # for node in qp.directly_quantized_operator_node_names:
-        #     if 'Relu' in node:
-        #         is_unsigned = True
-        # if is_unsigned:
-        #     zero_point = onnx.helper.make_tensor('zero_point_' + name, onnx.TensorProto.UINT8, [], [zero_point])
-        # else:
-        #     zero_point = onnx.helper.make_tensor('zero_point_' + name, onnx.TensorProto.INT8, [], [zero_point])
+        onnx_scale = onnx.helper.make_tensor('scale_' + name, onnx.TensorProto.FLOAT, [], [scale])
+    if quantizer_config.signedness_to_force:
+        if quantizer_config.per_channel:
+            onnx_zero_point = onnx.helper.make_tensor('zero_point_' + name, onnx.TensorProto.INT8, scale.shape,
+                                                      [zero_point] * scale.shape[0])
+        else:
+            onnx_zero_point = onnx.helper.make_tensor('zero_point_' + name, onnx.TensorProto.INT8, [], [zero_point])
+    else:
+        if quantizer_config.per_channel:
+            onnx_zero_point = onnx.helper.make_tensor('zero_point_' + name, onnx.TensorProto.UINT8, scale.shape,
+                                                      [zero_point] * scale.shape[0])
+        else:
+            onnx_zero_point = onnx.helper.make_tensor('zero_point_' + name, onnx.TensorProto.UINT8, [], [zero_point])
 
     quantizer = onnx.helper.make_node(
         'QuantizeLinear',  # name
@@ -55,8 +64,8 @@ def add_quantize_dequantize(is_weight, qp_id, qp, onnx_model, weight_tensor_name
         for i, inp in enumerate(node.input):
             if inp == weight_tensor_name:
                 node.input[i] = 'dq_output_' + name
-    onnx_model.graph.initializer.extend([scale])
-    onnx_model.graph.initializer.extend([zero_point])
+    onnx_model.graph.initializer.extend([onnx_scale])
+    onnx_model.graph.initializer.extend([onnx_zero_point])
     i = find_node_index(input_nodes[0].name, onnx_model)
     onnx_model.graph.node.insert(i, quantizer)
     onnx_model.graph.node.insert(i + 1, dequantizer)
@@ -80,7 +89,7 @@ def get_all_node_outputs(module_name, onnx_model_graph):
 
 def find_weight_input_in_module(module_name, onnx_model_graph) -> str:
     node_inputs = get_all_node_inputs(module_name, onnx_model_graph)
-    #TODO: add search of input weight tensor
+    # TODO: add search of input weight tensor
     return node_inputs[1]
 
 
@@ -124,6 +133,7 @@ def add_edges_for_nodes(nx_graph, onnx_model):
                 nx_graph_in_node = find_nx_graph_node_by_label(in_node.name, nx_graph)
                 nx_graph.add_edge(node, nx_graph_in_node, shape)
 
+
 def get_nodes_by_type(onnx_model: onnx.ModelProto, node_type: str):
     retval = []
     for node in onnx_model.graph.node:
@@ -136,3 +146,7 @@ def add_output_layers_for_all_convs(onnx_model):
     nodes = get_nodes_by_type(onnx_model, 'Conv')
     outputs = [node.output[0] for node in nodes]
     model_with_intermediate_outputs = select_model_inputs_outputs(onnx_model, outputs=outputs)
+
+
+def get_input_tensor():
+    ...

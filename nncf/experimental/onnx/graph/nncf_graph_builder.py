@@ -1,4 +1,3 @@
-import networkx as nx
 import onnx
 
 from nncf.common.graph import NNCFGraph
@@ -6,87 +5,23 @@ from nncf.common.graph.definitions import NNCFGraphNodeType
 from nncf.common.graph.layer_attributes import Dtype
 
 from nncf.experimental.onnx.graph.onnx_graph_helpers import find_nodes_by_input, find_nx_graph_node_by_label, \
-    find_output_shape
+    find_output_shape, get_all_node_outputs
 from nncf.experimental.onnx.graph.metatypes.onnx_ops import ONNX_OPERATION_METATYPES
+from google.protobuf.json_format import MessageToDict
 
 
 class GraphConverter:
     @staticmethod
     def create_nncf_graph(onnx_model: onnx.ModelProto):
-        digraph = GraphConverter.convert_from_onnx_to_digraph(onnx_model)
-        nncf_graph = GraphConverter.convert_from_digraph_to_nncf_graph(digraph)
-        return nncf_graph
+        return GraphConverter.convert_from_onnx_to_nncf_graph(onnx_model)
 
     @staticmethod
-    def convert_from_onnx_to_digraph(onnx_model: onnx.ModelProto) -> nx.DiGraph:
-        nx_graph = nx.DiGraph()
-        node_cnt = 0
-        for node in onnx_model.graph.node:
-            if node_cnt == 0:
-                params = {}
-                params["input"] = node.input
-                params["output"] = 'input_output'
-                params["label"] = 'input_node'
-                params["type"] = NNCFGraphNodeType.INPUT_NODE
-                params["op_attrs"] = ''
-                nx_graph.add_node(node_cnt, **params)
-                node_cnt += 1
-
-                params = {}
-                params["input"] = 'input_output'
-                params["output"] = node.output
-                params["label"] = node.name
-                params["type"] = node.op_type
-                params["op_attrs"] = node.attribute
-                nx_graph.add_node(node_cnt, **params)
-            else:
-                params = {}
-                params["input"] = node.input
-                params["output"] = node.output
-                params["label"] = node.name
-                params["type"] = node.op_type
-                params["op_attrs"] = node.attribute
-                nx_graph.add_node(node_cnt, **params)
-
-            node_cnt += 1
-
-        inferred_model = onnx.shape_inference.infer_shapes(onnx_model)
-        activations_shapes = inferred_model.graph.value_info
-        for node, attrs in nx_graph.nodes(data=True):
-            outputs = attrs['output']
-            for output in outputs:
-                nodes = find_nodes_by_input(output, onnx_model.graph)
-                shape = find_output_shape(output, activations_shapes)
-                for in_node in nodes:
-                    nx_graph_in_node = find_nx_graph_node_by_label(in_node.name, nx_graph)
-                    nx_graph.add_edge(node, nx_graph_in_node, activation_shape=shape)
-
-        for i, (node, attrs) in enumerate(nx_graph.nodes(data=True)):
-            if i == 0:
-                input_node = node
-            elif i == 1:
-                first_conv_node = node
-            else:
-                break
-        nx_graph.add_edge(input_node, first_conv_node, activation_shape=[1,3,224,224])
-
-        return nx_graph
-
-    @staticmethod
-    def convert_from_digraph_to_nncf_graph(digraph):
+    def convert_from_onnx_to_nncf_graph(onnx_model: onnx.ModelProto) -> NNCFGraph:
         nncf_graph = NNCFGraph()
-        for node, attrs in digraph.nodes(data=True):
-            node_name = attrs['label']
-            node_type = attrs['type']
+        for node in onnx_model.graph.node:
+            node_name = node.name
+            node_type = node.op_type
             metatype = ONNX_OPERATION_METATYPES.get_operator_metatype_by_op_name(node_type)
-
-            # is_integer_input = False
-            # if metatype in INPUT_NOOP_METATYPES and input_infos is not None:
-            #     input_id = op_address.call_order
-            #     if input_infos[input_id].is_integer_input():
-            #         is_integer_input = True
-            #
-            # is_shared = layer_name in layer_name_vs_node_counts and layer_name_vs_node_counts[layer_name] > 1
 
             nncf_graph.add_nncf_node(node_name=node_name,
                                      node_type=node_type,
@@ -94,15 +29,51 @@ class GraphConverter:
                                      layer_attributes=None)
         input_counter = {}
         output_counter = {}
-        for u, v, a in digraph.edges(data=True):
-            input_counter[v] = input_counter.get(v, -1) + 1
-            output_counter[u] = input_counter.get(u, -1) + 1
+        inferred_model = onnx.shape_inference.infer_shapes(onnx_model)
+        activations_shapes = inferred_model.graph.value_info
+        for output_node in nncf_graph.get_all_nodes():
+            output_node_id = output_node.node_id
+            outputs = get_all_node_outputs(output_node.node_name, onnx_model.graph)
+            for output in outputs:
+                nodes = find_nodes_by_input(output, onnx_model.graph)
+                shape = find_output_shape(output, activations_shapes)
+                for in_node in nodes:
+                    in_node_id = nncf_graph.get_node_by_name(in_node.name).node_id
+                    input_counter[in_node_id] = input_counter.get(in_node_id, -1) + 1
+                    output_counter[output_node_id] = input_counter.get(output_node_id, -1) + 1
+                    nncf_graph.add_edge_between_nncf_nodes(
+                        from_node_id=output_node_id,
+                        to_node_id=in_node_id,
+                        tensor_shape=shape,
+                        input_port_id=input_counter[in_node_id],
+                        output_port_id=output_counter[output_node_id],
+                        dtype=Dtype.FLOAT
+                    )
+
+        for _input in onnx_model.graph.input:
+            m_dict = MessageToDict(_input)
+            dim_info = m_dict.get("type").get("tensorType").get("shape").get(
+                "dim")  # ugly but we have to live with this when using dict
+            input_shape = [int(d.get("dimValue")) for d in dim_info]
+        input_node = nncf_graph.add_nncf_node(node_name='input_node',
+                                              node_type=NNCFGraphNodeType.INPUT_NODE,
+                                              node_metatype=ONNX_OPERATION_METATYPES.get_operator_metatype_by_op_name(
+                                                  NNCFGraphNodeType.INPUT_NODE),
+                                              layer_attributes=None)
+        # Consider that there is only one input
+        input_name = onnx_model.graph.input[0].name
+        to_nodes = find_nodes_by_input(input_name, onnx_model.graph)
+        for node in to_nodes:
+            in_node_id = input_node.node_id
+            to_node_id = nncf_graph.get_node_by_name(node.name).node_id
+            input_counter[in_node_id] = input_counter.get(input_node.node_id, -1) + 1
+            output_counter[to_node_id] = input_counter.get(to_node_id, -1) + 1
             nncf_graph.add_edge_between_nncf_nodes(
-                from_node_id=u,
-                to_node_id=v,
-                tensor_shape=a['activation_shape'],
-                input_port_id=input_counter[v],
-                output_port_id=output_counter[u],
+                from_node_id=input_node.node_id,
+                to_node_id=to_node_id,
+                tensor_shape=input_shape,
+                input_port_id=input_counter[in_node_id],
+                output_port_id=output_counter[to_node_id],
                 dtype=Dtype.FLOAT
             )
 

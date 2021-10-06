@@ -27,27 +27,13 @@ class StatisticsCollector:
         self.global_max = max(self.global_max, max_val)
 
 
-def collect_tensor_statistics(tensor):
-    min_val = np.min(tensor)
-    max_val = np.max(tensor)
-    scale = (max_val - min_val) / 256
-    zero_point = 0
-    return scale, zero_point, min_val, max_val
-
-
-def min_max_statistics(tensor):
-    global_min, global_max = 1e10, 1e10
-    min_val = np.min(tensor)
-    max_val = np.max(tensor)
-
-    return global_min, global_max
-
-
-def calculate_statistics_for_activation_quantizer(outputs, nncf_network, data_loader, num_iters, mode):
-    onnx_model = nncf_network.onnx_model
+def calculate_statistics_for_activation_quantizer(onnx_model: onnx.ModelProto, outputs, data_loader, num_iters,
+                                                  mode='min_max'):
     model_output = list(enumerate_model_node_outputs(onnx_model))[-1]
     model_with_intermediate_outputs = select_model_inputs_outputs(onnx_model, outputs=[outputs[0], model_output])
-    onnx.save(model_with_intermediate_outputs, '/home/aleksei/nncf_work/onnx_quantization/model_with_intermediate_outputs.onnx')
+    # TODO: add temporary location and also deleting this model
+    onnx.save(model_with_intermediate_outputs,
+              '/home/aleksei/nncf_work/onnx_quantization/model_with_intermediate_outputs.onnx')
 
     sess = rt.InferenceSession('/home/aleksei/nncf_work/onnx_quantization/model_with_intermediate_outputs.onnx')
     input_name = sess.get_inputs()[0].name
@@ -60,9 +46,19 @@ def calculate_statistics_for_activation_quantizer(outputs, nncf_network, data_lo
         if i == num_iters:
             break
     if mode == 'min_max':
-        scale = (statistics_collector.global_max - statistics_collector.global_min) / 256
-        return scale, 0
+        return statistics_collector.global_max, statistics_collector.global_min
     elif mode == 'mean_min_max':
-        scale = (statistics_collector.max_avg - statistics_collector.min_avg) / 256
-        return scale, 0
+        return statistics_collector.max_avg, statistics_collector.min_avg
     raise RuntimeError('')
+
+
+def calculate_statistics_for_weight_quantizer(weight_tensor: np.ndarray, num_bits: int):
+    filter_max, filter_min = [], []
+    for filter in weight_tensor:
+        filter_max.append(np.max(filter))
+        filter_min.append(np.min(filter))
+    return calculate_scale_level(np.array(filter_max), np.array(filter_min), num_bits)
+
+
+def calculate_scale_level(max_val: float, min_val: float, num_bits: int):
+    return (max_val - min_val) / 2 ** num_bits
