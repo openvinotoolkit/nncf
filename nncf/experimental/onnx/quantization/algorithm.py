@@ -1,5 +1,3 @@
-
-
 from nncf.experimental.onnx.graph.onnx_graph_helpers import get_initializers_value
 from nncf.experimental.onnx.graph.onnx_graph_helpers import find_weight_input_in_module
 from nncf.experimental.onnx.graph.onnx_graph_helpers import get_all_node_outputs
@@ -17,16 +15,13 @@ from nncf.common.quantization.quantizer_propagation.solver import QuantizerPropa
 from nncf.common.quantization.structs import QuantizableWeightedLayerNode
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.insertion_point_graph import InsertionPointGraph
-from nncf.common.quantization.structs import QuantizerSpec, QuantizationMode
 
 from nncf.experimental.onnx.hardware.fused_patterns import ONNX_HW_FUSED_PATTERNS
-
 
 QUANTIZATION_LAYER_METATYPES = GENERAL_WIGHT_LAYER_METATYPES
 
 
-def apply_quantization(nncf_network: NNCFNetwork, data_loader):
-    num_iters = 2
+def apply_quantization(nncf_network: NNCFNetwork, data_loader, initialization_number):
     original_graph = nncf_network._original_graph
 
     ip_graph = InsertionPointGraph(original_graph)
@@ -34,7 +29,8 @@ def apply_quantization(nncf_network: NNCFNetwork, data_loader):
     ip_graph = ip_graph.get_ip_graph_with_merged_hw_optimized_operations(pattern)
 
     weight_nodes = original_graph.get_nodes_by_metatypes(QUANTIZATION_LAYER_METATYPES)
-    quantizable_layer_nodes = [QuantizableWeightedLayerNode(weight_node, [QuantizerConfig()]) for weight_node in weight_nodes]
+    quantizable_layer_nodes = [QuantizableWeightedLayerNode(weight_node, [QuantizerConfig()]) for weight_node in
+                               weight_nodes]
     solver = QuantizerPropagationSolver(default_trait_to_metatype_map=DEFAULT_ONNX_QUANT_TRAIT_TO_OP_DICT,
                                         quantizable_layer_nodes=quantizable_layer_nodes)
 
@@ -46,27 +42,25 @@ def apply_quantization(nncf_network: NNCFNetwork, data_loader):
 
     for qp_id, qp in final_setup.quantization_points.items():
         if qp.is_weight_quantization_point():
-            target_node = original_graph.get_node_by_name(qp.insertion_point.target_node_name)
-
-            quantizer_spec = QuantizerSpec(8, QuantizationMode.SYMMETRIC, False, False, False)
-            weight_initializer_name = find_weight_input_in_module(qp.insertion_point.target_node_name, nncf_network.onnx_model.graph)
+            weight_initializer_name = find_weight_input_in_module(qp.insertion_point.target_node_name,
+                                                                  nncf_network.onnx_model.graph)
             weight_tensor = get_initializers_value(weight_initializer_name, nncf_network.onnx_model.graph)
-            scale, zero_point = collect_tensor_statistics(weight_tensor)
-            add_quantize_dequantize(qp_id, nncf_network.onnx_nncf_model, weight_initializer_name, scale, zero_point)
+            scale, zero_point, _, _ = collect_tensor_statistics(weight_tensor)
+            add_quantize_dequantize(True, qp_id, qp, nncf_network.onnx_nncf_model, weight_initializer_name, scale, zero_point)
         else:
             assert qp.is_activation_quantization_point()
             if not qp.insertion_point.target_node_name == 'input_node':
                 outputs = get_all_node_outputs(qp.insertion_point.target_node_name, nncf_network.onnx_model.graph)
-                scale, zero_point = calculate_statistics_for_activation_quantizer(outputs, nncf_network, data_loader, num_iters)
-                add_quantize_dequantize(qp_id, nncf_network.onnx_nncf_model, outputs[0], scale, zero_point)
+                scale, zero_point = calculate_statistics_for_activation_quantizer(outputs, nncf_network, data_loader,
+                                                                                  initialization_number, 'min_max')
+                add_quantize_dequantize(False, qp_id, qp, nncf_network.onnx_nncf_model, outputs[0], scale, zero_point)
             else:
                 node_name = qp.directly_quantized_operator_node_names[0]
                 outputs = get_all_node_inputs(node_name, nncf_network.onnx_model.graph)
                 scale, zero_point = calculate_statistics_for_activation_quantizer(outputs, nncf_network, data_loader,
-                                                                                  num_iters)
-                add_quantize_dequantize(qp_id, nncf_network.onnx_nncf_model, outputs[0], scale, zero_point)
+                                                                                  initialization_number, 'min_max')
+                add_quantize_dequantize(False, qp_id, qp, nncf_network.onnx_nncf_model, outputs[0], scale, zero_point)
 
     import onnx
     onnx.save(nncf_network.onnx_nncf_model, '/home/aleksei/nncf_work/onnx_quantization/quantized.onnx')
-
-
+    onnx.save(nncf_network.onnx_nncf_model, '/home/aleksei/nncf_work/onnx_quantization/quantized_model_for_ac/quantized.onnx')

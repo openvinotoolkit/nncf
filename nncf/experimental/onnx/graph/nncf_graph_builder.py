@@ -105,17 +105,5 @@ class GraphConverter:
                 output_port_id=output_counter[u],
                 dtype=Dtype.FLOAT
             )
-        # for u, v, a in digraph.edges(data=True):
-        #     input_shape = [1,3,224,224]
-        #     input_node = nncf_graph.get_nodes_by_types(['nncf_model_input'])[0]
-        #     nncf_graph.add_edge_between_nncf_nodes(
-        #         from_node_id=input_node.node_id,
-        #         to_node_id=u,
-        #         tensor_shape=input_shape,
-        #         input_port_id=0,
-        #         output_port_id=0,
-        #         dtype=Dtype.FLOAT
-        #     )
-        #     break
 
         return nncf_graph

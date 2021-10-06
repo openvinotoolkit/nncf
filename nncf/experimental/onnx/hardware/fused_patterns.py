@@ -12,6 +12,9 @@ def _get_onnx_hw_fused_patterns() -> HWFusedPatterns:
     RELU_OPERATIONS = {'type': ['Relu'],
                        'label': 'RELU'}
 
+    ADD_OPERATIONS = {'type': ['Add'],
+                      'label': 'ADD'}
+
     hw_fused_patterns = HWFusedPatterns()
 
     conv_ops = GraphPattern()
@@ -22,6 +25,11 @@ def _get_onnx_hw_fused_patterns() -> HWFusedPatterns:
     relu_ops.add_node(**RELU_OPERATIONS)
     hw_fused_patterns.register(relu_ops, RELU_OPERATIONS['label'], match=False)
 
+    add_ops = GraphPattern()
+    add_ops.add_node(**RELU_OPERATIONS)
+    hw_fused_patterns.register(add_ops, ADD_OPERATIONS['label'], match=False)
+
+    hw_fused_patterns.register(add_ops + relu_ops, 'ADD + RELU', match=True)
     hw_fused_patterns.register(conv_ops + relu_ops, 'CONV + RELU', match=True)
     return hw_fused_patterns
 

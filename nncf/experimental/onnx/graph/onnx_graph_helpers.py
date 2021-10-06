@@ -17,8 +17,8 @@ def find_nodes_by_input(input: str, graph: onnx.GraphProto):
             retval.append(node)
     return retval
 
-
-def add_quantize_dequantize(qp_id, onnx_model, weight_tensor_name, scale, zero_point):
+# TODO: add a possbility to change graph edges
+def add_quantize_dequantize(is_weight, qp_id, qp, onnx_model, weight_tensor_name, scale, zero_point):
     def find_node_index(node_name, onnx_model):
         for i, node in enumerate(onnx_model.graph.node):
             if node.name == node_name:
@@ -26,7 +26,18 @@ def add_quantize_dequantize(qp_id, onnx_model, weight_tensor_name, scale, zero_p
 
     name = str(qp_id)
     scale = onnx.helper.make_tensor('scale_' + name, onnx.TensorProto.FLOAT, [], [scale])
-    zero_point = onnx.helper.make_tensor('zero_point_' + name, onnx.TensorProto.INT8, [], [zero_point])
+    if is_weight:
+        zero_point = onnx.helper.make_tensor('zero_point_' + name, onnx.TensorProto.INT8, [], [zero_point])
+    else:
+        zero_point = onnx.helper.make_tensor('zero_point_' + name, onnx.TensorProto.INT8, [], [zero_point])
+        # is_unsigned = False
+        # for node in qp.directly_quantized_operator_node_names:
+        #     if 'Relu' in node:
+        #         is_unsigned = True
+        # if is_unsigned:
+        #     zero_point = onnx.helper.make_tensor('zero_point_' + name, onnx.TensorProto.UINT8, [], [zero_point])
+        # else:
+        #     zero_point = onnx.helper.make_tensor('zero_point_' + name, onnx.TensorProto.INT8, [], [zero_point])
 
     quantizer = onnx.helper.make_node(
         'QuantizeLinear',  # name
@@ -39,13 +50,14 @@ def add_quantize_dequantize(qp_id, onnx_model, weight_tensor_name, scale, zero_p
         ['q_output_' + name, 'scale_' + name, 'zero_point_' + name],  # inputs
         ['dq_output_' + name]  # outputs
     )
-    conv = find_nodes_by_input(weight_tensor_name, onnx_model.graph)
-    for i, inp in enumerate(conv[0].input):
-        if inp == weight_tensor_name:
-            conv[0].input[i] = 'dq_output_' + name
+    input_nodes = find_nodes_by_input(weight_tensor_name, onnx_model.graph)
+    for node in input_nodes:
+        for i, inp in enumerate(node.input):
+            if inp == weight_tensor_name:
+                node.input[i] = 'dq_output_' + name
     onnx_model.graph.initializer.extend([scale])
     onnx_model.graph.initializer.extend([zero_point])
-    i = find_node_index(conv[0].name, onnx_model)
+    i = find_node_index(input_nodes[0].name, onnx_model)
     onnx_model.graph.node.insert(i, quantizer)
     onnx_model.graph.node.insert(i + 1, dequantizer)
 
