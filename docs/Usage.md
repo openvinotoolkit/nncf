@@ -338,6 +338,7 @@ def configure_optimizers_fn():
     of an optimizer instance and an LR scheduler instance (replace with None if the latter
     is not applicable).
     '''
+
 def dump_checkpoint_fn(model, compression_controller, accuracy_aware_runner, save_dir):
     '''
     An (optional) function that allows a user to define how to save the model's checkpoint.
