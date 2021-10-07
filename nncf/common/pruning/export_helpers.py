@@ -168,7 +168,7 @@ class ConcatPruningOp(DefaultPruningOp):
 
                 print(f'is_on_sources_equal = {is_on_sources_equal}')
                 print('behaviour changed!!!')
-            if decision_new:
+            if decision_old:
                 return False
         return True
 
@@ -216,6 +216,7 @@ class ConcatPruningOp(DefaultPruningOp):
     def mask_propagation(cls, node: NNCFNode, graph: NNCFGraph):
         result_mask = None
 
+        assert cls.check_concat(node, graph)
         if cls.check_concat(node, graph):
             result_mask = cls.generate_output_mask(node, graph)
 
