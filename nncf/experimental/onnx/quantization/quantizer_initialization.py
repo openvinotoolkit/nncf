@@ -33,7 +33,6 @@ def calculate_statistics_for_activation_quantizer(onnx_model: onnx.ModelProto, o
                                                   mode='min_max'):
     model_output = list(enumerate_model_node_outputs(onnx_model))[-1]
     model_with_intermediate_outputs = select_model_inputs_outputs(onnx_model, outputs=[outputs[0], model_output])
-    # TODO: add temporary location and also deleting this model
     temporary_model = tempfile.NamedTemporaryFile()
     onnx.save(model_with_intermediate_outputs, temporary_model.name)
 
