@@ -116,6 +116,11 @@ ELEMENTWISE_LAYER_METATYPES = [
     op_metatypes.TFMulOpMetatype
 ]
 
+RESHAPE_METATYPES = [
+    layer_metatypes.TFReshapeLayerMetatype,
+    layer_metatypes.TFFlattenLayerMetatype,
+    op_metatypes.TFReshapeOpMetatype
+]
 
 def get_operator_metatypes() -> List[Type[OperatorMetatype]]:
     keras_metatypes_list = list(layer_metatypes.KERAS_LAYER_METATYPES.registry_dict.values())

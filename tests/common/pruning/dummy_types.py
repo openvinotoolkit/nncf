@@ -12,6 +12,8 @@ from nncf.common.pruning.operations import (
     GroupNormPruningOp,
     ConcatPruningOp,
     ElementwisePruningOp,
+    ReshapePruningOp,
+    FlattenPruningOp,
     StopMaskForwardPruningOp,
 )
 
@@ -62,6 +64,14 @@ class DummyConcatMetatype(OperatorMetatype):
 
 class DummyStopPropoagtionMetatype(OperatorMetatype):
     name = 'stop_propagation_ops'
+
+
+class DummyReshapeMetatye(OperatorMetatype):
+    name = 'reshape'
+
+
+class DummyFlattenMetatype(OperatorMetatype):
+    name = 'flatten'
 
 
 DUMMY_PRUNING_OPERATOR_METATYPES = PruningOperationsMetatypeRegistry("operator_metatypes")
@@ -118,3 +128,13 @@ class DummyConcatPruningOp(ConcatPruningOp):
     StopMaskForwardOp = DummyStopMaskForward
     InputOp = DummyInputPruningOp
     additional_types = [DummyConcatMetatype.name]
+
+
+@DUMMY_PRUNING_OPERATOR_METATYPES.register(DummyReshapeMetatye.name)
+class DummyReshapePruningOp(ReshapePruningOp):
+    additional_types = [DummyReshapeMetatye.name]
+
+
+@DUMMY_PRUNING_OPERATOR_METATYPES.register(DummyFlattenMetatype.name)
+class DummyFlattenPruningOp(FlattenPruningOp):
+    additional_types = [DummyFlattenMetatype.name]
