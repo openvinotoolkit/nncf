@@ -7,11 +7,7 @@
     "batch_size": 256,
     "optimizer": {
         "type": "Adam",
-        "base_lr": 1e-5,
-        "schedule_type": "multistep",
-        "steps": [
-            5
-        ]
+        "base_lr": 1e-5
     },
     "compression": {
         "algorithm": "quantization",
