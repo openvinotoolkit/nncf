@@ -35,6 +35,7 @@ from nncf.torch.dynamic_graph.context import get_current_context
 from nncf.torch.dynamic_graph.context import no_nncf_trace
 from nncf.torch.dynamic_graph.context import TracingContext
 from nncf.torch.graph.graph_builder import GraphBuilder
+from nncf.torch.graph.operator_metatypes import CatMetatype
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
 from tests.torch.helpers import register_bn_adaptation_init_args
 from tests.torch.test_compressed_graph import get_basic_quantization_config
@@ -208,10 +209,19 @@ class ModelForTestWithReshapeFlattenAndConcat(ModelForTest):
         y = super().forward(x)
         size = y.size()
         y = y.view(size + (1, 1))
+
+        y_copy = torch.ones_like(y)
+        y = torch.stack([y, y_copy])
+
         y_copy = torch.ones_like(y)
         y = torch.cat([y, y_copy], -1)
+
         y = torch.flatten(y)
         _ = y.view(-1)
+
+        y_copy = torch.ones_like(y)
+        y = torch.stack([y, y_copy])
+
         y_copy = torch.ones_like(y)
         y = torch.cat([y, y_copy], -1)
         return y
@@ -224,15 +234,22 @@ def test_concat_attributes_saved_during_graph_building(input_shape):
     graph_builder = GraphBuilder(create_dummy_forward_fn([input_info, ], with_input_tracing=True,
                                                          with_output_tracing=True))
     graph = graph_builder.build_graph(model)
-    reshape_nodes_with_attributes = {
+    cat_nodes_with_attributes = {
         'ModelForTestWithReshapeFlattenAndConcat/cat_0': {'axis': 1},
-        'ModelForTestWithReshapeFlattenAndConcat/cat_1': {'axis': 5},
-        'ModelForTestWithReshapeFlattenAndConcat/cat_2': {'axis': 0}
+        'ModelForTestWithReshapeFlattenAndConcat/cat_1': {'axis': 6},
+        'ModelForTestWithReshapeFlattenAndConcat/cat_2': {'axis': 1},
+        'ModelForTestWithReshapeFlattenAndConcat/stack_0': None,
+        'ModelForTestWithReshapeFlattenAndConcat/stack_1': None
     }
-    for name, shapes in reshape_nodes_with_attributes.items():
-        node = graph.get_node_by_name(name)
-        assert isinstance(node.layer_attributes, MultipleInputLayerAttributes)
-        assert node.layer_attributes.axis == shapes['axis']
+
+    for node in graph.get_all_nodes():
+        if node.metatype is CatMetatype:
+            assert node.node_name in cat_nodes_with_attributes
+            if isinstance(node.layer_attributes, MultipleInputLayerAttributes):
+                assert node.layer_attributes.axis == cat_nodes_with_attributes[node.node_name]['axis']
+            else:
+                assert node.layer_attributes is None
+                assert cat_nodes_with_attributes[node.node_name] is None
 
 
 TEST_KEYWORD_1 = "keyword1"
