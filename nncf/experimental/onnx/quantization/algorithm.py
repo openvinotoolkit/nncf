@@ -42,8 +42,8 @@ def choose_activation_quantization_configuration(nncf_network: NNCFNetwork, outp
 
 def choose_weight_quantization_configuration(outputs: onnx.TensorProto) -> [QuantizerConfig, float, int]:
     num_bits = 8
-    scale = calculate_statistics_for_weight_quantizer(outputs, num_bits)
-    per_channel = True
+    per_channel = False
+    scale = calculate_statistics_for_weight_quantizer(outputs, num_bits, per_channel)
     signedness_to_force = True
     quantizer_config = QuantizerConfig(num_bits=num_bits, signedness_to_force=signedness_to_force,
                                        per_channel=per_channel)

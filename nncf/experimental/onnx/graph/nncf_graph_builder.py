@@ -1,13 +1,14 @@
 import onnx
+from google.protobuf.json_format import MessageToDict
 
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph.definitions import NNCFGraphNodeType
 from nncf.common.graph.layer_attributes import Dtype
 
-from nncf.experimental.onnx.graph.onnx_graph_helpers import find_nodes_by_input, find_nx_graph_node_by_label, \
-    find_output_shape, get_all_node_outputs
+from nncf.experimental.onnx.graph.onnx_graph_helpers import find_nodes_by_input
+from nncf.experimental.onnx.graph.onnx_graph_helpers import find_output_shape
+from nncf.experimental.onnx.graph.onnx_graph_helpers import get_all_node_outputs
 from nncf.experimental.onnx.graph.metatypes.onnx_ops import ONNX_OPERATION_METATYPES
-from google.protobuf.json_format import MessageToDict
 
 
 class GraphConverter:
@@ -52,8 +53,7 @@ class GraphConverter:
 
         for _input in onnx_model.graph.input:
             m_dict = MessageToDict(_input)
-            dim_info = m_dict.get("type").get("tensorType").get("shape").get(
-                "dim")  # ugly but we have to live with this when using dict
+            dim_info = m_dict.get("type").get("tensorType").get("shape").get("dim")
             input_shape = [int(d.get("dimValue")) for d in dim_info]
         input_node = nncf_graph.add_nncf_node(node_name='input_node',
                                               node_type=NNCFGraphNodeType.INPUT_NODE,
