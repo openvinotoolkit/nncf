@@ -144,14 +144,31 @@ class ConcatPruningOp(DefaultPruningOp):
 
         for input_node in graph.get_previous_nodes(node):
             # If input has mask ->  it went from convolution (source of this node is a convolution)
+            node_has_mask = False
             if input_node.data.get('output_mask', None) is not None:
-                continue
+                node_has_mask = True
 
             source_nodes = get_sources_of_node(input_node, graph, cls.ConvolutionOp.get_all_op_aliases() +
                                                cls.StopMaskForwardOp.get_all_op_aliases() +
                                                cls.InputOp.get_all_op_aliases())
-            sources_types = [node.node_type for node in source_nodes] + [input_node.node_type]
-            if any(t in sources_types for t in cls.StopMaskForwardOp.get_all_op_aliases()):
+
+            source_types_old = [node.node_type for node in source_nodes]
+            sources_types_new = source_types_old + [input_node.node_type]
+
+            decision_old_on_sources = any(t in source_types_old for t in cls.StopMaskForwardOp.get_all_op_aliases())
+            decision_old = decision_old_on_sources and node_has_mask
+
+            decision_new_on_sources = any(t in sources_types_new for t in cls.StopMaskForwardOp.get_all_op_aliases())
+            decision_new = decision_new_on_sources and not node_has_mask
+
+            if decision_new != decision_old:
+                is_on_sources_equal = decision_new_on_sources == decision_old_on_sources
+                if not is_on_sources_equal:
+                    raise ValueError('ALERT')
+
+                print(f'is_on_sources_equal = {is_on_sources_equal}')
+                print('behaviour changed!!!')
+            if decision_new:
                 return False
         return True
 
