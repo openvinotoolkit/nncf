@@ -22,6 +22,7 @@ from tensorflow.python.keras import models
 from nncf.common.graph import INPUT_NOOP_METATYPES
 from nncf.common.graph import OUTPUT_NOOP_METATYPES
 from nncf.common.graph.layer_attributes import MultipleInputLayerAttributes
+from nncf.tensorflow.graph.metatypes.common import RESHAPE_METATYPES
 from nncf.tensorflow.graph.converter import TFModelConverter
 from nncf.tensorflow.graph.converter import convert_keras_model_to_nncf_graph
 from nncf.tensorflow.graph.metatypes.common import LAYER_METATYPES_AGNOSTIC_TO_DATA_PRECISION_WITH_MULTIPLE_INPUTS
@@ -122,3 +123,20 @@ def test_model_with_reshape_and_concat(model, ref_attrs):
             assert node.layer_attributes is not None
             assert isinstance(node.layer_attributes, MultipleInputLayerAttributes)
             assert node.layer_attributes.axis in ref_attrs[node.node_name]['axis']
+
+
+def test_concat_attributes_saved_during_graph_building():
+    model = get_model_with_reshapes_and_concats()
+    graph = convert_keras_model_to_nncf_graph(model)
+    ref_reshape_nodes = {'tf_op_layer_Reshape': {'input_shape': (None, 64),
+                                                 'output_shape': (32, None)},
+                         'reshape': {'input_shape': (32, None),
+                                     'output_shape': (32, 16, None)},
+                         'flatten': {'input_shape': (32, 8, 8, None),
+                                     'output_shape': (32, None)}}
+    for node in graph.get_all_nodes():
+        if node.metatype in RESHAPE_METATYPES:
+            assert node.node_name in ref_reshape_nodes
+            assert node.layer_attributes is not None
+            assert node.layer_attributes.input_shape == ref_reshape_nodes[node.node_name]['input_shape']
+            assert node.layer_attributes.output_shape == ref_reshape_nodes[node.node_name]['output_shape']
