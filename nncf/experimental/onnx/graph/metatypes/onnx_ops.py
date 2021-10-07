@@ -59,5 +59,3 @@ class GlobalAveragePoolMetatype(ONNXOpMetatype):
 
 GENERAL_WIGHT_LAYER_METATYPES = [ConvolutionMetatype,
                                  LinearMetatype]
-
-

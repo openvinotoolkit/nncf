@@ -4,7 +4,6 @@ from nncf.experimental.onnx.graph.metatypes.onnx_ops import LinearMetatype
 from nncf.experimental.onnx.graph.metatypes.onnx_ops import ReluMetatype
 from nncf.experimental.onnx.graph.metatypes.onnx_ops import GlobalAveragePoolMetatype
 
-
 DEFAULT_ONNX_QUANT_TRAIT_TO_OP_DICT = {
     QuantizationTrait.INPUTS_QUANTIZABLE: [
         ConvolutionMetatype,

@@ -12,12 +12,9 @@ from nncf.experimental.onnx.graph.metatypes.onnx_ops import ONNX_OPERATION_METAT
 
 
 class GraphConverter:
-    @staticmethod
-    def create_nncf_graph(onnx_model: onnx.ModelProto):
-        return GraphConverter.convert_from_onnx_to_nncf_graph(onnx_model)
 
     @staticmethod
-    def convert_from_onnx_to_nncf_graph(onnx_model: onnx.ModelProto) -> NNCFGraph:
+    def create_nncf_graph(onnx_model: onnx.ModelProto) -> NNCFGraph:
         nncf_graph = NNCFGraph()
         for node in onnx_model.graph.node:
             node_name = node.name

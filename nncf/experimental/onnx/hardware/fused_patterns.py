@@ -1,9 +1,6 @@
 from nncf.common.graph.patterns import GraphPattern
 from nncf.common.graph.patterns import HWFusedPatterns
 
-# from nncf.experimental.onnx.graph.pattern_operations import CONV_OPERATIONS
-# from nncf.experimental.onnx.graph.pattern_operations import RELU_OPERATIONS
-
 
 def _get_onnx_hw_fused_patterns() -> HWFusedPatterns:
     CONV_OPERATIONS = {'type': ['Conv'],
