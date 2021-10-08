@@ -41,11 +41,11 @@ def calculate_statistics_for_activation_quantizer(onnx_model: onnx.ModelProto, o
     input_name = sess.get_inputs()[0].name
     statistics_collector = StatisticsCollector()
     for i, (input_, _) in enumerate(data_loader):
+        if i == num_iters:
+            break
         input_tensor = input_.cpu().detach().numpy()
         output_tensor = sess.run([], {input_name: input_tensor.astype(np.float32)})
         statistics_collector.update(output_tensor[0])
-        if i == num_iters:
-            break
 
     temporary_model.close()
     if mode == 'min_max':
