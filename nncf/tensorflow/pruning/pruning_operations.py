@@ -76,11 +76,6 @@ class TFBatchNormPruningOp(BatchNormPruningOp):
 class TFElementwisePruningOp(ElementwisePruningOp):
     additional_types = _get_types(ELEMENTWISE_OPERATIONS)
 
-    @classmethod
-    def _assert_input_masks_close(cls, input_masks):
-        for input_mask in input_masks[1:]:
-            tf.debugging.assert_near(input_masks[0], input_mask)
-
 
 @TF_PRUNING_OPERATOR_METATYPES.register('stop_propagation_ops')
 class TFStopMaskForwardPruningOp(StopMaskForwardPruningOp):
@@ -90,21 +85,3 @@ class TFStopMaskForwardPruningOp(StopMaskForwardPruningOp):
 @TF_PRUNING_OPERATOR_METATYPES.register('concat')
 class TFConcatPruningOp(ConcatPruningOp):
     additional_types = ['Concatenate', 'ConcatV2']
-
-    ConvolutionOp = TFConvolutionPruningOp
-    StopMaskForwardOp = TFStopMaskForwardPruningOp
-    InputOp = TFInputPruningOp
-
-    @classmethod
-    def _get_unit_mask(cls, dim, device):
-        with tf.device(device):
-            mask = tf.ones(dim)
-        return mask
-
-    @classmethod
-    def _get_masks_device(cls, input_masks):
-        return [m for m in input_masks if m is not None][0].device
-
-    @classmethod
-    def _concat_masks(cls, filled_input_masks):
-        return tf.concat(filled_input_masks, 0)

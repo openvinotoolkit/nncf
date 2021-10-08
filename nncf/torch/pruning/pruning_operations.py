@@ -267,11 +267,6 @@ class PTElementwisePruningOp(ElementwisePruningOp, PTPruner):
     subtypes = [AddMetatype, SubMetatype, DivMetatype, MulMetatype]
 
     @classmethod
-    def _assert_input_masks_close(cls, input_masks):
-        assert all(torch.allclose(input_masks[0], mask) for mask in input_masks)
-
-
-    @classmethod
     def input_prune(cls, model: NNCFNetwork, node: NNCFNode, graph: NNCFGraph):
         input_mask = node.data['input_masks'][0]
         if input_mask is None:
@@ -300,22 +295,6 @@ class PTStopMaskForwardPruningOp(StopMaskForwardPruningOp, PTPruner):
 @PT_PRUNING_OPERATOR_METATYPES.register('concat')
 class PTConcatPruningOp(ConcatPruningOp, PTPruner):
     subtypes = [CatMetatype]
-
-    ConvolutionOp = PTConvolutionPruningOp
-    StopMaskForwardOp = PTStopMaskForwardPruningOp
-    InputOp = PTInputPruningOp
-
-    @classmethod
-    def _get_unit_mask(cls, dim, device):
-        return torch.ones(dim, device=device)
-
-    @classmethod
-    def _get_masks_device(cls, input_masks):
-        return [m for m in input_masks if m is not None][0].device
-
-    @classmethod
-    def _concat_masks(cls, filled_input_masks):
-        return torch.cat(filled_input_masks, 0)
 
 
 class ModelPruner(MaskPropagationAlgorithm):

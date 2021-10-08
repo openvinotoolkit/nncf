@@ -162,37 +162,9 @@ class GroupNormPruningOp(BasePruningOp):
 
 
 class ConcatPruningOp(BasePruningOp):
-    ConvolutionOp = None # type: ConvolutionPruningOp
-    StopMaskForwardOp = None # type: StopMaskForwardPruningOp
-    InputOp = None # type: InputPruningOp
-
     @classmethod
     def accept_pruned_input(cls, node: NNCFNode):
         return True
-
-    @classmethod
-    def check_concat(cls, node: NNCFNode, graph: NNCFGraph) -> bool:
-        """
-        Return whether all input sources of node is convolutions or not.
-
-        :param node: Node to determine it's sources
-        :param graph: NNCF graph to work with
-        :return: True if all input sources of node is convolutions
-        """
-
-        for input_node in graph.get_previous_nodes(node):
-            # If input has mask ->  it went from convolution (source of this node is a convolution)
-            if input_node.data.get('output_mask', None) is not None:
-                continue
-
-            source_nodes = get_sources_of_node(input_node, graph, cls.ConvolutionOp.get_all_op_aliases() +
-                                               cls.StopMaskForwardOp.get_all_op_aliases() +
-                                               cls.InputOp.get_all_op_aliases())
-            sources_types = [node.node_type for node in source_nodes] + [input_node.node_type]
-            if any(t in sources_types for t in cls.StopMaskForwardOp.get_all_op_aliases()):
-                return False
-        return True
-
 
     @classmethod
     def generate_output_mask(cls, node: NNCFNode, graph: NNCFGraph) -> Union[List[np.array], None]:
@@ -227,11 +199,7 @@ class ConcatPruningOp(BasePruningOp):
 
     @classmethod
     def mask_propagation(cls, node: NNCFNode, graph: NNCFGraph):
-        result_mask = None
-
-        if cls.check_concat(node, graph):
-            result_mask = cls.generate_output_mask(node, graph)
-
+        result_mask = cls.generate_output_mask(node, graph)
         node.data['output_mask'] = result_mask
 
 
