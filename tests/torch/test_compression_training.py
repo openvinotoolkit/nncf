@@ -44,75 +44,75 @@ GLOBAL_CONFIG = {
         {
             'cifar100':
                 {
-                    'configs': [
-                        ('mobilenet_v2_sym_int8.json', {
+                    'configs': {
+                        'mobilenet_v2_sym_int8.json': {
                             'execution_arg': {'multiprocessing-distributed'},
                             'expected_accuracy': 68.11,
                             'weights': 'mobilenet_v2_32x32_cifar100_68.11.pth',
                             'absolute_tolerance_train': 1.0,
                             'absolute_tolerance_eval': 2e-2
-                        }),
-                        ('mobilenet_v2_asym_int8.json', {
+                        },
+                        'mobilenet_v2_asym_int8.json': {
                             'execution_arg': {'multiprocessing-distributed', 'cpu-only'},
                             'expected_accuracy': 68.11,
                             'weights': 'mobilenet_v2_32x32_cifar100_68.11.pth',
                             'absolute_tolerance_train': 1.0,
                             'absolute_tolerance_eval': 2e-2
-                        }),
-                        ('inceptionV3_int8.json', {
+                        },
+                        'inceptionV3_int8.json': {
                             'expected_accuracy': 77.53,
                             'weights': 'inceptionV3_77.53.sd',
-                            'absolute_tolerance_eval': 6e-2
-                        }),
-                        ('resnet50_int8.json', {
+                            'absolute_tolerance_eval': 6e-2,
+                        },
+                        'resnet50_int8.json': {
                             'expected_accuracy': 67.93,
                             'weights': 'resnet50_cifar100_67.93.pth',
-                            'absolute_tolerance_eval': 6e-2
-                        }),
-                        ('mobilenet_v2_magnitude_sparsity_int8.json', {
+                            'absolute_tolerance_eval': 6e-2,
+                        },
+                        'mobilenet_v2_magnitude_sparsity_int8.json': {
                             'expected_accuracy': 68.11,
                             'weights': 'mobilenet_v2_32x32_cifar100_68.11.pth',
                             'execution_arg': {'multiprocessing-distributed', ''},
                             'absolute_tolerance_train': 1.5,
                             'absolute_tolerance_eval': 2e-2
-                        }),
-                        ('mobilenet_v2_rb_sparsity_int8.json', {
+                        },
+                        'mobilenet_v2_rb_sparsity_int8.json': {
                             'expected_accuracy': 68.11,
                             'weights': 'mobilenet_v2_32x32_cifar100_68.11.pth',
                             'execution_arg': {'multiprocessing-distributed'},
                             'absolute_tolerance_eval': 2e-2
-                        }),
-                        ('mobilenet_v2_learned_ranking.json', {
+                        },
+                        'mobilenet_v2_learned_ranking.json': {
                             'execution_arg': {'multiprocessing-distributed'},
                             'expected_accuracy': 68.11,
                             'weights': 'mobilenet_v2_32x32_cifar100_68.11.pth',
-                            'absolute_tolerance_train': 1.0,
+                            'absolute_tolerance_train': 1.5,
                             'absolute_tolerance_eval': 2e-2
-                        })
-                    ],
+                        },
+                    }
                 },
             'imagenet':
                 {
-                    'configs': [
-                        ('mobilenet_v2_imagenet_sym_int8.json', {
+                    'configs': {
+                        'mobilenet_v2_imagenet_sym_int8.json': {
                             'execution_arg': {'multiprocessing-distributed'},
                             'expected_accuracy': 100,
                             'weights': 'mobilenet_v2.pth.tar'
-                        }),
-                        ('mobilenet_v2_imagenet_asym_int8.json', {
+                        },
+                        'mobilenet_v2_imagenet_asym_int8.json': {
                             'execution_arg': {'multiprocessing-distributed'},
                             'expected_accuracy': 100,
-                            'weights': 'mobilenet_v2.pth.tar'
-                        }),
-                        ('resnet50_imagenet_sym_int8.json', {
+                            'weights': 'mobilenet_v2.pth.tar',
+                        },
+                        'resnet50_imagenet_sym_int8.json': {
                             'execution_arg': {'multiprocessing-distributed'},
-                            'expected_accuracy': 100
-                        }),
-                        ('resnet50_imagenet_asym_int8.json', {
+                            'expected_accuracy': 100,
+                        },
+                        'resnet50_imagenet_asym_int8.json': {
                             'execution_arg': {'multiprocessing-distributed'},
-                            'expected_accuracy': 100
-                        }),
-                    ]
+                            'expected_accuracy': 100,
+                        },
+                    }
                 }
         }
 }
@@ -155,7 +155,8 @@ for sample_type_, datasets in GLOBAL_CONFIG.items():
         dataset_path = dataset.get('path', os.path.join(tempfile.gettempdir(), dataset_name_))
         batch_size = dataset.get('batch', None)
         configs = dataset.get('configs', {})
-        for config_name, config_params in configs:
+        for config_name in configs:
+            config_params = configs[config_name]
             execution_args = config_params.get('execution_arg', [''])
             expected_accuracy_ = config_params.get('expected_accuracy', 100)
             absolute_tolerance_train_ = config_params.get('absolute_tolerance_train', 1)
