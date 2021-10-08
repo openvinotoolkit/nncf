@@ -20,7 +20,7 @@ from nncf.tensorflow.graph.pattern_operations import ELEMENTWISE_OPERATIONS
 from nncf.tensorflow.graph.pattern_operations import TF_ACTIVATIONS_OPERATIONS
 from nncf.common.graph.definitions import NNCFGraphNodeType
 from nncf.common.pruning.utils import PruningOperationsMetatypeRegistry
-from nncf.common.pruning.export_helpers import (
+from nncf.common.pruning.pruning_operations import (
     InputPruningOp,
     OutputPruningOp,
     IdentityMaskForwardPruningOp,

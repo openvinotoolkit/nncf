@@ -2,7 +2,7 @@ from typing import List
 
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.pruning.utils import PruningOperationsMetatypeRegistry
-from nncf.common.pruning.export_helpers import (
+from nncf.common.pruning.pruning_operations import (
     InputPruningOp,
     OutputPruningOp,
     IdentityMaskForwardPruningOp,

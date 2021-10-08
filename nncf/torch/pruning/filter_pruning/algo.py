@@ -63,8 +63,8 @@ from nncf.torch.layers import NNCF_PRUNING_MODULES_DICT
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.pruning.base_algo import BasePruningAlgoBuilder
 from nncf.torch.pruning.base_algo import BasePruningAlgoController
-from nncf.torch.pruning.export_helpers import PTElementwisePruningOp
-from nncf.torch.pruning.export_helpers import PT_PRUNING_OPERATOR_METATYPES
+from nncf.torch.pruning.pruning_operations import PTElementwisePruningOp
+from nncf.torch.pruning.pruning_operations import PT_PRUNING_OPERATOR_METATYPES
 from nncf.torch.pruning.filter_pruning.functions import FILTER_IMPORTANCE_FUNCTIONS
 from nncf.torch.pruning.filter_pruning.functions import calculate_binary_mask
 from nncf.torch.pruning.filter_pruning.functions import tensor_l2_normalizer

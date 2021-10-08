@@ -30,9 +30,9 @@ from nncf.common.pruning.model_analysis import cluster_special_ops
 from nncf.torch.dynamic_graph.graph_tracer import ModelInputInfo
 from nncf.torch.layers import NNCF_PRUNING_MODULES_DICT
 from nncf.torch.nncf_network import NNCFNetwork
-from nncf.torch.pruning.export_helpers import PTElementwisePruningOp
-from nncf.torch.pruning.export_helpers import PTIdentityMaskForwardPruningOp
-from nncf.torch.pruning.export_helpers import PT_PRUNING_OPERATOR_METATYPES
+from nncf.torch.pruning.pruning_operations import PTElementwisePruningOp
+from nncf.torch.pruning.pruning_operations import PTIdentityMaskForwardPruningOp
+from nncf.torch.pruning.pruning_operations import PT_PRUNING_OPERATOR_METATYPES
 from nncf.common.pruning.utils import is_depthwise_conv
 from nncf.torch.pruning.filter_pruning.algo import FilterPruningBuilder
 from tests.torch.helpers import create_compressed_model_and_algo_for_test

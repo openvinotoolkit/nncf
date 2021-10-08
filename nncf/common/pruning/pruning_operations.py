@@ -14,6 +14,7 @@
 import numpy as np
 
 from typing import Union, List
+from typing import TypeVar
 
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
@@ -21,12 +22,50 @@ from nncf.common.pruning.utils import is_grouped_conv
 from nncf.common.pruning.utils import get_sources_of_node
 from nncf.common.pruning.utils import is_depthwise_conv
 from nncf.common.graph.layer_attributes import GroupNormLayerAttributes
-from nncf.common.pruning.mask_propagation import identity_mask_propagation
-from nncf.common.pruning.mask_propagation import get_input_masks
-from nncf.common.pruning.default_pruning_op import DefaultPruningOp
 
 
-class InputPruningOp(DefaultPruningOp):
+TensorType = TypeVar('TensorType')
+
+
+class BasePruningOp:
+    """
+    Determines meta operations which aggregate operations having common
+    properties of interaction with pruning masks
+    """
+
+    subtypes = []
+    additional_types = []
+
+    @classmethod
+    def accept_pruned_input(cls, node: NNCFNode):
+        """
+        :return: accept_pruned_input - can this operation work with pruned input or not
+        """
+        raise NotImplementedError
+
+    @classmethod
+    def mask_propagation(cls, node: NNCFNode, graph: NNCFGraph):
+        """
+        Propagates the pruning mask through a node using pruning masks of all inputs and the current node (if any).
+
+        :param node: The graph node to propagate mask through it
+        :param graph: The model graph to prune
+        """
+        raise NotImplementedError
+
+    @classmethod
+    def get_all_op_aliases(cls):
+        """
+        :return: list of all aliases of types in metatype
+        """
+        op_types = []
+        for subtype in cls.subtypes:
+            op_types.extend(subtype.get_all_aliases())
+        op_types = list(set(op_types)) + cls.additional_types
+        return op_types
+
+
+class InputPruningOp(BasePruningOp):
     @classmethod
     def accept_pruned_input(cls, node: NNCFNode):
         return False
@@ -36,7 +75,7 @@ class InputPruningOp(DefaultPruningOp):
         node.data['output_mask'] = None
 
 
-class OutputPruningOp(DefaultPruningOp):
+class OutputPruningOp(BasePruningOp):
     @classmethod
     def accept_pruned_input(cls, node: NNCFNode):
         return True
@@ -46,7 +85,7 @@ class OutputPruningOp(DefaultPruningOp):
         node.data['output_mask'] = None
 
 
-class IdentityMaskForwardPruningOp(DefaultPruningOp):
+class IdentityMaskForwardPruningOp(BasePruningOp):
     @classmethod
     def accept_pruned_input(cls, node: NNCFNode):
         return True
@@ -56,7 +95,7 @@ class IdentityMaskForwardPruningOp(DefaultPruningOp):
         identity_mask_propagation(node, graph)
 
 
-class ConvolutionPruningOp(DefaultPruningOp):
+class ConvolutionPruningOp(BasePruningOp):
     @classmethod
     def accept_pruned_input(cls, node: NNCFNode):
         accept_pruned_input = True
@@ -78,7 +117,7 @@ class ConvolutionPruningOp(DefaultPruningOp):
         node.data['output_mask'] = output_mask
 
 
-class TransposeConvolutionPruningOp(DefaultPruningOp):
+class TransposeConvolutionPruningOp(BasePruningOp):
     @classmethod
     def accept_pruned_input(cls, node: NNCFNode):
         accept_pruned_input = True
@@ -101,7 +140,7 @@ class TransposeConvolutionPruningOp(DefaultPruningOp):
         node.data['output_mask'] = output_mask
 
 
-class BatchNormPruningOp(DefaultPruningOp):
+class BatchNormPruningOp(BasePruningOp):
     @classmethod
     def accept_pruned_input(cls, node: NNCFNode):
         return True
@@ -111,7 +150,7 @@ class BatchNormPruningOp(DefaultPruningOp):
         identity_mask_propagation(node, graph)
 
 
-class GroupNormPruningOp(DefaultPruningOp):
+class GroupNormPruningOp(BasePruningOp):
     @classmethod
     def accept_pruned_input(cls, node: NNCFNode):
         # For Instance Normalization
@@ -123,7 +162,7 @@ class GroupNormPruningOp(DefaultPruningOp):
         identity_mask_propagation(node, graph)
 
 
-class ConcatPruningOp(DefaultPruningOp):
+class ConcatPruningOp(BasePruningOp):
     ConvolutionOp = None # type: ConvolutionPruningOp
     StopMaskForwardOp = None # type: StopMaskForwardPruningOp
     InputOp = None # type: InputPruningOp
@@ -205,7 +244,7 @@ class ConcatPruningOp(DefaultPruningOp):
         node.data['output_mask'] = result_mask
 
 
-class ElementwisePruningOp(DefaultPruningOp):
+class ElementwisePruningOp(BasePruningOp):
     @classmethod
     def accept_pruned_input(cls, node: NNCFNode):
         return True
@@ -225,7 +264,7 @@ class ElementwisePruningOp(DefaultPruningOp):
         node.data['output_mask'] = input_masks[0]
 
 
-class StopMaskForwardPruningOp(DefaultPruningOp):
+class StopMaskForwardPruningOp(BasePruningOp):
     @classmethod
     def accept_pruned_input(cls, node: NNCFNode):
         return False
@@ -233,3 +272,26 @@ class StopMaskForwardPruningOp(DefaultPruningOp):
     @classmethod
     def mask_propagation(cls, node: NNCFNode, graph: NNCFGraph):
         node.data['output_mask'] = None
+
+
+def get_input_masks(node: NNCFNode, graph: NNCFGraph) -> List[Union[TensorType, None]]:
+    """
+    Returns input masks for all inputs of nx_node.
+
+    :return: Input masks.
+    """
+    input_masks = [input_node.data['output_mask'] for input_node in graph.get_previous_nodes(node)]
+    return input_masks
+
+
+def identity_mask_propagation(node: NNCFNode, graph: NNCFGraph):
+    """
+    Propagates input mask through nx_node.
+    """
+    input_masks = get_input_masks(node, graph)
+    if not input_masks:
+        # In case for disconnected NNCFGraph
+        input_masks = [None]
+    assert len(input_masks) == 1
+    node.data['input_masks'] = input_masks
+    node.data['output_mask'] = input_masks[0]

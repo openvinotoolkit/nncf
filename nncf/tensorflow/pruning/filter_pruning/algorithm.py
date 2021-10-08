@@ -53,10 +53,10 @@ from nncf.tensorflow.loss import TFZeroCompressionLoss
 from nncf.tensorflow.pruning.base_algorithm import BasePruningAlgoBuilder
 from nncf.tensorflow.pruning.base_algorithm import BasePruningAlgoController
 from nncf.tensorflow.pruning.base_algorithm import PrunedLayerInfo
-from nncf.tensorflow.pruning.export_helpers import TF_PRUNING_OPERATOR_METATYPES
-from nncf.tensorflow.pruning.export_helpers import TFConvolutionPruningOp
-from nncf.tensorflow.pruning.export_helpers import TFElementwisePruningOp
-from nncf.tensorflow.pruning.export_helpers import TFTransposeConvolutionPruningOp
+from nncf.tensorflow.pruning.pruning_operations import TF_PRUNING_OPERATOR_METATYPES
+from nncf.tensorflow.pruning.pruning_operations import TFConvolutionPruningOp
+from nncf.tensorflow.pruning.pruning_operations import TFElementwisePruningOp
+from nncf.tensorflow.pruning.pruning_operations import TFTransposeConvolutionPruningOp
 from nncf.tensorflow.pruning.filter_pruning.functions import calculate_binary_mask
 from nncf.tensorflow.pruning.filter_pruning.functions import FILTER_IMPORTANCE_FUNCTIONS
 from nncf.tensorflow.pruning.filter_pruning.functions import tensor_l2_normalizer
