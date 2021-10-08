@@ -306,9 +306,10 @@ def count_flops_and_weights_per_node(graph: NNCFGraph,
         name = node.node_name
         num_in_channels = input_channels.get(name, node.layer_attributes.in_channels)
         num_out_channels = output_channels.get(name, node.layer_attributes.out_channels)
+        filters_per_channel = num_out_channels // node.layer_attributes.groups
         flops_numpy = 2 * np.prod(node.layer_attributes.kernel_size) * \
-                      num_in_channels * num_out_channels * np.prod(output_shapes[name])
-        weights_numpy = np.prod(node.layer_attributes.kernel_size) * num_in_channels * num_out_channels
+                      num_in_channels * filters_per_channel * np.prod(output_shapes[name])
+        weights_numpy = np.prod(node.layer_attributes.kernel_size) * num_in_channels * filters_per_channel
         flops[name] = flops_numpy.astype(int).item()
         weights[name] = weights_numpy.astype(int).item()
 
