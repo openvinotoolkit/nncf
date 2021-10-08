@@ -40,6 +40,7 @@ from nncf.tensorflow.graph.transformations.commands import TFInsertionCommand
 from nncf.tensorflow.graph.transformations.layout import TFTransformationLayout
 from nncf.tensorflow.graph.utils import get_layer_identifier
 from nncf.tensorflow.graph.utils import collect_wrapped_layers
+from nncf.tensorflow.graph.tensor import TFNNCFTensor
 from nncf.tensorflow.pruning.pruning_operations import TFElementwisePruningOp
 from nncf.tensorflow.pruning.pruning_operations import TFIdentityMaskForwardPruningOp
 from nncf.tensorflow.pruning.pruning_operations import TF_PRUNING_OPERATOR_METATYPES
@@ -125,7 +126,7 @@ class BasePruningAlgoBuilder(TFCompressionAlgorithmBuilder):
                 # Add output_mask to elements to run mask_propagation
                 # and detect spec_nodes that will be pruned.
                 # It should be done for all elements of shared layer.
-                node.data['output_mask'] = tf.ones(node.layer_attributes.out_channels)
+                node.data['output_mask'] = TFNNCFTensor(tf.ones(node.layer_attributes.out_channels))
                 if layer_name in shared_layers:
                     continue
                 if node.is_shared():

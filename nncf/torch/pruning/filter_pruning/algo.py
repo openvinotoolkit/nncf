@@ -680,7 +680,8 @@ class FilterPruningController(BasePruningAlgoController):
                 continue
             node_module = self.model.get_containing_module(node.node_name)
             if node.data['output_mask'] is not None and node_module not in pruned_node_modules:
-                _apply_binary_mask_to_module_weight_and_bias(node_module, node.data['output_mask'], node.node_name)
+                _apply_binary_mask_to_module_weight_and_bias(node_module, node.data['output_mask'].tensor,
+                                                             node.node_name)
                 pruned_node_modules.append(node_module)
 
     def prepare_for_export(self):

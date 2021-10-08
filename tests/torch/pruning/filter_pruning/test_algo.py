@@ -267,7 +267,7 @@ def test_applying_masks_for_bn_after_concat(prune_bn):
     ]
     graph = pruned_model.get_original_graph()
     for i, node in enumerate(graph.get_nodes_by_types(['cat'])):
-        assert np.allclose(node.data['output_mask'].numpy(), ref_concat_masks[i])
+        assert np.allclose(node.data['output_mask'].tensor.numpy(), ref_concat_masks[i])
 
 
 @pytest.mark.parametrize('zero_grad',
@@ -405,5 +405,5 @@ def test_disconnected_graph():
     conv1 = graph.get_node_by_name('DisconectedGraphModel/NNCFConv2d[conv1]/conv2d_0')
     conv2 = graph.get_node_by_name('DisconectedGraphModel/NNCFConv2d[conv2]/conv2d_0')
 
-    assert sum(conv1.data['output_mask']) == 8
-    assert sum(conv2.data['output_mask']) == 8
+    assert sum(conv1.data['output_mask'].tensor) == 8
+    assert sum(conv2.data['output_mask'].tensor) == 8

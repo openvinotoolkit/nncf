@@ -17,6 +17,8 @@ from typing import List
 from typing import Optional
 from typing import Tuple
 from typing import Type
+from typing import TypeVar
+from typing import Union
 
 import math
 import numpy as np
@@ -30,6 +32,9 @@ from nncf.common.pruning.clusterization import Cluster
 from nncf.common.pruning.clusterization import Clusterization
 from nncf.common.pruning.structs import PrunedLayerInfoBase
 from nncf.common.utils.registry import Registry
+
+
+TensorType = TypeVar('TensorType')
 
 
 def is_grouped_conv(node: NNCFNode) -> bool:
@@ -407,3 +412,26 @@ def is_conv_with_downsampling(node: NNCFNode) -> bool:
         return not np.all(np.array(layer_attrs.stride) == 1) \
            and not layer_attrs.transpose
     return False
+
+
+def get_input_masks(node: NNCFNode, graph: NNCFGraph) -> List[Union[TensorType, None]]:
+    """
+    Returns input masks for all inputs of nx_node.
+
+    :return: Input masks.
+    """
+    input_masks = [input_node.data['output_mask'] for input_node in graph.get_previous_nodes(node)]
+    return input_masks
+
+
+def identity_mask_propagation(node: NNCFNode, graph: NNCFGraph):
+    """
+    Propagates input mask through nx_node.
+    """
+    input_masks = get_input_masks(node, graph)
+    if not input_masks:
+        # In case for disconnected NNCFGraph
+        input_masks = [None]
+    assert len(input_masks) == 1
+    node.data['input_masks'] = input_masks
+    node.data['output_mask'] = input_masks[0]

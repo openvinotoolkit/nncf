@@ -14,17 +14,16 @@
 import numpy as np
 
 from typing import Union, List
-from typing import TypeVar
 
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.pruning.utils import is_grouped_conv
 from nncf.common.pruning.utils import get_sources_of_node
 from nncf.common.pruning.utils import is_depthwise_conv
+from nncf.common.pruning.utils import get_input_masks
+from nncf.common.pruning.utils import identity_mask_propagation
 from nncf.common.graph.layer_attributes import GroupNormLayerAttributes
-
-
-TensorType = TypeVar('TensorType')
+from nncf.common.graph.tensor import NNCFTensor
 
 
 class BasePruningOp:
@@ -194,17 +193,6 @@ class ConcatPruningOp(BasePruningOp):
                 return False
         return True
 
-    @classmethod
-    def _get_unit_mask(cls, dim, device):
-        return np.ones(dim)
-
-    @classmethod
-    def _get_masks_device(cls, input_masks):
-        return None
-
-    @classmethod
-    def _concat_masks(cls, filled_input_masks):
-        return np.concatenate(filled_input_masks, 0)
 
     @classmethod
     def generate_output_mask(cls, node: NNCFNode, graph: NNCFGraph) -> Union[List[np.array], None]:
@@ -220,18 +208,21 @@ class ConcatPruningOp(BasePruningOp):
         previous_nodes = [edge.from_node for edge in input_edges]
         input_masks = [input_node.data['output_mask'] for input_node in previous_nodes]
 
-        if all(mask is None for mask in input_masks):
+        not_empty_masks = [mask for mask in input_masks if mask is not None] # type: List[NNCFTensor]
+        if not not_empty_masks:
             return None
 
+        first_non_empty_mask = not_empty_masks[0]
+        tensor_processor = first_non_empty_mask.mask_processor
+        device = first_non_empty_mask.device
         filled_input_masks = []
         for i, mask in enumerate(input_masks):
             if mask is None:
                 concat_axis = node.layer_attributes.axis
                 concat_dim = input_edges[i].tensor_shape[concat_axis]
-                device = cls._get_masks_device(input_masks)
-                mask = cls._get_unit_mask(concat_dim, device)
+                mask = tensor_processor.ones(concat_dim, device)
             filled_input_masks.append(mask)
-        result_mask = cls._concat_masks(filled_input_masks)
+        result_mask = tensor_processor.concatenate(filled_input_masks, 0)
         return result_mask
 
     @classmethod
@@ -250,17 +241,12 @@ class ElementwisePruningOp(BasePruningOp):
         return True
 
     @classmethod
-    def _assert_input_masks_close(cls, input_masks):
-        for input_mask in input_masks[1:]:
-            np.testing.assert_allclose(input_masks[0], input_mask)
-
-    @classmethod
     def mask_propagation(cls, node: NNCFNode, graph: NNCFGraph):
         input_masks = get_input_masks(node, graph)
 
-        node.data['input_masks'] = input_masks
+        node.data['input_masks'] = input_masks # type: List[NNCFTensor]
         if input_masks[0] is not None:
-            cls._assert_input_masks_close(input_masks)
+            input_masks[0].mask_processor.check_all_close(input_masks)
         node.data['output_mask'] = input_masks[0]
 
 
@@ -272,26 +258,3 @@ class StopMaskForwardPruningOp(BasePruningOp):
     @classmethod
     def mask_propagation(cls, node: NNCFNode, graph: NNCFGraph):
         node.data['output_mask'] = None
-
-
-def get_input_masks(node: NNCFNode, graph: NNCFGraph) -> List[Union[TensorType, None]]:
-    """
-    Returns input masks for all inputs of nx_node.
-
-    :return: Input masks.
-    """
-    input_masks = [input_node.data['output_mask'] for input_node in graph.get_previous_nodes(node)]
-    return input_masks
-
-
-def identity_mask_propagation(node: NNCFNode, graph: NNCFGraph):
-    """
-    Propagates input mask through nx_node.
-    """
-    input_masks = get_input_masks(node, graph)
-    if not input_masks:
-        # In case for disconnected NNCFGraph
-        input_masks = [None]
-    assert len(input_masks) == 1
-    node.data['input_masks'] = input_masks
-    node.data['output_mask'] = input_masks[0]
