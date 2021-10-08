@@ -1,9 +1,10 @@
 import networkx as nx
 import onnx
-from skl2onnx.helpers.onnx_helper import select_model_inputs_outputs
 
 from nncf.common.quantization.structs import QuantizerConfig
 
+
+# pylint: disable=no-member
 
 def find_node_by_output(output: str, graph: onnx.GraphProto):
     retval = []
@@ -13,10 +14,10 @@ def find_node_by_output(output: str, graph: onnx.GraphProto):
     return retval
 
 
-def find_nodes_by_input(input: str, graph: onnx.GraphProto):
+def find_nodes_by_input(input_name: str, graph: onnx.GraphProto):
     retval = []
     for node in graph.node:
-        if input in node.input or input == node.input:
+        if input_name in node.input or input == node.input:
             retval.append(node)
     return retval
 
@@ -80,7 +81,7 @@ def get_all_node_inputs(module_name, onnx_model_graph):
 
 
 def get_all_node_outputs(module_name, onnx_model_graph):
-    node_inputs = None
+    node_outputs = None
     for node in onnx_model_graph.node:
         if node.name == module_name:
             node_outputs = node.output
@@ -94,10 +95,9 @@ def find_weight_input_in_module(module_name, onnx_model_graph) -> str:
 
 
 def get_initializers_value(initializer_name, onnx_model_graph):
-    from onnx import numpy_helper
     for init in onnx_model_graph.initializer:
         if init.name == initializer_name:
-            tensor = numpy_helper.to_array(init)
+            tensor = onnx.numpy_helper.to_array(init)
     return tensor
 
 
@@ -140,13 +140,3 @@ def get_nodes_by_type(onnx_model: onnx.ModelProto, node_type: str):
         if str(node.op_type) == node_type:
             retval.append(node)
     return retval
-
-
-def add_output_layers_for_all_convs(onnx_model):
-    nodes = get_nodes_by_type(onnx_model, 'Conv')
-    outputs = [node.output[0] for node in nodes]
-    model_with_intermediate_outputs = select_model_inputs_outputs(onnx_model, outputs=outputs)
-
-
-def get_input_tensor():
-    ...

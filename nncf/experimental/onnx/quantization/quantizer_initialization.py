@@ -1,7 +1,8 @@
 import math
 import numpy as np
-
-from skl2onnx.helpers.onnx_helper import select_model_inputs_outputs, enumerate_model_node_outputs
+# pylint: disable=import-error
+from skl2onnx.helpers.onnx_helper import select_model_inputs_outputs
+from skl2onnx.helpers.onnx_helper import enumerate_model_node_outputs
 import onnx
 import onnxruntime as rt
 import tempfile
@@ -39,7 +40,7 @@ def calculate_statistics_for_activation_quantizer(onnx_model: onnx.ModelProto, o
     sess = rt.InferenceSession(temporary_model.name, providers=['OpenVINOExecutionProvider'])
     input_name = sess.get_inputs()[0].name
     statistics_collector = StatisticsCollector()
-    for i, (input_, target) in enumerate(data_loader):
+    for i, (input_, _) in enumerate(data_loader):
         input_tensor = input_.cpu().detach().numpy()
         output_tensor = sess.run([], {input_name: input_tensor.astype(np.float32)})
         statistics_collector.update(output_tensor[0])
@@ -49,7 +50,7 @@ def calculate_statistics_for_activation_quantizer(onnx_model: onnx.ModelProto, o
     temporary_model.close()
     if mode == 'min_max':
         return statistics_collector.global_max, statistics_collector.global_min
-    elif mode == 'mean_min_max':
+    if mode == 'mean_min_max':
         return statistics_collector.max_avg, statistics_collector.min_avg
     raise RuntimeError('Invalid statistics collection mode')
 
@@ -57,12 +58,11 @@ def calculate_statistics_for_activation_quantizer(onnx_model: onnx.ModelProto, o
 def calculate_statistics_for_weight_quantizer(weight_tensor: np.ndarray, num_bits: int, per_channel=True):
     if per_channel:
         filter_max, filter_min = [], []
-        for filter in weight_tensor:
-            filter_max.append(np.max(filter))
-            filter_min.append(np.min(filter))
+        for single_filter in weight_tensor:
+            filter_max.append(np.max(single_filter))
+            filter_min.append(np.min(single_filter))
         return calculate_scale_level(np.array(filter_max), np.array(filter_min), num_bits)
-    else:
-        return calculate_scale_level(np.max(weight_tensor), np.min(weight_tensor), num_bits)
+    return calculate_scale_level(np.max(weight_tensor), np.min(weight_tensor), num_bits)
 
 
 def calculate_scale_level(max_val: float, min_val: float, num_bits: int):

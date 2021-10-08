@@ -12,6 +12,8 @@ from nncf.experimental.onnx.graph.metatypes.onnx_ops import ONNX_OPERATION_METAT
 from nncf.experimental.onnx.graph.metatypes.onnx_ops import ConstantMetatype
 
 
+# pylint: disable=no-member
+
 class GraphConverter:
 
     @staticmethod

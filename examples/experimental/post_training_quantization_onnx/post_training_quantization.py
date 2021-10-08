@@ -1,9 +1,23 @@
 import argparse
 
 import onnx
-from examples.experimental.onnx.dataloader import create_train_dataloader
+from examples.experimental.post_training_quantization_onnx.dataloader import create_train_dataloader
 
 from nncf.experimental.onnx.quantization.algorithm import apply_post_training_quantization
+
+
+def run(onnx_model_path, output_model_path, data_loader_path, num_init_samples, input_shape):
+    onnx.checker.check_model(onnx_model_path)
+    onnx_model = onnx.load(onnx_model_path)
+    print(f"The model is loaded from {onnx_model_path}")
+    train_loader = create_train_dataloader(data_loader_path, input_shape)
+    print(f"The dataloader is built with the data located on  {data_loader_path}")
+    print("Post-Training Quantization is just started!")
+    quantized_onnx_model = apply_post_training_quantization(onnx_model, train_loader, num_init_samples)
+    onnx.save(quantized_onnx_model, output_model_path)
+    print(f"The quantized model is saved on {output_model_path}")
+    onnx.checker.check_model(output_model_path)
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -20,13 +34,4 @@ if __name__ == '__main__':
     num_init_samples = args.init_samples
     input_shape = args.input_shape
 
-    onnx.checker.check_model(onnx_model_path)
-    onnx_model = onnx.load(onnx_model_path)
-    print(f"The model is loaded from {onnx_model_path}")
-    train_loader = create_train_dataloader(data_loader_path, input_shape)
-    print(f"The dataloader is built with the data located on  {data_loader_path}")
-    print("Post-Training Quantization is just started!")
-    quantized_onnx_model = apply_post_training_quantization(onnx_model, train_loader, num_init_samples)
-    onnx.save(quantized_onnx_model, output_model_path)
-    print(f"The quantized model is saved on {output_model_path}")
-    onnx.checker.check_model(output_model_path)
+    run(onnx_model_path, output_model_path, data_loader_path, num_init_samples, input_shape)

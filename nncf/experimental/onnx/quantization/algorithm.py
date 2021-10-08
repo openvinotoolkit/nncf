@@ -33,7 +33,7 @@ def choose_activation_quantization_configuration(nncf_network: NNCFNetwork, outp
                                                                      dataloader,
                                                                      num_initialization_samples)
 
-    signedness_to_force = True if min_val < 0 else False
+    signedness_to_force = min_val < 0
     num_bits = 8
     quantizer_config = QuantizerConfig(num_bits=num_bits, signedness_to_force=signedness_to_force, per_channel=False)
     scale = calculate_scale_level(max_val, min_val, num_bits)
