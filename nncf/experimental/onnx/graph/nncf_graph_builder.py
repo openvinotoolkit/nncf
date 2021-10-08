@@ -9,6 +9,7 @@ from nncf.experimental.onnx.graph.onnx_graph_helpers import find_nodes_by_input
 from nncf.experimental.onnx.graph.onnx_graph_helpers import find_output_shape
 from nncf.experimental.onnx.graph.onnx_graph_helpers import get_all_node_outputs
 from nncf.experimental.onnx.graph.metatypes.onnx_ops import ONNX_OPERATION_METATYPES
+from nncf.experimental.onnx.graph.metatypes.onnx_ops import ConstantMetatype
 
 
 class GraphConverter:
@@ -20,7 +21,9 @@ class GraphConverter:
             node_name = node.name
             node_type = node.op_type
             metatype = ONNX_OPERATION_METATYPES.get_operator_metatype_by_op_name(node_type)
-
+            # We don't need to quantize Constants
+            if metatype == ConstantMetatype:
+                continue
             nncf_graph.add_nncf_node(node_name=node_name,
                                      node_type=node_type,
                                      node_metatype=metatype,

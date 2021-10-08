@@ -6,7 +6,7 @@ def _get_onnx_hw_fused_patterns() -> HWFusedPatterns:
     CONV_OPERATIONS = {'type': ['Conv'],
                        'label': 'CONV'}
 
-    RELU_OPERATIONS = {'type': ['Relu'],
+    RELU_OPERATIONS = {'type': ['Relu', 'Clip'],
                        'label': 'RELU'}
 
     ADD_OPERATIONS = {'type': ['Add'],

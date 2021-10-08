@@ -48,13 +48,25 @@ class LinearMetatype(ONNXOpMetatype):
 @ONNX_OPERATION_METATYPES.register()
 class ReluMetatype(ONNXOpMetatype):
     name = 'ReluOp'
-    op_names = ['Relu']
+    op_names = ['Relu', 'Clip']
 
 
 @ONNX_OPERATION_METATYPES.register()
 class GlobalAveragePoolMetatype(ONNXOpMetatype):
-    name = 'GlobalAveragePool'
+    name = 'GlobalAveragePoolOp'
     op_names = ['GlobalAveragePool']
+
+
+@ONNX_OPERATION_METATYPES.register()
+class ConstantMetatype(ONNXOpMetatype):
+    name = 'ConstantOp'
+    op_names = ['Constant']
+
+
+@ONNX_OPERATION_METATYPES.register()
+class AddLayerMetatype(ONNXOpMetatype):
+    name = 'AddOp'
+    op_names = ['Add']
 
 
 GENERAL_WIGHT_LAYER_METATYPES = [ConvolutionMetatype,
