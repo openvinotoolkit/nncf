@@ -36,7 +36,7 @@ def calculate_statistics_for_activation_quantizer(onnx_model: onnx.ModelProto, o
     temporary_model = tempfile.NamedTemporaryFile()
     onnx.save(model_with_intermediate_outputs, temporary_model.name)
 
-    sess = rt.InferenceSession(temporary_model.name)
+    sess = rt.InferenceSession(temporary_model.name, providers=['OpenVINOExecutionProvider'])
     input_name = sess.get_inputs()[0].name
     statistics_collector = StatisticsCollector()
     for i, (input_, target) in enumerate(data_loader):
