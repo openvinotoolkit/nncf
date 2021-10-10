@@ -15,11 +15,9 @@ from copy import deepcopy
 from functools import reduce
 from collections.abc import Iterable
 from typing import List, Tuple
-from unittest.mock import MagicMock
 
 from nncf.torch.dynamic_graph.graph_tracer import ModelInputInfo
 from nncf.torch.knowledge_distillation.algo import KnowledgeDistillationBuilder
-from nncf.torch.knowledge_distillation.knowledge_distillation_loss import KnowledgeDistillationLoss
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf import NNCFConfig
 from tests.torch.test_models.synthetic import PartlyNonDifferentialOutputsModel
@@ -384,4 +382,3 @@ def test_kd_softmax_loss_ignores_incompatible_outputs(shape_list: List[Tuple[int
     kd_ctrl = kd_builder.build_controller(compressed_model)
     compressed_model.forward(torch.ones_like(compressed_model.mock_param))
     kd_ctrl.loss()  # Should succeed - the loss for the incompatible outputs will be equal to 0
-
