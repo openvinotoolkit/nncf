@@ -934,6 +934,9 @@ class QuantizerPropagationSolver:
             edge = quant_prop_graph.edges[pred_ip_key, operator_node_key]
             if not edge[QuantizerPropagationStateGraph.IS_INTEGER_PATH_EDGE_ATTR]:
                 pred_ip_key_vs_qconf_dict[pred_ip_key] = qconf_list
+            else:
+                nncf_logger.debug("Detected integer input {} - won't set up "
+                                  "a propagating quantizer for it".format(pred_ip_key))
 
         if not pred_ip_key_vs_qconf_dict:
             # All inputs to the operator were integer

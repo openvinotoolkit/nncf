@@ -21,7 +21,6 @@ import torch
 
 from nncf.common.graph import INPUT_NOOP_METATYPES
 from nncf.common.graph import LayerName
-from nncf.common.graph.layer_attributes import Dtype
 from nncf.torch.dynamic_graph.graph import DynamicGraph
 from nncf.torch.dynamic_graph.graph_tracer import GraphTracer
 from nncf.torch.dynamic_graph.graph_tracer import ModelInputInfo
@@ -89,6 +88,6 @@ class GraphConverter:
                 tensor_shape=dynamic_graph_edge.activation_shape,
                 input_port_id=dynamic_graph_edge.input_port_id,
                 output_port_id=dynamic_graph_edge.output_port_id,
-                dtype=Dtype.FLOAT
+                dtype=dynamic_graph_edge.dtype
             )
         return nncf_graph

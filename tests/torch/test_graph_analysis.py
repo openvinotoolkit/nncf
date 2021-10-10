@@ -14,6 +14,7 @@ from collections import Counter
 
 import networkx as nx
 
+from nncf.common.graph import Dtype
 from nncf.common.graph import NNCFGraphEdge
 from nncf.common.graph import NNCFGraphPatternIO
 from nncf.common.graph import NNCFNodeName
@@ -53,7 +54,8 @@ def test_graph_pattern_io_building():
                              get_node(to_node_name),
                              input_port_id=input_port_id,
                              output_port_id=output_port_id,
-                             tensor_shape=[1, 1, 1, 1])
+                             tensor_shape=[1, 1, 1, 1],
+                             dtype=Dtype.FLOAT)
 
     def get_node(name: NNCFNodeName):
         return graph.get_node_by_name(name)

@@ -337,6 +337,14 @@ class DivMetatype(PTOperatorMetatype):
 
 
 @PT_OPERATOR_METATYPES.register()
+class FloorDivMetatype(PTOperatorMetatype):
+    name = "floordiv"
+    torch_tensor_patch_spec = PTPatchSpec(["__floordiv__",
+                                           "__ifloordiv__",
+                                           "__rfloordiv__"])
+
+
+@PT_OPERATOR_METATYPES.register()
 class ExpMetatype(PTOperatorMetatype):
     name = "exp"
     torch_module_patch_spec = PTPatchSpec([name])
