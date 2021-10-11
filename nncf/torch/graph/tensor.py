@@ -20,6 +20,9 @@ from nncf.common.graph.tensor import NNCFBaseTensorProcessor
 
 
 class PTNNCFTensorProcessor(NNCFBaseTensorProcessor):
+    """
+    A realization of the processing methods set for PTNNCFTensors.
+    """
     @classmethod
     def concatenate(cls, tensors: List[NNCFTensor], axis: int) -> NNCFTensor:
         ret_tensor = torch.cat([t.tensor for t in tensors], dim=axis)
@@ -36,6 +39,9 @@ class PTNNCFTensorProcessor(NNCFBaseTensorProcessor):
 
 
 class PTNNCFTensor(NNCFTensor):
+    """
+    A realisation of torch tensors wrapper for common NNCF algorithms.
+    """
     def __init__(self, tensor: torch.tensor):
         # In case somebody attempt to wrap
         # tensor twice
@@ -44,5 +50,6 @@ class PTNNCFTensor(NNCFTensor):
 
         super().__init__(tensor, PTNNCFTensorProcessor)
 
-    def device(self):
+    @property
+    def device(self) -> torch.device:
         return self._tensor.device

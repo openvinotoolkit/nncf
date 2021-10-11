@@ -11,46 +11,68 @@
  limitations under the License.
 """
 
-import numpy as np
 
-from abc import abstractproperty
+from abc import abstractmethod
 from typing import TypeVar, List
 
 
 TensorType = TypeVar('TensorType')
+DeviceType = TypeVar('DeviceType')
 
 
 class NNCFTensor:
+    """
+    An interface of framework specific tensors for common NNCF algorithms.
+    """
     def __init__(self, tensor: TensorType,
-                 mask_processor: 'NNCFBaseTensorProcessor'):
+                 tensor_processor: 'NNCFBaseTensorProcessor'):
         self._tensor = tensor
-        self._mask_processor = mask_processor
+        self._tensor_processor = tensor_processor
 
     @property
-    def tensor(self):
+    def tensor(self) -> TensorType:
         return self._tensor
 
     @property
-    def mask_processor(self):
-        return self._mask_processor
+    def tensor_processor(self) -> 'NNCFBaseTensorProcessor':
+        return self._tensor_processor
 
-    @abstractproperty
-    def device(self):
-        pass
+    @property
+    def device(self) -> DeviceType:
+        return None
 
 
 class NNCFBaseTensorProcessor:
+    """
+    An interface of the processing methods set for NNCFTensors.
+    """
     @classmethod
+    @abstractmethod
     def concatenate(cls, tensors: List[NNCFTensor], axis: int) -> NNCFTensor:
-        ret_tensor = np.concatenate([t.tensor for t in tensors], axis=axis)
-        return NNCFTensor(ret_tensor, cls)
+        """
+        Join a list of NNCFTensors along an existing axis.
+
+        :param tensors: List of NNCFTensors.
+        :param axis: The axis along which the tensors will be joined.
+        :returns: The concatenated List of the tensors.
+        """
 
     @classmethod
+    @abstractmethod
     def ones(cls, shape: List[int], device) -> NNCFTensor:
-        ret_tensor = np.ones(shape)
-        return NNCFTensor(ret_tensor, cls)
+        """
+        Return a new float tensor of given shape, filled with ones.
+
+        :param shape: Shape of the new tensor.
+        :param device: Device to put created tensor in.
+        :returns: Float tensor of ones with the given shape.
+        """
 
     @classmethod
+    @abstractmethod
     def check_all_close(cls, tensors: List[NNCFTensor]) -> None:
-        for tensor in tensors[1:]:
-            np.testing.assert_allclose(tensors[0].tensor, tensor.tensor)
+        """
+        Raises an AssertionError if two objects are not equal.
+
+        :param tensors: List of tensors to check pairwise equality.
+        """

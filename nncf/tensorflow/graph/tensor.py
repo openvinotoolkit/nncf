@@ -20,8 +20,12 @@ from nncf.common.graph.tensor import NNCFBaseTensorProcessor
 
 
 class TFNNCFTensorProcessor(NNCFBaseTensorProcessor):
+    """
+    A realization of the processing methods set for TFNNCFTensors.
+    """
     @classmethod
     def concatenate(cls, tensors: List[NNCFTensor], axis: int) -> NNCFTensor:
+        # pylint: disable=E1120,E1123
         ret_tensor = tf.concat([t.tensor for t in tensors], axis=axis)
         return TFNNCFTensor(ret_tensor)
 
@@ -36,6 +40,9 @@ class TFNNCFTensorProcessor(NNCFBaseTensorProcessor):
 
 
 class TFNNCFTensor(NNCFTensor):
+    """
+    A realisation of tensorflow tensors wrapper for common NNCF algorithms.
+    """
     def __init__(self, tensor: tf.Variable):
         # In case somebody attempt to wrap
         # tensor twice
@@ -44,5 +51,6 @@ class TFNNCFTensor(NNCFTensor):
 
         super().__init__(tensor, TFNNCFTensorProcessor)
 
-    def device(self):
+    @property
+    def device(self) -> tf.device:
         return self._tensor.device

@@ -13,8 +13,6 @@
 from typing import Dict
 from typing import List
 
-import tensorflow as tf
-
 from nncf.tensorflow.graph.pattern_operations import KERAS_ACTIVATIONS_OPERATIONS
 from nncf.tensorflow.graph.pattern_operations import ELEMENTWISE_OPERATIONS
 from nncf.tensorflow.graph.pattern_operations import TF_ACTIVATIONS_OPERATIONS

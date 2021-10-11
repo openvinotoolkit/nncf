@@ -17,7 +17,6 @@ from typing import List
 from typing import Optional
 from typing import Tuple
 from typing import Type
-from typing import TypeVar
 from typing import Union
 
 import math
@@ -26,15 +25,13 @@ import numpy as np
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.graph import NNCFNodeName
+from nncf.common.graph.tensor import NNCFTensor
 from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.pruning.clusterization import Cluster
 from nncf.common.pruning.clusterization import Clusterization
 from nncf.common.pruning.structs import PrunedLayerInfoBase
 from nncf.common.utils.registry import Registry
-
-
-TensorType = TypeVar('TensorType')
 
 
 def is_grouped_conv(node: NNCFNode) -> bool:
@@ -414,7 +411,7 @@ def is_conv_with_downsampling(node: NNCFNode) -> bool:
     return False
 
 
-def get_input_masks(node: NNCFNode, graph: NNCFGraph) -> List[Union[TensorType, None]]:
+def get_input_masks(node: NNCFNode, graph: NNCFGraph) -> List[Union[NNCFTensor, None]]:
     """
     Returns input masks for all inputs of nx_node.
 

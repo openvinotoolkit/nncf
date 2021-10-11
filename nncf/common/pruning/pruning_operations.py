@@ -11,19 +11,16 @@
  limitations under the License.
 """
 
-import numpy as np
-
 from typing import Union, List
 
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.pruning.utils import is_grouped_conv
-from nncf.common.pruning.utils import get_sources_of_node
 from nncf.common.pruning.utils import is_depthwise_conv
 from nncf.common.pruning.utils import get_input_masks
 from nncf.common.pruning.utils import identity_mask_propagation
-from nncf.common.graph.layer_attributes import GroupNormLayerAttributes
 from nncf.common.graph.tensor import NNCFTensor
+from nncf.common.graph.layer_attributes import GroupNormLayerAttributes
 
 
 class BasePruningOp:
@@ -167,7 +164,7 @@ class ConcatPruningOp(BasePruningOp):
         return True
 
     @classmethod
-    def generate_output_mask(cls, node: NNCFNode, graph: NNCFGraph) -> Union[List[np.array], None]:
+    def generate_output_mask(cls, node: NNCFNode, graph: NNCFGraph) -> Union[NNCFTensor, None]:
         """
         Generate output mask from input masks with all None replaced by identity masks.
         If all input masks is None return None.
@@ -185,7 +182,7 @@ class ConcatPruningOp(BasePruningOp):
             return None
 
         first_non_empty_mask = not_empty_masks[0]
-        tensor_processor = first_non_empty_mask.mask_processor
+        tensor_processor = first_non_empty_mask.tensor_processor
         device = first_non_empty_mask.device
         filled_input_masks = []
         for i, mask in enumerate(input_masks):
@@ -214,7 +211,7 @@ class ElementwisePruningOp(BasePruningOp):
 
         node.data['input_masks'] = input_masks # type: List[NNCFTensor]
         if input_masks[0] is not None:
-            input_masks[0].mask_processor.check_all_close(input_masks)
+            input_masks[0].tensor_processor.check_all_close(input_masks)
         node.data['output_mask'] = input_masks[0]
 
 

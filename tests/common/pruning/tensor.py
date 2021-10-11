@@ -43,6 +43,3 @@ class NPNNCFTensor(NNCFTensor):
             tensor = tensor.tensor
 
         super().__init__(tensor, NPNNCFTensorProcessor)
-
-    def device(self):
-        return self._tensor.device
