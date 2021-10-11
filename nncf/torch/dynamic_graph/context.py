@@ -297,7 +297,8 @@ class TracingContext:
         return self._trace_dynamic_graph
 
     def disable_trace_dynamic_graph(self):
-        self._trace_dynamic_graph = False
+        if not self.graph.is_graph_with_iteration_modules():
+            self._trace_dynamic_graph = False
 
     def enable_trace_dynamic_graph(self):
         self._trace_dynamic_graph = True

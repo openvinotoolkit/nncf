@@ -423,6 +423,8 @@ class IterationScopeNodeMatcher(DefaultScopeNodeMatcher):
                     break
         return node_candidates
 
+    def get_first_interation_modules(self)-> Dict:
+        return self._first_iteration_nodes
 
 class NodeManager:
     def __init__(self, node_id_to_key_dict, nx_graph):
@@ -581,3 +583,6 @@ class DynamicGraph:
 
             all_edges.append(dynamic_graph_edge)
         return all_edges
+
+    def is_graph_with_iteration_modules(self) -> bool:
+        return len(self.match_manager.iteration_matcher.get_first_interation_modules()) > 0
