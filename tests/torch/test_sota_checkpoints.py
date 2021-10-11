@@ -6,6 +6,7 @@ import re
 import shlex
 import subprocess
 import sys
+import sysconfig
 from collections import OrderedDict
 from pathlib import Path
 from typing import List
@@ -28,12 +29,12 @@ DIFF_TARGET_MIN_GLOBAL = -0.1
 DIFF_TARGET_MAX_GLOBAL = 0.1
 DIFF_FP32_MIN_GLOBAL = -1.0
 DIFF_FP32_MAX_GLOBAL = 0.1
-
-OPENVINO_DIR = PROJECT_ROOT.parent / 'intel' / 'openvino'
+SITE_PCKG_DIR = Path(sysconfig.get_path('purelib'))
+OPENVINO_DIR = PROJECT_ROOT.parent / 'openvino'
 if not os.path.exists(OPENVINO_DIR):
-    OPENVINO_DIR = PROJECT_ROOT.parent / 'intel' / 'openvino_2021'
-ACC_CHECK_DIR = OPENVINO_DIR / 'deployment_tools' / 'open_model_zoo' / 'tools' / 'accuracy_checker'
-MO_DIR = OPENVINO_DIR / 'deployment_tools' / 'model_optimizer'
+    OPENVINO_DIR = PROJECT_ROOT.parent / 'openvino_2022'
+ACC_CHECK_DIR = PROJECT_ROOT / 'openvino' / 'thirdparty' / 'open_model_zoo' / 'tools' / 'accuracy_checker'
+MO_DIR = SITE_PCKG_DIR / 'openvino' / 'tools' / 'mo'
 
 
 class EvalRunParamsStruct:
@@ -112,17 +113,17 @@ class TestSotaCheckpoints:
         return nncf_config
 
     @staticmethod
-    def run_cmd(comm: str, cwd: str) -> Tuple[int, str]:
-        print()
-        print(comm)
-        print()
+    def run_cmd(comm: str, cwd: str, venv=None) -> Tuple[int, str]:
+        print('\n', comm, '\n')
         com_line = shlex.split(comm)
-
         env = os.environ.copy()
         if "PYTHONPATH" in env:
             env["PYTHONPATH"] += ":" + str(PROJECT_ROOT)
         else:
             env["PYTHONPATH"] = str(PROJECT_ROOT)
+        if venv:
+            env['VIRTUAL_ENV'] = str(venv)
+            env['PATH'] = str(f'{venv}/bin') + ':' + env['PATH']
 
         with subprocess.Popen(com_line, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                                   cwd=cwd, env=env) as result:
@@ -479,6 +480,9 @@ class TestSotaCheckpoints:
         q_dq_ir_model_folder = PROJECT_ROOT / 'q_dq_ir_models' / eval_test_struct.model_name_
         mean_val = eval_test_struct.mean_val_
         scale_val = eval_test_struct.scale_val_
+        subprocess.run('pip uninstall mxnet -y $$ pip install mxnet==1.7.0.post2', cwd=MO_DIR, check=True, shell=True)
+        subprocess.run('pip uninstall protobuf -y $$ pip install protobuf>=3.15.6', cwd=MO_DIR, check=True, shell=True)
+        subprocess.run('pip install openvino-telemetry', cwd=MO_DIR, check=True, shell=True)
         if onnx_type == "q_dq":
             onnx_model = str(onnx_dir + 'q_dq/' + eval_test_struct.model_name_ + '.onnx')
             mo_cmd = "{} mo.py --input_model {} --framework=onnx --data_type=FP16 --reverse_input_channels" \
@@ -489,7 +493,7 @@ class TestSotaCheckpoints:
             mo_cmd = "{} mo.py --input_model {} --framework=onnx --data_type=FP16 --reverse_input_channels" \
                      " --mean_values={} --scale_values={} --output_dir {}" \
                 .format(sys.executable, onnx_model, mean_val, scale_val, ir_model_folder)
-        exit_code, err_str = self.run_cmd(mo_cmd, cwd=MO_DIR)
+        exit_code, err_str = self.run_cmd(mo_cmd, MO_DIR)
         if exit_code == 0 and err_str is None:
             if onnx_type == "q_dq":
                 ac_cmd = "accuracy_check -c {}/{}.yml -s {} -d dataset_definitions.yml -m {} --csv_result " \
@@ -500,7 +504,7 @@ class TestSotaCheckpoints:
                          "{}/{config}.csv".format(config_folder, ov_data_dir,
                                                   ir_model_folder, PROJECT_ROOT,
                                                   config=eval_test_struct.model_name_)
-            exit_code, err_str = self.run_cmd(ac_cmd, cwd=ACC_CHECK_DIR)
+            exit_code, err_str = self.run_cmd(ac_cmd, ACC_CHECK_DIR)
             if exit_code != 0 or err_str is not None:
                 pytest.fail(err_str)
         else:
@@ -552,14 +556,6 @@ class TestSotaCheckpoints:
 
 
 Tsc = TestSotaCheckpoints
-
-
-@pytest.fixture(autouse=True, scope="class")
-def openvino_preinstall(ov_data_dir):
-    if ov_data_dir:
-        subprocess.run("pip install -r requirements_onnx.txt", cwd=MO_DIR, check=True, shell=True)
-        subprocess.run(f"{sys.executable} setup.py install", cwd=ACC_CHECK_DIR, check=True, shell=True)
-
 
 @pytest.fixture(autouse=True, scope="class")
 def make_metrics_dump_path(metrics_dump_dir):
