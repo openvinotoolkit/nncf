@@ -38,6 +38,11 @@ class PTNNCFTensorProcessor(NNCFBaseTensorProcessor):
         for input_mask in tensors[1:]:
             assert torch.allclose(tensors[0].tensor, input_mask.tensor)
 
+    @classmethod
+    def repeat(cls, tensor: NNCFTensor, repeats: int) -> NNCFTensor:
+        ret_tensor = torch.repeat_interleave(tensor.tensor, repeats)
+        return PTNNCFTensor(ret_tensor)
+
 
 class PTNNCFTensor(NNCFTensor):
     """

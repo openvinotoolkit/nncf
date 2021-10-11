@@ -40,6 +40,11 @@ class TFNNCFTensorProcessor(NNCFBaseTensorProcessor):
         for input_mask in tensors[1:]:
             tf.debugging.assert_near(tensors[0].tensor, input_mask.tensor)
 
+    @classmethod
+    def repeat(cls, tensor: NNCFTensor, repeats: int) -> NNCFTensor:
+        ret_tensor = tf.repeat(tensor, repeats=repeats)
+        return TFNNCFTensor(ret_tensor)
+
 
 class TFNNCFTensor(NNCFTensor):
     """

@@ -34,6 +34,11 @@ class NPNNCFTensorProcessor(NNCFBaseTensorProcessor):
         for input_mask in tensors[1:]:
             np.testing.assert_allclose(tensors[0].tensor, input_mask.tensor)
 
+    @classmethod
+    def repeat(cls, tensor: NNCFTensor, repeats: int) -> NNCFTensor:
+        ret_tensor = np.repeat(tensor.tensor, repeats)
+        return NPNNCFTensor(ret_tensor)
+
 
 class NPNNCFTensor(NNCFTensor):
     def __init__(self, tensor: np.array):

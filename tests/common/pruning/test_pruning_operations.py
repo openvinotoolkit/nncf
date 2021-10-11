@@ -335,13 +335,16 @@ def test_reshape_metatype_mask_prop(node_type, input_shape, output_shape, output
         # Get reference to graph node
         prev_node = graph.get_node_by_id(prev_node.node_id)
         reshape_node = graph.get_node_by_id(reshape_node.node_id)
-        prev_node.data['output_mask'] = output_mask_cur
+        prev_node.data['output_mask'] = NPNNCFTensor(output_mask_cur) if output_mask_cur is not None else None
         if isinstance(output_mask_ref_cur, str):
             with pytest.raises(AssertionError):
                 METATYPES_MAP[node_type]['ops'].mask_propagation(reshape_node, graph)
         else:
             METATYPES_MAP[node_type]['ops'].mask_propagation(reshape_node, graph)
-            assert np.all(reshape_node.data['output_mask'] == output_mask_ref_cur)
+            if output_mask_ref_cur is None:
+                assert reshape_node.data['output_mask'] is None
+            else:
+                assert np.all(reshape_node.data['output_mask'].tensor == output_mask_ref_cur)
 
 
 @pytest.mark.parametrize('node_type', ['reshape', 'flatten'])
@@ -363,7 +366,7 @@ def test_reshape_is_last_op(node_type):
                                       output_port_id=0,
                                       dtype=Dtype.FLOAT)
 
-    for output_mask in (None, np.ones((10,))):
+    for output_mask in (None, NPNNCFTensor(np.ones((10,)))):
         prev_node = graph.get_node_by_id(prev_node.node_id)
         reshape_node = graph.get_node_by_id(reshape_node.node_id)
         prev_node.data['output_mask'] = output_mask
