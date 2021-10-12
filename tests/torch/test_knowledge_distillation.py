@@ -16,7 +16,8 @@ from functools import reduce
 from collections.abc import Iterable
 from typing import List, Tuple
 
-
+from nncf.torch.dynamic_graph.graph_tracer import ModelInputInfo
+from nncf.torch.knowledge_distillation.algo import KnowledgeDistillationBuilder
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf import NNCFConfig
 from tests.torch.test_models.synthetic import PartlyNonDifferentialOutputsModel
@@ -346,3 +347,38 @@ def run_training_for_device_testing(gpu, config: NNCFConfig, inference_type: str
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
+
+
+class KDOutputModel(torch.nn.Module):
+    def __init__(self, target_shapes: List[Tuple[int]]):
+        super().__init__()
+        self.mock_param = torch.nn.Parameter(torch.ones([1]))
+        self.target_shapes = target_shapes
+
+    def forward(self, *args, **kwargs):
+        retval = []
+        for shape in self.target_shapes:
+            retval.append(torch.ones(shape).to(self.mock_param.device) * self.mock_param)
+        return retval
+
+
+@pytest.mark.parametrize('shape_list', (
+    [(1, 2, 3, 4)],
+    [(1, 128)],
+    [(1, 128), (1, )]
+))
+def test_kd_softmax_loss_ignores_incompatible_outputs(shape_list: List[Tuple[int]]):
+    original_model = KDOutputModel(target_shapes=shape_list)
+    config = NNCFConfig.from_dict({
+        "input_info": {"sample_size": [1, 1, 1, 1]},
+        "compression": {
+            "algorithm": "knowledge_distillation",
+            "type": "softmax"
+        }
+    })
+    compressed_model = NNCFNetwork(original_model, [ModelInputInfo([1, 1, 1, 1])])
+    kd_builder = KnowledgeDistillationBuilder(config)
+    compressed_model = kd_builder.apply_to(compressed_model)
+    kd_ctrl = kd_builder.build_controller(compressed_model)
+    compressed_model.forward(torch.ones_like(compressed_model.mock_param))
+    kd_ctrl.loss()  # Should succeed - the loss for the incompatible outputs will be equal to 0
