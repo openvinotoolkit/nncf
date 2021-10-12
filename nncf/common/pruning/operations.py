@@ -11,8 +11,6 @@
  limitations under the License.
 """
 
-import numpy as np
-
 from typing import Optional, List
 
 from nncf.common.graph import NNCFGraph
@@ -70,6 +68,7 @@ class InputPruningOp(BasePruningOp):
 
     @classmethod
     def mask_propagation(cls, node: NNCFNode, graph: NNCFGraph) -> None:
+        node.data['output_masks'] = None
         node.data['output_mask'] = None
 
 
@@ -80,6 +79,7 @@ class OutputPruningOp(BasePruningOp):
 
     @classmethod
     def mask_propagation(cls, node: NNCFNode, graph: NNCFGraph) -> None:
+        node.data['input_maks'] = get_input_masks(node, graph)
         node.data['output_mask'] = None
 
 
@@ -110,6 +110,7 @@ class ConvolutionPruningOp(BasePruningOp):
             if is_prunable_depthwise_conv(node):
                 output_mask = input_masks[0]
 
+        node.data['input_masks'] = input_masks
         node.data['output_mask'] = output_mask
 
 
@@ -131,6 +132,7 @@ class TransposeConvolutionPruningOp(BasePruningOp):
             if is_prunable_depthwise_conv(node):
                 output_mask = input_masks[0]
 
+        node.data['input_masks'] = input_masks
         node.data['output_mask'] = output_mask
 
 
@@ -156,6 +158,7 @@ class GroupNormPruningOp(BasePruningOp):
         if cls.accept_pruned_input(node):
             identity_mask_propagation(node, graph)
         else:
+            node.data['input_maks'] = get_input_masks(node, graph)
             node.data['output_mask'] = None
 
 
@@ -198,6 +201,7 @@ class ConcatPruningOp(BasePruningOp):
     @classmethod
     def mask_propagation(cls, node: NNCFNode, graph: NNCFGraph) -> None:
         result_mask = cls.generate_output_mask(node, graph)
+        node.data['input_masks'] = get_input_masks(node, graph)
         node.data['output_mask'] = result_mask
 
 
@@ -210,16 +214,17 @@ class ElementwisePruningOp(BasePruningOp):
     def mask_propagation(cls, node: NNCFNode, graph: NNCFGraph) -> None:
         input_masks = get_input_masks(node, graph)
 
-        node.data['input_masks'] = input_masks  # type: List[NNCFTensor]
         if input_masks[0] is not None:
             input_masks[0].tensor_processor.check_all_close(input_masks)
+
+        node.data['input_masks'] = input_masks
         node.data['output_mask'] = input_masks[0]
 
 
 class ReshapePruningOp(BasePruningOp):
     @staticmethod
     def _is_flatten(node: NNCFNode) -> bool:
-        return sum([dim for dim in node.layer_attributes.output_shape if dim]) == 1
+        return len(node.layer_attributes.output_shape) == 2
 
     @classmethod
     def accept_pruned_input(cls, node: NNCFNode) -> bool:
@@ -235,6 +240,7 @@ class ReshapePruningOp(BasePruningOp):
             else:
                 identity_mask_propagation(node, graph)
         else:
+            node.data['input_masks'] = get_input_masks(node, graph)
             node.data['output_mask'] = None
 
 
@@ -252,10 +258,17 @@ class FlattenPruningOp(BasePruningOp):
         assert len(input_masks) == 1
         input_mask = input_masks[0]
         if input_mask is not None and node.layer_attributes is not None:
-            flatten_channels = int(np.prod(node.layer_attributes.input_shape))
-            mask_len = input_mask.shape[0]
+            # We assume all known by mask propagation layers except
+            # StopMaskForwardOp have input/output batch dim == 0.
+            # Besides, since input_mask is not None thus no StopMaskForwardOp operations
+            # was in the path from mask producer node to this node. As all
+            # known nodes have input/output batch dim == 0 previous has too.
+            flatten_channels = node.layer_attributes.output_shape[1]
+            mask_len = input_mask.tensor.shape[0]
             assert flatten_channels % mask_len == 0
-            output_mask = np.repeat(input_mask, repeats=flatten_channels // mask_len)
+            output_mask = input_mask.tensor_processor.repeat(input_mask, repeats=flatten_channels // mask_len)
+
+        node.data['input_masks'] = input_masks
         node.data['output_mask'] = output_mask
 
 
@@ -266,4 +279,5 @@ class StopMaskForwardPruningOp(BasePruningOp):
 
     @classmethod
     def mask_propagation(cls, node: NNCFNode, graph: NNCFGraph) -> None:
+        node.data['input_masks'] = get_input_masks(node, graph)
         node.data['output_mask'] = None

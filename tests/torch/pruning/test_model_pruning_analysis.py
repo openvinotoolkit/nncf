@@ -309,8 +309,9 @@ def test_struct_(request):
 def test_model_analyzer(test_struct: GroupSpecialModulesTestStruct):
     model = test_struct.model()
     nncf_model, _ = create_nncf_model_and_pruning_builder(model, {'prune_first_conv': True, 'prune_last_conv': True})
-
-    model_analyser = ModelAnalyzer(nncf_model.get_original_graph(), PT_PRUNING_OPERATOR_METATYPES,
+    prune_operations = [v.op_func_name for v in NNCF_PRUNING_MODULES_DICT]
+    model_analyser = ModelAnalyzer(nncf_model.get_original_graph(), prune_operations,
+                                   PT_PRUNING_OPERATOR_METATYPES,
                                    is_prunable_depthwise_conv)
     can_prune_analysis = model_analyser.analyse_model_before_pruning()
     for node_id in can_prune_analysis.keys():

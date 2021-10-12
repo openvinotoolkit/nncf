@@ -34,7 +34,7 @@ class SymbolicMaskProcessor(NNCFBaseTensorProcessor):
         producers = []
         for tensor in tensors:
             if tensor.mask_producers is not None:
-                producers.append(tensor.mask_producers)
+                producers.extend(tensor.mask_producers)
         if not producers:
             producers = None
 
@@ -65,19 +65,32 @@ class SymbolicMask(NNCFTensor):
     def mask_producers(self) -> List[int]:
         return self._mask_producers
 
+    @property
+    def device(self) -> None:
+        return None
+
 
 class SymbolicMaskPropagationAlgorithm(MaskPropagationAlgorithm):
-    def symbolic_mask_propagation(self, graph: NNCFGraph, prunable_layers: List[str]) -> Dict[int, bool]:
+    def symbolic_mask_propagation(self, prunable_layers: List[str]) -> Dict[int, bool]:
         """
         Mask propagation in graph:
         to propagate masks run method mask_propagation (of metaop of current node) on all nodes in topological order.
         """
-        can_prune = {idx: None for idx in graph.get_all_node_ids()}
+        can_prune = {idx: None for idx in self._graph.get_all_node_ids()
+                     if self._graph.get_node_by_id(idx).node_type in prunable_layers}
         for node in self._graph.topological_sort():
             if node.node_type in prunable_layers:
+                # Set output mask
+                node.data['output_mask'] = SymbolicMask(np.empty(node.layer_attributes.out_channels), [node.node_id])
+            # Propagate masks
+            cls = self.get_meta_operation_by_type_name(node.node_type)
+            cls.mask_propagation(node, self._graph)
+            if node.node_type in prunable_layers:
                 # Check input mask producers
-                if 'input_mask' in node.data:
-                    input_mask = node.data['input_mask']
+                if node.data['input_masks'][0] is not None:
+                    input_masks = node.data['input_masks']
+                    assert len(input_masks) == 1
+                    input_mask = input_masks[0]
                     if input_mask.mask_producers is None:
                         continue
 
@@ -85,11 +98,12 @@ class SymbolicMaskPropagationAlgorithm(MaskPropagationAlgorithm):
                         previously_dims_equal = True if can_prune[producer] is None else can_prune[producer]
                         is_dims_equal = node.layer_attributes.in_channels == input_mask.tensor.shape[0]
                         can_prune[producer] = previously_dims_equal and is_dims_equal
-                # Set output mask
-                node.data['output_mask'] = SymbolicMask(node.layer_attributes.out_channels, node.node_id)
-            # Propagate masks
-            cls = self.get_meta_operation_by_type_name(node.node_type)
-            cls.mask_propagation(node, self._graph)
+
+        # Clean nodes masks
+        for idx in can_prune:
+            node = self._graph.get_node_by_id(idx)
+            node.data['input_masks'] = None
+            node.data['output_mask'] = None
 
         return {k: bool(v) for k, v in can_prune.items()}
 
@@ -269,34 +283,39 @@ class ModelAnalyzer:
             self.accept_pruned_input[nncf_node.node_id] = cls.accept_pruned_input(nncf_node)
 
     def check_pruned_dimensions(self):
-        # Init output_masks and can prune for each prunable layer
-        for node in self.graph.get_all_nodes():
-            if node.node_type in self._prune_operations and self.can_prune[node.node_id]:
-                node.data['output_mask'] = SymbolicMask(node.layer_attributes.out_channels, node.node_id)
-        # Launch mask propagation
-        MaskPropagationAlgorithm(self.graph, self._pruning_operator_metatypes).mask_propagation()
-        # Check every pruning candidate has closing prunable layer
-        # and mask dimension is equal to closing prunable layer input dimensions
-        can_prune_by_dim = {}
-        for node in self.graph.get_all_nodes():
-            if node.node_type in self._prune_operations and 'input_mask' in node.data:
-                input_mask = node.data['input_mask'] # type: SymbolicMask
-                if input_mask.mask_producers is None:
-                    continue
+        mask_prop_algo = SymbolicMaskPropagationAlgorithm(self.graph, self._pruning_operator_metatypes)
+        can_prune_by_dim = mask_prop_algo.symbolic_mask_propagation(self._prune_operations)
+        can_prune_for_prunable_layers = \
+            {node_id: self.can_prune[node_id] and can_prune_by_dim[node_id] for node_id in can_prune_by_dim}
+        self.can_prune.update(can_prune_for_prunable_layers)
+        ## Init output_masks and can prune for each prunable layer
+        #for node in self.graph.get_all_nodes():
+        #    if node.node_type in self._prune_operations and self.can_prune[node.node_id]:
+        #        node.data['output_mask'] = SymbolicMask(node.layer_attributes.out_channels, node.node_id)
+        ## Launch mask propagation
+        #MaskPropagationAlgorithm(self.graph, self._pruning_operator_metatypes).mask_propagation()
+        ## Check every pruning candidate has closing prunable layer
+        ## and mask dimension is equal to closing prunable layer input dimensions
+        #can_prune_by_dim = {}
+        #for node in self.graph.get_all_nodes():
+        #    if node.node_type in self._prune_operations and 'input_mask' in node.data:
+        #        input_mask = node.data['input_mask'] # type: SymbolicMask
+        #        if input_mask.mask_producers is None:
+        #            continue
 
-                for producer in input_mask.mask_producers:
-                    previous_can_prune = can_prune_by_dim[producer] if producer in can_prune_by_dim else True
-                    if input_mask.tensor.shape[0] == node.layer_attributes.in_channels:
-                        can_prune_by_dim[producer] = previous_can_prune
-                    else:
-                        can_prune_by_dim[producer] = False
-        # Update can_prune dict
-        self.can_prune = {k: False for k in self.can_prune}
-        self.can_prune.update(can_prune_by_dim)
+        #        for producer in input_mask.mask_producers:
+        #            previous_can_prune = can_prune_by_dim[producer] if producer in can_prune_by_dim else True
+        #            if input_mask.tensor.shape[0] == node.layer_attributes.in_channels:
+        #                can_prune_by_dim[producer] = previous_can_prune
+        #            else:
+        #                can_prune_by_dim[producer] = False
+        ## Update can_prune dict
+        #self.can_prune = {k: False for k in self.can_prune}
+        #self.can_prune.update(can_prune_by_dim)
 
     def analyse_model_before_pruning(self):
         self.set_accept_pruned_input_attr()
         self.propagate_can_prune_attr_up()
         self.propagate_can_prune_attr_down()
-        self.check_pruned_dimentions()
+        self.check_pruned_dimensions()
         return self.can_prune

@@ -8,8 +8,6 @@ from tests.common.pruning import dummy_types
 from tests.common.pruning.tensor import NPNNCFTensor
 from tests.common.pruning.tensor import NPNNCFTensorProcessor
 from nncf.common.graph.layer_attributes import ReshapeLayerAttributes
-from nncf.common.pruning.pruning_operations import ReshapePruningOp
-from nncf.common.pruning.pruning_operations import FlattenPruningOp
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.layer_attributes import Dtype

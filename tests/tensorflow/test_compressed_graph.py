@@ -434,6 +434,9 @@ class TestModelsGraph:
     @pytest.mark.parametrize('desc', get_test_models_desc('filter_pruning'), ids=[
         get_model_name(m) for m in get_test_models_desc('filter_pruning')])
     def test_pruning_network(self, desc: ModelDesc, _pruning_case_config):
+        if desc.model_name != 'mobilenet_v1':
+            return
+
         model = desc.model_builder(input_shape=tuple(desc.input_sample_sizes[1:]))
         config = get_basic_filter_pruning_config(desc.input_sample_sizes)
         compressed_model, _ = create_compressed_model_and_algo_for_test(model, config, force_no_init=True)

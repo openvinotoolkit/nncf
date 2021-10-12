@@ -101,6 +101,8 @@ def get_model_with_reshapes_and_concats(batch_size=None):
     # pylint: disable=E1120,E1123
     t2 = tf.concat([x, ones], axis=-1)
     y = tf.concat([t1, t2], axis=-1)
+    y = tf.transpose(y, [2, 0, 1])
+    y = tf.keras.layers.Flatten()(y)
     return models.Model(inputs, y, name='ModelWithReshape')
 
 

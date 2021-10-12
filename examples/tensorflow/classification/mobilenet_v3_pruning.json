@@ -1,0 +1,54 @@
+{
+    "model": "MobileNetV3Small",
+    "pretrained": true,
+    "input_info": {
+        "sample_size": [
+            1,
+            224,
+            224,
+            3
+        ]
+    },
+    "batch_size": 320,
+    "epochs": 100,
+    "optimizer": {
+        "type": "sgd",
+        "schedule_type": "multistep",
+        "schedule_params": {
+            "base_lr": 0.1,
+            "steps": [
+                60,
+                80,
+                90
+            ],
+            "gamma": 0.1
+        },
+        "optimizer_params": {
+            "momentum": 0.9,
+            "nesterov": true
+        }
+    },
+    "dataset": "imagenet2012",
+    "dataset_type": "tfrecords",
+    "accuracy_aware_training": {
+        "mode": "adaptive_compression_level",
+        "params": {
+            "maximal_relative_accuracy_degradation": 1.0,
+            "initial_training_phase_epochs": 100,
+            "patience_epochs": 30
+        }
+    },
+    "compression": [
+        {
+            "algorithm": "filter_pruning",
+            "pruning_init": 0.2,
+            "params": {
+                "prune_downsample_convs": true,
+                "schedule": "exponential",
+                "pruning_target": 0.2,
+                "pruning_steps": 0,
+                "filter_importance": "geometric_median"
+            }
+        }
+    ]
+}
