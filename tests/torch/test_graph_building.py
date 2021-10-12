@@ -12,6 +12,7 @@
 """
 from copy import deepcopy
 
+from nncf.common.graph import Dtype
 from nncf.common.graph.definitions import MODEL_INPUT_OP_NAME
 from nncf.common.graph.definitions import MODEL_OUTPUT_OP_NAME
 from nncf.common.graph.definitions import NNCFGraphNodeType
@@ -433,3 +434,30 @@ def test_get_all_nodes():
     graph = builder.build_graph(model)
     test_list = [node_name.split(' ', 1)[1] for node_name in graph.get_all_node_keys()]
     assert ref_list == test_list
+
+
+class ModelWithIntegerPaths(torch.nn.Module):
+    INPUT_SHAPE = [2, 2, 2, 2]
+
+    def __init__(self):
+        super().__init__()
+        self.conv1 = torch.nn.Conv2d(2, 2, 1)
+        self.linear = torch.nn.Linear(1, 1, 1)
+
+    def forward(self, x: torch.Tensor):
+        x = self.conv1(x)
+        sz = torch.tensor(x.shape).to(x.device)
+        sz_tensor = torch.cat([sz])
+        idx_tensor = sz_tensor // sz_tensor
+        x = x[idx_tensor] * torch.ones([1, 1]).to(x.device)
+        x = self.linear(x)
+        return x
+
+
+def test_integer_path_marking():
+    input_infos = [ModelInputInfo(ModelWithIntegerPaths.INPUT_SHAPE), ]
+    builder = GraphBuilder(create_dummy_forward_fn(input_infos))
+    nncf_graph = builder.build_graph(ModelWithIntegerPaths(), input_infos=input_infos)
+    edges = list(nncf_graph.get_all_edges())
+    num_integer_edges = sum([1 for edge in edges if edge.dtype is Dtype.INTEGER])
+    assert num_integer_edges == 2  # cat -> __floordiv__ and __floordiv__ -> __getitem__
