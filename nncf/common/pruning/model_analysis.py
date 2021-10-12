@@ -13,25 +13,85 @@
 
 import numpy as np
 
-from typing import Callable, List
+from typing import Callable, List, Dict
 
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
+from nncf.common.tensor import NNCFTensor
+from nncf.common.tensor import NNCFBaseTensorProcessor
 from nncf.common.pruning.clusterization import Cluster
 from nncf.common.pruning.clusterization import Clusterization
 from nncf.common.pruning.operations import BasePruningOp
+from nncf.common.pruning.mask_propagation import MaskPropagationAlgorithm
 from nncf.common.pruning.utils import find_next_nodes_not_of_types
 from nncf.common.pruning.utils import PruningOperationsMetatypeRegistry
 
 
-class SymbolicMask(np.ndarray):
-    def __init__(self, mask_producer: int, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self._mask_producer = mask_producer
+class SymbolicMaskProcessor(NNCFBaseTensorProcessor):
+    @classmethod
+    def concatenate(cls, tensors: List[NNCFTensor], axis: int) -> NNCFTensor:
+        ret_tensor = np.concatenate([t.tensor for t in tensors], axis=axis)
+        producers = []
+        for tensor in tensors:
+            if tensor.mask_producers is not None:
+                producers.append(tensor.mask_producers)
+        if not producers:
+            producers = None
+
+        return SymbolicMask(ret_tensor, producers)
+
+    @classmethod
+    def ones(cls, shape: List[int], device) -> NNCFTensor:
+        ret_tensor = np.ones(shape)
+        return SymbolicMask(ret_tensor)
+
+    @classmethod
+    def check_all_close(cls, tensors: List[NNCFTensor]) -> None:
+        for input_mask in tensors[1:]:
+            np.testing.assert_allclose(tensors[0].tensor, input_mask.tensor)
+
+    @classmethod
+    def repeat(cls, tensor: NNCFTensor, repeats: int) -> NNCFTensor:
+        ret_tensor = np.repeat(tensor.tensor, repeats)
+        return SymbolicMask(ret_tensor, tensor.mask_producers)
+
+
+class SymbolicMask(NNCFTensor):
+    def __init__(self, tensor: np.array, mask_producers: List[int] = None):
+        super().__init__(tensor, SymbolicMaskProcessor)
+        self._mask_producers = mask_producers
 
     @property
-    def mask_producer(self):
-        return self._mask_producer
+    def mask_producers(self) -> List[int]:
+        return self._mask_producers
+
+
+class SymbolicMaskPropagationAlgorithm(MaskPropagationAlgorithm):
+    def symbolic_mask_propagation(self, graph: NNCFGraph, prunable_layers: List[str]) -> Dict[int, bool]:
+        """
+        Mask propagation in graph:
+        to propagate masks run method mask_propagation (of metaop of current node) on all nodes in topological order.
+        """
+        can_prune = {idx: None for idx in graph.get_all_node_ids()}
+        for node in self._graph.topological_sort():
+            if node.node_type in prunable_layers:
+                # Check input mask producers
+                if 'input_mask' in node.data:
+                    input_mask = node.data['input_mask']
+                    if input_mask.mask_producers is None:
+                        continue
+
+                    for producer in input_mask.mask_producers:
+                        previously_dims_equal = True if can_prune[producer] is None else can_prune[producer]
+                        is_dims_equal = node.layer_attributes.in_channels == input_mask.tensor.shape[0]
+                        can_prune[producer] = previously_dims_equal and is_dims_equal
+                # Set output mask
+                node.data['output_mask'] = SymbolicMask(node.layer_attributes.out_channels, node.node_id)
+            # Propagate masks
+            cls = self.get_meta_operation_by_type_name(node.node_type)
+            cls.mask_propagation(node, self._graph)
+
+        return {k: bool(v) for k, v in can_prune.items()}
 
 
 def get_position(nodes_list: List[NNCFNode], idx: int):
@@ -208,11 +268,31 @@ class ModelAnalyzer:
             cls = self.get_meta_operation_by_type_name(nncf_node.node_type)
             self.accept_pruned_input[nncf_node.node_id] = cls.accept_pruned_input(nncf_node)
 
-    def check_pruned_dimentions(self):
-        # Init output_masks for each prunable layer
+    def check_pruned_dimensions(self):
+        # Init output_masks and can prune for each prunable layer
         for node in self.graph.get_all_nodes():
             if node.node_type in self._prune_operations and self.can_prune[node.node_id]:
-                node.data['output_mask'] = None
+                node.data['output_mask'] = SymbolicMask(node.layer_attributes.out_channels, node.node_id)
+        # Launch mask propagation
+        MaskPropagationAlgorithm(self.graph, self._pruning_operator_metatypes).mask_propagation()
+        # Check every pruning candidate has closing prunable layer
+        # and mask dimension is equal to closing prunable layer input dimensions
+        can_prune_by_dim = {}
+        for node in self.graph.get_all_nodes():
+            if node.node_type in self._prune_operations and 'input_mask' in node.data:
+                input_mask = node.data['input_mask'] # type: SymbolicMask
+                if input_mask.mask_producers is None:
+                    continue
+
+                for producer in input_mask.mask_producers:
+                    previous_can_prune = can_prune_by_dim[producer] if producer in can_prune_by_dim else True
+                    if input_mask.tensor.shape[0] == node.layer_attributes.in_channels:
+                        can_prune_by_dim[producer] = previous_can_prune
+                    else:
+                        can_prune_by_dim[producer] = False
+        # Update can_prune dict
+        self.can_prune = {k: False for k in self.can_prune}
+        self.can_prune.update(can_prune_by_dim)
 
     def analyse_model_before_pruning(self):
         self.set_accept_pruned_input_attr()
