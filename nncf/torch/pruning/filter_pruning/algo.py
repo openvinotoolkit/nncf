@@ -149,7 +149,7 @@ class FilterPruningController(BasePruningAlgoController):
         self.filter_importance = FILTER_IMPORTANCE_FUNCTIONS.get(params.get('filter_importance', 'L2'))
         self.ranking_type = params.get('interlayer_ranking_type', 'unweighted_ranking')
         self.all_weights = params.get("all_weights", False)
-        scheduler_cls = PRUNING_SCHEDULERS.get(params.get("schedule", "baseline"))
+        scheduler_cls = PRUNING_SCHEDULERS.get(params.get('schedule', 'exponential'))
         self._scheduler = scheduler_cls(self, params)
 
         if self.ranking_type == 'learned_ranking':

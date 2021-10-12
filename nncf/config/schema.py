@@ -710,7 +710,7 @@ FILTER_PRUNING_SCHEMA = {
                     "schedule": with_attributes(_STRING,
                                                 description="The type of scheduling to use for adjusting the target"
                                                             " pruning level. Either `exponential`, `exponential_with"
-                                                            "_bias`,  or `baseline`, by default it is `baseline`"),
+                                                            "_bias`,  or `baseline`, by default it is `exponential`"),
                     "pruning_target": with_attributes(_NUMBER,
                                                       description="Target value of the pruning level for "
                                                                   "the convolutions that can be pruned. "
