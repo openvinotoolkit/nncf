@@ -276,6 +276,10 @@ def test_compression_eval_trained(_params, tmp_path, case_common_dirs):
     args['log-dir'] = tmp_path
     args['workers'] = 0  # Workaround for PyTorch MultiprocessingDataLoader issues
     args['seed'] = 1
+    # Workaround for PyTorch 1.9.1 Multiprocessing issue related to determinism and asym quantization
+    # https://github.com/pytorch/pytorch/issues/61032
+    if 'mobilenet_v2_asym_int8.json' in args['config']:
+        args.pop('seed')
     checkpoint_path = os.path.join(args['checkpoint-save-dir'], tc['checkpoint_name'] + '_best.pth')
     args['resume'] = checkpoint_path
 
