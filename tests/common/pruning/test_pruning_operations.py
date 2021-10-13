@@ -123,6 +123,9 @@ def test_group_norm_pruning_ops(num_channels, num_groups, accept_pruned_input_re
         conv_op.data['output_mask'] = output_mask
         MaskPropagationAlgorithm(graph, dummy_types.DUMMY_PRUNING_OPERATOR_METATYPES).mask_propagation()
         identity_op = graph.get_node_by_id(group_norm_op.node_id)
+        if not accept_pruned_input_ref:
+            output_mask = None
+
         assert np.all(identity_op.data['output_mask'] == output_mask)
 
 

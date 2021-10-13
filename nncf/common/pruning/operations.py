@@ -155,7 +155,10 @@ class GroupNormPruningOp(BasePruningOp):
 
     @classmethod
     def mask_propagation(cls, node: NNCFNode, graph: NNCFGraph) -> None:
-        identity_mask_propagation(node, graph)
+        if cls.accept_pruned_input(node):
+            identity_mask_propagation(node, graph)
+        else:
+            node.data['output_mask'] = None
 
 
 class ConcatPruningOp(BasePruningOp):
