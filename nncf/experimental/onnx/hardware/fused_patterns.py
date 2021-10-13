@@ -9,8 +9,8 @@ def _get_onnx_hw_fused_patterns() -> HWFusedPatterns:
     RELU_OPERATIONS = {'type': ['Relu', 'Clip'],
                        'label': 'RELU'}
 
-    ADD_OPERATIONS = {'type': ['Add'],
-                      'label': 'ADD'}
+    BN_OPERATIONS = {'type': ['BatchNormalization'],
+                     'label': 'BN'}
 
     hw_fused_patterns = HWFusedPatterns()
 
@@ -22,12 +22,13 @@ def _get_onnx_hw_fused_patterns() -> HWFusedPatterns:
     relu_ops.add_node(**RELU_OPERATIONS)
     hw_fused_patterns.register(relu_ops, RELU_OPERATIONS['label'], match=False)
 
-    add_ops = GraphPattern()
-    add_ops.add_node(**RELU_OPERATIONS)
-    hw_fused_patterns.register(add_ops, ADD_OPERATIONS['label'], match=False)
+    bn_ops = GraphPattern()
+    bn_ops.add_node(**BN_OPERATIONS)
+    hw_fused_patterns.register(bn_ops, BN_OPERATIONS['label'], match=False)
 
-    hw_fused_patterns.register(add_ops + relu_ops, 'ADD + RELU', match=True)
     hw_fused_patterns.register(conv_ops + relu_ops, 'CONV + RELU', match=True)
+    hw_fused_patterns.register(conv_ops + bn_ops + relu_ops, 'CONV + BN + RELU', match=True)
+    hw_fused_patterns.register(conv_ops + bn_ops, 'CONV + BN', match=True)
     return hw_fused_patterns
 
 

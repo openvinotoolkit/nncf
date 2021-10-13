@@ -1,4 +1,5 @@
 import math
+from typing import Union
 import numpy as np
 # pylint: disable=import-error
 from skl2onnx.helpers.onnx_helper import select_model_inputs_outputs
@@ -34,20 +35,19 @@ def calculate_statistics_for_activation_quantizer(onnx_model: onnx.ModelProto, o
                                                   mode='min_max'):
     model_output = list(enumerate_model_node_outputs(onnx_model))[-1]
     model_with_intermediate_outputs = select_model_inputs_outputs(onnx_model, outputs=[outputs[0], model_output])
-    temporary_model = tempfile.NamedTemporaryFile()
-    onnx.save(model_with_intermediate_outputs, temporary_model.name)
+    with tempfile.NamedTemporaryFile() as temporary_model:
+        onnx.save(model_with_intermediate_outputs, temporary_model.name)
 
-    sess = rt.InferenceSession(temporary_model.name, providers=['OpenVINOExecutionProvider'])
-    input_name = sess.get_inputs()[0].name
-    statistics_collector = StatisticsCollector()
-    for i, (input_, _) in enumerate(data_loader):
-        if i == num_iters:
-            break
-        input_tensor = input_.cpu().detach().numpy()
-        output_tensor = sess.run([], {input_name: input_tensor.astype(np.float32)})
-        statistics_collector.update(output_tensor[0])
+        sess = rt.InferenceSession(temporary_model.name, providers=['OpenVINOExecutionProvider'])
+        input_name = sess.get_inputs()[0].name
+        statistics_collector = StatisticsCollector()
+        for i, (input_, _) in enumerate(data_loader):
+            if i == num_iters:
+                break
+            input_tensor = input_.cpu().detach().numpy()
+            output_tensor = sess.run([], {input_name: input_tensor.astype(np.float32)})
+            statistics_collector.update(output_tensor[0])
 
-    temporary_model.close()
     if mode == 'min_max':
         return statistics_collector.global_max, statistics_collector.global_min
     if mode == 'mean_min_max':
@@ -55,15 +55,15 @@ def calculate_statistics_for_activation_quantizer(onnx_model: onnx.ModelProto, o
     raise RuntimeError('Invalid statistics collection mode')
 
 
-def calculate_statistics_for_weight_quantizer(weight_tensor: np.ndarray, num_bits: int, per_channel=True):
+def calculate_statistics_for_weight_quantizer(weight_tensor: np.ndarray, num_bits: int, per_channel: bool = True):
     if per_channel:
-        filter_max, filter_min = [], []
+        filter_max, filter_min = np.empty((0, 1)), np.empty((0, 1))
         for single_filter in weight_tensor:
-            filter_max.append(np.max(single_filter))
-            filter_min.append(np.min(single_filter))
-        return calculate_scale_level(np.array(filter_max), np.array(filter_min), num_bits)
+            filter_max = np.append(filter_max, np.max(single_filter))
+            filter_min = np.append(filter_min, np.min(single_filter))
+        return calculate_scale_level(filter_max, filter_min, num_bits)
     return calculate_scale_level(np.max(weight_tensor), np.min(weight_tensor), num_bits)
 
 
-def calculate_scale_level(max_val: float, min_val: float, num_bits: int):
+def calculate_scale_level(max_val: Union[float, np.ndarray], min_val: Union[float, np.ndarray], num_bits: int):
     return (max_val - min_val) / 2 ** num_bits

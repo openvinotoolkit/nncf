@@ -17,7 +17,7 @@ def find_node_by_output(output: str, graph: onnx.GraphProto):
 def find_nodes_by_input(input_name: str, graph: onnx.GraphProto):
     retval = []
     for node in graph.node:
-        if input_name in node.input or input == node.input:
+        if input_name in node.input or input_name == node.input:
             retval.append(node)
     return retval
 
@@ -34,32 +34,43 @@ def add_quantize_dequantize(nncf_network, quantizer_config: QuantizerConfig, qp_
     name = str(qp_id)
     if quantizer_config.per_channel:
         onnx_scale = onnx.helper.make_tensor('scale_' + name, onnx.TensorProto.FLOAT, scale.shape, scale)
-    else:
-        onnx_scale = onnx.helper.make_tensor('scale_' + name, onnx.TensorProto.FLOAT, [], [scale])
-    if quantizer_config.signedness_to_force:
-        if quantizer_config.per_channel:
+        if quantizer_config.signedness_to_force:
             onnx_zero_point = onnx.helper.make_tensor('zero_point_' + name, onnx.TensorProto.INT8, scale.shape,
                                                       [zero_point] * scale.shape[0])
         else:
-            onnx_zero_point = onnx.helper.make_tensor('zero_point_' + name, onnx.TensorProto.INT8, [], [zero_point])
-    else:
-        if quantizer_config.per_channel:
             onnx_zero_point = onnx.helper.make_tensor('zero_point_' + name, onnx.TensorProto.UINT8, scale.shape,
                                                       [zero_point] * scale.shape[0])
+        quantizer = onnx.helper.make_node(
+            'QuantizeLinear',  # name
+            [weight_tensor_name, 'scale_' + name, 'zero_point_' + name],  # inputs
+            ['q_output_' + name],  # outputs
+            axis=0
+        )
+
+        dequantizer = onnx.helper.make_node(
+            'DequantizeLinear',  # name
+            ['q_output_' + name, 'scale_' + name, 'zero_point_' + name],  # inputs
+            ['dq_output_' + name],  # outputs
+            axis=0
+        )
+    else:
+        onnx_scale = onnx.helper.make_tensor('scale_' + name, onnx.TensorProto.FLOAT, [], [scale])
+        if quantizer_config.signedness_to_force:
+            onnx_zero_point = onnx.helper.make_tensor('zero_point_' + name, onnx.TensorProto.INT8, [], [zero_point])
         else:
             onnx_zero_point = onnx.helper.make_tensor('zero_point_' + name, onnx.TensorProto.UINT8, [], [zero_point])
+        quantizer = onnx.helper.make_node(
+            'QuantizeLinear',  # name
+            [weight_tensor_name, 'scale_' + name, 'zero_point_' + name],  # inputs
+            ['q_output_' + name]  # outputs
+        )
 
-    quantizer = onnx.helper.make_node(
-        'QuantizeLinear',  # name
-        [weight_tensor_name, 'scale_' + name, 'zero_point_' + name],  # inputs
-        ['q_output_' + name]  # outputs
-    )
+        dequantizer = onnx.helper.make_node(
+            'DequantizeLinear',  # name
+            ['q_output_' + name, 'scale_' + name, 'zero_point_' + name],  # inputs
+            ['dq_output_' + name]  # outputs
+        )
 
-    dequantizer = onnx.helper.make_node(
-        'DequantizeLinear',  # name
-        ['q_output_' + name, 'scale_' + name, 'zero_point_' + name],  # inputs
-        ['dq_output_' + name]  # outputs
-    )
     input_nodes = find_nodes_by_input(weight_tensor_name, onnx_model.graph)
     for node in input_nodes:
         for i, inp in enumerate(node.input):

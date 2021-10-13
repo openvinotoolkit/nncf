@@ -69,5 +69,11 @@ class AddLayerMetatype(ONNXOpMetatype):
     op_names = ['Add']
 
 
+@ONNX_OPERATION_METATYPES.register()
+class BatchNormMetatype(ONNXOpMetatype):
+    name = 'BatchNormalizationOp'
+    op_names = ['BatchNormalization']
+
+
 GENERAL_WIGHT_LAYER_METATYPES = [ConvolutionMetatype,
                                  LinearMetatype]

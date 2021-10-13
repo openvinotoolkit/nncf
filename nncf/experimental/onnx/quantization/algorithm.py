@@ -42,7 +42,7 @@ def choose_activation_quantization_configuration(nncf_network: NNCFNetwork, outp
 
 def choose_weight_quantization_configuration(outputs: onnx.TensorProto) -> [QuantizerConfig, float, int]:
     num_bits = 8
-    per_channel = False
+    per_channel = True
     scale = calculate_statistics_for_weight_quantizer(outputs, num_bits, per_channel)
     signedness_to_force = True
     quantizer_config = QuantizerConfig(num_bits=num_bits, signedness_to_force=signedness_to_force,
@@ -91,5 +91,4 @@ def apply_post_training_quantization(onnx_model: onnx.ModelProto, data_loader: t
                                                                                                outputs, data_loader,
                                                                                                initialization_number)
             add_quantize_dequantize(nncf_network, quantizer_config, qp_id, outputs[0], scale, zero_point)
-    onnx.checker.check_model(nncf_network.onnx_compressed_model)
     return nncf_network.onnx_compressed_model

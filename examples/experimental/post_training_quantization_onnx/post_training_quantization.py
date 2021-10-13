@@ -1,12 +1,15 @@
 import argparse
-
+import os
+from typing import List
+from typing import Union
 import onnx
 from examples.experimental.post_training_quantization_onnx.dataloader import create_train_dataloader
 
 from nncf.experimental.onnx.quantization.algorithm import apply_post_training_quantization
 
 
-def run(onnx_model_path, output_model_path, data_loader_path, num_init_samples, input_shape):
+def run(onnx_model_path: Union[str, bytes, os.PathLike], output_model_path: Union[str, bytes, os.PathLike],
+        data_loader_path: Union[str, bytes, os.PathLike], num_init_samples: int, input_shape: List[int]):
     onnx.checker.check_model(onnx_model_path)
     onnx_model = onnx.load(onnx_model_path)
     print(f"The model is loaded from {onnx_model_path}")
@@ -28,10 +31,4 @@ if __name__ == '__main__':
     parser.add_argument("--init_samples", help="Number of initialization samples", type=int, default=10)
 
     args = parser.parse_args()
-    onnx_model_path = args.onnx_model_path
-    output_model_path = args.output_model_path
-    data_loader_path = args.data
-    num_init_samples = args.init_samples
-    input_shape = args.input_shape
-
-    run(onnx_model_path, output_model_path, data_loader_path, num_init_samples, input_shape)
+    run(args.onnx_model_path, args.output_model_path, args.data, args.init_samples, args.input_shape)
