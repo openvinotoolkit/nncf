@@ -46,7 +46,7 @@ class TFNNCFTensor(NNCFTensor):
     """
 
     def __init__(self, tensor: tf.Variable):
-        # In case somebody attempt to wrap
+        # In case somebody attempts to wrap
         # tensor twice
         if isinstance(tensor, self.__class__):
             tensor = tensor.tensor

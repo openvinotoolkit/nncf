@@ -37,7 +37,7 @@ class NPNNCFTensorProcessor(NNCFBaseTensorProcessor):
 
 class NPNNCFTensor(NNCFTensor):
     def __init__(self, tensor: np.array):
-        # In case somebody attempt to wrap
+        # In case somebody attempts to wrap
         # tensor twice
         if isinstance(tensor, self.__class__):
             tensor = tensor.tensor
