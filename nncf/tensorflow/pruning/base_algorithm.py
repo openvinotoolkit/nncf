@@ -40,10 +40,10 @@ from nncf.tensorflow.graph.transformations.commands import TFInsertionCommand
 from nncf.tensorflow.graph.transformations.layout import TFTransformationLayout
 from nncf.tensorflow.graph.utils import get_layer_identifier
 from nncf.tensorflow.graph.utils import collect_wrapped_layers
-from nncf.tensorflow.graph.tensor import TFNNCFTensor
-from nncf.tensorflow.pruning.pruning_operations import TFElementwisePruningOp
-from nncf.tensorflow.pruning.pruning_operations import TFIdentityMaskForwardPruningOp
-from nncf.tensorflow.pruning.pruning_operations import TF_PRUNING_OPERATOR_METATYPES
+from nncf.tensorflow.tensor import TFNNCFTensor
+from nncf.tensorflow.pruning.operations import TFElementwisePruningOp
+from nncf.tensorflow.pruning.operations import TFIdentityMaskForwardPruningOp
+from nncf.tensorflow.pruning.operations import TF_PRUNING_OPERATOR_METATYPES
 from nncf.tensorflow.pruning.utils import get_filter_axis
 from nncf.tensorflow.pruning.utils import get_filters_num
 from nncf.tensorflow.sparsity.magnitude.operation import BinaryMask

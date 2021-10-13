@@ -11,10 +11,8 @@
  limitations under the License.
 """
 
-
 from abc import abstractmethod
 from typing import TypeVar, List
-
 
 TensorType = TypeVar('TensorType')
 DeviceType = TypeVar('DeviceType')
@@ -24,6 +22,7 @@ class NNCFTensor:
     """
     An interface of framework specific tensors for common NNCF algorithms.
     """
+
     def __init__(self, tensor: TensorType,
                  tensor_processor: 'NNCFBaseTensorProcessor'):
         self._tensor = tensor
@@ -38,14 +37,16 @@ class NNCFTensor:
         return self._tensor_processor
 
     @property
+    @abstractmethod
     def device(self) -> DeviceType:
-        return None
+        pass
 
 
 class NNCFBaseTensorProcessor:
     """
     An interface of the processing methods set for NNCFTensors.
     """
+
     @classmethod
     @abstractmethod
     def concatenate(cls, tensors: List[NNCFTensor], axis: int) -> NNCFTensor:
@@ -59,7 +60,7 @@ class NNCFBaseTensorProcessor:
 
     @classmethod
     @abstractmethod
-    def ones(cls, shape: List[int], device) -> NNCFTensor:
+    def ones(cls, shape: List[int], device: DeviceType) -> NNCFTensor:
         """
         Return a new float tensor of given shape, filled with ones.
 

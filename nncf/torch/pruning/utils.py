@@ -18,7 +18,7 @@ import torch
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNodeName
 from nncf.torch.graph.graph import NNCFNode
-from nncf.torch.graph.tensor import PTNNCFTensor
+from nncf.torch.tensor import PTNNCFTensor
 from nncf.torch.nncf_network import NNCFNetwork
 
 

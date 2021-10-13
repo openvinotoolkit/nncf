@@ -15,14 +15,15 @@ import tensorflow as tf
 
 from typing import List
 
-from nncf.common.graph.tensor import NNCFTensor
-from nncf.common.graph.tensor import NNCFBaseTensorProcessor
+from nncf.common.tensor import NNCFTensor
+from nncf.common.tensor import NNCFBaseTensorProcessor
 
 
 class TFNNCFTensorProcessor(NNCFBaseTensorProcessor):
     """
     A realization of the processing methods set for TFNNCFTensors.
     """
+
     @classmethod
     def concatenate(cls, tensors: List[NNCFTensor], axis: int) -> NNCFTensor:
         # pylint: disable=E1120,E1123
@@ -43,6 +44,7 @@ class TFNNCFTensor(NNCFTensor):
     """
     A realisation of tensorflow tensors wrapper for common NNCF algorithms.
     """
+
     def __init__(self, tensor: tf.Variable):
         # In case somebody attempt to wrap
         # tensor twice

@@ -10,6 +10,7 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+
 from typing import Dict
 from typing import List
 
@@ -18,7 +19,7 @@ from nncf.tensorflow.graph.pattern_operations import ELEMENTWISE_OPERATIONS
 from nncf.tensorflow.graph.pattern_operations import TF_ACTIVATIONS_OPERATIONS
 from nncf.common.graph.definitions import NNCFGraphNodeType
 from nncf.common.pruning.utils import PruningOperationsMetatypeRegistry
-from nncf.common.pruning.pruning_operations import (
+from nncf.common.pruning.operations import (
     InputPruningOp,
     OutputPruningOp,
     IdentityMaskForwardPruningOp,

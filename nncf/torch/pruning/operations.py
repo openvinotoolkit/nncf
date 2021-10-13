@@ -50,7 +50,7 @@ from nncf.torch.graph.operator_metatypes import (
     SubMetatype,
     TanhMetatype,
 )
-from nncf.common.pruning.pruning_operations import (
+from nncf.common.pruning.operations import (
     InputPruningOp,
     OutputPruningOp,
     IdentityMaskForwardPruningOp,
@@ -72,7 +72,7 @@ PT_PRUNING_OPERATOR_METATYPES = PruningOperationsMetatypeRegistry("operator_meta
 
 class PTPruner:
     @classmethod
-    def input_prune(cls, model: NNCFNetwork, node: NNCFNode, graph: NNCFGraph):
+    def input_prune(cls, model: NNCFNetwork, node: NNCFNode, graph: NNCFGraph) -> None:
         """
         Prune node by input_masks (if masks is not none and operation support it).
 
@@ -82,7 +82,7 @@ class PTPruner:
         """
 
     @classmethod
-    def output_prune(cls, model: NNCFNetwork, node: NNCFNode, graph: NNCFGraph):
+    def output_prune(cls, model: NNCFNetwork, node: NNCFNode, graph: NNCFGraph) -> None:
         """
         Prune node by output_mask (if mask is not none and operation support it).
 
@@ -114,7 +114,7 @@ class PTConvolutionPruningOp(ConvolutionPruningOp, PTPruner):
     subtypes = [Conv1dMetatype, Conv2dMetatype, Conv3dMetatype]
 
     @classmethod
-    def input_prune(cls, model: NNCFNetwork, node: NNCFNode, graph: NNCFGraph):
+    def input_prune(cls, model: NNCFNetwork, node: NNCFNode, graph: NNCFGraph) -> None:
         input_mask = node.data['input_masks'][0]
         if input_mask is None:
             return
@@ -143,7 +143,7 @@ class PTConvolutionPruningOp(ConvolutionPruningOp, PTPruner):
                          ' {}.'.format(node.data['key'], old_num_channels, new_num_channels))
 
     @classmethod
-    def output_prune(cls, model: NNCFNetwork, node: NNCFNode, graph: NNCFGraph):
+    def output_prune(cls, model: NNCFNetwork, node: NNCFNode, graph: NNCFGraph) -> None:
         mask = node.data['output_mask']
         if mask is None:
             return
@@ -168,7 +168,7 @@ class PTTransposeConvolutionPruningOp(TransposeConvolutionPruningOp, PTPruner):
     subtypes = [ConvTranspose2dMetatype, ConvTranspose3dMetatype]
 
     @classmethod
-    def input_prune(cls, model: NNCFNetwork, node: NNCFNode, graph: NNCFGraph):
+    def input_prune(cls, model: NNCFNetwork, node: NNCFNode, graph: NNCFGraph) -> None:
         input_mask = node.data['input_masks'][0]
         if input_mask is None:
             return
@@ -184,7 +184,7 @@ class PTTransposeConvolutionPruningOp(TransposeConvolutionPruningOp, PTPruner):
                          ' {}.'.format(node.data['key'], old_num_clannels, node_module.in_channels))
 
     @classmethod
-    def output_prune(cls, model: NNCFNetwork, node: NNCFNode, graph: NNCFGraph):
+    def output_prune(cls, model: NNCFNetwork, node: NNCFNode, graph: NNCFGraph) -> None:
         output_mask = node.data['output_mask']
         if output_mask is None:
             return
@@ -215,7 +215,7 @@ class PTBatchNormPruningOp(BatchNormPruningOp, PTPruner):
     subtypes = [BatchNormMetatype]
 
     @classmethod
-    def input_prune(cls, model: NNCFNetwork, node: NNCFNode, graph: NNCFGraph):
+    def input_prune(cls, model: NNCFNetwork, node: NNCFNode, graph: NNCFGraph) -> None:
         input_mask = node.data['input_masks'][0]
         if input_mask is None:
             return
@@ -241,7 +241,7 @@ class PTGroupNormPruningOp(GroupNormPruningOp, PTPruner):
     subtypes = [GroupNormMetatype]
 
     @classmethod
-    def input_prune(cls, model: NNCFNetwork, node: NNCFNode, graph: NNCFGraph):
+    def input_prune(cls, model: NNCFNetwork, node: NNCFNode, graph: NNCFGraph) -> None:
         input_mask = node.data['input_masks'][0]
         if input_mask is None:
             return
@@ -267,7 +267,7 @@ class PTElementwisePruningOp(ElementwisePruningOp, PTPruner):
     subtypes = [AddMetatype, SubMetatype, DivMetatype, MulMetatype]
 
     @classmethod
-    def input_prune(cls, model: NNCFNetwork, node: NNCFNode, graph: NNCFGraph):
+    def input_prune(cls, model: NNCFNetwork, node: NNCFNode, graph: NNCFGraph) -> None:
         input_mask = node.data['input_masks'][0]
         if input_mask is None:
             return

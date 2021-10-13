@@ -13,7 +13,7 @@
 
 from nncf.common.graph import NNCFGraph
 from nncf.common.pruning.utils import PruningOperationsMetatypeRegistry
-from nncf.common.pruning.pruning_operations import BasePruningOp
+from nncf.common.pruning.operations import BasePruningOp
 
 
 class MaskPropagationAlgorithm:

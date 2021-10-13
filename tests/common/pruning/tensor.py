@@ -15,8 +15,8 @@ import numpy as np
 
 from typing import List
 
-from nncf.common.graph.tensor import NNCFTensor
-from nncf.common.graph.tensor import NNCFBaseTensorProcessor
+from nncf.common.tensor import NNCFTensor
+from nncf.common.tensor import NNCFBaseTensorProcessor
 
 
 class NPNNCFTensorProcessor(NNCFBaseTensorProcessor):
@@ -43,3 +43,7 @@ class NPNNCFTensor(NNCFTensor):
             tensor = tensor.tensor
 
         super().__init__(tensor, NPNNCFTensorProcessor)
+
+    @property
+    def device(self) -> None:
+        return None

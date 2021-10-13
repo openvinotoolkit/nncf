@@ -66,7 +66,7 @@ class NNCFNode:
         return self.data.get(NNCFGraph.LAYER_ATTRIBUTES)
 
     @layer_attributes.setter
-    def layer_attributes(self, data) -> None:
+    def layer_attributes(self, data: Any) -> None:
         self.data[NNCFGraph.LAYER_ATTRIBUTES] = data
 
     @property
