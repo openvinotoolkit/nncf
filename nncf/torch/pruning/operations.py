@@ -39,6 +39,7 @@ from nncf.torch.graph.operator_metatypes import (
     PTHardSwishMetatype,
     PTHardSigmoidMetatype,
     PTInputNoopMetatype,
+    PTInterpolateMetatype,
     PTLinearMetatype,
     PTMatMulMetatype,
     PTMaxMetatype,
@@ -145,7 +146,7 @@ class PTIdentityMaskForwardPruningOp(IdentityMaskForwardPruningOp, PTPruner):
     subtypes = [PTHardTanhMetatype, PTTanhMetatype, PTRELUMetatype, PTRELU6Metatype, PTLeakyRELUMetatype,
                 PTPRELUMetatype, PTELUMetatype, PTGELUMetatype, PTSigmoidMetatype, PTSoftmaxMetatype,
                 PTAvgPool2dMetatype, PTMaxPool2dMetatype, PTDropoutMetatype, PTSILUMetatype, PTPowerMetatype,
-                PTHardSwishMetatype, PTHardSigmoidMetatype, PTNoopMetatype]
+                PTHardSwishMetatype, PTHardSigmoidMetatype, PTNoopMetatype, PTInterpolateMetatype]
     additional_types = ['h_sigmoid', 'h_swish', 'RELU']
 
 
