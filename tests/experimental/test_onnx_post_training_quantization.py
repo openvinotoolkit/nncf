@@ -1,4 +1,3 @@
-import pytest
 import torchvision
 import torch
 import tempfile
@@ -14,11 +13,10 @@ def test_post_training_quantization_onnx(mocker, sota_data_dir):
     number_of_q_in_quantized_model = 141
     with tempfile.NamedTemporaryFile() as temporary_model:
         dummy_input = torch.randn(1, 3, 224, 224)
-        torch.onnx.export(model, dummy_input, temporary_model.name, opset_version=10)
+        torch.onnx.export(model, dummy_input, temporary_model.name, opset_version=13)
         with tempfile.NamedTemporaryFile() as temporary_quantized_model:
             num_init_samples = 1
             input_shape = [1, 3, 224, 224]
-            sota_data_dir = '/home/aleksei/datasetsimagenet'
             run(temporary_model.name, temporary_quantized_model.name, sota_data_dir,
                 num_init_samples, input_shape)
             onnx.checker.check_model(temporary_quantized_model.name)
