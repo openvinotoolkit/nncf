@@ -100,7 +100,7 @@ def test_disable_shape_matching():
     assert graph_1 == graph_2
 
     nodes_1 = list(graph_1.get_all_nodes())
-    assert len(nodes_1) == 3  # 1 input node + 1 operation node + 1 output node
+    assert len(nodes_1) == 5  # 1 input node + 1 operation node + 1 output node
 
     qnet = NNCFNetwork(model, input_infos=[ModelInputInfo(input_shape_1), ])  # type: NNCFNetwork
     context = qnet.get_tracing_context()

@@ -104,6 +104,28 @@ def patch_namespace_by_patchspec(namespace, patchspec: 'PatchSpec'):
         patch_namespace_opname(namespace, patched_op_info)
 
 
+def get_all_functions_from_namespace(namespace) -> List[object]:
+    import inspect
+
+    def remove_private_functions(names: List[str]) -> List[str]:
+        filtered_names = []
+        for name in names:
+            if name[0] == '_':
+                continue
+            else:
+                filtered_names.append(name)
+        return filtered_names
+
+    all_torch_function_names = []
+    members = inspect.getmembers(namespace)
+    for member in members:
+        if inspect.isfunction(member[1]) or inspect.isbuiltin(member[1]) or inspect.ismethod(
+                member[1]) or inspect.ismethoddescriptor(member[1]):
+            all_torch_function_names.append(member[0])
+    filtered_function_names = remove_private_functions(all_torch_function_names)
+    return filtered_function_names
+
+
 def patch_torch_operators():
     # Only patch torch.jit.script during first patch_torch_operators call
     global _JIT_ALREADY_WRAPPED
@@ -121,16 +143,29 @@ def patch_torch_operators():
     import torch.nn.functional as F
     import torch
     from nncf.torch.graph.operator_metatypes import get_operator_metatypes
-    for op_meta_class in get_operator_metatypes():  # type: OperatorMetatype
-        if op_meta_class.torch_nn_functional_patch_spec is not None:
-            ps = op_meta_class.torch_nn_functional_patch_spec
-            patch_namespace_by_patchspec(F, ps)
-        if op_meta_class.torch_module_patch_spec is not None:
-            ps = op_meta_class.torch_module_patch_spec
-            patch_namespace_by_patchspec(torch, ps)
-        if op_meta_class.torch_tensor_patch_spec is not None:
-            ps = op_meta_class.torch_tensor_patch_spec
-            patch_namespace_by_patchspec(TracedTensor, ps)
+    function_names= get_all_functions_from_namespace(F)
+    variable_function_names = get_all_functions_from_namespace(torch._C._VariableFunctions)
+    tensor_function_names = get_all_functions_from_namespace(torch.Tensor)
+    ignored_functions = ['ones', 'ones_like', 'zeros', 'cuda', 'dim']
+
+    for ignored_function in ignored_functions:
+        if ignored_function in function_names:
+            function_names.remove(ignored_function)
+        if ignored_function in variable_function_names:
+            variable_function_names.remove(ignored_function)
+        if ignored_function in tensor_function_names:
+            tensor_function_names.remove(ignored_function)
+
+    for function_name in function_names:
+        from nncf.torch.graph.operator_metatypes import PTPatchSpec
+        patch_namespace_by_patchspec(F, PTPatchSpec([function_name]))
+    for function_name in variable_function_names:
+        from nncf.torch.graph.operator_metatypes import PTPatchSpec
+        patch_namespace_by_patchspec(torch, PTPatchSpec([function_name]))
+    for tensor_name in tensor_function_names:
+        from nncf.torch.graph.operator_metatypes import PTPatchSpec
+        patch_namespace_by_patchspec(TracedTensor, PTPatchSpec([tensor_name]))
+    # add ignored ops
 
     # Patch __repr__ methods so that debugging does not add new nodes to the graph
     patch_namespace_opname(TracedTensor, PatchedOperatorInfo("__repr__", ForwardTraceOnly()))
