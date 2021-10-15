@@ -57,7 +57,7 @@ GLOBAL_CONFIG = {
                             'expected_accuracy': 68.11,
                             'weights': 'mobilenet_v2_32x32_cifar100_68.11.pth',
                             'absolute_tolerance_train': 1.0,
-                            'absolute_tolerance_eval': 2e-2
+                            'absolute_tolerance_eval': 6e-2
                         },
                         'inceptionV3_int8.json': {
                             'expected_accuracy': 77.53,
@@ -74,7 +74,7 @@ GLOBAL_CONFIG = {
                             'weights': 'mobilenet_v2_32x32_cifar100_68.11.pth',
                             'execution_arg': {'multiprocessing-distributed', ''},
                             'absolute_tolerance_train': 1.5,
-                            'absolute_tolerance_eval': 2e-2
+                            'absolute_tolerance_eval': 6e-2
                         },
                         'mobilenet_v2_rb_sparsity_int8.json': {
                             'expected_accuracy': 68.11,
