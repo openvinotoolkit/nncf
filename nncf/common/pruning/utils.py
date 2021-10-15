@@ -24,6 +24,7 @@ import numpy as np
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.graph import NNCFNodeName
+from nncf.common.tensor import NNCFTensor
 from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.pruning.clusterization import Cluster
@@ -407,3 +408,31 @@ def is_conv_with_downsampling(node: NNCFNode) -> bool:
         return not np.all(np.array(layer_attrs.stride) == 1) \
            and not layer_attrs.transpose
     return False
+
+
+def get_input_masks(node: NNCFNode, graph: NNCFGraph) -> List[Optional[NNCFTensor]]:
+    """
+    Returns input masks for all inputs of given NNCFNode.
+
+    :param node: Given NNCFNode.
+    :param graph: Graph to work with.
+    :return: Input masks.
+    """
+    input_masks = [input_node.data['output_mask'] for input_node in graph.get_previous_nodes(node)]
+    return input_masks
+
+
+def identity_mask_propagation(node: NNCFNode, graph: NNCFGraph) -> None:
+    """
+    Propagates input mask through NNCFNode.
+
+    :param node: Graph node to perform identity mask propagation on.
+    :param graph: Graph to work with.
+    """
+    input_masks = get_input_masks(node, graph)
+    if not input_masks:
+        # In case for disconnected NNCFGraph
+        input_masks = [None]
+    assert len(input_masks) == 1
+    node.data['input_masks'] = input_masks
+    node.data['output_mask'] = input_masks[0]

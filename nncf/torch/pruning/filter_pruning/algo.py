@@ -63,8 +63,8 @@ from nncf.torch.layers import NNCF_PRUNING_MODULES_DICT
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.pruning.base_algo import BasePruningAlgoBuilder
 from nncf.torch.pruning.base_algo import BasePruningAlgoController
-from nncf.torch.pruning.export_helpers import PTElementwise
-from nncf.torch.pruning.export_helpers import PT_PRUNING_OPERATOR_METATYPES
+from nncf.torch.pruning.operations import PTElementwisePruningOp
+from nncf.torch.pruning.operations import PT_PRUNING_OPERATOR_METATYPES
 from nncf.torch.pruning.filter_pruning.functions import FILTER_IMPORTANCE_FUNCTIONS
 from nncf.torch.pruning.filter_pruning.functions import calculate_binary_mask
 from nncf.torch.pruning.filter_pruning.functions import tensor_l2_normalizer
@@ -111,7 +111,7 @@ class FilterPruningBuilder(BasePruningAlgoBuilder):
         return types
 
     def get_types_of_grouping_ops(self) -> List[str]:
-        return PTElementwise.get_all_op_aliases()
+        return PTElementwisePruningOp.get_all_op_aliases()
 
 
 @ADAPTIVE_COMPRESSION_CONTROLLERS.register('pt_filter_pruning')
@@ -680,7 +680,8 @@ class FilterPruningController(BasePruningAlgoController):
                 continue
             node_module = self.model.get_containing_module(node.node_name)
             if node.data['output_mask'] is not None and node_module not in pruned_node_modules:
-                _apply_binary_mask_to_module_weight_and_bias(node_module, node.data['output_mask'], node.node_name)
+                _apply_binary_mask_to_module_weight_and_bias(node_module, node.data['output_mask'].tensor,
+                                                             node.node_name)
                 pruned_node_modules.append(node_module)
 
     def prepare_for_export(self):
