@@ -7,6 +7,29 @@ samples distributed with the code.  The samples demonstrate the usage of compres
 public models and datasets for three different use cases: Image Classification, Object Detection,
 and Semantic Segmentation.
 
+## New in Release 2.0.1
+Target version updates:
+- Bump target framework versions to PyTorch 1.9.1 and TensorFlow 2.4.3
+- Increased target HuggingFace transformers version for the integration patch to 4.9.1
+
+Bugfixes:
+- Fixed statistic collection for the algo mixing scenario
+- Increased pruning algorithm robustness in cases of a disconnected NNCF graph
+- Fixed the fatality of NNCF graph PNG rendering failures
+- Fixed README command lines
+- (PyTorch) Fixed a bug with quantizing shared weights multiple times
+- (PyTorch) Fixed knowledge distillation failures in CPU-only and DataParallel scenarios
+- (PyTorch) Fixed sparsity application for torch.nn.Embedding and EmbeddingBag modules
+- (PyTorch) Added GroupNorm + ReLU as a fusable pattern
+- (TensorFlow) Fixed gamma fusion handling for pruning TF BatchNorm
+- (PyTorch) Fixed pruning for models where operations have multiple convolution predecessors
+- (PyTorch) Fixed NNCFNetwork wrapper so that `self` in the calls to the wrapped model refer to the wrapper NNCFNetwork object and not to the wrapped model
+- (PyTorch) Fixed tracing of `view` operations to handle shape arguments with the `torch.Tensor` type 
+- (PyTorch) Added matmul ops to be considered for fusing
+- (PyTorch, TensorFlow) Fixed tensorboard logging for accuracy-aware scenarios
+- (PyTorch, TensorFlow) Fixed FLOPS calculation for grouped convolutions
+- (PyTorch) Fixed knowledge distillation failures for tensors of unsupported shapes - will ignore output tensors with unsupported shapes now instead of crashing.
+
 ## New in Release 2.0:
 - Added TensorFlow 2.4.2 support - NNCF can now be used to apply the compression algorithms to models originally trained in TensorFlow.
 NNCF with TensorFlow backend supports the following features:
