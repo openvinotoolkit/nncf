@@ -53,9 +53,6 @@ class UpdateWeight(UpdateParameter):
 
 
 class UpdateWeightAndBiasPruning(BaseOp):
-    def __init__(self, op):
-        super().__init__(op)
-
     def __call__(self, module, _):
         for param_name in ('weight', 'bias'):
             if not hasattr(module, param_name):

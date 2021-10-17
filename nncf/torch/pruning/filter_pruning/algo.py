@@ -56,7 +56,6 @@ from nncf.torch.graph.operator_metatypes import DepthwiseConv1dSubtype
 from nncf.torch.graph.operator_metatypes import DepthwiseConv2dSubtype
 from nncf.torch.graph.operator_metatypes import DepthwiseConv3dSubtype
 from nncf.torch.graph.operator_metatypes import LinearMetatype
-from nncf.torch.layer_utils import _NNCFModuleMixin
 from nncf.torch.layers import NNCF_GENERAL_CONV_MODULES_DICT
 from nncf.torch.layers import NNCF_LINEAR_MODULES_DICT
 from nncf.torch.layers import NNCF_PRUNING_MODULES_DICT
@@ -70,7 +69,6 @@ from nncf.torch.pruning.filter_pruning.functions import calculate_binary_mask
 from nncf.torch.pruning.filter_pruning.functions import tensor_l2_normalizer
 from nncf.torch.pruning.filter_pruning.global_ranking.legr import LeGR
 from nncf.torch.pruning.filter_pruning.layers import FilterPruningBlock
-from nncf.torch.pruning.filter_pruning.layers import inplace_apply_filter_binary_mask
 from nncf.torch.pruning.structs import PrunedModuleInfo
 from nncf.torch.pruning.utils import init_output_masks_in_graph
 from nncf.torch.structures import LeGRInitArgs, DistributedCallbacksArgs
@@ -94,7 +92,8 @@ LINEAR_LAYER_METATYPES = [
 @PT_COMPRESSION_ALGORITHMS.register('filter_pruning')
 class FilterPruningBuilder(BasePruningAlgoBuilder):
     def create_weight_pruning_operation(self, module):
-        return FilterPruningBlock(module.weight.size(module.target_weight_dim_for_compression), module.target_weight_dim_for_compression)
+        return FilterPruningBlock(module.weight.size(module.target_weight_dim_for_compression),
+                                  module.target_weight_dim_for_compression)
 
     def _build_controller(self, model: NNCFNetwork) -> PTCompressionAlgorithmController:
         return FilterPruningController(model,
@@ -669,7 +668,8 @@ class FilterPruningController(BasePruningAlgoController):
             if node.data['output_mask'] is not None and node_module not in pruned_node_modules and \
                     node.node_name in self._pruned_norms_operators:
                 # Setting masks for BN nodes
-                self._pruned_norms_operators[node.node_name][0].binary_filter_pruning_mask = node.data['output_mask'].tensor
+                self._pruned_norms_operators[node.node_name][0].binary_filter_pruning_mask = \
+                    node.data['output_mask'].tensor
                 pruned_node_modules.append(node_module)
 
     def prepare_for_export(self):

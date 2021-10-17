@@ -203,9 +203,6 @@ class BasePruningAlgoController(PTCompressionAlgorithmController):
     def set_pruning_rate(self, pruning_rate):
         raise NotImplementedError
 
-    def step(self, next_step):
-        raise NotImplementedError
-
     def zero_grads_for_pruned_modules(self):
         """
         This function registers a hook that will set the
