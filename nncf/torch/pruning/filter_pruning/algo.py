@@ -669,7 +669,7 @@ class FilterPruningController(BasePruningAlgoController):
             if node.data['output_mask'] is not None and node_module not in pruned_node_modules and \
                     node.node_name in self.other_pruning_operators:
                 # Setting masks for BN nodes
-                self.other_pruning_operators[node.node_name][0].binary_filter_pruning_mask = node.data['output_mask']
+                self.other_pruning_operators[node.node_name][0].binary_filter_pruning_mask = node.data['output_mask'].tensor
                 pruned_node_modules.append(node_module)
 
     def prepare_for_export(self):
