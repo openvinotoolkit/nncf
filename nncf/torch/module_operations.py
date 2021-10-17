@@ -57,18 +57,12 @@ class UpdateWeightAndBiasPruning(BaseOp):
         super().__init__(op)
 
     def __call__(self, module, _):
-        param_name = 'weight'
-        if not hasattr(module, param_name):
-            raise TypeError('{} should have {} attribute'.format(type(module), param_name))
-
-        value = getattr(module, param_name)
-        result = super().__call__(value, True)
-        setattr(module, param_name, result)
-
-        param_name = 'bias'
-        value = getattr(module, param_name)
-        result = super().__call__(value, False)
-        setattr(module, param_name, result)
+        for param_name in ('weight', 'bias'):
+            if not hasattr(module, param_name):
+                raise TypeError('{} should have {} attribute'.format(type(module), param_name))
+            value = getattr(module, param_name)
+            result = super().__call__(value, param_name == 'weight')
+            setattr(module, param_name, result)
 
 
 class UpdatePaddingValue(UpdateParameter):

@@ -17,7 +17,6 @@ from typing import List, Dict
 
 from nncf.torch.module_operations import UpdateWeightAndBiasPruning
 
-from nncf.torch.layer_utils import _NNCFModuleMixin
 from torch import nn
 from texttable import Texttable
 
@@ -65,6 +64,7 @@ class BasePruningAlgoBuilder(PTCompressionAlgorithmBuilder):
                                                          self.prune_downsample_convs)
 
         self.pruned_module_groups_info = []
+        self._pruned_norms_operators = {}
 
     @staticmethod
     def _set_default_params_for_ranking_type(params: Dict) -> None:
@@ -134,14 +134,12 @@ class BasePruningAlgoBuilder(PTCompressionAlgorithmBuilder):
             cluster = Cluster[PrunedModuleInfo](i, group_minfos, [n.node_id for n in group.elements])
             self.pruned_module_groups_info.add_cluster(cluster)
 
-        norms_operators = {}
         # Adding binary masks also for Batch/Group Norms to allow applying masks after propagation
-        all_norm_layers = target_model_graph.get_nodes_by_types(['batch_norm', 'group_norm'])  # NNCFNodes here
+        all_norm_layers = target_model_graph.get_nodes_by_types(['batch_norm', 'group_norm'])
         for node in all_norm_layers:
             node_name = node.node_name
             module = target_model.get_containing_module(node_name)
 
-            dim = 0
             pruning_block = self.create_weight_pruning_operation(module)
             # Hook for weights and bias
             hook = UpdateWeightAndBiasPruning(pruning_block).to(device)
@@ -153,8 +151,7 @@ class BasePruningAlgoBuilder(PTCompressionAlgorithmBuilder):
                     TransformationPriority.PRUNING_PRIORITY
                 )
             )
-            norms_operators[node_name] = (pruning_block, module)
-        self.other_operators = norms_operators
+            self._pruned_norms_operators[node_name] = (pruning_block, module)
         return insertion_commands
 
     def create_weight_pruning_operation(self, module):

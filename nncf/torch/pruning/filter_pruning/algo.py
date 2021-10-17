@@ -100,7 +100,7 @@ class FilterPruningBuilder(BasePruningAlgoBuilder):
         return FilterPruningController(model,
                                        self._prunable_types,
                                        self.pruned_module_groups_info,
-                                       self.other_operators,
+                                       self._pruned_norms_operators,
                                        self.config)
 
     def _is_pruned_module(self, module) -> bool:
@@ -120,12 +120,12 @@ class FilterPruningController(BasePruningAlgoController):
     def __init__(self, target_model: NNCFNetwork,
                  prunable_types: List[str],
                  pruned_module_groups: Clusterization[PrunedModuleInfo],
-                 other_pruning_operators,
+                 pruned_norms_operators,
                  config: NNCFConfig):
         #pylint:disable=too-many-statements
         super().__init__(target_model, prunable_types, pruned_module_groups, config)
         params = self.pruning_config.get('params', {})
-        self.other_pruning_operators = other_pruning_operators
+        self._pruned_norms_operators = pruned_norms_operators
         self.frozen = False
         self._pruning_rate = 0
         self.pruning_init = self.pruning_config.get('pruning_init', 0)
@@ -667,9 +667,9 @@ class FilterPruningController(BasePruningAlgoController):
                 continue
             node_module = self.model.get_containing_module(node.node_name)
             if node.data['output_mask'] is not None and node_module not in pruned_node_modules and \
-                    node.node_name in self.other_pruning_operators:
+                    node.node_name in self._pruned_norms_operators:
                 # Setting masks for BN nodes
-                self.other_pruning_operators[node.node_name][0].binary_filter_pruning_mask = node.data['output_mask'].tensor
+                self._pruned_norms_operators[node.node_name][0].binary_filter_pruning_mask = node.data['output_mask'].tensor
                 pruned_node_modules.append(node_module)
 
     def prepare_for_export(self):
