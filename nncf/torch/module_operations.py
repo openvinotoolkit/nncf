@@ -42,7 +42,6 @@ class UpdateParameter(BaseOp):
     def __call__(self, module, _):
         if not hasattr(module, self._param_name):
             raise TypeError('{} should have {} attribute'.format(type(module), self._param_name))
-
         value = getattr(module, self._param_name)
         result = super().__call__(value)
         setattr(module, self._param_name, result)
@@ -51,6 +50,25 @@ class UpdateParameter(BaseOp):
 class UpdateWeight(UpdateParameter):
     def __init__(self, op):
         super().__init__("weight", op)
+
+
+class UpdateWeightAndBiasPruning(BaseOp):
+    def __init__(self, op):
+        super().__init__(op)
+
+    def __call__(self, module, _):
+        param_name = 'weight'
+        if not hasattr(module, param_name):
+            raise TypeError('{} should have {} attribute'.format(type(module), param_name))
+
+        value = getattr(module, param_name)
+        result = super().__call__(value, True)
+        setattr(module, param_name, result)
+
+        param_name = 'bias'
+        value = getattr(module, param_name)
+        result = super().__call__(value, False)
+        setattr(module, param_name, result)
 
 
 class UpdatePaddingValue(UpdateParameter):

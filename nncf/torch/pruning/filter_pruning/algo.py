@@ -92,7 +92,7 @@ LINEAR_LAYER_METATYPES = [
 @PT_COMPRESSION_ALGORITHMS.register('filter_pruning')
 class FilterPruningBuilder(BasePruningAlgoBuilder):
     def create_weight_pruning_operation(self, module):
-        return FilterPruningBlock(module.weight.size(module.target_weight_dim_for_compression))
+        return FilterPruningBlock(module.weight.size(module.target_weight_dim_for_compression), module.target_weight_dim_for_compression)
 
     def _build_controller(self, model: NNCFNetwork) -> PTCompressionAlgorithmController:
         return FilterPruningController(model,
@@ -237,9 +237,6 @@ class FilterPruningController(BasePruningAlgoController):
 
     def freeze(self, freeze: bool = True):
         self.frozen = freeze
-
-    def step(self, next_step):
-        self._apply_masks()
 
     def _init_module_channels_and_shapes(self):
         self._modules_in_channels = {}  # type: Dict[NNCFNodeName, int]
@@ -440,7 +437,6 @@ class FilterPruningController(BasePruningAlgoController):
                 self.zero_grads_for_pruned_modules()
 
         self._apply_masks()
-
         if not groupwise_pruning_rates_set:
             self._pruning_rate = passed_pruning_rate
         else:
@@ -454,7 +450,7 @@ class FilterPruningController(BasePruningAlgoController):
         pruned_param_count = 0
         for minfo in self.pruned_module_groups_info.get_all_nodes():
             layer_param_count = sum(p.numel() for p in minfo.module.parameters() if p.requires_grad)
-            layer_weight_pruning_rate = self.pruning_rate_for_weight(minfo)
+            layer_weight_pruning_rate = self.pruning_rate_for_mask(minfo)
             full_param_count += layer_param_count
             pruned_param_count += layer_param_count * layer_weight_pruning_rate
         return pruned_param_count / full_param_count
@@ -639,27 +635,14 @@ class FilterPruningController(BasePruningAlgoController):
         raise RuntimeError("Can't prune model to asked flops pruning rate")
 
     def _apply_masks(self):
-        nncf_logger.debug("Applying pruning binary masks")
-
-        def _apply_binary_mask_to_module_weight_and_bias(module: torch.nn.Module,
-                                                         mask: torch.Tensor,
-                                                         node_name_for_logging: NNCFNodeName):
-            with torch.no_grad():
-                dim = module.target_weight_dim_for_compression if isinstance(module, _NNCFModuleMixin) else 0
-                # Applying the mask to weights
-                inplace_apply_filter_binary_mask(mask, module.weight, node_name_for_logging, dim)
-                # Applying the mask to biases (if they exist)
-                if module.bias is not None:
-                    inplace_apply_filter_binary_mask(mask, module.bias, node_name_for_logging)
-
+        nncf_logger.debug("Propagating pruning masks")
         # 1. Propagate masks for all modules
         graph = self.model.get_original_graph()
 
         init_output_masks_in_graph(graph, self.pruned_module_groups_info.get_all_nodes())
         MaskPropagationAlgorithm(graph, PT_PRUNING_OPERATOR_METATYPES).mask_propagation()
 
-        # TODO: THIS STEP SHOULD BE DELETED SINCE MASK APPLYING WILL BE PLACED IN PRUNING BLOCK
-        # 2. Apply the masks
+        # 2. Set the masks for Batch/Group Norms
         types_to_apply_mask = ['group_norm']
         if self.prune_batch_norms:
             types_to_apply_mask.append('batch_norm')
@@ -669,10 +652,10 @@ class FilterPruningController(BasePruningAlgoController):
             if node.node_type not in types_to_apply_mask:
                 continue
             node_module = self.model.get_containing_module(node.node_name)
-            if node.data['output_mask'] is not None and node_module not in pruned_node_modules:
+            if node.data['output_mask'] is not None and node_module not in pruned_node_modules and \
+                    node.node_name in self.other_pruning_operators:
                 # Setting masks for BN nodes
                 self.other_pruning_operators[node.node_name][0].binary_filter_pruning_mask = node.data['output_mask']
-                # _apply_binary_mask_to_module_weight_and_bias(node_module, node.data['output_mask'], node.node_name)
                 pruned_node_modules.append(node_module)
 
     def prepare_for_export(self):

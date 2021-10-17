@@ -21,9 +21,10 @@ from nncf.torch.utils import is_tracing_state, no_jit_trace
 
 @COMPRESSION_MODULES.register()
 class FilterPruningBlock(nn.Module):
-    def __init__(self, size):
+    def __init__(self, size, dim=0):
         super().__init__()
         self.register_buffer("_binary_filter_pruning_mask", torch.ones(size))
+        self.mask_applying_dim = dim
 
     @property
     def binary_filter_pruning_mask(self):
@@ -34,38 +35,19 @@ class FilterPruningBlock(nn.Module):
         with torch.no_grad():
             self._binary_filter_pruning_mask.set_(mask)
 
-    def forward(self, conv_weight):
+    def forward(self, weight, update_weight=True):
+        # In case of None weight (or bias) mask shouldn't be applied
+        if weight is None:
+            return weight
+
+        # For weights self.mask_applying_dim should be used, for bias dim=0
+        dim = 0 if not update_weight else self.mask_applying_dim
+
         if is_tracing_state():
             with no_jit_trace():
-                return conv_weight
-        return conv_weight
-
-
-@COMPRESSION_MODULES.register()
-class PruningBlock(nn.Module):
-    def __init__(self, size, name, dim):
-        super().__init__()
-        self.register_buffer("_binary_filter_pruning_mask", torch.ones(size))
-        self.name = name
-        self.dim = dim
-
-    @property
-    def binary_filter_pruning_mask(self):
-        return self._binary_filter_pruning_mask
-
-    @binary_filter_pruning_mask.setter
-    def binary_filter_pruning_mask(self, mask):
-        with torch.no_grad():
-            self._binary_filter_pruning_mask.set_(mask)
-
-    def __call__(self, module, *args):
-        new_weights = apply_filter_binary_mask(self.binary_filter_pruning_mask, module.weight,
-                                               self.name, self.dim)
-        setattr(module, 'weight', new_weights)
-        if module.bias is not None:
-            new_bias = apply_filter_binary_mask(self.binary_filter_pruning_mask, module.bias,
-                                               self.name)
-            setattr(module, 'bias', new_bias)
+                return inplace_apply_filter_binary_mask(self.binary_filter_pruning_mask, weight, dim=dim)
+        new_weight = apply_filter_binary_mask(self.binary_filter_pruning_mask, weight, dim=dim)
+        return new_weight
 
 
 def broadcast_filter_mask(filter_mask, shape, dim=0):

@@ -15,6 +15,8 @@ from functools import partial
 from functools import update_wrapper
 from typing import List, Dict
 
+from nncf.torch.module_operations import UpdateWeightAndBiasPruning
+
 from nncf.torch.layer_utils import _NNCFModuleMixin
 from torch import nn
 from texttable import Texttable
@@ -32,7 +34,7 @@ from nncf.torch.graph.transformations.commands import TransformationPriority
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.graph.transformations.commands import PTInsertionCommand
 from nncf.torch.pruning.export_helpers import PT_PRUNING_OPERATOR_METATYPES
-from nncf.torch.pruning.filter_pruning.layers import apply_filter_binary_mask, PruningBlock
+from nncf.torch.pruning.filter_pruning.layers import apply_filter_binary_mask
 from nncf.common.pruning.clusterization import Clusterization
 from nncf.common.pruning.clusterization import Cluster
 from nncf.torch.pruning.structs import PrunedModuleInfo
@@ -112,10 +114,9 @@ class BasePruningAlgoBuilder(PTCompressionAlgorithmBuilder):
                 assert self._is_pruned_module(module)
 
                 nncf_logger.info("Adding Weight Pruner in scope: {}".format(node_name))
-                # operation = self.create_weight_pruning_operation(module)
-                dim = module.target_weight_dim_for_compression if isinstance(module, _NNCFModuleMixin) else 0
-                operation = PruningBlock(module.weight.size(dim), name= node_name, dim=dim)
-                hook = operation.to(device)
+                pruning_block = self.create_weight_pruning_operation(module)
+                # Hook for weights and bias
+                hook = UpdateWeightAndBiasPruning(pruning_block).to(device)
                 insertion_commands.append(
                     PTInsertionCommand(
                         PTTargetPoint(TargetType.PRE_LAYER_OPERATION,
@@ -124,11 +125,10 @@ class BasePruningAlgoBuilder(PTCompressionAlgorithmBuilder):
                         TransformationPriority.PRUNING_PRIORITY
                     )
                 )
-
                 group_minfos.append(PrunedModuleInfo(node_name=node_name,
                                                      module_scope=module_scope,
                                                      module=module,
-                                                     operand=hook,
+                                                     operand=pruning_block,
                                                      node_id=node.node_id))
 
             cluster = Cluster[PrunedModuleInfo](i, group_minfos, [n.node_id for n in group.elements])
@@ -142,8 +142,9 @@ class BasePruningAlgoBuilder(PTCompressionAlgorithmBuilder):
             module = target_model.get_containing_module(node_name)
 
             dim = 0
-            operation = PruningBlock(module.weight.size(dim), name= node_name, dim=dim)
-            hook = operation.to(device)
+            pruning_block = self.create_weight_pruning_operation(module)
+            # Hook for weights and bias
+            hook = UpdateWeightAndBiasPruning(pruning_block).to(device)
             insertion_commands.append(
                 PTInsertionCommand(
                     PTTargetPoint(TargetType.PRE_LAYER_OPERATION,
@@ -152,7 +153,7 @@ class BasePruningAlgoBuilder(PTCompressionAlgorithmBuilder):
                     TransformationPriority.PRUNING_PRIORITY
                 )
             )
-            norms_operators[node_name] = (operation, module)
+            norms_operators[node_name] = (pruning_block, module)
         self.other_operators = norms_operators
         return insertion_commands
 
