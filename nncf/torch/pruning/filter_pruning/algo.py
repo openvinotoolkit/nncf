@@ -31,6 +31,7 @@ from nncf.common.pruning.clusterization import Clusterization
 from nncf.common.pruning.mask_propagation import MaskPropagationAlgorithm
 from nncf.common.pruning.schedulers import PRUNING_SCHEDULERS
 from nncf.common.pruning.statistics import FilterPruningStatistics
+from nncf.common.pruning.statistics import PrunedModelTheoreticalBorderline
 from nncf.common.pruning.statistics import PrunedLayerSummary
 from nncf.common.pruning.statistics import PrunedModelStatistics
 from nncf.common.pruning.utils import calculate_in_out_channels_in_uniformly_pruned_model
@@ -41,6 +42,7 @@ from nncf.common.pruning.utils import get_conv_in_out_channels
 from nncf.common.pruning.utils import get_rounded_pruned_element_number
 from nncf.common.schedulers import StubCompressionScheduler
 from nncf.common.statistics import NNCFStatistics
+from nncf.common.utils.debug import is_debug
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.config.extractors import extract_bn_adaptation_init_params
 from nncf.torch.algo_selector import PT_COMPRESSION_ALGORITHMS
@@ -61,8 +63,8 @@ from nncf.torch.layers import NNCF_PRUNING_MODULES_DICT
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.pruning.base_algo import BasePruningAlgoBuilder
 from nncf.torch.pruning.base_algo import BasePruningAlgoController
-from nncf.torch.pruning.export_helpers import PTElementwise
-from nncf.torch.pruning.export_helpers import PT_PRUNING_OPERATOR_METATYPES
+from nncf.torch.pruning.operations import PTElementwisePruningOp
+from nncf.torch.pruning.operations import PT_PRUNING_OPERATOR_METATYPES
 from nncf.torch.pruning.filter_pruning.functions import FILTER_IMPORTANCE_FUNCTIONS
 from nncf.torch.pruning.filter_pruning.functions import calculate_binary_mask
 from nncf.torch.pruning.filter_pruning.functions import tensor_l2_normalizer
@@ -110,7 +112,7 @@ class FilterPruningBuilder(BasePruningAlgoBuilder):
         return types
 
     def get_types_of_grouping_ops(self) -> List[str]:
-        return PTElementwise.get_all_op_aliases()
+        return PTElementwisePruningOp.get_all_op_aliases()
 
 
 @ADAPTIVE_COMPRESSION_CONTROLLERS.register('pt_filter_pruning')
@@ -120,6 +122,7 @@ class FilterPruningController(BasePruningAlgoController):
                  pruned_module_groups: Clusterization[PrunedModuleInfo],
                  other_pruning_operators,
                  config: NNCFConfig):
+        #pylint:disable=too-many-statements
         super().__init__(target_model, prunable_types, pruned_module_groups, config)
         params = self.pruning_config.get('params', {})
         self.other_pruning_operators = other_pruning_operators
@@ -140,12 +143,16 @@ class FilterPruningController(BasePruningAlgoController):
         self.current_flops = self.full_flops
         self.full_params_num = sum(self.nodes_params_num.values())
         self.current_params_num = self.full_params_num
+        self._pruned_layers_num = len(self.pruned_module_groups_info.get_all_nodes())
+        self._prunable_layers_num = len(self._model.get_graph().get_nodes_by_types(self._prunable_types))
+        self._max_prunable_flops, self._max_prunable_params =\
+            self._calculate_flops_and_weights_in_uniformly_pruned_model(1.)
 
         self.weights_normalizer = tensor_l2_normalizer  # for all weights in common case
         self.filter_importance = FILTER_IMPORTANCE_FUNCTIONS.get(params.get('filter_importance', 'L2'))
         self.ranking_type = params.get('interlayer_ranking_type', 'unweighted_ranking')
         self.all_weights = params.get("all_weights", False)
-        scheduler_cls = PRUNING_SCHEDULERS.get(params.get("schedule", "baseline"))
+        scheduler_cls = PRUNING_SCHEDULERS.get(params.get('schedule', 'exponential'))
         self._scheduler = scheduler_cls(self, params)
 
         if self.ranking_type == 'learned_ranking':
@@ -209,6 +216,13 @@ class FilterPruningController(BasePruningAlgoController):
         minfo.operand.binary_filter_pruning_mask = mask
 
     def statistics(self, quickly_collected_only: bool = False) -> NNCFStatistics:
+        if not quickly_collected_only and is_debug():
+            stats = PrunedModelTheoreticalBorderline(
+                self._pruned_layers_num, self._prunable_layers_num, self._max_prunable_flops,
+                self._max_prunable_params, self.full_flops, self.full_params_num)
+
+            nncf_logger.debug(stats.to_str())
+
         pruned_layers_summary = {}
         for minfo in self.pruned_module_groups_info.get_all_nodes():
             layer_name = str(minfo.module_scope)

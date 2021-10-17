@@ -18,9 +18,8 @@
     "input_info": {
       "sample_size": [1, 3, 368, 480]
     },
-
     "weighing": "mfb",
-
+    "multiprocessing_distributed" : true,
     "optimizer": {
         "type": "Adam",
         "optimizer_params": {

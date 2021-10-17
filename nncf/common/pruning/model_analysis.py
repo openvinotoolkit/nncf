@@ -17,7 +17,7 @@ from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.pruning.clusterization import Cluster
 from nncf.common.pruning.clusterization import Clusterization
-from nncf.common.pruning.export_helpers import DefaultMetaOp
+from nncf.common.pruning.operations import BasePruningOp
 from nncf.common.pruning.utils import find_next_nodes_not_of_types
 from nncf.common.pruning.utils import PruningOperationsMetatypeRegistry
 
@@ -143,7 +143,7 @@ class ModelAnalyzer:
         """
         return nncf_node.node_type in self._concat_op_metatype.get_all_op_aliases()
 
-    def get_meta_operation_by_type_name(self, type_name: str) -> DefaultMetaOp:
+    def get_meta_operation_by_type_name(self, type_name: str) -> BasePruningOp:
         """
         Returns class of metaop that corresponds to `type_name` type.
 

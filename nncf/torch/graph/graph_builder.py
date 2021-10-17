@@ -21,11 +21,13 @@ import torch
 
 from nncf.common.graph import INPUT_NOOP_METATYPES
 from nncf.common.graph import LayerName
-from nncf.common.graph.layer_attributes import Dtype
+from nncf.common.graph.layer_attributes import MultipleInputLayerAttributes
+from nncf.common.graph.utils import get_concat_axis
 from nncf.torch.dynamic_graph.graph import DynamicGraph
 from nncf.torch.dynamic_graph.graph_tracer import GraphTracer
 from nncf.torch.dynamic_graph.graph_tracer import ModelInputInfo
 from nncf.torch.graph.graph import PTNNCFGraph
+from nncf.torch.graph.operator_metatypes import CatMetatype
 from nncf.torch.graph.operator_metatypes import PT_OPERATOR_METATYPES
 
 
@@ -89,6 +91,21 @@ class GraphConverter:
                 tensor_shape=dynamic_graph_edge.activation_shape,
                 input_port_id=dynamic_graph_edge.input_port_id,
                 output_port_id=dynamic_graph_edge.output_port_id,
-                dtype=Dtype.FLOAT
+                dtype=dynamic_graph_edge.dtype
             )
+
+        for node in nncf_graph.get_all_nodes():
+            if node.metatype is CatMetatype:
+                input_edges = nncf_graph.get_input_edges(node)
+                output_edges = nncf_graph.get_output_edges(node)
+                # Case of intermediate node
+                if input_edges and output_edges:
+                    input_shapes = [edge.tensor_shape for edge in input_edges]
+                    output_shapes = [edge.tensor_shape for edge in output_edges]
+                    # Case node is stack
+                    if len(input_shapes[0]) != len(output_shapes[0]):
+                        continue
+                    axis = get_concat_axis(input_shapes, output_shapes)
+                    layer_attributes = MultipleInputLayerAttributes(axis)
+                    node.layer_attributes = layer_attributes
         return nncf_graph

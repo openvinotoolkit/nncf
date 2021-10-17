@@ -13,8 +13,6 @@
 
 import os.path as osp
 
-import tensorflow as tf
-
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.common.accuracy_aware_training.runner import BaseAccuracyAwareTrainingRunner
 from nncf.common.accuracy_aware_training.runner import BaseAdaptiveCompressionLevelTrainingRunner
@@ -27,8 +25,8 @@ class TFAccuracyAwareTrainingRunner(BaseAccuracyAwareTrainingRunner):
     """
 
     def initialize_training_loop_fns(self, train_epoch_fn, validate_fn, configure_optimizers_fn=None,
-                                     tensorboard_writer=None, log_dir=None):
-        super().initialize_training_loop_fns(train_epoch_fn, validate_fn, configure_optimizers_fn,
+                                     dump_checkpoint_fn=None, tensorboard_writer=None, log_dir=None):
+        super().initialize_training_loop_fns(train_epoch_fn, validate_fn, configure_optimizers_fn, dump_checkpoint_fn,
                                              tensorboard_writer=tensorboard_writer, log_dir=log_dir)
         self._log_dir = self._log_dir if self._log_dir is not None \
             else 'runs'
@@ -83,7 +81,8 @@ class TFAccuracyAwareTrainingRunner(BaseAccuracyAwareTrainingRunner):
             model.save_weights(best_path)
 
     def add_tensorboard_scalar(self, key, data, step):
-        tf.summary.scalar(key, data=data, step=step)
+        if self.verbose and self._tensorboard_writer is not None:
+            self._tensorboard_writer({key: data}, step)
 
     def load_best_checkpoint(self, model):
         resuming_checkpoint_path = self._best_checkpoint

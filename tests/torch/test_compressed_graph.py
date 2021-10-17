@@ -21,6 +21,7 @@ from typing import Callable, Dict, List, Tuple, Union
 import networkx as nx
 import pytest
 import torch
+from tests.torch.test_models.synthetic import MatMulDivConv
 from torch import nn
 import torch.nn.functional as F
 import torchvision
@@ -243,7 +244,7 @@ TEST_MODELS_DESC = [
     ModelDesc("ssd_vgg", test_models.ssd_vgg300, [2, 3, 300, 300]),
     ModelDesc("ssd_mobilenet", test_models.ssd_mobilenet, [2, 3, 300, 300]),
     ModelDesc("mobilenet_v2", torchvision.models.MobileNetV2, [2, 3, 32, 32]),
-    ModelDesc("mobilenet_v3_small", test_models.mobilenetv3, [2, 3, 32, 32]),
+    ModelDesc("mobilenet_v3_small", torchvision.models.mobilenet_v3_small, [2, 3, 32, 32]),
     ModelDesc("resnext29_32x4d", test_models.ResNeXt29_32x4d, [1, 3, 32, 32]),
     ModelDesc("pnasnetb", test_models.PNASNetB, [1, 3, 32, 32]),
     ModelDesc("senet18", test_models.SENet18, [1, 3, 32, 32]),
@@ -708,7 +709,8 @@ SYNTHETIC_MODEL_DESC_LIST = [
     GeneralModelDesc(model_builder=EmbeddingCatLinearModel, input_info={"sample_size": [1, 1],
                                                                   "type": "long",
                                                                   "filler": "zeros"}),
-    GeneralModelDesc(model_builder=MultiOutputSameTensorModel)
+    GeneralModelDesc(model_builder=MultiOutputSameTensorModel),
+    GeneralModelDesc(model_builder=MatMulDivConv, input_sample_sizes=([1, 1, 5, 5], [1, 1, 5, 5]))
 ]
 
 

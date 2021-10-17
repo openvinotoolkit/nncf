@@ -22,7 +22,7 @@ from nncf.torch.pruning.filter_pruning.algo import FilterPruningController
 from nncf.torch.pruning.filter_pruning.functions import l2_filter_norm
 from nncf.torch.pruning.filter_pruning.layers import FilterPruningBlock
 from nncf.torch.pruning.filter_pruning.layers import apply_filter_binary_mask
-from nncf.common.pruning.schedulers import BaselinePruningScheduler
+from nncf.common.pruning.schedulers import ExponentialPruningScheduler
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
 from tests.torch.helpers import check_correct_nncf_modules_replacement
 from tests.torch.helpers import create_ones_mock_dataloader
@@ -76,7 +76,7 @@ def test_check_default_algo_params():
     assert compression_ctrl.zero_grad is True
 
     # Check default scheduler params
-    assert isinstance(scheduler, BaselinePruningScheduler)
+    assert isinstance(scheduler, ExponentialPruningScheduler)
 
 
 @pytest.mark.parametrize(
@@ -330,7 +330,7 @@ def test_valid_masks_for_bn_after_concat(prune_bn):
     ]
     graph = pruned_model.get_original_graph()
     for i, node in enumerate(graph.get_nodes_by_types(['cat'])):
-        assert np.allclose(node.data['output_mask'].numpy(), ref_concat_masks[i])
+        assert np.allclose(node.data['output_mask'].tensor.numpy(), ref_concat_masks[i])
 
 
 @pytest.mark.parametrize('zero_grad',
@@ -468,5 +468,5 @@ def test_disconnected_graph():
     conv1 = graph.get_node_by_name('DisconectedGraphModel/NNCFConv2d[conv1]/conv2d_0')
     conv2 = graph.get_node_by_name('DisconectedGraphModel/NNCFConv2d[conv2]/conv2d_0')
 
-    assert sum(conv1.data['output_mask']) == 8
-    assert sum(conv2.data['output_mask']) == 8
+    assert sum(conv1.data['output_mask'].tensor) == 8
+    assert sum(conv2.data['output_mask'].tensor) == 8

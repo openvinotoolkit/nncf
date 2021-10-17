@@ -19,6 +19,7 @@ from torch import nn
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.compression_method_api import PTCompressionLoss
 from nncf.torch.nested_objects_traversal import NestedObjectIndex
+from nncf.common.utils.logger import logger as nncf_logger
 
 
 class KnowledgeDistillationLoss(PTCompressionLoss):
@@ -32,13 +33,18 @@ class KnowledgeDistillationLoss(PTCompressionLoss):
         super().__init__()
         original_model.train()
         if kd_type == 'softmax':
-            def kd_loss_fn(ref_outputs, compressed_model_outputs):
-                return -(nn.functional.log_softmax(compressed_model_outputs, dim=1) *
-                         nn.functional.softmax(ref_outputs, dim=1)).mean() * (compressed_model_outputs.shape[1])
+            def kd_loss_fn(ref_output: torch.Tensor, compressed_model_output: torch.Tensor):
+                if len(compressed_model_output.shape) != 2 or len(ref_output.shape) != 2:
+                    nncf_logger.debug("Incompatible shape (compressed - {}, ref - {}) of the model output tensor "
+                                      "for softmax KD - ignoring!".format(compressed_model_output.shape,
+                                                                          ref_output.shape))
+                    return torch.zeros([1]).to(compressed_model_output.device)
+                return -(nn.functional.log_softmax(compressed_model_output, dim=1) *
+                         nn.functional.softmax(ref_output, dim=1)).mean() * (compressed_model_output.shape[1])
         elif kd_type == 'mse':
-            def kd_loss_fn(ref_outputs, compressed_model_outputs):
+            def kd_loss_fn(ref_output: torch.Tensor, compressed_model_output: torch.Tensor):
                 mse = torch.nn.MSELoss()
-                return mse(ref_outputs, compressed_model_outputs)
+                return mse(ref_output, compressed_model_output)
         else:
             raise ValueError('Choose between mse/softmax options for Knowledge Distillation')
         self._kd_loss_handler = target_model.create_knowledge_distillation_loss_handler(original_model, partial(

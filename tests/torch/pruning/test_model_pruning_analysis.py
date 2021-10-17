@@ -30,9 +30,9 @@ from nncf.common.pruning.model_analysis import cluster_special_ops
 from nncf.torch.dynamic_graph.graph_tracer import ModelInputInfo
 from nncf.torch.layers import NNCF_PRUNING_MODULES_DICT
 from nncf.torch.nncf_network import NNCFNetwork
-from nncf.torch.pruning.export_helpers import PTElementwise
-from nncf.torch.pruning.export_helpers import PTIdentityMaskForwardOps
-from nncf.torch.pruning.export_helpers import PT_PRUNING_OPERATOR_METATYPES
+from nncf.torch.pruning.operations import PTElementwisePruningOp
+from nncf.torch.pruning.operations import PTIdentityMaskForwardPruningOp
+from nncf.torch.pruning.operations import PT_PRUNING_OPERATOR_METATYPES
 from nncf.common.pruning.utils import is_depthwise_conv
 from nncf.torch.pruning.filter_pruning.algo import FilterPruningBuilder
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
@@ -195,7 +195,7 @@ def test_pruning_node_selector(test_input_info_struct_: GroupPruningModulesTestS
     prune_first, prune_last, prune_downsample = test_input_info_struct_.prune_params
 
     pruning_operations = [v.op_func_name for v in NNCF_PRUNING_MODULES_DICT]
-    grouping_operations = PTElementwise.get_all_op_aliases()
+    grouping_operations = PTElementwisePruningOp.get_all_op_aliases()
     from nncf.common.pruning.pruning_node_selector import PruningNodeSelector
     pruning_node_selector = PruningNodeSelector(PT_PRUNING_OPERATOR_METATYPES,
                                                 pruning_operations,
@@ -264,7 +264,7 @@ def test_group_special_nodes(test_special_ops_struct: GroupSpecialModulesTestStr
 
     special_ops_clusterization = cluster_special_ops(nncf_model.get_original_graph(),
                                                      algo_builder.get_types_of_grouping_ops(),
-                                                     PTIdentityMaskForwardOps.get_all_op_aliases())
+                                                     PTIdentityMaskForwardPruningOp.get_all_op_aliases())
 
     for ref_cluster in test_special_ops_struct.eltwise_clusters:
         cluster = special_ops_clusterization.get_cluster_containing_element(ref_cluster[0])

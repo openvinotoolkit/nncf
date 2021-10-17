@@ -86,7 +86,7 @@ GLOBAL_CONFIG = {
                             'execution_arg': {'multiprocessing-distributed'},
                             'expected_accuracy': 68.11,
                             'weights': 'mobilenet_v2_32x32_cifar100_68.11.pth',
-                            'absolute_tolerance_train': 1.0,
+                            'absolute_tolerance_train': 1.5,
                             'absolute_tolerance_eval': 2e-2
                         },
                     }

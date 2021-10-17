@@ -75,6 +75,17 @@ def create_conv(in_channels, out_channels, kernel_size, weight_init=1, bias_init
     return conv
 
 
+def create_grouped_conv(in_channels, out_channels, kernel_size, groups,
+                        weight_init=1, bias_init=0, padding=0, stride=1):
+    if in_channels % groups != 0 or out_channels % groups != 0:
+        raise RuntimeError('Cannot create grouped convolution. '
+                           'Either `in_channels` or `out_channels` are not divisible by `groups`')
+    conv = nn.Conv2d(in_channels, out_channels, kernel_size, groups=groups, padding=padding, stride=stride)
+    fill_conv_weight(conv, weight_init)
+    fill_bias(conv, bias_init)
+    return conv
+
+
 def create_depthwise_conv(channels, kernel_size, weight_init, bias_init, padding=0, stride=1):
     conv = nn.Conv2d(channels, channels, kernel_size, padding=padding, stride=stride, groups=channels)
     fill_conv_weight(conv, weight_init)

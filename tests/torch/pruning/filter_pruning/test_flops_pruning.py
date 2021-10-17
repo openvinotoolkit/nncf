@@ -13,6 +13,7 @@
 import pytest
 
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
+from tests.torch.pruning.helpers import GroupedConvolutionModel
 from tests.torch.pruning.helpers import PruningTestModel
 from tests.torch.pruning.helpers import PruningTestModelSharedConvs
 from tests.torch.pruning.helpers import PruningTestWideModelConcat
@@ -77,23 +78,25 @@ def test_init_params_for_flops_calculation(model, ref_params):
 
 
 @pytest.mark.parametrize(
-    ("model", "all_weights", "ref_full_flops", "ref_current_flops", "ref_sizes"),
+    ("model", "all_weights", "pruning_flops_target", "ref_full_flops", "ref_current_flops", "ref_sizes"),
     (
-        (PruningTestWideModelConcat, False, 671154176, 402311168, [400, 792, 792, 1584]),
-        (PruningTestWideModelEltwise, False, 268500992, 157402112, [392, 784, 784, 784]),
-        (PruningTestWideModelConcat, True, 671154176, 402578304, [441, 821, 822, 1473]),
-        (PruningTestWideModelEltwise, True, 268500992, 161036544, [393, 855, 855, 685]),
-        (PruningTestModelSharedConvs, True, 461438976, 276861184, [373, 827, 827]),
-        (PruningTestModelSharedConvs, False, 461438976, 270498816, [392, 784, 784])
+        (PruningTestWideModelConcat, False, 0.4, 671154176, 402311168, [400, 792, 792, 1584]),
+        (PruningTestWideModelEltwise, False, 0.4, 268500992, 157402112, [392, 784, 784, 784]),
+        (PruningTestWideModelConcat, True, 0.4, 671154176, 402578304, [441, 821, 822, 1473]),
+        (PruningTestWideModelEltwise, True, 0.4, 268500992, 161036544, [393, 855, 855, 685]),
+        (PruningTestModelSharedConvs, True, 0.4, 461438976, 276861184, [373, 827, 827]),
+        (PruningTestModelSharedConvs, False, 0.4, 461438976, 270498816, [392, 784, 784]),
+        (GroupedConvolutionModel, False, 0.0, 11243520, 11243520, [])
     )
 )
-def test_flops_calulation_for_spec_layers(model, all_weights, ref_full_flops, ref_current_flops, ref_sizes):
+def test_flops_calulation_for_spec_layers(model, all_weights, pruning_flops_target,
+                                          ref_full_flops, ref_current_flops, ref_sizes):
     # Need check models with large size of layers because in other case
     # different value of pruning rate give the same final size of model
     config = get_basic_pruning_config([1, 1, 8, 8])
     config['compression']['algorithm'] = 'filter_pruning'
-    config['compression']['pruning_init'] = 0.4
-    config['compression']['params']['pruning_flops_target'] = 0.4
+    config['compression']['pruning_init'] = pruning_flops_target
+    config['compression']['params']['pruning_flops_target'] = pruning_flops_target
     config['compression']['params']['prune_first_conv'] = True
     config['compression']['params']['prune_last_conv'] = True
     config['compression']['params']['all_weights'] = all_weights

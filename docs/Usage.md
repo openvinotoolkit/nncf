@@ -338,13 +338,24 @@ def configure_optimizers_fn():
     of an optimizer instance and an LR scheduler instance (replace with None if the latter
     is not applicable).
     '''
+
+def dump_checkpoint_fn(model, compression_controller, accuracy_aware_runner, save_dir):
+    '''
+    An (optional) function that allows a user to define how to save the model's checkpoint.
+    Training loop will call this function instead own dump_checkpoint function and pass 
+    `model`, `compression_controller`, `accuracy_aware_runner` and `save_dir` to it as arguments.
+    The user can save the states of the objects according to their own needs. 
+    `save_dir` is a directory that Accuracy-Aware pipeline created to store log information.
+    '''
 ```
+
 Once the above functions are defined, you could pass them to the `run` method of the earlier created training loop :
 ```python
 
 model = training_loop.run(model,
                           train_epoch_fn=train_epoch_fn,
                           validate_fn=validate_fn,
-                          configure_optimizers_fn=configure_optimizers_fn)
+                          configure_optimizers_fn=configure_optimizers_fn,
+                          dump_checkpoint_fn=dump_checkpoint_fn)
 ```
 The above call executes the acccuracy-aware training loop and return the compressed model. For more details on how to use the accuracy-aware training loop functionality of NNCF, please refer to its [documentation](./accuracy_aware_model_training/AdaptiveCompressionTraining.md).

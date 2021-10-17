@@ -12,9 +12,11 @@
 """
 from copy import deepcopy
 
+from nncf.common.graph import Dtype
 from nncf.common.graph.definitions import MODEL_INPUT_OP_NAME
 from nncf.common.graph.definitions import MODEL_OUTPUT_OP_NAME
 from nncf.common.graph.definitions import NNCFGraphNodeType
+from nncf.common.graph.layer_attributes import MultipleInputLayerAttributes
 from typing import List
 from typing import Tuple
 
@@ -33,6 +35,7 @@ from nncf.torch.dynamic_graph.context import get_current_context
 from nncf.torch.dynamic_graph.context import no_nncf_trace
 from nncf.torch.dynamic_graph.context import TracingContext
 from nncf.torch.graph.graph_builder import GraphBuilder
+from nncf.torch.graph.operator_metatypes import CatMetatype
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
 from tests.torch.helpers import register_bn_adaptation_init_args
 from tests.torch.test_compressed_graph import get_basic_quantization_config
@@ -199,6 +202,54 @@ def test_activation_shape_tracing(input_shape: Tuple):
         output_tensor_shapes = [x.tensor_shape for x in output_edges]
         assert input_tensor_shapes == ref_input_shapes, "Failed for node ID: {}".format(node_id)
         assert output_tensor_shapes == ref_output_shapes, "Failed for node ID: {}".format(node_id)
+
+
+class ModelForTestWithReshapeFlattenAndConcat(ModelForTest):
+    def forward(self, x):
+        y = super().forward(x)
+        size = y.size()
+        y = y.view(size + (1, 1))
+
+        y_copy = torch.ones_like(y)
+        y = torch.stack([y, y_copy])
+
+        y_copy = torch.ones_like(y)
+        y = torch.cat([y, y_copy], -1)
+
+        y = torch.flatten(y)
+        _ = y.view(-1)
+
+        y_copy = torch.ones_like(y)
+        y = torch.stack([y, y_copy])
+
+        y_copy = torch.ones_like(y)
+        y = torch.cat([y, y_copy], -1)
+        return y
+
+
+@pytest.mark.parametrize("input_shape", input_shapes)
+def test_concat_attributes_saved_during_graph_building(input_shape):
+    model = ModelForTestWithReshapeFlattenAndConcat()
+    input_info = ModelInputInfo(input_shape)
+    graph_builder = GraphBuilder(create_dummy_forward_fn([input_info, ], with_input_tracing=True,
+                                                         with_output_tracing=True))
+    graph = graph_builder.build_graph(model)
+    cat_nodes_with_attributes = {
+        'ModelForTestWithReshapeFlattenAndConcat/cat_0': {'axis': 1},
+        'ModelForTestWithReshapeFlattenAndConcat/cat_1': {'axis': 6},
+        'ModelForTestWithReshapeFlattenAndConcat/cat_2': {'axis': 1},
+        'ModelForTestWithReshapeFlattenAndConcat/stack_0': None,
+        'ModelForTestWithReshapeFlattenAndConcat/stack_1': None
+    }
+
+    for node in graph.get_all_nodes():
+        if node.metatype is CatMetatype:
+            assert node.node_name in cat_nodes_with_attributes
+            if isinstance(node.layer_attributes, MultipleInputLayerAttributes):
+                assert node.layer_attributes.axis == cat_nodes_with_attributes[node.node_name]['axis']
+            else:
+                assert node.layer_attributes is None
+                assert cat_nodes_with_attributes[node.node_name] is None
 
 
 TEST_KEYWORD_1 = "keyword1"
@@ -433,3 +484,30 @@ def test_get_all_nodes():
     graph = builder.build_graph(model)
     test_list = [node_name.split(' ', 1)[1] for node_name in graph.get_all_node_keys()]
     assert ref_list == test_list
+
+
+class ModelWithIntegerPaths(torch.nn.Module):
+    INPUT_SHAPE = [2, 2, 2, 2]
+
+    def __init__(self):
+        super().__init__()
+        self.conv1 = torch.nn.Conv2d(2, 2, 1)
+        self.linear = torch.nn.Linear(1, 1, 1)
+
+    def forward(self, x: torch.Tensor):
+        x = self.conv1(x)
+        sz = torch.tensor(x.shape).to(x.device)
+        sz_tensor = torch.cat([sz])
+        idx_tensor = sz_tensor // sz_tensor
+        x = x[idx_tensor] * torch.ones([1, 1]).to(x.device)
+        x = self.linear(x)
+        return x
+
+
+def test_integer_path_marking():
+    input_infos = [ModelInputInfo(ModelWithIntegerPaths.INPUT_SHAPE), ]
+    builder = GraphBuilder(create_dummy_forward_fn(input_infos))
+    nncf_graph = builder.build_graph(ModelWithIntegerPaths(), input_infos=input_infos)
+    edges = list(nncf_graph.get_all_edges())
+    num_integer_edges = sum([1 for edge in edges if edge.dtype is Dtype.INTEGER])
+    assert num_integer_edges == 2  # cat -> __floordiv__ and __floordiv__ -> __getitem__

@@ -128,28 +128,28 @@ class TestSotaCheckpoints:
                                   cwd=cwd, env=env) as result:
             exit_code = result.poll()
 
-        def process_line(decoded_line: str, error_lines: List):
-            if re.search('Error|(No module named)', decoded_line):
-                # WA for tensorboardX multiprocessing bug (https://github.com/lanpa/tensorboardX/issues/598)
-                if not re.search('EOFError', decoded_line):
-                    error_lines.append(decoded_line)
-            if decoded_line != "":
-                print(decoded_line)
+            def process_line(decoded_line: str, error_lines: List):
+                if re.search('Error|(No module named)', decoded_line):
+                    # WA for tensorboardX multiprocessing bug (https://github.com/lanpa/tensorboardX/issues/598)
+                    if not re.search('EOFError', decoded_line):
+                        error_lines.append(decoded_line)
+                if decoded_line != "":
+                    print(decoded_line)
 
-        error_lines = []
-        while exit_code is None:
-            decoded_line = result.stdout.readline().decode('utf-8').strip()
-            process_line(decoded_line, error_lines)
-            exit_code = result.poll()
+            error_lines = []
+            while exit_code is None:
+                decoded_line = result.stdout.readline().decode('utf-8').strip()
+                process_line(decoded_line, error_lines)
+                exit_code = result.poll()
 
-        # The process may exit before the first process_line is executed, handling this case here
-        outs, _ = result.communicate()
-        remaining_lines = outs.decode('utf-8').strip().split('\n')
-        for output_line in remaining_lines:
-            process_line(output_line, error_lines)
+            # The process may exit before the first process_line is executed, handling this case here
+            outs, _ = result.communicate()
+            remaining_lines = outs.decode('utf-8').strip().split('\n')
+            for output_line in remaining_lines:
+                process_line(output_line, error_lines)
 
-        err_string = "\n".join(error_lines) if error_lines else None
-        return exit_code, err_string
+            err_string = "\n".join(error_lines) if error_lines else None
+            return exit_code, err_string
 
     # pylint:disable=unused-variable
     @staticmethod
@@ -507,28 +507,45 @@ class TestSotaCheckpoints:
             pytest.fail(err_str)
 
     @pytest.mark.train
-    @pytest.mark.parametrize("config_name_, expected_, metric_type_, dataset_name_, _sample_type_, model_name_",
-                             train_param_list, ids=train_ids_list)
-    def test_train(self, sota_data_dir, config_name_, expected_, metric_type_, dataset_name_, _sample_type_,
-                   model_name_):
+    @pytest.mark.parametrize("eval_test_struct", param_list, ids=ids_list)
+    def test_train(self, sota_data_dir, sota_checkpoints_dir, eval_test_struct: EvalRunParamsStruct):
         if sota_data_dir is None:
             pytest.skip('Path to datasets is not set')
         test = 'train'
-        metric_file_name = self.get_metric_file_name(model_name=model_name_)
-        metrics_dump_file_path = PROJECT_ROOT / metric_file_name
-        log_dir = PROJECT_ROOT / "logs"
-        cmd = self.CMD_FORMAT_STRING.format(sys.executable, 'train', conf=config_name_, dataset=sota_data_dir,
-                                            data_name=dataset_name_, sample_type=_sample_type_,
+        self.color_dict[eval_test_struct.model_name_] = BG_COLOR_RED_HEX
+        metric_file_name = self.get_metric_file_name(model_name=eval_test_struct.model_name_)
+        metrics_dump_file_path = pytest.metrics_dump_path / metric_file_name
+        log_dir = pytest.metrics_dump_path / 'logs'
+        checkpoint_dir = pytest.metrics_dump_path / 'checkpoints'
+        cmd = self.CMD_FORMAT_STRING.format(sys.executable, 'train', conf=eval_test_struct.config_name_,
+                                            dataset=sota_data_dir, data_name=eval_test_struct.dataset_name_,
+                                            sample_type=eval_test_struct.sample_type_,
                                             metrics_dump_file_path=metrics_dump_file_path, log_dir=log_dir)
-
-        _, err_str = self.run_cmd(cmd, cwd=PROJECT_ROOT)
-        metric_value = self.read_metric(str(metrics_dump_file_path))
-        diff_target = round((metric_value - expected_), 2)
-        self.row_dict[model_name_] = self.make_table_row(test, expected_, metric_type_, model_name_, err_str,
-                                                         metric_value, diff_target)
-        self.color_dict[model_name_], is_accuracy_within_thresholds = self.threshold_check(err_str is not None,
-                                                                                           diff_target)
-        assert is_accuracy_within_thresholds
+        cmd += f' --checkpoint-save-dir {checkpoint_dir}'
+        if eval_test_struct.reference_ is not None:
+            fp32_metric = self.ref_fp32_dict[str(eval_test_struct.reference_)]
+            weights_path = Path(sota_checkpoints_dir) / Path(str(eval_test_struct.reference_ + '.pth'))
+            if os.path.isfile(weights_path):
+                cmd += f' --weights {weights_path}'
+            exit_code, err_str = self.run_cmd(cmd, cwd=PROJECT_ROOT)
+            is_ok = (exit_code == 0 and metrics_dump_file_path.exists())
+            if is_ok:
+                metric_value = self.read_metric(str(metrics_dump_file_path))
+                diff_fp32 = round((metric_value - fp32_metric), 2)
+                if -1 < diff_fp32:
+                    self.color_dict[eval_test_struct.model_name_] = BG_COLOR_GREEN_HEX
+            else:
+                metric_value = None
+                diff_fp32 = None
+            self.row_dict[eval_test_struct.model_name_] = self.make_table_row(test,
+                                                                              fp32_metric,
+                                                                              eval_test_struct.metric_type_,
+                                                                              eval_test_struct.model_name_,
+                                                                              err_str,
+                                                                              metric_value,
+                                                                              diff_fp32)
+            assert self.color_dict[eval_test_struct.model_name_] == BG_COLOR_GREEN_HEX
+        else: pytest.skip('Only compressed models must be trained')
 
 
 Tsc = TestSotaCheckpoints
@@ -563,5 +580,5 @@ def results(sota_data_dir):
             header = ["Model", "Metrics type", "Expected", "Measured", "Reference FP32", "Diff FP32", "Diff Expected",
                       "Error"]
         else:
-            header = ["Model", "Metrics type", "Expected", "Measured", "Diff Expected", "Error"]
+            header = ["Model", "Metrics type", "Reference FP32", "Measured", "Diff FP32", "Error"]
         Tsc().write_results_table(header, pytest.metrics_dump_path)

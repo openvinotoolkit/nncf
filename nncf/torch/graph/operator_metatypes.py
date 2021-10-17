@@ -275,6 +275,7 @@ class LayerNormMetatype(PTOperatorMetatype):
     torch_nn_functional_patch_spec = PTPatchSpec([name])
     hw_config_names = [HWConfigOpName.MVN]
 
+
 @PT_OPERATOR_METATYPES.register()
 class GroupNormMetatype(PTOperatorMetatype):
     name = "group_norm"
@@ -285,6 +286,12 @@ class GroupNormMetatype(PTOperatorMetatype):
 @PT_OPERATOR_METATYPES.register()
 class GELUMetatype(PTOperatorMetatype):
     name = "gelu"
+    torch_nn_functional_patch_spec = PTPatchSpec([name])
+
+
+@PT_OPERATOR_METATYPES.register()
+class SILUMetatype(PTOperatorMetatype):
+    name = "silu"
     torch_nn_functional_patch_spec = PTPatchSpec([name])
 
 
@@ -334,6 +341,14 @@ class DivMetatype(PTOperatorMetatype):
                                          "__idiv__",
                                          "__truediv__"])
     hw_config_names = [HWConfigOpName.DIVIDE]
+
+
+@PT_OPERATOR_METATYPES.register()
+class FloorDivMetatype(PTOperatorMetatype):
+    name = "floordiv"
+    torch_tensor_patch_spec = PTPatchSpec(["__floordiv__",
+                                           "__ifloordiv__",
+                                           "__rfloordiv__"])
 
 
 @PT_OPERATOR_METATYPES.register()
