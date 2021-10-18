@@ -148,7 +148,7 @@ def patch_torch_operators():
     function_names = get_all_functions_from_namespace(F)
     variable_function_names = get_all_functions_from_namespace(torch._C._VariableFunctions)
     tensor_function_names = get_all_functions_from_namespace(torch.Tensor)
-    ignored_functions = ['ones', 'ones_like', 'zeros', 'cuda', 'dim', 'view', 'size', 'shape']
+    ignored_functions = ['ones', 'ones_like', 'zeros', 'cuda', 'dim', 'view', 'size', 'shape', 'has_names', '_reduce_ex_internal', '__reduce_ex__', 'storage', 'storage_offset', 'stride', 'rand', 'random_', 'item', 'numpy', 'cpu', 'randn', 'randn_like']
 
     for ignored_function in ignored_functions:
         if ignored_function in function_names:
