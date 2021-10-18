@@ -78,21 +78,21 @@ class SymbolicMask(NNCFTensor):
 
 
 class SymbolicMaskPropagationAlgorithm(MaskPropagationAlgorithm):
-    def symbolic_mask_propagation(self, prunable_layers: List[str]) -> Dict[int, bool]:
+    def symbolic_mask_propagation(self, prunable_layers: List[str], can_prune_after_analisys: Dict[int, bool]) -> Dict[int, bool]:
         """
         Mask propagation in graph:
         to propagate masks run method mask_propagation (of metaop of current node) on all nodes in topological order.
         """
-        can_prune = {node.node_id: None for node in self._graph.get_all_nodes()
-                     if node.node_type in prunable_layers and not is_depthwise_conv(node)}
+        can_prune_convs = {node.node_id: None for node in self._graph.get_all_nodes()
+                           if node.node_type in prunable_layers and not is_depthwise_conv(node)}
         for node in self._graph.topological_sort():
-            if node.node_id in can_prune:
+            if node.node_id in can_prune_convs and can_prune_after_analisys[node.node_id]:
                 # Set output mask
                 node.data['output_mask'] = SymbolicMask(np.empty(node.layer_attributes.out_channels), [node.node_id])
             # Propagate masks
             cls = self.get_meta_operation_by_type_name(node.node_type)
             cls.mask_propagation(node, self._graph)
-            if node.node_id in can_prune:
+            if node.node_id in can_prune_convs:
                 # Check input mask producers
                 if node.data['input_masks'][0] is not None:
                     input_masks = node.data['input_masks']
@@ -102,17 +102,19 @@ class SymbolicMaskPropagationAlgorithm(MaskPropagationAlgorithm):
                         continue
 
                     for producer in input_mask.mask_producers:
-                        previously_dims_equal = True if can_prune[producer] is None else can_prune[producer]
+                        previously_dims_equal = True if can_prune_convs[producer] is None \
+                            else can_prune_convs[producer]
+
                         is_dims_equal = node.layer_attributes.in_channels == input_mask.tensor.shape[0]
-                        can_prune[producer] = previously_dims_equal and is_dims_equal
+                        can_prune_convs[producer] = previously_dims_equal and is_dims_equal
 
         # Clean nodes masks
-        for idx in can_prune:
+        for idx in can_prune_convs:
             node = self._graph.get_node_by_id(idx)
             node.data['input_masks'] = None
             node.data['output_mask'] = None
 
-        return {k: bool(v) for k, v in can_prune.items()}
+        return {k: bool(v) for k, v in can_prune_convs.items()}
 
 
 def get_position(nodes_list: List[NNCFNode], idx: int):
@@ -291,7 +293,7 @@ class ModelAnalyzer:
 
     def check_pruned_dimensions(self):
         mask_prop_algo = SymbolicMaskPropagationAlgorithm(self.graph, self._pruning_operator_metatypes)
-        can_prune_by_dim = mask_prop_algo.symbolic_mask_propagation(self._prune_operations)
+        can_prune_by_dim = mask_prop_algo.symbolic_mask_propagation(self._prune_operations, self.can_prune)
         diff = [idx for idx in can_prune_by_dim if not can_prune_by_dim[idx] and self.can_prune[idx]]
         can_prune_for_prunable_layers = \
             {node_id: self.can_prune[node_id] and can_prune_by_dim[node_id] for node_id in can_prune_by_dim}
