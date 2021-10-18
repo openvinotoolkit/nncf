@@ -77,3 +77,28 @@ class NNCFBaseTensorProcessor:
 
         :param tensors: List of tensors to check pairwise equality.
         """
+
+    @classmethod
+    @abstractmethod
+    def repeat(cls, tensor: NNCFTensor, repeats: int) -> NNCFTensor:
+        """
+        TODO
+        Args:
+            tensor:
+            repeats:
+
+        Returns:
+
+        """
+
+    @classmethod
+    @abstractmethod
+    def elementwise_output_mask_from_input_masks(cls, tensors: List[NNCFTensor]) -> NNCFTensor:
+        """
+        TODO
+        Args:
+            tensors:
+
+        Returns:
+
+        """

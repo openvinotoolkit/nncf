@@ -45,6 +45,11 @@ class TFNNCFTensorProcessor(NNCFBaseTensorProcessor):
         ret_tensor = tf.repeat(tensor, repeats=repeats)
         return TFNNCFTensor(ret_tensor)
 
+    @classmethod
+    def elementwise_output_mask_from_input_masks(cls, tensors: List[NNCFTensor]) -> NNCFTensor:
+        cls.check_all_close(tensors)
+        return tensors[0]
+
 
 class TFNNCFTensor(NNCFTensor):
     """

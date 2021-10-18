@@ -213,12 +213,12 @@ class ElementwisePruningOp(BasePruningOp):
     @classmethod
     def mask_propagation(cls, node: NNCFNode, graph: NNCFGraph) -> None:
         input_masks = get_input_masks(node, graph)
-
-        if input_masks[0] is not None:
-            input_masks[0].tensor_processor.check_all_close(input_masks)
+        output_mask = input_masks[0]
+        if output_mask is not None:
+            output_mask = output_mask.tensor_processor.elementwise_output_mask_from_input_masks(input_masks)
 
         node.data['input_masks'] = input_masks
-        node.data['output_mask'] = input_masks[0]
+        node.data['output_mask'] = output_mask
 
 
 class ReshapePruningOp(BasePruningOp):

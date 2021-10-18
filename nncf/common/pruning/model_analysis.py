@@ -23,6 +23,7 @@ from nncf.common.pruning.clusterization import Cluster
 from nncf.common.pruning.clusterization import Clusterization
 from nncf.common.pruning.operations import BasePruningOp
 from nncf.common.pruning.mask_propagation import MaskPropagationAlgorithm
+from nncf.common.pruning.utils import is_depthwise_conv
 from nncf.common.pruning.utils import find_next_nodes_not_of_types
 from nncf.common.pruning.utils import PruningOperationsMetatypeRegistry
 
@@ -48,12 +49,18 @@ class SymbolicMaskProcessor(NNCFBaseTensorProcessor):
     @classmethod
     def check_all_close(cls, tensors: List[NNCFTensor]) -> None:
         for input_mask in tensors[1:]:
-            np.testing.assert_allclose(tensors[0].tensor, input_mask.tensor)
+            assert input_mask.tensor.shape == tensors[0].tensor.shape
 
     @classmethod
     def repeat(cls, tensor: NNCFTensor, repeats: int) -> NNCFTensor:
         ret_tensor = np.repeat(tensor.tensor, repeats)
         return SymbolicMask(ret_tensor, tensor.mask_producers)
+
+    @classmethod
+    def elementwise_output_mask_from_input_masks(cls, tensors: List[NNCFTensor]) -> NNCFTensor:
+        cls.check_all_close(tensors)
+        producers = list(set([p for t in tensors for p in t.mask_producers]))
+        return SymbolicMask(tensors[0].tensor, producers)
 
 
 class SymbolicMask(NNCFTensor):
@@ -76,16 +83,16 @@ class SymbolicMaskPropagationAlgorithm(MaskPropagationAlgorithm):
         Mask propagation in graph:
         to propagate masks run method mask_propagation (of metaop of current node) on all nodes in topological order.
         """
-        can_prune = {idx: None for idx in self._graph.get_all_node_ids()
-                     if self._graph.get_node_by_id(idx).node_type in prunable_layers}
+        can_prune = {node.node_id: None for node in self._graph.get_all_nodes()
+                     if node.node_type in prunable_layers and not is_depthwise_conv(node)}
         for node in self._graph.topological_sort():
-            if node.node_type in prunable_layers:
+            if node.node_id in can_prune:
                 # Set output mask
                 node.data['output_mask'] = SymbolicMask(np.empty(node.layer_attributes.out_channels), [node.node_id])
             # Propagate masks
             cls = self.get_meta_operation_by_type_name(node.node_type)
             cls.mask_propagation(node, self._graph)
-            if node.node_type in prunable_layers:
+            if node.node_id in can_prune:
                 # Check input mask producers
                 if node.data['input_masks'][0] is not None:
                     input_masks = node.data['input_masks']
@@ -285,6 +292,7 @@ class ModelAnalyzer:
     def check_pruned_dimensions(self):
         mask_prop_algo = SymbolicMaskPropagationAlgorithm(self.graph, self._pruning_operator_metatypes)
         can_prune_by_dim = mask_prop_algo.symbolic_mask_propagation(self._prune_operations)
+        diff = [idx for idx in can_prune_by_dim if not can_prune_by_dim[idx] and self.can_prune[idx]]
         can_prune_for_prunable_layers = \
             {node_id: self.can_prune[node_id] and can_prune_by_dim[node_id] for node_id in can_prune_by_dim}
         self.can_prune.update(can_prune_for_prunable_layers)
