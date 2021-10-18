@@ -136,6 +136,18 @@ class NNCFBatchNorm(_NNCFModuleMixin, nn.BatchNorm2d):
         return nncf_bn
 
 
+class NNCFGroupNorm(_NNCFModuleMixin, nn.GroupNorm):
+    op_func_name = "group_norm"
+
+    @staticmethod
+    def from_module(module):
+        assert module.__class__.__name__ == nn.GroupNorm.__name__
+
+        nncf_bn = NNCFGroupNorm(module.num_features)
+        dict_update(nncf_bn.__dict__, module.__dict__)
+        return nncf_bn
+
+
 class NNCFConvTranspose2d(_NNCFModuleMixin, nn.ConvTranspose2d):
     op_func_name = "conv_transpose2d"
     target_weight_dim_for_compression = 1
@@ -222,7 +234,8 @@ NNCF_MODULES_DICT = {
     NNCFConv2d: nn.Conv2d,
     NNCFConv3d: nn.Conv3d,
     NNCFLinear: nn.Linear,
-    NNCFBatchNorm:nn.BatchNorm2d,
+    NNCFBatchNorm : nn.BatchNorm2d,
+    NNCFGroupNorm : nn.GroupNorm,
     NNCFConvTranspose2d: nn.ConvTranspose2d,
     NNCFConvTranspose3d: nn.ConvTranspose3d,
     NNCFEmbedding: nn.Embedding,

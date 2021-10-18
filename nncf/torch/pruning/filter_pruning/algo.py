@@ -449,7 +449,7 @@ class FilterPruningController(BasePruningAlgoController):
             if self.zero_grad:
                 self.zero_grads_for_pruned_modules()
 
-        self._apply_masks()
+        self._propagate_masks()
         if not groupwise_pruning_rates_set:
             self._pruning_rate = passed_pruning_rate
         else:
@@ -647,7 +647,7 @@ class FilterPruningController(BasePruningAlgoController):
             cur_num += 1
         raise RuntimeError("Can't prune model to asked flops pruning rate")
 
-    def _apply_masks(self):
+    def _propagate_masks(self):
         nncf_logger.debug("Propagating pruning masks")
         # 1. Propagate masks for all modules
         graph = self.model.get_original_graph()
@@ -676,7 +676,7 @@ class FilterPruningController(BasePruningAlgoController):
         """
         Applies pruning masks to layer weights before exporting the model to ONNX.
         """
-        self._apply_masks()
+        self._propagate_masks()
 
         pruned_layers_stats = self.get_stats_for_pruned_modules()
         nncf_logger.debug('Pruned layers statistics: \n%s', pruned_layers_stats.draw())
