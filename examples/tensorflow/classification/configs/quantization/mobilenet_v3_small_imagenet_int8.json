@@ -6,35 +6,38 @@
     },
 
     "batch_size": 256,
-    "epochs": 30,
+    "epochs": 100,
 
     "optimizer": {
         "type": "Adam",
         "schedule_type": "piecewise_constant",
         "schedule_params": {
-            "boundaries": [10, 20],
-            "values": [1e-4, 1e-5, 1e-6]
+            "boundaries": [50, 80, 95],
+            "values": [1e-3, 1e-4, 1e-5, 1e-6]
         }
     },
 
     "dataset": "imagenet2012",
     "dataset_type": "tfds",
 
-    "compression": {
+    "compression": [{
         "algorithm": "quantization",
         "preset": "mixed",
         "initializer": {
             "batchnorm_adaptation": {
                 "num_bn_adaptation_samples": 2048
             }
-        },
-        "weights": {
-           "bits": 8,
-           "per_channel": true
-       },
-        "activations": {
-            "bits": 8,
-            "per_channel": false
         }
-   }
+    },
+        {
+            "algorithm": "filter_pruning",
+            "pruning_init": 0.01,
+            "params": {
+                "prune_downsample_convs": true,
+                "schedule": "exponential",
+                "pruning_flops_target": 0.1,
+                "pruning_steps": 20,
+                "filter_importance": "geometric_median"
+        }}
+    ]
 }
