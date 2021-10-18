@@ -104,7 +104,7 @@ def patch_namespace_by_patchspec(namespace, patchspec: 'PatchSpec'):
         patch_namespace_opname(namespace, patched_op_info)
 
 
-def get_all_functions_from_namespace(namespace) -> List[object]:
+def get_all_functions_from_namespace(namespace, do_filter: bool = True) -> List[object]:
     import inspect
 
     def remove_private_functions(names: List[str]) -> List[str]:
@@ -122,8 +122,10 @@ def get_all_functions_from_namespace(namespace) -> List[object]:
         if inspect.isfunction(member[1]) or inspect.isbuiltin(member[1]) or inspect.ismethod(
                 member[1]) or inspect.ismethoddescriptor(member[1]):
             all_torch_function_names.append(member[0])
-    filtered_function_names = remove_private_functions(all_torch_function_names)
-    return filtered_function_names
+    if do_filter:
+        filtered_function_names = remove_private_functions(all_torch_function_names)
+        return filtered_function_names
+    return all_torch_function_names
 
 
 def patch_torch_operators():
@@ -143,10 +145,10 @@ def patch_torch_operators():
     import torch.nn.functional as F
     import torch
     from nncf.torch.graph.operator_metatypes import get_operator_metatypes
-    function_names= get_all_functions_from_namespace(F)
+    function_names = get_all_functions_from_namespace(F)
     variable_function_names = get_all_functions_from_namespace(torch._C._VariableFunctions)
     tensor_function_names = get_all_functions_from_namespace(torch.Tensor)
-    ignored_functions = ['ones', 'ones_like', 'zeros', 'cuda', 'dim']
+    ignored_functions = ['ones', 'ones_like', 'zeros', 'cuda', 'dim', 'view', 'size', 'shape']
 
     for ignored_function in ignored_functions:
         if ignored_function in function_names:
@@ -165,6 +167,14 @@ def patch_torch_operators():
     for tensor_name in tensor_function_names:
         from nncf.torch.graph.operator_metatypes import PTPatchSpec
         patch_namespace_by_patchspec(TracedTensor, PTPatchSpec([tensor_name]))
+
+    for op_meta_class in get_operator_metatypes():  # type: OperatorMetatype
+        if op_meta_class.torch_tensor_patch_spec is not None:
+            ps = op_meta_class.torch_tensor_patch_spec
+            patch_namespace_by_patchspec(TracedTensor, ps)
+
+    # add dumoing function operations
+
     # add ignored ops
 
     # Patch __repr__ methods so that debugging does not add new nodes to the graph
