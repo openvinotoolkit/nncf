@@ -35,20 +35,20 @@ class FilterPruningBlock(nn.Module):
         with torch.no_grad():
             self._binary_filter_pruning_mask.set_(mask)
 
-    def forward(self, weight, update_weight=True):
-        # In case of None weight (or bias) mask shouldn't be applied
-        if weight is None:
-            return weight
+    def forward(self, **params):
+        new_params = []
+        for param_name, param_value in params.items():
+            # For weights self.mask_applying_dim should be used, for bias dim=0
+            dim = 0 if param_name == 'bias' else self.mask_applying_dim
 
-        # For weights self.mask_applying_dim should be used, for bias dim=0
-        dim = 0 if not update_weight else self.mask_applying_dim
-
-        if is_tracing_state():
-            with no_jit_trace():
-                return inplace_apply_filter_binary_mask(self.binary_filter_pruning_mask, weight, dim=dim)
-        new_weight = apply_filter_binary_mask(self.binary_filter_pruning_mask, weight, dim=dim)
-        return new_weight
-
+            # In case of None weight (or bias) mask shouldn't be applied
+            if param_value is None:
+                new_params.append(param_value)
+            if is_tracing_state():
+                with no_jit_trace():
+                    new_params.append(inplace_apply_filter_binary_mask(self.binary_filter_pruning_mask, param_value, dim=dim))
+            new_params.append(apply_filter_binary_mask(self.binary_filter_pruning_mask, param_value, dim=dim))
+        return new_params
 
 def broadcast_filter_mask(filter_mask, shape, dim=0):
     broadcasted_shape = np.ones(len(shape), dtype=np.int64)

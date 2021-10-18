@@ -17,7 +17,7 @@ import torch
 import numpy as np
 
 from examples.torch.common.optimizer import make_optimizer, get_parameter_groups
-from nncf.torch.module_operations import UpdateWeight, UpdateWeightAndBiasPruning
+from nncf.torch.module_operations import UpdateWeight, UpdateWeightAndBias
 from nncf.torch.pruning.filter_pruning.algo import FilterPruningController
 from nncf.torch.pruning.filter_pruning.functions import l2_filter_norm
 from nncf.torch.pruning.filter_pruning.layers import FilterPruningBlock
@@ -100,7 +100,7 @@ def test_valid_modules_replacement_and_pruning(prune_first, prune_last):
     def check_that_module_is_pruned(module):
         assert len(module.pre_ops.values()) == 1
         pre_ops = list(module.pre_ops.values())
-        assert isinstance(pre_ops[0], UpdateWeightAndBiasPruning)
+        assert isinstance(pre_ops[0], UpdateWeightAndBias)
         pruning_op = pre_ops[0].operand
         assert isinstance(pruning_op, FilterPruningBlock)
 

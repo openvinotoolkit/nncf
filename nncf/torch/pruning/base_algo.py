@@ -15,7 +15,7 @@ from functools import partial
 from functools import update_wrapper
 from typing import List, Dict
 
-from nncf.torch.module_operations import UpdateWeightAndBiasPruning
+from nncf.torch.module_operations import UpdateWeightAndBias
 
 from torch import nn
 from texttable import Texttable
@@ -116,7 +116,7 @@ class BasePruningAlgoBuilder(PTCompressionAlgorithmBuilder):
                 nncf_logger.info("Adding Weight Pruner in scope: {}".format(node_name))
                 pruning_block = self.create_weight_pruning_operation(module)
                 # Hook for weights and bias
-                hook = UpdateWeightAndBiasPruning(pruning_block).to(device)
+                hook = UpdateWeightAndBias(pruning_block).to(device)
                 insertion_commands.append(
                     PTInsertionCommand(
                         PTTargetPoint(TargetType.PRE_LAYER_OPERATION,
@@ -142,7 +142,7 @@ class BasePruningAlgoBuilder(PTCompressionAlgorithmBuilder):
 
             pruning_block = self.create_weight_pruning_operation(module)
             # Hook for weights and bias
-            hook = UpdateWeightAndBiasPruning(pruning_block).to(device)
+            hook = UpdateWeightAndBias(pruning_block).to(device)
             insertion_commands.append(
                 PTInsertionCommand(
                     PTTargetPoint(TargetType.PRE_LAYER_OPERATION,

@@ -25,8 +25,8 @@ class BaseOp(nn.Module):
     def operand(self):
         return self.op
 
-    def forward(self, *inputs):
-        return self.op(*inputs)
+    def forward(self, *inputs, **kwargs):
+        return self.op(*inputs, **kwargs)
 
 
 class UpdateInputs(BaseOp):
@@ -52,14 +52,27 @@ class UpdateWeight(UpdateParameter):
         super().__init__("weight", op)
 
 
-class UpdateWeightAndBiasPruning(BaseOp):
+class UpdateParameterList(BaseOp):
+    def __init__(self, param_names, op):
+        super().__init__(op)
+        self._param_names = param_names
+
     def __call__(self, module, _):
-        for param_name in ('weight', 'bias'):
+        param_values = []
+        for param_name in self._param_names:
             if not hasattr(module, param_name):
                 raise TypeError('{} should have {} attribute'.format(type(module), param_name))
-            value = getattr(module, param_name)
-            result = super().__call__(value, param_name == 'weight')
-            setattr(module, param_name, result)
+            param_values.append(getattr(module, param_name))
+        updated_kwargs = dict(zip(self._param_names, param_values))
+        updated_values = super().__call__(**updated_kwargs)
+
+        for param_name, updated_value in zip(self._param_names, updated_values):
+            setattr(module, param_name, updated_value)
+
+
+class UpdateWeightAndBias(UpdateParameterList):
+    def __init__(self, op):
+        super().__init__(["weight", "bias"], op)
 
 
 class UpdatePaddingValue(UpdateParameter):
