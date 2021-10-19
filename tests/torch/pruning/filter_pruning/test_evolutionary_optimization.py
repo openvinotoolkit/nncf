@@ -136,11 +136,6 @@ def test_pruner_default_params():
     assert legr_pruner.filter_pruner == compression_ctrl
     assert isinstance(legr_pruner.scheduler, type(compression_ctrl.scheduler))
 
-    ref_model_state_dict = list(compressed_model.state_dict().values())
-    saved_model_state_dict = list(legr_pruner.model_params_copy.values())
-    assert all(
-        torch.equal(ref_model_state_dict[i], saved_model_state_dict[i]) for i in range(len(ref_model_state_dict)))
-
 
 def test_pruner_interface():
     _, _, compression_ctrl = get_model_and_controller_for_legr_test()

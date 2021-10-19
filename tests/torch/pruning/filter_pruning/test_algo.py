@@ -73,7 +73,6 @@ def test_check_default_algo_params():
     assert compression_ctrl.pruning_quota == 0.9
 
     assert compression_ctrl.all_weights is False
-    assert compression_ctrl.zero_grad is True
 
     # Check default scheduler params
     assert isinstance(scheduler, ExponentialPruningScheduler)
@@ -331,53 +330,6 @@ def test_valid_masks_for_bn_after_concat(prune_bn):
     graph = pruned_model.get_original_graph()
     for i, node in enumerate(graph.get_nodes_by_types(['cat'])):
         assert np.allclose(node.data['output_mask'].tensor.numpy(), ref_concat_masks[i])
-
-
-@pytest.mark.parametrize('zero_grad',
-                         [True, False])
-def test_zeroing_gradients(zero_grad):
-    """
-    Test for zeroing gradients functionality (zero_grads_for_pruned_modules in base algo)
-    :param zero_grad: zero grad or not
-    """
-    config = get_basic_pruning_config(input_sample_size=[2, 1, 8, 8])
-    config['compression']['params']['prune_first_conv'] = True
-    config['compression']['params']['prune_last_conv'] = True
-    config['compression']['params']['zero_grad'] = zero_grad
-
-    pruned_model, pruning_algo, _ = create_pruning_algo_with_config(config)
-    assert pruning_algo.zero_grad is zero_grad
-
-    pruned_module_info = pruning_algo.pruned_module_groups_info.get_all_nodes()
-    pruned_modules = [minfo.module for minfo in pruned_module_info]
-
-    device = next(pruned_model.parameters()).device
-    data_loader = create_ones_mock_dataloader(config)
-
-    params_to_optimize = get_parameter_groups(pruned_model, config)
-    optimizer, lr_scheduler = make_optimizer(params_to_optimize, config)
-
-    lr_scheduler.step(0)
-
-    pruned_model.train()
-    for input_, target in data_loader:
-        input_ = input_.to(device)
-        target = target.to(device).view(1)
-
-        output = pruned_model(input_)
-
-        loss = torch.sum(target.to(torch.float32) - output)
-        optimizer.zero_grad()
-        loss.backward()
-
-        # In case of zero_grad = True gradients should be masked
-        if zero_grad:
-            for module in pruned_modules:
-                op = list(module.pre_ops.values())[0]
-                mask = op.operand.binary_filter_pruning_mask
-                grad = module.weight.grad
-                masked_grad = apply_filter_binary_mask(mask, grad, dim=module.target_weight_dim_for_compression)
-                assert torch.allclose(masked_grad, grad)
 
 
 @pytest.mark.parametrize(('all_weights', 'pruning_flops_target', 'ref_flops', 'ref_params_num'),

@@ -267,7 +267,6 @@ class LeGRPruner:
         self.scheduler = copy(self.filter_pruner.scheduler)
         self.model = model
         self.model_params_copy = None
-        self._save_model_weights()
         self.init_filter_norms = {node.node_name: self.filter_pruner.filter_importance(node.module.weight)
                                   for node in self.filter_pruner.pruned_module_groups_info.get_all_nodes()}
 
@@ -276,18 +275,6 @@ class LeGRPruner:
         :return: loss for pruning algorithm
         """
         return self.filter_pruner.loss()
-
-    def _save_model_weights(self) -> None:
-        """
-        Saving copy of all model parameters
-        """
-        self.model_params_copy = deepcopy(self.model.state_dict())
-
-    def _restore_model_weights(self):
-        """
-        Restoring saved original model parameters to discard any changes in model weights.
-        """
-        self.model.load_state_dict(self.model_params_copy)
 
     def _reset_masks(self) -> None:
         """
@@ -303,7 +290,6 @@ class LeGRPruner:
         Resetting all changes made in the model (and model masks during environment step) by restoring the original
         model weights, resetting masks.
         """
-        self._restore_model_weights()
         self._reset_masks()
         self.scheduler = copy(self.filter_pruner.scheduler)
 

@@ -10,32 +10,28 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-import torch
-from functools import partial
-from functools import update_wrapper
 from typing import List, Dict
 
-from nncf.torch.module_operations import UpdateWeightAndBias
-
-from torch import nn
+import torch
 from texttable import Texttable
+from torch import nn
 
 from nncf import NNCFConfig
+from nncf.common.graph.transformations.commands import TargetType
+from nncf.common.pruning.clusterization import Cluster
+from nncf.common.pruning.clusterization import Clusterization
+from nncf.common.utils.logger import logger as nncf_logger
 from nncf.config.extractors import extract_algo_specific_config
 from nncf.torch.algo_selector import ZeroCompressionLoss
-from nncf.common.graph.transformations.commands import TargetType
 from nncf.torch.compression_method_api import PTCompressionAlgorithmBuilder
 from nncf.torch.compression_method_api import PTCompressionAlgorithmController
-from nncf.common.utils.logger import logger as nncf_logger
-from nncf.torch.graph.transformations.layout import PTTransformationLayout
-from nncf.torch.nncf_network import NNCFNetwork
-from nncf.torch.graph.transformations.commands import TransformationPriority
-from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.graph.transformations.commands import PTInsertionCommand
+from nncf.torch.graph.transformations.commands import PTTargetPoint
+from nncf.torch.graph.transformations.commands import TransformationPriority
+from nncf.torch.graph.transformations.layout import PTTransformationLayout
+from nncf.torch.module_operations import UpdateWeightAndBias
+from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.pruning.operations import PT_PRUNING_OPERATOR_METATYPES
-from nncf.torch.pruning.filter_pruning.layers import apply_filter_binary_mask
-from nncf.common.pruning.clusterization import Clusterization
-from nncf.common.pruning.clusterization import Cluster
 from nncf.torch.pruning.structs import PrunedModuleInfo
 
 
@@ -192,7 +188,6 @@ class BasePruningAlgoController(PTCompressionAlgorithmController):
         self.prune_first = params.get('prune_first_conv', False)
         self.prune_last = params.get('prune_last_conv', False)
         self.prune_downsample_convs = params.get('prune_downsample_convs', False)
-        self.zero_grad = params.get('zero_grad', True)
         self.prune_flops = False
         self.check_pruning_rate(params)
         self._hooks = []
@@ -203,27 +198,8 @@ class BasePruningAlgoController(PTCompressionAlgorithmController):
     def set_pruning_rate(self, pruning_rate):
         raise NotImplementedError
 
-    def zero_grads_for_pruned_modules(self):
-        """
-        This function registers a hook that will set the
-        gradients for pruned filters to zero.
-        """
-        self._clean_hooks()
-
-        def hook(grad, mask, dim=0):
-            mask = mask.to(grad.device)
-            return apply_filter_binary_mask(mask, grad, dim=dim)
-
-        for minfo in self.pruned_module_groups_info.get_all_nodes():
-            mask = minfo.operand.binary_filter_pruning_mask
-            weight = minfo.module.weight
-            dim = minfo.module.target_weight_dim_for_compression
-            partial_hook = update_wrapper(partial(hook, mask=mask, dim=dim), hook)
-            self._hooks.append(weight.register_hook(partial_hook))
-            if minfo.module.bias is not None:
-                bias = minfo.module.bias
-                partial_hook = update_wrapper(partial(hook, mask=mask), hook)
-                self._hooks.append(bias.register_hook(partial_hook))
+    def step(self, next_step):
+        pass
 
     def check_pruning_rate(self, params):
         """

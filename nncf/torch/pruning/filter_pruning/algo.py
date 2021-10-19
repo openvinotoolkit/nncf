@@ -446,9 +446,6 @@ class FilterPruningController(BasePruningAlgoController):
                             pruning_rate = self._find_uniform_pruning_rate_for_target_flops(pruning_rate)
                     self._set_binary_masks_for_pruned_modules_groupwise(pruning_rate)
 
-            if self.zero_grad:
-                self.zero_grads_for_pruned_modules()
-
         self._propagate_masks()
         if not groupwise_pruning_rates_set:
             self._pruning_rate = passed_pruning_rate
