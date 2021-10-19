@@ -39,6 +39,11 @@ class NPNNCFTensorProcessor(NNCFBaseTensorProcessor):
         ret_tensor = np.repeat(tensor.tensor, repeats)
         return NPNNCFTensor(ret_tensor)
 
+    @classmethod
+    def elementwise_output_mask_from_input_masks(cls, tensors: List[NNCFTensor]) -> NNCFTensor:
+        cls.check_all_close(tensors)
+        return tensors[0]
+
 
 class NPNNCFTensor(NNCFTensor):
     def __init__(self, tensor: np.array):

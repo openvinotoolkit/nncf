@@ -18,13 +18,15 @@ from nncf.common.pruning.operations import BasePruningOp
 from nncf.common.pruning.mask_propagation import MaskPropagationAlgorithm
 
 
-@pytest.mark.parametrize('dummy_op_class,accept_pruned_input', [(dummy_types.DummyInputPruningOp, False),
-                                                                (dummy_types.DummyOutputPruningOp, True),
-                                                                (dummy_types.DummyStopMaskForward, False)])
-def test_stop_propagate_ops(dummy_op_class, accept_pruned_input):
-    node = NNCFNode(0, 'dummy_node')
-    assert dummy_op_class.accept_pruned_input(node) == accept_pruned_input
-    dummy_op_class.mask_propagation(node, None)
+@pytest.mark.parametrize('pruning_op,metatype,accept_pruned_input',
+                         [(dummy_types.DummyInputPruningOp, dummy_types.DummyInputMetatype, False),
+                          (dummy_types.DummyOutputPruningOp, dummy_types.DummyOutputMetatype, True),
+                          (dummy_types.DummyStopMaskForwardPruningOp, dummy_types.DummyStopMaskForwardMetatype, False)])
+def test_stop_propagate_ops(pruning_op, metatype, accept_pruned_input):
+    graph = NNCFGraph()
+    node = graph.add_nncf_node('conv_op', metatype.name, metatype)
+    assert pruning_op.accept_pruned_input(node) == accept_pruned_input
+    pruning_op.mask_propagation(node, graph)
     assert node.data['output_mask'] is None
 
 
@@ -35,7 +37,7 @@ def test_identity_mask_propogation_prune_ops(dummy_op_class):
     conv_op = graph.add_nncf_node('conv_op', 'conv', dummy_types.DummyConvMetatype)
     identity_ops = []
     for alias in dummy_op_class.get_all_op_aliases():
-        identity_op = graph.add_nncf_node('identity', alias, dummy_types.DymmyIdentityMaskForwardMetatype)
+        identity_op = graph.add_nncf_node('identity', alias, dummy_types.DummyIdentityMaskForwardMetatype)
         graph.add_edge_between_nncf_nodes(
             from_node_id=conv_op.node_id,
             to_node_id=identity_op.node_id,

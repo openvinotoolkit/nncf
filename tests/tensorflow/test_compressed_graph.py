@@ -391,6 +391,15 @@ def check_model_graph(compressed_model, ref_graph_filename, ref_graph_dir, renam
                                    graph_to_layer_var_names_map)
 
 
+BAD_NETS = [
+            #'mobilenet_v1',
+            #'mobilenet_v2',
+            #'resnet50',
+            #'retinanet',
+            'mobilenet_v3_small',
+            'mobilenet_v3_large',
+            'yolo_v4']
+BAD_NETS_CURRENT = []
 class TestModelsGraph:
     @pytest.mark.parametrize('desc', get_test_models_desc('quantization'), ids=[
         get_model_name(m) for m in get_test_models_desc('quantization')])
@@ -434,8 +443,8 @@ class TestModelsGraph:
     @pytest.mark.parametrize('desc', get_test_models_desc('filter_pruning'), ids=[
         get_model_name(m) for m in get_test_models_desc('filter_pruning')])
     def test_pruning_network(self, desc: ModelDesc, _pruning_case_config):
-        if desc.model_name != 'mobilenet_v1':
-            return
+        #if desc.model_name != 'mobilenet_v2':
+        #    return
 
         model = desc.model_builder(input_shape=tuple(desc.input_sample_sizes[1:]))
         config = get_basic_filter_pruning_config(desc.input_sample_sizes)
@@ -443,6 +452,19 @@ class TestModelsGraph:
 
         check_model_graph(compressed_model, desc.ref_graph_filename, _pruning_case_config.graph_dir,
                           desc.rename_resource_nodes)
+        #except:
+        #    global BAD_NETS_CURRENT
+        #    BAD_NETS_CURRENT.append(desc.model_name)
+        #    raise False
+
+
+@pytest.fixture(autouse='class')
+def print_bad_nets():
+    yield
+    global BAD_NETS
+    global BAD_NETS_CURRENT
+    print("BAD NETS: ", BAD_NETS)
+    print("BAD NETS CURRENT: ", BAD_NETS_CURRENT)
 
 
 QUANTIZE_OUTPUTS = [

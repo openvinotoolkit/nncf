@@ -34,7 +34,7 @@ class DummyOutputMetatype(OperatorMetatype):
     name = 'output'
 
 
-class DymmyIdentityMaskForwardMetatype(OperatorMetatype):
+class DummyIdentityMaskForwardMetatype(OperatorMetatype):
     name = 'identity_mask_forward'
 
 
@@ -62,7 +62,7 @@ class DummyConcatMetatype(OperatorMetatype):
     name = 'concat'
 
 
-class DummyStopPropoagtionMetatype(OperatorMetatype):
+class DummyStopMaskForwardMetatype(OperatorMetatype):
     name = 'stop_propagation_ops'
 
 
@@ -87,14 +87,14 @@ class DummyOutputPruningOp(OutputPruningOp):
     additional_types = [DummyOutputMetatype.name]
 
 
-@DUMMY_PRUNING_OPERATOR_METATYPES.register(DymmyIdentityMaskForwardMetatype.name)
+@DUMMY_PRUNING_OPERATOR_METATYPES.register(DummyIdentityMaskForwardMetatype.name)
 class DummyIdentityMaskForward(IdentityMaskForwardPruningOp):
-    additional_types = [DymmyIdentityMaskForwardMetatype.name]
+    additional_types = [DummyIdentityMaskForwardMetatype.name]
 
 
-@DUMMY_PRUNING_OPERATOR_METATYPES.register(DummyStopPropoagtionMetatype.name)
-class DummyStopMaskForward(StopMaskForwardPruningOp):
-    additional_types = [DummyStopPropoagtionMetatype.name]
+@DUMMY_PRUNING_OPERATOR_METATYPES.register(DummyStopMaskForwardMetatype.name)
+class DummyStopMaskForwardPruningOp(StopMaskForwardPruningOp):
+    additional_types = [DummyStopMaskForwardMetatype.name]
 
 
 @DUMMY_PRUNING_OPERATOR_METATYPES.register(DummyConvMetatype.name)
@@ -125,7 +125,7 @@ class DummyElementwisePruningOp(ElementwisePruningOp):
 @DUMMY_PRUNING_OPERATOR_METATYPES.register(DummyConcatMetatype.name)
 class DummyConcatPruningOp(ConcatPruningOp):
     ConvolutionOp = DummyConvPruningOp
-    StopMaskForwardOp = DummyStopMaskForward
+    StopMaskForwardOp = DummyStopMaskForwardPruningOp
     InputOp = DummyInputPruningOp
     additional_types = [DummyConcatMetatype.name]
 
