@@ -61,7 +61,6 @@ def torch_jit_script_wrapper(*args, **kwargs):
     return retval
 
 
-
 class OriginalOpInfo:
     def __init__(self, name: str, namespace, op):
         self.name = name
@@ -148,7 +147,22 @@ def patch_torch_operators():
     function_names = get_all_functions_from_namespace(F)
     variable_function_names = get_all_functions_from_namespace(torch._C._VariableFunctions)
     tensor_function_names = get_all_functions_from_namespace(torch.Tensor)
-    ignored_functions = ['ones', 'ones_like', 'zeros', 'cuda', 'dim', 'view', 'size', 'shape', 'has_names', '_reduce_ex_internal', '__reduce_ex__', 'storage', 'storage_offset', 'stride', 'rand', 'random_', 'item', 'numpy', 'cpu', 'randn', 'randn_like']
+
+    ignored_functions = ['view', 'size', 'shape', 'has_names', '_reduce_ex_internal', '__reduce_ex__',
+                         'storage', 'storage_offset', 'stride', 'item', 'numpy',
+                         'is_contiguous']
+
+    creating_tensor_funcs = ['empty', 'rand', 'randn', 'ones', 'tensor', 'zeros', 'ones_like', 'rad2deg', 'rad2deg_',
+                             'randn_like', 'as_subclass', 'copy_', 'clone', 'copysign', 'copysign_', 'detach',
+                             'detach_']
+    utility_tensor_funcs = ['all', 'allclose', 'any', 'backward', 'broadcast_to', 'dim', 'names', 'rename', 'rename_',
+                            'refine_names', 'register_hook', 'record_stream', 'random_' 'cpu', 'cuda', 'data_ptr',
+                            'dequantize', 'qscheme', 'q_per_channel_axis', 'q_per_channel_scales',
+                            'q_per_channel_zero_points', 'q_scale', 'q_zero_point', 'qr']
+
+    type_tensor_func = ['bfloat16', 'bool', 'byte', 'char', 'double']
+
+    ignored_functions.extend([creating_tensor_funcs, utility_tensor_funcs, type_tensor_func])
 
     for ignored_function in ignored_functions:
         if ignored_function in function_names:
@@ -172,10 +186,6 @@ def patch_torch_operators():
         if op_meta_class.torch_tensor_patch_spec is not None:
             ps = op_meta_class.torch_tensor_patch_spec
             patch_namespace_by_patchspec(TracedTensor, ps)
-
-    # add dumoing function operations
-
-    # add ignored ops
 
     # Patch __repr__ methods so that debugging does not add new nodes to the graph
     patch_namespace_opname(TracedTensor, PatchedOperatorInfo("__repr__", ForwardTraceOnly()))
@@ -245,6 +255,7 @@ def patch_extension_build_function():
                 with safe_open(Path(target_ninja_file_path), 'w') as ninja_build_file:
                     ninja_build_file.write(re.sub(r'--generate-dependencies-with-compile --dependency-output \$out\.d',
                                                   '', ninja_file_contents))
+
             return wrapped
 
         if sys.platform != 'win32':
