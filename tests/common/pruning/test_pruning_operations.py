@@ -156,10 +156,14 @@ class MockOpMaskProducer(BasePruningOp):
       'groups': 5}, False, 'grouped_conv_no_depthwise'),
     ({'in_channels': 10,
       'out_channels': 20,
-      'groups': 10}, True, 'depthwise_conv')
+      'groups': 10}, False, 'multiply_grouped_conv'),
+    ({'in_channels': 20,
+      'out_channels': 20,
+      'groups': 20}, True, 'depthwise_conv')
 ],
     ids=['usual_conv',
          'grouped_conv_no_depthwise',
+         'multiply_grouped_conv',
          'depthwise_conv']
 )
 def test_conv_pruning_ops(transpose, layer_attributes, ref_accept_pruned_input, conv_type):
@@ -198,7 +202,7 @@ def test_conv_pruning_ops(transpose, layer_attributes, ref_accept_pruned_input, 
             conv_op_target = graph.get_node_by_id(conv_op_target.node_id)
             if conv_type == 'usual_conv':
                 assert np.all(conv_op_target.data['output_mask'] == output_mask)
-            elif conv_type == 'grouped_conv_no_depthwise':
+            elif conv_type in ['grouped_conv_no_depthwise', 'multiply_grouped_conv']:
                 assert conv_op_target.data['output_mask'] is None
             else:
                 assert np.all(conv_op_target.data['output_mask'] == input_mask)

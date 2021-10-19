@@ -398,7 +398,7 @@ class PruningOperationsMetatypeRegistry(Registry):
 def is_depthwise_conv(node: NNCFNode) -> bool:
     return isinstance(node.layer_attributes, ConvolutionLayerAttributes) \
            and node.layer_attributes.groups == node.layer_attributes.in_channels \
-           and (node.layer_attributes.out_channels % node.layer_attributes.in_channels == 0) \
+           and (node.layer_attributes.out_channels == node.layer_attributes.in_channels) \
            and node.layer_attributes.in_channels > 1
 
 
