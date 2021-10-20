@@ -16,7 +16,7 @@ import numpy as np
 import tensorflow as tf
 
 from nncf.tensorflow.layers.wrapper import NNCFWrapper
-from nncf.tensorflow.layers.custom_objects import NNCF_QUANTIZATION_OPERATONS
+from nncf.tensorflow.layers.custom_objects import NNCF_QUANTIZATION_OPERATIONS
 from nncf.tensorflow.quantization.quantizers import TFQuantizerSpec
 from nncf.tensorflow.quantization.quantizers import QuantizerConfig
 from nncf.tensorflow.quantization.quantizers import Quantizer
@@ -94,7 +94,7 @@ class TestQuantizedWeightsEqualAfterFixApplied:
 
         layer = tf.keras.layers.Dense(DIM_SPLIT)
         layer = NNCFWrapper(layer)
-        quantizer_cls = NNCF_QUANTIZATION_OPERATONS.get(qspec.mode)
+        quantizer_cls = NNCF_QUANTIZATION_OPERATIONS.get(qspec.mode)
         quantizer = quantizer_cls(op_name, qspec)
         layer.registry_weight_operation(weight_attr, quantizer)
         layer.build(1)
@@ -140,7 +140,7 @@ class TestQuantizedWeightsEqualAfterFixApplied:
 
         layer = tf.keras.layers.Dense(DIM_SPLIT)
         layer = NNCFWrapper(layer)
-        quantizer_cls = NNCF_QUANTIZATION_OPERATONS.get(qspec.mode)
+        quantizer_cls = NNCF_QUANTIZATION_OPERATIONS.get(qspec.mode)
         quantizer = quantizer_cls(op_name, qspec)
         layer.registry_weight_operation(weight_attr, quantizer)
         layer.build(1)

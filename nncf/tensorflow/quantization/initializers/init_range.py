@@ -23,7 +23,7 @@ from nncf.common.quantization.initialization.range import RangeInitConfig
 from nncf.common.quantization.structs import QuantizerGroup
 from nncf.common.utils.progress_bar import ProgressBar
 from nncf.common.utils.helpers import should_consider_scope
-from nncf.tensorflow.layers.custom_objects import NNCF_QUANTIZATION_OPERATONS
+from nncf.tensorflow.layers.custom_objects import NNCF_QUANTIZATION_OPERATIONS
 from nncf.tensorflow.layers.wrapper import NNCFWrapper
 from nncf.tensorflow.layers.data_layout import get_channel_axis
 from nncf.tensorflow.layers.operation import InputType
@@ -82,7 +82,7 @@ class RangeInitializer:
         self.dataset = range_init_params.init_range_data_loader
         self.num_steps = range_init_params.get_max_num_init_steps()
 
-        self.nncf_quantization_operation_classes = NNCF_QUANTIZATION_OPERATONS.registry_dict.values()
+        self.nncf_quantization_operation_classes = NNCF_QUANTIZATION_OPERATIONS.registry_dict.values()
 
     @staticmethod
     def generate_stat_collector(init_config, per_channel: bool, channel_axes: int, input_type: str):

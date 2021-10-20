@@ -70,7 +70,7 @@ from nncf.tensorflow.graph.transformations.layout import TFTransformationLayout
 from nncf.tensorflow.graph.utils import get_original_name_and_instance_idx
 from nncf.tensorflow.hardware.config import TFHWConfig
 from nncf.tensorflow.hardware.fused_patterns import TF_HW_FUSED_PATTERNS
-from nncf.tensorflow.layers.custom_objects import NNCF_QUANTIZATION_OPERATONS
+from nncf.tensorflow.layers.custom_objects import NNCF_QUANTIZATION_OPERATIONS
 from nncf.tensorflow.loss import TFZeroCompressionLoss
 from nncf.tensorflow.quantization.collectors import TFQuantizationStatisticsCollector
 from nncf.tensorflow.quantization.default_quantization import DEFAULT_TF_QUANT_TRAIT_TO_OP_DICT
@@ -331,7 +331,7 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
         return False
 
     def _create_quantizer(self, name: str, qspec: TFQuantizerSpec) -> Quantizer:
-        quantizer_cls = NNCF_QUANTIZATION_OPERATONS.get(qspec.mode)
+        quantizer_cls = NNCF_QUANTIZATION_OPERATIONS.get(qspec.mode)
         return quantizer_cls(name, qspec)
 
     def _build_insertion_commands_for_quantizer_setup(self,
