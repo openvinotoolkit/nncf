@@ -57,7 +57,7 @@ GLOBAL_CONFIG = {
                             'expected_accuracy': 68.11,
                             'weights': 'mobilenet_v2_32x32_cifar100_68.11.pth',
                             'absolute_tolerance_train': 1.0,
-                            'absolute_tolerance_eval': 2e-2
+                            'absolute_tolerance_eval': 6e-2
                         },
                         'inceptionV3_int8.json': {
                             'expected_accuracy': 77.53,
@@ -74,7 +74,7 @@ GLOBAL_CONFIG = {
                             'weights': 'mobilenet_v2_32x32_cifar100_68.11.pth',
                             'execution_arg': {'multiprocessing-distributed', ''},
                             'absolute_tolerance_train': 1.5,
-                            'absolute_tolerance_eval': 2e-2
+                            'absolute_tolerance_eval': 6e-2
                         },
                         'mobilenet_v2_rb_sparsity_int8.json': {
                             'expected_accuracy': 68.11,
@@ -244,6 +244,10 @@ def test_compression_train(_params, tmp_path, case_common_dirs):
     args['log-dir'] = tmp_path
     args['workers'] = 0  # Workaround for PyTorch MultiprocessingDataLoader issues
     args['seed'] = 1
+    # Workaround for PyTorch 1.9.1 Multiprocessing issue related to determinism and asym quantization
+    # https://github.com/pytorch/pytorch/issues/61032
+    if 'mobilenet_v2_asym_int8.json' in args['config']:
+        args.pop('seed')
 
     runner = Command(create_command_line(get_cli_dict_args(args), tc['sample_type']))
     env_with_cuda_reproducibility = os.environ.copy()
@@ -272,6 +276,10 @@ def test_compression_eval_trained(_params, tmp_path, case_common_dirs):
     args['log-dir'] = tmp_path
     args['workers'] = 0  # Workaround for PyTorch MultiprocessingDataLoader issues
     args['seed'] = 1
+    # Workaround for PyTorch 1.9.1 Multiprocessing issue related to determinism and asym quantization
+    # https://github.com/pytorch/pytorch/issues/61032
+    if 'mobilenet_v2_asym_int8.json' in args['config']:
+        args.pop('seed')
     checkpoint_path = os.path.join(args['checkpoint-save-dir'], tc['checkpoint_name'] + '_best.pth')
     args['resume'] = checkpoint_path
 
