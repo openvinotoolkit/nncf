@@ -30,6 +30,8 @@ class KnowledgeDistillationBuilder(PTCompressionAlgorithmBuilder):
     def __init__(self, config: NNCFConfig, should_init: bool = True):
         super().__init__(config, should_init)
         self.kd_type = self._algo_config.get('type', None)
+        self.scale = self._algo_config.get('scale', 1)
+        self.temperature = self._algo_config.get('temperature', 1)
         if self.kd_type is None:
             raise ValueError('Type of KDLoss must be selected explicitly')
 
@@ -40,20 +42,22 @@ class KnowledgeDistillationBuilder(PTCompressionAlgorithmBuilder):
         return PTTransformationLayout()
 
     def _build_controller(self, model):
-        return KnowledgeDistillationController(model, self.original_model, self.kd_type)
+        return KnowledgeDistillationController(model, self.original_model, self.kd_type, self.scale, self.temperature)
 
     def initialize(self, model: NNCFNetwork) -> None:
         pass
 
 
 class KnowledgeDistillationController(PTCompressionAlgorithmController):
-    def __init__(self, target_model, original_model, kd_type):
+    def __init__(self, target_model, original_model, kd_type, scale, temperature):
         super().__init__(target_model)
         original_model.train()
         self._scheduler = BaseCompressionScheduler()
         self._loss = KnowledgeDistillationLoss(target_model=target_model,
                                                original_model=original_model,
-                                               kd_type=kd_type)
+                                               kd_type=kd_type,
+                                               scale=scale,
+                                               temperature=temperature)
 
     def compression_stage(self) -> CompressionStage:
         """

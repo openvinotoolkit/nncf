@@ -32,6 +32,7 @@ from tests.torch.quantization.test_quantization_helpers import distributed_init_
 
 import torch
 from torch import nn
+import torch.nn.functional as F
 from torch.optim import SGD
 import pytest
 
@@ -47,12 +48,14 @@ def get_model_device(inference_type, gpu):
     return "cuda"
 
 
-def get_kd_config(config: NNCFConfig) -> NNCFConfig:
+def get_kd_config(config: NNCFConfig, kd_type='mse', scale=1, temperature=1) -> NNCFConfig:
     if isinstance(config.get('compression', {}), dict):
         config['compression'] = [config['compression']] if config.get('compression', None) is not None else []
     config['compression'].append({
         'algorithm': 'knowledge_distillation',
-        'type': 'mse'
+        'type': kd_type,
+        'scale': scale,
+        'temperature': temperature
     })
     return config
 
@@ -223,15 +226,20 @@ def test_knowledge_distillation_outputs_containers_parsing():
         assert torch.allclose(reference_kd_loss, actual_kd_loss)
 
 
-@pytest.mark.parametrize('kd_loss_type', ['mse', 'softmax'])
-def test_knowledge_distillation_loss_types(kd_loss_type: str):
+@pytest.mark.parametrize(('kd_loss_type', 'scale', 'temperature'),
+                         [('mse', 1, 1), ('softmax', 1, 1), ("mse", 10, 1), ("softmax", 1, 5), ("softmax", 2, 5)])
+def test_knowledge_distillation_loss_types(kd_loss_type: str, scale, temperature):
     torch.manual_seed(2)
     if kd_loss_type == 'softmax':
         def kd_loss_fn(ref_outputs, compressed_model_outputs) -> torch.Tensor:
-            return -(nn.functional.log_softmax(compressed_model_outputs, dim=1) *
-                     nn.functional.softmax(ref_outputs, dim=1)).mean() * (compressed_model_outputs.shape[1])
+            return scale * -(nn.functional.log_softmax(compressed_model_outputs / temperature, dim=1) *
+                             nn.functional.softmax(ref_outputs / temperature, dim=1)).mean() * (
+                           temperature * temperature * compressed_model_outputs.shape[1])
     else:
-        kd_loss_fn = torch.nn.MSELoss()
+        def mse_loss(x, y):
+            return scale * F.mse_loss(x, y)
+
+        kd_loss_fn = mse_loss
     input_size = [1, 100]
     batch_size = 1 if torch.cuda.device_count() == 0 else torch.cuda.device_count()
 
@@ -243,7 +251,8 @@ def test_knowledge_distillation_loss_types(kd_loss_type: str):
     sparsity_level = 0.5
     config = get_kd_config(
         get_sparsity_config_with_sparsity_init(get_basic_magnitude_sparsity_config(input_sample_size=input_size),
-                                               sparsity_level))
+                                               sparsity_level), kd_type=kd_loss_type, scale=scale,
+        temperature=temperature)
     config['compression'][-1]['type'] = kd_loss_type
     model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
     model.train()
