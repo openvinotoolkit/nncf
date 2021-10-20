@@ -150,8 +150,8 @@ def patch_torch_operators():
                           TracedTensor: get_all_functions_from_namespace(torch.Tensor)}
 
     creating_tensor_funcs = ['empty', 'rand', 'randn', 'ones', 'tensor', 'zeros', 'ones_like', 'rad2deg', 'rad2deg_',
-                             'randn_like', 'as_subclass', 'copy_', 'clone', 'copysign', 'copysign_', 'detach',
-                             'detach_']
+                             'randn_like', 'as_subclass', 'copy_', 'clone', 'copysign', 'copysign_', 'contiguous',
+                             'detach', 'detach_']
     utility_tensor_funcs = ['all', 'allclose', 'any', 'backward', 'broadcast_to', 'dim', 'names', 'rename', 'rename_',
                             'refine_names', 'register_hook', 'record_stream', 'random_' 'cpu', 'cuda', 'data_ptr',
                             'dequantize', 'qscheme', 'q_per_channel_axis', 'q_per_channel_scales',
@@ -159,7 +159,7 @@ def patch_torch_operators():
                             'view', 'size', 'shape', 'has_names', '_reduce_ex_internal', '__reduce_ex__',
                             'storage', 'storage_offset', 'stride', 'item', 'numpy',
                             'is_contiguous', 'has_torch_function_unary', 'has_torch_function_variadic',
-                            'assert_int_or_pair'
+                            'assert_int_or_pair', 'handle_torch_function', 'has_torch_function'
                             ]
 
     type_tensor_func = ['bfloat16', 'bool', 'byte', 'char', 'double']
@@ -167,9 +167,13 @@ def patch_torch_operators():
                          funcs]
 
     for namespace, function_names in functions_to_patch.items():
+        # Do iterate and remove
+        new_function_names = []
         for function_name in function_names:
             if function_name in ignored_functions:
-                function_names.remove(function_name)
+                continue
+            new_function_names.append(function_name)
+        functions_to_patch[namespace] = new_function_names
 
     # Just to have backward compatibility with previous version of NNCF,
     # where 'relu' wasn't traced in torch.nn.functional

@@ -510,4 +510,4 @@ def test_integer_path_marking():
     nncf_graph = builder.build_graph(ModelWithIntegerPaths(), input_infos=input_infos)
     edges = list(nncf_graph.get_all_edges())
     num_integer_edges = sum([1 for edge in edges if edge.dtype is Dtype.INTEGER])
-    assert num_integer_edges == 4  # cat -> __floordiv__ and __floordiv__ -> __getitem__
+    assert num_integer_edges == 2  # cat -> __floordiv__ and __floordiv__ -> __getitem__
