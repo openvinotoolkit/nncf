@@ -33,7 +33,7 @@ from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.pruning.operations import PTElementwisePruningOp
 from nncf.torch.pruning.operations import PTIdentityMaskForwardPruningOp
 from nncf.torch.pruning.operations import PT_PRUNING_OPERATOR_METATYPES
-from nncf.common.pruning.utils import is_depthwise_conv
+from nncf.common.pruning.utils import is_prunable_depthwise_conv
 from nncf.torch.pruning.filter_pruning.algo import FilterPruningBuilder
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
 from tests.torch.helpers import create_nncf_model_and_single_algo_builder
@@ -310,7 +310,8 @@ def test_model_analyzer(test_struct: GroupSpecialModulesTestStruct):
     model = test_struct.model()
     nncf_model, _ = create_nncf_model_and_pruning_builder(model, {'prune_first_conv': True, 'prune_last_conv': True})
 
-    model_analyser = ModelAnalyzer(nncf_model.get_original_graph(), PT_PRUNING_OPERATOR_METATYPES, is_depthwise_conv)
+    model_analyser = ModelAnalyzer(nncf_model.get_original_graph(), PT_PRUNING_OPERATOR_METATYPES,
+                                   is_prunable_depthwise_conv)
     can_prune_analysis = model_analyser.analyse_model_before_pruning()
     for node_id in can_prune_analysis.keys():
         assert can_prune_analysis[node_id] == test_struct.ref_can_prune[node_id]

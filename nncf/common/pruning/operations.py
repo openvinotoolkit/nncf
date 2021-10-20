@@ -16,8 +16,8 @@ from typing import Optional, List
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.pruning.utils import is_grouped_conv
-from nncf.common.pruning.utils import is_depthwise_conv
 from nncf.common.pruning.utils import get_input_masks
+from nncf.common.pruning.utils import is_prunable_depthwise_conv
 from nncf.common.pruning.utils import identity_mask_propagation
 from nncf.common.tensor import NNCFTensor
 from nncf.common.graph.layer_attributes import GroupNormLayerAttributes
@@ -96,7 +96,7 @@ class ConvolutionPruningOp(BasePruningOp):
     def accept_pruned_input(cls, node: NNCFNode) -> bool:
         accept_pruned_input = True
         if is_grouped_conv(node):
-            if not is_depthwise_conv(node):
+            if not is_prunable_depthwise_conv(node):
                 accept_pruned_input = False
         return accept_pruned_input
 
@@ -107,7 +107,7 @@ class ConvolutionPruningOp(BasePruningOp):
 
         if is_grouped_conv(node):
             output_mask = None
-            if is_depthwise_conv(node):
+            if is_prunable_depthwise_conv(node):
                 output_mask = input_masks[0]
 
         node.data['output_mask'] = output_mask
@@ -118,7 +118,7 @@ class TransposeConvolutionPruningOp(BasePruningOp):
     def accept_pruned_input(cls, node: NNCFNode) -> bool:
         accept_pruned_input = True
         if is_grouped_conv(node):
-            if not is_depthwise_conv(node):
+            if not is_prunable_depthwise_conv(node):
                 accept_pruned_input = False
         return accept_pruned_input
 
@@ -130,7 +130,7 @@ class TransposeConvolutionPruningOp(BasePruningOp):
         # In case of group convs we can't prune by output filters
         if is_grouped_conv(node):
             output_mask = None
-            if is_depthwise_conv(node):
+            if is_prunable_depthwise_conv(node):
                 output_mask = input_masks[0]
 
         node.data['output_mask'] = output_mask

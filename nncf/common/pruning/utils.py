@@ -395,7 +395,9 @@ class PruningOperationsMetatypeRegistry(Registry):
         return None
 
 
-def is_depthwise_conv(node: NNCFNode) -> bool:
+def is_prunable_depthwise_conv(node: NNCFNode) -> bool:
+    # Only convolutions with in_channels == groups == out_channels are supported
+    # by pruning algorithm. Depthwise convolutions support ticket: #68580
     return isinstance(node.layer_attributes, ConvolutionLayerAttributes) \
            and node.layer_attributes.groups == node.layer_attributes.in_channels \
            and (node.layer_attributes.out_channels == node.layer_attributes.in_channels) \

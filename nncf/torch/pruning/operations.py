@@ -65,7 +65,7 @@ from nncf.common.pruning.operations import (
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.layers import NNCF_WRAPPED_USER_MODULES_DICT
-from nncf.common.pruning.utils import is_depthwise_conv
+from nncf.common.pruning.utils import is_prunable_depthwise_conv
 
 PT_PRUNING_OPERATOR_METATYPES = PruningOperationsMetatypeRegistry("operator_metatypes")
 
@@ -121,7 +121,7 @@ class PTConvolutionPruningOp(ConvolutionPruningOp, PTPruner):
         bool_mask = torch.tensor(input_mask, dtype=torch.bool)
         new_num_channels = int(torch.sum(input_mask))
 
-        is_depthwise = is_depthwise_conv(node)
+        is_depthwise = is_prunable_depthwise_conv(node)
         node_module = model.get_containing_module(node.node_name)
         old_num_channels = int(node_module.weight.size(1))
 
