@@ -50,7 +50,8 @@ class ForwardTraceOnly(CustomTraceFunction):
                 # Broadcast one and the same creator ID of input to all outputs
                 for out_idx in output_tensors_to_be_traced_indices:
                     forwarded_meta = deepcopy(fargs[input_traced_tensor_indices[0]].tensor_meta)
-                    forwarded_meta.shape = tuple(result[out_idx].shape)
+                    if forwarded_meta is not None:
+                        forwarded_meta.shape = tuple(result[out_idx].shape)
                     result[out_idx] = TracedTensor.from_torch_tensor(result[out_idx],
                                                                      forwarded_meta)
             elif len(input_traced_tensor_indices) != len(output_tensors_to_be_traced_indices):
@@ -60,7 +61,8 @@ class ForwardTraceOnly(CustomTraceFunction):
                 # Assume that output tensor order corresponds to input tensor order
                 for in_idx, out_idx in zip(input_traced_tensor_indices, output_tensors_to_be_traced_indices):
                     forwarded_meta = deepcopy(fargs[in_idx].tensor_meta)
-                    forwarded_meta.shape = tuple(result[out_idx].shape)
+                    if forwarded_meta is not None:
+                        forwarded_meta.shape = tuple(result[out_idx].shape)
                     result[out_idx] = TracedTensor.from_torch_tensor(result[out_idx],
                                                                      forwarded_meta)
             if was_tuple:
@@ -70,7 +72,8 @@ class ForwardTraceOnly(CustomTraceFunction):
                                "input and output tensor count mismatch!".format(operator.__name__))
         elif input_traced_tensor_indices:
             forwarded_meta = deepcopy(fargs[input_traced_tensor_indices[0]].tensor_meta)
-            forwarded_meta.shape = tuple(result.shape)
+            if forwarded_meta is not None:
+                forwarded_meta.shape = tuple(result.shape)
             return TracedTensor.from_torch_tensor(result,
                                                   forwarded_meta)
         # No traced tensors in input, return a usual torch.Tensor as well
