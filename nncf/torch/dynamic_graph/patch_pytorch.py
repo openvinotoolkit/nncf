@@ -109,10 +109,9 @@ def get_all_functions_from_namespace(namespace: object, do_filter: bool = True) 
     def remove_private_functions(names: List[str]) -> List[str]:
         filtered_names = []
         for name in names:
-            if name[0] == '_':
+            if name.startswith('_'):
                 continue
-            else:
-                filtered_names.append(name)
+            filtered_names.append(name)
         return filtered_names
 
     all_torch_function_names = []
@@ -144,16 +143,16 @@ def patch_torch_operators():
     import torch
     from nncf.torch.graph.operator_metatypes import get_operator_metatypes
     from nncf.torch.graph.operator_metatypes import PTPatchSpec
-
+    # pylint: disable=protected-access
     functions_to_patch = {torch.nn.functional: get_all_functions_from_namespace(torch.nn.functional),
                           torch: get_all_functions_from_namespace(torch._C._VariableFunctions),
                           TracedTensor: get_all_functions_from_namespace(torch.Tensor)}
-
+    # pylint: enable=protected-access
     creating_tensor_funcs = ['empty', 'rand', 'randn', 'ones', 'tensor', 'zeros', 'ones_like', 'rad2deg', 'rad2deg_',
                              'randn_like', 'as_subclass', 'copy_', 'clone', 'copysign', 'copysign_', 'contiguous',
                              'detach', 'detach_']
     utility_tensor_funcs = ['all', 'allclose', 'any', 'backward', 'broadcast_to', 'dim', 'names', 'rename', 'rename_',
-                            'refine_names', 'register_hook', 'record_stream', 'random_' 'cpu', 'cuda', 'data_ptr',
+                            'refine_names', 'register_hook', 'record_stream', 'random_', 'cpu', 'cuda', 'data_ptr',
                             'dequantize', 'qscheme', 'q_per_channel_axis', 'q_per_channel_scales',
                             'q_per_channel_zero_points', 'q_scale', 'q_zero_point', 'qr',
                             'view', 'size', 'shape', 'has_names', '_reduce_ex_internal', '__reduce_ex__',
