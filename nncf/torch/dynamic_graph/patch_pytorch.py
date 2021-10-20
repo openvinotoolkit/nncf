@@ -103,7 +103,7 @@ def patch_namespace_by_patchspec(namespace, patchspec: 'PatchSpec'):
         patch_namespace_opname(namespace, patched_op_info)
 
 
-def get_all_functions_from_namespace(namespace, do_filter: bool = True) -> List[object]:
+def get_all_functions_from_namespace(namespace: object, do_filter: bool = True) -> List[str]:
     import inspect
 
     def remove_private_functions(names: List[str]) -> List[str]:
@@ -141,13 +141,13 @@ def patch_torch_operators():
     _OPERATORS_ALREADY_WRAPPED = True
 
     # patch operators
-    import torch.nn.functional as F
     import torch
     from nncf.torch.graph.operator_metatypes import get_operator_metatypes
-    function_names = get_all_functions_from_namespace(F)
-    variable_function_names = get_all_functions_from_namespace(torch._C._VariableFunctions)
-    tensor_function_names = get_all_functions_from_namespace(torch.Tensor)
+    from nncf.torch.graph.operator_metatypes import PTPatchSpec
 
+    functions_to_patch = {torch.nn.functional: get_all_functions_from_namespace(torch.nn.functional),
+                          torch: get_all_functions_from_namespace(torch._C._VariableFunctions),
+                          TracedTensor: get_all_functions_from_namespace(torch.Tensor)}
 
     creating_tensor_funcs = ['empty', 'rand', 'randn', 'ones', 'tensor', 'zeros', 'ones_like', 'rad2deg', 'rad2deg_',
                              'randn_like', 'as_subclass', 'copy_', 'clone', 'copysign', 'copysign_', 'detach',
@@ -158,29 +158,26 @@ def patch_torch_operators():
                             'q_per_channel_zero_points', 'q_scale', 'q_zero_point', 'qr',
                             'view', 'size', 'shape', 'has_names', '_reduce_ex_internal', '__reduce_ex__',
                             'storage', 'storage_offset', 'stride', 'item', 'numpy',
-                            'is_contiguous', 'has_torch_function_unary', 'has_torch_function_variadic','assert_int_or_pair'
+                            'is_contiguous', 'has_torch_function_unary', 'has_torch_function_variadic',
+                            'assert_int_or_pair'
                             ]
 
     type_tensor_func = ['bfloat16', 'bool', 'byte', 'char', 'double']
-    ignored_functions = [func for funcs in [creating_tensor_funcs, utility_tensor_funcs, type_tensor_func] for func in funcs]
+    ignored_functions = [func for funcs in [creating_tensor_funcs, utility_tensor_funcs, type_tensor_func] for func in
+                         funcs]
 
-    for ignored_function in ignored_functions:
-        if ignored_function in function_names:
-            function_names.remove(ignored_function)
-        if ignored_function in variable_function_names:
-            variable_function_names.remove(ignored_function)
-        if ignored_function in tensor_function_names:
-            tensor_function_names.remove(ignored_function)
-    # Just to have backward compatibility with previous verion of NNCF,
+    for namespace, function_names in functions_to_patch.items():
+        for function_name in function_names:
+            if function_name in ignored_functions:
+                function_names.remove(function_name)
+
+    # Just to have backward compatibility with previous version of NNCF,
     # where 'relu' wasn't traced in torch.nn.functional
-    function_names.remove('relu')
-    from nncf.torch.graph.operator_metatypes import PTPatchSpec
-    for function_name in function_names:
-        patch_namespace_by_patchspec(F, PTPatchSpec([function_name]))
-    for function_name in variable_function_names:
-        patch_namespace_by_patchspec(torch, PTPatchSpec([function_name]))
-    for tensor_name in tensor_function_names:
-        patch_namespace_by_patchspec(TracedTensor, PTPatchSpec([tensor_name]))
+    functions_to_patch[torch.nn.functional].remove('relu')
+
+    for namespace, function_names in functions_to_patch.items():
+        for function_name in function_names:
+            patch_namespace_by_patchspec(namespace, PTPatchSpec([function_name]))
 
     for op_meta_class in get_operator_metatypes():  # type: OperatorMetatype
         if op_meta_class.torch_tensor_patch_spec is not None:
