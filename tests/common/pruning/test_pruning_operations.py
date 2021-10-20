@@ -271,12 +271,12 @@ def test_convs_elementwise_source_before_concat(empty_mask_right_branch, empty_m
 
 
 RESHAPE_TEST_CASES = [
-    ['flatten', (1, 1, 64), (1,)],
-    ['flatten', (1, 32, 64), (1,)],
-    ['flatten', (1, 32, 64, 1), (1,)],
-    ['reshape', (1, 32, 64), (1,)], # Flatten
-    ['reshape', (1, 64, 32), (1,)], # Flatten
-    ['reshape', (1, 32, 64, 1), (1,)], # Flatten
+    ['flatten', (1, 1, 64), (1, 64)],
+    ['flatten', (1, 32, 64), (1, 2048)],
+    ['flatten', (1, 32, 64, 1), (1, 2048)],
+    ['reshape', (1, 32, 64), (1, 2048)], # Flatten
+    ['reshape', (1, 64, 32), (1, 2048)], # Flatten
+    ['reshape', (1, 32, 64, 1), (1, 2048)], # Flatten
     ['reshape', (1, 1, 64), (1, 1, 1, 64)], # Expand
     ['reshape', (1, 1, 1, 64), (1, 64)],# Squeeze
     ['reshape', (1, 1, 1, 64), (1, 1, 64, 1)],

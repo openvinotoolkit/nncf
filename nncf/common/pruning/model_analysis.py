@@ -13,7 +13,7 @@
 
 import numpy as np
 
-from typing import Callable, List, Dict
+from typing import Callable, List, Dict, Optional
 
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
@@ -57,7 +57,12 @@ class SymbolicMaskProcessor(NNCFBaseTensorProcessor):
         return SymbolicMask(ret_tensor, tensor.mask_producers)
 
     @classmethod
-    def elementwise_output_mask_from_input_masks(cls, tensors: List[NNCFTensor]) -> NNCFTensor:
+    def elementwise_output_mask_from_input_masks(cls, tensors: List[NNCFTensor]) -> Optional[NNCFTensor]:
+        # Stop mask propagation in case some
+        # input branches have no masks
+        if any(t is None for t in tensors):
+            return None
+
         cls.check_all_close(tensors)
         producers = list(set([p for t in tensors for p in t.mask_producers]))
         return SymbolicMask(tensors[0].tensor, producers)

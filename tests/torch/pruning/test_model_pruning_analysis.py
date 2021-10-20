@@ -48,6 +48,7 @@ from tests.torch.pruning.helpers import TestModelResidualConnection
 from tests.torch.pruning.helpers import TestModelShuffleNetUnit
 from tests.torch.pruning.helpers import TestModelShuffleNetUnitDW
 from tests.torch.pruning.helpers import get_basic_pruning_config
+from tests.torch.test_models.pnasnet import CellB
 
 
 # pylint: disable=protected-access
