@@ -148,9 +148,6 @@ def patch_torch_operators():
     variable_function_names = get_all_functions_from_namespace(torch._C._VariableFunctions)
     tensor_function_names = get_all_functions_from_namespace(torch.Tensor)
 
-    ignored_functions = ['view', 'size', 'shape', 'has_names', '_reduce_ex_internal', '__reduce_ex__',
-                         'storage', 'storage_offset', 'stride', 'item', 'numpy',
-                         'is_contiguous']
 
     creating_tensor_funcs = ['empty', 'rand', 'randn', 'ones', 'tensor', 'zeros', 'ones_like', 'rad2deg', 'rad2deg_',
                              'randn_like', 'as_subclass', 'copy_', 'clone', 'copysign', 'copysign_', 'detach',
@@ -158,11 +155,14 @@ def patch_torch_operators():
     utility_tensor_funcs = ['all', 'allclose', 'any', 'backward', 'broadcast_to', 'dim', 'names', 'rename', 'rename_',
                             'refine_names', 'register_hook', 'record_stream', 'random_' 'cpu', 'cuda', 'data_ptr',
                             'dequantize', 'qscheme', 'q_per_channel_axis', 'q_per_channel_scales',
-                            'q_per_channel_zero_points', 'q_scale', 'q_zero_point', 'qr']
+                            'q_per_channel_zero_points', 'q_scale', 'q_zero_point', 'qr',
+                            'view', 'size', 'shape', 'has_names', '_reduce_ex_internal', '__reduce_ex__',
+                            'storage', 'storage_offset', 'stride', 'item', 'numpy',
+                            'is_contiguous', 'has_torch_function_unary', 'has_torch_function_variadic','assert_int_or_pair'
+                            ]
 
     type_tensor_func = ['bfloat16', 'bool', 'byte', 'char', 'double']
-
-    ignored_functions.extend([creating_tensor_funcs, utility_tensor_funcs, type_tensor_func])
+    ignored_functions = [func for funcs in [creating_tensor_funcs, utility_tensor_funcs, type_tensor_func] for func in funcs]
 
     for ignored_function in ignored_functions:
         if ignored_function in function_names:
@@ -171,15 +171,15 @@ def patch_torch_operators():
             variable_function_names.remove(ignored_function)
         if ignored_function in tensor_function_names:
             tensor_function_names.remove(ignored_function)
-
+    # Just to have backward compatibility with previous verion of NNCF,
+    # where 'relu' wasn't traced in torch.nn.functional
+    function_names.remove('relu')
+    from nncf.torch.graph.operator_metatypes import PTPatchSpec
     for function_name in function_names:
-        from nncf.torch.graph.operator_metatypes import PTPatchSpec
         patch_namespace_by_patchspec(F, PTPatchSpec([function_name]))
     for function_name in variable_function_names:
-        from nncf.torch.graph.operator_metatypes import PTPatchSpec
         patch_namespace_by_patchspec(torch, PTPatchSpec([function_name]))
     for tensor_name in tensor_function_names:
-        from nncf.torch.graph.operator_metatypes import PTPatchSpec
         patch_namespace_by_patchspec(TracedTensor, PTPatchSpec([tensor_name]))
 
     for op_meta_class in get_operator_metatypes():  # type: OperatorMetatype
