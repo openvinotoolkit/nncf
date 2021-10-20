@@ -32,6 +32,8 @@ class KnowledgeDistillationBuilder(PTCompressionAlgorithmBuilder):
         self.kd_type = self._algo_config.get('type', None)
         self.scale = self._algo_config.get('scale', 1)
         self.temperature = self._algo_config.get('temperature', 1)
+        if 'temperature' in self._algo_config.keys() and self.kd_type == 'mse':
+            raise ValueError("Temperature shouldn't be stated selected for MSE Loss (softmax only feature)")
         if self.kd_type is None:
             raise ValueError('Type of KDLoss must be selected explicitly')
 

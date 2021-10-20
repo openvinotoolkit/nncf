@@ -48,15 +48,17 @@ def get_model_device(inference_type, gpu):
     return "cuda"
 
 
-def get_kd_config(config: NNCFConfig, kd_type='mse', scale=1, temperature=1) -> NNCFConfig:
+def get_kd_config(config: NNCFConfig, kd_type='mse', scale=1, temperature=None) -> NNCFConfig:
     if isinstance(config.get('compression', {}), dict):
         config['compression'] = [config['compression']] if config.get('compression', None) is not None else []
-    config['compression'].append({
+    kd_algo_dict = {
         'algorithm': 'knowledge_distillation',
         'type': kd_type,
-        'scale': scale,
-        'temperature': temperature
-    })
+        'scale': scale
+    }
+    if temperature is not None:
+        kd_algo_dict['temperature'] = temperature
+    config['compression'].append(kd_algo_dict)
     return config
 
 
@@ -227,7 +229,7 @@ def test_knowledge_distillation_outputs_containers_parsing():
 
 
 @pytest.mark.parametrize(('kd_loss_type', 'scale', 'temperature'),
-                         [('mse', 1, 1), ('softmax', 1, 1), ("mse", 10, 1), ("softmax", 1, 5), ("softmax", 2, 5)])
+                         [('mse', 1, None), ('softmax', 1, 1), ("mse", 10, None), ("softmax", 1, 5), ("softmax", 2, 5)])
 def test_knowledge_distillation_loss_types(kd_loss_type: str, scale, temperature):
     torch.manual_seed(2)
     if kd_loss_type == 'softmax':
