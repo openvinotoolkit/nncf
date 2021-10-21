@@ -815,9 +815,9 @@ KNOWLEDGE_DISTILLATION_SCHEMA = {
             "const": KNOWLEDGE_DISTILLATION_ALGO_NAME_IN_CONFIG
         },
         "type": with_attributes(_STRING, description="Type of Knowledge Distillation Loss (mse/softmax)"),
-        "scale": with_attributes(_NUMBER, description="Knowledge Distillation loss value multiplier"),
+        "scale": with_attributes(_NUMBER, description="Knowledge Distillation loss value multiplier", default=1),
         "temperature": with_attributes(_NUMBER, description="Temperature for logits softening "
-                                                            "(works only with softmax disitllation)")
+                                                            "(works only with softmax disitllation)", default=1)
     },
     "additionalProperties": False
 }

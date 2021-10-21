@@ -29,7 +29,8 @@ class KnowledgeDistillationLoss(PTCompressionLoss):
     model and compressed model inferences with latest inputs. Provides KnowledgeDistillationLossHandler with kd original
     model (to distill from), storage device and function to calculate knowledge distillation loss.
     """
-    def __init__(self, target_model: NNCFNetwork, original_model: nn.Module, kd_type: str, scale=1, temperature=1):
+    def __init__(self, target_model: NNCFNetwork, original_model: nn.Module, kd_type: str, scale: float,
+                 temperature: float):
         super().__init__()
         original_model.train()
         if kd_type == 'softmax':

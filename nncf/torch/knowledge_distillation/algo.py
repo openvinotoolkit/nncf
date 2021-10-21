@@ -13,6 +13,8 @@
 
 from copy import deepcopy
 
+from torch import nn
+
 from nncf.common.schedulers import BaseCompressionScheduler
 from nncf.common.statistics import NNCFStatistics
 from nncf.torch.graph.transformations.layout import PTTransformationLayout
@@ -51,7 +53,8 @@ class KnowledgeDistillationBuilder(PTCompressionAlgorithmBuilder):
 
 
 class KnowledgeDistillationController(PTCompressionAlgorithmController):
-    def __init__(self, target_model, original_model, kd_type, scale, temperature):
+    def __init__(self, target_model: NNCFNetwork, original_model: nn.Module, kd_type: str, scale: float,
+                 temperature: float):
         super().__init__(target_model)
         original_model.train()
         self._scheduler = BaseCompressionScheduler()
