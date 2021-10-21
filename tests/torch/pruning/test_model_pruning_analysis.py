@@ -33,11 +33,12 @@ from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.pruning.operations import PTElementwisePruningOp
 from nncf.torch.pruning.operations import PTIdentityMaskForwardPruningOp
 from nncf.torch.pruning.operations import PT_PRUNING_OPERATOR_METATYPES
-from nncf.common.pruning.utils import is_depthwise_conv
+from nncf.common.pruning.utils import is_prunable_depthwise_conv
 from nncf.torch.pruning.filter_pruning.algo import FilterPruningBuilder
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
 from tests.torch.helpers import create_nncf_model_and_single_algo_builder
 from tests.torch.pruning.helpers import DepthwiseConvolutionModel
+from tests.torch.pruning.helpers import MultipleDepthwiseConvolutionModel
 from tests.torch.pruning.helpers import PruningTestModelEltwise
 from tests.torch.pruning.helpers import PruningTestModelSharedConvs
 from tests.torch.pruning.helpers import TestModelBranching
@@ -145,7 +146,17 @@ GROUP_PRUNING_MODULES_TEST_CASES = [
                                                   'DepthwiseConvolutionModel/NNCFConv2d[conv3]/conv2d_0',
                                                   'DepthwiseConvolutionModel/NNCFConv2d[depthwise_conv]/conv2d_0']],
                                   pruned_groups_by_node_id=[[2, 3, 5]],
-                                  prune_params=(False, False, False))
+                                  prune_params=(False, False, False)),
+    GroupPruningModulesTestStruct(
+        model=MultipleDepthwiseConvolutionModel,
+        non_pruned_module_nodes=['MultipleDepthwiseConvolutionModel/NNCFConv2d[conv1]/conv2d_0',
+                                 'MultipleDepthwiseConvolutionModel/NNCFConv2d[conv4]/conv2d_0',
+                                 'MultipleDepthwiseConvolutionModel/NNCFConv2d[conv2]/conv2d_0',
+                                 'MultipleDepthwiseConvolutionModel/NNCFConv2d[conv3]/conv2d_0',
+                                 'MultipleDepthwiseConvolutionModel/NNCFConv2d[depthwise_conv]/conv2d_0'],
+        pruned_groups=[],
+        pruned_groups_by_node_id=[],
+        prune_params=(False, False, False))
 ]
 
 
@@ -282,6 +293,10 @@ MODEL_ANALYSER_TEST_CASES = [
         model=TestModelResidualConnection,
         ref_can_prune={0: True, 1: True, 2: True, 3: True, 4: True, 5: True, 6: True, 7: False, 8: False, 9: False,
                        10: False, 11: False, 12: False}
+    ),
+    ModelAnalyserTestStruct(
+        model=MultipleDepthwiseConvolutionModel,
+        ref_can_prune={0: True, 1: True, 2: False, 3: False, 4: False, 5: True, 6: True, 7: True}
     )
 ]
 
@@ -295,7 +310,8 @@ def test_model_analyzer(test_struct: GroupSpecialModulesTestStruct):
     model = test_struct.model()
     nncf_model, _ = create_nncf_model_and_pruning_builder(model, {'prune_first_conv': True, 'prune_last_conv': True})
 
-    model_analyser = ModelAnalyzer(nncf_model.get_original_graph(), PT_PRUNING_OPERATOR_METATYPES, is_depthwise_conv)
+    model_analyser = ModelAnalyzer(nncf_model.get_original_graph(), PT_PRUNING_OPERATOR_METATYPES,
+                                   is_prunable_depthwise_conv)
     can_prune_analysis = model_analyser.analyse_model_before_pruning()
     for node_id in can_prune_analysis.keys():
         assert can_prune_analysis[node_id] == test_struct.ref_can_prune[node_id]
@@ -369,7 +385,15 @@ IS_MODULE_PRUNABLE_TEST_CASES = [
                             'TestModelShuffleNetUnit/TestShuffleUnit[unit1]/NNCFConv2d[compress_conv1]/conv2d_0': True,
                             'TestModelShuffleNetUnit/TestShuffleUnit[unit1]/NNCFConv2d[dw_conv2]/conv2d_0': True,
                             'TestModelShuffleNetUnit/TestShuffleUnit[unit1]/NNCFConv2d[expand_conv3]/conv2d_0': True},
-    )
+    ),
+    ModulePrunableTestStruct(
+        model=MultipleDepthwiseConvolutionModel,
+        config_params={'prune_first_conv': False, 'prune_last_conv': False, },
+        is_module_prunable={'MultipleDepthwiseConvolutionModel/NNCFConv2d[conv1]/conv2d_0': False,
+                            'MultipleDepthwiseConvolutionModel/NNCFConv2d[conv4]/conv2d_0': False,
+                            'MultipleDepthwiseConvolutionModel/NNCFConv2d[conv2]/conv2d_0': True,
+                            'MultipleDepthwiseConvolutionModel/NNCFConv2d[conv3]/conv2d_0': True,
+                            'MultipleDepthwiseConvolutionModel/NNCFConv2d[depthwise_conv]/conv2d_0': False})
 ]
 
 

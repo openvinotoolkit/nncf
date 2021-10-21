@@ -27,8 +27,8 @@ from nncf.common.pruning.model_analysis import cluster_special_ops
 from nncf.common.pruning.clusterization import Cluster
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.common.utils.helpers import should_consider_scope
-from nncf.common.pruning.utils import is_depthwise_conv
 from nncf.common.pruning.utils import is_conv_with_downsampling
+from nncf.common.pruning.utils import is_prunable_depthwise_conv
 
 
 class PruningNodeSelector:
@@ -139,7 +139,7 @@ class PruningNodeSelector:
         for node in all_nodes_to_prune:
             cluster_id = pruned_nodes_clusterization.get_cluster_containing_element(node.node_id).id
 
-            if is_depthwise_conv(node):
+            if is_prunable_depthwise_conv(node):
                 previous_convs = get_previous_convs(graph, node, self._prune_operations, stop_propagation_ops)
                 previous_clusters = [
                     pruned_nodes_clusterization.get_cluster_containing_element(node.node_id).id
@@ -168,7 +168,7 @@ class PruningNodeSelector:
             pruned_nodes_clusterization.merge_list_of_clusters(previous_clusters)
 
         # 6. Checks for groups (all nodes in group can be pruned or all group can't be pruned).
-        model_analyser = ModelAnalyzer(graph, self._pruning_operator_metatypes, is_depthwise_conv)
+        model_analyser = ModelAnalyzer(graph, self._pruning_operator_metatypes, is_prunable_depthwise_conv)
         can_prune_analysis = model_analyser.analyse_model_before_pruning()
         self._check_pruning_groups(graph, pruned_nodes_clusterization, can_prune_analysis)
         return pruned_nodes_clusterization
@@ -250,7 +250,7 @@ class PruningNodeSelector:
             msg = 'Ignored adding Weight Pruner in: {} because'\
                              ' this scope is one of the last convolutions'.format(node_name)
             prune = False
-        elif is_grouped_conv(node) and not is_depthwise_conv(node):
+        elif is_grouped_conv(node) and not is_prunable_depthwise_conv(node):
             msg = 'Ignored adding Weight Pruner in: {} because' \
                   ' this scope is grouped convolution'.format(node_name)
             prune = False
