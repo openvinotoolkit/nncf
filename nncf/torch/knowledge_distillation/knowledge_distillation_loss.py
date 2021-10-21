@@ -43,12 +43,10 @@ class KnowledgeDistillationLoss(PTCompressionLoss):
                 return scale * -(nn.functional.log_softmax(compressed_model_output / temperature, dim=1) *
                          nn.functional.softmax(ref_output / temperature, dim=1)).mean()\
                        * (compressed_model_output.shape[1] * temperature * temperature)
-        elif kd_type == 'mse':
+        else:
             def kd_loss_fn(ref_output: torch.Tensor, compressed_model_output: torch.Tensor):
                 mse = torch.nn.MSELoss()
                 return scale * mse(ref_output, compressed_model_output)
-        else:
-            raise ValueError('Choose between mse/softmax options for Knowledge Distillation')
         self._kd_loss_handler = target_model.create_knowledge_distillation_loss_handler(original_model, partial(
             KnowledgeDistillationLoss._calculate,
             kd_loss_fn=kd_loss_fn))

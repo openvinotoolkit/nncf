@@ -35,9 +35,7 @@ class KnowledgeDistillationBuilder(PTCompressionAlgorithmBuilder):
         self.scale = self._algo_config.get('scale', 1)
         self.temperature = self._algo_config.get('temperature', 1)
         if 'temperature' in self._algo_config.keys() and self.kd_type == 'mse':
-            raise ValueError("Temperature shouldn't be stated selected for MSE Loss (softmax only feature)")
-        if self.kd_type is None:
-            raise ValueError('Type of KDLoss must be selected explicitly')
+            raise ValueError("Temperature shouldn't be stated for MSE Loss (softmax only feature)")
 
     def _get_transformation_layout(self, target_model: NNCFNetwork) -> PTTransformationLayout:
         self.original_model = deepcopy(target_model.nncf_module)
