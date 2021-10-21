@@ -45,7 +45,7 @@ class Unpickler(pickle.Unpickler):
     #pylint:disable=protected-access
     allowed_classes = {
         'torch': {'Tensor', 'FloatStorage', 'LongStorage', 'IntStorage'},
-        'torch._utils': {'_rebuild_tensor_v2', '_rebuild_parameter'},
+        'torch._utils': {'_rebuild_tensor', '_rebuild_tensor_v2', '_rebuild_parameter'},
         'torch.nn': {'Module'},
         'torch.optim.adam': {'Adam'},
 
