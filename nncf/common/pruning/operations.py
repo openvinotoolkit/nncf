@@ -94,11 +94,9 @@ class IdentityMaskForwardPruningOp(BasePruningOp):
 class ConvolutionPruningOp(BasePruningOp):
     @classmethod
     def accept_pruned_input(cls, node: NNCFNode) -> bool:
-        accept_pruned_input = True
-        if is_grouped_conv(node):
-            if not is_prunable_depthwise_conv(node):
-                accept_pruned_input = False
-        return accept_pruned_input
+        if is_grouped_conv(node) and not is_prunable_depthwise_conv(node):
+            return False
+        return True
 
     @classmethod
     def mask_propagation(cls, node: NNCFNode, graph: NNCFGraph) -> None:
@@ -116,11 +114,9 @@ class ConvolutionPruningOp(BasePruningOp):
 class TransposeConvolutionPruningOp(BasePruningOp):
     @classmethod
     def accept_pruned_input(cls, node: NNCFNode) -> bool:
-        accept_pruned_input = True
-        if is_grouped_conv(node):
-            if not is_prunable_depthwise_conv(node):
-                accept_pruned_input = False
-        return accept_pruned_input
+        if is_grouped_conv(node) and not is_prunable_depthwise_conv(node):
+            return False
+        return True
 
     @classmethod
     def mask_propagation(cls, node: NNCFNode, graph: NNCFGraph) -> None:
