@@ -16,7 +16,7 @@ import tensorflow as tf
 from tensorflow.python.keras import layers
 
 from nncf.tensorflow.graph.metatypes.matcher import get_keras_layer_metatype
-from nncf.tensorflow.layers.custom_objects import NNCF_QUANTIZATION_OPERATONS
+from nncf.tensorflow.layers.custom_objects import NNCF_QUANTIZATION_OPERATIONS
 from nncf.tensorflow.layers.operation import InputType
 from nncf.tensorflow.layers.wrapper import NNCFWrapper
 from nncf.tensorflow.quantization import FakeQuantize
@@ -36,7 +36,7 @@ def compare_qspecs(qspec: TFQuantizerSpec, quantizer):
     assert qspec.per_channel == quantizer.per_channel
     assert qspec.narrow_range == quantizer.narrow_range
     assert qspec.half_range == quantizer.half_range
-    assert isinstance(quantizer, NNCF_QUANTIZATION_OPERATONS.get(qspec.mode))
+    assert isinstance(quantizer, NNCF_QUANTIZATION_OPERATIONS.get(qspec.mode))
     if qspec.mode == QuantizationMode.SYMMETRIC:
         # pylint: disable=protected-access
         assert qspec.signedness_to_force == quantizer.signedness_to_force
