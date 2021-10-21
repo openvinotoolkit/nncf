@@ -678,7 +678,7 @@ class TestInsertionPointGraph:
         ref_scope_vs_metatype_dict = {
             "/" + MODEL_INPUT_OP_NAME + "_0": PTInputNoopMetatype,
             "ModelForMetatypeTesting/NNCFConv2d[conv_regular]/conv2d_0": Conv2dMetatype,
-            "ModelForMetatypeTesting/BatchNorm2d[bn]/batch_norm_0": BatchNormMetatype,
+            "ModelForMetatypeTesting/NNCFBatchNorm[bn]/batch_norm_0": BatchNormMetatype,
             "ModelForMetatypeTesting/relu_0": RELUMetatype,
             "ModelForMetatypeTesting/MaxPool2d[max_pool2d]/max_pool2d_0": MaxPool2dMetatype,
             "ModelForMetatypeTesting/NNCFConvTranspose2d[conv_transpose]/conv_transpose2d_0": ConvTranspose2dMetatype,

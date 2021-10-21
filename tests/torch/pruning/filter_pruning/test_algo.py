@@ -20,7 +20,7 @@ from examples.torch.common.optimizer import make_optimizer, get_parameter_groups
 from nncf.torch.module_operations import UpdateWeight, UpdateWeightAndBias
 from nncf.torch.pruning.filter_pruning.algo import FilterPruningController
 from nncf.torch.pruning.filter_pruning.functions import l2_filter_norm
-from nncf.torch.pruning.filter_pruning.layers import FilterPruningBlock
+from nncf.torch.pruning.filter_pruning.layers import FilterPruningMask
 from nncf.torch.pruning.filter_pruning.layers import apply_filter_binary_mask
 from nncf.common.pruning.schedulers import ExponentialPruningScheduler
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
@@ -101,7 +101,7 @@ def test_valid_modules_replacement_and_pruning(prune_first, prune_last):
         pre_ops = list(module.pre_ops.values())
         assert isinstance(pre_ops[0], UpdateWeightAndBias)
         pruning_op = pre_ops[0].operand
-        assert isinstance(pruning_op, FilterPruningBlock)
+        assert isinstance(pruning_op, FilterPruningMask)
 
     config = get_basic_pruning_config(input_sample_size=[1, 1, 8, 8])
     config['compression']['params']['prune_first_conv'] = prune_first

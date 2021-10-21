@@ -17,7 +17,7 @@ from torch import nn
 
 from nncf.torch.layers import NNCFConv2d
 from nncf.torch.module_operations import UpdateWeightAndBias
-from nncf.torch.pruning.filter_pruning.layers import FilterPruningBlock, inplace_apply_filter_binary_mask, \
+from nncf.torch.pruning.filter_pruning.layers import FilterPruningMask, inplace_apply_filter_binary_mask, \
     apply_filter_binary_mask
 from tests.torch.helpers import fill_conv_weight, fill_bias
 
@@ -26,7 +26,7 @@ class TestFilterPruningBlockModel(nn.Module):
     def __init__(self, layer):
         super().__init__()
         self.layer = layer
-        pruning_op = FilterPruningBlock(layer.weight.size(0))
+        pruning_op = FilterPruningMask(layer.weight.size(0))
         self.op_key = self.layer.register_pre_forward_operation(UpdateWeightAndBias(pruning_op))
 
     @property

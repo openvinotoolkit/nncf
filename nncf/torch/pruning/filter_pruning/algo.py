@@ -68,7 +68,7 @@ from nncf.torch.pruning.filter_pruning.functions import FILTER_IMPORTANCE_FUNCTI
 from nncf.torch.pruning.filter_pruning.functions import calculate_binary_mask
 from nncf.torch.pruning.filter_pruning.functions import tensor_l2_normalizer
 from nncf.torch.pruning.filter_pruning.global_ranking.legr import LeGR
-from nncf.torch.pruning.filter_pruning.layers import FilterPruningBlock
+from nncf.torch.pruning.filter_pruning.layers import FilterPruningMask
 from nncf.torch.pruning.structs import PrunedModuleInfo
 from nncf.torch.pruning.utils import init_output_masks_in_graph
 from nncf.torch.structures import LeGRInitArgs, DistributedCallbacksArgs
@@ -92,8 +92,8 @@ LINEAR_LAYER_METATYPES = [
 @PT_COMPRESSION_ALGORITHMS.register('filter_pruning')
 class FilterPruningBuilder(BasePruningAlgoBuilder):
     def create_weight_pruning_operation(self, module):
-        return FilterPruningBlock(module.weight.size(module.target_weight_dim_for_compression),
-                                  module.target_weight_dim_for_compression)
+        return FilterPruningMask(module.weight.size(module.target_weight_dim_for_compression),
+                                 module.target_weight_dim_for_compression)
 
     def _build_controller(self, model: NNCFNetwork) -> PTCompressionAlgorithmController:
         return FilterPruningController(model,

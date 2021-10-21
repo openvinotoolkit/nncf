@@ -20,7 +20,11 @@ from nncf.torch.utils import is_tracing_state, no_jit_trace
 
 
 @COMPRESSION_MODULES.register()
-class FilterPruningBlock(nn.Module):
+class FilterPruningMask(nn.Module):
+    """
+    A module contains the mask for pruning.
+    On forward pass applying the mask to weight and bias of the module.
+    """
     def __init__(self, size, dim=0):
         super().__init__()
         self.register_buffer("_binary_filter_pruning_mask", torch.ones(size))
