@@ -13,7 +13,7 @@
 
 import numpy as np
 
-from typing import Callable, List, Dict, Optional
+from typing import Callable, List, Dict
 
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
@@ -23,9 +23,10 @@ from nncf.common.pruning.clusterization import Cluster
 from nncf.common.pruning.clusterization import Clusterization
 from nncf.common.pruning.operations import BasePruningOp
 from nncf.common.pruning.mask_propagation import MaskPropagationAlgorithm
-from nncf.common.pruning.utils import is_depthwise_conv
+from nncf.common.pruning.utils import is_grouped_conv
 from nncf.common.pruning.utils import find_next_nodes_not_of_types
 from nncf.common.pruning.utils import PruningOperationsMetatypeRegistry
+from nncf.common.pruning.utils import PruningAnalysisDecision
 
 
 class SymbolicMaskProcessor(NNCFBaseTensorProcessor):
@@ -57,12 +58,7 @@ class SymbolicMaskProcessor(NNCFBaseTensorProcessor):
         return SymbolicMask(ret_tensor, tensor.mask_producers)
 
     @classmethod
-    def elementwise_output_mask_from_input_masks(cls, tensors: List[NNCFTensor]) -> Optional[NNCFTensor]:
-        # Stop mask propagation in case some
-        # input branches have no masks
-        if any(t is None for t in tensors):
-            return None
-
+    def elementwise_output_mask_from_input_masks(cls, tensors: List[NNCFTensor]) -> NNCFTensor:
         cls.check_all_close(tensors)
         producers = list(set([p for t in tensors for p in t.mask_producers]))
         return SymbolicMask(tensors[0].tensor, producers)
@@ -83,21 +79,30 @@ class SymbolicMask(NNCFTensor):
 
 
 class SymbolicMaskPropagationAlgorithm(MaskPropagationAlgorithm):
-    def symbolic_mask_propagation(self, prunable_layers: List[str], can_prune_after_analisys: Dict[int, bool]) -> Dict[int, bool]:
+    def symbolic_mask_propagation(self, prunable_layers_types: List[str],
+                                  can_prune_after_analisys: Dict[int, PruningAnalysisDecision]) \
+                                  -> Dict[int, PruningAnalysisDecision]:
         """
         Mask propagation in graph:
         to propagate masks run method mask_propagation (of metaop of current node) on all nodes in topological order.
+
+        :param prunable_layers_types: Types of operations with prunable filters.
+        :param can_prune_after_analisys: Dict of nodes indexes only indexes of convolutional
+            layers that have no conflicts for MaskPropagation and supported by
+            nncf pruning algorithm have True value.
         """
-        can_prune_convs = {node.node_id: None for node in self._graph.get_all_nodes()
-                           if node.node_type in prunable_layers and not is_depthwise_conv(node)}
+
+        can_be_closing_convs = set([node.node_id for node in self._graph.get_all_nodes()
+                                    if node.node_type in prunable_layers_types and not is_grouped_conv(node)])
+        can_prune_by_dim = {k: None for k in can_be_closing_convs}
         for node in self._graph.topological_sort():
-            if node.node_id in can_prune_convs and can_prune_after_analisys[node.node_id]:
+            if node.node_id in can_be_closing_convs and can_prune_after_analisys[node.node_id]:
                 # Set output mask
                 node.data['output_mask'] = SymbolicMask(np.empty(node.layer_attributes.out_channels), [node.node_id])
             # Propagate masks
             cls = self.get_meta_operation_by_type_name(node.node_type)
             cls.mask_propagation(node, self._graph)
-            if node.node_id in can_prune_convs:
+            if node.node_id in can_be_closing_convs:
                 # Check input mask producers
                 if node.data['input_masks'][0] is not None:
                     input_masks = node.data['input_masks']
@@ -107,19 +112,28 @@ class SymbolicMaskPropagationAlgorithm(MaskPropagationAlgorithm):
                         continue
 
                     for producer in input_mask.mask_producers:
-                        previously_dims_equal = True if can_prune_convs[producer] is None \
-                            else can_prune_convs[producer]
+                        previously_dims_equal = True if can_prune_by_dim[producer] is None \
+                            else can_prune_by_dim[producer]
 
                         is_dims_equal = node.layer_attributes.in_channels == input_mask.tensor.shape[0]
-                        can_prune_convs[producer] = previously_dims_equal and is_dims_equal
+                        decision = previously_dims_equal and is_dims_equal
+                        can_prune_by_dim[producer] = PruningAnalysisDecision(
+                                                         decision, PruningAnalysisDecision.DIMENSION_MISMATCH)
 
         # Clean nodes masks
-        for idx in can_prune_convs:
+        for idx in can_be_closing_convs:
             node = self._graph.get_node_by_id(idx)
             node.data['input_masks'] = None
             node.data['output_mask'] = None
 
-        return {k: bool(v) for k, v in can_prune_convs.items()}
+        convs_without_closing_conv = {}
+        for k, v in can_prune_by_dim.items():
+            if v is None:
+                convs_without_closing_conv[k] = \
+                    PruningAnalysisDecision(False, PruningAnalysisDecision.CLOSING_CONV_MISSING)
+
+        can_prune_by_dim.update(convs_without_closing_conv)
+        return can_prune_by_dim
 
 
 def get_position(nodes_list: List[NNCFNode], idx: int):
@@ -328,9 +342,10 @@ class ModelAnalyzer:
         #self.can_prune = {k: False for k in self.can_prune}
         #self.can_prune.update(can_prune_by_dim)
 
-    def analyse_model_before_pruning(self):
+    def analyse_model_before_pruning(self) -> Dict[int, PruningAnalysisDecision]:
         self.set_accept_pruned_input_attr()
         self.propagate_can_prune_attr_up()
         self.propagate_can_prune_attr_down()
-        self.check_pruned_dimensions()
-        return self.can_prune
+        #self.check_pruned_dimensions()
+        return {k: PruningAnalysisDecision(v, PruningAnalysisDecision.MODEL_ANALYSIS)
+                for k, v in self.can_prune.items()}

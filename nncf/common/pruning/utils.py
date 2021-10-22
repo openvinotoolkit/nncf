@@ -12,11 +12,7 @@
 """
 
 from functools import partial
-from typing import Dict
-from typing import List
-from typing import Optional
-from typing import Tuple
-from typing import Type
+from typing import Dict, List, Optional, Tuple, Type, Callable
 
 import math
 import numpy as np
@@ -393,6 +389,32 @@ class PruningOperationsMetatypeRegistry(Registry):
         if op_name in self._op_name_to_op_class:
             return self._op_name_to_op_class[op_name]
         return None
+
+
+class PruningAnalysisDecision:
+    PREFIX = lambda node_name: 'Ignored adding Weight Pruner in: {} because '.format(node_name)
+    IGNORED_SCOPE = 'node in ignored scope'
+    FIRST_CONV = 'this scope is one of the first convolutions'
+    LAST_CONV = 'this scope is one of the last convolutions'
+    GROUP_CONV = 'this scope is grouped convolution'
+    DOWNSAMPLE_CONV = 'this scope is convolution with downsample'
+    MODEL_ANALYSIS = 'of model analysis'
+    DIMENSION_MISMATCH = 'of dimension mismatch'
+    CLOSING_CONV_MISSING = 'closing convolution missing'
+    IN_GROUP_OF_UNPRUNABLE = 'is in the group with non prunable layers'
+
+    def __init__(self, decision: bool, possible_reason: Optional[str] = None):
+        self.decision = decision
+        self.reason_without_prefix = possible_reason if not decision and possible_reason else None
+
+    def __bool__(self) -> bool:
+        return self.decision
+
+    def join(self, other: 'PruningAnalysisDecision') -> 'PruningAnalysisDecision':
+        if self.decision and other.decision:
+            return self
+        reasons = [d.reason_without_prefix for d in [self, other] if not d]
+        return PruningAnalysisDecision(False, ' and '.join(reasons))
 
 
 def is_prunable_depthwise_conv(node: NNCFNode) -> bool:
