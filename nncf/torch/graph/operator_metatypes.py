@@ -245,6 +245,12 @@ class HardTanhMetatype(PTOperatorMetatype):
 
 
 @PT_OPERATOR_METATYPES.register()
+class HardSwishMetatype(PTOperatorMetatype):
+    name = "hardswish"
+    torch_nn_functional_patch_spec = PTPatchSpec([name])
+
+
+@PT_OPERATOR_METATYPES.register()
 class TanhMetatype(PTOperatorMetatype):
     name = "tanh"
     torch_nn_functional_patch_spec = PTPatchSpec([name])
@@ -307,9 +313,9 @@ class SigmoidMetatype(PTOperatorMetatype):
 class AddMetatype(PTOperatorMetatype):
     name = "add"
     torch_tensor_patch_spec = PTPatchSpec([name,
-                                         "__add__",
-                                         "__iadd__",
-                                         "__radd__"])
+                                           "__add__",
+                                           "__iadd__",
+                                           "__radd__"])
     torch_module_patch_spec = PTPatchSpec([name])
     hw_config_names = [HWConfigOpName.ADD]
 
@@ -318,8 +324,8 @@ class AddMetatype(PTOperatorMetatype):
 class SubMetatype(PTOperatorMetatype):
     name = "sub"
     torch_tensor_patch_spec = PTPatchSpec(["__sub__",
-                                         "__isub__",
-                                         "__rsub__"])
+                                           "__isub__",
+                                           "__rsub__"])
     hw_config_names = [HWConfigOpName.SUBTRACT]
 
 
@@ -327,9 +333,9 @@ class SubMetatype(PTOperatorMetatype):
 class MulMetatype(PTOperatorMetatype):
     name = "mul"
     torch_tensor_patch_spec = PTPatchSpec(["mul",
-                                         "__mul__",
-                                         "__imul__",
-                                         "__rmul__"])
+                                           "__mul__",
+                                           "__imul__",
+                                           "__rmul__"])
     hw_config_names = [HWConfigOpName.MULTIPLY]
 
 
@@ -338,8 +344,8 @@ class DivMetatype(PTOperatorMetatype):
     name = "div"
     torch_module_patch_spec = PTPatchSpec([name])
     torch_tensor_patch_spec = PTPatchSpec(["__div__",
-                                         "__idiv__",
-                                         "__truediv__"])
+                                           "__idiv__",
+                                           "__truediv__"])
     hw_config_names = [HWConfigOpName.DIVIDE]
 
 
@@ -628,7 +634,9 @@ class LogicalNotMetatype(PTOperatorMetatype):
 @PT_OPERATOR_METATYPES.register()
 class PowerMetatype(PTOperatorMetatype):
     name = "__pow__"
-    torch_tensor_patch_spec = PTPatchSpec([name])
+    torch_tensor_patch_spec = PTPatchSpec([name,
+                                           'pow',
+                                           'sqrt'])
     hw_config_names = [HWConfigOpName.POWER]
 
 
@@ -656,6 +664,13 @@ class CloneMetatype(PTOperatorMetatype):
 class PixelShuffleMetatype(PTOperatorMetatype):
     name = "pixel_shuffle"
     torch_nn_functional_patch_spec = PTPatchSpec([name])
+
+
+@PT_OPERATOR_METATYPES.register()
+class SumMetatype(OperatorMetatype):
+    name = "sum"
+    torch_tensor_patch_spec = PTPatchSpec([name])
+    hw_config_names = [HWConfigOpName.REDUCESUM]
 
 
 def get_operator_metatypes() -> List[Type[OperatorMetatype]]:
