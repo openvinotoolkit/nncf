@@ -91,7 +91,7 @@ class TestTransformers:
                        check=True, shell=True, cwd=self.TRANSFORMERS_REPO_PATH)
         pip_runner.run_pip("install .", cwd=self.TRANSFORMERS_REPO_PATH)
         pip_runner.run_pip("install -e \".[testing]\"", cwd=self.TRANSFORMERS_REPO_PATH)
-        for sample_folder in ['question-answering', 'text-classification', 'language-modeling']:
+        for sample_folder in ['question-answering', 'text-classification', 'language-modeling', 'token-classification']:
             pip_runner.run_pip(f"install -r examples/pytorch/{sample_folder}/requirements.txt",
                                cwd=self.TRANSFORMERS_REPO_PATH)
         pip_runner.run_pip("install boto3", cwd=self.TRANSFORMERS_REPO_PATH)
@@ -220,6 +220,32 @@ class TestTransformers:
                    " --max_eval_samples 10" \
                    " --nncf_config nncf_gpt2_config_wikitext_hw_config.json" \
             .format(output=os.path.join(temp_folder["models"], "lm_output"))
+        runner = Command(create_command_line(com_line, self.VENV_ACTIVATE, self.PYTHON_EXECUTABLE,
+                                             self.CUDA_VISIBLE_STRING), self.TRANSFORMERS_REPO_PATH)
+        runner.run()
+
+    @pytest.mark.dependency(depends=['install_trans'], name='ner_train')
+    def test_ner_train(self, temp_folder):
+        com_line = "examples/pytorch/token-classification/run_ner.py --model_name_or_path bert-base-uncased" \
+                   " --do_train --per_gpu_train_batch_size 1" \
+                   " --dataset_name conll2003 " \
+                   " --max_train_samples 10" \
+                   " --output_dir {} " \
+                   " --nncf_config nncf_bert_config_conll.json".format(os.path.join(temp_folder["models"],
+                                                                                    "ner_output"))
+        runner = Command(create_command_line(com_line, self.VENV_ACTIVATE, self.PYTHON_EXECUTABLE,
+                                             self.CUDA_VISIBLE_STRING), self.TRANSFORMERS_REPO_PATH)
+        runner.run()
+        assert os.path.exists(os.path.join(temp_folder["models"], "ner_output", "pytorch_model.bin"))
+
+    @pytest.mark.dependency(depends=['install_trans', 'ner_train'])
+    def test_ner_eval(self, temp_folder):
+        com_line = "examples/pytorch/token-classification/run_ner.py " \
+                   " --model_name_or_path {output} --do_eval " \
+                   " --output_dir {output} --dataset_name conll2003" \
+                   " --max_eval_samples 10" \
+                   " --nncf_config nncf_bert_config_conll.json" \
+            .format(output=os.path.join(temp_folder["models"], "ner_output"))
         runner = Command(create_command_line(com_line, self.VENV_ACTIVATE, self.PYTHON_EXECUTABLE,
                                              self.CUDA_VISIBLE_STRING), self.TRANSFORMERS_REPO_PATH)
         runner.run()
