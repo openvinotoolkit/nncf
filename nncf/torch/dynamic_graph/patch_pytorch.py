@@ -148,9 +148,9 @@ def patch_torch_operators():
                           torch: get_all_functions_from_namespace(torch._C._VariableFunctions),
                           TracedTensor: get_all_functions_from_namespace(torch.Tensor)}
     # pylint: enable=protected-access
-    creating_tensor_funcs = ['arange', 'as_tensor', 'empty', 'rand', 'randn', 'ones', 'tensor', 'zeros', 'ones_like', 'rad2deg',
-                             'rad2deg_', 'randn_like', 'as_subclass', 'copy_', 'clone', 'copysign', 'copysign_',
-                             'contiguous', 'detach', 'detach_']
+    creating_tensor_funcs = ['arange', 'as_tensor', 'empty', 'rand', 'randn', 'ones', 'tensor', 'zeros', 'ones_like',
+                             'rad2deg', 'rad2deg_', 'randn_like', 'as_subclass', 'copy_', 'clone', 'copysign',
+                             'copysign_', 'contiguous', 'detach', 'detach_']
     utility_tensor_funcs = ['all', 'allclose', 'any', 'backward', 'broadcast_to', 'dim', 'names', 'rename', 'rename_',
                             'refine_names', 'register_hook', 'record_stream', 'random_', 'cpu', 'cuda', 'data_ptr',
                             'dequantize', 'qscheme', 'q_per_channel_axis', 'q_per_channel_scales',
