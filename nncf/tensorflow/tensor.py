@@ -32,7 +32,8 @@ class TFNNCFTensorProcessor(NNCFBaseTensorProcessor):
 
     @classmethod
     def ones(cls, shape: List[int], device) -> NNCFTensor:
-        return TFNNCFTensor(tf.ones(shape))
+        with tf.device(device):
+            return TFNNCFTensor(tf.ones(shape))
 
     @classmethod
     def check_all_close(cls, tensors: List[NNCFTensor]) -> None:
