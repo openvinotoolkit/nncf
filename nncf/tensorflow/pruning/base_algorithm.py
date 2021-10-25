@@ -107,16 +107,16 @@ class BasePruningAlgoBuilder(TFCompressionAlgorithmBuilder):
         :return: The instance of the `TransformationLayout` class containing
             a list of pruning mask insertions.
         """
-        converter = TFModelConverterFactory.create(model)
-        self._graph = converter.convert()
-        nx_graph = self._graph.get_graph_for_structure_analysis()
-        base_path = '/home/dlyakhov/model_export/18_10_21'
-        import networkx as nx
-        import os
-        import subprocess
-        path = os.path.join(base_path, model.name + '.dot')
-        nx.drawing.nx_pydot.write_dot(nx_graph, path)
-        subprocess.run(['dot', '-Tsvg', path, '-o', path[:-3] + 'svg'])
+        #converter = TFModelConverterFactory.create(model)
+        #self._graph = converter.convert()
+        #nx_graph = self._graph.get_graph_for_structure_analysis()
+        #base_path = '/home/dlyakhov/model_export/18_10_21'
+        #import networkx as nx
+        #import os
+        #import subprocess
+        #path = os.path.join(base_path, model.name + '.dot')
+        #nx.drawing.nx_pydot.write_dot(nx_graph, path)
+        #subprocess.run(['dot', '-Tsvg', path, '-o', path[:-3] + 'svg'])
         groups_of_nodes_to_prune = self._pruning_node_selector.create_pruning_groups(self._graph)
 
         transformations = TFTransformationLayout()

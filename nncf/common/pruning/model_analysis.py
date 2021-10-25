@@ -310,42 +310,9 @@ class ModelAnalyzer:
             cls = self.get_meta_operation_by_type_name(nncf_node.node_type)
             self.accept_pruned_input[nncf_node.node_id] = cls.accept_pruned_input(nncf_node)
 
-    def check_pruned_dimensions(self):
-        mask_prop_algo = SymbolicMaskPropagationAlgorithm(self.graph, self._pruning_operator_metatypes)
-        can_prune_by_dim = mask_prop_algo.symbolic_mask_propagation(self._prune_operations, self.can_prune)
-        diff = [idx for idx in can_prune_by_dim if not can_prune_by_dim[idx] and self.can_prune[idx]]
-        can_prune_for_prunable_layers = \
-            {node_id: self.can_prune[node_id] and can_prune_by_dim[node_id] for node_id in can_prune_by_dim}
-        self.can_prune.update(can_prune_for_prunable_layers)
-        ## Init output_masks and can prune for each prunable layer
-        #for node in self.graph.get_all_nodes():
-        #    if node.node_type in self._prune_operations and self.can_prune[node.node_id]:
-        #        node.data['output_mask'] = SymbolicMask(node.layer_attributes.out_channels, node.node_id)
-        ## Launch mask propagation
-        #MaskPropagationAlgorithm(self.graph, self._pruning_operator_metatypes).mask_propagation()
-        ## Check every pruning candidate has closing prunable layer
-        ## and mask dimension is equal to closing prunable layer input dimensions
-        #can_prune_by_dim = {}
-        #for node in self.graph.get_all_nodes():
-        #    if node.node_type in self._prune_operations and 'input_mask' in node.data:
-        #        input_mask = node.data['input_mask'] # type: SymbolicMask
-        #        if input_mask.mask_producers is None:
-        #            continue
-
-        #        for producer in input_mask.mask_producers:
-        #            previous_can_prune = can_prune_by_dim[producer] if producer in can_prune_by_dim else True
-        #            if input_mask.tensor.shape[0] == node.layer_attributes.in_channels:
-        #                can_prune_by_dim[producer] = previous_can_prune
-        #            else:
-        #                can_prune_by_dim[producer] = False
-        ## Update can_prune dict
-        #self.can_prune = {k: False for k in self.can_prune}
-        #self.can_prune.update(can_prune_by_dim)
-
     def analyse_model_before_pruning(self) -> Dict[int, PruningAnalysisDecision]:
         self.set_accept_pruned_input_attr()
         self.propagate_can_prune_attr_up()
         self.propagate_can_prune_attr_down()
-        #self.check_pruned_dimensions()
         return {k: PruningAnalysisDecision(v, PruningAnalysisDecision.MODEL_ANALYSIS)
                 for k, v in self.can_prune.items()}

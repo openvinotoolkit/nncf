@@ -195,9 +195,11 @@ class PruningNodeSelector:
         return [ret[module_identifier] for module_identifier in ret if len(ret[module_identifier]) > 1]
 
     def _check_pruning_dimentions(self, graph, can_prune_after_check) -> Dict[int, PruningAnalysisDecision]:
+        """TODO"""
         mask_prop_algo = SymbolicMaskPropagationAlgorithm(graph, self._pruning_operator_metatypes)
         can_prune_by_dim = mask_prop_algo.symbolic_mask_propagation(self._prune_operations_types, can_prune_after_check)
         diff = [idx for idx in can_prune_by_dim if not can_prune_by_dim[idx] and can_prune_after_check[idx]]
+
         # Find indexes of last convolutions
         stop_propagation_ops = self._stop_propagation_op_metatype.get_all_op_aliases()
         types_to_track = self._prune_operations_types + stop_propagation_ops
@@ -215,6 +217,7 @@ class PruningNodeSelector:
     def _should_prune_groups_analysis(self, graph: NNCFGraph, pruned_nodes_clusterization: Clusterization,
                                       can_prune: Dict[int, PruningAnalysisDecision]) \
             -> Dict[int, PruningAnalysisDecision]:
+        """TODO"""
         should_prune = {}
         for cluster in pruned_nodes_clusterization.get_all_clusters():
             should_prune_decisions = [self._is_module_prunable(graph, node) for node in cluster.elements]

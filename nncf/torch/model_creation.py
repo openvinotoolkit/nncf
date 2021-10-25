@@ -147,15 +147,15 @@ def create_compressed_model(model: Module,
 
 
 
-    base_path = '/home/dlyakhov/model_export/18_10_21'
-    import networkx as nx
-    import os
-    import subprocess
-    model_name = str(compressed_model.nncf_module).split('(')[0]
-    nx_graph = compressed_model.get_graph().get_graph_for_structure_analysis()
-    path = os.path.join(base_path, model_name + '.dot')
-    nx.drawing.nx_pydot.write_dot(nx_graph, path)
-    subprocess.run(['dot', '-Tsvg', path, '-o', path[:-3] + 'svg'])
+    #base_path = '/home/dlyakhov/model_export/18_10_21'
+    #import networkx as nx
+    #import os
+    #import subprocess
+    #model_name = str(compressed_model.nncf_module).split('(')[0]
+    #nx_graph = compressed_model.get_graph().get_graph_for_structure_analysis()
+    #path = os.path.join(base_path, model_name + '.dot')
+    #nx.drawing.nx_pydot.write_dot(nx_graph, path)
+    #subprocess.run(['dot', '-Tsvg', path, '-o', path[:-3] + 'svg'])
 
 
 
