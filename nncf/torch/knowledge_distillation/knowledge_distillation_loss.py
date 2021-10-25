@@ -29,7 +29,8 @@ class KnowledgeDistillationLoss(PTCompressionLoss):
     model and compressed model inferences with latest inputs. Provides KnowledgeDistillationLossHandler with kd original
     model (to distill from), storage device and function to calculate knowledge distillation loss.
     """
-    def __init__(self, target_model: NNCFNetwork, original_model: nn.Module, kd_type: str):
+    def __init__(self, target_model: NNCFNetwork, original_model: nn.Module, kd_type: str, scale: float,
+                 temperature: float):
         super().__init__()
         original_model.train()
         if kd_type == 'softmax':
@@ -39,14 +40,13 @@ class KnowledgeDistillationLoss(PTCompressionLoss):
                                       "for softmax KD - ignoring!".format(compressed_model_output.shape,
                                                                           ref_output.shape))
                     return torch.zeros([1]).to(compressed_model_output.device)
-                return -(nn.functional.log_softmax(compressed_model_output, dim=1) *
-                         nn.functional.softmax(ref_output, dim=1)).mean() * (compressed_model_output.shape[1])
-        elif kd_type == 'mse':
+                return scale * -(nn.functional.log_softmax(compressed_model_output / temperature, dim=1) *
+                         nn.functional.softmax(ref_output / temperature, dim=1)).mean()\
+                       * (compressed_model_output.shape[1] * temperature * temperature)
+        else:
             def kd_loss_fn(ref_output: torch.Tensor, compressed_model_output: torch.Tensor):
                 mse = torch.nn.MSELoss()
-                return mse(ref_output, compressed_model_output)
-        else:
-            raise ValueError('Choose between mse/softmax options for Knowledge Distillation')
+                return scale * mse(ref_output, compressed_model_output)
         self._kd_loss_handler = target_model.create_knowledge_distillation_loss_handler(original_model, partial(
             KnowledgeDistillationLoss._calculate,
             kd_loss_fn=kd_loss_fn))
