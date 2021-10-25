@@ -22,10 +22,10 @@ from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.compression_method_api import PTCompressionAlgorithmBuilder
 from nncf.torch.compression_method_api import PTCompressionAlgorithmController
 from nncf.api.compression import CompressionLoss, CompressionScheduler, CompressionStage
-from nncf.torch.algo_selector import COMPRESSION_ALGORITHMS
+from nncf.torch.algo_selector import PT_COMPRESSION_ALGORITHMS
 
 
-@COMPRESSION_ALGORITHMS.register('knowledge_distillation')
+@PT_COMPRESSION_ALGORITHMS.register('knowledge_distillation')
 class KnowledgeDistillationBuilder(PTCompressionAlgorithmBuilder):
     def __init__(self, config: NNCFConfig, should_init: bool = True):
         super().__init__(config, should_init)

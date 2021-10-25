@@ -184,19 +184,16 @@ def get_last_nodes_of_type(graph: NNCFGraph, op_types: List[str]) -> List[NNCFNo
     return last_nodes_of_type
 
 
-def get_previous_conv(graph: NNCFGraph, nncf_node: NNCFNode,
-                      pruning_types: List[str], stop_propagation_ops: List[str]) -> Optional[NNCFNode]:
+def get_previous_convs(graph: NNCFGraph, nncf_node: NNCFNode,
+                       pruning_types: List[str], stop_propagation_ops: List[str]) -> Optional[NNCFNode]:
     """
-    Returns source convolution of the node. If the node has another source type or there is
-    more than one source - returns None.
+    Returns source convolutions of the node.
 
-    :return: Source convolution of node. If the node has another source type or there is more
-        than one source - returns None.
+    :return: List of source convolutions of node.
     """
     sources = get_sources_of_node(nncf_node, graph, pruning_types + stop_propagation_ops)
-    if len(sources) == 1 and sources[0].node_type in pruning_types:
-        return sources[0]
-    return None
+    sources = [source for source in sources if source.node_type in pruning_types]
+    return sources
 
 
 def get_conv_in_out_channels(graph: NNCFGraph):
@@ -309,9 +306,10 @@ def count_flops_and_weights_per_node(graph: NNCFGraph,
         name = node.node_name
         num_in_channels = input_channels.get(name, node.layer_attributes.in_channels)
         num_out_channels = output_channels.get(name, node.layer_attributes.out_channels)
+        filters_per_channel = num_out_channels // node.layer_attributes.groups
         flops_numpy = 2 * np.prod(node.layer_attributes.kernel_size) * \
-                      num_in_channels * num_out_channels * np.prod(output_shapes[name])
-        weights_numpy = np.prod(node.layer_attributes.kernel_size) * num_in_channels * num_out_channels
+                      num_in_channels * filters_per_channel * np.prod(output_shapes[name])
+        weights_numpy = np.prod(node.layer_attributes.kernel_size) * num_in_channels * filters_per_channel
         flops[name] = flops_numpy.astype(int).item()
         weights[name] = weights_numpy.astype(int).item()
 

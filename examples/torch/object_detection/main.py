@@ -10,7 +10,6 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-
 import os.path as osp
 import sys
 import time
@@ -18,7 +17,7 @@ from copy import deepcopy
 from pathlib import Path
 
 import torch
-import torch.utils.data as data
+from torch.utils import data
 
 from examples.torch.common.argparser import parse_args
 from torch.optim.lr_scheduler import ReduceLROnPlateau
@@ -155,7 +154,8 @@ def main_worker(current_gpu, config):
 
     pretrained = is_pretrained_model_requested(config)
 
-    if config.to_onnx is not None:
+    is_export_only = 'export' in config.mode and ('train' not in config.mode and 'test' not in config.mode)
+    if is_export_only:
         assert pretrained or (resuming_checkpoint_path is not None)
     else:
         test_data_loader, train_data_loader, init_data_loader = create_dataloaders(config)
@@ -210,7 +210,7 @@ def main_worker(current_gpu, config):
 
     log_common_mlflow_params(config)
 
-    if 'export' in config.mode and ('train' not in config.mode and 'test' not in config.mode):
+    if is_export_only:
         compression_ctrl.export_model(config.to_onnx)
         logger.info("Saved to {}".format(config.to_onnx))
         return
@@ -305,8 +305,6 @@ def create_dataloaders(config):
         init_data_loader = create_train_data_loader(config.batch_size_init)
     else:
         init_data_loader = deepcopy(train_data_loader)
-    if config.distributed:
-        init_data_loader.num_workers = 0  # PyTorch multiprocessing dataloader issue WA
 
     test_dataset = get_testing_dataset(config.dataset, config.test_anno, config.test_imgs, config)
     logger.info("Loaded {} testing images".format(len(test_dataset)))

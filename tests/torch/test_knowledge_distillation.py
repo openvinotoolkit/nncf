@@ -16,7 +16,8 @@ from functools import reduce
 from collections.abc import Iterable
 from typing import List, Tuple
 
-
+from nncf.torch.dynamic_graph.graph_tracer import ModelInputInfo
+from nncf.torch.knowledge_distillation.algo import KnowledgeDistillationBuilder
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf import NNCFConfig
 from tests.torch.test_models.synthetic import PartlyNonDifferentialOutputsModel
@@ -37,9 +38,18 @@ import pytest
 KEY_TO_KD_PARAMETERS = 'kd'
 
 
+def get_model_device(inference_type, gpu):
+    if inference_type == 'cpu':
+        return "cpu"
+    if gpu is not None:
+        return "cuda:{}".format(gpu)
+
+    return "cuda"
+
+
 def get_kd_config(config: NNCFConfig) -> NNCFConfig:
-    if isinstance(config['compression'], dict):
-        config['compression'] = [config['compression']]
+    if isinstance(config.get('compression', {}), dict):
+        config['compression'] = [config['compression']] if config.get('compression', None) is not None else []
     config['compression'].append({
         'algorithm': 'knowledge_distillation',
         'type': 'mse'
@@ -55,7 +65,7 @@ def get_sparsity_config_with_sparsity_init(config: NNCFConfig, sparsity_init=0.5
 @pytest.mark.parametrize("inference_type", ['cpu', 'single_GPU', 'DP', 'DDP'])
 def test_knowledge_distillation_training_process(inference_type: str):
     if not torch.cuda.is_available() and not inference_type == 'cpu':
-        return
+        pytest.skip("Skipping CUDA test cases for CPU only setups")
     torch.manual_seed(1)
     input_size = [1, 1, 8, 8]
     sparsity_level = 0.3
@@ -79,7 +89,6 @@ def run_actual(model: nn.Module, config: NNCFConfig, inference_type: str, mock_d
     if inference_type == 'DDP':
         model = post_compression_test_distr_init(compression_ctrl, config, ngpus_per_node, model)
     elif inference_type in ('DP', 'single_GPU'):
-        model.to(torch.device('cuda:0'))
         if inference_type == 'DP':
             model = torch.nn.DataParallel(model)
     optimizer = SGD(model.parameters(), lr=1e-02, weight_decay=1e-02)
@@ -104,10 +113,7 @@ def run_reference(model: nn.Module, config: NNCFConfig, inference_type: str, moc
     model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
     if inference_type == 'DDP':
         model = post_compression_test_distr_init(compression_ctrl, config, ngpus_per_node, model)
-        kd_model.to(torch.device(next(model.parameters()).device))
     elif inference_type in ('DP', 'single_GPU'):
-        model.to(torch.device('cuda:0'))
-        kd_model.to(torch.device('cuda:0'))
         if inference_type == 'DP':
             model = torch.nn.DataParallel(model)
             kd_model = torch.nn.DataParallel(kd_model)
@@ -130,7 +136,7 @@ def run_reference(model: nn.Module, config: NNCFConfig, inference_type: str, moc
 def run_test_training(gpu, config: NNCFConfig, inference_type: str, ngpus_per_node: int):
     torch.manual_seed(2)
     number_of_iters = 10
-    batch_size = torch.cuda.device_count()
+    batch_size = 1 if torch.cuda.device_count() == 0 else torch.cuda.device_count()
     config['input_info']['sample_size'] = [1, 1, 8, 8]
     if inference_type == 'DDP':
         distributed_init_test_default(gpu, ngpus_per_node, config)
@@ -138,9 +144,10 @@ def run_test_training(gpu, config: NNCFConfig, inference_type: str, ngpus_per_no
     else:
         mock_dataloader = create_ones_mock_dataloader(config, num_samples=batch_size * number_of_iters,
                                                       batch_size=batch_size)
-
+    model_device = get_model_device(inference_type, gpu)
     model = TwoConvTestModel()
     fill_params_of_model_by_normal(model, std=0.5)
+    model.to(model_device)
     dumped_orig_model = deepcopy(model)
 
     actual_outputs, actual_model = run_actual(deepcopy(model), config, inference_type, mock_dataloader,
@@ -150,7 +157,7 @@ def run_test_training(gpu, config: NNCFConfig, inference_type: str, ngpus_per_no
         "Outputs of model with actual KD implementation doesn't match outputs from model with reference " \
         "Knowledge Distillation implementation"
 
-    for param1, param2 in zip([param.to(torch.device('cpu')) for name, param in
+    for param1, param2 in zip([param for name, param in
                                filter(lambda x: KEY_TO_KD_PARAMETERS in x[0], actual_model.named_parameters())],
                               dumped_orig_model.parameters()):
         assert torch.allclose(param1, param2), "Weights of dumped original model doesn't match weights of original " \
@@ -165,13 +172,14 @@ def test_loss_outputs_parsing():
     fill_params_of_model_by_normal(model)
     dumped_orig_model = deepcopy(model)
     sparsity_level = 0.3
+    batch_size = 1 if torch.cuda.device_count() == 0 else torch.cuda.device_count()
     config = get_kd_config(
         get_sparsity_config_with_sparsity_init(get_basic_magnitude_sparsity_config(input_sample_size=input_size),
                                                sparsity_level))
     model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
     model.train()
     mock_dataloader = create_ones_mock_dataloader(config, num_samples=torch.cuda.device_count(),
-                                                  batch_size=torch.cuda.device_count())
+                                                  batch_size=batch_size)
     compression_ctrl.scheduler.epoch_step()
     for _, (input_, __) in enumerate(mock_dataloader):
         input_ = input_.to(next(model.parameters()).device)
@@ -194,13 +202,14 @@ def test_knowledge_distillation_outputs_containers_parsing():
     fill_params_of_model_by_normal(model)
     dumped_orig_model = deepcopy(model)
     sparsity_level = 0.3
+    batch_size = 1 if torch.cuda.device_count() == 0 else torch.cuda.device_count()
     config = get_kd_config(
         get_sparsity_config_with_sparsity_init(get_basic_magnitude_sparsity_config(input_sample_size=input_size),
                                                sparsity_level))
     model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
     model.train()
     mock_dataloader = create_ones_mock_dataloader(config, num_samples=torch.cuda.device_count(),
-                                                  batch_size=torch.cuda.device_count())
+                                                  batch_size=batch_size)
     compression_ctrl.scheduler.epoch_step()
     for _, (input_, __) in enumerate(mock_dataloader):
         input_ = input_.to(next(model.parameters()).device)
@@ -224,6 +233,7 @@ def test_knowledge_distillation_loss_types(kd_loss_type: str):
     else:
         kd_loss_fn = torch.nn.MSELoss()
     input_size = [1, 100]
+    batch_size = 1 if torch.cuda.device_count() == 0 else torch.cuda.device_count()
 
     model = nn.Sequential(nn.Linear(in_features=input_size[-1], out_features=10),
                           nn.Sigmoid())
@@ -238,7 +248,7 @@ def test_knowledge_distillation_loss_types(kd_loss_type: str):
     model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
     model.train()
     mock_dataloader = create_ones_mock_dataloader(config, num_samples=torch.cuda.device_count(),
-                                                  batch_size=torch.cuda.device_count())
+                                                  batch_size=batch_size)
     compression_ctrl.scheduler.epoch_step()
     for _, (input_, __) in enumerate(mock_dataloader):
         input_ = input_.to(next(model.parameters()).device)
@@ -269,3 +279,106 @@ def test_kd_sparsity_statistics(algo: str):
            getattr(statistics_with_kd, algo).model_statistics.sparsity_level
     assert getattr(statistics, algo).model_statistics.sparsity_level_for_layers ==\
            getattr(statistics_with_kd, algo).model_statistics.sparsity_level_for_layers
+
+
+@pytest.mark.parametrize("device_placing", ['before', 'after'])
+@pytest.mark.parametrize("inference_type", ['cpu', 'single_GPU', 'DP', 'DDP'])
+def test_model_device_before_create_compressed_model(device_placing, inference_type):
+    if not torch.cuda.is_available() and not inference_type == 'cpu':
+        pytest.skip("Skipping CUDA test cases for CPU only setups")
+    input_size = [1, 1, 8, 8]
+    config = NNCFConfig()
+    config = get_kd_config(config)
+    config.update({
+        "input_info":
+            {
+                "sample_size": input_size,
+            },
+        }
+    )
+    if inference_type == 'DDP':
+        ngpus_per_node = torch.cuda.device_count()
+        config.world_size = ngpus_per_node
+        torch.multiprocessing.spawn(run_training_for_device_testing,
+                                    nprocs=ngpus_per_node,
+                                    args=(config, inference_type, ngpus_per_node, device_placing),
+                                    join=True)
+    else:
+        run_training_for_device_testing(None, config, inference_type, None, device_placing=device_placing)
+
+
+def run_training_for_device_testing(gpu, config: NNCFConfig, inference_type: str, ngpus_per_node: int,
+                                    device_placing: str):
+    number_of_iters = 1
+    batch_size = 1 if torch.cuda.device_count() == 0 else torch.cuda.device_count()
+    config['input_info']['sample_size'] = [1, 1, 8, 8]
+    if inference_type == 'DDP':
+        distributed_init_test_default(gpu, ngpus_per_node, config)
+        mock_dataloader = create_rank_dataloader(config, gpu, batch_size * number_of_iters, batch_size=batch_size)
+    else:
+        mock_dataloader = create_ones_mock_dataloader(config, num_samples=batch_size * number_of_iters,
+                                                      batch_size=batch_size)
+    model_device = get_model_device(inference_type, gpu)
+    model = TwoConvTestModel()
+    fill_params_of_model_by_normal(model, std=0.5)
+
+    if device_placing == 'before':
+        model.to(model_device)
+
+    model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
+
+    if inference_type == 'DDP':
+        model = post_compression_test_distr_init(compression_ctrl, config, ngpus_per_node, model)
+    elif inference_type == 'DP':
+        model = torch.nn.DataParallel(model)
+
+    optimizer = SGD(model.parameters(), lr=1e-02)
+    model.train()
+    output_storage = []
+
+    if device_placing == 'after':
+        model.to(model_device)
+
+    for _, (input_, __) in enumerate(mock_dataloader):
+        input_ = input_.to(next(model.parameters()).device)
+        output = model(input_)
+        output_storage.append(output)
+        loss = compression_ctrl.loss()
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+
+
+class KDOutputModel(torch.nn.Module):
+    def __init__(self, target_shapes: List[Tuple[int]]):
+        super().__init__()
+        self.mock_param = torch.nn.Parameter(torch.ones([1]))
+        self.target_shapes = target_shapes
+
+    def forward(self, *args, **kwargs):
+        retval = []
+        for shape in self.target_shapes:
+            retval.append(torch.ones(shape).to(self.mock_param.device) * self.mock_param)
+        return retval
+
+
+@pytest.mark.parametrize('shape_list', (
+    [(1, 2, 3, 4)],
+    [(1, 128)],
+    [(1, 128), (1, )]
+))
+def test_kd_softmax_loss_ignores_incompatible_outputs(shape_list: List[Tuple[int]]):
+    original_model = KDOutputModel(target_shapes=shape_list)
+    config = NNCFConfig.from_dict({
+        "input_info": {"sample_size": [1, 1, 1, 1]},
+        "compression": {
+            "algorithm": "knowledge_distillation",
+            "type": "softmax"
+        }
+    })
+    compressed_model = NNCFNetwork(original_model, [ModelInputInfo([1, 1, 1, 1])])
+    kd_builder = KnowledgeDistillationBuilder(config)
+    compressed_model = kd_builder.apply_to(compressed_model)
+    kd_ctrl = kd_builder.build_controller(compressed_model)
+    compressed_model.forward(torch.ones_like(compressed_model.mock_param))
+    kd_ctrl.loss()  # Should succeed - the loss for the incompatible outputs will be equal to 0

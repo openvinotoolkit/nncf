@@ -12,9 +12,10 @@
 """
 from abc import ABC, abstractmethod
 from copy import deepcopy
-from typing import Dict, Callable, Any, Union, List, Tuple, TypeVar
+from typing import Dict, Callable, Any, Union, List, Tuple
 import contextlib
 
+import numbers
 import numpy as np
 import onnx
 import torch
@@ -28,7 +29,7 @@ from torch.utils.data import Dataset
 from nncf.config import NNCFConfig
 from nncf.config.extractors import extract_algorithm_names
 from nncf.config.structures import BNAdaptationInitArgs
-from nncf.torch.algo_selector import COMPRESSION_ALGORITHMS
+from nncf.torch.algo_selector import PT_COMPRESSION_ALGORITHMS
 from nncf.torch.compression_method_api import PTCompressionAlgorithmController
 from nncf.torch.dynamic_graph.graph_tracer import create_input_infos
 from nncf.torch.dynamic_graph.scope import Scope
@@ -39,8 +40,9 @@ from nncf.torch.model_creation import create_compressed_model
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.utils import get_all_modules_by_type
 from tests.common.command import Command as BaseCommand
+from tests.common.helpers import BaseTensorListComparator
 
-TensorType = TypeVar('TensorType', bound=Union[torch.Tensor, np.ndarray])
+TensorType = Union[torch.Tensor, np.ndarray, numbers.Number]
 
 
 def fill_conv_weight(conv, value):
@@ -68,6 +70,17 @@ def fill_params_of_model_by_normal(model, std=1.0):
 
 def create_conv(in_channels, out_channels, kernel_size, weight_init=1, bias_init=0, padding=0, stride=1):
     conv = nn.Conv2d(in_channels, out_channels, kernel_size, padding=padding, stride=stride)
+    fill_conv_weight(conv, weight_init)
+    fill_bias(conv, bias_init)
+    return conv
+
+
+def create_grouped_conv(in_channels, out_channels, kernel_size, groups,
+                        weight_init=1, bias_init=0, padding=0, stride=1):
+    if in_channels % groups != 0 or out_channels % groups != 0:
+        raise RuntimeError('Cannot create grouped convolution. '
+                           'Either `in_channels` or `out_channels` are not divisible by `groups`')
+    conv = nn.Conv2d(in_channels, out_channels, kernel_size, groups=groups, padding=padding, stride=stride)
     fill_conv_weight(conv, weight_init)
     fill_bias(conv, bias_init)
     return conv
@@ -211,42 +224,14 @@ def get_grads(variables: List[nn.Parameter]) -> List[torch.Tensor]:
     return [var.grad.clone() for var in variables]
 
 
-def to_numpy(tensor: TensorType) -> np.ndarray:
-    if isinstance(tensor, torch.Tensor):
-        return tensor.cpu().detach().numpy()
-    return tensor
-
-
-def compare_tensor_lists(test: List[TensorType], reference: List[TensorType],
-                         assert_fn: Callable[[np.ndarray, np.ndarray], bool]):
-    assert len(test) == len(reference)
-
-    for x, y in zip(test, reference):
-        x = to_numpy(x)
-        y = to_numpy(y)
-        assert_fn(x, y)
-
-
-def check_equal(test: List[TensorType], reference: List[TensorType], rtol: float = 1e-1):
-    compare_tensor_lists(test, reference,
-                         lambda x, y: np.testing.assert_allclose(x, y, rtol=rtol))
-
-
-def check_not_equal(test: List[TensorType], reference: List[TensorType], rtol: float = 1e-4):
-    compare_tensor_lists(test, reference,
-                         lambda x, y: np.testing.assert_raises(AssertionError,
-                                                               np.testing.assert_allclose, x, y, rtol=rtol))
-
-
-def check_less(test: List[TensorType], reference: List[TensorType], rtol=1e-4):
-    check_not_equal(test, reference, rtol=rtol)
-    compare_tensor_lists(test, reference, np.testing.assert_array_less)
-
-
-def check_greater(test: List[TensorType], reference: List[TensorType], rtol=1e-4):
-    check_not_equal(test, reference, rtol=rtol)
-    compare_tensor_lists(test, reference,
-                         lambda x, y: np.testing.assert_raises(AssertionError, np.testing.assert_array_less, x, y))
+class PTTensorListComparator(BaseTensorListComparator):
+    @classmethod
+    def _to_numpy(cls, tensor: TensorType) -> Union[np.ndarray, numbers.Number]:
+        if isinstance(tensor, torch.Tensor):
+            return tensor.cpu().detach().numpy()
+        if isinstance(tensor, (np.ndarray, numbers.Number)):
+            return tensor
+        raise Exception(f'Tensor must be np.ndarray or torch.Tensor, not {type(tensor)}')
 
 
 def create_compressed_model_and_algo_for_test(model: Module, config: NNCFConfig=None,
@@ -284,7 +269,7 @@ def create_nncf_model_and_single_algo_builder(model: Module, config: NNCFConfig,
     algo_names = extract_algorithm_names(config)
     assert len(algo_names) == 1
     algo_name = next(iter(algo_names))
-    builder_cls = COMPRESSION_ALGORITHMS.get(algo_name)
+    builder_cls = PT_COMPRESSION_ALGORITHMS.get(algo_name)
     builder = builder_cls(config, should_init=True)
     return compressed_model, builder
 
@@ -443,3 +428,27 @@ def set_torch_seed(seed: int = 42):
     torch.manual_seed(seed)
     yield
     torch.manual_seed(saved_seed)
+
+
+def create_dataloader_with_num_workers(create_dataloader, num_workers, sample_type):
+    def create_dataloader_classification(*args, **kwargs):
+        train_loader, train_sampler, val_loader, init_loader = create_dataloader(*args, **kwargs)
+        init_loader.num_workers = num_workers
+        return train_loader, train_sampler, val_loader, init_loader
+
+    def create_dataloader_semantic_segmentation(*args, **kwargs):
+        (train_loader, val_loader, init_loader), class_weights = create_dataloader(*args, **kwargs)
+        init_loader.num_workers = num_workers
+        return (train_loader, val_loader, init_loader), class_weights
+
+    def create_dataloader_object_detection(*args, **kwargs):
+        test_data_loader, train_data_loader, init_data_loader = create_dataloader(*args, **kwargs)
+        init_data_loader.num_workers = num_workers
+        return test_data_loader, train_data_loader, init_data_loader
+
+    if sample_type == 'classification':
+        return create_dataloader_classification
+    if sample_type == 'semantic_segmentation':
+        return create_dataloader_semantic_segmentation
+    if sample_type == 'object_detection':
+        return create_dataloader_object_detection

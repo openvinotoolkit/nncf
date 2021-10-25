@@ -21,15 +21,15 @@ from shutil import copyfile
 from typing import Any
 
 import torch
-import torch.backends.cudnn as cudnn
-import torch.nn as nn
+from torch.backends import cudnn
+from torch import nn
 import torch.nn.parallel
 import torch.optim
 import torch.utils.data
 import torch.utils.data.distributed
-import torchvision.datasets as datasets
-import torchvision.models as models
-import torchvision.transforms as transforms
+from torchvision import datasets
+from torchvision import models
+from torchvision import transforms
 from torch.nn.modules.loss import _Loss
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torchvision.datasets import CIFAR10
@@ -79,9 +79,9 @@ from nncf.torch.structures import ExecutionParameters
 from nncf.torch.utils import is_main_process
 from nncf.torch.utils import safe_thread_call
 
-model_names = sorted(name for name in models.__dict__
+model_names = sorted(name for name, val in models.__dict__.items()
                      if name.islower() and not name.startswith("__")
-                     and callable(models.__dict__[name]))
+                     and callable(val))
 
 
 def get_argument_parser():
@@ -158,8 +158,9 @@ def main_worker(current_gpu, config: SampleConfig):
     resuming_checkpoint_path = config.resuming_checkpoint_path
     nncf_config = config.nncf_config
     pretrained = is_pretrained_model_requested(config)
+    is_export_only = 'export' in config.mode and ('train' not in config.mode and 'test' not in config.mode)
 
-    if config.to_onnx is not None:
+    if is_export_only:
         assert pretrained or (resuming_checkpoint_path is not None)
     else:
         # Data loading code
@@ -211,7 +212,7 @@ def main_worker(current_gpu, config: SampleConfig):
     if model_state_dict is not None:
         load_state(model, model_state_dict, is_resume=True)
 
-    if 'export' in config.mode and ('train' not in config.mode and 'test' not in config.mode):
+    if is_export_only:
         compression_ctrl.export_model(config.to_onnx)
         logger.info("Saved to {}".format(config.to_onnx))
         return
@@ -388,7 +389,7 @@ def create_datasets(config):
 
     input_info_list = create_input_infos(config)
     image_size = input_info_list[0].shape[-1]
-
+    size = int(image_size / 0.875)
     if dataset_config in ['cifar10', 'cifar100']:
         val_transform = transforms.Compose([
             transforms.ToTensor(),
@@ -400,8 +401,20 @@ def create_datasets(config):
             transforms.ToTensor(),
             normalize,
         ])
+    elif dataset_config in ['mock_32x32', 'mock_299x299']:
+        val_transform = transforms.Compose([
+            transforms.Resize(size),
+            transforms.CenterCrop(image_size),
+            transforms.ToTensor(),
+            normalize,
+        ])
+        train_transforms = transforms.Compose([
+            transforms.Resize(size),
+            transforms.CenterCrop(image_size),
+            transforms.ToTensor(),
+            normalize,
+        ])
     else:
-        size = int(image_size / 0.875)
         val_transform = transforms.Compose([
             transforms.Resize(size),
             transforms.CenterCrop(image_size),
@@ -461,9 +474,6 @@ def create_data_loaders(config, train_dataset, val_dataset):
         init_loader = create_train_data_loader(config.batch_size_init)
     else:
         init_loader = deepcopy(train_loader)
-    if config.distributed:
-        init_loader.num_workers = 0  # PyTorch multiprocessing dataloader issue WA
-
     return train_loader, train_sampler, val_loader, init_loader
 
 

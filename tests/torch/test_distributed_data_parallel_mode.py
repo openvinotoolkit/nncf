@@ -1,6 +1,6 @@
 import pytest
 import torch
-import torch.nn as nn
+from torch import nn
 import torch.multiprocessing as mp
 import time
 from typing import Tuple

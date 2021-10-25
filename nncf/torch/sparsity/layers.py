@@ -13,7 +13,7 @@
 from typing import List
 
 import torch
-import torch.nn as nn
+from torch import nn
 
 from nncf.torch.layer_utils import COMPRESSION_MODULES
 from nncf.torch.sparsity.functions import apply_binary_mask as apply_binary_mask_impl

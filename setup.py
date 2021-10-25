@@ -23,7 +23,7 @@ from setuptools import setup, find_packages
 
 here = os.path.abspath(os.path.dirname(__file__))
 
-with open("{}/README.md".format(here), "r") as fh:
+with open("{}/README.md".format(here), "r", encoding="utf8") as fh:
     long_description = fh.read()
 
 if "--tf" in sys.argv:
@@ -67,7 +67,8 @@ INSTALL_REQUIRES = ["ninja>=1.10.0.post2",
                     "natsort>=7.1.0",
                     "pandas~=1.1.5; python_version<'3.7'",
                     "pandas>=1.1.5; python_version>='3.7'",
-                    "scikit-learn>=0.24.0",
+                    "scikit-learn~=0.24.0; python_version<'3.7'",
+                    "scikit-learn>=0.24.0; python_version>='3.7'",
                     "wheel>=0.36.1"]
 
 
@@ -79,8 +80,8 @@ if python_version < (3, 6, 2):
 version_string = "{}{}".format(sys.version_info[0], sys.version_info[1])
 
 _extra_deps = [
-    "tensorflow==2.4.2",
-    "torch>=1.5.0, <=1.8.1, !=1.8.0",
+    "tensorflow==2.4.3",
+    "torch>=1.5.0, <=1.9.1, !=1.8.0",
 ]
 
 extra_deps = {b: a for a, b in (re.findall(r"^(([^!=<>]+)(?:[!=<>].*)?$)", x)[0] for x in _extra_deps)}

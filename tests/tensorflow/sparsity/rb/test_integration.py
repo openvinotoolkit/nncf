@@ -142,7 +142,7 @@ def test_rb_sparse_target_lenet(distributed, quantized):
         if quantized:
             config.update({'compression': [config['compression'], {'algorithm': 'quantization'}]})
 
-        compression_state_to_skip_init = {BaseCompressionAlgorithmController.BUILDER_STATE: dict()}
+        compression_state_to_skip_init = {BaseCompressionAlgorithmController.BUILDER_STATE: {}}
         compress_algo, compress_model = create_compressed_model(model, config, compression_state_to_skip_init)
         compression_callbacks = create_compression_callbacks(compress_algo, log_tensorboard=True, log_dir='logdir/')
 

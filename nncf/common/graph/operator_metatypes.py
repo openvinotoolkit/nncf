@@ -57,7 +57,7 @@ class OperatorMetatype:
         if metatype == cls or metatype in subtypes:
             return True
 
-        return any([subtype.subtype_check(metatype) for subtype in subtypes])
+        return any(subtype.subtype_check(metatype) for subtype in subtypes)
 
 
 class OperatorMetatypeRegistry(Registry):

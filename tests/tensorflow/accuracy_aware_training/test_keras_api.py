@@ -66,7 +66,7 @@ def get_const_target_mock_regression_dataset(num_samples=20, img_size=10, target
             self.X = X
 
         def __call__(self):
-            for i in range(len(self.X)):
+            for i, _ in enumerate(self.X):
                 xi = np.expand_dims(self.X[i], axis=0)
                 yield xi, [target_value, ]
 
@@ -87,7 +87,7 @@ def get_const_target_mock_regression_dataset(num_samples=20, img_size=10, target
      'reference_final_metric',
      'should_raise_runtime_error'),
     (
-        (30.0, 0.846153, 0.1419714, False),
+        (30.0, 0.846153, 0.141971, False),
         (1.0, 0.0, 0.0, True),
     )
 )

@@ -141,10 +141,10 @@ See [third_party_integration](./third_party_integration) for examples of code mo
 - Ubuntu\* 18.04 or later (64-bit)
 - Python\* 3.6.2 or later
 - Supported frameworks:
-  - PyTorch\* >=1.5.0, <=1.8.1 (1.8.0 not supported)
-  - TensorFlow\* 2.4.2
+  - PyTorch\* >=1.5.0, <=1.9.1 (1.8.0 not supported)
+  - TensorFlow\* 2.4.3
 
-This repository is tested on Python* 3.6.2+, PyTorch* 1.8.1 (NVidia CUDA\* Toolkit 10.2) and TensorFlow* 2.4.2 (NVidia CUDA\* Toolkit 11.0).
+This repository is tested on Python* 3.6.2+, PyTorch* 1.9.1 (NVidia CUDA\* Toolkit 10.2) and TensorFlow* 2.4.3 (NVidia CUDA\* Toolkit 11.0).
 
 ## Installation
 We suggest to install or use the package in the [Python virtual environment](https://docs.python.org/3/tutorial/venv.html).

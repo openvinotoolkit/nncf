@@ -28,7 +28,7 @@ from examples.torch.common.argparser import parse_args
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 
 import examples.torch.semantic_segmentation.utils.data as data_utils
-import examples.torch.semantic_segmentation.utils.loss_funcs as loss_funcs
+from examples.torch.semantic_segmentation.utils import loss_funcs
 import examples.torch.semantic_segmentation.utils.transforms as JT
 from examples.torch.common.argparser import get_common_argument_parser
 from examples.torch.common.example_logger import logger
@@ -211,8 +211,6 @@ def load_dataset(dataset, config):
         init_loader = create_train_data_loader(config.batch_size_init)
     else:
         init_loader = deepcopy(train_loader)
-    if config.distributed:
-        init_loader.num_workers = 0  # PyTorch multiprocessing dataloader issue WA
 
     val_sampler = torch.utils.data.SequentialSampler(val_set)
     val_loader = torch.utils.data.DataLoader(
@@ -502,7 +500,8 @@ def main_worker(current_gpu, config):
             loss_funcs.do_model_specific_postprocessing(config.model, target, model_outputs)
         return criterion_(loss_outputs, labels)
 
-    if config.to_onnx is not None:
+    is_export_only = 'export' in config.mode and ('train' not in config.mode and 'test' not in config.mode)
+    if is_export_only:
         assert pretrained or (resuming_checkpoint_path is not None)
     else:
         loaders, w_class = load_dataset(dataset, config)
@@ -540,7 +539,7 @@ def main_worker(current_gpu, config):
 
     log_common_mlflow_params(config)
 
-    if 'export' in config.mode and ('train' not in config.mode and 'test' not in config.mode):
+    if is_export_only:
         compression_ctrl.export_model(config.to_onnx)
         logger.info("Saved to {}".format(config.to_onnx))
         return

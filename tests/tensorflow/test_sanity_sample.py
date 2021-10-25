@@ -20,6 +20,7 @@ import tensorflow as tf
 
 from tests.common.helpers import TEST_ROOT
 from tests.tensorflow.helpers import get_coco_dataset_builders
+from tests.tensorflow.helpers import get_cifar10_dataset_builders
 from tests.tensorflow.test_models import SequentialModel, SequentialModelNoInput
 
 from examples.tensorflow.classification import main as cls_main
@@ -29,6 +30,7 @@ from examples.tensorflow.segmentation import evaluation as seg_eval
 from examples.tensorflow.common.model_loader import AVAILABLE_MODELS
 from examples.tensorflow.common.prepare_checkpoint import main as prepare_checkpoint_main
 
+cls_main.get_dataset_builders = get_cifar10_dataset_builders
 od_main.get_dataset_builders = partial(get_coco_dataset_builders, train=True, validation=True)
 seg_train.get_dataset_builders = partial(get_coco_dataset_builders, train=True, calibration=True)
 seg_eval.get_dataset_builders = partial(get_coco_dataset_builders, validation=True, calibration=True)
@@ -47,7 +49,7 @@ class ConfigFactory:
         self.config_path = str(config_path)
 
     def serialize(self):
-        with open(self.config_path, 'w') as f:
+        with open(self.config_path, 'w', encoding='utf8') as f:
             json.dump(self.config, f)
         return self.config_path
 
@@ -84,7 +86,7 @@ SAMPLES = {
 
 
 DATASETS = {
-    'classification': [('cifar10', 'tfds'), ('cifar10', 'tfds'), ('cifar10', 'tfds')],
+    'classification': [('cifar10', 'tfrecords'), ('cifar10', 'tfrecords'), ('cifar10', 'tfrecords')],
     'object_detection': [('coco2017', 'tfrecords')],
     'segmentation': [('coco2017', 'tfrecords')],
 }
@@ -107,7 +109,7 @@ CONFIGS = {
 
 
 BATCH_SIZE_PER_GPU = {
-    'classification': [32, 32, 32],
+    'classification': [1, 1, 1],
     'object_detection': [1],
     'segmentation': [1],
 }
@@ -139,6 +141,9 @@ DATASET_PATHS = {
         'coco2017': lambda dataset_root: TEST_ROOT.joinpath('tensorflow', 'data', 'mock_datasets', 'coco2017')
     },
 }
+
+DATASET_PATHS['classification']['cifar10'] = lambda dataset_root: TEST_ROOT.joinpath('tensorflow', 'data',
+                                                                                     'mock_datasets', 'cifar10')
 
 
 def get_sample_fn(sample_type, modes):

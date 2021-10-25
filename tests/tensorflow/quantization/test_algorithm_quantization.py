@@ -418,7 +418,7 @@ class LayerDeck:
         self.inputs = None
         params = LAYERS_PARAMS[layer_name]
         self.layer_inputs_shape = params["shape"]
-        self.params = dict()
+        self.params = {}
         for k, v in zip(params["param_name"], params["param_val"]):
             self.params[k] = v
         if "data_format" in params["param_name"]:
@@ -595,7 +595,7 @@ LAYERS_MAP = {
 def get_test_layers_desk():
     models = ["Conv1D", "Conv2D", "Conv3D", "DepthwiseConv2D",
               "Conv1DTranspose", "Conv2DTranspose", "Conv3DTranspose"]
-    result = list()
+    result = []
     for model_name in models:
         for input_type in [InputType.INPUTS, InputType.WEIGHTS]:
             for data_format in [DataFormat.CF, DataFormat.CL]:

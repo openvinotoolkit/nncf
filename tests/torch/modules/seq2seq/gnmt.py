@@ -1,4 +1,4 @@
-import torch.nn as nn
+from torch import nn
 
 from tests.torch.modules.seq2seq.decoder import ResidualRecurrentDecoder
 from tests.torch.modules.seq2seq.encoder import ResidualRecurrentEncoder

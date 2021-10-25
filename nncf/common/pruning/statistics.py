@@ -98,10 +98,10 @@ class FilterPruningStatistics(Statistics):
         Initializes statistics of the filter pruning algorithm.
 
         :param model_statistics: Statistics of the pruned model.
-        :param full_flops: Full FLOPS.
-        :param current_flops: Current FLOPS.
-        :param full_params_num: Full number of weights.
-        :param current_params_num: Current number of weights.
+        :param full_flops: The total amount of FLOPS in the model.
+        :param current_flops: Current amount of FLOPS in the model.
+        :param full_params_num: The total amount of weights in the model.
+        :param current_params_num: Current amount of weights in the model.
         :param target_pruning_level: A target level of the pruning
             for the algorithm for the current epoch.
         """
@@ -131,5 +131,59 @@ class FilterPruningStatistics(Statistics):
         pretty_string = (
             f'{self.model_statistics.to_str()}\n\n'
             f'Statistics of the filter pruning algorithm:\n{algorithm_string}'
+        )
+        return pretty_string
+
+
+class PrunedModelTheoreticalBorderline(Statistics):
+    """
+    Contains theoretical borderline statistics of the filter pruning algorithm.
+    """
+
+    def __init__(self,
+                 num_pruned_layers: int,
+                 num_prunable_layers: int,
+                 max_prunable_flops: float,
+                 max_prunable_params: float,
+                 total_flops: int,
+                 total_params: int):
+        """
+        Initializes statistics of the filter pruning theoretical borderline.
+
+        :param num_pruned_layers: Number of layers which was actually
+            pruned.
+        :param num_prunable_layers: Number of layers which have
+            prunable type.
+        :param max_prunable_flops: Number of flops for pruned
+            model with pruning rate = 1.
+        :param max_prunable_params: Number of weights for pruned
+            model with pruning rate = 1.
+        :param total_flops: The total amount of FLOPS in the model.
+        :param total_params: The total amount of weights in the model.
+        """
+        self._giga = 1e9
+        self._mega = 1e6
+        self.pruned_layers_num = num_pruned_layers
+        self.prunable_layers_num = num_prunable_layers
+        self.minimum_possible_flops = max_prunable_flops
+        self.minimum_possible_params = max_prunable_params
+        self.total_flops = total_flops
+        self.total_params = total_params
+
+    def to_str(self) -> str:
+        algorithm_string = create_table(
+            header=['Statistic\'s name', 'Value'],
+            rows=[
+                ['Pruned layers count / prunable layers count', f'{self.pruned_layers_num} /'
+                                                                f' {self.prunable_layers_num}'],
+                ['GFLOPS minimum possible after pruning / total', f'{self.minimum_possible_flops / self._giga:.3f} /'
+                                                                  f' {self.total_flops / self._giga:.3f}'],
+                ['MParams minimum possible after pruning / total', f'{self.minimum_possible_params / self._mega:.3f} /'
+                                                                   f' {self.total_params / self._mega:.3f}'],
+            ]
+        )
+
+        pretty_string = (
+            f'Theoretical borderline of the filter pruning algorithm\nfor current model:\n{algorithm_string}'
         )
         return pretty_string

@@ -104,3 +104,25 @@ def get_test_model_shared_convs(input_shape):
     init_conv_weights(conv2.kernel)
     init_conv_weights(conv3.kernel)
     return tf.keras.Model(inputs=inputs, outputs=[x, y])
+
+
+def get_model_grouped_convs(input_shape):
+    inputs = tf.keras.Input(shape=input_shape[1:], name='input')
+    conv1 = layers.Conv2D(512, 1, name='conv1', kernel_initializer='Ones',
+                          bias_initializer='Ones')
+    conv2 = layers.Conv2D(128, 3, groups=4, name='conv2', kernel_initializer='Ones',
+                          bias_initializer='Ones')
+    conv3 = layers.Conv2D(128, 3, groups=128, name='conv3', kernel_initializer='Ones',
+                          bias_initializer='Ones')
+    conv4 = layers.DepthwiseConv2D(3, name='conv4', kernel_initializer='Ones',
+                                   bias_initializer='Ones')
+    flatten = layers.Flatten()
+    linear = layers.Dense(128)
+
+    x = conv1(inputs)
+    x = conv2(x)
+    x = conv3(x)
+    x = conv4(x)
+    x = linear(flatten(x))
+
+    return tf.keras.Model(inputs=inputs, outputs=[x])

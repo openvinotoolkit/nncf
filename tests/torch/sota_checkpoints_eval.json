@@ -286,7 +286,9 @@
                 "resume": "ssd300_mobilenet_voc_magnitude_sparsity_int8.pth",
                 "model_description": "SSD300-MobileNet",
                 "compression_description": "INT8 + Sparsity 70% (Magnitude)",
-                "diff_fp32_max": 0.8
+                "diff_fp32_min": -1,
+                "diff_fp32_max": 0.8,
+                "diff_target_min": -0.2
             },
             "ssd300_vgg_voc": {
                 "config": "examples/torch/object_detection/configs/ssd300_vgg_voc.json",
@@ -341,14 +343,15 @@
             "ssd512_vgg_voc_int8": {
                 "config": "examples/torch/object_detection/configs/ssd512_vgg_voc_int8.json",
                 "reference": "ssd512_vgg_voc",
-                "target": 79.98,
+                "target": 80.00,
                 "metric_type": "Mean AP",
                 "resume": "ssd512_vgg_voc_int8.pth",
                 "batch": 32,
                 "model_description": "SSD512-VGG-BN",
                 "compression_description": "INT8",
                 "diff_fp32_min": -1,
-                "diff_fp32_max": 0.1
+                "diff_fp32_max": 0.2,
+                "diff_target_max": 0.2
             },
             "ssd512_vgg_voc_magnitude_sparsity_int8": {
                 "config": "examples/torch/object_detection/configs/ssd512_vgg_voc_magnitude_sparsity_int8.json",
@@ -360,7 +363,8 @@
                 "model_description": "SSD512-VGG-BN",
                 "compression_description": "INT8 + Sparsity 70% (Magnitude)",
                 "diff_fp32_min": -1,
-                "diff_fp32_max": 0.1
+                "diff_fp32_max": 0.1,
+                "diff_target_min": -0.2
             }
         }
     },
@@ -386,7 +390,8 @@
                 "mean_value": "[99.603,103.329,105.6567]",
                 "scale_value": "[75.643,77.821,76.746]",
                 "diff_fp32_min": -1,
-                "diff_fp32_max": 0.1
+                "diff_fp32_max": 0.1,
+                "diff_target_min": -0.2
             },
             "unet_camvid_magnitude_sparsity_int8": {
                 "config": "examples/torch/semantic_segmentation/configs/unet_camvid_magnitude_sparsity_int8.json",
@@ -422,6 +427,7 @@
                 "compression_description": "INT8",
                 "diff_fp32_min": -1,
                 "diff_fp32_max": 0.1
+                
             },
             "icnet_camvid_magnitude_sparsity_int8": {
                 "config": "examples/torch/semantic_segmentation/configs/icnet_camvid_magnitude_sparsity_int8.json",
@@ -459,13 +465,14 @@
             "unet_mapillary_magnitude_sparsity_int8": {
                 "config": "examples/torch/semantic_segmentation/configs/unet_mapillary_magnitude_sparsity_int8.json",
                 "reference": "unet_mapillary",
-                "target": 55.51,
+                "target": 55.6,
                 "metric_type": "Mean IoU",
                 "resume": "unet_mapillary_magnitude_sparsity_int8.pth",
                 "model_description": "UNet",
                 "compression_description": "INT8 + Sparsity 60% (Magnitude)",
                 "diff_fp32_min": -1,
-                "diff_fp32_max": 0.1
+                "diff_fp32_max": 0.1,
+                "diff_target_max": 0.2
             },
             "unet_mapillary_pruning_geometric_median": {
                 "config": "examples/torch/semantic_segmentation/configs/unet_mapillary_pruning_geometric_median.json",

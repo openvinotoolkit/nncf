@@ -15,6 +15,7 @@ from typing import Any
 from typing import Dict
 from typing import TypeVar
 
+from nncf import NNCFConfig
 from nncf.common.compression import BaseCompressionAlgorithmBuilder
 from nncf.tensorflow.graph.model_transformer import TFModelTransformer
 
@@ -26,6 +27,14 @@ class TFCompressionAlgorithmBuilder(BaseCompressionAlgorithmBuilder):
     Determines which modifications should be made to the original model in
     order to enable algorithm-specific compression during fine-tuning.
     """
+
+    def __init__(self, config: NNCFConfig, should_init: bool = True):
+        super().__init__(config, should_init)
+        compression_lr_multiplier = \
+            config.get_redefinable_global_param_value_for_algo('compression_lr_multiplier', self.name)
+        if compression_lr_multiplier is not None:
+            raise Exception('compression_lr_multiplier is not supported when your work with a TF model in NNCF. '
+                            'Please remove the compression_lr_multiplier attribute from your NNCFConfig.')
 
     def _get_state_without_name(self) -> Dict[str, Any]:
         """
@@ -42,7 +51,6 @@ class TFCompressionAlgorithmBuilder(BaseCompressionAlgorithmBuilder):
 
         :param state_without_name: Output of `_get_state_without_name()` method.
         """
-
     def apply_to(self, model: ModelType) -> ModelType:
         """
         Applies algorithm-specific modifications to the model.

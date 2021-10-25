@@ -21,7 +21,7 @@
 
 """
 
-import torch.nn as nn
+from torch import nn
 import math
 
 __all__ = ['mobilenetv3_Large', 'mobilenetv3']

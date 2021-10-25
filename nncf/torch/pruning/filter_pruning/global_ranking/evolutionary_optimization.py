@@ -15,7 +15,7 @@ from typing import List, Callable, Optional, Tuple, Dict
 
 import numpy as np
 import torch
-import torch.nn as nn
+from torch import nn
 from copy import deepcopy, copy
 from functools import partial
 from torch import optim

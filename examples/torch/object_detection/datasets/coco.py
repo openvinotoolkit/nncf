@@ -19,7 +19,7 @@ import sys
 import cv2
 import numpy as np
 import torch
-import torch.utils.data as data
+from torch.utils import data
 
 from examples.torch.common.example_logger import logger
 
@@ -50,7 +50,7 @@ def _read_coco_annotation(annotation_file, images_folder):
     images_folder = Path(images_folder)
     anno_dict = OrderedDict()
 
-    with open(annotation_file) as data_file:
+    with open(annotation_file, encoding="utf8") as data_file:
         json_annotation = json.load(data_file)
     annotation = json_annotation["annotations"]
 

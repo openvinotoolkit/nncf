@@ -14,7 +14,7 @@ from typing import Optional, Tuple
 
 import torch
 import torch.multiprocessing as mp
-import torch.nn as nn
+from torch import nn
 
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.torch.quantization.layers import AsymmetricQuantizer, SymmetricQuantizer, PTQuantizerSpec

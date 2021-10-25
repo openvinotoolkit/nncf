@@ -140,7 +140,7 @@ class QuantizationProposal:
           of the quantizer configs for the quantization point defined by `quantization_point_id`.
         """
         prior_list = self.quantizer_setup.quantization_points[quantization_point_id].possible_qconfigs
-        if not all([qc in prior_list for qc in constrained_config_list]):
+        if not all(qc in prior_list for qc in constrained_config_list):
             raise RuntimeError('Constrained config list is incompatible with the result of the quantizer propagation!')
         # TODO (vshampor): only allow to constrain 'input-group'-wise?
         self.quantizer_setup.quantization_points[quantization_point_id].possible_qconfigs = constrained_config_list
@@ -888,7 +888,7 @@ class QuantizerPropagationSolver:
         quant_det_id = node[QuantizerPropagationStateGraph.OPERATOR_METATYPE_NODE_ATTR]
         qconf_list = self.get_allowed_quantizer_configs_for_operator(quant_det_id)
         if quant_det_id in OUTPUT_NOOP_METATYPES:
-            qconf_list = self.default_global_qconfig_list
+            qconf_list = deepcopy(self.default_global_qconfig_list)
         assert qconf_list is not None
 
         if not HWConfig.is_wildcard_quantization(qconf_list):
@@ -1193,7 +1193,7 @@ class QuantizerPropagationSolver:
             raise RuntimeError("Unknown propagation strategy: {}".format(self._propagation_strategy))
 
         for qconf in qconfigs_union:
-            if all([compatible_fn(qconf, qconf_list) for qconf_list in potential_qconfigs_for_each_branch]):
+            if all(compatible_fn(qconf, qconf_list) for qconf_list in potential_qconfigs_for_each_branch):
                 merged_qconfig_list.append(qconf)
 
         nncf_logger.debug("Merged list before sorting: {}".format(";".join([str(qc) for qc in merged_qconfig_list])))

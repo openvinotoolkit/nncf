@@ -16,7 +16,7 @@ from typing import NamedTuple
 import os
 import pytest
 import torch
-import torch.nn as nn
+from torch import nn
 import torch.utils.data
 from random import random
 from torchvision.models import inception_v3

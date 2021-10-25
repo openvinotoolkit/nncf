@@ -72,7 +72,7 @@ class YOLOv4Model(base_model.Model):
             keras_model.load_weights(weights, by_name=True)
         return keras_model
 
-    def build_loss_fn(self, compress_model, compression_loss_fn):
+    def build_loss_fn(self, keras_model, compression_loss_fn):
         def _total_loss_fn(labels, outputs):
             loss_fn_out = self._loss_fn(labels, outputs,
                                         self._params.anchors,

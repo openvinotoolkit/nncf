@@ -12,9 +12,9 @@
 """
 
 import torch
-import torch.nn as nn
+from torch import nn
 import torch.nn.functional as F
-import torch.utils.model_zoo as model_zoo
+from torch.utils import model_zoo
 
 __all__ = ['Inception3', 'inception_v3']
 
@@ -73,7 +73,7 @@ class Inception3(nn.Module):
 
         for m in self.modules():
             if isinstance(m, (nn.Conv2d, nn.Linear)):
-                import scipy.stats as stats
+                from scipy import stats
                 stddev = m.stddev if hasattr(m, 'stddev') else 0.1
                 X = stats.truncnorm(-2, 2, scale=stddev)
                 values = torch.Tensor(X.rvs(m.weight.numel()))

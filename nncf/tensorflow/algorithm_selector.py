@@ -16,6 +16,7 @@ from typing import Type
 import tensorflow as tf
 
 from nncf.api.compression import CompressionAlgorithmController
+from nncf.common.compression import NO_COMPRESSION_ALGORITHM_NAME
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.schedulers import StubCompressionScheduler
 from nncf.common.utils.logger import logger
@@ -28,7 +29,7 @@ from nncf.tensorflow.loss import TFZeroCompressionLoss
 TF_COMPRESSION_ALGORITHMS = Registry('compression algorithm', add_name_as_attr=True)
 
 
-@TF_COMPRESSION_ALGORITHMS.register('NoCompressionAlgorithm')
+@TF_COMPRESSION_ALGORITHMS.register(NO_COMPRESSION_ALGORITHM_NAME)
 class NoCompressionAlgorithmBuilder(TFCompressionAlgorithmBuilder):
     def get_transformation_layout(self, _) -> TransformationLayout:
         return TransformationLayout()

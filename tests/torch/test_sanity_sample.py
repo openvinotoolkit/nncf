@@ -12,32 +12,33 @@
 """
 
 import json
+import os
 import shlex
 import sys
+import tempfile
+from enum import Enum
+from enum import auto
 from pathlib import Path
 from typing import Dict
 
-import os
 import pytest
-import tempfile
 import torch
-from enum import Enum
-from enum import auto
 from pytest_dependency import depends
-
 # pylint: disable=redefined-outer-name
-from examples.torch.common.model_loader import COMPRESSION_STATE_ATTR
+from torch import nn
 
+from examples.torch.common.model_loader import COMPRESSION_STATE_ATTR
 from examples.torch.common.optimizer import get_default_weight_decay
 from examples.torch.common.sample_config import SampleConfig
 from examples.torch.common.utils import get_name
 from examples.torch.common.utils import is_staged_quantization
 from nncf.api.compression import CompressionStage
-from nncf.common.compression import BaseControllerStateNames
 from nncf.common.compression import BaseCompressionAlgorithmController as BaseController
+from nncf.common.compression import BaseControllerStateNames
 from nncf.common.hardware.config import HWConfigType
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.config import NNCFConfig
+from nncf.torch.quantization.algo import QuantizationController
 from tests.common.helpers import EXAMPLES_DIR
 from tests.common.helpers import PROJECT_ROOT
 from tests.common.helpers import TEST_ROOT
@@ -54,7 +55,7 @@ class ConfigFactory:
         self.config_path = str(config_path)
 
     def serialize(self):
-        with open(self.config_path, 'w') as f:
+        with open(self.config_path, 'w', encoding='utf8') as f:
             json.dump(self.config, f)
         return self.config_path
 
@@ -117,7 +118,7 @@ DATASET_PATHS = {
     },
 }
 
-CONFIG_PARAMS = list()
+CONFIG_PARAMS = []
 for sample_type in SAMPLE_TYPES:
     for tpl in list(zip(CONFIGS[sample_type], DATASETS[sample_type], BATCHSIZE_PER_GPU[sample_type])):
         CONFIG_PARAMS.append((sample_type,) + tpl)
@@ -500,15 +501,38 @@ class SampleType(Enum):
 
 
 class TestCaseDescriptor:
-    config_name: str
-    quantization_algo_params: Dict = {}
-    sample_type: SampleType
-    dataset_dir: Path
-    dataset_name: str
-    is_real_dataset: bool = False
-    batch_size: int
-    n_weight_quantizers: int
-    n_activation_quantizers: int
+    def __init__(self):
+        self.config_name: str = ''
+        self.config_dict: Dict = {}
+        self.quantization_algo_params: Dict = {}
+        self.sample_type: SampleType = SampleType.CLASSIFICATION
+        self.dataset_dir: Path = Path()
+        self.dataset_name: str = ''
+        self.is_real_dataset: bool = False
+        self.batch_size: int = 0
+        self.n_weight_quantizers: int = 0
+        self.n_activation_quantizers: int = 0
+        self.is_staged: bool = False
+        self.staged_main = 'examples.torch.classification.staged_quantization_worker'
+        self._main_per_sample = {
+            SampleType.CLASSIFICATION: 'examples.torch.classification.main',
+            SampleType.OBJECT_DETECTION: 'examples.torch.object_detection.main',
+            SampleType.SEMANTIC_SEGMENTATION: 'examples.torch.semantic_segmentation.main',
+        }
+        self.is_export_called = False
+        self._train_mock = None
+
+    def get_main_location(self):
+        return self._main_per_sample[self.sample_type]
+
+    def get_sample_file_location(self):
+        return self._main_per_sample[self.sample_type] if not self.is_staged else self.staged_main
+
+    def get_train_location(self):
+        prefix = 'train'
+        if self.is_staged:
+            prefix += '_staged'
+        return self.get_sample_file_location() + '.' + prefix
 
     def batch(self, batch_size: int):
         self.batch_size = batch_size
@@ -525,6 +549,7 @@ class TestCaseDescriptor:
         self.quantization_algo_params = {
             "activations_quant_start_epoch": 0
         }
+        self.is_staged = True
         return self
 
     def sample(self, sample_type: SampleType):
@@ -579,16 +604,35 @@ class TestCaseDescriptor:
         return {"dataset": self.dataset_name}
 
     def setup_spy(self, mocker):
-        raise NotImplementedError
+        train_location = self.get_train_location()
+        self._train_mock = mocker.patch(train_location)
+
+        # Need to mock SafeMLFLow to prevent starting a not closed mlflow session due to memory leak of config and
+        # SafeMLFLow, which happens with a mocked train function
+        mlflow_location = self.get_sample_file_location() + '.SafeMLFLow'
+        mocker.patch(mlflow_location)
 
     def validate_spy(self):
-        raise NotImplementedError
+        self._train_mock.assert_called_once()
+
+    def finalize(self, dataset_dir=None) -> 'TestCaseDescriptor':
+        config_path = self.get_config_path()
+        with config_path.open() as file:
+            json_config = json.load(file)
+            json_config.update(self.get_config_update())
+            self.config_dict = json_config
+        if self.is_real_dataset:
+            self.dataset_dir = Path(
+                dataset_dir if dataset_dir else os.path.join(tempfile.gettempdir(), self.dataset_name))
+        return self
 
 
 class HAWQDescriptor(TestCaseDescriptor):
-    batch_size_init: int = 0
-    get_qsetup_spy = None
-    hessian_trace_estimator_spy = None
+    def __init__(self):
+        super().__init__()
+        self.batch_size_init: int = 0
+        self.get_qsetup_spy = None
+        self.hessian_trace_estimator_spy = None
 
     def batch_for_init(self, batch_size_init: int):
         self.batch_size_init = batch_size_init
@@ -609,12 +653,14 @@ class HAWQDescriptor(TestCaseDescriptor):
         return super().__str__() + '_hawq' + bs
 
     def setup_spy(self, mocker):
+        super().setup_spy(mocker)
         from nncf.torch.quantization.init_precision import HAWQPrecisionInitializer
         self.get_qsetup_spy = mocker.spy(HAWQPrecisionInitializer, "get_quantizer_setup_for_qconfig_sequence")
         from nncf.torch.quantization.hessian_trace import HessianTraceEstimator
         self.hessian_trace_estimator_spy = mocker.spy(HessianTraceEstimator, "__init__")
 
     def validate_spy(self):
+        super().validate_spy()
         qconfig_sequence = self.get_qsetup_spy.call_args[0][1]
         assert len(qconfig_sequence) == self.n_weight_quantizers
         all_precisions = {qc.num_bits for qc in qconfig_sequence}
@@ -627,9 +673,11 @@ class HAWQDescriptor(TestCaseDescriptor):
 
 
 class AutoQDescriptor(TestCaseDescriptor):
-    subset_ratio_: float = 1.0
-    BITS = [2, 4, 8]
-    debug_dump: bool = False
+    def __init__(self):
+        super().__init__()
+        self.subset_ratio_: float = 1.0
+        self.BITS = [2, 4, 8]
+        self.debug_dump: bool = False
 
     def subset_ratio(self, subset_ratio_: float):
         self.subset_ratio_ = subset_ratio_
@@ -641,7 +689,7 @@ class AutoQDescriptor(TestCaseDescriptor):
 
     def get_precision_section(self) -> Dict:
         return {"type": "autoq",
-                "bits": AutoQDescriptor.BITS,
+                "bits": self.BITS,
                 "iter_number": 2,
                 "compression_ratio": 0.15,
                 "eval_subset_ratio": self.subset_ratio_,
@@ -653,14 +701,16 @@ class AutoQDescriptor(TestCaseDescriptor):
         return super().__str__() + '_autoq' + sr + dd
 
     def setup_spy(self, mocker):
+        super().setup_spy(mocker)
         from nncf.torch.quantization.algo import QuantizationBuilder
         self.builder_spy = mocker.spy(QuantizationBuilder, 'build_controller')
 
     def validate_spy(self):
+        super().validate_spy()
         ctrl = self.builder_spy.spy_return
         final_bits = [qm.num_bits for qm in ctrl.all_quantizations.values()]
         assert set(final_bits) != {QuantizerConfig().num_bits}
-        assert all(bit in AutoQDescriptor.BITS for bit in final_bits)
+        assert all(bit in self.BITS for bit in final_bits)
 
 
 def resnet18_desc(x: TestCaseDescriptor):
@@ -715,19 +765,24 @@ TEST_CASE_DESCRIPTORS = [
 @pytest.fixture(params=TEST_CASE_DESCRIPTORS, ids=[str(d) for d in TEST_CASE_DESCRIPTORS])
 def desc(request, dataset_dir):
     desc: TestCaseDescriptor = request.param
-    config_path = desc.get_config_path()
-    with config_path.open() as file:
-        json_config = json.load(file)
-        json_config.update(desc.get_config_update())
-        desc.config = json_config
-    if desc.is_real_dataset:
-        desc.dataset_dir = Path(
-            dataset_dir if dataset_dir else os.path.join(tempfile.gettempdir(), desc.dataset_name))
-    return desc
+    return desc.finalize(dataset_dir)
+
+
+def validate_sample(args, desc: TestCaseDescriptor, mocker):
+    arg_list = [key if (val is None or val is True) else "{} {}".format(key, val) for key, val in args.items()]
+    command_line = " ".join(arg_list)
+
+    import importlib
+    main_location = desc.get_main_location()
+    sample = importlib.import_module(main_location)
+
+    desc.setup_spy(mocker)
+    sample.main(shlex.split(command_line))
+    desc.validate_spy()
 
 
 def test_precision_init(desc: TestCaseDescriptor, tmp_path, mocker):
-    config_factory = ConfigFactory(desc.config, tmp_path / 'config.json')
+    config_factory = ConfigFactory(desc.config_dict, tmp_path / 'config.json')
     args = {
         "--data": str(desc.dataset_dir),
         "--config": config_factory.serialize(),
@@ -738,29 +793,7 @@ def test_precision_init(desc: TestCaseDescriptor, tmp_path, mocker):
     if not torch.cuda.is_available():
         args["--cpu-only"] = True
 
-    arg_list = [key if (val is None or val is True) else "{} {}".format(key, val) for key, val in args.items()]
-    command_line = " ".join(arg_list)
-    # Need to mock SafeMLFLow to prevent starting a not closed mlflow session due to memory leak of config and
-    # SafeMLFLow, which happens with a mocked train function
-    if desc.sample_type == SampleType.CLASSIFICATION:
-        import examples.torch.classification.main as sample
-        mocker.patch("examples.torch.classification.staged_quantization_worker.train_staged")
-        mocker.patch("examples.torch.classification.main.train")
-        mocker.patch("examples.torch.classification.main.SafeMLFLow")
-        mocker.patch("examples.torch.classification.staged_quantization_worker.SafeMLFLow")
-    elif desc.sample_type == SampleType.SEMANTIC_SEGMENTATION:
-        import examples.torch.semantic_segmentation.main as sample
-        mocker.patch("examples.torch.semantic_segmentation.main.train")
-        mocker.patch("examples.torch.semantic_segmentation.main.SafeMLFLow")
-    elif desc.sample_type == SampleType.OBJECT_DETECTION:
-        import examples.torch.object_detection.main as sample
-        mocker.patch("examples.torch.object_detection.main.train")
-        mocker.patch("examples.torch.object_detection.main.SafeMLFLow")
-    desc.setup_spy(mocker)
-
-    sample.main(shlex.split(command_line))
-
-    desc.validate_spy()
+    validate_sample(args, desc, mocker)
 
 
 @pytest.mark.parametrize('target_device', [x.value for x in HWConfigType])
@@ -793,3 +826,94 @@ def test_sample_propagates_target_device_cl_param_to_nncf_config(mocker, tmp_pat
 
     config = start_worker_mock.call_args[0][1].nncf_config
     assert config["target_device"] == target_device
+
+
+
+class ExportDescriptor(TestCaseDescriptor):
+    def __init__(self):
+        super().__init__()
+        self._create_compressed_model_patch = None
+        self._reg_init_args_patch = None
+        self._ctrl_mock = None
+
+    def get_precision_section(self) -> Dict:
+        return {}
+
+    def setup_spy(self, mocker):
+        super().setup_spy(mocker)
+        self._reg_init_args_patch = mocker.spy(NNCFConfig, "register_extra_structs")
+        sample_file_location = self.get_sample_file_location()
+
+        if self.sample_type == SampleType.OBJECT_DETECTION:
+            mocker.patch(sample_file_location + '.build_ssd')
+        else:
+            load_model_location = sample_file_location + '.load_model'
+            mocker.patch(load_model_location)
+
+        ctrl_mock = mocker.MagicMock(spec=QuantizationController)
+        model_mock = mocker.MagicMock(spec=nn.Module)
+        create_model_location = sample_file_location + '.create_compressed_model'
+        create_model_patch = mocker.patch(create_model_location)
+
+        if self.is_staged:
+            mocker.patch(sample_file_location + '.get_quantization_optimizer')
+
+        def fn(*args, **kwargs):
+            return ctrl_mock, model_mock
+
+        create_model_patch.side_effect = fn
+        self._ctrl_mock = ctrl_mock
+
+    def validate_spy(self):
+        super().validate_spy()
+        self._reg_init_args_patch.assert_called()
+        if self.is_export_called:
+            self._ctrl_mock.export_model.assert_called_once()
+        else:
+            self._ctrl_mock.export_model.assert_not_called()
+
+    def get_sample_params(self):
+        result = super().get_sample_params()
+        result.update({'pretrained': True})
+        return result
+
+
+EXPORT_TEST_CASE_DESCRIPTORS = [
+    resnet18_desc(ExportDescriptor()),
+    resnet18_desc(ExportDescriptor()).staged(),
+    ssd300_vgg_desc(ExportDescriptor()),
+    unet_desc(ExportDescriptor()),
+]
+
+
+@pytest.fixture(params=EXPORT_TEST_CASE_DESCRIPTORS, ids=[str(d) for d in EXPORT_TEST_CASE_DESCRIPTORS])
+def export_desc(request):
+    desc: TestCaseDescriptor = request.param
+    return desc.finalize()
+
+
+@pytest.mark.parametrize(
+    ('extra_args', 'is_export_called'),
+    (
+        ({}, False),
+        ({"-m": 'export train'}, True)
+    ),
+    ids=['train_with_onnx_path', 'export_after_train']
+)
+def test_export_behavior(export_desc: TestCaseDescriptor, tmp_path, mocker, extra_args, is_export_called):
+    config_factory = ConfigFactory(export_desc.config_dict, tmp_path / 'config.json')
+    args = {
+        "--data": str(export_desc.dataset_dir),
+        "--config": config_factory.serialize(),
+        "--log-dir": tmp_path,
+        "--batch-size": export_desc.batch_size,
+        "--workers": 0,  # Workaround for the PyTorch MultiProcessingDataLoader issue
+        "--to-onnx": tmp_path / 'model.onnx',
+    }
+    if not torch.cuda.is_available():
+        args["--cpu-only"] = True
+    if extra_args is not None:
+        args.update(extra_args)
+    export_desc.is_export_called = is_export_called
+
+    validate_sample(args, export_desc, mocker)

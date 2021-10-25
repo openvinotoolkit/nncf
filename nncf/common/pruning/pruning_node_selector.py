@@ -18,7 +18,7 @@ from nncf.common.graph import NNCFNode
 from nncf.common.pruning.utils import get_sources_of_node
 from nncf.common.pruning.utils import get_first_nodes_of_type
 from nncf.common.pruning.utils import get_last_nodes_of_type
-from nncf.common.pruning.utils import get_previous_conv
+from nncf.common.pruning.utils import get_previous_convs
 from nncf.common.pruning.utils import is_grouped_conv
 from nncf.common.pruning.utils import PruningOperationsMetatypeRegistry
 from nncf.common.pruning.model_analysis import ModelAnalyzer
@@ -89,6 +89,7 @@ class PruningNodeSelector:
         :param graph: Graph to work with and their initialization parameters as values.
         :return: Clusterization of pruned nodes.
         """
+        # pylint:disable=too-many-branches
         all_nodes_to_prune = graph.get_nodes_by_types(self._prune_operations)  # NNCFNodes here
 
         # 1. Clusters for special ops
@@ -102,7 +103,7 @@ class PruningNodeSelector:
         for i, cluster in enumerate(special_ops_clusterization.get_all_clusters()):
             all_pruned_inputs = []
             pruned_inputs_idxs = set()
-            clusters_to_merge = list()
+            clusters_to_merge = []
 
             for node in cluster.elements:
                 sources = get_sources_of_node(node, graph, self._prune_operations)
@@ -139,11 +140,12 @@ class PruningNodeSelector:
             cluster_id = pruned_nodes_clusterization.get_cluster_containing_element(node.node_id).id
 
             if is_depthwise_conv(node):
-                previous_conv = get_previous_conv(graph, node, self._prune_operations, stop_propagation_ops)
-                if previous_conv:
-                    previous_conv_cluster_id = pruned_nodes_clusterization.get_cluster_containing_element(
-                        previous_conv.node_id).id
-                    pruned_nodes_clusterization.merge_clusters(cluster_id, previous_conv_cluster_id)
+                previous_convs = get_previous_convs(graph, node, self._prune_operations, stop_propagation_ops)
+                previous_clusters = [
+                    pruned_nodes_clusterization.get_cluster_containing_element(node.node_id).id
+                    for node in previous_convs
+                ]
+                pruned_nodes_clusterization.merge_list_of_clusters([cluster_id] + previous_clusters)
 
         # 5. Merge nodes into one cluster if some module forwards several times
         multiforward_nodes = self._get_multiforward_nodes(graph)
@@ -153,14 +155,15 @@ class PruningNodeSelector:
             pruned_nodes_clusterization.merge_list_of_clusters(clusters_to_merge)
 
             # Merge previous convolutions into one cluster
-            previous_convs = []
+            all_previous_convs = []
             for node in list_of_nodes:
                 nncf_node = graph.get_node_by_id(node.node_id)
-                previous_conv = get_previous_conv(graph, nncf_node, self._prune_operations, stop_propagation_ops)
-                previous_convs.append(previous_conv)
+                previous_convs = get_previous_convs(graph, nncf_node, self._prune_operations, stop_propagation_ops)
+                all_previous_convs.extend(previous_convs)
+
             previous_clusters = [
                 pruned_nodes_clusterization.get_cluster_containing_element(node.node_id).id
-                for node in previous_convs
+                for node in all_previous_convs
             ]
             pruned_nodes_clusterization.merge_list_of_clusters(previous_clusters)
 

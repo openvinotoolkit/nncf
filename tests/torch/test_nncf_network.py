@@ -11,6 +11,7 @@
  limitations under the License.
 """
 import itertools
+from functools import partial
 import os
 from collections import Counter
 from copy import deepcopy
@@ -795,6 +796,45 @@ def test_get_clean_shallow_copy():
     assert clean_copy.get_graph().get_nodes_count() == clean_copy.get_original_graph().get_nodes_count()
 
 
+class TwoConvTestModelWithUniqueFunction(TwoConvTestModel):
+    def __init__(self):
+        super().__init__()
+        self.unique_attr = 'unique_attr'
+        self.non_unique_attr = 'model_non_unique_attr'
+
+    def train_step(self):
+        pass
+
+    @staticmethod
+    def static_func():
+        pass
+
+
+def test_get_attr():
+    is_called_mock_forward = False
+
+    def mock_forward(*args, **kwargs):
+        nonlocal is_called_mock_forward
+        is_called_mock_forward = True
+
+    model = TwoConvTestModelWithUniqueFunction()
+    config = get_basic_sparsity_plus_quantization_config()
+    register_bn_adaptation_init_args(config)
+    sparse_quantized_model, _ = create_compressed_model_and_algo_for_test(model, config)
+
+    sparse_quantized_model.non_unique_attr = 'NNCFNetwork_non_unique_attr'
+    sparse_quantized_model.forward = mock_forward
+    sparse_quantized_model.forward()
+    assert is_called_mock_forward
+
+    assert hasattr(sparse_quantized_model, 'unique_attr')
+    assert hasattr(sparse_quantized_model, 'non_unique_attr')
+    assert sparse_quantized_model.non_unique_attr == 'NNCFNetwork_non_unique_attr'
+    assert isinstance(sparse_quantized_model.train_step, partial)
+    assert isinstance(sparse_quantized_model.train_step.args[0], NNCFNetwork)
+    assert not isinstance(sparse_quantized_model.static_func, partial)
+
+
 def test_temporary_clean_view():
     model = TwoConvTestModelWithUserModule()
     config = get_basic_sparsity_plus_quantization_config()
@@ -812,8 +852,8 @@ def test_temporary_clean_view():
                intermediate_model.get_original_graph().get_nodes_count()
     sd_after_tmp_clean_view = sparse_quantized_model.state_dict()
     for key in old_sd.keys():
-        assert key in sd_after_tmp_clean_view
-        assert torch.all(torch.eq(sd_after_tmp_clean_view[key], old_sd[key]))
+        assert key in sd_after_tmp_clean_view # pylint: disable=E1135
+        assert torch.all(torch.eq(sd_after_tmp_clean_view[key], old_sd[key])) # pylint: disable=E1136
     sparse_quantized_model.rebuild_graph()
     graph_after_tmp_clean_view = sparse_quantized_model.get_graph()
     assert graph_after_tmp_clean_view == old_graph

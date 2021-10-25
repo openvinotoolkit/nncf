@@ -17,7 +17,7 @@
 from collections import namedtuple
 
 import torch
-import torch.nn as nn
+from torch import nn
 import torch.nn.functional as F
 from torch.utils import model_zoo
 
@@ -94,7 +94,7 @@ class Inception3(nn.Module):
 
         for m in self.modules():
             if isinstance(m, (nn.Conv2d, nn.Linear)):
-                import scipy.stats as stats
+                from scipy import stats
                 stddev = m.stddev if hasattr(m, 'stddev') else 0.1
                 X = stats.truncnorm(-2, 2, scale=stddev)
                 values = torch.as_tensor(X.rvs(m.weight.numel()), dtype=m.weight.dtype)
