@@ -316,7 +316,7 @@ def test_model_analyzer(test_struct: GroupSpecialModulesTestStruct):
                                    is_prunable_depthwise_conv)
     can_prune_analysis = model_analyser.analyse_model_before_pruning()
     for node_id in can_prune_analysis.keys():
-        assert can_prune_analysis[node_id] == test_struct.ref_can_prune[node_id]
+        assert can_prune_analysis[node_id].decision == test_struct.ref_can_prune[node_id]
 
 
 class ModulePrunableTestStruct:
@@ -410,8 +410,8 @@ def test_is_module_prunable(test_prunable_struct: ModulePrunableTestStruct):
     graph = nncf_model.get_original_graph()
     for module_node_name in test_prunable_struct.is_module_prunable:
         nncf_node = graph.get_node_by_name(module_node_name)
-        is_prunable, _ = algo_builder.pruning_node_selector._is_module_prunable(graph, nncf_node)
-        assert is_prunable == test_prunable_struct.is_module_prunable[module_node_name]
+        decision = algo_builder.pruning_node_selector._is_module_prunable(graph, nncf_node)
+        assert decision.decision == test_prunable_struct.is_module_prunable[module_node_name]
 
 
 class SimpleNode:
