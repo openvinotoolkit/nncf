@@ -486,7 +486,7 @@ class ARangeMetatype(PTOperatorMetatype):
 class TransposeMetatype(PTOperatorMetatype):
     name = "transpose"
     torch_module_patch_spec = PTPatchSpec([name])
-    torch_tensor_patch_spec = PTPatchSpec([name, "permute"])
+    torch_tensor_patch_spec = PTPatchSpec([name, "permute", 'transpose_'])
     hw_config_names = [HWConfigOpName.TRANSPOSE]
 
 

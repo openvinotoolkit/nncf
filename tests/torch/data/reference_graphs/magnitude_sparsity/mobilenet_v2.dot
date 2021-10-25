@@ -202,7 +202,7 @@ strict digraph  {
 "200 MobileNetV2/Sequential[features]/ConvBNActivation[18]/BatchNorm2d[1]/batch_norm_0" [id=200, type=batch_norm];
 "201 MobileNetV2/Sequential[features]/ConvBNActivation[18]/ReLU6[2]/hardtanh_0" [id=201, type=hardtanh];
 "202 MobileNetV2/adaptive_avg_pool2d_0" [id=202, type=adaptive_avg_pool2d];
-"203 MobileNetV2/flatten_0" [id=203, type=flatten];
+"203 MobileNetV2/reshape_0" [id=203, type=reshape];
 "204 MobileNetV2/Sequential[classifier]/Dropout[0]/dropout_0" [id=204, type=dropout];
 "205 MobileNetV2/Sequential[classifier]/NNCFLinear[1]/ModuleDict[pre_ops]/UpdateWeight[0]/BinaryMask[op]/apply_binary_mask_0" [id=205, type=apply_binary_mask];
 "206 MobileNetV2/Sequential[classifier]/NNCFLinear[1]/linear_0" [id=206, type=linear];
@@ -419,8 +419,8 @@ strict digraph  {
 "199 MobileNetV2/Sequential[features]/ConvBNActivation[18]/NNCFConv2d[0]/conv2d_0" -> "200 MobileNetV2/Sequential[features]/ConvBNActivation[18]/BatchNorm2d[1]/batch_norm_0";
 "200 MobileNetV2/Sequential[features]/ConvBNActivation[18]/BatchNorm2d[1]/batch_norm_0" -> "201 MobileNetV2/Sequential[features]/ConvBNActivation[18]/ReLU6[2]/hardtanh_0";
 "201 MobileNetV2/Sequential[features]/ConvBNActivation[18]/ReLU6[2]/hardtanh_0" -> "202 MobileNetV2/adaptive_avg_pool2d_0";
-"202 MobileNetV2/adaptive_avg_pool2d_0" -> "203 MobileNetV2/flatten_0";
-"203 MobileNetV2/flatten_0" -> "204 MobileNetV2/Sequential[classifier]/Dropout[0]/dropout_0";
+"202 MobileNetV2/adaptive_avg_pool2d_0" -> "203 MobileNetV2/reshape_0";
+"203 MobileNetV2/reshape_0" -> "204 MobileNetV2/Sequential[classifier]/Dropout[0]/dropout_0";
 "204 MobileNetV2/Sequential[classifier]/Dropout[0]/dropout_0" -> "206 MobileNetV2/Sequential[classifier]/NNCFLinear[1]/linear_0";
 "205 MobileNetV2/Sequential[classifier]/NNCFLinear[1]/ModuleDict[pre_ops]/UpdateWeight[0]/BinaryMask[op]/apply_binary_mask_0" -> "206 MobileNetV2/Sequential[classifier]/NNCFLinear[1]/linear_0";
 "206 MobileNetV2/Sequential[classifier]/NNCFLinear[1]/linear_0" -> "207 /nncf_model_output_0";

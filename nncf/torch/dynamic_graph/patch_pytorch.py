@@ -148,17 +148,17 @@ def patch_torch_operators():
                           torch: get_all_functions_from_namespace(torch._C._VariableFunctions),
                           TracedTensor: get_all_functions_from_namespace(torch.Tensor)}
     # pylint: enable=protected-access
-    creating_tensor_funcs = ['empty', 'rand', 'randn', 'ones', 'tensor', 'zeros', 'ones_like', 'rad2deg', 'rad2deg_',
-                             'randn_like', 'as_subclass', 'copy_', 'clone', 'copysign', 'copysign_', 'contiguous',
-                             'detach', 'detach_']
+    creating_tensor_funcs = ['arange', 'as_tensor', 'empty', 'rand', 'randn', 'ones', 'tensor', 'zeros', 'ones_like', 'rad2deg',
+                             'rad2deg_', 'randn_like', 'as_subclass', 'copy_', 'clone', 'copysign', 'copysign_',
+                             'contiguous', 'detach', 'detach_']
     utility_tensor_funcs = ['all', 'allclose', 'any', 'backward', 'broadcast_to', 'dim', 'names', 'rename', 'rename_',
                             'refine_names', 'register_hook', 'record_stream', 'random_', 'cpu', 'cuda', 'data_ptr',
                             'dequantize', 'qscheme', 'q_per_channel_axis', 'q_per_channel_scales',
                             'q_per_channel_zero_points', 'q_scale', 'q_zero_point', 'qr',
                             'view', 'size', 'shape', 'has_names', '_reduce_ex_internal', '__reduce_ex__',
-                            'storage', 'storage_offset', 'stride', 'item', 'numpy',
+                            'storage', 'sort', 'storage_offset', 'stride', 'item', 'numpy',
                             'is_contiguous', 'has_torch_function_unary', 'has_torch_function_variadic',
-                            'assert_int_or_pair', 'handle_torch_function', 'has_torch_function'
+                            'assert_int_or_pair', 'handle_torch_function', 'has_torch_function', 'to'
                             ]
 
     type_tensor_func = ['bfloat16', 'bool', 'byte', 'char', 'double']

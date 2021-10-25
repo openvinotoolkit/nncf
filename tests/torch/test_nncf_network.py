@@ -678,13 +678,14 @@ class TestInsertionPointGraph:
 
     def test_operator_metatype_marking(self):
         from nncf.torch.graph.operator_metatypes import Conv2dMetatype, BatchNormMetatype, RELUMetatype, \
-            MaxPool2dMetatype, \
+            MaxPool2dMetatype, TransposeMetatype, \
             ConvTranspose2dMetatype, DepthwiseConv2dSubtype, AddMetatype, AvgPool2dMetatype, LinearMetatype
         ref_scope_vs_metatype_dict = {
             "/" + MODEL_INPUT_OP_NAME + "_0": PTInputNoopMetatype,
             "ModelForMetatypeTesting/NNCFConv2d[conv_regular]/conv2d_0": Conv2dMetatype,
             "ModelForMetatypeTesting/BatchNorm2d[bn]/batch_norm_0": BatchNormMetatype,
             "ModelForMetatypeTesting/relu_0": RELUMetatype,
+            "ModelForMetatypeTesting/transpose__0": TransposeMetatype,
             "ModelForMetatypeTesting/MaxPool2d[max_pool2d]/max_pool2d_0": MaxPool2dMetatype,
             "ModelForMetatypeTesting/NNCFConvTranspose2d[conv_transpose]/conv_transpose2d_0": ConvTranspose2dMetatype,
             "ModelForMetatypeTesting/NNCFConv2d[conv_depthwise]/conv2d_0": DepthwiseConv2dSubtype,

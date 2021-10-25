@@ -254,7 +254,7 @@ strict digraph  {
 "252 MobileNetV2/Sequential[features]/ConvBNActivation[18]/BatchNorm2d[1]/batch_norm_0" [id=252, type=batch_norm];
 "253 MobileNetV2/Sequential[features]/ConvBNActivation[18]/ReLU6[2]/hardtanh_0" [id=253, type=hardtanh];
 "254 MobileNetV2/adaptive_avg_pool2d_0" [id=254, type=adaptive_avg_pool2d];
-"255 MobileNetV2/flatten_0" [id=255, type=flatten];
+"255 MobileNetV2/reshape_0" [id=255, type=reshape];
 "256 MobileNetV2/Sequential[classifier]/Dropout[0]/dropout_0" [id=256, type=dropout];
 "257 MobileNetV2/Sequential[classifier]/NNCFLinear[1]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/calc_rb_binary_mask_0" [id=257, type=calc_rb_binary_mask];
 "258 MobileNetV2/Sequential[classifier]/NNCFLinear[1]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask_0" [id=258, type=apply_binary_mask];
@@ -524,8 +524,8 @@ strict digraph  {
 "251 MobileNetV2/Sequential[features]/ConvBNActivation[18]/NNCFConv2d[0]/conv2d_0" -> "252 MobileNetV2/Sequential[features]/ConvBNActivation[18]/BatchNorm2d[1]/batch_norm_0";
 "252 MobileNetV2/Sequential[features]/ConvBNActivation[18]/BatchNorm2d[1]/batch_norm_0" -> "253 MobileNetV2/Sequential[features]/ConvBNActivation[18]/ReLU6[2]/hardtanh_0";
 "253 MobileNetV2/Sequential[features]/ConvBNActivation[18]/ReLU6[2]/hardtanh_0" -> "254 MobileNetV2/adaptive_avg_pool2d_0";
-"254 MobileNetV2/adaptive_avg_pool2d_0" -> "255 MobileNetV2/flatten_0";
-"255 MobileNetV2/flatten_0" -> "256 MobileNetV2/Sequential[classifier]/Dropout[0]/dropout_0";
+"254 MobileNetV2/adaptive_avg_pool2d_0" -> "255 MobileNetV2/reshape_0";
+"255 MobileNetV2/reshape_0" -> "256 MobileNetV2/Sequential[classifier]/Dropout[0]/dropout_0";
 "256 MobileNetV2/Sequential[classifier]/Dropout[0]/dropout_0" -> "259 MobileNetV2/Sequential[classifier]/NNCFLinear[1]/linear_0";
 "257 MobileNetV2/Sequential[classifier]/NNCFLinear[1]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/calc_rb_binary_mask_0" -> "258 MobileNetV2/Sequential[classifier]/NNCFLinear[1]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask_0";
 "258 MobileNetV2/Sequential[classifier]/NNCFLinear[1]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask_0" -> "259 MobileNetV2/Sequential[classifier]/NNCFLinear[1]/linear_0";
