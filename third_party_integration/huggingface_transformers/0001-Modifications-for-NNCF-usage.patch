@@ -1,26 +1,29 @@
-From f7062c168da6c81a40d272887f5319438bb2d65d Mon Sep 17 00:00:00 2001
+From 6659b0e6c4847b7f503828bb7311d149ea445c81 Mon Sep 17 00:00:00 2001
 From: Vasily Shamporov <vasily.shamporov@intel.com>
 Date: Mon, 2 Aug 2021 17:46:48 +0300
 Subject: [PATCH] Modifications for NNCF usage
 
 ---
- examples/pytorch/language-modeling/run_clm.py |  75 +++++++++---
- examples/pytorch/question-answering/run_qa.py |  63 +++++++++--
- .../pytorch/text-classification/run_glue.py   | 107 ++++++++++++++++--
- .../pytorch/text-classification/run_xnli.py   |  70 ++++++++++--
+ examples/pytorch/language-modeling/run_clm.py |  75 ++++++++---
+ examples/pytorch/question-answering/run_qa.py |  63 ++++++++--
+ .../pytorch/text-classification/run_glue.py   | 107 ++++++++++++++--
+ .../pytorch/text-classification/run_xnli.py   |  70 +++++++++--
+ .../pytorch/token-classification/run_ner.py   | 118 ++++++++++++++----
+ nncf_bert_config_conll.json                   |  44 +++++++
  nncf_bert_config_squad.json                   |  44 +++++++
  ...config_squad_magnitude_sparsity_cubic.json |  31 +++++
  nncf_bert_config_xnli.json                    |  36 ++++++
- nncf_distilbert_config_sst2.json              |  33 ++++++
- nncf_gpt2_config_wikitext_hw_config.json      |  58 ++++++++++
- nncf_mobilebert_config_squad_int8.json        |  46 ++++++++
+ nncf_distilbert_config_sst2.json              |  33 +++++
+ nncf_gpt2_config_wikitext_hw_config.json      |  58 +++++++++
+ nncf_mobilebert_config_squad_int8.json        |  46 +++++++
  nncf_roberta_config_mnli.json                 |  36 ++++++
  src/transformers/file_utils.py                |   1 +
  src/transformers/modeling_utils.py            |  29 ++++-
- src/transformers/trainer.py                   |  75 ++++++++++--
+ src/transformers/trainer.py                   |  74 +++++++++--
  src/transformers/trainer_callback.py          |   2 +
  src/transformers/training_args.py             |   6 +
- 16 files changed, 662 insertions(+), 50 deletions(-)
+ 18 files changed, 800 insertions(+), 73 deletions(-)
+ create mode 100644 nncf_bert_config_conll.json
  create mode 100644 nncf_bert_config_squad.json
  create mode 100644 nncf_bert_config_squad_magnitude_sparsity_cubic.json
  create mode 100644 nncf_bert_config_xnli.json
@@ -146,7 +149,7 @@ index 0c002deeb..f9e4f4171 100755
  
      # Training
 diff --git a/examples/pytorch/question-answering/run_qa.py b/examples/pytorch/question-answering/run_qa.py
-index b8559bb72..3b8b280c1 100755
+index b8559bb72..0d15131c2 100755
 --- a/examples/pytorch/question-answering/run_qa.py
 +++ b/examples/pytorch/question-answering/run_qa.py
 @@ -25,6 +25,7 @@ from dataclasses import dataclass, field
@@ -239,7 +242,7 @@ index b8559bb72..3b8b280c1 100755
 +        else:
 +            model.to('cpu')
 +            dummy_tensor = torch.ones([1, 384], dtype=torch.long)
-+            onnx.export(model, dummy_tensor, training_args.to_onnx)
++            onnx.export(model, (dummy_tensor, dummy_tensor, dummy_tensor), training_args.to_onnx)
 +
      # Initialize our Trainer
      trainer = QuestionAnsweringTrainer(
@@ -532,9 +535,225 @@ index d7e5dfd83..6947317f8 100755
      # Training
      if training_args.do_train:
          checkpoint = None
+diff --git a/examples/pytorch/token-classification/run_ner.py b/examples/pytorch/token-classification/run_ner.py
+index 65c26cd9e..f3cf0f857 100755
+--- a/examples/pytorch/token-classification/run_ner.py
++++ b/examples/pytorch/token-classification/run_ner.py
+@@ -22,30 +22,39 @@ Fine-tuning the library models for token classification.
+ import logging
+ import os
+ import sys
+-from dataclasses import dataclass, field
++from copy import deepcopy
++from dataclasses import dataclass
++from dataclasses import field
++from typing import List
+ from typing import Optional
+ 
+ import datasets
+ import numpy as np
+-from datasets import ClassLabel, load_dataset, load_metric
+-
++import torch
+ import transformers
+-from transformers import (
+-    AutoConfig,
+-    AutoModelForTokenClassification,
+-    AutoTokenizer,
+-    DataCollatorForTokenClassification,
+-    HfArgumentParser,
+-    PreTrainedTokenizerFast,
+-    Trainer,
+-    TrainingArguments,
+-    set_seed,
+-)
++from datasets import ClassLabel
++from datasets import load_dataset
++from datasets import load_metric
++from nncf import NNCFConfig
++from nncf.config.structures import BNAdaptationInitArgs
++from nncf.config.structures import QuantizationRangeInitArgs
++from nncf.torch.initialization import PTInitializingDataLoader
++from packaging import version
++from torch import onnx
++from transformers import AutoConfig
++from transformers import AutoModelForTokenClassification
++from transformers import AutoTokenizer
++from transformers import DataCollatorForTokenClassification
++from transformers import HfArgumentParser
++from transformers import PreTrainedTokenizerFast
++from transformers import Trainer
++from transformers import TrainingArguments
++from transformers import set_seed
++from transformers.trainer import get_train_dataloader_for_init
+ from transformers.trainer_utils import get_last_checkpoint
+ from transformers.utils import check_min_version
+ from transformers.utils.versions import require_version
+ 
+-
+ # Will error if the minimal version of Transformers is not installed. Remove at your own risks.
+ check_min_version("4.9.0")
+ 
+@@ -177,6 +186,16 @@ class DataTrainingArguments:
+         self.task_name = self.task_name.lower()
+ 
+ 
++def filter_columns(dataset, keep_columns: List[str], remove_columns: List[str]):
++    if version.parse(datasets.__version__) < version.parse("1.4.0"):
++        dataset.set_format(
++            type=dataset.format["type"], columns=keep_columns, format_kwargs=dataset.format["format_kwargs"]
++        )
++        return dataset
++    else:
++        return dataset.remove_columns(remove_columns)
++
++
+ def main():
+     # See all possible arguments in src/transformers/training_args.py
+     # or by passing the --help flag to this script.
+@@ -331,14 +350,7 @@ def main():
+             use_auth_token=True if model_args.use_auth_token else None,
+         )
+ 
+-    model = AutoModelForTokenClassification.from_pretrained(
+-        model_args.model_name_or_path,
+-        from_tf=bool(".ckpt" in model_args.model_name_or_path),
+-        config=config,
+-        cache_dir=model_args.cache_dir,
+-        revision=model_args.model_revision,
+-        use_auth_token=True if model_args.use_auth_token else None,
+-    )
++
+ 
+     # Tokenizer check: this script requires a fast tokenizer.
+     if not isinstance(tokenizer, PreTrainedTokenizerFast):
+@@ -432,6 +444,65 @@ def main():
+     # Data collator
+     data_collator = DataCollatorForTokenClassification(tokenizer, pad_to_multiple_of=8 if training_args.fp16 else None)
+ 
++    nncf_config = None
++    if training_args.nncf_config is not None:
++        nncf_config = NNCFConfig.from_json(training_args.nncf_config)
++        if nncf_config.get("log_dir") is None:
++            nncf_config["log_dir"] = training_args.output_dir
++        if not os.path.exists(training_args.output_dir) and training_args.local_rank in [-1, 0]:
++            os.makedirs(nncf_config["log_dir"])
++        if training_args.do_train:
++            train_dataset_for_init = deepcopy(train_dataset)
++
++            train_dataset_for_init = filter_columns(train_dataset_for_init,
++                                                    keep_columns=['labels', 'input_ids', 'attention_mask',
++                                                                  'token_type_ids'],
++                                                    remove_columns=['ner_tags', 'pos_tags', 'tokens', 'id',
++                                                                    'chunk_tags'])
++            train_dataloader = get_train_dataloader_for_init(training_args, train_dataset_for_init, data_collator)
++
++            class ConllInitializingDataloader(PTInitializingDataLoader):
++                def get_inputs(self, dataloader_output):
++                    return (), {
++                        "input_ids": dataloader_output["input_ids"],
++                        "attention_mask": dataloader_output["attention_mask"],
++                        "token_type_ids": dataloader_output["token_type_ids"],
++                    }
++
++            nncf_config.register_extra_structs([
++                QuantizationRangeInitArgs(ConllInitializingDataloader(train_dataloader)),
++                BNAdaptationInitArgs(ConllInitializingDataloader(train_dataloader)),
++            ])
++
++    retval = AutoModelForTokenClassification.from_pretrained(
++        model_args.model_name_or_path,
++        from_tf=bool(".ckpt" in model_args.model_name_or_path),
++        config=config,
++        cache_dir=model_args.cache_dir,
++        revision=model_args.model_revision,
++        use_auth_token=True if model_args.use_auth_token else None,
++        nncf_config=nncf_config,
++        nncf_eval=nncf_config is not None and training_args.do_eval and not training_args.do_train
++    )
++
++    if nncf_config is None:
++        model = retval
++        compression_ctrl = None
++    else:
++        compression_ctrl, model = retval
++
++
++    if training_args.to_onnx:
++    # Expecting the following forward signature:
++    # (input_ids, attention_mask, token_type_ids, ...)
++        if nncf_config is not None:
++            compression_ctrl.export_model(training_args.to_onnx)
++        else:
++            model.to('cpu')
++            dummy_tensor = torch.ones([1, 128], dtype=torch.long)
++            onnx.export(model, (dummy_tensor, dummy_tensor, dummy_tensor), training_args.to_onnx,
++                        opset_version=10)
++
+     # Metrics
+     metric = load_metric("seqeval")
+ 
+@@ -477,6 +548,7 @@ def main():
+         tokenizer=tokenizer,
+         data_collator=data_collator,
+         compute_metrics=compute_metrics,
++        compression_ctrl=compression_ctrl
+     )
+ 
+     # Training
+diff --git a/nncf_bert_config_conll.json b/nncf_bert_config_conll.json
+new file mode 100644
+index 000000000..7ce2cc6c9
+--- /dev/null
++++ b/nncf_bert_config_conll.json
+@@ -0,0 +1,44 @@
++{
++    "input_info": [
++        {
++            "sample_size": [1, 512],
++            "type": "long"
++        },
++        {
++            "sample_size": [1, 512],
++            "type": "long"
++        },
++        {
++            "sample_size": [1, 512],
++            "type": "long"
++        }
++    ],
++    "compression": {
++        "algorithm": "quantization",
++        "initializer": {
++            "range": {
++                "num_init_samples": 32,
++                "type": "percentile",
++                "params":
++                {
++                    "min_percentile": 0.01,
++                    "max_percentile": 99.99
++                }
++            },
++
++            "batchnorm_adaptation": {
++                "num_bn_adaptation_samples": 200
++            }
++        },
++        "activations":
++        {
++            "mode": "symmetric"
++        },
++        "weights":
++        {
++            "mode": "symmetric",
++            "signed": true,
++            "per_channel": false
++        }
++    }
++}
 diff --git a/nncf_bert_config_squad.json b/nncf_bert_config_squad.json
 new file mode 100644
-index 000000000..87fcc6480
+index 000000000..12e0440f7
 --- /dev/null
 +++ b/nncf_bert_config_squad.json
 @@ -0,0 +1,44 @@
@@ -572,7 +791,7 @@ index 000000000..87fcc6480
 +        },
 +        "activations":
 +        {
-+            "mode": "symmetric",
++            "mode": "symmetric"
 +        },
 +        "weights":
 +        {
@@ -955,7 +1174,7 @@ index b34637b02..29ae259d6 100644
      """
      1D-convolutional layer as defined by Radford et al. for OpenAI GPT (and also used in GPT-2).
 diff --git a/src/transformers/trainer.py b/src/transformers/trainer.py
-index d6e0d51c4..f7cd81faf 100755
+index d6e0d51c4..dfb3147f9 100755
 --- a/src/transformers/trainer.py
 +++ b/src/transformers/trainer.py
 @@ -30,6 +30,7 @@ from logging import StreamHandler
@@ -1043,14 +1262,13 @@ index d6e0d51c4..f7cd81faf 100755
              model = nn.parallel.DistributedDataParallel(
                  model,
                  device_ids=[self.args.local_rank],
-@@ -1231,11 +1266,14 @@ class Trainer:
+@@ -1231,11 +1266,13 @@ class Trainer:
                      break
  
          for epoch in range(epochs_trained, num_train_epochs):
 +            if self.compression_ctrl is not None:
 +                self.compression_ctrl.scheduler.epoch_step()
 +                print(self.compression_ctrl.statistics().to_str())
-+                print(f"LOSS:{self.compression_ctrl.loss().item()}")
              if isinstance(train_dataloader, DataLoader) and isinstance(train_dataloader.sampler, DistributedSampler):
                  train_dataloader.sampler.set_epoch(epoch)
              elif isinstance(train_dataloader.dataset, IterableDatasetShard):
@@ -1059,7 +1277,7 @@ index d6e0d51c4..f7cd81faf 100755
              if is_torch_tpu_available():
                  parallel_loader = pl.ParallelLoader(train_dataloader, [args.device]).per_device_loader(args.device)
                  epoch_iterator = parallel_loader
-@@ -1275,9 +1313,11 @@ class Trainer:
+@@ -1275,9 +1312,11 @@ class Trainer:
                  ):
                      # Avoid unnecessary DDP synchronization since there will be no backward pass on this example.
                      with model.no_sync():
@@ -1073,7 +1291,7 @@ index d6e0d51c4..f7cd81faf 100755
                  self.current_flos += float(self.floating_point_ops(inputs))
  
                  # Optimizer step for deepspeed must be called on every step regardless of the value of gradient_accumulation_steps
-@@ -1311,6 +1351,8 @@ class Trainer:
+@@ -1311,6 +1350,8 @@ class Trainer:
                              )
  
                      # Optimizer step
@@ -1082,7 +1300,7 @@ index d6e0d51c4..f7cd81faf 100755
                      optimizer_was_run = True
                      if self.deepspeed:
                          pass  # called outside the loop
-@@ -1331,6 +1373,7 @@ class Trainer:
+@@ -1331,6 +1372,7 @@ class Trainer:
                      model.zero_grad()
                      self.state.global_step += 1
                      self.state.epoch = epoch + (step + 1) / steps_in_epoch
@@ -1090,7 +1308,7 @@ index d6e0d51c4..f7cd81faf 100755
                      self.control = self.callback_handler.on_step_end(args, self.state, self.control)
  
                      self._maybe_log_save_evaluate(tr_loss, model, trial, epoch, ignore_keys_for_eval)
-@@ -1426,6 +1469,13 @@ class Trainer:
+@@ -1426,6 +1468,13 @@ class Trainer:
              logs["loss"] = round(tr_loss_scalar / (self.state.global_step - self._globalstep_last_logged), 4)
              logs["learning_rate"] = self._get_learning_rate()
  
@@ -1104,7 +1322,7 @@ index d6e0d51c4..f7cd81faf 100755
              self._total_loss_scalar += tr_loss_scalar
              self._globalstep_last_logged = self.state.global_step
              self.store_flos()
-@@ -1779,6 +1829,10 @@ class Trainer:
+@@ -1779,6 +1828,10 @@ class Trainer:
              # deepspeed handles loss scaling by gradient_accumulation_steps in its `backward`
              loss = loss / self.args.gradient_accumulation_steps
  
@@ -1115,7 +1333,7 @@ index d6e0d51c4..f7cd81faf 100755
          if self.use_amp:
              self.scaler.scale(loss).backward()
          elif self.use_apex:
-@@ -1917,13 +1971,20 @@ class Trainer:
+@@ -1917,13 +1970,20 @@ class Trainer:
          output_dir = output_dir if output_dir is not None else self.args.output_dir
          os.makedirs(output_dir, exist_ok=True)
          logger.info(f"Saving model checkpoint to {output_dir}")

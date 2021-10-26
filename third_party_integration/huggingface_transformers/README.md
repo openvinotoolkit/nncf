@@ -54,6 +54,23 @@ _INT8 model (symmetric quantization)_ - 92.60% F1, 86.36% EM on the dev set.
 
 `python examples/pytorch/question-answering/run_qa.py --model_name_or_path bert_squad_int8 --do_eval --dataset_name squad --max_seq_length 384 --doc_stride 128 --output_dir bert_squad_int8 --per_gpu_eval_batch_size=1 --nncf_config nncf_bert_config_squad.json --to_onnx bert_squad_int8.onnx`
 
+
+### BERT-CoNLL2003
+
+_Full-precision FP32 baseline model_ - bert-base-cased model, trained on CoNLL2003 - 99.17% acc, 95.03% F1
+
+_INT8 model (symmetric quantization)_ - 99.18% acc, 95.31% F1
+
+**INT8 model quantization-aware training command line (trained on 4x Tesla V100):**
+
+`python examples/pytorch/token-classification/run_ner.py --model_name_or_path *path_to_fp32_finetuned_model* --dataset_name conll2003 --output_dir bert_base_cased_conll_int8 --do_train --do_eval --save_strategy epoch --evaluation_strategy epoch --nncf_config nncf_bert_config_conll.json`
+
+
+**Fine-tuned INT8 model evaluation and ONNX export command line:**
+
+`python examples/pytorch/token-classification/run_ner.py --model_name_or_path bert_base_cased_conll_int8 --dataset_name conll2003 --output_dir bert_base_cased_conll_int8 --do_eval --nncf_config nncf_bert_config_squad.json --to_onnx bert_base_cased_conll_int8.onnx`
+
+
 ### RoBERTA-MNLI
 
 _Full-precision FP32 baseline model_ - roberta-large-mnli, pre-trained on MNLI - 90.6% accuracy (matched), 90.1% accuracy (mismatched)
