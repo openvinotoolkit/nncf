@@ -98,7 +98,7 @@ class PTInputNoopMetatype(PTOperatorMetatype):
 
     @classmethod
     def get_all_aliases(cls) -> List[str]:
-        return [cls.name]
+        return cls.external_op_names
 
 
 @PT_OPERATOR_METATYPES.register()
@@ -109,7 +109,7 @@ class PTOutputNoopMetatype(PTOperatorMetatype):
 
     @classmethod
     def get_all_aliases(cls) -> List[str]:
-        return [cls.name]
+        return cls.external_op_names
 
 
 @PT_OPERATOR_METATYPES.register()
@@ -120,7 +120,7 @@ class PTNoopMetatype(PTOperatorMetatype):
 
     @classmethod
     def get_all_aliases(cls) -> List[str]:
-        return [cls.name]
+        return cls.external_op_names
 
 
 @PT_OPERATOR_METATYPES.register()
