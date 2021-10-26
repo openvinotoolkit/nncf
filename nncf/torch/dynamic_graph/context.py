@@ -84,6 +84,8 @@ class TracingContext:
 
     def __exit__(self, *args):
         self.reset_scope_operator_call_counters()
+        self.relative_scopes_stack.clear()
+        self.module_call_stack.clear()
         self.leave()
 
     def find_operator_node(self, tensor_metas: List[Optional[TensorMeta]],
