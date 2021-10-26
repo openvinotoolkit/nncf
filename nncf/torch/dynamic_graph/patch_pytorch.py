@@ -43,7 +43,7 @@ def register_operator(name=None):
         op_name = name
         if op_name is None:
             op_name = operator.__name__
-        return wrap_operator(operator, PatchedOperatorInfo(op_name))
+        return wrap_operator(operator, op_name)
 
     return wrap
 
@@ -86,21 +86,14 @@ def patch_torch_jit_script():
     setattr(torch.jit, "script", torch_jit_script_wrapper)
 
 
-def patch_namespace_opname(namespace, patched_op_info: PatchedOperatorInfo):
-    name = patched_op_info.name
-    if hasattr(namespace, name):
-        orig = getattr(namespace, name)
-        ORIGINAL_OPERATORS.append(OriginalOpInfo(name, namespace, orig))
-        setattr(namespace, name, wrap_operator(orig, patched_op_info))
+def patch_namespace_opname(namespace, op_name: str, custom_trace_fn: CustomTraceFunction = None):
+    print(op_name)
+    if hasattr(namespace, op_name):
+        orig = getattr(namespace, op_name)
+        ORIGINAL_OPERATORS.append(OriginalOpInfo(op_name, namespace, orig))
+        setattr(namespace, op_name, wrap_operator(orig, op_name, custom_trace_fn))
     else:
-        warnings.warn("Not patching {} since it is missing in this version of PyTorch"
-                      .format(name))
-
-
-def patch_namespace_by_patchspec(namespace, patchspec: 'PatchSpec'):
-    for op_name in patchspec.underlying_function_names:
-        patched_op_info = PatchedOperatorInfo(op_name, patchspec.custom_trace_fn)
-        patch_namespace_opname(namespace, patched_op_info)
+        warnings.warn("Not patching {} since it is missing in this version of PyTorch".format(op_name))
 
 
 def get_all_functions_from_namespace(namespace: object, do_filter: bool = True) -> List[str]:
@@ -141,8 +134,6 @@ def patch_torch_operators():
 
     # patch operators
     import torch
-    from nncf.torch.graph.operator_metatypes import get_operator_metatypes
-    from nncf.torch.graph.operator_metatypes import PTPatchSpec
     # pylint: disable=protected-access
     functions_to_patch = {
         torch.nn.functional: get_all_functions_from_namespace(torch.nn.functional),
@@ -150,24 +141,42 @@ def patch_torch_operators():
         TracedTensor: get_all_functions_from_namespace(torch.Tensor)
     }
     # pylint: enable=protected-access
-    creating_tensor_funcs = ['arange', 'as_tensor', 'empty', 'rand', 'randn', 'ones', 'tensor', 'zeros', 'ones_like',
-                             'rad2deg', 'rad2deg_', 'randn_like', 'as_subclass', 'copy_', 'clone', 'copysign',
-                             'copysign_', 'contiguous', 'detach', 'detach_']
-    utility_tensor_funcs = ['all', 'allclose', 'any', 'backward', 'broadcast_to', 'dim', 'names', 'rename', 'rename_',
-                            'refine_names', 'register_hook', 'record_stream', 'random_', 'cpu', 'cuda', 'data_ptr',
-                            'dequantize', 'qscheme', 'q_per_channel_axis', 'q_per_channel_scales',
-                            'q_per_channel_zero_points', 'q_scale', 'q_zero_point', 'qr',
-                            'view', 'size', 'shape', 'has_names', '_reduce_ex_internal', '__reduce_ex__',
-                            'storage', 'sort', 'storage_offset', 'stride', 'item', 'numpy',
-                            'is_contiguous', 'has_torch_function_unary', 'has_torch_function_variadic',
-                            'assert_int_or_pair', 'handle_torch_function', 'has_torch_function', 'to']
 
-    type_tensor_func = ['bfloat16', 'bool', 'byte', 'char', 'double']
-    ignored_functions = [func for funcs in [creating_tensor_funcs, utility_tensor_funcs, type_tensor_func] for func in
-                         funcs]
+    class IgnoredFunctions:
+        creating_tensor_funcs = ['arange', 'as_tensor', 'empty', 'rand', 'randn', 'ones', 'tensor', 'zeros',
+                                 'ones_like',
+                                 'rad2deg', 'rad2deg_', 'randn_like', 'as_subclass', 'copysign', 'copysign_', 'detach',
+                                 'detach_']
+        utility_tensor_funcs = ['all', 'allclose', 'any', 'backward', 'broadcast_to', 'dim', 'names', 'rename',
+                                'rename_',
+                                'refine_names', 'register_hook', 'record_stream', 'random_', 'cpu', 'cuda', 'data_ptr',
+                                'dequantize', 'qscheme', 'q_per_channel_axis', 'q_per_channel_scales',
+                                'q_per_channel_zero_points', 'q_scale', 'q_zero_point',
+                                'qr', 'size', 'shape', 'has_names', '_reduce_ex_internal', '__reduce_ex__',
+                                'storage', 'sort', 'storage_offset', 'stride', 'item', 'numpy',
+                                'is_contiguous', 'has_torch_function_unary', 'has_torch_function_variadic',
+                                'assert_int_or_pair', 'handle_torch_function', 'has_torch_function', 'to']
+
+        type_tensor_func = ['bfloat16', 'bool', 'byte', 'char', 'double']
+
+        ignored_functions = creating_tensor_funcs + utility_tensor_funcs + type_tensor_func
+
+    class PrivateFunctionsToPatch:
+        private_functions_to_patch = {
+            TracedTensor: ["__add__", "__iadd__", "__radd__", "__sub__", "__isub__", "__rsub__", "__mul__",
+                           "__imul__", "__rmul__", "__div__", "__idiv__", "__truediv__", "__floordiv__",
+                           "__ifloordiv__", "__rfloordiv__", "__getitem__", "__lt__", "__le__", "__gt__",
+                           "__ge__", "__mod__", "__eq__", "__ne__", "__or__", "__xor__", "__and__", "__pow__"]
+        }
+
+    # class запаченных волшебных функций
+    ## torch_function_names = [] # type: List[str]
+    # test на дупликат метатипов
+    # test на запаченность волшебной функции соотвествующей метатипу
+
+    ignored_functions = IgnoredFunctions.ignored_functions
 
     for namespace, function_names in functions_to_patch.items():
-        # Do iterate and remove
         new_function_names = []
         for function_name in function_names:
             if function_name in ignored_functions:
@@ -179,17 +188,15 @@ def patch_torch_operators():
     # where 'relu' wasn't traced in torch.nn.functional
     functions_to_patch[torch.nn.functional].remove('relu')
 
+    for namespace, function_names in PrivateFunctionsToPatch.private_functions_to_patch.items():
+        functions_to_patch[namespace] += function_names
+
     for namespace, function_names in functions_to_patch.items():
         for function_name in function_names:
-            patch_namespace_by_patchspec(namespace, PTPatchSpec([function_name]))
-
-    for op_meta_class in get_operator_metatypes():  # type: OperatorMetatype
-        if op_meta_class.torch_tensor_patch_spec is not None:
-            ps = op_meta_class.torch_tensor_patch_spec
-            patch_namespace_by_patchspec(TracedTensor, ps)
+            patch_namespace_opname(namespace, function_name)
 
     # Patch __repr__ methods so that debugging does not add new nodes to the graph
-    patch_namespace_opname(TracedTensor, PatchedOperatorInfo("__repr__", ForwardTraceOnly()))
+    # patch_namespace_opname(TracedTensor, PatchedOperatorInfo("__repr__", ForwardTraceOnly()))
 
     ORIGINAL_OPERATORS.append(OriginalOpInfo("__call__", torch.nn.Module, torch.nn.Module.__call__))
     torch.nn.Module.__call__ = wrap_module_call(torch.nn.Module.__call__)

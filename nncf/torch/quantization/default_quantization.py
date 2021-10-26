@@ -18,42 +18,42 @@ from nncf.torch.graph.operator_metatypes import PTOperatorMetatype
 
 DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT = {
     QuantizationTrait.INPUTS_QUANTIZABLE: [
-        operator_metatypes.Conv2dMetatype,
-        operator_metatypes.Conv3dMetatype,
-        operator_metatypes.ConvTranspose2dMetatype,
-        operator_metatypes.ConvTranspose3dMetatype,
-        operator_metatypes.DepthwiseConv2dSubtype,
-        operator_metatypes.DepthwiseConv3dSubtype,
-        operator_metatypes.LinearMetatype,
-        operator_metatypes.HardTanhMetatype,
-        operator_metatypes.TanhMetatype,
-        operator_metatypes.ELUMetatype,
-        operator_metatypes.PRELUMetatype,
-        operator_metatypes.LeakyRELUMetatype,
-        operator_metatypes.LayerNormMetatype,
-        operator_metatypes.GELUMetatype,
-        operator_metatypes.SigmoidMetatype,
-        operator_metatypes.AddMetatype,
-        operator_metatypes.MulMetatype,
-        operator_metatypes.DivMetatype,
-        operator_metatypes.ExpMetatype,
-        operator_metatypes.ErfMetatype,
-        operator_metatypes.MatMulMetatype,
-        operator_metatypes.MeanMetatype,
-        operator_metatypes.RoundMetatype,
-        operator_metatypes.PixelShuffleMetatype,
-        operator_metatypes.BatchNormMetatype,
-        operator_metatypes.AvgPool2dMetatype,
-        operator_metatypes.AvgPool3dMetatype
+        operator_metatypes.PTConv2dMetatype,
+        operator_metatypes.PTConv3dMetatype,
+        operator_metatypes.PTConvTranspose2dMetatype,
+        operator_metatypes.PTConvTranspose3dMetatype,
+        operator_metatypes.PTDepthwiseConv2dSubtype,
+        operator_metatypes.PTDepthwiseConv3dSubtype,
+        operator_metatypes.PTLinearMetatype,
+        operator_metatypes.PTHardTanhMetatype,
+        operator_metatypes.PTTanhMetatype,
+        operator_metatypes.PTELUMetatype,
+        operator_metatypes.PTPRELUMetatype,
+        operator_metatypes.PTLeakyRELUMetatype,
+        operator_metatypes.PTLayerNormMetatype,
+        operator_metatypes.PTGELUMetatype,
+        operator_metatypes.PTSigmoidMetatype,
+        operator_metatypes.PTAddMetatype,
+        operator_metatypes.PTMulMetatype,
+        operator_metatypes.PTDivMetatype,
+        operator_metatypes.PTExpMetatype,
+        operator_metatypes.PTErfMetatype,
+        operator_metatypes.PTMatMulMetatype,
+        operator_metatypes.PTMeanMetatype,
+        operator_metatypes.PTRoundMetatype,
+        operator_metatypes.PTPixelShuffleMetatype,
+        operator_metatypes.PTBatchNormMetatype,
+        operator_metatypes.PTAvgPool2dMetatype,
+        operator_metatypes.PTAvgPool3dMetatype
     ],
     QuantizationTrait.NON_QUANTIZABLE: [
-        operator_metatypes.SoftmaxMetatype
+        operator_metatypes.PTSoftmaxMetatype
     ],
     QuantizationTrait.CONCAT: [
-        operator_metatypes.CatMetatype
+        operator_metatypes.PTCatMetatype
     ],
     QuantizationTrait.OUTPUT_QUANTIZATION_AS_WEIGHTS: [
-        operator_metatypes.EmbeddingMetatype,
-        operator_metatypes.EmbeddingBagMetatype
+        operator_metatypes.PTEmbeddingMetatype,
+        operator_metatypes.PTEmbeddingBagMetatype
     ]
 }  # type: Dict[QuantizationTrait, List[PTOperatorMetatype]]

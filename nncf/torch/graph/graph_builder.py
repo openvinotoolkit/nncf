@@ -27,7 +27,7 @@ from nncf.torch.dynamic_graph.graph import DynamicGraph
 from nncf.torch.dynamic_graph.graph_tracer import GraphTracer
 from nncf.torch.dynamic_graph.graph_tracer import ModelInputInfo
 from nncf.torch.graph.graph import PTNNCFGraph
-from nncf.torch.graph.operator_metatypes import CatMetatype
+from nncf.torch.graph.operator_metatypes import PTCatMetatype
 from nncf.torch.graph.operator_metatypes import PT_OPERATOR_METATYPES
 
 
@@ -95,7 +95,7 @@ class GraphConverter:
             )
 
         for node in nncf_graph.get_all_nodes():
-            if node.metatype is CatMetatype:
+            if node.metatype is PTCatMetatype:
                 input_edges = nncf_graph.get_input_edges(node)
                 output_edges = nncf_graph.get_output_edges(node)
                 # Case of intermediate node

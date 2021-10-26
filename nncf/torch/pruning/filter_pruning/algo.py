@@ -47,15 +47,15 @@ from nncf.common.utils.logger import logger as nncf_logger
 from nncf.config.extractors import extract_bn_adaptation_init_params
 from nncf.torch.algo_selector import PT_COMPRESSION_ALGORITHMS
 from nncf.torch.compression_method_api import PTCompressionAlgorithmController
-from nncf.torch.graph.operator_metatypes import Conv1dMetatype
-from nncf.torch.graph.operator_metatypes import Conv2dMetatype
-from nncf.torch.graph.operator_metatypes import Conv3dMetatype
-from nncf.torch.graph.operator_metatypes import ConvTranspose2dMetatype
-from nncf.torch.graph.operator_metatypes import ConvTranspose3dMetatype
-from nncf.torch.graph.operator_metatypes import DepthwiseConv1dSubtype
-from nncf.torch.graph.operator_metatypes import DepthwiseConv2dSubtype
-from nncf.torch.graph.operator_metatypes import DepthwiseConv3dSubtype
-from nncf.torch.graph.operator_metatypes import LinearMetatype
+from nncf.torch.graph.operator_metatypes import PTConv1dMetatype
+from nncf.torch.graph.operator_metatypes import PTConv2dMetatype
+from nncf.torch.graph.operator_metatypes import PTConv3dMetatype
+from nncf.torch.graph.operator_metatypes import PTConvTranspose2dMetatype
+from nncf.torch.graph.operator_metatypes import PTConvTranspose3dMetatype
+from nncf.torch.graph.operator_metatypes import PTDepthwiseConv1dSubtype
+from nncf.torch.graph.operator_metatypes import PTDepthwiseConv2dSubtype
+from nncf.torch.graph.operator_metatypes import PTDepthwiseConv3dSubtype
+from nncf.torch.graph.operator_metatypes import PTLinearMetatype
 from nncf.torch.layer_utils import _NNCFModuleMixin
 from nncf.torch.layers import NNCF_GENERAL_CONV_MODULES_DICT
 from nncf.torch.layers import NNCF_LINEAR_MODULES_DICT
@@ -77,17 +77,17 @@ from nncf.torch.structures import LeGRInitArgs, DistributedCallbacksArgs
 from nncf.torch.utils import get_filters_num
 
 GENERAL_CONV_LAYER_METATYPES = [
-    Conv1dMetatype,
-    DepthwiseConv1dSubtype,
-    Conv2dMetatype,
-    DepthwiseConv2dSubtype,
-    Conv3dMetatype,
-    DepthwiseConv3dSubtype,
-    ConvTranspose2dMetatype,
-    ConvTranspose3dMetatype
+    PTConv1dMetatype,
+    PTDepthwiseConv1dSubtype,
+    PTConv2dMetatype,
+    PTDepthwiseConv2dSubtype,
+    PTConv3dMetatype,
+    PTDepthwiseConv3dSubtype,
+    PTConvTranspose2dMetatype,
+    PTConvTranspose3dMetatype
 ]
 LINEAR_LAYER_METATYPES = [
-    LinearMetatype
+    PTLinearMetatype
 ]
 
 

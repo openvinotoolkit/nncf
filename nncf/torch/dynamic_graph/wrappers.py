@@ -32,6 +32,7 @@ from nncf.common.utils.logger import logger as nncf_logger
 from nncf.common.utils.debug import is_debug
 from nncf.torch.dynamic_graph.context import get_current_context
 from nncf.torch.dynamic_graph.op_input_processing import OperatorInput
+from nncf.torch.dynamic_graph.trace_functions import CustomTraceFunction
 from nncf.torch.dynamic_graph.trace_tensor import make_tensor_metas
 from nncf.torch.dynamic_graph.trace_tensor import trace_tensors
 from nncf.torch.layer_utils import _NNCFModuleMixin
@@ -58,7 +59,7 @@ def ignore_scope(cls):
 OP_NAMES_REQUIRING_MODULE_ATTRS = [v.op_func_name for v in NNCF_MODULES_DICT] + ['group_norm']
 
 
-def wrap_operator(operator, operator_info: 'PatchedOperatorInfo'):
+def wrap_operator(operator, op_name: str, custom_trace_fn: CustomTraceFunction = None):
     # do not wrap function twice
     _orig_op = getattr(operator, '_original_op', None)
     if _orig_op is not None:
@@ -73,14 +74,13 @@ def wrap_operator(operator, operator_info: 'PatchedOperatorInfo'):
         ctx.in_operator = True
 
         try:
-            if operator_info.custom_trace_fn is not None:
-                result = operator_info.custom_trace_fn(operator, *args, **kwargs)
+            if custom_trace_fn is not None:
+                result = custom_trace_fn(operator, *args, **kwargs)
             elif ctx.is_forwarding:
                 from nncf.torch.dynamic_graph.patch_pytorch import ForwardTraceOnly
                 result = ForwardTraceOnly()(operator, *args, **kwargs)
             else:
                 node = None
-                op_name = operator_info.name
                 op_address = ctx.get_caller_context(op_name)
 
                 layer_attrs = None
