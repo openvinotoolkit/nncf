@@ -144,9 +144,11 @@ def patch_torch_operators():
     from nncf.torch.graph.operator_metatypes import get_operator_metatypes
     from nncf.torch.graph.operator_metatypes import PTPatchSpec
     # pylint: disable=protected-access
-    functions_to_patch = {torch.nn.functional: get_all_functions_from_namespace(torch.nn.functional),
-                          torch: get_all_functions_from_namespace(torch._C._VariableFunctions),
-                          TracedTensor: get_all_functions_from_namespace(torch.Tensor)}
+    functions_to_patch = {
+        torch.nn.functional: get_all_functions_from_namespace(torch.nn.functional),
+        torch: get_all_functions_from_namespace(torch._C._VariableFunctions),
+        TracedTensor: get_all_functions_from_namespace(torch.Tensor)
+    }
     # pylint: enable=protected-access
     creating_tensor_funcs = ['arange', 'as_tensor', 'empty', 'rand', 'randn', 'ones', 'tensor', 'zeros', 'ones_like',
                              'rad2deg', 'rad2deg_', 'randn_like', 'as_subclass', 'copy_', 'clone', 'copysign',
@@ -158,8 +160,7 @@ def patch_torch_operators():
                             'view', 'size', 'shape', 'has_names', '_reduce_ex_internal', '__reduce_ex__',
                             'storage', 'sort', 'storage_offset', 'stride', 'item', 'numpy',
                             'is_contiguous', 'has_torch_function_unary', 'has_torch_function_variadic',
-                            'assert_int_or_pair', 'handle_torch_function', 'has_torch_function', 'to'
-                            ]
+                            'assert_int_or_pair', 'handle_torch_function', 'has_torch_function', 'to']
 
     type_tensor_func = ['bfloat16', 'bool', 'byte', 'char', 'double']
     ignored_functions = [func for funcs in [creating_tensor_funcs, utility_tensor_funcs, type_tensor_func] for func in
