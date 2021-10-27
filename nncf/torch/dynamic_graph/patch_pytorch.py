@@ -86,6 +86,13 @@ def patch_namespace_opname(namespace, op_name: str, custom_trace_fn: CustomTrace
 
 
 def get_all_functions_from_namespace(namespace: object, do_filter: bool = True) -> List[str]:
+    """
+    Seeks all attributes from the namespace, then takes only attributes,
+    which types are function, builtin, method or method descriptor.
+    If 'do_filer' is True, then also removes all private or magic attributes.
+    :param namespace: Python module.
+    :param do_filter: If True return only public functions, else - otherwise.
+    """
     import inspect
 
     def remove_private_functions(names: List[str]) -> List[str]:
@@ -129,26 +136,23 @@ def patch_torch_operators():
         torch: get_all_functions_from_namespace(torch._C._VariableFunctions),
         TracedTensor: get_all_functions_from_namespace(torch.Tensor)
     }
+
     # pylint: enable=protected-access
 
     class IgnoredFunctions:
-        creating_tensor_funcs = ['arange', 'as_tensor', 'empty', 'rand', 'randn', 'ones', 'tensor', 'zeros',
-                                 'ones_like',
-                                 'rad2deg', 'rad2deg_', 'randn_like', 'as_subclass', 'copysign', 'copysign_', 'detach',
-                                 'detach_']
-        utility_tensor_funcs = ['all', 'allclose', 'any', 'backward', 'broadcast_to', 'dim', 'names', 'rename',
-                                'rename_',
-                                'refine_names', 'register_hook', 'record_stream', 'random_', 'cpu', 'cuda', 'data_ptr',
-                                'dequantize', 'qscheme', 'q_per_channel_axis', 'q_per_channel_scales',
-                                'q_per_channel_zero_points', 'q_scale', 'q_zero_point',
-                                'qr', 'size', 'shape', 'has_names', '_reduce_ex_internal', '__reduce_ex__',
-                                'storage', 'sort', 'storage_offset', 'stride', 'item', 'numpy',
-                                'is_contiguous', 'has_torch_function_unary', 'has_torch_function_variadic',
-                                'assert_int_or_pair', 'handle_torch_function', 'has_torch_function', 'to']
+        creating_tensor_funcs = ['arange', 'as_subclass', 'as_tensor', 'copysign', 'copysign_', 'detach', 'detach_',
+                                 'empty', 'ones', 'ones_like', 'rad2deg', 'rad2deg_', 'rand', 'randn', 'randn_like',
+                                 'tensor', 'zeros']
+        utility_tensor_funcs = ['all', 'allclose', 'any', 'assert_int_or_pair',
+                                'backward', 'broadcast_to', 'cpu', 'cuda', 'data_ptr', 'dequantize', 'dim',
+                                'handle_torch_function', 'has_names', 'has_torch_function', 'has_torch_function_unary',
+                                'has_torch_function_variadic', 'is_contiguous', 'item', 'names', 'numpy',
+                                'q_per_channel_axis', 'q_per_channel_scales', 'q_per_channel_zero_points', 'q_scale',
+                                'q_zero_point', 'qr', 'qscheme', 'random_', 'record_stream', 'refine_names',
+                                'register_hook', 'rename', 'rename_', 'shape', 'size', 'sort', 'storage',
+                                'storage_offset', 'stride', 'to']
 
-        type_tensor_func = ['bfloat16', 'bool', 'byte', 'char', 'double']
-
-        ignored_functions = creating_tensor_funcs + utility_tensor_funcs + type_tensor_func
+        ignored_functions = creating_tensor_funcs + utility_tensor_funcs
 
     class PrivateFunctionsToPatch:
         private_functions_to_patch = {
@@ -173,8 +177,10 @@ def patch_torch_operators():
             new_function_names.append(function_name)
         functions_to_patch[namespace] = new_function_names
 
-    # Just to have backward compatibility with previous version of NNCF,
-    # where 'relu' wasn't traced in torch.nn.functional
+    # Relu function from torch.nn.functional uses torch.relu or torch.relu_ inside,
+    # which we've already wrapped. So we don't have to wrap Relu in torch.nn.functional
+    # to be able to differ what torch.relu or torch.relu was called exactly inside Relu
+
     functions_to_patch[torch.nn.functional].remove('relu')
 
     for namespace, function_names in PrivateFunctionsToPatch.private_functions_to_patch.items():

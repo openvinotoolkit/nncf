@@ -77,7 +77,7 @@ def wrap_operator(operator, op_name: str, custom_trace_fn: CustomTraceFunction =
             if custom_trace_fn is not None:
                 result = custom_trace_fn(operator, *args, **kwargs)
             elif ctx.is_forwarding:
-                from nncf.torch.dynamic_graph.patch_pytorch import ForwardTraceOnly
+                from nncf.torch.dynamic_graph.trace_functions import ForwardTraceOnly
                 result = ForwardTraceOnly()(operator, *args, **kwargs)
             else:
                 node = None
