@@ -27,6 +27,31 @@ from nncf.torch.dynamic_graph.wrappers import wrap_module_call
 from nncf.torch.dynamic_graph.wrappers import wrap_operator
 
 
+class IgnoredFunctions:
+    creating_tensor_funcs = ['arange', 'as_subclass', 'as_tensor', 'copysign', 'copysign_', 'detach', 'detach_',
+                             'empty', 'ones', 'ones_like', 'rad2deg', 'rad2deg_', 'rand', 'randn', 'randn_like',
+                             'tensor', 'zeros']
+    utility_tensor_funcs = ['all', 'allclose', 'any', 'assert_int_or_pair',
+                            'backward', 'broadcast_to', 'cpu', 'cuda', 'data_ptr', 'dequantize', 'dim',
+                            'handle_torch_function', 'has_names', 'has_torch_function', 'has_torch_function_unary',
+                            'has_torch_function_variadic', 'is_contiguous', 'item', 'names', 'numpy',
+                            'q_per_channel_axis', 'q_per_channel_scales', 'q_per_channel_zero_points', 'q_scale',
+                            'q_zero_point', 'qr', 'qscheme', 'random_', 'record_stream', 'refine_names',
+                            'register_hook', 'rename', 'rename_', 'shape', 'size', 'sort', 'storage',
+                            'storage_offset', 'stride', 'to']
+
+    ignored_functions = creating_tensor_funcs + utility_tensor_funcs
+
+
+class PrivateFunctionsToPatch:
+    private_functions_to_patch = {
+        TracedTensor: ["__add__", "__iadd__", "__radd__", "__sub__", "__isub__", "__rsub__", "__mul__",
+                       "__imul__", "__rmul__", "__div__", "__idiv__", "__truediv__", "__floordiv__",
+                       "__ifloordiv__", "__rfloordiv__", "__getitem__", "__lt__", "__le__", "__gt__",
+                       "__ge__", "__mod__", "__eq__", "__ne__", "__or__", "__xor__", "__and__", "__pow__"]
+    }
+
+
 def register_operator(name=None):
     def wrap(operator):
         op_name = name
@@ -136,37 +161,7 @@ def patch_torch_operators():
         torch: get_all_functions_from_namespace(torch._C._VariableFunctions),
         TracedTensor: get_all_functions_from_namespace(torch.Tensor)
     }
-
     # pylint: enable=protected-access
-
-    class IgnoredFunctions:
-        creating_tensor_funcs = ['arange', 'as_subclass', 'as_tensor', 'copysign', 'copysign_', 'detach', 'detach_',
-                                 'empty', 'ones', 'ones_like', 'rad2deg', 'rad2deg_', 'rand', 'randn', 'randn_like',
-                                 'tensor', 'zeros']
-        utility_tensor_funcs = ['all', 'allclose', 'any', 'assert_int_or_pair',
-                                'backward', 'broadcast_to', 'cpu', 'cuda', 'data_ptr', 'dequantize', 'dim',
-                                'handle_torch_function', 'has_names', 'has_torch_function', 'has_torch_function_unary',
-                                'has_torch_function_variadic', 'is_contiguous', 'item', 'names', 'numpy',
-                                'q_per_channel_axis', 'q_per_channel_scales', 'q_per_channel_zero_points', 'q_scale',
-                                'q_zero_point', 'qr', 'qscheme', 'random_', 'record_stream', 'refine_names',
-                                'register_hook', 'rename', 'rename_', 'shape', 'size', 'sort', 'storage',
-                                'storage_offset', 'stride', 'to']
-
-        ignored_functions = creating_tensor_funcs + utility_tensor_funcs
-
-    class PrivateFunctionsToPatch:
-        private_functions_to_patch = {
-            TracedTensor: ["__add__", "__iadd__", "__radd__", "__sub__", "__isub__", "__rsub__", "__mul__",
-                           "__imul__", "__rmul__", "__div__", "__idiv__", "__truediv__", "__floordiv__",
-                           "__ifloordiv__", "__rfloordiv__", "__getitem__", "__lt__", "__le__", "__gt__",
-                           "__ge__", "__mod__", "__eq__", "__ne__", "__or__", "__xor__", "__and__", "__pow__"]
-        }
-
-    # class запаченных волшебных функций
-    ## torch_function_names = [] # type: List[str]
-    # test на дупликат метатипов
-    # test на запаченность волшебной функции соотвествующей метатипу
-
     ignored_functions = IgnoredFunctions.ignored_functions
 
     for namespace, function_names in functions_to_patch.items():
