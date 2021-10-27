@@ -20,7 +20,6 @@ from torch.nn.parallel import DistributedDataParallel
 
 from nncf.common.utils.logger import logger
 from nncf.common.utils.os import safe_open
-from nncf.torch.dynamic_graph.trace_functions import CustomTraceFunction
 from nncf.torch.dynamic_graph.trace_tensor import TracedTensor
 from nncf.torch.dynamic_graph.wrappers import ignore_scope
 from nncf.torch.dynamic_graph.wrappers import wrap_module_call
@@ -28,23 +27,23 @@ from nncf.torch.dynamic_graph.wrappers import wrap_operator
 
 
 class IgnoredFunctions:
-    creating_tensor_funcs = ['arange', 'as_subclass', 'as_tensor', 'copysign', 'copysign_', 'detach', 'detach_',
-                             'empty', 'ones', 'ones_like', 'rad2deg', 'rad2deg_', 'rand', 'randn', 'randn_like',
-                             'tensor', 'zeros']
-    utility_tensor_funcs = ['all', 'allclose', 'any', 'assert_int_or_pair',
-                            'backward', 'broadcast_to', 'cpu', 'cuda', 'data_ptr', 'dequantize', 'dim',
-                            'handle_torch_function', 'has_names', 'has_torch_function', 'has_torch_function_unary',
-                            'has_torch_function_variadic', 'is_contiguous', 'item', 'names', 'numpy',
-                            'q_per_channel_axis', 'q_per_channel_scales', 'q_per_channel_zero_points', 'q_scale',
-                            'q_zero_point', 'qr', 'qscheme', 'random_', 'record_stream', 'refine_names',
-                            'register_hook', 'rename', 'rename_', 'shape', 'size', 'sort', 'storage',
-                            'storage_offset', 'stride', 'to']
+    TENSOR_CREATING_FUNCTIONS = ['arange', 'as_subclass', 'as_tensor', 'copysign', 'copysign_', 'detach', 'detach_',
+                                 'empty', 'ones', 'ones_like', 'rad2deg', 'rad2deg_', 'rand', 'randn', 'randn_like',
+                                 'tensor', 'zeros']
+    TENSOR_UTILITY_FUNCTIONS = ['all', 'allclose', 'any', 'assert_int_or_pair',
+                                'backward', 'broadcast_to', 'cpu', 'cuda', 'data_ptr', 'dequantize', 'dim',
+                                'handle_torch_function', 'has_names', 'has_torch_function', 'has_torch_function_unary',
+                                'has_torch_function_variadic', 'is_contiguous', 'item', 'names', 'numpy',
+                                'q_per_channel_axis', 'q_per_channel_scales', 'q_per_channel_zero_points', 'q_scale',
+                                'q_zero_point', 'qr', 'qscheme', 'random_', 'record_stream', 'refine_names',
+                                'register_hook', 'rename', 'rename_', 'shape', 'size', 'sort', 'storage',
+                                'storage_offset', 'stride', 'to']
 
-    ignored_functions = creating_tensor_funcs + utility_tensor_funcs
+    IGNORED_FUNCTIONS = TENSOR_CREATING_FUNCTIONS + TENSOR_UTILITY_FUNCTIONS
 
 
-class PrivateFunctionsToPatch:
-    private_functions_to_patch = {
+class MagicFunctionsToPatch:
+    MAGIC_FUNCTION_TO_PATCH = {
         TracedTensor: ["__add__", "__iadd__", "__radd__", "__sub__", "__isub__", "__rsub__", "__mul__",
                        "__imul__", "__rmul__", "__div__", "__idiv__", "__truediv__", "__floordiv__",
                        "__ifloordiv__", "__rfloordiv__", "__getitem__", "__lt__", "__le__", "__gt__",
@@ -100,12 +99,11 @@ def patch_torch_jit_script():
     setattr(torch.jit, "script", torch_jit_script_wrapper)
 
 
-def patch_namespace_opname(namespace, op_name: str, custom_trace_fn: CustomTraceFunction = None):
-    print(op_name)
+def patch_namespace_opname(namespace, op_name: str):
     if hasattr(namespace, op_name):
         orig = getattr(namespace, op_name)
         ORIGINAL_OPERATORS.append(OriginalOpInfo(op_name, namespace, orig))
-        setattr(namespace, op_name, wrap_operator(orig, op_name, custom_trace_fn))
+        setattr(namespace, op_name, wrap_operator(orig, op_name))
     else:
         warnings.warn("Not patching {} since it is missing in this version of PyTorch".format(op_name))
 
@@ -162,7 +160,7 @@ def patch_torch_operators():
         TracedTensor: get_all_functions_from_namespace(torch.Tensor)
     }
     # pylint: enable=protected-access
-    ignored_functions = IgnoredFunctions.ignored_functions
+    ignored_functions = IgnoredFunctions.IGNORED_FUNCTIONS
 
     for namespace, function_names in functions_to_patch.items():
         new_function_names = []
@@ -178,7 +176,7 @@ def patch_torch_operators():
 
     functions_to_patch[torch.nn.functional].remove('relu')
 
-    for namespace, function_names in PrivateFunctionsToPatch.private_functions_to_patch.items():
+    for namespace, function_names in MagicFunctionsToPatch.MAGIC_FUNCTION_TO_PATCH.items():
         functions_to_patch[namespace] += function_names
 
     for namespace, function_names in functions_to_patch.items():

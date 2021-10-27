@@ -1,5 +1,5 @@
 import pytest
-from nncf.torch.dynamic_graph.patch_pytorch import PrivateFunctionsToPatch
+from nncf.torch.dynamic_graph.patch_pytorch import MagicFunctionsToPatch
 from nncf.torch.graph.operator_metatypes import PT_OPERATOR_METATYPES
 
 
@@ -14,9 +14,9 @@ def test_is_any_metatype_op_names_duplicated():
 def test_are_all_magic_functions_patched():
     for operator in PT_OPERATOR_METATYPES.registry_dict:
         for op_name in PT_OPERATOR_METATYPES.get(operator).op_names:
-            if op_name.startswith('_'):
+            if op_name.startswith('__') and op_name.endswith('__'):
                 is_contained = False
-                for namespace, functions in PrivateFunctionsToPatch.private_functions_to_patch.items():
+                for namespace, functions in MagicFunctionsToPatch.MAGIC_FUNCTION_TO_PATCH.items():
                     if op_name in functions:
                         is_contained = True
                         break
