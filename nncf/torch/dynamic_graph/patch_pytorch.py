@@ -21,21 +21,10 @@ from torch.nn.parallel import DistributedDataParallel
 from nncf.common.utils.logger import logger
 from nncf.common.utils.os import safe_open
 from nncf.torch.dynamic_graph.trace_functions import CustomTraceFunction
-from nncf.torch.dynamic_graph.trace_functions import ForwardTraceOnly
 from nncf.torch.dynamic_graph.trace_tensor import TracedTensor
 from nncf.torch.dynamic_graph.wrappers import ignore_scope
 from nncf.torch.dynamic_graph.wrappers import wrap_module_call
 from nncf.torch.dynamic_graph.wrappers import wrap_operator
-
-
-class PatchedOperatorInfo:
-    def __init__(self, name: str, custom_trace_fn: CustomTraceFunction = None):
-        """
-        custom_trace_fn will be called instead of the regular node search/insertion step
-        during the corresponding operator call
-        """
-        self.name = name
-        self.custom_trace_fn = custom_trace_fn
 
 
 def register_operator(name=None):

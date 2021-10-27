@@ -35,7 +35,7 @@ from nncf.torch.dynamic_graph.context import get_current_context
 from nncf.torch.dynamic_graph.context import no_nncf_trace
 from nncf.torch.dynamic_graph.context import TracingContext
 from nncf.torch.graph.graph_builder import GraphBuilder
-from nncf.torch.graph.operator_metatypes import CatMetatype
+from nncf.torch.graph.operator_metatypes import PTCatMetatype
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
 from tests.torch.helpers import register_bn_adaptation_init_args
 from tests.torch.test_compressed_graph import get_basic_quantization_config
@@ -87,7 +87,7 @@ def test_ambiguous_function():
 
 
 def test_forward_trace_functor():
-    from nncf.torch.dynamic_graph.patch_pytorch import ForwardTraceOnly
+    from nncf.torch.dynamic_graph.trace_functions import ForwardTraceOnly
     from nncf.torch.dynamic_graph.trace_tensor import TracedTensor, TensorMeta
 
     func = ForwardTraceOnly()
@@ -243,7 +243,7 @@ def test_concat_attributes_saved_during_graph_building(input_shape):
     }
 
     for node in graph.get_all_nodes():
-        if node.metatype is CatMetatype:
+        if node.metatype is PTCatMetatype:
             assert node.node_name in cat_nodes_with_attributes
             if isinstance(node.layer_attributes, MultipleInputLayerAttributes):
                 assert node.layer_attributes.axis == cat_nodes_with_attributes[node.node_name]['axis']
