@@ -59,6 +59,14 @@ INSTALL_REQUIRES = ["ninja>=1.10.0.post2",
                     "matplotlib~=3.3.4; python_version<'3.7'",
                     "matplotlib>=3.3.4; python_version>='3.7'",
                     "networkx>=2.5",
+
+                    # The recent pyparsing major version update seems to break
+                    # integration with networkx - the graphs parsed from current .dot
+                    # reference files no longer match against the graphs produced in tests.
+                    # Using 2.x versions of pyparsing seems to fix the issue.
+                    # Ticket: 69520
+                    "pyparsing<3.0",
+
                     "jsonschema==3.2.0",
                     "pydot>=1.4.1",
                     "jstyleson>=0.0.2",
