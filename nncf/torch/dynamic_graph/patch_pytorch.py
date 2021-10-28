@@ -43,7 +43,7 @@ class IgnoredFunctions:
 
 
 class MagicFunctionsToPatch:
-    MAGIC_FUNCTION_TO_PATCH = {
+    MAGIC_FUNCTIONS_TO_PATCH = {
         TracedTensor: ["__add__", "__iadd__", "__radd__", "__sub__", "__isub__", "__rsub__", "__mul__",
                        "__imul__", "__rmul__", "__div__", "__idiv__", "__truediv__", "__floordiv__",
                        "__ifloordiv__", "__rfloordiv__", "__getitem__", "__lt__", "__le__", "__gt__",
@@ -176,7 +176,7 @@ def patch_torch_operators():
 
     functions_to_patch[torch.nn.functional].remove('relu')
 
-    for namespace, function_names in MagicFunctionsToPatch.MAGIC_FUNCTION_TO_PATCH.items():
+    for namespace, function_names in MagicFunctionsToPatch.MAGIC_FUNCTIONS_TO_PATCH.items():
         functions_to_patch[namespace] += function_names
 
     for namespace, function_names in functions_to_patch.items():

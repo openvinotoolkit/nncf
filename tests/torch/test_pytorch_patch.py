@@ -16,7 +16,7 @@ def test_are_all_magic_functions_patched():
         for op_name in PT_OPERATOR_METATYPES.get(operator).op_names:
             if op_name.startswith('__') and op_name.endswith('__'):
                 is_contained = False
-                for namespace, functions in MagicFunctionsToPatch.MAGIC_FUNCTION_TO_PATCH.items():
+                for namespace, functions in MagicFunctionsToPatch.MAGIC_FUNCTIONS_TO_PATCH.items():
                     if op_name in functions:
                         is_contained = True
                         break
