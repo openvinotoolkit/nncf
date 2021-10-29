@@ -56,7 +56,7 @@ def register_operator(name=None):
         op_name = name
         if op_name is None:
             op_name = operator.__name__
-        return wrap_operator(operator, op_name)
+        return wrap_operator(operator, op_name, "external_function")
 
     return wrap
 
@@ -99,11 +99,11 @@ def patch_torch_jit_script():
     setattr(torch.jit, "script", torch_jit_script_wrapper)
 
 
-def patch_namespace_opname(namespace, op_name: str):
+def patch_namespace_opname(namespace: object, op_name: str):
     if hasattr(namespace, op_name):
         orig = getattr(namespace, op_name)
         ORIGINAL_OPERATORS.append(OriginalOpInfo(op_name, namespace, orig))
-        setattr(namespace, op_name, wrap_operator(orig, op_name))
+        setattr(namespace, op_name, wrap_operator(orig, op_name, namespace))
     else:
         warnings.warn("Not patching {} since it is missing in this version of PyTorch".format(op_name))
 

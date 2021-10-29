@@ -58,7 +58,10 @@ def ignore_scope(cls):
 OP_NAMES_REQUIRING_MODULE_ATTRS = [v.op_func_name for v in NNCF_MODULES_DICT] + ['group_norm']
 
 
-def wrap_operator(operator, op_name: str):
+def wrap_operator(operator, op_name: str, operator_namespace: object):
+    """
+
+    """
     # do not wrap function twice
     _orig_op = getattr(operator, '_original_op', None)
     if _orig_op is not None:
@@ -127,6 +130,7 @@ def wrap_operator(operator, op_name: str):
 
     # pylint: disable=protected-access
     wrapped._original_op = operator
+    wrapped._operator_namespace = operator_namespace
     return wrapped
 
 

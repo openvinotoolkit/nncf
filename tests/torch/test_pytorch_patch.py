@@ -1,23 +1,28 @@
-import pytest
 from nncf.torch.dynamic_graph.patch_pytorch import MagicFunctionsToPatch
 from nncf.torch.graph.operator_metatypes import PT_OPERATOR_METATYPES
 
 
 def test_is_any_metatype_op_names_duplicated():
-    op_name_list = set()
+    function_name_to_operator_metatype = {}
     for operator in PT_OPERATOR_METATYPES.registry_dict:
-        for op_name in PT_OPERATOR_METATYPES.get(operator).op_names:
-            assert op_name not in op_name_list
-            op_name_list.add(op_name)
+        for function_name in PT_OPERATOR_METATYPES.get(operator).get_all_aliases():
+            function_name_to_operator_metatype[function_name] = function_name_to_operator_metatype.get(function_name,
+                                                                                                       [function_name])
+    duplicated_operator_metatypes = []
+    for function_name, operator_metatypes in function_name_to_operator_metatype.items():
+        if len(operator_metatypes) > 1:
+            duplicated_operator_metatypes.append(operator_metatypes)
+    assert not duplicated_operator_metatypes, "There are duplicated function names in these metatypes: {}".format(
+        duplicated_operator_metatypes)
 
 
 def test_are_all_magic_functions_patched():
     for operator in PT_OPERATOR_METATYPES.registry_dict:
-        for op_name in PT_OPERATOR_METATYPES.get(operator).op_names:
-            if op_name.startswith('__') and op_name.endswith('__'):
+        for function_name in PT_OPERATOR_METATYPES.get(operator).get_all_aliases():
+            if function_name.startswith('__') and function_name.endswith('__'):
                 is_contained = False
-                for namespace, functions in MagicFunctionsToPatch.MAGIC_FUNCTIONS_TO_PATCH.items():
-                    if op_name in functions:
+                for _, functions in MagicFunctionsToPatch.MAGIC_FUNCTIONS_TO_PATCH.items():
+                    if function_name in functions:
                         is_contained = True
                         break
                 assert is_contained
