@@ -68,7 +68,7 @@ class InputPruningOp(BasePruningOp):
 
     @classmethod
     def mask_propagation(cls, node: NNCFNode, graph: NNCFGraph) -> None:
-        node.data['output_masks'] = None
+        node.data['input_masks'] = None
         node.data['output_mask'] = None
 
 
@@ -79,7 +79,7 @@ class OutputPruningOp(BasePruningOp):
 
     @classmethod
     def mask_propagation(cls, node: NNCFNode, graph: NNCFGraph) -> None:
-        node.data['input_maks'] = get_input_masks(node, graph)
+        node.data['input_masks'] = get_input_masks(node, graph)
         node.data['output_mask'] = None
 
 

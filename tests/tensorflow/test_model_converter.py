@@ -134,8 +134,8 @@ def test_reshape_attributes_saved_during_graph_building():
                                                  'output_shape': (32, None)},
                          'reshape': {'input_shape': (32, None),
                                      'output_shape': (32, 16, None)},
-                         'flatten': {'input_shape': (32, 8, 8, None),
-                                     'output_shape': (32, None)}}
+                         'flatten': {'input_shape': (None, 32, 16),
+                                     'output_shape': (None, 512)}}
     for node in graph.get_all_nodes():
         if node.metatype in RESHAPE_METATYPES:
             assert node.node_name in ref_reshape_nodes
