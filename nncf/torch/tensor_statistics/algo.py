@@ -24,8 +24,8 @@ from nncf.torch.graph.transformations.commands import PTInsertionCommand
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.graph.transformations.commands import TransformationPriority
-from nncf.torch.tensor_statistics.collectors import ReductionShape
-from nncf.torch.tensor_statistics.collectors import TensorStatisticCollectorBase
+from nncf.common.tensor_statistics.collectors import ReductionShape
+from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
 
 
 class TensorStatisticObservationPoint:

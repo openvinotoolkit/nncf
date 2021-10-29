@@ -33,20 +33,21 @@ from nncf.common.quantization.structs import QuantizerGroup
 from nncf.common.quantization.structs import QuantizerId
 from nncf.common.quantization.structs import WeightQuantizerId
 from nncf.common.utils.helpers import should_consider_scope
+from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
+from nncf.common.tensor_statistics.collectors import ReductionShape
 from nncf.torch.graph.graph import PTNNCFGraph
 from nncf.torch.initialization import DataLoaderBaseRunner
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.quantization.layers import BaseQuantizer
 from nncf.torch.quantization.translator import PTTargetPointTranslator
 from nncf.torch.tensor_statistics.algo import TensorStatisticObservationPoint
+from nncf.torch.tensor_statistics.collectors import MinMaxStatisticCollector
+from nncf.torch.tensor_statistics.collectors import MixedMinMaxStatisticCollector
 from nncf.torch.tensor_statistics.collectors import MeanMinMaxStatisticCollector
 from nncf.torch.tensor_statistics.collectors import MeanPercentileStatisticCollector
 from nncf.torch.tensor_statistics.collectors import MedianMADStatisticCollector
-from nncf.torch.tensor_statistics.collectors import MinMaxStatisticCollector
 from nncf.torch.tensor_statistics.collectors import PercentileStatisticCollector
-from nncf.torch.tensor_statistics.collectors import ReductionShape
-from nncf.torch.tensor_statistics.collectors import TensorStatisticCollectorBase
-from nncf.torch.tensor_statistics.statistics import MinMaxTensorStatistic
+from nncf.torch.tensor_statistics.statistics import PTMinMaxTensorStatistic
 
 
 class PTRangeInitParams(RangeInitParams):
@@ -114,6 +115,9 @@ class StatCollectorGenerator:
 
             collector = StatCollectorGenerator.generate_stat_collector_for_range_init_config(
                 init_config,
+                is_weights,
+                qp.qconfig.mode,
+                qp.qconfig.per_channel,
                 obs_p.reduction_shapes,
                 num_samples_to_collect_override=num_batches)
             retval[obs_p] = collector
@@ -122,15 +126,20 @@ class StatCollectorGenerator:
     @staticmethod
     def generate_stat_collector_for_range_init_config(
             init_config: RangeInitConfig,
+            is_weights: bool,
+            mode: str,
+            per_channel: bool,
             reduction_shapes: Set[ReductionShape] = None,
             num_samples_to_collect_override: int = None) -> TensorStatisticCollectorBase:
         num_samples = init_config.num_init_samples
         if num_samples_to_collect_override is not None:
             num_samples = num_samples_to_collect_override
         if init_config.init_type == "min_max":
-            return MinMaxStatisticCollector(reduction_shapes, num_samples)
+            return MinMaxStatisticCollector(mode, reduction_shapes, num_samples)
+        if init_config.init_type == "mixed_min_max":
+            return MixedMinMaxStatisticCollector(is_weights, mode, per_channel, reduction_shapes, num_samples)
         if init_config.init_type == "mean_min_max":
-            return MeanMinMaxStatisticCollector(reduction_shapes, num_samples)
+            return MeanMinMaxStatisticCollector(mode, reduction_shapes, num_samples)
         if init_config.init_type == "threesigma":
             return MedianMADStatisticCollector(reduction_shapes, num_samples)
         if init_config.init_type == "percentile":
@@ -215,6 +224,6 @@ class DataLoaderRangeInitializeRunner(DataLoaderBaseRunner):
             collector, quantizer_module = collector_and_module
             scale_shape = tuple(quantizer_module.scale_shape)
             target_stat = collector.get_statistics()[scale_shape]
-            minmax_stats = MinMaxTensorStatistic.from_stat(target_stat)
+            minmax_stats = PTMinMaxTensorStatistic.from_stat(target_stat)
             quantizer_module.apply_minmax_init(minmax_stats.min_values, minmax_stats.max_values,
                                                log_module_name=scope_str)

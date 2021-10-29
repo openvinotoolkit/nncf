@@ -23,12 +23,14 @@ from nncf.common.quantization.initialization.range import RangeInitConfig
 from nncf.common.quantization.structs import QuantizerGroup
 from nncf.common.utils.progress_bar import ProgressBar
 from nncf.common.utils.helpers import should_consider_scope
+from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.tensorflow.layers.custom_objects import NNCF_QUANTIZATION_OPERATIONS
 from nncf.tensorflow.layers.wrapper import NNCFWrapper
 from nncf.tensorflow.layers.data_layout import get_channel_axis
 from nncf.tensorflow.layers.operation import InputType
 from nncf.tensorflow.quantization.layers import FakeQuantize
 from nncf.tensorflow.quantization.initializers.collectors import MinMaxStatisticCollector
+from nncf.tensorflow.quantization.initializers.collectors import MixedMinMaxStatisticCollector
 from nncf.tensorflow.quantization.initializers.collectors import MeanMinMaxStatisticsCollector
 from nncf.tensorflow.quantization.initializers.collectors import MedianMADStatisticCollector
 from nncf.tensorflow.quantization.initializers.collectors import PercentileStatisticCollector
@@ -85,24 +87,27 @@ class RangeInitializer:
         self.nncf_quantization_operation_classes = NNCF_QUANTIZATION_OPERATIONS.registry_dict.values()
 
     @staticmethod
-    def generate_stat_collector(init_config, per_channel: bool, channel_axes: int, input_type: str):
+    def generate_stat_collector(init_config, per_channel: bool, channel_axes: int, input_type: str, mode: str):
         range_type = init_config.init_type
+        num_samples = init_config.num_init_samples
         if range_type == 'min_max':
-            return MinMaxStatisticCollector(per_channel, channel_axes, input_type)
+            return MinMaxStatisticCollector(per_channel, channel_axes, input_type, mode, num_samples)
+        if range_type == 'mixed_min_max':
+            return MixedMinMaxStatisticCollector(per_channel, channel_axes, input_type, mode, num_samples)
         if range_type == 'mean_min_max':
-            return MeanMinMaxStatisticsCollector(per_channel, channel_axes, input_type)
+            return MeanMinMaxStatisticsCollector(per_channel, channel_axes, input_type, mode, num_samples)
         if range_type == 'threesigma':
-            return MedianMADStatisticCollector(per_channel, channel_axes, input_type)
+            return MedianMADStatisticCollector(per_channel, channel_axes, input_type, num_samples)
         if range_type == 'percentile':
             min_percentile = init_config.init_type_specific_params.get('min_percentile', 0.1)
             max_percentile = init_config.init_type_specific_params.get('max_percentile', 99.9)
             return PercentileStatisticCollector(per_channel, channel_axes, input_type,
-                                                min_percentile, max_percentile)
+                                                [min_percentile, max_percentile], num_samples)
         if range_type == 'mean_percentile':
             min_percentile = init_config.init_type_specific_params.get('min_percentile', 0.1)
             max_percentile = init_config.init_type_specific_params.get('max_percentile', 99.9)
             return MeanPercentileStatisticCollector(per_channel, channel_axes, input_type,
-                                                    min_percentile, max_percentile)
+                                                    [min_percentile, max_percentile], num_samples)
         raise ValueError(f'Range type {range_type} is not supported.')
 
     def run(self, model: tf.keras.Model) -> None:
@@ -114,7 +119,7 @@ class RangeInitializer:
                 channel_axes = get_channel_axis(InputType.INPUTS, '', layer)
                 init_config = self.range_init_params.get_init_config_for_quantization_point(layer, InputType.INPUTS)
                 collector = RangeInitializer.generate_stat_collector(init_config, layer.per_channel,
-                                                                     channel_axes, InputType.INPUTS)
+                                                                     channel_axes, InputType.INPUTS, layer.mode)
                 handles.append(layer.register_hook_pre_quantizer(collector))
                 layer.enabled = False
                 layer_statistics.append((layer, collector))
@@ -126,7 +131,8 @@ class RangeInitializer:
                             init_config = self.range_init_params.\
                                 get_init_config_for_quantization_point(layer, InputType.WEIGHTS)
                             collector = RangeInitializer.generate_stat_collector(init_config, op.per_channel,
-                                                                                 channel_axes, InputType.WEIGHTS)
+                                                                                 channel_axes, InputType.WEIGHTS,
+                                                                                 op.mode)
                             handles.append(op.register_hook_pre_call(collector))
                             op.enabled = False
                             op_statistics.append((layer, op_name, op, collector))
@@ -139,14 +145,16 @@ class RangeInitializer:
             model(x, training=False)
 
         for layer, collector in layer_statistics:
-            collector.prepare_statistics()
-            layer.apply_range_initialization(collector.min, collector.max)
+            target_stat = collector.get_statistics()
+            minmax_stats = MinMaxTensorStatistic.from_stat(target_stat)
+            layer.apply_range_initialization(minmax_stats.min_values, minmax_stats.max_values)
             layer.enabled = True
 
         for layer, op_name, op, collector in op_statistics:
-            collector.prepare_statistics()
             weights = layer.get_operation_weights(op_name)
-            op.apply_range_initialization(weights, collector.min, collector.max)
+            target_stat = collector.get_statistics()
+            minmax_stats = MinMaxTensorStatistic.from_stat(target_stat)
+            op.apply_range_initialization(weights, minmax_stats.min_values, minmax_stats.max_values)
             op.enabled = True
 
         for handle in handles:
