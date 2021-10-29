@@ -25,8 +25,8 @@ class BaseOp(nn.Module):
     def operand(self):
         return self.op
 
-    def forward(self, *inputs):
-        return self.op(*inputs)
+    def forward(self, *inputs, **kwargs):
+        return self.op(*inputs, **kwargs)
 
 
 class UpdateInputs(BaseOp):
@@ -42,7 +42,6 @@ class UpdateParameter(BaseOp):
     def __call__(self, module, _):
         if not hasattr(module, self._param_name):
             raise TypeError('{} should have {} attribute'.format(type(module), self._param_name))
-
         value = getattr(module, self._param_name)
         result = super().__call__(value)
         setattr(module, self._param_name, result)
@@ -51,6 +50,39 @@ class UpdateParameter(BaseOp):
 class UpdateWeight(UpdateParameter):
     def __init__(self, op):
         super().__init__("weight", op)
+
+
+class UpdateParameterList(BaseOp):
+    """
+    A module which updates attributes of a module fed to
+    forward method call by operand call.
+    """
+
+    def __init__(self, param_names, op):
+        super().__init__(op)
+        self._param_names = param_names
+
+    def __call__(self, module, _):
+        param_values = []
+        for param_name in self._param_names:
+            if not hasattr(module, param_name):
+                raise TypeError('{} should have {} attribute'.format(type(module), param_name))
+            param_values.append(getattr(module, param_name))
+        updated_kwargs = dict(zip(self._param_names, param_values))
+        updated_values = super().__call__(**updated_kwargs)
+
+        for param_name, updated_value in zip(self._param_names, updated_values):
+            setattr(module, param_name, updated_value)
+
+
+class UpdateWeightAndBias(UpdateParameterList):
+    """
+    A module which updates `weight` and `bias` attributes of a module
+    fed to forward method call by operand call.
+    """
+
+    def __init__(self, op):
+        super().__init__(["weight", "bias"], op)
 
 
 class UpdatePaddingValue(UpdateParameter):
