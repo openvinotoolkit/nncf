@@ -270,6 +270,37 @@ def test_convs_elementwise_source_before_concat(empty_mask_right_branch, empty_m
         np.testing.assert_equal(concat_node.data['output_mask'].tensor, reference_mask)
 
 
+def test_concat_output_tensor_device():
+    graph = NNCFGraph()
+    dummy_ops = [graph.add_nncf_node(f'dummy_op_{i}', DummyMaskProducerMetatype.name,
+                                     DummyMaskProducerMetatype) for i in range(3)]
+    concat_layer_attributes = MultipleInputLayerAttributes(2)
+    concat_node = graph.add_nncf_node('concat_node', 'concat', dummy_types.DummyConcatMetatype,
+                                      layer_attributes=concat_layer_attributes)
+    for op in dummy_ops:
+        graph.add_edge_between_nncf_nodes(
+            from_node_id=op.node_id,
+            to_node_id=concat_node.node_id,
+            tensor_shape=[10] * 4,
+            input_port_id=0,
+            output_port_id=0,
+            dtype=Dtype.FLOAT)
+
+    # Set mask to last dummy node
+    ref_device = 'some_test_device'
+    for op in dummy_ops[:-1]:
+        op = graph.get_node_by_id(op.node_id)
+        op.data['output_mask'] = None
+
+    last_op = graph.get_node_by_id(dummy_ops[-1].node_id)
+    last_op.data['output_mask'] = NPNNCFTensor(np.ones(10), dummy_device=ref_device)
+    # Propagate masks
+    MaskPropagationAlgorithm(graph, dummy_types.DUMMY_PRUNING_OPERATOR_METATYPES).mask_propagation()
+    # Check concat op has appropriate device
+    concat_node = graph.get_node_by_id(concat_node.node_id)
+    assert concat_node.data['output_mask'].device == ref_device
+
+
 RESHAPE_TEST_CASES = [
     ['flatten', (1, 1, 64), (1, 64)],
     ['flatten', (1, 32, 64), (1, 2048)],
