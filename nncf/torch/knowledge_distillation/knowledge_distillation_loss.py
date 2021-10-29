@@ -46,6 +46,11 @@ class KnowledgeDistillationLoss(PTCompressionLoss):
         else:
             def kd_loss_fn(ref_output: torch.Tensor, compressed_model_output: torch.Tensor):
                 mse = torch.nn.MSELoss()
+                if len(ref_output.size()) < 2:
+                    nncf_logger.debug("Incompatible shape (compressed - {}, ref - {}) of the model output tensor "
+                                  "(most likely loss) - ignoring!".format(compressed_model_output.shape,
+                                                                      ref_output.shape))
+                    return torch.zeros([1]).to(compressed_model_output.device)
                 return scale * mse(ref_output, compressed_model_output)
         self._kd_loss_handler = target_model.create_knowledge_distillation_loss_handler(original_model, partial(
             KnowledgeDistillationLoss._calculate,
@@ -109,6 +114,7 @@ class KnowledgeDistillationLoss(PTCompressionLoss):
             raise RuntimeError("Knowledge Distillation Loss is not calculated.")
         for idx, _ in enumerate(loss):
             loss[idx] = loss[idx].unsqueeze(0)
+            ## Danger to convert 1 dim loss into n, 1 dim tensor through concat
         output = torch.cat(loss).mean()
         return output
 

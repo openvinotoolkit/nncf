@@ -373,18 +373,20 @@ class KDOutputModel(torch.nn.Module):
         return retval
 
 
-@pytest.mark.parametrize('shape_list', (
-    [(1, 2, 3, 4)],
-    [(1, 128)],
-    [(1, 128), (1, )]
-))
-def test_kd_softmax_loss_ignores_incompatible_outputs(shape_list: List[Tuple[int]]):
+@pytest.mark.parametrize('shape_list, kd_type, is_zero', [(
+    [(1, 2, 3, 4)], "softmax", True),
+    ([(1, 128)], "softmax", False),
+    ([(1, 128), (1, )], "softmax", False),
+    ([(1, )], "mse", True),
+    ([(1, 2, 3, 4)], "mse", False)
+])
+def test_kd_softmax_loss_ignores_incompatible_outputs(shape_list: List[Tuple[int]], kd_type, is_zero):
     original_model = KDOutputModel(target_shapes=shape_list)
     config = NNCFConfig.from_dict({
         "input_info": {"sample_size": [1, 1, 1, 1]},
         "compression": {
             "algorithm": "knowledge_distillation",
-            "type": "softmax"
+            "type": kd_type
         }
     })
     compressed_model = NNCFNetwork(original_model, [ModelInputInfo([1, 1, 1, 1])])
@@ -392,4 +394,9 @@ def test_kd_softmax_loss_ignores_incompatible_outputs(shape_list: List[Tuple[int
     compressed_model = kd_builder.apply_to(compressed_model)
     kd_ctrl = kd_builder.build_controller(compressed_model)
     compressed_model.forward(torch.ones_like(compressed_model.mock_param))
-    kd_ctrl.loss()  # Should succeed - the loss for the incompatible outputs will be equal to 0
+    print(kd_ctrl.loss().size())
+    print(kd_ctrl.loss())
+    print(torch.allclose(kd_ctrl.loss(), torch.zeros(kd_ctrl.loss().size())))
+    assert is_zero == torch.allclose(kd_ctrl.loss(), torch.zeros(kd_ctrl.loss().size()))
+    cr_loss = kd_ctrl.loss()  # Should succeed - the loss for the incompatible outputs will be equal to 0
+    print(f'cr loss {cr_loss}')
