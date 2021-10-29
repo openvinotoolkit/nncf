@@ -27,6 +27,7 @@ from nncf.common.pruning.utils import is_grouped_conv
 from nncf.common.pruning.utils import find_next_nodes_not_of_types
 from nncf.common.pruning.utils import PruningOperationsMetatypeRegistry
 from nncf.common.pruning.utils import PruningAnalysisDecision
+from nncf.common.pruning.utils import PruningAnalysisReason
 
 
 class SymbolicMaskProcessor(NNCFBaseTensorProcessor):
@@ -118,7 +119,7 @@ class SymbolicMaskPropagationAlgorithm(MaskPropagationAlgorithm):
                         is_dims_equal = node.layer_attributes.in_channels == input_mask.tensor.shape[0]
                         decision = previously_dims_equal and is_dims_equal
                         can_prune_by_dim[producer] = PruningAnalysisDecision(
-                                                         decision, PruningAnalysisDecision.DIMENSION_MISMATCH)
+                                                         decision, PruningAnalysisReason.DIMENSION_MISMATCH)
 
         # Clean nodes masks
         for idx in can_be_closing_convs:
@@ -130,7 +131,7 @@ class SymbolicMaskPropagationAlgorithm(MaskPropagationAlgorithm):
         for k, v in can_prune_by_dim.items():
             if v is None:
                 convs_without_closing_conv[k] = \
-                    PruningAnalysisDecision(False, PruningAnalysisDecision.CLOSING_CONV_MISSING)
+                    PruningAnalysisDecision(False, PruningAnalysisReason.CLOSING_CONV_MISSING)
 
         can_prune_by_dim.update(convs_without_closing_conv)
         return can_prune_by_dim
@@ -314,5 +315,5 @@ class ModelAnalyzer:
         self.set_accept_pruned_input_attr()
         self.propagate_can_prune_attr_up()
         self.propagate_can_prune_attr_down()
-        return {k: PruningAnalysisDecision(v, PruningAnalysisDecision.MODEL_ANALYSIS)
+        return {k: PruningAnalysisDecision(v, [PruningAnalysisReason.MODEL_ANALYSIS])
                 for k, v in self.can_prune.items()}

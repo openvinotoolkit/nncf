@@ -12,7 +12,8 @@
 """
 
 from functools import partial
-from typing import Dict, List, Optional, Tuple, Type, Callable
+from typing import Dict, List, Optional, Tuple, Type, Union
+from enum import Enum
 
 import math
 import numpy as np
@@ -391,8 +392,7 @@ class PruningOperationsMetatypeRegistry(Registry):
         return None
 
 
-class PruningAnalysisDecision:
-    PREFIX = lambda node_name: 'Ignored adding Weight Pruner in: {} because '.format(node_name)
+class PruningAnalysisReason(Enum):
     IGNORED_SCOPE = 'node in ignored scope'
     FIRST_CONV = 'this scope is one of the first convolutions'
     LAST_CONV = 'this scope is one of the last convolutions'
@@ -403,18 +403,51 @@ class PruningAnalysisDecision:
     CLOSING_CONV_MISSING = 'closing convolution missing'
     IN_GROUP_OF_UNPRUNABLE = 'is in the group with non prunable layers'
 
-    def __init__(self, decision: bool, possible_reason: Optional[str] = None):
+    @classmethod
+    def message(cls, node_name: str, decision: Optional['PruningAnalysisDecision']) -> str:
+        prefix = f'Ignored adding Weight Pruner in: {node_name}'
+        reasons = decision.reasons
+        if not reasons:
+            return prefix
+        # Filter messages
+        for special_reason in [cls.FIRST_CONV, cls.LAST_CONV]:
+            if special_reason in reasons:
+                reasons = [special_reason]
+        if cls.MODEL_ANALYSIS in reasons and cls.CLOSING_CONV_MISSING in reasons:
+            reasons = [cls.MODEL_ANALYSIS]
+        if len(reasons) == 1 and cls.IN_GROUP_OF_UNPRUNABLE == reasons[0]:
+            return ''
+        return prefix + ' because ' + ' and '.join([reason.value for reason in reasons])
+
+
+class PruningAnalysisDecision:
+    def __init__(self,
+                 decision: bool,
+                 possible_reasons: Optional[Union[List[PruningAnalysisReason], PruningAnalysisReason]] = None):
         self.decision = decision
-        self.reason_without_prefix = possible_reason if not decision and possible_reason else None
+        if not isinstance(possible_reasons, list):
+            possible_reasons = [possible_reasons]
+        self._reasons = possible_reasons if not decision and possible_reasons else None \
+            # type: Optional[List[PruningAnalysisReason]]
 
     def __bool__(self) -> bool:
         return self.decision
 
+    @property
+    def reasons(self) -> Optional[List[PruningAnalysisReason]]:
+        if self._reasons:
+            return self._reasons.copy()
+
     def join(self, other: 'PruningAnalysisDecision') -> 'PruningAnalysisDecision':
         if self.decision and other.decision:
             return self
-        reasons = [d.reason_without_prefix for d in [self, other] if not d]
-        return PruningAnalysisDecision(False, ' and '.join(reasons))
+
+        reasons = []
+        for decision in [self, other]:
+            if decision.reasons:
+                reasons.extend(decision.reasons)
+
+        return PruningAnalysisDecision(False, reasons)
 
 
 def is_prunable_depthwise_conv(node: NNCFNode) -> bool:

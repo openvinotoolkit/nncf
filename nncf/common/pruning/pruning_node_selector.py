@@ -21,6 +21,7 @@ from nncf.common.pruning.utils import get_last_nodes_of_type
 from nncf.common.pruning.utils import get_previous_convs
 from nncf.common.pruning.utils import is_grouped_conv
 from nncf.common.pruning.utils import PruningAnalysisDecision
+from nncf.common.pruning.utils import PruningAnalysisReason
 from nncf.common.pruning.utils import PruningOperationsMetatypeRegistry
 from nncf.common.pruning.model_analysis import ModelAnalyzer
 from nncf.common.pruning.model_analysis import SymbolicMaskPropagationAlgorithm
@@ -228,7 +229,7 @@ class PruningNodeSelector:
                 for node, decision in zip(cluster.elements, decisions):
                     if decision:
                         updated_decisions[node.node_id] = \
-                            PruningAnalysisDecision(False, PruningAnalysisDecision.IN_GROUP_OF_UNPRUNABLE)
+                            PruningAnalysisDecision(False, PruningAnalysisReason.IN_GROUP_OF_UNPRUNABLE)
                     else:
                         updated_decisions[node.node_id] = decision
 
@@ -254,8 +255,7 @@ class PruningNodeSelector:
                 cannot_prune_messages = []
                 for name, decision in zip(nodes_names, nodes_decisions):
                     if not decision:
-                        cannot_prune_messages.append(
-                            PruningAnalysisDecision.PREFIX(name) + decision.reason_without_prefix)
+                        cannot_prune_messages.append(PruningAnalysisReason.message(name, decision))
 
                 nncf_logger.info('Group of nodes [{}] can\'t be pruned, because some nodes should\'t be pruned, '
                                  'error messages for this nodes: {}'.format(
@@ -282,18 +282,18 @@ class PruningNodeSelector:
         node_name = node.node_name
 
         if not should_consider_scope(node_name, self._ignored_scopes, self._target_scopes):
-            return PruningAnalysisDecision(False, PruningAnalysisDecision.IGNORED_SCOPE)
+            return PruningAnalysisDecision(False, PruningAnalysisReason.IGNORED_SCOPE)
 
         if not self._prune_first and node in input_non_pruned_nodes:
-            return PruningAnalysisDecision(False, PruningAnalysisDecision.FIRST_CONV)
+            return PruningAnalysisDecision(False, PruningAnalysisReason.FIRST_CONV)
 
         elif not self._prune_last and node in output_non_pruned_nodes:
-            return PruningAnalysisDecision(False, PruningAnalysisDecision.LAST_CONV)
+            return PruningAnalysisDecision(False, PruningAnalysisReason.LAST_CONV)
 
         elif is_grouped_conv(node) and not is_prunable_depthwise_conv(node):
-            return PruningAnalysisDecision(False, PruningAnalysisDecision.GROUP_CONV)
+            return PruningAnalysisDecision(False, PruningAnalysisReason.GROUP_CONV)
 
         elif not self._prune_downsample_convs and is_conv_with_downsampling(node):
-            return PruningAnalysisDecision(False, PruningAnalysisDecision.DOWNSAMPLE_CONV)
+            return PruningAnalysisDecision(False, PruningAnalysisReason.DOWNSAMPLE_CONV)
 
         return PruningAnalysisDecision(True)
