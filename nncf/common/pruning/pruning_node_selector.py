@@ -177,7 +177,7 @@ class PruningNodeSelector:
         can_prune_and_should_prune_analysis = self._should_prune_groups_analysis(graph,
                                                                                  pruned_nodes_clusterization,
                                                                                  can_prune_analysis)
-        can_prune_final_analisys = self._check_pruning_dimentions(graph, can_prune_and_should_prune_analysis)
+        can_prune_final_analisys = self._check_pruning_dimensions(graph, can_prune_and_should_prune_analysis)
         self._filter_pruning_groups(pruned_nodes_clusterization, can_prune_final_analisys)
         return pruned_nodes_clusterization
 
@@ -195,8 +195,16 @@ class PruningNodeSelector:
             ret[node.layer_name].append(node)
         return [ret[module_identifier] for module_identifier in ret if len(ret[module_identifier]) > 1]
 
-    def _check_pruning_dimentions(self, graph, can_prune_after_check) -> Dict[int, PruningAnalysisDecision]:
-        """TODO"""
+    def _check_pruning_dimensions(self, graph, can_prune_after_check) -> Dict[int, PruningAnalysisDecision]:
+        """
+        Check all nodes marked as prunable after model analysis and pruning algo compatibility check
+        have correspondent closing node except last convolution, which means each prunable by output channels
+        dimension convolution except last one has correspondent prunable by input channels dimension convolution.
+
+        :param graph: Graph to work with.
+        :param can_prune_after_check: Pruning node analysis after model analyser and pruning algo compatibility step.
+        :return: Pruning node analysis after model analyzer, pruning algo compatibility and pruning dimensions checks.
+        """
         mask_prop_algo = SymbolicMaskPropagationAlgorithm(graph, self._pruning_operator_metatypes)
         can_prune_by_dim = mask_prop_algo.symbolic_mask_propagation(self._prune_operations_types, can_prune_after_check)
         diff = [idx for idx in can_prune_by_dim if not can_prune_by_dim[idx] and can_prune_after_check[idx]]
@@ -218,7 +226,15 @@ class PruningNodeSelector:
     def _should_prune_groups_analysis(self, graph: NNCFGraph, pruned_nodes_clusterization: Clusterization,
                                       can_prune: Dict[int, PruningAnalysisDecision]) \
             -> Dict[int, PruningAnalysisDecision]:
-        """TODO"""
+        """
+        Check whether all nodes in group can be pruned based on user-defined constraints and
+        model analysis. Otherwise the whole group cannot be pruned.
+
+        :param graph: Graph to work with.
+        :param pruned_nodes_clusterization: Clusterization with pruning nodes groups.
+        :param can_prune: Complete pruning analysis about each graph node.
+        :return:
+        """
         should_prune = {}
         for cluster in pruned_nodes_clusterization.get_all_clusters():
             should_prune_decisions = [self._is_module_prunable(graph, node) for node in cluster.elements]
@@ -240,7 +256,7 @@ class PruningNodeSelector:
         return can_prune_updated
 
     def _filter_pruning_groups(self, pruned_nodes_clusterization: Clusterization,
-                               can_prune: Dict[str, PruningAnalysisDecision]) -> None:
+                               can_prune: Dict[int, PruningAnalysisDecision]) -> None:
         """
         Check whether all nodes in group can be pruned based on user-defined constraints and
         connections inside the network. Otherwise the whole group cannot be pruned.
@@ -272,8 +288,7 @@ class PruningNodeSelector:
 
         :param graph: Graph to work with.
         :param node: Node to check.
-        :return: Tuple (prune, msg) where prune means whether we should/shouldn't prune module,
-            msg is additional information why we should/shouldn't prune.
+        :return: Pruning analysis decision.
         """
         stop_propagation_ops = self._stop_propagation_op_metatype.get_all_op_aliases()
         types_to_track = self._prune_operations_types + stop_propagation_ops

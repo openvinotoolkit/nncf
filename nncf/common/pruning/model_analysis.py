@@ -23,6 +23,7 @@ from nncf.common.pruning.clusterization import Cluster
 from nncf.common.pruning.clusterization import Clusterization
 from nncf.common.pruning.operations import BasePruningOp
 from nncf.common.pruning.mask_propagation import MaskPropagationAlgorithm
+from nncf.common.pruning.utils import get_input_masks
 from nncf.common.pruning.utils import is_grouped_conv
 from nncf.common.pruning.utils import find_next_nodes_not_of_types
 from nncf.common.pruning.utils import PruningOperationsMetatypeRegistry
@@ -84,8 +85,10 @@ class SymbolicMaskPropagationAlgorithm(MaskPropagationAlgorithm):
                                   can_prune_after_analisys: Dict[int, PruningAnalysisDecision]) \
                                   -> Dict[int, PruningAnalysisDecision]:
         """
-        Mask propagation in graph:
-        to propagate masks run method mask_propagation (of metaop of current node) on all nodes in topological order.
+        Check all nodes marked as prunable after model analysis and pruning algo compatibility check
+        have correspondent closing node, which means each prunable by output channels dimension convolution
+        has correspondent prunable by input channels dimension convolution. Otherwise the whole group
+        contained such node cannot be pruned.
 
         :param prunable_layers_types: Types of operations with prunable filters.
         :param can_prune_after_analisys: Dict of nodes indexes only indexes of convolutional
@@ -105,8 +108,8 @@ class SymbolicMaskPropagationAlgorithm(MaskPropagationAlgorithm):
             cls.mask_propagation(node, self._graph)
             if node.node_id in can_be_closing_convs:
                 # Check input mask producers
-                if node.data['input_masks'][0] is not None:
-                    input_masks = node.data['input_masks']
+                input_masks = get_input_masks(node, self._graph)
+                if any(input_masks):
                     assert len(input_masks) == 1
                     input_mask = input_masks[0]
                     if input_mask.mask_producers is None:
@@ -124,7 +127,6 @@ class SymbolicMaskPropagationAlgorithm(MaskPropagationAlgorithm):
         # Clean nodes masks
         for idx in can_be_closing_convs:
             node = self._graph.get_node_by_id(idx)
-            node.data['input_masks'] = None
             node.data['output_mask'] = None
 
         convs_without_closing_conv = {}

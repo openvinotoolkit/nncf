@@ -393,6 +393,10 @@ class PruningOperationsMetatypeRegistry(Registry):
 
 
 class PruningAnalysisReason(Enum):
+    """
+    Enum of possible pruning analysis decisions reasons.
+    """
+
     IGNORED_SCOPE = 'node in ignored scope'
     FIRST_CONV = 'this scope is one of the first convolutions'
     LAST_CONV = 'this scope is one of the last convolutions'
@@ -405,6 +409,13 @@ class PruningAnalysisReason(Enum):
 
     @classmethod
     def message(cls, node_name: str, decision: Optional['PruningAnalysisDecision']) -> str:
+        """
+        Returns the node pruning analysis decisions in a human-readable format.
+
+        :param node_name: Name of given node.
+        :param decision: Pruning analysis decision for given node.
+        :return: pruning analysis decision in a human-readable format.
+        """
         prefix = f'Ignored adding Weight Pruner in: {node_name}'
         reasons = decision.reasons
         if not reasons:
@@ -413,6 +424,7 @@ class PruningAnalysisReason(Enum):
         for special_reason in [cls.FIRST_CONV, cls.LAST_CONV]:
             if special_reason in reasons:
                 reasons = [special_reason]
+                break
         if cls.MODEL_ANALYSIS in reasons and cls.CLOSING_CONV_MISSING in reasons:
             reasons = [cls.MODEL_ANALYSIS]
         if len(reasons) == 1 and cls.IN_GROUP_OF_UNPRUNABLE == reasons[0]:
@@ -421,6 +433,11 @@ class PruningAnalysisReason(Enum):
 
 
 class PruningAnalysisDecision:
+    """
+    Container for pruning analysis decisions. Contains decision which is boolean marker either
+    node prunable or not and pruning analysis reason in PruningAnalysisReason format.
+    """
+
     def __init__(self,
                  decision: bool,
                  possible_reasons: Optional[Union[List[PruningAnalysisReason], PruningAnalysisReason]] = None):
@@ -439,6 +456,12 @@ class PruningAnalysisDecision:
             return self._reasons.copy()
 
     def join(self, other: 'PruningAnalysisDecision') -> 'PruningAnalysisDecision':
+        """
+        Join two pruning analysis decision about one NNCFNode.
+
+        :param other: pruning analysis decision to join with.
+        :return: Joint pruning analysis decision.
+        """
         if self.decision and other.decision:
             return self
 

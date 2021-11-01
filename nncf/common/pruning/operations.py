@@ -68,7 +68,6 @@ class InputPruningOp(BasePruningOp):
 
     @classmethod
     def mask_propagation(cls, node: NNCFNode, graph: NNCFGraph) -> None:
-        node.data['input_masks'] = None
         node.data['output_mask'] = None
 
 
@@ -79,7 +78,6 @@ class OutputPruningOp(BasePruningOp):
 
     @classmethod
     def mask_propagation(cls, node: NNCFNode, graph: NNCFGraph) -> None:
-        node.data['input_masks'] = get_input_masks(node, graph)
         node.data['output_mask'] = None
 
 
@@ -110,7 +108,6 @@ class ConvolutionPruningOp(BasePruningOp):
             if is_prunable_depthwise_conv(node):
                 output_mask = input_masks[0]
 
-        node.data['input_masks'] = input_masks
         node.data['output_mask'] = output_mask
 
 
@@ -132,7 +129,6 @@ class TransposeConvolutionPruningOp(BasePruningOp):
             if is_prunable_depthwise_conv(node):
                 output_mask = input_masks[0]
 
-        node.data['input_masks'] = input_masks
         node.data['output_mask'] = output_mask
 
 
@@ -158,7 +154,6 @@ class GroupNormPruningOp(BasePruningOp):
         if cls.accept_pruned_input(node):
             identity_mask_propagation(node, graph)
         else:
-            node.data['input_maks'] = get_input_masks(node, graph)
             node.data['output_mask'] = None
 
 
@@ -201,7 +196,6 @@ class ConcatPruningOp(BasePruningOp):
     @classmethod
     def mask_propagation(cls, node: NNCFNode, graph: NNCFGraph) -> None:
         result_mask = cls.generate_output_mask(node, graph)
-        node.data['input_masks'] = get_input_masks(node, graph)
         node.data['output_mask'] = result_mask
 
 
@@ -240,7 +234,6 @@ class ReshapePruningOp(BasePruningOp):
             else:
                 identity_mask_propagation(node, graph)
         else:
-            node.data['input_masks'] = get_input_masks(node, graph)
             node.data['output_mask'] = None
 
 
@@ -268,7 +261,6 @@ class FlattenPruningOp(BasePruningOp):
             assert flatten_channels % mask_len == 0
             output_mask = input_mask.tensor_processor.repeat(input_mask, repeats=flatten_channels // mask_len)
 
-        node.data['input_masks'] = input_masks
         node.data['output_mask'] = output_mask
 
 
@@ -279,5 +271,4 @@ class StopMaskForwardPruningOp(BasePruningOp):
 
     @classmethod
     def mask_propagation(cls, node: NNCFNode, graph: NNCFGraph) -> None:
-        node.data['input_masks'] = get_input_masks(node, graph)
         node.data['output_mask'] = None
