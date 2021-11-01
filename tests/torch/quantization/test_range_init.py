@@ -765,6 +765,7 @@ def test_quantize_range_init_sets_correct_scale_shapes(quantizer_range_init_test
         range_init_config = RangeInitConfig(init_type=initializer_type, num_init_samples=1)
         collector = StatCollectorGenerator.generate_stat_collector_for_range_init_config(
             range_init_config,
+            is_weights=False,
             reduction_shapes={tuple(quantizer.scale_shape)})
         collector.register_input(torch.ones(test_struct.input_shape))
         stat = collector.get_statistics()[tuple(quantizer.scale_shape)]

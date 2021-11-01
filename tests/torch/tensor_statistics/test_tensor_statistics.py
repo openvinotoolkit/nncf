@@ -10,17 +10,20 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+
 from functools import partial
 from typing import Dict, Type
 
 import pytest
 import torch
 
-from nncf.torch.tensor_statistics.collectors import MinMaxStatisticCollector, TensorStatisticCollectorBase, \
-    ReductionShape, MeanMinMaxStatisticCollector, MedianMADStatisticCollector, PercentileStatisticCollector, \
-    MeanPercentileStatisticCollector, StatisticsNotCollectedError, OfflineTensorStatisticCollector
-from nncf.torch.tensor_statistics.statistics import TensorStatistic, MinMaxTensorStatistic, MedianMADTensorStatistic, \
-    PercentileTensorStatistic
+from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase, ReductionShape, \
+    StatisticsNotCollectedError, OfflineTensorStatisticCollector
+from nncf.torch.tensor_statistics.collectors import MinMaxStatisticCollector, MeanMinMaxStatisticCollector, \
+    MedianMADStatisticCollector, PercentileStatisticCollector, MeanPercentileStatisticCollector, \
+    MixedMinMaxStatisticCollector
+from nncf.torch.tensor_statistics.statistics import PTTensorStatistic, PTMinMaxTensorStatistic, \
+    PTMedianMADTensorStatistic, PTPercentileTensorStatistic
 
 
 class TestCollectedStatistics:
@@ -42,15 +45,40 @@ class TestCollectedStatistics:
                                  (
                                          MinMaxStatisticCollector,
                                          {
-                                             (1,): MinMaxTensorStatistic(min_values=torch.tensor([-4.0]),
-                                                                         max_values=torch.tensor([6.1])),
-                                             (3, 1): MinMaxTensorStatistic(
+                                             (1,): PTMinMaxTensorStatistic(min_values=torch.tensor([-4.0]),
+                                                                           max_values=torch.tensor([6.1])),
+                                             (3, 1): PTMinMaxTensorStatistic(
                                                  min_values=torch.tensor([[1.0], [-4.0], [4.0]]),
-                                                 max_values=torch.tensor([[4.5], [-1.0], [6.1]])),
-                                             (1, 3): MinMaxTensorStatistic(
+                                                 max_values=torch.tensor([[4.5], [4.0], [6.1]])),
+                                             (1, 3): PTMinMaxTensorStatistic(
                                                  min_values=torch.tensor([[-1.3, -4.0, -3.5]]),
                                                  max_values=torch.tensor([[4.5, 5.8, 6.1]])),
-                                             (3, 3): MinMaxTensorStatistic(
+                                             (3, 3): PTMinMaxTensorStatistic(
+                                                 min_values=torch.tensor([
+                                                     [1.0, 2.0, 3.0],
+                                                     [-1.3, -4, -3.5],
+                                                     [4.0, 5.0, 6.0]
+                                                 ]),
+                                                 max_values=torch.tensor([
+                                                     [4.5, 2.6, 3.7],
+                                                     [1.3, 4.0, 3.5],
+                                                     [4.3, 5.8, 6.1]
+                                                 ]),
+                                             ),
+                                         }
+                                 ),
+                                 (
+                                         partial(MinMaxStatisticCollector, mode='asymmetric'),
+                                         {
+                                             (1,): PTMinMaxTensorStatistic(min_values=torch.tensor([-4.0]),
+                                                                         max_values=torch.tensor([6.1])),
+                                             (3, 1): PTMinMaxTensorStatistic(
+                                                 min_values=torch.tensor([[1.0], [-4.0], [4.0]]),
+                                                 max_values=torch.tensor([[4.5], [-1.0], [6.1]])),
+                                             (1, 3): PTMinMaxTensorStatistic(
+                                                 min_values=torch.tensor([[-1.3, -4.0, -3.5]]),
+                                                 max_values=torch.tensor([[4.5, 5.8, 6.1]])),
+                                             (3, 3): PTMinMaxTensorStatistic(
                                                  min_values=torch.tensor([
                                                      [1.0, 2.0, 3.0],
                                                      [-1.3, -4, -3.5],
@@ -65,17 +93,17 @@ class TestCollectedStatistics:
                                          }
                                  ),
                                  (
-                                         MeanMinMaxStatisticCollector,
+                                         partial(MeanMinMaxStatisticCollector, mode='asymmetric'),
                                          {
-                                             (1,): MinMaxTensorStatistic(min_values=torch.tensor([-3.5]),
+                                             (1,): PTMinMaxTensorStatistic(min_values=torch.tensor([-3.5]),
                                                                          max_values=torch.tensor([6.05])),
-                                             (3, 1): MinMaxTensorStatistic(
+                                             (3, 1): PTMinMaxTensorStatistic(
                                                  min_values=torch.tensor([[1.8], [-3.5], [4.15]]),
                                                  max_values=torch.tensor([[3.75], [-1.15], [6.05]])),
-                                             (1, 3): MinMaxTensorStatistic(
+                                             (1, 3): PTMinMaxTensorStatistic(
                                                  min_values=torch.tensor([[-1.15, -3, -3.25]]),
                                                  max_values=torch.tensor([[4.25, 5.4, 6.05]])),
-                                             (3, 3): MinMaxTensorStatistic(
+                                             (3, 3): PTMinMaxTensorStatistic(
                                                  min_values=torch.tensor([
                                                      [2.75, 2.3, 3.35],
                                                      [-1.15, -3, -3.25],
@@ -90,18 +118,43 @@ class TestCollectedStatistics:
                                          }
                                  ),
                                  (
+                                         partial(MixedMinMaxStatisticCollector, is_weights=True),
+                                         {
+                                             (1,): PTMinMaxTensorStatistic(min_values=torch.tensor([-4.0]),
+                                                                           max_values=torch.tensor([6.1])),
+                                             (3, 1): PTMinMaxTensorStatistic(
+                                                 min_values=torch.tensor([[1.0], [-4.0], [4.0]]),
+                                                 max_values=torch.tensor([[4.5], [4.0], [6.1]])),
+                                             (1, 3): PTMinMaxTensorStatistic(
+                                                 min_values=torch.tensor([[-1.3, -4.0, -3.5]]),
+                                                 max_values=torch.tensor([[4.5, 5.8, 6.1]])),
+                                             (3, 3): PTMinMaxTensorStatistic(
+                                                 min_values=torch.tensor([
+                                                     [1.0, 2.0, 3.0],
+                                                     [-1.3, -4, -3.5],
+                                                     [4.0, 5.0, 6.0]
+                                                 ]),
+                                                 max_values=torch.tensor([
+                                                     [4.5, 2.6, 3.7],
+                                                     [1.3, 4.0, 3.5],
+                                                     [4.3, 5.8, 6.1]
+                                                 ]),
+                                             ),
+                                         }
+                                 ),
+                                 (
                                          MedianMADStatisticCollector,
                                          {
-                                             (1,): MedianMADTensorStatistic(median_values=torch.tensor([2.8]),
+                                             (1,): PTMedianMADTensorStatistic(median_values=torch.tensor([2.8]),
                                                                             mad_values=torch.tensor([2.6])),
-                                             (3, 1): MedianMADTensorStatistic(
+                                             (3, 1): PTMedianMADTensorStatistic(
                                                  median_values=torch.tensor([[2.8], [-2.5], [5.4]]),
                                                  mad_values=torch.tensor([[0.85], [1.1], [0.65]])),
-                                             (1, 3): MedianMADTensorStatistic(
+                                             (1, 3): PTMedianMADTensorStatistic(
                                                  median_values=torch.tensor([[2.5, 2.3, 3.35]]),
                                                  mad_values=torch.tensor([[1.9, 3.1, 2.7]])),
                                              # Not supported for now:
-                                             # (3, 3): MedianMADTensorStatistic(
+                                             # (3, 3): PTMedianMADTensorStatistic(
                                              #     median_values=torch.tensor([
                                              #         [2.75, 2.3, 3.35],
                                              #         [-1.15, -3, -3.25],
@@ -118,14 +171,14 @@ class TestCollectedStatistics:
                                  (
                                          partial(PercentileStatisticCollector, percentiles_to_collect=[10.0]),
                                          {
-                                             (1,): PercentileTensorStatistic(
+                                             (1,): PTPercentileTensorStatistic(
                                                  {10.0: torch.tensor([-3.15])}),
-                                             (3, 1): PercentileTensorStatistic(
+                                             (3, 1): PTPercentileTensorStatistic(
                                                  {10.0: torch.tensor([[1.5], [-3.75], [4.15]])}),
-                                             (1, 3): PercentileTensorStatistic(
+                                             (1, 3): PTPercentileTensorStatistic(
                                                  {10.0: torch.tensor([[-1.15, -3, -3.25]])}),
                                              # Not supported for now:
-                                             # (3, 3): PercentileTensorStatistic(
+                                             # (3, 3): PTPercentileTensorStatistic(
                                              #     {
                                              #         10.0: torch.tensor([
                                              #             [1.35, 2.06, 3.07],
@@ -139,14 +192,14 @@ class TestCollectedStatistics:
                                  (
                                          partial(MeanPercentileStatisticCollector, percentiles_to_collect=[10.0]),
                                          {
-                                             (1,): PercentileTensorStatistic(
+                                             (1,): PTPercentileTensorStatistic(
                                                  {10.0: torch.tensor([-2.9])}),
-                                             (3, 1): PercentileTensorStatistic(
+                                             (3, 1): PTPercentileTensorStatistic(
                                                  {10.0: torch.tensor([[ 2.0100], [-3.3500], [ 4.4000]])}),
-                                             (1, 3): PercentileTensorStatistic(
+                                             (1, 3): PTPercentileTensorStatistic(
                                                  {10.0: torch.tensor([[-0.3900, -1.9400, -1.9300]])}),
                                              # Not supported for now:
-                                             # (3, 3): PercentileTensorStatistic(
+                                             # (3, 3): PTPercentileTensorStatistic(
                                              #     {
                                              #         10.0: torch.tensor([
                                              #             [ 2.7500,  2.3000,  3.3500],
@@ -159,7 +212,7 @@ class TestCollectedStatistics:
                                  ),
                              ])
     def test_collected_statistics(self, collector: Type[TensorStatisticCollectorBase],
-                                  reduction_shapes_vs_ref_statistic: Dict[ReductionShape, TensorStatistic]):
+                                  reduction_shapes_vs_ref_statistic: Dict[ReductionShape, PTTensorStatistic]):
         collector_obj = collector(reduction_shapes=set(reduction_shapes_vs_ref_statistic.keys()))
         for input_ in TestCollectedStatistics.REF_INPUTS:
             collector_obj.register_input(input_)

@@ -29,41 +29,41 @@ from nncf.tensorflow.quantization.initializers.utils import get_axes
 
 
 class TFOfflineTensorStatisticCollector(OfflineTensorStatisticCollector, ABC):
-    def __init__(self, per_channel: bool, input_type: str,
-                 channel_axes: Union[int, Tuple[int], List[int]], num_samples: int = None):
+    def __init__(self, input_type: str, channel_axes: Union[int, Tuple[int], List[int]],
+                 per_channel: bool = False, num_samples: int = None):
         super().__init__(num_samples)
         self._per_channel = per_channel
         self._input_type = input_type
         self._channel_axes = channel_axes if isinstance(channel_axes, (list, tuple)) else [channel_axes]
 
-    def _register_input(self, inputs: tf.Tensor):
+    def _register_input(self, x: tf.Tensor):
         # No need to store extra statistics in memory since weights won't change during range init
         if not self._samples or self._input_type == InputType.INPUTS:
-            self._samples.append(inputs.numpy())
+            self._samples.append(x.numpy())
 
     def __call__(self, *args, **kwargs):
         self.register_input(*args, **kwargs)
 
 
 class MinMaxStatisticCollectorBase(TFOfflineTensorStatisticCollector, ABC):
-    def __init__(self, per_channel: bool, channel_axes: Union[int, Tuple[int], List[int]],
-                 input_type: str, mode: str, num_samples: int = None, window_size: int = None):
-        super().__init__(per_channel, input_type, channel_axes, num_samples)
+    def __init__(self, channel_axes: Union[int, Tuple[int], List[int]], input_type: str,
+                 mode: str = 'symmetric', per_channel: bool = False, num_samples: int = None, window_size: int = None):
+        super().__init__(input_type, channel_axes, per_channel, num_samples)
         self._all_min_values = deque(maxlen=window_size)
         self._all_max_values = deque(maxlen=window_size)
         self._mode = mode
 
-    def _register_input(self, inputs: tf.Tensor):
+    def _register_input(self, x: tf.Tensor):
         # No need to store extra statistics in memory since weights won't change during range init
         if not self._all_min_values or self._input_type == InputType.INPUTS:
-            ndims = len(inputs.shape)
+            ndims = len(x.shape)
             axis = get_axes(ndims, self._per_channel, self._channel_axes)
 
             if self._input_type == InputType.INPUTS:
                 axis.remove(0)
-            min_reduced = tf.reduce_min(inputs, axis=axis)
+            min_reduced = tf.reduce_min(x, axis=axis)
             if self._mode == 'symmetric':
-                inputs = tf.math.abs(inputs)
+                inputs = tf.math.abs(x)
             max_reduced = tf.reduce_max(inputs, axis=axis)
 
             if self._input_type == InputType.INPUTS:
@@ -135,12 +135,12 @@ class MeanMinMaxStatisticsCollector(MinMaxStatisticCollectorBase):
 
 class MedianMADStatisticCollector(TFOfflineTensorStatisticCollector):
     """
-    Collector uses three-sigma approach with the assumption of normal distribution by default.
+    Collector uses three-sigma approach.
     """
 
-    def __init__(self, per_channel: bool, channel_axes: Union[int, Tuple[int], List[int]],
-                 input_type: str, num_samples: int = None):
-        super().__init__(per_channel, input_type, channel_axes, num_samples)
+    def __init__(self, channel_axes: Union[int, Tuple[int], List[int]],
+                 input_type: str, per_channel: bool = False, num_samples: int = None):
+        super().__init__(input_type, channel_axes, per_channel, num_samples)
         self._median = None
         self._mad = None
 
@@ -177,9 +177,9 @@ class PercentileStatisticCollector(TFOfflineTensorStatisticCollector):
     Collector uses percentiles to estimate min and max of all data history.
     """
 
-    def __init__(self, per_channel: bool, channel_axes: Union[int, Tuple[int], List[int]], input_type: str,
-                 percentiles_to_collect: List[float], num_samples: int = None):
-        super().__init__(per_channel, input_type, channel_axes, num_samples)
+    def __init__(self, channel_axes: Union[int, Tuple[int], List[int]], input_type: str,
+                 percentiles_to_collect: List[float], per_channel: bool = False, num_samples: int = None):
+        super().__init__(input_type, channel_axes, per_channel, num_samples)
         self._percentiles_to_collect = percentiles_to_collect
         self.percentile_vs_values_dict = {}
 
@@ -211,9 +211,9 @@ class MeanPercentileStatisticCollector(TFOfflineTensorStatisticCollector):
     and then averages the statistics.
     """
 
-    def __init__(self, per_channel: bool, channel_axes: Union[int, Tuple[int], List[int]], input_type: str,
-                 percentiles_to_collect: List[float], num_samples: int = None):
-        super().__init__(per_channel, input_type, channel_axes, num_samples)
+    def __init__(self, channel_axes: Union[int, Tuple[int], List[int]], input_type: str,
+                 percentiles_to_collect: List[float], per_channel: bool = False, num_samples: int = None):
+        super().__init__(input_type, channel_axes, per_channel, num_samples)
         self._all_pct_values = {}
         for pc in percentiles_to_collect:
             self._all_pct_values[pc] = []
@@ -221,20 +221,20 @@ class MeanPercentileStatisticCollector(TFOfflineTensorStatisticCollector):
     def _percentile(self, inputs: tf.Tensor, pc: float, axis: list):
         return np.percentile(inputs.numpy(), pc, axis)
 
-    def _register_input(self, inputs: tf.Tensor):
+    def _register_input(self, x: tf.Tensor):
         # No need to store extra statistics in memory since weights won't change during range init
         if not list(self._all_pct_values.values())[0] or self._input_type == InputType.INPUTS:
-            ndims = len(inputs.shape)
+            ndims = len(x.shape)
             axis = get_axes(ndims, self._per_channel, self._channel_axes)
 
             if self._input_type == InputType.INPUTS:
                 axis.remove(0)
             for pct, values in self._all_pct_values.items():
                 if self._input_type == InputType.INPUTS:
-                    vals = tf.py_function(self._percentile, [inputs, pct, axis], Tout=tf.float32)
+                    vals = tf.py_function(self._percentile, [x, pct, axis], Tout=tf.float32)
                     values.extend(tf.unstack(vals))
                 elif self._input_type == InputType.WEIGHTS:
-                    vals = tf.py_function(self._percentile, [inputs, pct, axis], Tout=tf.float32)
+                    vals = tf.py_function(self._percentile, [x, pct, axis], Tout=tf.float32)
                     values.append(vals)
 
     def _prepare_statistics(self):

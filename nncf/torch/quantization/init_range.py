@@ -40,6 +40,7 @@ from nncf.torch.initialization import DataLoaderBaseRunner
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.quantization.layers import BaseQuantizer
 from nncf.torch.quantization.translator import PTTargetPointTranslator
+from nncf.torch.quantization.layers import SymmetricQuantizer
 from nncf.torch.tensor_statistics.algo import TensorStatisticObservationPoint
 from nncf.torch.tensor_statistics.collectors import MinMaxStatisticCollector
 from nncf.torch.tensor_statistics.collectors import MixedMinMaxStatisticCollector
@@ -127,8 +128,8 @@ class StatCollectorGenerator:
     def generate_stat_collector_for_range_init_config(
             init_config: RangeInitConfig,
             is_weights: bool,
-            mode: str,
-            per_channel: bool,
+            mode: str = 'symmetric',
+            per_channel: bool = False,
             reduction_shapes: Set[ReductionShape] = None,
             num_samples_to_collect_override: int = None) -> TensorStatisticCollectorBase:
         num_samples = init_config.num_init_samples
@@ -179,7 +180,7 @@ class DataLoaderRangeInitializeRunner(DataLoaderBaseRunner):
     def __init__(
             self,
             model: NNCFNetwork,
-            modules_to_init_vs_init_configs: Dict[str, Tuple[torch.nn.Module, RangeInitConfig]],
+            modules_to_init_vs_init_configs: Dict[str, Tuple[BaseQuantizer, RangeInitConfig]],
             init_device: str,
             batch_size: int = None
     ):
@@ -199,14 +200,23 @@ class DataLoaderRangeInitializeRunner(DataLoaderBaseRunner):
 
     def _prepare_initialization(self):
         for name, data in self.modules_to_init.items():
-            quantizer_module, init_config = data  # type: BaseQuantizer, RangeInitConfig
+            quantizer_module, init_config, is_weights = data  # type: BaseQuantizer, RangeInitConfig
             num_samples_override = None
             if self.batch_size is not None:
                 num_batches = np.ceil(init_config.num_init_samples / self.batch_size)
                 num_samples_override = num_batches
 
+            if isinstance(quantizer_module, SymmetricQuantizer):
+                mode = 'symmetric'
+            else:
+                mode = 'asymmetric'
+            per_channel = quantizer_module.per_channel
+
             collector = StatCollectorGenerator.generate_stat_collector_for_range_init_config(
                 init_config,
+                is_weights,
+                mode,
+                per_channel,
                 {tuple(quantizer_module.scale_shape)},
                 num_samples_override
             )

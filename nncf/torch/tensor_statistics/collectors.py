@@ -35,7 +35,7 @@ class PTOfflineTensorStatisticCollector(OfflineTensorStatisticCollector):
 
 
 class MinMaxStatisticCollector(OnlineTensorStatisticCollector):
-    def __init__(self, mode, reduction_shapes: Set[ReductionShape] = None, num_samples: int = None):
+    def __init__(self, mode: str = 'symmetric', reduction_shapes: Set[ReductionShape] = None, num_samples: int = None):
         super().__init__(reduction_shapes, num_samples)
         self._mode = mode
         if self._reduction_shapes is not None:
@@ -50,8 +50,9 @@ class MinMaxStatisticCollector(OnlineTensorStatisticCollector):
             for reduction_shape in self._reduction_shapes:
                 min_reduced = min_reduce_like(x, reduction_shape)
                 if self._mode == 'symmetric':
-                    x = torch.abs(x)
-                max_reduced = max_reduce_like(x, reduction_shape)
+                    max_reduced = max_reduce_like(torch.abs(x), reduction_shape)
+                else:
+                    max_reduced = max_reduce_like(x, reduction_shape)
                 # Have to use .get() because the inferred reduction shape is only known at first register_input call
                 if self._min_values.get(reduction_shape) is None:
                     self._min_values[reduction_shape] = min_reduced
@@ -73,8 +74,9 @@ class MinMaxStatisticCollector(OnlineTensorStatisticCollector):
 
 
 class MixedMinMaxStatisticCollector(PTOfflineTensorStatisticCollector):
-    def __init__(self, is_weights, mode, per_channel, reduction_shapes: Set[ReductionShape] = None,
-                 num_samples: int = None, window_size: int = None):
+    def __init__(self, is_weights: bool, mode: str = 'symmetric', per_channel: bool = False,
+                 reduction_shapes: Set[ReductionShape] = None, num_samples: int = None,
+                 window_size: int = None):
         super().__init__(reduction_shapes, num_samples, window_size)
         self._is_weights = is_weights
         self._mode = mode
@@ -104,18 +106,20 @@ class MixedMinMaxStatisticCollector(PTOfflineTensorStatisticCollector):
                 if reduction_shape not in self._all_max_values:
                     self._all_max_values[reduction_shape] = deque(maxlen=self._window_size)
 
-                reduction_shape_ = self._reduction_shape_per_sample(x, reduction_shape)
-                min_ = min_reduce_like(x, reduction_shape_)
+                reduction_shape_per_sample = self._reduction_shape_per_sample(x, reduction_shape)
+                min_reduced = min_reduce_like(x, reduction_shape_per_sample)
                 if self._mode == 'symmetric':
-                    x = torch.abs(x)
-                max_ = max_reduce_like(x, reduction_shape_)
-
-                if self._is_weights:
-                    self._all_min_values[reduction_shape].append(min_)
-                    self._all_max_values[reduction_shape].append(max_)
+                    max_reduced = max_reduce_like(torch.abs(x), reduction_shape)
                 else:
-                    self._all_min_values[reduction_shape].extend([t.view(reduction_shape) for t in torch.unbind(min_)])
-                    self._all_max_values[reduction_shape].extend([t.view(reduction_shape) for t in torch.unbind(max_)])
+                    max_reduced = max_reduce_like(x, reduction_shape)
+                if self._is_weights:
+                    self._all_min_values[reduction_shape].append(min_reduced)
+                    self._all_max_values[reduction_shape].append(max_reduced)
+                else:
+                    self._all_min_values[reduction_shape].extend([t.view(reduction_shape)
+                                                                  for t in torch.unbind(min_reduced)])
+                    self._all_max_values[reduction_shape].extend([t.view(reduction_shape)
+                                                                  for t in torch.unbind(max_reduced)])
 
     def _reset(self):
         for rs in self._reduction_shapes:
@@ -141,7 +145,7 @@ class MixedMinMaxStatisticCollector(PTOfflineTensorStatisticCollector):
 
 
 class MeanMinMaxStatisticCollector(PTOfflineTensorStatisticCollector):
-    def __init__(self, mode, reduction_shapes: Set[ReductionShape] = None,
+    def __init__(self, mode: str = 'symmetric', reduction_shapes: Set[ReductionShape] = None,
                  num_samples: int = None, window_size: int = None):
         super().__init__(reduction_shapes, num_samples, window_size)
         self._mode = mode
@@ -162,8 +166,9 @@ class MeanMinMaxStatisticCollector(PTOfflineTensorStatisticCollector):
                     self._all_max_values[reduction_shape] = deque(maxlen=self._window_size)
                 self._all_min_values[reduction_shape].append(min_reduce_like(x, reduction_shape))
                 if self._mode == 'symmetric':
-                    x = torch.abs(x)
-                self._all_max_values[reduction_shape].append(max_reduce_like(x, reduction_shape))
+                    self._all_max_values[reduction_shape].append(max_reduce_like(torch.abs(x), reduction_shape))
+                else:
+                    self._all_max_values[reduction_shape].append(max_reduce_like(x, reduction_shape))
 
     def _reset(self):
         for rs in self._reduction_shapes:

@@ -87,27 +87,28 @@ class RangeInitializer:
         self.nncf_quantization_operation_classes = NNCF_QUANTIZATION_OPERATIONS.registry_dict.values()
 
     @staticmethod
-    def generate_stat_collector(init_config, per_channel: bool, channel_axes: int, input_type: str, mode: str):
+    def generate_stat_collector(init_config, channel_axes: int, input_type: str,
+                                mode: str = 'symmetric', per_channel: bool = False):
         range_type = init_config.init_type
         num_samples = init_config.num_init_samples
         if range_type == 'min_max':
-            return MinMaxStatisticCollector(per_channel, channel_axes, input_type, mode, num_samples)
+            return MinMaxStatisticCollector(channel_axes, input_type, mode, per_channel, num_samples)
         if range_type == 'mixed_min_max':
-            return MixedMinMaxStatisticCollector(per_channel, channel_axes, input_type, mode, num_samples)
+            return MixedMinMaxStatisticCollector(channel_axes, input_type, mode, per_channel, num_samples)
         if range_type == 'mean_min_max':
-            return MeanMinMaxStatisticsCollector(per_channel, channel_axes, input_type, mode, num_samples)
+            return MeanMinMaxStatisticsCollector(channel_axes, input_type, mode, per_channel, num_samples)
         if range_type == 'threesigma':
-            return MedianMADStatisticCollector(per_channel, channel_axes, input_type, num_samples)
+            return MedianMADStatisticCollector(channel_axes, input_type, per_channel, num_samples)
         if range_type == 'percentile':
             min_percentile = init_config.init_type_specific_params.get('min_percentile', 0.1)
             max_percentile = init_config.init_type_specific_params.get('max_percentile', 99.9)
-            return PercentileStatisticCollector(per_channel, channel_axes, input_type,
-                                                [min_percentile, max_percentile], num_samples)
+            return PercentileStatisticCollector(channel_axes, input_type, [min_percentile, max_percentile],
+                                                per_channel, num_samples)
         if range_type == 'mean_percentile':
             min_percentile = init_config.init_type_specific_params.get('min_percentile', 0.1)
             max_percentile = init_config.init_type_specific_params.get('max_percentile', 99.9)
-            return MeanPercentileStatisticCollector(per_channel, channel_axes, input_type,
-                                                    [min_percentile, max_percentile], num_samples)
+            return MeanPercentileStatisticCollector(channel_axes, input_type, [min_percentile, max_percentile],
+                                                    per_channel, num_samples)
         raise ValueError(f'Range type {range_type} is not supported.')
 
     def run(self, model: tf.keras.Model) -> None:
@@ -118,8 +119,9 @@ class RangeInitializer:
             if isinstance(layer, FakeQuantize):
                 channel_axes = get_channel_axis(InputType.INPUTS, '', layer)
                 init_config = self.range_init_params.get_init_config_for_quantization_point(layer, InputType.INPUTS)
-                collector = RangeInitializer.generate_stat_collector(init_config, layer.per_channel,
-                                                                     channel_axes, InputType.INPUTS, layer.mode)
+                collector = RangeInitializer.generate_stat_collector(init_config, channel_axes,
+                                                                     InputType.INPUTS, layer.mode,
+                                                                     layer.per_channel)
                 handles.append(layer.register_hook_pre_quantizer(collector))
                 layer.enabled = False
                 layer_statistics.append((layer, collector))
@@ -130,9 +132,9 @@ class RangeInitializer:
                             channel_axes = get_channel_axis(InputType.WEIGHTS, weight_attr, layer)
                             init_config = self.range_init_params.\
                                 get_init_config_for_quantization_point(layer, InputType.WEIGHTS)
-                            collector = RangeInitializer.generate_stat_collector(init_config, op.per_channel,
-                                                                                 channel_axes, InputType.WEIGHTS,
-                                                                                 op.mode)
+                            collector = RangeInitializer.generate_stat_collector(init_config, channel_axes,
+                                                                                 InputType.WEIGHTS, op.mode,
+                                                                                 op.per_channel)
                             handles.append(op.register_hook_pre_call(collector))
                             op.enabled = False
                             op_statistics.append((layer, op_name, op, collector))
