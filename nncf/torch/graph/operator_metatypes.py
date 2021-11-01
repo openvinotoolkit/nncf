@@ -22,6 +22,7 @@ from typing import TypeVar
 from nncf.common.graph.definitions import NNCFGraphNodeType
 from nncf.common.graph.layer_attributes import BaseLayerAttributes
 from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
+from nncf.common.graph.operator_metatypes import UNKNOWN_METATYPES
 from nncf.common.graph.operator_metatypes import INPUT_NOOP_METATYPES
 from nncf.common.graph.operator_metatypes import NOOP_METATYPES
 from nncf.common.graph.operator_metatypes import OUTPUT_NOOP_METATYPES
@@ -135,18 +136,16 @@ class PTOutputNoopMetatype(PTOperatorMetatype):
 class PTNoopMetatype(PTOperatorMetatype):
     name = "noop"
     external_op_names = [name]
+    module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: [],
+                                NamespaceTarget.TORCH_TENSOR: [],
+                                NamespaceTarget.TORCH: ["contiguous", "clone"]}
 
 
-# # # test uknown metatype не прокидываются операции (графовый тест)
-# @PT_OPERATOR_METATYPES.register()
-# @NOOP_METATYPES.register()
-# class PTUnknownMetatype(PTOperatorMetatype):
-#     name = "unknown"
-#     external_op_names = [name]
-
-    @classmethod
-    def get_all_aliases(cls) -> List[str]:
-        return cls.external_op_names
+@PT_OPERATOR_METATYPES.register()
+@UNKNOWN_METATYPES.register()
+class PTUnknownMetatype(PTOperatorMetatype):
+    name = "unknown"
+    external_op_names = [name]
 
 
 @PT_OPERATOR_METATYPES.register()
@@ -726,7 +725,8 @@ class PTLogicalNotMetatype(PTOperatorMetatype):
 class PTPowerMetatype(PTOperatorMetatype):
     name = "PowerOp"
     module_to_function_names = {
-        NamespaceTarget.TORCH_TENSOR: ["__pow__", "pow", "sqrt"]
+        NamespaceTarget.TORCH_TENSOR: ["__pow__", "pow", "sqrt", "sqrt_"],
+        NamespaceTarget.TORCH: ["pow", "sqrt", "sqrt_"]
     }
     hw_config_names = [HWConfigOpName.POWER]
 
@@ -761,6 +761,7 @@ class PTPixelShuffleMetatype(PTOperatorMetatype):
 class PTSumMetatype(OperatorMetatype):
     name = "SumOp"
     module_to_function_names = {
+        NamespaceTarget.TORCH_TENSOR: ["sum"],
         NamespaceTarget.TORCH: ["sum"]
     }
     hw_config_names = [HWConfigOpName.REDUCESUM]

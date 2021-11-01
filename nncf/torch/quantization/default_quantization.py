@@ -47,7 +47,8 @@ DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT = {
         operator_metatypes.PTAvgPool3dMetatype
     ],
     QuantizationTrait.NON_QUANTIZABLE: [
-        operator_metatypes.PTSoftmaxMetatype
+        operator_metatypes.PTSoftmaxMetatype,
+        operator_metatypes.PTUnknownMetatype
     ],
     QuantizationTrait.CONCAT: [
         operator_metatypes.PTCatMetatype

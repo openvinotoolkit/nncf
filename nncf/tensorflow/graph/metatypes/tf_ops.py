@@ -29,6 +29,15 @@ class TFOpMetatype(OperatorMetatype):
 
 
 @TF_OPERATION_METATYPES.register()
+class TFUnknownMetatype(OperatorMetatype):
+    name = 'unknown'
+
+    @classmethod
+    def get_all_aliases(cls) -> List[str]:
+        return [cls.name]
+
+
+@TF_OPERATION_METATYPES.register()
 class TFNoopMetatype(OperatorMetatype):
     name = 'noop'
 
