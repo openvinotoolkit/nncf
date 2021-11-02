@@ -12,7 +12,7 @@
 """
 
 from abc import abstractmethod
-from typing import TypeVar, List, Optional
+from typing import TypeVar, List, Optional, Union
 
 TensorType = TypeVar('TensorType')
 DeviceType = TypeVar('DeviceType')
@@ -66,9 +66,9 @@ class NNCFBaseTensorProcessor:
 
     @classmethod
     @abstractmethod
-    def ones(cls, shape: List[int], device: DeviceType) -> NNCFTensor:
+    def ones(cls, shape: Union[int, List[int]], device: DeviceType) -> NNCFTensor:
         """
-        Return a new 1D float tensor of given shape, filled with ones.
+        Return a new float tensor of given shape, filled with ones.
 
         :param shape: Shape of the new tensor.
         :param device: Device to put created tensor in.

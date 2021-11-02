@@ -11,7 +11,7 @@
  limitations under the License.
 """
 
-from typing import List
+from typing import List, Union
 
 from nncf.common.tensor import NNCFTensor
 from nncf.common.tensor import NNCFBaseTensorProcessor
@@ -66,7 +66,12 @@ class SymbolicMaskProcessor(NNCFBaseTensorProcessor):
         return SymbolicMask(ret_shape, producers)
 
     @classmethod
-    def ones(cls, shape: int, device) -> NNCFTensor:
+    def ones(cls, shape: Union[int, List[int]], device) -> NNCFTensor:
+        if isinstance(shape, list):
+            if len(shape) != 1:
+                raise RuntimeError(f'Unexpected shape = {shape} for 1D symbolic mask')
+            shape = shape[0]
+
         return SymbolicMask(shape)
 
     @classmethod

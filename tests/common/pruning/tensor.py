@@ -13,7 +13,7 @@
 
 import numpy as np
 
-from typing import List, Optional
+from typing import List, Optional, Union
 
 from nncf.common.tensor import NNCFTensor
 from nncf.common.tensor import NNCFBaseTensorProcessor
@@ -29,7 +29,7 @@ class NPNNCFTensorProcessor(NNCFBaseTensorProcessor):
         return NPNNCFTensor(ret_tensor, tensors[0].device)
 
     @classmethod
-    def ones(cls, shape: List[int], device) -> NNCFTensor:
+    def ones(cls, shape: Union[int, List[int]], device: Optional[str]) -> NNCFTensor:
         return NPNNCFTensor(np.ones(shape), device)
 
     @classmethod

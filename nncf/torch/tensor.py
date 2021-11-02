@@ -13,7 +13,7 @@
 
 import torch
 
-from typing import List
+from typing import List, Union
 
 from nncf.common.tensor import NNCFTensor
 from nncf.common.tensor import NNCFBaseTensorProcessor
@@ -30,7 +30,7 @@ class PTNNCFTensorProcessor(NNCFBaseTensorProcessor):
         return PTNNCFTensor(ret_tensor)
 
     @classmethod
-    def ones(cls, shape: List[int], device) -> NNCFTensor:
+    def ones(cls, shape: Union[int, List[int]], device: torch.device) -> NNCFTensor:
         return PTNNCFTensor(torch.ones(shape, device=device))
 
     @classmethod
