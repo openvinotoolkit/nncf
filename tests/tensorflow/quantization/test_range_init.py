@@ -12,7 +12,7 @@
 """
 
 import itertools
-from collections import namedtuple
+from collections import namedtuple, deque
 
 import pytest
 import numpy as np
@@ -21,7 +21,9 @@ import tensorflow as tf
 from nncf.common.quantization.initialization.range import PerLayerRangeInitConfig
 from nncf.common.quantization.initialization.range import RangeInitConfig
 from nncf.common.quantization.structs import QuantizerConfig, QuantizationMode
+from nncf.tensorflow.quantization.initializers.collectors import MinMaxStatisticCollectorBase
 from nncf.tensorflow.quantization.initializers.collectors import MinMaxStatisticCollector
+from nncf.tensorflow.quantization.initializers.collectors import MixedMinMaxStatisticCollector
 from nncf.tensorflow.quantization.initializers.collectors import MeanMinMaxStatisticsCollector
 from nncf.tensorflow.quantization.initializers.collectors import MedianMADStatisticCollector
 from nncf.tensorflow.quantization.initializers.collectors import PercentileStatisticCollector
@@ -46,38 +48,72 @@ class TestStatisticCollectorsWithStatAggregation:
     def check_num_samples(self, collector, num_samples_per_step, step_num, input_type):
         # pylint: disable=protected-access
         if input_type == InputType.INPUTS:
-            assert len(collector._all_min_values) == num_samples_per_step * step_num
-            assert len(collector._all_max_values) == num_samples_per_step * step_num
+            if isinstance(collector, MinMaxStatisticCollectorBase):
+                assert len(collector._all_min_values) == num_samples_per_step * step_num
+                assert len(collector._all_max_values) == num_samples_per_step * step_num
+            if isinstance(collector, MeanPercentileStatisticCollector):
+                for container in collector._all_pct_values.values():
+                    assert len(container) == num_samples_per_step * step_num
+
         if input_type == InputType.WEIGHTS:
-            assert len(collector._all_min_values) == 1
-            assert len(collector._all_max_values) == 1
+            if isinstance(collector, MinMaxStatisticCollectorBase):
+                assert len(collector._all_min_values) == 1
+                assert len(collector._all_max_values) == 1
+            if isinstance(collector, MeanPercentileStatisticCollector):
+                for container in collector._all_pct_values.values():
+                    assert len(container) == 1
 
     def check_stats_per_channel_tf_tensor(self, collector,
                                           input_tensor_min_per_channel,
                                           input_tensor_max_per_channel):
-        assert tf.math.reduce_all(collector.min.numpy() == pytest.approx(input_tensor_min_per_channel.numpy(), 0.01))
-        assert tf.math.reduce_all(collector.max.numpy() == pytest.approx(input_tensor_max_per_channel.numpy(), 0.01))
+        test_stats = collector.get_statistics()
+        if isinstance(collector, MinMaxStatisticCollectorBase):
+            assert tf.math.reduce_all(test_stats.min_values.numpy() ==
+                                      pytest.approx(input_tensor_min_per_channel.numpy(), 0.01))
+            assert tf.math.reduce_all(test_stats.max_values.numpy() ==
+                                      pytest.approx(input_tensor_max_per_channel.numpy(), 0.01))
+        if isinstance(collector, MeanPercentileStatisticCollector):
+            min_pct = min(test_stats.percentile_vs_values_dict.keys())
+            max_pct = max(test_stats.percentile_vs_values_dict.keys())
+            assert tf.math.reduce_all(test_stats.percentile_vs_values_dict[min_pct].numpy() == pytest.approx(
+                input_tensor_min_per_channel.numpy(), 0.01))
+            assert tf.math.reduce_all(test_stats.percentile_vs_values_dict[max_pct].numpy() == pytest.approx(
+                input_tensor_max_per_channel.numpy(), 0.01))
 
     def check_stats_per_tensor_tf_tensor(self, collector,
                                          input_tensor_min,
                                          input_tensor_max):
-        assert collector.min.numpy() == pytest.approx(input_tensor_min.numpy(), 0.01)
-        assert collector.max.numpy() == pytest.approx(input_tensor_max.numpy(), 0.01)
+        test_stats = collector.get_statistics()
+        if isinstance(collector, MinMaxStatisticCollectorBase):
+            assert test_stats.min_values.numpy() == pytest.approx(input_tensor_min.numpy(), 0.01)
+            assert test_stats.max_values.numpy() == pytest.approx(input_tensor_max.numpy(), 0.01)
+        if isinstance(collector, MeanPercentileStatisticCollector):
+            min_pct = min(test_stats.percentile_vs_values_dict.keys())
+            max_pct = max(test_stats.percentile_vs_values_dict.keys())
+            assert test_stats.percentile_vs_values_dict[min_pct].numpy() == pytest.approx(
+                input_tensor_min.numpy(), 0.01)
+            assert test_stats.percentile_vs_values_dict[max_pct].numpy() == pytest.approx(
+                input_tensor_max.numpy(), 0.01)
 
-    def check_all_min_max_values_shape(self, per_channel, collector, num_samples_per_step_activation,
+    def check_all_stat_values_shape(self, per_channel, collector, num_samples_per_step_activation,
                                        step_num, input_type):
         # pylint: disable=protected-access
+        if isinstance(collector, MinMaxStatisticCollectorBase):
+            collected_stats = collector._all_min_values
+        if isinstance(collector, MeanPercentileStatisticCollector):
+            collected_stats = next(iter(collector._all_pct_values.values()))
+
         if input_type == InputType.INPUTS:
             if per_channel:
-                assert tf.stack(collector._all_min_values).shape == (num_samples_per_step_activation * step_num,
+                assert tf.stack(collected_stats).shape == (num_samples_per_step_activation * step_num,
                                                                      NUM_CHANNELS)
             if not per_channel:
-                assert tf.stack(collector._all_min_values).shape == (num_samples_per_step_activation * step_num,)
+                assert tf.stack(collected_stats).shape == (num_samples_per_step_activation * step_num,)
         if input_type == InputType.WEIGHTS:
             if per_channel:
-                assert tf.stack(collector._all_min_values).shape == (1, NUM_CHANNELS)
+                assert tf.stack(collected_stats).shape == (1, NUM_CHANNELS)
             if not per_channel:
-                assert tf.stack(collector._all_min_values).shape == (1,)
+                assert tf.stack(collected_stats).shape == (1,)
 
     def run_all_checks(self, collector, input_type, per_channel,
                        input_tensor_min_per_channel=None,
@@ -86,13 +122,16 @@ class TestStatisticCollectorsWithStatAggregation:
                        input_tensor_max=None):
         # Before first call - no statistics
         # pylint: disable=protected-access
-        assert collector._all_min_values == []
-        assert collector._all_max_values == []
+        if isinstance(collector, MinMaxStatisticCollectorBase):
+            assert collector._all_min_values == deque()
+            assert collector._all_max_values == deque()
+        if isinstance(collector, MeanPercentileStatisticCollector):
+            for container in collector._all_pct_values.values():
+                assert container == deque()
 
         num_samples_per_step_activation = BATCH_SIZE
         for step_num in [1, 2]:
             collector(INPUT_TENSOR)
-            collector.prepare_statistics()
 
             self.check_num_samples(collector, num_samples_per_step_activation, step_num, input_type)
             if per_channel:
@@ -103,14 +142,14 @@ class TestStatisticCollectorsWithStatAggregation:
                 self.check_stats_per_tensor_tf_tensor(collector,
                                                  input_tensor_min,
                                                  input_tensor_max)
-            self.check_all_min_max_values_shape(per_channel, collector, num_samples_per_step_activation,
+            self.check_all_stat_values_shape(per_channel, collector, num_samples_per_step_activation,
                                                 step_num, input_type)
 
     @pytest.mark.parametrize("per_channel, input_type",
                              itertools.product([False, True],
                                                [InputType.INPUTS, InputType.WEIGHTS]))
     def test_min_max(self, per_channel, input_type):
-        collector = MinMaxStatisticCollector(per_channel, CHANNEL_AXIS, input_type)
+        collector = MinMaxStatisticCollector(CHANNEL_AXIS, input_type, per_channel=per_channel)
 
         if per_channel:
             # Get reference values
@@ -132,8 +171,34 @@ class TestStatisticCollectorsWithStatAggregation:
     @pytest.mark.parametrize("per_channel, input_type",
                              itertools.product([False, True],
                                                [InputType.INPUTS, InputType.WEIGHTS]))
+    def test_mixed_min_max(self, per_channel, input_type):
+        collector = MixedMinMaxStatisticCollector(CHANNEL_AXIS, input_type, per_channel=per_channel)
+
+        if per_channel:
+            # Get reference values
+            input_tensor_min_per_channel = tf.math.reduce_min(INPUT_TENSOR, axis=(0, 1, 2))
+            input_tensor_max_per_channel = tf.math.reduce_max(INPUT_TENSOR, axis=(0, 1, 2))
+
+            self.run_all_checks(collector, input_type, per_channel,
+                                input_tensor_min_per_channel=input_tensor_min_per_channel,
+                                input_tensor_max_per_channel=input_tensor_max_per_channel)
+        if not per_channel:
+            # Get reference values
+            input_tensor_min = tf.math.reduce_min(INPUT_TENSOR)
+            if input_type == InputType.INPUTS and not per_channel:
+                input_tensor_max = tf.math.reduce_mean(tf.math.reduce_max(INPUT_TENSOR, axis=(1, 2, 3)))
+            else:
+                input_tensor_max = tf.math.reduce_max(INPUT_TENSOR)
+
+            self.run_all_checks(collector, input_type, per_channel,
+                               input_tensor_min=input_tensor_min,
+                               input_tensor_max=input_tensor_max)
+
+    @pytest.mark.parametrize("per_channel, input_type",
+                             itertools.product([False, True],
+                                               [InputType.INPUTS, InputType.WEIGHTS]))
     def test_mean_min_max(self, per_channel, input_type):
-        collector = MeanMinMaxStatisticsCollector(per_channel, CHANNEL_AXIS, input_type)
+        collector = MeanMinMaxStatisticsCollector(CHANNEL_AXIS, input_type, per_channel=per_channel)
 
         axis = [0, 1, 2, 3]
         if per_channel:
@@ -174,10 +239,7 @@ class TestStatisticCollectorsWithStatAggregation:
                                                [InputType.INPUTS, InputType.WEIGHTS],
                                                [[0.0, 100.0], [0.1, 99.9], [33.3, 66.6]]))
     def test_mean_percentile(self, per_channel, input_type, percentiles):
-        min_percentile = percentiles[0]
-        max_percentile = percentiles[1]
-        collector = MeanPercentileStatisticCollector(per_channel, CHANNEL_AXIS, input_type,
-                                                     min_percentile, max_percentile)
+        collector = MeanPercentileStatisticCollector(CHANNEL_AXIS, input_type, percentiles, per_channel)
 
         axis = [0, 1, 2, 3]
         if per_channel:
@@ -190,6 +252,9 @@ class TestStatisticCollectorsWithStatAggregation:
 
         def _percentile(inputs: tf.Tensor, pc: int, axis: list):
             return np.percentile(inputs.numpy(), pc, axis)
+
+        min_percentile = percentiles[0]
+        max_percentile = percentiles[1]
 
         if per_channel:
             if input_type == InputType.INPUTS:
@@ -217,22 +282,42 @@ class TestStatisticCollectorsWithStatAggregation:
 
 class TestStatisticCollectorsWithDataAggregation:
     def check_stats_per_channel_np(self, collector,
-                                   input_tensor_min_per_channel,
-                                   input_tensor_max_per_channel):
-        assert tf.math.reduce_all(collector.min == pytest.approx(input_tensor_min_per_channel, 0.01))
-        assert tf.math.reduce_all(collector.max == pytest.approx(input_tensor_max_per_channel, 0.01))
+                                   input_tensor_stats1_per_channel,
+                                   input_tensor_stats2_per_channel):
+        test_stats = collector.get_statistics()
+        if isinstance(collector, MedianMADStatisticCollector):
+            assert tf.math.reduce_all(test_stats.mad_values.numpy() == pytest.approx(
+                input_tensor_stats1_per_channel, 0.01))
+            assert tf.math.reduce_all(test_stats.median_values.numpy() == pytest.approx(
+                input_tensor_stats2_per_channel, 0.01))
+        if isinstance(collector, MeanPercentileStatisticCollector):
+            min_pct = min(test_stats.percentile_vs_values_dict.keys())
+            max_pct = max(test_stats.percentile_vs_values_dict.keys())
+            assert tf.math.reduce_all(test_stats.percentile_vs_values_dict[min_pct].numpy() == pytest.approx(
+                input_tensor_stats1_per_channel.numpy(), 0.01))
+            assert tf.math.reduce_all(test_stats.percentile_vs_values_dict[max_pct].numpy() == pytest.approx(
+                input_tensor_stats2_per_channel.numpy(), 0.01))
 
     def check_stats_per_tensor_np(self, collector,
-                                  input_tensor_min,
-                                  input_tensor_max):
-        assert collector.min == pytest.approx(input_tensor_min, 0.01)
-        assert collector.max == pytest.approx(input_tensor_max, 0.01)
+                                  input_tensor_stats1,
+                                  input_tensor_stats2):
+        test_stats = collector.get_statistics()
+        if isinstance(collector, MedianMADStatisticCollector):
+            assert test_stats.mad_values.numpy() == pytest.approx(input_tensor_stats1, 0.01)
+            assert test_stats.median_values.numpy() == pytest.approx(input_tensor_stats2, 0.01)
+        if isinstance(collector, MeanPercentileStatisticCollector):
+            min_pct = min(test_stats.percentile_vs_values_dict.keys())
+            max_pct = max(test_stats.percentile_vs_values_dict.keys())
+            assert test_stats.percentile_vs_values_dict[min_pct].numpy() == pytest.approx(
+                input_tensor_stats1.numpy(), 0.01)
+            assert test_stats.percentile_vs_values_dict[max_pct].numpy() == pytest.approx(
+                input_tensor_stats2.numpy(), 0.01)
 
     def run_all_checks(self, collector, step_num, per_channel, input_type,
-                       input_tensor_min_per_channel=None,
-                       input_tensor_max_per_channel=None,
-                       input_tensor_min=None,
-                       input_tensor_max=None):
+                       input_tensor_stats1_per_channel=None,
+                       input_tensor_stats2_per_channel=None,
+                       input_tensor_stats1=None,
+                       input_tensor_stats2=None):
         # pylint: disable=protected-access
         if input_type == InputType.INPUTS:
             assert len(collector._samples) == step_num
@@ -241,12 +326,12 @@ class TestStatisticCollectorsWithDataAggregation:
 
         if per_channel:
             self.check_stats_per_channel_np(collector,
-                                            input_tensor_min_per_channel,
-                                            input_tensor_max_per_channel)
+                                            input_tensor_stats1_per_channel,
+                                            input_tensor_stats2_per_channel)
         if not per_channel:
             self.check_stats_per_tensor_np(collector,
-                                           input_tensor_min,
-                                           input_tensor_max)
+                                           input_tensor_stats1,
+                                           input_tensor_stats2)
 
     @pytest.mark.parametrize("per_channel, input_type, percentiles",
                              itertools.product([True, False],
@@ -255,7 +340,7 @@ class TestStatisticCollectorsWithDataAggregation:
     def test_percentile(self, per_channel, input_type, percentiles):
         min_percentile = percentiles[0]
         max_percentile = percentiles[1]
-        collector = PercentileStatisticCollector(per_channel, CHANNEL_AXIS, input_type, min_percentile, max_percentile)
+        collector = PercentileStatisticCollector(CHANNEL_AXIS, input_type, percentiles, per_channel)
 
         axis = [0, 1, 2, 3]
         # all input tensors are stacked together - one more dimension
@@ -265,11 +350,10 @@ class TestStatisticCollectorsWithDataAggregation:
 
         # Before first call - no samples
         # pylint: disable=protected-access
-        assert collector._samples == []
+        assert collector._samples == deque()
 
         for step_num in [1, 2]:
             collector(INPUT_TENSOR)
-            collector.prepare_statistics()
 
             # Get reference values
             if input_type == InputType.INPUTS:
@@ -288,18 +372,18 @@ class TestStatisticCollectorsWithDataAggregation:
 
             if per_channel:
                 self.run_all_checks(collector, step_num, per_channel, input_type,
-                                    input_tensor_min_per_channel=input_tensor_min_per_channel,
-                                    input_tensor_max_per_channel=input_tensor_max_per_channel)
+                                    input_tensor_stats1_per_channel=input_tensor_min_per_channel,
+                                    input_tensor_stats2_per_channel=input_tensor_max_per_channel)
             if not per_channel:
                 self.run_all_checks(collector, step_num, per_channel, input_type,
-                                    input_tensor_min=input_tensor_min,
-                                    input_tensor_max=input_tensor_max)
+                                    input_tensor_stats1=input_tensor_min,
+                                    input_tensor_stats2=input_tensor_max)
 
     @pytest.mark.parametrize("per_channel, input_type",
                              itertools.product([False, True],
                                                [InputType.INPUTS, InputType.WEIGHTS]))
     def test_threesigma(self, per_channel, input_type):
-        collector = MedianMADStatisticCollector(per_channel, CHANNEL_AXIS, input_type)
+        collector = MedianMADStatisticCollector(CHANNEL_AXIS, input_type, per_channel)
 
         input_tensor = tf.range(1, (BATCH_SIZE * HW_SIZE * HW_SIZE * NUM_CHANNELS + 1), dtype=tf.float32)
         input_tensor = tf.reshape(input_tensor, [BATCH_SIZE, HW_SIZE, HW_SIZE, NUM_CHANNELS])
@@ -312,11 +396,10 @@ class TestStatisticCollectorsWithDataAggregation:
 
         # Before first call - no samples
         # pylint: disable=protected-access
-        assert collector._samples == []
+        assert collector._samples == deque()
 
         for step_num in [1, 2]:
             collector(input_tensor)
-            collector.prepare_statistics()
 
             # Get reference values
             if input_type == InputType.INPUTS:
@@ -327,23 +410,19 @@ class TestStatisticCollectorsWithDataAggregation:
             if per_channel:
                 median = np.median(samples, axis=axis)
                 mad = np.median(abs(samples - median))
-                input_tensor_min_per_channel = (median - 3 * 1.4826 * mad).astype(np.float32)
-                input_tensor_max_per_channel = (median + 3 * 1.4826 * mad).astype(np.float32)
             if not per_channel:
                 inputs_tensor_flat = samples.flatten()
                 median = np.median(inputs_tensor_flat)
                 mad = np.median(abs(inputs_tensor_flat - median))
-                input_tensor_min = (median - 3 * 1.4826 * mad).astype(np.float32)
-                input_tensor_max = (median + 3 * 1.4826 * mad).astype(np.float32)
 
             if per_channel:
                 self.run_all_checks(collector, step_num, per_channel, input_type,
-                                    input_tensor_min_per_channel=input_tensor_min_per_channel,
-                                    input_tensor_max_per_channel=input_tensor_max_per_channel)
+                                    input_tensor_stats1_per_channel=mad,
+                                    input_tensor_stats2_per_channel=median)
             if not per_channel:
                 self.run_all_checks(collector, step_num, per_channel, input_type,
-                                    input_tensor_min=input_tensor_min,
-                                    input_tensor_max=input_tensor_max)
+                                    input_tensor_stats1=mad,
+                                    input_tensor_stats2=median)
 
 
 @pytest.mark.parametrize("wrap_dataloader",

@@ -71,14 +71,6 @@ class TestCollectedStatistics:
                                          partial(MinMaxStatisticCollector,
                                                  rs_vs_params=({(3, 3): {'mode': 'asymmetric'}})),
                                          {
-                                             # (1,): PTMinMaxTensorStatistic(min_values=torch.tensor([-4.0]),
-                                             #                             max_values=torch.tensor([6.1])),
-                                             # (3, 1): PTMinMaxTensorStatistic(
-                                             #     min_values=torch.tensor([[1.0], [-4.0], [4.0]]),
-                                             #     max_values=torch.tensor([[4.5], [-1.0], [6.1]])),
-                                             # (1, 3): PTMinMaxTensorStatistic(
-                                             #     min_values=torch.tensor([[-1.3, -4.0, -3.5]]),
-                                             #     max_values=torch.tensor([[4.5, 5.8, 6.1]])),
                                              (3, 3): PTMinMaxTensorStatistic(
                                                  min_values=torch.tensor([
                                                      [1.0, 2.0, 3.0],

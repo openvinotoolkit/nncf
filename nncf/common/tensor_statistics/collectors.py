@@ -32,7 +32,7 @@ class TensorStatisticCollectorBase(ABC):
                 self._num_samples is not None and self._collected_samples >= self._num_samples:
             return x
         if self._reduction_shapes is None:
-            self._reduction_shapes = {x.shape}
+            self._reduction_shapes = {tuple(x.shape)}
         self._register_input(x)
         self._collected_samples += 1
         return x

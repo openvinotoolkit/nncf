@@ -1244,12 +1244,14 @@ class QuantizationController(QuantizationControllerBase):
         for wq_id, wq_info in self.weight_quantizers.items():
             group = QuantizerGroup.WEIGHTS
             init_config = range_init_params.get_init_config_for_scope_and_group(wq_id, group)
-            modules_to_init[str(wq_id)] = (wq_info.quantizer_module_ref, init_config)
+            is_weights = True
+            modules_to_init[str(wq_id)] = (wq_info.quantizer_module_ref, init_config, is_weights)
 
         for aq_id, aq_info in self.non_weight_quantizers.items():
             group = QuantizerGroup.ACTIVATIONS
             init_config = range_init_params.get_init_config_for_scope_and_group(aq_id, group)
-            modules_to_init[str(aq_id)] = (aq_info.quantizer_module_ref, init_config)
+            is_weights = False
+            modules_to_init[str(aq_id)] = (aq_info.quantizer_module_ref, init_config, is_weights)
 
         # NOTE: Order of modules must be the same to correctly broadcast parameters (e.g. input_low
         # and input_range)
@@ -1257,7 +1259,7 @@ class QuantizationController(QuantizationControllerBase):
         self.modules_to_range_init = modules_to_init
         runner = DataLoaderRangeInitializeRunner(self._model, modules_to_init, range_init_params.device)
 
-        quantizers = [module for module, config in modules_to_init.values()]
+        quantizers = [module for module, config, is_weights in modules_to_init.values()]
         quantizers_switcher = QuantizersSwitcher(quantizers)
         # bypass quantization to collect statistics from floating point model
         quantizers_switcher.disable_quantizers()

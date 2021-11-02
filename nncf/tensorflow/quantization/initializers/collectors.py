@@ -31,7 +31,7 @@ from nncf.tensorflow.quantization.initializers.utils import get_axes
 class TFOfflineTensorStatisticCollector(OfflineTensorStatisticCollector, ABC):
     def __init__(self, input_type: str, channel_axes: Union[int, Tuple[int], List[int]],
                  per_channel: bool = False, num_samples: int = None):
-        super().__init__(num_samples)
+        super().__init__(num_samples=num_samples)
         self._per_channel = per_channel
         self._input_type = input_type
         self._channel_axes = channel_axes if isinstance(channel_axes, (list, tuple)) else [channel_axes]
@@ -216,7 +216,7 @@ class MeanPercentileStatisticCollector(TFOfflineTensorStatisticCollector):
         super().__init__(input_type, channel_axes, per_channel, num_samples)
         self._all_pct_values = {}
         for pc in percentiles_to_collect:
-            self._all_pct_values[pc] = []
+            self._all_pct_values[pc] = deque()
 
     def _percentile(self, inputs: tf.Tensor, pc: float, axis: list):
         return np.percentile(inputs.numpy(), pc, axis)
