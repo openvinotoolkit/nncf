@@ -11,7 +11,7 @@
  limitations under the License.
 """
 from collections import OrderedDict
-from typing import Dict
+from typing import Dict, Any
 
 import numpy as np
 import random
@@ -22,6 +22,7 @@ from torch.nn import Module, Parameter
 from nncf.common.graph import NNCFNodeName
 from nncf.common.utils.helpers import matches_any
 from nncf.common.utils.logger import logger as nncf_logger
+from nncf.common.compression import BaseCompressionAlgorithmController as BaseController
 from nncf.torch.dynamic_graph.trace_tensor import TracedTensor
 from nncf.torch.layer_utils import _NNCFModuleMixin
 from contextlib import contextmanager
@@ -295,3 +296,36 @@ def default_distributed_unwrapper(model: nn.Module):
     if isinstance(model, (torch.nn.parallel.DataParallel, torch.nn.parallel.DistributedDataParallel)):
         return model.module
     return model
+
+
+def maybe_convert_legacy_names_in_model_state(state_dict_to_load: Dict[str, Any]):
+    legacy_bn_names = [name for name in state_dict_to_load if 'BatchNorm2d' in name]
+    for name in legacy_bn_names:
+        tensor = state_dict_to_load.pop(name)
+        new_name = name.replace('BatchNorm2d', 'NNCFBatchNorm')
+        state_dict_to_load[new_name] = tensor
+
+    if legacy_bn_names:
+        nncf_logger.warning('Legacy Batch Norm layer names was detected in checkpoint model state dict.'
+                            ' All occurrences of `BatchNorm2d` in nodes names was replaced by `NNCFBatchNorm`')
+
+
+def maybe_convert_legacy_names_in_compress_state(compression_state: Dict[str, Any]):
+    if not compression_state or BaseController.BUILDER_STATE not in compression_state:
+        return
+
+    controller_state = compression_state[BaseController.BUILDER_STATE]
+    if not controller_state or 'quantization' not in controller_state:
+        return
+
+    qips = controller_state['quantization']['quantizer_setup']['quantization_points']
+    legacy_bn_names = False
+    for point in qips.values():
+        name = point['qip']['target_node_name']
+        if 'BatchNorm2d' in name:
+            legacy_bn_names = True
+            point['qip']['target_node_name'] = name.replace('BatchNorm2d', 'NNCFBatchNorm')
+
+    if legacy_bn_names:
+        nncf_logger.warning('Legacy Batch Norm layer names was detected in quantization setup target point names.'
+                            ' All occurrences of `BatchNorm2d` in nodes names was replaced by `NNCFBatchNorm`')
