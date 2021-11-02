@@ -13,14 +13,13 @@
 
 from collections import OrderedDict
 from copy import deepcopy
-from typing import Callable
+from typing import Callable, Union
 from typing import Dict
 from typing import List
 from typing import Set
 from typing import Tuple
 
 import numpy as np
-import torch
 
 from nncf.common.graph.layer_attributes import WeightedLayerAttributes
 from nncf.common.quantization.initialization.range import RangeInitConfig
@@ -29,6 +28,7 @@ from nncf.common.quantization.quantizer_setup import QuantizationPointBase
 from nncf.common.quantization.quantizer_setup import QuantizerSetupBase
 from nncf.torch.quantization.layers import get_scale_shape
 from nncf.common.quantization.structs import NonWeightQuantizerId
+from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.structs import QuantizerGroup
 from nncf.common.quantization.structs import QuantizerId
 from nncf.common.quantization.structs import WeightQuantizerId
@@ -109,16 +109,22 @@ class StatCollectorGenerator:
 
             tp = PTTargetPointTranslator.translate(qp.insertion_point)
 
+            reduction_shapes_with_params = set(StatCollectorGenerator.get_all_scale_shapes(qp, target_model_graph))
+            reduction_shapes = set()
+            rs_vs_params = {}
+            for item in reduction_shapes_with_params:
+                rs, mode, per_channel = item
+                reduction_shapes.add(rs)
+                rs_vs_params[rs] = {'mode': mode, 'per_channel': per_channel}
+
             obs_p = TensorStatisticObservationPoint(
                 tp,
-                reduction_shapes=set(StatCollectorGenerator.get_all_scale_shapes(qp,
-                                                                                 target_model_graph)))
+                reduction_shapes=set(reduction_shapes))
 
             collector = StatCollectorGenerator.generate_stat_collector_for_range_init_config(
                 init_config,
                 is_weights,
-                qp.qconfig.mode,
-                qp.qconfig.per_channel,
+                rs_vs_params,
                 obs_p.reduction_shapes,
                 num_samples_to_collect_override=num_batches)
             retval[obs_p] = collector
@@ -128,19 +134,18 @@ class StatCollectorGenerator:
     def generate_stat_collector_for_range_init_config(
             init_config: RangeInitConfig,
             is_weights: bool,
-            mode: str = 'symmetric',
-            per_channel: bool = False,
+            rs_vs_params: Dict[ReductionShape, Dict[str, Union[str, bool]]] = None,
             reduction_shapes: Set[ReductionShape] = None,
             num_samples_to_collect_override: int = None) -> TensorStatisticCollectorBase:
         num_samples = init_config.num_init_samples
         if num_samples_to_collect_override is not None:
             num_samples = num_samples_to_collect_override
         if init_config.init_type == "min_max":
-            return MinMaxStatisticCollector(mode, reduction_shapes, num_samples)
+            return MinMaxStatisticCollector(reduction_shapes, rs_vs_params, num_samples)
         if init_config.init_type == "mixed_min_max":
-            return MixedMinMaxStatisticCollector(is_weights, mode, per_channel, reduction_shapes, num_samples)
+            return MixedMinMaxStatisticCollector(is_weights, reduction_shapes, rs_vs_params, num_samples)
         if init_config.init_type == "mean_min_max":
-            return MeanMinMaxStatisticCollector(mode, reduction_shapes, num_samples)
+            return MeanMinMaxStatisticCollector(reduction_shapes, rs_vs_params, num_samples)
         if init_config.init_type == "threesigma":
             return MedianMADStatisticCollector(reduction_shapes, num_samples)
         if init_config.init_type == "percentile":
@@ -155,7 +160,7 @@ class StatCollectorGenerator:
 
     @staticmethod
     def get_all_scale_shapes(qp: QuantizationPointBase,
-                             target_nncf_graph: PTNNCFGraph) -> List[Tuple[int]]:
+                             target_nncf_graph: PTNNCFGraph) -> List[Tuple[Tuple[int], QuantizationMode, bool]]:
         qconfigs = qp.get_all_configs_list()
         if qp.is_weight_quantization_point():
             module_node = target_nncf_graph.get_node_by_name(qp.insertion_point.target_node_name)
@@ -169,10 +174,14 @@ class StatCollectorGenerator:
 
         retval = []
         for qconfig in qconfigs:
-            retval.append(tuple(get_scale_shape(input_shape,
-                                                is_weights=qp.is_weight_quantization_point(),
-                                                per_channel=qconfig.per_channel,
-                                                channel_idx=channel_idx)))
+            is_weights = qp.is_weight_quantization_point()
+            scale_shape = get_scale_shape(input_shape,
+                                          is_weights=is_weights,
+                                          per_channel=qconfig.per_channel,
+                                          channel_idx=channel_idx)
+            retval.append((tuple(scale_shape),
+                           qconfig.mode,
+                           qconfig.per_channel))
         return retval
 
 
@@ -200,7 +209,7 @@ class DataLoaderRangeInitializeRunner(DataLoaderBaseRunner):
 
     def _prepare_initialization(self):
         for name, data in self.modules_to_init.items():
-            quantizer_module, init_config, is_weights = data  # type: BaseQuantizer, RangeInitConfig
+            quantizer_module, init_config, is_weights = data  # type: BaseQuantizer, RangeInitConfig, bool
             num_samples_override = None
             if self.batch_size is not None:
                 num_batches = np.ceil(init_config.num_init_samples / self.batch_size)
@@ -211,12 +220,12 @@ class DataLoaderRangeInitializeRunner(DataLoaderBaseRunner):
             else:
                 mode = 'asymmetric'
             per_channel = quantizer_module.per_channel
+            rs_vs_params = {tuple(quantizer_module.scale_shape): {'mode': mode, 'per_channel': per_channel}}
 
             collector = StatCollectorGenerator.generate_stat_collector_for_range_init_config(
                 init_config,
                 is_weights,
-                mode,
-                per_channel,
+                rs_vs_params,
                 {tuple(quantizer_module.scale_shape)},
                 num_samples_override
             )
