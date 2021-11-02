@@ -33,7 +33,7 @@ class NPNNCFTensorProcessor(NNCFBaseTensorProcessor):
         return NPNNCFTensor(np.ones(shape), device)
 
     @classmethod
-    def check_all_close(cls, tensors: List[NNCFTensor]) -> None:
+    def allclose(cls, tensors: List[NNCFTensor]) -> None:
         for input_mask in tensors[1:]:
             np.testing.assert_allclose(tensors[0].tensor, input_mask.tensor)
 
@@ -43,9 +43,9 @@ class NPNNCFTensorProcessor(NNCFBaseTensorProcessor):
         return NPNNCFTensor(ret_tensor)
 
     @classmethod
-    def elementwise_output_mask_from_input_masks(cls, tensors: List[NNCFTensor]) -> NNCFTensor:
-        cls.check_all_close(tensors)
-        return tensors[0]
+    def elementwise_mask_propagation(cls, input_masks: List[NNCFTensor]) -> NNCFTensor:
+        cls.allclose(input_masks)
+        return input_masks[0]
 
 
 class NPNNCFTensor(NNCFTensor):

@@ -32,6 +32,13 @@ from nncf.common.pruning.utils import PruningAnalysisReason
 
 
 class SymbolicMaskProcessor(NNCFBaseTensorProcessor):
+    """
+    Implementation of processing methods set for SymbolicMask.
+    Responsible for correct mask dimension and mask producer attributes propagation.
+    For methods like concatenate and elementwise_mask_propagation unions
+    mask producers of input masks.
+    """
+
     @classmethod
     def concatenate(cls, tensors: List[NNCFTensor], axis: int) -> NNCFTensor:
         ret_tensor = np.concatenate([t.tensor for t in tensors], axis=axis)
@@ -50,7 +57,7 @@ class SymbolicMaskProcessor(NNCFBaseTensorProcessor):
         return SymbolicMask(ret_tensor)
 
     @classmethod
-    def check_all_close(cls, tensors: List[NNCFTensor]) -> None:
+    def allclose(cls, tensors: List[NNCFTensor]) -> None:
         for input_mask in tensors[1:]:
             assert input_mask.tensor.shape == tensors[0].tensor.shape
 
@@ -60,13 +67,22 @@ class SymbolicMaskProcessor(NNCFBaseTensorProcessor):
         return SymbolicMask(ret_tensor, tensor.mask_producers)
 
     @classmethod
-    def elementwise_output_mask_from_input_masks(cls, tensors: List[NNCFTensor]) -> NNCFTensor:
-        cls.check_all_close(tensors)
-        producers = list(set([p for t in tensors for p in t.mask_producers]))
-        return SymbolicMask(tensors[0].tensor, producers)
+    def elementwise_mask_propagation(cls, input_masks: List[NNCFTensor]) -> NNCFTensor:
+        cls.allclose(input_masks)
+        producers = list(set([p for t in input_masks for p in t.mask_producers]))
+        return SymbolicMask(input_masks[0].tensor, producers)
 
 
 class SymbolicMask(NNCFTensor):
+    """
+    Framework agnostic NNCFTensor representation which only uses the tensor shape and do not uses value
+    of the tensor. Keeps additional attribute - symbolic mask producer, pointer to NNCFNode which produced
+    this mask during symbolic mask propagation algorithm. NNCFNode produced a (symbolic or not) mask means
+    this mask was set as an output mask to this NNCFNode during (symbolic or not) mask propagation.
+    Tensor shape and mask producer attributes are correctly propagating during
+    symbolic mask propagation by SymbolicMaskProcessor.
+    """
+
     def __init__(self, tensor: np.array, mask_producers: List[int] = None):
         super().__init__(tensor, SymbolicMaskProcessor)
         self._mask_producers = mask_producers

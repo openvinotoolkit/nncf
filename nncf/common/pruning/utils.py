@@ -414,7 +414,7 @@ class PruningAnalysisReason(Enum):
 
         :param node_name: Name of given node.
         :param decision: Pruning analysis decision for given node.
-        :return: pruning analysis decision in a human-readable format.
+        :return: Pruning analysis decision in a human-readable format.
         """
         prefix = f'Ignored adding Weight Pruner in: {node_name}'
         reasons = decision.reasons
@@ -457,7 +457,7 @@ class PruningAnalysisDecision:
 
     def join(self, other: 'PruningAnalysisDecision') -> 'PruningAnalysisDecision':
         """
-        Join two pruning analysis decision about one NNCFNode.
+        Join two pruning analysis decisions about one NNCFNode.
 
         :param other: pruning analysis decision to join with.
         :return: Joint pruning analysis decision.

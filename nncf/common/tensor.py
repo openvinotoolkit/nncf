@@ -71,9 +71,9 @@ class NNCFBaseTensorProcessor:
 
     @classmethod
     @abstractmethod
-    def check_all_close(cls, tensors: List[NNCFTensor]) -> None:
+    def allclose(cls, tensors: List[NNCFTensor]) -> None:
         """
-        Raises an AssertionError if two objects are not equal.
+        Raises an AssertionError if any two tensors are not equal.
 
         :param tensors: List of tensors to check pairwise equality.
         """
@@ -82,23 +82,20 @@ class NNCFBaseTensorProcessor:
     @abstractmethod
     def repeat(cls, tensor: NNCFTensor, repeats: int) -> NNCFTensor:
         """
-        TODO
-        Args:
-            tensor:
-            repeats:
+        Successively repeat each element of given NNCFTesnor.
 
-        Returns:
-
+        :param tensor: Given NNCFTensor.
+        :param repeats: The number of repetitions for each element.
+        :return: NNCFTensor with repited elements.
         """
 
     @classmethod
     @abstractmethod
-    def elementwise_output_mask_from_input_masks(cls, tensors: List[NNCFTensor]) -> NNCFTensor:
+    def elementwise_mask_propagation(cls, input_masks: List[NNCFTensor]) -> NNCFTensor:
         """
-        TODO
-        Args:
-            tensors:
+        Assemble output mask for elementwise pruning operation from given input masks.
+        Raises an AssertionError if input masks are not pairwise equal.
 
-        Returns:
-
+        :param input_masks: Given input masks.
+        :return: Elementwise pruning operation output mask.
         """
