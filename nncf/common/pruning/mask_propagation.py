@@ -11,8 +11,15 @@
  limitations under the License.
 """
 
+from typing import Dict, List
+
 from nncf.common.graph import NNCFGraph
 from nncf.common.pruning.utils import PruningOperationsMetatypeRegistry
+from nncf.common.pruning.utils import get_input_masks
+from nncf.common.pruning.utils import is_grouped_conv
+from nncf.common.pruning.utils import PruningAnalysisDecision
+from nncf.common.pruning.utils import PruningAnalysisReason
+from nncf.common.pruning.symbolic_mask import SymbolicMask
 from nncf.common.pruning.operations import BasePruningOp
 
 
@@ -54,3 +61,60 @@ class MaskPropagationAlgorithm:
         for node in self._graph.topological_sort():
             cls = self.get_meta_operation_by_type_name(node.node_type)
             cls.mask_propagation(node, self._graph)
+
+    def symbolic_mask_propagation(self, prunable_layers_types: List[str],
+                                  can_prune_after_analisys: Dict[int, PruningAnalysisDecision]) \
+            -> Dict[int, PruningAnalysisDecision]:
+        """
+        Check all nodes marked as prunable after model analysis and pruning algo compatibility check
+        have correspondent closing node, which means each prunable by output channels dimension convolution
+        has correspondent prunable by input channels dimension convolution. Otherwise the whole group
+        contained such node cannot be pruned.
+
+        :param prunable_layers_types: Types of operations with prunable filters.
+        :param can_prune_after_analisys: Dict of nodes indexes only indexes of convolutional
+            layers that have no conflicts for MaskPropagation and supported by
+            nncf pruning algorithm have True value.
+        """
+
+        can_be_closing_convs = set([node.node_id for node in self._graph.get_all_nodes()
+                                    if node.node_type in prunable_layers_types and not is_grouped_conv(node)])
+        can_prune_by_dim = {k: None for k in can_be_closing_convs}
+        for node in self._graph.topological_sort():
+            if node.node_id in can_be_closing_convs and can_prune_after_analisys[node.node_id]:
+                # Set output mask
+                node.data['output_mask'] = SymbolicMask(node.layer_attributes.out_channels, [node.node_id])
+            # Propagate masks
+            cls = self.get_meta_operation_by_type_name(node.node_type)
+            cls.mask_propagation(node, self._graph)
+            if node.node_id in can_be_closing_convs:
+                # Check input mask producers
+                input_masks = get_input_masks(node, self._graph)
+                if any(input_masks):
+                    assert len(input_masks) == 1
+                    input_mask = input_masks[0]
+                    if input_mask.mask_producers is None:
+                        continue
+
+                    for producer in input_mask.mask_producers:
+                        previously_dims_equal = True if can_prune_by_dim[producer] is None \
+                            else can_prune_by_dim[producer]
+
+                        is_dims_equal = node.layer_attributes.in_channels == input_mask.shape[0]
+                        decision = previously_dims_equal and is_dims_equal
+                        can_prune_by_dim[producer] = PruningAnalysisDecision(
+                            decision, PruningAnalysisReason.DIMENSION_MISMATCH)
+
+        # Clean nodes masks
+        for idx in can_be_closing_convs:
+            node = self._graph.get_node_by_id(idx)
+            node.data['output_mask'] = None
+
+        convs_without_closing_conv = {}
+        for k, v in can_prune_by_dim.items():
+            if v is None:
+                convs_without_closing_conv[k] = \
+                    PruningAnalysisDecision(False, PruningAnalysisReason.CLOSING_CONV_MISSING)
+
+        can_prune_by_dim.update(convs_without_closing_conv)
+        return can_prune_by_dim

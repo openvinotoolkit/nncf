@@ -10,8 +10,9 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+
 from collections import defaultdict
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional
 
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
@@ -23,8 +24,8 @@ from nncf.common.pruning.utils import is_grouped_conv
 from nncf.common.pruning.utils import PruningAnalysisDecision
 from nncf.common.pruning.utils import PruningAnalysisReason
 from nncf.common.pruning.utils import PruningOperationsMetatypeRegistry
+from nncf.common.pruning.mask_propagation import MaskPropagationAlgorithm
 from nncf.common.pruning.model_analysis import ModelAnalyzer
-from nncf.common.pruning.model_analysis import SymbolicMaskPropagationAlgorithm
 from nncf.common.pruning.clusterization import Clusterization
 from nncf.common.pruning.model_analysis import cluster_special_ops
 from nncf.common.pruning.clusterization import Cluster
@@ -205,9 +206,8 @@ class PruningNodeSelector:
         :param can_prune_after_check: Pruning node analysis after model analyser and pruning algo compatibility step.
         :return: Pruning node analysis after model analyzer, pruning algo compatibility and pruning dimensions checks.
         """
-        mask_prop_algo = SymbolicMaskPropagationAlgorithm(graph, self._pruning_operator_metatypes)
+        mask_prop_algo = MaskPropagationAlgorithm(graph, self._pruning_operator_metatypes)
         can_prune_by_dim = mask_prop_algo.symbolic_mask_propagation(self._prune_operations_types, can_prune_after_check)
-        diff = [idx for idx in can_prune_by_dim if not can_prune_by_dim[idx] and can_prune_after_check[idx]]
 
         # Find indexes of last convolutions
         stop_propagation_ops = self._stop_propagation_op_metatype.get_all_op_aliases()

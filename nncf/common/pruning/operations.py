@@ -257,7 +257,7 @@ class FlattenPruningOp(BasePruningOp):
             # was in the path from mask producer node to this node. As all
             # known nodes have input/output batch dim == 0 previous has too.
             flatten_channels = node.layer_attributes.output_shape[1]
-            mask_len = input_mask.tensor.shape[0]
+            mask_len = input_mask.shape[0]
             assert flatten_channels % mask_len == 0
             output_mask = input_mask.tensor_processor.repeat(input_mask, repeats=flatten_channels // mask_len)
 

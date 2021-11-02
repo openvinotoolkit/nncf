@@ -11,148 +11,17 @@
  limitations under the License.
 """
 
-import numpy as np
-
 from typing import Callable, List, Dict
 
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
-from nncf.common.tensor import NNCFTensor
-from nncf.common.tensor import NNCFBaseTensorProcessor
 from nncf.common.pruning.clusterization import Cluster
 from nncf.common.pruning.clusterization import Clusterization
 from nncf.common.pruning.operations import BasePruningOp
-from nncf.common.pruning.mask_propagation import MaskPropagationAlgorithm
-from nncf.common.pruning.utils import get_input_masks
-from nncf.common.pruning.utils import is_grouped_conv
 from nncf.common.pruning.utils import find_next_nodes_not_of_types
 from nncf.common.pruning.utils import PruningOperationsMetatypeRegistry
 from nncf.common.pruning.utils import PruningAnalysisDecision
 from nncf.common.pruning.utils import PruningAnalysisReason
-
-
-class SymbolicMaskProcessor(NNCFBaseTensorProcessor):
-    """
-    Implementation of processing methods set for SymbolicMask.
-    Responsible for correct mask dimension and mask producer attributes propagation.
-    For methods like concatenate and elementwise_mask_propagation unions
-    mask producers of input masks.
-    """
-
-    @classmethod
-    def concatenate(cls, tensors: List[NNCFTensor], axis: int) -> NNCFTensor:
-        ret_tensor = np.concatenate([t.tensor for t in tensors], axis=axis)
-        producers = []
-        for tensor in tensors:
-            if tensor.mask_producers is not None:
-                producers.extend(tensor.mask_producers)
-        if not producers:
-            producers = None
-
-        return SymbolicMask(ret_tensor, producers)
-
-    @classmethod
-    def ones(cls, shape: List[int], device) -> NNCFTensor:
-        ret_tensor = np.ones(shape)
-        return SymbolicMask(ret_tensor)
-
-    @classmethod
-    def allclose(cls, tensors: List[NNCFTensor]) -> None:
-        for input_mask in tensors[1:]:
-            assert input_mask.tensor.shape == tensors[0].tensor.shape
-
-    @classmethod
-    def repeat(cls, tensor: NNCFTensor, repeats: int) -> NNCFTensor:
-        ret_tensor = np.repeat(tensor.tensor, repeats)
-        return SymbolicMask(ret_tensor, tensor.mask_producers)
-
-    @classmethod
-    def elementwise_mask_propagation(cls, input_masks: List[NNCFTensor]) -> NNCFTensor:
-        cls.allclose(input_masks)
-        producers = list(set([p for t in input_masks for p in t.mask_producers]))
-        return SymbolicMask(input_masks[0].tensor, producers)
-
-
-class SymbolicMask(NNCFTensor):
-    """
-    Framework agnostic NNCFTensor representation which only uses the tensor shape and do not uses value
-    of the tensor. Keeps additional attribute - symbolic mask producer, pointer to NNCFNode which produced
-    this mask during symbolic mask propagation algorithm. NNCFNode produced a (symbolic or not) mask means
-    this mask was set as an output mask to this NNCFNode during (symbolic or not) mask propagation.
-    Tensor shape and mask producer attributes are correctly propagating during
-    symbolic mask propagation by SymbolicMaskProcessor.
-    """
-
-    def __init__(self, tensor: np.array, mask_producers: List[int] = None):
-        super().__init__(tensor, SymbolicMaskProcessor)
-        self._mask_producers = mask_producers
-
-    @property
-    def mask_producers(self) -> List[int]:
-        return self._mask_producers
-
-    @property
-    def device(self) -> None:
-        return None
-
-
-class SymbolicMaskPropagationAlgorithm(MaskPropagationAlgorithm):
-    def symbolic_mask_propagation(self, prunable_layers_types: List[str],
-                                  can_prune_after_analisys: Dict[int, PruningAnalysisDecision]) \
-                                  -> Dict[int, PruningAnalysisDecision]:
-        """
-        Check all nodes marked as prunable after model analysis and pruning algo compatibility check
-        have correspondent closing node, which means each prunable by output channels dimension convolution
-        has correspondent prunable by input channels dimension convolution. Otherwise the whole group
-        contained such node cannot be pruned.
-
-        :param prunable_layers_types: Types of operations with prunable filters.
-        :param can_prune_after_analisys: Dict of nodes indexes only indexes of convolutional
-            layers that have no conflicts for MaskPropagation and supported by
-            nncf pruning algorithm have True value.
-        """
-
-        can_be_closing_convs = set([node.node_id for node in self._graph.get_all_nodes()
-                                    if node.node_type in prunable_layers_types and not is_grouped_conv(node)])
-        can_prune_by_dim = {k: None for k in can_be_closing_convs}
-        for node in self._graph.topological_sort():
-            if node.node_id in can_be_closing_convs and can_prune_after_analisys[node.node_id]:
-                # Set output mask
-                node.data['output_mask'] = SymbolicMask(np.empty(node.layer_attributes.out_channels), [node.node_id])
-            # Propagate masks
-            cls = self.get_meta_operation_by_type_name(node.node_type)
-            cls.mask_propagation(node, self._graph)
-            if node.node_id in can_be_closing_convs:
-                # Check input mask producers
-                input_masks = get_input_masks(node, self._graph)
-                if any(input_masks):
-                    assert len(input_masks) == 1
-                    input_mask = input_masks[0]
-                    if input_mask.mask_producers is None:
-                        continue
-
-                    for producer in input_mask.mask_producers:
-                        previously_dims_equal = True if can_prune_by_dim[producer] is None \
-                            else can_prune_by_dim[producer]
-
-                        is_dims_equal = node.layer_attributes.in_channels == input_mask.tensor.shape[0]
-                        decision = previously_dims_equal and is_dims_equal
-                        can_prune_by_dim[producer] = PruningAnalysisDecision(
-                                                         decision, PruningAnalysisReason.DIMENSION_MISMATCH)
-
-        # Clean nodes masks
-        for idx in can_be_closing_convs:
-            node = self._graph.get_node_by_id(idx)
-            node.data['output_mask'] = None
-
-        convs_without_closing_conv = {}
-        for k, v in can_prune_by_dim.items():
-            if v is None:
-                convs_without_closing_conv[k] = \
-                    PruningAnalysisDecision(False, PruningAnalysisReason.CLOSING_CONV_MISSING)
-
-        can_prune_by_dim.update(convs_without_closing_conv)
-        return can_prune_by_dim
 
 
 def get_position(nodes_list: List[NNCFNode], idx: int):

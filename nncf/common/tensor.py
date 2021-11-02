@@ -12,7 +12,7 @@
 """
 
 from abc import abstractmethod
-from typing import TypeVar, List
+from typing import TypeVar, List, Optional
 
 TensorType = TypeVar('TensorType')
 DeviceType = TypeVar('DeviceType')
@@ -23,7 +23,7 @@ class NNCFTensor:
     An interface of framework specific tensors for common NNCF algorithms.
     """
 
-    def __init__(self, tensor: TensorType,
+    def __init__(self, tensor: Optional[TensorType],
                  tensor_processor: 'NNCFBaseTensorProcessor'):
         self._tensor = tensor
         self._tensor_processor = tensor_processor
@@ -31,6 +31,12 @@ class NNCFTensor:
     @property
     def tensor(self) -> TensorType:
         return self._tensor
+
+    @property
+    def shape(self) -> List[int]:
+        if not self._tensor:
+            raise RuntimeError('Attempt to get shape of empty NNCFTensor')
+        return self._tensor.shape
 
     @property
     def tensor_processor(self) -> 'NNCFBaseTensorProcessor':
@@ -62,7 +68,7 @@ class NNCFBaseTensorProcessor:
     @abstractmethod
     def ones(cls, shape: List[int], device: DeviceType) -> NNCFTensor:
         """
-        Return a new float tensor of given shape, filled with ones.
+        Return a new 1D float tensor of given shape, filled with ones.
 
         :param shape: Shape of the new tensor.
         :param device: Device to put created tensor in.

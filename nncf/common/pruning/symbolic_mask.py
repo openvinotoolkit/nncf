@@ -1,0 +1,85 @@
+"""
+ Copyright (c) 2021 Intel Corporation
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+      http://www.apache.org/licenses/LICENSE-2.0
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+"""
+
+from typing import List
+
+from nncf.common.tensor import NNCFTensor
+from nncf.common.tensor import NNCFBaseTensorProcessor
+
+
+class SymbolicMask(NNCFTensor):
+    """
+    Framework agnostic 1D NNCFTensor representation which only uses given dimension and do not uses value
+    of the tensor. Keeps additional attribute - symbolic mask producer, pointer to NNCFNode which produced
+    this mask during symbolic mask propagation algorithm. NNCFNode produced a (symbolic or not) mask means
+    this mask was set as an output mask to this NNCFNode during (symbolic or not) mask propagation.
+    Tensor shape and mask producer attributes are correctly propagating during
+    symbolic mask propagation by SymbolicMaskProcessor.
+    """
+
+    def __init__(self, dimension: int, mask_producers: List[int] = None):
+        super().__init__(None, SymbolicMaskProcessor)
+        self._mask_producers = mask_producers
+        self._shape = dimension
+
+    @property
+    def shape(self) -> List[int]:
+        return [self._shape]
+
+    @property
+    def mask_producers(self) -> List[int]:
+        return self._mask_producers
+
+    @property
+    def device(self) -> None:
+        return None
+
+
+class SymbolicMaskProcessor(NNCFBaseTensorProcessor):
+    """
+    Implementation of processing methods set for SymbolicMask.
+    Responsible for correct mask dimension and mask producer attributes propagation.
+    For methods like concatenate and elementwise_mask_propagation unions
+    mask producers of input masks.
+    """
+
+    @classmethod
+    def concatenate(cls, tensors: List[SymbolicMask], axis: int) -> NNCFTensor:
+        ret_shape = sum([t.shape[0] for t in tensors])
+        producers = []
+        for tensor in tensors:
+            if tensor.mask_producers is not None:
+                producers.extend(tensor.mask_producers)
+        if not producers:
+            producers = None
+
+        return SymbolicMask(ret_shape, producers)
+
+    @classmethod
+    def ones(cls, shape: int, device) -> NNCFTensor:
+        return SymbolicMask(shape)
+
+    @classmethod
+    def allclose(cls, tensors: List[SymbolicMask]) -> None:
+        for input_mask in tensors[1:]:
+            assert tensors[0].shape == input_mask.shape
+
+    @classmethod
+    def repeat(cls, tensor: SymbolicMask, repeats: int) -> NNCFTensor:
+        return SymbolicMask(tensor.shape[0] * repeats, tensor.mask_producers)
+
+    @classmethod
+    def elementwise_mask_propagation(cls, input_masks: List[SymbolicMask]) -> NNCFTensor:
+        cls.allclose(input_masks)
+        producers = list({p for t in input_masks for p in t.mask_producers})
+        return SymbolicMask(input_masks[0].shape[0], producers)

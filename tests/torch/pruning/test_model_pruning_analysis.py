@@ -208,7 +208,7 @@ def test_pruning_node_selector(test_input_info_struct_: GroupPruningModulesTestS
 
     pruning_operations = [v.op_func_name for v in NNCF_PRUNING_MODULES_DICT]
     grouping_operations = PTElementwisePruningOp.get_all_op_aliases()
-    from nncf.common.pruning.pruning_node_selector import PruningNodeSelector
+    from nncf.common.pruning.node_selector import PruningNodeSelector
     pruning_node_selector = PruningNodeSelector(PT_PRUNING_OPERATOR_METATYPES,
                                                 pruning_operations,
                                                 grouping_operations,
