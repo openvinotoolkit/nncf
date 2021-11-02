@@ -293,7 +293,7 @@ class ShareEdgesQuantizedDataPathStatisticsCollector(StatisticsCollector):
                         is_op_non_change_precision_activation_tensor = True
                         node_op_name = node[NNCFGraph.NODE_TYPE_ATTR]
                         for op in DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT[QuantizationTrait.INPUTS_QUANTIZABLE]:
-                            if node_op_name in op.op_names:
+                            if node_op_name in op.get_all_aliases():
                                 is_op_non_change_precision_activation_tensor = False
                                 break
                         status = is_op_non_change_precision_activation_tensor and\

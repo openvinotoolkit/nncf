@@ -31,9 +31,8 @@ class PatchedOperatorInfo:
         """
         Information about patched operator.
         :param name: Operator name
-        :param function_namespace: Python module, from which operator was imported.
-        Could be a special string - 'external_function', which mean that function was registered 
-        not from 'torch' or its submodules.
+        :param function_namespace: Python module, from which operator was imported. Could be a special string
+         - 'external_function', which mean that function was registered not from 'torch' or its submodules.
         """
         self.name = name
         self.operator_namespace = operator_namespace

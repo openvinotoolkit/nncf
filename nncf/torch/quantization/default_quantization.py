@@ -26,6 +26,8 @@ DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT = {
         operator_metatypes.PTDepthwiseConv3dSubtype,
         operator_metatypes.PTLinearMetatype,
         operator_metatypes.PTHardTanhMetatype,
+        operator_metatypes.PTHardSwishMetatype,
+        operator_metatypes.PTHardSigmoidMetatype,
         operator_metatypes.PTTanhMetatype,
         operator_metatypes.PTELUMetatype,
         operator_metatypes.PTPRELUMetatype,

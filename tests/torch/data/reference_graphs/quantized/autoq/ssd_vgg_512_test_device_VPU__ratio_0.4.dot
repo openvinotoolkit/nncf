@@ -79,8 +79,8 @@ strict digraph  {
 "77 SSD_VGG/MultiOutputSequential[basenet]/ReLU[34]/relu__0" [id=77, label="relu__#77", style=filled, type=relu_];
 "78 SSD_VGG/MultiOutputSequential[basenet]/ReLU[34]/SymmetricQuantizer/symmetric_quantize_0" [color=red, id=78, label="AFQ_[B:4 M:S SGN:U PC:N]_#78_G22", style=filled, type=symmetric_quantize];
 "79 SSD_VGG/NNCFUserL2Norm[L2Norm]/pow_0" [id=79, label="pow_#79", style=filled, type=pow];
-"80 SSD_VGG/NNCFUserL2Norm[L2Norm]/AsymmetricQuantizer/asymmetric_quantize_0" [color=green, id=80, label="AFQ_[B:8 M:A SGN:S PC:N]_#80_G14", style=filled, type=asymmetric_quantize];
-"81 SSD_VGG/NNCFUserL2Norm[L2Norm]/sum_0" [id=81, label="sum_#81", style=filled, type=sum];
+"80 SSD_VGG/NNCFUserL2Norm[L2Norm]/sum_0" [id=80, label="sum_#80", style=filled, type=sum];
+"81 SSD_VGG/NNCFUserL2Norm[L2Norm]/AsymmetricQuantizer/asymmetric_quantize_0" [color=green, id=81, label="AFQ_[B:8 M:A SGN:S PC:N]_#81_G14", style=filled, type=asymmetric_quantize];
 "82 SSD_VGG/NNCFUserL2Norm[L2Norm]/sqrt_0" [id=82, label="sqrt_#82", style=filled, type=sqrt];
 "83 SSD_VGG/NNCFUserL2Norm[L2Norm]/SymmetricQuantizer/symmetric_quantize_0" [color=red, id=83, label="AFQ_[B:4 M:S SGN:U PC:N]_#83_G15", style=filled, type=symmetric_quantize];
 "84 SSD_VGG/NNCFUserL2Norm[L2Norm]/__add___0" [id=84, label="__add___#84", style=filled, type=__add__];
@@ -359,9 +359,9 @@ strict digraph  {
 "78 SSD_VGG/MultiOutputSequential[basenet]/ReLU[34]/SymmetricQuantizer/symmetric_quantize_0" -> "91 SSD_VGG/MultiOutputSequential[extras]/NNCFConv2d[0]/conv2d_0";
 "78 SSD_VGG/MultiOutputSequential[basenet]/ReLU[34]/SymmetricQuantizer/symmetric_quantize_0" -> "144 SSD_VGG/SSDDetectionOutput[detection_head]/ModuleList[heads]/SSDHead[1]/NNCFConv2d[loc]/pad_0";
 "78 SSD_VGG/MultiOutputSequential[basenet]/ReLU[34]/SymmetricQuantizer/symmetric_quantize_0" -> "147 SSD_VGG/SSDDetectionOutput[detection_head]/ModuleList[heads]/SSDHead[1]/NNCFConv2d[conf]/pad_0";
-"79 SSD_VGG/NNCFUserL2Norm[L2Norm]/pow_0" -> "80 SSD_VGG/NNCFUserL2Norm[L2Norm]/AsymmetricQuantizer/asymmetric_quantize_0";
-"80 SSD_VGG/NNCFUserL2Norm[L2Norm]/AsymmetricQuantizer/asymmetric_quantize_0" -> "81 SSD_VGG/NNCFUserL2Norm[L2Norm]/sum_0";
-"81 SSD_VGG/NNCFUserL2Norm[L2Norm]/sum_0" -> "82 SSD_VGG/NNCFUserL2Norm[L2Norm]/sqrt_0";
+"79 SSD_VGG/NNCFUserL2Norm[L2Norm]/pow_0" -> "80 SSD_VGG/NNCFUserL2Norm[L2Norm]/sum_0";
+"80 SSD_VGG/NNCFUserL2Norm[L2Norm]/sum_0" -> "81 SSD_VGG/NNCFUserL2Norm[L2Norm]/AsymmetricQuantizer/asymmetric_quantize_0";
+"81 SSD_VGG/NNCFUserL2Norm[L2Norm]/AsymmetricQuantizer/asymmetric_quantize_0" -> "82 SSD_VGG/NNCFUserL2Norm[L2Norm]/sqrt_0";
 "82 SSD_VGG/NNCFUserL2Norm[L2Norm]/sqrt_0" -> "83 SSD_VGG/NNCFUserL2Norm[L2Norm]/SymmetricQuantizer/symmetric_quantize_0";
 "83 SSD_VGG/NNCFUserL2Norm[L2Norm]/SymmetricQuantizer/symmetric_quantize_0" -> "84 SSD_VGG/NNCFUserL2Norm[L2Norm]/__add___0";
 "84 SSD_VGG/NNCFUserL2Norm[L2Norm]/__add___0" -> "85 SSD_VGG/NNCFUserL2Norm[L2Norm]/AsymmetricQuantizer/asymmetric_quantize_1";

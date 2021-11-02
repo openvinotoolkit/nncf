@@ -78,7 +78,7 @@ class PTOperatorMetatype(OperatorMetatype):
     @classmethod
     def get_all_aliases(cls) -> List[str]:
         output = set()
-        for module, function_names in cls.module_to_function_names.items():
+        for _, function_names in cls.module_to_function_names.items():
             output = output.union(function_names)
         if cls.external_op_names is not None:
             output = output.union(cls.external_op_names)
@@ -258,6 +258,13 @@ class PTHardSwishMetatype(PTOperatorMetatype):
     name = "HardSwishOp"
     module_to_function_names = {
         NamespaceTarget.TORCH_NN_FUNCTIONAL: ["hardswish"]
+    }
+
+@PT_OPERATOR_METATYPES.register()
+class PTHardSigmoidMetatype(PTOperatorMetatype):
+    name = "HardSigmoidOp"
+    module_to_function_names = {
+        NamespaceTarget.TORCH_NN_FUNCTIONAL: ["hardsigmoid"]
     }
 
 

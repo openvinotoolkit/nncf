@@ -85,8 +85,8 @@ strict digraph  {
 "83 SSD_VGG/MultiOutputSequential[basenet]/ReLU[49]/relu__0" [id=83, type=relu_];
 "84 SSD_VGG/MultiOutputSequential[basenet]/ReLU[49]/AsymmetricQuantizer/asymmetric_quantize_0" [id=84, type=asymmetric_quantize];
 "85 SSD_VGG/NNCFUserL2Norm[L2Norm]/pow_0" [id=85, type=pow];
-"86 SSD_VGG/NNCFUserL2Norm[L2Norm]/AsymmetricQuantizer/asymmetric_quantize_0" [id=86, type=asymmetric_quantize];
-"87 SSD_VGG/NNCFUserL2Norm[L2Norm]/sum_0" [id=87, type=sum];
+"86 SSD_VGG/NNCFUserL2Norm[L2Norm]/sum_0" [id=86, type=sum];
+"87 SSD_VGG/NNCFUserL2Norm[L2Norm]/AsymmetricQuantizer/asymmetric_quantize_0" [id=87, type=asymmetric_quantize];
 "88 SSD_VGG/NNCFUserL2Norm[L2Norm]/sqrt_0" [id=88, type=sqrt];
 "89 SSD_VGG/NNCFUserL2Norm[L2Norm]/AsymmetricQuantizer/asymmetric_quantize_1" [id=89, type=asymmetric_quantize];
 "90 SSD_VGG/NNCFUserL2Norm[L2Norm]/__add___0" [id=90, type=__add__];
@@ -290,9 +290,9 @@ strict digraph  {
 "82 SSD_VGG/MultiOutputSequential[basenet]/BatchNorm2d[48]/batch_norm_0" -> "83 SSD_VGG/MultiOutputSequential[basenet]/ReLU[49]/relu__0";
 "83 SSD_VGG/MultiOutputSequential[basenet]/ReLU[49]/relu__0" -> "84 SSD_VGG/MultiOutputSequential[basenet]/ReLU[49]/AsymmetricQuantizer/asymmetric_quantize_0";
 "84 SSD_VGG/MultiOutputSequential[basenet]/ReLU[49]/AsymmetricQuantizer/asymmetric_quantize_0" -> "97 SSD_VGG/MultiOutputSequential[extras]/NNCFConv2d[0]/conv2d_0";
-"85 SSD_VGG/NNCFUserL2Norm[L2Norm]/pow_0" -> "86 SSD_VGG/NNCFUserL2Norm[L2Norm]/AsymmetricQuantizer/asymmetric_quantize_0";
-"86 SSD_VGG/NNCFUserL2Norm[L2Norm]/AsymmetricQuantizer/asymmetric_quantize_0" -> "87 SSD_VGG/NNCFUserL2Norm[L2Norm]/sum_0";
-"87 SSD_VGG/NNCFUserL2Norm[L2Norm]/sum_0" -> "88 SSD_VGG/NNCFUserL2Norm[L2Norm]/sqrt_0";
+"85 SSD_VGG/NNCFUserL2Norm[L2Norm]/pow_0" -> "86 SSD_VGG/NNCFUserL2Norm[L2Norm]/sum_0";
+"86 SSD_VGG/NNCFUserL2Norm[L2Norm]/sum_0" -> "87 SSD_VGG/NNCFUserL2Norm[L2Norm]/AsymmetricQuantizer/asymmetric_quantize_0";
+"87 SSD_VGG/NNCFUserL2Norm[L2Norm]/AsymmetricQuantizer/asymmetric_quantize_0" -> "88 SSD_VGG/NNCFUserL2Norm[L2Norm]/sqrt_0";
 "88 SSD_VGG/NNCFUserL2Norm[L2Norm]/sqrt_0" -> "89 SSD_VGG/NNCFUserL2Norm[L2Norm]/AsymmetricQuantizer/asymmetric_quantize_1";
 "89 SSD_VGG/NNCFUserL2Norm[L2Norm]/AsymmetricQuantizer/asymmetric_quantize_1" -> "90 SSD_VGG/NNCFUserL2Norm[L2Norm]/__add___0";
 "90 SSD_VGG/NNCFUserL2Norm[L2Norm]/__add___0" -> "91 SSD_VGG/NNCFUserL2Norm[L2Norm]/AsymmetricQuantizer/asymmetric_quantize_2";
