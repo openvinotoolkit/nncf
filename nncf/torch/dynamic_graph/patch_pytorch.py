@@ -26,6 +26,19 @@ from nncf.torch.dynamic_graph.wrappers import wrap_module_call
 from nncf.torch.dynamic_graph.wrappers import wrap_operator
 
 
+class PatchedOperatorInfo:
+    def __init__(self, name: str, operator_namespace: object):
+        """
+        Information about patched operator.
+        :param name: Operator name
+        :param function_namespace: Python module, from which operator was imported.
+        Could be a special string - 'external_function', which mean that function was registered 
+        not from 'torch' or its submodules.
+        """
+        self.name = name
+        self.operator_namespace = operator_namespace
+
+
 class IgnoredFunctions:
     TENSOR_CREATING_FUNCTIONS = ['arange', 'as_subclass', 'as_tensor', 'copysign', 'copysign_', 'detach', 'detach_',
                                  'empty', 'ones', 'ones_like', 'rad2deg', 'rad2deg_', 'rand', 'randn', 'randn_like',
@@ -56,7 +69,7 @@ def register_operator(name=None):
         op_name = name
         if op_name is None:
             op_name = operator.__name__
-        return wrap_operator(operator, op_name, "external_function")
+        return wrap_operator(operator, PatchedOperatorInfo(op_name, "external_function"))
 
     return wrap
 
@@ -103,7 +116,7 @@ def patch_namespace_opname(namespace: object, op_name: str):
     if hasattr(namespace, op_name):
         orig = getattr(namespace, op_name)
         ORIGINAL_OPERATORS.append(OriginalOpInfo(op_name, namespace, orig))
-        setattr(namespace, op_name, wrap_operator(orig, op_name, namespace))
+        setattr(namespace, op_name, wrap_operator(orig, PatchedOperatorInfo(op_name, namespace)))
     else:
         warnings.warn("Not patching {} since it is missing in this version of PyTorch".format(op_name))
 

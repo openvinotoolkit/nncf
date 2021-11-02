@@ -58,7 +58,7 @@ def ignore_scope(cls):
 OP_NAMES_REQUIRING_MODULE_ATTRS = [v.op_func_name for v in NNCF_MODULES_DICT] + ['group_norm']
 
 
-def wrap_operator(operator, op_name: str, operator_namespace: object):
+def wrap_operator(operator, operator_info: 'PatchedOperatorInfo'):
     """
 
     """
@@ -82,6 +82,7 @@ def wrap_operator(operator, op_name: str, operator_namespace: object):
                 result = ForwardTraceOnly()(operator, *args, **kwargs)
             else:
                 node = None
+                op_name = operator_info.name
                 op_address = ctx.get_caller_context(op_name)
 
                 layer_attrs = None
@@ -130,7 +131,7 @@ def wrap_operator(operator, op_name: str, operator_namespace: object):
 
     # pylint: disable=protected-access
     wrapped._original_op = operator
-    wrapped._operator_namespace = operator_namespace
+    wrapped._operator_namespace = operator_info.operator_namespace
     return wrapped
 
 

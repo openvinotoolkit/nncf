@@ -18,6 +18,7 @@ import tensorflow as tf
 
 from nncf.common.graph.operator_metatypes import INPUT_NOOP_METATYPES
 from nncf.common.graph.operator_metatypes import NOOP_METATYPES
+from nncf.common.graph.operator_metatypes import UNKNOWN_METATYPES
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.operator_metatypes import OperatorMetatypeRegistry
 from nncf.common.hardware.opset import HWConfigOpName
@@ -81,6 +82,16 @@ class TFLayerMetatype(OperatorMetatype):
 class TFLayerWithWeightsMetatype(TFLayerMetatype):
     weight_definitions = []  # type: List[WeightDef]
     bias_attr_name = None  # type: Optional[str]
+
+
+@KERAS_LAYER_METATYPES.register()
+@UNKNOWN_METATYPES.register()
+class TFLayerUnknownMetatype(TFLayerMetatype):
+    name = 'unknown'
+
+    @classmethod
+    def get_all_aliases(cls) -> List[str]:
+        return [cls.name]
 
 
 @KERAS_LAYER_METATYPES.register()
