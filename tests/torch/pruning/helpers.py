@@ -216,11 +216,12 @@ class BigPruningTestModel(nn.Module):
         self.conv1 = create_conv(1, 16, 2, 0, 1)
         for i in range(16):
             self.conv1.weight.data[i] += i
+        self.bn1 = nn.BatchNorm2d(16)
         self.relu = nn.ReLU()
         self.conv2 = create_conv(16, 32, 3, 20, 0)
         for i in range(32):
             self.conv2.weight.data[i] += i
-        self.bn = nn.BatchNorm2d(32)
+        self.bn2 = nn.BatchNorm2d(32)
         self.up = create_transpose_conv(32, 64, 3, 3, 1, 2)
         for i in range(64):
             self.up.weight.data[0][i] += i
@@ -228,9 +229,10 @@ class BigPruningTestModel(nn.Module):
 
     def forward(self, x):
         x = self.conv1(x)
+        x = self.bn1(x)
         x = self.relu(x)
         x = self.conv2(x)
-        x = self.bn(x)
+        x = self.bn2(x)
         x = self.relu(x)
         x = self.up(x)
         x = self.relu(x)
