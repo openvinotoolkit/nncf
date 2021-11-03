@@ -16,6 +16,7 @@ import torch
 from torch import nn
 
 from nncf.config import NNCFConfig
+from tests.torch.test_models.pnasnet import CellB
 from tests.torch.helpers import create_conv
 from tests.torch.helpers import create_transpose_conv
 from tests.torch.helpers import create_depthwise_conv
@@ -518,6 +519,18 @@ class GroupedConvolutionModel(nn.Module):
         x = self.conv3(x)
         x = x.view(-1)
         return self.fc(x)
+
+
+class NASnetBlock(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.first_conv = nn.Conv2d(1, 2, (2, 2))
+        self.cell = CellB(2, 4, 2)
+
+    def forward(self, x):
+        x = self.first_conv(x)
+        x = self.cell(x)
+        return x
 
 
 def get_basic_pruning_config(input_sample_size=None) -> NNCFConfig:

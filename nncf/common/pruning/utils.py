@@ -447,6 +447,21 @@ class PruningAnalysisDecision:
         self._reasons = possible_reasons if not decision and possible_reasons else None \
             # type: Optional[List[PruningAnalysisReason]]
 
+    def __repr__(self) -> str:
+        representation = f'Prunable: {self.decision}'
+        if not self.decision:
+            representation += '; Reasons: ' + str(self._reasons)
+        return representation
+
+    def __eq__(self, other: 'PruningAnalysisDecision') -> bool:
+        eq = self.decision == other.decision
+        if self._reasons is None:
+            return eq and other._reasons is None
+        else:
+            if other._reasons is None:
+                return False
+            return eq and sorted(self._reasons) == sorted(other._reasons)
+
     def __bool__(self) -> bool:
         return self.decision
 

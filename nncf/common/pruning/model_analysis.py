@@ -202,5 +202,5 @@ class ModelAnalyzer:
         self.set_accept_pruned_input_attr()
         self.propagate_can_prune_attr_up()
         self.propagate_can_prune_attr_down()
-        return {k: PruningAnalysisDecision(v, [PruningAnalysisReason.MODEL_ANALYSIS])
+        return {k: PruningAnalysisDecision(v, PruningAnalysisReason.MODEL_ANALYSIS)
                 for k, v in self.can_prune.items()}

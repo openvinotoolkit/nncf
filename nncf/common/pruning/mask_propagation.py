@@ -106,8 +106,7 @@ class MaskPropagationAlgorithm:
                             decision, PruningAnalysisReason.DIMENSION_MISMATCH)
 
         # Clean nodes masks
-        for idx in can_be_closing_convs:
-            node = self._graph.get_node_by_id(idx)
+        for node in self._graph.get_all_nodes():
             node.data['output_mask'] = None
 
         convs_without_closing_conv = {}
