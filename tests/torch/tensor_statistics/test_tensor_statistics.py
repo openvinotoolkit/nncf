@@ -68,27 +68,16 @@ class TestCollectedStatistics:
                                          }
                                  ),
                                  (
-                                         partial(MinMaxStatisticCollector,
-                                                 rs_vs_params=({(3, 3): {'mode': 'asymmetric'}})),
+                                         MeanMinMaxStatisticCollector,
                                          {
-                                             (3, 3): PTMinMaxTensorStatistic(
-                                                 min_values=torch.tensor([
-                                                     [1.0, 2.0, 3.0],
-                                                     [-1.3, -4, -3.5],
-                                                     [4.0, 5.0, 6.0]
-                                                 ]),
-                                                 max_values=torch.tensor([
-                                                     [4.5, 2.6, 3.7],
-                                                     [-1.0, -2.0, -3.0],
-                                                     [4.3, 5.8, 6.1]
-                                                 ]),
-                                             ),
-                                         }
-                                 ),
-                                 (
-                                         partial(MeanMinMaxStatisticCollector,
-                                                 rs_vs_params=({(3, 3): {'mode': 'asymmetric'}})),
-                                         {
+                                             (1,): PTMinMaxTensorStatistic(min_values=torch.tensor([-3.5]),
+                                                                         max_values=torch.tensor([6.05])),
+                                             (3, 1): PTMinMaxTensorStatistic(
+                                                 min_values=torch.tensor([[1.8], [-3.5], [4.15]]),
+                                                 max_values=torch.tensor([[3.75], [3.5], [6.05]])),
+                                             (1, 3): PTMinMaxTensorStatistic(
+                                                 min_values=torch.tensor([[-1.15, -3, -3.25]]),
+                                                 max_values=torch.tensor([[4.25, 5.4, 6.05]])),
                                              (3, 3): PTMinMaxTensorStatistic(
                                                  min_values=torch.tensor([
                                                      [2.75, 2.3, 3.35],
@@ -97,7 +86,7 @@ class TestCollectedStatistics:
                                                  ]),
                                                  max_values=torch.tensor([
                                                      [2.75, 2.3, 3.35],
-                                                     [-1.15, -3, -3.25],
+                                                     [1.15, 3, 3.25],
                                                      [4.15, 5.4, 6.05]
                                                  ]),
                                              ),
@@ -199,7 +188,11 @@ class TestCollectedStatistics:
                              ])
     def test_collected_statistics(self, collector: Type[TensorStatisticCollectorBase],
                                   reduction_shapes_vs_ref_statistic: Dict[ReductionShape, PTTensorStatistic]):
-        collector_obj = collector(reduction_shapes=set(reduction_shapes_vs_ref_statistic.keys()))
+
+        rs_vs_params = {rs: {'mode': 'symmetric', 'per_channel': False}
+                        for rs in reduction_shapes_vs_ref_statistic.keys()}
+        collector_obj = collector(rs_vs_params=rs_vs_params)
+
         for input_ in TestCollectedStatistics.REF_INPUTS:
             collector_obj.register_input(input_)
         test_stats = collector_obj.get_statistics()
@@ -215,7 +208,7 @@ class TestCollectedStatistics:
     @pytest.fixture(params=COLLECTORS)
     def collector_for_interface_test(self, request):
         collector_type = request.param
-        return collector_type(reduction_shapes={(1, )})
+        return collector_type(rs_vs_params={(1, ): {'mode': 'symmetric', 'per_channel': False}})
 
     def test_collected_samples(self, collector_for_interface_test: TensorStatisticCollectorBase):
         for input_ in TestCollectedStatistics.REF_INPUTS:
@@ -254,7 +247,8 @@ class TestCollectedStatistics:
     @pytest.fixture(params=OFFLINE_COLLECTORS)
     def collector_for_num_samples_test(self, request):
         collector_type = request.param
-        return collector_type(reduction_shapes={(1,)}, num_samples=TestCollectedStatistics.REF_NUM_SAMPLES)
+        return collector_type(rs_vs_params={(1,): {'mode': 'symmetric', 'per_channel': False}},
+                              num_samples=TestCollectedStatistics.REF_NUM_SAMPLES)
 
     def test_num_samples(self, collector_for_num_samples_test: OfflineTensorStatisticCollector):
         for input_ in TestCollectedStatistics.REF_INPUTS * 10:

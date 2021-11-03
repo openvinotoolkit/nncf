@@ -763,10 +763,11 @@ def test_quantize_range_init_sets_correct_scale_shapes(quantizer_range_init_test
         q_cls = QUANTIZATION_MODULES.get(quantization_mode)
         quantizer = q_cls(qconfig)  # type: BaseQuantizer
         range_init_config = RangeInitConfig(init_type=initializer_type, num_init_samples=1)
+        rs_vs_params = {tuple(quantizer.scale_shape): {'mode': quantization_mode, 'per_channel': quantizer.per_channel}}
         collector = StatCollectorGenerator.generate_stat_collector_for_range_init_config(
             range_init_config,
             is_weights=False,
-            reduction_shapes={tuple(quantizer.scale_shape)})
+            rs_vs_params=rs_vs_params)
         collector.register_input(torch.ones(test_struct.input_shape))
         stat = collector.get_statistics()[tuple(quantizer.scale_shape)]
         minmax_values = MinMaxTensorStatistic.from_stat(stat)

@@ -48,7 +48,7 @@ class RangeInitConfig:
         num_init_samples = dct.get('num_init_samples', 256)
         if num_init_samples < 0:
             raise ValueError('Number of initialization samples must be >= 0')
-        return cls(dct.get('type', 'mean_min_max'),
+        return cls(dct.get('type', 'mixed_min_max'),
                    num_init_samples,
                    dct.get('params'))
 

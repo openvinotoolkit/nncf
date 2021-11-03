@@ -22,7 +22,7 @@ from nncf.common.tensor_statistics.collectors import OfflineTensorStatisticColle
 from nncf.common.tensor_statistics.collectors import ReductionShape
 from nncf.torch.dynamic_graph.context import no_nncf_trace
 from nncf.torch.tensor_statistics.reduction import min_reduce_like, max_reduce_like, \
-    get_per_channel_history, expand_like, percentile_reduce_like
+    get_per_channel_history, expand_like, percentile_reduce_like, get_reduction_shapes
 from nncf.torch.tensor_statistics.statistics import PTMinMaxTensorStatistic
 from nncf.torch.tensor_statistics.statistics import PTMedianMADTensorStatistic
 from nncf.torch.tensor_statistics.statistics import PTPercentileTensorStatistic
@@ -35,9 +35,9 @@ class PTOfflineTensorStatisticCollector(OfflineTensorStatisticCollector):
 
 
 class MinMaxStatisticCollector(OnlineTensorStatisticCollector):
-    def __init__(self, reduction_shapes: Set[ReductionShape] = None,
-                 rs_vs_params: Dict[ReductionShape, Dict[str, Union[str, bool]]] = None,
+    def __init__(self, rs_vs_params: Dict[ReductionShape, Dict[str, Union[str, bool]]] = None,
                  num_samples: int = None):
+        reduction_shapes = get_reduction_shapes(rs_vs_params)
         super().__init__(reduction_shapes, num_samples)
         self._rs_vs_params = rs_vs_params
         if self._reduction_shapes is not None:
@@ -81,12 +81,9 @@ class MinMaxStatisticCollector(OnlineTensorStatisticCollector):
 
 
 class MixedMinMaxStatisticCollector(PTOfflineTensorStatisticCollector):
-    def __init__(self,
-                 is_weights: bool,
-                 reduction_shapes: Set[ReductionShape] = None,
-                 rs_vs_params: Dict[ReductionShape, Dict[str, Union[str, bool]]] = None,
-                 num_samples: int = None,
-                 window_size: int = None):
+    def __init__(self, is_weights: bool, rs_vs_params: Dict[ReductionShape, Dict[str, Union[str, bool]]] = None,
+                 num_samples: int = None, window_size: int = None):
+        reduction_shapes = get_reduction_shapes(rs_vs_params)
         super().__init__(reduction_shapes, num_samples, window_size)
         self._is_weights = is_weights
         self._window_size = window_size
@@ -131,9 +128,9 @@ class MixedMinMaxStatisticCollector(PTOfflineTensorStatisticCollector):
                 reduction_shape_per_sample = self._reduction_shape_per_sample(x, reduction_shape)
                 min_reduced = min_reduce_like(x, reduction_shape_per_sample)
                 if self._mode[reduction_shape] == 'symmetric':
-                    max_reduced = max_reduce_like(torch.abs(x), reduction_shape)
+                    max_reduced = max_reduce_like(torch.abs(x), reduction_shape_per_sample)
                 else:
-                    max_reduced = max_reduce_like(x, reduction_shape)
+                    max_reduced = max_reduce_like(x, reduction_shape_per_sample)
                 if self._is_weights:
                     self._all_min_values[reduction_shape].append(min_reduced)
                     self._all_max_values[reduction_shape].append(max_reduced)
@@ -167,9 +164,9 @@ class MixedMinMaxStatisticCollector(PTOfflineTensorStatisticCollector):
 
 
 class MeanMinMaxStatisticCollector(PTOfflineTensorStatisticCollector):
-    def __init__(self, reduction_shapes: Set[ReductionShape] = None,
-                 rs_vs_params: Dict[ReductionShape, Dict[str, Union[str, bool]]] = None,
+    def __init__(self, rs_vs_params: Dict[ReductionShape, Dict[str, Union[str, bool]]] = None,
                  num_samples: int = None, window_size: int = None):
+        reduction_shapes = get_reduction_shapes(rs_vs_params)
         super().__init__(reduction_shapes, num_samples, window_size)
         self._window_size = window_size
         self._all_min_values = {}  # type: Dict[ReductionShape, Deque]
@@ -192,6 +189,10 @@ class MeanMinMaxStatisticCollector(PTOfflineTensorStatisticCollector):
                     self._all_min_values[reduction_shape] = deque(maxlen=self._window_size)
                 if reduction_shape not in self._all_max_values:
                     self._all_max_values[reduction_shape] = deque(maxlen=self._window_size)
+                if reduction_shape not in self._mode:
+                    self._mode[reduction_shape] = \
+                        self._rs_vs_params.get(reduction_shape, {'mode': 'symmetric'}).get('mode', 'symmetric')
+
                 self._all_min_values[reduction_shape].append(min_reduce_like(x, reduction_shape))
                 if self._mode[reduction_shape] == 'symmetric':
                     self._all_max_values[reduction_shape].append(max_reduce_like(torch.abs(x), reduction_shape))
@@ -216,6 +217,11 @@ class MeanMinMaxStatisticCollector(PTOfflineTensorStatisticCollector):
 
 
 class MedianMADStatisticCollector(PTOfflineTensorStatisticCollector):
+    def __init__(self, rs_vs_params: Dict[ReductionShape, Dict[str, Union[str, bool]]] = None,
+                 num_samples: int = None, window_size: int = None):
+        reduction_shapes = get_reduction_shapes(rs_vs_params)
+        super().__init__(reduction_shapes, num_samples, window_size)
+
     def _get_statistics(self) -> Dict[ReductionShape, PTMedianMADTensorStatistic]:
         retval = {} # type: Dict[ReductionShape, PTMedianMADTensorStatistic]
         for reduction_shape in self._reduction_shapes:
@@ -240,9 +246,10 @@ class MedianMADStatisticCollector(PTOfflineTensorStatisticCollector):
 
 class PercentileStatisticCollector(PTOfflineTensorStatisticCollector):
     def __init__(self, percentiles_to_collect: List[float],
-                 reduction_shapes: Set[ReductionShape] = None,
+                 rs_vs_params: Dict[ReductionShape, Dict[str, Union[str, bool]]] = None,
                  num_samples: int = None,
                  window_size: int = None):
+        reduction_shapes = get_reduction_shapes(rs_vs_params)
         super().__init__(reduction_shapes, num_samples, window_size)
         self._percentiles_to_collect = percentiles_to_collect  # NB: Percentiles are valued between 0 and 100
 
@@ -263,9 +270,10 @@ class PercentileStatisticCollector(PTOfflineTensorStatisticCollector):
 
 class MeanPercentileStatisticCollector(PTOfflineTensorStatisticCollector):
     def __init__(self, percentiles_to_collect: List[float],
-                 reduction_shapes: Set[ReductionShape] = None,
+                 rs_vs_params: Dict[ReductionShape, Dict[str, Union[str, bool]]] = None,
                  num_samples: int = None,
                  window_size: int = None):
+        reduction_shapes = get_reduction_shapes(rs_vs_params)
         super().__init__(reduction_shapes, num_samples, window_size)
         self._window_size = window_size
         self._all_pct_values = {}  # type: Dict[float, Dict[ReductionShape, Deque]]
