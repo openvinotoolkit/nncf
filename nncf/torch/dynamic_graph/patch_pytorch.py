@@ -11,10 +11,13 @@
  limitations under the License.
 """
 
+from enum import Enum
+
 from typing import List
 
 import warnings
 
+import torch
 from torch.nn import DataParallel
 from torch.nn.parallel import DistributedDataParallel
 
@@ -26,8 +29,35 @@ from nncf.torch.dynamic_graph.wrappers import wrap_module_call
 from nncf.torch.dynamic_graph.wrappers import wrap_operator
 
 
+class NamespaceTarget(Enum):
+    TORCH_NN_FUNCTIONAL = 'torch.nn.functional'
+    TORCH_TENSOR = 'torch.tensor'
+    TORCH = 'torch'
+    EXTERNAL = 'external_function'
+
+
+def get_namespace_to_patch(namespace_target: NamespaceTarget) -> object:
+    if namespace_target == NamespaceTarget.TORCH_NN_FUNCTIONAL:
+        return torch.nn.functional
+    elif namespace_target == NamespaceTarget.TORCH_TENSOR:
+        return TracedTensor
+    elif namespace_target == NamespaceTarget.TORCH:
+        return torch
+    raise RuntimeError("{} namespace wasn't found in {}".format(namespace_target, NamespaceTarget))
+
+
+def get_namespace_to_get_functions(namespace_target: NamespaceTarget) -> object:
+    if namespace_target == NamespaceTarget.TORCH_NN_FUNCTIONAL:
+        return torch.nn.functional
+    elif namespace_target == NamespaceTarget.TORCH_TENSOR:
+        return torch.Tensor
+    elif namespace_target == NamespaceTarget.TORCH:
+        return torch._C._VariableFunctions
+    raise RuntimeError("{} namespace wasn't found in {}".format(namespace_target, NamespaceTarget))
+
+
 class PatchedOperatorInfo:
-    def __init__(self, name: str, operator_namespace: object):
+    def __init__(self, name: str, operator_namespace: NamespaceTarget, skip_trace: bool = False):
         """
         Information about patched operator.
         :param name: Operator name
@@ -36,30 +66,39 @@ class PatchedOperatorInfo:
         """
         self.name = name
         self.operator_namespace = operator_namespace
+        self.skip_trace = skip_trace
 
 
-class IgnoredFunctions:
+class FunctionsToPatchWithoutTracing:
     TENSOR_CREATING_FUNCTIONS = ['arange', 'as_subclass', 'as_tensor', 'copysign', 'copysign_', 'detach', 'detach_',
                                  'empty', 'ones', 'ones_like', 'rad2deg', 'rad2deg_', 'rand', 'randn', 'randn_like',
                                  'tensor', 'zeros']
     TENSOR_UTILITY_FUNCTIONS = ['all', 'allclose', 'any', 'assert_int_or_pair',
                                 'backward', 'broadcast_to', 'cpu', 'cuda', 'data_ptr', 'dequantize', 'dim',
                                 'handle_torch_function', 'has_names', 'has_torch_function', 'has_torch_function_unary',
-                                'has_torch_function_variadic', 'is_contiguous', 'item', 'names', 'numpy',
+                                'has_torch_function_variadic', 'is_contiguous', 'item', 'names', 'numel', 'numpy',
                                 'q_per_channel_axis', 'q_per_channel_scales', 'q_per_channel_zero_points', 'q_scale',
                                 'q_zero_point', 'qr', 'qscheme', 'random_', 'record_stream', 'refine_names',
                                 'register_hook', 'rename', 'rename_', 'shape', 'size', 'sort', 'storage',
                                 'storage_offset', 'stride', 'to']
 
-    IGNORED_FUNCTIONS = TENSOR_CREATING_FUNCTIONS + TENSOR_UTILITY_FUNCTIONS
+    FUNCTIONS_TO_PATCH_WITHOUT_TRACING = TENSOR_CREATING_FUNCTIONS + TENSOR_UTILITY_FUNCTIONS
 
 
 class MagicFunctionsToPatch:
     MAGIC_FUNCTIONS_TO_PATCH = {
-        TracedTensor: ["__add__", "__iadd__", "__radd__", "__sub__", "__isub__", "__rsub__", "__mul__",
-                       "__imul__", "__rmul__", "__div__", "__idiv__", "__truediv__", "__floordiv__",
-                       "__ifloordiv__", "__rfloordiv__", "__getitem__", "__lt__", "__le__", "__gt__",
-                       "__ge__", "__mod__", "__eq__", "__ne__", "__or__", "__xor__", "__and__", "__pow__"]
+        get_namespace_to_patch(NamespaceTarget.TORCH_TENSOR): ["__add__", "__iadd__", "__radd__", "__sub__", "__isub__",
+                                                               "__rsub__", "__mul__",
+                                                               "__imul__", "__rmul__", "__div__", "__idiv__",
+                                                               "__truediv__", "__floordiv__",
+                                                               "__ifloordiv__", "__rfloordiv__", "__getitem__",
+                                                               "__lt__", "__le__", "__gt__",
+                                                               "__ge__", "__mod__", "__eq__", "__ne__", "__or__",
+                                                               "__xor__", "__and__", "__pow__"]
+    }
+    FUNCTIONS_TO_PATCH_WITHOUT_TRACING = {
+        get_namespace_to_get_functions(NamespaceTarget.TORCH_TENSOR): ['__repr__'],
+        get_namespace_to_patch(NamespaceTarget.TORCH_TENSOR): ['__repr__']
     }
 
 
@@ -68,7 +107,7 @@ def register_operator(name=None):
         op_name = name
         if op_name is None:
             op_name = operator.__name__
-        return wrap_operator(operator, PatchedOperatorInfo(op_name, "external_function"))
+        return wrap_operator(operator, PatchedOperatorInfo(op_name, NamespaceTarget.EXTERNAL))
 
     return wrap
 
@@ -111,16 +150,17 @@ def patch_torch_jit_script():
     setattr(torch.jit, "script", torch_jit_script_wrapper)
 
 
-def patch_namespace_opname(namespace: object, op_name: str):
+def patch_namespace_opname(namespace, op_info: PatchedOperatorInfo):
+    op_name = op_info.name
     if hasattr(namespace, op_name):
         orig = getattr(namespace, op_name)
         ORIGINAL_OPERATORS.append(OriginalOpInfo(op_name, namespace, orig))
-        setattr(namespace, op_name, wrap_operator(orig, PatchedOperatorInfo(op_name, namespace)))
+        setattr(namespace, op_name, wrap_operator(orig, op_info))
     else:
         warnings.warn("Not patching {} since it is missing in this version of PyTorch".format(op_name))
 
 
-def get_all_functions_from_namespace(namespace: object, do_filter: bool = True) -> List[str]:
+def get_all_functions_from_namespace(namespace: NamespaceTarget, do_filter: bool = True) -> List[str]:
     """
     Seeks all attributes from the namespace, then takes only attributes,
     which types are function, builtin, method or method descriptor.
@@ -138,6 +178,7 @@ def get_all_functions_from_namespace(namespace: object, do_filter: bool = True) 
             filtered_names.append(name)
         return filtered_names
 
+    namespace = get_namespace_to_get_functions(namespace)
     all_torch_function_names = []
     members = inspect.getmembers(namespace)
     for member in members:
@@ -163,21 +204,20 @@ def patch_torch_operators():
         return
     _OPERATORS_ALREADY_WRAPPED = True
 
-    # patch operators
-    import torch
-    # pylint: disable=protected-access
-    functions_to_patch = {
-        torch.nn.functional: get_all_functions_from_namespace(torch.nn.functional),
-        torch: get_all_functions_from_namespace(torch._C._VariableFunctions),
-        TracedTensor: get_all_functions_from_namespace(torch.Tensor)
-    }
-    # pylint: enable=protected-access
-    ignored_functions = IgnoredFunctions.IGNORED_FUNCTIONS
+    functions_to_patch = {}
+    for namespace in NamespaceTarget:
+        if namespace == NamespaceTarget.EXTERNAL:
+            continue
+        functions_to_patch[get_namespace_to_patch(namespace)] = get_all_functions_from_namespace(namespace)
 
+    ignored_functions = FunctionsToPatchWithoutTracing.FUNCTIONS_TO_PATCH_WITHOUT_TRACING
+    functions_to_patch_without_tracing = {}
     for namespace, function_names in functions_to_patch.items():
+        functions_to_patch_without_tracing[namespace] = []
         new_function_names = []
         for function_name in function_names:
             if function_name in ignored_functions:
+                functions_to_patch_without_tracing[namespace].append(function_name)
                 continue
             new_function_names.append(function_name)
         functions_to_patch[namespace] = new_function_names
@@ -186,17 +226,37 @@ def patch_torch_operators():
     # which we've already wrapped. So we don't have to wrap Relu in torch.nn.functional
     # to be able to differ what torch.relu or torch.relu was called exactly inside Relu
 
-    functions_to_patch[torch.nn.functional].remove('relu')
+    functions_to_patch[get_namespace_to_patch(NamespaceTarget.TORCH_NN_FUNCTIONAL)].remove('relu')
 
-    for namespace, function_names in MagicFunctionsToPatch.MAGIC_FUNCTIONS_TO_PATCH.items():
+    magic_functions_to_patch = MagicFunctionsToPatch.MAGIC_FUNCTIONS_TO_PATCH
+    for namespace, function_names in magic_functions_to_patch.items():
         functions_to_patch[namespace] += function_names
 
-    for namespace, function_names in functions_to_patch.items():
-        for function_name in function_names:
-            patch_namespace_opname(namespace, function_name)
+    for namespace, function_names in MagicFunctionsToPatch.FUNCTIONS_TO_PATCH_WITHOUT_TRACING.items():
+        functions_to_patch_without_tracing[namespace] = functions_to_patch_without_tracing.get(namespace,
+                                                                                               []) + function_names
 
-    # Patch __repr__ methods so that debugging does not add new nodes to the graph
-    # patch_namespace_opname(TracedTensor, PatchedOperatorInfo("__repr__", ForwardTraceOnly()))
+    for namespace_target in NamespaceTarget:
+        if namespace_target == NamespaceTarget.EXTERNAL:
+            continue
+        for namespace, function_names in functions_to_patch.items():
+            if get_namespace_to_patch(namespace_target) == namespace:
+                for function_name in function_names:
+                    op_info = PatchedOperatorInfo(function_name, namespace_target)
+                    patch_namespace_opname(namespace, op_info)
+        # Patch operators without tracing so that they will not added to the model graph.
+
+        for namespace, function_names in functions_to_patch_without_tracing.items():
+            if get_namespace_to_patch(namespace_target) == namespace:
+                for function_name in function_names:
+                    op_info = PatchedOperatorInfo(function_name, namespace_target, skip_trace=True)
+                    patch_namespace_opname(namespace, op_info)
+            # As in Enum we don't have it. Special case.
+
+            elif namespace == torch.Tensor:
+                for function_name in function_names:
+                    op_info = PatchedOperatorInfo(function_name, namespace_target, skip_trace=True)
+                    patch_namespace_opname(namespace, op_info)
 
     ORIGINAL_OPERATORS.append(OriginalOpInfo("__call__", torch.nn.Module, torch.nn.Module.__call__))
     torch.nn.Module.__call__ = wrap_module_call(torch.nn.Module.__call__)

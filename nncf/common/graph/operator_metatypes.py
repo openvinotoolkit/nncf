@@ -116,22 +116,20 @@ class OperatorMetatypeRegistry(Registry):
         :return: The operator metatype.
         """
         if op_name not in self._op_name_to_op_meta_dict:
-            return self._op_name_to_op_meta_dict['unknown']
+            return UnknownMetatype
         return self._op_name_to_op_meta_dict[op_name]
 
 
-UNKNOWN_METATYPES = Registry('unknown_metatypes')
 NOOP_METATYPES = Registry('noop_metatypes')
 INPUT_NOOP_METATYPES = Registry('input_noop_metatypes')
 OUTPUT_NOOP_METATYPES = Registry('output_noop_metatypes')
 
 
-@UNKNOWN_METATYPES.register()
 class UnknownMetatype(OperatorMetatype):
     """
     UnknownMetatype is mapped to operations in NNCFGraph, which are unknown for algorithms,
     typically these are the operations that haven't been discovered before.
-    Algorithms should avoid applying graph changes with this metatype.
+    Algorithms should avoid processing graph nodes with this metatype.
     """
     name = "unknown"
 

@@ -18,7 +18,6 @@ import tensorflow as tf
 
 from nncf.common.graph.operator_metatypes import INPUT_NOOP_METATYPES
 from nncf.common.graph.operator_metatypes import NOOP_METATYPES
-from nncf.common.graph.operator_metatypes import UNKNOWN_METATYPES
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.operator_metatypes import OperatorMetatypeRegistry
 from nncf.common.hardware.opset import HWConfigOpName
@@ -82,16 +81,6 @@ class TFLayerMetatype(OperatorMetatype):
 class TFLayerWithWeightsMetatype(TFLayerMetatype):
     weight_definitions = []  # type: List[WeightDef]
     bias_attr_name = None  # type: Optional[str]
-
-
-@KERAS_LAYER_METATYPES.register()
-@UNKNOWN_METATYPES.register()
-class TFLayerUnknownMetatype(TFLayerMetatype):
-    name = 'unknown'
-
-    @classmethod
-    def get_all_aliases(cls) -> List[str]:
-        return [cls.name]
 
 
 @KERAS_LAYER_METATYPES.register()
@@ -581,8 +570,8 @@ class TFTensorFlowOpLayerMetatype(TFLayerMetatype):
 
     @classmethod
     def determine_subtype(cls,
-            layer: tf.keras.layers.Layer,
-            wrapper: Optional[tf.keras.layers.Wrapper] = None) -> Optional[Type[OperatorMetatype]]:
+                          layer: tf.keras.layers.Layer,
+                          wrapper: Optional[tf.keras.layers.Wrapper] = None) -> Optional[Type[OperatorMetatype]]:
         return TF_OPERATION_METATYPES.get_operator_metatype_by_op_name(layer.node_def.op)
 
 

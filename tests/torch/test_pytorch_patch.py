@@ -1,5 +1,9 @@
+import torch
 from nncf.torch.dynamic_graph.patch_pytorch import MagicFunctionsToPatch
 from nncf.torch.graph.operator_metatypes import PT_OPERATOR_METATYPES
+from nncf.torch.dynamic_graph.context import TracingContext
+from nncf.torch.dynamic_graph.trace_tensor import TracedTensor
+from nncf.torch.dynamic_graph.trace_tensor import TensorMeta
 
 
 def test_is_any_metatype_op_names_duplicated():
@@ -26,3 +30,19 @@ def test_are_all_magic_functions_patched():
                         is_contained = True
                         break
                 assert is_contained
+
+
+def test_repr_patching():
+    context_to_use = TracingContext()
+    context_to_use.enable_trace_dynamic_graph()
+    with context_to_use as _ctx:
+        with torch.no_grad():
+            tensor = torch.ones([1, 2])
+            print(tensor)
+            str(tensor)
+            tensor.__repr__
+            tensor = TracedTensor.from_torch_tensor(tensor, TensorMeta(0, 0, tensor.shape))
+            print(tensor)
+            str(tensor)
+            tensor.__repr__
+    assert _ctx.graph.get_nodes_count() == 0

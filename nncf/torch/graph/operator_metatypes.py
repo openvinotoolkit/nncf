@@ -11,8 +11,6 @@
  limitations under the License.
 """
 
-from enum import Enum
-
 from typing import Dict
 from typing import List
 from typing import Optional
@@ -22,24 +20,17 @@ from typing import TypeVar
 from nncf.common.graph.definitions import NNCFGraphNodeType
 from nncf.common.graph.layer_attributes import BaseLayerAttributes
 from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
-from nncf.common.graph.operator_metatypes import UNKNOWN_METATYPES
 from nncf.common.graph.operator_metatypes import INPUT_NOOP_METATYPES
 from nncf.common.graph.operator_metatypes import NOOP_METATYPES
 from nncf.common.graph.operator_metatypes import OUTPUT_NOOP_METATYPES
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.operator_metatypes import OperatorMetatypeRegistry
 from nncf.common.hardware.opset import HWConfigOpName
+from nncf.torch.dynamic_graph.patch_pytorch import NamespaceTarget
 
 ModuleAttributes = TypeVar('ModuleAttributes', bound=BaseLayerAttributes)
 
 PT_OPERATOR_METATYPES = OperatorMetatypeRegistry("operator_metatypes")
-
-
-class NamespaceTarget(Enum):
-    TORCH_NN_FUNCTIONAL = 'torch.nn.functional'
-    TORCH_TENSOR = 'torch.tensor'
-    TORCH = 'torch'
-    EXTERNAL = 'external_function'
 
 
 class PTOperatorMetatype(OperatorMetatype):
@@ -139,13 +130,6 @@ class PTNoopMetatype(PTOperatorMetatype):
     module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: [],
                                 NamespaceTarget.TORCH_TENSOR: [],
                                 NamespaceTarget.TORCH: ["contiguous", "clone"]}
-
-
-@PT_OPERATOR_METATYPES.register()
-@UNKNOWN_METATYPES.register()
-class PTUnknownMetatype(PTOperatorMetatype):
-    name = "unknown"
-    external_op_names = [name]
 
 
 @PT_OPERATOR_METATYPES.register()
@@ -259,6 +243,7 @@ class PTHardSwishMetatype(PTOperatorMetatype):
     module_to_function_names = {
         NamespaceTarget.TORCH_NN_FUNCTIONAL: ["hardswish"]
     }
+
 
 @PT_OPERATOR_METATYPES.register()
 class PTHardSigmoidMetatype(PTOperatorMetatype):

@@ -77,9 +77,11 @@ def wrap_operator(operator, operator_info: 'PatchedOperatorInfo'):
         ctx.in_operator = True
 
         try:
-            if ctx.is_forwarding:
-                from nncf.torch.dynamic_graph.trace_functions import ForwardTraceOnly
-                result = ForwardTraceOnly()(operator, *args, **kwargs)
+            if operator_info.skip_trace:
+                result = operator(*args, **kwargs)
+            elif ctx.is_forwarding:
+                from nncf.torch.dynamic_graph.trace_functions import forward_trace_only
+                result = forward_trace_only(operator, *args, **kwargs)
             else:
                 node = None
                 op_name = operator_info.name

@@ -15,7 +15,9 @@ from typing import Dict, List
 from nncf.common.quantization.quantizer_propagation.structs import QuantizationTrait
 from nncf.torch.graph import operator_metatypes
 from nncf.torch.graph.operator_metatypes import PTOperatorMetatype
+from nncf.common.graph.operator_metatypes import UnknownMetatype
 
+# If there are no some metatype it means that they are considered as NoopMetatype
 DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT = {
     QuantizationTrait.INPUTS_QUANTIZABLE: [
         operator_metatypes.PTConv2dMetatype,
@@ -50,7 +52,7 @@ DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT = {
     ],
     QuantizationTrait.NON_QUANTIZABLE: [
         operator_metatypes.PTSoftmaxMetatype,
-        operator_metatypes.PTUnknownMetatype
+        UnknownMetatype
     ],
     QuantizationTrait.CONCAT: [
         operator_metatypes.PTCatMetatype

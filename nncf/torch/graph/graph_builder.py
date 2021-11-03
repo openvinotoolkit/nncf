@@ -29,6 +29,7 @@ from nncf.torch.dynamic_graph.graph_tracer import ModelInputInfo
 from nncf.torch.graph.graph import PTNNCFGraph
 from nncf.torch.graph.operator_metatypes import PTCatMetatype
 from nncf.torch.graph.operator_metatypes import PT_OPERATOR_METATYPES
+from nncf.common.graph.operator_metatypes import UnknownMetatype
 
 
 class GraphBuilder:
@@ -61,7 +62,10 @@ class GraphConverter:
             layer_name = str(dynamic_graph_node.op_exec_context.op_address.scope_in_model)
 
             metatype = PT_OPERATOR_METATYPES.get_operator_metatype_by_op_name(op_address.operator_name)
-            subtype = metatype.determine_subtype(dynamic_graph_node.layer_attributes)
+            if metatype is not UnknownMetatype:
+                subtype = metatype.determine_subtype(dynamic_graph_node.layer_attributes)
+            else:
+                subtype = None
             if subtype is not None:
                 metatype = subtype
 
