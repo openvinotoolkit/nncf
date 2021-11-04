@@ -277,6 +277,7 @@ to find instruction and links to exact configuration files and final checkpoints
 | :---: | :---: | :---: | :---: |
 |BERT-base-chinese|INT8|XNLI|77.22 (0.46)|
 |BERT-base-cased|INT8|CoNLL2003|99.18 (-0.01)|
+|BERT-base-cased|INT8|MRPC|84.8 (-0.24)|
 |BERT-large (Whole Word Masking)|INT8|SQuAD v1.1|F1: 92.68 (0.53)|
 |RoBERTa-large|INT8|MNLI|matched: 89.25 (1.35)|
 |DistilBERT-base|INT8|SST-2|90.3 (0.8)|
