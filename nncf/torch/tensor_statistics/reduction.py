@@ -118,4 +118,3 @@ def get_reduction_shapes(rs_vs_params):
     if rs_vs_params:
         return set(rs_vs_params.keys())
     return None
-
