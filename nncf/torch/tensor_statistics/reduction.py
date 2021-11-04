@@ -117,3 +117,5 @@ def get_per_channel_history(raw_input_history: deque, scale_shape: List[int], di
 def get_reduction_shapes(rs_vs_params):
     if rs_vs_params:
         return set(rs_vs_params.keys())
+    return None
+

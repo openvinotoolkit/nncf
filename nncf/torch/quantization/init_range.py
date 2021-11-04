@@ -16,7 +16,6 @@ from copy import deepcopy
 from typing import Callable, Union
 from typing import Dict
 from typing import List
-from typing import Set
 from typing import Tuple
 
 import numpy as np
@@ -28,7 +27,6 @@ from nncf.common.quantization.quantizer_setup import QuantizationPointBase
 from nncf.common.quantization.quantizer_setup import QuantizerSetupBase
 from nncf.torch.quantization.layers import get_scale_shape
 from nncf.common.quantization.structs import NonWeightQuantizerId
-from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.structs import QuantizerGroup
 from nncf.common.quantization.structs import QuantizerId
 from nncf.common.quantization.structs import WeightQuantizerId
