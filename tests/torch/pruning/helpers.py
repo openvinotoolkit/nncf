@@ -13,6 +13,8 @@
 
 import copy
 import torch
+import torch.nn.functional as F
+
 from torch import nn
 
 from nncf.config import NNCFConfig
@@ -519,6 +521,90 @@ class GroupedConvolutionModel(nn.Module):
         x = self.conv3(x)
         x = x.view(-1)
         return self.fc(x)
+
+
+def make_divisible(v, divisor, min_value=None):
+    """
+    This function is taken from the original tf repo.
+    It ensures that all layers have a channel number that is divisible by 8
+    It can be seen here:
+    https://github.com/tensorflow/models/blob/master/research/slim/nets/mobilenet/mobilenet.py
+    """
+    if min_value is None:
+        min_value = divisor
+    new_v = max(min_value, int(v + divisor / 2) // divisor * divisor)
+    # Make sure that round down does not go down by more than 10%.
+    if new_v < 0.9 * v:
+        new_v += divisor
+    return new_v
+
+
+class HSigmoid(nn.Module):
+    """
+    Approximated sigmoid function, so-called hard-version of sigmoid from 'Searching for MobileNetV3,'
+    https://arxiv.org/abs/1905.02244.
+    """
+    def forward(self, x):
+        return F.relu6(x + 3.0, inplace=True) / 6.0
+
+
+class SELayerWithReshape(nn.Module):
+    def __init__(self, channel, reduction=4):
+        super().__init__()
+        self.avg_pool = nn.AdaptiveAvgPool1d(1)
+        self.fc = nn.Sequential(
+            nn.Conv2d(channel, make_divisible(channel // reduction, 8), 1),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(make_divisible(channel // reduction, 8), channel, 1),
+            HSigmoid()
+        )
+
+    def forward(self, x):
+        b, c, _, _ = x.size()
+        y = torch.reshape(x, (b, c, -1))
+        y = self.avg_pool(y).view(b, c, 1, 1)
+        y = self.fc(y)
+        return x * y
+
+
+class InvertedResidual(nn.Module):
+    def __init__(self, inp, hidden_dim, oup, kernel_size, stride, se_layer):
+        super().__init__()
+        assert stride in [1, 2]
+
+        self.identity = stride == 1 and inp == oup
+
+        self.conv = nn.Sequential(
+            # dw
+            nn.Conv2d(hidden_dim, hidden_dim, kernel_size, stride, (kernel_size - 1) // 2,
+                      groups=hidden_dim, bias=False),
+            nn.BatchNorm2d(hidden_dim),
+            nn.ReLU(inplace=True),
+            # Squeeze-and-Excite
+            se_layer(hidden_dim),
+            # pw-linear
+            nn.Conv2d(hidden_dim, oup, 1, 1, 0, bias=False),
+            nn.BatchNorm2d(oup),
+        )
+
+    def forward(self, x):
+        if self.identity:
+            return x + self.conv(x)
+        else:
+            return self.conv(x)
+
+
+class MobilenetV3BlockSEReshape(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.first_conv = nn.Conv2d(1, 6, 2)
+        self.inverted_residual = InvertedResidual(6, 6, 6, 5, 1, SELayerWithReshape)
+        self.last_conv = nn.Conv2d(6, 1, 1)
+
+    def forward(self, x):
+        x = self.first_conv(x)
+        x = self.inverted_residual(x)
+        return self.last_conv(x)
 
 
 class NASnetBlock(nn.Module):

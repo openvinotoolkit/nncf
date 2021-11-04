@@ -41,6 +41,7 @@ from tests.torch.pruning.helpers import MultipleDepthwiseConvolutionModel
 from tests.torch.pruning.helpers import PruningTestModelEltwise
 from tests.torch.pruning.helpers import PruningTestModelSharedConvs
 from tests.torch.pruning.helpers import NASnetBlock
+from tests.torch.pruning.helpers import MobilenetV3BlockSEReshape
 from tests.torch.pruning.helpers import TestModelBranching
 from tests.torch.pruning.helpers import TestModelDiffConvs
 from tests.torch.pruning.helpers import TestModelEltwiseCombination
@@ -79,189 +80,209 @@ class GroupPruningModulesTestStruct:
 
 
 GROUP_PRUNING_MODULES_TEST_CASES = [
-    GroupPruningModulesTestStruct(model=PruningTestModelEltwise,
-                                  non_pruned_module_nodes=['PruningTestModelEltwise/NNCFConv2d[conv1]/conv2d_0',
-                                                           'PruningTestModelEltwise/NNCFConv2d[conv4]/conv2d_0'],
-                                  pruned_groups=[['PruningTestModelEltwise/NNCFConv2d[conv2]/conv2d_0',
-                                                  'PruningTestModelEltwise/NNCFConv2d[conv3]/conv2d_0']],
-                                  pruned_groups_by_node_id=[[3, 4]],
-                                  can_prune_after_analysis={0: True, 1: False, 2: True, 3: True,
-                                                            4: True, 5: True, 6: True, 7: False, 8: True},
-                                  final_can_prune={1: PruningAnalysisDecision(
-                                                          False, [PruningAnalysisReason.CLOSING_CONV_MISSING]),
-                                                   3: PruningAnalysisDecision(True), 4: PruningAnalysisDecision(True),
-                                                   7: PruningAnalysisDecision(
-                                                          False, [PruningAnalysisReason.CLOSING_CONV_MISSING])},
-                                  prune_params=(False, False, False)),
-    GroupPruningModulesTestStruct(model=PruningTestModelEltwise,
-                                  non_pruned_module_nodes=[],
-                                  pruned_groups=[['PruningTestModelEltwise/NNCFConv2d[conv1]/conv2d_0'],
-                                                 ['PruningTestModelEltwise/NNCFConv2d[conv4]/conv2d_0'],
-                                                 ['PruningTestModelEltwise/NNCFConv2d[conv2]/conv2d_0',
-                                                  'PruningTestModelEltwise/NNCFConv2d[conv3]/conv2d_0']],
-                                  pruned_groups_by_node_id=[[1], [7], [3, 4]],
-                                  can_prune_after_analysis={0: True, 1: True, 2: True, 3: True, 4: True,
-                                                            5: True, 6: True, 7: True, 8: True},
-                                  final_can_prune={1: PruningAnalysisDecision(True),
-                                                   3: PruningAnalysisDecision(True),
-                                                   4: PruningAnalysisDecision(True),
-                                                   7: PruningAnalysisDecision(
-                                                          False, [PruningAnalysisReason.CLOSING_CONV_MISSING])},
-                                  prune_params=(True, True, False)),
-    GroupPruningModulesTestStruct(model=TestModelBranching,
-                                  non_pruned_module_nodes=[],
-                                  pruned_groups=[['TestModelBranching/NNCFConv2d[conv1]/conv2d_0',
-                                                  'TestModelBranching/NNCFConv2d[conv2]/conv2d_0',
-                                                  'TestModelBranching/NNCFConv2d[conv3]/conv2d_0']],
-                                  pruned_groups_by_node_id=[[1, 2, 4]],
-                                  can_prune_after_analysis={0: True, 1: True, 2: True, 3: True, 4: True,
-                                                            5: True, 6: True, 7: True, 8: True, 9: True, 10: True},
+    #GroupPruningModulesTestStruct(model=PruningTestModelEltwise,
+    #                              non_pruned_module_nodes=['PruningTestModelEltwise/NNCFConv2d[conv1]/conv2d_0',
+    #                                                       'PruningTestModelEltwise/NNCFConv2d[conv4]/conv2d_0'],
+    #                              pruned_groups=[['PruningTestModelEltwise/NNCFConv2d[conv2]/conv2d_0',
+    #                                              'PruningTestModelEltwise/NNCFConv2d[conv3]/conv2d_0']],
+    #                              pruned_groups_by_node_id=[[3, 4]],
+    #                              can_prune_after_analysis={0: True, 1: False, 2: True, 3: True,
+    #                                                        4: True, 5: True, 6: True, 7: False, 8: True},
+    #                              final_can_prune={1: PruningAnalysisDecision(
+    #                                                      False, [PruningAnalysisReason.CLOSING_CONV_MISSING]),
+    #                                               3: PruningAnalysisDecision(True), 4: PruningAnalysisDecision(True),
+    #                                               7: PruningAnalysisDecision(
+    #                                                      False, [PruningAnalysisReason.CLOSING_CONV_MISSING])},
+    #                              prune_params=(False, False, False)),
+    #GroupPruningModulesTestStruct(model=PruningTestModelEltwise,
+    #                              non_pruned_module_nodes=[],
+    #                              pruned_groups=[['PruningTestModelEltwise/NNCFConv2d[conv1]/conv2d_0'],
+    #                                             ['PruningTestModelEltwise/NNCFConv2d[conv4]/conv2d_0'],
+    #                                             ['PruningTestModelEltwise/NNCFConv2d[conv2]/conv2d_0',
+    #                                              'PruningTestModelEltwise/NNCFConv2d[conv3]/conv2d_0']],
+    #                              pruned_groups_by_node_id=[[1], [7], [3, 4]],
+    #                              can_prune_after_analysis={0: True, 1: True, 2: True, 3: True, 4: True,
+    #                                                        5: True, 6: True, 7: True, 8: True},
+    #                              final_can_prune={1: PruningAnalysisDecision(True),
+    #                                               3: PruningAnalysisDecision(True),
+    #                                               4: PruningAnalysisDecision(True),
+    #                                               7: PruningAnalysisDecision(
+    #                                                      False, [PruningAnalysisReason.CLOSING_CONV_MISSING])},
+    #                              prune_params=(True, True, False)),
+    #GroupPruningModulesTestStruct(model=TestModelBranching,
+    #                              non_pruned_module_nodes=[],
+    #                              pruned_groups=[['TestModelBranching/NNCFConv2d[conv1]/conv2d_0',
+    #                                              'TestModelBranching/NNCFConv2d[conv2]/conv2d_0',
+    #                                              'TestModelBranching/NNCFConv2d[conv3]/conv2d_0']],
+    #                              pruned_groups_by_node_id=[[1, 2, 4]],
+    #                              can_prune_after_analysis={0: True, 1: True, 2: True, 3: True, 4: True,
+    #                                                        5: True, 6: True, 7: True, 8: True, 9: True, 10: True},
 
-                                  final_can_prune={1: PruningAnalysisDecision(True),
-                                                   2: PruningAnalysisDecision(True),
-                                                   4: PruningAnalysisDecision(True),
-                                                   7: PruningAnalysisDecision(
-                                                          False, [PruningAnalysisReason.CLOSING_CONV_MISSING]),
-                                                   8: PruningAnalysisDecision(
-                                                          False, [PruningAnalysisReason.CLOSING_CONV_MISSING])},
-                                  prune_params=(True, True, False)),
-    GroupPruningModulesTestStruct(model=TestModelBranching,
-                                  non_pruned_module_nodes=['TestModelBranching/NNCFConv2d[conv1]/conv2d_0',
-                                                      'TestModelBranching/NNCFConv2d[conv2]/conv2d_0',
-                                                      'TestModelBranching/NNCFConv2d[conv3]/conv2d_0'],
-                                  pruned_groups=[['TestModelBranching/NNCFConv2d[conv4]/conv2d_0',
-                                                  'TestModelBranching/NNCFConv2d[conv5]/conv2d_0']],
-                                  pruned_groups_by_node_id=[[7, 8]],
-                                  can_prune_after_analysis={0: True, 1: False, 2: False, 3: True, 4: False,
-                                                            5: True, 6: True, 7: True, 8: True, 9: True, 10: True},
-                                  final_can_prune={1: PruningAnalysisDecision(
-                                                          False, [PruningAnalysisReason.CLOSING_CONV_MISSING]),
-                                                   2: PruningAnalysisDecision(
-                                                           False, [PruningAnalysisReason.CLOSING_CONV_MISSING]),
-                                                   4: PruningAnalysisDecision(
-                                                           False, [PruningAnalysisReason.CLOSING_CONV_MISSING]),
-                                                   7: PruningAnalysisDecision(
-                                                           False, [PruningAnalysisReason.CLOSING_CONV_MISSING]),
-                                                   8: PruningAnalysisDecision(
-                                                           False, [PruningAnalysisReason.CLOSING_CONV_MISSING])},
-                                  prune_params=(False, True, False)),
-    GroupPruningModulesTestStruct(model=TestModelBranching,
-                                  non_pruned_module_nodes=['TestModelBranching/NNCFConv2d[conv4]/conv2d_0',
-                                                      'TestModelBranching/NNCFConv2d[conv5]/conv2d_0'],
-                                  pruned_groups=[['TestModelBranching/NNCFConv2d[conv1]/conv2d_0',
-                                                  'TestModelBranching/NNCFConv2d[conv2]/conv2d_0',
-                                                  'TestModelBranching/NNCFConv2d[conv3]/conv2d_0']],
-                                  pruned_groups_by_node_id=[[1, 2, 4]],
-                                  can_prune_after_analysis={0: True, 1: True, 2: True, 3: True, 4: True,
-                                                            5: True, 6: True, 7: False, 8: False, 9: True, 10: True},
-                                  final_can_prune={1: PruningAnalysisDecision(True),
-                                                   2: PruningAnalysisDecision(True),
-                                                   4: PruningAnalysisDecision(True),
-                                                   7: PruningAnalysisDecision(
-                                                          False, [PruningAnalysisReason.CLOSING_CONV_MISSING]),
-                                                   8: PruningAnalysisDecision(
-                                                          False, [PruningAnalysisReason.CLOSING_CONV_MISSING])},
-                                  prune_params=(True, False, False)),
-    GroupPruningModulesTestStruct(model=TestModelResidualConnection,
-                                  non_pruned_module_nodes=['TestModelResidualConnection/NNCFConv2d[conv4]/conv2d_0',
-                                                      'TestModelResidualConnection/NNCFConv2d[conv5]/conv2d_0'],
-                                  pruned_groups=[['TestModelResidualConnection/NNCFConv2d[conv1]/conv2d_0',
-                                                  'TestModelResidualConnection/NNCFConv2d[conv2]/conv2d_0',
-                                                  'TestModelResidualConnection/NNCFConv2d[conv3]/conv2d_0']],
-                                  pruned_groups_by_node_id=[[1, 2, 4]],
-                                  can_prune_after_analysis={0: True, 1: True, 2: True, 3: True, 4: True,
-                                                            5: True, 6: True, 7: False, 8: False, 9: False,
-                                                            10: False, 11: False, 12: False},
-                                  final_can_prune={1: PruningAnalysisDecision(True),
-                                                   2: PruningAnalysisDecision(True),
-                                                   4: PruningAnalysisDecision(True),
-                                                   7: PruningAnalysisDecision(
-                                                          False, [PruningAnalysisReason.CLOSING_CONV_MISSING]),
-                                                   8: PruningAnalysisDecision(
-                                                          False, [PruningAnalysisReason.CLOSING_CONV_MISSING])},
+    #                              final_can_prune={1: PruningAnalysisDecision(True),
+    #                                               2: PruningAnalysisDecision(True),
+    #                                               4: PruningAnalysisDecision(True),
+    #                                               7: PruningAnalysisDecision(
+    #                                                      False, [PruningAnalysisReason.CLOSING_CONV_MISSING]),
+    #                                               8: PruningAnalysisDecision(
+    #                                                      False, [PruningAnalysisReason.CLOSING_CONV_MISSING])},
+    #                              prune_params=(True, True, False)),
+    #GroupPruningModulesTestStruct(model=TestModelBranching,
+    #                              non_pruned_module_nodes=['TestModelBranching/NNCFConv2d[conv1]/conv2d_0',
+    #                                                  'TestModelBranching/NNCFConv2d[conv2]/conv2d_0',
+    #                                                  'TestModelBranching/NNCFConv2d[conv3]/conv2d_0'],
+    #                              pruned_groups=[['TestModelBranching/NNCFConv2d[conv4]/conv2d_0',
+    #                                              'TestModelBranching/NNCFConv2d[conv5]/conv2d_0']],
+    #                              pruned_groups_by_node_id=[[7, 8]],
+    #                              can_prune_after_analysis={0: True, 1: False, 2: False, 3: True, 4: False,
+    #                                                        5: True, 6: True, 7: True, 8: True, 9: True, 10: True},
+    #                              final_can_prune={1: PruningAnalysisDecision(
+    #                                                      False, [PruningAnalysisReason.CLOSING_CONV_MISSING]),
+    #                                               2: PruningAnalysisDecision(
+    #                                                       False, [PruningAnalysisReason.CLOSING_CONV_MISSING]),
+    #                                               4: PruningAnalysisDecision(
+    #                                                       False, [PruningAnalysisReason.CLOSING_CONV_MISSING]),
+    #                                               7: PruningAnalysisDecision(
+    #                                                       False, [PruningAnalysisReason.CLOSING_CONV_MISSING]),
+    #                                               8: PruningAnalysisDecision(
+    #                                                       False, [PruningAnalysisReason.CLOSING_CONV_MISSING])},
+    #                              prune_params=(False, True, False)),
+    #GroupPruningModulesTestStruct(model=TestModelBranching,
+    #                              non_pruned_module_nodes=['TestModelBranching/NNCFConv2d[conv4]/conv2d_0',
+    #                                                  'TestModelBranching/NNCFConv2d[conv5]/conv2d_0'],
+    #                              pruned_groups=[['TestModelBranching/NNCFConv2d[conv1]/conv2d_0',
+    #                                              'TestModelBranching/NNCFConv2d[conv2]/conv2d_0',
+    #                                              'TestModelBranching/NNCFConv2d[conv3]/conv2d_0']],
+    #                              pruned_groups_by_node_id=[[1, 2, 4]],
+    #                              can_prune_after_analysis={0: True, 1: True, 2: True, 3: True, 4: True,
+    #                                                        5: True, 6: True, 7: False, 8: False, 9: True, 10: True},
+    #                              final_can_prune={1: PruningAnalysisDecision(True),
+    #                                               2: PruningAnalysisDecision(True),
+    #                                               4: PruningAnalysisDecision(True),
+    #                                               7: PruningAnalysisDecision(
+    #                                                      False, [PruningAnalysisReason.CLOSING_CONV_MISSING]),
+    #                                               8: PruningAnalysisDecision(
+    #                                                      False, [PruningAnalysisReason.CLOSING_CONV_MISSING])},
+    #                              prune_params=(True, False, False)),
+    #GroupPruningModulesTestStruct(model=TestModelResidualConnection,
+    #                              non_pruned_module_nodes=['TestModelResidualConnection/NNCFConv2d[conv4]/conv2d_0',
+    #                                                  'TestModelResidualConnection/NNCFConv2d[conv5]/conv2d_0'],
+    #                              pruned_groups=[['TestModelResidualConnection/NNCFConv2d[conv1]/conv2d_0',
+    #                                              'TestModelResidualConnection/NNCFConv2d[conv2]/conv2d_0',
+    #                                              'TestModelResidualConnection/NNCFConv2d[conv3]/conv2d_0']],
+    #                              pruned_groups_by_node_id=[[1, 2, 4]],
+    #                              can_prune_after_analysis={0: True, 1: True, 2: True, 3: True, 4: True,
+    #                                                        5: True, 6: True, 7: False, 8: False, 9: False,
+    #                                                        10: False, 11: False, 12: False},
+    #                              final_can_prune={1: PruningAnalysisDecision(True),
+    #                                               2: PruningAnalysisDecision(True),
+    #                                               4: PruningAnalysisDecision(True),
+    #                                               7: PruningAnalysisDecision(
+    #                                                      False, [PruningAnalysisReason.CLOSING_CONV_MISSING]),
+    #                                               8: PruningAnalysisDecision(
+    #                                                      False, [PruningAnalysisReason.CLOSING_CONV_MISSING])},
 
-                                  prune_params=(True, True, False)),
-    GroupPruningModulesTestStruct(model=TestModelEltwiseCombination,
-                                  non_pruned_module_nodes=[],
-                                  pruned_groups=[['TestModelEltwiseCombination/NNCFConv2d[conv1]/conv2d_0',
-                                                  'TestModelEltwiseCombination/NNCFConv2d[conv2]/conv2d_0',
-                                                  'TestModelEltwiseCombination/NNCFConv2d[conv4]/conv2d_0',
-                                                  'TestModelEltwiseCombination/NNCFConv2d[conv3]/conv2d_0',],
-                                                 ['TestModelEltwiseCombination/NNCFConv2d[conv5]/conv2d_0',
-                                                  'TestModelEltwiseCombination/NNCFConv2d[conv6]/conv2d_0']],
-                                  pruned_groups_by_node_id=[[1, 2, 4, 6], [8, 9]],
-                                  can_prune_after_analysis={0: True, 1: True, 2: True, 3: True, 4: True,
-                                                            5: True, 6: True, 7: True, 8: True, 9: True,
-                                                            10: True, 11: True},
-                                  final_can_prune={1: PruningAnalysisDecision(True),
-                                                   2: PruningAnalysisDecision(True),
-                                                   4: PruningAnalysisDecision(True),
-                                                   6: PruningAnalysisDecision(True),
-                                                   8: PruningAnalysisDecision(
-                                                          False, [PruningAnalysisReason.CLOSING_CONV_MISSING]),
-                                                   9: PruningAnalysisDecision(
-                                                          False, [PruningAnalysisReason.CLOSING_CONV_MISSING])},
-                                  prune_params=(True, True, False)),
-    GroupPruningModulesTestStruct(model=PruningTestModelSharedConvs,
-                                  non_pruned_module_nodes=['PruningTestModelSharedConvs/NNCFConv2d[conv1]/conv2d_0',
-                                                    'PruningTestModelSharedConvs/NNCFConv2d[conv3]/conv2d_0',
-                                                    'PruningTestModelSharedConvs/NNCFConv2d[conv3]/conv2d_1'],
-                                  pruned_groups=[['PruningTestModelSharedConvs/NNCFConv2d[conv2]/conv2d_0',
-                                                  'PruningTestModelSharedConvs/NNCFConv2d[conv2]/conv2d_1']],
-                                  pruned_groups_by_node_id=[[3, 4]],
-                                  can_prune_after_analysis={0: True, 1: False, 2: True, 3: True, 4: True,
-                                                            5: False, 6: False, 7: True, 8: True},
-                                  final_can_prune={1: PruningAnalysisDecision(
-                                                          False, [PruningAnalysisReason.CLOSING_CONV_MISSING]),
-                                                   3: PruningAnalysisDecision(True),
-                                                   4: PruningAnalysisDecision(True),
-                                                   5: PruningAnalysisDecision(
-                                                          False, [PruningAnalysisReason.CLOSING_CONV_MISSING]),
-                                                   6: PruningAnalysisDecision(
-                                                          False, [PruningAnalysisReason.CLOSING_CONV_MISSING])},
+    #                              prune_params=(True, True, False)),
+    #GroupPruningModulesTestStruct(model=TestModelEltwiseCombination,
+    #                              non_pruned_module_nodes=[],
+    #                              pruned_groups=[['TestModelEltwiseCombination/NNCFConv2d[conv1]/conv2d_0',
+    #                                              'TestModelEltwiseCombination/NNCFConv2d[conv2]/conv2d_0',
+    #                                              'TestModelEltwiseCombination/NNCFConv2d[conv4]/conv2d_0',
+    #                                              'TestModelEltwiseCombination/NNCFConv2d[conv3]/conv2d_0',],
+    #                                             ['TestModelEltwiseCombination/NNCFConv2d[conv5]/conv2d_0',
+    #                                              'TestModelEltwiseCombination/NNCFConv2d[conv6]/conv2d_0']],
+    #                              pruned_groups_by_node_id=[[1, 2, 4, 6], [8, 9]],
+    #                              can_prune_after_analysis={0: True, 1: True, 2: True, 3: True, 4: True,
+    #                                                        5: True, 6: True, 7: True, 8: True, 9: True,
+    #                                                        10: True, 11: True},
+    #                              final_can_prune={1: PruningAnalysisDecision(True),
+    #                                               2: PruningAnalysisDecision(True),
+    #                                               4: PruningAnalysisDecision(True),
+    #                                               6: PruningAnalysisDecision(True),
+    #                                               8: PruningAnalysisDecision(
+    #                                                      False, [PruningAnalysisReason.CLOSING_CONV_MISSING]),
+    #                                               9: PruningAnalysisDecision(
+    #                                                      False, [PruningAnalysisReason.CLOSING_CONV_MISSING])},
+    #                              prune_params=(True, True, False)),
+    #GroupPruningModulesTestStruct(model=PruningTestModelSharedConvs,
+    #                              non_pruned_module_nodes=['PruningTestModelSharedConvs/NNCFConv2d[conv1]/conv2d_0',
+    #                                                'PruningTestModelSharedConvs/NNCFConv2d[conv3]/conv2d_0',
+    #                                                'PruningTestModelSharedConvs/NNCFConv2d[conv3]/conv2d_1'],
+    #                              pruned_groups=[['PruningTestModelSharedConvs/NNCFConv2d[conv2]/conv2d_0',
+    #                                              'PruningTestModelSharedConvs/NNCFConv2d[conv2]/conv2d_1']],
+    #                              pruned_groups_by_node_id=[[3, 4]],
+    #                              can_prune_after_analysis={0: True, 1: False, 2: True, 3: True, 4: True,
+    #                                                        5: False, 6: False, 7: True, 8: True},
+    #                              final_can_prune={1: PruningAnalysisDecision(
+    #                                                      False, [PruningAnalysisReason.CLOSING_CONV_MISSING]),
+    #                                               3: PruningAnalysisDecision(True),
+    #                                               4: PruningAnalysisDecision(True),
+    #                                               5: PruningAnalysisDecision(
+    #                                                      False, [PruningAnalysisReason.CLOSING_CONV_MISSING]),
+    #                                               6: PruningAnalysisDecision(
+    #                                                      False, [PruningAnalysisReason.CLOSING_CONV_MISSING])},
 
-                                  prune_params=(False, False, False)),
-    GroupPruningModulesTestStruct(model=DepthwiseConvolutionModel,
-                                  non_pruned_module_nodes=['DepthwiseConvolutionModel/NNCFConv2d[conv1]/conv2d_0',
-                                                           'DepthwiseConvolutionModel/NNCFConv2d[conv4]/conv2d_0'],
-                                  pruned_groups=[['DepthwiseConvolutionModel/NNCFConv2d[conv2]/conv2d_0',
-                                                  'DepthwiseConvolutionModel/NNCFConv2d[conv3]/conv2d_0',
-                                                  'DepthwiseConvolutionModel/NNCFConv2d[depthwise_conv]/conv2d_0']],
-                                  pruned_groups_by_node_id=[[2, 3, 5]],
-                                  can_prune_after_analysis={0: True, 1: False, 2: True, 3: True, 4: True,
-                                                            5: True, 6: False, 7: True},
+    #                              prune_params=(False, False, False)),
+    #GroupPruningModulesTestStruct(model=DepthwiseConvolutionModel,
+    #                              non_pruned_module_nodes=['DepthwiseConvolutionModel/NNCFConv2d[conv1]/conv2d_0',
+    #                                                       'DepthwiseConvolutionModel/NNCFConv2d[conv4]/conv2d_0'],
+    #                              pruned_groups=[['DepthwiseConvolutionModel/NNCFConv2d[conv2]/conv2d_0',
+    #                                              'DepthwiseConvolutionModel/NNCFConv2d[conv3]/conv2d_0',
+    #                                              'DepthwiseConvolutionModel/NNCFConv2d[depthwise_conv]/conv2d_0']],
+    #                              pruned_groups_by_node_id=[[2, 3, 5]],
+    #                              can_prune_after_analysis={0: True, 1: False, 2: True, 3: True, 4: True,
+    #                                                        5: True, 6: False, 7: True},
 
-                                  final_can_prune={1: PruningAnalysisDecision(
-                                                          False, [PruningAnalysisReason.CLOSING_CONV_MISSING]),
-                                                   2: PruningAnalysisDecision(True),
-                                                   3: PruningAnalysisDecision(True),
-                                                   6: PruningAnalysisDecision(
-                                                          False, [PruningAnalysisReason.CLOSING_CONV_MISSING])},
+    #                              final_can_prune={1: PruningAnalysisDecision(
+    #                                                      False, [PruningAnalysisReason.CLOSING_CONV_MISSING]),
+    #                                               2: PruningAnalysisDecision(True),
+    #                                               3: PruningAnalysisDecision(True),
+    #                                               6: PruningAnalysisDecision(
+    #                                                      False, [PruningAnalysisReason.CLOSING_CONV_MISSING])},
 
-                                  prune_params=(False, False, False)),
+    #                              prune_params=(False, False, False)),
+    #GroupPruningModulesTestStruct(
+    #    model=MultipleDepthwiseConvolutionModel,
+    #    non_pruned_module_nodes=['MultipleDepthwiseConvolutionModel/NNCFConv2d[conv1]/conv2d_0',
+    #                             'MultipleDepthwiseConvolutionModel/NNCFConv2d[conv4]/conv2d_0',
+    #                             'MultipleDepthwiseConvolutionModel/NNCFConv2d[conv2]/conv2d_0',
+    #                             'MultipleDepthwiseConvolutionModel/NNCFConv2d[conv3]/conv2d_0',
+    #                             'MultipleDepthwiseConvolutionModel/NNCFConv2d[depthwise_conv]/conv2d_0'],
+    #    pruned_groups=[],
+    #    pruned_groups_by_node_id=[],
+    #    can_prune_after_analysis={0: True, 1: False, 2: False, 3: False, 4: False, 5: False, 6: False, 7: True},
+
+    #    final_can_prune={1: PruningAnalysisDecision(
+    #                            False, [PruningAnalysisReason.CLOSING_CONV_MISSING]),
+    #                     2: PruningAnalysisDecision(
+    #                            False, [PruningAnalysisReason.CLOSING_CONV_MISSING]),
+    #                     3: PruningAnalysisDecision(
+    #                            False, [PruningAnalysisReason.CLOSING_CONV_MISSING]),
+    #                     6: PruningAnalysisDecision(
+    #                            False, [PruningAnalysisReason.CLOSING_CONV_MISSING])},
+
+    #    prune_params=(False, False, False)),
+    #GroupPruningModulesTestStruct(
+    #    model=NASnetBlock,
+    #    non_pruned_module_nodes=['NASnetBlock/NNCFConv2d[first_conv]/conv2d_0',
+    #                             'NASnetBlock/CellB[cell]/SepConv[sep_conv1]/NNCFConv2d[conv1]/conv2d_0',
+    #                             'NASnetBlock/CellB[cell]/SepConv[sep_conv2]/NNCFConv2d[conv1]/conv2d_0',
+    #                             'NASnetBlock/CellB[cell]/NNCFConv2d[conv1]/conv2d_0',
+    #                             'NASnetBlock/CellB[cell]/SepConv[sep_conv3]/NNCFConv2d[conv1]/conv2d_0'],
+    #    pruned_groups=[['NASnetBlock/CellB[cell]/NNCFConv2d[conv2]/conv2d_0']],
+    #    pruned_groups_by_node_id=[[16]],
+    #    can_prune_after_analysis={0: True, 1: False, 2: False, 3: True, 4: False, 5: True, 6: False, 7: False,
+    #                              8: True, 9: False, 10: True, 11: True, 12: True, 13: True, 14: True, 15: True,
+    #                              16: True, 17: True, 18: True, 19: True},
+    #    final_can_prune={16: PruningAnalysisDecision(
+    #                             False, [PruningAnalysisReason.CLOSING_CONV_MISSING]),
+    #                     1: PruningAnalysisDecision(
+    #                             False, [PruningAnalysisReason.CLOSING_CONV_MISSING]),
+    #                     7: PruningAnalysisDecision(
+    #                             False, [PruningAnalysisReason.CLOSING_CONV_MISSING])},
+
+    #    prune_params=(True, True, True)),
     GroupPruningModulesTestStruct(
-        model=MultipleDepthwiseConvolutionModel,
-        non_pruned_module_nodes=['MultipleDepthwiseConvolutionModel/NNCFConv2d[conv1]/conv2d_0',
-                                 'MultipleDepthwiseConvolutionModel/NNCFConv2d[conv4]/conv2d_0',
-                                 'MultipleDepthwiseConvolutionModel/NNCFConv2d[conv2]/conv2d_0',
-                                 'MultipleDepthwiseConvolutionModel/NNCFConv2d[conv3]/conv2d_0',
-                                 'MultipleDepthwiseConvolutionModel/NNCFConv2d[depthwise_conv]/conv2d_0'],
-        pruned_groups=[],
-        pruned_groups_by_node_id=[],
-        can_prune_after_analysis={0: True, 1: False, 2: False, 3: False, 4: False, 5: False, 6: False, 7: True},
-
-        final_can_prune={1: PruningAnalysisDecision(
-                                False, [PruningAnalysisReason.CLOSING_CONV_MISSING]),
-                         2: PruningAnalysisDecision(
-                                False, [PruningAnalysisReason.CLOSING_CONV_MISSING]),
-                         3: PruningAnalysisDecision(
-                                False, [PruningAnalysisReason.CLOSING_CONV_MISSING]),
-                         6: PruningAnalysisDecision(
-                                False, [PruningAnalysisReason.CLOSING_CONV_MISSING])},
-
-        prune_params=(False, False, False)),
-    GroupPruningModulesTestStruct(
-        model=NASnetBlock,
+        model=MobilenetV3BlockSEReshape,
         non_pruned_module_nodes=['NASnetBlock/NNCFConv2d[first_conv]/conv2d_0',
                                  'NASnetBlock/CellB[cell]/SepConv[sep_conv1]/NNCFConv2d[conv1]/conv2d_0',
                                  'NASnetBlock/CellB[cell]/SepConv[sep_conv2]/NNCFConv2d[conv1]/conv2d_0',
@@ -273,11 +294,11 @@ GROUP_PRUNING_MODULES_TEST_CASES = [
                                   8: True, 9: False, 10: True, 11: True, 12: True, 13: True, 14: True, 15: True,
                                   16: True, 17: True, 18: True, 19: True},
         final_can_prune={16: PruningAnalysisDecision(
-                                 False, [PruningAnalysisReason.CLOSING_CONV_MISSING]),
-                         1: PruningAnalysisDecision(
-                                 False, [PruningAnalysisReason.CLOSING_CONV_MISSING]),
-                         7: PruningAnalysisDecision(
-                                 False, [PruningAnalysisReason.CLOSING_CONV_MISSING])},
+            False, [PruningAnalysisReason.CLOSING_CONV_MISSING]),
+            1: PruningAnalysisDecision(
+                False, [PruningAnalysisReason.CLOSING_CONV_MISSING]),
+            7: PruningAnalysisDecision(
+                False, [PruningAnalysisReason.CLOSING_CONV_MISSING])},
 
         prune_params=(True, True, True))
 ]
