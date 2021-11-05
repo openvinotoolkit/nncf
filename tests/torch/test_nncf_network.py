@@ -48,6 +48,7 @@ from nncf.torch.graph.graph import PTNNCFGraph
 from nncf.torch.graph.graph_builder import GraphBuilder
 from nncf.torch.graph.operator_metatypes import PTInputNoopMetatype
 from nncf.torch.graph.operator_metatypes import PTOutputNoopMetatype
+from nncf.common.graph.operator_metatypes import UnknownMetatype
 from nncf.torch.graph.operator_metatypes import PT_OPERATOR_METATYPES
 from nncf.torch.graph.operator_metatypes import PTReshapeMetatype
 from nncf.torch.graph.transformations.commands import PTInsertionCommand
@@ -388,10 +389,11 @@ def get_nncf_graph_from_mock_nx_graph(nx_graph: nx.DiGraph) -> PTNNCFGraph:
             metatype = node[NNCFGraph.METATYPE_ATTR]
         else:
             metatype = PT_OPERATOR_METATYPES.get_operator_metatype_by_op_name(node_type)
-            if metatype.subtypes:
-                subtype = metatype.determine_subtype(layer_attributes=layer_attributes)
-                if subtype is not None:
-                    metatype = subtype
+            if metatype is not UnknownMetatype:
+                if metatype.subtypes:
+                    subtype = metatype.determine_subtype(layer_attributes=layer_attributes)
+                    if subtype is not None:
+                        metatype = subtype
 
         node_id = idx
         node = mock_graph.add_nncf_node(
