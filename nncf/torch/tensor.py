@@ -31,7 +31,7 @@ class PTNNCFTensorProcessor(NNCFBaseTensorProcessor):
 
     @classmethod
     def ones(cls, shape: List[int], device) -> NNCFTensor:
-        return PTNNCFTensor(torch.ones(shape))
+        return PTNNCFTensor(torch.ones(shape, device=device))
 
     @classmethod
     def check_all_close(cls, tensors: List[NNCFTensor]) -> None:

@@ -769,10 +769,6 @@ FILTER_PRUNING_SCHEMA = {
                                                                      " `False` by default.",
                                                          default=False
                                                          ),
-                    "zero_grad": with_attributes(_BOOLEAN,
-                                                 description="Whether to setting gradients corresponding to zeroed"
-                                                             " filters to zero during training, `True` by default.",
-                                                 default=True),
                     "save_ranking_coeffs_path": with_attributes(_STRING),
                     "load_ranking_coeffs_path": with_attributes(_STRING),
                     "legr_params":
@@ -807,6 +803,11 @@ FILTER_PRUNING_SCHEMA = {
     "additionalProperties": False
 }
 
+KNOWLEDGE_DISTILLATION_TYPE_SCHEMA = {
+    "type": "string",
+    "enum": ["mse", "softmax"]
+}
+
 KNOWLEDGE_DISTILLATION_ALGO_NAME_IN_CONFIG = 'knowledge_distillation'
 KNOWLEDGE_DISTILLATION_SCHEMA = {
     **BASIC_COMPRESSION_ALGO_SCHEMA,
@@ -814,9 +815,14 @@ KNOWLEDGE_DISTILLATION_SCHEMA = {
         "algorithm": {
             "const": KNOWLEDGE_DISTILLATION_ALGO_NAME_IN_CONFIG
         },
-        "type": with_attributes(_STRING, description="Type of Knowledge Distillation Loss (mse/softmax)")
+        "type": with_attributes(KNOWLEDGE_DISTILLATION_TYPE_SCHEMA,
+                                description="Type of Knowledge Distillation Loss (mse/softmax)"),
+        "scale": with_attributes(_NUMBER, description="Knowledge Distillation loss value multiplier", default=1),
+        "temperature": with_attributes(_NUMBER, description="Temperature for logits softening "
+                                                            "(works only with softmax disitllation)", default=1)
     },
-    "additionalProperties": False
+    "additionalProperties": False,
+    "required": ["type"]
 }
 
 ALL_SUPPORTED_ALGO_SCHEMA = [BINARIZATION_SCHEMA,

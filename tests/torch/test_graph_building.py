@@ -477,3 +477,37 @@ def test_integer_path_marking():
     edges = list(nncf_graph.get_all_edges())
     num_integer_edges = sum([1 for edge in edges if edge.dtype is Dtype.INTEGER])
     assert num_integer_edges == 2  # cat -> __floordiv__ and __floordiv__ -> __getitem__
+
+
+class ModelSpecificException(Exception):
+    pass
+
+
+class ExceptionRaisingModule(torch.nn.Module):
+    class Inner(torch.nn.Module):
+        def __init__(self):
+            super().__init__()
+            self.dummy_param = torch.nn.Parameter(torch.ones([1]))
+
+        def forward(self, *args, **kwargs):
+            _ = torch.cat((torch.ones([1]), torch.ones([1])))
+            raise ModelSpecificException
+
+    def __init__(self):
+        super().__init__()
+        self.seq = torch.nn.Sequential(self.Inner(), self.Inner())
+
+    def forward(self, *args, **kwargs):
+        return self.seq(*args, **kwargs)
+
+
+def test_scope_and_call_counters_are_reset_on_exceptions():
+    ctx = TracingContext()
+    model = ExceptionRaisingModule()
+    with pytest.raises(ModelSpecificException):
+        with ctx:
+            model(torch.ones([1]))
+    assert not ctx.module_call_stack
+    assert not ctx.relative_scopes_stack
+    #pylint:disable=protected-access
+    assert not ctx._thread_local.operator_counters
