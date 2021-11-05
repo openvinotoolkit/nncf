@@ -53,8 +53,7 @@ from nncf.torch.graph.operator_metatypes import (
     PTSoftmaxMetatype,
     PTSubMetatype,
     PTSumMetatype,
-    PTTanhMetatype,
-    PTUnknownMetatype
+    PTTanhMetatype
 )
 from nncf.common.pruning.operations import (
     InputPruningOp,
@@ -68,6 +67,7 @@ from nncf.common.pruning.operations import (
     ElementwisePruningOp,
     StopMaskForwardPruningOp
 )
+from nncf.common.graph.operator_metatypes import UnknownMetatype
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.layers import NNCF_WRAPPED_USER_MODULES_DICT
@@ -297,7 +297,7 @@ class PTElementwisePruningOp(ElementwisePruningOp, PTPruner):
 @PT_PRUNING_OPERATOR_METATYPES.register('stop_propagation_ops')
 class PTStopMaskForwardPruningOp(StopMaskForwardPruningOp, PTPruner):
     subtypes = [PTMeanMetatype, PTMaxMetatype, PTMinMetatype, PTLinearMetatype, PTMatMulMetatype, PTSumMetatype,
-                PTUnknownMetatype]
+                UnknownMetatype]
 
 
 @PT_PRUNING_OPERATOR_METATYPES.register('concat')
