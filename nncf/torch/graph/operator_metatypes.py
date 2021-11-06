@@ -39,8 +39,8 @@ class PTOperatorMetatype(OperatorMetatype):
     Each derived class represents a single semantic group - for example, AddMetatype would
     group together '__iadd__', '__add__' and '__radd__' operations which all define nodewise
     tensor addition.
-    Also, specify from what python module corresponding operations are came from.
-    This information helps to differ functions with the same names but with different meanings.
+    Derived classes also specify which PyTorch functions in which modules should be patched
+    so that the entire group of operations is visible in the internal graph.
     Grouping also allows efficient application of HW specifics to compression of
     certain operation groups.
     """
@@ -48,8 +48,8 @@ class PTOperatorMetatype(OperatorMetatype):
     # with this metatype
     external_op_names = []  # type: List[str]
 
-    # Wrapped functions from 'torch.nn.function', 'torch.tensor', 'torch' module,
-    # that corresponds to the instance of PTOperatorMetatype
+    # Names of functions from 'torch.nn.function', 'torch.tensor' and 'torch' modules respectively,
+    # which are associated with this metatype.
     module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: [],  # type: Dict[NamespaceTarget, List[str]]
                                 NamespaceTarget.TORCH_TENSOR: [],
                                 NamespaceTarget.TORCH: []}
