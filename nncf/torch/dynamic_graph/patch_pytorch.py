@@ -54,9 +54,9 @@ def get_namespace_to_extract_functions_from(namespace_target: NamespaceTarget) -
     # pylint: disable=protected-access
     if namespace_target == NamespaceTarget.TORCH_NN_FUNCTIONAL:
         return torch.nn.functional
-    elif namespace_target == NamespaceTarget.TORCH_TENSOR:
+    if namespace_target == NamespaceTarget.TORCH_TENSOR:
         return torch.Tensor
-    elif namespace_target == NamespaceTarget.TORCH:
+    if namespace_target == NamespaceTarget.TORCH:
         return torch._C._VariableFunctions
     raise RuntimeError("{} namespace wasn't found in {}".format(namespace_target, NamespaceTarget))
     # pylint: enable=protected-access
