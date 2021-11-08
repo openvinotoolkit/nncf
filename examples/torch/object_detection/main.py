@@ -332,6 +332,7 @@ def create_model(config: SampleConfig,
     if weights:
         sd = torch.load(weights, map_location='cpu',
                         pickle_module=restricted_pickle_module)
+        sd = sd["state_dict"]
         load_state(ssd_net, sd)
 
     ssd_net.to(config.device)
@@ -497,9 +498,9 @@ def train_epoch(compression_ctrl, net, config, train_data_loader, criterion, opt
         conf_loss += batch_loss_c.item()
 
         if is_on_first_rank(config):
-            config.tb.add_scalar("train/loss_l", batch_loss_l.item(), iteration)
-            config.tb.add_scalar("train/loss_c", batch_loss_c.item(), iteration)
-            config.tb.add_scalar("train/loss", batch_loss.item(), iteration)
+            config.tb.add_scalar("train/loss_l", batch_loss_l.item(), iteration + epoch_size * epoch)
+            config.tb.add_scalar("train/loss_c", batch_loss_c.item(), iteration + epoch_size * epoch)
+            config.tb.add_scalar("train/loss", batch_loss.item(), iteration + epoch_size * epoch)
 
         if iteration % config.print_freq == 0:
             t_finish = time.time()

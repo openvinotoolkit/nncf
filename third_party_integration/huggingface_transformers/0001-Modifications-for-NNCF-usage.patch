@@ -1,4 +1,4 @@
-From 6659b0e6c4847b7f503828bb7311d149ea445c81 Mon Sep 17 00:00:00 2001
+From 8e5d5b5798febec45bb442e96f2633ac1c2bf6ba Mon Sep 17 00:00:00 2001
 From: Vasily Shamporov <vasily.shamporov@intel.com>
 Date: Mon, 2 Aug 2021 17:46:48 +0300
 Subject: [PATCH] Modifications for NNCF usage
@@ -10,6 +10,7 @@ Subject: [PATCH] Modifications for NNCF usage
  .../pytorch/text-classification/run_xnli.py   |  70 +++++++++--
  .../pytorch/token-classification/run_ner.py   | 118 ++++++++++++++----
  nncf_bert_config_conll.json                   |  44 +++++++
+ nncf_bert_config_mrpc.json                    |  42 +++++++
  nncf_bert_config_squad.json                   |  44 +++++++
  ...config_squad_magnitude_sparsity_cubic.json |  31 +++++
  nncf_bert_config_xnli.json                    |  36 ++++++
@@ -22,8 +23,9 @@ Subject: [PATCH] Modifications for NNCF usage
  src/transformers/trainer.py                   |  74 +++++++++--
  src/transformers/trainer_callback.py          |   2 +
  src/transformers/training_args.py             |   6 +
- 18 files changed, 800 insertions(+), 73 deletions(-)
+ 19 files changed, 842 insertions(+), 73 deletions(-)
  create mode 100644 nncf_bert_config_conll.json
+ create mode 100644 nncf_bert_config_mrpc.json
  create mode 100644 nncf_bert_config_squad.json
  create mode 100644 nncf_bert_config_squad_magnitude_sparsity_cubic.json
  create mode 100644 nncf_bert_config_xnli.json
@@ -703,22 +705,22 @@ index 65c26cd9e..f3cf0f857 100755
      # Training
 diff --git a/nncf_bert_config_conll.json b/nncf_bert_config_conll.json
 new file mode 100644
-index 000000000..7ce2cc6c9
+index 000000000..0f73fe368
 --- /dev/null
 +++ b/nncf_bert_config_conll.json
 @@ -0,0 +1,44 @@
 +{
 +    "input_info": [
 +        {
-+            "sample_size": [1, 512],
++            "sample_size": [1, 128],
 +            "type": "long"
 +        },
 +        {
-+            "sample_size": [1, 512],
++            "sample_size": [1, 128],
 +            "type": "long"
 +        },
 +        {
-+            "sample_size": [1, 512],
++            "sample_size": [1, 128],
 +            "type": "long"
 +        }
 +    ],
@@ -747,6 +749,54 @@ index 000000000..7ce2cc6c9
 +        {
 +            "mode": "symmetric",
 +            "signed": true,
++            "per_channel": false
++        }
++    }
++}
+diff --git a/nncf_bert_config_mrpc.json b/nncf_bert_config_mrpc.json
+new file mode 100644
+index 000000000..f4ecbeeed
+--- /dev/null
++++ b/nncf_bert_config_mrpc.json
+@@ -0,0 +1,42 @@
++{
++    "input_info": [
++        {
++            "sample_size": [1, 128],
++            "type": "long"
++        },
++        {
++            "sample_size": [1, 128],
++            "type": "long"
++        },
++        {
++            "sample_size": [1, 128],
++            "type": "long"
++        }
++    ],
++    "compression": {
++        "algorithm": "quantization",
++        "initializer": {
++            "range": {
++                "num_init_samples": 64,
++                "type": "percentile",
++                "params":
++                {
++                    "min_percentile": 0.01,
++                    "max_percentile": 99.99
++                }
++            },
++            "batchnorm_adaptation": {
++                "num_bn_adaptation_samples": 200
++            }
++        },
++        "activations":
++        {
++            "mode": "symmetric"
++        },
++        "weights":
++        {
++            "mode": "symmetric",
 +            "per_channel": false
 +        }
 +    }

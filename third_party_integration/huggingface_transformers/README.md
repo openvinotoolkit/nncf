@@ -71,6 +71,20 @@ _INT8 model (symmetric quantization)_ - 99.18% acc, 95.31% F1
 `python examples/pytorch/token-classification/run_ner.py --model_name_or_path bert_base_cased_conll_int8 --dataset_name conll2003 --output_dir bert_base_cased_conll_int8 --do_eval --nncf_config nncf_bert_config_squad.json --to_onnx bert_base_cased_conll_int8.onnx`
 
 
+### BERT-MRPC
+
+_Full-precision FP32 baseline model_ -  bert-base-cased-finetuned-mrpc, 84.56% acc
+
+_INT8 model (symmetric quantization)_ - 84.8% acc
+
+**INT8 model quantization-aware training command line (trained on 1x RTX 2080):**
+
+`python examples/pytorch/token-classification/run_glue.py --model_name_or_path bert-base-cased-finetuned-mrpc --task_name mrpc --do_train --do_eval --num_train_epochs 5.0 --per_device_eval_batch_size 1 --output_dir bert_cased_mrpc_int8 --evaluation_strategy epoch --save_strategy epoch --nncf_config nncf_bert_config_mrpc.json`
+
+**Fine-tuned INT8 model evaluation and ONNX export command line:**
+
+`python examples/pytorch/token-classification/run_ner.py --model_name_or_path bert_cased_mrpc_int8 --task_name mrpc --do_eval --per_gpu_eval_batch_size 1 --output_dir bert_cased_mrpc_int8 --nncf_config nncf_bert_config_mrpc.json --to_onnx bert_base_cased_mrpc_int8.onnx`
+
 ### RoBERTA-MNLI
 
 _Full-precision FP32 baseline model_ - roberta-large-mnli, pre-trained on MNLI - 90.6% accuracy (matched), 90.1% accuracy (mismatched)
