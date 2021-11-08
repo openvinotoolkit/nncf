@@ -43,6 +43,7 @@ from nncf.torch.graph.operator_metatypes import (
     MulMetatype,
     PTOutputNoopMetatype,
     PRELUMetatype,
+    LeakyRELUMetatype,
     RELUMetatype,
     SigmoidMetatype,
     SILUMetatype,
@@ -105,7 +106,7 @@ class PTOutputPruningOp(OutputPruningOp, PTPruner):
 @PT_PRUNING_OPERATOR_METATYPES.register('identity_mask_propagation')
 class PTIdentityMaskForwardPruningOp(IdentityMaskForwardPruningOp, PTPruner):
     subtypes = [HardTanhMetatype, TanhMetatype, RELUMetatype, PRELUMetatype, ELUMetatype, GELUMetatype, SigmoidMetatype,
-                SoftmaxMetatype, AvgPool2dMetatype, MaxPool2dMetatype, DropoutMetatype, SILUMetatype]
+                SoftmaxMetatype, AvgPool2dMetatype, MaxPool2dMetatype, DropoutMetatype, SILUMetatype, LeakyRELUMetatype]
     additional_types = ['h_sigmoid', 'h_swish', 'RELU']
 
 
