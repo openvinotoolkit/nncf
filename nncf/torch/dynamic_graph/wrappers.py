@@ -60,7 +60,7 @@ OP_NAMES_REQUIRING_MODULE_ATTRS = [v.op_func_name for v in NNCF_MODULES_DICT] + 
 
 def wrap_operator(operator, operator_info: 'PatchedOperatorInfo'):
     """
-
+    TODO (vasiliy): add dosctring
     """
     # do not wrap function twice
     _orig_op = getattr(operator, '_original_op', None)

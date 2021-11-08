@@ -47,6 +47,7 @@ class GraphBuilder:
 class GraphConverter:
     @staticmethod
     def convert(dynamic_graph: DynamicGraph, input_infos: List[ModelInputInfo] = None) -> PTNNCFGraph:
+        # pylint:disable=too-many-branches
         layer_name_vs_node_counts = {}  # type: Dict[LayerName, int]
 
         for dynamic_graph_node in dynamic_graph.get_all_nodes():

@@ -18,6 +18,7 @@ from typing import List
 import warnings
 
 import torch
+import torch.utils.cpp_extension
 from torch.nn import DataParallel
 from torch.nn.parallel import DistributedDataParallel
 
@@ -30,6 +31,9 @@ from nncf.torch.dynamic_graph.wrappers import wrap_operator
 
 
 class NamespaceTarget(Enum):
+    """
+    NamespaceTarget stores modules from which patched operators were obtained.
+    """
     TORCH_NN_FUNCTIONAL = 'torch.nn.functional'
     TORCH_TENSOR = 'torch.tensor'
     TORCH = 'torch'
@@ -39,14 +43,15 @@ class NamespaceTarget(Enum):
 def get_namespace_to_patch(namespace_target: NamespaceTarget) -> object:
     if namespace_target == NamespaceTarget.TORCH_NN_FUNCTIONAL:
         return torch.nn.functional
-    elif namespace_target == NamespaceTarget.TORCH_TENSOR:
+    if namespace_target == NamespaceTarget.TORCH_TENSOR:
         return TracedTensor
-    elif namespace_target == NamespaceTarget.TORCH:
+    if namespace_target == NamespaceTarget.TORCH:
         return torch
     raise RuntimeError("{} namespace wasn't found in {}".format(namespace_target, NamespaceTarget))
 
 
-def get_namespace_to_get_functions(namespace_target: NamespaceTarget) -> object:
+def get_namespace_to_extract_functions_from(namespace_target: NamespaceTarget) -> object:
+    # pylint: disable=protected-access
     if namespace_target == NamespaceTarget.TORCH_NN_FUNCTIONAL:
         return torch.nn.functional
     elif namespace_target == NamespaceTarget.TORCH_TENSOR:
@@ -54,6 +59,7 @@ def get_namespace_to_get_functions(namespace_target: NamespaceTarget) -> object:
     elif namespace_target == NamespaceTarget.TORCH:
         return torch._C._VariableFunctions
     raise RuntimeError("{} namespace wasn't found in {}".format(namespace_target, NamespaceTarget))
+    # pylint: enable=protected-access
 
 
 class PatchedOperatorInfo:
@@ -61,8 +67,9 @@ class PatchedOperatorInfo:
         """
         Information about patched operator.
         :param name: Operator name
-        :param function_namespace: Python module, from which operator was imported. Could be a special string
-         - 'external_function', which mean that function was registered not from 'torch' or its submodules.
+        :param operator_namespace: Python module, from which operator was gotten.
+        :param skip_trace: If it is set to True, the both operator and its internal calls
+         to otherwise traced functions do not appear into the model graph.
         """
         self.name = name
         self.operator_namespace = operator_namespace
@@ -174,7 +181,7 @@ def get_all_functions_from_namespace(namespace: NamespaceTarget, do_filter: bool
             filtered_names.append(name)
         return filtered_names
 
-    patched_namespace = get_namespace_to_get_functions(namespace)
+    patched_namespace = get_namespace_to_extract_functions_from(namespace)
     all_torch_function_names = []
     members = inspect.getmembers(patched_namespace)
     for member in members:
@@ -234,7 +241,8 @@ def patch_torch_operators():
             patched_namespace = get_namespace_to_patch(namespace)
             patch_namespace_opname(patched_namespace, op_info)
 
-    # Patch operators without tracing so that they will not added to the model graph.
+    # Patch operators without tracing so that
+    # both they and any internal calls to otherwise traced functions do not appear into the model graph.
 
     for namespace, function_names in functions_to_patch_without_tracing.items():
         for function_name in function_names:
@@ -242,7 +250,8 @@ def patch_torch_operators():
             patched_namespace = get_namespace_to_patch(namespace)
             patch_namespace_opname(patched_namespace, op_info)
 
-    # Patch __repr__ twice in 'torch.Tensor' and 'TracedTensor'
+    # Patch __repr__ twice in 'torch.Tensor' and 'TracedTensor'.
+    # This is done to not add operations behind print() operator for the both TracedTensor and torch.Tensor.
 
     op_info = PatchedOperatorInfo("__repr__", NamespaceTarget.TORCH_TENSOR, skip_trace=True)
     patch_namespace_opname(torch.Tensor, op_info)
@@ -270,7 +279,6 @@ def patch_extension_build_function():
     The function patches PyTorch and fix a bug inside CUDA extensions building;
     The bug must be fixed with a new PyTorch 1.8.0
     """
-    import torch.utils.cpp_extension
     try:
         torch_version_numbers = torch.__version__.split('+', maxsplit=1)[0]
         split_torch_version = list(map(int, torch_version_numbers.split('.')))

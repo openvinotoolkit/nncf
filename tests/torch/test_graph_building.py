@@ -86,6 +86,39 @@ def test_ambiguous_function():
         unique_op_exec_contexts.add(node_op_address)
 
 
+def test_forward_trace_function():
+    from nncf.torch.dynamic_graph.trace_functions import forward_trace_only
+    from nncf.torch.dynamic_graph.trace_tensor import TracedTensor, TensorMeta
+
+    shape1, shape2 = ([32, 1, 4, 8], [1, 8, 12, 16])
+    meta1, meta2 = (TensorMeta(5, 1, shape1), TensorMeta(3, 8, shape2))
+    input_tensor1 = TracedTensor.from_torch_tensor(torch.Tensor(size=shape1), meta1)
+    input_tensor2 = TracedTensor.from_torch_tensor(torch.Tensor(size=shape2), meta2)
+
+    # 1 -> 1
+    output_tensor = forward_trace_only(torch.Tensor.view, input_tensor1, [-1])
+    assert output_tensor.tensor_meta != input_tensor1.tensor_meta
+    assert output_tensor.tensor_meta.shape == (1024, )
+
+    # 1 -> N
+    outputs = forward_trace_only(torch.Tensor.chunk, input_tensor1, 3)
+    for out in outputs:
+        assert out.tensor_meta == input_tensor1.tensor_meta
+
+    # N -> N (2 -> 2)
+    outputs = forward_trace_only(lambda x: x + [5], [input_tensor1, input_tensor2])
+    assert outputs[0].tensor_meta == input_tensor1.tensor_meta
+    assert outputs[1].tensor_meta == input_tensor2.tensor_meta
+
+    # M -> N (2 -> 3)
+    with pytest.raises(RuntimeError):
+        outputs = forward_trace_only(lambda x: x + [torch.Tensor(shape2)], [input_tensor1, input_tensor2])
+
+    # M -> N (2 -> 1)
+    with pytest.raises(RuntimeError):
+        outputs = forward_trace_only(lambda x: x[0], [input_tensor1, input_tensor2])
+
+
 class ModelForTest(torch.nn.Module):
     IN_CHANNELS = 3
     OUT_CHANNELS = 10

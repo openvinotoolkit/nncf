@@ -33,7 +33,7 @@ def test_are_all_magic_functions_patched():
                 assert is_contained
 
 
-def test_repr_patching():
+def test_tensor_printing_does_not_inflate_graph():
     context_to_use = TracingContext()
     context_to_use.enable_trace_dynamic_graph()
     with context_to_use as _ctx:
@@ -41,9 +41,9 @@ def test_repr_patching():
             tensor = torch.ones([1, 2])
             print(tensor)
             str(tensor)
-            tensor.__repr__
+            tensor.__repr__()
             tensor = TracedTensor.from_torch_tensor(tensor, TensorMeta(0, 0, tensor.shape))
             print(tensor)
             str(tensor)
-            tensor.__repr__
+            tensor.__repr__()
     assert _ctx.graph.get_nodes_count() == 0
