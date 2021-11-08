@@ -435,7 +435,8 @@ class PruningAnalysisReason(Enum):
 class PruningAnalysisDecision:
     """
     Container for pruning analysis decisions. Contains decision which is boolean marker either
-    node prunable or not and pruning analysis reason in PruningAnalysisReason format.
+    node prunable or not (prunable if decision attribute is True) and
+    pruning analysis reason in PruningAnalysisReason format.
     """
 
     def __init__(self,

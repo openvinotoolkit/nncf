@@ -539,30 +539,21 @@ def make_divisible(v, divisor, min_value=None):
     return new_v
 
 
-class HSigmoid(nn.Module):
-    """
-    Approximated sigmoid function, so-called hard-version of sigmoid from 'Searching for MobileNetV3,'
-    https://arxiv.org/abs/1905.02244.
-    """
-    def forward(self, x):
-        return F.relu6(x + 3.0, inplace=True) / 6.0
-
-
 class SELayerWithReshape(nn.Module):
     def __init__(self, channel, reduction=4):
         super().__init__()
-        self.avg_pool = nn.AdaptiveAvgPool1d(1)
+        self.avg_pool = nn.AdaptiveAvgPool2d(1)
         self.fc = nn.Sequential(
             nn.Conv2d(channel, make_divisible(channel // reduction, 8), 1),
             nn.ReLU(inplace=True),
             nn.Conv2d(make_divisible(channel // reduction, 8), channel, 1),
-            HSigmoid()
+            nn.ReLU(inplace=True)
         )
 
     def forward(self, x):
         b, c, _, _ = x.size()
-        y = torch.reshape(x, (b, c, -1))
-        y = self.avg_pool(y).view(b, c, 1, 1)
+        y = self.avg_pool(x)
+        y = y.view(b, c).view(b, c, 1, 1)
         y = self.fc(y)
         return x * y
 

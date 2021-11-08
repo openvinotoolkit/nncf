@@ -146,7 +146,7 @@ def create_compressed_model(model: Module,
         builder.load_state(compression_state[BaseController.BUILDER_STATE])
 
 
-    base_path = '/home/dlyakhov/model_export/18_10_21'
+    base_path = '/home/dlyakhov/model_export/11_08_21'
     import networkx as nx
     import os
     import subprocess

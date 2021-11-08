@@ -34,7 +34,7 @@ class NNCFTensor:
 
     @property
     def shape(self) -> List[int]:
-        if not self._tensor:
+        if self._tensor is None:
             raise RuntimeError('Attempt to get shape of empty NNCFTensor')
         return self._tensor.shape
 
