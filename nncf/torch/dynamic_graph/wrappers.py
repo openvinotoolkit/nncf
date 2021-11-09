@@ -60,7 +60,17 @@ OP_NAMES_REQUIRING_MODULE_ATTRS = [v.op_func_name for v in NNCF_MODULES_DICT] + 
 
 def wrap_operator(operator, operator_info: 'PatchedOperatorInfo'):
     """
-    TODO (vasiliy): add dosctring
+    Wraps the input callable object (`operator`) with the functionality that allows the calls to this object
+    to be tracked by the currently set global TracingContext. The wrapped functions can be then intercepted,
+    their arguments and return values modified arbitrarily and, for functions that correspond to operations on
+    tensors in a DNN,  their general position and address in the DNN's model control flow graph can be established.
+
+    :param: operator: A callable object to be wrapped.
+    :param: operator_info (PatchedOperatorInfo): An informational struct containing the specifics of wrapping
+            the `operator` in question.
+
+    :return: The wrapped version of `operator` that, without a TracingContext, performs functionally the same as
+             the unwrapped version, but within a TracingContext is able to be tracked and hooked.
     """
     # do not wrap function twice
     _orig_op = getattr(operator, '_original_op', None)
