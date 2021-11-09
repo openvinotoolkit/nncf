@@ -13,7 +13,7 @@
 
 from collections import OrderedDict
 from copy import deepcopy
-from typing import Callable, Union
+from typing import Callable
 from typing import Dict
 from typing import List
 from typing import Tuple
@@ -89,12 +89,41 @@ class PTRangeInitParams(RangeInitParams):
                          "definition!".format(str(qid)))
 
 
+class CollectorParams:
+    def __init__(self, is_weights, mode, per_channel):
+        self._is_weights = is_weights
+        self._mode = mode
+        self._per_channel = per_channel
+
+    def _use_per_sample_stats(self):
+        return not self._is_weights
+
+    def _use_abs_max(self):
+        return self._mode == 'symmetric'
+
+    def _use_means_of_mins(self):
+        return not self._is_weights and not self._per_channel and self._mode == 'asymmetric'
+
+    def _use_means_of_maxs(self):
+        return not self._is_weights and not self._per_channel
+
+    def get_params_for_collector(self, init_type: str):
+        if init_type == "min_max":
+            return self._use_abs_max()
+        if init_type == "mixed_min_max":
+            return self._use_per_sample_stats(), self._use_abs_max(), \
+                   self._use_means_of_mins(), self._use_means_of_maxs()
+        if init_type == "mean_min_max":
+            return self._use_abs_max()
+        raise RuntimeError("Unknown range init type: {}".format(init_type))
+
+
 class StatCollectorGenerator:
     @staticmethod
     def generate_collectors_for_range_init_statistics_collection(target_model_graph: PTNNCFGraph,
                                                                  quantizer_setup: QuantizerSetupBase,
                                                                  range_init_params: PTRangeInitParams) -> \
-            Dict[TensorStatisticObservationPoint, TensorStatisticCollectorBase]:
+            Dict[TensorStatisticObservationPoint, Dict[ReductionShape, TensorStatisticCollectorBase]]:
         retval = {}
         for qp in quantizer_setup.quantization_points.values():
             init_config = range_init_params.get_init_config_for_quantization_point(qp)
@@ -111,45 +140,54 @@ class StatCollectorGenerator:
                 tp,
                 reduction_shapes=set(rs_vs_params.keys()))
 
-            collector = StatCollectorGenerator.generate_stat_collector_for_range_init_config(
-                init_config,
-                is_weights,
-                rs_vs_params,
-                num_samples_to_collect_override=num_batches)
-            retval[obs_p] = collector
+            retval[obs_p] = {}
+            for rs in obs_p.reduction_shapes:
+                collector_params = rs_vs_params[rs]
+                collector = StatCollectorGenerator.generate_stat_collector_for_range_init_config(
+                    init_config,
+                    rs,
+                    collector_params,
+                    num_samples_to_collect_override=num_batches)
+                retval[obs_p][rs] = collector
+
         return retval
 
     @staticmethod
     def generate_stat_collector_for_range_init_config(
             init_config: RangeInitConfig,
-            is_weights: bool,
-            rs_vs_params: Dict[ReductionShape, Dict[str, Union[str, bool]]] = None,
+            reduction_shape: ReductionShape = None,
+            collector_params = None,
             num_samples_to_collect_override: int = None) -> TensorStatisticCollectorBase:
         num_samples = init_config.num_init_samples
         if num_samples_to_collect_override is not None:
             num_samples = num_samples_to_collect_override
         if init_config.init_type == "min_max":
-            return MinMaxStatisticCollector(rs_vs_params, num_samples)
+            use_abs_max = collector_params.get_params_for_collector("min_max")
+            return MinMaxStatisticCollector(use_abs_max, reduction_shape, num_samples)
         if init_config.init_type == "mixed_min_max":
-            return MixedMinMaxStatisticCollector(is_weights, rs_vs_params, num_samples)
+            use_per_sample_stats, use_abs_max, use_means_of_mins, use_means_of_maxs = \
+                collector_params.get_params_for_collector("mixed_min_max")
+            return MixedMinMaxStatisticCollector(use_per_sample_stats, use_abs_max, use_means_of_mins,
+                                                 use_means_of_maxs, reduction_shape, num_samples)
         if init_config.init_type == "mean_min_max":
-            return MeanMinMaxStatisticCollector(rs_vs_params, num_samples)
+            use_abs_max = collector_params.get_params_for_collector("mean_min_max")
+            return MeanMinMaxStatisticCollector(use_abs_max, reduction_shape, num_samples)
         if init_config.init_type == "threesigma":
-            return MedianMADStatisticCollector(rs_vs_params, num_samples)
+            return MedianMADStatisticCollector(reduction_shape, num_samples)
         if init_config.init_type == "percentile":
             min_percentile = init_config.init_type_specific_params.get("min_percentile", 0.1)
             max_percentile = init_config.init_type_specific_params.get("max_percentile", 99.9)
-            return PercentileStatisticCollector([min_percentile, max_percentile], rs_vs_params, num_samples)
+            return PercentileStatisticCollector([min_percentile, max_percentile], reduction_shape, num_samples)
         if init_config.init_type == "mean_percentile":
             min_percentile = init_config.init_type_specific_params.get("min_percentile", 0.1)
             max_percentile = init_config.init_type_specific_params.get("max_percentile", 99.9)
-            return MeanPercentileStatisticCollector([min_percentile, max_percentile], rs_vs_params, num_samples)
+            return MeanPercentileStatisticCollector([min_percentile, max_percentile], reduction_shape, num_samples)
         raise RuntimeError("Unknown range init type: {}".format(init_config.init_type))
 
     @staticmethod
     def get_all_scale_shapes_with_params(qp: QuantizationPointBase,
                                          target_nncf_graph: PTNNCFGraph) -> Dict[ReductionShape,
-                                                                                 Dict[str, Union[str, bool]]]:
+                                                                                 CollectorParams]:
         qconfigs = qp.get_all_configs_list()
         if qp.is_weight_quantization_point():
             module_node = target_nncf_graph.get_node_by_name(qp.insertion_point.target_node_name)
@@ -169,7 +207,7 @@ class StatCollectorGenerator:
                                           per_channel=qconfig.per_channel,
                                           channel_idx=channel_idx)
             if tuple(scale_shape) not in retval:
-                retval[tuple(scale_shape)] = {'mode': qconfig.mode, 'per_channel': qconfig.per_channel}
+                retval[tuple(scale_shape)] = CollectorParams(is_weights, qconfig.mode, qconfig.per_channel)
         return retval
 
 

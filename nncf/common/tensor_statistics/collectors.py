@@ -21,8 +21,8 @@ ReductionShape = Tuple[int]
 
 
 class TensorStatisticCollectorBase(ABC):
-    def __init__(self, reduction_shapes: Set[ReductionShape] = None, num_samples: int = None):
-        self._reduction_shapes = reduction_shapes
+    def __init__(self, reduction_shape: ReductionShape = None, num_samples: int = None):
+        self._reduction_shape = reduction_shape
         self._enabled = True
         self._collected_samples = 0
         self._num_samples = num_samples
@@ -31,8 +31,8 @@ class TensorStatisticCollectorBase(ABC):
         if not self._enabled or \
                 self._num_samples is not None and self._collected_samples >= self._num_samples:
             return x
-        if self._reduction_shapes is None:
-            self._reduction_shapes = {tuple(x.shape)}
+        if self._reduction_shape is None:
+            self._reduction_shape = {tuple(x.shape)}
         self._register_input(x)
         self._collected_samples += 1
         return x
@@ -77,9 +77,8 @@ class OnlineTensorStatisticCollector(TensorStatisticCollectorBase, ABC):
 
 
 class OfflineTensorStatisticCollector(TensorStatisticCollectorBase, ABC):
-    def __init__(self, reduction_shapes: Set[ReductionShape] = None, num_samples: int = None,
-                 window_size: int = None):
-        super().__init__(reduction_shapes, num_samples)
+    def __init__(self, reduction_shape: ReductionShape = None, num_samples: int = None, window_size: int = None):
+        super().__init__(reduction_shape, num_samples)
         self._samples = deque(maxlen=window_size)
 
     def _reset(self):

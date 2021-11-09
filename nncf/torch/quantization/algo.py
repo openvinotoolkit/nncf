@@ -646,8 +646,8 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
                        range_init_params.get_max_num_init_steps())
 
         retval = {}
-        for ip, collector in stat_ctrl.ip_vs_collector_dict.items():
-            retval[ip] = collector.get_statistics()
+        for ip, rs_vs_collector in stat_ctrl.ip_vs_collector_dict.items():
+            retval[ip] = {rs: collector.get_statistics() for rs, collector in rs_vs_collector.items()}
         return retval
 
     def _get_statistics_for_final_range_init(self, target_model: NNCFNetwork,

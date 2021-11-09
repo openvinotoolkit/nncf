@@ -53,11 +53,12 @@ class TensorStatisticsCollectionBuilder(PTCompressionAlgorithmBuilder):
         # receives its own data, and should we use a thread-local collector, there would have to be a
         # separate thread reduction step involved. Still, is there a better option here than to rely on GIL?
         layout = PTTransformationLayout()
-        for op, collector in self._observation_points_vs_collectors.items():
-            hook_obj = collector.register_input
-            command = PTInsertionCommand(op.insertion_point, hook_obj,
-                                         TransformationPriority.FP32_TENSOR_STATISTICS_OBSERVATION)
-            layout.register(command)
+        for op, rs_vs_collector in self._observation_points_vs_collectors.items():
+            for collector in rs_vs_collector.values():
+                hook_obj = collector.register_input
+                command = PTInsertionCommand(op.insertion_point, hook_obj,
+                                             TransformationPriority.FP32_TENSOR_STATISTICS_OBSERVATION)
+                layout.register(command)
         return layout
 
     def _build_controller(self, model: NNCFNetwork) -> 'TensorStatisticsCollectionController':
