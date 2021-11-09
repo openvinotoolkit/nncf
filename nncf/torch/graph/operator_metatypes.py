@@ -750,7 +750,7 @@ class PTPixelShuffleMetatype(PTOperatorMetatype):
 
 
 @PT_OPERATOR_METATYPES.register()
-class PTSumMetatype(OperatorMetatype):
+class PTSumMetatype(PTOperatorMetatype):
     name = "SumOp"
     module_to_function_names = {
         NamespaceTarget.TORCH_TENSOR: ["sum"],

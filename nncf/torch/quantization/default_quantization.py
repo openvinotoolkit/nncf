@@ -17,7 +17,7 @@ from nncf.torch.graph import operator_metatypes
 from nncf.torch.graph.operator_metatypes import PTOperatorMetatype
 from nncf.common.graph.operator_metatypes import UnknownMetatype
 
-# If there are no some metatype it means that they are considered as NoopMetatype
+# If there are no some metatype it means that they are considered as QuantizationTrait.QuantizationAgnostic
 DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT = {
     QuantizationTrait.INPUTS_QUANTIZABLE: [
         operator_metatypes.PTConv2dMetatype,
