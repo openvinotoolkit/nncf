@@ -419,6 +419,37 @@ class PruningTestModelSharedConvs(nn.Module):
         return self.conv3(out1), self.conv3(out2)
 
 
+class PruningTestModelWrongDims(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.first_conv = create_conv(1, 8, 1)
+        self.last_conv = create_conv(32, 1, 1)
+
+    def forward(self, x):
+        x = self.first_conv(x)
+        x = x.view(-1, 32, 4, 4)
+        return self.last_conv(x)
+
+
+class PruningTestModelWrongDimsElementwise(nn.Module):
+    def __init__(self, use_last_conv=True):
+        super().__init__()
+        self.use_last_conv = use_last_conv
+        self.first_conv = create_conv(1, 8, 1)
+        self.branch_conv = create_conv(8, 32, 2, stride=2)
+        if use_last_conv:
+            self.last_conv = create_conv(32, 1, 1)
+
+    def forward(self, x):
+        x = self.first_conv(x)
+        y = self.branch_conv(x)
+        x = x.view(y.shape)
+        x = x + y
+        if self.use_last_conv:
+            x = self.last_conv(x)
+        return x
+
+
 class DisconectedGraphModel(nn.Module):
     def __init__(self):
         super().__init__()

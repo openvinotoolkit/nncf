@@ -42,6 +42,8 @@ from tests.torch.pruning.helpers import PruningTestModelEltwise
 from tests.torch.pruning.helpers import PruningTestModelSharedConvs
 from tests.torch.pruning.helpers import NASnetBlock
 from tests.torch.pruning.helpers import MobilenetV3BlockSEReshape
+from tests.torch.pruning.helpers import PruningTestModelWrongDims
+from tests.torch.pruning.helpers import PruningTestModelWrongDimsElementwise
 from tests.torch.pruning.helpers import TestModelBranching
 from tests.torch.pruning.helpers import TestModelDiffConvs
 from tests.torch.pruning.helpers import TestModelEltwiseCombination
@@ -281,8 +283,31 @@ GROUP_PRUNING_MODULES_TEST_CASES = [
     #                             False, [PruningAnalysisReason.CLOSING_CONV_MISSING])},
 
     #    prune_params=(True, True, True)),
+    #GroupPruningModulesTestStruct(
+    #    model=MobilenetV3BlockSEReshape,
+    #    non_pruned_module_nodes=[],
+    #    pruned_groups=[
+    #        ['MobilenetV3BlockSEReshape/NNCFConv2d[first_conv]/conv2d_0',
+    #         'MobilenetV3BlockSEReshape/InvertedResidual[inverted_residual]/Sequential[conv]/NNCFConv2d[4]/conv2d_0',
+    #         'MobilenetV3BlockSEReshape/InvertedResidual[inverted_residual]/Sequential[conv]/NNCFConv2d[0]/conv2d_0',
+    #         'MobilenetV3BlockSEReshape/InvertedResidual[inverted_residual]/Sequential[conv]/SELayerWithReshape[3]/'
+    #         'Sequential[fc]/NNCFConv2d[2]/conv2d_0'],
+    #        ['MobilenetV3BlockSEReshape/InvertedResidual[inverted_residual]/Sequential[conv]/'
+    #         'SELayerWithReshape[3]/Sequential[fc]/NNCFConv2d[0]/conv2d_0'],
+    #        ['MobilenetV3BlockSEReshape/NNCFConv2d[last_conv]/conv2d_0']],
+    #    pruned_groups_by_node_id=[[8], [16], [1, 2, 10, 13]],
+    #    can_prune_after_analysis={0: True, 1: True, 2: True, 3: True, 4: True, 5: True, 6: True, 7: True,
+    #                              8: True, 9: True, 10: True, 11: True, 12: True, 13: True, 14: True, 15: True,
+    #                              16: True, 17: True},
+    #    final_can_prune={1: PruningAnalysisDecision(True),
+    #                     8: PruningAnalysisDecision(True),
+    #                     10: PruningAnalysisDecision(True),
+    #                     13: PruningAnalysisDecision(True),
+    #                     16: PruningAnalysisDecision(False, [PruningAnalysisReason.CLOSING_CONV_MISSING])},
+
+    #    prune_params=(True, True, True))
     GroupPruningModulesTestStruct(
-        model=MobilenetV3BlockSEReshape,
+        model=PruningTestModelWrongDims,
         non_pruned_module_nodes=[],
         pruned_groups=[
             ['MobilenetV3BlockSEReshape/NNCFConv2d[first_conv]/conv2d_0',

@@ -209,13 +209,6 @@ class PruningNodeSelector:
         mask_prop_algo = MaskPropagationAlgorithm(graph, self._pruning_operator_metatypes)
         can_prune_by_dim = mask_prop_algo.symbolic_mask_propagation(self._prune_operations_types, can_prune_after_check)
 
-        # Find indexes of last convolutions
-        stop_propagation_ops = self._stop_propagation_op_metatype.get_all_op_aliases()
-        types_to_track = self._prune_operations_types + stop_propagation_ops
-        output_non_pruned_nodes = get_last_nodes_of_type(graph, types_to_track)
-        for last_conv_node in output_non_pruned_nodes:
-            can_prune_by_dim[last_conv_node.node_id] = PruningAnalysisDecision(True)
-
         can_prune_for_prunable_layers = \
             {node_id: can_prune_after_check[node_id].join(can_prune_by_dim[node_id]) for node_id in can_prune_by_dim}
 
@@ -301,9 +294,6 @@ class PruningNodeSelector:
 
         if not self._prune_first and node in input_non_pruned_nodes:
             return PruningAnalysisDecision(False, PruningAnalysisReason.FIRST_CONV)
-
-        elif not self._prune_last and node in output_non_pruned_nodes:
-            return PruningAnalysisDecision(False, PruningAnalysisReason.LAST_CONV)
 
         elif is_grouped_conv(node) and not is_prunable_depthwise_conv(node):
             return PruningAnalysisDecision(False, PruningAnalysisReason.GROUP_CONV)

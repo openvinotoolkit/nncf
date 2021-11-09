@@ -11,7 +11,7 @@
  limitations under the License.
 """
 
-from typing import List, Union
+from typing import List, Union, Optional
 
 from nncf.common.tensor import NNCFTensor
 from nncf.common.tensor import NNCFBaseTensorProcessor
@@ -29,7 +29,7 @@ class SymbolicMask(NNCFTensor):
 
     def __init__(self, dimension: int, mask_producers: List[int] = None):
         super().__init__(None, SymbolicMaskProcessor)
-        self._mask_producers = mask_producers
+        self._mask_producers = mask_producers if mask_producers else []
         self._shape = dimension
 
     @property
@@ -45,6 +45,16 @@ class SymbolicMask(NNCFTensor):
         return None
 
 
+class AmbiguousSymbolicMask(SymbolicMask):
+    """
+    Special case of Symbolic mask used when pruning operation
+    receive inconsistent set of masks and should produce mask which
+    certainly mark all producers of such mask as unprunable by dimension mismatch.
+    """
+    def __init__(self, mask_producers: List[int] = None):
+        super().__init__(-1, mask_producers)
+
+
 class SymbolicMaskProcessor(NNCFBaseTensorProcessor):
     """
     Implementation of processing methods set for SymbolicMask.
@@ -54,7 +64,7 @@ class SymbolicMaskProcessor(NNCFBaseTensorProcessor):
     """
 
     @classmethod
-    def concatenate(cls, tensors: List[SymbolicMask], axis: int) -> NNCFTensor:
+    def concatenate(cls, tensors: List[SymbolicMask], axis: int) -> SymbolicMask:
         ret_shape = sum([t.shape[0] for t in tensors])
         producers = []
         for tensor in tensors:
@@ -66,7 +76,7 @@ class SymbolicMaskProcessor(NNCFBaseTensorProcessor):
         return SymbolicMask(ret_shape, producers)
 
     @classmethod
-    def ones(cls, shape: Union[int, List[int]], device) -> NNCFTensor:
+    def ones(cls, shape: Union[int, List[int]], device) -> SymbolicMask:
         if isinstance(shape, list):
             if len(shape) != 1:
                 raise RuntimeError(f'Unexpected shape = {shape} for 1D symbolic mask')
@@ -80,11 +90,21 @@ class SymbolicMaskProcessor(NNCFBaseTensorProcessor):
             assert tensors[0].shape == input_mask.shape
 
     @classmethod
-    def repeat(cls, tensor: SymbolicMask, repeats: int) -> NNCFTensor:
+    def repeat(cls, tensor: SymbolicMask, repeats: int) -> SymbolicMask:
         return SymbolicMask(tensor.shape[0] * repeats, tensor.mask_producers)
 
     @classmethod
-    def elementwise_mask_propagation(cls, input_masks: List[SymbolicMask]) -> NNCFTensor:
-        cls.allclose(input_masks)
+    def elementwise_mask_propagation(cls, input_masks: List[SymbolicMask]) -> SymbolicMask:
+        """
+        Assemble output mask for elementwise pruning operation from given input masks.
+        In case input_masks have different shape don't propagate any masks.
+
+        :param input_masks: Given input masks.
+        :return: Elementwise pruning operation output mask.
+        """
         producers = list({p for t in input_masks for p in t.mask_producers})
+        for input_mask in input_masks[1:]:
+            if not input_masks[0].shape == input_mask.shape:
+                return AmbiguousSymbolicMask(producers)
+
         return SymbolicMask(input_masks[0].shape[0], producers)

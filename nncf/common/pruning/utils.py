@@ -399,7 +399,7 @@ class PruningAnalysisReason(Enum):
 
     IGNORED_SCOPE = 'node in ignored scope'
     FIRST_CONV = 'this scope is one of the first convolutions'
-    LAST_CONV = 'this scope is one of the last convolutions'
+    LAST_CONV = 'this scope is convolution with output which directly affects model output'
     GROUP_CONV = 'this scope is grouped convolution'
     DOWNSAMPLE_CONV = 'this scope is convolution with downsample'
     MODEL_ANALYSIS = 'of model analysis'
@@ -421,10 +421,6 @@ class PruningAnalysisReason(Enum):
         if not reasons:
             return prefix
         # Filter messages
-        for special_reason in [cls.FIRST_CONV, cls.LAST_CONV]:
-            if special_reason in reasons:
-                reasons = [special_reason]
-                break
         if cls.MODEL_ANALYSIS in reasons and cls.CLOSING_CONV_MISSING in reasons:
             reasons = [cls.MODEL_ANALYSIS]
         if len(reasons) == 1 and cls.IN_GROUP_OF_UNPRUNABLE == reasons[0]:

@@ -88,13 +88,11 @@ class MaskPropagationAlgorithm:
             cls = self.get_meta_operation_by_type_name(node.node_type)
             cls.mask_propagation(node, self._graph)
             if node.node_id in can_be_closing_convs:
-                # Check input mask producers
+                # Check input mask producers out channel dimension
                 input_masks = get_input_masks(node, self._graph)
                 if any(input_masks):
                     assert len(input_masks) == 1
                     input_mask = input_masks[0]
-                    if input_mask.mask_producers is None:
-                        continue
 
                     for producer in input_mask.mask_producers:
                         previously_dims_equal = True if can_prune_by_dim[producer] is None \
@@ -104,16 +102,25 @@ class MaskPropagationAlgorithm:
                         decision = previously_dims_equal and is_dims_equal
                         can_prune_by_dim[producer] = PruningAnalysisDecision(
                             decision, PruningAnalysisReason.DIMENSION_MISMATCH)
-
-        # Clean nodes masks
-        for node in self._graph.get_all_nodes():
-            node.data['output_mask'] = None
-
+        # Remove all convolutions with masks
+        # that were propagated to output node
+        for out_node in self._graph.get_output_nodes():
+            for input_mask in get_input_masks(out_node, self._graph):
+                if input_mask:
+                    for producer in input_mask.mask_producers:
+                        can_prune_by_dim[producer] = PruningAnalysisDecision(
+                                False, PruningAnalysisReason.LAST_CONV)
+        # Update decision for nodes which
+        # have no closing convolution
         convs_without_closing_conv = {}
         for k, v in can_prune_by_dim.items():
             if v is None:
                 convs_without_closing_conv[k] = \
                     PruningAnalysisDecision(False, PruningAnalysisReason.CLOSING_CONV_MISSING)
-
         can_prune_by_dim.update(convs_without_closing_conv)
+
+        # Clean nodes masks
+        for node in self._graph.get_all_nodes():
+            node.data['output_mask'] = None
+
         return can_prune_by_dim
