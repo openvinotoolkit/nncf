@@ -199,7 +199,7 @@ def _params(request, tmp_path_factory, dataset_dir, weekly_models_path, enable_i
     if weekly_models_path is None:
         pytest.skip('Path to models weights for weekly testing is not set, use --weekly-models option.')
     test_config, args, execution_arg, dataset_name = request.param
-    test_config['timeout'] = 2 * 60 * 60  # 2 hours, because rb sparsity + int8 works 1.5-2 hours
+    test_config['timeout'] = 3 * 60 * 60  # 3 hours, because legr training takes 2.5-3 hours
     if enable_imagenet:
         test_config['timeout'] = None
     if 'imagenet' in dataset_name and not enable_imagenet:
