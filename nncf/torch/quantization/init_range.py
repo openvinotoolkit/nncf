@@ -107,14 +107,23 @@ class CollectorParams:
     def _use_means_of_maxs(self):
         return not self._is_weights and not self._per_channel
 
+    def _get_params_for_min_max(self):
+        return self._use_abs_max()
+
+    def _get_params_for_mixed_min_max(self):
+        return self._use_per_sample_stats(), self._use_abs_max(), \
+               self._use_means_of_mins(), self._use_means_of_maxs()
+
+    def _get_params_for_mean_min_max(self):
+        return self._use_abs_max()
+
     def get_params_for_collector(self, init_type: str):
         if init_type == "min_max":
-            return self._use_abs_max()
+            return self._get_params_for_min_max()
         if init_type == "mixed_min_max":
-            return self._use_per_sample_stats(), self._use_abs_max(), \
-                   self._use_means_of_mins(), self._use_means_of_maxs()
+            return self._get_params_for_mixed_min_max()
         if init_type == "mean_min_max":
-            return self._use_abs_max()
+            return self._get_params_for_mean_min_max()
         raise RuntimeError("Unknown range init type: {}".format(init_type))
 
 
