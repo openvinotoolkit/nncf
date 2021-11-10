@@ -36,21 +36,18 @@ def load_model(model, pretrained=True, num_classes=1000, model_params=None,
 
     """
     logger.info("Loading model: {}".format(model))
-    from torchreid.models.mobilenetv3 import mobilenetv3_small
-    load_model_fn = partial(mobilenetv3_small, type='classification', feature_dim=100)
-    #load_model_fn = partial(torchvision.models.mobilenet_v3_small, num_classes=num_classes, pretrained=pretrained)
-    #if model_params is None:
-    #    model_params = {}
-    #if model in torchvision.models.__dict__:
-    #    load_model_fn = partial(torchvision.models.__dict__[model], num_classes=num_classes, pretrained=pretrained,
-    #                            **model_params)
-    #elif model in custom_models.__dict__:
-    #    load_model_fn = partial(custom_models.__dict__[model], num_classes=num_classes, pretrained=pretrained,
-    #                            **model_params)
-    #elif model == "mobilenet_v2_32x32":
-    #    load_model_fn = partial(MobileNetV2For32x32, num_classes=100)
-    #else:
-    #    raise Exception("Undefined model name")
+    if model_params is None:
+        model_params = {}
+    if model in torchvision.models.__dict__:
+        load_model_fn = partial(torchvision.models.__dict__[model], num_classes=num_classes, pretrained=pretrained,
+                                **model_params)
+    elif model in custom_models.__dict__:
+        load_model_fn = partial(custom_models.__dict__[model], num_classes=num_classes, pretrained=pretrained,
+                                **model_params)
+    elif model == "mobilenet_v2_32x32":
+        load_model_fn = partial(MobileNetV2For32x32, num_classes=100)
+    else:
+        raise Exception("Undefined model name")
     loaded_model = safe_thread_call(load_model_fn)
     if not pretrained and weights_path is not None:
         sd = torch.load(weights_path, map_location='cpu', pickle_module=restricted_pickle_module)
