@@ -77,22 +77,12 @@ def test_check_default_algo_params():
     assert isinstance(scheduler, ExponentialPruningScheduler)
 
 
-@pytest.mark.parametrize(
-    ('prune_first', 'prune_last'),
-    [
-        (False, False),
-        (False, True),
-        (True, False),
-        (True, True),
-    ]
-
-)
-def test_valid_modules_replacement_and_pruning(prune_first, prune_last):
+@pytest.mark.parametrize('prune_first', [False, True])
+def test_valid_modules_replacement_and_pruning(prune_first):
     """
     Test that checks that all conv modules in model was replaced by nncf modules and
     pruning pre ops were added correctly.
     :param prune_first: whether to prune first convolution or not
-    :param prune_last: whether to prune last convolution or not
     """
 
     def check_that_module_is_pruned(module):
@@ -108,7 +98,6 @@ def test_valid_modules_replacement_and_pruning(prune_first, prune_last):
 
     config = get_basic_pruning_config(input_sample_size=[1, 1, 8, 8])
     config['compression']['params']['prune_first_conv'] = prune_first
-    config['compression']['params']['prune_last_conv'] = prune_last
 
     pruned_model, pruning_algo, nncf_modules = create_pruning_algo_with_config(config)
     pruned_module_info = pruning_algo.pruned_module_groups_info.get_all_nodes()
@@ -150,12 +139,7 @@ def test_valid_modules_replacement_and_pruning(prune_first, prune_last):
 
     # Check for conv3W
     conv3 = pruned_model.conv3
-    if prune_last:
-        assert conv3 in pruned_modules
-        assert conv3 in nncf_modules.values()
-        check_that_module_is_pruned(conv3)
-    else:
-        check_that_module_is_not_pruned(conv3)
+    check_that_module_is_not_pruned(conv3)
 
 
 @pytest.mark.parametrize(('all_weights', 'pruning_flops_target', 'prune_first', 'ref_masks'),
@@ -388,14 +372,15 @@ def test_calculation_of_flops(all_weights, pruning_flops_target, ref_flops, ref_
     assert pruning_algo._calculate_flops_and_weights_pruned_model_by_masks() == (ref_flops, ref_params_num)
 
 
-def test_clusters_for_multiple_forward():
+@pytest.mark.parametrize('repeat_seq_of_shared_convs', [True, False])
+@pytest.mark.parametrize('additional_last_shared_layers', [True, False])
+def test_clusters_for_multiple_forward(repeat_seq_of_shared_convs, additional_last_shared_layers):
     config = get_basic_pruning_config(input_sample_size=[1, 2, 8, 8])
     config['compression']['algorithm'] = 'filter_pruning'
     config['compression']['params']['all_weights'] = False
     config['compression']['params']['prune_first_conv'] = True
-    config['compression']['params']['prune_last_conv'] = True
     config['compression']['pruning_init'] = 0.5
-    model = TestModelMultipleForward()
+    model = TestModelMultipleForward(repeat_seq_of_shared_convs, additional_last_shared_layers)
     _, pruning_algo = create_compressed_model_and_algo_for_test(model, config)
 
     clusters = pruning_algo.pruned_module_groups_info.clusters

@@ -28,16 +28,19 @@ from tests.torch.helpers import create_grouped_conv
 class PruningTestModel(nn.Module):
     CONV_1_NODE_NAME = "PruningTestModel/NNCFConv2d[conv1]/conv2d_0"
     CONV_2_NODE_NAME = "PruningTestModel/NNCFConv2d[conv2]/conv2d_0"
+    CONV_3_NODE_NAME = "PruningTestModel/NNCFConv2d[conv3]/conv2d_0"
     def __init__(self):
         super().__init__()
         self.conv1 = create_conv(1, 3, 2, 9, -2)
         self.relu = nn.ReLU()
         self.conv2 = create_conv(3, 1, 3, -10, 0)
+        self.conv3 = create_conv(1, 1, 1)
 
     def forward(self, x):
         x = self.conv1(x)
         x = self.relu(x)
         x = self.conv2(x)
+        x = self.conv3(x)
         return x
 
 
@@ -309,8 +312,10 @@ class TestModelShuffleNetUnitDW(nn.Module):
 
 
 class TestModelMultipleForward(nn.Module):
-    def __init__(self):
+    def __init__(self, repeat_seq_of_shared_convs=False, additional_last_shared_layers=False):
         super().__init__()
+        self.num_iter_shared_convs = 2 if repeat_seq_of_shared_convs else 1
+        self.last_shared_layers = additional_last_shared_layers
         self.conv1 = create_conv(2, 16, 1, 1, -2)
         for i in range(16):
             self.conv1.weight.data[i] += i
@@ -318,19 +323,28 @@ class TestModelMultipleForward(nn.Module):
         for i in range(16):
             self.conv2.weight.data[i] += i
         self.conv3 = create_conv(2, 16, 1, 1, -2)
-        # Wights of conv3 is initialized to check difference masks
+        # Weights of conv3 is initialized to check difference masks
         self.conv4 = create_conv(16, 16, 1, 1, -2)
         for i in range(16):
             self.conv4.weight.data[i] += i
+        self.conv5 = create_conv(16, 16, 1, 1, -2)
+        for i in range(16):
+            self.conv5.weight.data[i] += i
 
     def forward(self, x):
         x1 = self.conv1(x)
         x2 = self.conv2(x)
         x3 = self.conv3(x)
-        x1 = self.conv4(x1)
-        x2 = self.conv4(x2)
-        x3 = self.conv4(x3)
 
+        for _ in range(self.num_iter_shared_convs):
+            x1 = self.conv4(x1)
+            x2 = self.conv4(x2)
+            x3 = self.conv4(x3)
+
+        if self.last_shared_layers:
+            x1 = self.conv5(x1)
+            x2 = self.conv5(x2)
+            x3 = self.conv5(x3)
         return x1, x2, x3
 
 
@@ -447,6 +461,18 @@ class PruningTestModelWrongDimsElementwise(nn.Module):
         x = x + y
         if self.use_last_conv:
             x = self.last_conv(x)
+        return x
+
+
+class PruningTestModelStopOp(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.conv = create_conv(1, 1, 1)
+        self.linear = nn.Linear(64, 1)
+
+    def forward(self, x):
+        x = self.conv(x)
+        x = self.linear(torch.flatten(x, start_dim=1))
         return x
 
 

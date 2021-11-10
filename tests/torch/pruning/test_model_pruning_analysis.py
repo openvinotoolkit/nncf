@@ -45,6 +45,7 @@ from tests.torch.pruning.helpers import NASnetBlock
 from tests.torch.pruning.helpers import MobilenetV3BlockSEReshape
 from tests.torch.pruning.helpers import PruningTestModelWrongDims
 from tests.torch.pruning.helpers import PruningTestModelWrongDimsElementwise
+from tests.torch.pruning.helpers import PruningTestModelStopOp
 from tests.torch.pruning.helpers import TestModelBranching
 from tests.torch.pruning.helpers import TestModelDiffConvs
 from tests.torch.pruning.helpers import TestModelEltwiseCombination
@@ -119,7 +120,6 @@ GROUP_PRUNING_MODULES_TEST_CASES = [
                                   pruned_groups_by_node_id=[[1, 2, 4]],
                                   can_prune_after_analysis={0: True, 1: True, 2: True, 3: True, 4: True,
                                                             5: True, 6: True, 7: True, 8: True, 9: True, 10: True},
-
                                   final_can_prune={1: PruningAnalysisDecision(True),
                                                    2: PruningAnalysisDecision(True),
                                                    4: PruningAnalysisDecision(True),
@@ -184,7 +184,6 @@ GROUP_PRUNING_MODULES_TEST_CASES = [
                                                           False, [PruningAnalysisReason.CLOSING_CONV_MISSING]),
                                                    8: PruningAnalysisDecision(
                                                           False, [PruningAnalysisReason.CLOSING_CONV_MISSING])},
-
                                   prune_params=(True, False)),
     GroupPruningModulesTestStruct(model=TestModelEltwiseCombination,
                                   non_pruned_module_nodes=[
@@ -225,7 +224,6 @@ GROUP_PRUNING_MODULES_TEST_CASES = [
                                                           False, [PruningAnalysisReason.LAST_CONV]),
                                                    6: PruningAnalysisDecision(
                                                           False, [PruningAnalysisReason.LAST_CONV])},
-
                                   prune_params=(False, False)),
     GroupPruningModulesTestStruct(model=DepthwiseConvolutionModel,
                                   non_pruned_module_nodes=['DepthwiseConvolutionModel/NNCFConv2d[conv1]/conv2d_0',
@@ -242,7 +240,6 @@ GROUP_PRUNING_MODULES_TEST_CASES = [
                                                    3: PruningAnalysisDecision(True),
                                                    6: PruningAnalysisDecision(
                                                           False, [PruningAnalysisReason.LAST_CONV])},
-
                                   prune_params=(False, False)),
     GroupPruningModulesTestStruct(
         model=MultipleDepthwiseConvolutionModel,
@@ -254,7 +251,6 @@ GROUP_PRUNING_MODULES_TEST_CASES = [
         pruned_groups=[],
         pruned_groups_by_node_id=[],
         can_prune_after_analysis={0: True, 1: False, 2: False, 3: False, 4: False, 5: False, 6: True, 7: True},
-
         final_can_prune={1: PruningAnalysisDecision(
                                 False, [PruningAnalysisReason.CLOSING_CONV_MISSING]),
                          2: PruningAnalysisDecision(
@@ -263,7 +259,6 @@ GROUP_PRUNING_MODULES_TEST_CASES = [
                                 False, [PruningAnalysisReason.CLOSING_CONV_MISSING]),
                          6: PruningAnalysisDecision(
                                 False, [PruningAnalysisReason.LAST_CONV])},
-
         prune_params=(False, False)),
     GroupPruningModulesTestStruct(
         model=NASnetBlock,
@@ -284,7 +279,6 @@ GROUP_PRUNING_MODULES_TEST_CASES = [
                                  False, [PruningAnalysisReason.CLOSING_CONV_MISSING]),
                          7: PruningAnalysisDecision(
                                  False, [PruningAnalysisReason.CLOSING_CONV_MISSING])},
-
         prune_params=(True, True)),
     GroupPruningModulesTestStruct(
         model=MobilenetV3BlockSEReshape,
@@ -308,7 +302,6 @@ GROUP_PRUNING_MODULES_TEST_CASES = [
                          13: PruningAnalysisDecision(True),
                          16: PruningAnalysisDecision(False, [PruningAnalysisReason.LAST_CONV])},
 
-
         prune_params=(True, True)),
     GroupPruningModulesTestStruct(
         model=partial(PruningTestModelWrongDimsElementwise, use_last_conv=False),
@@ -319,7 +312,6 @@ GROUP_PRUNING_MODULES_TEST_CASES = [
         can_prune_after_analysis={0: True, 1: True, 2: True, 3: True, 4: True, 5: True},
         final_can_prune={1: PruningAnalysisDecision(False, PruningAnalysisReason.LAST_CONV),
                          2: PruningAnalysisDecision(False, PruningAnalysisReason.LAST_CONV)},
-
         prune_params=(True, True)),
     GroupPruningModulesTestStruct(
         model=partial(PruningTestModelWrongDimsElementwise, use_last_conv=True),
@@ -332,7 +324,6 @@ GROUP_PRUNING_MODULES_TEST_CASES = [
         final_can_prune={1: PruningAnalysisDecision(False, PruningAnalysisReason.DIMENSION_MISMATCH),
                          2: PruningAnalysisDecision(False, PruningAnalysisReason.DIMENSION_MISMATCH),
                          5: PruningAnalysisDecision(False, PruningAnalysisReason.LAST_CONV)},
-
         prune_params=(True, True)),
     GroupPruningModulesTestStruct(
         model=PruningTestModelWrongDims,
@@ -343,7 +334,14 @@ GROUP_PRUNING_MODULES_TEST_CASES = [
         can_prune_after_analysis={0: True, 1: True, 2: True, 3: True, 4: True},
         final_can_prune={1: PruningAnalysisDecision(False, PruningAnalysisReason.DIMENSION_MISMATCH),
                          3: PruningAnalysisDecision(False, PruningAnalysisReason.LAST_CONV)},
-
+        prune_params=(True, True)),
+    GroupPruningModulesTestStruct(
+        model=PruningTestModelStopOp,
+        non_pruned_module_nodes=['PruningTestModelStopOp/NNCFConv2d[conv]/conv2d_0'],
+        pruned_groups=[],
+        pruned_groups_by_node_id=[],
+        can_prune_after_analysis={0: True, 1: False, 2: False, 3: False, 4: False},
+        final_can_prune={1: PruningAnalysisDecision(False, PruningAnalysisReason.CLOSING_CONV_MISSING)},
         prune_params=(True, True))
 ]
 
@@ -432,7 +430,7 @@ def test_symbolic_mask_propagation(test_input_info_struct_):
     prune_first, *_ = test_input_info_struct_.prune_params
     nncf_model, algo_builder = create_nncf_model_and_pruning_builder(model,
                                                                      {'prune_first_conv': prune_first,
-                                                                      'prune_last_conv': False})
+                                                                      'prune_last_conv': True})
     pruning_types = [v.op_func_name for v in NNCF_PRUNING_MODULES_DICT]
     graph = nncf_model.get_graph()
     algo = MaskPropagationAlgorithm(graph, PT_PRUNING_OPERATOR_METATYPES)
