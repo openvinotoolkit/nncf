@@ -142,7 +142,7 @@ class UnknownMetatype(OperatorMetatype):
 class NoopMetatype(OperatorMetatype):
     """
     NoopMetatype is mapped to operations in NNCFGraph, that doesn't influence an input tensor.
-    The compression algorithms  can safely ignore this node.
+    The compression algorithms can safely ignore this node.
     """
     name = "noop"
 
