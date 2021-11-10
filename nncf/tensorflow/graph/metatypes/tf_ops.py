@@ -155,6 +155,19 @@ class TFReshapeOpMetatype(TFOpMetatype):
     hw_config_names = [HWConfigOpName.RESHAPE]
 
 
+@TF_OPERATION_METATYPES.register()
+class TFExpandDimsOpMetatype(TFOpMetatype):
+    name = 'ExpandDimsOp'
+    op_names = ['ExpandDims']
+
+
+@TF_OPERATION_METATYPES.register()
+class TFSplitOpMetatype(TFOpMetatype):
+    name = 'SplitOp'
+    op_names = ['Split']
+    hw_config_names = [HWConfigOpName.SPLIT]
+
+
 WEIGHTABLE_TF_OP_METATYPES = [
     TFConv2DOpMetatype,
     TFConv3DOpMetatype,

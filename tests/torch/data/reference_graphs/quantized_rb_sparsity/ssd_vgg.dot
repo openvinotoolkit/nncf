@@ -115,8 +115,8 @@ strict digraph  {
 "113 SSD_VGG/MultiOutputSequential[basenet]/ReLU[49]/relu__0" [id=113, type=relu_];
 "114 SSD_VGG/MultiOutputSequential[basenet]/ReLU[49]/SymmetricQuantizer/symmetric_quantize_0" [id=114, type=symmetric_quantize];
 "115 SSD_VGG/NNCFUserL2Norm[L2Norm]/pow_0" [id=115, type=pow];
-"116 SSD_VGG/NNCFUserL2Norm[L2Norm]/SymmetricQuantizer/symmetric_quantize_0" [id=116, type=symmetric_quantize];
-"117 SSD_VGG/NNCFUserL2Norm[L2Norm]/sum_0" [id=117, type=sum];
+"116 SSD_VGG/NNCFUserL2Norm[L2Norm]/sum_0" [id=116, type=sum];
+"117 SSD_VGG/NNCFUserL2Norm[L2Norm]/SymmetricQuantizer/symmetric_quantize_0" [id=117, type=symmetric_quantize];
 "118 SSD_VGG/NNCFUserL2Norm[L2Norm]/sqrt_0" [id=118, type=sqrt];
 "119 SSD_VGG/NNCFUserL2Norm[L2Norm]/SymmetricQuantizer/symmetric_quantize_1" [id=119, type=symmetric_quantize];
 "120 SSD_VGG/NNCFUserL2Norm[L2Norm]/__add___0" [id=120, type=__add__];
@@ -392,9 +392,9 @@ strict digraph  {
 "114 SSD_VGG/MultiOutputSequential[basenet]/ReLU[49]/SymmetricQuantizer/symmetric_quantize_0" -> "129 SSD_VGG/MultiOutputSequential[extras]/NNCFConv2d[0]/conv2d_0";
 "114 SSD_VGG/MultiOutputSequential[basenet]/ReLU[49]/SymmetricQuantizer/symmetric_quantize_0" -> "197 SSD_VGG/SSDDetectionOutput[detection_head]/ModuleList[heads]/SSDHead[1]/NNCFConv2d[loc]/conv2d_0";
 "114 SSD_VGG/MultiOutputSequential[basenet]/ReLU[49]/SymmetricQuantizer/symmetric_quantize_0" -> "201 SSD_VGG/SSDDetectionOutput[detection_head]/ModuleList[heads]/SSDHead[1]/NNCFConv2d[conf]/conv2d_0";
-"115 SSD_VGG/NNCFUserL2Norm[L2Norm]/pow_0" -> "116 SSD_VGG/NNCFUserL2Norm[L2Norm]/SymmetricQuantizer/symmetric_quantize_0";
-"116 SSD_VGG/NNCFUserL2Norm[L2Norm]/SymmetricQuantizer/symmetric_quantize_0" -> "117 SSD_VGG/NNCFUserL2Norm[L2Norm]/sum_0";
-"117 SSD_VGG/NNCFUserL2Norm[L2Norm]/sum_0" -> "118 SSD_VGG/NNCFUserL2Norm[L2Norm]/sqrt_0";
+"115 SSD_VGG/NNCFUserL2Norm[L2Norm]/pow_0" -> "116 SSD_VGG/NNCFUserL2Norm[L2Norm]/sum_0";
+"116 SSD_VGG/NNCFUserL2Norm[L2Norm]/sum_0" -> "117 SSD_VGG/NNCFUserL2Norm[L2Norm]/SymmetricQuantizer/symmetric_quantize_0";
+"117 SSD_VGG/NNCFUserL2Norm[L2Norm]/SymmetricQuantizer/symmetric_quantize_0" -> "118 SSD_VGG/NNCFUserL2Norm[L2Norm]/sqrt_0";
 "118 SSD_VGG/NNCFUserL2Norm[L2Norm]/sqrt_0" -> "119 SSD_VGG/NNCFUserL2Norm[L2Norm]/SymmetricQuantizer/symmetric_quantize_1";
 "119 SSD_VGG/NNCFUserL2Norm[L2Norm]/SymmetricQuantizer/symmetric_quantize_1" -> "120 SSD_VGG/NNCFUserL2Norm[L2Norm]/__add___0";
 "120 SSD_VGG/NNCFUserL2Norm[L2Norm]/__add___0" -> "121 SSD_VGG/NNCFUserL2Norm[L2Norm]/SymmetricQuantizer/symmetric_quantize_2";
