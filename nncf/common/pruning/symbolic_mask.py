@@ -11,7 +11,7 @@
  limitations under the License.
 """
 
-from typing import List, Union, Optional
+from typing import List, Union
 
 from nncf.common.tensor import NNCFTensor
 from nncf.common.tensor import NNCFBaseTensorProcessor
@@ -51,6 +51,7 @@ class AmbiguousSymbolicMask(SymbolicMask):
     receive inconsistent set of masks and should produce mask which
     certainly mark all producers of such mask as unprunable by dimension mismatch.
     """
+
     def __init__(self, mask_producers: List[int] = None):
         super().__init__(-1, mask_producers)
 

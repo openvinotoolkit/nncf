@@ -18,7 +18,6 @@ from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.pruning.utils import get_sources_of_node
 from nncf.common.pruning.utils import get_first_nodes_of_type
-from nncf.common.pruning.utils import get_last_nodes_of_type
 from nncf.common.pruning.utils import get_previous_convs
 from nncf.common.pruning.utils import is_grouped_conv
 from nncf.common.pruning.utils import PruningAnalysisDecision
@@ -117,7 +116,7 @@ class PruningNodeSelector:
                         all_pruned_inputs[source_node.node_id] = source_node
 
             if all_pruned_inputs:
-                cluster = Cluster[NNCFNode](i, all_pruned_inputs.values(), [node_id for node_id in all_pruned_inputs])
+                cluster = Cluster[NNCFNode](i, all_pruned_inputs.values(), all_pruned_inputs.keys())
                 clusters_to_merge.append(cluster.id)
                 pruned_nodes_clusterization.add_cluster(cluster)
 
@@ -287,7 +286,6 @@ class PruningNodeSelector:
         stop_propagation_ops = self._stop_propagation_op_metatype.get_all_op_aliases()
         types_to_track = self._prune_operations_types + stop_propagation_ops
         input_non_pruned_nodes = get_first_nodes_of_type(graph, types_to_track)
-        output_non_pruned_nodes = get_last_nodes_of_type(graph, types_to_track)
         node_name = node.node_name
 
         if not should_consider_scope(node_name, self._ignored_scopes, self._target_scopes):
@@ -296,10 +294,10 @@ class PruningNodeSelector:
         if not self._prune_first and node in input_non_pruned_nodes:
             return PruningAnalysisDecision(False, PruningAnalysisReason.FIRST_CONV)
 
-        elif is_grouped_conv(node) and not is_prunable_depthwise_conv(node):
+        if is_grouped_conv(node) and not is_prunable_depthwise_conv(node):
             return PruningAnalysisDecision(False, PruningAnalysisReason.GROUP_CONV)
 
-        elif not self._prune_downsample_convs and is_conv_with_downsampling(node):
+        if not self._prune_downsample_convs and is_conv_with_downsampling(node):
             return PruningAnalysisDecision(False, PruningAnalysisReason.DOWNSAMPLE_CONV)
 
         return PruningAnalysisDecision(True)

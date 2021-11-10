@@ -77,11 +77,13 @@ def test_check_default_algo_params():
 
 
 @pytest.mark.parametrize('prune_first', [False, True])
-def test_valid_modules_replacement_and_pruning(prune_first):
+@pytest.mark.parametrize('prune_batch_norms', [True, False])
+def test_valid_modules_replacement_and_pruning(prune_first, prune_batch_norms):
     """
     Test that checks that all conv modules in model was replaced by nncf modules and
     pruning pre ops were added correctly.
     :param prune_first: whether to prune first convolution or not
+    :param prune_batch_norms: whether to prune batch norm layers or not.
     """
 
     def check_that_module_is_pruned(module):
@@ -97,6 +99,7 @@ def test_valid_modules_replacement_and_pruning(prune_first):
 
     config = get_basic_pruning_config(input_sample_size=[1, 1, 8, 8])
     config['compression']['params']['prune_first_conv'] = prune_first
+    config['compression']['params']['prune_batch_norms'] = prune_batch_norms
 
     pruned_model, pruning_algo, nncf_modules = create_pruning_algo_with_config(config)
     pruned_module_info = pruning_algo.pruned_module_groups_info.get_all_nodes()
@@ -113,7 +116,7 @@ def test_valid_modules_replacement_and_pruning(prune_first):
 
     # Check for bn1
     bn1 = pruned_model.bn1
-    if prune_first:
+    if prune_first and prune_batch_norms:
         assert bn1 in nncf_modules.values()
         check_that_module_is_pruned(bn1)
     else:
@@ -127,8 +130,11 @@ def test_valid_modules_replacement_and_pruning(prune_first):
 
     # Check for bn2
     bn2 = pruned_model.bn2
-    assert bn2 in nncf_modules.values()
-    check_that_module_is_pruned(bn2)
+    if prune_batch_norms:
+        assert bn2 in nncf_modules.values()
+        check_that_module_is_pruned(bn2)
+    else:
+        check_that_module_is_not_pruned(bn2)
 
     # Check for conv3
     up = pruned_model.up
@@ -218,10 +224,10 @@ def test_pruning_masks_correctness(all_weights, pruning_flops_target, prune_firs
 def test_pruning_masks_applying_correctness(all_weights, pruning_flops_target, prune_first, ref_masks):
     """
     Test for pruning masks check (_set_binary_masks_for_filters, _set_binary_masks_for_all_filters_together).
-    :param all_weights: whether mask will be calculated for all weights in common or not
-    :param pruning_flops_target: prune model by flops, if None then by number of channels
-    :param prune_first: whether to prune first convolution or not
-    :param ref_masks: reference masks values
+    :param all_weights: whether mask will be calculated for all weights in common or not.
+    :param pruning_flops_target: prune model by flops, if None then by number of channels.
+    :param prune_first: whether to prune first convolution or not.
+    :param ref_masks: reference masks values.
     """
     input_shapes = {'conv1': [1, 1, 8, 8],
                     'conv2': [1, 16, 8, 8],

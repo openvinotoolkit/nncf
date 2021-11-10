@@ -77,8 +77,8 @@ class MaskPropagationAlgorithm:
             nncf pruning algorithm have True value.
         """
 
-        can_be_closing_convs = set([node.node_id for node in self._graph.get_all_nodes()
-                                    if node.node_type in prunable_layers_types and not is_grouped_conv(node)])
+        can_be_closing_convs = {node.node_id for node in self._graph.get_all_nodes()
+                                if node.node_type in prunable_layers_types and not is_grouped_conv(node)}
         can_prune_by_dim = {k: None for k in can_be_closing_convs}
         for node in self._graph.topological_sort():
             if node.node_id in can_be_closing_convs and can_prune_after_analisys[node.node_id]:

@@ -13,7 +13,6 @@
 
 import copy
 import torch
-import torch.nn.functional as F
 
 from torch import nn
 
@@ -638,8 +637,7 @@ class InvertedResidual(nn.Module):
     def forward(self, x):
         if self.identity:
             return x + self.conv(x)
-        else:
-            return self.conv(x)
+        return self.conv(x)
 
 
 class MobilenetV3BlockSEReshape(nn.Module):

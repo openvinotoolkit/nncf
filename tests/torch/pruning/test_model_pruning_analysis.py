@@ -427,7 +427,7 @@ def test_pruning_node_selector(test_input_info_struct_: GroupPruningModulesTestS
 def test_symbolic_mask_propagation(test_input_info_struct_):
     model = test_input_info_struct_.model()
     prune_first, *_ = test_input_info_struct_.prune_params
-    nncf_model, algo_builder = create_nncf_model_and_pruning_builder(model,
+    nncf_model, _ = create_nncf_model_and_pruning_builder(model,
                                                                      {'prune_first_conv': prune_first})
     pruning_types = [v.op_func_name for v in NNCF_PRUNING_MODULES_DICT]
     graph = nncf_model.get_graph()
@@ -436,7 +436,7 @@ def test_symbolic_mask_propagation(test_input_info_struct_):
                                                      test_input_info_struct_.can_prune_after_analysis)
     # Check all output masks are deleted
     for node in graph.get_all_nodes():
-        assert node.data['output_mask'] == None
+        assert node.data['output_mask'] is None
 
     # Check ref decisions
     ref_final_can_prune = test_input_info_struct_.final_can_prune

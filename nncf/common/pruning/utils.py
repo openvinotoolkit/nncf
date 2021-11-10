@@ -454,10 +454,9 @@ class PruningAnalysisDecision:
         eq = self.decision == other.decision
         if self._reasons is None:
             return eq and other._reasons is None
-        else:
-            if other._reasons is None:
-                return False
-            return eq and sorted(self._reasons) == sorted(other._reasons)
+        if other._reasons is None:
+            return False
+        return eq and sorted(self._reasons) == sorted(other._reasons)
 
     def __bool__(self) -> bool:
         return self.decision
@@ -466,6 +465,7 @@ class PruningAnalysisDecision:
     def reasons(self) -> Optional[List[PruningAnalysisReason]]:
         if self._reasons:
             return self._reasons.copy()
+        return None
 
     def join(self, other: 'PruningAnalysisDecision') -> 'PruningAnalysisDecision':
         """
