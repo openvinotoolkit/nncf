@@ -372,9 +372,12 @@ def test_calculation_of_flops(all_weights, pruning_flops_target, ref_flops, ref_
     assert pruning_algo._calculate_flops_and_weights_pruned_model_by_masks() == (ref_flops, ref_params_num)
 
 
-@pytest.mark.parametrize('repeat_seq_of_shared_convs', [True, False])
+@pytest.mark.parametrize('repeat_seq_of_shared_convs,ref_second_cluster', [(True, [4, 5, 6, 7, 8, 9]),
+                                                                           (False, [4, 5, 6])])
 @pytest.mark.parametrize('additional_last_shared_layers', [True, False])
-def test_clusters_for_multiple_forward(repeat_seq_of_shared_convs, additional_last_shared_layers):
+def test_clusters_for_multiple_forward(repeat_seq_of_shared_convs,
+                                       ref_second_cluster,
+                                       additional_last_shared_layers):
     config = get_basic_pruning_config(input_sample_size=[1, 2, 8, 8])
     config['compression']['algorithm'] = 'filter_pruning'
     config['compression']['params']['all_weights'] = False
@@ -384,12 +387,14 @@ def test_clusters_for_multiple_forward(repeat_seq_of_shared_convs, additional_la
     _, pruning_algo = create_compressed_model_and_algo_for_test(model, config)
 
     clusters = pruning_algo.pruned_module_groups_info.clusters
-    assert len(clusters) == 2
+    ref_num_clusters = 2 if additional_last_shared_layers else 1
+    assert len(clusters) == ref_num_clusters
     # Convolutions before one node that forwards several times should be in one cluster
     assert sorted([n.nncf_node_id for n in clusters[0].elements]) == [1, 2, 3]
-    # Nodes that associate with one module should be in one cluster
-    assert sorted([n.nncf_node_id for n in clusters[1].elements]) == [4, 5, 6]
-
+    # In case of two clusters
+    if additional_last_shared_layers:
+        # Nodes that associate with one module should be in one cluster
+        assert sorted([n.nncf_node_id for n in clusters[1].elements]) == ref_second_cluster
 
 
 @pytest.mark.parametrize(

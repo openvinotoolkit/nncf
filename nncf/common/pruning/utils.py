@@ -183,7 +183,7 @@ def get_last_nodes_of_type(graph: NNCFGraph, op_types: List[str]) -> List[NNCFNo
 
 
 def get_previous_convs(graph: NNCFGraph, nncf_node: NNCFNode,
-                       pruning_types: List[str], stop_propagation_ops: List[str]) -> Optional[NNCFNode]:
+                       pruning_types: List[str], stop_propagation_ops: List[str]) -> List[NNCFNode]:
     """
     Returns source convolutions of the node.
 

@@ -163,7 +163,11 @@ class PruningNodeSelector:
                 nncf_node = graph.get_node_by_id(node.node_id)
                 previous_convs = get_previous_convs(graph, nncf_node, self._prune_operations_types,
                                                     stop_propagation_ops)
-                all_previous_convs.extend(previous_convs)
+                # Check if previous node isn't multiforward,
+                # in case of multiforward nodes cycle
+                for previous_conv in previous_convs:
+                    if previous_conv not in list_of_nodes:
+                        all_previous_convs.append(previous_conv)
 
             previous_clusters = [
                 pruned_nodes_clusterization.get_cluster_containing_element(node.node_id).id
