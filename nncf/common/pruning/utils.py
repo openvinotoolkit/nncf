@@ -399,7 +399,7 @@ class PruningAnalysisReason(Enum):
 
     IGNORED_SCOPE = 'node in ignored scope'
     FIRST_CONV = 'this scope is one of the first convolutions'
-    LAST_CONV = 'this scope is convolution with output which directly affects model output'
+    LAST_CONV = 'this scope is convolution with output which directly affects model output dimensions'
     GROUP_CONV = 'this scope is grouped convolution'
     DOWNSAMPLE_CONV = 'this scope is convolution with downsample'
     MODEL_ANALYSIS = 'of model analysis'

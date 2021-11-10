@@ -23,8 +23,8 @@ from tests.tensorflow.pruning.helpers import get_test_model_shared_convs
     ("model_fn", "all_weights", "pruning_flops_target", "ref_full_flops", "ref_current_flops",
      "ref_full_params", "ref_current_params"),
     (
-        (get_test_model_shared_convs, True, 0.4, 461438976, 276385312, 11534848, 6908711),
-        (get_test_model_shared_convs, False, 0.4, 461438976, 270498816, 11534848, 6761608),
+        (get_test_model_shared_convs, True, 0.4, 461438976, 276858560, 11534848, 6920562),
+        (get_test_model_shared_convs, False, 0.4, 461438976, 275300352, 11534848, 6881664),
         (get_model_grouped_convs, False, 0.0, 10859520, 10859520, 215808, 215808)
     )
 )
