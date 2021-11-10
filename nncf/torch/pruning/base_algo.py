@@ -45,7 +45,6 @@ class BasePruningAlgoBuilder(PTCompressionAlgorithmBuilder):
         self._params = params
 
         self.prune_first = params.get('prune_first_conv', False)
-        self.prune_last = params.get('prune_last_conv', False)
         self.prune_batch_norms = params.get('prune_batch_norms', True)
         self.prune_downsample_convs = params.get('prune_downsample_convs', False)
 
@@ -58,7 +57,6 @@ class BasePruningAlgoBuilder(PTCompressionAlgorithmBuilder):
                                                          self.ignored_scopes,
                                                          self.target_scopes,
                                                          self.prune_first,
-                                                         self.prune_last,
                                                          self.prune_downsample_convs)
 
         self.pruned_module_groups_info = []
@@ -69,18 +67,17 @@ class BasePruningAlgoBuilder(PTCompressionAlgorithmBuilder):
         """
         Setting default parameter values of pruning algorithm depends on the ranking type:
         for learned_ranking `all_weights` must be True (in case of False was set by the user, an Exception will be
-        raised), `prune_first_conv`, `prune_last_conv`, `prune_downsample_convs` are recommended to be True (this
+        raised), `prune_first_conv`, `prune_downsample_convs` are recommended to be True (this
         params will be set to True by default (and remain unchanged if the user sets some value).
         :param params: dict with parameters of the algorithm from config
         """
         learned_ranking = 'interlayer_ranking_type' in params and params['interlayer_ranking_type'] == 'learned_ranking'
         if not learned_ranking:
             return
-        nncf_logger.info('For learning global ranking `prune_first_conv`, `prune_last_conv`, `prune_downsample_convs`, '
+        nncf_logger.info('For learning global ranking `prune_first_conv`, `prune_downsample_convs`, '
                          '`all_weights` are setting to True by default. It is not recommended to set this params'
                          ' to False.')
         params.setdefault('prune_first_conv', True)
-        params.setdefault('prune_last_conv', True)
         params.setdefault('prune_downsample_convs', True)
         if params.get('all_weights') is False:
             raise Exception('In case of `interlayer_ranking_type`=`learned_ranking`, `all_weights` must be set to True,'
@@ -200,7 +197,6 @@ class BasePruningAlgoController(PTCompressionAlgorithmController):
         self.pruned_module_groups_info = pruned_module_groups_info
         self.prune_batch_norms = params.get('prune_batch_norms', True)
         self.prune_first = params.get('prune_first_conv', False)
-        self.prune_last = params.get('prune_last_conv', False)
         self.prune_downsample_convs = params.get('prune_downsample_convs', False)
         self.prune_flops = False
         self.check_pruning_rate(params)

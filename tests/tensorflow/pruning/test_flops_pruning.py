@@ -36,7 +36,6 @@ def test_flops_calulation_for_spec_layers(model_fn, all_weights, pruning_flops_t
     config['compression']['pruning_init'] = pruning_flops_target
     config['compression']['params']['pruning_flops_target'] = pruning_flops_target
     config['compression']['params']['prune_first_conv'] = True
-    config['compression']['params']['prune_last_conv'] = True
     config['compression']['params']['all_weights'] = all_weights
     input_shape = [1, 8, 8, 1]
     model = model_fn(input_shape)

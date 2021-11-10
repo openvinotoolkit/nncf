@@ -70,7 +70,6 @@ def test_pruning_export_concat_model(tmp_path, prune_first, prune_last, ref_shap
     nncf_config['compression']['algorithm'] = 'filter_pruning'
 
     nncf_config['compression']['params']['prune_first_conv'] = prune_first
-    nncf_config['compression']['params']['prune_last_conv'] = prune_last
     nncf_config['compression']['pruning_init'] = 0.5
 
     onnx_model_proto = load_exported_onnx_version(nncf_config, model,
@@ -97,7 +96,6 @@ def test_pruning_export_eltwise_model(tmp_path, prune_first, prune_last, ref_sha
     nncf_config['compression']['algorithm'] = 'filter_pruning'
 
     nncf_config['compression']['params']['prune_first_conv'] = prune_first
-    nncf_config['compression']['params']['prune_last_conv'] = prune_last
     nncf_config['compression']['pruning_init'] = 0.5
     onnx_model_proto = load_exported_onnx_version(nncf_config, model,
                                                   path_to_storage_dir=tmp_path)
@@ -123,7 +121,6 @@ def test_pruning_export_diffconvs_model(tmp_path, prune_first, prune_last, ref_s
     nncf_config['compression']['algorithm'] = 'filter_pruning'
 
     nncf_config['compression']['params']['prune_first_conv'] = prune_first
-    nncf_config['compression']['params']['prune_last_conv'] = prune_last
     nncf_config['compression']['pruning_init'] = 0.5
     onnx_model_proto = load_exported_onnx_version(nncf_config, model,
                                                   path_to_storage_dir=tmp_path)
@@ -138,7 +135,6 @@ def test_pruning_export_groupnorm_model(tmp_path):
     nncf_config['compression']['algorithm'] = 'filter_pruning'
 
     nncf_config['compression']['params']['prune_first_conv'] = True
-    nncf_config['compression']['params']['prune_last_conv'] = True
     nncf_config['compression']['pruning_init'] = 0.5
     onnx_model_proto = load_exported_onnx_version(nncf_config, model,
                                                   path_to_storage_dir=tmp_path)

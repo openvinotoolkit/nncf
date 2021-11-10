@@ -95,7 +95,6 @@ def test_default_pruning_params_for_legr(tmp_path):
     _, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
 
     assert compression_ctrl.prune_first is True
-    assert compression_ctrl.prune_last is True
     assert compression_ctrl.all_weights is True
     assert compression_ctrl.prune_downsample_convs is True
 

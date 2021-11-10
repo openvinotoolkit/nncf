@@ -64,7 +64,6 @@ def test_check_default_algo_params():
     scheduler = compression_ctrl.scheduler
     # Check default algo params
     assert compression_ctrl.prune_first is False
-    assert compression_ctrl.prune_last is False
     assert compression_ctrl.prune_batch_norms is True
     assert compression_ctrl.prune_downsample_convs is False
     assert compression_ctrl.filter_importance is l2_filter_norm
@@ -318,7 +317,6 @@ def test_valid_masks_for_bn_after_concat(prune_bn):
     config['compression']['algorithm'] = 'filter_pruning'
     config['compression']['params']['prune_batch_norms'] = prune_bn
     config['compression']['params']['prune_first_conv'] = True
-    config['compression']['params']['prune_last_conv'] = True
     config['compression']['pruning_init'] = 0.5
     model = PruningTestModelConcatBN()
     pruned_model, _ = create_compressed_model_and_algo_for_test(model, config)
@@ -429,7 +427,6 @@ def test_disconnected_graph():
     config['compression']['pruning_init'] = 0.5
     config['compression']['params']['pruning_target'] = 0.5
     config['compression']['params']['prune_first_conv'] = True
-    config['compression']['params']['prune_last_conv'] = True
     model = DisconectedGraphModel()
     pruned_model, _ = create_compressed_model_and_algo_for_test(model, config)
     graph = pruned_model.get_original_graph()

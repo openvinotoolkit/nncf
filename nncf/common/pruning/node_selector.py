@@ -48,7 +48,6 @@ class PruningNodeSelector:
                  ignored_scopes: Optional[List[str]],
                  target_scopes: Optional[List[str]],
                  prune_first: bool,
-                 prune_last: bool,
                  prune_downsample_convs: bool):
         """
         :param pruning_operator_metatypes: registry with operation metatypes pruning algorithm is aware of, i.e.
@@ -62,7 +61,6 @@ class PruningNodeSelector:
         :param ignored_scopes: Ignored scopes.
         :param target_scopes: Target scopes.
         :param prune_first: Whether to prune first convolution or not.
-        :param prune_last: Whether to prune last convolution or not.
         :param prune_downsample_convs: Whether to prune downsample Convolutional layers (with stride > 1) or not.
         """
         self._pruning_operator_metatypes = pruning_operator_metatypes
@@ -78,7 +76,6 @@ class PruningNodeSelector:
         self._target_scopes = target_scopes
 
         self._prune_first = prune_first
-        self._prune_last = prune_last
         self._prune_downsample_convs = prune_downsample_convs
 
     def create_pruning_groups(self, graph: NNCFGraph) -> Clusterization[NNCFNode]:

@@ -399,7 +399,6 @@ def test_pruning_node_selector(test_input_info_struct_: GroupPruningModulesTestS
                                                 None,
                                                 None,
                                                 prune_first,
-                                                False,
                                                 prune_downsample)
     model = model()
     model.eval()
@@ -429,8 +428,7 @@ def test_symbolic_mask_propagation(test_input_info_struct_):
     model = test_input_info_struct_.model()
     prune_first, *_ = test_input_info_struct_.prune_params
     nncf_model, algo_builder = create_nncf_model_and_pruning_builder(model,
-                                                                     {'prune_first_conv': prune_first,
-                                                                      'prune_last_conv': True})
+                                                                     {'prune_first_conv': prune_first})
     pruning_types = [v.op_func_name for v in NNCF_PRUNING_MODULES_DICT]
     graph = nncf_model.get_graph()
     algo = MaskPropagationAlgorithm(graph, PT_PRUNING_OPERATOR_METATYPES)
@@ -477,8 +475,7 @@ def test_special_ops_struct_(request):
 def test_group_special_nodes(test_special_ops_struct: GroupSpecialModulesTestStruct):
     model = test_special_ops_struct.model()
     nncf_model, algo_builder = create_nncf_model_and_pruning_builder(model,
-                                                                     {'prune_first_conv': True,
-                                                                      'prune_last_conv': True})
+                                                                     {'prune_first_conv': True})
 
     special_ops_clusterization = cluster_special_ops(nncf_model.get_original_graph(),
                                                      algo_builder.get_types_of_grouping_ops(),
@@ -521,7 +518,7 @@ def test_struct_(request):
 
 def test_model_analyzer(test_struct: GroupSpecialModulesTestStruct):
     model = test_struct.model()
-    nncf_model, _ = create_nncf_model_and_pruning_builder(model, {'prune_first_conv': True, 'prune_last_conv': True})
+    nncf_model, _ = create_nncf_model_and_pruning_builder(model, {'prune_first_conv': True})
     prune_operations = [v.op_func_name for v in NNCF_PRUNING_MODULES_DICT]
     model_analyser = ModelAnalyzer(nncf_model.get_original_graph(), prune_operations,
                                    PT_PRUNING_OPERATOR_METATYPES,
@@ -549,7 +546,7 @@ IS_MODULE_PRUNABLE_TEST_CASES = [
     ),
     ModulePrunableTestStruct(
         model=TestModelDiffConvs,
-        config_params={'prune_first_conv': True, 'prune_last_conv': True},
+        config_params={'prune_first_conv': True},
         is_module_prunable={'TestModelDiffConvs/NNCFConv2d[conv1]/conv2d_0': True,
                             'TestModelDiffConvs/NNCFConv2d[conv2]/conv2d_0': True,
                             'TestModelDiffConvs/NNCFConv2d[conv3]/conv2d_0': False,
@@ -557,7 +554,7 @@ IS_MODULE_PRUNABLE_TEST_CASES = [
     ),
     ModulePrunableTestStruct(
         model=TestModelDiffConvs,
-        config_params={'prune_first_conv': True, 'prune_last_conv': True, 'prune_downsample_convs': True},
+        config_params={'prune_first_conv': True, 'prune_downsample_convs': True},
         is_module_prunable={'TestModelDiffConvs/NNCFConv2d[conv1]/conv2d_0': True,
                             'TestModelDiffConvs/NNCFConv2d[conv2]/conv2d_0': True,
                             'TestModelDiffConvs/NNCFConv2d[conv3]/conv2d_0': True,
@@ -574,7 +571,7 @@ IS_MODULE_PRUNABLE_TEST_CASES = [
     ),
     ModulePrunableTestStruct(
         model=TestModelBranching,
-        config_params={'prune_first_conv': True, 'prune_last_conv': True, },
+        config_params={'prune_first_conv': True},
         is_module_prunable={'TestModelBranching/NNCFConv2d[conv1]/conv2d_0': True,
                             'TestModelBranching/NNCFConv2d[conv2]/conv2d_0': True,
                             'TestModelBranching/NNCFConv2d[conv3]/conv2d_0': True,
@@ -583,7 +580,7 @@ IS_MODULE_PRUNABLE_TEST_CASES = [
     ),
     ModulePrunableTestStruct(
         model=TestModelShuffleNetUnitDW,
-        config_params={'prune_first_conv': True, 'prune_last_conv': True, },
+        config_params={'prune_first_conv': True},
         is_module_prunable={
             'TestModelShuffleNetUnitDW/NNCFConv2d[conv]/conv2d_0': True,
             'TestModelShuffleNetUnitDW/TestShuffleUnit[unit1]/NNCFConv2d[dw_conv4]/conv2d_0': False,
@@ -594,7 +591,7 @@ IS_MODULE_PRUNABLE_TEST_CASES = [
     ),
     ModulePrunableTestStruct(
         model=TestModelShuffleNetUnit,
-        config_params={'prune_first_conv': True, 'prune_last_conv': True, },
+        config_params={'prune_first_conv': True},
         is_module_prunable={'TestModelShuffleNetUnit/NNCFConv2d[conv]/conv2d_0': True,
                             'TestModelShuffleNetUnit/TestShuffleUnit[unit1]/NNCFConv2d[compress_conv1]/conv2d_0': True,
                             'TestModelShuffleNetUnit/TestShuffleUnit[unit1]/NNCFConv2d[dw_conv2]/conv2d_0': True,
@@ -602,7 +599,7 @@ IS_MODULE_PRUNABLE_TEST_CASES = [
     ),
     ModulePrunableTestStruct(
         model=MultipleDepthwiseConvolutionModel,
-        config_params={'prune_first_conv': False, 'prune_last_conv': False, },
+        config_params={'prune_first_conv': False},
         is_module_prunable={'MultipleDepthwiseConvolutionModel/NNCFConv2d[conv1]/conv2d_0': False,
                             'MultipleDepthwiseConvolutionModel/NNCFConv2d[conv4]/conv2d_0': True,
                             'MultipleDepthwiseConvolutionModel/NNCFConv2d[conv2]/conv2d_0': True,
