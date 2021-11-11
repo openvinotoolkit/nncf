@@ -110,11 +110,8 @@ class KnowledgeDistillationLoss(PTCompressionLoss):
         :return: Differentiable knowledge distillation loss value
         """
         loss = self._kd_loss_handler.get_kd_loss()
-        if len(loss) == 0:
-            raise RuntimeError("Knowledge Distillation Loss is not calculated.")
         for idx, _ in enumerate(loss):
             loss[idx] = loss[idx].unsqueeze(0)
-            ## Danger to convert 1 dim loss into n, 1 dim tensor through concat
         output = torch.cat(loss).mean()
         return output
 

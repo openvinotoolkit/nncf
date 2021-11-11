@@ -16,8 +16,6 @@ from functools import reduce
 from collections.abc import Iterable
 from typing import List, Tuple
 
-from nncf.torch.dynamic_graph.graph_tracer import ModelInputInfo
-from nncf.torch.knowledge_distillation.algo import KnowledgeDistillationBuilder
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf import NNCFConfig
 from tests.torch.test_models.synthetic import PartlyNonDifferentialOutputsModel
@@ -414,7 +412,7 @@ def test_kd_output_shapes_handling(shape_size_list, kd_type, is_zero):
     compressed_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
     compression_ctrl.scheduler.epoch_step()
     compressed_model.train()
-    input = torch.normal(0, std=0.5, size=input_size)
-    compressed_model.forward(input)
+    input_ = torch.normal(0, std=0.5, size=input_size)
+    compressed_model.forward(input_)
     kd_loss = compression_ctrl.loss()
     assert torch.allclose(kd_loss, torch.zeros([1])) == is_zero
