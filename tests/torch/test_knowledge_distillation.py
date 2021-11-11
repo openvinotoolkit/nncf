@@ -373,30 +373,48 @@ class KDOutputModel(torch.nn.Module):
         return retval
 
 
-@pytest.mark.parametrize('shape_list, kd_type, is_zero', [(
-    [(1, 2, 3, 4)], "softmax", True),
-    ([(1, 128)], "softmax", False),
-    ([(1, 128), (1, )], "softmax", False),
-    ([(1, )], "mse", True),
-    ([(1, 2, 3, 4)], "mse", False)
+class CustomOutputWeightenedModel(torch.nn.Module):
+    def __init__(self, input_shape: List[int], target_output_shapes: List[int]):
+        super().__init__()
+        self.weights = nn.ParameterDict()
+        self.linears = nn.ModuleDict()
+        self.target_output_shapes = target_output_shapes
+        self.linears['4'] = torch.nn.Linear(in_features=input_shape[3], out_features=input_shape[3])
+        self.linears['3'] = torch.nn.Linear(in_features=input_shape[3], out_features=1)
+        self.linears['2'] = torch.nn.Linear(in_features=input_shape[2], out_features=1)
+        self.linears['1'] = torch.nn.Linear(in_features=input_shape[1], out_features=1)
+
+    def forward(self, x):
+        output = {4: self.linears['4'](x)}
+        for i in range(3, min(self.target_output_shapes) - 1, -1):
+            output[i] = self.linears[str(i)](output[i + 1]).squeeze(-1)
+        return tuple(filter(lambda x: len(x.size()) in self.target_output_shapes, output.values()))
+
+
+@pytest.mark.parametrize('shape_size_list, kd_type, is_zero', [
+    ([4], "softmax", True),
+    ([3], "softmax", True),
+    ([1], "softmax", True),
+    ([2], "softmax", False),
+    ([3, 2, 1], "softmax", False),
+    ([4], "mse", False),
+    ([3], "mse", False),
+    ([2], "mse", False),
+    ([1], "mse", True),
+    ([4, 2, 1], "mse", False),
 ])
-def test_kd_softmax_loss_ignores_incompatible_outputs(shape_list: List[Tuple[int]], kd_type, is_zero):
-    original_model = KDOutputModel(target_shapes=shape_list)
-    config = NNCFConfig.from_dict({
-        "input_info": {"sample_size": [1, 1, 1, 1]},
-        "compression": {
-            "algorithm": "knowledge_distillation",
-            "type": kd_type
-        }
-    })
-    compressed_model = NNCFNetwork(original_model, [ModelInputInfo([1, 1, 1, 1])])
-    kd_builder = KnowledgeDistillationBuilder(config)
-    compressed_model = kd_builder.apply_to(compressed_model)
-    kd_ctrl = kd_builder.build_controller(compressed_model)
-    compressed_model.forward(torch.ones_like(compressed_model.mock_param))
-    print(kd_ctrl.loss().size())
-    print(kd_ctrl.loss())
-    print(torch.allclose(kd_ctrl.loss(), torch.zeros(kd_ctrl.loss().size())))
-    assert is_zero == torch.allclose(kd_ctrl.loss(), torch.zeros(kd_ctrl.loss().size()))
-    cr_loss = kd_ctrl.loss()  # Should succeed - the loss for the incompatible outputs will be equal to 0
-    print(f'cr loss {cr_loss}')
+def test_kd_output_shapes_handling(shape_size_list, kd_type, is_zero):
+    """
+    Checks for incompatible model output shape sizes that they are ignored (kd loss is zero)
+    """
+    input_size = [1, 2, 3, 4]
+    config = get_kd_config(get_sparsity_config_with_sparsity_init(
+        get_basic_magnitude_sparsity_config(input_sample_size=input_size), sparsity_init=0.5), kd_type=kd_type)
+    model = CustomOutputWeightenedModel(input_size, shape_size_list)
+    compressed_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
+    compression_ctrl.scheduler.epoch_step()
+    compressed_model.train()
+    input = torch.normal(0, std=0.5, size=input_size)
+    compressed_model.forward(input)
+    kd_loss = compression_ctrl.loss()
+    assert torch.allclose(kd_loss, torch.zeros([1])) == is_zero
