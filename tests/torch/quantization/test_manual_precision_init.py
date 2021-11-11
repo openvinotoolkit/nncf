@@ -115,6 +115,9 @@ MANUAL_CONFIG_TEST_PARAMS = [
 @pytest.mark.parametrize('manual_config_params', MANUAL_CONFIG_TEST_PARAMS,
                          ids=[p.name for p in MANUAL_CONFIG_TEST_PARAMS])
 def test_hawq_manual_configs(manual_config_params):
+    # Tip: check and correct configs with hardcoded layer names (bitwidth_per_scope attribute)
+    # in case you changed quantized NNCFGraph and this test failed
+    # with error like `Could not find a quantization point at scope name...`
     config = manual_config_params.create_nncf_config()
     config = register_default_init_args(config, create_ones_mock_dataloader(config), criterion=None)
     model = manual_config_params.create_model(config['model'])

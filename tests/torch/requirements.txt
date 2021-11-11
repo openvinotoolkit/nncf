@@ -6,3 +6,6 @@ onnx>=1.8.0
 onnxruntime==1.6.0
 pytest-mock>=3.3.1
 pytest-dependency>=0.5.1
+
+# Ticket 69520
+pyparsing<3.0

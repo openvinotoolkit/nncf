@@ -65,6 +65,10 @@ class NNCFNode:
     def layer_attributes(self) -> BaseLayerAttributes:
         return self.data.get(NNCFGraph.LAYER_ATTRIBUTES)
 
+    @layer_attributes.setter
+    def layer_attributes(self, data: Any) -> None:
+        self.data[NNCFGraph.LAYER_ATTRIBUTES] = data
+
     @property
     def ignored_algorithms(self) -> List[str]:
         return self.data.get(NNCFGraph.IGNORED_ALGOS_ATTR, [])

@@ -48,11 +48,11 @@ def test_get_bn_for_conv_node():
 
     conv1_name = 'BigPruningTestModel/NNCFConv2d[conv1]/conv2d_0'
     bn = get_bn_for_conv_node_by_name(pruned_model, conv1_name)
-    assert bn is None
+    assert bn == pruned_model.bn1
 
     conv2_name = 'BigPruningTestModel/NNCFConv2d[conv2]/conv2d_0'
     bn = get_bn_for_conv_node_by_name(pruned_model, conv2_name)
-    assert bn == pruned_model.bn
+    assert bn == pruned_model.bn2
 
     up_name = 'BigPruningTestModel/NNCFConvTranspose2d[up]/conv_transpose2d_0'
     bn = get_bn_for_conv_node_by_name(pruned_model, up_name)

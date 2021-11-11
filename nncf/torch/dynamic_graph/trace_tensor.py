@@ -110,11 +110,15 @@ def trace_tensors(operator_output, node: 'DynamicGraphNode'):
     if isinstance(operator_output, (list, tuple)):
         output_ = []
         for i, x in enumerate(operator_output):
-            meta = TensorMeta(node.node_id, i, x.shape, get_dtype(x))
+            meta = None
+            if node is not None:
+                meta = TensorMeta(node.node_id, i, x.shape, get_dtype(x))
             output_.append(TracedTensor.from_torch_tensor(x, meta))
         return operator_output.__class__(output_)
     if isinstance(operator_output, torch.Tensor):
-        meta = TensorMeta(node.node_id, 0, operator_output.shape, get_dtype(operator_output))
+        meta = None
+        if node is not None:
+            meta = TensorMeta(node.node_id, 0, operator_output.shape, get_dtype(operator_output))
         return TracedTensor.from_torch_tensor(operator_output, meta)
     raise ValueError("Unknown return type. Can not trace function call")
 

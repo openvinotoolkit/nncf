@@ -40,9 +40,10 @@ from nncf.tensorflow.graph.transformations.commands import TFInsertionCommand
 from nncf.tensorflow.graph.transformations.layout import TFTransformationLayout
 from nncf.tensorflow.graph.utils import get_layer_identifier
 from nncf.tensorflow.graph.utils import collect_wrapped_layers
-from nncf.tensorflow.pruning.export_helpers import TFElementwise
-from nncf.tensorflow.pruning.export_helpers import TFIdentityMaskForwardOps
-from nncf.tensorflow.pruning.export_helpers import TF_PRUNING_OPERATOR_METATYPES
+from nncf.tensorflow.tensor import TFNNCFTensor
+from nncf.tensorflow.pruning.operations import TFElementwisePruningOp
+from nncf.tensorflow.pruning.operations import TFIdentityMaskForwardPruningOp
+from nncf.tensorflow.pruning.operations import TF_PRUNING_OPERATOR_METATYPES
 from nncf.tensorflow.pruning.utils import get_filter_axis
 from nncf.tensorflow.pruning.utils import get_filters_num
 from nncf.tensorflow.sparsity.magnitude.operation import BinaryMask
@@ -125,7 +126,7 @@ class BasePruningAlgoBuilder(TFCompressionAlgorithmBuilder):
                 # Add output_mask to elements to run mask_propagation
                 # and detect spec_nodes that will be pruned.
                 # It should be done for all elements of shared layer.
-                node.data['output_mask'] = tf.ones(node.layer_attributes.out_channels)
+                node.data['output_mask'] = TFNNCFTensor(tf.ones(node.layer_attributes.out_channels))
                 if layer_name in shared_layers:
                     continue
                 if node.is_shared():
@@ -207,7 +208,7 @@ class BasePruningAlgoBuilder(TFCompressionAlgorithmBuilder):
     @staticmethod
     def _get_bn_for_node(node: NNCFNode, bn_nodes: List[NNCFNode]) -> Tuple[bool, List[NNCFNode]]:
         is_finished = False
-        propagating_ops = [op_name for meta_op in [TFIdentityMaskForwardOps, TFElementwise]
+        propagating_ops = [op_name for meta_op in [TFIdentityMaskForwardPruningOp, TFElementwisePruningOp]
                            for op_name in meta_op.get_all_op_aliases()]
         if node.node_type == 'BatchNormalization':
             is_finished = True

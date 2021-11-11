@@ -22,6 +22,7 @@ from examples.torch.common.execution import get_device
 from examples.torch.common.execution import prepare_model_for_execution
 from examples.torch.common.model_loader import load_model
 from examples.torch.common.sample_config import SampleConfig
+from nncf.api.compression import CompressionStage
 from nncf.torch import register_default_init_args
 from nncf.torch.checkpoint_loading import load_state
 from nncf.common.graph.definitions import MODEL_INPUT_OP_NAME
@@ -180,3 +181,101 @@ def test_can_compress_with_config_and_resume_of_old_checkpoint():
     })
     register_bn_adaptation_init_args(config)
     create_compressed_model_and_algo_for_test(model, config, compression_state=old_style_sd)
+
+
+# BN Wrapping backward compatibility test
+
+
+class ConvBNLayer(torch.nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.conv = torch.nn.Conv2d(3, 9, (3, 3))
+        self.bn = torch.nn.BatchNorm2d(9)
+        self.conv1 = torch.nn.Conv2d(9, 3, (3, 3))
+        self.bn1 = torch.nn.BatchNorm2d(3)
+
+    def forward(self, x):
+        x = self.bn(self.conv(x))
+        return self.bn1(self.conv1(x))
+
+
+sd_without_nncf_bn_wrapping = {
+    'nncf_module.conv.weight': torch.empty([9, 3, 3, 3]),
+    'nncf_module.conv.bias': torch.empty([9]),
+    'nncf_module.conv.nncf_padding_value': torch.empty([1]),
+    'nncf_module.conv.pre_ops.0.op._num_bits': torch.empty([1]),
+    'nncf_module.conv.pre_ops.0.op.signed_tensor': torch.empty([1]),
+    'nncf_module.conv.pre_ops.0.op.enabled': torch.empty([1]),
+    'nncf_module.conv.pre_ops.0.op.scale': torch.empty([9, 1, 1, 1]),
+    'nncf_module.bn.weight': torch.empty([9]),
+    'nncf_module.bn.bias': torch.empty([9]),
+    'nncf_module.bn.running_mean': torch.empty([9]),
+    'nncf_module.bn.running_var': torch.empty([9]),
+    'nncf_module.bn.num_batches_tracked': torch.empty([]),
+    'nncf_module.conv1.weight': torch.empty([3, 9, 3, 3]),
+    'nncf_module.conv1.bias': torch.empty([3]),
+    'nncf_module.conv1.nncf_padding_value': torch.empty([1]),
+    'nncf_module.conv1.pre_ops.0.op._num_bits': torch.empty([1]),
+    'nncf_module.conv1.pre_ops.0.op.signed_tensor': torch.empty([1]),
+    'nncf_module.conv1.pre_ops.0.op.enabled': torch.empty([1]),
+    'nncf_module.conv1.pre_ops.0.op.scale': torch.empty([3, 1, 1, 1]),
+    'nncf_module.bn1.weight': torch.empty([3]),
+    'nncf_module.bn1.bias': torch.empty([3]),
+    'nncf_module.bn1.running_mean': torch.empty([3]),
+    'nncf_module.bn1.running_var': torch.empty([3]),
+    'nncf_module.bn1.num_batches_tracked': torch.empty([]),
+    'external_quantizers./nncf_model_input_0|OUTPUT._num_bits': torch.empty([1]),
+    'external_quantizers./nncf_model_input_0|OUTPUT.signed_tensor': torch.empty([1]),
+    'external_quantizers./nncf_model_input_0|OUTPUT.enabled': torch.empty([1]),
+    'external_quantizers./nncf_model_input_0|OUTPUT.scale': torch.empty([1]),
+    # Old bn layer names:            |||||||||||
+    'external_quantizers.ConvBNLayer/BatchNorm2d[bn]/batch_norm_0|OUTPUT._num_bits': torch.empty([1]),
+    'external_quantizers.ConvBNLayer/BatchNorm2d[bn]/batch_norm_0|OUTPUT.signed_tensor': torch.empty([1]),
+    'external_quantizers.ConvBNLayer/BatchNorm2d[bn]/batch_norm_0|OUTPUT.enabled': torch.empty([1]),
+    'external_quantizers.ConvBNLayer/BatchNorm2d[bn]/batch_norm_0|OUTPUT.scale': torch.empty([1])
+}
+
+compression_state_without_bn_wrapping = {
+    'builder_state':
+    {'quantization':
+        {'quantizer_setup':
+            {'quantization_points':
+                {1: {'qip': {'target_node_name': '/nncf_model_input_0', 'input_port_id': None},
+                     'qip_class': 'ActivationQuantizationInsertionPoint',
+                     'qconfig':
+                         {'num_bits': 8, 'mode': 'symmetric', 'signedness_to_force': None, 'per_channel': False},
+                     'directly_quantized_operator_node_names': ['ConvBNLayer/NNCFConv2d[conv]/conv2d_0']},
+                 # Old bn layer name:                         |||||||||||
+                 2: {'qip': {'target_node_name': 'ConvBNLayer/BatchNorm2d[bn]/batch_norm_0', 'input_port_id': None},
+                     'qip_class': 'ActivationQuantizationInsertionPoint',
+                     'qconfig':
+                         {'num_bits': 8, 'mode': 'symmetric', 'signedness_to_force': None, 'per_channel': False},
+                     'directly_quantized_operator_node_names': ['ConvBNLayer/NNCFConv2d[conv1]/conv2d_0']},
+                 4: {'qip': {'target_node_name': 'ConvBNLayer/NNCFConv2d[conv]/conv2d_0'},
+                     'qip_class': 'WeightQuantizationInsertionPoint',
+                     'qconfig':
+                         {'num_bits': 8, 'mode': 'symmetric', 'signedness_to_force': True, 'per_channel': True},
+                     'directly_quantized_operator_node_names': ['ConvBNLayer/NNCFConv2d[conv]/conv2d_0']},
+                 5: {'qip': {'target_node_name': 'ConvBNLayer/NNCFConv2d[conv1]/conv2d_0'},
+                     'qip_class': 'WeightQuantizationInsertionPoint',
+                     'qconfig':
+                         {'num_bits': 8, 'mode': 'symmetric', 'signedness_to_force': True, 'per_channel': True},
+                     'directly_quantized_operator_node_names': ['ConvBNLayer/NNCFConv2d[conv1]/conv2d_0']}},
+             'unified_scale_groups': {}, 'shared_input_operation_set_groups': {0: [1, 4], 1: [2, 5]}},
+         'build_time_metric_infos': {'aq_potential_num': 3, 'wq_potential_num': 4}}},
+    'ctrl_state': {'quantization': {'loss_state': None, 'scheduler_state': {'current_step': -1, 'current_epoch': -1},
+                   'compression_stage': CompressionStage.FULLY_COMPRESSED}}}
+
+
+def test_quantization_ckpt_without_wrapped_bn_loading():
+    model = ConvBNLayer()
+    config = get_basic_quantization_config(input_info={
+        "sample_size": [1, 3, 100, 100]
+    })
+    register_bn_adaptation_init_args(config)
+    with pytest.deprecated_call():
+        compressed_model, _ = \
+            create_compressed_model_and_algo_for_test(model, config,
+                                                      compression_state=compression_state_without_bn_wrapping)
+    with pytest.deprecated_call():
+        _ = load_state(compressed_model, sd_without_nncf_bn_wrapping, is_resume=True)

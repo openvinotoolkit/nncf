@@ -18,6 +18,7 @@ from typing import Dict, List, Set, Tuple
 import torch
 
 from nncf.common.utils.logger import logger as nncf_logger
+from nncf.torch.utils import maybe_convert_legacy_names_in_model_state
 
 
 def load_state(model: torch.nn.Module, state_dict_to_load: dict, is_resume: bool = False,
@@ -44,6 +45,7 @@ def load_state(model: torch.nn.Module, state_dict_to_load: dict, is_resume: bool
 
     model_state_dict = model.state_dict()
 
+    maybe_convert_legacy_names_in_model_state(state_dict_to_load)
     key_matcher = KeyMatcher(is_resume, state_dict_to_load, model_state_dict, keys_to_ignore)
     new_dict = key_matcher.run()
     num_loaded_params = len(new_dict)

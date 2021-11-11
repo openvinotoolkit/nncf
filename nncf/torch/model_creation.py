@@ -36,8 +36,9 @@ from nncf.common.utils.debug import set_debug_log_dir
 from nncf.torch.dynamic_graph.graph_tracer import create_input_infos, create_dummy_forward_fn
 from nncf.torch.graph.graph_builder import GraphBuilder
 from nncf.torch.nncf_network import NNCFNetwork
-from nncf.torch.utils import is_dist_avail_and_initialized
 from nncf.torch.utils import is_main_process
+from nncf.torch.utils import is_dist_avail_and_initialized
+from nncf.torch.utils import maybe_convert_legacy_names_in_compress_state
 from nncf.config.structures import ModelEvaluationArgs
 from nncf.config.utils import is_accuracy_aware_training
 
@@ -94,7 +95,7 @@ def create_compressed_model(model: Module,
     is_legacy_model_state_dict = compression_state is not None and \
                                  BaseController.BUILDER_STATE not in compression_state and \
                                  BaseController.CONTROLLER_STATE not in compression_state
-
+    maybe_convert_legacy_names_in_compress_state(compression_state)
     # Compress model that will be deployed for the inference on target device. No need to compress parts of the
     # model that are used on training stage only (e.g. AuxLogits of Inception-v3 model) or unused modules with weights.
     # As a consequence, no need to care about spoiling BN statistics, as there're disabled in eval mode.
@@ -176,6 +177,7 @@ def create_compressed_model(model: Module,
                 "If your training pipeline demands the processes be synchronized, please, "
                 "keep attention to that error")
             return compression_ctrl, compressed_model
+    compressed_model.get_tracing_context().disable_trace_dynamic_graph()
     return compression_ctrl, compressed_model
 
 

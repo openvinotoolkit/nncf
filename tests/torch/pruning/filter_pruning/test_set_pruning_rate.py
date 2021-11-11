@@ -40,7 +40,7 @@ def create_pruning_algo_with_config(config):
     ('all_weights', 'pruning_rate_to_set', 'ref_pruning_rates', 'ref_global_pruning_rate'),
     [
         (False, 0.5, [0.5, 0.5], 0.5),
-        (True, 0.5, [0.28125, 0.60937], 0.5),
+        (True, 0.5, [0.25, 0.625], 0.5),
         (False, {0: 0.6, 1: 0.8}, [0.5, 0.75], 0.69986),
     ]
 )

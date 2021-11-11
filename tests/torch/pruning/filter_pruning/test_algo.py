@@ -10,20 +10,21 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+
+from copy import deepcopy
+
 import pytest
 import torch
 import numpy as np
 
-from examples.torch.common.optimizer import make_optimizer, get_parameter_groups
-from nncf.torch.module_operations import UpdateWeight
+from nncf.torch.module_operations import UpdateWeightAndBias
 from nncf.torch.pruning.filter_pruning.algo import FilterPruningController
 from nncf.torch.pruning.filter_pruning.functions import l2_filter_norm
-from nncf.torch.pruning.filter_pruning.layers import FilterPruningBlock
+from nncf.torch.pruning.filter_pruning.layers import FilterPruningMask
 from nncf.torch.pruning.filter_pruning.layers import apply_filter_binary_mask
 from nncf.common.pruning.schedulers import ExponentialPruningScheduler
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
 from tests.torch.helpers import check_correct_nncf_modules_replacement
-from tests.torch.helpers import create_ones_mock_dataloader
 from tests.torch.pruning.helpers import gen_ref_masks
 from tests.torch.pruning.helpers import get_basic_pruning_config
 from tests.torch.pruning.helpers import PruningTestModel
@@ -71,7 +72,6 @@ def test_check_default_algo_params():
     assert compression_ctrl.pruning_quota == 0.9
 
     assert compression_ctrl.all_weights is False
-    assert compression_ctrl.zero_grad is True
 
     # Check default scheduler params
     assert isinstance(scheduler, ExponentialPruningScheduler)
@@ -97,9 +97,14 @@ def test_valid_modules_replacement_and_pruning(prune_first, prune_last):
 
     def check_that_module_is_pruned(module):
         assert len(module.pre_ops.values()) == 1
-        op = list(module.pre_ops.values())[0]
-        assert isinstance(op, UpdateWeight)
-        assert isinstance(op.operand, FilterPruningBlock)
+        pre_ops = list(module.pre_ops.values())
+        assert isinstance(pre_ops[0], UpdateWeightAndBias)
+        pruning_op = pre_ops[0].operand
+        assert isinstance(pruning_op, FilterPruningMask)
+
+    def check_that_module_is_not_pruned(module):
+        assert len(module.pre_ops) == 0
+        assert len(module.post_ops) == 0
 
     config = get_basic_pruning_config(input_sample_size=[1, 1, 8, 8])
     config['compression']['params']['prune_first_conv'] = prune_first
@@ -115,12 +120,27 @@ def test_valid_modules_replacement_and_pruning(prune_first, prune_last):
         assert conv1 in pruned_modules
         assert conv1 in nncf_modules.values()
         check_that_module_is_pruned(conv1)
+    else:
+        check_that_module_is_not_pruned(conv1)
+
+    # Check for bn1
+    bn1 = pruned_model.bn1
+    if prune_first:
+        assert bn1 in nncf_modules.values()
+        check_that_module_is_pruned(bn1)
+    else:
+        check_that_module_is_not_pruned(bn1)
 
     # Check for conv2
     conv2 = pruned_model.conv2
     assert conv2 in pruned_modules
     assert conv2 in nncf_modules.values()
     check_that_module_is_pruned(conv2)
+
+    # Check for bn2
+    bn2 = pruned_model.bn2
+    assert bn2 in nncf_modules.values()
+    check_that_module_is_pruned(bn2)
 
     # Check for conv3
     up = pruned_model.up
@@ -134,6 +154,8 @@ def test_valid_modules_replacement_and_pruning(prune_first, prune_last):
         assert conv3 in pruned_modules
         assert conv3 in nncf_modules.values()
         check_that_module_is_pruned(conv3)
+    else:
+        check_that_module_is_not_pruned(conv3)
 
 
 @pytest.mark.parametrize(('all_weights', 'pruning_flops_target', 'prune_first', 'ref_masks'),
@@ -159,9 +181,9 @@ def test_pruning_masks_correctness(all_weights, pruning_flops_target, prune_firs
     """
 
     def check_mask(module, num):
-        op = list(module.pre_ops.values())[0]
-        assert hasattr(op.operand, 'binary_filter_pruning_mask')
-        assert torch.allclose(op.operand.binary_filter_pruning_mask, ref_masks[num])
+        pruning_op = list(module.pre_ops.values())[0].operand
+        assert hasattr(pruning_op, 'binary_filter_pruning_mask')
+        assert torch.allclose(pruning_op.binary_filter_pruning_mask, ref_masks[num])
 
     config = get_basic_pruning_config(input_sample_size=[1, 1, 8, 8])
     config['compression']['params']['all_weights'] = all_weights
@@ -196,50 +218,118 @@ def test_pruning_masks_correctness(all_weights, pruning_flops_target, prune_firs
     check_mask(up, i)
 
 
-@pytest.mark.parametrize('prune_bn',
-                         [False,
-                          True]
-                         )
-def test_applying_masks(prune_bn):
-    config = get_basic_pruning_config(input_sample_size=[1, 1, 8, 8])
-    config['compression']['params']['prune_batch_norms'] = prune_bn
-    config['compression']['params']['prune_first_conv'] = True
-    config['compression']['params']['prune_last_conv'] = True
-    config['compression']['pruning_init'] = 0.5
+@pytest.mark.parametrize(('all_weights', 'pruning_flops_target', 'prune_first', 'ref_masks'),
+                         [
+                             (False, None, True, gen_ref_masks([(8, 8), (16, 16), (32, 32)])),
+                             (True, None, True, gen_ref_masks([(5, 11), (9, 23), (42, 22)])),
+                             (False, None, False, gen_ref_masks([(16, 16), (32, 32)])),
+                             (True, None, False, gen_ref_masks([(8, 24), (40, 24)])),
 
-    pruned_model, pruning_algo, nncf_modules = create_pruning_algo_with_config(config)
+                             # Flops pruning cases
+                             (False, 0.5, True, gen_ref_masks([(0, 16), (8, 24), (24, 40)])),
+                             (False, 0.5, False, gen_ref_masks([(8, 24), (24, 40)])),
+                             (True, 0.5, True, gen_ref_masks([(4, 12), (3, 29), (30, 34)])),
+                             (True, 0.5, False, gen_ref_masks([(3, 29), (31, 33)])),
+                         ]
+                         )
+def test_pruning_masks_applying_correctness(all_weights, pruning_flops_target, prune_first, ref_masks):
+    """
+    Test for pruning masks check (_set_binary_masks_for_filters, _set_binary_masks_for_all_filters_together).
+    :param all_weights: whether mask will be calculated for all weights in common or not
+    :param pruning_flops_target: prune model by flops, if None then by number of channels
+    :param prune_first: whether to prune first convolution or not
+    :param ref_masks: reference masks values
+    """
+    input_shapes = {'conv1': [1, 1, 8, 8],
+                    'conv2': [1, 16, 8, 8],
+                    'bn1': [1, 16, 8, 8],
+                    'bn2': [1, 32, 8, 8],
+                    'up': [1, 32, 8, 8]}
+
+    def check_mask(module, num):
+        # Mask for weights
+        pruning_op = list(module.pre_ops.values())[0].operand
+        assert hasattr(pruning_op, 'binary_filter_pruning_mask')
+        assert torch.allclose(pruning_op.binary_filter_pruning_mask, ref_masks[num])
+
+        # Mask for bias
+        # pruning_op = list(module.pre_ops.values())[1].operand
+        # assert hasattr(pruning_op, 'binary_filter_pruning_mask')
+        # assert torch.allclose(pruning_op.binary_filter_pruning_mask, ref_masks[num])
+
+    def check_module_output(module, name, num):
+        """
+        Checks that output of module are masked.
+        """
+        mask = ref_masks[num]
+        input_ = torch.ones(input_shapes[name])
+        output = module(input_)
+        ref_output = apply_filter_binary_mask(mask, output, dim=1)
+        assert torch.allclose(output, ref_output)
+
+    def check_model_weights(model_state_dict, ref_state_dict):
+        for key in ref_state_dict.keys():
+            assert torch.allclose(model_state_dict['nncf_module.' + key], ref_state_dict[key])
+
+    config = get_basic_pruning_config(input_sample_size=[1, 1, 8, 8])
+    config['compression']['algorithm'] = 'filter_pruning'
+    config['compression']['params']['all_weights'] = all_weights
+    config['compression']['params']['prune_first_conv'] = prune_first
+    config['compression']['pruning_init'] = 0.5
+    if pruning_flops_target:
+        config['compression']['params']['pruning_flops_target'] = pruning_flops_target
+
+    model = BigPruningTestModel()
+    ref_state_dict = deepcopy(model.state_dict())
+    pruned_model, pruning_algo = create_compressed_model_and_algo_for_test(BigPruningTestModel(), config)
+
     pruned_module_info = pruning_algo.pruned_module_groups_info.get_all_nodes()
     pruned_modules = [minfo.module for minfo in pruned_module_info]
+    assert pruning_algo.pruning_rate == 0.5
+    assert pruning_algo.all_weights is all_weights
 
-    assert len(pruned_modules) == len(nncf_modules)
+    # Checking that model weights remain unchanged
+    check_model_weights(pruned_model.state_dict(), ref_state_dict)
 
-    for module in pruned_modules:
-        op = list(module.pre_ops.values())[0]
-        mask = op.operand.binary_filter_pruning_mask
-        masked_weight = apply_filter_binary_mask(mask, module.weight, dim=module.target_weight_dim_for_compression)
-        masked_bias = apply_filter_binary_mask(mask, module.bias)
-        assert torch.allclose(module.weight, masked_weight)
-        assert torch.allclose(module.bias, masked_bias)
+    i = 0
+    # ref_masks Check for conv1
+    conv1 = pruned_model.conv1
+    if prune_first:
+        assert conv1 in pruned_modules
+        check_mask(conv1, i)
+        check_module_output(conv1, 'conv1', i)
 
-    # Have only one BN node in graph
-    bn_module = pruned_model.bn
-    conv_for_bn = pruned_model.conv2
-    bn_mask = list(conv_for_bn.pre_ops.values())[0].operand.binary_filter_pruning_mask
-    if prune_bn:
-        masked_bn_weight = apply_filter_binary_mask(bn_mask, bn_module.weight)
-        masked_bn_bias = apply_filter_binary_mask(bn_mask, bn_module.bias)
-        assert torch.allclose(bn_module.weight, masked_bn_weight)
-        assert torch.allclose(bn_module.bias, masked_bn_bias)
-    else:
-        assert sum(bn_module.weight) == len(bn_module.weight)
-        # Can not check bias because bias initialized with zeros
+    # Check for bn1
+    bn1 = pruned_model.bn1
+    if prune_first:
+        check_mask(bn1, i)
+        check_module_output(bn1, 'bn1', i)
+        i += 1
+
+    # Check for conv2
+    conv2 = pruned_model.conv2
+    assert conv2 in pruned_modules
+    check_mask(conv2, i)
+    check_module_output(conv2, 'conv2', i)
+
+    # Check for bn2
+    bn2 = pruned_model.bn2
+    check_mask(bn2, i)
+    check_module_output(bn2, 'bn2', i)
+    i += 1
+
+    # Check for up conv
+    up = pruned_model.up
+    assert up in pruned_modules
+    check_mask(up, i)
+    check_module_output(up, 'up', i)
 
 
 @pytest.mark.parametrize('prune_bn',
                          (False,
                           True)
                          )
-def test_applying_masks_for_bn_after_concat(prune_bn):
+def test_valid_masks_for_bn_after_concat(prune_bn):
     config = get_basic_pruning_config(input_sample_size=[1, 1, 8, 8])
     config['compression']['algorithm'] = 'filter_pruning'
     config['compression']['params']['prune_batch_norms'] = prune_bn
@@ -253,12 +343,11 @@ def test_applying_masks_for_bn_after_concat(prune_bn):
     for bn_module in bn_modules:
         if prune_bn:
             # Check that mask was applied for batch_norm module
-            assert sum(bn_module.weight) == len(bn_module.weight) * 0.5
-            assert sum(bn_module.bias) == len(bn_module.bias) * 0.5
+            mask = bn_module.pre_ops['0'].op.binary_filter_pruning_mask
+            assert sum(mask) == len(mask) * 0.5
         else:
-            # Check that mask was not applied for batch_norm module
-            assert sum(bn_module.weight) == len(bn_module.weight)
-            assert sum(bn_module.bias) == len(bn_module.bias)
+            # Check that no mask was added to the layer
+            assert len(bn_module.pre_ops) == 0
 
     # Check output mask of concat layers
     ref_concat_masks = [
@@ -267,54 +356,7 @@ def test_applying_masks_for_bn_after_concat(prune_bn):
     ]
     graph = pruned_model.get_original_graph()
     for i, node in enumerate(graph.get_nodes_by_types(['cat'])):
-        assert np.allclose(node.data['output_mask'].numpy(), ref_concat_masks[i])
-
-
-@pytest.mark.parametrize('zero_grad',
-                         [True, False])
-def test_zeroing_gradients(zero_grad):
-    """
-    Test for zeroing gradients functionality (zero_grads_for_pruned_modules in base algo)
-    :param zero_grad: zero grad or not
-    """
-    config = get_basic_pruning_config(input_sample_size=[2, 1, 8, 8])
-    config['compression']['params']['prune_first_conv'] = True
-    config['compression']['params']['prune_last_conv'] = True
-    config['compression']['params']['zero_grad'] = zero_grad
-
-    pruned_model, pruning_algo, _ = create_pruning_algo_with_config(config)
-    assert pruning_algo.zero_grad is zero_grad
-
-    pruned_module_info = pruning_algo.pruned_module_groups_info.get_all_nodes()
-    pruned_modules = [minfo.module for minfo in pruned_module_info]
-
-    device = next(pruned_model.parameters()).device
-    data_loader = create_ones_mock_dataloader(config)
-
-    params_to_optimize = get_parameter_groups(pruned_model, config)
-    optimizer, lr_scheduler = make_optimizer(params_to_optimize, config)
-
-    lr_scheduler.step(0)
-
-    pruned_model.train()
-    for input_, target in data_loader:
-        input_ = input_.to(device)
-        target = target.to(device).view(1)
-
-        output = pruned_model(input_)
-
-        loss = torch.sum(target.to(torch.float32) - output)
-        optimizer.zero_grad()
-        loss.backward()
-
-        # In case of zero_grad = True gradients should be masked
-        if zero_grad:
-            for module in pruned_modules:
-                op = list(module.pre_ops.values())[0]
-                mask = op.operand.binary_filter_pruning_mask
-                grad = module.weight.grad
-                masked_grad = apply_filter_binary_mask(mask, grad, dim=module.target_weight_dim_for_compression)
-                assert torch.allclose(masked_grad, grad)
+        assert np.allclose(node.data['output_mask'].tensor.numpy(), ref_concat_masks[i])
 
 
 @pytest.mark.parametrize(('all_weights', 'pruning_flops_target', 'ref_flops', 'ref_params_num'),
@@ -405,5 +447,5 @@ def test_disconnected_graph():
     conv1 = graph.get_node_by_name('DisconectedGraphModel/NNCFConv2d[conv1]/conv2d_0')
     conv2 = graph.get_node_by_name('DisconectedGraphModel/NNCFConv2d[conv2]/conv2d_0')
 
-    assert sum(conv1.data['output_mask']) == 8
-    assert sum(conv2.data['output_mask']) == 8
+    assert sum(conv1.data['output_mask'].tensor) == 8
+    assert sum(conv2.data['output_mask'].tensor) == 8
