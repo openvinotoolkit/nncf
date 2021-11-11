@@ -24,6 +24,8 @@ from typing import TypeVar
 import functools
 import torch
 from copy import deepcopy
+
+from nncf.torch.layers import NNCFBatchNorm
 from torch import nn
 
 from nncf.common.graph.definitions import MODEL_INPUT_OP_NAME
@@ -432,7 +434,7 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
         for nncf_module_scope in self._nncf_module_scopes:
             if nncf_module_names is not None:
                 module_name = nncf_module_scope[-1].calling_module_class_name
-                if module_name not in nncf_module_names:
+                if module_name not in nncf_module_names or module_name == NNCFBatchNorm.__class__.__name__:
                     continue
             nodes_in_scope = self._original_graph.get_op_nodes_in_scope(nncf_module_scope)
             for node in nodes_in_scope:

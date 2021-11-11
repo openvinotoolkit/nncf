@@ -129,7 +129,8 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
 
                 ignored = False
                 for nncf_node in underlying_nncf_nodes:
-                    if not should_consider_scope(nncf_node.node_name, self._ignored_scopes, self._target_scopes):
+                    if not should_consider_scope(nncf_node.node_name, self._ignored_scopes, self._target_scopes) or \
+                            'quantization' in nncf_node.ignored_algorithms:
                         ignored = True
 
                 if ignored:

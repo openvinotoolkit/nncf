@@ -100,6 +100,7 @@ def wrap_operator(operator, operator_info: 'PatchedOperatorInfo'):
             else:
                 op_name = operator_info.name
                 op_address = ctx.get_caller_context(op_name)
+
                 ctx.register_operator_call(op_address.operator_name, op_address.scope_in_model)
 
                 if ctx.elastic_depth and ctx.in_skipped_block:

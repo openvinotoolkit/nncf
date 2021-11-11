@@ -197,7 +197,7 @@ class NNCFBatchNorm1d(_NNCFModuleMixin, nn.BatchNorm1d):
 
 class NNCFBatchNorm2d(_NNCFModuleMixin, nn.BatchNorm2d):
     op_func_name = "batch_norm"
-    ignored_algorithms = ['magnitude_sparsity', 'rb_sparsity', 'const_sparsity', 'quantization']
+    ignored_algorithms = ['magnitude_sparsity', 'rb_sparsity', 'const_sparsity']
 
     @staticmethod
     def from_module(module):
