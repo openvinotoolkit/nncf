@@ -403,7 +403,7 @@ class CustomOutputWeightenedModel(torch.nn.Module):
 ])
 def test_kd_output_shapes_handling(shape_size_list, kd_type, is_zero):
     """
-    Checks for incompatible model output shape sizes that they are ignored (kd loss is zero)
+    Checks ignorance behavior (kd loss is zero) for different model output shape sizes
     """
     input_size = [1, 2, 3, 4]
     config = get_kd_config(get_sparsity_config_with_sparsity_init(
