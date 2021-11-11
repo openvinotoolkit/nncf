@@ -251,7 +251,7 @@ class FlattenPruningOp(BasePruningOp):
         assert len(input_masks) == 1
         input_mask = input_masks[0]
         if input_mask is not None and node.layer_attributes is not None:
-            # We assume all known by mask propagation layers except
+            # We assume all layers known by the mask propagation algo except
             # StopMaskForwardOp have input/output batch dim == 0.
             # Besides, since input_mask is not None thus no StopMaskForwardOp operations
             # was in the path from mask producer node to this node. As all

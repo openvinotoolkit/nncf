@@ -63,25 +63,33 @@ class MaskPropagationAlgorithm:
             cls.mask_propagation(node, self._graph)
 
     def symbolic_mask_propagation(self, prunable_layers_types: List[str],
-                                  can_prune_after_analisys: Dict[int, PruningAnalysisDecision]) \
+                                  can_prune_after_analysis: Dict[int, PruningAnalysisDecision]) \
             -> Dict[int, PruningAnalysisDecision]:
         """
-        Check all nodes marked as prunable after model analysis and pruning algo compatibility check
-        have correspondent closing node, which means each prunable by output channels dimension convolution
-        has correspondent prunable by input channels dimension convolution. Otherwise the whole group
-        contained such node cannot be pruned.
+        Check all nodes that were marked as prunable after the model analysis and compatibility check vs.
+        pruning algo have a correct correspondent closing node on each path form self to outputs;
+        the check entails verifying that every convolution prunable by the output channel dimension
+        has a corresponding convolution that is pruneable by its input channel dimension (output channel
+        dimension equal to closing convolution input channel dimension) in every path form self to outputs.
+        If the check fails, the entire groups containing such nodes will be marked as un-pruneable.
+        If convolution symbolic mask mixes with other symbolic masks (by elementwise operation, for example)
+        and mixing masks can't be mixed, all mask producers participated in this mixing will be marked as unprunable.
+        If convolution output channel dimension reducing directly affect an output of the model -
+        it will be marked as unprunable as well.
+
 
         :param prunable_layers_types: Types of operations with prunable filters.
-        :param can_prune_after_analisys: Dict of nodes indexes only indexes of convolutional
-            layers that have no conflicts for MaskPropagation and supported by
-            nncf pruning algorithm have True value.
+        :param can_prune_after_analysis: Dict of node indices vs the decision made by previous steps;
+            the decision is true only for the nodes that do not conflict with mask propagation and
+            are supported by the NNCF pruning algorithm.
+        :return: Dict of node indices vs the decision made by symbolic mask propagation algorithm.
         """
 
         can_be_closing_convs = {node.node_id for node in self._graph.get_all_nodes()
                                 if node.node_type in prunable_layers_types and not is_grouped_conv(node)}
         can_prune_by_dim = {k: None for k in can_be_closing_convs}
         for node in self._graph.topological_sort():
-            if node.node_id in can_be_closing_convs and can_prune_after_analisys[node.node_id]:
+            if node.node_id in can_be_closing_convs and can_prune_after_analysis[node.node_id]:
                 # Set output mask
                 node.data['output_mask'] = SymbolicMask(node.layer_attributes.out_channels, [node.node_id])
             # Propagate masks

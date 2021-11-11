@@ -47,7 +47,7 @@ class SymbolicMask(NNCFTensor):
 
 class AmbiguousSymbolicMask(SymbolicMask):
     """
-    Special case of Symbolic mask used when pruning operation
+    Special case of symbolic mask used when pruning operation
     receive inconsistent set of masks and should produce mask which
     certainly mark all producers of such mask as unprunable by dimension mismatch.
     """

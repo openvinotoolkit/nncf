@@ -110,11 +110,9 @@ class ModelAnalyzer:
     """
 
     def __init__(self, graph: NNCFGraph,
-                 prune_operations: List[str],
                  pruning_operator_metatypes: PruningOperationsMetatypeRegistry,
                  is_depthwise_conv_fn: Callable[[NNCFNode], bool]):
         self.graph = graph
-        self._prune_operations = prune_operations
 
         self._pruning_operator_metatypes = pruning_operator_metatypes
         pruning_op_metatypes_dict = self._pruning_operator_metatypes.registry_dict

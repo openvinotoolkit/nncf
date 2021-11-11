@@ -177,6 +177,11 @@ class GroupNormLayerAttributes(WeightedLayerAttributes):
 
 
 class ReshapeLayerAttributes(BaseLayerAttributes):
+    """
+    This class stores attributes of reshape modules/layers
+    that are useful for some algorithms.
+    """
+
     def __init__(self,
                  input_shape: List[int],
                  output_shape: List[int]):

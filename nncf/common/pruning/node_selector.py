@@ -198,12 +198,13 @@ class PruningNodeSelector:
 
     def _check_pruning_dimensions(self, graph, can_prune_after_check) -> Dict[int, PruningAnalysisDecision]:
         """
-        Check all nodes marked as prunable after model analysis and pruning algo compatibility check
-        have correspondent closing node except last convolution, which means each prunable by output channels
-        dimension convolution except last one has correspondent prunable by input channels dimension convolution.
+        Check all nodes that were marked as prunable after the model analysis and compatibility check vs.
+        pruning algo have a correct correspondent closing node on each path form self to outputs.
 
         :param graph: Graph to work with.
-        :param can_prune_after_check: Pruning node analysis after model analyser and pruning algo compatibility step.
+        :param can_prune_after_check: Dict of node indices vs the decision made by previous steps;
+            the decision is true only for the nodes that do not conflict with mask propagation and
+            are supported by the NNCF pruning algorithm
         :return: Pruning node analysis after model analyzer, pruning algo compatibility and pruning dimensions checks.
         """
         mask_prop_algo = MaskPropagationAlgorithm(graph, self._pruning_operator_metatypes)
