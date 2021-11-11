@@ -374,7 +374,6 @@ class KDOutputModel(torch.nn.Module):
 class CustomOutputWeightedModel(torch.nn.Module):
     def __init__(self, input_shape: List[int], outputs_dim_numbers_list: List[int]):
         super().__init__()
-        self.weights = nn.ParameterDict()
         self.outputs_dim_numbers_list = outputs_dim_numbers_list
         # linear layer would be compressed and will lead to different teacher (FP) and student (compressed) model
         # outputs and hence non zero KD loss value (if outputs are not ignored through special logic)
@@ -387,7 +386,7 @@ class CustomOutputWeightedModel(torch.nn.Module):
                   3: x.view([x.shape[0], x.shape[1], x.shape[2] * x.shape[3]]),
                   2: x.view([x.shape[0], x.shape[1] * x.shape[2] * x.shape[3]]),
                   1: x.view([x.shape[0] * x.shape[1] * x.shape[2] * x.shape[3]])}
-        return tuple(filter(lambda x: len(x.size()) in self.outputs_dim_numbers_list, output.values()))
+        return tuple(filter(lambda item: len(item.size()) in self.outputs_dim_numbers_list, output.values()))
 
 
 @pytest.mark.parametrize('outputs_dim_numbers_list, kd_type, is_zero', [
