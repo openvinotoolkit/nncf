@@ -67,11 +67,11 @@ class MaskPropagationAlgorithm:
             -> Dict[int, PruningAnalysisDecision]:
         """
         Check all nodes that were marked as prunable after the model analysis and compatibility check vs.
-        pruning algo have a correct correspondent closing node on each path form self to outputs;
+        pruning algo have a correct correspondent closing node on each path from self to outputs;
         the check entails verifying that every convolution prunable by the output channel dimension
-        has a corresponding convolution that is pruneable by its input channel dimension (output channel
-        dimension equal to closing convolution input channel dimension) in every path form self to outputs.
-        If the check fails, the entire groups containing such nodes will be marked as un-pruneable.
+        has a corresponding convolution that is prunable by its input channel dimension (output channel
+        dimension equal to closing convolution input channel dimension) in every path from self to outputs.
+        If the check fails, the entire groups containing such nodes will be marked as unprunable.
         If convolution symbolic mask mixes with other symbolic masks (by elementwise operation, for example)
         and mixing masks can't be mixed, all mask producers participated in this mixing will be marked as unprunable.
         If convolution output channel dimension reducing directly affect an output of the model -
