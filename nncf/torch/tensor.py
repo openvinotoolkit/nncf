@@ -34,7 +34,7 @@ class PTNNCFTensorProcessor(NNCFBaseTensorProcessor):
         return PTNNCFTensor(torch.ones(shape, device=device))
 
     @classmethod
-    def allclose(cls, tensors: List[NNCFTensor]) -> None:
+    def assert_allclose(cls, tensors: List[NNCFTensor]) -> None:
         for input_mask in tensors[1:]:
             assert torch.allclose(tensors[0].tensor, input_mask.tensor)
 
@@ -45,7 +45,7 @@ class PTNNCFTensorProcessor(NNCFBaseTensorProcessor):
 
     @classmethod
     def elementwise_mask_propagation(cls, input_masks: List[NNCFTensor]) -> NNCFTensor:
-        cls.allclose(input_masks)
+        cls.assert_allclose(input_masks)
         return input_masks[0]
 
 

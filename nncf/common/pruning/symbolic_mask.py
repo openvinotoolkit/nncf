@@ -86,7 +86,7 @@ class SymbolicMaskProcessor(NNCFBaseTensorProcessor):
         return SymbolicMask(shape)
 
     @classmethod
-    def allclose(cls, tensors: List[SymbolicMask]) -> None:
+    def assert_allclose(cls, tensors: List[SymbolicMask]) -> None:
         for input_mask in tensors[1:]:
             assert tensors[0].shape == input_mask.shape
 

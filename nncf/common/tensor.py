@@ -77,7 +77,7 @@ class NNCFBaseTensorProcessor:
 
     @classmethod
     @abstractmethod
-    def allclose(cls, tensors: List[NNCFTensor]) -> None:
+    def assert_allclose(cls, tensors: List[NNCFTensor]) -> None:
         """
         Raises an AssertionError if any two tensors are not equal.
 
