@@ -178,14 +178,8 @@ class TFMinimumOpMetatype(TFOpMetatype):
 @TF_OPERATION_METATYPES.register()
 class TFMaximumOpMetatype(TFOpMetatype):
     name = 'MaximumOp'
-    op_names = ['Maximum']
+    op_names = ['Maximum', 'Max']
     hw_config_names = [HWConfigOpName.MAXIMUM]
-
-
-@TF_OPERATION_METATYPES.register()
-class TFMaxOpMetatype(TFOpMetatype):
-    name = 'MaxOp'
-    op_names = ['Max']
 
 
 @TF_OPERATION_METATYPES.register()
