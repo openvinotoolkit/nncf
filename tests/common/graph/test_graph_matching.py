@@ -9,8 +9,8 @@ def test_ops_combination_patterns():
     pattern = TestPattern.first_pattern + TestPattern.second_pattern
 
     ref_graph = nx.DiGraph()
-    ref_graph.add_node('1', type='a')
-    ref_graph.add_node('2', type='c')
+    ref_graph.add_node('1', type='a', key='1')
+    ref_graph.add_node('2', type='c', key='2')
     ref_graph.add_edge('1', '2')
     matches = find_subgraphs_matching_pattern(ref_graph, pattern)
     assert matches == [['1', '2']]
@@ -18,8 +18,8 @@ def test_ops_combination_patterns():
     pattern = TestPattern.first_pattern + TestPattern.second_pattern | TestPattern.third_pattern
 
     ref_graph = nx.DiGraph()
-    ref_graph.add_node('1', type='a')
-    ref_graph.add_node('2', type='c')
+    ref_graph.add_node('1', type='a', key='1')
+    ref_graph.add_node('2', type='c', key='2')
     ref_graph.add_edge('1', '2')
     matches = find_subgraphs_matching_pattern(ref_graph, pattern)
     assert matches == [['1', '2']]
@@ -31,9 +31,9 @@ def test_ops_combination_patterns():
     pattern.join_patterns(TestPattern.third_pattern, edges)
 
     ref_graph = nx.DiGraph()
-    ref_graph.add_node('1', type='a')
-    ref_graph.add_node('2', type='c')
-    ref_graph.add_node('3', type='e')
+    ref_graph.add_node('1', type='a', key='1')
+    ref_graph.add_node('2', type='c', key='2')
+    ref_graph.add_node('3', type='e', key='3')
     ref_graph.add_edge('1', '2')
     ref_graph.add_edge('1', '3')
     ref_graph.add_edge('2', '3')
@@ -50,9 +50,9 @@ def test_no_matches():
     pattern.join_patterns(TestPattern.third_pattern, edges)
 
     ref_graph = nx.DiGraph()
-    ref_graph.add_node('1', type='a')
-    ref_graph.add_node('2', type='c')
-    ref_graph.add_node('3', type='e')
+    ref_graph.add_node('1', type='a', key='1')
+    ref_graph.add_node('2', type='c', key='2')
+    ref_graph.add_node('3', type='e', key='3')
     ref_graph.add_edge('1', '2')
     ref_graph.add_edge('2', '3')
     matches = find_subgraphs_matching_pattern(ref_graph, pattern)
@@ -64,12 +64,12 @@ def test_two_matches():
     pattern = TestPattern.first_pattern + TestPattern.second_pattern
 
     ref_graph = nx.DiGraph()
-    ref_graph.add_node('1', type='a')
-    ref_graph.add_node('2', type='c')
-    ref_graph.add_node('3', type='e')
-    ref_graph.add_node('4', type='c')
-    ref_graph.add_node('5', type='a')
-    ref_graph.add_node('6', type='d')
+    ref_graph.add_node('1', type='a', key='1')
+    ref_graph.add_node('2', type='c', key='2')
+    ref_graph.add_node('3', type='e', key='3')
+    ref_graph.add_node('4', type='c', key='4')
+    ref_graph.add_node('5', type='a', key='5')
+    ref_graph.add_node('6', type='d', key='6')
     ref_graph.add_edge('1', '2')
     ref_graph.add_edge('2', '3')
     ref_graph.add_edge('5', '6')

@@ -113,7 +113,7 @@ def test_join_patterns_func_three_patterns():
 def test_join_pattern_with_special_input_node():
     pattern = TestPattern.first_pattern
     second_pattern = GraphPattern()
-    second_pattern.add_node(label='second', type=GraphPattern.PATTERN_INPUT_NODE_TYPE)
+    second_pattern.add_node(label='second', type=GraphPattern.ANY_PATTERN_NODE_TYPE)
     pattern.join_patterns(second_pattern)
     pattern.join_patterns(TestPattern.third_pattern)
 
