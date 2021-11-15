@@ -119,7 +119,8 @@ def test_matches_with_non_pattern_node_type():
     matches = find_subgraphs_matching_pattern(ref_graph, pattern)
     assert matches == [['2', '3']]
 
-    pattern = TestPattern.forth_pattern + TestPattern.first_pattern + TestPattern.second_pattern + TestPattern.forth_pattern
+    pattern = TestPattern.forth_pattern + TestPattern.first_pattern + \
+              TestPattern.second_pattern + TestPattern.forth_pattern
 
     ref_graph = nx.DiGraph()
     ref_graph.add_node('1', type='a')
