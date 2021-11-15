@@ -12,7 +12,11 @@
 """
 from nncf.common.quantization.quantizer_propagation.structs import QuantizationTrait
 from nncf.tensorflow.graph.metatypes import keras_layers as layer_metatypes
+from nncf.tensorflow.graph.metatypes import tf_ops as op_metatypes
 from nncf.tensorflow.graph.metatypes import common
+from nncf.common.graph.operator_metatypes import UnknownMetatype
+
+# If there are no some metatypes it means that they are considered as QuantizationTrait.QuantizationAgnostic
 
 DEFAULT_TF_QUANT_TRAIT_TO_OP_DICT = {
     QuantizationTrait.INPUTS_QUANTIZABLE: [
@@ -38,9 +42,12 @@ DEFAULT_TF_QUANT_TRAIT_TO_OP_DICT = {
         layer_metatypes.TFELULayerMetatype,
         layer_metatypes.TFPReLULayerMetatype,
         layer_metatypes.TFLeakyReLULayerMetatype,
-        layer_metatypes.TFActivationLayerMetatype
+        layer_metatypes.TFActivationLayerMetatype,
+        op_metatypes.TFSigmoidOpMetatype,
+        op_metatypes.TFSigmoidOpMetatype
     ],
-    QuantizationTrait.NON_QUANTIZABLE: [layer_metatypes.TFSoftmaxLayerMetatype],
+    QuantizationTrait.NON_QUANTIZABLE: [layer_metatypes.TFSoftmaxLayerMetatype,
+                                        UnknownMetatype],
     QuantizationTrait.CONCAT: [layer_metatypes.TFConcatenateLayerMetatype],
     QuantizationTrait.OUTPUT_QUANTIZATION_AS_WEIGHTS: [layer_metatypes.TFEmbeddingLayerMetatype]
 }

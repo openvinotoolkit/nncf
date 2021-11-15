@@ -113,7 +113,9 @@ ELEMENTWISE_LAYER_METATYPES = [
     layer_metatypes.TFMultiplyLayerMetatype,
     layer_metatypes.TFRescalingLayerMetatype,
     op_metatypes.TFAddOpMetatype,
-    op_metatypes.TFMulOpMetatype
+    op_metatypes.TFMulOpMetatype,
+    op_metatypes.TFExpOpMetatype,
+    op_metatypes.TFLogOpMetatype
 ]
 
 
