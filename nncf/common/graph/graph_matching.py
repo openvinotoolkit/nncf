@@ -92,12 +92,6 @@ def find_subgraphs_matching_pattern(graph: nx.DiGraph, pattern_graph: GraphPatte
                 continue
             if node_1[attr] not in node_2[attr]:
                 return False
-        # Save matches between pattern nodes and graph nodes
-
-        nonlocal matches
-        # Bottleneck: the node must have 'key' attribute
-
-        matches[node_1['key']] = node_2
         return True
 
     def are_edges_matching(edge_1, edge_2):
@@ -112,8 +106,6 @@ def find_subgraphs_matching_pattern(graph: nx.DiGraph, pattern_graph: GraphPatte
     for c in nx.weakly_connected_components(pattern_graph.graph):
         patterns.append(pattern_graph.graph.subgraph(c))
 
-    # Get all patterns sorted by their lengths
-    # as we want match the longest patterns first
     def sort_patterns(pattern: nx.DiGraph):
         """
         Sort patterns by their length,
@@ -125,37 +117,33 @@ def find_subgraphs_matching_pattern(graph: nx.DiGraph, pattern_graph: GraphPatte
                 pattern_len -= 1
         return pattern_len
 
+    # Get all patterns sorted by their lengths
+    # as we want match the longest patterns first
+
     patterns = sorted(patterns, key=sort_patterns, reverse=True)
 
     for pattern in patterns:
         matcher = ism.DiGraphMatcher(graph, pattern,
                                      node_match=are_nodes_matching,
                                      edge_match=are_edges_matching)
-        # Restore matches for every pattern
-
-        matches = {}
         for subgraph in matcher.subgraph_isomorphisms_iter():
             # Bottleneck that need to sort by id for result consistency
             pattern_subgraph = list(nx.lexicographical_topological_sort(graph.subgraph(subgraph),
                                                                         key=lambda x: int(x.split()[0])))
-            # Remove matches from unsuccessful matched patterns
-            pattern_matches = {}
-            for node_name, node_attrs in matches.items():
-                if node_name in pattern_subgraph:
-                    pattern_matches[node_name] = node_attrs
 
             full_subgraph_with_non_pattern_nodes = pattern_subgraph[:]
             outside_pattern_nodes = []
 
-            # If some nodes outside the pattern - remove them from pattern_subgraph
+            # If some nodes are outside the pattern - remove them from pattern_subgraph
 
-            for node_name, node_attrs in pattern_matches.items():
-                if GraphPattern.NON_PATTERN_NODE_TYPE in node_attrs['type']:
-                    outside_pattern_nodes.append(graph.nodes.get(node_name))
+            for node, pattern_node_id in matcher.mapping.items():
+                pattern_node = pattern_graph.graph.nodes[pattern_node_id]
+                pattern_node_types = pattern_node.get('type')
+                if GraphPattern.NON_PATTERN_NODE_TYPE in pattern_node_types:
+                    outside_pattern_nodes.append(graph.nodes.get(node))
             for node in outside_pattern_nodes:
-                pattern_subgraph.remove(node['key'])
+                pattern_subgraph.remove(node)
 
-            matches = {}
             is_visited_node = any(node in visited_nodes for node in pattern_subgraph)
             if is_visited_node:
                 continue
