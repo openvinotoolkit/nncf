@@ -10,8 +10,11 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+from typing import Union
 
 import numpy as np
+
+from nncf.tensorflow.layers.data_layout import get_weight_shape
 
 
 def discard_zeros(x: np.ndarray) -> np.ndarray:
@@ -29,13 +32,27 @@ def get_per_channel_history(inputs_tensor: np.ndarray, axis: list) -> np.ndarray
     return np.transpose(np.reshape(inputs_tensor, (new_shape, -1)))
 
 
-def get_axes(ndims, per_channel, channel_axes, add_dim=False):
+def get_axes(ndims: int, per_channel: bool, channel_axes: Union[int, list, tuple]):
     axes = list(range(ndims))
     if per_channel:
         for val in channel_axes:
             val = (ndims + val) % ndims
             axes.remove(val)
-    if add_dim:
-        # if all input tensors are stacked together - one more dimension
-        axes.append(axes[-1] + 1)
     return axes
+
+
+def get_reduction_shape_activations(layer, channel_axes, use_per_sample_stats):
+    ndims = len(layer.input_shape)
+    channel_axes_ = channel_axes if isinstance(channel_axes, (list, tuple)) else [channel_axes]
+    reduction_shape = get_axes(ndims, layer.per_channel, channel_axes_)
+    if use_per_sample_stats:
+        reduction_shape = reduction_shape[1:]
+    return tuple(reduction_shape)
+
+
+def get_reduction_shape_weights(layer, weight_attr, channel_axes, per_channel):
+    weight_shape = get_weight_shape(layer, weight_attr)
+    ndims = len(weight_shape)
+    channel_axes_ = channel_axes if isinstance(channel_axes, (list, tuple)) else [channel_axes]
+    reduction_shape = get_axes(ndims, per_channel, channel_axes_)
+    return tuple(reduction_shape)

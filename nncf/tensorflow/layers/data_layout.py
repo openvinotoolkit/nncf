@@ -60,3 +60,8 @@ def get_weight_channel_axis(layer, weight_attr):
                 return weight_def.channel_axes
 
     return -1
+
+def get_weight_shape(layer, weight_attr):
+    original_layer = unwrap_layer(layer)
+    weight = getattr(original_layer, weight_attr)
+    return weight.shape

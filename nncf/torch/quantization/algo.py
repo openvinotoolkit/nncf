@@ -59,6 +59,7 @@ from nncf.common.quantization.structs import QuantizerId
 from nncf.common.quantization.structs import WeightQuantizerId
 from nncf.common.schedulers import BaseCompressionScheduler
 from nncf.common.statistics import NNCFStatistics
+from nncf.common.tensor_statistics.statistics import convert_stat_to_min_max_tensor_stat
 from nncf.common.utils.debug import is_debug
 from nncf.common.utils.helpers import matches_any
 from nncf.common.utils.logger import DuplicateFilter
@@ -561,11 +562,12 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
                                                     qp.is_weight_quantization_point(),
                                                     qp.qconfig.per_channel,
                                                     channel_idx))
+
                 if scale_shape not in tensor_statistics[tp]:
                     nncf_logger.debug("Did not collect tensor statistics at {} for shape {}".format(tp, scale_shape))
                     retval[qp_id] = None
                 else:
-                    minmax_stat = MinMaxTensorStatistic.from_stat(tensor_statistics[tp][scale_shape])
+                    minmax_stat = convert_stat_to_min_max_tensor_stat(tensor_statistics[tp][scale_shape])
                     retval[qp_id] = minmax_stat
         return retval
 
@@ -1005,6 +1007,7 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
                                               is_weights=True,
                                               per_channel=qconfig.per_channel,
                                               channel_idx=layer_attributes.get_target_dim_for_compression())
+
                 scale_shapes.append(scale_shape)
             else:
                 input_shape = target_model_graph.get_input_shape_for_insertion_point(ip)

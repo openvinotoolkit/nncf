@@ -112,9 +112,3 @@ def get_per_channel_history(raw_input_history: deque, scale_shape: List[int], di
                 per_channel_history[i] = np.concatenate([per_channel_history[i], flat_channel_split])
         raw_input_history.append(entry)
     return per_channel_history
-
-
-def get_reduction_shapes(rs_vs_params):
-    if rs_vs_params:
-        return set(rs_vs_params.keys())
-    return None

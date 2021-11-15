@@ -11,209 +11,135 @@
  limitations under the License.
 """
 
-from abc import ABC
 from collections import deque
-from typing import Tuple, List, Union
+from typing import List
 
 import numpy as np
 import tensorflow as tf
 
 from nncf.common.tensor_statistics.collectors import OfflineTensorStatisticCollector
-from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
+from nncf.common.tensor_statistics.collectors import MixedMinMaxStatisticCollector
+from nncf.common.tensor_statistics.collectors import MeanMinMaxStatisticCollector
+from nncf.common.tensor_statistics.collectors import MinMaxStatisticCollector
+from nncf.common.tensor_statistics.collectors import ReductionShape
 from nncf.common.tensor_statistics.statistics import MedianMADTensorStatistic
 from nncf.common.tensor_statistics.statistics import PercentileTensorStatistic
-from nncf.tensorflow.layers.operation import InputType
+from nncf.common.utils.backend import BackendType
 from nncf.tensorflow.quantization.initializers.utils import get_per_channel_history
 from nncf.tensorflow.quantization.initializers.utils import discard_zeros
-from nncf.tensorflow.quantization.initializers.utils import get_axes
 
 
-class TFOfflineTensorStatisticCollector(OfflineTensorStatisticCollector, ABC):
-    def __init__(self, input_type: str, channel_axes: Union[int, Tuple[int], List[int]],
-                 per_channel: bool = False, num_samples: int = None):
-        super().__init__(num_samples=num_samples)
-        self._per_channel = per_channel
-        self._input_type = input_type
-        self._channel_axes = channel_axes if isinstance(channel_axes, (list, tuple)) else [channel_axes]
+class TFMinMaxStatisticCollector(MinMaxStatisticCollector):
+    def __init__(self, use_abs_max: bool,
+                 reduction_shape: ReductionShape,
+                 num_samples: int = None):
+        super().__init__(use_abs_max, reduction_shape, num_samples, BackendType.TENSORFLOW)
+
+    def _register_input(self, x):
+        self._register_input_common(x)
+
+
+class TFMixedMinMaxStatisticCollector(MixedMinMaxStatisticCollector):
+    def __init__(self,
+                 use_per_sample_stats: bool,
+                 use_abs_max: bool,
+                 use_means_of_mins: bool,
+                 use_means_of_maxs: bool,
+                 reduction_shape: ReductionShape,
+                 num_samples: int = None,
+                 window_size: int = None):
+        super().__init__(use_per_sample_stats, use_abs_max, use_means_of_mins, use_means_of_maxs,
+                         reduction_shape, num_samples, window_size, BackendType.TENSORFLOW)
+
+    def _register_input(self, x):
+        self._register_input_common(x)
+
+
+class TFMeanMinMaxStatisticCollector(MeanMinMaxStatisticCollector):
+    def __init__(self,
+                 use_per_sample_stats: bool,
+                 use_abs_max: bool,
+                 reduction_shape: ReductionShape,
+                 num_samples: int = None,
+                 window_size: int = None):
+        super().__init__(use_per_sample_stats, use_abs_max, reduction_shape,
+                         num_samples, window_size, BackendType.TENSORFLOW)
+
+    def _register_input(self, x):
+        self._register_input_common(x)
+
+
+class MedianMADStatisticCollector(OfflineTensorStatisticCollector):
+    """
+    Collector estimates median and median absolute deviation (MAD).
+    """
 
     def _register_input(self, x: tf.Tensor):
-        # No need to store extra statistics in memory since weights won't change during range init
-        if not self._samples or self._input_type == InputType.INPUTS:
-            self._samples.append(x.numpy())
-
-    def __call__(self, *args, **kwargs):
-        self.register_input(*args, **kwargs)
-
-
-class MinMaxStatisticCollectorBase(TFOfflineTensorStatisticCollector, ABC):
-    def __init__(self, channel_axes: Union[int, Tuple[int], List[int]], input_type: str,
-                 mode: str = 'symmetric', per_channel: bool = False, num_samples: int = None, window_size: int = None):
-        super().__init__(input_type, channel_axes, per_channel, num_samples)
-        self._all_min_values = deque(maxlen=window_size)
-        self._all_max_values = deque(maxlen=window_size)
-        self._mode = mode
-
-    def _register_input(self, x: tf.Tensor):
-        # No need to store extra statistics in memory since weights won't change during range init
-        if not self._all_min_values or self._input_type == InputType.INPUTS:
-            ndims = len(x.shape)
-            axis = get_axes(ndims, self._per_channel, self._channel_axes)
-
-            if self._input_type == InputType.INPUTS:
-                axis.remove(0)
-            min_reduced = tf.reduce_min(x, axis=axis)
-            if self._mode == 'symmetric':
-                inputs = tf.math.abs(x)
-            max_reduced = tf.reduce_max(inputs, axis=axis)
-
-            if self._input_type == InputType.INPUTS:
-                self._all_min_values.extend(tf.unstack(min_reduced))
-                self._all_max_values.extend(tf.unstack(max_reduced))
-            elif self._input_type == InputType.WEIGHTS:
-                self._all_min_values.append(min_reduced)
-                self._all_max_values.append(max_reduced)
-
-    def _prepare_statistics(self):
-        if self._per_channel:
-            new_shape = np.prod(self._all_min_values[0].shape).item()
-            for i, _ in enumerate(self._all_min_values):
-                self._all_min_values[i] = tf.reshape(self._all_min_values[i], shape=new_shape)
-                self._all_max_values[i] = tf.reshape(self._all_max_values[i], shape=new_shape)
-
-
-class MinMaxStatisticCollector(MinMaxStatisticCollectorBase):
-    """
-    Collector aggregates min of minimum values and max of maximum values.
-    """
-
-    def _min_aggregate(self) -> tf.Tensor:
-        return tf.math.reduce_min(tf.stack(self._all_min_values), axis=0)
-
-    def _max_aggregate(self) -> tf.Tensor:
-        return tf.math.reduce_max(tf.stack(self._all_max_values), axis=0)
-
-    def _get_statistics(self) -> MinMaxTensorStatistic:
-        self._prepare_statistics()
-        return MinMaxTensorStatistic(self._min_aggregate(), self._max_aggregate())
-
-
-class MixedMinMaxStatisticCollector(MinMaxStatisticCollectorBase):
-    """
-    Collector aggregates (min or mean) of minimum values and (max or mean) of maximum values.
-    """
-
-    def _min_aggregate(self) -> tf.Tensor:
-        if self._input_type == InputType.INPUTS and not self._per_channel and self._mode == 'asymmetric':
-            return tf.math.reduce_mean(tf.stack(self._all_min_values), axis=0)
-        return tf.math.reduce_min(tf.stack(self._all_min_values), axis=0)
-
-    def _max_aggregate(self) -> tf.Tensor:
-        if self._input_type == InputType.INPUTS and not self._per_channel:
-            return tf.math.reduce_mean(tf.stack(self._all_max_values), axis=0)
-        return tf.math.reduce_max(tf.stack(self._all_max_values), axis=0)
-
-    def _get_statistics(self) -> MinMaxTensorStatistic:
-        self._prepare_statistics()
-        return MinMaxTensorStatistic(self._min_aggregate(), self._max_aggregate())
-
-
-class MeanMinMaxStatisticsCollector(MinMaxStatisticCollectorBase):
-    """
-    Collector aggregates mean of minimum values and mean of maximum values.
-    """
-
-    def _min_aggregate(self) -> tf.Tensor:
-        return tf.math.reduce_mean(tf.stack(self._all_min_values), axis=0)
-
-    def _max_aggregate(self) -> tf.Tensor:
-        return tf.math.reduce_mean(tf.stack(self._all_max_values), axis=0)
-
-    def _get_statistics(self) -> MinMaxTensorStatistic:
-        self._prepare_statistics()
-        return MinMaxTensorStatistic(self._min_aggregate(), self._max_aggregate())
-
-
-class MedianMADStatisticCollector(TFOfflineTensorStatisticCollector):
-    """
-    Collector uses three-sigma approach.
-    """
-
-    def __init__(self, channel_axes: Union[int, Tuple[int], List[int]],
-                 input_type: str, per_channel: bool = False, num_samples: int = None):
-        super().__init__(input_type, channel_axes, per_channel, num_samples)
-        self._median = None
-        self._mad = None
-
-    def _prepare_statistics(self):
-        ndims = len(self._samples[0].shape)
-        axis = get_axes(ndims, self._per_channel, self._channel_axes, add_dim=True)
-
-        inputs_tensor = np.array(self._samples)
-        if self._per_channel:
-            per_channel_histories = get_per_channel_history(inputs_tensor, axis)
-            per_channel_median = []
-            per_channel_mad = []
-            for channel_history in per_channel_histories:
-                channel_history = discard_zeros(channel_history)
-                median = np.median(channel_history)
-                per_channel_median.append(median)
-                inputs_median_diff = abs(channel_history - median)
-                per_channel_mad.append(np.median(inputs_median_diff))
-            self._median = tf.convert_to_tensor(np.array(per_channel_median), dtype=tf.float32)
-            self._mad = tf.convert_to_tensor(np.array(per_channel_mad), dtype=tf.float32)
-        else:
-            inputs_tensor = inputs_tensor.flatten()
-            inputs_tensor_flat = discard_zeros(inputs_tensor)
-            self._median = tf.convert_to_tensor(np.median(inputs_tensor_flat), dtype=tf.float32)
-            self._mad = tf.convert_to_tensor(np.median(abs(inputs_tensor_flat - self._median)), dtype=tf.float32)
+        self._samples.append(x.numpy())
 
     def _get_statistics(self) -> MedianMADTensorStatistic:
-        self._prepare_statistics()
-        return MedianMADTensorStatistic(self._median, self._mad)
+        # all input tensors are stacked together - one more dimension
+        self._reduction_shape = self._reduction_shape + (self._reduction_shape[-1] + 1,)
+
+        per_channel_histories = get_per_channel_history(np.array(self._samples), list(self._reduction_shape))
+        per_channel_median = []
+        per_channel_mad = []
+        for channel_history in per_channel_histories:
+            channel_history = discard_zeros(channel_history)
+            median = np.median(channel_history)
+            per_channel_median.append(median)
+            inputs_median_diff = abs(channel_history - median)
+            per_channel_mad.append(np.median(inputs_median_diff))
+        median = tf.squeeze(tf.convert_to_tensor(np.array(per_channel_median), dtype=tf.float32))
+        mad = tf.squeeze(tf.convert_to_tensor(np.array(per_channel_mad), dtype=tf.float32))
+        return MedianMADTensorStatistic(median, mad)
 
 
-class PercentileStatisticCollector(TFOfflineTensorStatisticCollector):
+class PercentileStatisticCollector(OfflineTensorStatisticCollector):
     """
-    Collector uses percentiles to estimate min and max of all data history.
+    Collector estimates percentile values of all data history.
     """
 
-    def __init__(self, channel_axes: Union[int, Tuple[int], List[int]], input_type: str,
-                 percentiles_to_collect: List[float], per_channel: bool = False, num_samples: int = None):
-        super().__init__(input_type, channel_axes, per_channel, num_samples)
+    def __init__(self,
+                 reduction_shape: ReductionShape,
+                 percentiles_to_collect: List[float],
+                 num_samples: int = None,
+                 window_size: int = None):
+        super().__init__(reduction_shape, num_samples, window_size)
         self._percentiles_to_collect = percentiles_to_collect
-        self.percentile_vs_values_dict = {}
 
-    def _prepare_statistics(self):
-        ndims = len(self._samples[0].shape)
-        axis = get_axes(ndims, self._per_channel, self._channel_axes, add_dim=True)
-        inputs_tensor = np.array(self._samples)
-        for pc in self._percentiles_to_collect:
-            if self._per_channel:
-                per_channel_histories = get_per_channel_history(inputs_tensor, axis)
-                per_channel_vals = []
-                for channel_history in per_channel_histories:
-                    val = np.percentile(channel_history, pc)
-                    per_channel_vals.append(val)
-                self.percentile_vs_values_dict[pc] = tf.convert_to_tensor(np.array(per_channel_vals), dtype=tf.float32)
-            else:
-                inputs_tensor_flat = inputs_tensor.flatten()
-                self.percentile_vs_values_dict[pc] = tf.convert_to_tensor(np.percentile(inputs_tensor_flat, pc),
-                                                                     dtype=tf.float32)
+    def _register_input(self, x: tf.Tensor):
+        self._samples.append(x.numpy())
 
     def _get_statistics(self) -> PercentileTensorStatistic:
-        self._prepare_statistics()
-        return PercentileTensorStatistic(self.percentile_vs_values_dict)
+        # all input tensors are stacked together - one more dimension
+        self._reduction_shape = self._reduction_shape + (self._reduction_shape[-1] + 1,)
+
+        percentile_vs_values_dict = {}
+        for pc in self._percentiles_to_collect:
+            per_channel_histories = get_per_channel_history(np.array(self._samples), list(self._reduction_shape))
+            per_channel_vals = []
+            for channel_history in per_channel_histories:
+                channel_history = discard_zeros(channel_history)
+                val = np.percentile(channel_history, pc)
+                per_channel_vals.append(val)
+            percentile_vs_values_dict[pc] = tf.squeeze(tf.convert_to_tensor(np.array(per_channel_vals),
+                                                                            dtype=tf.float32))
+        return PercentileTensorStatistic(percentile_vs_values_dict)
 
 
-class MeanPercentileStatisticCollector(TFOfflineTensorStatisticCollector):
+class MeanPercentileStatisticCollector(OfflineTensorStatisticCollector):
     """
-    Collector uses percentiles to estimate min and max of data per step
-    and then averages the statistics.
+    Collector estimates percentile values per step and then averages the results.
     """
 
-    def __init__(self, channel_axes: Union[int, Tuple[int], List[int]], input_type: str,
-                 percentiles_to_collect: List[float], per_channel: bool = False, num_samples: int = None):
-        super().__init__(input_type, channel_axes, per_channel, num_samples)
+    def __init__(self,
+                 reduction_shape: ReductionShape,
+                 percentiles_to_collect: List[float],
+                 num_samples: int = None,
+                 window_size: int = None):
+        super().__init__(reduction_shape, num_samples, window_size)
+        self._use_per_sample_stats = 0 not in reduction_shape # assume batch is the first dimension
         self._all_pct_values = {}
         for pc in percentiles_to_collect:
             self._all_pct_values[pc] = deque()
@@ -222,30 +148,15 @@ class MeanPercentileStatisticCollector(TFOfflineTensorStatisticCollector):
         return np.percentile(inputs.numpy(), pc, axis)
 
     def _register_input(self, x: tf.Tensor):
-        # No need to store extra statistics in memory since weights won't change during range init
-        if not list(self._all_pct_values.values())[0] or self._input_type == InputType.INPUTS:
-            ndims = len(x.shape)
-            axis = get_axes(ndims, self._per_channel, self._channel_axes)
-
-            if self._input_type == InputType.INPUTS:
-                axis.remove(0)
-            for pct, values in self._all_pct_values.items():
-                if self._input_type == InputType.INPUTS:
-                    vals = tf.py_function(self._percentile, [x, pct, axis], Tout=tf.float32)
-                    values.extend(tf.unstack(vals))
-                elif self._input_type == InputType.WEIGHTS:
-                    vals = tf.py_function(self._percentile, [x, pct, axis], Tout=tf.float32)
-                    values.append(vals)
-
-    def _prepare_statistics(self):
-        if self._per_channel:
-            new_shape = np.prod(list(self._all_pct_values.values())[0][0].shape).item()
-            for values in self._all_pct_values.values():
-                for i, _ in enumerate(values):
-                    values[i] = tf.reshape(values[i], shape=new_shape)
+        for pct, values in self._all_pct_values.items():
+            if self._use_per_sample_stats:
+                vals = tf.squeeze(tf.py_function(self._percentile, [x, pct, self._reduction_shape], Tout=tf.float32))
+                values.extend(tf.unstack(vals))
+            else:
+                vals = tf.squeeze(tf.py_function(self._percentile, [x, pct, self._reduction_shape], Tout=tf.float32))
+                values.append(vals)
 
     def _get_statistics(self) -> PercentileTensorStatistic:
-        self._prepare_statistics()
         mean_percentile_values = {}
         for pct, values in self._all_pct_values.items():
             stacked_pct_vals = tf.stack(values)

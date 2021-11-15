@@ -16,6 +16,7 @@ from copy import deepcopy
 from itertools import islice
 import math
 
+import numpy as np
 import tensorflow as tf
 
 from nncf.common.quantization.initialization.range import RangeInitParams
@@ -23,15 +24,18 @@ from nncf.common.quantization.initialization.range import RangeInitConfig
 from nncf.common.quantization.structs import QuantizerGroup
 from nncf.common.utils.progress_bar import ProgressBar
 from nncf.common.utils.helpers import should_consider_scope
-from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
+from nncf.common.tensor_statistics.statistics import convert_stat_to_min_max_tensor_stat
+from nncf.common.tensor_statistics.collectors import CollectorParams
 from nncf.tensorflow.layers.custom_objects import NNCF_QUANTIZATION_OPERATIONS
 from nncf.tensorflow.layers.wrapper import NNCFWrapper
 from nncf.tensorflow.layers.data_layout import get_channel_axis
 from nncf.tensorflow.layers.operation import InputType
+from nncf.tensorflow.quantization.initializers.utils import get_reduction_shape_activations
+from nncf.tensorflow.quantization.initializers.utils import get_reduction_shape_weights
 from nncf.tensorflow.quantization.layers import FakeQuantize
-from nncf.tensorflow.quantization.initializers.collectors import MinMaxStatisticCollector
-from nncf.tensorflow.quantization.initializers.collectors import MixedMinMaxStatisticCollector
-from nncf.tensorflow.quantization.initializers.collectors import MeanMinMaxStatisticsCollector
+from nncf.tensorflow.quantization.initializers.collectors import TFMinMaxStatisticCollector
+from nncf.tensorflow.quantization.initializers.collectors import TFMixedMinMaxStatisticCollector
+from nncf.tensorflow.quantization.initializers.collectors import TFMeanMinMaxStatisticCollector
 from nncf.tensorflow.quantization.initializers.collectors import MedianMADStatisticCollector
 from nncf.tensorflow.quantization.initializers.collectors import PercentileStatisticCollector
 from nncf.tensorflow.quantization.initializers.collectors import MeanPercentileStatisticCollector
@@ -78,38 +82,118 @@ class TFRangeInitParams(RangeInitParams):
                          'definition!'.format(str(node_name)))
 
 
+class TFCollectorParams(CollectorParams):
+    def __init__(self, is_weights: bool, mode: str, per_channel, init_type, collectors_with_per_sample_stat_collection):
+        super().__init__(is_weights, mode, per_channel, init_type)
+        self._collectors_with_per_sample_stat_collection = collectors_with_per_sample_stat_collection
+
+    @property
+    def use_per_sample_stats(self) -> bool:
+        return (self._init_type in self._collectors_with_per_sample_stat_collection) and (not self._is_weights)
+
+
 class RangeInitializer:
     def __init__(self, range_init_params: TFRangeInitParams):
         self.range_init_params = range_init_params
         self.dataset = range_init_params.init_range_data_loader
         self.num_steps = range_init_params.get_max_num_init_steps()
+        self._collectors_with_per_sample_stat_collection = ['mixed_min_max', 'mean_min_max', 'mean_percentile']
 
         self.nncf_quantization_operation_classes = NNCF_QUANTIZATION_OPERATIONS.registry_dict.values()
 
     @staticmethod
-    def generate_stat_collector(init_config, channel_axes: int, input_type: str,
-                                mode: str = 'symmetric', per_channel: bool = False):
+    def generate_stat_collector(reduction_shape,
+                                collector_params,
+                                init_config,
+                                num_samples_to_collect_override: int = None):
         range_type = init_config.init_type
         num_samples = init_config.num_init_samples
+        if num_samples_to_collect_override is not None:
+            num_samples = num_samples_to_collect_override
+
         if range_type == 'min_max':
-            return MinMaxStatisticCollector(channel_axes, input_type, mode, per_channel, num_samples)
+            use_abs_max = collector_params.get_low_level_params_for_collector()
+            return TFMinMaxStatisticCollector(use_abs_max,
+                                              reduction_shape,
+                                              num_samples)
         if range_type == 'mixed_min_max':
-            return MixedMinMaxStatisticCollector(channel_axes, input_type, mode, per_channel, num_samples)
+            use_abs_max, use_means_of_mins, use_means_of_maxs = \
+                collector_params.get_low_level_params_for_collector()
+            return TFMixedMinMaxStatisticCollector(collector_params.use_per_sample_stats,
+                                                   use_abs_max,
+                                                   use_means_of_mins,
+                                                   use_means_of_maxs,
+                                                   reduction_shape,
+                                                   num_samples)
         if range_type == 'mean_min_max':
-            return MeanMinMaxStatisticsCollector(channel_axes, input_type, mode, per_channel, num_samples)
+            use_abs_max = collector_params.get_low_level_params_for_collector()
+            return TFMeanMinMaxStatisticCollector(collector_params.use_per_sample_stats,
+                                                  reduction_shape,
+                                                  num_samples)
+
         if range_type == 'threesigma':
-            return MedianMADStatisticCollector(channel_axes, input_type, per_channel, num_samples)
+            return MedianMADStatisticCollector(reduction_shape,
+                                               num_samples)
         if range_type == 'percentile':
             min_percentile = init_config.init_type_specific_params.get('min_percentile', 0.1)
             max_percentile = init_config.init_type_specific_params.get('max_percentile', 99.9)
-            return PercentileStatisticCollector(channel_axes, input_type, [min_percentile, max_percentile],
-                                                per_channel, num_samples)
+            return PercentileStatisticCollector(reduction_shape,
+                                                [min_percentile, max_percentile],
+                                                num_samples)
         if range_type == 'mean_percentile':
             min_percentile = init_config.init_type_specific_params.get('min_percentile', 0.1)
             max_percentile = init_config.init_type_specific_params.get('max_percentile', 99.9)
-            return MeanPercentileStatisticCollector(channel_axes, input_type, [min_percentile, max_percentile],
-                                                    per_channel, num_samples)
+            return MeanPercentileStatisticCollector(reduction_shape,
+                                                    [min_percentile, max_percentile],
+                                                    num_samples)
         raise ValueError(f'Range type {range_type} is not supported.')
+
+    def _register_layer_statistics(self, layer, layer_statistics, handles):
+        channel_axes = get_channel_axis(InputType.INPUTS, '', layer)
+        init_config = self.range_init_params.get_init_config_for_quantization_point(layer, InputType.INPUTS)
+
+        is_weights = False
+        collector_params = TFCollectorParams(is_weights, layer.mode, layer.per_channel, init_config.init_type,
+                                             self._collectors_with_per_sample_stat_collection)
+
+        reduction_shape = get_reduction_shape_activations(layer, channel_axes,
+                                                          collector_params.use_per_sample_stats)
+
+        num_batches = int(np.ceil(
+            init_config.num_init_samples / self.dataset.batch_size))
+
+        collector = RangeInitializer.generate_stat_collector(reduction_shape,
+                                                             collector_params,
+                                                             init_config,
+                                                             num_batches)
+        handles.append(layer.register_hook_pre_quantizer(collector.register_input))
+        layer.enabled = False
+        layer_statistics.append((layer, collector))
+
+    def _register_op_statistics(self, layer, op_statistics, handles):
+        for weight_attr, ops in layer.weights_attr_ops.items():
+            for op_name, op in ops.items():
+                if op.__class__ in self.nncf_quantization_operation_classes:
+                    channel_axes = get_channel_axis(InputType.WEIGHTS, weight_attr, layer)
+                    init_config = self.range_init_params. \
+                        get_init_config_for_quantization_point(layer, InputType.WEIGHTS)
+
+                    is_weights = True
+                    collector_params = TFCollectorParams(is_weights, op.mode, op.per_channel, init_config.init_type,
+                                                         self._collectors_with_per_sample_stat_collection)
+
+                    reduction_shape = get_reduction_shape_weights(layer, weight_attr, channel_axes, op.per_channel)
+
+                    # No need to store extra statistics in memory since weights won't change during range init
+                    num_batches = 1
+
+                    collector = RangeInitializer.generate_stat_collector(reduction_shape,
+                                                                         collector_params,
+                                                                         init_config,
+                                                                         num_batches)
+                    handles.append(op.register_hook_pre_call(collector.register_input))
+                    op.enabled = False
+                    op_statistics.append((layer, op_name, op, collector))
 
     def run(self, model: tf.keras.Model) -> None:
         layer_statistics = []
@@ -117,27 +201,9 @@ class RangeInitializer:
         handles = []
         for layer in model.layers:
             if isinstance(layer, FakeQuantize):
-                channel_axes = get_channel_axis(InputType.INPUTS, '', layer)
-                init_config = self.range_init_params.get_init_config_for_quantization_point(layer, InputType.INPUTS)
-                collector = RangeInitializer.generate_stat_collector(init_config, channel_axes,
-                                                                     InputType.INPUTS, layer.mode,
-                                                                     layer.per_channel)
-                handles.append(layer.register_hook_pre_quantizer(collector))
-                layer.enabled = False
-                layer_statistics.append((layer, collector))
+                self._register_layer_statistics(layer, layer_statistics, handles)
             elif isinstance(layer, NNCFWrapper):
-                for weight_attr, ops in layer.weights_attr_ops.items():
-                    for op_name, op in ops.items():
-                        if op.__class__ in self.nncf_quantization_operation_classes:
-                            channel_axes = get_channel_axis(InputType.WEIGHTS, weight_attr, layer)
-                            init_config = self.range_init_params.\
-                                get_init_config_for_quantization_point(layer, InputType.WEIGHTS)
-                            collector = RangeInitializer.generate_stat_collector(init_config, channel_axes,
-                                                                                 InputType.WEIGHTS, op.mode,
-                                                                                 op.per_channel)
-                            handles.append(op.register_hook_pre_call(collector))
-                            op.enabled = False
-                            op_statistics.append((layer, op_name, op, collector))
+                self._register_op_statistics(layer, op_statistics, handles)
 
         for (x, _) in ProgressBar(
                 islice(self.dataset, self.num_steps),
@@ -148,14 +214,14 @@ class RangeInitializer:
 
         for layer, collector in layer_statistics:
             target_stat = collector.get_statistics()
-            minmax_stats = MinMaxTensorStatistic.from_stat(target_stat)
+            minmax_stats = convert_stat_to_min_max_tensor_stat(target_stat)
             layer.apply_range_initialization(minmax_stats.min_values, minmax_stats.max_values)
             layer.enabled = True
 
         for layer, op_name, op, collector in op_statistics:
             weights = layer.get_operation_weights(op_name)
             target_stat = collector.get_statistics()
-            minmax_stats = MinMaxTensorStatistic.from_stat(target_stat)
+            minmax_stats = convert_stat_to_min_max_tensor_stat(target_stat)
             op.apply_range_initialization(weights, minmax_stats.min_values, minmax_stats.max_values)
             op.enabled = True
 
