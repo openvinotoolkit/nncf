@@ -9,6 +9,8 @@ class TestPattern:
     first_type = ['a', 'b']
     second_type = ['c', 'd']
     third_type = ['e']
+    forth_type = [GraphPattern.NON_PATTERN_NODE_TYPE]
+    fifth_type = [GraphPattern.ANY_PATTERN_NODE_TYPE]
 
     first_pattern = GraphPattern()
     first_pattern.add_node(label='first', type=first_type)
@@ -16,7 +18,84 @@ class TestPattern:
     second_pattern.add_node(label='second', type=second_type)
     third_pattern = GraphPattern()
     third_pattern.add_node(label='third', type=third_type)
+    forth_pattern = GraphPattern()
+    forth_pattern.add_node(label='forth', type=forth_type)
+    fifth_pattern = GraphPattern()
+    fifth_pattern.add_node(label='fifth', type=fifth_pattern)
 
+    """
+    pattern_with_non_pattern_nodes
+            NON
+             |
+             1
+             |
+             2  NON
+            / \ /
+           4   3
+           |  / 
+           | /
+           |/
+           5
+           |
+           6---NON
+    """
+
+    pattern_with_non_pattern_nodes = GraphPattern()
+    first = pattern_with_non_pattern_nodes.add_node(label='1', type=['a'])
+    second = pattern_with_non_pattern_nodes.add_node(label='2', type=['b'])
+    third = pattern_with_non_pattern_nodes.add_node(label='3', type=['c'])
+    forth = pattern_with_non_pattern_nodes.add_node(label='4', type=['a'])
+    fifth = pattern_with_non_pattern_nodes.add_node(label='5', type=['e'])
+    sixth = pattern_with_non_pattern_nodes.add_node(label='6', type=['a'])
+    seventh = pattern_with_non_pattern_nodes.add_node(label='7', type=[GraphPattern.NON_PATTERN_NODE_TYPE])
+    eighth = pattern_with_non_pattern_nodes.add_node(label='8', type=[GraphPattern.NON_PATTERN_NODE_TYPE])
+    nineth = pattern_with_non_pattern_nodes.add_node(label='9', type=[GraphPattern.NON_PATTERN_NODE_TYPE])
+    pattern_with_non_pattern_nodes.add_edge(first, second)
+    pattern_with_non_pattern_nodes.add_edge(second, third)
+    pattern_with_non_pattern_nodes.add_edge(second, forth)
+    pattern_with_non_pattern_nodes.add_edge(forth, fifth)
+    pattern_with_non_pattern_nodes.add_edge(third, fifth)
+    pattern_with_non_pattern_nodes.add_edge(fifth, sixth)
+    pattern_with_non_pattern_nodes.add_edge(seventh, first)
+    pattern_with_non_pattern_nodes.add_edge(eighth, third)
+    pattern_with_non_pattern_nodes.add_edge(nineth, sixth)
+
+    """
+    pattern_with_any_pattern_nodes
+            ANY
+             |
+             1
+             |
+             2  ANY
+            / \ /
+           4   3
+           |  / 
+           | /
+           |/
+           5
+           |
+           6---ANY
+    """
+
+    pattern_with_any_pattern_nodes = GraphPattern()
+    first = pattern_with_any_pattern_nodes.add_node(label='1', type=['a'])
+    second = pattern_with_any_pattern_nodes.add_node(label='2', type=['b'])
+    third = pattern_with_any_pattern_nodes.add_node(label='3', type=['c'])
+    forth = pattern_with_any_pattern_nodes.add_node(label='4', type=['a'])
+    fifth = pattern_with_any_pattern_nodes.add_node(label='5', type=['e'])
+    sixth = pattern_with_any_pattern_nodes.add_node(label='6', type=['a'])
+    seventh = pattern_with_any_pattern_nodes.add_node(label='7', type=[GraphPattern.NON_PATTERN_NODE_TYPE])
+    eighth = pattern_with_any_pattern_nodes.add_node(label='8', type=[GraphPattern.NON_PATTERN_NODE_TYPE])
+    nineth = pattern_with_any_pattern_nodes.add_node(label='9', type=[GraphPattern.NON_PATTERN_NODE_TYPE])
+    pattern_with_any_pattern_nodes.add_edge(first, second)
+    pattern_with_any_pattern_nodes.add_edge(second, third)
+    pattern_with_any_pattern_nodes.add_edge(second, forth)
+    pattern_with_any_pattern_nodes.add_edge(forth, fifth)
+    pattern_with_any_pattern_nodes.add_edge(third, fifth)
+    pattern_with_any_pattern_nodes.add_edge(fifth, sixth)
+    pattern_with_any_pattern_nodes.add_edge(seventh, first)
+    pattern_with_any_pattern_nodes.add_edge(eighth, third)
+    pattern_with_any_pattern_nodes.add_edge(nineth, sixth)
 
 def test_ops_combination_two_patterns():
     pattern = TestPattern.first_pattern + TestPattern.second_pattern

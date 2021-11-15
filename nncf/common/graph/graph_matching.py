@@ -88,8 +88,6 @@ def find_subgraphs_matching_pattern(graph: nx.DiGraph, pattern_graph: GraphPatte
                 if GraphPattern.ANY_PATTERN_NODE_TYPE in node_2['type'] or \
                         GraphPattern.NON_PATTERN_NODE_TYPE in node_2['type']:
                     continue
-            if attr == 'outgoing_edges':
-                continue
             if node_1[attr] not in node_2[attr]:
                 return False
         return True
@@ -140,7 +138,7 @@ def find_subgraphs_matching_pattern(graph: nx.DiGraph, pattern_graph: GraphPatte
                 pattern_node = pattern_graph.graph.nodes[pattern_node_id]
                 pattern_node_types = pattern_node.get('type')
                 if GraphPattern.NON_PATTERN_NODE_TYPE in pattern_node_types:
-                    outside_pattern_nodes.append(graph.nodes.get(node))
+                    outside_pattern_nodes.append(node)
             for node in outside_pattern_nodes:
                 pattern_subgraph.remove(node)
 
