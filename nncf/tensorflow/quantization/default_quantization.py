@@ -43,10 +43,12 @@ DEFAULT_TF_QUANT_TRAIT_TO_OP_DICT = {
         layer_metatypes.TFPReLULayerMetatype,
         layer_metatypes.TFLeakyReLULayerMetatype,
         layer_metatypes.TFActivationLayerMetatype,
-        op_metatypes.TFSigmoidOpMetatype,
-        op_metatypes.TFSigmoidOpMetatype
     ],
     QuantizationTrait.NON_QUANTIZABLE: [layer_metatypes.TFSoftmaxLayerMetatype,
+                                        # TODO: align with pytorch metatypes
+                                        op_metatypes.TFSigmoidOpMetatype,
+                                        op_metatypes.TFExpOpMetatype,
+                                        op_metatypes.TFLogOpMetatype,
                                         UnknownMetatype],
     QuantizationTrait.CONCAT: [layer_metatypes.TFConcatenateLayerMetatype],
     QuantizationTrait.OUTPUT_QUANTIZATION_AS_WEIGHTS: [layer_metatypes.TFEmbeddingLayerMetatype]
