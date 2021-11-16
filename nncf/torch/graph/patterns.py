@@ -72,3 +72,24 @@ def create_h_sigmoid_act() -> GraphPattern:
     pattern.add_edge(add_node, hardtanh_node)
     pattern.add_edge(hardtanh_node, truediv_node)
     return pattern
+
+
+def create_l2_norm() -> GraphPattern:
+    pattern = GraphPattern()
+
+    outside_pattern_node = pattern.add_node(label='*OUTSIDE_PATTERN_NODE*', type=GraphPattern.NON_PATTERN_NODE_TYPE)
+    pow_node = pattern.add_node(label='POW', type='pow')
+    sum_node = pattern.add_node(label='SUM', type='sum')
+    sqrt_node = pattern.add_node(label='SQRT', type='sqrt')
+    add_node = pattern.add_node(label='ADD', type='__add__')
+    div_node = pattern.add_node(label='DIV', type='div')
+    mul_node = pattern.add_node(label='MUL', type='__rmul__')
+
+    pattern.add_edge(outside_pattern_node, pow_node)
+    pattern.add_edge(pow_node, sum_node)
+    pattern.add_edge(sum_node, sqrt_node)
+    pattern.add_edge(sqrt_node, add_node)
+    pattern.add_edge(add_node, div_node)
+    pattern.add_edge(div_node, mul_node)
+    pattern.add_edge(outside_pattern_node, div_node)
+    return pattern
