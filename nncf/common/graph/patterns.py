@@ -72,8 +72,8 @@ class GraphPattern:
     Describes layer patterns in model's graph.
     This class is used in quantizer arrangement search algorithm, representing layer fusing patterns
 
-    :param ANY_PATTERN_NODE_TYPE: Special node type, meaning any type inside the pattern
-    :param NON_PATTERN_NODE_TYPE: Special node type, meaning any type outside the pattern
+    :param ANY_PATTERN_NODE_TYPE: Special node type, meaning any type inside the pattern.
+    :param NON_PATTERN_NODE_TYPE: Special node type, meaning any type outside the pattern.
     """
     ANY_PATTERN_NODE_TYPE = 'ANY_PATTERN_NODE'
     NON_PATTERN_NODE_TYPE = 'NON_PATTERN_NODE'
@@ -166,8 +166,8 @@ class GraphPattern:
         assert second_graph.in_degree(first_node_second_graph) == 0
 
         # Special case when first node is ANY_PATTERN_NODE_TYPE or NON_PATTERN_NODE_TYPE
-        if second_graph.nodes[first_node_second_graph]['type'][0] == GraphPattern.ANY_PATTERN_NODE_TYPE or\
-                second_graph.nodes[first_node_second_graph]['type'][0] == GraphPattern.NON_PATTERN_NODE_TYPE:
+        if GraphPattern.ANY_PATTERN_NODE_TYPE in second_graph.nodes[first_node_second_graph]['type'] or \
+                GraphPattern.NON_PATTERN_NODE_TYPE in second_graph.nodes[first_node_second_graph]['type']:
             successors = self_graph.successors(first_node_second_graph)
             new_edges = list(it.product([last_node_first_graph], successors))
             self_graph.add_edges_from(new_edges)
@@ -230,6 +230,9 @@ class GraphPattern:
 
     def add_edge(self, u_name, v_name) -> None:
         self._graph.add_edge(u_name, v_name)
+
+    def add_edges_from(self, ebunch_to_add, **attr) -> None:
+        self._graph.add_edges_from(ebunch_to_add, **attr)
 
     def get_weakly_connected_subgraphs(self) -> List[nx.DiGraph]:
         return [self._graph.subgraph(c) for c in nx.weakly_connected_components(self._graph)]

@@ -28,8 +28,8 @@ def get_edge_boundaries(match: List[str], graph: nx.DiGraph):
 def is_subgraph_has_inner_outgoing_edges(graph: nx.DiGraph, full_subgraph_with_non_pattern_nodes: List[str],
                                          pattern_subgraph: List[str]) -> bool:
     """
-    Check out whether the 'pattern_subgraph' has outgoing edges which
-     aren't connected with nodes from full_subgraph_with_non_pattern_nodes
+    Checks out whether the 'pattern_subgraph' has outgoing edges,
+    that aren't connected with nodes from full_subgraph_with_non_pattern_nodes.
     Example:
     (conv2d + BN + ReLU pattern):
             ...
@@ -44,8 +44,8 @@ def is_subgraph_has_inner_outgoing_edges(graph: nx.DiGraph, full_subgraph_with_n
              |
             ...
     :param graph: The model graph.
-    :param full_subgraph_with_non_pattern_nodes: A subgraph of the model graph with nodes outside the patter.
-    :param pattern_subgraph: A subgraph of the model graph
+    :param full_subgraph_with_non_pattern_nodes: A subgraph of the model graph including the nodes outside the pattern.
+    :param pattern_subgraph: A subgraph of the model.
     :return: True if the subgraph contains outgoing edges starting not from the last node,
         False - otherwise.
     """
@@ -81,10 +81,12 @@ def find_subgraphs_matching_pattern(graph: nx.DiGraph, pattern_graph: GraphPatte
 
     def are_nodes_matching(node_1, node_2):
         for attr in node_2:
-            # Special case for Input node
             if attr == 'label':
                 continue
             if attr == 'type':
+                # GraphPattern.ANY_PATTERN_NODE_TYPE and GraphPattern.NON_PATTERN_NODE_TYPE
+                # are matched to any node type.
+
                 if GraphPattern.ANY_PATTERN_NODE_TYPE in node_2['type'] or \
                         GraphPattern.NON_PATTERN_NODE_TYPE in node_2['type']:
                     continue
