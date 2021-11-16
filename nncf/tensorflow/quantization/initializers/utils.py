@@ -12,9 +12,11 @@
 """
 from typing import Union
 
+import tensorflow as tf
 import numpy as np
 
 from nncf.tensorflow.layers.data_layout import get_weight_shape
+from nncf.common.tensor_statistics.collectors import ReductionShape
 
 
 def discard_zeros(x: np.ndarray) -> np.ndarray:
@@ -32,7 +34,7 @@ def get_per_channel_history(inputs_tensor: np.ndarray, axis: list) -> np.ndarray
     return np.transpose(np.reshape(inputs_tensor, (new_shape, -1)))
 
 
-def get_axes(ndims: int, per_channel: bool, channel_axes: Union[int, list, tuple]):
+def get_axes(ndims: int, per_channel: bool, channel_axes: Union[int, list, tuple]) -> list:
     axes = list(range(ndims))
     if per_channel:
         for val in channel_axes:
@@ -41,7 +43,9 @@ def get_axes(ndims: int, per_channel: bool, channel_axes: Union[int, list, tuple
     return axes
 
 
-def get_reduction_shape_activations(layer, channel_axes, use_per_sample_stats):
+def get_reduction_shape_activations(layer: tf.keras.layers.Layer,
+                                    channel_axes: Union[int, tuple, list],
+                                    use_per_sample_stats: bool) -> ReductionShape:
     ndims = len(layer.input_shape)
     channel_axes_ = channel_axes if isinstance(channel_axes, (list, tuple)) else [channel_axes]
     reduction_shape = get_axes(ndims, layer.per_channel, channel_axes_)
@@ -50,7 +54,9 @@ def get_reduction_shape_activations(layer, channel_axes, use_per_sample_stats):
     return tuple(reduction_shape)
 
 
-def get_reduction_shape_weights(layer, weight_attr, channel_axes, per_channel):
+def get_reduction_shape_weights(layer: tf.keras.layers.Layer,
+                                weight_attr: str, channel_axes: Union[int, tuple, list],
+                                per_channel: bool) -> ReductionShape:
     weight_shape = get_weight_shape(layer, weight_attr)
     ndims = len(weight_shape)
     channel_axes_ = channel_axes if isinstance(channel_axes, (list, tuple)) else [channel_axes]

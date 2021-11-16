@@ -12,7 +12,7 @@
 """
 
 from collections import deque
-from typing import List
+from typing import List, Union
 
 import numpy as np
 import tensorflow as tf
@@ -21,51 +21,80 @@ from nncf.common.tensor_statistics.collectors import OfflineTensorStatisticColle
 from nncf.common.tensor_statistics.collectors import MixedMinMaxStatisticCollector
 from nncf.common.tensor_statistics.collectors import MeanMinMaxStatisticCollector
 from nncf.common.tensor_statistics.collectors import MinMaxStatisticCollector
+from nncf.common.tensor_statistics.collectors import Aggregator
 from nncf.common.tensor_statistics.collectors import ReductionShape
 from nncf.common.tensor_statistics.statistics import MedianMADTensorStatistic
 from nncf.common.tensor_statistics.statistics import PercentileTensorStatistic
-from nncf.common.utils.backend import BackendType
 from nncf.tensorflow.quantization.initializers.utils import get_per_channel_history
 from nncf.tensorflow.quantization.initializers.utils import discard_zeros
 
 
-class TFMinMaxStatisticCollector(MinMaxStatisticCollector):
-    def __init__(self, use_abs_max: bool,
-                 reduction_shape: ReductionShape,
-                 num_samples: int = None):
-        super().__init__(use_abs_max, reduction_shape, num_samples, BackendType.TENSORFLOW)
+class TFAggregator(Aggregator):
+    @staticmethod
+    def reduce_min(x: tf.Tensor, reduction_shape: Union[int, tuple, list]) -> tf.Tensor:
+        return tf.squeeze(tf.reduce_min(x, axis=reduction_shape))
 
-    def _register_input(self, x):
+    @staticmethod
+    def reduce_max(x: tf.Tensor, reduction_shape: Union[int, tuple, list]) -> tf.Tensor:
+        return tf.squeeze(tf.reduce_max(x, axis=reduction_shape))
+
+    @staticmethod
+    def abs(x: tf.Tensor) -> tf.Tensor:
+        return tf.math.abs(x)
+
+    @staticmethod
+    def min(x1: tf.Tensor, x2: tf.Tensor) -> tf.Tensor:
+        return tf.math.minimum(x1, x2)
+
+    @staticmethod
+    def max(x1: tf.Tensor, x2: tf.Tensor) -> tf.Tensor:
+        return tf.math.maximum(x1, x2)
+
+    @classmethod
+    def tensor_min(cls, x: tf.Tensor, axis: Union[int, tuple, list]) -> tf.Tensor:
+        return cls.reduce_min(x, axis)
+
+    @classmethod
+    def tensor_max(cls, x: tf.Tensor, axis: Union[int, tuple, list]) -> tf.Tensor:
+        return cls.reduce_max(x, axis)
+
+    @staticmethod
+    def mean(x: tf.Tensor, axis: Union[int, tuple, list]) -> tf.Tensor:
+        return tf.math.reduce_mean(x, axis=axis)
+
+    @staticmethod
+    def stack(x: deque) -> tf.Tensor:
+        return tf.stack(x)
+
+    @staticmethod
+    def list_to_extend_stat_history(x: tf.Tensor) -> tf.Tensor:
+        return tf.unstack(x)
+
+
+class TFMinMaxStatisticCollector(MinMaxStatisticCollector):
+    @staticmethod
+    def _get_aggregator() -> Aggregator:
+        return TFAggregator()
+
+    def _register_input(self, x: tf.Tensor):
         self._register_input_common(x)
 
 
 class TFMixedMinMaxStatisticCollector(MixedMinMaxStatisticCollector):
-    def __init__(self,
-                 use_per_sample_stats: bool,
-                 use_abs_max: bool,
-                 use_means_of_mins: bool,
-                 use_means_of_maxs: bool,
-                 reduction_shape: ReductionShape,
-                 num_samples: int = None,
-                 window_size: int = None):
-        super().__init__(use_per_sample_stats, use_abs_max, use_means_of_mins, use_means_of_maxs,
-                         reduction_shape, num_samples, window_size, BackendType.TENSORFLOW)
+    @staticmethod
+    def _get_aggregator() -> Aggregator:
+        return TFAggregator()
 
-    def _register_input(self, x):
+    def _register_input(self, x: tf.Tensor):
         self._register_input_common(x)
 
 
 class TFMeanMinMaxStatisticCollector(MeanMinMaxStatisticCollector):
-    def __init__(self,
-                 use_per_sample_stats: bool,
-                 use_abs_max: bool,
-                 reduction_shape: ReductionShape,
-                 num_samples: int = None,
-                 window_size: int = None):
-        super().__init__(use_per_sample_stats, use_abs_max, reduction_shape,
-                         num_samples, window_size, BackendType.TENSORFLOW)
+    @staticmethod
+    def _get_aggregator() -> Aggregator:
+        return TFAggregator()
 
-    def _register_input(self, x):
+    def _register_input(self, x: tf.Tensor):
         self._register_input_common(x)
 
 
@@ -144,7 +173,7 @@ class MeanPercentileStatisticCollector(OfflineTensorStatisticCollector):
         for pc in percentiles_to_collect:
             self._all_pct_values[pc] = deque()
 
-    def _percentile(self, inputs: tf.Tensor, pc: float, axis: list):
+    def _percentile(self, inputs: tf.Tensor, pc: float, axis: list) -> np.ndarray:
         return np.percentile(inputs.numpy(), pc, axis)
 
     def _register_input(self, x: tf.Tensor):

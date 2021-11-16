@@ -35,7 +35,7 @@ class PercentileTensorStatistic(TensorStatistic):
         self.percentile_vs_values_dict = percentile_vs_values_dict
 
 
-def convert_stat_to_min_max_tensor_stat(statistic: TensorStatistic):
+def convert_stat_to_min_max_tensor_stat(statistic: TensorStatistic) -> TensorStatistic:
     if isinstance(statistic, MinMaxTensorStatistic):
         return statistic
     if isinstance(statistic, MedianMADTensorStatistic):

@@ -20,12 +20,12 @@ import numpy as np
 import tensorflow as tf
 
 from nncf.common.quantization.initialization.range import RangeInitParams
+from nncf.common.quantization.initialization.range import RangeInitCollectorParams
 from nncf.common.quantization.initialization.range import RangeInitConfig
 from nncf.common.quantization.structs import QuantizerGroup
 from nncf.common.utils.progress_bar import ProgressBar
 from nncf.common.utils.helpers import should_consider_scope
 from nncf.common.tensor_statistics.statistics import convert_stat_to_min_max_tensor_stat
-from nncf.common.tensor_statistics.collectors import CollectorParams
 from nncf.tensorflow.layers.custom_objects import NNCF_QUANTIZATION_OPERATIONS
 from nncf.tensorflow.layers.wrapper import NNCFWrapper
 from nncf.tensorflow.layers.data_layout import get_channel_axis
@@ -82,7 +82,7 @@ class TFRangeInitParams(RangeInitParams):
                          'definition!'.format(str(node_name)))
 
 
-class TFCollectorParams(CollectorParams):
+class TFRangeInitCollectorParams(RangeInitCollectorParams):
     def __init__(self, is_weights: bool, mode: str, per_channel, init_type, collectors_with_per_sample_stat_collection):
         super().__init__(is_weights, mode, per_channel, init_type)
         self._collectors_with_per_sample_stat_collection = collectors_with_per_sample_stat_collection
@@ -128,9 +128,9 @@ class RangeInitializer:
         if range_type == 'mean_min_max':
             use_abs_max = collector_params.get_low_level_params_for_collector()
             return TFMeanMinMaxStatisticCollector(collector_params.use_per_sample_stats,
+                                                  use_abs_max,
                                                   reduction_shape,
                                                   num_samples)
-
         if range_type == 'threesigma':
             return MedianMADStatisticCollector(reduction_shape,
                                                num_samples)
@@ -148,13 +148,13 @@ class RangeInitializer:
                                                     num_samples)
         raise ValueError(f'Range type {range_type} is not supported.')
 
-    def _register_layer_statistics(self, layer, layer_statistics, handles):
+    def _register_layer_statistics(self, layer: tf.keras.layers.Layer, layer_statistics: list, handles: list):
         channel_axes = get_channel_axis(InputType.INPUTS, '', layer)
         init_config = self.range_init_params.get_init_config_for_quantization_point(layer, InputType.INPUTS)
 
         is_weights = False
-        collector_params = TFCollectorParams(is_weights, layer.mode, layer.per_channel, init_config.init_type,
-                                             self._collectors_with_per_sample_stat_collection)
+        collector_params = TFRangeInitCollectorParams(is_weights, layer.mode, layer.per_channel, init_config.init_type,
+                                                      self._collectors_with_per_sample_stat_collection)
 
         reduction_shape = get_reduction_shape_activations(layer, channel_axes,
                                                           collector_params.use_per_sample_stats)
@@ -170,7 +170,7 @@ class RangeInitializer:
         layer.enabled = False
         layer_statistics.append((layer, collector))
 
-    def _register_op_statistics(self, layer, op_statistics, handles):
+    def _register_op_statistics(self, layer: tf.keras.layers.Layer, op_statistics: list, handles: list):
         for weight_attr, ops in layer.weights_attr_ops.items():
             for op_name, op in ops.items():
                 if op.__class__ in self.nncf_quantization_operation_classes:
@@ -179,8 +179,9 @@ class RangeInitializer:
                         get_init_config_for_quantization_point(layer, InputType.WEIGHTS)
 
                     is_weights = True
-                    collector_params = TFCollectorParams(is_weights, op.mode, op.per_channel, init_config.init_type,
-                                                         self._collectors_with_per_sample_stat_collection)
+                    collector_params = TFRangeInitCollectorParams(is_weights, op.mode, op.per_channel,
+                                                                  init_config.init_type,
+                                                                  self._collectors_with_per_sample_stat_collection)
 
                     reduction_shape = get_reduction_shape_weights(layer, weight_attr, channel_axes, op.per_channel)
 

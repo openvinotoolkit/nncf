@@ -23,6 +23,7 @@ import numpy as np
 from nncf.common.graph.layer_attributes import WeightedLayerAttributes
 from nncf.common.quantization.initialization.range import RangeInitConfig
 from nncf.common.quantization.initialization.range import RangeInitParams
+from nncf.common.quantization.initialization.range import RangeInitCollectorParams
 from nncf.common.quantization.quantizer_setup import QuantizationPointBase
 from nncf.common.quantization.quantizer_setup import QuantizerSetupBase
 from nncf.common.tensor_statistics.statistics import convert_stat_to_min_max_tensor_stat
@@ -33,7 +34,6 @@ from nncf.common.quantization.structs import QuantizerId
 from nncf.common.quantization.structs import WeightQuantizerId
 from nncf.common.utils.helpers import should_consider_scope
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
-from nncf.common.tensor_statistics.collectors import CollectorParams
 from nncf.common.tensor_statistics.collectors import ReductionShape
 from nncf.torch.graph.graph import PTNNCFGraph
 from nncf.torch.initialization import DataLoaderBaseRunner
@@ -90,7 +90,7 @@ class PTRangeInitParams(RangeInitParams):
                          "definition!".format(str(qid)))
 
 
-class PTCollectorParams(CollectorParams):
+class PTRangeInitCollectorParams(RangeInitCollectorParams):
     def __init__(self, is_weights: bool, mode: str, per_channel, init_type, input_shape, channel_idx,
                  collectors_with_per_sample_stat_collection):
         super().__init__(is_weights, mode, per_channel, init_type)
@@ -192,7 +192,7 @@ class StatCollectorGenerator:
     def get_all_scale_shapes_with_params(cls, qp: QuantizationPointBase,
                                          target_nncf_graph: PTNNCFGraph,
                                          init_type: str) -> Dict[ReductionShape,
-                                                            CollectorParams]:
+                                                            PTRangeInitCollectorParams]:
         qconfigs = qp.get_all_configs_list()
         if qp.is_weight_quantization_point():
             module_node = target_nncf_graph.get_node_by_name(qp.insertion_point.target_node_name)
@@ -213,13 +213,13 @@ class StatCollectorGenerator:
                                           channel_idx=channel_idx))
 
             if scale_shape not in retval:
-                retval[scale_shape] = PTCollectorParams(is_weights,
-                                                        qconfig.mode,
-                                                        qconfig.per_channel,
-                                                        init_type,
-                                                        input_shape,
-                                                        channel_idx,
-                                                        cls.collectors_with_per_sample_stat_collection)
+                retval[scale_shape] = PTRangeInitCollectorParams(is_weights,
+                                                                 qconfig.mode,
+                                                                 qconfig.per_channel,
+                                                                 init_type,
+                                                                 input_shape,
+                                                                 channel_idx,
+                                                                 cls.collectors_with_per_sample_stat_collection)
         return retval
 
 
