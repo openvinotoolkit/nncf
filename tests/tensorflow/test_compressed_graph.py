@@ -83,7 +83,8 @@ def check_graph_def(graph_def, graph_path: str):
 def check_nx_graph(nx_graph: nx.DiGraph, graph_path: str):
     expected_graph = nx.drawing.nx_pydot.read_dot(graph_path)
 
-    assert nx_graph.nodes.keys() == expected_graph.nodes.keys()
+    for nx_graph_node, expected_graph_node in zip(nx_graph.nodes.keys(), expected_graph.nodes.keys()):
+        assert nx_graph_node == expected_graph_node
 
     for node_name, node_attrs in nx_graph.nodes.items():
         expected_attrs = expected_graph.nodes[node_name]
