@@ -16,7 +16,7 @@ from nncf.common.graph.patterns import GraphPattern
 
 def create_swish_act() -> GraphPattern:
     pattern = GraphPattern()
-    input_pattern_node = pattern.add_node(label='*INPUT_NODE*', type=GraphPattern.PATTERN_INPUT_NODE_TYPE)
+    input_pattern_node = pattern.add_node(label='*INPUT_NODE*', type=GraphPattern.NON_PATTERN_NODE_TYPE)
     sigmoid_node = pattern.add_node(label='SIGMOID', type='sigmoid')
     mul_node = pattern.add_node(label='MUL', type='__mul__')
 
@@ -30,7 +30,7 @@ def create_h_swish_act() -> GraphPattern:
     main_pattern = GraphPattern()
 
     pattern = GraphPattern()
-    input_pattern_node = pattern.add_node(label='*INPUT_NODE*', type=GraphPattern.PATTERN_INPUT_NODE_TYPE)
+    input_pattern_node = pattern.add_node(label='*INPUT_NODE*', type=GraphPattern.NON_PATTERN_NODE_TYPE)
     add_node = pattern.add_node(label='ADD', type='__add__')
     hardtanh_node = pattern.add_node(label='HARDTANH', type='hardtanh')
     truediv_node = pattern.add_node(label='DIV', type='__truediv__')
@@ -45,7 +45,7 @@ def create_h_swish_act() -> GraphPattern:
     main_pattern.add_pattern_alternative(pattern)
 
     pattern = GraphPattern()
-    input_pattern_node = pattern.add_node(label='*INPUT_NODE*', type=GraphPattern.PATTERN_INPUT_NODE_TYPE)
+    input_pattern_node = pattern.add_node(label='*INPUT_NODE*', type=GraphPattern.NON_PATTERN_NODE_TYPE)
     add_node = pattern.add_node(label='ADD', type='__add__')
     hardtanh_node = pattern.add_node(label='HARDTANH', type='hardtanh')
     mul_node = pattern.add_node(label='MUL', type='__mul__')
@@ -63,7 +63,7 @@ def create_h_swish_act() -> GraphPattern:
 def create_h_sigmoid_act() -> GraphPattern:
     pattern = GraphPattern()
 
-    input_pattern_node = pattern.add_node(label='*INPUT_NODE*', type=GraphPattern.PATTERN_INPUT_NODE_TYPE)
+    input_pattern_node = pattern.add_node(label='*INPUT_NODE*', type=GraphPattern.NON_PATTERN_NODE_TYPE)
     add_node = pattern.add_node(label='ADD', type='__add__')
     hardtanh_node = pattern.add_node(label='HARTANH', type='hardtanh')
     truediv_node = pattern.add_node(label='DIV', type='__truediv__')
