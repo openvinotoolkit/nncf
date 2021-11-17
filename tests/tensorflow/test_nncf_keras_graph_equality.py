@@ -53,7 +53,7 @@ def test_nncf_keras_model_graph_equality(nncf_model_builder, keras_application_m
 
     tf.keras.backend.clear_session()
 
-    keras_application_model = keras_application_model_builder()
+    keras_application_model = keras_application_model_builder(weights=None)
     graph_def_keras = get_graph(keras_application_model)
 
     tf.test.assert_equal_graph_def(graph_def_nncf, graph_def_keras)
