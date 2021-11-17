@@ -32,28 +32,14 @@ from nncf.torch.tensor_statistics.statistics import PTPercentileTensorStatistic
 
 class PTAggregator(Aggregator):
     @staticmethod
-    def convert_from_numpy_rs_to_torch_rs(x: torch.Tensor, reduction_shape_np: ReductionShape) -> ReductionShape:
-        nncf_torch_shape = [] # type: List[int]
-        for i in range(x.dim()):
-            if i in reduction_shape_np:
-                nncf_torch_shape.append(1)
-            else:
-                nncf_torch_shape.append(x.shape[i])
-        if all(item == 1 for item in nncf_torch_shape):
-            nncf_torch_shape = [1]
-        return tuple(nncf_torch_shape)
-
-    @classmethod
-    def reduce_min(cls, x: torch.Tensor, reduction_shape: ReductionShape) -> torch.Tensor:
+    def reduce_min(x: torch.Tensor, reduction_shape: ReductionShape) -> torch.Tensor:
         reduced_min = torch.amin(x, dim=reduction_shape)
-        nncf_torch_shape = cls.convert_from_numpy_rs_to_torch_rs(x, reduction_shape)
-        return reduced_min.view(nncf_torch_shape)
+        return reduced_min
 
-    @classmethod
-    def reduce_max(cls, x: torch.Tensor, reduction_shape: ReductionShape) -> torch.Tensor:
+    @staticmethod
+    def reduce_max(x: torch.Tensor, reduction_shape: ReductionShape) -> torch.Tensor:
         reduced_max = torch.amax(x, dim=reduction_shape)
-        nncf_torch_shape = cls.convert_from_numpy_rs_to_torch_rs(x, reduction_shape)
-        return reduced_max.view(nncf_torch_shape)
+        return reduced_max
 
     @staticmethod
     def abs(x: torch.Tensor) -> torch.Tensor:
@@ -86,17 +72,16 @@ class PTAggregator(Aggregator):
         return torch.stack(tuple(x))
 
     @staticmethod
-    def convert_shape(shape: list) -> list:
-        if all(dim == 1 for dim in shape[1:]):
-            return [1]
-        return [1] + shape[1:]
-
-    @classmethod
-    def list_to_extend_stat_history(cls, x: torch.Tensor) -> list:
-        return [t.view(cls.convert_shape(list(x.size()))) for t in torch.unbind(x)]
+    def unstack(x: torch.Tensor) -> list:
+        return torch.unbind(x)
 
 
 class PTMinMaxStatisticCollector(MinMaxStatisticCollector):
+    def __init__(self, use_abs_max: bool, reduction_shape: ReductionShape, output_shape: ReductionShape,
+                 num_samples: int = None):
+        super().__init__(use_abs_max, reduction_shape, num_samples)
+        self._output_shape = output_shape
+
     @staticmethod
     def _get_aggregator():
         return PTAggregator()
@@ -106,10 +91,25 @@ class PTMinMaxStatisticCollector(MinMaxStatisticCollector):
             self._register_input_common(x)
 
     def _get_statistics(self) -> PTMinMaxTensorStatistic:
-        return PTMinMaxTensorStatistic(self._min_values, self._max_values)
+        min_values = self._min_values.view(self._output_shape)
+        max_values = self._max_values.view(self._output_shape)
+        return PTMinMaxTensorStatistic(min_values, max_values)
 
 
 class PTMixedMinMaxStatisticCollector(MixedMinMaxStatisticCollector):
+    def __init__(self,
+                 use_per_sample_stats: bool,
+                 use_abs_max: bool,
+                 use_means_of_mins: bool,
+                 use_means_of_maxs: bool,
+                 reduction_shape: ReductionShape,
+                 output_shape: ReductionShape,
+                 num_samples: int = None,
+                 window_size: int = None):
+        super().__init__(use_per_sample_stats, use_abs_max, use_means_of_mins,
+                         use_means_of_maxs, reduction_shape, num_samples, window_size)
+        self._output_shape = output_shape
+
     @staticmethod
     def _get_aggregator():
         return PTAggregator()
@@ -119,10 +119,23 @@ class PTMixedMinMaxStatisticCollector(MixedMinMaxStatisticCollector):
             self._register_input_common(x)
 
     def _get_statistics(self) -> PTMinMaxTensorStatistic:
-        return PTMinMaxTensorStatistic(self._min_aggregate(), self._max_aggregate())
+        min_values = self._min_aggregate().view(self._output_shape)
+        max_values = self._max_aggregate().view(self._output_shape)
+        return PTMinMaxTensorStatistic(min_values, max_values)
 
 
 class PTMeanMinMaxStatisticCollector(MeanMinMaxStatisticCollector):
+    def __init__(self,
+                 use_per_sample_stats: bool,
+                 use_abs_max: bool,
+                 reduction_shape: ReductionShape,
+                 output_shape: ReductionShape,
+                 num_samples: int = None,
+                 window_size: int = None):
+        super(PTMeanMinMaxStatisticCollector, self).__init__(use_per_sample_stats, use_abs_max, reduction_shape,
+                                                             num_samples, window_size)
+        self._output_shape = output_shape
+
     @staticmethod
     def _get_aggregator():
         return PTAggregator()
@@ -132,7 +145,9 @@ class PTMeanMinMaxStatisticCollector(MeanMinMaxStatisticCollector):
             self._register_input_common(x)
 
     def _get_statistics(self) -> PTMinMaxTensorStatistic:
-        return PTMinMaxTensorStatistic(self._min_aggregate(), self._max_aggregate())
+        min_values = self._min_aggregate().view(self._output_shape)
+        max_values = self._max_aggregate().view(self._output_shape)
+        return PTMinMaxTensorStatistic(min_values, max_values)
 
 
 class MedianMADStatisticCollector(OfflineTensorStatisticCollector):

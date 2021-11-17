@@ -15,6 +15,7 @@ from typing import List, Dict, Optional, Tuple
 
 from nncf.common.initialization.dataloader import NNCFDataLoader
 from nncf.common.quantization.structs import QuantizerGroup
+from nncf.common.quantization.structs import QuantizationMode
 
 
 class RangeInitConfig:
@@ -136,7 +137,7 @@ class RangeInitParams:
 
 
 class RangeInitCollectorParams:
-    def __init__(self, is_weights: bool, mode: str, per_channel: bool, init_type: str):
+    def __init__(self, is_weights: bool, mode: QuantizationMode, per_channel: bool, init_type: str):
         self._is_weights = is_weights
         self._mode = mode
         self._per_channel = per_channel
@@ -144,7 +145,7 @@ class RangeInitCollectorParams:
 
     @property
     def _use_abs_max(self) -> bool:
-        return self._mode == 'symmetric'
+        return self._mode == QuantizationMode.SYMMETRIC
 
     @property
     def _use_means_of_mins(self) -> bool:

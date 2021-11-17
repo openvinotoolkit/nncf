@@ -29,6 +29,7 @@ from nncf.common.quantization.quantizer_setup import QuantizerSetupBase
 from nncf.common.tensor_statistics.statistics import convert_stat_to_min_max_tensor_stat
 from nncf.torch.quantization.layers import get_scale_shape
 from nncf.common.quantization.structs import NonWeightQuantizerId
+from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.structs import QuantizerGroup
 from nncf.common.quantization.structs import QuantizerId
 from nncf.common.quantization.structs import WeightQuantizerId
@@ -91,8 +92,8 @@ class PTRangeInitParams(RangeInitParams):
 
 
 class PTRangeInitCollectorParams(RangeInitCollectorParams):
-    def __init__(self, is_weights: bool, mode: str, per_channel, init_type, input_shape, channel_idx,
-                 collectors_with_per_sample_stat_collection):
+    def __init__(self, is_weights: bool, mode: QuantizationMode, per_channel: bool, init_type: str, input_shape: tuple,
+                 channel_idx: int, collectors_with_per_sample_stat_collection: list):
         super().__init__(is_weights, mode, per_channel, init_type)
         self._input_shape = input_shape
         self._channel_idx = channel_idx
@@ -102,7 +103,7 @@ class PTRangeInitCollectorParams(RangeInitCollectorParams):
     def use_per_sample_stats(self) -> bool:
         return (self._init_type in self._collectors_with_per_sample_stat_collection) and (not self._is_weights)
 
-    def get_reduction_shape(self) -> ReductionShape:
+    def converte_reduction_shape(self) -> ReductionShape:
         ndims = len(self._input_shape)
         reduction_shape = list(range(ndims))  # type: List[int]
         if self._per_channel:
@@ -162,20 +163,20 @@ class StatCollectorGenerator:
             num_samples = num_samples_to_collect_override
         if init_config.init_type == "min_max":
             use_abs_max = collector_params.get_low_level_params_for_collector()
-            reduction_shape_conveted = collector_params.get_reduction_shape()
-            return PTMinMaxStatisticCollector(use_abs_max, reduction_shape_conveted, num_samples)
+            reduction_shape_converted = collector_params.converte_reduction_shape()
+            return PTMinMaxStatisticCollector(use_abs_max, reduction_shape_converted, reduction_shape, num_samples)
         if init_config.init_type == "mixed_min_max":
             use_abs_max, use_means_of_mins, use_means_of_maxs = \
                 collector_params.get_low_level_params_for_collector()
-            reduction_shape_conveted = collector_params.get_reduction_shape()
+            reduction_shape_converted = collector_params.converte_reduction_shape()
             return PTMixedMinMaxStatisticCollector(collector_params.use_per_sample_stats, use_abs_max,
-                                                   use_means_of_mins, use_means_of_maxs, reduction_shape_conveted,
-                                                   num_samples)
+                                                   use_means_of_mins, use_means_of_maxs, reduction_shape_converted,
+                                                   reduction_shape, num_samples)
         if init_config.init_type == "mean_min_max":
             use_abs_max = collector_params.get_low_level_params_for_collector()
-            reduction_shape_conveted = collector_params.get_reduction_shape()
+            reduction_shape_converted = collector_params.converte_reduction_shape()
             return PTMeanMinMaxStatisticCollector(collector_params.use_per_sample_stats, use_abs_max,
-                                                  reduction_shape_conveted, num_samples)
+                                                  reduction_shape_converted, reduction_shape, num_samples)
         if init_config.init_type == "threesigma":
             return MedianMADStatisticCollector(reduction_shape, num_samples)
         if init_config.init_type == "percentile":

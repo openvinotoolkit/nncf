@@ -81,7 +81,7 @@ class StatisticsNotCollectedError(Exception):
     """Raised when the statistics are not collected but requested"""
 
 
-class OnlineTensorStatisticCollector(TensorStatisticCollectorBase, ABC):
+class OnlineTensorStatisticCollector(TensorStatisticCollectorBase):
     pass
 
 
@@ -113,21 +113,21 @@ class Aggregator(ABC):
 
     @staticmethod
     @abstractmethod
-    def stack(x):
-        pass
-
-    @staticmethod
-    @abstractmethod
     def mean(x, axis):
         pass
 
     @staticmethod
     @abstractmethod
-    def list_to_extend_stat_history(x):
+    def stack(x):
+        pass
+
+    @staticmethod
+    @abstractmethod
+    def unstack(x):
         pass
 
 
-class OfflineTensorStatisticCollector(TensorStatisticCollectorBase, ABC):
+class OfflineTensorStatisticCollector(TensorStatisticCollectorBase):
     def __init__(self, reduction_shape: ReductionShape = None, num_samples: int = None, window_size: int = None):
         super().__init__(reduction_shape, num_samples)
         self._samples = deque(maxlen=window_size)
@@ -136,13 +136,12 @@ class OfflineTensorStatisticCollector(TensorStatisticCollectorBase, ABC):
         self._samples.clear()
 
 
-class MinMaxStatisticCollector(OnlineTensorStatisticCollector, ABC):
+class MinMaxStatisticCollector(OnlineTensorStatisticCollector):
     """
     Collector estimates min of minimum values and max of maximum values.
     """
 
-    def __init__(self, use_abs_max: bool, reduction_shape: ReductionShape,
-                 num_samples: int = None):
+    def __init__(self, use_abs_max: bool, reduction_shape: ReductionShape, num_samples: int = None):
         super().__init__(reduction_shape, num_samples)
         self._use_abs_max = use_abs_max
         self._aggregator = self._get_aggregator()
@@ -179,7 +178,7 @@ class MinMaxStatisticCollector(OnlineTensorStatisticCollector, ABC):
         self._max_values = None
 
 
-class MinMaxOfflineStatisticCollectorBase(OfflineTensorStatisticCollector, ABC):
+class MinMaxOfflineStatisticCollectorBase(OfflineTensorStatisticCollector):
     def __init__(self,
                  use_per_sample_stats: bool,
                  use_abs_max: bool,
@@ -206,8 +205,8 @@ class MinMaxOfflineStatisticCollectorBase(OfflineTensorStatisticCollector, ABC):
         max_reduced = self._aggregator.reduce_max(x, self._reduction_shape)
 
         if self._use_per_sample_stats:
-            self._all_min_values.extend(self._aggregator.list_to_extend_stat_history(min_reduced))
-            self._all_max_values.extend(self._aggregator.list_to_extend_stat_history(max_reduced))
+            self._all_min_values.extend(self._aggregator.unstack(min_reduced))
+            self._all_max_values.extend(self._aggregator.unstack(max_reduced))
         else:
             self._all_min_values.append(min_reduced)
             self._all_max_values.append(max_reduced)
@@ -228,7 +227,7 @@ class MinMaxOfflineStatisticCollectorBase(OfflineTensorStatisticCollector, ABC):
         self._all_max_values.clear()
 
 
-class MixedMinMaxStatisticCollector(MinMaxOfflineStatisticCollectorBase, ABC):
+class MixedMinMaxStatisticCollector(MinMaxOfflineStatisticCollectorBase):
     """
     Collector aggregates (min or mean) of minimum values and (max or mean) of maximum values.
     """
@@ -258,7 +257,7 @@ class MixedMinMaxStatisticCollector(MinMaxOfflineStatisticCollectorBase, ABC):
         return self._aggregator.tensor_max(stacked_max, axis=0)
 
 
-class MeanMinMaxStatisticCollector(MinMaxOfflineStatisticCollectorBase, ABC):
+class MeanMinMaxStatisticCollector(MinMaxOfflineStatisticCollectorBase):
     """
     Collector estimates mean of minimum values and mean of maximum values.
     """

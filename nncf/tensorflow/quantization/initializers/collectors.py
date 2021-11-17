@@ -67,7 +67,7 @@ class TFAggregator(Aggregator):
         return tf.stack(x)
 
     @staticmethod
-    def list_to_extend_stat_history(x: tf.Tensor) -> tf.Tensor:
+    def unstack(x: tf.Tensor) -> tf.Tensor:
         return tf.unstack(x)
 
 
