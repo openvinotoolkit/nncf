@@ -37,7 +37,6 @@ DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT = {
         operator_metatypes.PTLeakyRELUMetatype,
         operator_metatypes.PTLayerNormMetatype,
         operator_metatypes.PTGELUMetatype,
-        operator_metatypes.PTSigmoidMetatype,
         operator_metatypes.PTAddMetatype,
         operator_metatypes.PTMulMetatype,
         operator_metatypes.PTDivMetatype,
