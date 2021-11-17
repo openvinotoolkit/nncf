@@ -508,7 +508,7 @@ class TestSotaCheckpoints:
 
     @pytest.mark.train
     @pytest.mark.parametrize("eval_test_struct", param_list, ids=ids_list)
-    def test_train(self, sota_data_dir, sota_checkpoints_dir, eval_test_struct: EvalRunParamsStruct):
+    def test_train(self, cuda_ip, sota_data_dir, sota_checkpoints_dir, eval_test_struct: EvalRunParamsStruct):
         if sota_data_dir is None:
             pytest.skip('Path to datasets is not set')
         test = 'train'
@@ -522,6 +522,9 @@ class TestSotaCheckpoints:
                                             sample_type=eval_test_struct.sample_type_,
                                             metrics_dump_file_path=metrics_dump_file_path, log_dir=log_dir)
         cmd += f' --checkpoint-save-dir {checkpoint_dir}'
+        if cuda_ip is not None:
+            print(f'Setting distributed mode synchronization URL to tcp://127.0.0.1:{cuda_ip}')
+            cmd += f' --dist-url=tcp://127.0.0.1:{cuda_ip}'
         if eval_test_struct.reference_ is not None:
             fp32_metric = self.ref_fp32_dict[str(eval_test_struct.reference_)]
             weights_path = Path(sota_checkpoints_dir) / Path(str(eval_test_struct.reference_ + '.pth'))
