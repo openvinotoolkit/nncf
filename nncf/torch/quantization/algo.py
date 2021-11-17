@@ -183,6 +183,8 @@ class QuantizerSetupGeneratorBase:
                 nncf_logger.warning('Preset quantizer parameters {} explicitly overrided.'.format(overrided_params))
         params_dict.update(params_dict_from_config)
         self.global_quantizer_constraints[quantizer_group] = QuantizationConstraints.from_config_dict(params_dict)
+        # working here for activations
+        print(f'\n\nquantizer_group {quantizer_group} ign scope {params_dict_from_config.get("ignored_scopes")}\n\n')
         self._ignored_scopes_per_group[quantizer_group] = params_dict_from_config.get('ignored_scopes')
         self._target_scopes_per_group[quantizer_group] = params_dict_from_config.get('target_scopes')
 
@@ -200,10 +202,12 @@ class QuantizerSetupGeneratorBase:
                 return True
 
             return False
-
+        print(f'\n\n_should_consider_scope_for_group\n\n')
         if matches_any(node_name, self.ignored_scopes):
+            print(f'node {node_name} group {group} should not be considered global ign scope')
             return False
         if matches_any(node_name, self._ignored_scopes_per_group[group]):
+            print(f'node {node_name} group {group} should not be considered')
             return False
 
         return True
