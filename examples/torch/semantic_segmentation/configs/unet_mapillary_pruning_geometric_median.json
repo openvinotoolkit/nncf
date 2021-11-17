@@ -20,6 +20,7 @@
         0.0679, 0.8589, 0.0389, 2.8977, 9.4937, 0.2531, 1.8852, 2.1179, 2.1978,
         5.9516, 6.4394],
     "batch_size" : 5,
+    "epochs": 10,
     "multiprocessing_distributed" : true,
     "optimizer": {
         "type": "Adam",
