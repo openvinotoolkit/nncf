@@ -45,7 +45,6 @@ DEFAULT_TF_QUANT_TRAIT_TO_OP_DICT = {
         layer_metatypes.TFActivationLayerMetatype,
     ],
     QuantizationTrait.NON_QUANTIZABLE: [layer_metatypes.TFSoftmaxLayerMetatype,
-                                        # TODO: align with pytorch metatypes
                                         op_metatypes.TFSigmoidOpMetatype,
                                         op_metatypes.TFExpOpMetatype,
                                         op_metatypes.TFLogOpMetatype,

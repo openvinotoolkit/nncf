@@ -41,7 +41,6 @@ DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT = {
         operator_metatypes.PTAddMetatype,
         operator_metatypes.PTMulMetatype,
         operator_metatypes.PTDivMetatype,
-        operator_metatypes.PTExpMetatype,
         operator_metatypes.PTErfMetatype,
         operator_metatypes.PTMatMulMetatype,
         operator_metatypes.PTMeanMetatype,
@@ -52,6 +51,8 @@ DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT = {
         operator_metatypes.PTAvgPool3dMetatype
     ],
     QuantizationTrait.NON_QUANTIZABLE: [
+        operator_metatypes.PTSigmoidMetatype,
+        operator_metatypes.PTExpMetatype,
         operator_metatypes.PTSoftmaxMetatype,
         UnknownMetatype
     ],
