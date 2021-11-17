@@ -264,10 +264,12 @@ class PruningNodeSelector:
                 cannot_prune_messages = []
                 for name, decision in zip(nodes_names, nodes_decisions):
                     if not decision:
-                        cannot_prune_messages.append(PruningAnalysisReason.message(name, decision))
+                        message = PruningAnalysisReason.message(name, decision)
+                        if message:
+                            cannot_prune_messages.append(message)
 
                 nncf_logger.info('Group of nodes [{}] can\'t be pruned, because some nodes should\'t be pruned, '
-                                 'error messages for this nodes: {}'.format(
+                                 'error messages for this nodes: {}.'.format(
                                     ', '.join(nodes_names),
                                     ', '.join(cannot_prune_messages)))
                 pruned_nodes_clusterization.delete_cluster(cluster.id)

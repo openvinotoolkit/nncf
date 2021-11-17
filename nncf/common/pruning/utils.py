@@ -416,14 +416,14 @@ class PruningAnalysisReason(Enum):
         :param decision: Pruning analysis decision for given node.
         :return: Pruning analysis decision in a human-readable format.
         """
-        prefix = f'Ignored adding Weight Pruner in: {node_name}'
+        prefix = f'ignored adding Weight Pruner in: {node_name}'
         reasons = decision.reasons
         if not reasons:
             return prefix
         # Filter messages
-        if cls.MODEL_ANALYSIS in reasons and cls.CLOSING_CONV_MISSING in reasons:
-            reasons = [cls.MODEL_ANALYSIS]
-        if len(reasons) == 1 and cls.IN_GROUP_OF_UNPRUNABLE == reasons[0]:
+        if len(reasons) > 1 and cls.CLOSING_CONV_MISSING in reasons:
+            reasons.remove(cls.CLOSING_CONV_MISSING)
+        if len(reasons) == 1 and cls.IN_GROUP_OF_UNPRUNABLE in reasons:
             return ''
         return prefix + ' because ' + ' and '.join([reason.value for reason in reasons])
 
