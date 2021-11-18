@@ -36,7 +36,7 @@ from nncf.torch.dynamic_graph.context import no_nncf_trace
 from nncf.torch.dynamic_graph.context import TracingContext
 from nncf.torch.graph.graph_builder import GraphBuilder
 from nncf.torch.graph.operator_metatypes import PTCatMetatype
-from nncf.torch.graph.operator_metatypes import ReshapeMetatype
+from nncf.torch.graph.operator_metatypes import PTReshapeMetatype
 from nncf.common.graph.layer_attributes import ReshapeLayerAttributes
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
 from tests.torch.helpers import register_bn_adaptation_init_args
@@ -271,7 +271,7 @@ def test_reshape_attributes_saved_during_graph_building(input_shape):
     }
 
     for node in graph.get_all_nodes():
-        if node.metatype is ReshapeMetatype:
+        if node.metatype is PTReshapeMetatype:
             assert node.node_name in reshape_nodes_with_attributes
             if isinstance(node.layer_attributes, ReshapeLayerAttributes):
                 ref_attrs = reshape_nodes_with_attributes[node.node_name]
