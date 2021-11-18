@@ -88,11 +88,11 @@ if python_version < (3, 6, 2):
 version_string = "{}{}".format(sys.version_info[0], sys.version_info[1])
 
 _extra_deps = [
-    "tensorflow==2.4.3",
+    "tensorflow~=2.4.3",
     "torch>=1.5.0, <=1.9.1, !=1.8.0",
 ]
 
-extra_deps = {b: a for a, b in (re.findall(r"^(([^!=<>]+)(?:[!=<>].*)?$)", x)[0] for x in _extra_deps)}
+extra_deps = {b: a for a, b in (re.findall(r"^(([^~!=<>]+)(?:[~!=<>].*)?$)", x)[0] for x in _extra_deps)}
 
 EXTRAS_REQUIRE = {
     "tests": [
