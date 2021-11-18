@@ -306,7 +306,7 @@ class PTStopMaskForwardPruningOp(StopMaskForwardPruningOp, PTPruner):
 
 @PT_PRUNING_OPERATOR_METATYPES.register('reshape')
 class PTReshape(ReshapePruningOp):
-    subtypes = [ReshapeMetatype]
+    subtypes = [PTReshapeMetatype]
 
 
 @PT_PRUNING_OPERATOR_METATYPES.register('concat')
