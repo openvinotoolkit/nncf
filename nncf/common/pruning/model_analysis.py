@@ -11,7 +11,7 @@
  limitations under the License.
 """
 
-from typing import Callable, List
+from typing import Callable, List, Dict
 
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
@@ -20,6 +20,8 @@ from nncf.common.pruning.clusterization import Clusterization
 from nncf.common.pruning.operations import BasePruningOp
 from nncf.common.pruning.utils import find_next_nodes_not_of_types
 from nncf.common.pruning.utils import PruningOperationsMetatypeRegistry
+from nncf.common.pruning.utils import PruningAnalysisDecision
+from nncf.common.pruning.utils import PruningAnalysisReason
 
 
 def get_position(nodes_list: List[NNCFNode], idx: int):
@@ -194,8 +196,9 @@ class ModelAnalyzer:
             cls = self.get_meta_operation_by_type_name(nncf_node.node_type)
             self.accept_pruned_input[nncf_node.node_id] = cls.accept_pruned_input(nncf_node)
 
-    def analyse_model_before_pruning(self):
+    def analyse_model_before_pruning(self) -> Dict[int, PruningAnalysisDecision]:
         self.set_accept_pruned_input_attr()
         self.propagate_can_prune_attr_up()
         self.propagate_can_prune_attr_down()
-        return self.can_prune
+        return {k: PruningAnalysisDecision(v, PruningAnalysisReason.MODEL_ANALYSIS)
+                for k, v in self.can_prune.items()}

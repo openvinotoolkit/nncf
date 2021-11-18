@@ -50,6 +50,7 @@ from nncf.torch.graph.operator_metatypes import (
     SoftmaxMetatype,
     SubMetatype,
     TanhMetatype,
+    ReshapeMetatype,
 )
 from nncf.common.pruning.operations import (
     InputPruningOp,
@@ -61,6 +62,7 @@ from nncf.common.pruning.operations import (
     GroupNormPruningOp,
     ConcatPruningOp,
     ElementwisePruningOp,
+    ReshapePruningOp,
     StopMaskForwardPruningOp
 )
 from nncf.common.utils.logger import logger as nncf_logger
@@ -291,6 +293,11 @@ class PTElementwisePruningOp(ElementwisePruningOp, PTPruner):
 @PT_PRUNING_OPERATOR_METATYPES.register('stop_propagation_ops')
 class PTStopMaskForwardPruningOp(StopMaskForwardPruningOp, PTPruner):
     subtypes = [MeanMetatype, MaxMetatype, MinMetatype, LinearMetatype, MatMulMetatype]
+
+
+@PT_PRUNING_OPERATOR_METATYPES.register('reshape')
+class PTReshape(ReshapePruningOp):
+    subtypes = [ReshapeMetatype]
 
 
 @PT_PRUNING_OPERATOR_METATYPES.register('concat')

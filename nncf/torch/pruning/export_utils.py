@@ -11,6 +11,7 @@
  limitations under the License.
 """
 
+
 def get_input_masks(nx_node, nx_graph):
     """
     Return input masks for all inputs of nx_node.

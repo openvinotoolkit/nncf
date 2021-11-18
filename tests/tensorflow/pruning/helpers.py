@@ -32,7 +32,6 @@ def get_basic_pruning_config(model_size=8):
                 "pruning_init": 0.5,
                 "params": {
                     "prune_first_conv": True,
-                    "prune_last_conv": True
                 }
             }
     }))

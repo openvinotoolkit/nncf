@@ -22,6 +22,7 @@ from tensorflow.python.keras import models
 from nncf.common.graph import INPUT_NOOP_METATYPES
 from nncf.common.graph import OUTPUT_NOOP_METATYPES
 from nncf.common.graph.layer_attributes import MultipleInputLayerAttributes
+from nncf.tensorflow.graph.metatypes.common import RESHAPE_METATYPES
 from nncf.tensorflow.graph.converter import TFModelConverter
 from nncf.tensorflow.graph.converter import convert_keras_model_to_nncf_graph
 from nncf.tensorflow.graph.metatypes.common import LAYER_METATYPES_AGNOSTIC_TO_DATA_PRECISION_WITH_MULTIPLE_INPUTS
@@ -100,6 +101,8 @@ def get_model_with_reshapes_and_concats(batch_size=None):
     # pylint: disable=E1120,E1123
     t2 = tf.concat([x, ones], axis=-1)
     y = tf.concat([t1, t2], axis=-1)
+    y = tf.transpose(y, [2, 0, 1])
+    y = tf.keras.layers.Flatten()(y)
     return models.Model(inputs, y, name='ModelWithReshape')
 
 
@@ -113,7 +116,7 @@ REF_CONCAT_ATTRS = [{'tf_op_layer_tf_concat_1': {'axis': [-1, 3]},
 
 
 @pytest.mark.parametrize('model, ref_attrs', list(zip(CONCAT_MODELS, REF_CONCAT_ATTRS)))
-def test_model_with_reshape_and_concat(model, ref_attrs):
+def test_concat_attributes_saved_during_graph_building(model, ref_attrs):
     model = model()
     graph = convert_keras_model_to_nncf_graph(model)
     for node in graph.get_all_nodes():
@@ -122,3 +125,20 @@ def test_model_with_reshape_and_concat(model, ref_attrs):
             assert node.layer_attributes is not None
             assert isinstance(node.layer_attributes, MultipleInputLayerAttributes)
             assert node.layer_attributes.axis in ref_attrs[node.node_name]['axis']
+
+
+def test_reshape_attributes_saved_during_graph_building():
+    model = get_model_with_reshapes_and_concats()
+    graph = convert_keras_model_to_nncf_graph(model)
+    ref_reshape_nodes = {'tf_op_layer_Reshape': {'input_shape': (None, 64),
+                                                 'output_shape': (32, None)},
+                         'reshape': {'input_shape': (32, None),
+                                     'output_shape': (32, 16, None)},
+                         'flatten': {'input_shape': (None, 32, 16),
+                                     'output_shape': (None, 512)}}
+    for node in graph.get_all_nodes():
+        if node.metatype in RESHAPE_METATYPES:
+            assert node.node_name in ref_reshape_nodes
+            assert node.layer_attributes is not None
+            assert node.layer_attributes.input_shape == ref_reshape_nodes[node.node_name]['input_shape']
+            assert node.layer_attributes.output_shape == ref_reshape_nodes[node.node_name]['output_shape']

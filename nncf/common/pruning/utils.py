@@ -12,11 +12,8 @@
 """
 
 from functools import partial
-from typing import Dict
-from typing import List
-from typing import Optional
-from typing import Tuple
-from typing import Type
+from typing import Dict, List, Optional, Tuple, Type, Union
+from enum import Enum
 
 import math
 import numpy as np
@@ -186,7 +183,7 @@ def get_last_nodes_of_type(graph: NNCFGraph, op_types: List[str]) -> List[NNCFNo
 
 
 def get_previous_convs(graph: NNCFGraph, nncf_node: NNCFNode,
-                       pruning_types: List[str], stop_propagation_ops: List[str]) -> Optional[NNCFNode]:
+                       pruning_types: List[str], stop_propagation_ops: List[str]) -> List[NNCFNode]:
     """
     Returns source convolutions of the node.
 
@@ -393,6 +390,100 @@ class PruningOperationsMetatypeRegistry(Registry):
         if op_name in self._op_name_to_op_class:
             return self._op_name_to_op_class[op_name]
         return None
+
+
+class PruningAnalysisReason(Enum):
+    """
+    Enum of possible pruning analysis decisions reasons.
+    """
+
+    IGNORED_SCOPE = 'node in ignored scope'
+    FIRST_CONV = 'this scope is one of the first convolutions'
+    LAST_CONV = 'this scope is convolution with output which directly affects model output dimensions'
+    GROUP_CONV = 'this scope is grouped convolution'
+    DOWNSAMPLE_CONV = 'this scope is convolution with downsample'
+    MODEL_ANALYSIS = 'of model analysis'
+    DIMENSION_MISMATCH = 'of dimension mismatch'
+    CLOSING_CONV_MISSING = 'closing convolution missing'
+    IN_GROUP_OF_UNPRUNABLE = 'is in the group with non prunable layers'
+
+    @classmethod
+    def message(cls, node_name: str, decision: Optional['PruningAnalysisDecision']) -> str:
+        """
+        Returns the node pruning analysis decisions in a human-readable format.
+
+        :param node_name: Name of given node.
+        :param decision: Pruning analysis decision for given node.
+        :return: Pruning analysis decision in a human-readable format.
+        """
+        prefix = f'ignored adding Weight Pruner in: {node_name}'
+        reasons = decision.reasons
+        if not reasons:
+            return prefix
+        # Filter messages
+        if len(reasons) > 1 and cls.CLOSING_CONV_MISSING in reasons:
+            reasons.remove(cls.CLOSING_CONV_MISSING)
+        if len(reasons) == 1 and cls.IN_GROUP_OF_UNPRUNABLE in reasons:
+            return ''
+        return prefix + ' because ' + ' and '.join([reason.value for reason in reasons])
+
+
+class PruningAnalysisDecision:
+    """
+    Container for pruning analysis decisions. Contains decision which is boolean marker either
+    node prunable or not (prunable if decision attribute is True) and
+    pruning analysis reason in PruningAnalysisReason format. In case of positive
+    decision (decision == True) possible reason will be ignored.
+    """
+
+    def __init__(self,
+                 decision: bool,
+                 possible_reasons: Optional[Union[List[PruningAnalysisReason], PruningAnalysisReason]] = None):
+        self.decision = decision
+        if not isinstance(possible_reasons, list):
+            possible_reasons = [possible_reasons]
+        self._reasons = possible_reasons if not decision and possible_reasons else None \
+            # type: Optional[List[PruningAnalysisReason]]
+
+    def __repr__(self) -> str:
+        representation = f'Prunable: {self.decision}'
+        if not self.decision:
+            representation += '; Reasons: ' + str(self._reasons)
+        return representation
+
+    def __eq__(self, other: 'PruningAnalysisDecision') -> bool:
+        eq = self.decision == other.decision
+        if self._reasons is None:
+            return eq and other._reasons is None
+        if other._reasons is None:
+            return False
+        return eq and sorted(self._reasons) == sorted(other._reasons)
+
+    def __bool__(self) -> bool:
+        return self.decision
+
+    @property
+    def reasons(self) -> Optional[List[PruningAnalysisReason]]:
+        if self._reasons:
+            return self._reasons.copy()
+        return None
+
+    def join(self, other: 'PruningAnalysisDecision') -> 'PruningAnalysisDecision':
+        """
+        Join two pruning analysis decisions about one NNCFNode.
+
+        :param other: pruning analysis decision to join with.
+        :return: Joint pruning analysis decision.
+        """
+        if self.decision and other.decision:
+            return self
+
+        reasons = []
+        for decision in [self, other]:
+            if decision.reasons:
+                reasons.extend(decision.reasons)
+
+        return PruningAnalysisDecision(False, reasons)
 
 
 def is_prunable_depthwise_conv(node: NNCFNode) -> bool:

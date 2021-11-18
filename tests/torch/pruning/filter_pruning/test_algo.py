@@ -64,7 +64,6 @@ def test_check_default_algo_params():
     scheduler = compression_ctrl.scheduler
     # Check default algo params
     assert compression_ctrl.prune_first is False
-    assert compression_ctrl.prune_last is False
     assert compression_ctrl.prune_batch_norms is True
     assert compression_ctrl.prune_downsample_convs is False
     assert compression_ctrl.filter_importance is l2_filter_norm
@@ -77,22 +76,14 @@ def test_check_default_algo_params():
     assert isinstance(scheduler, ExponentialPruningScheduler)
 
 
-@pytest.mark.parametrize(
-    ('prune_first', 'prune_last'),
-    [
-        (False, False),
-        (False, True),
-        (True, False),
-        (True, True),
-    ]
-
-)
-def test_valid_modules_replacement_and_pruning(prune_first, prune_last):
+@pytest.mark.parametrize('prune_first', [False, True])
+@pytest.mark.parametrize('prune_batch_norms', [True, False])
+def test_valid_modules_replacement_and_pruning(prune_first, prune_batch_norms):
     """
     Test that checks that all conv modules in model was replaced by nncf modules and
     pruning pre ops were added correctly.
     :param prune_first: whether to prune first convolution or not
-    :param prune_last: whether to prune last convolution or not
+    :param prune_batch_norms: whether to prune batch norm layers or not.
     """
 
     def check_that_module_is_pruned(module):
@@ -108,7 +99,7 @@ def test_valid_modules_replacement_and_pruning(prune_first, prune_last):
 
     config = get_basic_pruning_config(input_sample_size=[1, 1, 8, 8])
     config['compression']['params']['prune_first_conv'] = prune_first
-    config['compression']['params']['prune_last_conv'] = prune_last
+    config['compression']['params']['prune_batch_norms'] = prune_batch_norms
 
     pruned_model, pruning_algo, nncf_modules = create_pruning_algo_with_config(config)
     pruned_module_info = pruning_algo.pruned_module_groups_info.get_all_nodes()
@@ -125,7 +116,7 @@ def test_valid_modules_replacement_and_pruning(prune_first, prune_last):
 
     # Check for bn1
     bn1 = pruned_model.bn1
-    if prune_first:
+    if prune_first and prune_batch_norms:
         assert bn1 in nncf_modules.values()
         check_that_module_is_pruned(bn1)
     else:
@@ -139,8 +130,11 @@ def test_valid_modules_replacement_and_pruning(prune_first, prune_last):
 
     # Check for bn2
     bn2 = pruned_model.bn2
-    assert bn2 in nncf_modules.values()
-    check_that_module_is_pruned(bn2)
+    if prune_batch_norms:
+        assert bn2 in nncf_modules.values()
+        check_that_module_is_pruned(bn2)
+    else:
+        check_that_module_is_not_pruned(bn2)
 
     # Check for conv3
     up = pruned_model.up
@@ -150,12 +144,7 @@ def test_valid_modules_replacement_and_pruning(prune_first, prune_last):
 
     # Check for conv3W
     conv3 = pruned_model.conv3
-    if prune_last:
-        assert conv3 in pruned_modules
-        assert conv3 in nncf_modules.values()
-        check_that_module_is_pruned(conv3)
-    else:
-        check_that_module_is_not_pruned(conv3)
+    check_that_module_is_not_pruned(conv3)
 
 
 @pytest.mark.parametrize(('all_weights', 'pruning_flops_target', 'prune_first', 'ref_masks'),
@@ -235,10 +224,10 @@ def test_pruning_masks_correctness(all_weights, pruning_flops_target, prune_firs
 def test_pruning_masks_applying_correctness(all_weights, pruning_flops_target, prune_first, ref_masks):
     """
     Test for pruning masks check (_set_binary_masks_for_filters, _set_binary_masks_for_all_filters_together).
-    :param all_weights: whether mask will be calculated for all weights in common or not
-    :param pruning_flops_target: prune model by flops, if None then by number of channels
-    :param prune_first: whether to prune first convolution or not
-    :param ref_masks: reference masks values
+    :param all_weights: whether mask will be calculated for all weights in common or not.
+    :param pruning_flops_target: prune model by flops, if None then by number of channels.
+    :param prune_first: whether to prune first convolution or not.
+    :param ref_masks: reference masks values.
     """
     input_shapes = {'conv1': [1, 1, 8, 8],
                     'conv2': [1, 16, 8, 8],
@@ -334,7 +323,6 @@ def test_valid_masks_for_bn_after_concat(prune_bn):
     config['compression']['algorithm'] = 'filter_pruning'
     config['compression']['params']['prune_batch_norms'] = prune_bn
     config['compression']['params']['prune_first_conv'] = True
-    config['compression']['params']['prune_last_conv'] = True
     config['compression']['pruning_init'] = 0.5
     model = PruningTestModelConcatBN()
     pruned_model, _ = create_compressed_model_and_algo_for_test(model, config)
@@ -388,23 +376,29 @@ def test_calculation_of_flops(all_weights, pruning_flops_target, ref_flops, ref_
     assert pruning_algo._calculate_flops_and_weights_pruned_model_by_masks() == (ref_flops, ref_params_num)
 
 
-def test_clusters_for_multiple_forward():
+@pytest.mark.parametrize('repeat_seq_of_shared_convs,ref_second_cluster', [(True, [4, 5, 6, 7, 8, 9]),
+                                                                           (False, [4, 5, 6])])
+@pytest.mark.parametrize('additional_last_shared_layers', [True, False])
+def test_clusters_for_multiple_forward(repeat_seq_of_shared_convs,
+                                       ref_second_cluster,
+                                       additional_last_shared_layers):
     config = get_basic_pruning_config(input_sample_size=[1, 2, 8, 8])
     config['compression']['algorithm'] = 'filter_pruning'
     config['compression']['params']['all_weights'] = False
     config['compression']['params']['prune_first_conv'] = True
-    config['compression']['params']['prune_last_conv'] = True
     config['compression']['pruning_init'] = 0.5
-    model = TestModelMultipleForward()
+    model = TestModelMultipleForward(repeat_seq_of_shared_convs, additional_last_shared_layers)
     _, pruning_algo = create_compressed_model_and_algo_for_test(model, config)
 
     clusters = pruning_algo.pruned_module_groups_info.clusters
-    assert len(clusters) == 2
+    ref_num_clusters = 2 if additional_last_shared_layers else 1
+    assert len(clusters) == ref_num_clusters
     # Convolutions before one node that forwards several times should be in one cluster
     assert sorted([n.nncf_node_id for n in clusters[0].elements]) == [1, 2, 3]
-    # Nodes that associate with one module should be in one cluster
-    assert sorted([n.nncf_node_id for n in clusters[1].elements]) == [4, 5, 6]
-
+    # In case of two clusters
+    if additional_last_shared_layers:
+        # Nodes that associate with one module should be in one cluster
+        assert sorted([n.nncf_node_id for n in clusters[1].elements]) == ref_second_cluster
 
 
 @pytest.mark.parametrize(
@@ -439,7 +433,6 @@ def test_disconnected_graph():
     config['compression']['pruning_init'] = 0.5
     config['compression']['params']['pruning_target'] = 0.5
     config['compression']['params']['prune_first_conv'] = True
-    config['compression']['params']['prune_last_conv'] = True
     model = DisconectedGraphModel()
     pruned_model, _ = create_compressed_model_and_algo_for_test(model, config)
     graph = pruned_model.get_original_graph()
