@@ -14,9 +14,8 @@
     "rgb": true
   },
   "batch_size": 128,
-  "max_iter": 75000,
-  "iter_size": 1,
-  "save_freq": 50,
+  "epochs": 10,
+  "save_freq": 1,
   "optimizer": {
     "type": "Adam",
     "base_lr": 1e-4,

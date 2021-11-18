@@ -13,12 +13,10 @@
     "normalize_coef": 255,
     "rgb": true
   },
-  "max_iter": 3000,
-  "batch_size": 128,
-  "test_interval": 500, // in iterations
-  "iter_size": 1,
-  "save_freq": 3, // in epochs
   "epochs": 3,
+  "batch_size": 128,
+  "test_interval": 1,
+  "save_freq": 1,
   "optimizer": {
     "type": "Adam",
     "base_lr": 1e-5,
