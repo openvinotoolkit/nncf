@@ -11,8 +11,7 @@
  limitations under the License.
 """
 
-from collections import deque
-from typing import List, Union
+from typing import List, Union, Deque
 
 import tensorflow as tf
 
@@ -50,7 +49,7 @@ class TFNNCFTensorProcessor(NNCFBaseTensorProcessor):
         return TFNNCFTensor(tf.math.reduce_mean(x.tensor, axis=axis))
 
     @classmethod
-    def stack(cls, x: Union[list, deque], axis: int = 0) -> NNCFTensor:
+    def stack(cls, x: Union[List[NNCFTensor], Deque[NNCFTensor]], axis: int = 0) -> NNCFTensor:
         x = [t.tensor for t in x]
         return TFNNCFTensor(tf.stack(x, axis=axis))
 
@@ -91,7 +90,7 @@ class TFNNCFTensor(NNCFTensor):
     A realisation of tensorflow tensors wrapper for common NNCF algorithms.
     """
 
-    def __init__(self, tensor: tf.Variable):
+    def __init__(self, tensor: tf.Tensor):
         # In case somebody attempts to wrap
         # tensor twice
         if isinstance(tensor, self.__class__):

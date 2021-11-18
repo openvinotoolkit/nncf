@@ -11,8 +11,7 @@
  limitations under the License.
 """
 
-from collections import deque
-from typing import List, Union
+from typing import List, Union, Deque
 
 import torch
 
@@ -50,7 +49,7 @@ class PTNNCFTensorProcessor(NNCFBaseTensorProcessor):
         return PTNNCFTensor(x.tensor.mean(dim=axis))
 
     @classmethod
-    def stack(cls, x: Union[List[NNCFTensor], deque], axis: int = 0) -> NNCFTensor:
+    def stack(cls, x: Union[List[NNCFTensor], Deque[NNCFTensor]], axis: int = 0) -> NNCFTensor:
         x = [t.tensor for t in x]
         return PTNNCFTensor(torch.stack(x, dim=axis))
 

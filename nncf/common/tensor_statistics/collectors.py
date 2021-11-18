@@ -23,10 +23,7 @@ ReductionShape = Tuple[int]
 
 
 class TensorStatisticCollectorBase(ABC):
-    """
-    Collector estimate statistics at the quantization point based on the provided reduction shape.
-    Statistics can be stored in offline regime and aggregated afterwards or collected on the fly in online regime.
-    """
+    """Collector estimate statistics at the quantization point based on the provided reduction shape."""
 
     def __init__(self, reduction_shape: ReductionShape = None, num_samples: int = None):
         self._reduction_shape = reduction_shape
@@ -79,14 +76,16 @@ class TensorStatisticCollectorBase(ABC):
 
 
 class StatisticsNotCollectedError(Exception):
-    """Raised when the statistics are not collected but requested"""
+    """Raised when the statistics are not collected but requested."""
 
 
 class OnlineTensorStatisticCollector(TensorStatisticCollectorBase):
-    pass
+    """Base class for collectors that collect statistics in online regime, without storing the data."""
 
 
 class OfflineTensorStatisticCollector(TensorStatisticCollectorBase):
+    """Collects statistics in offline regime by storing and aggregating data afterwards."""
+
     def __init__(self, reduction_shape: ReductionShape = None, num_samples: int = None, window_size: int = None):
         super().__init__(reduction_shape, num_samples)
         self._samples = deque(maxlen=window_size)
@@ -96,9 +95,7 @@ class OfflineTensorStatisticCollector(TensorStatisticCollectorBase):
 
 
 class MinMaxStatisticCollector(OnlineTensorStatisticCollector):
-    """
-    Collector estimates min of minimum values and max of maximum values.
-    """
+    """Collector estimates min of minimum values and max of maximum values."""
 
     def __init__(self, use_abs_max: bool, reduction_shape: ReductionShape, num_samples: int = None):
         super().__init__(reduction_shape, num_samples)
@@ -135,6 +132,11 @@ class MinMaxStatisticCollector(OnlineTensorStatisticCollector):
 
 
 class MinMaxOfflineStatisticCollectorBase(OfflineTensorStatisticCollector):
+    """
+    Base class for collectors that aggregate statistics
+    from minimum and maximum values of tensors.
+    """
+
     def __init__(self,
                  use_per_sample_stats: bool,
                  use_abs_max: bool,
@@ -212,7 +214,7 @@ class MixedMinMaxStatisticCollector(MinMaxOfflineStatisticCollectorBase):
 
 class MeanMinMaxStatisticCollector(MinMaxOfflineStatisticCollectorBase):
     """
-    Collector estimates mean of minimum values and mean of maximum values.
+    Collector aggregates mean of minimum values and mean of maximum values.
     """
 
     def _min_aggregate(self):

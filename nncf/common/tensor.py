@@ -12,8 +12,7 @@
 """
 
 from abc import abstractmethod
-from typing import TypeVar, List, Optional, Union
-from collections import deque
+from typing import TypeVar, List, Optional, Union, Deque
 
 TensorType = TypeVar('TensorType')
 DeviceType = TypeVar('DeviceType')
@@ -121,7 +120,7 @@ class NNCFBaseTensorProcessor:
 
     @classmethod
     @abstractmethod
-    def stack(cls, x: Union[list, deque], axis: int = 0) -> NNCFTensor:
+    def stack(cls, x: Union[List[NNCFTensor], Deque[NNCFTensor]], axis: int = 0) -> NNCFTensor:
         """
         Stacks a list or deque of NNCFTensors rank-R tensors into one NNCFTensor rank-(R+1) tensor.
 
