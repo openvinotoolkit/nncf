@@ -451,7 +451,7 @@ class TestNumberOfNodes:
             counters[name] = counter
         _ = model(test_data.x, test_hidden)
         assert model.get_graph().get_nodes_count() == 132  # NB: may always fail in debug due to superfluous 'cat' nodes
-        assert len(counters) + 2 == 66 # 8 WQ + 56 AQ + 1 input AQ + 1 reset point AQ
+        assert len(counters) + 2 == 54 # 8 WQ + 44 AQ + 1 input AQ + 1 reset point AQ
         for counter in counters.values():
             assert counter.count == p.seq_length
         assert counter_for_input_quantizer.count == 1
