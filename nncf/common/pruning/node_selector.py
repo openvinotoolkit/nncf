@@ -177,8 +177,8 @@ class PruningNodeSelector:
         can_prune_and_should_prune_analysis = self._should_prune_groups_analysis(graph,
                                                                                  pruned_nodes_clusterization,
                                                                                  can_prune_analysis)
-        can_prune_final_analisys = self._check_pruning_dimensions(graph, can_prune_and_should_prune_analysis)
-        self._filter_pruning_groups(pruned_nodes_clusterization, can_prune_final_analisys)
+        can_prune_final_analysis = self._pruning_dimensions_analysis(graph, can_prune_and_should_prune_analysis)
+        self._filter_groups(pruned_nodes_clusterization, can_prune_final_analysis)
         return pruned_nodes_clusterization
 
     def _get_multiforward_nodes(self, graph: NNCFGraph) -> List[List[NNCFNode]]:
@@ -195,7 +195,7 @@ class PruningNodeSelector:
             ret[node.layer_name].append(node)
         return [ret[module_identifier] for module_identifier in ret if len(ret[module_identifier]) > 1]
 
-    def _check_pruning_dimensions(self, graph, can_prune_after_check) -> Dict[int, PruningAnalysisDecision]:
+    def _pruning_dimensions_analysis(self, graph, can_prune_after_check) -> Dict[int, PruningAnalysisDecision]:
         """
         Check all nodes that were marked as prunable after the model analysis and compatibility check vs.
         pruning algo have a correct correspondent closing node on each path form self to outputs.
@@ -248,11 +248,12 @@ class PruningNodeSelector:
         can_prune_updated.update(should_prune)
         return can_prune_updated
 
-    def _filter_pruning_groups(self, pruned_nodes_clusterization: Clusterization,
-                               can_prune: Dict[int, PruningAnalysisDecision]) -> None:
+    def _filter_groups(self, pruned_nodes_clusterization: Clusterization,
+                       can_prune: Dict[int, PruningAnalysisDecision]) -> None:
         """
         Check whether all nodes in group can be pruned based on user-defined constraints and
-        connections inside the network. Otherwise the whole group cannot be pruned.
+        connections inside the network. Otherwise the whole group cannot be pruned and will be
+        removed the clusterization.
 
         :param pruned_nodes_clusterization: Clusterization with pruning nodes groups.
         :param can_prune: Can this node be pruned or not.

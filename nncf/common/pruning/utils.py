@@ -432,7 +432,8 @@ class PruningAnalysisDecision:
     """
     Container for pruning analysis decisions. Contains decision which is boolean marker either
     node prunable or not (prunable if decision attribute is True) and
-    pruning analysis reason in PruningAnalysisReason format.
+    pruning analysis reason in PruningAnalysisReason format. In case of positive
+    decision (decision == True) possible reason will be ignored.
     """
 
     def __init__(self,
