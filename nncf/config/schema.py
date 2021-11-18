@@ -748,14 +748,6 @@ FILTER_PRUNING_SCHEMA = {
                                                                     "convolution operations on it. `False` by default.",
                                                         default=False
                                                         ),
-                    "prune_last_conv": with_attributes(_BOOLEAN,
-                                                       description="Whether to prune last Convolutional layers or not."
-                                                                   "  Last means that it is a Convolutional layer such"
-                                                                   " that there is a path from this layer to the model"
-                                                                   " output such that there are no other convolution"
-                                                                   " operations on it. `False` by default. ",
-                                                       default=False
-                                                       ),
                     "prune_downsample_convs": with_attributes(_BOOLEAN,
                                                               description="Whether to prune downsample Convolutional"
                                                                           " layers (with stride > 1) or not. `False`"

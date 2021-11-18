@@ -13,7 +13,7 @@
 
 import tensorflow as tf
 
-from typing import List
+from typing import List, Union
 
 from nncf.common.tensor import NNCFTensor
 from nncf.common.tensor import NNCFBaseTensorProcessor
@@ -31,14 +31,24 @@ class TFNNCFTensorProcessor(NNCFBaseTensorProcessor):
         return TFNNCFTensor(ret_tensor)
 
     @classmethod
-    def ones(cls, shape: List[int], device) -> NNCFTensor:
+    def ones(cls, shape: Union[int, List[int]], device: tf.device) -> NNCFTensor:
         with tf.device(device):
             return TFNNCFTensor(tf.ones(shape))
 
     @classmethod
-    def check_all_close(cls, tensors: List[NNCFTensor]) -> None:
+    def assert_allclose(cls, tensors: List[NNCFTensor]) -> None:
         for input_mask in tensors[1:]:
             tf.debugging.assert_near(tensors[0].tensor, input_mask.tensor)
+
+    @classmethod
+    def repeat(cls, tensor: NNCFTensor, repeats: int) -> NNCFTensor:
+        ret_tensor = tf.repeat(tensor, repeats=repeats)
+        return TFNNCFTensor(ret_tensor)
+
+    @classmethod
+    def elementwise_mask_propagation(cls, input_masks: List[NNCFTensor]) -> NNCFTensor:
+        cls.assert_allclose(input_masks)
+        return input_masks[0]
 
 
 class TFNNCFTensor(NNCFTensor):

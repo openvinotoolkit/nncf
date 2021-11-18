@@ -13,7 +13,7 @@
 
 import numpy as np
 
-from typing import List
+from typing import List, Optional, Union
 
 from nncf.common.tensor import NNCFTensor
 from nncf.common.tensor import NNCFBaseTensorProcessor
@@ -22,28 +22,42 @@ from nncf.common.tensor import NNCFBaseTensorProcessor
 class NPNNCFTensorProcessor(NNCFBaseTensorProcessor):
     @classmethod
     def concatenate(cls, tensors: List[NNCFTensor], axis: int) -> NNCFTensor:
+        for tensor in tensors[1:]:
+            assert tensors[0].device == tensor.device
+
         ret_tensor = np.concatenate([t.tensor for t in tensors], axis=axis)
-        return NPNNCFTensor(ret_tensor)
+        return NPNNCFTensor(ret_tensor, tensors[0].device)
 
     @classmethod
-    def ones(cls, shape: List[int], device) -> NNCFTensor:
-        return NPNNCFTensor(np.ones(shape))
+    def ones(cls, shape: Union[int, List[int]], device: Optional[str]) -> NNCFTensor:
+        return NPNNCFTensor(np.ones(shape), device)
 
     @classmethod
-    def check_all_close(cls, tensors: List[NNCFTensor]) -> None:
+    def assert_allclose(cls, tensors: List[NNCFTensor]) -> None:
         for input_mask in tensors[1:]:
             np.testing.assert_allclose(tensors[0].tensor, input_mask.tensor)
 
+    @classmethod
+    def repeat(cls, tensor: NNCFTensor, repeats: int) -> NNCFTensor:
+        ret_tensor = np.repeat(tensor.tensor, repeats)
+        return NPNNCFTensor(ret_tensor)
+
+    @classmethod
+    def elementwise_mask_propagation(cls, input_masks: List[NNCFTensor]) -> NNCFTensor:
+        cls.assert_allclose(input_masks)
+        return input_masks[0]
+
 
 class NPNNCFTensor(NNCFTensor):
-    def __init__(self, tensor: np.array):
+    def __init__(self, tensor: np.array, dummy_device: Optional[str] = None):
         # In case somebody attempts to wrap
         # tensor twice
         if isinstance(tensor, self.__class__):
             tensor = tensor.tensor
 
         super().__init__(tensor, NPNNCFTensorProcessor)
+        self.dummy_device = dummy_device
 
     @property
-    def device(self) -> None:
-        return None
+    def device(self) -> Optional[str]:
+        return self.dummy_device

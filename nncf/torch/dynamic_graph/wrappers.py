@@ -156,7 +156,7 @@ def wrap_module_call(module_call):
             return module_call(self, *args, **kwargs)
         ctx.push_scope(self)
         retval = module_call(self, *args, **kwargs)
-        if type(self).__name__ in ITERATION_MODULES.registry_dict.keys():
+        if type(self).__name__ in ITERATION_MODULES.registry_dict:
             ctx.reset_operator_call_count_in_scope(ctx.scope)
         ctx.pop_scope()
         return retval

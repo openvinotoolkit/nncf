@@ -28,6 +28,8 @@ from nncf.common.pruning.operations import (
     BatchNormPruningOp,
     ConcatPruningOp,
     ElementwisePruningOp,
+    ReshapePruningOp,
+    FlattenPruningOp,
     StopMaskForwardPruningOp
 )
 
@@ -74,6 +76,16 @@ class TFBatchNormPruningOp(BatchNormPruningOp):
 @TF_PRUNING_OPERATOR_METATYPES.register('elementwise')
 class TFElementwisePruningOp(ElementwisePruningOp):
     additional_types = _get_types(ELEMENTWISE_OPERATIONS)
+
+
+@TF_PRUNING_OPERATOR_METATYPES.register('reshape')
+class TFReshapeOps(ReshapePruningOp):
+    additional_types = ['Reshape']
+
+
+@TF_PRUNING_OPERATOR_METATYPES.register('flatten')
+class TFFlattenOps(FlattenPruningOp):
+    additional_types = ['Flatten']
 
 
 @TF_PRUNING_OPERATOR_METATYPES.register('stop_propagation_ops')

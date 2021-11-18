@@ -12,7 +12,7 @@
 """
 
 from abc import abstractmethod
-from typing import TypeVar, List
+from typing import TypeVar, List, Optional, Union
 
 TensorType = TypeVar('TensorType')
 DeviceType = TypeVar('DeviceType')
@@ -23,7 +23,7 @@ class NNCFTensor:
     An interface of framework specific tensors for common NNCF algorithms.
     """
 
-    def __init__(self, tensor: TensorType,
+    def __init__(self, tensor: Optional[TensorType],
                  tensor_processor: 'NNCFBaseTensorProcessor'):
         self._tensor = tensor
         self._tensor_processor = tensor_processor
@@ -31,6 +31,12 @@ class NNCFTensor:
     @property
     def tensor(self) -> TensorType:
         return self._tensor
+
+    @property
+    def shape(self) -> List[int]:
+        if self._tensor is None:
+            raise RuntimeError('Attempt to get shape of empty NNCFTensor')
+        return self._tensor.shape
 
     @property
     def tensor_processor(self) -> 'NNCFBaseTensorProcessor':
@@ -60,7 +66,7 @@ class NNCFBaseTensorProcessor:
 
     @classmethod
     @abstractmethod
-    def ones(cls, shape: List[int], device: DeviceType) -> NNCFTensor:
+    def ones(cls, shape: Union[int, List[int]], device: DeviceType) -> NNCFTensor:
         """
         Return a new float tensor of given shape, filled with ones.
 
@@ -71,9 +77,31 @@ class NNCFBaseTensorProcessor:
 
     @classmethod
     @abstractmethod
-    def check_all_close(cls, tensors: List[NNCFTensor]) -> None:
+    def assert_allclose(cls, tensors: List[NNCFTensor]) -> None:
         """
-        Raises an AssertionError if two objects are not equal.
+        Raises an AssertionError if any two tensors are not equal.
 
         :param tensors: List of tensors to check pairwise equality.
+        """
+
+    @classmethod
+    @abstractmethod
+    def repeat(cls, tensor: NNCFTensor, repeats: int) -> NNCFTensor:
+        """
+        Successively repeat each element of given NNCFTesnor.
+
+        :param tensor: Given NNCFTensor.
+        :param repeats: The number of repetitions for each element.
+        :return: NNCFTensor with repited elements.
+        """
+
+    @classmethod
+    @abstractmethod
+    def elementwise_mask_propagation(cls, input_masks: List[NNCFTensor]) -> NNCFTensor:
+        """
+        Assemble output mask for elementwise pruning operation from given input masks.
+        Raises an AssertionError if input masks are not pairwise equal.
+
+        :param input_masks: Given input masks.
+        :return: Elementwise pruning operation output mask.
         """

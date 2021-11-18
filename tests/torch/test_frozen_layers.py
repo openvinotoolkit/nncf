@@ -35,7 +35,6 @@ class AlgoBuilder:
         self._config.update({'algorithm': 'filter_pruning',
                              'params': {
                                  'prune_first_conv': True,
-                                 'prune_last_conv': True
                              }})
         return self
 

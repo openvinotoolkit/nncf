@@ -144,6 +144,7 @@ def create_compressed_model(model: Module,
     is_state_loadable = not is_legacy_model_state_dict and compression_state is not None
     if is_state_loadable:
         builder.load_state(compression_state[BaseController.BUILDER_STATE])
+
     builder.apply_to(compressed_model)
     compression_ctrl = builder.build_controller(compressed_model)
     if is_state_loadable:

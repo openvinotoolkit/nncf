@@ -24,7 +24,7 @@ from nncf.common.graph.transformations.commands import TransformationPriority
 from nncf.common.pruning.clusterization import Cluster
 from nncf.common.pruning.clusterization import Clusterization
 from nncf.common.pruning.mask_propagation import MaskPropagationAlgorithm
-from nncf.common.pruning.pruning_node_selector import PruningNodeSelector
+from nncf.common.pruning.node_selector import PruningNodeSelector
 from nncf.common.pruning.statistics import PrunedLayerSummary
 from nncf.common.pruning.statistics import PrunedModelStatistics
 from nncf.common.pruning.structs import PrunedLayerInfoBase
@@ -69,7 +69,6 @@ class BasePruningAlgoBuilder(TFCompressionAlgorithmBuilder):
 
         self._ignore_frozen_layers = True
         self._prune_first = params.get('prune_first_conv', False)
-        self._prune_last = params.get('prune_last_conv', False)
         self._prune_batch_norms = params.get('prune_batch_norms', True)
         self._prune_downsample_convs = params.get('prune_downsample_convs', False)
 
@@ -81,7 +80,6 @@ class BasePruningAlgoBuilder(TFCompressionAlgorithmBuilder):
                                                           self.ignored_scopes,
                                                           self.target_scopes,
                                                           self._prune_first,
-                                                          self._prune_last,
                                                           self._prune_downsample_convs)
 
         self._pruned_layer_groups_info = None

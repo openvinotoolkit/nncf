@@ -30,6 +30,8 @@ from nncf.torch.graph.graph import PTNNCFGraph
 from nncf.torch.graph.operator_metatypes import PTCatMetatype
 from nncf.torch.graph.operator_metatypes import PT_OPERATOR_METATYPES
 from nncf.common.graph.operator_metatypes import UnknownMetatype
+from nncf.torch.graph.operator_metatypes import ReshapeMetatype
+from nncf.common.graph.layer_attributes import ReshapeLayerAttributes
 
 
 class GraphBuilder:
@@ -112,5 +114,14 @@ class GraphConverter:
                         continue
                     axis = get_concat_axis(input_shapes, output_shapes)
                     layer_attributes = MultipleInputLayerAttributes(axis)
+                    node.layer_attributes = layer_attributes
+
+            if node.metatype is ReshapeMetatype:
+                input_nodes = nncf_graph.get_input_edges(node)
+                output_nodes = nncf_graph.get_output_edges(node)
+                # In case ReshapeMetatype op is intermediate node
+                if input_nodes and output_nodes:
+                    layer_attributes = ReshapeLayerAttributes(input_nodes[0].tensor_shape,
+                                                              output_nodes[0].tensor_shape)
                     node.layer_attributes = layer_attributes
         return nncf_graph

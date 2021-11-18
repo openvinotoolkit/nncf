@@ -23,8 +23,8 @@ from tests.tensorflow.pruning.helpers import get_test_model_shared_convs
     ("model_fn", "all_weights", "pruning_flops_target", "ref_full_flops", "ref_current_flops",
      "ref_full_params", "ref_current_params"),
     (
-        (get_test_model_shared_convs, True, 0.4, 461438976, 276385312, 11534848, 6908711),
-        (get_test_model_shared_convs, False, 0.4, 461438976, 270498816, 11534848, 6761608),
+        (get_test_model_shared_convs, True, 0.4, 461438976, 276858560, 11534848, 6920562),
+        (get_test_model_shared_convs, False, 0.4, 461438976, 275300352, 11534848, 6881664),
         (get_model_grouped_convs, False, 0.0, 10859520, 10859520, 215808, 215808)
     )
 )
@@ -36,7 +36,6 @@ def test_flops_calulation_for_spec_layers(model_fn, all_weights, pruning_flops_t
     config['compression']['pruning_init'] = pruning_flops_target
     config['compression']['params']['pruning_flops_target'] = pruning_flops_target
     config['compression']['params']['prune_first_conv'] = True
-    config['compression']['params']['prune_last_conv'] = True
     config['compression']['params']['all_weights'] = all_weights
     input_shape = [1, 8, 8, 1]
     model = model_fn(input_shape)
