@@ -9,6 +9,10 @@ and Semantic Segmentation.
 
 ## New in Release 2.0.1
 Target version updates:
+- Relax TensorFlow version requirements to 2.4.x
+
+## New in Release 2.0.1
+Target version updates:
 - Bump target framework versions to PyTorch 1.9.1 and TensorFlow 2.4.3
 - Increased target HuggingFace transformers version for the integration patch to 4.9.1
 
