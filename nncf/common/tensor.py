@@ -13,6 +13,7 @@
 
 from abc import abstractmethod
 from typing import TypeVar, List, Optional, Union
+from collections import deque
 
 TensorType = TypeVar('TensorType')
 DeviceType = TypeVar('DeviceType')
@@ -52,6 +53,93 @@ class NNCFBaseTensorProcessor:
     """
     An interface of the processing methods set for NNCFTensors.
     """
+
+    @classmethod
+    @abstractmethod
+    def reduce_min(cls, x: NNCFTensor, axis: Union[int, tuple, list]) -> NNCFTensor:
+        """
+        Computes minimum of elements across dimensions of NNCFTensor.
+
+        :param x: NNCFTensor to reduce
+        :param axis: The dimensions to reduce.
+        :return: Reduced NNCFTensor.
+        """
+
+    @classmethod
+    @abstractmethod
+    def reduce_max(cls, x: NNCFTensor, axis: Union[int, tuple, list]) -> NNCFTensor:
+        """
+        Computes maximum of elements across dimensions of NNCFTensor.
+
+        :param x: NNCFTensor to reduce
+        :param axis: The dimensions to reduce.
+        :return: Reduced NNCFTensor.
+        """
+
+    @classmethod
+    @abstractmethod
+    def abs(cls, x: NNCFTensor) -> NNCFTensor:
+        """
+        Computes the absolute value of a NNCFTensor.
+
+        :param x: NNCFTensor
+        :return: Absolute value of a NNCFTensor
+        """
+
+    @classmethod
+    @abstractmethod
+    def min(cls, x1: NNCFTensor, x2: NNCFTensor) -> NNCFTensor:
+        """
+        Returns the min of x1 and x2.
+
+        :param x1: NCFTensor to compare.
+        :param x2: NCFTensor to compare.
+        :return: Compared NNCFTensor.
+        """
+
+    @classmethod
+    @abstractmethod
+    def max(cls, x1: NNCFTensor, x2: NNCFTensor) -> NNCFTensor:
+        """
+        Returns the max of x1 and x2.
+
+        :param x1: NNCFTensor to compare.
+        :param x2: NNCFTensor to compare.
+        :return: Compared NNCFTensor.
+        """
+
+    @classmethod
+    @abstractmethod
+    def mean(cls, x: NNCFTensor, axis: Union[int, tuple, list]) -> NNCFTensor:
+        """
+        Computes the mean of elements across given dimensions of NNCFTensor.
+
+        :param x: NNCFTensor to reduce.
+        :param axis:
+        :return: Reduced NNCFTensor.
+        """
+
+    @classmethod
+    @abstractmethod
+    def stack(cls, x: Union[list, deque], axis: int = 0) -> NNCFTensor:
+        """
+        Stacks a list or deque of NNCFTensors rank-R tensors into one NNCFTensor rank-(R+1) tensor.
+
+        :param x: List or deque of NNCFTensors.
+        :param axis: The axis to stack along.
+        :return: Stacked NNCFTensor.
+        """
+
+    @classmethod
+    @abstractmethod
+    def unstack(cls, x: NNCFTensor, axis: int = 0) -> list:
+        """
+        Unstack a tensor into list.
+
+        :param x: NNCFTensor to unstack.
+        :param axis: The axis to unstack along.
+        :return: List of NNCFTensors.
+        """
 
     @classmethod
     @abstractmethod

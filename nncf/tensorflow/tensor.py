@@ -11,9 +11,10 @@
  limitations under the License.
 """
 
-import tensorflow as tf
-
+from collections import deque
 from typing import List, Union
+
+import tensorflow as tf
 
 from nncf.common.tensor import NNCFTensor
 from nncf.common.tensor import NNCFBaseTensorProcessor
@@ -23,6 +24,40 @@ class TFNNCFTensorProcessor(NNCFBaseTensorProcessor):
     """
     A realization of the processing methods set for TFNNCFTensors.
     """
+
+    @classmethod
+    def reduce_min(cls, x: NNCFTensor, axis: Union[int, tuple, list]) -> NNCFTensor:
+        return TFNNCFTensor(tf.squeeze(tf.reduce_min(x.tensor, axis=axis)))
+
+    @classmethod
+    def reduce_max(cls, x: NNCFTensor, axis: Union[int, tuple, list]) -> NNCFTensor:
+        return TFNNCFTensor(tf.squeeze(tf.reduce_max(x.tensor, axis=axis)))
+
+    @classmethod
+    def abs(cls, x: NNCFTensor) -> NNCFTensor:
+        return TFNNCFTensor(tf.math.abs(x.tensor))
+
+    @classmethod
+    def min(cls, x1: NNCFTensor, x2: NNCFTensor) -> NNCFTensor:
+        return TFNNCFTensor(tf.math.minimum(x1.tensor, x2.tensor))
+
+    @classmethod
+    def max(cls, x1: NNCFTensor, x2: NNCFTensor) -> NNCFTensor:
+        return TFNNCFTensor(tf.math.maximum(x1.tensor, x2.tensor))
+
+    @classmethod
+    def mean(cls, x: NNCFTensor, axis: Union[int, tuple, list]) -> NNCFTensor:
+        return TFNNCFTensor(tf.math.reduce_mean(x.tensor, axis=axis))
+
+    @classmethod
+    def stack(cls, x: Union[list, deque], axis: int = 0) -> NNCFTensor:
+        x = [t.tensor for t in x]
+        return TFNNCFTensor(tf.stack(x, axis=axis))
+
+    @classmethod
+    def unstack(cls, x: NNCFTensor, axis: int = 0) -> List[NNCFTensor]:
+        tensor_list = tf.unstack(x.tensor, axis=axis)
+        return [TFNNCFTensor(t) for t in tensor_list]
 
     @classmethod
     def concatenate(cls, tensors: List[NNCFTensor], axis: int) -> NNCFTensor:

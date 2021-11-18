@@ -11,9 +11,10 @@
  limitations under the License.
 """
 
-import torch
-
+from collections import deque
 from typing import List, Union
+
+import torch
 
 from nncf.common.tensor import NNCFTensor
 from nncf.common.tensor import NNCFBaseTensorProcessor
@@ -23,6 +24,40 @@ class PTNNCFTensorProcessor(NNCFBaseTensorProcessor):
     """
     A realization of the processing methods set for PTNNCFTensors.
     """
+
+    @classmethod
+    def reduce_min(cls, x: NNCFTensor, axis: Union[int, tuple]) -> NNCFTensor:
+        return PTNNCFTensor(torch.amin(x.tensor, dim=axis))
+
+    @classmethod
+    def reduce_max(cls, x: NNCFTensor, axis: Union[int, tuple]) -> NNCFTensor:
+        return PTNNCFTensor(torch.amax(x.tensor, dim=axis))
+
+    @classmethod
+    def abs(cls, x: NNCFTensor) -> NNCFTensor:
+        return PTNNCFTensor(torch.abs(x.tensor))
+
+    @classmethod
+    def min(cls, x1: NNCFTensor, x2: NNCFTensor) -> NNCFTensor:
+        return PTNNCFTensor(torch.min(x1.tensor, x2.tensor))
+
+    @classmethod
+    def max(cls, x1: NNCFTensor, x2: NNCFTensor) -> NNCFTensor:
+        return PTNNCFTensor(torch.max(x1.tensor, x2.tensor))
+
+    @classmethod
+    def mean(cls, x: NNCFTensor, axis: Union[int, tuple]) -> NNCFTensor:
+        return PTNNCFTensor(x.tensor.mean(dim=axis))
+
+    @classmethod
+    def stack(cls, x: Union[List[NNCFTensor], deque], axis: int = 0) -> NNCFTensor:
+        x = [t.tensor for t in x]
+        return PTNNCFTensor(torch.stack(x, dim=axis))
+
+    @classmethod
+    def unstack(cls, x: NNCFTensor, axis: int = 0) -> List[NNCFTensor]:
+        tensor_list = torch.unbind(x.tensor, dim=axis)
+        return [PTNNCFTensor(t) for t in tensor_list]
 
     @classmethod
     def concatenate(cls, tensors: List[NNCFTensor], axis: int) -> NNCFTensor:
