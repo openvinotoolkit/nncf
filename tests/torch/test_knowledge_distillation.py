@@ -16,8 +16,6 @@ from functools import reduce
 from collections.abc import Iterable
 from typing import List, Tuple
 
-from nncf.torch.dynamic_graph.graph_tracer import ModelInputInfo
-from nncf.torch.knowledge_distillation.algo import KnowledgeDistillationBuilder
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf import NNCFConfig
 from tests.torch.test_models.synthetic import PartlyNonDifferentialOutputsModel
@@ -373,23 +371,53 @@ class KDOutputModel(torch.nn.Module):
         return retval
 
 
-@pytest.mark.parametrize('shape_list', (
-    [(1, 2, 3, 4)],
-    [(1, 128)],
-    [(1, 128), (1, )]
-))
-def test_kd_softmax_loss_ignores_incompatible_outputs(shape_list: List[Tuple[int]]):
-    original_model = KDOutputModel(target_shapes=shape_list)
-    config = NNCFConfig.from_dict({
-        "input_info": {"sample_size": [1, 1, 1, 1]},
-        "compression": {
-            "algorithm": "knowledge_distillation",
-            "type": "softmax"
-        }
-    })
-    compressed_model = NNCFNetwork(original_model, [ModelInputInfo([1, 1, 1, 1])])
-    kd_builder = KnowledgeDistillationBuilder(config)
-    compressed_model = kd_builder.apply_to(compressed_model)
-    kd_ctrl = kd_builder.build_controller(compressed_model)
-    compressed_model.forward(torch.ones_like(compressed_model.mock_param))
-    kd_ctrl.loss()  # Should succeed - the loss for the incompatible outputs will be equal to 0
+class CustomOutputWeightedModel(torch.nn.Module):
+    def __init__(self, input_shape: List[int], outputs_dim_numbers_list: List[int]):
+        super().__init__()
+        self.outputs_dim_numbers_list = outputs_dim_numbers_list
+        # linear layer would be compressed and will lead to different teacher (FP) and student (compressed) model
+        # outputs and hence non zero KD loss value (if outputs are not ignored through special logic)
+        self.linear = torch.nn.Linear(in_features=input_shape[3], out_features=input_shape[3])
+
+    def forward(self, x: torch.Tensor):
+        x = self.linear(x)
+        # creating outputs with different number of dims
+        output = {4: x,
+                  3: x.view([x.shape[0], x.shape[1], x.shape[2] * x.shape[3]]),
+                  2: x.view([x.shape[0], x.shape[1] * x.shape[2] * x.shape[3]]),
+                  1: x.view([x.shape[0] * x.shape[1] * x.shape[2] * x.shape[3]])}
+        return tuple(filter(lambda item: len(item.size()) in self.outputs_dim_numbers_list, output.values()))
+
+
+@pytest.mark.parametrize('outputs_dim_numbers_list, kd_type, is_zero', [
+    ([4], "softmax", True),
+    ([3], "softmax", True),
+    ([1], "softmax", True),
+    ([2], "softmax", False),
+    ([3, 2, 1], "softmax", False),
+    ([4], "mse", False),
+    ([3], "mse", False),
+    ([2], "mse", False),
+    ([1], "mse", True),
+    ([4, 2, 1], "mse", False),
+])
+def test_kd_incompatible_output_shapes_handling(outputs_dim_numbers_list, kd_type, is_zero):
+    """
+    Checks ignorance behavior (kd loss is zero) for different model output shape sizes
+    :param dim_numbers_list: a list of dim numbers of model output tensors
+        examples: dim_numbers_list = [4] -> model outputs should be [*, *, *, *]
+        dim_numbers_list = [4, 2] -> model outputs should be ([*, *, *, *], [*, *])
+    :param kd_type: type of knowledge distillation loss
+    "param is_zero: if given type of model outputs should be ignored than kd loss value should be zero
+    """
+    input_size = [1, 2, 3, 4]
+    config = get_kd_config(get_sparsity_config_with_sparsity_init(
+        get_basic_magnitude_sparsity_config(input_sample_size=input_size), sparsity_init=0.5), kd_type=kd_type)
+    model = CustomOutputWeightedModel(input_size, outputs_dim_numbers_list)
+    compressed_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
+    compression_ctrl.scheduler.epoch_step()
+    compressed_model.train()
+    input_ = torch.normal(0, std=0.5, size=input_size)
+    compressed_model.forward(input_)
+    kd_loss = compression_ctrl.loss()
+    assert torch.allclose(kd_loss, torch.zeros([1])) == is_zero
