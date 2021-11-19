@@ -465,10 +465,10 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
                     self._op_names.append(op_name)
 
                     half_range = self._get_half_range(qconfig)
-                    applied_saturation_fix = applied_saturation_fix or half_range
                     quantizer_spec = TFQuantizerSpec.from_config(qconfig,
                                                                  narrow_range=not half_range,
-                                                                 half_range=half_range)
+                                                                 half_range=(half_range and not applied_saturation_fix))
+                    applied_saturation_fix = applied_saturation_fix or half_range
                     target_point = TFLayerWeight(layer_info.layer_name, weight_def.weight_attr_name)
                     qpoint = TFQuantizationPoint(op_name, quantizer_spec, target_point)
             else:
