@@ -1,3 +1,7 @@
 strict digraph  {
 "0 /nncf_model_input_0" [id=0, type=nncf_model_input];
+"1 TestModel/MaxPool1d[_layer]/max_pool1d_0" [id=1, type=max_pool1d];
+"2 /nncf_model_output_0" [id=2, type=nncf_model_output];
+"0 /nncf_model_input_0" -> "1 TestModel/MaxPool1d[_layer]/max_pool1d_0";
+"1 TestModel/MaxPool1d[_layer]/max_pool1d_0" -> "2 /nncf_model_output_0";
 }

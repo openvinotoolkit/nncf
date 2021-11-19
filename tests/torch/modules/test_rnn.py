@@ -220,7 +220,7 @@ def test_export_lstm_cell(tmp_path):
     for node in model.graph.node:
         if node.op_type == 'FakeQuantize':
             onnx_num += 1
-    assert onnx_num == 17
+    assert onnx_num == 14
 
 
 @pytest.mark.parametrize('sizes',
@@ -400,7 +400,7 @@ def test_export_stacked_bi_lstm(tmp_path):
     for node in model.graph.node:
         if node.op_type == 'FakeQuantize':
             onnx_num += 1
-    assert onnx_num == 66
+    assert onnx_num == 54
 
 
 class TestNumberOfNodes:
@@ -450,8 +450,8 @@ class TestNumberOfNodes:
                 continue
             counters[name] = counter
         _ = model(test_data.x, test_hidden)
-        assert model.get_graph().get_nodes_count() == 144  # NB: may always fail in debug due to superfluous 'cat' nodes
-        assert len(counters) + 2 == 66 # 8 WQ + 56 AQ + 1 input AQ + 1 reset point AQ
+        assert model.get_graph().get_nodes_count() == 132  # NB: may always fail in debug due to superfluous 'cat' nodes
+        assert len(counters) + 2 == 54 # 8 WQ + 44 AQ + 1 input AQ + 1 reset point AQ
         for counter in counters.values():
             assert counter.count == p.seq_length
         assert counter_for_input_quantizer.count == 1
@@ -533,8 +533,8 @@ class TestNumberOfNodes:
             quantizer.register_forward_pre_hook(partial(hook, counter=counter))
         dummy_forward_fn(model)
 
-        assert model.get_graph().get_nodes_count() == 400 # NB: may always fail in debug due to superfluous 'cat' nodes
-        assert len(counters) == 170
+        assert model.get_graph().get_nodes_count() == 373  # NB: may always fail in debug due to superfluous 'cat' nodes
+        assert len(counters) == 143
 
         for name, counter in counters.items():
             if 'cell' in name or "LSTMCellForwardNNCF" in name:
@@ -543,8 +543,8 @@ class TestNumberOfNodes:
                 assert counter.count == 1, name
         new_seq_len = int(sequence_size / 2)
         dummy_forward_fn(model, new_seq_len)
-        assert model.get_graph().get_nodes_count() == 400  # NB: may always fail in debug due to superfluous 'cat' nodes
-        assert len(counters) == 170
+        assert model.get_graph().get_nodes_count() == 373  # NB: may always fail in debug due to superfluous 'cat' nodes
+        assert len(counters) == 143
         for name, counter in counters.items():
             if 'cell' in name or "LSTMCellForwardNNCF" in name:
                 assert counter.count == sequence_size + new_seq_len, name

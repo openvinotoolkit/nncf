@@ -116,7 +116,7 @@ class OperatorMetatypeRegistry(Registry):
         :return: The operator metatype.
         """
         if op_name not in self._op_name_to_op_meta_dict:
-            return self._op_name_to_op_meta_dict['noop']
+            return UnknownMetatype
         return self._op_name_to_op_meta_dict[op_name]
 
 
@@ -125,8 +125,25 @@ INPUT_NOOP_METATYPES = Registry('input_noop_metatypes')
 OUTPUT_NOOP_METATYPES = Registry('output_noop_metatypes')
 
 
+class UnknownMetatype(OperatorMetatype):
+    """
+    UnknownMetatype is mapped to operations in NNCFGraph, which are unknown for algorithms,
+    typically these are the operations that haven't been discovered before.
+    Algorithms should avoid processing graph nodes with this metatype.
+    """
+    name = "unknown"
+
+    @classmethod
+    def get_all_aliases(cls) -> List[str]:
+        return [cls.name]
+
+
 @NOOP_METATYPES.register()
 class NoopMetatype(OperatorMetatype):
+    """
+    NoopMetatype is mapped to operations in NNCFGraph, that doesn't influence an input tensor.
+    The compression algorithms can safely ignore this node.
+    """
     name = "noop"
 
     @classmethod

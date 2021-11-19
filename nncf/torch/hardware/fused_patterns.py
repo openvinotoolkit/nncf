@@ -10,6 +10,7 @@ from nncf.torch.graph.pattern_operations import RELU_OPERATIONS
 from nncf.torch.graph.patterns import create_h_sigmoid_act
 from nncf.torch.graph.patterns import create_h_swish_act
 from nncf.torch.graph.patterns import create_swish_act
+from nncf.torch.graph.patterns import create_l2_norm
 
 
 def _get_torch_hw_fused_patterns() -> HWFusedPatterns:
@@ -55,6 +56,8 @@ def _get_torch_hw_fused_patterns() -> HWFusedPatterns:
     relu.add_node(**RELU_OPERATIONS)
     retval.register(group_norm + relu, 'GROUP_NORM + RELU', match=True)
 
+    l2_norm = create_l2_norm()
+    retval.register(l2_norm, 'L2_NORM', match=True)
     return retval
 
 

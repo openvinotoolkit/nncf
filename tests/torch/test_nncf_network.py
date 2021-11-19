@@ -48,8 +48,9 @@ from nncf.torch.graph.graph import PTNNCFGraph
 from nncf.torch.graph.graph_builder import GraphBuilder
 from nncf.torch.graph.operator_metatypes import PTInputNoopMetatype
 from nncf.torch.graph.operator_metatypes import PTOutputNoopMetatype
+from nncf.common.graph.operator_metatypes import UnknownMetatype
 from nncf.torch.graph.operator_metatypes import PT_OPERATOR_METATYPES
-from nncf.torch.graph.operator_metatypes import ReshapeMetatype
+from nncf.torch.graph.operator_metatypes import PTReshapeMetatype
 from nncf.torch.graph.transformations.commands import PTInsertionCommand
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.graph.transformations.layout import PTTransformationLayout
@@ -100,7 +101,7 @@ def test_disable_shape_matching():
     assert graph_1 == graph_2
 
     nodes_1 = list(graph_1.get_all_nodes())
-    assert len(nodes_1) == 3  # 1 input node + 1 operation node + 1 output node
+    assert len(nodes_1) == 5  # 1 input node + 1 chunk + 1 transpose + 1 matmul + 1 output node
 
     qnet = NNCFNetwork(model, input_infos=[ModelInputInfo(input_shape_1), ])  # type: NNCFNetwork
     context = qnet.get_tracing_context()
@@ -366,6 +367,7 @@ def mark_input_ports_lexicographically_based_on_input_node_key(graph: nx.DiGraph
 
 
 def get_nncf_graph_from_mock_nx_graph(nx_graph: nx.DiGraph) -> PTNNCFGraph:
+    # pylint:disable=too-many-branches
     mock_graph = PTNNCFGraph()
     key_vs_id = {}
     edge_vs_output_idx_and_creator_id = {}  # type: Dict[Tuple[str, str], Tuple[int, int]]
@@ -388,10 +390,11 @@ def get_nncf_graph_from_mock_nx_graph(nx_graph: nx.DiGraph) -> PTNNCFGraph:
             metatype = node[NNCFGraph.METATYPE_ATTR]
         else:
             metatype = PT_OPERATOR_METATYPES.get_operator_metatype_by_op_name(node_type)
-            if metatype.subtypes:
-                subtype = metatype.determine_subtype(layer_attributes=layer_attributes)
-                if subtype is not None:
-                    metatype = subtype
+            if metatype is not UnknownMetatype:
+                if metatype.subtypes:
+                    subtype = metatype.determine_subtype(layer_attributes=layer_attributes)
+                    if subtype is not None:
+                        metatype = subtype
 
         node_id = idx
         node = mock_graph.add_nncf_node(
@@ -677,21 +680,22 @@ class TestInsertionPointGraph:
                 assert pre_hook_ip.target_node_name == nncf_node.node_name
 
     def test_operator_metatype_marking(self):
-        from nncf.torch.graph.operator_metatypes import Conv2dMetatype, BatchNormMetatype, RELUMetatype, \
-            MaxPool2dMetatype, \
-            ConvTranspose2dMetatype, DepthwiseConv2dSubtype, AddMetatype, AvgPool2dMetatype, LinearMetatype
+        from nncf.torch.graph.operator_metatypes import PTConv2dMetatype, PTBatchNormMetatype, PTRELUMetatype, \
+            PTMaxPool2dMetatype, PTTransposeMetatype, \
+            PTConvTranspose2dMetatype, PTDepthwiseConv2dSubtype, PTAddMetatype, PTAvgPool2dMetatype, PTLinearMetatype
         ref_scope_vs_metatype_dict = {
             "/" + MODEL_INPUT_OP_NAME + "_0": PTInputNoopMetatype,
-            "ModelForMetatypeTesting/NNCFConv2d[conv_regular]/conv2d_0": Conv2dMetatype,
-            "ModelForMetatypeTesting/NNCFBatchNorm[bn]/batch_norm_0": BatchNormMetatype,
-            "ModelForMetatypeTesting/relu_0": RELUMetatype,
-            "ModelForMetatypeTesting/MaxPool2d[max_pool2d]/max_pool2d_0": MaxPool2dMetatype,
-            "ModelForMetatypeTesting/NNCFConvTranspose2d[conv_transpose]/conv_transpose2d_0": ConvTranspose2dMetatype,
-            "ModelForMetatypeTesting/NNCFConv2d[conv_depthwise]/conv2d_0": DepthwiseConv2dSubtype,
-            "ModelForMetatypeTesting/__iadd___0": AddMetatype,
-            "ModelForMetatypeTesting/AdaptiveAvgPool2d[adaptive_avg_pool]/adaptive_avg_pool2d_0": AvgPool2dMetatype,
-            "ModelForMetatypeTesting/NNCFLinear[linear]/linear_0": LinearMetatype,
-            'ModelForMetatypeTesting/flatten_0': ReshapeMetatype,
+            "ModelForMetatypeTesting/NNCFConv2d[conv_regular]/conv2d_0": PTConv2dMetatype,
+            "ModelForMetatypeTesting/NNCFBatchNorm[bn]/batch_norm_0": PTBatchNormMetatype,
+            "ModelForMetatypeTesting/relu_0": PTRELUMetatype,
+            "ModelForMetatypeTesting/transpose__0": PTTransposeMetatype,
+            "ModelForMetatypeTesting/MaxPool2d[max_pool2d]/max_pool2d_0": PTMaxPool2dMetatype,
+            "ModelForMetatypeTesting/NNCFConvTranspose2d[conv_transpose]/conv_transpose2d_0": PTConvTranspose2dMetatype,
+            "ModelForMetatypeTesting/NNCFConv2d[conv_depthwise]/conv2d_0": PTDepthwiseConv2dSubtype,
+            "ModelForMetatypeTesting/__iadd___0": PTAddMetatype,
+            "ModelForMetatypeTesting/AdaptiveAvgPool2d[adaptive_avg_pool]/adaptive_avg_pool2d_0": PTAvgPool2dMetatype,
+            "ModelForMetatypeTesting/NNCFLinear[linear]/linear_0": PTLinearMetatype,
+            'ModelForMetatypeTesting/flatten_0': PTReshapeMetatype,
             "/" + MODEL_OUTPUT_OP_NAME + "_0": PTOutputNoopMetatype,
         }
 

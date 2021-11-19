@@ -135,6 +135,7 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
                 if ignored:
                     qpg_node[self.IS_IN_IGNORED_SCOPES] = True
                     self.ignored_node_keys.append(node_key)
+                    # TODO (vshampor): do we need here NoopMetatype
                     qpg_node[self.OPERATOR_METATYPE_NODE_ATTR] = NoopMetatype
                 else:
                     qpg_node[self.OPERATOR_METATYPE_NODE_ATTR] = nncf_node_ref.metatype

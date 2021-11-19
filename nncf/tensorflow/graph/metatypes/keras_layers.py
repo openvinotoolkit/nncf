@@ -570,8 +570,8 @@ class TFTensorFlowOpLayerMetatype(TFLayerMetatype):
 
     @classmethod
     def determine_subtype(cls,
-            layer: tf.keras.layers.Layer,
-            wrapper: Optional[tf.keras.layers.Wrapper] = None) -> Optional[Type[OperatorMetatype]]:
+                          layer: tf.keras.layers.Layer,
+                          wrapper: Optional[tf.keras.layers.Wrapper] = None) -> Optional[Type[OperatorMetatype]]:
         return TF_OPERATION_METATYPES.get_operator_metatype_by_op_name(layer.node_def.op)
 
 

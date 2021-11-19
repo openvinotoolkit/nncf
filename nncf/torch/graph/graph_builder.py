@@ -27,9 +27,10 @@ from nncf.torch.dynamic_graph.graph import DynamicGraph
 from nncf.torch.dynamic_graph.graph_tracer import GraphTracer
 from nncf.torch.dynamic_graph.graph_tracer import ModelInputInfo
 from nncf.torch.graph.graph import PTNNCFGraph
+from nncf.torch.graph.operator_metatypes import PTCatMetatype
 from nncf.torch.graph.operator_metatypes import PT_OPERATOR_METATYPES
-from nncf.torch.graph.operator_metatypes import CatMetatype
-from nncf.torch.graph.operator_metatypes import ReshapeMetatype
+from nncf.common.graph.operator_metatypes import UnknownMetatype
+from nncf.torch.graph.operator_metatypes import PTReshapeMetatype
 from nncf.common.graph.layer_attributes import ReshapeLayerAttributes
 
 
@@ -64,7 +65,10 @@ class GraphConverter:
             layer_name = str(dynamic_graph_node.op_exec_context.op_address.scope_in_model)
 
             metatype = PT_OPERATOR_METATYPES.get_operator_metatype_by_op_name(op_address.operator_name)
-            subtype = metatype.determine_subtype(dynamic_graph_node.layer_attributes)
+            if metatype is not UnknownMetatype:
+                subtype = metatype.determine_subtype(dynamic_graph_node.layer_attributes)
+            else:
+                subtype = None
             if subtype is not None:
                 metatype = subtype
 
@@ -98,7 +102,7 @@ class GraphConverter:
             )
 
         for node in nncf_graph.get_all_nodes():
-            if node.metatype is CatMetatype:
+            if node.metatype is PTCatMetatype:
                 input_edges = nncf_graph.get_input_edges(node)
                 output_edges = nncf_graph.get_output_edges(node)
                 # Case of intermediate node
@@ -112,7 +116,7 @@ class GraphConverter:
                     layer_attributes = MultipleInputLayerAttributes(axis)
                     node.layer_attributes = layer_attributes
 
-            if node.metatype is ReshapeMetatype:
+            if node.metatype is PTReshapeMetatype:
                 input_nodes = nncf_graph.get_input_edges(node)
                 output_nodes = nncf_graph.get_output_edges(node)
                 # In case ReshapeMetatype op is intermediate node

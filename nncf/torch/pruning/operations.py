@@ -18,39 +18,44 @@ from nncf.common.graph import NNCFNode
 from nncf.common.pruning.utils import PruningOperationsMetatypeRegistry
 from nncf.common.pruning.mask_propagation import MaskPropagationAlgorithm
 from nncf.torch.graph.operator_metatypes import (
-    AddMetatype,
-    AvgPool2dMetatype,
-    BatchNormMetatype,
-    CatMetatype,
-    Conv1dMetatype,
-    Conv2dMetatype,
-    Conv3dMetatype,
-    ConvTranspose2dMetatype,
-    ConvTranspose3dMetatype,
-    DivMetatype,
-    DropoutMetatype,
-    ELUMetatype,
-    GELUMetatype,
-    GroupNormMetatype,
-    HardTanhMetatype,
+    PTAddMetatype,
+    PTAvgPool2dMetatype,
+    PTBatchNormMetatype,
+    PTCatMetatype,
+    PTConv1dMetatype,
+    PTConv2dMetatype,
+    PTConv3dMetatype,
+    PTConvTranspose2dMetatype,
+    PTConvTranspose3dMetatype,
+    PTDivMetatype,
+    PTDropoutMetatype,
+    PTELUMetatype,
+    PTGELUMetatype,
+    PTGroupNormMetatype,
+    PTHardTanhMetatype,
+    PTHardSwishMetatype,
+    PTHardSigmoidMetatype,
     PTInputNoopMetatype,
-    LinearMetatype,
-    MatMulMetatype,
-    MaxMetatype,
-    MaxPool2dMetatype,
-    MeanMetatype,
-    MinMetatype,
-    MulMetatype,
+    PTLinearMetatype,
+    PTMatMulMetatype,
+    PTMaxMetatype,
+    PTMaxPool2dMetatype,
+    PTMeanMetatype,
+    PTMinMetatype,
+    PTMulMetatype,
+    PTNoopMetatype,
     PTOutputNoopMetatype,
-    PRELUMetatype,
-    LeakyRELUMetatype,
-    RELUMetatype,
-    SigmoidMetatype,
-    SILUMetatype,
-    SoftmaxMetatype,
-    SubMetatype,
-    TanhMetatype,
-    ReshapeMetatype,
+    PTPowerMetatype,
+    PTPRELUMetatype,
+    PTLeakyRELUMetatype,
+    PTRELUMetatype,
+    PTSigmoidMetatype,
+    PTSILUMetatype,
+    PTSoftmaxMetatype,
+    PTSubMetatype,
+    PTSumMetatype,
+    PTTanhMetatype,
+    PTReshapeMetatype
 )
 from nncf.common.pruning.operations import (
     InputPruningOp,
@@ -65,6 +70,7 @@ from nncf.common.pruning.operations import (
     ReshapePruningOp,
     StopMaskForwardPruningOp
 )
+from nncf.common.graph.operator_metatypes import UnknownMetatype
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.layers import NNCF_WRAPPED_USER_MODULES_DICT
@@ -107,14 +113,16 @@ class PTOutputPruningOp(OutputPruningOp, PTPruner):
 
 @PT_PRUNING_OPERATOR_METATYPES.register('identity_mask_propagation')
 class PTIdentityMaskForwardPruningOp(IdentityMaskForwardPruningOp, PTPruner):
-    subtypes = [HardTanhMetatype, TanhMetatype, RELUMetatype, PRELUMetatype, ELUMetatype, GELUMetatype, SigmoidMetatype,
-                SoftmaxMetatype, AvgPool2dMetatype, MaxPool2dMetatype, DropoutMetatype, SILUMetatype, LeakyRELUMetatype]
+    subtypes = [PTHardTanhMetatype, PTTanhMetatype, PTRELUMetatype, PTLeakyRELUMetatype, PTPRELUMetatype, PTELUMetatype,
+                PTGELUMetatype, PTSigmoidMetatype, PTSoftmaxMetatype, PTAvgPool2dMetatype, PTMaxPool2dMetatype,
+                PTDropoutMetatype, PTSILUMetatype, PTPowerMetatype, PTHardSwishMetatype, PTHardSigmoidMetatype,
+                PTNoopMetatype]
     additional_types = ['h_sigmoid', 'h_swish', 'RELU']
 
 
 @PT_PRUNING_OPERATOR_METATYPES.register('convolution')
 class PTConvolutionPruningOp(ConvolutionPruningOp, PTPruner):
-    subtypes = [Conv1dMetatype, Conv2dMetatype, Conv3dMetatype]
+    subtypes = [PTConv1dMetatype, PTConv2dMetatype, PTConv3dMetatype]
 
     @classmethod
     def input_prune(cls, model: NNCFNetwork, node: NNCFNode, graph: NNCFGraph) -> None:
@@ -168,7 +176,7 @@ class PTConvolutionPruningOp(ConvolutionPruningOp, PTPruner):
 
 @PT_PRUNING_OPERATOR_METATYPES.register('transpose_convolution')
 class PTTransposeConvolutionPruningOp(TransposeConvolutionPruningOp, PTPruner):
-    subtypes = [ConvTranspose2dMetatype, ConvTranspose3dMetatype]
+    subtypes = [PTConvTranspose2dMetatype, PTConvTranspose3dMetatype]
 
     @classmethod
     def input_prune(cls, model: NNCFNetwork, node: NNCFNode, graph: NNCFGraph) -> None:
@@ -215,7 +223,7 @@ class PTTransposeConvolutionPruningOp(TransposeConvolutionPruningOp, PTPruner):
 
 @PT_PRUNING_OPERATOR_METATYPES.register('batch_norm')
 class PTBatchNormPruningOp(BatchNormPruningOp, PTPruner):
-    subtypes = [BatchNormMetatype]
+    subtypes = [PTBatchNormMetatype]
 
     @classmethod
     def input_prune(cls, model: NNCFNetwork, node: NNCFNode, graph: NNCFGraph) -> None:
@@ -241,7 +249,7 @@ class PTBatchNormPruningOp(BatchNormPruningOp, PTPruner):
 
 @PT_PRUNING_OPERATOR_METATYPES.register('group_norm')
 class PTGroupNormPruningOp(GroupNormPruningOp, PTPruner):
-    subtypes = [GroupNormMetatype]
+    subtypes = [PTGroupNormMetatype]
 
     @classmethod
     def input_prune(cls, model: NNCFNetwork, node: NNCFNode, graph: NNCFGraph) -> None:
@@ -267,7 +275,7 @@ class PTGroupNormPruningOp(GroupNormPruningOp, PTPruner):
 
 @PT_PRUNING_OPERATOR_METATYPES.register('elementwise')
 class PTElementwisePruningOp(ElementwisePruningOp, PTPruner):
-    subtypes = [AddMetatype, SubMetatype, DivMetatype, MulMetatype]
+    subtypes = [PTAddMetatype, PTSubMetatype, PTDivMetatype, PTMulMetatype]
 
     @classmethod
     def input_prune(cls, model: NNCFNetwork, node: NNCFNode, graph: NNCFGraph) -> None:
@@ -279,7 +287,7 @@ class PTElementwisePruningOp(ElementwisePruningOp, PTPruner):
         node_module = model.get_containing_module(node.node_name)
 
         if isinstance(node_module, tuple(NNCF_WRAPPED_USER_MODULES_DICT)):
-            assert node_module.target_weight_dim_for_compression == 0,\
+            assert node_module.target_weight_dim_for_compression == 0, \
                 "Implemented only for target_weight_dim_for_compression == 0"
             old_num_clannels = int(node_module.weight.size(0))
             new_num_channels = int(torch.sum(input_mask))
@@ -292,17 +300,18 @@ class PTElementwisePruningOp(ElementwisePruningOp, PTPruner):
 
 @PT_PRUNING_OPERATOR_METATYPES.register('stop_propagation_ops')
 class PTStopMaskForwardPruningOp(StopMaskForwardPruningOp, PTPruner):
-    subtypes = [MeanMetatype, MaxMetatype, MinMetatype, LinearMetatype, MatMulMetatype]
+    subtypes = [PTMeanMetatype, PTMaxMetatype, PTMinMetatype, PTLinearMetatype, PTMatMulMetatype, PTSumMetatype,
+                UnknownMetatype]
 
 
 @PT_PRUNING_OPERATOR_METATYPES.register('reshape')
 class PTReshape(ReshapePruningOp):
-    subtypes = [ReshapeMetatype]
+    subtypes = [PTReshapeMetatype]
 
 
 @PT_PRUNING_OPERATOR_METATYPES.register('concat')
 class PTConcatPruningOp(ConcatPruningOp, PTPruner):
-    subtypes = [CatMetatype]
+    subtypes = [PTCatMetatype]
 
 
 class ModelPruner(MaskPropagationAlgorithm):
