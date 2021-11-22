@@ -11,7 +11,38 @@
  limitations under the License.
 """
 
+from typing import Union, Dict, Tuple, List
+
 import tensorflow as tf
+
+from nncf.experimental.tensorflow.nncf_context import get_nncf_context
+
+
+InputSignature = Union[tf.TensorSpec, Dict[str, tf.TensorSpec], Tuple[tf.TensorSpec, ...], List[tf.TensorSpec]]
+
+
+def _add_names_to_input_signature(input_signature: InputSignature):
+    if isinstance(input_signature, tf.TensorSpec) and input_signature.name is None:
+        return tf.TensorSpec.from_spec(input_signature, name='input_0')
+
+    if isinstance(input_signature, dict):
+        _input_signature = {}
+        for i, (k, spec) in enumerate(input_signature.items()):
+            _input_signature[k] = tf.TensorSpec.from_spec(
+                spec,
+                name=spec.name if spec.name else f'input_{i}'
+            )
+        return _input_signature
+
+    specs = []
+    for i, spec in input_signature:
+        specs.append(
+            tf.TensorSpec.from_spec(
+                spec,
+                name=spec.name if spec.name else f'input_{i}'
+            )
+        )
+    return input_signature.__class__(specs)
 
 
 class NNCFNetwork(tf.keras.Model):
@@ -19,7 +50,10 @@ class NNCFNetwork(tf.keras.Model):
     Wraps the Keras model.
     """
 
-    def __init__(self, model, input_signature, **kwargs):
+    def __init__(self,
+                 model: tf.keras.Model,
+                 input_signature: InputSignature,
+                 **kwargs):
         """
         Initializes the NNCF network.
 
@@ -28,7 +62,12 @@ class NNCFNetwork(tf.keras.Model):
         """
         super().__init__(**kwargs)
         self._model = model
-        self._input_signature = input_signature
+        self._input_signature = _add_names_to_input_signature(input_signature)
+        self.__dict__['_hooks'] = []
+
+    @property
+    def nncf_operations(self):
+        return [op for hook in getattr(self, '_hooks') for op in hook.operations]
 
     @property
     def input_signature(self):
@@ -39,5 +78,39 @@ class NNCFNetwork(tf.keras.Model):
         return None
 
     def call(self, inputs, **kwargs):
-        outputs = self._model(inputs, **kwargs)
+        with get_nncf_context().enter(wrap_ops=True):
+            x = self._apply_post_hooks_for_inputs(inputs)
+            outputs = self._model(x, **kwargs)
         return outputs
+
+    def _apply_post_hooks_for_inputs(self, inputs):
+        """
+        Applies post-hooks to inputs.
+
+        :param inputs: Input tensor, or dict/list/tuple of input tensors.
+        :return: Modified input tensor, or dict/list/tuple of input tensors.
+        """
+        input_name_to_post_hook_map = {
+            hook.target_point.op_name: hook for hook in getattr(self, '_hooks') if hook.target_point.op_type_name == 'Placeholder'
+        }
+
+        if not input_name_to_post_hook_map:
+            return inputs
+
+        if isinstance(self.input_signature, tf.TensorSpec):
+            post_hook = input_name_to_post_hook_map[self.input_signature.name]
+            return post_hook(inputs)
+
+        if isinstance(self.input_signature, dict) and isinstance(inputs, dict):
+            _inputs = {}
+            for k, x in inputs.items():
+                input_name = self.input_signature[k].name
+                post_hook = input_name_to_post_hook_map[input_name]
+                _inputs[k] = post_hook(x)
+            return _inputs
+
+        _inputs = []
+        for x, spec in zip(inputs, self.input_signature):
+            post_hook = input_name_to_post_hook_map[spec.name]
+            _inputs.append(post_hook(x))
+        return inputs.__class__(_inputs)

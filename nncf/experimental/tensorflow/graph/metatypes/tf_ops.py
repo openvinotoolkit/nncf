@@ -305,7 +305,7 @@ class TFResizeNearestNeighborOpMetatype(TFOpMetatype):
 class TFConv2DOpMetatype(TFOpWithWeightsMetatype):
     name = 'Conv2DOp'
     op_names = ['Conv2D']
-    weight_definitions = [WeightDef(port_id=1, channel_axes=None)]  # TODO(andrey-churkin): channel_axes
+    weight_definitions = [WeightDef(port_id=1, channel_axes=[-1])]
     hw_config_names = [HWConfigOpName.CONVOLUTION]
 
 
@@ -313,7 +313,7 @@ class TFConv2DOpMetatype(TFOpWithWeightsMetatype):
 class TFConv3DOpMetatype(TFOpWithWeightsMetatype):
     name = 'Conv3DOp'
     op_names = ['Conv3D']
-    weight_definitions = [WeightDef(port_id=1, channel_axes=None)]  # TODO(andrey-churkin): channel_axes
+    weight_definitions = [WeightDef(port_id=1, channel_axes=[-1])]
     hw_config_names = [HWConfigOpName.CONVOLUTION]
 
 
@@ -321,7 +321,7 @@ class TFConv3DOpMetatype(TFOpWithWeightsMetatype):
 class TFDepthwiseConv2dNativeOpMetatype(TFOpWithWeightsMetatype):
     name = 'DepthwiseConv2dNativeOp'
     op_names = ['DepthwiseConv2dNative']
-    weight_definitions = [WeightDef(port_id=1, channel_axes=None)]  # TODO(andrey-churkin): channel_axes
+    weight_definitions = [WeightDef(port_id=1, channel_axes=[2, 3])]
     hw_config_names = [HWConfigOpName.DEPTHWISECONVOLUTION]
 
 

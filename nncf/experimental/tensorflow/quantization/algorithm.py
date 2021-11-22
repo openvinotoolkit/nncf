@@ -11,11 +11,12 @@
  limitations under the License.
 """
 
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Tuple
 from copy import deepcopy
 
 from nncf import NNCFConfig
 from nncf.common.graph import NNCFGraph
+from nncf.common.graph import NNCFNode
 from nncf.common.graph import OUTPUT_NOOP_METATYPES
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
@@ -38,7 +39,11 @@ from nncf.common.quantization.quantizer_setup import ActivationQuantizationInser
 from nncf.common.quantization.quantizer_propagation.solver import QuantizerPropagationSolver
 from nncf.common.stateful_classes_registry import TF_STATEFUL_CLASSES
 from nncf.tensorflow.api.compression import TFCompressionAlgorithmBuilder
-from nncf.tensorflow.quantization.quantizers import TFQuantizerSpec
+from nncf.common.graph.transformations.commands import TransformationPriority
+from nncf.config.extractors import extract_range_init_params
+from nncf.common.statistics import NNCFStatistics
+
+from nncf.tensorflow.quantization.algorithm import QuantizationController
 
 from nncf.experimental.tensorflow.nncf_network import NNCFNetwork
 from nncf.experimental.tensorflow.graph.converter import convert_nncf_network_to_nncf_graph
@@ -48,7 +53,15 @@ from nncf.experimental.tensorflow.graph.transformations.commands import TFTarget
 from nncf.experimental.tensorflow.hardware.fused_patterns import TF_HW_FUSED_PATTERNS
 from nncf.experimental.tensorflow.hardware.config import TFHWConfig
 from nncf.experimental.tensorflow.quantization.default_quantization import DEFAULT_TF_QUANT_TRAIT_TO_OP_DICT
-
+from nncf.experimental.tensorflow.graph.transformations.commands import TFInsertionCommand
+from nncf.experimental.tensorflow.quantization.quantizers import TFQuantizerSpec
+from nncf.experimental.tensorflow.quantization.quantizers import create_quantizer
+from nncf.experimental.tensorflow.graph.model_transformer import TFModelTransformer
+from nncf.experimental.tensorflow.graph.transformations.layout import TFTransformationLayout
+from nncf.experimental.tensorflow.quantization.initializers.init_range import TFRangeInitParamsV2
+from nncf.experimental.tensorflow.quantization.initializers.init_range import RangeInitializerV2
+from nncf.config.extractors import extract_bn_adaptation_init_params
+from nncf.common.initialization.batchnorm_adaptation import BatchnormAdaptationAlgorithm
 
 # TODO(andrey-churkin): Fill it out
 UNSUPPORTED_TF_OP_METATYPES = [
@@ -69,11 +82,28 @@ class TFQuantizationPoint:
 
     _state_names = TFQuantizationPointStateNames
 
-    def __init__(self, op_name: str, quantizer_spec: TFQuantizerSpec, target_point: TargetPoint):
+    def __init__(self,
+                 op_name: str,
+                 quantizer_spec: TFQuantizerSpec,
+                 target_point: TargetPoint,
+                 is_weight_quantization: bool,
+                 input_shape: Optional[List[int]] = None,
+                 channel_axes: Optional[List[int]] = None):
+        """
+        :param op_name:
+        :param quantizer_spec:
+        :param target_point:
+        :param input_shape:
+        :param channel_axes:
+        """
         self.target_point = target_point
         self.op_name = op_name
+        self.is_weight_quantization = is_weight_quantization
         self.quantizer_spec = quantizer_spec
+        self.input_shape = input_shape
+        self.channel_axes = channel_axes
 
+    # TODO(andrey-churkin):
     def get_state(self) -> Dict[str, Any]:
         """
         Returns a dictionary with Python data structures (dict, list, tuple, str, int, float, True, False, None) that
@@ -205,6 +235,59 @@ def _get_quantizer_op_name(prefix: str, is_wq: bool, port_id: int, target_type) 
     return quantizer_op_name
 
 
+def _get_tensor_specs(node: NNCFNode,
+                      nncf_graph: NNCFGraph,
+                      port_ids: List[int],
+                      is_input_tensors: bool,
+                      is_weight_tensors: bool):
+    """
+    Returns specification of tensors for `node` according to `port_ids`.
+
+    :param node:
+    :param nncf_graph:
+    :param port_ids:
+    :param is_input_tensors:
+    :param is_weight_tensors:
+    """
+
+    tensor_specs = []
+
+    if is_weight_tensors:
+        assert is_input_tensors
+        metatype = node.metatype
+
+        assert len(port_ids) == 1
+        assert len(metatype.weight_definitions) == 1
+
+        channel_axes = metatype.weight_definitions[0].channel_axes
+        weight_shape = node.layer_attributes.get_weight_shape()
+        tensor_specs.append((weight_shape, channel_axes))
+    else:
+        data_format = node.layer_attributes.get_data_format()
+        channel_axes = [-1] if data_format == 'channels_last' else [1]
+
+        if is_input_tensors:
+            edges = nncf_graph.get_input_edges(node)
+            for input_port_id in port_ids:
+                tensor_specs.extend(
+                    (e.tensor_shape, channel_axes) for e in edges if e.input_port_id == input_port_id
+                )
+        else:
+            edges = nncf_graph.get_output_edges(node)
+            for output_port_id in port_ids:
+                filtered_edges = [e for e in edges if e.output_port_id == output_port_id]
+
+                shape = filtered_edges[0].tensor_shape
+                for e in filtered_edges:
+                    assert e.tensor_shape == shape
+
+                tensor_specs.append((shape, channel_axes))
+
+    assert len(tensor_specs) == len(port_ids)
+
+    return tensor_specs
+
+
 def _create_quantization_setup(nncf_graph: NNCFGraph,
                                qp_solution: SingleConfigQuantizerSetup,
                                disable_saturation_fix: bool,
@@ -246,15 +329,32 @@ def _create_quantization_setup(nncf_graph: NNCFGraph,
             half_range = False
             narrow_range = False
             if qp.insertion_point.input_port_id is not None:
-                port_ids = [qp.insertion_point.input_port_id]
+                port_ids = [qp.insertion_point.input_port_id]  # Input port ids
                 target_type = TargetType.OPERATOR_PRE_HOOK
             else:
-                port_ids = [0]
+                port_ids = [0]  # Output port ids
                 target_type = TargetType.OPERATOR_POST_HOOK
+
+            # TODO(andrey-churkin): Need refactoring
+            # if target_node.node_type == 'Placeholder':
+            #     edges = nncf_graph.get_output_edges(target_node)
+            #     assert len(edges) == 1
+            #     target_node = edges[0].to_node
+            #     port_ids = [edges[0].input_port_id]
+            #     target_type = TargetType.OPERATOR_PRE_HOOK
+
         else:
             raise RuntimeError('Unknown type of quantization point.')
 
-        for port_id in port_ids:
+        tensor_specs = _get_tensor_specs(
+            target_node,
+            nncf_graph,
+            port_ids,
+            target_type == TargetType.OPERATOR_PRE_HOOK,
+            qp.is_weight_quantization_point()
+        )
+
+        for port_id, (tensor_shape, channel_axes) in zip(port_ids, tensor_specs):
             quantizer_op_name = _get_quantizer_op_name(
                 target_node.node_name,
                 qp.is_weight_quantization_point(),
@@ -263,7 +363,7 @@ def _create_quantization_setup(nncf_graph: NNCFGraph,
             )
             quantizer_spec = TFQuantizerSpec.from_config(qp.qconfig, narrow_range, half_range)
             target_point = TFTargetPoint(target_node.node_name, target_node.node_type, port_id, target_type)
-            qpoint = TFQuantizationPoint(quantizer_op_name, quantizer_spec, target_point)
+            qpoint = TFQuantizationPoint(quantizer_op_name, quantizer_spec, target_point, qp.is_weight_quantization_point(), tensor_shape, channel_axes)
 
             quantization_setup.add_quantization_point(qpoint)
 
@@ -275,6 +375,65 @@ def _create_quantization_setup(nncf_graph: NNCFGraph,
         quantization_setup.register_unified_scale_group(us_group)
 
     return quantization_setup
+
+
+def _build_insertion_commands_for_quantization_setup(qsetup: TFQuantizationSetup) -> List[TFInsertionCommand]:
+    """
+    :param qsetup:
+    :return:
+    """
+    insertion_commands = []
+    quantization_points = qsetup.get_quantization_points()
+    # quantization point id is her index inside the `quantization_points` list
+    was_processed = {qp_id: False for qp_id in range(len(quantization_points))}
+
+    for unified_scales_group in qsetup.get_unified_scale_groups():
+        qp = quantization_points[unified_scales_group[0]]
+        quantizer = create_quantizer(
+            f'{qp.op_name}/unified_scale_group',
+            qp.quantizer_spec,
+            qp.is_weight_quantization,
+            qp.input_shape,
+            qp.channel_axes
+        )
+
+        for qp_id in unified_scales_group:
+            if was_processed[qp_id]:
+                raise RuntimeError('Unexpected behavior')
+            was_processed[qp_id] = True
+
+            curr_qp = quantization_points[qp_id]
+            # Checks
+            assert curr_qp.quantizer_spec.get_state() == qp.quantizer_spec.get_state()
+            assert curr_qp.input_shape == qp.input_shape
+            assert curr_qp.channel_axes == qp.channel_axes
+
+            command = TFInsertionCommand(
+                curr_qp.target_point,
+                quantizer,
+                TransformationPriority.QUANTIZATION_PRIORITY
+            )
+            insertion_commands.append(command)
+
+    for qp_id, qp in enumerate(quantization_points):
+        if was_processed[qp_id]:
+            continue
+
+        quantizer = create_quantizer(
+            qp.op_name,
+            qp.quantizer_spec,
+            qp.is_weight_quantization,
+            qp.input_shape,
+            qp.channel_axes
+        )
+        command = TFInsertionCommand(
+            qp.target_point,
+            quantizer,
+            TransformationPriority.QUANTIZATION_PRIORITY
+        )
+        insertion_commands.append(command)
+
+    return insertion_commands
 
 
 class QBuilderStateNames:
@@ -314,9 +473,12 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
         for quantizer_group in QuantizerGroup:
             self._parse_group_params(self._algo_config, quantizer_group)
 
+        if self.should_init:
+            self._parse_init_params()
+
         self._range_initializer = None
         self._bn_adaptation = None
-        self._quantizer_setup = None
+        self._quantization_setup = None
 
         self.hw_config = None
         if self._target_device != "TRIAL":
@@ -465,10 +627,67 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
         return [QuantizableWeightedLayerNode(*item) for item in possible_qconfigs_for_nodes.items()]
 
     def _build_controller(self, model):
-        raise NotImplementedError
+        return QuantizationControllerV2(model, self.config, self._op_names)
 
     def get_transformation_layout(self, model):
-        raise NotImplementedError
+        transformation_layout = TFTransformationLayout()
 
-    def initialize(self, model):
-        raise NotImplementedError
+        if self._quantization_setup is None:
+            self._quantization_setup = self.get_quantization_setup(model)
+
+        insertion_commands = _build_insertion_commands_for_quantization_setup(self._quantization_setup)
+        for command in insertion_commands:
+            transformation_layout.register(command)
+
+            for op in command.insertion_objects:
+                self._op_names.append(op.name)
+
+        return transformation_layout
+
+    def apply_to(self, model: NNCFNetwork) -> NNCFNetwork:
+        """
+        Applies algorithm-specific modifications to the model.
+
+        :param model: The original uncompressed model.
+        :return: The model with additional modifications necessary to enable
+            algorithm-specific compression during fine-tuning.
+        """
+        transformation_layout = self.get_transformation_layout(model)
+        transformer = TFModelTransformer(model)
+        transformed_model = transformer.transform(transformation_layout)
+
+        if self.should_init:
+            self.initialize(transformed_model)
+
+        return transformed_model
+
+    def initialize(self, model: NNCFNetwork) -> None:
+        if self._range_init_params is not None:
+            self._run_range_initialization(model)
+        self._run_batchnorm_adaptation(model)
+
+    def _run_range_initialization(self, model: NNCFNetwork) -> None:
+        if self._range_initializer is None:
+            self._range_initializer = RangeInitializerV2(self._range_init_params)
+        self._range_initializer.run(model)
+
+    def _run_batchnorm_adaptation(self, model: NNCFNetwork) -> None:
+        if self._bn_adaptation is None:
+            self._bn_adaptation = BatchnormAdaptationAlgorithm(
+                **extract_bn_adaptation_init_params(self.config, self.name))
+        self._bn_adaptation.run(model)
+
+    def _parse_init_params(self):
+        self._range_init_params = self._parse_range_init_params()
+
+    def _parse_range_init_params(self) -> TFRangeInitParamsV2:
+        range_init_params = extract_range_init_params(self.config)
+        return TFRangeInitParamsV2(**range_init_params) if range_init_params is not None else None
+
+
+class QuantizationControllerV2(QuantizationController):
+    def strip_model(self, model: NNCFNetwork) -> NNCFNetwork:
+        return model
+
+    def statistics(self, quickly_collected_only: bool = False) -> NNCFStatistics:
+        return NNCFStatistics()

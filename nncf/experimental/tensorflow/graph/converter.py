@@ -21,6 +21,8 @@ from nncf.common.graph.layer_attributes import Dtype
 from nncf.experimental.tensorflow.nncf_network import NNCFNetwork
 from nncf.experimental.tensorflow.graph.metatypes.matcher import get_op_metatype
 from nncf.experimental.tensorflow.graph.metatypes.common import ALL_TF_OP_METATYPES_WITH_WEIGHTS
+from nncf.experimental.tensorflow.graph.node_attributes import TFNodeAttributes
+from nncf.experimental.tensorflow.graph.node_attributes import TFWeightedNodeAttributes
 
 
 def convert_nncf_network_to_nncf_graph(nncf_network: NNCFNetwork) -> NNCFGraph:
@@ -74,7 +76,7 @@ class NodeDesc:
                  metatype,
                  is_shared: bool,
                  resource_name: Optional[str] = None,
-                 attrs: Optional[Dict[str, Any]] = None):
+                 attrs: Optional[Any] = None):
         """
         Initializes description of a node.
 
@@ -122,6 +124,31 @@ class EdgeDesc:
         self.input_port_id = input_port_id
         self.tensor_shape = tensor_shape
         self.tensor_dtype = tensor_dtype
+
+
+def _get_data_format(op: tf.Operation) -> str:
+    """
+    Returns data format for the TensorFlow operation in the Keras format.
+    Returns default data format if the operation does not have it.
+
+    :param op: TensorFlow operation.
+    :return: String `channels_last` or `channels_first`.
+    """
+    try:
+        data_format = op.get_attr('data_format')
+    except ValueError:
+        data_format = None
+
+    if data_format:
+        to_keras_data_format = {
+            'NHWC': 'channels_last',
+            'NCHW': 'channels_first',
+            'NDHWC': 'channels_last',
+            'NCDHW': 'channels_first',
+        }
+        return to_keras_data_format[data_format.decode('utf-8')]
+
+    return tf.keras.backend.image_data_format()
 
 
 def _collect_tfgraph_description(graph) -> Tuple[List[NodeDesc], List[EdgeDesc]]:
@@ -173,11 +200,23 @@ def _collect_tfgraph_description(graph) -> Tuple[List[NodeDesc], List[EdgeDesc]]
     for op in visited_nodes.values():
         metatype = get_op_metatype(op.type)
 
+        node_attributes = TFNodeAttributes(_get_data_format(op))
+
         is_shared = False
         resource_name = None
         if metatype in ALL_TF_OP_METATYPES_WITH_WEIGHTS:
-            resource_name = op_name_to_resource_op_name_map[op.name]
-            is_shared = len(resource_op_name_to_op_names_map[resource_name]) > 1
+            resource_name = op_name_to_resource_op_name_map.get(op.name)
+            if resource_name:
+                is_shared = len(resource_op_name_to_op_names_map[resource_name]) > 1
+
+                assert len(metatype.weight_definitions) == 1
+                port_id = metatype.weight_definitions[0].port_id
+                weight_shape = op.inputs[port_id].shape.as_list()
+
+                node_attributes = TFWeightedNodeAttributes(
+                    node_attributes.get_data_format(),
+                    weight_shape
+                )
 
         node_descs.append(
             NodeDesc(
@@ -185,7 +224,8 @@ def _collect_tfgraph_description(graph) -> Tuple[List[NodeDesc], List[EdgeDesc]]
                 op_type_name=op.type,
                 metatype=metatype,
                 is_shared=is_shared,
-                resource_name=resource_name
+                resource_name=resource_name,
+                attrs=node_attributes
             )
         )
 
