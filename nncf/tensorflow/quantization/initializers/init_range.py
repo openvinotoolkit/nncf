@@ -23,6 +23,9 @@ from nncf.common.quantization.initialization.range import RangeInitParams
 from nncf.common.quantization.initialization.range import RangeInitCollectorParams
 from nncf.common.quantization.initialization.range import RangeInitConfig
 from nncf.common.quantization.structs import QuantizerGroup
+from nncf.common.quantization.structs import QuantizationMode
+from nncf.common.tensor_statistics.collectors import ReductionShape
+from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
 from nncf.common.utils.progress_bar import ProgressBar
 from nncf.common.utils.helpers import should_consider_scope
 from nncf.common.tensor_statistics.statistics import convert_stat_to_min_max_tensor_stat
@@ -83,7 +86,7 @@ class TFRangeInitParams(RangeInitParams):
 
 
 class TFRangeInitCollectorParams(RangeInitCollectorParams):
-    def __init__(self, is_weights: bool, mode: str, per_channel, init_type, collectors_with_per_sample_stat_collection):
+    def __init__(self, is_weights: bool, mode: QuantizationMode, per_channel, init_type, collectors_with_per_sample_stat_collection):
         super().__init__(is_weights, mode, per_channel, init_type)
         self._collectors_with_per_sample_stat_collection = collectors_with_per_sample_stat_collection
 
@@ -102,35 +105,28 @@ class RangeInitializer:
         self.nncf_quantization_operation_classes = NNCF_QUANTIZATION_OPERATIONS.registry_dict.values()
 
     @staticmethod
-    def generate_stat_collector(reduction_shape,
-                                collector_params,
-                                init_config,
-                                num_samples_to_collect_override: int = None):
+    def generate_stat_collector(reduction_shape: ReductionShape,
+                                collector_params: TFRangeInitCollectorParams,
+                                init_config: RangeInitConfig,
+                                num_samples_to_collect_override: int = None) -> TensorStatisticCollectorBase:
         range_type = init_config.init_type
         num_samples = init_config.num_init_samples
         if num_samples_to_collect_override is not None:
             num_samples = num_samples_to_collect_override
 
         if range_type == 'min_max':
-            use_abs_max = collector_params.get_low_level_params_for_collector()
-            return TFMinMaxStatisticCollector(use_abs_max,
-                                              reduction_shape,
-                                              num_samples)
+            return TFMinMaxStatisticCollector(collector_params.use_abs_max, reduction_shape, num_samples)
         if range_type == 'mixed_min_max':
-            use_abs_max, use_means_of_mins, use_means_of_maxs = \
-                collector_params.get_low_level_params_for_collector()
             return TFMixedMinMaxStatisticCollector(collector_params.use_per_sample_stats,
-                                                   use_abs_max,
-                                                   use_means_of_mins,
-                                                   use_means_of_maxs,
+                                                   collector_params.use_abs_max,
+                                                   collector_params.use_means_of_mins,
+                                                   collector_params.use_means_of_maxs,
                                                    reduction_shape,
                                                    num_samples)
         if range_type == 'mean_min_max':
-            use_abs_max = collector_params.get_low_level_params_for_collector()
             return TFMeanMinMaxStatisticCollector(collector_params.use_per_sample_stats,
-                                                  use_abs_max,
-                                                  reduction_shape,
-                                                  num_samples)
+                                                  collector_params.use_abs_max,
+                                                  reduction_shape, num_samples)
         if range_type == 'threesigma':
             return MedianMADStatisticCollector(reduction_shape,
                                                num_samples)

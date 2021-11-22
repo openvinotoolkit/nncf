@@ -103,7 +103,7 @@ class PTRangeInitCollectorParams(RangeInitCollectorParams):
     def use_per_sample_stats(self) -> bool:
         return (self._init_type in self._collectors_with_per_sample_stat_collection) and (not self._is_weights)
 
-    def converte_reduction_shape(self) -> ReductionShape:
+    def convert_reduction_shape(self) -> ReductionShape:
         ndims = len(self._input_shape)
         reduction_shape = list(range(ndims))  # type: List[int]
         if self._per_channel:
@@ -162,20 +162,20 @@ class StatCollectorGenerator:
         if num_samples_to_collect_override is not None:
             num_samples = num_samples_to_collect_override
         if init_config.init_type == "min_max":
-            use_abs_max = collector_params.get_low_level_params_for_collector()
-            reduction_shape_converted = collector_params.converte_reduction_shape()
-            return PTMinMaxStatisticCollector(use_abs_max, reduction_shape_converted, reduction_shape, num_samples)
+            reduction_shape_converted = collector_params.convert_reduction_shape()
+            return PTMinMaxStatisticCollector(collector_params.use_abs_max, reduction_shape_converted,
+                                              reduction_shape, num_samples)
         if init_config.init_type == "mixed_min_max":
-            use_abs_max, use_means_of_mins, use_means_of_maxs = \
-                collector_params.get_low_level_params_for_collector()
-            reduction_shape_converted = collector_params.converte_reduction_shape()
-            return PTMixedMinMaxStatisticCollector(collector_params.use_per_sample_stats, use_abs_max,
-                                                   use_means_of_mins, use_means_of_maxs, reduction_shape_converted,
+            reduction_shape_converted = collector_params.convert_reduction_shape()
+            return PTMixedMinMaxStatisticCollector(collector_params.use_per_sample_stats,
+                                                   collector_params.use_abs_max,
+                                                   collector_params.use_means_of_mins,
+                                                   collector_params.use_means_of_maxs,
+                                                   reduction_shape_converted,
                                                    reduction_shape, num_samples)
         if init_config.init_type == "mean_min_max":
-            use_abs_max = collector_params.get_low_level_params_for_collector()
-            reduction_shape_converted = collector_params.converte_reduction_shape()
-            return PTMeanMinMaxStatisticCollector(collector_params.use_per_sample_stats, use_abs_max,
+            reduction_shape_converted = collector_params.convert_reduction_shape()
+            return PTMeanMinMaxStatisticCollector(collector_params.use_per_sample_stats, collector_params.use_abs_max,
                                                   reduction_shape_converted, reduction_shape, num_samples)
         if init_config.init_type == "threesigma":
             return MedianMADStatisticCollector(reduction_shape, num_samples)

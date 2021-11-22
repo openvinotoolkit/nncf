@@ -91,7 +91,7 @@ class NNCFBaseTensorProcessor:
         """
         Returns the min of x1 and x2.
 
-        :param x1: NCFTensor to compare.
+        :param x1: NNCFTensor to compare.
         :param x2: NCFTensor to compare.
         :return: Compared NNCFTensor.
         """

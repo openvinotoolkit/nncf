@@ -63,7 +63,7 @@ def get_weight_channel_axis(layer, weight_attr):
 
     return -1
 
-def get_weight_shape(layer: tf.keras.layers.Layer, weight_attr: str):
+def get_weight_shape(layer: tf.keras.layers.Layer, weight_attr: str) -> tf.TensorShape:
     original_layer = unwrap_layer(layer)
     weight = getattr(original_layer, weight_attr)
     return weight.shape

@@ -144,32 +144,13 @@ class RangeInitCollectorParams:
         self._init_type = init_type
 
     @property
-    def _use_abs_max(self) -> bool:
+    def use_abs_max(self) -> bool:
         return self._mode == QuantizationMode.SYMMETRIC
 
     @property
-    def _use_means_of_mins(self) -> bool:
+    def use_means_of_mins(self) -> bool:
         return not self._is_weights and not self._per_channel and self._mode == 'asymmetric'
 
     @property
-    def _use_means_of_maxs(self) -> bool:
+    def use_means_of_maxs(self) -> bool:
         return not self._is_weights and not self._per_channel
-
-    def _get_params_for_min_max(self) -> bool:
-        return self._use_abs_max
-
-    def _get_params_for_mixed_min_max(self) -> Tuple[bool, bool, bool]:
-        return self._use_abs_max, self._use_means_of_mins, self._use_means_of_maxs
-
-    def _get_params_for_mean_min_max(self) -> bool:
-        return self._use_abs_max
-
-    def get_low_level_params_for_collector(self):
-        """Generate low-level parameters for collectors"""
-        if self._init_type == "min_max":
-            return self._get_params_for_min_max()
-        if self._init_type == "mixed_min_max":
-            return self._get_params_for_mixed_min_max()
-        if self._init_type == "mean_min_max":
-            return self._get_params_for_mean_min_max()
-        raise RuntimeError("Parameters not required or unknown range init type: {}".format(self._init_type))

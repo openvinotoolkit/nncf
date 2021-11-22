@@ -15,7 +15,7 @@ from abc import ABC
 
 
 class TensorStatistic(ABC):
-    pass
+    """Base class that stores statistic data"""
 
 
 class MinMaxTensorStatistic(TensorStatistic):

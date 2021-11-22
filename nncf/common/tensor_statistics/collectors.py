@@ -80,7 +80,7 @@ class StatisticsNotCollectedError(Exception):
 
 
 class OnlineTensorStatisticCollector(TensorStatisticCollectorBase):
-    """Base class for collectors that collect statistics in online regime, without storing the data."""
+    """Base class for collectors that collects statistics in online regime, without storing the data."""
 
 
 class OfflineTensorStatisticCollector(TensorStatisticCollectorBase):
