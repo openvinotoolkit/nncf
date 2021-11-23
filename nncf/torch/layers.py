@@ -245,6 +245,7 @@ NNCF_MODULES_DICT = {
 
 NNCF_MODULES_MAP = {k.__name__: v.__name__ for k, v in NNCF_MODULES_DICT.items()}
 NNCF_MODULES = list(NNCF_MODULES_MAP.keys())
+NNCF_MODULES_OP_NAMES = [k.op_func_name for k in NNCF_MODULES_DICT.keys()]
 
 NNCF_CONV_MODULES_DICT = {
     NNCFConv1d: nn.Conv1d,
