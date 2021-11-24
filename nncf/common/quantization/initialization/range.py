@@ -11,7 +11,7 @@
  limitations under the License.
 """
 
-from typing import List, Dict, Optional, Tuple
+from typing import List, Dict, Optional
 
 from nncf.common.initialization.dataloader import NNCFDataLoader
 from nncf.common.quantization.structs import QuantizerGroup

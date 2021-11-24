@@ -261,21 +261,20 @@ class DataLoaderRangeInitializeRunner(DataLoaderBaseRunner):
             else:
                 mode = QuantizationMode.ASYMMETRIC
 
-
             shape = quantizer_module.scale_shape
             if shape == (1,): # Per-tensor
-                # TODO(negvet): need to know input_shape
-                input_shape = (1, 1, 1, 1)
+                # TODO(negvet): need to know input_shape somehow to reduce
+                input_shape = (1, 1, 1, 1) # just example
                 channel_idx = None
-            elif shape == (1, 1, 1, 1):
+            elif len(shape) > 1 and all([item == 1 for item in shape]):
                 input_shape = shape
-                channel_idx = 0  # doest not matter which dim is channel_idx
+                channel_idx = 0  # (1, 1, 1, 1) - doest not matter which dim is channel_idx
             else:
                 input_shape = shape
                 if not is_weights:
                     channel_idx = 1  # channel dim for activations
                 else:
-                     channel_idx = [i for i, val in enumerate(shape) if val != 1][0]
+                    channel_idx = [i for i, val in enumerate(shape) if val != 1][0]
 
             collector_params = PTRangeInitCollectorParams(is_weights,
                                                           mode,

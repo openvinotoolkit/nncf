@@ -77,7 +77,7 @@ class PTMeanMinMaxStatisticCollector(MeanMinMaxStatisticCollector):
                  output_shape: ReductionShape,
                  num_samples: int = None,
                  window_size: int = None):
-        super(PTMeanMinMaxStatisticCollector, self).__init__(use_per_sample_stats, use_abs_max, reduction_shape,
+        super().__init__(use_per_sample_stats, use_abs_max, reduction_shape,
                                                              num_samples, window_size)
         self._output_shape = output_shape
 

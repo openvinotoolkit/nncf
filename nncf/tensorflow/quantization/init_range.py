@@ -86,7 +86,8 @@ class TFRangeInitParams(RangeInitParams):
 
 
 class TFRangeInitCollectorParams(RangeInitCollectorParams):
-    def __init__(self, is_weights: bool, mode: QuantizationMode, per_channel, init_type, collectors_with_per_sample_stat_collection):
+    def __init__(self, is_weights: bool, mode: QuantizationMode, per_channel,
+                 init_type, collectors_with_per_sample_stat_collection):
         super().__init__(is_weights, mode, per_channel, init_type)
         self._collectors_with_per_sample_stat_collection = collectors_with_per_sample_stat_collection
 
@@ -212,14 +213,20 @@ class RangeInitializer:
         for layer, collector in layer_statistics:
             target_stat = collector.get_statistics()
             minmax_stats = tf_convert_stat_to_min_max_tensor_stat(target_stat)
-            layer.apply_range_initialization(minmax_stats.min_values, minmax_stats.max_values)
+            layer.apply_range_initialization(tf.squeeze(minmax_stats.min_values), tf.squeeze(minmax_stats.max_values))
             layer.enabled = True
 
         for layer, op_name, op, collector in op_statistics:
             weights = layer.get_operation_weights(op_name)
             target_stat = collector.get_statistics()
             minmax_stats = tf_convert_stat_to_min_max_tensor_stat(target_stat)
-            op.apply_range_initialization(weights, minmax_stats.min_values, minmax_stats.max_values)
+            min_values = minmax_stats.min_values
+            if len(min_values.shape) != 1:
+                min_values = tf.squeeze(min_values)
+            max_values = minmax_stats.max_values
+            if len(max_values.shape) != 1:
+                max_values = tf.squeeze(max_values)
+            op.apply_range_initialization(weights, min_values, max_values)
             op.enabled = True
 
         for handle in handles:

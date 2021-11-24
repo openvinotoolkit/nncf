@@ -59,8 +59,8 @@ class TFMedianMADStatisticCollector(MedianMADStatisticCollector):
     def _get_statistics(self) -> TFMedianMADTensorStatistic:
         self._reduction_shape = convert_rs_to_pt_type(self._samples[0].shape, self._reduction_shape)
         numpy_median, numpy_mad = self._prepare_statistics()
-        median_tensor = tf.squeeze(tf.convert_to_tensor(np.array(numpy_median), dtype=tf.float32))
-        mad_tensor = tf.squeeze(tf.convert_to_tensor(np.array(numpy_mad), dtype=tf.float32))
+        median_tensor = tf.convert_to_tensor(np.array(numpy_median), dtype=tf.float32)
+        mad_tensor = tf.convert_to_tensor(np.array(numpy_mad), dtype=tf.float32)
         return TFMedianMADTensorStatistic(median_tensor, mad_tensor)
 
 
@@ -72,7 +72,7 @@ class TFPercentileStatisticCollector(PercentileStatisticCollector):
         self._reduction_shape = convert_rs_to_pt_type(self._samples[0].shape, self._reduction_shape)
         percentile_vs_values_dict = self._prepare_statistics()
         for key, val in percentile_vs_values_dict.items():
-            percentile_vs_values_dict[key] = tf.squeeze(tf.convert_to_tensor(val, dtype=tf.float32))
+            percentile_vs_values_dict[key] = tf.convert_to_tensor(val, dtype=tf.float32)
         return TFPercentileTensorStatistic(percentile_vs_values_dict)
 
 
@@ -81,7 +81,7 @@ class TFMeanPercentileStatisticCollector(MeanPercentileStatisticCollector):
         x_np = x.numpy()
         for pct, values in self._all_pct_values.items():
             np_vals = np_percentile_reduce_like(x_np, convert_rs_to_pt_type(x_np.shape, self._reduction_shape), pct)
-            tf_vals = tf.squeeze(tf.convert_to_tensor(np_vals, dtype=tf.float32))
+            tf_vals = tf.convert_to_tensor(np_vals, dtype=tf.float32)
             values.append(tf_vals)
 
     def _get_statistics(self) -> TFPercentileTensorStatistic:

@@ -49,12 +49,12 @@ class TestCollectedStatistics:
                                  (
                                          TFMinMaxStatisticCollector,
                                          {
-                                             ((1,), (0, 1)): TFMinMaxTensorStatistic(min_values=tf.constant(-4.0),
+                                             (0, 1): TFMinMaxTensorStatistic(min_values=tf.constant(-4.0),
                                                                                      max_values=tf.constant(6.1)),
-                                             ((3, 1), (1,)): TFMinMaxTensorStatistic(
+                                             (1,): TFMinMaxTensorStatistic(
                                                  min_values=tf.constant([1.0,-4.0, 4.0]),
                                                  max_values=tf.constant([4.5, 4.0, 6.1])),
-                                             ((1, 3), (0,)): TFMinMaxTensorStatistic(
+                                             (0,): TFMinMaxTensorStatistic(
                                                  min_values=tf.constant([[-1.3, -4.0, -3.5]]),
                                                  max_values=tf.constant([[4.5, 5.8, 6.1]])),
                                              # Not supported for now:
@@ -75,12 +75,12 @@ class TestCollectedStatistics:
                                  (
                                          partial(TFMeanMinMaxStatisticCollector, use_per_sample_stats=False),
                                          {
-                                             ((1,), (0, 1)): TFMinMaxTensorStatistic(min_values=tf.constant(-3.5),
+                                             (0, 1): TFMinMaxTensorStatistic(min_values=tf.constant(-3.5),
                                                                                      max_values=tf.constant(6.05)),
-                                             ((3, 1), (1,)): TFMinMaxTensorStatistic(
+                                             (1,): TFMinMaxTensorStatistic(
                                                  min_values=tf.constant([1.8, -3.5, 4.15]),
                                                  max_values=tf.constant([3.75, 3.5, 6.05])),
-                                             ((1, 3), (0,)): TFMinMaxTensorStatistic(
+                                             (0,): TFMinMaxTensorStatistic(
                                                  min_values=tf.constant([[-1.15, -3, -3.25]]),
                                                  max_values=tf.constant([[4.25, 5.4, 6.05]])),
                                          }
@@ -91,12 +91,12 @@ class TestCollectedStatistics:
                                                  use_means_of_mins=False,
                                                  use_means_of_maxs=True),
                                          {
-                                             ((1,), (0, 1)): TFMinMaxTensorStatistic(min_values=tf.constant(-4.0),
+                                             (0, 1): TFMinMaxTensorStatistic(min_values=tf.constant(-4.0),
                                                                                      max_values=tf.constant(6.05)),
-                                             ((3, 1), (1,)): TFMinMaxTensorStatistic(
+                                             (1,): TFMinMaxTensorStatistic(
                                                  min_values=tf.constant([1.0, -4.0, 4.0]),
                                                  max_values=tf.constant([3.75, 3.5, 6.05])),
-                                             ((1, 3), (0,)): TFMinMaxTensorStatistic(
+                                             (0,): TFMinMaxTensorStatistic(
                                                  min_values=tf.constant([[-1.3, -4.0, -3.5]]),
                                                  max_values=tf.constant([[4.25, 5.4, 6.05]])),
                                          }
@@ -105,15 +105,13 @@ class TestCollectedStatistics:
     def test_collected_statistics_with_shape_convert(self, collector: Type[TensorStatisticCollectorBase],
                                                      reduction_shapes_vs_ref_statistic:
                                                      Dict[Tuple[ReductionShape, ReductionShape], TensorStatistic]):
-        for shapes in reduction_shapes_vs_ref_statistic.keys():
-            output_shape, reduction_shape = shapes
+        for reduction_shape in reduction_shapes_vs_ref_statistic.keys():
             collector_obj = collector(use_abs_max=True,
                                       reduction_shape=reduction_shape)
             for input_ in TestCollectedStatistics.REF_INPUTS:
                 collector_obj.register_input(input_)
             test_stats = collector_obj.get_statistics()
-            assert reduction_shapes_vs_ref_statistic[shapes] == test_stats
-
+            assert reduction_shapes_vs_ref_statistic[reduction_shape] == test_stats
 
     @pytest.mark.parametrize(('collector', 'reduction_shapes_vs_ref_statistic'),
                              [
@@ -170,7 +168,7 @@ class TestCollectedStatistics:
                                              (0, 1): TFPercentileTensorStatistic(
                                                  {10.0: tf.constant([-2.9])}),
                                              (1,): TFPercentileTensorStatistic(
-                                                 {10.0: tf.constant([2.0100, -3.3500, 4.4000])}),
+                                                 {10.0: tf.constant([[ 2.0100], [-3.3500], [ 4.4000]])}),
                                              (0,): TFPercentileTensorStatistic(
                                                  {10.0: tf.constant([[-0.3900, -1.9400, -1.9300]])}),
                                              # Not supported for now:
@@ -188,13 +186,12 @@ class TestCollectedStatistics:
                              ])
     def test_collected_statistics(self, collector: Type[TensorStatisticCollectorBase],
                                   reduction_shapes_vs_ref_statistic: Dict[ReductionShape, TensorStatistic]):
-        for shapes in reduction_shapes_vs_ref_statistic.keys():
-            reduction_shape = shapes
+        for reduction_shape in reduction_shapes_vs_ref_statistic.keys():
             collector_obj = collector(reduction_shape=reduction_shape)
             for input_ in TestCollectedStatistics.REF_INPUTS:
                 collector_obj.register_input(input_)
             test_stats = collector_obj.get_statistics()
-            assert reduction_shapes_vs_ref_statistic[shapes] == test_stats
+            assert reduction_shapes_vs_ref_statistic[reduction_shape] == test_stats
 
     COLLECTORS = [
         partial(TFMinMaxStatisticCollector,

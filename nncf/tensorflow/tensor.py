@@ -26,11 +26,11 @@ class TFNNCFTensorProcessor(NNCFBaseTensorProcessor):
 
     @classmethod
     def reduce_min(cls, x: NNCFTensor, axis: Union[int, tuple, list]) -> NNCFTensor:
-        return TFNNCFTensor(tf.squeeze(tf.reduce_min(x.tensor, axis=axis)))
+        return TFNNCFTensor(tf.reduce_min(x.tensor, axis=axis))
 
     @classmethod
     def reduce_max(cls, x: NNCFTensor, axis: Union[int, tuple, list]) -> NNCFTensor:
-        return TFNNCFTensor(tf.squeeze(tf.reduce_max(x.tensor, axis=axis)))
+        return TFNNCFTensor(tf.reduce_max(x.tensor, axis=axis))
 
     @classmethod
     def abs(cls, x: NNCFTensor) -> NNCFTensor:

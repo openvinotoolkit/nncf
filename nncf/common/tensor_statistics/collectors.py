@@ -128,9 +128,6 @@ class MinMaxStatisticCollector(OnlineTensorStatisticCollector):
         else:
             self._max_values = self._tensor_processor.max(max_reduced, self._max_values)
 
-    def _get_statistics(self) -> MinMaxTensorStatistic:
-        return MinMaxTensorStatistic(self._min_values.tensor, self._max_values.tensor)
-
     def _reset(self):
         self._min_values = None
         self._max_values = None
@@ -178,9 +175,6 @@ class MinMaxOfflineStatisticCollectorBase(OfflineTensorStatisticCollector):
     @abstractmethod
     def _max_aggregate(self):
         pass
-
-    def _get_statistics(self) -> MinMaxTensorStatistic:
-        return MinMaxTensorStatistic(self._min_aggregate().tensor, self._max_aggregate().tensor)
 
     def _reset(self):
         self._all_min_values.clear()
