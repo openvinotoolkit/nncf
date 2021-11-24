@@ -26,7 +26,6 @@ from nncf.common.quantization.initialization.range import RangeInitParams
 from nncf.common.quantization.initialization.range import RangeInitCollectorParams
 from nncf.common.quantization.quantizer_setup import QuantizationPointBase
 from nncf.common.quantization.quantizer_setup import QuantizerSetupBase
-from nncf.common.tensor_statistics.statistics import convert_stat_to_min_max_tensor_stat
 from nncf.torch.quantization.layers import get_scale_shape
 from nncf.common.quantization.structs import NonWeightQuantizerId
 from nncf.common.quantization.structs import QuantizationMode
@@ -44,11 +43,12 @@ from nncf.torch.quantization.translator import PTTargetPointTranslator
 from nncf.torch.quantization.layers import SymmetricQuantizer
 from nncf.torch.tensor_statistics.algo import TensorStatisticObservationPoint
 from nncf.torch.tensor_statistics.collectors import PTMinMaxStatisticCollector
+from nncf.torch.tensor_statistics.collectors import PTMedianMADStatisticCollector
+from nncf.torch.tensor_statistics.collectors import PTPercentileStatisticCollector
+from nncf.torch.tensor_statistics.collectors import PTMeanPercentileStatisticCollector
 from nncf.torch.tensor_statistics.collectors import PTMixedMinMaxStatisticCollector
 from nncf.torch.tensor_statistics.collectors import PTMeanMinMaxStatisticCollector
-from nncf.torch.tensor_statistics.collectors import MeanPercentileStatisticCollector
-from nncf.torch.tensor_statistics.collectors import MedianMADStatisticCollector
-from nncf.torch.tensor_statistics.collectors import PercentileStatisticCollector
+from nncf.torch.tensor_statistics.statistics import pt_convert_stat_to_min_max_tensor_stat
 
 
 class PTRangeInitParams(RangeInitParams):
@@ -115,7 +115,7 @@ class PTRangeInitCollectorParams(RangeInitCollectorParams):
 
 
 class StatCollectorGenerator:
-    collectors_with_per_sample_stat_collection = ['mixed_min_max']
+    collectors_with_per_sample_stat_collection = ["mixed_min_max"]
 
     @staticmethod
     def generate_collectors_for_range_init_statistics_collection(target_model_graph: PTNNCFGraph,
@@ -178,15 +178,15 @@ class StatCollectorGenerator:
             return PTMeanMinMaxStatisticCollector(collector_params.use_per_sample_stats, collector_params.use_abs_max,
                                                   reduction_shape_converted, reduction_shape, num_samples)
         if init_config.init_type == "threesigma":
-            return MedianMADStatisticCollector(reduction_shape, num_samples)
+            return PTMedianMADStatisticCollector(reduction_shape, num_samples)
         if init_config.init_type == "percentile":
             min_percentile = init_config.init_type_specific_params.get("min_percentile", 0.1)
             max_percentile = init_config.init_type_specific_params.get("max_percentile", 99.9)
-            return PercentileStatisticCollector([min_percentile, max_percentile], reduction_shape, num_samples)
+            return PTPercentileStatisticCollector([min_percentile, max_percentile], reduction_shape, num_samples)
         if init_config.init_type == "mean_percentile":
             min_percentile = init_config.init_type_specific_params.get("min_percentile", 0.1)
             max_percentile = init_config.init_type_specific_params.get("max_percentile", 99.9)
-            return MeanPercentileStatisticCollector([min_percentile, max_percentile], reduction_shape, num_samples)
+            return PTMeanPercentileStatisticCollector([min_percentile, max_percentile], reduction_shape, num_samples)
         raise RuntimeError("Unknown range init type: {}".format(init_config.init_type))
 
     @classmethod
@@ -228,7 +228,7 @@ class DataLoaderRangeInitializeRunner(DataLoaderBaseRunner):
     def __init__(
             self,
             model: NNCFNetwork,
-            modules_to_init_vs_init_configs: Dict[str, Tuple[BaseQuantizer, RangeInitConfig]],
+            modules_to_init_vs_init_configs: Dict[str, Tuple[BaseQuantizer, RangeInitConfig, bool]],
             init_device: str,
             batch_size: int = None
     ):
@@ -241,6 +241,8 @@ class DataLoaderRangeInitializeRunner(DataLoaderBaseRunner):
         self.hook_handles = []
         self.batch_size = batch_size
 
+        self.collectors_with_per_sample_stat_collection = ["mixed_min_max"]
+
     def _get_fwd_hook(self, collector: TensorStatisticCollectorBase) -> Callable:
         def fwd_hook(module, input_, output):
             collector.register_input(input_[0])
@@ -248,23 +250,45 @@ class DataLoaderRangeInitializeRunner(DataLoaderBaseRunner):
 
     def _prepare_initialization(self):
         for name, data in self.modules_to_init.items():
-            quantizer_module, init_config, is_weights = data  # type: Tuple[BaseQuantizer, RangeInitConfig, bool]
+            quantizer_module, init_config, is_weights = data
             num_samples_override = None
             if self.batch_size is not None:
                 num_batches = np.ceil(init_config.num_init_samples / self.batch_size)
                 num_samples_override = num_batches
 
             if isinstance(quantizer_module, SymmetricQuantizer):
-                mode = 'symmetric'
+                mode = QuantizationMode.SYMMETRIC
             else:
-                mode = 'asymmetric'
-            per_channel = quantizer_module.per_channel
-            rs_vs_params = {tuple(quantizer_module.scale_shape): {'mode': mode, 'per_channel': per_channel}}
+                mode = QuantizationMode.ASYMMETRIC
+
+
+            shape = quantizer_module.scale_shape
+            if shape == (1,): # Per-tensor
+                # TODO(negvet): need to know input_shape
+                input_shape = (1, 1, 1, 1)
+                channel_idx = None
+            elif shape == (1, 1, 1, 1):
+                input_shape = shape
+                channel_idx = 0  # doest not matter which dim is channel_idx
+            else:
+                input_shape = shape
+                if not is_weights:
+                    channel_idx = 1  # channel dim for activations
+                else:
+                     channel_idx = [i for i, val in enumerate(shape) if val != 1][0]
+
+            collector_params = PTRangeInitCollectorParams(is_weights,
+                                                          mode,
+                                                          quantizer_module.per_channel,
+                                                          init_config.init_type,
+                                                          input_shape,
+                                                          channel_idx,
+                                                          self.collectors_with_per_sample_stat_collection)
 
             collector = StatCollectorGenerator.generate_stat_collector_for_range_init_config(
                 init_config,
-                is_weights,
-                rs_vs_params,
+                tuple(quantizer_module.scale_shape),
+                collector_params,
                 num_samples_override
             )
 
@@ -279,8 +303,7 @@ class DataLoaderRangeInitializeRunner(DataLoaderBaseRunner):
             handle.remove()
         for scope_str, collector_and_module in self.collectors_and_modules_to_init.items():
             collector, quantizer_module = collector_and_module
-            scale_shape = tuple(quantizer_module.scale_shape)
-            target_stat = collector.get_statistics()[scale_shape]
-            minmax_stats = convert_stat_to_min_max_tensor_stat(target_stat)
+            target_stat = collector.get_statistics()
+            minmax_stats = pt_convert_stat_to_min_max_tensor_stat(target_stat)
             quantizer_module.apply_minmax_init(minmax_stats.min_values, minmax_stats.max_values,
                                                log_module_name=scope_str)

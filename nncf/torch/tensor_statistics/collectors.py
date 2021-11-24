@@ -11,19 +11,18 @@
  limitations under the License.
 """
 
-from collections import deque
-from typing import List, Dict, Deque
-
 import torch
-import numpy as np
 
 from nncf.common.tensor_statistics.collectors import MinMaxStatisticCollector
+from nncf.common.tensor_statistics.collectors import MedianMADStatisticCollector
+from nncf.common.tensor_statistics.collectors import PercentileStatisticCollector
+from nncf.common.tensor_statistics.collectors import MeanPercentileStatisticCollector
 from nncf.common.tensor_statistics.collectors import MixedMinMaxStatisticCollector
 from nncf.common.tensor_statistics.collectors import MeanMinMaxStatisticCollector
-from nncf.common.tensor_statistics.collectors import OfflineTensorStatisticCollector
 from nncf.common.tensor_statistics.collectors import ReductionShape
+from nncf.common.tensor_statistics.reduction import np_percentile_reduce_like
 from nncf.torch.dynamic_graph.context import no_nncf_trace
-from nncf.torch.tensor_statistics.reduction import  get_per_channel_history, expand_like, percentile_reduce_like
+from nncf.torch.tensor_statistics.reduction import  expand_like
 from nncf.torch.tensor_statistics.statistics import PTMinMaxTensorStatistic
 from nncf.torch.tensor_statistics.statistics import PTMedianMADTensorStatistic
 from nncf.torch.tensor_statistics.statistics import PTPercentileTensorStatistic
@@ -92,25 +91,13 @@ class PTMeanMinMaxStatisticCollector(MeanMinMaxStatisticCollector):
         return PTMinMaxTensorStatistic(min_values, max_values)
 
 
-class MedianMADStatisticCollector(OfflineTensorStatisticCollector):
-    """
-    Collector estimates median and median absolute deviation (MAD).
-    """
-
+class PTMedianMADStatisticCollector(MedianMADStatisticCollector):
     def _register_input(self, x: torch.Tensor):
         with no_nncf_trace():
             self._samples.append(x.detach().cpu().numpy())
 
     def _get_statistics(self) -> PTMedianMADTensorStatistic:
-        per_channel_history = get_per_channel_history(self._samples, list(self._reduction_shape),
-                                                      discard_zeros=True)
-        per_channel_median = [np.median(channel_hist) for channel_hist in per_channel_history]
-        per_channel_mad = []
-        for idx, median in enumerate(per_channel_median):
-            per_channel_mad.append(np.median(abs(per_channel_history[idx] - median)))
-
-        numpy_median = np.asarray(per_channel_median)
-        numpy_mad = np.asarray(per_channel_mad)
+        numpy_median, numpy_mad = self._prepare_statistics()
         median_tensor = torch.from_numpy(numpy_median).to(dtype=torch.float)
         mad_tensor = torch.from_numpy(numpy_mad).to(dtype=torch.float)
 
@@ -120,52 +107,26 @@ class MedianMADStatisticCollector(OfflineTensorStatisticCollector):
         return PTMedianMADTensorStatistic(median_tensor, mad_tensor)
 
 
-class PercentileStatisticCollector(OfflineTensorStatisticCollector):
-    """
-    Collector estimates percentile values of all data history.
-    """
-
-    def __init__(self, percentiles_to_collect: List[float], reduction_shape: ReductionShape = None,
-                 num_samples: int = None, window_size: int = None):
-        super().__init__(reduction_shape, num_samples, window_size)
-        self._percentiles_to_collect = percentiles_to_collect  # NB: Percentiles are valued between 0 and 100
-
+class PTPercentileStatisticCollector(PercentileStatisticCollector):
     def _register_input(self, x: torch.Tensor):
         with no_nncf_trace():
             self._samples.append(x.detach().cpu().numpy())
 
     def _get_statistics(self) -> PTPercentileTensorStatistic:
-        per_channel_history = get_per_channel_history(self._samples, list(self._reduction_shape))
-        percentile_vs_values_dict = {}  # type: Dict[float, torch.Tensor]
-        for pc in self._percentiles_to_collect:
-            per_channel_percentiles = [np.percentile(channel_hist, pc) for channel_hist in per_channel_history]
-            numpy_percentiles = np.asarray(per_channel_percentiles)
-            torch_percentiles = torch.from_numpy(numpy_percentiles).to(dtype=torch.float)
-            torch_percentiles = expand_like(torch_percentiles, list(self._reduction_shape))
-            percentile_vs_values_dict[pc] = torch_percentiles
+        percentile_vs_values_dict = self._prepare_statistics()
+        for key, val in percentile_vs_values_dict.items():
+            torch_percentiles = torch.from_numpy(val).to(dtype=torch.float)
+            percentile_vs_values_dict[key] = expand_like(torch_percentiles, list(self._reduction_shape))
         return PTPercentileTensorStatistic(percentile_vs_values_dict)
 
 
-class MeanPercentileStatisticCollector(OfflineTensorStatisticCollector):
-    """
-    Collector estimates percentile values per step and then averages the results.
-    """
-
-    def __init__(self, percentiles_to_collect: List[float], reduction_shape: ReductionShape = None,
-                 num_samples: int = None, window_size: int = None):
-        super().__init__(reduction_shape, num_samples, window_size)
-        self._all_pct_values = {}  # type: Dict[float, Deque]
-        for pc in percentiles_to_collect:
-            self._all_pct_values[pc] = deque(maxlen=window_size)
-
+class PTMeanPercentileStatisticCollector(MeanPercentileStatisticCollector):
     def _register_input(self, x: torch.Tensor):
         with no_nncf_trace():
             for pct, val in self._all_pct_values.items():
-                val.append(percentile_reduce_like(x, list(self._reduction_shape), pct))
-
-    def _reset(self):
-        for _, val in self._all_pct_values.items():
-            val.clear()
+                np_vals = np_percentile_reduce_like(x.cpu().numpy(), self._reduction_shape, pct)
+                torch_vals = torch.from_numpy(np_vals).to(dtype=torch.float)
+                val.append(torch_vals)
 
     def _get_statistics(self) -> PTPercentileTensorStatistic:
         mean_percentile_values = {}

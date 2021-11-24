@@ -28,20 +28,20 @@ from nncf.common.tensor_statistics.collectors import ReductionShape
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
 from nncf.common.utils.progress_bar import ProgressBar
 from nncf.common.utils.helpers import should_consider_scope
-from nncf.common.tensor_statistics.statistics import convert_stat_to_min_max_tensor_stat
 from nncf.tensorflow.layers.custom_objects import NNCF_QUANTIZATION_OPERATIONS
 from nncf.tensorflow.layers.wrapper import NNCFWrapper
 from nncf.tensorflow.layers.data_layout import get_channel_axis
 from nncf.tensorflow.layers.operation import InputType
-from nncf.tensorflow.quantization.initializers.utils import get_reduction_shape_activations
-from nncf.tensorflow.quantization.initializers.utils import get_reduction_shape_weights
+from nncf.tensorflow.tensor_statistics.statistics import tf_convert_stat_to_min_max_tensor_stat
+from nncf.tensorflow.tensor_statistics.reduction import get_reduction_shape_activations
+from nncf.tensorflow.tensor_statistics.reduction import get_reduction_shape_weights
 from nncf.tensorflow.quantization.layers import FakeQuantize
-from nncf.tensorflow.quantization.initializers.collectors import TFMinMaxStatisticCollector
-from nncf.tensorflow.quantization.initializers.collectors import TFMixedMinMaxStatisticCollector
-from nncf.tensorflow.quantization.initializers.collectors import TFMeanMinMaxStatisticCollector
-from nncf.tensorflow.quantization.initializers.collectors import MedianMADStatisticCollector
-from nncf.tensorflow.quantization.initializers.collectors import PercentileStatisticCollector
-from nncf.tensorflow.quantization.initializers.collectors import MeanPercentileStatisticCollector
+from nncf.tensorflow.tensor_statistics.collectors import TFMinMaxStatisticCollector
+from nncf.tensorflow.tensor_statistics.collectors import TFMedianMADStatisticCollector
+from nncf.tensorflow.tensor_statistics.collectors import TFPercentileStatisticCollector
+from nncf.tensorflow.tensor_statistics.collectors import TFMeanPercentileStatisticCollector
+from nncf.tensorflow.tensor_statistics.collectors import TFMixedMinMaxStatisticCollector
+from nncf.tensorflow.tensor_statistics.collectors import TFMeanMinMaxStatisticCollector
 
 
 class TFRangeInitParams(RangeInitParams):
@@ -100,7 +100,7 @@ class RangeInitializer:
         self.range_init_params = range_init_params
         self.dataset = range_init_params.init_range_data_loader
         self.num_steps = range_init_params.get_max_num_init_steps()
-        self._collectors_with_per_sample_stat_collection = ['mixed_min_max', 'mean_min_max', 'mean_percentile']
+        self._collectors_with_per_sample_stat_collection = ['mixed_min_max', 'mean_min_max']
 
         self.nncf_quantization_operation_classes = NNCF_QUANTIZATION_OPERATIONS.registry_dict.values()
 
@@ -128,20 +128,20 @@ class RangeInitializer:
                                                   collector_params.use_abs_max,
                                                   reduction_shape, num_samples)
         if range_type == 'threesigma':
-            return MedianMADStatisticCollector(reduction_shape,
-                                               num_samples)
+            return TFMedianMADStatisticCollector(reduction_shape,
+                                                 num_samples)
         if range_type == 'percentile':
             min_percentile = init_config.init_type_specific_params.get('min_percentile', 0.1)
             max_percentile = init_config.init_type_specific_params.get('max_percentile', 99.9)
-            return PercentileStatisticCollector(reduction_shape,
-                                                [min_percentile, max_percentile],
-                                                num_samples)
+            return TFPercentileStatisticCollector([min_percentile, max_percentile],
+                                                  reduction_shape,
+                                                  num_samples)
         if range_type == 'mean_percentile':
             min_percentile = init_config.init_type_specific_params.get('min_percentile', 0.1)
             max_percentile = init_config.init_type_specific_params.get('max_percentile', 99.9)
-            return MeanPercentileStatisticCollector(reduction_shape,
-                                                    [min_percentile, max_percentile],
-                                                    num_samples)
+            return TFMeanPercentileStatisticCollector([min_percentile, max_percentile],
+                                                      reduction_shape,
+                                                      num_samples)
         raise ValueError(f'Range type {range_type} is not supported.')
 
     def _register_layer_statistics(self, layer: tf.keras.layers.Layer, layer_statistics: list, handles: list):
@@ -211,14 +211,14 @@ class RangeInitializer:
 
         for layer, collector in layer_statistics:
             target_stat = collector.get_statistics()
-            minmax_stats = convert_stat_to_min_max_tensor_stat(target_stat)
+            minmax_stats = tf_convert_stat_to_min_max_tensor_stat(target_stat)
             layer.apply_range_initialization(minmax_stats.min_values, minmax_stats.max_values)
             layer.enabled = True
 
         for layer, op_name, op, collector in op_statistics:
             weights = layer.get_operation_weights(op_name)
             target_stat = collector.get_statistics()
-            minmax_stats = convert_stat_to_min_max_tensor_stat(target_stat)
+            minmax_stats = tf_convert_stat_to_min_max_tensor_stat(target_stat)
             op.apply_range_initialization(weights, minmax_stats.min_values, minmax_stats.max_values)
             op.enabled = True
 

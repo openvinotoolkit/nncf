@@ -14,10 +14,15 @@
 from abc import ABC
 from abc import abstractmethod
 from collections import deque
-from typing import Tuple
+from typing import Tuple, TypeVar, List
+
+import numpy as np
 
 from nncf.common.tensor import NNCFTensor
+from nncf.common.tensor_statistics.reduction import get_per_channel_history
 from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
+
+TensorType = TypeVar('TensorType')
 
 ReductionShape = Tuple[int]
 
@@ -31,19 +36,19 @@ class TensorStatisticCollectorBase(ABC):
         self._collected_samples = 0
         self._num_samples = num_samples
 
-    def register_input(self, x):
+    def register_input(self, x: TensorType) -> TensorType:
         """Registers input tensor"""
         if not self._enabled or \
                 self._num_samples is not None and self._collected_samples >= self._num_samples:
             return x
         if self._reduction_shape is None:
-            self._reduction_shape = {tuple(x.shape)}
+            self._reduction_shape = tuple(range(len(x.shape)))
         self._register_input(x)
         self._collected_samples += 1
         return x
 
     @abstractmethod
-    def _register_input(self, x):
+    def _register_input(self, x: TensorType):
         pass
 
     def get_statistics(self):
@@ -224,3 +229,63 @@ class MeanMinMaxStatisticCollector(MinMaxOfflineStatisticCollectorBase):
     def _max_aggregate(self):
         stacked_max = self._tensor_processor.stack(self._all_max_values)
         return self._tensor_processor.mean(stacked_max, axis=0)
+
+
+class MedianMADStatisticCollector(OfflineTensorStatisticCollector):
+    """
+    Collector estimates median and median absolute deviation (MAD).
+    """
+
+    def _prepare_statistics(self):
+        per_channel_history = get_per_channel_history(self._samples, list(self._reduction_shape),
+                                                      discard_zeros=True)
+        per_channel_median = [np.median(channel_hist) for channel_hist in per_channel_history]
+        per_channel_mad = []
+        for idx, median in enumerate(per_channel_median):
+            per_channel_mad.append(np.median(abs(per_channel_history[idx] - median)))
+        numpy_median = np.asarray(per_channel_median)
+        numpy_mad = np.asarray(per_channel_mad)
+        return numpy_median, numpy_mad
+
+
+class PercentileStatisticCollector(OfflineTensorStatisticCollector):
+    """
+    Collector estimates percentile values of all data history.
+    """
+
+    def __init__(self,
+                 percentiles_to_collect: List[float],
+                 reduction_shape: ReductionShape = None,
+                 num_samples: int = None,
+                 window_size: int = None):
+        super().__init__(reduction_shape, num_samples, window_size)
+        self._percentiles_to_collect = percentiles_to_collect
+
+    def _prepare_statistics(self):
+        per_channel_history = get_per_channel_history(self._samples, list(self._reduction_shape))
+        percentile_vs_values_dict = {}
+        for pc in self._percentiles_to_collect:
+            per_channel_percentiles = [np.percentile(channel_hist, pc) for channel_hist in per_channel_history]
+            numpy_percentiles = np.asarray(per_channel_percentiles)
+            percentile_vs_values_dict[pc] = numpy_percentiles
+        return percentile_vs_values_dict
+
+
+class MeanPercentileStatisticCollector(OfflineTensorStatisticCollector):
+    """
+    Collector estimates percentile values per step and then averages the results.
+    """
+
+    def __init__(self,
+                 percentiles_to_collect: List[float],
+                 reduction_shape: ReductionShape = None,
+                 num_samples: int = None,
+                 window_size: int = None):
+        super().__init__(reduction_shape, num_samples, window_size)
+        self._all_pct_values = {}
+        for pc in percentiles_to_collect:
+            self._all_pct_values[pc] = deque(maxlen=window_size)
+
+    def _reset(self):
+        for _, val in self._all_pct_values.items():
+            val.clear()

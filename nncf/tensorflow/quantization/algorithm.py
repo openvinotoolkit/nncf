@@ -74,8 +74,8 @@ from nncf.tensorflow.layers.custom_objects import NNCF_QUANTIZATION_OPERATIONS
 from nncf.tensorflow.loss import TFZeroCompressionLoss
 from nncf.tensorflow.quantization.collectors import TFQuantizationStatisticsCollector
 from nncf.tensorflow.quantization.default_quantization import DEFAULT_TF_QUANT_TRAIT_TO_OP_DICT
-from nncf.tensorflow.quantization.initializers.init_range import RangeInitializer
-from nncf.tensorflow.quantization.initializers.init_range import TFRangeInitParams
+from nncf.tensorflow.quantization.init_range import RangeInitializer
+from nncf.tensorflow.quantization.init_range import TFRangeInitParams
 from nncf.tensorflow.quantization.layers import FakeQuantize
 from nncf.tensorflow.quantization.quantizers import Quantizer
 from nncf.tensorflow.quantization.quantizers import TFQuantizerSpec

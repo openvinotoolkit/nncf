@@ -10,28 +10,13 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-from typing import Union
+
+from typing import Union, Tuple
 
 import tensorflow as tf
-import numpy as np
 
 from nncf.tensorflow.layers.data_layout import get_weight_shape
 from nncf.common.tensor_statistics.collectors import ReductionShape
-
-
-def discard_zeros(x: np.ndarray) -> np.ndarray:
-    x = x[x != 0]
-    if x.shape == (0,):
-        x = np.array([0])
-    return x
-
-
-def get_per_channel_history(inputs_tensor: np.ndarray, axis: list) -> np.ndarray:
-    new_shape = 1
-    inputs_tensor_shape = inputs_tensor.shape
-    for dim in axis:
-        new_shape *= inputs_tensor_shape[dim]
-    return np.transpose(np.reshape(inputs_tensor, (new_shape, -1)))
 
 
 def get_axes(ndims: int, per_channel: bool, channel_axes: Union[int, list, tuple]) -> list:
@@ -62,3 +47,16 @@ def get_reduction_shape_weights(layer: tf.keras.layers.Layer,
     channel_axes_ = channel_axes if isinstance(channel_axes, (list, tuple)) else [channel_axes]
     reduction_shape = get_axes(ndims, per_channel, channel_axes_)
     return tuple(reduction_shape)
+
+
+def convert_rs_to_pt_type(input_shape: Tuple[int], reduction_shape: ReductionShape) -> ReductionShape:
+    if len(reduction_shape) == len(input_shape):
+        pt_reduction_shape = [1]
+    else:
+        pt_reduction_shape = []
+        for dim_idx, dim in enumerate(input_shape):
+            if dim_idx in reduction_shape:
+                pt_reduction_shape.append(1)
+            else:
+                pt_reduction_shape.append(dim)
+    return tuple(pt_reduction_shape)
