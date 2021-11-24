@@ -246,8 +246,7 @@ class AdaptiveCompressionTrainingLoop(TrainingLoop):
                                                self.runner.cumulative_epoch_count)
         self.runner.load_best_checkpoint(model)
         compressed_model_accuracy = self.runner.validate(model)
-        possible_checkpoint_compression_rates = [comp_rate for (comp_rate, acc_budget)
-                                                 in self.runner._compressed_training_history if acc_budget >= 0]
+        possible_checkpoint_compression_rates = self.runner.get_compression_rates_with_positive_acc_budget()
         best_checkpoint_compression_rate = max(possible_checkpoint_compression_rates)
         nncf_logger.info('The final compressed model has {} compression rate with {} accuracy'.format(
             best_checkpoint_compression_rate, compressed_model_accuracy))

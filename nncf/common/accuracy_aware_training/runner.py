@@ -13,6 +13,7 @@
 
 from typing import Callable
 from typing import Dict
+from typing import List
 from typing import TypeVar
 from abc import ABC
 from abc import abstractmethod
@@ -271,3 +272,6 @@ class BaseAdaptiveCompressionLevelTrainingRunner(BaseAccuracyAwareTrainingRunner
         self._best_checkpoints = {}
         self.compression_rate_target = None
         self.was_compression_increased_on_prev_step = None
+
+    def get_compression_rates_with_positive_acc_budget(self) -> List[float]:
+        return [comp_rate for (comp_rate, acc_budget) in self._compressed_training_history if acc_budget >= 0]
