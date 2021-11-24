@@ -118,4 +118,4 @@ As an example of NNCF convolution binarization capabilities, you may use the con
 |ResNet-50|None|ImageNet|76.16|[resnet50_imagenet.json](configs/quantization/resnet50_imagenet.json)|
 |ResNet-50|Filter pruning, 52.5%, geometric median criterion|ImageNet|75.23 (0.93)|[resnet50_imagenet_accuracy_aware.json](configs/pruning/resnet50_imagenet_accuracy_aware.json)|
 |ResNet-18|None|ImageNet|69.8|[resnet18_imagenet.json](configs/binarization/resnet18_imagenet.json)|
-|ResNet-18|Filter pruning, 50%, geometric median criterion|ImageNet|69.92 (-0.12)|[resnet18_imagenet_accuracy_aware.json](configs/pruning/resnet18_imagenet_accuracy_aware.json)|
+|ResNet-18|Filter pruning, 60%, geometric median criterion|ImageNet|69.2 (-0.6)|[resnet18_imagenet_accuracy_aware.json](configs/pruning/resnet18_imagenet_accuracy_aware.json)|

@@ -142,13 +142,11 @@ class TrainingRunnerCreator(ABC):
 
 class EarlyExitTrainingRunnerCreator(TrainingRunnerCreator):
     def __init__(self, accuracy_aware_training_params, compression_controller,
-                 lr_updates_needed, verbose, validate_every_n_epochs,
-                 dump_checkpoints):
+                 lr_updates_needed, verbose, dump_checkpoints):
         self.accuracy_aware_training_params = accuracy_aware_training_params
         self.compression_controller = compression_controller
         self.lr_updates_needed = lr_updates_needed
         self.verbose = verbose
-        self.validate_every_n_epochs = validate_every_n_epochs
         self.dump_checkpoints = dump_checkpoints
 
     def create_training_loop(self) -> TrainingRunner:
@@ -161,28 +159,24 @@ class EarlyExitTrainingRunnerCreator(TrainingRunnerCreator):
         if nncf_backend is BackendType.TORCH:
             from nncf.torch.accuracy_aware_training.runner import PTAccuracyAwareTrainingRunner
             return PTAccuracyAwareTrainingRunner(self.accuracy_aware_training_params, self.lr_updates_needed,
-                                                 self.verbose, self.validate_every_n_epochs,
-                                                 self.dump_checkpoints)
+                                                 self.verbose, self.dump_checkpoints)
         if nncf_backend == BackendType.TENSORFLOW:
             from nncf.tensorflow.accuracy_aware_training.runner import TFAccuracyAwareTrainingRunner
             return TFAccuracyAwareTrainingRunner(self.accuracy_aware_training_params,
-                                                 self.verbose, self.validate_every_n_epochs,
-                                                 self.dump_checkpoints)
+                                                 self.verbose, self.dump_checkpoints)
         raise RuntimeError('Got an unsupported value of nncf_backend')
 
 
 class AdaptiveCompressionLevelTrainingRunnerCreator(TrainingRunnerCreator):
     def __init__(self, accuracy_aware_training_params, compression_controller,
                  lr_updates_needed, verbose, minimal_compression_rate,
-                 maximal_compression_rate, validate_every_n_epochs,
-                 dump_checkpoints):
+                 maximal_compression_rate, dump_checkpoints):
         self.accuracy_aware_training_params = accuracy_aware_training_params
         self.compression_controller = compression_controller
         self.lr_updates_needed = lr_updates_needed
         self.verbose = verbose
         self.minimal_compression_rate = minimal_compression_rate
         self.maximal_compression_rate = maximal_compression_rate
-        self.validate_every_n_epochs = validate_every_n_epochs
         self.dump_checkpoints = dump_checkpoints
 
     def create_training_loop(self) -> TrainingRunner:
@@ -199,7 +193,6 @@ class AdaptiveCompressionLevelTrainingRunnerCreator(TrainingRunnerCreator):
                                                             self.lr_updates_needed, self.verbose,
                                                             self.minimal_compression_rate,
                                                             self.maximal_compression_rate,
-                                                            self.validate_every_n_epochs,
                                                             self.dump_checkpoints)
         if nncf_backend == BackendType.TENSORFLOW:
             from nncf.tensorflow.accuracy_aware_training.runner import TFAdaptiveCompressionLevelTrainingRunner
@@ -207,7 +200,6 @@ class AdaptiveCompressionLevelTrainingRunnerCreator(TrainingRunnerCreator):
                                                             self.verbose,
                                                             self.minimal_compression_rate,
                                                             self.maximal_compression_rate,
-                                                            self.validate_every_n_epochs,
                                                             self.dump_checkpoints)
         raise RuntimeError('Got an unsupported value of nncf_backend')
 
@@ -219,13 +211,13 @@ class BaseAccuracyAwareTrainingRunner(TrainingRunner):
     """
 
     def __init__(self, accuracy_aware_params: Dict[str, object], verbose=True,
-                 validate_every_n_epochs=None, dump_checkpoints=True):
+                 dump_checkpoints=True):
         self.maximal_relative_accuracy_drop = accuracy_aware_params.get('maximal_relative_accuracy_degradation', 1.0)
         self.maximal_absolute_accuracy_drop = accuracy_aware_params.get('maximal_absolute_accuracy_degradation')
         self.maximal_total_epochs = accuracy_aware_params.get('maximal_total_epochs', 10000)
+        self.validate_every_n_epochs = accuracy_aware_params.get('validate_every_n_epochs', 1)
 
         self.verbose = verbose
-        self.validate_every_n_epochs = validate_every_n_epochs
         self.dump_checkpoints = dump_checkpoints
 
         self.accuracy_budget = None
@@ -264,13 +256,13 @@ class BaseAdaptiveCompressionLevelTrainingRunner(BaseAccuracyAwareTrainingRunner
 
     def __init__(self, accuracy_aware_params: Dict[str, object], verbose=True,
                  minimal_compression_rate=0.05, maximal_compression_rate=0.95,
-                 validate_every_n_epochs=None, dump_checkpoints=True):
-        super().__init__(accuracy_aware_params, verbose, validate_every_n_epochs, dump_checkpoints)
+                 dump_checkpoints=True):
+        super().__init__(accuracy_aware_params, verbose, dump_checkpoints)
 
         self.compression_rate_step = accuracy_aware_params.get('initial_compression_rate_step', 0.1)
         self.step_reduction_factor = accuracy_aware_params.get('compression_rate_step_reduction_factor', 0.5)
         self.minimal_compression_rate_step = accuracy_aware_params.get('minimal_compression_rate_step', 0.025)
-        self.patience_epochs = accuracy_aware_params.get('patience_epochs', 10)
+        self.patience_epochs = accuracy_aware_params.get('patience_epochs')
         self.initial_training_phase_epochs = accuracy_aware_params.get('initial_training_phase_epochs')
 
         self.minimal_compression_rate = minimal_compression_rate

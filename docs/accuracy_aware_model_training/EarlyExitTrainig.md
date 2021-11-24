@@ -7,7 +7,9 @@ Note: since the EarlyExit training does not control any compression parameter th
 
 This training loop supports any combination of NNCF compression algorithms.
 
-There are only two parameters of Early-Exit training loop: `maximal_relative_accuracy_degradation` or `maximal_absolute_accuracy_degradation` - relative/absolute accuracy drop in percentage/in original metric with original, uncompressed model less than that is user tolerant. And `maximal_total_epochs` - number of training epochs, if the fine-tuning epoch reaches this number, the loop finishes the fine-tuning and return the model with the least accuracy drop
+There are only two main parameters of Early-Exit training loop: `maximal_relative_accuracy_degradation` or `maximal_absolute_accuracy_degradation` - relative/absolute accuracy drop in percentage/in original metric with original, uncompressed model less than that is user tolerant. And `maximal_total_epochs` - number of training epochs, if the fine-tuning epoch reaches this number, the loop finishes the fine-tuning and return the model with the least accuracy drop.
+Also, the user could specify `validate_every_n_epochs` - the parameter specifies across which number of epochs `Runner` should validate the compressed mode.
+
 
 There is an example of config file needed to be provided to create_accuracy_aware_training_loop (see [the usage documentation](../Usage.md#accuracy-aware-model-training) for more details).
 

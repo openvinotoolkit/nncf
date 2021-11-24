@@ -51,11 +51,8 @@ class PTAccuracyAwareTrainingRunner(BaseAccuracyAwareTrainingRunner):
 
     def __init__(self, accuracy_aware_training_params,
                  lr_updates_needed=True, verbose=True,
-                 validate_every_n_epochs=None,
                  dump_checkpoints=True):
-        super().__init__(accuracy_aware_training_params, verbose,
-                         validate_every_n_epochs,
-                         dump_checkpoints)
+        super().__init__(accuracy_aware_training_params, verbose, dump_checkpoints)
 
         self._base_lr_reduction_factor_during_search = 0.5
         self.lr_updates_needed = lr_updates_needed
@@ -200,19 +197,16 @@ class PTAdaptiveCompressionLevelTrainingRunner(PTAccuracyAwareTrainingRunner,
                  lr_updates_needed=True, verbose=True,
                  minimal_compression_rate=0.05,
                  maximal_compression_rate=0.95,
-                 validate_every_n_epochs=None,
                  dump_checkpoints=True):
 
         PTAccuracyAwareTrainingRunner.__init__(self, accuracy_aware_training_params,
                                                lr_updates_needed, verbose,
-                                               validate_every_n_epochs,
                                                dump_checkpoints)
 
         BaseAdaptiveCompressionLevelTrainingRunner.__init__(self, accuracy_aware_training_params,
                                                             verbose,
                                                             minimal_compression_rate=minimal_compression_rate,
                                                             maximal_compression_rate=maximal_compression_rate,
-                                                            validate_every_n_epochs=validate_every_n_epochs,
                                                             dump_checkpoints=dump_checkpoints)
 
     def update_training_history(self, compression_rate, best_metric_value):
@@ -248,7 +242,7 @@ class PTAdaptiveCompressionLevelTrainingRunner(PTAccuracyAwareTrainingRunner,
             nncf_logger.warning('Could not produce a compressed model satisfying the set accuracy '
                                 'degradation criterion during training. Increasing the number of training '
                                 'epochs')
-        best_checkpoint_compression_rate = max(possible_checkpoint_rates)
+        best_checkpoint_compression_rate = sorted(possible_checkpoint_rates)[-1]
         resuming_checkpoint_path = self._best_checkpoints[best_checkpoint_compression_rate]
         nncf_logger.info('Loading the best checkpoint found during training '
                          '{}...'.format(resuming_checkpoint_path))

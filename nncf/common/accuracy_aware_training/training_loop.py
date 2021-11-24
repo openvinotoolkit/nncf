@@ -80,13 +80,11 @@ class EarlyExitCompressionTrainingLoop(TrainingLoop):
                  nncf_config: NNCFConfig,
                  compression_controller: CompressionAlgorithmController,
                  lr_updates_needed=True, verbose=True,
-                 validate_every_n_epochs=None,
                  dump_checkpoints=True):
         accuracy_aware_training_params = extract_accuracy_aware_training_params(nncf_config)
         self.runner = self._create_runner(EarlyExitTrainingRunnerCreator(accuracy_aware_training_params,
                                                                          compression_controller,
                                                                          lr_updates_needed, verbose,
-                                                                         validate_every_n_epochs,
                                                                          dump_checkpoints))
         self.compression_controller = compression_controller
 
@@ -150,7 +148,6 @@ class AdaptiveCompressionTrainingLoop(TrainingLoop):
                  lr_updates_needed=True, verbose=True,
                  minimal_compression_rate=0.05,
                  maximal_compression_rate=0.95,
-                 validate_every_n_epochs=None,
                  dump_checkpoints=True):
         accuracy_aware_training_params = extract_accuracy_aware_training_params(nncf_config)
         self.adaptive_controller = self._get_adaptive_compression_ctrl(compression_controller)
@@ -160,7 +157,6 @@ class AdaptiveCompressionTrainingLoop(TrainingLoop):
                                                           lr_updates_needed, verbose,
                                                           minimal_compression_rate,
                                                           maximal_compression_rate,
-                                                          validate_every_n_epochs,
                                                           dump_checkpoints))
 
         if self.adaptive_controller is None:
@@ -208,7 +204,6 @@ class AdaptiveCompressionTrainingLoop(TrainingLoop):
         self.runner.update_training_history(compression_rate=self.adaptive_controller.compression_rate,
                                             best_metric_value=self.runner.best_val_metric_value)
 
-        self.runner.validate_every_n_epochs = 1
         while self.runner.compression_rate_step >= self.runner.minimal_compression_rate_step and \
                 self.runner.cumulative_epoch_count < self.runner.maximal_total_epochs:
 
@@ -250,6 +245,10 @@ class AdaptiveCompressionTrainingLoop(TrainingLoop):
             self.runner.add_tensorboard_scalar('val/accuracy_aware/accuracy_bugdet', self.runner.accuracy_bugdet,
                                                self.runner.cumulative_epoch_count)
         self.runner.load_best_checkpoint(model)
+        compressed_model_accuracy = self.runner.validate(model)
+        best_checkpoint_compression_rate = max(self.runner.possible_checkpoint_rates)
+        nncf_logger.info('The final compressed model has {} compression rate with {} accuracy'.format(
+            best_checkpoint_compression_rate, compressed_model_accuracy))
         return model
 
     @staticmethod

@@ -271,7 +271,7 @@ def test_early_exit_with_mock_validation(max_accuracy_degradation, exit_epoch_nu
                 "mode": "early_exit",
                 "params": {
                     "maximal_relative_accuracy_degradation": 1,
-                    "maximal_total_epochs": 1
+                    "maximal_total_epochs": 1,
                 }
             },
             "compression": [
@@ -288,7 +288,9 @@ def test_early_exit_with_mock_validation(max_accuracy_degradation, exit_epoch_nu
                 "mode": "adaptive_compression_level",
                 "params": {
                     "maximal_relative_accuracy_degradation": 1,
-                    "maximal_total_epochs": 1
+                    "initial_training_phase_epochs": 1,
+                    "maximal_total_epochs": 1,
+                    "patience_epochs": 10
                 }
             },
             "compression": [

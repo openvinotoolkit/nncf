@@ -358,67 +358,95 @@ QUANTIZATION_INITIALIZER_SCHEMA = {
     "additionalProperties": False,
 }
 
-maximal_relative_accuracy_degradation = {
-    "maximal_relative_accuracy_degradation": with_attributes(_NUMBER,
-                                                             description="Maximally allowed accuracy degradation"
-                                                                         " of the model in percent relative to"
-                                                                         " the original model accuracy.")
-}
-maximal_absolute_accuracy_degradation = {
-    "maximal_absolute_accuracy_degradation": with_attributes(_NUMBER,
-                                                             description="Maximally allowed accuracy degradation"
-                                                                         " of the model in absolute metric values of"
-                                                                         " the original model.")
-}
-
-ADAPTIVE_COMPRESSION_LEVEL_TRAINING = {
+ADAPTIVE_COMPRESSION_LEVEL_TRAINING_MODE_NAME_IN_CONFIG = "adaptive_compression_level"
+ADAPTIVE_COMPRESSION_LEVEL_TRAINING_SCHEMA = {
+    "type": "object",
     "properties": {
-        "mode": "adaptive_compression_level",
+        "mode": {"const": ADAPTIVE_COMPRESSION_LEVEL_TRAINING_MODE_NAME_IN_CONFIG},
         "params": {
-            "initial_training_phase_epochs": with_attributes(_NUMBER,
-                                                             description="Number of epochs to fine-tune during "
-                                                                         "the initial training phase of the "
-                                                                         "adaptive compression training loop."),
-            "initial_compression_rate_step": with_attributes(_NUMBER,
-                                                             description="Initial value for the compression rate "
-                                                                         "increase/decrease training phase of the "
-                                                                         "compression training loop."),
-            "compression_rate_step_reduction_factor": with_attributes(_NUMBER,
-                                                                      description="Factor used to reduce "
-                                                                                  "the compression rate "
-                                                                                  "change step in "
-                                                                                  "the adaptive compression "
-                                                                                  "training loop."),
-            "minimal_compression_rate_step": with_attributes(_NUMBER,
-                                                             description="The minimal compression rate change "
-                                                                         "step value after which the training "
-                                                                         "loop is terminated."),
-            "patience_epochs": with_attributes(_NUMBER,
-                                               description="The number of epochs to fine-tune the model"
-                                                           " for a given compression rate after the initial"
-                                                           " training phase of the training loop."),
-            "oneof": [
-                maximal_relative_accuracy_degradation, maximal_absolute_accuracy_degradation
-            ],
-        }
+            "type": "object",
+            "properties": {
+                "maximal_relative_accuracy_degradation": with_attributes(_NUMBER,
+                                                                         description="Maximally allowed accuracy degradation"
+                                                                                     " of the model in percent relative to"
+                                                                                     " the original model accuracy."),
+                "maximal_absolute_accuracy_degradation": with_attributes(_NUMBER,
+                                                                         description="Maximally allowed accuracy degradation"
+                                                                                     " of the model in absolute metric values of"
+                                                                                     " the original model."),
+                "initial_training_phase_epochs": with_attributes(_NUMBER,
+                                                                 description="Number of epochs to fine-tune during "
+                                                                             "the initial training phase of the "
+                                                                             "adaptive compression training loop."),
+                "initial_compression_rate_step": with_attributes(_NUMBER,
+                                                                 description="Initial value for the compression rate "
+                                                                             "increase/decrease training phase of the "
+                                                                             "compression training loop."),
+                "compression_rate_step_reduction_factor": with_attributes(_NUMBER,
+                                                                          description="Factor used to reduce "
+                                                                                      "the compression rate "
+                                                                                      "change step in "
+                                                                                      "the adaptive compression "
+                                                                                      "training loop."),
+                "minimal_compression_rate_step": with_attributes(_NUMBER,
+                                                                 description="The minimal compression rate change "
+                                                                             "step value after which the training "
+                                                                             "loop is terminated."),
+                "patience_epochs": with_attributes(_NUMBER,
+                                                   description="The number of epochs to fine-tune the model"
+                                                               " for a given compression rate after the initial"
+                                                               " training phase of the training loop."),
+
+                "maximal_total_epochs": with_attributes(_NUMBER,
+                                                        description="The maximal total fine-tuning epoch count. "
+                                                                    "If the epoch counter reaches this number, "
+                                                                    "the fine-tuning process will stop and the model with"
+                                                                    "the largest compression rate will be returned."),
+                "validate_every_n_epochs": with_attributes(_NUMBER,
+                                                           description="Specifies across which number of epochs Runner"
+                                                                       " should validate the compressed mode."),
+            },
+            "oneOf": [{"type": "object", "required": ["maximal_relative_accuracy_degradation"]},
+                      {"type": "object", "required": ["maximal_absolute_accuracy_degradation"]}],
+            "required": ["initial_training_phase_epochs", "patience_epochs"],
+            "additionalProperties": False
+        },
+
     },
     "required": ["mode", "params"],
     "additionalProperties": False
 }
 
-EARLY_EXIT_TRAINING = {
+EARLY_EXIT_TRAINING_MODE_NAME_IN_CONFIG = "early_exit"
+EARLY_EXIT_TRAINING_SCHEMA = {
+    "type": "object",
     "properties": {
-        "mode": "early_exit",
+        "mode": {"const": EARLY_EXIT_TRAINING_MODE_NAME_IN_CONFIG},
         "params": {
-            "oneof": [
-                maximal_relative_accuracy_degradation, maximal_absolute_accuracy_degradation
-            ],
-            "maximal_total_epochs": with_attributes(_NUMBER,
-                                                    description="The maximal total fine-tuning epoch count. "
-                                                                "If the accuracy criteria wouldn't reach during "
-                                                                "fine-tuning the most accurate model "
-                                                                "will be returned."),
-        }
+            "type": "object",
+            "properties": {
+                "maximal_relative_accuracy_degradation": with_attributes(_NUMBER,
+                                                                         description="Maximally allowed accuracy degradation"
+                                                                                     " of the model in percent relative to"
+                                                                                     " the original model accuracy."),
+                "maximal_absolute_accuracy_degradation": with_attributes(_NUMBER,
+                                                                         description="Maximally allowed accuracy degradation"
+                                                                                     " of the model in absolute metric values of"
+                                                                                     " the original model."),
+                "maximal_total_epochs": with_attributes(_NUMBER,
+                                                        description="The maximal total fine-tuning epoch count. "
+                                                                    "If the accuracy criteria wouldn't reach during "
+                                                                    "fine-tuning the most accurate model "
+                                                                    "will be returned."),
+                "validate_every_n_epochs": with_attributes(_NUMBER,
+                                                           description="Specifies across which number of epochs Runner"
+                                                                       " should validate the compressed mode."),
+            },
+            "oneOf": [{"type": "object", "required": ["maximal_relative_accuracy_degradation"]},
+                      {"type": "object", "required": ["maximal_absolute_accuracy_degradation"]}],
+            "required": ["maximal_total_epochs"],
+            "additionalProperties": False
+        },
     },
     "required": ["mode", "params"],
     "additionalProperties": False
@@ -426,8 +454,8 @@ EARLY_EXIT_TRAINING = {
 
 ACCURACY_AWARE_TRAINING_SCHEMA = {
     "type": "object",
-    "oneof": [EARLY_EXIT_TRAINING,
-              ADAPTIVE_COMPRESSION_LEVEL_TRAINING],
+    "oneOf": [EARLY_EXIT_TRAINING_SCHEMA,
+              ADAPTIVE_COMPRESSION_LEVEL_TRAINING_SCHEMA],
 }
 
 COMMON_COMPRESSION_ALGORITHM_PROPERTIES = {
@@ -833,6 +861,11 @@ REF_VS_ALGO_SCHEMA = {BINARIZATION_ALGO_NAME_IN_CONFIG: BINARIZATION_SCHEMA,
                       FILTER_PRUNING_ALGO_NAME_IN_CONFIG: FILTER_PRUNING_SCHEMA,
                       KNOWLEDGE_DISTILLATION_ALGO_NAME_IN_CONFIG: KNOWLEDGE_DISTILLATION_SCHEMA}
 
+ACCURACY_AWARE_MODES_VS_SCHEMA = {
+    ADAPTIVE_COMPRESSION_LEVEL_TRAINING_MODE_NAME_IN_CONFIG: ADAPTIVE_COMPRESSION_LEVEL_TRAINING_SCHEMA,
+    EARLY_EXIT_TRAINING_MODE_NAME_IN_CONFIG: EARLY_EXIT_TRAINING_SCHEMA
+}
+
 TARGET_DEVICE_SCHEMA = {
     "type": "string",
     "enum": ["ANY", "CPU", "GPU", "VPU", "TRIAL"]
@@ -896,3 +929,19 @@ def validate_single_compression_algo_schema(single_compression_algo_dict: Dict):
     except Exception as e:
         import sys
         raise type(e)("For algorithm: '{}'\n".format(algo_name) + str(e)).with_traceback(sys.exc_info()[2])
+
+
+def validate_accuracy_aware_training_schema(single_compression_algo_dict: Dict):
+    """
+    Checks accuracy_aware_training section.
+    """
+    jsonschema.validate(single_compression_algo_dict, schema=ACCURACY_AWARE_TRAINING_SCHEMA)
+    accuracy_aware_mode = single_compression_algo_dict.get('mode')
+    if accuracy_aware_mode not in ACCURACY_AWARE_MODES_VS_SCHEMA:
+        raise jsonschema.ValidationError(
+            "Incorrect Accuracy Aware mode - must be one of ({})".format(
+                ", ".join(ACCURACY_AWARE_MODES_VS_SCHEMA.keys())))
+    try:
+        jsonschema.validate(single_compression_algo_dict, schema=ACCURACY_AWARE_MODES_VS_SCHEMA[accuracy_aware_mode])
+    except Exception as e:
+        raise e
