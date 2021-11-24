@@ -1,6 +1,7 @@
 from copy import deepcopy
 from functools import cmp_to_key
 from itertools import combinations
+from itertools import groupby
 
 import networkx as nx
 from nncf.common.graph.graph import NNCFGraph, LayerName
@@ -13,6 +14,7 @@ from nncf.common.graph.definitions import MODEL_OUTPUT_OP_NAME
 from nncf.torch.dynamic_graph.operation_address import OperationAddress
 from nncf.torch.layers import NNCF_MODULES_MAP, NNCF_MODULES_OP_NAMES
 
+IGNORED_NAME_OPERATORS = [DropoutMetatype.name, MODEL_OUTPUT_OP_NAME]
 
 class SearchGraphNode:
     """
@@ -117,7 +119,6 @@ class SearchGraph():
     def set_node_attr(self, node_key, name_attr, value_attr):
         self._nx_graph.nodes[node_key][name_attr] = value_attr
 
-IGNORED_NAME_OPERATORS = [DropoutMetatype.name, MODEL_OUTPUT_OP_NAME]
 
 def prepare_search_graph(original_graph: NNCFGraph) -> SearchGraph:
     nx_merged_graph = get_orig_graph_with_orig_pattern(original_graph._nx_graph)
@@ -131,9 +132,9 @@ def add_node(d, shape, node):
     else:
         d[str(shape)] = [node]
 
-def insert_dummy_node(nx_graph, node_key):
+def insert_dummy_node(nx_graph, node_key: str):
     next_nodes = deepcopy(nx_graph._succ[node_key])
-    dummy_node_attr = {SearchGraph.IS_DUMMY_NODE_ATTR: True, 'has_dummy': False}
+    dummy_node_attr = {SearchGraph.IS_DUMMY_NODE_ATTR: True}
     node_key_attr = deepcopy(nx_graph._node[node_key])
     dummy_node_key = node_key + ' dummy'
     node_key_attr.update(dummy_node_attr)
@@ -158,7 +159,7 @@ def get_orig_graph_with_orig_pattern(orig_graph):
     nx.set_node_attributes(merged_graph, False, SearchGraph.IS_MERGED_NODE_ATTR)
     nx.set_node_attributes(merged_graph, None, SearchGraph.ACTIVATION_INPUT_SHAPE_ATTR)
     nx.set_node_attributes(merged_graph, None, SearchGraph.ACTIVATION_OUTPUT_SHAPE_ATTR)
-    nx.set_node_attributes(merged_graph, False, 'has_dummy')
+    #nx.set_node_attributes(merged_graph, False, 'has_dummy')
     for match in matches:
         if len(match) == 1:
             continue
@@ -189,7 +190,7 @@ def get_orig_graph_with_orig_pattern(orig_graph):
             SearchGraph.IS_MERGED_NODE_ATTR: True,
             SearchGraph.TYPE_NODE_ATTR: type_list,
             SearchGraph.MERGED_NODES_NODE_ATTR: merged_nodes,
-            'has_dummy': False
+            #'has_dummy': False
         }
         merged_graph.add_node(merged_node_key, **merged_node_attrs)
         for in_edge_key, in_edge_attrs in in_edge_copies_dict.items():
@@ -201,7 +202,7 @@ def get_orig_graph_with_orig_pattern(orig_graph):
     for node_key in old_merged_graph_nodes:
         next_nodes = merged_graph._succ[node_key]
         if len(list(next_nodes)) > 1:
-            merged_graph.nodes[node_key]['has_dummy'] = True
+            #merged_graph.nodes[node_key]['has_dummy'] = True
             insert_dummy_node(merged_graph, node_key)
 
     return merged_graph
@@ -217,7 +218,9 @@ def add_node_to_aux_struct(node_key, shape, shape_map):
 def comparator(u, v):
     return u.main_id - v.main_id
 
-def traverse_subgraph(graph: SearchGraph, start_node: SearchGraphNode, end_node: SearchGraphNode):
+def rule_after_removing_block_graph_has_no_hanging_edges(graph: SearchGraph,
+                                                         start_node: SearchGraphNode,
+                                                         end_node: SearchGraphNode):
     from collections import deque
     q = deque([start_node])
     addit_nodes = set()
@@ -252,40 +255,6 @@ def traverse_subgraph(graph: SearchGraph, start_node: SearchGraphNode, end_node:
                 return False
         nodes.append(end_node)
         return True
-
-def traverse_subgraph_last(graph: SearchGraph, start_node: SearchGraphNode, end_node: SearchGraphNode):
-    from collections import deque
-    q = deque([start_node])
-    addit_nodes = set()
-    nodes = []
-    current_node = start_node
-    potential_end_nodes = []
-    while len(q) != 0:
-        current_node = q.pop()
-        if current_node.node_key != start_node.node_key:
-            prev_nodes = graph.get_prev_nodes(current_node.node_key)
-            if len(prev_nodes) > 1:
-                for pn in prev_nodes:
-                    addit_nodes.add(pn)
-        if current_node.node_key == end_node.node_key:
-            continue
-        if current_node.main_id > end_node.main_id:
-            return False
-        nodes.append(current_node)
-        next_nodes = graph.get_next_nodes(current_node.node_key)
-        if len(next_nodes) == 0:
-            potential_end_nodes.append(current_node)
-        for next_node in next_nodes:
-            q.appendleft(next_node)
-    if len(q) > 0 or len(potential_end_nodes) > 0:
-        return False
-    else:
-        for node in addit_nodes:
-            if node not in nodes:
-                return False
-        nodes.append(end_node)
-        return True
-
 
 def rule__not_lead_to_double_edge(sgraph: SearchGraph, start_node: SearchGraphNode, end_node: SearchGraphNode):
     if start_node.is_dummy:
@@ -349,14 +318,12 @@ def search_lin_combination(block, blocks):
                 return True
     return False
 
-def remove_lin_combination(sorted_building_blocks):
+def remove_linear_combination(sorted_building_blocks):
     good_blocks = []
     start_to_idx = {}
     last_node = None
     for i, block in enumerate(sorted_building_blocks):
         start_node, end_node = block
-        #if end_node.main_id - start_node.main_id > 23:
-        #    continue
         if last_node == end_node:
             if start_node.main_id in start_to_idx:
                 if not search_lin_combination(block, good_blocks[start_to_idx[start_node.main_id]:]):
@@ -375,7 +342,6 @@ def match_blocks_to_full_node_names(building_blocks, orig_graph):
     building_block_in_orig_format = []
     for block in building_blocks:
         start_node, end_node = block
-        #if start_node.is_merged:
         id_st = start_node.bottom_id # dummy node
         id_end = end_node.bottom_id
         block_in_orig_format = [orig_graph.get_node_key_by_id(id_st).split(' ')[-1],
@@ -388,27 +354,25 @@ def get_building_blocks(compressed_model, max_block_size=50, allow_nested_blocks
     orig_graph = compressed_model.get_original_graph() # PTNNCFGraph
     sgraph = prepare_search_graph(orig_graph)
 
-    act_input_shape = {} # key - str(shape), value - set of node_key
-    act_output_shape = {} # key - str(shape), value - set of node_keysss
+    act_input_shape = {} # key - str(shape), value - set of node_keys
+    act_output_shape = {} # key - str(shape), value - set of node_keys
+    fn_rules = [rule__not_lead_to_double_edge,
+                rule__not_lead_to_duplication_of_activation,
+                rule_after_removing_block_graph_has_no_hanging_edges]
 
     blocks = []
     for node in sgraph.get_all_nodes():
         next_edges = sgraph.get_next_edges(node.node_key)
         prev_edges = sgraph.get_prev_edges(node.node_key)
-
         for _, edge_attr in next_edges.items():
             sgraph.set_node_attr(node.node_key, 'activation_output_shape', edge_attr['activation_shape'])
             break
-        add_node_to_aux_struct(node, edge_attr['activation_shape'], act_output_shape)
+        if not node.is_dummy:
+            add_node_to_aux_struct(node, edge_attr['activation_shape'], act_output_shape)
         for _, edge_attr in prev_edges.items():
             sgraph.set_node_attr(node.node_key, 'activation_input_shape', edge_attr['activation_shape'])
             break
-        if node.node_key == '40 conv2d  41 relu_   dummy':
-            st = 1
-        #if not node.data['has_dummy'] or node.is_dummy:
         add_node_to_aux_struct(node, edge_attr['activation_shape'], act_input_shape)
-        #else:
-        #    st = 1
 
     for shape, start_nodes in act_input_shape.items():
         for start_node in start_nodes:
@@ -416,42 +380,34 @@ def get_building_blocks(compressed_model, max_block_size=50, allow_nested_blocks
                 continue
             pred_start_node = sgraph.get_prev_nodes(start_node.node_key)
             if len(pred_start_node) != 1:
-                # in this node several diff. edges enter
                 continue
             for end_node in act_output_shape[shape]:
                 if end_node.main_id - start_node.main_id > max_block_size:
                     continue
                 if end_node.node_type in IGNORED_NAME_OPERATORS:
                     continue
-                if end_node.node_key == start_node.node_key:
-                    continue
-                if end_node.is_dummy:
-                    continue
-                if end_node.node_key in start_node.node_key:
-                    continue
-                if end_node.main_id < start_node.main_id:
+                if end_node.main_id <= start_node.main_id:
                     continue
                 is_one_edge = (end_node.main_id - start_node.bottom_id) == 1 
 
                 # CHECK RULES
-                status_0 = rule__not_lead_to_double_edge(sgraph, start_node, end_node)
-                status_1 = rule__not_lead_to_duplication_of_activation(sgraph, start_node, end_node)
-                if status_0 and status_1 and not is_one_edge:
-                    status_2 = traverse_subgraph(sgraph, start_node, end_node)
-                    if status_2:
-                        blocks.append((start_node, end_node))
+                all_rules_is_true = True
+                for rule_fn in fn_rules:
+                    if not rule_fn(sgraph, start_node, end_node):
+                        all_rules_is_true = False
+                        break
+                if all_rules_is_true and not is_one_edge:
+                    blocks.append((start_node, end_node))
 
     sorted_blocks = sorted(blocks, key=cmp_to_key(comparator_for_block))
-    sorted_blocks = remove_lin_combination(sorted_blocks)
+    sorted_blocks = remove_linear_combination(sorted_blocks)
     if not allow_nested_blocks:
         sorted_blocks = remove_nested_blocks(sorted_blocks)
     blocks_in_orig_format = match_blocks_to_full_node_names(sorted_blocks, orig_graph)
 
-    get_all_modules_per_blocks(compressed_model, blocks_in_orig_format)
     return blocks_in_orig_format
 
 
-from itertools import groupby
 def remove_nested_blocks(sorted_blocks):
     return [list(group_block)[-1] for _, group_block in groupby(sorted_blocks, lambda block: block[0].main_id)]
 
@@ -471,7 +427,6 @@ def get_group_of_dependent_blocks(blocks):
     groups[idx].append(len(blocks) - 1)
 
     return groups
-
 
 def get_all_node_op_addresses_in_block(compressed_model, blocks):
     graph = compressed_model.get_original_graph()

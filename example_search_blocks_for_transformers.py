@@ -59,6 +59,7 @@ nncf_config.update({
         }
         ],
     })
+
 compression_algo_controller, compressed_model = create_compressed_model(model, nncf_config)
 #print(model)
 #print(compressed_model)
