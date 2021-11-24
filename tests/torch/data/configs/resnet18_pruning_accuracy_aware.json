@@ -29,6 +29,7 @@
     "accuracy_aware_training": {
         "mode": "adaptive_compression_level",
         "params": {
+            "maximal_absolute_accuracy_degradation": 1,
             "initial_training_phase_epochs": 0,
             "patience_epochs": 1
         }

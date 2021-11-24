@@ -367,12 +367,14 @@ ADAPTIVE_COMPRESSION_LEVEL_TRAINING_SCHEMA = {
             "type": "object",
             "properties": {
                 "maximal_relative_accuracy_degradation": with_attributes(_NUMBER,
-                                                                         description="Maximally allowed accuracy degradation"
-                                                                                     " of the model in percent relative to"
+                                                                         description="Maximally allowed accuracy "
+                                                                                     "degradation of the model in "
+                                                                                     "percent relative to"
                                                                                      " the original model accuracy."),
                 "maximal_absolute_accuracy_degradation": with_attributes(_NUMBER,
-                                                                         description="Maximally allowed accuracy degradation"
-                                                                                     " of the model in absolute metric values of"
+                                                                         description="Maximally allowed accuracy"
+                                                                                     " degradation of the model in "
+                                                                                     "absolute metric values of"
                                                                                      " the original model."),
                 "initial_training_phase_epochs": with_attributes(_NUMBER,
                                                                  description="Number of epochs to fine-tune during "
@@ -400,8 +402,9 @@ ADAPTIVE_COMPRESSION_LEVEL_TRAINING_SCHEMA = {
                 "maximal_total_epochs": with_attributes(_NUMBER,
                                                         description="The maximal total fine-tuning epoch count. "
                                                                     "If the epoch counter reaches this number, "
-                                                                    "the fine-tuning process will stop and the model with"
-                                                                    "the largest compression rate will be returned."),
+                                                                    "the fine-tuning process will stop and the model "
+                                                                    "with the largest compression rate"
+                                                                    " will be returned."),
                 "validate_every_n_epochs": with_attributes(_NUMBER,
                                                            description="Specifies across which number of epochs Runner"
                                                                        " should validate the compressed mode."),
@@ -426,12 +429,14 @@ EARLY_EXIT_TRAINING_SCHEMA = {
             "type": "object",
             "properties": {
                 "maximal_relative_accuracy_degradation": with_attributes(_NUMBER,
-                                                                         description="Maximally allowed accuracy degradation"
-                                                                                     " of the model in percent relative to"
+                                                                         description="Maximally allowed accuracy "
+                                                                                     "degradation of the model in "
+                                                                                     "percent relative to"
                                                                                      " the original model accuracy."),
                 "maximal_absolute_accuracy_degradation": with_attributes(_NUMBER,
-                                                                         description="Maximally allowed accuracy degradation"
-                                                                                     " of the model in absolute metric values of"
+                                                                         description="Maximally allowed accuracy "
+                                                                                     "degradation of the model in "
+                                                                                     "absolute metric values of"
                                                                                      " the original model."),
                 "maximal_total_epochs": with_attributes(_NUMBER,
                                                         description="The maximal total fine-tuning epoch count. "
