@@ -140,7 +140,7 @@ class PTAccuracyAwareTrainingRunner(BaseAccuracyAwareTrainingRunner):
             copyfile(checkpoint_path, best_path)
 
     def dump_checkpoint(self, model, compression_controller):
-        if self._dump_checkpoint_fn is not None:
+        if self._dump_checkpoint_fn is not None and is_main_process():
             self._dump_checkpoint_fn(model, compression_controller, self, self._log_dir)
         else:
             checkpoint = {
