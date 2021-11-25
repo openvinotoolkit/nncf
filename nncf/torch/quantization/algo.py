@@ -335,7 +335,9 @@ class PropagationBasedQuantizerSetupGenerator(QuantizerSetupGeneratorBase):
         if self._debug_interface:
             self._debug_interface.visualize_insertion_point_graph(insertion_point_graph)
         from nncf.common.quantization.quantizer_propagation.solver import QuantizerPropagationSolver
-        ignored_scopes_for_solver = (lambda x: [x] if isinstance(x, str) else x)(self.ignored_scopes) + (lambda x: [x] if isinstance(x, str) else x)(self._ignored_scopes_per_group[QuantizerGroup.ACTIVATIONS])
+        ignored_scopes_for_solver = (lambda x: [x] if isinstance(x, str) else x)(self.ignored_scopes) + \
+                                    (lambda x: [x] if isinstance(x, str) else x)(self._ignored_scopes_per_group[
+                                                                                     QuantizerGroup.ACTIVATIONS])
         prop_graph_solver = QuantizerPropagationSolver(ignored_scopes=ignored_scopes_for_solver,
                                                        target_scopes=self.target_scopes,
                                                        hw_config=self.hw_config,

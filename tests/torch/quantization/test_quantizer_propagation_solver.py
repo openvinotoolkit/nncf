@@ -235,6 +235,7 @@ class RunOnIpGraphTestStruct:
 
 
 class TestQuantizerPropagationSolver:
+    #pylint:disable=too-many-public-methods
     def test_quantization_traits_are_unambiguous_for_op_names(self):
         op_name_to_trait_dict = {}  # type: Dict[str, QuantizationTrait]
         for trait, arches in DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT.items():
@@ -1853,6 +1854,6 @@ class TestQuantizerPropagationSolver:
         config["compression"].update(update_config_info)
         train_loader = create_random_mock_dataloader(config, num_samples=10)
         config = register_default_init_args(config, train_loader)
-        ctrl, compressed_model = create_compressed_model(model, config)
-        assert compare_two_lists_permutation_invariant([item.target_node_name for item in ctrl.all_quantizations.keys()],
-                                                       all_quantization_names)
+        ctrl, _ = create_compressed_model(model, config)
+        assert compare_two_lists_permutation_invariant([item.target_node_name for item in ctrl.all_quantizations.keys()]
+                                                       , all_quantization_names)
