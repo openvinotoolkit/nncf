@@ -150,7 +150,7 @@ class QuantizerSetupGeneratorBase:
         self._quantize_inputs = self._quantization_config.get('quantize_inputs', True)
         self._quantize_outputs = self._quantization_config.get('quantize_outputs', False)
 
-        self.ignored_scopes = self._quantization_config.get('ignored_scopes')
+        self.ignored_scopes = self._quantization_config.get('ignored_scopes', [])
         self.target_scopes = self._quantization_config.get('target_scopes')
 
         self.global_quantizer_constraints = {}  # type: Dict[QuantizerGroup, QuantizationConstraints]
@@ -183,9 +183,7 @@ class QuantizerSetupGeneratorBase:
                 nncf_logger.warning('Preset quantizer parameters {} explicitly overrided.'.format(overrided_params))
         params_dict.update(params_dict_from_config)
         self.global_quantizer_constraints[quantizer_group] = QuantizationConstraints.from_config_dict(params_dict)
-        # working here for activations
-        print(f'\n\nquantizer_group {quantizer_group} ign scope {params_dict_from_config.get("ignored_scopes")}\n\n')
-        self._ignored_scopes_per_group[quantizer_group] = params_dict_from_config.get('ignored_scopes')
+        self._ignored_scopes_per_group[quantizer_group] = params_dict_from_config.get('ignored_scopes', [])
         self._target_scopes_per_group[quantizer_group] = params_dict_from_config.get('target_scopes')
 
     def _get_default_qconfig(self, constraints: QuantizationConstraints = None):
@@ -202,12 +200,9 @@ class QuantizerSetupGeneratorBase:
                 return True
 
             return False
-        print(f'\n\n_should_consider_scope_for_group\n\n')
         if matches_any(node_name, self.ignored_scopes):
-            print(f'node {node_name} group {group} should not be considered global ign scope')
             return False
         if matches_any(node_name, self._ignored_scopes_per_group[group]):
-            print(f'node {node_name} group {group} should not be considered')
             return False
 
         return True
@@ -339,7 +334,8 @@ class PropagationBasedQuantizerSetupGenerator(QuantizerSetupGeneratorBase):
         if self._debug_interface:
             self._debug_interface.visualize_insertion_point_graph(insertion_point_graph)
         from nncf.common.quantization.quantizer_propagation.solver import QuantizerPropagationSolver
-        prop_graph_solver = QuantizerPropagationSolver(ignored_scopes=self.ignored_scopes,
+        ignored_scopes_for_solver = (lambda x: [x] if isinstance(x, str) else x)(self.ignored_scopes) + (lambda x: [x] if isinstance(x, str) else x)(self._ignored_scopes_per_group[QuantizerGroup.ACTIVATIONS])
+        prop_graph_solver = QuantizerPropagationSolver(ignored_scopes=ignored_scopes_for_solver,
                                                        target_scopes=self.target_scopes,
                                                        hw_config=self.hw_config,
                                                        default_trait_to_metatype_map=DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT,
