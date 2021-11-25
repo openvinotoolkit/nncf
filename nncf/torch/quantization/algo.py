@@ -452,6 +452,9 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
             self._use_logarithm_scale_per_group[quantizer_group] = params_dict.get('logarithm_scale', False)
 
         self._disable_saturation_fix = self._algo_config.get('disable_saturation_fix', False)
+        self._applied_saturation_fix = False
+        self._apply_saturation_fix_only_to_first_layer = self._algo_config.get(
+            'apply_saturation_fix_only_to_first_layer', False)
         self._device_for_callable_obj_creation = 'cpu'
         self._single_config_quantizer_setup = None  # type: Optional[SingleConfigQuantizerSetup]
 
@@ -1032,6 +1035,9 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
                                     'This resolves the saturation issue problem on AVX2 and AVX-512 machines. '
                                     'Please take a look at the documentation for a detailed information.')
                 half_range = True
+                if self._apply_saturation_fix_only_to_first_layer:
+                    half_range = half_range and not self._applied_saturation_fix
+                self._applied_saturation_fix = True
 
         qspec = PTQuantizerSpec.from_config(qconfig,
                                             narrow_range=narrow_range,

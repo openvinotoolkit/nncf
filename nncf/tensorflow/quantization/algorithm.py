@@ -245,6 +245,8 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
         self.quantize_inputs = self._algo_config.get('quantize_inputs', True)
         self.quantize_outputs = self._algo_config.get('quantize_outputs', False)
         self._disable_saturation_fix = self._algo_config.get('disable_saturation_fix', False)
+        self._apply_saturation_fix_only_to_first_layer = self._algo_config.get(
+            'apply_saturation_fix_only_to_first_layer', False)
         self._target_device = config.get('target_device', 'ANY')
         algo_config = self._get_algo_specific_config_section()
         if self._target_device == 'VPU' and 'preset' in algo_config:
@@ -465,10 +467,12 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
                     self._op_names.append(op_name)
 
                     half_range = self._get_half_range(qconfig)
+                    if self._apply_saturation_fix_only_to_first_layer:
+                        half_range = half_range and not applied_saturation_fix
+                    applied_saturation_fix = applied_saturation_fix or half_range
                     quantizer_spec = TFQuantizerSpec.from_config(qconfig,
                                                                  narrow_range=not half_range,
-                                                                 half_range=(half_range and not applied_saturation_fix))
-                    applied_saturation_fix = applied_saturation_fix or half_range
+                                                                 half_range=half_range)
                     target_point = TFLayerWeight(layer_info.layer_name, weight_def.weight_attr_name)
                     qpoint = TFQuantizationPoint(op_name, quantizer_spec, target_point)
             else:
