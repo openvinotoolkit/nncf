@@ -93,6 +93,8 @@ class FilterPruningStatistics(Statistics):
                  current_flops: int,
                  full_params_num: int,
                  current_params_num: int,
+                 full_filters_num: int,
+                 current_filters_num: int,
                  target_pruning_level: float):
         """
         Initializes statistics of the filter pruning algorithm.
@@ -102,6 +104,8 @@ class FilterPruningStatistics(Statistics):
         :param current_flops: Current amount of FLOPS in the model.
         :param full_params_num: The total amount of weights in the model.
         :param current_params_num: Current amount of weights in the model.
+        :param full_filters_num: The total amount of filters in the model.
+        :param current_filters_num: Current amount of filters in the model.
         :param target_pruning_level: A target level of the pruning
             for the algorithm for the current epoch.
         """
@@ -113,7 +117,10 @@ class FilterPruningStatistics(Statistics):
         self.flops_pruning_level = 1 - self.current_flops / self.full_flops
         self.full_params_num = full_params_num
         self.current_params_num = current_params_num
+        self.full_filters_num = full_filters_num
+        self.current_filters_num = current_filters_num
         self.target_pruning_level = target_pruning_level
+        self.whole_model_pruning_level = 1 - self.current_filters_num/self.full_filters_num
 
     def to_str(self) -> str:
         algorithm_string = create_table(
@@ -124,6 +131,8 @@ class FilterPruningStatistics(Statistics):
                                           f' {self.full_flops / self._giga:.3f}'],
                 ['MParams current / full', f'{self.current_params_num / self._mega:.3f} /'
                                            f' {self.full_params_num / self._mega:.3f}'],
+                ['Whole model filter pruning rate', self.whole_model_pruning_level],
+                ['Filters current / full', f'{self.current_filters_num} / {self.full_filters_num}'],
                 ['A target level of the pruning for the algorithm for the current epoch', self.target_pruning_level],
             ]
         )

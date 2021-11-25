@@ -298,6 +298,17 @@ def count_flops_and_weights_per_node(graph: NNCFGraph,
     return flops, weights
 
 
+def count_filters_num(graph: NNCFGraph,
+                      op_metatypes: List[Type[OperatorMetatype]],
+                      output_channels: Dict[NNCFNodeName, int] = None):
+    """Count filters of `op_metatypes` layers taking into account new output channels number."""
+    filters_num = 0
+    output_channels = output_channels or {}
+    for node in graph.get_nodes_by_metatypes(op_metatypes):
+        filters_num += output_channels.get(node.node_name, node.layer_attributes.out_channels)
+    return filters_num
+
+
 def calculate_in_out_channels_in_uniformly_pruned_model(pruning_groups: List[Cluster[PrunedLayerInfoBase]],
                                                         pruning_rate: float,
                                                         full_input_channels: Dict[str, int],
