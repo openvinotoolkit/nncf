@@ -13,7 +13,7 @@
 
 import torch
 
-from typing import List
+from typing import List, Union
 
 from nncf.common.tensor import NNCFTensor
 from nncf.common.tensor import NNCFBaseTensorProcessor
@@ -30,13 +30,23 @@ class PTNNCFTensorProcessor(NNCFBaseTensorProcessor):
         return PTNNCFTensor(ret_tensor)
 
     @classmethod
-    def ones(cls, shape: List[int], device) -> NNCFTensor:
+    def ones(cls, shape: Union[int, List[int]], device: torch.device) -> NNCFTensor:
         return PTNNCFTensor(torch.ones(shape, device=device))
 
     @classmethod
-    def check_all_close(cls, tensors: List[NNCFTensor]) -> None:
+    def assert_allclose(cls, tensors: List[NNCFTensor]) -> None:
         for input_mask in tensors[1:]:
             assert torch.allclose(tensors[0].tensor, input_mask.tensor)
+
+    @classmethod
+    def repeat(cls, tensor: NNCFTensor, repeats: int) -> NNCFTensor:
+        ret_tensor = torch.repeat_interleave(tensor.tensor, repeats)
+        return PTNNCFTensor(ret_tensor)
+
+    @classmethod
+    def elementwise_mask_propagation(cls, input_masks: List[NNCFTensor]) -> NNCFTensor:
+        cls.assert_allclose(input_masks)
+        return input_masks[0]
 
 
 class PTNNCFTensor(NNCFTensor):

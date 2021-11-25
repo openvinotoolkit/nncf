@@ -28,6 +28,7 @@ from nncf.common.graph import NNCFNodeName
 from nncf.common.graph import OperatorMetatype
 from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
 from nncf.common.graph.layer_attributes import MultipleInputLayerAttributes
+from nncf.common.graph.layer_attributes import ReshapeLayerAttributes
 from nncf.common.graph.layer_attributes import Dtype
 from nncf.common.graph.utils import get_concat_axis
 from nncf.common.utils.logger import logger as nncf_logger
@@ -35,6 +36,7 @@ from nncf.tensorflow.graph.metatypes.common import DECONV_LAYER_METATYPES
 from nncf.tensorflow.graph.metatypes.common import DEPTHWISE_CONV_LAYER_METATYPES
 from nncf.tensorflow.graph.metatypes.common import LAYER_METATYPES_AGNOSTIC_TO_DATA_PRECISION_WITH_MULTIPLE_INPUTS
 from nncf.tensorflow.graph.metatypes.common import GENERAL_CONV_LAYER_METATYPES
+from nncf.tensorflow.graph.metatypes.common import RESHAPE_METATYPES
 from nncf.tensorflow.graph.metatypes.matcher import get_keras_layer_metatype
 from nncf.tensorflow.graph.metatypes.matcher import get_op_metatype
 from nncf.common.graph.operator_metatypes import OutputNoopMetatype
@@ -519,6 +521,8 @@ class FunctionalConverter(TFModelConverter):
                 layer_attributes = _get_conv_layer_attributes(self._get_layer(layer_name), is_depthwise=False)
             elif metatype in LAYER_METATYPES_AGNOSTIC_TO_DATA_PRECISION_WITH_MULTIPLE_INPUTS:
                 layer_attributes = _get_multiple_input_layer_attributes(layer)
+            elif metatype in RESHAPE_METATYPES:
+                layer_attributes = _get_reshape_layer_attributes(layer)
             else:
                 layer_attributes = None
             is_shared = len(self._layer_name_to_node_names[layer_name]) > 1
@@ -611,6 +615,8 @@ class SequentialConverter(TFModelConverter):
                 layer_attributes = _get_conv_layer_attributes(self._get_layer(layer_name), is_depthwise=False)
             elif layer_metatype in LAYER_METATYPES_AGNOSTIC_TO_DATA_PRECISION_WITH_MULTIPLE_INPUTS:
                 layer_attributes = _get_multiple_input_layer_attributes(model_layer)
+            elif layer_metatype in RESHAPE_METATYPES:
+                layer_attributes = _get_reshape_layer_attributes(model_layer)
 
             if layer_attributes is not None:
                 attrs.update({NNCFGraph.LAYER_ATTRIBUTES: layer_attributes})
@@ -691,3 +697,11 @@ def _get_conv_layer_attributes(layer: tf.keras.layers.Layer, is_depthwise: bool 
                                       strides,
                                       groups, transpose=transpose,
                                       padding_values=([0, 0, 0, 0]))
+
+
+def _get_reshape_layer_attributes(layer: tf.keras.layers.Layer):
+    input_shape = layer.input_shape
+    output_shape = layer.output_shape
+    if isinstance(output_shape, list):
+        output_shape = output_shape[0]
+    return ReshapeLayerAttributes(input_shape, output_shape)

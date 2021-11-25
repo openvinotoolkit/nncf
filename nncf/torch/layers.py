@@ -230,7 +230,6 @@ class NNCFEmbeddingBag(_NNCFModuleMixin, nn.EmbeddingBag):
         dict_update(nncf_embedding_bag.__dict__, module.__dict__)
         return nncf_embedding_bag
 
-
 NNCF_MODULES_DICT = {
     NNCFConv1d: nn.Conv1d,
     NNCFConv2d: nn.Conv2d,

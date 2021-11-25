@@ -26,10 +26,10 @@ def check_pruning_mask(mask, pruning_rate, layer_name):
 
 @pytest.mark.parametrize(('all_weights', 'prune_batch_norms', 'ref_num_wrapped_layer'),
                          [
-                             [True, True, 6],
-                             [False, True, 6],
-                             [True, False, 4],
-                             [False, False, 4],
+                             [True, True, 5],
+                             [False, True, 5],
+                             [True, False, 3],
+                             [False, False, 3],
                          ])
 def test_masks_in_concat_model(all_weights, prune_batch_norms, ref_num_wrapped_layer):
     config = get_basic_pruning_config(8)

@@ -7,6 +7,7 @@ from functools import partial
 from tests.common.pruning import dummy_types
 from tests.common.pruning.tensor import NPNNCFTensor
 from tests.common.pruning.tensor import NPNNCFTensorProcessor
+from nncf.common.graph.layer_attributes import ReshapeLayerAttributes
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.layer_attributes import Dtype
@@ -17,13 +18,15 @@ from nncf.common.pruning.operations import BasePruningOp
 from nncf.common.pruning.mask_propagation import MaskPropagationAlgorithm
 
 
-@pytest.mark.parametrize('dummy_op_class,accept_pruned_input', [(dummy_types.DummyInputPruningOp, False),
-                                                                (dummy_types.DummyOutputPruningOp, True),
-                                                                (dummy_types.DummyStopMaskForward, False)])
-def test_stop_propagate_ops(dummy_op_class, accept_pruned_input):
-    node = NNCFNode(0, 'dummy_node')
-    assert dummy_op_class.accept_pruned_input(node) == accept_pruned_input
-    dummy_op_class.mask_propagation(node, None)
+@pytest.mark.parametrize('pruning_op,metatype,accept_pruned_input',
+                         [(dummy_types.DummyInputPruningOp, dummy_types.DummyInputMetatype, False),
+                          (dummy_types.DummyOutputPruningOp, dummy_types.DummyOutputMetatype, True),
+                          (dummy_types.DummyStopMaskForwardPruningOp, dummy_types.DummyStopMaskForwardMetatype, False)])
+def test_stop_propagate_ops(pruning_op, metatype, accept_pruned_input):
+    graph = NNCFGraph()
+    node = graph.add_nncf_node('conv_op', metatype.name, metatype)
+    assert pruning_op.accept_pruned_input(node) == accept_pruned_input
+    pruning_op.mask_propagation(node, graph)
     assert node.data['output_mask'] is None
 
 
@@ -34,7 +37,7 @@ def test_identity_mask_propogation_prune_ops(dummy_op_class):
     conv_op = graph.add_nncf_node('conv_op', 'conv', dummy_types.DummyConvMetatype)
     identity_ops = []
     for alias in dummy_op_class.get_all_op_aliases():
-        identity_op = graph.add_nncf_node('identity', alias, dummy_types.DymmyIdentityMaskForwardMetatype)
+        identity_op = graph.add_nncf_node('identity', alias, dummy_types.DummyIdentityMaskForwardMetatype)
         graph.add_edge_between_nncf_nodes(
             from_node_id=conv_op.node_id,
             to_node_id=identity_op.node_id,
@@ -265,3 +268,138 @@ def test_convs_elementwise_source_before_concat(empty_mask_right_branch, empty_m
     else:
         reference_mask = np.ones((10 + right_branch_output_channels,))
         np.testing.assert_equal(concat_node.data['output_mask'].tensor, reference_mask)
+
+
+def test_concat_output_tensor_device():
+    graph = NNCFGraph()
+    dummy_ops = [graph.add_nncf_node(f'dummy_op_{i}', DummyMaskProducerMetatype.name,
+                                     DummyMaskProducerMetatype) for i in range(3)]
+    concat_layer_attributes = MultipleInputLayerAttributes(2)
+    concat_node = graph.add_nncf_node('concat_node', 'concat', dummy_types.DummyConcatMetatype,
+                                      layer_attributes=concat_layer_attributes)
+    for op in dummy_ops:
+        graph.add_edge_between_nncf_nodes(
+            from_node_id=op.node_id,
+            to_node_id=concat_node.node_id,
+            tensor_shape=[10] * 4,
+            input_port_id=0,
+            output_port_id=0,
+            dtype=Dtype.FLOAT)
+
+    # Set mask to last dummy node
+    ref_device = 'some_test_device'
+    for op in dummy_ops[:-1]:
+        op = graph.get_node_by_id(op.node_id)
+        op.data['output_mask'] = None
+
+    last_op = graph.get_node_by_id(dummy_ops[-1].node_id)
+    last_op.data['output_mask'] = NPNNCFTensor(np.ones(10), dummy_device=ref_device)
+    # Propagate masks
+    MaskPropagationAlgorithm(graph, dummy_types.DUMMY_PRUNING_OPERATOR_METATYPES).mask_propagation()
+    # Check concat op has appropriate device
+    concat_node = graph.get_node_by_id(concat_node.node_id)
+    assert concat_node.data['output_mask'].device == ref_device
+
+
+RESHAPE_TEST_CASES = [
+    ['flatten', (1, 1, 64), (1, 64)],
+    ['flatten', (1, 32, 64), (1, 2048)],
+    ['flatten', (1, 32, 64, 1), (1, 2048)],
+    ['reshape', (1, 32, 64), (1, 2048)], # Flatten
+    ['reshape', (1, 64, 32), (1, 2048)], # Flatten
+    ['reshape', (1, 32, 64, 1), (1, 2048)], # Flatten
+    ['reshape', (1, 1, 64), (1, 1, 1, 64)], # Expand
+    ['reshape', (1, 1, 1, 64), (1, 64)],# Squeeze
+    ['reshape', (1, 1, 1, 64), (1, 1, 64, 1)],
+    ['reshape', (1, 1, 32, 64), (1, 64, 32)],
+    ['reshape', (1, 1, 32, 64), (1, 64, 16, 16)],
+]
+
+
+METATYPES_MAP = {
+    'flatten': {'metatype': dummy_types.DummyFlattenMetatype,
+                'ops': dummy_types.DummyFlattenPruningOp},
+    'reshape': {'metatype': dummy_types.DummyReshapeMetatye,
+                'ops': dummy_types.DummyReshapePruningOp}
+}
+
+
+@pytest.mark.parametrize(('node_type', 'input_shape', 'output_shape'),
+                         RESHAPE_TEST_CASES)
+def test_reshape_accept_pruned_input(node_type, input_shape, output_shape):
+    node_name = 'dummy_reshape'
+    layer_attributes = ReshapeLayerAttributes(input_shape, output_shape)
+    graph = NNCFGraph()
+    node = graph.add_nncf_node(node_name, node_type, METATYPES_MAP[node_type]['metatype'],
+                               layer_attributes=layer_attributes)
+
+    actual_accept_pruned_input = METATYPES_MAP[node_type]['ops'].accept_pruned_input(node)
+    assert actual_accept_pruned_input
+
+
+REF_OUTPUT_MASK_RESHAPE = [
+                              [np.ones(10), 'error'],
+                              [np.array([0, 1] * 32), np.reshape(np.array([[0] * 32 + [1] * 32] * 32), -1)],
+                              [np.array([0, 1] * 32), np.reshape(np.array([[0] * 32 + [1] * 32] * 32), -1)]
+                          ] * 2 + [[np.array([0, 1] * 32)] * 2] * 4
+
+
+@pytest.mark.parametrize(('node_type', 'input_shape', 'output_shape', 'output_mask', 'output_mask_ref'),
+                         [x + y for x, y in zip(RESHAPE_TEST_CASES, REF_OUTPUT_MASK_RESHAPE)])
+def test_reshape_metatype_mask_prop(node_type, input_shape, output_shape, output_mask, output_mask_ref):
+    node_name = 'dummy_reshape'
+    layer_attributes = ReshapeLayerAttributes(input_shape, output_shape)
+
+    graph = NNCFGraph()
+    prev_node = graph.add_nncf_node('prev_node', dummy_types.DummyConvMetatype.name, dummy_types.DummyConvMetatype)
+    reshape_node = graph.add_nncf_node(node_name, node_type, METATYPES_MAP[node_type]['metatype'],
+                                       layer_attributes=layer_attributes)
+
+    graph.add_edge_between_nncf_nodes(from_node_id=prev_node.node_id,
+                                      to_node_id=reshape_node.node_id,
+                                      tensor_shape=output_shape,
+                                      input_port_id=0,
+                                      output_port_id=0,
+                                      dtype=Dtype.FLOAT)
+    # Check both None mask and not None mask
+    for output_mask_cur, output_mask_ref_cur in ([(None, None), (output_mask, output_mask_ref)]):
+        # Get reference to graph node
+        prev_node = graph.get_node_by_id(prev_node.node_id)
+        reshape_node = graph.get_node_by_id(reshape_node.node_id)
+        prev_node.data['output_mask'] = NPNNCFTensor(output_mask_cur) if output_mask_cur is not None else None
+        if isinstance(output_mask_ref_cur, str):
+            with pytest.raises(AssertionError):
+                METATYPES_MAP[node_type]['ops'].mask_propagation(reshape_node, graph)
+        else:
+            METATYPES_MAP[node_type]['ops'].mask_propagation(reshape_node, graph)
+            if output_mask_ref_cur is None:
+                assert reshape_node.data['output_mask'] is None
+            else:
+                assert np.all(reshape_node.data['output_mask'].tensor == output_mask_ref_cur)
+
+
+@pytest.mark.parametrize('node_type', ['reshape', 'flatten'])
+def test_reshape_is_last_op(node_type):
+    node_name = 'dummy_reshape'
+    layer_attributes = None
+
+    graph = NNCFGraph()
+    prev_node = graph.add_nncf_node('prev_node', dummy_types.DummyConvMetatype.name, dummy_types.DummyConvMetatype)
+    reshape_node = graph.add_nncf_node(node_name, node_type, METATYPES_MAP[node_type]['metatype'],
+                                       layer_attributes=layer_attributes)
+
+    assert not METATYPES_MAP[node_type]['ops'].accept_pruned_input(reshape_node)
+
+    graph.add_edge_between_nncf_nodes(from_node_id=prev_node.node_id,
+                                      to_node_id=reshape_node.node_id,
+                                      tensor_shape=[1, 32],
+                                      input_port_id=0,
+                                      output_port_id=0,
+                                      dtype=Dtype.FLOAT)
+
+    for output_mask in (None, NPNNCFTensor(np.ones((10,)))):
+        prev_node = graph.get_node_by_id(prev_node.node_id)
+        reshape_node = graph.get_node_by_id(reshape_node.node_id)
+        prev_node.data['output_mask'] = output_mask
+        METATYPES_MAP[node_type]['ops'].mask_propagation(reshape_node, graph)
+        assert reshape_node.data['output_mask'] is None

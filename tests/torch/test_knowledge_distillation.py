@@ -404,9 +404,9 @@ class CustomOutputWeightedModel(torch.nn.Module):
 def test_kd_incompatible_output_shapes_handling(outputs_dim_numbers_list, kd_type, is_zero):
     """
     Checks ignorance behavior (kd loss is zero) for different model output shape sizes
-    :param outputs_dim_numbers_list: a list of dim numbers of model output tensors
-        examples: outputs_dim_numbers_list = [4] -> model outputs should be [*, *, *, *]
-        outputs_dim_numbers_list = [4, 2] -> model outputs should be ([*, *, *, *], [*, *])
+    :param dim_numbers_list: a list of dim numbers of model output tensors
+        examples: dim_numbers_list = [4] -> model outputs should be [*, *, *, *]
+        dim_numbers_list = [4, 2] -> model outputs should be ([*, *, *, *], [*, *])
     :param kd_type: type of knowledge distillation loss
     "param is_zero: if given type of model outputs should be ignored than kd loss value should be zero
     """

@@ -79,6 +79,9 @@ def pytest_addoption(parser):
         "--pip-cache-dir", type=str, default=None,
         help="Path to pip cached downloaded packages directory (speeds up installation tests)"
     )
+    parser.addoption(
+        "--cuda-ip", type=str, default=None, help="IP address of distributed mode synchronization URL for train test"
+    )
 
 
 
@@ -187,3 +190,7 @@ def runs_subprocess_in_precommit():
             torch.cuda.empty_cache()
     except ImportError:
         pass
+
+@pytest.fixture(scope="module")
+def cuda_ip(request):
+    return request.config.getoption("--cuda-ip")

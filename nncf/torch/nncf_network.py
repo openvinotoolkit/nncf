@@ -59,7 +59,7 @@ from nncf.torch.dynamic_graph.transform_graph import replace_modules_by_nncf_mod
 from nncf.torch.graph.graph import PTNNCFGraph
 from nncf.torch.graph.graph_builder import GraphBuilder
 from nncf.torch.graph.graph_builder import GraphConverter
-from nncf.torch.graph.operator_metatypes import SplitMetatype
+from nncf.torch.graph.operator_metatypes import PTSplitMetatype
 from nncf.torch.graph.transformations.commands import PTInsertionCommand
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.graph.transformations.layout import PTTransformationLayout
@@ -548,7 +548,7 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
                                                     input_port_id=port_id)
                 pre_hooks.append(pre_hook_ip)
 
-            if issubclass(node.metatype, SplitMetatype):
+            if issubclass(node.metatype, PTSplitMetatype):
                 # chunk returns a tuple of tensors, which can only be handled in NNCF
                 # once post-hook ports are enabled. Work around it for now by disallowing post-hook
                 # insertion for chunks

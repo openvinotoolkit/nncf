@@ -207,11 +207,61 @@ class ElementwisePruningOp(BasePruningOp):
     @classmethod
     def mask_propagation(cls, node: NNCFNode, graph: NNCFGraph) -> None:
         input_masks = get_input_masks(node, graph)
+        output_mask = input_masks[0]
+        if output_mask is not None:
+            output_mask = output_mask.tensor_processor.elementwise_mask_propagation(input_masks)
 
-        node.data['input_masks'] = input_masks  # type: List[NNCFTensor]
-        if input_masks[0] is not None:
-            input_masks[0].tensor_processor.check_all_close(input_masks)
-        node.data['output_mask'] = input_masks[0]
+        node.data['input_masks'] = input_masks
+        node.data['output_mask'] = output_mask
+
+
+class ReshapePruningOp(BasePruningOp):
+    @staticmethod
+    def _is_flatten(node: NNCFNode) -> bool:
+        return len(node.layer_attributes.output_shape) == 2
+
+    @classmethod
+    def accept_pruned_input(cls, node: NNCFNode) -> bool:
+        if node.layer_attributes is None:
+            return False
+        return True
+
+    @classmethod
+    def mask_propagation(cls, node: NNCFNode, graph: NNCFGraph) -> None:
+        if cls.accept_pruned_input(node):
+            if cls._is_flatten(node):
+                FlattenPruningOp.mask_propagation(node, graph)
+            else:
+                identity_mask_propagation(node, graph)
+        else:
+            node.data['output_mask'] = None
+
+
+class FlattenPruningOp(BasePruningOp):
+    @classmethod
+    def accept_pruned_input(cls, node: NNCFNode) -> bool:
+        if node.layer_attributes is not None:
+            return True
+        return False
+
+    @classmethod
+    def mask_propagation(cls, node: NNCFNode, graph: NNCFGraph) -> bool:
+        output_mask = None
+        input_masks = get_input_masks(node, graph)
+        assert len(input_masks) == 1
+        input_mask = input_masks[0]
+        if input_mask is not None and node.layer_attributes is not None:
+            # We assume all layers known by the mask propagation algo except
+            # StopMaskForwardOp have input/output batch dim == 0.
+            # Besides, since input_mask is not None thus no StopMaskForwardOp operations
+            # was in the path from mask producer node to this node. As all
+            # known nodes have input/output batch dim == 0 previous has too.
+            flatten_channels = node.layer_attributes.output_shape[1]
+            mask_len = input_mask.shape[0]
+            assert flatten_channels % mask_len == 0
+            output_mask = input_mask.tensor_processor.repeat(input_mask, repeats=flatten_channels // mask_len)
+
+        node.data['output_mask'] = output_mask
 
 
 class StopMaskForwardPruningOp(BasePruningOp):
