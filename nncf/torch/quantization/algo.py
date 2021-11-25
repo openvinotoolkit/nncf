@@ -200,6 +200,7 @@ class QuantizerSetupGeneratorBase:
                 return True
 
             return False
+
         if matches_any(node_name, self.ignored_scopes):
             return False
         if matches_any(node_name, self._ignored_scopes_per_group[group]):
