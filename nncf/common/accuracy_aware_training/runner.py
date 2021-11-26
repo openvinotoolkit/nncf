@@ -14,9 +14,12 @@
 from typing import Callable
 from typing import Dict
 from typing import List
+from typing import Optional
+from typing import Union
 from typing import TypeVar
 from abc import ABC
 from abc import abstractmethod
+import pathlib
 from nncf.api.compression import CompressionAlgorithmController
 from nncf.common.utils.backend import infer_backend_from_compression_controller
 from nncf.common.utils.backend import BackendType
@@ -35,7 +38,7 @@ class TrainingRunner(ABC):
     minimal_tolerable_accuracy: float
 
     @abstractmethod
-    def train_epoch(self, model: ModelType, compression_controller: CompressionAlgorithmController):
+    def train_epoch(self, model: ModelType, compression_controller: CompressionAlgorithmController) -> None:
         """
         Calls train_epoch_fn and compression_controller.scheduler.epoch_step()
 
@@ -45,7 +48,7 @@ class TrainingRunner(ABC):
         """
 
     @abstractmethod
-    def validate(self, model: ModelType):
+    def validate(self, model: ModelType) -> float:
         """
         Compute the target metric value on the validation dataset for the supplied model.
 
@@ -54,7 +57,7 @@ class TrainingRunner(ABC):
         """
 
     @abstractmethod
-    def dump_statistics(self, model: ModelType, compression_controller: CompressionAlgorithmController):
+    def dump_statistics(self, model: ModelType, compression_controller: CompressionAlgorithmController) -> None:
         """
         Dumps current statistics from compression_controller and dumps model's checkpoint.
 
@@ -64,7 +67,7 @@ class TrainingRunner(ABC):
         """
 
     @abstractmethod
-    def dump_checkpoint(self, model: ModelType, compression_controller: CompressionAlgorithmController):
+    def dump_checkpoint(self, model: ModelType, compression_controller: CompressionAlgorithmController) -> None:
         """
         Dump current model checkpoint on disk.
 
@@ -74,21 +77,19 @@ class TrainingRunner(ABC):
         """
 
     @abstractmethod
-    def configure_optimizers(self):
+    def configure_optimizers(self) -> None:
         """
         Initialize the training optimizer object (and, optionally, the learning rate scheduler object).
-
-        :return: optimizer instance, learning rate scheduler instance (None if not applicable)
         """
 
     @abstractmethod
-    def reset_training(self):
+    def reset_training(self) -> None:
         """
         Initialize all-training related parameters (e.g. epoch count, optimizer, learning rate scheduler).
         """
 
     @abstractmethod
-    def retrieve_uncompressed_model_accuracy(self, model):
+    def retrieve_uncompressed_model_accuracy(self, model: ModelType) -> None:
         """
         :param model: The model object to retrieve the original accuracy value from.
 
@@ -97,7 +98,7 @@ class TrainingRunner(ABC):
         """
 
     @abstractmethod
-    def calculate_minimal_tolerable_accuracy(self, uncompressed_model_accuracy):
+    def calculate_minimal_tolerable_accuracy(self, uncompressed_model_accuracy: float) -> None:
         """
         :param uncompressed_model_accuracy: The uncompressed model accuracy.
 
@@ -106,8 +107,14 @@ class TrainingRunner(ABC):
         """
 
     @abstractmethod
-    def initialize_training_loop_fns(self, train_epoch_fn, validate_fn, configure_optimizers_fn, dump_checkpoint_fn,
-                                     tensorboard_writer=None, log_dir=None):
+    def initialize_training_loop_fns(self, train_epoch_fn: Callable[[CompressionAlgorithmController, ModelType,
+                                                                     Optional['Optimizer', 'LRSceduler', int]], None],
+                                     validate_fn: Callable[[ModelType, Optional[float]], float],
+                                     configure_optimizers_fn: Callable[[], ('Optimizer', 'LRScheduler')],
+                                     dump_checkpoint_fn: Callable[
+                                         [ModelType, CompressionAlgorithmController, 'TrainingRunner', str], None],
+                                     tensorboard_writer: 'TensorboardWriter' = None,
+                                     log_dir: Union[str, pathlib.Path] = None):
         """
         Register the user-supplied functions to be used to control the training process.
 
@@ -123,7 +130,7 @@ class TrainingRunner(ABC):
         """
 
     @abstractmethod
-    def load_best_checkpoint(self, model):
+    def load_best_checkpoint(self, model: ModelType) -> None:
         """
         Load the most accurate model state from the fine-tuning history.
 
@@ -145,8 +152,10 @@ class EarlyExitTrainingRunnerCreator(TrainingRunnerCreator):
     """
     Class creates an Early Exit Training Runner depending on an used backend.
     """
-    def __init__(self, accuracy_aware_training_params, compression_controller,
-                 lr_updates_needed, verbose, dump_checkpoints):
+
+    def __init__(self, accuracy_aware_training_params: Dict[str, object],
+                 compression_controller: CompressionAlgorithmController,
+                 lr_updates_needed: bool, verbose: bool, dump_checkpoints: bool):
         self.accuracy_aware_training_params = accuracy_aware_training_params
         self.compression_controller = compression_controller
         self.lr_updates_needed = lr_updates_needed
@@ -175,9 +184,11 @@ class AdaptiveCompressionLevelTrainingRunnerCreator(TrainingRunnerCreator):
     """
     Class creates an Adaptive Compression Level Training Runner depending on an used backend.
     """
-    def __init__(self, accuracy_aware_training_params, compression_controller,
-                 lr_updates_needed, verbose, minimal_compression_rate,
-                 maximal_compression_rate, dump_checkpoints):
+
+    def __init__(self, accuracy_aware_training_params: Dict[str, object],
+                 compression_controller: CompressionAlgorithmController,
+                 lr_updates_needed: bool, verbose: bool, minimal_compression_rate: float,
+                 maximal_compression_rate: float, dump_checkpoints: bool):
         self.accuracy_aware_training_params = accuracy_aware_training_params
         self.compression_controller = compression_controller
         self.lr_updates_needed = lr_updates_needed
@@ -236,7 +247,10 @@ class BaseAccuracyAwareTrainingRunner(TrainingRunner):
         self.cumulative_epoch_count = 0
         self.best_val_metric_value = 0
 
-    def initialize_training_loop_fns(self, train_epoch_fn, validate_fn, configure_optimizers_fn,
+    def initialize_training_loop_fns(self, train_epoch_fn: Callable[[CompressionAlgorithmController, ModelType,
+                                                                     Optional['Optimizer', 'LRSceduler', int]], None],
+                                     validate_fn: Callable[[ModelType, Optional[float]], float],
+                                     configure_optimizers_fn: Callable[[], ('Optimizer', 'LRScheduler')],
                                      dump_checkpoint_fn: Callable[
                                          [ModelType, CompressionAlgorithmController, TrainingRunner, str], None],
                                      tensorboard_writer=None, log_dir=None):
@@ -247,7 +261,7 @@ class BaseAccuracyAwareTrainingRunner(TrainingRunner):
         self._tensorboard_writer = tensorboard_writer
         self._log_dir = log_dir
 
-    def calculate_minimal_tolerable_accuracy(self, uncompressed_model_accuracy):
+    def calculate_minimal_tolerable_accuracy(self, uncompressed_model_accuracy: float):
         if self.maximal_absolute_accuracy_drop is not None:
             self.minimal_tolerable_accuracy = uncompressed_model_accuracy - self.maximal_absolute_accuracy_drop
         else:
