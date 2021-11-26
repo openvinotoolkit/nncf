@@ -1,3 +1,4 @@
+import re
 import pandas as pd
 
 
@@ -21,9 +22,16 @@ def parse_pruning_transformation_log(file_path):
                 conv_stat_line.append('-')
             conv_stat.append(conv_stat_line)
 
-    df = pd.DataFrame(conv_stat)
+    df = pd.DataFrame(conv_stat, columns=['conv_name', 'mask'])
     # Here you can do any queries
     pd.set_option('display.max_rows', df.shape[0]+1)
+    def to_digits(x):
+        num = re.findall(r'\d+', x)
+        if not num:
+            return 0
+        return int(num[0])
+    pruned_channels_sum = df['mask'].apply(to_digits).sum()
+    print(f'Total pruned channels: {pruned_channels_sum}')
     print(df)
 
 

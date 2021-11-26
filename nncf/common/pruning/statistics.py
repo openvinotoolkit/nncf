@@ -134,10 +134,12 @@ class FilterPruningStatistics(Statistics):
                 ['FLOPS pruning level', self.flops_pruning_level],
                 ['GFLOPS current / full', f'{self.current_flops / self._giga:.3f} /'
                                           f' {self.full_flops / self._giga:.3f}'],
-                ['MParams current / full', f'{self.current_params_num / self._mega:.3f} /'
-                                           f' {self.full_params_num / self._mega:.3f}'],
+                ['MParams current / full', f'{self.current_params_num} /'
+                                           f' {self.full_params_num}'
+                                           f' ({self.current_params_num - self.full_params_num})'],
                 ['Whole model filter pruning rate', self.whole_model_pruning_level],
-                ['Filters current / full', f'{self.current_filters_num} / {self.full_filters_num}'],
+                ['Filters current / full', f'{self.current_filters_num} / {self.full_filters_num}'
+                                           f' ({self.current_filters_num - self.full_filters_num})'],
                 ['A target level of the pruning for the algorithm for the current epoch', self.target_pruning_level],
             ]
         )
