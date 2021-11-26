@@ -508,21 +508,3 @@ def get_type_building_block(op_addresses_in_block: List[OperationAddress])-> Bui
     if count_fc == 2 and count_matmul == 0:
         return BuildingBlockType.FF
     return BuildingBlockType.Unknown
-
-
-# def vis(graph, blocks):
-#     # correct work only for visualization blocks without common vertices
-#     dot = Digraph()
-#     for id, block_path in enumerate(blocks):
-#         with dot.subgraph(name='cluster_{}'.format(id)) as c:
-#             c.attr(color='blue')
-#             c.node_attr['style'] = 'filled'
-#             for node in block_path:
-#                 c.node(node)
-#             c.attr(label='block #{}'.format(id))
-#
-#     for node in graph.nodes:
-#         dot.node(graph.nodes[node]['key'])
-#         for child in graph.successors(node):
-#             dot.edge(node, child)
-#     return dot

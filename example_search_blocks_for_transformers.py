@@ -3,6 +3,7 @@
 from transformers.models.bert.configuration_bert import BertConfig
 from transformers.models.bert.modeling_bert import BertForSequenceClassification
 
+import nncf
 from nncf import NNCFConfig
 from nncf.torch import create_compressed_model
 from nncf.torch.search_blocks import get_building_blocks
@@ -61,3 +62,9 @@ compression_algo_controller, compressed_model = create_compressed_model(model, n
 
 building_blocks  = get_building_blocks(compressed_model, allow_nested_blocks=False)
 building_blocks_info = get_building_blocks_info(building_blocks, compressed_model)
+
+for idx, block_info in enumerate(building_blocks_info):
+    print("Block # {}, Start node: {}, End_node: {}, Type: {} ".format(idx,
+     block_info.building_block[0], block_info.building_block[0], block_info.block_type))
+    print(block_info.modules)
+    print(block_info.op_addresses)
