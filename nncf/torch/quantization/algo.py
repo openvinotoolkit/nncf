@@ -150,7 +150,7 @@ class QuantizerSetupGeneratorBase:
         self._quantize_inputs = self._quantization_config.get('quantize_inputs', True)
         self._quantize_outputs = self._quantization_config.get('quantize_outputs', False)
 
-        self.ignored_scopes = self._quantization_config.get('ignored_scopes', [])
+        self.ignored_scopes = self._quantization_config.get('ignored_scopes')
         self.target_scopes = self._quantization_config.get('target_scopes')
 
         self.global_quantizer_constraints = {}  # type: Dict[QuantizerGroup, QuantizationConstraints]
@@ -183,7 +183,7 @@ class QuantizerSetupGeneratorBase:
                 nncf_logger.warning('Preset quantizer parameters {} explicitly overrided.'.format(overrided_params))
         params_dict.update(params_dict_from_config)
         self.global_quantizer_constraints[quantizer_group] = QuantizationConstraints.from_config_dict(params_dict)
-        self._ignored_scopes_per_group[quantizer_group] = params_dict_from_config.get('ignored_scopes', [])
+        self._ignored_scopes_per_group[quantizer_group] = params_dict_from_config.get('ignored_scopes')
         self._target_scopes_per_group[quantizer_group] = params_dict_from_config.get('target_scopes')
 
     def _get_default_qconfig(self, constraints: QuantizationConstraints = None):
@@ -341,7 +341,7 @@ class PropagationBasedQuantizerSetupGenerator(QuantizerSetupGeneratorBase):
                 return []
             return [list_or_str] if isinstance(list_or_str, str) else list_or_str
 
-        ignored_scopes_for_solver = str_or_list_to_list(self.ignored_scopes) +\
+        ignored_scopes_for_solver = str_or_list_to_list(self.ignored_scopes) + \
                                     str_or_list_to_list(self._ignored_scopes_per_group[QuantizerGroup.ACTIVATIONS])
         prop_graph_solver = QuantizerPropagationSolver(ignored_scopes=ignored_scopes_for_solver,
                                                        target_scopes=self.target_scopes,
