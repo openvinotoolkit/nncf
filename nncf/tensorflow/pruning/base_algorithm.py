@@ -305,6 +305,7 @@ class BasePruningAlgoController(BaseCompressionAlgorithmController):
         weights_shapes = []
         mask_shapes = []
         pruned_filters = []
+        node_ids = []
         wrapped_layers = collect_wrapped_layers(self._model)
         for wrapped_layer in wrapped_layers:
             for weight_attr, ops in wrapped_layer.weights_attr_ops.items():
@@ -324,14 +325,16 @@ class BasePruningAlgoController(BaseCompressionAlgorithmController):
                         pruned_filters_number = filters_number - tf.reduce_sum(filter_mask)
                         pruning_rates.append(pruned_filters_number / filters_number)
                         pruned_filters.append(pruned_filters_number)
+                        node_ids.append(self._original_graph.get_node_by_name(wrapped_layer.name).node_id)
 
         pruning_rates = tf.keras.backend.batch_get_value(pruning_rates)
-        mask_pruning = list(zip(mask_names, weights_shapes, mask_shapes, pruned_filters, pruning_rates))
+        mask_pruning = list(zip(mask_names, weights_shapes, mask_shapes, pruned_filters, pruning_rates, node_ids))
 
         pruned_layers_summary = []
-        for mask_name, weights_shape, mask_shape, pruned_filters_number, pruning_rate in mask_pruning:
+        for mask_name, weights_shape, mask_shape, pruned_filters_number, pruning_rate, node_id in mask_pruning:
             pruned_layers_summary.append(PrunedLayerSummary(mask_name, weights_shape,
-                                                            mask_shape, pruning_rate, pruned_filters_number))
+                                                            mask_shape, pruning_rate, pruned_filters_number,
+                                                            node_id))
 
         return PrunedModelStatistics(self.pruning_rate, pruned_layers_summary)
 

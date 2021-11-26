@@ -240,7 +240,8 @@ class FilterPruningController(BasePruningAlgoController):
                                        list(minfo.module.weight.size()),
                                        list(self.mask_shape(minfo)),
                                        self.pruning_rate_for_mask(minfo),
-                                       self.pruned_filters(minfo))
+                                       self.pruned_filters(minfo),
+                                       minfo.nncf_node_id)
 
         model_statistics = PrunedModelStatistics(self._pruning_rate, list(pruned_layers_summary.values()))
         self._update_benchmark_statistics()
