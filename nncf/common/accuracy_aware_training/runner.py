@@ -25,6 +25,9 @@ from nncf.common.utils.backend import infer_backend_from_compression_controller
 from nncf.common.utils.backend import BackendType
 
 ModelType = TypeVar('ModelType')
+OptimizerType = TypeVar('OptimizerType')
+LRSchedulerType = TypeVar('LRSchedulerType')
+TensorboardWriterType = TypeVar('TensorboardWriterType')
 
 
 class TrainingRunner(ABC):
@@ -108,12 +111,13 @@ class TrainingRunner(ABC):
 
     @abstractmethod
     def initialize_training_loop_fns(self, train_epoch_fn: Callable[[CompressionAlgorithmController, ModelType,
-                                                                     Optional['Optimizer', 'LRSceduler', int]], None],
+                                                                     Optional[OptimizerType, LRSchedulerType, int]],
+                                                                    None],
                                      validate_fn: Callable[[ModelType, Optional[float]], float],
-                                     configure_optimizers_fn: Callable[[], ('Optimizer', 'LRScheduler')],
+                                     configure_optimizers_fn: Callable[[], (OptimizerType, LRSchedulerType)],
                                      dump_checkpoint_fn: Callable[
                                          [ModelType, CompressionAlgorithmController, 'TrainingRunner', str], None],
-                                     tensorboard_writer: 'TensorboardWriter' = None,
+                                     tensorboard_writer: TensorboardWriterType = None,
                                      log_dir: Union[str, pathlib.Path] = None):
         """
         Register the user-supplied functions to be used to control the training process.
@@ -248,9 +252,10 @@ class BaseAccuracyAwareTrainingRunner(TrainingRunner):
         self.best_val_metric_value = 0
 
     def initialize_training_loop_fns(self, train_epoch_fn: Callable[[CompressionAlgorithmController, ModelType,
-                                                                     Optional['Optimizer', 'LRSceduler', int]], None],
+                                                                     Optional[OptimizerType, LRSchedulerType, int]],
+                                                                    None],
                                      validate_fn: Callable[[ModelType, Optional[float]], float],
-                                     configure_optimizers_fn: Callable[[], ('Optimizer', 'LRScheduler')],
+                                     configure_optimizers_fn: Callable[[], (OptimizerType, LRSchedulerType)],
                                      dump_checkpoint_fn: Callable[
                                          [ModelType, CompressionAlgorithmController, TrainingRunner, str], None],
                                      tensorboard_writer=None, log_dir=None):
