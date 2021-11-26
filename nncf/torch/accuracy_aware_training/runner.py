@@ -154,7 +154,7 @@ class PTAccuracyAwareTrainingRunner(BaseAccuracyAwareTrainingRunner):
             }
             checkpoint_path = osp.join(self._checkpoint_save_dir, 'acc_aware_checkpoint_last.pth')
             torch.save(checkpoint, checkpoint_path)
-            nncf_logger.log("The checkpoint is saved in {}".format(checkpoint_path))
+            nncf_logger.info("The checkpoint is saved in {}".format(checkpoint_path))
             self._save_best_checkpoint(checkpoint_path)
 
     def add_tensorboard_scalar(self, key, data, step):
@@ -237,8 +237,7 @@ class PTAdaptiveCompressionLevelTrainingRunner(PTAccuracyAwareTrainingRunner,
 
     def load_best_checkpoint(self, model):
         # load checkpoint with highest compression rate and positive acc budget
-        possible_checkpoint_rates = [comp_rate for (comp_rate, acc_budget) in self._compressed_training_history
-                                     if acc_budget >= 0]
+        possible_checkpoint_rates = self.get_compression_rates_with_positive_acc_budget()
         if not possible_checkpoint_rates:
             nncf_logger.warning('Could not produce a compressed model satisfying the set accuracy '
                                 'degradation criterion during training. Increasing the number of training '
