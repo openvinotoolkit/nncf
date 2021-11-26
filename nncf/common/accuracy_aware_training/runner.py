@@ -16,6 +16,7 @@ from typing import Dict
 from typing import List
 from typing import Optional
 from typing import Union
+from typing import Tuple
 from typing import TypeVar
 from abc import ABC
 from abc import abstractmethod
@@ -111,10 +112,11 @@ class TrainingRunner(ABC):
 
     @abstractmethod
     def initialize_training_loop_fns(self, train_epoch_fn: Callable[[CompressionAlgorithmController, ModelType,
-                                                                     Optional[OptimizerType, LRSchedulerType, int]],
-                                                                    None],
+                                                                     Optional[OptimizerType],
+                                                                     Optional[LRSchedulerType],
+                                                                     Optional[int]], None],
                                      validate_fn: Callable[[ModelType, Optional[float]], float],
-                                     configure_optimizers_fn: Callable[[], (OptimizerType, LRSchedulerType)],
+                                     configure_optimizers_fn: Callable[[], Tuple[OptimizerType, LRSchedulerType]],
                                      dump_checkpoint_fn: Callable[
                                          [ModelType, CompressionAlgorithmController, 'TrainingRunner', str], None],
                                      tensorboard_writer: TensorboardWriterType = None,
@@ -252,10 +254,11 @@ class BaseAccuracyAwareTrainingRunner(TrainingRunner):
         self.best_val_metric_value = 0
 
     def initialize_training_loop_fns(self, train_epoch_fn: Callable[[CompressionAlgorithmController, ModelType,
-                                                                     Optional[OptimizerType, LRSchedulerType, int]],
-                                                                    None],
+                                                                     Optional[OptimizerType],
+                                                                     Optional[LRSchedulerType],
+                                                                     Optional[int]], None],
                                      validate_fn: Callable[[ModelType, Optional[float]], float],
-                                     configure_optimizers_fn: Callable[[], (OptimizerType, LRSchedulerType)],
+                                     configure_optimizers_fn: Callable[[], Tuple[OptimizerType, LRSchedulerType]],
                                      dump_checkpoint_fn: Callable[
                                          [ModelType, CompressionAlgorithmController, TrainingRunner, str], None],
                                      tensorboard_writer=None, log_dir=None):
