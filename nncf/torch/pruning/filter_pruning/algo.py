@@ -218,6 +218,11 @@ class FilterPruningController(BasePruningAlgoController):
     def set_mask(minfo: PrunedModuleInfo, mask: torch.Tensor) -> None:
         minfo.operand.binary_filter_pruning_mask = mask
 
+    @staticmethod
+    def pruned_filters(minfo: PrunedModuleInfo):
+        mask = minfo.operand.binary_filter_pruning_mask
+        return mask.shape[0] - mask.sum()
+
     def statistics(self, quickly_collected_only: bool = False) -> NNCFStatistics:
         if not quickly_collected_only and is_debug():
             stats = PrunedModelTheoreticalBorderline(
@@ -234,7 +239,8 @@ class FilterPruningController(BasePruningAlgoController):
                     PrunedLayerSummary(layer_name,
                                        list(minfo.module.weight.size()),
                                        list(self.mask_shape(minfo)),
-                                       self.pruning_rate_for_mask(minfo))
+                                       self.pruning_rate_for_mask(minfo),
+                                       self.pruned_filters(minfo))
 
         model_statistics = PrunedModelStatistics(self._pruning_rate, list(pruned_layers_summary.values()))
         self._update_benchmark_statistics()

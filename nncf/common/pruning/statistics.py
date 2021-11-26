@@ -26,7 +26,8 @@ class PrunedLayerSummary:
                  name: str,
                  weight_shape: List[int],
                  mask_shape: List[int],
-                 filter_pruning_level: float):
+                 filter_pruning_level: float,
+                 pruned_filters_num: int):
         """
         Initializes a summary about the pruned layer.
 
@@ -39,6 +40,7 @@ class PrunedLayerSummary:
         self.weight_shape = weight_shape
         self.mask_shape = mask_shape
         self.filter_pruning_level = filter_pruning_level
+        self.pruned_filters_num = pruned_filters_num
 
 
 class PrunedModelStatistics(Statistics):
@@ -67,10 +69,10 @@ class PrunedModelStatistics(Statistics):
             ]
         )
 
-        header = ['Layer\'s name', 'Weight\'s shape', 'Mask\'s shape', 'Filter pruning level']
+        header = ['Layer\'s name', 'Weight\'s shape', 'Mask\'s shape', 'Pruned filters count', 'Filter pruning level']
         rows = []
         for s in self.pruned_layers_summary:
-            rows.append([s.name, s.weight_shape, s.mask_shape, s.filter_pruning_level])
+            rows.append([s.name, s.weight_shape, s.mask_shape, s.pruned_filters_num, s.filter_pruning_level])
 
         layers_string = create_table(header, rows)
 
