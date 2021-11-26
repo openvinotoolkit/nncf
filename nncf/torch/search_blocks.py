@@ -18,12 +18,12 @@ from nncf.common.graph.definitions import MODEL_OUTPUT_OP_NAME
 from nncf.torch.dynamic_graph.operation_address import OperationAddress
 from nncf.torch.graph.graph import PTNNCFGraph
 from nncf.torch.hardware.fused_patterns import PT_HW_FUSED_PATTERNS
-from nncf.torch.graph.operator_metatypes import DropoutMetatype
+from nncf.torch.graph.operator_metatypes import PTDropoutMetatype
 from nncf.torch.layers import NNCF_MODULES_OP_NAMES
 from nncf.torch.nncf_network import NNCFNetwork
 
 
-IGNORED_NAME_OPERATORS = [DropoutMetatype.name, MODEL_OUTPUT_OP_NAME]
+IGNORED_NAME_OPERATORS = ["dropout", MODEL_OUTPUT_OP_NAME]
 
 BuildingBlock = namedtuple('BuildingBlock', ('start_node', 'end_node'))
 
