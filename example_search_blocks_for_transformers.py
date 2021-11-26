@@ -3,12 +3,10 @@
 from transformers.models.bert.configuration_bert import BertConfig
 from transformers.models.bert.modeling_bert import BertForSequenceClassification
 
-import nncf
 from nncf import NNCFConfig
 from nncf.torch import create_compressed_model
 from nncf.torch.search_blocks import get_building_blocks
-from nncf.torch.search_blocks import get_all_modules_per_blocks
-from nncf.torch.search_blocks import get_all_node_op_addresses_in_block
+from nncf.torch.search_blocks import get_building_blocks_info
 
 d = {"architectures": [
     "BertForMaskedLM"
@@ -59,14 +57,7 @@ nncf_config.update({
         }
         ],
     })
-
 compression_algo_controller, compressed_model = create_compressed_model(model, nncf_config)
-#print(model)
-#print(compressed_model)
 
 building_blocks  = get_building_blocks(compressed_model, allow_nested_blocks=False)
-node_op_address_per_block = get_all_node_op_addresses_in_block(compressed_model, building_blocks)
-modules_per_blocks = get_all_modules_per_blocks(compressed_model, building_blocks)
-#print(building_blocks)
-#print(node_op_address_per_block)
-#print(modules_per_blocks)
+building_blocks_info = get_building_blocks_info(building_blocks, compressed_model)
