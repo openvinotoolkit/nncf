@@ -27,6 +27,32 @@ Where ![L_j](https://latex.codecogs.com/png.latex?L_j) is j-th convolutional lay
 
 Then during pruning filters with smaller ![G(F_i)](https://latex.codecogs.com/png.latex?G%28F_i%29) importance function will be pruned first.
 
+#### Algorithm statistics
+A model compression can be measured by two main metrics: filter pruning rate and FLOPs pruning rate. While 
+filter pruning rate shows the ratio of removed filters to the total number of filters in the model, FLOPs pruning rate 
+indicates how the removed filters affect the number of floating point operations required to run a model. 
+
+During the algorithm execution several compression statistics are available:
+
+`Target pruning level for the current epoch` - a pruning level calculated by the algorithm scheduler at each training epoch for 
+all layers previously defined as prunable. Note that this metric does not indicate the whole model filter pruning rate, as 
+it does not take into account the number of filters in layers that cannot be pruned.
+
+`FLOPs pruning level` - estimated reduction in the number of floating point operations of the model.
+The number of FLOPs for a single convolutional layer can be computed as:
+
+![FLOPs](https://latex.codecogs.com/png.image?%5Cdpi%7B110%7D%20FLOPs&space;=&space;2&space;%5Ctimes&space;input%5C;channels&space;%5Ctimes&space;kernel%5C;size%5E%7B2%7D%5Ctimes&space;W%5Ctimes&space;H%5Ctimes&space;filters)
+
+Each removed filter contributes to FLOPs reduction in two convolutional layers as it affects the number 
+of filters in one and the number of input channels of the next layer. Thus it is expected that this number may differ 
+significantly from the filter pruning rate.
+
+`MParams` - the number of parameters in the model in millions. Typically convolutional layer weights have shape 
+![shape](https://latex.codecogs.com/png.image?%5Cdpi%7B110%7D%20%5Cinline%20(kernel%5C;size,&space;kernel%5C;size,&space;input%5C;channels,&space;filters%5C;&space;num)).
+Thus each removed filter affects the number of parameters in two convolutional layers as it affects the number 
+of filters in one and the number of input channels of the next layer. It is expected that this number may differ 
+significantly from the filter pruning rate.
+
 #### Schedulers
 
 **Baseline Scheduler**
