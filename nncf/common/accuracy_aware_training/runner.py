@@ -142,6 +142,9 @@ class TrainingRunnerCreator(ABC):
 
 
 class EarlyExitTrainingRunnerCreator(TrainingRunnerCreator):
+    """
+    Class creates an Early Exit Training Runner depending on an used backend.
+    """
     def __init__(self, accuracy_aware_training_params, compression_controller,
                  lr_updates_needed, verbose, dump_checkpoints):
         self.accuracy_aware_training_params = accuracy_aware_training_params
@@ -169,6 +172,9 @@ class EarlyExitTrainingRunnerCreator(TrainingRunnerCreator):
 
 
 class AdaptiveCompressionLevelTrainingRunnerCreator(TrainingRunnerCreator):
+    """
+    Class creates an Adaptive Compression Level Training Runner depending on an used backend.
+    """
     def __init__(self, accuracy_aware_training_params, compression_controller,
                  lr_updates_needed, verbose, minimal_compression_rate,
                  maximal_compression_rate, dump_checkpoints):

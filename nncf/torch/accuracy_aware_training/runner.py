@@ -154,6 +154,7 @@ class PTAccuracyAwareTrainingRunner(BaseAccuracyAwareTrainingRunner):
             }
             checkpoint_path = osp.join(self._checkpoint_save_dir, 'acc_aware_checkpoint_last.pth')
             torch.save(checkpoint, checkpoint_path)
+            nncf_logger.log("The checkpoint is saved in {}".format(checkpoint_path))
             self._save_best_checkpoint(checkpoint_path)
 
     def add_tensorboard_scalar(self, key, data, step):
