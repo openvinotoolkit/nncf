@@ -1,16 +1,16 @@
 # Adaptive Compression Level training loop in NNCF
 
-The compression level search can be only done for a single compression algorithm in the pipeline (i.e. several compression algorithms could be applied to the model and the search is going to be performed for a single one); currently supported algorithms for compression rate search are magnitude sparsity and filter pruning. 
+The compression level search can be only done for a single compression algorithm in the pipeline (i.e. several compression algorithms could be applied to the model and the search is going to be performed for a single one); currently supported algorithms for compression rate search are **magnitude sparsity** and **filter pruning**. 
 The exact compression algorithm for which the search is done is determined from `"compression"` config section. Below is an example of a filter pruning configuration with added `"accuracy_aware_training"` parameters. The parameters to be set by the user in this config section are: 
 1) `maximal_relative_accuracy_degradation` or `maximal_absolute_accuracy_degradation` - the maximal allowed accuracy metric drop relative to the original model metrics (in percent) or the maximal allowed absolute accuracy metric drop (in original metrics value),
 2) `initial_training_phase_epochs` - the number of epochs to train the model with the compression schedule specified in the `"params"` section of `"compression"` algorithm. 
 
 3) `patience_epochs` - the number of epochs to train the model for a compression rate level set by the search algorithm before switching to another compression rate value.
-4) (Optional; default=0.025) `minimal_compression_rate_step` - The minimal compression rate change step value after which the training loop is terminated.
-5) (Optional; default=0.1) `initial_compression_rate_step` - Initial value for the compression rate increase/decrease training phase of the compression training loop.
-6) (Optional; default=0.5) `compression_rate_step_reduction_factor` - Factor used to reduce the compression rate change step in the adaptive compression training loop. 
-4) (Optional; default=1) `validate_every_n_epochs` - The parameter specifies across which number of epochs `Runner` should validate the compressed model.
-5) (Optional; default=1e4) `maximal_total_epochs` -  - number of training epochs, if the fine-tuning epoch reaches this number, the loop finishes the fine-tuning and return the model with the least accuracy drop.
+4) `minimal_compression_rate_step` (Optional; default=0.025) - The minimal compression rate change step value after which the training loop is terminated.
+5) `initial_compression_rate_step` (Optional; default=0.1) - Initial value for the compression rate increase/decrease training phase of the compression training loop.
+6) `compression_rate_step_reduction_factor` (Optional; default=0.5) - Factor used to reduce the compression rate change step in the adaptive compression training loop. 
+4) `validate_every_n_epochs` (Optional; default=1) - The parameter specifies across which number of epochs `Runner` should validate the compressed model.
+5) `maximal_total_epochs` (Optional; default=1e4) - The number of training epochs, if the fine-tuning epoch reaches this number, the loop finishes the fine-tuning and return the model with thi highest compression rate and the least accuracy drop.
 
 
 To launch the adaptive compression training loop, the user is expected to define several function related to model training, validation and optimizer creation (see [the usage documentation](../Usage.md#accuracy-aware-model-training) for more details) and pass them to the run method of an `AdaptiveCompressionTrainingLoop` instance. The training loop logic inside of the `AdaptiveCompressionTrainingLoop` is framework-agnostic, while all of the framework specifics are encapsulated inside of corresponding `Runner` objects, which are created and called inside the training loop. The adaptive compression training loop is generally aimed at automatically searching for the optimal compression rate in the model, with the parameters of the search algorithm specified in the configuration file as follows:
@@ -21,7 +21,12 @@ To launch the adaptive compression training loop, the user is expected to define
         "params": {
             "maximal_relative_accuracy_degradation": 1.0,
             "initial_training_phase_epochs": 100,
-            "patience_epochs": 30
+            "patience_epochs": 30,
+            "minimal_compression_rate_step": 0.025, // Optional
+            "initial_compression_rate_step": 0.1, // Optional
+            "compression_rate_step_reduction_factor": 0.5, // Optional
+            "validate_every_n_epochs": 1, // Optional
+            "maximal_total_epochs": 10000 // Optional
         }
     },
     "compression": [
