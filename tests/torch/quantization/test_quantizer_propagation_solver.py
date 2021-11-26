@@ -1830,10 +1830,6 @@ class TestQuantizerPropagationSolver:
                                                                                   "ignored_scopes": ["LeNet/relu_1"]}},
                                                                                ['LeNet/relu_0'])])
     def test_activation_ignored_scope(self, update_config_info, should_ignore_quantizers):
-        def compare_two_lists_permutation_invariant(list1, list2):
-            # items in lists are supposed to be unique
-            return reduce(lambda a, x: a + int(x in list2), list1, 0) == max(len(list1), len(list2))
-
         model = LeNet()
         all_quantization_names = ["LeNet/NNCFConv2d[conv1]/conv2d_0",
                                   "LeNet/NNCFConv2d[conv2]/conv2d_0",
@@ -1855,5 +1851,5 @@ class TestQuantizerPropagationSolver:
         train_loader = create_random_mock_dataloader(config, num_samples=10)
         config = register_default_init_args(config, train_loader)
         ctrl, _ = create_compressed_model(model, config)
-        assert compare_two_lists_permutation_invariant([item.target_node_name for item in ctrl.all_quantizations.keys()]
-                                                       , all_quantization_names)
+        assert Counter([item.target_node_name for item in ctrl.all_quantizations.keys()]) == \
+               Counter(all_quantization_names)
