@@ -543,22 +543,14 @@ QUANTIZATION_SCHEMA = {
                                                                    "standard QuantizeLinear-DequantizeLinear "
                                                                    "node pairs (8-bit quantization only in the latter "
                                                                    "case). Default: false"),
-        "apply_saturation_fix_only_to_first_layer": with_attributes(
-            _BOOLEAN,
-            description="Option controls whether to apply the saturation "
-                        "issue fix only for the first layer or to all layers. "
-                        "This option has effect while saturation fix is enabled. "
-                        "If set to True, the fix will be applied only to the first layer. "
-                        "If set to False, the fix will be applied only to all layer. "
-                        "For a detailed information, please, take look at the docs"),
-        "disable_saturation_fix": with_attributes(_BOOLEAN,
-                                                  description="Option controls whether to apply the saturation "
-                                                              "issue fix for the appropriate NNCF config or not"
-                                                              "If set to True, the fix will not be applied. "
-                                                              "If set to False while "
-                                                              "appropriate target_devices are chosen "
-                                                              "the fix will be applied. For a detailed information "
-                                                              ", please, take look at the docs"),
+        "saturation_fix": with_attributes(_STRING,
+                                          description="Option controls whether to apply the saturation "
+                                                      "issue fix for the appropriate NNCF config or not. "
+                                                      "If set to 'disable', the fix will not be applied. "
+                                                      "If set to 'enable' or 'enable_for_first_conv_layer', "
+                                                      "while appropriate target_devices are chosen, "
+                                                      "the fix will be applied to the all layers or to the first"
+                                                      "convolutional layer respectively."),
         **STAGED_QUANTIZATION_PARAMS,
         **COMMON_COMPRESSION_ALGORITHM_PROPERTIES,
     },

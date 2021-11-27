@@ -451,10 +451,8 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
             params_dict = self._algo_config.get(group_name, {})
             self._use_logarithm_scale_per_group[quantizer_group] = params_dict.get('logarithm_scale', False)
 
-        self._disable_saturation_fix = self._algo_config.get('disable_saturation_fix', False)
+        self._saturation_fix = self._algo_config.get('saturation_fix', 'enable')
         self._applied_saturation_fix = False
-        self._apply_saturation_fix_only_to_first_layer = self._algo_config.get(
-            'apply_saturation_fix_only_to_first_layer', False)
         self._device_for_callable_obj_creation = 'cpu'
         self._single_config_quantizer_setup = None  # type: Optional[SingleConfigQuantizerSetup]
 
@@ -1028,16 +1026,17 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
         compression_lr_multiplier = self._get_compression_lr_multiplier()
 
         half_range = False
-        if self.hw_config and not self._disable_saturation_fix and is_weights(primary_ip):
-            if self.hw_config.target_device in ['CPU', 'ANY'] and qconfig.num_bits == 8:
-                nncf_logger.warning('The saturation issue fix will be applied. '
-                                    'Now all weight quantizers will effectively use only 7 bits out of 8 bits. '
-                                    'This resolves the saturation issue problem on AVX2 and AVX-512 machines. '
-                                    'Please take a look at the documentation for a detailed information.')
-                half_range = True
-                if self._apply_saturation_fix_only_to_first_layer:
-                    half_range = half_range and not self._applied_saturation_fix
-                self._applied_saturation_fix = True
+        if self.hw_config and is_weights(primary_ip):
+            if self._saturation_fix in ['enable', 'enable_for_first_conv_layer']:
+                if self.hw_config.target_device in ['CPU', 'ANY'] and qconfig.num_bits == 8:
+                    nncf_logger.warning('The saturation issue fix will be applied. '
+                                        'Now all weight quantizers will effectively use only 7 bits out of 8 bits. '
+                                        'This resolves the saturation issue problem on AVX2 and AVX-512 machines. '
+                                        'Please take a look at the documentation for a detailed information.')
+                    half_range = True
+                    if self._saturation_fix == 'enable_for_first_conv_layer':
+                        half_range = half_range and not self._applied_saturation_fix
+                    self._applied_saturation_fix = True
 
         qspec = PTQuantizerSpec.from_config(qconfig,
                                             narrow_range=narrow_range,
