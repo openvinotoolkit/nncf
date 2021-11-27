@@ -324,11 +324,16 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
             qconfig = constraints.apply_constraints_to(qconfig)
         return qconfig
 
-    def _get_half_range(self, qconfig: QuantizerConfig) -> bool:
+    def _get_half_range(self, qconfig: QuantizerConfig, applied_saturation_fix: bool) -> Tuple[bool, bool]:
+        half_range = False
         if self._saturation_fix in ['enable', 'enable_for_first_conv_layer']:
             if self._target_device in ['CPU', 'ANY'] and qconfig.num_bits == 8:
-                return True
-        return False
+                half_range = True
+
+        if self._saturation_fix == 'enable_for_first_conv_layer':
+            half_range = half_range and not applied_saturation_fix
+        applied_saturation_fix = applied_saturation_fix or half_range
+        return half_range, applied_saturation_fix
 
     def _create_quantizer(self, name: str, qspec: TFQuantizerSpec) -> Quantizer:
         quantizer_cls = NNCF_QUANTIZATION_OPERATIONS.get(qspec.mode)
@@ -464,10 +469,7 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
                         weight_def.weight_attr_name)
                     self._op_names.append(op_name)
 
-                    half_range = self._get_half_range(qconfig)
-                    if self._saturation_fix == 'enable_for_first_conv_layer':
-                        half_range = half_range and not applied_saturation_fix
-                    applied_saturation_fix = applied_saturation_fix or half_range
+                    half_range, applied_saturation_fix = self._get_half_range(qconfig, applied_saturation_fix)
                     quantizer_spec = TFQuantizerSpec.from_config(qconfig,
                                                                  narrow_range=not half_range,
                                                                  half_range=half_range)
