@@ -55,6 +55,21 @@ def helper_to_test_if_saturation_fix_was_applied(nncf_config, target_device):
         assert not quantizer.quantizer_module_ref._half_range  # pylint: disable=protected-access
 
 
+def helper_to_test_if_saturation_fix_was_applied_only_to_first_conv_later(nncf_config, target_device):
+    model = TwoConvTestModel()
+    nncf_config.update({"target_device": target_device})
+
+    _, compression_ctrl = create_compressed_model_and_algo_for_test(model, nncf_config)
+
+    for idx, quantizer in enumerate(compression_ctrl.weight_quantizers.values()):
+        if idx == 0:
+            assert quantizer.quantizer_module_ref._half_range  # pylint: disable=protected-access
+        else:
+            assert not quantizer.quantizer_module_ref._half_range  # pylint: disable=protected-access
+    for quantizer in compression_ctrl.non_weight_quantizers.values():
+        assert not quantizer.quantizer_module_ref._half_range  # pylint: disable=protected-access
+
+
 def helper_to_test_if_saturation_fix_wasnt_applied(nncf_config, target_device):
     model = TwoConvTestModel()
     nncf_config.update({"target_device": target_device})
@@ -71,17 +86,27 @@ def test_config_option_disable_saturation_fix():
     nncf_config = get_config_for_export_mode(True)
     nncf_config.update({"compression":
                             {"algorithm": "quantization",
-                             "disable_saturation_fix": True}})
+                             "saturation_fix": "disable"}})
 
     for device in ['CPU', 'ANY', 'VPU', 'GPU', 'TRIAL']:
         helper_to_test_if_saturation_fix_wasnt_applied(nncf_config, device)
 
     nncf_config.update({"compression":
                             {"algorithm": "quantization",
-                             "disable_saturation_fix": False}})
+                             "saturation_fix": "enable"}})
 
     for device in ['CPU', 'ANY']:
         helper_to_test_if_saturation_fix_was_applied(nncf_config, device)
+
+    for device in ['VPU', 'GPU', 'TRIAL']:
+        helper_to_test_if_saturation_fix_wasnt_applied(nncf_config, device)
+
+    nncf_config.update({"compression":
+                            {"algorithm": "quantization",
+                             "saturation_fix": "enable_for_first_conv_layer"}})
+
+    for device in ['CPU', 'ANY']:
+        helper_to_test_if_saturation_fix_was_applied_only_to_first_conv_later(nncf_config, device)
 
     for device in ['VPU', 'GPU', 'TRIAL']:
         helper_to_test_if_saturation_fix_wasnt_applied(nncf_config, device)

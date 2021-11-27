@@ -152,7 +152,7 @@ def test_quantization_configs__disable_saturation_fix():
 
     config = get_basic_quantization_config()
     config['compression'].update({
-        'disable_saturation_fix': True
+        'saturation_fix': 'disable'
     })
     compression_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config, force_no_init=True)
 
@@ -160,22 +160,31 @@ def test_quantization_configs__disable_saturation_fix():
     check_specs_for_disabled_saturation_fix(compression_model)
 
 
-@pytest.mark.parametrize('disabled', [False, True], ids=['enabled', 'disabled'])
-def test_export_saturation_fix(disabled):
-    model = get_basic_conv_test_model()
+@pytest.mark.parametrize('sf_mode', ['enable', 'enable_for_first_conv_layer', 'disable'],
+                         ids=['enabled', 'enabled_first_layer', 'disabled'])
+def test_export_saturation_fix(sf_mode):
+    model = get_basic_two_conv_test_model()
     config = get_basic_quantization_config()
     config['compression'].update({
-        'disable_saturation_fix': disabled
+        'saturation_fix': sf_mode
     })
+    if sf_mode in ['enable', 'enable_for_first_conv_layer']:
+        enabled = True
+    else:
+        enabled = False
+
     compression_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config, force_no_init=True)
     activation_quantizers_be, weight_quantizers_be = get_quantizers(compression_model)
-    ref_weight_qspec = TFQuantizerSpec(mode=QuantizationMode.SYMMETRIC,
-                                       num_bits=8,
-                                       signedness_to_force=True,
-                                       per_channel=True,
-                                       narrow_range=disabled,
-                                       half_range=not disabled)
-    for wq in weight_quantizers_be:
+
+    for idx, wq in enumerate(weight_quantizers_be):
+        if sf_mode == 'enable_for_first_conv_layer' and idx > 0:
+            enabled = False
+        ref_weight_qspec = TFQuantizerSpec(mode=QuantizationMode.SYMMETRIC,
+                                           num_bits=8,
+                                           signedness_to_force=True,
+                                           per_channel=True,
+                                           narrow_range=not enabled,
+                                           half_range=enabled)
         compare_qspecs(ref_weight_qspec, wq)
 
     ref_activation_qspec = TFQuantizerSpec(mode=QuantizationMode.SYMMETRIC,
@@ -187,18 +196,23 @@ def test_export_saturation_fix(disabled):
     for wq in activation_quantizers_be:
         compare_qspecs(ref_activation_qspec, wq)
 
+    if sf_mode in ['enable', 'enable_for_first_conv_layer']:
+        enabled = True
+    else:
+        enabled = False
     compression_ctrl.export_model('/tmp/test.pb')
     activation_quantizers_ae, weight_quantizers_ae = get_quantizers(compression_model)
 
-    ref_weight_qspec = TFQuantizerSpec(mode=QuantizationMode.SYMMETRIC,
-                                       num_bits=8,
-                                       signedness_to_force=True,
-                                       per_channel=True,
-                                       narrow_range=disabled,
-                                       half_range=False)
-    for wq in weight_quantizers_ae:
+    for idx, wq in enumerate(weight_quantizers_ae):
+        if sf_mode == 'enable_for_first_conv_layer' and idx > 0:
+            enabled = False
+        ref_weight_qspec = TFQuantizerSpec(mode=QuantizationMode.SYMMETRIC,
+                                           num_bits=8,
+                                           signedness_to_force=True,
+                                           per_channel=True,
+                                           narrow_range=not enabled,
+                                           half_range=False)
         compare_qspecs(ref_weight_qspec, wq)
-
     for wq in activation_quantizers_ae:
         compare_qspecs(ref_activation_qspec, wq)
 

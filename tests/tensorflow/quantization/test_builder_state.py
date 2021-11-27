@@ -95,7 +95,7 @@ def test_quantization_configs__disable_saturation_fix_and_resume_from_compressio
 
     config = get_basic_quantization_config()
     config['compression'].update({
-        'disable_saturation_fix': True
+        'saturation_fix': 'disable'
     })
     compression_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config, force_no_init=True)
 
