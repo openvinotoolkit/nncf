@@ -168,10 +168,7 @@ def test_export_saturation_fix(sf_mode):
     config['compression'].update({
         'saturation_fix': sf_mode
     })
-    if sf_mode in ['enable', 'enable_for_first_conv_layer']:
-        enabled = True
-    else:
-        enabled = False
+    enabled = sf_mode in ['enable', 'enable_for_first_conv_layer']
 
     compression_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config, force_no_init=True)
     activation_quantizers_be, weight_quantizers_be = get_quantizers(compression_model)
@@ -196,10 +193,7 @@ def test_export_saturation_fix(sf_mode):
     for wq in activation_quantizers_be:
         compare_qspecs(ref_activation_qspec, wq)
 
-    if sf_mode in ['enable', 'enable_for_first_conv_layer']:
-        enabled = True
-    else:
-        enabled = False
+    enabled = sf_mode in ['enable', 'enable_for_first_conv_layer']
     compression_ctrl.export_model('/tmp/test.pb')
     activation_quantizers_ae, weight_quantizers_ae = get_quantizers(compression_model)
 
