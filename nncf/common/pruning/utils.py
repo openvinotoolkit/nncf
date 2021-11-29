@@ -394,7 +394,7 @@ def calculate_in_out_channels_by_masks(pruning_groups: List[Cluster[PrunedLayerI
     def get_num_of_sparse_elements_by_node(node_name: str) -> int:
         mask = masks[node_name]
         tensor_processor = mask.tensor_processor
-        return mask.shape[0] - tensor_processor.sum(mask)
+        return mask.shape[0] - int(tensor_processor.sum(mask))
 
     return _calculate_in_out_channels(pruning_groups,
                                       get_num_of_sparse_elements_by_node,

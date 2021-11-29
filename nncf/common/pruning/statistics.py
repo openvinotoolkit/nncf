@@ -26,9 +26,7 @@ class PrunedLayerSummary:
                  name: str,
                  weight_shape: List[int],
                  mask_shape: List[int],
-                 filter_pruning_level: float,
-                 pruned_filters_num: int,
-                 node_id: int):
+                 filter_pruning_level: float):
         """
         Initializes a summary about the pruned layer.
 
@@ -41,8 +39,6 @@ class PrunedLayerSummary:
         self.weight_shape = weight_shape
         self.mask_shape = mask_shape
         self.filter_pruning_level = filter_pruning_level
-        self.pruned_filters_num = pruned_filters_num
-        self.node_id = node_id
 
 
 class PrunedModelStatistics(Statistics):
@@ -71,11 +67,10 @@ class PrunedModelStatistics(Statistics):
             ]
         )
 
-        header = ['Node index', 'Layer\'s name', 'Weight\'s shape', 'Mask\'s shape', 'Pruned filters count',
-                  'Filter pruning level']
+        header = ['Layer\'s name', 'Weight\'s shape', 'Mask\'s shape', 'Filter pruning level']
         rows = []
-        for s in sorted(self.pruned_layers_summary, key=lambda x: x.node_id):
-            rows.append([s.node_id, s.name, s.weight_shape, s.mask_shape, s.pruned_filters_num, s.filter_pruning_level])
+        for s in self.pruned_layers_summary:
+            rows.append([s.name, s.weight_shape, s.mask_shape, s.filter_pruning_level])
 
         layers_string = create_table(header, rows)
 
@@ -132,14 +127,18 @@ class FilterPruningStatistics(Statistics):
             header=['Statistic\'s name', 'Value'],
             rows=[
                 ['FLOPS pruning level', self.flops_pruning_level],
-                ['GFLOPS current / full', f'{self.current_flops / self._giga:.3f} /'
-                                          f' {self.full_flops / self._giga:.3f}'],
-                ['MParams current / full', f'{self.current_params_num} /'
-                                           f' {self.full_params_num}'
-                                           f' ({self.current_params_num - self.full_params_num})'],
+                ['GFLOPS current / full (FLOPS current - full)',
+                    f'{self.current_flops / self._giga:.3f} /'
+                    f' {self.full_flops / self._giga:.3f}'
+                    f' ({self.current_flops - self.full_flops})'],
+                ['MParams current / full (Params current - full)',
+                    f'{self.current_params_num / self._mega:.3f} /'
+                    f' {self.full_params_num / self._mega:.3f}'
+                    f' ({self.current_params_num - self.full_params_num})'],
+                ['Filters current / full (Filters current - full)',
+                    f'{self.current_filters_num} / {self.full_filters_num}'
+                    f' ({self.current_filters_num - self.full_filters_num})'],
                 ['Whole model filter pruning rate', self.whole_model_pruning_level],
-                ['Filters current / full', f'{self.current_filters_num} / {self.full_filters_num}'
-                                           f' ({self.current_filters_num - self.full_filters_num})'],
                 ['A target level of the pruning for the algorithm for the current epoch', self.target_pruning_level],
             ]
         )
