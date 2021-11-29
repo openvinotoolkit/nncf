@@ -228,7 +228,7 @@ class DataLoaderRangeInitializeRunner(DataLoaderBaseRunner):
     def __init__(
             self,
             model: NNCFNetwork,
-            modules_to_init_vs_init_configs: Dict[str, Tuple[BaseQuantizer, RangeInitConfig, bool]],
+            modules_to_init_vs_init_configs: Dict[str, Tuple[BaseQuantizer, RangeInitConfig, bool, Tuple[int]]],
             init_device: str,
             batch_size: int = None
     ):
@@ -250,7 +250,7 @@ class DataLoaderRangeInitializeRunner(DataLoaderBaseRunner):
 
     def _prepare_initialization(self):
         for name, data in self.modules_to_init.items():
-            quantizer_module, init_config, is_weights = data
+            quantizer_module, init_config, is_weights, input_shape = data
             num_samples_override = None
             if self.batch_size is not None:
                 num_batches = np.ceil(init_config.num_init_samples / self.batch_size)
@@ -263,14 +263,10 @@ class DataLoaderRangeInitializeRunner(DataLoaderBaseRunner):
 
             shape = quantizer_module.scale_shape
             if shape == (1,): # Per-tensor
-                # TODO(negvet): need to know input_shape somehow to reduce
-                input_shape = (1, 1, 1, 1) # just example
                 channel_idx = None
             elif len(shape) > 1 and all([item == 1 for item in shape]):
-                input_shape = shape
                 channel_idx = 0  # (1, 1, 1, 1) - doest not matter which dim is channel_idx
             else:
-                input_shape = shape
                 if not is_weights:
                     channel_idx = 1  # channel dim for activations
                 else:

@@ -417,6 +417,7 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
         self._debug_interface = QuantizationDebugInterface() if is_debug() else None
         self._weight_quantizers = OrderedDict()  # Quantizers applied via UpdateWeights
         self._non_weight_quantizers = OrderedDict()  # All the other quantizers
+        self._quantizers_input_shapes = OrderedDict()
         self._processed_insertion_points = set()  # type: Set[PTTargetPoint]
         self._groups_of_adjacent_quantizers = GroupsOfAdjacentQuantizers()  # type: GroupsOfAdjacentQuantizers
         self._setup_to_module_id_translation_dict = {}  # type: Dict[QuantizationPointId, QuantizerId]
@@ -678,6 +679,7 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
                                       self._weight_quantizers,
                                       self._non_weight_quantizers,
                                       self._groups_of_adjacent_quantizers,
+                                      self._quantizers_input_shapes,
                                       build_time_metric_info=self._build_time_metric_infos,
                                       build_time_range_init_params=self._range_init_params)
 
@@ -1068,10 +1070,16 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
                                                                            primary_ip.target_node_name
                                                                        ),
                                                                        insertion_points)
+            module_node = target_model_graph.get_node_by_name(primary_ip.target_node_name)
+            layer_attributes = module_node.layer_attributes
+            input_shape = layer_attributes.get_weight_shape()
+            self._quantizers_input_shapes[primary_qid] = tuple(input_shape)
         else:
             primary_qid = NonWeightQuantizerId(primary_ip.target_node_name, primary_ip.input_port_id)
             self._non_weight_quantizers[primary_qid] = \
                 NonWeightQuantizerInfo(quantizer, insertion_points)
+            input_shape = target_model_graph.get_input_shape_for_insertion_point(insertion_points[0])
+            self._quantizers_input_shapes[primary_qid] = input_shape
 
         if not (is_weights(primary_ip) and len(insertion_points) == 1):
             assert external_quantizer_storage_key not in target_model.get_compression_modules_by_type(
@@ -1174,6 +1182,7 @@ class QuantizationController(QuantizationControllerBase):
                  weight_quantizers: Dict[WeightQuantizerId, WeightQuantizerInfo],
                  non_weight_quantizers: Dict[NonWeightQuantizerId, NonWeightQuantizerInfo],
                  groups_of_adjacent_quantizers: GroupsOfAdjacentQuantizers,
+                 quantizers_input_shapes: Dict[QuantizerId, Tuple[int]],
                  build_time_metric_info: QuantizationShareBuildTimeInfo = None,
                  build_time_range_init_params: PTRangeInitParams = None):
         super().__init__(target_model)
@@ -1189,6 +1198,7 @@ class QuantizationController(QuantizationControllerBase):
         self.all_quantizations = OrderedDict()  # type: Dict[QuantizerId, BaseQuantizer]
         self.all_quantizations.update({k: v.quantizer_module_ref for k, v in self.weight_quantizers.items()})
         self.all_quantizations.update({k: v.quantizer_module_ref for k, v in self.non_weight_quantizers.items()})
+        self._quantizers_input_shapes = quantizers_input_shapes
         self._distributed = False
         self._groups_of_adjacent_quantizers = groups_of_adjacent_quantizers
         self._bn_adaptation = None
@@ -1248,13 +1258,15 @@ class QuantizationController(QuantizationControllerBase):
             group = QuantizerGroup.WEIGHTS
             init_config = range_init_params.get_init_config_for_scope_and_group(wq_id, group)
             is_weights = True
-            modules_to_init[str(wq_id)] = (wq_info.quantizer_module_ref, init_config, is_weights)
+            modules_to_init[str(wq_id)] = (wq_info.quantizer_module_ref, init_config,
+                                           is_weights, self._quantizers_input_shapes[wq_id])
 
         for aq_id, aq_info in self.non_weight_quantizers.items():
             group = QuantizerGroup.ACTIVATIONS
             init_config = range_init_params.get_init_config_for_scope_and_group(aq_id, group)
             is_weights = False
-            modules_to_init[str(aq_id)] = (aq_info.quantizer_module_ref, init_config, is_weights)
+            modules_to_init[str(aq_id)] = (aq_info.quantizer_module_ref, init_config,
+                                           is_weights, self._quantizers_input_shapes[aq_id])
 
         # NOTE: Order of modules must be the same to correctly broadcast parameters (e.g. input_low
         # and input_range)
@@ -1262,7 +1274,7 @@ class QuantizationController(QuantizationControllerBase):
         self.modules_to_range_init = modules_to_init
         runner = DataLoaderRangeInitializeRunner(self._model, modules_to_init, range_init_params.device)
 
-        quantizers = [module for module, config, is_weights in modules_to_init.values()]
+        quantizers = [module for module, config, is_weights, input_shape in modules_to_init.values()]
         quantizers_switcher = QuantizersSwitcher(quantizers)
         # bypass quantization to collect statistics from floating point model
         quantizers_switcher.disable_quantizers()
