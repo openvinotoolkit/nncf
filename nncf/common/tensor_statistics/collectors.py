@@ -18,9 +18,7 @@ from typing import Tuple, TypeVar, List
 
 import numpy as np
 
-from nncf.common.tensor import NNCFTensor
 from nncf.common.tensor_statistics.reduction import get_per_channel_history
-from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
 
 TensorType = TypeVar('TensorType')
 
@@ -99,20 +97,65 @@ class OfflineTensorStatisticCollector(TensorStatisticCollectorBase):
         self._samples.clear()
 
 
+class CollectorTensorProcessor(ABC):
+    @staticmethod
+    @abstractmethod
+    def reduce_min(x, reduction_shape):
+        pass
+
+    @staticmethod
+    @abstractmethod
+    def reduce_max(x, reduction_shape):
+        pass
+
+    @staticmethod
+    @abstractmethod
+    def abs(x):
+        pass
+
+    @staticmethod
+    @abstractmethod
+    def min(x1, x2):
+        pass
+
+    @staticmethod
+    @abstractmethod
+    def max(x1, x2):
+        pass
+
+    @staticmethod
+    @abstractmethod
+    def mean(x, axis):
+        pass
+
+    @staticmethod
+    @abstractmethod
+    def stack(x):
+        pass
+
+    @staticmethod
+    @abstractmethod
+    def unstack(x):
+        pass
+
+
 class MinMaxStatisticCollector(OnlineTensorStatisticCollector):
     """Collector estimates min of minimum values and max of maximum values."""
 
     def __init__(self, use_abs_max: bool, reduction_shape: ReductionShape, num_samples: int = None):
         super().__init__(reduction_shape, num_samples)
         self._use_abs_max = use_abs_max
-        self._tensor_processor = None
+        self._tensor_processor = self._get_processor()
 
         self._min_values = None
         self._max_values = None
 
-    def _register_input_common(self, x: NNCFTensor):
-        if not self._tensor_processor:
-            self._tensor_processor = x.tensor_processor
+    @staticmethod
+    @abstractmethod
+    def _get_processor():
+        pass
+
+    def _register_input_common(self, x: TensorType):
         min_reduced = self._tensor_processor.reduce_min(x, self._reduction_shape)
         if self._use_abs_max:
             x = self._tensor_processor.abs(x)
@@ -148,14 +191,17 @@ class MinMaxOfflineStatisticCollectorBase(OfflineTensorStatisticCollector):
         super().__init__(reduction_shape, num_samples)
         self._use_per_sample_stats = use_per_sample_stats
         self._use_abs_max = use_abs_max
-        self._tensor_processor = None
+        self._tensor_processor = self._get_processor()
 
         self._all_min_values = deque(maxlen=window_size)
         self._all_max_values = deque(maxlen=window_size)
 
-    def _register_input_common(self, x: NNCFTensor):
-        if not self._tensor_processor:
-            self._tensor_processor = x.tensor_processor
+    @staticmethod
+    @abstractmethod
+    def _get_processor():
+        pass
+
+    def _register_input_common(self, x: TensorType):
         min_reduced = self._tensor_processor.reduce_min(x, self._reduction_shape)
         if self._use_abs_max:
             x = self._tensor_processor.abs(x)

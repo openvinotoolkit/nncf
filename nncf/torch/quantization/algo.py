@@ -1541,6 +1541,7 @@ class ExperimentalQuantizationBuilder(QuantizationBuilder):
                                                   self._weight_quantizers,
                                                   self._non_weight_quantizers,
                                                   groups_of_adjacent_quantizers,
+                                                  self._quantizers_input_shapes,
                                                   self._quantizer_setup,
                                                   self._initial_quantizer_setup,
                                                   self._setup_to_module_id_translation_dict,
@@ -1567,6 +1568,7 @@ class ExperimentalQuantizationController(QuantizationController):
                  weight_quantizers: Dict[WeightQuantizerId, WeightQuantizerInfo],
                  non_weight_quantizers: Dict[NonWeightQuantizerId, NonWeightQuantizerInfo],
                  groups_of_adjacent_quantizers: GroupsOfAdjacentQuantizers,
+                 quantizers_input_shapes: Dict[QuantizerId, Tuple[int]],
                  quantizer_setup: MultiConfigQuantizerSetup,
                  initial_quantizer_setup: SingleConfigQuantizerSetup,
                  setup_to_module_id_translation_dict: Dict[QuantizationPointId, QuantizerId],
@@ -1580,6 +1582,7 @@ class ExperimentalQuantizationController(QuantizationController):
                          weight_quantizers=weight_quantizers,
                          non_weight_quantizers=non_weight_quantizers,
                          groups_of_adjacent_quantizers=groups_of_adjacent_quantizers,
+                         quantizers_input_shapes=quantizers_input_shapes,
                          build_time_metric_info=build_time_metric_info)
         self._target_model_ref = target_model
         self._should_setup_adjust_pad_ops = should_setup_adjust_pad_ops

@@ -11,9 +11,12 @@
  limitations under the License.
 """
 
+from typing import Union, List, Deque
+
 import torch
 
 from nncf.common.tensor_statistics.collectors import MinMaxStatisticCollector
+from nncf.common.tensor_statistics.collectors import CollectorTensorProcessor
 from nncf.common.tensor_statistics.collectors import MedianMADStatisticCollector
 from nncf.common.tensor_statistics.collectors import PercentileStatisticCollector
 from nncf.common.tensor_statistics.collectors import MeanPercentileStatisticCollector
@@ -21,12 +24,49 @@ from nncf.common.tensor_statistics.collectors import MixedMinMaxStatisticCollect
 from nncf.common.tensor_statistics.collectors import MeanMinMaxStatisticCollector
 from nncf.common.tensor_statistics.collectors import ReductionShape
 from nncf.common.tensor_statistics.reduction import np_percentile_reduce_like
-from nncf.torch.dynamic_graph.context import no_nncf_trace
 from nncf.torch.tensor_statistics.reduction import  expand_like
 from nncf.torch.tensor_statistics.statistics import PTMinMaxTensorStatistic
 from nncf.torch.tensor_statistics.statistics import PTMedianMADTensorStatistic
 from nncf.torch.tensor_statistics.statistics import PTPercentileTensorStatistic
-from nncf.torch.tensor import PTNNCFTensor
+from nncf.torch.dynamic_graph.context import no_nncf_trace
+
+
+class PTCollectorTensorProcessor(CollectorTensorProcessor):
+    """
+    A PT realization of the processing methods set for PTNNCFTensors.
+    """
+
+    @classmethod
+    def reduce_min(cls, x: torch.Tensor, axis: Union[int, tuple]) -> torch.Tensor:
+        return torch.amin(x, dim=axis)
+
+    @classmethod
+    def reduce_max(cls, x: torch.Tensor, axis: Union[int, tuple]) -> torch.Tensor:
+        return torch.amax(x, dim=axis)
+
+    @classmethod
+    def abs(cls, x: torch.Tensor) -> torch.Tensor:
+        return torch.abs(x)
+
+    @classmethod
+    def min(cls, x1: torch.Tensor, x2: torch.Tensor) -> torch.Tensor:
+        return torch.min(x1, x2)
+
+    @classmethod
+    def max(cls, x1: torch.Tensor, x2: torch.Tensor) -> torch.Tensor:
+        return torch.max(x1, x2)
+
+    @classmethod
+    def mean(cls, x: torch.Tensor, axis: Union[int, tuple]) -> torch.Tensor:
+        return x.mean(dim=axis)
+
+    @classmethod
+    def stack(cls, x: Union[List[torch.Tensor], Deque[torch.Tensor]], axis: int = 0) -> torch.Tensor:
+        return torch.stack(tuple(x), dim=axis)
+
+    @classmethod
+    def unstack(cls, x: torch.Tensor, axis: int = 0) -> List[torch.Tensor]:
+        return torch.unbind(x, dim=axis)
 
 
 class PTMinMaxStatisticCollector(MinMaxStatisticCollector):
@@ -35,13 +75,17 @@ class PTMinMaxStatisticCollector(MinMaxStatisticCollector):
         super().__init__(use_abs_max, reduction_shape, num_samples)
         self._output_shape = output_shape
 
+    @staticmethod
+    def _get_processor() -> CollectorTensorProcessor:
+        return PTCollectorTensorProcessor()
+
     def _register_input(self, x: torch.Tensor):
         with no_nncf_trace():
-            self._register_input_common(PTNNCFTensor(x))
+            self._register_input_common(x)
 
     def _get_statistics(self) -> PTMinMaxTensorStatistic:
-        min_values = self._min_values.tensor.view(self._output_shape)
-        max_values = self._max_values.tensor.view(self._output_shape)
+        min_values = self._min_values.view(self._output_shape)
+        max_values = self._max_values.view(self._output_shape)
         return PTMinMaxTensorStatistic(min_values, max_values)
 
 
@@ -59,13 +103,17 @@ class PTMixedMinMaxStatisticCollector(MixedMinMaxStatisticCollector):
                          use_means_of_maxs, reduction_shape, num_samples, window_size)
         self._output_shape = output_shape
 
+    @staticmethod
+    def _get_processor() -> CollectorTensorProcessor:
+        return PTCollectorTensorProcessor()
+
     def _register_input(self, x: torch.Tensor):
         with no_nncf_trace():
-            self._register_input_common(PTNNCFTensor(x))
+            self._register_input_common(x)
 
     def _get_statistics(self) -> PTMinMaxTensorStatistic:
-        min_values = self._min_aggregate().tensor.view(self._output_shape)
-        max_values = self._max_aggregate().tensor.view(self._output_shape)
+        min_values = self._min_aggregate().view(self._output_shape)
+        max_values = self._max_aggregate().view(self._output_shape)
         return PTMinMaxTensorStatistic(min_values, max_values)
 
 
@@ -81,13 +129,17 @@ class PTMeanMinMaxStatisticCollector(MeanMinMaxStatisticCollector):
                                                              num_samples, window_size)
         self._output_shape = output_shape
 
+    @staticmethod
+    def _get_processor() -> CollectorTensorProcessor:
+        return PTCollectorTensorProcessor()
+
     def _register_input(self, x: torch.Tensor):
         with no_nncf_trace():
-            self._register_input_common(PTNNCFTensor(x))
+            self._register_input_common(x)
 
     def _get_statistics(self) -> PTMinMaxTensorStatistic:
-        min_values = self._min_aggregate().tensor.view(self._output_shape)
-        max_values = self._max_aggregate().tensor.view(self._output_shape)
+        min_values = self._min_aggregate().view(self._output_shape)
+        max_values = self._max_aggregate().view(self._output_shape)
         return PTMinMaxTensorStatistic(min_values, max_values)
 
 
