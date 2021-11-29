@@ -223,6 +223,9 @@ class BigPruningTestModel(nn.Module):
             self.conv1.weight.data[i] += i
         self.bn1 = nn.BatchNorm2d(16)
         self.relu = nn.ReLU()
+        self.conv_depthwise = create_depthwise_conv(16, 3, 0, 1)
+        for i in range(16):
+            self.conv_depthwise.weight.data[i] += i
         self.conv2 = create_conv(16, 32, 3, 20, 0)
         for i in range(32):
             self.conv2.weight.data[i] += i
@@ -236,6 +239,7 @@ class BigPruningTestModel(nn.Module):
         x = self.conv1(x)
         x = self.bn1(x)
         x = self.relu(x)
+        x = self.conv_depthwise(x)
         x = self.conv2(x)
         x = self.bn2(x)
         x = self.relu(x)
