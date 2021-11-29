@@ -29,6 +29,7 @@ from nncf.common.graph import NNCFNodeName
 from nncf.common.graph import OUTPUT_NOOP_METATYPES
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TransformationPriority
+from nncf.common.graph.utils import get_first_nodes_of_type
 from nncf.common.hardware.config import HWConfigType
 from nncf.common.hardware.config import HW_CONFIG_TYPE_TARGET_DEVICE_MAP
 from nncf.common.initialization.batchnorm_adaptation import BatchnormAdaptationAlgorithm
@@ -324,16 +325,15 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
             qconfig = constraints.apply_constraints_to(qconfig)
         return qconfig
 
-    def _get_half_range(self, qconfig: QuantizerConfig, applied_saturation_fix: bool) -> Tuple[bool, bool]:
-        half_range = False
-        if self._saturation_fix in ['enable', 'enable_for_first_conv_layer']:
-            if self._target_device in ['CPU', 'ANY'] and qconfig.num_bits == 8:
-                half_range = True
-
-        if self._saturation_fix == 'enable_for_first_conv_layer':
-            half_range = half_range and not applied_saturation_fix
-        applied_saturation_fix = applied_saturation_fix or half_range
-        return half_range, applied_saturation_fix
+    def _get_half_range(self, qconfig: QuantizerConfig, target_node: NNCFNode,
+                        first_conv_nodes: List[NNCFNode]) -> bool:
+        if self._target_device in ['CPU', 'ANY'] and qconfig.num_bits == 8:
+            if self._saturation_fix == 'enable':
+                return True
+            elif self._saturation_fix == 'enable_for_first_conv_layer':
+                if target_node in first_conv_nodes:
+                    return True
+        return False
 
     def _create_quantizer(self, name: str, qspec: TFQuantizerSpec) -> Quantizer:
         quantizer_cls = NNCF_QUANTIZATION_OPERATIONS.get(qspec.mode)
@@ -444,6 +444,7 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
         qp_id_to_index = {}  # type: Dict[QuantizationPointId, int]
         tf_setup_qp_index = 0
         applied_saturation_fix = False
+        first_conv_nodes = get_first_nodes_of_type(nncf_graph, ['Conv2D'])
         for qp_id, qp in quantizer_setup.quantization_points.items():
             if qp.is_weight_quantization_point():
                 target_node = nncf_graph.get_node_by_name(qp.insertion_point.target_node_name)
@@ -469,7 +470,8 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
                         weight_def.weight_attr_name)
                     self._op_names.append(op_name)
 
-                    half_range, applied_saturation_fix = self._get_half_range(qconfig, applied_saturation_fix)
+                    half_range = self._get_half_range(qconfig, target_node, first_conv_nodes)
+                    applied_saturation_fix = applied_saturation_fix or half_range
                     quantizer_spec = TFQuantizerSpec.from_config(qconfig,
                                                                  narrow_range=not half_range,
                                                                  half_range=half_range)
@@ -508,11 +510,16 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
         setup = self._generate_unified_scale_groups(model, quantizer_setup, qp_id_to_index, setup)
 
         if applied_saturation_fix:
-            logger.warning('The saturation issue fix will be applied. '
-                           'Now all weight quantizers will effectively use only 7 bits out of 8 bits. '
-                           'This resolves the saturation issue problem on AVX2 and AVX-512 machines. '
-                           'Please take a look at the documentation for a detailed information.')
-
+            if self._saturation_fix == 'enable':
+                logger.warning('The saturation issue fix will be applied. '
+                               'Now all weight quantizers will effectively use only 7 bits out of 8 bits. '
+                               'This resolves the saturation issue problem on AVX2 and AVX-512 machines. '
+                               'Please take a look at the documentation for a detailed information.')
+            elif self._saturation_fix == 'enable_for_first_conv_layer':
+                logger.warning('The saturation issue fix will be applied. '
+                               'Now first convolustion weight quantizers will effectively use only 7 bits out of '
+                               '8 bits. This resolves the saturation issue problem on AVX2 and AVX-512 machines. '
+                               'Please take a look at the documentation for a detailed information.')
         return setup
 
     def _generate_unified_scale_groups(self,
