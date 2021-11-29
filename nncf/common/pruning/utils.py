@@ -12,7 +12,7 @@
 """
 
 from functools import partial
-from typing import Dict, List, Optional, Tuple, Type, Union
+from typing import Dict, List, Optional, Tuple, Type, Union, Callable
 from enum import Enum
 
 import math
@@ -281,7 +281,15 @@ def count_flops_and_weights_per_node(graph: NNCFGraph,
         name = node.node_name
         num_in_channels = input_channels.get(name, node.layer_attributes.in_channels)
         num_out_channels = output_channels.get(name, node.layer_attributes.out_channels)
-        filters_per_channel = num_out_channels // node.layer_attributes.groups
+        if is_prunable_depthwise_conv(node):
+            # Prunable depthwise conv processed in special way
+            # because common way to calculate filters per
+            # channel for such layer leads to zero in case
+            # some of the output channels are pruned.
+            filters_per_channel = 1
+        else:
+            filters_per_channel = num_out_channels // node.layer_attributes.groups
+
         flops_numpy = 2 * np.prod(node.layer_attributes.kernel_size) * \
                       num_in_channels * filters_per_channel * np.prod(output_shapes[name])
         weights_numpy = np.prod(node.layer_attributes.kernel_size) * num_in_channels * filters_per_channel
@@ -309,6 +317,35 @@ def count_filters_num(graph: NNCFGraph,
     return filters_num
 
 
+def _calculate_in_out_channels(pruning_groups: List[Cluster[PrunedLayerInfoBase]],
+                               sparse_elements_counter: Callable[[str], int],
+                               full_input_channels: Dict[str, int],
+                               full_output_channels: Dict[str, int],
+                               pruning_groups_next_nodes: Dict[int, List[str]]):
+    tmp_in_channels = full_input_channels.copy()
+    tmp_out_channels = full_output_channels.copy()
+
+    for group in pruning_groups:
+        layer_name = group.elements[0].node_name
+        assert all(tmp_out_channels[layer_name] == tmp_out_channels[node.node_name] for node in
+                   group.elements)
+        # Prune all nodes in cluster (by output channels)
+        old_out_channels = full_output_channels[layer_name]
+        num_of_sparse_elems = sparse_elements_counter(layer_name)
+        new_out_channels_num = old_out_channels - num_of_sparse_elems
+
+        for minfo in group.elements:
+            tmp_out_channels[minfo.node_name] = new_out_channels_num
+            if minfo.is_depthwise:
+                tmp_in_channels[minfo.node_name] = new_out_channels_num
+
+        # Prune in_channels in all next nodes of cluster
+        for node_name in pruning_groups_next_nodes[group.id]:
+            tmp_in_channels[node_name] -= num_of_sparse_elems
+
+    return tmp_in_channels, tmp_out_channels
+
+
 def calculate_in_out_channels_in_uniformly_pruned_model(pruning_groups: List[Cluster[PrunedLayerInfoBase]],
                                                         pruning_rate: float,
                                                         full_input_channels: Dict[str, int],
@@ -326,26 +363,32 @@ def calculate_in_out_channels_in_uniformly_pruned_model(pruning_groups: List[Clu
     :return Dictionary of new input channels number {node_name: channels_num}
     :return Dictionary of new output channels number {node_name: channels_num}
     """
-    tmp_in_channels = full_input_channels.copy()
-    tmp_out_channels = full_output_channels.copy()
+    def get_num_of_sparse_elements_by_node(node_name: str) -> int:
+        old_out_channels = full_output_channels[node_name]
+        return get_rounded_pruned_element_number(old_out_channels, pruning_rate)
 
-    for group in pruning_groups:
-        layer_name = group.elements[0].node_name
-        assert all(tmp_out_channels[layer_name] == tmp_out_channels[node.node_name] for node in
-                   group.elements)
-        # Prune all nodes in cluster (by output channels)
-        old_out_channels = full_output_channels[layer_name]
-        num_of_sparse_elems = get_rounded_pruned_element_number(old_out_channels, pruning_rate)
-        new_out_channels_num = old_out_channels - num_of_sparse_elems
+    return _calculate_in_out_channels(pruning_groups,
+                                      get_num_of_sparse_elements_by_node,
+                                      full_input_channels,
+                                      full_output_channels,
+                                      pruning_groups_next_nodes)
 
-        for minfo in group.elements:
-            tmp_out_channels[minfo.node_name] = new_out_channels_num
 
-        # Prune in_channels in all next nodes of cluster
-        for node_name in pruning_groups_next_nodes[group.id]:
-            tmp_in_channels[node_name] -= num_of_sparse_elems
+def calculate_in_out_channels_by_masks(pruning_groups: List[Cluster[PrunedLayerInfoBase]],
+                                       masks: Dict[str, NNCFTensor],
+                                       full_input_channels: Dict[str, int],
+                                       full_output_channels: Dict[str, int],
+                                       pruning_groups_next_nodes: Dict[int, List[str]]):
+    def get_num_of_sparse_elements_by_node(node_name: str) -> int:
+        mask = masks[node_name]
+        tensor_processor = mask.tensor_processor
+        return mask.shape[0] - tensor_processor.sum(mask)
 
-    return tmp_in_channels, tmp_out_channels
+    return _calculate_in_out_channels(pruning_groups,
+                                      get_num_of_sparse_elements_by_node,
+                                      full_input_channels,
+                                      full_output_channels,
+                                      pruning_groups_next_nodes)
 
 
 class PruningOperationsMetatypeRegistry(Registry):

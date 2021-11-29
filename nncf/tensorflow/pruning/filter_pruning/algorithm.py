@@ -28,6 +28,7 @@ from nncf.common.pruning.mask_propagation import MaskPropagationAlgorithm
 from nncf.common.pruning.schedulers import PRUNING_SCHEDULERS
 from nncf.common.pruning.statistics import FilterPruningStatistics
 from nncf.common.pruning.utils import calculate_in_out_channels_in_uniformly_pruned_model
+from nncf.common.pruning.utils import calculate_in_out_channels_by_masks
 from nncf.common.pruning.utils import count_filters_num
 from nncf.common.pruning.utils import count_flops_and_weights
 from nncf.common.pruning.utils import count_flops_and_weights_per_node
@@ -515,29 +516,25 @@ class FilterPruningController(BasePruningAlgoController):
 
         return cumulative_filters_importance
 
-    def _count_current_in_out_channels(self):
-        tmp_in_channels = self._layers_in_channels.copy()
-        tmp_out_channels = self._layers_out_channels.copy()
-
+    def _collect_pruning_masks(self) -> Dict[str, TFNNCFTensor]:
+        retval = {}
         for group in self._pruned_layer_groups_info.get_all_clusters():
-            assert all(tmp_out_channels[group.elements[0].node_name] == tmp_out_channels[node.node_name] for node in
-                       group.elements)
-            mask = self._original_graph.get_node_by_id(group.elements[0].nncf_node_id).data['output_mask'].tensor
-            new_out_channels_num = int(sum(mask))
-            num_of_sparse_elems = len(mask) - new_out_channels_num
             for node in group.elements:
-                tmp_out_channels[node.node_name] = new_out_channels_num
-            # Prune in_channels in all next nodes of cluster
-            for node_name in self._next_nodes[group.id]:
-                tmp_in_channels[node_name] -= num_of_sparse_elems
-
-        return tmp_in_channels, tmp_out_channels
+                retval[node.node_name] = self._original_graph.get_node_by_name(node.node_name).data['output_mask']
+        return retval
 
     def _update_benchmark_statistics(self):
-        tmp_in_channels, tmp_out_channels = self._count_current_in_out_channels()
+        tmp_in_channels, tmp_out_channels = calculate_in_out_channels_by_masks(
+                pruning_groups=self._pruned_layer_groups_info.get_all_clusters(),
+                masks=self._collect_pruning_masks(),
+                full_input_channels=self._layers_in_channels,
+                full_output_channels=self._layers_out_channels,
+                pruning_groups_next_nodes=self._next_nodes)
+
         self.current_filters_num = count_filters_num(self._original_graph,
                                                      op_metatypes=GENERAL_CONV_LAYER_METATYPES,
                                                      output_channels=tmp_out_channels)
+
         self.current_flops, self.current_params_num = \
             count_flops_and_weights(self._original_graph,
                                     self._layers_in_shapes,

@@ -109,3 +109,7 @@ class SymbolicMaskProcessor(NNCFPruningBaseTensorProcessor):
                 return AmbiguousSymbolicMask(producers)
 
         return SymbolicMask(input_masks[0].shape[0], producers)
+
+    @classmethod
+    def sum(cls, tensor: NNCFTensor) -> int:
+        raise RuntimeError('Attempt to apply sum operation to symbolic NNCFTensor')

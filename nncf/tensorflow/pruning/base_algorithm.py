@@ -28,6 +28,7 @@ from nncf.common.pruning.node_selector import PruningNodeSelector
 from nncf.common.pruning.statistics import PrunedLayerSummary
 from nncf.common.pruning.statistics import PrunedModelStatistics
 from nncf.common.pruning.structs import PrunedLayerInfoBase
+from nncf.common.pruning.utils import is_prunable_depthwise_conv
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.common.compression import BaseCompressionAlgorithmController
 from nncf.config.extractors import extract_algo_specific_config
@@ -52,8 +53,8 @@ from nncf.tensorflow.sparsity.utils import strip_model_from_masks
 
 
 class PrunedLayerInfo(PrunedLayerInfoBase):
-    def __init__(self, node_name: NNCFNodeName, layer_name: str, node_id: int):
-        super().__init__(node_name, node_id)
+    def __init__(self, node_name: NNCFNodeName, layer_name: str, node_id: int, is_depthwise: bool):
+        super().__init__(node_name, node_id, is_depthwise)
         self.layer_name = layer_name
 
 
@@ -120,7 +121,8 @@ class BasePruningAlgoBuilder(TFCompressionAlgorithmBuilder):
             for node in group.elements:
                 layer_name = get_layer_identifier(node)
                 layer = model.get_layer(layer_name)
-                group_minfos.append(PrunedLayerInfo(node.node_name, layer_name, node.node_id))
+                group_minfos.append(PrunedLayerInfo(node.node_name, layer_name, node.node_id,
+                                                    is_prunable_depthwise_conv(node)))
 
                 # Add output_mask to elements to run mask_propagation
                 # and detect spec_nodes that will be pruned.

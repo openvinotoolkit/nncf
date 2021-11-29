@@ -36,6 +36,7 @@ from nncf.common.pruning.statistics import PrunedModelTheoreticalBorderline
 from nncf.common.pruning.statistics import PrunedLayerSummary
 from nncf.common.pruning.statistics import PrunedModelStatistics
 from nncf.common.pruning.utils import calculate_in_out_channels_in_uniformly_pruned_model
+from nncf.common.pruning.utils import calculate_in_out_channels_by_masks
 from nncf.common.pruning.utils import count_filters_num
 from nncf.common.pruning.utils import count_flops_and_weights
 from nncf.common.pruning.utils import count_flops_and_weights_per_node
@@ -47,6 +48,7 @@ from nncf.common.statistics import NNCFStatistics
 from nncf.common.utils.debug import is_debug
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.config.extractors import extract_bn_adaptation_init_params
+from nncf.torch.tensor import PTNNCFTensor
 from nncf.torch.algo_selector import PT_COMPRESSION_ALGORITHMS
 from nncf.torch.compression_method_api import PTCompressionAlgorithmController
 from nncf.torch.graph.operator_metatypes import PTConv1dMetatype
@@ -340,23 +342,6 @@ class FilterPruningController(BasePruningAlgoController):
             count_flops_and_weights_per_node(graph, self._modules_in_shapes, self._modules_out_shapes,
                                              conv_op_metatypes=GENERAL_CONV_LAYER_METATYPES,
                                              linear_op_metatypes=LINEAR_LAYER_METATYPES)
-
-    def _count_current_in_out_channels(self):
-        tmp_in_channels = self._modules_in_channels.copy()
-        tmp_out_channels = self._modules_out_channels.copy()
-
-        for group in self.pruned_module_groups_info.get_all_clusters():
-            assert all(tmp_out_channels[group.elements[0].node_name] == tmp_out_channels[node.node_name]
-                       for node in group.elements)
-            new_out_channels_num = int(sum(group.elements[0].operand.binary_filter_pruning_mask))
-            num_of_sparse_elems = len(group.elements[0].operand.binary_filter_pruning_mask) - new_out_channels_num
-            for node in group.elements:
-                tmp_out_channels[node.node_name] = new_out_channels_num
-            # Prune in_channels in all next nodes of cluster
-            next_nodes = self.next_nodes[group.id]
-            for node_name in next_nodes:
-                tmp_in_channels[node_name] -= num_of_sparse_elems
-        return tmp_in_channels, tmp_out_channels
 
     def _calculate_flops_and_weights_in_uniformly_pruned_model(self, pruning_rate: float) -> Tuple[int, int]:
         """
@@ -697,8 +682,21 @@ class FilterPruningController(BasePruningAlgoController):
         self._scheduler = StubCompressionScheduler()
         self._scheduler.current_pruning_level = 0.0
 
+    def _collect_pruning_masks(self) -> Dict[str, PTNNCFTensor]:
+        retval = {}
+        for group in self.pruned_module_groups_info.get_all_clusters():
+            for node in group.elements:
+                retval[node.node_name] = PTNNCFTensor(node.operand.binary_filter_pruning_mask)
+        return retval
+
     def _update_benchmark_statistics(self):
-        tmp_in_channels, tmp_out_channels = self._count_current_in_out_channels()
+        tmp_in_channels, tmp_out_channels = calculate_in_out_channels_by_masks(
+            pruning_groups=self.pruned_module_groups_info.get_all_clusters(),
+            masks=self._collect_pruning_masks(),
+            full_input_channels=self._modules_in_channels,
+            full_output_channels=self._modules_out_channels,
+            pruning_groups_next_nodes=self.next_nodes)
+
         self.current_filters_num = count_filters_num(self._model.get_original_graph(),
                                                      op_metatypes=GENERAL_CONV_LAYER_METATYPES,
                                                      output_channels=tmp_out_channels)
