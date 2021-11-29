@@ -379,6 +379,18 @@ def calculate_in_out_channels_by_masks(pruning_groups: List[Cluster[PrunedLayerI
                                        full_input_channels: Dict[str, int],
                                        full_output_channels: Dict[str, int],
                                        pruning_groups_next_nodes: Dict[int, List[str]]):
+    """
+    Imitates filters pruning by removing output filters zeroed by pruning masks in each pruning group
+    and updating corresponding input channels number in `pruning_groups_next_nodes` nodes.
+
+    :param pruning_groups: A list of pruning groups.
+    :param masks: A dictionary of masks of each pruning node.
+    :param full_input_channels:  A dictionary of input channels number in original model.
+    :param full_output_channels: A dictionary of output channels number in original model.
+    :param pruning_groups_next_nodes: A dictionary of next nodes of each pruning group.
+    :return Dictionary of new input channels number {node_name: channels_num}
+    :return Dictionary of new output channels number {node_name: channels_num}
+    """
     def get_num_of_sparse_elements_by_node(node_name: str) -> int:
         mask = masks[node_name]
         tensor_processor = mask.tensor_processor
