@@ -411,6 +411,9 @@ class FilterPruningController(BasePruningAlgoController):
             group = self._pruned_layer_groups_info.get_cluster_by_id(group_id)
             for node in group.elements:
                 tmp_out_channels[node.node_name] -= 1
+                if node.is_depthwise:
+                    tmp_in_channels[node.node_name] -= 1
+
             for node_name in self._next_nodes[group_id]:
                 tmp_in_channels[node_name] -= 1
 
@@ -482,6 +485,7 @@ class FilterPruningController(BasePruningAlgoController):
                 full_input_channels=self._layers_in_channels,
                 full_output_channels=self._layers_out_channels,
                 pruning_groups_next_nodes=self._next_nodes)
+
         return count_flops_and_weights(self._original_graph,
                                        self._layers_in_shapes,
                                        self._layers_out_shapes,

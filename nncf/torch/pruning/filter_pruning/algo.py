@@ -603,6 +603,9 @@ class FilterPruningController(BasePruningAlgoController):
             cluster = self.pruned_module_groups_info.get_cluster_by_id(cluster_idx)
             for node in cluster.elements:
                 tmp_out_channels[node.node_name] -= 1
+                if node.is_depthwise:
+                    tmp_in_channels[node.node_name] -= 1
+
                 node.operand.binary_filter_pruning_mask[filter_idx] = 0
 
             # Prune in channels in all next nodes

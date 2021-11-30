@@ -13,10 +13,15 @@
 
 import pytest
 
+from nncf.common.pruning.utils import calculate_in_out_channels_by_masks
+from nncf.common.pruning.utils import count_flops_and_weights
+from nncf.tensorflow.graph.metatypes.common import GENERAL_CONV_LAYER_METATYPES
+from nncf.tensorflow.graph.metatypes.common import LINEAR_LAYER_METATYPES
 from tests.tensorflow.helpers import create_compressed_model_and_algo_for_test
 from tests.tensorflow.pruning.helpers import get_basic_pruning_config
 from tests.tensorflow.pruning.helpers import get_model_grouped_convs
 from tests.tensorflow.pruning.helpers import get_test_model_shared_convs
+from tests.tensorflow.pruning.helpers import get_model_depthwise_conv
 
 
 @pytest.mark.parametrize(
@@ -25,7 +30,8 @@ from tests.tensorflow.pruning.helpers import get_test_model_shared_convs
     (
         (get_test_model_shared_convs, True, 0.4, 461438976, 276858560, 11534848, 6920562),
         (get_test_model_shared_convs, False, 0.4, 461438976, 275300352, 11534848, 6881664),
-        (get_model_grouped_convs, False, 0.0, 10859520, 10859520, 215808, 215808)
+        (get_model_grouped_convs, False, 0.0, 10859520, 10859520, 215808, 215808),
+        (get_model_depthwise_conv, True, 0.8, 783360, 154368, 23688, 7776),
     )
 )
 def test_flops_calulation_for_spec_layers(model_fn, all_weights, pruning_flops_target,
@@ -46,3 +52,20 @@ def test_flops_calulation_for_spec_layers(model_fn, all_weights, pruning_flops_t
     assert compression_ctrl.full_params_num == ref_full_params
     assert compression_ctrl.current_flops == ref_current_flops
     assert compression_ctrl.current_params_num == ref_current_params
+    # pylint:disable=protected-access
+    tmp_in_channels, tmp_out_channels = calculate_in_out_channels_by_masks(
+        pruning_groups=compression_ctrl._pruned_layer_groups_info.get_all_clusters(),
+        masks=compression_ctrl._collect_pruning_masks(),
+        full_input_channels=compression_ctrl._layers_in_channels,
+        full_output_channels=compression_ctrl._layers_out_channels,
+        pruning_groups_next_nodes=compression_ctrl._next_nodes)
+
+    cur_flops, cur_params_num = \
+        count_flops_and_weights(compression_ctrl._original_graph,
+                                compression_ctrl._layers_in_shapes,
+                                compression_ctrl._layers_out_shapes,
+                                input_channels=tmp_in_channels,
+                                output_channels=tmp_out_channels,
+                                conv_op_metatypes=GENERAL_CONV_LAYER_METATYPES,
+                                linear_op_metatypes=LINEAR_LAYER_METATYPES)
+    assert (cur_flops, cur_params_num) == (ref_current_flops, ref_current_params)
