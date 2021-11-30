@@ -17,7 +17,7 @@ from typing import List, Union
 from nncf.common.tensor import NNCFTensor, DeviceType
 
 
-class PruningBaseTensorProcessor:
+class NNCFPruningBaseTensorProcessor:
     """
     An interface of the processing methods set for NNCFTensors.
     """

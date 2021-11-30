@@ -98,7 +98,7 @@ class OfflineTensorStatisticCollector(TensorStatisticCollectorBase):
         self._samples.clear()
 
 
-class CollectorTensorProcessor(ABC):
+class NNCFCollectorTensorProcessor(ABC):
     @staticmethod
     @abstractmethod
     def reduce_min(x, axis):

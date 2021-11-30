@@ -13,7 +13,7 @@
 from typing import List, Dict
 
 import torch
-from nncf.torch.pruning.tensor_processor import PTPruningTensorProcessor
+from nncf.torch.pruning.tensor_processor import PTNNCFPruningTensorProcessor
 from texttable import Texttable
 from torch import nn
 
@@ -133,7 +133,7 @@ class BasePruningAlgoBuilder(PTCompressionAlgorithmBuilder):
         # Propagate masks to find norm layers to prune
         init_output_masks_in_graph(target_model_graph, self.pruned_module_groups_info.get_all_nodes())
         MaskPropagationAlgorithm(target_model_graph, PT_PRUNING_OPERATOR_METATYPES,
-                                 PTPruningTensorProcessor).mask_propagation()
+                                 PTNNCFPruningTensorProcessor).mask_propagation()
 
         # Adding binary masks also for Batch/Group Norms to allow applying masks after propagation
         types_to_apply_mask = ['group_norm']

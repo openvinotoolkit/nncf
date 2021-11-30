@@ -15,11 +15,11 @@ import numpy as np
 
 from typing import List, Optional, Union
 
+from nncf.common.pruning.tensor_processor import NNCFPruningBaseTensorProcessor
 from nncf.common.tensor import NNCFTensor
-from nncf.common.tensor import NNCFBaseTensorProcessor
 
 
-class NPNNCFTensorProcessor(NNCFBaseTensorProcessor):
+class NPNNCFTensorProcessor(NNCFPruningBaseTensorProcessor):
     @classmethod
     def concatenate(cls, tensors: List[NNCFTensor], axis: int) -> NNCFTensor:
         for tensor in tensors[1:]:
@@ -55,7 +55,7 @@ class NPNNCFTensor(NNCFTensor):
         if isinstance(tensor, self.__class__):
             tensor = tensor.tensor
 
-        super().__init__(tensor, NPNNCFTensorProcessor)
+        super().__init__(tensor)
         self.dummy_device = dummy_device
 
     @property

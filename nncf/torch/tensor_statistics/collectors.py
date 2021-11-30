@@ -17,7 +17,7 @@ import torch
 
 from nncf.common.tensor import NNCFTensor
 from nncf.common.tensor_statistics.collectors import MinMaxStatisticCollector
-from nncf.common.tensor_statistics.collectors import CollectorTensorProcessor
+from nncf.common.tensor_statistics.collectors import NNCFCollectorTensorProcessor
 from nncf.common.tensor_statistics.collectors import MedianMADStatisticCollector
 from nncf.common.tensor_statistics.collectors import PercentileStatisticCollector
 from nncf.common.tensor_statistics.collectors import MeanPercentileStatisticCollector
@@ -33,9 +33,9 @@ from nncf.torch.dynamic_graph.context import no_nncf_trace
 from nncf.torch.tensor import PTNNCFTensor
 
 
-class PTCollectorTensorProcessor(CollectorTensorProcessor):
+class PTNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
     """
-    A PT realization of the processing methods set for PTNNCFTensors.
+    A realization of the processing methods set for PTNNCFTensors.
     """
 
     @staticmethod
@@ -80,8 +80,8 @@ class PTMinMaxStatisticCollector(MinMaxStatisticCollector):
         self._output_shape = output_shape
 
     @staticmethod
-    def _get_processor() -> CollectorTensorProcessor:
-        return PTCollectorTensorProcessor()
+    def _get_processor() -> NNCFCollectorTensorProcessor:
+        return PTNNCFCollectorTensorProcessor()
 
     def _register_input(self, x: torch.Tensor):
         with no_nncf_trace():
@@ -108,8 +108,8 @@ class PTMixedMinMaxStatisticCollector(MixedMinMaxStatisticCollector):
         self._output_shape = output_shape
 
     @staticmethod
-    def _get_processor() -> CollectorTensorProcessor:
-        return PTCollectorTensorProcessor()
+    def _get_processor() -> NNCFCollectorTensorProcessor:
+        return PTNNCFCollectorTensorProcessor()
 
     def _register_input(self, x: torch.Tensor):
         with no_nncf_trace():
@@ -134,8 +134,8 @@ class PTMeanMinMaxStatisticCollector(MeanMinMaxStatisticCollector):
         self._output_shape = output_shape
 
     @staticmethod
-    def _get_processor() -> CollectorTensorProcessor:
-        return PTCollectorTensorProcessor()
+    def _get_processor() -> NNCFCollectorTensorProcessor:
+        return PTNNCFCollectorTensorProcessor()
 
     def _register_input(self, x: torch.Tensor):
         with no_nncf_trace():

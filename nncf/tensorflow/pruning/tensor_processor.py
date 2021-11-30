@@ -15,12 +15,12 @@ from typing import List, Union
 
 import tensorflow as tf
 
-from nncf.common.pruning.tensor_processor import PruningBaseTensorProcessor
+from nncf.common.pruning.tensor_processor import NNCFPruningBaseTensorProcessor
 from nncf.common.tensor import NNCFTensor
 from nncf.tensorflow.tensor import TFNNCFTensor
 
 
-class TFPruningTensorProcessor(PruningBaseTensorProcessor):
+class TFNNCFPruningTensorProcessor(NNCFPruningBaseTensorProcessor):
     """
     A realization of the processing methods set for TFNNCFTensors.
     """

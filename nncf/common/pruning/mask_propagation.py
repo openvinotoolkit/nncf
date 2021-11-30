@@ -11,17 +11,16 @@
  limitations under the License.
 """
 
-from typing import Dict, List, Union
+from typing import Dict, List, Type
 
 from nncf.common.graph import NNCFGraph
-from nncf.common.pruning.tensor_processor import PruningBaseTensorProcessor
+from nncf.common.pruning.tensor_processor import NNCFPruningBaseTensorProcessor
 from nncf.common.pruning.utils import PruningOperationsMetatypeRegistry
 from nncf.common.pruning.utils import get_input_masks
 from nncf.common.pruning.utils import is_grouped_conv
 from nncf.common.pruning.utils import PruningAnalysisDecision
 from nncf.common.pruning.utils import PruningAnalysisReason
 from nncf.common.pruning.symbolic_mask import SymbolicMask
-from nncf.common.pruning.symbolic_mask import SymbolicMaskProcessor
 from nncf.common.pruning.operations import BasePruningOp
 
 
@@ -34,7 +33,7 @@ class MaskPropagationAlgorithm:
 
     def __init__(self, graph: NNCFGraph,
                  pruning_operator_metatypes: PruningOperationsMetatypeRegistry,
-                 tensor_processor: PruningBaseTensorProcessor):
+                 tensor_processor: Type[NNCFPruningBaseTensorProcessor]):
         """
         Initializes MaskPropagationAlgorithm.
 

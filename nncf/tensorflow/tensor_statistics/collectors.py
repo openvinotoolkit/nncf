@@ -18,7 +18,7 @@ import tensorflow as tf
 
 from nncf.common.tensor import NNCFTensor
 from nncf.common.tensor_statistics.collectors import MedianMADStatisticCollector
-from nncf.common.tensor_statistics.collectors import CollectorTensorProcessor
+from nncf.common.tensor_statistics.collectors import NNCFCollectorTensorProcessor
 from nncf.common.tensor_statistics.collectors import PercentileStatisticCollector
 from nncf.common.tensor_statistics.collectors import MeanPercentileStatisticCollector
 from nncf.common.tensor_statistics.collectors import MixedMinMaxStatisticCollector
@@ -32,9 +32,9 @@ from nncf.tensorflow.tensor_statistics.reduction import convert_rs_to_pt_type
 from nncf.tensorflow.tensor import TFNNCFTensor
 
 
-class TFCollectorTensorProcessor(CollectorTensorProcessor):
+class TFNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
     """
-    A TF realization of the processing methods set for CollectorTensorProcessor.
+    A realization of the processing methods set for TFNNCFTensors.
     """
 
     @staticmethod
@@ -74,8 +74,8 @@ class TFCollectorTensorProcessor(CollectorTensorProcessor):
 
 class TFMinMaxStatisticCollector(MinMaxStatisticCollector):
     @staticmethod
-    def _get_processor() -> CollectorTensorProcessor:
-        return TFCollectorTensorProcessor()
+    def _get_processor() -> NNCFCollectorTensorProcessor:
+        return TFNNCFCollectorTensorProcessor()
 
     def _register_input(self, x: tf.Tensor):
         self._register_input_common(TFNNCFTensor(x))
@@ -86,8 +86,8 @@ class TFMinMaxStatisticCollector(MinMaxStatisticCollector):
 
 class TFMixedMinMaxStatisticCollector(MixedMinMaxStatisticCollector):
     @staticmethod
-    def _get_processor() -> CollectorTensorProcessor:
-        return TFCollectorTensorProcessor()
+    def _get_processor() -> NNCFCollectorTensorProcessor:
+        return TFNNCFCollectorTensorProcessor()
 
     def _register_input(self, x: tf.Tensor):
         self._register_input_common(TFNNCFTensor(x))
@@ -98,8 +98,8 @@ class TFMixedMinMaxStatisticCollector(MixedMinMaxStatisticCollector):
 
 class TFMeanMinMaxStatisticCollector(MeanMinMaxStatisticCollector):
     @staticmethod
-    def _get_processor() -> CollectorTensorProcessor:
-        return TFCollectorTensorProcessor()
+    def _get_processor() -> NNCFCollectorTensorProcessor:
+        return TFNNCFCollectorTensorProcessor()
 
     def _register_input(self, x: tf.Tensor):
         self._register_input_common(TFNNCFTensor(x))

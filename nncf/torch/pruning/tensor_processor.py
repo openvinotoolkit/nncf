@@ -15,12 +15,12 @@ from typing import List, Union
 
 import torch
 
-from nncf.common.pruning.tensor_processor import PruningBaseTensorProcessor
+from nncf.common.pruning.tensor_processor import NNCFPruningBaseTensorProcessor
 from nncf.common.tensor import NNCFTensor
 from nncf.torch.tensor import PTNNCFTensor
 
 
-class PTPruningTensorProcessor(PruningBaseTensorProcessor):
+class PTNNCFPruningTensorProcessor(NNCFPruningBaseTensorProcessor):
     """
     A realization of the processing methods set for PTNNCFTensors.
     """

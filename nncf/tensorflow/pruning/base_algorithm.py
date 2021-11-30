@@ -41,7 +41,7 @@ from nncf.tensorflow.graph.transformations.layout import TFTransformationLayout
 from nncf.tensorflow.graph.utils import get_layer_identifier
 from nncf.tensorflow.graph.utils import collect_wrapped_layers
 from nncf.tensorflow.tensor import TFNNCFTensor
-from nncf.tensorflow.pruning.tensor_processor import TFPruningTensorProcessor
+from nncf.tensorflow.pruning.tensor_processor import TFNNCFPruningTensorProcessor
 from nncf.tensorflow.pruning.operations import TFElementwisePruningOp
 from nncf.tensorflow.pruning.operations import TFIdentityMaskForwardPruningOp
 from nncf.tensorflow.pruning.operations import TF_PRUNING_OPERATOR_METATYPES
@@ -151,7 +151,8 @@ class BasePruningAlgoBuilder(TFCompressionAlgorithmBuilder):
             self._pruned_layer_groups_info.add_cluster(cluster)
 
         # Propagating masks across the graph to detect spec_nodes that will be pruned
-        mask_propagator = MaskPropagationAlgorithm(self._graph, TF_PRUNING_OPERATOR_METATYPES, TFPruningTensorProcessor)
+        mask_propagator = MaskPropagationAlgorithm(self._graph, TF_PRUNING_OPERATOR_METATYPES,
+                                                   TFNNCFPruningTensorProcessor)
         mask_propagator.mask_propagation()
 
         # Add masks for all spec modules, because prunable batchnorm layers can be determined
