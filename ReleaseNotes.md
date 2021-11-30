@@ -7,6 +7,10 @@ samples distributed with the code.  The samples demonstrate the usage of compres
 public models and datasets for three different use cases: Image Classification, Object Detection,
 and Semantic Segmentation.
 
+## New in Release 2.0.2
+Target version updates:
+- Relax TensorFlow version requirements to 2.4.x
+
 ## New in Release 2.0.1
 Target version updates:
 - Bump target framework versions to PyTorch 1.9.1 and TensorFlow 2.4.3

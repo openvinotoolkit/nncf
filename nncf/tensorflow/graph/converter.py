@@ -220,6 +220,16 @@ class TFModelConverter(ABC):
                 retval[layer_name] = custom_layer_info
         return retval
 
+    def _get_layer_dtype(self, layer_config: Dict) -> str:
+        if layer_config['class_name'] in ['Functional', 'Sequential']:
+            return self._get_layer_dtype(layer_config['config']['layers'][0])
+
+        dtype = layer_config['config']['dtype']
+        if layer_config['class_name'] == 'TensorFlowOpLayer':
+            attrs = layer_config['config']['node_def'].get('attr', {})
+            dtype = attrs.get('DstT', {}).get('type') or attrs.get('T', {}).get('type') or dtype
+        return dtype
+
     @staticmethod
     def _get_layer_type(layer_config: Dict) -> str:
         if layer_config['class_name'] == 'TensorFlowOpLayer':
@@ -263,13 +273,6 @@ class TFModelConverter(ABC):
                     del names_map[graphdef_name]
 
         return names_map
-
-    @staticmethod
-    def _get_layer_dtype(layer_config: Dict) -> str:
-        dtype = layer_config['config']['dtype']
-        if layer_config['class_name'] == 'TensorFlowOpLayer':
-            dtype = layer_config['config']['node_def'].get('attr', {}).get('T', {}).get('type') or dtype
-        return dtype
 
     @staticmethod
     def _get_graphdef_node_name_for_custom_layer_node_weight(weighted_node: NodeDef,
