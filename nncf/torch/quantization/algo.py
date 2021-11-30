@@ -1030,17 +1030,17 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
             if self.hw_config.target_device in ['CPU', 'ANY'] and qconfig.num_bits == 8:
                 if self._saturation_fix == 'enable':
                     half_range = True
-                    nncf_logger.warning('The saturation issue fix will be applied. '
-                                        'Now all weight quantizers will effectively use only 7 bits out of 8 bits. '
-                                        'This resolves the saturation issue problem on AVX2 and AVX-512 machines. '
-                                        'Please take a look at the documentation for a detailed information.')
+                    quantizers_with_saturation_fix_str = 'all weight quantizers'
                 elif self._saturation_fix == 'enable_for_first_conv_layer':
                     if target_node in get_first_nodes_of_type(target_model_graph, ['conv2d']):
                         half_range = True
-                        nncf_logger.warning('The saturation issue fix will be applied. Now first convolution '
-                                            'weight quantizers will effectively use only 7 bits out of 8 bits. '
-                                            'This resolves the saturation issue problem on AVX2 and AVX-512 machines. '
-                                            'Please take a look at the documentation for a detailed information.')
+                        quantizers_with_saturation_fix_str = 'first convolution weight quantizers'
+                if half_range:
+                    nncf_logger.warning('The saturation issue fix will be applied. '
+                                        'Now {} will effectively use only 7 bits out of 8 bits. '
+                                        'This resolves the saturation issue problem on AVX2 and AVX-512 machines. '
+                                        'Please take a look at the documentation for a detailed information.'
+                                        .format(quantizers_with_saturation_fix_str))
 
         qspec = PTQuantizerSpec.from_config(qconfig,
                                             narrow_range=narrow_range,

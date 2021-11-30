@@ -516,15 +516,14 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
     def _raise_saturation_fix_warning(self, applied_saturation_fix: bool):
         if applied_saturation_fix:
             if self._saturation_fix == 'enable':
-                logger.warning('The saturation issue fix will be applied. '
-                               'Now all weight quantizers will effectively use only 7 bits out of 8 bits. '
-                               'This resolves the saturation issue problem on AVX2 and AVX-512 machines. '
-                               'Please take a look at the documentation for a detailed information.')
+                quantizers_with_saturation_fix_str = 'all weight quantizers'
             elif self._saturation_fix == 'enable_for_first_conv_layer':
-                logger.warning('The saturation issue fix will be applied. '
-                               'Now first convolution weight quantizers will effectively use only 7 bits out of '
-                               '8 bits. This resolves the saturation issue problem on AVX2 and AVX-512 machines. '
-                               'Please take a look at the documentation for a detailed information.')
+                quantizers_with_saturation_fix_str = 'first convolution weight quantizers'
+            logger.warning('The saturation issue fix will be applied. '
+                           'Now {} will effectively use only 7 bits out of '
+                           '8 bits. This resolves the saturation issue problem on AVX2 and AVX-512 machines. '
+                           'Please take a look at the documentation for a detailed information.'
+                           .format(quantizers_with_saturation_fix_str))
 
     def _generate_unified_scale_groups(self,
                                        model: tf.keras.Model,

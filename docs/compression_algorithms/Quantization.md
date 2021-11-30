@@ -133,7 +133,8 @@ This leads to accuracy degradation.
 
 To fix this issue inside NNCF, by default, all weight tensors are quantized in 8 bits but only 7 bits are effectively used.
 This regime is used when `"target_device": "CPU"` or `"target_device": "ANY"` set. This fix, potentially, requires longer fine-tuning.
-To apply the saturation issue fix only to the first layer use `"saturation_fix": "enable_for_first_conv_layer"`. To disable the saturation issue fix for all layers use `"saturation_fix": "disable"`.
+
+To control the application of saturation fix, `"saturation_fix"` config option is introduced. The default value is `"saturation_fix": "enable"`. To apply the saturation issue fix only to the first layer, use `"saturation_fix": "enable_for_first_conv_layer"`. To disable the saturation issue fix for all layers, use `"saturation_fix": "disable"`.
 
 ---
 
