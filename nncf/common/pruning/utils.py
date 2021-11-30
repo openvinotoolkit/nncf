@@ -22,6 +22,7 @@ from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.graph import NNCFNodeName
 from nncf.common.tensor import NNCFTensor
+from nncf.common.tensor import NNCFBaseTensorProcessor
 from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.pruning.clusterization import Cluster
@@ -383,6 +384,7 @@ def calculate_in_out_channels_in_uniformly_pruned_model(pruning_groups: List[Clu
 
 def calculate_in_out_channels_by_masks(pruning_groups: List[Cluster[PrunedLayerInfoBase]],
                                        masks: Dict[str, NNCFTensor],
+                                       tensor_processor: NNCFBaseTensorProcessor,
                                        full_input_channels: Dict[str, int],
                                        full_output_channels: Dict[str, int],
                                        pruning_groups_next_nodes: Dict[int, List[str]]):
@@ -400,7 +402,6 @@ def calculate_in_out_channels_by_masks(pruning_groups: List[Cluster[PrunedLayerI
     """
     def get_num_of_sparse_elements_by_node(node_name: str) -> int:
         mask = masks[node_name]
-        tensor_processor = mask.tensor_processor
         return mask.shape[0] - int(tensor_processor.sum(mask))
 
     return _calculate_in_out_channels(pruning_groups,

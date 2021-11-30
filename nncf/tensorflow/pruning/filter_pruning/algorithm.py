@@ -531,6 +531,7 @@ class FilterPruningController(BasePruningAlgoController):
         tmp_in_channels, tmp_out_channels = calculate_in_out_channels_by_masks(
                 pruning_groups=self._pruned_layer_groups_info.get_all_clusters(),
                 masks=self._collect_pruning_masks(),
+                tensor_processor=TFNNCFPruningTensorProcessor,
                 full_input_channels=self._layers_in_channels,
                 full_output_channels=self._layers_out_channels,
                 pruning_groups_next_nodes=self._next_nodes)
