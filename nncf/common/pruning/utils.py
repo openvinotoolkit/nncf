@@ -308,8 +308,15 @@ def count_flops_and_weights_per_node(graph: NNCFGraph,
 
 def count_filters_num(graph: NNCFGraph,
                       op_metatypes: List[Type[OperatorMetatype]],
-                      output_channels: Dict[NNCFNodeName, int] = None):
-    """Count filters of `op_metatypes` layers taking into account new output channels number."""
+                      output_channels: Dict[NNCFNodeName, int] = None) -> int:
+    """
+    Counts filters of `op_metatypes` layers taking into account new output channels number.
+
+    :param graph: Graph to work with.
+    :param op_metatypes: List of metatypes defining convolution operations.
+    :param output_channels:  A dictionary of output channels number in pruned model.
+    :return: Current number of filters according to given graph and output channels.
+    """
     filters_num = 0
     output_channels = output_channels or {}
     for node in graph.get_nodes_by_metatypes(op_metatypes):
