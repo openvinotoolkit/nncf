@@ -5,7 +5,7 @@ from enum import Enum
 from functools import cmp_to_key
 from itertools import combinations
 from itertools import groupby
-from typing import List, Dict, Type
+from typing import List, Type
 
 import networkx as nx
 import torch
@@ -19,6 +19,8 @@ from nncf.torch.dynamic_graph.operation_address import OperationAddress
 from nncf.torch.graph.graph import PTNNCFGraph
 from nncf.torch.hardware.fused_patterns import PT_HW_FUSED_PATTERNS
 from nncf.torch.graph.operator_metatypes import PTDropoutMetatype
+from nncf.torch.graph.operator_metatypes import PTMatMulMetatype
+from nncf.torch.graph.operator_metatypes import PTLinearMetatype
 from nncf.torch.layers import NNCF_MODULES_OP_NAMES
 from nncf.torch.nncf_network import NNCFNetwork
 
@@ -82,15 +84,13 @@ class SearchGraphNode:
         # return the first id node
         if not self.is_merged:
             return self.data.get('id')
-        else:
-            return self.data.get(SearchGraph.MERGED_NODES_NODE_ATTR)[0].get('id')
+        return self.data.get(SearchGraph.MERGED_NODES_NODE_ATTR)[0].get('id')
 
     @property
     def bottom_id(self) -> int:
         if not self.is_merged:
             return self.data.get('id')
-        else:
-            return self.data.get(SearchGraph.MERGED_NODES_NODE_ATTR)[-1].get('id')
+        return self.data.get(SearchGraph.MERGED_NODES_NODE_ATTR)[-1].get('id')
 
     def __str__(self):
         return self.node_key
@@ -175,7 +175,6 @@ class SearchGraph():
     def get_nx_graph(self):
         return self._nx_graph
 
-    
 def prepare_search_graph(original_graph: PTNNCFGraph) -> SearchGraph:
     nx_merged_graph = get_orig_graph_with_orig_pattern(original_graph.get_nx_graph_copy())
     sgraph = SearchGraph(nx_merged_graph)
@@ -266,14 +265,14 @@ def rule_after_removing_block_graph_has_no_hanging_edges(graph: SearchGraph,
                 q.appendleft(next_node)
     if len(q) > 0 or len(potential_end_nodes) > 0:
         return False
-    else:
-        for node in addit_nodes:
-            if node not in nodes:
-                return False
-        nodes.append(end_node)
-        return True
+    for node in addit_nodes:
+        if node not in nodes:
+            return False
+    nodes.append(end_node)
+    return True
 
 def rule_not_lead_to_double_edge(sgraph: SearchGraph, start_node: SearchGraphNode, end_node: SearchGraphNode):
+    #pylint: disable=protected-access
     if start_node.is_dummy:
         next_end_node = sgraph.get_next_nodes(end_node.node_key)
         if len(next_end_node) != 0:
@@ -289,7 +288,9 @@ def rule_not_lead_to_double_edge(sgraph: SearchGraph, start_node: SearchGraphNod
             attr = None
     return True if attr is None else False
 
-def rule_not_lead_to_duplication_of_activation(sgraph: SearchGraph, start_node: SearchGraphNode, end_node: SearchGraphNode):
+def rule_not_lead_to_duplication_of_activation(sgraph: SearchGraph,
+                                               start_node: SearchGraphNode,
+                                               end_node: SearchGraphNode):
     pred_start_node = sgraph.get_prev_nodes(start_node.node_key)
     next_end_node = sgraph.get_next_nodes(end_node.node_key)
     if len(next_end_node) == 0 or len(pred_start_node) == 0:
@@ -304,8 +305,7 @@ def rule_not_lead_to_duplication_of_activation(sgraph: SearchGraph, start_node: 
 def comparator_for_building_block(a: BuildingBlock, b: BuildingBlock):
     if a.end_node.bottom_id != b.end_node.bottom_id:
         return a.end_node.bottom_id - b.end_node.bottom_id
-    else:
-        return b.start_node.main_id - a.start_node.main_id
+    return b.start_node.main_id - a.start_node.main_id
 
 def blocks_combination_is_block(block: BuildingBlock, combination):
 
@@ -320,8 +320,7 @@ def blocks_combination_is_block(block: BuildingBlock, combination):
         if end_i_node.node_key in start_nexti_node.node_key:
             i += 1
             continue
-        else:
-            return False
+        return False
     return True
 
 def search_lin_combination(block, blocks):
@@ -418,7 +417,7 @@ def get_building_blocks(compressed_model: NNCFNetwork,
                     continue
                 if end_node.main_id <= start_node.main_id:
                     continue
-                is_one_edge = (end_node.main_id - start_node.bottom_id) == 1 
+                is_one_edge = (end_node.main_id - start_node.bottom_id) == 1
 
                 # CHECK RULES
                 all_rules_is_true = True
@@ -473,6 +472,7 @@ def get_all_node_op_addresses_in_block(compressed_model: NNCFNetwork, block: Bui
     nx_graph = graph.get_nx_graph_copy()
     start_node, end_node = block
     start_node_key, end_node_key = None, None
+    #pylint: disable=protected-access
     for node in nx_graph._node.values():
         if start_node == str(node['node_name']):
             start_node_key = node['key']
@@ -499,9 +499,9 @@ def get_type_building_block(op_addresses_in_block: List[OperationAddress])-> Bui
     count_matmul = 0
     count_fc = 0
     for op_address in op_addresses_in_block:
-        if op_address.operator_name == 'matmul':
+        if op_address.operator_name in PTMatMulMetatype.get_all_aliases():
             count_matmul += 1
-        if op_address.operator_name == 'linear':
+        if op_address.operator_name in PTLinearMetatype.get_all_aliases():
             count_fc += 1
     if count_fc == 4 and count_matmul == 2:
         return BuildingBlockType.MSHA

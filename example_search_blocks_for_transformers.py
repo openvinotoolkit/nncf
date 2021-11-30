@@ -6,8 +6,8 @@ from transformers.models.bert.modeling_bert import BertForSequenceClassification
 import nncf
 from nncf import NNCFConfig
 from nncf.torch import create_compressed_model
-from nncf.torch.search_blocks import get_building_blocks
-from nncf.torch.search_blocks import get_building_blocks_info
+from nncf.torch.search_building_blocks.search_blocks import get_building_blocks
+from nncf.torch.search_building_blocks.search_blocks import get_building_blocks_info
 
 d = {"architectures": [
     "BertForMaskedLM"
