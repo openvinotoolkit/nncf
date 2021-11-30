@@ -17,9 +17,11 @@ from functools import partial
 
 import pytest
 import torch
+
 from torch import nn
 
 from nncf.common.graph import NNCFNodeName
+from nncf.common.pruning.symbolic_mask import SymbolicMaskProcessor
 from nncf.common.pruning.clusterization import Cluster
 from nncf.common.pruning.clusterization import Clusterization
 from nncf.common.pruning.model_analysis import ModelAnalyzer
@@ -431,7 +433,7 @@ def test_symbolic_mask_propagation(test_input_info_struct_):
                                                                      {'prune_first_conv': prune_first})
     pruning_types = [v.op_func_name for v in NNCF_PRUNING_MODULES_DICT]
     graph = nncf_model.get_graph()
-    algo = MaskPropagationAlgorithm(graph, PT_PRUNING_OPERATOR_METATYPES)
+    algo = MaskPropagationAlgorithm(graph, PT_PRUNING_OPERATOR_METATYPES, SymbolicMaskProcessor)
     final_can_prune = algo.symbolic_mask_propagation(pruning_types,
                                                      test_input_info_struct_.can_prune_after_analysis)
     # Check all output masks are deleted

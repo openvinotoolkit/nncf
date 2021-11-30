@@ -48,6 +48,7 @@ from nncf.tensorflow.graph.utils import collect_wrapped_layers
 from nncf.tensorflow.graph.utils import get_original_name_and_instance_idx
 from nncf.tensorflow.graph.utils import unwrap_layer
 from nncf.tensorflow.tensor import TFNNCFTensor
+from nncf.tensorflow.pruning.tensor_processor import TFPruningTensorProcessor
 from nncf.tensorflow.layers.data_layout import get_input_channel_axis
 from nncf.tensorflow.layers.wrapper import NNCFWrapper
 from nncf.tensorflow.loss import TFZeroCompressionLoss
@@ -296,7 +297,8 @@ class FilterPruningController(BasePruningAlgoController):
                 nncf_node.data['output_mask'] = TFNNCFTensor(filter_mask)
 
         # 2. Propagating masks across the graph
-        mask_propagator = MaskPropagationAlgorithm(self._original_graph, TF_PRUNING_OPERATOR_METATYPES)
+        mask_propagator = MaskPropagationAlgorithm(self._original_graph, TF_PRUNING_OPERATOR_METATYPES,
+                                                   TFPruningTensorProcessor)
         mask_propagator.mask_propagation()
 
         # 3. Apply masks to the model
@@ -343,7 +345,8 @@ class FilterPruningController(BasePruningAlgoController):
                 nncf_node.data['output_mask'] = TFNNCFTensor(filter_mask)
 
         # 2. Propagate masks across the graph
-        mask_propagator = MaskPropagationAlgorithm(self._original_graph, TF_PRUNING_OPERATOR_METATYPES)
+        mask_propagator = MaskPropagationAlgorithm(self._original_graph, TF_PRUNING_OPERATOR_METATYPES,
+                                                   TFPruningTensorProcessor)
         mask_propagator.mask_propagation()
 
         # 3. Apply masks to the model
@@ -418,7 +421,8 @@ class FilterPruningController(BasePruningAlgoController):
                         nncf_node = self._original_graph.get_node_by_id(node.nncf_node_id)
                         nncf_node.data['output_mask'] = TFNNCFTensor(masks[group.id])
 
-                mask_propagator = MaskPropagationAlgorithm(self._original_graph, TF_PRUNING_OPERATOR_METATYPES)
+                mask_propagator = MaskPropagationAlgorithm(self._original_graph, TF_PRUNING_OPERATOR_METATYPES,
+                                                           TFPruningTensorProcessor)
                 mask_propagator.mask_propagation()
 
                 # 4. Set binary masks to the model

@@ -264,7 +264,7 @@ class DataLoaderRangeInitializeRunner(DataLoaderBaseRunner):
             shape = quantizer_module.scale_shape
             if shape == (1,): # Per-tensor
                 channel_idx = None
-            elif len(shape) > 1 and all([item == 1 for item in shape]):
+            elif len(shape) > 1 and all(item == 1 for item in shape):
                 channel_idx = 0  # (1, 1, 1, 1) - doest not matter which dim is channel_idx
             else:
                 if not is_weights:

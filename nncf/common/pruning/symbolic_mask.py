@@ -14,7 +14,7 @@
 from typing import List, Union
 
 from nncf.common.tensor import NNCFTensor
-from nncf.common.tensor import NNCFBaseTensorProcessor
+from nncf.common.pruning.tensor_processor import PruningBaseTensorProcessor
 
 
 class SymbolicMask(NNCFTensor):
@@ -28,7 +28,7 @@ class SymbolicMask(NNCFTensor):
     """
 
     def __init__(self, dimension: int, mask_producers: List[int] = None):
-        super().__init__(None, SymbolicMaskProcessor)
+        super().__init__(None)
         self._mask_producers = mask_producers if mask_producers else []
         self._shape = dimension
 
@@ -56,7 +56,7 @@ class AmbiguousSymbolicMask(SymbolicMask):
         super().__init__(-1, mask_producers)
 
 
-class SymbolicMaskProcessor(NNCFBaseTensorProcessor):
+class SymbolicMaskProcessor(PruningBaseTensorProcessor):
     """
     Implementation of processing methods set for SymbolicMask.
     Responsible for correct mask dimension and mask producer attributes propagation.

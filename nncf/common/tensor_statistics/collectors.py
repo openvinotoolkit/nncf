@@ -17,6 +17,7 @@ from collections import deque
 from typing import Tuple, TypeVar, List
 
 import numpy as np
+from nncf.common.tensor import NNCFTensor
 
 from nncf.common.tensor_statistics.reduction import get_per_channel_history
 
@@ -100,43 +101,90 @@ class OfflineTensorStatisticCollector(TensorStatisticCollectorBase):
 class CollectorTensorProcessor(ABC):
     @staticmethod
     @abstractmethod
-    def reduce_min(x, reduction_shape):
-        pass
+    def reduce_min(x, axis):
+        """
+         Computes minimum of elements across dimensions of Tensor.
+
+         :param x: Tensor to reduce
+         :param axis: The dimensions to reduce.
+         :return: Reduced Tensor.
+         """
 
     @staticmethod
     @abstractmethod
-    def reduce_max(x, reduction_shape):
-        pass
+    def reduce_max(x, axis):
+        """
+        Computes maximum of elements across dimensions of Tensor.
+
+        :param x: Tensor to reduce
+        :param axis: The dimensions to reduce.
+        :return: Reduced Tensor.
+        """
 
     @staticmethod
     @abstractmethod
     def abs(x):
-        pass
+        """
+        Computes the absolute value of a Tensor.
+
+        :param x: Tensor
+        :return: Absolute value of a Tensor
+        """
 
     @staticmethod
     @abstractmethod
     def min(x1, x2):
-        pass
+        """
+        Returns the min of x1 and x2.
+
+        :param x1: Tensor to compare.
+        :param x2: NCFTensor to compare.
+        :return: Compared Tensor.
+        """
 
     @staticmethod
     @abstractmethod
     def max(x1, x2):
-        pass
+        """
+        Returns the max of x1 and x2.
+
+        :param x1: Tensor to compare.
+        :param x2: Tensor to compare.
+        :return: Compared Tensor.
+        """
 
     @staticmethod
     @abstractmethod
     def mean(x, axis):
-        pass
+        """
+        Computes the mean of elements across given dimensions of Tensor.
+
+        :param x: Tensor to reduce.
+        :param axis:
+        :return: Reduced Tensor.
+        """
 
     @staticmethod
     @abstractmethod
     def stack(x):
-        pass
+        """
+        Stacks a list or deque of Tensors rank-R tensors into one Tensor rank-(R+1) tensor.
+
+        :param x: List or deque of Tensors.
+        :param axis: The axis to stack along.
+        :return: Stacked Tensor.
+        """
 
     @staticmethod
     @abstractmethod
     def unstack(x):
-        pass
+        """
+        Unstack a tensor into list.
+
+        :param x: Tensor to unstack.
+        :param axis: The axis to unstack along.
+        :return: List of Tensors.
+        """
 
 
 class MinMaxStatisticCollector(OnlineTensorStatisticCollector):
@@ -155,7 +203,7 @@ class MinMaxStatisticCollector(OnlineTensorStatisticCollector):
     def _get_processor():
         pass
 
-    def _register_input_common(self, x: TensorType):
+    def _register_input_common(self, x: NNCFTensor):
         min_reduced = self._tensor_processor.reduce_min(x, self._reduction_shape)
         if self._use_abs_max:
             x = self._tensor_processor.abs(x)
@@ -201,7 +249,7 @@ class MinMaxOfflineStatisticCollectorBase(OfflineTensorStatisticCollector):
     def _get_processor():
         pass
 
-    def _register_input_common(self, x: TensorType):
+    def _register_input_common(self, x: NNCFTensor):
         min_reduced = self._tensor_processor.reduce_min(x, self._reduction_shape)
         if self._use_abs_max:
             x = self._tensor_processor.abs(x)

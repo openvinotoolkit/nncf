@@ -16,6 +16,7 @@ from typing import Dict, List, Optional
 
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
+from nncf.common.pruning.symbolic_mask import SymbolicMaskProcessor
 from nncf.common.pruning.utils import get_sources_of_node
 from nncf.common.pruning.utils import get_first_nodes_of_type
 from nncf.common.pruning.utils import get_previous_convs
@@ -206,7 +207,7 @@ class PruningNodeSelector:
             are supported by the NNCF pruning algorithm
         :return: Pruning node analysis after model analyzer, pruning algo compatibility and pruning dimensions checks.
         """
-        mask_prop_algo = MaskPropagationAlgorithm(graph, self._pruning_operator_metatypes)
+        mask_prop_algo = MaskPropagationAlgorithm(graph, self._pruning_operator_metatypes, SymbolicMaskProcessor)
         can_prune_by_dim = mask_prop_algo.symbolic_mask_propagation(self._prune_operations_types, can_prune_after_check)
 
         can_prune_for_prunable_layers = \

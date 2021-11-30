@@ -11,15 +11,17 @@
  limitations under the License.
 """
 
-from typing import Dict, List
+from typing import Dict, List, Union
 
 from nncf.common.graph import NNCFGraph
+from nncf.common.pruning.tensor_processor import PruningBaseTensorProcessor
 from nncf.common.pruning.utils import PruningOperationsMetatypeRegistry
 from nncf.common.pruning.utils import get_input_masks
 from nncf.common.pruning.utils import is_grouped_conv
 from nncf.common.pruning.utils import PruningAnalysisDecision
 from nncf.common.pruning.utils import PruningAnalysisReason
 from nncf.common.pruning.symbolic_mask import SymbolicMask
+from nncf.common.pruning.symbolic_mask import SymbolicMaskProcessor
 from nncf.common.pruning.operations import BasePruningOp
 
 
@@ -30,7 +32,9 @@ class MaskPropagationAlgorithm:
     for nodes that have masks already defined.
     """
 
-    def __init__(self, graph: NNCFGraph, pruning_operator_metatypes: PruningOperationsMetatypeRegistry):
+    def __init__(self, graph: NNCFGraph,
+                 pruning_operator_metatypes: PruningOperationsMetatypeRegistry,
+                 tensor_processor: PruningBaseTensorProcessor):
         """
         Initializes MaskPropagationAlgorithm.
 
@@ -40,6 +44,7 @@ class MaskPropagationAlgorithm:
         """
         self._graph = graph
         self._pruning_operator_metatypes = pruning_operator_metatypes
+        self._tensor_processor = tensor_processor
 
     def get_meta_operation_by_type_name(self, type_name: str) -> BasePruningOp:
         """
@@ -60,7 +65,7 @@ class MaskPropagationAlgorithm:
         """
         for node in self._graph.topological_sort():
             cls = self.get_meta_operation_by_type_name(node.node_type)
-            cls.mask_propagation(node, self._graph)
+            cls.mask_propagation(node, self._graph, self._tensor_processor)
 
     def symbolic_mask_propagation(self, prunable_layers_types: List[str],
                                   can_prune_after_analysis: Dict[int, PruningAnalysisDecision]) \
@@ -94,7 +99,7 @@ class MaskPropagationAlgorithm:
                 node.data['output_mask'] = SymbolicMask(node.layer_attributes.out_channels, [node.node_id])
             # Propagate masks
             cls = self.get_meta_operation_by_type_name(node.node_type)
-            cls.mask_propagation(node, self._graph)
+            cls.mask_propagation(node, self._graph, self._tensor_processor)
             if node.node_id in can_be_closing_convs:
                 # Check input mask producers out channel dimension
                 input_masks = get_input_masks(node, self._graph)

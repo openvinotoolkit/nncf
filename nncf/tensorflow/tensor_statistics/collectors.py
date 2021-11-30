@@ -16,6 +16,7 @@ from typing import Union, Deque, List
 import numpy as np
 import tensorflow as tf
 
+from nncf.common.tensor import NNCFTensor
 from nncf.common.tensor_statistics.collectors import MedianMADStatisticCollector
 from nncf.common.tensor_statistics.collectors import CollectorTensorProcessor
 from nncf.common.tensor_statistics.collectors import PercentileStatisticCollector
@@ -28,6 +29,7 @@ from nncf.tensorflow.tensor_statistics.statistics import TFMinMaxTensorStatistic
 from nncf.tensorflow.tensor_statistics.statistics import TFPercentileTensorStatistic
 from nncf.tensorflow.tensor_statistics.statistics import TFMedianMADTensorStatistic
 from nncf.tensorflow.tensor_statistics.reduction import convert_rs_to_pt_type
+from nncf.tensorflow.tensor import TFNNCFTensor
 
 
 class TFCollectorTensorProcessor(CollectorTensorProcessor):
@@ -36,36 +38,38 @@ class TFCollectorTensorProcessor(CollectorTensorProcessor):
     """
 
     @staticmethod
-    def reduce_min(x: tf.Tensor, axis: Union[int, tuple, list]) -> tf.Tensor:
-        return tf.reduce_min(x, axis=axis)
+    def reduce_min(x: NNCFTensor, axis: Union[int, tuple, list]) -> NNCFTensor:
+        return TFNNCFTensor(tf.reduce_min(x.tensor, axis=axis))
 
     @staticmethod
-    def reduce_max(x: tf.Tensor, axis: Union[int, tuple, list]) -> tf.Tensor:
-        return tf.reduce_max(x, axis=axis)
+    def reduce_max(x: NNCFTensor, axis: Union[int, tuple, list]) -> NNCFTensor:
+        return TFNNCFTensor(tf.reduce_max(x.tensor, axis=axis))
 
     @staticmethod
-    def abs(x: tf.Tensor) -> tf.Tensor:
-        return tf.math.abs(x)
+    def abs(x: NNCFTensor) -> NNCFTensor:
+        return TFNNCFTensor(tf.math.abs(x.tensor))
 
     @staticmethod
-    def min(x1: tf.Tensor, x2: tf.Tensor) -> tf.Tensor:
-        return tf.math.minimum(x1, x2)
+    def min(x1: tf.Tensor, x2: tf.Tensor) -> NNCFTensor:
+        return TFNNCFTensor(tf.math.minimum(x1.tensor, x2.tensor))
 
     @staticmethod
-    def max(x1: tf.Tensor, x2: tf.Tensor) -> tf.Tensor:
-        return tf.math.maximum(x1, x2)
+    def max(x1: tf.Tensor, x2: tf.Tensor) -> NNCFTensor:
+        return TFNNCFTensor(tf.math.maximum(x1.tensor, x2.tensor))
 
     @staticmethod
-    def mean(x: tf.Tensor, axis: Union[int, tuple, list]) -> tf.Tensor:
-        return tf.math.reduce_mean(x, axis=axis)
+    def mean(x: NNCFTensor, axis: Union[int, tuple, list]) -> NNCFTensor:
+        return TFNNCFTensor(tf.math.reduce_mean(x.tensor, axis=axis))
 
     @staticmethod
-    def stack(x: Union[List[tf.Tensor], Deque[tf.Tensor]], axis: int = 0) -> tf.Tensor:
-        return tf.stack(x, axis=axis)
+    def stack(x: Union[List[tf.Tensor], Deque[tf.Tensor]], axis: int = 0) -> NNCFTensor:
+        x = [t.tensor for t in x]
+        return TFNNCFTensor(tf.stack(x, axis=axis))
 
     @staticmethod
-    def unstack(x: tf.Tensor, axis: int = 0) -> List[tf.Tensor]:
-        return tf.unstack(x, axis=axis)
+    def unstack(x: NNCFTensor, axis: int = 0) -> List[NNCFTensor]:
+        tensor_list = tf.unstack(x.tensor, axis=axis)
+        return [TFNNCFTensor(t) for t in tensor_list]
 
 
 class TFMinMaxStatisticCollector(MinMaxStatisticCollector):
@@ -74,10 +78,10 @@ class TFMinMaxStatisticCollector(MinMaxStatisticCollector):
         return TFCollectorTensorProcessor()
 
     def _register_input(self, x: tf.Tensor):
-        self._register_input_common(x)
+        self._register_input_common(TFNNCFTensor(x))
 
     def _get_statistics(self) -> TFMinMaxTensorStatistic:
-        return TFMinMaxTensorStatistic(self._min_values, self._max_values)
+        return TFMinMaxTensorStatistic(self._min_values.tensor, self._max_values.tensor)
 
 
 class TFMixedMinMaxStatisticCollector(MixedMinMaxStatisticCollector):
@@ -86,10 +90,10 @@ class TFMixedMinMaxStatisticCollector(MixedMinMaxStatisticCollector):
         return TFCollectorTensorProcessor()
 
     def _register_input(self, x: tf.Tensor):
-        self._register_input_common(x)
+        self._register_input_common(TFNNCFTensor(x))
 
     def _get_statistics(self) -> TFMinMaxTensorStatistic:
-        return TFMinMaxTensorStatistic(self._min_aggregate(), self._max_aggregate())
+        return TFMinMaxTensorStatistic(self._min_aggregate().tensor, self._max_aggregate().tensor)
 
 
 class TFMeanMinMaxStatisticCollector(MeanMinMaxStatisticCollector):
@@ -98,10 +102,10 @@ class TFMeanMinMaxStatisticCollector(MeanMinMaxStatisticCollector):
         return TFCollectorTensorProcessor()
 
     def _register_input(self, x: tf.Tensor):
-        self._register_input_common(x)
+        self._register_input_common(TFNNCFTensor(x))
 
     def _get_statistics(self) -> TFMinMaxTensorStatistic:
-        return TFMinMaxTensorStatistic(self._min_aggregate(), self._max_aggregate())
+        return TFMinMaxTensorStatistic(self._min_aggregate().tensor, self._max_aggregate().tensor)
 
 
 class TFMedianMADStatisticCollector(MedianMADStatisticCollector):
