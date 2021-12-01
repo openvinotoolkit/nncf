@@ -9,6 +9,8 @@ class TestPattern:
     first_type = ['a', 'b']
     second_type = ['c', 'd']
     third_type = ['e']
+    forth_type = [GraphPattern.NON_PATTERN_NODE_TYPE]
+    fifth_type = [GraphPattern.ANY_PATTERN_NODE_TYPE]
 
     first_pattern = GraphPattern()
     first_pattern.add_node(label='first', type=first_type)
@@ -16,6 +18,56 @@ class TestPattern:
     second_pattern.add_node(label='second', type=second_type)
     third_pattern = GraphPattern()
     third_pattern.add_node(label='third', type=third_type)
+    forth_pattern = GraphPattern()
+    forth_pattern.add_node(label='forth', type=forth_type)
+    fifth_pattern = GraphPattern()
+    fifth_pattern.add_node(label='fifth', type=fifth_pattern)
+
+    # pattern_with_non_pattern_nodes |  pattern_with_any_pattern_nodes
+    #        NON                     |            ANY
+    #         |                      |             |
+    #         1                      |             1
+    #         |                      |             |
+    #         2  NON                 |             2  ANY
+    #        / \ /                   |            / \ /
+    #       4   3                    |           4   3
+    #       |  /                     |           |  /
+    #       | /                      |           | /
+    #       |/                       |           |/
+    #       5                        |           5
+    #       |                        |           |
+    #       6---NON                  |           6---ANY
+
+    pattern_with_non_pattern_nodes = GraphPattern()
+    pattern_with_any_pattern_nodes = GraphPattern()
+    common_nodes = {
+        '1': {'type': 'a'}, '2': {'type': 'b'}, '3': {'type': 'c'},
+        '4': {'type': 'a'}, '5': {'type': 'e'}, '6': {'type': 'a'}
+    }
+    non_pattern_nodes = {'7': {'type': GraphPattern.NON_PATTERN_NODE_TYPE},
+                         '8': {'type': GraphPattern.NON_PATTERN_NODE_TYPE},
+                         '9': {'type': GraphPattern.NON_PATTERN_NODE_TYPE}}
+    any_pattern_nodes = {'7': {'type': GraphPattern.ANY_PATTERN_NODE_TYPE},
+                         '8': {'type': GraphPattern.ANY_PATTERN_NODE_TYPE},
+                         '9': {'type': GraphPattern.ANY_PATTERN_NODE_TYPE}}
+    label_to_non_pattern_nodes = {}
+    label_to_any_pattern_nodes = {}
+    for label, attrs in common_nodes.items():
+        label_to_non_pattern_nodes[label] = pattern_with_non_pattern_nodes.add_node(label=label, **attrs)
+        label_to_any_pattern_nodes[label] = pattern_with_any_pattern_nodes.add_node(label=label, **attrs)
+    for label, attrs in non_pattern_nodes.items():
+        label_to_non_pattern_nodes[label] = pattern_with_non_pattern_nodes.add_node(label=label, **attrs)
+    for label, attrs in any_pattern_nodes.items():
+        label_to_any_pattern_nodes[label] = pattern_with_any_pattern_nodes.add_node(label=label, **attrs)
+
+    edges = [('1', '2'), ('2', '3'), ('2', '4'),
+             ('4', '5'), ('5', '6'), ('3', '5'),
+             ('7', '1'), ('8', '3'), ('9', '6')]
+    for edge in edges:
+        pattern_with_non_pattern_nodes.add_edge(label_to_non_pattern_nodes[edge[0]],
+                                                label_to_non_pattern_nodes[edge[1]])
+        pattern_with_any_pattern_nodes.add_edge(label_to_any_pattern_nodes[edge[0]],
+                                                label_to_any_pattern_nodes[edge[1]])
 
 
 def test_ops_combination_two_patterns():
@@ -113,7 +165,7 @@ def test_join_patterns_func_three_patterns():
 def test_join_pattern_with_special_input_node():
     pattern = TestPattern.first_pattern
     second_pattern = GraphPattern()
-    second_pattern.add_node(label='second', type=GraphPattern.PATTERN_INPUT_NODE_TYPE)
+    second_pattern.add_node(label='second', type=GraphPattern.ANY_PATTERN_NODE_TYPE)
     pattern.join_patterns(second_pattern)
     pattern.join_patterns(TestPattern.third_pattern)
 

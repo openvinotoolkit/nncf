@@ -6,7 +6,7 @@
     "num_classes": 100,
     "batch_size": 256,
     "dataset": "cifar100",
-    "epochs": 1,
+    "epochs": 60,
     "optimizer": {
         "type": "SGD",
         "base_lr": 0.1,
@@ -14,9 +14,7 @@
         "schedule_type": "multistep",
         "steps": [
             20,
-            40,
-            60,
-            80
+            40
         ],
         "optimizer_params":
         {

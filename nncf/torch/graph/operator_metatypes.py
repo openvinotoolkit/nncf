@@ -11,7 +11,7 @@
  limitations under the License.
 """
 
-from copy import copy
+from typing import Dict
 from typing import List
 from typing import Optional
 from typing import Type
@@ -26,8 +26,7 @@ from nncf.common.graph.operator_metatypes import OUTPUT_NOOP_METATYPES
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.operator_metatypes import OperatorMetatypeRegistry
 from nncf.common.hardware.opset import HWConfigOpName
-from nncf.torch.dynamic_graph.trace_functions import CustomTraceFunction
-from nncf.torch.dynamic_graph.trace_functions import ForwardTraceOnly
+from nncf.torch.dynamic_graph.patch_pytorch import NamespaceTarget
 
 ModuleAttributes = TypeVar('ModuleAttributes', bound=BaseLayerAttributes)
 
@@ -41,26 +40,19 @@ class PTOperatorMetatype(OperatorMetatype):
     group together '__iadd__', '__add__' and '__radd__' operations which all define nodewise
     tensor addition.
     Derived classes also specify which PyTorch functions in which modules should be patched
-    and in what manner, so that the entire group of operations is visible in the internal graph
-    representation. Grouping also allows efficient application of HW specifics to compression of
+    so that the entire group of operations is visible in the internal graph.
+    Grouping also allows efficient application of HW specifics to compression of
     certain operation groups.
     """
-    # Wrapping specifications for operator calls of the following kind:
-    # torch.nn.functional.conv2d
-    torch_nn_functional_patch_spec = None  # type: Optional[PTPatchSpec]
-
-    # Wrapping specifications for operator calls of the following kind:
-    # torch.cat
-    torch_module_patch_spec = None  # type: Optional[PTPatchSpec]
-
-    # Wrapping specifications for operator calls of the following kind:
-    # x = torch.Tensor(...)
-    # x1 = x.view(...)
-    torch_tensor_patch_spec = None  # type: Optional[PTPatchSpec]
-
     # Names of functions registered as operators via @register_operator to be associated
     # with this metatype
     external_op_names = []  # type: List[str]
+
+    # Names of functions from 'torch.nn.function', 'torch.tensor' and 'torch' modules respectively,
+    # which are associated with this metatype.
+    module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: [],  # type: Dict[NamespaceTarget, List[str]]
+                                NamespaceTarget.TORCH_TENSOR: [],
+                                NamespaceTarget.TORCH: []}
 
     subtypes = []  # type: List[Type[OperatorMetatype]]
 
@@ -69,19 +61,19 @@ class PTOperatorMetatype(OperatorMetatype):
         return cls.subtypes
 
     @classmethod
+    def get_all_namespace_to_function_names(cls) -> Dict[NamespaceTarget, List[str]]:
+        output = dict(cls.module_to_function_names)
+        output[NamespaceTarget.EXTERNAL] = cls.external_op_names
+        return output
+
+    @classmethod
     def get_all_aliases(cls) -> List[str]:
-        # TODO: disambiguate overlapping function names
-        retval = copy(cls.external_op_names)
-        if cls.torch_nn_functional_patch_spec is not None:
-            for fn_name in cls.torch_nn_functional_patch_spec.underlying_function_names:
-                retval.append(fn_name)
-        if cls.torch_module_patch_spec is not None:
-            for fn_name in cls.torch_module_patch_spec.underlying_function_names:
-                retval.append(fn_name)
-        if cls.torch_tensor_patch_spec is not None:
-            for fn_name in cls.torch_tensor_patch_spec.underlying_function_names:
-                retval.append(fn_name)
-        return retval
+        output = set()
+        for _, function_names in cls.module_to_function_names.items():
+            output = output.union(function_names)
+        if cls.external_op_names is not None:
+            output = output.union(cls.external_op_names)
+        return output
 
     @classmethod
     def determine_subtype(cls,
@@ -100,22 +92,6 @@ class PTOperatorMetatype(OperatorMetatype):
             return None
 
         return matches[0]
-
-
-class PTPatchSpec:
-    def __init__(self,
-                 underlying_function_names: List[str],
-                 custom_trace_fn: CustomTraceFunction = None):
-        """
-        :param underlying_function_names: All function names in this list will be wrapped with NNCF
-        wrappers that allow corresponding function calls to be registered in NNCF internal graph
-        representation of the PyTorch model and to be afterwards considered for compression.
-        :param custom_trace_fn: Will be called instead of the regular node search/insertion step
-        during the corresponding operator call. Useful to specify this for nodes that have no effect on compression
-        and therefore not vital to graph representation, but that should still be accounted for so that the
-        graph representation does not become disjoint."""
-        self.underlying_function_names = underlying_function_names
-        self.custom_trace_fn = custom_trace_fn
 
 
 class PTOperatorSubtype(PTOperatorMetatype):
@@ -151,10 +127,13 @@ class PTOutputNoopMetatype(PTOperatorMetatype):
 class PTNoopMetatype(PTOperatorMetatype):
     name = "noop"
     external_op_names = [name]
+    module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: [],
+                                NamespaceTarget.TORCH_TENSOR: [],
+                                NamespaceTarget.TORCH: ["contiguous", "clone"]}
 
 
 @PT_OPERATOR_METATYPES.register()
-class DepthwiseConv1dSubtype(PTOperatorSubtype):
+class PTDepthwiseConv1dSubtype(PTOperatorSubtype):
     hw_config_names = [HWConfigOpName.DEPTHWISECONVOLUTION]
 
     @classmethod
@@ -167,15 +146,17 @@ class DepthwiseConv1dSubtype(PTOperatorSubtype):
 
 
 @PT_OPERATOR_METATYPES.register()
-class Conv1dMetatype(PTOperatorMetatype):
-    name = "conv1d"
+class PTConv1dMetatype(PTOperatorMetatype):
+    name = "Conv1DOp"
     hw_config_names = [HWConfigOpName.CONVOLUTION]
-    subtypes = [DepthwiseConv1dSubtype]
-    torch_nn_functional_patch_spec = PTPatchSpec([name])
+    subtypes = [PTDepthwiseConv1dSubtype]
+    module_to_function_names = {
+        NamespaceTarget.TORCH_NN_FUNCTIONAL: ["conv1d"]
+    }
 
 
 @PT_OPERATOR_METATYPES.register()
-class DepthwiseConv2dSubtype(PTOperatorSubtype):
+class PTDepthwiseConv2dSubtype(PTOperatorSubtype):
     hw_config_names = [HWConfigOpName.DEPTHWISECONVOLUTION]
 
     @classmethod
@@ -188,15 +169,17 @@ class DepthwiseConv2dSubtype(PTOperatorSubtype):
 
 
 @PT_OPERATOR_METATYPES.register()
-class Conv2dMetatype(PTOperatorMetatype):
-    name = "conv2d"
+class PTConv2dMetatype(PTOperatorMetatype):
+    name = "Conv2DOp"
     hw_config_names = [HWConfigOpName.CONVOLUTION]
-    torch_nn_functional_patch_spec = PTPatchSpec([name])
-    subtypes = [DepthwiseConv2dSubtype]
+    subtypes = [PTDepthwiseConv2dSubtype]
+    module_to_function_names = {
+        NamespaceTarget.TORCH_NN_FUNCTIONAL: ["conv2d"]
+    }
 
 
 @PT_OPERATOR_METATYPES.register()
-class DepthwiseConv3dSubtype(PTOperatorSubtype):
+class PTDepthwiseConv3dSubtype(PTOperatorSubtype):
     hw_config_names = [HWConfigOpName.DEPTHWISECONVOLUTION]
 
     @classmethod
@@ -209,438 +192,571 @@ class DepthwiseConv3dSubtype(PTOperatorSubtype):
 
 
 @PT_OPERATOR_METATYPES.register()
-class Conv3dMetatype(PTOperatorMetatype):
-    name = "conv3d"
+class PTConv3dMetatype(PTOperatorMetatype):
+    name = "Conv3DOp"
     hw_config_names = [HWConfigOpName.CONVOLUTION]
-    subtypes = [DepthwiseConv3dSubtype]
-    torch_nn_functional_patch_spec = PTPatchSpec([name])
+    subtypes = [PTDepthwiseConv3dSubtype]
+    module_to_function_names = {
+        NamespaceTarget.TORCH_NN_FUNCTIONAL: ["conv3d"]
+    }
 
 
 @PT_OPERATOR_METATYPES.register()
-class ConvTranspose2dMetatype(PTOperatorMetatype):
-    name = "conv_transpose2d"
+class PTConvTranspose2dMetatype(PTOperatorMetatype):
+    name = "ConvTranspose2DOp"
     hw_config_names = [HWConfigOpName.CONVOLUTION]
-    torch_nn_functional_patch_spec = PTPatchSpec([name])
+    module_to_function_names = {
+        NamespaceTarget.TORCH_NN_FUNCTIONAL: ["conv_transpose2d"]
+    }
 
 
 @PT_OPERATOR_METATYPES.register()
-class ConvTranspose3dMetatype(PTOperatorMetatype):
-    name = "conv_transpose3d"
+class PTConvTranspose3dMetatype(PTOperatorMetatype):
+    name = "ConvTranspose3DOp"
     hw_config_names = [HWConfigOpName.CONVOLUTION]
-    torch_nn_functional_patch_spec = PTPatchSpec([name])
+    module_to_function_names = {
+        NamespaceTarget.TORCH_NN_FUNCTIONAL: ["conv_transpose3d"]
+    }
 
 
 @PT_OPERATOR_METATYPES.register()
-class LinearMetatype(PTOperatorMetatype):
-    name = "linear"
+class PTLinearMetatype(PTOperatorMetatype):
+    name = "LinearOp"
+    module_to_function_names = {
+        NamespaceTarget.TORCH_NN_FUNCTIONAL: ["linear"],
+        NamespaceTarget.TORCH: ["addmm"]
+    }
     hw_config_names = [HWConfigOpName.MATMUL]
-    torch_nn_functional_patch_spec = PTPatchSpec([name])
-    torch_module_patch_spec = PTPatchSpec(["addmm"])
 
 
 @PT_OPERATOR_METATYPES.register()
-class HardTanhMetatype(PTOperatorMetatype):
-    name = "hardtanh"
-    torch_nn_functional_patch_spec = PTPatchSpec([name])
+class PTHardTanhMetatype(PTOperatorMetatype):
+    name = "HardTanhOP"
+    module_to_function_names = {
+        NamespaceTarget.TORCH_NN_FUNCTIONAL: ["hardtanh"]
+    }
 
 
 @PT_OPERATOR_METATYPES.register()
-class TanhMetatype(PTOperatorMetatype):
-    name = "tanh"
-    torch_nn_functional_patch_spec = PTPatchSpec([name])
-    torch_module_patch_spec = PTPatchSpec([name])
+class PTHardSwishMetatype(PTOperatorMetatype):
+    name = "HardSwishOp"
+    module_to_function_names = {
+        NamespaceTarget.TORCH_NN_FUNCTIONAL: ["hardswish"]
+    }
 
 
 @PT_OPERATOR_METATYPES.register()
-class ELUMetatype(PTOperatorMetatype):
-    name = "elu"
-    torch_nn_functional_patch_spec = PTPatchSpec([name, "elu_"])
+class PTHardSigmoidMetatype(PTOperatorMetatype):
+    name = "HardSigmoidOp"
+    module_to_function_names = {
+        NamespaceTarget.TORCH_NN_FUNCTIONAL: ["hardsigmoid"]
+    }
 
 
 @PT_OPERATOR_METATYPES.register()
-class PRELUMetatype(PTOperatorMetatype):
-    name = "prelu"
-    torch_nn_functional_patch_spec = PTPatchSpec([name])
+class PTTanhMetatype(PTOperatorMetatype):
+    name = "TanhOp"
+    module_to_function_names = {
+        NamespaceTarget.TORCH_NN_FUNCTIONAL: ["tanh"],
+        NamespaceTarget.TORCH: ["tanh"]
+    }
 
 
 @PT_OPERATOR_METATYPES.register()
-class LeakyRELUMetatype(PTOperatorMetatype):
-    name = "leaky_relu"
-    torch_nn_functional_patch_spec = PTPatchSpec([name])
+class PTELUMetatype(PTOperatorMetatype):
+    name = "EluOp"
+    module_to_function_names = {
+        NamespaceTarget.TORCH_NN_FUNCTIONAL: ["elu", "elu_"]
+    }
 
 
 @PT_OPERATOR_METATYPES.register()
-class LayerNormMetatype(PTOperatorMetatype):
-    name = "layer_norm"
-    torch_nn_functional_patch_spec = PTPatchSpec([name])
+class PTPRELUMetatype(PTOperatorMetatype):
+    name = "PReluOp"
+    module_to_function_names = {
+        NamespaceTarget.TORCH_NN_FUNCTIONAL: ["prelu"]
+    }
+
+
+@PT_OPERATOR_METATYPES.register()
+class PTLeakyRELUMetatype(PTOperatorMetatype):
+    name = "LeakyReluOp"
+    module_to_function_names = {
+        NamespaceTarget.TORCH_NN_FUNCTIONAL: ["leaky_relu"]
+    }
+
+
+@PT_OPERATOR_METATYPES.register()
+class PTLayerNormMetatype(PTOperatorMetatype):
+    name = "LayerNormOp"
+    module_to_function_names = {
+        NamespaceTarget.TORCH_NN_FUNCTIONAL: ["layer_norm"]
+    }
     hw_config_names = [HWConfigOpName.MVN]
 
+
 @PT_OPERATOR_METATYPES.register()
-class GroupNormMetatype(PTOperatorMetatype):
-    name = "group_norm"
-    torch_nn_functional_patch_spec = PTPatchSpec([name])
+class PTGroupNormMetatype(PTOperatorMetatype):
+    name = "GroupNormOp"
+    module_to_function_names = {
+        NamespaceTarget.TORCH_NN_FUNCTIONAL: ["group_norm"]
+    }
     hw_config_names = [HWConfigOpName.MVN]
 
 
 @PT_OPERATOR_METATYPES.register()
-class GELUMetatype(PTOperatorMetatype):
-    name = "gelu"
-    torch_nn_functional_patch_spec = PTPatchSpec([name])
+class PTGELUMetatype(PTOperatorMetatype):
+    name = "GeluOp"
+    module_to_function_names = {
+        NamespaceTarget.TORCH_NN_FUNCTIONAL: ["gelu"]
+    }
 
 
 @PT_OPERATOR_METATYPES.register()
-class SigmoidMetatype(PTOperatorMetatype):
-    name = "sigmoid"
-    torch_nn_functional_patch_spec = PTPatchSpec([name])
-    torch_module_patch_spec = PTPatchSpec([name])
-    torch_tensor_patch_spec = PTPatchSpec([name])
+class PTSILUMetatype(PTOperatorMetatype):
+    name = "SiluOp"
+    module_to_function_names = {
+        NamespaceTarget.TORCH_NN_FUNCTIONAL: ["silu"]
+    }
 
 
 @PT_OPERATOR_METATYPES.register()
-class AddMetatype(PTOperatorMetatype):
-    name = "add"
-    torch_tensor_patch_spec = PTPatchSpec([name,
-                                         "__add__",
-                                         "__iadd__",
-                                         "__radd__"])
-    torch_module_patch_spec = PTPatchSpec([name])
+class PTSigmoidMetatype(PTOperatorMetatype):
+    name = "SigmoidOp"
+    module_to_function_names = {
+        NamespaceTarget.TORCH_NN_FUNCTIONAL: ["sigmoid"],
+        NamespaceTarget.TORCH_TENSOR: ["sigmoid"],
+        NamespaceTarget.TORCH: ["sigmoid"]
+    }
+
+
+@PT_OPERATOR_METATYPES.register()
+class PTAddMetatype(PTOperatorMetatype):
+    name = "AddOp"
+    module_to_function_names = {
+        NamespaceTarget.TORCH_TENSOR: ["add", "__add__", "__iadd__", "__radd__"],
+        NamespaceTarget.TORCH: ["add"]
+    }
     hw_config_names = [HWConfigOpName.ADD]
 
 
 @PT_OPERATOR_METATYPES.register()
-class SubMetatype(PTOperatorMetatype):
-    name = "sub"
-    torch_tensor_patch_spec = PTPatchSpec(["__sub__",
-                                         "__isub__",
-                                         "__rsub__"])
+class PTSubMetatype(PTOperatorMetatype):
+    name = "SubOp"
+    module_to_function_names = {
+        NamespaceTarget.TORCH_TENSOR: ["sub", "__sub__", "__isub__", "__rsub__"],
+        NamespaceTarget.TORCH: ["sub"]
+    }
     hw_config_names = [HWConfigOpName.SUBTRACT]
 
 
 @PT_OPERATOR_METATYPES.register()
-class MulMetatype(PTOperatorMetatype):
-    name = "mul"
-    torch_tensor_patch_spec = PTPatchSpec(["mul",
-                                         "__mul__",
-                                         "__imul__",
-                                         "__rmul__"])
+class PTMulMetatype(PTOperatorMetatype):
+    name = "MulOp"
+    module_to_function_names = {
+        NamespaceTarget.TORCH_TENSOR: ["mul", "__mul__", "__imul__", "__rmul__"],
+        NamespaceTarget.TORCH: ["mul"],
+    }
     hw_config_names = [HWConfigOpName.MULTIPLY]
 
 
 @PT_OPERATOR_METATYPES.register()
-class DivMetatype(PTOperatorMetatype):
-    name = "div"
-    torch_module_patch_spec = PTPatchSpec([name])
-    torch_tensor_patch_spec = PTPatchSpec(["__div__",
-                                         "__idiv__",
-                                         "__truediv__"])
+class PTDivMetatype(PTOperatorMetatype):
+    name = "DivOp"
+    module_to_function_names = {
+        NamespaceTarget.TORCH_TENSOR: ["__div__", "__idiv__", "__truediv__"],
+        NamespaceTarget.TORCH: ["div"]
+    }
     hw_config_names = [HWConfigOpName.DIVIDE]
 
 
 @PT_OPERATOR_METATYPES.register()
-class ExpMetatype(PTOperatorMetatype):
-    name = "exp"
-    torch_module_patch_spec = PTPatchSpec([name])
+class PTFloorDivMetatype(PTOperatorMetatype):
+    name = "FloordivOp"
+    module_to_function_names = {
+        NamespaceTarget.TORCH_TENSOR: ["__floordiv__", "__ifloordiv__", "__rfloordiv__"],
+    }
 
 
 @PT_OPERATOR_METATYPES.register()
-class ErfMetatype(PTOperatorMetatype):
-    name = "erf"
-    torch_module_patch_spec = PTPatchSpec([name])
+class PTExpMetatype(PTOperatorMetatype):
+    name = "ExpOp"
+    module_to_function_names = {
+        NamespaceTarget.TORCH: ["exp"],
+    }
 
 
 @PT_OPERATOR_METATYPES.register()
-class MatMulMetatype(PTOperatorMetatype):
-    name = "matmul"
-    torch_module_patch_spec = PTPatchSpec([name, "bmm"])
-    torch_tensor_patch_spec = PTPatchSpec([name])
+class PTErfMetatype(PTOperatorMetatype):
+    name = "ErfOp"
+    module_to_function_names = {
+        NamespaceTarget.TORCH: ["erf"],
+    }
+
+
+@PT_OPERATOR_METATYPES.register()
+class PTMatMulMetatype(PTOperatorMetatype):
+    name = "MatMulOp"
+    module_to_function_names = {
+        NamespaceTarget.TORCH_TENSOR: ["matmul"],
+        NamespaceTarget.TORCH: ["matmul", "bmm"]
+    }
     hw_config_names = [HWConfigOpName.MATMUL]
 
 
 @PT_OPERATOR_METATYPES.register()
-class MeanMetatype(PTOperatorMetatype):
-    name = "mean"
-    torch_tensor_patch_spec = PTPatchSpec([name])
+class PTMeanMetatype(PTOperatorMetatype):
+    name = "MeanOp"
+    module_to_function_names = {
+        NamespaceTarget.TORCH_TENSOR: ["mean"]
+    }
     hw_config_names = [HWConfigOpName.REDUCEMEAN]
 
 
 @PT_OPERATOR_METATYPES.register()
-class RoundMetatype(PTOperatorMetatype):
-    name = "round"
-    torch_tensor_patch_spec = PTPatchSpec([name])
+class PTRoundMetatype(PTOperatorMetatype):
+    name = "RoundOp"
+    module_to_function_names = {
+        NamespaceTarget.TORCH_TENSOR: ["round"]
+    }
 
 
 @PT_OPERATOR_METATYPES.register()
-class DropoutMetatype(PTOperatorMetatype):
-    name = "dropout"
-    torch_nn_functional_patch_spec = PTPatchSpec([name])
+class PTDropoutMetatype(PTOperatorMetatype):
+    name = "DropoutOp"
+    module_to_function_names = {
+        NamespaceTarget.TORCH_NN_FUNCTIONAL: ["dropout"]
+    }
 
 
 @PT_OPERATOR_METATYPES.register()
-class ThresholdMetatype(PTOperatorMetatype):
-    name = "threshold"
-    torch_nn_functional_patch_spec = PTPatchSpec([name])
+class PTThresholdMetatype(PTOperatorMetatype):
+    name = "ThresholdOp"
+    module_to_function_names = {
+        NamespaceTarget.TORCH_NN_FUNCTIONAL: ["threshold"]
+    }
 
 
 @PT_OPERATOR_METATYPES.register()
-class BatchNormMetatype(PTOperatorMetatype):
-    name = "batch_norm"
-    torch_nn_functional_patch_spec = PTPatchSpec([name])
+class PTBatchNormMetatype(PTOperatorMetatype):
+    name = "BatchNormOp"
+    module_to_function_names = {
+        NamespaceTarget.TORCH_NN_FUNCTIONAL: ["batch_norm"]
+    }
 
 
 @PT_OPERATOR_METATYPES.register()
-class AvgPool2dMetatype(PTOperatorMetatype):
-    name = "avg_pool2d"
+class PTAvgPool2dMetatype(PTOperatorMetatype):
+    name = "AvgPool2DOp"
+    module_to_function_names = {
+        NamespaceTarget.TORCH_NN_FUNCTIONAL: ["avg_pool2d", "adaptive_avg_pool2d"]
+    }
     hw_config_names = [HWConfigOpName.AVGPOOL]
-    torch_nn_functional_patch_spec = PTPatchSpec([name, "adaptive_avg_pool2d"])
 
 
 @PT_OPERATOR_METATYPES.register()
-class AvgPool3dMetatype(PTOperatorMetatype):
-    name = "avg_pool3d"
+class PTAvgPool3dMetatype(PTOperatorMetatype):
+    name = "AvgPool3DOp"
+    module_to_function_names = {
+        NamespaceTarget.TORCH_NN_FUNCTIONAL: ["avg_pool3d", "adaptive_avg_pool3d"]
+    }
     hw_config_names = [HWConfigOpName.AVGPOOL]
-    torch_nn_functional_patch_spec = PTPatchSpec([name, "adaptive_avg_pool3d"])
 
 
 @PT_OPERATOR_METATYPES.register()
-class MaxPool2dMetatype(PTOperatorMetatype):
-    name = "max_pool2d"
-    torch_nn_functional_patch_spec = PTPatchSpec([name])
+class PTMaxPool2dMetatype(PTOperatorMetatype):
+    name = "MaxPool2DOp"
+    module_to_function_names = {
+        NamespaceTarget.TORCH_NN_FUNCTIONAL: ["max_pool2d", "adaptive_max_pool2d"]
+    }
     hw_config_names = [HWConfigOpName.MAXPOOL]
 
 
 @PT_OPERATOR_METATYPES.register()
-class MaxPool3dMetatype(PTOperatorMetatype):
-    name = "max_pool3d"
-    torch_nn_functional_patch_spec = PTPatchSpec([name, "adaptive_max_pool3d"])
+class PTMaxPool3dMetatype(PTOperatorMetatype):
+    name = "MaxPool3DOp"
+    module_to_function_names = {
+        NamespaceTarget.TORCH_NN_FUNCTIONAL: ["max_pool3d", "adaptive_max_pool3d"]
+    }
     hw_config_names = [HWConfigOpName.MAXPOOL]
 
 
 @PT_OPERATOR_METATYPES.register()
-class MaxUnpool3dMetatype(PTOperatorMetatype):
-    name = "max_unpool3d"
-    torch_nn_functional_patch_spec = PTPatchSpec([name])
+class PTMaxUnpool3dMetatype(PTOperatorMetatype):
+    name = "MaxUnPool3DOp"
+    module_to_function_names = {
+        NamespaceTarget.TORCH_NN_FUNCTIONAL: ["max_unpool3d"]
+    }
 
 
 @PT_OPERATOR_METATYPES.register()
-class PadMetatype(PTOperatorMetatype):
-    name = "pad"
-    torch_nn_functional_patch_spec = PTPatchSpec([name])
+class PTPadMetatype(PTOperatorMetatype):
+    name = "PadOp"
+    module_to_function_names = {
+        NamespaceTarget.TORCH_NN_FUNCTIONAL: ["pad"]
+    }
 
 
 @PT_OPERATOR_METATYPES.register()
-class CatMetatype(PTOperatorMetatype):
-    name = "cat"
-    torch_module_patch_spec = PTPatchSpec([name, "stack"])
+class PTCatMetatype(PTOperatorMetatype):
+    name = "CatOp"
+    module_to_function_names = {
+        NamespaceTarget.TORCH: ["cat", "stack"]
+    }
     hw_config_names = [HWConfigOpName.CONCAT]
 
 
 @PT_OPERATOR_METATYPES.register()
-class RELUMetatype(PTOperatorMetatype):
-    name = "relu"
-    torch_module_patch_spec = PTPatchSpec([name, "relu_"])
+class PTRELUMetatype(PTOperatorMetatype):
+    name = "ReluOp"
+    module_to_function_names = {
+        NamespaceTarget.TORCH: ["relu", "relu_"]
+    }
 
 
 @PT_OPERATOR_METATYPES.register()
-class MaxMetatype(PTOperatorMetatype):
-    name = "max"
-    torch_module_patch_spec = PTPatchSpec([name])
-    hw_config_names = [HWConfigOpName.MAXIMUM,
-                       HWConfigOpName.REDUCEMAX]
+class PTMaxMetatype(PTOperatorMetatype):
+    name = "MaxOp"
+    module_to_function_names = {
+        NamespaceTarget.TORCH: ["max"]
+    }
+    hw_config_names = [HWConfigOpName.MAXIMUM, HWConfigOpName.REDUCEMAX]
 
 
 @PT_OPERATOR_METATYPES.register()
-class MinMetatype(PTOperatorMetatype):
-    name = "min"
-    torch_module_patch_spec = PTPatchSpec([name])
+class PTMinMetatype(PTOperatorMetatype):
+    name = "MinOp"
+    module_to_function_names = {
+        NamespaceTarget.TORCH: ["min"]
+    }
     hw_config_names = [HWConfigOpName.MINIMUM]
 
 
 @PT_OPERATOR_METATYPES.register()
-class ARangeMetatype(PTOperatorMetatype):
-    name = "arange"
-    torch_module_patch_spec = PTPatchSpec([name], ForwardTraceOnly())
-
-
-@PT_OPERATOR_METATYPES.register()
-class TransposeMetatype(PTOperatorMetatype):
-    name = "transpose"
-    torch_module_patch_spec = PTPatchSpec([name])
-    torch_tensor_patch_spec = PTPatchSpec([name, "permute"])
+class PTTransposeMetatype(PTOperatorMetatype):
+    name = "TransposeOp"
+    module_to_function_names = {
+        NamespaceTarget.TORCH_TENSOR: ["transpose", "permute", "transpose_"],
+        NamespaceTarget.TORCH: ["transpose"]
+    }
     hw_config_names = [HWConfigOpName.TRANSPOSE]
 
 
 @PT_OPERATOR_METATYPES.register()
-class GatherMetatype(PTOperatorMetatype):
-    name = "gather"
-    torch_module_patch_spec = PTPatchSpec(["index_select", "where"])
-    torch_tensor_patch_spec = PTPatchSpec(["index_select", "__getitem__"])
+class PTGatherMetatype(PTOperatorMetatype):
+    name = "GatherOp"
+    module_to_function_names = {
+        NamespaceTarget.TORCH_TENSOR: ["index_select", "__getitem__"],
+        NamespaceTarget.TORCH: ["gather", "index_select", "where"]
+    }
 
 
 @PT_OPERATOR_METATYPES.register()
-class ScatterMetatype(PTOperatorMetatype):
-    name = "scatter"
-    torch_tensor_patch_spec = PTPatchSpec(["masked_fill", "masked_fill_"])
+class PTScatterMetatype(PTOperatorMetatype):
+    name = "ScatterOp"
+    module_to_function_names = {
+        NamespaceTarget.TORCH_TENSOR: ["scatter", "masked_fill", "masked_fill_"]
+    }
 
 
 @PT_OPERATOR_METATYPES.register()
-class ReshapeMetatype(PTOperatorMetatype):
-    name = "reshape"
-    torch_module_patch_spec = PTPatchSpec(["squeeze", "flatten", "unsqueeze"])
-    torch_tensor_patch_spec = PTPatchSpec([name, "view", "flatten", "squeeze", "unsqueeze"])
-    hw_config_names = [HWConfigOpName.RESHAPE,
-                       HWConfigOpName.SQUEEZE,
-                       HWConfigOpName.UNSQUEEZE,
-                       HWConfigOpName.FLATTEN]
+class PTReshapeMetatype(PTOperatorMetatype):
+    name = "ReshapeOp"
+    module_to_function_names = {
+        NamespaceTarget.TORCH_TENSOR: ["reshape", "view", "flatten", "squeeze", "unsqueeze"],
+        NamespaceTarget.TORCH: ["squeeze", "flatten", "unsqueeze"]
+    }
+    hw_config_names = [HWConfigOpName.RESHAPE, HWConfigOpName.SQUEEZE,
+                       HWConfigOpName.UNSQUEEZE, HWConfigOpName.FLATTEN]
 
 
 @PT_OPERATOR_METATYPES.register()
-class ContiguousMetatype(PTOperatorMetatype):
-    name = "contiguous"
-    torch_tensor_patch_spec = PTPatchSpec([name], ForwardTraceOnly())
-
-
-@PT_OPERATOR_METATYPES.register()
-class SplitMetatype(PTOperatorMetatype):
-    name = "split"
-    torch_tensor_patch_spec = PTPatchSpec([name, "chunk"])
+class PTSplitMetatype(PTOperatorMetatype):
+    name = "SplitOp"
+    module_to_function_names = {
+        NamespaceTarget.TORCH_NN_FUNCTIONAL: ["split", "chunk"]
+    }
     hw_config_names = [HWConfigOpName.SPLIT]
 
 
 @PT_OPERATOR_METATYPES.register()
-class ExpandMetatype(PTOperatorMetatype):
-    name = "expand"
-    torch_tensor_patch_spec = PTPatchSpec([name])
+class PTExpandMetatype(PTOperatorMetatype):
+    name = "ExpandOp"
+    module_to_function_names = {
+        NamespaceTarget.TORCH_TENSOR: ["expand"]
+    }
 
 
 # Non-quantizable ops
 @PT_OPERATOR_METATYPES.register()
-class EmbeddingMetatype(PTOperatorMetatype):
-    name = "embedding"
-    torch_nn_functional_patch_spec = PTPatchSpec([name])
+class PTEmbeddingMetatype(PTOperatorMetatype):
+    name = "EmbeddingOp"
+    module_to_function_names = {
+        NamespaceTarget.TORCH_NN_FUNCTIONAL: ["embedding"]
+    }
     hw_config_names = [HWConfigOpName.EMBEDDING]
 
 
 @PT_OPERATOR_METATYPES.register()
-class EmbeddingBagMetatype(PTOperatorMetatype):
-    name = "embedding_bag"
-    torch_nn_functional_patch_spec = PTPatchSpec([name])
+class PTEmbeddingBagMetatype(PTOperatorMetatype):
+    name = "EmbeddingBagOp"
+    module_to_function_names = {
+        NamespaceTarget.TORCH_NN_FUNCTIONAL: ["embedding_bag"]
+    }
     hw_config_names = [HWConfigOpName.EMBEDDINGBAG]
 
 
 @PT_OPERATOR_METATYPES.register()
-class SoftmaxMetatype(PTOperatorMetatype):
-    name = "softmax"
-    torch_nn_functional_patch_spec = PTPatchSpec([name])
+class PTSoftmaxMetatype(PTOperatorMetatype):
+    name = "SoftmaxOp"
+    module_to_function_names = {
+        NamespaceTarget.TORCH_NN_FUNCTIONAL: ["softmax"]
+    }
 
 
 @PT_OPERATOR_METATYPES.register()
-class LessMetatype(PTOperatorMetatype):
-    name = "__lt__"
-    torch_tensor_patch_spec = PTPatchSpec([name])
+class PTLessMetatype(PTOperatorMetatype):
+    name = "LessOp"
+    module_to_function_names = {
+        NamespaceTarget.TORCH_TENSOR: ["__lt__"]
+    }
     hw_config_names = [HWConfigOpName.LESS]
 
 
 @PT_OPERATOR_METATYPES.register()
-class LessEqualMetatype(PTOperatorMetatype):
-    name = "__le__"
-    torch_tensor_patch_spec = PTPatchSpec([name])
+class PTLessEqualMetatype(PTOperatorMetatype):
+    name = "LessEqualOp"
+    module_to_function_names = {
+        NamespaceTarget.TORCH_TENSOR: ["__le__"]
+    }
     hw_config_names = [HWConfigOpName.LESSEQUAL]
 
 
 @PT_OPERATOR_METATYPES.register()
-class GreaterMetatype(PTOperatorMetatype):
-    name = "__gt__"
-    torch_tensor_patch_spec = PTPatchSpec([name])
+class PTGreaterMetatype(PTOperatorMetatype):
+    name = "GreaterOp"
+    module_to_function_names = {
+        NamespaceTarget.TORCH_TENSOR: ["__gt__"]
+    }
     hw_config_names = [HWConfigOpName.GREATER]
 
 
 @PT_OPERATOR_METATYPES.register()
-class GreaterEqualMetatype(PTOperatorMetatype):
-    name = "__ge__"
-    torch_tensor_patch_spec = PTPatchSpec([name])
+class PTGreaterEqualMetatype(PTOperatorMetatype):
+    name = "GreaterEqualOp"
+    module_to_function_names = {
+        NamespaceTarget.TORCH_TENSOR: ["__ge__"]
+    }
     hw_config_names = [HWConfigOpName.GREATEREQUAL]
 
 
 @PT_OPERATOR_METATYPES.register()
-class ModMetatype(PTOperatorMetatype):
-    name = "__mod__"
-    torch_tensor_patch_spec = PTPatchSpec([name])
+class PTModMetatype(PTOperatorMetatype):
+    name = "ModOp"
+    module_to_function_names = {
+        NamespaceTarget.TORCH_TENSOR: ["__mod__"]
+    }
     hw_config_names = [HWConfigOpName.FLOORMOD]
 
 
 @PT_OPERATOR_METATYPES.register()
-class EqualsMetatype(PTOperatorMetatype):
-    name = "__eq__"
-    torch_tensor_patch_spec = PTPatchSpec([name])
+class PTEqualsMetatype(PTOperatorMetatype):
+    name = "EqualsOp"
+    module_to_function_names = {
+        NamespaceTarget.TORCH_TENSOR: ["__eq__"]
+    }
     hw_config_names = [HWConfigOpName.EQUAL]
 
 
 @PT_OPERATOR_METATYPES.register()
-class NotEqualMetatype(PTOperatorMetatype):
-    name = "__ne__"
-    torch_tensor_patch_spec = PTPatchSpec([name])
+class PTNotEqualMetatype(PTOperatorMetatype):
+    name = "NotEqualOp"
+    module_to_function_names = {
+        NamespaceTarget.TORCH_TENSOR: ["__ne__"]
+    }
     hw_config_names = [HWConfigOpName.NOTEQUAL]
 
 
 @PT_OPERATOR_METATYPES.register()
-class LogicalOrMetatype(PTOperatorMetatype):
-    name = "__or__"
-    torch_tensor_patch_spec = PTPatchSpec([name])
+class PTLogicalOrMetatype(PTOperatorMetatype):
+    name = "LogicalOrOp"
+    module_to_function_names = {
+        NamespaceTarget.TORCH_TENSOR: ["__or__"]
+    }
     hw_config_names = [HWConfigOpName.LOGICALOR]
 
 
 @PT_OPERATOR_METATYPES.register()
-class LogicalXorMetatype(PTOperatorMetatype):
-    name = "__xor__"
-    torch_tensor_patch_spec = PTPatchSpec([name])
+class PTLogicalXorMetatype(PTOperatorMetatype):
+    name = "LogicalXorOp"
+    module_to_function_names = {
+        NamespaceTarget.TORCH_TENSOR: ["__xor__"]
+    }
     hw_config_names = [HWConfigOpName.LOGICALXOR]
 
 
 @PT_OPERATOR_METATYPES.register()
-class LogicalAndMetatype(PTOperatorMetatype):
-    name = "__and__"
-    torch_tensor_patch_spec = PTPatchSpec([name])
+class PTLogicalAndMetatype(PTOperatorMetatype):
+    name = "LogicalAndOp"
+    module_to_function_names = {
+        NamespaceTarget.TORCH_TENSOR: ["__and__"]
+    }
     hw_config_names = [HWConfigOpName.LOGICALAND]
 
 
 @PT_OPERATOR_METATYPES.register()
-class LogicalNotMetatype(PTOperatorMetatype):
-    name = "logical_not_"
-    torch_tensor_patch_spec = PTPatchSpec([name])
+class PTLogicalNotMetatype(PTOperatorMetatype):
+    name = "LogicalNotOp"
+    module_to_function_names = {
+        NamespaceTarget.TORCH_TENSOR: ["logical_not_"]
+    }
     hw_config_names = [HWConfigOpName.LOGICALNOT]
 
 
 @PT_OPERATOR_METATYPES.register()
-class PowerMetatype(PTOperatorMetatype):
-    name = "__pow__"
-    torch_tensor_patch_spec = PTPatchSpec([name])
+class PTPowerMetatype(PTOperatorMetatype):
+    name = "PowerOp"
+    module_to_function_names = {
+        NamespaceTarget.TORCH_TENSOR: ["__pow__", "pow", "sqrt", "sqrt_"],
+        NamespaceTarget.TORCH: ["pow", "sqrt", "sqrt_"]
+    }
     hw_config_names = [HWConfigOpName.POWER]
 
 
 @PT_OPERATOR_METATYPES.register()
-class InterpolateMetatype(PTOperatorMetatype):
-    name = "interpolate"
-    torch_nn_functional_patch_spec = PTPatchSpec([name])
+class PTInterpolateMetatype(PTOperatorMetatype):
+    name = "InterpolateOp"
+    module_to_function_names = {
+        NamespaceTarget.TORCH_NN_FUNCTIONAL: ["interpolate"]
+    }
     hw_config_names = [HWConfigOpName.INTERPOLATE]
 
 
 @PT_OPERATOR_METATYPES.register()
-class RepeatMetatype(PTOperatorMetatype):
-    name = "repeat_interleave"
-    torch_module_patch_spec = PTPatchSpec([name])
+class PTRepeatMetatype(PTOperatorMetatype):
+    name = "RepeatOp"
+    module_to_function_names = {
+        NamespaceTarget.TORCH: ["repeat_interleave"]
+    }
     hw_config_names = [HWConfigOpName.TILE]
 
 
 @PT_OPERATOR_METATYPES.register()
-class CloneMetatype(PTOperatorMetatype):
-    name = "clone"
-    torch_tensor_patch_spec = PTPatchSpec([name], ForwardTraceOnly())
+class PTPixelShuffleMetatype(PTOperatorMetatype):
+    name = "PixelShuffleOp"
+    module_to_function_names = {
+        NamespaceTarget.TORCH_NN_FUNCTIONAL: ["pixel_shuffle"]
+    }
 
 
 @PT_OPERATOR_METATYPES.register()
-class PixelShuffleMetatype(PTOperatorMetatype):
-    name = "pixel_shuffle"
-    torch_nn_functional_patch_spec = PTPatchSpec([name])
+class PTSumMetatype(PTOperatorMetatype):
+    name = "SumOp"
+    module_to_function_names = {
+        NamespaceTarget.TORCH_TENSOR: ["sum"],
+        NamespaceTarget.TORCH: ["sum"]
+    }
+    hw_config_names = [HWConfigOpName.REDUCESUM]
 
 
 def get_operator_metatypes() -> List[Type[OperatorMetatype]]:

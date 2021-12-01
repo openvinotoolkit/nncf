@@ -19,6 +19,7 @@ from torch import nn
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.compression_method_api import PTCompressionLoss
 from nncf.torch.nested_objects_traversal import NestedObjectIndex
+from nncf.common.utils.logger import logger as nncf_logger
 
 
 class KnowledgeDistillationLoss(PTCompressionLoss):
@@ -28,19 +29,33 @@ class KnowledgeDistillationLoss(PTCompressionLoss):
     model and compressed model inferences with latest inputs. Provides KnowledgeDistillationLossHandler with kd original
     model (to distill from), storage device and function to calculate knowledge distillation loss.
     """
-    def __init__(self, target_model: NNCFNetwork, original_model: nn.Module, kd_type: str):
+    def __init__(self, target_model: NNCFNetwork, original_model: nn.Module, kd_type: str, scale: float,
+                 temperature: float):
         super().__init__()
         original_model.train()
         if kd_type == 'softmax':
-            def kd_loss_fn(ref_outputs, compressed_model_outputs):
-                return -(nn.functional.log_softmax(compressed_model_outputs, dim=1) *
-                         nn.functional.softmax(ref_outputs, dim=1)).mean() * (compressed_model_outputs.shape[1])
-        elif kd_type == 'mse':
-            def kd_loss_fn(ref_outputs, compressed_model_outputs):
-                mse = torch.nn.MSELoss()
-                return mse(ref_outputs, compressed_model_outputs)
+            def kd_loss_fn(teacher_output: torch.Tensor, student_output: torch.Tensor):
+                if len(student_output.shape) != 2 or len(teacher_output.shape) != 2:
+                    nncf_logger.debug("Incompatible number of dimensions of the model output tensor for softmax KD "
+                                      "(student - {}, teacher - {}, number of dims {} should be == 2)"
+                                      " - ignoring!".format(student_output.shape,
+                                                            teacher_output.shape,
+                                                            len(student_output.shape)))
+                    return torch.zeros([1]).to(student_output.device)
+                return scale * -(nn.functional.log_softmax(student_output / temperature, dim=1) *
+                                 nn.functional.softmax(teacher_output / temperature, dim=1)).mean() \
+                       * (student_output.shape[1] * temperature * temperature)
         else:
-            raise ValueError('Choose between mse/softmax options for Knowledge Distillation')
+            def kd_loss_fn(teacher_output: torch.Tensor, student_output: torch.Tensor):
+                mse = torch.nn.MSELoss()
+                if len(teacher_output.shape) < 2:
+                    nncf_logger.debug("Incompatible number of dimensions of the model output tensor for MSE KD "
+                                      "(student - {}, teacher - {}, number of dims {} should be > 1)"
+                                      " (most likely loss) - ignoring!".format(student_output.shape,
+                                                                               teacher_output.shape,
+                                                                               len(student_output.shape)))
+                    return torch.zeros([1]).to(student_output.device)
+                return scale * mse(teacher_output, student_output)
         self._kd_loss_handler = target_model.create_knowledge_distillation_loss_handler(original_model, partial(
             KnowledgeDistillationLoss._calculate,
             kd_loss_fn=kd_loss_fn))
@@ -99,8 +114,6 @@ class KnowledgeDistillationLoss(PTCompressionLoss):
         :return: Differentiable knowledge distillation loss value
         """
         loss = self._kd_loss_handler.get_kd_loss()
-        if len(loss) == 0:
-            raise RuntimeError("Knowledge Distillation Loss is not calculated.")
         for idx, _ in enumerate(loss):
             loss[idx] = loss[idx].unsqueeze(0)
         output = torch.cat(loss).mean()

@@ -51,7 +51,6 @@ def test_legr_coeffs_saving(tmp_path):
     config = get_basic_pruning_config()
     config['compression']['algorithm'] = 'filter_pruning'
     config['compression']['params']['prune_first_conv'] = True
-    config['compression']['params']['prune_last_conv'] = True
     config['compression']['params']['save_ranking_coeffs_path'] = str(file_name)
     _, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
     assert compression_ctrl.ranking_coeffs == ref_ranking_coeffs
@@ -96,7 +95,6 @@ def test_default_pruning_params_for_legr(tmp_path):
     _, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
 
     assert compression_ctrl.prune_first is True
-    assert compression_ctrl.prune_last is True
     assert compression_ctrl.all_weights is True
     assert compression_ctrl.prune_downsample_convs is True
 

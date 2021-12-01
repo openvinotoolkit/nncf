@@ -59,6 +59,14 @@ INSTALL_REQUIRES = ["ninja>=1.10.0.post2",
                     "matplotlib~=3.3.4; python_version<'3.7'",
                     "matplotlib>=3.3.4; python_version>='3.7'",
                     "networkx>=2.5",
+
+                    # The recent pyparsing major version update seems to break
+                    # integration with networkx - the graphs parsed from current .dot
+                    # reference files no longer match against the graphs produced in tests.
+                    # Using 2.x versions of pyparsing seems to fix the issue.
+                    # Ticket: 69520
+                    "pyparsing<3.0",
+
                     "jsonschema==3.2.0",
                     "pydot>=1.4.1",
                     "jstyleson>=0.0.2",
@@ -67,7 +75,8 @@ INSTALL_REQUIRES = ["ninja>=1.10.0.post2",
                     "natsort>=7.1.0",
                     "pandas~=1.1.5; python_version<'3.7'",
                     "pandas>=1.1.5; python_version>='3.7'",
-                    "scikit-learn>=0.24.0",
+                    "scikit-learn~=0.24.0; python_version<'3.7'",
+                    "scikit-learn>=0.24.0; python_version>='3.7'",
                     "wheel>=0.36.1"]
 
 
@@ -79,11 +88,11 @@ if python_version < (3, 6, 2):
 version_string = "{}{}".format(sys.version_info[0], sys.version_info[1])
 
 _extra_deps = [
-    "tensorflow==2.4.2",
-    "torch>=1.5.0, <=1.8.1, !=1.8.0",
+    "tensorflow~=2.4.3",
+    "torch>=1.5.0, <=1.9.1, !=1.8.0",
 ]
 
-extra_deps = {b: a for a, b in (re.findall(r"^(([^!=<>]+)(?:[!=<>].*)?$)", x)[0] for x in _extra_deps)}
+extra_deps = {b: a for a, b in (re.findall(r"^(([^~!=<>]+)(?:[~!=<>].*)?$)", x)[0] for x in _extra_deps)}
 
 EXTRAS_REQUIRE = {
     "tests": [

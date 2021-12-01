@@ -220,7 +220,7 @@ def test_early_exit_with_mock_validation(max_accuracy_degradation, exit_epoch_nu
         epoch_counter = epoch
         if "maximal_relative_accuracy_degradation" in max_accuracy_degradation:
             return original_metric * (1 - 0.01 * max_accuracy_degradation['maximal_relative_accuracy_degradation']) * (
-                        epoch / exit_epoch_number)
+                    epoch / exit_epoch_number)
         return (original_metric - max_accuracy_degradation['maximal_absolute_accuracy_degradation']) * \
                epoch / exit_epoch_number
 
@@ -263,3 +263,82 @@ def test_early_exit_with_mock_validation(max_accuracy_degradation, exit_epoch_nu
                                              configure_optimizers_fn=configure_optimizers_fn)
     # Epoch number starts from 0
     assert epoch_counter == exit_epoch_number
+
+
+@pytest.mark.parametrize('aa_config', (
+        {
+            "accuracy_aware_training": {
+                "mode": "early_exit",
+                "params": {
+                    "maximal_relative_accuracy_degradation": 1,
+                    "maximal_total_epochs": 1
+                }
+            },
+            "compression": [
+                {
+                    "algorithm": "filter_pruning",
+                },
+                {
+                    "algorithm": "rb_sparsity",
+                }
+            ]
+        },
+        {
+            "accuracy_aware_training": {
+                "mode": "adaptive_compression_level",
+                "params": {
+                    "maximal_relative_accuracy_degradation": 1,
+                    "maximal_total_epochs": 1
+                }
+            },
+            "compression": [
+                {
+                    "algorithm": "filter_pruning",
+                }
+            ]
+        }
+)
+                         )
+def test_mock_dump_checkpoint(aa_config):
+    is_called_dump_checkpoint_fn = False
+
+    def mock_dump_checkpoint_fn(model, compression_controller, accuracy_aware_runner, aa_log_dir):
+        from nncf.api.compression import CompressionAlgorithmController
+        from nncf.common.accuracy_aware_training.runner import TrainingRunner
+        assert isinstance(model, torch.nn.Module)
+        assert isinstance(compression_controller, CompressionAlgorithmController)
+        assert isinstance(accuracy_aware_runner, TrainingRunner)
+        assert isinstance(aa_log_dir, str)
+        nonlocal is_called_dump_checkpoint_fn
+        is_called_dump_checkpoint_fn = True
+
+    config = get_quantization_config_without_range_init(LeNet.INPUT_SIZE[-1])
+    train_loader = create_ones_mock_dataloader(aa_config, num_samples=10)
+    model = LeNet()
+    config.update(aa_config)
+
+    def train_fn(compression_ctrl, model, epoch, optimizer, lr_scheduler,
+                 train_loader=train_loader):
+        pass
+
+    def mock_validate_fn(model, init_step=False, epoch=0):
+        return 80
+
+    def configure_optimizers_fn():
+        optimizer = SGD(model.parameters(), lr=0.001)
+        return optimizer, None
+
+    config = register_default_init_args(config,
+                                        train_loader=train_loader,
+                                        model_eval_fn=partial(mock_validate_fn, init_step=True))
+
+    model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
+
+    early_stopping_training_loop = EarlyExitCompressionTrainingLoop(config, compression_ctrl,
+                                                                    dump_checkpoints=True)
+    model = early_stopping_training_loop.run(model,
+                                             train_epoch_fn=train_fn,
+                                             validate_fn=partial(mock_validate_fn),
+                                             configure_optimizers_fn=configure_optimizers_fn,
+                                             dump_checkpoint_fn=mock_dump_checkpoint_fn)
+    assert is_called_dump_checkpoint_fn

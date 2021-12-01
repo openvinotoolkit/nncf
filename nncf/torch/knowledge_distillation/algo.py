@@ -13,6 +13,8 @@
 
 from copy import deepcopy
 
+from torch import nn
+
 from nncf.common.schedulers import BaseCompressionScheduler
 from nncf.common.statistics import NNCFStatistics
 from nncf.torch.graph.transformations.layout import PTTransformationLayout
@@ -30,8 +32,10 @@ class KnowledgeDistillationBuilder(PTCompressionAlgorithmBuilder):
     def __init__(self, config: NNCFConfig, should_init: bool = True):
         super().__init__(config, should_init)
         self.kd_type = self._algo_config.get('type', None)
-        if self.kd_type is None:
-            raise ValueError('Type of KDLoss must be selected explicitly')
+        self.scale = self._algo_config.get('scale', 1)
+        self.temperature = self._algo_config.get('temperature', 1)
+        if 'temperature' in self._algo_config.keys() and self.kd_type == 'mse':
+            raise ValueError("Temperature shouldn't be stated for MSE Loss (softmax only feature)")
 
     def _get_transformation_layout(self, target_model: NNCFNetwork) -> PTTransformationLayout:
         self.original_model = deepcopy(target_model.nncf_module)
@@ -40,20 +44,23 @@ class KnowledgeDistillationBuilder(PTCompressionAlgorithmBuilder):
         return PTTransformationLayout()
 
     def _build_controller(self, model):
-        return KnowledgeDistillationController(model, self.original_model, self.kd_type)
+        return KnowledgeDistillationController(model, self.original_model, self.kd_type, self.scale, self.temperature)
 
     def initialize(self, model: NNCFNetwork) -> None:
         pass
 
 
 class KnowledgeDistillationController(PTCompressionAlgorithmController):
-    def __init__(self, target_model, original_model, kd_type):
+    def __init__(self, target_model: NNCFNetwork, original_model: nn.Module, kd_type: str, scale: float,
+                 temperature: float):
         super().__init__(target_model)
         original_model.train()
         self._scheduler = BaseCompressionScheduler()
         self._loss = KnowledgeDistillationLoss(target_model=target_model,
                                                original_model=original_model,
-                                               kd_type=kd_type)
+                                               kd_type=kd_type,
+                                               scale=scale,
+                                               temperature=temperature)
 
     def compression_stage(self) -> CompressionStage:
         """

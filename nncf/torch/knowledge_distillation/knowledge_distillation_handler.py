@@ -45,6 +45,8 @@ class KnowledgeDistillationLossHandler(nn.Module):
         self._compressed_context.global_buffer_store[self.KD_LOSS_STORAGE_NAME] = []
 
     def get_kd_loss(self) -> List[torch.Tensor]:
+        if len(self._compressed_context.global_buffer_store[self.KD_LOSS_STORAGE_NAME]) == 0:
+            return [torch.zeros([], device=self._compressed_context.global_buffer_store[self.KD_STORAGE_DEVICE])]
         return self._compressed_context.global_buffer_store[self.KD_LOSS_STORAGE_NAME]
 
     def forward(self, inputs, *args, **kwargs):

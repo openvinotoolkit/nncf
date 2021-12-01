@@ -40,7 +40,8 @@ QUANTIZATION_AGNOSTIC_OPERATIONS = {
 }
 
 BATCH_NORMALIZATION_OPERATIONS = {'type': ['BatchNormalization',
-                                           'SyncBatchNormalization',],
+                                           'SyncBatchNormalization',
+                                           'FusedBatchNormV3'],
                                   'label': 'BATCH_NORMALIZATION'
                                   }
 
@@ -56,7 +57,15 @@ KERAS_ACTIVATIONS_OPERATIONS = {
 
 
 TF_ACTIVATIONS_OPERATIONS = {
-    'type': ['Relu'],
+    'type': [
+        'Relu',
+        'Elu',
+        'LeakyRelu',
+        'Relu6',
+        'Selu',
+        'Sigmoid',
+        'Tanh',
+    ],
     'label': 'TF_ACTIVATIONS'
 }
 
@@ -67,7 +76,10 @@ ATOMIC_ACTIVATIONS_OPERATIONS = merge_two_types_of_operations(KERAS_ACTIVATIONS_
 POOLING_OPERATIONS = {'type': ['AveragePooling2D',
                                'AveragePooling3D',
                                'GlobalAveragePooling2D',
-                               'GlobalAveragePooling3D'],
+                               'GlobalAveragePooling3D',
+                               'AvgPool',
+                               'AvgPool3D',
+                               'Mean',],
                       'label': 'POOLING'}
 
 SINGLE_OPS = merge_two_types_of_operations(POOLING_OPERATIONS,

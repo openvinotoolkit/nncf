@@ -10,31 +10,31 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-import torch
-from functools import partial
-from functools import update_wrapper
 from typing import List, Dict
 
-from torch import nn
+import torch
 from texttable import Texttable
+from torch import nn
 
 from nncf import NNCFConfig
+from nncf.common.graph.transformations.commands import TargetType
+from nncf.common.pruning.clusterization import Cluster
+from nncf.common.pruning.clusterization import Clusterization
+from nncf.common.pruning.mask_propagation import MaskPropagationAlgorithm
+from nncf.common.utils.logger import logger as nncf_logger
 from nncf.config.extractors import extract_algo_specific_config
 from nncf.torch.algo_selector import ZeroCompressionLoss
-from nncf.common.graph.transformations.commands import TargetType
 from nncf.torch.compression_method_api import PTCompressionAlgorithmBuilder
 from nncf.torch.compression_method_api import PTCompressionAlgorithmController
-from nncf.common.utils.logger import logger as nncf_logger
-from nncf.torch.graph.transformations.layout import PTTransformationLayout
-from nncf.torch.nncf_network import NNCFNetwork
-from nncf.torch.graph.transformations.commands import TransformationPriority
-from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.graph.transformations.commands import PTInsertionCommand
-from nncf.torch.pruning.export_helpers import PT_PRUNING_OPERATOR_METATYPES
-from nncf.torch.pruning.filter_pruning.layers import apply_filter_binary_mask
-from nncf.common.pruning.clusterization import Clusterization
-from nncf.common.pruning.clusterization import Cluster
+from nncf.torch.graph.transformations.commands import PTTargetPoint
+from nncf.torch.graph.transformations.commands import TransformationPriority
+from nncf.torch.graph.transformations.layout import PTTransformationLayout
+from nncf.torch.module_operations import UpdateWeightAndBias
+from nncf.torch.nncf_network import NNCFNetwork
+from nncf.torch.pruning.operations import PT_PRUNING_OPERATOR_METATYPES
 from nncf.torch.pruning.structs import PrunedModuleInfo
+from nncf.torch.pruning.utils import init_output_masks_in_graph
 
 
 class BasePruningAlgoBuilder(PTCompressionAlgorithmBuilder):
@@ -45,41 +45,39 @@ class BasePruningAlgoBuilder(PTCompressionAlgorithmBuilder):
         self._params = params
 
         self.prune_first = params.get('prune_first_conv', False)
-        self.prune_last = params.get('prune_last_conv', False)
         self.prune_batch_norms = params.get('prune_batch_norms', True)
         self.prune_downsample_convs = params.get('prune_downsample_convs', False)
 
         self._prunable_types = self.get_op_types_of_pruned_modules()
 
-        from nncf.common.pruning.pruning_node_selector import PruningNodeSelector
+        from nncf.common.pruning.node_selector import PruningNodeSelector
         self.pruning_node_selector = PruningNodeSelector(PT_PRUNING_OPERATOR_METATYPES,
                                                          self._prunable_types,
                                                          self.get_types_of_grouping_ops(),
                                                          self.ignored_scopes,
                                                          self.target_scopes,
                                                          self.prune_first,
-                                                         self.prune_last,
                                                          self.prune_downsample_convs)
 
         self.pruned_module_groups_info = []
+        self._pruned_norms_operators = []
 
     @staticmethod
     def _set_default_params_for_ranking_type(params: Dict) -> None:
         """
         Setting default parameter values of pruning algorithm depends on the ranking type:
         for learned_ranking `all_weights` must be True (in case of False was set by the user, an Exception will be
-        raised), `prune_first_conv`, `prune_last_conv`, `prune_downsample_convs` are recommended to be True (this
+        raised), `prune_first_conv`, `prune_downsample_convs` are recommended to be True (this
         params will be set to True by default (and remain unchanged if the user sets some value).
         :param params: dict with parameters of the algorithm from config
         """
         learned_ranking = 'interlayer_ranking_type' in params and params['interlayer_ranking_type'] == 'learned_ranking'
         if not learned_ranking:
             return
-        nncf_logger.info('For learning global ranking `prune_first_conv`, `prune_last_conv`, `prune_downsample_convs`, '
+        nncf_logger.info('For learning global ranking `prune_first_conv`, `prune_downsample_convs`, '
                          '`all_weights` are setting to True by default. It is not recommended to set this params'
                          ' to False.')
         params.setdefault('prune_first_conv', True)
-        params.setdefault('prune_last_conv', True)
         params.setdefault('prune_downsample_convs', True)
         if params.get('all_weights') is False:
             raise Exception('In case of `interlayer_ranking_type`=`learned_ranking`, `all_weights` must be set to True,'
@@ -111,27 +109,59 @@ class BasePruningAlgoBuilder(PTCompressionAlgorithmBuilder):
                 assert self._is_pruned_module(module)
 
                 nncf_logger.info("Adding Weight Pruner in scope: {}".format(node_name))
-                operation = self.create_weight_pruning_operation(module)
-                hook = operation.to(device)
+                pruning_block = self.create_weight_pruning_operation(module, node_name)
+                # Hook for weights and bias
+                hook = UpdateWeightAndBias(pruning_block).to(device)
                 insertion_commands.append(
                     PTInsertionCommand(
-                        PTTargetPoint(TargetType.OPERATION_WITH_WEIGHTS,
+                        PTTargetPoint(TargetType.PRE_LAYER_OPERATION,
                                       target_node_name=node_name),
                         hook,
                         TransformationPriority.PRUNING_PRIORITY
                     )
                 )
-
                 group_minfos.append(PrunedModuleInfo(node_name=node_name,
                                                      module_scope=module_scope,
                                                      module=module,
-                                                     operand=hook,
+                                                     operand=pruning_block,
                                                      node_id=node.node_id))
+
             cluster = Cluster[PrunedModuleInfo](i, group_minfos, [n.node_id for n in group.elements])
             self.pruned_module_groups_info.add_cluster(cluster)
+
+        # Propagate masks to find norm layers to prune
+        init_output_masks_in_graph(target_model_graph, self.pruned_module_groups_info.get_all_nodes())
+        MaskPropagationAlgorithm(target_model_graph, PT_PRUNING_OPERATOR_METATYPES).mask_propagation()
+
+        # Adding binary masks also for Batch/Group Norms to allow applying masks after propagation
+        types_to_apply_mask = ['group_norm']
+        if self.prune_batch_norms:
+            types_to_apply_mask.append('batch_norm')
+
+        all_norm_layers = target_model_graph.get_nodes_by_types(types_to_apply_mask)
+        for node in all_norm_layers:
+            if node.data['output_mask'] is None:
+                # Skip elements that will not be pruned
+                continue
+
+            node_name = node.node_name
+            module = target_model.get_containing_module(node_name)
+
+            pruning_block = self.create_weight_pruning_operation(module, node_name)
+            # Hook for weights and bias
+            hook = UpdateWeightAndBias(pruning_block).to(device)
+            insertion_commands.append(
+                PTInsertionCommand(
+                    PTTargetPoint(TargetType.PRE_LAYER_OPERATION,
+                                  target_node_name=node_name),
+                    hook,
+                    TransformationPriority.PRUNING_PRIORITY
+                )
+            )
+            self._pruned_norms_operators.append((node, pruning_block, module))
         return insertion_commands
 
-    def create_weight_pruning_operation(self, module):
+    def create_weight_pruning_operation(self, module, node_name):
         raise NotImplementedError
 
     def _is_pruned_module(self, module: nn.Module):
@@ -167,9 +197,7 @@ class BasePruningAlgoController(PTCompressionAlgorithmController):
         self.pruned_module_groups_info = pruned_module_groups_info
         self.prune_batch_norms = params.get('prune_batch_norms', True)
         self.prune_first = params.get('prune_first_conv', False)
-        self.prune_last = params.get('prune_last_conv', False)
         self.prune_downsample_convs = params.get('prune_downsample_convs', False)
-        self.zero_grad = params.get('zero_grad', True)
         self.prune_flops = False
         self.check_pruning_rate(params)
         self._hooks = []
@@ -181,29 +209,7 @@ class BasePruningAlgoController(PTCompressionAlgorithmController):
         raise NotImplementedError
 
     def step(self, next_step):
-        raise NotImplementedError
-
-    def zero_grads_for_pruned_modules(self):
-        """
-        This function registers a hook that will set the
-        gradients for pruned filters to zero.
-        """
-        self._clean_hooks()
-
-        def hook(grad, mask, dim=0):
-            mask = mask.to(grad.device)
-            return apply_filter_binary_mask(mask, grad, dim=dim)
-
-        for minfo in self.pruned_module_groups_info.get_all_nodes():
-            mask = minfo.operand.binary_filter_pruning_mask
-            weight = minfo.module.weight
-            dim = minfo.module.target_weight_dim_for_compression
-            partial_hook = update_wrapper(partial(hook, mask=mask, dim=dim), hook)
-            self._hooks.append(weight.register_hook(partial_hook))
-            if minfo.module.bias is not None:
-                bias = minfo.module.bias
-                partial_hook = update_wrapper(partial(hook, mask=mask), hook)
-                self._hooks.append(bias.register_hook(partial_hook))
+        pass
 
     def check_pruning_rate(self, params):
         """

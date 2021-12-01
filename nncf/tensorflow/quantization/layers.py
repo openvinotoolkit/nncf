@@ -15,7 +15,7 @@ import tensorflow as tf
 
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.tensorflow.layers.custom_objects import NNCF_CUSTOM_OBJECTS
-from nncf.tensorflow.layers.custom_objects import NNCF_QUANTIZATION_OPERATONS
+from nncf.tensorflow.layers.custom_objects import NNCF_QUANTIZATION_OPERATIONS
 from nncf.tensorflow.layers.operation import InputType
 from nncf.tensorflow.quantization.quantizers import Quantizer
 from nncf.tensorflow.quantization.quantizers import TFQuantizerSpec
@@ -94,7 +94,7 @@ class FakeQuantize(tf.keras.layers.Layer):
         self._quantizer.apply_range_initialization(self._quantizer_weights, min_values, max_values, min_range, eps)
 
     def _create_quantizer(self, qspec: TFQuantizerSpec, op_name: str) -> Quantizer:
-        quantizer_cls = NNCF_QUANTIZATION_OPERATONS.get(qspec.mode)
+        quantizer_cls = NNCF_QUANTIZATION_OPERATIONS.get(qspec.mode)
         return quantizer_cls(op_name, qspec)
 
     @staticmethod

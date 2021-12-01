@@ -1,4 +1,13 @@
 strict digraph  {
 "0 /nncf_model_input_0" [id=0, type=nncf_model_input];
-"1 /nncf_model_input_1" [id=1, type=nncf_model_input];
+"1 SymmetricQuantizer/symmetric_quantize_0" [id=1, type=symmetric_quantize];
+"2 /nncf_model_input_1" [id=2, type=nncf_model_input];
+"3 SymmetricQuantizer/symmetric_quantize_1" [id=3, type=symmetric_quantize];
+"4 TestModel/mul_0" [id=4, type=mul];
+"5 /nncf_model_output_0" [id=5, type=nncf_model_output];
+"0 /nncf_model_input_0" -> "1 SymmetricQuantizer/symmetric_quantize_0";
+"1 SymmetricQuantizer/symmetric_quantize_0" -> "4 TestModel/mul_0";
+"2 /nncf_model_input_1" -> "3 SymmetricQuantizer/symmetric_quantize_1";
+"3 SymmetricQuantizer/symmetric_quantize_1" -> "4 TestModel/mul_0";
+"4 TestModel/mul_0" -> "5 /nncf_model_output_0";
 }

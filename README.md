@@ -124,6 +124,13 @@ To run the samples please refer to the corresponding tutorials:
   - [Object Detection sample](examples/tensorflow/object_detection/README.md)
   - [Instance Segmentation sample](examples/tensorflow/segmentation/README.md)
 
+## Model Compression Notebooks 
+
+A collection of ready-to-run Jupyter* notebooks are also available to demonstrate how to use NNCF compression algorithms
+to optimize models for inference with the OpenVINO Toolkit.
+- [Optimizing PyTorch models with NNCF of OpenVINO by 8-bit quantization](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/302-pytorch-quantization-aware-training)
+- [Optimizing TensorFlow models with NNCF of OpenVINO by 8-bit quantization](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/305-tensorflow-quantization-aware-training)
+
 ## Third-party repository integration
 NNCF may be straightforwardly integrated into training/evaluation pipelines of third-party repositories.
 
@@ -141,10 +148,10 @@ See [third_party_integration](./third_party_integration) for examples of code mo
 - Ubuntu\* 18.04 or later (64-bit)
 - Python\* 3.6.2 or later
 - Supported frameworks:
-  - PyTorch\* >=1.5.0, <=1.8.1 (1.8.0 not supported)
-  - TensorFlow\* 2.4.2
+  - PyTorch\* >=1.5.0, <=1.9.1 (1.8.0 not supported)
+  - TensorFlow\* 2.4.3
 
-This repository is tested on Python* 3.6.2+, PyTorch* 1.8.1 (NVidia CUDA\* Toolkit 10.2) and TensorFlow* 2.4.2 (NVidia CUDA\* Toolkit 11.0).
+This repository is tested on Python* 3.6.2+, PyTorch* 1.9.1 (NVidia CUDA\* Toolkit 10.2) and TensorFlow* 2.4.3 (NVidia CUDA\* Toolkit 11.0).
 
 ## Installation
 We suggest to install or use the package in the [Python virtual environment](https://docs.python.org/3/tutorial/venv.html).
@@ -182,6 +189,11 @@ pip install nncf[torch]
 Install NNCF and TensorFlow in one line:
 ```
 pip install nncf[tf]
+```
+
+NNCF is also available via [conda](https://anaconda.org/conda-forge/nncf):
+```
+conda install -c conda-forge nncf
 ```
 
 #### As a Docker image
@@ -260,11 +272,13 @@ to find instruction and links to exact configuration files and final checkpoints
 |UNet|Filter pruning, 25%, geometric median criterion|Mapillary|55.62 (0.61)|
 
 <a name="pytorch_nlp"></a>
-#### NLP
+#### NLP (HuggingFace Transformers-powered models)
 
 |PyTorch Model|<img width="20" height="1">Compression algorithm<img width="20" height="1">|Dataset|Accuracy (Drop) %|
 | :---: | :---: | :---: | :---: |
 |BERT-base-chinese|INT8|XNLI|77.22 (0.46)|
+|BERT-base-cased|INT8|CoNLL2003|99.18 (-0.01)|
+|BERT-base-cased|INT8|MRPC|84.8 (-0.24)|
 |BERT-large (Whole Word Masking)|INT8|SQuAD v1.1|F1: 92.68 (0.53)|
 |RoBERTa-large|INT8|MNLI|matched: 89.25 (1.35)|
 |DistilBERT-base|INT8|SST-2|90.3 (0.8)|

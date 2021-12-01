@@ -154,7 +154,8 @@ def main_worker(current_gpu, config):
 
     pretrained = is_pretrained_model_requested(config)
 
-    if config.to_onnx is not None:
+    is_export_only = 'export' in config.mode and ('train' not in config.mode and 'test' not in config.mode)
+    if is_export_only:
         assert pretrained or (resuming_checkpoint_path is not None)
     else:
         test_data_loader, train_data_loader, init_data_loader = create_dataloaders(config)
@@ -209,7 +210,7 @@ def main_worker(current_gpu, config):
 
     log_common_mlflow_params(config)
 
-    if 'export' in config.mode and ('train' not in config.mode and 'test' not in config.mode):
+    if is_export_only:
         compression_ctrl.export_model(config.to_onnx)
         logger.info("Saved to {}".format(config.to_onnx))
         return
@@ -331,6 +332,7 @@ def create_model(config: SampleConfig,
     if weights:
         sd = torch.load(weights, map_location='cpu',
                         pickle_module=restricted_pickle_module)
+        sd = sd["state_dict"]
         load_state(ssd_net, sd)
 
     ssd_net.to(config.device)
@@ -496,9 +498,9 @@ def train_epoch(compression_ctrl, net, config, train_data_loader, criterion, opt
         conf_loss += batch_loss_c.item()
 
         if is_on_first_rank(config):
-            config.tb.add_scalar("train/loss_l", batch_loss_l.item(), iteration)
-            config.tb.add_scalar("train/loss_c", batch_loss_c.item(), iteration)
-            config.tb.add_scalar("train/loss", batch_loss.item(), iteration)
+            config.tb.add_scalar("train/loss_l", batch_loss_l.item(), iteration + epoch_size * epoch)
+            config.tb.add_scalar("train/loss_c", batch_loss_c.item(), iteration + epoch_size * epoch)
+            config.tb.add_scalar("train/loss", batch_loss.item(), iteration + epoch_size * epoch)
 
         if iteration % config.print_freq == 0:
             t_finish = time.time()

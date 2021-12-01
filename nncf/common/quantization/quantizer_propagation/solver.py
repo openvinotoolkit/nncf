@@ -53,6 +53,7 @@ from nncf.common.utils.debug import DEBUG_LOG_DIR
 from nncf.common.utils.debug import is_debug
 from nncf.common.utils.helpers import matches_any
 from nncf.common.utils.logger import logger as nncf_logger
+from nncf.common.graph.operator_metatypes import UnknownMetatype
 
 
 class TransitionStatus(Enum):
@@ -627,6 +628,8 @@ class QuantizerPropagationSolver:
                 if quant_det_id is None:
                     warnings.warn("Unknown metatype for operator node: {}".format(node_key))
                     trait = QuantizationTrait.QUANTIZATION_AGNOSTIC
+                elif quant_det_id is UnknownMetatype:
+                    trait = QuantizationTrait.NON_QUANTIZABLE
                 else:
                     trait = self._operator_quantization_trait_map.get(quant_det_id,
                                                                       QuantizationTrait.QUANTIZATION_AGNOSTIC)
@@ -934,6 +937,9 @@ class QuantizerPropagationSolver:
             edge = quant_prop_graph.edges[pred_ip_key, operator_node_key]
             if not edge[QuantizerPropagationStateGraph.IS_INTEGER_PATH_EDGE_ATTR]:
                 pred_ip_key_vs_qconf_dict[pred_ip_key] = qconf_list
+            else:
+                nncf_logger.debug("Detected integer input {} - won't set up "
+                                  "a propagating quantizer for it".format(pred_ip_key))
 
         if not pred_ip_key_vs_qconf_dict:
             # All inputs to the operator were integer

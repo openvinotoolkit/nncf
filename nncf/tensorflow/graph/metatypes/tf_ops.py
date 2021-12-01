@@ -155,6 +155,231 @@ class TFReshapeOpMetatype(TFOpMetatype):
     hw_config_names = [HWConfigOpName.RESHAPE]
 
 
+@TF_OPERATION_METATYPES.register()
+class TFExpandDimsOpMetatype(TFOpMetatype):
+    name = 'ExpandDimsOp'
+    op_names = ['ExpandDims']
+
+
+@TF_OPERATION_METATYPES.register()
+class TFSplitOpMetatype(TFOpMetatype):
+    name = 'SplitOp'
+    op_names = ['Split']
+    hw_config_names = [HWConfigOpName.SPLIT]
+
+
+@TF_OPERATION_METATYPES.register()
+class TFMinimumOpMetatype(TFOpMetatype):
+    name = 'MinimumOp'
+    op_names = ['Minimum']
+    hw_config_names = [HWConfigOpName.MINIMUM]
+
+
+@TF_OPERATION_METATYPES.register()
+class TFMaximumOpMetatype(TFOpMetatype):
+    name = 'MaximumOp'
+    op_names = ['Maximum', 'Max']
+    hw_config_names = [HWConfigOpName.MAXIMUM]
+
+
+@TF_OPERATION_METATYPES.register()
+class TFExpOpMetatype(TFOpMetatype):
+    name = 'ExpOp'
+    op_names = ['Exp']
+
+
+class TFPlaceholderOpMetatype(TFOpMetatype):
+    name = 'PlaceholderOp'
+    op_names = ['Placeholder']
+
+
+@TF_OPERATION_METATYPES.register()
+class TFShapeOpMetatype(TFOpMetatype):
+    name = 'ShapeOp'
+    op_names = ['Shape']
+
+
+@TF_OPERATION_METATYPES.register()
+class TFBiasAddOpMetatype(TFOpMetatype):
+    name = 'BiasAddOp'
+    op_names = ['BiasAdd']
+    hw_config_names = [HWConfigOpName.ADD]
+
+
+@TF_OPERATION_METATYPES.register()
+class TFMeanOpMetatype(TFOpMetatype):
+    name = 'MeanOp'
+    op_names = ['Mean']
+    hw_config_names = [
+        HWConfigOpName.REDUCEMEAN,
+        HWConfigOpName.AVGPOOL,
+    ]
+
+
+@TF_OPERATION_METATYPES.register()
+class TFFusedBatchNormV3OpMetatype(TFOpMetatype):
+    name = 'FusedBatchNormV3Op'
+    op_names = ['FusedBatchNormV3']
+
+
+@TF_OPERATION_METATYPES.register()
+class TFSqueezeOpMetatype(TFOpMetatype):
+    name = 'SqueezeOp'
+    op_names = ['Squeeze']
+    hw_config_names = [HWConfigOpName.SQUEEZE]
+
+
+@TF_OPERATION_METATYPES.register()
+class TFSigmoidOpMetatype(TFOpMetatype):
+    name = 'SigmoidOp'
+    op_names = ['Sigmoid']
+
+
+@TF_OPERATION_METATYPES.register()
+class TFCombinedNonMaxSuppressionOpMetatype(TFOpMetatype):
+    name = 'CombinedNonMaxSuppressionOp'
+    op_names = ['CombinedNonMaxSuppression']
+
+
+@TF_OPERATION_METATYPES.register()
+class TFTopKV2OpMetatype(TFOpMetatype):
+    name = 'TopKV2Op'
+    op_names = ['TopKV2']
+
+
+@TF_OPERATION_METATYPES.register()
+class TFGatherOpMetatype(TFOpMetatype):
+    name = 'GatherOp'
+    op_names = ['GatherNd', 'GatherV2']
+
+
+@TF_OPERATION_METATYPES.register()
+class TFPowOpMetatype(TFOpMetatype):
+    name = 'PowOp'
+    op_names = ['Pow', 'Sqrt']
+    hw_config_names = [HWConfigOpName.POWER]
+
+
+@TF_OPERATION_METATYPES.register()
+class TFTrueDivOpMetatype(TFOpMetatype):
+    name = 'TrueDivOp'
+    op_names = ['RealDiv']
+    hw_config_names = [HWConfigOpName.DIVIDE]
+
+
+@TF_OPERATION_METATYPES.register()
+class TFLogOpMetatype(TFOpMetatype):
+    name = 'LogOp'
+    op_names = ['Log']
+
+
+@TF_OPERATION_METATYPES.register()
+class TFFloorOpMetatype(TFOpMetatype):
+    name = 'FloorOp'
+    op_names = ['Floor']
+
+
+@TF_OPERATION_METATYPES.register()
+class TFFloorDivOpMetatype(TFOpMetatype):
+    name = 'FloorDivOp'
+    op_names = ['FloorDiv']
+
+
+@TF_OPERATION_METATYPES.register()
+class TFCastOpMetatype(TFOpMetatype):
+    name = 'CastOp'
+    op_names = ['Cast']
+
+
+class TFMaxOpMetatype(TFOpMetatype):
+    name = 'MaxOp'
+    op_names = ['Max']
+    hw_config_names = [HWConfigOpName.MAXIMUM]
+
+
+@TF_OPERATION_METATYPES.register()
+class TFTanhOpMetatype(TFOpMetatype):
+    name = 'TanhOp'
+    op_names = ['Tanh']
+
+
+@TF_OPERATION_METATYPES.register()
+class TFSeluOpMetatype(TFOpMetatype):
+    name = 'SeluOp'
+    op_names = ['Selu']
+
+
+@TF_OPERATION_METATYPES.register()
+class TFEluOpMetatype(TFOpMetatype):
+    name = 'EluOp'
+    op_names = ['Elu']
+
+
+@TF_OPERATION_METATYPES.register()
+class TFLeakyReluOpMetatype(TFOpMetatype):
+    name = 'LeakyReluOp'
+    op_names = ['LeakyRelu']
+
+
+@TF_OPERATION_METATYPES.register()
+class TFMaxPoolOpMetatype(TFOpMetatype):
+    name = 'MaxPoolOp'
+    op_names = ['MaxPool']
+    hw_config_names = [HWConfigOpName.MAXPOOL]
+
+
+@TF_OPERATION_METATYPES.register()
+class TFMaxPool3DOpMetatype(TFOpMetatype):
+    name = 'MaxPool3DOp'
+    op_names = ['MaxPool3D']
+    hw_config_names = [HWConfigOpName.MAXPOOL]
+
+
+@TF_OPERATION_METATYPES.register()
+class TFNegOpMetatype(TFOpMetatype):
+    name = 'NegOp'
+    op_names = ['Neg']
+
+
+@TF_OPERATION_METATYPES.register()
+class TFTileOpMetatype(TFOpMetatype):
+    name = 'TileOp'
+    op_names = ['Tile']
+    hw_config_names = [HWConfigOpName.TILE]
+
+
+@TF_OPERATION_METATYPES.register()
+class TFSliceOpMetatype(TFOpMetatype):
+    name = 'SliceOp'
+    op_names = ['Slice']
+
+
+@TF_OPERATION_METATYPES.register()
+class TFSoftmaxOpMetatype(TFOpMetatype):
+    name = 'SoftmaxOp'
+    op_names = ['Softmax']
+
+
+@TF_OPERATION_METATYPES.register()
+class TFTransposeOpMetatype(TFOpMetatype):
+    name = 'TransposeOp'
+    op_names = ['Transpose']
+    hw_config_names = [HWConfigOpName.TRANSPOSE]
+
+
+class TFGreaterOpMetatype(TFOpMetatype):
+    name = 'GreaterOp'
+    op_names = ['Greater']
+    hw_config_names = [HWConfigOpName.GREATER]
+
+
+@TF_OPERATION_METATYPES.register()
+class TFResizeNearestNeighborOpMetatype(TFOpMetatype):
+    name = 'ResizeNearestNeighborOp'
+    op_names = ['ResizeNearestNeighbor']
+    hw_config_names = [HWConfigOpName.INTERPOLATE]
+
+
 WEIGHTABLE_TF_OP_METATYPES = [
     TFConv2DOpMetatype,
     TFConv3DOpMetatype,

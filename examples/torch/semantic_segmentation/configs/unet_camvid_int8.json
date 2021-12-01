@@ -20,7 +20,7 @@
     },
 
     "weighing": "mfb",
-
+    "multiprocessing_distributed" : true,
     "optimizer": {
         "type": "Adam",
         "optimizer_params": {

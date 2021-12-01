@@ -22,7 +22,7 @@ from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizerSpec
 from nncf.tensorflow.layers.custom_objects import NNCF_CUSTOM_OBJECTS
-from nncf.tensorflow.layers.custom_objects import NNCF_QUANTIZATION_OPERATONS
+from nncf.tensorflow.layers.custom_objects import NNCF_QUANTIZATION_OPERATIONS
 from nncf.tensorflow.layers.data_layout import get_channel_axis
 from nncf.tensorflow.layers.data_layout import get_channel_size
 from nncf.tensorflow.layers.operation import NNCFOperation
@@ -276,7 +276,7 @@ class Quantizer(NNCFOperation):
 
 
 @NNCF_CUSTOM_OBJECTS.register()
-@NNCF_QUANTIZATION_OPERATONS.register(QuantizationMode.SYMMETRIC)
+@NNCF_QUANTIZATION_OPERATIONS.register(QuantizationMode.SYMMETRIC)
 class SymmetricQuantizer(Quantizer):
     def __init__(self, name: str, qspec: TFQuantizerSpec):
         super().__init__(name)
@@ -411,7 +411,7 @@ class SymmetricQuantizer(Quantizer):
 
 
 @NNCF_CUSTOM_OBJECTS.register()
-@NNCF_QUANTIZATION_OPERATONS.register(QuantizationMode.ASYMMETRIC)
+@NNCF_QUANTIZATION_OPERATIONS.register(QuantizationMode.ASYMMETRIC)
 class AsymmetricQuantizer(Quantizer):
     def __init__(self, name: str, qspec: TFQuantizerSpec):
         super().__init__(name)

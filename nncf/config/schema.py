@@ -710,7 +710,7 @@ FILTER_PRUNING_SCHEMA = {
                     "schedule": with_attributes(_STRING,
                                                 description="The type of scheduling to use for adjusting the target"
                                                             " pruning level. Either `exponential`, `exponential_with"
-                                                            "_bias`,  or `baseline`, by default it is `baseline`"),
+                                                            "_bias`,  or `baseline`, by default it is `exponential`"),
                     "pruning_target": with_attributes(_NUMBER,
                                                       description="Target value of the pruning level for "
                                                                   "the convolutions that can be pruned. "
@@ -748,14 +748,6 @@ FILTER_PRUNING_SCHEMA = {
                                                                     "convolution operations on it. `False` by default.",
                                                         default=False
                                                         ),
-                    "prune_last_conv": with_attributes(_BOOLEAN,
-                                                       description="Whether to prune last Convolutional layers or not."
-                                                                   "  Last means that it is a Convolutional layer such"
-                                                                   " that there is a path from this layer to the model"
-                                                                   " output such that there are no other convolution"
-                                                                   " operations on it. `False` by default. ",
-                                                       default=False
-                                                       ),
                     "prune_downsample_convs": with_attributes(_BOOLEAN,
                                                               description="Whether to prune downsample Convolutional"
                                                                           " layers (with stride > 1) or not. `False`"
@@ -769,10 +761,6 @@ FILTER_PRUNING_SCHEMA = {
                                                                      " `False` by default.",
                                                          default=False
                                                          ),
-                    "zero_grad": with_attributes(_BOOLEAN,
-                                                 description="Whether to setting gradients corresponding to zeroed"
-                                                             " filters to zero during training, `True` by default.",
-                                                 default=True),
                     "save_ranking_coeffs_path": with_attributes(_STRING),
                     "load_ranking_coeffs_path": with_attributes(_STRING),
                     "legr_params":
@@ -807,6 +795,11 @@ FILTER_PRUNING_SCHEMA = {
     "additionalProperties": False
 }
 
+KNOWLEDGE_DISTILLATION_TYPE_SCHEMA = {
+    "type": "string",
+    "enum": ["mse", "softmax"]
+}
+
 KNOWLEDGE_DISTILLATION_ALGO_NAME_IN_CONFIG = 'knowledge_distillation'
 KNOWLEDGE_DISTILLATION_SCHEMA = {
     **BASIC_COMPRESSION_ALGO_SCHEMA,
@@ -814,9 +807,14 @@ KNOWLEDGE_DISTILLATION_SCHEMA = {
         "algorithm": {
             "const": KNOWLEDGE_DISTILLATION_ALGO_NAME_IN_CONFIG
         },
-        "type": with_attributes(_STRING, description="Type of Knowledge Distillation Loss (mse/softmax)")
+        "type": with_attributes(KNOWLEDGE_DISTILLATION_TYPE_SCHEMA,
+                                description="Type of Knowledge Distillation Loss (mse/softmax)"),
+        "scale": with_attributes(_NUMBER, description="Knowledge Distillation loss value multiplier", default=1),
+        "temperature": with_attributes(_NUMBER, description="Temperature for logits softening "
+                                                            "(works only with softmax disitllation)", default=1)
     },
-    "additionalProperties": False
+    "additionalProperties": False,
+    "required": ["type"]
 }
 
 ALL_SUPPORTED_ALGO_SCHEMA = [BINARIZATION_SCHEMA,

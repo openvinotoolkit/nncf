@@ -14,9 +14,13 @@
 from typing import Iterable
 from typing import List
 from typing import Optional
+from typing import Tuple
+from typing import Union
 
 import numpy as np
 import torch
+
+from nncf.common.graph import Dtype
 
 
 class TensorMeta:
@@ -24,7 +28,8 @@ class TensorMeta:
     def default_comparator(lhs: 'TensorMeta', rhs: 'TensorMeta'):
         return lhs.index == rhs.index and lhs.creator_id == rhs.creator_id and lhs.shape[1:] == rhs.shape[1:]
 
-    def __init__(self, creator_id: int, index: int, shape):
+    def __init__(self, creator_id: int, index: int, shape: Union[List[int], Tuple[torch.Tensor, ...]],
+                 dtype: Dtype = Dtype.FLOAT):
         """
         :param creator_id: An ID of the node in DynamicGraph that corresponds to an operation that created the
             tensor.
@@ -34,6 +39,7 @@ class TensorMeta:
         self.creator_id = creator_id
         self.index = index
         self.shape = tuple(int(dim) for dim in shape)  # Handle cases when shape is a tuple of Tensors
+        self.dtype = dtype
 
     def __eq__(self, other):
         if not isinstance(other, TensorMeta):
@@ -94,15 +100,25 @@ def flatten_args(args, kwargs):
     return list(flatten(args)) + list(flatten(kwargs))
 
 
+def get_dtype(x: torch.Tensor) -> Dtype:
+    if x.dtype in [torch.float, torch.float16, torch.float32, torch.float64]:
+        return Dtype.FLOAT
+    return Dtype.INTEGER
+
+
 def trace_tensors(operator_output, node: 'DynamicGraphNode'):
     if isinstance(operator_output, (list, tuple)):
         output_ = []
         for i, x in enumerate(operator_output):
-            meta = TensorMeta(node.node_id, i, x.shape)
+            meta = None
+            if node is not None:
+                meta = TensorMeta(node.node_id, i, x.shape, get_dtype(x))
             output_.append(TracedTensor.from_torch_tensor(x, meta))
         return operator_output.__class__(output_)
     if isinstance(operator_output, torch.Tensor):
-        meta = TensorMeta(node.node_id, 0, operator_output.shape)
+        meta = None
+        if node is not None:
+            meta = TensorMeta(node.node_id, 0, operator_output.shape, get_dtype(operator_output))
         return TracedTensor.from_torch_tensor(operator_output, meta)
     raise ValueError("Unknown return type. Can not trace function call")
 

@@ -17,7 +17,7 @@ from nncf.common.graph.patterns import GraphPattern
 def create_h_sigmoid_act() -> GraphPattern:
     pattern = GraphPattern()
 
-    input_pattern_node = pattern.add_node(label='*INPUT_NODE*', type=GraphPattern.PATTERN_INPUT_NODE_TYPE)
+    input_pattern_node = pattern.add_node(label='*INPUT_NODE*', type=GraphPattern.NON_PATTERN_NODE_TYPE)
     add_node = pattern.add_node(label='ADD', type='AddV2')
     relu_node = pattern.add_node(label='RELU', type='ReLU')
     mul_node = pattern.add_node(label='TF_OP_MUL', type='Mul')
@@ -32,7 +32,7 @@ def create_h_sigmoid_act() -> GraphPattern:
 def create_h_swish_act() -> GraphPattern:
     pattern = GraphPattern()
 
-    input_pattern_node = pattern.add_node(label='*INPUT_NODE*', type=GraphPattern.PATTERN_INPUT_NODE_TYPE)
+    input_pattern_node = pattern.add_node(label='*INPUT_NODE*', type=GraphPattern.NON_PATTERN_NODE_TYPE)
 
     # TODO (vshampor): current approach with join_patterns is deficient since it does not allow to reliably
     #  connect nodes after a pattern has been joined. Along with the label and the type, the nodes created

@@ -72,9 +72,11 @@ class GraphPattern:
     Describes layer patterns in model's graph.
     This class is used in quantizer arrangement search algorithm, representing layer fusing patterns
 
-    :param PATTERN_INPUT_NODE_TYPE: Special node type possible pattern input
+    :param ANY_PATTERN_NODE_TYPE: Special node type, meaning any type inside the pattern.
+    :param NON_PATTERN_NODE_TYPE: Special node type, meaning any type outside the pattern.
     """
-    PATTERN_INPUT_NODE_TYPE = 'INPUT_NODE'
+    ANY_PATTERN_NODE_TYPE = 'ANY_PATTERN_NODE'
+    NON_PATTERN_NODE_TYPE = 'NON_PATTERN_NODE'
 
     def __init__(self):
         self._graph = nx.DiGraph()
@@ -163,8 +165,9 @@ class GraphPattern:
         first_node_second_graph = list(nx.lexicographical_topological_sort(second_graph, key=int))[0]
         assert second_graph.in_degree(first_node_second_graph) == 0
 
-        # Special case when first node is PATTERN_INPUT_NODE_TYPE
-        if second_graph.nodes[first_node_second_graph]['type'][0] == GraphPattern.PATTERN_INPUT_NODE_TYPE:
+        # Special case when first node is ANY_PATTERN_NODE_TYPE or NON_PATTERN_NODE_TYPE
+        if GraphPattern.ANY_PATTERN_NODE_TYPE in second_graph.nodes[first_node_second_graph]['type'] or \
+                GraphPattern.NON_PATTERN_NODE_TYPE in second_graph.nodes[first_node_second_graph]['type']:
             successors = self_graph.successors(first_node_second_graph)
             new_edges = list(it.product([last_node_first_graph], successors))
             self_graph.add_edges_from(new_edges)
@@ -189,8 +192,8 @@ class GraphPattern:
         last node of self's graph and first node of other's graph,
         which are found by nx.lexicographical_topological_sort().
 
-        If other starts from a node with the PATTERN_INPUT_NODE_TYPE type, the input node of the other will be
-        discarded from the final pattern.
+        If other starts from a node with ANY_PATTERN_NODE_TYPE or NON_PATTERN_NODE_TYPE types,
+        the input node of the other will be discarded from the final pattern.
 
         :param other: GraphPattern that will be added
         :param edges: List of edges between self and other graphs.
@@ -227,6 +230,9 @@ class GraphPattern:
 
     def add_edge(self, u_name, v_name) -> None:
         self._graph.add_edge(u_name, v_name)
+
+    def add_edges_from(self, ebunch_to_add, **attr) -> None:
+        self._graph.add_edges_from(ebunch_to_add, **attr)
 
     def get_weakly_connected_subgraphs(self) -> List[nx.DiGraph]:
         return [self._graph.subgraph(c) for c in nx.weakly_connected_components(self._graph)]

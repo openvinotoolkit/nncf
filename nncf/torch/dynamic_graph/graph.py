@@ -10,7 +10,7 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-
+from collections import Counter
 from typing import Dict
 from typing import List
 from typing import Optional
@@ -20,6 +20,7 @@ import networkx as nx
 import networkx.algorithms.isomorphism as iso
 from torch import Tensor
 
+from nncf.common.graph import Dtype
 from nncf.common.graph.layer_attributes import BaseLayerAttributes
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.torch.dynamic_graph.scope import Scope
@@ -70,19 +71,34 @@ class FirstInputsMatcher(InputsMatcher):
 
 
 class DefaultInputsMatcher(InputsMatcher):
-    def __call__(self, node_inputs: List[TensorMeta], real_inputs: List[TensorMeta],
+    def __call__(self, saved_inputs: List[TensorMeta], actual_inputs: List[TensorMeta],
                  tm_comparators: List[TensorMetaComparator]) -> bool:
-        if node_inputs is None and real_inputs:
+        if saved_inputs is None and actual_inputs:
             return False
 
-        for saved_input, actual_input in zip(node_inputs, real_inputs):
+        matched_with_unexpected_tensors = False
+        for saved_input, actual_input in zip(saved_inputs, actual_inputs):
             if saved_input is None and actual_input is None:
                 continue
-            if (saved_input is None) != (actual_input is None):
+            if (saved_input is None) and (actual_input is not None):
+                # torch.Tensor.size() seems to return ints when not tracing ONNX
+                # and tensors when tracing ONNX. This breaks input-based node matching whenever
+                # torch.Tensor.size() return value is passed into a NNCF-traced operation (such as `view`)
+                # because at graph building time it expected to see ints as args and now it sees tensors.
+                # To mitigate this, will only match inputs against the positions which had tensors during build-time
+                # and disregard the rest of the argument positions.
+                matched_with_unexpected_tensors = True
+                continue
+            if (saved_input is not None) and (actual_input is None):
                 return False
             for tm_comparator in tm_comparators:
                 if not tm_comparator(saved_input, actual_input):
                     return False
+        if matched_with_unexpected_tensors:
+            nncf_logger.debug("Had to match a node to an op which has tensors at positions where there were no tensors "
+                              "at graph building time:\nNode input metas: {}, but op input metas: {}".format(
+                saved_inputs, actual_inputs
+            ))
         return True
 
 
@@ -109,9 +125,14 @@ class OperationExecutionContext:
             DefaultTensorMetaComparator()]
         self.input_matcher = input_matcher if input_matcher else DefaultInputsMatcher()
 
-    def __eq__(self, other: 'OperationExecutionContext'):
-        return (self.op_address == other.op_address) and \
-               self.input_matcher(self.tensor_metas, other.tensor_metas, self.tm_comparators)
+    def __eq__(self, other):
+        return self.op_address == other.op_address and Counter(self.tensor_metas) == Counter(other.tensor_metas)
+
+    def matches_saved_inputs_from(self, other: 'OperationExecutionContext'):
+        # WARNING: not commutative
+        return self.op_address == other.op_address and self.input_matcher(other.tensor_metas,
+                                                                          self.tensor_metas,
+                                                                          self.tm_comparators)
 
     def __hash__(self):
         return hash((self.operator_name, tuple(self.scope_in_model), self.call_order,
@@ -160,12 +181,14 @@ class DynamicGraphNode:
 
 class DynamicGraphEdge:
     def __init__(self, from_node_id: int, to_node_id: int,
-                 activation_shape: List[int], input_port_id: int, output_port_id: int):
+                 activation_shape: List[int], input_port_id: int, output_port_id: int,
+                 dtype: Dtype):
         self.from_node_id = from_node_id
         self.to_node_id = to_node_id
         self.activation_shape = activation_shape
         self.input_port_id = input_port_id
         self.output_port_id = output_port_id
+        self.dtype = dtype
 
 
 class DefaultScopeNodeMatcher:
@@ -181,7 +204,7 @@ class DefaultScopeNodeMatcher:
             -> Dict[str, DynamicGraphNode]:
         node_candidates = {}
         for nx_node_key, node in self._inputless_nodes.items():
-            if node.op_exec_context == op_exec_context:
+            if op_exec_context.matches_saved_inputs_from(node.op_exec_context):
                 node_candidates[nx_node_key] = node
         return node_candidates
 
@@ -194,7 +217,7 @@ class DefaultScopeNodeMatcher:
             creator_id = info.creator_id
             for successor_node_key in self._nx_graph.successors(self._node_id_to_key_dict[creator_id]):
                 successor_node = self._nx_graph.nodes[successor_node_key]
-                if op_exec_context == successor_node[DynamicGraph.OP_EXEC_CONTEXT_NODE_ATTR]:
+                if op_exec_context.matches_saved_inputs_from(successor_node[DynamicGraph.OP_EXEC_CONTEXT_NODE_ATTR]):
                     nx_node_candidates[successor_node_key] = successor_node
 
         node_candidates = {}  # type: Dict[str, DynamicGraphNode]
@@ -247,6 +270,7 @@ class DefaultScopeNodeMatcher:
             self._nx_graph.edges[parent, node_key][DynamicGraph.ACTIVATION_SHAPE_EDGE_ATTR] = info.shape
             self._nx_graph.edges[parent, node_key][DynamicGraph.INPUT_PORT_ID_EDGE_ATTR] = i
             self._nx_graph.edges[parent, node_key][DynamicGraph.OUTPUT_PORT_ID_EDGE_ATTR] = info.index
+            self._nx_graph.edges[parent, node_key][DynamicGraph.ACTIVATION_DTYPE_EDGE_ATTR] = info.dtype
 
         nx_node_dict = self._nx_graph.nodes[node_key]
         node = DynamicGraphNode(node_id=nx_node_dict[DynamicGraph.ID_NODE_ATTR],
@@ -392,13 +416,15 @@ class IterationScopeNodeMatcher(DefaultScopeNodeMatcher):
         for iter_scope in iter_scopes:
             if iter_scope in self._first_iteration_nodes:
                 for name, node in self._first_iteration_nodes[iter_scope].items():
-                    if op_exec_context == node.op_exec_context:
+                    if op_exec_context.matches_saved_inputs_from(node.op_exec_context):
                         node_candidates[name] = node
                         break
                 if node_candidates:
                     break
         return node_candidates
 
+    def get_first_iteration_modules(self)-> Dict:
+        return self._first_iteration_nodes
 
 class NodeManager:
     def __init__(self, node_id_to_key_dict, nx_graph):
@@ -469,6 +495,7 @@ class DynamicGraph:
     LAYER_ATTRIBUTES = 'layer_attributes'
     OP_EXEC_CONTEXT_NODE_ATTR = 'op_exec_context'
     ACTIVATION_SHAPE_EDGE_ATTR = 'activation_shape'
+    ACTIVATION_DTYPE_EDGE_ATTR = 'activation_dtype'
     INPUT_PORT_ID_EDGE_ATTR = 'input_port_id'
     OUTPUT_PORT_ID_EDGE_ATTR = 'output_port_id'
     IGNORED_ALGOS_NODE_ATTR = 'ignored_algos'
@@ -551,7 +578,11 @@ class DynamicGraph:
                 to_node_id=to_node_id,
                 activation_shape=nx_edge_attrs[DynamicGraph.ACTIVATION_SHAPE_EDGE_ATTR],
                 input_port_id=nx_edge_attrs[DynamicGraph.INPUT_PORT_ID_EDGE_ATTR],
-                output_port_id=nx_edge_attrs[DynamicGraph.OUTPUT_PORT_ID_EDGE_ATTR])
+                output_port_id=nx_edge_attrs[DynamicGraph.OUTPUT_PORT_ID_EDGE_ATTR],
+                dtype=nx_edge_attrs[DynamicGraph.ACTIVATION_DTYPE_EDGE_ATTR])
 
             all_edges.append(dynamic_graph_edge)
         return all_edges
+
+    def is_graph_with_iteration_modules(self) -> bool:
+        return len(self.match_manager.iteration_matcher.get_first_iteration_modules()) > 0

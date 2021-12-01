@@ -13,8 +13,7 @@
 from abc import ABC
 from abc import abstractmethod
 from enum import Enum
-from typing import List
-from typing import Tuple
+from typing import List, Tuple, Any
 
 
 class Dtype(Enum):
@@ -29,15 +28,30 @@ class BaseLayerAttributes(ABC):
     """
 
 
+class MultipleInputLayerAttributes(BaseLayerAttributes):
+    """
+    Represents a layer with multiple inputs.
+    """
+
+    def __init__(self,
+                 axis: int):
+        self.axis = axis
+
+    def __eq__(self, other: Any):
+        return isinstance(other, MultipleInputLayerAttributes) \
+               and self.axis == other.axis
+
+
 class WeightedLayerAttributes(BaseLayerAttributes):
     """
     Represents a layer with weights.
     """
+
     def __init__(self, weight_requires_grad: bool, dtype: Dtype = Dtype.FLOAT):
         self.weight_requires_grad = weight_requires_grad
         self.dtype = dtype
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any):
         return isinstance(other, WeightedLayerAttributes) \
                and self.weight_requires_grad == other.weight_requires_grad
 
@@ -59,6 +73,7 @@ class GenericWeightedLayerAttributes(WeightedLayerAttributes):
     Represents a weighted layer for which there is no information ahead of time
     of the exact meaning of the weight indices.
     """
+
     def __init__(self, weight_requires_grad: bool, weight_shape: List[int],
                  filter_dimension_idx: int = 0):
         super().__init__(weight_requires_grad)
@@ -112,7 +127,7 @@ class ConvolutionLayerAttributes(WeightedLayerAttributes):
         self.transpose = transpose
         self.padding_values = padding_values
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any):
         return isinstance(other, ConvolutionLayerAttributes) \
                and super().__eq__(other) \
                and self.in_channels == other.in_channels \
@@ -148,7 +163,7 @@ class GroupNormLayerAttributes(WeightedLayerAttributes):
         self.num_channels = num_channels
         self.num_groups = num_groups
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any):
         return isinstance(other, GroupNormLayerAttributes) \
                and super().__eq__(other) \
                and self.num_channels == other.num_channels \
@@ -159,3 +174,16 @@ class GroupNormLayerAttributes(WeightedLayerAttributes):
 
     def get_target_dim_for_compression(self) -> int:
         return 0
+
+
+class ReshapeLayerAttributes(BaseLayerAttributes):
+    """
+    This class stores attributes of reshape modules/layers
+    that are useful for some algorithms.
+    """
+
+    def __init__(self,
+                 input_shape: List[int],
+                 output_shape: List[int]):
+        self.input_shape = input_shape
+        self.output_shape = output_shape

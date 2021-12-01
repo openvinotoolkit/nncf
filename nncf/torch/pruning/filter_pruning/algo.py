@@ -31,6 +31,7 @@ from nncf.common.pruning.clusterization import Clusterization
 from nncf.common.pruning.mask_propagation import MaskPropagationAlgorithm
 from nncf.common.pruning.schedulers import PRUNING_SCHEDULERS
 from nncf.common.pruning.statistics import FilterPruningStatistics
+from nncf.common.pruning.statistics import PrunedModelTheoreticalBorderline
 from nncf.common.pruning.statistics import PrunedLayerSummary
 from nncf.common.pruning.statistics import PrunedModelStatistics
 from nncf.common.pruning.utils import calculate_in_out_channels_in_uniformly_pruned_model
@@ -41,63 +42,64 @@ from nncf.common.pruning.utils import get_conv_in_out_channels
 from nncf.common.pruning.utils import get_rounded_pruned_element_number
 from nncf.common.schedulers import StubCompressionScheduler
 from nncf.common.statistics import NNCFStatistics
+from nncf.common.utils.debug import is_debug
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.config.extractors import extract_bn_adaptation_init_params
 from nncf.torch.algo_selector import PT_COMPRESSION_ALGORITHMS
 from nncf.torch.compression_method_api import PTCompressionAlgorithmController
-from nncf.torch.graph.operator_metatypes import Conv1dMetatype
-from nncf.torch.graph.operator_metatypes import Conv2dMetatype
-from nncf.torch.graph.operator_metatypes import Conv3dMetatype
-from nncf.torch.graph.operator_metatypes import ConvTranspose2dMetatype
-from nncf.torch.graph.operator_metatypes import ConvTranspose3dMetatype
-from nncf.torch.graph.operator_metatypes import DepthwiseConv1dSubtype
-from nncf.torch.graph.operator_metatypes import DepthwiseConv2dSubtype
-from nncf.torch.graph.operator_metatypes import DepthwiseConv3dSubtype
-from nncf.torch.graph.operator_metatypes import LinearMetatype
-from nncf.torch.layer_utils import _NNCFModuleMixin
+from nncf.torch.graph.operator_metatypes import PTConv1dMetatype
+from nncf.torch.graph.operator_metatypes import PTConv2dMetatype
+from nncf.torch.graph.operator_metatypes import PTConv3dMetatype
+from nncf.torch.graph.operator_metatypes import PTConvTranspose2dMetatype
+from nncf.torch.graph.operator_metatypes import PTConvTranspose3dMetatype
+from nncf.torch.graph.operator_metatypes import PTDepthwiseConv1dSubtype
+from nncf.torch.graph.operator_metatypes import PTDepthwiseConv2dSubtype
+from nncf.torch.graph.operator_metatypes import PTDepthwiseConv3dSubtype
+from nncf.torch.graph.operator_metatypes import PTLinearMetatype
 from nncf.torch.layers import NNCF_GENERAL_CONV_MODULES_DICT
 from nncf.torch.layers import NNCF_LINEAR_MODULES_DICT
 from nncf.torch.layers import NNCF_PRUNING_MODULES_DICT
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.pruning.base_algo import BasePruningAlgoBuilder
 from nncf.torch.pruning.base_algo import BasePruningAlgoController
-from nncf.torch.pruning.export_helpers import PTElementwise
-from nncf.torch.pruning.export_helpers import PT_PRUNING_OPERATOR_METATYPES
+from nncf.torch.pruning.operations import PTElementwisePruningOp
+from nncf.torch.pruning.operations import PT_PRUNING_OPERATOR_METATYPES
 from nncf.torch.pruning.filter_pruning.functions import FILTER_IMPORTANCE_FUNCTIONS
 from nncf.torch.pruning.filter_pruning.functions import calculate_binary_mask
 from nncf.torch.pruning.filter_pruning.functions import tensor_l2_normalizer
 from nncf.torch.pruning.filter_pruning.global_ranking.legr import LeGR
-from nncf.torch.pruning.filter_pruning.layers import FilterPruningBlock
-from nncf.torch.pruning.filter_pruning.layers import inplace_apply_filter_binary_mask
+from nncf.torch.pruning.filter_pruning.layers import FilterPruningMask
 from nncf.torch.pruning.structs import PrunedModuleInfo
 from nncf.torch.pruning.utils import init_output_masks_in_graph
 from nncf.torch.structures import LeGRInitArgs, DistributedCallbacksArgs
 from nncf.torch.utils import get_filters_num
 
 GENERAL_CONV_LAYER_METATYPES = [
-    Conv1dMetatype,
-    DepthwiseConv1dSubtype,
-    Conv2dMetatype,
-    DepthwiseConv2dSubtype,
-    Conv3dMetatype,
-    DepthwiseConv3dSubtype,
-    ConvTranspose2dMetatype,
-    ConvTranspose3dMetatype
+    PTConv1dMetatype,
+    PTDepthwiseConv1dSubtype,
+    PTConv2dMetatype,
+    PTDepthwiseConv2dSubtype,
+    PTConv3dMetatype,
+    PTDepthwiseConv3dSubtype,
+    PTConvTranspose2dMetatype,
+    PTConvTranspose3dMetatype
 ]
 LINEAR_LAYER_METATYPES = [
-    LinearMetatype
+    PTLinearMetatype
 ]
 
 
 @PT_COMPRESSION_ALGORITHMS.register('filter_pruning')
 class FilterPruningBuilder(BasePruningAlgoBuilder):
-    def create_weight_pruning_operation(self, module):
-        return FilterPruningBlock(module.weight.size(module.target_weight_dim_for_compression))
+    def create_weight_pruning_operation(self, module, node_name):
+        return FilterPruningMask(module.weight.size(module.target_weight_dim_for_compression),
+                                 node_name, module.target_weight_dim_for_compression)
 
     def _build_controller(self, model: NNCFNetwork) -> PTCompressionAlgorithmController:
         return FilterPruningController(model,
                                        self._prunable_types,
                                        self.pruned_module_groups_info,
+                                       self._pruned_norms_operators,
                                        self.config)
 
     def _is_pruned_module(self, module) -> bool:
@@ -109,7 +111,7 @@ class FilterPruningBuilder(BasePruningAlgoBuilder):
         return types
 
     def get_types_of_grouping_ops(self) -> List[str]:
-        return PTElementwise.get_all_op_aliases()
+        return PTElementwisePruningOp.get_all_op_aliases()
 
 
 @ADAPTIVE_COMPRESSION_CONTROLLERS.register('pt_filter_pruning')
@@ -117,9 +119,12 @@ class FilterPruningController(BasePruningAlgoController):
     def __init__(self, target_model: NNCFNetwork,
                  prunable_types: List[str],
                  pruned_module_groups: Clusterization[PrunedModuleInfo],
+                 pruned_norms_operators: List[Tuple[NNCFNode, FilterPruningMask, torch.nn.Module]],
                  config: NNCFConfig):
+        #pylint:disable=too-many-statements
         super().__init__(target_model, prunable_types, pruned_module_groups, config)
         params = self.pruning_config.get('params', {})
+        self._pruned_norms_operators = pruned_norms_operators
         self.frozen = False
         self._pruning_rate = 0
         self.pruning_init = self.pruning_config.get('pruning_init', 0)
@@ -137,12 +142,16 @@ class FilterPruningController(BasePruningAlgoController):
         self.current_flops = self.full_flops
         self.full_params_num = sum(self.nodes_params_num.values())
         self.current_params_num = self.full_params_num
+        self._pruned_layers_num = len(self.pruned_module_groups_info.get_all_nodes())
+        self._prunable_layers_num = len(self._model.get_graph().get_nodes_by_types(self._prunable_types))
+        self._max_prunable_flops, self._max_prunable_params =\
+            self._calculate_flops_and_weights_in_uniformly_pruned_model(1.)
 
         self.weights_normalizer = tensor_l2_normalizer  # for all weights in common case
         self.filter_importance = FILTER_IMPORTANCE_FUNCTIONS.get(params.get('filter_importance', 'L2'))
         self.ranking_type = params.get('interlayer_ranking_type', 'unweighted_ranking')
         self.all_weights = params.get("all_weights", False)
-        scheduler_cls = PRUNING_SCHEDULERS.get(params.get("schedule", "baseline"))
+        scheduler_cls = PRUNING_SCHEDULERS.get(params.get('schedule', 'exponential'))
         self._scheduler = scheduler_cls(self, params)
 
         if self.ranking_type == 'learned_ranking':
@@ -206,6 +215,13 @@ class FilterPruningController(BasePruningAlgoController):
         minfo.operand.binary_filter_pruning_mask = mask
 
     def statistics(self, quickly_collected_only: bool = False) -> NNCFStatistics:
+        if not quickly_collected_only and is_debug():
+            stats = PrunedModelTheoreticalBorderline(
+                self._pruned_layers_num, self._prunable_layers_num, self._max_prunable_flops,
+                self._max_prunable_params, self.full_flops, self.full_params_num)
+
+            nncf_logger.debug(stats.to_str())
+
         pruned_layers_summary = {}
         for minfo in self.pruned_module_groups_info.get_all_nodes():
             layer_name = str(minfo.module_scope)
@@ -234,9 +250,6 @@ class FilterPruningController(BasePruningAlgoController):
 
     def freeze(self, freeze: bool = True):
         self.frozen = freeze
-
-    def step(self, next_step):
-        self._apply_masks()
 
     def _init_module_channels_and_shapes(self):
         self._modules_in_channels = {}  # type: Dict[NNCFNodeName, int]
@@ -433,11 +446,7 @@ class FilterPruningController(BasePruningAlgoController):
                             pruning_rate = self._find_uniform_pruning_rate_for_target_flops(pruning_rate)
                     self._set_binary_masks_for_pruned_modules_groupwise(pruning_rate)
 
-            if self.zero_grad:
-                self.zero_grads_for_pruned_modules()
-
-        self._apply_masks()
-
+        self._propagate_masks()
         if not groupwise_pruning_rates_set:
             self._pruning_rate = passed_pruning_rate
         else:
@@ -451,7 +460,7 @@ class FilterPruningController(BasePruningAlgoController):
         pruned_param_count = 0
         for minfo in self.pruned_module_groups_info.get_all_nodes():
             layer_param_count = sum(p.numel() for p in minfo.module.parameters() if p.requires_grad)
-            layer_weight_pruning_rate = self.pruning_rate_for_weight(minfo)
+            layer_weight_pruning_rate = self.pruning_rate_for_mask(minfo)
             full_param_count += layer_param_count
             pruned_param_count += layer_param_count * layer_weight_pruning_rate
         return pruned_param_count / full_param_count
@@ -635,45 +644,27 @@ class FilterPruningController(BasePruningAlgoController):
             cur_num += 1
         raise RuntimeError("Can't prune model to asked flops pruning rate")
 
-    def _apply_masks(self):
-        nncf_logger.debug("Applying pruning binary masks")
-
-        def _apply_binary_mask_to_module_weight_and_bias(module: torch.nn.Module,
-                                                         mask: torch.Tensor,
-                                                         node_name_for_logging: NNCFNodeName):
-            with torch.no_grad():
-                dim = module.target_weight_dim_for_compression if isinstance(module, _NNCFModuleMixin) else 0
-                # Applying the mask to weights
-                inplace_apply_filter_binary_mask(mask, module.weight, node_name_for_logging, dim)
-                # Applying the mask to biases (if they exist)
-                if module.bias is not None:
-                    inplace_apply_filter_binary_mask(mask, module.bias, node_name_for_logging)
-
+    def _propagate_masks(self):
+        nncf_logger.debug("Propagating pruning masks")
         # 1. Propagate masks for all modules
         graph = self.model.get_original_graph()
 
         init_output_masks_in_graph(graph, self.pruned_module_groups_info.get_all_nodes())
         MaskPropagationAlgorithm(graph, PT_PRUNING_OPERATOR_METATYPES).mask_propagation()
 
-        # 2. Apply the masks
-        types_to_apply_mask = [v.op_func_name for v in NNCF_GENERAL_CONV_MODULES_DICT] + ['group_norm']
-        if self.prune_batch_norms:
-            types_to_apply_mask.append('batch_norm')
-
+        # 2. Set the masks for Batch/Group Norms
         pruned_node_modules = []
-        for node in graph.get_all_nodes():
-            if node.node_type not in types_to_apply_mask:
-                continue
-            node_module = self.model.get_containing_module(node.node_name)
-            if node.data['output_mask'] is not None and node_module not in pruned_node_modules:
-                _apply_binary_mask_to_module_weight_and_bias(node_module, node.data['output_mask'], node.node_name)
+        for node, pruning_block, node_module in self._pruned_norms_operators:
+            if node_module not in pruned_node_modules:
+                # Setting masks for BN nodes
+                pruning_block.binary_filter_pruning_mask = node.data['output_mask'].tensor
                 pruned_node_modules.append(node_module)
 
     def prepare_for_export(self):
         """
         Applies pruning masks to layer weights before exporting the model to ONNX.
         """
-        self._apply_masks()
+        self._propagate_masks()
 
         pruned_layers_stats = self.get_stats_for_pruned_modules()
         nncf_logger.debug('Pruned layers statistics: \n%s', pruned_layers_stats.draw())

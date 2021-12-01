@@ -94,20 +94,21 @@ class NNCFConv2d(_NNCFModuleMixin, nn.Conv2d):
     def _custom_forward_fn(self, input_):
         proxy_padding_value = getattr(self, NNCF_PADDING_VALUE_ATTR_NAME)  # hack to get value from ProxyModule
         proxy_weight = self.weight
-        return self._conv_forward_proxy(input_, proxy_weight, proxy_padding_value)
+        proxy_bias = self.bias
+        return self._conv_forward_proxy(input_, proxy_weight, proxy_bias, proxy_padding_value)
 
 
-    def _conv_forward_proxy(self, input_, weight, padding_value):
+    def _conv_forward_proxy(self, input_, weight, bias, padding_value):
         self.get_padding_value_ref().data.fill_(padding_value.item())
         if self.padding_mode != 'zeros':
             return F.conv2d(F.pad(input_, self._reversed_padding_repeated_twice, mode=self.padding_mode,
                                   value=self.get_padding_value_ref().item()),
-                            weight, self.bias, self.stride,
+                            weight, bias, self.stride,
                             (0, 0), self.dilation, self.groups)
         if not self.get_padding_value_ref():
-            return F.conv2d(input_, weight, self.bias, self.stride, self.padding, self.dilation, self.groups)
+            return F.conv2d(input_, weight, bias, self.stride, self.padding, self.dilation, self.groups)
         return F.conv2d(F.pad(input_, self._reversed_padding_repeated_twice, value=self.get_padding_value_ref().item()),
-                        weight, self.bias, self.stride,
+                        weight, bias, self.stride,
                         (0, 0), self.dilation, self.groups)
 
 
@@ -121,6 +122,33 @@ class NNCFLinear(_NNCFModuleMixin, nn.Linear):
         nncf_linear = NNCFLinear(module.in_features, module.out_features, hasattr(module, 'bias'))
         dict_update(nncf_linear.__dict__, module.__dict__)
         return nncf_linear
+
+
+class NNCFBatchNorm(_NNCFModuleMixin, nn.BatchNorm2d):
+    op_func_name = "batch_norm"
+    ignored_algorithms = ['magnitude_sparsity', 'rb_sparsity', 'const_sparsity', 'quantization']
+
+    @staticmethod
+    def from_module(module):
+        assert module.__class__.__name__ == nn.BatchNorm2d.__name__
+
+        nncf_bn = NNCFBatchNorm(module.num_features)
+        dict_update(nncf_bn.__dict__, module.__dict__)
+        return nncf_bn
+
+
+class NNCFGroupNorm(_NNCFModuleMixin, nn.GroupNorm):
+    op_func_name = "group_norm"
+    ignored_algorithms = ['magnitude_sparsity', 'rb_sparsity', 'const_sparsity', 'quantization']
+
+    @staticmethod
+    def from_module(module):
+        assert module.__class__.__name__ == nn.GroupNorm.__name__
+
+        nncf_bn = NNCFGroupNorm(module.num_features)
+        dict_update(nncf_bn.__dict__, module.__dict__)
+        return nncf_bn
+
 
 class NNCFConvTranspose2d(_NNCFModuleMixin, nn.ConvTranspose2d):
     op_func_name = "conv_transpose2d"
@@ -207,6 +235,8 @@ NNCF_MODULES_DICT = {
     NNCFConv2d: nn.Conv2d,
     NNCFConv3d: nn.Conv3d,
     NNCFLinear: nn.Linear,
+    NNCFBatchNorm: nn.BatchNorm2d,
+    NNCFGroupNorm: nn.GroupNorm,
     NNCFConvTranspose2d: nn.ConvTranspose2d,
     NNCFConvTranspose3d: nn.ConvTranspose3d,
     NNCFEmbedding: nn.Embedding,
@@ -253,8 +283,8 @@ def register_module(*quantizable_field_names: str, ignored_algorithms: list = No
         UNWRAPPED_USER_MODULES.registry_dict[cls.__name__] = cls
         nncf_wrapped_module_class_name = 'NNCFUser{}'.format(cls.__name__)
         NNCF_WRAPPED_USER_MODULES_DICT[cls] = type(nncf_wrapped_module_class_name, (_NNCFModuleMixin, cls), {})
-        get_base_attributes_fn = lambda self : GenericWeightedLayerAttributes(self.weight.requires_grad,
-                                                                              self.weight.shape)
+        get_base_attributes_fn = lambda self: GenericWeightedLayerAttributes(self.weight.requires_grad,
+                                                                             self.weight.shape)
         setattr(NNCF_WRAPPED_USER_MODULES_DICT[cls], "get_weight_shape", get_base_attributes_fn)
         if ignored_algorithms:
             setattr(NNCF_WRAPPED_USER_MODULES_DICT[cls], "ignored_algorithms", ignored_algorithms)
