@@ -22,7 +22,6 @@ from typing import Set
 from typing import Tuple
 from typing import Type
 from unittest.mock import MagicMock
-from functools import reduce
 
 import networkx as nx
 import pytest
@@ -1823,33 +1822,30 @@ class TestQuantizerPropagationSolver:
         assert double_input_pq.current_location_node_key == InsertionPointGraph.get_pre_hook_node_key("5 /E_0",
                                                                                                       input_port_id=1)
 
-    @pytest.mark.parametrize('update_config_info, should_ignore_quantizers', [({}, []),
-                                                                              ({"ignored_scopes": ["LeNet/relu_1"]},
-                                                                               ['LeNet/relu_0']),
-                                                                              ({"activations": {
-                                                                                  "ignored_scopes": ["LeNet/relu_1"]}},
-                                                                               ['LeNet/relu_0'])])
-    def test_activation_ignored_scope(self, update_config_info, should_ignore_quantizers):
-        model = LeNet()
-        all_quantization_names = ["LeNet/NNCFConv2d[conv1]/conv2d_0",
-                                  "LeNet/NNCFConv2d[conv2]/conv2d_0",
-                                  "LeNet/NNCFLinear[fc1]/linear_0",
-                                  "LeNet/NNCFLinear[fc2]/linear_0",
-                                  "LeNet/NNCFLinear[fc3]/linear_0",
-                                  "/nncf_model_input_0",
-                                  "LeNet/relu_0",
-                                  "LeNet/relu_1",
-                                  "LeNet/relu_2",
-                                  "LeNet/relu_3"]
-        for item in should_ignore_quantizers:
-            try:
-                all_quantization_names.remove(item)
-            except ValueError:
-                pass
-        config = get_quantization_config_without_range_init(LeNet.INPUT_SIZE[-1])
-        config["compression"].update(update_config_info)
-        train_loader = create_random_mock_dataloader(config, num_samples=10)
-        config = register_default_init_args(config, train_loader)
-        ctrl, _ = create_compressed_model(model, config)
-        assert Counter([item.target_node_name for item in ctrl.all_quantizations.keys()]) == \
-               Counter(all_quantization_names)
+
+@pytest.mark.parametrize('update_config_info, should_ignore_quantizers', [({}, []),
+                                                                          ({"ignored_scopes": ["LeNet/relu_1"]},
+                                                                           ['LeNet/relu_0']),
+                                                                          ({"activations": {
+                                                                              "ignored_scopes": ["LeNet/relu_1"]}},
+                                                                           ['LeNet/relu_0'])])
+def test_activation_ignored_scope(update_config_info, should_ignore_quantizers):
+    model = LeNet()
+    all_quantization_names = ["LeNet/NNCFConv2d[conv1]/conv2d_0",
+                              "LeNet/NNCFConv2d[conv2]/conv2d_0",
+                              "LeNet/NNCFLinear[fc1]/linear_0",
+                              "LeNet/NNCFLinear[fc2]/linear_0",
+                              "LeNet/NNCFLinear[fc3]/linear_0",
+                              "/nncf_model_input_0",
+                              "LeNet/relu_0",
+                              "LeNet/relu_1",
+                              "LeNet/relu_2",
+                              "LeNet/relu_3"]
+    ref_quantization_names = list(filter(lambda x: x not in should_ignore_quantizers, all_quantization_names))
+    config = get_quantization_config_without_range_init(LeNet.INPUT_SIZE[-1])
+    config["compression"].update(update_config_info)
+    train_loader = create_random_mock_dataloader(config, num_samples=10)
+    config = register_default_init_args(config, train_loader)
+    ctrl, _ = create_compressed_model(model, config)
+    assert Counter([item.target_node_name for item in ctrl.all_quantizations.keys()]) == \
+           Counter(ref_quantization_names)
