@@ -30,15 +30,27 @@ from examples.tensorflow.segmentation import evaluation as seg_eval
 from examples.tensorflow.common.model_loader import AVAILABLE_MODELS
 from examples.tensorflow.common.prepare_checkpoint import main as prepare_checkpoint_main
 
-cls_main.get_dataset_builders = get_cifar10_dataset_builders
-od_main.get_dataset_builders = partial(get_coco_dataset_builders, train=True, validation=True)
-seg_train.get_dataset_builders = partial(get_coco_dataset_builders, train=True, calibration=True)
-seg_eval.get_dataset_builders = partial(get_coco_dataset_builders, validation=True, calibration=True)
-
 AVAILABLE_MODELS.update({
     'SequentialModel': SequentialModel,
     'SequentialModelNoInput': SequentialModelNoInput
 })
+
+
+@pytest.fixture(autouse=True)
+def run_around_tests():
+    original_cls_main_get_dataset_builders = cls_main.get_dataset_builders
+    original_od_main_get_dataset_builders = od_main.get_dataset_builders
+    original_seg_train_get_dataset_builders = seg_train.get_dataset_builders
+    original_seg_eval_get_dataset_builders = seg_eval.get_dataset_builders
+    cls_main.get_dataset_builders = get_cifar10_dataset_builders
+    od_main.get_dataset_builders = partial(get_coco_dataset_builders, train=True, validation=True)
+    seg_train.get_dataset_builders = partial(get_coco_dataset_builders, train=True, calibration=True)
+    seg_eval.get_dataset_builders = partial(get_coco_dataset_builders, validation=True, calibration=True)
+    yield
+    cls_main.get_dataset_builders = original_cls_main_get_dataset_builders
+    od_main.get_dataset_builders = original_od_main_get_dataset_builders
+    seg_train.get_dataset_builders = original_seg_train_get_dataset_builders
+    seg_eval.get_dataset_builders = original_seg_eval_get_dataset_builders
 
 
 class ConfigFactory:
