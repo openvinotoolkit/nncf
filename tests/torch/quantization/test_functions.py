@@ -10,6 +10,7 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+from typing import Tuple
 
 import numpy as np
 import pytest
@@ -143,7 +144,7 @@ def check_outputs_for_quantization_functions(test_val: torch.Tensor, ref_val: np
 @pytest.mark.parametrize("use_cuda", [False, True], ids=['cpu', 'cuda'])
 @pytest.mark.parametrize('scale_mode', ["single_scale", "per_channel_scale"])
 @pytest.mark.parametrize("is_weights", (True, False), ids=('weights', 'activation'))
-@pytest.mark.parametrize("is_fp16", (True, False), ids=('fp16', 'fp32'))
+@pytest.mark.parametrize("is_fp16", (False, False), ids=('fp16', 'fp32'))
 class TestParametrized:
     @pytest.mark.parametrize("is_signed", (True, False), ids=('signed', 'unsigned'))
     class TestSymmetric:
@@ -180,6 +181,34 @@ class TestParametrized:
                     for idx in range(0, channel_count):
                         single_input_channel = input_[:, idx, ...]
                         scales[0, idx] = calc_scale(single_input_channel)
+                return scales
+
+        @staticmethod
+        def generate_scale_const(scale: float, inp_shape: Tuple[int], scale_mode, is_weights):
+            assert scale_mode in ["single_scale", "per_channel_scale"]
+
+            if scale_mode == "single_scale":
+                return scale
+
+            if scale_mode == "per_channel_scale":
+                if is_weights:
+                    channel_count = inp_shape[0]
+                    if channel_count == 1:
+                        pytest.skip("Same case as for single scale mode")
+                    scales_shape = [1 for _ in inp_shape]
+                    scales_shape[0] = channel_count
+                    scales = np.zeros(scales_shape)
+                    for idx in range(0, channel_count):
+                        scales[idx] = scale
+                else:
+                    channel_count = inp_shape[1]
+                    if channel_count == 1:
+                        pytest.skip("Same case as for single scale mode")
+                    scales_shape = [1 for _ in inp_shape]
+                    scales_shape[1] = channel_count
+                    scales = np.zeros(scales_shape)
+                    for idx in range(0, channel_count):
+                        scales[0, idx] = scale
                 return scales
 
         @staticmethod
@@ -253,6 +282,90 @@ class TestParametrized:
 
             check_outputs_for_quantization_functions(test_value, ref_output, is_fp16)
             check_outputs_for_quantization_functions(test_grads, ref_grads, is_fp16)
+
+        def test_quantize_symmetric_forward_middle_quants_points(self, _seed, is_signed, is_weights,
+                                                                 is_fp16, input_size, bits, use_cuda, scale_mode):
+            if not torch.cuda.is_available() and use_cuda is True:
+                pytest.skip("Skipping CUDA test cases for CPU only setups")
+            if is_fp16:
+                pytest.skip("Too small precision")
+            if not is_signed or bits != 8 or use_cuda:
+                pytest.skip("Such test not implemented yet")
+
+            skip_if_half_on_cpu(is_fp16, use_cuda)
+
+            ref_scale = self.generate_scale_const(1., input_size, scale_mode, is_weights)
+            level_low, level_high, levels = self.get_range_level(is_signed, bits - 1)
+
+            test_scale = get_test_data([np.array(ref_scale)], use_cuda, is_fp16=is_fp16)[0]
+
+            ref_scale_save = abs(ref_scale) + 1e-16
+            ref_input_low = ref_scale_save * (level_low / level_high)
+            ref_input_range = ref_scale_save - ref_input_low
+            ref_quant_len = ref_input_range / (levels - 1)
+            input_low = np.array(ref_input_low).flatten()[0]
+            quant_len = np.array(ref_quant_len).flatten()[0]
+
+            # Gen ref inp
+            ref_input = [input_low + (i + 0.5) * quant_len for i in range(levels)]
+            print(f'ref input {ref_input}')
+            print(f'ref scale {ref_scale} quant len {quant_len}')
+            elems = np.prod(input_size)
+            print(f'input size {input_size} elems {elems}')
+            ref_input = ref_input * int(np.round(0.5 + elems / levels))
+            print(f'ref input {ref_input[:20]}')
+            print(f'len ref inpit {len(ref_input)} len  np.array(ref_input)[:elems] {len(np.array(ref_input)[:elems])}')
+            ref_input = np.reshape(np.array(ref_input)[:elems], input_size)
+
+            test_input = get_test_data([ref_input], use_cuda, is_fp16=is_fp16)[0]
+
+            from nncf.torch.quantization.layers import SymmetricQuantizer
+            from nncf.torch.quantization.layers import PTQuantizerSpec
+            from nncf.torch.quantization.layers import QuantizerConfig
+            from nncf.torch.quantization.layers import QuantizationMode
+
+            qconf = QuantizerConfig(num_bits=8,
+                                    mode=QuantizationMode.SYMMETRIC,
+                                    signedness_to_force=True,
+                                    per_channel=False)
+
+            qspec_int7 = PTQuantizerSpec.from_config(qconf,
+                                                     narrow_range=False,
+                                                     scale_shape=tuple(test_scale.shape),
+                                                     logarithm_scale=False,
+                                                     half_range=True,
+                                                     compression_lr_multiplier=1)
+
+            quantizer_int7 = SymmetricQuantizer(qspec_int7)
+            if use_cuda:
+                # Should move self.levels, self.levels_low, self.levels_high to but doesn't
+                quantizer_int7.cuda()
+
+            quantizer_int7.scale = torch.nn.Parameter(torch.tensor(ref_scale), requires_grad=True)
+
+            qspec_int8 = PTQuantizerSpec.from_config(qconf,
+                                                     narrow_range=False,
+                                                     scale_shape=tuple(test_scale.shape),
+                                                     logarithm_scale=False,
+                                                     half_range=False,
+                                                     compression_lr_multiplier=1)
+
+            quantizer_int8 = SymmetricQuantizer(qspec_int8)
+            if use_cuda:
+                # Should move self.levels, self.levels_low, self.levels_high to but doesn't
+                quantizer_int8.cuda()
+
+            quantizer_int8.scale = torch.nn.Parameter(torch.tensor(ref_scale * 127. / 63.))
+            out_int7 = quantizer_int7.forward(test_input)
+            out_int8 = quantizer_int8.forward(out_int7)
+            torch.set_printoptions(threshold=10000)
+            print(f'test input {test_input[0, 0, 0, :]} out_int7 {out_int7[0, 0, 0, :]} {len(out_int7[0, 0, 0, :])} out_int8 {out_int8[0, 0, 0, :]} {len(out_int8[0, 0, 0, :])}')
+
+            print(torch.isclose(out_int7[0, 0, 0, :], out_int8[0, 0, 0, :]))
+            diff = (out_int8 - out_int7).abs()
+            if (diff > 1e-6).any():
+                assert ((diff[diff > 1e-6] - quant_len).abs() < 1e-6).all(), 'quants completely different!'
+                assert False, f'quant moved at flatten positions {torch.where(diff.flatten() > 1e-6)}'
 
     class TestAsymmetric:
         @staticmethod
@@ -367,3 +480,4 @@ class TestParametrized:
             test_grads = get_grads([test_input, test_input_low, test_input_range])
 
             check_outputs_for_quantization_functions(test_grads, ref_grads, is_fp16)
+
