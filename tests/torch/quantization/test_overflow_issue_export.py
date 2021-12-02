@@ -21,7 +21,7 @@ import pytest
                           (8, QuantizationMode.SYMMETRIC, (1, 1, 1, 1), True, (128, -64, 63)),
                           (8, QuantizationMode.SYMMETRIC, (1, 2, 3, 8), False, (256, -128, 127))
                           ])
-def test_is_correct_saturation_issue_levels(num_bits, mode, scale_shape, half_range, assert_vals):
+def test_is_correct_overflow_issue_levels(num_bits, mode, scale_shape, half_range, assert_vals):
     qspec = PTQuantizerSpec(
         num_bits=num_bits,
         mode=mode,
@@ -39,7 +39,7 @@ def test_is_correct_saturation_issue_levels(num_bits, mode, scale_shape, half_ra
     assert quantizer.level_high == assert_vals[2]
 
 
-def helper_to_test_if_saturation_fix_was_applied(nncf_config, target_device):
+def helper_to_test_if_overflow_fix_was_applied(nncf_config, target_device):
     model = TwoConvTestModel()
     nncf_config.update({"target_device": target_device})
 
@@ -55,7 +55,7 @@ def helper_to_test_if_saturation_fix_was_applied(nncf_config, target_device):
         assert not quantizer.quantizer_module_ref._half_range  # pylint: disable=protected-access
 
 
-def helper_to_test_if_saturation_fix_was_applied_only_to_first_conv_later(nncf_config, target_device):
+def helper_to_test_if_overflow_fix_was_applied_only_to_first_conv_later(nncf_config, target_device):
     model = TwoConvTestModel()
     nncf_config.update({"target_device": target_device})
 
@@ -70,7 +70,7 @@ def helper_to_test_if_saturation_fix_was_applied_only_to_first_conv_later(nncf_c
         assert not quantizer.quantizer_module_ref._half_range  # pylint: disable=protected-access
 
 
-def helper_to_test_if_saturation_fix_wasnt_applied(nncf_config, target_device):
+def helper_to_test_if_overflow_fix_wasnt_applied(nncf_config, target_device):
     model = TwoConvTestModel()
     nncf_config.update({"target_device": target_device})
 
@@ -82,44 +82,44 @@ def helper_to_test_if_saturation_fix_wasnt_applied(nncf_config, target_device):
         assert not quantizer.quantizer_module_ref._half_range  # pylint: disable=protected-access
 
 
-def test_config_option_disable_saturation_fix():
+def test_config_option_disable_overflow_fix():
     nncf_config = get_config_for_export_mode(True)
     nncf_config.update({"compression":
                             {"algorithm": "quantization",
-                             "saturation_fix": "disable"}})
+                             "overflow_fix": "disable"}})
 
     for device in ['CPU', 'ANY', 'VPU', 'GPU', 'TRIAL']:
-        helper_to_test_if_saturation_fix_wasnt_applied(nncf_config, device)
+        helper_to_test_if_overflow_fix_wasnt_applied(nncf_config, device)
 
     nncf_config.update({"compression":
                             {"algorithm": "quantization",
-                             "saturation_fix": "enable"}})
+                             "overflow_fix": "enable"}})
 
     for device in ['CPU', 'ANY']:
-        helper_to_test_if_saturation_fix_was_applied(nncf_config, device)
+        helper_to_test_if_overflow_fix_was_applied(nncf_config, device)
 
     for device in ['VPU', 'GPU', 'TRIAL']:
-        helper_to_test_if_saturation_fix_wasnt_applied(nncf_config, device)
+        helper_to_test_if_overflow_fix_wasnt_applied(nncf_config, device)
 
     nncf_config.update({"compression":
                             {"algorithm": "quantization",
-                             "saturation_fix": "enable_for_first_conv_layer"}})
+                             "overflow_fix": "first_layer_only"}})
 
     for device in ['CPU', 'ANY']:
-        helper_to_test_if_saturation_fix_was_applied_only_to_first_conv_later(nncf_config, device)
+        helper_to_test_if_overflow_fix_was_applied_only_to_first_conv_later(nncf_config, device)
 
     for device in ['VPU', 'GPU', 'TRIAL']:
-        helper_to_test_if_saturation_fix_wasnt_applied(nncf_config, device)
+        helper_to_test_if_overflow_fix_wasnt_applied(nncf_config, device)
 
 
-def test_hw_config_saturation_fix_applied():
+def test_hw_config_overflow_fix_applied():
     nncf_config = get_config_for_export_mode(True)
 
     for device in ['CPU', 'ANY']:
-        helper_to_test_if_saturation_fix_was_applied(nncf_config, device)
+        helper_to_test_if_overflow_fix_was_applied(nncf_config, device)
 
     for device in ['VPU', 'GPU', 'TRIAL']:
-        helper_to_test_if_saturation_fix_wasnt_applied(nncf_config, device)
+        helper_to_test_if_overflow_fix_wasnt_applied(nncf_config, device)
 
 
 class EightConvTestModel(nn.Module):
@@ -169,7 +169,7 @@ class DepthWiseConvTestModel(nn.Module):
         return self.features(x)
 
 
-def are_symmetric_fq_nodes_are_exported_correct_with_saturation_fix(tmp_path, compression_ctrl):
+def are_symmetric_fq_nodes_are_exported_correct_with_overflow_fix(tmp_path, compression_ctrl):
     level_high = 63
     level_low = -64
     levels = 128
@@ -222,7 +222,7 @@ def are_symmetric_fq_nodes_are_exported_correct_with_saturation_fix(tmp_path, co
                            input_output_low)
 
 
-def are_asymmetric_fq_nodes_are_exported_correct_with_saturation_fix(tmp_path, compression_ctrl):
+def are_asymmetric_fq_nodes_are_exported_correct_with_overflow_fix(tmp_path, compression_ctrl):
     level_high = 127
     level_low = 0
     levels = 128
@@ -281,7 +281,7 @@ def test_are_symmetric_fq_exported_depthwise_per_channel_weights_tensors_clipped
         "sample_size": [1, 1, 20, 20]
     }})
     _, compression_ctrl = create_compressed_model_and_algo_for_test(model, nncf_config)
-    are_symmetric_fq_nodes_are_exported_correct_with_saturation_fix(tmp_path, compression_ctrl)
+    are_symmetric_fq_nodes_are_exported_correct_with_overflow_fix(tmp_path, compression_ctrl)
 
 
 def test_are_asymmetric_fq_exported_depthwise_per_channel_weights_tensors_clipped(tmp_path):
@@ -299,7 +299,7 @@ def test_are_asymmetric_fq_exported_depthwise_per_channel_weights_tensors_clippe
     }
     })
     _, compression_ctrl = create_compressed_model_and_algo_for_test(model, nncf_config)
-    are_asymmetric_fq_nodes_are_exported_correct_with_saturation_fix(tmp_path, compression_ctrl)
+    are_asymmetric_fq_nodes_are_exported_correct_with_overflow_fix(tmp_path, compression_ctrl)
 
 
 def test_are_symmetric_fq_exported_per_channel_weights_tensors_clipped(tmp_path):
@@ -310,7 +310,7 @@ def test_are_symmetric_fq_exported_per_channel_weights_tensors_clipped(tmp_path)
         "sample_size": [1, 1, 20, 20]
     }})
     _, compression_ctrl = create_compressed_model_and_algo_for_test(model, nncf_config)
-    are_symmetric_fq_nodes_are_exported_correct_with_saturation_fix(tmp_path, compression_ctrl)
+    are_symmetric_fq_nodes_are_exported_correct_with_overflow_fix(tmp_path, compression_ctrl)
 
 
 def test_are_assymetric_fq_exported_per_channel_weights_tensors_clipped(tmp_path):
@@ -329,7 +329,7 @@ def test_are_assymetric_fq_exported_per_channel_weights_tensors_clipped(tmp_path
     }
     })
     _, compression_ctrl = create_compressed_model_and_algo_for_test(model, nncf_config)
-    are_asymmetric_fq_nodes_are_exported_correct_with_saturation_fix(tmp_path, compression_ctrl)
+    are_asymmetric_fq_nodes_are_exported_correct_with_overflow_fix(tmp_path, compression_ctrl)
 
 
 def test_are_qdq_exported_per_tensor_weights_tensors_clipped(tmp_path):
@@ -395,7 +395,7 @@ def test_are_qdq_exported_per_tensor_weights_tensors_clipped(tmp_path):
 
 
 @pytest.mark.parametrize('model', [TwoConvTestModel(), EightConvTestModel(), DepthWiseConvTestModel()])
-def test_is_pytorch_output_the_same_as_onnx_qdq_saturation_fix_applied(tmp_path, model):
+def test_is_pytorch_output_the_same_as_onnx_qdq_overflow_fix_applied(tmp_path, model):
     nncf_config = get_config_for_export_mode(True)
     nncf_config.update({"input_info": {
         "sample_size": [1, 1, 20, 20]
@@ -421,7 +421,7 @@ def test_is_pytorch_output_the_same_as_onnx_qdq_saturation_fix_applied(tmp_path,
         assert np.allclose(torch_out.numpy(), onnx_out, rtol=1e-5, atol=1e-3)
 
 
-def test_is_saturation_fix_applied_model_resumed_correctly(tmp_path):
+def test_is_overflow_fix_applied_model_resumed_correctly(tmp_path):
     model = TwoConvTestModel()
     nncf_config = get_config_for_export_mode(False)
     compressed_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, nncf_config)
@@ -432,4 +432,4 @@ def test_is_saturation_fix_applied_model_resumed_correctly(tmp_path):
     compressed_model, compression_ctrl = create_compressed_model_and_algo_for_test(
         model, nncf_config, compression_state=compression_state)
     load_state(compressed_model, model_state_dict, is_resume=True)
-    are_symmetric_fq_nodes_are_exported_correct_with_saturation_fix(tmp_path, compression_ctrl)
+    are_symmetric_fq_nodes_are_exported_correct_with_overflow_fix(tmp_path, compression_ctrl)

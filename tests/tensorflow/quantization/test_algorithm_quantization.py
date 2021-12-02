@@ -127,7 +127,7 @@ def test_quantization_configs__custom():
         compare_qspecs(ref_activation_qspec, wq)
 
 
-def check_specs_for_disabled_saturation_fix(compression_model):
+def check_specs_for_disabled_overflow_fix(compression_model):
     activation_quantizers, weight_quantizers = get_quantizers(compression_model)
     ref_weight_qspec = TFQuantizerSpec(mode=QuantizationMode.SYMMETRIC,
                                        num_bits=8,
@@ -147,34 +147,34 @@ def check_specs_for_disabled_saturation_fix(compression_model):
         compare_qspecs(ref_activation_qspec, wq)
 
 
-def test_quantization_configs__disable_saturation_fix():
+def test_quantization_configs__disable_overflow_fix():
     model = get_basic_conv_test_model()
 
     config = get_basic_quantization_config()
     config['compression'].update({
-        'saturation_fix': 'disable'
+        'overflow_fix': 'disable'
     })
     compression_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config, force_no_init=True)
 
     assert isinstance(compression_ctrl, QuantizationController)
-    check_specs_for_disabled_saturation_fix(compression_model)
+    check_specs_for_disabled_overflow_fix(compression_model)
 
 
-@pytest.mark.parametrize('sf_mode', ['enable', 'enable_for_first_conv_layer', 'disable'],
+@pytest.mark.parametrize('sf_mode', ['enable', 'first_layer_only', 'disable'],
                          ids=['enabled', 'enabled_first_layer', 'disabled'])
-def test_export_saturation_fix(sf_mode):
+def test_export_overflow_fix(sf_mode):
     model = get_basic_two_conv_test_model()
     config = get_basic_quantization_config()
     config['compression'].update({
-        'saturation_fix': sf_mode
+        'overflow_fix': sf_mode
     })
-    enabled = sf_mode in ['enable', 'enable_for_first_conv_layer']
+    enabled = sf_mode in ['enable', 'first_layer_only']
 
     compression_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config, force_no_init=True)
     activation_quantizers_be, weight_quantizers_be = get_quantizers(compression_model)
 
     for idx, wq in enumerate(weight_quantizers_be):
-        if sf_mode == 'enable_for_first_conv_layer' and idx > 0:
+        if sf_mode == 'first_layer_only' and idx > 0:
             enabled = False
         ref_weight_qspec = TFQuantizerSpec(mode=QuantizationMode.SYMMETRIC,
                                            num_bits=8,
@@ -193,12 +193,12 @@ def test_export_saturation_fix(sf_mode):
     for wq in activation_quantizers_be:
         compare_qspecs(ref_activation_qspec, wq)
 
-    enabled = sf_mode in ['enable', 'enable_for_first_conv_layer']
+    enabled = sf_mode in ['enable', 'first_layer_only']
     compression_ctrl.export_model('/tmp/test.pb')
     activation_quantizers_ae, weight_quantizers_ae = get_quantizers(compression_model)
 
     for idx, wq in enumerate(weight_quantizers_ae):
-        if sf_mode == 'enable_for_first_conv_layer' and idx > 0:
+        if sf_mode == 'first_layer_only' and idx > 0:
             enabled = False
         ref_weight_qspec = TFQuantizerSpec(mode=QuantizationMode.SYMMETRIC,
                                            num_bits=8,

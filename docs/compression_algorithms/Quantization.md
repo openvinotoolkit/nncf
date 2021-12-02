@@ -129,12 +129,12 @@ For symmetric:
 
 There is a known issue with AVX2 and AVX512 CPU devices. The issue appears with 8-bit matrix calculations with tensors which elements are close to the maximum or saturated.
 AVX2 and AVX512 utilize a 16-bit register to store the result of operations on tensors. In case when tensors are saturated the buffer overflow happens.
-This leads to accuracy degradation.
+This leads to accuracy degradation. For more details of the overflow issue please refer [here](https://www.intel.com/content/www/us/en/developer/articles/technical/lower-numerical-precision-deep-learning-inference-and-training.html).
 
 To fix this issue inside NNCF, by default, all weight tensors are quantized in 8 bits but only 7 bits are effectively used.
 This regime is used when `"target_device": "CPU"` or `"target_device": "ANY"` set. This fix, potentially, requires longer fine-tuning.
 
-To control the application of saturation fix, `"saturation_fix"` config option is introduced. The default value is `"saturation_fix": "enable"`. To apply the saturation issue fix only to the first layer, use `"saturation_fix": "enable_for_first_conv_layer"`. To disable the saturation issue fix for all layers, use `"saturation_fix": "disable"`.
+To control the application of overflow fix, `"overflow_fix"` config option is introduced. The default value is `"overflow_fix": "enable"`. To apply the overflow issue fix only to the first layer, use `"overflow_fix": "first_layer_only"`. To disable the overflow issue fix for all layers, use `"overflow_fix": "disable"`.
 
 ---
 

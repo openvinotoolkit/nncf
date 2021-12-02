@@ -452,7 +452,7 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
             params_dict = self._algo_config.get(group_name, {})
             self._use_logarithm_scale_per_group[quantizer_group] = params_dict.get('logarithm_scale', False)
 
-        self._saturation_fix = self._algo_config.get('saturation_fix', 'enable')
+        self._overflow_fix = self._algo_config.get('overflow_fix', 'enable')
         self._device_for_callable_obj_creation = 'cpu'
         self._single_config_quantizer_setup = None  # type: Optional[SingleConfigQuantizerSetup]
 
@@ -590,7 +590,7 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
                 stats_for_range_init,
                 target_model_graph)
 
-        dup_filter = DuplicateFilter()  # so that the saturation fix warning is only logged once
+        dup_filter = DuplicateFilter()  # so that the overflow fix warning is only logged once
         nncf_logger.addFilter(dup_filter)
         insertion_commands, setup_to_module_id_translation_dict = \
             self._build_insertion_commands_list_for_quantizer_setup(self._single_config_quantizer_setup,
@@ -1028,19 +1028,19 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
         half_range = False
         if self.hw_config and is_weights(primary_ip):
             if self.hw_config.target_device in ['CPU', 'ANY'] and qconfig.num_bits == 8:
-                if self._saturation_fix == 'enable':
+                if self._overflow_fix == 'enable':
                     half_range = True
-                    quantizers_with_saturation_fix_str = 'all weight quantizers'
-                elif self._saturation_fix == 'enable_for_first_conv_layer':
+                    quantizers_with_overflow_fix_str = 'all weight quantizers'
+                elif self._overflow_fix == 'first_layer_only':
                     if target_node in get_first_nodes_of_type(target_model_graph, ['conv2d']):
                         half_range = True
-                        quantizers_with_saturation_fix_str = 'first convolution weight quantizers'
+                        quantizers_with_overflow_fix_str = 'first convolution weight quantizers'
                 if half_range:
-                    nncf_logger.warning('The saturation issue fix will be applied. '
+                    nncf_logger.warning('The overflow issue fix will be applied. '
                                         'Now {} will effectively use only 7 bits out of 8 bits. '
-                                        'This resolves the saturation issue problem on AVX2 and AVX-512 machines. '
+                                        'This resolves the overflow issue problem on AVX2 and AVX-512 machines. '
                                         'Please take a look at the documentation for a detailed information.'
-                                        .format(quantizers_with_saturation_fix_str))
+                                        .format(quantizers_with_overflow_fix_str))
 
         qspec = PTQuantizerSpec.from_config(qconfig,
                                             narrow_range=narrow_range,

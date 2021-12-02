@@ -324,9 +324,9 @@ class SymmetricQuantizer(Quantizer):
             'signed_var': signed
         }
 
-    def apply_saturation_fix(self, weights):
+    def apply_overflow_fix(self, weights):
         if self.num_bits != 8 or not self._half_range:
-            raise RuntimeError('Attempt to apply saturation issue fix '
+            raise RuntimeError('Attempt to apply overflow issue fix '
                                'to quantizer which is not configured for that.')
 
         # Multiplier to expand scale from 7 bit to 8 bit
@@ -449,9 +449,9 @@ class AsymmetricQuantizer(Quantizer):
             'input_range_var': input_range
         }
 
-    def apply_saturation_fix(self, weights):
+    def apply_overflow_fix(self, weights):
         if self.num_bits != 8 or not self._half_range:
-            raise RuntimeError('Attempt to apply saturation issue fix '
+            raise RuntimeError('Attempt to apply overflow issue fix '
                                'to quantizer which is not configured for that.')
 
         # Low value shift to expand quantize range from 7 bit to 8 bit properly

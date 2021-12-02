@@ -543,11 +543,11 @@ QUANTIZATION_SCHEMA = {
                                                                    "standard QuantizeLinear-DequantizeLinear "
                                                                    "node pairs (8-bit quantization only in the latter "
                                                                    "case). Default: false"),
-        "saturation_fix": with_attributes(_STRING,
-                                          description="Option controls whether to apply the saturation "
+        "overflow_fix": with_attributes(_STRING,
+                                          description="Option controls whether to apply the overflow "
                                                       "issue fix for the appropriate NNCF config or not. "
                                                       "If set to 'disable', the fix will not be applied. "
-                                                      "If set to 'enable' or 'enable_for_first_conv_layer', "
+                                                      "If set to 'enable' or 'first_layer_only', "
                                                       "while appropriate target_devices are chosen, "
                                                       "the fix will be applied to the all layers or to the first"
                                                       "convolutional layer respectively."),

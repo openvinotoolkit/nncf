@@ -80,7 +80,7 @@ from nncf.tensorflow.quantization.initializers.init_range import TFRangeInitPara
 from nncf.tensorflow.quantization.layers import FakeQuantize
 from nncf.tensorflow.quantization.quantizers import Quantizer
 from nncf.tensorflow.quantization.quantizers import TFQuantizerSpec
-from nncf.tensorflow.quantization.utils import apply_saturation_fix
+from nncf.tensorflow.quantization.utils import apply_overflow_fix
 
 QUANTIZATION_LAYER_METATYPES = GENERAL_CONV_LAYER_METATYPES + LINEAR_LAYER_METATYPES
 
@@ -245,7 +245,7 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
 
         self.quantize_inputs = self._algo_config.get('quantize_inputs', True)
         self.quantize_outputs = self._algo_config.get('quantize_outputs', False)
-        self._saturation_fix = self._algo_config.get('saturation_fix', 'enable')
+        self._overflow_fix = self._algo_config.get('overflow_fix', 'enable')
         self._target_device = config.get('target_device', 'ANY')
         algo_config = self._get_algo_specific_config_section()
         if self._target_device == 'VPU' and 'preset' in algo_config:
@@ -328,9 +328,9 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
     def _get_half_range(self, qconfig: QuantizerConfig, target_node: NNCFNode,
                         first_conv_nodes: List[NNCFNode]) -> bool:
         if self._target_device in ['CPU', 'ANY'] and qconfig.num_bits == 8:
-            if self._saturation_fix == 'enable':
+            if self._overflow_fix == 'enable':
                 return True
-            if self._saturation_fix == 'enable_for_first_conv_layer':
+            if self._overflow_fix == 'first_layer_only':
                 if target_node in first_conv_nodes:
                     return True
         return False
@@ -443,7 +443,7 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
         quantized_layer_names_vs_qconfigs = {}  # type: Dict[str, QuantizerConfig]
         qp_id_to_index = {}  # type: Dict[QuantizationPointId, int]
         tf_setup_qp_index = 0
-        applied_saturation_fix = False
+        applied_overflow_fix = False
         first_conv_nodes = get_first_nodes_of_type(nncf_graph, ['Conv2D'])
         for qp_id, qp in quantizer_setup.quantization_points.items():
             if qp.is_weight_quantization_point():
@@ -471,7 +471,7 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
                     self._op_names.append(op_name)
 
                     half_range = self._get_half_range(qconfig, target_node, first_conv_nodes)
-                    applied_saturation_fix = applied_saturation_fix or half_range
+                    applied_overflow_fix = applied_overflow_fix or half_range
                     quantizer_spec = TFQuantizerSpec.from_config(qconfig,
                                                                  narrow_range=not half_range,
                                                                  half_range=half_range)
@@ -509,21 +509,21 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
 
         setup = self._generate_unified_scale_groups(model, quantizer_setup, qp_id_to_index, setup)
 
-        self._raise_saturation_fix_warning(applied_saturation_fix)
+        self._raise_overflow_fix_warning(applied_overflow_fix)
 
         return setup
 
-    def _raise_saturation_fix_warning(self, applied_saturation_fix: bool):
-        if applied_saturation_fix:
-            if self._saturation_fix == 'enable':
-                quantizers_with_saturation_fix_str = 'all weight quantizers'
-            elif self._saturation_fix == 'enable_for_first_conv_layer':
-                quantizers_with_saturation_fix_str = 'first convolution weight quantizers'
-            logger.warning('The saturation issue fix will be applied. '
+    def _raise_overflow_fix_warning(self, applied_overflow_fix: bool):
+        if applied_overflow_fix:
+            if self._overflow_fix == 'enable':
+                quantizers_with_overflow_fix_str = 'all weight quantizers'
+            elif self._overflow_fix == 'first_layer_only':
+                quantizers_with_overflow_fix_str = 'first convolution weight quantizers'
+            logger.warning('The overflow issue fix will be applied. '
                            'Now {} will effectively use only 7 bits out of '
-                           '8 bits. This resolves the saturation issue problem on AVX2 and AVX-512 machines. '
+                           '8 bits. This resolves the overflow issue problem on AVX2 and AVX-512 machines. '
                            'Please take a look at the documentation for a detailed information.'
-                           .format(quantizers_with_saturation_fix_str))
+                           .format(quantizers_with_overflow_fix_str))
 
     def _generate_unified_scale_groups(self,
                                        model: tf.keras.Model,
@@ -700,7 +700,7 @@ class QuantizationController(BaseCompressionAlgorithmController):
         return self._loss
 
     def strip_model(self, model: tf.keras.Model) -> tf.keras.Model:
-        apply_saturation_fix(model, self._op_names)
+        apply_overflow_fix(model, self._op_names)
         return model
 
     def statistics(self, quickly_collected_only: bool = False) -> NNCFStatistics:

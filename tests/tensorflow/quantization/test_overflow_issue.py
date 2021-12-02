@@ -20,7 +20,7 @@ from nncf.tensorflow.layers.custom_objects import NNCF_QUANTIZATION_OPERATIONS
 from nncf.tensorflow.quantization.quantizers import TFQuantizerSpec
 from nncf.tensorflow.quantization.quantizers import QuantizerConfig
 from nncf.tensorflow.quantization.quantizers import Quantizer
-from nncf.tensorflow.quantization.utils import apply_saturation_fix_to_layer
+from nncf.tensorflow.quantization.utils import apply_overflow_fix_to_layer
 from nncf.common.quantization.structs import QuantizationMode
 
 
@@ -49,7 +49,7 @@ def test_min_adj(bits, low, range_, narrow_range, ref):
     assert abs(res - ref) < EPS
 
 
-def get_weights_for_saturation_issue_test(low, range_len, narrow_range, init_w_as_middle_points):
+def get_weights_for_overflow_issue_test(low, range_len, narrow_range, init_w_as_middle_points):
     if init_w_as_middle_points:
         quant_len = range_len / (128 - (2 if narrow_range else 1))
         if low > EPS:
@@ -104,7 +104,7 @@ class TestQuantizedWeightsEqualAfterFixApplied:
         ref_scale = 1
         low = ref_scale * ref_signed_var
         range_len = (1 - ref_signed_var) * ref_scale
-        new_w = get_weights_for_saturation_issue_test(low, range_len, narrow_range, init_w_as_middle_points)
+        new_w = get_weights_for_overflow_issue_test(low, range_len, narrow_range, init_w_as_middle_points)
         layer.get_layer_weight(weight_attr).assign(new_w)
 
         # Check quantizer weights
@@ -117,7 +117,7 @@ class TestQuantizedWeightsEqualAfterFixApplied:
             quant_len = range_len / (128 - (2 if narrow_range else 1))
             assert (np.abs(np.abs(w_int7 - new_w) - quant_len / 2) < 1e-6).all(), 'Middle points calculated incorrectly'
 
-        apply_saturation_fix_to_layer(layer, 'kernel', quantizer)
+        apply_overflow_fix_to_layer(layer, 'kernel', quantizer)
         assert not quantizer._half_range # pylint: disable=protected-access
         w_int8 = layer(tf.ones((1, 1))).numpy()
 
@@ -146,7 +146,7 @@ class TestQuantizedWeightsEqualAfterFixApplied:
         layer.build(1)
 
         # Set layer weights
-        new_w = get_weights_for_saturation_issue_test(low, range_len, narrow_range, init_w_as_middle_points)
+        new_w = get_weights_for_overflow_issue_test(low, range_len, narrow_range, init_w_as_middle_points)
         layer.get_layer_weight(weight_attr).assign(new_w)
 
         # Set quantizer weights
@@ -163,7 +163,7 @@ class TestQuantizedWeightsEqualAfterFixApplied:
             quant_len = range_len / (128 - (2 if narrow_range else 1))
             assert (np.abs(np.abs(w_int7 - new_w) - quant_len / 2) < EPS).all(), 'Middle points calculated incorrectly'
 
-        apply_saturation_fix_to_layer(layer, 'kernel', quantizer)
+        apply_overflow_fix_to_layer(layer, 'kernel', quantizer)
         assert not quantizer._half_range # pylint: disable=protected-access
         w_int8 = layer(tf.ones((1, 1))).numpy()
 
