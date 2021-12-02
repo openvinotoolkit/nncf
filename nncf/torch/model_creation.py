@@ -139,6 +139,7 @@ def create_compressed_model(model: Module,
                                    original_model_accuracy=original_model_accuracy)
 
     should_init = compression_state is None
+
     builder = create_compression_algorithm_builder(config, should_init)
     is_state_loadable = not is_legacy_model_state_dict and compression_state is not None
     if is_state_loadable:

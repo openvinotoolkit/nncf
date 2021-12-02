@@ -1,5 +1,4 @@
 from collections import deque
-from collections import namedtuple
 from copy import deepcopy
 from enum import Enum
 from functools import cmp_to_key
@@ -11,7 +10,6 @@ import networkx as nx
 import torch
 
 from nncf.common.graph.graph import NNCFGraph
-# from graphviz import Digraph
 from nncf.common.graph.graph_matching import find_subgraphs_matching_pattern
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.definitions import MODEL_OUTPUT_OP_NAME
@@ -19,15 +17,19 @@ from nncf.torch.dynamic_graph.operation_address import OperationAddress
 from nncf.torch.graph.graph import PTNNCFGraph
 from nncf.torch.hardware.fused_patterns import PT_HW_FUSED_PATTERNS
 from nncf.torch.graph.operator_metatypes import PTDropoutMetatype
+from nncf.torch.graph.operator_metatypes import PTRELUMetatype
 from nncf.torch.graph.operator_metatypes import PTMatMulMetatype
 from nncf.torch.graph.operator_metatypes import PTLinearMetatype
 from nncf.torch.layers import NNCF_MODULES_OP_NAMES
 from nncf.torch.nncf_network import NNCFNetwork
 
 
-IGNORED_NAME_OPERATORS = ["dropout", MODEL_OUTPUT_OP_NAME]
+IGNORED_NAME_OPERATORS = [*PTDropoutMetatype.get_all_aliases(), MODEL_OUTPUT_OP_NAME]
 
-BuildingBlock = namedtuple('BuildingBlock', ('start_node', 'end_node'))
+class BuildingBlock:
+    def __init__(self, start_node, end_node):
+        self.start_node = start_node
+        self.end_node = end_node
 
 class BuildingBlockType(Enum): # only for BERT
     MSHA = 'MSHA'
@@ -238,6 +240,24 @@ def add_node_to_aux_struct(node_key, shape, shape_map):
 def rule_after_removing_block_graph_has_no_hanging_edges(graph: SearchGraph,
                                                          start_node: SearchGraphNode,
                                                          end_node: SearchGraphNode):
+    """
+    The subgraph is traversed starting with the start_node and ending with the end_node
+    to determine that after deleting such a block there are no dangling edges in the graph.
+    """
+    #            A
+    #           / \
+    #          /   \
+    #         /     \
+    #    start_node  |   Edge A-C is dangling edges
+    #        |       |
+    #         \     /
+    #          \   /
+    #            C
+    #            |
+    #           ...
+    #            |
+    #         end_node
+
     q = deque([start_node])
     addit_nodes = set()
     nodes = []
@@ -272,6 +292,17 @@ def rule_after_removing_block_graph_has_no_hanging_edges(graph: SearchGraph,
     return True
 
 def rule_not_lead_to_double_edge(sgraph: SearchGraph, start_node: SearchGraphNode, end_node: SearchGraphNode):
+    """
+    This rule ensures that no duplicate edges will be created in the graph after a block is deleted.
+    """
+    #         A              A
+    #        / \            / \
+    #       /   \          /   \
+    #    block   |  =>     \   /
+    #       \   /           \ /
+    #        \ /             D
+    #         D          forbidden
+
     #pylint: disable=protected-access
     if start_node.is_dummy:
         next_end_node = sgraph.get_next_nodes(end_node.node_key)
@@ -286,11 +317,22 @@ def rule_not_lead_to_double_edge(sgraph: SearchGraph, start_node: SearchGraphNod
             attr = sgraph._nx_graph.get_edge_data(pred_start_node[0].node_key, next_end_node[0].node_key)
         else:
             attr = None
-    return True if attr is None else False
+    return attr is None
 
 def rule_not_lead_to_duplication_of_activation(sgraph: SearchGraph,
                                                start_node: SearchGraphNode,
                                                end_node: SearchGraphNode):
+    """
+    This rule ensures that after the block is deleted there will be no duplication of activation layers.
+    """
+    #         A             A
+    #         |             |
+    #        relu          relu
+    #         |      =>     |
+    #        block         relu
+    #         |
+    #        relu        forbidden
+
     pred_start_node = sgraph.get_prev_nodes(start_node.node_key)
     next_end_node = sgraph.get_next_nodes(end_node.node_key)
     if len(next_end_node) == 0 or len(pred_start_node) == 0:
@@ -298,7 +340,8 @@ def rule_not_lead_to_duplication_of_activation(sgraph: SearchGraph,
     if pred_start_node[0].is_dummy:
         pred_start_node = sgraph.get_prev_nodes(pred_start_node[0].node_key)
 
-    if 'relu' == pred_start_node[0].node_type[-1] and 'relu' == next_end_node[0].node_type[0]:
+    if pred_start_node[0].node_type[-1] in PTRELUMetatype.get_all_aliases()\
+         and next_end_node[0].node_type[0] in PTRELUMetatype.get_all_aliases():
         return False
     return True
 
@@ -334,34 +377,52 @@ def search_lin_combination(block, blocks):
     return False
 
 def remove_linear_combination(sorted_building_blocks):
+    """
+    Search and remove of block which is a combination of other blocks following each other.
+    """
     result_blocks = []
     start_to_idx = {}
     last_node = None
     for block in sorted_building_blocks:
-        start_node, end_node = block
-        if last_node == end_node:
-            if start_node.main_id in start_to_idx:
-                if not search_lin_combination(block, result_blocks[start_to_idx[start_node.main_id]:]):
+        if last_node == block.end_node:
+            if block.start_node.main_id in start_to_idx:
+                if not search_lin_combination(block, result_blocks[start_to_idx[block.start_node.main_id]:]):
                     result_blocks.append(block)
-                    last_node = end_node
+                    last_node = block.end_node
         else:
             result_blocks.append(block)
-            last_node = end_node
-            if start_node.main_id not in start_to_idx:
-                start_to_idx[start_node.main_id] = len(result_blocks) - 1
+            last_node = block.end_node
+            if block.start_node.main_id not in start_to_idx:
+                start_to_idx[block.start_node.main_id] = len(result_blocks) - 1
 
     return result_blocks
 
 def restore_node_name_in_orig_graph(building_blocks, orig_graph):
     building_block_in_orig_format = []
     for block in building_blocks:
-        start_node, end_node = block
-        id_st = start_node.bottom_id # dummy node
-        id_end = end_node.bottom_id
+        id_st = block.start_node.bottom_id # dummy node
+        id_end = block.end_node.bottom_id
         block_in_orig_format = [orig_graph.get_node_key_by_id(id_st).split(' ')[-1],
                                 orig_graph.get_node_key_by_id(id_end).split(' ')[-1]]
         building_block_in_orig_format.append(block_in_orig_format)
     return building_block_in_orig_format
+
+def get_potential_candidate_for_block(sgraph: SearchGraph):
+    act_input_shape = {} # key - str(shape), value - set of node_keys
+    act_output_shape = {} # key - str(shape), value - set of node_keys
+    for node in sgraph.get_all_nodes():
+        next_edges = sgraph.get_next_edges(node.node_key)
+        prev_edges = sgraph.get_prev_edges(node.node_key)
+        for _, edge_attr in next_edges.items():
+            sgraph.set_node_attr(node.node_key, 'activation_output_shape', edge_attr['activation_shape'])
+            if not node.is_dummy:
+                add_node_to_aux_struct(node, edge_attr['activation_shape'], act_output_shape)
+            break
+        for _, edge_attr in prev_edges.items():
+            sgraph.set_node_attr(node.node_key, 'activation_input_shape', edge_attr['activation_shape'])
+            break
+        add_node_to_aux_struct(node, edge_attr['activation_shape'], act_input_shape)
+    return act_input_shape, act_output_shape
 
 def get_building_blocks(compressed_model: NNCFNetwork,
                         max_block_size: int = 50,
@@ -377,38 +438,24 @@ def get_building_blocks(compressed_model: NNCFNetwork,
       does not lead to duplication of edges along which the same tensor flows
     - removing a block from the graph (that is, the layers included in the block are not executed)
       does not lead to dangling edges
+    - removing a block from the graph (that is, the layers included in the block are not executed)
+      does not lead to duplicate activation layers
     """
 
     orig_graph = compressed_model.get_original_graph() # PTNNCFGraph
     sgraph = prepare_search_graph(orig_graph)
-
-    act_input_shape = {} # key - str(shape), value - set of node_keys
-    act_output_shape = {} # key - str(shape), value - set of node_keys
 
     fn_rules = [rule_not_lead_to_double_edge,
                 rule_not_lead_to_duplication_of_activation,
                 rule_after_removing_block_graph_has_no_hanging_edges]
 
     blocks = []
-    for node in sgraph.get_all_nodes():
-        next_edges = sgraph.get_next_edges(node.node_key)
-        prev_edges = sgraph.get_prev_edges(node.node_key)
-        for _, edge_attr in next_edges.items():
-            sgraph.set_node_attr(node.node_key, 'activation_output_shape', edge_attr['activation_shape'])
-            break
-        if not node.is_dummy:
-            add_node_to_aux_struct(node, edge_attr['activation_shape'], act_output_shape)
-        for _, edge_attr in prev_edges.items():
-            sgraph.set_node_attr(node.node_key, 'activation_input_shape', edge_attr['activation_shape'])
-            break
-        add_node_to_aux_struct(node, edge_attr['activation_shape'], act_input_shape)
+    act_input_shape, act_output_shape = get_potential_candidate_for_block(sgraph)
 
     for shape, start_nodes in act_input_shape.items():
         for start_node in start_nodes:
-            if start_node.node_type == IGNORED_NAME_OPERATORS:
-                continue
             pred_start_node = sgraph.get_prev_nodes(start_node.node_key)
-            if len(pred_start_node) != 1:
+            if start_node.node_type == IGNORED_NAME_OPERATORS or len(pred_start_node) != 1:
                 continue
             for end_node in act_output_shape[shape]:
                 if end_node.main_id - start_node.main_id > max_block_size:
@@ -442,6 +489,10 @@ def remove_nested_blocks(sorted_blocks):
     return [list(group_block)[-1] for _, group_block in groupby(sorted_blocks, lambda block: block.start_node.main_id)]
 
 def get_group_of_dependent_blocks(blocks):
+    """
+    Building blocks can be categorized into groups. Blocks that follow each other in the graph
+    (that is, they are connected by one edge) belong to the same group.
+    """
     groups = {}
     idx = 0
     groups = { idx: [] }

@@ -65,6 +65,6 @@ building_blocks_info = get_building_blocks_info(building_blocks, compressed_mode
 
 for idx, block_info in enumerate(building_blocks_info):
     print("Block # {}, Start node: {}, End_node: {}, Type: {} ".format(idx,
-     block_info.building_block[0], block_info.building_block[0], block_info.block_type))
+     block_info.building_block[0], block_info.building_block[1], block_info.block_type))
     print(block_info.modules)
     print(block_info.op_addresses)
