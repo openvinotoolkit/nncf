@@ -11,7 +11,7 @@
  limitations under the License.
 """
 
-from typing import Dict, List, Type
+from typing import Dict, List, Type, Optional
 
 from nncf.common.graph import NNCFGraph
 from nncf.common.pruning.tensor_processor import NNCFPruningBaseTensorProcessor
@@ -34,7 +34,7 @@ class MaskPropagationAlgorithm:
 
     def __init__(self, graph: NNCFGraph,
                  pruning_operator_metatypes: PruningOperationsMetatypeRegistry,
-                 tensor_processor: Type[NNCFPruningBaseTensorProcessor] = SymbolicMaskProcessor):
+                 tensor_processor: Optional[Type[NNCFPruningBaseTensorProcessor]] = None):
         """
         Initializes MaskPropagationAlgorithm.
 
@@ -99,7 +99,7 @@ class MaskPropagationAlgorithm:
                 node.data['output_mask'] = SymbolicMask(node.layer_attributes.out_channels, [node.node_id])
             # Propagate masks
             cls = self.get_meta_operation_by_type_name(node.node_type)
-            cls.mask_propagation(node, self._graph, self._tensor_processor)
+            cls.mask_propagation(node, self._graph, SymbolicMaskProcessor)
             if node.node_id in can_be_closing_convs:
                 # Check input mask producers out channel dimension
                 input_masks = get_input_masks(node, self._graph)
