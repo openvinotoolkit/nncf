@@ -774,10 +774,8 @@ def test_quantize_range_init_sets_correct_scale_shapes(quantizer_range_init_test
         collector_params = PTRangeInitCollectorParams(test_struct.is_weights,
                                                       quantization_mode,
                                                       test_struct.per_channel,
-                                                      initializer_type,
                                                       tuple(test_struct.input_shape),
-                                                      channel_idx,
-                                                      ['mixed_min_max'])
+                                                      channel_idx)
 
         collector = StatCollectorGenerator.generate_stat_collector_for_range_init_config(
             range_init_config,

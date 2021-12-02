@@ -30,6 +30,12 @@ class TensorStatisticCollectorBase(ABC):
     """Collector estimate statistics at the quantization point based on the provided reduction shape."""
 
     def __init__(self, reduction_shape: ReductionShape = None, num_samples: int = None):
+        """
+        Initializes Tensor Statistic Collector
+
+        :param reduction_shape: Shape that defines tensor dimensions to reduce.
+        :param num_samples: Maximum number of samples to collect.
+        """
         self._reduction_shape = reduction_shape
         self._enabled = True
         self._collected_samples = 0
@@ -51,7 +57,7 @@ class TensorStatisticCollectorBase(ABC):
         pass
 
     def get_statistics(self):
-        """Returns collected statistics if present"""
+        """Returns collected statistics, if present."""
         if self._collected_samples == 0:
             raise StatisticsNotCollectedError()
         return self._get_statistics()
@@ -67,7 +73,7 @@ class TensorStatisticCollectorBase(ABC):
         self._enabled = False
 
     def reset(self):
-        """Resets all the statistics in the collector"""
+        """Resets all the statistics in the collector."""
         self._collected_samples = 0
         self._reset()
 
@@ -88,7 +94,7 @@ class OnlineTensorStatisticCollector(TensorStatisticCollectorBase):
 
 
 class OfflineTensorStatisticCollector(TensorStatisticCollectorBase):
-    """Collects statistics in offline regime by storing and aggregating data afterwards."""
+    """Collects statistics in offline regime by storing the data and aggregating it afterwards."""
 
     def __init__(self, reduction_shape: ReductionShape = None, num_samples: int = None, window_size: int = None):
         super().__init__(reduction_shape, num_samples)

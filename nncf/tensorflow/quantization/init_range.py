@@ -23,7 +23,6 @@ from nncf.common.quantization.initialization.range import RangeInitParams
 from nncf.common.quantization.initialization.range import RangeInitCollectorParams
 from nncf.common.quantization.initialization.range import RangeInitConfig
 from nncf.common.quantization.structs import QuantizerGroup
-from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.tensor_statistics.collectors import ReductionShape
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
 from nncf.common.utils.progress_bar import ProgressBar

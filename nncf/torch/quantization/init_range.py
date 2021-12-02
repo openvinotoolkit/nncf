@@ -94,18 +94,29 @@ class PTRangeInitParams(RangeInitParams):
 class PTRangeInitCollectorParams(RangeInitCollectorParams):
     def __init__(self, is_weights: bool, mode: QuantizationMode, per_channel: bool, input_shape: tuple,
                  channel_idx: int):
+        """
+
+        :param input_shape: Shape of the input tensor.
+        :param channel_idx: Channel dimension.
+        """
         super().__init__(is_weights, mode, per_channel)
         self._input_shape = input_shape
         self._channel_idx = channel_idx
 
     def convert_reduction_shape(self, per_sample_stats) -> ReductionShape:
+        """
+        Calculates the reduction shape of the tensor.
+
+        :param per_sample_stats: Boolean flag that indicated whether statistics are collected per-sample or per-batch.
+        :return: Shape to reduce to.
+        """
         ndims = len(self._input_shape)
         reduction_shape = list(range(ndims))  # type: List[int]
         if self._per_channel:
             val = (ndims + self._channel_idx) % ndims
             reduction_shape.remove(val)
         if self.use_per_sample_stats(per_sample_stats):
-            reduction_shape = reduction_shape[1:]
+            reduction_shape = reduction_shape[1:]  # Assumes batch is the first dimension
         return tuple(reduction_shape)
 
 

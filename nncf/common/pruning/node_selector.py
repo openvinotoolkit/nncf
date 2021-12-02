@@ -16,7 +16,6 @@ from typing import Dict, List, Optional
 
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
-from nncf.common.pruning.symbolic_mask import SymbolicMaskProcessor
 from nncf.common.pruning.utils import get_sources_of_node
 from nncf.common.pruning.utils import get_first_nodes_of_type
 from nncf.common.pruning.utils import get_previous_convs
