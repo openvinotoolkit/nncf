@@ -21,6 +21,7 @@ from nncf.common.pruning.utils import is_grouped_conv
 from nncf.common.pruning.utils import PruningAnalysisDecision
 from nncf.common.pruning.utils import PruningAnalysisReason
 from nncf.common.pruning.symbolic_mask import SymbolicMask
+from nncf.common.pruning.symbolic_mask import SymbolicMaskProcessor
 from nncf.common.pruning.operations import BasePruningOp
 
 
@@ -33,7 +34,7 @@ class MaskPropagationAlgorithm:
 
     def __init__(self, graph: NNCFGraph,
                  pruning_operator_metatypes: PruningOperationsMetatypeRegistry,
-                 tensor_processor: Type[NNCFPruningBaseTensorProcessor]):
+                 tensor_processor: Type[NNCFPruningBaseTensorProcessor] = SymbolicMaskProcessor):
         """
         Initializes MaskPropagationAlgorithm.
 

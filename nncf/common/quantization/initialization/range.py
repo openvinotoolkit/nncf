@@ -137,14 +137,35 @@ class RangeInitParams:
 
 
 class RangeInitCollectorParams:
-    def __init__(self, is_weights: bool, mode: QuantizationMode, per_channel: bool, init_type: str):
+    """
+    Defines low-level parameters that are used to instantiate statistic collectors.
+    """
+
+    def __init__(self, is_weights: bool, mode: QuantizationMode, per_channel: bool):
+        """
+        Initializes Range Initialization Collector Parameters.
+
+        :param is_weights: Boolean that defines tensor type. True for Weights, False for Activations.
+        :param mode: Quantization mode: symmetric or asymmetric.
+        :param per_channel: Quantization granularity.
+        """
         self._is_weights = is_weights
         self._mode = mode
         self._per_channel = per_channel
-        self._init_type = init_type
+
+    def use_per_sample_stats(self, per_sample_stats) -> bool:
+        """
+        For activations, if per_sample_stats is True, statistics will be collected per-sample.
+        For weights statistics are always collected per-batch.
+
+        :param per_sample_stats: Defined by certain collector design.
+        :return: A boolean that defines whether to collect statistics per-sample or per-batch.
+        """
+        return per_sample_stats and (not self._is_weights)
 
     @property
     def use_abs_max(self) -> bool:
+        """Applies abs(max) for symmetric quantization."""
         return self._mode == QuantizationMode.SYMMETRIC
 
     @property

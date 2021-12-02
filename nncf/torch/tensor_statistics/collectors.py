@@ -35,7 +35,7 @@ from nncf.torch.tensor import PTNNCFTensor
 
 class PTNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
     """
-    A realization of the processing methods set for PTNNCFTensors.
+    A realization of the processing methods for PTNNCFTensors.
     """
 
     @staticmethod

@@ -207,7 +207,7 @@ class PruningNodeSelector:
             are supported by the NNCF pruning algorithm
         :return: Pruning node analysis after model analyzer, pruning algo compatibility and pruning dimensions checks.
         """
-        mask_prop_algo = MaskPropagationAlgorithm(graph, self._pruning_operator_metatypes, SymbolicMaskProcessor)
+        mask_prop_algo = MaskPropagationAlgorithm(graph, self._pruning_operator_metatypes)
         can_prune_by_dim = mask_prop_algo.symbolic_mask_propagation(self._prune_operations_types, can_prune_after_check)
 
         can_prune_for_prunable_layers = \

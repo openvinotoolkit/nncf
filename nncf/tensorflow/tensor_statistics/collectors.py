@@ -34,7 +34,7 @@ from nncf.tensorflow.tensor import TFNNCFTensor
 
 class TFNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
     """
-    A realization of the processing methods set for TFNNCFTensors.
+    A realization of the processing methods for TFNNCFTensors.
     """
 
     @staticmethod

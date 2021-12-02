@@ -14,7 +14,7 @@
 from abc import ABC
 from abc import abstractmethod
 from collections import deque
-from typing import Tuple, TypeVar, List
+from typing import Tuple, TypeVar, List, Union
 
 import numpy as np
 from nncf.common.tensor import NNCFTensor
@@ -99,91 +99,95 @@ class OfflineTensorStatisticCollector(TensorStatisticCollectorBase):
 
 
 class NNCFCollectorTensorProcessor(ABC):
+    """
+    An interface of the processing methods for NNCFTensors.
+    """
+
     @staticmethod
     @abstractmethod
-    def reduce_min(x, axis):
+    def reduce_min(x: NNCFTensor, axis: Union[int, tuple, list]):
         """
-         Computes minimum of elements across dimensions of Tensor.
+         Computes minimum of elements across dimensions of NNCFTensor.
 
-         :param x: Tensor to reduce
+         :param x: NNCFTensor to reduce
          :param axis: The dimensions to reduce.
-         :return: Reduced Tensor.
+         :return: Reduced NNCFTensor.
          """
 
     @staticmethod
     @abstractmethod
-    def reduce_max(x, axis):
+    def reduce_max(x: NNCFTensor, axis: Union[int, tuple, list]):
         """
-        Computes maximum of elements across dimensions of Tensor.
+        Computes maximum of elements across dimensions of NNCFTensor.
 
-        :param x: Tensor to reduce
+        :param x: NNCFTensor to reduce
         :param axis: The dimensions to reduce.
-        :return: Reduced Tensor.
+        :return: Reduced NNCFTensor.
         """
 
     @staticmethod
     @abstractmethod
-    def abs(x):
+    def abs(x: NNCFTensor):
         """
-        Computes the absolute value of a Tensor.
+        Computes the absolute value of a NNCFTensor.
 
-        :param x: Tensor
-        :return: Absolute value of a Tensor
+        :param x: NNCFTensor
+        :return: Absolute value of a NNCFTensor
         """
 
     @staticmethod
     @abstractmethod
-    def min(x1, x2):
+    def min(x1: NNCFTensor, x2: NNCFTensor):
         """
         Returns the min of x1 and x2.
 
-        :param x1: Tensor to compare.
-        :param x2: NCFTensor to compare.
+        :param x1: NNCFTensor to compare.
+        :param x2: NNCFTensor to compare.
         :return: Compared Tensor.
         """
 
     @staticmethod
     @abstractmethod
-    def max(x1, x2):
+    def max(x1: NNCFTensor, x2: NNCFTensor):
         """
         Returns the max of x1 and x2.
 
-        :param x1: Tensor to compare.
-        :param x2: Tensor to compare.
-        :return: Compared Tensor.
+        :param x1: NNCFTensor to compare.
+        :param x2: NNCFTensor to compare.
+        :return: Compared NNCFTensor.
         """
 
     @staticmethod
     @abstractmethod
-    def mean(x, axis):
+    def mean(x: NNCFTensor, axis: Union[int, tuple, list]):
         """
-        Computes the mean of elements across given dimensions of Tensor.
+        Computes the mean of elements across given dimensions of NNCFTensor.
 
-        :param x: Tensor to reduce.
-        :param axis:
-        :return: Reduced Tensor.
+        :param x: NNCFTensor to reduce.
+        :param axis: The dimensions to reduce.
+        :return: Reduced NNCFTensor.
         """
 
     @staticmethod
     @abstractmethod
-    def stack(x):
+    def stack(x: NNCFTensor):
         """
-        Stacks a list or deque of Tensors rank-R tensors into one Tensor rank-(R+1) tensor.
+        Stacks a list or deque of NNCFTensors rank-R tensors into one NNCFTensor rank-(R+1) tensor.
 
-        :param x: List or deque of Tensors.
+        :param x: List or deque of NNCFTensors.
         :param axis: The axis to stack along.
-        :return: Stacked Tensor.
+        :return: Stacked NNCFTensor.
         """
 
     @staticmethod
     @abstractmethod
-    def unstack(x):
+    def unstack(x: NNCFTensor):
         """
-        Unstack a tensor into list.
+        Unstack a NNCFTensor into list.
 
-        :param x: Tensor to unstack.
+        :param x: NNCFTensor to unstack.
         :param axis: The axis to unstack along.
-        :return: List of Tensors.
+        :return: List of NNCFTensor.
         """
 
 

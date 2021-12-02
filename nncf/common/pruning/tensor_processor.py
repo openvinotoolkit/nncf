@@ -19,7 +19,7 @@ from nncf.common.tensor import NNCFTensor, DeviceType
 
 class NNCFPruningBaseTensorProcessor:
     """
-    An interface of the processing methods set for NNCFTensors.
+    An interface of the processing methods for NNCFTensors.
     """
 
     @classmethod
