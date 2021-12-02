@@ -9,7 +9,7 @@ from nncf.torch.layer_utils import CompressionParameter
 from nncf.torch.initialization import DataLoaderBNAdaptationRunner
 
 from tests.torch.helpers import BasicConvTestModel, TwoConvTestModel, MockModel
-from tests.torch.quantization.test_saturation_issue_export import DepthWiseConvTestModel, EightConvTestModel
+from tests.torch.quantization.test_overflow_issue_export import DepthWiseConvTestModel, EightConvTestModel
 # pylint:disable=unused-import
 from tests.torch.modules.test_rnn import _seed
 

@@ -17,7 +17,7 @@ from typing import Dict, List, Optional
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.pruning.utils import get_sources_of_node
-from nncf.common.pruning.utils import get_first_nodes_of_type
+from nncf.common.graph.utils import get_first_nodes_of_type
 from nncf.common.pruning.utils import get_previous_convs
 from nncf.common.pruning.utils import is_grouped_conv
 from nncf.common.pruning.utils import PruningAnalysisDecision

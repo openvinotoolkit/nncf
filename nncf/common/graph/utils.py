@@ -11,7 +11,11 @@
  limitations under the License.
 """
 
+from functools import partial
 from typing import List
+
+from nncf.common.graph import NNCFGraph, NNCFNode
+from nncf.common.pruning.utils import traverse_function
 
 from nncf.common.utils.logger import logger
 
@@ -41,3 +45,26 @@ def get_concat_axis(input_shapes: List[List[int]], output_shapes: List[List[int]
             axis = none_dim
 
     return axis
+
+
+def get_first_nodes_of_type(graph: NNCFGraph, op_types: List[str]) -> List[NNCFNode]:
+    """
+    Looking for first node in graph with type in `op_types`.
+    First == layer with type in `op_types`, that there is a path from the input such that there are no other
+    operations with type in `op_types` on it.
+
+    :param op_types: Types of modules to track.
+    :param graph: Graph to work with.
+    :return: List of all first nodes with type in `op_types`.
+    """
+    graph_roots = graph.get_input_nodes()  # NNCFNodes here
+
+    visited = {node_id: False for node_id in graph.get_all_node_ids()}
+    partial_traverse_function = partial(traverse_function,
+                                        type_check_fn=lambda x: x in op_types,
+                                        visited=visited)
+
+    first_nodes_of_type = []
+    for root in graph_roots:
+        first_nodes_of_type.extend(graph.traverse_graph(root, partial_traverse_function))
+    return first_nodes_of_type

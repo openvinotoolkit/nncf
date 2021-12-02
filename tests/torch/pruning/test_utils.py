@@ -14,7 +14,7 @@ import pytest
 
 from nncf.torch.pruning.filter_pruning.algo import FilterPruningBuilder
 from nncf.common.pruning.utils import get_rounded_pruned_element_number
-from nncf.common.pruning.utils import get_first_nodes_of_type
+from nncf.common.graph.utils import get_first_nodes_of_type
 from nncf.common.pruning.utils import get_last_nodes_of_type
 from nncf.torch.pruning.utils import get_bn_for_conv_node_by_name
 from tests.torch.pruning.helpers import get_basic_pruning_config, BigPruningTestModel, \
