@@ -41,6 +41,7 @@ class MaskPropagationAlgorithm:
         :param graph: Graph to work with.
         :param pruning_operator_metatypes: Registry with operation metatypes pruning algorithm is aware of, i.e.
                metatypes describing operations with common pruning mask application and propagation properties.
+        :param tensor_processor: Framework-specific tensor processor.
         """
         self._graph = graph
         self._pruning_operator_metatypes = pruning_operator_metatypes
