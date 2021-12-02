@@ -329,7 +329,8 @@ def _calculate_in_out_channels(pruning_groups: List[Cluster[PrunedLayerInfoBase]
                                sparse_elements_counter: Callable[[str], int],
                                full_input_channels: Dict[str, int],
                                full_output_channels: Dict[str, int],
-                               pruning_groups_next_nodes: Dict[int, List[str]]):
+                               pruning_groups_next_nodes: Dict[int, List[str]]) -> Tuple[Dict[str, int],
+                                                                                         Dict[str, int]]:
     tmp_in_channels = full_input_channels.copy()
     tmp_out_channels = full_output_channels.copy()
 
@@ -358,7 +359,8 @@ def calculate_in_out_channels_in_uniformly_pruned_model(pruning_groups: List[Clu
                                                         pruning_rate: float,
                                                         full_input_channels: Dict[str, int],
                                                         full_output_channels: Dict[str, int],
-                                                        pruning_groups_next_nodes: Dict[int, List[str]]):
+                                                        pruning_groups_next_nodes: Dict[int, List[str]]) -> \
+                                                        Tuple[Dict[str, int], Dict[str, int]]:
     """
     Imitates filters pruning by removing `pruning_rate` percent of output filters in each pruning group
     and updating corresponding input channels number in `pruning_groups_next_nodes` nodes.
@@ -387,7 +389,8 @@ def calculate_in_out_channels_by_masks(pruning_groups: List[Cluster[PrunedLayerI
                                        tensor_processor: NNCFBaseTensorProcessor,
                                        full_input_channels: Dict[str, int],
                                        full_output_channels: Dict[str, int],
-                                       pruning_groups_next_nodes: Dict[int, List[str]]):
+                                       pruning_groups_next_nodes: Dict[int, List[str]]) -> Tuple[Dict[str, int],
+                                                                                                 Dict[str, int]]:
     """
     Imitates filters pruning by removing output filters zeroed by pruning masks in each pruning group
     and updating corresponding input channels number in `pruning_groups_next_nodes` nodes.

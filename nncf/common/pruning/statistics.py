@@ -120,25 +120,24 @@ class FilterPruningStatistics(Statistics):
         self.full_filters_num = full_filters_num
         self.current_filters_num = current_filters_num
         self.target_pruning_level = target_pruning_level
-        self.whole_model_pruning_level = 1 - self.current_filters_num/self.full_filters_num
 
     def to_str(self) -> str:
         algorithm_string = create_table(
             header=['Statistic\'s name', 'Value'],
             rows=[
                 ['FLOPS pruning level', self.flops_pruning_level],
-                ['GFLOPS current / full (FLOPS current - full)',
+                ['GFLOPS current / full (full - current)',
                     f'{self.current_flops / self._giga:.3f} /'
                     f' {self.full_flops / self._giga:.3f}'
-                    f' ({self.current_flops - self.full_flops})'],
-                ['MParams current / full (Params current - full)',
+                    f' ({(self.full_flops - self.current_flops) / self._giga:.3f})'],
+                ['MParams current / full (full - current)',
                     f'{self.current_params_num / self._mega:.3f} /'
                     f' {self.full_params_num / self._mega:.3f}'
-                    f' ({self.current_params_num - self.full_params_num})'],
-                ['Filters current / full (Filters current - full)',
+                    f' ({(self.full_params_num - self.current_params_num) / self._mega:.3f})'],
+                ['Filters current / full (full - current)',
                     f'{self.current_filters_num} / {self.full_filters_num}'
-                    f' ({self.current_filters_num - self.full_filters_num})'],
-                ['Whole model filter pruning rate', self.whole_model_pruning_level],
+                    f' ({self.full_filters_num - self.current_filters_num})'],
+                ['Filters pruning level', self.current_filters_num / self.full_filters_num],
                 ['A target level of the pruning for the algorithm for the current epoch', self.target_pruning_level],
             ]
         )
