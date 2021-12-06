@@ -1,5 +1,5 @@
 import pytest
-from nncf.torch.tensor import PTNNCFTensorProcessor
+from nncf.torch.pruning.tensor_processor import PTNNCFPruningTensorProcessor
 import torch
 
 
@@ -9,7 +9,7 @@ def test_create_tensor(device):
         if device == torch.device('cuda'):
             pytest.skip('There are no available CUDA devices')
     shape = [1, 3, 10, 100]
-    tensor = PTNNCFTensorProcessor.ones(shape, device)
+    tensor = PTNNCFPruningTensorProcessor.ones(shape, device)
     assert torch.is_tensor(tensor.tensor)
     assert tensor.device.type == device.type
     assert list(tensor.tensor.shape) == shape

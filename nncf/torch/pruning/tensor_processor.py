@@ -11,53 +11,40 @@
  limitations under the License.
 """
 
-import numpy as np
+from typing import List, Union
 
-from typing import List, Optional, Union
+import torch
 
 from nncf.common.pruning.tensor_processor import NNCFPruningBaseTensorProcessor
 from nncf.common.tensor import NNCFTensor
+from nncf.torch.tensor import PTNNCFTensor
 
 
-class NPNNCFTensorProcessor(NNCFPruningBaseTensorProcessor):
+class PTNNCFPruningTensorProcessor(NNCFPruningBaseTensorProcessor):
+    """
+    A realization of the processing methods set for PTNNCFTensors.
+    """
+
     @classmethod
     def concatenate(cls, tensors: List[NNCFTensor], axis: int) -> NNCFTensor:
-        for tensor in tensors[1:]:
-            assert tensors[0].device == tensor.device
-
-        ret_tensor = np.concatenate([t.tensor for t in tensors], axis=axis)
-        return NPNNCFTensor(ret_tensor, tensors[0].device)
+        ret_tensor = torch.cat([t.tensor for t in tensors], dim=axis)
+        return PTNNCFTensor(ret_tensor)
 
     @classmethod
-    def ones(cls, shape: Union[int, List[int]], device: Optional[str]) -> NNCFTensor:
-        return NPNNCFTensor(np.ones(shape), device)
+    def ones(cls, shape: Union[int, List[int]], device: torch.device) -> NNCFTensor:
+        return PTNNCFTensor(torch.ones(shape, device=device))
 
     @classmethod
     def assert_allclose(cls, tensors: List[NNCFTensor]) -> None:
         for input_mask in tensors[1:]:
-            np.testing.assert_allclose(tensors[0].tensor, input_mask.tensor)
+            assert torch.allclose(tensors[0].tensor, input_mask.tensor)
 
     @classmethod
     def repeat(cls, tensor: NNCFTensor, repeats: int) -> NNCFTensor:
-        ret_tensor = np.repeat(tensor.tensor, repeats)
-        return NPNNCFTensor(ret_tensor)
+        ret_tensor = torch.repeat_interleave(tensor.tensor, repeats)
+        return PTNNCFTensor(ret_tensor)
 
     @classmethod
     def elementwise_mask_propagation(cls, input_masks: List[NNCFTensor]) -> NNCFTensor:
         cls.assert_allclose(input_masks)
         return input_masks[0]
-
-
-class NPNNCFTensor(NNCFTensor):
-    def __init__(self, tensor: np.array, dummy_device: Optional[str] = None):
-        # In case somebody attempts to wrap
-        # tensor twice
-        if isinstance(tensor, self.__class__):
-            tensor = tensor.tensor
-
-        super().__init__(tensor)
-        self.dummy_device = dummy_device
-
-    @property
-    def device(self) -> Optional[str]:
-        return self.dummy_device

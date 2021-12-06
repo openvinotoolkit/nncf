@@ -1,5 +1,5 @@
 import pytest
-from nncf.tensorflow.tensor import TFNNCFTensorProcessor
+from nncf.tensorflow.pruning.tensor_processor import TFNNCFPruningTensorProcessor
 import tensorflow as tf
 
 
@@ -9,7 +9,7 @@ def test_create_tensor(device):
         if device == 'GPU':
             pytest.skip('There are no available CUDA devices')
     shape = [1, 3, 10, 100]
-    tensor = TFNNCFTensorProcessor.ones(shape, device)
+    tensor = TFNNCFPruningTensorProcessor.ones(shape, device)
     assert tf.is_tensor(tensor.tensor)
     assert tensor.tensor.device.split('/')[-1].split(':')[1] == device
     assert list(tensor.tensor.shape) == shape

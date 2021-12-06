@@ -15,6 +15,7 @@ from typing import List, Dict, Optional
 
 from nncf.common.initialization.dataloader import NNCFDataLoader
 from nncf.common.quantization.structs import QuantizerGroup
+from nncf.common.quantization.structs import QuantizationMode
 
 
 class RangeInitConfig:
@@ -48,7 +49,7 @@ class RangeInitConfig:
         num_init_samples = dct.get('num_init_samples', 256)
         if num_init_samples < 0:
             raise ValueError('Number of initialization samples must be >= 0')
-        return cls(dct.get('type', 'mean_min_max'),
+        return cls(dct.get('type', 'mixed_min_max'),
                    num_init_samples,
                    dct.get('params'))
 
@@ -133,3 +134,44 @@ class RangeInitParams:
         self.device = device
         self.global_init_config = global_init_config
         self.per_layer_range_init_configs = per_layer_range_init_configs
+
+
+class RangeInitCollectorParams:
+    """
+    Defines low-level parameters that are used to instantiate statistic collectors.
+    """
+
+    def __init__(self, is_weights: bool, mode: QuantizationMode, per_channel: bool):
+        """
+        Initializes Range Initialization Collector Parameters.
+
+        :param is_weights: Boolean that defines tensor type. True for Weights, False for Activations.
+        :param mode: Quantization mode: symmetric or asymmetric.
+        :param per_channel: Quantization granularity.
+        """
+        self._is_weights = is_weights
+        self._mode = mode
+        self._per_channel = per_channel
+
+    def use_per_sample_stats(self, per_sample_stats) -> bool:
+        """
+        For activations, if per_sample_stats is True, statistics will be collected per-sample.
+        For weights statistics are always collected per-batch.
+
+        :param per_sample_stats: Defined by certain collector design.
+        :return: A boolean that defines whether to collect statistics per-sample or per-batch.
+        """
+        return per_sample_stats and (not self._is_weights)
+
+    @property
+    def use_abs_max(self) -> bool:
+        """Applies abs(max) for symmetric quantization."""
+        return self._mode == QuantizationMode.SYMMETRIC
+
+    @property
+    def use_means_of_mins(self) -> bool:
+        return not self._is_weights and not self._per_channel and self._mode == 'asymmetric'
+
+    @property
+    def use_means_of_maxs(self) -> bool:
+        return not self._is_weights and not self._per_channel

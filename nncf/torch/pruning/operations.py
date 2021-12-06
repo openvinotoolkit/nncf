@@ -72,9 +72,10 @@ from nncf.common.pruning.operations import (
 )
 from nncf.common.graph.operator_metatypes import UnknownMetatype
 from nncf.common.utils.logger import logger as nncf_logger
+from nncf.common.pruning.utils import is_prunable_depthwise_conv
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.layers import NNCF_WRAPPED_USER_MODULES_DICT
-from nncf.common.pruning.utils import is_prunable_depthwise_conv
+from nncf.torch.pruning.tensor_processor import PTNNCFPruningTensorProcessor
 
 PT_PRUNING_OPERATOR_METATYPES = PruningOperationsMetatypeRegistry("operator_metatypes")
 
@@ -317,7 +318,7 @@ class PTConcatPruningOp(ConcatPruningOp, PTPruner):
 class ModelPruner(MaskPropagationAlgorithm):
     def __init__(self, model: NNCFNetwork, graph: NNCFGraph,
                  pruning_operator_metatypes: PruningOperationsMetatypeRegistry):
-        super().__init__(graph, pruning_operator_metatypes)
+        super().__init__(graph, pruning_operator_metatypes, PTNNCFPruningTensorProcessor)
         self._model = model
 
     def apply_mask(self):
