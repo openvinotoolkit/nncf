@@ -323,16 +323,16 @@ class BasePruningAlgoController(BaseCompressionAlgorithmController):
                         mask_shapes.append(list(filter_mask.shape))
                         filters_number = get_filters_num(wrapped_layer)
                         pruned_filters_number = filters_number - tf.reduce_sum(filter_mask)
-                        pruning_rates.append(pruned_filters_number / filters_number)
+                        pruning_levels.append(pruned_filters_number / filters_number)
 
-        pruning_rates = tf.keras.backend.batch_get_value(pruning_rates)
-        mask_pruning = list(zip(mask_names, weights_shapes, mask_shapes, pruning_rates))
+        pruning_levels = tf.keras.backend.batch_get_value(pruning_levels)
+        mask_pruning = list(zip(mask_names, weights_shapes, mask_shapes, pruning_levels))
 
         pruned_layers_summary = []
-        for mask_name, weights_shape, mask_shape, pruning_rate in mask_pruning:
-            pruned_layers_summary.append(PrunedLayerSummary(mask_name, weights_shape, mask_shape, pruning_rate))
+        for mask_name, weights_shape, mask_shape, pruning_level in mask_pruning:
+            pruned_layers_summary.append(PrunedLayerSummary(mask_name, weights_shape, mask_shape, pruning_level))
 
-        return PrunedModelStatistics(self.pruning_rate, pruned_layers_summary)
+        return pruned_layers_summary
 
     def strip_model(self, model: tf.keras.Model) -> tf.keras.Model:
         return strip_model_from_masks(model, self._op_names)

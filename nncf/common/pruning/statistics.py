@@ -47,23 +47,51 @@ class PrunedModelStatistics(Statistics):
     """
 
     def __init__(self,
-                 pruning_level: float,
+                 full_flops: int,
+                 current_flops: int,
+                 full_params_num: int,
+                 current_params_num: int,
+                 full_filters_num: int,
+                 current_filters_num: int,
                  pruned_layers_summary: List[PrunedLayerSummary]):
         """
         Initializes statistics of the pruned model.
 
-        :param pruning_level: Pruning level of the whole model.
+        :param full_flops: The total amount of FLOPS in the model.
+        :param current_flops: Current amount of FLOPS in the model.
+        :param full_params_num: The total amount of weights in the model.
+        :param current_params_num: Current amount of weights in the model.
+        :param full_filters_num: The total amount of filters in the model.
+        :param current_filters_num: Current amount of filters in the model.
         :param pruned_layers_summary: Detailed summary for the
             pruned layers.
         """
-        self.pruning_level = pruning_level
+        self._giga = 1e9
+        self._mega = 1e6
+        self.full_flops = full_flops
+        self.current_flops = current_flops
+        self.flops_pruning_level = 1 - self.current_flops / self.full_flops
+        self.full_params_num = full_params_num
+        self.current_params_num = current_params_num
+        self.params_pruning_level = 1 - self.current_params_num / self.full_params_num
+        self.full_filters_num = full_filters_num
+        self.current_filters_num = current_filters_num
+        self.filter_pruning_level = 1 - self.current_filters_num / self.full_filters_num
         self.pruned_layers_summary = pruned_layers_summary
 
     def to_str(self) -> str:
         model_string = create_table(
             header=['Statistic\'s name', 'Value'],
             rows=[
-                ['Pruning level of the whole model', self.pruning_level],
+                ['FLOPS pruning level current', self.flops_pruning_level],
+                ['Params pruning level current', self.params_pruning_level],
+                ['Filters pruning level current', self.filter_pruning_level],
+                ['GFLOPS full', f'{self.full_flops / self._giga:.3f}'],
+                ['GFLOPS current ', f'{self.current_flops / self._giga:.3f}'],
+                ['MParams full ', f' {self.full_params_num / self._mega:.3f}'],
+                ['MParams current ', f'{self.current_params_num / self._mega:.3f}'],
+                ['Filters full', self.full_filters_num],
+                ['Filters current ', self.current_filters_num],
             ]
         )
 
@@ -74,9 +102,11 @@ class PrunedModelStatistics(Statistics):
 
         layers_string = create_table(header, rows)
 
+        pruning_level_desc = 'Prompt: statistic pruning level = 1 - statistic current / statistic full.'
         pretty_string = (
-            f'Statistics of the pruned model:\n{model_string}\n\n'
-            f'Statistics by pruned layers:\n{layers_string}'
+            f'Statistics by pruned layers:\n{layers_string}\n'
+            + pruning_level_desc + '\n' +
+            f'Statistics of the pruned model:\n{model_string}\n'
         )
 
         return pretty_string
@@ -89,61 +119,37 @@ class FilterPruningStatistics(Statistics):
 
     def __init__(self,
                  model_statistics: PrunedModelStatistics,
-                 full_flops: int,
-                 current_flops: int,
-                 full_params_num: int,
-                 current_params_num: int,
-                 full_filters_num: int,
-                 current_filters_num: int,
-                 target_pruning_level: float):
+                 current_pruning_level: float,
+                 target_pruning_level: float,
+                 prune_flops: bool):
         """
         Initializes statistics of the filter pruning algorithm.
 
         :param model_statistics: Statistics of the pruned model.
-        :param full_flops: The total amount of FLOPS in the model.
-        :param current_flops: Current amount of FLOPS in the model.
-        :param full_params_num: The total amount of weights in the model.
-        :param current_params_num: Current amount of weights in the model.
-        :param full_filters_num: The total amount of filters in the model.
-        :param current_filters_num: Current amount of filters in the model.
-        :param target_pruning_level: A target level of the pruning
+        :param current_pruning_level: A current level of the pruning
             for the algorithm for the current epoch.
+        :param target_pruning_level: A target level of the pruning
+            for the algorithm.
+        :param prune_flops: Is pruning algo sets flops pruning level or
+            not (filter pruning level).
         """
-        self._giga = 1e9
-        self._mega = 1e6
         self.model_statistics = model_statistics
-        self.full_flops = full_flops
-        self.current_flops = current_flops
-        self.flops_pruning_level = 1 - self.current_flops / self.full_flops
-        self.full_params_num = full_params_num
-        self.current_params_num = current_params_num
-        self.full_filters_num = full_filters_num
-        self.current_filters_num = current_filters_num
+        self.current_pruning_level = current_pruning_level
         self.target_pruning_level = target_pruning_level
+        self.prune_flops = prune_flops
 
     def to_str(self) -> str:
+        pruning_mode = 'FLOPS' if self.prune_flops else 'filter'
         algorithm_string = create_table(
             header=['Statistic\'s name', 'Value'],
             rows=[
-                ['FLOPS pruning level', self.flops_pruning_level],
-                ['GFLOPS current / full (full - current)',
-                    f'{self.current_flops / self._giga:.3f} /'
-                    f' {self.full_flops / self._giga:.3f}'
-                    f' ({(self.full_flops - self.current_flops) / self._giga:.3f})'],
-                ['MParams current / full (full - current)',
-                    f'{self.current_params_num / self._mega:.3f} /'
-                    f' {self.full_params_num / self._mega:.3f}'
-                    f' ({(self.full_params_num - self.current_params_num) / self._mega:.3f})'],
-                ['Filters current / full (full - current)',
-                    f'{self.current_filters_num} / {self.full_filters_num}'
-                    f' ({self.full_filters_num - self.current_filters_num})'],
-                ['Filters pruning level', self.current_filters_num / self.full_filters_num],
-                ['A target level of the pruning for the algorithm for the current epoch', self.target_pruning_level],
+                [f'{pruning_mode.capitalize()} pruning level in current epoch', self.current_pruning_level],
+                [f'Target {pruning_mode} pruning level', self.target_pruning_level],
             ]
         )
 
         pretty_string = (
-            f'{self.model_statistics.to_str()}\n\n'
+            f'{self.model_statistics.to_str()}\n'
             f'Statistics of the filter pruning algorithm:\n{algorithm_string}'
         )
         return pretty_string

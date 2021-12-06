@@ -181,15 +181,17 @@ class FilterPruningController(BasePruningAlgoController):
 
             nncf_logger.debug(stats.to_str())
 
-        model_statistics = self._calculate_pruned_model_stats()
+        pruned_layers_summary = self._calculate_pruned_layers_summary()
         self._update_benchmark_statistics()
-        target_pruning_level = self.scheduler.current_pruning_level
+        model_statistics = PrunedModelStatistics(self.full_flops, self.current_flops,
+                                                 self.full_params_num, self.current_params_num,
+                                                 self.full_filters_num, self.current_filters_num,
+                                                 pruned_layers_summary)
 
         stats = FilterPruningStatistics(model_statistics,
-                                        self.full_flops, self.current_flops,
-                                        self.full_params_num, self.current_params_num,
-                                        self.full_filters_num, self.current_filters_num,
-                                        target_pruning_level)
+                                        self.scheduler.current_pruning_level,
+                                        self.scheduler.target_level,
+                                        self.prune_flops)
 
         nncf_stats = NNCFStatistics()
         nncf_stats.register('filter_pruning', stats)
