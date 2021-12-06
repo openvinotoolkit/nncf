@@ -16,7 +16,6 @@ from typing import Dict, List, Tuple, Union
 
 import numpy as np
 import torch
-from nncf.torch.pruning.tensor_processor import PTNNCFPruningTensorProcessor
 
 from nncf import NNCFConfig
 from nncf.api.compression import CompressionLoss
@@ -51,6 +50,7 @@ from nncf.config.extractors import extract_bn_adaptation_init_params
 from nncf.torch.tensor import PTNNCFTensor
 from nncf.torch.algo_selector import PT_COMPRESSION_ALGORITHMS
 from nncf.torch.compression_method_api import PTCompressionAlgorithmController
+from nncf.torch.tensor_statistics.collectors import PTNNCFCollectorTensorProcessor
 from nncf.torch.graph.operator_metatypes import PTConv1dMetatype
 from nncf.torch.graph.operator_metatypes import PTConv2dMetatype
 from nncf.torch.graph.operator_metatypes import PTConv3dMetatype
@@ -68,6 +68,7 @@ from nncf.torch.pruning.base_algo import BasePruningAlgoBuilder
 from nncf.torch.pruning.base_algo import BasePruningAlgoController
 from nncf.torch.pruning.operations import PTElementwisePruningOp
 from nncf.torch.pruning.operations import PT_PRUNING_OPERATOR_METATYPES
+from nncf.torch.pruning.tensor_processor import PTNNCFPruningTensorProcessor
 from nncf.torch.pruning.filter_pruning.functions import FILTER_IMPORTANCE_FUNCTIONS
 from nncf.torch.pruning.filter_pruning.functions import calculate_binary_mask
 from nncf.torch.pruning.filter_pruning.functions import tensor_l2_normalizer
@@ -77,6 +78,7 @@ from nncf.torch.pruning.structs import PrunedModuleInfo
 from nncf.torch.pruning.utils import init_output_masks_in_graph
 from nncf.torch.structures import LeGRInitArgs, DistributedCallbacksArgs
 from nncf.torch.utils import get_filters_num
+
 
 GENERAL_CONV_LAYER_METATYPES = [
     PTConv1dMetatype,
@@ -690,7 +692,7 @@ class FilterPruningController(BasePruningAlgoController):
         tmp_in_channels, tmp_out_channels = calculate_in_out_channels_by_masks(
             pruning_groups=self.pruned_module_groups_info.get_all_clusters(),
             masks=self._collect_pruning_masks(),
-            tensor_processor=PTNNCFPruningTensorProcessor,
+            tensor_processor=PTNNCFCollectorTensorProcessor,
             full_input_channels=self._modules_in_channels,
             full_output_channels=self._modules_out_channels,
             pruning_groups_next_nodes=self.next_nodes)

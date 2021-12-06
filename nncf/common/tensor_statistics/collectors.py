@@ -14,14 +14,14 @@
 from abc import ABC
 from abc import abstractmethod
 from collections import deque
-from typing import Tuple, TypeVar, List, Union
+from typing import Tuple, Optional, List, Union
 
 import numpy as np
 from nncf.common.tensor import NNCFTensor
+from nncf.common.tensor import TensorType
+from nncf.common.tensor import TensorElementsType
 
 from nncf.common.tensor_statistics.reduction import get_per_channel_history
-
-TensorType = TypeVar('TensorType')
 
 ReductionShape = Tuple[int]
 
@@ -29,7 +29,7 @@ ReductionShape = Tuple[int]
 class TensorStatisticCollectorBase(ABC):
     """Collector estimate statistics at the quantization point based on the provided reduction shape."""
 
-    def __init__(self, reduction_shape: ReductionShape = None, num_samples: int = None):
+    def __init__(self, reduction_shape: Optional[ReductionShape] = None, num_samples: Optional[int] = None):
         """
         Initializes Tensor Statistic Collector
 
@@ -96,7 +96,7 @@ class OnlineTensorStatisticCollector(TensorStatisticCollectorBase):
 class OfflineTensorStatisticCollector(TensorStatisticCollectorBase):
     """Collects statistics in offline regime by storing the data and aggregating it afterwards."""
 
-    def __init__(self, reduction_shape: ReductionShape = None, num_samples: int = None, window_size: int = None):
+    def __init__(self, reduction_shape: Optional[ReductionShape] = None, num_samples: int = None, window_size: int = None):
         super().__init__(reduction_shape, num_samples)
         self._samples = deque(maxlen=window_size)
 
@@ -111,7 +111,7 @@ class NNCFCollectorTensorProcessor(ABC):
 
     @staticmethod
     @abstractmethod
-    def reduce_min(x: NNCFTensor, axis: Union[int, tuple, list]):
+    def reduce_min(x: NNCFTensor, axis: Union[int, tuple, list]) -> NNCFTensor:
         """
          Computes minimum of elements across dimensions of NNCFTensor.
 
@@ -122,7 +122,7 @@ class NNCFCollectorTensorProcessor(ABC):
 
     @staticmethod
     @abstractmethod
-    def reduce_max(x: NNCFTensor, axis: Union[int, tuple, list]):
+    def reduce_max(x: NNCFTensor, axis: Union[int, tuple, list]) -> NNCFTensor:
         """
         Computes maximum of elements across dimensions of NNCFTensor.
 
@@ -133,7 +133,7 @@ class NNCFCollectorTensorProcessor(ABC):
 
     @staticmethod
     @abstractmethod
-    def abs(x: NNCFTensor):
+    def abs(x: NNCFTensor) -> NNCFTensor:
         """
         Computes the absolute value of a NNCFTensor.
 
@@ -143,7 +143,7 @@ class NNCFCollectorTensorProcessor(ABC):
 
     @staticmethod
     @abstractmethod
-    def min(x1: NNCFTensor, x2: NNCFTensor):
+    def min(x1: NNCFTensor, x2: NNCFTensor) -> NNCFTensor:
         """
         Returns the min of x1 and x2.
 
@@ -154,7 +154,7 @@ class NNCFCollectorTensorProcessor(ABC):
 
     @staticmethod
     @abstractmethod
-    def max(x1: NNCFTensor, x2: NNCFTensor):
+    def max(x1: NNCFTensor, x2: NNCFTensor) -> NNCFTensor:
         """
         Returns the max of x1 and x2.
 
@@ -165,7 +165,7 @@ class NNCFCollectorTensorProcessor(ABC):
 
     @staticmethod
     @abstractmethod
-    def mean(x: NNCFTensor, axis: Union[int, tuple, list]):
+    def mean(x: NNCFTensor, axis: Union[int, tuple, list]) -> NNCFTensor:
         """
         Computes the mean of elements across given dimensions of NNCFTensor.
 
@@ -176,7 +176,7 @@ class NNCFCollectorTensorProcessor(ABC):
 
     @staticmethod
     @abstractmethod
-    def stack(x: NNCFTensor):
+    def stack(x: NNCFTensor) -> NNCFTensor:
         """
         Stacks a list or deque of NNCFTensors rank-R tensors into one NNCFTensor rank-(R+1) tensor.
 
@@ -187,13 +187,23 @@ class NNCFCollectorTensorProcessor(ABC):
 
     @staticmethod
     @abstractmethod
-    def unstack(x: NNCFTensor):
+    def unstack(x: NNCFTensor) -> List[NNCFTensor]:
         """
         Unstack a NNCFTensor into list.
 
         :param x: NNCFTensor to unstack.
         :param axis: The axis to unstack along.
         :return: List of NNCFTensor.
+        """
+
+    @staticmethod
+    @abstractmethod
+    def sum(tensor: NNCFTensor) -> TensorElementsType:
+        """
+        Returns a sum of each elements in a given NNCFTensor.
+
+        :param tensor: Given NNCFTensor.
+        :returns: Sum of each elements of the given NNCFTensor.
         """
 
 
@@ -353,7 +363,7 @@ class PercentileStatisticCollector(OfflineTensorStatisticCollector):
 
     def __init__(self,
                  percentiles_to_collect: List[float],
-                 reduction_shape: ReductionShape = None,
+                 reduction_shape: Optional[ReductionShape] = None,
                  num_samples: int = None,
                  window_size: int = None):
         super().__init__(reduction_shape, num_samples, window_size)
@@ -376,7 +386,7 @@ class MeanPercentileStatisticCollector(OfflineTensorStatisticCollector):
 
     def __init__(self,
                  percentiles_to_collect: List[float],
-                 reduction_shape: ReductionShape = None,
+                 reduction_shape: Optional[ReductionShape] = None,
                  num_samples: int = None,
                  window_size: int = None):
         super().__init__(reduction_shape, num_samples, window_size)

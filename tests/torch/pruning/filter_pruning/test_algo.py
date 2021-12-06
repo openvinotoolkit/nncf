@@ -25,7 +25,7 @@ from nncf.torch.pruning.filter_pruning.layers import apply_filter_binary_mask
 from nncf.common.pruning.utils import calculate_in_out_channels_by_masks
 from nncf.common.pruning.utils import count_flops_and_weights
 from nncf.common.pruning.schedulers import ExponentialPruningScheduler
-from nncf.torch.tensor import PTNNCFTensorProcessor
+from nncf.torch.tensor_statistics.collectors import PTNNCFCollectorTensorProcessor
 from nncf.torch.pruning.filter_pruning.algo import GENERAL_CONV_LAYER_METATYPES
 from nncf.torch.pruning.filter_pruning.algo import LINEAR_LAYER_METATYPES
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
@@ -388,7 +388,7 @@ def test_calculation_of_flops(all_weights, pruning_flops_target, ref_flops, ref_
     tmp_in_channels, tmp_out_channels = calculate_in_out_channels_by_masks(
         pruning_algo.pruned_module_groups_info.get_all_clusters(),
         masks=pruning_algo._collect_pruning_masks(),
-        tensor_processor=PTNNCFTensorProcessor,
+        tensor_processor=PTNNCFCollectorTensorProcessor,
         full_input_channels=pruning_algo._modules_in_channels,
         full_output_channels=pruning_algo._modules_out_channels,
         pruning_groups_next_nodes=pruning_algo.next_nodes)

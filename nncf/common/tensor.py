@@ -12,10 +12,11 @@
 """
 
 from abc import abstractmethod
-from typing import TypeVar, List, Optional, Union
+from typing import TypeVar, List, Optional
 
 TensorType = TypeVar('TensorType')
 DeviceType = TypeVar('DeviceType')
+TensorElementsType = TypeVar('TensorElementsType')
 
 
 class NNCFTensor:
@@ -23,10 +24,8 @@ class NNCFTensor:
     An interface of framework specific tensors for common NNCF algorithms.
     """
 
-    def __init__(self, tensor: Optional[TensorType],
-                 tensor_processor: 'NNCFBaseTensorProcessor'):
+    def __init__(self, tensor: Optional[TensorType]):
         self._tensor = tensor
-        self._tensor_processor = tensor_processor
 
     @property
     def tensor(self) -> TensorType:
