@@ -127,7 +127,7 @@ def test_adaptive_compression_training_loop(max_accuracy_degradation,
                                         train_epoch_fn=train_fn,
                                         validate_fn=partial(validate_fn, train_loader=train_loader),
                                         configure_optimizers_fn=configure_optimizers_fn)
-    assert compression_ctrl.compression_rate == pytest.approx(final_compression_rate, 1e-3)
+    assert compression_ctrl.compression_level == pytest.approx(final_compression_rate, 1e-3)
     assert validate_fn(model, train_loader=train_loader) == pytest.approx(reference_final_metric, 1e-4)
 
 

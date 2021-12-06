@@ -197,7 +197,7 @@ def test_pruning_masks_correctness(all_weights, pruning_flops_target, prune_firs
     pruned_model, pruning_algo, _ = create_pruning_algo_with_config(config)
     pruned_module_info = pruning_algo.pruned_module_groups_info.get_all_nodes()
     pruned_modules = [minfo.module for minfo in pruned_module_info]
-    assert pruning_algo.pruning_rate == 0.5
+    assert pruning_algo.pruning_level == 0.5
     assert pruning_algo.all_weights is all_weights
 
     i = 0
@@ -279,7 +279,7 @@ def test_pruning_masks_applying_correctness(all_weights, pruning_flops_target, p
 
     pruned_module_info = pruning_algo.pruned_module_groups_info.get_all_nodes()
     pruned_modules = [minfo.module for minfo in pruned_module_info]
-    assert pruning_algo.pruning_rate == 0.5
+    assert pruning_algo.pruning_level == 0.5
     assert pruning_algo.all_weights is all_weights
 
     # Checking that model weights remain unchanged

@@ -18,7 +18,6 @@ import tensorflow as tf
 
 from nncf import NNCFConfig
 from nncf.api.compression import CompressionLoss
-from nncf.api.compression import CompressionScheduler
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNodeName
 from nncf.common.initialization.batchnorm_adaptation import BatchnormAdaptationAlgorithm
@@ -26,7 +25,9 @@ from nncf.common.pruning.clusterization import Cluster
 from nncf.common.pruning.clusterization import Clusterization
 from nncf.common.pruning.mask_propagation import MaskPropagationAlgorithm
 from nncf.common.pruning.schedulers import PRUNING_SCHEDULERS
+from nncf.common.pruning.schedulers import PruningScheduler
 from nncf.common.pruning.statistics import FilterPruningStatistics
+from nncf.common.pruning.statistics import PrunedModelStatistics
 from nncf.common.pruning.utils import calculate_in_out_channels_in_uniformly_pruned_model
 from nncf.common.pruning.utils import calculate_in_out_channels_by_masks
 from nncf.common.pruning.utils import count_filters_num
@@ -145,11 +146,11 @@ class FilterPruningController(BasePruningAlgoController):
         scheduler_cls = PRUNING_SCHEDULERS.get(params.get('schedule', 'exponential'))
         self._scheduler = scheduler_cls(self, params)
         self._bn_adaptation = None
-        self.set_pruning_rate(self.pruning_init)
+        self.set_pruning_level(self.pruning_init)
         self._loss = TFZeroCompressionLoss()
 
     @property
-    def scheduler(self) -> CompressionScheduler:
+    def scheduler(self) -> PruningScheduler:
         return self._scheduler
 
     @property
@@ -166,7 +167,7 @@ class FilterPruningController(BasePruningAlgoController):
     def compression_rate(self, compression_rate: float) -> None:
         is_pruning_controller_frozen = self.frozen
         self.freeze(False)
-        self.set_pruning_rate(compression_rate)
+        self.set_pruning_level(compression_rate)
         self.freeze(is_pruning_controller_frozen)
 
     def disable_scheduler(self):
@@ -200,27 +201,27 @@ class FilterPruningController(BasePruningAlgoController):
     def freeze(self, freeze: bool = True):
         self.frozen = freeze
 
-    def set_pruning_rate(self, pruning_rate: float,
-                         run_batchnorm_adaptation: bool = False):
+    def set_pruning_level(self, pruning_level: float,
+                          run_batchnorm_adaptation: bool = False):
         """
         Setup pruning masks in accordance to provided pruning rate
-        :param pruning_rate: pruning ration
+        :param pruning_level: pruning ration
         :return:
         """
         # Pruning rate from scheduler can be percentage of params that should be pruned
-        self.pruning_rate = pruning_rate
+        self.pruning_rate = pruning_level
         if not self.frozen:
-            nncf_logger.info('Computing filter importances and masks...')
+            nncf_logger.info('Computing filter importance scores and binary masks...')
             if self.all_weights:
                 if self.prune_flops:
-                    self._set_binary_masks_for_pruned_modules_globally_by_flops_target(pruning_rate)
+                    self._set_binary_masks_for_pruned_modules_globally_by_flops_target(pruning_level)
                 else:
-                    self._set_binary_masks_for_pruned_layers_globally(pruning_rate)
+                    self._set_binary_masks_for_pruned_layers_globally(pruning_level)
             else:
                 if self.prune_flops:
                     # Looking for a layerwise pruning rate needed for the required flops pruning rate
-                    pruning_rate = self._find_uniform_pruning_rate_for_target_flops(pruning_rate)
-                self._set_binary_masks_for_pruned_layers_groupwise(pruning_rate)
+                    pruning_level = self._find_uniform_pruning_level_for_target_flops(pruning_level)
+                self._set_binary_masks_for_pruned_layers_groupwise(pruning_level)
 
         if run_batchnorm_adaptation:
             self._run_batchnorm_adaptation()
@@ -280,7 +281,7 @@ class FilterPruningController(BasePruningAlgoController):
                                              conv_op_metatypes=GENERAL_CONV_LAYER_METATYPES,
                                              linear_op_metatypes=LINEAR_LAYER_METATYPES)
 
-    def _set_binary_masks_for_pruned_layers_groupwise(self, pruning_rate: float):
+    def _set_binary_masks_for_pruned_layers_groupwise(self, pruning_level: float):
         nncf_logger.debug('Setting new binary masks for pruned layers.')
         wrapped_layers = collect_wrapped_layers(self._model)
 
@@ -296,7 +297,7 @@ class FilterPruningController(BasePruningAlgoController):
 
             # b. Calculate threshold
             num_of_sparse_elems = get_rounded_pruned_element_number(cumulative_filters_importance.shape[0],
-                                                                    pruning_rate)
+                                                                    pruning_level)
             threshold = sorted(cumulative_filters_importance)[min(num_of_sparse_elems, filters_num - 1)]
 
             # c. Initialize masks
@@ -321,11 +322,11 @@ class FilterPruningController(BasePruningAlgoController):
         # Calculate actual flops and weights number with new masks
         self._update_benchmark_statistics()
 
-    def _set_binary_masks_for_pruned_layers_globally(self, pruning_rate: float):
+    def _set_binary_masks_for_pruned_layers_globally(self, pruning_level: float):
         """
-        Sets the binary mask values for layer groups according to the global pruning rate.
+        Sets the binary mask values for layer groups according to the global pruning level.
         Filter importance scores in each group are merged into a single global list and a
-        threshold value separating the pruning_rate proportion of the least important filters
+        threshold value separating the pruning_level proportion of the least important filters
         in the model is calculated. Filters are pruned globally according to the threshold value.
         """
         nncf_logger.debug('Setting new binary masks for all pruned modules together.')
@@ -344,7 +345,7 @@ class FilterPruningController(BasePruningAlgoController):
 
         # b. Calculate one threshold for all weights
         importances = tf.concat(list(filter_importances.values()), 0)
-        threshold = sorted(importances)[int(pruning_rate * importances.shape[0])]
+        threshold = sorted(importances)[int(pruning_level * importances.shape[0])]
 
         # c. Initialize masks
         for group in self._pruned_layer_groups_info.get_all_clusters():
@@ -370,13 +371,13 @@ class FilterPruningController(BasePruningAlgoController):
         self._update_benchmark_statistics()
 
     def _set_binary_masks_for_pruned_modules_globally_by_flops_target(self,
-                                                                      target_flops_pruning_rate: float):
+                                                                      target_flops_pruning_level: float):
         """
-        Prunes least important filters one-by-one until target FLOPs pruning rate is achieved.
+        Prunes least important filters one-by-one until target FLOPs pruning level is achieved.
         Filters are sorted by filter importance score.
         """
         nncf_logger.debug('Setting new binary masks for pruned layers.')
-        target_flops = self.full_flops * (1 - target_flops_pruning_rate)
+        target_flops = self.full_flops * (1 - target_flops_pruning_level)
         wrapped_layers = collect_wrapped_layers(self._model)
         masks = {}
 
@@ -447,8 +448,8 @@ class FilterPruningController(BasePruningAlgoController):
                     if nncf_node.data['output_mask'] is not None:
                         self._set_operation_masks([layer], nncf_node.data['output_mask'].tensor)
                 return
-        raise RuntimeError(f'Unable to prune model to required flops pruning rate:'
-                           f' {target_flops_pruning_rate}')
+        raise RuntimeError(f'Unable to prune model to required flops pruning level:'
+                           f' {target_flops_pruning_level}')
 
     def _set_operation_masks(self, layers: List[NNCFWrapper], filter_mask):
         for layer in layers:
@@ -460,9 +461,9 @@ class FilterPruningController(BasePruningAlgoController):
                         broadcasted_mask = broadcast_filter_mask(filter_mask, weight_shape, filter_axis)
                         layer.ops_weights[op_name]['mask'].assign(broadcasted_mask)
 
-    def _find_uniform_pruning_rate_for_target_flops(self, target_flops_pruning_rate):
+    def _find_uniform_pruning_level_for_target_flops(self, target_flops_pruning_level):
         error = 0.01
-        target_flops = self.full_flops * (1 - target_flops_pruning_rate)
+        target_flops = self.full_flops * (1 - target_flops_pruning_level)
         left, right = 0.0, 1.0
         while abs(right - left) > error:
             middle = (left + right) / 2
@@ -477,13 +478,13 @@ class FilterPruningController(BasePruningAlgoController):
             self.current_params_num = params_num
             return right
         raise RuntimeError(f'Unable to prune the model to get the required '
-                           f'pruning rate in flops = {target_flops_pruning_rate}')
+                           f'pruning level in flops = {target_flops_pruning_level}')
 
-    def _calculate_flops_and_weights_in_uniformly_pruned_model(self, pruning_rate):
+    def _calculate_flops_and_weights_in_uniformly_pruned_model(self, pruning_level):
         tmp_in_channels, tmp_out_channels = \
             calculate_in_out_channels_in_uniformly_pruned_model(
                 pruning_groups=self._pruned_layer_groups_info.get_all_clusters(),
-                pruning_rate=pruning_rate,
+                pruning_level=pruning_level,
                 full_input_channels=self._layers_in_channels,
                 full_output_channels=self._layers_out_channels,
                 pruning_groups_next_nodes=self._next_nodes)

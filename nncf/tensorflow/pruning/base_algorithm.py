@@ -26,7 +26,6 @@ from nncf.common.pruning.clusterization import Clusterization
 from nncf.common.pruning.mask_propagation import MaskPropagationAlgorithm
 from nncf.common.pruning.node_selector import PruningNodeSelector
 from nncf.common.pruning.statistics import PrunedLayerSummary
-from nncf.common.pruning.statistics import PrunedModelStatistics
 from nncf.common.pruning.structs import PrunedLayerInfoBase
 from nncf.common.pruning.utils import is_prunable_depthwise_conv
 from nncf.common.utils.logger import logger as nncf_logger
@@ -276,21 +275,21 @@ class BasePruningAlgoController(BaseCompressionAlgorithmController):
                                                            "filter_pruning")
         params = self.pruning_config.get('params', {})
         self.pruning_init = self.pruning_config.get('pruning_init', 0)
-        self.pruning_rate = self.pruning_init
+        self.pruning_level = self.pruning_init
         self._pruned_layer_groups_info = pruned_layer_groups_info
         self.prune_flops = False
-        self._check_pruning_rate(params)
+        self._check_pruning_level(params)
 
     def freeze(self):
         raise NotImplementedError
 
-    def set_pruning_rate(self, pruning_rate: float):
+    def set_pruning_level(self, pruning_level: float):
         raise NotImplementedError
 
     def step(self, next_step):
         pass
 
-    def _check_pruning_rate(self, params):
+    def _check_pruning_level(self, params):
         """
         Check that set only one of pruning target params
         """
@@ -301,8 +300,8 @@ class BasePruningAlgoController(BaseCompressionAlgorithmController):
         if pruning_flops_target:
             self.prune_flops = True
 
-    def _calculate_pruned_model_stats(self) -> PrunedModelStatistics:
-        pruning_rates = []
+    def _calculate_pruned_layers_summary(self) -> List[PrunedLayerSummary]:
+        pruning_levels = []
         mask_names = []
         weights_shapes = []
         mask_shapes = []

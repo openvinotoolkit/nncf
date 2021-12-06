@@ -203,19 +203,19 @@ class BasePruningAlgoController(PTCompressionAlgorithmController):
         self.prune_first = params.get('prune_first_conv', False)
         self.prune_downsample_convs = params.get('prune_downsample_convs', False)
         self.prune_flops = False
-        self.check_pruning_rate(params)
+        self.check_pruning_level(params)
         self._hooks = []
 
     def freeze(self):
         raise NotImplementedError
 
-    def set_pruning_rate(self, pruning_rate):
+    def set_pruning_level(self, pruning_level):
         raise NotImplementedError
 
     def step(self, next_step):
         pass
 
-    def check_pruning_rate(self, params):
+    def check_pruning_level(self, params):
         """
         Check that set only one of pruning target params
         """
@@ -238,29 +238,29 @@ class BasePruningAlgoController(PTCompressionAlgorithmController):
         raise NotImplementedError
 
     @staticmethod
-    def pruning_rate_for_weight(minfo: PrunedModuleInfo):
+    def pruning_level_for_weight(minfo: PrunedModuleInfo):
         """
-        Calculates sparsity rate for all weight nodes.
+        Calculates sparsity level for all weight nodes.
         """
         weight = minfo.module.weight
-        pruning_rate = 1 - weight.nonzero().size(0) / weight.view(-1).size(0)
-        return pruning_rate
+        pruning_level = 1 - weight.nonzero().size(0) / weight.view(-1).size(0)
+        return pruning_level
 
     @staticmethod
-    def pruning_rate_for_filters(minfo: PrunedModuleInfo):
+    def pruning_level_for_filters(minfo: PrunedModuleInfo):
         """
-        Calculates sparsity rate for weight filter-wise.
+        Calculates sparsity level for weight filter-wise.
         """
         dim = minfo.module.target_weight_dim_for_compression
         weight = minfo.module.weight.transpose(0, dim).contiguous()
         filters_sum = weight.view(weight.size(0), -1).sum(axis=1)
-        pruning_rate = 1 - len(filters_sum.nonzero()) / filters_sum.size(0)
-        return pruning_rate
+        pruning_level = 1 - len(filters_sum.nonzero()) / filters_sum.size(0)
+        return pruning_level
 
-    def pruning_rate_for_mask(self, minfo: PrunedModuleInfo):
+    def pruning_level_for_mask(self, minfo: PrunedModuleInfo):
         mask = self.get_mask(minfo)
-        pruning_rate = 1 - mask.nonzero().size(0) / max(mask.view(-1).size(0), 1)
-        return pruning_rate
+        pruning_level = 1 - mask.nonzero().size(0) / max(mask.view(-1).size(0), 1)
+        return pruning_level
 
     def mask_shape(self, minfo: PrunedModuleInfo):
         mask = self.get_mask(minfo)
@@ -268,7 +268,7 @@ class BasePruningAlgoController(PTCompressionAlgorithmController):
 
     def get_stats_for_pruned_modules(self):
         """
-        Creates a table with layer pruning rate statistics
+        Creates a table with layer pruning level statistics
         """
         table = Texttable()
         table.set_cols_width([33, 20, 6, 8])
@@ -279,7 +279,7 @@ class BasePruningAlgoController(PTCompressionAlgorithmController):
             drow["Name"] = str(minfo.module_scope)
             drow["Weight's shape"] = list(minfo.module.weight.size())
             drow["Bias shape"] = list(minfo.module.bias.size()) if minfo.module.bias is not None else []
-            drow["Layer PR"] = self.pruning_rate_for_filters(minfo)
+            drow["Layer PR"] = self.pruning_level_for_filters(minfo)
             row = [drow[h] for h in header]
             data.append(row)
         table.add_rows(data)
