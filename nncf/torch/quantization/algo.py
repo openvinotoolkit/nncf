@@ -17,7 +17,7 @@ from collections import OrderedDict
 from copy import deepcopy
 from pathlib import Path
 from string import Template
-from typing import Any
+from typing import Any, Union
 from typing import Dict
 from typing import List
 from typing import Optional
@@ -336,7 +336,15 @@ class PropagationBasedQuantizerSetupGenerator(QuantizerSetupGeneratorBase):
         if self._debug_interface:
             self._debug_interface.visualize_insertion_point_graph(insertion_point_graph)
         from nncf.common.quantization.quantizer_propagation.solver import QuantizerPropagationSolver
-        prop_graph_solver = QuantizerPropagationSolver(ignored_scopes=self.ignored_scopes,
+
+        def str_or_list_to_list(list_or_str: Union[List[str], str]) -> List:
+            if list_or_str is None:
+                return []
+            return [list_or_str] if isinstance(list_or_str, str) else list_or_str
+
+        ignored_scopes_for_solver = str_or_list_to_list(self.ignored_scopes) + \
+                                    str_or_list_to_list(self._ignored_scopes_per_group[QuantizerGroup.ACTIVATIONS])
+        prop_graph_solver = QuantizerPropagationSolver(ignored_scopes=ignored_scopes_for_solver,
                                                        target_scopes=self.target_scopes,
                                                        hw_config=self.hw_config,
                                                        default_trait_to_metatype_map=DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT,
