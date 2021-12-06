@@ -96,7 +96,8 @@ class OnlineTensorStatisticCollector(TensorStatisticCollectorBase):
 class OfflineTensorStatisticCollector(TensorStatisticCollectorBase):
     """Collects statistics in offline regime by storing the data and aggregating it afterwards."""
 
-    def __init__(self, reduction_shape: Optional[ReductionShape] = None, num_samples: int = None, window_size: int = None):
+    def __init__(self, reduction_shape: Optional[ReductionShape] = None,
+                 num_samples: int = None, window_size: int = None):
         super().__init__(reduction_shape, num_samples)
         self._samples = deque(maxlen=window_size)
 
