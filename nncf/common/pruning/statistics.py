@@ -81,17 +81,15 @@ class PrunedModelStatistics(Statistics):
 
     def to_str(self) -> str:
         model_string = create_table(
-            header=['Statistic\'s name', 'Value'],
+            header=['#', 'Full', 'Current', 'Pruning level'],
             rows=[
-                ['FLOPS pruning level current', self.flops_pruning_level],
-                ['Params pruning level current', self.params_pruning_level],
-                ['Filters pruning level current', self.filter_pruning_level],
-                ['GFLOPS full', f'{self.full_flops / self._giga:.3f}'],
-                ['GFLOPS current ', f'{self.current_flops / self._giga:.3f}'],
-                ['MParams full ', f' {self.full_params_num / self._mega:.3f}'],
-                ['MParams current ', f'{self.current_params_num / self._mega:.3f}'],
-                ['Filters full', self.full_filters_num],
-                ['Filters current ', self.current_filters_num],
+                ['GFLOPS', f'{self.full_flops / self._giga:.3f}',
+                           f'{self.current_flops / self._giga:.3f}',
+                           self.flops_pruning_level],
+                ['MParams', f'{self.full_params_num / self._mega:.3f}',
+                            f'{self.current_params_num / self._mega:.3f}',
+                            self.params_pruning_level],
+                ['Filters', self.full_filters_num, self.current_filters_num, self.filter_pruning_level],
             ]
         )
 
@@ -105,8 +103,8 @@ class PrunedModelStatistics(Statistics):
         pruning_level_desc = 'Prompt: statistic pruning level = 1 - statistic current / statistic full.'
         pretty_string = (
             f'Statistics by pruned layers:\n{layers_string}\n'
-            + pruning_level_desc + '\n' +
             f'Statistics of the pruned model:\n{model_string}\n'
+            + pruning_level_desc
         )
 
         return pretty_string
