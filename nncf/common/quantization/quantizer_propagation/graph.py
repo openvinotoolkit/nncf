@@ -337,13 +337,19 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
                                       if branch_qconf_lists[idx] is None]
         merge_pq_unified_scale_type = self._get_major_unified_scale_type(unified_scale_types_of_merged_branches)
 
+        merge_gid = None
+        if merge_pq_unified_scale_type is not None:
+            merge_gid = self._unified_scale_group_manager.register_group(set())
+
         merge_pqs = []
         for target_ip_node_key in target_ip_node_keys:
             target_ip_node = self.nodes[target_ip_node_key]
             target_type = target_ip_node[QuantizerPropagationStateGraph.NODE_TYPE_NODE_ATTR]
             if target_type is QuantizerPropagationStateGraphNodeType.PRE_HOOK:
                 merge_pq = self.add_propagating_quantizer(merged_qconf_list,
-                                                          target_ip_node_key)
+                                                          target_ip_node_key,
+                                                          unified_scale_type=merge_pq_unified_scale_type,
+                                                          unified_scale_group_id_override=merge_gid)
             elif target_type is QuantizerPropagationStateGraphNodeType.POST_HOOK:
                 merge_pq = PropagatingQuantizer(self._get_next_prop_quantizer_id(), merged_qconf_list,
                                                 target_ip_node_key, unified_scale_type=merge_pq_unified_scale_type)
@@ -354,6 +360,8 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
                 assert target_ip_node[QuantizerPropagationStateGraph.PROPAGATING_QUANTIZER_NODE_ATTR] is None
                 target_ip_node[QuantizerPropagationStateGraph.PROPAGATING_QUANTIZER_NODE_ATTR] = merge_pq
                 target_ip_node[QuantizerPropagationStateGraph.AFFECTING_PROPAGATING_QUANTIZERS_ATTR].append(merge_pq)
+                if merge_gid is not None:
+                    self._unified_scale_group_manager.add_to_group(merge_gid, merge_pq)
             else:
                 raise RuntimeError("Unsupported target type for merge PQ insertion: {}".format(target_type))
 
@@ -367,7 +375,7 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
                 unified_scale_gids_to_merge.add(gid)
 
         if unified_scale_gids_to_merge:
-            merge_gid = self._unified_scale_group_manager.register_group(set(merge_pqs))
+            assert merge_gid is not None
             for gid_to_merge in unified_scale_gids_to_merge:
                 self._unified_scale_group_manager.merge_groups(merge_gid, gid_to_merge)
 
