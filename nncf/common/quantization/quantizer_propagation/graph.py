@@ -301,6 +301,7 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
             major_unified_scale_type = UnifiedScaleType.UNIFY_ONLY_PER_TENSOR
         return major_unified_scale_type
 
+    # pylint:disable=too-many-statements
     def merge_quantizers_for_branching_node(self, quantizers_to_merge: List[PropagatingQuantizer],
                                             merged_qconf_list: List[QuantizerConfig],
                                             branch_qconf_lists: List[Optional[List[QuantizerConfig]]],
@@ -334,7 +335,7 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
             return []
 
         unified_scale_types_of_merged_branches = [pq.unified_scale_type for idx, pq in enumerate(quantizers_to_merge)
-                                      if branch_qconf_lists[idx] is None]
+                                                  if branch_qconf_lists[idx] is None]
         merge_pq_unified_scale_type = self._get_major_unified_scale_type(unified_scale_types_of_merged_branches)
 
         merge_gid = None
@@ -567,7 +568,7 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
         if target_node_affecting_quantizers:
             raise RuntimeError("Cannot register a propagating quantizer into a node that is already "
                                "affected by existing propagating quantizers (ids: {})!".format(
-                [pq.id for pq in target_node_affecting_quantizers]))
+                                   [pq.id for pq in target_node_affecting_quantizers]))
 
         self._verify_nodes_and_edges_for_pq(prop_quantizer)
 
