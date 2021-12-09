@@ -903,8 +903,9 @@ def get_ip_graph_for_test(nncf_graph: NNCFGraph,
             ip = PreHookInsertionPoint(node.node_name, in_edge.input_port_id)
             pre_hooks.append(ip)
 
-        ip = PostHookInsertionPoint(node.node_name)
-        post_hooks.append(ip)
+        if node.node_type != 'split':
+            ip = PostHookInsertionPoint(node.node_name)
+            post_hooks.append(ip)
     weighted_target_points = None
     if weighted_node_names is not None:
         weighted_target_points = []
