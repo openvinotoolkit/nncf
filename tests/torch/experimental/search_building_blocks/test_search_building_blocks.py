@@ -4,7 +4,7 @@ from torchvision.models.squeezenet import squeezenet1_0
 
 from nncf.torch.model_creation import create_compressed_model
 from tests.torch.helpers import get_empty_config
-from nncf.torch.search_building_blocks.search_blocks import get_building_blocks
+from nncf.experimental.torch.search_building_blocks.search_blocks import get_building_blocks
 from tests.torch.test_models.resnet import ResNet50
 from tests.torch.test_models.inceptionv3 import Inception3
 
