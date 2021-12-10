@@ -30,7 +30,6 @@ from nncf.common.insertion_point_graph import InsertionPointGraph
 from nncf.common.insertion_point_graph import PostHookInsertionPoint
 from nncf.common.insertion_point_graph import PreHookInsertionPoint
 from nncf.common.quantization.quantizer_propagation.graph import QuantizerPropagationStateGraph as QPSG
-from nncf.common.quantization.quantizer_propagation.structs import PropagatingQuantizer
 from nncf.common.quantization.quantizer_propagation.structs import PropagationPath
 from nncf.common.quantization.quantizer_propagation.structs import QuantizationTrait
 from nncf.common.quantization.quantizer_propagation.structs import QuantizerPropagationStateGraphNodeType
@@ -48,7 +47,6 @@ from tests.torch.test_nncf_network import get_mock_nncf_node_attrs
 from tests.torch.test_nncf_network import get_nncf_graph_from_mock_nx_graph
 from tests.torch.test_nncf_network import get_two_branch_mock_model_graph
 from tests.torch.test_nncf_network import mark_input_ports_lexicographically_based_on_input_node_key
-
 
 
 #pylint:disable=too-many-lines
@@ -1078,7 +1076,7 @@ class TestRedundantQuantizerMerge:
 
 class TestUnifinedScaleTypeAfterMergeQuantizers:
     @staticmethod
-    def get_merged_pq(qpsg: QPSG) -> PropagatingQuantizer:
+    def setup_and_propagate_quantizers(qpsg: QPSG) -> QPSG:
 
         pq_1 = qpsg.add_propagating_quantizer([QuantizerConfig(per_channel=True)],
                                               InsertionPointGraph.get_pre_hook_node_key('4 /E_0', input_port_id=0),
@@ -1101,15 +1099,13 @@ class TestUnifinedScaleTypeAfterMergeQuantizers:
         qpsg.propagate_quantizer_via_path(pq_1, paths_1[0])
         qpsg.propagate_quantizer_via_path(pq_2, paths_2[0])
 
-        merged_qp = qpsg.merge_quantizers_for_branching_node([pq_1, pq_2],
-                                                             [QuantizerConfig(per_channel=True)],
-                                                             [None, None],
-                                                             '1 /B_0')
-
-        return merged_qp[0]
+        qpsg.merge_quantizers_for_branching_node([pq_1, pq_2],
+                                                 [QuantizerConfig(per_channel=True)],
+                                                 [None, None],
+                                                 '1 /B_0')
 
     @staticmethod
-    def get_model_graph_with_split_node():
+    def get_model_graph_with_split_node() -> QPSG:
         mock_graph = nx.DiGraph()
 
         #         (0 /A_0)
@@ -1147,13 +1143,21 @@ class TestUnifinedScaleTypeAfterMergeQuantizers:
         )
         return model_graph_qpsg
 
-
-    def test_unifined_scale_type_for_split_node(self):
-
+    def test_unified_scale_type_for_split_node(self):
         model_graph_qpsg = self.get_model_graph_with_split_node()
-        merged_pq = self.get_merged_pq(model_graph_qpsg)
+        self.setup_and_propagate_quantizers(model_graph_qpsg)
 
-        assert merged_pq.unified_scale_type == UnifiedScaleType.UNIFY_ALWAYS
+        quantizers = model_graph_qpsg.collect_all_propagating_quantizers()
+        assert len(quantizers) == 1
+
+        pq = quantizers.pop()
+        assert pq.unified_scale_type == UnifiedScaleType.UNIFY_ALWAYS
+
+        setup = model_graph_qpsg.create_quantizer_setup({})
+        assert len(setup.unified_scale_groups) == 1
+
+        gid = setup.get_unified_scale_group_id(pq.id)
+        assert gid == 0
 
 
 def create_graph_for_output_quant_as_weights() -> NNCFGraph:
