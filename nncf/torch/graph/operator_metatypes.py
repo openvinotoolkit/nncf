@@ -50,9 +50,9 @@ class PTOperatorMetatype(OperatorMetatype):
 
     # Names of functions from 'torch.nn.function', 'torch.tensor' and 'torch' modules respectively,
     # which are associated with this metatype.
-    module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: [],  # type: Dict[NamespaceTarget, List[str]]
+    module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: [],
                                 NamespaceTarget.TORCH_TENSOR: [],
-                                NamespaceTarget.TORCH: []}
+                                NamespaceTarget.TORCH: []}  # type: Dict[NamespaceTarget, List[str]]
 
     subtypes = []  # type: List[Type[OperatorMetatype]]
 
