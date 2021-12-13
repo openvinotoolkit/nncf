@@ -23,6 +23,7 @@ from torch.nn import init
 from torch.nn.utils.rnn import PackedSequence
 
 from nncf.torch.dynamic_graph.context import forward_nncf_trace
+from nncf.torch.utils import no_jit_trace
 from nncf.torch.checkpoint_loading import OPTIONAL_PARAMETERS_REGISTRY
 from nncf.common.graph.layer_attributes import GenericWeightedLayerAttributes
 from nncf.common.utils.registry import Registry
@@ -99,15 +100,17 @@ class NNCFConv2d(_NNCFModuleMixin, nn.Conv2d):
 
 
     def _conv_forward_proxy(self, input_, weight, bias, padding_value):
-        self.get_padding_value_ref().data.fill_(padding_value.item())
+        with no_jit_trace():
+            padding_val = padding_value.item()
+        self.get_padding_value_ref().data.fill_(padding_val)
         if self.padding_mode != 'zeros':
             return F.conv2d(F.pad(input_, self._reversed_padding_repeated_twice, mode=self.padding_mode,
-                                  value=self.get_padding_value_ref().item()),
+                                  value=padding_val),
                             weight, bias, self.stride,
                             (0, 0), self.dilation, self.groups)
-        if not self.get_padding_value_ref():
+        if padding_val == 0:
             return F.conv2d(input_, weight, bias, self.stride, self.padding, self.dilation, self.groups)
-        return F.conv2d(F.pad(input_, self._reversed_padding_repeated_twice, value=self.get_padding_value_ref().item()),
+        return F.conv2d(F.pad(input_, self._reversed_padding_repeated_twice, value=padding_val),
                         weight, bias, self.stride,
                         (0, 0), self.dilation, self.groups)
 
