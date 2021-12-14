@@ -307,7 +307,7 @@ sparsity and filter pruning algorithms. It can be enabled by setting a non-zero 
 ```
 {
     "algorithm": "quantization",
-    "preset": "performance", // The preset defines the quantization schema for weights and activations. The parameter takes values 'performance' or 'mixed'. The mode 'performance' defines symmetric weights and activations. The mode 'mixed' defines symmetric 'weights' and asymmetric 'activations'. Weights quantize with 'per_channel': True by default. Any preset parameters can be overridden by sections 'weights' and 'activations'. Preset "performance" set by default for all target devices except "TRIAL".
+    "preset": "performance", // The preset defines the quantization schema for weights and activations. The parameter takes values 'performance' or 'mixed'. The mode 'performance' defines symmetric weights and activations. The mode 'mixed' defines symmetric 'weights' and asymmetric 'activations'. Any preset parameters can be overridden by sections 'weights' and 'activations'. Preset "performance" set by default for all target devices except "TRIAL".
     "initializer": {
         "range": {
             "num_init_samples": 256, // Number of samples from the training dataset to consume as sample model inputs for purposes of setting initial minimum and maximum quantization ranges
