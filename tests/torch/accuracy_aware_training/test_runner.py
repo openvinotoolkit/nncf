@@ -47,8 +47,7 @@ def create_initialized_lenet_model_and_dataloader(config: NNCFConfig) -> Tuple[n
 )
 def test_runner(num_steps, learning_rate, reference_metric):
     runner = PTAccuracyAwareTrainingRunner(accuracy_aware_training_params={},
-                                           dump_checkpoints=False,
-                                           validate_every_n_epochs=1)
+                                           dump_checkpoints=False)
     input_sample_size = [1, 1, LeNet.INPUT_SIZE[-1], LeNet.INPUT_SIZE[-1]]
     config = get_basic_magnitude_sparsity_config(input_sample_size=input_sample_size)
     model, train_loader, compression_ctrl = create_initialized_lenet_model_and_dataloader(config)

@@ -887,6 +887,7 @@ def test_accuracy_aware_training_pipeline(accuracy_aware_config, tmp_path, multi
     last_checkpoint_path = os.path.join(tmp_path, get_name(config_factory.config), time_dir_1,
                                         'accuracy_aware_training',
                                         time_dir_2, 'acc_aware_checkpoint_last.pth')
+
     assert os.path.exists(last_checkpoint_path)
     if 'compression' in accuracy_aware_config['nncf_config']:
         allowed_compression_stages = (CompressionStage.FULLY_COMPRESSED, CompressionStage.PARTIALLY_COMPRESSED)

@@ -98,17 +98,13 @@ class TFAdaptiveCompressionLevelTrainingRunner(TFAccuracyAwareTrainingRunner,
                                                BaseAdaptiveCompressionLevelTrainingRunner):
 
     def __init__(self, accuracy_aware_params, verbose=True,
-                 minimal_compression_rate=0.05, maximal_compression_rate=0.95,
-                 validate_every_n_epochs=None, dump_checkpoints=True):
+                 minimal_compression_rate=0.05, maximal_compression_rate=0.95, dump_checkpoints=True):
         TFAccuracyAwareTrainingRunner.__init__(self, accuracy_aware_params,
-                                               verbose,
-                                               validate_every_n_epochs,
-                                               dump_checkpoints)
+                                               verbose, dump_checkpoints)
         BaseAdaptiveCompressionLevelTrainingRunner.__init__(self, accuracy_aware_params,
                                                             verbose,
                                                             minimal_compression_rate,
                                                             maximal_compression_rate,
-                                                            validate_every_n_epochs,
                                                             dump_checkpoints)
 
     def update_training_history(self, compression_rate, best_metric_value):
@@ -134,7 +130,7 @@ class TFAdaptiveCompressionLevelTrainingRunner(TFAccuracyAwareTrainingRunner,
             nncf_logger.warning('Could not produce a compressed model satisfying the set accuracy '
                                 'degradation criterion during training. Increasing the number of training '
                                 'epochs')
-        best_checkpoint_compression_rate = max(possible_checkpoint_rates)
+        best_checkpoint_compression_rate = sorted(possible_checkpoint_rates)[-1]
         resuming_checkpoint_path = self._best_checkpoints[best_checkpoint_compression_rate]
         nncf_logger.info('Loading the best checkpoint found during training '
                          '{}...'.format(resuming_checkpoint_path))
