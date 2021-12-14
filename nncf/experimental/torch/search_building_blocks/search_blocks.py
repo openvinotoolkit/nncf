@@ -113,6 +113,8 @@ class BuildingBlock:
         self.start_node = start_node
         self.end_node = end_node
 
+    def __eq__(self, __o: object) -> bool:
+        return self.start_node == __o.start_node and self.end_node == __o.end_node
 
 class BuildingBlockType(Enum):
     """
@@ -129,7 +131,7 @@ class BuildingBlockInfo:
 
     """
     Describes additional information about the building block
-    the address of each layer, the modules contained and type of block(optional).
+    the address of each layer, the modules contained and type of block.
     """
 
     def __init__(self, building_block: BuildingBlock,
@@ -421,6 +423,11 @@ def check_graph_has_no_act_layer_duplication_after_block_removal(sgraph: SearchG
     return True
 
 def compare_for_building_block(a: BuildingBlock, b: BuildingBlock):
+    """
+    Orders the blocks in ascending order of the end node index.
+    If the indices of the end nodes are the same, the blocks are ordered by the
+    index of the start node.
+    """
     if a.end_node.bottom_id != b.end_node.bottom_id:
         return a.end_node.bottom_id - b.end_node.bottom_id
     return b.start_node.main_id - a.start_node.main_id
@@ -487,26 +494,33 @@ def restore_node_name_in_orig_graph(building_blocks: List[BuildingBlock], orig_g
     for block in building_blocks:
         id_st = block.start_node.bottom_id # dummy node
         id_end = block.end_node.bottom_id
-        block_in_orig_format = [orig_graph.get_node_key_by_id(id_st).split(' ')[-1],
-                                orig_graph.get_node_key_by_id(id_end).split(' ')[-1]]
+        block_in_orig_format = BuildingBlock(orig_graph.get_node_key_by_id(id_st).split(' ')[-1],
+                                orig_graph.get_node_key_by_id(id_end).split(' ')[-1])
         building_block_in_orig_format.append(block_in_orig_format)
     return building_block_in_orig_format
 
 def get_potential_candidate_for_block(sgraph: SearchGraph) -> Tuple[Dict[str, List[int]]]:
+    """
+    Distributes all nodes to the same output and input shapes.
+
+    param: sgraph: SeacrhGraph of target model
+    returns: Dict for input/output shapes, where key - shape,
+    value - list of node with such input/output shape.
+    """
     act_input_shape = {} # key - str(shape), value - set of node_keys
     act_output_shape = {} # key - str(shape), value - set of node_keys
     for node in sgraph.get_all_nodes():
         next_edges = sgraph.get_next_edges(node.node_key)
         prev_edges = sgraph.get_prev_edges(node.node_key)
         for _, edge_attr in next_edges.items():
-            sgraph.set_node_attr(node.node_key, 'activation_output_shape', edge_attr['activation_shape'])
+            sgraph.set_node_attr(node.node_key, SearchGraph.ACTIVATION_OUTPUT_SHAPE_ATTR, edge_attr[NNCFGraph.ACTIVATION_SHAPE_EDGE_ATTR])
             if not node.is_dummy:
-                add_node_to_aux_struct(node, edge_attr['activation_shape'], act_output_shape)
+                add_node_to_aux_struct(node, edge_attr[NNCFGraph.ACTIVATION_SHAPE_EDGE_ATTR], act_output_shape)
             break
         for _, edge_attr in prev_edges.items():
-            sgraph.set_node_attr(node.node_key, 'activation_input_shape', edge_attr['activation_shape'])
+            sgraph.set_node_attr(node.node_key, SearchGraph.ACTIVATION_OUTPUT_SHAPE_ATTR, edge_attr[NNCFGraph.ACTIVATION_SHAPE_EDGE_ATTR])
             break
-        add_node_to_aux_struct(node, edge_attr['activation_shape'], act_input_shape)
+        add_node_to_aux_struct(node, edge_attr[NNCFGraph.ACTIVATION_SHAPE_EDGE_ATTR], act_input_shape)
     return act_input_shape, act_output_shape
 
 def get_building_blocks(compressed_model: NNCFNetwork,
