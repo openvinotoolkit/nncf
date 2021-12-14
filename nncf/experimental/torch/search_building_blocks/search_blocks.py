@@ -4,8 +4,7 @@ from enum import Enum
 from functools import cmp_to_key
 from itertools import combinations
 from itertools import groupby
-from typing import List, Set, Tuple
-from typing import Dict
+from typing import Any, List, Set, Tuple, Dict
 
 import networkx as nx
 
@@ -169,7 +168,7 @@ class SearchGraph:
             if len(list(next_nodes)) > 1:
                 self._insert_dummy_node(node_key)
 
-    def _nx_node_to_sgraph_node(self, nx_node_key: str, nx_node_attrs: Dict):
+    def _nx_node_to_sgraph_node(self, nx_node_key: str, nx_node_attrs: Dict[str, Any]):
         return SearchGraphNode(nx_node_key, nx_node_attrs)
 
     def get_node_by_key(self, node_key: str) -> SearchGraphNode:
@@ -214,10 +213,10 @@ class SearchGraph:
         prev_node_keys = self._nx_graph.pred[node_key]
         return [self.get_node_by_key(node_key) for node_key in prev_node_keys]
 
-    def get_prev_edges(self, node_key: str) -> Dict:
+    def get_prev_edges(self, node_key: str) -> Dict[str, Any]:
         return self._nx_graph.pred[node_key]
 
-    def get_next_edges(self, node_key: str) -> Dict:
+    def get_next_edges(self, node_key: str) -> Dict[str, Any]:
         return self._nx_graph.succ[node_key]
 
     def _insert_dummy_node(self, node_key: str):
