@@ -72,6 +72,7 @@ class PTExporter(Exporter):
         kwargs = self._model_args[-1]
         model.forward = partial(model.forward, *args, **kwargs)
 
+
         # pylint:disable=unexpected-keyword-arg
         with torch.no_grad():
             # Should call this, otherwise the operations executed during export will end up in graph.

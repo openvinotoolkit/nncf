@@ -472,6 +472,8 @@ class SymmetricQuantizer(BaseQuantizer):
                                                                        level_low,
                                                                        level_high,
                                                                        self.eps)
+                # perform 7 bits quantization
+                x = self.quantize(x, execute_traced_op_as_identity=False)
         return x, level_high, level_low, input_low, input_high
 
     def get_quantizer_config(self) -> QuantizerConfig:
@@ -609,6 +611,8 @@ class AsymmetricQuantizer(BaseQuantizer):
                                                                        self.levels,
                                                                        self.eps)
 
+                # perform 7 bits quantizationls
+                x = self.quantize(x, execute_traced_op_as_identity=False)
         return x, level_high, level_low, input_low, input_high
 
     def get_quantizer_config(self) -> QuantizerConfig:

@@ -295,6 +295,8 @@ class TestParametrized:
             skip_if_half_on_cpu(is_fp16, use_cuda)
 
             ref_scale = self.generate_scale_const(1., input_size, scale_mode, is_weights)
+            ref_scale = 1.
+            print(f'ref scale {"its float" if isinstance(ref_scale, float) else ref_scale.size}')
             level_low, level_high, levels = self.get_range_level(is_signed, bits - 1)
 
             test_scale = get_test_data([np.array(ref_scale)], use_cuda, is_fp16=is_fp16)[0]
@@ -308,13 +310,9 @@ class TestParametrized:
 
             # Gen ref inp
             ref_input = [input_low + (i + 0.5) * quant_len for i in range(levels)]
-            print(f'ref input {ref_input}')
             print(f'ref scale {ref_scale} quant len {quant_len}')
             elems = np.prod(input_size)
-            print(f'input size {input_size} elems {elems}')
             ref_input = ref_input * int(np.round(0.5 + elems / levels))
-            print(f'ref input {ref_input[:20]}')
-            print(f'len ref inpit {len(ref_input)} len  np.array(ref_input)[:elems] {len(np.array(ref_input)[:elems])}')
             ref_input = np.reshape(np.array(ref_input)[:elems], input_size)
 
             test_input = get_test_data([ref_input], use_cuda, is_fp16=is_fp16)[0]
@@ -356,13 +354,17 @@ class TestParametrized:
                 quantizer_int8.cuda()
 
             quantizer_int8.scale = torch.nn.Parameter(torch.tensor(ref_scale * 127. / 63.))
+            out_int8 = quantizer_int7.run_export_quantization(test_input)
             out_int7 = quantizer_int7.forward(test_input)
-            out_int8 = quantizer_int8.forward(out_int7)
-            torch.set_printoptions(threshold=10000)
+            #out_int8 = quantizer_int8.run_export_quantization(test_input)
+            #out_int7 = quantizer_int7.forward(test_input)
+            #out_int8 = quantizer_int8.forward(out_int7)
+            #torch.set_printoptions(threshold=10000)
             print(f'test input {test_input[0, 0, 0, :]} out_int7 {out_int7[0, 0, 0, :]} {len(out_int7[0, 0, 0, :])} out_int8 {out_int8[0, 0, 0, :]} {len(out_int8[0, 0, 0, :])}')
 
             print(torch.isclose(out_int7[0, 0, 0, :], out_int8[0, 0, 0, :]))
             diff = (out_int8 - out_int7).abs()
+            print(diff)
             if (diff > 1e-6).any():
                 assert ((diff[diff > 1e-6] - quant_len).abs() < 1e-6).all(), 'quants completely different!'
                 assert False, f'quant moved at flatten positions {torch.where(diff.flatten() > 1e-6)}'
@@ -481,3 +483,100 @@ class TestParametrized:
 
             check_outputs_for_quantization_functions(test_grads, ref_grads, is_fp16)
 
+
+def test_middle_symmetric_quants_export():
+    bits = 8
+    input_size = [1, 1, 10, 10]
+    scale = TestParametrized.TestSymmetric.generate_scale_const(1., input_size, scale_mode="single_scale", is_weights=True)
+    level_low, level_high, levels = TestParametrized.TestSymmetric.get_range_level(is_signed=False, bits=bits - 1)
+
+    input_low = scale * (level_low / level_high)
+    input_range = scale - input_low
+    quant_len = input_range / (levels - 1)
+    scale = torch.Tensor(np.array(scale))
+
+    ref_input = [input_low + (i + 0.5) * quant_len for i in range(levels)]
+    elems = np.prod(input_size)
+    ref_input = ref_input * int(np.round(0.5 + elems / levels))
+    ref_input = np.reshape(np.array(ref_input)[:elems], input_size)
+    ref_input = get_test_data([ref_input])[0]
+
+    from nncf.torch.quantization.layers import SymmetricQuantizer
+    from nncf.torch.quantization.layers import PTQuantizerSpec
+    from nncf.torch.quantization.layers import QuantizerConfig
+    from nncf.torch.quantization.layers import QuantizationMode
+
+    qconf = QuantizerConfig(num_bits=8,
+                            mode=QuantizationMode.SYMMETRIC,
+                            signedness_to_force=True,
+                            per_channel=False)
+
+    qspec_int7 = PTQuantizerSpec.from_config(qconf,
+                                             narrow_range=False,
+                                             scale_shape=tuple(scale.shape),
+                                             logarithm_scale=False,
+                                             half_range=True,
+                                             compression_lr_multiplier=1)
+
+    quantizer_int7 = SymmetricQuantizer(qspec_int7)
+
+    quantizer_int7.scale = torch.nn.Parameter(torch.tensor(scale), requires_grad=True)
+
+    out_int7_export = quantizer_int7.run_export_quantization(ref_input)
+    out_int7 = quantizer_int7.forward(ref_input)
+    diff = (out_int7_export - out_int7).abs()
+    if (diff > 1e-6).any():
+        assert ((diff[diff > 1e-6] - quant_len).abs() < 1e-6).all(), 'quants completely different!'
+        assert False, f'quant moved at flatten positions {torch.where(diff.flatten() > 1e-6)}'
+
+
+@pytest.mark.parametrize('input_size', [([1, 1, 10, 10]), ([1, 1, 32, 32])])
+def test_middle_asymmetric_quants_export(input_size):
+    bits = 8
+
+    level_low, level_high, levels = TestParametrized.TestAsymmetric.get_range_level(bits - 1)
+    input_range = 3.
+    input_low = -1.
+    quant_len = input_range / levels
+
+    ref_input = [input_low + (i + 0.5) * quant_len for i in range(levels)]
+    gen_input_low, gen_input_range = TestParametrized.TestAsymmetric.generate_range(np.array(ref_input), scale_mode="single_scale", is_weights=True, is_fp16=False)
+    input_low = np.full(gen_input_low.size, input_low) if isinstance(gen_input_low, np.ndarray) else input_low
+    input_range = np.full(gen_input_range.size, input_range) if isinstance(gen_input_range, np.ndarray) else input_range
+
+    elems = np.prod(input_size)
+    ref_input = ref_input * int(np.round(0.5 + elems / levels))
+    ref_input = np.reshape(np.array(ref_input)[:elems], input_size)
+    ref_input = get_test_data([ref_input])[0]
+
+    from nncf.torch.quantization.layers import AsymmetricQuantizer
+    from nncf.torch.quantization.layers import PTQuantizerSpec
+    from nncf.torch.quantization.layers import QuantizerConfig
+    from nncf.torch.quantization.layers import QuantizationMode
+
+    qconf = QuantizerConfig(num_bits=8,
+                            mode=QuantizationMode.ASYMMETRIC,
+                            signedness_to_force=True,
+                            per_channel=False)
+
+    qspec_int7 = PTQuantizerSpec.from_config(qconf,
+                                             narrow_range=False,
+                                             scale_shape=tuple(gen_input_low.shape),
+                                             logarithm_scale=False,
+                                             half_range=True,
+                                             compression_lr_multiplier=1)
+
+    quantizer_int7 = AsymmetricQuantizer(qspec_int7)
+    quantizer_int7.input_low = torch.nn.Parameter(torch.tensor(np.array(input_low)), requires_grad=True)
+    quantizer_int7.input_range = torch.nn.Parameter(torch.tensor(np.array(input_range)), requires_grad=True)
+
+    out_int7_export = quantizer_int7.run_export_quantization(ref_input)
+    out_int7 = quantizer_int7.forward(ref_input)
+    diff = (out_int7_export - out_int7).abs()
+    if (diff > 1e-6).any():
+        assert ((diff[diff > 1e-6] - quant_len).abs() < 1e-6).all(), 'quants completely different!'
+        assert False, f'quant moved at flatten positions {torch.where(diff.flatten() > 1e-6)}'
+
+
+def test_quantization_export():
+    pass

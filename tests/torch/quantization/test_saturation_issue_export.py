@@ -408,3 +408,28 @@ def test_is_saturation_fix_applied_model_resumed_correctly(tmp_path):
         model, nncf_config, compression_state=compression_state)
     load_state(compressed_model, model_state_dict, is_resume=True)
     are_symmetric_fq_nodes_are_exported_correct_with_saturation_fix(tmp_path, compression_ctrl)
+
+
+def test_quantization_export():
+    model = nn.Linear(in_features=10, out_features=10)
+    config = get_config_for_export_mode(False, sample_size=[1, 1, 10, 10])
+    compressed_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
+    compression_ctrl.export_model('/home/skholkin/tmp/linear_model.onnx')
+    import onnx
+    from onnx import numpy_helper
+    model_onnx = onnx.load('/home/skholkin/tmp/linear_model.onnx')
+    for init in model_onnx.graph.initializer:
+        print(init)
+        print(numpy_helper.to_array(init))
+
+    fq_nodes = get_nodes_by_type(model_onnx, 'FakeQuantize')
+    inputs = [get_all_inputs_for_graph_node(fq_node, model_onnx.graph) for fq_node in fq_nodes]
+    weights = [list(item.values())[0] for item in inputs]
+    a = 1
+    # 1. create a model (create middle quants (or zero quants) inputs)
+    # 2. quantize model
+    # 3. get reference quantization values for weights
+    # 4. export model to onnx
+    # 5. load saved onnx model
+    # 6. check onnx weights to be the same as referenced torch quantizaton values
+    pass

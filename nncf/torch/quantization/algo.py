@@ -1221,6 +1221,9 @@ class QuantizationController(QuantizationControllerBase):
     def groups_of_adjacent_quantizers(self) -> GroupsOfAdjacentQuantizers:
         return self._groups_of_adjacent_quantizers
 
+    def strip_model(self, model: nn.ModuleDict) -> nn.Module:
+        return model
+
     def prepare_for_export(self):
         for quantizer_id, quantizer in self.all_quantizations.items():
             if not quantizer.is_enabled_quantization():

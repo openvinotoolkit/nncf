@@ -29,15 +29,15 @@ from tests.torch.test_helpers import TwoConvTestModel
 from tests.torch.test_helpers import load_exported_onnx_version
 
 
-def get_config_for_export_mode(should_be_onnx_standard: bool) -> NNCFConfig:
+def get_config_for_export_mode(should_be_onnx_standard: bool, sample_size=[1, 1, 4, 4]) -> NNCFConfig:
     nncf_config = NNCFConfig()
     nncf_config.update({
         "input_info": {
-            "sample_size": [1, 1, 4, 4]
+            "sample_size": sample_size
         },
         "compression": {
             "algorithm": "quantization",
-            "export_to_onnx_standard_ops": should_be_onnx_standard
+        #    "export_to_onnx_standard_ops": should_be_onnx_standard
         }
     })
     register_bn_adaptation_init_args(nncf_config)
