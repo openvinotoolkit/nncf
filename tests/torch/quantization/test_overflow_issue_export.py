@@ -2,6 +2,7 @@ import numpy as np
 import onnx
 import onnxruntime as rt
 import torch
+from nncf.utils import get_all_modules_by_type
 from torch import nn
 from nncf.torch.checkpoint_loading import load_state
 
@@ -435,26 +436,81 @@ def test_is_overflow_fix_applied_model_resumed_correctly(tmp_path):
     are_symmetric_fq_nodes_are_exported_correct_with_overflow_fix(tmp_path, compression_ctrl)
 
 
+def generate_scale_const(scale: float, inp_shape, scale_mode, is_weights):
+    assert scale_mode in ["single_scale", "per_channel_scale"]
+
+    if scale_mode == "single_scale":
+        return scale
+
+    if scale_mode == "per_channel_scale":
+        if is_weights:
+            channel_count = inp_shape[0]
+            if channel_count == 1:
+                pytest.skip("Same case as for single scale mode")
+            scales_shape = [1 for _ in inp_shape]
+            scales_shape[0] = channel_count
+            scales = np.zeros(scales_shape)
+            for idx in range(0, channel_count):
+                scales[idx] = scale
+        else:
+            channel_count = inp_shape[1]
+            if channel_count == 1:
+                pytest.skip("Same case as for single scale mode")
+            scales_shape = [1 for _ in inp_shape]
+            scales_shape[1] = channel_count
+            scales = np.zeros(scales_shape)
+            for idx in range(0, channel_count):
+                scales[0, idx] = scale
+        return scales
+
+
 def test_quantization_export():
-    model = nn.Linear(in_features=10, out_features=10)
-    config = get_config_for_export_mode(False, sample_size=[1, 1, 10, 10])
+    model = nn.Sequential(nn.Linear(in_features=100, out_features=100))
+    config = get_config_for_export_mode(False, sample_size=[1, 1, 100, 100])
+    weights_size = list(model[0].size())
     compressed_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
-    compression_ctrl.export_model('/home/skholkin/tmp/linear_model.onnx')
+
+    weight_quantizer = None
+    for name, module in get_all_modules_by_type(compressed_model).items():
+        if isinstance(module, SymmetricQuantizer):
+            if ('weight' in str(name).lower()):
+                weight_quantizer = module
+                break
+
+    scale = generate_scale_const(1., weights_size, "per_channel_scale", True)
+    levels = weight_quantizer.levels
+    level_low = weight_quantizer.level_low
+    level_high = weight_quantizer.level_high
+    input_low = scale * (level_low / level_high)
+    input_range = scale - input_low
+    quant_len = input_range / (levels - 1)
+
+    # generate middle quants to fill required tensor
+    ref_weights = ([input_low + (i + 0.5) * quant_len for i in range(levels)])
+    elems = np.prod(weights_size)
+    ref_weights = ref_weights * int(np.round(0.5 + elems / levels))
+    ref_weights = np.reshape(np.float32(ref_weights).flatten()[:elems], weights_size)
+    from tests.torch.quantization.test_functions import get_test_data
+    ref_weights = get_test_data([ref_weights])[0].float()
+
+    from nncf.torch.layers import NNCFLinear
+    nncf_linear_module = None
+    for name, module in get_all_modules_by_type(compressed_model).items():
+        if isinstance(module, NNCFLinear):
+            nncf_linear_module = module
+            break
+    nncf_linear_module.weight = nn.Parameter(ref_weights)
+
+    compression_ctrl.export_model('linear_model.onnx')
     import onnx
-    from onnx import numpy_helper
-    model_onnx = onnx.load('/home/skholkin/tmp/linear_model.onnx')
-    for init in model_onnx.graph.initializer:
-        print(init)
-        print(numpy_helper.to_array(init))
+    model_onnx = onnx.load('linear_model.onnx')
 
     fq_nodes = get_nodes_by_type(model_onnx, 'FakeQuantize')
     inputs = [get_all_inputs_for_graph_node(fq_node, model_onnx.graph) for fq_node in fq_nodes]
-    weights = [list(item.values())[0] for item in inputs]
-    a = 1
-    # 1. create a model (create middle quants (or zero quants) inputs)
-    # 2. quantize model
-    # 3. get reference quantization values for weights
-    # 4. export model to onnx
-    # 5. load saved onnx model
-    # 6. check onnx weights to be the same as referenced torch quantizaton values
-    pass
+    all_weights = [list(item.values())[0] for item in inputs][1]
+    act_weights = all_weights[0]
+    diff = (weight_quantizer(ref_weights).detach() - act_weights).abs()
+
+    if (diff > 1e-6).any():
+        assert ((diff[diff > 1e-6] - quant_len).abs() < 1e-6).all(), 'quants completely different!'
+        assert False, f'quant moved at flatten positions {torch.where(diff.flatten() > 1e-6)}'
