@@ -129,10 +129,12 @@ For symmetric:
 
 There is a known issue with AVX2 and AVX512 CPU devices. The issue appears with 8-bit matrix calculations with tensors which elements are close to the maximum or saturated.
 AVX2 and AVX512 utilize a 16-bit register to store the result of operations on tensors. In case when tensors are saturated the buffer overflow happens.
-This leads to accuracy degradation.
+This leads to accuracy degradation. For more details of the overflow issue please refer [here](https://www.intel.com/content/www/us/en/developer/articles/technical/lower-numerical-precision-deep-learning-inference-and-training.html).
 
-To fix this issue inside NNCF, weight tensors are quantized in 8 bits but only 7 bits are effectively used.
-This regime is used when `"target_device": "CPU"` or `"target_device": "ANY"` set.
+To fix this issue inside NNCF, by default, all weight tensors are quantized in 8 bits but only 7 bits are effectively used.
+This regime is used when `"target_device": "CPU"` or `"target_device": "ANY"` set. This fix, potentially, requires longer fine-tuning.
+
+To control the application of overflow fix, `"overflow_fix"` config option is introduced. The default value is `"overflow_fix": "enable"`. To apply the overflow issue fix only to the first layer, use `"overflow_fix": "first_layer_only"`. To disable the overflow issue fix for all layers, use `"overflow_fix": "disable"`.
 
 ---
 
@@ -305,6 +307,7 @@ sparsity and filter pruning algorithms. It can be enabled by setting a non-zero 
 ```
 {
     "algorithm": "quantization",
+    "preset": "performance", // The preset defines the quantization schema for weights and activations. The parameter takes values 'performance' or 'mixed'. The mode 'performance' defines symmetric weights and activations. The mode 'mixed' defines symmetric 'weights' and asymmetric 'activations'. Any preset parameters can be overridden by sections 'weights' and 'activations'. Preset "performance" set by default for all target devices except "TRIAL".
     "initializer": {
         "range": {
             "num_init_samples": 256, // Number of samples from the training dataset to consume as sample model inputs for purposes of setting initial minimum and maximum quantization ranges

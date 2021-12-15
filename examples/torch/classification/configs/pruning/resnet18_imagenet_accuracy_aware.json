@@ -32,7 +32,7 @@
         "params": {
             "maximal_relative_accuracy_degradation": 1.0,
             "initial_training_phase_epochs": 100,
-            "patience_epochs": 30
+            "patience_epochs": 100
         }
     },
     "compression": {

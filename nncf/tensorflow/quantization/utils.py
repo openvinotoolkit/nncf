@@ -21,16 +21,16 @@ from nncf.tensorflow.layers.operation import NNCFOperation
 from nncf.tensorflow.quantization.layers import FakeQuantize
 
 
-def apply_saturation_fix(model: tf.keras.Model, op_names: List[str]) -> None:
+def apply_overflow_fix(model: tf.keras.Model, op_names: List[str]) -> None:
     if not isinstance(model, tf.keras.Model):
         raise ValueError(f'Expected model to be a `tf.keras.Model` instance but got: {type(model)}')
 
     for wrapped_layer, weight_attr, op in get_nncf_operations(model, op_names):
         if op.half_range:
-            apply_saturation_fix_to_layer(wrapped_layer, weight_attr, op)
+            apply_overflow_fix_to_layer(wrapped_layer, weight_attr, op)
 
 
-def apply_saturation_fix_to_layer(wrapped_layer: NNCFWrapper, weight_attr: str, op: NNCFOperation) -> None:
+def apply_overflow_fix_to_layer(wrapped_layer: NNCFWrapper, weight_attr: str, op: NNCFOperation) -> None:
     layer_weight = wrapped_layer.layer_weights[weight_attr]
     ops_weights = wrapped_layer.get_operation_weights(op.name)
     # Keep zero weights to prevent
@@ -39,10 +39,10 @@ def apply_saturation_fix_to_layer(wrapped_layer: NNCFWrapper, weight_attr: str, 
     layer_weight_updated = op.call(layer_weight, ops_weights, False)
 
     # Assign exact zero to weights which
-    # was exact zero before saturation fix
+    # was exact zero before overflow fix
     layer_weight_updated = tf.where(mask, [0.], layer_weight_updated)
     layer_weight.assign(layer_weight_updated)
-    op.apply_saturation_fix(ops_weights)
+    op.apply_overflow_fix(ops_weights)
 
 
 def collect_fake_quantize_layers(model: tf.keras.Model) -> List[FakeQuantize]:

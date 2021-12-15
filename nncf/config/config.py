@@ -22,6 +22,7 @@ from nncf.common.utils.logger import logger
 from nncf.common.utils.os import safe_open
 from nncf.config.schema import ROOT_NNCF_CONFIG_SCHEMA
 from nncf.config.schema import validate_single_compression_algo_schema
+from nncf.config.schema import validate_accuracy_aware_training_schema
 from nncf.config.structures import NNCFExtraConfigStruct
 
 
@@ -102,6 +103,9 @@ class NNCFConfig(dict):
             raise jsonschema.ValidationError(msg)
 
         compression_section = loaded_json.get('compression')
+        accuracy_aware_section = loaded_json.get('accuracy_aware_training')
+        if accuracy_aware_section is not None:
+            validate_accuracy_aware_training_schema(accuracy_aware_section)
         if compression_section is None:
             # No compression specified
             return

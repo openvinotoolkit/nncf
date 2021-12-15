@@ -11,243 +11,182 @@
  limitations under the License.
 """
 
-from abc import ABC, abstractmethod
-from collections import deque
-from typing import List, Dict, Set, Tuple, Deque
+from typing import Union, List, Deque
 
 import torch
-import numpy as np
 
+from nncf.common.tensor import NNCFTensor
+from nncf.common.tensor_statistics.collectors import MinMaxStatisticCollector
+from nncf.common.tensor_statistics.collectors import NNCFCollectorTensorProcessor
+from nncf.common.tensor_statistics.collectors import MedianMADStatisticCollector
+from nncf.common.tensor_statistics.collectors import PercentileStatisticCollector
+from nncf.common.tensor_statistics.collectors import MeanPercentileStatisticCollector
+from nncf.common.tensor_statistics.collectors import MixedMinMaxStatisticCollector
+from nncf.common.tensor_statistics.collectors import MeanMinMaxStatisticCollector
+from nncf.common.tensor_statistics.collectors import ReductionShape
+from nncf.common.tensor_statistics.reduction import np_percentile_reduce_like
+from nncf.torch.tensor_statistics.reduction import  expand_like
+from nncf.torch.tensor_statistics.statistics import PTMinMaxTensorStatistic
+from nncf.torch.tensor_statistics.statistics import PTMedianMADTensorStatistic
+from nncf.torch.tensor_statistics.statistics import PTPercentileTensorStatistic
 from nncf.torch.dynamic_graph.context import no_nncf_trace
-from nncf.torch.tensor_statistics.reduction import min_reduce_like, max_reduce_like, \
-    get_per_channel_history, expand_like, percentile_reduce_like
-from nncf.torch.tensor_statistics.statistics import TensorStatistic, MinMaxTensorStatistic, \
-    MedianMADTensorStatistic, PercentileTensorStatistic
-
-ReductionShape = Tuple[int]
+from nncf.torch.tensor import PTNNCFTensor
 
 
-class TensorStatisticCollectorBase(ABC):
-    def __init__(self, reduction_shapes: Set[ReductionShape] = None, num_samples: int = None):
-        self._reduction_shapes = reduction_shapes
-        self._enabled = True
-        self._collected_samples = 0
-        self._num_samples = num_samples
+class PTNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
+    """
+    A realization of the processing methods for PTNNCFTensors.
+    """
 
-    def register_input(self, x: torch.Tensor) -> torch.Tensor:
-        if not self._enabled or \
-                self._num_samples is not None and self._collected_samples >= self._num_samples:
-            return x
-        if self._reduction_shapes is None:
-            self._reduction_shapes = {x.shape}
-        self._register_input(x)
-        self._collected_samples += 1
-        return x
+    @staticmethod
+    def reduce_min(x: NNCFTensor, axis: Union[int, tuple]) -> NNCFTensor:
+        return PTNNCFTensor(torch.amin(x.tensor, dim=axis))
 
-    @abstractmethod
+    @staticmethod
+    def reduce_max(x: NNCFTensor, axis: Union[int, tuple]) -> NNCFTensor:
+        return PTNNCFTensor(torch.amax(x.tensor, dim=axis))
+
+    @staticmethod
+    def abs(x: NNCFTensor) -> NNCFTensor:
+        return PTNNCFTensor(torch.abs(x.tensor))
+
+    @staticmethod
+    def min(x1: NNCFTensor, x2: NNCFTensor) -> NNCFTensor:
+        return PTNNCFTensor(torch.min(x1.tensor, x2.tensor))
+
+    @staticmethod
+    def max(x1: NNCFTensor, x2: NNCFTensor) -> NNCFTensor:
+        return PTNNCFTensor(torch.max(x1.tensor, x2.tensor))
+
+    @staticmethod
+    def mean(x: NNCFTensor, axis: Union[int, tuple]) -> NNCFTensor:
+        return PTNNCFTensor(x.tensor.mean(dim=axis))
+
+    @staticmethod
+    def stack(x: Union[List[NNCFTensor], Deque[NNCFTensor]], axis: int = 0) -> NNCFTensor:
+        x = [t.tensor for t in x]
+        return PTNNCFTensor(torch.stack(x, dim=axis))
+
+    @staticmethod
+    def unstack(x: NNCFTensor, axis: int = 0) -> List[NNCFTensor]:
+        tensor_list = torch.unbind(x.tensor, dim=axis)
+        return [PTNNCFTensor(t) for t in tensor_list]
+
+
+class PTMinMaxStatisticCollector(MinMaxStatisticCollector):
+    def __init__(self, use_abs_max: bool, reduction_shape: ReductionShape, output_shape: ReductionShape,
+                 num_samples: int = None):
+        super().__init__(use_abs_max, reduction_shape, num_samples)
+        self._output_shape = output_shape
+
+    @staticmethod
+    def _get_processor() -> NNCFCollectorTensorProcessor:
+        return PTNNCFCollectorTensorProcessor()
+
     def _register_input(self, x: torch.Tensor):
-        pass
+        with no_nncf_trace():
+            self._register_input_common(PTNNCFTensor(x))
 
-    def get_statistics(self) -> Dict[ReductionShape, TensorStatistic]:
-        if self._collected_samples == 0:
-            raise StatisticsNotCollectedError()
-        return self._get_statistics()
-
-    @abstractmethod
-    def _get_statistics(self) -> Dict[ReductionShape, TensorStatistic]:
-        pass
-
-    def enable(self):
-        self._enabled = True
-
-    def disable(self):
-        self._enabled = False
-
-    def reset(self):
-        self._collected_samples = 0
-        self._reset()
-
-    @abstractmethod
-    def _reset(self):
-        pass
-
-    def collected_samples(self) -> int:
-        return self._collected_samples
+    def _get_statistics(self) -> PTMinMaxTensorStatistic:
+        min_values = self._min_values.tensor.view(self._output_shape)
+        max_values = self._max_values.tensor.view(self._output_shape)
+        return PTMinMaxTensorStatistic(min_values, max_values)
 
 
-class StatisticsNotCollectedError(Exception):
-    pass
-
-
-class OnlineTensorStatisticCollector(TensorStatisticCollectorBase, ABC):
-    pass
-
-
-class OfflineTensorStatisticCollector(TensorStatisticCollectorBase, ABC):
-    def __init__(self, reduction_shapes: Set[ReductionShape] = None, num_samples: int = None,
+class PTMixedMinMaxStatisticCollector(MixedMinMaxStatisticCollector):
+    def __init__(self,
+                 use_per_sample_stats: bool,
+                 use_abs_max: bool,
+                 use_means_of_mins: bool,
+                 use_means_of_maxs: bool,
+                 reduction_shape: ReductionShape,
+                 output_shape: ReductionShape,
+                 num_samples: int = None,
                  window_size: int = None):
-        super().__init__(reduction_shapes, num_samples)
-        self._samples = deque(maxlen=window_size)  # type: Deque[torch.Tensor]
+        super().__init__(use_per_sample_stats, use_abs_max, use_means_of_mins,
+                         use_means_of_maxs, reduction_shape, num_samples, window_size)
+        self._output_shape = output_shape
 
+    @staticmethod
+    def _get_processor() -> NNCFCollectorTensorProcessor:
+        return PTNNCFCollectorTensorProcessor()
+
+    def _register_input(self, x: torch.Tensor):
+        with no_nncf_trace():
+            self._register_input_common(PTNNCFTensor(x))
+
+    def _get_statistics(self) -> PTMinMaxTensorStatistic:
+        min_values = self._min_aggregate().tensor.view(self._output_shape)
+        max_values = self._max_aggregate().tensor.view(self._output_shape)
+        return PTMinMaxTensorStatistic(min_values, max_values)
+
+
+class PTMeanMinMaxStatisticCollector(MeanMinMaxStatisticCollector):
+    def __init__(self,
+                 use_per_sample_stats: bool,
+                 use_abs_max: bool,
+                 reduction_shape: ReductionShape,
+                 output_shape: ReductionShape,
+                 num_samples: int = None,
+                 window_size: int = None):
+        super().__init__(use_per_sample_stats, use_abs_max, reduction_shape,
+                                                             num_samples, window_size)
+        self._output_shape = output_shape
+
+    @staticmethod
+    def _get_processor() -> NNCFCollectorTensorProcessor:
+        return PTNNCFCollectorTensorProcessor()
+
+    def _register_input(self, x: torch.Tensor):
+        with no_nncf_trace():
+            self._register_input_common(PTNNCFTensor(x))
+
+    def _get_statistics(self) -> PTMinMaxTensorStatistic:
+        min_values = self._min_aggregate().tensor.view(self._output_shape)
+        max_values = self._max_aggregate().tensor.view(self._output_shape)
+        return PTMinMaxTensorStatistic(min_values, max_values)
+
+
+class PTMedianMADStatisticCollector(MedianMADStatisticCollector):
     def _register_input(self, x: torch.Tensor):
         with no_nncf_trace():
             self._samples.append(x.detach().cpu().numpy())
 
-    def _reset(self):
-        self._samples.clear()
+    def _get_statistics(self) -> PTMedianMADTensorStatistic:
+        numpy_median, numpy_mad = self._prepare_statistics()
+        median_tensor = torch.from_numpy(numpy_median).to(dtype=torch.float)
+        mad_tensor = torch.from_numpy(numpy_mad).to(dtype=torch.float)
+
+        median_tensor = expand_like(median_tensor, list(self._reduction_shape))
+        mad_tensor = expand_like(mad_tensor, list(self._reduction_shape))
+
+        return PTMedianMADTensorStatistic(median_tensor, mad_tensor)
 
 
-class MinMaxStatisticCollector(OnlineTensorStatisticCollector):
-    def __init__(self, reduction_shapes: Set[ReductionShape] = None, num_samples: int = None):
-        super().__init__(reduction_shapes, num_samples)
-        if self._reduction_shapes is not None:
-            self._min_values = {rs: None for rs in self._reduction_shapes}  # type: Dict[ReductionShape]
-            self._max_values = {rs: None for rs in self._reduction_shapes}  # type: Dict[ReductionShape]
-        else:
-            self._min_values = {}  # type: Dict[ReductionShape]
-            self._max_values = {}  # type: Dict[ReductionShape]
-
+class PTPercentileStatisticCollector(PercentileStatisticCollector):
     def _register_input(self, x: torch.Tensor):
         with no_nncf_trace():
-            for reduction_shape in self._reduction_shapes:
-                min_reduced = min_reduce_like(x, reduction_shape)
-                max_reduced = max_reduce_like(x, reduction_shape)
-                # Have to use .get() because the inferred reduction shape is only known at first register_input call
-                if self._min_values.get(reduction_shape) is None:
-                    self._min_values[reduction_shape] = min_reduced
-                else:
-                    self._min_values[reduction_shape] = torch.min(min_reduced, self._min_values[reduction_shape])
+            self._samples.append(x.detach().cpu().numpy())
 
-                if self._max_values.get(reduction_shape) is None:
-                    self._max_values[reduction_shape] = max_reduced
-                else:
-                    self._max_values[reduction_shape] = torch.max(max_reduced, self._max_values[reduction_shape])
-
-    def _get_statistics(self) -> Dict[ReductionShape, MinMaxTensorStatistic]:
-        return {rs: MinMaxTensorStatistic(self._min_values[rs], self._max_values[rs]) for rs in self._reduction_shapes}
-
-    def _reset(self):
-        self._min_values = {rs: None for rs in self._reduction_shapes}  # type: Dict[ReductionShape]
-        self._max_values = {rs: None for rs in self._reduction_shapes}  # type: Dict[ReductionShape]
+    def _get_statistics(self) -> PTPercentileTensorStatistic:
+        percentile_vs_values_dict = self._prepare_statistics()
+        for key, val in percentile_vs_values_dict.items():
+            torch_percentiles = torch.from_numpy(val).to(dtype=torch.float)
+            percentile_vs_values_dict[key] = expand_like(torch_percentiles, list(self._reduction_shape))
+        return PTPercentileTensorStatistic(percentile_vs_values_dict)
 
 
-class MeanMinMaxStatisticCollector(OfflineTensorStatisticCollector):
-    def __init__(self, reduction_shapes: Set[ReductionShape] = None, num_samples: int = None, window_size: int = None):
-        super().__init__(reduction_shapes, num_samples, window_size)
-        self._window_size = window_size
-        self._all_min_values = {}  # type: Dict[ReductionShape, Deque]
-        self._all_max_values = {}  # type: Dict[ReductionShape, Deque]
-        if self._reduction_shapes is not None:
-            for rs in self._reduction_shapes:
-                self._all_min_values[rs] = deque(maxlen=window_size)
-                self._all_max_values[rs] = deque(maxlen=window_size)
-
-    def _register_input(self, x: torch.Tensor):
-        with no_nncf_trace():
-            for reduction_shape in self._reduction_shapes:
-                if reduction_shape not in self._all_min_values:
-                    self._all_min_values[reduction_shape] = deque(maxlen=self._window_size)
-                if reduction_shape not in self._all_max_values:
-                    self._all_max_values[reduction_shape] = deque(maxlen=self._window_size)
-                self._all_min_values[reduction_shape].append(min_reduce_like(x, reduction_shape))
-                self._all_max_values[reduction_shape].append(max_reduce_like(x, reduction_shape))
-
-    def _reset(self):
-        for rs in self._reduction_shapes:
-            self._all_min_values[rs].clear()
-            self._all_max_values[rs].clear()
-
-    def _get_statistics(self) -> Dict[ReductionShape, MinMaxTensorStatistic]:
-        retval = {}
-        for rs in self._reduction_shapes:
-            stacked_min = torch.stack(list(self._all_min_values[rs]))
-            min_values = stacked_min.mean(dim=0).view(rs)
-
-            stacked_max = torch.stack(list(self._all_max_values[rs]))
-            max_values = stacked_max.mean(dim=0).view(rs)
-            retval[rs] = MinMaxTensorStatistic(min_values, max_values)
-        return retval
-
-
-class MedianMADStatisticCollector(OfflineTensorStatisticCollector):
-    def _get_statistics(self) -> Dict[ReductionShape, MedianMADTensorStatistic]:
-        retval = {} # type: Dict[ReductionShape, MedianMADTensorStatistic]
-        for reduction_shape in self._reduction_shapes:
-            per_channel_history = get_per_channel_history(self._samples, reduction_shape,
-                                                          discard_zeros=True)
-            per_channel_median = [np.median(channel_hist) for channel_hist in per_channel_history]
-            per_channel_mad = []
-            for idx, median in enumerate(per_channel_median):
-                per_channel_mad.append(np.median(abs(per_channel_history[idx] - median)))
-
-            numpy_median = np.asarray(per_channel_median)
-            numpy_mad = np.asarray(per_channel_mad)
-            median_tensor = torch.from_numpy(numpy_median).to(dtype=torch.float)
-            mad_tensor = torch.from_numpy(numpy_mad).to(dtype=torch.float)
-
-            median_tensor = expand_like(median_tensor, reduction_shape)
-            mad_tensor = expand_like(mad_tensor, reduction_shape)
-            retval[reduction_shape] = MedianMADTensorStatistic(median_tensor, mad_tensor)
-
-        return retval
-
-
-class PercentileStatisticCollector(OfflineTensorStatisticCollector):
-    def __init__(self, percentiles_to_collect: List[float],
-                 reduction_shapes: Set[ReductionShape] = None,
-                 num_samples: int = None,
-                 window_size: int = None):
-        super().__init__(reduction_shapes, num_samples, window_size)
-        self._percentiles_to_collect = percentiles_to_collect  # NB: Percentiles are valued between 0 and 100
-
-    def _get_statistics(self) -> Dict[ReductionShape, PercentileTensorStatistic]:
-        retval = {}  # type: Dict[ReductionShape, PercentileTensorStatistic]
-        for reduction_shape in self._reduction_shapes:
-            per_channel_history = get_per_channel_history(self._samples, reduction_shape)
-            percentile_vs_values_dict = {}  # type: Dict[float, torch.Tensor]
-            for pc in self._percentiles_to_collect:
-                per_channel_percentiles = [np.percentile(channel_hist, pc) for channel_hist in per_channel_history]
-                numpy_percentiles = np.asarray(per_channel_percentiles)
-                torch_percentiles = torch.from_numpy(numpy_percentiles).to(dtype=torch.float)
-                torch_percentiles = expand_like(torch_percentiles, reduction_shape)
-                percentile_vs_values_dict[pc] = torch_percentiles
-            retval[reduction_shape] = PercentileTensorStatistic(percentile_vs_values_dict)
-        return retval
-
-
-class MeanPercentileStatisticCollector(OfflineTensorStatisticCollector):
-    def __init__(self, percentiles_to_collect: List[float],
-                 reduction_shapes: Set[ReductionShape] = None,
-                 num_samples: int = None,
-                 window_size: int = None):
-        super().__init__(reduction_shapes, num_samples, window_size)
-        self._window_size = window_size
-        self._all_pct_values = {}  # type: Dict[float, Dict[ReductionShape, Deque]]
-        for pc in percentiles_to_collect:
-            self._all_pct_values[pc] = {}
-            if self._reduction_shapes is not None:
-                for rs in self._reduction_shapes:
-                    self._all_pct_values[pc][rs] = deque(maxlen=window_size)
-
+class PTMeanPercentileStatisticCollector(MeanPercentileStatisticCollector):
     def _register_input(self, x: torch.Tensor):
         with no_nncf_trace():
             for pct, val in self._all_pct_values.items():
-                for reduction_shape in self._reduction_shapes:
-                    if reduction_shape not in val:
-                        val[reduction_shape] = deque(maxlen=self._window_size)
-                    val[reduction_shape].append(percentile_reduce_like(x, reduction_shape, pct))
+                np_vals = np_percentile_reduce_like(x.cpu().numpy(), self._reduction_shape, pct)
+                torch_vals = torch.from_numpy(np_vals).to(dtype=torch.float)
+                val.append(torch_vals)
 
-    def _reset(self):
-        for _, val in self._all_pct_values.items():
-            for rs in self._reduction_shapes:
-                val[rs].clear()
-
-    def _get_statistics(self) -> Dict[ReductionShape, PercentileTensorStatistic]:
-        retval = {}
-        for rs in self._reduction_shapes:
-            mean_percentile_values = {}
-            for pct, val in self._all_pct_values.items():
-                stacked_pct_vals = torch.stack(list(val[rs]))
-                mean_percentile_values[pct] = stacked_pct_vals.mean(dim=0).view(rs)
-            retval[rs] = PercentileTensorStatistic(mean_percentile_values)
-        return retval
+    def _get_statistics(self) -> PTPercentileTensorStatistic:
+        mean_percentile_values = {}
+        for pct, val in self._all_pct_values.items():
+            stacked_pct_vals = torch.stack(list(val))
+            mean_percentile_values[pct] = stacked_pct_vals.mean(dim=0).view(self._reduction_shape)
+        return PTPercentileTensorStatistic(mean_percentile_values)

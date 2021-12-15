@@ -16,6 +16,7 @@ from typing import Dict, List, Tuple, Union
 
 import numpy as np
 import torch
+from nncf.torch.pruning.tensor_processor import PTNNCFPruningTensorProcessor
 
 from nncf import NNCFConfig
 from nncf.api.compression import CompressionLoss
@@ -650,7 +651,7 @@ class FilterPruningController(BasePruningAlgoController):
         graph = self.model.get_original_graph()
 
         init_output_masks_in_graph(graph, self.pruned_module_groups_info.get_all_nodes())
-        MaskPropagationAlgorithm(graph, PT_PRUNING_OPERATOR_METATYPES).mask_propagation()
+        MaskPropagationAlgorithm(graph, PT_PRUNING_OPERATOR_METATYPES, PTNNCFPruningTensorProcessor).mask_propagation()
 
         # 2. Set the masks for Batch/Group Norms
         pruned_node_modules = []
