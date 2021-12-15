@@ -131,41 +131,6 @@ def check_outputs_for_quantization_functions(test_val: torch.Tensor, ref_val: np
     PTTensorListComparator.check_equal(test_val, ref_val, rtol)
 
 
-def generate_scale(input_, scale_mode, is_weights):
-    assert scale_mode in ["single_scale", "per_channel_scale"]
-
-    def calc_scale(input_):
-        # Should generate a scale that is 1/2 of the input data span,
-        # to test the out-of-bounds gradient calculation
-        return (min(abs(input_.min()), abs(input_.max())) - input_.mean()) / 4
-
-    if scale_mode == "single_scale":
-        return np.array([calc_scale(input_)])
-
-    if scale_mode == "per_channel_scale":
-        if is_weights:
-            channel_count = input_.shape[0]
-            if channel_count == 1:
-                pytest.skip("Same case as for single scale mode")
-            scales_shape = [1 for _ in input_.shape]
-            scales_shape[0] = channel_count
-            scales = np.zeros(scales_shape)
-            for idx in range(0, channel_count):
-                single_input_channel = input_[idx, ...]
-                scales[idx] = calc_scale(single_input_channel)
-        else:
-            channel_count = input_.shape[1]
-            if channel_count == 1:
-                pytest.skip("Same case as for single scale mode")
-            scales_shape = [1 for _ in input_.shape]
-            scales_shape[1] = channel_count
-            scales = np.zeros(scales_shape)
-            for idx in range(0, channel_count):
-                single_input_channel = input_[:, idx, ...]
-                scales[0, idx] = calc_scale(single_input_channel)
-        return scales
-
-
 @pytest.mark.parametrize('input_size',
                          [[1, 48, 112, 112],
                           [1, 96, 28, 28],
@@ -235,7 +200,7 @@ class TestParametrized:
             skip_if_half_on_cpu(is_fp16, use_cuda)
             ref_input = generate_input(input_size)
 
-            ref_scale = generate_scale(ref_input, scale_mode, is_weights)
+            ref_scale = self.generate_scale(ref_input, scale_mode, is_weights)
 
             if is_fp16:
                 ref_input = ref_input.astype(np.float16)
