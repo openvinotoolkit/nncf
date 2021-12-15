@@ -2,7 +2,7 @@ import numpy as np
 import onnx
 import onnxruntime as rt
 import torch
-from nncf.utils import get_all_modules_by_type
+from nncf.torch.utils import get_all_modules_by_type
 from torch import nn
 from nncf.torch.checkpoint_loading import load_state
 
@@ -465,9 +465,9 @@ def generate_scale_const(scale: float, inp_shape, scale_mode, is_weights):
 
 
 def test_quantization_export():
-    model = nn.Sequential(nn.Linear(in_features=100, out_features=100))
+    model = nn.Sequential(nn.Linear(in_features=100, out_features=100, bias=False))
     config = get_config_for_export_mode(False, sample_size=[1, 1, 100, 100])
-    weights_size = list(model[0].size())
+    weights_size = list(model[0].weight.size())
     compressed_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
 
     weight_quantizer = None
@@ -484,6 +484,7 @@ def test_quantization_export():
     input_low = scale * (level_low / level_high)
     input_range = scale - input_low
     quant_len = input_range / (levels - 1)
+    weight_quantizer.scale = nn.Parameter(torch.Tensor(scale))
 
     # generate middle quants to fill required tensor
     ref_weights = ([input_low + (i + 0.5) * quant_len for i in range(levels)])
@@ -507,8 +508,8 @@ def test_quantization_export():
 
     fq_nodes = get_nodes_by_type(model_onnx, 'FakeQuantize')
     inputs = [get_all_inputs_for_graph_node(fq_node, model_onnx.graph) for fq_node in fq_nodes]
-    all_weights = [list(item.values())[0] for item in inputs][1]
-    act_weights = all_weights[0]
+    all_weights = [list(item.values())[0] for item in inputs]
+    act_weights = all_weights[1]
     diff = (weight_quantizer(ref_weights).detach() - act_weights).abs()
 
     if (diff > 1e-6).any():

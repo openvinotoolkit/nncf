@@ -37,7 +37,7 @@ def get_config_for_export_mode(should_be_onnx_standard: bool, sample_size=[1, 1,
         },
         "compression": {
             "algorithm": "quantization",
-        #    "export_to_onnx_standard_ops": should_be_onnx_standard
+            "export_to_onnx_standard_ops": should_be_onnx_standard
         }
     })
     register_bn_adaptation_init_args(nncf_config)
