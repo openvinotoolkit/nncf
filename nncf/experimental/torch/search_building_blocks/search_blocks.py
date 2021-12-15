@@ -37,7 +37,7 @@ class SearchGraphNode:
 
     def __init__(self,
                  node_key: str,
-                 data: dict = None):
+                 data: Dict = None):
         self.node_key = node_key
         self.data = data if data else {}
 
@@ -301,7 +301,7 @@ def get_merged_original_graph_with_pattern(orig_graph: nx.DiGraph):
 
     return merged_graph
 
-def add_node_to_aux_struct(node_key: str, shape: List, shape_map: Dict):
+def add_node_to_aux_struct(node_key: str, shape: List[int], shape_map: Dict[str, Set[str]]):
     """
     Add to shape_map key of node for corresponds shape.
     """
