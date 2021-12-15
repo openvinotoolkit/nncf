@@ -52,9 +52,21 @@ class ReluMetatype(ONNXOpMetatype):
 
 
 @ONNX_OPERATION_METATYPES.register()
+class SigmoidMetatype(ONNXOpMetatype):
+    name = 'SigmoidOp'
+    op_names = ['Sigmoid']
+
+
+@ONNX_OPERATION_METATYPES.register()
 class GlobalAveragePoolMetatype(ONNXOpMetatype):
     name = 'GlobalAveragePoolOp'
     op_names = ['GlobalAveragePool']
+
+
+@ONNX_OPERATION_METATYPES.register()
+class MaxPoolMetatype(ONNXOpMetatype):
+    name = 'MaxPoolOp'
+    op_names = ['MaxPool']
 
 
 @ONNX_OPERATION_METATYPES.register()
@@ -70,9 +82,27 @@ class AddLayerMetatype(ONNXOpMetatype):
 
 
 @ONNX_OPERATION_METATYPES.register()
+class MulLayerMetatype(ONNXOpMetatype):
+    name = 'MulOp'
+    op_names = ['Mul']
+
+
+@ONNX_OPERATION_METATYPES.register()
+class ConcatLayerMetatype(ONNXOpMetatype):
+    name = 'ConcatOp'
+    op_names = ['Concat']
+
+
+@ONNX_OPERATION_METATYPES.register()
 class BatchNormMetatype(ONNXOpMetatype):
     name = 'BatchNormalizationOp'
     op_names = ['BatchNormalization']
+
+
+@ONNX_OPERATION_METATYPES.register()
+class ResizeMetatype(ONNXOpMetatype):
+    name = 'ResizeOp'
+    op_names = ['Resize']
 
 
 GENERAL_WIGHT_LAYER_METATYPES = [ConvolutionMetatype,

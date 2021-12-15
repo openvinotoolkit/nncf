@@ -36,10 +36,10 @@ def add_quantize_dequantize(nncf_network, quantizer_config: QuantizerConfig, qp_
         onnx_scale = onnx.helper.make_tensor('scale_' + name, onnx.TensorProto.FLOAT, scale.shape, scale)
         if quantizer_config.signedness_to_force:
             onnx_zero_point = onnx.helper.make_tensor('zero_point_' + name, onnx.TensorProto.INT8, scale.shape,
-                                                      [zero_point] * scale.shape[0])
+                                                      zero_point)
         else:
             onnx_zero_point = onnx.helper.make_tensor('zero_point_' + name, onnx.TensorProto.UINT8, scale.shape,
-                                                      [zero_point] * scale.shape[0])
+                                                      zero_point)
         quantizer = onnx.helper.make_node(
             'QuantizeLinear',  # name
             [weight_tensor_name, 'scale_' + name, 'zero_point_' + name],  # inputs

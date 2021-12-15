@@ -6,15 +6,16 @@ Then it places extra outputs in the model's graph to collect tensor statistics f
 To collect statistics or infer the ONNX model ONNXRuntime with OpenVINO Execution Provider is used. 
 As the last step, the initialized quantizers are added to the ONNX model's graph.
 
-This feature was tested on torchvision ResNet-50 model exported with default parameters of export. Only ImageNet dataset is currently supported.
+This feature was tested on torchvision ResNet-50 and MobilenetV2 models exported with default parameters of export. Only ImageNet (COCO is experimental) dataset is currently supported.
 
 ## Run Post-Training quantization sample
 ```
-python post_training_quantization.py -m <ONNX model path> -o <quantized ONNX model path> --data <Imagenet data path>
+python post_training_quantization.py -m <ONNX model path> -o <quantized ONNX model path> --dataset_name <ImageNet or COCO>  --data <Imagenet data path> --per_channel
 ```
 
 ## Results of Post-Training quantization of ONNX model
 
 |Model|Original accuracy|Quantized model accuracy|
 | :---: | :---: | :---: |
-|ResNet-50|76.13%|75.44%|
+|ResNet-50|76.13%|75.97%|
+|MobilenetV2|71.87%|71.35%|

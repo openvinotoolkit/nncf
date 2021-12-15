@@ -1,3 +1,4 @@
+from typing import List
 import onnx
 import torch
 
@@ -31,27 +32,30 @@ def choose_activation_quantization_configuration(nncf_network: NNCFNetwork, outp
     max_val, min_val = calculate_statistics_for_activation_quantizer(nncf_network.onnx_model,
                                                                      outputs,
                                                                      dataloader,
-                                                                     num_initialization_samples)
+                                                                     num_initialization_samples,
+                                                                     mode='mean_min_max')
 
     signedness_to_force = min_val < 0
     num_bits = 8
     quantizer_config = QuantizerConfig(num_bits=num_bits, signedness_to_force=signedness_to_force, per_channel=False)
-    scale = calculate_scale_level(max_val, min_val, num_bits)
-    return quantizer_config, scale, 0
+    scale = calculate_scale_level(max_val, min_val, num_bits, symmetric=signedness_to_force)
+    zero_point = 0
+    return quantizer_config, scale, zero_point
 
 
-def choose_weight_quantization_configuration(outputs: onnx.TensorProto) -> [QuantizerConfig, float, int]:
+def choose_weight_quantization_configuration(outputs: onnx.TensorProto, per_channel) -> [QuantizerConfig, float, int]:
     num_bits = 8
-    per_channel = True
-    scale = calculate_statistics_for_weight_quantizer(outputs, num_bits, per_channel)
+    scale, zero_point = calculate_statistics_for_weight_quantizer(outputs, num_bits, per_channel)
+
     signedness_to_force = True
     quantizer_config = QuantizerConfig(num_bits=num_bits, signedness_to_force=signedness_to_force,
                                        per_channel=per_channel)
-    return quantizer_config, scale, 0
+    return quantizer_config, scale, zero_point
 
 
 def apply_post_training_quantization(onnx_model: onnx.ModelProto, data_loader: torch.utils.data.DataLoader,
-                                     initialization_number: int) -> onnx.ModelProto:
+                                     initialization_number: int, ignored_scopes: List[str],
+                                     per_channel: bool) -> onnx.ModelProto:
     nncf_network = NNCFNetwork(onnx_model)
     nncf_graph = nncf_network.nncf_graph
 
@@ -62,7 +66,8 @@ def apply_post_training_quantization(onnx_model: onnx.ModelProto, data_loader: t
     weight_nodes = nncf_graph.get_nodes_by_metatypes(QUANTIZATION_LAYER_METATYPES)
     quantizable_layer_nodes = [QuantizableWeightedLayerNode(weight_node, [QuantizerConfig()]) for weight_node in
                                weight_nodes]
-    solver = QuantizerPropagationSolver(default_trait_to_metatype_map=DEFAULT_ONNX_QUANT_TRAIT_TO_OP_DICT,
+    solver = QuantizerPropagationSolver(ignored_scopes=ignored_scopes,
+                                        default_trait_to_metatype_map=DEFAULT_ONNX_QUANT_TRAIT_TO_OP_DICT,
                                         quantizable_layer_nodes=quantizable_layer_nodes)
 
     quantization_proposal = solver.run_on_ip_graph(ip_graph)
@@ -76,7 +81,7 @@ def apply_post_training_quantization(onnx_model: onnx.ModelProto, data_loader: t
             weight_initializer_name = find_weight_input_in_module(qp.insertion_point.target_node_name,
                                                                   nncf_network.onnx_model.graph)
             weight_tensor = get_initializers_value(weight_initializer_name, nncf_network.onnx_model.graph)
-            quantizer_config, scale, zero_point = choose_weight_quantization_configuration(weight_tensor)
+            quantizer_config, scale, zero_point = choose_weight_quantization_configuration(weight_tensor, per_channel)
             add_quantize_dequantize(nncf_network, quantizer_config, qp_id, weight_initializer_name, scale,
                                     zero_point)
         else:

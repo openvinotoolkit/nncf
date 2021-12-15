@@ -37,11 +37,10 @@ def calculate_statistics_for_activation_quantizer(onnx_model: onnx.ModelProto, o
     model_with_intermediate_outputs = select_model_inputs_outputs(onnx_model, outputs=[outputs[0], model_output])
     with tempfile.NamedTemporaryFile() as temporary_model:
         onnx.save(model_with_intermediate_outputs, temporary_model.name)
-
         sess = rt.InferenceSession(temporary_model.name, providers=['OpenVINOExecutionProvider'])
         input_name = sess.get_inputs()[0].name
         statistics_collector = StatisticsCollector()
-        for i, (input_, _) in enumerate(data_loader):
+        for i, (input_, *other) in enumerate(data_loader):
             if i == num_iters:
                 break
             input_tensor = input_.cpu().detach().numpy()
@@ -56,14 +55,24 @@ def calculate_statistics_for_activation_quantizer(onnx_model: onnx.ModelProto, o
 
 
 def calculate_statistics_for_weight_quantizer(weight_tensor: np.ndarray, num_bits: int, per_channel: bool = True):
+    # Symmetric quantization to range [-128; 127]
     if per_channel:
-        filter_max, filter_min = np.empty((0, 1)), np.empty((0, 1))
+        scales, zero_points = [], []
         for single_filter in weight_tensor:
-            filter_max = np.append(filter_max, np.max(single_filter))
-            filter_min = np.append(filter_min, np.min(single_filter))
-        return calculate_scale_level(filter_max, filter_min, num_bits)
-    return calculate_scale_level(np.max(weight_tensor), np.min(weight_tensor), num_bits)
+            input_high = np.max(single_filter)
+            input_low = np.min(single_filter)
+            scales.append(calculate_scale_level(input_high, input_low, num_bits, symmetric=True))
+            zero_points.append(0)
+        return np.array(scales), np.array(zero_points)
+    return calculate_scale_level(np.max(weight_tensor), np.min(weight_tensor), num_bits, symmetric=False)
 
 
-def calculate_scale_level(max_val: Union[float, np.ndarray], min_val: Union[float, np.ndarray], num_bits: int):
+def calculate_scale_level(max_val: Union[float, np.ndarray],
+                          min_val: Union[float, np.ndarray],
+                          num_bits: int,
+                          symmetric: bool):
+    # Always full range
+    if symmetric:
+        input_abs_max = np.maximum(np.abs(max_val), np.abs(min_val))
+        return input_abs_max / ((2 ** num_bits - 1) / 2)
     return (max_val - min_val) / 2 ** num_bits
