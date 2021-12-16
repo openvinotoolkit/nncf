@@ -5,7 +5,7 @@ import onnx
 
 
 def test_post_training_quantization_onnx(mocker, sota_data_dir):
-    from examples.experimental.post_training_quantization_onnx.post_training_quantization import run
+    from examples.experimental.post_training_quantization_onnx.classification.post_training_quantization import run
     mocker.patch(
         'nncf.experimental.onnx.quantization.algorithm.calculate_statistics_for_activation_quantizer',
         return_value=(1, 0))

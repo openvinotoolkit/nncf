@@ -19,3 +19,4 @@ python post_training_quantization.py -m <ONNX model path> -o <quantized ONNX mod
 | :---: | :---: | :---: |
 |ResNet-50|76.13%|75.97%|
 |MobilenetV2|71.87%|71.35%|
+|Yolov5s|37.1%|36.1%|

@@ -32,7 +32,7 @@ class StatisticsCollector:
 
 
 def calculate_statistics_for_activation_quantizer(onnx_model: onnx.ModelProto, outputs, data_loader, num_iters,
-                                                  mode='min_max'):
+                                                  mode='mean_min_max'):
     model_output = list(enumerate_model_node_outputs(onnx_model))[-1]
     model_with_intermediate_outputs = select_model_inputs_outputs(onnx_model, outputs=[outputs[0], model_output])
     with tempfile.NamedTemporaryFile() as temporary_model:
