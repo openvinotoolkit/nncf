@@ -6,6 +6,8 @@ The used dataset is ImageNet.
 
 ## Run Post-Training quantization sample
 
+Take a notice that the ONNX model opset should be equal 13.
+
 ```
 python post_training_quantization.py -m <ONNX model path> -o <quantized ONNX model path> --data <ImageNet data path>
 ```
