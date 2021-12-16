@@ -125,3 +125,25 @@ def get_model_grouped_convs(input_shape):
     x = linear(flatten(x))
 
     return tf.keras.Model(inputs=inputs, outputs=[x])
+
+
+def get_model_depthwise_conv(input_shape):
+    inputs = tf.keras.Input(shape=input_shape[1:], name='input')
+    conv1 = layers.Conv2D(8, 1, name='conv1', kernel_initializer='Ones',
+                          bias_initializer='Ones')
+    conv2 = layers.Conv2D(128, 3, name='conv2', kernel_initializer='Ones',
+                          bias_initializer='Ones')
+    conv_depthwise = layers.DepthwiseConv2D(3, name='conv4', kernel_initializer='Ones',
+                                            bias_initializer='Ones')
+    conv3 = layers.Conv2D(8, 3, name='conv3', kernel_initializer='Ones',
+                          bias_initializer='Ones')
+    flatten = layers.Flatten()
+    linear = layers.Dense(128)
+
+    x = conv1(inputs)
+    x = conv2(x)
+    x = conv_depthwise(x)
+    x = conv3(x)
+    x = linear(flatten(x))
+
+    return tf.keras.Model(inputs=inputs, outputs=[x])

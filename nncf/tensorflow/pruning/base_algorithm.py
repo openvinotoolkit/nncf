@@ -26,8 +26,8 @@ from nncf.common.pruning.clusterization import Clusterization
 from nncf.common.pruning.mask_propagation import MaskPropagationAlgorithm
 from nncf.common.pruning.node_selector import PruningNodeSelector
 from nncf.common.pruning.statistics import PrunedLayerSummary
-from nncf.common.pruning.statistics import PrunedModelStatistics
 from nncf.common.pruning.structs import PrunedLayerInfoBase
+from nncf.common.pruning.utils import is_prunable_depthwise_conv
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.common.compression import BaseCompressionAlgorithmController
 from nncf.config.extractors import extract_algo_specific_config
@@ -52,8 +52,8 @@ from nncf.tensorflow.sparsity.utils import strip_model_from_masks
 
 
 class PrunedLayerInfo(PrunedLayerInfoBase):
-    def __init__(self, node_name: NNCFNodeName, layer_name: str, node_id: int):
-        super().__init__(node_name, node_id)
+    def __init__(self, node_name: NNCFNodeName, layer_name: str, node_id: int, is_depthwise: bool):
+        super().__init__(node_name, node_id, is_depthwise)
         self.layer_name = layer_name
 
 
@@ -120,7 +120,8 @@ class BasePruningAlgoBuilder(TFCompressionAlgorithmBuilder):
             for node in group.elements:
                 layer_name = get_layer_identifier(node)
                 layer = model.get_layer(layer_name)
-                group_minfos.append(PrunedLayerInfo(node.node_name, layer_name, node.node_id))
+                group_minfos.append(PrunedLayerInfo(node.node_name, layer_name, node.node_id,
+                                                    is_prunable_depthwise_conv(node)))
 
                 # Add output_mask to elements to run mask_propagation
                 # and detect spec_nodes that will be pruned.
@@ -274,21 +275,21 @@ class BasePruningAlgoController(BaseCompressionAlgorithmController):
                                                            "filter_pruning")
         params = self.pruning_config.get('params', {})
         self.pruning_init = self.pruning_config.get('pruning_init', 0)
-        self.pruning_rate = self.pruning_init
+        self.pruning_level = self.pruning_init
         self._pruned_layer_groups_info = pruned_layer_groups_info
         self.prune_flops = False
-        self._check_pruning_rate(params)
+        self._check_pruning_level(params)
 
     def freeze(self):
         raise NotImplementedError
 
-    def set_pruning_rate(self, pruning_rate: float):
+    def set_pruning_level(self, pruning_level: float):
         raise NotImplementedError
 
     def step(self, next_step):
         pass
 
-    def _check_pruning_rate(self, params):
+    def _check_pruning_level(self, params):
         """
         Check that set only one of pruning target params
         """
@@ -299,8 +300,8 @@ class BasePruningAlgoController(BaseCompressionAlgorithmController):
         if pruning_flops_target:
             self.prune_flops = True
 
-    def _calculate_pruned_model_stats(self) -> PrunedModelStatistics:
-        pruning_rates = []
+    def _calculate_pruned_layers_summary(self) -> List[PrunedLayerSummary]:
+        pruning_levels = []
         mask_names = []
         weights_shapes = []
         mask_shapes = []
@@ -321,17 +322,16 @@ class BasePruningAlgoController(BaseCompressionAlgorithmController):
                         mask_shapes.append(list(filter_mask.shape))
                         filters_number = get_filters_num(wrapped_layer)
                         pruned_filters_number = filters_number - tf.reduce_sum(filter_mask)
-                        pruning_rates.append(pruned_filters_number / filters_number)
+                        pruning_levels.append(pruned_filters_number / filters_number)
 
-        pruning_rates = tf.keras.backend.batch_get_value(pruning_rates)
-        mask_pruning = list(zip(mask_names, weights_shapes, mask_shapes, pruning_rates))
+        pruning_levels = tf.keras.backend.batch_get_value(pruning_levels)
+        mask_pruning = list(zip(mask_names, weights_shapes, mask_shapes, pruning_levels))
 
         pruned_layers_summary = []
-        for mask_name, weights_shape, mask_shape, pruning_rate in mask_pruning:
-            pruned_layers_summary.append(PrunedLayerSummary(mask_name, weights_shape,
-                                                            mask_shape, pruning_rate))
+        for mask_name, weights_shape, mask_shape, pruning_level in mask_pruning:
+            pruned_layers_summary.append(PrunedLayerSummary(mask_name, weights_shape, mask_shape, pruning_level))
 
-        return PrunedModelStatistics(self.pruning_rate, pruned_layers_summary)
+        return pruned_layers_summary
 
     def strip_model(self, model: tf.keras.Model) -> tf.keras.Model:
         return strip_model_from_masks(model, self._op_names)

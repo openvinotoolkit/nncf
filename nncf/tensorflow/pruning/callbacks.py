@@ -26,9 +26,10 @@ class PruningStatisticsCallback(StatisticsCallback):
 
         ms = stats.filter_pruning.model_statistics
         tensorboard_stats = {
-            f'{base_prefix}/pruning_level_for_model': ms.pruning_level,
-            f'{base_prefix}/flops_pruning_level': stats.filter_pruning.flops_pruning_level,
-            f'{base_prefix}/target_pruning_level': stats.filter_pruning.target_pruning_level,
+            f'{base_prefix}/algo_current_pruning_level': stats.filter_pruning.current_pruning_level,
+            f'{base_prefix}/model_FLOPS_pruning_level': ms.flops_pruning_level,
+            f'{base_prefix}/model_params_pruning_level': ms.params_pruning_level,
+            f'{base_prefix}/model_filters_pruning_level': ms.filter_pruning_level,
         }
 
         for ls in ms.pruned_layers_summary:

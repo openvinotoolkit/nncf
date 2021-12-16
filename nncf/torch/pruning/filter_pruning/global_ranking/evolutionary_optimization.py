@@ -317,4 +317,4 @@ class LeGRPruner:
         :param ranking_coeffs: ranking coefficients, that will be used for layers ranking during pruning
         """
         self.filter_pruner.ranking_coeffs = ranking_coeffs
-        self.filter_pruner.set_pruning_rate(flops_pruning_target)
+        self.filter_pruner.set_pruning_level(flops_pruning_target)

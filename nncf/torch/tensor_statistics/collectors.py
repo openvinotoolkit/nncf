@@ -16,6 +16,7 @@ from typing import Union, List, Deque
 import torch
 
 from nncf.common.tensor import NNCFTensor
+from nncf.common.tensor import TensorElementsType
 from nncf.common.tensor_statistics.collectors import MinMaxStatisticCollector
 from nncf.common.tensor_statistics.collectors import NNCFCollectorTensorProcessor
 from nncf.common.tensor_statistics.collectors import MedianMADStatisticCollector
@@ -71,6 +72,10 @@ class PTNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
     def unstack(x: NNCFTensor, axis: int = 0) -> List[NNCFTensor]:
         tensor_list = torch.unbind(x.tensor, dim=axis)
         return [PTNNCFTensor(t) for t in tensor_list]
+
+    @staticmethod
+    def sum(tensor: NNCFTensor) -> TensorElementsType:
+        return torch.sum(tensor.tensor).item()
 
 
 class PTMinMaxStatisticCollector(MinMaxStatisticCollector):

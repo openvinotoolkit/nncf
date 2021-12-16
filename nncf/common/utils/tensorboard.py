@@ -43,9 +43,10 @@ def convert_to_dict(stats, algorithm_name: str):
 @convert_to_dict.register(FilterPruningStatistics)
 def _(stats, algorithm_name):
     tensorboard_stats = {
-        f'{algorithm_name}/pruning_level_for_model': stats.model_statistics.pruning_level,
-        f'{algorithm_name}/flops_pruning_level': stats.flops_pruning_level,
-        f'{algorithm_name}/target_pruning_level': stats.target_pruning_level,
+        f'{algorithm_name}/algo_current_pruning_level': stats.current_pruning_level,
+        f'{algorithm_name}/model_FLOPS_pruning_level': stats.model_statistics.flops_pruning_level,
+        f'{algorithm_name}/model_params_pruning_level': stats.model_statistics.params_pruning_level,
+        f'{algorithm_name}/model_filters_pruning_level': stats.model_statistics.filter_pruning_level,
     }
     return tensorboard_stats
 

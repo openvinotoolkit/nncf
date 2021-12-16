@@ -16,6 +16,7 @@ from typing import TypeVar, List, Optional
 
 TensorType = TypeVar('TensorType')
 DeviceType = TypeVar('DeviceType')
+TensorElementsType = TypeVar('TensorElementsType')
 
 
 class NNCFTensor:
