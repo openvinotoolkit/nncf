@@ -145,7 +145,10 @@ class NNCFGroupNorm(_NNCFModuleMixin, nn.GroupNorm):
     def from_module(module):
         assert module.__class__.__name__ == nn.GroupNorm.__name__
 
-        nncf_bn = NNCFGroupNorm(module.num_features)
+        nncf_bn = NNCFGroupNorm(num_groups=module.num_groups,
+                                num_channels=module.num_channels,
+                                eps=module.eps,
+                                affine=module.affine)
         dict_update(nncf_bn.__dict__, module.__dict__)
         return nncf_bn
 
