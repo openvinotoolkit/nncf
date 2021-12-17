@@ -4,6 +4,17 @@
 This sample shows an example of quantization of classification models from torchvision. 
 The used dataset is ImageNet.
 
+
+## Install 
+
+To correctly use the sample you should follow the instructions below.
+
+Install requirements
+
+```
+pip install -r <nncf dir>/nncf/experimental/onnx/requirements.txt
+```
+
 ## Run Post-Training quantization sample
 
 Take a notice that the ONNX model opset should be equal 13.

@@ -8,17 +8,31 @@ The used dataset is COCO downloaded with [ultralytics repository](https://github
 
 To correctly use the sample you should follow the instructions below.
 
-1. Clone yolov5 repositry
+0. Install requirements
 
-```
-git clone https://github.com/ultralytics/yolov5  
-cd yolov5  
-pip install -r requirments.txt
-```
+    ```
+    pip install -r <nncf dir>/nncf/experimental/onnx/requirements.txt
+    ```
+
+1. Clone yolov5 repository into object_detection sample directory
+
+    ```
+    cd <nncf dir>/examples/experimental/post_training_quantization_onnx/object_detection
+    git clone https://github.com/ultralytics/yolov5  
+    cd yolov5  
+    pip install -r requirements.txt
+    cd ..
+    ```
 
 2. Download dataset
 
-To download dataset, please, take a look at the instructions at yolov5 repository. Spoiler: you can run train.py script which automatically download the data.
+    ```
+    cd <nncf dir>/examples/experimental/post_training_quantization_onnx/object_detection/yolov5
+    bash data/scripts/get_coco.sh
+    ```
+
+Now, use the 
+```<nncf dir>/examples/experimental/post_training_quantization_onnx/object_detection/datasets/coco``` as the path to data.
 
 ## Get ONNX Yolov5 model
 
@@ -32,7 +46,17 @@ python export.py --weights yolov5s.pt --opset 13
 ## Run Post-Training quantization sample
 
 Important: There are several operations in the last layers of the model that should be considered as non-quantizable.
-Quantization of these layers drop the accuracy significantly. Please, add them to --ignore_scopes parameter.
+Quantization of these layers drops the accuracy significantly. It was figured out empirically. Please, add them to --ignore_scopes parameter.
+To identify these layers we recommend to open the ONNX model via [Netron](https://github.com/lutzroeder/netron) and check out the layers name, which are presented on the image.
+
+
+
+These are layers Mul and Add operations at the end of the network, which are inside red rectangles. The necessary layer name could be found in Properties.
+
+  
+
+![This is an image](./yolov5_last_layers.jpg)
+
 
 ```
 python post_training_quantization.py -m <ONNX model path> -o <quantized ONNX model path> --data <COCO data path> --init_samples 100 --ignored_scopes Mul_222 Add_226 Mul_228 Mul_276 Add_280 Mul_282 Mul_235 Mul_239 Mul_289 Mul_293 Mul_330 Add_334 Mul_336 Mul_343 Mul_347
