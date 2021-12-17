@@ -62,6 +62,15 @@ These are layers Mul and Add operations at the end of the network, which are ins
 python post_training_quantization.py -m <ONNX model path> -o <quantized ONNX model path> --data <COCO data path> --init_samples 100 --ignored_scopes Mul_222 Add_226 Mul_228 Mul_276 Add_280 Mul_282 Mul_235 Mul_239 Mul_289 Mul_293 Mul_330 Add_334 Mul_336 Mul_343 Mul_347
 ```
 
+## Run validation
+
+You could validate the accuracy of INT8 model by running the following command:
+
+```
+python val.py --data data/coco.yaml --weights <quantized ONNX model path> 
+```
+
+
 ## Results of Post-Training quantization of ONNX model
 
 |Model|Original accuracy|Quantized model accuracy|
