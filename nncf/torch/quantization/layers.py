@@ -451,7 +451,7 @@ class SymmetricQuantizer(BaseQuantizer):
         distributed.broadcast(self.signed_tensor, src=src)
 
     def _get_input_low_input_high(self, scale, level_low, level_high, eps):
-        input_range = abs(scale) + eps
+        input_range = abs(scale)
         input_low = input_range * level_low / level_high
         input_high = input_range
         return input_low, input_high

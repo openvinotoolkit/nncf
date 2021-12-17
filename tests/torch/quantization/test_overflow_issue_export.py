@@ -2,13 +2,15 @@ import numpy as np
 import onnx
 import onnxruntime as rt
 import torch
+from nncf import NNCFConfig
+
 from nncf.torch.utils import get_all_modules_by_type
 from torch import nn
 from nncf.torch.checkpoint_loading import load_state
 
 from nncf.torch.quantization.layers import PTQuantizerSpec, QuantizationMode, SymmetricQuantizer, AsymmetricQuantizer
 from tests.torch.helpers import TwoConvTestModel, create_compressed_model_and_algo_for_test, create_conv, \
-    get_nodes_by_type, get_all_inputs_for_graph_node
+    get_nodes_by_type, get_all_inputs_for_graph_node, register_bn_adaptation_init_args
 from tests.torch.quantization.test_onnx_export import get_config_for_export_mode
 
 import pytest
@@ -464,19 +466,13 @@ def generate_scale_const(scale: float, inp_shape, scale_mode, is_weights):
         return scales
 
 
-def test_quantization_export():
-    model = nn.Sequential(nn.Linear(in_features=100, out_features=100, bias=False))
-    config = get_config_for_export_mode(False, sample_size=[1, 1, 100, 100])
+def test_sym_quantization_export():
+    model = nn.Sequential(nn.Linear(in_features=128, out_features=100, bias=False))
+    config = get_config_for_export_mode(False, sample_size=[1, 1, 100, 128])
     weights_size = list(model[0].weight.size())
     compressed_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
-
-    weight_quantizer = None
-    for name, module in get_all_modules_by_type(compressed_model).items():
-        if isinstance(module, SymmetricQuantizer):
-            if ('weight' in str(name).lower()):
-                weight_quantizer = module
-                break
-
+    compressed_model.eval()
+    weight_quantizer = list(compression_ctrl.weight_quantizers.values())[0].quantizer_module_ref
     scale = generate_scale_const(1., weights_size, "per_channel_scale", True)
     levels = weight_quantizer.levels
     level_low = weight_quantizer.level_low
@@ -490,16 +486,98 @@ def test_quantization_export():
     ref_weights = ([input_low + (i + 0.5) * quant_len for i in range(levels)])
     elems = np.prod(weights_size)
     ref_weights = ref_weights * int(np.round(0.5 + elems / levels))
-    ref_weights = np.reshape(np.float32(ref_weights).flatten()[:elems], weights_size)
+    ref_weights = np.reshape(np.array(ref_weights).flatten()[:elems], weights_size, 'F')
     from tests.torch.quantization.test_functions import get_test_data
     ref_weights = get_test_data([ref_weights])[0].float()
 
-    from nncf.torch.layers import NNCFLinear
-    nncf_linear_module = None
-    for name, module in get_all_modules_by_type(compressed_model).items():
-        if isinstance(module, NNCFLinear):
-            nncf_linear_module = module
-            break
+    nncf_linear_module = list(compressed_model.get_nncf_wrapped_model())[0]
+    nncf_linear_module.weight = nn.Parameter(ref_weights)
+
+    compression_ctrl.export_model('linear_model.onnx')
+    import onnx
+    model_onnx = onnx.load('linear_model.onnx')
+
+    fq_nodes = get_nodes_by_type(model_onnx, 'FakeQuantize')
+    inputs = [get_all_inputs_for_graph_node(fq_node, model_onnx.graph) for fq_node in fq_nodes]
+    all_weights = [list(item.values())[0] for item in inputs]
+    act_weights = all_weights[1]
+    diff = (weight_quantizer(ref_weights).detach() - act_weights).abs()
+
+    if (diff > 1e-6).any():
+        assert ((diff[diff > 1e-6] - quant_len).abs() < 1e-6).all(), 'quants completely different!'
+        assert False, f'quant moved at flatten positions {torch.where(diff.flatten() > 1e-6)}'
+
+
+def generate_range_const(input_low, input_range, input_, scale_mode, is_weights):
+    assert scale_mode in ["single_scale", "per_channel_scale"]
+
+    if scale_mode == "single_scale":
+        return np.array([input_low]), np.array([input_range])
+
+    if scale_mode == "per_channel_scale":
+        if is_weights:
+            channel_count = input_.shape[0]
+            if channel_count == 1:
+                pytest.skip("Same case as for single scale mode")
+            scales_shape = [1 for _ in input_.shape]
+            scales_shape[0] = channel_count
+            input_low_out = np.zeros(scales_shape)
+            input_range_out = np.zeros(scales_shape)
+            for idx in range(0, channel_count):
+                input_low_out[idx], input_range_out[idx] = input_low, input_range
+        else:
+            channel_count = input_.shape[1]
+            if channel_count == 1:
+                pytest.skip("Same case as for single scale mode")
+            scales_shape = [1 for _ in input_.shape]
+            scales_shape[1] = channel_count
+            input_low_out = np.zeros(scales_shape)
+            input_range_out = np.zeros(scales_shape)
+            for idx in range(0, channel_count):
+                input_low_out[0, idx], input_range_out[0, idx] = input_low, input_range
+
+        return input_low_out, input_range_out
+
+
+def test_asym_quantization_export():
+    model = nn.Sequential(nn.Linear(in_features=128, out_features=100, bias=False))
+    sample_size = [1, 1, 100, 128]
+    nncf_config = NNCFConfig()
+    nncf_config.update({
+        "input_info": {
+            "sample_size": sample_size
+        },
+        "compression": {
+            "algorithm": "quantization",
+            "weights": {
+                "mode": "asymmetric"
+            },
+            "export_to_onnx_standard_ops": False
+        }
+    })
+    register_bn_adaptation_init_args(nncf_config)
+    weights_size = list(model[0].weight.size())
+    compressed_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, nncf_config)
+
+    weight_quantizer = list(compression_ctrl.weight_quantizers.values())[0].quantizer_module_ref
+
+    input_range = 1.5
+    input_low = -1.
+    input_low, input_range = generate_range_const(input_low, input_range, model[0].weight, "per_channel_scale", True)
+    levels = weight_quantizer.levels
+    quant_len = input_range / (levels - 1)
+    weight_quantizer.input_low = nn.Parameter(torch.Tensor(input_low))
+    weight_quantizer.input_range = nn.Parameter(torch.Tensor(input_range))
+
+    # generate middle quants to fill required tensor
+    ref_weights = ([input_low + (i + 0.5) * quant_len for i in range(levels)])
+    elems = np.prod(weights_size)
+    ref_weights = ref_weights * int(np.round(0.5 + elems / levels))
+    ref_weights = np.reshape(np.array(ref_weights).flatten()[:elems], weights_size, 'F')
+    from tests.torch.quantization.test_functions import get_test_data
+    ref_weights = get_test_data([ref_weights])[0].float()
+
+    nncf_linear_module = list(compressed_model.get_nncf_wrapped_model())[0]
     nncf_linear_module.weight = nn.Parameter(ref_weights)
 
     compression_ctrl.export_model('linear_model.onnx')
