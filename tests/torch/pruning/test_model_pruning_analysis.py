@@ -381,7 +381,7 @@ def test_groups(test_input_info_struct_: GroupPruningModulesTestStruct):
     clusters = compression_ctrl.pruned_module_groups_info
     all_pruned_modules_info = clusters.get_all_nodes()
     all_pruned_modules = [info.module for info in all_pruned_modules_info]
-    print(f'Pruned nodes: {[minfo.node_name for minfo in all_pruned_modules_info]}')
+
     for node_name in non_pruned_module_nodes:
         module = compressed_model.get_containing_module(node_name)
         assert module is not None and module not in all_pruned_modules
@@ -394,6 +394,7 @@ def test_groups(test_input_info_struct_: GroupPruningModulesTestStruct):
         group_modules = [compressed_model.get_containing_module(node_name) for node_name in group]
 
         assert Counter(cluster_modules) == Counter(group_modules)
+    assert len(pruned_groups) == len(clusters.get_all_clusters())
 
 
 def test_pruning_node_selector(test_input_info_struct_: GroupPruningModulesTestStruct):
