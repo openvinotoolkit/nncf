@@ -55,6 +55,7 @@ from tests.torch.pruning.helpers import TestModelResidualConnection
 from tests.torch.pruning.helpers import TestModelShuffleNetUnit
 from tests.torch.pruning.helpers import TestModelShuffleNetUnitDW
 from tests.torch.pruning.helpers import get_basic_pruning_config
+from tests.torch.pruning.helpers import TestModelGroupNorm
 
 
 # pylint: disable=protected-access
@@ -344,7 +345,16 @@ GROUP_PRUNING_MODULES_TEST_CASES = [
         pruned_groups_by_node_id=[],
         can_prune_after_analysis={0: True, 1: False, 2: False, 3: False, 4: False},
         final_can_prune={1: PruningAnalysisDecision(False, PruningAnalysisReason.CLOSING_CONV_MISSING)},
-        prune_params=(True, True))
+        prune_params=(True, True)),
+    GroupPruningModulesTestStruct(
+        model=TestModelGroupNorm,
+        non_pruned_module_nodes=['TestModelGroupNorm/NNCFConv2d[conv2]/conv2d_0'],
+        pruned_groups=[['TestModelGroupNorm/NNCFConv2d[conv1]/conv2d_0']],
+        pruned_groups_by_node_id=[[1]],
+        can_prune_after_analysis={0: True, 1: True, 2: True, 3: False, 4: False, 5: False},
+        final_can_prune={1: PruningAnalysisDecision(True),
+                         3: PruningAnalysisDecision(False, PruningAnalysisReason.CLOSING_CONV_MISSING)},
+        prune_params=(True, True)),
 ]
 
 
@@ -429,8 +439,7 @@ def test_pruning_node_selector(test_input_info_struct_: GroupPruningModulesTestS
 def test_symbolic_mask_propagation(test_input_info_struct_):
     model = test_input_info_struct_.model()
     prune_first, *_ = test_input_info_struct_.prune_params
-    nncf_model, _ = create_nncf_model_and_pruning_builder(model,
-                                                                     {'prune_first_conv': prune_first})
+    nncf_model, _ = create_nncf_model_and_pruning_builder(model, {'prune_first_conv': prune_first})
     pruning_types = [v.op_func_name for v in NNCF_PRUNING_MODULES_DICT]
     graph = nncf_model.get_graph()
     algo = MaskPropagationAlgorithm(graph, PT_PRUNING_OPERATOR_METATYPES, SymbolicMaskProcessor)
