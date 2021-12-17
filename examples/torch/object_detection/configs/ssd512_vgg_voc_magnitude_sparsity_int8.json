@@ -13,9 +13,9 @@
     "normalize_coef": 255,
     "rgb": true
   },
-  "epochs": 4,
+  "epochs": 310,
   "batch_size": 96,
-  "save_freq": 3,
+  "save_freq": 30,
   "optimizer": {
     "type": "Adam",
     "base_lr": 1e-4,
@@ -44,8 +44,8 @@
               0.7
           ],
           "multistep_steps": [
-              2,
-              3
+              40,
+              80
           ]
       }
     },
