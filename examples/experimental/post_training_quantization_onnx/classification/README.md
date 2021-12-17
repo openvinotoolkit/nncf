@@ -25,7 +25,7 @@ python post_training_quantization.py -m <ONNX model path> -o <quantized ONNX mod
 
 ## Run validation
 
-You could use [accuracy_checker](https://github.com/openvinotoolkit/open_model_zoo/tree/master/tools/accuracy_checker) to run the validation of the obtained model. The config file is the same for resnet50 and mobilenetv2 and it is located [here](/.ac_configs).  
+You could use [accuracy_checker](https://github.com/openvinotoolkit/open_model_zoo/tree/master/tools/accuracy_checker) to run the validation of the obtained model. The config file is the same for resnet50 and mobilenetv2 and it is located [here](examples/experimental/post_training_quantization_onnx/classification/ac_configs/imagenet_int8_onnx.yml).  
 
 
 ## Results of Post-Training quantization of ONNX model
