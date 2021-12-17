@@ -196,6 +196,12 @@ NNCF is also available via [conda](https://anaconda.org/conda-forge/nncf):
 conda install -c conda-forge nncf
 ```
 
+#### From a specific commit hash using pip:
+```python
+pip install git+https://github.com/openvinotoolkit/nncf@bd189e2#egg=nncf
+```
+Note that in order for this to work for pip versions >= 21.3, your Git version must be at least 2.22.
+
 #### As a Docker image
 Use one of the Dockerfiles in the [docker](./docker) directory to build an image with an environment already set up and ready for running NNCF [sample scripts](#model-compression-samples).
 
