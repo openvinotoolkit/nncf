@@ -34,6 +34,8 @@ NNCF_QUANTIZATION_OPERATIONS = Registry('nncf_quantization_operations')
 
 
 def _get_channel_size(input_shape: List[int], channel_axes: List[int]):
+    if not isinstance(channel_axes, (list, tuple)):
+        channel_axes = [channel_axes]
     size = 1
     for axis in channel_axes:
         size *= input_shape[axis]

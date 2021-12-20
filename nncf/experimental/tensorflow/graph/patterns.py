@@ -63,3 +63,13 @@ def create_matmul_biasadd_pattern() -> GraphPattern:
     pattern.add_edge(matmul_node, biasadd_node)
 
     return pattern
+
+
+def create_conv2d_biasadd_pattern() -> GraphPattern:
+    pattern = GraphPattern()
+
+    conv2d_node = pattern.add_node(label='CONV2D', type='Conv2D')
+    biasadd_node = pattern.add_node(label='BIASADD', type='BiasAdd')
+    pattern.add_edge(conv2d_node, biasadd_node)
+
+    return pattern

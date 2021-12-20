@@ -79,9 +79,11 @@ class ArgProvider:
 
 
 @TF_ARG_PROVIDERS.register('Relu6')
+@TF_ARG_PROVIDERS.register('Relu')
 @TF_ARG_PROVIDERS.register('Mean')
 @TF_ARG_PROVIDERS.register('AddV2')
 @TF_ARG_PROVIDERS.register('Placeholder')
+@TF_ARG_PROVIDERS.register('BiasAdd')
 class SimpleOutputArgProvider(ArgProvider):
     def get_output(self, output_port_id: int, args, kwargs):
         check_port_id(output_port_id, min_port_id=0, max_port_id=0)
@@ -98,6 +100,38 @@ class SimpleOutputArgProvider(ArgProvider):
             raise ValueError(f'Unexpected `args`: {args}')
 
         return replace(args, output_port_id, value), kwargs
+
+
+@TF_ARG_PROVIDERS.register('ResizeNearestNeighbor')
+class ResizeNearestNeighborArgProvider(ArgProvider):
+    """
+    Argument provider for the `ResizeNearestNeighbor` operation.
+
+    """
+
+    def get_output(self, output_port_id: int, args, kwargs):
+        check_port_id(output_port_id, min_port_id=0, max_port_id=0)
+
+        if len(args) > 1:
+            raise ValueError(f'Unexpected `args`: {args}')
+
+        return args[output_port_id]
+
+    def set_output(self, output_port_id: int, value, args, kwargs):
+        check_port_id(output_port_id, min_port_id=0, max_port_id=0)
+
+        if len(args) > 1:
+            raise ValueError(f'Unexpected `args`: {args}')
+
+        return replace(args, output_port_id, value), kwargs
+
+    def get_input(self, input_port_id: int, args, kwargs):
+        check_port_id(input_port_id, min_port_id=0, max_port_id=0)
+        return args[0]
+
+    def set_input(self, input_port_id: int, value, args, kwargs):
+        check_port_id(input_port_id, min_port_id=0, max_port_id=0)
+        return replace(args, input_port_id, value), kwargs
 
 
 @TF_ARG_PROVIDERS.register('Conv2D')
@@ -127,6 +161,22 @@ class Conv2DArgProvider(ArgProvider):
 
         kwargs['filter'] = value
         return args, kwargs
+
+    def get_output(self, output_port_id: int, args, kwargs):
+        check_port_id(output_port_id, min_port_id=0, max_port_id=0)
+
+        if len(args) > 1:
+            raise ValueError(f'Unexpected `args`: {args}')
+
+        return args[output_port_id]
+
+    def set_output(self, output_port_id: int, value, args, kwargs):
+        check_port_id(output_port_id, min_port_id=0, max_port_id=0)
+
+        if len(args) > 1:
+            raise ValueError(f'Unexpected `args`: {args}')
+
+        return replace(args, output_port_id, value), kwargs
 
 
 @TF_ARG_PROVIDERS.register('FusedBatchNormV3')

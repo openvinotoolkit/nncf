@@ -19,6 +19,7 @@ from nncf.experimental.tensorflow.graph.pattern_operations import ELEMENTWISE_OP
 from nncf.experimental.tensorflow.graph.pattern_operations import LINEAR_OPERATIONS
 from nncf.experimental.tensorflow.graph.pattern_operations import QUANTIZATION_AGNOSTIC_OPERATIONS
 from nncf.experimental.tensorflow.graph.patterns import create_matmul_biasadd_pattern
+from nncf.experimental.tensorflow.graph.patterns import create_conv2d_biasadd_pattern
 from nncf.experimental.tensorflow.graph.patterns import create_h_sigmoid_act
 from nncf.experimental.tensorflow.graph.patterns import create_h_swish_act
 
@@ -41,6 +42,9 @@ def _get_tf_hw_fused_patterns() -> HWFusedPatterns:
 
     matmul_biasadd = create_matmul_biasadd_pattern()
     retval.register(matmul_biasadd, 'MATMUL_BIASADD', match=True)
+
+    conv2d_biasadd = create_conv2d_biasadd_pattern()
+    retval.register(conv2d_biasadd, 'CONV2D_BIASADD', match=True)
 
     atomic_activations = GraphPattern()
     atomic_activations.add_node(**ATOMIC_ACTIVATIONS_OPERATIONS)
