@@ -136,4 +136,4 @@ To export a model to the OpenVINO IR and run it using the Intel® Deep Learning 
 
 |**Model**|**Compression algorithm**|**Dataset**|**Accuracy (Drop) %**|**NNCF config file**|
 | :---: | :---: | :---: | :---: | :---: |
-|ResNet50|Sparsity 75% (magnitude)|ImageNet|74.42 (0.62)|[resnet50_imagenet_magnitude_sparsity_accuracy_aware.json](configs/sparsity/resnet50_imagenet_magnitude_sparsity_accuracy_aware.json)|
+|ResNet50|Sparsity 65% (magnitude)|ImageNet|74.37 (0.67)|[resnet50_imagenet_magnitude_sparsity_accuracy_aware.json](configs/sparsity/resnet50_imagenet_magnitude_sparsity_accuracy_aware.json)|
