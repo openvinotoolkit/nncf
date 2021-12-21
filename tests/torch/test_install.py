@@ -23,7 +23,7 @@ def venv_type_(request):
 
 @pytest.fixture(name="package_type",
                 params=["install", "develop", "sdist", "bdist_wheel",
-                        "pip_pypi", "pip_local", "pip_e_local", "pip_git_commit", "pip_git_branch"])
+                        "pip_pypi", "pip_local", "pip_e_local", "pip_git_develop"])
 def package_type_(request):
     return request.param
 

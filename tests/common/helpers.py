@@ -70,13 +70,7 @@ def create_venv_with_nncf(tmp_path, package_type, venv_type, extra_reqs):
     elif package_type == 'pip_e_local':
         subprocess.run(
             f'{pip_with_venv} install -e {PROJECT_ROOT}[{extra_reqs}]', check=True, shell=True)
-    elif package_type == 'pip_git_commit':
-        current_commit_sha = subprocess.check_output(["git", "rev-parse", "--short", "HEAD"],
-                                                     cwd=PROJECT_ROOT).strip().decode()
-        subprocess.run(
-            f'{pip_with_venv} install git+{GITHUB_REPO_URL}@{current_commit_sha}#egg=nncf[{extra_reqs}]',
-            check=True, shell=True)
-    elif package_type == 'pip_git_branch':
+    elif package_type == 'pip_git_develop':
         subprocess.run(
             f'{pip_with_venv} install git+{GITHUB_REPO_URL}@develop#egg=nncf[{extra_reqs}]', check=True, shell=True)
     else:
