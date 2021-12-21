@@ -94,6 +94,9 @@ def create_h_swish_act() -> GraphPattern:
 
 
 def create_h_sigmoid_act() -> GraphPattern:
+    main_pattern = GraphPattern()
+
+    # ReLU version:
     pattern = GraphPattern()
 
     input_pattern_node = pattern.add_node(label='*INPUT_NODE*', type=GraphPattern.NON_PATTERN_NODE_TYPE)
@@ -104,7 +107,24 @@ def create_h_sigmoid_act() -> GraphPattern:
     pattern.add_edge(input_pattern_node, add_node)
     pattern.add_edge(add_node, hardtanh_node)
     pattern.add_edge(hardtanh_node, truediv_node)
-    return pattern
+
+    main_pattern.add_pattern_alternative(pattern)
+
+    # ReLU6 version
+    pattern = GraphPattern()
+
+    input_pattern_node = pattern.add_node(label='*INPUT_NODE*', type=GraphPattern.NON_PATTERN_NODE_TYPE)
+    add_node = pattern.add_node(label='ADD', type='__add__')
+    relu6_node = pattern.add_node(label='RELU6', type='relu6')
+    truediv_node = pattern.add_node(label='DIV', type='__truediv__')
+
+    pattern.add_edge(input_pattern_node, add_node)
+    pattern.add_edge(add_node, relu6_node)
+    pattern.add_edge(hardtanh_node, truediv_node)
+
+    main_pattern.add_pattern_alternative(pattern)
+
+    return main_pattern
 
 
 def create_l2_norm() -> GraphPattern:
