@@ -75,7 +75,7 @@ def create_h_swish_act() -> GraphPattern:
     pattern.add_edge(add_node, relu_node)
     pattern.add_edge(relu_node, mul_node)
 
-    mul_2_node = pattern.add_node(label='MULTIPLY', type='Multiply')
+    mul_2_node = pattern.add_node(label='MULTIPLY', type=['Multiply', 'Mul'])
     pattern.add_edge(input_pattern_node, mul_2_node)
     pattern.add_edge(mul_node, mul_2_node)
     main_pattern.add_pattern_alternative(pattern)
@@ -98,3 +98,23 @@ def create_h_swish_act() -> GraphPattern:
     main_pattern.add_pattern_alternative(pattern)
 
     return main_pattern
+
+
+def create_matmul_biasadd_pattern() -> GraphPattern:
+    pattern = GraphPattern()
+
+    matmul_node = pattern.add_node(label='MATMUL', type='MatMul')
+    biasadd_node = pattern.add_node(label='BIASADD', type='BiasAdd')
+    pattern.add_edge(matmul_node, biasadd_node)
+
+    return pattern
+
+
+def create_conv2d_biasadd_pattern() -> GraphPattern:
+    pattern = GraphPattern()
+
+    conv2d_node = pattern.add_node(label='CONV2D', type='Conv2D')
+    biasadd_node = pattern.add_node(label='BIASADD', type='BiasAdd')
+    pattern.add_edge(conv2d_node, biasadd_node)
+
+    return pattern
