@@ -11,6 +11,8 @@
  limitations under the License.
 """
 
+from typing import Optional
+
 import tensorflow as tf
 
 
@@ -53,3 +55,33 @@ def _fake_quant_with_min_max_vars(inputs, min_var, max_var, num_bits, narrow_ran
             inputs, min_var, max_var, num_bits=num_bits, narrow_range=narrow_range)
     return tf.quantization.fake_quant_with_min_max_vars(
         inputs, min_var, max_var, num_bits=num_bits, narrow_range=narrow_range)
+
+
+def asymmetric_range_initialization(min_values,
+                                    max_values,
+                                    min_range: float = 0.1,
+                                    eps: float = 0.01):
+    ranges = max_values - min_values
+    max_range = tf.reduce_max(ranges)
+    lower_threshold = tf.maximum(eps * max_range, min_range)
+    correction = (tf.maximum(ranges, lower_threshold) - ranges) * 0.5
+    input_low = min_values - correction
+    input_range = ranges + 2 * correction
+    return input_low, input_range
+
+
+def symmetric_range_initialization(min_values,
+                                   max_values,
+                                   min_range: float = 0.1,
+                                   eps: float = 0.01,
+                                   signedness_to_force: Optional[bool] = None):
+    signed = -1.0 if signedness_to_force in (True, None) else 0.0
+    if signedness_to_force is None:
+        sign = tf.reduce_any(tf.less(min_values, 0))
+        signed = -1.0 if sign else 0.0
+
+    ranges = tf.maximum(tf.abs(max_values), tf.abs(min_values))
+    max_range = tf.reduce_max(ranges)
+    lower_threshold = tf.maximum(eps * max_range, min_range)
+    scale = tf.maximum(ranges, lower_threshold)
+    return signed, scale
