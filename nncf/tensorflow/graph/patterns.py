@@ -15,6 +15,9 @@ from nncf.common.graph.patterns import GraphPattern
 
 
 def create_h_sigmoid_act() -> GraphPattern:
+    main_pattern = GraphPattern()
+
+    # ReLU version
     pattern = GraphPattern()
 
     input_pattern_node = pattern.add_node(label='*INPUT_NODE*', type=GraphPattern.NON_PATTERN_NODE_TYPE)
@@ -26,7 +29,24 @@ def create_h_sigmoid_act() -> GraphPattern:
     pattern.add_edge(add_node, relu_node)
     pattern.add_edge(relu_node, mul_node)
 
-    return pattern
+    main_pattern.add_pattern_alternative(pattern)
+
+    # ReLU6 version
+
+    pattern = GraphPattern()
+
+    input_pattern_node = pattern.add_node(label='*INPUT_NODE*', type=GraphPattern.NON_PATTERN_NODE_TYPE)
+    add_node = pattern.add_node(label='ADD', type='AddV2')
+    relu6_node = pattern.add_node(label='RELU6', type='Relu6')
+    mul_node = pattern.add_node(label='TF_OP_MUL', type='Mul')
+
+    pattern.add_edge(input_pattern_node, add_node)
+    pattern.add_edge(add_node, relu6_node)
+    pattern.add_edge(relu6_node, mul_node)
+
+    main_pattern.add_pattern_alternative(pattern)
+
+    return main_pattern
 
 
 def create_h_swish_act() -> GraphPattern:

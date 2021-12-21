@@ -21,7 +21,7 @@ from typing import Callable, Dict, List, Tuple, Union
 import networkx as nx
 import pytest
 import torch
-from tests.torch.test_models.synthetic import ConvRelu6HSwish
+from tests.torch.test_models.synthetic import ConvRelu6HSwishHSigmoid
 from tests.torch.test_models.synthetic import MatMulDivConv
 from torch import nn
 import torch.nn.functional as F
@@ -722,7 +722,7 @@ SYNTHETIC_MODEL_DESC_LIST = [
                                                                   "filler": "zeros"}),
     GeneralModelDesc(model_builder=MultiOutputSameTensorModel),
     GeneralModelDesc(model_builder=MatMulDivConv, input_sample_sizes=([1, 1, 5, 5], [1, 1, 5, 5])),
-    GeneralModelDesc(model_builder=ConvRelu6HSwish, input_sample_sizes=([1, 1, 5, 5],))
+    GeneralModelDesc(model_builder=ConvRelu6HSwishHSigmoid, input_sample_sizes=([1, 1, 5, 5],))
 ]
 
 
