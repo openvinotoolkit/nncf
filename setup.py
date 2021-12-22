@@ -59,11 +59,11 @@ def find_version(*file_paths):
     if not is_building_release:
         if is_installing_editable:
             return version_value + ".dev0+editable"
-        import subprocess
+        import subprocess  # nosec
         dev_version_id = "unknown_version"
         try:
             repo_root = os.path.dirname(os.path.realpath(__file__))
-            dev_version_id = subprocess.check_output(["git", "rev-parse", "--short", "HEAD"],
+            dev_version_id = subprocess.check_output(["git", "rev-parse", "--short", "HEAD"],   # nosec
                                                      cwd=repo_root).strip().decode()
         except subprocess.CalledProcessError:
             pass
