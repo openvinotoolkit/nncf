@@ -1,3 +1,4 @@
+from typing import List
 import numpy as np
 import onnx
 import onnxruntime as rt
@@ -5,10 +6,9 @@ import torch
 from torch import nn
 from nncf.torch.checkpoint_loading import load_state
 
-from nncf import NNCFConfig
 from nncf.torch.quantization.layers import PTQuantizerSpec, QuantizationMode, SymmetricQuantizer, AsymmetricQuantizer
 from tests.torch.helpers import TwoConvTestModel, create_compressed_model_and_algo_for_test, create_conv, \
-    get_nodes_by_type, get_all_inputs_for_graph_node, register_bn_adaptation_init_args
+    get_nodes_by_type, get_all_inputs_for_graph_node
 from tests.torch.quantization.test_onnx_export import get_config_for_export_mode
 
 import pytest
@@ -436,48 +436,45 @@ def test_is_overflow_fix_applied_model_resumed_correctly(tmp_path):
     are_symmetric_fq_nodes_are_exported_correct_with_overflow_fix(tmp_path, compression_ctrl)
 
 
+def set_scale_to_sym_quantizer_and_get_attrs(quantizer: SymmetricQuantizer, scale: float):
+    scale = np.full(quantizer.scale.size(), scale)
+    levels = quantizer.levels
+    level_low = quantizer.level_low
+    level_high = quantizer.level_high
+    input_low = scale * (level_low / level_high)
+    input_range = scale - input_low
+    quant_len = input_range / (levels - 1)
+    quantizer.scale = nn.Parameter(torch.from_numpy(scale.astype(np.single)))
+    return input_low, quant_len, levels
+
+
+def set_scale_to_asym_quantizer_and_get_attrs(quantizer: AsymmetricQuantizer, input_low: float, input_range: float):
+    input_low = np.full(quantizer.input_low.size(), input_low)
+    input_range = np.full(quantizer.input_low.size(), input_range)
+    levels = quantizer.levels
+    quant_len = input_range / (levels - 1)
+    quantizer.input_low = nn.Parameter(torch.from_numpy(input_low.astype(np.single)))
+    quantizer.input_range = nn.Parameter(torch.from_numpy(input_range.astype(np.single)))
+    return input_low, quant_len, levels
+
+
+def generate_middle_quants(size: List[int], input_low: np.ndarray, quant_len: np.ndarray, levels: np.ndarray):
+    ref_weights = ([input_low + (i + 0.5) * quant_len for i in range(levels)])
+    elems = np.prod(size)
+    ref_weights = ref_weights * int(np.round(0.5 + elems / levels))
+    ref_weights = np.reshape(np.array(ref_weights).flatten()[:elems], size, 'F')
+    return torch.from_numpy(ref_weights.astype(np.single))
+
+
 @pytest.mark.parametrize("quantization_mode", ["symmetric", "asymmetric"])
 def test_overflow_fix_quantization_export_with_middle_quants(quantization_mode):
-    model = nn.Sequential(nn.Linear(in_features=128, out_features=100, bias=False))
+    model = nn.Sequential(nn.Linear(in_features=128, out_features=100, bias=True))
     sample_size = [1, 1, 100, 128]
-    config = NNCFConfig()
-    config.update({
-        "input_info": {
-            "sample_size": sample_size
-        },
-        "compression": {
-            "algorithm": "quantization",
-            "weights": {
-                "mode": quantization_mode
-            },
-            "export_to_onnx_standard_ops": False
-        }
-    })
-    register_bn_adaptation_init_args(config)
+    config = get_config_for_export_mode(False)
+    config["compression"]["weights"] = {"mode": quantization_mode}
+    config["input_info"]["sample_size"] = sample_size
 
-    def set_scale_to_sym_quantizer_and_get_attrs(quantizer: SymmetricQuantizer, scale: float):
-        scale = np.full(quantizer.scale.size(), scale)
-        levels = quantizer.levels
-        level_low = quantizer.level_low
-        level_high = quantizer.level_high
-        input_low = scale * (level_low / level_high)
-        input_range = scale - input_low
-        quant_len = input_range / (levels - 1)
-        quantizer.scale = nn.Parameter(torch.from_numpy(scale.astype(np.single)))
-        return input_low, quant_len, levels
-
-    def set_scale_to_asym_quantizer_and_get_attrs(quantizer: AsymmetricQuantizer, input_low: float, input_range: float):
-        input_low = np.full(quantizer.input_low.size(), input_low)
-        input_range = np.full(quantizer.input_low.size(), input_range)
-        levels = quantizer.levels
-        quant_len = input_range / (levels - 1)
-        quantizer.input_low = nn.Parameter(torch.from_numpy(input_low.astype(np.single)))
-        quantizer.input_range = nn.Parameter(torch.from_numpy(input_range.astype(np.single)))
-        return input_low, quant_len, levels
-
-    weights_size = list(model[0].weight.size())
     compressed_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
-    compressed_model.eval()
     weight_quantizer = list(compression_ctrl.weight_quantizers.values())[0].quantizer_module_ref
 
     if quantization_mode == "symmetric":
@@ -486,14 +483,9 @@ def test_overflow_fix_quantization_export_with_middle_quants(quantization_mode):
         input_low, quant_len, levels = set_scale_to_asym_quantizer_and_get_attrs(weight_quantizer, input_low=-1.,
                                                                                  input_range=3.)
 
-    # generate middle quants to fill required tensor
-    ref_weights = ([input_low + (i + 0.5) * quant_len for i in range(levels)])
-    elems = np.prod(weights_size)
-    ref_weights = ref_weights * int(np.round(0.5 + elems / levels))
-    ref_weights = np.reshape(np.array(ref_weights).flatten()[:elems], weights_size, 'F')
-    ref_weights = torch.from_numpy(ref_weights.astype(np.single))
-
     nncf_linear_module = list(compressed_model.get_nncf_wrapped_model())[0]
+    ref_weights = generate_middle_quants(list(nncf_linear_module.weight.size()), input_low, quant_len, levels)
+
     nncf_linear_module.weight = nn.Parameter(ref_weights)
 
     compression_ctrl.export_model('linear_model.onnx')
