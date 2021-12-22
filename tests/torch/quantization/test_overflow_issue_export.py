@@ -437,7 +437,7 @@ def test_is_overflow_fix_applied_model_resumed_correctly(tmp_path):
 
 
 @pytest.mark.parametrize("quantization_mode", ["symmetric", "asymmetric"])
-def test_overflow_quantization_export_with_middle_quants(quantization_mode):
+def test_overflow_fix_quantization_export_with_middle_quants(quantization_mode):
     model = nn.Sequential(nn.Linear(in_features=128, out_features=100, bias=False))
     sample_size = [1, 1, 100, 128]
     config = NNCFConfig()
