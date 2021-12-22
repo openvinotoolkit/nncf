@@ -17,6 +17,7 @@ import numpy as np
 import tensorflow as tf
 
 from nncf.common.tensor import NNCFTensor
+from nncf.common.tensor import TensorElementsType
 from nncf.common.tensor_statistics.collectors import MedianMADStatisticCollector
 from nncf.common.tensor_statistics.collectors import NNCFCollectorTensorProcessor
 from nncf.common.tensor_statistics.collectors import PercentileStatisticCollector
@@ -70,6 +71,10 @@ class TFNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
     def unstack(x: NNCFTensor, axis: int = 0) -> List[NNCFTensor]:
         tensor_list = tf.unstack(x.tensor, axis=axis)
         return [TFNNCFTensor(t) for t in tensor_list]
+
+    @staticmethod
+    def sum(tensor: NNCFTensor) -> TensorElementsType:
+        return tf.reduce_sum(tensor.tensor).numpy()
 
 
 class TFMinMaxStatisticCollector(MinMaxStatisticCollector):

@@ -22,7 +22,12 @@ from nncf.torch.pruning.filter_pruning.algo import FilterPruningController
 from nncf.torch.pruning.filter_pruning.functions import l2_filter_norm
 from nncf.torch.pruning.filter_pruning.layers import FilterPruningMask
 from nncf.torch.pruning.filter_pruning.layers import apply_filter_binary_mask
+from nncf.common.pruning.utils import calculate_in_out_channels_by_masks
+from nncf.common.pruning.utils import count_flops_and_weights
 from nncf.common.pruning.schedulers import ExponentialPruningScheduler
+from nncf.torch.tensor_statistics.collectors import PTNNCFCollectorTensorProcessor
+from nncf.torch.pruning.filter_pruning.algo import GENERAL_CONV_LAYER_METATYPES
+from nncf.torch.pruning.filter_pruning.algo import LINEAR_LAYER_METATYPES
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
 from tests.torch.helpers import check_correct_nncf_modules_replacement
 from tests.torch.pruning.helpers import gen_ref_masks
@@ -105,14 +110,19 @@ def test_valid_modules_replacement_and_pruning(prune_first, prune_batch_norms):
     pruned_module_info = pruning_algo.pruned_module_groups_info.get_all_nodes()
     pruned_modules = [minfo.module for minfo in pruned_module_info]
 
-    # Check for conv1
+    # Check for conv1 and conv_depthwise
     conv1 = pruned_model.conv1
+    conv_depthwise = pruned_model.conv_depthwise
     if prune_first:
         assert conv1 in pruned_modules
         assert conv1 in nncf_modules.values()
         check_that_module_is_pruned(conv1)
+
+        assert conv_depthwise in nncf_modules.values()
+        check_that_module_is_pruned(conv_depthwise)
     else:
         check_that_module_is_not_pruned(conv1)
+        check_that_module_is_not_pruned(conv_depthwise)
 
     # Check for bn1
     bn1 = pruned_model.bn1
@@ -147,19 +157,22 @@ def test_valid_modules_replacement_and_pruning(prune_first, prune_batch_norms):
     check_that_module_is_not_pruned(conv3)
 
 
-@pytest.mark.parametrize(('all_weights', 'pruning_flops_target', 'prune_first', 'ref_masks'),
-                         [
-                             (False, None, True, gen_ref_masks([(8, 8), (16, 16), (32, 32)])),
-                             (True, None, True, gen_ref_masks([(5, 11), (9, 23), (42, 22)])),
-                             (False, None, False, gen_ref_masks([(16, 16), (32, 32)])),
-                             (True, None, False, gen_ref_masks([(8, 24), (40, 24)])),
-                             # Flops pruning cases
-                             (False, 0.5, True, gen_ref_masks([(0, 16), (8, 24), (24, 40)])),
-                             (False, 0.5, False, gen_ref_masks([(8, 24), (24, 40)])),
-                             (True, 0.5, True, gen_ref_masks([(4, 12), (3, 29), (30, 34)])),
-                             (True, 0.5, False, gen_ref_masks([(3, 29), (31, 33)])),
-                         ]
-                         )
+BIG_PRUNING_MODEL_TEST_PARAMS = ('all_weights', 'pruning_flops_target', 'prune_first', 'ref_masks')
+BIG_PRUNING_MODEL_TEST_PARAMS_VALUES = \
+[
+    (False, None, True, gen_ref_masks([(8, 8), (16, 16), (32, 32)])),
+    (True, None, True, gen_ref_masks([(3, 13), (10, 22), (43, 21)])),
+    (False, None, False, gen_ref_masks([(16, 16), (32, 32)])),
+    (True, None, False, gen_ref_masks([(8, 24), (40, 24)])),
+    # Flops pruning cases
+    (False, 0.5, True, gen_ref_masks([(0, 16), (8, 24), (24, 40)])),
+    (False, 0.5, False, gen_ref_masks([(8, 24), (24, 40)])),
+    (True, 0.5, True, gen_ref_masks([(2, 14), (3, 29), (30, 34)])),
+    (True, 0.5, False, gen_ref_masks([(3, 29), (31, 33)])),
+]
+
+
+@pytest.mark.parametrize(BIG_PRUNING_MODEL_TEST_PARAMS, BIG_PRUNING_MODEL_TEST_PARAMS_VALUES )
 def test_pruning_masks_correctness(all_weights, pruning_flops_target, prune_first, ref_masks):
     """
     Test for pruning masks check (_set_binary_masks_for_filters, _set_binary_masks_for_all_filters_together).
@@ -184,15 +197,19 @@ def test_pruning_masks_correctness(all_weights, pruning_flops_target, prune_firs
     pruned_model, pruning_algo, _ = create_pruning_algo_with_config(config)
     pruned_module_info = pruning_algo.pruned_module_groups_info.get_all_nodes()
     pruned_modules = [minfo.module for minfo in pruned_module_info]
-    assert pruning_algo.pruning_rate == 0.5
+    assert pruning_algo.pruning_level == 0.5
     assert pruning_algo.all_weights is all_weights
 
     i = 0
     # ref_masks Check for conv1
     conv1 = pruned_model.conv1
+    conv_depthwise = pruned_model.conv_depthwise
     if prune_first:
         assert conv1 in pruned_modules
+        assert conv_depthwise in pruned_modules
+
         check_mask(conv1, i)
+        check_mask(conv_depthwise, i)
         i += 1
 
     # Check for conv2
@@ -207,20 +224,7 @@ def test_pruning_masks_correctness(all_weights, pruning_flops_target, prune_firs
     check_mask(up, i)
 
 
-@pytest.mark.parametrize(('all_weights', 'pruning_flops_target', 'prune_first', 'ref_masks'),
-                         [
-                             (False, None, True, gen_ref_masks([(8, 8), (16, 16), (32, 32)])),
-                             (True, None, True, gen_ref_masks([(5, 11), (9, 23), (42, 22)])),
-                             (False, None, False, gen_ref_masks([(16, 16), (32, 32)])),
-                             (True, None, False, gen_ref_masks([(8, 24), (40, 24)])),
-
-                             # Flops pruning cases
-                             (False, 0.5, True, gen_ref_masks([(0, 16), (8, 24), (24, 40)])),
-                             (False, 0.5, False, gen_ref_masks([(8, 24), (24, 40)])),
-                             (True, 0.5, True, gen_ref_masks([(4, 12), (3, 29), (30, 34)])),
-                             (True, 0.5, False, gen_ref_masks([(3, 29), (31, 33)])),
-                         ]
-                         )
+@pytest.mark.parametrize(BIG_PRUNING_MODEL_TEST_PARAMS, BIG_PRUNING_MODEL_TEST_PARAMS_VALUES )
 def test_pruning_masks_applying_correctness(all_weights, pruning_flops_target, prune_first, ref_masks):
     """
     Test for pruning masks check (_set_binary_masks_for_filters, _set_binary_masks_for_all_filters_together).
@@ -230,6 +234,7 @@ def test_pruning_masks_applying_correctness(all_weights, pruning_flops_target, p
     :param ref_masks: reference masks values.
     """
     input_shapes = {'conv1': [1, 1, 8, 8],
+                    'conv_depthwise': [1, 16, 7, 7],
                     'conv2': [1, 16, 8, 8],
                     'bn1': [1, 16, 8, 8],
                     'bn2': [1, 32, 8, 8],
@@ -274,7 +279,7 @@ def test_pruning_masks_applying_correctness(all_weights, pruning_flops_target, p
 
     pruned_module_info = pruning_algo.pruned_module_groups_info.get_all_nodes()
     pruned_modules = [minfo.module for minfo in pruned_module_info]
-    assert pruning_algo.pruning_rate == 0.5
+    assert pruning_algo.pruning_level == 0.5
     assert pruning_algo.all_weights is all_weights
 
     # Checking that model weights remain unchanged
@@ -283,10 +288,16 @@ def test_pruning_masks_applying_correctness(all_weights, pruning_flops_target, p
     i = 0
     # ref_masks Check for conv1
     conv1 = pruned_model.conv1
+    conv_depthwise = pruned_model.conv_depthwise
     if prune_first:
         assert conv1 in pruned_modules
+        assert conv_depthwise in pruned_modules
+
         check_mask(conv1, i)
+        check_mask(conv_depthwise, i)
+
         check_module_output(conv1, 'conv1', i)
+        check_module_output(conv_depthwise, 'conv_depthwise', i)
 
     # Check for bn1
     bn1 = pruned_model.bn1
@@ -349,10 +360,10 @@ def test_valid_masks_for_bn_after_concat(prune_bn):
 
 @pytest.mark.parametrize(('all_weights', 'pruning_flops_target', 'ref_flops', 'ref_params_num'),
                          [
-                             (False, None, 1315008, 7776),
-                             (True, None, 1492400, 9304),
-                             (False, 0.5, 2367952, 13160),
-                             (True, 0.5, 2380268, 13678),
+                             (False, None, 493456, 6664),
+                             (True, None, 474212, 7426),
+                             (False, 0.5, 940400, 13304),
+                             (True, 0.5, 962512, 13560),
                          ]
                          )
 def test_calculation_of_flops(all_weights, pruning_flops_target, ref_flops, ref_params_num):
@@ -364,6 +375,7 @@ def test_calculation_of_flops(all_weights, pruning_flops_target, ref_flops, ref_
     """
     config = get_basic_pruning_config(input_sample_size=[1, 1, 8, 8])
     config['compression']['params']['all_weights'] = all_weights
+    config['compression']['params']['prune_first_conv'] = True
     config['compression']['pruning_init'] = 0.5
     if pruning_flops_target:
         config['compression']['params']['pruning_flops_target'] = pruning_flops_target
@@ -373,7 +385,23 @@ def test_calculation_of_flops(all_weights, pruning_flops_target, ref_flops, ref_
     assert pruning_algo.current_flops == ref_flops
     assert pruning_algo.current_params_num == ref_params_num
     # pylint:disable=protected-access
-    assert pruning_algo._calculate_flops_and_weights_pruned_model_by_masks() == (ref_flops, ref_params_num)
+    tmp_in_channels, tmp_out_channels = calculate_in_out_channels_by_masks(
+        pruning_algo.pruned_module_groups_info.get_all_clusters(),
+        masks=pruning_algo._collect_pruning_masks(),
+        tensor_processor=PTNNCFCollectorTensorProcessor,
+        full_input_channels=pruning_algo._modules_in_channels,
+        full_output_channels=pruning_algo._modules_out_channels,
+        pruning_groups_next_nodes=pruning_algo.next_nodes)
+
+    cur_flops, cur_params_num = count_flops_and_weights(
+        pruning_algo._model.get_original_graph(),
+        pruning_algo._modules_in_shapes,
+        pruning_algo._modules_out_shapes,
+        input_channels=tmp_in_channels,
+        output_channels=tmp_out_channels,
+        conv_op_metatypes=GENERAL_CONV_LAYER_METATYPES,
+        linear_op_metatypes=LINEAR_LAYER_METATYPES)
+    assert (cur_flops, cur_params_num) == (ref_flops, ref_params_num)
 
 
 @pytest.mark.parametrize('repeat_seq_of_shared_convs,ref_second_cluster', [(True, [4, 5, 6, 7, 8, 9]),

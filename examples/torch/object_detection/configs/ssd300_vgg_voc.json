@@ -15,15 +15,14 @@
     "rgb": true
   },
   "batch_size": 256,
-  "max_iter": 75000,
-  "iter_size": 1,
-  "save_freq": 50, // in epochs
+  "epochs": 290,
+  "save_freq": 50,
   "optimizer": {
     "type": "Adam",
     "base_lr": 1e-4,
     "weight_decay": 5e-4,
     "schedule_type": "multistep",
-    "steps": [2, 3, 4] // in epochs
+    "steps": [2, 3, 4]
   },
   "ssd_params": {
     "clip": false,

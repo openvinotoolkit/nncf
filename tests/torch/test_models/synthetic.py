@@ -241,3 +241,25 @@ class MatMulDivConv(nn.Module):
     def forward(self, x: torch.Tensor, y: torch.Tensor):
         z = torch.matmul(x, y) / 2
         return self.conv(z)
+
+
+class ConvRelu6HSwishHSigmoid(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.conv1 = create_conv(1, 2, 2, 2)
+        self.conv2 = create_conv(2, 2, 2, 2)
+
+    @staticmethod
+    def _hswish(x: torch.Tensor) -> torch.Tensor:
+        return x * torch.nn.functional.relu6(x + 3) / 6
+
+    @staticmethod
+    def _hsigmoid(x: torch.Tensor) -> torch.Tensor:
+        return torch.nn.functional.relu6(x + 3) / 6
+
+    def forward(self, x: torch.Tensor):
+        z = self.conv1(x)
+        z = self._hswish(z)
+        z = self.conv2(z)
+        z = self._hsigmoid(z)
+        return z

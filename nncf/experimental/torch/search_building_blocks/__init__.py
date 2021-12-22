@@ -10,11 +10,3 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-from nncf.common.graph import NNCFNodeName
-
-
-class PrunedLayerInfoBase:
-    def __init__(self, node_name: NNCFNodeName, node_id: int, is_depthwise: bool):
-        self.node_name = node_name
-        self.nncf_node_id = node_id
-        self.is_depthwise = is_depthwise

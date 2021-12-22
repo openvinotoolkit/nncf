@@ -12,9 +12,8 @@
     "normalize_coef": 255,
     "rgb": true
   },
-  "max_iter": 100000,
+  "epochs": 386,
   "batch_size": 256,
-  "iter_size": 1,
   "save_freq": 50,
   "optimizer": {
     "type": "Adam",

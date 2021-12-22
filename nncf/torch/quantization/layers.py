@@ -131,7 +131,8 @@ class BaseQuantizer(nn.Module):
         raise NotImplementedError
 
     def is_enabled_quantization(self):
-        return self.enabled[0] == 1
+        with no_jit_trace():
+            return self.enabled[0].item() == 1
 
     def enable_quantization(self):
         self.enabled[0] = 1
@@ -201,7 +202,8 @@ class BaseQuantizer(nn.Module):
 
     @property
     def num_bits(self):
-        return self._num_bits.item()
+        with no_jit_trace():
+            return self._num_bits.item()
 
     @num_bits.setter
     def num_bits(self, num_bits: int):
@@ -411,7 +413,8 @@ class SymmetricQuantizer(BaseQuantizer):
 
     @property
     def signed(self):
-        return self.signed_tensor.item() == 1
+        with no_jit_trace():
+            return self.signed_tensor.item() == 1
 
     @signed.setter
     def signed(self, signed: bool):

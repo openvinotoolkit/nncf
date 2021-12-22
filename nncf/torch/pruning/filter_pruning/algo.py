@@ -16,11 +16,9 @@ from typing import Dict, List, Tuple, Union
 
 import numpy as np
 import torch
-from nncf.torch.pruning.tensor_processor import PTNNCFPruningTensorProcessor
 
 from nncf import NNCFConfig
 from nncf.api.compression import CompressionLoss
-from nncf.api.compression import CompressionScheduler
 from nncf.api.compression import CompressionStage
 from nncf.common.accuracy_aware_training.training_loop import ADAPTIVE_COMPRESSION_CONTROLLERS
 from nncf.common.initialization.batchnorm_adaptation import BatchnormAdaptationAlgorithm
@@ -31,11 +29,14 @@ from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
 from nncf.common.pruning.clusterization import Clusterization
 from nncf.common.pruning.mask_propagation import MaskPropagationAlgorithm
 from nncf.common.pruning.schedulers import PRUNING_SCHEDULERS
+from nncf.common.pruning.schedulers import PruningScheduler
 from nncf.common.pruning.statistics import FilterPruningStatistics
 from nncf.common.pruning.statistics import PrunedModelTheoreticalBorderline
 from nncf.common.pruning.statistics import PrunedLayerSummary
 from nncf.common.pruning.statistics import PrunedModelStatistics
 from nncf.common.pruning.utils import calculate_in_out_channels_in_uniformly_pruned_model
+from nncf.common.pruning.utils import calculate_in_out_channels_by_masks
+from nncf.common.pruning.utils import count_filters_num
 from nncf.common.pruning.utils import count_flops_and_weights
 from nncf.common.pruning.utils import count_flops_and_weights_per_node
 from nncf.common.pruning.utils import get_cluster_next_nodes
@@ -46,8 +47,10 @@ from nncf.common.statistics import NNCFStatistics
 from nncf.common.utils.debug import is_debug
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.config.extractors import extract_bn_adaptation_init_params
+from nncf.torch.tensor import PTNNCFTensor
 from nncf.torch.algo_selector import PT_COMPRESSION_ALGORITHMS
 from nncf.torch.compression_method_api import PTCompressionAlgorithmController
+from nncf.torch.tensor_statistics.collectors import PTNNCFCollectorTensorProcessor
 from nncf.torch.graph.operator_metatypes import PTConv1dMetatype
 from nncf.torch.graph.operator_metatypes import PTConv2dMetatype
 from nncf.torch.graph.operator_metatypes import PTConv3dMetatype
@@ -65,6 +68,7 @@ from nncf.torch.pruning.base_algo import BasePruningAlgoBuilder
 from nncf.torch.pruning.base_algo import BasePruningAlgoController
 from nncf.torch.pruning.operations import PTElementwisePruningOp
 from nncf.torch.pruning.operations import PT_PRUNING_OPERATOR_METATYPES
+from nncf.torch.pruning.tensor_processor import PTNNCFPruningTensorProcessor
 from nncf.torch.pruning.filter_pruning.functions import FILTER_IMPORTANCE_FUNCTIONS
 from nncf.torch.pruning.filter_pruning.functions import calculate_binary_mask
 from nncf.torch.pruning.filter_pruning.functions import tensor_l2_normalizer
@@ -74,6 +78,7 @@ from nncf.torch.pruning.structs import PrunedModuleInfo
 from nncf.torch.pruning.utils import init_output_masks_in_graph
 from nncf.torch.structures import LeGRInitArgs, DistributedCallbacksArgs
 from nncf.torch.utils import get_filters_num
+
 
 GENERAL_CONV_LAYER_METATYPES = [
     PTConv1dMetatype,
@@ -127,7 +132,7 @@ class FilterPruningController(BasePruningAlgoController):
         params = self.pruning_config.get('params', {})
         self._pruned_norms_operators = pruned_norms_operators
         self.frozen = False
-        self._pruning_rate = 0
+        self._pruning_level = 0
         self.pruning_init = self.pruning_config.get('pruning_init', 0)
         self.pruning_quota = 0.9
         self.normalize_weights = True
@@ -143,6 +148,8 @@ class FilterPruningController(BasePruningAlgoController):
         self.current_flops = self.full_flops
         self.full_params_num = sum(self.nodes_params_num.values())
         self.current_params_num = self.full_params_num
+        self.full_filters_num = count_filters_num(self._model.get_original_graph(), GENERAL_CONV_LAYER_METATYPES)
+        self.current_filters_num = self.full_filters_num
         self._pruned_layers_num = len(self.pruned_module_groups_info.get_all_nodes())
         self._prunable_layers_num = len(self._model.get_graph().get_nodes_by_types(self._prunable_types))
         self._max_prunable_flops, self._max_prunable_params =\
@@ -196,7 +203,7 @@ class FilterPruningController(BasePruningAlgoController):
             with open(params.get('save_ranking_coeffs_path'), 'w', encoding='utf8') as f:
                 json.dump(self.ranking_coeffs, f)
 
-        self.set_pruning_rate(self.pruning_init)
+        self.set_pruning_level(self.pruning_init)
         self._bn_adaptation = None
 
     @property
@@ -204,7 +211,7 @@ class FilterPruningController(BasePruningAlgoController):
         return self._loss
 
     @property
-    def scheduler(self) -> CompressionScheduler:
+    def scheduler(self) -> PruningScheduler:
         return self._scheduler
 
     @staticmethod
@@ -231,23 +238,27 @@ class FilterPruningController(BasePruningAlgoController):
                     PrunedLayerSummary(layer_name,
                                        list(minfo.module.weight.size()),
                                        list(self.mask_shape(minfo)),
-                                       self.pruning_rate_for_mask(minfo))
+                                       self.pruning_level_for_mask(minfo))
 
-        model_statistics = PrunedModelStatistics(self._pruning_rate, list(pruned_layers_summary.values()))
         self._update_benchmark_statistics()
-        target_pruning_level = self.scheduler.current_pruning_level
+        model_statistics = PrunedModelStatistics(self.full_flops, self.current_flops,
+                                                 self.full_params_num, self.current_params_num,
+                                                 self.full_filters_num, self.current_filters_num,
+                                                 list(pruned_layers_summary.values()))
 
-        stats = FilterPruningStatistics(model_statistics, self.full_flops, self.current_flops,
-                                        self.full_params_num, self.current_params_num, target_pruning_level)
+        stats = FilterPruningStatistics(model_statistics,
+                                        self.scheduler.current_pruning_level,
+                                        self.scheduler.target_level,
+                                        self.prune_flops)
 
         nncf_stats = NNCFStatistics()
         nncf_stats.register('filter_pruning', stats)
         return nncf_stats
 
     @property
-    def pruning_rate(self) -> float:
-        """Global pruning rate in the model"""
-        return self._pruning_rate
+    def pruning_level(self) -> float:
+        """Global pruning level in the model"""
+        return self._pruning_level
 
     def freeze(self, freeze: bool = True):
         self.frozen = freeze
@@ -328,47 +339,18 @@ class FilterPruningController(BasePruningAlgoController):
                                              conv_op_metatypes=GENERAL_CONV_LAYER_METATYPES,
                                              linear_op_metatypes=LINEAR_LAYER_METATYPES)
 
-    def _calculate_flops_and_weights_pruned_model_by_masks(self) -> Tuple[int, int]:
+    def _calculate_flops_and_weights_in_uniformly_pruned_model(self, pruning_level: float) -> Tuple[int, int]:
         """
-        Calculates number of weights and flops for pruned model by using binary_filter_pruning_mask.
-
-        :return: number of flops in model
-        """
-        tmp_in_channels = self._modules_in_channels.copy()
-        tmp_out_channels = self._modules_out_channels.copy()
-
-        for group in self.pruned_module_groups_info.get_all_clusters():
-            assert all(tmp_out_channels[group.elements[0].node_name] == tmp_out_channels[node.node_name]
-                       for node in group.elements)
-            new_out_channels_num = int(sum(group.elements[0].operand.binary_filter_pruning_mask))
-            num_of_sparse_elems = len(group.elements[0].operand.binary_filter_pruning_mask) - new_out_channels_num
-            for node in group.elements:
-                tmp_out_channels[node.node_name] = new_out_channels_num
-            # Prune in_channels in all next nodes of cluster
-            next_nodes = self.next_nodes[group.id]
-            for node_name in next_nodes:
-                tmp_in_channels[node_name] -= num_of_sparse_elems
-
-        return count_flops_and_weights(self._model.get_original_graph(),
-                                       self._modules_in_shapes,
-                                       self._modules_out_shapes,
-                                       input_channels=tmp_in_channels,
-                                       output_channels=tmp_out_channels,
-                                       conv_op_metatypes=GENERAL_CONV_LAYER_METATYPES,
-                                       linear_op_metatypes=LINEAR_LAYER_METATYPES)
-
-    def _calculate_flops_and_weights_in_uniformly_pruned_model(self, pruning_rate: float) -> Tuple[int, int]:
-        """
-        Prune all prunable modules in model with pruning_rate rate and returns number of weights and
+        Prune all prunable modules in model by pruning_level level and returns number of weights and
         flops of the pruned model.
 
-        :param pruning_rate: proportion of zero filters in all modules
+        :param pruning_level: proportion of zero filters in all modules
         :return: flops number in pruned model
         """
         tmp_in_channels, tmp_out_channels = \
             calculate_in_out_channels_in_uniformly_pruned_model(
                 pruning_groups=self.pruned_module_groups_info.get_all_clusters(),
-                pruning_rate=pruning_rate,
+                pruning_level=pruning_level,
                 full_input_channels=self._modules_in_channels,
                 full_output_channels=self._modules_out_channels,
                 pruning_groups_next_nodes=self.next_nodes)
@@ -381,16 +363,16 @@ class FilterPruningController(BasePruningAlgoController):
                                        conv_op_metatypes=GENERAL_CONV_LAYER_METATYPES,
                                        linear_op_metatypes=LINEAR_LAYER_METATYPES)
 
-    def _find_uniform_pruning_rate_for_target_flops(self, target_flops_pruning_rate: float) -> float:
+    def _find_uniform_pruning_level_for_target_flops(self, target_flops_pruning_level: float) -> float:
         """
-        Searching for the minimal uniform layer-wise weight pruning rate (proportion of zero filters in a layer)
-         needed to achieve the target pruning rate in flops.
+        Searching for the minimal uniform layer-wise weight pruning level (proportion of zero filters in a layer)
+         needed to achieve the target pruning level in flops.
 
-        :param target_flops_pruning_rate: target proportion of flops that should be pruned in the model
-        :return: uniform pruning rate for all layers
+        :param target_flops_pruning_level: target proportion of flops that should be pruned in the model
+        :return: uniform pruning level for all layers
         """
         error = 0.01
-        target_flops = self.full_flops * (1 - target_flops_pruning_rate)
+        target_flops = self.full_flops * (1 - target_flops_pruning_level)
         left, right = 0.0, 1.0
         while abs(right - left) > error:
             middle = (left + right) / 2
@@ -405,91 +387,91 @@ class FilterPruningController(BasePruningAlgoController):
             self.current_params_num = params_num
             return right
         raise RuntimeError("Can't prune the model to get the required "
-                           "pruning rate in flops = {}".format(target_flops_pruning_rate))
+                           "pruning level in flops = {}".format(target_flops_pruning_level))
 
-    def set_pruning_rate(self, pruning_rate: Union[float, Dict[int, float]],
-                         run_batchnorm_adaptation: bool = False) -> None:
+    def set_pruning_level(self, pruning_level: Union[float, Dict[int, float]],
+                          run_batchnorm_adaptation: bool = False) -> None:
         """
-        Set the global or groupwise pruning rate in the model.
-        If pruning_rate is a float, the correspoding global pruning rate is set in the model,
+        Set the global or groupwise pruning level in the model.
+        If pruning_level is a float, the correspoding global pruning level is set in the model,
         either in terms of the percentage of filters pruned or as the percentage of flops
         removed, the latter being true in case the "prune_flops" flag of the controller is
         set to True.
-        If pruning_rate is a dict, the keys should correspond to layer group id's and the
-        values to groupwise pruning rates to be set in the model.
+        If pruning_level is a dict, the keys should correspond to layer group id's and the
+        values to groupwise pruning level to be set in the model.
         """
-        groupwise_pruning_rates_set = isinstance(pruning_rate, dict)
-        passed_pruning_rate = pruning_rate
+        groupwise_pruning_levels_set = isinstance(pruning_level, dict)
+        passed_pruning_level = pruning_level
 
         if not self.frozen:
             nncf_logger.info("Computing filter importance scores and binary masks...")
             with torch.no_grad():
                 if self.all_weights:
-                    if groupwise_pruning_rates_set:
-                        raise RuntimeError('Cannot set group-wise pruning rates with '
+                    if groupwise_pruning_levels_set:
+                        raise RuntimeError('Cannot set group-wise pruning levels with '
                                            'all_weights=True')
                     # Non-uniform (global) importance-score-based pruning according
-                    # to the global pruning rate
+                    # to the global pruning level
                     if self.prune_flops:
-                        self._set_binary_masks_for_pruned_modules_globally_by_flops_target(pruning_rate)
+                        self._set_binary_masks_for_pruned_modules_globally_by_flops_target(pruning_level)
                     else:
-                        self._set_binary_masks_for_pruned_modules_globally(pruning_rate)
+                        self._set_binary_masks_for_pruned_modules_globally(pruning_level)
                 else:
-                    if groupwise_pruning_rates_set:
+                    if groupwise_pruning_levels_set:
                         group_ids = [group.id for group in self.pruned_module_groups_info.get_all_clusters()]
-                        if set(pruning_rate.keys()) != set(group_ids):
-                            raise RuntimeError('Groupwise pruning rate dict keys do not correspond to '
+                        if set(pruning_level.keys()) != set(group_ids):
+                            raise RuntimeError('Groupwise pruning level dict keys do not correspond to '
                                                'layer group ids')
                     else:
-                        # Pruning uniformly with the same pruning rate across layers
+                        # Pruning uniformly with the same pruning level across layers
                         if self.prune_flops:
-                            # Looking for layerwise pruning rate needed for the required flops pruning rate
-                            pruning_rate = self._find_uniform_pruning_rate_for_target_flops(pruning_rate)
-                    self._set_binary_masks_for_pruned_modules_groupwise(pruning_rate)
+                            # Looking for layerwise pruning level needed for the required flops pruning level
+                            pruning_level = self._find_uniform_pruning_level_for_target_flops(pruning_level)
+                    self._set_binary_masks_for_pruned_modules_groupwise(pruning_level)
 
         self._propagate_masks()
-        if not groupwise_pruning_rates_set:
-            self._pruning_rate = passed_pruning_rate
+        if not groupwise_pruning_levels_set:
+            self._pruning_level = passed_pruning_level
         else:
-            self._pruning_rate = self._calculate_global_weight_pruning_rate()
+            self._pruning_level = self._calculate_global_weight_pruning_level()
 
         if run_batchnorm_adaptation:
             self._run_batchnorm_adaptation()
 
-    def _calculate_global_weight_pruning_rate(self) -> float:
+    def _calculate_global_weight_pruning_level(self) -> float:
         full_param_count = 0
         pruned_param_count = 0
         for minfo in self.pruned_module_groups_info.get_all_nodes():
             layer_param_count = sum(p.numel() for p in minfo.module.parameters() if p.requires_grad)
-            layer_weight_pruning_rate = self.pruning_rate_for_mask(minfo)
+            layer_weight_pruning_level = self.pruning_level_for_mask(minfo)
             full_param_count += layer_param_count
-            pruned_param_count += layer_param_count * layer_weight_pruning_rate
+            pruned_param_count += layer_param_count * layer_weight_pruning_level
         return pruned_param_count / full_param_count
 
     @property
-    def current_groupwise_pruning_rate(self) -> Dict[int, float]:
+    def current_groupwise_pruning_level(self) -> Dict[int, float]:
         """
         Return the dict of layer group id's and corresponding current groupwise
-        pruning rates in the model
+        pruning levels in the model
         """
-        groupwise_pruning_rate_dict = {}
+        groupwise_pruning_level_dict = {}
         for group in self.pruned_module_groups_info.get_all_clusters():
-            groupwise_pruning_rate_dict[group.id] = self.pruning_rate_for_mask(group.elements[0])
-        return groupwise_pruning_rate_dict
+            groupwise_pruning_level_dict[group.id] = self.pruning_level_for_mask(group.elements[0])
+        return groupwise_pruning_level_dict
 
     def _set_binary_masks_for_pruned_modules_groupwise(self,
-                                                       pruning_rate: Union[float, Dict[int, float]]) -> None:
+                                                       pruning_level: Union[float, Dict[int, float]]) -> None:
         """
-        Set the binary mask values according to groupwise pruning rates.
-        If pruning_rate is a float, set the pruning rates uniformly across groups.
-        If pruning_rate is a dict, set specific pruning rates corresponding to each group.
+        Set the binary mask values according to groupwise pruning level.
+        If pruning_level is a float, set the pruning level uniformly across groups.
+        If pruning_level is a dict, set specific pruning levels corresponding to each group.
         """
         nncf_logger.debug("Updating binary masks for pruned modules.")
-        groupwise_pruning_rates_set = isinstance(pruning_rate, dict)
+        groupwise_pruning_levels_set = isinstance(pruning_level, dict)
 
         for group in self.pruned_module_groups_info.get_all_clusters():
-            group_pruning_rate = pruning_rate[group.id] if groupwise_pruning_rates_set \
-                else pruning_rate
+            group_pruning_level = pruning_level[group.id] if groupwise_pruning_levels_set \
+                else pruning_level
 
             filters_num = torch.tensor([get_filters_num(minfo.module) for minfo in group.elements])
             assert torch.all(filters_num == filters_num[0])
@@ -504,7 +486,7 @@ class FilterPruningController(BasePruningAlgoController):
 
             # 2. Calculate threshold
             num_of_sparse_elems = get_rounded_pruned_element_number(cumulative_filters_importance.size(0),
-                                                                    group_pruning_rate)
+                                                                    group_pruning_level)
             threshold = sorted(cumulative_filters_importance)[min(num_of_sparse_elems, filters_num[0] - 1)]
             mask = calculate_binary_mask(cumulative_filters_importance, threshold)
 
@@ -516,11 +498,11 @@ class FilterPruningController(BasePruningAlgoController):
         # Calculate actual flops and weights number with new masks
         self._update_benchmark_statistics()
 
-    def _set_binary_masks_for_pruned_modules_globally(self, pruning_rate: float) -> None:
+    def _set_binary_masks_for_pruned_modules_globally(self, pruning_level: float) -> None:
         """
-        Set the binary mask values for layer groups according to the global pruning rate.
+        Set the binary mask values for layer groups according to the global pruning level.
         Filter importance scores in each group are merged into a single global list and a
-        threshold value separating the pruning_rate proportion of the least important filters
+        threshold value separating the pruning_level proportion of the least important filters
         in the model is calculated. Filters are pruned globally according to the threshold value.
         """
         nncf_logger.debug("Setting new binary masks for all pruned modules together.")
@@ -543,7 +525,7 @@ class FilterPruningController(BasePruningAlgoController):
 
         # 2. Calculate one threshold for all weights
         importances = torch.cat(filter_importances)
-        threshold = sorted(importances)[int(pruning_rate * importances.size(0))]
+        threshold = sorted(importances)[int(pruning_level * importances.size(0))]
 
         # 3. Set binary masks for filters in groups
         for i, group in enumerate(self.pruned_module_groups_info.get_all_clusters()):
@@ -556,16 +538,16 @@ class FilterPruningController(BasePruningAlgoController):
         self._update_benchmark_statistics()
 
     def _set_binary_masks_for_pruned_modules_globally_by_flops_target(self,
-                                                                      target_flops_pruning_rate: float) -> None:
+                                                                      target_flops_pruning_level: float) -> None:
         """
         Sorting all prunable filters in the network by importance and pruning the amount of the
-        least important filters sufficient to achieve the target pruning rate by flops.
+        least important filters sufficient to achieve the target pruning level by flops.
         Filters are pruned one-by-one and the corresponding flops value is checked.
 
-        :param target_flops_pruning_rate: target proportion of flops removed from the model
+        :param target_flops_pruning_level: target proportion of flops removed from the model
         :return:
         """
-        target_flops = self.full_flops * (1 - target_flops_pruning_rate)
+        target_flops = self.full_flops * (1 - target_flops_pruning_level)
 
         # 1. Initialize masks
         for minfo in self.pruned_module_groups_info.get_all_nodes():
@@ -604,7 +586,7 @@ class FilterPruningController(BasePruningAlgoController):
         filter_indexes = torch.cat(filter_indexes)
 
         # 3. Sort all filter groups by importances and prune the least important filters
-        # until target flops pruning rate is achieved
+        # until target flops pruning level is achieved
         sorted_importances = sorted(zip(importances, cluster_indexes, filter_indexes), key=lambda x: x[0])
         cur_num = 0
         tmp_in_channels = self._modules_in_channels.copy()
@@ -624,6 +606,9 @@ class FilterPruningController(BasePruningAlgoController):
             cluster = self.pruned_module_groups_info.get_cluster_by_id(cluster_idx)
             for node in cluster.elements:
                 tmp_out_channels[node.node_name] -= 1
+                if node.is_depthwise:
+                    tmp_in_channels[node.node_name] -= 1
+
                 node.operand.binary_filter_pruning_mask[filter_idx] = 0
 
             # Prune in channels in all next nodes
@@ -643,7 +628,7 @@ class FilterPruningController(BasePruningAlgoController):
                 self.current_params_num = params_num
                 return
             cur_num += 1
-        raise RuntimeError("Can't prune model to asked flops pruning rate")
+        raise RuntimeError("Can't prune model to asked flops pruning level")
 
     def _propagate_masks(self):
         nncf_logger.debug("Propagating pruning masks")
@@ -672,7 +657,7 @@ class FilterPruningController(BasePruningAlgoController):
 
     def compression_stage(self) -> CompressionStage:
         target_pruning_level = self.scheduler.target_level
-        actual_pruning_level = self._pruning_rate
+        actual_pruning_level = self._pruning_level
         if actual_pruning_level == 0:
             return CompressionStage.UNCOMPRESSED
         if actual_pruning_level >= target_pruning_level:
@@ -683,21 +668,47 @@ class FilterPruningController(BasePruningAlgoController):
     def compression_rate(self):
         if self.prune_flops:
             return 1 - self.current_flops / self.full_flops
-        return self.pruning_rate
+        return self.pruning_level
 
     @compression_rate.setter
     def compression_rate(self, pruning_rate):
         is_pruning_controller_frozen = self.frozen
         self.freeze(False)
-        self.set_pruning_rate(pruning_rate)
+        self.set_pruning_level(pruning_rate)
         self.freeze(is_pruning_controller_frozen)
 
     def disable_scheduler(self):
         self._scheduler = StubCompressionScheduler()
         self._scheduler.current_pruning_level = 0.0
 
+    def _collect_pruning_masks(self) -> Dict[str, PTNNCFTensor]:
+        retval = {}
+        for group in self.pruned_module_groups_info.get_all_clusters():
+            for node in group.elements:
+                retval[node.node_name] = PTNNCFTensor(node.operand.binary_filter_pruning_mask)
+        return retval
+
     def _update_benchmark_statistics(self):
-        self.current_flops, self.current_params_num = self._calculate_flops_and_weights_pruned_model_by_masks()
+        tmp_in_channels, tmp_out_channels = calculate_in_out_channels_by_masks(
+            pruning_groups=self.pruned_module_groups_info.get_all_clusters(),
+            masks=self._collect_pruning_masks(),
+            tensor_processor=PTNNCFCollectorTensorProcessor,
+            full_input_channels=self._modules_in_channels,
+            full_output_channels=self._modules_out_channels,
+            pruning_groups_next_nodes=self.next_nodes)
+
+        self.current_filters_num = count_filters_num(self._model.get_original_graph(),
+                                                     op_metatypes=GENERAL_CONV_LAYER_METATYPES,
+                                                     output_channels=tmp_out_channels)
+
+        self.current_flops, self.current_params_num = \
+            count_flops_and_weights(self._model.get_original_graph(),
+                                    self._modules_in_shapes,
+                                    self._modules_out_shapes,
+                                    input_channels=tmp_in_channels,
+                                    output_channels=tmp_out_channels,
+                                    conv_op_metatypes=GENERAL_CONV_LAYER_METATYPES,
+                                    linear_op_metatypes=LINEAR_LAYER_METATYPES)
 
     def _run_batchnorm_adaptation(self):
         if self._bn_adaptation is None:

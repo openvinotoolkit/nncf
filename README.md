@@ -130,6 +130,7 @@ A collection of ready-to-run Jupyter* notebooks are also available to demonstrat
 to optimize models for inference with the OpenVINO Toolkit.
 - [Optimizing PyTorch models with NNCF of OpenVINO by 8-bit quantization](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/302-pytorch-quantization-aware-training)
 - [Optimizing TensorFlow models with NNCF of OpenVINO by 8-bit quantization](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/305-tensorflow-quantization-aware-training)
+- [Post-Training Quantization of Pytorch model with NNCF](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/112-pytorch-post-training-quantization-nncf)
 
 ## Third-party repository integration
 NNCF may be straightforwardly integrated into training/evaluation pipelines of third-party repositories.
@@ -195,6 +196,12 @@ NNCF is also available via [conda](https://anaconda.org/conda-forge/nncf):
 ```
 conda install -c conda-forge nncf
 ```
+
+#### From a specific commit hash using pip:
+```python
+pip install git+https://github.com/openvinotoolkit/nncf@bd189e2#egg=nncf
+```
+Note that in order for this to work for pip versions >= 21.3, your Git version must be at least 2.22.
 
 #### As a Docker image
 Use one of the Dockerfiles in the [docker](./docker) directory to build an image with an environment already set up and ready for running NNCF [sample scripts](#model-compression-samples).

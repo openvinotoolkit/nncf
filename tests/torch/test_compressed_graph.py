@@ -21,6 +21,7 @@ from typing import Callable, Dict, List, Tuple, Union
 import networkx as nx
 import pytest
 import torch
+from tests.torch.test_models.synthetic import ConvRelu6HSwishHSigmoid
 from tests.torch.test_models.synthetic import MatMulDivConv
 from torch import nn
 import torch.nn.functional as F
@@ -641,6 +642,8 @@ SYNTHETIC_MODEL_DESC_LIST = [
     SingleLayerModelDesc(layer=nn.BatchNorm2d(1), input_sample_sizes=([2, 1, 1, 1])),
     SingleLayerModelDesc(layer=nn.BatchNorm3d(1), input_sample_sizes=([2, 1, 1, 1, 1])),
 
+    SingleLayerModelDesc(layer=nn.GroupNorm(2, 4), input_sample_sizes=([2, 4, 1, 1])),
+
     SingleLayerModelDesc(layer=nn.AvgPool2d(1), input_sample_sizes=[1, 1, 1]),
     SingleLayerModelDesc(layer=nn.AdaptiveAvgPool2d(1), input_sample_sizes=[1, 1, 1]),
     SingleLayerModelDesc(layer=nn.AvgPool3d(1), input_sample_sizes=[1, 1, 1, 1]),
@@ -710,7 +713,7 @@ SYNTHETIC_MODEL_DESC_LIST = [
     SingleLayerModelDesc(model_name='pixel_shuffle', layer=partial(F.pixel_shuffle, upscale_factor=1),
                          input_sample_sizes=([1, 1, 1, 1])),
 
-    GeneralModelDesc(model_builder=ManyNonEvalModules, input_sample_sizes=([1, 1, 1, 1])),
+    GeneralModelDesc(model_builder=ManyNonEvalModules, input_sample_sizes=([1, 1, 1, 1],)),
     GeneralModelDesc(model_builder=EmbeddingSumModel, input_info={"sample_size": [1, 1],
                                                                   "type": "long",
                                                                   "filler": "zeros"}),
@@ -718,7 +721,8 @@ SYNTHETIC_MODEL_DESC_LIST = [
                                                                   "type": "long",
                                                                   "filler": "zeros"}),
     GeneralModelDesc(model_builder=MultiOutputSameTensorModel),
-    GeneralModelDesc(model_builder=MatMulDivConv, input_sample_sizes=([1, 1, 5, 5], [1, 1, 5, 5]))
+    GeneralModelDesc(model_builder=MatMulDivConv, input_sample_sizes=([1, 1, 5, 5], [1, 1, 5, 5])),
+    GeneralModelDesc(model_builder=ConvRelu6HSwishHSigmoid, input_sample_sizes=([1, 1, 5, 5],))
 ]
 
 
