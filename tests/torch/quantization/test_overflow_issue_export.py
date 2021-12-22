@@ -2,12 +2,10 @@ import numpy as np
 import onnx
 import onnxruntime as rt
 import torch
-from nncf import NNCFConfig
-
-from nncf.torch.utils import get_all_modules_by_type
 from torch import nn
 from nncf.torch.checkpoint_loading import load_state
 
+from nncf import NNCFConfig
 from nncf.torch.quantization.layers import PTQuantizerSpec, QuantizationMode, SymmetricQuantizer, AsymmetricQuantizer
 from tests.torch.helpers import TwoConvTestModel, create_compressed_model_and_algo_for_test, create_conv, \
     get_nodes_by_type, get_all_inputs_for_graph_node, register_bn_adaptation_init_args
