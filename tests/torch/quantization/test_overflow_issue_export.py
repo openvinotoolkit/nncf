@@ -438,34 +438,6 @@ def test_is_overflow_fix_applied_model_resumed_correctly(tmp_path):
     are_symmetric_fq_nodes_are_exported_correct_with_overflow_fix(tmp_path, compression_ctrl)
 
 
-def generate_scale_const(scale: float, inp_shape, scale_mode, is_weights):
-    assert scale_mode in ["single_scale", "per_channel_scale"]
-
-    if scale_mode == "single_scale":
-        return scale
-
-    if scale_mode == "per_channel_scale":
-        if is_weights:
-            channel_count = inp_shape[0]
-            if channel_count == 1:
-                pytest.skip("Same case as for single scale mode")
-            scales_shape = [1 for _ in inp_shape]
-            scales_shape[0] = channel_count
-            scales = np.zeros(scales_shape)
-            for idx in range(0, channel_count):
-                scales[idx] = scale
-        else:
-            channel_count = inp_shape[1]
-            if channel_count == 1:
-                pytest.skip("Same case as for single scale mode")
-            scales_shape = [1 for _ in inp_shape]
-            scales_shape[1] = channel_count
-            scales = np.zeros(scales_shape)
-            for idx in range(0, channel_count):
-                scales[0, idx] = scale
-        return scales
-
-
 @pytest.mark.parametrize("quantization_mode", ["symmetric", "asymmetric"])
 def test_overflow_quantization_export_with_middle_quants(quantization_mode):
     model = nn.Sequential(nn.Linear(in_features=128, out_features=100, bias=False))
@@ -485,15 +457,15 @@ def test_overflow_quantization_export_with_middle_quants(quantization_mode):
     })
     register_bn_adaptation_init_args(config)
 
-    def set_scale_to_sym_quantizer_and_get_attrs(quantizer: SymmetricQuantizer, scale: np.array):
-        scale = np.full(quantizer.scale.size(), 1., dtype=np.single)
+    def set_scale_to_sym_quantizer_and_get_attrs(quantizer: SymmetricQuantizer, scale: float):
+        scale = np.full(quantizer.scale.size(), scale)
         levels = quantizer.levels
         level_low = quantizer.level_low
         level_high = quantizer.level_high
         input_low = scale * (level_low / level_high)
         input_range = scale - input_low
         quant_len = input_range / (levels - 1)
-        quantizer.scale = nn.Parameter(torch.Tensor(scale))
+        quantizer.scale = nn.Parameter(torch.from_numpy(scale.astype(np.single)))
         return input_low, quant_len, levels
 
     def set_scale_to_asym_quantizer_and_get_attrs(quantizer: AsymmetricQuantizer, input_low: float, input_range: float):
@@ -501,8 +473,8 @@ def test_overflow_quantization_export_with_middle_quants(quantization_mode):
         input_range = np.full(quantizer.input_low.size(), input_range)
         levels = quantizer.levels
         quant_len = input_range / (levels - 1)
-        quantizer.input_low = nn.Parameter(torch.Tensor(input_low))
-        quantizer.input_range = nn.Parameter(torch.Tensor(input_range))
+        quantizer.input_low = nn.Parameter(torch.from_numpy(input_low.astype(np.single)))
+        quantizer.input_range = nn.Parameter(torch.from_numpy(input_range.astype(np.single)))
         return input_low, quant_len, levels
 
     weights_size = list(model[0].weight.size())
@@ -521,14 +493,12 @@ def test_overflow_quantization_export_with_middle_quants(quantization_mode):
     elems = np.prod(weights_size)
     ref_weights = ref_weights * int(np.round(0.5 + elems / levels))
     ref_weights = np.reshape(np.array(ref_weights).flatten()[:elems], weights_size, 'F')
-    from tests.torch.quantization.test_functions import get_test_data
-    ref_weights = get_test_data([ref_weights])[0].float()
+    ref_weights = torch.from_numpy(ref_weights.astype(np.single))
 
     nncf_linear_module = list(compressed_model.get_nncf_wrapped_model())[0]
     nncf_linear_module.weight = nn.Parameter(ref_weights)
 
     compression_ctrl.export_model('linear_model.onnx')
-    import onnx
     model_onnx = onnx.load('linear_model.onnx')
 
     fq_nodes = get_nodes_by_type(model_onnx, 'FakeQuantize')
@@ -537,92 +507,6 @@ def test_overflow_quantization_export_with_middle_quants(quantization_mode):
     act_weights = all_weights[1]
     diff = (weight_quantizer(ref_weights).detach() - act_weights).abs()
 
-    if (diff > 1e-6).any():
-        assert ((diff[diff > 1e-6] - quant_len).abs() < 1e-6).all(), 'quants completely different!'
-        assert False, f'quant moved at flatten positions {torch.where(diff.flatten() > 1e-6)}'
-
-
-def generate_range_const(input_low, input_range, input_, scale_mode, is_weights):
-    assert scale_mode in ["single_scale", "per_channel_scale"]
-
-    if scale_mode == "single_scale":
-        return np.array([input_low]), np.array([input_range])
-
-    if scale_mode == "per_channel_scale":
-        if is_weights:
-            channel_count = input_.shape[0]
-            if channel_count == 1:
-                pytest.skip("Same case as for single scale mode")
-            scales_shape = [1 for _ in input_.shape]
-            scales_shape[0] = channel_count
-            input_low_out = np.zeros(scales_shape)
-            input_range_out = np.zeros(scales_shape)
-            for idx in range(0, channel_count):
-                input_low_out[idx], input_range_out[idx] = input_low, input_range
-        else:
-            channel_count = input_.shape[1]
-            if channel_count == 1:
-                pytest.skip("Same case as for single scale mode")
-            scales_shape = [1 for _ in input_.shape]
-            scales_shape[1] = channel_count
-            input_low_out = np.zeros(scales_shape)
-            input_range_out = np.zeros(scales_shape)
-            for idx in range(0, channel_count):
-                input_low_out[0, idx], input_range_out[0, idx] = input_low, input_range
-
-        return input_low_out, input_range_out
-
-
-def test_overflow_asym_quantization_export_with_middle_quants():
-    model = nn.Sequential(nn.Linear(in_features=128, out_features=100, bias=False))
-    sample_size = [1, 1, 100, 128]
-    nncf_config = NNCFConfig()
-    nncf_config.update({
-        "input_info": {
-            "sample_size": sample_size
-        },
-        "compression": {
-            "algorithm": "quantization",
-            "weights": {
-                "mode": "asymmetric"
-            },
-            "export_to_onnx_standard_ops": False
-        }
-    })
-    register_bn_adaptation_init_args(nncf_config)
-    weights_size = list(model[0].weight.size())
-    compressed_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, nncf_config)
-
-    weight_quantizer = list(compression_ctrl.weight_quantizers.values())[0].quantizer_module_ref
-
-    input_range = 3.
-    input_low = -1.
-    input_low, input_range = generate_range_const(input_low, input_range, model[0].weight, "per_channel_scale", True)
-    levels = weight_quantizer.levels
-    quant_len = input_range / (levels - 1)
-    weight_quantizer.input_low = nn.Parameter(torch.Tensor(input_low))
-    weight_quantizer.input_range = nn.Parameter(torch.Tensor(input_range))
-
-    # generate middle quants to fill required tensor
-    ref_weights = ([input_low + (i + 0.5) * quant_len for i in range(levels)])
-    elems = np.prod(weights_size)
-    ref_weights = ref_weights * int(np.round(0.5 + elems / levels))
-    ref_weights = np.reshape(np.array(ref_weights).flatten()[:elems], weights_size, 'F')
-    from tests.torch.quantization.test_functions import get_test_data
-    ref_weights = get_test_data([ref_weights])[0].float()
-
-    nncf_linear_module = list(compressed_model.get_nncf_wrapped_model())[0]
-    nncf_linear_module.weight = nn.Parameter(ref_weights)
-
-    compression_ctrl.export_model('linear_model.onnx')
-    import onnx
-    model_onnx = onnx.load('linear_model.onnx')
-
-    fq_nodes = get_nodes_by_type(model_onnx, 'FakeQuantize')
-    inputs = [get_all_inputs_for_graph_node(fq_node, model_onnx.graph) for fq_node in fq_nodes]
-    all_weights = [list(item.values())[0] for item in inputs]
-    act_weights = all_weights[1]
-    diff = (weight_quantizer(ref_weights).detach() - act_weights).abs()
     if (diff > 1e-6).any():
         assert ((diff[diff > 1e-6] - quant_len).abs() < 1e-6).all(), 'quants completely different!'
         assert False, f'quant moved at flatten positions {torch.where(diff.flatten() > 1e-6)}'
