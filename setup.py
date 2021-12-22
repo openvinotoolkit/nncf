@@ -58,7 +58,7 @@ def find_version(*file_paths):
     version_value = version_match.group(1)
     if not is_building_release:
         if is_installing_editable:
-            return version_value + ".dev-editable"
+            return version_value + ".dev0+editable"
         import subprocess
         dev_version_id = "unknown_version"
         try:
@@ -67,7 +67,7 @@ def find_version(*file_paths):
                                                      cwd=repo_root).strip().decode()
         except subprocess.CalledProcessError:
             pass
-        return version_value + f".dev-{dev_version_id}"
+        return version_value + f".dev0+{dev_version_id}"
 
     return version_value
 
