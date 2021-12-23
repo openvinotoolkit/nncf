@@ -10,6 +10,8 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+
+import copy
 import logging
 from typing import Dict
 
@@ -504,6 +506,7 @@ STAGED_QUANTIZATION_PARAMS = {
 }
 
 QUANTIZATION_ALGO_NAME_IN_CONFIG = "quantization"
+EXPERIMENTAL_QUANTIZATION_ALGO_NAME_IN_CONFIG = "experimental_quantization"
 
 QUANTIZATION_PRESETS_SCHEMA = {
     "type": "string",
@@ -589,6 +592,8 @@ QUANTIZATION_SCHEMA = {
     },
     "additionalProperties": False
 }
+EXPERIMENTAL_QUANTIZATION_SCHEMA = copy.deepcopy(QUANTIZATION_SCHEMA)
+EXPERIMENTAL_QUANTIZATION_SCHEMA["properties"]["algorithm"]["const"] = EXPERIMENTAL_QUANTIZATION_ALGO_NAME_IN_CONFIG
 
 BINARIZATION_ALGO_NAME_IN_CONFIG = "binarization"
 BINARIZATION_SCHEMA = {
@@ -856,10 +861,12 @@ ALL_SUPPORTED_ALGO_SCHEMA = [BINARIZATION_SCHEMA,
                              MAGNITUDE_SPARSITY_SCHEMA,
                              RB_SPARSITY_SCHEMA,
                              FILTER_PRUNING_SCHEMA,
-                             KNOWLEDGE_DISTILLATION_SCHEMA]
+                             KNOWLEDGE_DISTILLATION_SCHEMA,
+                             EXPERIMENTAL_QUANTIZATION_SCHEMA]
 
 REF_VS_ALGO_SCHEMA = {BINARIZATION_ALGO_NAME_IN_CONFIG: BINARIZATION_SCHEMA,
                       QUANTIZATION_ALGO_NAME_IN_CONFIG: QUANTIZATION_SCHEMA,
+                      EXPERIMENTAL_QUANTIZATION_ALGO_NAME_IN_CONFIG: EXPERIMENTAL_QUANTIZATION_SCHEMA,
                       CONST_SPARSITY_ALGO_NAME_IN_CONFIG: CONST_SPARSITY_SCHEMA,
                       MAGNITUDE_SPARSITY_ALGO_NAME_IN_CONFIG: MAGNITUDE_SPARSITY_SCHEMA,
                       RB_SPARSITY_ALGO_NAME_IN_CONFIG: RB_SPARSITY_SCHEMA,

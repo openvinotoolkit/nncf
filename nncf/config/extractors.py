@@ -73,7 +73,7 @@ def extract_algo_specific_config(config: NNCFConfig, algo_name_to_match: str) ->
     return next(iter(matches))
 
 
-def extract_range_init_params(config: NNCFConfig) -> Optional[Dict[str, object]]:
+def extract_range_init_params(config: NNCFConfig, name: str) -> Optional[Dict[str, object]]:
     """
     Extracts parameters of the quantization range initialization algorithm from the
     compression algorithm NNCFconfig.
@@ -81,7 +81,7 @@ def extract_range_init_params(config: NNCFConfig) -> Optional[Dict[str, object]]
     :param config: An instance of the NNCFConfig.
     :return: Parameters of the quantization range initialization algorithm.
     """
-    algo_config = extract_algo_specific_config(config, 'quantization')
+    algo_config = extract_algo_specific_config(config, name)
     init_range_config_dict_or_list = algo_config.get('initializer', {}).get('range', {})
 
     range_init_args = None

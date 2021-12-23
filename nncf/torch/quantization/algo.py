@@ -503,7 +503,7 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
             self._algo_config.get('initializer', {}))
 
     def _parse_range_init_params(self) -> Optional[PTRangeInitParams]:
-        range_init_params = extract_range_init_params(self.config)
+        range_init_params = extract_range_init_params(self.config, self.name)
         return PTRangeInitParams(**range_init_params) if range_init_params is not None else None
 
     def _parse_precision_init_params(self, initializer_config: Dict) -> Tuple[str, BasePrecisionInitParams]:

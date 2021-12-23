@@ -63,6 +63,7 @@ from nncf.tensorflow.graph.metatypes.common import LAYER_METATYPES_AGNOSTIC_TO_D
 from nncf.tensorflow.graph.metatypes.common import LINEAR_LAYER_METATYPES
 from nncf.tensorflow.graph.metatypes.keras_layers import TFLambdaLayerMetatype
 from nncf.tensorflow.graph.metatypes.keras_layers import TFLayerWithWeightsMetatype
+from nncf.tensorflow.graph.metatypes.tf_ops import TFOpWithWeightsMetatype
 from nncf.tensorflow.graph.transformations.commands import TFAfterLayer
 from nncf.tensorflow.graph.transformations.commands import TFBeforeLayer
 from nncf.tensorflow.graph.transformations.commands import TFInsertionCommand
@@ -297,7 +298,7 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
         self._bn_adapt_params = self._parse_bn_adapt_params()
 
     def _parse_range_init_params(self) -> TFRangeInitParams:
-        range_init_params = extract_range_init_params(self.config)
+        range_init_params = extract_range_init_params(self.config, self.name)
         return TFRangeInitParams(**range_init_params) if range_init_params is not None else None
 
     def _parse_group_params(self, quant_config: Dict, quantizer_group: QuantizerGroup) -> None:
@@ -563,7 +564,8 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
                                               target_scopes=None)):
                 continue
 
-            assert issubclass(metatype, TFLayerWithWeightsMetatype)
+            assert issubclass(metatype, TFLayerWithWeightsMetatype) or \
+                issubclass(metatype, TFOpWithWeightsMetatype)
             nodes_with_weights.append(node)
         scope_overrides_dict = self._get_algo_specific_config_section().get('scope_overrides', {})
         weighted_node_and_qconf_lists = assign_qconfig_lists_to_modules(nodes_with_weights,
