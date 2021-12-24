@@ -130,14 +130,14 @@
                 "diff_fp32_max": 0.15
             },
             "mobilenet_v2_imagenet_int4_int8": {
-                "config": "examples/torch/classification/configs/mixed_precision/mobilenet_v2_imagenet_mixed_int_manual.json",
+                "config": "examples/torch/classification/configs/mixed_precision/mobilenet_v2_imagenet_mixed_int_hawq_old_eval.json",
                 "reference": "mobilenet_v2_imagenet",
-                "target": 70.92,
+                "target": 71.07,
                 "metric_type": "Acc@1",
                 "resume": "mobilenet_v2_imagenet_int4_int8.pth",
                 "model_description": "MobileNet V2",
-                "compression_description": "Mixed, 46.6% INT8 / 53.4% INT4",
-                "diff_fp32_min": -1.05,
+                "compression_description": "Mixed, 53.27% INT8 / 46.73% INT4",
+                "diff_fp32_min": -1,
                 "diff_fp32_max": 0.1
             },
             "mobilenet_v2_imagenet_rb_sparsity_int8": {
@@ -180,14 +180,14 @@
                 "diff_fp32_max": 0.15
             },
             "squeezenet1_1_imagenet_int4_int8": {
-                "config": "examples/torch/classification/configs/mixed_precision/squeezenet1_1_imagenet_mixed_int_manual.json",
+                "config": "examples/torch/classification/configs/mixed_precision/squeezenet1_1_imagenet_mixed_int_hawq_old_eval.json",
                 "reference": "squeezenet1_1_imagenet",
-                "target": 58.9,
+                "target": 57.61,
                 "metric_type": "Acc@1",
                 "resume": "squeezenet1_1_imagenet_int4_int8.pth",
                 "model_description": "SqueezeNet V1.1",
-                "compression_description": "Mixed, 54.7% INT8 / 45.3% INT4",
-                "diff_fp32_min": -0.55,
+                "compression_description": "Mixed, 52.83% INT8 / 47.17% INT4",
+                "diff_fp32_min": -0.7,
                 "diff_fp32_max": 0.7
             },
             "resnet18_imagenet": {

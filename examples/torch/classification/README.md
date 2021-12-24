@@ -78,12 +78,12 @@ To export a model to the OpenVINO IR and run it using the Intel® Deep Learning 
 |MobileNet V2|None|ImageNet|71.93|[mobilenet_v2_imagenet.json](configs/quantization/mobilenet_v2_imagenet.json)|-|
 |MobileNet V2|INT8|ImageNet|71.35 (0.58)|[mobilenet_v2_imagenet_int8.json](configs/quantization/mobilenet_v2_imagenet_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/mobilenet_v2_imagenet_int8.pth)|
 |MobileNet V2|INT8 (per-tensor only)|ImageNet|71.3 (0.63)|[mobilenet_v2_imagenet_int8_per_tensor.json](configs/quantization/mobilenet_v2_imagenet_int8_per_tensor.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/mobilenet_v2_imagenet_int8_per_tensor.pth)|
-|MobileNet V2|Mixed, 46.6% INT8 / 53.4% INT4|ImageNet|70.92 (1.01)|[mobilenet_v2_imagenet_mixed_int_manual.json](configs/mixed_precision/mobilenet_v2_imagenet_mixed_int_manual.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/mobilenet_v2_imagenet_int4_int8.pth)|
+|MobileNet V2|Mixed, 53.27% INT8 / 46.73% INT4|ImageNet|71.07 (0.86)|[mobilenet_v2_imagenet_mixed_int_hawq.json](configs/mixed_precision/mobilenet_v2_imagenet_mixed_int_hawq.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/mobilenet_v2_imagenet_int4_int8.pth)|
 |MobileNet V2|INT8 + Sparsity 52% (RB)|ImageNet|71.11 (0.82)|[mobilenet_v2_imagenet_rb_sparsity_int8.json](configs/sparsity_quantization/mobilenet_v2_imagenet_rb_sparsity_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/mobilenet_v2_imagenet_rb_sparsity_int8.pth)|
 |SqueezeNet V1.1|None|ImageNet|58.24|[squeezenet1_1_imagenet.json](configs/quantization/squeezenet1_1_imagenet.json)|-|
 |SqueezeNet V1.1|INT8|ImageNet|58.28 (-0.04)|[squeezenet1_1_imagenet_int8.json](configs/quantization/squeezenet1_1_imagenet_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/squeezenet1_1_imagenet_int8.pth)|
 |SqueezeNet V1.1|INT8 (per-tensor only)|ImageNet|58.26 (-0.02)|[squeezenet1_1_imagenet_int8_per_tensor.json](configs/quantization/squeezenet1_1_imagenet_int8_per_tensor.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/squeezenet1_1_imagenet_int8_per_tensor.pth)|
-|SqueezeNet V1.1|Mixed, 54.7% INT8 / 45.3% INT4|ImageNet|58.9 (-0.66)|[squeezenet1_1_imagenet_mixed_int_manual.json](configs/mixed_precision/squeezenet1_1_imagenet_mixed_int_manual.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/squeezenet1_1_imagenet_int4_int8.pth)|
+|SqueezeNet V1.1|Mixed, 52.83% INT8 / 47.17% INT4|ImageNet|57.61 (0.63)|[squeezenet1_1_imagenet_mixed_int_hawq.json](configs/mixed_precision/squeezenet1_1_imagenet_mixed_int_hawq.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/squeezenet1_1_imagenet_int4_int8.pth)|
 
 
 #### Binarization
