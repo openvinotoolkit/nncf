@@ -64,6 +64,7 @@ from nncf.common.pruning.operations import (
     ConvolutionPruningOp,
     TransposeConvolutionPruningOp,
     BatchNormPruningOp,
+    LinearPruningOp,
     GroupNormPruningOp,
     ConcatPruningOp,
     ElementwisePruningOp,
@@ -222,6 +223,11 @@ class PTTransposeConvolutionPruningOp(TransposeConvolutionPruningOp, PTPruner):
                          ' {}.'.format(node.data['key'], old_num_clannels, node_module.out_channels))
 
 
+@PT_PRUNING_OPERATOR_METATYPES.register('linear')
+class PTBatchNormPruningOp(LinearPruningOp, PTPruner):
+    subtypes = [PTLinearMetatype, PTMatMulMetatype]
+
+
 @PT_PRUNING_OPERATOR_METATYPES.register('batch_norm')
 class PTBatchNormPruningOp(BatchNormPruningOp, PTPruner):
     subtypes = [PTBatchNormMetatype]
@@ -301,7 +307,7 @@ class PTElementwisePruningOp(ElementwisePruningOp, PTPruner):
 
 @PT_PRUNING_OPERATOR_METATYPES.register('stop_propagation_ops')
 class PTStopMaskForwardPruningOp(StopMaskForwardPruningOp, PTPruner):
-    subtypes = [PTMeanMetatype, PTMaxMetatype, PTMinMetatype, PTLinearMetatype, PTMatMulMetatype, PTSumMetatype,
+    subtypes = [PTMeanMetatype, PTMaxMetatype, PTMinMetatype, PTSumMetatype,
                 UnknownMetatype]
 
 

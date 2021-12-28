@@ -25,12 +25,12 @@ from nncf.common.pruning.operations import (
     IdentityMaskForwardPruningOp,
     ConvolutionPruningOp,
     TransposeConvolutionPruningOp,
+    LinearPruningOp,
     BatchNormPruningOp,
     ConcatPruningOp,
     ElementwisePruningOp,
     ReshapePruningOp,
     FlattenPruningOp,
-    StopMaskForwardPruningOp
 )
 
 TF_PRUNING_OPERATOR_METATYPES = PruningOperationsMetatypeRegistry("operator_metatypes")
@@ -68,6 +68,11 @@ class TFTransposeConvolutionPruningOp(TransposeConvolutionPruningOp):
     additional_types = ['Conv1DTranspose', 'Conv2DTranspose', 'Conv3DTranspose']
 
 
+@TF_PRUNING_OPERATOR_METATYPES.register('linear')
+class TFLinearPruningOp(LinearPruningOp):
+    additional_types = ['Dense', 'MatMul']
+
+
 @TF_PRUNING_OPERATOR_METATYPES.register('batch_norm')
 class TFBatchNormPruningOp(BatchNormPruningOp):
     additional_types = ['BatchNormalization', 'SyncBatchNormalization']
@@ -86,11 +91,6 @@ class TFReshapeOps(ReshapePruningOp):
 @TF_PRUNING_OPERATOR_METATYPES.register('flatten')
 class TFFlattenOps(FlattenPruningOp):
     additional_types = ['Flatten']
-
-
-@TF_PRUNING_OPERATOR_METATYPES.register('stop_propagation_ops')
-class TFStopMaskForwardPruningOp(StopMaskForwardPruningOp):
-    additional_types = ['Dense', 'MatMul']
 
 
 @TF_PRUNING_OPERATOR_METATYPES.register('concat')

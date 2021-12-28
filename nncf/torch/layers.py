@@ -270,6 +270,7 @@ NNCF_GENERAL_CONV_MODULES_DICT.update(NNCF_DECONV_MODULES_DICT)
 NNCF_LINEAR_MODULES_DICT = {NNCFLinear: nn.Linear}
 
 NNCF_PRUNING_MODULES_DICT = {
+    NNCFLinear: nn.Linear,
     NNCFConv1d: nn.Conv1d,
     NNCFConv2d: nn.Conv2d,
     NNCFConv3d: nn.Conv3d,
