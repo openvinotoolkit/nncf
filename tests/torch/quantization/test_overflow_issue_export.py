@@ -403,6 +403,12 @@ def test_is_overflow_fix_applied_model_resumed_correctly(tmp_path):
     are_symmetric_fq_nodes_are_exported_correct_with_overflow_fix(tmp_path, compression_ctrl)
 
 
+def set_parameters_to_quantizer_and_get_attrs(quantizer, paramaters_to_set):
+    if isinstance(quantizer, SymmetricQuantizer):
+        return set_scale_to_sym_quantizer_and_get_attrs(quantizer, **paramaters_to_set)
+    return set_input_low_and_input_range_to_asym_quantizer_and_get_attrs(quantizer, **paramaters_to_set)
+
+
 def set_scale_to_sym_quantizer_and_get_attrs(quantizer: SymmetricQuantizer, scale: float):
     scale = np.full(quantizer.scale.size(), scale)
     levels = quantizer.levels
@@ -415,7 +421,8 @@ def set_scale_to_sym_quantizer_and_get_attrs(quantizer: SymmetricQuantizer, scal
     return input_low, quant_len, levels
 
 
-def set_scale_to_asym_quantizer_and_get_attrs(quantizer: AsymmetricQuantizer, input_low: float, input_range: float):
+def set_input_low_and_input_range_to_asym_quantizer_and_get_attrs(quantizer: AsymmetricQuantizer, input_low: float,
+                                                                  input_range: float):
     input_low = np.full(quantizer.input_low.size(), input_low)
     input_range = np.full(quantizer.input_low.size(), input_range)
     levels = quantizer.levels
@@ -433,8 +440,10 @@ def generate_middle_quants(size: List[int], input_low: np.ndarray, quant_len: np
     return torch.from_numpy(ref_weights.astype(np.single))
 
 
-@pytest.mark.parametrize("quantization_mode", ["symmetric", "asymmetric"])
-def test_overflow_fix_quantization_export_with_middle_quants(quantization_mode):
+@pytest.mark.parametrize("quantization_mode, parameters_to_set",
+                         [("symmetric", {"scale": 1.}), ("asymmetric", {"input_low": -1.,
+                                                                        "input_range": 3.})])
+def test_overflow_fix_quantization_export_with_middle_quants(quantization_mode, parameters_to_set):
     model = nn.Sequential(nn.Linear(in_features=128, out_features=100))
     sample_size = [1, 1, 100, 128]
     config = get_config_for_export_mode(False)
@@ -444,11 +453,7 @@ def test_overflow_fix_quantization_export_with_middle_quants(quantization_mode):
     compressed_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
     weight_quantizer = list(compression_ctrl.weight_quantizers.values())[0].quantizer_module_ref
 
-    if quantization_mode == "symmetric":
-        input_low, quant_len, levels = set_scale_to_sym_quantizer_and_get_attrs(weight_quantizer, scale=1.)
-    else:
-        input_low, quant_len, levels = set_scale_to_asym_quantizer_and_get_attrs(weight_quantizer, input_low=-1.,
-                                                                                 input_range=3.)
+    input_low, quant_len, levels = set_parameters_to_quantizer_and_get_attrs(weight_quantizer, parameters_to_set)
 
     nncf_linear_module = list(compressed_model.get_nncf_wrapped_model())[0]
     ref_weights = generate_middle_quants(list(nncf_linear_module.weight.size()), input_low, quant_len, levels)
