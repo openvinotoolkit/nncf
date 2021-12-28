@@ -464,6 +464,7 @@ def test_overflow_fix_quantization_export_with_middle_quants(quantization_mode, 
     model_onnx = onnx.load('linear_model.onnx')
 
     fq_nodes = get_nodes_by_type(model_onnx, 'FakeQuantize')
+    # pylint:disable=no-member
     inputs = [get_all_inputs_for_graph_node(fq_node, model_onnx.graph) for fq_node in fq_nodes]
     act_weights = list(inputs[1].values())[0]
 
