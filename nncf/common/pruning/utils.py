@@ -21,10 +21,11 @@ import numpy as np
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.graph import NNCFNodeName
-from nncf.common.tensor import NNCFTensor
-from nncf.common.tensor_statistics.collectors import NNCFCollectorTensorProcessor
+from nncf.common.graph.layer_attributes import LinearLayerAttributes
 from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
 from nncf.common.graph.operator_metatypes import OperatorMetatype
+from nncf.common.tensor import NNCFTensor
+from nncf.common.tensor_statistics.collectors import NNCFCollectorTensorProcessor
 from nncf.common.pruning.clusterization import Cluster
 from nncf.common.pruning.clusterization import Clusterization
 from nncf.common.pruning.structs import PrunedLayerInfoBase
@@ -184,12 +185,12 @@ def get_conv_in_out_channels(graph: NNCFGraph):
     """
     in_channels, out_channels = {}, {}
     for node in graph.get_all_nodes():
-        if isinstance(node.layer_attributes, ConvolutionLayerAttributes):
+        if isinstance(node.layer_attributes, (ConvolutionLayerAttributes, LinearLayerAttributes)):
             name = node.node_name
             if name in in_channels and name in out_channels:
                 continue
-            in_channels[name] = node.layer_attributes.in_channels
-            out_channels[name] = node.layer_attributes.out_channels
+            in_channels[name] = get_input_channels(node)
+            out_channels[name] = get_output_channels(node)
     return in_channels, out_channels
 
 
@@ -321,7 +322,7 @@ def count_filters_num(graph: NNCFGraph,
     filters_num = 0
     output_channels = output_channels or {}
     for node in graph.get_nodes_by_metatypes(op_metatypes):
-        filters_num += output_channels.get(node.node_name, node.layer_attributes.out_channels)
+        filters_num += output_channels.get(node.node_name, get_output_channels(node))
     return filters_num
 
 
@@ -567,6 +568,23 @@ def get_input_masks(node: NNCFNode, graph: NNCFGraph) -> List[Optional[NNCFTenso
     """
     input_masks = [input_node.data['output_mask'] for input_node in graph.get_previous_nodes(node)]
     return input_masks
+
+
+def get_input_channels(node: NNCFNode) -> int:
+    layer_attrs = node.layer_attributes # type: Union[ConvolutionLayerAttributes, LinearLayerAttributes]
+    if isinstance(layer_attrs, ConvolutionLayerAttributes):
+        return layer_attrs.in_channels
+    elif isinstance(layer_attrs, LinearLayerAttributes):
+        return layer_attrs.in_features
+
+
+def get_output_channels(node: NNCFNode) -> int:
+    layer_attrs = node.layer_attributes # type: Union[ConvolutionLayerAttributes, LinearLayerAttributes]
+    if isinstance(layer_attrs, ConvolutionLayerAttributes):
+        return layer_attrs.out_channels
+    elif isinstance(layer_attrs, LinearLayerAttributes):
+        return layer_attrs.out_features
+    raise RuntimeError(f'Can\'t get count output channel from node {node}')
 
 
 def identity_mask_propagation(node: NNCFNode, graph: NNCFGraph) -> None:

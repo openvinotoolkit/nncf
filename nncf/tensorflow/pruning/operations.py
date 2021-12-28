@@ -27,6 +27,7 @@ from nncf.common.pruning.operations import (
     IdentityMaskForwardPruningOp,
     ConvolutionPruningOp,
     TransposeConvolutionPruningOp,
+    LinearPruningOp,
     BatchNormPruningOp,
     ConcatPruningOp,
     ElementwisePruningOp,
@@ -74,6 +75,11 @@ class TFConvolutionPruningOp(ConvolutionPruningOp):
 @TF_PRUNING_OPERATOR_METATYPES.register('transpose_convolution')
 class TFTransposeConvolutionPruningOp(TransposeConvolutionPruningOp):
     additional_types = ['Conv1DTranspose', 'Conv2DTranspose', 'Conv3DTranspose']
+
+
+@TF_PRUNING_OPERATOR_METATYPES.register('linear')
+class TFLinearPruningOp(LinearPruningOp):
+    additional_types = ['Dense', 'MatMul']
 
 
 @TF_PRUNING_OPERATOR_METATYPES.register('batch_norm')
