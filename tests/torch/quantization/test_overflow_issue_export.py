@@ -437,7 +437,7 @@ def generate_middle_quants(size: List[int], input_low: np.ndarray, quant_len: np
 
 @pytest.mark.parametrize("quantization_mode", ["symmetric", "asymmetric"])
 def test_overflow_fix_quantization_export_with_middle_quants(quantization_mode):
-    model = nn.Sequential(nn.Linear(in_features=128, out_features=100, bias=True))
+    model = nn.Sequential(nn.Linear(in_features=128, out_features=100))
     sample_size = [1, 1, 100, 128]
     config = get_config_for_export_mode(False)
     config["compression"]["weights"] = {"mode": quantization_mode}
@@ -462,8 +462,8 @@ def test_overflow_fix_quantization_export_with_middle_quants(quantization_mode):
 
     fq_nodes = get_nodes_by_type(model_onnx, 'FakeQuantize')
     inputs = [get_all_inputs_for_graph_node(fq_node, model_onnx.graph) for fq_node in fq_nodes]
-    all_weights = [list(item.values())[0] for item in inputs]
-    act_weights = all_weights[1]
+    act_weights = list(inputs[1].values())[0]
+
     diff = (weight_quantizer(ref_weights).detach() - act_weights).abs()
 
     if (diff > 1e-6).any():
