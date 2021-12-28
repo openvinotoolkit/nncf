@@ -346,10 +346,8 @@ def test_are_qdq_exported_per_tensor_weights_tensors_clipped(tmp_path):
 
     for quantizer, onnx_q_parametres in zip([first_quantizer, second_quantizer], inputs[1::2]):
         onnx_tensor_weight, onnx_q_scale, onnx_zero_level = list(onnx_q_parametres.values())
-        quantizer_weight, quantizer_scale = quantizer.quantized_module.weight.detach().numpy(), \
-                                            quantizer.quantizer_module_ref.scale
+        quantizer_scale = quantizer.quantizer_module_ref.scale.detach().numpy()
 
-        quantizer_scale = quantizer_scale.detach().numpy()
         onnx_input_output_low = -128 * onnx_q_scale + onnx_zero_level
         onnx_input_output_high = 127 * onnx_q_scale + onnx_zero_level
 
