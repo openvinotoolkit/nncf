@@ -85,8 +85,9 @@ class BranchingModel(nn.Module):
 
 
 class ResidualConnectionModel(nn.Module):
-    def __init__(self):
+    def __init__(self, last_layer_accept_pruning=True):
         super().__init__()
+        self.last_layer_accept_pruning = last_layer_accept_pruning
         self.conv1 = create_conv(1, 8, 3, 1, -2, padding=1)
         self.conv2 = create_conv(8, 8, 3, 2, -2, padding=1)
         self.conv3 = create_conv(8, 8, 3, 3, -2, padding=1)
@@ -101,7 +102,10 @@ class ResidualConnectionModel(nn.Module):
         x = x + self.conv3(x)
         x = self.relu(x)
         x = self.conv4(x) + self.conv5(x)
-        x = self.linear(x.view(-1))
+        b, *_ = x.size()
+        view_const = (b, -1) if self.last_layer_accept_pruning else (-1)
+        x = x.view(view_const)
+        x = self.linear(x)
         return x
 
 
@@ -233,7 +237,12 @@ class BigPruningTestModel(nn.Module):
         self.up = create_transpose_conv(32, 64, 3, 3, 1, 2)
         for i in range(64):
             self.up.weight.data[0][i] += i
-        self.conv3 = create_conv(64, 1, 5, 5, 1)
+        self.linear = nn.Linear(3136, 128)
+        for i in range(128):
+            self.linear.weight.data[i] = i
+        self.linear.bias.data.fill_(1)
+        self.bn3 = nn.BatchNorm2d(128)
+        self.conv3 = create_conv(128, 1, 1, 5, 1)
 
     def forward(self, x):
         x = self.conv1(x)
@@ -245,8 +254,11 @@ class BigPruningTestModel(nn.Module):
         x = self.relu(x)
         x = self.up(x)
         x = self.relu(x)
+        b, *_ = x.size()
+        x = self.linear(x.view(b, -1)).view(b, -1, 1, 1)
+        x = self.bn3(x)
         x = self.conv3(x)
-        x = x.view(1, -1)
+        x = x.view(b, -1)
         return x
 
 
@@ -467,15 +479,17 @@ class PruningTestModelWrongDimsElementwise(nn.Module):
         return x
 
 
-class PruningTestModelStopOp(nn.Module):
+class PruningTestModelSimplePrunableLinear(nn.Module):
     def __init__(self):
         super().__init__()
-        self.conv = create_conv(1, 1, 1)
-        self.linear = nn.Linear(64, 1)
+        self.conv = create_conv(1, 4, 1)
+        self.linear = nn.Linear(256, 32)
+        self.last_linear = nn.Linear(32, 1)
 
     def forward(self, x):
         x = self.conv(x)
         x = self.linear(torch.flatten(x, start_dim=1))
+        x = self.last_linear(x)
         return x
 
 
@@ -618,6 +632,24 @@ class SELayerWithReshape(nn.Module):
         return x * y
 
 
+class SELayerWithReshapeAndLinear(nn.Module):
+    def __init__(self, channel, reduction=4):
+        super().__init__()
+        self.avg_pool = nn.AdaptiveAvgPool2d(1)
+        self.fc = nn.Sequential(
+            nn.Linear(channel, make_divisible(channel // reduction, 8)),
+            nn.ReLU(inplace=True),
+            nn.Linear(make_divisible(channel // reduction, 8), channel),
+            nn.ReLU(inplace=True)
+        )
+
+    def forward(self, x):
+        b, c, _, _ = x.size()
+        y = self.avg_pool(x).view(b, c)
+        y = self.fc(y).view(b, c, 1, 1)
+        return x * y
+
+
 class InvertedResidual(nn.Module):
     def __init__(self, inp, hidden_dim, oup, kernel_size, stride, se_layer):
         super().__init__()
@@ -645,10 +677,11 @@ class InvertedResidual(nn.Module):
 
 
 class MobilenetV3BlockSEReshape(nn.Module):
-    def __init__(self):
+    def __init__(self, linear_in_se_block=False):
         super().__init__()
+        se_block = SELayerWithReshape if not linear_in_se_block else SELayerWithReshapeAndLinear
         self.first_conv = nn.Conv2d(1, 6, 2)
-        self.inverted_residual = InvertedResidual(6, 6, 6, 5, 1, SELayerWithReshape)
+        self.inverted_residual = InvertedResidual(6, 6, 6, 5, 1, se_block)
         self.last_conv = nn.Conv2d(6, 1, 1)
 
     def forward(self, x):

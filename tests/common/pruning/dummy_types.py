@@ -7,6 +7,7 @@ from nncf.common.pruning.operations import (
     OutputPruningOp,
     IdentityMaskForwardPruningOp,
     ConvolutionPruningOp,
+    LinearPruningOp,
     TransposeConvolutionPruningOp,
     BatchNormPruningOp,
     GroupNormPruningOp,
@@ -45,6 +46,8 @@ class DummyElementwiseMetatype(OperatorMetatype):
 class DummyConvMetatype(OperatorMetatype):
     name = 'conv'
 
+class DummyLinearMetatype(OperatorMetatype):
+    name = 'linear'
 
 class DummyTransposeConvolutionMetatype(OperatorMetatype):
     name = 'transpose_conv'
@@ -100,6 +103,11 @@ class DummyStopMaskForwardPruningOp(StopMaskForwardPruningOp):
 @DUMMY_PRUNING_OPERATOR_METATYPES.register(DummyConvMetatype.name)
 class DummyConvPruningOp(ConvolutionPruningOp):
     additional_types = [DummyConvMetatype.name]
+
+
+@DUMMY_PRUNING_OPERATOR_METATYPES.register(DummyLinearMetatype.name)
+class DummyLinearPruningOp(LinearPruningOp):
+    additional_types = [DummyLinearMetatype.name]
 
 
 @DUMMY_PRUNING_OPERATOR_METATYPES.register(DummyTransposeConvolutionMetatype.name)

@@ -224,7 +224,7 @@ class PTTransposeConvolutionPruningOp(TransposeConvolutionPruningOp, PTPruner):
 
 
 @PT_PRUNING_OPERATOR_METATYPES.register('linear')
-class PTBatchNormPruningOp(LinearPruningOp, PTPruner):
+class PTLinearPruningOp(LinearPruningOp, PTPruner):
     subtypes = [PTLinearMetatype, PTMatMulMetatype]
 
 

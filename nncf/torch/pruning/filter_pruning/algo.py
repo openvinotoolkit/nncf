@@ -40,7 +40,7 @@ from nncf.common.pruning.utils import count_filters_num
 from nncf.common.pruning.utils import count_flops_and_weights
 from nncf.common.pruning.utils import count_flops_and_weights_per_node
 from nncf.common.pruning.utils import get_cluster_next_nodes
-from nncf.common.pruning.utils import get_conv_in_out_channels
+from nncf.common.pruning.utils import get_prunable_layers_in_out_channels
 from nncf.common.pruning.utils import get_rounded_pruned_element_number
 from nncf.common.schedulers import StubCompressionScheduler
 from nncf.common.statistics import NNCFStatistics
@@ -273,7 +273,7 @@ class FilterPruningController(BasePruningAlgoController):
     def _init_pruned_modules_params(self):
         # 1. Init in/out channels for potentially prunable modules
         graph = self._model.get_original_graph()
-        self._modules_in_channels, self._modules_out_channels = get_conv_in_out_channels(graph)
+        self._modules_in_channels, self._modules_out_channels = get_prunable_layers_in_out_channels(graph)
 
         # 2. Init next_nodes for every pruning cluster
         self.next_nodes = get_cluster_next_nodes(graph, self.pruned_module_groups_info, self._prunable_types)

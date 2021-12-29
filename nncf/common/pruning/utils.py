@@ -173,9 +173,9 @@ def get_previous_convs(graph: NNCFGraph, nncf_node: NNCFNode,
     return sources
 
 
-def get_conv_in_out_channels(graph: NNCFGraph):
+def get_prunable_layers_in_out_channels(graph: NNCFGraph):
     """
-    Collects the number of input and output channels for each convolution in the graph.
+    Collects the number of input and output channels for each prunable layer in the graph.
 
     :param graph: NNCFGraph
     :return Dictionary with the number of input channels to convolution layers:
@@ -571,20 +571,33 @@ def get_input_masks(node: NNCFNode, graph: NNCFGraph) -> List[Optional[NNCFTenso
 
 
 def get_input_channels(node: NNCFNode) -> int:
+    """
+    Returns count of input channels of an prunable node.
+
+    :param node: Given prunable node.
+    :return: Count of input channels of the given node.
+    """
     layer_attrs = node.layer_attributes # type: Union[ConvolutionLayerAttributes, LinearLayerAttributes]
     if isinstance(layer_attrs, ConvolutionLayerAttributes):
         return layer_attrs.in_channels
-    elif isinstance(layer_attrs, LinearLayerAttributes):
+    if isinstance(layer_attrs, LinearLayerAttributes):
         return layer_attrs.in_features
+    raise RuntimeError(f'Can\'t get count of input channels from node {node}')
 
 
 def get_output_channels(node: NNCFNode) -> int:
+    """
+    Returns count of output channels of an prunable node.
+
+    :param node: Given prunable node.
+    :return: Count of output channels of the given node.
+    """
     layer_attrs = node.layer_attributes # type: Union[ConvolutionLayerAttributes, LinearLayerAttributes]
     if isinstance(layer_attrs, ConvolutionLayerAttributes):
         return layer_attrs.out_channels
-    elif isinstance(layer_attrs, LinearLayerAttributes):
+    if isinstance(layer_attrs, LinearLayerAttributes):
         return layer_attrs.out_features
-    raise RuntimeError(f'Can\'t get count output channel from node {node}')
+    raise RuntimeError(f'Can\'t get count of output channels from node {node}')
 
 
 def identity_mask_propagation(node: NNCFNode, graph: NNCFGraph) -> None:
