@@ -31,6 +31,7 @@ from nncf.common.pruning.operations import (
     ElementwisePruningOp,
     ReshapePruningOp,
     FlattenPruningOp,
+    StopMaskForwardPruningOp
 )
 
 TF_PRUNING_OPERATOR_METATYPES = PruningOperationsMetatypeRegistry("operator_metatypes")
@@ -91,6 +92,11 @@ class TFReshapeOps(ReshapePruningOp):
 @TF_PRUNING_OPERATOR_METATYPES.register('flatten')
 class TFFlattenOps(FlattenPruningOp):
     additional_types = ['Flatten']
+
+
+@TF_PRUNING_OPERATOR_METATYPES.register('stop_propagation_ops')
+class TFStopMaskForwardPruningOp(StopMaskForwardPruningOp):
+    additional_types = []
 
 
 @TF_PRUNING_OPERATOR_METATYPES.register('concat')

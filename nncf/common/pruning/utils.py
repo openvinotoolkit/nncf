@@ -322,7 +322,7 @@ def count_filters_num(graph: NNCFGraph,
     filters_num = 0
     output_channels = output_channels or {}
     for node in graph.get_nodes_by_metatypes(op_metatypes):
-        filters_num += output_channels.get(node.node_name, node.layer_attributes.out_channels)
+        filters_num += output_channels.get(node.node_name, get_output_channels(node))
     return filters_num
 
 
@@ -584,6 +584,7 @@ def get_output_channels(node: NNCFNode) -> int:
         return layer_attrs.out_channels
     elif isinstance(layer_attrs, LinearLayerAttributes):
         return layer_attrs.out_features
+    raise RuntimeError(f'Can\'t get count output channel from node {node}')
 
 
 def identity_mask_propagation(node: NNCFNode, graph: NNCFGraph) -> None:

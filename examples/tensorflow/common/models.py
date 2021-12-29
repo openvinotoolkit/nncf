@@ -104,7 +104,7 @@ def MobileNetV3(stack_fn, last_point_ch, input_shape=None, model_type='large', *
     x = activation(x)
 
     x = layers.Dropout(0.2)(x)
-    x = layers.Conv2D(1000, kernel_size=1, padding='same', name='Logits')(x)
+    x = layers.Conv2D(100, kernel_size=1, padding='same', name='Logits')(x)
     x = layers.Flatten()(x)
     x = layers.Activation(activation='softmax',
                           name='Predictions')(x)
@@ -127,7 +127,7 @@ def MobileNetV3(stack_fn, last_point_ch, input_shape=None, model_type='large', *
         BASE_WEIGHT_PATH + file_name,
         cache_subdir='models',
         file_hash=file_hash)
-    model.load_weights(weights_path)
+    #model.load_weights(weights_path)
 
     return model
 
@@ -200,20 +200,16 @@ def _se_block(inputs, filters, se_ratio, prefix):
     x = layers.GlobalAveragePooling2D(name=prefix + 'squeeze_excite/AvgPool')(
         inputs)
     if backend.image_data_format() == 'channels_first':
-        x = layers.Reshape((filters, 1, 1))(x)
+        x = layers.Reshape((filters, 1))(x)
     else:
-        x = layers.Reshape((1, 1, filters))(x)
-    x = layers.Conv2D(
+        x = layers.Reshape((1, filters))(x)
+    x = layers.Dense(
         _depth(filters * se_ratio),
-        kernel_size=1,
-        padding='same',
         name=prefix + 'squeeze_excite/Conv')(
         x)
     x = layers.ReLU(name=prefix + 'squeeze_excite/Relu')(x)
-    x = layers.Conv2D(
+    x = layers.Dense(
         filters,
-        kernel_size=1,
-        padding='same',
         name=prefix + 'squeeze_excite/Conv_1')(
         x)
     x = hard_sigmoid(x)

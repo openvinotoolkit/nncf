@@ -28,6 +28,7 @@ from nncf.common.pruning.node_selector import PruningNodeSelector
 from nncf.common.pruning.statistics import PrunedLayerSummary
 from nncf.common.pruning.structs import PrunedLayerInfoBase
 from nncf.common.pruning.utils import is_prunable_depthwise_conv
+from nncf.common.pruning.utils import get_output_channels
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.common.compression import BaseCompressionAlgorithmController
 from nncf.config.extractors import extract_algo_specific_config
@@ -126,7 +127,7 @@ class BasePruningAlgoBuilder(TFCompressionAlgorithmBuilder):
                 # Add output_mask to elements to run mask_propagation
                 # and detect spec_nodes that will be pruned.
                 # It should be done for all elements of shared layer.
-                node.data['output_mask'] = TFNNCFTensor(tf.ones(node.layer_attributes.out_channels))
+                node.data['output_mask'] = TFNNCFTensor(tf.ones(get_output_channels(node)))
                 if layer_name in shared_layers:
                     continue
                 if node.is_shared():

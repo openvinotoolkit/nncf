@@ -148,7 +148,8 @@ class FilterPruningController(BasePruningAlgoController):
         self.current_flops = self.full_flops
         self.full_params_num = sum(self.nodes_params_num.values())
         self.current_params_num = self.full_params_num
-        self.full_filters_num = count_filters_num(self._model.get_original_graph(), GENERAL_CONV_LAYER_METATYPES)
+        self.full_filters_num = count_filters_num(self._model.get_original_graph(), GENERAL_CONV_LAYER_METATYPES +
+                                                  LINEAR_LAYER_METATYPES)
         self.current_filters_num = self.full_filters_num
         self._pruned_layers_num = len(self.pruned_module_groups_info.get_all_nodes())
         self._prunable_layers_num = len(self._model.get_graph().get_nodes_by_types(self._prunable_types))
