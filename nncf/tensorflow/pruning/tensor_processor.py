@@ -43,7 +43,7 @@ class TFNNCFPruningTensorProcessor(NNCFPruningBaseTensorProcessor):
 
     @classmethod
     def repeat(cls, tensor: NNCFTensor, repeats: int) -> NNCFTensor:
-        ret_tensor = tf.repeat(tensor, repeats=repeats)
+        ret_tensor = tf.repeat(tensor.tensor, repeats=repeats)
         return TFNNCFTensor(ret_tensor)
 
     @classmethod
