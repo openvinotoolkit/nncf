@@ -237,7 +237,12 @@ class BigPruningTestModel(nn.Module):
         self.up = create_transpose_conv(32, 64, 3, 3, 1, 2)
         for i in range(64):
             self.up.weight.data[0][i] += i
-        self.conv3 = create_conv(64, 1, 5, 5, 1)
+        self.linear = nn.Linear(3136, 128)
+        for i in range(128):
+            self.linear.weight.data[i] = i
+        self.linear.bias.data.fill_(1)
+        self.bn3 = nn.BatchNorm2d(128)
+        self.conv3 = create_conv(128, 1, 1, 5, 1)
 
     def forward(self, x):
         x = self.conv1(x)
@@ -249,8 +254,11 @@ class BigPruningTestModel(nn.Module):
         x = self.relu(x)
         x = self.up(x)
         x = self.relu(x)
+        b, c, h, w = x.size()
+        x = self.linear(x.view(b, -1)).view(b, -1, 1, 1)
+        x = self.bn3(x)
         x = self.conv3(x)
-        x = x.view(1, -1)
+        x = x.view(b, -1)
         return x
 
 

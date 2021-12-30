@@ -173,9 +173,9 @@ def get_previous_convs(graph: NNCFGraph, nncf_node: NNCFNode,
     return sources
 
 
-def get_conv_in_out_channels(graph: NNCFGraph):
+def get_prunable_layers_in_out_channels(graph: NNCFGraph):
     """
-    Collects the number of input and output channels for each convolution in the graph.
+    Collects the number of input and output channels for each prunable layer in the graph.
 
     :param graph: NNCFGraph
     :return Dictionary with the number of input channels to convolution layers:

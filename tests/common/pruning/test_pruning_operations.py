@@ -316,7 +316,7 @@ RESHAPE_TEST_CASES = [
     ['reshape', (1, 64, 32), (1, 2048)], # Flatten
     ['reshape', (1, 32, 64, 1), (1, 2048)], # Flatten
     ['reshape', (1, 1, 64), (1, 1, 1, 64)], # Expand
-    ['reshape', (1, 1, 1, 64), (1, 64)],# Squeeze
+    ['reshape', (1, 1, 1, 64), (1, 64)], # Squeeze
     ['reshape', (1, 1, 1, 64), (1, 1, 64, 1)],
     ['reshape', (1, 1, 32, 64), (1, 64, 32)],
     ['reshape', (1, 1, 32, 64), (1, 64, 16, 16)],

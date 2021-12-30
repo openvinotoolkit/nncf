@@ -34,7 +34,7 @@ from nncf.common.pruning.utils import count_filters_num
 from nncf.common.pruning.utils import count_flops_and_weights
 from nncf.common.pruning.utils import count_flops_and_weights_per_node
 from nncf.common.pruning.utils import get_cluster_next_nodes
-from nncf.common.pruning.utils import get_conv_in_out_channels
+from nncf.common.pruning.utils import get_prunable_layers_in_out_channels
 from nncf.common.pruning.utils import get_rounded_pruned_element_number
 from nncf.common.statistics import NNCFStatistics
 from nncf.common.pruning.statistics import PrunedModelTheoreticalBorderline
@@ -231,7 +231,7 @@ class FilterPruningController(BasePruningAlgoController):
 
     def _init_pruned_layers_params(self):
         # 1. Initialize in/out channels for potentially prunable layers
-        self._layers_in_channels, self._layers_out_channels = get_conv_in_out_channels(self._original_graph)
+        self._layers_in_channels, self._layers_out_channels = get_prunable_layers_in_out_channels(self._original_graph)
 
         # 2. Initialize next_nodes for each pruning cluster
         self._next_nodes = get_cluster_next_nodes(self._original_graph, self._pruned_layer_groups_info,
