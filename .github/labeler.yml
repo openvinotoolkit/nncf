@@ -5,23 +5,23 @@ dependencies:
   - '**/setup.py'
 
 NNCF PT:
-  - 'examples/torch/**'
-  - 'nncf/torch/**'
-  - 'tests/torch/**'
+  - 'examples/torch/**/*'
+  - 'nncf/torch/**/*'
+  - 'tests/torch/**/*'
 
 NNCF TF:
-  - 'examples/tensorflow/**'
-  - 'nncf/tensorflow/**'
-  - 'tests/tensorflow/**'
+  - 'examples/tensorflow/**/*'
+  - 'nncf/tensorflow/**/*'
+  - 'tests/tensorflow/**/*'
 
 documentation:
   - '**/README.md'
-  - 'docs/**'
+  - 'docs/**/*'
 
 experimental:
-  - 'nncf/experimental/**'
+  - 'nncf/experimental/**/*'
 
 NNCF Common:
-  - 'examples/common/**'
-  - 'nncf/common/**'
-  - 'tests/common/**'
+  - 'examples/common/**/*'
+  - 'nncf/common/**/*'
+  - 'tests/common/**/*'
