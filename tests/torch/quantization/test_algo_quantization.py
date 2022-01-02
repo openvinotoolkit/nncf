@@ -45,6 +45,7 @@ from nncf.torch.quantization.layers import AsymmetricQuantizer
 from nncf.common.quantization.structs import NonWeightQuantizerId
 from nncf.common.quantization.structs import WeightQuantizerId
 from nncf.torch.utils import get_all_modules_by_type
+from nncf.torch.utils import get_model_device
 from tests.torch.helpers import BasicConvTestModel
 from tests.torch.helpers import TwoConvTestModel
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
@@ -560,7 +561,7 @@ def test_debug_mode():
     with nncf_debug():
         model, _ = create_compressed_model_and_algo_for_test(model, config)
         model.forward(torch.zeros(BasicConvTestModel.INPUT_SIZE,
-                                  device=next(model.parameters()).device))
+                                  device=get_model_device(model)))
 
 
 class SharedLayersModel(torch.nn.Module):

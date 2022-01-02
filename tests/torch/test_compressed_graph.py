@@ -21,6 +21,8 @@ from typing import Callable, Dict, List, Tuple, Union
 import networkx as nx
 import pytest
 import torch
+
+from nncf.torch.utils import get_model_device
 from tests.torch.test_models.synthetic import ConvRelu6HSwishHSigmoid
 from tests.torch.test_models.synthetic import MatMulDivConv
 from torch import nn
@@ -170,7 +172,7 @@ def gnmt_wrap_inputs_fn(model_args, model_kwargs):
 
 def gnmt_forward_fn(seq_len, batch_size, vocab_size):
     def forward_fn(model, seq_len_, batch_size_, vocab_size_, batch_first_):
-        device = next(model.parameters()).device
+        device = get_model_device(model)
 
         def gen_packed_sequence():
             seq_list = []
@@ -221,7 +223,7 @@ def sr_wrap_inputs_fn(model_args, model_kwargs):
 
 
 def sr_dummy_forward_fn(model_, input_sample_sizes: Tuple[List[int]]):
-    device = next(model_.parameters()).device
+    device = get_model_device(model_)
     config = {'input_info': [{"sample_size": sizes} for sizes in input_sample_sizes]}
     input_info_list = create_input_infos(config)
     tensor_list = [create_mock_tensor(info, device) for info in input_info_list]
