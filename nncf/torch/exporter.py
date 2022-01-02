@@ -10,14 +10,36 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-
+from typing import Any
 from typing import Optional
 from functools import partial
 from copy import copy
 import torch
 
 from nncf.common.exporter import Exporter
+from nncf.torch.dynamic_graph.graph_tracer import create_dummy_forward_fn
 from nncf.torch.dynamic_graph.graph_tracer import create_mock_tensor
+from nncf.torch.nested_objects_traversal import objwalk
+from nncf.torch.utils import is_tensor
+
+
+def generate_input_names_list(num_inputs: int):
+    return [f'input.{idx}' for idx in range(0, num_inputs)]
+
+
+def generate_output_names_list(num_outputs: int):
+    return [f'output.{idx}' for idx in range(0, num_outputs)]
+
+
+def count_tensors(model_retval: Any) -> int:
+    count = 0
+    def counter_fn(x: torch.Tensor) -> torch.Tensor:
+        nonlocal count
+        count += 1
+        return x
+
+    objwalk(model_retval, is_tensor, counter_fn)
+    return count
 
 
 class PTExporter(Exporter):
@@ -72,13 +94,28 @@ class PTExporter(Exporter):
         kwargs = self._model_args[-1]
         model.forward = partial(model.forward, *args, **kwargs)
 
+        if self._input_names is not None:
+            input_names = self._input_names
+        else:
+            input_names = generate_input_names_list(len(input_tensor_list))
+
+
         # pylint:disable=unexpected-keyword-arg
         with torch.no_grad():
-            # Should call this, otherwise the operations executed during export will end up in graph.
+            # Should call this, otherwise the operations executed during export will end up in the graph.
             model.disable_dynamic_graph_building()
+
+            if self._output_names is not None:
+                output_names = self._output_names
+            else:
+                # Will have to run a dummy forward call in order to determine the number of outputs.
+                dummy_forward = create_dummy_forward_fn(self._model.input_infos)
+                retval = dummy_forward(self._model)
+                output_names = generate_output_names_list(count_tensors(retval))
+
             torch.onnx.export(model, tuple(input_tensor_list), save_path,
-                              input_names=self._input_names,
-                              output_names=self._output_names,
+                              input_names=input_names,
+                              output_names=output_names,
                               enable_onnx_checker=False,
                               opset_version=10,
                               # Do not fuse Conv+BN in ONNX. May cause dropout elements to appear in ONNX.

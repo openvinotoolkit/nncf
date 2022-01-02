@@ -14,7 +14,7 @@ import pytest
 
 from tests.torch.pruning.helpers import BigPruningTestModel, get_basic_pruning_config, \
     PruningTestModelConcat, PruningTestModelEltwise, TestModelDiffConvs, TestModelGroupNorm
-from tests.torch.test_helpers import load_exported_onnx_version
+from tests.torch.helpers import load_exported_onnx_version
 
 pytestmark = pytest.mark.skip(reason="Export as actually deleting filters from the model is currently disabled.")
 
