@@ -37,6 +37,8 @@ from nncf.torch.nncf_network import NNCFNetwork
 
 IGNORED_NAME_OPERATORS = [*PTDropoutMetatype.get_all_aliases(), MODEL_OUTPUT_OP_NAME]
 
+bar = 42
+
 class SearchGraphNode:
     """
     Class describing nodes used in SearchGraph.

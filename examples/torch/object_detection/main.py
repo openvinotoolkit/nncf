@@ -89,6 +89,7 @@ def get_argument_parser():
     parser.add_argument('--test_anno', help='path to testing annotations or VOC root directory')
     return parser
 
+foo = 0
 
 def main(argv):
     parser = get_argument_parser()
