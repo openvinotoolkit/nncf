@@ -134,7 +134,7 @@ class WeightNormedConvModel(torch.nn.Module):
         return self.conv(x)
 
 
-def test_weight_normed_modules_are_replaced_correctly(mocker):
+def test_weight_normed_modules_are_replaced_correctly():
     nncf_model = NNCFNetwork(WeightNormedConvModel(), input_infos=[ModelInputInfo([1, 1, 10])])
 
     wrapped_conv = nncf_model.conv
@@ -146,6 +146,7 @@ def test_weight_normed_modules_are_replaced_correctly(mocker):
     assert isinstance(wrapped_conv.weight_v, torch.nn.Parameter)
     assert not isinstance(wrapped_conv.weight, torch.nn.Parameter)
 
+    #pylint:disable=protected-access
     assert len(wrapped_conv._forward_pre_hooks) == 1
 
 
