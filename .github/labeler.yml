@@ -3,3 +3,25 @@
 dependencies:
   - 'requirements.txt'
   - '**/setup.py'
+
+NNCF PT:
+  - 'examples/torch/**'
+  - 'nncf/torch/**'
+  - 'tests/torch/**'
+
+NNCF TF:
+  - 'examples/tensorflow/**'
+  - 'nncf/tensorflow/**'
+  - 'tests/tensorflow/**'
+
+documentation:
+  - '**/README.md'
+  - 'docs/**'
+
+experimental:
+  - 'nncf/experimental/**'
+
+NNCF Common:
+  - 'examples/common/**'
+  - 'nncf/common/**'
+  - 'tests/common/**'
