@@ -28,6 +28,7 @@ Bugfixes:
 - (TensorFlow) Fixed a bug where an operation with int32 inputs (following a Cast op) was attempted to be quantized.
 - (PyTorch, TensorFlow) LeakyReLU now properly handled during pruning
 - (PyTorch) Fixed errors with custom modules failing at the `determine_subtype` stage of metatype assignment.
+- (PyTorch) Fix handling modules with `torch.nn.utils.weight_norm.WeightNorm` applied
 
 ## New in Release 2.0.2
 Target version updates:
