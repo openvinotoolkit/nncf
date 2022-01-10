@@ -25,8 +25,8 @@ from nncf.torch.quantization.layers import QuantizerExportMode
 from tests.torch.helpers import get_nodes_by_type
 from tests.torch.helpers import register_bn_adaptation_init_args
 from tests.torch.helpers import resolve_constant_node_inputs_to_values
-from tests.torch.test_helpers import TwoConvTestModel
-from tests.torch.test_helpers import load_exported_onnx_version
+from tests.torch.helpers import TwoConvTestModel
+from tests.torch.helpers import load_exported_onnx_version
 
 
 def get_config_for_export_mode(should_be_onnx_standard: bool) -> NNCFConfig:
