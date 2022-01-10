@@ -70,6 +70,7 @@ from nncf.torch.module_operations import UpdateWeight
 from nncf.torch.quantization.layers import QUANTIZATION_MODULES
 from nncf.torch.utils import compute_FLOPs_hook
 from nncf.torch.utils import get_all_modules_by_type
+from nncf.torch.utils import get_model_device
 from nncf.torch.utils import get_state_dict_names_with_modules
 from nncf.torch.nested_objects_traversal import objwalk
 
@@ -171,11 +172,7 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
         self._user_dummy_forward_fn = dummy_forward_fn
         self._kd_loss_handler = None
 
-        try:
-            device = next(module.parameters()).device
-        except StopIteration:
-            # Param-less model, assume CPU
-            device = 'cpu'
+        device = get_model_device(module)
 
         if wrap_inputs_fn is not None:
             self._wrap_inputs_fn = wrap_inputs_fn
@@ -281,7 +278,7 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
         :param calculate_fn: function used to parse model outputs and calculate knowledge distillation loss
         :return: KnowledgeDistillationLossHandler instance
         """
-        device = next(self.get_nncf_wrapped_model().parameters()).device
+        device = get_model_device(self.get_nncf_wrapped_model())
         self._kd_loss_handler = KnowledgeDistillationLossHandler(self._compressed_context,
                                                                  kd_original_model,
                                                                  calculate_fn,

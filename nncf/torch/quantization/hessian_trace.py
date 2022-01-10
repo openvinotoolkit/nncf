@@ -14,6 +14,8 @@ from functools import partial
 from typing import List, Union, Any, Callable
 
 import torch
+
+from nncf.torch.utils import get_model_device
 from nncf.torch.utils import is_tensor
 from nncf.torch.nested_objects_traversal import objwalk
 from torch import Tensor
@@ -76,7 +78,7 @@ class GradientsCalculator:
         self.num_iter += 1
         dataloader_output = next(self.data_loader_iter)
 
-        device = next(self._model.parameters()).device
+        device = get_model_device(self._model)
         to_device_fn = partial(torch.Tensor.to, device=device)
         dataloader_output = objwalk(dataloader_output, is_tensor, to_device_fn)
         args, kwargs = self._data_loader.get_inputs(dataloader_output)

@@ -409,8 +409,6 @@ def test_insertion_point_coalescing(input_insertion_points: List[PTTargetPoint],
 class EltwiseQuantizerLinkingTestModel(torch.nn.Module):
     def __init__(self):
         super().__init__()
-        self._dummy_trainable_param = torch.nn.Parameter(torch.ones([1]))
-
         class Path(torch.nn.Module):
             def forward(self, input_1, input_2):
                 retval0 = input_1 + input_2

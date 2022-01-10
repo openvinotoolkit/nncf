@@ -128,6 +128,7 @@ from nncf.torch.tensor_statistics.collectors import ReductionShape
 from nncf.torch.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.torch.tensor_statistics.statistics import pt_convert_stat_to_min_max_tensor_stat
 from nncf.torch.tensor_statistics.statistics import TensorStatistic
+from nncf.torch.utils import get_model_device
 from nncf.torch.utils import get_state_dict_names_with_modules
 from nncf.torch.utils import is_main_process
 from torch import nn
@@ -586,7 +587,7 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
         # TODO (vshampor): a simpler solution would be to always create callables on CPU and
         # to move these to model-specific device upon actual application, but would this impact
         # the time required to create a compressed model?
-        self._device_for_callable_obj_creation = next(target_model.parameters()).device
+        self._device_for_callable_obj_creation = get_model_device(target_model)
         target_model_graph = target_model.get_original_graph()
         target_model.register_compression_module_type(ExtraCompressionModuleType.EXTERNAL_QUANTIZER)
         if self._single_config_quantizer_setup is None:
@@ -1204,7 +1205,7 @@ class QuantizationController(QuantizationControllerBase):
                  build_time_metric_info: QuantizationShareBuildTimeInfo = None,
                  build_time_range_init_params: PTRangeInitParams = None):
         super().__init__(target_model)
-        self._loss = ZeroCompressionLoss(next(target_model.parameters()).device)
+        self._loss = ZeroCompressionLoss(get_model_device(target_model))
         self._scheduler = BaseCompressionScheduler()
         self.debug_interface = debug_interface
         self.config = config

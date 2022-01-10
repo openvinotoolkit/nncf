@@ -17,6 +17,7 @@ from copy import deepcopy
 import torch
 
 from nncf.torch.dynamic_graph.graph import DynamicGraph
+from nncf.torch.utils import get_model_device
 
 
 class ModelInputInfo:
@@ -128,7 +129,7 @@ def create_dummy_forward_fn(input_infos: List[ModelInputInfo], with_input_tracin
         from nncf.torch.dynamic_graph.io_handling import wrap_nncf_model_outputs_with_objwalk
         from nncf.torch.dynamic_graph.io_handling import replicate_same_tensors
 
-        device = next(model.parameters()).device
+        device = get_model_device(model)
         args_list = [create_mock_tensor(info, device) for info in input_infos if info.keyword is None]
         kwargs = OrderedDict()
         for info in input_infos:

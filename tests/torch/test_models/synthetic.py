@@ -207,10 +207,6 @@ class EmbeddingCatLinearModel(nn.Module):
         return self.linear(z)
 
 class MultiOutputSameTensorModel(torch.nn.Module):
-    def __init__(self):
-        super().__init__()
-        self._dummy_param = torch.nn.Parameter(torch.ones([1]))
-
     def forward(self, x):
         return x, x*x, x
 
