@@ -95,7 +95,7 @@ INSTALL_REQUIRES = ["ninja>=1.10.0.post2",
                     "tqdm>=4.54.1",
                     "natsort>=7.1.0",
                     "pandas~=1.1.5; python_version<'3.7'",
-                    "pandas>=1.1.5; python_version>='3.7'",
+                    "pandas>=1.1.5,<1.4.0rc0; python_version>='3.7'",
                     "scikit-learn~=0.24.0; python_version<'3.7'",
                     "scikit-learn>=0.24.0; python_version>='3.7'",
                     "wheel>=0.36.1"]
