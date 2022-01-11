@@ -14,6 +14,7 @@ from nncf.common.graph.layer_attributes import Dtype
 from nncf.common.graph.layer_attributes import MultipleInputLayerAttributes
 from nncf.common.graph.layer_attributes import GroupNormLayerAttributes
 from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
+from nncf.common.graph.layer_attributes import LinearLayerAttributes
 from nncf.common.pruning.operations import BasePruningOp
 from nncf.common.pruning.mask_propagation import MaskPropagationAlgorithm
 
@@ -214,6 +215,40 @@ def test_conv_pruning_ops(transpose, layer_attributes, ref_accept_pruned_input, 
                 assert conv_op_target.data['output_mask'] is None
             else:
                 assert np.all(conv_op_target.data['output_mask'] == input_mask)
+
+
+def test_linear_pruning_ops():
+    graph = NNCFGraph()
+    in_features = out_features = 10
+    dummy_op_before = graph.add_nncf_node('dummy_op_before', DummyMaskProducerMetatype.name,
+                                          DummyMaskProducerMetatype)
+    target_linear_attributes = LinearLayerAttributes(weight_requires_grad=True,
+                                                     in_features=in_features, out_features=out_features)
+    linear_op_target = graph.add_nncf_node('linear_op_target', dummy_types.DummyLinearMetatype.name,
+                                           dummy_types.DummyLinearMetatype,
+                                           layer_attributes=target_linear_attributes)
+    graph.add_edge_between_nncf_nodes(from_node_id=dummy_op_before.node_id,
+                                      to_node_id=linear_op_target.node_id,
+                                      tensor_shape=[in_features] * 2,
+                                      input_port_id=0,
+                                      output_port_id=0,
+                                      dtype=Dtype.FLOAT)
+    # Check linear layer always accept pruned input
+    assert dummy_types.LinearPruningOp.accept_pruned_input(linear_op_target)
+    ones_input_mask = NPNNCFTensor(np.ones((in_features)))
+    ones_output_mask = NPNNCFTensor(np.ones((out_features)))
+    # Check all combinations of masks
+    for input_mask in [None, ones_input_mask]:
+        for output_mask in [None, ones_output_mask]:
+            dummy_op_before = graph.get_node_by_id(dummy_op_before.node_id)
+            linear_op_target = graph.get_node_by_id(linear_op_target.node_id)
+            dummy_op_before.data['output_mask'] = input_mask
+            linear_op_target.data['output_mask'] = output_mask
+            MaskPropagationAlgorithm(graph, dummy_types.DUMMY_PRUNING_OPERATOR_METATYPES,
+                                     NPNNCFTensorProcessor).mask_propagation()
+            dummy_op_before = graph.get_node_by_id(dummy_op_before.node_id)
+            linear_op_target = graph.get_node_by_id(linear_op_target.node_id)
+            assert np.all(linear_op_target.data['output_mask'] == output_mask)
 
 
 @pytest.mark.parametrize('empty_mask_left_branch', [False, True])
