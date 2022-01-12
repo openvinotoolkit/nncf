@@ -168,14 +168,10 @@ class PrunedModelTheoreticalBorderline(Statistics):
         """
         Initializes statistics of the filter pruning theoretical borderline.
 
-        :param num_pruned_layers: Number of layers which was actually
-            pruned.
-        :param num_prunable_layers: Number of layers which have
-            prunable type.
-        :param max_prunable_flops: Number of flops for pruned
-            model with pruning rate = 1.
-        :param max_prunable_params: Number of weights for pruned
-            model with pruning rate = 1.
+        :param num_pruned_layers: Number of layers which was actually pruned.
+        :param num_prunable_layers: Number of layers which have prunable type.
+        :param max_prunable_flops: Number of flops for pruned model with pruning level = 1.
+        :param max_prunable_params: Number of weights for pruned model with pruning level = 1.
         :param total_flops: The total amount of FLOPS in the model.
         :param total_params: The total amount of weights in the model.
         """
