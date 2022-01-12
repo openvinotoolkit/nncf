@@ -860,7 +860,8 @@ def accuracy_aware_config(request):
     ids=['distributed', 'dataparallel'])
 def test_accuracy_aware_training_pipeline(accuracy_aware_config, tmp_path, multiprocessing_distributed):
     config_factory = ConfigFactory(accuracy_aware_config['nncf_config'], tmp_path / 'config.json')
-
+    tmp_path = tmp_path / 'accuracy_aware'
+    tmp_path = tmp_path / 'distributed' if multiprocessing_distributed else tmp_path / 'dataparallel'
     args = {
         "--mode": "train",
         "--data": accuracy_aware_config["dataset_path"],
