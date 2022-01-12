@@ -17,6 +17,7 @@ from typing import Callable
 from typing import Dict
 from typing import List
 from typing import Set
+from typing import Union
 
 import tensorflow as tf
 
@@ -29,6 +30,7 @@ from nncf.tensorflow.graph.transformations.commands import TFAfterLayer
 from nncf.tensorflow.graph.transformations.commands import TFBeforeLayer
 from nncf.tensorflow.graph.transformations.commands import TFLayer
 from nncf.tensorflow.graph.transformations.commands import TFLayerWeight
+from nncf.tensorflow.graph.transformations.commands import TFMultiLayerPoint
 from nncf.tensorflow.graph.transformations.commands import TFOperationWithWeights
 from nncf.tensorflow.graph.transformations.layout import TFTransformationLayout
 from nncf.tensorflow.graph.utils import get_custom_objects
@@ -150,8 +152,10 @@ class TFModelTransformer(ModelTransformer):
             raise TypeError('Transformation type {} does not support'
                             .format(transformation.type))
 
-    def _insert(self, target_point: TargetPoint, insertion_objects: List[Callable]):
-        if isinstance(target_point, TFLayerWeight):
+    def _insert(self, target_point: Union[TargetPoint, TFMultiLayerPoint], insertion_objects: List[Callable]):
+        if isinstance(target_point, TFMultiLayerPoint):
+            self._shared_insert_layers(target_point.target_points, insertion_objects)
+        elif isinstance(target_point, TFLayerWeight):
             weight_operations = [
                 WeightOperations(target_point.weights_attr_name, insertion_objects)]
             self._insert_weight_operations(target_point.layer_name, weight_operations)
@@ -168,6 +172,55 @@ class TFModelTransformer(ModelTransformer):
         else:
             raise TypeError('Insertion transform does not support {} '
                             'target point type'.format(target_point.type))
+
+    # pylint:disable=too-many-branches
+    def _shared_insert_layers(self, target_points: List[TargetPoint], layers: List[Callable]):
+        functional_model = is_functional_model(self._model)
+        if functional_model:
+            for layer in self._model_config['input_layers']:
+                for tp in target_points:
+                    if isinstance(tp, TFBeforeLayer) and tp.layer_name == layer[0]:
+                        raise RuntimeError(f'Insertion before input layer: {tp.layer_name} is not supported')
+
+        layer_configs = []
+        for layer in layers:
+            config = tf.keras.utils.serialize_keras_object(layer)
+            if functional_model:
+                config['name'] = config['config']['name']
+                config['inbound_nodes'] = []
+                for i, tp in enumerate(target_points):
+                    if isinstance(tp, TFAfterLayer):
+                        config['inbound_nodes'].append([[tp.layer_name, tp.instance_idx, tp.output_port_id, {}]])
+                    elif isinstance(tp, TFBeforeLayer):
+                        idx, input_layer_cfg = self._find_layer_config(tp.layer_name)
+                        inbound = [input_layer_cfg['inbound_nodes'][tp.instance_idx][tp.input_port_id]]
+                        config['inbound_nodes'].append(inbound)
+                        self._model_config['layers'][idx]['inbound_nodes'][tp.instance_idx][tp.input_port_id] = \
+                                [config['name'], i, 0, {}]
+                    else:
+                        raise TypeError(
+                            f'Insertion transform does not support {target_points[0].type} target point type')
+
+            layer_configs.append(config)
+
+        for config in layer_configs:
+            for i, tp in enumerate(target_points):
+                if functional_model and isinstance(tp, TFAfterLayer):
+                    layer_out_ports = set()
+                    replace_layer_name = config['name']
+                    for layer in self._model_config['layers']:
+                        for inbound_node in layer['inbound_nodes']:
+                            self._process_insertion_after(inbound_node, tp.layer_name, tp.instance_idx,
+                                                          layer_out_ports, replace_layer_name, i)
+
+                    self._insert_after_model_outputs(tp.layer_name, tp.instance_idx, layer_out_ports,
+                                                     replace_layer_name, i)
+                    if len(layer_out_ports) > 1:
+                        raise RuntimeError('Insertion after layer ({}) with multiple ports '
+                                           'is not supported'.format(tp.layer_name))
+
+            layer_name = target_points[0].layer_name
+            self._insert_layer_after_sequential(layer_name, config)
 
     def _multi_insertion(self, target_point: TargetPoint, commands: List[TransformationCommand]):
         if not isinstance(target_point, TFLayer):
@@ -267,7 +320,8 @@ class TFModelTransformer(ModelTransformer):
         idx, _ = self._find_layer_config(layer_name)
         self._model_config['layers'][idx] = replace_layer_config
 
-    def _insert_layers_before(self, layer_name: str, instance_idx: int, input_port_id: int, layers: List):
+    def _insert_layers_before(self, layer_name: str, instance_idx: int, input_port_id: int,
+                              layers: List):
         functional_model = is_functional_model(self._model)
 
         if functional_model:
@@ -289,7 +343,8 @@ class TFModelTransformer(ModelTransformer):
         for config in layer_configs:
             self._model_config['layers'].insert(idx, config)
 
-    def _insert_layers_after(self, layer_name: str, instance_idx: int, output_port_id: int, layers: List):
+    def _insert_layers_after(self, layer_name: str, instance_idx: int, output_port_id: int,
+                             layers: List):
         functional_model = is_functional_model(self._model)
 
         layer_configs = []
@@ -314,7 +369,8 @@ class TFModelTransformer(ModelTransformer):
                 self._process_insertion_after(inbound_node, layer_name, instance_idx,
                                               layer_out_ports, replace_layer_name)
 
-        self._insert_after_model_outputs(layer_name, instance_idx, layer_out_ports, replace_layer_name)
+        self._insert_after_model_outputs(layer_name, instance_idx, layer_out_ports,
+                                         replace_layer_name)
         if len(layer_out_ports) > 1:
             raise RuntimeError('Insertion after layer ({}) with multiple ports '
                                'is not supported'.format(layer_name))
@@ -329,18 +385,23 @@ class TFModelTransformer(ModelTransformer):
     def _process_insertion_after(connection_infos, layer_name: str,
                                  instance_idx: int,
                                  layer_out_ports: Set,
-                                 replace_layer_name: str):
+                                 replace_layer_name: str,
+                                 insert_with_instance_idx: int = 0):
+        if not isinstance(connection_infos[0], list):
+            connection_infos = [connection_infos[0]]
+
         for connection_info in connection_infos:
             if connection_info[0] == layer_name:
                 layer_out_ports.add(connection_info[2])
                 if connection_info[1] == instance_idx:
                     connection_info[0] = replace_layer_name
-                    connection_info[1] = 0
+                    connection_info[1] = insert_with_instance_idx
 
     def _insert_after_model_outputs(self, layer_name: str,
                                     instance_idx: int,
                                     layer_out_ports: Set,
-                                    replace_layer_name: str):
+                                    replace_layer_name: str,
+                                    insert_with_instance_idx: int = 0):
         output_layers = self._model_config['output_layers']
         if isinstance(output_layers, list):
             self._process_insertion_after(output_layers, layer_name, instance_idx,
@@ -349,13 +410,16 @@ class TFModelTransformer(ModelTransformer):
             for out_layers in output_layers.values():
                 if isinstance(out_layers, list):
                     self._process_insertion_after([out_layers], layer_name, instance_idx,
-                                                  layer_out_ports, replace_layer_name)
+                                                  layer_out_ports, replace_layer_name, insert_with_instance_idx)
                 elif isinstance(out_layers, dict):
-                    self._process_insertion_after(out_layers.values(), layer_name, instance_idx,
-                                                  layer_out_ports, replace_layer_name)
+                    self._process_insertion_after(list(out_layers.values()), layer_name, instance_idx,
+                                                  layer_out_ports, replace_layer_name, insert_with_instance_idx)
 
     @staticmethod
     def _process_replacement(connection_infos, layer_name: str, replace_layer_name: str):
+        if not isinstance(connection_infos[0], list):
+            connection_infos = [connection_infos[0]]
+
         for connection_info in connection_infos:
             if connection_info[0] == layer_name:
                 connection_info[0] = replace_layer_name
@@ -369,4 +433,4 @@ class TFModelTransformer(ModelTransformer):
                 if isinstance(out_layers, list):
                     self._process_replacement([out_layers], layer_name, replace_layer_name)
                 elif isinstance(out_layers, dict):
-                    self._process_replacement(out_layers.values(), layer_name, replace_layer_name)
+                    self._process_replacement(list(out_layers.values()), layer_name, replace_layer_name)

@@ -13,9 +13,11 @@
 
 import copy
 import torch
+
 from torch import nn
 
 from nncf.config import NNCFConfig
+from tests.torch.test_models.pnasnet import CellB
 from tests.torch.helpers import create_conv
 from tests.torch.helpers import create_transpose_conv
 from tests.torch.helpers import create_depthwise_conv
@@ -25,16 +27,19 @@ from tests.torch.helpers import create_grouped_conv
 class PruningTestModel(nn.Module):
     CONV_1_NODE_NAME = "PruningTestModel/NNCFConv2d[conv1]/conv2d_0"
     CONV_2_NODE_NAME = "PruningTestModel/NNCFConv2d[conv2]/conv2d_0"
+    CONV_3_NODE_NAME = "PruningTestModel/NNCFConv2d[conv3]/conv2d_0"
     def __init__(self):
         super().__init__()
         self.conv1 = create_conv(1, 3, 2, 9, -2)
         self.relu = nn.ReLU()
         self.conv2 = create_conv(3, 1, 3, -10, 0)
+        self.conv3 = create_conv(1, 1, 1)
 
     def forward(self, x):
         x = self.conv1(x)
         x = self.relu(x)
         x = self.conv2(x)
+        x = self.conv3(x)
         return x
 
 
@@ -216,11 +221,15 @@ class BigPruningTestModel(nn.Module):
         self.conv1 = create_conv(1, 16, 2, 0, 1)
         for i in range(16):
             self.conv1.weight.data[i] += i
+        self.bn1 = nn.BatchNorm2d(16)
         self.relu = nn.ReLU()
+        self.conv_depthwise = create_depthwise_conv(16, 3, 0, 1)
+        for i in range(16):
+            self.conv_depthwise.weight.data[i] += i
         self.conv2 = create_conv(16, 32, 3, 20, 0)
         for i in range(32):
             self.conv2.weight.data[i] += i
-        self.bn = nn.BatchNorm2d(32)
+        self.bn2 = nn.BatchNorm2d(32)
         self.up = create_transpose_conv(32, 64, 3, 3, 1, 2)
         for i in range(64):
             self.up.weight.data[0][i] += i
@@ -228,14 +237,16 @@ class BigPruningTestModel(nn.Module):
 
     def forward(self, x):
         x = self.conv1(x)
+        x = self.bn1(x)
         x = self.relu(x)
+        x = self.conv_depthwise(x)
         x = self.conv2(x)
-        x = self.bn(x)
+        x = self.bn2(x)
         x = self.relu(x)
         x = self.up(x)
         x = self.relu(x)
         x = self.conv3(x)
-        # x = x.view(1, -1)
+        x = x.view(1, -1)
         return x
 
 
@@ -304,8 +315,10 @@ class TestModelShuffleNetUnitDW(nn.Module):
 
 
 class TestModelMultipleForward(nn.Module):
-    def __init__(self):
+    def __init__(self, repeat_seq_of_shared_convs=False, additional_last_shared_layers=False):
         super().__init__()
+        self.num_iter_shared_convs = 2 if repeat_seq_of_shared_convs else 1
+        self.last_shared_layers = additional_last_shared_layers
         self.conv1 = create_conv(2, 16, 1, 1, -2)
         for i in range(16):
             self.conv1.weight.data[i] += i
@@ -313,19 +326,28 @@ class TestModelMultipleForward(nn.Module):
         for i in range(16):
             self.conv2.weight.data[i] += i
         self.conv3 = create_conv(2, 16, 1, 1, -2)
-        # Wights of conv3 is initialized to check difference masks
+        # Weights of conv3 is initialized to check difference masks
         self.conv4 = create_conv(16, 16, 1, 1, -2)
         for i in range(16):
             self.conv4.weight.data[i] += i
+        self.conv5 = create_conv(16, 16, 1, 1, -2)
+        for i in range(16):
+            self.conv5.weight.data[i] += i
 
     def forward(self, x):
         x1 = self.conv1(x)
         x2 = self.conv2(x)
         x3 = self.conv3(x)
-        x1 = self.conv4(x1)
-        x2 = self.conv4(x2)
-        x3 = self.conv4(x3)
 
+        for _ in range(self.num_iter_shared_convs):
+            x1 = self.conv4(x1)
+            x2 = self.conv4(x2)
+            x3 = self.conv4(x3)
+
+        if self.last_shared_layers:
+            x1 = self.conv5(x1)
+            x2 = self.conv5(x2)
+            x3 = self.conv5(x3)
         return x1, x2, x3
 
 
@@ -414,6 +436,49 @@ class PruningTestModelSharedConvs(nn.Module):
         return self.conv3(out1), self.conv3(out2)
 
 
+class PruningTestModelWrongDims(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.first_conv = create_conv(1, 8, 1)
+        self.last_conv = create_conv(32, 1, 1)
+
+    def forward(self, x):
+        x = self.first_conv(x)
+        x = x.view(-1, 32, 4, 4)
+        return self.last_conv(x)
+
+
+class PruningTestModelWrongDimsElementwise(nn.Module):
+    def __init__(self, use_last_conv=True):
+        super().__init__()
+        self.use_last_conv = use_last_conv
+        self.first_conv = create_conv(1, 8, 1)
+        self.branch_conv = create_conv(8, 32, 2, stride=2)
+        if use_last_conv:
+            self.last_conv = create_conv(32, 1, 1)
+
+    def forward(self, x):
+        x = self.first_conv(x)
+        y = self.branch_conv(x)
+        x = x.view(y.shape)
+        x = x + y
+        if self.use_last_conv:
+            x = self.last_conv(x)
+        return x
+
+
+class PruningTestModelStopOp(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.conv = create_conv(1, 1, 1)
+        self.linear = nn.Linear(64, 1)
+
+    def forward(self, x):
+        x = self.conv(x)
+        x = self.linear(torch.flatten(x, start_dim=1))
+        return x
+
+
 class DisconectedGraphModel(nn.Module):
     def __init__(self):
         super().__init__()
@@ -466,6 +531,37 @@ class DepthwiseConvolutionModel(nn.Module):
         return self.conv4(x)
 
 
+class MultipleDepthwiseConvolutionModel(nn.Module):
+    """
+    Model with group conv which has
+    out_channels = 2 * in_channels and
+    in_channels == groups
+    """
+
+    def __init__(self):
+        super().__init__()
+        self.conv1 = create_conv(1, 512, 1, 1, 1)
+        self.conv4 = create_conv(2048, 512, 2, 1, 1)
+        for i in range(512):
+            self.conv1.weight.data[i] += i
+            self.conv4.weight.data[i] += i
+        self.conv2 = create_conv(512, 1024, 3, 1, 1)
+        self.conv3 = create_conv(512, 1024, 3, 1, 1)
+        self.depthwise_conv = create_grouped_conv(1024, 2048, 5, 1024, 1, 1)
+        for i in range(1024):
+            self.conv2.weight.data[i] += i
+            self.conv3.weight.data[i] += i
+            self.depthwise_conv.weight.data[i] += i
+
+    def forward(self, x):
+        x = self.conv1(x)
+        x1 = self.conv2(x)
+        x2 = self.conv3(x)
+        x = x1 + x2
+        x = self.depthwise_conv(x)
+        return self.conv4(x)
+
+
 class GroupedConvolutionModel(nn.Module):
     def __init__(self):
         super().__init__()
@@ -485,6 +581,92 @@ class GroupedConvolutionModel(nn.Module):
         x = self.conv3(x)
         x = x.view(-1)
         return self.fc(x)
+
+
+def make_divisible(v, divisor, min_value=None):
+    """
+    This function is taken from the original tf repo.
+    It ensures that all layers have a channel number that is divisible by 8
+    It can be seen here:
+    https://github.com/tensorflow/models/blob/master/research/slim/nets/mobilenet/mobilenet.py
+    """
+    if min_value is None:
+        min_value = divisor
+    new_v = max(min_value, int(v + divisor / 2) // divisor * divisor)
+    # Make sure that round down does not go down by more than 10%.
+    if new_v < 0.9 * v:
+        new_v += divisor
+    return new_v
+
+
+class SELayerWithReshape(nn.Module):
+    def __init__(self, channel, reduction=4):
+        super().__init__()
+        self.avg_pool = nn.AdaptiveAvgPool2d(1)
+        self.fc = nn.Sequential(
+            nn.Conv2d(channel, make_divisible(channel // reduction, 8), 1),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(make_divisible(channel // reduction, 8), channel, 1),
+            nn.ReLU(inplace=True)
+        )
+
+    def forward(self, x):
+        b, c, _, _ = x.size()
+        y = self.avg_pool(x)
+        y = y.view(b, c).view(b, c, 1, 1)
+        y = self.fc(y)
+        return x * y
+
+
+class InvertedResidual(nn.Module):
+    def __init__(self, inp, hidden_dim, oup, kernel_size, stride, se_layer):
+        super().__init__()
+        assert stride in [1, 2]
+
+        self.identity = stride == 1 and inp == oup
+
+        self.conv = nn.Sequential(
+            # dw
+            nn.Conv2d(hidden_dim, hidden_dim, kernel_size, stride, (kernel_size - 1) // 2,
+                      groups=hidden_dim, bias=False),
+            nn.BatchNorm2d(hidden_dim),
+            nn.ReLU(inplace=True),
+            # Squeeze-and-Excite
+            se_layer(hidden_dim),
+            # pw-linear
+            nn.Conv2d(hidden_dim, oup, 1, 1, 0, bias=False),
+            nn.BatchNorm2d(oup),
+        )
+
+    def forward(self, x):
+        if self.identity:
+            return x + self.conv(x)
+        return self.conv(x)
+
+
+class MobilenetV3BlockSEReshape(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.first_conv = nn.Conv2d(1, 6, 2)
+        self.inverted_residual = InvertedResidual(6, 6, 6, 5, 1, SELayerWithReshape)
+        self.last_conv = nn.Conv2d(6, 1, 1)
+
+    def forward(self, x):
+        x = self.first_conv(x)
+        x = self.inverted_residual(x)
+        return self.last_conv(x)
+
+
+class NASnetBlock(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.first_conv = nn.Conv2d(1, 2, (2, 2))
+        self.cell = CellB(2, 4, 2)
+
+    def forward(self, x):
+        x = self.first_conv(x)
+        x = self.cell(x)
+        return x
 
 
 def get_basic_pruning_config(input_sample_size=None) -> NNCFConfig:

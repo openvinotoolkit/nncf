@@ -18,7 +18,7 @@ from pathlib import Path
 import tensorflow as tf
 import numpy as np
 
-from nncf.tensorflow import AdaptiveCompressionTrainingLoop
+from nncf.common.accuracy_aware_training import create_accuracy_aware_training_loop
 from nncf.tensorflow import create_compressed_model
 from nncf.tensorflow.helpers.model_manager import TFOriginalModelManager
 from nncf.tensorflow.initialization import register_default_init_args
@@ -353,8 +353,7 @@ def run(config):
                                          num_test_batches, config.print_freq)
                 return metric_result['AP']
 
-            # instantiate and run accuracy-aware training loop
-            acc_aware_training_loop = AdaptiveCompressionTrainingLoop(config.nncf_config, compression_ctrl)
+            acc_aware_training_loop = create_accuracy_aware_training_loop(nncf_config, compression_ctrl)
             compress_model = acc_aware_training_loop.run(compress_model,
                                                          train_epoch_fn=train_epoch_fn,
                                                          validate_fn=validate_fn,

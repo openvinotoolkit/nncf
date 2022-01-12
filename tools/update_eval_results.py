@@ -36,7 +36,7 @@ import argparse
 from tests.torch.test_sota_checkpoints import DIFF_FP32_MAX_GLOBAL
 from tests.torch.test_sota_checkpoints import DIFF_FP32_MIN_GLOBAL
 
-BASE_PYTORCH_CHECKPOINT_URL = 'https://storage.openvinotoolkit.org/repositories/nncf/models/v2.0.0/'
+BASE_PYTORCH_CHECKPOINT_URL = 'https://storage.openvinotoolkit.org/repositories/nncf/models/v1.7.0/'
 
 SAMPLE_TYPE_TO_SAMPLE_DISPLAY_NAME_DICT = {
     'classification': 'Classification',

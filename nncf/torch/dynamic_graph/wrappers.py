@@ -55,14 +55,28 @@ def ignore_scope(cls):
     return cls
 
 
-OP_NAMES_REQUIRING_MODULE_ATTRS = [v.op_func_name for v in NNCF_MODULES_DICT] + ["group_norm"]
+OP_NAMES_REQUIRING_MODULE_ATTRS = [v.op_func_name for v in NNCF_MODULES_DICT] + ['group_norm']
 
 
 def wrap_operator(operator, operator_info: 'PatchedOperatorInfo'):
+    """
+    Wraps the input callable object (`operator`) with the functionality that allows the calls to this object
+    to be tracked by the currently set global TracingContext. The wrapped functions can be then intercepted,
+    their arguments and return values modified arbitrarily and, for functions that correspond to operations on
+    tensors in a DNN,  their general position and address in the DNN's model control flow graph can be established.
+
+    :param: operator: A callable object to be wrapped.
+    :param: operator_info (PatchedOperatorInfo): An informational struct containing the specifics of wrapping
+            the `operator` in question.
+
+    :return: The wrapped version of `operator` that, without a TracingContext, performs functionally the same as
+             the unwrapped version, but within a TracingContext is able to be tracked and hooked.
+    """
     # do not wrap function twice
     _orig_op = getattr(operator, '_original_op', None)
     if _orig_op is not None:
-        raise Exception("Operator: {} is already wrapped".format(_orig_op.__name__))
+        nncf_logger.debug("Operator: {} is already wrapped".format(_orig_op.__name__))
+        return operator
 
     def wrapped(*args, **kwargs):
         ctx = get_current_context()
@@ -73,33 +87,36 @@ def wrap_operator(operator, operator_info: 'PatchedOperatorInfo'):
         ctx.in_operator = True
 
         try:
-            if operator_info.custom_trace_fn is not None:
-                result = operator_info.custom_trace_fn(operator, *args, **kwargs)
+            if operator_info.skip_trace:
+                result = operator(*args, **kwargs)
             elif ctx.is_forwarding:
-                from nncf.torch.dynamic_graph.patch_pytorch import ForwardTraceOnly
-                result = ForwardTraceOnly()(operator, *args, **kwargs)
+                from nncf.torch.dynamic_graph.trace_functions import forward_trace_only
+                result = forward_trace_only(operator, *args, **kwargs)
             else:
+                node = None
                 op_name = operator_info.name
                 op_address = ctx.get_caller_context(op_name)
 
                 layer_attrs = None
                 ignored_algos = []
                 # Collect module attributes, if required
-                if op_name in OP_NAMES_REQUIRING_MODULE_ATTRS:
-                    curr_module = ctx.get_current_module()
-                    if curr_module is None:
-                        raise RuntimeError("Operation {} requires module attributes, "
-                                           "but it was executed outside any module".format(op_name))
-                    layer_attrs = _get_layer_attributes(curr_module, op_name)
-                    if isinstance(curr_module, _NNCFModuleMixin):
-                        ignored_algos = deepcopy(curr_module.ignored_algorithms)
+                if ctx.trace_dynamic_graph:
+                    if op_name in OP_NAMES_REQUIRING_MODULE_ATTRS:
+                        curr_module = ctx.get_current_module()
+                        if curr_module is None:
+                            raise RuntimeError("Operation {} requires module attributes, "
+                                               "but it was executed outside any module".format(op_name))
+                        layer_attrs = _get_layer_attributes(curr_module, op_name)
+                        if isinstance(curr_module, _NNCFModuleMixin):
+                            ignored_algos = deepcopy(curr_module.ignored_algorithms)
 
                 ctx.register_operator_call(op_address.operator_name, op_address.scope_in_model)
                 op_input = OperatorInput(list(args), kwargs)
                 processed_input = ctx.execute_pre_hooks(op_address, op_input)
 
-                tensor_metas = make_tensor_metas(processed_input)
-                node = ctx.find_operator_node(tensor_metas, op_address)
+                if ctx.trace_dynamic_graph:
+                    tensor_metas = make_tensor_metas(processed_input)
+                    node = ctx.find_operator_node(tensor_metas, op_address)
 
                 args = tuple(processed_input.op_args)
                 kwargs = processed_input.op_kwargs
@@ -107,13 +124,12 @@ def wrap_operator(operator, operator_info: 'PatchedOperatorInfo'):
 
                 if isinstance(result, type(NotImplemented)):
                     nncf_logger.debug("Operation {} returned NotImplemented".format(op_name))
-                elif node is None:
+                elif ctx.trace_dynamic_graph and node is None:
                     node = ctx.maybe_add_node(processed_input, tensor_metas, op_address, layer_attrs, ignored_algos)
 
-                if node is not None:
-                    if is_debug():
-                        ctx.register_node_call(node)
-                    result = trace_tensors(result, node)
+                if is_debug() and ctx.trace_dynamic_graph and node is not None:
+                    ctx.register_node_call(node)
+                result = trace_tensors(result, node)
                 result = ctx.execute_post_hooks(op_address, result)
         except:
             # Looks like the __repr__ call made during IDE debug to display tensor contents does not exit properly,
@@ -127,6 +143,7 @@ def wrap_operator(operator, operator_info: 'PatchedOperatorInfo'):
 
     # pylint: disable=protected-access
     wrapped._original_op = operator
+    wrapped._operator_namespace = operator_info.operator_namespace
     return wrapped
 
 
@@ -139,7 +156,7 @@ def wrap_module_call(module_call):
             return module_call(self, *args, **kwargs)
         ctx.push_scope(self)
         retval = module_call(self, *args, **kwargs)
-        if type(self).__name__ in ITERATION_MODULES.registry_dict.keys():
+        if type(self).__name__ in ITERATION_MODULES.registry_dict:
             ctx.reset_operator_call_count_in_scope(ctx.scope)
         ctx.pop_scope()
         return retval

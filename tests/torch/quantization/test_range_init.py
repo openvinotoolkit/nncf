@@ -19,6 +19,7 @@ from typing import Tuple
 
 import pytest
 import torch
+
 from torch import nn
 import torch.utils.data
 from pytest import approx
@@ -42,16 +43,17 @@ from nncf.torch.initialization import DefaultInitializingDataLoader
 from nncf.torch.initialization import wrap_dataloader_for_init
 from nncf.torch.nncf_network import EXTERNAL_QUANTIZERS_STORAGE_NAME
 from nncf.torch.quantization.init_range import PTRangeInitParams
+from nncf.torch.quantization.init_range import PTRangeInitCollectorParams
 from nncf.torch.quantization.init_range import StatCollectorGenerator
 from nncf.torch.quantization.layers import AsymmetricQuantizer
 from nncf.torch.quantization.layers import BaseQuantizer
 from nncf.torch.quantization.layers import PTQuantizerSpec
 from nncf.torch.quantization.layers import QUANTIZATION_MODULES
 from nncf.torch.quantization.layers import SymmetricQuantizer
-from nncf.torch.tensor_statistics.collectors import MeanMinMaxStatisticCollector
-from nncf.torch.tensor_statistics.collectors import MedianMADStatisticCollector
-from nncf.torch.tensor_statistics.collectors import MinMaxStatisticCollector
-from nncf.torch.tensor_statistics.statistics import MinMaxTensorStatistic
+from nncf.torch.tensor_statistics.collectors import PTMeanMinMaxStatisticCollector
+from nncf.torch.tensor_statistics.collectors import PTMedianMADStatisticCollector
+from nncf.torch.tensor_statistics.collectors import PTMinMaxStatisticCollector
+from nncf.torch.tensor_statistics.statistics import pt_convert_stat_to_min_max_tensor_stat
 from nncf.torch.utils import get_all_modules_by_type
 from nncf.torch.utils import safe_thread_call
 from tests.torch.helpers import TwoConvTestModel
@@ -64,7 +66,6 @@ from tests.torch.quantization.test_quantization_helpers import create_rank_datal
 from tests.torch.quantization.test_quantization_helpers import distributed_init_test_default
 from tests.torch.quantization.test_quantization_helpers import get_squeezenet_quantization_config
 from tests.torch.quantization.test_quantization_helpers import post_compression_test_distr_init
-
 
 # pylint:disable=unused-import
 
@@ -504,6 +505,7 @@ def init_idfn(val):
                          itertools.product(["symmetric", "asymmetric"],
                                            [True, False],
                                            [("min_max", 9999, 0, 9999),
+                                            ("mixed_min_max", 9999, 0, 9999),
                                             ("mean_min_max", 9999, 0, 9999),
                                             ("threesigma", 16119.5, -6119.5, 22239),
                                             ("percentile", 6789, 3210, 3578)]), ids=init_idfn)
@@ -669,13 +671,13 @@ def test_per_layer_range_init_collectors_are_called_the_required_number_of_times
     data_loader = TestRangeInit.create_dataloader(True, config, 10)
     config.register_extra_structs([QuantizationRangeInitArgs(data_loader)])
 
-    range_minmax_init_create_spy = mocker.spy(MinMaxStatisticCollector, '__init__')
-    range_meanminmax_init_create_spy = mocker.spy(MeanMinMaxStatisticCollector, '__init__')
-    range_threesigma_init_create_spy = mocker.spy(MedianMADStatisticCollector, '__init__')
+    range_minmax_init_create_spy = mocker.spy(PTMinMaxStatisticCollector, '__init__')
+    range_meanminmax_init_create_spy = mocker.spy(PTMeanMinMaxStatisticCollector, '__init__')
+    range_threesigma_init_create_spy = mocker.spy(PTMedianMADStatisticCollector, '__init__')
 
-    range_minmax_init_register_input_spy = mocker.spy(MinMaxStatisticCollector, '_register_input')
-    range_meanminmax_init_register_input_spy = mocker.spy(MeanMinMaxStatisticCollector, '_register_input')
-    range_threesigma_init_register_input_spy = mocker.spy(MedianMADStatisticCollector, '_register_input')
+    range_minmax_init_register_input_spy = mocker.spy(PTMinMaxStatisticCollector, '_register_input')
+    range_meanminmax_init_register_input_spy = mocker.spy(PTMeanMinMaxStatisticCollector, '_register_input')
+    range_threesigma_init_register_input_spy = mocker.spy(PTMedianMADStatisticCollector, '_register_input')
 
     TestRangeInit.create_algo_and_compressed_model(config)
 
@@ -694,7 +696,7 @@ def test_per_layer_range_init_collectors_are_called_the_required_number_of_times
            range_init_call_count_test_struct.expected_call_count_register_input['three_sigma']
 
 
-QUANTIZER_RANGE_INITIALIZERS = ["min_max", "threesigma", "mean_min_max", "percentile"]
+QUANTIZER_RANGE_INITIALIZERS = ["min_max", "threesigma", "mean_min_max", "percentile", "mixed_min_max"]
 
 
 class QuantizeRangeInitScaleShapeTestStruct:
@@ -763,12 +765,25 @@ def test_quantize_range_init_sets_correct_scale_shapes(quantizer_range_init_test
         q_cls = QUANTIZATION_MODULES.get(quantization_mode)
         quantizer = q_cls(qconfig)  # type: BaseQuantizer
         range_init_config = RangeInitConfig(init_type=initializer_type, num_init_samples=1)
+
+        if test_struct.is_weights:
+            channel_idx = 0  # channel dim for weights
+        else:
+            channel_idx = 1  # channel dim for activations
+
+        collector_params = PTRangeInitCollectorParams(test_struct.is_weights,
+                                                      quantization_mode,
+                                                      test_struct.per_channel,
+                                                      tuple(test_struct.input_shape),
+                                                      channel_idx)
+
         collector = StatCollectorGenerator.generate_stat_collector_for_range_init_config(
             range_init_config,
-            reduction_shapes={tuple(quantizer.scale_shape)})
+            tuple(quantizer.scale_shape),
+            collector_params)
         collector.register_input(torch.ones(test_struct.input_shape))
-        stat = collector.get_statistics()[tuple(quantizer.scale_shape)]
-        minmax_values = MinMaxTensorStatistic.from_stat(stat)
+        stat = collector.get_statistics()
+        minmax_values = pt_convert_stat_to_min_max_tensor_stat(stat)
         quantizer.apply_minmax_init(min_values=minmax_values.min_values,
                                     max_values=minmax_values.max_values)
 

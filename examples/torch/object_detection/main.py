@@ -58,7 +58,7 @@ from examples.torch.object_detection.layers.modules import MultiBoxLoss
 from examples.torch.object_detection.model import build_ssd
 from nncf.api.compression import CompressionStage
 from nncf.config.utils import is_accuracy_aware_training
-from nncf.torch import AdaptiveCompressionTrainingLoop
+from nncf.common.accuracy_aware_training import create_accuracy_aware_training_loop
 from nncf.torch import create_compressed_model
 from nncf.torch import load_state
 from nncf.torch.dynamic_graph.graph_tracer import create_input_infos
@@ -245,8 +245,7 @@ def main_worker(current_gpu, config):
             optimizer, lr_scheduler = make_optimizer(params_to_optimize, config)
             return optimizer, lr_scheduler
 
-        # instantiate and run accuracy-aware training loop
-        acc_aware_training_loop = AdaptiveCompressionTrainingLoop(nncf_config, compression_ctrl)
+        acc_aware_training_loop = create_accuracy_aware_training_loop(nncf_config, compression_ctrl)
         net = acc_aware_training_loop.run(net,
                                           train_epoch_fn=train_epoch_fn,
                                           validate_fn=validate_fn,
@@ -333,6 +332,7 @@ def create_model(config: SampleConfig,
     if weights:
         sd = torch.load(weights, map_location='cpu',
                         pickle_module=restricted_pickle_module)
+        sd = sd["state_dict"]
         load_state(ssd_net, sd)
 
     ssd_net.to(config.device)
@@ -350,28 +350,27 @@ def train_step(batch_iterator, compression_ctrl, config, criterion, net, train_d
     batch_loss_l = torch.tensor(0.).to(config.device)
     batch_loss_c = torch.tensor(0.).to(config.device)
     batch_loss = torch.tensor(0.).to(config.device)
-    for _ in range(0, config.iter_size):
-        # load train data
-        try:
-            images, targets = next(batch_iterator)
-        except StopIteration:
-            logger.debug("StopIteration: can not load batch")
-            batch_iterator = iter(train_data_loader)
-            break
+    # load train data
+    try:
+        images, targets = next(batch_iterator)
+    except StopIteration:
+        logger.debug("StopIteration: can not load batch")
+        batch_iterator = iter(train_data_loader)
 
-        images = images.to(config.device)
-        targets = [anno.requires_grad_(False).to(config.device) for anno in targets]
+    images = images.to(config.device)
+    targets = [anno.requires_grad_(False).to(config.device) for anno in targets]
 
-        # forward
-        out = net(images)
-        # backprop
-        loss_l, loss_c = criterion(out, targets)
-        loss_comp = compression_ctrl.loss()
-        loss = loss_l + loss_c + loss_comp
-        batch_loss += loss
-        loss.backward()
-        batch_loss_l += loss_l
-        batch_loss_c += loss_c
+    # forward
+    out = net(images)
+    # backprop
+    loss_l, loss_c = criterion(out, targets)
+    loss_comp = compression_ctrl.loss()
+    loss = loss_l + loss_c + loss_comp
+    batch_loss += loss
+    loss.backward()
+    batch_loss_l += loss_l
+    batch_loss_c += loss_c
+
     return batch_iterator, batch_loss, batch_loss_c, batch_loss_l, loss_comp
 
 
@@ -386,9 +385,11 @@ def train(net, compression_ctrl, train_data_loader, test_data_loader, criterion,
 
     best_mAp = 0
     best_compression_stage = CompressionStage.UNCOMPRESSED
-    test_freq_in_epochs = max(config.test_interval // epoch_size, 1)
+    test_freq_in_epochs = config.test_interval
+    if config.test_interval is None:
+        test_freq_in_epochs = 1
 
-    max_epochs = config['max_iter'] // epoch_size
+    max_epochs = config['epochs']
 
     for epoch in range(config.start_epoch, max_epochs):
         compression_ctrl.scheduler.epoch_step(epoch)
@@ -489,18 +490,15 @@ def train_epoch(compression_ctrl, net, config, train_data_loader, criterion, opt
         )
         optimizer.step()
 
-        batch_loss_l = batch_loss_l / config.iter_size
-        batch_loss_c = batch_loss_c / config.iter_size
-        model_loss = (batch_loss_l + batch_loss_c) / config.iter_size
-        batch_loss = batch_loss / config.iter_size
+        model_loss = batch_loss_l + batch_loss_c
 
         loc_loss += batch_loss_l.item()
         conf_loss += batch_loss_c.item()
 
         if is_on_first_rank(config):
-            config.tb.add_scalar("train/loss_l", batch_loss_l.item(), iteration)
-            config.tb.add_scalar("train/loss_c", batch_loss_c.item(), iteration)
-            config.tb.add_scalar("train/loss", batch_loss.item(), iteration)
+            config.tb.add_scalar("train/loss_l", batch_loss_l.item(), iteration + epoch_size * epoch)
+            config.tb.add_scalar("train/loss_c", batch_loss_c.item(), iteration + epoch_size * epoch)
+            config.tb.add_scalar("train/loss", batch_loss.item(), iteration + epoch_size * epoch)
 
         if iteration % config.print_freq == 0:
             t_finish = time.time()

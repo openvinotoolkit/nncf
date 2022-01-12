@@ -22,13 +22,16 @@
     "dataset": "imagenet2012",
     "dataset_type": "tfds",
 
+    "accuracy_aware_training": {
+        "mode": "adaptive_compression_level",
+        "params": {
+            "maximal_relative_accuracy_degradation": 1.0,
+            "initial_training_phase_epochs": 100,
+            "patience_epochs": 40
+        }
+    },
     "compression": {
         "algorithm": "magnitude_sparsity",
-        "accuracy_aware_training": {
-            "maximal_accuracy_degradation": 1.0,
-            "initial_training_phase_epochs": 100,
-            "patience_epochs": 40,
-        },
         "sparsity_init": 0.1,
         "params": {
             "schedule": "multistep",

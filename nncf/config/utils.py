@@ -14,19 +14,7 @@
 from nncf import NNCFConfig
 
 
-def is_accuracy_aware_training(config: NNCFConfig,
-                               compression_config_passed: bool = False) -> bool:
-    """
-    Returns True if the compression config contains an accuracy-aware
-    training related section, False otherwise.
-    """
-    compression_config = config.get('compression', {}) if not compression_config_passed \
-        else config
-    if isinstance(compression_config, list):
-        for algo_config in compression_config:
-            if algo_config.get("accuracy_aware_training") is not None:
-                return True
-        return False
-    if compression_config.get("accuracy_aware_training") is not None:
+def is_accuracy_aware_training(nncf_config: NNCFConfig) -> bool:
+    if nncf_config.get("accuracy_aware_training") is not None:
         return True
     return False

@@ -33,7 +33,7 @@ learning frameworks.
 - Configuration file examples for each supported compression algorithm.
 - Git patches for prominent third-party repositories ([huggingface-transformers](https://github.com/huggingface/transformers)) demonstrating the process of integrating NNCF into custom training pipelines
 - Exporting PyTorch compressed models to ONNX\* checkpoints and TensorFlow compressed models to SavedModel or Frozen Graph format, ready to use with [OpenVINO&trade; toolkit](https://github.com/openvinotoolkit/).
-- Support for compression-aware model training via the [adaptive-compression training loop](./docs/Usage.md#accuracy-aware-model-training).
+- Support for [Accuracy-Aware model training](./docs/Usage.md#accuracy-aware-model-training) pipelines via the [Adaptive Compression Level Training](./docs/accuracy_aware_model_training/AdaptiveCompressionLevelTraining.md) and [Early Exit Training](./docs/accuracy_aware_model_training/EarlyExitTrainig.md).
 
 ## Usage
 The NNCF is organized as a regular Python package that can be imported in your target training pipeline script.
@@ -122,7 +122,15 @@ To run the samples please refer to the corresponding tutorials:
 - TensorFlow samples:
   - [Image Classification sample](examples/tensorflow/classification/README.md)
   - [Object Detection sample](examples/tensorflow/object_detection/README.md)
-  - [Instance Segmentation sample](examples/tensorflow/semantic_segmentation/README.md)
+  - [Instance Segmentation sample](examples/tensorflow/segmentation/README.md)
+
+## Model Compression Notebooks 
+
+A collection of ready-to-run Jupyter* notebooks are also available to demonstrate how to use NNCF compression algorithms
+to optimize models for inference with the OpenVINO Toolkit.
+- [Optimizing PyTorch models with NNCF of OpenVINO by 8-bit quantization](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/302-pytorch-quantization-aware-training)
+- [Optimizing TensorFlow models with NNCF of OpenVINO by 8-bit quantization](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/305-tensorflow-quantization-aware-training)
+- [Post-Training Quantization of Pytorch model with NNCF](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/112-pytorch-post-training-quantization-nncf)
 
 ## Third-party repository integration
 NNCF may be straightforwardly integrated into training/evaluation pipelines of third-party repositories.
@@ -183,6 +191,17 @@ Install NNCF and TensorFlow in one line:
 ```
 pip install nncf[tf]
 ```
+
+NNCF is also available via [conda](https://anaconda.org/conda-forge/nncf):
+```
+conda install -c conda-forge nncf
+```
+
+#### From a specific commit hash using pip:
+```python
+pip install git+https://github.com/openvinotoolkit/nncf@bd189e2#egg=nncf
+```
+Note that in order for this to work for pip versions >= 21.3, your Git version must be at least 2.22.
 
 #### As a Docker image
 Use one of the Dockerfiles in the [docker](./docker) directory to build an image with an environment already set up and ready for running NNCF [sample scripts](#model-compression-samples).
@@ -260,11 +279,13 @@ to find instruction and links to exact configuration files and final checkpoints
 |UNet|Filter pruning, 25%, geometric median criterion|Mapillary|55.62 (0.61)|
 
 <a name="pytorch_nlp"></a>
-#### NLP
+#### NLP (HuggingFace Transformers-powered models)
 
 |PyTorch Model|<img width="20" height="1">Compression algorithm<img width="20" height="1">|Dataset|Accuracy (Drop) %|
 | :---: | :---: | :---: | :---: |
 |BERT-base-chinese|INT8|XNLI|77.22 (0.46)|
+|BERT-base-cased|INT8|CoNLL2003|99.18 (-0.01)|
+|BERT-base-cased|INT8|MRPC|84.8 (-0.24)|
 |BERT-large (Whole Word Masking)|INT8|SQuAD v1.1|F1: 92.68 (0.53)|
 |RoBERTa-large|INT8|MNLI|matched: 89.25 (1.35)|
 |DistilBERT-base|INT8|SST-2|90.3 (0.8)|
@@ -278,7 +299,7 @@ to find instruction and links to exact configuration files and final checkpoints
 
 |Tensorflow Model|Compression algorithm|Dataset|Accuracy (Drop) %|
 | :---: | :---: | :---: | :---: |
-|Inception V3|INT8 (per-tensor for weights)|ImageNet|78.35 (-0.45)|
+|Inception V3|INT8 (per-tensor for weights)|ImageNet|78.36 (-0.44)|
 |Inception V3|Sparsity 54% (Magnitude)|ImageNet|77.87 (0.03)|
 |Inception V3|INT8 (per-tensor for weights) + Sparsity 61% (RB)|ImageNet|77.58 (0.32)|
 |MobileNet V2|INT8 (per-tensor for weights)|ImageNet|71.66 (0.19)|
@@ -304,7 +325,7 @@ to find instruction and links to exact configuration files and final checkpoints
 |RetinaNet|Sparsity 50% (Magnitude)|COCO2017|33.13 (0.31)|
 |RetinaNet|Filter Pruning 40%, geometric_median criterion|COCO2017|32.7 (0.74)|
 |RetinaNet|Filter Pruning 40%, geometric_median criterion + INT8 (per-tensor for weights)|COCO2017|32.53 (0.91)|
-|YOLOv4|INT8 (per-channel, symmetric for weights; per-tensor, asymmetric for activations)|COCO2017|46.15 (0.89)|
+|YOLOv4|INT8 (per-channel, symmetric for weights; per-tensor, asymmetric for activations)|COCO2017|46.30 (0.74)|
 |YOLOv4|Sparsity 50% (Magnitude)|COCO2017|46.54 (0.50)|
 
 <a name="tensorflow_instance_segmentation"></a>
@@ -312,7 +333,7 @@ to find instruction and links to exact configuration files and final checkpoints
 
 |TensorFlow Model|<img width="110" height="1">Compression algorithm<img width="110" height="1">|Dataset|mAP (drop) %|
 | :---: | :---: | :---: | :---: |
-|MaskRCNN|INT8 (per-tensor for weights)|COCO2017|bbox: 37.12 (0.21)<br/>segm: 33.52 (0.04)|
+|MaskRCNN|INT8 (per-tensor for weights)|COCO2017|bbox: 37.14 (0.19)<br/>segm: 33.53 (0.03)|
 |MaskRCNN|Sparsity 50% (Magnitude)|COCO2017|bbox: 36.93 (0.40)<br/>segm: 33.23 (0.33)|
 
 ## Citing

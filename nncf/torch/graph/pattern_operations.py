@@ -45,7 +45,10 @@ NON_RELU_ACTIVATIONS_OPERATIONS = {'type': ['elu',
                                             'elu_',
                                             'prelu',
                                             'sigmoid',
-                                            'gelu'],
+                                            'gelu',
+                                            'silu',
+                                            'hardsigmoid',
+                                            'hardswish'],
                                    'label': 'NON_RELU_ACTIVATIONS'}
 
 ATOMIC_ACTIVATIONS_OPERATIONS = merge_two_types_of_operations(RELU_OPERATIONS,

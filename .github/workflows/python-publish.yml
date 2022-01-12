@@ -39,5 +39,13 @@ jobs:
         TWINE_USERNAME: ${{ secrets.PYPI_USERNAME }}
         TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
       run: |
-        python setup.py sdist bdist_wheel
+        python setup.py sdist bdist_wheel --release
+
+        # Disallow uploading dev packages
+        for file in dist; do
+          if [[$file == *"dev"* ]]; then
+             exit 42
+          fi
+        done
+
         twine upload dist/*

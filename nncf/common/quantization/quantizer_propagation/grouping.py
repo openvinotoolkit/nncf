@@ -150,7 +150,7 @@ class QuantizersWaitingForMergeManager:
         return self._branching_node_keys_vs_quantizers_waiting_for_merge[node_key]
 
     def __contains__(self, item: PropagatingQuantizer):
-        return item in self._quantizers_vs_branching_node_keys.keys()
+        return item in self._quantizers_vs_branching_node_keys
 
     def resolve_merged_node(self, branching_node_key: str):
         """

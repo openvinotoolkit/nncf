@@ -21,6 +21,7 @@ import tensorflow as tf
 import networkx as nx
 
 from nncf import NNCFConfig
+from nncf.common.hardware.config import HWConfigType
 from tests.tensorflow import test_models
 from tests.tensorflow.helpers import get_empty_config, create_compressed_model_and_algo_for_test
 from tests.tensorflow.sparsity.magnitude.test_helpers import get_basic_filter_pruning_config
@@ -82,7 +83,8 @@ def check_graph_def(graph_def, graph_path: str):
 def check_nx_graph(nx_graph: nx.DiGraph, graph_path: str):
     expected_graph = nx.drawing.nx_pydot.read_dot(graph_path)
 
-    assert nx_graph.nodes.keys() == expected_graph.nodes.keys()
+    for nx_graph_node, expected_graph_node in zip(sorted(nx_graph.nodes.keys()), sorted(expected_graph.nodes.keys())):
+        assert nx_graph_node == expected_graph_node
 
     for node_name, node_attrs in nx_graph.nodes.items():
         expected_attrs = expected_graph.nodes[node_name]
@@ -198,7 +200,6 @@ SKIP_MAP = {
         'nasnet_mobile': pytest.mark.skip(reason='gitlab issue #18'),
         'mobilenet_v2_slim': pytest.mark.skip(reason='ticket #46349'),
         'xception': pytest.mark.skip(reason='gitlab issue #28'),
-        'mask_rcnn': pytest.mark.skip(reason='ticket #58759')
     },
     'magnitude_sparsity': {
         'inception_resnet_v2': pytest.mark.skip(reason='gitlab issue #17'),
@@ -211,7 +212,7 @@ SKIP_MAP = {
         'nasnet_mobile': pytest.mark.skip(reason='gitlab issue #18'),
         'xception': pytest.mark.skip(reason='gitlab issue #28'),
         'mask_rcnn': pytest.mark.skip(reason='ticket #50605'),
-        'resnet50_v2': pytest.mark.skip(resason='Several masks on one weight'),
+        'resnet50v2': pytest.mark.skip(resason='Several masks on one weight'),
         'mobilenet_v2_slim': pytest.mark.skip(reason='ticket #46349')
     },
     'rb_sparsity': {
@@ -247,8 +248,8 @@ def get_test_models_desc(algorithm):
         ),
         ModelDesc(ref_name('resnet50.pb'), test_models.ResNet50, [1, 32, 32, 3]),
         pytest.param(
-            ModelDesc(ref_name('resnet50_v2.pb'), test_models.ResNet50V2, [1, 32, 32, 3]),
-            marks=SKIP_MAP[algorithm].get('resnet50_v2', ())
+            ModelDesc(ref_name('resnet50v2.pb'), test_models.ResNet50V2, [1, 32, 32, 3]),
+            marks=SKIP_MAP[algorithm].get('resnet50v2', ())
         ),
         ModelDesc(ref_name('vgg16.pb'), test_models.VGG16, [1, 32, 32, 3]),
         pytest.param(
@@ -274,7 +275,11 @@ def get_test_models_desc(algorithm):
             marks=SKIP_MAP[algorithm].get('shared_layers_model', ())
         ),
         pytest.param(
-            ModelDesc('mask_rcnn.dot', test_models.MaskRCNN, [1, 1024, 1024, 3]),
+            ModelDesc('mask_rcnn.dot', test_models.MaskRCNN, [1, 1024, 1024, 3],
+                      ignored_scopes=[
+                            "{re}.*clip_boxes.*", # skip due to https://github.com/tensorflow/tensorflow/issues/51793
+                      ]
+            ),
             marks=SKIP_MAP[algorithm].get('mask_rcnn', ())
         ),
         pytest.param(
@@ -452,6 +457,42 @@ def test_quantize_outputs(desc: ModelDesc, _quantization_case_config):
     config = get_basic_quantization_config(_quantization_case_config.qconfig,
                                            input_sample_sizes=desc.input_sample_sizes)
     config['compression']['quantize_outputs'] = True
+    compressed_model, _ = create_compressed_model_and_algo_for_test(model, config, force_no_init=True)
+
+    check_model_graph(compressed_model, desc.ref_graph_filename, _quantization_case_config.graph_dir,
+                      desc.rename_resource_nodes)
+
+
+TYPE_HW = [(HWConfigType.CPU), (HWConfigType.GPU), (HWConfigType.VPU)]
+
+TEST_HW_MODELS_DESC = [
+    ModelDesc('resnet50.pb', test_models.ResNet50, [1, 32, 32, 3]),
+    ModelDesc('inception_v3.pb', test_models.InceptionV3, [1, 75, 75, 3]),
+    ModelDesc('mobilenet_v2.pb', test_models.MobileNetV2, [1, 96, 96, 3]),
+]
+
+
+@pytest.mark.parametrize('desc', TEST_HW_MODELS_DESC, ids=[m.model_name for m in TEST_HW_MODELS_DESC])
+@pytest.mark.parametrize('hw_config_type', TYPE_HW, ids=[hw.value for hw in TYPE_HW])
+def test_compressed_graph_models_hw(desc: ModelDesc, hw_config_type):
+    model = desc.model_builder(input_shape=tuple(desc.input_sample_sizes[1:]))
+
+    quant_params = {
+        'activations': ('asymmetric', 'per_tensor'),
+        'weights': ('symmetric', 'per_channel')
+    }
+    _quantization_case_config = QuantizeTestCaseConfiguration(quant_params,
+                                                              os.path.join('quantized', 'hw', hw_config_type.value))
+    config = get_basic_quantization_config(_quantization_case_config.qconfig,
+                                           input_sample_sizes=desc.input_sample_sizes)
+    config["target_device"] = hw_config_type.value
+
+    if desc.ignored_scopes is not None:
+        if "activations" in config["compression"]:
+            config["compression"]["activations"]["ignored_scopes"] = desc.ignored_scopes
+        else:
+            config["compression"]["activations"] = {"ignored_scopes": desc.ignored_scopes}
+
     compressed_model, _ = create_compressed_model_and_algo_for_test(model, config, force_no_init=True)
 
     check_model_graph(compressed_model, desc.ref_graph_filename, _quantization_case_config.graph_dir,

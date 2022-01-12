@@ -89,7 +89,7 @@ def configure_accuracy_aware_paths(log_dir: str) -> str:
     acc_aware_log_dir = osp.join(log_dir,
                                  'accuracy_aware_training/{run_id}'.format(run_id=run_id))
     os.makedirs(acc_aware_log_dir, exist_ok=True)
-    return log_dir
+    return acc_aware_log_dir
 
 
 def product_dict(d: Dict[Hashable, List]) -> Dict:

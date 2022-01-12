@@ -28,7 +28,6 @@ from nncf.common.compression import BaseCompressionAlgorithmController as BaseCo
 from nncf.config.extractors import extract_algorithm_names
 from nncf.torch.algo_selector import NoCompressionAlgorithmBuilder
 from nncf.config import NNCFConfig
-from nncf.config.utils import is_accuracy_aware_training
 from nncf.api.compression import CompressionAlgorithmController
 from nncf.torch.algo_selector import PT_COMPRESSION_ALGORITHMS
 from nncf.torch.composite_compression import PTCompositeCompressionAlgorithmBuilder
@@ -37,9 +36,11 @@ from nncf.common.utils.debug import set_debug_log_dir
 from nncf.torch.dynamic_graph.graph_tracer import create_input_infos, create_dummy_forward_fn
 from nncf.torch.graph.graph_builder import GraphBuilder
 from nncf.torch.nncf_network import NNCFNetwork
-from nncf.torch.utils import is_dist_avail_and_initialized
 from nncf.torch.utils import is_main_process
+from nncf.torch.utils import is_dist_avail_and_initialized
+from nncf.torch.utils import maybe_convert_legacy_names_in_compress_state
 from nncf.config.structures import ModelEvaluationArgs
+from nncf.config.utils import is_accuracy_aware_training
 
 
 # pylint:disable=too-many-branches
@@ -94,7 +95,7 @@ def create_compressed_model(model: Module,
     is_legacy_model_state_dict = compression_state is not None and \
                                  BaseController.BUILDER_STATE not in compression_state and \
                                  BaseController.CONTROLLER_STATE not in compression_state
-
+    maybe_convert_legacy_names_in_compress_state(compression_state)
     # Compress model that will be deployed for the inference on target device. No need to compress parts of the
     # model that are used on training stage only (e.g. AuxLogits of Inception-v3 model) or unused modules with weights.
     # As a consequence, no need to care about spoiling BN statistics, as there're disabled in eval mode.
@@ -126,6 +127,7 @@ def create_compressed_model(model: Module,
             evaluation_args = config.get_extra_struct(ModelEvaluationArgs)
             with torch.no_grad():
                 original_model_accuracy = evaluation_args.eval_fn(model)
+                nncf_logger.info("Non-compressed model accuracy = {}".format(original_model_accuracy))
 
     compressed_model = NNCFNetwork(model, input_infos=input_info_list,
                                    dummy_forward_fn=dummy_forward_fn,
@@ -142,6 +144,7 @@ def create_compressed_model(model: Module,
     is_state_loadable = not is_legacy_model_state_dict and compression_state is not None
     if is_state_loadable:
         builder.load_state(compression_state[BaseController.BUILDER_STATE])
+
     builder.apply_to(compressed_model)
     compression_ctrl = builder.build_controller(compressed_model)
     if is_state_loadable:
@@ -175,6 +178,7 @@ def create_compressed_model(model: Module,
                 "If your training pipeline demands the processes be synchronized, please, "
                 "keep attention to that error")
             return compression_ctrl, compressed_model
+    compressed_model.get_tracing_context().disable_trace_dynamic_graph()
     return compression_ctrl, compressed_model
 
 

@@ -22,7 +22,7 @@ from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizerSpec
 from nncf.tensorflow.layers.custom_objects import NNCF_CUSTOM_OBJECTS
-from nncf.tensorflow.layers.custom_objects import NNCF_QUANTIZATION_OPERATONS
+from nncf.tensorflow.layers.custom_objects import NNCF_QUANTIZATION_OPERATIONS
 from nncf.tensorflow.layers.data_layout import get_channel_axis
 from nncf.tensorflow.layers.data_layout import get_channel_size
 from nncf.tensorflow.layers.operation import NNCFOperation
@@ -276,7 +276,7 @@ class Quantizer(NNCFOperation):
 
 
 @NNCF_CUSTOM_OBJECTS.register()
-@NNCF_QUANTIZATION_OPERATONS.register(QuantizationMode.SYMMETRIC)
+@NNCF_QUANTIZATION_OPERATIONS.register(QuantizationMode.SYMMETRIC)
 class SymmetricQuantizer(Quantizer):
     def __init__(self, name: str, qspec: TFQuantizerSpec):
         super().__init__(name)
@@ -324,9 +324,9 @@ class SymmetricQuantizer(Quantizer):
             'signed_var': signed
         }
 
-    def apply_saturation_fix(self, weights):
+    def apply_overflow_fix(self, weights):
         if self.num_bits != 8 or not self._half_range:
-            raise RuntimeError('Attempt to apply saturation issue fix '
+            raise RuntimeError('Attempt to apply overflow issue fix '
                                'to quantizer which is not configured for that.')
 
         # Multiplier to expand scale from 7 bit to 8 bit
@@ -411,7 +411,7 @@ class SymmetricQuantizer(Quantizer):
 
 
 @NNCF_CUSTOM_OBJECTS.register()
-@NNCF_QUANTIZATION_OPERATONS.register(QuantizationMode.ASYMMETRIC)
+@NNCF_QUANTIZATION_OPERATIONS.register(QuantizationMode.ASYMMETRIC)
 class AsymmetricQuantizer(Quantizer):
     def __init__(self, name: str, qspec: TFQuantizerSpec):
         super().__init__(name)
@@ -449,9 +449,9 @@ class AsymmetricQuantizer(Quantizer):
             'input_range_var': input_range
         }
 
-    def apply_saturation_fix(self, weights):
+    def apply_overflow_fix(self, weights):
         if self.num_bits != 8 or not self._half_range:
-            raise RuntimeError('Attempt to apply saturation issue fix '
+            raise RuntimeError('Attempt to apply overflow issue fix '
                                'to quantizer which is not configured for that.')
 
         # Low value shift to expand quantize range from 7 bit to 8 bit properly

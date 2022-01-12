@@ -69,7 +69,7 @@ from examples.torch.common.utils import write_metrics
 from nncf.api.compression import CompressionStage
 from nncf.common.utils.tensorboard import prepare_for_tensorboard
 from nncf.config.utils import is_accuracy_aware_training
-from nncf.torch import AdaptiveCompressionTrainingLoop
+from nncf.common.accuracy_aware_training import create_accuracy_aware_training_loop
 from nncf.torch import create_compressed_model
 from nncf.torch.checkpoint_loading import load_state
 from nncf.torch.dynamic_graph.graph_tracer import create_input_infos
@@ -144,6 +144,8 @@ def main_worker(current_gpu, config: SampleConfig):
     if is_main_process():
         configure_logging(logger, config)
         print_args(config)
+    else:
+        config.tb = None
 
     set_seed(config)
 
@@ -176,7 +178,7 @@ def main_worker(current_gpu, config: SampleConfig):
             return top1, top5, loss
 
         def model_eval_fn(model):
-            top1, _ = validate(val_loader, model, criterion, config)
+            top1, _, _ = validate(val_loader, model, criterion, config)
             return top1
 
         execution_params = ExecutionParameters(config.cpu_only, config.current_gpu)
@@ -267,8 +269,7 @@ def main_worker(current_gpu, config: SampleConfig):
                 optimizer, lr_scheduler = make_optimizer(params_to_optimize, config)
                 return optimizer, lr_scheduler
 
-            # instantiate and run accuracy-aware training loop
-            acc_aware_training_loop = AdaptiveCompressionTrainingLoop(nncf_config, compression_ctrl)
+            acc_aware_training_loop = create_accuracy_aware_training_loop(nncf_config, compression_ctrl)
             model = acc_aware_training_loop.run(model,
                                                 train_epoch_fn=train_epoch_fn,
                                                 validate_fn=validate_fn,

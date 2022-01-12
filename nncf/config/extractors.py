@@ -157,3 +157,43 @@ def extract_bn_adaptation_init_params(config: NNCFConfig, algo_name: str) -> Dic
     }
 
     return params
+
+
+def extract_accuracy_aware_training_params(config: NNCFConfig) -> Dict[str, object]:
+    """
+    Extracts accuracy aware training parameters from NNCFConfig.
+
+    :param: config: An instance of the NNCFConfig.
+    :return: Accuracy aware training parameters.
+    """
+    class NNCFAlgorithmNames:
+        QUANTIZATION = 'quantization'
+        FILTER_PRUNING = 'filter_pruning'
+        SPARSITY = ['rb_sparsity', 'magnitude_sparsity', 'const_sparsity']
+
+    def validate_accuracy_aware_schema(config: NNCFConfig, params: Dict[str, object]):
+        from nncf.common.accuracy_aware_training import AccuracyAwareTrainingMode
+        if params["mode"] == AccuracyAwareTrainingMode.EARLY_EXIT:
+            return
+        if params["mode"] == AccuracyAwareTrainingMode.ADAPTIVE_COMPRESSION_LEVEL:
+            algorithms = extract_algorithm_names(config)
+            if NNCFAlgorithmNames.FILTER_PRUNING in algorithms and \
+                    any(algo in NNCFAlgorithmNames.SPARSITY for algo in algorithms):
+                raise RuntimeError("adaptive_compression_level mode supports filter_pruning or sparsity algorithms"
+                                   "separately. Please, choose only one algorithm with adaptive compression level. "
+                                   "Take a note that you still can use it combined with quantization.")
+            if len(algorithms) == 1 and algorithms[0] == NNCFAlgorithmNames.QUANTIZATION:
+                raise RuntimeError("adaptive_compression_level mode doesn't support quantization")
+
+    accuracy_aware_training_config = config.get("accuracy_aware_training", None)
+
+    mode = accuracy_aware_training_config.get("mode")
+    params = {"mode": mode}
+
+    if accuracy_aware_training_config.get("params") is not None:
+        for param_key, param_val in accuracy_aware_training_config.get("params").items():
+            params[param_key] = param_val
+
+    validate_accuracy_aware_schema(config, params)
+
+    return params

@@ -29,6 +29,7 @@ from nncf.tensorflow.graph.transformations import commands
 from nncf.tensorflow.graph.transformations.commands import TFInsertionCommand
 from nncf.tensorflow.graph.transformations.commands import TFLayer
 from nncf.tensorflow.graph.transformations.commands import TFLayerWeight
+from nncf.tensorflow.graph.transformations.commands import TFMultiLayerPoint
 from nncf.tensorflow.graph.transformations.commands import TFMultipleInsertionCommands
 from nncf.tensorflow.graph.transformations.layout import TFTransformationLayout
 from nncf.tensorflow.graph.utils import is_functional_model
@@ -81,6 +82,21 @@ def test_insertion_command_priority(case):
     res = res_cmd.insertion_objects
     assert len(res) == len(cmds)
     assert all(res[i]() <= res[i + 1]() for i in range(len(res) - 1))
+
+
+def test_insertion_commands_union_multi_layer_point():
+    cmd_1 = TFMultiLayerPoint([
+        commands.TFAfterLayer('layer_0'),
+        commands.TFBeforeLayer('layer_1'),
+    ])
+    cmd_2 = TFMultiLayerPoint([
+        commands.TFBeforeLayer('layer_2'),
+        commands.TFAfterLayer('layer_3')
+    ])
+    cmd_0 = commands.TFInsertionCommand(cmd_1)
+    cmd_1 = commands.TFInsertionCommand(cmd_2)
+    with pytest.raises(Exception):
+        cmd_0.union(cmd_1)
 
 
 def test_removal_command_union():

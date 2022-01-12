@@ -53,7 +53,7 @@ def ResNet50V2(input_shape=None):
                      name='predictions')(x)
 
     # Create model.
-    model = training.Model(img_input, x, name="resnet50_v2")
+    model = training.Model(img_input, x, name="resnet50v2")
 
     return model
 

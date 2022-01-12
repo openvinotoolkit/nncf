@@ -1,3 +1,7 @@
 *  @openvinotoolkit/nncf_pytorch-maintainers
 
 CODEOWNERS  @openvinotoolkit/openvino-admins
+
+# Control 3d party dependencies
+requirements.txt  @openvino-configuration-mgmt
+**/setup.py  @openvino-configuration-mgmt

@@ -29,17 +29,19 @@ from nncf.common.graph import NNCFNodeName
 from nncf.common.insertion_point_graph import InsertionPointGraph
 from nncf.common.insertion_point_graph import PostHookInsertionPoint
 from nncf.common.insertion_point_graph import PreHookInsertionPoint
-from nncf.common.quantization.quantizer_propagation.structs import PropagationPath
 from nncf.common.quantization.quantizer_propagation.graph import QuantizerPropagationStateGraph as QPSG
+from nncf.common.quantization.quantizer_propagation.structs import PropagationPath
 from nncf.common.quantization.quantizer_propagation.structs import QuantizationTrait
 from nncf.common.quantization.quantizer_propagation.structs import QuantizerPropagationStateGraphNodeType
 from nncf.common.quantization.quantizer_setup import ActivationQuantizationInsertionPoint
 from nncf.common.quantization.quantizer_setup import MultiConfigQuantizationPoint
 from nncf.common.quantization.quantizer_setup import MultiConfigQuantizerSetup
 from nncf.common.quantization.quantizer_setup import WeightQuantizationInsertionPoint
+
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
-from nncf.torch.graph.operator_metatypes import CatMetatype
+from nncf.common.quantization.structs import UnifiedScaleType
+from nncf.torch.graph.operator_metatypes import PTCatMetatype
 from tests.torch.test_nncf_network import get_ip_graph_for_test
 from tests.torch.test_nncf_network import get_mock_nncf_node_attrs
 from tests.torch.test_nncf_network import get_nncf_graph_from_mock_nx_graph
@@ -70,7 +72,7 @@ class TestQuantizerPropagationStateGraph:
         ip_graph = get_ip_graph_for_test(get_two_branch_mock_model_graph())
         qpsg = QPSG(ip_graph)
 
-        qpsg.nodes['5 /F_0'][QPSG.OPERATOR_METATYPE_NODE_ATTR] = CatMetatype
+        qpsg.nodes['5 /F_0'][QPSG.OPERATOR_METATYPE_NODE_ATTR] = PTCatMetatype
         qpsg.skip_check = False
         yield qpsg
         if not qpsg.skip_check:
@@ -248,7 +250,7 @@ class TestQuantizerPropagationStateGraph:
         test_groups_vs_paths = \
             mock_qp_graph.get_paths_to_immediately_dominating_insertion_points_grouped_by_unified_scales(
                 start_node_key,
-                {CatMetatype})
+                {PTCatMetatype})
 
         def get_cat_path_list(path_list: List[List[Tuple[str, str]]]):
             str_paths = [[str(edge[0]) + ' -> ' + str(edge[1]) for edge in path] for path in path_list]
@@ -1070,6 +1072,93 @@ class TestRedundantQuantizerMerge:
             assert pq.current_location_node_key in ref_remaining_pq_positions
 
         assert len(remaining_pqs) == len(ref_remaining_pq_positions)
+
+
+class TestUnifinedScaleTypeAfterMergeQuantizers:
+    @staticmethod
+    def setup_and_propagate_quantizers(qpsg: QPSG) -> QPSG:
+
+        pq_1 = qpsg.add_propagating_quantizer([QuantizerConfig(per_channel=True)],
+                                              InsertionPointGraph.get_pre_hook_node_key('4 /E_0', input_port_id=0),
+                                              unified_scale_type=UnifiedScaleType.UNIFY_ALWAYS)
+        g_id = qpsg.get_unified_scale_group_id_by_propagating_quantizer_id(pq_1.id)
+        pq_2 = qpsg.add_propagating_quantizer([QuantizerConfig(per_channel=True)],
+                                              InsertionPointGraph.get_pre_hook_node_key('4 /E_0', input_port_id=1),
+                                              unified_scale_type=UnifiedScaleType.UNIFY_ALWAYS,
+                                              unified_scale_group_id_override=g_id)
+
+
+        paths_1 = get_edge_paths_for_propagation(qpsg,
+                                                 InsertionPointGraph.get_pre_hook_node_key('2 /C_0'),
+                                                 InsertionPointGraph.get_pre_hook_node_key('4 /E_0', input_port_id=0))
+
+        paths_2 = get_edge_paths_for_propagation(qpsg,
+                                                 InsertionPointGraph.get_pre_hook_node_key('3 /D_0'),
+                                                 InsertionPointGraph.get_pre_hook_node_key('4 /E_0', input_port_id=1))
+
+        qpsg.propagate_quantizer_via_path(pq_1, paths_1[0])
+        qpsg.propagate_quantizer_via_path(pq_2, paths_2[0])
+
+        qpsg.merge_quantizers_for_branching_node([pq_1, pq_2],
+                                                 [QuantizerConfig(per_channel=True)],
+                                                 [None, None],
+                                                 '1 /B_0')
+
+    @staticmethod
+    def get_model_graph_with_split_node() -> QPSG:
+        mock_graph = nx.DiGraph()
+
+        #         (0 /A_0)
+        #            |
+        #         (1 /B_0)
+        #        /        \
+        #    (2 /C_0)   (3 /D_0)
+        #        \        /
+        #         (4 /E_0)
+
+        node_keys = ['A', 'B', 'C', 'D', 'E']
+        for node_key in node_keys:
+            mock_node_attrs = get_mock_nncf_node_attrs(op_name=node_key)
+            if node_key == "B":
+                # Split have no POST_HOOK
+                mock_node_attrs[NNCFGraph.NODE_TYPE_ATTR] = "split"
+            mock_graph.add_node(node_key, **mock_node_attrs)
+
+        mock_graph.add_edges_from([('A', 'B'), ('B', 'C'), ('B', 'D'), ('C', 'E'), ('D', 'E')])
+        mark_input_ports_lexicographically_based_on_input_node_key(mock_graph)
+        mock_graph = get_nncf_graph_from_mock_nx_graph(mock_graph)
+
+        ip_graph = get_ip_graph_for_test(mock_graph)
+        qpsg = QPSG(ip_graph)
+
+        operator_node_key_vs_trait_dict = {
+            '0 /A_0': QuantizationTrait.QUANTIZATION_AGNOSTIC,
+            '1 /B_0': QuantizationTrait.QUANTIZATION_AGNOSTIC,
+            '2 /C_0': QuantizationTrait.INPUTS_QUANTIZABLE,
+            '3 /D_0': QuantizationTrait.CONCAT,
+            '4 /E_0': QuantizationTrait.QUANTIZATION_AGNOSTIC,
+        }
+        model_graph_qpsg = TestQuantizerPropagationStateGraph.mark_nodes_with_traits(
+            qpsg, operator_node_key_vs_trait_dict
+        )
+        return model_graph_qpsg
+
+    def test_unified_scale_type_for_split_node(self):
+        model_graph_qpsg = self.get_model_graph_with_split_node()
+        self.setup_and_propagate_quantizers(model_graph_qpsg)
+
+        quantizers = model_graph_qpsg.collect_all_propagating_quantizers()
+        assert len(quantizers) == 1
+
+        pq = quantizers.pop()
+        assert pq.unified_scale_type == UnifiedScaleType.UNIFY_ALWAYS
+
+        setup = model_graph_qpsg.create_quantizer_setup({})
+        assert len(setup.unified_scale_groups) == 1
+
+        gid = setup.get_unified_scale_group_id(pq.id)
+        assert gid == 0
+
 
 def create_graph_for_output_quant_as_weights() -> NNCFGraph:
     mock_graph = nx.DiGraph()

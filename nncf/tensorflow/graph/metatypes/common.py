@@ -73,7 +73,8 @@ LINEAR_LAYER_METATYPES = [
 
 NORMALIZATION_LAYER_METATYPES = [
     layer_metatypes.TFBatchNormalizationLayerMetatype,
-    layer_metatypes.TFLayerNormalizationLayerMetatype
+    layer_metatypes.TFLayerNormalizationLayerMetatype,
+    op_metatypes.TFFusedBatchNormV3OpMetatype,
 ]
 
 LAYER_METATYPES_AGNOSTIC_TO_DATA_PRECISION_WITH_ONE_INPUT = [
@@ -96,7 +97,14 @@ LAYER_METATYPES_AGNOSTIC_TO_DATA_PRECISION_WITH_ONE_INPUT = [
     op_metatypes.TFPackOpMetatype,
     op_metatypes.TFPadOpMetatype,
     op_metatypes.TFStridedSliceOpMetatype,
-    op_metatypes.TFReshapeOpMetatype
+    op_metatypes.TFReshapeOpMetatype,
+    op_metatypes.TFShapeOpMetatype,
+    op_metatypes.TFMaxOpMetatype,
+    op_metatypes.TFMaxPoolOpMetatype,
+    op_metatypes.TFExpandDimsOpMetatype,
+    op_metatypes.TFSqueezeOpMetatype,
+    op_metatypes.TFMaxPool3DOpMetatype,
+    op_metatypes.TFTileOpMetatype,
 ]
 
 LAYER_METATYPES_AGNOSTIC_TO_DATA_PRECISION_WITH_MULTIPLE_INPUTS = [
@@ -113,9 +121,18 @@ ELEMENTWISE_LAYER_METATYPES = [
     layer_metatypes.TFMultiplyLayerMetatype,
     layer_metatypes.TFRescalingLayerMetatype,
     op_metatypes.TFAddOpMetatype,
-    op_metatypes.TFMulOpMetatype
+    op_metatypes.TFMulOpMetatype,
+    op_metatypes.TFBiasAddOpMetatype,
+    op_metatypes.TFGreaterOpMetatype,
+    op_metatypes.TFNegOpMetatype,
+    op_metatypes.TFSubOpMetatype,
 ]
 
+RESHAPE_METATYPES = [
+    layer_metatypes.TFReshapeLayerMetatype,
+    layer_metatypes.TFFlattenLayerMetatype,
+    op_metatypes.TFReshapeOpMetatype
+]
 
 def get_operator_metatypes() -> List[Type[OperatorMetatype]]:
     keras_metatypes_list = list(layer_metatypes.KERAS_LAYER_METATYPES.registry_dict.values())

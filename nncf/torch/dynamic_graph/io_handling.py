@@ -12,6 +12,7 @@ from nncf.torch.dynamic_graph.graph_tracer import ModelInputInfo, create_mock_te
 from nncf.torch.utils import is_tensor, is_traced_tensor
 from nncf.torch.nested_objects_traversal import objwalk
 from nncf.common.utils.logger import logger as nncf_logger
+from nncf.torch.dynamic_graph.context import forward_nncf_trace
 
 
 @register_operator(name=MODEL_INPUT_OP_NAME)
@@ -46,7 +47,8 @@ def replicate_same_tensors(obj: Any) -> Any:
     def replicate_fn(tensor: torch.Tensor) -> torch.Tensor:
         tensor_object_id = id(tensor)
         if tensor_object_id in observed_tensor_object_ids:
-            return tensor.clone()
+            with forward_nncf_trace():
+                return tensor.clone()
         observed_tensor_object_ids.add(tensor_object_id)
         return tensor
     obj = objwalk(obj, is_tensor, replicate_fn)

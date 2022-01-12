@@ -12,11 +12,8 @@
 """
 
 from functools import partial
-from typing import Dict
-from typing import List
-from typing import Optional
-from typing import Tuple
-from typing import Type
+from typing import Dict, List, Optional, Tuple, Type, Union, Callable
+from enum import Enum
 
 import math
 import numpy as np
@@ -24,6 +21,8 @@ import numpy as np
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.graph import NNCFNodeName
+from nncf.common.tensor import NNCFTensor
+from nncf.common.tensor_statistics.collectors import NNCFCollectorTensorProcessor
 from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.pruning.clusterization import Cluster
@@ -138,29 +137,6 @@ def traverse_function(node: NNCFNode, output: List[NNCFNode], type_check_fn, vis
     return True, output
 
 
-def get_first_nodes_of_type(graph: NNCFGraph, op_types: List[str]) -> List[NNCFNode]:
-    """
-    Looking for first node in graph with type in `op_types`.
-    First == layer with type in `op_types`, that there is a path from the input such that there are no other
-    operations with type in `op_types` on it.
-
-    :param op_types: Types of modules to track.
-    :param graph: Graph to work with.
-    :return: List of all first nodes with type in `op_types`.
-    """
-    graph_roots = graph.get_input_nodes()  # NNCFNodes here
-
-    visited = {node_id: False for node_id in graph.get_all_node_ids()}
-    partial_traverse_function = partial(traverse_function,
-                                        type_check_fn=lambda x: x in op_types,
-                                        visited=visited)
-
-    first_nodes_of_type = []
-    for root in graph_roots:
-        first_nodes_of_type.extend(graph.traverse_graph(root, partial_traverse_function))
-    return first_nodes_of_type
-
-
 def get_last_nodes_of_type(graph: NNCFGraph, op_types: List[str]) -> List[NNCFNode]:
     """
     Looking for last node in graph with type in `op_types`.
@@ -185,7 +161,7 @@ def get_last_nodes_of_type(graph: NNCFGraph, op_types: List[str]) -> List[NNCFNo
 
 
 def get_previous_convs(graph: NNCFGraph, nncf_node: NNCFNode,
-                       pruning_types: List[str], stop_propagation_ops: List[str]) -> Optional[NNCFNode]:
+                       pruning_types: List[str], stop_propagation_ops: List[str]) -> List[NNCFNode]:
     """
     Returns source convolutions of the node.
 
@@ -306,7 +282,15 @@ def count_flops_and_weights_per_node(graph: NNCFGraph,
         name = node.node_name
         num_in_channels = input_channels.get(name, node.layer_attributes.in_channels)
         num_out_channels = output_channels.get(name, node.layer_attributes.out_channels)
-        filters_per_channel = num_out_channels // node.layer_attributes.groups
+        if is_prunable_depthwise_conv(node):
+            # Prunable depthwise conv processed in special way
+            # because common way to calculate filters per
+            # channel for such layer leads to zero in case
+            # some of the output channels are pruned.
+            filters_per_channel = 1
+        else:
+            filters_per_channel = num_out_channels // node.layer_attributes.groups
+
         flops_numpy = 2 * np.prod(node.layer_attributes.kernel_size) * \
                       num_in_channels * filters_per_channel * np.prod(output_shapes[name])
         weights_numpy = np.prod(node.layer_attributes.kernel_size) * num_in_channels * filters_per_channel
@@ -323,23 +307,30 @@ def count_flops_and_weights_per_node(graph: NNCFGraph,
     return flops, weights
 
 
-def calculate_in_out_channels_in_uniformly_pruned_model(pruning_groups: List[Cluster[PrunedLayerInfoBase]],
-                                                        pruning_rate: float,
-                                                        full_input_channels: Dict[str, int],
-                                                        full_output_channels: Dict[str, int],
-                                                        pruning_groups_next_nodes: Dict[int, List[str]]):
+def count_filters_num(graph: NNCFGraph,
+                      op_metatypes: List[Type[OperatorMetatype]],
+                      output_channels: Dict[NNCFNodeName, int] = None) -> int:
     """
-    Imitates filters pruning by removing `pruning_rate` percent of output filters in each pruning group
-    and updating corresponding input channels number in `pruning_groups_next_nodes` nodes.
+    Counts filters of `op_metatypes` layers taking into account new output channels number.
 
-    :param pruning_groups: A list of pruning groups.
-    :param pruning_rate: Target pruning rate.
-    :param full_input_channels:  A dictionary of input channels number in original model.
-    :param full_output_channels: A dictionary of output channels number in original model.
-    :param pruning_groups_next_nodes: A dictionary of next nodes of each pruning group.
-    :return Dictionary of new input channels number {node_name: channels_num}
-    :return Dictionary of new output channels number {node_name: channels_num}
+    :param graph: Graph to work with.
+    :param op_metatypes: List of metatypes defining convolution operations.
+    :param output_channels:  A dictionary of output channels number in pruned model.
+    :return: Current number of filters according to given graph and output channels.
     """
+    filters_num = 0
+    output_channels = output_channels or {}
+    for node in graph.get_nodes_by_metatypes(op_metatypes):
+        filters_num += output_channels.get(node.node_name, node.layer_attributes.out_channels)
+    return filters_num
+
+
+def _calculate_in_out_channels(pruning_groups: List[Cluster[PrunedLayerInfoBase]],
+                               sparse_elements_counter: Callable[[str], int],
+                               full_input_channels: Dict[str, int],
+                               full_output_channels: Dict[str, int],
+                               pruning_groups_next_nodes: Dict[int, List[str]]) -> Tuple[Dict[str, int],
+                                                                                         Dict[str, int]]:
     tmp_in_channels = full_input_channels.copy()
     tmp_out_channels = full_output_channels.copy()
 
@@ -349,17 +340,78 @@ def calculate_in_out_channels_in_uniformly_pruned_model(pruning_groups: List[Clu
                    group.elements)
         # Prune all nodes in cluster (by output channels)
         old_out_channels = full_output_channels[layer_name]
-        num_of_sparse_elems = get_rounded_pruned_element_number(old_out_channels, pruning_rate)
+        num_of_sparse_elems = sparse_elements_counter(layer_name)
         new_out_channels_num = old_out_channels - num_of_sparse_elems
 
         for minfo in group.elements:
             tmp_out_channels[minfo.node_name] = new_out_channels_num
+            if minfo.is_depthwise:
+                tmp_in_channels[minfo.node_name] = new_out_channels_num
 
         # Prune in_channels in all next nodes of cluster
         for node_name in pruning_groups_next_nodes[group.id]:
             tmp_in_channels[node_name] -= num_of_sparse_elems
 
     return tmp_in_channels, tmp_out_channels
+
+
+def calculate_in_out_channels_in_uniformly_pruned_model(pruning_groups: List[Cluster[PrunedLayerInfoBase]],
+                                                        pruning_level: float,
+                                                        full_input_channels: Dict[str, int],
+                                                        full_output_channels: Dict[str, int],
+                                                        pruning_groups_next_nodes: Dict[int, List[str]]) -> \
+                                                        Tuple[Dict[str, int], Dict[str, int]]:
+    """
+    Imitates filters pruning by removing `pruning_rate` percent of output filters in each pruning group
+    and updating corresponding input channels number in `pruning_groups_next_nodes` nodes.
+
+    :param pruning_groups: A list of pruning groups.
+    :param pruning_level: Target pruning rate.
+    :param full_input_channels:  A dictionary of input channels number in original model.
+    :param full_output_channels: A dictionary of output channels number in original model.
+    :param pruning_groups_next_nodes: A dictionary of next nodes of each pruning group.
+    :return Dictionary of new input channels number {node_name: channels_num}
+    :return Dictionary of new output channels number {node_name: channels_num}
+    """
+    def get_num_of_sparse_elements_by_node(node_name: str) -> int:
+        old_out_channels = full_output_channels[node_name]
+        return get_rounded_pruned_element_number(old_out_channels, pruning_level)
+
+    return _calculate_in_out_channels(pruning_groups,
+                                      get_num_of_sparse_elements_by_node,
+                                      full_input_channels,
+                                      full_output_channels,
+                                      pruning_groups_next_nodes)
+
+
+def calculate_in_out_channels_by_masks(pruning_groups: List[Cluster[PrunedLayerInfoBase]],
+                                       masks: Dict[str, NNCFTensor],
+                                       tensor_processor: Type[NNCFCollectorTensorProcessor],
+                                       full_input_channels: Dict[str, int],
+                                       full_output_channels: Dict[str, int],
+                                       pruning_groups_next_nodes: Dict[int, List[str]]) -> Tuple[Dict[str, int],
+                                                                                                 Dict[str, int]]:
+    """
+    Imitates filters pruning by removing output filters zeroed by pruning masks in each pruning group
+    and updating corresponding input channels number in `pruning_groups_next_nodes` nodes.
+
+    :param pruning_groups: A list of pruning groups.
+    :param masks: A dictionary of masks of each pruning node.
+    :param tensor_processor: NNCF Tensor processor to operate on NNCFTensors.
+    :param full_input_channels:  A dictionary of input channels number in original model.
+    :param full_output_channels: A dictionary of output channels number in original model.
+    :param pruning_groups_next_nodes: A dictionary of next nodes of each pruning group.
+    :return Dictionary of new input channels number {node_name: channels_num}
+    """
+    def get_num_of_sparse_elements_by_node(node_name: str) -> int:
+        mask = masks[node_name]
+        return mask.shape[0] - int(tensor_processor.sum(mask))
+
+    return _calculate_in_out_channels(pruning_groups,
+                                      get_num_of_sparse_elements_by_node,
+                                      full_input_channels,
+                                      full_output_channels,
+                                      pruning_groups_next_nodes)
 
 
 class PruningOperationsMetatypeRegistry(Registry):
@@ -394,10 +446,106 @@ class PruningOperationsMetatypeRegistry(Registry):
         return None
 
 
-def is_depthwise_conv(node: NNCFNode) -> bool:
+class PruningAnalysisReason(Enum):
+    """
+    Enum of possible pruning analysis decisions reasons.
+    """
+
+    IGNORED_SCOPE = 'node in ignored scope'
+    FIRST_CONV = 'this scope is one of the first convolutions'
+    LAST_CONV = 'this scope is convolution with output which directly affects model output dimensions'
+    GROUP_CONV = 'this scope is grouped convolution'
+    DOWNSAMPLE_CONV = 'this scope is convolution with downsample'
+    MODEL_ANALYSIS = 'of model analysis'
+    DIMENSION_MISMATCH = 'of dimension mismatch'
+    CLOSING_CONV_MISSING = 'closing convolution missing'
+    IN_GROUP_OF_UNPRUNABLE = 'is in the group with non prunable layers'
+
+    @classmethod
+    def message(cls, node_name: str, decision: Optional['PruningAnalysisDecision']) -> str:
+        """
+        Returns the node pruning analysis decisions in a human-readable format.
+
+        :param node_name: Name of given node.
+        :param decision: Pruning analysis decision for given node.
+        :return: Pruning analysis decision in a human-readable format.
+        """
+        prefix = f'ignored adding Weight Pruner in: {node_name}'
+        reasons = decision.reasons
+        if not reasons:
+            return prefix
+        # Filter messages
+        if len(reasons) > 1 and cls.CLOSING_CONV_MISSING in reasons:
+            reasons.remove(cls.CLOSING_CONV_MISSING)
+        if len(reasons) == 1 and cls.IN_GROUP_OF_UNPRUNABLE in reasons:
+            return ''
+        return prefix + ' because ' + ' and '.join([reason.value for reason in reasons])
+
+
+class PruningAnalysisDecision:
+    """
+    Container for pruning analysis decisions. Contains decision which is boolean marker either
+    node prunable or not (prunable if decision attribute is True) and
+    pruning analysis reason in PruningAnalysisReason format. In case of positive
+    decision (decision == True) possible reason will be ignored.
+    """
+
+    def __init__(self,
+                 decision: bool,
+                 possible_reasons: Optional[Union[List[PruningAnalysisReason], PruningAnalysisReason]] = None):
+        self.decision = decision
+        if not isinstance(possible_reasons, list):
+            possible_reasons = [possible_reasons]
+        self._reasons = possible_reasons if not decision and possible_reasons else None \
+            # type: Optional[List[PruningAnalysisReason]]
+
+    def __repr__(self) -> str:
+        representation = f'Prunable: {self.decision}'
+        if not self.decision:
+            representation += '; Reasons: ' + str(self._reasons)
+        return representation
+
+    def __eq__(self, other: 'PruningAnalysisDecision') -> bool:
+        eq = self.decision == other.decision
+        if self._reasons is None:
+            return eq and other._reasons is None
+        if other._reasons is None:
+            return False
+        return eq and sorted(self._reasons) == sorted(other._reasons)
+
+    def __bool__(self) -> bool:
+        return self.decision
+
+    @property
+    def reasons(self) -> Optional[List[PruningAnalysisReason]]:
+        if self._reasons:
+            return self._reasons.copy()
+        return None
+
+    def join(self, other: 'PruningAnalysisDecision') -> 'PruningAnalysisDecision':
+        """
+        Join two pruning analysis decisions about one NNCFNode.
+
+        :param other: pruning analysis decision to join with.
+        :return: Joint pruning analysis decision.
+        """
+        if self.decision and other.decision:
+            return self
+
+        reasons = []
+        for decision in [self, other]:
+            if decision.reasons:
+                reasons.extend(decision.reasons)
+
+        return PruningAnalysisDecision(False, reasons)
+
+
+def is_prunable_depthwise_conv(node: NNCFNode) -> bool:
+    # Only convolutions with in_channels == groups == out_channels are supported
+    # by pruning algorithm. Depthwise convolutions support ticket: #68580
     return isinstance(node.layer_attributes, ConvolutionLayerAttributes) \
            and node.layer_attributes.groups == node.layer_attributes.in_channels \
-           and (node.layer_attributes.out_channels % node.layer_attributes.in_channels == 0) \
+           and (node.layer_attributes.out_channels == node.layer_attributes.in_channels) \
            and node.layer_attributes.in_channels > 1
 
 
@@ -407,3 +555,31 @@ def is_conv_with_downsampling(node: NNCFNode) -> bool:
         return not np.all(np.array(layer_attrs.stride) == 1) \
            and not layer_attrs.transpose
     return False
+
+
+def get_input_masks(node: NNCFNode, graph: NNCFGraph) -> List[Optional[NNCFTensor]]:
+    """
+    Returns input masks for all inputs of given NNCFNode.
+
+    :param node: Given NNCFNode.
+    :param graph: Graph to work with.
+    :return: Input masks.
+    """
+    input_masks = [input_node.data['output_mask'] for input_node in graph.get_previous_nodes(node)]
+    return input_masks
+
+
+def identity_mask_propagation(node: NNCFNode, graph: NNCFGraph) -> None:
+    """
+    Propagates input mask through NNCFNode.
+
+    :param node: Graph node to perform identity mask propagation on.
+    :param graph: Graph to work with.
+    """
+    input_masks = get_input_masks(node, graph)
+    if not input_masks:
+        # In case for disconnected NNCFGraph
+        input_masks = [None]
+    assert len(input_masks) == 1
+    node.data['input_masks'] = input_masks
+    node.data['output_mask'] = input_masks[0]

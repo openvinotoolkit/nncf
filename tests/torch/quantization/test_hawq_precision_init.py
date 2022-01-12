@@ -451,12 +451,12 @@ def test_hawq_on_single_conv_without_quantizers(_seed, dataset_dir, tmp_path, pa
     load_state(model, model_zoo.load_url(model_urls['squeezenet1_1']))
     criterion = nn.CrossEntropyLoss()
     ref_trace = params.cpu_ref_trace
-    rtol = 1e-7
+    rtol = 1e-5
     if torch.cuda.is_available():
         model = model.cuda()
         criterion = criterion.cuda()
         ref_trace = params.cuda_ref_trace
-        rtol = 1e-9
+        rtol = 1e-6
 
     if not dataset_dir:
         dataset_dir = str(tmp_path)

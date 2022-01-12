@@ -16,7 +16,7 @@ import tensorflow as tf
 from tensorflow.python.keras import layers
 
 from nncf.tensorflow.graph.metatypes.matcher import get_keras_layer_metatype
-from nncf.tensorflow.layers.custom_objects import NNCF_QUANTIZATION_OPERATONS
+from nncf.tensorflow.layers.custom_objects import NNCF_QUANTIZATION_OPERATIONS
 from nncf.tensorflow.layers.operation import InputType
 from nncf.tensorflow.layers.wrapper import NNCFWrapper
 from nncf.tensorflow.quantization import FakeQuantize
@@ -25,6 +25,7 @@ from nncf.tensorflow.quantization.quantizers import Quantizer
 from nncf.tensorflow.quantization.quantizers import TFQuantizerSpec
 from tests.tensorflow.helpers import create_compressed_model_and_algo_for_test
 from tests.tensorflow.helpers import get_basic_conv_test_model
+from tests.tensorflow.helpers import get_basic_two_conv_test_model
 from tests.tensorflow.quantization.utils import get_basic_quantization_config
 # TODO(nlyalyus): WA for the bug 58886, QuantizationMode should be imported after nncf.tensorflow.
 #  Otherwise test_quantize_inputs and test_quantize_outputs_removal will fail, because of invalid inputs quantization
@@ -35,7 +36,7 @@ def compare_qspecs(qspec: TFQuantizerSpec, quantizer):
     assert qspec.per_channel == quantizer.per_channel
     assert qspec.narrow_range == quantizer.narrow_range
     assert qspec.half_range == quantizer.half_range
-    assert isinstance(quantizer, NNCF_QUANTIZATION_OPERATONS.get(qspec.mode))
+    assert isinstance(quantizer, NNCF_QUANTIZATION_OPERATIONS.get(qspec.mode))
     if qspec.mode == QuantizationMode.SYMMETRIC:
         # pylint: disable=protected-access
         assert qspec.signedness_to_force == quantizer.signedness_to_force
@@ -126,7 +127,7 @@ def test_quantization_configs__custom():
         compare_qspecs(ref_activation_qspec, wq)
 
 
-def check_specs_for_disabled_saturation_fix(compression_model):
+def check_specs_for_disabled_overflow_fix(compression_model):
     activation_quantizers, weight_quantizers = get_quantizers(compression_model)
     ref_weight_qspec = TFQuantizerSpec(mode=QuantizationMode.SYMMETRIC,
                                        num_bits=8,
@@ -146,35 +147,41 @@ def check_specs_for_disabled_saturation_fix(compression_model):
         compare_qspecs(ref_activation_qspec, wq)
 
 
-def test_quantization_configs__disable_saturation_fix():
+def test_quantization_configs__disable_overflow_fix():
     model = get_basic_conv_test_model()
 
     config = get_basic_quantization_config()
     config['compression'].update({
-        'disable_saturation_fix': True
+        'overflow_fix': 'disable'
     })
     compression_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config, force_no_init=True)
 
     assert isinstance(compression_ctrl, QuantizationController)
-    check_specs_for_disabled_saturation_fix(compression_model)
+    check_specs_for_disabled_overflow_fix(compression_model)
 
 
-@pytest.mark.parametrize('disabled', [False, True], ids=['enabled', 'disabled'])
-def test_export_saturation_fix(disabled):
-    model = get_basic_conv_test_model()
+@pytest.mark.parametrize('sf_mode', ['enable', 'first_layer_only', 'disable'],
+                         ids=['enabled', 'enabled_first_layer', 'disabled'])
+def test_export_overflow_fix(sf_mode):
+    model = get_basic_two_conv_test_model()
     config = get_basic_quantization_config()
     config['compression'].update({
-        'disable_saturation_fix': disabled
+        'overflow_fix': sf_mode
     })
+    enabled = sf_mode in ['enable', 'first_layer_only']
+
     compression_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config, force_no_init=True)
     activation_quantizers_be, weight_quantizers_be = get_quantizers(compression_model)
-    ref_weight_qspec = TFQuantizerSpec(mode=QuantizationMode.SYMMETRIC,
-                                       num_bits=8,
-                                       signedness_to_force=True,
-                                       per_channel=True,
-                                       narrow_range=disabled,
-                                       half_range=not disabled)
-    for wq in weight_quantizers_be:
+
+    for idx, wq in enumerate(weight_quantizers_be):
+        if sf_mode == 'first_layer_only' and idx > 0:
+            enabled = False
+        ref_weight_qspec = TFQuantizerSpec(mode=QuantizationMode.SYMMETRIC,
+                                           num_bits=8,
+                                           signedness_to_force=True,
+                                           per_channel=True,
+                                           narrow_range=not enabled,
+                                           half_range=enabled)
         compare_qspecs(ref_weight_qspec, wq)
 
     ref_activation_qspec = TFQuantizerSpec(mode=QuantizationMode.SYMMETRIC,
@@ -186,18 +193,20 @@ def test_export_saturation_fix(disabled):
     for wq in activation_quantizers_be:
         compare_qspecs(ref_activation_qspec, wq)
 
+    enabled = sf_mode in ['enable', 'first_layer_only']
     compression_ctrl.export_model('/tmp/test.pb')
     activation_quantizers_ae, weight_quantizers_ae = get_quantizers(compression_model)
 
-    ref_weight_qspec = TFQuantizerSpec(mode=QuantizationMode.SYMMETRIC,
-                                       num_bits=8,
-                                       signedness_to_force=True,
-                                       per_channel=True,
-                                       narrow_range=disabled,
-                                       half_range=False)
-    for wq in weight_quantizers_ae:
+    for idx, wq in enumerate(weight_quantizers_ae):
+        if sf_mode == 'first_layer_only' and idx > 0:
+            enabled = False
+        ref_weight_qspec = TFQuantizerSpec(mode=QuantizationMode.SYMMETRIC,
+                                           num_bits=8,
+                                           signedness_to_force=True,
+                                           per_channel=True,
+                                           narrow_range=not enabled,
+                                           half_range=False)
         compare_qspecs(ref_weight_qspec, wq)
-
     for wq in activation_quantizers_ae:
         compare_qspecs(ref_activation_qspec, wq)
 
@@ -278,6 +287,7 @@ def get_quantize_inputs_test_model(input_shapes):
 
 def test_quantize_inputs():
     config = get_basic_quantization_config()
+    config['target_device'] = 'TRIAL'
     input_shapes = [[2, 32, 32, 3] for i in range(5)]
     model = get_quantize_inputs_test_model(input_shapes)
 
@@ -623,3 +633,81 @@ def test_quantize_pre_post_processing(layer_name, input_type, data_type):
     postprocess = q._post_processing_fn(preprocess)
     assert tf.math.reduce_all(preprocess == layer_desk.inputs_transformed)
     assert tf.math.reduce_all(postprocess == layer_desk.inputs)
+
+TEST_QUANTIZATION_PRESET_STRUCT = [
+    {
+        'preset': 'performance',
+        'target_device': 'CPU',
+        'overrided_param' : {},
+        'expected_weights_q': 'symmetric',
+        'expected_activations_q': 'symmetric'
+    },
+    {
+        'preset': 'mixed',
+        'target_device': 'CPU',
+        'overrided_param' : {},
+        'expected_weights_q': 'symmetric',
+        'expected_activations_q': 'asymmetric'
+    },
+    {
+        'preset': 'performance',
+        'target_device': 'GPU',
+        'overrided_param' : {},
+        'expected_weights_q': 'symmetric',
+        'expected_activations_q': 'symmetric'
+    },
+    {
+        'preset': 'mixed',
+        'target_device': 'GPU',
+        'overrided_param' : {},
+        'expected_weights_q': 'symmetric',
+        'expected_activations_q': 'asymmetric'
+    },
+    {
+        'preset': 'performance',
+        'target_device': 'CPU',
+        'overrided_param' : {'weights': {'mode': 'asymmetric'}},
+        'expected_weights_q': 'asymmetric',
+        'expected_activations_q': 'symmetric'
+    }]
+
+@pytest.mark.parametrize('data', TEST_QUANTIZATION_PRESET_STRUCT)
+def test_quantization_preset(data):
+    model = get_basic_conv_test_model()
+
+    config = get_basic_quantization_config()
+    config['target_device']  = data['target_device']
+    config['compression'] = {'algorithm': 'quantization', 'preset': data['preset']}
+    config['compression'].update(data['overrided_param'])
+    compression_model, _ = create_compressed_model_and_algo_for_test(model, config, force_no_init=True)
+
+    activation_quantizers, weight_quantizers = get_quantizers(compression_model)
+    for aq in activation_quantizers:
+        assert aq.mode == data['expected_activations_q']
+    for wq in weight_quantizers:
+        assert wq.mode == data['expected_weights_q']
+
+
+def test_quantization_preset_with_scope_overrides():
+    model = get_basic_two_conv_test_model()
+    config = get_basic_quantization_config()
+    config['target_device'] = "TRIAL"
+    config['compression'] = {'algorithm': 'quantization',
+                             'preset': 'mixed',
+                             'scope_overrides': {
+                                 'weights': {
+                                    'conv2d': {
+                                        "mode": "asymmetric",
+                                    }}
+                             }
+                             }
+    compression_model, _ = create_compressed_model_and_algo_for_test(model, config, force_no_init=True)
+
+    activation_quantizers, weight_quantizers = get_quantizers(compression_model)
+    for aq in activation_quantizers:
+        assert aq.mode == 'asymmetric'
+    for wq in weight_quantizers:
+        if wq.name == 'conv2d_kernel_quantizer':
+            assert wq.mode == 'asymmetric'
+        else:
+            assert wq.mode == 'symmetric'

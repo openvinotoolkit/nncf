@@ -38,6 +38,12 @@ if "--tf" in sys.argv:
         ))
 
 
+is_installing_editable = "develop" in sys.argv
+is_building_release = not is_installing_editable and "--release" in sys.argv
+if "--release" in sys.argv:
+    sys.argv.remove("--release")
+
+
 def read(*parts):
     with codecs.open(os.path.join(here, *parts), 'r') as fp:
         return fp.read()
@@ -47,15 +53,30 @@ def find_version(*file_paths):
     version_file = read(*file_paths)
     version_match = re.search(r"^__version__ = ['\"]([^'\"]*)['\"]",
                               version_file, re.M)
-    if version_match:
-        return version_match.group(1)
-    raise RuntimeError("Unable to find version string.")
+    if not version_match:
+        raise RuntimeError("Unable to find version string.")
+    version_value = version_match.group(1)
+    if not is_building_release:
+        if is_installing_editable:
+            return version_value + ".dev0+editable"
+        import subprocess  # nosec
+        dev_version_id = "unknown_version"
+        try:
+            repo_root = os.path.dirname(os.path.realpath(__file__))
+            dev_version_id = subprocess.check_output(["git", "rev-parse", "--short", "HEAD"],   # nosec
+                                                     cwd=repo_root).strip().decode()
+        except subprocess.CalledProcessError:
+            pass
+        return version_value + f".dev0+{dev_version_id}"
+
+    return version_value
+
 
 INSTALL_REQUIRES = ["ninja>=1.10.0.post2",
                     "addict>=2.4.0",
                     "texttable>=1.6.3",
                     "scipy<=1.5.4, >=1.3.2; python_version<'3.7'",
-                    "scipy>=1.3.2; python_version>='3.7'",
+                    "scipy>=1.3.2, <1.8; python_version>='3.7'",
                     "matplotlib~=3.3.4; python_version<'3.7'",
                     "matplotlib>=3.3.4; python_version>='3.7'",
                     "networkx>=2.5",
@@ -74,7 +95,7 @@ INSTALL_REQUIRES = ["ninja>=1.10.0.post2",
                     "tqdm>=4.54.1",
                     "natsort>=7.1.0",
                     "pandas~=1.1.5; python_version<'3.7'",
-                    "pandas>=1.1.5; python_version>='3.7'",
+                    "pandas>=1.1.5,<1.4.0rc0; python_version>='3.7'",
                     "scikit-learn~=0.24.0; python_version<'3.7'",
                     "scikit-learn>=0.24.0; python_version>='3.7'",
                     "wheel>=0.36.1"]

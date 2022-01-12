@@ -37,14 +37,14 @@ def test_baseline_scheduler():
     # Check pruning params before epoch 0
     scheduler.epoch_step()
     assert pytest.approx(scheduler.current_pruning_level) == 0.0
-    assert pytest.approx(compression_ctrl.pruning_rate) == 0.0
+    assert pytest.approx(compression_ctrl.pruning_level) == 0.0
     assert scheduler.current_epoch == 0
     assert compression_ctrl.frozen is False
 
     # Check pruning params after epoch 0
     scheduler.epoch_step()
     assert pytest.approx(scheduler.current_pruning_level) == 0.5
-    assert pytest.approx(compression_ctrl.pruning_rate) == 0.5
+    assert pytest.approx(compression_ctrl.pruning_level) == 0.5
     assert scheduler.current_epoch == 1
     assert compression_ctrl.frozen is True
 
@@ -72,7 +72,7 @@ def test_exponential_scheduler():
     # Check pruning params before epoch 0
     scheduler.epoch_step()
     assert pytest.approx(scheduler.current_pruning_level) == 0.0
-    assert pytest.approx(compression_ctrl.pruning_rate) == 0.0
+    assert pytest.approx(compression_ctrl.pruning_level) == 0.0
     assert compression_ctrl.frozen is False
     assert scheduler.current_epoch == 0
 
@@ -80,17 +80,17 @@ def test_exponential_scheduler():
     for i in range(20):
         # Check pruning params on epoch 1
         scheduler.epoch_step()
-        pruning_rate = scheduler.a * np.exp(
+        pruning_level = scheduler.a * np.exp(
             -scheduler.k * (scheduler.current_epoch - scheduler.num_warmup_epochs)) + scheduler.b
-        assert pytest.approx(scheduler.current_pruning_level) == pruning_rate
-        assert pytest.approx(compression_ctrl.pruning_rate) == pruning_rate
+        assert pytest.approx(scheduler.current_pruning_level) == pruning_level
+        assert pytest.approx(compression_ctrl.pruning_level) == pruning_level
         assert compression_ctrl.frozen is False
         assert scheduler.current_epoch == i + 1
 
     # Check pruning params after epoch 20
     scheduler.epoch_step()
     assert pytest.approx(scheduler.current_pruning_level, abs=1e-4) == 0.5
-    assert pytest.approx(compression_ctrl.pruning_rate, abs=1e-4) == 0.5
+    assert pytest.approx(compression_ctrl.pruning_level, abs=1e-4) == 0.5
     assert compression_ctrl.frozen is True
     assert scheduler.current_epoch == 21
 
@@ -101,7 +101,7 @@ def pruning_controller_mock_(mocker):
         def __init__(self):
             self.pruning_init = 0
             self.prune_flops = False
-            self.set_pruning_rate = mocker.stub()
+            self.set_pruning_level = mocker.stub()
             self.freeze = mocker.stub()
             self.step = mocker.stub()
 
@@ -135,8 +135,8 @@ def test_exponential_with_bias(pruning_controller_mock):
         for _ in range(steps_per_epoch):
             scheduler.step()
 
-        pruning_controller_mock.set_pruning_rate.assert_called_once_with(expected_level)
-        pruning_controller_mock.set_pruning_rate.reset_mock()
+        pruning_controller_mock.set_pruning_level.assert_called_once_with(expected_level)
+        pruning_controller_mock.set_pruning_level.reset_mock()
 
         if epoch_idx < freeze_epoch:
             pruning_controller_mock.freeze.assert_not_called()

@@ -21,6 +21,7 @@ from typing import Callable, Dict, List, Tuple, Union
 import networkx as nx
 import pytest
 import torch
+from tests.torch.test_models.synthetic import ConvRelu6HSwishHSigmoid
 from tests.torch.test_models.synthetic import MatMulDivConv
 from torch import nn
 import torch.nn.functional as F
@@ -49,6 +50,8 @@ from tests.torch.helpers import get_empty_config
 from tests.torch.helpers import register_bn_adaptation_init_args
 from tests.torch.modules.seq2seq.gnmt import GNMT
 from tests.torch.modules.test_rnn import replace_lstm
+from nncf.torch.layers import NNCF_MODULES_DICT
+from nncf.torch.layers import NNCF_WRAPPED_USER_MODULES_DICT
 from tests.torch.test_models.synthetic import ArangeModel
 from tests.torch.test_models.synthetic import EmbeddingCatLinearModel
 from tests.torch.test_models.synthetic import EmbeddingSumModel
@@ -290,6 +293,14 @@ class TestModelsGraph:
         graph = graph_builder.build_graph(net)
         check_graph(graph, desc.dot_filename, 'original')
 
+    def get_sparsifiable_modules(self, algo_name):
+        # counts wrapped NNCF modules to ignore the ones that are called in the training mode only
+        sparsifiable_modules = []
+        for module_cls in list(NNCF_MODULES_DICT) + list(NNCF_WRAPPED_USER_MODULES_DICT.values()):
+            if algo_name not in module_cls.ignored_algorithms:
+                sparsifiable_modules  .append(module_cls.__name__)
+        return sparsifiable_modules
+
     @pytest.mark.parametrize(
         "algo",
         (
@@ -300,7 +311,6 @@ class TestModelsGraph:
     )
     def test_sparse_network(self, desc: ModelDesc, algo):
         model = desc.model_builder()
-        from nncf.torch.layers import NNCF_MODULES_MAP
 
         config = get_empty_config(input_sample_sizes=desc.input_sample_sizes)
         config["compression"] = {"algorithm": algo}
@@ -309,14 +319,15 @@ class TestModelsGraph:
             create_compressed_model_and_algo_for_test(model, config, dummy_forward_fn=desc.dummy_forward_fn,
                                                       wrap_inputs_fn=desc.wrap_inputs_fn)
 
-        # counts wrapped NNCF modules to ignore the ones that are called in the training mode only
-        sparsifiable_modules = list(NNCF_MODULES_MAP.keys())
+
+        sparsifiable_modules = self.get_sparsifiable_modules(algo)
         ref_num_sparsed = len(get_all_modules_by_type(model, sparsifiable_modules))
         assert ref_num_sparsed == len(compression_ctrl.sparsified_module_info)
         check_model_graph(compressed_model, desc.dot_filename, algo)
 
     def test_quantize_network(self, desc: ModelDesc, _case_config):
         model = desc.model_builder()
+
         config = get_basic_quantization_config(_case_config.quant_type, input_sample_sizes=desc.input_sample_sizes)
         register_bn_adaptation_init_args(config)
         compressed_model, _ = \
@@ -327,7 +338,6 @@ class TestModelsGraph:
     def test_sparse_quantize_network(self, desc: ModelDesc):
         model = desc.model_builder()
 
-        from nncf.torch.layers import NNCF_MODULES_MAP
         config = get_empty_config(input_sample_sizes=desc.input_sample_sizes)
         config["compression"] = [
             {"algorithm": "rb_sparsity"},
@@ -339,8 +349,7 @@ class TestModelsGraph:
             create_compressed_model_and_algo_for_test(model, config, dummy_forward_fn=desc.dummy_forward_fn,
                                                       wrap_inputs_fn=desc.wrap_inputs_fn)
 
-        # counts wrapped NNCF modules to ignore the ones that are called in the training mode only
-        sparsifiable_modules = list(NNCF_MODULES_MAP.keys())
+        sparsifiable_modules = self.get_sparsifiable_modules('rb_sparsity')
         ref_num_sparsed = len(get_all_modules_by_type(compressed_model, sparsifiable_modules))
 
         assert ref_num_sparsed == len(compression_ctrl.child_ctrls[0].sparsified_module_info)
@@ -633,6 +642,8 @@ SYNTHETIC_MODEL_DESC_LIST = [
     SingleLayerModelDesc(layer=nn.BatchNorm2d(1), input_sample_sizes=([2, 1, 1, 1])),
     SingleLayerModelDesc(layer=nn.BatchNorm3d(1), input_sample_sizes=([2, 1, 1, 1, 1])),
 
+    SingleLayerModelDesc(layer=nn.GroupNorm(2, 4), input_sample_sizes=([2, 4, 1, 1])),
+
     SingleLayerModelDesc(layer=nn.AvgPool2d(1), input_sample_sizes=[1, 1, 1]),
     SingleLayerModelDesc(layer=nn.AdaptiveAvgPool2d(1), input_sample_sizes=[1, 1, 1]),
     SingleLayerModelDesc(layer=nn.AvgPool3d(1), input_sample_sizes=[1, 1, 1, 1]),
@@ -702,7 +713,7 @@ SYNTHETIC_MODEL_DESC_LIST = [
     SingleLayerModelDesc(model_name='pixel_shuffle', layer=partial(F.pixel_shuffle, upscale_factor=1),
                          input_sample_sizes=([1, 1, 1, 1])),
 
-    GeneralModelDesc(model_builder=ManyNonEvalModules, input_sample_sizes=([1, 1, 1, 1])),
+    GeneralModelDesc(model_builder=ManyNonEvalModules, input_sample_sizes=([1, 1, 1, 1],)),
     GeneralModelDesc(model_builder=EmbeddingSumModel, input_info={"sample_size": [1, 1],
                                                                   "type": "long",
                                                                   "filler": "zeros"}),
@@ -710,7 +721,8 @@ SYNTHETIC_MODEL_DESC_LIST = [
                                                                   "type": "long",
                                                                   "filler": "zeros"}),
     GeneralModelDesc(model_builder=MultiOutputSameTensorModel),
-    GeneralModelDesc(model_builder=MatMulDivConv, input_sample_sizes=([1, 1, 5, 5], [1, 1, 5, 5]))
+    GeneralModelDesc(model_builder=MatMulDivConv, input_sample_sizes=([1, 1, 5, 5], [1, 1, 5, 5])),
+    GeneralModelDesc(model_builder=ConvRelu6HSwishHSigmoid, input_sample_sizes=([1, 1, 5, 5],))
 ]
 
 

@@ -149,6 +149,7 @@ LIST_OF_TEST_PARAMS = [
         config_provider=TestConfigCreator().add_algo('filter_pruning', {
             'num_init_steps': 1,
             'pruning_steps': 2,
+            'schedule': 'baseline'
         }),
         compression_stages=[CompressionStage.UNCOMPRESSED,
                             CompressionStage.FULLY_COMPRESSED,

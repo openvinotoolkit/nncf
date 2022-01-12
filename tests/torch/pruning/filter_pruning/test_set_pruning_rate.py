@@ -40,7 +40,7 @@ def create_pruning_algo_with_config(config):
     ('all_weights', 'pruning_rate_to_set', 'ref_pruning_rates', 'ref_global_pruning_rate'),
     [
         (False, 0.5, [0.5, 0.5], 0.5),
-        (True, 0.5, [0.28125, 0.60937], 0.5),
+        (True, 0.5, [0.25, 0.625], 0.5),
         (False, {0: 0.6, 1: 0.8}, [0.5, 0.75], 0.69986),
     ]
 )
@@ -56,10 +56,10 @@ def test_setting_pruning_rate(all_weights, pruning_rate_to_set, ref_pruning_rate
     _, pruning_controller, _ = create_pruning_algo_with_config(config)
     assert isinstance(pruning_controller, FilterPruningController)
 
-    pruning_controller.set_pruning_rate(pruning_rate_to_set)
-    groupwise_pruning_rates = list(pruning_controller.current_groupwise_pruning_rate.values())
+    pruning_controller.set_pruning_level(pruning_rate_to_set)
+    groupwise_pruning_rates = list(pruning_controller.current_groupwise_pruning_level.values())
     assert np.isclose(groupwise_pruning_rates, ref_pruning_rates).all()
-    assert np.isclose(pruning_controller.pruning_rate, ref_global_pruning_rate).all()
+    assert np.isclose(pruning_controller.pruning_level, ref_global_pruning_rate).all()
 
 
 def test_can_set_compression_rate_in_filter_pruning_algo():

@@ -1,7 +1,5 @@
 strict digraph  {
 self [op=Placeholder];
-"mobilenet_1.00_128/conv1_pad/Pad/paddings" [op=Const];
-"mobilenet_1.00_128/conv1_pad/Pad" [op=Pad];
 "mobilenet_1.00_128/conv1/Sigmoid/ReadVariableOp/resource" [op=Placeholder];
 "mobilenet_1.00_128/conv1/Sigmoid/ReadVariableOp" [op=ReadVariableOp];
 "mobilenet_1.00_128/conv1/Sigmoid" [op=Sigmoid];
@@ -556,9 +554,7 @@ self [op=Placeholder];
 "mobilenet_1.00_128/reshape_2/Reshape" [op=Reshape];
 "mobilenet_1.00_128/predictions/Softmax" [op=Softmax];
 Identity [op=Identity];
-self -> "mobilenet_1.00_128/conv1_pad/Pad";
-"mobilenet_1.00_128/conv1_pad/Pad/paddings" -> "mobilenet_1.00_128/conv1_pad/Pad";
-"mobilenet_1.00_128/conv1_pad/Pad" -> "mobilenet_1.00_128/conv1/Conv2D";
+self -> "mobilenet_1.00_128/conv1/Conv2D";
 "mobilenet_1.00_128/conv1/Sigmoid/ReadVariableOp/resource" -> "mobilenet_1.00_128/conv1/Sigmoid/ReadVariableOp";
 "mobilenet_1.00_128/conv1/Sigmoid/ReadVariableOp" -> "mobilenet_1.00_128/conv1/Sigmoid";
 "mobilenet_1.00_128/conv1/Sigmoid" -> "mobilenet_1.00_128/conv1/Round";

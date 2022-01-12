@@ -114,7 +114,7 @@ class BaseDatasetBuilder(ABC):
         dataset = self._dataset_loader.as_dataset(
             split=self._split,
             as_supervised=self._as_supervised,
-            shuffle_files=True,
+            shuffle_files=self._is_train,
             decoders=decoders,
             read_config=read_config)
 

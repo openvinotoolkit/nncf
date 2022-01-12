@@ -20,6 +20,7 @@ import networkx as nx
 import networkx.algorithms.isomorphism as iso
 from torch import Tensor
 
+from nncf.common.graph import Dtype
 from nncf.common.graph.layer_attributes import BaseLayerAttributes
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.torch.dynamic_graph.scope import Scope
@@ -180,12 +181,14 @@ class DynamicGraphNode:
 
 class DynamicGraphEdge:
     def __init__(self, from_node_id: int, to_node_id: int,
-                 activation_shape: List[int], input_port_id: int, output_port_id: int):
+                 activation_shape: List[int], input_port_id: int, output_port_id: int,
+                 dtype: Dtype):
         self.from_node_id = from_node_id
         self.to_node_id = to_node_id
         self.activation_shape = activation_shape
         self.input_port_id = input_port_id
         self.output_port_id = output_port_id
+        self.dtype = dtype
 
 
 class DefaultScopeNodeMatcher:
@@ -267,6 +270,7 @@ class DefaultScopeNodeMatcher:
             self._nx_graph.edges[parent, node_key][DynamicGraph.ACTIVATION_SHAPE_EDGE_ATTR] = info.shape
             self._nx_graph.edges[parent, node_key][DynamicGraph.INPUT_PORT_ID_EDGE_ATTR] = i
             self._nx_graph.edges[parent, node_key][DynamicGraph.OUTPUT_PORT_ID_EDGE_ATTR] = info.index
+            self._nx_graph.edges[parent, node_key][DynamicGraph.ACTIVATION_DTYPE_EDGE_ATTR] = info.dtype
 
         nx_node_dict = self._nx_graph.nodes[node_key]
         node = DynamicGraphNode(node_id=nx_node_dict[DynamicGraph.ID_NODE_ATTR],
@@ -419,6 +423,8 @@ class IterationScopeNodeMatcher(DefaultScopeNodeMatcher):
                     break
         return node_candidates
 
+    def get_first_iteration_modules(self)-> Dict:
+        return self._first_iteration_nodes
 
 class NodeManager:
     def __init__(self, node_id_to_key_dict, nx_graph):
@@ -489,6 +495,7 @@ class DynamicGraph:
     LAYER_ATTRIBUTES = 'layer_attributes'
     OP_EXEC_CONTEXT_NODE_ATTR = 'op_exec_context'
     ACTIVATION_SHAPE_EDGE_ATTR = 'activation_shape'
+    ACTIVATION_DTYPE_EDGE_ATTR = 'activation_dtype'
     INPUT_PORT_ID_EDGE_ATTR = 'input_port_id'
     OUTPUT_PORT_ID_EDGE_ATTR = 'output_port_id'
     IGNORED_ALGOS_NODE_ATTR = 'ignored_algos'
@@ -571,7 +578,11 @@ class DynamicGraph:
                 to_node_id=to_node_id,
                 activation_shape=nx_edge_attrs[DynamicGraph.ACTIVATION_SHAPE_EDGE_ATTR],
                 input_port_id=nx_edge_attrs[DynamicGraph.INPUT_PORT_ID_EDGE_ATTR],
-                output_port_id=nx_edge_attrs[DynamicGraph.OUTPUT_PORT_ID_EDGE_ATTR])
+                output_port_id=nx_edge_attrs[DynamicGraph.OUTPUT_PORT_ID_EDGE_ATTR],
+                dtype=nx_edge_attrs[DynamicGraph.ACTIVATION_DTYPE_EDGE_ATTR])
 
             all_edges.append(dynamic_graph_edge)
         return all_edges
+
+    def is_graph_with_iteration_modules(self) -> bool:
+        return len(self.match_manager.iteration_matcher.get_first_iteration_modules()) > 0

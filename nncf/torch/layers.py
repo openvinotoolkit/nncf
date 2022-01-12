@@ -10,6 +10,8 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+from typing import Dict
+
 import math
 import numbers
 from typing import Optional
@@ -21,20 +23,44 @@ import warnings
 from torch import nn
 from torch.nn import init
 from torch.nn.utils.rnn import PackedSequence
+from torch.nn.utils.weight_norm import WeightNorm
 
 from nncf.torch.dynamic_graph.context import forward_nncf_trace
+from nncf.torch.utils import no_jit_trace
 from nncf.torch.checkpoint_loading import OPTIONAL_PARAMETERS_REGISTRY
 from nncf.common.graph.layer_attributes import GenericWeightedLayerAttributes
 from nncf.common.utils.registry import Registry
 from nncf.torch.layer_utils import _NNCFModuleMixin
 
 
-def dict_update(src, dst, recursive=True):
-    for name, value in dst.items():
-        if recursive and name in src and isinstance(value, dict):
-            dict_update(src[name], value, recursive)
+def dict_update(src: Dict, dst: Dict, recursive: bool = True):
+    for name, value in src.items():
+        if recursive and name in dst and isinstance(value, dict):
+            dict_update(value, dst[name], recursive)
         else:
-            src[name] = value
+            dst[name] = value
+
+
+def maybe_reapply_weight_norm(src: torch.nn.Module, dst: torch.nn.Module) -> torch.nn.Module:
+    #pylint:disable=protected-access
+    for k, hook in src._forward_pre_hooks.items():
+        if isinstance(hook, WeightNorm):
+            # The code below presumes that the `hook` object does not
+            # contain internal references to the module it was set up on
+            # (i.e. to the `src`) and takes the module to act on as a parameter.
+            # This is the case for the `WeightNorm` hook.
+            hook.remove(dst)
+            del dst._forward_pre_hooks[k]
+            name = hook.name
+            dim = hook.dim
+            WeightNorm.apply(dst, name=name, dim=dim)
+    return dst
+
+
+def align_module_internals(src: torch.nn.Module, dst: torch.nn.Module) -> torch.nn.Module:
+    dict_update(src.__dict__, dst.__dict__)
+    dst = maybe_reapply_weight_norm(src, dst)
+    return dst
 
 
 class NNCFConv1d(_NNCFModuleMixin, nn.Conv1d):
@@ -47,7 +73,7 @@ class NNCFConv1d(_NNCFModuleMixin, nn.Conv1d):
             module.in_channels, module.out_channels, module.kernel_size, module.stride,
             module.padding, module.dilation, module.groups, hasattr(module, 'bias')
         )
-        dict_update(nncf_conv.__dict__, module.__dict__)
+        nncf_conv = align_module_internals(module, nncf_conv)
         return nncf_conv
 
 
@@ -87,27 +113,30 @@ class NNCFConv2d(_NNCFModuleMixin, nn.Conv2d):
             module.in_channels, module.out_channels, module.kernel_size, module.stride,
             module.padding, module.dilation, module.groups, hasattr(module, 'bias')
         )
-        dict_update(nncf_conv.__dict__, module.__dict__)
+        nncf_conv = align_module_internals(module, nncf_conv)
         return nncf_conv
 
     # override class attribute of _NNCFModuleMixin
     def _custom_forward_fn(self, input_):
         proxy_padding_value = getattr(self, NNCF_PADDING_VALUE_ATTR_NAME)  # hack to get value from ProxyModule
         proxy_weight = self.weight
-        return self._conv_forward_proxy(input_, proxy_weight, proxy_padding_value)
+        proxy_bias = self.bias
+        return self._conv_forward_proxy(input_, proxy_weight, proxy_bias, proxy_padding_value)
 
 
-    def _conv_forward_proxy(self, input_, weight, padding_value):
-        self.get_padding_value_ref().data.fill_(padding_value.item())
+    def _conv_forward_proxy(self, input_, weight, bias, padding_value):
+        with no_jit_trace():
+            padding_val = padding_value.item()
+        self.get_padding_value_ref().data.fill_(padding_val)
         if self.padding_mode != 'zeros':
             return F.conv2d(F.pad(input_, self._reversed_padding_repeated_twice, mode=self.padding_mode,
-                                  value=self.get_padding_value_ref().item()),
-                            weight, self.bias, self.stride,
+                                  value=padding_val),
+                            weight, bias, self.stride,
                             (0, 0), self.dilation, self.groups)
-        if not self.get_padding_value_ref():
-            return F.conv2d(input_, weight, self.bias, self.stride, self.padding, self.dilation, self.groups)
-        return F.conv2d(F.pad(input_, self._reversed_padding_repeated_twice, value=self.get_padding_value_ref().item()),
-                        weight, self.bias, self.stride,
+        if padding_val == 0:
+            return F.conv2d(input_, weight, bias, self.stride, self.padding, self.dilation, self.groups)
+        return F.conv2d(F.pad(input_, self._reversed_padding_repeated_twice, value=padding_val),
+                        weight, bias, self.stride,
                         (0, 0), self.dilation, self.groups)
 
 
@@ -119,8 +148,38 @@ class NNCFLinear(_NNCFModuleMixin, nn.Linear):
         assert module.__class__.__name__ == nn.Linear.__name__
 
         nncf_linear = NNCFLinear(module.in_features, module.out_features, hasattr(module, 'bias'))
-        dict_update(nncf_linear.__dict__, module.__dict__)
+        nncf_linear = align_module_internals(module, nncf_linear)
         return nncf_linear
+
+
+class NNCFBatchNorm(_NNCFModuleMixin, nn.BatchNorm2d):
+    op_func_name = "batch_norm"
+    ignored_algorithms = ['magnitude_sparsity', 'rb_sparsity', 'const_sparsity', 'quantization']
+
+    @staticmethod
+    def from_module(module):
+        assert module.__class__.__name__ == nn.BatchNorm2d.__name__
+
+        nncf_bn = NNCFBatchNorm(module.num_features)
+        nncf_bn = align_module_internals(module, nncf_bn)
+        return nncf_bn
+
+
+class NNCFGroupNorm(_NNCFModuleMixin, nn.GroupNorm):
+    op_func_name = "group_norm"
+    ignored_algorithms = ['magnitude_sparsity', 'rb_sparsity', 'const_sparsity', 'quantization']
+
+    @staticmethod
+    def from_module(module):
+        assert module.__class__.__name__ == nn.GroupNorm.__name__
+
+        nncf_bn = NNCFGroupNorm(num_groups=module.num_groups,
+                                num_channels=module.num_channels,
+                                eps=module.eps,
+                                affine=module.affine)
+        nncf_bn = align_module_internals(module, nncf_bn)
+        return nncf_bn
+
 
 class NNCFConvTranspose2d(_NNCFModuleMixin, nn.ConvTranspose2d):
     op_func_name = "conv_transpose2d"
@@ -135,7 +194,7 @@ class NNCFConvTranspose2d(_NNCFModuleMixin, nn.ConvTranspose2d):
         if hasattr(module, 'padding_mode'):
             args.append(module.padding_mode)
         nncf_conv_transpose2d = NNCFConvTranspose2d(*args)
-        dict_update(nncf_conv_transpose2d.__dict__, module.__dict__)
+        nncf_conv_transpose2d = align_module_internals(module, nncf_conv_transpose2d)
         return nncf_conv_transpose2d
 
 
@@ -150,7 +209,7 @@ class NNCFConv3d(_NNCFModuleMixin, nn.Conv3d):
             module.in_channels, module.out_channels, module.kernel_size, module.stride,
             module.padding, module.dilation, module.groups, hasattr(module, 'bias')
         )
-        dict_update(nncf_conv3d.__dict__, module.__dict__)
+        nncf_conv3d = align_module_internals(module, nncf_conv3d)
         return nncf_conv3d
 
 class NNCFConvTranspose3d(_NNCFModuleMixin, nn.ConvTranspose3d):
@@ -166,7 +225,7 @@ class NNCFConvTranspose3d(_NNCFModuleMixin, nn.ConvTranspose3d):
         if hasattr(module, 'padding_mode'):
             args.append(module.padding_mode)
         nncf_conv_transpose3d = NNCFConvTranspose3d(*args)
-        dict_update(nncf_conv_transpose3d.__dict__, module.__dict__)
+        nncf_conv_transpose3d = align_module_internals(module, nncf_conv_transpose3d)
         return nncf_conv_transpose3d
 
 
@@ -182,7 +241,7 @@ class NNCFEmbedding(_NNCFModuleMixin, nn.Embedding):
                 module.max_norm, module.norm_type, module.scale_grad_by_freq,
                 module.sparse, module.weight]
         nncf_embedding = NNCFEmbedding(*args)
-        dict_update(nncf_embedding.__dict__, module.__dict__)
+        nncf_embedding = align_module_internals(module, nncf_embedding)
         return nncf_embedding
 
 
@@ -199,7 +258,7 @@ class NNCFEmbeddingBag(_NNCFModuleMixin, nn.EmbeddingBag):
                 module.mode, module.sparse, module.weight,
                 module.include_last_offset]
         nncf_embedding_bag = NNCFEmbeddingBag(*args)
-        dict_update(nncf_embedding_bag.__dict__, module.__dict__)
+        nncf_embedding_bag = align_module_internals(module, nncf_embedding_bag)
         return nncf_embedding_bag
 
 NNCF_MODULES_DICT = {
@@ -207,6 +266,8 @@ NNCF_MODULES_DICT = {
     NNCFConv2d: nn.Conv2d,
     NNCFConv3d: nn.Conv3d,
     NNCFLinear: nn.Linear,
+    NNCFBatchNorm: nn.BatchNorm2d,
+    NNCFGroupNorm: nn.GroupNorm,
     NNCFConvTranspose2d: nn.ConvTranspose2d,
     NNCFConvTranspose3d: nn.ConvTranspose3d,
     NNCFEmbedding: nn.Embedding,
@@ -215,6 +276,7 @@ NNCF_MODULES_DICT = {
 
 NNCF_MODULES_MAP = {k.__name__: v.__name__ for k, v in NNCF_MODULES_DICT.items()}
 NNCF_MODULES = list(NNCF_MODULES_MAP.keys())
+NNCF_MODULES_OP_NAMES = [k.op_func_name for k, _ in NNCF_MODULES_DICT.items()]
 
 NNCF_CONV_MODULES_DICT = {
     NNCFConv1d: nn.Conv1d,
@@ -253,8 +315,8 @@ def register_module(*quantizable_field_names: str, ignored_algorithms: list = No
         UNWRAPPED_USER_MODULES.registry_dict[cls.__name__] = cls
         nncf_wrapped_module_class_name = 'NNCFUser{}'.format(cls.__name__)
         NNCF_WRAPPED_USER_MODULES_DICT[cls] = type(nncf_wrapped_module_class_name, (_NNCFModuleMixin, cls), {})
-        get_base_attributes_fn = lambda self : GenericWeightedLayerAttributes(self.weight.requires_grad,
-                                                                              self.weight.shape)
+        get_base_attributes_fn = lambda self: GenericWeightedLayerAttributes(self.weight.requires_grad,
+                                                                             self.weight.shape)
         setattr(NNCF_WRAPPED_USER_MODULES_DICT[cls], "get_weight_shape", get_base_attributes_fn)
         if ignored_algorithms:
             setattr(NNCF_WRAPPED_USER_MODULES_DICT[cls], "ignored_algorithms", ignored_algorithms)

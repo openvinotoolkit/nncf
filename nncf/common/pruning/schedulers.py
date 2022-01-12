@@ -82,7 +82,7 @@ class PruningScheduler(BaseCompressionScheduler):
         """
         super().epoch_step(next_epoch)
         self._current_level = self._calculate_pruning_level()
-        self._controller.set_pruning_rate(self.current_pruning_level)
+        self._controller.set_pruning_level(self.current_pruning_level)
         if self.current_epoch >= self.freeze_epoch:
             self._controller.freeze()
 

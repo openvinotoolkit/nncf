@@ -18,6 +18,7 @@ import torch
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNodeName
 from nncf.torch.graph.graph import NNCFNode
+from nncf.torch.tensor import PTNNCFTensor
 from nncf.torch.nncf_network import NNCFNetwork
 
 
@@ -60,4 +61,4 @@ def init_output_masks_in_graph(graph: NNCFGraph, nodes: List):
     for minfo in nodes:
         mask = minfo.operand.binary_filter_pruning_mask
         nncf_node = graph.get_node_by_id(minfo.nncf_node_id)
-        nncf_node.data['output_mask'] = mask
+        nncf_node.data['output_mask'] = PTNNCFTensor(mask)

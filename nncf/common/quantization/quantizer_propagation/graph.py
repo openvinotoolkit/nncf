@@ -135,6 +135,7 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
                 if ignored:
                     qpg_node[self.IS_IN_IGNORED_SCOPES] = True
                     self.ignored_node_keys.append(node_key)
+                    # TODO (vshampor): do we need here NoopMetatype
                     qpg_node[self.OPERATOR_METATYPE_NODE_ATTR] = NoopMetatype
                 else:
                     qpg_node[self.OPERATOR_METATYPE_NODE_ATTR] = nncf_node_ref.metatype
@@ -300,6 +301,7 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
             major_unified_scale_type = UnifiedScaleType.UNIFY_ONLY_PER_TENSOR
         return major_unified_scale_type
 
+    # pylint:disable=too-many-statements
     def merge_quantizers_for_branching_node(self, quantizers_to_merge: List[PropagatingQuantizer],
                                             merged_qconf_list: List[QuantizerConfig],
                                             branch_qconf_lists: List[Optional[List[QuantizerConfig]]],
@@ -333,8 +335,12 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
             return []
 
         unified_scale_types_of_merged_branches = [pq.unified_scale_type for idx, pq in enumerate(quantizers_to_merge)
-                                      if branch_qconf_lists[idx] is None]
+                                                  if branch_qconf_lists[idx] is None]
         merge_pq_unified_scale_type = self._get_major_unified_scale_type(unified_scale_types_of_merged_branches)
+
+        merge_gid = None
+        if merge_pq_unified_scale_type is not None:
+            merge_gid = self._unified_scale_group_manager.register_group(set())
 
         merge_pqs = []
         for target_ip_node_key in target_ip_node_keys:
@@ -342,7 +348,9 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
             target_type = target_ip_node[QuantizerPropagationStateGraph.NODE_TYPE_NODE_ATTR]
             if target_type is QuantizerPropagationStateGraphNodeType.PRE_HOOK:
                 merge_pq = self.add_propagating_quantizer(merged_qconf_list,
-                                                          target_ip_node_key)
+                                                          target_ip_node_key,
+                                                          unified_scale_type=merge_pq_unified_scale_type,
+                                                          unified_scale_group_id_override=merge_gid)
             elif target_type is QuantizerPropagationStateGraphNodeType.POST_HOOK:
                 merge_pq = PropagatingQuantizer(self._get_next_prop_quantizer_id(), merged_qconf_list,
                                                 target_ip_node_key, unified_scale_type=merge_pq_unified_scale_type)
@@ -353,6 +361,8 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
                 assert target_ip_node[QuantizerPropagationStateGraph.PROPAGATING_QUANTIZER_NODE_ATTR] is None
                 target_ip_node[QuantizerPropagationStateGraph.PROPAGATING_QUANTIZER_NODE_ATTR] = merge_pq
                 target_ip_node[QuantizerPropagationStateGraph.AFFECTING_PROPAGATING_QUANTIZERS_ATTR].append(merge_pq)
+                if merge_gid is not None:
+                    self._unified_scale_group_manager.add_to_group(merge_gid, merge_pq)
             else:
                 raise RuntimeError("Unsupported target type for merge PQ insertion: {}".format(target_type))
 
@@ -366,7 +376,7 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
                 unified_scale_gids_to_merge.add(gid)
 
         if unified_scale_gids_to_merge:
-            merge_gid = self._unified_scale_group_manager.register_group(set(merge_pqs))
+            assert merge_gid is not None
             for gid_to_merge in unified_scale_gids_to_merge:
                 self._unified_scale_group_manager.merge_groups(merge_gid, gid_to_merge)
 
@@ -558,7 +568,7 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
         if target_node_affecting_quantizers:
             raise RuntimeError("Cannot register a propagating quantizer into a node that is already "
                                "affected by existing propagating quantizers (ids: {})!".format(
-                [pq.id for pq in target_node_affecting_quantizers]))
+                                   [pq.id for pq in target_node_affecting_quantizers]))
 
         self._verify_nodes_and_edges_for_pq(prop_quantizer)
 

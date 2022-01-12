@@ -29,6 +29,7 @@ from nncf.common.graph import NNCFNodeName
 from nncf.common.graph import OUTPUT_NOOP_METATYPES
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TransformationPriority
+from nncf.common.graph.utils import get_first_nodes_of_type
 from nncf.common.hardware.config import HWConfigType
 from nncf.common.hardware.config import HW_CONFIG_TYPE_TARGET_DEVICE_MAP
 from nncf.common.initialization.batchnorm_adaptation import BatchnormAdaptationAlgorithm
@@ -38,8 +39,10 @@ from nncf.common.quantization.quantizer_propagation.solver import QuantizerPropa
 from nncf.common.quantization.quantizer_setup import ActivationQuantizationInsertionPoint
 from nncf.common.quantization.quantizer_setup import SingleConfigQuantizerSetup
 from nncf.common.quantization.structs import QuantizableWeightedLayerNode
+from nncf.common.quantization.structs import QuantizationPreset
 from nncf.common.quantization.structs import QuantizationConstraints
 from nncf.common.quantization.structs import QuantizationMode
+from nncf.common.quantization.quantizer_setup import QuantizationPointId
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizerGroup
 from nncf.common.schedulers import BaseCompressionScheduler
@@ -62,21 +65,22 @@ from nncf.tensorflow.graph.metatypes.keras_layers import TFLayerWithWeightsMetat
 from nncf.tensorflow.graph.transformations.commands import TFAfterLayer
 from nncf.tensorflow.graph.transformations.commands import TFBeforeLayer
 from nncf.tensorflow.graph.transformations.commands import TFInsertionCommand
+from nncf.tensorflow.graph.transformations.commands import TFMultiLayerPoint
 from nncf.tensorflow.graph.transformations.commands import TFLayerWeight
 from nncf.tensorflow.graph.transformations.layout import TFTransformationLayout
 from nncf.tensorflow.graph.utils import get_original_name_and_instance_idx
 from nncf.tensorflow.hardware.config import TFHWConfig
 from nncf.tensorflow.hardware.fused_patterns import TF_HW_FUSED_PATTERNS
-from nncf.tensorflow.layers.custom_objects import NNCF_QUANTIZATION_OPERATONS
+from nncf.tensorflow.layers.custom_objects import NNCF_QUANTIZATION_OPERATIONS
 from nncf.tensorflow.loss import TFZeroCompressionLoss
 from nncf.tensorflow.quantization.collectors import TFQuantizationStatisticsCollector
 from nncf.tensorflow.quantization.default_quantization import DEFAULT_TF_QUANT_TRAIT_TO_OP_DICT
-from nncf.tensorflow.quantization.initializers.init_range import RangeInitializer
-from nncf.tensorflow.quantization.initializers.init_range import TFRangeInitParams
+from nncf.tensorflow.quantization.init_range import RangeInitializer
+from nncf.tensorflow.quantization.init_range import TFRangeInitParams
 from nncf.tensorflow.quantization.layers import FakeQuantize
 from nncf.tensorflow.quantization.quantizers import Quantizer
 from nncf.tensorflow.quantization.quantizers import TFQuantizerSpec
-from nncf.tensorflow.quantization.utils import apply_saturation_fix
+from nncf.tensorflow.quantization.utils import apply_overflow_fix
 
 QUANTIZATION_LAYER_METATYPES = GENERAL_CONV_LAYER_METATYPES + LINEAR_LAYER_METATYPES
 
@@ -142,6 +146,7 @@ class TFQuantizationPoint:
 
 class TFQuantizationSetupStateNames:
     QUANTIZATION_POINTS = 'quantization_points'
+    UNIFIED_SCALE_GROUPS = 'unified_scale_groups'
 
 
 class TFQuantizationSetup:
@@ -153,6 +158,7 @@ class TFQuantizationSetup:
     def __init__(self):
         super().__init__()
         self._quantization_points = []  # type: List[TFQuantizationPoint]
+        self._unified_scale_groups = []  # type: List[List[QuantizationPointId]]
 
     def add_quantization_point(self, point: TFQuantizationPoint):
         """
@@ -165,6 +171,30 @@ class TFQuantizationSetup:
     def __iter__(self):
         return iter(self._quantization_points)
 
+    def register_unified_scale_group(self, point_ids: List[List[QuantizationPointId]]):
+        """
+        Adds unified scale group to the setup
+
+        :param point_ids: quantization point indexes
+        """
+        self._unified_scale_groups.append(point_ids)
+
+    def get_quantization_points(self) -> List[TFQuantizationPoint]:
+        """
+        Returns quantization points
+
+        :return: quantization points
+        """
+        return self._quantization_points
+
+    def get_unified_scale_groups(self) -> List[List[QuantizationPointId]]:
+        """
+        Returns unified scale groups
+
+        :return: unified scale groups
+        """
+        return self._unified_scale_groups
+
     def get_state(self) -> Dict:
         """
         Returns a dictionary with Python data structures (dict, list, tuple, str, int, float, True, False, None) that
@@ -176,6 +206,7 @@ class TFQuantizationSetup:
         quantization_points_state = [qp.get_state() for qp in self._quantization_points]
         return {
             self._state_names.QUANTIZATION_POINTS: quantization_points_state,
+            self._state_names.UNIFIED_SCALE_GROUPS: self._unified_scale_groups
         }
 
     @classmethod
@@ -189,6 +220,10 @@ class TFQuantizationSetup:
         for quantization_point_state in state[cls._state_names.QUANTIZATION_POINTS]:
             quantization_point = TFQuantizationPoint.from_state(quantization_point_state)
             setup.add_quantization_point(quantization_point)
+
+        if cls._state_names.UNIFIED_SCALE_GROUPS in state:
+            for quantization_group in state[cls._state_names.UNIFIED_SCALE_GROUPS]:
+                setup.register_unified_scale_group(quantization_group)
         return setup
 
 
@@ -210,8 +245,11 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
 
         self.quantize_inputs = self._algo_config.get('quantize_inputs', True)
         self.quantize_outputs = self._algo_config.get('quantize_outputs', False)
-        self._disable_saturation_fix = self._algo_config.get('disable_saturation_fix', False)
+        self._overflow_fix = self._algo_config.get('overflow_fix', 'enable')
         self._target_device = config.get('target_device', 'ANY')
+        algo_config = self._get_algo_specific_config_section()
+        if self._target_device == 'VPU' and 'preset' in algo_config:
+            raise RuntimeError("The VPU target device does not support presets.")
 
         self.global_quantizer_constraints = {}
         self.ignored_scopes_per_group = {}
@@ -262,12 +300,21 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
 
     def _parse_group_params(self, quant_config: Dict, quantizer_group: QuantizerGroup) -> None:
         group_name = quantizer_group.value
-        params_dict = quant_config.get(group_name, {})
+        params_dict = {}
+        params_dict_from_config = quant_config.get(group_name, {})
+        preset = quant_config.get('preset')
+        if self._target_device in ['ANY', 'CPU', 'GPU'] or self._target_device == 'TRIAL' and preset is not None:
+            preset = QuantizationPreset.from_str(quant_config.get('preset', 'performance'))
+            params_dict = preset.get_params_configured_by_preset(quantizer_group)
+            overrided_params = params_dict.keys() & params_dict_from_config.keys()
+            if overrided_params:
+                logger.warning('Preset quantizer parameters {} explicitly overrided.'.format(overrided_params))
+        params_dict.update(params_dict_from_config)
         self.global_quantizer_constraints[quantizer_group] = QuantizationConstraints.from_config_dict(params_dict)
-        self.ignored_scopes_per_group[quantizer_group] = params_dict.get('ignored_scopes', [])
+        self.ignored_scopes_per_group[quantizer_group] = params_dict_from_config.get('ignored_scopes', [])
         if self.ignored_scopes is not None:
             self.ignored_scopes_per_group[quantizer_group] += self.ignored_scopes
-        target_scopes = params_dict.get('target_scopes')
+        target_scopes = params_dict_from_config.get('target_scopes')
         if target_scopes is None and self.target_scopes is not None:
             self.target_scopes_per_group[quantizer_group] = self.target_scopes
         else:
@@ -279,21 +326,49 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
             qconfig = constraints.apply_constraints_to(qconfig)
         return qconfig
 
-    def _get_half_range(self, qconfig: QuantizerConfig) -> bool:
-        if not self._disable_saturation_fix:
-            if self._target_device in ['CPU', 'ANY'] and qconfig.num_bits == 8:
+    def _get_half_range(self, qconfig: QuantizerConfig, target_node: NNCFNode,
+                        first_conv_nodes: List[NNCFNode]) -> bool:
+        if self._target_device in ['CPU', 'ANY'] and qconfig.num_bits == 8:
+            if self._overflow_fix == 'enable':
                 return True
+            if self._overflow_fix == 'first_layer_only':
+                if target_node in first_conv_nodes:
+                    return True
         return False
 
     def _create_quantizer(self, name: str, qspec: TFQuantizerSpec) -> Quantizer:
-        quantizer_cls = NNCF_QUANTIZATION_OPERATONS.get(qspec.mode)
+        quantizer_cls = NNCF_QUANTIZATION_OPERATIONS.get(qspec.mode)
         return quantizer_cls(name, qspec)
 
     def _build_insertion_commands_for_quantizer_setup(self,
                                                       quantizer_setup: TFQuantizationSetup) \
             -> List[TFInsertionCommand]:
         insertion_commands = []
-        for quantization_point in quantizer_setup:
+        quantization_points = quantizer_setup.get_quantization_points()
+        non_unified_scales_quantization_point_ids = set(range(len(quantization_points)))
+
+        for unified_scales_group in quantizer_setup.get_unified_scale_groups():
+            us_qp_id = unified_scales_group[0]
+            qp = quantization_points[us_qp_id]
+            quantizer_spec = qp.quantizer_spec
+            op_name = qp.op_name + '/unified_scale_group'
+            quantizer = FakeQuantize(quantizer_spec, name=op_name)
+            self._op_names.append(quantizer.op_name)
+            target_points = []
+            for us_qp_id in unified_scales_group:
+                non_unified_scales_quantization_point_ids.discard(us_qp_id)
+                qp = quantization_points[us_qp_id]
+                assert quantizer_spec.get_state() == qp.quantizer_spec.get_state()
+                target_points.append(qp.target_point)
+
+            command = TFInsertionCommand(target_point=TFMultiLayerPoint(target_points),
+                                         callable_object=quantizer,
+                                         priority=TransformationPriority.QUANTIZATION_PRIORITY)
+
+            insertion_commands.append(command)
+
+        for qp_id in non_unified_scales_quantization_point_ids:
+            quantization_point = quantization_points[qp_id]
             op_name = quantization_point.op_name
             quantizer_spec = quantization_point.quantizer_spec
             target_point = quantization_point.target_point
@@ -362,12 +437,15 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
 
         quantizer_setup = self._get_quantizer_propagation_solution(nncf_graph,
                                                                    quantizable_weighted_layer_nodes,
-                                                                   custom_layer_nodes)
+                                                                   custom_layer_nodes,
+                                                                   model)
         setup = TFQuantizationSetup()
 
         quantized_layer_names_vs_qconfigs = {}  # type: Dict[str, QuantizerConfig]
-
-        applied_saturation_fix = False
+        qp_id_to_index = {}  # type: Dict[QuantizationPointId, int]
+        tf_setup_qp_index = 0
+        applied_overflow_fix = False
+        first_conv_nodes = get_first_nodes_of_type(nncf_graph, ['Conv2D'])
         for qp_id, qp in quantizer_setup.quantization_points.items():
             if qp.is_weight_quantization_point():
                 target_node = nncf_graph.get_node_by_name(qp.insertion_point.target_node_name)
@@ -393,14 +471,13 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
                         weight_def.weight_attr_name)
                     self._op_names.append(op_name)
 
-                    half_range = self._get_half_range(qconfig)
-                    applied_saturation_fix = applied_saturation_fix or half_range
+                    half_range = self._get_half_range(qconfig, target_node, first_conv_nodes)
+                    applied_overflow_fix = applied_overflow_fix or half_range
                     quantizer_spec = TFQuantizerSpec.from_config(qconfig,
                                                                  narrow_range=not half_range,
                                                                  half_range=half_range)
                     target_point = TFLayerWeight(layer_info.layer_name, weight_def.weight_attr_name)
                     qpoint = TFQuantizationPoint(op_name, quantizer_spec, target_point)
-                    setup.add_quantization_point(qpoint)
             else:
                 assert qp.is_activation_quantization_point()
                 ip = qp.insertion_point
@@ -426,14 +503,48 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
                                                 instance_idx=layer_info.instance_idx,
                                                 output_port_id=0)
                 qpoint = TFQuantizationPoint(fake_quantize_name, quantizer_spec, target_point)
-                setup.add_quantization_point(qpoint)
 
-        if applied_saturation_fix:
-            logger.warning('The saturation issue fix will be applied. '
-                           'Now all weight quantizers will effectively use only 7 bits out of 8 bits. '
-                           'This resolves the saturation issue problem on AVX2 and AVX-512 machines. '
-                           'Please take a look at the documentation for a detailed information.')
+            setup.add_quantization_point(qpoint)
+            qp_id_to_index[qp_id] = tf_setup_qp_index
+            tf_setup_qp_index += 1
 
+        setup = self._generate_unified_scale_groups(model, quantizer_setup, qp_id_to_index, setup)
+
+        self._raise_overflow_fix_warning(applied_overflow_fix)
+
+        return setup
+
+    def _raise_overflow_fix_warning(self, applied_overflow_fix: bool):
+        if applied_overflow_fix:
+            if self._overflow_fix == 'enable':
+                quantizers_with_overflow_fix_str = 'all weight quantizers'
+            elif self._overflow_fix == 'first_layer_only':
+                quantizers_with_overflow_fix_str = 'first convolution weight quantizers'
+            logger.warning('The overflow issue fix will be applied. '
+                           'Now {} will effectively use only 7 bits out of '
+                           '8 bits. This resolves the overflow issue problem on AVX2 and AVX-512 machines. '
+                           'Please take a look at the documentation for a detailed information.'
+                           .format(quantizers_with_overflow_fix_str))
+
+    def _generate_unified_scale_groups(self,
+                                       model: tf.keras.Model,
+                                       quantizer_setup: SingleConfigQuantizerSetup,
+                                       qp_id_to_index: Dict[QuantizationPointId, int],
+                                       setup: TFQuantizationSetup) -> TFQuantizationSetup:
+        # To properly set the instance indices for FQ need to save layers order like in the model config
+        layer_names = [layer.name for layer in model.layers]
+        for unified_group in quantizer_setup.unified_scale_groups.values():
+            sorted_unified_group = []
+            for qp_id in unified_group:
+                qp = quantizer_setup.quantization_points[qp_id]
+                qp_layer_name = qp.insertion_point.target_node_name
+                original_name, _ = get_original_name_and_instance_idx(qp_layer_name)
+                layer_idx = layer_names.index(original_name)
+                tf_setup_index = qp_id_to_index[qp_id]
+                sorted_unified_group.append((tf_setup_index, layer_idx))
+
+            sorted_unified_group = sorted(sorted_unified_group, key=lambda x: x[1])
+            setup.register_unified_scale_group([setup_index for setup_index, _ in sorted_unified_group])
         return setup
 
     def _get_quantizable_weighted_layer_nodes(self, nncf_graph: NNCFGraph) -> List[QuantizableWeightedLayerNode]:
@@ -451,18 +562,20 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
 
             assert issubclass(metatype, TFLayerWithWeightsMetatype)
             nodes_with_weights.append(node)
+        scope_overrides_dict = self._get_algo_specific_config_section().get('scope_overrides', {})
         weighted_node_and_qconf_lists = assign_qconfig_lists_to_modules(nodes_with_weights,
                                                                         self.DEFAULT_QCONFIG,
                                                                         self.global_quantizer_constraints[
                                                                             QuantizerGroup.WEIGHTS],
-                                                                        scope_overrides_dict=None,
+                                                                        scope_overrides_dict,
                                                                         hw_config=self.hw_config)
         return [QuantizableWeightedLayerNode(node, qconf_list) for node, qconf_list
                 in weighted_node_and_qconf_lists.items()]
 
     def _get_quantizer_propagation_solution(self, nncf_graph: NNCFGraph,
                                             quantizable_weighted_layer_nodes: List[QuantizableWeightedLayerNode],
-                                            custom_layer_node_names: List[NNCFNodeName]) \
+                                            custom_layer_node_names: List[NNCFNodeName],
+                                            model: tf.keras.Model) \
             -> SingleConfigQuantizerSetup:
         ip_graph = InsertionPointGraph(nncf_graph,
                                        [qn.node.node_name for qn in quantizable_weighted_layer_nodes])
@@ -470,7 +583,7 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
         pattern = TF_HW_FUSED_PATTERNS.get_full_pattern_graph()
         ip_graph = ip_graph.get_ip_graph_with_merged_hw_optimized_operations(pattern)
 
-        input_preprocessing_nodes = self._get_input_preprocessing_nodes(nncf_graph)
+        input_preprocessing_nodes = self._get_input_preprocessing_nodes(nncf_graph, model)
         input_preprocessing_node_names = [n.node_name for n in input_preprocessing_nodes]
         if custom_layer_node_names:
             logger.warning('Custom layers [{}] '
@@ -512,7 +625,7 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
             quantizer_setup.discard(qp_id, keep_shared_input_qps=True)
         return quantizer_setup
 
-    def _get_input_preprocessing_nodes(self, nncf_graph: NNCFGraph) -> List[NNCFNode]:
+    def _get_input_preprocessing_nodes(self, nncf_graph: NNCFGraph, model: tf.keras.Model) -> List[NNCFNode]:
         retval = []
 
         def traverse_fn(node: NNCFNode, preprocessing_nodes: List[NNCFNode]) -> Tuple[bool, List[NNCFNode]]:
@@ -520,8 +633,12 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
             successors = nncf_graph.get_next_nodes(node)
             if len(successors) == 1:
                 successor = next(iter(successors))
-                if successor.metatype in ELEMENTWISE_LAYER_METATYPES and len(
-                        nncf_graph.get_previous_nodes(successor)) == 1:
+                # It is necessary to determine the number of input nodes from the model
+                # in order to correctly count the duplicated edges
+                original_name, _ = get_original_name_and_instance_idx(successor.node_name)
+                layer = model.get_layer(name=original_name)
+                num_previous_nodes = len(layer.input) if isinstance(layer.input, list) else 1
+                if successor.metatype in ELEMENTWISE_LAYER_METATYPES and num_previous_nodes == 1:
                     preprocessing_nodes.append(successor)
                     is_finished = False
             return is_finished, preprocessing_nodes
@@ -584,7 +701,7 @@ class QuantizationController(BaseCompressionAlgorithmController):
         return self._loss
 
     def strip_model(self, model: tf.keras.Model) -> tf.keras.Model:
-        apply_saturation_fix(model, self._op_names)
+        apply_overflow_fix(model, self._op_names)
         return model
 
     def statistics(self, quickly_collected_only: bool = False) -> NNCFStatistics:

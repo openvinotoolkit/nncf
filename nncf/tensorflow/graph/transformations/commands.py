@@ -16,6 +16,7 @@ from typing import Callable
 from typing import Dict
 from typing import List
 from typing import Optional
+from typing import Union
 
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
@@ -82,6 +83,20 @@ class TFLayerPoint(TargetPoint):
         }
         return cls(**kwargs)
 
+
+class TFMultiLayerPoint:
+    """
+    `TFMultiLayerPoint` stores a list of target points that will be
+    combined into shared callable object. Each point can be spots in the model
+    graph: insertion spots before/after layer.
+    """
+
+    def __init__(self, target_points: List[TargetPoint]):
+        self._target_points = target_points
+
+    @property
+    def target_points(self) -> List[TargetPoint]:
+        return self._target_points
 
 class TFLayerStateNames:
     LAYER_NAME = 'layer_name'
@@ -381,7 +396,7 @@ class TFInsertionCommand(TransformationCommand):
     """
 
     def __init__(self,
-                 target_point: TargetPoint,
+                 target_point: Union[TargetPoint, TFMultiLayerPoint],
                  callable_object: Optional[Callable] = None,
                  priority: Optional[TransformationPriority] = None):
         super().__init__(TransformationType.INSERT, target_point)
@@ -396,6 +411,10 @@ class TFInsertionCommand(TransformationCommand):
         return [x for x, _ in self.callable_objects]
 
     def union(self, other: TransformationCommand) -> 'TFInsertionCommand':
+        if isinstance(self.target_point, TFMultiLayerPoint):
+            raise NotImplementedError('A command of TFInsertionCommand type with TFMultiLayerPoint '
+                                      'could not be united with another command')
+
         if not self.check_command_compatibility(other):
             raise ValueError('{} and {} commands could not be united'.format(
                 type(self).__name__, type(other).__name__))

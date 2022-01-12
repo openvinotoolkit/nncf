@@ -10,16 +10,19 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-from typing import List
-from typing import Union
-from typing import TypeVar
+
+from typing import Dict, List, Type, Optional
 
 from nncf.common.graph import NNCFGraph
-from nncf.common.graph import NNCFNode
-from nncf.common.pruning.export_helpers import DefaultMetaOp
+from nncf.common.pruning.tensor_processor import NNCFPruningBaseTensorProcessor
 from nncf.common.pruning.utils import PruningOperationsMetatypeRegistry
-
-TensorType = TypeVar('TensorType')
+from nncf.common.pruning.utils import get_input_masks
+from nncf.common.pruning.utils import is_grouped_conv
+from nncf.common.pruning.utils import PruningAnalysisDecision
+from nncf.common.pruning.utils import PruningAnalysisReason
+from nncf.common.pruning.symbolic_mask import SymbolicMask
+from nncf.common.pruning.symbolic_mask import SymbolicMaskProcessor
+from nncf.common.pruning.operations import BasePruningOp
 
 
 class MaskPropagationAlgorithm:
@@ -29,18 +32,22 @@ class MaskPropagationAlgorithm:
     for nodes that have masks already defined.
     """
 
-    def __init__(self, graph: NNCFGraph, pruning_operator_metatypes: PruningOperationsMetatypeRegistry):
+    def __init__(self, graph: NNCFGraph,
+                 pruning_operator_metatypes: PruningOperationsMetatypeRegistry,
+                 tensor_processor: Optional[Type[NNCFPruningBaseTensorProcessor]] = None):
         """
         Initializes MaskPropagationAlgorithm.
 
         :param graph: Graph to work with.
         :param pruning_operator_metatypes: Registry with operation metatypes pruning algorithm is aware of, i.e.
                metatypes describing operations with common pruning mask application and propagation properties.
+        :param tensor_processor: Framework-specific tensor processor.
         """
         self._graph = graph
         self._pruning_operator_metatypes = pruning_operator_metatypes
+        self._tensor_processor = tensor_processor
 
-    def get_meta_operation_by_type_name(self, type_name: str) -> DefaultMetaOp:
+    def get_meta_operation_by_type_name(self, type_name: str) -> BasePruningOp:
         """
         Returns class of metaop that corresponds to `type_name` type.
 
@@ -59,27 +66,75 @@ class MaskPropagationAlgorithm:
         """
         for node in self._graph.topological_sort():
             cls = self.get_meta_operation_by_type_name(node.node_type)
-            cls.mask_propagation(node, self._graph)
+            cls.mask_propagation(node, self._graph, self._tensor_processor)
+
+    def symbolic_mask_propagation(self, prunable_layers_types: List[str],
+                                  can_prune_after_analysis: Dict[int, PruningAnalysisDecision]) \
+            -> Dict[int, PruningAnalysisDecision]:
+        """
+        Check all nodes that were marked as prunable after the model analysis and compatibility check vs.
+        pruning algo have a correct correspondent closing node on each path from self to outputs;
+        the check entails verifying that every convolution prunable by the output channel dimension
+        has a corresponding convolution that is prunable by its input channel dimension (output channel
+        dimension equal to closing convolution input channel dimension) in every path from self to outputs.
+        If the check fails, the entire groups containing such nodes will be marked as unprunable.
+        If convolution symbolic mask mixes with other symbolic masks (by elementwise operation, for example)
+        and mixing masks can't be mixed, all mask producers participated in this mixing will be marked as unprunable.
+        If convolution output channel dimension reducing directly affect an output of the model -
+        it will be marked as unprunable as well.
 
 
-def get_input_masks(node: NNCFNode, graph: NNCFGraph) -> List[Union[TensorType, None]]:
-    """
-    Returns input masks for all inputs of nx_node.
+        :param prunable_layers_types: Types of operations with prunable filters.
+        :param can_prune_after_analysis: Dict of node indices vs the decision made by previous steps;
+            the decision is true only for the nodes that do not conflict with mask propagation and
+            are supported by the NNCF pruning algorithm.
+        :return: Dict of node indices vs the decision made by symbolic mask propagation algorithm.
+        """
 
-    :return: Input masks.
-    """
-    input_masks = [input_node.data['output_mask'] for input_node in graph.get_previous_nodes(node)]
-    return input_masks
+        can_be_closing_convs = {node.node_id for node in self._graph.get_all_nodes()
+                                if node.node_type in prunable_layers_types and not is_grouped_conv(node)}
+        can_prune_by_dim = {k: None for k in can_be_closing_convs}
+        for node in self._graph.topological_sort():
+            if node.node_id in can_be_closing_convs and can_prune_after_analysis[node.node_id]:
+                # Set output mask
+                node.data['output_mask'] = SymbolicMask(node.layer_attributes.out_channels, [node.node_id])
+            # Propagate masks
+            cls = self.get_meta_operation_by_type_name(node.node_type)
+            cls.mask_propagation(node, self._graph, SymbolicMaskProcessor)
+            if node.node_id in can_be_closing_convs:
+                # Check input mask producers out channel dimension
+                input_masks = get_input_masks(node, self._graph)
+                if any(input_masks):
+                    assert len(input_masks) == 1
+                    input_mask = input_masks[0]
 
+                    for producer in input_mask.mask_producers:
+                        previously_dims_equal = True if can_prune_by_dim[producer] is None \
+                            else can_prune_by_dim[producer]
 
-def identity_mask_propagation(node: NNCFNode, graph: NNCFGraph):
-    """
-    Propagates input mask through nx_node.
-    """
-    input_masks = get_input_masks(node, graph)
-    if not input_masks:
-        # In case for disconnected NNCFGraph
-        input_masks = [None]
-    assert len(input_masks) == 1
-    node.data['input_masks'] = input_masks
-    node.data['output_mask'] = input_masks[0]
+                        is_dims_equal = node.layer_attributes.in_channels == input_mask.shape[0]
+                        decision = previously_dims_equal and is_dims_equal
+                        can_prune_by_dim[producer] = PruningAnalysisDecision(
+                            decision, PruningAnalysisReason.DIMENSION_MISMATCH)
+        # Remove all convolutions with masks
+        # that were propagated to output node
+        for out_node in self._graph.get_output_nodes():
+            for input_mask in get_input_masks(out_node, self._graph):
+                if input_mask:
+                    for producer in input_mask.mask_producers:
+                        can_prune_by_dim[producer] = PruningAnalysisDecision(
+                                False, PruningAnalysisReason.LAST_CONV)
+        # Update decision for nodes which
+        # have no closing convolution
+        convs_without_closing_conv = {}
+        for k, v in can_prune_by_dim.items():
+            if v is None:
+                convs_without_closing_conv[k] = \
+                    PruningAnalysisDecision(False, PruningAnalysisReason.CLOSING_CONV_MISSING)
+        can_prune_by_dim.update(convs_without_closing_conv)
+
+        # Clean nodes masks
+        for node in self._graph.get_all_nodes():
+            node.data['output_mask'] = None
+
+        return can_prune_by_dim

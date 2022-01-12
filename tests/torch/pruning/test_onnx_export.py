@@ -16,6 +16,8 @@ from tests.torch.pruning.helpers import BigPruningTestModel, get_basic_pruning_c
     PruningTestModelConcat, PruningTestModelEltwise, TestModelDiffConvs, TestModelGroupNorm
 from tests.torch.test_helpers import load_exported_onnx_version
 
+pytestmark = pytest.mark.skip(reason="Export as actually deleting filters from the model is currently disabled.")
+
 
 def find_value_by_name_in_list(obj_list, name):
     for obj in obj_list:
@@ -51,24 +53,18 @@ def test_pruning_export_simple_model(tmp_path):
     check_bias_and_weight_shape('nncf_module.conv3', onnx_model_proto, [1, 32, 5, 5], [1])
 
 
-@pytest.mark.parametrize(('prune_first', 'prune_last', 'ref_shapes'),
-                         [(False, True, [[[16, 1, 2, 2], [16]], [[16, 16, 2, 2], [16]], [[16, 16, 2, 2], [16]],
-                                         [[8, 32, 3, 3], [8]]]),
-                          (True, True, [[[8, 1, 2, 2], [8]], [[16, 8, 2, 2], [16]], [[16, 8, 2, 2], [16]],
-                                        [[8, 32, 3, 3], [8]]]),
-                          (False, False, [[[16, 1, 2, 2], [16]], [[16, 16, 2, 2], [16]], [[16, 16, 2, 2], [16]],
-                                          [[16, 32, 3, 3], [16]]]),
-                          (True, False, [[[8, 1, 2, 2], [8]], [[16, 8, 2, 2], [16]], [[16, 8, 2, 2], [16]],
-                                         [[16, 32, 3, 3], [16]]]),
-                          ]
+@pytest.mark.parametrize(('prune_first', 'ref_shapes'),
+                         [(False, [[[16, 1, 2, 2], [16]], [[16, 16, 2, 2], [16]], [[16, 16, 2, 2], [16]],
+                                   [[16, 32, 3, 3], [16]]]),
+                          (True, [[[8, 1, 2, 2], [8]], [[16, 8, 2, 2], [16]], [[16, 8, 2, 2], [16]],
+                                  [[16, 32, 3, 3], [16]]])]
                          )
-def test_pruning_export_concat_model(tmp_path, prune_first, prune_last, ref_shapes):
+def test_pruning_export_concat_model(tmp_path, prune_first, ref_shapes):
     model = PruningTestModelConcat()
     nncf_config = get_basic_pruning_config(input_sample_size=[1, 1, 8, 8])
     nncf_config['compression']['algorithm'] = 'filter_pruning'
 
     nncf_config['compression']['params']['prune_first_conv'] = prune_first
-    nncf_config['compression']['params']['prune_last_conv'] = prune_last
     nncf_config['compression']['pruning_init'] = 0.5
 
     onnx_model_proto = load_exported_onnx_version(nncf_config, model,
@@ -78,24 +74,17 @@ def test_pruning_export_concat_model(tmp_path, prune_first, prune_last, ref_shap
         check_bias_and_weight_shape(conv_name, onnx_model_proto, *ref_shapes[i - 1])
 
 
-@pytest.mark.parametrize(('prune_first', 'prune_last', 'ref_shapes'),
-                         [(False, True, [[[16, 1, 2, 2], [16]], [[16, 16, 2, 2], [16]], [[16, 16, 2, 2], [16]],
-                                         [[8, 16, 3, 3], [8]]]),
-                          (True, True, [[[8, 1, 2, 2], [8]], [[16, 8, 2, 2], [16]], [[16, 8, 2, 2], [16]],
-                                        [[8, 16, 3, 3], [8]]]),
-                          (False, False, [[[16, 1, 2, 2], [16]], [[16, 16, 2, 2], [16]], [[16, 16, 2, 2], [16]],
-                                          [[16, 16, 3, 3], [16]]]),
-                          (True, False, [[[8, 1, 2, 2], [8]], [[16, 8, 2, 2], [16]], [[16, 8, 2, 2], [16]],
-                                         [[16, 16, 3, 3], [16]]]),
-                          ]
-                         )
-def test_pruning_export_eltwise_model(tmp_path, prune_first, prune_last, ref_shapes):
+@pytest.mark.parametrize(('prune_first', 'ref_shapes'),
+                         [(False, [[[16, 1, 2, 2], [16]], [[16, 16, 2, 2], [16]], [[16, 16, 2, 2], [16]],
+                                   [[16, 16, 3, 3], [16]]]),
+                          (True, [[[8, 1, 2, 2], [8]], [[16, 8, 2, 2], [16]], [[16, 8, 2, 2], [16]],
+                                  [[16, 16, 3, 3], [16]]])])
+def test_pruning_export_eltwise_model(tmp_path, prune_first, ref_shapes):
     model = PruningTestModelEltwise()
     nncf_config = get_basic_pruning_config(input_sample_size=[1, 1, 8, 8])
     nncf_config['compression']['algorithm'] = 'filter_pruning'
 
     nncf_config['compression']['params']['prune_first_conv'] = prune_first
-    nncf_config['compression']['params']['prune_last_conv'] = prune_last
     nncf_config['compression']['pruning_init'] = 0.5
     onnx_model_proto = load_exported_onnx_version(nncf_config, model,
                                                   path_to_storage_dir=tmp_path)
@@ -104,24 +93,17 @@ def test_pruning_export_eltwise_model(tmp_path, prune_first, prune_last, ref_sha
         check_bias_and_weight_shape(conv_name, onnx_model_proto, *ref_shapes[i - 1])
 
 
-@pytest.mark.parametrize(('prune_first', 'prune_last', 'ref_shapes'),
-                         [(False, True, [[[32, 1, 2, 2], [32]], [[32, 1, 1, 1], [32]], [[32, 32, 3, 3], [32]],
-                                         [[16, 4, 1, 1], [16]]]),
-                          (True, True, [[[16, 1, 2, 2], [16]], [[16, 1, 1, 1], [16]], [[32, 16, 3, 3], [32]],
-                                        [[16, 4, 1, 1], [16]]]),
-                          (False, False, [[[32, 1, 2, 2], [32]], [[32, 1, 1, 1], [32]], [[32, 32, 3, 3], [32]],
-                                          [[16, 4, 1, 1], [16]]]),
-                          (True, False, [[[16, 1, 2, 2], [16]], [[16, 1, 1, 1], [16]], [[32, 16, 3, 3], [32]],
-                                         [[16, 4, 1, 1], [16]]]),
-                          ]
-                         )
-def test_pruning_export_diffconvs_model(tmp_path, prune_first, prune_last, ref_shapes):
+@pytest.mark.parametrize(('prune_first', 'ref_shapes'),
+                         [(False, [[[32, 1, 2, 2], [32]], [[32, 1, 1, 1], [32]], [[32, 32, 3, 3], [32]],
+                                   [[16, 4, 1, 1], [16]]]),
+                          (True, [[[16, 1, 2, 2], [16]], [[16, 1, 1, 1], [16]], [[32, 16, 3, 3], [32]],
+                                  [[16, 4, 1, 1], [16]]])])
+def test_pruning_export_diffconvs_model(tmp_path, prune_first, ref_shapes):
     model = TestModelDiffConvs()
     nncf_config = get_basic_pruning_config(input_sample_size=[1, 1, 8, 8])
     nncf_config['compression']['algorithm'] = 'filter_pruning'
 
     nncf_config['compression']['params']['prune_first_conv'] = prune_first
-    nncf_config['compression']['params']['prune_last_conv'] = prune_last
     nncf_config['compression']['pruning_init'] = 0.5
     onnx_model_proto = load_exported_onnx_version(nncf_config, model,
                                                   path_to_storage_dir=tmp_path)
@@ -136,7 +118,6 @@ def test_pruning_export_groupnorm_model(tmp_path):
     nncf_config['compression']['algorithm'] = 'filter_pruning'
 
     nncf_config['compression']['params']['prune_first_conv'] = True
-    nncf_config['compression']['params']['prune_last_conv'] = True
     nncf_config['compression']['pruning_init'] = 0.5
     onnx_model_proto = load_exported_onnx_version(nncf_config, model,
                                                   path_to_storage_dir=tmp_path)

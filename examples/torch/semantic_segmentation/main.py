@@ -57,7 +57,7 @@ from examples.torch.semantic_segmentation.utils.checkpoint import save_checkpoin
 from nncf.api.compression import CompressionStage
 from nncf.common.utils.tensorboard import prepare_for_tensorboard
 from nncf.config.utils import is_accuracy_aware_training
-from nncf.torch import AdaptiveCompressionTrainingLoop
+from nncf.common.accuracy_aware_training import create_accuracy_aware_training_loop
 from nncf.torch import create_compressed_model
 from nncf.torch import load_state
 from nncf.torch.initialization import register_default_init_args
@@ -574,7 +574,7 @@ def main_worker(current_gpu, config):
             optimizer, lr_scheduler = make_optimizer(params_to_optimize, config)
             return optimizer, lr_scheduler
 
-        acc_aware_training_loop = AdaptiveCompressionTrainingLoop(nncf_config, compression_ctrl)
+        acc_aware_training_loop = create_accuracy_aware_training_loop(config, compression_ctrl)
         model = acc_aware_training_loop.run(model,
                                             train_epoch_fn=train_epoch_fn,
                                             validate_fn=validate_fn,

@@ -39,7 +39,7 @@ from tests.common.serialization import check_serialization
 from tests.tensorflow.helpers import create_compressed_model_and_algo_for_test
 from tests.tensorflow.helpers import get_basic_conv_test_model
 from tests.tensorflow.quantization.test_algorithm_quantization import check_default_qspecs
-from tests.tensorflow.quantization.test_algorithm_quantization import check_specs_for_disabled_saturation_fix
+from tests.tensorflow.quantization.test_algorithm_quantization import check_specs_for_disabled_overflow_fix
 from tests.tensorflow.quantization.utils import get_basic_quantization_config
 from tests.tensorflow.test_bn_adaptation import get_dataset_for_test
 from tests.tensorflow.test_callbacks import REF_CKPT_DIR
@@ -90,12 +90,12 @@ def _save_and_load_compression_state(compression_ctrl, tmp_path):
     return compression_state
 
 
-def test_quantization_configs__disable_saturation_fix_and_resume_from_compression_state(tmp_path):
+def test_quantization_configs__disable_overflow_fix_and_resume_from_compression_state(tmp_path):
     model = get_basic_conv_test_model()
 
     config = get_basic_quantization_config()
     config['compression'].update({
-        'disable_saturation_fix': True
+        'overflow_fix': 'disable'
     })
     compression_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config, force_no_init=True)
 
@@ -104,7 +104,7 @@ def test_quantization_configs__disable_saturation_fix_and_resume_from_compressio
     compression_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config,
                                                                                     compression_state_to_load)
     assert isinstance(compression_ctrl, QuantizationController)
-    check_specs_for_disabled_saturation_fix(compression_model)
+    check_specs_for_disabled_overflow_fix(compression_model)
 
 
 def test_checkpoint_callback_make_checkpoints(mocker, tmp_path):
@@ -295,7 +295,8 @@ GROUND_TRUTH_STATE = {
             },
             "target_point_class_name": "TFOperationWithWeights"
         }
-    ]
+    ],
+    'unified_scale_groups': []
 }
 
 

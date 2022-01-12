@@ -16,6 +16,7 @@ from typing import Type
 import tensorflow as tf
 
 from nncf.common.graph.operator_metatypes import OperatorMetatype
+from nncf.common.graph.operator_metatypes import UnknownMetatype
 from nncf.tensorflow.graph.metatypes.keras_layers import KERAS_LAYER_METATYPES
 from nncf.tensorflow.graph.metatypes.tf_ops import TF_OPERATION_METATYPES
 
@@ -55,8 +56,9 @@ def get_keras_layer_metatype(
 
     if not determine_subtype:
         return layer_metatype
-
-    subtype = layer_metatype.determine_subtype(layer)
+    subtype = None
+    if layer_metatype is not UnknownMetatype:
+        subtype = layer_metatype.determine_subtype(layer)
     if subtype is not None:
         return subtype
     return layer_metatype
