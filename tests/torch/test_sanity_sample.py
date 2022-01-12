@@ -860,13 +860,14 @@ def accuracy_aware_config(request):
     ids=['distributed', 'dataparallel'])
 def test_accuracy_aware_training_pipeline(accuracy_aware_config, tmp_path, multiprocessing_distributed):
     config_factory = ConfigFactory(accuracy_aware_config['nncf_config'], tmp_path / 'config.json')
-    tmp_path = tmp_path / 'accuracy_aware'
-    tmp_path = tmp_path / 'distributed' if multiprocessing_distributed else tmp_path / 'dataparallel'
+    log_dir = tmp_path / 'accuracy_aware'
+    log_dir = log_dir / 'distributed' if multiprocessing_distributed else log_dir / 'dataparallel'
+
     args = {
         "--mode": "train",
         "--data": accuracy_aware_config["dataset_path"],
         "--config": config_factory.serialize(),
-        "--log-dir": tmp_path,
+        "--log-dir": log_dir,
         "--batch-size": accuracy_aware_config["batch_size"] * NUM_DEVICES,
         "--workers": 0,  # Workaround for the PyTorch MultiProcessingDataLoader issue
         "--epochs": 2,
@@ -882,10 +883,10 @@ def test_accuracy_aware_training_pipeline(accuracy_aware_config, tmp_path, multi
     runner.run()
 
     from glob import glob
-    time_dir_1 = glob(os.path.join(tmp_path, get_name(config_factory.config), '*/'))[0].split('/')[-2]
-    time_dir_2 = glob(os.path.join(tmp_path, get_name(config_factory.config), time_dir_1,
+    time_dir_1 = glob(os.path.join(log_dir, get_name(config_factory.config), '*/'))[0].split('/')[-2]
+    time_dir_2 = glob(os.path.join(log_dir, get_name(config_factory.config), time_dir_1,
                                    'accuracy_aware_training', '*/'))[0].split('/')[-2]
-    last_checkpoint_path = os.path.join(tmp_path, get_name(config_factory.config), time_dir_1,
+    last_checkpoint_path = os.path.join(log_dir, get_name(config_factory.config), time_dir_1,
                                         'accuracy_aware_training',
                                         time_dir_2, 'acc_aware_checkpoint_last.pth')
 
