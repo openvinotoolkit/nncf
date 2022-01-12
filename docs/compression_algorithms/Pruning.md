@@ -28,14 +28,14 @@ Where ![L_j](https://latex.codecogs.com/png.latex?L_j) is j-th convolutional lay
 Then during pruning filters with smaller ![G(F_i)](https://latex.codecogs.com/png.latex?G%28F_i%29) importance function will be pruned first.
 
 #### Algorithm statistics
-A model compression can be measured by two main metrics: filter pruning rate and FLOPs pruning rate. While 
-filter pruning rate shows the ratio of removed filters to the total number of filters in the model, FLOPs pruning rate 
+A model compression can be measured by two main metrics: filter pruning level and FLOPs pruning level. While 
+filter pruning level shows the ratio of removed filters to the total number of filters in the model, FLOPs pruning level 
 indicates how the removed filters affect the number of floating point operations required to run a model. 
 
 During the algorithm execution several compression statistics are available:
 
 `Target pruning level for the current epoch` - a pruning level calculated by the algorithm scheduler at each training epoch for 
-all layers previously defined as prunable. Note that this metric does not indicate the whole model filter pruning rate, as 
+all layers previously defined as prunable. Note that this metric does not indicate the whole model filter pruning level, as 
 it does not take into account the number of filters in layers that cannot be pruned.
 
 `FLOPs pruning level` - estimated reduction in the number of floating point operations of the model.
@@ -45,13 +45,13 @@ The number of FLOPs for a single convolutional layer can be computed as:
 
 Each removed filter contributes to FLOPs reduction in two convolutional layers as it affects the number 
 of filters in one and the number of input channels of the next layer. Thus it is expected that this number may differ 
-significantly from the filter pruning rate.
+significantly from the filter pruning level.
 
 `MParams` - the number of parameters in the model in millions. Typically convolutional layer weights have shape 
 ![shape](https://latex.codecogs.com/png.image?%5Cdpi%7B110%7D%20%5Cinline%20(kernel%5C;size,&space;kernel%5C;size,&space;input%5C;channels,&space;filters%5C;&space;num)).
 Thus each removed filter affects the number of parameters in two convolutional layers as it affects the number 
 of filters in one and the number of input channels of the next layer. It is expected that this number may differ 
-significantly from the filter pruning rate.
+significantly from the filter pruning level.
 
 #### Schedulers
 
@@ -61,26 +61,26 @@ The zeroed filters are frozen afterwards and the remaining model parameters are 
 
 **Parameters of the scheduler:**
 - `num_init_steps` - number of epochs for model pretraining **before** pruning.
-- `pruning_target` - pruning rate target. For example, the value `0.5` means that right after pretraining, convolutions that can be pruned will have 50% of their filters set to zero.
+- `pruning_target` - pruning level target. For example, the value `0.5` means that right after pretraining, convolutions that can be pruned will have 50% of their filters set to zero.
 
 
 **Exponential scheduler**
 
 Similar to the Baseline scheduler, during `num_init_steps` epochs model is pretrained without pruning.
-During the next `pruning steps` epochs `Exponential scheduler` gradually increasing pruning rate from `pruning_init` to `pruning_target`. After each pruning training epoch pruning algorithm calculates filter importances for all convolutional filters and prune (setting to zero) `current_pruning_rate` part of filters with the smallest importance in each Convolution.  After `num_init_steps` + `pruning_steps` epochs algorithm with zeroed filters is frozen and remaining model parameters only fine-tunes.
+During the next `pruning steps` epochs `Exponential scheduler` gradually increasing pruning level from `pruning_init` to `pruning_target`. After each pruning training epoch pruning algorithm calculates filter importances for all convolutional filters and prune (setting to zero) `current_pruning_rate` part of filters with the smallest importance in each Convolution.  After `num_init_steps` + `pruning_steps` epochs algorithm with zeroed filters is frozen and remaining model parameters only fine-tunes.
 
-Current pruning rate ![P_{i}](https://latex.codecogs.com/svg.latex?P_{i}) (on i-th epoch) during training calculates by equation:
+Current pruning level ![P_{i}](https://latex.codecogs.com/svg.latex?P_{i}) (on i-th epoch) during training calculates by equation:
 ![P_i = a * e^{- k * i}](https://latex.codecogs.com/png.latex?P_i%20%3D%20a%20*%20e%5E%7B-%20k%20*%20i%7D)
 Where ![a, k](https://latex.codecogs.com/svg.latex?a,%20k) - parameters.
 
 **Parameters of scheduler:**
 - `num_init_steps` - number of epochs for model pretraining before pruning.
-- `pruning_steps` - the number of epochs during which the pruning rate target is increased from `pruning_init` to `pruning_target` value.
-- `pruning_init` - initial pruning rate target. For example, value `0.1` means that at the begging of training, convolutions that can be pruned will have 10% of their filters set to zero.
-- `pruning_target` - pruning rate target at the end of the schedule. For example, the value `0.5` means that at the epoch with the number of `num_init_steps + pruning_steps`, convolutions that can be pruned will have 50% of their filters set to zero.
+- `pruning_steps` - the number of epochs during which the pruning level target is increased from `pruning_init` to `pruning_target` value.
+- `pruning_init` - initial pruning level target. For example, value `0.1` means that at the begging of training, convolutions that can be pruned will have 10% of their filters set to zero.
+- `pruning_target` - pruning level target at the end of the schedule. For example, the value `0.5` means that at the epoch with the number of `num_init_steps + pruning_steps`, convolutions that can be pruned will have 50% of their filters set to zero.
 
 **Exponential with bias scheduler**
-Similar to the `Exponential scheduler`, but current pruning rate ![P_{i}](https://latex.codecogs.com/svg.latex?P_{i}) (on i-th epoch) during training calculates by equation:
+Similar to the `Exponential scheduler`, but current pruning level ![P_{i}](https://latex.codecogs.com/svg.latex?P_{i}) (on i-th epoch) during training calculates by equation:
 ![P_i = a * e^{- k * i} + b](https://latex.codecogs.com/png.latex?P_i%20%3D%20a%20*%20e%5E%7B-%20k%20*%20i%7D%20&plus;%20b)
 Where ![a, k, b](https://latex.codecogs.com/png.latex?a%2C%20k%2C%20b) - parameters.
 
@@ -118,7 +118,7 @@ This approach allows pruning the model taking into account layer-specific sensit
         "pruning_target": 0.4, // Target value of the pruning level for the convolutions that can be pruned. These convolutions are determined by the model architecture. 0.5 by default.
         "pruning_flops_target": 0.4, // Target value of the pruning level by FLOPs in the whole model. Only one parameter from `pruning_target` and `pruning_flops_target` can be set. If none of them is specified, `pruning_target` = 0.5 is used as the default value. 
         "num_init_steps": 3, // Number of epochs for model pretraining before starting filter pruning. 0 by default.
-        "pruning_steps": 10, // Number of epochs during which the pruning rate is increased from `pruning_init` to `pruning_target` value.
+        "pruning_steps": 10, // Number of epochs during which the pruning level is increased from `pruning_init` to `pruning_target` value.
         "filter_importance": "L2", // The type of filter importance metric. Can be one of `L1`, `L2`, `geometric_median`. `L2` by default.
         "interlayer_ranking_type": "unweighted_ranking", // The type of filter ranking across the layers. Can be one of `unweighted_ranking`, `learned_ranking`. `unweighted_ranking` by default.
         "all_weights": false, // Whether to prune layers independently (choose filters with the smallest importance in each layer separately) or not. `False` by default.
@@ -130,7 +130,7 @@ This approach allows pruning the model taking into account layer-specific sensit
         "legr_params": { // Set of parameters, that can be set for 'learned_ranking' interlayer_ranking_type case
             "generations": 200, //  Number of generations for evolution algorithm optimizing. 400 by default
             "train_steps": 150, // Number of training steps to estimate pruned model accuracy. 200 by default 
-            "max_pruning": 0.6, // Pruning level for the model to train LeGR algorithm on it. If learned ranking will be used for multiple pruning rates, the highest should be used as `max_pruning`. If model will be pruned with one pruning rate, target pruning rate should be used.
+            "max_pruning": 0.6, // Pruning level for the model to train LeGR algorithm on it. If learned ranking will be used for multiple pruning levels, the highest should be used as `max_pruning`. If model will be pruned with one pruning level, target pruning level should be used.
             "random_seed": 42, // Random seed for ranking coefficients generation during optimization 
         },
     },
