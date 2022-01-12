@@ -1,4 +1,5 @@
-from typing import List
+from typing import List, Dict
+
 import numpy as np
 import onnx
 import onnxruntime as rt
@@ -6,7 +7,8 @@ import torch
 from torch import nn
 from nncf.torch.checkpoint_loading import load_state
 
-from nncf.torch.quantization.layers import PTQuantizerSpec, QuantizationMode, SymmetricQuantizer, AsymmetricQuantizer
+from nncf.torch.quantization.layers import PTQuantizerSpec, QuantizationMode, SymmetricQuantizer, AsymmetricQuantizer, \
+    BaseQuantizer
 from tests.torch.helpers import TwoConvTestModel, create_compressed_model_and_algo_for_test, create_conv, \
     get_nodes_by_type, get_all_inputs_for_graph_node
 from tests.torch.quantization.test_onnx_export import get_config_for_export_mode
@@ -403,7 +405,7 @@ def test_is_overflow_fix_applied_model_resumed_correctly(tmp_path):
     are_symmetric_fq_nodes_are_exported_correct_with_overflow_fix(tmp_path, compression_ctrl)
 
 
-def set_parameters_to_quantizer_and_get_attrs(quantizer, paramaters_to_set):
+def set_parameters_to_quantizer_and_get_attrs(quantizer: BaseQuantizer, paramaters_to_set: Dict):
     if isinstance(quantizer, SymmetricQuantizer):
         return set_scale_to_sym_quantizer_and_get_attrs(quantizer, **paramaters_to_set)
     return set_input_low_and_input_range_to_asym_quantizer_and_get_attrs(quantizer, **paramaters_to_set)
