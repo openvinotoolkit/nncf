@@ -34,24 +34,38 @@ indicates how the removed filters affect the number of floating point operations
 
 During the algorithm execution several compression statistics are available:
 
-`Target pruning level for the current epoch` - a pruning level calculated by the algorithm scheduler at each training epoch for 
-all layers previously defined as prunable. Note that this metric does not indicate the whole model filter pruning level, as 
-it does not take into account the number of filters in layers that cannot be pruned.
+`Filter pruning level` - percentage of filters removed from the model. Calculated as: 
 
-`FLOPs pruning level` - estimated reduction in the number of floating point operations of the model.
+![Filter pruning level](https://latex.codecogs.com/png.image?%5Cdpi%7B110%7D%20%5Cinline%20%5Ctextit%7Bfilter%20pruning%20rate%20%7D=%201%20-%20(%5Ctextit%7Bcurrent%20number%20of%20filters%20in%20the%20model%20%7D/%5Ctextit%7B%20total%20number%20of%20filters%20in%20the%20model%7D))
+
+> **NOTE**: All other pruning levels are calculated in a similar way.
+
+`GFLOPs pruning level` - an estimated reduction in the number of floating point operations of the model. 
 The number of FLOPs for a single convolutional layer can be computed as:
 
 ![FLOPs](https://latex.codecogs.com/png.image?%5Cdpi%7B110%7D%20FLOPs&space;=&space;2&space;%5Ctimes&space;input%5C;channels&space;%5Ctimes&space;kernel%5C;size%5E%7B2%7D%5Ctimes&space;W%5Ctimes&space;H%5Ctimes&space;filters)
+
+> **NOTE**: One GFLOP is one billion (1e9) FLOPs.
 
 Each removed filter contributes to FLOPs reduction in two convolutional layers as it affects the number 
 of filters in one and the number of input channels of the next layer. Thus it is expected that this number may differ 
 significantly from the filter pruning level.
 
-`MParams` - the number of parameters in the model in millions. Typically convolutional layer weights have shape 
+In addition, the decrease in GFLOPs is estimated by calculating the number of FLOPs of convolutional and fully connected layers. 
+As a result, these estimates may differ slightly from the actual number of FLOPs in the compressed model.
+
+`MParams  pruning level` - calculated reduction in the number of parameters in the model in millions. Typically convolutional layer weights have shape 
 ![shape](https://latex.codecogs.com/png.image?%5Cdpi%7B110%7D%20%5Cinline%20(kernel%5C;size,&space;kernel%5C;size,&space;input%5C;channels,&space;filters%5C;&space;num)).
 Thus each removed filter affects the number of parameters in two convolutional layers as it affects the number 
 of filters in one and the number of input channels of the next layer. It is expected that this number may differ 
 significantly from the filter pruning level.
+
+`Filter (or FLOPs) pruning level in current epoch` - a pruning level calculated by the algorithm scheduler at each training epoch for 
+all layers previously defined as prunable. 
+> **NOTE**: In case of `Filter pruning level in current epoch` this metric does not indicate the whole model filter pruning level, as 
+it does not take into account the number of filters in layers that cannot be pruned.
+
+`Target filter (or FLOPs) pruning level` - a pruning level that is expected to be achieved at the end of the algorithm execution.
 
 #### Schedulers
 
