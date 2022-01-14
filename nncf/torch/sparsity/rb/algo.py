@@ -26,6 +26,7 @@ from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.sparsity.base_algo import BaseSparsityAlgoBuilder, BaseSparsityAlgoController, SparseModuleInfo
 from nncf.torch.sparsity.rb.layers import RBSparsifyingWeight
 from nncf.torch.sparsity.rb.loss import SparseLoss, SparseLossForPerLayerSparsity
+from nncf.torch.utils import get_model_device
 from nncf.torch.utils import get_world_size
 from nncf.common.accuracy_aware_training.training_loop import ADAPTIVE_COMPRESSION_CONTROLLERS
 from nncf.torch.sparsity.collector import PTSparseModelStatisticsCollector
@@ -96,7 +97,7 @@ class RBSparsityController(BaseSparsityAlgoController):
             raise KeyError('Could not set distributed mode for the compression algorithm '
                            'because the default process group has not been initialized.')
 
-        if next(self._model.parameters()).is_cuda:
+        if 'cuda' in get_model_device(self._model).type:
             state = torch.cuda.get_rng_state()
             if dist.get_backend() == dist.Backend.NCCL:
                 state = state.cuda()

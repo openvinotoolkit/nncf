@@ -18,6 +18,7 @@ from typing import List, Tuple
 
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf import NNCFConfig
+from nncf.torch.utils import get_model_device
 from tests.torch.test_models.synthetic import PartlyNonDifferentialOutputsModel
 from tests.torch.test_models.synthetic import ContainersOutputsModel
 from tests.torch.helpers import TwoConvTestModel, get_empty_config
@@ -37,11 +38,11 @@ import pytest
 KEY_TO_KD_PARAMETERS = 'kd'
 
 
-def get_model_device(inference_type, gpu):
+def get_device_str(inference_type: str, gpu_id: int):
     if inference_type == 'cpu':
         return "cpu"
-    if gpu is not None:
-        return "cuda:{}".format(gpu)
+    if gpu_id is not None:
+        return "cuda:{}".format(gpu_id)
 
     return "cuda"
 
@@ -98,7 +99,7 @@ def run_actual(model: nn.Module, config: NNCFConfig, inference_type: str, mock_d
     model.train()
     output_storage = []
     for _, (input_, __) in enumerate(mock_dataloader):
-        input_ = input_.to(next(model.parameters()).device)
+        input_ = input_.to(get_model_device(model))
         output = model(input_)
         output_storage.append(output)
         loss = compression_ctrl.loss()
@@ -125,7 +126,7 @@ def run_reference(model: nn.Module, config: NNCFConfig, inference_type: str, moc
     kd_model.train()
     output_storage = []
     for _, (input_, __) in enumerate(mock_dataloader):
-        input_ = input_.to(next(model.parameters()).device)
+        input_ = input_.to(get_model_device(model))
         output = model(input_)
         kd_output = kd_model(input_)
         output_storage.append(output)
@@ -147,7 +148,7 @@ def run_test_training(gpu, config: NNCFConfig, inference_type: str, ngpus_per_no
     else:
         mock_dataloader = create_ones_mock_dataloader(config, num_samples=batch_size * number_of_iters,
                                                       batch_size=batch_size)
-    model_device = get_model_device(inference_type, gpu)
+    model_device = get_device_str(inference_type, gpu)
     model = TwoConvTestModel()
     fill_params_of_model_by_normal(model, std=0.5)
     model.to(model_device)
@@ -185,7 +186,7 @@ def test_loss_outputs_parsing():
                                                   batch_size=batch_size)
     compression_ctrl.scheduler.epoch_step()
     for _, (input_, __) in enumerate(mock_dataloader):
-        input_ = input_.to(next(model.parameters()).device)
+        input_ = input_.to(get_model_device(model))
         outputs = model(input_)
         kd_outputs = dumped_orig_model(input_)
         loss_outputs = []
@@ -215,7 +216,7 @@ def test_knowledge_distillation_outputs_containers_parsing():
                                                   batch_size=batch_size)
     compression_ctrl.scheduler.epoch_step()
     for _, (input_, __) in enumerate(mock_dataloader):
-        input_ = input_.to(next(model.parameters()).device)
+        input_ = input_.to(get_model_device(model))
         outputs = model(input_)
         kd_outputs = dumped_orig_model(input_)
 
@@ -260,7 +261,7 @@ def test_knowledge_distillation_loss_types(kd_loss_type: str, scale, temperature
                                                   batch_size=batch_size)
     compression_ctrl.scheduler.epoch_step()
     for _, (input_, __) in enumerate(mock_dataloader):
-        input_ = input_.to(next(model.parameters()).device)
+        input_ = input_.to(get_model_device(model))
         outputs = model(input_)
         kd_outputs = dumped_orig_model(input_)
         reference_kd_loss = kd_loss_fn(kd_outputs, outputs)
@@ -327,7 +328,7 @@ def run_training_for_device_testing(gpu, config: NNCFConfig, inference_type: str
     else:
         mock_dataloader = create_ones_mock_dataloader(config, num_samples=batch_size * number_of_iters,
                                                       batch_size=batch_size)
-    model_device = get_model_device(inference_type, gpu)
+    model_device = get_device_str(inference_type, gpu)
     model = TwoConvTestModel()
     fill_params_of_model_by_normal(model, std=0.5)
 
@@ -349,7 +350,7 @@ def run_training_for_device_testing(gpu, config: NNCFConfig, inference_type: str
         model.to(model_device)
 
     for _, (input_, __) in enumerate(mock_dataloader):
-        input_ = input_.to(next(model.parameters()).device)
+        input_ = input_.to(get_model_device(model))
         output = model(input_)
         output_storage.append(output)
         loss = compression_ctrl.loss()

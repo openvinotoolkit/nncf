@@ -33,6 +33,7 @@ from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.graph.transformations.commands import TransformationPriority
 from nncf.torch.graph.transformations.layout import PTTransformationLayout
 from nncf.torch.nncf_network import NNCFNetwork
+from nncf.torch.utils import get_model_device
 
 
 class SparseModuleInfo:
@@ -56,7 +57,7 @@ class BaseSparsityAlgoBuilder(PTCompressionAlgorithmBuilder):
         return layout
 
     def _sparsify_weights(self, target_model: NNCFNetwork) -> List[PTInsertionCommand]:
-        device = next(target_model.parameters()).device
+        device = get_model_device(target_model)
         sparsified_module_nodes = target_model.get_weighted_original_graph_nodes(
             nncf_module_names=self.compressed_nncf_module_names)
         insertion_commands = []
@@ -93,7 +94,7 @@ class BaseSparsityAlgoController(PTCompressionAlgorithmController, SparsityContr
     def __init__(self, target_model: NNCFNetwork,
                  sparsified_module_info: List[SparseModuleInfo]):
         super().__init__(target_model)
-        self._loss = ZeroCompressionLoss(next(target_model.parameters()).device)
+        self._loss = ZeroCompressionLoss(get_model_device(target_model))
         self._scheduler = BaseCompressionScheduler()
         self.sparsified_module_info = sparsified_module_info
 

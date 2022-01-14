@@ -33,6 +33,7 @@ from nncf.torch.dynamic_graph.context import TracingContext
 from nncf.torch.dynamic_graph.transform_graph import replace_modules
 from nncf.torch.layers import LSTMCellNNCF, NNCF_RNN, ITERATION_MODULES
 from nncf.torch.model_creation import create_compressed_model
+from nncf.torch.utils import get_model_device
 from nncf.torch.utils import manual_seed
 from tests.torch.modules.seq2seq.gnmt import GNMT
 from tests.torch.helpers import get_empty_config, get_grads, create_compressed_model_and_algo_for_test
@@ -50,7 +51,7 @@ def replace_lstm(model):
     def replace_fn(module_):
         if not isinstance(module_, nn.LSTM):
             return module_
-        device = next(module_.parameters()).device
+        device = get_model_device(module_)
         custom_lstm = NNCF_RNN('LSTM', input_size=module_.input_size, hidden_size=module_.hidden_size,
                                num_layers=module_.num_layers, bidirectional=module_.bidirectional,
                                batch_first=module_.batch_first, dropout=module_.dropout,

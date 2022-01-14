@@ -57,7 +57,7 @@ class ManualPrecisionInitializer(BasePrecisionInitializer):
                         q_configs = self._hw_precision_constraints.get(q_id)
                         matched_q_configs = list(filter(lambda x: x.num_bits == bitwidth, q_configs))
                         if not matched_q_configs:
-                            raise ValueError(msg.format(bitwidth, scope_name, q_configs))
+                            raise ValueError(msg.format(bitwidth, scope_name, list(map(str, q_configs))))
                         qp.qconfig = matched_q_configs[0]
                     else:
                         qp.qconfig.num_bits = bitwidth

@@ -44,6 +44,7 @@ from nncf.torch.module_operations import UpdateInputs
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.quantization.algo import QuantizationControllerBase
 from nncf.torch.quantization.schedulers import QUANTIZATION_SCHEDULERS
+from nncf.torch.utils import get_model_device
 
 
 @PT_COMPRESSION_ALGORITHMS.register('binarization')
@@ -66,7 +67,7 @@ class BinarizationBuilder(PTCompressionAlgorithmBuilder):
         return [NNCFConv2d.__name__, ]
 
     def _binarize_weights_and_module_inputs(self, target_model: NNCFNetwork) -> List[PTInsertionCommand]:
-        device = next(target_model.parameters()).device
+        device = get_model_device(target_model)
 
         module_nodes = target_model.get_weighted_original_graph_nodes(
             nncf_module_names=self.compressed_nncf_module_names)
@@ -113,7 +114,7 @@ class BinarizationController(QuantizationControllerBase):
     def __init__(self, target_model: NNCFNetwork, config: NNCFConfig):
         super().__init__(target_model)
 
-        self._loss = ZeroCompressionLoss(next(target_model.parameters()).device)
+        self._loss = ZeroCompressionLoss(get_model_device(target_model))
         scheduler_cls = QUANTIZATION_SCHEDULERS.get("staged")
         algo_config = extract_algo_specific_config(config, "binarization")
         self._scheduler = scheduler_cls(self, algo_config.get("params", {}))

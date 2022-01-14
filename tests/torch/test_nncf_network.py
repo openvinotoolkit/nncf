@@ -24,6 +24,7 @@ import networkx as nx
 import pytest
 import torch
 from torch import nn
+from torch.nn.utils import weight_norm
 
 from nncf.common.graph import BaseLayerAttributes
 from nncf.common.graph import NNCFGraph
@@ -122,6 +123,31 @@ def test_check_correct_modules_replacement():
 
     _, nncf_modules = check_correct_nncf_modules_replacement(model, nncf_model)
     assert set(nncf_modules) == set(nncf_model.get_nncf_modules())
+
+
+class WeightNormedConvModel(torch.nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.conv = weight_norm(torch.nn.Conv1d(1, 1, 1))
+
+    def forward(self, x):
+        return self.conv(x)
+
+
+def test_weight_normed_modules_are_replaced_correctly():
+    nncf_model = NNCFNetwork(WeightNormedConvModel(), input_infos=[ModelInputInfo([1, 1, 10])])
+
+    wrapped_conv = nncf_model.conv
+    assert hasattr(wrapped_conv, "weight_g")
+    assert hasattr(wrapped_conv, "weight_v")
+    assert hasattr(wrapped_conv, "weight")
+
+    assert isinstance(wrapped_conv.weight_g, torch.nn.Parameter)
+    assert isinstance(wrapped_conv.weight_v, torch.nn.Parameter)
+    assert not isinstance(wrapped_conv.weight, torch.nn.Parameter)
+
+    #pylint:disable=protected-access
+    assert len(wrapped_conv._forward_pre_hooks) == 1
 
 
 @register_module()

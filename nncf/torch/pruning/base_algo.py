@@ -37,6 +37,7 @@ from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.pruning.operations import PT_PRUNING_OPERATOR_METATYPES
 from nncf.torch.pruning.structs import PrunedModuleInfo
 from nncf.torch.pruning.utils import init_output_masks_in_graph
+from nncf.torch.utils import get_model_device
 
 
 class BasePruningAlgoBuilder(PTCompressionAlgorithmBuilder):
@@ -97,7 +98,7 @@ class BasePruningAlgoBuilder(PTCompressionAlgorithmBuilder):
         target_model_graph = target_model.get_original_graph()
         groups_of_nodes_to_prune = self.pruning_node_selector.create_pruning_groups(target_model_graph)
 
-        device = next(target_model.parameters()).device
+        device = get_model_device(target_model)
         insertion_commands = []
         self.pruned_module_groups_info = Clusterization[PrunedModuleInfo](lambda x: x.node_name)
 
@@ -193,7 +194,7 @@ class BasePruningAlgoController(PTCompressionAlgorithmController):
                  pruned_module_groups_info: Clusterization[PrunedModuleInfo],
                  config: NNCFConfig):
         super().__init__(target_model)
-        self._loss = ZeroCompressionLoss(next(target_model.parameters()).device)
+        self._loss = ZeroCompressionLoss(get_model_device(target_model))
         self._prunable_types = prunable_types
         self.config = config
         self.pruning_config = extract_algo_specific_config(config, 'filter_pruning')

@@ -342,3 +342,12 @@ def maybe_convert_legacy_names_in_compress_state(compression_state: Dict[str, An
         warnings.warn('Legacy Batch Norm layer names was detected in quantization setup target point names.'
                       ' All occurrences of `BatchNorm2d` in nodes names was replaced by `NNCFBatchNorm`',
                       category=DeprecationWarning)
+
+
+def get_model_device(model: torch.nn.Module) -> torch.device:
+    try:
+        device = next(model.parameters()).device
+    except StopIteration:
+        # The model had no parameters at all, doesn't matter which device to choose
+        device = torch.device('cpu')
+    return device

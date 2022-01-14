@@ -20,6 +20,7 @@ from nncf.config.structures import QuantizationRangeInitArgs
 from nncf.torch.nested_objects_traversal import objwalk
 from nncf.torch.structures import AutoQPrecisionInitArgs, LeGRInitArgs, DistributedCallbacksArgs
 from nncf.torch.structures import QuantizationPrecisionInitArgs
+from nncf.torch.utils import get_model_device
 from nncf.torch.utils import is_tensor, default_distributed_wrapper, default_distributed_unwrapper
 
 
@@ -132,11 +133,11 @@ class DataLoaderBaseRunner:
 
     def run(self, data_loader, num_init_steps):
         if self.init_device is not None:
-            original_device = next(iter(self.model.parameters())).device
+            original_device = get_model_device(self.model)
             self.model.to(self.init_device)
 
         self._prepare_initialization()
-        device = next(self.model.parameters()).device
+        device = get_model_device(self.model)
         data_loader = wrap_dataloader_for_init(data_loader)
 
         with torch.no_grad():
