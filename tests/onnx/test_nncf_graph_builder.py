@@ -3,8 +3,8 @@ import pytest
 
 from nncf.experimental.onnx.graph.nncf_graph_builder import GraphConverter
 
-from tests.experimental.onnx.models import LinearModel
-from tests.experimental.onnx.models import MultiInputOutputModel
+from tests.onnx.models import LinearModel
+from tests.onnx.models import MultiInputOutputModel
 
 import networkx as nx
 
