@@ -1,6 +1,6 @@
 import numpy as np
 import onnx
-
+# pylint: disable=no-member
 
 def create_initializer_tensor(name: str, tensor_array: np.ndarray,
                               data_type: onnx.TensorProto = onnx.TensorProto.FLOAT) -> onnx.TensorProto:

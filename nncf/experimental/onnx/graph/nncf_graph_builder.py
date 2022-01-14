@@ -1,3 +1,4 @@
+# pylint: disable=no-member
 from onnx import ModelProto
 from google.protobuf.json_format import MessageToDict
 
