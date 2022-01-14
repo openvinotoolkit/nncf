@@ -475,7 +475,7 @@ class SymmetricQuantizer(BaseQuantizer):
                                                                        level_low,
                                                                        level_high,
                                                                        self.eps)
-            x = self.quantize(x, execute_traced_op_as_identity=False)
+                #x = self.quantize(x, execute_traced_op_as_identity=False)
             #x = 5 * x
             #x = x + torch.zeros_like(x)
             #x = torch.min(x, 1)
@@ -617,7 +617,7 @@ class AsymmetricQuantizer(BaseQuantizer):
                                                                        self.levels,
                                                                        self.eps)
 
-            x = self.quantize(x, execute_traced_op_as_identity=False)
+                #x = self.quantize(x, execute_traced_op_as_identity=False)
             #x = x + torch.zeros_like(x)
             #x = torch.max(x, 1)
         #x = self.quantize(x, execute_traced_op_as_identity=False)

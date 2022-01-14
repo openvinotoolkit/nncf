@@ -209,13 +209,14 @@ def test_are_quantized_weights_exported_correct(tmp_path):
     # print(nncf_config['input_info']['sample_size'])
     # compressed_model.cuda()
     # summary(compressed_model, tuple(nncf_config['input_info']['sample_size'][1:]))
-    quantizers = compression_ctrl.weight_quantizers.values()
+    quantizers = list(compression_ctrl.weight_quantizers.values())
     onnx_checkpoint_path = str(tmp_path / 'model.onnx')
     print(f'onnx checkpoints path {onnx_checkpoint_path}')
     compression_ctrl.export_model(onnx_checkpoint_path, input_names=['input'])
     onnx_model = onnx.load(onnx_checkpoint_path)
     fq_nodes = get_nodes_by_type(onnx_model, 'FakeQuantize')
     inputs = [get_all_inputs_for_graph_node(fq_node, onnx_model.graph) for fq_node in fq_nodes]
+    q_modules = [item.quantized_module for item in quantizers]
     quantized_weights = [item.quantized_module.weight for item in quantizers]
     b = 1
     for quantizer, fq_parametres in zip(quantizers, inputs[1::2]):
