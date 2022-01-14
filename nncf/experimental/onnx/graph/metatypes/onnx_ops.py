@@ -105,5 +105,5 @@ class ResizeMetatype(ONNXOpMetatype):
     op_names = ['Resize']
 
 
-GENERAL_WIGHT_LAYER_METATYPES = [ConvolutionMetatype,
-                                 LinearMetatype]
+GENERAL_WEIGHT_LAYER_METATYPES = [ConvolutionMetatype,
+                                  LinearMetatype]
