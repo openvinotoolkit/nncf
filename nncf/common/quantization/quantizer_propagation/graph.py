@@ -753,6 +753,10 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
         return retval
 
     def check_status_for_output_nodes(self, from_node_key: str) -> 'TransitionStatus':
+        """
+        Checks that all branches outgoing from the branching node can be quantized
+        (They do not contain an output that should not be quantized).
+        """
         from nncf.common.quantization.quantizer_propagation.solver import TransitionStatus
 
         def traverse_fn(curr_node_key: str) -> TransitionStatus:
