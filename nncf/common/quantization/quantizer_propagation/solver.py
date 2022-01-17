@@ -54,7 +54,6 @@ from nncf.common.utils.debug import is_debug
 from nncf.common.utils.helpers import matches_any
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.common.graph.operator_metatypes import UnknownMetatype
-from nncf.common.graph.operator_metatypes import OUTPUT_NOOP_METATYPES
 
 
 class TransitionStatus(Enum):
