@@ -1,5 +1,6 @@
 from nncf.common.graph.patterns import GraphPattern
 from nncf.common.graph.patterns import HWFusedPatterns
+from nncf.tensorflow.graph.metatypes.tf_ops import TFIdentityOpMetatype
 from nncf.tensorflow.graph.pattern_operations import ATOMIC_ACTIVATIONS_OPERATIONS
 from nncf.tensorflow.graph.pattern_operations import BATCH_NORMALIZATION_OPERATIONS
 from nncf.tensorflow.graph.pattern_operations import ELEMENTWISE_OPERATIONS
@@ -32,7 +33,7 @@ def _get_tf_hw_fused_patterns() -> HWFusedPatterns:
     any_bn_act_combo = batch_norm | activations | batch_norm_activations_permutation
 
     identity = GraphPattern()
-    identity.add_node(type=['Identity'], label='IDENTITY')
+    identity.add_node(type=TFIdentityOpMetatype.get_all_aliases(), label='IDENTITY')
     linear_ops_maybe_followed_by_identity = linear_ops | (linear_ops + identity)
 
     agnostic_ops = GraphPattern()

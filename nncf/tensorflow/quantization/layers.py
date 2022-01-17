@@ -85,7 +85,10 @@ class FakeQuantize(tf.keras.layers.Layer):
 
     def call(self, inputs, training=None):
         training = self._get_training_value(training)
-        return self._quantizer(inputs, self._quantizer_weights, training)
+        try:
+            return self._quantizer(inputs, self._quantizer_weights, training)
+        except:
+            raise RuntimeError('int input to {}, {}'.format(self._op_name, self.name))
 
     def register_hook_pre_quantizer(self, hook):
         return self._quantizer.register_hook_pre_call(hook)

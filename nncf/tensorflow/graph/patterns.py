@@ -12,6 +12,8 @@
 """
 
 from nncf.common.graph.patterns import GraphPattern
+from nncf.tensorflow.graph.metatypes.tf_ops import TFAddOpMetatype, TFReluOpMetatype
+from nncf.tensorflow.graph.metatypes.tf_ops import TFMulOpMetatype
 
 
 def create_h_sigmoid_act() -> GraphPattern:
@@ -21,9 +23,9 @@ def create_h_sigmoid_act() -> GraphPattern:
     pattern = GraphPattern()
 
     input_pattern_node = pattern.add_node(label='*INPUT_NODE*', type=GraphPattern.NON_PATTERN_NODE_TYPE)
-    add_node = pattern.add_node(label='ADD', type='AddV2')
-    relu_node = pattern.add_node(label='RELU', type='ReLU')
-    mul_node = pattern.add_node(label='TF_OP_MUL', type='Mul')
+    add_node = pattern.add_node(label='ADD', type=TFAddOpMetatype.get_all_aliases())
+    relu_node = pattern.add_node(label='RELU', type=TFReluOpMetatype.get_all_aliases())
+    mul_node = pattern.add_node(label='TF_OP_MUL', type=TFMulOpMetatype.get_all_aliases())
 
     pattern.add_edge(input_pattern_node, add_node)
     pattern.add_edge(add_node, relu_node)
@@ -63,9 +65,9 @@ def create_h_swish_act() -> GraphPattern:
     pattern = GraphPattern()
     input_pattern_node = pattern.add_node(label='*INPUT_NODE*', type=GraphPattern.NON_PATTERN_NODE_TYPE)
 
-    add_node = pattern.add_node(label='ADD', type='AddV2')
-    relu_node = pattern.add_node(label='RELU', type='ReLU')
-    mul_node = pattern.add_node(label='TF_OP_MUL', type='Mul')
+    add_node = pattern.add_node(label='ADD', type=TFAddOpMetatype.get_all_aliases())
+    relu_node = pattern.add_node(label='RELU', type=TFReluOpMetatype.get_all_aliases())
+    mul_node = pattern.add_node(label='TF_OP_MUL', type=TFMulOpMetatype.get_all_aliases())
 
     pattern.add_edge(input_pattern_node, add_node)
     pattern.add_edge(add_node, relu_node)

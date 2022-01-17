@@ -15,7 +15,7 @@ from tensorflow.python.keras import backend
 
 try:
     from tensorflow.python.keras.engine import keras_tensor
-    keras_tensor.disable_keras_tensors()
+    # keras_tensor.disable_keras_tensors()
 except ImportError:
     keras_tensor = None
 
