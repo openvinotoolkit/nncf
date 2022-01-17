@@ -14,10 +14,11 @@
 from copy import deepcopy
 from functools import partial
 from typing import Callable
-from typing import List
-from typing import Optional
 from typing import Set
 from typing import Tuple
+
+from typing import List
+from typing import Optional
 
 from torch import nn
 
@@ -79,19 +80,27 @@ def replace_modules_by_nncf_modules(model: nn.Module,
                                     eval_op_scopes: Optional[List[Scope]] = None,
                                     reset: Optional[bool] = False) -> Tuple[nn.Module, List[Scope]]:
     """
-    Function to replace target children modules inside given `model` to
-    the nncf modules enumerated in NNCF_MODULE_DICT and UNWRAPPED_USER_MODULES.
-    Does not replace modules inside already replaced modules.
-    Does not replace target module if it is not inside non target module.
+    Replaces certain modules in the model hierarchy with NNCF-wrapped versions of the same modules.
+    The modules to be replaced are statically defined in `nncf.torch.layers.NNCF_MODULES_DICT` and dynamically
+    extended if the user utilized the `nncf.torch.layers.register_module` decorator to enable their custom
+    weighted modules.
+    Does not replace sub-modules of an already replaced module. Modules targeted via "target_scopes" will not
+    be replaced if they are not already in another module targeted by "target_scopes".
+    Note: for `ignored_scopes`, `target_scopes` and `eval_op_scopes`, the scopes
+    in this list must correspond to the *storage* scope, i.e. reflect the hierarchy of the modules in the Python object,
+    rather than correspond to the way that the underlying forward operations were executed in, which is different
+    from the way other `ignored_scopes` and `target_scopes` are written in NNCF.
 
-    :param model: Model to replace internal modules.
-    :param ignored_scopes: List of scope all modules from that should be ignored.
-    :param target_scopes: List of scope all modules from that could be replaced.
-        If present, all other scopes become ignored. Has lower priority that ignored_scopes.
-    :param eval_op_scopes: List of scopes of modules that are executed in evaluation mode only.
-    :param reset: Should reset wrapped nncf modules after replacement or not.
-    :returns: Tuple of a module with target children modules replaced according to `replace_fn`
-        and list of scopes that contain replaced target children modules.
+    :param model: The model in which the modules should be replaced.
+    :param ignored_scopes: The list of string representations of the scopes that should be ignored during replacement,
+     i.e. in which the replacement should not occur (corresponds to a "denylist").
+    :param target_scopes: The list of string representations of the scopes so that the replacement should occur only
+     in these scopes (corresponds to an "allowlist")
+    :param eval_op_scopes: The list of the scopes for the modules that are executed in evaluation mode (i.e. the modules
+    that end up having a scope not in this list will be considered train-only and will not be replaced).
+    :param reset: Whether to reset the NNCF-wrapped modules as a result of this function if the model already contains
+     those.
+    :return: The model with the modules replaced and the list of storage scopes for the modules that were replaced.
     """
 
     replace_fn = partial(replace_module_by_nncf_module)
@@ -130,25 +139,12 @@ def replace_modules(model: nn.Module,
                     eval_op_scopes: Optional[List[Scope]] = None,
                     reset: Optional[bool] = False) -> Tuple[nn.Module, List[Scope]]:
     """
-    Recursive function to replace target children modules inside given `model` according to
-    given `replace_fn` function. Does not replace modules inside already replaced modules.
-    Does not replace target module if it is not inside non target module.
-
-    :param model: Model to replace internal modules.
+    Recursive helper for the `replace_modules_by_nncf_modules`. See docstring of
+    `replace_modules_by_nncf_modules` for a description of the majority of the parameters.
+    :param model: Model where the replacing will take place.
     :param replace_fn: Callable that returns updated modules for modules
         that should be replaced.
-    :param stop_branching_fn: Condition whether to stop recursive call for given model.
-    :param affected_scopes: Recursive buffer for a list of scopes that contain modules
-        that was replaced during function execution.
-    :param ignored_scopes: List of scope all modules from that should be ignored.
-    :param target_scopes: List of scope all modules from that could be replaced.
-        If present, all other scopes become ignored. Has lower priority that ignored_scopes.
-    :param memo: Set of all seen before modules.
-    :param current_scope: List of all scope elements of given module.
-    :param eval_op_scopes: List of scopes of modules that are executed in evaluation mode only.
-    :param reset: Should reset wrapped nncf modules after replacement or not.
-    :returns: Tuple of a module with target children modules replaced according to `replace_fn`
-        and list of scopes that contain replaced target children modules.
+    :param stop_branching_fn: Predicate for when to stop recursion call for given model.
     """
 
     if memo is None:
@@ -156,10 +152,10 @@ def replace_modules(model: nn.Module,
         current_scope = Scope()
         current_scope.push(ScopeElement(model.__class__.__name__))
 
-    if model in memo:
+    if current_scope in memo:
         return model, affected_scopes
 
-    memo.add(model)
+    memo.add(current_scope)
     for name, module in model.named_children():
         if module is None:
             continue

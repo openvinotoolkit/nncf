@@ -795,7 +795,7 @@ def test_insertion_point_target_point_translation():
 
 class IndirectModuleCaller(nn.Module):
     def __init__(self, module_for_indirection: torch.nn.Module):
-        super(IndirectModuleCaller, self).__init__()
+        super().__init__()
 
         self.module_for_indirection = module_for_indirection
         self.conv_immediate = nn.Conv2d(32, 32, 3, 1, 1, bias=False)
@@ -808,7 +808,7 @@ class IndirectModuleCaller(nn.Module):
 
 class Backbone(nn.Module):
     def __init__(self, in_channels=3):
-        super(Backbone, self).__init__()
+        super().__init__()
         self.in_channels = in_channels
 
         # This is another source of indirection - a module whose reference then
@@ -829,7 +829,7 @@ class Backbone(nn.Module):
 
 class ModelWithIndirectModuleCallBranch(nn.Module):
     def __init__(self, in_channels=3):
-        super(ModelWithIndirectModuleCallBranch, self).__init__()
+        super().__init__()
 
         self.in_channels = in_channels
 
