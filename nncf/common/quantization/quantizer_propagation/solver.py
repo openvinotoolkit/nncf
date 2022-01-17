@@ -54,6 +54,7 @@ from nncf.common.utils.debug import is_debug
 from nncf.common.utils.helpers import matches_any
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.common.graph.operator_metatypes import UnknownMetatype
+from nncf.common.graph.operator_metatypes import OUTPUT_NOOP_METATYPES
 
 
 class TransitionStatus(Enum):
@@ -484,7 +485,7 @@ class QuantizerPropagationSolver:
         # pylint:disable=too-many-branches
         # pylint:disable=too-many-statements
         curr_node_key = curr_prop_quantizer.current_location_node_key
-        curr_node = quant_prop_graph.nodes[curr_prop_quantizer.current_location_node_key]
+        curr_node = quant_prop_graph.nodes[curr_node_key]
         curr_node_type = curr_node[QuantizerPropagationStateGraph.NODE_TYPE_NODE_ATTR]
         assert QuantizerPropagationStateGraph.is_insertion_point(curr_node_type)
 
@@ -1024,7 +1025,7 @@ class QuantizerPropagationSolver:
         if dom_op_quantizers:
             return TransitionStatus.SHOULD_WAIT_FOR_MERGE
 
-        return TransitionStatus.SHOULD_TRANSITION
+        return quant_prop_graph.check_status_for_output_nodes(branching_node_key)
 
     def _check_affecting_quantizers_in_common_path(self,
                                                    affecting_quantizers: List[PropagatingQuantizer],
