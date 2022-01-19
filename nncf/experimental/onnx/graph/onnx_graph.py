@@ -12,13 +12,11 @@
 """
 
 from typing import List
-from typing import TypeVar
 
 import onnx
+from onnx import NodeProto
+from onnx import ValueInfoProto
 import numpy as np
-
-NodeType = TypeVar('NodeType')
-InitializerType = TypeVar('InitializerType')
 
 
 # pylint: disable=no-member
@@ -32,7 +30,7 @@ class ONNXGraph:
         self.onnx_model = onnx_model
         self.model_with_shapes = onnx.shape_inference.infer_shapes(self.onnx_model)
 
-    def get_nodes_by_output(self, output_name: str) -> List[NodeType]:
+    def get_nodes_by_output(self, output_name: str) -> List[NodeProto]:
         """
         Returns all nodes that have output with the name 'output_name'.
         """
@@ -43,7 +41,7 @@ class ONNXGraph:
                 output.append(node)
         return output
 
-    def get_nodes_by_input(self, input_name: str) -> List[NodeType]:
+    def get_nodes_by_input(self, input_name: str) -> List[NodeProto]:
         """
         Returns all nodes that have input with the name 'output_name'.
         """
@@ -54,25 +52,25 @@ class ONNXGraph:
                 output.append(node)
         return output
 
-    def get_all_nodes(self) -> List[NodeType]:
+    def get_all_nodes(self) -> List[NodeProto]:
         """
         Returns all nodes of onnx model.
         """
         return self.onnx_model.graph.node
 
-    def get_all_model_inputs(self) -> List[InitializerType]:
+    def get_all_model_inputs(self) -> List[ValueInfoProto]:
         """
         Returns all model inputs.
         """
-        return self.onnx_model.graph.input
+        return list(self.onnx_model.graph.input)
 
-    def get_all_model_outputs(self) -> List[InitializerType]:
+    def get_all_model_outputs(self) -> List[ValueInfoProto]:
         """
         Returns all model outputs.
         """
-        return self.onnx_model.graph.output
+        return list(self.onnx_model.graph.output)
 
-    def get_all_node_inputs(self, node_name: str) -> List[InitializerType]:
+    def get_all_node_inputs(self, node_name: str) -> List[ValueInfoProto]:
         """
         Returns all node input edges.
         """
@@ -81,9 +79,9 @@ class ONNXGraph:
         for node in graph.node:
             if node.name == node_name:
                 node_inputs = node.input
-        return node_inputs
+        return list(node_inputs)
 
-    def get_all_node_outputs(self, node_name: str) -> List[InitializerType]:
+    def get_all_node_outputs(self, node_name: str) -> List[ValueInfoProto]:
         """
         Returns all node input edges.
         """
@@ -92,9 +90,9 @@ class ONNXGraph:
         for node in graph.node:
             if node.name == node_name:
                 node_outputs = node.output
-        return node_outputs
+        return list(node_outputs)
 
-    def get_nodes_by_type(self, node_type: str) -> List[NodeType]:
+    def get_nodes_by_type(self, node_type: str) -> List[NodeProto]:
         """
         Returns all nodes in the model that have type equal to 'node_type'.
         """
@@ -105,7 +103,7 @@ class ONNXGraph:
                 output.append(node)
         return output
 
-    def find_weight_input_in_module(self, node_name: str) -> InitializerType:
+    def find_weight_input_in_module(self, node_name: str) -> ValueInfoProto:
         """
         Returns weight Initializaer of the mode with the name 'node_name'.
         """
