@@ -24,8 +24,16 @@ from nncf.experimental.onnx.graph.metatypes.onnx_ops import ConstantMetatype
 
 
 class GraphConverter:
+    """
+    Builds the NNCFGraph from an ONNX model
+    """
+
     @staticmethod
     def create_nncf_graph(onnx_model: ModelProto) -> NNCFGraph:
+        """
+        Adds all ONNX nodes from 'onnx_model' and then adds thr special input_nodes and output_nodes.
+        """
+
         nncf_graph = NNCFGraph()
         onnx_graph = ONNXGraph(onnx_model)
         for node in onnx_graph.get_all_nodes():
