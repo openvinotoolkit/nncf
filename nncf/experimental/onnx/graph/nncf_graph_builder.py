@@ -1,3 +1,16 @@
+"""
+ Copyright (c) 2022 Intel Corporation
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+      http://www.apache.org/licenses/LICENSE-2.0
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+"""
+
 # pylint: disable=no-member
 from onnx import ModelProto
 from google.protobuf.json_format import MessageToDict
@@ -32,8 +45,8 @@ class GraphConverter:
             output_node_id = output_node.node_id
             outputs = onnx_graph.get_all_node_outputs(output_node.node_name)
             for output in outputs:
-                nodes = onnx_graph.find_nodes_by_input(output)
-                shape = onnx_graph.find_node_output_shape(output)
+                nodes = onnx_graph.get_nodes_by_input(output)
+                shape = onnx_graph.get_node_output_shape(output)
                 for in_node in nodes:
                     in_node_id = nncf_graph.get_node_by_name(in_node.name).node_id
                     input_counter[in_node_id] = input_counter.get(in_node_id, -1) + 1
@@ -47,7 +60,7 @@ class GraphConverter:
                         dtype=Dtype.FLOAT
                     )
         # Add Input Nodes
-        for i, _input in enumerate(onnx_model.graph.input):
+        for i, _input in enumerate(onnx_graph.get_all_model_inputs()):
             m_dict = MessageToDict(_input)
             dim_info = m_dict.get("type").get("tensorType").get("shape").get("dim")
             input_shape = [int(d.get("dimValue")) for d in dim_info]
@@ -58,7 +71,7 @@ class GraphConverter:
                                                       NNCFGraphNodeType.INPUT_NODE),
                                                   layer_attributes=None)
             input_name = _input.name
-            to_nodes = onnx_graph.find_nodes_by_input(input_name)
+            to_nodes = onnx_graph.get_nodes_by_input(input_name)
             for node in to_nodes:
                 in_node_id = input_node.node_id
                 to_node_id = nncf_graph.get_node_by_name(node.name).node_id
@@ -73,7 +86,7 @@ class GraphConverter:
                     dtype=Dtype.FLOAT
                 )
         # Add Output Nodes
-        for i, _output in enumerate(onnx_model.graph.output):
+        for i, _output in enumerate(onnx_graph.get_all_model_outputs()):
             m_dict = MessageToDict(_output)
             dim_info = m_dict.get("type").get("tensorType").get("shape").get("dim")
             output_shape = [int(d.get("dimValue")) for d in dim_info]
@@ -85,7 +98,7 @@ class GraphConverter:
                                                    layer_attributes=None)
 
             output_name = _output.name
-            to_nodes = onnx_graph.find_nodes_by_output(output_name)
+            to_nodes = onnx_graph.get_nodes_by_output(output_name)
             for node in to_nodes:
                 out_node_id = output_node.node_id
                 to_node_id = nncf_graph.get_node_by_name(node.name).node_id
