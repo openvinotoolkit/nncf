@@ -11,8 +11,7 @@
  limitations under the License.
 """
 
-# pylint: disable=no-member
-from onnx import ModelProto
+from onnx import ModelProto  # pylint: disable=no-member
 from google.protobuf.json_format import MessageToDict
 
 from nncf.common.graph import NNCFGraph
