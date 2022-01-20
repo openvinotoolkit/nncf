@@ -453,12 +453,14 @@ def test_overflow_fix_quantization_export_with_middle_quants(tmp_path, quantizat
     config["compression"]["weights"] = {"mode": quantization_mode}
     config["input_info"]["sample_size"] = sample_size
 
-    compressed_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
+    _, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
 
     quantizers = compression_ctrl.weight_quantizers.values()
     for quantizer in quantizers:
-        input_low, quant_len, levels = set_parameters_to_quantizer_and_get_attrs(quantizer.quantizer_module_ref, parameters_to_set)
-        ref_weights = generate_middle_quants(list(quantizer.quantized_module.weight.size()), input_low, quant_len, levels)
+        input_low, quant_len, levels = set_parameters_to_quantizer_and_get_attrs(
+            quantizer.quantizer_module_ref, parameters_to_set)
+        ref_weights = generate_middle_quants(list(quantizer.quantized_module.weight.size()),
+                                             input_low, quant_len, levels)
         quantizer.quantized_module.weight = nn.Parameter(ref_weights)
 
     onnx_checkpoint_path = str(tmp_path / 'two_conv_model_int8.onnx')
@@ -470,7 +472,7 @@ def test_overflow_fix_quantization_export_with_middle_quants(tmp_path, quantizat
     inputs = [get_all_inputs_for_graph_node(fq_node, model_onnx.graph) for fq_node in fq_nodes]
 
     for quantizer, fq_parametres in zip(quantizers, inputs[1::2]):
-        tensor_weight, input_output_low, input_output_high = list(fq_parametres.values())
+        tensor_weight, _, __ = list(fq_parametres.values())
         # Quantize weights as they are exported quantized
         quantized_weights = quantizer.quantizer_module_ref(quantizer.quantized_module.weight).detach()
 

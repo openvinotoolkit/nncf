@@ -205,16 +205,17 @@ def test_are_quantized_weights_exported_correct(tmp_path):
         "sample_size": [1, 1, 20, 20]
     }})
     fill_params_of_model_by_normal(model)
-    compressed_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, nncf_config)
+    _, compression_ctrl = create_compressed_model_and_algo_for_test(model, nncf_config)
 
     quantizers = compression_ctrl.weight_quantizers.values()
     onnx_checkpoint_path = str(tmp_path / 'model.onnx')
     compression_ctrl.export_model(onnx_checkpoint_path, input_names=['input'])
     onnx_model = onnx.load(onnx_checkpoint_path)
     fq_nodes = get_nodes_by_type(onnx_model, 'FakeQuantize')
+    # pylint:disable=no-member
     inputs = [get_all_inputs_for_graph_node(fq_node, onnx_model.graph) for fq_node in fq_nodes]
     for quantizer, fq_parametres in zip(quantizers, inputs[1::2]):
-        tensor_weight, input_output_low, input_output_high = list(fq_parametres.values())
+        tensor_weight, _, __ = list(fq_parametres.values())
         # Quantize weights as they are exported quantized
         quantized_weights = quantizer.quantizer_module_ref(quantizer.quantized_module.weight).detach()
         assert np.allclose(tensor_weight, np.array(quantized_weights))
