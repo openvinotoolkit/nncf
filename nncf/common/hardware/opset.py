@@ -39,6 +39,7 @@ class HWConfigOpName:
     MAXPOOL = 'MaxPool'
     REDUCEMAX = 'ReduceMax'
     REDUCESUM = 'ReduceSum'
+    REDUCEL2 = 'ReduceL2'
     INTERPOLATE = 'Interpolate'
     MVN = 'MVN'
     RESHAPE = 'Reshape'

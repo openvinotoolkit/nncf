@@ -24,6 +24,7 @@ import torch
 
 from nncf.torch.utils import get_model_device
 from tests.torch.test_models.synthetic import ConvRelu6HSwishHSigmoid
+from tests.torch.test_models.synthetic import MMDivConv
 from tests.torch.test_models.synthetic import MatMulDivConv
 from torch import nn
 import torch.nn.functional as F
@@ -634,6 +635,8 @@ SYNTHETIC_MODEL_DESC_LIST = [
     TensorBinaryMethodsDesc(model_name='MatMul', tensor_method='matmul'),
 
     SingleLayerModelDesc(model_name='Mean', layer=torch.mean),
+    SingleLayerModelDesc(model_name='normalize', layer=partial(torch.nn.functional.normalize, p=2),
+                         input_sample_sizes=([1, 1, 1, 1], )),
 
     TensorUnaryMethodsDesc(tensor_method='round'),
 
@@ -724,6 +727,7 @@ SYNTHETIC_MODEL_DESC_LIST = [
                                                                   "filler": "zeros"}),
     GeneralModelDesc(model_builder=MultiOutputSameTensorModel),
     GeneralModelDesc(model_builder=MatMulDivConv, input_sample_sizes=([1, 1, 5, 5], [1, 1, 5, 5])),
+    GeneralModelDesc(model_builder=MMDivConv, input_sample_sizes=([5, 5], [5, 5])),
     GeneralModelDesc(model_builder=ConvRelu6HSwishHSigmoid, input_sample_sizes=([1, 1, 5, 5],))
 ]
 
