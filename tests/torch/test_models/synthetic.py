@@ -239,6 +239,18 @@ class MatMulDivConv(nn.Module):
         return self.conv(z)
 
 
+class MMDivConv(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.conv = create_conv(1, 1, 1, 2)
+
+    def forward(self, x: torch.Tensor, y: torch.Tensor):
+        z = torch.mm(x, y) / 2
+        z = z.unsqueeze(0)
+        z = z.unsqueeze(0)
+        return self.conv(z)
+
+
 class ConvRelu6HSwishHSigmoid(nn.Module):
     def __init__(self):
         super().__init__()
