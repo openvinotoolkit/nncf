@@ -1,5 +1,7 @@
 import numpy as np
 import onnx
+
+
 # pylint: disable=no-member
 
 def create_initializer_tensor(name: str, tensor_array: np.ndarray,
@@ -208,5 +210,49 @@ class MultiInputOutputModel(ONNXReferenceModel):
             initializer=[],
         )
 
-        model = onnx.helper.make_model(graph_def, producer_name="onnx-example")
+        model = onnx.helper.make_model(graph_def)
         super().__init__(model, 'multi_input_output_model.dot')
+
+
+class ModelWithIntEdges(ONNXReferenceModel):
+    def __init__(self):
+        model_input_name_1 = "X_1"
+        X_1 = onnx.helper.make_tensor_value_info(model_input_name_1,
+                                                 onnx.TensorProto.FLOAT,
+                                                 [1, 6, 3, 3])
+
+        model_output_name_1 = "Y_1"
+        Y_1 = onnx.helper.make_tensor_value_info(model_output_name_1,
+                                                 onnx.TensorProto.FLOAT,
+                                                 [1, 6, 3, 3])
+
+        shape_node_output_name = 'shape_output'
+        # Output is int64
+        shape_node = onnx.helper.make_node(
+            name="Shape1",
+            op_type="Shape",
+            inputs=[
+                model_input_name_1
+            ],
+            outputs=[shape_node_output_name]
+        )
+
+        constant_node = onnx.helper.make_node(
+            name="Constant1",
+            op_type="ConstantOfShape",
+            inputs=[
+                shape_node_output_name
+            ],
+            outputs=[model_output_name_1]
+        )
+
+        graph_def = onnx.helper.make_graph(
+            nodes=[shape_node, constant_node],
+            name="MultiInputOutputNet",
+            inputs=[X_1],
+            outputs=[Y_1],
+            initializer=[],
+        )
+
+        model = onnx.helper.make_model(graph_def)
+        super().__init__(model, 'int_edges_model.dot')

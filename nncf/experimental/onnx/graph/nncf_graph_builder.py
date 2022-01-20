@@ -18,18 +18,12 @@ from onnx import ModelProto  # pylint: disable=no-name-in-module
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph.definitions import NNCFGraphNodeType
 from nncf.common.graph.layer_attributes import Dtype
+from nncf.common.graph.definitions import MODEL_INPUT_OP_NAME
+from nncf.common.graph.definitions import MODEL_OUTPUT_OP_NAME
 
 from nncf.experimental.onnx.graph.onnx_graph import ONNXGraph
 from nncf.experimental.onnx.graph.metatypes.onnx_ops import ONNX_OPERATION_METATYPES
 from nncf.experimental.onnx.graph.metatypes.onnx_ops import ConstantMetatype
-
-
-def convert_onnx_dtype_to_nncf_dtype(onnx_dtype: str):
-    convertation_map = {
-        "FLOAT": "float",
-        "INT8": "int"
-    }
-    return convertation_map[onnx_dtype]
 
 
 class GraphConverter:
@@ -64,7 +58,7 @@ class GraphConverter:
                 nodes = onnx_graph.get_nodes_by_input(output)
                 shape = onnx_graph.get_node_output_shape(output)
                 onnx_dtype = onnx_graph.get_node_output_dtype(output)
-                nncf_dtype = convert_onnx_dtype_to_nncf_dtype(onnx_dtype)
+                nncf_dtype = GraphConverter.convert_onnx_dtype_to_nncf_dtype(onnx_dtype)
                 for in_node in nodes:
                     in_node_id = nncf_graph.get_node_by_name(in_node.name).node_id
                     input_counter[in_node_id] += 1
@@ -79,17 +73,8 @@ class GraphConverter:
                     )
         # Add Input Nodes
         for i, _input in enumerate(onnx_graph.get_all_model_inputs()):
-            tensor_type = _input.type.tensor_type
-            input_shape = []
-            if tensor_type.HasField("shape"):
-                for d in tensor_type.shape.dim:
-                    if d.HasField("dim_value"):
-                        input_shape.append(int(d.dim_value))
-                    else:
-                        raise RuntimeError('There is no integer value in model Input dimension')
-            else:
-                raise RuntimeError('There is no shape in model Inputs')
-            input_node = nncf_graph.add_nncf_node(node_name='nncf_input_node_' + str(i),
+            input_shape = onnx_graph.get_tensor_shape(_input)
+            input_node = nncf_graph.add_nncf_node(node_name=MODEL_INPUT_OP_NAME + '_' + str(i),
                                                   node_type=NNCFGraphNodeType.INPUT_NODE,
                                                   node_metatype=ONNX_OPERATION_METATYPES.
                                                   get_operator_metatype_by_op_name(
@@ -103,28 +88,19 @@ class GraphConverter:
                 input_counter[in_node_id] += 1
                 output_counter[to_node_id] += 1
                 onnx_dtype = onnx_graph.get_node_input_dtype(input_name)
-                nncf_dtype = convert_onnx_dtype_to_nncf_dtype(onnx_dtype)
+                nncf_dtype = GraphConverter.convert_onnx_dtype_to_nncf_dtype(onnx_dtype)
                 nncf_graph.add_edge_between_nncf_nodes(
                     from_node_id=input_node.node_id,
                     to_node_id=to_node_id,
                     tensor_shape=input_shape,
                     input_port_id=input_counter[in_node_id],
                     output_port_id=output_counter[to_node_id],
-                    dtype=Dtype(nncf_dtype)
+                    dtype=nncf_dtype
                 )
         # Add Output Nodes
         for i, _output in enumerate(onnx_graph.get_all_model_outputs()):
-            tensor_type = _output.type.tensor_type
-            output_shape = []
-            if tensor_type.HasField("shape"):
-                for d in tensor_type.shape.dim:
-                    if d.HasField("dim_value"):
-                        output_shape.append(int(d.dim_value))
-                    else:
-                        raise RuntimeError('There is no integer value in model Output dimension')
-            else:
-                raise RuntimeError('There is no shape in model Outputs')
-            output_node = nncf_graph.add_nncf_node(node_name='nncf_output_node_' + str(i),
+            output_shape = onnx_graph.get_tensor_shape(_output)
+            output_node = nncf_graph.add_nncf_node(node_name=MODEL_OUTPUT_OP_NAME + '_' + str(i),
                                                    node_type=NNCFGraphNodeType.OUTPUT_NODE,
                                                    node_metatype=ONNX_OPERATION_METATYPES.
                                                    get_operator_metatype_by_op_name(
@@ -139,14 +115,24 @@ class GraphConverter:
                 input_counter[out_node_id] += 1
                 output_counter[to_node_id] += 1
                 onnx_dtype = onnx_graph.get_node_input_dtype(output_name)
-                nncf_dtype = convert_onnx_dtype_to_nncf_dtype(onnx_dtype)
+                nncf_dtype = GraphConverter.convert_onnx_dtype_to_nncf_dtype(onnx_dtype)
                 nncf_graph.add_edge_between_nncf_nodes(
                     from_node_id=to_node_id,
                     to_node_id=output_node.node_id,
                     tensor_shape=output_shape,
                     input_port_id=input_counter[out_node_id],
                     output_port_id=output_counter[to_node_id],
-                    dtype=Dtype(nncf_dtype)
+                    dtype=nncf_dtype
                 )
 
         return nncf_graph
+
+    @staticmethod
+    def convert_onnx_dtype_to_nncf_dtype(onnx_dtype: str) -> Dtype:
+        conversation_map = {
+            "FLOAT": "float",
+            "FLOAT16": "float",
+            "BFLOAT16": "float",
+            "DOUBLE": "float",
+        }
+        return Dtype(conversation_map.get(onnx_dtype, 'int'))

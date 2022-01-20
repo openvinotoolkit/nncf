@@ -29,6 +29,11 @@ class ONNXGraph:
     def __init__(self, onnx_model: onnx.ModelProto):
         self.onnx_model = onnx_model
         self.model_with_shapes = onnx.shape_inference.infer_shapes(self.onnx_model)
+        self.activations_tensors = self.model_with_shapes.graph.value_info
+        inputs = self.model_with_shapes.graph.input
+        outputs = self.model_with_shapes.graph.output
+        self.activations_tensors.extend(inputs)
+        self.activations_tensors.extend(outputs)
 
     def get_nodes_by_output(self, output_name: str) -> List[NodeProto]:
         """
@@ -122,32 +127,36 @@ class ONNXGraph:
                 tensor = onnx.numpy_helper.to_array(init)
         return tensor
 
+    def get_tensor_shape(self, tensor: ValueInfoProto) -> List[int]:
+        """
+        Returns 'tensor' shape.
+        """
+        tensor_type = tensor.type.tensor_type
+        shape = []
+        if tensor_type.HasField("shape"):
+            for d in tensor_type.shape.dim:
+                if d.HasField("dim_value"):
+                    shape.append(int(d.dim_value))
+                else:
+                    raise RuntimeError('There is no integer value in model Input dimension')
+        else:
+            raise RuntimeError('There is no shape in model Inputs')
+        return shape
+
     def get_node_output_shape(self, node_output_name: str) -> List[int]:
         """
         Returns node's output shape with output name equals to node_output_name.
         """
-        shape = []
-        activations_shapes = self.model_with_shapes.graph.value_info
-        inputs = self.model_with_shapes.graph.input
-        outputs = self.model_with_shapes.graph.output
-        activations_shapes.extend(inputs)
-        activations_shapes.extend(outputs)
-        for tensor in activations_shapes:
+        for tensor in self.activations_tensors:
             if tensor.name == node_output_name:
-                for dim in tensor.type.tensor_type.shape.dim:
-                    shape.append(dim.dim_value)
-        return shape
+                return self.get_tensor_shape(tensor)
+        raise RuntimeError('There is no node with such output name')
 
     def get_node_output_dtype(self, node_output_name: str) -> str:
         """
         Returns the output data type of the node with output name equals to node_output_name.
         """
-        activations_shapes = self.model_with_shapes.graph.value_info
-        inputs = self.model_with_shapes.graph.input
-        outputs = self.model_with_shapes.graph.output
-        activations_shapes.extend(inputs)
-        activations_shapes.extend(outputs)
-        for tensor in activations_shapes:
+        for tensor in self.activations_tensors:
             if tensor.name == node_output_name:
                 elem_type = tensor.type.tensor_type.elem_type
                 return onnx.TensorProto.DataType.Name(elem_type)
@@ -157,12 +166,7 @@ class ONNXGraph:
         """
         Returns the input data type of the node with input name equals to node_input_name.
         """
-        activations_shapes = self.model_with_shapes.graph.value_info
-        inputs = self.model_with_shapes.graph.input
-        outputs = self.model_with_shapes.graph.output
-        activations_shapes.extend(inputs)
-        activations_shapes.extend(outputs)
-        for tensor in activations_shapes:
+        for tensor in self.activations_tensors:
             if tensor.name == node_input_name:
                 elem_type = tensor.type.tensor_type.elem_type
                 return onnx.TensorProto.DataType.Name(elem_type)
