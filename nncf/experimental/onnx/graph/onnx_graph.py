@@ -136,11 +136,15 @@ class ONNXGraph:
         if tensor_type.HasField("shape"):
             for d in tensor_type.shape.dim:
                 if d.HasField("dim_value"):
-                    shape.append(int(d.dim_value))
+                    dim_value = d.dim_value
+                    if isinstance(dim_value, int):
+                        shape.append(dim_value)
+                    else:
+                        raise RuntimeError('The tensor has non integer shape.')
                 else:
-                    raise RuntimeError('There is no integer value in model Input dimension')
+                    raise RuntimeError('The tensor does not have dim_value field.')
         else:
-            raise RuntimeError('There is no shape in model Inputs')
+            raise RuntimeError('The tensor does not have shape field')
         return shape
 
     def get_node_output_shape(self, node_output_name: str) -> List[int]:
