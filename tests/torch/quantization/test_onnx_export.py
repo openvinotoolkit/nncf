@@ -23,7 +23,7 @@ from nncf.torch.quantization.layers import PTQuantizerSpec
 from nncf.torch.quantization.layers import QUANTIZATION_MODULES
 from nncf.torch.quantization.layers import QuantizationMode
 from nncf.torch.quantization.layers import QuantizerExportMode
-from tests.torch.helpers import get_nodes_by_type, get_all_inputs_for_graph_node
+from tests.torch.helpers import get_nodes_by_type, get_all_inputs_for_graph_node, fill_params_of_model_by_normal
 from tests.torch.helpers import register_bn_adaptation_init_args
 from tests.torch.helpers import resolve_constant_node_inputs_to_values
 from tests.torch.test_helpers import TwoConvTestModel
@@ -117,6 +117,7 @@ def test_onnx_export_to_quantize_dequantize_per_channel(per_channel: bool,
         logarithm_scale=False,
         narrow_range=False,
         half_range=False,
+        export_quantized=False
     )
 
     q_cls = QUANTIZATION_MODULES.get(qmode)
@@ -203,26 +204,17 @@ def test_are_quantized_weights_exported_correct(tmp_path):
     nncf_config.update({"input_info": {
         "sample_size": [1, 1, 20, 20]
     }})
+    fill_params_of_model_by_normal(model)
     compressed_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, nncf_config)
-    graph = compressed_model.get_graph()
-    # from torchsummary import summary
-    # print(nncf_config['input_info']['sample_size'])
-    # compressed_model.cuda()
-    # summary(compressed_model, tuple(nncf_config['input_info']['sample_size'][1:]))
-    quantizers = list(compression_ctrl.weight_quantizers.values())
+
+    quantizers = compression_ctrl.weight_quantizers.values()
     onnx_checkpoint_path = str(tmp_path / 'model.onnx')
-    print(f'onnx checkpoints path {onnx_checkpoint_path}')
     compression_ctrl.export_model(onnx_checkpoint_path, input_names=['input'])
     onnx_model = onnx.load(onnx_checkpoint_path)
     fq_nodes = get_nodes_by_type(onnx_model, 'FakeQuantize')
     inputs = [get_all_inputs_for_graph_node(fq_node, onnx_model.graph) for fq_node in fq_nodes]
-    q_modules = [item.quantized_module for item in quantizers]
-    quantized_weights = [item.quantized_module.weight for item in quantizers]
-    b = 1
     for quantizer, fq_parametres in zip(quantizers, inputs[1::2]):
         tensor_weight, input_output_low, input_output_high = list(fq_parametres.values())
-
         # Quantize weights as they are exported quantized
         quantized_weights = quantizer.quantizer_module_ref(quantizer.quantized_module.weight).detach()
-        a = quantizer.quantized_module.weight
         assert np.allclose(tensor_weight, np.array(quantized_weights))

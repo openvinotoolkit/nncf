@@ -32,7 +32,8 @@ def test_is_correct_overflow_issue_levels(num_bits, mode, scale_shape, half_rang
         narrow_range=False,
         scale_shape=scale_shape,
         logarithm_scale=False,
-        half_range=half_range)
+        half_range=half_range,
+        export_quantized=True)
 
     quantizer = SymmetricQuantizer(qspec) if mode == QuantizationMode.SYMMETRIC else AsymmetricQuantizer(qspec)
 
@@ -445,33 +446,35 @@ def generate_middle_quants(size: List[int], input_low: np.ndarray, quant_len: np
 @pytest.mark.parametrize("quantization_mode, parameters_to_set",
                          [("symmetric", {"scale": 1.}), ("asymmetric", {"input_low": -1.,
                                                                         "input_range": 3.})])
-def test_overflow_fix_quantization_export_with_middle_quants(quantization_mode, parameters_to_set):
-    model = nn.Sequential(nn.Linear(in_features=128, out_features=100))
-    sample_size = [1, 1, 100, 128]
+def test_overflow_fix_quantization_export_with_middle_quants(tmp_path, quantization_mode, parameters_to_set):
+    model = TwoConvTestModel()
+    sample_size = [1, 1, 20, 20]
     config = get_config_for_export_mode(False)
     config["compression"]["weights"] = {"mode": quantization_mode}
     config["input_info"]["sample_size"] = sample_size
 
     compressed_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
-    weight_quantizer = list(compression_ctrl.weight_quantizers.values())[0].quantizer_module_ref
 
-    input_low, quant_len, levels = set_parameters_to_quantizer_and_get_attrs(weight_quantizer, parameters_to_set)
+    quantizers = compression_ctrl.weight_quantizers.values()
+    for quantizer in quantizers:
+        input_low, quant_len, levels = set_parameters_to_quantizer_and_get_attrs(quantizer.quantizer_module_ref, parameters_to_set)
+        ref_weights = generate_middle_quants(list(quantizer.quantized_module.weight.size()), input_low, quant_len, levels)
+        quantizer.quantized_module.weight = nn.Parameter(ref_weights)
 
-    nncf_linear_module = list(compressed_model.get_nncf_wrapped_model())[0]
-    ref_weights = generate_middle_quants(list(nncf_linear_module.weight.size()), input_low, quant_len, levels)
-
-    nncf_linear_module.weight = nn.Parameter(ref_weights)
-
-    compression_ctrl.export_model('linear_model.onnx')
-    model_onnx = onnx.load('linear_model.onnx')
+    onnx_checkpoint_path = str(tmp_path / 'two_conv_model_int8.onnx')
+    compression_ctrl.export_model(onnx_checkpoint_path)
+    model_onnx = onnx.load(onnx_checkpoint_path)
 
     fq_nodes = get_nodes_by_type(model_onnx, 'FakeQuantize')
     # pylint:disable=no-member
     inputs = [get_all_inputs_for_graph_node(fq_node, model_onnx.graph) for fq_node in fq_nodes]
-    act_weights = list(inputs[1].values())[0]
 
-    diff = (weight_quantizer(ref_weights).detach() - act_weights).abs()
+    for quantizer, fq_parametres in zip(quantizers, inputs[1::2]):
+        tensor_weight, input_output_low, input_output_high = list(fq_parametres.values())
+        # Quantize weights as they are exported quantized
+        quantized_weights = quantizer.quantizer_module_ref(quantizer.quantized_module.weight).detach()
 
-    if (diff > 1e-6).any():
-        assert ((diff[diff > 1e-6] - quant_len).abs() < 1e-6).all(), 'quants completely different!'
-        assert False, f'quant moved at flatten positions {torch.where(diff.flatten() > 1e-6)}'
+        diff = (quantized_weights.detach() - tensor_weight).abs()
+        if (diff > 1e-6).any():
+            assert ((diff[diff > 1e-6] - quant_len).abs() < 1e-6).all(), 'quants completely different!'
+            assert False, f'quant moved at flatten positions {torch.where(diff.flatten() > 1e-6)}'

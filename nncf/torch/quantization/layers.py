@@ -59,17 +59,19 @@ class PTQuantizerSpec(QuantizerSpec):
                  half_range: bool,
                  scale_shape: Tuple[int, ...],
                  logarithm_scale: bool,
+                 export_quantized: bool = False,
                  compression_lr_multiplier: float = None):
         super().__init__(num_bits, mode, signedness_to_force, narrow_range, half_range)
         self.scale_shape = scale_shape
         self.logarithm_scale = logarithm_scale
         self.compression_lr_multiplier = compression_lr_multiplier
-
+        self.export_quantized = export_quantized
 
     @classmethod
     def from_config(cls, qconfig: QuantizerConfig, narrow_range: bool,
                     half_range: bool, scale_shape: Tuple[int],
-                    logarithm_scale: bool, compression_lr_multiplier: float) -> 'PTQuantizerSpec':
+                    logarithm_scale: bool, export_quantized: bool,
+                    compression_lr_multiplier: float) -> 'PTQuantizerSpec':
         return cls(qconfig.num_bits,
                    qconfig.mode,
                    qconfig.signedness_to_force,
@@ -77,6 +79,7 @@ class PTQuantizerSpec(QuantizerSpec):
                    half_range,
                    scale_shape,
                    logarithm_scale,
+                   export_quantized,
                    compression_lr_multiplier)
 
 
@@ -88,6 +91,7 @@ class BaseQuantizer(nn.Module):
         self._signedness_to_force = qspec.signedness_to_force
         self._is_using_log_scale_storage = qspec.logarithm_scale
         self._half_range = qspec.half_range
+        self._export_quantized = qspec.export_quantized
         self._num_bits = CompressionParameter(torch.IntTensor([qspec.num_bits]), requires_grad=False,
                                               compression_lr_multiplier=qspec.compression_lr_multiplier)
         OPTIONAL_PARAMETERS_REGISTRY.register('_num_bits')
@@ -475,11 +479,9 @@ class SymmetricQuantizer(BaseQuantizer):
                                                                        level_low,
                                                                        level_high,
                                                                        self.eps)
-                #x = self.quantize(x, execute_traced_op_as_identity=False)
-            #x = 5 * x
-            #x = x + torch.zeros_like(x)
-            #x = torch.min(x, 1)
-            #a = 1
+            if self._export_quantized:
+                x = self.quantize(x, execute_traced_op_as_identity=False)
+
         return x, level_high, level_low, input_low, input_high
 
     def get_quantizer_config(self) -> QuantizerConfig:
@@ -616,11 +618,8 @@ class AsymmetricQuantizer(BaseQuantizer):
                                                                        self.input_low,
                                                                        self.levels,
                                                                        self.eps)
-
-                #x = self.quantize(x, execute_traced_op_as_identity=False)
-            #x = x + torch.zeros_like(x)
-            #x = torch.max(x, 1)
-        #x = self.quantize(x, execute_traced_op_as_identity=False)
+                if self._export_quantized:
+                    x = self.quantize(x, execute_traced_op_as_identity=False)
         return x, level_high, level_low, input_low, input_high
 
     def get_quantizer_config(self) -> QuantizerConfig:
