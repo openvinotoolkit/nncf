@@ -482,7 +482,6 @@ class SymmetricQuantizer(BaseQuantizer):
                                                                        self.eps)
             if self._export_quantized:
                 x = self.quantize(x, execute_traced_op_as_identity=False)
-
         return x, level_high, level_low, input_low, input_high
 
     def get_quantizer_config(self) -> QuantizerConfig:
