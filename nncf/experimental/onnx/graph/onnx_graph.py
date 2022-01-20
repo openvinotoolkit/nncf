@@ -128,8 +128,42 @@ class ONNXGraph:
         """
         shape = []
         activations_shapes = self.model_with_shapes.graph.value_info
+        inputs = self.model_with_shapes.graph.input
+        outputs = self.model_with_shapes.graph.output
+        activations_shapes.extend(inputs)
+        activations_shapes.extend(outputs)
         for tensor in activations_shapes:
             if tensor.name == node_output_name:
                 for dim in tensor.type.tensor_type.shape.dim:
                     shape.append(dim.dim_value)
         return shape
+
+    def get_node_output_dtype(self, node_output_name: str) -> str:
+        """
+        Returns the output data type of the node with output name equals to node_output_name.
+        """
+        activations_shapes = self.model_with_shapes.graph.value_info
+        inputs = self.model_with_shapes.graph.input
+        outputs = self.model_with_shapes.graph.output
+        activations_shapes.extend(inputs)
+        activations_shapes.extend(outputs)
+        for tensor in activations_shapes:
+            if tensor.name == node_output_name:
+                elem_type = tensor.type.tensor_type.elem_type
+                return onnx.TensorProto.DataType.Name(elem_type)
+        raise RuntimeError()
+
+    def get_node_input_dtype(self, node_input_name: str) -> str:
+        """
+        Returns the input data type of the node with input name equals to node_input_name.
+        """
+        activations_shapes = self.model_with_shapes.graph.value_info
+        inputs = self.model_with_shapes.graph.input
+        outputs = self.model_with_shapes.graph.output
+        activations_shapes.extend(inputs)
+        activations_shapes.extend(outputs)
+        for tensor in activations_shapes:
+            if tensor.name == node_input_name:
+                elem_type = tensor.type.tensor_type.elem_type
+                return onnx.TensorProto.DataType.Name(elem_type)
+        raise RuntimeError()
