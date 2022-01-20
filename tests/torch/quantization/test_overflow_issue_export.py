@@ -1,4 +1,4 @@
-from typing import List, Dict
+from typing import List, Dict, Tuple
 
 import numpy as np
 import onnx
@@ -406,13 +406,15 @@ def test_is_overflow_fix_applied_model_resumed_correctly(tmp_path):
     are_symmetric_fq_nodes_are_exported_correct_with_overflow_fix(tmp_path, compression_ctrl)
 
 
-def set_parameters_to_quantizer_and_get_attrs(quantizer: BaseQuantizer, paramaters_to_set: Dict):
+def set_parameters_to_quantizer_and_get_attrs(quantizer: BaseQuantizer, paramaters_to_set: Dict)\
+        -> Tuple[np.ndarray, np.ndarray, int]:
     if isinstance(quantizer, SymmetricQuantizer):
         return set_scale_to_sym_quantizer_and_get_attrs(quantizer, **paramaters_to_set)
     return set_input_low_and_input_range_to_asym_quantizer_and_get_attrs(quantizer, **paramaters_to_set)
 
 
-def set_scale_to_sym_quantizer_and_get_attrs(quantizer: SymmetricQuantizer, scale: float):
+def set_scale_to_sym_quantizer_and_get_attrs(quantizer: SymmetricQuantizer, scale: float)\
+        -> Tuple[np.ndarray, np.ndarray, int]:
     scale = np.full(quantizer.scale.size(), scale)
     levels = quantizer.levels
     level_low = quantizer.level_low
@@ -424,8 +426,8 @@ def set_scale_to_sym_quantizer_and_get_attrs(quantizer: SymmetricQuantizer, scal
     return input_low, quant_len, levels
 
 
-def set_input_low_and_input_range_to_asym_quantizer_and_get_attrs(quantizer: AsymmetricQuantizer, input_low: float,
-                                                                  input_range: float):
+def set_input_low_and_input_range_to_asym_quantizer_and_get_attrs(
+        quantizer: AsymmetricQuantizer, input_low: float, input_range: float) -> Tuple[np.ndarray, np.ndarray, int]:
     input_low = np.full(quantizer.input_low.size(), input_low)
     input_range = np.full(quantizer.input_low.size(), input_range)
     levels = quantizer.levels
