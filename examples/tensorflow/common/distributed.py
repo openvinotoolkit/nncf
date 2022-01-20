@@ -14,6 +14,8 @@
 import os
 import tensorflow as tf
 
+from examples.tensorflow.common.utils import set_memory_growth
+
 
 def get_distribution_strategy(config):
     if config.get('cpu_only', False):
@@ -32,9 +34,12 @@ def get_distribution_strategy(config):
                                'Please do not export the CUDA_VISIBLE_DEVICES environment variable '
                                'or specify GPU with id = {id} in it'.format(id=_gpu_id))
 
-    num_gpus = len(tf.config.list_physical_devices('GPU'))
+    gpus = tf.config.list_physical_devices('GPU')
 
-    if num_gpus > 1:
+    # Workaround for https://github.com/tensorflow/tensorflow/issues/33916
+    set_memory_growth(gpus)
+
+    if len(gpus) > 1:
         return tf.distribute.MirroredStrategy()
 
     return tf.distribute.get_strategy()

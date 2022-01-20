@@ -14,7 +14,6 @@
 import time
 import datetime
 import json
-import logging
 import os
 import tarfile
 import resource
@@ -23,7 +22,6 @@ from pathlib import Path
 
 import tensorflow as tf
 
-from nncf.common.utils.logger import logger as nncf_logger
 from examples.tensorflow.common.logger import logger as default_logger
 from examples.tensorflow.common.sample_config import CustomArgumentParser
 
@@ -89,16 +87,6 @@ def configure_paths(config):
     os.makedirs(config.checkpoint_save_dir, exist_ok=True)
 
 
-def configure_logging(sample_logger, config):
-    training_pipeline_log_file_handler = logging.FileHandler(osp.join(config.log_dir, GENERAL_LOG_FILE_NAME))
-    training_pipeline_log_file_handler.setFormatter(logging.Formatter("%(message)s"))
-    sample_logger.addHandler(training_pipeline_log_file_handler)
-
-    nncf_log_file_handler = logging.FileHandler(osp.join(config.log_dir, NNCF_LOG_FILE_NAME))
-    nncf_log_file_handler.setFormatter(logging.Formatter("%(levelname)s:%(name)s:%(message)s"))
-    nncf_logger.addHandler(nncf_log_file_handler)
-
-
 def create_code_snapshot(root, dst_path, extensions=(".py", ".json", ".cpp", ".cu", "h", ".cuh")):
     """Creates tarball with the source code"""
     with tarfile.open(str(dst_path), "w:gz") as tar:
@@ -144,6 +132,14 @@ def get_saving_parameters(config):
 def set_hard_limit_num_open_files():
     _, high = resource.getrlimit(resource.RLIMIT_NOFILE)
     resource.setrlimit(resource.RLIMIT_NOFILE, (high, high))
+
+
+def set_memory_growth(devices):
+    for device in devices:
+        try:
+            tf.config.experimental.set_memory_growth(device, True)
+        except (ValueError, RuntimeError) as e:
+            default_logger.info('{}: {}'.format(device, e))
 
 
 class SummaryWriter:
