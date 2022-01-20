@@ -26,8 +26,8 @@ from nncf.torch.quantization.layers import QuantizerExportMode
 from tests.torch.helpers import get_nodes_by_type, get_all_inputs_for_graph_node, fill_params_of_model_by_normal
 from tests.torch.helpers import register_bn_adaptation_init_args
 from tests.torch.helpers import resolve_constant_node_inputs_to_values
-from tests.torch.test_helpers import TwoConvTestModel
-from tests.torch.test_helpers import load_exported_onnx_version
+from tests.torch.helpers import TwoConvTestModel
+from tests.torch.helpers import load_exported_onnx_version
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
 
 

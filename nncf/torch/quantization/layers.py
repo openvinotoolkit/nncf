@@ -33,6 +33,7 @@ from nncf.torch.quantization.quantize_functions import symmetric_quantize, asymm
 from nncf.torch.layer_utils import COMPRESSION_MODULES, CompressionParameter
 from nncf.common.utils.registry import Registry
 from nncf.torch.utils import get_flat_tensor_contents_string, no_jit_trace, is_tracing_state
+from nncf.torch.utils import get_model_device
 
 QUANTIZATION_MODULES = Registry('quantization_modules')
 INITIALIZABLE_MODULES = Registry('initializable_modules')
@@ -185,7 +186,7 @@ class BaseQuantizer(nn.Module):
             return
         if torch.any(torch.eq(min_values, np.inf)) or torch.any(torch.eq(max_values, -np.inf)):
             raise AttributeError('Statistics is not collected for {}'.format(log_module_name))
-        own_device = next(self.parameters()).device
+        own_device = get_model_device(self)
         min_values = min_values.to(own_device)
         max_values = max_values.to(own_device)
         self._apply_minmax_init(min_values, max_values, log_module_name)

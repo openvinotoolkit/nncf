@@ -41,6 +41,7 @@ from nncf.common.graph import NNCFNodeName
 from nncf.common.hardware.config import HWConfigType
 from nncf.common.quantization.structs import QuantizerGroup
 from nncf.common.utils.debug import set_debug_log_dir
+from nncf.torch.utils import get_model_device
 from nncf.torch.dynamic_graph.graph_tracer import create_input_infos
 from nncf.torch.initialization import default_criterion_fn
 from nncf.torch.quantization.adjust_padding import add_adjust_padding_nodes
@@ -461,7 +462,7 @@ def test_hawq_on_single_conv_without_quantizers(_seed, dataset_dir, tmp_path, pa
     if not dataset_dir:
         dataset_dir = str(tmp_path)
     data_loader, _ = create_test_dataloaders(config, dataset_dir)
-    device = next(model.parameters()).device
+    device = get_model_device(model)
 
     for _, param in model.named_parameters():
         param.requires_grad = False

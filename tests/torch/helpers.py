@@ -12,6 +12,7 @@
 """
 from abc import ABC, abstractmethod
 from copy import deepcopy
+from pathlib import Path
 from typing import Dict, Callable, Any, Union, List, Tuple
 import contextlib
 
@@ -397,6 +398,8 @@ def resolve_constant_node_inputs_to_values(node: onnx.NodeProto, graph: onnx.Gra
     return retval
 
 
+
+
 class Command(BaseCommand):
     def run(self, timeout=3600, assert_returncode_zero=True):
         if torch.cuda.is_available():
@@ -452,3 +455,12 @@ def create_dataloader_with_num_workers(create_dataloader, num_workers, sample_ty
         return create_dataloader_semantic_segmentation
     if sample_type == 'object_detection':
         return create_dataloader_object_detection
+
+
+def load_exported_onnx_version(nncf_config: NNCFConfig, model: torch.nn.Module,
+                               path_to_storage_dir: Path) -> onnx.ModelProto:
+    _, compression_ctrl = create_compressed_model_and_algo_for_test(model, nncf_config)
+    onnx_checkpoint_path = path_to_storage_dir / 'model.onnx'
+    compression_ctrl.export_model(str(onnx_checkpoint_path))
+    model_proto = onnx.load_model(str(onnx_checkpoint_path))
+    return model_proto
