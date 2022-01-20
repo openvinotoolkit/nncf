@@ -11,8 +11,7 @@
  limitations under the License.
 """
 
-from onnx import ModelProto  # pylint: disable=no-member
-from google.protobuf.json_format import MessageToDict
+from onnx import ModelProto  # pylint: disable=no-name-in-module
 
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph.definitions import NNCFGraphNodeType
@@ -68,9 +67,16 @@ class GraphConverter:
                     )
         # Add Input Nodes
         for i, _input in enumerate(onnx_graph.get_all_model_inputs()):
-            m_dict = MessageToDict(_input)
-            dim_info = m_dict.get("type").get("tensorType").get("shape").get("dim")
-            input_shape = [int(d.get("dimValue")) for d in dim_info]
+            tensor_type = _input.type.tensor_type
+            input_shape = []
+            if tensor_type.HasField("shape"):
+                for d in tensor_type.shape.dim:
+                    if d.HasField("dim_value"):
+                        input_shape.append(int(d.dim_value))
+                    else:
+                        raise RuntimeError('There is no integer value in model Input dimension')
+            else:
+                raise RuntimeError('There is no shape in model Inputs')
             input_node = nncf_graph.add_nncf_node(node_name='input_node_' + str(i),
                                                   node_type=NNCFGraphNodeType.INPUT_NODE,
                                                   node_metatype=ONNX_OPERATION_METATYPES.
@@ -94,9 +100,16 @@ class GraphConverter:
                 )
         # Add Output Nodes
         for i, _output in enumerate(onnx_graph.get_all_model_outputs()):
-            m_dict = MessageToDict(_output)
-            dim_info = m_dict.get("type").get("tensorType").get("shape").get("dim")
-            output_shape = [int(d.get("dimValue")) for d in dim_info]
+            tensor_type = _output.type.tensor_type
+            output_shape = []
+            if tensor_type.HasField("shape"):
+                for d in tensor_type.shape.dim:
+                    if d.HasField("dim_value"):
+                        output_shape.append(int(d.dim_value))
+                    else:
+                        raise RuntimeError('There is no integer value in model Output dimension')
+            else:
+                raise RuntimeError('There is no shape in model Outputs')
             output_node = nncf_graph.add_nncf_node(node_name='output_node_' + str(i),
                                                    node_type=NNCFGraphNodeType.OUTPUT_NODE,
                                                    node_metatype=ONNX_OPERATION_METATYPES.
