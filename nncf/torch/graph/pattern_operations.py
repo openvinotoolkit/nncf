@@ -71,6 +71,7 @@ POOLING_OPERATIONS = {'type': ['adaptive_avg_pool2d',
                       'label': 'POOLING'}
 
 MATMUL_OPERATIONS = {'type': ['bmm',
-                              'matmul'
+                              'matmul',
+                              'mm'
                               ],
                      'label': 'MATMUL'}
