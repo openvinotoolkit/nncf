@@ -635,6 +635,8 @@ SYNTHETIC_MODEL_DESC_LIST = [
     TensorBinaryMethodsDesc(model_name='MatMul', tensor_method='matmul'),
 
     SingleLayerModelDesc(model_name='Mean', layer=torch.mean),
+    SingleLayerModelDesc(model_name='normalize', layer=partial(torch.nn.functional.normalize, p=2),
+                         input_sample_sizes=([1, 1, 1, 1], )),
 
     TensorUnaryMethodsDesc(tensor_method='round'),
 

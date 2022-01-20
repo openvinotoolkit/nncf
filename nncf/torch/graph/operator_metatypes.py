@@ -759,6 +759,15 @@ class PTSumMetatype(PTOperatorMetatype):
     hw_config_names = [HWConfigOpName.REDUCESUM]
 
 
+@PT_OPERATOR_METATYPES.register()
+class PTReduceL2(PTOperatorMetatype):
+    name = "ReduceL2"
+    module_to_function_names = {
+        NamespaceTarget.TORCH_NN_FUNCTIONAL: ["normalize"],  # note: normalize is for general L_p normalization
+    }
+    hw_config_names = [HWConfigOpName.REDUCEL2]
+
+
 def get_operator_metatypes() -> List[Type[OperatorMetatype]]:
     """
     Returns a list of the operator metatypes.
