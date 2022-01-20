@@ -11,6 +11,8 @@
  limitations under the License.
 """
 
+from collections import defaultdict
+
 from onnx import ModelProto  # pylint: disable=no-name-in-module
 
 from nncf.common.graph import NNCFGraph
@@ -45,8 +47,8 @@ class GraphConverter:
                                      node_type=node_type,
                                      node_metatype=metatype,
                                      layer_attributes=None)
-        input_counter = {}
-        output_counter = {}
+        input_counter = defaultdict(int)
+        output_counter = defaultdict(int)
         for output_node in nncf_graph.get_all_nodes():
             output_node_id = output_node.node_id
             outputs = onnx_graph.get_all_node_outputs(output_node.node_name)
@@ -55,8 +57,8 @@ class GraphConverter:
                 shape = onnx_graph.get_node_output_shape(output)
                 for in_node in nodes:
                     in_node_id = nncf_graph.get_node_by_name(in_node.name).node_id
-                    input_counter[in_node_id] = input_counter.get(in_node_id, -1) + 1
-                    output_counter[output_node_id] = input_counter.get(output_node_id, -1) + 1
+                    input_counter[in_node_id] += 1
+                    output_counter[output_node_id] += 1
                     nncf_graph.add_edge_between_nncf_nodes(
                         from_node_id=output_node_id,
                         to_node_id=in_node_id,
@@ -77,7 +79,7 @@ class GraphConverter:
                         raise RuntimeError('There is no integer value in model Input dimension')
             else:
                 raise RuntimeError('There is no shape in model Inputs')
-            input_node = nncf_graph.add_nncf_node(node_name='input_node_' + str(i),
+            input_node = nncf_graph.add_nncf_node(node_name='nncf_input_node_' + str(i),
                                                   node_type=NNCFGraphNodeType.INPUT_NODE,
                                                   node_metatype=ONNX_OPERATION_METATYPES.
                                                   get_operator_metatype_by_op_name(
@@ -88,8 +90,8 @@ class GraphConverter:
             for node in to_nodes:
                 in_node_id = input_node.node_id
                 to_node_id = nncf_graph.get_node_by_name(node.name).node_id
-                input_counter[in_node_id] = input_counter.get(input_node.node_id, -1) + 1
-                output_counter[to_node_id] = input_counter.get(to_node_id, -1) + 1
+                input_counter[in_node_id] += 1
+                output_counter[to_node_id] += 1
                 nncf_graph.add_edge_between_nncf_nodes(
                     from_node_id=input_node.node_id,
                     to_node_id=to_node_id,
@@ -110,7 +112,7 @@ class GraphConverter:
                         raise RuntimeError('There is no integer value in model Output dimension')
             else:
                 raise RuntimeError('There is no shape in model Outputs')
-            output_node = nncf_graph.add_nncf_node(node_name='output_node_' + str(i),
+            output_node = nncf_graph.add_nncf_node(node_name='nncf_output_node_' + str(i),
                                                    node_type=NNCFGraphNodeType.OUTPUT_NODE,
                                                    node_metatype=ONNX_OPERATION_METATYPES.
                                                    get_operator_metatype_by_op_name(
@@ -122,8 +124,8 @@ class GraphConverter:
             for node in to_nodes:
                 out_node_id = output_node.node_id
                 to_node_id = nncf_graph.get_node_by_name(node.name).node_id
-                input_counter[out_node_id] = input_counter.get(output_node.node_id, -1) + 1
-                output_counter[to_node_id] = input_counter.get(to_node_id, -1) + 1
+                input_counter[out_node_id] += 1
+                output_counter[to_node_id] += 1
                 nncf_graph.add_edge_between_nncf_nodes(
                     from_node_id=to_node_id,
                     to_node_id=output_node.node_id,
