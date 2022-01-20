@@ -204,23 +204,12 @@ def are_symmetric_fq_nodes_are_exported_correct_with_overflow_fix(tmp_path, comp
 
     for quantizer, fq_parametres in zip(quantizers, inputs[1::2]):
         tensor_weight, input_output_low, input_output_high = list(fq_parametres.values())
-        quantizer_weight, quantizer_scale = quantizer.quantized_module.weight.detach().numpy(), \
-                                            quantizer.quantizer_module_ref.scale
+        quantizer_scale = quantizer.quantizer_module_ref.scale
 
-        input_low = -level_positive_negative_ratio * quantizer_scale.detach().numpy()
-        input_high = quantizer_scale.detach().numpy()
-        # Clamp weight tensors as we do in exporting
-        if quantizer_weight.shape[0] > 1:
-            for i in range(quantizer_weight.shape[0]):
-                try:
-                    quantizer_weight[i] = np.clip(quantizer_weight[i], a_min=input_low[i], a_max=input_high[i])
-                except TypeError:
-                    quantizer_weight[i] = np.clip(quantizer_weight[i], a_min=input_low[i].item(),
-                                                  a_max=input_high[i].item())
-        else:
-            quantizer_weight = np.clip(quantizer_weight, a_min=input_low.item(), a_max=input_high.item())
+        # Quantize weights as they are exported quantized
+        quantized_weights = quantizer.quantizer_module_ref(quantizer.quantized_module.weight).detach()
 
-        assert np.allclose(tensor_weight, quantizer_weight)
+        assert np.allclose(tensor_weight, np.array(quantized_weights))
         assert np.allclose(level_high_ratio * quantizer_scale.detach().numpy(), input_output_high)
         assert np.allclose(-2.0 * level_positive_negative_ratio * quantizer_scale.detach().numpy(),
                            input_output_low)
@@ -255,24 +244,13 @@ def are_asymmetric_fq_nodes_are_exported_correct_with_overflow_fix(tmp_path, com
     level_high_ratio = (2 * level_high + 1) / level_high
     for quantizer, fq_parametres in zip(quantizers, inputs[1::2]):
         tensor_weight, input_output_low, input_output_high = list(fq_parametres.values())
-        quantizer_weight = quantizer.quantized_module.weight.detach().numpy()
         quantizer_input_range = quantizer.quantizer_module_ref.input_range
         quantizer_input_low = quantizer.quantizer_module_ref.input_low
 
-        input_low = quantizer_input_low.detach().numpy()
-        input_high = quantizer_input_range.detach().numpy()
-        # Clamp weight tensors as we do in exporting
-        if quantizer_weight.shape[0] > 1:
-            for i in range(quantizer_weight.shape[0]):
-                try:
-                    quantizer_weight[i] = np.clip(quantizer_weight[i], a_min=input_low[i], a_max=input_high[i])
-                except TypeError:
-                    quantizer_weight[i] = np.clip(quantizer_weight[i], a_min=input_low[i].item(),
-                                                  a_max=input_high[i].item())
-        else:
-            quantizer_weight = np.clip(quantizer_weight, a_min=input_low.item(), a_max=input_high.item())
+        # Quantize weights as they are exported quantized
+        quantized_weights = quantizer.quantizer_module_ref(quantizer.quantized_module.weight).detach()
 
-        assert np.allclose(tensor_weight, quantizer_weight)
+        assert np.allclose(tensor_weight, np.array(quantized_weights))
         assert np.allclose(level_high_ratio * quantizer_input_range.detach().numpy(), input_output_high)
         assert np.allclose(quantizer_input_low.detach().numpy(),
                            input_output_low)
@@ -371,29 +349,18 @@ def test_are_qdq_exported_per_tensor_weights_tensors_clipped(tmp_path):
 
     for quantizer, onnx_q_parametres in zip([first_quantizer, second_quantizer], inputs[1::2]):
         onnx_tensor_weight, onnx_q_scale, onnx_zero_level = list(onnx_q_parametres.values())
-        quantizer_weight, quantizer_scale = quantizer.quantized_module.weight.detach().numpy(), \
-                                            quantizer.quantizer_module_ref.scale
+        quantizer_scale = quantizer.quantizer_module_ref.scale.detach().numpy()
 
-        quantizer_scale = quantizer_scale.detach().numpy()
-        input_low = -level_positive_negative_ratio * quantizer_scale
-        input_high = quantizer_scale
         onnx_input_output_low = -128 * onnx_q_scale + onnx_zero_level
         onnx_input_output_high = 127 * onnx_q_scale + onnx_zero_level
 
-        # Clamp weight tensors as we do in exporting
-        if quantizer_weight.shape[0] > 1:
-            for i in range(quantizer_weight.shape[0]):
-                try:
-                    quantizer_weight[i] = np.clip(quantizer_weight[i], a_min=input_low[i], a_max=input_high[i])
-                except IndexError:
-                    quantizer_weight[i] = np.clip(quantizer_weight[i], a_min=input_low[i].item(),
-                                                  a_max=input_high[i].item())
-        else:
-            quantizer_weight = np.clip(quantizer_weight, a_min=input_low.item(), a_max=input_high.item())
-
         if quantizer_scale.shape:
             quantizer_scale = quantizer_scale[0]
-        assert np.allclose(onnx_tensor_weight, quantizer_weight)
+
+        # Quantize weights as they are exported quantized
+        quantized_weights = quantizer.quantizer_module_ref(quantizer.quantized_module.weight).detach()
+
+        assert np.allclose(onnx_tensor_weight, np.array(quantized_weights))
         assert np.allclose(level_high_ratio * quantizer_scale, onnx_input_output_high)
         assert np.allclose(-2.0 * level_positive_negative_ratio * quantizer_scale, onnx_input_output_low)
 
