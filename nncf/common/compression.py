@@ -274,5 +274,5 @@ class BaseCompressionAlgorithmBuilder(CompressionAlgorithmBuilder):
             (dict, list, tuple, str, int, float, True, False, None) that represents state of the object.
         """
 
-    def _parse_bn_adapt_params(self) -> Dict:
+    def _parse_bn_adapt_params(self) -> Optional[Dict]:
         return extract_bn_adaptation_init_params(self.config, self.name)

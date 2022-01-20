@@ -669,17 +669,17 @@ def test_quantization_can_be_run_with_no_data_loaders_if_zero_init_samples():
     model = BasicConvTestModel()
     # Should complete successfully even though no loaders have been registered into the config.
     _, _ = create_compressed_model_and_algo_for_test(model, NNCFConfig.from_dict({
-        "input_info": {
-            "sample_size": [1, 1, 4, 4]
+        'input_info': {
+            'sample_size': [1, 1, 4, 4]
         },
-        "compression": {
-            "algorithm": "quantization",
-            "initializer": {
-                "range": {
-                    "num_init_samples": 0
+        'compression': {
+            'algorithm': 'quantization',
+            'initializer': {
+                'range': {
+                    'num_init_samples': 0
                 },
-                "batchnorm_adaptation": {
-                    "num_bn_adaptation_samples": 0
+                'batchnorm_adaptation': {
+                    'num_bn_adaptation_samples': 0
                 }
             }
         }
