@@ -57,6 +57,7 @@ from nncf.torch.graph.transformations.commands import PTInsertionCommand
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.graph.transformations.layout import PTTransformationLayout
 from nncf.torch.layer_utils import _NNCFModuleMixin
+from nncf.torch.layers import NNCFConv2d
 from nncf.torch.module_operations import BaseOp
 from nncf.torch.nncf_network import EXTERNAL_QUANTIZERS_STORAGE_NAME
 from nncf.torch.nncf_network import NNCFNetwork
@@ -791,3 +792,62 @@ def test_insertion_point_target_point_translation():
             PTInsertionPoint(target_type, op_address)
     target_type = TargetType.POST_LAYER_OPERATION
     assert PTInsertionPoint(target_type, op_address).insertion_type == PTInsertionType.NNCF_MODULE_POST_OP
+
+class IndirectModuleCaller(nn.Module):
+    def __init__(self, module_for_indirection: torch.nn.Module):
+        super(IndirectModuleCaller, self).__init__()
+
+        self.module_for_indirection = module_for_indirection
+        self.conv_immediate = nn.Conv2d(32, 32, 3, 1, 1, bias=False)
+
+    def forward(self, img):
+        enc_features = self.module_for_indirection.forward(img)
+        out = self.conv_immediate(enc_features)
+
+        return out
+
+class Backbone(nn.Module):
+    def __init__(self, in_channels=3):
+        super(Backbone, self).__init__()
+        self.in_channels = in_channels
+
+        # This is another source of indirection - a module whose reference then
+        # is being passed to an owning container (Sequential). NNCFNetwork creation algo
+        # must replace the module object in both places with the same object.
+        self.conv_indirect = nn.Conv2d(self.in_channels, 32, 3, 2, 1, bias=False)
+        self.features = nn.Sequential(
+            self.conv_indirect,
+            nn.BatchNorm2d(32),
+            nn.ReLU6(inplace=True)
+        )
+
+    def forward(self, img):
+        enc_features = self.features(img)
+
+        return enc_features
+
+
+class ModelWithIndirectModuleCallBranch(nn.Module):
+    def __init__(self, in_channels=3):
+        super(ModelWithIndirectModuleCallBranch, self).__init__()
+
+        self.in_channels = in_channels
+
+        self.backbone = Backbone(self.in_channels)
+        self.testBranch = IndirectModuleCaller(self.backbone)
+
+    def forward(self, img):
+        out = self.testBranch(img)
+        return out
+
+
+def test_wrapping_of_indirect_module_operations():
+    model = NNCFNetwork(ModelWithIndirectModuleCallBranch(), [
+        ModelInputInfo([1, 3, 32, 32])
+    ])
+    assert isinstance(model.backbone.conv_indirect, NNCFConv2d)
+    assert model.backbone.features[0] is model.backbone.conv_indirect
+    assert model.testBranch.module_for_indirection.features[0] is model.backbone.features[0]
+    assert model.testBranch.module_for_indirection.conv_indirect is model.backbone.conv_indirect
+    assert model.testBranch.module_for_indirection.features[0] is model.testBranch.module_for_indirection.conv_indirect
+    assert isinstance(model.testBranch.conv_immediate, NNCFConv2d)
