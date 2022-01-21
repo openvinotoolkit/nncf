@@ -34,10 +34,10 @@ from nncf.tensorflow.graph.transformations.commands import TFMultiLayerPoint
 from nncf.tensorflow.graph.transformations.commands import TFOperationWithWeights
 from nncf.tensorflow.graph.transformations.layout import TFTransformationLayout
 from nncf.tensorflow.graph.utils import get_custom_objects
+from nncf.tensorflow.graph.utils import reformat_inbound_nodes_for_oplambda
 from nncf.tensorflow.graph.utils import get_weight_name
 from nncf.tensorflow.graph.utils import is_functional_model
 from nncf.tensorflow.graph.utils import is_sequential_or_functional_model
-from nncf.tensorflow.graph.utils import get_list_level
 from nncf.tensorflow.layers.custom_objects import get_nncf_custom_objects
 from nncf.tensorflow.layers.wrapper import NNCFWrapper
 
@@ -66,8 +66,6 @@ class TFModelTransformer(ModelTransformer):
         )
         self._name_mapping = {}
 
-        self._fq_counter = None
-
     def transform(self, transformation_layout: TFTransformationLayout):
         """ Applies transformations to the Keras model.
 
@@ -76,15 +74,8 @@ class TFModelTransformer(ModelTransformer):
         """
         layer_weights_map = {layer.name: self._get_layer_weights(layer) for layer in self._model.layers}
 
-        self.transformation_layout = transformation_layout
-
-        config_fp32 = copy.deepcopy(self._model_config)
-
         for transform in transformation_layout.transformations:
             self._apply_transformation(transform)
-
-        for i, layer in enumerate(self._model_config['layers']):
-            print(i, layer['class_name'], layer['config']['name'])
 
         if is_functional_model(self._model):
             transformed_model = tf.keras.Model.from_config(self._model_config, self._custom_objects)
@@ -208,14 +199,8 @@ class TFModelTransformer(ModelTransformer):
                         config['inbound_nodes'].append([[tp.layer_name, tp.instance_idx, tp.output_port_id, {}]])
                     elif isinstance(tp, TFBeforeLayer):
                         idx, input_layer_cfg = self._find_layer_config(tp.layer_name)
-
-                        # inbound = [input_layer_cfg['inbound_nodes'][tp.instance_idx][tp.input_port_id]]
-                        # config['inbound_nodes'].append(inbound)
                         inbound = input_layer_cfg['inbound_nodes'][tp.instance_idx][tp.input_port_id]
                         config['inbound_nodes'].append([[inbound[0], inbound[1], inbound[2], {}]])
-
-                        # self._model_config['layers'][idx]['inbound_nodes'][tp.instance_idx][tp.input_port_id] = \
-                        #         [config['name'], i, 0, {}]
                         self._model_config['layers'][idx]['inbound_nodes'][tp.instance_idx][tp.input_port_id] = \
                                 [config['name'], i, 0, inbound[3]]
                     else:
@@ -230,39 +215,9 @@ class TFModelTransformer(ModelTransformer):
                     layer_out_ports = set()
                     replace_layer_name = config['name']
                     for layer in self._model_config['layers']:
-
                         inbound_nodes = layer['inbound_nodes']
-
-
-
-
-                        # update format of inbound_nodes for TFOpLambda layer
                         if layer['class_name'] in ['TFOpLambda', 'SlicingOpLambda']:
-                            # convert inbound_nodes to [[ ]]
-                            if get_list_level(inbound_nodes) == 4:  # [[[[ ]]]] -> [[ ]]
-                                inbound_nodes = inbound_nodes[0][0]
-                            if get_list_level(inbound_nodes) == 3:  # [[[ ]]] -> [[ ]]
-                                inbound_nodes = inbound_nodes[0]
-
-                            #  OpLambda inbound_nodes could have format
-                            #  [['x1', 0, 0 {'y': ['x2', 0, 0], 'name': None}]]
-                            #  for multiple inputs instead of
-                            #  [['x1', 0, 0, {}], ['x2', 0, 0, {}]]
-                            # True for input_port_id {0, 1}, for instance_idx = 0
-                            inbound_nodes_lambda = []
-                            for inbound_node in inbound_nodes:
-                                inbound_nodes_lambda.append(inbound_node)
-                                kwargs = inbound_node[3]
-
-                                def _check_input_data(x):
-                                    return [type(item) for item in x] == [str, int, int]
-
-                                for item in kwargs.values():
-                                    if isinstance(item, list) and len(item) == 3 and _check_input_data(item):
-                                        inbound_nodes_lambda.append(item)
-                            inbound_nodes = [inbound_nodes_lambda]  # convert to [[[ ]]] format, which is default
-
-
+                            inbound_nodes = reformat_inbound_nodes_for_oplambda(inbound_nodes)
 
                         for inbound_node in inbound_nodes:
                             self._process_insertion_after(inbound_node, tp.layer_name, tp.instance_idx,
@@ -398,35 +353,14 @@ class TFModelTransformer(ModelTransformer):
         downstream_layer_inbound_nodes = downstream_layer_cfg['inbound_nodes']
 
         if downstream_layer_cfg['class_name'] in ['TFOpLambda', 'SlicingOpLambda']:
-            # convert inbound_nodes to [[ ]]
-            if get_list_level(downstream_layer_inbound_nodes) == 4:  # [[[[ ]]]] -> [[ ]]
-                downstream_layer_inbound_nodes = downstream_layer_inbound_nodes[0][0]
-            if get_list_level(downstream_layer_inbound_nodes) == 3:  # [[[ ]]] -> [[ ]]
-                downstream_layer_inbound_nodes = downstream_layer_inbound_nodes[0]
-
-            #  OpLambda inbound_nodes could have format
-            #  [['x1', 0, 0 {'y': ['x2', 0, 0], 'name': None}]]
-            #  for multiple inputs instead of
-            #  [['x1', 0, 0, {}], ['x2', 0, 0, {}]]
-            # True for input_port_id {0, 1}, for instance_idx = 0
-            inbound_nodes_lambda = []
-            for inbound_node in downstream_layer_inbound_nodes:
-                inbound_nodes_lambda.append(inbound_node)
-                kwargs = inbound_node[3]
-                def _check_input_data(x):
-                    return [type(item) for item in x] == [str, int, int]
-                for item in kwargs.values():
-                    if isinstance(item, list) and len(item) == 3 and _check_input_data(item):
-                        inbound_nodes_lambda.append(item)
-            downstream_layer_inbound_nodes = [inbound_nodes_lambda]  # convert to [[[ ]]] format, which is default
-
+            downstream_layer_inbound_nodes = reformat_inbound_nodes_for_oplambda(downstream_layer_inbound_nodes)
 
         for layer in layers_to_insert:
             config = tf.keras.utils.serialize_keras_object(layer)
             if functional_model:
                 config['name'] = config['config']['name']
 
-                # Config update of the layer to insert
+                # Update config of the layer to insert
                 inbound_node_info = copy.deepcopy(downstream_layer_inbound_nodes)[instance_idx][input_port_id]
                 config['inbound_nodes'] = [[inbound_node_info[0], inbound_node_info[1], inbound_node_info[2], {}]]
 
@@ -468,7 +402,6 @@ class TFModelTransformer(ModelTransformer):
             else:
                 self._insert_layer_after_sequential(layer_name, config)
 
-
     def _insert_layer_after_functional(self, layer_name: str, instance_idx: int, layer_to_insert_config: Dict):
         """
         Performs insertion after the (upstream) layer (functional model).
@@ -483,29 +416,8 @@ class TFModelTransformer(ModelTransformer):
         for layer in self._model_config['layers']:
             inbound_nodes = layer['inbound_nodes']
 
-            # update format of inbound_nodes for TFOpLambda layer
             if layer['class_name'] in ['TFOpLambda', 'SlicingOpLambda']:
-                # convert inbound_nodes to [[ ]]
-                if get_list_level(inbound_nodes) == 4:  # [[[[ ]]]] -> [[ ]]
-                    inbound_nodes = inbound_nodes[0][0]
-                if get_list_level(inbound_nodes) == 3:  # [[[ ]]] -> [[ ]]
-                    inbound_nodes = inbound_nodes[0]
-
-                #  OpLambda inbound_nodes could have format
-                #  [['x1', 0, 0 {'y': ['x2', 0, 0], 'name': None}]]
-                #  for multiple inputs instead of
-                #  [['x1', 0, 0, {}], ['x2', 0, 0, {}]]
-                # True for input_port_id {0, 1}, for instance_idx = 0
-                inbound_nodes_lambda = []
-                for inbound_node in inbound_nodes:
-                    inbound_nodes_lambda.append(inbound_node)
-                    kwargs = inbound_node[3]
-                    def _check_input_data(x):
-                        return [type(item) for item in x] == [str, int, int]
-                    for item in kwargs.values():
-                        if isinstance(item, list) and len(item) == 3 and _check_input_data(item):
-                            inbound_nodes_lambda.append(item)
-                inbound_nodes = [inbound_nodes_lambda]  # convert to [[[ ]]] format, which is default
+                inbound_nodes = reformat_inbound_nodes_for_oplambda(inbound_nodes)
 
             for inbound_node in inbound_nodes:
                 self._process_insertion_after(inbound_node, layer_name, instance_idx,
@@ -518,9 +430,10 @@ class TFModelTransformer(ModelTransformer):
                                'is not supported'.format(layer_name))
         self._insert_layer_after_sequential(layer_name, layer_to_insert_config)
 
-
     def _insert_layer_after_sequential(self, layer_name: str, layer_configs):
         idx, _ = self._find_layer_config(layer_name)
+        if idx is None:
+            raise RuntimeError('Layer is not found: {}'.format(layer_name))
         self._model_config['layers'].insert(idx + 1, layer_configs)
 
     @staticmethod
@@ -539,11 +452,6 @@ class TFModelTransformer(ModelTransformer):
                 if connection_info[1] == instance_idx:
                     connection_info[0] = replace_layer_name
                     connection_info[1] = insert_with_instance_idx
-
-
-
-
-
 
     def _insert_after_model_outputs(self, layer_name: str,
                                     instance_idx: int,

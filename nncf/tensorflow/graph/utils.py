@@ -10,7 +10,6 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-
 from typing import List, Tuple
 import sys
 import inspect
@@ -175,3 +174,50 @@ def is_builtin_layer(layer) -> bool:
 
 def get_list_level(lst: List) -> int:
     return isinstance(lst, list) and list(map(get_list_level, lst or [0]))[0] + 1
+
+
+def check_oplambda_input_data(x: List) -> bool:
+    input_stracture = [type(item) for item in x]
+    return input_stracture == [str, int, int] or input_stracture == [str, int, int, dict]
+
+
+def reformat_inbound_nodes_for_oplambda(inbound_nodes: List) -> List[List[List]]:
+    """
+    Default format examples for inbound_nodes of the layer are as follows:
+    1- [[['name', id, id, kwargs]]] - Single input, not shared layer.
+    2- [[['name_a', id, id, kwargs], ['name_b', id, id, kwargs]]] - Multiple (two) inputs, not shared layer.
+    3- [[['name_a', id, id, kwargs]], [['name_b', id, id, kwargs]]] - Single input, shared layer.
+
+    This function assumes there are no shared layers (aka shared convolutions) among
+    'TFOpLambda' or 'SlicingOpLambda' layers.
+
+    'TFOpLambda' or 'SlicingOpLambda' layers, apart from default format templates (1 and 2 above),
+    could have the following formats:
+    4 - [['name', id, id, kwargs]] - Single input.
+    5 - [[[['_CONSTANT_VALUE', -1, serialized_kt, {'y': ['name', id, id]}]]]] -
+    Multiple (two) inputs with one constant input.
+
+    :param inbound_nodes: Inbound nodes of the 'TFOpLambda' or 'SlicingOpLambda' layer.
+    :return: Reformatted inbound_nodes.
+    """
+    if get_list_level(inbound_nodes) == 2:  # [[ ]] -> [[[ ]]]
+        inbound_nodes = [inbound_nodes]
+    if get_list_level(inbound_nodes) == 4:  # [[[[ ]]]] -> [[[ ]]]
+        inbound_nodes = inbound_nodes[0]
+
+    inbound_nodes_oplambda = []
+    for inbound_node in inbound_nodes[0]:
+        if inbound_node[0] != '_CONSTANT_VALUE':
+            # If an element in the first call argument did not originate as a keras tensor
+            # and is a constant value, it is saved using '_CONSTANT_VALUE'.
+            inbound_nodes_oplambda.append(inbound_node)
+
+        # Check for nested inbound nodes in kwargs
+        kwargs = inbound_node[3]
+        for item in kwargs.values():
+            if isinstance(item, list) and check_oplambda_input_data(item):
+                if len(item) == 3:
+                    item.append({})
+                inbound_nodes_oplambda.append(item)
+
+    return [inbound_nodes_oplambda]  # convert to [[[ ]]] format, which is default for inbound nodes

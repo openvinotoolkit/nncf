@@ -42,7 +42,8 @@ from nncf.tensorflow.graph.metatypes.matcher import get_keras_layer_metatype
 from nncf.tensorflow.graph.metatypes.matcher import get_op_metatype
 from nncf.common.graph.operator_metatypes import OutputNoopMetatype
 from nncf.tensorflow.graph.metatypes.tf_ops import WEIGHTABLE_TF_OP_METATYPES
-from nncf.tensorflow.graph.utils import get_shared_node_name, get_list_level
+from nncf.tensorflow.graph.utils import get_shared_node_name
+from nncf.tensorflow.graph.utils import reformat_inbound_nodes_for_oplambda
 from nncf.tensorflow.graph.utils import is_builtin_layer
 from nncf.tensorflow.graph.utils import is_functional_model
 from nncf.tensorflow.graph.utils import is_sequential_model
@@ -156,9 +157,6 @@ class TFModelConverter(ABC):
         custom_layers = TFModelConverter.get_custom_layers(model)
         retval = {}
         for layer_name, layer in custom_layers.items():
-            # layer_input_spec = [tf.TensorSpec.from_tensor(tensor)
-            #                     for tensor in layer.input] if isinstance(layer.input, list) \
-            #     else tf.TensorSpec.from_tensor(layer.input)
             layer_input_spec = [self._get_type_spec(tensor)
                                 for tensor in layer.input] if isinstance(layer.input, list) \
                 else self._get_type_spec(layer.input)
@@ -235,60 +233,27 @@ class TFModelConverter(ABC):
                 retval[layer_name] = custom_layer_info
         return retval
 
-    def _get_layer_output_dtype(self, layer_config: Dict) -> str:
+    def _get_layer_output_dtype(self, layer_config: Dict) -> Dtype:
         if layer_config['class_name'] in ['Functional', 'Sequential']:
-            return self._get_layer_output_dtype(layer_config['config']['layers'[0]])
+            return self._get_layer_output_dtype(layer_config['config']['layers'][0])
 
         layer_name = layer_config['config']['name']
         if layer_config['class_name'] == 'TensorFlowOpLayer':
             layer_name = 'tf_op_layer_' + layer_name
 
-        if 'input' in layer_name:
-            # layer['class_name'] == InputLayer
-            # TODO (negvet): generalize
+        if layer_config['class_name'] == 'InputLayer':
             return Dtype.FLOAT
-
-
 
         keras_layer = self._get_layer(layer_name)
         if isinstance(keras_layer.output, tf.Tensor) or isinstance(keras_layer.output, KerasTensor):
             dtype = keras_layer.output.dtype
         else:
-            dtype = keras_layer.output[0].dtype  # Assume all outputs have the same type
-
+            # In case of multiple outputs, assume all outputs have the same type
+            dtype = keras_layer.output[0].dtype
 
         if dtype == tf.int32:
-            # TODO (nagvet): other types: int8, ...
             return Dtype.INTEGER
         return Dtype.FLOAT
-
-        # dtype = layer_config['config']['dtype']
-        # if layer_config['class_name'] == 'TensorFlowOpLayer':
-        #     attrs = layer_config['config']['node_def'].get('attr', {})
-        #     dtype = attrs.get('DstT', {}).get('type') or attrs.get('T', {}).get('type') or dtype
-        # if layer_config['class_name'] in ['TFOpLambda', 'SlicingOpLambda']:
-        #     inbound_nodes = layer_config['inbound_nodes']
-        #     # TODO (negvet): optimize
-        #     # # [[]] is required for inbound_nodes
-        #     # # [] -> [[ ]]
-        #     if get_list_level(inbound_nodes) == 1:
-        #         inbound_nodes = [inbound_nodes]
-        #     # # [[[ ]]] -> [[ ]]
-        #     if get_list_level(inbound_nodes) == 3:
-        #         inbound_nodes = inbound_nodes[0]
-        #     # [[[[ ]]]] -> [[ ]]
-        #     if get_list_level(inbound_nodes) == 4:
-        #         inbound_nodes = inbound_nodes[0][0]
-        #
-        #     kwargs = inbound_nodes[0][3]
-        #     for key, item in kwargs.items():
-        #         if key == 'out_type':
-        #             if item == tf.int32:
-        #                 dtype = 'int32'
-        #             if item == tf.float32:
-        #                 dtype = 'float32'
-
-        # return dtype
 
     @staticmethod
     def _get_layer_type(layer_config: Dict) -> str:
@@ -463,14 +428,7 @@ class FunctionalConverter(TFModelConverter):
     """
     def __init__(self, model: tf.keras.Model):
         super().__init__(model)
-
         self._model_config = self._model.get_config()
-        for layer_config in self._model_config['layers']:
-            if layer_config['class_name'] in ['TFOpLambda', 'SlicingOpLambda']:
-                inbound_nodes = layer_config.get('inbound_nodes')
-                if inbound_nodes and (not isinstance(inbound_nodes[0][0], list)):
-                    layer_config['inbound_nodes'] = [inbound_nodes]
-
         self._layer_info = {}  # type: Dict[str, Dict]
         self._collect_layer_information()
         self._layer_name_to_node_names = defaultdict(set)
@@ -479,29 +437,22 @@ class FunctionalConverter(TFModelConverter):
         self._collect_edge_information()
 
     def _collect_layer_information(self):
-        # model_config = self._model.get_config()
-        for layer_idx, layer_config in enumerate(self._model_config['layers']):
+        for layer_config in self._model_config['layers']:
             layer_name = layer_config['name']
             layer_type = self._get_layer_type(layer_config)
             layer_output_dtype = self._get_layer_output_dtype(layer_config)
-
-            if layer_name in ['tf.__operators__.getitem_21', 'tf.range']:
-                layer_output_dtype = 'int32'
-
             data_format = layer_config['config'].get('data_format')
             model_layer = self._get_layer(layer_name)
             layer_metatype = get_keras_layer_metatype(model_layer)
-            inbound_nodes = layer_config.get('inbound_nodes')
             self._layer_info[layer_name] = {
                         'type': layer_type,
                         'metatype': layer_metatype,
                         'dtype': layer_output_dtype,
                         'data_format': data_format,
-                        'inbound_nodes': inbound_nodes
+                        'inbound_nodes': layer_config.get('inbound_nodes')
                     }
 
     def _collect_node_information(self):
-        # model_config = self._model.get_config()
         for layer_config in self._model_config['layers']:
             layer_name = layer_config['name']
             if layer_name not in self._custom_layer_infos:
@@ -520,12 +471,8 @@ class FunctionalConverter(TFModelConverter):
             is_shared = instances_count > 1
             for i in range(instances_count):
                 node_name = get_shared_node_name(layer_name, i) if is_shared else layer_name
-
-                # input_shapes = self._prepare_shape(layer.inbound_nodes[i].input_shapes)
                 input_shapes = [tuple(tensor.shape) for tensor in layer.inbound_nodes[i].keras_inputs]
-
                 output_shapes = self._prepare_shape(layer.inbound_nodes[i].output_shapes)
-
                 self._node_info[node_name] = {
                     'layer_name': layer_name,
                     'target_node_name': layer_name,
@@ -551,77 +498,24 @@ class FunctionalConverter(TFModelConverter):
         return len(self._layer_name_to_node_names[layer_name]) > 1
 
     def _collect_edge_information(self):
-        # model_config = self._model.get_config()
         for layer_config in self._model_config['layers']:
             layer_name = layer_config['name']
-            for layer_instance_idx, instance_input_info in enumerate(layer_config['inbound_nodes']):
+
+            inbound_nodes = layer_config['inbound_nodes']
+            if layer_config['class_name'] in ['TFOpLambda', 'SlicingOpLambda']:
+                inbound_nodes = reformat_inbound_nodes_for_oplambda(inbound_nodes)
+
+            for layer_instance_idx, inbound_nodes in enumerate(inbound_nodes):
                 if self._is_layer_shared(layer_name):
                     node_name = get_shared_node_name(layer_name, layer_instance_idx)
                 else:
                     node_name = layer_name
                 input_shapes = self._node_info[node_name]['input_shapes']
 
-
-                # # [[]] is required for instance_input_info
-                #
-                # # [] -> [[ ]]
-                # if not isinstance(instance_input_info[0], list):
-                if get_list_level(instance_input_info) == 1:
-                    instance_input_info = [instance_input_info]
-                # # [[[ ]]] -> [[ ]]
-                # if isinstance(instance_input_info[0][0], list):
-                if get_list_level(instance_input_info) == 3:
-                    instance_input_info = instance_input_info[0]
-
-
-                def _check_input_data(x):
-                    return [type(item) for item in x] == [str, int, int]
-
-                if layer_config['class_name'] in ['TFOpLambda', 'SlicingOpLambda']:
-                    # from [['bn1', 0, 0 {'y': ['bn2', 0, 0], 'name': None}]]
-                    # to   [['bn1', 0, 0, {}], ['bn2', 0, 0, {}]]
-                    instance_input_info_lambda = []
-                    for inbound_node in instance_input_info:
-                        if inbound_node[0] != '_CONSTANT_VALUE':
-                            instance_input_info_lambda.append([inbound_node[0], inbound_node[1], inbound_node[2], {}])
-                        # check for nested edges
-                        d = inbound_node[3]
-                        for item in d.values():
-                            if isinstance(item, list) and len(item) == 3 and _check_input_data(item):
-                                item.append({})
-                                instance_input_info_lambda.append(item)
-                    instance_input_info = instance_input_info_lambda
-
-
-
                 layer_instance_input_port_id = 0
-                # for layer_instance_input_port_id, inbound_node in enumerate(instance_input_info):
-                for inbound_node in instance_input_info:
+                for inbound_node in inbound_nodes:
                     producer_layer_name, producer_layer_instance, \
                     producer_layer_instance_output_port, kwargs = inbound_node
-
-
-                    # if producer_layer_name == '_CONSTANT_VALUE': # MASK case
-                    #     # If an element in the first call argument did not originate as a
-                    #     # keras tensor and is a constant value, we save it using the format
-                    #     # ['_CONSTANT_VALUE', -1, serialized_tensor_or_python_constant]
-                    #     # (potentially including serialized kwargs in an optional 4th argument
-                    #
-                    #     # if 'y' not in kwargs:
-                    #     #     # instance_input_info has [['_CONSTANT_VALUE', ...], ['layer_name', 0, 0, {dtype}]] structure
-                    #     #     continue
-                    #
-                    #     # found = False
-                    #     # for item in kwargs.values():
-                    #     #     if isinstance(item, list) and len(item) == 3:
-                    #     #         producer_layer_name, producer_layer_instance, producer_layer_instance_output_port = item
-                    #     #         found = True
-                    #     #         break
-                    #     # if not found:
-                    #     #     continue
-                    #
-                    #     continue
-
 
                     if self._is_layer_shared(producer_layer_name):
                         producer_node_name = get_shared_node_name(producer_layer_name, producer_layer_instance)
@@ -629,11 +523,8 @@ class FunctionalConverter(TFModelConverter):
                         producer_node_name = producer_layer_name
 
                     producer_layer_info = self._layer_info[producer_layer_name]
-                    # dtype = Dtype.FLOAT if 'float' in producer_layer_info['dtype'].lower() else Dtype.INTEGER
                     dtype = producer_layer_info['dtype']
                     tensor_shape = input_shapes[layer_instance_input_port_id]
-
-
 
                     edge = (producer_node_name, node_name)
                     self._edge_info[edge] = {
@@ -643,10 +534,6 @@ class FunctionalConverter(TFModelConverter):
                         'from_node_output_port_id': producer_layer_instance_output_port
                     }
                     layer_instance_input_port_id += 1
-
-
-
-
 
     def convert(self) -> NNCFGraph:
         nncf_graph = NNCFGraph()
@@ -821,12 +708,7 @@ def _get_multiple_input_layer_attributes(layer: tf.keras.layers.Layer) -> Multip
             input_shape = [input_shape]
         if not isinstance(output_shape, list):
             output_shape = [output_shape]
-
-        # axis = get_concat_axis(input_shape, output_shape)
-        try:
-            axis = get_concat_axis(input_shape, output_shape)
-        except:
-            raise RuntimeError('layer: {}'.format(layer.name))
+        axis = get_concat_axis(input_shape, output_shape)
 
     return MultipleInputLayerAttributes(axis)
 
