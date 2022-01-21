@@ -12,6 +12,7 @@
 """
 
 from typing import List
+from typing import Type
 
 from nncf.common.graph.operator_metatypes import NOOP_METATYPES
 from nncf.common.graph.operator_metatypes import INPUT_NOOP_METATYPES
@@ -120,3 +121,12 @@ class ResizeMetatype(ONNXOpMetatype):
 
 GENERAL_WEIGHT_LAYER_METATYPES = [ConvolutionMetatype,
                                   LinearMetatype]
+
+
+def get_operator_metatypes() -> List[Type[OperatorMetatype]]:
+    """
+    Returns a list of the operator metatypes.
+
+    :return: List of operator metatypes .
+    """
+    return list(ONNX_OPERATION_METATYPES.registry_dict.values())
