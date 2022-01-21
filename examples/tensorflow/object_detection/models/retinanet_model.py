@@ -97,9 +97,8 @@ class RetinanetModel(base_model.Model):
         return _total_loss_fn
 
     def build_model(self, weights=None, is_training=None):
-        with keras_utils.maybe_enter_backend_graph():
-            outputs = self.model_outputs(self._input_layer, is_training)
-            keras_model = tf.keras.models.Model(inputs=self._input_layer, outputs=outputs, name='retinanet')
+        outputs = self.model_outputs(self._input_layer, is_training)
+        keras_model = tf.keras.models.Model(inputs=self._input_layer, outputs=outputs, name='retinanet')
 
         if self._checkpoint_path:
             logger.info('Init backbone')

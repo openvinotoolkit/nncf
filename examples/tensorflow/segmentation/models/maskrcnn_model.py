@@ -37,7 +37,7 @@ def _restore_baseline_weights(keras_model, checkpoint_path):
 
     assignment_map = {}
     for v in keras_model.variables:
-        var_name = v.name[v.name.find('/') + 1:] # Skip parent name
+        var_name = v.name
 
         match_names = []
         for x in checkpoint_names:
@@ -312,9 +312,8 @@ class MaskrcnnModel(base_model.Model):
 
     def build_model(self, weights=None, is_training=None):
         input_layers = self.build_input_layers(self._params, is_training)
-        with keras_utils.maybe_enter_backend_graph():
-            outputs = self.model_outputs(input_layers, is_training)
-            keras_model = tf.keras.models.Model(inputs=input_layers, outputs=outputs, name='maskrcnn')
+        outputs = self.model_outputs(input_layers, is_training)
+        keras_model = tf.keras.models.Model(inputs=input_layers, outputs=outputs, name='maskrcnn')
 
         if self._checkpoint_path:
             logger.info('Init backbone')
