@@ -445,14 +445,18 @@ def generate_middle_quants(size: List[int], input_low: np.ndarray, quant_len: np
     return torch.from_numpy(ref_weights.astype(np.single))
 
 
-@pytest.mark.parametrize("quantization_mode, parameters_to_set",
-                         [("symmetric", {"scale": 1.}), ("asymmetric", {"input_low": -1.,
-                                                                        "input_range": 3.})])
-def test_overflow_fix_quantization_export_with_middle_quants(tmp_path, quantization_mode, parameters_to_set):
+@pytest.mark.parametrize("half_range, quantization_mode, parameters_to_set",
+                         [(True, "symmetric", {"scale": 1.}),
+                          (True, "asymmetric", {"input_low": -1., "input_range": 3.}),
+                          (False, "symmetric", {"scale": 1.}),
+                          (False, "asymmetric", {"input_low": -1., "input_range": 3.})])
+def test_quantization_export_with_middle_quants(tmp_path, half_range, quantization_mode, parameters_to_set):
     model = TwoConvTestModel()
     sample_size = [1, 1, 20, 20]
     config = get_config_for_export_mode(False)
     config["compression"]["weights"] = {"mode": quantization_mode}
+    if not half_range:
+        config["compression"]["overflow_fix"] = 'disable'
     config["input_info"]["sample_size"] = sample_size
 
     _, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
