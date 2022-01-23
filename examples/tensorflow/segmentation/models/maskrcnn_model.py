@@ -17,7 +17,6 @@ from examples.tensorflow.common.logger import logger
 from examples.tensorflow.common.object_detection import base_model
 from examples.tensorflow.common.object_detection import losses
 from examples.tensorflow.common.object_detection.architecture import factory
-from examples.tensorflow.common.object_detection.architecture import keras_utils
 from examples.tensorflow.common.object_detection.evaluation import coco_evaluator
 from examples.tensorflow.common.object_detection.ops import postprocess_ops
 from examples.tensorflow.common.object_detection.ops import roi_ops

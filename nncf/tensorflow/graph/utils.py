@@ -46,7 +46,7 @@ def is_functional_model(model):
 def get_keras_layers_class_names():
     keras_layers = [class_name for class_name, _ in
                     inspect.getmembers(sys.modules[tf.keras.layers.__name__], inspect.isclass)]
-    keras_layers += ['TensorFlowOpLayer', 'TFOpLambda']
+    keras_layers += ['TensorFlowOpLayer', 'TFOpLambda', 'SlicingOpLambda']
     return keras_layers
 
 

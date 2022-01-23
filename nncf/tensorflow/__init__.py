@@ -18,19 +18,12 @@ import tensorflow
 from pkg_resources import parse_version
 
 tensorflow_version = parse_version(tensorflow.__version__).base_version
-
-if parse_version(BKC_TF_VERSION).base_version != tensorflow_version:
-    import warnings
-    warnings.warn("NNCF provides best results with tensorflow=={bkc}, "
-                   "while current tensorflow version is {curr} - consider switching to tensorflow=={bkc}".format(
+if not tensorflow_version.startswith(BKC_TF_VERSION[:-2]):
+    raise RuntimeError(
+         'NNCF only supports tensorflow=={bkc}, while current tensorflow version is {curr}'.format(
          bkc=BKC_TF_VERSION,
          curr=tensorflow.__version__
     ))
-elif not ('2.4.3' <= tensorflow_version <= '2.5.0'):
-   raise RuntimeError(
-        'NNCF only supports 2.4.3<=tensorflow<=2.5.0, while current tensorflow version is {curr}'.format(
-        curr=tensorflow.__version__
-   ))
 
 
 from nncf.tensorflow.helpers import create_compressed_model
@@ -44,8 +37,6 @@ from nncf.tensorflow.sparsity.magnitude import algorithm as magnitude_sparsity_a
 from nncf.tensorflow.pruning.filter_pruning import algorithm as filter_pruning_algorithm
 from nncf.tensorflow.sparsity.rb import algorithm as rb_sparsity_algorithm
 
-# from tensorflow.python.keras.engine import keras_tensor
-# keras_tensor.disable_keras_tensors()
 
 from nncf.common.accuracy_aware_training.training_loop import AdaptiveCompressionTrainingLoop
 from nncf.common.accuracy_aware_training.training_loop import EarlyExitCompressionTrainingLoop

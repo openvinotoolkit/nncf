@@ -50,7 +50,6 @@ class TFPackOpMetatype(TFOpMetatype):
     op_names = ['Pack', 'stack']
 
 
-# TODO: remove
 @TF_OPERATION_METATYPES.register()
 class TFUnPackOpMetatype(TFOpMetatype):
     name = 'UnPackOp'

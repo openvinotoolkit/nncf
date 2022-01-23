@@ -16,7 +16,6 @@ import functools
 import numpy as np
 import tensorflow as tf
 
-from examples.tensorflow.common.object_detection.architecture import keras_utils
 from examples.tensorflow.common.object_detection.architecture import nn_ops
 
 

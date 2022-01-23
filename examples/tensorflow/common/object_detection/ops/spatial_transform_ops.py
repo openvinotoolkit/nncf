@@ -259,15 +259,6 @@ def selective_crop_and_resize(features,
         # Gather for x_axis.
         # shape is [batch_size, num_boxes, output_size, output_size, features]
         features_per_box = layers.Lambda(einsum2)((features_per_box, grid_x_weight))
-
-        # # Gather for y_axis.
-        # # shape is [batch_size, num_boxes, output_size, width, features]
-        # features_per_box = tf.einsum('bmhwf,bmoh->bmowf', features,
-        #                              tf.cast(grid_y_weight, features.dtype))
-        # # Gather for x_axis.
-        # # shape is [batch_size, num_boxes, output_size, output_size, features]
-        # features_per_box = tf.einsum('bmhwf,bmow->bmhof', features_per_box,
-        #                              tf.cast(grid_x_weight, features.dtype))
     else:
         height_dim_offset = max_feature_width
         level_dim_offset = max_feature_height * height_dim_offset
@@ -358,11 +349,6 @@ def multilevel_crop_and_resize(features, boxes, output_size=7):
         level_dim_offsets = tf.constant(level_dim_offsets, tf.int32)
         height_dim_sizes = tf.constant(feature_widths, tf.int32)
 
-
-
-
-
-
         # Assigns boxes to the right level.
         box_width = boxes[:, :, 3] - boxes[:, :, 1]
         box_height = boxes[:, :, 2] - boxes[:, :, 0]
@@ -386,12 +372,6 @@ def multilevel_crop_and_resize(features, boxes, output_size=7):
             tf.expand_dims(box_height, -1),
             tf.expand_dims(box_width, -1)
         ], -1)
-
-
-
-
-
-
 
         # Maps levels to [0, max_level-min_level].
         levels -= min_level
