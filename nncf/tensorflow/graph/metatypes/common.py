@@ -104,7 +104,7 @@ LAYER_METATYPES_AGNOSTIC_TO_DATA_PRECISION_WITH_ONE_INPUT = [
     op_metatypes.TFExpandDimsOpMetatype,
     op_metatypes.TFSqueezeOpMetatype,
     op_metatypes.TFMaxPool3DOpMetatype,
-    op_metatypes.TFTileOpMetatype
+    op_metatypes.TFTileOpMetatype,
 ]
 
 LAYER_METATYPES_AGNOSTIC_TO_DATA_PRECISION_WITH_MULTIPLE_INPUTS = [

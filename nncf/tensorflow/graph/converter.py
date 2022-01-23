@@ -622,7 +622,7 @@ class SequentialConverter(TFModelConverter):
         model_config = self._model.get_config()
 
         layer_name = None
-        for layer_idx, layer_config in enumerate(model_config['layers']):
+        for layer_config in model_config['layers']:
             layer_name = layer_config['config']['name']
             if layer_name in self._custom_layer_infos:
                 nncf_graph = self._add_custom_layer_subgraph(nncf_graph, layer_name)

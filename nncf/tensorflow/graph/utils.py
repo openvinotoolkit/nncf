@@ -17,6 +17,7 @@ import inspect
 import tensorflow as tf
 from tensorflow.python.keras.engine.base_layer import TensorFlowOpLayer
 from tensorflow.python.keras.layers.core import TFOpLambda
+from tensorflow.python.keras.layers.core import SlicingOpLambda
 
 from nncf.tensorflow.graph.metatypes.keras_layers import TFNNCFWrapperLayerMetatype
 from nncf.tensorflow.graph.metatypes.matcher import get_keras_layer_metatype
@@ -168,6 +169,7 @@ def is_builtin_layer(layer) -> bool:
     # A similar logic is actually what gets used in TF as
     # tensorflow.python.keras.utils.layer_utils.is_builtin_layer.
     return isinstance(layer, TensorFlowOpLayer) or isinstance(layer, TFOpLambda) or \
+           isinstance(layer, SlicingOpLambda) or \
            _was_specially_wrapped_with_keras_export(layer, '_keras_api_names') or \
            _was_specially_wrapped_with_keras_export(layer, '_keras_api_names_v1')
 
