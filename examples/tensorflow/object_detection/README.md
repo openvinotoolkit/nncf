@@ -67,7 +67,16 @@ The [COCO2017](https://cocodataset.org/) dataset in TFRecords format should be s
 - Download the pre-trained weights in H5 format and provide the path to them using `--weights` flag. The link to the 
 archive with pre-trained weights can be found in the `TensorFlow checkpoint` column of the [results](#results) table. 
 Select the checkpoint corresponding to the `None` compression algorithm, which includes the pre-trained weights for the 
-FP32 model, without applying any compression algorithms.  
+FP32 model, without applying any compression algorithms.
+- (Optional) Before compressing a model, it is highly recommended checking the accuracy of the pretrained model, use the following command: 
+  ```bash
+  python main.py \
+  --mode=test \
+  --config=configs/quantization/retinanet_coco_int8.json \
+  --weights=<path_to_H5_file_with_pretrained_weights>
+  --data=<path_to_dataset> \
+  --disable-compression 
+  ```
 - Run the following command to start compression with fine-tuning on all available GPUs on the machine:
     ```bash
     python main.py \
@@ -81,7 +90,7 @@ FP32 model, without applying any compression algorithms.
 
 ### Validate Your Model Checkpoint
 
-To estimate the test scores of your model checkpoint, use the following command:
+To estimate the test scores of your trained model checkpoint, use the following command:
 ```bash
 python main.py \
 --mode=test \
@@ -89,8 +98,6 @@ python main.py \
 --data=<path_to_dataset> \
 --resume=<path_to_trained_model_checkpoint>
 ```
-
-To validate an model checkpoint, make sure the compression algorithm settings are empty in the configuration file and path to`.h5` file with model weights is provided in command line argument `--weights`.
 
 ### Export Compressed Model
 

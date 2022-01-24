@@ -50,20 +50,37 @@ The ImageNet dataset in TFRecords format should be specified in the configuratio
 
 - If you did not install the package, add the repository root folder to the `PYTHONPATH` environment variable.
 - Go to the `examples/tensorflow/classification` folder.
-- Run the following command to start compression with fine-tuning on all available GPUs on the machine:
-    ```bash
-    python main.py \
-    --mode=train \
-    --config=configs/quantization/mobilenet_v2_imagenet_int8.json \
-    --data=<path_to_imagenet_dataset> \
-    --log-dir=../../results/quantization/mobilenet_v2_int8
-    ```
-    It may take a few epochs to get the baseline accuracy results.
-- Use the `--resume` flag with the path to the checkpoint to resume training from the defined checkpoint or folder with checkpoints to resume training from the last checkpoint.
+
+#### Test Pretrained Model
+
+Before compressing a model, it is highly recommended checking the accuracy of the pretrained model. All models which are supported in the sample has pretrained weights for ImageNet. 
+
+To load pretrained weights into a model and then evaluate the accuracy of that model, make sure that the pretrained=True option is set in the configuration file and use the following command:
+```bash
+python main.py \
+--mode=test \
+--config=configs/quantization/mobilenet_v2_imagenet_int8.json \
+--data=<path_to_imagenet_dataset> \
+--disable-compression 
+```
+
+#### Compress Pretrained Model
+
+Run the following command to start compression with fine-tuning on all available GPUs on the machine:
+  ```bash
+  python main.py \
+  --mode=train \
+  --config=configs/quantization/mobilenet_v2_imagenet_int8.json \
+  --data=<path_to_imagenet_dataset> \
+  --log-dir=../../results/quantization/mobilenet_v2_int8
+  ```
+It may take a few epochs to get the baseline accuracy results.
+
+Use the `--resume` flag with the path to the checkpoint to resume training from the defined checkpoint or folder with checkpoints to resume training from the last checkpoint.
 
 ### Validate Your Model Checkpoint
 
-To estimate the test scores of your model checkpoint, use the following command:
+To estimate the test scores of your trained model checkpoint, use the following command:
 ```bash
 python main.py \
 --mode=test \
@@ -71,7 +88,6 @@ python main.py \
 --data=<path_to_imagenet_dataset> \
 --resume=<path_to_trained_model_checkpoint>
 ```
-To validate an model checkpoint, make sure the compression algorithm settings are empty in the configuration file and `pretrained=True` is set.
 
 ### Export Compressed Model
 
