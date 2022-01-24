@@ -32,6 +32,7 @@ from tests.torch.helpers import create_compressed_model_and_algo_for_test
 from tests.torch.helpers import get_nodes_by_type
 from tests.torch.helpers import register_bn_adaptation_init_args
 from tests.torch.helpers import resolve_constant_node_inputs_to_values
+from tests.torch.quantization.test_onnx_export import get_successors
 from tests.torch.quantization.test_quantization_helpers import get_quantization_config_without_range_init
 
 
@@ -668,19 +669,13 @@ class TestsWithONNXInspection:
         return False
 
     @staticmethod
-    def get_successor(node: onnx.NodeProto, graph: onnx.GraphProto) -> onnx.NodeProto:
-        assert len(node.output) == 1  # Only single-output nodes are supported in this func
-        for target_node in graph.node:
-            if node.output[0] in target_node.input:
-                return target_node
-        return None
-
-    @staticmethod
     def group_nodes_by_output_target(nodes: List[onnx.NodeProto], graph: onnx.GraphProto) -> List[
         List[onnx.NodeProto]]:
         output_nodes = {}  # type: Dict[str, List[onnx.NodeProto]]
         for node in nodes:
-            target_node_name = TestsWithONNXInspection.get_successor(node, graph).name
+            succs = get_successors(node, graph)
+            assert len(succs) == 1
+            target_node_name = next(iter(succs)).name
             if target_node_name not in output_nodes:
                 output_nodes[target_node_name] = []
             output_nodes[target_node_name].append(node)
