@@ -245,7 +245,7 @@ class TFModelConverter(ABC):
             return Dtype.FLOAT
 
         keras_layer = self._get_layer(layer_name)
-        if isinstance(keras_layer.output, tf.Tensor) or isinstance(keras_layer.output, KerasTensor):
+        if isinstance(keras_layer.output, (tf.Tensor, KerasTensor)):
             dtype = keras_layer.output.dtype
         else:
             # In case of multiple outputs, assume all outputs have the same type
@@ -515,7 +515,7 @@ class FunctionalConverter(TFModelConverter):
                 layer_instance_input_port_id = 0
                 for inbound_node in inbound_nodes:
                     producer_layer_name, producer_layer_instance, \
-                    producer_layer_instance_output_port, kwargs = inbound_node
+                    producer_layer_instance_output_port, _ = inbound_node
 
                     if self._is_layer_shared(producer_layer_name):
                         producer_node_name = get_shared_node_name(producer_layer_name, producer_layer_instance)

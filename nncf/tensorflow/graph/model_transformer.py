@@ -345,15 +345,14 @@ class TFModelTransformer(ModelTransformer):
         layer_configs = []
         idx, downstream_layer_cfg = self._find_layer_config(layer_name)
 
-        downstream_layer_inbound_nodes = downstream_layer_cfg['inbound_nodes']
-
-        if downstream_layer_cfg['class_name'] in ['TFOpLambda', 'SlicingOpLambda']:
-            downstream_layer_inbound_nodes = reformat_inbound_nodes_for_oplambda(downstream_layer_inbound_nodes)
-
         for layer in layers_to_insert:
             config = tf.keras.utils.serialize_keras_object(layer)
             if functional_model:
                 config['name'] = config['config']['name']
+
+                downstream_layer_inbound_nodes = downstream_layer_cfg['inbound_nodes']
+                if downstream_layer_cfg['class_name'] in ['TFOpLambda', 'SlicingOpLambda']:
+                    downstream_layer_inbound_nodes = reformat_inbound_nodes_for_oplambda(downstream_layer_inbound_nodes)
 
                 # Update config of the layer to insert
                 inbound_node_info = copy.deepcopy(downstream_layer_inbound_nodes)[instance_idx][input_port_id]
@@ -406,7 +405,7 @@ class TFModelTransformer(ModelTransformer):
         :param layer_to_insert_config: Config of the layer, which is supposed to be inserted into the graph.
         """
         layer_out_ports = set()
-        replace_layer_name = layer_to_insert_config['name']  # name to replace the inbound_node name in the downstream layer
+        replace_layer_name = layer_to_insert_config['name']  # new inbound_node name in the downstream layer
 
         for layer in self._model_config['layers']:
             inbound_nodes = layer['inbound_nodes']

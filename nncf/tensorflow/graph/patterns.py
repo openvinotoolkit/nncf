@@ -12,7 +12,8 @@
 """
 
 from nncf.common.graph.patterns import GraphPattern
-from nncf.tensorflow.graph.metatypes.tf_ops import TFAddOpMetatype, TFReluOpMetatype
+from nncf.tensorflow.graph.metatypes.tf_ops import TFAddOpMetatype
+from nncf.tensorflow.graph.metatypes.tf_ops import TFReluOpMetatype
 from nncf.tensorflow.graph.metatypes.tf_ops import TFMulOpMetatype
 
 

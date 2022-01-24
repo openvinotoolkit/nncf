@@ -80,7 +80,7 @@ class TFElementwisePruningOp(ElementwisePruningOp):
 
 @TF_PRUNING_OPERATOR_METATYPES.register('reshape')
 class TFReshapeOps(ReshapePruningOp):
-    additional_types = ['Reshape']
+    additional_types = ['Reshape', 'reshape']
 
 
 @TF_PRUNING_OPERATOR_METATYPES.register('flatten')
@@ -90,9 +90,9 @@ class TFFlattenOps(FlattenPruningOp):
 
 @TF_PRUNING_OPERATOR_METATYPES.register('stop_propagation_ops')
 class TFStopMaskForwardPruningOp(StopMaskForwardPruningOp):
-    additional_types = ['Dense', 'MatMul']
+    additional_types = ['Dense', 'MatMul', 'linalg.matmul']
 
 
 @TF_PRUNING_OPERATOR_METATYPES.register('concat')
 class TFConcatPruningOp(ConcatPruningOp):
-    additional_types = ['Concatenate', 'ConcatV2']
+    additional_types = ['Concatenate', 'ConcatV2', 'concat']

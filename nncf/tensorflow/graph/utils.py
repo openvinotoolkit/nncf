@@ -168,8 +168,7 @@ def _was_specially_wrapped_with_keras_export(layer, attr_name) -> bool:
 def is_builtin_layer(layer) -> bool:
     # A similar logic is actually what gets used in TF as
     # tensorflow.python.keras.utils.layer_utils.is_builtin_layer.
-    return isinstance(layer, TensorFlowOpLayer) or isinstance(layer, TFOpLambda) or \
-           isinstance(layer, SlicingOpLambda) or \
+    return isinstance(layer, (SlicingOpLambda, TFOpLambda, TensorFlowOpLayer)) or \
            _was_specially_wrapped_with_keras_export(layer, '_keras_api_names') or \
            _was_specially_wrapped_with_keras_export(layer, '_keras_api_names_v1')
 
@@ -180,7 +179,8 @@ def get_list_level(lst: List) -> int:
 
 def check_oplambda_input_data(x: List) -> bool:
     input_stracture = [type(item) for item in x]
-    return input_stracture == [str, int, int] or input_stracture == [str, int, int, dict]
+    return input_stracture in ([str, int, int], [str, int, int, dict])
+
 
 
 def reformat_inbound_nodes_for_oplambda(inbound_nodes: List) -> List[List[List]]:
