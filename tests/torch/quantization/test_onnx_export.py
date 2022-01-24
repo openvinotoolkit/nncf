@@ -195,3 +195,44 @@ def test_target_compression_idx(tmp_path):
                                                                                 onnx_graph)
     assert input_low_t_attr.shape == (1, TargetCompressionIdxTestModel.CONV2D_TRANSPOSE_TARGET_CHANNEL_COUNT, 1, 1)
     assert input_low_t_attr.shape == input_high_t_attr.shape
+
+
+class ModelWithBranches(torch.nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.conv_1 = torch.nn.Conv2d(2, 2, (1, 1))
+        self.conv_2 = torch.nn.Conv2d(2, 2, (1, 1), groups=2)
+        self.conv_3 = torch.nn.Conv2d(2, 2, (1, 1), groups=2)
+
+
+    def forward(self, x):
+        x1 = self.conv_1(x)
+        x2 = self.conv_2(x)
+        x3 = self.conv_3(x)
+        return x1, x2, x3
+
+
+def test_branching_fq(tmp_path):
+    nncf_config = NNCFConfig.from_dict({
+        "input_info": {
+            "sample_size": [1, 2, 2, 2]
+        },
+        "compression": {
+            "algorithm": "quantization",
+            "preset": "mixed",
+            "ignored_scopes": [
+                "/nncf_model_input_0"
+            ],
+            "initializer": {
+                "range": {
+                    "num_init_samples": 0
+                },
+                "batchnorm_adaptation": {
+                    "num_bn_adapation_samples": 0
+                }
+            }
+        }
+    })
+    onnx_model_proto = load_exported_onnx_version(nncf_config, ModelWithBranches(),
+                                                  path_to_storage_dir=tmp_path)
+    pass
