@@ -20,7 +20,7 @@ import numbers
 import numpy as np
 import onnx
 import torch
-from onnx import numpy_helper
+from onnx import numpy_helper  # pylint: disable=no-name-in-module
 from torch import nn
 from torch.nn import Module
 from torch.nn import functional as F
@@ -45,6 +45,8 @@ from tests.common.helpers import BaseTensorListComparator
 
 TensorType = Union[torch.Tensor, np.ndarray, numbers.Number]
 
+
+# pylint: disable=no-member
 
 def fill_conv_weight(conv, value):
     conv.weight.data.fill_(value)
@@ -235,7 +237,7 @@ class PTTensorListComparator(BaseTensorListComparator):
         raise Exception(f'Tensor must be np.ndarray or torch.Tensor, not {type(tensor)}')
 
 
-def create_compressed_model_and_algo_for_test(model: Module, config: NNCFConfig=None,
+def create_compressed_model_and_algo_for_test(model: Module, config: NNCFConfig = None,
                                               dummy_forward_fn: Callable[[Module], Any] = None,
                                               wrap_inputs_fn: Callable[[Tuple, Dict], Tuple[Tuple, Dict]] = None,
                                               compression_state: Dict[str, Any] = None) \
@@ -396,8 +398,6 @@ def resolve_constant_node_inputs_to_values(node: onnx.NodeProto, graph: onnx.Gra
             val = constant_input_node.attribute[0]
             retval[input_] = numpy_helper.to_array(val.t)
     return retval
-
-
 
 
 class Command(BaseCommand):

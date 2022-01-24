@@ -13,6 +13,8 @@ from tests.torch.quantization.test_onnx_export import get_config_for_export_mode
 import pytest
 
 
+# pylint: disable=no-member
+
 @pytest.mark.parametrize('num_bits, mode, scale_shape, half_range, assert_vals',
                          [(8, QuantizationMode.SYMMETRIC, (1, 2, 3, 4), True, (128, -64, 63)),
                           (8, QuantizationMode.ASYMMETRIC, (1, 2, 3, 4), True, (128, 0, 127)),

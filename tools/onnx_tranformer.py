@@ -16,11 +16,13 @@ from argparse import ArgumentParser
 
 import onnx
 
+
 def rename_quantize(model):
     for node in model.graph.node:
         if node.op_type == 'Quantize':
             node.op_type = 'FakeQuantize'
             node.doc_string = 'Fake quantization operation'
+
 
 def main(argv):
     parser = ArgumentParser()
@@ -30,11 +32,11 @@ def main(argv):
                         required=True)
     args = parser.parse_args(args=argv)
 
-    model = onnx.load(args.input_model)
+    model = onnx.load(args.input_model)  # pylint: disable=no-member
 
     rename_quantize(model)
 
-    onnx.save(model, args.output_model)
+    onnx.save(model, args.output_model)  # pylint: disable=no-member
 
 
 if __name__ == '__main__':
