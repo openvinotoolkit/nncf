@@ -11,7 +11,7 @@ This sample demonstrates DL model compression capabailites for object detection 
 
 ## Installation
 
-At this point it is assumed that you have already installed nncf
+At this point it is assumed that you have already installed nncf:
 
 ```
 pip install nncf
