@@ -243,6 +243,7 @@ to find instruction and links to exact configuration files and final checkpoints
 |MobileNet V2|INT8 (per-tensor for weights)|ImageNet|71.3 (0.63)|
 |MobileNet V2|Mixed, 46.6% INT8 / 53.4% INT4|ImageNet|70.92 (1.01)|
 |MobileNet V2|INT8 + Sparsity 52% (RB)|ImageNet|71.11 (0.82)|
+|MobileNet V3 small|INT8|ImageNet|66.94 (0.73)|
 |SqueezeNet V1.1|INT8|ImageNet|58.28 (-0.04)|
 |SqueezeNet V1.1|INT8 (per-tensor for weights)|ImageNet|58.26 (-0.02)|
 |SqueezeNet V1.1|Mixed, 54.7% INT8 / 45.3% INT4|ImageNet|58.9 (-0.66)|

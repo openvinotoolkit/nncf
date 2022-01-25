@@ -1,5 +1,5 @@
 """
- Copyright (c) 2019-2020 Intel Corporation
+ Copyright (c) 2019-2022 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -216,7 +216,7 @@ def test_export_lstm_cell(tmp_path):
     assert os.path.exists(test_path)
 
     onnx_num = 0
-    model = onnx.load(test_path)
+    model = onnx.load(test_path)  # pylint: disable=no-member
     # pylint: disable=no-member
     for node in model.graph.node:
         if node.op_type == 'FakeQuantize':
@@ -396,8 +396,8 @@ def test_export_stacked_bi_lstm(tmp_path):
     assert os.path.exists(test_path)
 
     onnx_num = 0
-    model = onnx.load(test_path)
     # pylint: disable=no-member
+    model = onnx.load(test_path)
     for node in model.graph.node:
         if node.op_type == 'FakeQuantize':
             onnx_num += 1
@@ -452,7 +452,7 @@ class TestNumberOfNodes:
             counters[name] = counter
         _ = model(test_data.x, test_hidden)
         assert model.get_graph().get_nodes_count() == 132  # NB: may always fail in debug due to superfluous 'cat' nodes
-        assert len(counters) + 2 == 54 # 8 WQ + 44 AQ + 1 input AQ + 1 reset point AQ
+        assert len(counters) + 2 == 54  # 8 WQ + 44 AQ + 1 input AQ + 1 reset point AQ
         for counter in counters.values():
             assert counter.count == p.seq_length
         assert counter_for_input_quantizer.count == 1
