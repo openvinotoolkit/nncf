@@ -13,7 +13,9 @@ This sample demonstrates a DL model compression in case of an image-classificati
 
 ## Installation
 
-To work with the sample you should install the corresponding Python package dependencies
+At this point it is assumed that you have already installed nncf. You can find information on downloading nncf [here](https://github.com/openvinotoolkit/nncf#:~:text=As%20a%20PyPI%20package).  
+
+To work with the sample you should install the corresponding Python package dependencies:
 
 ```
 pip install -r examples/torch/requirements.txt
