@@ -188,7 +188,7 @@ def are_symmetric_fq_nodes_are_exported_correct_with_overflow_fix(tmp_path, comp
     onnx_checkpoint_path = str(tmp_path / 'model.onnx')
     compression_ctrl.export_model(onnx_checkpoint_path, input_names=['input'])
 
-    onnx_model = onnx.load(onnx_checkpoint_path)
+    onnx_model = onnx.load(onnx_checkpoint_path)  # pylint: disable=no-member
 
     # Find weight tensors in ONNX model
     fq_nodes = get_nodes_by_type(onnx_model, 'FakeQuantize')
@@ -241,7 +241,7 @@ def are_asymmetric_fq_nodes_are_exported_correct_with_overflow_fix(tmp_path, com
     onnx_checkpoint_path = str(tmp_path / 'model.onnx')
     compression_ctrl.export_model(onnx_checkpoint_path, input_names=['input'])
 
-    onnx_model = onnx.load(onnx_checkpoint_path)
+    onnx_model = onnx.load(onnx_checkpoint_path)  # pylint: disable=no-member
 
     # Find weight tensors in ONNX model
     fq_nodes = get_nodes_by_type(onnx_model, 'FakeQuantize')
@@ -355,7 +355,7 @@ def test_are_qdq_exported_per_tensor_weights_tensors_clipped(tmp_path):
     onnx_checkpoint_path = str(tmp_path / 'model.onnx')
     compression_ctrl.export_model(onnx_checkpoint_path, input_names=['input'])
 
-    onnx_model = onnx.load(onnx_checkpoint_path)
+    onnx_model = onnx.load(onnx_checkpoint_path)  # pylint: disable=no-member
 
     # Find weight tensors in ONNX model
     quantize_nodes = get_nodes_by_type(onnx_model, 'QuantizeLinear')

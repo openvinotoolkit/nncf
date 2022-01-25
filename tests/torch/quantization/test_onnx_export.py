@@ -102,7 +102,7 @@ PER_CHANNEL_AQ_SCALE_SHAPE = (1, INPUT_TENSOR_SHAPE[1], 1, 1)
                              [True, False],
                              [QuantizationMode.SYMMETRIC, QuantizationMode.ASYMMETRIC],
                              [QuantizerExportMode.FAKE_QUANTIZE, QuantizerExportMode.ONNX_QUANTIZE_DEQUANTIZE_PAIRS]
-                             ))
+                         ))
 def test_onnx_export_to_quantize_dequantize_per_channel(per_channel: bool,
                                                         qmode: QuantizationMode,
                                                         export_mode: QuantizerExportMode):
@@ -153,6 +153,8 @@ class TargetCompressionIdxTestModel(torch.nn.Module):
         x = self.conv_t(x)
         return x
 
+
+# pylint: disable=no-member
 
 def get_weight_fq_for_conv_node(node: onnx.NodeProto, graph: onnx.GraphProto):
     weight_input_tensor_id = node.input[1]
