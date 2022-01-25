@@ -25,6 +25,7 @@ from nncf.common.utils.registry import Registry
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import infer_backend_from_model
 from nncf.config.extractors import extract_algo_specific_config
+from nncf.config.extractors import extract_bn_adaptation_init_params
 
 ModelType = TypeVar('ModelType')
 
@@ -272,3 +273,6 @@ class BaseCompressionAlgorithmBuilder(CompressionAlgorithmBuilder):
         :return: Returns a dictionary with Python data structures
             (dict, list, tuple, str, int, float, True, False, None) that represents state of the object.
         """
+
+    def _parse_bn_adapt_params(self) -> Optional[Dict]:
+        return extract_bn_adaptation_init_params(self.config, self.name)
