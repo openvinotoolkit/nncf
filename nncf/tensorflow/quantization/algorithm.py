@@ -17,6 +17,8 @@ from typing import List
 from typing import Tuple
 
 import tensorflow as tf
+from tensorflow.python.keras.layers.core import SlicingOpLambda
+from tensorflow.python.keras.layers.core import TFOpLambda
 
 from nncf import NNCFConfig
 from nncf.api.compression import CompressionLoss
@@ -637,7 +639,13 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
                 # in order to correctly count the duplicated edges
                 original_name, _ = get_original_name_and_instance_idx(successor.node_name)
                 layer = model.get_layer(name=original_name)
+
                 num_previous_nodes = len(layer.input) if isinstance(layer.input, list) else 1
+                if isinstance(layer, (TFOpLambda, SlicingOpLambda)):
+                    num_previous_nodes = 0
+                    for inbound_node in layer.inbound_nodes:
+                        num_previous_nodes += len(inbound_node.keras_inputs)
+
                 if successor.metatype in ELEMENTWISE_LAYER_METATYPES and num_previous_nodes == 1:
                     preprocessing_nodes.append(successor)
                     is_finished = False
