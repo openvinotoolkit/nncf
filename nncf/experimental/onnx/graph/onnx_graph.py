@@ -11,6 +11,7 @@
  limitations under the License.
 """
 
+from typing import Dict
 from typing import List
 
 import onnx
@@ -35,67 +36,54 @@ class ONNXGraph:
         self.activations_tensors.extend(inputs)
         self.activations_tensors.extend(outputs)
 
-    def get_nodes_by_output(self, output_name: str) -> List[NodeProto]:
-        """
-        Returns all nodes that have output with the name 'output_name'.
-        """
-        output = []
-        graph = self.onnx_model.graph
-        for node in graph.node:
-            if output_name in node.output or output_name == node.output:
-                output.append(node)
-        return output
-
-    def get_nodes_by_input(self, input_name: str) -> List[NodeProto]:
-        """
-        Returns all nodes that have input with the name 'output_name'.
-        """
-        output = []
-        graph = self.onnx_model.graph
-        for node in graph.node:
-            if input_name in node.input or input_name == node.input:
-                output.append(node)
-        return output
-
     def get_all_nodes(self) -> List[NodeProto]:
         """
         Returns all nodes of onnx model.
         """
         return self.onnx_model.graph.node
 
-    def get_all_model_inputs(self) -> List[ValueInfoProto]:
+    def get_model_inputs(self) -> List[ValueInfoProto]:
         """
-        Returns all model inputs.
+        Returns model inputs.
         """
         return list(self.onnx_model.graph.input)
 
-    def get_all_model_outputs(self) -> List[ValueInfoProto]:
+    def get_model_outputs(self) -> List[ValueInfoProto]:
         """
-        Returns all model outputs.
+        Returns model outputs.
         """
         return list(self.onnx_model.graph.output)
 
-    def get_all_node_inputs(self, node_name: str) -> List[ValueInfoProto]:
+    def get_nodes_by_output(self, output_name: str) -> List[NodeProto]:
         """
-        Returns all node input edges.
+        Returns all nodes that have output with the name 'output_name'.
         """
-        node_inputs = None
-        graph = self.onnx_model.graph
-        for node in graph.node:
-            if node.name == node_name:
-                node_inputs = node.input
-        return list(node_inputs)
+        return self._get_nodes_by_lambda(output_name, lambda node: node.output)
 
-    def get_all_node_outputs(self, node_name: str) -> List[ValueInfoProto]:
+    def get_nodes_by_input(self, input_name: str) -> List[NodeProto]:
         """
-        Returns all node input edges.
+        Returns all nodes that have input with the name 'input_name'.
         """
-        node_outputs = None
+        return self._get_nodes_by_lambda(input_name, lambda node: node.input)
+
+    def _get_nodes_by_lambda(self, name: str, func):
+        output = []
+        graph = self.onnx_model.graph
+        for node in graph.node:
+            if name in func(node) or name == func(node):
+                output.append(node)
+        return output
+
+    def get_node_edges(self, node_name: str) -> Dict[str, List[ValueInfoProto]]:
+        """
+        Returns node input and output edges.
+        """
         graph = self.onnx_model.graph
         for node in graph.node:
             if node.name == node_name:
-                node_outputs = node.output
-        return list(node_outputs)
+                return {'input': list(node.input),
+                        'output': list(node.output)}
+        raise RuntimeError('There is no node with the name {}'.format(node_name))
 
     def get_nodes_by_type(self, node_type: str) -> List[NodeProto]:
         """
@@ -120,12 +108,12 @@ class ONNXGraph:
         """
         Returns tensor value of model's Initializer with the name equals to 'initializer_name'.
         """
-        tensor = None
         graph = self.onnx_model.graph
         for init in graph.initializer:
             if init.name == initializer_name:
                 tensor = onnx.numpy_helper.to_array(init)
-        return tensor
+                return tensor
+        raise RuntimeError('There is no initializer with the name {}'.format(initializer_name))
 
     def get_tensor_shape(self, tensor: ValueInfoProto) -> List[int]:
         """
@@ -147,31 +135,21 @@ class ONNXGraph:
             raise RuntimeError('The tensor does not have shape field')
         return shape
 
-    def get_node_output_shape(self, node_output_name: str) -> List[int]:
+    def get_edge_shape(self, edge_name: str) -> List[int]:
         """
-        Returns node's output shape with output name equals to node_output_name.
+        Returns tensor shape of the edge with the name 'edge_name'.
         """
         for tensor in self.activations_tensors:
-            if tensor.name == node_output_name:
+            if tensor.name == edge_name:
                 return self.get_tensor_shape(tensor)
-        raise RuntimeError('There is no node with such output name')
+        raise RuntimeError('There is no edge with the name {}'.format(edge_name))
 
-    def get_node_output_dtype(self, node_output_name: str) -> str:
+    def get_edge_dtype(self, edge_name: str) -> str:
         """
-        Returns the output data type of the node with output name equals to node_output_name.
+        Returns the data type of the edge with the name 'edge_name'.
         """
         for tensor in self.activations_tensors:
-            if tensor.name == node_output_name:
+            if tensor.name == edge_name:
                 elem_type = tensor.type.tensor_type.elem_type
                 return onnx.TensorProto.DataType.Name(elem_type)
-        raise RuntimeError()
-
-    def get_node_input_dtype(self, node_input_name: str) -> str:
-        """
-        Returns the input data type of the node with input name equals to node_input_name.
-        """
-        for tensor in self.activations_tensors:
-            if tensor.name == node_input_name:
-                elem_type = tensor.type.tensor_type.elem_type
-                return onnx.TensorProto.DataType.Name(elem_type)
-        raise RuntimeError()
+        raise RuntimeError('There is no edge with the name {}'.format(edge_name))
