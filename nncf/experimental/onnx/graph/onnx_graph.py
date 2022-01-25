@@ -11,6 +11,7 @@
  limitations under the License.
 """
 
+from typing import Callable
 from typing import Dict
 from typing import List
 
@@ -66,7 +67,7 @@ class ONNXGraph:
         """
         return self._get_nodes_by_lambda(input_name, lambda node: node.input)
 
-    def _get_nodes_by_lambda(self, name: str, func):
+    def _get_nodes_by_lambda(self, name: str, func: Callable[[NodeProto], List[NodeProto]]):
         output = []
         graph = self.onnx_model.graph
         for node in graph.node:
