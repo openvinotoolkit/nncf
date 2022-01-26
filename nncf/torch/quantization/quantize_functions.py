@@ -123,7 +123,7 @@ class ExportQuantizeToFakeQuantize(torch.autograd.Function):
 
     @staticmethod
     def forward(ctx, input_, levels, input_low, input_high, output_low, output_high):
-        return input_
+        return torch.clone(input_)
 
     @staticmethod
     def backward(ctx, grad_output):
@@ -140,7 +140,7 @@ class ExportQuantizeToONNXQuantDequant(torch.autograd.Function):
 
     @staticmethod
     def forward(ctx, input_, y_scale, y_zero_point):
-        return input_
+        return torch.clone(input_)
 
     @staticmethod
     def backward(ctx, grad_output):

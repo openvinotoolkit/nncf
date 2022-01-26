@@ -11,22 +11,21 @@
  limitations under the License.
 """
 from itertools import product
-from typing import Tuple
+from typing import Tuple, List
 
 import onnx
 import pytest
 import torch
-
 from nncf import NNCFConfig
 from nncf.torch.quantization.layers import PTQuantizerSpec
 from nncf.torch.quantization.layers import QUANTIZATION_MODULES
 from nncf.torch.quantization.layers import QuantizationMode
 from nncf.torch.quantization.layers import QuantizerExportMode
+from tests.torch.helpers import TwoConvTestModel
 from tests.torch.helpers import get_nodes_by_type
+from tests.torch.helpers import load_exported_onnx_version
 from tests.torch.helpers import register_bn_adaptation_init_args
 from tests.torch.helpers import resolve_constant_node_inputs_to_values
-from tests.torch.helpers import TwoConvTestModel
-from tests.torch.helpers import load_exported_onnx_version
 
 
 def get_config_for_export_mode(should_be_onnx_standard: bool) -> NNCFConfig:
@@ -195,3 +194,65 @@ def test_target_compression_idx(tmp_path):
                                                                                 onnx_graph)
     assert input_low_t_attr.shape == (1, TargetCompressionIdxTestModel.CONV2D_TRANSPOSE_TARGET_CHANNEL_COUNT, 1, 1)
     assert input_low_t_attr.shape == input_high_t_attr.shape
+
+
+class ModelWithBranches(torch.nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.conv_1 = torch.nn.Conv2d(2, 2, (1, 1))
+        self.conv_2 = torch.nn.Conv2d(2, 2, (1, 1), groups=2)
+        self.conv_3 = torch.nn.Conv2d(2, 2, (1, 1), groups=2)
+
+
+    def forward(self, x):
+        x1 = self.conv_1(x)
+        x2 = self.conv_2(x)
+        x3 = self.conv_3(x)
+        x4 = x + x
+        return x1, x2, x3, x4
+
+def get_successors(node: onnx.NodeProto, graph: onnx.GraphProto) -> List[onnx.NodeProto]:
+    retval = []
+    for output_name in node.output:
+        for target_node in graph.node:
+            if output_name in target_node.input:
+                retval.append(target_node)
+    return retval
+
+@pytest.mark.parametrize('export_mode', [QuantizerExportMode.FAKE_QUANTIZE,
+                                         QuantizerExportMode.ONNX_QUANTIZE_DEQUANTIZE_PAIRS])
+def test_branching_fqs_are_not_chained(tmp_path, export_mode):
+    nncf_config = NNCFConfig.from_dict({
+        "input_info": {
+            "sample_size": [1, 2, 2, 2]
+        },
+        "compression": {
+            "algorithm": "quantization",
+            "preset": "mixed",
+            "ignored_scopes": [
+                "/nncf_model_input_0",
+                "{re}.*__add__.*"
+            ],
+            "initializer": {
+                "range": {
+                    "num_init_samples": 0
+                },
+                "batchnorm_adaptation": {
+                    "num_bn_adaptation_samples": 0
+                }
+            }
+        }
+    })
+    onnx_model_proto = load_exported_onnx_version(nncf_config, ModelWithBranches(),
+                                                  path_to_storage_dir=tmp_path)
+    target_node_type = "FakeQuantize" if export_mode is QuantizerExportMode.FAKE_QUANTIZE else "DequantizeLinear"
+    quantizer_nodes = get_nodes_by_type(onnx_model_proto, target_node_type)
+    # Quantizer nodes should, for this model, immediately be followed by the quantized operation. Chained quantizers
+    # mean that the ONNX export was incorrect.
+    #pylint:disable=no-member
+    follower_node_lists = [get_successors(x, onnx_model_proto.graph) for x in quantizer_nodes]
+    follower_nodes = []
+    for lst in follower_node_lists:
+        follower_nodes += lst
+    follower_node_types = [x.op_type for x in follower_nodes]
+    assert not any(x == target_node_type for x in follower_node_types)
