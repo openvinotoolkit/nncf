@@ -11,7 +11,7 @@ This sample demonstrates DL model compression capabilities for semantic segmenta
 
 ## Installation
 
-At this point it is assumed that you have already installed nncf. You can find information on downloading nncf [here](https://github.com/openvinotoolkit/nncf#user-content-installation).   
+At this point it is assumed that you have already installed nncf. You can find information on downloading nncf [here](https://github.com/openvinotoolkit/nncf#user-content-installation).  
 
 To work with the sample you should install the corresponding Python package dependencies:
 
