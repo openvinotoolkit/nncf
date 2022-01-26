@@ -14,9 +14,6 @@
 from typing import List
 from typing import Type
 
-from nncf.common.graph.operator_metatypes import NOOP_METATYPES
-from nncf.common.graph.operator_metatypes import INPUT_NOOP_METATYPES
-
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.operator_metatypes import OperatorMetatypeRegistry
 
@@ -29,22 +26,6 @@ class ONNXOpMetatype(OperatorMetatype):
     @classmethod
     def get_all_aliases(cls) -> List[str]:
         return cls.op_names
-
-
-@ONNX_OPERATION_METATYPES.register()
-@NOOP_METATYPES.register()
-class ONNXLayerNoopMetatype(ONNXOpMetatype):
-    name = 'noop'
-
-    @classmethod
-    def get_all_aliases(cls) -> List[str]:
-        return [cls.name]
-
-
-@ONNX_OPERATION_METATYPES.register()
-@INPUT_NOOP_METATYPES.register()
-class ONNXInputLayerMetatype(ONNXOpMetatype):
-    name = 'InputLayer'
 
 
 @ONNX_OPERATION_METATYPES.register()
