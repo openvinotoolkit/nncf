@@ -14,7 +14,7 @@ The sample receives a configuration file where the training schedule, hyper-para
 
 ## Installation
 
-At this point it is assumed that you have already installed nncf. You can find information on downloading nncf [here](https://github.com/openvinotoolkit/nncf#user-content-as-a-pypi-package).  
+At this point it is assumed that you have already installed nncf. You can find information on downloading nncf [here](https://github.com/openvinotoolkit/nncf#user-content-installation).  
 
 To work with the sample you should install the corresponding Python package dependencies:
 
