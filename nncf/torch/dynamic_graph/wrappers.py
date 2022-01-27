@@ -87,6 +87,9 @@ def wrap_operator(operator, operator_info: 'PatchedOperatorInfo'):
         ctx.in_operator = True
 
         try:
+            op_name = operator_info.name
+            op_address = ctx.get_caller_context(op_name)
+            str_op_address = str(op_address)
             if operator_info.skip_trace:
                 result = operator(*args, **kwargs)
             elif ctx.is_forwarding:
@@ -99,8 +102,9 @@ def wrap_operator(operator, operator_info: 'PatchedOperatorInfo'):
 
                 layer_attrs = None
                 ignored_algos = []
+
                 # Collect module attributes, if required
-                if ctx.trace_dynamic_graph:
+                if ctx.trace_dynamic_graph and not ctx.in_skipped_block:
                     if op_name in OP_NAMES_REQUIRING_MODULE_ATTRS:
                         curr_module = ctx.get_current_module()
                         if curr_module is None:
@@ -114,23 +118,36 @@ def wrap_operator(operator, operator_info: 'PatchedOperatorInfo'):
                 op_input = OperatorInput(list(args), kwargs)
                 processed_input = ctx.execute_pre_hooks(op_address, op_input)
 
-                if ctx.trace_dynamic_graph:
+                if ctx.trace_dynamic_graph and not ctx.in_skipped_block:
                     tensor_metas = make_tensor_metas(processed_input)
                     node = ctx.find_operator_node(tensor_metas, op_address)
 
                 args = tuple(processed_input.op_args)
                 kwargs = processed_input.op_kwargs
-                result = operator(*args, **kwargs)
+
+                if not ctx._elastic_depth or not ctx.in_skipped_block:
+                    result = operator(*args, **kwargs)
+                else:
+                    result = ctx.tensor_cache
 
                 if isinstance(result, type(NotImplemented)):
                     nncf_logger.debug("Operation {} returned NotImplemented".format(op_name))
-                elif ctx.trace_dynamic_graph and node is None:
+                elif ctx.trace_dynamic_graph and node is None and not ctx.in_skipped_block:
                     node = ctx.maybe_add_node(processed_input, tensor_metas, op_address, layer_attrs, ignored_algos)
 
-                if is_debug() and ctx.trace_dynamic_graph and node is not None:
+                if is_debug() and ctx.trace_dynamic_graph and node is not None and not ctx.in_skipped_block:
                     ctx.register_node_call(node)
-                result = trace_tensors(result, node)
+                if not ctx.in_skipped_block:
+                    result = trace_tensors(result, node)
                 result = ctx.execute_post_hooks(op_address, result)
+
+                if str_op_address in ctx.end_node_name_of_skipped_block:
+                    assert ctx.in_skipped_block == True
+                    ctx.in_skipped_block = False
+                if str_op_address in ctx.start_node_name_of_skipped_block:
+                    assert ctx.in_skipped_block == False
+                    ctx.in_skipped_block = True
+                    ctx.tensor_cache = result
         except:
             # Looks like the __repr__ call made during IDE debug to display tensor contents does not exit properly,
             # but instead throws an exception. This try...except block handles such a situation.
@@ -148,6 +165,8 @@ def wrap_operator(operator, operator_info: 'PatchedOperatorInfo'):
 
 
 def wrap_module_call(module_call):
+    from nncf.torch.dynamic_graph.patch_pytorch import ORIGINAL_OPERATORS
+    NAMES_ORIGINAL_OPERATORS = [ op.name for op in ORIGINAL_OPERATORS]
     def wrapped(self, *args, **kwargs):
         ctx = get_current_context()
         if not ctx or self.__class__ in _IGNORED_SCOPES:
@@ -155,8 +174,28 @@ def wrap_module_call(module_call):
                 _warn_data_parallel()
             return module_call(self, *args, **kwargs)
         ctx.push_scope(self)
-        retval = module_call(self, *args, **kwargs)
-        if type(self).__name__ in ITERATION_MODULES.registry_dict:
+        is_nncf_layer = isinstance(self, _NNCFModuleMixin)
+        if is_nncf_layer:
+            op_name = self.op_func_name
+        else:
+            op_name = self.__class__.__name__
+        is_layer_or_op = op_name in NAMES_ORIGINAL_OPERATORS or is_nncf_layer
+        op_address = ctx.get_caller_context(op_name)
+        str_op_address = str(op_address)
+        if ctx._elastic_depth and is_layer_or_op and ctx.in_skipped_block:
+            ctx.register_operator_call(op_address.operator_name, op_address.scope_in_model)
+            retval = ctx.tensor_cache
+            if str_op_address in ctx.end_node_name_of_skipped_block:
+                assert ctx.in_skipped_block == True
+                ctx.in_skipped_block = False
+            if str_op_address in ctx.start_node_name_of_skipped_block:
+                assert ctx.in_skipped_block == False
+                ctx.in_skipped_block = True
+        else:
+            retval = module_call(self, *args, **kwargs)
+
+
+        if type(self).__name__ in ITERATION_MODULES.registry_dict.keys():
             ctx.reset_operator_call_count_in_scope(ctx.scope)
         ctx.pop_scope()
         return retval

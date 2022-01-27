@@ -20,10 +20,10 @@ from typing import List
 from typing import Optional
 
 import torch
-
 from nncf.common.graph.layer_attributes import BaseLayerAttributes
 from nncf.common.utils.debug import is_debug
 from nncf.torch.dynamic_graph.graph import DynamicGraph
+
 from nncf.torch.dynamic_graph.graph import DynamicGraphNode
 from nncf.torch.dynamic_graph.op_input_processing import OperatorInput
 from nncf.torch.dynamic_graph.operation_address import OperationAddress
@@ -81,6 +81,15 @@ class TracingContext:
         self.global_buffer_store = {}
 
         self._trace_dynamic_graph = False
+
+        # ELASTIC DEPTH PARAMS
+        self._elastic_depth = False
+        self.skipped_blocks = list()
+        self.in_skipped_block = False
+        self.start_node_name_of_skipped_block = []
+        self.end_node_name_of_skipped_block = []
+        self.active_block_idxs = None
+
 
     def __enter__(self):
         global _CURRENT_CONTEXT
@@ -259,6 +268,7 @@ class TracingContext:
                              node_input_comparator: 'TensorMetaComparator' = None):
         self._input_comparators_per_scope.append((node_input_comparator, scopes_to_apply))
 
+
     @property
     def base_module_thread_local_replica(self) -> torch.nn.Module:
         return self._threading.thread_local.base_module_replica
@@ -348,6 +358,36 @@ class TracingContext:
 
     def reset_graph(self):
         self.graph = DynamicGraph()
+
+    def set_active_skipped_block(self, block_idxs: List[int]):
+        if self.active_block_idxs is not None:
+            self.start_node_name_of_skipped_block = []
+            self.end_node_name_of_skipped_block = []
+        self.active_block_idxs = block_idxs
+        if self._elastic_depth and len(block_idxs) > 0:
+            i = 0
+            self.start_node_name_of_skipped_block.append(self.skipped_blocks[block_idxs[i]].start_node)
+            self.end_node_name_of_skipped_block.append(self.skipped_blocks[block_idxs[i]].end_node)
+            while (i < len(block_idxs) - 1):
+                idx = block_idxs[i]
+                idx_n = block_idxs[i + 1]
+                if self.ordinals_ids[idx][1] <= self.ordinals_ids[idx_n][0]:
+                    self.start_node_name_of_skipped_block.append(self.skipped_blocks[idx_n].start_node)
+                    self.end_node_name_of_skipped_block.append(self.skipped_blocks[idx_n].end_node)
+                else:
+                    self.active_block_idxs.remove(idx_n)
+                i += 1
+
+    def set_elastic_blocks(self, blocks: List['BuildingBlock'] = None, ordinal_ids: List = None):
+        if blocks is not None:    
+            if isinstance(blocks, list):
+                if len(blocks) == 0:
+                    self.skipped_blocks = []
+                elif isinstance(blocks[0], str):
+                    self.skipped_blocks = [blocks]
+                else:
+                    self.skipped_blocks = blocks
+            self.ordinals_ids = ordinal_ids
 
 
 @contextmanager
