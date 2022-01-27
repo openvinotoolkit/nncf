@@ -1,0 +1,48 @@
+"""
+ Copyright (c) 2022 Intel Corporation
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+      http://www.apache.org/licenses/LICENSE-2.0
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+"""
+
+from typing import List
+
+from nncf.experimental.post_training_api.engine import Engine
+from nncf.experimental.post_training_api.dataloader import DataLoader
+
+import onnx
+import onnxruntime as rt
+import numpy as np
+
+
+class OnnxEngine(Engine):
+    def __init__(self, dataloader: DataLoader, num_iters: int, providers: List[str]):
+        super().__init__(dataloader)
+        self.num_iters = num_iters
+        self.providers = providers
+
+    def set_model(self, model: str) -> None:
+        """
+        Because ORT must load model from the file, we should provide the path.
+        """
+        onnx_model = onnx.load(model)
+        onnx.checker.check_model(onnx_model)
+        self.model = model
+
+    def infer(self) -> List[np.ndarray]:
+        output = []
+        sess = rt.InferenceSession(self.model, providers=self.providers)
+        input_name = sess.get_inputs()[0].name
+        for i, (input_, *other) in enumerate(self.data_loader):
+            if i == self.num_iters:
+                break
+            input_tensor = input_.cpu().detach().numpy()
+            output_tensor = sess.run([], {input_name: input_tensor.astype(np.float32)})
+            output.append(output_tensor)
+        return output
