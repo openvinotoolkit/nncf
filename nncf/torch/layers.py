@@ -138,21 +138,34 @@ class NNCFConv2d(_NNCFModuleMixin, nn.Conv2d):
         proxy_padding_value = getattr(self, NNCF_PADDING_VALUE_ATTR_NAME)  # hack to get value from ProxyModule
         proxy_weight = self.weight
         proxy_bias = self.bias
-        return self._conv_forward_proxy(input_, proxy_weight, proxy_bias, proxy_padding_value)
+        proxy_padding = self.padding
+        proxy_num_groups = self.groups
+        return self._conv_forward_proxy(input_,
+                                  proxy_weight, proxy_bias, proxy_padding_value, proxy_padding, proxy_num_groups)
 
-
-    def _conv_forward_proxy(self, input_, weight, bias, padding_value):
+    def _conv_forward_proxy(self, input_, weight, bias, padding_value, padding, num_groups):
         with no_jit_trace():
             padding_val = padding_value.item()
         self.get_padding_value_ref().data.fill_(padding_val)
+        self.groups = num_groups
+
+        def _reverse_repeat_tuple(t, n):
+            r"""Reverse the order of `t` and repeat each element for `n` times.
+
+            This can be used to translate padding arg used by Conv and Pooling modules
+            to the ones used by `F.pad`.
+            """
+            return tuple(x for x in reversed(t) for _ in range(n))
+
+        reversed_padding_repeated_twice = _reverse_repeat_tuple(self.padding, 2)
         if self.padding_mode != 'zeros':
-            return F.conv2d(F.pad(input_, self._reversed_padding_repeated_twice, mode=self.padding_mode,
+            return F.conv2d(F.pad(input_, reversed_padding_repeated_twice, mode=self.padding_mode,
                                   value=padding_val),
                             weight, bias, self.stride,
                             (0, 0), self.dilation, self.groups)
         if padding_val == 0:
-            return F.conv2d(input_, weight, bias, self.stride, self.padding, self.dilation, self.groups)
-        return F.conv2d(F.pad(input_, self._reversed_padding_repeated_twice, value=padding_val),
+            return F.conv2d(input_, weight, bias, self.stride, padding, self.dilation, self.groups)
+        return F.conv2d(F.pad(input_, reversed_padding_repeated_twice, value=padding_val),
                         weight, bias, self.stride,
                         (0, 0), self.dilation, self.groups)
 
@@ -340,6 +353,7 @@ NNCF_GENERAL_CONV_MODULES_DICT = dict(NNCF_CONV_MODULES_DICT)
 NNCF_GENERAL_CONV_MODULES_DICT.update(NNCF_DECONV_MODULES_DICT)
 
 NNCF_LINEAR_MODULES_DICT = {NNCFLinear: nn.Linear}
+NNCF_MODULES_OP_NAMES = [k.op_func_name for k, _ in NNCF_MODULES_DICT.items()]
 
 NNCF_PRUNING_MODULES_DICT = {
     NNCFLinear: nn.Linear,
