@@ -1,5 +1,5 @@
 """
- Copyright (c) 2021 Intel Corporation
+ Copyright (c) 2022 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -99,6 +99,11 @@ GLOBAL_CONFIG = {
                             'absolute_tolerance_train': 0.5,
                             'absolute_tolerance_test': 0.5
                         },
+                        'quantization/resnet50_int8_accuracy_aware.json':{
+                            'expected_accuracy': 74.88,
+                            'absolute_tolerance_train': 0.5,
+                            'absolute_tolerance_test': 0.5
+                        },
                         'sparsity_quantization/resnet50_imagenet_rb_sparsity_int8.json': {
                             'expected_accuracy': 74.30,
                             'absolute_tolerance_train': 0.5,
@@ -111,6 +116,11 @@ GLOBAL_CONFIG = {
                         },
                         'pruning/resnet50_imagenet_pruning_geometric_median.json': {
                             'expected_accuracy': 74.98,
+                            'absolute_tolerance_train': 0.5,
+                            'absolute_tolerance_test': 0.5
+                        },
+                        'pruning_quantization/resnet50_imagenet_pruning_geometric_median_int8.json': {
+                            'expected_accuracy': 75.08,
                             'absolute_tolerance_train': 0.5,
                             'absolute_tolerance_test': 0.5
                         },
@@ -134,6 +144,12 @@ GLOBAL_CONFIG = {
                     },
                     'pruning/retinanet_coco_pruning.json': {
                         'expected_accuracy': 32.70,
+                        'absolute_tolerance_train': 0.5,
+                        'absolute_tolerance_test': 0.5,
+                        'weights': 'retinanet/retinanet.h5',
+                    },
+                    'pruning_quantization/retinanet_coco_pruning_int8.json': {
+                        'expected_accuracy': 32.53,
                         'absolute_tolerance_train': 0.5,
                         'absolute_tolerance_test': 0.5,
                         'weights': 'retinanet/retinanet.h5',

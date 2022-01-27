@@ -1,5 +1,5 @@
 """
- Copyright (c) 2021 Intel Corporation
+ Copyright (c) 2022 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -224,7 +224,6 @@ class ElementwisePruningOp(BasePruningOp):
         if output_mask is not None:
             output_mask = tensor_processor.elementwise_mask_propagation(input_masks)
 
-        node.data['input_masks'] = input_masks
         node.data['output_mask'] = output_mask
 
 

@@ -1,5 +1,5 @@
 """
- Copyright (c) 2020 Intel Corporation
+ Copyright (c) 2022 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -236,6 +236,18 @@ class MatMulDivConv(nn.Module):
 
     def forward(self, x: torch.Tensor, y: torch.Tensor):
         z = torch.matmul(x, y) / 2
+        return self.conv(z)
+
+
+class MMDivConv(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.conv = create_conv(1, 1, 1, 2)
+
+    def forward(self, x: torch.Tensor, y: torch.Tensor):
+        z = torch.mm(x, y) / 2
+        z = z.unsqueeze(0)
+        z = z.unsqueeze(0)
         return self.conv(z)
 
 

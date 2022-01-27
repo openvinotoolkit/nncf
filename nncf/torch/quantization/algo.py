@@ -1,5 +1,5 @@
 """
- Copyright (c) 2019-2021 Intel Corporation
+ Copyright (c) 2019-2022 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -1172,9 +1172,11 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
 
     def initialize(self, model: NNCFNetwork) -> None:
         if is_main_process() and self.should_init:
-            bn_adaptation = BatchnormAdaptationAlgorithm(
-                **extract_bn_adaptation_init_params(self.config, 'quantization'))
-            bn_adaptation.run(model)
+            bn_adapt_params = self._parse_bn_adapt_params()
+            if bn_adapt_params is not None:
+                bn_adaptation = BatchnormAdaptationAlgorithm(
+                    **extract_bn_adaptation_init_params(self.config, 'quantization'))
+                bn_adaptation.run(model)
 
 
 class QuantizationControllerBase(PTCompressionAlgorithmController):

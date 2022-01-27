@@ -53,11 +53,11 @@ class GraphConverter:
         output_counter = defaultdict(int)
         for output_node in nncf_graph.get_all_nodes():
             output_node_id = output_node.node_id
-            outputs = onnx_graph.get_all_node_outputs(output_node.node_name)
+            outputs = onnx_graph.get_node_edges(output_node.node_name)['output']
             for output in outputs:
                 nodes = onnx_graph.get_nodes_by_input(output)
-                shape = onnx_graph.get_node_output_shape(output)
-                onnx_dtype = onnx_graph.get_node_output_dtype(output)
+                shape = onnx_graph.get_edge_shape(output)
+                onnx_dtype = onnx_graph.get_edge_dtype(output)
                 nncf_dtype = GraphConverter.convert_onnx_dtype_to_nncf_dtype(onnx_dtype)
                 for in_node in nodes:
                     in_node_id = nncf_graph.get_node_by_name(in_node.name).node_id
@@ -72,7 +72,7 @@ class GraphConverter:
                         dtype=Dtype(nncf_dtype)
                     )
         # Add Input Nodes
-        for i, _input in enumerate(onnx_graph.get_all_model_inputs()):
+        for i, _input in enumerate(onnx_graph.get_model_inputs()):
             input_shape = onnx_graph.get_tensor_shape(_input)
             input_node = nncf_graph.add_nncf_node(node_name=MODEL_INPUT_OP_NAME + '_' + str(i),
                                                   node_type=NNCFGraphNodeType.INPUT_NODE,
@@ -87,7 +87,7 @@ class GraphConverter:
                 to_node_id = nncf_graph.get_node_by_name(node.name).node_id
                 input_counter[in_node_id] += 1
                 output_counter[to_node_id] += 1
-                onnx_dtype = onnx_graph.get_node_input_dtype(input_name)
+                onnx_dtype = onnx_graph.get_edge_dtype(input_name)
                 nncf_dtype = GraphConverter.convert_onnx_dtype_to_nncf_dtype(onnx_dtype)
                 nncf_graph.add_edge_between_nncf_nodes(
                     from_node_id=input_node.node_id,
@@ -98,7 +98,7 @@ class GraphConverter:
                     dtype=nncf_dtype
                 )
         # Add Output Nodes
-        for i, _output in enumerate(onnx_graph.get_all_model_outputs()):
+        for i, _output in enumerate(onnx_graph.get_model_outputs()):
             output_shape = onnx_graph.get_tensor_shape(_output)
             output_node = nncf_graph.add_nncf_node(node_name=MODEL_OUTPUT_OP_NAME + '_' + str(i),
                                                    node_type=NNCFGraphNodeType.OUTPUT_NODE,
@@ -114,7 +114,7 @@ class GraphConverter:
                 to_node_id = nncf_graph.get_node_by_name(node.name).node_id
                 input_counter[out_node_id] += 1
                 output_counter[to_node_id] += 1
-                onnx_dtype = onnx_graph.get_node_input_dtype(output_name)
+                onnx_dtype = onnx_graph.get_edge_dtype(output_name)
                 nncf_dtype = GraphConverter.convert_onnx_dtype_to_nncf_dtype(onnx_dtype)
                 nncf_graph.add_edge_between_nncf_nodes(
                     from_node_id=to_node_id,
