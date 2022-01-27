@@ -15,6 +15,8 @@ from typing import Dict
 from typing import List
 from typing import Optional
 
+from typing import Any
+
 from nncf.common.quantization.initialization.range import PerLayerRangeInitConfig
 from nncf.common.quantization.initialization.range import RangeInitConfig
 from nncf.common.utils.logger import logger
@@ -142,25 +144,27 @@ def extract_bn_adaptation_init_params(config: NNCFConfig, algo_name: str) -> Opt
     """
     algo_config = extract_algo_specific_config(config, algo_name)
     params = algo_config.get('initializer', {}).get('batchnorm_adaptation', {})
+    return get_bn_adapt_algo_kwargs(config, params)
+
+
+def get_bn_adapt_algo_kwargs(nncf_config: NNCFConfig, params: Dict[str, Any]) -> Dict[str, Any]:
     num_bn_adaptation_samples = params.get('num_bn_adaptation_samples', 2000)
 
     if num_bn_adaptation_samples == 0:
         return None
 
     try:
-        args = config.get_extra_struct(BNAdaptationInitArgs)
+        args = nncf_config.get_extra_struct(BNAdaptationInitArgs)
     except KeyError:
         raise RuntimeError(
             'Unable to create the batch-norm statistics adaptation algorithm '
             'because the data loader is not provided as an extra struct. Refer to the '
             '`NNCFConfig.register_extra_structs` method and the `BNAdaptationInitArgs` class.') from None
-
     params = {
         'num_bn_adaptation_samples': num_bn_adaptation_samples,
         'data_loader': args.data_loader,
         'device': args.device
     }
-
     return params
 
 

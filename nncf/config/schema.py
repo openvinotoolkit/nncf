@@ -852,13 +852,75 @@ KNOWLEDGE_DISTILLATION_SCHEMA = {
     "required": ["type"]
 }
 
+BOOTSTRAP_NAS_ALGO_NAME_IN_CONFIG = 'bootstrapNAS'
+BOOTSTRAP_NAS_SCHEMA = {
+    **BASIC_COMPRESSION_ALGO_SCHEMA,
+    "properties": {
+        "algorithm": {
+            "const": BOOTSTRAP_NAS_ALGO_NAME_IN_CONFIG,
+        },
+        "elasticity": {  # TODO: or it should be inside training?
+            "depth": {
+                "skipped_blocks": {
+                    "oneOf": [
+                        _ARRAY_OF_STRINGS,
+                        {
+                            "type": "array",
+                            "items": _ARRAY_OF_STRINGS
+                        }
+                    ],
+                },
+                # "skipped_blocks_dependencies": {
+                #     {
+                #         "type": "array",
+                #         "items": _ARRAY_OF_NUMBERS
+                #     }
+                # },
+                "mode": with_attributes(_BOOLEAN,
+                                        description="Mode of elastic_depth.'manual' - set "
+                                                    "block from config by user and 'auto' - search building blocks auto."),
+                "min_block_size": with_attributes(_NUMBER,
+                                                  description="Minimal size of building block."),
+                "max_block_size": with_attributes(_NUMBER,
+                                                  description="Maximal size of building block."),
+            },
+            "width": {
+                "min_out_channels": with_attributes(_NUMBER, description="TBD"),
+                "max_num_widths": with_attributes(_NUMBER, description="TBD"),
+                "width_step": with_attributes(_NUMBER, description="TBD"),
+                "width_multipliers": with_attributes(_ARRAY_OF_NUMBERS, description="TBD"),
+                "filter_importance": with_attributes(_STRING,
+                                                     description="The type of filter importance metric. Can be"
+                                                                 " one of `L1`, `L2`, `geometric_median`."
+                                                                 " `L2` by default."),
+            },
+            "kernel": {
+                "max_num_kernels": with_attributes(_NUMBER, description="TBD"),
+            },
+        },
+        "training": {
+            "algorithm": with_attributes(_STRING, description="TBD"),  # TODO: progressive shrinking only
+            "schedule": {
+                "kernel_stage_epochs": with_attributes(_NUMBER, description="TBD"),
+                "depth_stage_epochs": with_attributes(_NUMBER, description="TBD"),
+                "width_stage_epochs": with_attributes(_NUMBER, description="TBD"),
+            },
+        },
+        "search": {
+            "algorithm": with_attributes(_STRING, description="TBD"),  # TODO: NSGA only?
+            "load_external_predictors": with_attributes(_BOOLEAN, description="TBD"),
+        },
+    },
+}
+
 ALL_SUPPORTED_ALGO_SCHEMA = [BINARIZATION_SCHEMA,
                              QUANTIZATION_SCHEMA,
                              CONST_SPARSITY_SCHEMA,
                              MAGNITUDE_SPARSITY_SCHEMA,
                              RB_SPARSITY_SCHEMA,
                              FILTER_PRUNING_SCHEMA,
-                             KNOWLEDGE_DISTILLATION_SCHEMA]
+                             KNOWLEDGE_DISTILLATION_SCHEMA,
+                             BOOTSTRAP_NAS_SCHEMA]
 
 REF_VS_ALGO_SCHEMA = {BINARIZATION_ALGO_NAME_IN_CONFIG: BINARIZATION_SCHEMA,
                       QUANTIZATION_ALGO_NAME_IN_CONFIG: QUANTIZATION_SCHEMA,
@@ -866,7 +928,8 @@ REF_VS_ALGO_SCHEMA = {BINARIZATION_ALGO_NAME_IN_CONFIG: BINARIZATION_SCHEMA,
                       MAGNITUDE_SPARSITY_ALGO_NAME_IN_CONFIG: MAGNITUDE_SPARSITY_SCHEMA,
                       RB_SPARSITY_ALGO_NAME_IN_CONFIG: RB_SPARSITY_SCHEMA,
                       FILTER_PRUNING_ALGO_NAME_IN_CONFIG: FILTER_PRUNING_SCHEMA,
-                      KNOWLEDGE_DISTILLATION_ALGO_NAME_IN_CONFIG: KNOWLEDGE_DISTILLATION_SCHEMA}
+                      KNOWLEDGE_DISTILLATION_ALGO_NAME_IN_CONFIG: KNOWLEDGE_DISTILLATION_SCHEMA,
+                      BOOTSTRAP_NAS_ALGO_NAME_IN_CONFIG: BOOTSTRAP_NAS_SCHEMA}
 
 ACCURACY_AWARE_MODES_VS_SCHEMA = {
     ADAPTIVE_COMPRESSION_LEVEL_TRAINING_MODE_NAME_IN_CONFIG: ADAPTIVE_COMPRESSION_LEVEL_TRAINING_SCHEMA,
