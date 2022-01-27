@@ -182,7 +182,6 @@ def check_oplambda_input_data(x: List) -> bool:
     return input_stracture in ([str, int, int], [str, int, int, dict])
 
 
-
 def reformat_inbound_nodes_for_oplambda(inbound_nodes: List) -> List[List[List]]:
     """
     Default format examples for inbound_nodes of the layer are as follows:

@@ -47,7 +47,6 @@ BATCH_NORMALIZATION_OPERATIONS = {'type': ['BatchNormalization',
 
 KERAS_ACTIVATIONS_OPERATIONS = {
     'type': ['ReLU',
-             'nn.relu',
              'ThresholdedReLU',
              'ELU',
              'PReLU',
@@ -60,6 +59,7 @@ KERAS_ACTIVATIONS_OPERATIONS = {
 TF_ACTIVATIONS_OPERATIONS = {
     'type': [
         'Relu',
+        'nn.relu',
         'Elu',
         'LeakyRelu',
         'Relu6',
