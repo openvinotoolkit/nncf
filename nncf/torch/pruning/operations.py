@@ -15,8 +15,9 @@ import torch
 
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
-from nncf.common.pruning.utils import PruningOperationsMetatypeRegistry
+from nncf.common.graph.operator_metatypes import UnknownMetatype
 from nncf.common.pruning.mask_propagation import MaskPropagationAlgorithm
+from nncf.common.pruning.utils import get_input_masks
 from nncf.torch.graph.operator_metatypes import (
     PTAddMetatype,
     PTAvgPool2dMetatype,
@@ -73,11 +74,12 @@ from nncf.common.pruning.operations import (
     ReshapePruningOp,
     StopMaskForwardPruningOp
 )
-from nncf.common.graph.operator_metatypes import UnknownMetatype
-from nncf.common.utils.logger import logger as nncf_logger
+
+from nncf.common.pruning.utils import PruningOperationsMetatypeRegistry
 from nncf.common.pruning.utils import is_prunable_depthwise_conv
-from nncf.torch.nncf_network import NNCFNetwork
+from nncf.common.utils.logger import logger as nncf_logger
 from nncf.torch.layers import NNCF_WRAPPED_USER_MODULES_DICT
+from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.pruning.tensor_processor import PTNNCFPruningTensorProcessor
 
 PT_PRUNING_OPERATOR_METATYPES = PruningOperationsMetatypeRegistry("operator_metatypes")
@@ -95,12 +97,33 @@ class PTPruner:
         """
 
     @classmethod
+    def input_reorder(cls, model: NNCFNetwork, node: NNCFNode, graph: NNCFGraph):
+        """
+        Reorder input channels of node by input_masks (if masks is not none and operation support it).
+        It's needed to make an equivalent network after sorting filters by importance in the previous layer.
+
+        :param model: NNCF network.
+        :param node: Node from NNCF graph that will reorder input channels.
+        :param graph: Graph of model.
+        """
+
+    @classmethod
     def output_prune(cls, model: NNCFNetwork, node: NNCFNode, graph: NNCFGraph) -> None:
         """
         Prune node by output_mask (if mask is not none and operation support it).
 
         :param model: NNCF network.
         :param node: Node from NNCF graph that will be prune.
+        :param graph: Graph of model.
+        """
+
+    @classmethod
+    def output_reorder(cls, model: NNCFNetwork, node: NNCFNode, graph: NNCFGraph):
+        """
+        Reorder output channels of node by output_mask (if masks is not none and operation support it).
+        It's needed for performing pruning of filters by simple crop of the last important elements.
+        :param model: NNCF network.
+        :param node: Node from NNCF graph that will reorder output channels.
         :param graph: Graph of model.
         """
 
@@ -129,7 +152,7 @@ class PTConvolutionPruningOp(ConvolutionPruningOp, PTPruner):
     subtypes = [PTConv1dMetatype, PTConv2dMetatype, PTConv3dMetatype]
 
     @classmethod
-    def input_prune(cls, model: NNCFNetwork, node: NNCFNode, graph: NNCFGraph) -> None:
+    def input_prune(cls, model: NNCFNetwork, node: NNCFNode, graph: NNCFGraph):
         input_mask = node.data['input_masks'][0]
         if input_mask is None:
             return
@@ -176,6 +199,35 @@ class PTConvolutionPruningOp(ConvolutionPruningOp, PTPruner):
 
         nncf_logger.info('Pruned Convolution {} by pruning mask. Old output filters number: {}, new filters number:'
                          ' {}.'.format(node.data['key'], old_num_clannels, node_module.out_channels))
+
+    @classmethod
+    def input_reorder(cls, model: NNCFNetwork, node: NNCFNode, graph: NNCFGraph):
+        if is_prunable_depthwise_conv(node):
+            return
+        input_masks = get_input_masks(node, graph)
+        reorder_indexes = input_masks[0]
+        if reorder_indexes is None:
+            return
+        reorder_indexes = reorder_indexes.tensor
+        conv = model.get_containing_module(node.node_name)
+        conv.weight.data = torch.index_select(conv.weight.data, 1, reorder_indexes)
+        nncf_logger.debug(
+            'Reordered input channels (first 10 reorder indexes {}) of Convolution: {} '.format(reorder_indexes[:10],
+                                                                                                node.data['key']))
+
+    @classmethod
+    def output_reorder(cls, model: NNCFNetwork, node: NNCFNode, graph: NNCFGraph):
+        reorder_indexes = node.data['output_mask']
+        if reorder_indexes is None:
+            return
+        conv = model.get_containing_module(node.node_name)
+        reorder_indexes = reorder_indexes.tensor
+        conv.weight.data = torch.index_select(conv.weight.data, 0, reorder_indexes)
+        if conv.bias is not None:
+            conv.bias.data = torch.index_select(conv.bias.data, 0, reorder_indexes)
+        nncf_logger.debug(
+            'Reordered output channels (first 10 reorder indexes {}) of Convolution: {} '.format(reorder_indexes[:10],
+                                                                                                 node.data['key']))
 
 
 @PT_PRUNING_OPERATOR_METATYPES.register('transpose_convolution')
@@ -255,6 +307,25 @@ class PTBatchNormPruningOp(BatchNormPruningOp, PTPruner):
         nncf_logger.info('Pruned BatchNorm {} by input mask. Old num features: {}, new num features:'
                          ' {}.'.format(node.data['key'], old_num_clannels, new_num_channels))
 
+    @classmethod
+    def input_reorder(cls, model: NNCFNetwork, node: NNCFNode, graph: NNCFGraph):
+        input_masks = get_input_masks(node, graph)
+        reorder_indexes = input_masks[0]
+        if reorder_indexes is None:
+            return
+
+        reorder_indexes = reorder_indexes.tensor
+        bn = model.get_containing_module(node.node_name)
+
+        bn.weight.data = torch.index_select(bn.weight.data, 0, reorder_indexes)
+        bn.bias.data = torch.index_select(bn.bias.data, 0, reorder_indexes)
+        bn.running_mean.data = torch.index_select(bn.running_mean.data, 0, reorder_indexes)
+        bn.running_var.data = torch.index_select(bn.running_var.data, 0, reorder_indexes)
+
+        nncf_logger.debug(
+            'Reordered channels (first 10 reorder indexes {}) of BatchNorm: {} '.format(reorder_indexes[:10],
+                                                                                        node.data['key']))
+
 
 @PT_PRUNING_OPERATOR_METATYPES.register('group_norm')
 class PTGroupNormPruningOp(GroupNormPruningOp, PTPruner):
@@ -314,7 +385,7 @@ class PTStopMaskForwardPruningOp(StopMaskForwardPruningOp, PTPruner):
 
 
 @PT_PRUNING_OPERATOR_METATYPES.register('reshape')
-class PTReshape(ReshapePruningOp):
+class PTReshape(ReshapePruningOp, PTPruner):
     subtypes = [PTReshapeMetatype]
 
 
