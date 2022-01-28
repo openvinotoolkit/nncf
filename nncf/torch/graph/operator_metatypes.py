@@ -515,6 +515,14 @@ class PTRELUMetatype(PTOperatorMetatype):
 
 
 @PT_OPERATOR_METATYPES.register()
+class PTRELU6Metatype(PTOperatorMetatype):
+    name = "Relu6Op"
+    module_to_function_names = {
+        NamespaceTarget.TORCH_NN_FUNCTIONAL: ["relu6"]
+    }
+
+
+@PT_OPERATOR_METATYPES.register()
 class PTMaxMetatype(PTOperatorMetatype):
     name = "MaxOp"
     module_to_function_names = {
