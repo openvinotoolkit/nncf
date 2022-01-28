@@ -56,8 +56,7 @@ def get_training_dataset(dataset_name, path_to_annotations, path_to_imgs, config
             path_to_imgs,
             transform=ssd_transform,
             target_transform=VOCAnnotationTransform(keep_difficult=False),
-            return_image_info=False,
-            rgb=preprocessing.rgb
+            return_image_info=False
         )
     if dataset_name == 'coco':
         training_dataset = COCODataset(
@@ -88,8 +87,7 @@ def get_testing_dataset(dataset_name, path_to_annotations, path_to_imgs, config)
             path_to_imgs, [('2007', 'test')],
             transform=transform,
             target_transform=VOCAnnotationTransform(keep_difficult=True),
-            return_image_info=True,
-            rgb=preprocessing.rgb
+            return_image_info=True
         )
     if dataset_name == 'coco':
         testing_dataset = COCODataset(

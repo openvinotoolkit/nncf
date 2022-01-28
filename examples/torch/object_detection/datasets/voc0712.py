@@ -14,6 +14,7 @@
 import os
 import os.path
 import sys
+from typing import Optional, Callable
 
 import cv2
 import numpy as np
@@ -106,36 +107,27 @@ class VOCDetection(data.Dataset):
     name = 'voc'
 
 
-    def __init__(self, root, image_sets=(('2007', 'trainval'),), transform=None,
-                 target_transform=VOCAnnotationTransform(keep_difficult=False), return_image_info=False, rgb=True):
+    def __init__(self,
+                 root: str,
+                 image_sets: tuple = (('2007', 'trainval'), ('2012', 'trainval')),
+                 transform: Optional[Callable] = None,
+                 target_transform: Optional[Callable] = VOCAnnotationTransform(keep_difficult=False),
+                 return_image_info: bool = False,
+                 ):
         super().__init__()
-        self.list_image_set=[]
-        self.image_set = image_sets
-        #with others parameters (also how with root)
-        self.transform = transform
-        self.target_transform = target_transform
-        self.rgb = rgb
+        self.list_image_set = []
         self.return_image_info = return_image_info
         self._annopath = os.path.join('%s', 'Annotations', '%s.xml')
         self._imgpath = os.path.join('%s', 'JPEGImages', '%s.jpg')
-        self.ids = [] #переменная file_name в voc.py
-        for year,name in self.image_set:
-            voc_elem = datasets.VOCDetection(root, year=year, image_set=name, transform=self.transform,
-                                             target_transform=self.target_transform)
+        self.ids = []
+        for year, name in image_sets:
+            voc_elem = datasets.VOCDetection(root, year=year,
+                                             image_set=name, transform=transform, target_transform=target_transform)
+
             self.list_image_set.append(voc_elem)
 
         self._voc_concat = data.ConcatDataset(self.list_image_set)
-        # for id,tg in enumerate(self._voc_concat):
-        #     print(id)
 
-        #voc_elem = datasets.VOCDetection(self.root,year='2007',image_set='trainval',transforms=None)
-
-
-        # for (year, name) in self.image_set:
-        #     rootpath = os.path.join(self.root,'VOCdevkit', 'VOC' + year) #здесь добавил VOCdevkit
-        #     with open(os.path.join(rootpath, 'ImageSets', 'Main', name + '.txt'), encoding='utf8') as lines:
-        #         for line in lines:
-        #             self.ids.append((rootpath, line.strip()))
 
     def __getitem__(self, index):
         return self._voc_concat.__getitem__(index)
@@ -180,7 +172,7 @@ class VOCDetection(data.Dataset):
     #         target = np.hstack((boxes, np.expand_dims(labels, axis=1)))
     #     return torch.from_numpy(img).permute(2, 0, 1), target, height, width
 
-    def pull_anno(self, index): #используется в eval.py
+    def pull_anno(self, index):
         """Returns the original annotation of image at index
 
         Note: not using self.__getitem__(), as any transformations passed in
@@ -198,17 +190,13 @@ class VOCDetection(data.Dataset):
         gt = self.target_transform(anno, 1, 1)
         return img_name[1], gt
 
-    # def pull_image(self, index): #не используется?
+    #function not used
+    # def pull_image(self, index):
     #     img_id = self.ids[index]
     #     return cv2.imread(self._imgpath % img_id, cv2.IMREAD_COLOR)
 
-    def get_img_names(self): #используется в eval.py
+    def get_img_names(self):
         img_names = []
         for id_ in self.ids:
             img_names.append(id_[1])
         return img_names
-
-
-
-a=VOCDetection('C:/Users/nmeshalk/omz-training-datasets').__len__()
-print(a)
