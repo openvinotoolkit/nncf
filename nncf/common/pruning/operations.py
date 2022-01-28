@@ -224,7 +224,6 @@ class ElementwisePruningOp(BasePruningOp):
         if output_mask is not None:
             output_mask = tensor_processor.elementwise_mask_propagation(input_masks)
 
-        node.data['input_masks'] = input_masks
         node.data['output_mask'] = output_mask
 
 

@@ -102,7 +102,7 @@ def manual_seed(seed):
 
 def is_tracing_state():
     # pylint: disable=protected-access
-    return torch._C._get_tracing_state()
+    return torch._C._get_tracing_state() is not None
 
 
 class no_jit_trace:

@@ -1173,9 +1173,11 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
 
     def initialize(self, model: NNCFNetwork) -> None:
         if is_main_process() and self.should_init:
-            bn_adaptation = BatchnormAdaptationAlgorithm(
-                **extract_bn_adaptation_init_params(self.config, 'quantization'))
-            bn_adaptation.run(model)
+            bn_adapt_params = self._parse_bn_adapt_params()
+            if bn_adapt_params is not None:
+                bn_adaptation = BatchnormAdaptationAlgorithm(
+                    **extract_bn_adaptation_init_params(self.config, 'quantization'))
+                bn_adaptation.run(model)
 
 
 class QuantizationControllerBase(PTCompressionAlgorithmController):

@@ -581,5 +581,4 @@ def identity_mask_propagation(node: NNCFNode, graph: NNCFGraph) -> None:
         # In case for disconnected NNCFGraph
         input_masks = [None]
     assert len(input_masks) == 1
-    node.data['input_masks'] = input_masks
     node.data['output_mask'] = input_masks[0]

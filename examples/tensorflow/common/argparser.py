@@ -217,6 +217,12 @@ def get_common_argument_parser(**flags):
             metavar='N',
             help='Print frequency (batch iterations). Default: 10)'))
 
+    parser.add_argument(
+        "--disable-compression",
+        help="Disable compression",
+        action="store_true",
+    )
+
     return parser
 
 

@@ -123,7 +123,7 @@ class ExportQuantizeToFakeQuantize(torch.autograd.Function):
 
     @staticmethod
     def forward(ctx, input_, levels, input_low, input_high, output_low, output_high):
-        return input_
+        return torch.clone(input_)
 
     @staticmethod
     def backward(ctx, grad_output):
@@ -140,7 +140,7 @@ class ExportQuantizeToONNXQuantDequant(torch.autograd.Function):
 
     @staticmethod
     def forward(ctx, input_, y_scale, y_zero_point):
-        return input_
+        return torch.clone(input_)
 
     @staticmethod
     def backward(ctx, grad_output):
@@ -192,7 +192,8 @@ class TuneRange(torch.autograd.Function):
         input_low_copy[input_low_copy > 0] = 0
         input_high[input_high < 0] = 0
         n = levels - 1
-        scale = levels / (input_high - input_low_copy)
+        # Need a cast here because fp16 division yileds fp32 results sometimes
+        scale = (levels / (input_high - input_low_copy)).to(dtype=input_high.dtype)
         zp = torch.round(-input_low_copy * scale)
 
         new_input_low = torch.where(zp < n, zp / (zp - n) * input_high, input_low_copy)
