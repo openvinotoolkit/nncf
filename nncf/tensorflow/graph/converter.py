@@ -35,7 +35,8 @@ from nncf.common.graph.utils import get_concat_axis
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.tensorflow.graph.metatypes.common import DECONV_LAYER_METATYPES
 from nncf.tensorflow.graph.metatypes.common import DEPTHWISE_CONV_LAYER_METATYPES
-from nncf.tensorflow.graph.metatypes.common import LAYER_METATYPES_AGNOSTIC_TO_DATA_PRECISION_WITH_MULTIPLE_INPUTS
+from nncf.tensorflow.graph.metatypes.common import \
+    LAYER_METATYPES_AGNOSTIC_TO_DATA_PRECISION_WITH_MULTIPLE_CONCAT_INPUTS
 from nncf.tensorflow.graph.metatypes.common import GENERAL_CONV_LAYER_METATYPES
 from nncf.tensorflow.graph.metatypes.common import RESHAPE_METATYPES
 from nncf.tensorflow.graph.metatypes.matcher import get_keras_layer_metatype
@@ -551,7 +552,7 @@ class FunctionalConverter(TFModelConverter):
                 layer_attributes = _get_conv_layer_attributes(self._get_layer(layer_name), is_depthwise=True)
             elif metatype in GENERAL_CONV_LAYER_METATYPES:
                 layer_attributes = _get_conv_layer_attributes(self._get_layer(layer_name), is_depthwise=False)
-            elif metatype in LAYER_METATYPES_AGNOSTIC_TO_DATA_PRECISION_WITH_MULTIPLE_INPUTS:
+            elif metatype in LAYER_METATYPES_AGNOSTIC_TO_DATA_PRECISION_WITH_MULTIPLE_CONCAT_INPUTS:
                 layer_attributes = _get_multiple_input_layer_attributes(layer)
             elif metatype in RESHAPE_METATYPES:
                 layer_attributes = _get_reshape_layer_attributes(layer)
@@ -646,7 +647,7 @@ class SequentialConverter(TFModelConverter):
                 layer_attributes = _get_conv_layer_attributes(self._get_layer(layer_name), is_depthwise=True)
             elif layer_metatype in GENERAL_CONV_LAYER_METATYPES:
                 layer_attributes = _get_conv_layer_attributes(self._get_layer(layer_name), is_depthwise=False)
-            elif layer_metatype in LAYER_METATYPES_AGNOSTIC_TO_DATA_PRECISION_WITH_MULTIPLE_INPUTS:
+            elif layer_metatype in LAYER_METATYPES_AGNOSTIC_TO_DATA_PRECISION_WITH_MULTIPLE_CONCAT_INPUTS:
                 layer_attributes = _get_multiple_input_layer_attributes(model_layer)
             elif layer_metatype in RESHAPE_METATYPES:
                 layer_attributes = _get_reshape_layer_attributes(model_layer)
@@ -703,13 +704,9 @@ def _get_multiple_input_layer_attributes(layer: tf.keras.layers.Layer) -> Multip
     else:
         input_shape = layer.input_shape
         output_shape = layer.output_shape
-
-        if not isinstance(input_shape, list):
-            input_shape = [input_shape]
         if not isinstance(output_shape, list):
             output_shape = [output_shape]
         axis = get_concat_axis(input_shape, output_shape)
-
     return MultipleInputLayerAttributes(axis)
 
 
