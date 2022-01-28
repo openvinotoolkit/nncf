@@ -384,7 +384,10 @@ def create_datasets(config):
     elif dataset_config == 'cifar100':
         normalize = transforms.Normalize(mean=(0.5071, 0.4865, 0.4409),
                                          std=(0.2673, 0.2564, 0.2761))
-    elif dataset_config in ['cifar10', 'mock_32x32', 'mock_299x299']:
+    elif dataset_config == 'cifar10':
+        normalize = transforms.Normalize(mean=(0.4914, 0.4822, 0.4465),
+                                         std=(0.2471, 0.2435, 0.2616))
+    elif dataset_config in ['mock_32x32', 'mock_299x299']:
         normalize = transforms.Normalize(mean=(0.5, 0.5, 0.5),
                                          std=(0.5, 0.5, 0.5))
 
