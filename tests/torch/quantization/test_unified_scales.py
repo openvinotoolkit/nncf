@@ -764,7 +764,6 @@ class TestsWithONNXInspection:
         test_input1 = torch.ones([1, 5], dtype=torch.long)
         compressed_model.forward(test_input1)
         onnx_path = str(tmp_path / "model.onnx")
-        print(onnx_path)
         compression_ctrl.export_model(onnx_path)
 
         onnx_model = onnx.load(onnx_path)

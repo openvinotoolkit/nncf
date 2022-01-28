@@ -27,10 +27,8 @@ from nncf.torch.quantization.layers import AsymmetricQuantizer
 from nncf.torch.quantization.layers import QUANTIZATION_MODULES
 from nncf.torch.quantization.layers import QuantizationMode
 from nncf.torch.quantization.layers import QuantizerExportMode
-from tests.torch.helpers import TwoConvTestModel
 from tests.torch.helpers import get_nodes_by_type
 from tests.torch.helpers import get_all_inputs_for_graph_node
-from tests.torch.helpers import load_exported_onnx_version
 from tests.torch.helpers import register_bn_adaptation_init_args
 from tests.torch.helpers import resolve_constant_node_inputs_to_values
 from tests.torch.helpers import TwoConvTestModel
