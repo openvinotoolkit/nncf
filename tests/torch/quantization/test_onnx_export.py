@@ -16,7 +16,7 @@ from typing import Tuple, Dict, List
 import onnx
 import pytest
 import torch
-import torch.nn as nn
+from torch import nn
 import numpy as np
 
 from nncf import NNCFConfig
@@ -333,7 +333,7 @@ def test_export_quantized_weights_with_middle_quants(tmp_path, half_range, quant
 
     onnx_checkpoint_path = str(tmp_path / 'two_conv_model_int8.onnx')
     compression_ctrl.export_model(onnx_checkpoint_path)
-    model_onnx = onnx.load(onnx_checkpoint_path)
+    model_onnx = onnx.load(onnx_checkpoint_path)  # pylint: disable=no-member
 
     fq_nodes = get_nodes_by_type(model_onnx, 'FakeQuantize')
     # pylint:disable=no-member
