@@ -31,8 +31,5 @@ REF_METATYPES_COUNTERS = [
 def test_mapping_onnx_metatypes(model_creator_func, ref_metatypes):
     model = model_creator_func()
     nncf_graph = GraphConverter.create_nncf_graph(model.onnx_model)
-    ref_metatypes_counter = Counter(ref_metatypes)
-    metatypes_counter = Counter()
-    for node in nncf_graph.get_all_nodes():
-        metatypes_counter[node.metatype] += 1
-    assert ref_metatypes_counter == metatypes_counter
+    actual_metatypes = [node.metatype for node in nncf_graph.get_all_nodes()]
+    assert Counter(ref_metatypes) == Counter(actual_metatypes)
