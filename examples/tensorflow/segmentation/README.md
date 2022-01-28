@@ -54,6 +54,16 @@ archive with pre-trained weights can be found in the `TensorFlow checkpoint` col
 Select the checkpoint corresponding to the `None` compression algorithm, which includes the pre-trained weights for the 
 FP32 model, without applying any compression algorithms.
 - Specify the GPUs to be used for training by setting the environment variable [`CUDA_VISIBLE_DEVICES`](https://developer.nvidia.com/blog/cuda-pro-tip-control-gpu-visibility-cuda_visible_devices/). This is necessary because training and validation during training must be performed on different GPU devices. Please note that usually only one GPU is required for validation during training.
+- (Optional) Before compressing a model, it is highly recommended checking the accuracy of the pretrained model, use the following command:
+  ```bash
+  python evaluation.py \
+  --mode=test \
+  --config=configs/quantization/mask_rcnn_coco_int8.json \
+  --weights=<path_to_ckpt_file_with_pretrained_weights> \
+  --data=<path_to_dataset> \
+  --batch-size=1 \
+  --disable-compression
+  ```
 - Run the following command to start compression with fine-tuning on all available GPUs on the machine:
     ```bash
     python train.py \
@@ -80,7 +90,7 @@ To start checkpoints validation during training follow these steps:
 
 ### Validate Your Model Checkpoint
 
-To estimate the test scores of your model checkpoint, use the following command
+To estimate the test scores of your trained model checkpoint, use the following command
 ```bash
 python evaluation.py \
 --mode=test \
@@ -89,8 +99,6 @@ python evaluation.py \
 --batch-size=1 \
 --resume=<path_to_trained_model_checkpoint>
 ```
-
-To validate an model checkpoint, make sure the compression algorithm settings are empty in the configuration file and path to checkpoint file with model weights is provided in command line argument `--weights`
 
 ### Export Compressed Model
 
