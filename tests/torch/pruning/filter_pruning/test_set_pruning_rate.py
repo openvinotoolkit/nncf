@@ -46,7 +46,7 @@ def test_setting_pruning_level(all_weights, pruning_level_to_set, ref_pruning_le
     Test setting global and groupwise pruning levels via the set_pruning_level method.
     """
     # Creating algorithm with empty config
-    config = get_basic_pruning_config(input_sample_size=[1, 1, 8, 8])
+    config = get_basic_pruning_config(input_sample_size=[2, 1, 8, 8])
     config["compression"]["pruning_init"] = 0.2
     config["compression"]["params"]["all_weights"] = all_weights
 
@@ -64,7 +64,7 @@ def test_can_set_compression_rate_in_filter_pruning_algo():
     Test setting the global pruning level via the compression_rate property.
     """
     # Creating algorithm with empty config
-    config = get_basic_pruning_config(input_sample_size=[1, 1, 8, 8])
+    config = get_basic_pruning_config(input_sample_size=[2, 1, 8, 8])
     config["compression"]["pruning_init"] = 0.2
 
     _, pruning_controller, _ = create_pruning_algo_with_config(config)

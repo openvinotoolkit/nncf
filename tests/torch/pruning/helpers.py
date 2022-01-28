@@ -13,11 +13,11 @@ import copy
 
 import torch
 from torch import nn
+import torch.nn.functional as F
 
 from nncf.config import NNCFConfig
 from nncf.torch.dynamic_graph.context import no_nncf_trace
-from tests.torch.helpers import create_bn
-from tests.torch.helpers import create_conv
+from tests.torch.helpers import create_bn, create_conv, fill_linear_weight
 from tests.torch.helpers import create_depthwise_conv
 from tests.torch.helpers import create_grouped_conv
 from tests.torch.helpers import create_transpose_conv
@@ -383,6 +383,7 @@ class BigPruningTestModel(nn.Module):
         self.layernorm.bias.data.fill_(1)
         self.bn3 = create_bn(128, dim=self.dim)
         self.conv3 = create_conv(128, 1, 1, 5, 1, dim=self.dim)
+        self.instance_norm = create_instance_norm(1, dim)
 
     def forward(self, x):
         x = self.conv1(x)
@@ -399,6 +400,7 @@ class BigPruningTestModel(nn.Module):
         x = self.layernorm(x).view(b, -1, *[1] * self.dim)
         x = self.bn3(x)
         x = self.conv3(x)
+        x = self.instance_norm(torch.cat((x, x), 2))
         x = x.view(b, -1)
         return x
 
@@ -1118,6 +1120,28 @@ class NASnetBlock(nn.Module):
         x = self.first_conv(x)
         x = self.cell(x)
         return x
+
+
+class ResUnetblock(torch.nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.conv0 = nn.Conv3d(8, 32, 1)
+        self.in0 = nn.InstanceNorm3d(32, affine=True)
+        self.conv1 = nn.Conv3d(32, 32, 1)
+        self.in1 = nn.InstanceNorm3d(32, affine=True)
+        self.conv2 = nn.Conv3d(32, 32, 1)
+        self.conv3 = nn.Conv3d(32, 32, 1)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        x = self.conv0(x)
+        x1 = self.in0(x)
+        x1 = F.leaky_relu(x1)
+        x1 = self.conv1(x1)
+        x1 = self.in1(x1)
+        x1 = F.leaky_relu(x1)
+        x1 = self.conv2(x1)
+
+        return self.conv3(x + x1)
 
 
 def get_basic_pruning_config(input_sample_size=None) -> NNCFConfig:

@@ -45,6 +45,14 @@ LAYER_NORMALIZATION_OPERATIONS = {
     GraphPattern.LABEL_ATTR: "LAYER_NORMALIZATION",
 }
 
+INSTANCE_NORMALIZATION_OPERATIONS = {'type': ['instance_norm',
+                                              'instance_norm1d',
+                                              'instance_norm2d',
+                                              'instance_norm3d'
+                                           ],
+                                  'label': 'INSTANCE_NORMALIZATION'
+                                  }
+
 RELU_OPERATIONS = {GraphPattern.METATYPE_ATTR: ["relu", "relu_", "hardtanh"], GraphPattern.LABEL_ATTR: "RELU"}
 
 NON_RELU_ACTIVATIONS_OPERATIONS = {

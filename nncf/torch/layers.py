@@ -261,7 +261,6 @@ class NNCFGroupNorm(_NNCFModuleMixin, nn.GroupNorm):
         nncf_bn = align_module_internals(module, nncf_bn)
         return nncf_bn
 
-
 class NNCFLayerNorm(_NNCFModuleMixin, nn.LayerNorm):
     op_func_name = "layer_norm"
     ignored_algorithms = ["magnitude_sparsity", "rb_sparsity", "const_sparsity", "quantization"]
@@ -273,6 +272,53 @@ class NNCFLayerNorm(_NNCFModuleMixin, nn.LayerNorm):
         nncf_ln = NNCFLayerNorm(module.normalized_shape, hasattr(module, "eps"))
         nncf_ln = align_module_internals(module, nncf_ln)
         return nncf_ln
+
+class NNCFInstanceNorm1d(_NNCFModuleMixin, nn.InstanceNorm1d):
+    op_func_name = "instance_norm"
+    ignored_algorithms = ['magnitude_sparsity', 'rb_sparsity', 'const_sparsity', 'quantization']
+
+    @staticmethod
+    def from_module(module):
+        assert module.__class__.__name__ == nn.InstanceNorm1d.__name__
+
+        nncf_in = NNCFInstanceNorm1d(num_features=module.num_features,
+                                     affine=module.affine,
+                                     momentum=module.momentum,
+                                     eps=module.eps)
+        dict_update(nncf_in.__dict__, module.__dict__)
+        return nncf_in
+
+
+class NNCFInstanceNorm2d(_NNCFModuleMixin, nn.InstanceNorm2d):
+    op_func_name = "instance_norm"
+    ignored_algorithms = ['magnitude_sparsity', 'rb_sparsity', 'const_sparsity', 'quantization']
+
+    @staticmethod
+    def from_module(module):
+        assert module.__class__.__name__ == nn.InstanceNorm2d.__name__
+
+        nncf_in = NNCFInstanceNorm2d(num_features=module.num_features,
+                                     affine=module.affine,
+                                     momentum=module.momentum,
+                                     eps=module.eps)
+        dict_update(nncf_in.__dict__, module.__dict__)
+        return nncf_in
+
+
+class NNCFInstanceNorm3d(_NNCFModuleMixin, nn.InstanceNorm3d):
+    op_func_name = "instance_norm"
+    ignored_algorithms = ['magnitude_sparsity', 'rb_sparsity', 'const_sparsity', 'quantization']
+
+    @staticmethod
+    def from_module(module):
+        assert module.__class__.__name__ == nn.InstanceNorm3d.__name__
+
+        nncf_in = NNCFInstanceNorm3d(num_features=module.num_features,
+                                     affine=module.affine,
+                                     momentum=module.momentum,
+                                     eps=module.eps)
+        dict_update(nncf_in.__dict__, module.__dict__)
+        return nncf_in
 
 
 class NNCFConvTranspose2d(_NNCFModuleMixin, nn.ConvTranspose2d):
@@ -408,6 +454,9 @@ NNCF_MODULES_DICT = {
     NNCFConvTranspose3d: nn.ConvTranspose3d,
     NNCFEmbedding: nn.Embedding,
     NNCFEmbeddingBag: nn.EmbeddingBag,
+    NNCFInstanceNorm1d: nn.InstanceNorm1d,
+    NNCFInstanceNorm2d: nn.InstanceNorm2d,
+    NNCFInstanceNorm3d: nn.InstanceNorm3d
 }
 
 NNCF_MODULES_MAP = {k.__name__: v.__name__ for k, v in NNCF_MODULES_DICT.items()}

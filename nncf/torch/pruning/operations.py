@@ -57,6 +57,7 @@ from nncf.torch.graph.operator_metatypes import PTHardSigmoidMetatype
 from nncf.torch.graph.operator_metatypes import PTHardSwishMetatype
 from nncf.torch.graph.operator_metatypes import PTHardTanhMetatype
 from nncf.torch.graph.operator_metatypes import PTInputNoopMetatype
+from nncf.torch.graph.operator_metatypes import PTInstanceNormMetatype
 from nncf.torch.graph.operator_metatypes import PTInterpolateMetatype
 from nncf.torch.graph.operator_metatypes import PTLayerNormMetatype
 from nncf.torch.graph.operator_metatypes import PTLeakyRELUMetatype
@@ -179,6 +180,7 @@ class PTIdentityMaskForwardPruningOp(IdentityMaskForwardPruningOp, PTPruner):
         PTHardSigmoidMetatype,
         PTNoopMetatype,
         PTInterpolateMetatype,
+        PTInstanceNormMetatype
     ]
     additional_types = ["h_sigmoid", "h_swish", "RELU"]
 

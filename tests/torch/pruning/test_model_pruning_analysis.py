@@ -61,6 +61,7 @@ from tests.torch.pruning.helpers import PruningTestModelSimplePrunableLinear
 from tests.torch.pruning.helpers import PruningTestModelWrongDims
 from tests.torch.pruning.helpers import PruningTestModelWrongDimsElementwise
 from tests.torch.pruning.helpers import ResidualConnectionModel
+from tests.torch.pruning.helpers import ResUnetblock
 from tests.torch.pruning.helpers import ShuffleNetUnitModel
 from tests.torch.pruning.helpers import ShuffleNetUnitModelDW
 from tests.torch.pruning.helpers import SplitConcatModel
@@ -71,10 +72,12 @@ from tests.torch.pruning.helpers import SplitReshapeModel
 from tests.torch.pruning.helpers import get_basic_pruning_config
 
 
-def create_nncf_model_and_pruning_builder(
-    model: torch.nn.Module, config_params: Dict
-) -> Tuple[NNCFNetwork, FilterPruningBuilder]:
-    nncf_config = get_basic_pruning_config(input_sample_size=[1, 1, 8, 8])
+def create_nncf_model_and_pruning_builder(model: torch.nn.Module,
+                                          config_params: Dict,
+                                          input_sample_size: List[int] = None) -> Tuple[NNCFNetwork, FilterPruningBuilder]:
+    if input_sample_size is None:
+        input_sample_size = [1, 1, 8, 8]
+    nncf_config = get_basic_pruning_config(input_sample_size=input_sample_size)
     nncf_config["compression"]["algorithm"] = "filter_pruning"
     for key, value in config_params.items():
         nncf_config["compression"]["params"][key] = value
@@ -93,6 +96,7 @@ class GroupPruningModulesTestStruct:
         final_can_prune: Dict[int, PruningAnalysisDecision],
         prune_params: Tuple[bool, bool],
         name: Optional[str] = None,
+        input_sample_size: List[int] = None
     ):
         self.model = model
         self.non_pruned_module_nodes = non_pruned_module_nodes
@@ -100,7 +104,8 @@ class GroupPruningModulesTestStruct:
         self.pruned_groups_by_node_id = pruned_groups_by_node_id
         self.can_prune_after_analysis = can_prune_after_analysis
         self.final_can_prune = final_can_prune
-        self.prune_params = prune_params  # Prune first, Prune downsample
+        self.prune_params = prune_params # Prune first, Prune downsample
+        self.input_sample_size = input_sample_size if input_sample_size is not None else [1, 1, 8, 8]
         self.name = name
 
     def __str__(self):
@@ -617,6 +622,45 @@ GROUP_PRUNING_MODULES_TEST_CASES = [
                          7: PruningAnalysisDecision(False, PruningAnalysisReason.LAST_CONV)},
         prune_params=(True, True)),
     GroupPruningModulesTestStruct(
+        model=ResUnetblock,
+        non_pruned_module_nodes=['ResUnetblock/NNCFConv3d[conv0]/conv3d_0',
+                                 'ResUnetblock/NNCFConv3d[conv2]/conv3d_0',
+                                 'ResUnetblock/NNCFConv3d[conv3]/conv3d_0'],
+        pruned_groups=[['ResUnetblock/NNCFConv3d[conv1]/conv3d_0']],
+        pruned_groups_by_node_id=[[4]],
+        can_prune_after_analysis={0: True, 1: False, 2: True, 3: True, 4: True,
+                                  5: True, 6: True, 7: False, 8: True, 9: True, 10: True},
+        final_can_prune={1: PruningAnalysisDecision(False, PruningAnalysisReason.CLOSING_CONV_MISSING),
+                         4: PruningAnalysisDecision(True),
+                         9: PruningAnalysisDecision(False, PruningAnalysisReason.LAST_CONV),
+                         7: PruningAnalysisDecision(False, PruningAnalysisReason.CLOSING_CONV_MISSING)},
+        prune_params=(False, False),
+        input_sample_size=[8, 8, 8, 8, 8]),
+    GroupPruningModulesTestStruct(
+        model=ResUnetblock,
+        non_pruned_module_nodes=['ResUnetblock/NNCFConv3d[conv3]/conv3d_0'],
+        pruned_groups=[['ResUnetblock/NNCFConv3d[conv0]/conv3d_0',
+                        'ResUnetblock/NNCFConv3d[conv2]/conv3d_0'],
+                        ['ResUnetblock/NNCFConv3d[conv1]/conv3d_0']],
+        pruned_groups_by_node_id=[[4], [1, 7]],
+        can_prune_after_analysis={0: True,
+                                  1: True,
+                                  2: True,
+                                  3: True,
+                                  4: True,
+                                  5: True,
+                                  6: True,
+                                  7: True,
+                                  8: True,
+                                  9: True,
+                                  10: True},
+        final_can_prune={1: PruningAnalysisDecision(True),
+                         4: PruningAnalysisDecision(True),
+                         9: PruningAnalysisDecision(False, PruningAnalysisReason.LAST_CONV),
+                         7: PruningAnalysisDecision(True)},
+        prune_params=(True, False),
+        input_sample_size=[8, 8, 8, 8, 8]),
+    GroupPruningModulesTestStruct(
         model=partial(PruningTestMeanMetatype, mean_dim=1),
         name='PruningTestMeanMetatype with mean dimension 1',
         non_pruned_module_nodes=['PruningTestMeanMetatype/NNCFConv2d[last_conv]/conv2d_0',
@@ -638,7 +682,7 @@ GROUP_PRUNING_MODULES_TEST_CASES = [
         final_can_prune={1: PruningAnalysisDecision(True),
                          3: PruningAnalysisDecision(False, [PruningAnalysisReason.LAST_CONV])},
         prune_params=(True, True)
-    ),
+    )
 ]  # fmt: skip
 
 
@@ -658,7 +702,7 @@ def test_groups(test_input_info_struct_: GroupPruningModulesTestStruct):
     prune_first, prune_downsample = test_input_info_struct_.prune_params
 
     model = model()
-    nncf_config = get_basic_pruning_config(input_sample_size=[1, 1, 8, 8])
+    nncf_config = get_basic_pruning_config(input_sample_size=test_input_info_struct_.input_sample_size)
     nncf_config["compression"]["algorithm"] = "filter_pruning"
     nncf_config["compression"]["params"]["prune_first_conv"] = prune_first
     nncf_config["compression"]["params"]["prune_downsample_convs"] = prune_downsample
@@ -706,7 +750,7 @@ def test_pruning_node_selector(test_input_info_struct_: GroupPruningModulesTestS
     )
     model = model()
     model.eval()
-    nncf_network = NNCFNetwork(model, input_info=FillerInputInfo([FillerInputElement([1, 1, 8, 8])]))
+    nncf_network = NNCFNetwork(model, input_info=FillerInputInfo([FillerInputElement(test_input_info_struct_.input_sample_size)]))
     graph = nncf_network.nncf.get_original_graph()
     pruning_groups = pruning_node_selector.create_pruning_groups(graph)
 
@@ -730,7 +774,8 @@ def test_pruning_node_selector(test_input_info_struct_: GroupPruningModulesTestS
 def test_symbolic_mask_propagation(test_input_info_struct_):
     model = test_input_info_struct_.model()
     prune_first, *_ = test_input_info_struct_.prune_params
-    nncf_model, _ = create_nncf_model_and_pruning_builder(model, {"prune_first_conv": prune_first})
+    nncf_model, _ = create_nncf_model_and_pruning_builder(model, {"prune_first_conv": prune_first},
+     input_sample_size=test_input_info_struct_.input_sample_size)
     pruning_types = [v.op_func_name for v in NNCF_PRUNING_MODULES_DICT]
     nncf_model.eval()
     graph = nncf_model.nncf.get_graph()

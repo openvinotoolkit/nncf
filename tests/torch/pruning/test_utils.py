@@ -37,7 +37,7 @@ def test_get_rounded_pruned_element_number(total, sparsity_rate, multiple_of, re
 
 
 def test_get_bn_for_conv_node():
-    config = get_basic_pruning_config(input_sample_size=[1, 1, 8, 8])
+    config = get_basic_pruning_config(input_sample_size=[2, 1, 8, 8])
     config["compression"]["algorithm"] = "filter_pruning"
     pruned_model, _ = create_compressed_model_and_algo_for_test(BigPruningTestModel(), config)
 
@@ -66,7 +66,7 @@ def test_get_bn_for_conv_node():
     ],
 )
 def test_get_first_pruned_layers(model, ref_first_module_names):
-    config = get_basic_pruning_config(input_sample_size=[1, 1, 8, 8])
+    config = get_basic_pruning_config(input_sample_size=[2, 1, 8, 8])
     config["compression"]["algorithm"] = "filter_pruning"
     pruned_model, _ = create_compressed_model_and_algo_for_test(model(), config)
 

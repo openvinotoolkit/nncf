@@ -863,6 +863,12 @@ class PTSumMetatype(PTOperatorMetatype):
     module_to_function_names = {NamespaceTarget.TORCH_TENSOR: ["sum"], NamespaceTarget.TORCH: ["sum"]}
     hw_config_names = [HWConfigOpName.REDUCESUM]
 
+@PT_OPERATOR_METATYPES.register()
+class PTInstanceNormMetatype(PTOperatorMetatype):
+    name = "InstanceNormOp"
+    module_to_function_names = {
+        NamespaceTarget.TORCH_NN_FUNCTIONAL: ["instance_norm"]
+    }
 
 @PT_OPERATOR_METATYPES.register()
 class PTReduceL2(PTOperatorMetatype):

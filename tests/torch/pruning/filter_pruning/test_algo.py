@@ -109,7 +109,7 @@ def test_valid_modules_replacement_and_pruning(prune_first, prune_batch_norms):
         assert len(module.pre_ops) == 0
         assert len(module.post_ops) == 0
 
-    config = get_basic_pruning_config(input_sample_size=[1, 1, 8, 8])
+    config = get_basic_pruning_config(input_sample_size=[2, 1, 8, 8])
     config["compression"]["params"]["prune_first_conv"] = prune_first
     config["compression"]["params"]["prune_batch_norms"] = prune_batch_norms
 
@@ -217,7 +217,7 @@ def test_pruning_masks_correctness(all_weights, prune_by_flops, pruning_init, pr
         # print(x, y)
         assert torch.allclose(pruning_op.binary_filter_pruning_mask, ref_masks[dim][num])
 
-    config = get_basic_pruning_config(input_sample_size=[1, 1] + [8] * dim)
+    config = get_basic_pruning_config(input_sample_size=[2, 1] + [8] * dim)
     config["compression"]["params"]["all_weights"] = all_weights
     config["compression"]["params"]["prune_first_conv"] = prune_first
 
@@ -307,7 +307,7 @@ def test_pruning_masks_applying_correctness(all_weights, prune_by_flops, pruning
         for key in ref_state_dict.keys():
             assert torch.allclose(model_state_dict[key], ref_state_dict[key])
 
-    config = get_basic_pruning_config(input_sample_size=[1, 1] + [8] * dim)
+    config = get_basic_pruning_config(input_sample_size=[2, 1] + [8] * dim)
     config["compression"]["algorithm"] = "filter_pruning"
     config["compression"]["params"]["all_weights"] = all_weights
     config["compression"]["params"]["prune_first_conv"] = prune_first
@@ -380,7 +380,7 @@ def test_pruning_masks_applying_correctness(all_weights, prune_by_flops, pruning
 
 @pytest.mark.parametrize("prune_bn", (False, True))
 def test_valid_masks_for_bn_after_concat(prune_bn):
-    config = get_basic_pruning_config(input_sample_size=[1, 1, 8, 8])
+    config = get_basic_pruning_config(input_sample_size=[2, 1, 8, 8])
     config["compression"]["algorithm"] = "filter_pruning"
     config["compression"]["params"]["prune_batch_norms"] = prune_bn
     config["compression"]["params"]["prune_first_conv"] = True
@@ -706,7 +706,7 @@ PruningTestModelDiffChInPruningClusterRef = {
 
      ])  # fmt: skip
 def test_flops_calculator(model_module, all_weights, pruning_flops_target, ref_flops, ref_params_num, refs):
-    config = get_basic_pruning_config(input_sample_size=[1, 1, 8, 8])
+    config = get_basic_pruning_config(input_sample_size=[2, 1, 8, 8])
     config["compression"]["algorithm"] = "filter_pruning"
     config["compression"]["params"]["all_weights"] = all_weights
     config["compression"]["params"]["prune_first_conv"] = True
@@ -782,7 +782,7 @@ def test_flops_calculator(model_module, all_weights, pruning_flops_target, ref_f
 )
 @pytest.mark.parametrize("additional_last_shared_layers", [True, False])
 def test_clusters_for_multiple_forward(repeat_seq_of_shared_convs, ref_second_cluster, additional_last_shared_layers):
-    config = get_basic_pruning_config(input_sample_size=[1, 2, 8, 8])
+    config = get_basic_pruning_config(input_sample_size=[2, 2, 8, 8])
     config["compression"]["algorithm"] = "filter_pruning"
     config["compression"]["params"]["all_weights"] = False
     config["compression"]["params"]["prune_first_conv"] = True
@@ -811,7 +811,7 @@ def test_clusters_for_multiple_forward(repeat_seq_of_shared_convs, ref_second_cl
 )
 def test_func_calculation_flops_for_conv(model):
     # Check _calculate_output_shape that used for disconnected graph
-    config = get_basic_pruning_config([1, 1, 8, 8])
+    config = get_basic_pruning_config([2, 1, 8, 8])
     config["compression"]["algorithm"] = "filter_pruning"
     config["compression"]["pruning_init"] = 0.0
     config["compression"]["params"]["pruning_flops_target"] = 0.0
