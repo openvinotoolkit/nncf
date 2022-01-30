@@ -9,6 +9,10 @@ DefaultPriority = 0
 
 
 class Initializer:
+    """
+    The base class controls the initialization flow of the model.
+    """
+
     def __init__(self, engine, dataloader, initializer_config):
         self.engine = engine
         self.dataloader = dataloader

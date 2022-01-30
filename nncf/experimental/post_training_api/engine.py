@@ -17,7 +17,7 @@ class Engine(ABC):
         self.model = model
 
     @abstractmethod
-    def infer(self, input_data: List[TensorType]) -> List[TensorType]:
+    def infer_model(self, input_data: List[TensorType]) -> List[TensorType]:
         """
         Infer the model on the provided input_data.
         """

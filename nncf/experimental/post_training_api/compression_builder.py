@@ -20,16 +20,15 @@ ModelType = TypeVar('ModelType')
 
 
 class AlgorithmPriority(OrderedEnum):
-    DEFAULT_PRIORITY = 0
+    DEFAULT_PRIORITY = 1
     PRUNING_PRIORITY = 2
     SPARSIFICATION_PRIORITY = 3
-    QUANTIZATION_PRIORITY = 11
+    QUANTIZATION_PRIORITY = 4
 
 
 class CompressionBuilder:
     """
-    The main class holds the compression algorithms and
-    controls the compression algorithms flow applied to CompressedModel.
+    The main class applies the compression algorithms to the model according to their order.
     """
 
     def __init__(self):
@@ -45,18 +44,18 @@ class CompressionBuilder:
         self.algorithms.add(algorithm)
 
     def _set_algorithm_priority(self, algorithm: BaseCompressionAlgorithmBuilder, priority: AlgorithmPriority) -> None:
-        algorithm.priority = AlgorithmPriority.QUANTIZATION_PRIORITY
+        algorithm.priority = priority
 
     def _define_algorithm_priority(self, algorithm: BaseCompressionAlgorithmBuilder) -> AlgorithmPriority:
         # TODO: need to realize
         return AlgorithmPriority.DEFAULT_PRIORITY
 
-    def init(self, model: ModelType) -> CompressedModel:
+    def compress_model(self, model: ModelType) -> CompressedModel:
         """
-        Apply compression algorithms to CompressedModel according to algorithms priority.
+        Apply compression algorithms to the 'model'.
         """
         compressed_model = CompressedModel(model)
         while not self.algorithms.is_empty():
             algorithm = self.algorithms.pop()
-            algorithm.apply_to(compressed_model)
+            compressed_model = algorithm.apply_to(compressed_model)
         return compressed_model

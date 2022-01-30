@@ -10,6 +10,7 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+
 from typing import Dict
 
 from nncf.common.compression import BaseCompressionAlgorithmBuilder
@@ -22,7 +23,10 @@ from nncf.experimental.post_training_api.compressed_model import CompressedModel
 
 class PostTrainingQuantization(BaseCompressionAlgorithmBuilder):
     """
-    This class has to
+    Post-Training Quantization algorithm makes 3 main things:
+        1) Find the transformations needed to apply to the model.
+        2) Apply these transformations.
+        3) Initialize the transformed model.
     """
 
     def __init__(self, quantization_config: Dict[str, object], engine: Engine, dataloader: DataLoader):

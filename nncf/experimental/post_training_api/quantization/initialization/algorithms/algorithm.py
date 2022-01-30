@@ -15,8 +15,13 @@ from nncf.experimental.post_training_api.compressed_model import CompressedModel
 
 
 class InitializationAlgorithm:
-    def __init__(self):
-        pass
+    """
+    The base class for all post-training quantization initialization algorithms.
+    """
+
+    def __init__(self, engine, dataloader):
+        self.engine = engine
+        self.dataloader = dataloader
 
     def run(self, model: CompressedModel):
         pass

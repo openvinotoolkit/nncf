@@ -11,12 +11,12 @@
  limitations under the License.
 """
 
-from nncf.experimental.post_training_api.quantization.initialization.algorithms.algorithm import InitializationAlgorithm
+
+# TODO: implemet
+class PostTrainingQuantizationParameters:
+
+    def __init__(self, quantization_parameters):
+        self.parameters = quantization_parameters
 
 
-class ONNXInitializationAlgorithm(InitializationAlgorithm):
-    def __init__(self, engine, dataloader):
-        super().__init__(engine, dataloader)
-
-    def run(self, model):
-        pass
+DEFAULT = PostTrainingQuantizationParameters()

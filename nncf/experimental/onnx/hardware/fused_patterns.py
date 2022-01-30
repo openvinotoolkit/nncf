@@ -14,13 +14,13 @@
 from nncf.common.graph.patterns import GraphPattern
 from nncf.common.graph.patterns import HWFusedPatterns
 
-from nncf.experimental.onnx.graph.pattern_operations import LINEAR_OPERATIONS
-from nncf.experimental.onnx.graph.pattern_operations import BATCH_NORMALIZATION_OPERATIONS
-from nncf.experimental.onnx.graph.pattern_operations import ATOMIC_ACTIVATIONS_OPERATIONS
-from nncf.experimental.onnx.graph.pattern_operations import ARITHMETIC_OPERATIONS
-from nncf.experimental.onnx.graph.pattern_operations import MATMUL_OPERATIONS
+from nncf.experimental.onnx.hardware.pattern_operations import LINEAR_OPERATIONS
+from nncf.experimental.onnx.hardware.pattern_operations import BATCH_NORMALIZATION_OPERATIONS
+from nncf.experimental.onnx.hardware.pattern_operations import ATOMIC_ACTIVATIONS_OPERATIONS
+from nncf.experimental.onnx.hardware.pattern_operations import ARITHMETIC_OPERATIONS
+from nncf.experimental.onnx.hardware.pattern_operations import MATMUL_OPERATIONS
 
-from nncf.experimental.onnx.graph.patterns import create_h_sigmoid_act
+from nncf.experimental.onnx.hardware.patterns import create_h_sigmoid_act
 
 
 def _get_onnx_hw_fused_patterns() -> HWFusedPatterns:

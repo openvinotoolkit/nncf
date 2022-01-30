@@ -1,21 +1,21 @@
-from examples.onnx.dataloader import create_train_dataloader
+from examples.experimental.onnx.dataloader import create_train_dataloader
 from nncf.experimental.onnx.engine import OnnxEngine
 from nncf.experimental.post_training_api.compression_builder import CompressionBuilder
 from nncf.experimental.onnx.quantization.algorithm import ONNXPostTrainingQuantization
+from nncf.experimental.post_training_api.quantization.config import DEFAULT
 
 fp32_model_onnx_path = ''
 dataset_dir = ''
 input_shape = []
+
+# Step 1: Initialize the data loader.
 dataloader = create_train_dataloader(dataset_dir=dataset_dir, input_shape=input_shape)
+# Step 2: Initialize the engine for metric calculation and statistics collection.
 engine = OnnxEngine(providers=['OpenVINOExecutionProvider'])
 
+# Step 3: Create a pipeline of compression algorithms.
 builder = CompressionBuilder()
-
-quantization_config = {
-
-}
-
-quantization = ONNXPostTrainingQuantization(quantization_config, engine, dataloader)
-
+quantization = ONNXPostTrainingQuantization(DEFAULT, engine, dataloader)
 builder.add_algorithm(quantization)
-compressed_model = builder.init(fp32_model_onnx_path)  # Transformed model
+# Step 4: Execute the pipeline.
+compressed_model = builder.compress_model(fp32_model_onnx_path)
