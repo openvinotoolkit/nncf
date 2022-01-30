@@ -10,3 +10,13 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+
+from nncf.experimental.post_training_api.compressed_model import CompressedModel
+
+
+class InitializationAlgorithm:
+    def __init__(self):
+        pass
+
+    def run(self, model: CompressedModel):
+        pass

@@ -11,11 +11,9 @@
  limitations under the License.
 """
 
-from nncf.experimental.onnx.graph.transformations.layout import ONNXTransformationLayout
-from nncf.experimental.onnx.compressed_model import CompressedModel
+from nncf.experimental.post_training_api.quantization.initialization.initializer import Initializer
 
 
-class ONNXModelTransformer:
-    @staticmethod
-    def transform(model: CompressedModel, transformation_layout: ONNXTransformationLayout) -> CompressedModel:
-        pass
+class ONNXInitializer(Initializer):
+    def __init__(self, engine, dataloader, initializer_config):
+        super().__init__(engine, dataloader, initializer_config)

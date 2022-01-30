@@ -1,72 +1,62 @@
-from typing import List
+"""
+ Copyright (c) 2022 Intel Corporation
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+      http://www.apache.org/licenses/LICENSE-2.0
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+"""
+from typing import TypeVar
+from nncf.common.utils.priority_queue import PriorityQueue
+from nncf.common.utils.ordered_enum import OrderedEnum
+from nncf.experimental.post_training_api.compressed_model import CompressedModel
+from nncf.common.compression import BaseCompressionAlgorithmBuilder
+
+ModelType = TypeVar('ModelType')
 
 
-class PriorityQueue:
-    def __init__(self, queue: List[int] = None):
-        self.queue = []
-        self.length = 0
-        if queue is not None:
-            for element in queue:
-                self.append(element)
-
-    def append(self, element):
-        self.queue.append(element)
-        self.length += 1
-        self.sift_up(self.length - 1)
-
-    def sift_up(self, i):
-        if i == 0:
-            return
-        if (i % 2) == 1:
-            parent = i // 2
-        else:
-            parent = (i // 2) - 1
-        if self.queue[parent] < self.queue[i]:
-            self.queue[parent], self.queue[i] = self.queue[i], self.queue[parent]
-            self.sift_up(parent)
-
-    def sift_down(self, i):
-        left_child, right_child = i * 2 + 1, i * 2 + 2
-        if left_child > self.length - 1:  # No children
-            return
-        elif right_child > self.length - 1:  # Only left child
-            if self.queue[left_child] > self.queue[i]:
-                self.queue[i], self.queue[left_child] = self.queue[left_child], self.queue[i]
-        else:  # Two children
-            if self.queue[left_child] > self.queue[right_child]:
-                if self.queue[left_child] > self.queue[i]:
-                    self.queue[i], self.queue[left_child] = self.queue[left_child], self.queue[i]
-                    self.sift_down(left_child)
-            elif self.queue[right_child] > self.queue[i]:
-                self.queue[i], self.queue[right_child] = self.queue[right_child], self.queue[i]
-                self.sift_down(right_child)
-
-    def pop(self):
-        self.queue[0], self.queue[self.length - 1] = self.queue[self.length - 1], self.queue[0]
-        elem = self.queue.pop()
-        self.length -= 1
-        self.sift_down(0)
-        return elem
-
-    def is_empty(self) -> bool:
-        return self.length == 0
-
-    def __repr__(self):
-        return str(self.queue)
+class AlgorithmPriority(OrderedEnum):
+    DEFAULT_PRIORITY = 0
+    PRUNING_PRIORITY = 2
+    SPARSIFICATION_PRIORITY = 3
+    QUANTIZATION_PRIORITY = 11
 
 
 class CompressionBuilder:
     """
-    Holds the compression algorithms and controls the compression flow under the CompressedModel
+    The main class holds the compression algorithms and
+    controls the compression algorithms flow applied to CompressedModel.
     """
 
     def __init__(self):
         self.algorithms = PriorityQueue()
 
-    def add_algorithm(self, algorithm):
-        self.algorithms.append(algorithm)
+    def add_algorithm(self, algorithm: BaseCompressionAlgorithmBuilder,
+                      priority: AlgorithmPriority = None) -> None:
+        if priority is not None:
+            self._set_algorithm_priority(algorithm, priority)
+        else:
+            priority = self._define_algorithm_priority(algorithm)
+            self._set_algorithm_priority(algorithm, priority)
+        self.algorithms.add(algorithm)
 
-    def init(self, compressed_model):
+    def _set_algorithm_priority(self, algorithm: BaseCompressionAlgorithmBuilder, priority: AlgorithmPriority) -> None:
+        algorithm.priority = AlgorithmPriority.QUANTIZATION_PRIORITY
+
+    def _define_algorithm_priority(self, algorithm: BaseCompressionAlgorithmBuilder) -> AlgorithmPriority:
+        # TODO: need to realize
+        return AlgorithmPriority.DEFAULT_PRIORITY
+
+    def init(self, model: ModelType) -> CompressedModel:
+        """
+        Apply compression algorithms to CompressedModel according to algorithms priority.
+        """
+        compressed_model = CompressedModel(model)
         while not self.algorithms.is_empty():
             algorithm = self.algorithms.pop()
             algorithm.apply_to(compressed_model)
+        return compressed_model

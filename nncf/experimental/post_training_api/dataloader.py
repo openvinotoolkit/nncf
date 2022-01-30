@@ -3,10 +3,18 @@ from abc import abstractmethod
 
 
 class DataLoader(ABC):
-    @abstractmethod
-    def __getitem__(self, i):
-        ...
+    """
+    Base class provides interface to get elements of the dataset.
+    """
 
     @abstractmethod
-    def __len__(self):
-        ...
+    def __getitem__(self, i):
+        """
+        Returns the i-th element of the dataset.
+        """
+
+    @abstractmethod
+    def __len__(self) -> int:
+        """
+        Returns the length of the dataset.
+        """

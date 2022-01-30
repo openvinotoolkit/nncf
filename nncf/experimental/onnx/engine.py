@@ -14,7 +14,6 @@
 from typing import List
 
 from nncf.experimental.post_training_api.engine import Engine
-from nncf.experimental.post_training_api.dataloader import DataLoader
 
 import onnx
 import onnxruntime as rt
@@ -22,9 +21,7 @@ import numpy as np
 
 
 class OnnxEngine(Engine):
-    def __init__(self, dataloader: DataLoader, num_iters: int, providers: List[str]):
-        super().__init__(dataloader)
-        self.num_iters = num_iters
+    def __init__(self, providers: List[str]):
         self.providers = providers
 
     def set_model(self, model: str) -> None:
@@ -34,15 +31,10 @@ class OnnxEngine(Engine):
         onnx_model = onnx.load(model)
         onnx.checker.check_model(onnx_model)
         self.model = model
+        self.sess = rt.InferenceSession(self.model, providers=self.providers)
 
-    def infer(self) -> List[np.ndarray]:
-        output = []
-        sess = rt.InferenceSession(self.model, providers=self.providers)
-        input_name = sess.get_inputs()[0].name
-        for i, (input_, *other) in enumerate(self.data_loader):
-            if i == self.num_iters:
-                break
-            input_tensor = input_.cpu().detach().numpy()
-            output_tensor = sess.run([], {input_name: input_tensor.astype(np.float32)})
-            output.append(output_tensor)
-        return output
+    def infer(self, input_: np.ndarray) -> List[np.ndarray]:
+        input_name = self.sess.get_inputs()[0].name
+        input_tensor = input_.cpu().detach().numpy()
+        output_tensor = self.sess.run([], {input_name: input_tensor.astype(np.float32)})
+        return output_tensor

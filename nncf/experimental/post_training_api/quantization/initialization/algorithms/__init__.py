@@ -10,12 +10,3 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-
-from nncf.experimental.onnx.graph.transformations.layout import ONNXTransformationLayout
-from nncf.experimental.onnx.compressed_model import CompressedModel
-
-
-class ONNXModelTransformer:
-    @staticmethod
-    def transform(model: CompressedModel, transformation_layout: ONNXTransformationLayout) -> CompressedModel:
-        pass
