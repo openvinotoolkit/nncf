@@ -19,18 +19,18 @@ class Initializer:
 
         self.algorithms = PriorityQueue(algorithms_with_priority)
 
-    def run_algorithm(self, algorithm: InitializationAlgorithm, model: CompressedModel) -> CompressedModel:
+    def initialize_model(self, compressed_model: CompressedModel):
+        while not self.algorithms.is_empty():
+            algorithm = self.algorithms.pop()
+            compressed_model = self._run_algorithm(algorithm, compressed_model)
+        return compressed_model
+
+    def _run_algorithm(self, algorithm: InitializationAlgorithm, model: CompressedModel) -> CompressedModel:
         return algorithm.run(model)
 
     def add_algorithm(self, algorithm: InitializationAlgorithm, priority: int = DefaultPriority) -> None:
         self._set_algorithm_priority(algorithm, priority)
         self.algorithms.add(algorithm)
-
-    def is_empty(self) -> bool:
-        return self.algorithms.is_empty()
-
-    def pop(self) -> InitializationAlgorithm:
-        return self.algorithms.pop()
 
     def _set_algorithm_priority(self, algorithm: InitializationAlgorithm,
                                 priority: int = DefaultPriority) -> InitializationAlgorithm:

@@ -29,21 +29,13 @@ class PostTrainingQuantization(BaseCompressionAlgorithmBuilder):
         super().__init__(None)  # TODO: what should do with NNCFConfig?
         self.quantization_config = quantization_config
         self.initializer = Initializer(engine, dataloader, quantization_config.get('initilization'))
-        self.priority = None  # Priority of algorithms application sei by CompressionBuilder
+        self.priority = None  # Priority of algorithms application set by CompressionBuilder
 
     def apply_to(self, compressed_model: CompressedModel) -> CompressedModel:
         transformation_layout = self.get_transformation_layout(compressed_model)
         transformed_compressed_model = ModelTransformer.transform(compressed_model, transformation_layout)
-
-        initialized_compressed_model = self.initialize(transformed_compressed_model)
-
+        initialized_compressed_model = self.initializer.initialize_model(transformed_compressed_model)
         return initialized_compressed_model
-
-    def initialize(self, compressed_model: CompressedModel) -> CompressedModel:
-        while self.initializer.is_empty():
-            algorithm = self.initializer.pop()
-            compressed_model = self.initializer.run_algorithm(algorithm, compressed_model)
-        return compressed_model
 
     def __lt__(self, other):
         return self.priority < other.priority
