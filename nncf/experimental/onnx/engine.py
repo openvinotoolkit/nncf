@@ -20,9 +20,12 @@ import onnxruntime as rt
 import numpy as np
 
 
-class OnnxEngine(Engine):
-    def __init__(self, providers: List[str]):
-        self.providers = providers
+class ONNXEngine(Engine):
+    def __init__(self, providers: List[str] = None):
+        if providers is None:
+            self.providers = ['OpenVINOExecutionProvider']
+        else:
+            self.providers = providers
 
     def set_model(self, model: str) -> None:
         """
@@ -33,7 +36,7 @@ class OnnxEngine(Engine):
         self.model = model
         self.sess = rt.InferenceSession(self.model, providers=self.providers)
 
-    def infer(self, input_: np.ndarray) -> List[np.ndarray]:
+    def infer_model(self, input_: np.ndarray) -> List[np.ndarray]:
         input_name = self.sess.get_inputs()[0].name
         input_tensor = input_.cpu().detach().numpy()
         output_tensor = self.sess.run([], {input_name: input_tensor.astype(np.float32)})
