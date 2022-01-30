@@ -23,6 +23,8 @@ from nncf.common.graph.definitions import MODEL_OUTPUT_OP_NAME
 
 from nncf.experimental.onnx.graph.onnx_graph import ONNXGraph
 from nncf.experimental.onnx.graph.metatypes.onnx_ops import ONNX_OPERATION_METATYPES
+from nncf.common.graph.operator_metatypes import InputNoopMetatype
+from nncf.common.graph.operator_metatypes import OutputNoopMetatype
 from nncf.experimental.onnx.graph.metatypes.onnx_ops import ConstantMetatype
 
 
@@ -76,9 +78,7 @@ class GraphConverter:
             input_shape = onnx_graph.get_tensor_shape(_input)
             input_node = nncf_graph.add_nncf_node(node_name=MODEL_INPUT_OP_NAME + '_' + str(i),
                                                   node_type=NNCFGraphNodeType.INPUT_NODE,
-                                                  node_metatype=ONNX_OPERATION_METATYPES.
-                                                  get_operator_metatype_by_op_name(
-                                                      NNCFGraphNodeType.INPUT_NODE),
+                                                  node_metatype=InputNoopMetatype,
                                                   layer_attributes=None)
             input_name = _input.name
             to_nodes = onnx_graph.get_nodes_by_input(input_name)
@@ -102,9 +102,7 @@ class GraphConverter:
             output_shape = onnx_graph.get_tensor_shape(_output)
             output_node = nncf_graph.add_nncf_node(node_name=MODEL_OUTPUT_OP_NAME + '_' + str(i),
                                                    node_type=NNCFGraphNodeType.OUTPUT_NODE,
-                                                   node_metatype=ONNX_OPERATION_METATYPES.
-                                                   get_operator_metatype_by_op_name(
-                                                       NNCFGraphNodeType.OUTPUT_NODE),
+                                                   node_metatype=OutputNoopMetatype,
                                                    layer_attributes=None)
 
             output_name = _output.name

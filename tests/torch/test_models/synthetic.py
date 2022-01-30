@@ -13,6 +13,9 @@
 import torch
 import torch.nn.functional as F
 from abc import abstractmethod
+
+from torch.nn import BatchNorm2d
+
 from tests.torch.helpers import create_conv
 from torch import nn
 from torch.nn import Dropout
@@ -270,4 +273,16 @@ class ConvRelu6HSwishHSigmoid(nn.Module):
         z = self._hswish(z)
         z = self.conv2(z)
         z = self._hsigmoid(z)
+        return z
+
+class ConvBNLeakyReLU(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.conv = create_conv(1, 2, 2, 2)
+        self.bn = BatchNorm2d(2)
+
+    def forward(self, x: torch.Tensor):
+        z = self.conv(x)
+        z = self.bn(z)
+        z = torch.nn.functional.leaky_relu(z)
         return z

@@ -104,6 +104,9 @@ class SampleConfig(Dict):
 def create_sample_config(args, parser) -> SampleConfig:
     nncf_config = NNCFConfig.from_json(args.config)
 
+    if args.disable_compression and 'compression' in nncf_config:
+        del nncf_config['compression']
+
     sample_config = SampleConfig.from_json(args.config)
     sample_config.update_from_args(args, parser)
     sample_config.nncf_config = nncf_config
