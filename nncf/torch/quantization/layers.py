@@ -62,6 +62,13 @@ class PTQuantizerSpec(QuantizerSpec):
                  logarithm_scale: bool,
                  export_quantized: bool = False,
                  compression_lr_multiplier: float = None):
+        """
+       :param scale_shape: Shape of quantizer scale parameters
+       :param logarithm_scale: Whether to use log of scale as optimized parameter instead of scale itself.
+       :param compression_lr_multiplier: Used to increase/decrease gradients for quantization parameters.
+       :param export_quantized: Export to onnx weights quantized or non quantized. Should not be True for activation
+            quantizers.
+        """
         super().__init__(num_bits, mode, signedness_to_force, narrow_range, half_range)
         self.scale_shape = scale_shape
         self.logarithm_scale = logarithm_scale
