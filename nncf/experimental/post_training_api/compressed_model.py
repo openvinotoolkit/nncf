@@ -28,6 +28,7 @@ class CompressedModel(ABC):
 
     def __init__(self, model: ModelType):
         self.original_model = model
+        self.compressed_model = None
         self.nncf_graph = self.build_nncf_graph()
         self.transformations = []
 
@@ -35,4 +36,10 @@ class CompressedModel(ABC):
     def build_nncf_graph(self) -> NNCFGraph:
         """
         Builds NNCFGraph from the model.
+        """
+
+    @abstractmethod
+    def export(self, path: str) -> None:
+        """
+        Exports the compressed model.
         """

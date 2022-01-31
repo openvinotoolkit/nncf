@@ -5,6 +5,7 @@ from nncf.experimental.onnx.quantization.algorithm import ONNXPostTrainingQuanti
 from nncf.experimental.post_training_api.quantization.config import DEFAULT
 
 fp32_model_onnx_path = ''
+int8_model_onnx_path = ''
 dataset_dir = ''
 input_shape = []
 
@@ -19,3 +20,5 @@ quantization = ONNXPostTrainingQuantization(DEFAULT, engine, dataloader)
 builder.add_algorithm(quantization)
 # Step 4: Execute the pipeline.
 compressed_model = builder.compress_model(fp32_model_onnx_path)
+# Step 5: Export the compressed model.
+compressed_model.export(int8_model_onnx_path)

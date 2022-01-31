@@ -50,11 +50,21 @@ class CompressionBuilder:
         # TODO: need to realize
         return AlgorithmPriority.DEFAULT_PRIORITY
 
+    def _build_compressed_model(self, model: ModelType) -> CompressedModel:
+        # TODO:add logic with different frameworks
+        from torch.nn import Module
+        if isinstance(model, str):
+            from nncf.experimental.onnx.compressed_model import ONNXCompressedModel
+            compressed_model = ONNXCompressedModel(model)
+        elif isinstance(model, Module):
+            compressed_model = ...
+        return compressed_model
+
     def compress_model(self, model: ModelType) -> CompressedModel:
         """
         Apply compression algorithms to the 'model'.
         """
-        compressed_model = CompressedModel(model)
+        compressed_model = self._build_compressed_model(model)
         while not self.algorithms.is_empty():
             algorithm = self.algorithms.pop()
             compressed_model = algorithm.apply_to(compressed_model)
