@@ -337,11 +337,11 @@ def maybe_convert_legacy_names_in_compress_state(compression_state: Dict[str, An
         name = point['qip']['target_node_name']
         if 'BatchNorm2d' in name:
             legacy_bn_names = True
-            point['qip']['target_node_name'] = name.replace('BatchNorm2d', 'NNCFBatchNorm2')
+            point['qip']['target_node_name'] = name.replace('BatchNorm2d', 'NNCFBatchNorm2d')
 
     if legacy_bn_names:
         warnings.warn('Legacy Batch Norm layer names was detected in quantization setup target point names.'
-                      ' All occurrences of `BatchNorm2d` in nodes names was replaced by `NNCFBatchNorm2`',
+                      ' All occurrences of `BatchNorm2d` in nodes names was replaced by `NNCFBatchNorm2d`',
                       category=DeprecationWarning)
 
 
