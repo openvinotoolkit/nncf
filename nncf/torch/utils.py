@@ -309,12 +309,12 @@ def maybe_convert_legacy_names_in_model_state(state_dict_to_load: Dict[str, Any]
     legacy_bn_names = [name for name in state_dict_to_load if 'BatchNorm2d' in name]
     for name in legacy_bn_names:
         tensor = state_dict_to_load.pop(name)
-        new_name = name.replace('BatchNorm2d', 'NNCFBatchNorm')
+        new_name = name.replace('BatchNorm2d', 'NNCFBatchNorm2d')
         state_dict_to_load[new_name] = tensor
 
     if legacy_bn_names:
         warnings.warn('Legacy Batch Norm layer names was detected in checkpoint model state dict.'
-                      ' All occurrences of `BatchNorm2d` in nodes names was replaced by `NNCFBatchNorm`',
+                      ' All occurrences of `BatchNorm2d` in nodes names was replaced by `NNCFBatchNorm2d`',
                       category=DeprecationWarning)
 
 
@@ -337,11 +337,11 @@ def maybe_convert_legacy_names_in_compress_state(compression_state: Dict[str, An
         name = point['qip']['target_node_name']
         if 'BatchNorm2d' in name:
             legacy_bn_names = True
-            point['qip']['target_node_name'] = name.replace('BatchNorm2d', 'NNCFBatchNorm')
+            point['qip']['target_node_name'] = name.replace('BatchNorm2d', 'NNCFBatchNorm2')
 
     if legacy_bn_names:
         warnings.warn('Legacy Batch Norm layer names was detected in quantization setup target point names.'
-                      ' All occurrences of `BatchNorm2d` in nodes names was replaced by `NNCFBatchNorm`',
+                      ' All occurrences of `BatchNorm2d` in nodes names was replaced by `NNCFBatchNorm2`',
                       category=DeprecationWarning)
 
 

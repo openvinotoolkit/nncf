@@ -152,15 +152,41 @@ class NNCFLinear(_NNCFModuleMixin, nn.Linear):
         return nncf_linear
 
 
-class NNCFBatchNorm(_NNCFModuleMixin, nn.BatchNorm2d):
-    op_func_name = "batch_norm"
+class NNCFBatchNorm1d(_NNCFModuleMixin, nn.BatchNorm1d):
+    op_func_name = "batch_norm1d"
+    ignored_algorithms = ['magnitude_sparsity', 'rb_sparsity', 'const_sparsity', 'quantization']
+
+    @staticmethod
+    def from_module(module):
+        assert module.__class__.__name__ == nn.BatchNorm1d.__name__
+
+        nncf_bn = NNCFBatchNorm1d(module.num_features)
+        nncf_bn = align_module_internals(module, nncf_bn)
+        return nncf_bn
+
+
+class NNCFBatchNorm2d(_NNCFModuleMixin, nn.BatchNorm2d):
+    op_func_name = "batch_norm2d"
     ignored_algorithms = ['magnitude_sparsity', 'rb_sparsity', 'const_sparsity', 'quantization']
 
     @staticmethod
     def from_module(module):
         assert module.__class__.__name__ == nn.BatchNorm2d.__name__
 
-        nncf_bn = NNCFBatchNorm(module.num_features)
+        nncf_bn = NNCFBatchNorm2d(module.num_features)
+        nncf_bn = align_module_internals(module, nncf_bn)
+        return nncf_bn
+
+
+class NNCFBatchNorm3d(_NNCFModuleMixin, nn.BatchNorm3d):
+    op_func_name = "batch_norm3d"
+    ignored_algorithms = ['magnitude_sparsity', 'rb_sparsity', 'const_sparsity', 'quantization']
+
+    @staticmethod
+    def from_module(module):
+        assert module.__class__.__name__ == nn.BatchNorm3d.__name__
+
+        nncf_bn = NNCFBatchNorm3d(module.num_features)
         nncf_bn = align_module_internals(module, nncf_bn)
         return nncf_bn
 
@@ -266,7 +292,9 @@ NNCF_MODULES_DICT = {
     NNCFConv2d: nn.Conv2d,
     NNCFConv3d: nn.Conv3d,
     NNCFLinear: nn.Linear,
-    NNCFBatchNorm: nn.BatchNorm2d,
+    NNCFBatchNorm1d: nn.BatchNorm1d,
+    NNCFBatchNorm2d: nn.BatchNorm2d,
+    NNCFBatchNorm3d: nn.BatchNorm3d,
     NNCFGroupNorm: nn.GroupNorm,
     NNCFConvTranspose2d: nn.ConvTranspose2d,
     NNCFConvTranspose3d: nn.ConvTranspose3d,

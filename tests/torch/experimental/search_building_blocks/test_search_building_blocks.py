@@ -28,27 +28,27 @@ REF_BUILDING_BLOCKS_FOR_RESNET = [
 
 REF_BUILDING_BLOCKS_FOR_MOBILENETV2 = [
     BuildingBlock(
-     'MobileNetV2/Sequential[features]/InvertedResidual[2]/Sequential[conv]/NNCFBatchNorm[3]/batch_norm_0',
+     'MobileNetV2/Sequential[features]/InvertedResidual[2]/Sequential[conv]/NNCFBatchNorm2d[3]/batch_norm_0',
      'MobileNetV2/Sequential[features]/InvertedResidual[3]/__add___0'),
     BuildingBlock(
-     'MobileNetV2/Sequential[features]/InvertedResidual[4]/Sequential[conv]/NNCFBatchNorm[3]/batch_norm_0',
+     'MobileNetV2/Sequential[features]/InvertedResidual[4]/Sequential[conv]/NNCFBatchNorm2d[3]/batch_norm_0',
      'MobileNetV2/Sequential[features]/InvertedResidual[5]/__add___0'),
     BuildingBlock('MobileNetV2/Sequential[features]/InvertedResidual[5]/__add___0',
      'MobileNetV2/Sequential[features]/InvertedResidual[6]/__add___0'),
-    BuildingBlock('MobileNetV2/Sequential[features]/InvertedResidual[7]/Sequential[conv]/NNCFBatchNorm[3]/batch_norm_0',
+    BuildingBlock('MobileNetV2/Sequential[features]/InvertedResidual[7]/Sequential[conv]/NNCFBatchNorm2d[3]/batch_norm_0',
      'MobileNetV2/Sequential[features]/InvertedResidual[8]/__add___0'),
     BuildingBlock('MobileNetV2/Sequential[features]/InvertedResidual[8]/__add___0',
      'MobileNetV2/Sequential[features]/InvertedResidual[9]/__add___0'),
     BuildingBlock('MobileNetV2/Sequential[features]/InvertedResidual[9]/__add___0',
      'MobileNetV2/Sequential[features]/InvertedResidual[10]/__add___0'),
     BuildingBlock(
-     'MobileNetV2/Sequential[features]/InvertedResidual[11]/Sequential[conv]/NNCFBatchNorm[3]/batch_norm_0',
+     'MobileNetV2/Sequential[features]/InvertedResidual[11]/Sequential[conv]/NNCFBatchNorm2d[3]/batch_norm_0',
      'MobileNetV2/Sequential[features]/InvertedResidual[12]/__add___0'),
     BuildingBlock(
      'MobileNetV2/Sequential[features]/InvertedResidual[12]/__add___0',
      'MobileNetV2/Sequential[features]/InvertedResidual[13]/__add___0'),
     BuildingBlock(
-     'MobileNetV2/Sequential[features]/InvertedResidual[14]/Sequential[conv]/NNCFBatchNorm[3]/batch_norm_0',
+     'MobileNetV2/Sequential[features]/InvertedResidual[14]/Sequential[conv]/NNCFBatchNorm2d[3]/batch_norm_0',
      'MobileNetV2/Sequential[features]/InvertedResidual[15]/__add___0'),
     BuildingBlock('MobileNetV2/Sequential[features]/InvertedResidual[15]/__add___0',
      'MobileNetV2/Sequential[features]/InvertedResidual[16]/__add___0')]  # 10

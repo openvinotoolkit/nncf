@@ -1,9 +1,9 @@
 strict digraph  {
 "0 /nncf_model_input_0" [id=0, type=nncf_model_input];
 "1 SymmetricQuantizer/symmetric_quantize_0" [id=1, type=symmetric_quantize];
-"2 TestModel/BatchNorm1d[_layer]/batch_norm_0" [id=2, type=batch_norm];
+"2 TestModel/NNCFBatchNorm1d[_layer]/batch_norm_0" [id=2, type=batch_norm];
 "3 /nncf_model_output_0" [id=3, type=nncf_model_output];
 "0 /nncf_model_input_0" -> "1 SymmetricQuantizer/symmetric_quantize_0";
-"1 SymmetricQuantizer/symmetric_quantize_0" -> "2 TestModel/BatchNorm1d[_layer]/batch_norm_0";
-"2 TestModel/BatchNorm1d[_layer]/batch_norm_0" -> "3 /nncf_model_output_0";
+"1 SymmetricQuantizer/symmetric_quantize_0" -> "2 TestModel/NNCFBatchNorm1d[_layer]/batch_norm_0";
+"2 TestModel/NNCFBatchNorm1d[_layer]/batch_norm_0" -> "3 /nncf_model_output_0";
 }
