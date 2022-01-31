@@ -11,7 +11,6 @@
  limitations under the License.
 """
 
-from tensorflow.keras import layers
 import tensorflow as tf
 
 _EPSILON = 1e-8
@@ -255,10 +254,10 @@ def selective_crop_and_resize(features,
             return tf.einsum('bmhwf,bmow->bmhof', x[0], tf.cast(x[1], x[0].dtype))
         # Gather for y_axis.
         # shape is [batch_size, num_boxes, output_size, width, features]
-        features_per_box = layers.Lambda(einsum1)((features, grid_y_weight))
+        features_per_box = tf.keras.layers.Lambda(einsum1)((features, grid_y_weight))
         # Gather for x_axis.
         # shape is [batch_size, num_boxes, output_size, output_size, features]
-        features_per_box = layers.Lambda(einsum2)((features_per_box, grid_x_weight))
+        features_per_box = tf.keras.layers.Lambda(einsum2)((features_per_box, grid_x_weight))
     else:
         height_dim_offset = max_feature_width
         level_dim_offset = max_feature_height * height_dim_offset
