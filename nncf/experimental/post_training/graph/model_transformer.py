@@ -11,11 +11,15 @@
  limitations under the License.
 """
 
-from nncf.experimental.onnx.graph.transformations.layout import ONNXTransformationLayout
+from abc import ABC
+from abc import abstractmethod
+
+from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.experimental.onnx.compressed_model import CompressedModel
 
 
-class ONNXModelTransformer:
+class ModelTransformer(ABC):
+    @abstractmethod
     @staticmethod
-    def transform(model: CompressedModel, transformation_layout: ONNXTransformationLayout) -> CompressedModel:
+    def transform(model: CompressedModel, transformation_layout: TransformationLayout) -> CompressedModel:
         pass

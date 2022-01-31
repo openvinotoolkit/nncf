@@ -37,7 +37,16 @@ class ONNXEngine(Engine):
         self.sess = rt.InferenceSession(self.model, providers=self.providers)
 
     def infer_model(self, input_: np.ndarray) -> List[np.ndarray]:
+        # feed Dict TF
         input_name = self.sess.get_inputs()[0].name
         input_tensor = input_.cpu().detach().numpy()
         output_tensor = self.sess.run([], {input_name: input_tensor.astype(np.float32)})
+        self._process_output(output_tensor)
         return output_tensor
+
+
+    # def _collect_statistics(self):
+    #     self.collector.append(statistics)
+
+    def _process_output(self, output) -> Dict[layer_name, np.ndarray]:
+        pass

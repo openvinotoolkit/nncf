@@ -10,3 +10,19 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+
+from nncf.experimental.post_training.compressed_model import CompressedModel
+
+
+class InitializationAlgorithm:
+    """
+    The base class for all post-training quantization initialization algorithms.
+    """
+
+    def __init__(self, engine, dataloader, **kwargs):
+        self.engine = engine
+        self.dataloader = dataloader
+        self.priority = None
+
+    def run(self, model: CompressedModel):
+        pass

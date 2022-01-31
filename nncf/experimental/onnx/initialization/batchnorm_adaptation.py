@@ -10,3 +10,9 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+
+from nncf.experimental.post_training.initialization.batchnorm_adaptation import BatchNormAdaptationAlgorithm
+
+
+class ONNXBatchNormAdaptationAlgorithm(BatchNormAdaptationAlgorithm):
+    pass

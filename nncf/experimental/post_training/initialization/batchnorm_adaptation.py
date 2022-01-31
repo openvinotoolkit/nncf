@@ -11,9 +11,8 @@
  limitations under the License.
 """
 
-from nncf.experimental.post_training_api.quantization.initialization.initializer import Initializer
+from nncf.experimental.post_training.initialization.algorithm import InitializationAlgorithm
 
 
-class ONNXInitializer(Initializer):
-    def __init__(self, engine, dataloader, initializer_config):
-        super().__init__(engine, dataloader, initializer_config)
+class BatchNormAdaptationAlgorithm(InitializationAlgorithm):
+    pass

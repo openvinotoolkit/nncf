@@ -11,17 +11,8 @@
  limitations under the License.
 """
 
-from nncf.experimental.post_training_api.compressed_model import CompressedModel
+from nncf.experimental.post_training.initialization.algorithm import InitializationAlgorithm
 
 
-class InitializationAlgorithm:
-    """
-    The base class for all post-training quantization initialization algorithms.
-    """
-
-    def __init__(self, engine, dataloader):
-        self.engine = engine
-        self.dataloader = dataloader
-
-    def run(self, model: CompressedModel):
-        pass
+class QuantizerRangeFinderAlgorithm(InitializationAlgorithm):
+    pass

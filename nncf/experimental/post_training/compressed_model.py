@@ -17,6 +17,8 @@ from abc import abstractmethod
 from typing import TypeVar
 
 from nncf.common.graph.graph import NNCFGraph
+from nncf.experimental.post_training.api.engine import Engine
+from nncf.experimental.post_training.api.dataloader import DataLoader
 
 ModelType = TypeVar('ModelType')
 
@@ -26,14 +28,14 @@ class CompressedModel(ABC):
     The original model wrapper used to build NNCFGraph and utilized it in the compression algorithms.
     """
 
-    def __init__(self, model: ModelType):
+    def __init__(self, model: ModelType, dataloader: DataLoader, engine: Engine):
         self.original_model = model
         self.compressed_model = None
-        self.nncf_graph = self.build_nncf_graph()
+        self.nncf_graph = self.build_nncf_graph(dataloader, engine)
         self.transformations = []
 
     @abstractmethod
-    def build_nncf_graph(self) -> NNCFGraph:
+    def build_nncf_graph(self, dataloader: DataLoader, engine: Engine) -> NNCFGraph:
         """
         Builds NNCFGraph from the model.
         """

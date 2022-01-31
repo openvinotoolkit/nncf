@@ -10,3 +10,9 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+
+from nncf.experimental.post_training.initialization.quantizer_range_finder import QuantizerRangeFinderAlgorithm
+
+
+class ONNXQuantizerRangeFinderAlgorithm(QuantizerRangeFinderAlgorithm):
+    pass

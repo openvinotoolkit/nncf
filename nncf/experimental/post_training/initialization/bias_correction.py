@@ -11,12 +11,8 @@
  limitations under the License.
 """
 
-
-# TODO: implemet
-class PostTrainingQuantizationParameters:
-
-    def __init__(self, quantization_parameters):
-        self.parameters = quantization_parameters
+from nncf.experimental.post_training.initialization.algorithm import InitializationAlgorithm
 
 
-DEFAULT = PostTrainingQuantizationParameters()
+class BiasCorrectionAlgorithm(InitializationAlgorithm):
+    pass
