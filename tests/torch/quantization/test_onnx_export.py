@@ -122,7 +122,7 @@ def test_onnx_export_to_quantize_dequantize_per_channel(per_channel: bool,
         logarithm_scale=False,
         narrow_range=False,
         half_range=False,
-        export_quantized=False
+        is_quantized_on_export=False
     )
 
     q_cls = QUANTIZATION_MODULES.get(qmode)

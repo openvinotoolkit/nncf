@@ -30,7 +30,7 @@ def test_is_correct_overflow_issue_levels(num_bits, mode, scale_shape, half_rang
         scale_shape=scale_shape,
         logarithm_scale=False,
         half_range=half_range,
-        export_quantized=True)
+        is_quantized_on_export=True)
 
     quantizer = SymmetricQuantizer(qspec) if mode == QuantizationMode.SYMMETRIC else AsymmetricQuantizer(qspec)
 

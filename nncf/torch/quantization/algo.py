@@ -1062,7 +1062,7 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
                                             scale_shape=tuple(scale_shape),
                                             logarithm_scale=use_logarithm_scale,
                                             half_range=half_range,
-                                            export_quantized=is_weights(primary_ip),
+                                            is_quantized_on_export=is_weights(primary_ip),
                                             compression_lr_multiplier=compression_lr_multiplier)
         quantizer = self.__create_quantize_module(qspec).to(self._device_for_callable_obj_creation)
         if range_init_minmax_values is not None:
