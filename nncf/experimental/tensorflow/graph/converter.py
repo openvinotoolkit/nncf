@@ -1,5 +1,5 @@
 """
- Copyright (c) 2021 Intel Corporation
+ Copyright (c) 2022 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -23,45 +23,6 @@ from nncf.tensorflow.graph.metatypes.common import ALL_LAYER_METATYPES_WITH_WEIG
 from nncf.experimental.tensorflow.nncf_network import NNCFNetwork
 from nncf.experimental.tensorflow.graph.node_attributes import TFNodeAttributes
 from nncf.experimental.tensorflow.graph.node_attributes import TFWeightedNodeAttributes
-
-
-def convert_nncf_network_to_nncf_graph(nncf_network: NNCFNetwork) -> NNCFGraph:
-    """
-    Builds NNCF graph from provided NNCF network.
-
-    :param nncf_network: The NNCF network.
-    :return: The NNCF graph.
-    """
-    concrete_function = tf.function(nncf_network).get_concrete_function(nncf_network.input_signature)  # training?
-    node_descs, edge_descs = _collect_tfgraph_description(concrete_function.graph)
-
-    nncf_graph = NNCFGraph()
-    op_name_to_node_id_map = {}
-    for desc in node_descs:
-        nncf_node = nncf_graph.add_nncf_node(
-            node_name=desc.op_name,
-            node_type=desc.op_type_name,
-            node_metatype=desc.metatype,
-            layer_attributes=desc.attrs,
-            layer_name=desc.resource_name if desc.resource_name else desc.op_name,
-            is_shared=desc.is_shared
-        )
-        op_name_to_node_id_map[desc.op_name] = nncf_node.node_id
-
-    for desc in edge_descs:
-        from_node_id = op_name_to_node_id_map[desc.producer_op_name]
-        to_node_id = op_name_to_node_id_map[desc.consumer_op_name]
-
-        nncf_graph.add_edge_between_nncf_nodes(
-            from_node_id,
-            to_node_id,
-            tensor_shape=desc.tensor_shape,
-            input_port_id=desc.input_port_id,
-            output_port_id=desc.output_port_id,
-            dtype=desc.tensor_dtype
-        )
-
-    return nncf_graph
 
 
 class NodeDesc:
@@ -126,163 +87,221 @@ class EdgeDesc:
         self.tensor_dtype = tensor_dtype
 
 
-def _get_data_format(op: tf.Operation) -> str:
+class SubclassedConverter:
     """
-    Returns data format for the TensorFlow operation in the Keras format.
-    Returns default data format if the operation does not have it.
-
-    :param op: TensorFlow operation.
-    :return: String `channels_last` or `channels_first`.
+    Converts the NNCF network to the NNCF graph.
     """
-    try:
-        data_format = op.get_attr('data_format')
-    except ValueError:
-        data_format = None
 
-    if data_format:
-        to_keras_data_format = {
-            'NHWC': 'channels_last',
-            'NCHW': 'channels_first',
-            'NDHWC': 'channels_last',
-            'NCDHW': 'channels_first',
-        }
-        return to_keras_data_format[data_format.decode('utf-8')]
+    def __init__(self,
+                 nncf_network: NNCFNetwork,
+                 training: bool = False):
+        """
+        Initializes the subclassed converter.
 
-    return tf.keras.backend.image_data_format()
+        :param nncf_network: The NNCF network.
+        :param training: Mode of the model.
+        """
+        self._nncf_network = nncf_network
+        self._training = training
 
+    def convert(self) -> NNCFGraph:
+        """
+        Builds NNCF graph from provided NNCF network.
 
-def _collect_tfgraph_description(graph) -> Tuple[List[NodeDesc], List[EdgeDesc]]:
-    """
-    Traverses the graph and collects information about nodes and edges
-    which should be included in the NNCF graph.
+        :return: The NNCF graph.
+        """
+        concrete_function = tf.function(self._nncf_network).get_concrete_function(self._nncf_network.input_signature,
+                                                                                  training=self._training)  # training?
+        node_descs, edge_descs = SubclassedConverter._collect_tfgraph_description(concrete_function.graph)
 
-    :param graph: TensorFlow `FuncGraph`.
-    :return: Description of nodes and edges which should be included in the NNCF graph.
-    """
-    captured_input_ops = {}  # type: Dict[str, tf.Operation]
-    for tensor in graph.internal_captures:
-        captured_input_ops[tensor.op.name] = tensor.op
-
-    regular_input_ops = {}  # type: Dict[str, tf.Operation]
-    for tensor in graph.inputs:
-        if tensor.op.name not in captured_input_ops:
-            regular_input_ops[tensor.op.name] = tensor.op
-
-    # Traverse the graph and mark all nodes reachable from `regular_input_ops`.
-    # The NNCF graph contains only reachable nodes.
-    # If `op_name` in `visited_nodes` the node with `op_name`
-    # reachable from `regular_input_ops`.
-    queue = deque(regular_input_ops.values())
-    visited_nodes = dict(regular_input_ops)
-
-    while len(queue) != 0:
-        v = queue.popleft()
-        # A successor of node `v` is a node `u` such that exists
-        # a directed edge (v, u) from `v` to `u`.
-        successors = (op for tensor in v.outputs for op in tensor.consumers())
-        for u in successors:
-            if u.name not in visited_nodes:
-                queue.append(u)
-                visited_nodes[u.name] = u
-
-    resource_op_name_to_op_names_map = _get_resource_op_name_to_op_names_map(captured_input_ops.values())
-    # Reverse map
-    op_name_to_resource_op_name_map = {}
-    for resource_op_name, op_names in resource_op_name_to_op_names_map.items():
-        for op_name in op_names:
-            op_name_to_resource_op_name_map[op_name] = resource_op_name
-
-    # Collect descriptions for all visited nodes. The directed edge (v, u)
-    # of `FuncGraph` is added only if nodes v, u were visited.
-    node_descs = []
-    edge_descs = []
-
-    for op in visited_nodes.values():
-        metatype = get_op_metatype(op.type)
-
-        node_attributes = TFNodeAttributes(_get_data_format(op))
-
-        is_shared = False
-        resource_name = None
-        if metatype in ALL_LAYER_METATYPES_WITH_WEIGHTS:
-            resource_name = op_name_to_resource_op_name_map.get(op.name)
-            if resource_name:
-                is_shared = len(resource_op_name_to_op_names_map[resource_name]) > 1
-
-                assert len(metatype.weight_definitions) == 1
-                port_id = metatype.weight_definitions[0].port_id
-                weight_shape = op.inputs[port_id].shape.as_list()
-
-                node_attributes = TFWeightedNodeAttributes(
-                    node_attributes.get_data_format(),
-                    weight_shape
-                )
-
-        node_descs.append(
-            NodeDesc(
-                op_name=op.name,
-                op_type_name=op.type,
-                metatype=metatype,
-                is_shared=is_shared,
-                resource_name=resource_name,
-                attrs=node_attributes
+        nncf_graph = NNCFGraph()
+        op_name_to_node_id_map = {}
+        for desc in node_descs:
+            nncf_node = nncf_graph.add_nncf_node(
+                node_name=desc.op_name,
+                node_type=desc.op_type_name,
+                node_metatype=desc.metatype,
+                layer_attributes=desc.attrs,
+                layer_name=desc.resource_name if desc.resource_name else desc.op_name,
+                is_shared=desc.is_shared
             )
+            op_name_to_node_id_map[desc.op_name] = nncf_node.node_id
+
+        for desc in edge_descs:
+            from_node_id = op_name_to_node_id_map[desc.producer_op_name]
+            to_node_id = op_name_to_node_id_map[desc.consumer_op_name]
+
+            nncf_graph.add_edge_between_nncf_nodes(
+                from_node_id,
+                to_node_id,
+                tensor_shape=desc.tensor_shape,
+                input_port_id=desc.input_port_id,
+                output_port_id=desc.output_port_id,
+                dtype=desc.tensor_dtype
+            )
+
+        return nncf_graph
+
+    @staticmethod
+    def _get_data_format(op: tf.Operation) -> str:
+        """
+        Returns data format for the TensorFlow operation in the Keras format.
+        Returns default data format if the operation does not have it.
+
+        :param op: TensorFlow operation.
+        :return: String `channels_last` or `channels_first`.
+        """
+        try:
+            data_format = op.get_attr('data_format')
+        except ValueError:
+            data_format = None
+
+        if data_format:
+            to_keras_data_format = {
+                'NHWC': 'channels_last',
+                'NCHW': 'channels_first',
+                'NDHWC': 'channels_last',
+                'NCDHW': 'channels_first',
+            }
+            return to_keras_data_format[data_format.decode('utf-8')]
+
+        return tf.keras.backend.image_data_format()
+
+    @staticmethod
+    def _collect_tfgraph_description(graph) -> Tuple[List[NodeDesc], List[EdgeDesc]]:
+        """
+        Traverses the graph and collects information about nodes and edges
+        which should be included in the NNCF graph.
+
+        :param graph: TensorFlow `FuncGraph`.
+        :return: Description of nodes and edges which should be included in the NNCF graph.
+        """
+        captured_input_ops = {}  # type: Dict[str, tf.Operation]
+        for tensor in graph.internal_captures:
+            captured_input_ops[tensor.op.name] = tensor.op
+
+        regular_input_ops = {}  # type: Dict[str, tf.Operation]
+        for tensor in graph.inputs:
+            if tensor.op.name not in captured_input_ops:
+                regular_input_ops[tensor.op.name] = tensor.op
+
+        # Traverse the graph and mark all nodes reachable from `regular_input_ops`.
+        # The NNCF graph contains only reachable nodes.
+        # If `op_name` in `visited_nodes` the node with `op_name`
+        # reachable from `regular_input_ops`.
+        queue = deque(regular_input_ops.values())
+        visited_nodes = dict(regular_input_ops)
+
+        while len(queue) != 0:
+            v = queue.popleft()
+            # A successor of node `v` is a node `u` such that exists
+            # a directed edge (v, u) from `v` to `u`.
+            successors = (op for tensor in v.outputs for op in tensor.consumers())
+            for u in successors:
+                if u.name not in visited_nodes:
+                    queue.append(u)
+                    visited_nodes[u.name] = u
+
+        resource_op_name_to_op_names_map =  SubclassedConverter._get_resource_op_name_to_op_names_map(
+            captured_input_ops.values()
         )
+        # Reverse map
+        op_name_to_resource_op_name_map = {}
+        for resource_op_name, op_names in resource_op_name_to_op_names_map.items():
+            for op_name in op_names:
+                op_name_to_resource_op_name_map[op_name] = resource_op_name
 
-        for input_port_id, tensor in enumerate(op.inputs):
-            producer_op = tensor.op
-            if producer_op.name not in visited_nodes:
-                continue
+        # Collect descriptions for all visited nodes. The directed edge (v, u)
+        # of `FuncGraph` is added only if nodes v, u were visited.
+        node_descs = []
+        edge_descs = []
 
-            edge_descs.append(
-                EdgeDesc(
-                    producer_op_name=producer_op.name,
-                    output_port_id=tensor.value_index,
-                    consumer_op_name=op.name,
-                    input_port_id=input_port_id,
-                    tensor_shape=tensor.shape.as_list(),
-                    tensor_dtype=_convert_dtype_to_nncf_format(tensor.dtype)
+        for op in visited_nodes.values():
+            metatype = get_op_metatype(op.type)
+
+            node_attributes = TFNodeAttributes(SubclassedConverter._get_data_format(op))
+
+            is_shared = False
+            resource_name = None
+            if metatype in ALL_LAYER_METATYPES_WITH_WEIGHTS:
+                resource_name = op_name_to_resource_op_name_map.get(op.name)
+                if resource_name:
+                    is_shared = len(resource_op_name_to_op_names_map[resource_name]) > 1
+
+                    assert len(metatype.weight_definitions) == 1
+                    port_id = metatype.weight_definitions[0].port_id
+                    weight_shape = op.inputs[port_id].shape.as_list()
+
+                    node_attributes = TFWeightedNodeAttributes(
+                        node_attributes.get_data_format(),
+                        weight_shape
+                    )
+
+            node_descs.append(
+                NodeDesc(
+                    op_name=op.name,
+                    op_type_name=op.type,
+                    metatype=metatype,
+                    is_shared=is_shared,
+                    resource_name=resource_name,
+                    attrs=node_attributes
                 )
             )
 
-    return node_descs, edge_descs
+            for input_port_id, tensor in enumerate(op.inputs):
+                producer_op = tensor.op
+                if producer_op.name not in visited_nodes:
+                    continue
 
+                edge_descs.append(
+                    EdgeDesc(
+                        producer_op_name=producer_op.name,
+                        output_port_id=tensor.value_index,
+                        consumer_op_name=op.name,
+                        input_port_id=input_port_id,
+                        tensor_shape=tensor.shape.as_list(),
+                        tensor_dtype=SubclassedConverter._convert_dtype_to_nncf_format(tensor.dtype)
+                    )
+                )
 
-def _convert_dtype_to_nncf_format(dtype: tf.dtypes.DType) -> Dtype:
-    if dtype.is_floating:
-        tensor_dtype = Dtype.FLOAT
-    elif dtype.is_integer:
-        tensor_dtype = Dtype.INTEGER
-    else:
-        raise RuntimeError(f'Unexpected dtype of tensor: {dtype}')
+        return node_descs, edge_descs
 
-    return tensor_dtype
+    @staticmethod
+    def _convert_dtype_to_nncf_format(dtype: tf.dtypes.DType) -> Dtype:
+        if dtype.is_floating:
+            tensor_dtype = Dtype.FLOAT
+        elif dtype.is_integer:
+            tensor_dtype = Dtype.INTEGER
+        else:
+            raise RuntimeError(f'Unexpected dtype of tensor: {dtype}')
 
+        return tensor_dtype
 
-def _get_resource_op_name_to_op_names_map(captured_input_ops) -> Dict[str, List[str]]:
-    """
-    Returns mapping from the name of resource node to the name of visited
-    nodes that use this resource.
-
-    :param captured_input_ops: Placeholders for weights.
-    :return: The mapping from the name of resource node to the name of visited
+    @staticmethod
+    def _get_resource_op_name_to_op_names_map(captured_input_ops) -> Dict[str, List[str]]:
+        """
+        Returns mapping from the name of resource node to the name of visited
         nodes that use this resource.
-    """
-    resource_op_name_to_op_names_map = {}
-    for op in captured_input_ops:
-        if len(op.outputs) != 1:
-            raise RuntimeError(f'Unexpected number of outputs: {len(op.outputs)}')
 
-        output_tensor = op.outputs[0]
-        for consumer_op in output_tensor.consumers():
-            if len(consumer_op.outputs) != 1:
-                raise RuntimeError(f'Unexpected number of outputs: {len(consumer_op.outputs)}')
+        :param captured_input_ops: Placeholders for weights.
+        :return: The mapping from the name of resource node to the name of visited
+            nodes that use this resource.
+        """
+        resource_op_name_to_op_names_map = {}
+        for op in captured_input_ops:
+            if len(op.outputs) != 1:
+                raise RuntimeError(f'Unexpected number of outputs: {len(op.outputs)}')
 
-            tensor = consumer_op.outputs[0]
-            consumers = tensor.consumers()
-            if len(consumers) != 1:
-                raise RuntimeError(f'Unexpected number of consumers: {len(consumers)}')
+            output_tensor = op.outputs[0]
+            for consumer_op in output_tensor.consumers():
+                if len(consumer_op.outputs) != 1:
+                    raise RuntimeError(f'Unexpected number of outputs: {len(consumer_op.outputs)}')
 
-            op_names = resource_op_name_to_op_names_map.setdefault(op.name, [])
-            op_names.append(consumers[0].name)
-    return resource_op_name_to_op_names_map
+                tensor = consumer_op.outputs[0]
+                consumers = tensor.consumers()
+                if len(consumers) != 1:
+                    raise RuntimeError(f'Unexpected number of consumers: {len(consumers)}')
+
+                op_names = resource_op_name_to_op_names_map.setdefault(op.name, [])
+                op_names.append(consumers[0].name)
+        return resource_op_name_to_op_names_map

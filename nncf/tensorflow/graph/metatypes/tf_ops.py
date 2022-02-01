@@ -148,7 +148,7 @@ class TFRelu6OpMetatype(TFOpMetatype):
 class TFMatMulOpMetatype(TFOpWithWeightsMetatype):
     name = 'MatMulOp'
     op_names = ['MatMul', 'linalg.matmul']
-    weight_definitions = [OpWeightDef(port_id=1, channel_axes=None)]  # TODO(andrey-churkin): channel_axes
+    weight_definitions = [OpWeightDef(port_id=1, channel_axes=-1)]
     hw_config_names = [HWConfigOpName.MATMUL]
 
 

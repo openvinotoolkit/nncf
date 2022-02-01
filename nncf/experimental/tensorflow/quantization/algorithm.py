@@ -1,5 +1,5 @@
 """
- Copyright (c) 2021 Intel Corporation
+ Copyright (c) 2022 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -36,7 +36,7 @@ from nncf.tensorflow.quantization.algorithm import TFQuantizationPoint
 from nncf.tensorflow.quantization.algorithm import TFQuantizationSetup
 from nncf.tensorflow.quantization.algorithm import QuantizationBuilder
 from nncf.experimental.tensorflow.nncf_network import NNCFNetwork
-from nncf.experimental.tensorflow.graph.converter import convert_nncf_network_to_nncf_graph
+from nncf.experimental.tensorflow.graph.converter import SubclassedConverter
 from nncf.experimental.tensorflow.graph.model_transformer import TFModelTransformerV2
 from nncf.experimental.tensorflow.graph.transformations.layout import TFTransformationLayoutV2
 from nncf.experimental.tensorflow.quantization.init_range import TFRangeInitParamsV2
@@ -257,7 +257,8 @@ class QuantizationBuilderV2(QuantizationBuilder):
         return []
 
     def _get_quantizer_setup(self, model: NNCFNetwork) -> TFQuantizationSetupV2:
-        nncf_graph = convert_nncf_network_to_nncf_graph(model)
+        converter = SubclassedConverter(model)
+        nncf_graph = converter.convert()
         # Find out which metatypes unsupported by the quantization algorithm
         for node in nncf_graph.get_all_nodes():
             if node.metatype in UNSUPPORTED_TF_OP_METATYPES:

@@ -28,8 +28,8 @@ from nncf.tensorflow.layers.data_layout import get_channel_size
 from nncf.tensorflow.layers.operation import NNCFOperation
 from nncf.tensorflow.quantization.functions import asymmetric_quantize
 from nncf.tensorflow.quantization.functions import symmetric_quantize
-from nncf.tensorflow.quantization.functions import asymmetric_range_initialization
-from nncf.tensorflow.quantization.functions import symmetric_range_initialization
+from nncf.tensorflow.quantization.functions import calc_asymmetric_range_initialization_params
+from nncf.tensorflow.quantization.functions import calc_symmetric_range_initialization_params
 
 
 class TFQuantizerSpec(QuantizerSpec):
@@ -117,6 +117,13 @@ class Quantizer(NNCFOperation):
 
     @property
     def signedness_to_force(self) -> Optional[bool]:
+        """
+        Returns one of the following values:
+            - `True` if the quantizer must be signed
+            - `False` if the quantizer must be unsigned
+            - `None` if the signed/unsigned attribute should be determined based
+            on the incoming activation statistics during range initialization.
+        """
         raise NotImplementedError
 
     @property
@@ -337,6 +344,13 @@ class SymmetricQuantizer(Quantizer):
 
     @property
     def signedness_to_force(self) -> Optional[bool]:
+        """
+        Returns one of the following values:
+            - `True` if the quantizer must be signed
+            - `False` if the quantizer must be unsigned
+            - `None` if the signed/unsigned attribute should be determined based
+            on the incoming activation statistics during range initialization.
+        """
         return self._signedness_to_force
 
     def signed(self, op_weights) -> bool:
@@ -393,7 +407,7 @@ class SymmetricQuantizer(Quantizer):
         )
 
     def apply_range_initialization(self, weights, min_values, max_values, min_range=0.1, eps=0.01):
-        signed, scale = symmetric_range_initialization(
+        signed, scale = calc_symmetric_range_initialization_params(
             min_values, max_values, min_range, eps, self.signedness_to_force
         )
         weights['signed_var'].assign(signed)
@@ -413,6 +427,13 @@ class AsymmetricQuantizer(Quantizer):
 
     @property
     def signedness_to_force(self) -> Optional[bool]:
+        """
+        Returns one of the following values:
+            - `True` if the quantizer must be signed
+            - `False` if the quantizer must be unsigned
+            - `None` if the signed/unsigned attribute should be determined based
+            on the incoming activation statistics during range initialization.
+        """
         return None
 
     def build(self, input_shape, input_type, name, layer):
@@ -465,7 +486,7 @@ class AsymmetricQuantizer(Quantizer):
         )
 
     def apply_range_initialization(self, weights, min_values, max_values, min_range=0.1, eps=0.01):
-        input_low, input_range = asymmetric_range_initialization(
+        input_low, input_range = calc_asymmetric_range_initialization_params(
             min_values, max_values, min_range, eps
         )
         weights['input_low_var'].assign(input_low)

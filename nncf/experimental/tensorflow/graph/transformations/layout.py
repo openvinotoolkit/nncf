@@ -1,5 +1,5 @@
 """
- Copyright (c) 2021 Intel Corporation
+ Copyright (c) 2022 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -20,6 +20,10 @@ class TFTransformationLayoutV2(TransformationLayout):
     def register(self, transformation: TransformationCommand) -> None:
         """
         Registers the transformation command in the transformation layout.
+
+        The `TFTransformationLayoutV2` is a simplified version of the
+        `TransformationLayout` class where some redundant functionality
+        was removed.
 
         :param transformation: The transformation command to be registered in
             the transformation layout.

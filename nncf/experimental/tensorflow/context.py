@@ -1,5 +1,5 @@
 """
- Copyright (c) 2021 Intel Corporation
+ Copyright (c) 2022 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -16,23 +16,23 @@ from typing import Any
 import threading
 
 
-_NNCF_CONTEXT = threading.local()
+_CURRENT_CONTEXT = threading.local()
 
 
-def get_nncf_context():
+def get_current_context():
     """
-    Returns current active `NNCFContext`.
+    Returns current active `TFTracingContext`.
 
-    :return: NNCF context.
+    :return: Tracing context.
     """
-    nncf_context = getattr(_NNCF_CONTEXT, 'nncf_context', None)
-    if nncf_context is None:
-        nncf_context = NNCFContext()
-        setattr(_NNCF_CONTEXT, 'nncf_context', nncf_context)
-    return nncf_context
+    tracing_context = getattr(_CURRENT_CONTEXT, 'tracing_context', None)
+    if tracing_context is None:
+        tracing_context = TFTracingContext()
+        setattr(_CURRENT_CONTEXT, 'tracing_context', tracing_context)
+    return tracing_context
 
 
-class NNCFContext:
+class TFTracingContext:
     """
     Contains information about should we wrap the TensorFlow
     operation or not.
@@ -40,7 +40,7 @@ class NNCFContext:
 
     def __init__(self):
         """
-        Initializes the NNCF context.
+        Initializes the tracing context.
             - in_call: `True` if we are inside the `call` method of the
                 tf.keras.Model instance, `False` otherwise.
             - wrap_ops: `True` if we should wrap the TensorFlow operation,
@@ -66,7 +66,7 @@ class NNCFContext:
             'wrap_ops': wrap_ops,
             'in_call': in_call,
         }
-        return NNCFContextManager(self, next_state)
+        return TFTracingContextManager(self, next_state)
 
     def unique_name(self, name: str) -> str:
         """
@@ -105,31 +105,31 @@ class NNCFContext:
         self._state = state
 
 
-class NNCFContextManager:
+class TFTracingContextManager:
     """
-    Context manager for the NNCF context.
+    Context manager for the tracing context.
     """
 
     def __init__(self,
-                 nncf_context: NNCFContext,
+                 tracing_context: TFTracingContext,
                  next_state: Dict[str, Any]):
         """
-        Initializes the NNCF context.
+        Initializes the tracing context manager.
 
-        :param nncf_context: NNCF context.
-        :param next_state: Next state of the NNCF context which
+        :param tracing_context: Tracing context.
+        :param next_state: Next state of the tracing context which
             should be applied.
         """
-        self._nncf_context = nncf_context
+        self._tracing_context = tracing_context
         self._next_state = next_state
         self._prev_state = None
 
     def __enter__(self):
-        self._prev_state = self._nncf_context.get_state()
-        self._nncf_context.load_state(self._next_state)
+        self._prev_state = self._tracing_context.get_state()
+        self._tracing_context.load_state(self._next_state)
 
     def __exit__(self, *exc):
-        self._nncf_context.load_state(self._prev_state)
+        self._tracing_context.load_state(self._prev_state)
 
-        if not self._nncf_context.in_call:
-            self._nncf_context.names_in_use = {}
+        if not self._tracing_context.in_call:
+            self._tracing_context.names_in_use = {}

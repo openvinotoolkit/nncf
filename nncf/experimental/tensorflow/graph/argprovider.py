@@ -1,5 +1,5 @@
 """
- Copyright (c) 2021 Intel Corporation
+ Copyright (c) 2022 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -11,10 +11,15 @@
  limitations under the License.
 """
 
+from typing import Any
+from typing import Tuple
+
+import tensorflow as tf
+
 from nncf.common.utils.registry import Registry
 
 
-def replace(xs, pos: int, value):
+def replace(xs: Tuple[Any, ...], pos: int, value: Any) -> Tuple[Any, ...]:
     """
     Return a new instance of the tuple replacing the specified
     position with the new value.
@@ -42,7 +47,7 @@ class ArgProvider:
     `port_id` from the `args` and `kwargs`.
     """
 
-    def get_input(self, input_port_id: int, args, kwargs):
+    def get_input(self, input_port_id: int, args, kwargs) -> tf.Tensor:
         """
         Returns input Tensor with specified `input_port_id`.
         :param input_port_id: Zero-based index an input Tensor
@@ -50,7 +55,7 @@ class ArgProvider:
         :return: A Tensor with specified `input_port_id`.
         """
 
-    def get_output(self, output_port_id: int, args, kwargs):
+    def get_output(self, output_port_id: int, args, kwargs) -> tf.Tensor:
         """
         Returns output Tensor with specified `output_port_id`.
         :param output_port_id: Zero-based index an output Tensor
@@ -58,7 +63,7 @@ class ArgProvider:
         :return: A Tensor with specified `output_port_id`.
         """
 
-    def set_input(self, input_port_id: int, value, args, kwargs):
+    def set_input(self, input_port_id: int, value: tf.Tensor, args, kwargs):
         """
         Updates input Tensor with specified `input_port_id`.
         :param input_port_id: Zero-based index an input Tensor
@@ -66,7 +71,7 @@ class ArgProvider:
         :return: A tuple (args, kwargs) with updated Tensor.
         """
 
-    def set_output(self, output_port_id: int, value, args, kwargs):
+    def set_output(self, output_port_id: int, value: tf.Tensor, args, kwargs):
         """
         Updates output Tensor with specified `output_port_id`.
         :param output_port_id: Zero-based index an output Tensor
@@ -82,7 +87,7 @@ class ArgProvider:
 @TF_ARG_PROVIDERS.register('Placeholder')
 @TF_ARG_PROVIDERS.register('BiasAdd')
 class SimpleOutputArgProvider(ArgProvider):
-    def get_output(self, output_port_id: int, args, kwargs):
+    def get_output(self, output_port_id: int, args, kwargs) -> tf.Tensor:
         check_port_id(output_port_id, min_port_id=0, max_port_id=0)
 
         if len(args) > 1:
@@ -90,7 +95,7 @@ class SimpleOutputArgProvider(ArgProvider):
 
         return args[output_port_id]
 
-    def set_output(self, output_port_id: int, value, args, kwargs):
+    def set_output(self, output_port_id: int, value: tf.Tensor, args, kwargs):
         check_port_id(output_port_id, min_port_id=0, max_port_id=0)
 
         if len(args) > 1:
@@ -105,7 +110,7 @@ class ResizeNearestNeighborArgProvider(ArgProvider):
     Argument provider for the `ResizeNearestNeighbor` operation.
     """
 
-    def get_output(self, output_port_id: int, args, kwargs):
+    def get_output(self, output_port_id: int, args, kwargs) -> tf.Tensor:
         check_port_id(output_port_id, min_port_id=0, max_port_id=0)
 
         if len(args) > 1:
@@ -113,7 +118,7 @@ class ResizeNearestNeighborArgProvider(ArgProvider):
 
         return args[output_port_id]
 
-    def set_output(self, output_port_id: int, value, args, kwargs):
+    def set_output(self, output_port_id: int, value: tf.Tensor, args, kwargs):
         check_port_id(output_port_id, min_port_id=0, max_port_id=0)
 
         if len(args) > 1:
@@ -121,11 +126,11 @@ class ResizeNearestNeighborArgProvider(ArgProvider):
 
         return replace(args, output_port_id, value), kwargs
 
-    def get_input(self, input_port_id: int, args, kwargs):
+    def get_input(self, input_port_id: int, args, kwargs) -> tf.Tensor:
         check_port_id(input_port_id, min_port_id=0, max_port_id=0)
         return args[0]
 
-    def set_input(self, input_port_id: int, value, args, kwargs):
+    def set_input(self, input_port_id: int, value: tf.Tensor, args, kwargs):
         check_port_id(input_port_id, min_port_id=0, max_port_id=0)
         return replace(args, input_port_id, value), kwargs
 
@@ -141,7 +146,7 @@ class Conv2DArgProvider(ArgProvider):
         port_id: 0 - output tensor.
     """
 
-    def get_input(self, input_port_id: int, args, kwargs):
+    def get_input(self, input_port_id: int, args, kwargs) -> tf.Tensor:
         check_port_id(input_port_id, min_port_id=0, max_port_id=1)
 
         if input_port_id == 0:
@@ -149,7 +154,7 @@ class Conv2DArgProvider(ArgProvider):
 
         return kwargs['filter']  # input_port_id == 1
 
-    def set_input(self, input_port_id: int, value, args, kwargs):
+    def set_input(self, input_port_id: int, value: tf.Tensor, args, kwargs):
         check_port_id(input_port_id, min_port_id=0, max_port_id=1)
 
         if input_port_id == 0:
@@ -158,7 +163,7 @@ class Conv2DArgProvider(ArgProvider):
         kwargs['filter'] = value
         return args, kwargs
 
-    def get_output(self, output_port_id: int, args, kwargs):
+    def get_output(self, output_port_id: int, args, kwargs) -> tf.Tensor:
         check_port_id(output_port_id, min_port_id=0, max_port_id=0)
 
         if len(args) > 1:
@@ -166,7 +171,7 @@ class Conv2DArgProvider(ArgProvider):
 
         return args[output_port_id]
 
-    def set_output(self, output_port_id: int, value, args, kwargs):
+    def set_output(self, output_port_id: int, value: tf.Tensor, args, kwargs):
         check_port_id(output_port_id, min_port_id=0, max_port_id=0)
 
         if len(args) > 1:
@@ -183,11 +188,11 @@ class FusedBatchNormV3ArgProvider(ArgProvider):
         port_id: 0 - output tensor (`y` key).
     """
 
-    def get_output(self, output_port_id: int, args, kwargs):
+    def get_output(self, output_port_id: int, args, kwargs) -> tf.Tensor:
         check_port_id(output_port_id, min_port_id=0, max_port_id=0)
         return args[0].y
 
-    def set_output(self, output_port_id: int, value, args, kwargs):
+    def set_output(self, output_port_id: int, value: tf.Tensor, args, kwargs):
         check_port_id(output_port_id, min_port_id=0, max_port_id=0)
         x = args[0]._replace(y=value)
         return replace(args, 0, x), kwargs
@@ -202,11 +207,11 @@ class DepthwiseConv2dNativeArgProvider(ArgProvider):
         port_id: 1 - filter tensor (args[1]).
     """
 
-    def get_input(self, input_port_id: int, args, kwargs):
+    def get_input(self, input_port_id: int, args, kwargs) -> tf.Tensor:
         check_port_id(input_port_id, min_port_id=0, max_port_id=1)
         return args[input_port_id]
 
-    def set_input(self, input_port_id: int, value, args, kwargs):
+    def set_input(self, input_port_id: int, value: tf.Tensor, args, kwargs):
         check_port_id(input_port_id, min_port_id=0, max_port_id=1)
         return replace(args, input_port_id, value), kwargs
 
@@ -220,10 +225,10 @@ class MatMulArgProvider(ArgProvider):
         port_id: 1 - filter (always?) tensor (args[1]).
     """
 
-    def get_input(self, input_port_id: int, args, kwargs):
+    def get_input(self, input_port_id: int, args, kwargs) -> tf.Tensor:
         check_port_id(input_port_id, min_port_id=0, max_port_id=1)
         return args[input_port_id]
 
-    def set_input(self, input_port_id: int, value, args, kwargs):
+    def set_input(self, input_port_id: int, value: tf.Tensor, args, kwargs):
         check_port_id(input_port_id, min_port_id=0, max_port_id=1)
         return replace(args, input_port_id, value), kwargs

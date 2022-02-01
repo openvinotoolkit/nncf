@@ -1,5 +1,5 @@
 """
- Copyright (c) 2021 Intel Corporation
+ Copyright (c) 2022 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -22,6 +22,11 @@ from nncf.experimental.tensorflow.patch_tf import Hook
 class TFModelTransformerV2(ModelTransformer):
     """
     Applies transformations to the NNCF network.
+
+    The `TFModelTransformerV2` does not modify the model config to insert
+    compression operations to the model. The `TFModelTransformerV2` adds
+    pre-hook or post-hook to the wrapped TF operation instead of that.
+    In this way, compression operation falls into the model.
     """
 
     def __init__(self, model: NNCFNetwork):

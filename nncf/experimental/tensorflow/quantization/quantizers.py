@@ -1,5 +1,5 @@
 """
- Copyright (c) 2021 Intel Corporation
+ Copyright (c) 2022 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -23,8 +23,9 @@ from nncf.tensorflow.quantization.quantizers import Quantizer
 from nncf.tensorflow.layers.operation import InputType
 from nncf.tensorflow.quantization.functions import asymmetric_quantize
 from nncf.tensorflow.quantization.functions import symmetric_quantize
-from nncf.tensorflow.quantization.functions import asymmetric_range_initialization
-from nncf.tensorflow.quantization.functions import symmetric_range_initialization
+from nncf.tensorflow.quantization.functions import calc_asymmetric_range_initialization_params
+from nncf.tensorflow.quantization.functions import calc_symmetric_range_initialization_params
+from nncf.experimental.tensorflow.nncf_network import NNCFNetwork
 
 
 NNCF_QUANTIZATION_OPERATIONS_V2 = Registry('nncf_quantization_operations_v2')
@@ -42,6 +43,17 @@ def _get_channel_size(input_shape: List[int], channel_axes: List[int]):
 class QuantizerV2(Quantizer):
     """
     Base class for all quantization operations.
+
+    The differences between the `QuantizerV2` and the `Quantizer`
+    are following:
+        - `QuantizerV2` has a different signature of the `__init__()` method.
+          Additional parameters `input_type`, `input_shape`, `channel_axes`
+          were added.
+        - `QuantizerV2` has a different signature of the `call()` method.
+          The `weights` parameter was removed because references to the
+          parameters of the quantizer are stored inside the class now.
+        - `QuantizerV2` has a different signature of the `apply_range_initialization()` method.
+        - `QuantizerV2` has a different signature of the `setup_input_transformation()` method.
     """
 
     def __init__(self,
@@ -76,10 +88,10 @@ class QuantizerV2(Quantizer):
                              'using per-channel quantization.')
 
     @property
-    def input_shape(self):
+    def input_shape(self) -> Optional[List[int]]:
         return self._input_shape
 
-    def call(self, inputs, *args, **kwargs):
+    def call(self, inputs: tf.Tensor, *args, **kwargs) -> tf.Tensor:
         """
         Applies quantization to the input tensor if the quantizer is enabled.
         Otherwise, if the quantizer is disabled, returns the input tensor as-is.
@@ -94,7 +106,7 @@ class QuantizerV2(Quantizer):
         outputs = self._post_processing_fn(quantized)
         return outputs
 
-    def quantize(self, inputs):
+    def quantize(self, inputs: tf.Tensor) -> tf.Tensor:
         """
         Applies quantization operation to the input tensor.
 
@@ -103,7 +115,11 @@ class QuantizerV2(Quantizer):
         """
         raise NotImplementedError
 
-    def apply_range_initialization(self, min_values, max_values, min_range=0.1, eps=0.01):
+    def apply_range_initialization(self,
+                                   min_values: tf.Tensor,
+                                   max_values: tf.Tensor,
+                                   min_range: float = 0.1,
+                                   eps: float = 0.01) -> None:
         """
         Initialize quantizer parameters using minimum and maximum weight values.
 
@@ -115,6 +131,13 @@ class QuantizerV2(Quantizer):
         raise NotImplementedError
 
     def setup_input_transformation(self):
+        """
+        Setup input transformation that the per-channel quantization can be applied to input tensor.
+        The TensorFlow fake_quant_with_min_max_vars_per_channel supports only inputs tensor one of
+        the shapes: [d], [b, d] [b, h, w, d]. For this reason, Quantizer transforms any inputs tensor
+        to one of the supported shapes, then quantizes and then transforms quantized tensor to
+        the original inputs shape.
+        """
         self._pre_processing_fn, self._post_processing_fn = \
             QuantizerV2._make_transformation_fns(self._input_shape, self.channel_axes)
 
@@ -146,6 +169,13 @@ class SymmetricQuantizerV2(QuantizerV2):
 
     @property
     def signedness_to_force(self) -> Optional[bool]:
+        """
+        Returns one of the following values:
+            - `True` if the quantizer must be signed
+            - `False` if the quantizer must be unsigned
+            - `None` if the signed/unsigned attribute should be determined based
+            on the incoming activation statistics during range initialization.
+        """
         return self._signedness_to_force
 
     @property
@@ -157,7 +187,12 @@ class SymmetricQuantizerV2(QuantizerV2):
         """
         return self._signed_var.numpy() < 0.0
 
-    def build(self, nncf_network) -> None:
+    def build(self, nncf_network: NNCFNetwork) -> None:
+        """
+        Creates weights of the quantizer and adds them to the model.
+
+        :param nncf_network: NNCF network.
+        """
         shape = None
         if self.per_channel:
             self.setup_input_transformation()
@@ -180,7 +215,10 @@ class SymmetricQuantizerV2(QuantizerV2):
             trainable=False
         )
 
-    def apply_overflow_fix(self):
+    def apply_overflow_fix(self) -> None:
+        """
+        Applies the saturation fix.
+        """
         if self.num_bits != 8 or not self.half_range:
             raise RuntimeError('Attempt to apply saturation issue fix '
                                'to quantizer which is not configured for that.')
@@ -191,7 +229,13 @@ class SymmetricQuantizerV2(QuantizerV2):
         self._eps *= multiplier
         self._half_range = False
 
-    def quantize(self, inputs):
+    def quantize(self, inputs: tf.Tensor) -> tf.Tensor:
+        """
+        Applies quantization operation to the input tensor.
+
+        :param inputs: Input tensor.
+        :return: Quantized tensor.
+        """
         num_bits = self.num_bits - 1 if self.half_range else self.num_bits
         return symmetric_quantize(
             inputs,
@@ -203,8 +247,20 @@ class SymmetricQuantizerV2(QuantizerV2):
             self._eps
         )
 
-    def apply_range_initialization(self, min_values, max_values, min_range=0.1, eps=0.01):
-        signed, scale = symmetric_range_initialization(
+    def apply_range_initialization(self,
+                                   min_values: tf.Tensor,
+                                   max_values: tf.Tensor,
+                                   min_range: float = 0.1,
+                                   eps: float = 0.01) -> None:
+        """
+        Initialize quantizer parameters using minimum and maximum weight values.
+
+        :param min_values: Minimum weight values.
+        :param max_values: Maximum weight values.
+        :param min_range: Minimum range.
+        :param eps: Smoothing coefficient for ranges: min_range = maximum(min_range, eps * max_range).
+        """
+        signed, scale = calc_symmetric_range_initialization_params(
             min_values, max_values, min_range, eps, self.signedness_to_force
         )
         self._signed_var.assign(signed)
@@ -239,9 +295,21 @@ class AsymmetricQuantizerV2(QuantizerV2):
 
     @property
     def signedness_to_force(self) -> Optional[bool]:
+        """
+        Returns one of the following values:
+            - `True` if the quantizer must be signed
+            - `False` if the quantizer must be unsigned
+            - `None` if the signed/unsigned attribute should be determined based
+            on the incoming activation statistics during range initialization.
+        """
         return self._signedness_to_force
 
-    def build(self, nncf_network) -> None:
+    def build(self, nncf_network: NNCFNetwork) -> None:
+        """
+        Creates weights of the quantizer and adds them to the model.
+
+        :param nncf_network: NNCF network.
+        """
         shape = None
         if self.per_channel:
             self.setup_input_transformation()
@@ -263,7 +331,10 @@ class AsymmetricQuantizerV2(QuantizerV2):
             trainable=True
         )
 
-    def apply_overflow_fix(self):
+    def apply_overflow_fix(self) -> None:
+        """
+        Applies the saturation fix.
+        """
         if self.num_bits != 8 or not self._half_range:
             raise RuntimeError('Attempt to apply saturation issue fix '
                                'to quantizer which is not configured for that.')
@@ -280,7 +351,13 @@ class AsymmetricQuantizerV2(QuantizerV2):
         self._eps *= multiplier
         self._half_range = False
 
-    def quantize(self, inputs):
+    def quantize(self, inputs: tf.Tensor) -> tf.Tensor:
+        """
+        Applies quantization operation to the input tensor.
+
+        :param inputs: Input tensor.
+        :return: Quantized tensor.
+        """
         num_bits = self.num_bits - 1 if self.half_range else self.num_bits
         return asymmetric_quantize(
             inputs,
@@ -292,8 +369,20 @@ class AsymmetricQuantizerV2(QuantizerV2):
             self._eps
         )
 
-    def apply_range_initialization(self, min_values, max_values, min_range=0.1, eps=0.01):
-        input_low, input_range = asymmetric_range_initialization(
+    def apply_range_initialization(self,
+                                   min_values: tf.Tensor,
+                                   max_values: tf.Tensor,
+                                   min_range: float = 0.1,
+                                   eps: float = 0.01) -> None:
+        """
+        Initialize quantizer parameters using minimum and maximum weight values.
+
+        :param min_values: Minimum weight values.
+        :param max_values: Maximum weight values.
+        :param min_range: Minimum range.
+        :param eps: Smoothing coefficient for ranges: min_range = maximum(min_range, eps * max_range).
+        """
+        input_low, input_range = calc_asymmetric_range_initialization_params(
             min_values, max_values, min_range, eps
         )
         self._input_low_var.assign(input_low)

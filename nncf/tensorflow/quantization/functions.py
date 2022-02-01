@@ -12,6 +12,7 @@
 """
 
 from typing import Optional
+from typing import Tuple
 
 import tensorflow as tf
 
@@ -57,10 +58,19 @@ def _fake_quant_with_min_max_vars(inputs, min_var, max_var, num_bits, narrow_ran
         inputs, min_var, max_var, num_bits=num_bits, narrow_range=narrow_range)
 
 
-def asymmetric_range_initialization(min_values,
-                                    max_values,
-                                    min_range: float = 0.1,
-                                    eps: float = 0.01):
+def calc_asymmetric_range_initialization_params(min_values: tf.Tensor,
+                                                max_values: tf.Tensor,
+                                                min_range: float = 0.1,
+                                                eps: float = 0.01) -> Tuple[tf.Tensor, tf.Tensor]:
+    """
+    Calculates parameters for the asymmetric range initialization.
+
+    :param min_values: Minimum weight values.
+    :param max_values: Maximum weight values.
+    :param min_range: Minimum range.
+    :param eps: Smoothing coefficient for ranges: min_range = maximum(min_range, eps * max_range).
+    :return: Parameters for the asymmetric range initialization.
+    """
     ranges = max_values - min_values
     max_range = tf.reduce_max(ranges)
     lower_threshold = tf.maximum(eps * max_range, min_range)
@@ -70,11 +80,26 @@ def asymmetric_range_initialization(min_values,
     return input_low, input_range
 
 
-def symmetric_range_initialization(min_values,
-                                   max_values,
-                                   min_range: float = 0.1,
-                                   eps: float = 0.01,
-                                   signedness_to_force: Optional[bool] = None):
+def calc_symmetric_range_initialization_params(
+        min_values: tf.Tensor,
+        max_values: tf.Tensor,
+        min_range: float = 0.1,
+        eps: float = 0.01,
+        signedness_to_force: Optional[bool] = None) -> Tuple[tf.Tensor, tf.Tensor]:
+    """
+    Calculates parameters for the symmetric range initialization.
+
+    :param min_values: Minimum weight values.
+    :param max_values: Maximum weight values.
+    :param min_range: Minimum range.
+    :param eps: Smoothing coefficient for ranges: min_range = maximum(min_range, eps * max_range).
+    :param signedness_to_force: One of the following values:
+        - `True` if the quantizer must be signed
+        - `False` if the quantizer must be unsigned
+        - `None` if the signed/unsigned attribute should be determined based
+        on the incoming activation statistics during range initialization.
+    :return: Parameters for the symmetric range initialization.
+    """
     signed = -1.0 if signedness_to_force in (True, None) else 0.0
     if signedness_to_force is None:
         sign = tf.reduce_any(tf.less(min_values, 0))

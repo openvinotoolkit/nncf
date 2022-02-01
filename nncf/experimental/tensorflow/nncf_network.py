@@ -1,5 +1,5 @@
 """
- Copyright (c) 2021 Intel Corporation
+ Copyright (c) 2022 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -15,7 +15,8 @@ from typing import Union, Dict, Tuple, List
 
 import tensorflow as tf
 
-from nncf.experimental.tensorflow.nncf_context import get_nncf_context
+from nncf.tensorflow.layers.operation import NNCFOperation
+from nncf.experimental.tensorflow.context import get_current_context
 
 
 InputSignature = Union[tf.TensorSpec, Dict[str, tf.TensorSpec], Tuple[tf.TensorSpec, ...], List[tf.TensorSpec]]
@@ -67,18 +68,37 @@ class NNCFNetwork(tf.keras.Model):
         self.__dict__['_hooks'] = []
 
     @property
-    def nncf_operations(self):
+    def nncf_operations(self) -> List[NNCFOperation]:
+        """
+        Returns list of the NNCF operations which were added to the NNCF network.
+
+        :return: List of the NNCF operations.
+        """
         return [op for hook in getattr(self, '_hooks') for op in hook.operations]
 
     @property
-    def input_signature(self):
+    def input_signature(self) -> InputSignature:
+        """
+        Returns input signature of the model.
+
+        :return: Input signature of the model.
+        """
         return self._input_signature
 
     def get_config(self):
         raise NotImplementedError
 
     def call(self, inputs, **kwargs):
-        with get_nncf_context().enter(wrap_ops=True):
+        """
+        Calls the model on new inputs and returns the outputs as tensors.
+        We call the model inside the tracing context to add the NNCF
+        operations to the graph of the model.
+
+        :param inputs: Input tensor, or dict/list/tuple of input tensors.
+        :return: A tensor if there is a single output, or a list of tensors
+            if there are more than one outputs.
+        """
+        with get_current_context().enter(wrap_ops=True):
             x = self._apply_post_hooks_for_inputs(inputs)
             outputs = self._model(x, **kwargs)
         return outputs

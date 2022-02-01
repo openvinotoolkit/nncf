@@ -1,5 +1,5 @@
 """
- Copyright (c) 2021 Intel Corporation
+ Copyright (c) 2022 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -21,10 +21,10 @@ from tensorflow.python.eager import context
 from tensorflow.python.framework import ops
 
 from nncf.common.graph.transformations.commands import TargetType
-from nncf.experimental.tensorflow.nncf_context import get_nncf_context
+from nncf.tensorflow.layers.operation import NNCFOperation
+from nncf.experimental.tensorflow.context import get_current_context
 from nncf.experimental.tensorflow.scope import get_op_name
 from nncf.experimental.tensorflow.graph.argprovider import replace
-from nncf.experimental.tensorflow.nncf_operation import NNCFOperation
 from nncf.experimental.tensorflow.graph.transformations.commands import TFTargetPoint
 from nncf.experimental.tensorflow.graph.argprovider import TF_ARG_PROVIDERS
 
@@ -136,15 +136,15 @@ class TensorFlowOpWrapper:
         """
         Applies TensorFlow operation with compression extensions.
         """
-        nncf_context = get_nncf_context()
+        tracing_context = get_current_context()
 
         # Should we wrap current operation?
-        if not nncf_context.wrap_ops:
+        if not tracing_context.wrap_ops:
             return self._op(*args, **kwargs)
 
         op_name = get_op_name(self._op_type_name, kwargs.get('name'))
 
-        with nncf_context.enter(wrap_ops=False):
+        with tracing_context.enter(wrap_ops=False):
             # Apply pre-hooks
             args, kwargs = TensorFlowOpWrapper._apply_hooks(
                 self._pre_hooks.get(op_name, []),
@@ -241,9 +241,9 @@ class TFPatcher:
     def _wrap_name_scope_v2_enter_fn(func):
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
-            nncf_context = get_nncf_context()
+            tracing_context = get_current_context()
 
-            if tf.executing_eagerly() and nncf_context.in_call:
+            if tf.executing_eagerly() and tracing_context.in_call:
                 obj, = args  # self
                 eager_context = context.context()
                 old_name = eager_context.scope_name
@@ -254,7 +254,7 @@ class TFPatcher:
                 elif name[-1] == '/':
                     scope_name = name
                 elif old_name:
-                    scope_name = nncf_context.unique_name(old_name + name) + '/'
+                    scope_name = tracing_context.unique_name(old_name + name) + '/'
                 else:
                     scope_name = name + '/'
                 eager_context.scope_name = scope_name
