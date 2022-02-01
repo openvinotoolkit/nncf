@@ -10,15 +10,14 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-
 import os
 import os.path
 import sys
 from typing import Optional, Callable
 
-import cv2
-import numpy as np
-import torch
+from pathlib import Path  # from python 3.4 we may not do pip install pathlib
+from pathlib import PurePath  # from python 3.4 we may not do pip install pathlib
+
 from torch.utils import data
 from torchvision import datasets
 
@@ -86,7 +85,6 @@ class VOCAnnotationTransform:
 
         return res
 
-
 class VOCDetection(data.Dataset):
     """VOC Detection Dataset Object
 
@@ -106,7 +104,6 @@ class VOCDetection(data.Dataset):
     classes = VOC_CLASSES
     name = 'voc'
 
-
     def __init__(self,
                  root: str,
                  image_sets: tuple = (('2007', 'trainval'), ('2012', 'trainval')),
@@ -116,17 +113,26 @@ class VOCDetection(data.Dataset):
                  ):
         super().__init__()
         self.list_image_set = []
+        self.target_tranform = target_transform
         self.return_image_info = return_image_info
         self._annopath = os.path.join('%s', 'Annotations', '%s.xml')
         self._imgpath = os.path.join('%s', 'JPEGImages', '%s.jpg')
         self.ids = []
+        self.ids_new = []
+
         for year, name in image_sets:
             voc_elem = datasets.VOCDetection(root, year=year,
                                              image_set=name, transform=transform, target_transform=target_transform)
-
+            for name_path in voc_elem.images:
+                self.ids_new.append((str(PurePath(name_path).parents[1]), Path(name_path).stem))
             self.list_image_set.append(voc_elem)
-
         self._voc_concat = data.ConcatDataset(self.list_image_set)
+
+        for (year, name) in image_sets:
+            rootpath = os.path.join(root, 'VOCdevkit', 'VOC' + year)
+            with open(os.path.join(rootpath, 'ImageSets', 'Main', name + '.txt'), encoding='utf8') as lines:
+                for line in lines:
+                    self.ids.append((rootpath, line.strip()))
 
 
     def __getitem__(self, index):
@@ -144,7 +150,7 @@ class VOCDetection(data.Dataset):
 
     def __len__(self):
         return self._voc_concat.__len__()
-        #return len(self.ids)
+
 
     # def pull_item(self, index):
     #     """
@@ -172,7 +178,7 @@ class VOCDetection(data.Dataset):
     #         target = np.hstack((boxes, np.expand_dims(labels, axis=1)))
     #     return torch.from_numpy(img).permute(2, 0, 1), target, height, width
 
-    def pull_anno(self, index):
+    def pull_anno(self, index): #using in load_detection_annotation
         """Returns the original annotation of image at index
 
         Note: not using self.__getitem__(), as any transformations passed in
