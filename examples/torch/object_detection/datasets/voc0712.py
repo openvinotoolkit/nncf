@@ -206,3 +206,7 @@ class VOCDetection(data.Dataset):
         for id_ in self.ids:
             img_names.append(id_[1])
         return img_names
+
+a = VOCDetection('/home/nmeshalk/Desktop/data/trainval', (('2007', 'test'),)).ids
+b = VOCDetection('/home/nmeshalk/Desktop/data/trainval', (('2007', 'test'),)).ids_new
+print(a)
