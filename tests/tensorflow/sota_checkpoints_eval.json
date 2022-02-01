@@ -324,7 +324,7 @@
                     "model_description":"yolo_v4",
                     "batch_per_gpu": 15,
                     "reverse_input_channels": true,
-                    "scale_value": "Placeholder[255]"
+                    "scale_value": "image_input[255]"
                 },
                 "yolo_v4_int8_w_sym_ch_half_a_asym_t": {
                     "config":"examples/tensorflow/object_detection/configs/quantization/yolo_v4_coco_int8.json",
@@ -336,7 +336,7 @@
                     "compression_description":"INT8",
                     "batch_per_gpu": 15,
                     "reverse_input_channels": true,
-                    "scale_value": "Placeholder[255]",
+                    "scale_value": "image_input[255]",
                     "diff_target_max": 0.15,
                     "diff_target_min": -0.15
                 },
@@ -350,7 +350,7 @@
                     "compression_description":"Sparsity50",
                     "batch_per_gpu": 15,
                     "reverse_input_channels": true,
-                    "scale_value": "Placeholder[255]",
+                    "scale_value": "image_input[255]",
                     "diff_target_max": 0.15,
                     "diff_target_min": -0.15
                 }
