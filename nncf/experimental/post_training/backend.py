@@ -11,13 +11,15 @@ class Backend(OrderedEnum):
 def define_the_backend(model):
     from torch.nn import Module
     from tensorflow.keras.models import Model
-
+    from onnx import ModelProto
+    if isinstance(model, ModelProto):
+        return Backend.ONNX
     if isinstance(model, str):
-        return InitializationAlgorithmPriority.ONNX
+        return Backend.ONNX
     elif isinstance(model, Module):
-        return InitializationAlgorithmPriority.PYTORCH
+        return Backend.PYTORCH
     elif isinstance(model, Model):
-        return InitializationAlgorithmPriority.TENSORFLOW
+        return Backend.TENSORFLOW
     elif isinstance(model, ):  # TODO: add OpenVINO
-        return InitializationAlgorithmPriority.OPENVINO
+        return Backend.OPENVINO
     raise RuntimeError('This backend is not supported')

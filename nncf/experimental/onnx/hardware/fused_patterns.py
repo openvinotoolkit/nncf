@@ -41,7 +41,7 @@ def _get_onnx_hw_fused_patterns() -> HWFusedPatterns:
     atomic_activations = GraphPattern()
     atomic_activations.add_node(**ATOMIC_ACTIVATIONS_OPERATIONS)
     h_sigmoid = create_h_sigmoid_act()
-    activations = ATOMIC_ACTIVATIONS_OPERATIONS | h_sigmoid
+    activations = atomic_activations | h_sigmoid
     hw_fused_patterns.register(activations, 'ACTIVATIONS', match=False)
 
     arithmetic_ops = GraphPattern()

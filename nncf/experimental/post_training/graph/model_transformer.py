@@ -19,7 +19,6 @@ from nncf.experimental.onnx.compressed_model import CompressedModel
 
 
 class ModelTransformer(ABC):
-    @abstractmethod
-    @staticmethod
-    def transform(model: CompressedModel, transformation_layout: TransformationLayout) -> CompressedModel:
+
+    def transform(self, model: CompressedModel, transformation_layout: TransformationLayout) -> CompressedModel:
         pass

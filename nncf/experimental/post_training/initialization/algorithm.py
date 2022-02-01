@@ -19,10 +19,10 @@ class InitializationAlgorithm:
     The base class for all post-training quantization initialization algorithms.
     """
 
-    def __init__(self, engine, dataloader, **kwargs):
+    def __init__(self, dataloader, engine, **kwargs):
         self.engine = engine
         self.dataloader = dataloader
         self.priority = None
 
-    def run(self, model: CompressedModel):
+    def apply(self, model: CompressedModel):
         pass

@@ -13,9 +13,9 @@ from nncf.experimental.post_training.quantization.algorithm import DEFAULT
 from nncf.experimental.post_training.api.dataloader import DataLoader
 
 
-class MyDataLoader(DataLoader, TorchDataLoader):
+class MyDataLoader(TorchDataLoader):
     def __init__(self, dataset, **attrs):
-        TorchDataLoader.__init__(dataset, **attrs)
+        TorchDataLoader.__init__(dataset=dataset, **attrs)
 
 
 def create_train_dataloader(dataset_dir: Union[str, bytes, os.PathLike], input_shape: List[int],
@@ -31,25 +31,28 @@ def create_train_dataloader(dataset_dir: Union[str, bytes, os.PathLike], input_s
         normalize,
     ])
     train_dataset = torchvision.datasets.ImageFolder(os.path.join(dataset_dir, 'train'), transform)
-    train_loader = MyDataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers)
+    train_loader = torch.utils.data.DataLoader(
+        train_dataset, batch_size=batch_size, shuffle=True,
+        num_workers=num_workers)
+    # train_loader = MyDataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers)
     return train_loader
 
 
-fp32_model_onnx_path = ''
-int8_model_onnx_path = ''
-dataset_dir = ''
-input_shape = []
+fp32_model_onnx_path = '/home/aleksei/nncf_work/onnx_quantization/mobilenet_v2.onnx'
+int8_model_onnx_path = '/home/aleksei/tmp/onnx/onnx_ptq_api/transformed.onnx'
+dataset_dir = '/home/aleksei/datasetsimagenet'
+input_shape = [1, 3, 224, 224]
 
 # Step 1: Initialize the data loader.
 dataloader = create_train_dataloader(dataset_dir=dataset_dir, input_shape=input_shape)
 
-# Step 3: Create a pipeline of compression algorithms.
+# Step 2: Create a pipeline of compression algorithms.
 builder = CompressionBuilder()
 quantization = PostTrainingQuantization(DEFAULT)
 builder.add_algorithm(quantization)
-# Step 4: Execute the pipeline.
+# Step 3: Execute the pipeline.
 compressed_model = builder.apply(fp32_model_onnx_path, dataloader)
-# Step 5: Export the compressed model.
+# Step 4: Export the compressed model.
 compressed_model.export(int8_model_onnx_path)
 
 # samples for many backends

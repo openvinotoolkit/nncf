@@ -11,12 +11,19 @@
  limitations under the License.
 """
 
-from nncf.experimental.post_training_api.quantization.initialization.algorithms.algorithm import InitializationAlgorithm
+from nncf.experimental.post_training.compressed_model import CompressedModel
+from nncf.experimental.post_training.initialization.algorithm import InitializationAlgorithm
 
 
 class ONNXInitializationAlgorithm(InitializationAlgorithm):
     def __init__(self, engine, dataloader):
         super().__init__(engine, dataloader)
 
-    def run(self, model):
+    def run(self, model: CompressedModel):
+        pass
+
+        # for i, (_input, ...) in self.dataloader:
+        #     self.engine.infer_model(_input)
+
+    def _add_outputs_to_activations(self, model: CompressedModel):
         pass

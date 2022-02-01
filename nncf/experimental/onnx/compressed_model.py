@@ -12,5 +12,8 @@ class ONNXCompressedModel(CompressedModel):
         super().__init__(model, dataloader, engine)
 
     def build_nncf_graph(self, dataloader: DataLoader, engine: Engine) -> NNCFGraph:
-        model = onnx.load(self.original_model)
-        return GraphConverter.create_nncf_graph(model)
+        self.original_model = onnx.load(self.original_model)
+        return GraphConverter.create_nncf_graph(self.original_model)
+
+    def export(self, path: str):
+        onnx.save_model(self.transformed_model, path)

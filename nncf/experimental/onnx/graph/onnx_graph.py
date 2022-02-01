@@ -18,6 +18,7 @@ from typing import List
 import onnx
 from onnx import NodeProto  # pylint: disable=no-name-in-module
 from onnx import ValueInfoProto  # pylint: disable=no-name-in-module
+from onnx import numpy_helper
 import numpy as np
 
 
@@ -101,7 +102,7 @@ class ONNXGraph:
         """
         Returns weight Initializaer of the mode with the name 'node_name'.
         """
-        node_inputs = self.get_all_node_inputs(node_name)
+        node_inputs = self.get_node_edges(node_name)['input']
         # TODO(kshpv): add search of input weight tensor
         return node_inputs[1]
 
@@ -112,7 +113,7 @@ class ONNXGraph:
         graph = self.onnx_model.graph
         for init in graph.initializer:
             if init.name == initializer_name:
-                tensor = onnx.numpy_helper.to_array(init)
+                tensor = numpy_helper.to_array(init)
                 return tensor
         raise RuntimeError('There is no initializer with the name {}'.format(initializer_name))
 
@@ -154,3 +155,6 @@ class ONNXGraph:
                 elem_type = tensor.type.tensor_type.elem_type
                 return onnx.TensorProto.DataType.Name(elem_type)
         raise RuntimeError('There is no edge with the name {}'.format(edge_name))
+
+    def update_quantizer(self, quantizer_name, scale, zero_point):
+        pass

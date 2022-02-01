@@ -62,9 +62,10 @@ DEFAULT = PostTrainingQuantizationParameters(per_channel_weights=True,
                                              ignored_scopes=None,
                                              quantize_inputs=True,
                                              quantize_outputs=True,
-                                             initialization_algorithms=[QuantizerRangeFinderAlgorithm,
-                                                                        BiasCorrectionAlgorithm,
-                                                                        BatchNormAdaptationAlgorithm])
+                                             target_device='CPU',
+                                             initialization_algorithms=[QuantizerRangeFinderAlgorithm])
+                                                                        # BiasCorrectionAlgorithm,
+# BatchNormAdaptationAlgorithm])
 
 
 class InitializationAlgorithmPriority(OrderedEnum):
@@ -100,19 +101,19 @@ class PostTrainingQuantization(PostTrainingAlgorithm):
         model_transformer = self._create_model_transformer(compressed_model)
 
         for algorithm in self.initialization_algorithms_to_created:
-            algorithm = self._create_initialization_algorithm(compressed_model, algorithm)
+            algorithm = self._create_initialization_algorithm(compressed_model, dataloader, engine, algorithm)
             priority = self._define_algorithm_priority(algorithm)
             self._set_algorithm_priority(algorithm, priority)
             self.initialization_algorithms.add(algorithm)
 
         quantization_transformations = model_analyzer.get_quantization_transformations(compressed_model)
-        transformed_compressed_model = model_transformer.transform(compressed_model, quantization_transformations)
+        compressed_model = model_transformer.transform(compressed_model, quantization_transformations)
 
         while not self.initialization_algorithms.is_empty():
             initialization_algorithm = self.initialization_algorithms.pop()
-            initialized_compressed_model = initialization_algorithm.apply(transformed_compressed_model)
+            compressed_model = initialization_algorithm.apply(compressed_model, model_transformer=model_transformer)
 
-        return initialized_compressed_model
+        return compressed_model
 
     def _create_model_analyzer(self, compressed_model: CompressedModel) -> ModelAnalyzer:
         if define_the_backend(compressed_model.original_model) == Backend.ONNX:
@@ -122,19 +123,20 @@ class PostTrainingQuantization(PostTrainingAlgorithm):
     def _create_model_transformer(self, compressed_model: CompressedModel) -> ModelTransformer:
         if define_the_backend(compressed_model.original_model) == Backend.ONNX:
             from nncf.experimental.onnx.graph.model_transformer import ONNXModelTransformer
-            return ONNXModelTransformer()
+            return ONNXModelTransformer(compressed_model)
 
     def _create_initialization_algorithm(self, compressed_model: CompressedModel,
+                                         dataloader: DataLoader, engine: Engine,
                                          algorithm: Type[InitializationAlgorithm]) -> InitializationAlgorithm:
         """
         Creates backend-specific CompressedModel instance based on the model.
         """
         if define_the_backend(compressed_model.original_model) == Backend.ONNX:
-            if isinstance(algorithm, QuantizerRangeFinderAlgorithm):
-                return ONNXQuantizerRangeFinderAlgorithm()
-            if isinstance(algorithm, BatchNormAdaptationAlgorithm):
+            if algorithm is QuantizerRangeFinderAlgorithm:
+                return ONNXQuantizerRangeFinderAlgorithm(engine, dataloader)
+            if algorithm is BatchNormAdaptationAlgorithm:
                 return ONNXBatchNormAdaptationAlgorithm()
-            if isinstance(algorithm, BiasCorrectionAlgorithm):
+            if algorithm is BiasCorrectionAlgorithm:
                 return ONNXBiasCorrectionAlgorithm()
 
     def _set_algorithm_priority(self, algorithm: InitializationAlgorithm,

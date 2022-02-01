@@ -13,7 +13,7 @@
 
 from typing import List
 
-from nncf.experimental.post_training_api.engine import Engine
+from nncf.experimental.post_training.api.engine import Engine
 
 import onnx
 import onnxruntime as rt
@@ -32,7 +32,7 @@ class ONNXEngine(Engine):
         Because ORT must load model from the file, we should provide the path.
         """
         onnx_model = onnx.load(model)
-        onnx.checker.check_model(onnx_model)
+        # onnx.checker.check_model(onnx_model)
         self.model = model
         self.sess = rt.InferenceSession(self.model, providers=self.providers)
 
@@ -41,12 +41,4 @@ class ONNXEngine(Engine):
         input_name = self.sess.get_inputs()[0].name
         input_tensor = input_.cpu().detach().numpy()
         output_tensor = self.sess.run([], {input_name: input_tensor.astype(np.float32)})
-        self._process_output(output_tensor)
         return output_tensor
-
-
-    # def _collect_statistics(self):
-    #     self.collector.append(statistics)
-
-    def _process_output(self, output) -> Dict[layer_name, np.ndarray]:
-        pass
