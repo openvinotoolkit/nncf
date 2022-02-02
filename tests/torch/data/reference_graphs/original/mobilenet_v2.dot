@@ -149,7 +149,7 @@ strict digraph  {
 "147 MobileNetV2/Sequential[features]/ConvBNActivation[18]/BatchNorm2d[1]/batch_norm_0" [id=147, type=batch_norm];
 "148 MobileNetV2/Sequential[features]/ConvBNActivation[18]/ReLU6[2]/hardtanh_0" [id=148, type=hardtanh];
 "149 MobileNetV2/adaptive_avg_pool2d_0" [id=149, type=adaptive_avg_pool2d];
-"150 MobileNetV2/reshape_0" [id=150, type=reshape];
+"150 MobileNetV2/flatten_0" [id=150, type=flatten];
 "151 MobileNetV2/Sequential[classifier]/Dropout[0]/dropout_0" [id=151, type=dropout];
 "152 MobileNetV2/Sequential[classifier]/Linear[1]/linear_0" [id=152, type=linear];
 "0 MobileNetV2/Sequential[features]/ConvBNActivation[0]/Conv2d[0]/conv2d_0" -> "1 MobileNetV2/Sequential[features]/ConvBNActivation[0]/BatchNorm2d[1]/batch_norm_0";
@@ -311,7 +311,7 @@ strict digraph  {
 "146 MobileNetV2/Sequential[features]/ConvBNActivation[18]/Conv2d[0]/conv2d_0" -> "147 MobileNetV2/Sequential[features]/ConvBNActivation[18]/BatchNorm2d[1]/batch_norm_0";
 "147 MobileNetV2/Sequential[features]/ConvBNActivation[18]/BatchNorm2d[1]/batch_norm_0" -> "148 MobileNetV2/Sequential[features]/ConvBNActivation[18]/ReLU6[2]/hardtanh_0";
 "148 MobileNetV2/Sequential[features]/ConvBNActivation[18]/ReLU6[2]/hardtanh_0" -> "149 MobileNetV2/adaptive_avg_pool2d_0";
-"149 MobileNetV2/adaptive_avg_pool2d_0" -> "150 MobileNetV2/reshape_0";
-"150 MobileNetV2/reshape_0" -> "151 MobileNetV2/Sequential[classifier]/Dropout[0]/dropout_0";
+"149 MobileNetV2/adaptive_avg_pool2d_0" -> "150 MobileNetV2/flatten_0";
+"150 MobileNetV2/flatten_0" -> "151 MobileNetV2/Sequential[classifier]/Dropout[0]/dropout_0";
 "151 MobileNetV2/Sequential[classifier]/Dropout[0]/dropout_0" -> "152 MobileNetV2/Sequential[classifier]/Linear[1]/linear_0";
 }
