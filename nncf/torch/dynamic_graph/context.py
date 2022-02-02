@@ -60,10 +60,11 @@ class TracingContext:
         self._pre_hooks = {}  # type: Dict[PreHookId, List[Callable]]
         self._num_nested_hooks = 0
 
-        self._thread_local = threading.local()
+        self._thread_local = None
+        self._cond = None
 
         self._n_instances_searching_graph = 0
-        self._cond = threading.Condition()
+
         self._is_tracing = True
         self._is_forwarding = False
         self._may_add_nodes = True
@@ -76,6 +77,7 @@ class TracingContext:
         global _CURRENT_CONTEXT
         self._save_context = _CURRENT_CONTEXT
         _CURRENT_CONTEXT = self
+        self._cond = threading.Condition()
         self._init_thread_local()
         if is_debug():
             self.reset_node_call_counters()
@@ -83,10 +85,12 @@ class TracingContext:
         return self
 
     def __exit__(self, *args):
-        self.reset_scope_operator_call_counters()
-        self.relative_scopes_stack.clear()
-        self.module_call_stack.clear()
-        self.leave()
+        self._deinit_thread_local()
+        self._cond = None
+
+        global _CURRENT_CONTEXT
+        _CURRENT_CONTEXT = self._save_context
+        self._save_context = None
 
     def find_operator_node(self, tensor_metas: List[Optional[TensorMeta]],
                            op_address: OperationAddress) -> Optional[DynamicGraphNode]:
@@ -169,17 +173,6 @@ class TracingContext:
             if scoped_op_name in key:
                 self._thread_local.operator_counters[key] = 0
 
-    def enter(self):
-        global _CURRENT_CONTEXT
-        self._save_context = _CURRENT_CONTEXT
-        _CURRENT_CONTEXT = self
-        self._init_thread_local()
-
-    def leave(self):
-        global _CURRENT_CONTEXT
-        _CURRENT_CONTEXT = self._save_context
-        self._save_context = None
-
     def push_scope(self, called_module: torch.nn.Module):
         relative_scopes_list = self._get_scope_relative_to_last_registered_module_call(called_module)
         self.module_call_stack.append(called_module)
@@ -260,28 +253,30 @@ class TracingContext:
         self._input_comparators_per_scope.append((node_input_comparator, scopes_to_apply))
 
     @property
-    def base_module_thread_local_replica(self):
-        self._init_thread_local()
+    def base_module_thread_local_replica(self) -> torch.nn.Module:
+        if self._thread_local is None:
+            raise RuntimeError("Thread-local context data is only available within the `with` statement "
+                               "with this context.")
+
         return self._thread_local.base_module_replica
 
     @base_module_thread_local_replica.setter
-    def base_module_thread_local_replica(self, value):
-        self._init_thread_local()
+    def base_module_thread_local_replica(self, value: torch.nn.Module):
+        if self._thread_local is None:
+            raise RuntimeError("Thread-local context data is only available within the `with` statement "
+                               "with this context.")
         self._thread_local.base_module_replica = value
 
     @property
     def in_operator(self):
-        self._init_thread_local()
         return self._thread_local.in_operator
 
     @in_operator.setter
     def in_operator(self, val):
-        self._init_thread_local()
         self._thread_local.in_operator = val
 
     @property
     def module_call_stack(self) -> List[torch.nn.Module]:
-        self._init_thread_local()
         return self._thread_local.module_call_stack
 
     def get_current_module(self) -> Optional[torch.nn.Module]:
@@ -291,7 +286,6 @@ class TracingContext:
 
     @property
     def relative_scopes_stack(self) -> List[Scope]:
-        self._init_thread_local()
         return self._thread_local.scopes
 
     @property
@@ -306,10 +300,10 @@ class TracingContext:
         self._trace_dynamic_graph = True
 
     def _init_thread_local(self):
-        # todo: primary node part!
-        tl = self._thread_local
-        if getattr(tl, 'ready', False):
+        if getattr(self._thread_local, 'ready', False):
             return
+        self._thread_local = threading.local()
+        tl = self._thread_local
         tl.ready = True
         tl.scopes = []
         tl.module_call_stack = []
@@ -318,6 +312,9 @@ class TracingContext:
         tl.base_module_replica = None
         tl.operator_counters = {}
         tl.node_call_tracker = {}
+
+    def _deinit_thread_local(self):
+        self._thread_local = None
 
     def register_node_call(self, node: DynamicGraphNode):
         if node.node_id in self._thread_local.node_call_tracker:
