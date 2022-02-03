@@ -108,11 +108,11 @@ def get_model_with_reshapes_and_concats(batch_size=None):
 
 CONCAT_MODELS = [partial(get_concat_test_model, input_shape=[1, 8, 8, 1]),
                  get_model_with_reshapes_and_concats]
-REF_CONCAT_ATTRS = [{'tf_op_layer_tf_concat_1': {'axis': [-1, 3]},
-                     'tf_op_layer_tf_concat_2': {'axis': [-1, 3]}},
+REF_CONCAT_ATTRS = [{'tf.concat': {'axis': [-1, 3]},
+                     'tf.concat_1': {'axis': [-1, 3]}},
                     {'concatenate': {'axis': [-1, 2]},
-                     'tf_op_layer_concat': {'axis': [-1, 2]},
-                     'tf_op_layer_concat_1': {'axis': [-1, 2]}}]
+                     'tf.concat': {'axis': [-1, 2]},
+                     'tf.concat_1': {'axis': [-1, 2]}}]
 
 
 @pytest.mark.parametrize('model, ref_attrs', list(zip(CONCAT_MODELS, REF_CONCAT_ATTRS)))
@@ -130,7 +130,7 @@ def test_concat_attributes_saved_during_graph_building(model, ref_attrs):
 def test_reshape_attributes_saved_during_graph_building():
     model = get_model_with_reshapes_and_concats()
     graph = convert_keras_model_to_nncf_graph(model)
-    ref_reshape_nodes = {'tf_op_layer_Reshape': {'input_shape': (None, 64),
+    ref_reshape_nodes = {'tf.reshape': {'input_shape': (None, 64),
                                                  'output_shape': (32, None)},
                          'reshape': {'input_shape': (32, None),
                                      'output_shape': (32, 16, None)},

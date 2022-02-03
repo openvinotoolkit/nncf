@@ -17,6 +17,7 @@ import networkx as nx
 import tensorflow as tf
 from tensorflow.python.keras import layers
 from tensorflow.python.keras import models
+from tensorflow.python.keras.engine.keras_tensor import KerasTensor
 
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationPriority
@@ -533,7 +534,7 @@ def apply_insert_before(model):
         else:
             instance_idx = 0
 
-        inputs = [layer.input] if isinstance(layer.input, tf.Tensor) else layer.input
+        inputs = [layer.input] if isinstance(layer.input, KerasTensor) else layer.input
 
         for port, _ in enumerate(inputs):
             fake_quantize_name = f'FakeQuantize_{i}.{port}/{original_node_name}'

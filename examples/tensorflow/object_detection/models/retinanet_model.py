@@ -15,7 +15,6 @@ import tensorflow as tf
 
 from examples.tensorflow.common.object_detection import base_model
 from examples.tensorflow.common.object_detection.architecture import factory
-from examples.tensorflow.common.object_detection.architecture import keras_utils
 from examples.tensorflow.common.object_detection.ops import postprocess_ops
 from examples.tensorflow.common.object_detection.evaluation import coco_evaluator
 from examples.tensorflow.common.logger import logger
@@ -97,9 +96,8 @@ class RetinanetModel(base_model.Model):
         return _total_loss_fn
 
     def build_model(self, weights=None, is_training=None):
-        with keras_utils.maybe_enter_backend_graph():
-            outputs = self.model_outputs(self._input_layer, is_training)
-            keras_model = tf.keras.models.Model(inputs=self._input_layer, outputs=outputs, name='retinanet')
+        outputs = self.model_outputs(self._input_layer, is_training)
+        keras_model = tf.keras.models.Model(inputs=self._input_layer, outputs=outputs, name='retinanet')
 
         if self._checkpoint_path:
             logger.info('Init backbone')

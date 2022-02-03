@@ -14,7 +14,6 @@
 import functools
 import tensorflow as tf
 
-from examples.tensorflow.common.object_detection.architecture import keras_utils
 from examples.tensorflow.common.object_detection.architecture import nn_ops
 
 
@@ -113,7 +112,7 @@ class Fpn:
                              'less or equal to FPN minimum level {}.'.format(self._min_level))
 
         backbone_max_level = min(max(input_levels), self._max_level)
-        with keras_utils.maybe_enter_backend_graph(), tf.name_scope('fpn'):
+        with tf.name_scope('fpn'):
             # Adds lateral connections.
             feats_lateral = {}
             for level in range(self._min_level, backbone_max_level + 1):

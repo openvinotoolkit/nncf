@@ -248,14 +248,16 @@ def selective_crop_and_resize(features,
         grid_x_weight = tf.reduce_sum(
             tf.multiply(grid_x_one_hot, kernel_x), axis=-2)
 
+        def einsum1(x):
+            return tf.einsum('bmhwf,bmoh->bmowf', x[0], tf.cast(x[1], x[0].dtype))
+        def einsum2(x):
+            return tf.einsum('bmhwf,bmow->bmhof', x[0], tf.cast(x[1], x[0].dtype))
         # Gather for y_axis.
         # shape is [batch_size, num_boxes, output_size, width, features]
-        features_per_box = tf.einsum('bmhwf,bmoh->bmowf', features,
-                                     tf.cast(grid_y_weight, features.dtype))
+        features_per_box = tf.keras.layers.Lambda(einsum1)((features, grid_y_weight))
         # Gather for x_axis.
         # shape is [batch_size, num_boxes, output_size, output_size, features]
-        features_per_box = tf.einsum('bmhwf,bmow->bmhof', features_per_box,
-                                     tf.cast(grid_x_weight, features.dtype))
+        features_per_box = tf.keras.layers.Lambda(einsum2)((features_per_box, grid_x_weight))
     else:
         height_dim_offset = max_feature_width
         level_dim_offset = max_feature_height * height_dim_offset
@@ -278,8 +280,7 @@ def selective_crop_and_resize(features,
             [1, 1, output_size * 2, 1])
 
         indices = tf.reshape(
-            batch_size_offset + box_levels_offset + y_indices_offset +
-            x_indices_offset, [-1])
+            y_indices_offset + x_indices_offset + box_levels_offset + batch_size_offset, [-1])
 
         features = tf.reshape(features, [-1, num_filters])
 
@@ -357,11 +358,11 @@ def multilevel_crop_and_resize(features, boxes, output_size=7):
             tf.int32)
         # Maps levels between [min_level, max_level].
         levels = tf.minimum(max_level, tf.maximum(levels, min_level))
-
         # Projects box location and sizes to corresponding feature levels.
         scale_to_level = tf.cast(
             tf.pow(tf.constant(2.0), tf.cast(levels, tf.float32)),
             boxes.dtype)
+
         boxes /= tf.expand_dims(scale_to_level, axis=2)
         box_width /= scale_to_level
         box_height /= scale_to_level
@@ -414,7 +415,7 @@ def multilevel_crop_and_resize(features, boxes, output_size=7):
             tf.reshape(x_indices, [batch_size, num_boxes, 1, output_size * 2]),
             [1, 1, output_size * 2, 1])
         indices = tf.reshape(
-            batch_size_offset + levels_offset + y_indices_offset + x_indices_offset,
+            levels_offset + y_indices_offset + x_indices_offset + batch_size_offset,
             [-1])
 
         features_per_box = tf.reshape(
