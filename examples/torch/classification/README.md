@@ -55,7 +55,7 @@ To validate an FP32 model checkpoint, make sure the compression algorithm settin
 
 To export trained model to the ONNX format, use the following command:
 ```
-python main.py -m test --config=configs/quantization/mobilenet_v2_imagenet_int8.json --resume=../../results/quantization/mobilenet_v2_int8/6/checkpoints/epoch_1.pth --to-onnx=../../results/mobilenet_v2_int8.onnx
+python main.py -m export --config=configs/quantization/mobilenet_v2_imagenet_int8.json --resume=../../results/quantization/mobilenet_v2_int8/6/checkpoints/epoch_1.pth --to-onnx=../../results/mobilenet_v2_int8.onnx
 ```
 
 #### Export to OpenVINO™ Intermediate Representation (IR)
