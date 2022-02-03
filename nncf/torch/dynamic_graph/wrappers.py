@@ -13,6 +13,7 @@
 
 import warnings
 from copy import deepcopy
+from typing import Callable
 
 from torch.nn import Conv1d
 from torch.nn import Conv2d
@@ -20,16 +21,17 @@ from torch.nn import Conv3d
 from torch.nn import ConvTranspose1d
 from torch.nn import ConvTranspose2d
 from torch.nn import ConvTranspose3d
-from torch.nn import DataParallel, Module as TorchModule
+from torch.nn import DataParallel
 from torch.nn import Linear
+from torch.nn import Module as TorchModule
 
 from nncf.common.graph.layer_attributes import BaseLayerAttributes
 from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
 from nncf.common.graph.layer_attributes import GenericWeightedLayerAttributes
 from nncf.common.graph.layer_attributes import GroupNormLayerAttributes
 from nncf.common.graph.layer_attributes import LinearLayerAttributes
-from nncf.common.utils.logger import logger as nncf_logger
 from nncf.common.utils.debug import is_debug
+from nncf.common.utils.logger import logger as nncf_logger
 from nncf.torch.dynamic_graph.context import get_current_context
 from nncf.torch.dynamic_graph.op_input_processing import OperatorInput
 from nncf.torch.dynamic_graph.trace_tensor import make_tensor_metas
@@ -87,65 +89,27 @@ def wrap_operator(operator, operator_info: 'PatchedOperatorInfo'):
         ctx.in_operator = True
 
         try:
-            op_name = operator_info.name
-            op_address = ctx.get_caller_context(op_name)
-            str_op_address = str(op_address)
             if operator_info.skip_trace:
                 result = operator(*args, **kwargs)
             elif ctx.is_forwarding:
                 from nncf.torch.dynamic_graph.trace_functions import forward_trace_only
                 result = forward_trace_only(operator, *args, **kwargs)
             else:
-                node = None
                 op_name = operator_info.name
                 op_address = ctx.get_caller_context(op_name)
-
-                layer_attrs = None
-                ignored_algos = []
-
-                # Collect module attributes, if required
-                if ctx.trace_dynamic_graph and not ctx.in_skipped_block:
-                    if op_name in OP_NAMES_REQUIRING_MODULE_ATTRS:
-                        curr_module = ctx.get_current_module()
-                        if curr_module is None:
-                            raise RuntimeError("Operation {} requires module attributes, "
-                                               "but it was executed outside any module".format(op_name))
-                        layer_attrs = _get_layer_attributes(curr_module, op_name)
-                        if isinstance(curr_module, _NNCFModuleMixin):
-                            ignored_algos = deepcopy(curr_module.ignored_algorithms)
-
                 ctx.register_operator_call(op_address.operator_name, op_address.scope_in_model)
-                op_input = OperatorInput(list(args), kwargs)
-                processed_input = ctx.execute_pre_hooks(op_address, op_input)
 
-                if ctx.trace_dynamic_graph and not ctx.in_skipped_block:
-                    tensor_metas = make_tensor_metas(processed_input)
-                    node = ctx.find_operator_node(tensor_metas, op_address)
-
-                args = tuple(processed_input.op_args)
-                kwargs = processed_input.op_kwargs
-
-                if not ctx._elastic_depth or not ctx.in_skipped_block:
-                    result = operator(*args, **kwargs)
-                else:
+                if ctx.elastic_depth and ctx.in_skipped_block:
                     result = ctx.tensor_cache
+                else:
+                    result = _process_ordinary_op(op_address, operator_info, operator, ctx, *args, **kwargs)
 
-                if isinstance(result, type(NotImplemented)):
-                    nncf_logger.debug("Operation {} returned NotImplemented".format(op_name))
-                elif ctx.trace_dynamic_graph and node is None and not ctx.in_skipped_block:
-                    node = ctx.maybe_add_node(processed_input, tensor_metas, op_address, layer_attrs, ignored_algos)
-
-                if is_debug() and ctx.trace_dynamic_graph and node is not None and not ctx.in_skipped_block:
-                    ctx.register_node_call(node)
-                if not ctx.in_skipped_block:
-                    result = trace_tensors(result, node)
-                result = ctx.execute_post_hooks(op_address, result)
-
+                str_op_address = str(op_address)
                 if str_op_address in ctx.end_node_name_of_skipped_block:
-                    assert ctx.in_skipped_block == True
+                    assert ctx.in_skipped_block is True
                     ctx.in_skipped_block = False
                 if str_op_address in ctx.start_node_name_of_skipped_block:
-                    assert ctx.in_skipped_block == False
+                    assert ctx.in_skipped_block is False
                     ctx.in_skipped_block = True
                     ctx.tensor_cache = result
         except:
@@ -166,7 +130,8 @@ def wrap_operator(operator, operator_info: 'PatchedOperatorInfo'):
 
 def wrap_module_call(module_call):
     from nncf.torch.dynamic_graph.patch_pytorch import ORIGINAL_OPERATORS
-    NAMES_ORIGINAL_OPERATORS = [ op.name for op in ORIGINAL_OPERATORS]
+    NAMES_ORIGINAL_OPERATORS = [op.name for op in ORIGINAL_OPERATORS]
+
     def wrapped(self, *args, **kwargs):
         ctx = get_current_context()
         if not ctx or self.__class__ in _IGNORED_SCOPES:
@@ -182,18 +147,17 @@ def wrap_module_call(module_call):
         is_layer_or_op = op_name in NAMES_ORIGINAL_OPERATORS or is_nncf_layer
         op_address = ctx.get_caller_context(op_name)
         str_op_address = str(op_address)
-        if ctx._elastic_depth and is_layer_or_op and ctx.in_skipped_block:
+        if ctx.elastic_depth and is_layer_or_op and ctx.in_skipped_block:
             ctx.register_operator_call(op_address.operator_name, op_address.scope_in_model)
             retval = ctx.tensor_cache
             if str_op_address in ctx.end_node_name_of_skipped_block:
-                assert ctx.in_skipped_block == True
+                assert ctx.in_skipped_block is True
                 ctx.in_skipped_block = False
             if str_op_address in ctx.start_node_name_of_skipped_block:
-                assert ctx.in_skipped_block == False
+                assert ctx.in_skipped_block is False
                 ctx.in_skipped_block = True
         else:
             retval = module_call(self, *args, **kwargs)
-
 
         if type(self).__name__ in ITERATION_MODULES.registry_dict.keys():
             ctx.reset_operator_call_count_in_scope(ctx.scope)
@@ -201,6 +165,50 @@ def wrap_module_call(module_call):
         return retval
 
     return wrapped
+
+
+def _process_ordinary_op(op_address: 'OperationAddress',
+                         operator_info: 'PatchedOperatorInfo',
+                         operator: Callable,
+                         ctx: 'TracingContext',
+                         *args,
+                         **kwargs):
+    op_name = operator_info.name
+
+    op_input = OperatorInput(list(args), kwargs)
+    processed_input = ctx.execute_pre_hooks(op_address, op_input)
+    args = tuple(processed_input.op_args)
+    kwargs = processed_input.op_kwargs
+    result = operator(*args, **kwargs)
+    node = None
+    if isinstance(result, type(NotImplemented)):
+        nncf_logger.debug("Operation {} returned NotImplemented".format(op_name))
+    elif ctx.trace_dynamic_graph:
+        tensor_metas = make_tensor_metas(processed_input)
+        node = ctx.find_operator_node(tensor_metas, op_address)
+        if node is None:
+            layer_attrs, ignored_algos = _collect_module_attrs_and_ignored_algorithms(ctx, op_name)
+            node = ctx.maybe_add_node(processed_input, tensor_metas, op_address, layer_attrs, ignored_algos)
+        if is_debug() and node is not None:
+            ctx.register_node_call(node)
+
+    result = trace_tensors(result, node)
+    result = ctx.execute_post_hooks(op_address, result)
+    return result
+
+
+def _collect_module_attrs_and_ignored_algorithms(ctx, op_name):
+    layer_attrs = None
+    ignored_algos = []
+    if op_name in OP_NAMES_REQUIRING_MODULE_ATTRS:
+        curr_module = ctx.get_current_module()
+        if curr_module is None:
+            raise RuntimeError("Operation {} requires module attributes, "
+                               "but it was executed outside any module".format(op_name))
+        layer_attrs = _get_layer_attributes(curr_module, op_name)
+        if isinstance(curr_module, _NNCFModuleMixin):
+            ignored_algos = deepcopy(curr_module.ignored_algorithms)
+    return layer_attrs, ignored_algos
 
 
 def _get_layer_attributes(module: TorchModule, operator_name: str) -> BaseLayerAttributes:
