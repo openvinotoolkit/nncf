@@ -11,6 +11,7 @@
  limitations under the License.
 """
 
+from typing import Dict
 from typing import List
 from typing import Tuple
 
@@ -300,6 +301,25 @@ class BasePruningAlgoController(BaseCompressionAlgorithmController):
             raise ValueError('Only one parameter from \'pruning_target\' and \'pruning_flops_target\' can be set.')
         if pruning_flops_target:
             self.prune_flops = True
+
+    def _calculate_num_of_sparse_elements_by_node(self) -> Dict[str, int]:
+        num_of_sparse_elements_by_node = {}
+        wrapped_layers = collect_wrapped_layers(self._model)
+        for wrapped_layer in wrapped_layers:
+            for weight_attr, ops in wrapped_layer.weights_attr_ops.items():
+                for op_name in ops:
+                    if op_name in self._op_names:
+                        mask = wrapped_layer.ops_weights[op_name]['mask']
+                        reduce_axes = list(range(len(mask.shape)))
+                        filter_axis = get_filter_axis(wrapped_layer, weight_attr)
+                        if filter_axis == -1:
+                            filter_axis = reduce_axes[filter_axis]
+                        reduce_axes.remove(filter_axis)
+                        filter_mask = tf.reduce_max(tf.cast(mask, tf.int32), axis=reduce_axes, keepdims=True)
+                        filters_number = get_filters_num(wrapped_layer)
+                        pruned_filter_number = filters_number - tf.reduce_sum(filter_mask)
+                        num_of_sparse_elements_by_node[wrapped_layer.name] = pruned_filter_number.numpy()
+        return num_of_sparse_elements_by_node
 
     def _calculate_pruned_layers_summary(self) -> List[PrunedLayerSummary]:
         pruning_levels = []
