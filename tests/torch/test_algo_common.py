@@ -83,7 +83,7 @@ class TestCompressionAlgos:
         assert os.path.exists(test_path)
 
 
-class TestConfigCreator:
+class ConfigCreator:
     def __init__(self):
         self._config = get_empty_config()
         self._algorithm_sections = {}
@@ -106,7 +106,7 @@ class TestConfigCreator:
 
 
 class CompressionStageTestStruct:
-    def __init__(self, config_provider: 'TestConfigCreator', compression_stages: List[CompressionStage]):
+    def __init__(self, config_provider: 'ConfigCreator', compression_stages: List[CompressionStage]):
         self.config_provider = config_provider
         self.compression_stages = compression_stages
 
@@ -123,30 +123,30 @@ FFF_levels = [CompressionStage.FULLY_COMPRESSED] * 3
 NPF_levels = [CompressionStage.UNCOMPRESSED, CompressionStage.PARTIALLY_COMPRESSED, CompressionStage.FULLY_COMPRESSED]
 LIST_OF_TEST_PARAMS = [
     CompressionStageTestStruct(
-        config_provider=TestConfigCreator().add_algo('quantization'),
+        config_provider=ConfigCreator().add_algo('quantization'),
         compression_stages=FFF_levels
     ),
     CompressionStageTestStruct(
-        config_provider=TestConfigCreator().add_algo('quantization', staged_quantization_params),
+        config_provider=ConfigCreator().add_algo('quantization', staged_quantization_params),
         compression_stages=NPF_levels
     ),
     CompressionStageTestStruct(
-        config_provider=TestConfigCreator().add_algo('const_sparsity'),
+        config_provider=ConfigCreator().add_algo('const_sparsity'),
         compression_stages=FFF_levels
     ),
     CompressionStageTestStruct(
-        config_provider=TestConfigCreator().add_algo('magnitude_sparsity', magnitude_sparsity_params),
+        config_provider=ConfigCreator().add_algo('magnitude_sparsity', magnitude_sparsity_params),
         compression_stages=NPF_levels
     ),
     CompressionStageTestStruct(
-        config_provider=TestConfigCreator().add_algo('rb_sparsity', {
+        config_provider=ConfigCreator().add_algo('rb_sparsity', {
             'sparsity_target': 0.61,
             'sparsity_target_epoch': 2,
         }),
         compression_stages=NPF_levels
     ),
     CompressionStageTestStruct(
-        config_provider=TestConfigCreator().add_algo('filter_pruning', {
+        config_provider=ConfigCreator().add_algo('filter_pruning', {
             'num_init_steps': 1,
             'pruning_steps': 2,
             'schedule': 'baseline'
@@ -156,26 +156,26 @@ LIST_OF_TEST_PARAMS = [
                             CompressionStage.FULLY_COMPRESSED]
     ),
     CompressionStageTestStruct(
-        config_provider=TestConfigCreator().add_algo('filter_pruning', filter_pruning_params),
+        config_provider=ConfigCreator().add_algo('filter_pruning', filter_pruning_params),
         compression_stages=NPF_levels
     ),
     CompressionStageTestStruct(
-        config_provider=TestConfigCreator().add_algo('magnitude_sparsity', magnitude_sparsity_params).add_algo(
+        config_provider=ConfigCreator().add_algo('magnitude_sparsity', magnitude_sparsity_params).add_algo(
             'quantization'),
         compression_stages=[CompressionStage.PARTIALLY_COMPRESSED] * 2 + [CompressionStage.FULLY_COMPRESSED],
     ),
     CompressionStageTestStruct(
-        config_provider=TestConfigCreator().add_algo('magnitude_sparsity', magnitude_sparsity_params).add_algo(
+        config_provider=ConfigCreator().add_algo('magnitude_sparsity', magnitude_sparsity_params).add_algo(
             'quantization', staged_quantization_params),
         compression_stages=NPF_levels,
     ),
     CompressionStageTestStruct(
-        config_provider=TestConfigCreator().add_algo('quantization', staged_quantization_params).add_algo(
+        config_provider=ConfigCreator().add_algo('quantization', staged_quantization_params).add_algo(
             'filter_pruning', filter_pruning_params),
         compression_stages=NPF_levels,
     ),
     CompressionStageTestStruct(
-        config_provider=TestConfigCreator().add_algo('magnitude_sparsity', magnitude_sparsity_params).add_algo(
+        config_provider=ConfigCreator().add_algo('magnitude_sparsity', magnitude_sparsity_params).add_algo(
             'quantization', staged_quantization_params).add_algo('filter_pruning', filter_pruning_params),
         compression_stages=NPF_levels,
     ),

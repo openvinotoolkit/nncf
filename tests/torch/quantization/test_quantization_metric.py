@@ -55,12 +55,12 @@ def as_dict(obj):
     return obj
 
 
-TestStruct = namedtuple(
-    'TestStruct', ('initializers', 'activations', 'weights', 'ignored_scopes', 'target_device', 'expected'))
+CaseStruct = namedtuple(
+    'CaseStruct', ('initializers', 'activations', 'weights', 'ignored_scopes', 'target_device', 'expected'))
 
 
 QUANTIZATION_SHARE_AND_BITWIDTH_DISTR_STATS_TEST_CASES = [
-    TestStruct(
+    CaseStruct(
         initializers={},
         activations={},
         weights={},
@@ -95,7 +95,7 @@ QUANTIZATION_SHARE_AND_BITWIDTH_DISTR_STATS_TEST_CASES = [
             }
         }
     ),
-    TestStruct(
+    CaseStruct(
         initializers={},
         activations={},
         weights={},
@@ -152,7 +152,7 @@ def test_quantization_share_and_bitwidth_distribution_stats(data):
 
 
 MEMORY_CONSUMPTION_STATS_TEST_CASES = [
-    TestStruct(
+    CaseStruct(
         initializers={},
         activations={},
         weights={},
@@ -166,7 +166,7 @@ MEMORY_CONSUMPTION_STATS_TEST_CASES = [
             'weight_memory_consumption_decrease': 4.0
         }
     ),
-    TestStruct(
+    CaseStruct(
         initializers={
             'precision': {
                 'bitwidth_per_scope': [
@@ -189,7 +189,7 @@ MEMORY_CONSUMPTION_STATS_TEST_CASES = [
             'weight_memory_consumption_decrease': 4.05
         }
     ),
-    TestStruct(
+    CaseStruct(
         initializers={},
         activations={},
         weights={},
@@ -227,7 +227,7 @@ def test_memory_consumption_stats(data):
 
 
 QUANTIZATION_CONFIGURATION_STATS_TEST_CASES = [
-    TestStruct(
+    CaseStruct(
         initializers={},
         activations={},
         weights={},
@@ -238,7 +238,7 @@ QUANTIZATION_CONFIGURATION_STATS_TEST_CASES = [
             'total_edges_in_cfg': 177
         }
     ),
-    TestStruct(
+    CaseStruct(
         initializers={},
         activations={},
         weights={},

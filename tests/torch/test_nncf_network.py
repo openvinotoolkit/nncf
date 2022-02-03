@@ -896,7 +896,7 @@ def test_temporary_clean_view():
     assert graph_after_tmp_clean_view == old_graph
 
 
-class TestModelMultipleForward(nn.Module):
+class MultipleForwardModel(nn.Module):
     def __init__(self):
         super().__init__()
         self.conv = nn.Conv2d(1, 1, 1, 1)
@@ -912,7 +912,7 @@ class TestModelMultipleForward(nn.Module):
 def test_multiple_forward():
     # Check that all convolution nodes in model have op_address and layer_attributes
     # for case with multiple forward of one module
-    model = TestModelMultipleForward()
+    model = MultipleForwardModel()
     config = get_basic_sparsity_plus_quantization_config()
     register_bn_adaptation_init_args(config)
     sparse_quantized_model, _ = create_compressed_model_and_algo_for_test(model, config)

@@ -34,7 +34,7 @@ from tests.torch.pruning.helpers import gen_ref_masks
 from tests.torch.pruning.helpers import get_basic_pruning_config
 from tests.torch.pruning.helpers import PruningTestModel
 from tests.torch.pruning.helpers import BigPruningTestModel
-from tests.torch.pruning.helpers import TestModelMultipleForward
+from tests.torch.pruning.helpers import MultipleForwardModel
 from tests.torch.pruning.helpers import PruningTestModelConcatBN
 from tests.torch.pruning.helpers import DisconectedGraphModel
 
@@ -415,7 +415,7 @@ def test_clusters_for_multiple_forward(repeat_seq_of_shared_convs,
     config['compression']['params']['all_weights'] = False
     config['compression']['params']['prune_first_conv'] = True
     config['compression']['pruning_init'] = 0.5
-    model = TestModelMultipleForward(repeat_seq_of_shared_convs, additional_last_shared_layers)
+    model = MultipleForwardModel(repeat_seq_of_shared_convs, additional_last_shared_layers)
     _, pruning_algo = create_compressed_model_and_algo_for_test(model, config)
 
     clusters = pruning_algo.pruned_module_groups_info.clusters
