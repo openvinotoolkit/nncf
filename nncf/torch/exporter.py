@@ -81,6 +81,7 @@ class PTExporter(Exporter):
 
         :param save_path: The path where the model will be saved.
         """
+        origin_device = self._model.device
         model = self._model.eval().cpu()
         input_tensor_list = []
         for info in self._model.input_infos:
@@ -122,3 +123,4 @@ class PTExporter(Exporter):
                               training=True)
             model.enable_dynamic_graph_building()
         model.forward = original_forward
+        model.to(origin_device)
