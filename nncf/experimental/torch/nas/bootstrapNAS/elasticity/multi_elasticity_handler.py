@@ -19,16 +19,16 @@ from typing import Optional
 from typing import OrderedDict as OrderedDictType
 
 from nncf.common.pruning.utils import count_flops_and_weights_per_node
-from nncf.torch.nas.bootstrapNAS.elasticity.base_handler import ElasticityConfig
-from nncf.torch.nas.bootstrapNAS.elasticity.base_handler import ElasticityHandler
-from nncf.torch.nas.bootstrapNAS.elasticity.base_handler import SingleElasticityHandler
-from nncf.torch.nas.bootstrapNAS.elasticity.elastic_depth import ElasticDepthHandler
-from nncf.torch.nas.bootstrapNAS.elasticity.elastic_depth import ElasticDepthSearchSpace
-from nncf.torch.nas.bootstrapNAS.elasticity.elastic_kernel import ElasticKernelHandler
-from nncf.torch.nas.bootstrapNAS.elasticity.elastic_kernel import ElasticKernelSearchSpace
-from nncf.torch.nas.bootstrapNAS.elasticity.elastic_width import ElasticWidthHandler
-from nncf.torch.nas.bootstrapNAS.elasticity.elastic_width import ElasticWidthSearchSpace
-from nncf.torch.nas.bootstrapNAS.elasticity.elasticity_dim import ElasticityDim
+from nncf.experimental.torch.nas.bootstrapNAS.elasticity.base_handler import ElasticityConfig
+from nncf.experimental.torch.nas.bootstrapNAS.elasticity.base_handler import ElasticityHandler
+from nncf.experimental.torch.nas.bootstrapNAS.elasticity.base_handler import SingleElasticityHandler
+from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elastic_depth import ElasticDepthHandler
+from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elastic_depth import ElasticDepthSearchSpace
+from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elastic_kernel import ElasticKernelHandler
+from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elastic_kernel import ElasticKernelSearchSpace
+from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elastic_width import ElasticWidthHandler
+from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elastic_width import ElasticWidthSearchSpace
+from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elasticity_dim import ElasticityDim
 
 SubnetConfig = OrderedDictType[ElasticityDim, ElasticityConfig]
 

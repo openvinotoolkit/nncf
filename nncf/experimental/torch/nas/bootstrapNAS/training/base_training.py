@@ -14,9 +14,9 @@ from abc import ABC
 from abc import abstractmethod
 
 from nncf.torch.compression_method_api import PTCompressionAlgorithmController
-from nncf.torch.nas.bootstrapNAS.elasticity.elasticity_controller import ElasticityController
-from nncf.torch.nas.bootstrapNAS.elasticity.multi_elasticity_handler import MultiElasticityHandler
-from nncf.torch.nas.bootstrapNAS.training.stage_descriptor import StageDescriptor
+from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elasticity_controller import ElasticityController
+from nncf.experimental.torch.nas.bootstrapNAS.elasticity.multi_elasticity_handler import MultiElasticityHandler
+from nncf.experimental.torch.nas.bootstrapNAS.training.stage_descriptor import StageDescriptor
 
 
 class BNASTrainingAlgorithm(ABC):

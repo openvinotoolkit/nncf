@@ -19,9 +19,9 @@ from examples.torch.common.models.classification.resnet_cifar10 import resnet50_
 from nncf import NNCFConfig
 from nncf.api.compression import CompressionStage
 from nncf.torch.model_creation import create_nncf_network
-from nncf.torch.nas.bootstrapNAS.elasticity.elasticity_dim import ElasticityDim
-from nncf.torch.nas.bootstrapNAS.elasticity.visualization import SubnetGraph
-from nncf.torch.nas.bootstrapNAS.training.model_creator_helpers import resume_compression_from_state
+from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elasticity_dim import ElasticityDim
+from nncf.experimental.torch.nas.bootstrapNAS.elasticity.visualization import SubnetGraph
+from nncf.experimental.torch.nas.bootstrapNAS.training.model_creator_helpers import resume_compression_from_state
 from nncf.torch.utils import manual_seed
 from tests.torch.helpers import register_bn_adaptation_init_args
 from tests.torch.nas.creators import create_bnas_model_and_ctrl_by_test_desc

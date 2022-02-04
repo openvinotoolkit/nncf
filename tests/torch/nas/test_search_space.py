@@ -19,9 +19,9 @@ from typing import Optional
 
 import pytest
 
-from nncf.torch.nas.bootstrapNAS.elasticity.elastic_depth import ElasticDepthBuilder
-from nncf.torch.nas.bootstrapNAS.elasticity.elastic_kernel import ElasticKernelBuilder
-from nncf.torch.nas.bootstrapNAS.elasticity.elastic_width import ElasticWidthBuilder
+from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elastic_depth import ElasticDepthBuilder
+from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elastic_kernel import ElasticKernelBuilder
+from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elastic_width import ElasticWidthBuilder
 from tests.torch.helpers import BasicConvTestModel
 from tests.torch.nas.descriptors import ElasticityDesc
 from tests.torch.nas.descriptors import WidthElasticityDesc

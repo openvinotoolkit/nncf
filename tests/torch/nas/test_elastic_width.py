@@ -17,7 +17,7 @@ import torch
 from torch import nn
 from torch.backends import cudnn
 
-from nncf.torch.nas.bootstrapNAS.elasticity.visualization import SubnetGraph
+from nncf.experimental.torch.nas.bootstrapNAS.elasticity.visualization import SubnetGraph
 from nncf.torch.utils import get_model_device
 from nncf.torch.utils import manual_seed
 from tests.torch.helpers import create_conv

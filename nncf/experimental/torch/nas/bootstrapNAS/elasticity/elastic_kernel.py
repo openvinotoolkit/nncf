@@ -35,11 +35,11 @@ from nncf.torch.layers import NNCFConv2d
 from nncf.torch.module_operations import UpdateInputs
 from nncf.torch.module_operations import UpdatePadding
 from nncf.torch.module_operations import UpdateWeight
-from nncf.torch.nas.bootstrapNAS.elasticity.base_handler import ELASTICITY_BUILDERS
-from nncf.torch.nas.bootstrapNAS.elasticity.base_handler import ELASTICITY_HANDLERS_MAP
-from nncf.torch.nas.bootstrapNAS.elasticity.base_handler import SingleElasticityHandler
-from nncf.torch.nas.bootstrapNAS.elasticity.base_handler import SingleElasticityBuilder
-from nncf.torch.nas.bootstrapNAS.elasticity.elasticity_dim import ElasticityDim
+from nncf.experimental.torch.nas.bootstrapNAS.elasticity.base_handler import ELASTICITY_BUILDERS
+from nncf.experimental.torch.nas.bootstrapNAS.elasticity.base_handler import ELASTICITY_HANDLERS_MAP
+from nncf.experimental.torch.nas.bootstrapNAS.elasticity.base_handler import SingleElasticityHandler
+from nncf.experimental.torch.nas.bootstrapNAS.elasticity.base_handler import SingleElasticityBuilder
+from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elasticity_dim import ElasticityDim
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.utils import is_tracing_state
 from nncf.torch.utils import no_jit_trace

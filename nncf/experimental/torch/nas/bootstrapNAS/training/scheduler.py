@@ -17,9 +17,9 @@ from typing import Optional
 from typing import Tuple
 
 from nncf.common.schedulers import BaseCompressionScheduler
-from nncf.torch.nas.bootstrapNAS.elasticity.elasticity_dim import ElasticityDim
-from nncf.torch.nas.bootstrapNAS.training.base_training import BNASTrainingAlgorithm
-from nncf.torch.nas.bootstrapNAS.training.stage_descriptor import StageDescriptor
+from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elasticity_dim import ElasticityDim
+from nncf.experimental.torch.nas.bootstrapNAS.training.base_training import BNASTrainingAlgorithm
+from nncf.experimental.torch.nas.bootstrapNAS.training.stage_descriptor import StageDescriptor
 
 
 class BNASSchedulerStateNames:

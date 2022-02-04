@@ -15,7 +15,7 @@ import onnx
 import onnxruntime as rt
 import torch
 
-from nncf.torch.nas.bootstrapNAS.elasticity.elasticity_dim import ElasticityDim
+from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elasticity_dim import ElasticityDim
 from tests.torch.helpers import get_all_inputs_for_graph_node
 from tests.torch.helpers import get_nodes_by_type
 from tests.torch.nas.descriptors import THREE_CONV_TEST_DESC

@@ -21,7 +21,7 @@ from typing import TypeVar
 from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.common.utils.registry import Registry
-from nncf.torch.nas.bootstrapNAS.elasticity.elasticity_dim import ElasticityDim
+from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elasticity_dim import ElasticityDim
 from nncf.torch.nncf_network import NNCFNetwork
 
 ELASTICITY_HANDLERS_MAP = Dict[ElasticityDim, 'ElasticityHandler']

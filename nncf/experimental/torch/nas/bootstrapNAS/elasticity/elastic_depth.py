@@ -28,12 +28,12 @@ from nncf.experimental.torch.search_building_blocks.search_blocks import GROUPED
 from nncf.experimental.torch.search_building_blocks.search_blocks import ORDINAL_IDS
 from nncf.experimental.torch.search_building_blocks.search_blocks import get_building_blocks
 from nncf.torch.dynamic_graph.context import TracingContext
-from nncf.torch.nas.bootstrapNAS.elasticity.base_handler import ELASTICITY_BUILDERS
-from nncf.torch.nas.bootstrapNAS.elasticity.base_handler import ELASTICITY_HANDLERS_MAP
-from nncf.torch.nas.bootstrapNAS.elasticity.base_handler import SingleElasticityBuilder
-from nncf.torch.nas.bootstrapNAS.elasticity.base_handler import SingleElasticityHandler
-from nncf.torch.nas.bootstrapNAS.elasticity.elastic_width import ElasticWidthHandler
-from nncf.torch.nas.bootstrapNAS.elasticity.elasticity_dim import ElasticityDim
+from nncf.experimental.torch.nas.bootstrapNAS.elasticity.base_handler import ELASTICITY_BUILDERS
+from nncf.experimental.torch.nas.bootstrapNAS.elasticity.base_handler import ELASTICITY_HANDLERS_MAP
+from nncf.experimental.torch.nas.bootstrapNAS.elasticity.base_handler import SingleElasticityBuilder
+from nncf.experimental.torch.nas.bootstrapNAS.elasticity.base_handler import SingleElasticityHandler
+from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elastic_width import ElasticWidthHandler
+from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elasticity_dim import ElasticityDim
 from nncf.torch.nncf_network import NNCFNetwork
 
 block_id = int

@@ -19,11 +19,11 @@ from nncf import NNCFConfig
 from nncf.torch.algo_selector import PT_COMPRESSION_ALGORITHMS
 from nncf.torch.compression_method_api import PTCompressionAlgorithmBuilder
 from nncf.torch.graph.transformations.layout import PTTransformationLayout
-from nncf.torch.nas.bootstrapNAS.elasticity.base_handler import ELASTICITY_BUILDERS
-from nncf.torch.nas.bootstrapNAS.elasticity.base_handler import SingleElasticityBuilder
-from nncf.torch.nas.bootstrapNAS.elasticity.elasticity_controller import ElasticityController
-from nncf.torch.nas.bootstrapNAS.elasticity.elasticity_dim import ElasticityDim
-from nncf.torch.nas.bootstrapNAS.elasticity.multi_elasticity_handler import MultiElasticityHandler
+from nncf.experimental.torch.nas.bootstrapNAS.elasticity.base_handler import ELASTICITY_BUILDERS
+from nncf.experimental.torch.nas.bootstrapNAS.elasticity.base_handler import SingleElasticityBuilder
+from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elasticity_controller import ElasticityController
+from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elasticity_dim import ElasticityDim
+from nncf.experimental.torch.nas.bootstrapNAS.elasticity.multi_elasticity_handler import MultiElasticityHandler
 from nncf.torch.nncf_network import NNCFNetwork
 
 

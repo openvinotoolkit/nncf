@@ -19,13 +19,13 @@ import torch
 
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.torch.model_creation import create_nncf_network
-from nncf.torch.nas.bootstrapNAS.elasticity.base_handler import SEHBuilderStateNames
-from nncf.torch.nas.bootstrapNAS.elasticity.elastic_depth import EDBuilderStateNames
-from nncf.torch.nas.bootstrapNAS.elasticity.elastic_depth import ElasticDepthBuilder
-from nncf.torch.nas.bootstrapNAS.elasticity.elastic_kernel import EKBuilderStateNames
-from nncf.torch.nas.bootstrapNAS.elasticity.elastic_kernel import ElasticKernelBuilder
-from nncf.torch.nas.bootstrapNAS.elasticity.elastic_width import EWBuilderStateNames
-from nncf.torch.nas.bootstrapNAS.elasticity.elastic_width import ElasticWidthBuilder
+from nncf.experimental.torch.nas.bootstrapNAS.elasticity.base_handler import SEHBuilderStateNames
+from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elastic_depth import EDBuilderStateNames
+from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elastic_depth import ElasticDepthBuilder
+from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elastic_kernel import EKBuilderStateNames
+from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elastic_kernel import ElasticKernelBuilder
+from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elastic_width import EWBuilderStateNames
+from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elastic_width import ElasticWidthBuilder
 from tests.torch.helpers import BasicConvTestModel
 from tests.torch.helpers import get_empty_config
 from tests.torch.nas.creators import build_elastic_model_from_handler

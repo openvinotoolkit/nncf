@@ -14,7 +14,7 @@ from typing import Any
 from typing import Dict
 from typing import List
 
-from nncf.torch.nas.bootstrapNAS.elasticity.elasticity_dim import ElasticityDim
+from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elasticity_dim import ElasticityDim
 
 
 class StageDescriptor:
