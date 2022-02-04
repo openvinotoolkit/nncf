@@ -526,13 +526,6 @@ class FilterPruningController(BasePruningAlgoController):
 
         return cumulative_filters_importance
 
-    def _collect_pruning_masks(self) -> Dict[str, TFNNCFTensor]:
-        retval = {}
-        for group in self._pruned_layer_groups_info.get_all_clusters():
-            for node in group.elements:
-                retval[node.node_name] = self._original_graph.get_node_by_name(node.node_name).data['output_mask']
-        return retval
-
     def _update_benchmark_statistics(self):
         tmp_in_channels, tmp_out_channels = calculate_in_out_channels_by_masks(
                 pruning_groups=self._pruned_layer_groups_info.get_all_clusters(),
