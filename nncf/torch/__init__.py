@@ -47,10 +47,6 @@ from nncf.torch.sparsity.rb import algo as rb_sparsity_algo
 from nncf.torch.pruning.filter_pruning import algo as filter_pruning_algo
 from nncf.torch.knowledge_distillation import algo as knowledge_distillation_algo
 
-from nncf.torch.nas.bootstrapNAS.training.training_algorithm import EpochBasedTrainingAlgorithm
-from nncf.torch.nas.bootstrapNAS.elasticity import elasticity_builder as elasticity_algo
-from nncf.torch.nas.bootstrapNAS.training import progressive_shrinking_builder as ps_algo
-
 # Functions most commonly used in integrating NNCF into training pipelines are
 # listed below for importing convenience
 
