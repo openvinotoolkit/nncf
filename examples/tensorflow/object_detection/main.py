@@ -14,6 +14,7 @@
 import os
 import sys
 from pathlib import Path
+import atexit
 
 import tensorflow as tf
 import numpy as np
@@ -377,6 +378,9 @@ def run(config):
         save_path, save_format = get_saving_parameters(config)
         compression_ctrl.export_model(save_path, save_format)
         logger.info("Saved to {}".format(save_path))
+
+    # Due to https://github.com/tensorflow/tensorflow/issues/50487
+    atexit.register(strategy._extended._collective_ops._pool.close)
 
 
 def export(config):

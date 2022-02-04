@@ -12,6 +12,7 @@
 """
 
 import sys
+import atexit
 
 import tensorflow as tf
 
@@ -270,6 +271,9 @@ def run_evaluation(config, eval_timeout=None):
 
     if config.metrics_dump is not None:
         write_metrics(metric_result['AP'], config.metrics_dump)
+
+    # Due to https://github.com/tensorflow/tensorflow/issues/50487
+    atexit.register(strategy._extended._collective_ops._pool.close)
 
 
 def export(config):

@@ -14,6 +14,7 @@
 import os
 import sys
 from pathlib import Path
+import atexit
 
 import numpy as np
 import tensorflow as tf
@@ -293,6 +294,9 @@ def run_train(config):
     logger.info('Compression statistics')
     statistics = compression_ctrl.statistics()
     logger.info(statistics.to_str())
+
+    # Due to https://github.com/tensorflow/tensorflow/issues/50487
+    atexit.register(strategy._extended._collective_ops._pool.close)
 
 
 def main(argv):
