@@ -14,14 +14,14 @@
 from typing import List
 from typing import Type
 
-from nncf.common.utils.priority_queue import PriorityQueue
 from nncf.common.utils.ordered_enum import OrderedEnum
+from nncf.common.quantization.structs import QuantizerConfig
+from nncf.common.quantization.structs import QuantizationMode
 
 from nncf.experimental.post_training.backend import define_the_backend
 from nncf.experimental.post_training.backend import Backend
 from nncf.experimental.post_training.api.engine import Engine
 from nncf.experimental.post_training.api.dataloader import DataLoader
-from nncf.experimental.post_training.graph.model_analyzer import ModelAnalyzer
 from nncf.experimental.post_training.graph.model_transformer import ModelTransformer
 from nncf.experimental.post_training.algorithm import PostTrainingAlgorithm
 from nncf.experimental.post_training.compressed_model import CompressedModel
@@ -44,15 +44,23 @@ class PostTrainingQuantizationParameters:
                  quantize_inputs: bool,
                  quantize_outputs: bool,
                  target_device: str,  # TODO: change to ENUM
+                 transformation_algorithms: None,
                  initialization_algorithms: List[Type[InitializationAlgorithm]]
                  ):
-        self.per_channel_weights = per_channel_weights
-        self.symmetric_weights = symmetric_weights
-        self.symmetric_activations = symmetric_activations
+        mode = QuantizationMode.SYMMETRIC if symmetric_weights else QuantizationMode.ASYMMETRIC
+        self.weight_quantizer_config = QuantizerConfig(num_bits=8,
+                                                       mode=mode,
+                                                       per_channel=per_channel_weights)
+        mode = QuantizationMode.SYMMETRIC if symmetric_activations else QuantizationMode.ASYMMETRIC
+        self.activation_quantizer_config = QuantizerConfig(num_bits=8,
+                                                           mode=mode,
+                                                           per_channel=False)
+
         self.ignored_scopes = ignored_scopes
         self.quantize_inputs = quantize_inputs
         self.quantize_outputs = quantize_outputs
         self.target_device = target_device
+        self.transformation_algorithms = transformation_algorithms
         self.initialization_algorithms = initialization_algorithms
 
 
@@ -63,9 +71,8 @@ DEFAULT = PostTrainingQuantizationParameters(per_channel_weights=True,
                                              quantize_inputs=True,
                                              quantize_outputs=True,
                                              target_device='CPU',
+                                             transformation_algorithms=None,
                                              initialization_algorithms=[QuantizerRangeFinderAlgorithm])
-                                                                        # BiasCorrectionAlgorithm,
-# BatchNormAdaptationAlgorithm])
 
 
 class InitializationAlgorithmPriority(OrderedEnum):
@@ -73,6 +80,13 @@ class InitializationAlgorithmPriority(OrderedEnum):
     QUANTIZER_RANGE_FIND = 2
     BATCH_NORM_ADAPTATION = 3
     BIAS_CORRECTION = 4
+
+
+def merge_two_dicts(x, y):
+    # TODO: check intersections keys
+    z = x.copy()
+    z.update(y)
+    return z
 
 
 class PostTrainingQuantization(PostTrainingAlgorithm):
@@ -85,45 +99,55 @@ class PostTrainingQuantization(PostTrainingAlgorithm):
 
     def __init__(self, quantization_parameters: PostTrainingQuantizationParameters):
         super().__init__()
-        self.per_channel_weights = quantization_parameters.per_channel_weights
-        self.symmetric_weights = quantization_parameters.symmetric_weights
-        self.symmetric_activations = quantization_parameters.symmetric_activations
+        self.weight_quantizer_config = quantization_parameters.weight_quantizer_config
+        self.activation_quantizer_config = quantization_parameters.activation_quantizer_config
         self.ignored_scopes = quantization_parameters.ignored_scopes
         self.quantize_inputs = quantization_parameters.quantize_inputs
         self.quantize_outputs = quantization_parameters.quantize_outputs
         self.target_device = quantization_parameters.target_device
 
+        self.transformation_algorithms_to_created = quantization_parameters.transformation_algorithms
+        self.transformation_algorithms = []
+
         self.initialization_algorithms_to_created = quantization_parameters.initialization_algorithms
-        self.initialization_algorithms = PriorityQueue()
+        self.initialization_algorithms = []
 
     def apply(self, compressed_model: CompressedModel, dataloader: DataLoader, engine: Engine) -> CompressedModel:
-        model_analyzer = self._create_model_analyzer(compressed_model)
         model_transformer = self._create_model_transformer(compressed_model)
-
+        statistics_collector = self._create_statistics_collector(compressed_model, engine)
         for algorithm in self.initialization_algorithms_to_created:
             algorithm = self._create_initialization_algorithm(compressed_model, dataloader, engine, algorithm)
-            priority = self._define_algorithm_priority(algorithm)
-            self._set_algorithm_priority(algorithm, priority)
-            self.initialization_algorithms.add(algorithm)
+            self.initialization_algorithms.append(algorithm)
 
-        quantization_transformations = model_analyzer.get_quantization_transformations(compressed_model)
-        compressed_model = model_transformer.transform(compressed_model, quantization_transformations)
+        # Algorithms to prepare FP32 model for initialiation algorithms, e.g. ChannelAlignment
+        # while not self.transfomration_algorithms.is_empty():
+        #     algorithm = self.transfomration_algorithms.pop()
+        #     algorithm.run(compressed_model)
 
-        while not self.initialization_algorithms.is_empty():
-            initialization_algorithm = self.initialization_algorithms.pop()
-            compressed_model = initialization_algorithm.apply(compressed_model, model_transformer=model_transformer)
+        layers_to_collect_statistics = {}  # Dict[layer_name: agregation_func]
+        for initialization_algorithm in self.initialization_algorithms:
+            layers_to_collect_statistics = merge_two_dicts(layers_to_collect_statistics,
+                                                           initialization_algorithm.get_layers_for_statistics())
+
+        statistics_collector.collect_statistics(layers_to_collect_statistics, 10)
+
+        for initialization_algorithm in self.initialization_algorithms:
+            transformation_layout = initialization_algorithm.get_transformations_layout(compressed_model,
+                                                                                        statistics_collector)
+
+        model_transformer.transform(compressed_model, transformation_layout)
 
         return compressed_model
-
-    def _create_model_analyzer(self, compressed_model: CompressedModel) -> ModelAnalyzer:
-        if define_the_backend(compressed_model.original_model) == Backend.ONNX:
-            from nncf.experimental.onnx.graph.model_analyzer import ONNXModelAnalyzer
-            return ONNXModelAnalyzer()
 
     def _create_model_transformer(self, compressed_model: CompressedModel) -> ModelTransformer:
         if define_the_backend(compressed_model.original_model) == Backend.ONNX:
             from nncf.experimental.onnx.graph.model_transformer import ONNXModelTransformer
             return ONNXModelTransformer(compressed_model)
+
+    def _create_statistics_collector(self, compressed_model: CompressedModel, engine: Engine):
+        if define_the_backend(compressed_model.original_model) == Backend.ONNX:
+            from nncf.experimental.onnx.initialization.statistics_collector import ONNXStatisticsCollector
+            return ONNXStatisticsCollector(compressed_model, engine)
 
     def _create_initialization_algorithm(self, compressed_model: CompressedModel,
                                          dataloader: DataLoader, engine: Engine,
@@ -133,26 +157,8 @@ class PostTrainingQuantization(PostTrainingAlgorithm):
         """
         if define_the_backend(compressed_model.original_model) == Backend.ONNX:
             if algorithm is QuantizerRangeFinderAlgorithm:
-                return ONNXQuantizerRangeFinderAlgorithm(engine, dataloader)
+                return ONNXQuantizerRangeFinderAlgorithm(compressed_model, engine)
             if algorithm is BatchNormAdaptationAlgorithm:
                 return ONNXBatchNormAdaptationAlgorithm()
             if algorithm is BiasCorrectionAlgorithm:
                 return ONNXBiasCorrectionAlgorithm()
-
-    def _set_algorithm_priority(self, algorithm: InitializationAlgorithm,
-                                priority: InitializationAlgorithmPriority) -> None:
-        algorithm.priority = priority
-
-    def _define_algorithm_priority(self, algorithm: InitializationAlgorithm) -> InitializationAlgorithmPriority:
-        """
-        Defines the priority of the algorithm based on its instance.
-        """
-        if isinstance(algorithm, QuantizerRangeFinderAlgorithm):
-            return InitializationAlgorithmPriority.QUANTIZER_RANGE_FIND
-        if isinstance(algorithm, BatchNormAdaptationAlgorithm):
-            return InitializationAlgorithmPriority.BATCH_NORM_ADAPTATION
-        if isinstance(algorithm, BiasCorrectionAlgorithm):
-            return InitializationAlgorithmPriority.BIAS_CORRECTION
-
-# Не хватает объяснения нужности новых сущностей (бенефиты от них)
-#

@@ -155,6 +155,3 @@ class ONNXGraph:
                 elem_type = tensor.type.tensor_type.elem_type
                 return onnx.TensorProto.DataType.Name(elem_type)
         raise RuntimeError('There is no edge with the name {}'.format(edge_name))
-
-    def update_quantizer(self, quantizer_name, scale, zero_point):
-        pass

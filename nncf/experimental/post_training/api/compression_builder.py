@@ -80,10 +80,10 @@ class CompressionBuilder:
         elif define_the_backend(model) == Backend.OPENVINO:
             pass
 
-    def _create_engine(self, model: ModelType) -> Engine:
+    def _create_engine(self, model: ModelType, dataloader: DataLoader) -> Engine:
         if define_the_backend(model) == Backend.ONNX:
             from nncf.experimental.onnx.engine import ONNXEngine
-            return ONNXEngine()
+            return ONNXEngine(dataloader)
         elif define_the_backend(model) == Backend.PYTORCH:
             pass
         elif define_the_backend(model) == Backend.TENSORFLOW:
@@ -96,7 +96,7 @@ class CompressionBuilder:
         Apply compression algorithms to the 'model'.
         """
         if engine is None:
-            engine = self._create_engine(model)
+            engine = self._create_engine(model, dataloader)
         compressed_model = self._create_compressed_model(model, dataloader, engine)
         while not self.algorithms.is_empty():
             algorithm = self.algorithms.pop()

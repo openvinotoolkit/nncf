@@ -15,4 +15,9 @@ from nncf.experimental.post_training.initialization.algorithm import Initializat
 
 
 class QuantizerRangeFinderAlgorithm(InitializationAlgorithm):
-    pass
+    """
+
+    """
+
+    def get_layers_for_statistics(self):
+        pass

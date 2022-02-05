@@ -16,4 +16,4 @@ class ONNXCompressedModel(CompressedModel):
         return GraphConverter.create_nncf_graph(self.original_model)
 
     def export(self, path: str):
-        onnx.save_model(self.transformed_model, path)
+        onnx.save_model(self.compressed_model, path)

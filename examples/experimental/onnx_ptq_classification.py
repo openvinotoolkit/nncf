@@ -13,9 +13,15 @@ from nncf.experimental.post_training.quantization.algorithm import DEFAULT
 from nncf.experimental.post_training.api.dataloader import DataLoader
 
 
-class MyDataLoader(TorchDataLoader):
+class MyDataLoader(DataLoader):
     def __init__(self, dataset, **attrs):
-        TorchDataLoader.__init__(dataset=dataset, **attrs)
+        self.dataset = dataset
+
+    def __getitem__(self, item):
+        return torch.unsqueeze(self.dataset[item][0], 0), self.dataset[item][1]
+
+    def __len__(self):
+        return len(self.dataset)
 
 
 def create_train_dataloader(dataset_dir: Union[str, bytes, os.PathLike], input_shape: List[int],
@@ -31,10 +37,7 @@ def create_train_dataloader(dataset_dir: Union[str, bytes, os.PathLike], input_s
         normalize,
     ])
     train_dataset = torchvision.datasets.ImageFolder(os.path.join(dataset_dir, 'train'), transform)
-    train_loader = torch.utils.data.DataLoader(
-        train_dataset, batch_size=batch_size, shuffle=True,
-        num_workers=num_workers)
-    # train_loader = MyDataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers)
+    train_loader = MyDataLoader(train_dataset, batch_size=batch_size, num_workers=num_workers)
     return train_loader
 
 

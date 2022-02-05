@@ -30,7 +30,8 @@ class CompressedModel(ABC):
 
     def __init__(self, model: ModelType, dataloader: DataLoader, engine: Engine):
         self.original_model = model
-        self.compressed_model = None
+        self.compressed_model = None  # Final compressed model. This model will be exported.
+        self.transformed_model = None  # Model with applied transformtaions
         self.nncf_graph = self.build_nncf_graph(dataloader, engine)
         self.transformations = []
 

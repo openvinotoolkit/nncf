@@ -11,49 +11,29 @@
  limitations under the License.
 """
 
+from typing import Union
+
 from nncf.experimental.post_training.initialization.quantizer_range_finder import QuantizerRangeFinderAlgorithm
-from nncf.experimental.post_training.compressed_model import CompressedModel
 
-from skl2onnx.helpers.onnx_helper import select_model_inputs_outputs
-from skl2onnx.helpers.onnx_helper import enumerate_model_node_outputs
-import onnx
-import onnxruntime as rt
-import tempfile
 import numpy as np
-import math
 
+from nncf.experimental.post_training.compressed_model import CompressedModel
+from nncf.experimental.onnx.graph.onnx_graph import ONNXGraph
 
-class StatisticsCollector:
-    def __init__(self):
-        self.tensors = []
-        self.global_min = []
-        self.global_max = []
-        self.min_sum = 0
-        self.max_sum = 0
-        self.min_avg = 0
-        self.max_avg = 0
-        self.counter = 0
+from nncf.experimental.onnx.graph.metatypes.onnx_ops import GENERAL_WEIGHT_LAYER_METATYPES
+from nncf.experimental.onnx.quantization.default_quantization import DEFAULT_ONNX_QUANT_TRAIT_TO_OP_DICT
 
-    def update(self, tensors):
-        if len(self.global_min) == 0:
-            self.global_min = [math.inf] * len(tensors)
-            self.global_max = [-math.inf] * len(tensors)
-        for i, tensor in enumerate(tensors):
-            np_tensor = np.array(tensor)
-            min_val = np.min(np_tensor)
-            max_val = np.max(np_tensor)
-            self.global_min[i] = min(self.global_min[i], min_val)
-            self.global_max[i] = max(self.global_max[i], max_val)
+from nncf.experimental.onnx.graph.transformations.commands import ONNXQuantizerInsertionCommand
+from nncf.experimental.onnx.graph.transformations.layout import ONNXTransformationLayout
 
-        # min_val = np.min(tensor)
-        # max_val = np.max(tensor)
-        # self.min_sum += min_val
-        # self.max_sum += max_val
-        # self.counter += 1
-        # self.min_avg = self.min_sum / self.counter
-        # self.max_avg = self.max_sum / self.counter
-        # self.global_min = min(self.global_min, min_val)
-        # self.global_max = max(self.global_max, max_val)
+from nncf.common.quantization.quantizer_propagation.solver import QuantizerPropagationSolver
+from nncf.common.quantization.structs import QuantizableWeightedLayerNode
+from nncf.common.quantization.structs import QuantizerConfig
+from nncf.common.insertion_point_graph import InsertionPointGraph
+
+from nncf.experimental.onnx.hardware.fused_patterns import ONNX_HW_FUSED_PATTERNS
+
+QUANTIZATION_LAYER_METATYPES = GENERAL_WEIGHT_LAYER_METATYPES
 
 
 class ONNXQuantizerRangeFinderAlgorithm(QuantizerRangeFinderAlgorithm):
@@ -61,30 +41,97 @@ class ONNXQuantizerRangeFinderAlgorithm(QuantizerRangeFinderAlgorithm):
     The base class for all post-training quantization initialization algorithms.
     """
 
-    def __init__(self, dataloader, engine, **kwargs):
-        super().__init__(engine, dataloader)
-        self.model_transformer = kwargs['model_transformer']
+    def __init__(self, compressed_model: CompressedModel, engine):
+        super().__init__(compressed_model, engine)
+        self._weight_quantizers = []
+        self._activation_quantizers = []
 
-    def apply(self, model: CompressedModel):
-        num_iters = 3
-        statistics_collector = StatisticsCollector()
-        onnx_model = model.original_model
-        activations_outputs = []
-        for transformation in model.transformations:
-            if not transformation.is_weights:
-                activations_outputs.append(transformation.target_point)
+    def _get_quantizer_setup(self, compressed_model: CompressedModel):
+        nncf_graph = compressed_model.nncf_graph
 
-        model_output = list(enumerate_model_node_outputs(onnx_model))[-1]
-        model_with_intermediate_outputs = select_model_inputs_outputs(onnx_model,
-                                                                      outputs=[*activations_outputs, model_output])
-        with tempfile.NamedTemporaryFile() as temporary_model:
-            onnx.save(model_with_intermediate_outputs, temporary_model.name)
-            self.engine.set_model(temporary_model.name)
-            for i, (input_, *other) in enumerate(self.dataloader):
-                if i == num_iters:
-                    break
-                outputs = self.engine.infer_model(input_)
-                statistics_collector.update(outputs)
+        ip_graph = InsertionPointGraph(nncf_graph)
+        pattern = ONNX_HW_FUSED_PATTERNS.get_full_pattern_graph()
+        ip_graph = ip_graph.get_ip_graph_with_merged_hw_optimized_operations(pattern)
 
+        weight_nodes = nncf_graph.get_nodes_by_metatypes(QUANTIZATION_LAYER_METATYPES)
+        quantizable_layer_nodes = [QuantizableWeightedLayerNode(weight_node, [QuantizerConfig()]) for weight_node in
+                                   weight_nodes]
+        solver = QuantizerPropagationSolver(ignored_scopes=None,
+                                            default_trait_to_metatype_map=DEFAULT_ONNX_QUANT_TRAIT_TO_OP_DICT,
+                                            quantizable_layer_nodes=quantizable_layer_nodes)
 
-        self.model_transformer._apply_transformation()
+        quantization_proposal = solver.run_on_ip_graph(ip_graph)
+        multi_config_setup = quantization_proposal.quantizer_setup
+        single_config_setup = multi_config_setup.select_first_qconfig_for_each_point()
+        finalized_proposal = quantization_proposal.finalize(single_config_setup)
+        final_setup = solver.get_final_quantizer_setup(finalized_proposal)
+        return final_setup
+
+    def get_layers_for_statistics(self):
+        quantizer_setup = self._get_quantizer_setup(self.compressed_model)
+        onnx_graph = ONNXGraph(self.compressed_model.original_model)
+        for qp_id, qp in quantizer_setup.quantization_points.items():
+            if qp.is_weight_quantization_point():
+                weight_initializer_name = onnx_graph.find_weight_input_in_module(qp.insertion_point.target_node_name)
+                self._weight_quantizers.append(weight_initializer_name)
+            else:
+                assert qp.is_activation_quantization_point()
+                if 'model_input' not in qp.insertion_point.target_node_name:
+                    node_name = qp.insertion_point.target_node_name
+                    outputs = onnx_graph.get_node_edges(node_name)['output'][0]
+                else:
+                    node_name = qp.directly_quantized_operator_node_names[0]
+                    outputs = onnx_graph.get_node_edges(node_name)['input'][0]
+                self._activation_quantizers.append(outputs)
+
+        output = {}
+        for activation_quantizer in self._activation_quantizers:
+            output[activation_quantizer] = self._get_collector_func(activation_quantizer)
+
+        return output
+
+    def _get_collector_func(self, activation_quantizer):
+        return 'min_max'
+
+    def get_transformations_layout(self, compressed_model, collector):
+        transformations_layout = ONNXTransformationLayout()
+        onnx_graph = ONNXGraph(self.compressed_model.original_model)
+        for weight_quantizer in self._weight_quantizers:
+            weight_tensor = onnx_graph.get_initializers_value(weight_quantizer)
+            parameters = self._calculate_quantizer_parameters(weight_tensor, 8)
+            command = ONNXQuantizerInsertionCommand(weight_quantizer, parameters)
+            transformations_layout.register(command)
+        for activation_quantizer in self._activation_quantizers:
+            scale = self.calculate_scale_level(collector.statistics[activation_quantizer].max,
+                                               collector.statistics[activation_quantizer].min,
+                                               8,
+                                               False)
+            zero_points = np.zeros_like(scale)
+            parameters = [scale, zero_points]
+
+            command = ONNXQuantizerInsertionCommand(activation_quantizer, parameters)
+            transformations_layout.register(command)
+
+        return transformations_layout
+
+    def calculate_scale_level(self,
+                              max_val: Union[float, np.ndarray],
+                              min_val: Union[float, np.ndarray],
+                              num_bits: int,
+                              symmetric: bool):
+        # Always full range
+        if symmetric:
+            input_abs_max = np.maximum(np.abs(max_val), np.abs(min_val))
+            return input_abs_max / ((2 ** num_bits - 1) / 2)
+        return (max_val - min_val) / 2 ** num_bits
+
+    def _calculate_quantizer_parameters(self, weight_tensor, num_bits: int, per_channel: bool = True):
+        if per_channel:
+            scales, zero_points = [], []
+            for single_filter in weight_tensor:
+                input_high = np.max(single_filter)
+                input_low = np.min(single_filter)
+                scales.append(self.calculate_scale_level(input_high, input_low, num_bits, symmetric=True))
+                zero_points.append(0)
+            return np.array(scales), np.array(zero_points)
+        return self.calculate_scale_level(np.max(weight_tensor), np.min(weight_tensor), num_bits, symmetric=False)

@@ -11,6 +11,9 @@
  limitations under the License.
 """
 
+from abc import ABC
+from abc import abstractmethod
+
 from nncf.experimental.post_training.compressed_model import CompressedModel
 
 
@@ -19,10 +22,15 @@ class InitializationAlgorithm:
     The base class for all post-training quantization initialization algorithms.
     """
 
-    def __init__(self, dataloader, engine, **kwargs):
+    def __init__(self, compressed_model: CompressedModel, engine, **kwargs):
+        self.compressed_model = compressed_model
         self.engine = engine
-        self.dataloader = dataloader
         self.priority = None
 
+    @abstractmethod
     def apply(self, model: CompressedModel):
+        pass
+
+    @abstractmethod
+    def get_layers_for_statistics(self):
         pass

@@ -1,3 +1,7 @@
+from typing import List
+
+import onnx
+
 from nncf.experimental.post_training.graph.model_analyzer import ModelAnalyzer
 from nncf.experimental.post_training.compressed_model import CompressedModel
 from nncf.experimental.onnx.graph.onnx_graph import ONNXGraph
@@ -5,7 +9,7 @@ from nncf.experimental.onnx.graph.onnx_graph import ONNXGraph
 from nncf.experimental.onnx.graph.metatypes.onnx_ops import GENERAL_WEIGHT_LAYER_METATYPES
 from nncf.experimental.onnx.quantization.default_quantization import DEFAULT_ONNX_QUANT_TRAIT_TO_OP_DICT
 
-from nncf.experimental.onnx.graph.transformations.commands import ONNXInsertionCommand
+from nncf.experimental.onnx.graph.transformations.commands import ONNXQuantizerInsertionCommand
 from nncf.experimental.onnx.graph.transformations.layout import ONNXTransformationLayout
 
 from nncf.common.quantization.quantizer_propagation.solver import QuantizerPropagationSolver
@@ -27,19 +31,22 @@ class ONNXModelAnalyzer(ModelAnalyzer):
         for qp_id, qp in quantizer_setup.quantization_points.items():
             if qp.is_weight_quantization_point():
                 weight_initializer_name = onnx_graph.find_weight_input_in_module(qp.insertion_point.target_node_name)
-                weight_tensor = onnx_graph.get_initializers_value(weight_initializer_name)
-                transformation_layout.register(ONNXInsertionCommand(weight_initializer_name, weight_tensor, True))
+                command = ONNXQuantizerInsertionCommand(weight_initializer_name, True)
+
             else:
                 assert qp.is_activation_quantization_point()
-                if not 'model_input' in qp.insertion_point.target_node_name:
+                if 'model_input' not in qp.insertion_point.target_node_name:
                     node_name = qp.insertion_point.target_node_name
                     outputs = onnx_graph.get_node_edges(node_name)['output']
                 else:
                     node_name = qp.directly_quantized_operator_node_names[0]
                     outputs = onnx_graph.get_node_edges(node_name)['input']
-                import numpy as np
-                transformation_layout.register(ONNXInsertionCommand(outputs[0], np.random.random((10, 10)), False))
+                command = ONNXQuantizerInsertionCommand(outputs[0], False)
+            transformation_layout.register(command)
         return transformation_layout
+
+    def get_sparsity_transformations(self, compressed_model: CompressedModel):
+        pass
 
     def _get_quantizer_setup(self, compressed_model: CompressedModel):
         nncf_graph = compressed_model.nncf_graph
@@ -61,6 +68,3 @@ class ONNXModelAnalyzer(ModelAnalyzer):
         finalized_proposal = quantization_proposal.finalize(single_config_setup)
         final_setup = solver.get_final_quantizer_setup(finalized_proposal)
         return final_setup
-
-    def get_sparsity_transformations(self, compressed_model: CompressedModel):
-        pass
