@@ -20,7 +20,7 @@ from nncf.common.exporter import Exporter
 from nncf.torch.dynamic_graph.graph_tracer import create_dummy_forward_fn
 from nncf.torch.dynamic_graph.graph_tracer import create_mock_tensor
 from nncf.torch.nested_objects_traversal import objwalk
-from nncf.torch.utils import is_tensor
+from nncf.torch.utils import is_tensor, get_model_device
 
 
 def generate_input_names_list(num_inputs: int):
@@ -81,7 +81,7 @@ class PTExporter(Exporter):
 
         :param save_path: The path where the model will be saved.
         """
-        original_device = getattr(self._model, "device", None)
+        original_device = get_model_device(self._model)
         model = self._model.eval().cpu()
         input_tensor_list = []
         for info in self._model.input_infos:
@@ -123,5 +123,4 @@ class PTExporter(Exporter):
                               training=True)
             model.enable_dynamic_graph_building()
         model.forward = original_forward
-        if original_device is not None:
-            model.to(original_device)
+        model.to(original_device)
