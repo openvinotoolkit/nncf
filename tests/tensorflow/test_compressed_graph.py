@@ -212,7 +212,7 @@ SKIP_MAP = {
         'nasnet_mobile': pytest.mark.skip(reason='gitlab issue #18'),
         'xception': pytest.mark.skip(reason='gitlab issue #28'),
         'mask_rcnn': pytest.mark.skip(reason='ticket #50605'),
-        'resnet50v2': pytest.mark.skip(resason='Several masks on one weight'),
+        'resnet50v2': pytest.mark.skip(reason='Several masks on one weight'),
         'mobilenet_v2_slim': pytest.mark.skip(reason='ticket #46349')
     },
     'rb_sparsity': {
