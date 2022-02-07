@@ -380,7 +380,7 @@ def run(config):
         logger.info("Saved to {}".format(save_path))
 
     # Due to https://github.com/tensorflow/tensorflow/issues/50487
-    # pylint: disable=protected-access
+    # pylint: disable=protected-access, too-many-statements
     atexit.register(strategy._extended._collective_ops._pool.close)
 
 
