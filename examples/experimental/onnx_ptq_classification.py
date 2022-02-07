@@ -7,9 +7,6 @@ from torch.utils.data.dataloader import DataLoader as TorchDataLoader
 import torchvision
 from torchvision import transforms
 
-from nncf.experimental.post_training.api.compression_builder import CompressionBuilder
-from nncf.experimental.post_training.quantization.algorithm import PostTrainingQuantization
-from nncf.experimental.post_training.quantization.algorithm import DEFAULT
 from nncf.experimental.post_training.api.dataloader import DataLoader
 
 
@@ -41,14 +38,19 @@ def create_train_dataloader(dataset_dir: Union[str, bytes, os.PathLike], input_s
     return train_loader
 
 
-fp32_model_onnx_path = '/home/aleksei/nncf_work/onnx_quantization/mobilenet_v2.onnx'
-int8_model_onnx_path = '/home/aleksei/tmp/onnx/onnx_ptq_api/transformed.onnx'
+
 dataset_dir = '/home/aleksei/datasetsimagenet'
 input_shape = [1, 3, 224, 224]
 
+from nncf.experimental.post_training.api.compression_builder import CompressionBuilder
+from nncf.experimental.post_training.quantization.algorithm import PostTrainingQuantization
+from nncf.experimental.post_training.quantization.algorithm import DEFAULT
+
+fp32_model_onnx_path = '/home/aleksei/nncf_work/onnx_quantization/mobilenet_v2.onnx'
+int8_model_onnx_path = '/home/aleksei/tmp/onnx/onnx_ptq_api/transformed.onnx'
+
 # Step 1: Initialize the data loader.
 dataloader = create_train_dataloader(dataset_dir=dataset_dir, input_shape=input_shape)
-
 # Step 2: Create a pipeline of compression algorithms.
 builder = CompressionBuilder()
 quantization = PostTrainingQuantization(DEFAULT)
@@ -57,5 +59,3 @@ builder.add_algorithm(quantization)
 compressed_model = builder.apply(fp32_model_onnx_path, dataloader)
 # Step 4: Export the compressed model.
 compressed_model.export(int8_model_onnx_path)
-
-# samples for many backends

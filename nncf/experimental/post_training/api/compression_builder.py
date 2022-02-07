@@ -100,5 +100,5 @@ class CompressionBuilder:
         compressed_model = self._create_compressed_model(model, dataloader, engine)
         while not self.algorithms.is_empty():
             algorithm = self.algorithms.pop()
-            compressed_model = algorithm.apply(compressed_model, dataloader, engine)
+            compressed_model = algorithm.apply(compressed_model, engine)
         return compressed_model

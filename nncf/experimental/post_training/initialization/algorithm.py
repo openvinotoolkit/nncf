@@ -11,26 +11,35 @@
  limitations under the License.
 """
 
+from typing import Dict
+from typing import Callable
+
 from abc import ABC
 from abc import abstractmethod
 
 from nncf.experimental.post_training.compressed_model import CompressedModel
+from nncf.experimental.post_training.api.engine import Engine
+from nncf.experimental.post_training.initialization.statistics_collector import StatisticsCollector
+from nncf.common.graph.transformations.layout import TransformationCommand
 
 
-class InitializationAlgorithm:
+class InitializationAlgorithm(ABC):
     """
     The base class for all post-training quantization initialization algorithms.
     """
 
-    def __init__(self, compressed_model: CompressedModel, engine, **kwargs):
+    def __init__(self, compressed_model: CompressedModel, engine: Engine, **kwargs):
         self.compressed_model = compressed_model
         self.engine = engine
-        self.priority = None
 
     @abstractmethod
-    def apply(self, model: CompressedModel):
-        pass
+    def get_layers_for_statistics(self) -> Dict[str, Callable]:
+        """
+
+        """
 
     @abstractmethod
-    def get_layers_for_statistics(self):
-        pass
+    def get_transformation_commands(self, collector: StatisticsCollector) -> TransformationCommand:
+        """
+
+        """

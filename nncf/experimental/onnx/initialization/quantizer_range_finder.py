@@ -12,6 +12,9 @@
 """
 
 from typing import Union
+from typing import Dict
+from typing import Callable
+from typing import List
 
 from nncf.experimental.post_training.initialization.quantizer_range_finder import QuantizerRangeFinderAlgorithm
 
@@ -24,6 +27,7 @@ from nncf.experimental.onnx.graph.metatypes.onnx_ops import GENERAL_WEIGHT_LAYER
 from nncf.experimental.onnx.quantization.default_quantization import DEFAULT_ONNX_QUANT_TRAIT_TO_OP_DICT
 
 from nncf.experimental.onnx.graph.transformations.commands import ONNXQuantizerInsertionCommand
+from nncf.experimental.onnx.graph.transformations.commands import ONNXInsertionCommand
 from nncf.experimental.onnx.graph.transformations.layout import ONNXTransformationLayout
 
 from nncf.common.quantization.quantizer_propagation.solver import QuantizerPropagationSolver
@@ -46,28 +50,7 @@ class ONNXQuantizerRangeFinderAlgorithm(QuantizerRangeFinderAlgorithm):
         self._weight_quantizers = []
         self._activation_quantizers = []
 
-    def _get_quantizer_setup(self, compressed_model: CompressedModel):
-        nncf_graph = compressed_model.nncf_graph
-
-        ip_graph = InsertionPointGraph(nncf_graph)
-        pattern = ONNX_HW_FUSED_PATTERNS.get_full_pattern_graph()
-        ip_graph = ip_graph.get_ip_graph_with_merged_hw_optimized_operations(pattern)
-
-        weight_nodes = nncf_graph.get_nodes_by_metatypes(QUANTIZATION_LAYER_METATYPES)
-        quantizable_layer_nodes = [QuantizableWeightedLayerNode(weight_node, [QuantizerConfig()]) for weight_node in
-                                   weight_nodes]
-        solver = QuantizerPropagationSolver(ignored_scopes=None,
-                                            default_trait_to_metatype_map=DEFAULT_ONNX_QUANT_TRAIT_TO_OP_DICT,
-                                            quantizable_layer_nodes=quantizable_layer_nodes)
-
-        quantization_proposal = solver.run_on_ip_graph(ip_graph)
-        multi_config_setup = quantization_proposal.quantizer_setup
-        single_config_setup = multi_config_setup.select_first_qconfig_for_each_point()
-        finalized_proposal = quantization_proposal.finalize(single_config_setup)
-        final_setup = solver.get_final_quantizer_setup(finalized_proposal)
-        return final_setup
-
-    def get_layers_for_statistics(self):
+    def get_layers_for_statistics(self) -> Dict[str, Callable]:
         quantizer_setup = self._get_quantizer_setup(self.compressed_model)
         onnx_graph = ONNXGraph(self.compressed_model.original_model)
         for qp_id, qp in quantizer_setup.quantization_points.items():
@@ -90,40 +73,61 @@ class ONNXQuantizerRangeFinderAlgorithm(QuantizerRangeFinderAlgorithm):
 
         return output
 
-    def _get_collector_func(self, activation_quantizer):
-        return 'min_max'
-
-    def get_transformations_layout(self, compressed_model, collector):
-        transformations_layout = ONNXTransformationLayout()
+    def get_transformation_commands(self, collector) -> List[ONNXInsertionCommand]:
+        transformation_commands = []
         onnx_graph = ONNXGraph(self.compressed_model.original_model)
         for weight_quantizer in self._weight_quantizers:
             weight_tensor = onnx_graph.get_initializers_value(weight_quantizer)
             parameters = self._calculate_quantizer_parameters(weight_tensor, 8)
             command = ONNXQuantizerInsertionCommand(weight_quantizer, parameters)
-            transformations_layout.register(command)
+            transformation_commands.append(command)
         for activation_quantizer in self._activation_quantizers:
-            scale = self.calculate_scale_level(collector.statistics[activation_quantizer].max,
-                                               collector.statistics[activation_quantizer].min,
-                                               8,
-                                               False)
+            scale = self._calculate_scale_level(collector.statistics[activation_quantizer].max,
+                                                collector.statistics[activation_quantizer].min,
+                                                8,
+                                                False)
             zero_points = np.zeros_like(scale)
             parameters = [scale, zero_points]
 
             command = ONNXQuantizerInsertionCommand(activation_quantizer, parameters)
-            transformations_layout.register(command)
+            transformation_commands.append(command)
 
-        return transformations_layout
+        return transformation_commands
 
-    def calculate_scale_level(self,
-                              max_val: Union[float, np.ndarray],
-                              min_val: Union[float, np.ndarray],
-                              num_bits: int,
-                              symmetric: bool):
+    def _get_quantizer_setup(self, compressed_model: CompressedModel):
+        nncf_graph = compressed_model.nncf_graph
+
+        ip_graph = InsertionPointGraph(nncf_graph)
+        pattern = ONNX_HW_FUSED_PATTERNS.get_full_pattern_graph()
+        ip_graph = ip_graph.get_ip_graph_with_merged_hw_optimized_operations(pattern)
+
+        weight_nodes = nncf_graph.get_nodes_by_metatypes(QUANTIZATION_LAYER_METATYPES)
+        quantizable_layer_nodes = [QuantizableWeightedLayerNode(weight_node, [QuantizerConfig()]) for weight_node in
+                                   weight_nodes]
+        solver = QuantizerPropagationSolver(ignored_scopes=None,
+                                            default_trait_to_metatype_map=DEFAULT_ONNX_QUANT_TRAIT_TO_OP_DICT,
+                                            quantizable_layer_nodes=quantizable_layer_nodes)
+
+        quantization_proposal = solver.run_on_ip_graph(ip_graph)
+        multi_config_setup = quantization_proposal.quantizer_setup
+        single_config_setup = multi_config_setup.select_first_qconfig_for_each_point()
+        finalized_proposal = quantization_proposal.finalize(single_config_setup)
+        final_setup = solver.get_final_quantizer_setup(finalized_proposal)
+        return final_setup
+
+    def _calculate_scale_level(self,
+                               max_val: Union[float, np.ndarray],
+                               min_val: Union[float, np.ndarray],
+                               num_bits: int,
+                               symmetric: bool):
         # Always full range
         if symmetric:
             input_abs_max = np.maximum(np.abs(max_val), np.abs(min_val))
             return input_abs_max / ((2 ** num_bits - 1) / 2)
         return (max_val - min_val) / 2 ** num_bits
+
+    def _get_collector_func(self, activation_quantizer):
+        return 'min_max'
 
     def _calculate_quantizer_parameters(self, weight_tensor, num_bits: int, per_channel: bool = True):
         if per_channel:
@@ -131,7 +135,7 @@ class ONNXQuantizerRangeFinderAlgorithm(QuantizerRangeFinderAlgorithm):
             for single_filter in weight_tensor:
                 input_high = np.max(single_filter)
                 input_low = np.min(single_filter)
-                scales.append(self.calculate_scale_level(input_high, input_low, num_bits, symmetric=True))
+                scales.append(self._calculate_scale_level(input_high, input_low, num_bits, symmetric=True))
                 zero_points.append(0)
             return np.array(scales), np.array(zero_points)
-        return self.calculate_scale_level(np.max(weight_tensor), np.min(weight_tensor), num_bits, symmetric=False)
+        return self._calculate_scale_level(np.max(weight_tensor), np.min(weight_tensor), num_bits, symmetric=False)

@@ -5,6 +5,8 @@ import tempfile
 import numpy as np
 import math
 
+from nncf.experimental.post_training.initialization.statistics_collector import StatisticsCollector
+
 
 class Statistics:
     def __init__(self, _min, _max):
@@ -12,12 +14,9 @@ class Statistics:
         self.max = max(-math.inf, _max)
 
 
-class ONNXStatisticsCollector:
+class ONNXStatisticsCollector(StatisticsCollector):
     def __init__(self, compressed_model, engine):
-        self.compressed_model = compressed_model
-        self.engine = engine
-        self.is_calculate_metric = False
-        self.statistics = {}
+        super().__init__(compressed_model, engine)
 
     def collect_statistics(self, layers_to_collect_statistics, num_iters):
         onnx_model = self.compressed_model.original_model
@@ -30,7 +29,7 @@ class ONNXStatisticsCollector:
             onnx.save(model_with_intermediate_outputs, temporary_model.name)
             self.engine.set_model(temporary_model.name)
             for i in range(num_iters):
-                output, target = self.engine.infer_model(i)
+                output, target = self.engine.infer(i)
                 # output should be topologically sorted
                 self._agregate_statistics(output, layers_to_collect_statistics)
                 if self.is_calculate_metric:

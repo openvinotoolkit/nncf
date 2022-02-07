@@ -17,11 +17,11 @@ from typing import Type
 from nncf.common.utils.ordered_enum import OrderedEnum
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizationMode
+from nncf.common.graph.transformations.layout import TransformationLayout
 
 from nncf.experimental.post_training.backend import define_the_backend
 from nncf.experimental.post_training.backend import Backend
 from nncf.experimental.post_training.api.engine import Engine
-from nncf.experimental.post_training.api.dataloader import DataLoader
 from nncf.experimental.post_training.graph.model_transformer import ModelTransformer
 from nncf.experimental.post_training.algorithm import PostTrainingAlgorithm
 from nncf.experimental.post_training.compressed_model import CompressedModel
@@ -112,19 +112,19 @@ class PostTrainingQuantization(PostTrainingAlgorithm):
         self.initialization_algorithms_to_created = quantization_parameters.initialization_algorithms
         self.initialization_algorithms = []
 
-    def apply(self, compressed_model: CompressedModel, dataloader: DataLoader, engine: Engine) -> CompressedModel:
+    def apply(self, compressed_model: CompressedModel, engine: Engine) -> CompressedModel:
         model_transformer = self._create_model_transformer(compressed_model)
+        transformation_layout = self._create_transformation_layout(compressed_model)
         statistics_collector = self._create_statistics_collector(compressed_model, engine)
         for algorithm in self.initialization_algorithms_to_created:
-            algorithm = self._create_initialization_algorithm(compressed_model, dataloader, engine, algorithm)
+            algorithm = self._create_initialization_algorithm(compressed_model, engine, algorithm)
             self.initialization_algorithms.append(algorithm)
 
         # Algorithms to prepare FP32 model for initialiation algorithms, e.g. ChannelAlignment
-        # while not self.transfomration_algorithms.is_empty():
-        #     algorithm = self.transfomration_algorithms.pop()
-        #     algorithm.run(compressed_model)
+        for transformation_algorithm in self.transformation_algorithms:
+            transformation_algorithm.run(compressed_model)
 
-        layers_to_collect_statistics = {}  # Dict[layer_name: agregation_func]
+        layers_to_collect_statistics = {}  # Dict[str: Callable]
         for initialization_algorithm in self.initialization_algorithms:
             layers_to_collect_statistics = merge_two_dicts(layers_to_collect_statistics,
                                                            initialization_algorithm.get_layers_for_statistics())
@@ -132,8 +132,9 @@ class PostTrainingQuantization(PostTrainingAlgorithm):
         statistics_collector.collect_statistics(layers_to_collect_statistics, 10)
 
         for initialization_algorithm in self.initialization_algorithms:
-            transformation_layout = initialization_algorithm.get_transformations_layout(compressed_model,
-                                                                                        statistics_collector)
+            transformation_commands = initialization_algorithm.get_transformation_commands(statistics_collector)
+            for transformation_command in transformation_commands:
+                transformation_layout.register(transformation_command)
 
         model_transformer.transform(compressed_model, transformation_layout)
 
@@ -149,12 +150,13 @@ class PostTrainingQuantization(PostTrainingAlgorithm):
             from nncf.experimental.onnx.initialization.statistics_collector import ONNXStatisticsCollector
             return ONNXStatisticsCollector(compressed_model, engine)
 
-    def _create_initialization_algorithm(self, compressed_model: CompressedModel,
-                                         dataloader: DataLoader, engine: Engine,
+    def _create_transformation_layout(self, compressed_model: CompressedModel) -> TransformationLayout:
+        if define_the_backend(compressed_model.original_model) == Backend.ONNX:
+            from nncf.experimental.onnx.graph.transformations.layout import ONNXTransformationLayout
+            return ONNXTransformationLayout()
+
+    def _create_initialization_algorithm(self, compressed_model: CompressedModel, engine: Engine,
                                          algorithm: Type[InitializationAlgorithm]) -> InitializationAlgorithm:
-        """
-        Creates backend-specific CompressedModel instance based on the model.
-        """
         if define_the_backend(compressed_model.original_model) == Backend.ONNX:
             if algorithm is QuantizerRangeFinderAlgorithm:
                 return ONNXQuantizerRangeFinderAlgorithm(compressed_model, engine)

@@ -27,7 +27,7 @@ import numpy as np
 
 class ONNXEngine(Engine):
     def __init__(self, dataloader: DataLoader, sampler: Sampler = None, providers: List[str] = None):
-        self.dataloader = dataloader
+        super().__init__(dataloader)
         if sampler is None:
             # self.sampler = RandomSampler()
             self.sampler = None
@@ -40,12 +40,10 @@ class ONNXEngine(Engine):
         """
         Because ORT must load model from the file, we should provide the path.
         """
-        onnx_model = onnx.load(model)
-        # onnx.checker.check_model(onnx_model)
         self.model = model
         self.sess = rt.InferenceSession(self.model, providers=self.providers)
 
-    def infer_model(self, i: int, shuffle: bool = True) -> Tuple[Dict[str, np.ndarray], np.ndarray]:
+    def infer(self, i: int) -> Tuple[Dict[str, np.ndarray], np.ndarray]:
         # feed Dict TF
         output = {}
         _input, target = self.dataloader[i]
