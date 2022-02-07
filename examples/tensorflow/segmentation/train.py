@@ -296,6 +296,7 @@ def run_train(config):
     logger.info(statistics.to_str())
 
     # Due to https://github.com/tensorflow/tensorflow/issues/50487
+    # pylint: disable=protected-access
     atexit.register(strategy._extended._collective_ops._pool.close)
 
 

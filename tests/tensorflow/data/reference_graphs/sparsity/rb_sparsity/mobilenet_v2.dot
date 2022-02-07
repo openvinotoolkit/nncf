@@ -1,5 +1,5 @@
 strict digraph  {
-self [op=Placeholder];
+args_0 [op=Placeholder];
 "mobilenetv2_1.00_96/Conv1/Sigmoid/ReadVariableOp/resource" [op=Placeholder];
 "mobilenetv2_1.00_96/Conv1/Sigmoid/ReadVariableOp" [op=ReadVariableOp];
 "mobilenetv2_1.00_96/Conv1/Sigmoid" [op=Sigmoid];
@@ -986,7 +986,7 @@ self [op=Placeholder];
 "mobilenetv2_1.00_96/predictions/BiasAdd" [op=BiasAdd];
 "mobilenetv2_1.00_96/predictions/Softmax" [op=Softmax];
 Identity [op=Identity];
-self -> "mobilenetv2_1.00_96/Conv1/Conv2D";
+args_0 -> "mobilenetv2_1.00_96/Conv1/Conv2D";
 "mobilenetv2_1.00_96/Conv1/Sigmoid/ReadVariableOp/resource" -> "mobilenetv2_1.00_96/Conv1/Sigmoid/ReadVariableOp";
 "mobilenetv2_1.00_96/Conv1/Sigmoid/ReadVariableOp" -> "mobilenetv2_1.00_96/Conv1/Sigmoid";
 "mobilenetv2_1.00_96/Conv1/Sigmoid" -> "mobilenetv2_1.00_96/Conv1/Round";

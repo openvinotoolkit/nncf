@@ -1,5 +1,5 @@
 strict digraph  {
-self [op=Placeholder];
+args_0 [op=Placeholder];
 "conv2d/kernel" [op=Placeholder];
 "sequential/conv2d/Conv2D/ReadVariableOp" [op=ReadVariableOp];
 "sequential/conv2d/Conv2D" [op=Conv2D];
@@ -71,7 +71,7 @@ self [op=Placeholder];
 "sequential/FakeQuantize_2/dense/SymmQuant/mul" [op=Mul];
 "sequential/FakeQuantize_2/dense/SymmQuant/FakeQuantWithMinMaxVars" [op=FakeQuantWithMinMaxVars];
 Identity [op=Identity];
-self -> "sequential/conv2d/Conv2D";
+args_0 -> "sequential/conv2d/Conv2D";
 "conv2d/kernel" -> "sequential/conv2d/Conv2D/ReadVariableOp";
 "sequential/conv2d/Conv2D/ReadVariableOp" -> "sequential/conv2d/Conv2D";
 "sequential/conv2d/Conv2D" -> "sequential/conv2d/BiasAdd";

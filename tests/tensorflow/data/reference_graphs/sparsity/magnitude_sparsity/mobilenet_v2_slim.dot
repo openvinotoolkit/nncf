@@ -1,5 +1,5 @@
 strict digraph  {
-self [op=Placeholder];
+args_0 [op=Placeholder];
 "keras_layer/MobilenetV2/Conv/weights_mask" [op=Placeholder];
 "sequential/keras_layer/ReadVariableOp" [op=ReadVariableOp];
 "sequential/keras_layer/Greater/y" [op=Const];
@@ -954,7 +954,7 @@ self [op=Placeholder];
 "sequential/keras_layer/StatefulPartitionedCall" [op=StatefulPartitionedCall];
 "sequential/activation/Softmax" [op=Softmax];
 Identity [op=Identity];
-self -> "sequential/keras_layer/StatefulPartitionedCall";
+args_0 -> "sequential/keras_layer/StatefulPartitionedCall";
 "keras_layer/MobilenetV2/Conv/weights_mask" -> "sequential/keras_layer/ReadVariableOp";
 "keras_layer/MobilenetV2/Conv/weights_mask" -> "sequential/keras_layer/mul/ReadVariableOp";
 "sequential/keras_layer/ReadVariableOp" -> "sequential/keras_layer/Greater";

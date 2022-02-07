@@ -273,6 +273,7 @@ def run_evaluation(config, eval_timeout=None):
         write_metrics(metric_result['AP'], config.metrics_dump)
 
     # Due to https://github.com/tensorflow/tensorflow/issues/50487
+    # pylint: disable=protected-access
     atexit.register(strategy._extended._collective_ops._pool.close)
 
 

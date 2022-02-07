@@ -1,5 +1,5 @@
 strict digraph  {
-self [op=Placeholder];
+args_0 [op=Placeholder];
 "FakeQuantize_1.0/conv2d/FakeQuantize_1.0/conv2d_scale" [op=Placeholder];
 "ResnetBlockTest/FakeQuantize_1.0/conv2d/SymmQuant/Abs/ReadVariableOp" [op=ReadVariableOp];
 "ResnetBlockTest/FakeQuantize_1.0/conv2d/SymmQuant/Abs" [op=Abs];
@@ -179,15 +179,9 @@ self [op=Placeholder];
 "dense/bias" [op=Placeholder];
 "ResnetBlockTest/dense/BiasAdd/ReadVariableOp" [op=ReadVariableOp];
 "ResnetBlockTest/dense/BiasAdd" [op=BiasAdd];
-"ResnetBlockTest/dense/Max/reduction_indices" [op=Const];
-"ResnetBlockTest/dense/Max" [op=Max];
-"ResnetBlockTest/dense/sub" [op=Sub];
-"ResnetBlockTest/dense/Exp" [op=Exp];
-"ResnetBlockTest/dense/Sum/reduction_indices" [op=Const];
-"ResnetBlockTest/dense/Sum" [op=Sum];
-"ResnetBlockTest/dense/truediv" [op=RealDiv];
+"ResnetBlockTest/dense/Softmax" [op=Softmax];
 Identity [op=Identity];
-self -> "ResnetBlockTest/FakeQuantize_1.0/conv2d/SymmQuant/FakeQuantWithMinMaxVars";
+args_0 -> "ResnetBlockTest/FakeQuantize_1.0/conv2d/SymmQuant/FakeQuantWithMinMaxVars";
 "FakeQuantize_1.0/conv2d/FakeQuantize_1.0/conv2d_scale" -> "ResnetBlockTest/FakeQuantize_1.0/conv2d/SymmQuant/Abs/ReadVariableOp";
 "ResnetBlockTest/FakeQuantize_1.0/conv2d/SymmQuant/Abs/ReadVariableOp" -> "ResnetBlockTest/FakeQuantize_1.0/conv2d/SymmQuant/Abs";
 "ResnetBlockTest/FakeQuantize_1.0/conv2d/SymmQuant/Abs" -> "ResnetBlockTest/FakeQuantize_1.0/conv2d/SymmQuant/add";
@@ -383,14 +377,6 @@ self -> "ResnetBlockTest/FakeQuantize_1.0/conv2d/SymmQuant/FakeQuantWithMinMaxVa
 "ResnetBlockTest/dense/Tensordot" -> "ResnetBlockTest/dense/BiasAdd";
 "dense/bias" -> "ResnetBlockTest/dense/BiasAdd/ReadVariableOp";
 "ResnetBlockTest/dense/BiasAdd/ReadVariableOp" -> "ResnetBlockTest/dense/BiasAdd";
-"ResnetBlockTest/dense/BiasAdd" -> "ResnetBlockTest/dense/Max";
-"ResnetBlockTest/dense/BiasAdd" -> "ResnetBlockTest/dense/sub";
-"ResnetBlockTest/dense/Max/reduction_indices" -> "ResnetBlockTest/dense/Max";
-"ResnetBlockTest/dense/Max" -> "ResnetBlockTest/dense/sub";
-"ResnetBlockTest/dense/sub" -> "ResnetBlockTest/dense/Exp";
-"ResnetBlockTest/dense/Exp" -> "ResnetBlockTest/dense/Sum";
-"ResnetBlockTest/dense/Exp" -> "ResnetBlockTest/dense/truediv";
-"ResnetBlockTest/dense/Sum/reduction_indices" -> "ResnetBlockTest/dense/Sum";
-"ResnetBlockTest/dense/Sum" -> "ResnetBlockTest/dense/truediv";
-"ResnetBlockTest/dense/truediv" -> Identity;
+"ResnetBlockTest/dense/BiasAdd" -> "ResnetBlockTest/dense/Softmax";
+"ResnetBlockTest/dense/Softmax" -> Identity;
 }

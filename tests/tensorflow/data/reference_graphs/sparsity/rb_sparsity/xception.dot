@@ -1,5 +1,5 @@
 strict digraph  {
-self [op=Placeholder];
+args_0 [op=Placeholder];
 "xception/block1_conv1/Sigmoid/ReadVariableOp/resource" [op=Placeholder];
 "xception/block1_conv1/Sigmoid/ReadVariableOp" [op=ReadVariableOp];
 "xception/block1_conv1/Sigmoid" [op=Sigmoid];
@@ -1086,7 +1086,7 @@ self [op=Placeholder];
 "xception/predictions/BiasAdd" [op=BiasAdd];
 "xception/predictions/Softmax" [op=Softmax];
 Identity [op=Identity];
-self -> "xception/block1_conv1/Conv2D";
+args_0 -> "xception/block1_conv1/Conv2D";
 "xception/block1_conv1/Sigmoid/ReadVariableOp/resource" -> "xception/block1_conv1/Sigmoid/ReadVariableOp";
 "xception/block1_conv1/Sigmoid/ReadVariableOp" -> "xception/block1_conv1/Sigmoid";
 "xception/block1_conv1/Sigmoid" -> "xception/block1_conv1/Round";

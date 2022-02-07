@@ -1,5 +1,5 @@
 strict digraph  {
-self [op=Placeholder];
+args_0 [op=Placeholder];
 "NASNet/stem_conv1/Sigmoid/ReadVariableOp/resource" [op=Placeholder];
 "NASNet/stem_conv1/Sigmoid/ReadVariableOp" [op=ReadVariableOp];
 "NASNet/stem_conv1/Sigmoid" [op=Sigmoid];
@@ -5347,7 +5347,7 @@ self [op=Placeholder];
 "NASNet/predictions/BiasAdd" [op=BiasAdd];
 "NASNet/predictions/Softmax" [op=Softmax];
 Identity [op=Identity];
-self -> "NASNet/stem_conv1/Conv2D";
+args_0 -> "NASNet/stem_conv1/Conv2D";
 "NASNet/stem_conv1/Sigmoid/ReadVariableOp/resource" -> "NASNet/stem_conv1/Sigmoid/ReadVariableOp";
 "NASNet/stem_conv1/Sigmoid/ReadVariableOp" -> "NASNet/stem_conv1/Sigmoid";
 "NASNet/stem_conv1/Sigmoid" -> "NASNet/stem_conv1/Round";

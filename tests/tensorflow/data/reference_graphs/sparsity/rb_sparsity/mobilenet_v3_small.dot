@@ -1,5 +1,5 @@
 strict digraph  {
-self [op=Placeholder];
+args_0 [op=Placeholder];
 "MobilenetV3small/rescaling/Cast/x" [op=Const];
 "MobilenetV3small/rescaling/Cast_1/x" [op=Const];
 "MobilenetV3small/rescaling/mul" [op=Mul];
@@ -1145,7 +1145,7 @@ self [op=Placeholder];
 "MobilenetV3small/flatten/Reshape" [op=Reshape];
 "MobilenetV3small/Predictions/Softmax" [op=Softmax];
 Identity [op=Identity];
-self -> "MobilenetV3small/rescaling/mul";
+args_0 -> "MobilenetV3small/rescaling/mul";
 "MobilenetV3small/rescaling/Cast/x" -> "MobilenetV3small/rescaling/mul";
 "MobilenetV3small/rescaling/Cast_1/x" -> "MobilenetV3small/rescaling/add";
 "MobilenetV3small/rescaling/mul" -> "MobilenetV3small/rescaling/add";

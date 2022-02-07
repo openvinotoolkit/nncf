@@ -1,5 +1,5 @@
 strict digraph  {
-self [op=Placeholder];
+args_0 [op=Placeholder];
 "densenet121/zero_padding2d/Pad/paddings" [op=Const];
 "densenet121/zero_padding2d/Pad" [op=Pad];
 "densenet121/conv1/conv/Sigmoid/ReadVariableOp/resource" [op=Placeholder];
@@ -2309,7 +2309,7 @@ self [op=Placeholder];
 "densenet121/predictions/BiasAdd" [op=BiasAdd];
 "densenet121/predictions/Softmax" [op=Softmax];
 Identity [op=Identity];
-self -> "densenet121/zero_padding2d/Pad";
+args_0 -> "densenet121/zero_padding2d/Pad";
 "densenet121/zero_padding2d/Pad/paddings" -> "densenet121/zero_padding2d/Pad";
 "densenet121/zero_padding2d/Pad" -> "densenet121/conv1/conv/Conv2D";
 "densenet121/conv1/conv/Sigmoid/ReadVariableOp/resource" -> "densenet121/conv1/conv/Sigmoid/ReadVariableOp";

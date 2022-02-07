@@ -1,5 +1,5 @@
 strict digraph  {
-self [op=Placeholder];
+args_0 [op=Placeholder];
 "vgg16/block1_conv1/Sigmoid/ReadVariableOp/resource" [op=Placeholder];
 "vgg16/block1_conv1/Sigmoid/ReadVariableOp" [op=ReadVariableOp];
 "vgg16/block1_conv1/Sigmoid" [op=Sigmoid];
@@ -200,7 +200,7 @@ self [op=Placeholder];
 "vgg16/predictions/BiasAdd" [op=BiasAdd];
 "vgg16/predictions/Softmax" [op=Softmax];
 Identity [op=Identity];
-self -> "vgg16/block1_conv1/Conv2D";
+args_0 -> "vgg16/block1_conv1/Conv2D";
 "vgg16/block1_conv1/Sigmoid/ReadVariableOp/resource" -> "vgg16/block1_conv1/Sigmoid/ReadVariableOp";
 "vgg16/block1_conv1/Sigmoid/ReadVariableOp" -> "vgg16/block1_conv1/Sigmoid";
 "vgg16/block1_conv1/Sigmoid" -> "vgg16/block1_conv1/Round";

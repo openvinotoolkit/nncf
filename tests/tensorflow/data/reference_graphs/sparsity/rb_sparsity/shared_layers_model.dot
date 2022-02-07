@@ -1,5 +1,5 @@
 strict digraph  {
-self [op=Placeholder];
+args_0 [op=Placeholder];
 "model/c0/Sigmoid/ReadVariableOp/resource" [op=Placeholder];
 "model/c0/Sigmoid/ReadVariableOp" [op=ReadVariableOp];
 "model/c0/Sigmoid" [op=Sigmoid];
@@ -11,7 +11,6 @@ self [op=Placeholder];
 "model/c0/BiasAdd/ReadVariableOp/resource" [op=Placeholder];
 "model/c0/BiasAdd/ReadVariableOp" [op=ReadVariableOp];
 "model/c0/BiasAdd" [op=BiasAdd];
-"model/tf.split/Const" [op=Const];
 "model/tf.split/split/split_dim" [op=Const];
 "model/tf.split/split" [op=Split];
 "model/c2/Sigmoid/ReadVariableOp/resource" [op=Placeholder];
@@ -76,7 +75,7 @@ self [op=Placeholder];
 "model/c4/BiasAdd_1" [op=BiasAdd];
 Identity [op=Identity];
 Identity_1 [op=Identity];
-self -> "model/c0/Conv2D";
+args_0 -> "model/c0/Conv2D";
 "model/c0/Sigmoid/ReadVariableOp/resource" -> "model/c0/Sigmoid/ReadVariableOp";
 "model/c0/Sigmoid/ReadVariableOp" -> "model/c0/Sigmoid";
 "model/c0/Sigmoid" -> "model/c0/Round";

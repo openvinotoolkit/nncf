@@ -1,5 +1,5 @@
 strict digraph  {
-self [op=Placeholder];
+args_0 [op=Placeholder];
 "resnet50v2/conv1_pad/Pad/paddings" [op=Const];
 "resnet50v2/conv1_pad/Pad" [op=Pad];
 "resnet50v2/conv1_conv/Sigmoid/ReadVariableOp/resource" [op=Placeholder];
@@ -1048,7 +1048,7 @@ self [op=Placeholder];
 "resnet50v2/predictions/BiasAdd" [op=BiasAdd];
 "resnet50v2/predictions/Softmax" [op=Softmax];
 Identity [op=Identity];
-self -> "resnet50v2/conv1_pad/Pad";
+args_0 -> "resnet50v2/conv1_pad/Pad";
 "resnet50v2/conv1_pad/Pad/paddings" -> "resnet50v2/conv1_pad/Pad";
 "resnet50v2/conv1_pad/Pad" -> "resnet50v2/conv1_conv/Conv2D";
 "resnet50v2/conv1_conv/Sigmoid/ReadVariableOp/resource" -> "resnet50v2/conv1_conv/Sigmoid/ReadVariableOp";

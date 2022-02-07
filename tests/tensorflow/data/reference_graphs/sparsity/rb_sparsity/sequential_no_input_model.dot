@@ -1,5 +1,5 @@
 strict digraph  {
-self [op=Placeholder];
+args_0 [op=Placeholder];
 "sequential/conv2d/Sigmoid/ReadVariableOp/resource" [op=Placeholder];
 "sequential/conv2d/Sigmoid/ReadVariableOp" [op=ReadVariableOp];
 "sequential/conv2d/Sigmoid" [op=Sigmoid];
@@ -37,7 +37,7 @@ self [op=Placeholder];
 "sequential/dense_1/BiasAdd/ReadVariableOp" [op=ReadVariableOp];
 "sequential/dense_1/BiasAdd" [op=BiasAdd];
 Identity [op=Identity];
-self -> "sequential/conv2d/Conv2D";
+args_0 -> "sequential/conv2d/Conv2D";
 "sequential/conv2d/Sigmoid/ReadVariableOp/resource" -> "sequential/conv2d/Sigmoid/ReadVariableOp";
 "sequential/conv2d/Sigmoid/ReadVariableOp" -> "sequential/conv2d/Sigmoid";
 "sequential/conv2d/Sigmoid" -> "sequential/conv2d/Round";

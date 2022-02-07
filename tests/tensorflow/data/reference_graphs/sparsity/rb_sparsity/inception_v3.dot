@@ -1,5 +1,5 @@
 strict digraph  {
-self [op=Placeholder];
+args_0 [op=Placeholder];
 "inception_v3/conv2d/Sigmoid/ReadVariableOp/resource" [op=Placeholder];
 "inception_v3/conv2d/Sigmoid/ReadVariableOp" [op=ReadVariableOp];
 "inception_v3/conv2d/Sigmoid" [op=Sigmoid];
@@ -1656,7 +1656,7 @@ self [op=Placeholder];
 "inception_v3/predictions/BiasAdd" [op=BiasAdd];
 "inception_v3/predictions/Softmax" [op=Softmax];
 Identity [op=Identity];
-self -> "inception_v3/conv2d/Conv2D";
+args_0 -> "inception_v3/conv2d/Conv2D";
 "inception_v3/conv2d/Sigmoid/ReadVariableOp/resource" -> "inception_v3/conv2d/Sigmoid/ReadVariableOp";
 "inception_v3/conv2d/Sigmoid/ReadVariableOp" -> "inception_v3/conv2d/Sigmoid";
 "inception_v3/conv2d/Sigmoid" -> "inception_v3/conv2d/Round";

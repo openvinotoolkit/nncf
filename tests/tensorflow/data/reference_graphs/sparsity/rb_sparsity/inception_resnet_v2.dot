@@ -1,5 +1,5 @@
 strict digraph  {
-self [op=Placeholder];
+args_0 [op=Placeholder];
 "inception_resnet_v2/conv2d/Sigmoid/ReadVariableOp/resource" [op=Placeholder];
 "inception_resnet_v2/conv2d/Sigmoid/ReadVariableOp" [op=ReadVariableOp];
 "inception_resnet_v2/conv2d/Sigmoid" [op=Sigmoid];
@@ -4173,7 +4173,7 @@ self [op=Placeholder];
 "inception_resnet_v2/predictions/BiasAdd" [op=BiasAdd];
 "inception_resnet_v2/predictions/Softmax" [op=Softmax];
 Identity [op=Identity];
-self -> "inception_resnet_v2/conv2d/Conv2D";
+args_0 -> "inception_resnet_v2/conv2d/Conv2D";
 "inception_resnet_v2/conv2d/Sigmoid/ReadVariableOp/resource" -> "inception_resnet_v2/conv2d/Sigmoid/ReadVariableOp";
 "inception_resnet_v2/conv2d/Sigmoid/ReadVariableOp" -> "inception_resnet_v2/conv2d/Sigmoid";
 "inception_resnet_v2/conv2d/Sigmoid" -> "inception_resnet_v2/conv2d/Round";
