@@ -10,16 +10,21 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+import cv2
+import numpy as np
+import torch
 import os
 import os.path
 import sys
 from typing import Optional, Callable
 
-from pathlib import Path  # from python 3.4 we may not do pip install pathlib
-from pathlib import PurePath  # from python 3.4 we may not do pip install pathlib
+from pathlib import Path
+from pathlib import PurePath
 
+from torchvision.transforms import functional as F
 from torch.utils import data
 from torchvision import datasets
+
 
 if sys.version_info[0] == 2:
     import defusedxml.cElementTree as ET
@@ -56,7 +61,7 @@ class VOCAnnotationTransform:
             zip(VOC_CLASSES, range(len(VOC_CLASSES))))
         self.keep_difficult = keep_difficult
 
-    def __call__(self, target, width, height):
+    def __call__(self, target, pull = False):
         """
         Args:
             target (annotation) : the target annotation to be made usable
@@ -65,18 +70,26 @@ class VOCAnnotationTransform:
             a list containing lists of bounding boxes  [bbox coords, class idx],
             coordinates are normalized
         """
+
+        if not pull:
+            width = int(target['annotation']['size']['width'])
+            height = int(target['annotation']['size']['height'])
+        else:
+            width = 1
+            height = 1
         res = []
-        for obj in target.iter('object'):
-            difficult = int(obj.find('difficult').text) == 1
+
+        for obj in iter(target['annotation']['object']):
+            difficult = int(obj['difficult']) == 1
             if not self.keep_difficult and difficult:
                 continue
-            name = obj.find('name').text.lower().strip()
-            bbox = obj.find('bndbox')
+            name = obj['name'].lower().strip()
+            bbox = obj['bndbox']
 
             pts = ['xmin', 'ymin', 'xmax', 'ymax']
             bndbox = []
             for i, pt in enumerate(pts):
-                cur_pt = int(bbox.find(pt).text) - 1
+                cur_pt = int(bbox[pt]) - 1
                 # scale height or width
                 cur_pt = cur_pt / width if i % 2 == 0 else cur_pt / height
                 bndbox.append(cur_pt)
@@ -84,6 +97,7 @@ class VOCAnnotationTransform:
             res += [{'bbox': bndbox, 'label_idx': label_idx, 'difficult': difficult}]
 
         return res
+
 
 class VOCDetection(data.Dataset):
     """VOC Detection Dataset Object
@@ -112,73 +126,53 @@ class VOCDetection(data.Dataset):
                  return_image_info: bool = False,
                  ):
         super().__init__()
-        self.list_image_set = []
-        self.target_tranform = target_transform
+        self.target_transform = target_transform
+        self.transform = transform
         self.return_image_info = return_image_info
         self._annopath = os.path.join('%s', 'Annotations', '%s.xml')
         self._imgpath = os.path.join('%s', 'JPEGImages', '%s.jpg')
         self.ids = []
-        self.ids_new = []
+        self.root = root
 
+        sub_datasets = []
         for year, name in image_sets:
             voc_elem = datasets.VOCDetection(root, year=year,
                                              image_set=name, transform=transform, target_transform=target_transform)
             for name_path in voc_elem.images:
-                self.ids_new.append((str(PurePath(name_path).parents[1]), Path(name_path).stem))
-            self.list_image_set.append(voc_elem)
-        self._voc_concat = data.ConcatDataset(self.list_image_set)
-
-        for (year, name) in image_sets:
-            rootpath = os.path.join(root, 'VOCdevkit', 'VOC' + year)
-            with open(os.path.join(rootpath, 'ImageSets', 'Main', name + '.txt'), encoding='utf8') as lines:
-                for line in lines:
-                    self.ids.append((rootpath, line.strip()))
+                self.ids.append((str(PurePath(name_path).parents[1]), Path(name_path).stem))
+            sub_datasets.append(voc_elem)
+        self._voc_concat = data.ConcatDataset(sub_datasets)
 
 
     def __getitem__(self, index):
-        return self._voc_concat.__getitem__(index)
-        # """
-        # Returns image at index in torch tensor form (RGB) and
-        # corresponding normalized annotation in 2d array [[xmin, ymin, xmax, ymax, label_ind],
-        #                                       ... ]
-        # """
-        # im, gt, h, w = self.pull_item(index)
-        #
-        # if self.return_image_info:
-        #     return im, gt, h, w
-        # return im, gt
+        """
+        Returns image at index in torch tensor form (RGB) and
+        corresponding normalized annotation in 2d array [[xmin, ymin, xmax, ymax, label_ind],
+                                              ... ]
+        """
+        img_id = self.ids[index]
+        img = cv2.imread(self._imgpath % img_id)
+        height, width, _ = img.shape
+
+        im, gt = self._voc_concat.__getitem__(index)
+
+        if self.transform is not None:
+            boxes = np.asarray([x['bbox'] for x in gt])
+            labels = np.asarray([x['label_idx'] for x in gt])
+            gt = np.hstack((boxes, np.expand_dims(labels, axis=1)))
+            res_image = F.to_tensor(im[0])
+        else:
+            res_image = F.to_tensor(im)
+        if self.return_image_info:
+            return res_image, gt, height, width
+        return res_image, gt
+
 
     def __len__(self):
         return self._voc_concat.__len__()
 
 
-    # def pull_item(self, index):
-    #     """
-    #     Returns image at index in torch tensor form (RGB),
-    #     corresponding normalized annotation in 2d array [[xmin, ymin, xmax, ymax, label_ind],
-    #                                                      ... ],
-    #     height and width of image
-    #     """
-    #     img_id = self.ids[index]
-    #
-    #     target = ET.parse(self._annopath % img_id).getroot()
-    #     img = cv2.imread(self._imgpath % img_id)
-    #
-    #     height, width, _ = img.shape
-    #
-    #     if self.target_transform is not None:
-    #         target = self.target_transform(target, width, height)
-    #
-    #     if self.transform is not None:
-    #         boxes = np.asarray([x['bbox'] for x in target])
-    #         labels = np.asarray([x['label_idx'] for x in target])
-    #         img, boxes, labels = self.transform(img, boxes, labels)
-    #         if self.rgb:
-    #             img = img[:, :, (2, 1, 0)]
-    #         target = np.hstack((boxes, np.expand_dims(labels, axis=1)))
-    #     return torch.from_numpy(img).permute(2, 0, 1), target, height, width
-
-    def pull_anno(self, index): #using in load_detection_annotation
+    def pull_anno(self, index):
         """Returns the original annotation of image at index
 
         Note: not using self.__getitem__(), as any transformations passed in
@@ -193,13 +187,9 @@ class VOCDetection(data.Dataset):
         """
         img_name = self.ids[index]
         anno = ET.parse(self._annopath % img_name).getroot()
-        gt = self.target_transform(anno, 1, 1)
-        return img_name[1], gt
-
-    #function not used
-    # def pull_image(self, index):
-    #     img_id = self.ids[index]
-    #     return cv2.imread(self._imgpath % img_id, cv2.IMREAD_COLOR)
+        gt_res = self.target_transform(datasets.VOCDetection.parse_voc_xml(datasets.VOCDetection(self.root),
+                                                                           node=anno), pull=True)
+        return img_name[1], gt_res
 
     def get_img_names(self):
         img_names = []
