@@ -17,7 +17,7 @@ from torchvision.models import mobilenet_v2
 from torchvision.models import resnet50
 
 from examples.torch.common.models.classification.mobilenet_v2_cifar10 import mobilenet_v2_cifar10
-from examples.torch.common.models.classification.resnet50_cifar10 import resnet50_cifar10
+from examples.torch.common.models.classification.resnet_cifar10 import resnet50_cifar10
 from nncf.torch.nas.bootstrapNAS.elasticity.elasticity_dim import ElasticityDim
 from tests.torch.nas.creators import create_bnas_model_and_ctrl_by_test_desc
 from tests.torch.nas.descriptors import ModelStats

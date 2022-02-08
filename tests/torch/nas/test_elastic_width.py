@@ -17,13 +17,11 @@ import torch
 from torch import nn
 from torch.backends import cudnn
 
-from nncf.torch.nas.bootstrapNAS.elasticity.elasticity_dim import ElasticityDim
 from nncf.torch.nas.bootstrapNAS.elasticity.visualization import SubnetGraph
 from nncf.torch.utils import get_model_device
 from nncf.torch.utils import manual_seed
 from tests.torch.helpers import create_conv
 from tests.torch.helpers import get_empty_config
-from tests.torch.nas.creators import NAS_MODEL_DESCS
 from tests.torch.nas.creators import create_bootstrap_nas_training_algo
 from tests.torch.nas.creators import create_bootstrap_training_model_and_ctrl
 from tests.torch.nas.creators import create_two_conv_width_supernet
@@ -46,8 +44,8 @@ def _seed():
     manual_seed(0)
 
 
-@pytest.fixture(params=(TwoConvAddConvTestModel, TwoSequentialConvBNTestModel))
-def basic_model(request):
+@pytest.fixture(name='basic_model', params=(TwoConvAddConvTestModel, TwoSequentialConvBNTestModel))
+def fixture_basic_model(request):
     model_cls = request.param
     model = model_cls()
     move_model_to_cuda_if_available(model)
@@ -72,7 +70,7 @@ def test_set_elastic_width_by_value_not_from_list():
 ###########################
 
 def test_elastic_width_with_maximum_value():
-    elastic_width_op, supernet = create_two_conv_width_supernet()
+    _, supernet = create_two_conv_width_supernet()
     device = get_model_device(supernet)
     x = torch.ones(supernet.INPUT_SIZE).to(device)
     actual_output = supernet(x)
@@ -139,8 +137,8 @@ def test_width_reorg(basic_model):
     compare_tensors_ignoring_the_order(after_reorg, before_reorg)
 
 
-@pytest.fixture(scope='function', params=NAS_MODELS_SCOPE)
-def nas_model_name(request):
+@pytest.fixture(name='nas_model_name', scope='function', params=NAS_MODELS_SCOPE)
+def fixture_nas_model_name(request):
     return request.param
 
 

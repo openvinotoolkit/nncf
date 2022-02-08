@@ -15,7 +15,7 @@ import pytest
 import torch
 from torch.backends import cudnn
 
-from examples.torch.common.models.classification.resnet50_cifar10 import resnet50_cifar10
+from examples.torch.common.models.classification.resnet_cifar10 import resnet50_cifar10
 from nncf import NNCFConfig
 from nncf.api.compression import CompressionStage
 from nncf.torch.model_creation import create_nncf_network
@@ -114,8 +114,8 @@ NAS_MODELS_SCOPE = [
 ]
 
 
-@pytest.fixture(scope='function', params=NAS_MODELS_SCOPE)
-def nas_model_name(request):
+@pytest.fixture(name='nas_model_name', scope='function', params=NAS_MODELS_SCOPE)
+def fixture_nas_model_name(request):
     return request.param
 
 

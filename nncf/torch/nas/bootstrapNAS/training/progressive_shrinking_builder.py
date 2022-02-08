@@ -1,5 +1,5 @@
 """
- Copyright (c) 2019-2021 Intel Corporation
+ Copyright (c) 2022 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -17,12 +17,13 @@ from typing import List
 from nncf import NNCFConfig
 from nncf.common.initialization.batchnorm_adaptation import BatchnormAdaptationAlgorithm
 from nncf.config.extractors import get_bn_adapt_algo_kwargs
+from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elasticity_builder import ElasticityBuilder
+from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elasticity_dim import ElasticityDim
+from nncf.experimental.torch.nas.bootstrapNAS.training.progressive_shrinking_controller import \
+    ProgressiveShrinkingController
 from nncf.torch.algo_selector import PT_COMPRESSION_ALGORITHMS
 from nncf.torch.compression_method_api import PTCompressionAlgorithmBuilder
 from nncf.torch.graph.transformations.layout import PTTransformationLayout
-from nncf.torch.nas.bootstrapNAS.elasticity.elasticity_builder import ElasticityBuilder
-from nncf.torch.nas.bootstrapNAS.training.progressive_shrinking_controller import ProgressiveShrinkingController
-from nncf.torch.nas.bootstrapNAS.elasticity.elasticity_dim import ElasticityDim
 from nncf.torch.nncf_network import NNCFNetwork
 
 
@@ -44,7 +45,7 @@ class ProgressiveShrinkingBuilder(PTCompressionAlgorithmBuilder):
 
         default_progressivity = map(lambda x: x.value, self.DEFAULT_PROGRESSIVITY)
         progressivity_of_elasticity = self._algo_config.get('progressivity_of_elasticity', default_progressivity)
-        self._progressivity_of_elasticity = list(map(lambda x: ElasticityDim.from_str(x), progressivity_of_elasticity))
+        self._progressivity_of_elasticity = list(map(ElasticityDim.from_str, progressivity_of_elasticity))
         self._elasticity_builder = ElasticityBuilder(self.config, self.should_init)
 
     @staticmethod
@@ -63,11 +64,11 @@ class ProgressiveShrinkingBuilder(PTCompressionAlgorithmBuilder):
     def _get_algo_specific_config_section(self) -> Dict:
         return self.config.get('bootstrapNAS', {}).get('training', {})
 
-    def _build_controller(self, target_model: NNCFNetwork) -> 'ProgressiveShrinkingController':
-        elasticity_ctrl = self._elasticity_builder.build_controller(target_model)
+    def _build_controller(self, model: NNCFNetwork) -> 'ProgressiveShrinkingController':
+        elasticity_ctrl = self._elasticity_builder.build_controller(model)
         schedule_params = self._algo_config.get('schedule', {})
         return ProgressiveShrinkingController(
-            target_model, elasticity_ctrl, self._bn_adaptation, self._progressivity_of_elasticity, schedule_params)
+            model, elasticity_ctrl, self._bn_adaptation, self._progressivity_of_elasticity, schedule_params)
 
     def _get_transformation_layout(self, target_model: NNCFNetwork) -> PTTransformationLayout:
         enabled_elasticity_dims = self._elasticity_builder.get_available_elasticity_dims()

@@ -18,12 +18,13 @@ from torchvision.models import MobileNetV2
 from examples.torch.common.models import efficient_net
 from nncf.experimental.torch.search_building_blocks.search_blocks import BuildingBlock
 from nncf.experimental.torch.search_building_blocks.search_blocks import get_building_blocks
-from nncf.torch.model_creation import create_compressed_model
 from tests.torch import test_models
+from tests.torch.helpers import create_compressed_model_and_algo_for_test
 from tests.torch.helpers import get_empty_config
 from tests.torch.nas.helpers import move_model_to_cuda_if_available
 from tests.torch.nas.test_elastic_depth import INCEPTION_INPUT_SIZE
 from tests.torch.nas.test_elastic_depth import RESNET50_INPUT_SIZE
+from tests.torch.test_models import ResNet18
 from tests.torch.test_models import squeezenet1_0
 from tests.torch.test_models.inceptionv3 import Inception3
 from tests.torch.test_models.resnet import ResNet50
@@ -262,8 +263,92 @@ def test_building_block(model_creator, input_sizes, ref_skipped_blocks, ref_grou
     model = model_creator()
     move_model_to_cuda_if_available(model)
     nncf_config = get_empty_config(input_sample_sizes=input_sizes)
-    _, compressed_model = create_compressed_model(model, nncf_config)
+    compressed_model, _ = create_compressed_model_and_algo_for_test(model, nncf_config)
 
     blocks, _, group_dependent = get_building_blocks(compressed_model, allow_nested_blocks=False)
     assert blocks == ref_skipped_blocks
     assert group_dependent == ref_group_dependent
+
+
+class SearchBBlockAlgoParamsCase:
+    def __init__(self,
+                 min_block_size: int = 1,
+                 max_block_size: int = 100,
+                 allow_nested_blocks: bool = False,
+                 allow_linear_combination: bool = True,
+                 ref_blocks=None):
+        self.max_block_size = max_block_size
+        self.min_block_size = min_block_size
+        self.allow_nested_blocks = allow_nested_blocks
+        self.allow_linear_combination = allow_linear_combination
+        self.ref_blocks = [] if ref_blocks is None else ref_blocks
+
+
+@pytest.mark.parametrize('algo_params', (
+    (
+        SearchBBlockAlgoParamsCase(max_block_size=7,
+                                   ref_blocks=[BuildingBlock("ResNet/MaxPool2d[maxpool]/max_pool2d_0",
+                                                             "ResNet/Sequential[layer1]/BasicBlock[0]/relu_1")]),
+        SearchBBlockAlgoParamsCase(max_block_size=8,
+                                   ref_blocks=[BuildingBlock("ResNet/MaxPool2d[maxpool]/max_pool2d_0",
+                                                             "ResNet/Sequential[layer1]/BasicBlock[0]/relu_1"),
+                                               BuildingBlock("ResNet/Sequential[layer1]/BasicBlock[0]/relu_1",
+                                                             "ResNet/Sequential[layer1]/BasicBlock[1]/relu_1"),
+                                               BuildingBlock("ResNet/Sequential[layer2]/BasicBlock[0]/relu_1",
+                                                             "ResNet/Sequential[layer2]/BasicBlock[1]/relu_1"),
+                                               BuildingBlock("ResNet/Sequential[layer3]/BasicBlock[0]/relu_1",
+                                                             "ResNet/Sequential[layer3]/BasicBlock[1]/relu_1"),
+                                               BuildingBlock("ResNet/Sequential[layer4]/BasicBlock[0]/relu_1",
+                                                             "ResNet/Sequential[layer4]/BasicBlock[1]/relu_1")
+                                               ]),
+        SearchBBlockAlgoParamsCase(min_block_size=10,
+                                   max_block_size=20,
+                                   ref_blocks=[BuildingBlock("ResNet/MaxPool2d[maxpool]/max_pool2d_0",
+                                                             "ResNet/Sequential[layer1]/BasicBlock[1]/relu_1")]),
+        SearchBBlockAlgoParamsCase(max_block_size=20,
+                                   allow_nested_blocks=True,
+                                   ref_blocks=[  # start nested block group
+                                       BuildingBlock("ResNet/MaxPool2d[maxpool]/max_pool2d_0",
+                                                     "ResNet/Sequential[layer1]/BasicBlock[0]/relu_1"),  # block A
+                                       BuildingBlock("ResNet/Sequential[layer1]/BasicBlock[0]/relu_1",
+                                                     "ResNet/Sequential[layer1]/BasicBlock[1]/relu_1"),  # block B
+                                       BuildingBlock("ResNet/MaxPool2d[maxpool]/max_pool2d_0",
+                                                     "ResNet/Sequential[layer1]/BasicBlock[1]/relu_1"),  # block C
+                                       # end nested block group
+                                       # C = A + B . A, B - nested blocks. Lin. combination A + B = block C
+                                       BuildingBlock("ResNet/Sequential[layer2]/BasicBlock[0]/relu_1",
+                                                     "ResNet/Sequential[layer2]/BasicBlock[1]/relu_1"),
+                                       BuildingBlock("ResNet/Sequential[layer3]/BasicBlock[0]/relu_1",
+                                                     "ResNet/Sequential[layer3]/BasicBlock[1]/relu_1"),
+                                       BuildingBlock("ResNet/Sequential[layer4]/BasicBlock[0]/relu_1",
+                                                     "ResNet/Sequential[layer4]/BasicBlock[1]/relu_1")]),
+        SearchBBlockAlgoParamsCase(max_block_size=20,
+                                   allow_nested_blocks=True,
+                                   allow_linear_combination=False,
+                                   ref_blocks=[
+                                       # nested block group is empty because parameter allow_linear_combination is false
+                                       # and the biggest block was deleted.
+                                       BuildingBlock("ResNet/MaxPool2d[maxpool]/max_pool2d_0",
+                                                     "ResNet/Sequential[layer1]/BasicBlock[0]/relu_1"),
+                                       BuildingBlock("ResNet/Sequential[layer1]/BasicBlock[0]/relu_1",
+                                                     "ResNet/Sequential[layer1]/BasicBlock[1]/relu_1"),
+                                       BuildingBlock("ResNet/Sequential[layer2]/BasicBlock[0]/relu_1",
+                                                     "ResNet/Sequential[layer2]/BasicBlock[1]/relu_1"),
+                                       BuildingBlock("ResNet/Sequential[layer3]/BasicBlock[0]/relu_1",
+                                                     "ResNet/Sequential[layer3]/BasicBlock[1]/relu_1"),
+                                       BuildingBlock("ResNet/Sequential[layer4]/BasicBlock[0]/relu_1",
+                                                     "ResNet/Sequential[layer4]/BasicBlock[1]/relu_1")]))
+))
+def test_building_block_algo_param(algo_params: SearchBBlockAlgoParamsCase):
+    model = ResNet18()
+    move_model_to_cuda_if_available(model)
+    nncf_config = get_empty_config(input_sample_sizes=RESNET50_INPUT_SIZE)
+    compressed_model, _ = create_compressed_model_and_algo_for_test(model, nncf_config)
+
+    blocks, _, _ = get_building_blocks(compressed_model,
+                                       allow_nested_blocks=algo_params.allow_nested_blocks,
+                                       min_block_size=algo_params.min_block_size,
+                                       max_block_size=algo_params.max_block_size,
+                                       allow_linear_combination=algo_params.allow_linear_combination)
+
+    assert blocks == algo_params.ref_blocks

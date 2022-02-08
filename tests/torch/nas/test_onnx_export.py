@@ -12,9 +12,7 @@
 """
 import numpy as np
 import onnx
-import onnx.numpy_helper
 import onnxruntime as rt
-
 import torch
 
 from nncf.torch.nas.bootstrapNAS.elasticity.elasticity_dim import ElasticityDim
@@ -26,6 +24,7 @@ from tests.torch.nas.test_all_elasticity import ThreeConvModel
 from tests.torch.nas.test_all_elasticity import create_bnas_model_and_ctrl_by_test_desc
 
 
+# pylint: disable=no-member
 def check_onnx_weights(ctrl, path_to_onnx, ref_orig_weights, expected_num_nodes):
     ctrl.export_model(path_to_onnx)
     onnx_model = onnx.load(path_to_onnx)
@@ -37,7 +36,7 @@ def check_onnx_weights(ctrl, path_to_onnx, ref_orig_weights, expected_num_nodes)
 
 
 def test_multi_elasticity_weights_in_onnx(tmp_path):
-    model, ctrl = create_bnas_model_and_ctrl_by_test_desc(THREE_CONV_TEST_DESC, mode='manual')
+    _, ctrl = create_bnas_model_and_ctrl_by_test_desc(THREE_CONV_TEST_DESC, mode='manual')
     multi_elasticity_handler = ctrl.multi_elasticity_handler
     orig_model = ThreeConvModel()
     conv1 = orig_model.conv1

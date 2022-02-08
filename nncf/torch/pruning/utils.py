@@ -99,7 +99,7 @@ def collect_output_shapes(graph: NNCFGraph) -> Dict[NNCFNodeName, List[int]]:
     :param graph: NNCFGraph.
     :return: Dictionary of output dimension shapes. E.g {node_name: (height, width)}
     """
-    modules_out_shapes = dict()
+    modules_out_shapes = {}
     for node in graph.get_nodes_by_types([v.op_func_name for v in NNCF_GENERAL_CONV_MODULES_DICT]):
         output_edges = graph.get_output_edges(node)
         if output_edges:
@@ -131,7 +131,7 @@ def collect_input_shapes(graph: NNCFGraph) -> Dict[NNCFNodeName, List[int]]:
     :param graph: NNCFGraph.
     :return: Dictionary of input dimension shapes. E.g {node_name: (height, width)}
     """
-    modules_in_shapes = dict()
+    modules_in_shapes = {}
     for node in graph.get_nodes_by_types([v.op_func_name for v in NNCF_LINEAR_MODULES_DICT]):
         in_edge = graph.get_input_edges(node)[0]
         in_shape = in_edge.tensor_shape

@@ -185,7 +185,7 @@ class NNCFGraph:
         """
         return self.get_node_by_key(self.get_node_key_by_id(node_id))
 
-    def get_node_by_key(self, key: str):
+    def get_node_by_key(self, key: str) -> NNCFNode:
         """
         :param key: key (node_name) of the node.
         :return: NNCFNode in a graph with such key.

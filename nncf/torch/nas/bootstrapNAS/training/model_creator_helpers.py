@@ -56,9 +56,8 @@ def create_compressed_model_from_algo_names(nncf_network: NNCFNetwork,
     return compression_ctrl, compressed_model
 
 
-def resume_compression_algorithm_builder_from_compression_state(compression_state: Dict[str, Any],
-                                                                config: Optional[
-                                                                    NNCFConfig] = None) -> PTCompressionAlgorithmBuilder:
+def resume_compression_algorithm_builder(compression_state: Dict[str, Any],
+                                         config: Optional[NNCFConfig] = None) -> PTCompressionAlgorithmBuilder:
     """
     :param compression_state:
     :param config:
@@ -86,7 +85,7 @@ def resume_compression_from_state(nncf_network, compression_state, config: Optio
     during training, like in NAS
     :return:
     """
-    builder = resume_compression_algorithm_builder_from_compression_state(compression_state, config)
+    builder = resume_compression_algorithm_builder(compression_state, config)
     model = builder.apply_to(nncf_network)
     ctrl = builder.build_controller(nncf_network)
     ctrl.load_state(compression_state[BaseController.CONTROLLER_STATE])
@@ -97,7 +96,7 @@ def add_compression(nncf_network: NNCFNetwork,
                     compression_ctrl,
                     compression_config: NNCFConfig):
     old_compression_state = compression_ctrl.get_compression_state()
-    old_builder = resume_compression_algorithm_builder_from_compression_state(old_compression_state)
+    old_builder = resume_compression_algorithm_builder(old_compression_state)
 
     new_model = nncf_network.get_clean_shallow_copy()
 

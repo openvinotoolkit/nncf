@@ -11,8 +11,8 @@
  limitations under the License.
 """
 import random
-from collections import Callable
 from typing import Any
+from typing import Callable
 from typing import Dict
 from typing import List
 from typing import Optional
@@ -37,7 +37,6 @@ from nncf.torch.module_operations import UpdatePadding
 from nncf.torch.module_operations import UpdateWeight
 from nncf.torch.nas.bootstrapNAS.elasticity.base_handler import ELASTICITY_BUILDERS
 from nncf.torch.nas.bootstrapNAS.elasticity.base_handler import ELASTICITY_HANDLERS_MAP
-from nncf.torch.nas.bootstrapNAS.elasticity.base_handler import ElasticityConfig
 from nncf.torch.nas.bootstrapNAS.elasticity.base_handler import SingleElasticityHandler
 from nncf.torch.nas.bootstrapNAS.elasticity.base_handler import SingleElasticityBuilder
 from nncf.torch.nas.bootstrapNAS.elasticity.elasticity_dim import ElasticityDim
@@ -272,6 +271,17 @@ class ElasticKernelHandler(SingleElasticityHandler):
     def resolve_conflicts_with_other_elasticities(self,
                                                   config: ElasticKernelConfig,
                                                   elasticity_handlers: ELASTICITY_HANDLERS_MAP) -> ElasticKernelConfig:
+        """
+        Resolves a conflict between the given elasticity config and active elasticity configs of the given handlers.
+        For example, elastic width configuration may contradict to elastic depth one. When we activate some
+        configuration in the Elastic Width Handler, i.e. define number of output channels for some layers, we
+        change output shapes of the layers. Consequently, it affects the blocks that can be skipped by Elastic Depth
+        Handler, because input and output shapes may not be identical now.
+
+        :param config: elasticity configuration
+        :param elasticity_handlers: map of elasticity dimension to elasticity handler
+        :return: elasticity configuration without conflicts with other active configs of other elasticity handlers
+        """
         return config
 
     def _collect_ops_data_by_selection_rule(self, selection_rule: Callable) -> List[Any]:
@@ -289,7 +299,7 @@ class ElasticKernelBuilder(SingleElasticityBuilder):
     def __init__(self, elasticity_params: Optional[Dict[str, Any]] = None,
                  ignored_scopes: Optional[List[str]] = None,
                  target_scopes: Optional[List[str]] = None):
-        super().__init__(target_scopes, ignored_scopes, elasticity_params)
+        super().__init__(ignored_scopes, target_scopes, elasticity_params)
         self._node_names_to_make_elastic = []  # type: List[NNCFNodeName]
 
     def build(self, target_model: NNCFNetwork) -> ElasticKernelHandler:

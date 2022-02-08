@@ -39,7 +39,7 @@ class ElasticityDesc:
         self.model_cls = model_cls
         self.ref_state = ref_state
         self.name = name
-        self.params = dict() if params is None else params
+        self.params = {} if params is None else params
         self.input_size = input_size
         self.ref_search_space = ref_search_space
         self.ref_output_fn = ref_output_fn

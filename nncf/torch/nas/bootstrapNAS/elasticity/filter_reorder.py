@@ -37,7 +37,7 @@ class FilterReorderingAlgorithm(MaskPropagationAlgorithm):
         1. running input_reorder method for this node
         2. running output_reorder method for this node
         """
-        pruned_node_modules = list()
+        pruned_node_modules = []
         with torch.no_grad():
             for node in self._graph.topological_sort():
                 node_cls = self.get_meta_operation_by_type_name(node.node_type)

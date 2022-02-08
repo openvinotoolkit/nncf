@@ -11,17 +11,17 @@
  limitations under the License.
 """
 import random
-from collections import Callable
 from collections import OrderedDict
 from copy import deepcopy
 from typing import Any
+from typing import Callable
 from typing import Dict
 from typing import List
 from typing import Optional
 from typing import Tuple
 
 import torch
-import torch.nn as nn
+from torch import nn
 
 from nncf.common.graph import BaseLayerAttributes
 from nncf.common.graph import NNCFNodeName
@@ -103,7 +103,7 @@ class DynamicWidthOp:
         return self._active_width
 
     def set_active_width(self, width: width_type):
-        """ 
+        """
         Set new number of filters that was set for preceding layers (input width) or for current layer
         (output width). The operation will use this value to adapt parameters for the layer, to which the operation is
         applied. The width should be less the original number of filters and more than one. Zero number of filters is
@@ -200,10 +200,7 @@ class ElasticWidthConv2DOp(ElasticWidthOp, nn.Module):
         width_list = []
         if max_out_channels <= min_out_channels:
             width_list.append(max_out_channels)
-            return width_list
-
-        if not width_multipliers:
-            # width = width_step * (max_out_channels // width_step)
+        elif not width_multipliers:
             width = max_out_channels
             width_list.append(width)
             width -= width_step
@@ -212,7 +209,6 @@ class ElasticWidthConv2DOp(ElasticWidthOp, nn.Module):
                     break
                 width_list.append(width)
                 width -= width_step
-            return width_list
         else:
             width_multipliers.sort(reverse=True)
             if width_multipliers[0] < 1:
@@ -221,22 +217,22 @@ class ElasticWidthConv2DOp(ElasticWidthOp, nn.Module):
                 if max_num_params == len(width_list):
                     break
                 if 0 >= multiplier > 1:
-                    nncf_logger.warning(f"Wrong value for multiplier: {multiplier}. Skipping ")
+                    nncf_logger.warning("Wrong value for multiplier: {}. Skipping ".format(multiplier))
                     continue
                 w = int(max_out_channels * multiplier)
                 w = w - (w % 8)
-                if w < min_out_channels:
-                    w = min_out_channels
+                w = max(w, min_out_channels)
                 if w in width_list:
                     continue
                 width_list.append(w)
-            return width_list
+        return width_list
 
 
 class ElasticWidthHandler(SingleElasticityHandler):
     """
     An interface for handling elastic width dimension in the network, i.e. define number of channels in the layers.
     """
+
     def __init__(self, target_model: NNCFNetwork,
                  filter_importance: Callable,
                  weights_normalizer: Callable,
@@ -326,17 +322,17 @@ class ElasticWidthHandler(SingleElasticityHandler):
         supernet_config = self._collect_ops_data_by_selection_rule(lambda op: op.max_width)
         self.set_config(supernet_config)
 
-    def set_config(self, width_config: ElasticWidthConfig) -> None:
+    def set_config(self, config: ElasticWidthConfig) -> None:
         """
         Activates a Subnet that corresponds to the given elasticity configuration
 
-        :param width_config: map of pruning group id to width value
+        :param config: map of pruning group id to width value
         """
         for node in self._propagation_graph.get_all_nodes():
             node.data.pop('output_mask', None)
 
         names_of_processed_nodes = set()
-        for cluster_id, width in width_config.items():
+        for cluster_id, width in config.items():
             cluster = self._pruned_module_groups_info.get_cluster_by_id(cluster_id)
             for elastic_width_info in cluster.elements:
                 node_id = elastic_width_info.nncf_node_id
@@ -413,13 +409,26 @@ class ElasticWidthHandler(SingleElasticityHandler):
     def resolve_conflicts_with_other_elasticities(self,
                                                   config: ElasticWidthConfig,
                                                   elasticity_handlers: ELASTICITY_HANDLERS_MAP) -> ElasticWidthConfig:
+        """
+        Resolves a conflict between the given elasticity config and active elasticity configs of the given handlers.
+        For example, elastic width configuration may contradict to elastic depth one. When we activate some
+        configuration in the Elastic Width Handler, i.e. define number of output channels for some layers, we
+        change output shapes of the layers. Consequently, it affects the blocks that can be skipped by Elastic Depth
+        Handler, because input and output shapes may not be identical now.
+
+        :param config: elasticity configuration
+        :param elasticity_handlers: map of elasticity dimension to elasticity handler
+        :return: elasticity configuration without conflicts with other active configs of other elasticity handlers
+        """
         return config
 
     def get_group_id_by_node_name(self, node_name: NNCFNodeName) -> Optional[int]:
+        group_id = None
         for cluster in self._pruned_module_groups_info.get_all_clusters():
             for element in cluster.elements:
                 if node_name == element.node_name:
-                    return cluster.id
+                    group_id = cluster.id
+        return group_id
 
     def reorganize_weights(self):
         for node in self._propagation_graph.get_all_nodes():
@@ -467,8 +476,8 @@ class ElasticWidthHandler(SingleElasticityHandler):
             output_node_names = [node.node_name for node in self._propagation_graph.get_output_nodes()]
             if start_width != end_width and end_node_name not in output_node_names:
                 pair_indexes.append(idx)
-                nncf_logger.warning(f'Pair of nodes [{start_node_name, end_node_name}] has a different width: '
-                                    f'{start_width} != {end_width}')
+                nncf_logger.warning('Pair of nodes [{}, {}] has a different width: {} != {}'.format(
+                    start_node_name, end_node_name, start_width, end_width))
         return pair_indexes
 
     def _get_width_list_len(self, op: ElasticWidthOp) -> int:
@@ -482,7 +491,7 @@ class ElasticWidthHandler(SingleElasticityHandler):
         return op.width_list[:width_list_len]
 
     def _collect_ops_data_by_selection_rule(self, selection_rule: Callable) -> Dict[pruning_group_id, Any]:
-        elastic_width_config = dict()
+        elastic_width_config = {}
         for cluster in self._pruned_module_groups_info.get_all_clusters():
             all_max_out_channels = {el.elastic_op.max_width for el in cluster.elements}
             if len(all_max_out_channels) != 1:
@@ -496,7 +505,8 @@ class ElasticWidthHandler(SingleElasticityHandler):
         return elastic_width_config
 
     @staticmethod
-    def mask_to_width(mask: NNCFTensor) -> int:
+    def mask_to_width(mask: NNCFTensor) -> Optional[int]:
+        result = None
         if mask is not None:
             actual_mask = mask.tensor
             mask_len = sum(actual_mask.size())
@@ -504,7 +514,8 @@ class ElasticWidthHandler(SingleElasticityHandler):
             ref_mask = ElasticWidthHandler._width_to_mask(mask_len, width).tensor
             assert torch.equal(ref_mask, actual_mask), \
                 f'Invalid mask {actual_mask}: the first {width} values must be ones, the rest - zeros.'
-            return width
+            result = width
+        return result
 
     @staticmethod
     def _width_to_mask(active_width: int, max_width: int) -> PTNNCFTensor:
@@ -524,7 +535,7 @@ class ElasticWidthBuilder(SingleElasticityBuilder):
     def __init__(self, elasticity_params: Optional[Dict[str, Any]] = None,
                  ignored_scopes: Optional[List[str]] = None,
                  target_scopes: Optional[List[str]] = None):
-        super().__init__(target_scopes, ignored_scopes, elasticity_params)
+        super().__init__(ignored_scopes, target_scopes, elasticity_params)
         self._weights_normalizer = None
         normalize_weights = self._elasticity_params.get('normalize_weights', False)
         if normalize_weights:

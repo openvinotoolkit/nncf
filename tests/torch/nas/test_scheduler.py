@@ -1,5 +1,5 @@
 """
- Copyright (c) 2021 Intel Corporation
+ Copyright (c) 2022 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -17,15 +17,16 @@ from typing import List
 
 import pytest
 
-from nncf.torch.nas.bootstrapNAS.elasticity.elasticity_dim import ElasticityDim
-from nncf.torch.nas.bootstrapNAS.elasticity.base_handler import SingleElasticityHandler
-from nncf.torch.nas.bootstrapNAS.elasticity.elastic_depth import ElasticDepthHandler
-from nncf.torch.nas.bootstrapNAS.elasticity.elastic_width import ElasticWidthHandler
-from nncf.torch.nas.bootstrapNAS.elasticity.multi_elasticity_handler import MultiElasticityHandler
-from nncf.torch.nas.bootstrapNAS.training.progressive_shrinking_builder import ProgressiveShrinkingBuilder
-from nncf.torch.nas.bootstrapNAS.training.progressive_shrinking_controller import ProgressiveShrinkingController
-from nncf.torch.nas.bootstrapNAS.training.scheduler import BootstrapNASScheduler
-from nncf.torch.nas.bootstrapNAS.training.stage_descriptor import StageDescriptor
+from nncf.experimental.torch.nas.bootstrapNAS.elasticity.base_handler import SingleElasticityHandler
+from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elastic_depth import ElasticDepthHandler
+from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elastic_width import ElasticWidthHandler
+from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elasticity_dim import ElasticityDim
+from nncf.experimental.torch.nas.bootstrapNAS.elasticity.multi_elasticity_handler import MultiElasticityHandler
+from nncf.experimental.torch.nas.bootstrapNAS.training.progressive_shrinking_builder import ProgressiveShrinkingBuilder
+from nncf.experimental.torch.nas.bootstrapNAS.training.progressive_shrinking_controller import \
+    ProgressiveShrinkingController
+from nncf.experimental.torch.nas.bootstrapNAS.training.scheduler import BootstrapNASScheduler
+from nncf.experimental.torch.nas.bootstrapNAS.training.stage_descriptor import StageDescriptor
 from tests.torch.helpers import MockModel
 
 LIST_STAGES__K_KW_KWD = [
@@ -51,8 +52,8 @@ SIMPLE_LIST_STAGE_DESCRIPTORS = [
 ]
 
 
-@pytest.fixture(params=[SIMPLE_LIST_STAGE_DESCRIPTORS], ids=['simple_desc'])
-def schedule_params(request):
+@pytest.fixture(name='schedule_params', params=[SIMPLE_LIST_STAGE_DESCRIPTORS], ids=['simple_desc'])
+def fixture_schedule_params(request):
     list_descriptors = request.param
     return {"list_stage_descriptions": list_descriptors}
 
@@ -103,6 +104,7 @@ class TestScheduler:
             ElasticityDim.DEPTH: mock_depth_handler,
         })
         mock_handler = MultiElasticityHandler(handlers)
+        # pylint:disable=protected-access
         is_handler_enabled_map = mock_handler._is_handler_enabled_map
         mock_elasticity_ctrl = mocker.stub()
         mock_elasticity_ctrl.multi_elasticity_handler = mock_handler
@@ -261,10 +263,19 @@ LIST_SCHEDULER_DESCS = [
         progressivity_of_elasticity=[ElasticityDim.KERNEL, ElasticityDim.WIDTH, ElasticityDim.DEPTH],
         available_elasticity_dims=[ElasticityDim.KERNEL, ElasticityDim.DEPTH],
     ),
+    SchedulerTestDesc(
+        name='limited list stages started from intermediate',
+        list_stage_dims=[
+            [ElasticityDim.DEPTH],
+            [ElasticityDim.DEPTH, ElasticityDim.WIDTH]
+        ],
+        progressivity_of_elasticity=LIST_DIMS__KDW,
+        available_elasticity_dims=LIST_DIMS__KDW,
+    ),
 ]
 
 
-@pytest.mark.parametrize('desc', LIST_SCHEDULER_DESCS, ids=map(lambda x: str(x), LIST_SCHEDULER_DESCS))
+@pytest.mark.parametrize('desc', LIST_SCHEDULER_DESCS, ids=map(str, LIST_SCHEDULER_DESCS))
 class TestElasticityConsistency:
     def test_checks_on_scheduler_init(self, mocker, desc: SchedulerTestDesc):
         scheduler_fn = partial(BootstrapNASScheduler,

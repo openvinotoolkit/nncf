@@ -76,8 +76,8 @@ class ElasticityHandler(ABC):
         """
         Activates the Supernet - the original network to which elasticity was applied.
         The Supernet is usually a maximum Subnet. But it might be not the case if maximum value of elastic properties
-        is limited for efficiency of search. For instance, a supernet may contain 32 convolutional channels, 
-        but maximum subnet can be restricted to have 24 channels, at maximum. 
+        is limited for efficiency of search. For instance, a supernet may contain 32 convolutional channels,
+        but maximum subnet can be restricted to have 24 channels, at maximum.
         """
 
     @abstractmethod
@@ -142,7 +142,6 @@ class SingleElasticityHandler(ElasticityHandler, ABC):
         """
         :return: search space that can be produced by iterating over all elastic parameters
         """
-        pass
 
     @abstractmethod
     def get_kwargs_for_flops_counting(self) -> Dict[str, Any]:
@@ -150,14 +149,12 @@ class SingleElasticityHandler(ElasticityHandler, ABC):
         Provides arguments for counting flops of the currently activated subnet.
         :return: mapping of parameters to its values
         """
-        pass
 
     @abstractmethod
     def get_transformation_commands(self) -> List[TransformationCommand]:
         """
         :return: transformation commands for introducing the elasticity to NNCFNetwork
         """
-        pass
 
     @abstractmethod
     def resolve_conflicts_with_other_elasticities(self,

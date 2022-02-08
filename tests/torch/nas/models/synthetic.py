@@ -69,9 +69,8 @@ class ThreeConvModel(nn.Module):
         self._transition_matrix = nn.Parameter(torch.eye(3 ** 2))
 
     def assert_weights_equal(self, model: 'ThreeConvModel'):
-        params = {name: param for name, param in model.named_parameters()}
-        ref_params = {name: param for name, param in self.named_parameters()}
-        for name, ref_param in ref_params.items():
+        params = dict(model.named_parameters())
+        for name, ref_param in self.named_parameters():
             if name.endswith('transition_matrix'):
                 continue
             param = params[name]

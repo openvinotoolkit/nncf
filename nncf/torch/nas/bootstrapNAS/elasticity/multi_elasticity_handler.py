@@ -112,19 +112,20 @@ class MultiElasticityHandler(ElasticityHandler):
         """
         self._collect_handler_data_by_method_name(self._get_current_method_name())
 
-    def set_config(self, subnet_config: SubnetConfig) -> None:
+    def set_config(self, config: SubnetConfig) -> None:
         """
         Activates a Subnet that corresponds to the given elasticity configuration
 
-        :param subnet_config: elasticity configuration
+        :param config: elasticity configuration
         """
+        active_handlers = {
+            dim: self._handlers[dim] for dim in self._handlers if self._is_handler_enabled_map[dim]
+        }
         for handler_id, handler in self._handlers.items():
-            if handler_id in subnet_config:
-                config = subnet_config[handler_id]
-                active_handlers = {
-                    dim: self._handlers[dim] for dim in self._handlers if self._is_handler_enabled_map[dim]
-                }
-                resolved_config = handler.resolve_conflicts_with_other_elasticities(config, active_handlers)
+            if handler_id in config:
+                sub_config = config[handler_id]
+                other_active_handlers = dict(filter(lambda pair: pair[0] != handler_id, active_handlers.items()))
+                resolved_config = handler.resolve_conflicts_with_other_elasticities(sub_config, other_active_handlers)
                 handler.set_config(resolved_config)
 
     def load_state(self, state: Dict[str, Any]) -> None:
@@ -183,8 +184,10 @@ class MultiElasticityHandler(ElasticityHandler):
         return flops, num_weights
 
     def _get_handler_by_elasticity_dim(self, dim: ElasticityDim) -> Optional[SingleElasticityHandler]:
+        result = None
         if dim in self._handlers:
-            return self._handlers[dim]
+            result = self._handlers[dim]
+        return result
 
     def _collect_handler_data_by_method_name(self, method_name) -> OrderedDictType[ElasticityDim, Any]:
         result = OrderedDict()

@@ -1,5 +1,5 @@
 """
- Copyright (c) 2019-2021 Intel Corporation
+ Copyright (c) 2022 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -49,7 +49,7 @@ class ElasticDepthHandler(SingleElasticityHandler):
     def __init__(self, target_model: NNCFNetwork,
                  skipped_blocks: BUILDING_BLOCKS,
                  skip_dependencies: GROUPED_BLOCK_IDS,
-                 all_skipped_nodes_per_skipped_block_idxs: Dict[int, List[str]],
+                 all_skipped_nodes_per_skipped_block_indexes: Dict[int, List[str]],
                  ordinal_ids: ORDINAL_IDS):
         super().__init__()
         self._target_model = target_model
@@ -57,7 +57,7 @@ class ElasticDepthHandler(SingleElasticityHandler):
         self._skipped_blocks = skipped_blocks
         self._skip_dependencies = skip_dependencies
         self._ordinal_ids = ordinal_ids
-        self._all_skipped_nodes_per_skipped_block_idxs = all_skipped_nodes_per_skipped_block_idxs
+        self._all_skipped_nodes_per_skipped_block_indexes = all_skipped_nodes_per_skipped_block_indexes
         self._depth_indicator = 1
         self._is_search_space_obsolete = True
         self._cached_search_space = None
@@ -98,7 +98,7 @@ class ElasticDepthHandler(SingleElasticityHandler):
 
         :return: list of blocks' indexes to skip
         """
-        return self._tracing_context.active_block_idxs
+        return self._tracing_context.active_block_indexes
 
     def get_random_config(self) -> ElasticDepthConfig:
         """
@@ -149,10 +149,21 @@ class ElasticDepthHandler(SingleElasticityHandler):
 
     def resolve_conflicts_with_other_elasticities(self,
                                                   config: ElasticDepthConfig,
-                                                  handlers: ELASTICITY_HANDLERS_MAP) -> ElasticDepthConfig:
+                                                  elasticity_handlers: ELASTICITY_HANDLERS_MAP) -> ElasticDepthConfig:
+        """
+        Resolves a conflict between the given elasticity config and active elasticity configs of the given handlers.
+        For example, elastic width configuration may contradict to elastic depth one. When we activate some
+        configuration in the Elastic Width Handler, i.e. define number of output channels for some layers, we
+        change output shapes of the layers. Consequently, it affects the blocks that can be skipped by Elastic Depth
+        Handler, because input and output shapes may not be identical now.
+
+        :param config: elasticity configuration
+        :param elasticity_handlers: map of elasticity dimension to elasticity handler
+        :return: elasticity configuration without conflicts with other active configs of other elasticity handlers
+        """
         result = config
-        if ElasticityDim.WIDTH in handlers:
-            width_handler = handlers[ElasticityDim.WIDTH]
+        if ElasticityDim.WIDTH in elasticity_handlers:
+            width_handler = elasticity_handlers[ElasticityDim.WIDTH]
             assert isinstance(width_handler, ElasticWidthHandler)
             blocks = [self._tracing_context.skipped_blocks[block_idx] for block_idx in config]
             pairs_of_nodes = [(block.start_node, block.end_node) for block in blocks]
@@ -160,18 +171,16 @@ class ElasticDepthHandler(SingleElasticityHandler):
                 indexes_of_pairs = width_handler.find_pairs_of_nodes_with_different_width(pairs_of_nodes)
                 if indexes_of_pairs:
                     result = [element for idx, element in enumerate(config) if idx not in indexes_of_pairs]
-                    nncf_logger.debug(
-                        f'The blocks with indexes {indexes_of_pairs} are not skipped to avoid inconsistency with width')
+                    nncf_logger.debug('The blocks with indexes {} are not skipped to avoid inconsistency with width'.
+                                      format(indexes_of_pairs))
         return result
-
-        pass
 
     def get_kwargs_for_flops_counting(self) -> Dict[str, Any]:
         op_addresses_to_skip = []
-        active_block_idxs = self._tracing_context.active_block_idxs
-        if active_block_idxs is not None:
-            for idx in active_block_idxs:
-                op_addresses_to_skip.extend(self._all_skipped_nodes_per_skipped_block_idxs[idx])
+        active_block_indexes = self._tracing_context.active_block_indexes
+        if active_block_indexes is not None:
+            for idx in active_block_indexes:
+                op_addresses_to_skip.extend(self._all_skipped_nodes_per_skipped_block_indexes[idx])
         return {'op_addresses_to_skip': op_addresses_to_skip}
 
     def _remove_inconsistent_blocks(self, config: ElasticDepthConfig) -> ElasticDepthConfig:
@@ -179,32 +188,40 @@ class ElasticDepthHandler(SingleElasticityHandler):
 
     def _remove_blocks_skipped_non_progressively(self, config: ElasticDepthConfig) -> ElasticDepthConfig:
         assert self._skip_dependencies is not None, 'Please include depth dependencies in conf. Pending automation.'
-        to_remove = []
-        for c in config:
-            for group in self._skip_dependencies.values():
-                found = False
-                index = group.index(c) if c in group else None
-                if index is not None:
-                    found = True
-                    if len(group) - index > self.depth_indicator:
-                        # nncf_logger.debug(f'{c} did not pass the depth_indicator test')
-                        to_remove.append(c)
-                        break
-                    valids = [group[index]]
-                    for i in range(index + 1, len(group)):
-                        if group[i] in config:
-                            valids.append(group[i])
-                        else:
-                            # nncf_logger.debug(f'{c} or {valids} did not satisfy requirement of next static block')
-                            for v in valids:
-                                to_remove.append(v)
-                            break
-                if found:
-                    break
-        for r in to_remove:
-            config.remove(r)
-            nncf_logger.debug(f'The block #{r} is not skipped to not violate progressive shrinking')
+        block_indexes_to_remove = []
+        for block_index in config:
+            tmp_block_indexes_to_remove = self._get_block_indexes_to_remove(block_index, config)
+            block_indexes_to_remove.extend(tmp_block_indexes_to_remove)
+
+        for block_index in block_indexes_to_remove:
+            config.remove(block_index)
+            nncf_logger.debug('The block #{} is not skipped to not violate progressive shrinking'.format(block_index))
         return config
+
+    def _get_block_indexes_to_remove(self, block_index: int, config: ElasticDepthConfig) -> ElasticDepthConfig:
+        block_indexes_to_remove = []
+        for group in self._skip_dependencies.values():
+            found = False
+            group_index = group.index(block_index) if block_index in group else None
+            if group_index is not None:
+                found = True
+                if len(group) - group_index > self.depth_indicator:
+                    nncf_logger.debug('The block with {} did not pass the depth_indicator test'.format(block_index))
+                    block_indexes_to_remove.append(block_index)
+                    break
+                valid_block_indexes = [group[group_index]]
+                for i in range(group_index + 1, len(group)):
+                    if group[i] in config:
+                        valid_block_indexes.append(group[i])
+                    else:
+                        nncf_logger.debug('The block #{} or #{} did not satisfy requirement of next static block'.
+                                          format(block_index, valid_block_indexes))
+                        for valid_block_index in valid_block_indexes:
+                            block_indexes_to_remove.append(valid_block_index)
+                        break
+            if found:
+                break
+        return block_indexes_to_remove
 
 
 class ElasticDepthMode(Enum):
@@ -259,7 +276,7 @@ class ElasticDepthBuilder(SingleElasticityBuilder):
         :return: a handler object that can manipulate the elastic depth.
         """
         tracing_context = target_model.get_tracing_context()
-        tracing_context._elastic_depth = True
+        tracing_context.elastic_depth = True
 
         if self._mode == ElasticDepthMode.AUTO:
             if not self._skipped_blocks and not self._skip_dependencies:
@@ -275,10 +292,10 @@ class ElasticDepthBuilder(SingleElasticityBuilder):
                 nncf_logger.info('\n'.join(['\n\"Found building blocks:\": [', ',\n'.join(str_bs), ']']))
 
         tracing_context.set_elastic_blocks(self._skipped_blocks, self._ordinal_ids)
-        all_skipped_nodes_per_skipped_block_idxs = self._get_all_skipped_nodes(target_model, self._skipped_blocks)
+        all_skipped_nodes_per_skipped_block_indexes = self._get_all_skipped_nodes(target_model, self._skipped_blocks)
 
         return ElasticDepthHandler(target_model, self._skipped_blocks, self._skip_dependencies,
-                                   all_skipped_nodes_per_skipped_block_idxs, self._ordinal_ids)
+                                   all_skipped_nodes_per_skipped_block_indexes, self._ordinal_ids)
 
     def load_state(self, state: Dict[str, Any]) -> None:
         """
@@ -290,9 +307,11 @@ class ElasticDepthBuilder(SingleElasticityBuilder):
         skip_dependencies_from_state = state[self._state_names.SKIPPED_BLOCKS_DEPENDENCIES]
         skipped_blocks = [BuildingBlock.from_state(bb_state) for bb_state in skipped_blocks_from_state]
         ordinal_ids_from_state = state[self._state_names.ORDINAL_IDS]
-        if self._skipped_blocks and self._skipped_blocks != skipped_blocks or \
-            self._skip_dependencies and self._skip_dependencies != skip_dependencies_from_state or \
-            self._ordinal_ids and self._ordinal_ids != ordinal_ids_from_state:
+        is_skipped_blocks_diff = self._skipped_blocks and self._skipped_blocks != skipped_blocks
+        is_skip_dependencies_diff = self._skip_dependencies and self._skip_dependencies != skip_dependencies_from_state
+        is_ordinal_ids_diff = self._ordinal_ids and self._ordinal_ids != ordinal_ids_from_state
+
+        if is_skipped_blocks_diff or is_skip_dependencies_diff or is_ordinal_ids_diff:
             nncf_logger.warning('Elasticity parameters were provided in two places: on init and on loading '
                                 'state. The one from state is taken by ignoring the ones from init.')
         self._mode = ElasticDepthMode.from_str(state[self._state_names.MODE])
@@ -317,21 +336,24 @@ class ElasticDepthBuilder(SingleElasticityBuilder):
     @staticmethod
     def _get_all_skipped_nodes(target_model: NNCFNetwork, skipped_blocks) -> Dict[int, List[str]]:
         graph = target_model.get_original_graph()
-        all_skipped_nodes_per_skipped_block_idxs = {}
+        all_skipped_nodes_per_skipped_block_indexes = {}
         for idx, block in enumerate(skipped_blocks):
-
             start_node_key, end_node_key = None, None
-            for node in graph._nx_graph._node.values():
-                if block.start_node == str(node['node_name']):
-                    start_node_key = node['key']
-                if block.end_node == str(node['node_name']):
-                    end_node_key = node['key']
+            for node_key in graph.get_all_node_keys():
+                node = graph.get_node_by_key(node_key)
+                if block.start_node == node.node_name:
+                    start_node_key = node_key
+                if block.end_node == node.node_name:
+                    end_node_key = node_key
+            # pylint: disable=protected-access
             simple_paths = nx.all_simple_paths(graph._nx_graph, start_node_key, end_node_key)
             all_nodes_in_block = set()
             for node_keys_in_path in simple_paths:
                 for node_key in node_keys_in_path:
-                    all_nodes_in_block.add(str(graph._nx_graph._node[node_key]['node_name']))
-            start_op_address = str(graph._nx_graph._node[start_node_key]['node_name'])
+                    node = graph.get_node_by_key(node_key)
+                    all_nodes_in_block.add(node.node_name)
+            start_node = graph.get_node_by_key(start_node_key)
+            start_op_address = start_node.node_name
             all_nodes_in_block.remove(start_op_address)
-            all_skipped_nodes_per_skipped_block_idxs[idx] = list(all_nodes_in_block)
-        return all_skipped_nodes_per_skipped_block_idxs
+            all_skipped_nodes_per_skipped_block_indexes[idx] = list(all_nodes_in_block)
+        return all_skipped_nodes_per_skipped_block_indexes

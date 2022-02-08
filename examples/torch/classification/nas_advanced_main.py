@@ -1,5 +1,5 @@
 """
- Copyright (c) 2021 Intel Corporation
+ Copyright (c) 2022 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -16,7 +16,7 @@ import warnings
 from pathlib import Path
 from shutil import copyfile
 
-import torch.nn as nn
+from torch import nn
 
 from examples.torch.classification.main import create_data_loaders
 from examples.torch.classification.main import create_datasets
@@ -98,13 +98,12 @@ def main_worker(current_gpu, config: SampleConfig):
     model_name = config['model']
     train_criterion_fn = inception_criterion_fn if 'inception' in model_name else default_criterion_fn
 
-    resuming_checkpoint_path = config.resuming_checkpoint_path
     nncf_config = config.nncf_config
     pretrained = is_pretrained_model_requested(config)
 
     # Data loading code
     train_dataset, val_dataset = create_datasets(config)
-    train_loader, train_sampler, val_loader, init_loader = create_data_loaders(config, train_dataset, val_dataset)
+    train_loader, _, val_loader, _ = create_data_loaders(config, train_dataset, val_dataset)
 
     bn_adapt_args = BNAdaptationInitArgs(data_loader=wrap_dataloader_for_init(train_loader), device=config.device)
     nncf_config.register_extra_structs([bn_adapt_args])
@@ -137,18 +136,14 @@ def main_worker(current_gpu, config: SampleConfig):
     else:
         training_algorithm = EpochBasedTrainingAlgorithm.from_checkpoint(nncf_network, bn_adapt_args,
                                                                          resuming_checkpoint_path)
-        elasticity_ctrl = training_algorithm.elasticity_ctrl
 
     if 'train' in config.mode:
-        nncf_network, elasticity_ctrl = training_algorithm.run(train_epoch_fn, train_loader, lr_scheduler,
-                                                               validate_model_fn, val_loader, optimizer,
-                                                               config.checkpoint_save_dir, config.tb)
+        training_algorithm.run(train_epoch_fn, train_loader, lr_scheduler,
+                               validate_model_fn, val_loader, optimizer,
+                               config.checkpoint_save_dir, config.tb)
 
     if 'test' in config.mode:
         validate(val_loader, model, criterion, config)
-
-    # search = NSGAIISearch(model, elasticity_ctrl, nncf_config)
-    # elasticity_ctrl = search.run(validate, val_loader)
 
 
 if __name__ == '__main__':

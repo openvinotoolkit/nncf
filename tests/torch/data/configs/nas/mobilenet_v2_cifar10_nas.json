@@ -7,7 +7,6 @@
     "bootstrapNAS": {
         "training": {
             "algorithm": "progressive_shrinking",
-            "progressivity_of_elasticity": ["kernel", "depth", "width"],
             "batchnorm_adaptation": {
                 "num_bn_adaptation_samples": 2
             },
@@ -19,26 +18,8 @@
                 ]
             },
             "elasticity": {
-                "enabled_elasticity_dims": ["width", "depth"],
-                "width": {
-                    "min_out_channels": 50,
-                    "width_step": 32,
-                    "filter_importance": "L1"
-                },
-                "kernel": {
-                    "max_num_kernels": "3"
-                }
+                "enabled_elasticity_dims": ["width", "depth"]
             }
-        },
-        "search": {
-            "algorithm": "NSGA"
-        },
-        "compression": [
-            {
-                "algorithm": "quantization",
-                "params": {},
-                "initializer": {}
-            }
-        ]
+        }
     }
 }

@@ -139,7 +139,7 @@ class BootstrapNASScheduler(BaseCompressionScheduler):
         super().load_state(state)
         list_stage_descriptors = state[self._state_names.LIST_STAGE_DESCRIPTIONS]
         # No conflict resolving with the related config options, parameters are overridden by compression state
-        self.list_stage_descriptors = list(map(lambda x: StageDescriptor.from_state(x), list_stage_descriptors))
+        self.list_stage_descriptors = list(map(StageDescriptor.from_state, list_stage_descriptors))
 
     def get_state(self) -> Dict[str, Any]:
         """
@@ -151,32 +151,38 @@ class BootstrapNASScheduler(BaseCompressionScheduler):
         state[self._state_names.LIST_STAGE_DESCRIPTIONS] = [desc.get_state() for desc in self.list_stage_descriptors]
         return state
 
-    def _validate_elasticity_dims(self, enabled_elasticity_dims, progressivity_of_elasticity):
+    def _validate_elasticity_dims(self, available_elasticity_dims, progressivity_of_elasticity):
         last_stage = -1
+        first_stage = len(progressivity_of_elasticity)
         for desc in self._list_stage_descriptors:
             high_priority_dim_idx = -1
+            low_priority_dim_idx = len(progressivity_of_elasticity)
             stages_covered = []
             for train_dim in desc.train_dims:
-                if train_dim not in enabled_elasticity_dims:
+                if train_dim not in available_elasticity_dims:
                     raise ValueError(
                         f"Invalid training elasticity dimension {train_dim} in the scheduler.\n"
                         f"The elasticity for this dimension is not enabled.\n"
                         f"It can be enabled by specifying `enabled_elasticity_dims` param in the `elasticity` "
                         f"section of config.\n"
-                        f"List of currently enabled dimensions: {[dim.value for dim in enabled_elasticity_dims]}")
+                        f"List of currently available dimensions: {[dim.value for dim in available_elasticity_dims]}")
                 dim_idx = progressivity_of_elasticity.index(train_dim)
                 if dim_idx not in stages_covered:
                     stages_covered.append(dim_idx)
                 if dim_idx > high_priority_dim_idx:
                     high_priority_dim_idx = dim_idx
-            if high_priority_dim_idx < last_stage:
+                if dim_idx < low_priority_dim_idx:
+                    low_priority_dim_idx = dim_idx
+            if high_priority_dim_idx < last_stage or low_priority_dim_idx > first_stage:
                 raise ValueError(
                     f"stage {progressivity_of_elasticity[high_priority_dim_idx]} violates progressivity of elasticity")
-            for i in range(0, high_priority_dim_idx):
-                if i not in stages_covered and progressivity_of_elasticity[i] in enabled_elasticity_dims:
+            for i in range(low_priority_dim_idx, high_priority_dim_idx):
+                if i not in stages_covered and progressivity_of_elasticity[i] in available_elasticity_dims:
                     raise ValueError(
-                        f"Missed to call {progressivity_of_elasticity[i]} in {desc.train_dims} which violates progressivity of elasticity {progressivity_of_elasticity}")
+                        f"Missed to call {progressivity_of_elasticity[i]} in {desc.train_dims} which violates "
+                        f"progressivity of elasticity {progressivity_of_elasticity}")
             last_stage = high_priority_dim_idx
+            first_stage = low_priority_dim_idx
 
     @staticmethod
     def _get_default_params() -> Dict[str, List[Dict]]:

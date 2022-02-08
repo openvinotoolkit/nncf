@@ -861,24 +861,12 @@ BOOTSTRAP_NAS_SCHEMA = {
         },
         "elasticity": {  # TODO: or it should be inside training?
             "depth": {
-                "skipped_blocks": {
-                    "oneOf": [
-                        _ARRAY_OF_STRINGS,
-                        {
-                            "type": "array",
-                            "items": _ARRAY_OF_STRINGS
-                        }
-                    ],
-                },
-                # "skipped_blocks_dependencies": {
-                #     {
-                #         "type": "array",
-                #         "items": _ARRAY_OF_NUMBERS
-                #     }
-                # },
                 "mode": with_attributes(_BOOLEAN,
-                                        description="Mode of elastic_depth.'manual' - set "
-                                                    "block from config by user and 'auto' - search building blocks auto."),
+                                        description="The way of elastic depth configuration - how skipped blocks are "
+                                                    "defined. Two modes are supported: manual and auto. The first "
+                                                    "refers to explicit setting coordinates of blocks in the config. "
+                                                    "The latter assumes no input from the user - blocks to skip are "
+                                                    "found automatically"),
                 "min_block_size": with_attributes(_NUMBER,
                                                   description="Minimal size of building block."),
                 "max_block_size": with_attributes(_NUMBER,
@@ -900,15 +888,6 @@ BOOTSTRAP_NAS_SCHEMA = {
         },
         "training": {
             "algorithm": with_attributes(_STRING, description="TBD"),  # TODO: progressive shrinking only
-            "schedule": {
-                "kernel_stage_epochs": with_attributes(_NUMBER, description="TBD"),
-                "depth_stage_epochs": with_attributes(_NUMBER, description="TBD"),
-                "width_stage_epochs": with_attributes(_NUMBER, description="TBD"),
-            },
-        },
-        "search": {
-            "algorithm": with_attributes(_STRING, description="TBD"),  # TODO: NSGA only?
-            "load_external_predictors": with_attributes(_BOOLEAN, description="TBD"),
         },
     },
 }

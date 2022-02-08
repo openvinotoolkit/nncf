@@ -1,5 +1,5 @@
 """
- Copyright (c) 2021 Intel Corporation
+ Copyright (c) 2022 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -23,16 +23,18 @@ from torchvision.models import mobilenet_v3_small
 
 from examples.torch.common.models import efficient_net
 from nncf import NNCFConfig
+from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elastic_kernel import ElasticKernelHandler
+from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elasticity_dim import ElasticityDim
+from nncf.experimental.torch.nas.bootstrapNAS.elasticity.multi_elasticity_handler import MultiElasticityHandler
+from nncf.experimental.torch.nas.bootstrapNAS.training.base_training import BNASTrainingController
+from nncf.experimental.torch.nas.bootstrapNAS.training.model_creator_helpers import \
+    create_compressed_model_from_algo_names
+from nncf.experimental.torch.nas.bootstrapNAS.training.progressive_shrinking_controller import \
+    ProgressiveShrinkingController
 from nncf.torch.dynamic_graph.graph_tracer import create_dummy_forward_fn
 from nncf.torch.dynamic_graph.graph_tracer import create_input_infos
 from nncf.torch.graph.transformations.layout import PTTransformationLayout
 from nncf.torch.model_creation import create_nncf_network
-from nncf.torch.nas.bootstrapNAS.elasticity.elastic_kernel import ElasticKernelHandler
-from nncf.torch.nas.bootstrapNAS.elasticity.elasticity_dim import ElasticityDim
-from nncf.torch.nas.bootstrapNAS.elasticity.multi_elasticity_handler import MultiElasticityHandler
-from nncf.torch.nas.bootstrapNAS.training.base_training import BNASTrainingController
-from nncf.torch.nas.bootstrapNAS.training.model_creator_helpers import create_compressed_model_from_algo_names
-from nncf.torch.nas.bootstrapNAS.training.progressive_shrinking_controller import ProgressiveShrinkingController
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.nncf_network import PTModelTransformer
 from tests.torch import test_models

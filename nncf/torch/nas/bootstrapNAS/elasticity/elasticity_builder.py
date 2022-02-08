@@ -20,9 +20,9 @@ from nncf.torch.algo_selector import PT_COMPRESSION_ALGORITHMS
 from nncf.torch.compression_method_api import PTCompressionAlgorithmBuilder
 from nncf.torch.graph.transformations.layout import PTTransformationLayout
 from nncf.torch.nas.bootstrapNAS.elasticity.base_handler import ELASTICITY_BUILDERS
-from nncf.torch.nas.bootstrapNAS.elasticity.elasticity_dim import ElasticityDim
 from nncf.torch.nas.bootstrapNAS.elasticity.base_handler import SingleElasticityBuilder
 from nncf.torch.nas.bootstrapNAS.elasticity.elasticity_controller import ElasticityController
+from nncf.torch.nas.bootstrapNAS.elasticity.elasticity_dim import ElasticityDim
 from nncf.torch.nas.bootstrapNAS.elasticity.multi_elasticity_handler import MultiElasticityHandler
 from nncf.torch.nncf_network import NNCFNetwork
 
@@ -64,8 +64,9 @@ class ElasticityBuilder(PTCompressionAlgorithmBuilder):
         self._target_scopes = self.config.get('target_scopes', None)
         self._multi_elasticity_handler_state = None
 
-        available_elasticity_dims_str = self._algo_config.get('available_elasticity_dims', {e.value for e in ElasticityDim})
-        self._available_elasticity_dims = list(map(lambda x: ElasticityDim.from_str(x), available_elasticity_dims_str))
+        all_elasticity_dims = {e.value for e in ElasticityDim}
+        available_elasticity_dims_str = self._algo_config.get('available_elasticity_dims', all_elasticity_dims)
+        self._available_elasticity_dims = list(map(ElasticityDim.from_str, available_elasticity_dims_str))
         self._elasticity_builders = OrderedDict()  # type: Dict[ElasticityDim, SingleElasticityBuilder]
         self._builder_states = None
 
@@ -76,7 +77,6 @@ class ElasticityBuilder(PTCompressionAlgorithmBuilder):
         :param model: The model with additional modifications necessary to enable
             algorithm-specific compression during fine-tuning.
         """
-        pass
 
     def get_available_elasticity_dims(self) -> List[ElasticityDim]:
         """
@@ -87,8 +87,15 @@ class ElasticityBuilder(PTCompressionAlgorithmBuilder):
     def _get_algo_specific_config_section(self) -> Dict:
         return self.config.get('bootstrapNAS', {}).get('training', {}).get('elasticity', {})
 
-    def _build_controller(self, target_model: NNCFNetwork) -> 'ElasticityController':
-        return ElasticityController(target_model, self._algo_config, self._multi_elasticity_handler)
+    def _build_controller(self, model: NNCFNetwork) -> 'ElasticityController':
+        """
+        Simple implementation of building controller without setting builder state and loading controller's one.
+
+        :param model: The model with additional modifications necessary to enable
+            algorithm-specific compression during fine-tuning.
+        :return: The instance of the `ElasticityController`.
+        """
+        return ElasticityController(model, self._algo_config, self._multi_elasticity_handler)
 
     def _get_transformation_layout(self, target_model: NNCFNetwork) -> PTTransformationLayout:
         sorted_elasticity_dims = list(
@@ -145,4 +152,4 @@ class ElasticityBuilder(PTCompressionAlgorithmBuilder):
         available_elasticity_dims_state = state_without_name[self._state_names.AVAILABLE_ELASTICITY_DIMS]
 
         # No conflict resolving with the related config options, parameters are overridden by compression state
-        self._available_elasticity_dims = list(map(lambda x: ElasticityDim.from_str(x), available_elasticity_dims_state))
+        self._available_elasticity_dims = list(map(ElasticityDim.from_str, available_elasticity_dims_state))

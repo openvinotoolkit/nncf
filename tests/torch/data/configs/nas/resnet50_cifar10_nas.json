@@ -12,12 +12,13 @@
             },
             "schedule": {
                 "list_stage_descriptions": [
-                    {"train_dims": ["width"], "epochs": 1, "width_indicator": 4},
-                    {"train_dims": ["width"], "epochs": 1, "reorg_weights": true, "width_indicator": 1}
+                    {"train_dims": ["depth"], "epochs": 1},
+                    {"train_dims": ["depth"], "epochs": 1, "depth_indicator": 2},
+                    {"train_dims": ["depth", "width"], "epochs": 1, "depth_indicator": 2, "reorg_weights": true, "width_indicator": 2}
                 ]
             },
             "elasticity": {
-                "enabled_elasticity_dims": ["width"]
+                "enabled_elasticity_dims": ["depth", "width"]
             }
         }
     }

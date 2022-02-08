@@ -1,5 +1,5 @@
 """
- Copyright (c) 2019-2021 Intel Corporation
+ Copyright (c) 2022 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -24,11 +24,12 @@ from nncf import NNCFConfig
 from nncf.api.compression import CompressionStage
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.config.structures import BNAdaptationInitArgs
+from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elasticity_controller import ElasticityController
+from nncf.experimental.torch.nas.bootstrapNAS.training.base_training import BNASTrainingController
+from nncf.experimental.torch.nas.bootstrapNAS.training.model_creator_helpers import \
+    create_compressed_model_from_algo_names
+from nncf.experimental.torch.nas.bootstrapNAS.training.model_creator_helpers import resume_compression_from_state
 from nncf.torch.checkpoint_loading import load_state
-from nncf.torch.nas.bootstrapNAS.elasticity.elasticity_controller import ElasticityController
-from nncf.torch.nas.bootstrapNAS.training.base_training import BNASTrainingController
-from nncf.torch.nas.bootstrapNAS.training.model_creator_helpers import create_compressed_model_from_algo_names
-from nncf.torch.nas.bootstrapNAS.training.model_creator_helpers import resume_compression_from_state
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.utils import is_main_process
 
@@ -185,7 +186,7 @@ class EpochBasedTrainingAlgorithm:
             # Backup elasticity state and model weight to directly restore from it in a separate search sample
             elasticity_path = Path(checkpoint_save_dir) / 'last_elasticity.pth'
             elasticity_state = self._training_ctrl.elasticity_controller.get_compression_state()
-            model_path = Path(checkpoint_save_dir) / f'last_model_weights.pth'
+            model_path = Path(checkpoint_save_dir) / 'last_model_weights.pth'
             model_state = self._model.state_dict()
             torch.save(elasticity_state, elasticity_path)
             torch.save(model_state, model_path)
