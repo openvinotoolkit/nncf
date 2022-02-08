@@ -267,6 +267,7 @@ def evaluate(test_step, metric, test_dist_dataset, num_batches, print_freq):
     return result
 
 
+# pylint: disable=too-many-statements
 def run(config):
     strategy = get_distribution_strategy(config)
     if config.metrics_dump is not None:
@@ -381,7 +382,7 @@ def run(config):
 
     # Due to https://github.com/tensorflow/tensorflow/issues/50487
     # pylint: disable=protected-access
-    # pylint: disable=too-many-statements
+    # TODO(negvet): remove disable=too-many-statements above when fixed
     atexit.register(strategy._extended._collective_ops._pool.close)
 
 
