@@ -23,13 +23,13 @@ from nncf.experimental.torch.nas.bootstrapNAS.training.progressive_shrinking_con
     ProgressiveShrinkingController
 from nncf.experimental.torch.nas.bootstrapNAS.training.scheduler import BootstrapNASScheduler
 from tests.common.helpers import TEST_ROOT
-from tests.torch.test_sanity_sample import SampleTestDescriptor
+from tests.torch.test_sanity_sample import SanityTestCaseDescriptor
 from tests.torch.test_sanity_sample import SampleType
 from tests.torch.test_sanity_sample import get_default_args
 from tests.torch.test_sanity_sample import validate_sample
 
 
-class NASSampleTestDescriptor(SampleTestDescriptor):
+class NASSampleTestDescriptor(SanityTestCaseDescriptor):
     def __init__(self):
         super().__init__()
         self.sample(SampleType.CLASSIFICATION)
@@ -86,7 +86,7 @@ NAS_TEST_CASE_DESCRIPTORS = [
 ]
 
 
-@pytest.fixture(name='nas_desc', params=NAS_TEST_CASE_DESCRIPTORS)
+@pytest.fixture(name='nas_desc', params=NAS_TEST_CASE_DESCRIPTORS, ids=map(str, NAS_TEST_CASE_DESCRIPTORS))
 def fixture_nas_desc(request, dataset_dir):
     desc: NASSampleTestDescriptor = request.param
     return desc.finalize(dataset_dir)

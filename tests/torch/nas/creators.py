@@ -66,9 +66,7 @@ def create_bnas_model_and_ctrl_by_test_desc(desc: MultiElasticityTestDesc, mode=
                 "elasticity": {
                     "depth": {
                         'mode': mode,
-                        'skipped_blocks': desc.blocks_to_skip,
-                        'skipped_blocks_dependencies': desc.blocks_dependencies,
-                        'ordinal_ids': desc.ordinal_ids
+                        'skipped_blocks': desc.blocks_to_skip
                     }
                 }
             }

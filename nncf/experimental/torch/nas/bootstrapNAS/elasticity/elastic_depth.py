@@ -18,22 +18,22 @@ from typing import Dict
 from typing import List
 from typing import Optional
 
-import networkx as nx
-
+from nncf.common.graph import NNCFNodeName
 from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.utils.logger import logger as nncf_logger
-from nncf.experimental.torch.search_building_blocks.search_blocks import BUILDING_BLOCKS
-from nncf.experimental.torch.search_building_blocks.search_blocks import BuildingBlock
-from nncf.experimental.torch.search_building_blocks.search_blocks import GROUPED_BLOCK_IDS
-from nncf.experimental.torch.search_building_blocks.search_blocks import ORDINAL_IDS
-from nncf.experimental.torch.search_building_blocks.search_blocks import get_building_blocks
-from nncf.torch.dynamic_graph.context import TracingContext
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.base_handler import ELASTICITY_BUILDERS
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.base_handler import ELASTICITY_HANDLERS_MAP
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.base_handler import SingleElasticityBuilder
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.base_handler import SingleElasticityHandler
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elastic_width import ElasticWidthHandler
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elasticity_dim import ElasticityDim
+from nncf.experimental.torch.search_building_blocks.search_blocks import BUILDING_BLOCKS
+from nncf.experimental.torch.search_building_blocks.search_blocks import BuildingBlock
+from nncf.experimental.torch.search_building_blocks.search_blocks import GROUPED_BLOCK_IDS
+from nncf.experimental.torch.search_building_blocks.search_blocks import ORDINAL_IDS
+from nncf.experimental.torch.search_building_blocks.search_blocks import get_building_blocks
+from nncf.experimental.torch.search_building_blocks.search_blocks import get_group_of_dependent_blocks
+from nncf.torch.dynamic_graph.context import TracingContext
 from nncf.torch.nncf_network import NNCFNetwork
 
 block_id = int
@@ -49,7 +49,7 @@ class ElasticDepthHandler(SingleElasticityHandler):
     def __init__(self, target_model: NNCFNetwork,
                  skipped_blocks: BUILDING_BLOCKS,
                  skip_dependencies: GROUPED_BLOCK_IDS,
-                 all_skipped_nodes_per_skipped_block_indexes: Dict[int, List[str]],
+                 node_names_per_block: Dict[int, List[str]],
                  ordinal_ids: ORDINAL_IDS):
         super().__init__()
         self._target_model = target_model
@@ -57,7 +57,7 @@ class ElasticDepthHandler(SingleElasticityHandler):
         self._skipped_blocks = skipped_blocks
         self._skip_dependencies = skip_dependencies
         self._ordinal_ids = ordinal_ids
-        self._all_skipped_nodes_per_skipped_block_indexes = all_skipped_nodes_per_skipped_block_indexes
+        self._node_names_per_block = node_names_per_block
         self._depth_indicator = 1
         self._is_search_space_obsolete = True
         self._cached_search_space = None
@@ -166,7 +166,7 @@ class ElasticDepthHandler(SingleElasticityHandler):
             width_handler = elasticity_handlers[ElasticityDim.WIDTH]
             assert isinstance(width_handler, ElasticWidthHandler)
             blocks = [self._tracing_context.skipped_blocks[block_idx] for block_idx in config]
-            pairs_of_nodes = [(block.start_node, block.end_node) for block in blocks]
+            pairs_of_nodes = [(block.start_node_name, block.end_node_name) for block in blocks]
             if pairs_of_nodes:
                 indexes_of_pairs = width_handler.find_pairs_of_nodes_with_different_width(pairs_of_nodes)
                 if indexes_of_pairs:
@@ -180,7 +180,7 @@ class ElasticDepthHandler(SingleElasticityHandler):
         active_block_indexes = self._tracing_context.active_block_indexes
         if active_block_indexes is not None:
             for idx in active_block_indexes:
-                op_addresses_to_skip.extend(self._all_skipped_nodes_per_skipped_block_indexes[idx])
+                op_addresses_to_skip.extend(self._node_names_per_block[idx])
         return {'op_addresses_to_skip': op_addresses_to_skip}
 
     def _remove_inconsistent_blocks(self, config: ElasticDepthConfig) -> ElasticDepthConfig:
@@ -254,18 +254,18 @@ class ElasticDepthBuilder(SingleElasticityBuilder):
                  target_scopes: Optional[List[str]] = None):
         super().__init__(ignored_scopes, target_scopes, elasticity_params)
         self._mode = ElasticDepthMode.from_str(self._elasticity_params.get('mode', ElasticDepthMode.AUTO.value))
-        self._skipped_blocks = []
-        self._skip_dependencies = {}
-        self._ordinal_ids = None
+        self._skipped_blocks = None  # type: Optional[BUILDING_BLOCKS]
+        self._skip_dependencies = None  # type: Optional[GROUPED_BLOCK_IDS]
+        self._ordinal_ids = None  # type: Optional[ORDINAL_IDS]
         self._max_block_size = self._elasticity_params.get('max_block_size', 50)
         self._min_block_size = self._elasticity_params.get('min_block_size', 6)
         self._allow_nested_blocks = self._elasticity_params.get('allow_nested_blocks', False)
         self._allow_linear_combination = self._elasticity_params.get('allow_linear_combination', False)
 
         if self._mode == ElasticDepthMode.MANUAL:
-            self._skipped_blocks = [BuildingBlock(*b) for b in self._elasticity_params.get('skipped_blocks', [])]
-            self._skip_dependencies = self._elasticity_params.get('skipped_blocks_dependencies', {})
-            self._ordinal_ids = self._elasticity_params.get('ordinal_ids', None)
+            skipped_blocks = self._elasticity_params.get('skipped_blocks', [])  # type: List[List[str,str]]
+            self._skipped_blocks = [BuildingBlock(*b) for b in skipped_blocks]
+            self._skip_dependencies = get_group_of_dependent_blocks(self._skipped_blocks)
 
     def build(self, target_model: NNCFNetwork) -> ElasticDepthHandler:
         """
@@ -290,12 +290,20 @@ class ElasticDepthBuilder(SingleElasticityBuilder):
                     )
                 str_bs = [str(block) for block in self._skipped_blocks]
                 nncf_logger.info('\n'.join(['\n\"Found building blocks:\": [', ',\n'.join(str_bs), ']']))
+        else:
+            graph = target_model.get_original_graph()
+            ordinal_ids = []
+            for block in self._skipped_blocks:
+                start_node = graph.get_node_by_name(block.start_node_name)
+                end_node = graph.get_node_by_name(block.end_node_name)
+                ordinal_ids.append([start_node.node_id, end_node.node_id])
+            self._ordinal_ids = ordinal_ids
 
         tracing_context.set_elastic_blocks(self._skipped_blocks, self._ordinal_ids)
-        all_skipped_nodes_per_skipped_block_indexes = self._get_all_skipped_nodes(target_model, self._skipped_blocks)
+        node_names_per_block = self._get_node_names_per_block(target_model, self._skipped_blocks)
 
         return ElasticDepthHandler(target_model, self._skipped_blocks, self._skip_dependencies,
-                                   all_skipped_nodes_per_skipped_block_indexes, self._ordinal_ids)
+                                   node_names_per_block, self._ordinal_ids)
 
     def load_state(self, state: Dict[str, Any]) -> None:
         """
@@ -326,34 +334,29 @@ class ElasticDepthBuilder(SingleElasticityBuilder):
 
         :return: state of the object
         """
+        skipped_blocks_from_state = []
+        if self._skipped_blocks is not None:
+            skipped_blocks_from_state = list(map(lambda x: x.get_state(), self._skipped_blocks))
         return {
             self._state_names.MODE: self._mode.value,
-            self._state_names.SKIPPED_BLOCKS: list(map(lambda x: x.get_state(), self._skipped_blocks)),
+            self._state_names.SKIPPED_BLOCKS: skipped_blocks_from_state,
             self._state_names.SKIPPED_BLOCKS_DEPENDENCIES: self._skip_dependencies,
             self._state_names.ORDINAL_IDS: self._ordinal_ids
         }
 
     @staticmethod
-    def _get_all_skipped_nodes(target_model: NNCFNetwork, skipped_blocks) -> Dict[int, List[str]]:
+    def _get_node_names_per_block(target_model: NNCFNetwork, skipped_blocks) -> Dict[int, List[NNCFNodeName]]:
         graph = target_model.get_original_graph()
-        all_skipped_nodes_per_skipped_block_indexes = {}
+        all_node_names_per_block = {}
         for idx, block in enumerate(skipped_blocks):
-            start_node_key, end_node_key = None, None
-            for node_key in graph.get_all_node_keys():
-                node = graph.get_node_by_key(node_key)
-                if block.start_node == node.node_name:
-                    start_node_key = node_key
-                if block.end_node == node.node_name:
-                    end_node_key = node_key
-            # pylint: disable=protected-access
-            simple_paths = nx.all_simple_paths(graph._nx_graph, start_node_key, end_node_key)
-            all_nodes_in_block = set()
+            simple_paths = graph.get_all_simple_paths(block.start_node_name, block.end_node_name)
+
+            node_names_in_block = set()
             for node_keys_in_path in simple_paths:
                 for node_key in node_keys_in_path:
                     node = graph.get_node_by_key(node_key)
-                    all_nodes_in_block.add(node.node_name)
-            start_node = graph.get_node_by_key(start_node_key)
-            start_op_address = start_node.node_name
-            all_nodes_in_block.remove(start_op_address)
-            all_skipped_nodes_per_skipped_block_indexes[idx] = list(all_nodes_in_block)
-        return all_skipped_nodes_per_skipped_block_indexes
+                    node_names_in_block.add(node.node_name)
+
+            node_names_in_block.remove(block.start_node_name)
+            all_node_names_per_block[idx] = list(node_names_in_block)
+        return all_node_names_per_block

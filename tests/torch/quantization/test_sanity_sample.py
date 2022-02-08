@@ -201,15 +201,15 @@ TEST_CASE_DESCRIPTORS = [
 ]
 
 
-@pytest.fixture(params=TEST_CASE_DESCRIPTORS)
-def desc(request, dataset_dir):
+@pytest.fixture(name='precision_desc', params=TEST_CASE_DESCRIPTORS, ids=map(str, TEST_CASE_DESCRIPTORS))
+def fixture_precision_desc(request, dataset_dir):
     desc: PrecisionTestCaseDescriptor = request.param
     return desc.finalize(dataset_dir)
 
 
-def test_precision_init(desc: PrecisionTestCaseDescriptor, tmp_path, mocker):
-    args = get_default_args(desc, tmp_path)
-    validate_sample(args, desc, mocker)
+def test_precision_init(precision_desc: PrecisionTestCaseDescriptor, tmp_path, mocker):
+    args = get_default_args(precision_desc, tmp_path)
+    validate_sample(args, precision_desc, mocker)
 
 
 class ExportTestCaseDescriptor(PrecisionTestCaseDescriptor):
@@ -270,8 +270,8 @@ EXPORT_TEST_CASE_DESCRIPTORS = [
 ]
 
 
-@pytest.fixture(params=EXPORT_TEST_CASE_DESCRIPTORS)
-def export_desc(request):
+@pytest.fixture(name='export_desc', params=EXPORT_TEST_CASE_DESCRIPTORS, ids=map(str, EXPORT_TEST_CASE_DESCRIPTORS))
+def fixture_export_desc(request):
     desc: PrecisionTestCaseDescriptor = request.param
     return desc.finalize()
 

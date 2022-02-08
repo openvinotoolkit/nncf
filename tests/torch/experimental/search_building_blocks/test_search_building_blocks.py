@@ -41,8 +41,8 @@ REF_BUILDING_BLOCKS_FOR_RESNET = [
     BuildingBlock('ResNet/Sequential[layer3]/Bottleneck[3]/relu_2', 'ResNet/Sequential[layer3]/Bottleneck[4]/relu_2'),
     BuildingBlock('ResNet/Sequential[layer3]/Bottleneck[4]/relu_2', 'ResNet/Sequential[layer3]/Bottleneck[5]/relu_2'),
     BuildingBlock('ResNet/Sequential[layer4]/Bottleneck[0]/relu_2', 'ResNet/Sequential[layer4]/Bottleneck[1]/relu_2'),
-    BuildingBlock('ResNet/Sequential[layer4]/Bottleneck[1]/relu_2',
-                  'ResNet/Sequential[layer4]/Bottleneck[2]/relu_2')]  # 12
+    BuildingBlock('ResNet/Sequential[layer4]/Bottleneck[1]/relu_2', 'ResNet/Sequential[layer4]/Bottleneck[2]/relu_2')
+]
 
 REF_BUILDING_BLOCKS_FOR_MOBILENETV2 = [
     BuildingBlock(
@@ -74,47 +74,50 @@ REF_BUILDING_BLOCKS_FOR_MOBILENETV2 = [
         'MobileNetV2/Sequential[features]/InvertedResidual[15]/__add___0'),
     BuildingBlock(
         'MobileNetV2/Sequential[features]/InvertedResidual[15]/__add___0',
-        'MobileNetV2/Sequential[features]/InvertedResidual[16]/__add___0')]  # 10
+        'MobileNetV2/Sequential[features]/InvertedResidual[16]/__add___0')
+]
 
 REF_BUILDING_BLOCKS_FOR_SQUEEZENET = [
-    BuildingBlock(
-        'SqueezeNet/Sequential[features]/Fire[3]/ReLU[squeeze_activation]/relu__0',
-        'SqueezeNet/Sequential[features]/Fire[4]/ReLU[squeeze_activation]/relu__0'),
-    BuildingBlock(
-        'SqueezeNet/Sequential[features]/Fire[4]/ReLU[squeeze_activation]/relu__0',
-        'SqueezeNet/Sequential[features]/Fire[4]/cat_0'),
-    BuildingBlock(
-        'SqueezeNet/Sequential[features]/Fire[7]/ReLU[squeeze_activation]/relu__0',
-        'SqueezeNet/Sequential[features]/Fire[7]/cat_0'),
-    BuildingBlock(
-        'SqueezeNet/Sequential[features]/Fire[8]/ReLU[squeeze_activation]/relu__0',
-        'SqueezeNet/Sequential[features]/Fire[9]/ReLU[squeeze_activation]/relu__0'),
-    BuildingBlock(
-        'SqueezeNet/Sequential[features]/Fire[9]/ReLU[squeeze_activation]/relu__0',
-        'SqueezeNet/Sequential[features]/Fire[9]/cat_0'),
-    BuildingBlock(
-        'SqueezeNet/Sequential[features]/Fire[12]/ReLU[squeeze_activation]/relu__0',
-        'SqueezeNet/Sequential[features]/Fire[12]/cat_0')]  # 6
+    BuildingBlock('SqueezeNet/Sequential[features]/Fire[3]/ReLU[squeeze_activation]/relu__0',
+                  'SqueezeNet/Sequential[features]/Fire[4]/ReLU[squeeze_activation]/relu__0'),
+    BuildingBlock('SqueezeNet/Sequential[features]/Fire[4]/ReLU[squeeze_activation]/relu__0',
+                  'SqueezeNet/Sequential[features]/Fire[4]/cat_0'),
+    BuildingBlock('SqueezeNet/Sequential[features]/Fire[7]/ReLU[squeeze_activation]/relu__0',
+                  'SqueezeNet/Sequential[features]/Fire[7]/cat_0'),
+    BuildingBlock('SqueezeNet/Sequential[features]/Fire[8]/ReLU[squeeze_activation]/relu__0',
+                  'SqueezeNet/Sequential[features]/Fire[9]/ReLU[squeeze_activation]/relu__0'),
+    BuildingBlock('SqueezeNet/Sequential[features]/Fire[9]/ReLU[squeeze_activation]/relu__0',
+                  'SqueezeNet/Sequential[features]/Fire[9]/cat_0'),
+    BuildingBlock('SqueezeNet/Sequential[features]/Fire[12]/ReLU[squeeze_activation]/relu__0',
+                  'SqueezeNet/Sequential[features]/Fire[12]/cat_0')
+]
 
 REF_BUILDING_BLOCKS_FOR_INCEPTIONV3 = [
-    BuildingBlock('Inception3/InceptionA[Mixed_5c]/cat_0', 'Inception3/InceptionA[Mixed_5d]/cat_0'),
+    BuildingBlock('Inception3/InceptionA[Mixed_5c]/cat_0',
+                  'Inception3/InceptionA[Mixed_5d]/cat_0'),
     BuildingBlock('Inception3/InceptionC[Mixed_6b]/BasicConv2d[branch7x7dbl_2]/relu__0',
                   'Inception3/InceptionC[Mixed_6b]/BasicConv2d[branch7x7dbl_4]/relu__0'),
-    BuildingBlock('Inception3/InceptionB[Mixed_6a]/cat_0', 'Inception3/InceptionC[Mixed_6b]/cat_0'),
+    BuildingBlock('Inception3/InceptionB[Mixed_6a]/cat_0',
+                  'Inception3/InceptionC[Mixed_6b]/cat_0'),
     BuildingBlock('Inception3/InceptionC[Mixed_6c]/BasicConv2d[branch7x7dbl_2]/relu__0',
                   'Inception3/InceptionC[Mixed_6c]/BasicConv2d[branch7x7dbl_4]/relu__0'),
-    BuildingBlock('Inception3/InceptionC[Mixed_6b]/cat_0', 'Inception3/InceptionC[Mixed_6c]/cat_0'),
+    BuildingBlock('Inception3/InceptionC[Mixed_6b]/cat_0',
+                  'Inception3/InceptionC[Mixed_6c]/cat_0'),
     BuildingBlock('Inception3/InceptionC[Mixed_6d]/BasicConv2d[branch7x7dbl_2]/relu__0',
                   'Inception3/InceptionC[Mixed_6d]/BasicConv2d[branch7x7dbl_4]/relu__0'),
-    BuildingBlock('Inception3/InceptionC[Mixed_6c]/cat_0', 'Inception3/InceptionC[Mixed_6d]/cat_0'),
+    BuildingBlock('Inception3/InceptionC[Mixed_6c]/cat_0',
+                  'Inception3/InceptionC[Mixed_6d]/cat_0'),
     BuildingBlock('Inception3/InceptionC[Mixed_6e]/BasicConv2d[branch7x7dbl_2]/relu__0',
                   'Inception3/InceptionC[Mixed_6e]/BasicConv2d[branch7x7dbl_4]/relu__0'),
     BuildingBlock('Inception3/InceptionC[Mixed_6e]/BasicConv2d[branch7x7dbl_3]/relu__0',
                   'Inception3/InceptionC[Mixed_6e]/BasicConv2d[branch7x7dbl_5]/relu__0'),
     BuildingBlock('Inception3/InceptionC[Mixed_6e]/BasicConv2d[branch7x7dbl_2]/relu__0',
                   'Inception3/InceptionC[Mixed_6e]/BasicConv2d[branch7x7dbl_5]/relu__0'),
-    BuildingBlock('Inception3/InceptionC[Mixed_6d]/cat_0', 'Inception3/InceptionC[Mixed_6e]/cat_0'),
-    BuildingBlock('Inception3/InceptionE[Mixed_7b]/cat_2', 'Inception3/InceptionE[Mixed_7c]/cat_2')]
+    BuildingBlock('Inception3/InceptionC[Mixed_6d]/cat_0',
+                  'Inception3/InceptionC[Mixed_6e]/cat_0'),
+    BuildingBlock('Inception3/InceptionE[Mixed_7b]/cat_2',
+                  'Inception3/InceptionE[Mixed_7c]/cat_2')
+]
 
 REF_BUILDING_BLOCKS_FOR_ResNext = [
     BuildingBlock('ResNeXt/Sequential[layer1]/Block[0]/relu_2', 'ResNeXt/Sequential[layer1]/Block[1]/relu_2'),
@@ -228,36 +231,17 @@ REF_BUILDING_BLOCKS_FOR_EFFICIENT_NET = [
     BuildingBlock('EfficientNet/ModuleList[_blocks]/MBConvBlock[15]/MemoryEfficientSwish[_swish]/__mul___1',
                   'EfficientNet/ModuleList[_blocks]/MBConvBlock[15]/__mul___0')]
 
-REF_GROUP_DEPENDENT_RESNET50 = {0: [0, 1], 1: [2, 3, 4], 2: [5, 6, 7, 8, 9], 3: [10, 11]}
-REF_GROUP_DEPENDENT_MOBILENETV2 = {0: [0], 1: [1, 2], 2: [3, 4, 5], 3: [6, 7], 4: [8, 9]}
-REF_GROUP_DEPENDENT_INCEPTIONV3 = {0: [0], 1: [1], 2: [2], 3: [3], 4: [4], 5: [5], 6: [6], 7: [7], 8: [8], 9: [9],
-                                   10: [10], 11: [11]}
-REF_GROUP_DEPENDENT_SQUEEZNET = {0: [0, 1], 1: [2], 2: [3, 4], 3: [5]}
-REF_GROUP_DEPENDENT_PNASNETB = {0: [0, 1, 2, 3, 4, 5], 1: [6, 7, 8, 9, 10, 11], 2: [12, 13, 14, 15, 16, 17]}
-REF_GROUP_DEPENDENT_RESNEXT = {0: [0, 1], 1: [2, 3], 2: [4, 5]}
-REF_GROUP_DEPENDENT_SSD_MOBILENET = {0: [0], 1: [1], 2: [2], 3: [3], 4: [4], 5: [5], 6: [6], 7: [7], 8: [8], 9: [9],
-                                     10: [10], 11: [11], 12: [12], 13: [13], 14: [14]}
-REF_GROUP_DEPENDENT_EFFICIENT_NET = {0: [0], 1: [1], 2: [2], 3: [3], 4: [4], 5: [5], 6: [6], 7: [7], 8: [8], 9: [9],
-                                     10: [10], 11: [11], 12: [12], 13: [13], 14: [14], 15: [15], 16: [16], 17: [17],
-                                     18: [18], 19: [19], 20: [20], 21: [21], 22: [22], 23: [23], 24: [24]}
 
-
-@pytest.mark.parametrize('model_creator, input_sizes, ref_skipped_blocks, ref_group_dependent',
-                         ((ResNet50, RESNET50_INPUT_SIZE, REF_BUILDING_BLOCKS_FOR_RESNET, REF_GROUP_DEPENDENT_RESNET50),
-                          (MobileNetV2, RESNET50_INPUT_SIZE, REF_BUILDING_BLOCKS_FOR_MOBILENETV2,
-                           REF_GROUP_DEPENDENT_MOBILENETV2),
-                          (Inception3, INCEPTION_INPUT_SIZE, REF_BUILDING_BLOCKS_FOR_INCEPTIONV3,
-                           REF_GROUP_DEPENDENT_INCEPTIONV3),
-                          (squeezenet1_0, RESNET50_INPUT_SIZE, REF_BUILDING_BLOCKS_FOR_SQUEEZENET,
-                           REF_GROUP_DEPENDENT_SQUEEZNET),
-                          (test_models.ResNeXt29_32x4d, [1, 3, 32, 32], REF_BUILDING_BLOCKS_FOR_ResNext,
-                           REF_GROUP_DEPENDENT_RESNEXT),
-                          (test_models.PNASNetB, [1, 3, 32, 32], REF_BUILDING_BLOCKS_FOR_PNASNetB,
-                           REF_GROUP_DEPENDENT_PNASNETB),
-                          (test_models.ssd_mobilenet, [2, 3, 300, 300], REF_BUILDING_BLOCKS_FOR_SSD_MOBILENET,
-                           REF_GROUP_DEPENDENT_SSD_MOBILENET),
+@pytest.mark.parametrize('model_creator, input_sizes, ref_skipped_blocks',
+                         ((ResNet50, RESNET50_INPUT_SIZE, REF_BUILDING_BLOCKS_FOR_RESNET),
+                          (MobileNetV2, RESNET50_INPUT_SIZE, REF_BUILDING_BLOCKS_FOR_MOBILENETV2),
+                          (Inception3, INCEPTION_INPUT_SIZE, REF_BUILDING_BLOCKS_FOR_INCEPTIONV3),
+                          (squeezenet1_0, RESNET50_INPUT_SIZE, REF_BUILDING_BLOCKS_FOR_SQUEEZENET),
+                          (test_models.ResNeXt29_32x4d, [1, 3, 32, 32], REF_BUILDING_BLOCKS_FOR_ResNext),
+                          (test_models.PNASNetB, [1, 3, 32, 32], REF_BUILDING_BLOCKS_FOR_PNASNetB),
+                          (test_models.ssd_mobilenet, [2, 3, 300, 300], REF_BUILDING_BLOCKS_FOR_SSD_MOBILENET),
                           (partial(efficient_net, model_name='efficientnet-b0'), [10, 3, 240, 240],
-                           REF_BUILDING_BLOCKS_FOR_EFFICIENT_NET, REF_GROUP_DEPENDENT_EFFICIENT_NET)
+                           REF_BUILDING_BLOCKS_FOR_EFFICIENT_NET)
                           ))
 def test_building_block(model_creator, input_sizes, ref_skipped_blocks, ref_group_dependent):
     model = model_creator()

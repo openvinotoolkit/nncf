@@ -138,18 +138,18 @@ class BuildingBlock:
     Describes a building block that is uniquely defined by the start and end nodes.
     """
 
-    def __init__(self, start_node: str, end_node: str):
-        self.start_node = start_node
-        self.end_node = end_node
+    def __init__(self, start_node_name: NNCFNodeName, end_node_name: NNCFNodeName):
+        self.start_node_name = start_node_name
+        self.end_node_name = end_node_name
 
     def __eq__(self, __o: 'BuildingBlock') -> bool:
-        return self.start_node == __o.start_node and self.end_node == __o.end_node
+        return self.start_node_name == __o.start_node_name and self.end_node_name == __o.end_node_name
 
     def __repr__(self) -> str:
         return str(self)
 
     def __str__(self) -> str:
-        return "[START NODE: {}, END_NODE: {}]".format(self.start_node, self.end_node)
+        return "[START NODE: {}, END_NODE: {}]".format(self.start_node_name, self.end_node_name)
 
     def get_state(self) -> Dict[str, Any]:
         """
@@ -159,8 +159,8 @@ class BuildingBlock:
         :return: state of the object
         """
         return {
-            'start_node': self.start_node,
-            'end_node': self.end_node
+            'start_node_name': self.start_node_name,
+            'end_node_name': self.end_node_name
         }
 
     @classmethod
@@ -509,9 +509,9 @@ def check_blocks_combination_is_block(block: PotentialBuildingBlock,
         return False
     i = 0
     while i < len(combination) - 1:
-        end_i_node = combination[i].end_node
-        start_nexti_node = combination[i + 1].start_node
-        if end_i_node.node_key in start_nexti_node.node_key:
+        curr_end_node = combination[i].end_node
+        next_start_node = combination[i + 1].start_node
+        if curr_end_node.node_key in next_start_node.node_key:
             i += 1
             continue
         return False
@@ -525,7 +525,6 @@ def search_lin_combination(block: PotentialBuildingBlock, blocks: List[Potential
     and connected by one edge.
     """
     max_num = len(blocks)
-    all_combinations = []
     for i in range(max_num, 1, -1):
         all_combinations = list(combinations(blocks, i))
         for combo in all_combinations:
@@ -687,9 +686,9 @@ def get_group_of_dependent_blocks(blocks: BUILDING_BLOCKS) -> GROUPED_BLOCK_IDS:
     idx = 0
     groups = {idx: []}
     for i in range(len(blocks) - 1):
-        start_node_key_i1 = blocks[i + 1].start_node
-        end_node_key_i = blocks[i].end_node
-        if start_node_key_i1 == end_node_key_i:
+        next_start_node_name = blocks[i + 1].start_node_name
+        curr_end_node_name = blocks[i].end_node_name
+        if next_start_node_name == curr_end_node_name:
             groups[idx].append(i)
         else:
             groups[idx].append(i)
@@ -726,23 +725,15 @@ def get_all_node_op_addresses_in_block(compressed_model: NNCFNetwork, block: Bui
     :return: Set of operation addresses for building block.
     """
     graph = compressed_model.get_original_graph()
-    nx_graph = graph.get_nx_graph_copy()
-    start_node, end_node = block.start_node, block.end_node
-    start_node_key, end_node_key = None, None
-    # pylint: disable=protected-access
-    for node in nx_graph._node.values():
-        if start_node == str(node['node_name']):
-            start_node_key = node['key']
-        if end_node == str(node['node_name']):
-            end_node_key = node['key']
-    simple_paths = nx.all_simple_paths(nx_graph, start_node_key, end_node_key)
-    op_adresses = set()
+    simple_paths = graph.get_all_simple_paths(block.start_node_name, block.end_node_name)
+    op_addresses = set()
     for node_keys_in_path in simple_paths:
         for node_key in node_keys_in_path:
-            op_adresses.add(OperationAddress.from_str(nx_graph._node[node_key]['node_name']))
-    start_op_address = OperationAddress.from_str(nx_graph._node[start_node_key]['node_name'])
-    op_adresses.remove(start_op_address)
-    return op_adresses
+            node = graph.get_node_by_key(node_key)
+            op_addresses.add(OperationAddress.from_str(node.node_name))
+    start_op_address = OperationAddress.from_str(block.start_node_name)
+    op_addresses.remove(start_op_address)
+    return op_addresses
 
 
 def get_all_modules_in_blocks(compressed_model: NNCFNetwork,

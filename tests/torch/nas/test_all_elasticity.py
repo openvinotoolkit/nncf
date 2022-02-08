@@ -65,8 +65,7 @@ RESNET50_2_MANUAL_BLOCKS_DESC = MultiElasticityTestDesc(
          "ResNet/Sequential[layer1]/Bottleneck[2]/ReLU[relu]/relu__2"],
         ["ResNet/Sequential[layer4]/Bottleneck[1]/ReLU[relu]/relu__2",
          "ResNet/Sequential[layer4]/Bottleneck[2]/ReLU[relu]/relu__2"]
-    ],
-    blocks_dependencies={0: [0, 1]}
+    ]
 )
 
 
@@ -250,12 +249,12 @@ REF_COMPRESSION_STATE_FOR_TWO_CONV = {
                             'mode': 'manual',
                             'skipped_blocks': [
                                 {
-                                    'start_node': 'ThreeConvModel/NNCFConv2d[conv1]/conv2d_0',
-                                    'end_node': '/nncf_model_output_0'
+                                    'start_node_name': 'ThreeConvModel/NNCFConv2d[conv1]/conv2d_0',
+                                    'end_node_name': '/nncf_model_output_0'
                                 }
                             ],
                             'skipped_blocks_dependencies': {0: [0]},
-                            'ordinal_ids': None,
+                            'ordinal_ids': [[1, 5]],
                         },
                         'width': {
                             'elasticity_params': {'min_out_channels': 1, 'width_step': 1},
@@ -323,8 +322,7 @@ TWO_CONV_FULL_CONFIG = {
                 "available_elasticity_dims": ["width", "depth"],
                 "depth": {
                     'mode': 'manual',
-                    'skipped_blocks': THREE_CONV_TEST_DESC.blocks_to_skip,
-                    'skipped_blocks_dependencies': THREE_CONV_TEST_DESC.blocks_dependencies
+                    'skipped_blocks': THREE_CONV_TEST_DESC.blocks_to_skip
                 },
                 "kernel": {
                     "max_num_kernels": "3"

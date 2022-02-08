@@ -252,6 +252,13 @@ class NNCFGraph:
             all_nodes.append(nncf_node)
         return all_nodes
 
+    def get_all_simple_paths(self, start_node_name: NNCFNodeName, end_node_name: NNCFNodeName):
+        start_node = self.get_node_by_name(start_node_name)
+        end_node = self.get_node_by_name(end_node_name)
+        start_node_key = self.get_node_key_by_id(start_node.node_id)
+        end_node_key = self.get_node_key_by_id(end_node.node_id)
+        return nx.all_simple_paths(self._nx_graph, start_node_key, end_node_key)
+
     @staticmethod
     def _nx_node_to_nncf_node(nx_node: dict) -> NNCFNode:
         return NNCFNode(node_id=nx_node[NNCFGraph.ID_NODE_ATTR],

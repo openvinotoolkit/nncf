@@ -368,19 +368,20 @@ class TracingContext:
         self.active_block_indexes = block_indexes
         if self.elastic_depth and len(block_indexes) > 0:
             i = 0
-            self.start_node_name_of_skipped_block.append(self.skipped_blocks[block_indexes[i]].start_node)
-            self.end_node_name_of_skipped_block.append(self.skipped_blocks[block_indexes[i]].end_node)
+            self.start_node_name_of_skipped_block.append(self.skipped_blocks[block_indexes[i]].start_node_name)
+            self.end_node_name_of_skipped_block.append(self.skipped_blocks[block_indexes[i]].end_node_name)
             while i < len(block_indexes) - 1:
-                index = block_indexes[i]
+                curr_index = block_indexes[i]
                 next_index = block_indexes[i + 1]
-                if self._ordinals_ids[index][1] <= self._ordinals_ids[next_index][0]:
-                    self.start_node_name_of_skipped_block.append(self.skipped_blocks[next_index].start_node)
-                    self.end_node_name_of_skipped_block.append(self.skipped_blocks[next_index].end_node)
+                if self._ordinals_ids[curr_index][1] <= self._ordinals_ids[next_index][0]:
+                    self.start_node_name_of_skipped_block.append(self.skipped_blocks[next_index].start_node_name)
+                    self.end_node_name_of_skipped_block.append(self.skipped_blocks[next_index].end_node_name)
                 else:
                     self.active_block_indexes.remove(next_index)
                 i += 1
 
-    def set_elastic_blocks(self, blocks: List['BuildingBlock'] = None, ordinal_ids: List = None):
+    def set_elastic_blocks(self, blocks: List['BuildingBlock'] = None,
+                           ordinal_ids: Optional[List[List[int]]] = None):
         if blocks is not None:
             if isinstance(blocks, list):
                 if len(blocks) == 0:

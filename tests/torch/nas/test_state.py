@@ -112,8 +112,8 @@ COMMON_DEPTH_SUPERNET_DESC = ElasticityDesc(
         EDBuilderStateNames.MODE: 'auto',
         EDBuilderStateNames.SKIPPED_BLOCKS: [
             {
-                'start_node': 'BasicTestSuperNet/NNCFConv2d[conv1]/conv2d_0',
-                'end_node': 'BasicTestSuperNet/__add___0'
+                'start_node_name': 'BasicTestSuperNet/NNCFConv2d[conv1]/conv2d_0',
+                'end_node_name': 'BasicTestSuperNet/__add___0'
             }
         ],
         EDBuilderStateNames.SKIPPED_BLOCKS_DEPENDENCIES: {0: [0]},

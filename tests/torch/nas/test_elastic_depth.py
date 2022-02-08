@@ -93,8 +93,8 @@ BASIC_ELASTIC_DEPTH_PARAMS = {
     'skipped_blocks_dependencies': {0: [0]},
     'skipped_blocks_state': [
         {
-            'start_node': 'DepthBasicConvTestModel/Sequential[branch_with_blocks]/NNCFConv2d[conv0]/conv2d_0',
-            'end_node': 'DepthBasicConvTestModel/Sequential[branch_with_blocks]/NNCFConv2d[conv1]/conv2d_0'
+            'start_node_name': 'DepthBasicConvTestModel/Sequential[branch_with_blocks]/NNCFConv2d[conv0]/conv2d_0',
+            'end_node_name': 'DepthBasicConvTestModel/Sequential[branch_with_blocks]/NNCFConv2d[conv1]/conv2d_0'
         }
     ]
 }
@@ -218,7 +218,6 @@ def test_skip_one_block_resnet18(mocker):
                 'ResNet/Sequential[layer1]/BasicBlock[0]/relu_0',  # 1
                 'ResNet/Sequential[layer1]/BasicBlock[0]/NNCFBatchNorm[bn2]/batch_norm_0'
             ]],
-            'skipped_blocks_dependencies': {0: [0]}
         }}}}
     compressed_model, _ = create_bootstrap_training_model_and_ctrl(model, nncf_config)
 
@@ -249,7 +248,7 @@ def test_can_export_model_with_one_skipped_block_resnet18(tmp_path):
     move_model_to_cuda_if_available(model)
 
     nncf_config = get_empty_config(input_sample_sizes=RESNET50_INPUT_SIZE)
-    skipped_blocks = [BuildingBlock('ResNet/Sequential[layer1]/BasicBlock[0]/relu_0',  # 1
+    skipped_blocks = [BuildingBlock('ResNet/Sequential[layer1]/BasicBlock[0]/relu_0',
                                     'ResNet/Sequential[layer1]/BasicBlock[0]/NNCFBatchNorm[bn2]/batch_norm_0')]
     orig_onnx_model_path = tmp_path / "resnet18.onnx"
     onnx_model_without_block_path = tmp_path / "resnet18_with_one_skipped_block.onnx"
@@ -290,7 +289,7 @@ def test_skip_one_block_resnet50(mocker):
     model = ResNet50()
     device = move_model_to_cuda_if_available(model)
     nncf_config = get_empty_config(input_sample_sizes=RESNET50_INPUT_SIZE)
-    skipped_blocks = [BuildingBlock('ResNet/Sequential[layer1]/Bottleneck[1]/relu_2',  # 1
+    skipped_blocks = [BuildingBlock('ResNet/Sequential[layer1]/Bottleneck[1]/relu_2',
                                     'ResNet/Sequential[layer1]/Bottleneck[2]/relu_2')]
     compressed_model, _ = create_compressed_model_and_algo_for_test(model, nncf_config)
 
@@ -442,13 +441,13 @@ def test_check_dinamic_graph_not_grow():
     model = ResNet50()
     device = move_model_to_cuda_if_available(model)
     nncf_config = get_empty_config(input_sample_sizes=RESNET50_INPUT_SIZE)
-    skipped_blocks = [BuildingBlock('ResNet/Sequential[layer1]/Bottleneck[1]/relu_2',  # 3
+    skipped_blocks = [BuildingBlock('ResNet/Sequential[layer1]/Bottleneck[1]/relu_2',
                                     'ResNet/Sequential[layer1]/Bottleneck[2]/relu_2'),
-                      BuildingBlock('ResNet/Sequential[layer2]/Bottleneck[2]/relu_2',  # 7
+                      BuildingBlock('ResNet/Sequential[layer2]/Bottleneck[2]/relu_2',
                                     'ResNet/Sequential[layer2]/Bottleneck[3]/relu_2'),
-                      BuildingBlock('ResNet/Sequential[layer3]/Bottleneck[4]/relu_2',  # 13
+                      BuildingBlock('ResNet/Sequential[layer3]/Bottleneck[4]/relu_2',
                                     'ResNet/Sequential[layer3]/Bottleneck[5]/relu_2'),
-                      BuildingBlock('ResNet/Sequential[layer4]/Bottleneck[1]/relu_2',  # 16
+                      BuildingBlock('ResNet/Sequential[layer4]/Bottleneck[1]/relu_2',
                                     'ResNet/Sequential[layer4]/Bottleneck[2]/relu_2')
                       ]
     compressed_model, _ = create_compressed_model_and_algo_for_test(model, nncf_config)

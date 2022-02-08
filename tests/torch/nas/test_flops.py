@@ -32,16 +32,12 @@ RESNET50_BLOCK_TO_SKIP = [
      "ResNet/Sequential[layer1]/Bottleneck[2]/ReLU[relu]/relu__2"],
 ]
 
-RESNET50_ORDINAL_IDS = [[26, 36]]
-
 MOBILENET_V2_BLOCKS_TO_SKIP = [
     ["MobileNetV2/Sequential[features]/InvertedResidual[2]/Sequential[conv]/NNCFConv2d[2]/conv2d_0",
      "MobileNetV2/Sequential[features]/InvertedResidual[3]/__add___0"],
     ["MobileNetV2/Sequential[features]/InvertedResidual[4]/Sequential[conv]/NNCFConv2d[2]/conv2d_0",
      "MobileNetV2/Sequential[features]/InvertedResidual[5]/__add___0"]
 ]
-
-MOBILENET_V2__ORDINAL_IDS = [[26, 36], [48, 56]]
 
 LIST_OF_ME_DESCS = [
     MultiElasticityTestDesc(
@@ -53,7 +49,6 @@ LIST_OF_ME_DESCS = [
             width_stage=ModelStats(25_853_952, 581_472)
         ),
         blocks_to_skip=RESNET50_BLOCK_TO_SKIP,
-        ordinal_ids=RESNET50_ORDINAL_IDS
     ),
     MultiElasticityTestDesc(
         name='resnet50_tv',
@@ -65,7 +60,6 @@ LIST_OF_ME_DESCS = [
             width_stage=ModelStats(6_494_208, 581_472)
         ),
         blocks_to_skip=RESNET50_BLOCK_TO_SKIP,
-        ordinal_ids=RESNET50_ORDINAL_IDS
     ),
     MultiElasticityTestDesc(
         name='mobilenet_tv',
@@ -77,8 +71,6 @@ LIST_OF_ME_DESCS = [
             width_stage=ModelStats(2_220_800, 144_880)
         ),
         blocks_to_skip=MOBILENET_V2_BLOCKS_TO_SKIP,
-        blocks_dependencies={0: [0], 1: [1]},
-        ordinal_ids=MOBILENET_V2__ORDINAL_IDS
     ),
     MultiElasticityTestDesc(
         name='mobilenet_tv_imagenet',
@@ -91,8 +83,6 @@ LIST_OF_ME_DESCS = [
             width_stage=ModelStats(110_124_800, 1_412_080)
         ),
         blocks_to_skip=MOBILENET_V2_BLOCKS_TO_SKIP,
-        blocks_dependencies={0: [0], 1: [1]},
-        ordinal_ids=MOBILENET_V2__ORDINAL_IDS
     ),
     MultiElasticityTestDesc(
         model_creator=mobilenet_v2_cifar10,
@@ -103,8 +93,6 @@ LIST_OF_ME_DESCS = [
             width_stage=ModelStats(21_779_456, 144_880)
         ),
         blocks_to_skip=MOBILENET_V2_BLOCKS_TO_SKIP,
-        blocks_dependencies={0: [0], 1: [1]},
-        ordinal_ids=MOBILENET_V2__ORDINAL_IDS
     ),
     MultiElasticityTestDesc(
         model_creator=DenseNet121,
@@ -130,7 +118,6 @@ LIST_OF_ME_DESCS = [
                          'DepthBasicConvTestModel/Sequential[branch_with_blocks]/NNCFConv2d[conv1]/conv2d_0']],
         input_sizes=DepthBasicConvTestModel.INPUT_SIZE,
         algo_params={'width': {'min_out_channels': 1, 'width_step': 1}},
-        ordinal_ids=[[1, 2]]
     ),
 ]
 

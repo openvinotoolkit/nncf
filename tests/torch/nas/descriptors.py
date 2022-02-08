@@ -104,12 +104,10 @@ class MultiElasticityTestDesc(NamedTuple):
     model_creator: Any
     ref_model_stats: RefModelStats = None
     blocks_to_skip: List[List[str]] = None
-    blocks_dependencies: Dict[int, List[int]] = {0: [0]}
     input_sizes: List[int] = [1, 3, 32, 32]
     algo_params: Dict = {}
     name: str = None
     is_auto_skipped_blocks: bool = False
-    ordinal_ids: List = None
 
     def __str__(self):
         if hasattr(self.model_creator, '__name__'):

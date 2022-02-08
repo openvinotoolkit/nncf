@@ -42,7 +42,7 @@ from examples.torch.common.utils import create_code_snapshot
 from examples.torch.common.utils import is_pretrained_model_requested
 from examples.torch.common.utils import print_args
 from nncf.config.structures import BNAdaptationInitArgs
-from nncf.experimental.torch import EpochBasedTrainingAlgorithm
+from nncf.experimental.torch.nas.bootstrapNAS import EpochBasedTrainingAlgorithm
 from nncf.torch.initialization import default_criterion_fn
 from nncf.torch.initialization import wrap_dataloader_for_init
 from nncf.torch.model_creation import create_nncf_network

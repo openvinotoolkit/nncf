@@ -119,9 +119,9 @@ DATASET_PATHS = {
 }
 
 CONFIG_PARAMS = []
-for sample_type in SAMPLE_TYPES:
-    for tpl in list(zip(CONFIGS[sample_type], DATASETS[sample_type], BATCHSIZE_PER_GPU[sample_type])):
-        CONFIG_PARAMS.append((sample_type,) + tpl)
+for sample_type_ in SAMPLE_TYPES:
+    for tpl in list(zip(CONFIGS[sample_type_], DATASETS[sample_type_], BATCHSIZE_PER_GPU[sample_type_])):
+        CONFIG_PARAMS.append((sample_type_,) + tpl)
 
 
 def update_compression_algo_dict_with_reduced_bn_adapt_params(algo_dict):
@@ -158,9 +158,9 @@ def _get_test_case_id(p) -> str:
     return "-".join([p[0], p[1].name, p[2], str(p[3])])
 
 
-@pytest.fixture(params=CONFIG_PARAMS,
+@pytest.fixture(params=CONFIG_PARAMS, name='config',
                 ids=[_get_test_case_id(p) for p in CONFIG_PARAMS])
-def config(request, dataset_dir):
+def fixture_config(request, dataset_dir):
     sample_type, config_path, dataset_name, batch_size = request.param
     dataset_path = DATASET_PATHS[sample_type][dataset_name](dataset_dir)
 
@@ -191,8 +191,8 @@ def config(request, dataset_dir):
     }
 
 
-@pytest.fixture(scope="module")
-def case_common_dirs(tmp_path_factory):
+@pytest.fixture(scope="module", name='case_common_dirs')
+def fixture_case_common_dirs(tmp_path_factory):
     return {
         "checkpoint_save_dir": str(tmp_path_factory.mktemp("models")),
         "save_coeffs_path": str(tmp_path_factory.mktemp("ranking_coeffs")),
@@ -626,9 +626,10 @@ def test_sample_propagates_target_device_cl_param_to_nncf_config(mocker, tmp_pat
     assert config["target_device"] == target_device
 
 
-@pytest.fixture(params=[TEST_ROOT.joinpath("torch", "data", "configs", "resnet18_pruning_accuracy_aware.json"),
+@pytest.fixture(name='accuracy_aware_config',
+                params=[TEST_ROOT.joinpath("torch", "data", "configs", "resnet18_pruning_accuracy_aware.json"),
                         TEST_ROOT.joinpath("torch", "data", "configs", "resnet18_int8_accuracy_aware.json")])
-def accuracy_aware_config(request):
+def fixture_accuracy_aware_config(request):
     config_path = request.param
     with config_path.open() as f:
         jconfig = json.load(f)
