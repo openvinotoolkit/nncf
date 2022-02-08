@@ -13,6 +13,7 @@
 
 import os
 from typing import List
+from pkg_resources import parse_version
 
 import pytest
 from addict import Dict
@@ -363,7 +364,9 @@ def prepare_and_check_nx_graph(tf_graph: tf.Graph, graph_path: str, ref_graph_ex
 
 
 def check_model_graph(compressed_model, ref_graph_filename, ref_graph_dir, rename_resource_nodes):
-    data_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'reference_graphs')
+    tensorflow_version = parse_version(tf.__version__).base_version
+    data_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'reference_graphs',
+                            tensorflow_version[:3])
     graph_dir = os.path.join(data_dir, ref_graph_dir)
     graph_path = os.path.abspath(os.path.join(graph_dir, ref_graph_filename))
 
