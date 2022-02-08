@@ -43,7 +43,7 @@ class PruningTestModel(nn.Module):
         return x
 
 
-class TestModelDiffConvs(nn.Module):
+class DiffConvsModel(nn.Module):
     def __init__(self):
         super().__init__()
         # Usual conv
@@ -67,7 +67,7 @@ class TestModelDiffConvs(nn.Module):
         return x
 
 
-class TestModelBranching(nn.Module):
+class BranchingModel(nn.Module):
     def __init__(self):
         super().__init__()
         self.conv1 = create_conv(1, 3, 2, 1, -2)
@@ -84,7 +84,7 @@ class TestModelBranching(nn.Module):
         return x
 
 
-class TestModelResidualConnection(nn.Module):
+class ResidualConnectionModel(nn.Module):
     def __init__(self):
         super().__init__()
         self.conv1 = create_conv(1, 8, 3, 1, -2, padding=1)
@@ -105,7 +105,7 @@ class TestModelResidualConnection(nn.Module):
         return x
 
 
-class TestModelEltwiseCombination(nn.Module):
+class EltwiseCombinationModel(nn.Module):
     def __init__(self):
         super().__init__()
         self.conv1 = create_conv(1, 8, 3, 1, -2, padding=1)
@@ -290,7 +290,7 @@ class TestShuffleUnit(nn.Module):
         return x
 
 
-class TestModelShuffleNetUnit(nn.Module):
+class ShuffleNetUnitModel(nn.Module):
     def __init__(self):
         super().__init__()
         self.conv = create_conv(1, 16, 1, 1, -2)
@@ -302,7 +302,7 @@ class TestModelShuffleNetUnit(nn.Module):
         return x
 
 
-class TestModelShuffleNetUnitDW(nn.Module):
+class ShuffleNetUnitModelDW(nn.Module):
     def __init__(self):
         super().__init__()
         self.conv = create_conv(1, 16, 1, 1, -2)
@@ -314,7 +314,7 @@ class TestModelShuffleNetUnitDW(nn.Module):
         return x
 
 
-class TestModelMultipleForward(nn.Module):
+class MultipleForwardModel(nn.Module):
     def __init__(self, repeat_seq_of_shared_convs=False, additional_last_shared_layers=False):
         super().__init__()
         self.num_iter_shared_convs = 2 if repeat_seq_of_shared_convs else 1
@@ -351,7 +351,7 @@ class TestModelMultipleForward(nn.Module):
         return x1, x2, x3
 
 
-class TestModelGroupNorm(nn.Module):
+class GroupNormModel(nn.Module):
     def __init__(self):
         super().__init__()
         self.conv1 = create_conv(1, 16, 1, 1, -2)

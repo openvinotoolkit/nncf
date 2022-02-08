@@ -503,7 +503,7 @@ class SampleType(Enum):
     OBJECT_DETECTION = auto()
 
 
-class TestCaseDescriptor:
+class SanityTestCaseDescriptor:
     def __init__(self):
         self.config_name: str = ''
         self.config_dict: Dict = {}
@@ -618,7 +618,7 @@ class TestCaseDescriptor:
     def validate_spy(self):
         self._train_mock.assert_called_once()
 
-    def finalize(self, dataset_dir=None) -> 'TestCaseDescriptor':
+    def finalize(self, dataset_dir=None) -> 'SanityTestCaseDescriptor':
         config_path = self.get_config_path()
         with config_path.open() as file:
             json_config = json.load(file)
@@ -630,7 +630,7 @@ class TestCaseDescriptor:
         return self
 
 
-class HAWQDescriptor(TestCaseDescriptor):
+class HAWQDescriptor(SanityTestCaseDescriptor):
     def __init__(self):
         super().__init__()
         self.batch_size_init: int = 0
@@ -675,7 +675,7 @@ class HAWQDescriptor(TestCaseDescriptor):
         assert init_data_loader.batch_size == expected_batch_size
 
 
-class AutoQDescriptor(TestCaseDescriptor):
+class AutoQDescriptor(SanityTestCaseDescriptor):
     def __init__(self):
         super().__init__()
         self.subset_ratio_: float = 1.0
@@ -716,27 +716,27 @@ class AutoQDescriptor(TestCaseDescriptor):
         assert all(bit in self.BITS for bit in final_bits)
 
 
-def resnet18_desc(x: TestCaseDescriptor):
+def resnet18_desc(x: SanityTestCaseDescriptor):
     return x.config("resnet18_cifar10_mixed_int.json").sample(SampleType.CLASSIFICATION). \
         mock_dataset('mock_32x32').batch(3).num_weight_quantizers(21).num_activation_quantizers(27)
 
 
-def inception_v3_desc(x: TestCaseDescriptor):
+def inception_v3_desc(x: SanityTestCaseDescriptor):
     return x.config("inception_v3_cifar10_mixed_int.json").sample(SampleType.CLASSIFICATION). \
         mock_dataset('mock_32x32').batch(3).num_weight_quantizers(95).num_activation_quantizers(105)
 
 
-def ssd300_vgg_desc(x: TestCaseDescriptor):
+def ssd300_vgg_desc(x: SanityTestCaseDescriptor):
     return x.config("ssd300_vgg_voc_mixed_int.json").sample(SampleType.OBJECT_DETECTION). \
         mock_dataset('voc').batch(3).num_weight_quantizers(35).num_activation_quantizers(27)
 
 
-def unet_desc(x: TestCaseDescriptor):
+def unet_desc(x: SanityTestCaseDescriptor):
     return x.config("unet_camvid_mixed_int.json").sample(SampleType.SEMANTIC_SEGMENTATION). \
         mock_dataset('camvid').batch(3).num_weight_quantizers(23).num_activation_quantizers(23)
 
 
-def icnet_desc(x: TestCaseDescriptor):
+def icnet_desc(x: SanityTestCaseDescriptor):
     return x.config("icnet_camvid_mixed_int.json").sample(SampleType.SEMANTIC_SEGMENTATION). \
         mock_dataset('camvid').batch(3).num_weight_quantizers(64).num_activation_quantizers(81)
 
@@ -767,11 +767,11 @@ TEST_CASE_DESCRIPTORS = [
 
 @pytest.fixture(params=TEST_CASE_DESCRIPTORS, ids=[str(d) for d in TEST_CASE_DESCRIPTORS])
 def desc(request, dataset_dir):
-    desc: TestCaseDescriptor = request.param
+    desc: SanityTestCaseDescriptor = request.param
     return desc.finalize(dataset_dir)
 
 
-def validate_sample(args, desc: TestCaseDescriptor, mocker):
+def validate_sample(args, desc: SanityTestCaseDescriptor, mocker):
     arg_list = [key if (val is None or val is True) else "{} {}".format(key, val) for key, val in args.items()]
     command_line = " ".join(arg_list)
 
@@ -784,7 +784,7 @@ def validate_sample(args, desc: TestCaseDescriptor, mocker):
     desc.validate_spy()
 
 
-def test_precision_init(desc: TestCaseDescriptor, tmp_path, mocker):
+def test_precision_init(desc: SanityTestCaseDescriptor, tmp_path, mocker):
     config_factory = ConfigFactory(desc.config_dict, tmp_path / 'config.json')
     args = {
         "--data": str(desc.dataset_dir),
@@ -899,7 +899,7 @@ def test_accuracy_aware_training_pipeline(accuracy_aware_config, tmp_path, multi
     assert compression_stage in allowed_compression_stages
 
 
-class ExportDescriptor(TestCaseDescriptor):
+class ExportDescriptor(SanityTestCaseDescriptor):
     def __init__(self):
         super().__init__()
         self._create_compressed_model_patch = None
@@ -958,7 +958,7 @@ EXPORT_TEST_CASE_DESCRIPTORS = [
 
 @pytest.fixture(params=EXPORT_TEST_CASE_DESCRIPTORS, ids=[str(d) for d in EXPORT_TEST_CASE_DESCRIPTORS])
 def export_desc(request):
-    desc: TestCaseDescriptor = request.param
+    desc: SanityTestCaseDescriptor = request.param
     return desc.finalize()
 
 
@@ -970,7 +970,7 @@ def export_desc(request):
     ),
     ids=['train_with_onnx_path', 'export_after_train']
 )
-def test_export_behavior(export_desc: TestCaseDescriptor, tmp_path, mocker, extra_args, is_export_called):
+def test_export_behavior(export_desc: SanityTestCaseDescriptor, tmp_path, mocker, extra_args, is_export_called):
     config_factory = ConfigFactory(export_desc.config_dict, tmp_path / 'config.json')
     args = {
         "--data": str(export_desc.dataset_dir),

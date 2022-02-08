@@ -22,7 +22,7 @@ from nncf.torch.sparsity.magnitude.functions import normed_magnitude, abs_magnit
 from tests.torch.helpers import fill_conv_weight, fill_linear_weight, fill_bias
 
 
-class TestModel(nn.Module):
+class SingleLayerModel(nn.Module):
     def __init__(self, layer):
         super().__init__()
         self.layer = layer
@@ -53,7 +53,7 @@ class TestModel(nn.Module):
 )
 def test_can_infer_magnitude_sparse_conv(weight_importance, threshold, ref_output):
     nncf_module = NNCFConv2d(1, 1, 2)
-    sparse_model = TestModel(nncf_module)
+    sparse_model = SingleLayerModel(nncf_module)
     sparsifier = sparse_model.sparsifier
     fill_conv_weight(nncf_module, 9)
     fill_bias(nncf_module, 0)
@@ -83,7 +83,7 @@ def test_can_infer_magnitude_sparse_conv(weight_importance, threshold, ref_outpu
 )
 def test_can_infer_magnitude_sparse_linear(weight_importance, threshold, ref_output):
     nncf_module = NNCFLinear(4, 1)
-    sparse_model = TestModel(nncf_module)
+    sparse_model = SingleLayerModel(nncf_module)
     sparsifier = sparse_model.sparsifier
     fill_linear_weight(nncf_module, 9)
     fill_bias(nncf_module, 0)

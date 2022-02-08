@@ -317,14 +317,14 @@ REF_DEFAULT_STATE = {
 }
 
 
-class TestLoss:
+class MockLoss:
     def __init__(self):
         self.current_sparsity = 0.5
 
 
-class TestCompressionController:
+class MockCompressionController:
     def __init__(self):
-        self.loss = TestLoss()
+        self.loss = MockLoss()
 
     def set_sparsity_level(self, level):
         pass
@@ -334,7 +334,7 @@ class TestCompressionController:
                                            MultiStepSparsityScheduler, AdaptiveSparsityScheduler],
                          ids=['Polynomial', 'Exponential', 'Multistep', 'Adaptive'])
 def test_scheduler_get_state(scheduler_cls):
-    args = (TestCompressionController(), {'sparsity_init': 0.3, 'update_per_optimizer_step': True, 'patience': 2})
+    args = (MockCompressionController(), {'sparsity_init': 0.3, 'update_per_optimizer_step': True, 'patience': 2})
     scheduler = scheduler_cls(*args)
 
     # Test init state
