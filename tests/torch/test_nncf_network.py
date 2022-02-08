@@ -945,3 +945,10 @@ def get_ip_graph_for_test(nncf_graph: NNCFGraph,
                                    allowed_pre_hook_insertion_points=pre_hooks,
                                    allowed_post_hook_insertion_points=post_hooks)
     return ip_graph
+
+def test_deepcopy_nncf_network():
+    model = TwoConvTestModelWithUserModule()
+    config = get_basic_sparsity_plus_quantization_config()
+    register_bn_adaptation_init_args(config)
+    sparse_quantized_model, _ = create_compressed_model_and_algo_for_test(model, config)
+    _ = deepcopy(sparse_quantized_model)

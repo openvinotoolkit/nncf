@@ -11,7 +11,7 @@
  limitations under the License.
 """
 from collections import OrderedDict
-from typing import Dict, Any
+from typing import Dict, Any, List
 
 import warnings
 import numpy as np
@@ -76,7 +76,8 @@ def get_all_modules_by_type(model, module_types=None, current_scope=None,
     return found
 
 
-def get_state_dict_names_with_modules(model, str_types=None, prefix=''):
+def get_state_dict_names_with_modules(model: 'NNCFNetwork',
+                                      str_types: List[str] = None, prefix='') -> Dict[str, torch.nn.Module]:
     found = OrderedDict()
     for name, module in model.named_children():
         full_node_name = "{}{}".format(prefix, name)
