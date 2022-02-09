@@ -19,6 +19,7 @@ import tarfile
 import resource
 from os import path as osp
 from pathlib import Path
+import atexit
 
 import tensorflow as tf
 
@@ -201,3 +202,10 @@ class Timer:
         self.start_time = 0.
         self.diff = 0.
         self.average_time = 0.
+
+
+def close_strategy_threadpool(strategy):
+    """Due to https://github.com/tensorflow/tensorflow/issues/50487"""
+    # TODO(negvet): remove disable=too-many-statements in the sample run function when fixed
+    # pylint: disable=protected-access
+    atexit.register(strategy._extended._collective_ops._pool.close)

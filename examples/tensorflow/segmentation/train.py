@@ -14,11 +14,11 @@
 import os
 import sys
 from pathlib import Path
-import atexit
 
 import numpy as np
 import tensorflow as tf
 
+from examples.tensorflow.common.utils import close_strategy_threadpool
 from nncf.tensorflow import create_compressed_model
 from nncf.tensorflow.helpers.model_manager import TFOriginalModelManager
 from nncf.tensorflow.initialization import register_default_init_args
@@ -295,9 +295,7 @@ def run_train(config):
     statistics = compression_ctrl.statistics()
     logger.info(statistics.to_str())
 
-    # Due to https://github.com/tensorflow/tensorflow/issues/50487
-    # pylint: disable=protected-access
-    atexit.register(strategy._extended._collective_ops._pool.close)
+    close_strategy_threadpool(strategy)
 
 
 def main(argv):

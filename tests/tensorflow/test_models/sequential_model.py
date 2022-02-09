@@ -12,7 +12,7 @@
 """
 
 from tensorflow.keras import Sequential, layers
-from tensorflow.keras.initializers import Constant
+from tensorflow.keras.initializers import Constant  # pylint: disable=no-name-in-module
 
 
 def SequentialModel(**kwargs):

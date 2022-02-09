@@ -12,10 +12,10 @@
 """
 
 import sys
-import atexit
 
 import tensorflow as tf
 
+from examples.tensorflow.common.utils import close_strategy_threadpool
 from nncf.tensorflow import create_compressed_model
 from nncf.tensorflow import register_default_init_args
 from nncf.tensorflow.helpers.model_manager import TFOriginalModelManager
@@ -272,9 +272,7 @@ def run_evaluation(config, eval_timeout=None):
     if config.metrics_dump is not None:
         write_metrics(metric_result['AP'], config.metrics_dump)
 
-    # Due to https://github.com/tensorflow/tensorflow/issues/50487
-    # pylint: disable=protected-access
-    atexit.register(strategy._extended._collective_ops._pool.close)
+    close_strategy_threadpool(strategy)
 
 
 def export(config):

@@ -14,11 +14,11 @@
 import os
 import sys
 from pathlib import Path
-import atexit
 
 import tensorflow as tf
 import numpy as np
 
+from examples.tensorflow.common.utils import close_strategy_threadpool
 from nncf.common.accuracy_aware_training import create_accuracy_aware_training_loop
 from nncf.tensorflow import create_compressed_model
 from nncf.tensorflow.helpers.model_manager import TFOriginalModelManager
@@ -380,10 +380,7 @@ def run(config):
         compression_ctrl.export_model(save_path, save_format)
         logger.info("Saved to {}".format(save_path))
 
-    # Due to https://github.com/tensorflow/tensorflow/issues/50487
-    # pylint: disable=protected-access
-    # TODO(negvet): remove disable=too-many-statements above when fixed
-    atexit.register(strategy._extended._collective_ops._pool.close)
+    close_strategy_threadpool(strategy)
 
 
 def export(config):
