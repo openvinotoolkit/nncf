@@ -50,7 +50,7 @@ If you want to validate an FP32 model checkpoint, make sure the compression algo
 
 #### Export compressed model
 To export trained model to ONNX format use the following command:
-`python main.py -m test --config configs/ssd300_vgg_voc_int8.json --data <path_to_dataset> --resume <path_to_compressed_model_checkpoint> --to-onnx=../../results/ssd300_int8.onnx`
+`python main.py -m export --config configs/ssd300_vgg_voc_int8.json --data <path_to_dataset> --resume <path_to_compressed_model_checkpoint> --to-onnx=../../results/ssd300_int8.onnx`
 
 #### Export to OpenVINO Intermediate Representation (IR)
 
