@@ -63,9 +63,12 @@ class ConfigFactory:
         self.config[key] = value
 
 
-def create_command_line(args, sample_type, main_filename='main.py'):
+def create_command_line(args, sample_type, main_filename='main.py', is_experimental=False):
     python_path = PROJECT_ROOT.as_posix()
-    executable = EXAMPLES_DIR.joinpath('torch', sample_type, main_filename).as_posix()
+    main_path = ['torch', sample_type, main_filename]
+    if is_experimental:
+        main_path.insert(0, 'experimental')
+    executable = EXAMPLES_DIR.joinpath(*main_path).as_posix()
     cli_args = " ".join(key if (val is None or val is True) else "{} {}".format(key, val) for key, val in args.items())
     return "PYTHONPATH={path} {python_exe} {main_py} {args}".format(
         path=python_path, main_py=executable, args=cli_args, python_exe=sys.executable

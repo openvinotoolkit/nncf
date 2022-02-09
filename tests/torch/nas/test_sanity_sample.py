@@ -82,7 +82,8 @@ class NASSampleTestDescriptor(SanityTestCaseDescriptor):
 NAS_TEST_CASE_DESCRIPTORS = [
     NASSampleTestDescriptor().dummy_config('resnet50_cifar10_nas.json'),
     NASSampleTestDescriptor().dummy_config('mobilenet_v2_cifar10_nas.json'),
-    NASSampleTestDescriptor().dummy_config('efficient_net_b1_cifar10_nas.json')
+    NASSampleTestDescriptor().dummy_config('efficient_net_b1_cifar10_nas.json'),
+    NASSampleTestDescriptor().dummy_config('mobilenet_v3_cifar10_nas.json')
 ]
 
 

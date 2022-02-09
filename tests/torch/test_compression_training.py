@@ -48,46 +48,13 @@ GLOBAL_CONFIG = {
             'cifar10':
                 {
                     'configs': {
-                        'mobilenet_v2_cifar10_nas_LARGE.json': {
-                            'expected_accuracy': 93.11,
-                            'test_timeout': 4 * 60 * 60,
-                            'weights': 'mobilenet_v2_cifar10_93.91.pth',
-                            'absolute_tolerance_train': 1,
-                            'absolute_tolerance_eval': 2e-2,
-                            'main_filename': 'nas_advanced_main.py',
-                            'checkpoint_name': 'supernet',
-                        },
-                        'resnet50_cifar10_nas_LARGE.json': {
-                            'test_timeout': 4 * 60 * 60,
-                            'expected_accuracy': 93.65,
-                            'weights': 'resnet50_cifar10_93.65.pth',
-                            'absolute_tolerance_train': 1,
-                            'absolute_tolerance_eval': 2e-2,
-                            'main_filename': 'nas_advanced_main.py',
-                            'checkpoint_name': 'supernet',
-                        },
-                        'mobilenet_v2_cifar10_nas_MEDIUM.json': {
-                            'expected_accuracy': 93.11,
-                            'weights': 'mobilenet_v2_cifar10_93.91.pth',
-                            'absolute_tolerance_train': 1.5,
-                            'absolute_tolerance_eval': 2e-2,
-                            'main_filename': 'nas_advanced_main.py',
-                            'checkpoint_name': 'supernet',
-                        },
-                        'resnet50_cifar10_nas_MEDIUM.json': {
-                            'expected_accuracy': 93.65,
-                            'weights': 'resnet50_cifar10_93.65.pth',
-                            'absolute_tolerance_train': 1.8,
-                            'absolute_tolerance_eval': 2e-2,
-                            'main_filename': 'nas_advanced_main.py',
-                            'checkpoint_name': 'supernet',
-                        },
                         'mobilenet_v2_cifar10_nas_SMALL.json': {
                             'expected_accuracy': 81.59,
                             'train_steps': 2,
                             'weights': 'mobilenet_v2_cifar10_93.91.pth',
                             'absolute_tolerance_train': 1.0,
                             'absolute_tolerance_eval': 2e-2,
+                            'is_experimental': True,
                             'main_filename': 'nas_advanced_main.py',
                             'checkpoint_name': 'supernet',
                         },
@@ -97,6 +64,7 @@ GLOBAL_CONFIG = {
                             'weights': 'resnet50_cifar10_93.65.pth',
                             'absolute_tolerance_train': 2.0,
                             'absolute_tolerance_eval': 2e-2,
+                            'is_experimental': True,
                             'main_filename': 'nas_advanced_main.py',
                             'checkpoint_name': 'supernet',
                         },
@@ -106,15 +74,7 @@ GLOBAL_CONFIG = {
                             'weights': 'vgg11_bn_cifar10_92.39.pth',
                             'absolute_tolerance_train': 2.0,
                             'absolute_tolerance_eval': 2e-2,
-                            'main_filename': 'nas_advanced_main.py',
-                            'checkpoint_name': 'supernet',
-                        },
-                        'mobilenet_v3_cifar10_nas_SMALL.json': {
-                            'expected_accuracy': 10,
-                            'train_steps': 2,
-                            # FIXME: 'weights': '',
-                            'absolute_tolerance_train': 1.0,
-                            'absolute_tolerance_eval': 2e-2,
+                            'is_experimental': True,
                             'main_filename': 'nas_advanced_main.py',
                             'checkpoint_name': 'supernet',
                         },
@@ -168,27 +128,13 @@ GLOBAL_CONFIG = {
                             'absolute_tolerance_eval': 2e-2
                         },
                         'efficient_net_b0_cifar10_nas_SMALL.json': {
+                            # TODO: fix supernet training (ticket 73814)
                             'expected_accuracy': 10.04,
                             'train_steps': 2,
                             'weights': 'efficient_net_b0_cifar100_87.02.pth',
                             'absolute_tolerance_train': 1.0,
                             'absolute_tolerance_eval': 2e-2,
-                            'main_filename': 'nas_advanced_main.py',
-                            'checkpoint_name': 'supernet',
-                        },
-                        'efficient_net_b0_cifar100_nas_MEDIUM.json': {
-                            'expected_accuracy': 87.02,
-                            'weights': 'efficient_net_b0_cifar100_87.02.pth',
-                            'absolute_tolerance_train': 1.0,
-                            'absolute_tolerance_eval': 2e-2,
-                            'main_filename': 'nas_advanced_main.py',
-                            'checkpoint_name': 'supernet',
-                        },
-                        'efficient_net_b0_cifar100_nas_LARGE.json': {
-                            'expected_accuracy': 87.02,
-                            'weights': 'efficient_net_b0_cifar100_87.02.pth',
-                            'absolute_tolerance_train': 1.0,
-                            'absolute_tolerance_eval': 2e-2,
+                            'is_experimental': True,
                             'main_filename': 'nas_advanced_main.py',
                             'checkpoint_name': 'supernet',
                         },
@@ -260,6 +206,7 @@ for sample_type_, datasets in GLOBAL_CONFIG.items():
         for config_name in configs:
             config_params = configs[config_name]
             main_filename = config_params.get('main_filename', 'main.py')
+            is_experimental = config_params.get('is_experimental', False)
             test_timeout = config_params.get('test_timeout')
             train_steps = config_params.get('train_steps', None)
             execution_args = config_params.get('execution_arg', [''])
@@ -289,6 +236,7 @@ for sample_type_, datasets in GLOBAL_CONFIG.items():
                 test_config_ = {
                     'sample_type': sample_type_,
                     'main_filename': main_filename,
+                    'is_experimental': is_experimental,
                     'timeout': test_timeout,
                     'expected_accuracy': expected_accuracy_,
                     'absolute_tolerance_train': absolute_tolerance_train_,
@@ -360,7 +308,8 @@ def test_compression_train(_params, tmp_path, case_common_dirs):
     if 'mobilenet_v2_asym_int8.json' in args['config']:
         args.pop('seed')
 
-    runner = Command(create_command_line(get_cli_dict_args(args), tc['sample_type'], tc['main_filename']))
+    runner = Command(create_command_line(get_cli_dict_args(args), tc['sample_type'], tc['main_filename'],
+                                         tc['is_experimental']))
     env_with_cuda_reproducibility = os.environ.copy()
     env_with_cuda_reproducibility['CUBLAS_WORKSPACE_CONFIG'] = ':4096:8'
     runner.kwargs.update(env=env_with_cuda_reproducibility)
@@ -400,7 +349,8 @@ def test_compression_eval_trained(_params, tmp_path, case_common_dirs):
     if 'weights' in args:
         del args['weights']
 
-    runner = Command(create_command_line(get_cli_dict_args(args), tc['sample_type'], tc['main_filename']))
+    runner = Command(create_command_line(get_cli_dict_args(args), tc['sample_type'], tc['main_filename'],
+                                         tc['is_experimental']))
     env_with_cuda_reproducibility = os.environ.copy()
     env_with_cuda_reproducibility['CUBLAS_WORKSPACE_CONFIG'] = ':4096:8'
     runner.kwargs.update(env=env_with_cuda_reproducibility)
