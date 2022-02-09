@@ -67,7 +67,6 @@ from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elasticity_dim import E
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.filter_reorder import FilterReorderingAlgorithm
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.pruning.filter_pruning.functions import FILTER_IMPORTANCE_FUNCTIONS
-from nncf.torch.pruning.filter_pruning.functions import tensor_l2_normalizer
 from nncf.torch.pruning.operations import PTElementwisePruningOp
 from nncf.torch.pruning.operations import PT_PRUNING_OPERATOR_METATYPES
 from nncf.torch.pruning.tensor_processor import PTNNCFPruningTensorProcessor
@@ -235,7 +234,7 @@ class ElasticWidthHandler(SingleElasticityHandler):
 
     def __init__(self, target_model: NNCFNetwork,
                  filter_importance: Callable,
-                 weights_normalizer: Callable,
+                 weights_normalizer: Optional[Callable],
                  node_name_vs_dynamic_input_width_op_map: Dict[NNCFNodeName, DynamicWidthOp],
                  pruned_module_groups_info: Clusterization[ElasticWidthInfo](id_fn=lambda x: x.node_name),
                  transformation_commands: List[TransformationCommand]):
@@ -537,9 +536,6 @@ class ElasticWidthBuilder(SingleElasticityBuilder):
                  target_scopes: Optional[List[str]] = None):
         super().__init__(ignored_scopes, target_scopes, elasticity_params)
         self._weights_normalizer = None
-        normalize_weights = self._elasticity_params.get('normalize_weights', False)
-        if normalize_weights:
-            self._weights_normalizer = tensor_l2_normalizer  # for all weights in common case
         self._grouped_node_names_to_prune = []  # type: List[List[NNCFNodeName]]
 
     def build(self, target_model: NNCFNetwork) -> ElasticWidthHandler:

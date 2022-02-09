@@ -325,7 +325,7 @@ TWO_CONV_FULL_CONFIG = {
                     'skipped_blocks': THREE_CONV_TEST_DESC.blocks_to_skip
                 },
                 "kernel": {
-                    "max_num_kernels": "3"
+                    "max_num_kernels": 3
                 },
                 **THREE_CONV_TEST_DESC.algo_params
             },

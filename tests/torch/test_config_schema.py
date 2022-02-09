@@ -12,7 +12,8 @@ GOOD_CONFIG_SOURCES = [
     PROJECT_ROOT / Path("examples/torch/classification/configs"),
     PROJECT_ROOT / Path("examples/torch/semantic_segmentation/configs"),
     PROJECT_ROOT / Path("examples/torch/object_detection/configs"),
-    TEST_ROOT / Path("torch/data/configs")
+    TEST_ROOT / Path("torch/data/configs"),
+    TEST_ROOT / Path("torch/data/schema_validation_good_configs")
 ]
 
 BAD_CONFIG_SOURCES = [

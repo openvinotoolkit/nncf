@@ -18,7 +18,7 @@
                 ]
             },
             "elasticity": {
-                "enabled_elasticity_dims": ["depth", "width"]
+                "available_elasticity_dims": ["depth", "width"]
             }
         }
     }

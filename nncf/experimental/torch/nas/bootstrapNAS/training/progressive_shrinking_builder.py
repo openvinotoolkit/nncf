@@ -49,11 +49,11 @@ class ProgressiveShrinkingBuilder(PTCompressionAlgorithmBuilder):
         self._elasticity_builder = ElasticityBuilder(self.config, self.should_init)
 
     @staticmethod
-    def check_elasticity_dims_consistency(enabled_elasticity_dims: List[ElasticityDim],
+    def check_elasticity_dims_consistency(available_elasticity_dims: List[ElasticityDim],
                                           progressivity_of_elasticity: List[ElasticityDim]):
-        for dim in enabled_elasticity_dims:
+        for dim in available_elasticity_dims:
             if dim not in progressivity_of_elasticity:
-                raise ValueError(f'Invalid elasticity dimension {dim} specified as enabled in `elasticity` section.'
+                raise ValueError(f'Invalid elasticity dimension {dim} specified as available in `elasticity` section.'
                                  f' This dimension is not part of the progressivity_of_elasticity='
                                  f'{progressivity_of_elasticity} which defines order of adding elasticity dimension'
                                  f' by going from one training stage to another.')
@@ -71,8 +71,8 @@ class ProgressiveShrinkingBuilder(PTCompressionAlgorithmBuilder):
             model, elasticity_ctrl, self._bn_adaptation, self._progressivity_of_elasticity, schedule_params)
 
     def _get_transformation_layout(self, target_model: NNCFNetwork) -> PTTransformationLayout:
-        enabled_elasticity_dims = self._elasticity_builder.get_available_elasticity_dims()
-        self.check_elasticity_dims_consistency(enabled_elasticity_dims, self._progressivity_of_elasticity)
+        available_elasticity_dims = self._elasticity_builder.get_available_elasticity_dims()
+        self.check_elasticity_dims_consistency(available_elasticity_dims, self._progressivity_of_elasticity)
         return self._elasticity_builder.get_transformation_layout(target_model)
 
     def _get_state_without_name(self) -> Dict[str, Any]:

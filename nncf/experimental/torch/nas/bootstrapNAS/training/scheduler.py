@@ -163,7 +163,7 @@ class BootstrapNASScheduler(BaseCompressionScheduler):
                     raise ValueError(
                         f"Invalid training elasticity dimension {train_dim} in the scheduler.\n"
                         f"The elasticity for this dimension is not enabled.\n"
-                        f"It can be enabled by specifying `enabled_elasticity_dims` param in the `elasticity` "
+                        f"It can be enabled by specifying `available_elasticity_dims` param in the `elasticity` "
                         f"section of config.\n"
                         f"List of currently available dimensions: {[dim.value for dim in available_elasticity_dims]}")
                 dim_idx = progressivity_of_elasticity.index(train_dim)

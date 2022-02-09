@@ -23,29 +23,17 @@
                 ]
             },
             "elasticity": {
-                "enabled_elasticity_dims": ["width", "depth"],
+                "available_elasticity_dims": ["width", "depth"],
                 "width": {
                     "max_num_widths": 2,
                       "min_out_channels": 32,
                       "width_step": 32,
-                      "use_width_multiplier": true,
                       "width_multipliers": [1, 0.85]
                 },
                 "kernel": {
-                    "max_num_kernels": "3"
+                    "max_num_kernels": 3
                 }
             }
-        },
-        "search": {
-            "algorithm": "NSGA",
-            "evaluations": 1000
-        },
-        "compression": [
-            {
-                "algorithm": "quantization",
-                "params": {},
-                "initializer": {}
-            }
-        ]
+        }
     }
 }
