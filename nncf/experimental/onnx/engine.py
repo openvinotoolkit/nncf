@@ -18,7 +18,7 @@ from typing import Tuple
 from nncf.experimental.post_training.api.engine import Engine
 from nncf.experimental.post_training.api.dataloader import DataLoader
 from nncf.experimental.post_training.sampler import Sampler
-from nncf.experimental.post_training.sampler import RandomSampler
+from nncf.experimental.post_training.initialization.statistics_collector import LayerStatistic
 
 import onnx
 import onnxruntime as rt
@@ -26,11 +26,8 @@ import numpy as np
 
 
 class ONNXEngine(Engine):
-    def __init__(self, dataloader: DataLoader, sampler: Sampler = None, providers: List[str] = None):
+    def __init__(self, dataloader: DataLoader, providers: List[str] = None):
         super().__init__(dataloader)
-        if sampler is None:
-            # self.sampler = RandomSampler()
-            self.sampler = None
         if providers is None:
             self.providers = ['OpenVINOExecutionProvider']
         else:
@@ -43,14 +40,13 @@ class ONNXEngine(Engine):
         self.model = model
         self.sess = rt.InferenceSession(self.model, providers=self.providers)
 
-    def infer(self, i: int) -> Tuple[Dict[str, np.ndarray], np.ndarray]:
+    def infer(self, _input) -> Tuple[Dict[str, np.ndarray], np.ndarray]:
         # feed Dict TF
         output = {}
-        _input, target = self.dataloader[i]
         input_name = self.sess.get_inputs()[0].name
         input_tensor = _input.cpu().detach().numpy()
         output_tensor = self.sess.run([], {input_name: input_tensor.astype(np.float32)})
         model_outputs = self.sess.get_outputs()
         for i, model_output in enumerate(model_outputs):
             output[model_output.name] = output_tensor[i]
-        return output, target
+        return output

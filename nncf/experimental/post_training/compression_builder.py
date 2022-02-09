@@ -23,8 +23,7 @@ from nncf.experimental.post_training.algorithm import PostTrainingAlgorithm
 from nncf.experimental.post_training.quantization.algorithm import PostTrainingQuantization
 from nncf.experimental.post_training.sparsity.algorithm import PostTrainingSpasity
 
-from nncf.experimental.post_training.backend import define_the_backend
-from nncf.experimental.post_training.backend import Backend
+from nncf.experimental.post_training.backend import BACKEND
 
 ModelType = TypeVar('ModelType')
 
@@ -66,38 +65,25 @@ class CompressionBuilder:
         if isinstance(algorithm, PostTrainingSpasity):
             return CompressionAlgorithmPriority.SPARSITY_PRIORITY
 
-    def _create_compressed_model(self, model: ModelType, dataloader: DataLoader, engine: Engine) -> CompressedModel:
-        """
-        Creates backend-specific CompressedModel instance based on the model.
-        """
-        if define_the_backend(model) == Backend.ONNX:
-            from nncf.experimental.onnx.compressed_model import ONNXCompressedModel
-            return ONNXCompressedModel(model, dataloader, engine)
-        elif define_the_backend(model) == Backend.PYTORCH:
-            pass
-        elif define_the_backend(model) == Backend.TENSORFLOW:
-            pass
-        elif define_the_backend(model) == Backend.OPENVINO:
-            pass
-
-    def _create_engine(self, model: ModelType, dataloader: DataLoader) -> Engine:
-        if define_the_backend(model) == Backend.ONNX:
+    def _create_engine(self, compressed_model: CompressedModel, dataloader: DataLoader) -> Engine:
+        if compressed_model.model_backend == BACKEND.ONNX:
             from nncf.experimental.onnx.engine import ONNXEngine
             return ONNXEngine(dataloader)
-        elif define_the_backend(model) == Backend.PYTORCH:
+        elif compressed_model.model_backend == BACKEND.PYTORCH:
             pass
-        elif define_the_backend(model) == Backend.TENSORFLOW:
+        elif compressed_model.model_backend == BACKEND.TENSORFLOW:
             pass
-        elif define_the_backend(model) == Backend.OPENVINO:
+        elif compressed_model.model_backend == BACKEND.OPENVINO:
             pass
 
-    def apply(self, model: ModelType, dataloader: DataLoader, engine: Engine = None) -> CompressedModel:
+    def apply(self, compressed_model: CompressedModel, dataloader: DataLoader,
+              engine: Engine = None) -> CompressedModel:
         """
         Apply compression algorithms to the 'model'.
         """
         if engine is None:
-            engine = self._create_engine(model, dataloader)
-        compressed_model = self._create_compressed_model(model, dataloader, engine)
+            engine = self._create_engine(compressed_model, dataloader)
+        compressed_model.build_and_set_nncf_graph(dataloader, engine)
         while not self.algorithms.is_empty():
             algorithm = self.algorithms.pop()
             compressed_model = algorithm.apply(compressed_model, engine)

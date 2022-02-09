@@ -6,6 +6,7 @@ from typing import Dict
 from typing import TypeVar
 
 from nncf.experimental.post_training.api.dataloader import DataLoader
+from nncf.experimental.post_training.sampler import Sampler
 
 ModelType = TypeVar('ModelType')
 TensorType = TypeVar('TensorType')
@@ -23,7 +24,7 @@ class Engine(ABC):
         self.model = model
 
     @abstractmethod
-    def infer(self, i: int) -> Tuple[Dict[str, TensorType], TensorType]:
+    def infer(self, _input) -> Tuple[Dict[str, TensorType], TensorType]:
         """
-        Infer the model on the i-th sample of the dataset
+        Infer the model on the provided input.
         """

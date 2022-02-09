@@ -1,29 +1,23 @@
 import os
-from typing import List
-from typing import Union
 
-import torch
-from torch.utils.data.dataloader import DataLoader as TorchDataLoader
 import torchvision
 from torchvision import transforms
 
+import onnx
+
 from nncf.experimental.post_training.api.dataloader import DataLoader
+from nncf.experimental.post_training.compressed_model import CompressedModel
+from nncf.experimental.post_training.compression_builder import CompressionBuilder
+from nncf.experimental.post_training.quantization.algorithm import PostTrainingQuantization
+from nncf.experimental.post_training.utils import export
+
+from nncf.experimental.post_training.quantization.algorithm import PostTrainingQuantizationParameters
+from nncf.experimental.post_training.initialization.algorithm import InitializationAlgorithms
+from nncf.experimental.post_training.initialization.quantizer_range_finder import QuantizerRangeFinderParameters
 
 
-class MyDataLoader(DataLoader):
-    def __init__(self, dataset, **attrs):
-        self.dataset = dataset
-
-    def __getitem__(self, item):
-        return torch.unsqueeze(self.dataset[item][0], 0), self.dataset[item][1]
-
-    def __len__(self):
-        return len(self.dataset)
-
-
-def create_train_dataloader(dataset_dir: Union[str, bytes, os.PathLike], input_shape: List[int],
-                            batch_size: int = 1, num_workers: int = 4) -> torch.utils.data.DataLoader:
-    image_size = [input_shape[-2], input_shape[-1]]
+def create_train_dataset(dataset_dir):
+    image_size = [224, 224]
     size = int(image_size[0] / 0.875)
     normalize = transforms.Normalize(mean=(0.485, 0.456, 0.406),
                                      std=(0.229, 0.224, 0.225))
@@ -33,29 +27,45 @@ def create_train_dataloader(dataset_dir: Union[str, bytes, os.PathLike], input_s
         transforms.ToTensor(),
         normalize,
     ])
-    train_dataset = torchvision.datasets.ImageFolder(os.path.join(dataset_dir, 'train'), transform)
-    train_loader = MyDataLoader(train_dataset, batch_size=batch_size, num_workers=num_workers)
-    return train_loader
+    return torchvision.datasets.ImageFolder(os.path.join(dataset_dir, 'train'), transform)
 
-
-
-dataset_dir = '/home/aleksei/datasetsimagenet'
-input_shape = [1, 3, 224, 224]
-
-from nncf.experimental.post_training.api.compression_builder import CompressionBuilder
-from nncf.experimental.post_training.quantization.algorithm import PostTrainingQuantization
-from nncf.experimental.post_training.quantization.algorithm import DEFAULT
 
 fp32_model_onnx_path = '/home/aleksei/nncf_work/onnx_quantization/mobilenet_v2.onnx'
 int8_model_onnx_path = '/home/aleksei/tmp/onnx/onnx_ptq_api/transformed.onnx'
+dataset_dir = '/home/aleksei/datasetsimagenet'
 
-# Step 1: Initialize the data loader.
-dataloader = create_train_dataloader(dataset_dir=dataset_dir, input_shape=input_shape)
-# Step 2: Create a pipeline of compression algorithms.
+fp32_model = onnx.load(fp32_model_onnx_path)
+
+# Step 1: Wrap a model.
+compressed_model = CompressedModel(fp32_model)
+
+# Step 2: Initialize the data loader.
+train_dataset = create_train_dataset(dataset_dir)
+
+
+class MyDataLoader(DataLoader):
+    def __init__(self, dataset, batch_size, shuffle):
+        super().__init__(batch_size, shuffle)
+        self.dataset = dataset
+
+    def __getitem__(self, item):
+        return self.dataset[item]
+
+    def __len__(self):
+        return len(self.dataset)
+
+
+dataloader = MyDataLoader(train_dataset, batch_size=1, shuffle=True)
+
+# Step 3: Create a pipeline of compression algorithms.
 builder = CompressionBuilder()
-quantization = PostTrainingQuantization(DEFAULT)
+# Step 4: Create a quantiztion algorithm.
+quantization_parameters = PostTrainingQuantizationParameters(
+    iterations_number=10
+)
+quantization = PostTrainingQuantization(quantization_parameters)
 builder.add_algorithm(quantization)
-# Step 3: Execute the pipeline.
-compressed_model = builder.apply(fp32_model_onnx_path, dataloader)
-# Step 4: Export the compressed model.
-compressed_model.export(int8_model_onnx_path)
+# Step 4: Execute the pipeline.
+builder.apply(compressed_model, dataloader)
+# Step 5: Export the compressed model.
+export(compressed_model, int8_model_onnx_path)

@@ -5,6 +5,13 @@ from nncf.experimental.post_training.api.engine import Engine
 from nncf.experimental.post_training.compressed_model import CompressedModel
 
 
+class PostTraniningAlgorithmParameters(ABC):
+    def __init__(self):
+        """
+
+        """
+
+
 class PostTrainingAlgorithm(ABC):
     @abstractmethod
     def apply(self, compressed_model: CompressedModel, engine: Engine) -> CompressedModel:

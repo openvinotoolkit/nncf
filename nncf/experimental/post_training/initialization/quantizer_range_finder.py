@@ -11,7 +11,24 @@
  limitations under the License.
 """
 
+from typing import List
+
+from nncf.common.quantization.structs import QuantizerConfig
+from nncf.experimental.post_training.initialization.statistics_collector import LayerStatistic
 from nncf.experimental.post_training.initialization.algorithm import InitializationAlgorithm
+from nncf.experimental.post_training.initialization.algorithm import InitizalizationParameters
+
+
+class QuantizerRangeFinderParameters(InitizalizationParameters):
+    def __init__(self, weight_statistics_min_func: str,
+                 weight_statistics_max_func: str,
+                 activation_statistics_min_func: str,
+                 activation_statistics_max_func: str,
+                 ):
+        self.weight_statistics_min_func = weight_statistics_min_func
+        self.weight_statistics_max_func = weight_statistics_max_func
+        self.activation_statistics_min_func = activation_statistics_min_func
+        self.activation_statistics_max_func = activation_statistics_max_func
 
 
 class QuantizerRangeFinderAlgorithm(InitializationAlgorithm):
@@ -19,5 +36,6 @@ class QuantizerRangeFinderAlgorithm(InitializationAlgorithm):
 
     """
 
-    def get_layers_for_statistics(self):
+    def get_layers_for_statistics(self, weight_quantizer_config: QuantizerConfig,
+                                  activation_quantizer_config: QuantizerConfig) -> List[LayerStatistic]:
         pass

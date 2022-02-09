@@ -12,67 +12,76 @@
 """
 
 from typing import List
-from typing import Type
+from typing import Dict
+from typing import Optional
 
 from nncf.common.utils.ordered_enum import OrderedEnum
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.graph.transformations.layout import TransformationLayout
 
-from nncf.experimental.post_training.backend import define_the_backend
-from nncf.experimental.post_training.backend import Backend
+from nncf.experimental.post_training.backend import BACKEND
 from nncf.experimental.post_training.api.engine import Engine
 from nncf.experimental.post_training.graph.model_transformer import ModelTransformer
 from nncf.experimental.post_training.algorithm import PostTrainingAlgorithm
+from nncf.experimental.post_training.algorithm import PostTraniningAlgorithmParameters
 from nncf.experimental.post_training.compressed_model import CompressedModel
 
 from nncf.experimental.post_training.initialization.algorithm import InitializationAlgorithm
-from nncf.experimental.post_training.initialization.quantizer_range_finder import QuantizerRangeFinderAlgorithm
-from nncf.experimental.post_training.initialization.batchnorm_adaptation import BatchNormAdaptationAlgorithm
-from nncf.experimental.post_training.initialization.bias_correction import BiasCorrectionAlgorithm
+from nncf.experimental.post_training.initialization.algorithm import InitializationAlgorithms
+from nncf.experimental.post_training.initialization.algorithm import InitizalizationParameters
+from nncf.experimental.post_training.initialization.quantizer_range_finder import QuantizerRangeFinderParameters
 
-from nncf.experimental.onnx.initialization.quantizer_range_finder import ONNXQuantizerRangeFinderAlgorithm
-from nncf.experimental.onnx.initialization.batchnorm_adaptation import ONNXBatchNormAdaptationAlgorithm
-from nncf.experimental.onnx.initialization.bias_correction import ONNXBiasCorrectionAlgorithm
+from nncf.experimental.post_training.utils import merge_two_dicts
 
 
-class PostTrainingQuantizationParameters:
-    def __init__(self, per_channel_weights: bool,
-                 symmetric_weights: bool,
-                 symmetric_activations: bool,
-                 ignored_scopes: List[str],
-                 quantize_inputs: bool,
-                 quantize_outputs: bool,
-                 target_device: str,  # TODO: change to ENUM
-                 transformation_algorithms: None,
-                 initialization_algorithms: List[Type[InitializationAlgorithm]]
+class PostTrainingQuantizationParameters(PostTraniningAlgorithmParameters):
+    def __init__(self,
+                 preset: str = 'perfomance',
+                 iterations_number: int = 300,
+                 target_device: str = 'CPU',  # TODO: change to ENUM
+                 weight_bits: int = 8,
+                 activation_bits: int = 8,
+                 initialization_algorithms: List[InitializationAlgorithms] = None,
+                 initialization_algorithms_parameters: List[InitizalizationParameters] = None,
+                 ignored_scopes: Optional[List[str]] = None
                  ):
-        mode = QuantizationMode.SYMMETRIC if symmetric_weights else QuantizationMode.ASYMMETRIC
-        self.weight_quantizer_config = QuantizerConfig(num_bits=8,
-                                                       mode=mode,
-                                                       per_channel=per_channel_weights)
-        mode = QuantizationMode.SYMMETRIC if symmetric_activations else QuantizationMode.ASYMMETRIC
-        self.activation_quantizer_config = QuantizerConfig(num_bits=8,
-                                                           mode=mode,
+
+        if initialization_algorithms is None:
+            default_initialization_algorithms = [InitializationAlgorithms.QuantizerRangeFinder]
+            default_initialization_algorithms_parameters = [
+                QuantizerRangeFinderParameters(weight_statistics_min_func='min',
+                                               weight_statistics_max_func='max',
+                                               activation_statistics_min_func='min',
+                                               activation_statistics_max_func='max'
+                                               )]
+            self.initialization_algorithms = self._determine_initialization_algorithms(
+                default_initialization_algorithms,
+                default_initialization_algorithms_parameters)
+        else:
+            # type: Dict[InitializationAlgorithms, InitizalizationParameters]
+            self.initialization_algorithms = self._determine_initialization_algorithms(initialization_algorithms,
+                                                                                       initialization_algorithms_parameters)
+        self._determine_weight_activation_quantizers_config(
+            preset,
+            weight_bits,
+            activation_bits)
+        self.iterations_number = iterations_number
+        self.target_device = target_device
+        self.ignored_scopes = ignored_scopes
+
+    def _determine_weight_activation_quantizers_config(self, preset: str, weight_bits: int, activation_bits: int):
+        weight_mode = QuantizationMode.SYMMETRIC
+        activation_mode = QuantizationMode.SYMMETRIC
+        self.weight_quantizer_config = QuantizerConfig(num_bits=weight_bits, mode=weight_mode, per_channel=True)
+        self.activation_quantizer_config = QuantizerConfig(num_bits=activation_bits, mode=activation_mode,
                                                            per_channel=False)
 
-        self.ignored_scopes = ignored_scopes
-        self.quantize_inputs = quantize_inputs
-        self.quantize_outputs = quantize_outputs
-        self.target_device = target_device
-        self.transformation_algorithms = transformation_algorithms
-        self.initialization_algorithms = initialization_algorithms
-
-
-DEFAULT = PostTrainingQuantizationParameters(per_channel_weights=True,
-                                             symmetric_weights=True,
-                                             symmetric_activations=True,
-                                             ignored_scopes=None,
-                                             quantize_inputs=True,
-                                             quantize_outputs=True,
-                                             target_device='CPU',
-                                             transformation_algorithms=None,
-                                             initialization_algorithms=[QuantizerRangeFinderAlgorithm])
+    def _determine_initialization_algorithms(self, initialization_algorithms, initialization_algorithms_parameters):
+        output = {}
+        for algorithm, parameters in zip(initialization_algorithms, initialization_algorithms_parameters):
+            output[algorithm] = parameters
+        return output
 
 
 class InitializationAlgorithmPriority(OrderedEnum):
@@ -80,13 +89,6 @@ class InitializationAlgorithmPriority(OrderedEnum):
     QUANTIZER_RANGE_FIND = 2
     BATCH_NORM_ADAPTATION = 3
     BIAS_CORRECTION = 4
-
-
-def merge_two_dicts(x, y):
-    # TODO: check intersections keys
-    z = x.copy()
-    z.update(y)
-    return z
 
 
 class PostTrainingQuantization(PostTrainingAlgorithm):
@@ -97,17 +99,14 @@ class PostTrainingQuantization(PostTrainingAlgorithm):
         3) Initialize the transformed model.
     """
 
-    def __init__(self, quantization_parameters: PostTrainingQuantizationParameters):
+    def __init__(self,
+                 quantization_parameters: PostTrainingQuantizationParameters = PostTrainingQuantizationParameters()):
         super().__init__()
         self.weight_quantizer_config = quantization_parameters.weight_quantizer_config
         self.activation_quantizer_config = quantization_parameters.activation_quantizer_config
         self.ignored_scopes = quantization_parameters.ignored_scopes
-        self.quantize_inputs = quantization_parameters.quantize_inputs
-        self.quantize_outputs = quantization_parameters.quantize_outputs
         self.target_device = quantization_parameters.target_device
-
-        self.transformation_algorithms_to_created = quantization_parameters.transformation_algorithms
-        self.transformation_algorithms = []
+        self.iterations_number = quantization_parameters.iterations_number
 
         self.initialization_algorithms_to_created = quantization_parameters.initialization_algorithms
         self.initialization_algorithms = []
@@ -116,23 +115,22 @@ class PostTrainingQuantization(PostTrainingAlgorithm):
         model_transformer = self._create_model_transformer(compressed_model)
         transformation_layout = self._create_transformation_layout(compressed_model)
         statistics_collector = self._create_statistics_collector(compressed_model, engine)
-        for algorithm in self.initialization_algorithms_to_created:
-            algorithm = self._create_initialization_algorithm(compressed_model, engine, algorithm)
+        for algorithm, parameters in self.initialization_algorithms_to_created.items():
+            algorithm = self._create_initialization_algorithm(compressed_model, engine, algorithm, parameters)
             self.initialization_algorithms.append(algorithm)
 
-        # Algorithms to prepare FP32 model for initialiation algorithms, e.g. ChannelAlignment
-        for transformation_algorithm in self.transformation_algorithms:
-            transformation_algorithm.run(compressed_model)
-
-        layers_to_collect_statistics = {}  # Dict[str: Callable]
+        layers_to_collect_statistics = []  # List[]
         for initialization_algorithm in self.initialization_algorithms:
-            layers_to_collect_statistics = merge_two_dicts(layers_to_collect_statistics,
-                                                           initialization_algorithm.get_layers_for_statistics())
+            # TODO: potentially could be intersection in layers_to_collect_statistics
+            layers_to_collect_statistics.extend(
+                initialization_algorithm.get_layers_for_statistics(self.weight_quantizer_config,
+                                                                   self.activation_quantizer_config))
 
-        statistics_collector.collect_statistics(layers_to_collect_statistics, 10)
+        layers_statistics = statistics_collector.collect_statistics(layers_to_collect_statistics,
+                                                                    self.iterations_number)
 
         for initialization_algorithm in self.initialization_algorithms:
-            transformation_commands = initialization_algorithm.get_transformation_commands(statistics_collector)
+            transformation_commands = initialization_algorithm.get_transformation_commands(layers_statistics)
             for transformation_command in transformation_commands:
                 transformation_layout.register(transformation_command)
 
@@ -141,26 +139,30 @@ class PostTrainingQuantization(PostTrainingAlgorithm):
         return compressed_model
 
     def _create_model_transformer(self, compressed_model: CompressedModel) -> ModelTransformer:
-        if define_the_backend(compressed_model.original_model) == Backend.ONNX:
+        if compressed_model.model_backend == BACKEND.ONNX:
             from nncf.experimental.onnx.graph.model_transformer import ONNXModelTransformer
             return ONNXModelTransformer(compressed_model)
 
     def _create_statistics_collector(self, compressed_model: CompressedModel, engine: Engine):
-        if define_the_backend(compressed_model.original_model) == Backend.ONNX:
+        if compressed_model.model_backend == BACKEND.ONNX:
             from nncf.experimental.onnx.initialization.statistics_collector import ONNXStatisticsCollector
             return ONNXStatisticsCollector(compressed_model, engine)
 
     def _create_transformation_layout(self, compressed_model: CompressedModel) -> TransformationLayout:
-        if define_the_backend(compressed_model.original_model) == Backend.ONNX:
+        if compressed_model.model_backend == BACKEND.ONNX:
             from nncf.experimental.onnx.graph.transformations.layout import ONNXTransformationLayout
             return ONNXTransformationLayout()
 
     def _create_initialization_algorithm(self, compressed_model: CompressedModel, engine: Engine,
-                                         algorithm: Type[InitializationAlgorithm]) -> InitializationAlgorithm:
-        if define_the_backend(compressed_model.original_model) == Backend.ONNX:
-            if algorithm is QuantizerRangeFinderAlgorithm:
-                return ONNXQuantizerRangeFinderAlgorithm(compressed_model, engine)
-            if algorithm is BatchNormAdaptationAlgorithm:
+                                         algorithm: InitializationAlgorithms,
+                                         parameters: InitizalizationParameters) -> InitializationAlgorithm:
+        if compressed_model.model_backend == BACKEND.ONNX:
+            from nncf.experimental.onnx.initialization.quantizer_range_finder import ONNXQuantizerRangeFinderAlgorithm
+            from nncf.experimental.onnx.initialization.batchnorm_adaptation import ONNXBatchNormAdaptationAlgorithm
+            from nncf.experimental.onnx.initialization.bias_correction import ONNXBiasCorrectionAlgorithm
+            if algorithm == InitializationAlgorithms.QuantizerRangeFinder:
+                return ONNXQuantizerRangeFinderAlgorithm(compressed_model, engine, parameters)
+            if algorithm == InitializationAlgorithms.BatchNormAdaptation:
                 return ONNXBatchNormAdaptationAlgorithm()
-            if algorithm is BiasCorrectionAlgorithm:
+            if algorithm == InitializationAlgorithms.BiasCorrection:
                 return ONNXBiasCorrectionAlgorithm()

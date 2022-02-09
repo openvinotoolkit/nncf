@@ -27,7 +27,8 @@ from nncf.experimental.onnx.graph.transformations.commands import ONNXInsertionC
 class ONNXModelTransformer(ModelTransformer):
     def __init__(self, model: CompressedModel):
         self.model = model
-        self.model.compressed_model = deepcopy(self.model.original_model)
+        original_model = self.model.original_model
+        self.model.compressed_model = deepcopy(original_model)
 
     def transform(self, model: CompressedModel, transformation_layout: ONNXTransformationLayout) -> CompressedModel:
         for transform in transformation_layout.transformations:
@@ -61,23 +62,39 @@ class ONNXModelTransformer(ModelTransformer):
 
         if per_channel:
             onnx_scale = onnx.helper.make_tensor('scale_' + target_point, onnx.TensorProto.FLOAT, scale.shape, scale)
+            onnx_zero_point = onnx.helper.make_tensor('zero_point_' + target_point, onnx.TensorProto.INT8, scale.shape,
+                                                      zero_points)
+            axis = 0
+            quantizer = onnx.helper.make_node(
+                'QuantizeLinear',
+                [target_point, 'scale_' + target_point, 'zero_point_' + target_point],  # inputs
+                ['q_output_' + target_point],  # outputs
+                name=quantizer_name,
+                axis=axis
+            )
+            dequantizer = onnx.helper.make_node(
+                'DequantizeLinear',
+                ['q_output_' + target_point, 'scale_' + target_point, 'zero_point_' + target_point],  # inputs
+                ['dq_output_' + target_point],  # outputs
+                name=dequantizer_name,
+                axis=axis
+            )
         else:
             onnx_scale = onnx.helper.make_tensor('scale_' + target_point, onnx.TensorProto.FLOAT, [], [scale])
-
-        quantizer = onnx.helper.make_node(
-            'QuantizeLinear',
-            [target_point, 'scale_' + target_point, 'zero_point_' + target_point],  # inputs
-            ['q_output_' + target_point],  # outputs
-            name=quantizer_name,
-            axis=0
-        )
-        dequantizer = onnx.helper.make_node(
-            'DequantizeLinear',
-            ['q_output_' + target_point, 'scale_' + target_point, 'zero_point_' + target_point],  # inputs
-            ['dq_output_' + target_point],  # outputs
-            name=dequantizer_name,
-            axis=0
-        )
+            onnx_zero_point = onnx.helper.make_tensor('zero_point_' + target_point, onnx.TensorProto.INT8, [],
+                                                      [zero_points])
+            quantizer = onnx.helper.make_node(
+                'QuantizeLinear',
+                [target_point, 'scale_' + target_point, 'zero_point_' + target_point],  # inputs
+                ['q_output_' + target_point],  # outputs
+                name=quantizer_name
+            )
+            dequantizer = onnx.helper.make_node(
+                'DequantizeLinear',
+                ['q_output_' + target_point, 'scale_' + target_point, 'zero_point_' + target_point],  # inputs
+                ['dq_output_' + target_point],  # outputs
+                name=dequantizer_name
+            )
 
         onnx_graph = ONNXGraph(self.model.compressed_model)
         input_nodes = onnx_graph.get_nodes_by_input(target_point)
@@ -88,6 +105,7 @@ class ONNXModelTransformer(ModelTransformer):
                     node.input[i] = 'dq_output_' + target_point
 
         self.model.compressed_model.graph.initializer.extend([onnx_scale])
+        self.model.compressed_model.graph.initializer.extend([onnx_zero_point])
         i = find_node_index(input_nodes[0].name, self.model.compressed_model)
         self.model.compressed_model.graph.node.insert(i, quantizer)
         self.model.compressed_model.graph.node.insert(i + 1, dequantizer)

@@ -17,10 +17,24 @@ from typing import Callable
 from abc import ABC
 from abc import abstractmethod
 
+from enum import Enum
+
 from nncf.experimental.post_training.compressed_model import CompressedModel
 from nncf.experimental.post_training.api.engine import Engine
 from nncf.experimental.post_training.initialization.statistics_collector import StatisticsCollector
 from nncf.common.graph.transformations.layout import TransformationCommand
+
+
+class InitializationAlgorithms(Enum):
+    QuantizerRangeFinder = 'quantizer_range_finder'
+    BiasCorrection = 'bias_correction'
+    BatchNormAdaptation = 'batch_norm_adaptation'
+
+
+class InitizalizationParameters(ABC):
+    """
+
+    """
 
 
 class InitializationAlgorithm(ABC):
@@ -28,9 +42,10 @@ class InitializationAlgorithm(ABC):
     The base class for all post-training quantization initialization algorithms.
     """
 
-    def __init__(self, compressed_model: CompressedModel, engine: Engine, **kwargs):
+    def __init__(self, compressed_model: CompressedModel, engine: Engine, parameters: InitizalizationParameters):
         self.compressed_model = compressed_model
         self.engine = engine
+        self.parameters = parameters
 
     @abstractmethod
     def get_layers_for_statistics(self) -> Dict[str, Callable]:
