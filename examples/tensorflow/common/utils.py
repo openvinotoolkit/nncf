@@ -22,6 +22,7 @@ from pathlib import Path
 import atexit
 
 import tensorflow as tf
+from tensorflow.python.distribute.mirrored_strategy import MirroredStrategy
 
 from examples.tensorflow.common.logger import logger as default_logger
 from examples.tensorflow.common.sample_config import CustomArgumentParser
@@ -208,4 +209,5 @@ def close_strategy_threadpool(strategy):
     """Due to https://github.com/tensorflow/tensorflow/issues/50487"""
     # TODO(negvet): remove disable=too-many-statements in the sample run function when fixed
     # pylint: disable=protected-access
-    atexit.register(strategy._extended._collective_ops._pool.close)
+    if isinstance(strategy, MirroredStrategy):
+        atexit.register(strategy._extended._collective_ops._pool.close)
