@@ -12,7 +12,6 @@
 """
 import cv2
 import numpy as np
-import torch
 import os
 import os.path
 import sys
@@ -196,4 +195,3 @@ class VOCDetection(data.Dataset):
         for id_ in self.ids:
             img_names.append(id_[1])
         return img_names
-
