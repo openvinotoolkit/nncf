@@ -25,6 +25,7 @@ from nncf import NNCFConfig
 from nncf.common.hardware.config import HWConfigType
 from tests.tensorflow import test_models
 from tests.tensorflow.helpers import get_empty_config, create_compressed_model_and_algo_for_test
+from tests.tensorflow.helpers import operational_node
 from tests.tensorflow.sparsity.magnitude.test_helpers import get_basic_filter_pruning_config
 from tests.tensorflow.sparsity.magnitude.test_helpers import get_basic_sparsity_config
 
@@ -59,8 +60,9 @@ def get_nx_graph_from_tf_graph(tf_graph: tf.Graph, graph_to_layer_var_names_map:
     edges = []
     for op in tf_graph.get_operations():
         op_name = graph_to_layer_var_names_map.get(op.name, op.name)
-        nodes[op_name] = _get_node_attributes(op)
-        edges.extend(_get_inbound_edges(op))
+        if operational_node(op_name):
+            nodes[op_name] = _get_node_attributes(op)
+            edges.extend(_get_inbound_edges(op))
 
     nx_graph = nx.DiGraph()
 
