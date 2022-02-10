@@ -286,3 +286,15 @@ class ConvBNLeakyReLU(nn.Module):
         z = self.bn(z)
         z = torch.nn.functional.leaky_relu(z)
         return z
+
+class FC_ConstMul(torch.nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.fc1 = nn.Linear(6, 6)
+        self.dp = nn.Dropout()
+
+    def forward(self, x):
+        x = self.dp(x)
+        x1 = self.fc1(x)
+        x1 = x1 * 2
+        return x + x1
