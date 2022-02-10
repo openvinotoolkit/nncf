@@ -292,12 +292,12 @@ class QuantizerPropagationSolver:
         self._additional_unified_scale_op_scopes = additional_unified_scale_op_scopes
 
         # Will handle the "wildcard" quantization situation for the time being
-        if default_qconfig_list is not None:
-            for op_meta, qconf_list in self._operator_allowed_qconfigs_map.items():
-                trait = self._operator_quantization_trait_map.get(op_meta, QuantizationTrait.QUANTIZATION_AGNOSTIC)
-                if trait == QuantizationTrait.INPUTS_QUANTIZABLE:
-                    if HWConfig.is_qconf_list_corresponding_to_unspecified_op(qconf_list):
-                        self._operator_allowed_qconfigs_map[op_meta] = default_qconfig_list
+        #if default_qconfig_list is not None:
+        #    for op_meta, qconf_list in self._operator_allowed_qconfigs_map.items():
+        #        trait = self._operator_quantization_trait_map.get(op_meta, QuantizationTrait.QUANTIZATION_AGNOSTIC)
+        #        if trait == QuantizationTrait.INPUTS_QUANTIZABLE:
+        #            if HWConfig.is_qconf_list_corresponding_to_unspecified_op(qconf_list):
+        #                self._operator_allowed_qconfigs_map[op_meta] = default_qconfig_list
         self._active_propagating_quantizers_queue = deque()
         self._finished_propagating_quantizers = []  # type: List[PropagatingQuantizer]
         self._ignored_scopes = ignored_scopes
