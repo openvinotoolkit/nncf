@@ -11,6 +11,7 @@ from nncf.experimental.post_training.initialization.statistics_collector import 
 from nncf.experimental.post_training.initialization.statistics_collector import CalculateTensorValueFunc
 
 from nncf.experimental.onnx.sampler import ONNXBatchSampler
+from nncf.experimental.onnx.sampler import ONNXRandomBatchSampler
 
 
 class ONNXLayerStatistic(LayerStatistic):
@@ -40,7 +41,8 @@ class ONNXStatisticsCollector(StatisticsCollector):
         with tempfile.NamedTemporaryFile() as temporary_model:
             onnx.save(model_with_intermediate_outputs, temporary_model.name)
             self.engine.set_model(temporary_model.name)
-            sampler = ONNXBatchSampler(self.engine.dataloader)
+            # sampler = ONNXBatchSampler(self.engine.dataloader)
+            sampler = ONNXRandomBatchSampler(self.engine.dataloader)
             for i, sample in enumerate(sampler):
                 if i == num_iters:
                     break

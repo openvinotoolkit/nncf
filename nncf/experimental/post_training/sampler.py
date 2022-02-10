@@ -39,7 +39,7 @@ class BatchSampler(Sampler):
         pass
 
 
-class RandomBatchSampler(Sampler):
+class RandomBatchSampler(BatchSampler):
     def __init__(self, dataloader: DataLoader, seed: int = 0):
         super().__init__(dataloader)
         random.seed(seed)
@@ -47,5 +47,7 @@ class RandomBatchSampler(Sampler):
         random.shuffle(self.random_permutated_indices)
 
     def __iter__(self):
-        for index in self.random_permutated_indices:
-            yield self.dataloader[index]
+        batch_indices = list(range(0, len(self.dataloader), self.batch_size))
+        for i in range(len(batch_indices) - 1):
+            batch = self.form_batch(batch_indices[i], batch_indices[i + 1])
+            yield batch

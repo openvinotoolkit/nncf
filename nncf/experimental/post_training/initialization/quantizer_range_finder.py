@@ -18,17 +18,20 @@ from nncf.experimental.post_training.initialization.statistics_collector import 
 from nncf.experimental.post_training.initialization.algorithm import InitializationAlgorithm
 from nncf.experimental.post_training.initialization.algorithm import InitizalizationParameters
 
+from nncf.experimental.post_training.initialization.statistics_collector import WEIGHTS_ESTIMATOR_FUNCTION
+from nncf.experimental.post_training.initialization.statistics_collector import ACTIVATIONS_ESTIMATOR_FUNCTION
+
 
 class QuantizerRangeFinderParameters(InitizalizationParameters):
-    def __init__(self, weight_statistics_min_func: str,
-                 weight_statistics_max_func: str,
-                 activation_statistics_min_func: str,
-                 activation_statistics_max_func: str,
+    def __init__(self, weight_min_func: WEIGHTS_ESTIMATOR_FUNCTION,
+                 weight_max_func: WEIGHTS_ESTIMATOR_FUNCTION,
+                 activation_min_func: ACTIVATIONS_ESTIMATOR_FUNCTION,
+                 activation_max_func: ACTIVATIONS_ESTIMATOR_FUNCTION,
                  ):
-        self.weight_statistics_min_func = weight_statistics_min_func
-        self.weight_statistics_max_func = weight_statistics_max_func
-        self.activation_statistics_min_func = activation_statistics_min_func
-        self.activation_statistics_max_func = activation_statistics_max_func
+        self.weight_min_func = weight_min_func
+        self.weight_max_func = weight_max_func
+        self.activation_min_func = activation_min_func
+        self.activation_max_func = activation_max_func
 
 
 class QuantizerRangeFinderAlgorithm(InitializationAlgorithm):

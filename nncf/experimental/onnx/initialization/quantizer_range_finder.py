@@ -43,6 +43,9 @@ from nncf.experimental.onnx.initialization.statistics_collector import ONNXTenso
 
 from nncf.experimental.onnx.hardware.fused_patterns import ONNX_HW_FUSED_PATTERNS
 
+from nncf.experimental.post_training.quantization.parameters import WEIGHTS_ESTIMATOR_FUNCTION
+from nncf.experimental.post_training.quantization.parameters import ACTIVATIONS_ESTIMATOR_FUNCTION
+
 QUANTIZATION_LAYER_METATYPES = GENERAL_WEIGHT_LAYER_METATYPES
 
 
@@ -59,18 +62,19 @@ class ONNXQuantizerRangeFinderAlgorithm(QuantizerRangeFinderAlgorithm):
 
     def _determine_aggregation_func(self):
         self.weight_statistics_min_func = self._get_statistics_aggregation_func(
-            self.parameters.weight_statistics_min_func)
+            self.parameters.weight_min_func)
         self.weight_statistics_max_func = self._get_statistics_aggregation_func(
-            self.parameters.weight_statistics_max_func)
+            self.parameters.weight_max_func)
         self.activation_statistics_min_func = self._get_statistics_aggregation_func(
-            self.parameters.activation_statistics_min_func)
+            self.parameters.activation_min_func)
         self.activation_statistics_max_func = self._get_statistics_aggregation_func(
-            self.parameters.activation_statistics_max_func)
+            self.parameters.activation_max_func)
 
-    def _get_statistics_aggregation_func(self, func_name: str):
-        if func_name == 'min':
+    def _get_statistics_aggregation_func(self,
+                                         func_name: Union[WEIGHTS_ESTIMATOR_FUNCTION, ACTIVATIONS_ESTIMATOR_FUNCTION]):
+        if func_name == WEIGHTS_ESTIMATOR_FUNCTION.MIN or ACTIVATIONS_ESTIMATOR_FUNCTION.MIN:
             return ONNXTensorMinFunc
-        elif func_name == 'max':
+        elif func_name == WEIGHTS_ESTIMATOR_FUNCTION.MAX or ACTIVATIONS_ESTIMATOR_FUNCTION.MAX:
             return ONNXTensorMaxFunc
 
     def get_layers_for_statistics(self, weight_quantizer_config: QuantizerConfig,
@@ -115,8 +119,8 @@ class ONNXQuantizerRangeFinderAlgorithm(QuantizerRangeFinderAlgorithm):
         for activation_quantizer in self._activation_quantizers:
             for layer_statistics in layers_statistics:
                 if layer_statistics.layer_name == activation_quantizer:
-                    scale = self._calculate_scale_level(layer_statistics.get_global_max_value(False),
-                                                        layer_statistics.get_global_min_value(False),
+                    scale = self._calculate_scale_level(layer_statistics.get_global_max_value(),
+                                                        layer_statistics.get_global_min_value(),
                                                         8,
                                                         False)
                     zero_points = 0

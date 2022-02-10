@@ -6,10 +6,26 @@ from typing import TypeVar
 from typing import Optional
 from typing import Callable
 
+from nncf.common.utils.ordered_enum import OrderedEnum
 from nncf.experimental.post_training.compressed_model import CompressedModel
 from nncf.experimental.post_training.api.engine import Engine
 
 TensorType = TypeVar('TensorType')
+
+
+class WEIGHTS_ESTIMATOR_FUNCTION(OrderedEnum):
+    MIN = 'min'
+    MAX = 'max'
+
+
+class ACTIVATIONS_ESTIMATOR_FUNCTION(OrderedEnum):
+    MAX = 'max'
+    MIN = 'min'
+    MEAN = 'mean'
+
+
+class BATCH_AGGREGATION_FUNCTION(OrderedEnum):
+    MEAN = 'mean'
 
 
 class CalculateTensorValueFunc(ABC):
@@ -17,6 +33,31 @@ class CalculateTensorValueFunc(ABC):
     @abstractmethod
     def __call__(tensor: TensorType, axis: int):
         pass
+
+
+class TensorMinFunc(CalculateTensorValueFunc):
+    """
+
+    """
+
+
+class TensorMaxFunc(CalculateTensorValueFunc):
+    """
+
+    """
+
+
+class BatchAggregatorFunc(ABC):
+    @staticmethod
+    @abstractmethod
+    def __call__(tensor: TensorType):
+        pass
+
+
+class MeanAggregatorFunc(BatchAggregatorFunc):
+    """
+
+    """
 
 
 class LayerStatistic(ABC):

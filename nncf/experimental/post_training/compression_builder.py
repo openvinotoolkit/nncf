@@ -13,26 +13,14 @@
 
 from typing import TypeVar
 
-from nncf.common.utils.priority_queue import PriorityQueue
-from nncf.common.utils.ordered_enum import OrderedEnum
 from nncf.experimental.post_training.compressed_model import CompressedModel
 from nncf.experimental.post_training.api.engine import Engine
 from nncf.experimental.post_training.api.dataloader import DataLoader
 from nncf.experimental.post_training.algorithm import PostTrainingAlgorithm
 
-from nncf.experimental.post_training.quantization.algorithm import PostTrainingQuantization
-from nncf.experimental.post_training.sparsity.algorithm import PostTrainingSpasity
-
 from nncf.experimental.post_training.backend import BACKEND
 
 ModelType = TypeVar('ModelType')
-
-
-class CompressionAlgorithmPriority(OrderedEnum):
-    DEFAULT_PRIORITY = 1
-    PRUNING_PRIORITY = 2
-    SPARSITY_PRIORITY = 3
-    QUANTIZATION_PRIORITY = 4
 
 
 class CompressionBuilder:
@@ -41,29 +29,10 @@ class CompressionBuilder:
     """
 
     def __init__(self):
-        self.algorithms = PriorityQueue()
+        self.algorithms = []
 
-    def add_algorithm(self, algorithm: PostTrainingAlgorithm,
-                      priority: CompressionAlgorithmPriority = None) -> None:
-        if priority is not None:
-            self._set_algorithm_priority(algorithm, priority)
-        else:
-            priority = self._define_algorithm_priority(algorithm)
-            self._set_algorithm_priority(algorithm, priority)
-        self.algorithms.add(algorithm)
-
-    def _set_algorithm_priority(self, algorithm: PostTrainingAlgorithm,
-                                priority: CompressionAlgorithmPriority) -> None:
-        algorithm.priority = priority
-
-    def _define_algorithm_priority(self, algorithm: PostTrainingAlgorithm) -> CompressionAlgorithmPriority:
-        """
-        Defines the priority of the algorithm based on its instance.
-        """
-        if isinstance(algorithm, PostTrainingQuantization):
-            return CompressionAlgorithmPriority.QUANTIZATION_PRIORITY
-        if isinstance(algorithm, PostTrainingSpasity):
-            return CompressionAlgorithmPriority.SPARSITY_PRIORITY
+    def add_algorithm(self, algorithm: PostTrainingAlgorithm, ) -> None:
+        self.algorithms.append(algorithm)
 
     def _create_engine(self, compressed_model: CompressedModel, dataloader: DataLoader) -> Engine:
         if compressed_model.model_backend == BACKEND.ONNX:
@@ -76,15 +45,19 @@ class CompressionBuilder:
         elif compressed_model.model_backend == BACKEND.OPENVINO:
             pass
 
-    def apply(self, compressed_model: CompressedModel, dataloader: DataLoader,
+    def _create_compressed_model(self, model: ModelType) -> CompressedModel:
+        return CompressedModel(model)
+
+    def apply(self, model: ModelType, dataloader: DataLoader,
               engine: Engine = None) -> CompressedModel:
         """
         Apply compression algorithms to the 'model'.
         """
+        compressed_model = self._create_compressed_model(model)
         if engine is None:
             engine = self._create_engine(compressed_model, dataloader)
         compressed_model.build_and_set_nncf_graph(dataloader, engine)
-        while not self.algorithms.is_empty():
-            algorithm = self.algorithms.pop()
+        while len(self.algorithms) > 0:
+            algorithm = self.algorithms.pop()  # TODO: will remove the last element. Is it expected behavior?
             compressed_model = algorithm.apply(compressed_model, engine)
-        return compressed_model
+        return compressed_model.compressed_model
