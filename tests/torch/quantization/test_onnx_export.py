@@ -256,3 +256,63 @@ def test_branching_fqs_are_not_chained(tmp_path, export_mode):
         follower_nodes += lst
     follower_node_types = [x.op_type for x in follower_nodes]
     assert not any(x == target_node_type for x in follower_node_types)
+
+
+@pytest.mark.parametrize('quantization_mode', ['symmetric', 'asymmetric'])
+def test_mapping_to_zero(quantization_mode):
+    x_zero = torch.Tensor([0.]).to(torch.device('cpu'))
+    levels = 256
+    eps = 1e-6
+    from nncf.torch.quantization.quantize_functions import TuneRange
+
+    def new_fq_formula(x, input_low, input_range, levels):
+        # clamp x?
+        s = (levels - 1) / input_range
+        quant_zero = torch.round(-input_low * s)
+        output = torch.round(((x - input_low) * s - quant_zero)) * (1 / s)
+        return output
+
+    def old_fq_formula(x, input_low, input_range, levels):
+        # clamp x?
+        s = (levels - 1) / input_range
+        return torch.round((x - input_low) * s) / s + input_low
+
+    if quantization_mode == 'symmetric':
+        level_low = -128
+        level_high = 127
+        scale = torch.Tensor([100.]).to(torch.device('cpu'))
+        scale_safe = abs(scale) + eps
+        from nncf.torch.quantization.quantize_functions import symmetric_quantize
+        from nncf.torch.quantization.quantize_functions import QuantizeSymmetric
+        #x_quantized = symmetric_quantize(x, levels, level_low, level_high, scale, eps)
+        x_zero_quantized = QuantizeSymmetric.apply(x_zero, scale_safe, level_low, level_high, levels)
+        input_low = scale * (level_low / level_high)
+        input_range = scale - input_low
+        input_low_quantized = QuantizeSymmetric.apply(input_low, scale_safe, level_low, level_high, levels)
+        input_high_quantized = QuantizeSymmetric.apply(input_low + input_range, scale_safe, level_low, level_high, levels)
+    else:
+        level_low = 0
+        level_high = 255
+        input_low = torch.Tensor([-10.]).to(torch.device('cpu'))
+        input_range = torch.Tensor([15.]).to(torch.device('cpu'))
+        from nncf.torch.quantization.quantize_functions import asymmetric_quantize
+        from nncf.torch.quantization.quantize_functions import QuantizeAsymmetric
+        input_range_safe = abs(input_range) + eps
+        input_low_tuned, input_range_tuned = TuneRange.apply(input_low, input_range_safe, levels)
+        x_zero_quantized = QuantizeAsymmetric.apply(x_zero, input_low_tuned, input_range_tuned, level_low, level_high, levels)
+        input_low_quantized = QuantizeAsymmetric.apply(input_low, input_low_tuned, input_range_tuned, level_low, level_high, levels)
+        input_high_quantized = QuantizeAsymmetric.apply(input_low + input_range, input_low_tuned, input_range_tuned, level_low, level_high, levels)
+
+    print(f'X quantized {x_zero} -> {x_zero_quantized}')
+    print(f'Input low  quantized {input_low} -> {input_low_quantized}')
+    print(f'Input high  quantized {input_low + input_range} -> {input_high_quantized}')
+    print(f'New FQ formula quantized {x_zero} -> {new_fq_formula(x_zero, input_low, input_range, levels)}')
+    print(f'New FQ formula input low {input_low} -> {new_fq_formula(input_low, input_low, input_range, levels)}')
+    print(f'New FQ formula input high {input_low + input_range} -> {new_fq_formula(input_low + input_range, input_low, input_range, levels)}')
+    print(f'OLD FQ formula quantized {x_zero} -> {old_fq_formula(x_zero, input_low, input_range, levels)}')
+    print(f'OLD FQ formula input low {input_low} -> {old_fq_formula(input_low, input_low, input_range, levels)}')
+    print(f'OLD FQ formula input high {input_low + input_range} -> {old_fq_formula(input_low + input_range, input_low, input_range, levels)}')
+    #assert torch.allclose(x_quantized, torch.Tensor([0]).to(torch.device('cuda')))
+
+    input_low_tuned, input_range_tuned = TuneRange.apply(torch.Tensor([-0.6]), torch.Tensor([0.9]), 6)
+    print(input_low_tuned, input_range_tuned)
