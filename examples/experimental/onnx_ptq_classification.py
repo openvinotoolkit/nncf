@@ -1,45 +1,14 @@
 import argparse
-import os
 
 from typing import List
 
-import torchvision
-from torchvision import transforms
-
 import onnx
 
-from nncf.experimental.post_training.api.dataloader import DataLoader
 from nncf.experimental.post_training.compression_builder import CompressionBuilder
 from nncf.experimental.post_training.quantization.algorithm import PostTrainingQuantization
 
 from nncf.experimental.post_training.quantization.algorithm import PostTrainingQuantizationParameters
-
-
-def create_initialization_dataset(dataset_dir, input_shape: List[int]):
-    image_size = [input_shape[-2], input_shape[-1]]
-    size = int(image_size[0] / 0.875)
-    normalize = transforms.Normalize(mean=(0.485, 0.456, 0.406),
-                                     std=(0.229, 0.224, 0.225))
-    transform = transforms.Compose([
-        transforms.Resize(size),
-        transforms.CenterCrop(image_size),
-        transforms.ToTensor(),
-        normalize,
-    ])
-    return torchvision.datasets.ImageFolder(os.path.join(dataset_dir, 'train'), transform)
-
-
-class ImageNetDataLoader(DataLoader):
-    def __init__(self, dataset, batch_size, shuffle):
-        super().__init__(batch_size, shuffle)
-        self.dataset = dataset
-        print(f"The dataloader is built with the data located on  {dataset.root}")
-
-    def __getitem__(self, item):
-        return self.dataset[item]
-
-    def __len__(self):
-        return len(self.dataset)
+from nncf.experimental.onnx.helper import create_dataloader_from_imagenet_torch_dataset
 
 
 def run(onnx_model_path: str, output_model_path: str,
@@ -53,8 +22,8 @@ def run(onnx_model_path: str, output_model_path: str,
     print(f"The model is loaded from {onnx_model_path}")
 
     # Step 1: Initialize the data loader.
-    initialization_dataset = create_initialization_dataset(dataset_path, input_shape)
-    dataloader = ImageNetDataLoader(initialization_dataset, batch_size=batch_size, shuffle=shuffle)
+    dataloader = create_dataloader_from_imagenet_torch_dataset(dataset_path, input_shape,
+                                                               batch_size=batch_size, shuffle=shuffle)
 
     # Step 2: Create a pipeline of compression algorithms.
     builder = CompressionBuilder()
