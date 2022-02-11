@@ -1,7 +1,7 @@
 yattag>=1.14.0
 prettytable>=2.0.0
 # Required for test_algo_common not to fail because of google namespace issues
-protobuf==3.14.0
+protobuf==3.15.0
 onnx>=1.8.0
 onnxruntime==1.6.0
 pytest-mock>=3.3.1
