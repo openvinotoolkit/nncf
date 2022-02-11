@@ -18,7 +18,7 @@ import os
 import pytest
 import tensorflow as tf
 
-from tests.tensorflow.helpers import get_empty_config, create_compressed_model_and_algo_for_test
+from tests.tensorflow.helpers import create_compressed_model_and_algo_for_test
 from tests.tensorflow.test_compressed_graph import get_graph_to_layer_var_names_map
 from tests.tensorflow.test_compressed_graph import get_model_name
 from tests.tensorflow.test_compressed_graph import ModelDesc
@@ -26,6 +26,9 @@ from tests.tensorflow.test_compressed_graph import _quantization_case_config
 from tests.tensorflow.test_compressed_graph import get_basic_quantization_config
 from tests.tensorflow.test_compressed_graph import prepare_and_check_graph_def
 from tests.tensorflow.test_compressed_graph import prepare_and_check_nx_graph
+from tests.tensorflow.test_compressed_graph import QUANTIZERS
+from tests.tensorflow.test_compressed_graph import QuantizeTestCaseConfiguration
+from tests.tensorflow.test_compressed_graph import create_test_name
 from tests.experimental.tensorflow import test_models
 
 
@@ -37,6 +40,14 @@ MODELS = [
 MODELS_IDS = [
     get_model_name(m) for m in MODELS
 ]
+
+
+@pytest.fixture(
+    scope='function', params=QUANTIZERS, ids=[create_test_name(quant_params) for quant_params in QUANTIZERS]
+)
+def _quantization_case_config_v2(request):
+    graph_dir = os.path.join('quantized', create_test_name(request.param))
+    return QuantizeTestCaseConfiguration(request.param, graph_dir)
 
 
 def nncf_network_to_tf_graph(nncf_network):
@@ -71,14 +82,14 @@ def check_model_graph_v2(compressed_model, ref_graph_filename, ref_graph_dir, re
 
 
 @pytest.mark.parametrize('desc', MODELS, ids=MODELS_IDS)
-def test_quantize_network(desc: ModelDesc, _quantization_case_config):
+def test_quantize_network_v2(desc: ModelDesc, _quantization_case_config_v2):
     input_signature = tf.TensorSpec(
         shape=[None] + desc.input_sample_sizes[1:],
         dtype=tf.float32
     )
     model = NNCFNetwork(desc.model_builder(), input_signature)
 
-    config = get_basic_quantization_config(_quantization_case_config.qconfig,
+    config = get_basic_quantization_config(_quantization_case_config_v2.qconfig,
                                         input_sample_sizes=desc.input_sample_sizes)
     config['compression']['algorithm'] = 'experimental_quantization'
     if desc.ignored_scopes is not None:
@@ -88,5 +99,5 @@ def test_quantize_network(desc: ModelDesc, _quantization_case_config):
             config['compression']['activations'] = {'ignored_scopes': desc.ignored_scopes}
 
     compressed_model, _ = create_compressed_model_and_algo_for_test(model, config, force_no_init=True)
-    check_model_graph_v2(compressed_model, desc.ref_graph_filename, _quantization_case_config.graph_dir,
+    check_model_graph_v2(compressed_model, desc.ref_graph_filename, _quantization_case_config_v2.graph_dir,
                         desc.rename_resource_nodes)

@@ -18,6 +18,33 @@ from typing import Mapping
 
 import tensorflow as tf
 
+# pylint:disable=too-many-lines
+# pylint:disable=too-many-statements
+def make_divisible(value: float,
+                   divisor: int,
+                   min_value: Optional[float] = None,
+                   round_down_protect: bool = True,
+                   ) -> int:
+    """This is to ensure that all layers have channels that are divisible by 8.
+
+    Args:
+        value: A `float` of original value.
+        divisor: An `int` of the divisor that need to be checked upon.
+        min_value: A `float` of  minimum value threshold.
+        round_down_protect: A `bool` indicating whether round down more than 10%
+            will be allowed.
+
+    Returns:
+        The adjusted value in `int` that is divisible against divisor.
+    """
+    if min_value is None:
+        min_value = divisor
+    new_value = max(min_value, int(value + divisor / 2) // divisor * divisor)
+    # Make sure that round down does not go down by more than 10%.
+    if round_down_protect and new_value < 0.9 * value:
+        new_value += divisor
+    return int(new_value)
+
 
 class SqueezeExcitation(tf.keras.layers.Layer):
     """Creates a squeeze and excitation layer."""
@@ -57,7 +84,7 @@ class SqueezeExcitation(tf.keras.layers.Layer):
             allowed.
           **kwargs: Additional keyword arguments to be passed.
         """
-        super(SqueezeExcitation, self).__init__(**kwargs)
+        super().__init__(**kwargs)
 
         self._in_filters = in_filters
         self._out_filters = out_filters
@@ -109,7 +136,7 @@ class SqueezeExcitation(tf.keras.layers.Layer):
             kernel_regularizer=self._kernel_regularizer,
             bias_regularizer=self._bias_regularizer)
 
-        super(SqueezeExcitation, self).build(input_shape)
+        super().build(input_shape)
 
     def get_config(self):
         config = {
@@ -125,7 +152,7 @@ class SqueezeExcitation(tf.keras.layers.Layer):
             'gating_activation': self._gating_activation,
             'round_down_protect': self._round_down_protect,
         }
-        base_config = super(SqueezeExcitation, self).get_config()
+        base_config = super().get_config()
         return dict(list(base_config.items()) + list(config.items()))
 
     def call(self, inputs):
@@ -148,12 +175,12 @@ class StochasticDepth(tf.keras.layers.Layer):
         Returns:
           A output `tf.Tensor` of which should have the same shape as input.
         """
-        super(StochasticDepth, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         self._drop_rate = stochastic_depth_drop_rate
 
     def get_config(self):
         config = {'drop_rate': self._drop_rate}
-        base_config = super(StochasticDepth, self).get_config()
+        base_config = super().get_config()
         return dict(list(base_config.items()) + list(config.items()))
 
     def call(self, inputs, training=None):
@@ -297,7 +324,7 @@ class ResidualBlock(tf.keras.layers.Layer):
             trainable. Default to True.
           **kwargs: Additional keyword arguments to be passed.
         """
-        super(ResidualBlock, self).__init__(**kwargs)
+        super().__init__(**kwargs)
 
         self._filters = filters
         self._strides = strides
@@ -394,7 +421,7 @@ class ResidualBlock(tf.keras.layers.Layer):
         else:
             self._stochastic_depth = None
 
-        super(ResidualBlock, self).build(input_shape)
+        super().build(input_shape)
 
     def get_config(self):
         config = {
@@ -414,7 +441,7 @@ class ResidualBlock(tf.keras.layers.Layer):
             'norm_epsilon': self._norm_epsilon,
             'bn_trainable': self._bn_trainable
         }
-        base_config = super(ResidualBlock, self).get_config()
+        base_config = super().get_config()
         return dict(list(base_config.items()) + list(config.items()))
 
     def call(self, inputs, training=None):
@@ -492,7 +519,7 @@ class BottleneckBlock(tf.keras.layers.Layer):
             trainable. Default to True.
           **kwargs: Additional keyword arguments to be passed.
         """
-        super(BottleneckBlock, self).__init__(**kwargs)
+        super().__init__(**kwargs)
 
         self._filters = filters
         self._strides = strides
@@ -615,7 +642,7 @@ class BottleneckBlock(tf.keras.layers.Layer):
             self._stochastic_depth = None
         self._add = tf.keras.layers.Add()
 
-        super(BottleneckBlock, self).build(input_shape)
+        super().build(input_shape)
 
     def get_config(self):
         config = {
@@ -635,7 +662,7 @@ class BottleneckBlock(tf.keras.layers.Layer):
             'norm_epsilon': self._norm_epsilon,
             'bn_trainable': self._bn_trainable
         }
-        base_config = super(BottleneckBlock, self).get_config()
+        base_config = super().get_config()
         return dict(list(base_config.items()) + list(config.items()))
 
     def call(self, inputs, training=None):
@@ -946,9 +973,9 @@ class ResNet(tf.keras.Model):
                 name='block_group_l{}'.format(i + 2))
             endpoints[str(i + 2)] = x
 
-        self._output_specs = {l: endpoints[l].get_shape() for l in endpoints}
+        self._output_specs = {k: v.get_shape() for k, v in endpoints.items()}
 
-        super(ResNet, self).__init__(inputs=inputs, outputs=endpoints, **kwargs)
+        super().__init__(inputs=inputs, outputs=endpoints, **kwargs)
 
     def _block_group(self,
                      inputs: tf.Tensor,
@@ -1106,7 +1133,7 @@ class ClassificationModel(tf.keras.Model):
                 bias_regularizer=bias_regularizer)(
                     x)
 
-        super(ClassificationModel, self).__init__(
+        super().__init__(
             inputs=inputs, outputs=x, **kwargs)
         self._config_dict = {
             'backbone': backbone,

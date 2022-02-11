@@ -15,7 +15,6 @@ from nncf.common.graph.model_transformer import ModelTransformer
 from nncf.common.graph.transformations.commands import TransformationType
 from nncf.experimental.tensorflow.nncf_network import NNCFNetwork
 from nncf.experimental.tensorflow.graph.transformations.layout import TFTransformationLayoutV2
-from nncf.experimental.tensorflow.patch_tf import TFPatcher
 from nncf.experimental.tensorflow.patch_tf import Hook
 
 
