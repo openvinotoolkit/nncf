@@ -52,17 +52,25 @@ def get_nx_graph_from_tf_graph(tf_graph: tf.Graph, graph_to_layer_var_names_map:
     def _get_inbound_edges(op: tf.Operation):
         inbound_edges = []
         for input_tensor in op.inputs:
-            inbound_edges.append((graph_to_layer_var_names_map.get(input_tensor.op.name, input_tensor.op.name),
-                                  graph_to_layer_var_names_map.get(op.name, op.name)))
+            inbound_edges.append([graph_to_layer_var_names_map.get(input_tensor.op.name, input_tensor.op.name),
+                                  graph_to_layer_var_names_map.get(op.name, op.name)])
         return inbound_edges
 
     nodes = {}
     edges = []
     for op in tf_graph.get_operations():
         op_name = graph_to_layer_var_names_map.get(op.name, op.name)
-        if operational_node(op_name):
-            nodes[op_name] = _get_node_attributes(op)
-            edges.extend(_get_inbound_edges(op))
+        nodes[op_name] = _get_node_attributes(op)
+        edges.extend(_get_inbound_edges(op))
+
+    for node_name in list(nodes.keys()):
+        if not operational_node(node_name):
+            del nodes[node_name]
+
+    for node_edges in list(edges):
+        for node_name in node_edges:
+            if not operational_node(node_name):
+                edges.remove(node_edges)
 
     nx_graph = nx.DiGraph()
 
