@@ -11,12 +11,6 @@ This sample demonstrates DL model compression capabailites for object detection 
 
 ## Installation
 
-At this point it is assumed that you have already installed nncf
-
-```
-pip install nncf
-```
-
 To work with the sample you should install the corresponding Python package dependencies
 
 ```
@@ -32,6 +26,15 @@ This scenario demonstrates quantization with fine-tuning of SSD300 on VOC datase
 #### Run object detection sample
 - If you did not install the package then add the repository root folder to the `PYTHONPATH` environment variable
 - Navigate to the `examples/torch/object_detection` folder
+- (Optional) Before compressing a model, it is highly recommended checking the accuracy of the pretrained model, use the following command: 
+  ```bash
+  python main.py \
+  --mode=test \
+  --config=configs/quantization/retinanet_coco_int8.json \
+  --weights=<path_to_H5_file_with_pretrained_weights>
+  --data=<path_to_dataset> \
+  --disable-compression 
+  ```
 - Run the following command to start compression with fine-tuning on GPUs:
 `python main.py -m train --config configs/ssd300_vgg_voc_int8.json --data <path_to_dataset> --log-dir=../../results/quantization/ssd300_int8`
 It may take a few epochs to get the baseline accuracy results.
@@ -42,7 +45,7 @@ It may take a few epochs to get the baseline accuracy results.
 om scratch.
 
 #### Validate your model checkpoint
-To estimate the test scores of your model checkpoint use the following command:
+To estimate the test scores of your trained model checkpoint use the following command:
 `python main.py -m test --config=configs/ssd300_vgg_voc_int8.json --data <path_to_dataset> --resume <path_to_trained_model_checkpoint>`
 If you want to validate an FP32 model checkpoint, make sure the compression algorithm settings are empty in the configuration file or `pretrained=True` is set.
 
@@ -50,7 +53,7 @@ If you want to validate an FP32 model checkpoint, make sure the compression algo
 
 #### Export compressed model
 To export trained model to ONNX format use the following command:
-`python main.py -m test --config configs/ssd300_vgg_voc_int8.json --data <path_to_dataset> --resume <path_to_compressed_model_checkpoint> --to-onnx=../../results/ssd300_int8.onnx`
+`python main.py -m export --config configs/ssd300_vgg_voc_int8.json --data <path_to_dataset> --resume <path_to_compressed_model_checkpoint> --to-onnx=../../results/ssd300_int8.onnx`
 
 #### Export to OpenVINO Intermediate Representation (IR)
 
