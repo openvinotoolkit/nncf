@@ -12,6 +12,7 @@
 """
 
 from typing import Union, Dict, Tuple, List
+import itertools
 
 import tensorflow as tf
 
@@ -65,7 +66,9 @@ class NNCFNetwork(tf.keras.Model):
         super().__init__(**kwargs)
         self._model = model
         self._input_signature = _add_names_to_input_signature(input_signature)
-        self.__dict__['_hooks'] = []
+
+        self.__dict__['_pre_hooks'] = {}  # type: Dict[str, List[Hook]]
+        self.__dict__['_post_hooks'] = {}  # type: Dict[str, List[Hook]]
 
     @property
     def nncf_operations(self) -> List[NNCFOperation]:
@@ -98,10 +101,29 @@ class NNCFNetwork(tf.keras.Model):
         :return: A tensor if there is a single output, or a list of tensors
             if there are more than one outputs.
         """
+        get_current_context().model = self
         with get_current_context().enter(wrap_ops=True):
             x = self._apply_post_hooks_for_inputs(inputs)
             outputs = self._model(x, **kwargs)
+        get_current_context().model = None
         return outputs
+
+    def _add_hook(self, hook):
+        """
+        Adds the hook to the `NNCFNetwork`.
+
+        :param hook: Hook.
+        """
+        hooks = getattr(self, '_pre_hooks') if hook.is_pre_hook else getattr(self, '_post_hooks')
+        # TODO(andrey-churkin): What we should do if the hook with the same `target_point`
+        # already exists inside `hooks`? Is it a valid case?
+        hooks.setdefault(hook.target_point.op_name, []).append(hook)
+
+    @property
+    def _hooks(self):
+        pre_hooks = getattr(self, '_pre_hooks')
+        post_hooks = getattr(self, '_post_hooks')
+        return itertools.chain(*pre_hooks.values(), *post_hooks.values())
 
     def _apply_post_hooks_for_inputs(self, inputs):
         """

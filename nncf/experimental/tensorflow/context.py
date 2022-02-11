@@ -52,6 +52,7 @@ class TFTracingContext:
         }
         # Maps a name used in the graph to the next id to use for that name.
         self.names_in_use = {}
+        self.model = None
 
     @property
     def in_call(self) -> bool:

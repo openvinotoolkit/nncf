@@ -224,6 +224,8 @@ class SubclassedConverter:
             is_shared = False
             resource_name = None
             if metatype in ALL_LAYER_METATYPES_WITH_WEIGHTS:
+                # TODO(andrey-churkin): This code does not work for a quantized model.
+                # Need to use a more advanced algorithm to find resource nodes.
                 resource_name = op_name_to_resource_op_name_map.get(op.name)
                 if resource_name:
                     is_shared = len(resource_op_name_to_op_names_map[resource_name]) > 1

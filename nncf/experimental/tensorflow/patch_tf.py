@@ -19,6 +19,7 @@ from typing import List
 import tensorflow as tf
 from tensorflow.python.eager import context
 from tensorflow.python.framework import ops
+from tensorflow.python.ops import nn
 
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.tensorflow.layers.operation import NNCFOperation
@@ -99,38 +100,19 @@ class Hook:
 
 class TensorFlowOpWrapper:
     """
-    Describes wrapper around TensorFlow operation from the `tf.raw_ops` module.
+    Describes a wrapper around the method from the TensorFlow API.
     """
 
     def __init__(self, op, op_type_name: str):
         """
         Initializes a wrapper.
 
-        :param op: Original TensorFlow operation.
+        :param op: Original method.
         :param op_type_name: Operation type name (name of the function
             from the `tf.raw_ops` module).
         """
         self._op = op
         self._op_type_name = op_type_name
-        self._pre_hooks = {}  # type: Dict[str, List[Hook]]
-        self._post_hooks = {}  # type: Dict[str, List[Hook]]
-
-    def add_hook(self, hook: Hook) -> None:
-        """
-        Adds the hook to the wrapper.
-
-        :param hook: Hook.
-        """
-        if hook.target_point.op_type_name != self._op_type_name:
-            raise ValueError(
-                f'Unexpected `op_type_name` inside `hook.target_point`: {hook.target_point.op_type_name}. '
-                f'Expected: {self._op_type_name}.'
-            )
-        hooks = self._pre_hooks if hook.is_pre_hook else self._post_hooks
-
-        # TODO(andrey-churkin): What we should do if the hook with the same `target_point`
-        # already exists inside `hooks`? It is a valid case?
-        hooks.setdefault(hook.target_point.op_name, []).append(hook)
 
     def __call__(self, *args, **kwargs):
         """
@@ -144,10 +126,13 @@ class TensorFlowOpWrapper:
 
         op_name = get_op_name(self._op_type_name, kwargs.get('name'))
 
+        _pre_hooks = getattr(get_current_context().model, '_pre_hooks')
+        _post_hooks = getattr(get_current_context().model, '_post_hooks')
+
         with tracing_context.enter(wrap_ops=False):
             # Apply pre-hooks
             args, kwargs = TensorFlowOpWrapper._apply_hooks(
-                self._pre_hooks.get(op_name, []),
+                _pre_hooks.get(op_name, []),
                 args,
                 kwargs
             )
@@ -157,7 +142,7 @@ class TensorFlowOpWrapper:
 
             # Apply post-hooks
             (outputs,), _ = TensorFlowOpWrapper._apply_hooks(
-                self._post_hooks.get(op_name, []),
+                _post_hooks.get(op_name, []),
                 (outputs,),
                 {}
             )
@@ -192,18 +177,28 @@ class TFPatcher:
             tf_op_wrapper = TensorFlowOpWrapper(fn, op_type_name)
             setattr(module, fn_name, tf_op_wrapper)
 
-            # TODO(andrey-churkin): Wrap public API.
+            # Wraps `fn` from the public API
+            if hasattr(fn, '_tf_api_names'):
+                tf_api_names = getattr(fn, '_tf_api_names')
+                for api_name in tf_api_names:
+                    items = api_name.split('.')
+                    module_names = items[:-1]
+                    name = items[-1]
+
+                    curr_module = tf
+                    for curr_name in module_names:
+                        curr_module = getattr(curr_module, curr_name)
+                    setattr(curr_module, name, tf_op_wrapper)
+
+            # TODO(andrey-churkin): Changes references from the `tensorflow.python.ops.nn`
+            # module because the Keras uses it (Only for TF versions: 2.4.x, 2.5.x). Need
+            # to remove this for new versions.
+            if getattr(nn, fn_name, None) is fn:
+                setattr(nn, fn_name, tf_op_wrapper)
 
         ops.name_scope = TFPatcher._wrap_name_scope_internal_fn(ops.name_scope)
         ops.name_scope_v2.__enter__ = TFPatcher._wrap_name_scope_v2_enter_fn(ops.name_scope_v2.__enter__)
         tf.name_scope.__enter__ = TFPatcher._wrap_name_scope_v2_enter_fn(tf.name_scope.__enter__)
-
-    @staticmethod
-    def add_hook(hook: Hook) -> None:
-        op_type_name = hook.target_point.op_type_name
-        op_type_name_to_op_info_map = TFPatcher._get_ops_info([op_type_name])
-        (tf_op_wrapper, _, _) = op_type_name_to_op_info_map[op_type_name]
-        tf_op_wrapper.add_hook(hook)
 
     @staticmethod
     def _get_ops_info(op_type_names: Optional[List[str]] = None):

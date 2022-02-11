@@ -45,18 +45,18 @@ class TFModelTransformerV2(ModelTransformer):
             includes a list of transformations to be applied to the NNCF network.
         :return: The transformed NNCF network.
         """
-        model_hooks = getattr(self._model, '_hooks')
         for command in transformation_layout.transformations:
             if command.type == TransformationType.INSERT:
                 hook = Hook(command.insertion_objects, command.target_point)
-                model_hooks.append(hook)
-                TFPatcher.add_hook(hook)
+                getattr(self._model, '_add_hook')(hook)
             elif command.type == TransformationType.REMOVE:
                 # TODO(andrey-churkin): Add support
                 pass
             else:
                 raise ValueError(f'Transformation type {command.type} does not support.')
 
+        # TODO(andrey-churkin): Need to investigate if we can move this code
+        # from the `TFModelTransformerV2` class.
         with self._model.distribute_strategy.scope():
             for op in self._model.nncf_operations:
                 op.build(self._model)
