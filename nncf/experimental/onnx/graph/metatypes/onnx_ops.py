@@ -83,6 +83,12 @@ class MulLayerMetatype(ONNXOpMetatype):
 
 
 @ONNX_OPERATION_METATYPES.register()
+class SumMetatype(ONNXOpMetatype):
+    name = 'SumOp'
+    op_names = ['Sum']
+
+
+@ONNX_OPERATION_METATYPES.register()
 class ConcatLayerMetatype(ONNXOpMetatype):
     name = 'ConcatOp'
     op_names = ['Concat']
@@ -98,6 +104,18 @@ class BatchNormMetatype(ONNXOpMetatype):
 class ResizeMetatype(ONNXOpMetatype):
     name = 'ResizeOp'
     op_names = ['Resize']
+
+
+@ONNX_OPERATION_METATYPES.register()
+class ReshapeMetatype(ONNXOpMetatype):
+    name = 'ReshapeOp'
+    op_names = ['Reshape']
+
+
+@ONNX_OPERATION_METATYPES.register()
+class TransposeMetatype(ONNXOpMetatype):
+    name = 'TransposeOp'
+    op_names = ['Transpose']
 
 
 GENERAL_WEIGHT_LAYER_METATYPES = [ConvolutionMetatype,

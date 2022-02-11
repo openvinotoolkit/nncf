@@ -249,6 +249,7 @@ class InsertionPointGraph(nx.DiGraph):
         """
         # pylint:disable=too-many-branches
         merged_ip_graph = deepcopy(self)
+        nx.drawing.nx_pydot.write_dot(self._base_nx_graph, '/home/aleksei/tmp/onnx/onnx_ptq_api/insertion_point_graph.dot')
         matches = find_subgraphs_matching_pattern(self._base_nx_graph, full_fusing_pattern)
         for match in matches:
             if len(match) == 1:

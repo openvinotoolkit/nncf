@@ -31,6 +31,9 @@ class ONNXGraph:
 
     def __init__(self, onnx_model: onnx.ModelProto):
         self.onnx_model = onnx_model
+        for i, node in enumerate(self.onnx_model.graph.node):
+            if node.name == '':
+                node.name = 'layer_' + str(i)
         self.model_with_shapes = onnx.shape_inference.infer_shapes(self.onnx_model)
         self.activations_tensors = self.model_with_shapes.graph.value_info
         inputs = self.model_with_shapes.graph.input
@@ -48,7 +51,14 @@ class ONNXGraph:
         """
         Returns model inputs.
         """
-        return list(self.onnx_model.graph.input)
+        inputs = []
+        input_all = [node.name for node in self.onnx_model.graph.input]
+        input_initializer = [node.name for node in self.onnx_model.graph.initializer]
+        net_feed_input = list(set(input_all) - set(input_initializer))
+        for node in self.onnx_model.graph.input:
+            if node.name in net_feed_input:
+                inputs.append(node)
+        return inputs
 
     def get_model_outputs(self) -> List[ValueInfoProto]:
         """
@@ -130,11 +140,11 @@ class ONNXGraph:
                     if isinstance(dim_value, int):
                         shape.append(dim_value)
                     else:
-                        raise RuntimeError('The tensor has non integer shape.')
+                        raise RuntimeError(f'The tensor {tensor.name} has non integer shape.')
                 else:
-                    raise RuntimeError('The tensor does not have dim_value field.')
+                    raise RuntimeError(f'The tensor {tensor.name} does not have dim_value field.')
         else:
-            raise RuntimeError('The tensor does not have shape field')
+            raise RuntimeError(f'The tensor {tensor.name} does not have shape field')
         return shape
 
     def get_edge_shape(self, edge_name: str) -> List[int]:

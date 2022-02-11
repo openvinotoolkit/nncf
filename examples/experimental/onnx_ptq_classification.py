@@ -8,6 +8,7 @@ from nncf.experimental.post_training.compression_builder import CompressionBuild
 from nncf.experimental.post_training.quantization.algorithm import PostTrainingQuantization
 
 from nncf.experimental.post_training.quantization.algorithm import PostTrainingQuantizationParameters
+from nncf.experimental.post_training.quantization.parameters import GRANULARITY
 from nncf.experimental.onnx.helper import create_dataloader_from_imagenet_torch_dataset
 
 
@@ -30,6 +31,7 @@ def run(onnx_model_path: str, output_model_path: str,
 
     # Step 3: Create the quantization algorithm and add to the builder.
     quantization_parameters = PostTrainingQuantizationParameters(
+        weight_granularity=GRANULARITY.PERTENSOR,
         number_samples=num_init_samples
     )
     quantization = PostTrainingQuantization(quantization_parameters)
@@ -38,10 +40,14 @@ def run(onnx_model_path: str, output_model_path: str,
     # Step 4: Execute the pipeline.
     print("Post-Training Quantization has just started!")
     quantized_model = builder.apply(original_model, dataloader)
+
     # Step 5: Save the quantized model.
     onnx.save(quantized_model, output_model_path)
     print(f"The quantized model is saved on {output_model_path}")
+
     onnx.checker.check_model(output_model_path)
+
+    # Step 6:
 
 
 if __name__ == '__main__':

@@ -60,21 +60,40 @@ class MeanAggregatorFunc(BatchAggregatorFunc):
     """
 
 
+class MaxAggregatorFunc(BatchAggregatorFunc):
+    """
+
+    """
+
+
+class MinAggregatorFunc(BatchAggregatorFunc):
+    """
+
+    """
+
+
 class LayerStatistic(ABC):
     def __init__(self, layer_name: str,
                  min_value_func: CalculateTensorValueFunc,
                  max_value_func: CalculateTensorValueFunc,
+                 min_batch_aggregator_func: BatchAggregatorFunc,
+                 max_batch_aggregator_func: BatchAggregatorFunc,
+                 is_instant_calculation: bool = True,
                  axis: Optional[int] = None):
         self.layer_name = layer_name
         self.min_value_func = min_value_func
         self.max_value_func = max_value_func
+        self.min_batch_aggregator_func = min_batch_aggregator_func
+        self.max_batch_aggregator_func = max_batch_aggregator_func
         self.axis = axis
         self.min_values = []  # type: List[TensorType]
         self.max_values = []  # type: List[TensorType]
 
     def add_tensor_statistic(self, tensor: TensorType) -> None:
-        self.min_values.append(self.min_value_func.__call__(tensor, axis=self.axis))
-        self.max_values.append(self.max_value_func.__call__(tensor, axis=self.axis))
+        batch_min_value = self.min_batch_aggregator_func.__call__(tensor)
+        batch_max_value = self.max_batch_aggregator_func.__call__(tensor)
+        self.min_values.append(self.min_value_func.__call__(batch_min_value, axis=self.axis))
+        self.max_values.append(self.max_value_func.__call__(batch_max_value, axis=self.axis))
 
     @abstractmethod
     def get_global_min_value(self):

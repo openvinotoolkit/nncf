@@ -12,7 +12,18 @@
 """
 
 from nncf.experimental.post_training.initialization.bias_correction import BiasCorrectionAlgorithm
+from nncf.experimental.post_training.compressed_model import CompressedModel
+from nncf.experimental.post_training.initialization.statistics_collector import StatisticsCollector
 
 
 class ONNXBiasCorrectionAlgorithm(BiasCorrectionAlgorithm):
     pass
+    # def __init__(self, compressed_model: CompressedModel, engine, parameters: BiasCorrectionParameters):
+    #     self.compressed_model = compressed_model
+    #     self.engine = engine
+    #
+    # def get_transformation_commands(self, collector: StatisticsCollector) -> TransformationCommand:
+    #     quantized_model = self.compressed_model.compressed_model
+
+
+

@@ -9,6 +9,7 @@ import numpy as np
 from nncf.experimental.post_training.initialization.statistics_collector import StatisticsCollector
 from nncf.experimental.post_training.initialization.statistics_collector import LayerStatistic
 from nncf.experimental.post_training.initialization.statistics_collector import CalculateTensorValueFunc
+from nncf.experimental.post_training.initialization.statistics_collector import BatchAggregatorFunc
 
 from nncf.experimental.onnx.sampler import ONNXBatchSampler
 from nncf.experimental.onnx.sampler import ONNXRandomBatchSampler
@@ -41,8 +42,7 @@ class ONNXStatisticsCollector(StatisticsCollector):
         with tempfile.NamedTemporaryFile() as temporary_model:
             onnx.save(model_with_intermediate_outputs, temporary_model.name)
             self.engine.set_model(temporary_model.name)
-            # sampler = ONNXBatchSampler(self.engine.dataloader)
-            sampler = ONNXRandomBatchSampler(self.engine.dataloader)
+            sampler = self._create_sampler(self.engine)
             for i, sample in enumerate(sampler):
                 if i == num_iters:
                     break
@@ -54,8 +54,15 @@ class ONNXStatisticsCollector(StatisticsCollector):
 
         return layers_statistics
 
+    def _create_sampler(self, engine):
+        if engine.dataloader.shuffle:
+            print('Using Shuffled dataset')
+            return ONNXRandomBatchSampler(self.engine.dataloader)
+        else:
+            print('Using Non-Shuffled dataset')
+            return ONNXBatchSampler(self.engine.dataloader)
+
     def _agregate_statistics(self, output, layers_statistics: List[LayerStatistic]):
-        # TODO: add honest  statistics collection
         for layer_statistic in layers_statistics:
             tensor = output[layer_statistic.layer_name]
             layer_statistic.add_tensor_statistic(tensor)
@@ -76,5 +83,19 @@ class ONNXTensorMaxFunc(CalculateTensorValueFunc):
         return np.max(tensor, axis=axis)
 
 
-def mean_min_max(x: np.ndarray):
-    return np.min(x), np.max(x)
+class ONNXBatchMaxFunc(BatchAggregatorFunc):
+    @staticmethod
+    def __call__(tensor: np.ndarray):
+        return np.max(tensor, axis=0)
+
+
+class ONNXBatchMinFunc(BatchAggregatorFunc):
+    @staticmethod
+    def __call__(tensor: np.ndarray):
+        return np.min(tensor, axis=0)
+
+
+class ONNXBatchMeanFunc(BatchAggregatorFunc):
+    @staticmethod
+    def __call__(tensor: np.ndarray):
+        return np.mean(tensor, axis=0)

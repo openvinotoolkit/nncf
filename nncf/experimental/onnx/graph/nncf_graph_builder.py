@@ -41,8 +41,9 @@ class GraphConverter:
 
         nncf_graph = NNCFGraph()
         onnx_graph = ONNXGraph(onnx_model)
-        for node in onnx_graph.get_all_nodes():
+        for i, node in enumerate(onnx_graph.get_all_nodes()):
             node_name = node.name
+            # TODO: add unique name?
             node_type = node.op_type
             metatype = ONNX_OPERATION_METATYPES.get_operator_metatype_by_op_name(node_type)
             if metatype == ConstantMetatype:  # We don't need to quantize Constants
@@ -58,7 +59,9 @@ class GraphConverter:
             outputs = onnx_graph.get_node_edges(output_node.node_name)['output']
             for output in outputs:
                 nodes = onnx_graph.get_nodes_by_input(output)
-                shape = onnx_graph.get_edge_shape(output)
+                # TODO: effecienent-v2 has no shape in node
+               # shape = onnx_graph.get_edge_shape(output)
+                shape = [1]
                 onnx_dtype = onnx_graph.get_edge_dtype(output)
                 nncf_dtype = GraphConverter.convert_onnx_dtype_to_nncf_dtype(onnx_dtype)
                 for in_node in nodes:

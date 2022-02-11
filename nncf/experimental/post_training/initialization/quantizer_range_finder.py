@@ -20,6 +20,7 @@ from nncf.experimental.post_training.initialization.algorithm import Initizaliza
 
 from nncf.experimental.post_training.initialization.statistics_collector import WEIGHTS_ESTIMATOR_FUNCTION
 from nncf.experimental.post_training.initialization.statistics_collector import ACTIVATIONS_ESTIMATOR_FUNCTION
+from nncf.experimental.post_training.initialization.statistics_collector import BATCH_AGGREGATION_FUNCTION
 
 
 class QuantizerRangeFinderParameters(InitizalizationParameters):
@@ -27,11 +28,15 @@ class QuantizerRangeFinderParameters(InitizalizationParameters):
                  weight_max_func: WEIGHTS_ESTIMATOR_FUNCTION,
                  activation_min_func: ACTIVATIONS_ESTIMATOR_FUNCTION,
                  activation_max_func: ACTIVATIONS_ESTIMATOR_FUNCTION,
+                 batch_aggregation_min_func: BATCH_AGGREGATION_FUNCTION,
+                 batch_aggregation_max_func: BATCH_AGGREGATION_FUNCTION
                  ):
         self.weight_min_func = weight_min_func
         self.weight_max_func = weight_max_func
         self.activation_min_func = activation_min_func
         self.activation_max_func = activation_max_func
+        self.batch_aggregation_min_func = batch_aggregation_min_func
+        self.batch_aggregation_max_func = batch_aggregation_max_func
 
 
 class QuantizerRangeFinderAlgorithm(InitializationAlgorithm):

@@ -54,6 +54,7 @@ class ONNXModelTransformer(ModelTransformer):
 
         scale = transformation.parameters[0]
         zero_points = transformation.parameters[1]
+        symetric = transformation.parameters[2]
 
         target_point = transformation.target_point
 
@@ -62,8 +63,12 @@ class ONNXModelTransformer(ModelTransformer):
 
         if per_channel:
             onnx_scale = onnx.helper.make_tensor('scale_' + target_point, onnx.TensorProto.FLOAT, scale.shape, scale)
-            onnx_zero_point = onnx.helper.make_tensor('zero_point_' + target_point, onnx.TensorProto.INT8, scale.shape,
-                                                      zero_points)
+            if not symetric:
+                onnx_zero_point = onnx.helper.make_tensor('zero_point_' + target_point, onnx.TensorProto.UINT8, scale.shape,
+                                                          zero_points)
+            else:
+                onnx_zero_point = onnx.helper.make_tensor('zero_point_' + target_point, onnx.TensorProto.INT8, scale.shape,
+                                                          zero_points)
             axis = 0
             quantizer = onnx.helper.make_node(
                 'QuantizeLinear',
@@ -77,12 +82,16 @@ class ONNXModelTransformer(ModelTransformer):
                 ['q_output_' + target_point, 'scale_' + target_point, 'zero_point_' + target_point],  # inputs
                 ['dq_output_' + target_point],  # outputs
                 name=dequantizer_name,
-                axis=axis
+                axis=axis,
             )
         else:
             onnx_scale = onnx.helper.make_tensor('scale_' + target_point, onnx.TensorProto.FLOAT, [], [scale])
-            onnx_zero_point = onnx.helper.make_tensor('zero_point_' + target_point, onnx.TensorProto.INT8, [],
-                                                      [zero_points])
+            if not symetric:
+                onnx_zero_point = onnx.helper.make_tensor('zero_point_' + target_point, onnx.TensorProto.UINT8, [],
+                                                          [zero_points])
+            else:
+                onnx_zero_point = onnx.helper.make_tensor('zero_point_' + target_point, onnx.TensorProto.INT8, [],
+                                                          [zero_points])
             quantizer = onnx.helper.make_node(
                 'QuantizeLinear',
                 [target_point, 'scale_' + target_point, 'zero_point_' + target_point],  # inputs

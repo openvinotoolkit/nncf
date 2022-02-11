@@ -70,7 +70,10 @@ class PostTrainingQuantizationParameters(PostTraniningAlgorithmParameters):
             weight_min_func=weight_range_estimator.min_estimator_function,
             weight_max_func=weight_range_estimator.max_estimator_function,
             activation_min_func=activation_range_estimator.min_estimator_function,
-            activation_max_func=activation_range_estimator.max_estimator_function
+            activation_max_func=activation_range_estimator.max_estimator_function,
+            batch_aggregation_min_func=activation_range_estimator.min_batch_aggregator,
+            batch_aggregation_max_func=activation_range_estimator.max_batch_aggregator
+
         )}  # type: Dict[InitializationAlgorithms, InitizalizationParameters]
 
         self._determine_weight_activation_quantizers_config(

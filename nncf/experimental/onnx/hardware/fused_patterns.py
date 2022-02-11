@@ -59,7 +59,7 @@ def _get_onnx_hw_fused_patterns() -> HWFusedPatterns:
     hw_fused_patterns.register(activations + batch_norm, 'ACTIVATIONS + BN', match=True)
     hw_fused_patterns.register(arithmetic_ops + batch_norm_activations_permutation,
                                'ARITHMETIC + BN_ACT_PERM', match=True)
-
+    hw_fused_patterns.visualize_all_patterns('/home/aleksei/tmp/onnx/onnx_ptq_api/hw_fused_patterns')
     return hw_fused_patterns
 
 

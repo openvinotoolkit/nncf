@@ -9,6 +9,10 @@ from nncf.experimental.onnx.graph.metatypes.onnx_ops import MulLayerMetatype
 from nncf.experimental.onnx.graph.metatypes.onnx_ops import ConcatLayerMetatype
 from nncf.experimental.onnx.graph.metatypes.onnx_ops import BatchNormMetatype
 from nncf.experimental.onnx.graph.metatypes.onnx_ops import ResizeMetatype
+from nncf.experimental.onnx.graph.metatypes.onnx_ops import MaxPoolMetatype
+
+from nncf.common.graph.operator_metatypes import UnknownMetatype
+
 
 DEFAULT_ONNX_QUANT_TRAIT_TO_OP_DICT = {
     QuantizationTrait.INPUTS_QUANTIZABLE: [
@@ -19,9 +23,10 @@ DEFAULT_ONNX_QUANT_TRAIT_TO_OP_DICT = {
         AddLayerMetatype,
         MulLayerMetatype,
         BatchNormMetatype,
-        ResizeMetatype
+        ResizeMetatype,
     ],
-    QuantizationTrait.NON_QUANTIZABLE: [SigmoidMetatype],
+    QuantizationTrait.NON_QUANTIZABLE: [SigmoidMetatype,
+                                        UnknownMetatype],
     QuantizationTrait.CONCAT: [ConcatLayerMetatype],
     QuantizationTrait.OUTPUT_QUANTIZATION_AS_WEIGHTS: []
 }
