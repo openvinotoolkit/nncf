@@ -20,6 +20,7 @@ import tensorflow as tf
 
 # pylint:disable=too-many-lines
 # pylint:disable=too-many-statements
+# pylint:disable=abstract-method
 def make_divisible(value: float,
                    divisor: int,
                    min_value: Optional[float] = None,
@@ -237,11 +238,6 @@ def get_activation(identifier, use_keras_layer=False):
       A Python function corresponding to the activation function or a keras
       activation layer when use_keras_layer=True.
     """
-    ###
-    assert identifier == 'relu'
-    return tf.keras.layers.ReLU()
-
-
     if isinstance(identifier, str):
         identifier = str(identifier).lower()
         if use_keras_layer:
@@ -255,6 +251,8 @@ def get_activation(identifier, use_keras_layer=False):
                 "hard_swish": None,
                 "hard_sigmoid": None,
             }
+            if identifier == 'relu':
+                return tf.keras.layers.ReLU()
             if identifier in keras_layer_allowlist:
                 return tf.keras.layers.Activation(keras_layer_allowlist[identifier])
         name_to_fn = {

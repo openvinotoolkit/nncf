@@ -22,7 +22,6 @@ from tests.tensorflow.helpers import create_compressed_model_and_algo_for_test
 from tests.tensorflow.test_compressed_graph import get_graph_to_layer_var_names_map
 from tests.tensorflow.test_compressed_graph import get_model_name
 from tests.tensorflow.test_compressed_graph import ModelDesc
-from tests.tensorflow.test_compressed_graph import _quantization_case_config
 from tests.tensorflow.test_compressed_graph import get_basic_quantization_config
 from tests.tensorflow.test_compressed_graph import prepare_and_check_graph_def
 from tests.tensorflow.test_compressed_graph import prepare_and_check_nx_graph
