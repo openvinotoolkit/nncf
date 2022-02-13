@@ -15,6 +15,7 @@ from typing import Union
 from typing import Dict
 from typing import Callable
 from typing import List
+from typing import Tuple
 
 from nncf.experimental.post_training.initialization.quantizer_range_finder import QuantizerRangeFinderAlgorithm
 
@@ -35,6 +36,7 @@ from nncf.common.quantization.quantizer_propagation.solver import QuantizerPropa
 from nncf.common.quantization.structs import QuantizableWeightedLayerNode
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.insertion_point_graph import InsertionPointGraph
+from nncf.common.quantization.structs import QuantizationMode
 
 from nncf.experimental.post_training.initialization.quantizer_range_finder import QuantizerRangeFinderParameters
 from nncf.experimental.onnx.initialization.statistics_collector import ONNXLayerStatistic
@@ -62,7 +64,6 @@ class ONNXQuantizerRangeFinderAlgorithm(QuantizerRangeFinderAlgorithm):
         super().__init__(compressed_model, engine, parameters)
         self._weight_quantizers = []
         self._activation_quantizers = []
-        self._determine_aggregation_func()
 
     def _determine_aggregation_func(self):
         self.weight_statistics_min_func = self._get_statistics_collection_func(
@@ -130,16 +131,13 @@ class ONNXQuantizerRangeFinderAlgorithm(QuantizerRangeFinderAlgorithm):
 
         return output
 
-    def get_transformation_commands(self, layers_statistics, weight_quantizer_config: QuantizerConfig,
-                                    activation_quantizer_config: QuantizerConfig) -> List[ONNXInsertionCommand]:
+    def get_transformation_commands(self, layers_statistics) -> List[ONNXInsertionCommand]:
         transformation_commands = []
         original_model = self.compressed_model.original_model
         onnx_graph = ONNXGraph(original_model)
         for weight_quantizer in self._weight_quantizers:
             weight_tensor = onnx_graph.get_initializers_value(weight_quantizer)
-            parameters = self._calculate_quantizer_parameters(weight_tensor, 8, weight_quantizer_config.per_channel)
-            parameters = list(parameters)
-            parameters.append(True)
+            parameters = self._calculate_weight_quantizer_parameters(weight_tensor, self.weight_quantizer_config)
             command = ONNXQuantizerInsertionCommand(weight_quantizer, parameters)
             transformation_commands.append(command)
         for activation_quantizer in self._activation_quantizers:
@@ -149,10 +147,11 @@ class ONNXQuantizerRangeFinderAlgorithm(QuantizerRangeFinderAlgorithm):
                         symmetric = True
                     else:
                         symmetric = False
-                    scale, zero_points = self._calculate_scale_level(layer_statistics.get_global_max_value(),
-                                                                     layer_statistics.get_global_min_value(),
-                                                                     8,
-                                                                     symmetric)
+                    scale, zero_points = self._calculate_scale_level_and_zero_point(
+                        layer_statistics.get_global_max_value(),
+                        layer_statistics.get_global_min_value(),
+                        8,
+                        symmetric)
 
                     parameters = [scale, zero_points, symmetric]
 
@@ -163,7 +162,6 @@ class ONNXQuantizerRangeFinderAlgorithm(QuantizerRangeFinderAlgorithm):
 
     def _get_quantizer_setup(self, compressed_model: CompressedModel):
         nncf_graph = compressed_model.nncf_graph
-        # nncf_graph.visualize_graph('/home/aleksei/tmp/onnx/onnx_ptq_api/nncf_graph.dot')
         ip_graph = InsertionPointGraph(nncf_graph)
         pattern = ONNX_HW_FUSED_PATTERNS.get_full_pattern_graph()
         ip_graph = ip_graph.get_ip_graph_with_merged_hw_optimized_operations(pattern)
@@ -182,24 +180,40 @@ class ONNXQuantizerRangeFinderAlgorithm(QuantizerRangeFinderAlgorithm):
         final_setup = solver.get_final_quantizer_setup(finalized_proposal)
         return final_setup
 
-    def _calculate_scale_level(self,
-                               max_val: Union[float, np.ndarray],
-                               min_val: Union[float, np.ndarray],
-                               num_bits: int,
-                               symmetric: bool):
+    def _calculate_scale_level_and_zero_point(self,
+                                              max_val: Union[float, np.ndarray],
+                                              min_val: Union[float, np.ndarray],
+                                              num_bits: int,
+                                              symmetric: bool):
         # Always full range
         if symmetric:
             input_abs_max = np.maximum(np.abs(max_val), np.abs(min_val))
             return input_abs_max / ((2 ** num_bits - 1) / 2), 0
         return (max_val - min_val) / 2 ** num_bits, 0
 
-    def _calculate_quantizer_parameters(self, weight_tensor, num_bits: int, per_channel: bool = True):
+    def _calculate_scale_level(self,
+                               max_val: Union[float, np.ndarray],
+                               min_val: Union[float, np.ndarray],
+                               num_bits: int,
+                               mode: QuantizationMode):
+        # Always full range
+        if mode == QuantizationMode.SYMMETRIC:
+            input_abs_max = np.maximum(np.abs(max_val), np.abs(min_val))
+            return input_abs_max / ((2 ** num_bits - 1) / 2)
+        return (max_val - min_val) / 2 ** num_bits
+
+    def _calculate_weight_quantizer_parameters(self, weight_tensor: np.ndarray, quantizer_config: QuantizerConfig) -> \
+            Tuple[List[float], List[int], bool]:
+        per_channel = quantizer_config.per_channel
+        num_bits = quantizer_config.num_bits
+        mode = quantizer_config.mode
+
         if per_channel:
-            scales, zero_points = [], []
-            for single_filter in weight_tensor:
-                input_high = np.max(single_filter)
-                input_low = np.min(single_filter)
-                scales.append(self._calculate_scale_level(input_high, input_low, num_bits, symmetric=True))
-                zero_points.append(0)
-            return np.array(scales), np.array(zero_points)
-        return self._calculate_scale_level(np.max(weight_tensor), np.min(weight_tensor), num_bits, symmetric=False)
+            axes = tuple(range(len(weight_tensor.shape))[1:])
+        else:
+            axes = None
+        input_high = np.amax(weight_tensor, axis=axes)
+        input_low = np.amin(weight_tensor, axis=axes)
+        scales = self._calculate_scale_level(input_high, input_low, num_bits, mode)
+        zero_points = np.zeros_like(scales, dtype=np.int)
+        return scales.tolist(), zero_points.tolist(), True if mode == QuantizationMode.SYMMETRIC else False

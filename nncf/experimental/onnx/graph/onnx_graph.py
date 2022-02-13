@@ -31,9 +31,6 @@ class ONNXGraph:
 
     def __init__(self, onnx_model: onnx.ModelProto):
         self.onnx_model = onnx_model
-        for i, node in enumerate(self.onnx_model.graph.node):
-            if node.name == '':
-                node.name = 'layer_' + str(i)
         self.model_with_shapes = onnx.shape_inference.infer_shapes(self.onnx_model)
         self.activations_tensors = self.model_with_shapes.graph.value_info
         inputs = self.model_with_shapes.graph.input
@@ -76,7 +73,10 @@ class ONNXGraph:
         """
         Returns all nodes that have input with the name 'input_name'.
         """
-        return self._get_nodes_by_lambda(input_name, lambda node: node.input)
+        nodes = self._get_nodes_by_lambda(input_name, lambda node: node.input)
+        if len(nodes) == 0:
+            raise RuntimeError(f'There is no nodes with the input {input_name}')
+        return nodes
 
     def _get_nodes_by_lambda(self, name: str, func: Callable[[NodeProto], List[NodeProto]]):
         output = []

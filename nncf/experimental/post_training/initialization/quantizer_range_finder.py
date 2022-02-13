@@ -10,10 +10,13 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+from abc import ABC
+from abc import abstractmethod
 
 from typing import List
 
 from nncf.common.quantization.structs import QuantizerConfig
+from nncf.experimental.post_training.compressed_model import CompressedModel
 from nncf.experimental.post_training.initialization.statistics_collector import LayerStatistic
 from nncf.experimental.post_training.initialization.algorithm import InitializationAlgorithm
 from nncf.experimental.post_training.initialization.algorithm import InitizalizationParameters
@@ -29,7 +32,9 @@ class QuantizerRangeFinderParameters(InitizalizationParameters):
                  activation_min_func: ACTIVATIONS_ESTIMATOR_FUNCTION,
                  activation_max_func: ACTIVATIONS_ESTIMATOR_FUNCTION,
                  batch_aggregation_min_func: BATCH_AGGREGATION_FUNCTION,
-                 batch_aggregation_max_func: BATCH_AGGREGATION_FUNCTION
+                 batch_aggregation_max_func: BATCH_AGGREGATION_FUNCTION,
+                 weight_quantizer_config: QuantizerConfig,
+                 activation_quantizer_config: QuantizerConfig
                  ):
         self.weight_min_func = weight_min_func
         self.weight_max_func = weight_max_func
@@ -37,13 +42,30 @@ class QuantizerRangeFinderParameters(InitizalizationParameters):
         self.activation_max_func = activation_max_func
         self.batch_aggregation_min_func = batch_aggregation_min_func
         self.batch_aggregation_max_func = batch_aggregation_max_func
+        self.weight_quantizer_config = weight_quantizer_config
+        self.activation_quantizer_config = activation_quantizer_config
 
 
-class QuantizerRangeFinderAlgorithm(InitializationAlgorithm):
+class QuantizerRangeFinderAlgorithm(InitializationAlgorithm, ABC):
     """
 
     """
 
+    def __init__(self, compressed_model: CompressedModel, engine, parameters: QuantizerRangeFinderParameters):
+        super().__init__(compressed_model, engine, parameters)
+        self._determine_aggregation_func()
+        self.weight_quantizer_config = parameters.weight_quantizer_config
+        self.activation_quantizer_config = parameters.activation_quantizer_config
+
+    @abstractmethod
+    def _determine_aggregation_func(self):
+        pass
+
+    @abstractmethod
     def get_layers_for_statistics(self, weight_quantizer_config: QuantizerConfig,
                                   activation_quantizer_config: QuantizerConfig) -> List[LayerStatistic]:
+        pass
+
+    @abstractmethod
+    def get_transformation_commands(self, layers_statistics):
         pass

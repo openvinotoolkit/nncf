@@ -31,7 +31,7 @@ def run(onnx_model_path: str, output_model_path: str,
 
     # Step 3: Create the quantization algorithm and add to the builder.
     quantization_parameters = PostTrainingQuantizationParameters(
-        weight_granularity=GRANULARITY.PERTENSOR,
+        #weight_granularity=GRANULARITY.PERTENSOR,
         number_samples=num_init_samples
     )
     quantization = PostTrainingQuantization(quantization_parameters)

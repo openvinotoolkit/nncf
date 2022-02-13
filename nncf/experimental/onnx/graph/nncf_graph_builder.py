@@ -43,7 +43,6 @@ class GraphConverter:
         onnx_graph = ONNXGraph(onnx_model)
         for i, node in enumerate(onnx_graph.get_all_nodes()):
             node_name = node.name
-            # TODO: add unique name?
             node_type = node.op_type
             metatype = ONNX_OPERATION_METATYPES.get_operator_metatype_by_op_name(node_type)
             if metatype == ConstantMetatype:  # We don't need to quantize Constants
@@ -58,10 +57,18 @@ class GraphConverter:
             output_node_id = output_node.node_id
             outputs = onnx_graph.get_node_edges(output_node.node_name)['output']
             for output in outputs:
-                nodes = onnx_graph.get_nodes_by_input(output)
-                # TODO: effecienent-v2 has no shape in node
-               # shape = onnx_graph.get_edge_shape(output)
-                shape = [1]
+                try:
+                    # TODO: need to work on that
+                    nodes = onnx_graph.get_nodes_by_input(output)
+                except RuntimeError as e:
+                    print(e)
+                    print('This should be the outputs of the model')
+                    continue
+                try:
+                    shape = onnx_graph.get_edge_shape(output)
+                except RuntimeError as err:
+                    # TODO: effecienent-v2 has no shape in node
+                    shape = [1]
                 onnx_dtype = onnx_graph.get_edge_dtype(output)
                 nncf_dtype = GraphConverter.convert_onnx_dtype_to_nncf_dtype(onnx_dtype)
                 for in_node in nodes:
@@ -125,7 +132,7 @@ class GraphConverter:
                     output_port_id=output_counter[to_node_id],
                     dtype=nncf_dtype
                 )
-
+        nncf_graph.visualize_graph('/home/aleksei/tmp/onnx/onnx_ptq_api/nncf_graph.dot')
         return nncf_graph
 
     @staticmethod

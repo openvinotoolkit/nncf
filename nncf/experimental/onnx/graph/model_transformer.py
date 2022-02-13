@@ -47,7 +47,7 @@ class ONNXModelTransformer(ModelTransformer):
                     return i
             return 0
 
-        if transformation.parameters[0].size != 1:
+        if isinstance(transformation.parameters[0], list):
             per_channel = True
         else:
             per_channel = False
@@ -62,12 +62,14 @@ class ONNXModelTransformer(ModelTransformer):
         dequantizer_name = 'DequantizeLinear_' + target_point
 
         if per_channel:
-            onnx_scale = onnx.helper.make_tensor('scale_' + target_point, onnx.TensorProto.FLOAT, scale.shape, scale)
+            onnx_scale = onnx.helper.make_tensor('scale_' + target_point, onnx.TensorProto.FLOAT, (len(scale),), scale)
             if not symetric:
-                onnx_zero_point = onnx.helper.make_tensor('zero_point_' + target_point, onnx.TensorProto.UINT8, scale.shape,
+                onnx_zero_point = onnx.helper.make_tensor('zero_point_' + target_point, onnx.TensorProto.UINT8,
+                                                          (len(scale),),
                                                           zero_points)
             else:
-                onnx_zero_point = onnx.helper.make_tensor('zero_point_' + target_point, onnx.TensorProto.INT8, scale.shape,
+                onnx_zero_point = onnx.helper.make_tensor('zero_point_' + target_point, onnx.TensorProto.INT8,
+                                                          (len(scale),),
                                                           zero_points)
             axis = 0
             quantizer = onnx.helper.make_node(
@@ -105,8 +107,16 @@ class ONNXModelTransformer(ModelTransformer):
                 name=dequantizer_name
             )
 
+        # TODO:NEED TO ADJUST LOGIC FOR INCEPTION_v3
         onnx_graph = ONNXGraph(self.model.compressed_model)
-        input_nodes = onnx_graph.get_nodes_by_input(target_point)
+        try:
+            input_nodes = onnx_graph.get_nodes_by_input(target_point)
+        except RuntimeError as e:
+            print(e)
+            # TODO:SKIP THE BAD NODE
+            return
+        #     input_nodes = onnx_graph.get_nodes_by_output(target_point)
+        # finally:
 
         for node in input_nodes:
             for i, inp in enumerate(node.input):

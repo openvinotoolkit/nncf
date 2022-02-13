@@ -27,14 +27,14 @@ class CompressedModel:
     """
 
     def __init__(self, model: ModelType):
-        self.original_model = model
-        self._determine_backend(self.original_model)
+        self._determine_model_backend(model)
+        self._set_original_model(model)
         self.nncf_graph = None
         self.compressed_model = None  # Final compressed model. This model will be exported.
         self.transformed_model = None  # Model with applied transformtaions
         self.transformations = []
 
-    def _determine_backend(self, model: ModelType) -> None:
+    def _determine_model_backend(self, model: ModelType) -> None:
         from torch.nn import Module
         from tensorflow.keras.models import Model
         from onnx import ModelProto
@@ -51,6 +51,25 @@ class CompressedModel:
             self.model_backend = BACKEND.OPENVINO
             return
         raise RuntimeError('This backend is not supported')
+
+    def _set_original_model(self, model: ModelType):
+        if self.model_backend == BACKEND.ONNX:
+            import onnx
+            from onnx import version_converter
+            from nncf.experimental.onnx.helper import add_input_from_initializer
+            onnx.checker.check_model(model)
+            print(f'Original opset = {model.opset_import[0].version}')
+
+            add_input_from_initializer(model)
+            infered_model = onnx.shape_inference.infer_shapes(model, strict_mode=True)
+            self.original_model = version_converter.convert_version(infered_model, 13)
+
+            onnx.checker.check_model(self.original_model)
+            print(f'Successfully converted the model to the opset = {self.original_model.opset_import[0].version}')
+
+            for i, node in enumerate(self.original_model.graph.node):
+                if node.name == '':
+                    node.name = node.op_type + '_' + str(id(node))
 
     def build_and_set_nncf_graph(self, dataloader: DataLoader, engine: Engine):
         """

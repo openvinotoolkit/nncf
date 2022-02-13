@@ -64,9 +64,7 @@ class PostTrainingQuantization(PostTrainingAlgorithm):
                                                                     self.number_samples)
 
         for initialization_algorithm in self.algorithms:
-            transformation_commands = initialization_algorithm.get_transformation_commands(layers_statistics,
-                                                                                           self.weight_quantizer_config,
-                                                                                           self.activation_quantizer_config)
+            transformation_commands = initialization_algorithm.get_transformation_commands(layers_statistics)
             for transformation_command in transformation_commands:
                 transformation_layout.register(transformation_command)
 
@@ -93,7 +91,6 @@ class PostTrainingQuantization(PostTrainingAlgorithm):
                           parameters: InitizalizationParameters) -> InitializationAlgorithm:
         if compressed_model.model_backend == BACKEND.ONNX:
             from nncf.experimental.onnx.initialization.quantizer_range_finder import ONNXQuantizerRangeFinderAlgorithm
-            from nncf.experimental.onnx.initialization.batchnorm_adaptation import ONNXBatchNormAdaptationAlgorithm
             from nncf.experimental.onnx.initialization.bias_correction import ONNXBiasCorrectionAlgorithm
             if algorithm == InitializationAlgorithms.QuantizerRangeFinder:
                 return ONNXQuantizerRangeFinderAlgorithm(compressed_model, engine, parameters)

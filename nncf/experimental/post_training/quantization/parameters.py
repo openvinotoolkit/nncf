@@ -66,16 +66,6 @@ class PostTrainingQuantizationParameters(PostTraniningAlgorithmParameters):
                  ignored_scopes: Optional[List[str]] = None
                  ):
 
-        self.algorithms = {InitializationAlgorithms.QuantizerRangeFinder: QuantizerRangeFinderParameters(
-            weight_min_func=weight_range_estimator.min_estimator_function,
-            weight_max_func=weight_range_estimator.max_estimator_function,
-            activation_min_func=activation_range_estimator.min_estimator_function,
-            activation_max_func=activation_range_estimator.max_estimator_function,
-            batch_aggregation_min_func=activation_range_estimator.min_batch_aggregator,
-            batch_aggregation_max_func=activation_range_estimator.max_batch_aggregator
-
-        )}  # type: Dict[InitializationAlgorithms, InitizalizationParameters]
-
         self._determine_weight_activation_quantizers_config(
             preset,
             weight_bits,
@@ -83,6 +73,19 @@ class PostTrainingQuantizationParameters(PostTraniningAlgorithmParameters):
             activation_bits,
             activation_granularity
         )
+
+        self.algorithms = {InitializationAlgorithms.QuantizerRangeFinder: QuantizerRangeFinderParameters(
+            weight_min_func=weight_range_estimator.min_estimator_function,
+            weight_max_func=weight_range_estimator.max_estimator_function,
+            activation_min_func=activation_range_estimator.min_estimator_function,
+            activation_max_func=activation_range_estimator.max_estimator_function,
+            batch_aggregation_min_func=activation_range_estimator.min_batch_aggregator,
+            batch_aggregation_max_func=activation_range_estimator.max_batch_aggregator,
+            weight_quantizer_config=self.weight_quantizer_config,
+            activation_quantizer_config=self.activation_quantizer_config
+
+        )}  # type: Dict[InitializationAlgorithms, InitizalizationParameters]
+
         self.number_samples = number_samples
         self.target_device = target_device
         self.ignored_scopes = ignored_scopes
