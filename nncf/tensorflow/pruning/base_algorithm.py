@@ -109,15 +109,6 @@ class BasePruningAlgoBuilder(TFCompressionAlgorithmBuilder):
         """
         converter = TFModelConverterFactory.create(model)
         self._graph = converter.convert()
-
-        import networkx as nx
-        import subprocess
-        import os
-
-        dot_name = f'/tmp/{model.name}.dot'
-        nx.drawing.nx_pydot.write_dot(self._graph.get_nx_graph_copy(), dot_name)
-        subprocess.run(['dot', '-Tsvg', dot_name, '-o', os.path.split(dot_name)[0] + f'/{model.name}.svg'])
-
         groups_of_nodes_to_prune = self._pruning_node_selector.create_pruning_groups(self._graph)
 
         transformations = TFTransformationLayout()

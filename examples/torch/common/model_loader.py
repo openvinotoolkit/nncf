@@ -20,7 +20,6 @@ import torchvision.models
 
 import examples.torch.common.models as custom_models
 from examples.torch.classification.models.mobilenet_v2_32x32 import MobileNetV2For32x32
-from examples.torch.common.models.classification.mobilenet_v3_se_linear import mobilenet_v3_small
 from examples.torch.common.example_logger import logger
 from examples.torch.common import restricted_pickle_module
 from nncf.torch.checkpoint_loading import load_state
@@ -47,9 +46,6 @@ def load_model(model, pretrained=True, num_classes=1000, model_params=None,
                                 **model_params)
     elif model == "mobilenet_v2_32x32":
         load_model_fn = partial(MobileNetV2For32x32, num_classes=100)
-    elif model == "mobilenet_v3_small_se_linear":
-        load_model_fn = partial(mobilenet_v3_small, num_classes=num_classes, pretrained=pretrained,
-                                **model_params)
     else:
         raise Exception("Undefined model name")
     loaded_model = safe_thread_call(load_model_fn)
