@@ -12,15 +12,12 @@
 """
 
 from typing import Union
-from typing import Dict
-from typing import Callable
 from typing import List
 from typing import Tuple
 
 from nncf.experimental.post_training.initialization.quantizer_range_finder import QuantizerRangeFinderAlgorithm
 
 import numpy as np
-import onnx
 
 from nncf.experimental.post_training.compressed_model import CompressedModel
 from nncf.experimental.onnx.graph.onnx_graph import ONNXGraph
@@ -30,7 +27,6 @@ from nncf.experimental.onnx.quantization.default_quantization import DEFAULT_ONN
 
 from nncf.experimental.onnx.graph.transformations.commands import ONNXQuantizerInsertionCommand
 from nncf.experimental.onnx.graph.transformations.commands import ONNXInsertionCommand
-from nncf.experimental.onnx.graph.transformations.layout import ONNXTransformationLayout
 
 from nncf.common.quantization.quantizer_propagation.solver import QuantizerPropagationSolver
 from nncf.common.quantization.structs import QuantizableWeightedLayerNode
@@ -39,18 +35,21 @@ from nncf.common.insertion_point_graph import InsertionPointGraph
 from nncf.common.quantization.structs import QuantizationMode
 
 from nncf.experimental.post_training.initialization.quantizer_range_finder import QuantizerRangeFinderParameters
-from nncf.experimental.onnx.initialization.statistics_collector import ONNXLayerStatistic
+from nncf.experimental.onnx.initialization.statistics_collector import LayerStatistic
 from nncf.experimental.onnx.initialization.statistics_collector import ONNXTensorMaxFunc
 from nncf.experimental.onnx.initialization.statistics_collector import ONNXTensorMinFunc
 from nncf.experimental.onnx.initialization.statistics_collector import ONNXBatchMaxFunc
 from nncf.experimental.onnx.initialization.statistics_collector import ONNXBatchMinFunc
 from nncf.experimental.onnx.initialization.statistics_collector import ONNXBatchMeanFunc
+from nncf.experimental.onnx.initialization.statistics_collector import ONNXStatisticsMeanFunc
+from nncf.experimental.onnx.initialization.statistics_collector import ONNXStatisticsABSMAXFunc
 
 from nncf.experimental.onnx.hardware.fused_patterns import ONNX_HW_FUSED_PATTERNS
 
 from nncf.experimental.post_training.quantization.parameters import WEIGHTS_ESTIMATOR_FUNCTION
 from nncf.experimental.post_training.quantization.parameters import ACTIVATIONS_ESTIMATOR_FUNCTION
 from nncf.experimental.post_training.quantization.parameters import BATCH_AGGREGATION_FUNCTION
+from nncf.experimental.post_training.quantization.parameters import STATISTICS_AGGREGATION_FUNCTION
 
 QUANTIZATION_LAYER_METATYPES = GENERAL_WEIGHT_LAYER_METATYPES
 
@@ -78,6 +77,8 @@ class ONNXQuantizerRangeFinderAlgorithm(QuantizerRangeFinderAlgorithm):
             self.parameters.batch_aggregation_min_func)
         self.batch_aggregation_max_func = self._get_batch_aggregation_func(
             self.parameters.batch_aggregation_max_func)
+        self.statistics_aggregator_func = self._get_statistic_aggregation_func(
+            self.parameters.statistics_aggregator_func)
 
     def _get_statistics_collection_func(self,
                                         function: Union[WEIGHTS_ESTIMATOR_FUNCTION, ACTIVATIONS_ESTIMATOR_FUNCTION]):
@@ -94,8 +95,15 @@ class ONNXQuantizerRangeFinderAlgorithm(QuantizerRangeFinderAlgorithm):
         elif function == BATCH_AGGREGATION_FUNCTION.MAX:
             return ONNXBatchMaxFunc
 
+    def _get_statistic_aggregation_func(self,
+                                        function: STATISTICS_AGGREGATION_FUNCTION):
+        if function == STATISTICS_AGGREGATION_FUNCTION.MEAN:
+            return ONNXStatisticsMeanFunc
+        elif function == STATISTICS_AGGREGATION_FUNCTION.ABS_MAX:
+            return ONNXStatisticsABSMAXFunc
+
     def get_layers_for_statistics(self, weight_quantizer_config: QuantizerConfig,
-                                  activation_quantizer_config: QuantizerConfig) -> List[ONNXLayerStatistic]:
+                                  activation_quantizer_config: QuantizerConfig) -> List[LayerStatistic]:
         quantizer_setup = self._get_quantizer_setup(self.compressed_model)
         original_model = self.compressed_model.original_model
         onnx_graph = ONNXGraph(original_model)
@@ -121,12 +129,13 @@ class ONNXQuantizerRangeFinderAlgorithm(QuantizerRangeFinderAlgorithm):
         output = []
         for activation_quantizer in self._activation_quantizers:
             axis = 1 if activation_quantizer_config.per_channel else None
-            layer_statistics = ONNXLayerStatistic(activation_quantizer,
-                                                  min_value_func=self.activation_statistics_min_func,
-                                                  max_value_func=self.activation_statistics_max_func,
-                                                  min_batch_aggregator_func=self.batch_aggregation_min_func,
-                                                  max_batch_aggregator_func=self.batch_aggregation_max_func,
-                                                  axis=axis)
+            layer_statistics = LayerStatistic(activation_quantizer,
+                                              min_value_func=self.activation_statistics_min_func,
+                                              max_value_func=self.activation_statistics_max_func,
+                                              min_batch_aggregator_func=self.batch_aggregation_min_func,
+                                              max_batch_aggregator_func=self.batch_aggregation_max_func,
+                                              statistics_aggregation_func=self.statistics_aggregator_func,
+                                              axis=axis)
             output.append(layer_statistics)
 
         return output
@@ -135,26 +144,19 @@ class ONNXQuantizerRangeFinderAlgorithm(QuantizerRangeFinderAlgorithm):
         transformation_commands = []
         original_model = self.compressed_model.original_model
         onnx_graph = ONNXGraph(original_model)
+
         for weight_quantizer in self._weight_quantizers:
             weight_tensor = onnx_graph.get_initializers_value(weight_quantizer)
             parameters = self._calculate_weight_quantizer_parameters(weight_tensor, self.weight_quantizer_config)
             command = ONNXQuantizerInsertionCommand(weight_quantizer, parameters)
             transformation_commands.append(command)
+
         for activation_quantizer in self._activation_quantizers:
             for layer_statistics in layers_statistics:
+                # TODO: improve perfomance of matching
                 if layer_statistics.layer_name == activation_quantizer:
-                    if layer_statistics.get_global_min_value() < 0:
-                        symmetric = True
-                    else:
-                        symmetric = False
-                    scale, zero_points = self._calculate_scale_level_and_zero_point(
-                        layer_statistics.get_global_max_value(),
-                        layer_statistics.get_global_min_value(),
-                        8,
-                        symmetric)
-
-                    parameters = [scale, zero_points, symmetric]
-
+                    parameters = self._calculate_activation_quantizer_parameters(layer_statistics,
+                                                                                 self.activation_quantizer_config)
                     command = ONNXQuantizerInsertionCommand(activation_quantizer, parameters)
                     transformation_commands.append(command)
 
@@ -179,17 +181,6 @@ class ONNXQuantizerRangeFinderAlgorithm(QuantizerRangeFinderAlgorithm):
         finalized_proposal = quantization_proposal.finalize(single_config_setup)
         final_setup = solver.get_final_quantizer_setup(finalized_proposal)
         return final_setup
-
-    def _calculate_scale_level_and_zero_point(self,
-                                              max_val: Union[float, np.ndarray],
-                                              min_val: Union[float, np.ndarray],
-                                              num_bits: int,
-                                              symmetric: bool):
-        # Always full range
-        if symmetric:
-            input_abs_max = np.maximum(np.abs(max_val), np.abs(min_val))
-            return input_abs_max / ((2 ** num_bits - 1) / 2), 0
-        return (max_val - min_val) / 2 ** num_bits, 0
 
     def _calculate_scale_level(self,
                                max_val: Union[float, np.ndarray],
@@ -216,4 +207,30 @@ class ONNXQuantizerRangeFinderAlgorithm(QuantizerRangeFinderAlgorithm):
         input_low = np.amin(weight_tensor, axis=axes)
         scales = self._calculate_scale_level(input_high, input_low, num_bits, mode)
         zero_points = np.zeros_like(scales, dtype=np.int)
-        return scales.tolist(), zero_points.tolist(), True if mode == QuantizationMode.SYMMETRIC else False
+        return scales.tolist(), zero_points.tolist(), mode
+
+    def _calculate_activation_quantizer_parameters(self, layer_statistics: LayerStatistic,
+                                                   quantizer_config: QuantizerConfig) -> \
+            Tuple[List[float], List[int], bool]:
+        # TODO:PERCHANNEL IS NOT SUPPORTED.
+        per_channel = quantizer_config.per_channel
+        num_bits = quantizer_config.num_bits
+        mode = quantizer_config.mode
+
+        # if per_channel:
+        #     axes = tuple(range(len(weight_tensor.shape))[1:])
+        # else:
+        #     axes = None
+
+        axes = None
+        input_high = layer_statistics.get_global_max_value()
+        input_low = layer_statistics.get_global_min_value()
+        if input_low < 0:
+            mode = QuantizationMode.SYMMETRIC
+        else:
+            mode = QuantizationMode.ASYMMETRIC
+
+        scales = self._calculate_scale_level(input_high, input_low, num_bits, mode)
+        zero_points = np.zeros_like(scales, dtype=np.int)
+
+        return scales.tolist(), zero_points.tolist(), mode

@@ -13,13 +13,15 @@
 from copy import deepcopy
 import onnx
 
+from nncf.common.graph.transformations.commands import TransformationCommand
+from nncf.common.quantization.structs import QuantizationMode
+
 from nncf.experimental.onnx.graph.onnx_graph import ONNXGraph
 
 from nncf.experimental.post_training.graph.model_transformer import ModelTransformer
 from nncf.experimental.onnx.graph.transformations.layout import ONNXTransformationLayout
-from nncf.experimental.onnx.compressed_model import CompressedModel
+from nncf.experimental.post_training.compressed_model import CompressedModel
 
-from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.experimental.onnx.graph.transformations.commands import ONNXQuantizerInsertionCommand
 from nncf.experimental.onnx.graph.transformations.commands import ONNXInsertionCommand
 
@@ -54,7 +56,7 @@ class ONNXModelTransformer(ModelTransformer):
 
         scale = transformation.parameters[0]
         zero_points = transformation.parameters[1]
-        symetric = transformation.parameters[2]
+        mode = transformation.parameters[2]
 
         target_point = transformation.target_point
 
@@ -63,7 +65,7 @@ class ONNXModelTransformer(ModelTransformer):
 
         if per_channel:
             onnx_scale = onnx.helper.make_tensor('scale_' + target_point, onnx.TensorProto.FLOAT, (len(scale),), scale)
-            if not symetric:
+            if mode == QuantizationMode.ASYMMETRIC:
                 onnx_zero_point = onnx.helper.make_tensor('zero_point_' + target_point, onnx.TensorProto.UINT8,
                                                           (len(scale),),
                                                           zero_points)
@@ -88,7 +90,7 @@ class ONNXModelTransformer(ModelTransformer):
             )
         else:
             onnx_scale = onnx.helper.make_tensor('scale_' + target_point, onnx.TensorProto.FLOAT, [], [scale])
-            if not symetric:
+            if mode == QuantizationMode.ASYMMETRIC:
                 onnx_zero_point = onnx.helper.make_tensor('zero_point_' + target_point, onnx.TensorProto.UINT8, [],
                                                           [zero_points])
             else:

@@ -53,7 +53,7 @@ class PostTrainingQuantization(PostTrainingAlgorithm):
             algorithm = self._create_algorithm(compressed_model, engine, algorithm, parameters)
             self.algorithms.append(algorithm)
 
-        layers_to_collect_statistics = []  # List[]
+        layers_to_collect_statistics = []  # List[LayerStatistic]
         for initialization_algorithm in self.algorithms:
             # TODO: potentially could be intersection in layers_to_collect_statistics
             layers_to_collect_statistics.extend(

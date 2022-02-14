@@ -10,28 +10,17 @@ from nncf.experimental.post_training.initialization.statistics_collector import 
 from nncf.experimental.post_training.initialization.statistics_collector import LayerStatistic
 from nncf.experimental.post_training.initialization.statistics_collector import CalculateTensorValueFunc
 from nncf.experimental.post_training.initialization.statistics_collector import BatchAggregatorFunc
+from nncf.experimental.post_training.initialization.statistics_collector import StatisticsCalculationFunc
 
 from nncf.experimental.onnx.sampler import ONNXBatchSampler
 from nncf.experimental.onnx.sampler import ONNXRandomBatchSampler
-
-
-class ONNXLayerStatistic(LayerStatistic):
-    def get_global_min_value(self, mean: bool = True):
-        if mean:
-            return np.mean(self.min_values)
-        return np.min(self.min_values)
-
-    def get_global_max_value(self, mean: bool = True):
-        if mean:
-            return np.mean(self.max_values)
-        return np.max(self.max_values)
 
 
 class ONNXStatisticsCollector(StatisticsCollector):
     def __init__(self, compressed_model, engine):
         super().__init__(compressed_model, engine)
 
-    def collect_statistics(self, layers_statistics: List[LayerStatistic], num_iters: int):
+    def collect_statistics(self, layers_statistics: List[LayerStatistic], num_iters: int) -> List[LayerStatistic]:
         layers_to_collect_statistics = [layer_statistic.layer_name for layer_statistic in layers_statistics]
         onnx_model = self.compressed_model.original_model
         model_output = list(enumerate_model_node_outputs(onnx_model))[-1]
@@ -99,3 +88,16 @@ class ONNXBatchMeanFunc(BatchAggregatorFunc):
     @staticmethod
     def __call__(tensor: np.ndarray):
         return np.mean(tensor, axis=0)
+
+
+class ONNXStatisticsMeanFunc(StatisticsCalculationFunc):
+    @staticmethod
+    def __call__(tensors: List[np.ndarray]) -> float:
+        return np.mean(tensors)
+
+
+class ONNXStatisticsABSMAXFunc(StatisticsCalculationFunc):
+    @staticmethod
+    def __call__(tensors: List[np.ndarray]) -> float:
+        # TODO: need to test
+        return np.where(np.max(np.abs(tensors)), tensors)

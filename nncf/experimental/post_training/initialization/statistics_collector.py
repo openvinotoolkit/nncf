@@ -5,6 +5,7 @@ from typing import List
 from typing import TypeVar
 from typing import Optional
 from typing import Callable
+from typing import Type
 
 from nncf.common.utils.ordered_enum import OrderedEnum
 from nncf.experimental.post_training.compressed_model import CompressedModel
@@ -28,23 +29,16 @@ class BATCH_AGGREGATION_FUNCTION(OrderedEnum):
     MEAN = 'mean'
 
 
+class STATISTICS_AGGREGATION_FUNCTION(OrderedEnum):
+    MIN_MAX = 'min_max'
+    MEAN = 'mean'
+
+
 class CalculateTensorValueFunc(ABC):
     @staticmethod
     @abstractmethod
     def __call__(tensor: TensorType, axis: int):
         pass
-
-
-class TensorMinFunc(CalculateTensorValueFunc):
-    """
-
-    """
-
-
-class TensorMaxFunc(CalculateTensorValueFunc):
-    """
-
-    """
 
 
 class BatchAggregatorFunc(ABC):
@@ -54,37 +48,27 @@ class BatchAggregatorFunc(ABC):
         pass
 
 
-class MeanAggregatorFunc(BatchAggregatorFunc):
-    """
-
-    """
-
-
-class MaxAggregatorFunc(BatchAggregatorFunc):
-    """
-
-    """
-
-
-class MinAggregatorFunc(BatchAggregatorFunc):
-    """
-
-    """
+class StatisticsCalculationFunc(ABC):
+    @staticmethod
+    @abstractmethod
+    def __call__(tensors: List[TensorType]):
+        pass
 
 
 class LayerStatistic(ABC):
     def __init__(self, layer_name: str,
-                 min_value_func: CalculateTensorValueFunc,
-                 max_value_func: CalculateTensorValueFunc,
-                 min_batch_aggregator_func: BatchAggregatorFunc,
-                 max_batch_aggregator_func: BatchAggregatorFunc,
-                 is_instant_calculation: bool = True,
+                 min_value_func: Type[CalculateTensorValueFunc],
+                 max_value_func: Type[CalculateTensorValueFunc],
+                 min_batch_aggregator_func: Type[BatchAggregatorFunc],
+                 max_batch_aggregator_func: Type[BatchAggregatorFunc],
+                 statistics_aggregation_func: Type[StatisticsCalculationFunc],
                  axis: Optional[int] = None):
         self.layer_name = layer_name
         self.min_value_func = min_value_func
         self.max_value_func = max_value_func
         self.min_batch_aggregator_func = min_batch_aggregator_func
         self.max_batch_aggregator_func = max_batch_aggregator_func
+        self.statistics_aggregation_func = statistics_aggregation_func
         self.axis = axis
         self.min_values = []  # type: List[TensorType]
         self.max_values = []  # type: List[TensorType]
@@ -95,13 +79,11 @@ class LayerStatistic(ABC):
         self.min_values.append(self.min_value_func.__call__(batch_min_value, axis=self.axis))
         self.max_values.append(self.max_value_func.__call__(batch_max_value, axis=self.axis))
 
-    @abstractmethod
     def get_global_min_value(self):
-        pass
+        return self.statistics_aggregation_func.__call__(self.min_values)
 
-    @abstractmethod
     def get_global_max_value(self):
-        pass
+        return self.statistics_aggregation_func.__call__(self.max_values)
 
 
 class StatisticsCollector(ABC):
@@ -112,5 +94,5 @@ class StatisticsCollector(ABC):
         self.layers_statistics = []  # type: List[LayerStatistic]
 
     @abstractmethod
-    def collect_statistics(self, layers_to_collect_statistics: List[str], num_iters: int) -> None:
+    def collect_statistics(self, layers_to_collect_statistics: List[str], num_iters: int) -> List[LayerStatistic]:
         pass

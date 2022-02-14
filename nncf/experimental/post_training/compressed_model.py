@@ -69,7 +69,7 @@ class CompressedModel:
 
             for i, node in enumerate(self.original_model.graph.node):
                 if node.name == '':
-                    node.name = node.op_type + '_' + str(id(node))
+                    node.name = node.op_type + '_nncf_' + str(i)
 
     def build_and_set_nncf_graph(self, dataloader: DataLoader, engine: Engine):
         """

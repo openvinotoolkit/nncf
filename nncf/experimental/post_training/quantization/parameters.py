@@ -15,6 +15,7 @@ from nncf.experimental.post_training.initialization.quantizer_range_finder impor
 from nncf.experimental.post_training.initialization.statistics_collector import WEIGHTS_ESTIMATOR_FUNCTION
 from nncf.experimental.post_training.initialization.statistics_collector import ACTIVATIONS_ESTIMATOR_FUNCTION
 from nncf.experimental.post_training.initialization.statistics_collector import BATCH_AGGREGATION_FUNCTION
+from nncf.experimental.post_training.initialization.statistics_collector import STATISTICS_AGGREGATION_FUNCTION
 
 
 class PRESET(OrderedEnum):
@@ -52,6 +53,12 @@ class ActivationsRangeEstimatorParameters:
         self.max_estimator_function = max_estimator_function
 
 
+class StatisticsAggregationParameters:
+    def __init__(self,
+                 statistics_aggregation_func: STATISTICS_AGGREGATION_FUNCTION = STATISTICS_AGGREGATION_FUNCTION.MEAN):
+        self.statistics_aggregation_func = statistics_aggregation_func
+
+
 class PostTrainingQuantizationParameters(PostTraniningAlgorithmParameters):
     def __init__(self,
                  preset: PRESET = PRESET.MIXED,
@@ -61,6 +68,7 @@ class PostTrainingQuantizationParameters(PostTraniningAlgorithmParameters):
                  activation_bits: int = 8,
                  activation_granularity: GRANULARITY = GRANULARITY.PERTENSOR,
                  activation_range_estimator: ActivationsRangeEstimatorParameters = ActivationsRangeEstimatorParameters(),
+                 statistics_aggregation_function: StatisticsAggregationParameters = StatisticsAggregationParameters(),
                  number_samples: int = 300,
                  target_device: DEVICE = DEVICE.CPU,
                  ignored_scopes: Optional[List[str]] = None
@@ -81,6 +89,7 @@ class PostTrainingQuantizationParameters(PostTraniningAlgorithmParameters):
             activation_max_func=activation_range_estimator.max_estimator_function,
             batch_aggregation_min_func=activation_range_estimator.min_batch_aggregator,
             batch_aggregation_max_func=activation_range_estimator.max_batch_aggregator,
+            statistics_aggregator_func=statistics_aggregation_function.statistics_aggregation_func,
             weight_quantizer_config=self.weight_quantizer_config,
             activation_quantizer_config=self.activation_quantizer_config
 

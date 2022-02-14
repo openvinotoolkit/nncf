@@ -74,8 +74,6 @@ class ONNXGraph:
         Returns all nodes that have input with the name 'input_name'.
         """
         nodes = self._get_nodes_by_lambda(input_name, lambda node: node.input)
-        if len(nodes) == 0:
-            raise RuntimeError(f'There is no nodes with the input {input_name}')
         return nodes
 
     def _get_nodes_by_lambda(self, name: str, func: Callable[[NodeProto], List[NodeProto]]):
@@ -141,6 +139,10 @@ class ONNXGraph:
                         shape.append(dim_value)
                     else:
                         raise RuntimeError(f'The tensor {tensor.name} has non integer shape.')
+                elif d.HasField("dim_param"):
+                    # flexible shape
+                    # make manually 1
+                    shape.append(1)
                 else:
                     raise RuntimeError(f'The tensor {tensor.name} does not have dim_value field.')
         else:
