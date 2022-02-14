@@ -50,7 +50,6 @@ DEFAULT_TF_QUANT_TRAIT_TO_OP_DICT = {
         op_metatypes.TFEluOpMetatype,
         op_metatypes.TFLeakyReluOpMetatype,
         op_metatypes.TFRelu6OpMetatype,
-        op_metatypes.TFReluOpMetatype,
     ],
     QuantizationTrait.NON_QUANTIZABLE: [layer_metatypes.TFSoftmaxLayerMetatype,
                                         op_metatypes.TFSigmoidOpMetatype,

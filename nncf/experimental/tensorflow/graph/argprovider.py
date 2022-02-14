@@ -19,7 +19,7 @@ import tensorflow as tf
 from nncf.common.utils.registry import Registry
 
 
-def replace(xs: Tuple[Any, ...], pos: int, value: Any) -> Tuple[Any, ...]:
+def replace_value_by_index(xs: Tuple[Any, ...], pos: int, value: Any) -> Tuple[Any, ...]:
     """
     Return a new instance of the tuple replacing the specified
     position with the new value.
@@ -101,7 +101,7 @@ class SimpleOutputArgProvider(ArgProvider):
         if len(args) > 1:
             raise ValueError(f'Unexpected `args`: {args}')
 
-        return replace(args, output_port_id, value), kwargs
+        return replace_value_by_index(args, output_port_id, value), kwargs
 
 
 @TF_ARG_PROVIDERS.register('ResizeNearestNeighbor')
@@ -124,7 +124,7 @@ class ResizeNearestNeighborArgProvider(ArgProvider):
         if len(args) > 1:
             raise ValueError(f'Unexpected `args`: {args}')
 
-        return replace(args, output_port_id, value), kwargs
+        return replace_value_by_index(args, output_port_id, value), kwargs
 
     def get_input(self, input_port_id: int, args, kwargs) -> tf.Tensor:
         check_port_id(input_port_id, min_port_id=0, max_port_id=0)
@@ -132,7 +132,7 @@ class ResizeNearestNeighborArgProvider(ArgProvider):
 
     def set_input(self, input_port_id: int, value: tf.Tensor, args, kwargs):
         check_port_id(input_port_id, min_port_id=0, max_port_id=0)
-        return replace(args, input_port_id, value), kwargs
+        return replace_value_by_index(args, input_port_id, value), kwargs
 
 
 @TF_ARG_PROVIDERS.register('Conv2D')
@@ -158,7 +158,7 @@ class Conv2DArgProvider(ArgProvider):
         check_port_id(input_port_id, min_port_id=0, max_port_id=1)
 
         if input_port_id == 0:
-            return replace(args, input_port_id, value), kwargs
+            return replace_value_by_index(args, input_port_id, value), kwargs
 
         kwargs['filter'] = value
         return args, kwargs
@@ -177,7 +177,7 @@ class Conv2DArgProvider(ArgProvider):
         if len(args) > 1:
             raise ValueError(f'Unexpected `args`: {args}')
 
-        return replace(args, output_port_id, value), kwargs
+        return replace_value_by_index(args, output_port_id, value), kwargs
 
 
 @TF_ARG_PROVIDERS.register('FusedBatchNormV3')
@@ -195,7 +195,7 @@ class FusedBatchNormV3ArgProvider(ArgProvider):
     def set_output(self, output_port_id: int, value: tf.Tensor, args, kwargs):
         check_port_id(output_port_id, min_port_id=0, max_port_id=0)
         x = args[0]._replace(y=value)
-        return replace(args, 0, x), kwargs
+        return replace_value_by_index(args, 0, x), kwargs
 
 
 @TF_ARG_PROVIDERS.register('DepthwiseConv2dNative')
@@ -213,7 +213,7 @@ class DepthwiseConv2dNativeArgProvider(ArgProvider):
 
     def set_input(self, input_port_id: int, value: tf.Tensor, args, kwargs):
         check_port_id(input_port_id, min_port_id=0, max_port_id=1)
-        return replace(args, input_port_id, value), kwargs
+        return replace_value_by_index(args, input_port_id, value), kwargs
 
 
 @TF_ARG_PROVIDERS.register('MatMul')
@@ -231,4 +231,4 @@ class MatMulArgProvider(ArgProvider):
 
     def set_input(self, input_port_id: int, value: tf.Tensor, args, kwargs):
         check_port_id(input_port_id, min_port_id=0, max_port_id=1)
-        return replace(args, input_port_id, value), kwargs
+        return replace_value_by_index(args, input_port_id, value), kwargs

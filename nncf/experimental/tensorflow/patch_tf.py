@@ -25,7 +25,7 @@ from nncf.common.graph.transformations.commands import TargetType
 from nncf.tensorflow.layers.operation import NNCFOperation
 from nncf.experimental.tensorflow.context import get_current_context
 from nncf.experimental.tensorflow.scope import get_op_name
-from nncf.experimental.tensorflow.graph.argprovider import replace
+from nncf.experimental.tensorflow.graph.argprovider import replace_value_by_index
 from nncf.experimental.tensorflow.graph.transformations.commands import TFTargetPoint
 from nncf.experimental.tensorflow.graph.argprovider import TF_ARG_PROVIDERS
 
@@ -225,7 +225,7 @@ class TFPatcher:
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
             if len(args) == 4:
-                args = replace(args, 3, False)
+                args = replace_value_by_index(args, 3, False)
             else:
                 kwargs['skip_on_eager'] = False
             return func(*args, **kwargs)
