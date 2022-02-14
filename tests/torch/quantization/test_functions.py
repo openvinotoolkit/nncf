@@ -95,7 +95,7 @@ def _seed():
 
 
 def generate_input(input_size):
-    return 1.0 * (2 * np.random.random_sample(input_size) - 1)
+    return 1.0 * (2 * np.random.random_sample(input_size) - 1) * 100
 
 
 def get_test_data(data_list, is_cuda=False, is_backward=False, is_fp16=False):
@@ -218,6 +218,17 @@ class TestParametrized:
 
             test_value = symmetric_quantize(test_input, levels, level_low, level_high, test_scale, EPS)
 
+            print(ref_input_low)
+            print(ref_input_range)
+            print(f'ZeroQuant test {symmetric_quantize(torch.zeros_like(test_input), levels, level_low, level_high, test_scale, EPS)} ref {ReferenceQuantize.forward(np.zeros_like(ref_input), ref_input_low, ref_input_range, levels)}')
+            if input_size == [1, 96, 28, 28]:
+                test_value = test_value.cpu()
+                for i in range(test_value.shape[0]):
+                    for j in range(test_value.shape[1]):
+                        for k in range(test_value.shape[2]):
+                            for m in range(test_value.shape[3]):
+                                if not np.isclose(test_value[i, j, k, m], ref_value[i, j, k, m], rtol=1e-2 if is_fp16 else 1e-3, atol=0):
+                                    print(f'{i, j, k, m} Tested value {test_value[i, j, k, m]}  Ref value{ref_value[i, j, k, m]}')
             check_outputs_for_quantization_functions(test_value, ref_value, is_fp16, rtol=1e-2 if is_fp16 else 1e-3)
 
         def test_quantize_symmetric_backward(self, _seed, is_signed, is_weights, is_fp16, input_size, bits, use_cuda,
