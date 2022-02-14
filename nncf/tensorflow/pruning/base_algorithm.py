@@ -319,7 +319,13 @@ class BasePruningAlgoController(BaseCompressionAlgorithmController):
                         filters_number = get_filters_num(wrapped_layer)
                         pruned_filter_number = filters_number - tf.reduce_sum(filter_mask)
                         num_of_sparse_elements_by_node[wrapped_layer.name] = pruned_filter_number.numpy()
-        return num_of_sparse_elements_by_node
+
+        num_of_sparse_elements_by_node_to_return = {}
+        for group in self._pruned_layer_groups_info.get_all_clusters():
+            for node in group.elements:
+                num_of_sparse_elements_by_node_to_return[node.node_name] = num_of_sparse_elements_by_node[node.layer_name]
+
+        return num_of_sparse_elements_by_node_to_return
 
     def _calculate_pruned_layers_summary(self) -> List[PrunedLayerSummary]:
         pruning_levels = []
