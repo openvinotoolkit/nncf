@@ -207,7 +207,6 @@ class Timer:
 
 def close_strategy_threadpool(strategy):
     """Due to https://github.com/tensorflow/tensorflow/issues/50487"""
-    # TODO(negvet): remove disable=too-many-statements in the sample run function when fixed
     # pylint: disable=protected-access
     if isinstance(strategy, MirroredStrategy):
         atexit.register(strategy._extended._collective_ops._pool.close)
