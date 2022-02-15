@@ -20,23 +20,6 @@ at::Tensor q_cpu_forward(
     return output;
 }
 
-//template <typename scalar_t>
-//at::Tensor q_cpu_forward(
-//        at::Tensor input,
-//        at::Tensor input_low,
-//        at::Tensor input_range,
-//        scalar_t levels) {
-//    at::Tensor s = (levels - 1) / input_range;
-//    auto output = at::max(at::min(input, input_low + input_range), input_low);
-//    auto
-//    output -= input_low;
-//    output *= s;
-//    output = output.round_();
-//    output = output.div_(s);
-//    output += input_low;
-//    return output;
-//}
-
 template <typename scalar_t>
 std::vector<at::Tensor> q_cpu_backward(
         at::Tensor grad_output,

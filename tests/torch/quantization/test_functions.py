@@ -95,7 +95,7 @@ def _seed():
 
 
 def generate_input(input_size):
-    return 1.0 * (2 * np.random.random_sample(input_size) - 1) * 100
+    return 1.0 * (2 * np.random.random_sample(input_size) - 1)
 
 
 def get_test_data(data_list, is_cuda=False, is_backward=False, is_fp16=False):
@@ -218,17 +218,6 @@ class TestParametrized:
 
             test_value = symmetric_quantize(test_input, levels, level_low, level_high, test_scale, EPS)
 
-            print(ref_input_low)
-            print(ref_input_range)
-            print(f'ZeroQuant test {symmetric_quantize(torch.zeros_like(test_input), levels, level_low, level_high, test_scale, EPS)} ref {ReferenceQuantize.forward(np.zeros_like(ref_input), ref_input_low, ref_input_range, levels)}')
-            if input_size == [1, 96, 28, 28]:
-                test_value = test_value.cpu()
-                for i in range(test_value.shape[0]):
-                    for j in range(test_value.shape[1]):
-                        for k in range(test_value.shape[2]):
-                            for m in range(test_value.shape[3]):
-                                if not np.isclose(test_value[i, j, k, m], ref_value[i, j, k, m], rtol=1e-2 if is_fp16 else 1e-3, atol=0):
-                                    print(f'{i, j, k, m} Tested value {test_value[i, j, k, m]}  Ref value{ref_value[i, j, k, m]}')
             check_outputs_for_quantization_functions(test_value, ref_value, is_fp16, rtol=1e-2 if is_fp16 else 1e-3)
 
         def test_quantize_symmetric_backward(self, _seed, is_signed, is_weights, is_fp16, input_size, bits, use_cuda,
@@ -343,7 +332,6 @@ class TestParametrized:
                 ref_input, ref_input_low, ref_input_range, levels)
             test_value = asymmetric_quantize(test_input, levels, level_low, level_high, test_input_low,
                                              test_input_range, EPS)
-
             check_outputs_for_quantization_functions(test_value, ref_value, is_fp16)
 
         def test_quantize_asymmetric_backward(self, _seed, input_size, bits, use_cuda, is_weights,
@@ -378,3 +366,36 @@ class TestParametrized:
             test_grads = get_grads([test_input, test_input_low, test_input_range])
 
             check_outputs_for_quantization_functions(test_grads, ref_grads, is_fp16)
+
+
+@pytest.mark.parametrize('quantization_mode', ['symmetric', 'asymmetric'])
+@pytest.mark.parametrize('device', ['cuda', 'cpu'])
+def test_mapping_to_zero(quantization_mode, device):
+    x_zero = torch.zeros([1]).to(torch.device(device))
+    levels = 256
+    eps = 1e-6
+    number_of_samples = 100
+    from torch.distributions.uniform import Uniform
+
+    if quantization_mode == 'symmetric':
+        level_low = -128
+        level_high = 127
+        from nncf.torch.quantization.quantize_functions import symmetric_quantize
+
+        uniform_dist_scale = Uniform(0, 100)
+        for i in range(number_of_samples):
+            scale = uniform_dist_scale.sample().to(torch.device(device))
+            test_output = symmetric_quantize(x_zero, levels, level_low, level_high, scale, eps)
+            assert torch.isclose(test_output, torch.zeros_like(test_output))
+    else:
+        level_low = 0
+        level_high = 255
+        from nncf.torch.quantization.quantize_functions import asymmetric_quantize
+
+        uniform_dist_input_low = Uniform(-100, 0)
+        uniform_dist_input_range = Uniform(0, 100)
+        for i in range(number_of_samples):
+            input_low = uniform_dist_input_low.sample().to(torch.device(device))
+            input_range = uniform_dist_input_range.sample().to(torch.device(device))
+            test_output = asymmetric_quantize(x_zero, levels, level_low, level_high, input_low, input_range, eps)
+            assert torch.isclose(test_output, torch.zeros_like(test_output))
