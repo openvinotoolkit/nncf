@@ -118,7 +118,8 @@ def skip_if_half_on_cpu(is_fp16, use_cuda):
                     "symmetric quantize fails. Remove this once this is fixed in PyTorch.")
 
 
-def check_outputs_for_quantization_functions(test_val: torch.Tensor, ref_val: np.ndarray, is_fp16, rtol=1e-4):
+def check_outputs_for_quantization_functions(test_val: torch.Tensor, ref_val: np.ndarray, is_fp16, rtol=1e-4,
+                                             atol=1e-10):
     if is_fp16:
         # FP16 seems to be so inaccurate that ref and test quantization runs
         # will never be aligned quantum-wise - for quanta close to the
@@ -128,7 +129,7 @@ def check_outputs_for_quantization_functions(test_val: torch.Tensor, ref_val: np
         # tensor equality - the test passes for FP32 cases, and the kernel implementation
         # is exactly the same for FP16 calculations-wise.
         return
-    PTTensorListComparator.check_equal(test_val, ref_val, rtol)
+    PTTensorListComparator.check_equal(test_val, ref_val, rtol, atol)
 
 
 @pytest.mark.parametrize('input_size',
@@ -332,6 +333,7 @@ class TestParametrized:
                 ref_input, ref_input_low, ref_input_range, levels)
             test_value = asymmetric_quantize(test_input, levels, level_low, level_high, test_input_low,
                                              test_input_range, EPS)
+
             check_outputs_for_quantization_functions(test_value, ref_value, is_fp16)
 
         def test_quantize_asymmetric_backward(self, _seed, input_size, bits, use_cuda, is_weights,
@@ -380,21 +382,19 @@ def test_mapping_to_zero(quantization_mode, device):
     if quantization_mode == 'symmetric':
         level_low = -128
         level_high = 127
-        from nncf.torch.quantization.quantize_functions import symmetric_quantize
 
         uniform_dist_scale = Uniform(0, 100)
-        for i in range(number_of_samples):
+        for _ in range(number_of_samples):
             scale = uniform_dist_scale.sample().to(torch.device(device))
             test_output = symmetric_quantize(x_zero, levels, level_low, level_high, scale, eps)
             assert torch.isclose(test_output, torch.zeros_like(test_output))
     else:
         level_low = 0
         level_high = 255
-        from nncf.torch.quantization.quantize_functions import asymmetric_quantize
 
         uniform_dist_input_low = Uniform(-100, 0)
         uniform_dist_input_range = Uniform(0, 100)
-        for i in range(number_of_samples):
+        for _ in range(number_of_samples):
             input_low = uniform_dist_input_low.sample().to(torch.device(device))
             input_range = uniform_dist_input_range.sample().to(torch.device(device))
             test_output = asymmetric_quantize(x_zero, levels, level_low, level_high, input_low, input_range, eps)
