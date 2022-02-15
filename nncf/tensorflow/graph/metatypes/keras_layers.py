@@ -576,6 +576,38 @@ class TFTensorFlowOpLayerMetatype(TFLayerMetatype):
 
 
 @KERAS_LAYER_METATYPES.register()
+class TFOpLambdaMetatype(TFLayerMetatype):
+    name = 'TFOpLambdaKerasLayer'
+    keras_layer_names = ['TFOpLambda']
+
+    @classmethod
+    def get_subtypes(cls) -> List[Type[OperatorMetatype]]:
+        return list(TF_OPERATION_METATYPES.registry_dict.values())
+
+    @classmethod
+    def determine_subtype(cls,
+                          layer: tf.keras.layers.Layer,
+                          wrapper: Optional[tf.keras.layers.Wrapper] = None) -> Optional[Type[OperatorMetatype]]:
+        return TF_OPERATION_METATYPES.get_operator_metatype_by_op_name(layer.symbol)
+
+
+@KERAS_LAYER_METATYPES.register()
+class TFSlicingOpLambdaMetatype(TFLayerMetatype):
+    name = 'SlicingOpLambdaKerasLayer'
+    keras_layer_names = ['SlicingOpLambda']
+
+    @classmethod
+    def get_subtypes(cls) -> List[Type[OperatorMetatype]]:
+        return list(TF_OPERATION_METATYPES.registry_dict.values())
+
+    @classmethod
+    def determine_subtype(cls,
+                          layer: tf.keras.layers.Layer,
+                          wrapper: Optional[tf.keras.layers.Wrapper] = None) -> Optional[Type[OperatorMetatype]]:
+        return TF_OPERATION_METATYPES.get_operator_metatype_by_op_name(layer.symbol)
+
+
+@KERAS_LAYER_METATYPES.register()
 class TFNNCFWrapperLayerMetatype(TFLayerMetatype):
     name = 'NNCFWrapperLayer'
     keras_layer_names = ['NNCFWrapper']

@@ -212,7 +212,7 @@ SKIP_MAP = {
         'nasnet_mobile': pytest.mark.skip(reason='gitlab issue #18'),
         'xception': pytest.mark.skip(reason='gitlab issue #28'),
         'mask_rcnn': pytest.mark.skip(reason='ticket #50605'),
-        'resnet50v2': pytest.mark.skip(resason='Several masks on one weight'),
+        'resnet50v2': pytest.mark.skip(reason='Several masks on one weight'),
         'mobilenet_v2_slim': pytest.mark.skip(reason='ticket #46349')
     },
     'rb_sparsity': {
@@ -275,11 +275,7 @@ def get_test_models_desc(algorithm):
             marks=SKIP_MAP[algorithm].get('shared_layers_model', ())
         ),
         pytest.param(
-            ModelDesc('mask_rcnn.dot', test_models.MaskRCNN, [1, 1024, 1024, 3],
-                      ignored_scopes=[
-                            "{re}.*clip_boxes.*", # skip due to https://github.com/tensorflow/tensorflow/issues/51793
-                      ]
-            ),
+            ModelDesc('mask_rcnn.dot', test_models.MaskRCNN, [1, 1024, 1024, 3]),
             marks=SKIP_MAP[algorithm].get('mask_rcnn', ())
         ),
         pytest.param(

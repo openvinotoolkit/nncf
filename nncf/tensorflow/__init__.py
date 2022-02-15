@@ -37,8 +37,6 @@ from nncf.tensorflow.sparsity.magnitude import algorithm as magnitude_sparsity_a
 from nncf.tensorflow.pruning.filter_pruning import algorithm as filter_pruning_algorithm
 from nncf.tensorflow.sparsity.rb import algorithm as rb_sparsity_algorithm
 
-from tensorflow.python.keras.engine import keras_tensor
-keras_tensor.disable_keras_tensors()
 
 from nncf.common.accuracy_aware_training.training_loop import AdaptiveCompressionTrainingLoop
 from nncf.common.accuracy_aware_training.training_loop import EarlyExitCompressionTrainingLoop

@@ -763,7 +763,6 @@ class TestsWithONNXInspection:
 
         test_input1 = torch.ones([1, 5], dtype=torch.long)
         compressed_model.forward(test_input1)
-
         onnx_path = str(tmp_path / "model.onnx")
         compression_ctrl.export_model(onnx_path)
 
@@ -781,6 +780,9 @@ class TestsWithONNXInspection:
 
         unified_fq_node_inputs = [resolve_constant_node_inputs_to_values(fq_node, onnx_model.graph)
                                   for fq_node in fq_nodes_with_expected_unified_scales]
+        # delete weights from input dict
+        for item in unified_fq_node_inputs:
+            item.pop(min(item.keys()))
         for inputs_dict in unified_fq_node_inputs[1:]:
             curr_values = list(inputs_dict.values())
             ref_values = list(unified_fq_node_inputs[0].values())
