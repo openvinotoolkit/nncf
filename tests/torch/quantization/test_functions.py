@@ -15,6 +15,7 @@ import numpy as np
 import pytest
 import torch
 from torch.autograd import Variable
+from torch.distributions.uniform import Uniform
 
 from nncf.torch.quantization.quantize_functions import asymmetric_quantize, symmetric_quantize
 from nncf.torch.utils import sum_like
@@ -373,11 +374,11 @@ class TestParametrized:
 @pytest.mark.parametrize('quantization_mode', ['symmetric', 'asymmetric'])
 @pytest.mark.parametrize('device', ['cuda', 'cpu'])
 def test_mapping_to_zero(quantization_mode, device):
+    torch.manual_seed(1)
     x_zero = torch.zeros([1]).to(torch.device(device))
     levels = 256
     eps = 1e-6
     number_of_samples = 100
-    from torch.distributions.uniform import Uniform
 
     if quantization_mode == 'symmetric':
         level_low = -128
