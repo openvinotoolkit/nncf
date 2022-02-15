@@ -274,7 +274,6 @@ def model_eval_fn(model, strategy, model_builder, test_dist_dataset, num_test_ba
     return metric_result['AP']
 
 
-# pylint: disable=too-many-statements
 def run(config):
     strategy = get_distribution_strategy(config)
     if config.metrics_dump is not None:
