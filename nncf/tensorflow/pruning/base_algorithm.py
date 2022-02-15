@@ -10,7 +10,6 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-
 from typing import Dict
 from typing import List
 from typing import Tuple
@@ -320,12 +319,12 @@ class BasePruningAlgoController(BaseCompressionAlgorithmController):
                         pruned_filter_number = filters_number - tf.reduce_sum(filter_mask)
                         num_of_sparse_elements_by_node[wrapped_layer.name] = pruned_filter_number.numpy()
 
-        num_of_sparse_elements_by_node_to_return = {}
+        retval = {}
         for group in self._pruned_layer_groups_info.get_all_clusters():
             for node in group.elements:
-                num_of_sparse_elements_by_node_to_return[node.node_name] = num_of_sparse_elements_by_node[node.layer_name]
+                retval[node.node_name] = num_of_sparse_elements_by_node[node.layer_name]
 
-        return num_of_sparse_elements_by_node_to_return
+        return retval
 
     def _calculate_pruned_layers_summary(self) -> List[PrunedLayerSummary]:
         pruning_levels = []

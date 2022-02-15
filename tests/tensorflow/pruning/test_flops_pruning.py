@@ -56,8 +56,7 @@ def test_flops_calulation_for_spec_layers(model_fn, all_weights, pruning_flops_t
     # pylint:disable=protected-access
     tmp_in_channels, tmp_out_channels = calculate_in_out_channels_by_masks(
         pruning_groups=compression_ctrl._pruned_layer_groups_info.get_all_clusters(),
-        masks=compression_ctrl._collect_pruning_masks(),
-        tensor_processor=TFNNCFCollectorTensorProcessor,
+        num_of_sparse_elements_by_node=compression_ctrl._calculate_num_of_sparse_elements_by_node(),
         full_input_channels=compression_ctrl._layers_in_channels,
         full_output_channels=compression_ctrl._layers_out_channels,
         pruning_groups_next_nodes=compression_ctrl._next_nodes)

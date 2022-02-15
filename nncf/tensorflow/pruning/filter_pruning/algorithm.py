@@ -55,7 +55,6 @@ from nncf.tensorflow.pruning.tensor_processor import TFNNCFPruningTensorProcesso
 from nncf.tensorflow.layers.data_layout import get_input_channel_axis
 from nncf.tensorflow.layers.wrapper import NNCFWrapper
 from nncf.tensorflow.loss import TFZeroCompressionLoss
-from nncf.tensorflow.tensor_statistics.collectors import TFNNCFCollectorTensorProcessor
 from nncf.tensorflow.pruning.base_algorithm import BasePruningAlgoBuilder
 from nncf.tensorflow.pruning.base_algorithm import BasePruningAlgoController
 from nncf.tensorflow.pruning.base_algorithm import PrunedLayerInfo
@@ -193,7 +192,7 @@ class FilterPruningController(BasePruningAlgoController):
                                                  pruned_layers_summary)
 
         stats = FilterPruningStatistics(model_statistics,
-                                        self.scheduler._calculate_pruning_level(),
+                                        self.scheduler.current_pruning_level,
                                         self.scheduler.target_level,
                                         self.prune_flops)
 

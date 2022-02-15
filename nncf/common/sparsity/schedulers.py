@@ -77,7 +77,7 @@ class SparsityScheduler(BaseCompressionScheduler):
         self._current_level = self._calculate_sparsity_level()
         if self.current_epoch >= self.freeze_epoch:
             self._controller.freeze()
-        self._controller.set_sparsity_level(self._current_level)
+        self._controller.set_sparsity_level(self._calculate_sparsity_level())
 
     @property
     def current_sparsity_level(self) -> float:
@@ -87,7 +87,7 @@ class SparsityScheduler(BaseCompressionScheduler):
 
         :return: Current sparsity level.
         """
-        return self._current_level
+        return self._calculate_sparsity_level()
 
 
 @SPARSITY_SCHEDULERS.register('polynomial')

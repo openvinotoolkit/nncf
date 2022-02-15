@@ -155,7 +155,7 @@ class RBSparsityController(BaseSparsityController):
             num_weights += np.prod(mask.shape.as_list()).item()
         mean_sparse_prob = 1.0 - (sparse_prob_sum / num_weights)
 
-        target_sparsity_level = self.scheduler._calculate_sparsity_level()
+        target_sparsity_level = self.scheduler.current_sparsity_level
 
         stats = RBSparsityStatistics(model_stats, target_sparsity_level, mean_sparse_prob)
 

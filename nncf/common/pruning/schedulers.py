@@ -105,7 +105,7 @@ class PruningScheduler(BaseCompressionScheduler):
         :return: Current sparsity level.
         """
         if self.current_epoch >= self.num_warmup_epochs:
-            return self._current_level
+            return self._calculate_pruning_level()
         return 0
 
 
