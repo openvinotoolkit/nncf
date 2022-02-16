@@ -336,32 +336,16 @@ class SymmetricQuantizer(Quantizer):
         self._half_range = False
 
     def quantize(self, inputs, weights, _):
-        def _half_range_quantize():
-            return symmetric_quantize(
-                inputs,
-                weights['scale_var'],
-                weights['signed_var'],
-                num_bits=self.num_bits - 1,
-                per_channel=self.per_channel,
-                narrow_range=self.narrow_range,
-                eps=self._eps
-            )
-
-        def _default_quantize():
-            return symmetric_quantize(
-                inputs,
-                weights['scale_var'],
-                weights['signed_var'],
-                num_bits=self.num_bits,
-                per_channel=self.per_channel,
-                narrow_range=self.narrow_range,
-                eps=self._eps
-            )
-
-        if self._half_range:
-            return _half_range_quantize()
-
-        return _default_quantize()
+        num_bits = self.num_bits - 1 if self._half_range else self.num_bits
+        return symmetric_quantize(
+            inputs,
+            weights['scale_var'],
+            weights['signed_var'],
+            num_bits=num_bits,
+            per_channel=self.per_channel,
+            narrow_range=self.narrow_range,
+            eps=self._eps
+        )
 
     def apply_range_initialization(self, weights, min_values, max_values, min_range=0.1, eps=0.01):
         if self.signedness_to_force is None:
@@ -466,32 +450,16 @@ class AsymmetricQuantizer(Quantizer):
         self._half_range = False
 
     def quantize(self, inputs, weights, _):
-        def _half_range_quantize():
-            return asymmetric_quantize(
-                inputs,
-                weights['input_low_var'],
-                weights['input_range_var'],
-                num_bits=self.num_bits - 1,
-                per_channel=self.per_channel,
-                narrow_range=self.narrow_range,
-                eps=self._eps
-            )
-
-        def _default_quantize():
-            return asymmetric_quantize(
-                inputs,
-                weights['input_low_var'],
-                weights['input_range_var'],
-                num_bits=self.num_bits,
-                per_channel=self.per_channel,
-                narrow_range=self.narrow_range,
-                eps=self._eps
-            )
-
-        if self._half_range:
-            return _half_range_quantize()
-
-        return _default_quantize()
+        num_bits = self.num_bits - 1 if self._half_range else self.num_bits
+        return asymmetric_quantize(
+            inputs,
+            weights['input_low_var'],
+            weights['input_range_var'],
+            num_bits=num_bits,
+            per_channel=self.per_channel,
+            narrow_range=self.narrow_range,
+            eps=self._eps
+        )
 
     def apply_range_initialization(self, weights, min_values, max_values, min_range=0.1, eps=0.01):
         ranges = max_values - min_values
