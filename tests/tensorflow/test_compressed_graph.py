@@ -13,6 +13,7 @@
 
 import os
 from typing import List
+from pkg_resources import parse_version
 
 import pytest
 from addict import Dict
@@ -24,6 +25,7 @@ from nncf import NNCFConfig
 from nncf.common.hardware.config import HWConfigType
 from tests.tensorflow import test_models
 from tests.tensorflow.helpers import get_empty_config, create_compressed_model_and_algo_for_test
+from tests.tensorflow.helpers import operational_node
 from tests.tensorflow.sparsity.magnitude.test_helpers import get_basic_filter_pruning_config
 from tests.tensorflow.sparsity.magnitude.test_helpers import get_basic_sparsity_config
 
@@ -50,8 +52,8 @@ def get_nx_graph_from_tf_graph(tf_graph: tf.Graph, graph_to_layer_var_names_map:
     def _get_inbound_edges(op: tf.Operation):
         inbound_edges = []
         for input_tensor in op.inputs:
-            inbound_edges.append((graph_to_layer_var_names_map.get(input_tensor.op.name, input_tensor.op.name),
-                                  graph_to_layer_var_names_map.get(op.name, op.name)))
+            inbound_edges.append([graph_to_layer_var_names_map.get(input_tensor.op.name, input_tensor.op.name),
+                                  graph_to_layer_var_names_map.get(op.name, op.name)])
         return inbound_edges
 
     nodes = {}
@@ -60,6 +62,15 @@ def get_nx_graph_from_tf_graph(tf_graph: tf.Graph, graph_to_layer_var_names_map:
         op_name = graph_to_layer_var_names_map.get(op.name, op.name)
         nodes[op_name] = _get_node_attributes(op)
         edges.extend(_get_inbound_edges(op))
+
+    for node_name in list(nodes.keys()):
+        if not operational_node(node_name):
+            del nodes[node_name]
+
+    for node_edges in list(edges):
+        for node_name in node_edges:
+            if not operational_node(node_name):
+                edges.remove(node_edges)
 
     nx_graph = nx.DiGraph()
 
@@ -363,7 +374,9 @@ def prepare_and_check_nx_graph(tf_graph: tf.Graph, graph_path: str, ref_graph_ex
 
 
 def check_model_graph(compressed_model, ref_graph_filename, ref_graph_dir, rename_resource_nodes):
-    data_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'reference_graphs')
+    tensorflow_version = parse_version(tf.__version__).base_version
+    data_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'reference_graphs',
+                            tensorflow_version[:3])
     graph_dir = os.path.join(data_dir, ref_graph_dir)
     graph_path = os.path.abspath(os.path.join(graph_dir, ref_graph_filename))
 

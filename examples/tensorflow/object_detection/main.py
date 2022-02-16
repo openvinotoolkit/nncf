@@ -10,7 +10,7 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-
+import functools
 import os
 import sys
 from pathlib import Path
@@ -18,6 +18,7 @@ from pathlib import Path
 import tensorflow as tf
 import numpy as np
 
+from examples.tensorflow.common.utils import close_strategy_threadpool
 from nncf.common.accuracy_aware_training import create_accuracy_aware_training_loop
 from nncf.tensorflow import create_compressed_model
 from nncf.tensorflow.helpers.model_manager import TFOriginalModelManager
@@ -266,6 +267,13 @@ def evaluate(test_step, metric, test_dist_dataset, num_batches, print_freq):
     return result
 
 
+def model_eval_fn(model, strategy, model_builder, test_dist_dataset, num_test_batches, config):
+    test_step = create_test_step_fn(strategy, model, model_builder.post_processing)
+    metric_result = evaluate(test_step, model_builder.eval_metrics(), test_dist_dataset,
+                             num_test_batches, config.print_freq)
+    return metric_result['AP']
+
+
 def run(config):
     strategy = get_distribution_strategy(config)
     if config.metrics_dump is not None:
@@ -286,11 +294,6 @@ def run(config):
     # Create model builder
     model_builder = get_model_builder(config)
 
-    def model_eval_fn(model):
-        test_step = create_test_step_fn(strategy, model, model_builder.post_processing)
-        metric_result = evaluate(test_step, model_builder.eval_metrics(), test_dist_dataset,
-                                 num_test_batches, config.print_freq)
-        return metric_result['AP']
     # Register additional parameters in the NNCFConfig for initialization
     # the compressed model during building
     nncf_config = config.nncf_config
@@ -307,7 +310,13 @@ def run(config):
     with TFOriginalModelManager(model_builder.build_model,
                                 weights=config.get('weights', None)) as model:
         with strategy.scope():
-            config.nncf_config.register_extra_structs([ModelEvaluationArgs(eval_fn=model_eval_fn)])
+            config.nncf_config.register_extra_structs(
+                [ModelEvaluationArgs(eval_fn=functools.partial(model_eval_fn,
+                                                               strategy=strategy,
+                                                               model_builder=model_builder,
+                                                               test_dist_dataset=test_dist_dataset,
+                                                               num_test_batches=num_test_batches,
+                                                               config=config))])
             compression_ctrl, compress_model = create_compressed_model(model, nncf_config, compression_state)
             scheduler = build_scheduler(
                 config=config,
@@ -377,6 +386,8 @@ def run(config):
         save_path, save_format = get_saving_parameters(config)
         compression_ctrl.export_model(save_path, save_format)
         logger.info("Saved to {}".format(save_path))
+
+    close_strategy_threadpool(strategy)
 
 
 def export(config):

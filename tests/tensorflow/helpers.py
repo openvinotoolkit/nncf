@@ -191,3 +191,8 @@ def get_op_by_cls(wrapper, cls):
             if isinstance(op, cls):
                 return op
     return None
+
+
+def operational_node(node_name: str) -> bool:
+    """Check for non-operational nodes with names 'model_name/1234567'. Appeared in Mask-RCNN"""
+    return not (len(node_name.split('/')) == 2 and node_name.split('/')[1].isdigit())

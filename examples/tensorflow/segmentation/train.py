@@ -18,6 +18,7 @@ from pathlib import Path
 import numpy as np
 import tensorflow as tf
 
+from examples.tensorflow.common.utils import close_strategy_threadpool
 from nncf.tensorflow import create_compressed_model
 from nncf.tensorflow.helpers.model_manager import TFOriginalModelManager
 from nncf.tensorflow.initialization import register_default_init_args
@@ -293,6 +294,8 @@ def run_train(config):
     logger.info('Compression statistics')
     statistics = compression_ctrl.statistics()
     logger.info(statistics.to_str())
+
+    close_strategy_threadpool(strategy)
 
 
 def main(argv):
