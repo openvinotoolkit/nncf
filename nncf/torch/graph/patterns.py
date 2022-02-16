@@ -147,7 +147,7 @@ def create_l2_norm() -> GraphPattern:
     pattern.add_edge(outside_pattern_node, div_node)
     return pattern
 
-def create_fc_or_conv_mul() -> GraphPattern:
+def create_fc_conv_mul() -> GraphPattern:
     pattern = GraphPattern()
     linear_node = pattern.add_node(label='linear', type='linear')
     mul_node = pattern.add_node(label='MUL', type='__mul__')
