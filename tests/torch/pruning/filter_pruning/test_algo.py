@@ -406,8 +406,7 @@ def test_calculation_of_flops(all_weights, pruning_flops_target, ref_flops, ref_
     # pylint:disable=protected-access
     tmp_in_channels, tmp_out_channels = calculate_in_out_channels_by_masks(
         pruning_algo.pruned_module_groups_info.get_all_clusters(),
-        masks=pruning_algo._collect_pruning_masks(),
-        tensor_processor=PTNNCFCollectorTensorProcessor,
+        num_of_sparse_elements_by_node=pruning_algo._calculate_num_of_sparse_elements_by_node(),
         full_input_channels=pruning_algo._modules_in_channels,
         full_output_channels=pruning_algo._modules_out_channels,
         pruning_groups_next_nodes=pruning_algo.next_nodes)

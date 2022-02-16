@@ -86,9 +86,9 @@ class TestSparseModules:
         assert scheduler.freeze_epoch == 100
 
     @pytest.mark.parametrize(('schedule', 'get_params', 'ref_levels'),
-                             (('polynomial', get_poly_params, [0.2, 0.2, 0.4, 0.6, 0.6, 0.6, 0.6]),
-                              ('exponential', get_poly_params, [0.2, 0.2, 0.4343145, 0.6, 0.6, 0.6, 0.6]),
-                              ('multistep', get_multistep_params, [0.2, 0.2, 0.2, 0.4, 0.5, 0.6, 0.6])))
+                             (('polynomial', get_poly_params, [0.2, 0.4, 0.6, 0.6, 0.6, 0.6]),
+                              ('exponential', get_poly_params, [0.2, 0.4343145, 0.6, 0.6, 0.6, 0.6]),
+                              ('multistep', get_multistep_params, [0.2, 0.2, 0.4, 0.5, 0.6, 0.6])))
     def test_scheduler_can_do_epoch_step(self, algo, schedule, get_params, ref_levels):
         model = get_basic_conv_test_model()
         config = get_empty_config()
@@ -99,16 +99,14 @@ class TestSparseModules:
 
         scheduler = compression_ctrl.scheduler
 
-        assert pytest.approx(scheduler.current_sparsity_level) == ref_levels[0]
-        for ref_level in ref_levels[1:]:
+        for ref_level in ref_levels:
             scheduler.epoch_step()
             assert pytest.approx(scheduler.current_sparsity_level) == ref_level
 
         _, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
         scheduler = compression_ctrl.scheduler
 
-        assert pytest.approx(scheduler.current_sparsity_level) == ref_levels[0]
-        for i, ref_level in enumerate(ref_levels[1:]):
+        for i, ref_level in enumerate(ref_levels):
             scheduler.epoch_step(i)
             assert pytest.approx(scheduler.current_sparsity_level) == ref_level
 
