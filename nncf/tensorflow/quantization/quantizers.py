@@ -79,14 +79,27 @@ class Quantizer(NNCFOperation):
     """
     Base class for all NNCF quantization operations.
     """
-    def __init__(self, name: str):
+
+    def __init__(self, name: str, qspec: TFQuantizerSpec):
         """
         Initializes internal NNCF quantization operation state.
 
         :param name: Unique operation name in algorithm scope.
+        :param qspec: Specification of the quantizer. Is a collection
+            of parameters that influence how quantization performs.
         """
         super().__init__(name)
+
+        # Specification of the quantization
+        self.num_bits = qspec.num_bits
+        self.per_channel = qspec.per_channel
+        self.narrow_range = qspec.narrow_range
+        self._half_range = qspec.half_range
+
+        # The boolean flag that specified whether the
+        # quantization operation applying or not.
         self.enabled = True
+
         self._eps = 1e-16
         self._pre_processing_fn = self._make_pre_processing_fn()
         self._post_processing_fn = self._make_post_processing_fn()
@@ -99,6 +112,26 @@ class Quantizer(NNCFOperation):
         :return: The mode of the quantization.
         """
         raise NotImplementedError
+
+    @property
+    def signedness_to_force(self) -> Optional[bool]:
+        """
+        Returns one of the following values:
+            - `True` if the quantizer must be signed
+            - `False` if the quantizer must be unsigned
+            - `None` if the signed/unsigned attribute should be determined based
+            on the incoming activation statistics during range initialization.
+        """
+        raise NotImplementedError
+
+    @property
+    def half_range(self) -> bool:
+        """
+        Returns one of the following values:
+            - `True` if only a half of the quantizer range is used effectively.
+            - `False` if the full range is used.
+        """
+        return self._half_range
 
     def call(self, inputs, weights, training):
         """
@@ -269,30 +302,54 @@ class Quantizer(NNCFOperation):
 
         :return: A QuantizerConfig struct that corresponds to current state of the quantizer.
         """
-        raise NotImplementedError
+        return QuantizerConfig(self.num_bits, self.mode, self.signedness_to_force, self.per_channel)
 
-    def get_config(self):
-        raise NotImplementedError
+    def get_config(self) -> Dict[str, Any]:
+        config = {
+            'name': self.name,
+            'quantizer_spec': {
+                'num_bits': self.num_bits,
+                'mode': self.mode,
+                'signedness_to_force': self.signedness_to_force,
+                'narrow_range': self.narrow_range,
+                'half_range': self.half_range,
+                'per_channel': self.per_channel,
+            }
+        }
+        return config
+
+    @classmethod
+    def from_config(cls, config: Dict[str, Any]):
+        qspec = TFQuantizerSpec.from_state(config['quantizer_spec'])
+        name = config['name']
+        return cls(name, qspec)
 
 
 @NNCF_CUSTOM_OBJECTS.register()
 @NNCF_QUANTIZATION_OPERATIONS.register(QuantizationMode.SYMMETRIC)
 class SymmetricQuantizer(Quantizer):
-    def __init__(self, name: str, qspec: TFQuantizerSpec):
-        super().__init__(name)
-        self.num_bits = qspec.num_bits
-        self.per_channel = qspec.per_channel
-        self.narrow_range = qspec.narrow_range
-        self.signedness_to_force = qspec.signedness_to_force
-        self._half_range = qspec.half_range
+    """
+    Represents the NNCF operation that performs symmetric quantization.
+    """
 
-    @property
-    def half_range(self):
-        return self._half_range
+    def __init__(self, name: str, qspec: TFQuantizerSpec):
+        super().__init__(name, qspec)
+        self._signedness_to_force = qspec.signedness_to_force
 
     @property
     def mode(self) -> str:
         return QuantizationMode.SYMMETRIC
+
+    @property
+    def signedness_to_force(self) -> Optional[bool]:
+        """
+        Returns one of the following values:
+            - `True` if the quantizer must be signed
+            - `False` if the quantizer must be unsigned
+            - `None` if the signed/unsigned attribute should be determined based
+            on the incoming activation statistics during range initialization.
+        """
+        return self._signedness_to_force
 
     def signed(self, op_weights) -> bool:
         """
@@ -357,60 +414,28 @@ class SymmetricQuantizer(Quantizer):
         scale = tf.maximum(ranges, lower_threshold)
         weights['scale_var'].assign(scale)
 
-    def get_quantizer_config(self) -> QuantizerConfig:
-        return QuantizerConfig(
-            num_bits=self.num_bits,
-            mode=QuantizationMode.SYMMETRIC,
-            signedness_to_force=self.signedness_to_force,
-            per_channel=self.per_channel
-        )
-
-    def get_config(self):
-        qspec_dict = {
-            'num_bits':  self.num_bits,
-            'mode': QuantizationMode.SYMMETRIC,
-            'signedness_to_force': self.signedness_to_force,
-            'narrow_range': self.narrow_range,
-            'half_range': self._half_range,
-            'per_channel': self.per_channel,
-        }
-        config = {
-            'quantizer_spec': qspec_dict,
-            'name': self.name,
-        }
-        return config
-
-    @classmethod
-    def from_config(cls, config):
-        qspec_dict = config['quantizer_spec']
-        qspec = TFQuantizerSpec(num_bits=qspec_dict['num_bits'],
-                                mode=QuantizationMode.SYMMETRIC,
-                                signedness_to_force=qspec_dict['signedness_to_force'],
-                                narrow_range=qspec_dict['narrow_range'],
-                                half_range=qspec_dict['half_range'],
-                                per_channel=qspec_dict['per_channel'])
-        name = config['name']
-        return cls(name, qspec)
-
-
 
 @NNCF_CUSTOM_OBJECTS.register()
 @NNCF_QUANTIZATION_OPERATIONS.register(QuantizationMode.ASYMMETRIC)
 class AsymmetricQuantizer(Quantizer):
-    def __init__(self, name: str, qspec: TFQuantizerSpec):
-        super().__init__(name)
-        self.num_bits = qspec.num_bits
-        self.narrow_range = qspec.narrow_range
-        self.per_channel = qspec.per_channel
-        self._half_range = qspec.half_range
-
-    @property
-    def half_range(self):
-        return self._half_range
+    """
+    Represents the NNCF operation that performs asymmetric quantization.
+    """
 
     @property
     def mode(self) -> str:
         return QuantizationMode.ASYMMETRIC
+
+    @property
+    def signedness_to_force(self) -> Optional[bool]:
+        """
+        Returns one of the following values:
+            - `True` if the quantizer must be signed
+            - `False` if the quantizer must be unsigned
+            - `None` if the signed/unsigned attribute should be determined based
+            on the incoming activation statistics during range initialization.
+        """
+        return None
 
     def build(self, input_shape, input_type, name, layer):
         shape = None
@@ -470,38 +495,3 @@ class AsymmetricQuantizer(Quantizer):
         input_range = ranges + 2 * correction
         weights['input_low_var'].assign(input_low)
         weights['input_range_var'].assign(input_range)
-
-    def get_quantizer_config(self) -> QuantizerConfig:
-        return QuantizerConfig(
-            num_bits=self.num_bits,
-            mode=QuantizationMode.ASYMMETRIC,
-            signedness_to_force=None,
-            per_channel=self.per_channel
-        )
-
-    def get_config(self):
-        qspec_dict = {
-            'num_bits': self.num_bits,
-            'mode': QuantizationMode.ASYMMETRIC,
-            'signedness_to_force': None,
-            'narrow_range': self.narrow_range,
-            'half_range': self._half_range,
-            'per_channel': self.per_channel,
-        }
-        config = {
-            'quantizer_spec': qspec_dict,
-            'name': self.name,
-        }
-        return config
-
-    @classmethod
-    def from_config(cls, config):
-        qspec_dict = config['quantizer_spec']
-        qspec = TFQuantizerSpec(num_bits=qspec_dict['num_bits'],
-                                mode=QuantizationMode.ASYMMETRIC,
-                                signedness_to_force=None,
-                                narrow_range=qspec_dict['narrow_range'],
-                                half_range=qspec_dict['half_range'],
-                                per_channel=qspec_dict['per_channel'])
-        name = config['name']
-        return cls(name, qspec)
