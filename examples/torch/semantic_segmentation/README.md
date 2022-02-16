@@ -30,8 +30,8 @@ This scenario demonstrates quantization with fine-tuning of UNet on Mapillary Vi
   ```bash
   python main.py \
   --mode=test \
-  --config=configs/quantization/mask_rcnn_coco_int8.json \
-  --weights=<path_to_ckpt_file_with_pretrained_weights> \
+  --config=configs/unet_mapillary_int8.json \
+  --weights=<path_to_fp32_model_checkpoint> \
   --data=<path_to_dataset> \
   --batch-size=1 \
   --disable-compression
