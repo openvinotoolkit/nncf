@@ -32,8 +32,7 @@ This scenario demonstrates quantization with fine-tuning of SSD300 on VOC datase
   ```bash
   python main.py \
   --mode=test \
-  --config=configs/quantization/retinanet_coco_int8.json \
-  --weights=<path_to_H5_file_with_pretrained_weights>
+  --config=configs/ssd300_vgg_voc_int8.json \
   --data=<path_to_dataset> \
   --disable-compression 
   ```
