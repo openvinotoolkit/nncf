@@ -106,7 +106,7 @@ class TestSparseModules:
         assert saved_ctrl_state == ctrl.get_state()
         algo_state = next(iter(saved_ctrl_state.values()))
         assert algo_state == {
-            BaseControllerStateNames.COMPRESSION_STAGE: CompressionStage.UNCOMPRESSED,
+            BaseControllerStateNames.COMPRESSION_STAGE: CompressionStage.PARTIALLY_COMPRESSED,
             BaseControllerStateNames.SCHEDULER: {'current_step': 100, 'current_epoch': 5},
             BaseControllerStateNames.LOSS: None
         }
@@ -312,7 +312,7 @@ REF_DEFAULT_STATE = {
     ExponentialSparsityScheduler: {'current_step': -1, 'current_epoch': -1},
     MultiStepSparsityScheduler: {'current_step': -1, 'current_epoch': -1},
     AdaptiveSparsityScheduler: {'current_step': -1, 'current_epoch': -1,
-                                'num_bad_epochs': 0, 'current_sparsity_level': 0.3}
+                                'num_bad_epochs': 1, 'current_sparsity_level': 0.3}
 
 }
 
@@ -351,8 +351,8 @@ def test_scheduler_get_state(scheduler_cls):
     if scheduler_cls == PolynomialSparsityScheduler:
         assert state['_steps_per_epoch'] == 5
     if scheduler_cls == AdaptiveSparsityScheduler:
-        assert state['num_bad_epochs'] == 1
-        assert state['current_sparsity_level'] == pytest.approx(0.3)
+        assert state['num_bad_epochs'] == 0
+        assert state['current_sparsity_level'] == pytest.approx(0.35)
 
     # Test load state
     new_scheduler = scheduler_cls(*args)
@@ -364,8 +364,8 @@ def test_scheduler_get_state(scheduler_cls):
         # pylint: disable=protected-access
         assert new_scheduler._steps_per_epoch == 5
     if scheduler_cls == AdaptiveSparsityScheduler:
-        assert new_scheduler.num_bad_epochs == 1
-        assert new_scheduler.current_sparsity_level == pytest.approx(0.3)
+        assert new_scheduler.num_bad_epochs == 0
+        assert new_scheduler.current_sparsity_level == pytest.approx(0.35)
 
 
 @pytest.mark.parametrize('algo',

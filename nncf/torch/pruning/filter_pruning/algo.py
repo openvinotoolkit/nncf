@@ -47,10 +47,8 @@ from nncf.common.statistics import NNCFStatistics
 from nncf.common.utils.debug import is_debug
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.config.extractors import extract_bn_adaptation_init_params
-from nncf.torch.tensor import PTNNCFTensor
 from nncf.torch.algo_selector import PT_COMPRESSION_ALGORITHMS
 from nncf.torch.compression_method_api import PTCompressionAlgorithmController
-from nncf.torch.tensor_statistics.collectors import PTNNCFCollectorTensorProcessor
 from nncf.torch.graph.operator_metatypes import PTConv1dMetatype
 from nncf.torch.graph.operator_metatypes import PTConv2dMetatype
 from nncf.torch.graph.operator_metatypes import PTConv3dMetatype

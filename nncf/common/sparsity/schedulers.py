@@ -89,6 +89,17 @@ class SparsityScheduler(BaseCompressionScheduler):
         """
         return self._current_level
 
+    def load_state(self, state: Dict[str, Any]) -> None:
+        super().load_state(state)
+        if self._current_level is None:
+            self._current_level = self._calculate_sparsity_level()
+
+    def get_state(self) -> Dict[str, Any]:
+        if self._current_level is None:
+            self._current_level = self._calculate_sparsity_level()
+        state = super().get_state()
+        return state
+
 
 @SPARSITY_SCHEDULERS.register('polynomial')
 class PolynomialSparsityScheduler(SparsityScheduler):
@@ -150,8 +161,6 @@ class PolynomialSparsityScheduler(SparsityScheduler):
         super().load_state(state)
         if self._update_per_optimizer_step:
             self._steps_per_epoch = state['_steps_per_epoch']
-        if self._current_level is None:
-            self._current_level = self._calculate_sparsity_level()
 
     def get_state(self) -> Dict[str, Any]:
         state = super().get_state()
@@ -215,11 +224,6 @@ class ExponentialSparsityScheduler(SparsityScheduler):
         current_density = self.schedule(self.current_epoch)
         current_level = 1.0 - current_density
         return min(current_level, self.target_level)
-
-    def load_state(self, state: Dict[str, Any]) -> None:
-        super().load_state(state)
-        if self._current_level is None:
-            self._current_level = self._calculate_sparsity_level()
 
 
 @SPARSITY_SCHEDULERS.register('adaptive')
@@ -295,8 +299,3 @@ class MultiStepSparsityScheduler(SparsityScheduler):
 
     def _calculate_sparsity_level(self) -> float:
         return self.schedule(self.current_epoch)
-
-    def load_state(self, state: Dict[str, Any]) -> None:
-        super().load_state(state)
-        if self._current_level is None:
-            self._current_level = self._calculate_sparsity_level()

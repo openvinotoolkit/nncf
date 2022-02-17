@@ -158,7 +158,7 @@ class MagnitudeSparsityController(BaseSparsityAlgoController):
         if self._mode == 'local':
             return CompressionStage.FULLY_COMPRESSED
 
-        if self.scheduler.current_sparsity_level == 0 or self.scheduler.current_sparsity_level is None:
+        if self.scheduler.current_sparsity_level is None or self.scheduler.current_sparsity_level == 0:
             return CompressionStage.UNCOMPRESSED
         if self.scheduler.current_sparsity_level >= self.scheduler.target_level:
             return CompressionStage.FULLY_COMPRESSED

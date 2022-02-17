@@ -26,7 +26,6 @@ from nncf.torch.pruning.filter_pruning.layers import apply_filter_binary_mask
 from nncf.common.pruning.utils import calculate_in_out_channels_by_masks
 from nncf.common.pruning.utils import count_flops_and_weights
 from nncf.common.pruning.schedulers import ExponentialPruningScheduler
-from nncf.torch.tensor_statistics.collectors import PTNNCFCollectorTensorProcessor
 from nncf.torch.pruning.filter_pruning.algo import GENERAL_CONV_LAYER_METATYPES
 from nncf.torch.pruning.filter_pruning.algo import LINEAR_LAYER_METATYPES
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
