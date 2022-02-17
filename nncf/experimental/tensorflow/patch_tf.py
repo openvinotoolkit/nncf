@@ -15,6 +15,8 @@ import functools
 import inspect
 from typing import Optional
 from typing import List
+from typing import Dict
+from typing import Any
 
 import tensorflow as tf
 from tensorflow.python.eager import context
@@ -38,7 +40,8 @@ class Hook:
 
     def __init__(self,
                  operations: List[NNCFOperation],
-                 target_point: TFTargetPoint):
+                 target_point: TFTargetPoint,
+                 ops_weights: Dict[str, Any]):
         """
         Initializes the hook.
 
@@ -46,9 +49,11 @@ class Hook:
             The operation at index 0 is applied first, with index -1 last.
         :param target_point: A target point. Contains information on where the
             operations should be applied.
+        :param ops_weights: Weights of the operations.
         """
         self._operations = operations
         self._target_point = target_point
+        self._ops_weights = ops_weights
 
         arg_provider_cls = TF_ARG_PROVIDERS.registry_dict.get(self._target_point.op_type_name)
         if arg_provider_cls is None:
@@ -77,6 +82,15 @@ class Hook:
         """
         return self._target_point.type == TargetType.OPERATOR_PRE_HOOK
 
+    def get_operation_weights(self, op_name: str) -> Any:
+        """
+        Returns weights of the operation with `op_name`.
+
+        :param op_name: Name of the operation.
+        :return: Weihts of the operation.
+        """
+        return self._ops_weights[op_name]
+
     def __call__(self, *args, **kwargs):
         """
         Applies this hook.
@@ -92,7 +106,8 @@ class Hook:
 
         x = get_fn(self.target_point.port_id, args, kwargs)
         for op in self.operations:
-            x = op(*(x,))
+            w = self.get_operation_weights(op.name)
+            x = op(*(x, w, None))
         args_, kwargs_ = set_fn(self.target_point.port_id, x, args, kwargs)
 
         return args_, kwargs_

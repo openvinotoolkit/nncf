@@ -15,7 +15,6 @@ from nncf.common.graph.model_transformer import ModelTransformer
 from nncf.common.graph.transformations.commands import TransformationType
 from nncf.experimental.tensorflow.nncf_network import NNCFNetwork
 from nncf.experimental.tensorflow.graph.transformations.layout import TFTransformationLayoutV2
-from nncf.experimental.tensorflow.patch_tf import Hook
 
 
 class TFModelTransformerV2(ModelTransformer):
@@ -46,18 +45,11 @@ class TFModelTransformerV2(ModelTransformer):
         """
         for command in transformation_layout.transformations:
             if command.type == TransformationType.INSERT:
-                hook = Hook(command.insertion_objects, command.target_point)
-                getattr(self._model, '_add_hook')(hook)
+                self._model.insert_at_point(command.target_point, command.insertion_objects)
             elif command.type == TransformationType.REMOVE:
                 # TODO(andrey-churkin): Add support
                 pass
             else:
                 raise ValueError(f'Transformation type {command.type} does not support.')
-
-        # TODO(andrey-churkin): Need to investigate if we can move this code
-        # from the `TFModelTransformerV2` class.
-        with self._model.distribute_strategy.scope():
-            for op in self._model.nncf_operations:
-                op.build(self._model)
 
         return self._model

@@ -11,6 +11,7 @@
  limitations under the License.
 """
 
+from typing import Dict
 from typing import Optional
 from typing import List
 
@@ -18,57 +19,24 @@ import tensorflow as tf
 
 from nncf.common.utils.registry import Registry
 from nncf.common.quantization.structs import QuantizationMode
-from nncf.tensorflow.quantization.quantizers import TFQuantizerSpec
-from nncf.tensorflow.quantization.quantizers import Quantizer
 from nncf.tensorflow.layers.operation import InputType
-from nncf.tensorflow.quantization.functions import asymmetric_quantize
-from nncf.tensorflow.quantization.functions import symmetric_quantize
-from nncf.tensorflow.quantization.functions import calc_asymmetric_range_initialization_params
-from nncf.tensorflow.quantization.functions import calc_symmetric_range_initialization_params
-from nncf.experimental.tensorflow.nncf_network import NNCFNetwork
+from nncf.tensorflow.quantization.quantizers import TFQuantizerSpec
+from nncf.tensorflow.quantization.quantizers import SymmetricQuantizer
+from nncf.tensorflow.quantization.quantizers import AsymmetricQuantizer
 
 
 NNCF_QUANTIZATION_OPERATIONS_V2 = Registry('nncf_quantization_operations_v2')
 
 
-def _get_channel_size(input_shape: List[int], channel_axes: List[int]):
-    if not isinstance(channel_axes, (list, tuple)):
-        channel_axes = [channel_axes]
-    size = 1
-    for axis in channel_axes:
-        size *= input_shape[axis]
-    return size
-
-
-class QuantizerV2(Quantizer):
-    """
-    Base class for all quantization operations.
-
-    The differences between the `QuantizerV2` and the `Quantizer`
-    are following:
-        - `QuantizerV2` has a different signature of the `__init__()` method.
-          Additional parameters `input_type`, `input_shape`, `channel_axes`
-          were added.
-        - `QuantizerV2` has a different signature of the `call()` method.
-          The `weights` parameter was removed because references to the
-          parameters of the quantizer are stored inside the class now.
-        - `QuantizerV2` has a different signature of the `apply_range_initialization()` method.
-        - `QuantizerV2` has a different signature of the `setup_input_transformation()` method.
-    """
-
-    def __init__(self,
-                 name: str,
-                 qspec: TFQuantizerSpec,
-                 input_type: str,
-                 input_shape: Optional[List[int]] = None,
-                 channel_axes: Optional[List[int]] = None):
+@NNCF_QUANTIZATION_OPERATIONS_V2.register(QuantizationMode.SYMMETRIC)
+class SymmetricQuantizerV2(SymmetricQuantizer):
+    def set_input_spec(self,
+                       input_type: str,
+                       input_shape: Optional[List[int]] = None,
+                       channel_axes: Optional[List[int]] = None):
         """
-        Initializes the internal state of the quantizer.
+        Sets input tensor specification for the quantizer.
 
-        :param name: Name of operation. Unique identifier inside
-            the NNCF network.
-        :param qspec: Specification of the quantizer. Is a collection
-            of parameters that influence how quantization performs.
         :param input_type: Indicates the type of input tensor: `inputs` or `weights`.
         :param input_shape: Shape of the input tensor for which the
             quantization is applied. Required only for per-channel
@@ -77,316 +45,57 @@ class QuantizerV2(Quantizer):
             correspond to its channels. Required only for per-channel
             quantization.
         """
-        super().__init__(name, qspec)
-
-        # Specification of the input tensor
         self.input_type = input_type
-        self._input_shape = input_shape
+        self.input_shape = input_shape
         self.channel_axes = channel_axes
-        if self.per_channel and (self._input_shape is None or self.channel_axes is None):
+
+    def create_variables(self, layer: tf.keras.layers.Layer) -> Dict[str, tf.Variable]:
+        """
+        Creates quantizer variables using `layer.add_weight()` method.
+
+        :param layer: Instance of the `tf.keras.layers.Layer` class.
+        :return: Quantizer variables.
+        """
+        if self.per_channel and (self.input_shape is None or self.channel_axes is None):
             raise ValueError('The `input_shape` and `channel_axes` arguments are required when'
                              'using per-channel quantization.')
-
-    @property
-    def input_shape(self) -> Optional[List[int]]:
-        return self._input_shape
-
-    def call(self, inputs: tf.Tensor, *args, **kwargs) -> tf.Tensor:
-        """
-        Applies quantization to the input tensor if the quantizer is enabled.
-        Otherwise, if the quantizer is disabled, returns the input tensor as-is.
-
-        :param inputs: Input tensor.
-        :return: Output tensor.
-        """
-        if not self.enabled:
-            return inputs
-        transformed = self._pre_processing_fn(inputs)
-        quantized = self.quantize(transformed)
-        outputs = self._post_processing_fn(quantized)
-        return outputs
-
-    def quantize(self, inputs: tf.Tensor) -> tf.Tensor:
-        """
-        Applies quantization operation to the input tensor.
-
-        :param inputs: Input tensor.
-        :return: Quantized tensor.
-        """
-        raise NotImplementedError
-
-    def apply_range_initialization(self,
-                                   min_values: tf.Tensor,
-                                   max_values: tf.Tensor,
-                                   min_range: float = 0.1,
-                                   eps: float = 0.01) -> None:
-        """
-        Initialize quantizer parameters using minimum and maximum weight values.
-
-        :param min_values: Minimum weight values.
-        :param max_values: Maximum weight values.
-        :param min_range: Minimum range.
-        :param eps: Smoothing coefficient for ranges: min_range = maximum(min_range, eps * max_range).
-        """
-        raise NotImplementedError
-
-    def setup_input_transformation(self):
-        """
-        Setup input transformation that the per-channel quantization can be applied to input tensor.
-        The TensorFlow fake_quant_with_min_max_vars_per_channel supports only inputs tensor one of
-        the shapes: [d], [b, d] [b, h, w, d]. For this reason, Quantizer transforms any inputs tensor
-        to one of the supported shapes, then quantizes and then transforms quantized tensor to
-        the original inputs shape.
-        """
-        self._pre_processing_fn, self._post_processing_fn = \
-            QuantizerV2._make_transformation_fns(self._input_shape, self.channel_axes)
-
-
-@NNCF_QUANTIZATION_OPERATIONS_V2.register(QuantizationMode.SYMMETRIC)
-class SymmetricQuantizerV2(QuantizerV2):
-    """
-    Represents the nncf operation that performs symmetric quantization.
-    """
-
-    def __init__(self,
-                 name: str,
-                 qspec: TFQuantizerSpec,
-                 input_type: InputType,
-                 input_shape: Optional[List[int]] = None,
-                 channel_axes: Optional[List[int]] = None):
-        """
-        Initializes the internal state of the symmetric quantizer.
-        """
-        super().__init__(name, qspec, input_type, input_shape, channel_axes)
-        self._signedness_to_force = qspec.signedness_to_force
-        # Following variables are initialized inside the `build()` method.
-        self._scale_var = None  # type: tf.Variable
-        self._signed_var = None  # type: tf.Variable
-
-    @property
-    def mode(self) -> str:
-        return QuantizationMode.SYMMETRIC
-
-    @property
-    def signedness_to_force(self) -> Optional[bool]:
-        """
-        Returns one of the following values:
-            - `True` if the quantizer must be signed
-            - `False` if the quantizer must be unsigned
-            - `None` if the signed/unsigned attribute should be determined based
-            on the incoming activation statistics during range initialization.
-        """
-        return self._signedness_to_force
-
-    @property
-    def signed(self) -> bool:
-        """
-        Returns `True` for signed quantization, `False` for unsigned.
-
-        :return: `True` for signed quantization, `False` for unsigned.
-        """
-        return self._signed_var.numpy() < 0.0
-
-    def build(self, nncf_network: NNCFNetwork) -> None:
-        """
-        Creates weights of the quantizer and adds them to the model.
-
-        :param nncf_network: NNCF network.
-        """
-        shape = None
-        if self.per_channel:
-            self.setup_input_transformation()
-            shape = (_get_channel_size(self._input_shape, self.channel_axes),)
-
         prefix = self.name.replace('/', '^')
-
-        self._scale_var = nncf_network.add_weight(
-            f'{prefix}^scale',
-            shape=shape,
-            initializer=tf.keras.initializers.Constant(1.0),
-            trainable=True
-        )
-
-        self._signed_var = nncf_network.add_weight(
-            f'{prefix}^signed',
-            initializer=tf.keras.initializers.Constant(
-                -1.0 if self.signedness_to_force in (True, None) else 0.0
-            ),
-            trainable=False
-        )
-
-    def apply_overflow_fix(self) -> None:
-        """
-        Applies the saturation fix.
-        """
-        if self.num_bits != 8 or not self.half_range:
-            raise RuntimeError('Attempt to apply saturation issue fix '
-                               'to quantizer which is not configured for that.')
-
-        # Multiplier to expand scale from 7 bit to 8 bit
-        multiplier = 127 / 63 if self.narrow_range else 255 / 127
-        self._scale_var.assign(multiplier * self._scale_var)
-        self._eps *= multiplier
-        self._half_range = False
-
-    def quantize(self, inputs: tf.Tensor) -> tf.Tensor:
-        """
-        Applies quantization operation to the input tensor.
-
-        :param inputs: Input tensor.
-        :return: Quantized tensor.
-        """
-        num_bits = self.num_bits - 1 if self.half_range else self.num_bits
-        return symmetric_quantize(
-            inputs,
-            self._scale_var,
-            self._signed_var,
-            num_bits,
-            self.per_channel,
-            self.narrow_range,
-            self._eps
-        )
-
-    def apply_range_initialization(self,
-                                   min_values: tf.Tensor,
-                                   max_values: tf.Tensor,
-                                   min_range: float = 0.1,
-                                   eps: float = 0.01) -> None:
-        """
-        Initialize quantizer parameters using minimum and maximum weight values.
-
-        :param min_values: Minimum weight values.
-        :param max_values: Maximum weight values.
-        :param min_range: Minimum range.
-        :param eps: Smoothing coefficient for ranges: min_range = maximum(min_range, eps * max_range).
-        """
-        signed, scale = calc_symmetric_range_initialization_params(
-            min_values, max_values, min_range, eps, self.signedness_to_force
-        )
-        self._signed_var.assign(signed)
-        self._scale_var.assign(scale)
+        return self._create_variables(layer, self.input_shape, self.channel_axes, prefix)
 
 
 @NNCF_QUANTIZATION_OPERATIONS_V2.register(QuantizationMode.ASYMMETRIC)
-class AsymmetricQuantizerV2(QuantizerV2):
-    """
-    Represents the nncf operation that performs asymmetric quantization.
-    """
-
-    def __init__(self,
-                 name: str,
-                 qspec: TFQuantizerSpec,
-                 input_type: InputType,
-                 input_shape: Optional[List[int]] = None,
-                 channel_axes: Optional[List[int]] = None):
+class AsymmetricQuantizerV2(AsymmetricQuantizer):
+    def set_input_spec(self,
+                       input_type: str,
+                       input_shape: Optional[List[int]] = None,
+                       channel_axes: Optional[List[int]] = None):
         """
-        Initializes the internal state of the symmetric quantizer.
-        """
-        super().__init__(name, qspec, input_type, input_shape, channel_axes)
-        # Specification of the quantization
-        self._signedness_to_force = None
-        # Following variables are initialized inside the `build()` method.
-        self._input_low_var = None  # type: tf.Variable
-        self._input_range_var = None  # type: tf.Variable
+        Sets input tensor specification for the quantizer.
 
-    @property
-    def mode(self) -> str:
-        return QuantizationMode.ASYMMETRIC
-
-    @property
-    def signedness_to_force(self) -> Optional[bool]:
+        :param input_type: Indicates the type of input tensor: `inputs` or `weights`.
+        :param input_shape: Shape of the input tensor for which the
+            quantization is applied. Required only for per-channel
+            quantization.
+        :param channel_axes: Axes numbers of the input tensor which
+            correspond to its channels. Required only for per-channel
+            quantization.
         """
-        Returns one of the following values:
-            - `True` if the quantizer must be signed
-            - `False` if the quantizer must be unsigned
-            - `None` if the signed/unsigned attribute should be determined based
-            on the incoming activation statistics during range initialization.
-        """
-        return self._signedness_to_force
+        self.input_type = input_type
+        self.input_shape = input_shape
+        self.channel_axes = channel_axes
 
-    def build(self, nncf_network: NNCFNetwork) -> None:
+    def create_variables(self, layer: tf.keras.layers.Layer) -> Dict[str, tf.Variable]:
         """
-        Creates weights of the quantizer and adds them to the model.
+        Creates quantizer variables using `layer.add_weight()` method.
 
-        :param nncf_network: NNCF network.
+        :param layer: Instance of the `tf.keras.layers.Layer` class.
+        :return: Quantizer variables.
         """
-        shape = None
-        if self.per_channel:
-            self.setup_input_transformation()
-            shape = (_get_channel_size(self._input_shape, self.channel_axes),)
-
+        if self.per_channel and (self.input_shape is None or self.channel_axes is None):
+            raise ValueError('The `input_shape` and `channel_axes` arguments are required when'
+                             'using per-channel quantization.')
         prefix = self.name.replace('/', '^')
-
-        self._input_low_var = nncf_network.add_weight(
-            f'{prefix}^input_low',
-            shape=shape,
-            initializer=tf.keras.initializers.Constant(0.0),
-            trainable=True
-        )
-
-        self._input_range_var = nncf_network.add_weight(
-            f'{prefix}^input_range',
-            shape=shape,
-            initializer=tf.keras.initializers.Constant(1.0),
-            trainable=True
-        )
-
-    def apply_overflow_fix(self) -> None:
-        """
-        Applies the saturation fix.
-        """
-        if self.num_bits != 8 or not self._half_range:
-            raise RuntimeError('Attempt to apply saturation issue fix '
-                               'to quantizer which is not configured for that.')
-
-        # Low value shift to expand quantize range from 7 bit to 8 bit properly
-        self._input_low_var.assign(
-            self._input_low_var + self._min_adj(7, self._input_low_var, self._input_range_var + self._eps,
-                                                self.narrow_range)
-        )
-
-        # Multiplier to expand scale from 7 bit to 8 bit
-        multiplier = 127 / 63 if self.narrow_range else 255 / 127
-        self._input_range_var.assign(multiplier * self._input_range_var)
-        self._eps *= multiplier
-        self._half_range = False
-
-    def quantize(self, inputs: tf.Tensor) -> tf.Tensor:
-        """
-        Applies quantization operation to the input tensor.
-
-        :param inputs: Input tensor.
-        :return: Quantized tensor.
-        """
-        num_bits = self.num_bits - 1 if self.half_range else self.num_bits
-        return asymmetric_quantize(
-            inputs,
-            self._input_low_var,
-            self._input_range_var,
-            num_bits,
-            self.per_channel,
-            self.narrow_range,
-            self._eps
-        )
-
-    def apply_range_initialization(self,
-                                   min_values: tf.Tensor,
-                                   max_values: tf.Tensor,
-                                   min_range: float = 0.1,
-                                   eps: float = 0.01) -> None:
-        """
-        Initialize quantizer parameters using minimum and maximum weight values.
-
-        :param min_values: Minimum weight values.
-        :param max_values: Maximum weight values.
-        :param min_range: Minimum range.
-        :param eps: Smoothing coefficient for ranges: min_range = maximum(min_range, eps * max_range).
-        """
-        input_low, input_range = calc_asymmetric_range_initialization_params(
-            min_values, max_values, min_range, eps
-        )
-        self._input_low_var.assign(input_low)
-        self._input_range_var.assign(input_range)
+        return self._create_variables(layer, self.input_shape, self.channel_axes, prefix)
 
 
 def create_quantizer(name: str,
@@ -394,6 +103,26 @@ def create_quantizer(name: str,
                      is_weight_quantization: bool,
                      input_shape: Optional[List[int]] = None,
                      channel_axes: Optional[List[int]] = None):
+    """
+    Factory method to create quantizer.
+
+    :param name: Name of the quantizer. Should be unique.
+    :param qspec: Specification of the quantizer.
+    :param is_weight_quantization: A boolean flag.
+        Takes one of the following values:
+            - `True` if input tensor of the quantizer is weights
+            - `False` if input tensor of the quantizer is activations
+    :param input_shape: Shape of the input tensor for which the
+        quantization is applied. Required only for per-channel
+        quantization.
+    :param channel_axes: Axes numbers of the input tensor which
+        correspond to its channels. Required only for per-channel
+        quantization.
+    :return: The instance of the `SymmetricQuantizerV2` or
+        `AsymmetricQuantizerV2` class.
+    """
     quantizer_cls = NNCF_QUANTIZATION_OPERATIONS_V2.get(qspec.mode)
     input_type = InputType.WEIGHTS if is_weight_quantization else InputType.INPUTS
-    return quantizer_cls(name, qspec, input_type, input_shape, channel_axes)
+    quantizer = quantizer_cls(name, qspec)
+    quantizer.set_input_spec(input_type, input_shape, channel_axes)
+    return quantizer

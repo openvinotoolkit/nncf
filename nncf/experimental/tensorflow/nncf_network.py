@@ -11,13 +11,15 @@
  limitations under the License.
 """
 
-from typing import Union, Dict, Tuple, List
+from typing import Union, Dict, Tuple, List, Any
 import itertools
 
 import tensorflow as tf
 
 from nncf.tensorflow.layers.operation import NNCFOperation
 from nncf.experimental.tensorflow.context import get_current_context
+from nncf.experimental.tensorflow.graph.transformations.commands import TFTargetPoint
+from nncf.experimental.tensorflow.patch_tf import Hook
 
 
 InputSignature = Union[tf.TensorSpec, Dict[str, tf.TensorSpec], Tuple[tf.TensorSpec, ...], List[tf.TensorSpec]]
@@ -88,6 +90,12 @@ class NNCFNetwork(tf.keras.Model):
         """
         return self._input_signature
 
+    def get_nncf_operations_with_params(self) -> List[Tuple[NNCFOperation, Any]]:
+        return [
+            (op, hook.get_operation_weights(op.name)) \
+                 for hook in getattr(self, '_hooks') for op in hook.operations
+        ]
+
     def get_config(self):
         raise NotImplementedError
 
@@ -108,12 +116,19 @@ class NNCFNetwork(tf.keras.Model):
         get_current_context().model = None
         return outputs
 
-    def _add_hook(self, hook):
+    def insert_at_point(self, point: TFTargetPoint, ops: List[NNCFOperation]) -> None:
         """
-        Adds the hook to the `NNCFNetwork`.
+        Inserts the list of the NNCF operations according to the target point.
 
-        :param hook: Hook.
+        :param point: The location where operations should be inserted.
+        :param ops: List of the NNCF operarions.
         """
+        # TODO(andrey-churkin): Need to remove strategy here when example will be fixed
+        with self._model.distribute_strategy.scope():
+            ops_weights = {op.name: op.create_variables(self) for op in ops}
+
+        hook = Hook(ops, point, ops_weights)
+
         hooks = getattr(self, '_pre_hooks') if hook.is_pre_hook else getattr(self, '_post_hooks')
         # TODO(andrey-churkin): What we should do if the hook with the same `target_point`
         # already exists inside `hooks`? Is it a valid case?

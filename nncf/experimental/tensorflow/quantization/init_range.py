@@ -49,7 +49,7 @@ class RangeInitializerV2(RangeInitializer):
         super().__init__(range_init_params)
         self.nncf_quantization_operation_classes = NNCF_QUANTIZATION_OPERATIONS_V2.registry_dict.values()
 
-    def _register_op_collector(self, op, collectors, handles):
+    def _register_op_collector(self, op, collectors, handles, op_weights):
         node_name = ''  # TODO(andrey-churkin): Use correct node_name
         init_config = self.range_init_params.get_init_config_for_quantization_point_v2(
             node_name,
@@ -77,15 +77,15 @@ class RangeInitializerV2(RangeInitializer):
         )
         handles.append(op.register_hook_pre_call(collector.register_input))
         op.enabled = False
-        collectors.append((op, collector))
+        collectors.append((op, collector, op_weights))
 
     def run(self, model: NNCFNetwork) -> None:
         handles = []
         collectors = []
-        for op in model.nncf_operations:
+        for op, op_weights in model.get_nncf_operations_with_params():
             if op.__class__ not in self.nncf_quantization_operation_classes:
                 continue
-            self._register_op_collector(op, collectors, handles)
+            self._register_op_collector(op, collectors, handles, op_weights)
 
         for (x, _) in ProgressBar(
                 islice(self.dataset, self.num_steps),
@@ -94,7 +94,7 @@ class RangeInitializerV2(RangeInitializer):
         ):
             model(x, training=False)
 
-        for op, collector in collectors:
+        for op, collector, op_weights in collectors:
             target_stat = collector.get_statistics()
             minmax_stats = tf_convert_stat_to_min_max_tensor_stat(target_stat)
 
@@ -105,7 +105,7 @@ class RangeInitializerV2(RangeInitializer):
             if len(max_values.shape) != 1:
                 max_values = tf.squeeze(max_values)
 
-            op.apply_range_initialization(min_values, max_values)
+            op.apply_range_initialization(op_weights, min_values, max_values)
             op.enabled = True
 
         for handle in handles:
