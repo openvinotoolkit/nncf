@@ -12,6 +12,8 @@
 """
 
 from collections import namedtuple
+
+from PIL.Image import Image
 from torchvision.transforms import functional as F
 
 import cv2
@@ -128,20 +130,30 @@ def detection_collate(batch):
 
 
 def base_transform(image, size, mean, std, normalize_coef):
-    x = cv2.resize(image, (size, size))
+    x = cv2.resize(image, (size, size)).astype(np.float32)
     x /= normalize_coef
     x -= mean
     x /= std
+    x = x.astype(np.float32)
     return x
 
 
 class BaseTransform:
-    def __init__(self, size, mean, std, normalize_coef):
+    def __init__(self,
+                 size: int,
+                 mean: int,
+                 std: int,
+                 normalize_coef: int
+                 ):
         self.size = size
         self.mean = np.array(mean, dtype=np.float32)
         self.std = np.array(std, dtype=np.float32)
         self.normalize_coef = normalize_coef
 
-    def __call__(self, image, boxes=None, labels=None):
-        return base_transform(np.transpose(np.array(F.to_tensor(image)), (1, 2, 0)),
-                              self.size, self.mean, self.std, self.normalize_coef), boxes, labels
+    def __call__(self, image: Image, target: list):
+        boxes = np.asarray([x['bbox'] for x in target])
+        labels = np.asarray([x['label_idx'] for x in target])
+        target = np.hstack((boxes, np.expand_dims(labels, axis=1)))
+        res = base_transform(np.array(image)[:, :, ::-1][:, :, (2, 1, 0)],
+                             self.size, self.mean, self.std, self.normalize_coef)
+        return torch.from_numpy(res).permute(2, 0, 1), target
