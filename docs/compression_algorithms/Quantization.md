@@ -120,6 +120,8 @@ In our implementation, we use a slightly transformed formula. It is equivalent b
 
 ![s = \frac{level\_high}{|input\_range^{*}| + eps}](https://latex.codecogs.com/png.latex?s%20%3D%20%5Cfrac%7Blevel%5C_high%7D%7B%7Cinput%5C_range%5E%7B*%7D%7C%20&plus;%20eps%7D)
 
+![quant\_zero = \lfloor-input\_low * s\rceil](https://latex.codecogs.com/png.image?%5Cdpi%7B110%7D%20quant%5C_zero%20=%20%5Clfloor-input%5C_low%5E%7B*%7D%20*%20s%5Crceil)
+
 For asymmetric:
 ![\\input\_low^{*} = input\_low \\ input\_range^{*} = input\_range ](https://latex.codecogs.com/png.latex?%5C%5Cinput%5C_low%5E%7B*%7D%20%3D%20input%5C_low%20%5C%5C%20input%5C_range%5E%7B*%7D%20%3D%20input%5C_range)
 
