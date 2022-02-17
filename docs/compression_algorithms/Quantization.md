@@ -8,7 +8,9 @@ The method performs differentiable sampling of the continuous signal (for exampl
 
 Quantization is parametrized by clamping range and number of quantization levels. The sampling formula is the following:
 
-![output = \frac{\left\lfloor (clamp(input; input\_low, input\_high)-input\_low)  *s\right \rceil}{s} + input\_low\\](https://latex.codecogs.com/png.latex?output%20%3D%20%5Cfrac%7B%5Cleft%5Clfloor%20%28clamp%28input%3B%20input%5C_low%2C%20input%5C_high%29-input%5C_low%29%20*s%5Cright%20%5Crceil%7D%7Bs%7D%20&plus;%20input%5C_low%5C%5C)
+![quant\_zero = \lfloor-input\_low * s\rceil](https://latex.codecogs.com/png.image?%5Cdpi%7B110%7D%20quant%5C_zero%20=%20%5Clfloor-input%5C_low%20*%20s%5Crceil)
+
+![output = \frac{\left\lfloor (clamp(input; input\_low, input\_high)-input\_low)  *s - quant\_zero \right \rceil}{s}\\](https://latex.codecogs.com/png.image?%5Cdpi%7B110%7D%20output%20=%20%5Cfrac%7B%5Cleft%5Clfloor%20(clamp(input;%20input%5C_low,%20input%5C_high)-input%5C_low)%20%20*s%20-%20quant%5C_zero%20%5Cright%20%5Crceil%7D%7Bs%7D)
 
 ![clamp(input; input\_low, input\_high) = min(max(input, input\_low), input\_high)))](https://latex.codecogs.com/png.latex?clamp%28input%3B%20input%5C_low%2C%20input%5C_high%29%20%3D%20min%28max%28input%2C%20input%5C_low%29%2C%20input%5C_high%29%29%29)
 
