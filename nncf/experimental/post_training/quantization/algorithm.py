@@ -53,7 +53,7 @@ class PostTrainingQuantization(PostTrainingAlgorithm):
             algorithm = self._create_algorithm(compressed_model, engine, algorithm, parameters)
             self.algorithms.append(algorithm)
 
-        layers_to_collect_statistics = []  # List[LayerStatistic]
+        layers_to_collect_statistics = []  # List[MinMaxLayerStatistic]
         for initialization_algorithm in self.algorithms:
             # TODO: potentially could be intersection in layers_to_collect_statistics
             layers_to_collect_statistics.extend(
@@ -63,12 +63,14 @@ class PostTrainingQuantization(PostTrainingAlgorithm):
         layers_statistics = statistics_collector.collect_statistics(layers_to_collect_statistics,
                                                                     self.number_samples)
 
-        for initialization_algorithm in self.algorithms:
-            transformation_commands = initialization_algorithm.get_transformation_commands(layers_statistics)
-            for transformation_command in transformation_commands:
-                transformation_layout.register(transformation_command)
+        # commands from RangeFinder
+        transformation_commands = self.algorithms[0].get_transformation_commands(layers_statistics)
+        for transformation_command in transformation_commands:
+            transformation_layout.register(transformation_command)
 
         model_transformer.transform(compressed_model, transformation_layout)
+
+        self.algorithms[1].run(compressed_model, model_transformer)
 
         return compressed_model
 

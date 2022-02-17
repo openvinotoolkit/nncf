@@ -1,4 +1,8 @@
+from typing import Union
+
 import torch
+
+from nncf.experimental.onnx.engine import ONNXEngine
 
 from nncf.experimental.post_training.sampler import BatchSampler
 from nncf.experimental.post_training.sampler import RandomBatchSampler
@@ -24,3 +28,12 @@ class ONNXRandomBatchSampler(RandomBatchSampler):
             targets.append(self.dataloader[self.random_permutated_indices[i]][1])
 
         return torch.stack(tensors), targets
+
+
+def create_onnx_sampler(engine: ONNXEngine) -> Union[ONNXBatchSampler, ONNXRandomBatchSampler]:
+    if engine.dataloader.shuffle:
+        print('Using Shuffled dataset')
+        return ONNXRandomBatchSampler(engine.dataloader)
+    else:
+        print('Using Non-Shuffled dataset')
+        return ONNXBatchSampler(engine.dataloader)

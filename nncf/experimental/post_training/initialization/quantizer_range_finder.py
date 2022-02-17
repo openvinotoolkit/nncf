@@ -17,7 +17,7 @@ from typing import List
 
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.experimental.post_training.compressed_model import CompressedModel
-from nncf.experimental.post_training.initialization.statistics_collector import LayerStatistic
+from nncf.experimental.post_training.initialization.statistics_collector import MinMaxLayerStatistic
 from nncf.experimental.post_training.initialization.algorithm import InitializationAlgorithm
 from nncf.experimental.post_training.initialization.algorithm import InitizalizationParameters
 
@@ -25,6 +25,9 @@ from nncf.experimental.post_training.initialization.statistics_collector import 
 from nncf.experimental.post_training.initialization.statistics_collector import ACTIVATIONS_ESTIMATOR_FUNCTION
 from nncf.experimental.post_training.initialization.statistics_collector import BATCH_AGGREGATION_FUNCTION
 from nncf.experimental.post_training.initialization.statistics_collector import STATISTICS_AGGREGATION_FUNCTION
+
+
+# from nncf.experimental.post_training.quantization.parameters import DEVICE
 
 
 class QuantizerRangeFinderParameters(InitizalizationParameters):
@@ -36,7 +39,11 @@ class QuantizerRangeFinderParameters(InitizalizationParameters):
                  batch_aggregation_max_func: BATCH_AGGREGATION_FUNCTION,
                  statistics_aggregator_func: STATISTICS_AGGREGATION_FUNCTION,
                  weight_quantizer_config: QuantizerConfig,
-                 activation_quantizer_config: QuantizerConfig
+                 activation_quantizer_config: QuantizerConfig,
+                 # target_device: DEVICE,
+                 target_device,
+                 quatize_outputs: bool = False,
+                 ignored_scopes: List[str] = None,
                  ):
         self.weight_min_func = weight_min_func
         self.weight_max_func = weight_max_func
@@ -47,6 +54,9 @@ class QuantizerRangeFinderParameters(InitizalizationParameters):
         self.statistics_aggregator_func = statistics_aggregator_func
         self.weight_quantizer_config = weight_quantizer_config
         self.activation_quantizer_config = activation_quantizer_config
+        self.ignored_scopes = ignored_scopes
+        self.target_device = target_device
+        self.quantize_outputs = quatize_outputs
 
 
 class QuantizerRangeFinderAlgorithm(InitializationAlgorithm, ABC):
@@ -59,6 +69,9 @@ class QuantizerRangeFinderAlgorithm(InitializationAlgorithm, ABC):
         self._determine_aggregation_func()
         self.weight_quantizer_config = parameters.weight_quantizer_config
         self.activation_quantizer_config = parameters.activation_quantizer_config
+        self.ignored_scopes = parameters.ignored_scopes
+        self.target_device = parameters.target_device
+        self.quantize_outputs = parameters.quantize_outputs
 
     @abstractmethod
     def _determine_aggregation_func(self):
@@ -66,7 +79,7 @@ class QuantizerRangeFinderAlgorithm(InitializationAlgorithm, ABC):
 
     @abstractmethod
     def get_layers_for_statistics(self, weight_quantizer_config: QuantizerConfig,
-                                  activation_quantizer_config: QuantizerConfig) -> List[LayerStatistic]:
+                                  activation_quantizer_config: QuantizerConfig) -> List[MinMaxLayerStatistic]:
         pass
 
     @abstractmethod

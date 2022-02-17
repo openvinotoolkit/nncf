@@ -5,12 +5,14 @@ from typing import Optional
 from nncf.common.utils.ordered_enum import OrderedEnum
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizationMode
+from nncf.common.hardware.config import HWConfigType
 
 from nncf.experimental.post_training.algorithm import PostTraniningAlgorithmParameters
 
 from nncf.experimental.post_training.initialization.algorithm import InitializationAlgorithms
 from nncf.experimental.post_training.initialization.algorithm import InitizalizationParameters
 from nncf.experimental.post_training.initialization.quantizer_range_finder import QuantizerRangeFinderParameters
+from nncf.experimental.post_training.initialization.bias_correction import BiasCorrectionAlgorithmParameters
 
 from nncf.experimental.post_training.initialization.statistics_collector import WEIGHTS_ESTIMATOR_FUNCTION
 from nncf.experimental.post_training.initialization.statistics_collector import ACTIVATIONS_ESTIMATOR_FUNCTION
@@ -22,12 +24,6 @@ class PRESET(OrderedEnum):
     PERFOMANCE = 'perfomance'
     MIXED = 'mixed'
     ACCURACY = 'accuracy'
-
-
-class DEVICE(OrderedEnum):
-    CPU = 'CPU'
-    GPU = 'GPU'
-    ANY = 'ANY'
 
 
 class GRANULARITY(OrderedEnum):
@@ -70,7 +66,7 @@ class PostTrainingQuantizationParameters(PostTraniningAlgorithmParameters):
                  activation_range_estimator: ActivationsRangeEstimatorParameters = ActivationsRangeEstimatorParameters(),
                  statistics_aggregation_function: StatisticsAggregationParameters = StatisticsAggregationParameters(),
                  number_samples: int = 300,
-                 target_device: DEVICE = DEVICE.CPU,
+                 target_device: str = 'CPU',
                  ignored_scopes: Optional[List[str]] = None
                  ):
 
@@ -91,9 +87,11 @@ class PostTrainingQuantizationParameters(PostTraniningAlgorithmParameters):
             batch_aggregation_max_func=activation_range_estimator.max_batch_aggregator,
             statistics_aggregator_func=statistics_aggregation_function.statistics_aggregation_func,
             weight_quantizer_config=self.weight_quantizer_config,
-            activation_quantizer_config=self.activation_quantizer_config
-
-        )}  # type: Dict[InitializationAlgorithms, InitizalizationParameters]
+            activation_quantizer_config=self.activation_quantizer_config,
+            ignored_scopes=ignored_scopes,
+            target_device=target_device
+        ),
+            InitializationAlgorithms.BiasCorrection: BiasCorrectionAlgorithmParameters()}  # type: Dict[InitializationAlgorithms, InitizalizationParameters]
 
         self.number_samples = number_samples
         self.target_device = target_device

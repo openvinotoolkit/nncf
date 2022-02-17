@@ -11,8 +11,25 @@
  limitations under the License.
 """
 
+from typing import List
+
+from abc import ABC
+from abc import abstractmethod
+
+from nncf.experimental.post_training.initialization.statistics_collector import LayerStatistic
 from nncf.experimental.post_training.initialization.algorithm import InitializationAlgorithm
+from nncf.experimental.post_training.initialization.algorithm import InitizalizationParameters
 
 
-class BiasCorrectionAlgorithm(InitializationAlgorithm):
+class BiasCorrectionAlgorithmParameters(InitizalizationParameters):
     pass
+
+
+class BiasCorrectionAlgorithm(InitializationAlgorithm, ABC):
+    @abstractmethod
+    def get_layers_for_statistics(self) -> List[LayerStatistic]:
+        pass
+
+    @abstractmethod
+    def get_transformation_commands(self, layers_statistics):
+        pass

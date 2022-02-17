@@ -15,6 +15,8 @@ from typing import Union
 from typing import List
 from typing import Tuple
 
+from copy import deepcopy
+
 from nncf.experimental.post_training.initialization.quantizer_range_finder import QuantizerRangeFinderAlgorithm
 
 import numpy as np
@@ -31,11 +33,13 @@ from nncf.experimental.onnx.graph.transformations.commands import ONNXInsertionC
 from nncf.common.quantization.quantizer_propagation.solver import QuantizerPropagationSolver
 from nncf.common.quantization.structs import QuantizableWeightedLayerNode
 from nncf.common.quantization.structs import QuantizerConfig
+from nncf.common.quantization.structs import QuantizerGroup
+from nncf.common.quantization.structs import QuantizationConstraints
 from nncf.common.insertion_point_graph import InsertionPointGraph
 from nncf.common.quantization.structs import QuantizationMode
 
 from nncf.experimental.post_training.initialization.quantizer_range_finder import QuantizerRangeFinderParameters
-from nncf.experimental.onnx.initialization.statistics_collector import LayerStatistic
+from nncf.experimental.onnx.initialization.statistics_collector import MinMaxLayerStatistic
 from nncf.experimental.onnx.initialization.statistics_collector import ONNXTensorMaxFunc
 from nncf.experimental.onnx.initialization.statistics_collector import ONNXTensorMinFunc
 from nncf.experimental.onnx.initialization.statistics_collector import ONNXBatchMaxFunc
@@ -51,6 +55,10 @@ from nncf.experimental.post_training.quantization.parameters import ACTIVATIONS_
 from nncf.experimental.post_training.quantization.parameters import BATCH_AGGREGATION_FUNCTION
 from nncf.experimental.post_training.quantization.parameters import STATISTICS_AGGREGATION_FUNCTION
 
+from nncf.common.hardware.config import HWConfigType
+from nncf.common.hardware.config import HW_CONFIG_TYPE_TARGET_DEVICE_MAP
+from nncf.experimental.onnx.hardware.config import ONNXHWConfig
+
 QUANTIZATION_LAYER_METATYPES = GENERAL_WEIGHT_LAYER_METATYPES
 
 
@@ -58,11 +66,16 @@ class ONNXQuantizerRangeFinderAlgorithm(QuantizerRangeFinderAlgorithm):
     """
     The base class for all post-training quantization initialization algorithms.
     """
+    DEFAULT_QCONFIG = QuantizerConfig(num_bits=8,
+                                      mode=QuantizationMode.SYMMETRIC,
+                                      signedness_to_force=None,
+                                      per_channel=False)
 
     def __init__(self, compressed_model: CompressedModel, engine, parameters: QuantizerRangeFinderParameters):
         super().__init__(compressed_model, engine, parameters)
         self._weight_quantizers = []
         self._activation_quantizers = []
+        self.global_quantizer_constraints = {}
 
     def _determine_aggregation_func(self):
         self.weight_statistics_min_func = self._get_statistics_collection_func(
@@ -103,10 +116,11 @@ class ONNXQuantizerRangeFinderAlgorithm(QuantizerRangeFinderAlgorithm):
             return ONNXStatisticsABSMAXFunc
 
     def get_layers_for_statistics(self, weight_quantizer_config: QuantizerConfig,
-                                  activation_quantizer_config: QuantizerConfig) -> List[LayerStatistic]:
+                                  activation_quantizer_config: QuantizerConfig) -> List[MinMaxLayerStatistic]:
         quantizer_setup = self._get_quantizer_setup(self.compressed_model)
         original_model = self.compressed_model.original_model
         onnx_graph = ONNXGraph(original_model)
+        filled_outputs = []
         for qp_id, qp in quantizer_setup.quantization_points.items():
             if qp.is_weight_quantization_point():
                 weight_initializer_name = onnx_graph.find_weight_input_in_module(qp.insertion_point.target_node_name)
@@ -124,12 +138,18 @@ class ONNXQuantizerRangeFinderAlgorithm(QuantizerRangeFinderAlgorithm):
                 else:
                     node_name = qp.directly_quantized_operator_node_names[0]
                     outputs = onnx_graph.get_node_edges(node_name)['input'][0]
+                if outputs in filled_outputs:
+                    # TODO: resolve this
+                    # Problems with inception v3
+                    print(f'Skipping {outputs} layer')
+                    continue
+                filled_outputs.append(outputs)
                 self._activation_quantizers.append(outputs)
 
         output = []
         for activation_quantizer in self._activation_quantizers:
             axis = 1 if activation_quantizer_config.per_channel else None
-            layer_statistics = LayerStatistic(activation_quantizer,
+            layer_statistics = MinMaxLayerStatistic(activation_quantizer,
                                               min_value_func=self.activation_statistics_min_func,
                                               max_value_func=self.activation_statistics_max_func,
                                               min_batch_aggregator_func=self.batch_aggregation_min_func,
@@ -162,8 +182,13 @@ class ONNXQuantizerRangeFinderAlgorithm(QuantizerRangeFinderAlgorithm):
 
         return transformation_commands
 
+    def _get_default_qconfig(self) -> QuantizerConfig:
+        qconfig = deepcopy(self.DEFAULT_QCONFIG)
+        return qconfig
+
     def _get_quantizer_setup(self, compressed_model: CompressedModel):
         nncf_graph = compressed_model.nncf_graph
+        nncf_graph.visualize_graph('/home/aleksei/tmp/onnx/onnx_ptq_api/nncf_graph.dot')
         ip_graph = InsertionPointGraph(nncf_graph)
         pattern = ONNX_HW_FUSED_PATTERNS.get_full_pattern_graph()
         ip_graph = ip_graph.get_ip_graph_with_merged_hw_optimized_operations(pattern)
@@ -171,9 +196,17 @@ class ONNXQuantizerRangeFinderAlgorithm(QuantizerRangeFinderAlgorithm):
         weight_nodes = nncf_graph.get_nodes_by_metatypes(QUANTIZATION_LAYER_METATYPES)
         quantizable_layer_nodes = [QuantizableWeightedLayerNode(weight_node, [QuantizerConfig()]) for weight_node in
                                    weight_nodes]
-        solver = QuantizerPropagationSolver(ignored_scopes=None,
+
+        hw_config_type = HWConfigType.from_str(HW_CONFIG_TYPE_TARGET_DEVICE_MAP[self.target_device])
+        hw_config_path = ONNXHWConfig.get_path_to_hw_config(hw_config_type)
+        hw_config = ONNXHWConfig.from_json(hw_config_path)
+
+        solver = QuantizerPropagationSolver(ignored_scopes=self.ignored_scopes,
+                                            hw_config=hw_config,
                                             default_trait_to_metatype_map=DEFAULT_ONNX_QUANT_TRAIT_TO_OP_DICT,
-                                            quantizable_layer_nodes=quantizable_layer_nodes)
+                                            default_qconfig_list=[self._get_default_qconfig()],
+                                            quantizable_layer_nodes=quantizable_layer_nodes,
+                                            quantize_outputs=self.quantize_outputs)
 
         quantization_proposal = solver.run_on_ip_graph(ip_graph)
         multi_config_setup = quantization_proposal.quantizer_setup
@@ -209,7 +242,7 @@ class ONNXQuantizerRangeFinderAlgorithm(QuantizerRangeFinderAlgorithm):
         zero_points = np.zeros_like(scales, dtype=np.int)
         return scales.tolist(), zero_points.tolist(), mode
 
-    def _calculate_activation_quantizer_parameters(self, layer_statistics: LayerStatistic,
+    def _calculate_activation_quantizer_parameters(self, layer_statistics: MinMaxLayerStatistic,
                                                    quantizer_config: QuantizerConfig) -> \
             Tuple[List[float], List[int], bool]:
         # TODO:PERCHANNEL IS NOT SUPPORTED.

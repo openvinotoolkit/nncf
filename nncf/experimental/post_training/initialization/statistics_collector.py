@@ -55,7 +55,7 @@ class StatisticsCalculationFunc(ABC):
         pass
 
 
-class LayerStatistic(ABC):
+class MinMaxLayerStatistic(ABC):
     def __init__(self, layer_name: str,
                  min_value_func: Type[CalculateTensorValueFunc],
                  max_value_func: Type[CalculateTensorValueFunc],
@@ -86,13 +86,23 @@ class LayerStatistic(ABC):
         return self.statistics_aggregation_func.__call__(self.max_values)
 
 
+class LayerStatistic(ABC):
+    def __init__(self, layer_name: str,
+                 axis: Optional[int] = None):
+        self.layer_name = layer_name
+        self.values = []
+
+    def add_tensor_statistic(self, tensor: TensorType) -> None:
+        self.values.append(tensor)
+
+
 class StatisticsCollector(ABC):
     def __init__(self, compressed_model: CompressedModel, engine: Engine):
         self.compressed_model = compressed_model
         self.engine = engine
         self.is_calculate_metric = False
-        self.layers_statistics = []  # type: List[LayerStatistic]
+        self.layers_statistics = []  # type: List[MinMaxLayerStatistic]
 
     @abstractmethod
-    def collect_statistics(self, layers_to_collect_statistics: List[str], num_iters: int) -> List[LayerStatistic]:
+    def collect_statistics(self, layers_to_collect_statistics: List[str], num_iters: int) -> List[MinMaxLayerStatistic]:
         pass

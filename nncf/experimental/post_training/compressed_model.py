@@ -29,7 +29,7 @@ class CompressedModel:
     def __init__(self, model: ModelType):
         self._determine_model_backend(model)
         self._set_original_model(model)
-        self.nncf_graph = None
+        self.nncf_graph = None  # type: NNCFGraph
         self.compressed_model = None  # Final compressed model. This model will be exported.
         self.transformed_model = None  # Model with applied transformtaions
         self.transformations = []

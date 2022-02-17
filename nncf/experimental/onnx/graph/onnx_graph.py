@@ -44,6 +44,11 @@ class ONNXGraph:
         """
         return self.onnx_model.graph.node
 
+    def get_node_by_name(self, node_name: str):
+        for node in self.get_all_nodes():
+            if node.name == node_name:
+                return node
+
     def get_model_inputs(self) -> List[ValueInfoProto]:
         """
         Returns model inputs.

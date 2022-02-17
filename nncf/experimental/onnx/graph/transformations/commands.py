@@ -1,6 +1,8 @@
 from typing import List
 from onnx import NodeProto
 
+import numpy as np
+
 from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.graph.transformations.commands import TransformationType
 
@@ -16,5 +18,7 @@ class ONNXQuantizerInsertionCommand(ONNXInsertionCommand):
         self.parameters = parameters
 
 
-class ONNXUpdateParameters(TransformationCommand):
-    pass
+class ONNXUpdateBias(ONNXInsertionCommand):
+    def __init__(self, target_layer_name: str, bias_tensor: np.ndarray):
+        super().__init__(target_layer_name)
+        self.bias_tensor = bias_tensor

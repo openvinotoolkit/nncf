@@ -7,20 +7,20 @@ import tempfile
 import numpy as np
 
 from nncf.experimental.post_training.initialization.statistics_collector import StatisticsCollector
-from nncf.experimental.post_training.initialization.statistics_collector import LayerStatistic
+from nncf.experimental.post_training.initialization.statistics_collector import MinMaxLayerStatistic
 from nncf.experimental.post_training.initialization.statistics_collector import CalculateTensorValueFunc
 from nncf.experimental.post_training.initialization.statistics_collector import BatchAggregatorFunc
 from nncf.experimental.post_training.initialization.statistics_collector import StatisticsCalculationFunc
 
-from nncf.experimental.onnx.sampler import ONNXBatchSampler
-from nncf.experimental.onnx.sampler import ONNXRandomBatchSampler
+from nncf.experimental.onnx.sampler import create_onnx_sampler
 
 
 class ONNXStatisticsCollector(StatisticsCollector):
     def __init__(self, compressed_model, engine):
         super().__init__(compressed_model, engine)
 
-    def collect_statistics(self, layers_statistics: List[LayerStatistic], num_iters: int) -> List[LayerStatistic]:
+    def collect_statistics(self, layers_statistics: List[MinMaxLayerStatistic], num_iters: int) -> List[
+        MinMaxLayerStatistic]:
         layers_to_collect_statistics = [layer_statistic.layer_name for layer_statistic in layers_statistics]
         onnx_model = self.compressed_model.original_model
         model_output = list(enumerate_model_node_outputs(onnx_model))[-1]
@@ -31,7 +31,7 @@ class ONNXStatisticsCollector(StatisticsCollector):
         with tempfile.NamedTemporaryFile() as temporary_model:
             onnx.save(model_with_intermediate_outputs, temporary_model.name)
             self.engine.set_model(temporary_model.name)
-            sampler = self._create_sampler(self.engine)
+            sampler = create_onnx_sampler(self.engine)
             for i, sample in enumerate(sampler):
                 if i == num_iters:
                     break
@@ -43,15 +43,7 @@ class ONNXStatisticsCollector(StatisticsCollector):
 
         return layers_statistics
 
-    def _create_sampler(self, engine):
-        if engine.dataloader.shuffle:
-            print('Using Shuffled dataset')
-            return ONNXRandomBatchSampler(self.engine.dataloader)
-        else:
-            print('Using Non-Shuffled dataset')
-            return ONNXBatchSampler(self.engine.dataloader)
-
-    def _agregate_statistics(self, output, layers_statistics: List[LayerStatistic]):
+    def _agregate_statistics(self, output, layers_statistics: List[MinMaxLayerStatistic]):
         for layer_statistic in layers_statistics:
             tensor = output[layer_statistic.layer_name]
             layer_statistic.add_tensor_statistic(tensor)

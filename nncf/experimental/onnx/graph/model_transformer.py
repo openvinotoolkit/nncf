@@ -23,6 +23,7 @@ from nncf.experimental.onnx.graph.transformations.layout import ONNXTransformati
 from nncf.experimental.post_training.compressed_model import CompressedModel
 
 from nncf.experimental.onnx.graph.transformations.commands import ONNXQuantizerInsertionCommand
+from nncf.experimental.onnx.graph.transformations.commands import ONNXUpdateBias
 from nncf.experimental.onnx.graph.transformations.commands import ONNXInsertionCommand
 
 
@@ -41,6 +42,62 @@ class ONNXModelTransformer(ModelTransformer):
         if isinstance(transformation, ONNXQuantizerInsertionCommand):
             self._insert_quantizer(transformation)
             self.model.transformations.append(transformation)
+        if isinstance(transformation, ONNXUpdateBias):
+            self._update_bias(transformation)
+            self.model.transformations.append(transformation)
+
+    def _update_bias(self, transformation: ONNXUpdateBias):
+
+        def find_node_index(node_name, onnx_model):
+            for i, node in enumerate(onnx_model.graph.node):
+                if node.name == node_name:
+                    return i
+            return 0
+
+        onnx_graph = ONNXGraph(self.model.compressed_model)
+
+        target_point = transformation.target_point
+        bias_tensor = transformation.bias_tensor
+
+        node = onnx_graph.get_node_by_name(target_point)
+
+        bias_name = 'bias_' + target_point
+        onnx_bias = onnx.helper.make_tensor(bias_name, onnx.TensorProto.FLOAT, bias_tensor.shape, bias_tensor)
+
+        t = node.op_type
+        n = node.name
+        outputs = node.output
+        inputs = node.input
+        attrs = node.attribute
+
+        node_inputs = [_input for _input in inputs]
+
+        # Should be bias in BN and CONV layers
+        if len(node.input) > 3:
+            node_inputs[2] = bias_name
+        else:
+            node_inputs += [bias_name]
+
+        node_attrs = {}
+
+        for attr in node.attribute:
+            attr_key = attr.name
+            attr_value = onnx.helper.get_attribute_value(attr)
+            node_attrs[attr_key] = attr_value
+
+        new_node = onnx.helper.make_node(
+            t,
+            name=n,
+            inputs=node_inputs,
+            outputs=outputs,
+            **node_attrs
+        )
+        print(f'bias_name = {bias_name}')
+
+        i = find_node_index(n, self.model.compressed_model)
+        self.model.compressed_model.graph.node.remove(node)
+        self.model.compressed_model.graph.initializer.extend([onnx_bias])
+        self.model.compressed_model.graph.node.insert(i, new_node)
 
     def _insert_quantizer(self, transformation: ONNXInsertionCommand):
         def find_node_index(node_name, onnx_model):
