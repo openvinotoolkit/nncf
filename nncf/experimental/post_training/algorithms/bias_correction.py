@@ -16,16 +16,16 @@ from typing import List
 from abc import ABC
 from abc import abstractmethod
 
-from nncf.experimental.post_training.initialization.statistics_collector import LayerStatistic
-from nncf.experimental.post_training.initialization.algorithm import InitializationAlgorithm
-from nncf.experimental.post_training.initialization.algorithm import InitizalizationParameters
+from nncf.experimental.post_training.statistics.statistics_collector import LayerStatistic
+from nncf.experimental.post_training.algorithms import Algorithm
+from nncf.experimental.post_training.algorithms import AlgorithmParameters
 
 
-class BiasCorrectionAlgorithmParameters(InitizalizationParameters):
+class BiasCorrectionAlgorithmParameters(AlgorithmParameters):
     pass
 
 
-class BiasCorrectionAlgorithm(InitializationAlgorithm, ABC):
+class BiasCorrectionAlgorithm(Algorithm, ABC):
     @abstractmethod
     def get_layers_for_statistics(self) -> List[LayerStatistic]:
         pass

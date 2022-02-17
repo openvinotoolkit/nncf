@@ -5,10 +5,9 @@ from typing import List
 import onnx
 
 from nncf.experimental.post_training.compression_builder import CompressionBuilder
-from nncf.experimental.post_training.quantization.algorithm import PostTrainingQuantization
-
-from nncf.experimental.post_training.quantization.algorithm import PostTrainingQuantizationParameters
-from nncf.experimental.post_training.quantization.parameters import GRANULARITY
+from nncf.experimental.post_training.algorithms.quantization import PostTrainingQuantization
+from nncf.experimental.post_training.algorithms.quantization.parameters import PostTrainingQuantizationParameters
+from nncf.experimental.post_training.algorithms.quantization.parameters import GRANULARITY
 from nncf.experimental.onnx.helper import create_dataloader_from_imagenet_torch_dataset
 
 

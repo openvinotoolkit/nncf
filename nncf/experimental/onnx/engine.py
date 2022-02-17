@@ -17,10 +17,7 @@ from typing import Tuple
 
 from nncf.experimental.post_training.api.engine import Engine
 from nncf.experimental.post_training.api.dataloader import DataLoader
-from nncf.experimental.post_training.sampler import Sampler
-from nncf.experimental.post_training.initialization.statistics_collector import MinMaxLayerStatistic
 
-import onnx
 import onnxruntime as rt
 import numpy as np
 

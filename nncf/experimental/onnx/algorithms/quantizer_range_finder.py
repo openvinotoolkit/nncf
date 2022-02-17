@@ -16,47 +16,40 @@ from typing import List
 from typing import Tuple
 
 from copy import deepcopy
-
-from nncf.experimental.post_training.initialization.quantizer_range_finder import QuantizerRangeFinderAlgorithm
-
 import numpy as np
-
-from nncf.experimental.post_training.compressed_model import CompressedModel
-from nncf.experimental.onnx.graph.onnx_graph import ONNXGraph
-
-from nncf.experimental.onnx.graph.metatypes.onnx_ops import GENERAL_WEIGHT_LAYER_METATYPES
-from nncf.experimental.onnx.quantization.default_quantization import DEFAULT_ONNX_QUANT_TRAIT_TO_OP_DICT
-
-from nncf.experimental.onnx.graph.transformations.commands import ONNXQuantizerInsertionCommand
-from nncf.experimental.onnx.graph.transformations.commands import ONNXInsertionCommand
-
-from nncf.common.quantization.quantizer_propagation.solver import QuantizerPropagationSolver
-from nncf.common.quantization.structs import QuantizableWeightedLayerNode
-from nncf.common.quantization.structs import QuantizerConfig
-from nncf.common.quantization.structs import QuantizerGroup
-from nncf.common.quantization.structs import QuantizationConstraints
-from nncf.common.insertion_point_graph import InsertionPointGraph
-from nncf.common.quantization.structs import QuantizationMode
-
-from nncf.experimental.post_training.initialization.quantizer_range_finder import QuantizerRangeFinderParameters
-from nncf.experimental.onnx.initialization.statistics_collector import MinMaxLayerStatistic
-from nncf.experimental.onnx.initialization.statistics_collector import ONNXTensorMaxFunc
-from nncf.experimental.onnx.initialization.statistics_collector import ONNXTensorMinFunc
-from nncf.experimental.onnx.initialization.statistics_collector import ONNXBatchMaxFunc
-from nncf.experimental.onnx.initialization.statistics_collector import ONNXBatchMinFunc
-from nncf.experimental.onnx.initialization.statistics_collector import ONNXBatchMeanFunc
-from nncf.experimental.onnx.initialization.statistics_collector import ONNXStatisticsMeanFunc
-from nncf.experimental.onnx.initialization.statistics_collector import ONNXStatisticsABSMAXFunc
-
-from nncf.experimental.onnx.hardware.fused_patterns import ONNX_HW_FUSED_PATTERNS
-
-from nncf.experimental.post_training.quantization.parameters import WEIGHTS_ESTIMATOR_FUNCTION
-from nncf.experimental.post_training.quantization.parameters import ACTIVATIONS_ESTIMATOR_FUNCTION
-from nncf.experimental.post_training.quantization.parameters import BATCH_AGGREGATION_FUNCTION
-from nncf.experimental.post_training.quantization.parameters import STATISTICS_AGGREGATION_FUNCTION
 
 from nncf.common.hardware.config import HWConfigType
 from nncf.common.hardware.config import HW_CONFIG_TYPE_TARGET_DEVICE_MAP
+from nncf.common.quantization.quantizer_propagation.solver import QuantizerPropagationSolver
+from nncf.common.quantization.structs import QuantizableWeightedLayerNode
+from nncf.common.quantization.structs import QuantizerConfig
+from nncf.common.insertion_point_graph import InsertionPointGraph
+from nncf.common.quantization.structs import QuantizationMode
+
+from nncf.experimental.post_training.algorithms.quantizer_range_finder import QuantizerRangeFinderAlgorithm
+from nncf.experimental.post_training.compressed_model import CompressedModel
+from nncf.experimental.onnx.graph.onnx_graph import ONNXGraph
+from nncf.experimental.onnx.graph.metatypes.onnx_ops import GENERAL_WEIGHT_LAYER_METATYPES
+from nncf.experimental.onnx.algorithms.quantization.default_quantization import DEFAULT_ONNX_QUANT_TRAIT_TO_OP_DICT
+from nncf.experimental.onnx.graph.transformations.commands import ONNXQuantizerInsertionCommand
+from nncf.experimental.onnx.graph.transformations.commands import ONNXInsertionCommand
+from nncf.experimental.post_training.algorithms.quantizer_range_finder import QuantizerRangeFinderParameters
+from nncf.experimental.post_training.statistics.statistics_collector import MinMaxLayerStatistic
+from nncf.experimental.onnx.statistics.functions import ONNXTensorMaxFunc
+from nncf.experimental.onnx.statistics.functions import ONNXTensorMinFunc
+from nncf.experimental.onnx.statistics.functions import ONNXBatchMaxFunc
+from nncf.experimental.onnx.statistics.functions import ONNXBatchMinFunc
+from nncf.experimental.onnx.statistics.functions import ONNXBatchMeanFunc
+from nncf.experimental.onnx.statistics.functions import ONNXStatisticsMeanFunc
+from nncf.experimental.onnx.statistics.functions import ONNXStatisticsABSMAXFunc
+
+from nncf.experimental.onnx.hardware.fused_patterns import ONNX_HW_FUSED_PATTERNS
+
+from nncf.experimental.post_training.statistics.statistics_collector import WEIGHTS_ESTIMATOR_FUNCTION
+from nncf.experimental.post_training.statistics.statistics_collector import ACTIVATIONS_ESTIMATOR_FUNCTION
+from nncf.experimental.post_training.statistics.statistics_collector import BATCH_AGGREGATION_FUNCTION
+from nncf.experimental.post_training.statistics.statistics_collector import STATISTICS_AGGREGATION_FUNCTION
+
 from nncf.experimental.onnx.hardware.config import ONNXHWConfig
 
 QUANTIZATION_LAYER_METATYPES = GENERAL_WEIGHT_LAYER_METATYPES
@@ -76,6 +69,9 @@ class ONNXQuantizerRangeFinderAlgorithm(QuantizerRangeFinderAlgorithm):
         self._weight_quantizers = []
         self._activation_quantizers = []
         self.global_quantizer_constraints = {}
+
+    def apply(self, quantized_model, statistics=None):
+        pass
 
     def _determine_aggregation_func(self):
         self.weight_statistics_min_func = self._get_statistics_collection_func(
@@ -150,12 +146,12 @@ class ONNXQuantizerRangeFinderAlgorithm(QuantizerRangeFinderAlgorithm):
         for activation_quantizer in self._activation_quantizers:
             axis = 1 if activation_quantizer_config.per_channel else None
             layer_statistics = MinMaxLayerStatistic(activation_quantizer,
-                                              min_value_func=self.activation_statistics_min_func,
-                                              max_value_func=self.activation_statistics_max_func,
-                                              min_batch_aggregator_func=self.batch_aggregation_min_func,
-                                              max_batch_aggregator_func=self.batch_aggregation_max_func,
-                                              statistics_aggregation_func=self.statistics_aggregator_func,
-                                              axis=axis)
+                                                    min_value_func=self.activation_statistics_min_func,
+                                                    max_value_func=self.activation_statistics_max_func,
+                                                    min_batch_aggregator_func=self.batch_aggregation_min_func,
+                                                    max_batch_aggregator_func=self.batch_aggregation_max_func,
+                                                    statistics_aggregation_func=self.statistics_aggregator_func,
+                                                    axis=axis)
             output.append(layer_statistics)
 
         return output

@@ -17,20 +17,20 @@ from typing import List
 
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.experimental.post_training.compressed_model import CompressedModel
-from nncf.experimental.post_training.initialization.statistics_collector import MinMaxLayerStatistic
-from nncf.experimental.post_training.initialization.algorithm import InitializationAlgorithm
-from nncf.experimental.post_training.initialization.algorithm import InitizalizationParameters
+from nncf.experimental.post_training.statistics.statistics_collector import MinMaxLayerStatistic
+from nncf.experimental.post_training.algorithms import Algorithm
+from nncf.experimental.post_training.algorithms import AlgorithmParameters
 
-from nncf.experimental.post_training.initialization.statistics_collector import WEIGHTS_ESTIMATOR_FUNCTION
-from nncf.experimental.post_training.initialization.statistics_collector import ACTIVATIONS_ESTIMATOR_FUNCTION
-from nncf.experimental.post_training.initialization.statistics_collector import BATCH_AGGREGATION_FUNCTION
-from nncf.experimental.post_training.initialization.statistics_collector import STATISTICS_AGGREGATION_FUNCTION
+from nncf.experimental.post_training.statistics.statistics_collector import WEIGHTS_ESTIMATOR_FUNCTION
+from nncf.experimental.post_training.statistics.statistics_collector import ACTIVATIONS_ESTIMATOR_FUNCTION
+from nncf.experimental.post_training.statistics.statistics_collector import BATCH_AGGREGATION_FUNCTION
+from nncf.experimental.post_training.statistics.statistics_collector import STATISTICS_AGGREGATION_FUNCTION
 
 
 # from nncf.experimental.post_training.quantization.parameters import DEVICE
 
 
-class QuantizerRangeFinderParameters(InitizalizationParameters):
+class QuantizerRangeFinderParameters(AlgorithmParameters):
     def __init__(self, weight_min_func: WEIGHTS_ESTIMATOR_FUNCTION,
                  weight_max_func: WEIGHTS_ESTIMATOR_FUNCTION,
                  activation_min_func: ACTIVATIONS_ESTIMATOR_FUNCTION,
@@ -59,13 +59,15 @@ class QuantizerRangeFinderParameters(InitizalizationParameters):
         self.quantize_outputs = quatize_outputs
 
 
-class QuantizerRangeFinderAlgorithm(InitializationAlgorithm, ABC):
+class QuantizerRangeFinderAlgorithm(Algorithm, ABC):
     """
 
     """
 
     def __init__(self, compressed_model: CompressedModel, engine, parameters: QuantizerRangeFinderParameters):
-        super().__init__(compressed_model, engine, parameters)
+        self.compressed_model = compressed_model
+        self.engine = engine
+        self.parameters = parameters
         self._determine_aggregation_func()
         self.weight_quantizer_config = parameters.weight_quantizer_config
         self.activation_quantizer_config = parameters.activation_quantizer_config

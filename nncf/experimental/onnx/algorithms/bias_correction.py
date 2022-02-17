@@ -17,19 +17,15 @@ import onnx
 import tempfile
 import numpy as np
 
-from nncf.experimental.post_training.initialization.statistics_collector import LayerStatistic
-
-from nncf.experimental.post_training.initialization.bias_correction import BiasCorrectionAlgorithm
-from nncf.experimental.post_training.initialization.bias_correction import BiasCorrectionAlgorithmParameters
-from nncf.experimental.post_training.compressed_model import CompressedModel
-from nncf.experimental.post_training.initialization.statistics_collector import StatisticsCollector
-from nncf.experimental.onnx.graph.onnx_graph import ONNXGraph
-
-from nncf.experimental.onnx.graph.transformations.commands import ONNXUpdateBias
-
 from skl2onnx.helpers.onnx_helper import select_model_inputs_outputs
 from skl2onnx.helpers.onnx_helper import enumerate_model_node_outputs
 
+from nncf.experimental.post_training.statistics.statistics_collector import LayerStatistic
+from nncf.experimental.post_training.algorithms.bias_correction import BiasCorrectionAlgorithm
+from nncf.experimental.post_training.algorithms.bias_correction import BiasCorrectionAlgorithmParameters
+from nncf.experimental.post_training.compressed_model import CompressedModel
+from nncf.experimental.onnx.graph.onnx_graph import ONNXGraph
+from nncf.experimental.onnx.graph.transformations.commands import ONNXUpdateBias
 from nncf.experimental.onnx.sampler import create_onnx_sampler
 
 OPERATIONS_WITH_BIAS = ['BatchNormalization', 'Conv', ]
@@ -37,7 +33,12 @@ OPERATIONS_WITH_BIAS = ['BatchNormalization', 'Conv', ]
 
 class ONNXBiasCorrectionAlgorithm(BiasCorrectionAlgorithm):
     def __init__(self, compressed_model: CompressedModel, engine, parameters: BiasCorrectionAlgorithmParameters):
-        super().__init__(compressed_model, engine, parameters)
+        self.compressed_model = compressed_model
+        self.engine = engine
+        self.parameters = parameters
+
+    def apply(self):
+        pass
 
     def get_layers_for_statistics(self, *args) -> List[LayerStatistic]:
         return self._get_outputs_with_biases()
@@ -71,7 +72,6 @@ class ONNXBiasCorrectionAlgorithm(BiasCorrectionAlgorithm):
         original_model_onnx_graph = ONNXGraph(self.compressed_model.original_model)
         layer_output = original_model_onnx_graph.get_node_edges(layer_name.layer_name)['output'][0]
 
-
         for i, sample in enumerate(sampler):
             _input, target = sample
 
@@ -79,7 +79,7 @@ class ONNXBiasCorrectionAlgorithm(BiasCorrectionAlgorithm):
             model_with_intermediate_outputs = select_model_inputs_outputs(model,
                                                                           outputs=[layer_output, model_output])
 
-            print (f'layer_output = {layer_output}')
+            print(f'layer_output = {layer_output}')
 
             with tempfile.NamedTemporaryFile() as temporary_model:
                 onnx.save(model_with_intermediate_outputs, temporary_model.name)

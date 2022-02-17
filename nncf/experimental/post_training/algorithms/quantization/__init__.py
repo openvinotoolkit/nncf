@@ -11,22 +11,25 @@
  limitations under the License.
 """
 
+from typing import List
+
 from nncf.common.graph.transformations.layout import TransformationLayout
 
 from nncf.experimental.post_training.backend import BACKEND
 from nncf.experimental.post_training.api.engine import Engine
 from nncf.experimental.post_training.graph.model_transformer import ModelTransformer
-from nncf.experimental.post_training.algorithm import PostTrainingAlgorithm
+from nncf.experimental.post_training.algorithms import Algorithm
+from nncf.experimental.post_training.algorithms import PostTrainingAlgorithms
 from nncf.experimental.post_training.compressed_model import CompressedModel
-
-from nncf.experimental.post_training.initialization.algorithm import InitializationAlgorithm
-from nncf.experimental.post_training.initialization.algorithm import InitializationAlgorithms
-from nncf.experimental.post_training.initialization.algorithm import InitizalizationParameters
-from nncf.experimental.post_training.quantization.parameters import PostTrainingQuantizationParameters
+from nncf.experimental.post_training.algorithms.quantization.parameters import PostTrainingQuantizationParameters
 
 
-class PostTrainingQuantization(PostTrainingAlgorithm):
+class PostTrainingQuantization(Algorithm):
     """
+
+    1) QuantizerRangeFinder
+    2) BiasCorrection
+
     Post-Training Quantization algorithm makes 3 main things:
         1) Find the transformations needed to apply to the model.
         2) Apply these transformations.
@@ -49,9 +52,7 @@ class PostTrainingQuantization(PostTrainingAlgorithm):
         model_transformer = self._create_model_transformer(compressed_model)
         transformation_layout = self._create_transformation_layout(compressed_model)
         statistics_collector = self._create_statistics_collector(compressed_model, engine)
-        for algorithm, parameters in self.algorithms_to_created.items():
-            algorithm = self._create_algorithm(compressed_model, engine, algorithm, parameters)
-            self.algorithms.append(algorithm)
+        self.algorithms = self._create_algorithms(compressed_model, engine)
 
         layers_to_collect_statistics = []  # List[MinMaxLayerStatistic]
         for initialization_algorithm in self.algorithms:
@@ -81,7 +82,7 @@ class PostTrainingQuantization(PostTrainingAlgorithm):
 
     def _create_statistics_collector(self, compressed_model: CompressedModel, engine: Engine):
         if compressed_model.model_backend == BACKEND.ONNX:
-            from nncf.experimental.onnx.initialization.statistics_collector import ONNXStatisticsCollector
+            from nncf.experimental.onnx.statistics.statistics_collector import ONNXStatisticsCollector
             return ONNXStatisticsCollector(compressed_model, engine)
 
     def _create_transformation_layout(self, compressed_model: CompressedModel) -> TransformationLayout:
@@ -89,12 +90,14 @@ class PostTrainingQuantization(PostTrainingAlgorithm):
             from nncf.experimental.onnx.graph.transformations.layout import ONNXTransformationLayout
             return ONNXTransformationLayout()
 
-    def _create_algorithm(self, compressed_model: CompressedModel, engine: Engine, algorithm: InitializationAlgorithms,
-                          parameters: InitizalizationParameters) -> InitializationAlgorithm:
+    def _create_algorithms(self, compressed_model: CompressedModel, engine: Engine) -> List[Algorithm]:
+        output = []
         if compressed_model.model_backend == BACKEND.ONNX:
-            from nncf.experimental.onnx.initialization.quantizer_range_finder import ONNXQuantizerRangeFinderAlgorithm
-            from nncf.experimental.onnx.initialization.bias_correction import ONNXBiasCorrectionAlgorithm
-            if algorithm == InitializationAlgorithms.QuantizerRangeFinder:
-                return ONNXQuantizerRangeFinderAlgorithm(compressed_model, engine, parameters)
-            if algorithm == InitializationAlgorithms.BiasCorrection:
-                return ONNXBiasCorrectionAlgorithm(compressed_model, engine, parameters)
+            from nncf.experimental.onnx.algorithms.quantizer_range_finder import ONNXQuantizerRangeFinderAlgorithm
+            from nncf.experimental.onnx.algorithms.bias_correction import ONNXBiasCorrectionAlgorithm
+            for algorithm, parameters in self.algorithms_to_created.items():
+                if algorithm == PostTrainingAlgorithms.QuantizerRangeFinder:
+                    output.append(ONNXQuantizerRangeFinderAlgorithm(compressed_model, engine, parameters))
+                elif algorithm == PostTrainingAlgorithms.BiasCorrection:
+                    output.append(ONNXBiasCorrectionAlgorithm(compressed_model, engine, parameters))
+        return output

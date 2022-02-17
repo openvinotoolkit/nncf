@@ -7,17 +7,18 @@ from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.hardware.config import HWConfigType
 
-from nncf.experimental.post_training.algorithm import PostTraniningAlgorithmParameters
+from nncf.experimental.post_training.algorithms import AlgorithmParameters
+from nncf.experimental.post_training.algorithms import PostTrainingAlgorithms
 
-from nncf.experimental.post_training.initialization.algorithm import InitializationAlgorithms
-from nncf.experimental.post_training.initialization.algorithm import InitizalizationParameters
-from nncf.experimental.post_training.initialization.quantizer_range_finder import QuantizerRangeFinderParameters
-from nncf.experimental.post_training.initialization.bias_correction import BiasCorrectionAlgorithmParameters
+from nncf.experimental.post_training.algorithms.quantizer_range_finder import QuantizerRangeFinderAlgorithm
+from nncf.experimental.post_training.algorithms.quantizer_range_finder import QuantizerRangeFinderParameters
+from nncf.experimental.post_training.algorithms.bias_correction import BiasCorrectionAlgorithm
+from nncf.experimental.post_training.algorithms.bias_correction import BiasCorrectionAlgorithmParameters
 
-from nncf.experimental.post_training.initialization.statistics_collector import WEIGHTS_ESTIMATOR_FUNCTION
-from nncf.experimental.post_training.initialization.statistics_collector import ACTIVATIONS_ESTIMATOR_FUNCTION
-from nncf.experimental.post_training.initialization.statistics_collector import BATCH_AGGREGATION_FUNCTION
-from nncf.experimental.post_training.initialization.statistics_collector import STATISTICS_AGGREGATION_FUNCTION
+from nncf.experimental.post_training.statistics.statistics_collector import WEIGHTS_ESTIMATOR_FUNCTION
+from nncf.experimental.post_training.statistics.statistics_collector import ACTIVATIONS_ESTIMATOR_FUNCTION
+from nncf.experimental.post_training.statistics.statistics_collector import BATCH_AGGREGATION_FUNCTION
+from nncf.experimental.post_training.statistics.statistics_collector import STATISTICS_AGGREGATION_FUNCTION
 
 
 class PRESET(OrderedEnum):
@@ -55,7 +56,7 @@ class StatisticsAggregationParameters:
         self.statistics_aggregation_func = statistics_aggregation_func
 
 
-class PostTrainingQuantizationParameters(PostTraniningAlgorithmParameters):
+class PostTrainingQuantizationParameters(AlgorithmParameters):
     def __init__(self,
                  preset: PRESET = PRESET.MIXED,
                  weight_bits: int = 8,
@@ -78,7 +79,7 @@ class PostTrainingQuantizationParameters(PostTraniningAlgorithmParameters):
             activation_granularity
         )
 
-        self.algorithms = {InitializationAlgorithms.QuantizerRangeFinder: QuantizerRangeFinderParameters(
+        self.algorithms = {PostTrainingAlgorithms.QuantizerRangeFinder: QuantizerRangeFinderParameters(
             weight_min_func=weight_range_estimator.min_estimator_function,
             weight_max_func=weight_range_estimator.max_estimator_function,
             activation_min_func=activation_range_estimator.min_estimator_function,
@@ -91,7 +92,7 @@ class PostTrainingQuantizationParameters(PostTraniningAlgorithmParameters):
             ignored_scopes=ignored_scopes,
             target_device=target_device
         ),
-            InitializationAlgorithms.BiasCorrection: BiasCorrectionAlgorithmParameters()}  # type: Dict[InitializationAlgorithms, InitizalizationParameters]
+            PostTrainingAlgorithms.BiasCorrection: BiasCorrectionAlgorithmParameters()}  # type: Dict[InitializationAlgorithms, InitizalizationParameters]
 
         self.number_samples = number_samples
         self.target_device = target_device
