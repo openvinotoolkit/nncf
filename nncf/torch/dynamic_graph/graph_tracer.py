@@ -98,8 +98,8 @@ class GraphTracer:
 
         context_to_use.enable_trace_dynamic_graph()
         from nncf.torch.utils import training_mode_switcher
-        context_to_use.base_module_thread_local_replica = model
         with context_to_use as _ctx:
+            _ctx.base_module_thread_local_replica = model
             with torch.no_grad():
                 if as_eval:
                     with training_mode_switcher(model, is_training=False):

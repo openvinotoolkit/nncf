@@ -11,7 +11,9 @@ This sample demonstrates DL model compression capabailites for object detection 
 
 ## Installation
 
-To work with the sample you should install the corresponding Python package dependencies
+At this point it is assumed that you have already installed nncf. You can find information on downloading nncf [here](https://github.com/openvinotoolkit/nncf#user-content-installation).  
+
+To work with the sample you should install the corresponding Python package dependencies:
 
 ```
 pip install -r examples/torch/requirements.txt
@@ -27,7 +29,7 @@ This scenario demonstrates quantization with fine-tuning of SSD300 on VOC datase
 - If you did not install the package then add the repository root folder to the `PYTHONPATH` environment variable
 - Navigate to the `examples/torch/object_detection` folder
 - Run the following command to start compression with fine-tuning on GPUs:
-`python main.py -m train --config configs/ssd300_vgg_int8_voc.json --data <path_to_dataset> --log-dir=../../results/quantization/ssd300_int8`
+`python main.py -m train --config configs/ssd300_vgg_voc_int8.json --data <path_to_dataset> --log-dir=../../results/quantization/ssd300_int8`
 It may take a few epochs to get the baseline accuracy results.
 - Use `--multiprocessing-distributed` flag to run in the distributed mode.
 - Use `--resume` flag with the path to a previously saved model to resume training.

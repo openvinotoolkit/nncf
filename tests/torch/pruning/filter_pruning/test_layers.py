@@ -22,7 +22,7 @@ from nncf.torch.pruning.filter_pruning.layers import FilterPruningMask, inplace_
 from tests.torch.helpers import fill_conv_weight, fill_bias
 
 
-class TestFilterPruningBlockModel(nn.Module):
+class FilterPruningBlockModel(nn.Module):
     def __init__(self, layer):
         super().__init__()
         self.layer = layer
@@ -55,7 +55,7 @@ def test_can_infer_magnitude_pruned_conv(weights_val, bias_val):
     nncf_module = NNCFConv2d(1, 1, 2)
     pytorch_module = nn.Conv2d(1, 1, 2)
 
-    sparse_model = TestFilterPruningBlockModel(nncf_module)
+    sparse_model = FilterPruningBlockModel(nncf_module)
 
     fill_conv_weight(nncf_module, weights_val)
     fill_bias(nncf_module, bias_val)

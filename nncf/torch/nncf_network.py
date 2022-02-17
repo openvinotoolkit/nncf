@@ -94,13 +94,13 @@ class LoadStateListener:
         restores model state by calling this method.
     """
 
-    def __init__(self, model, all_quantizations):
+    def __init__(self, model: 'NNCFNetwork', all_quantizations: Dict[str, torch.nn.Module]):
         # pylint: disable=protected-access
         self.hook = model._register_load_state_dict_pre_hook(
-            functools.partial(self.hook_fn, quantize_modules=all_quantizations.values()))
+            functools.partial(self.hook_fn, quantize_modules=list(all_quantizations.values())))
 
     def hook_fn(self, state_dict, prefix, local_metadata, strict, missing_keys, unexpected_keys, error_msgs,
-                quantize_modules):
+                quantize_modules: List[torch.nn.Module]):
         for module in quantize_modules:
             module.initialized = False
 

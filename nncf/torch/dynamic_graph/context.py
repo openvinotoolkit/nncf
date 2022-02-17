@@ -49,6 +49,16 @@ class PreHookId:
     def __hash__(self):
         return hash(str(self))
 
+class CopySafeThreadingVars:
+    """ A class holding variables that are related to threading and
+    thus impossible to deepcopy. The deepcopy will simply return a
+    new object without copying, but won't fail."""
+    def __init__(self):
+        self.thread_local = threading.local()
+        self.cond = threading.Condition()
+
+    def __deepcopy__(self, memo):
+        return CopySafeThreadingVars()
 
 # pylint: disable=too-many-public-methods
 class TracingContext:
@@ -60,10 +70,10 @@ class TracingContext:
         self._pre_hooks = {}  # type: Dict[PreHookId, List[Callable]]
         self._num_nested_hooks = 0
 
-        self._thread_local = threading.local()
+        self._threading = CopySafeThreadingVars()
 
         self._n_instances_searching_graph = 0
-        self._cond = threading.Condition()
+
         self._is_tracing = True
         self._is_forwarding = False
         self._may_add_nodes = True
@@ -76,28 +86,29 @@ class TracingContext:
         global _CURRENT_CONTEXT
         self._save_context = _CURRENT_CONTEXT
         _CURRENT_CONTEXT = self
-        self._init_thread_local()
+        self._reset_thread_local()
         if is_debug():
             self.reset_node_call_counters()
 
         return self
 
     def __exit__(self, *args):
-        self.reset_scope_operator_call_counters()
-        self.relative_scopes_stack.clear()
-        self.module_call_stack.clear()
-        self.leave()
+        self._reset_thread_local()
+
+        global _CURRENT_CONTEXT
+        _CURRENT_CONTEXT = self._save_context
+        self._save_context = None
 
     def find_operator_node(self, tensor_metas: List[Optional[TensorMeta]],
                            op_address: OperationAddress) -> Optional[DynamicGraphNode]:
-        with self._cond:
+        with self._threading.cond:
             self._n_instances_searching_graph += 1
 
         node = self.graph.find_node(op_address, tensor_metas, self._input_comparators_per_scope)
 
-        with self._cond:
+        with self._threading.cond:
             self._n_instances_searching_graph -= 1
-            self._cond.notify_all()
+            self._threading.cond.notify_all()
         return node
 
     def register_global_buffer(self, name: str, buffer):
@@ -109,9 +120,9 @@ class TracingContext:
                        ignored_algorithms: List[str] = None) -> Optional[DynamicGraphNode]:
         if not self._may_add_nodes:
             return None
-        with self._cond:
+        with self._threading.cond:
             while self._n_instances_searching_graph > 0:
-                self._cond.wait()
+                self._threading.cond.wait()
             # Another thread may have added a node inside this block,
             # so we need to check again if a node is already added.
             node = self.graph.find_node(op_address, tensor_metas, self._input_comparators_per_scope)
@@ -144,7 +155,7 @@ class TracingContext:
         Must be called after each "forward" operation of the model that is made
         within this context
         """
-        self._thread_local.operator_counters = {}
+        self._threading.thread_local.operator_counters = {}
 
     @staticmethod
     def _get_operator_counter_key(operator_name: str, scope: Scope):
@@ -152,33 +163,22 @@ class TracingContext:
 
     def register_operator_call(self, operator_name: str, scope: Scope):
         key = self._get_operator_counter_key(operator_name, scope)
-        if key in self._thread_local.operator_counters:
-            self._thread_local.operator_counters[key] += 1
+        if key in self._threading.thread_local.operator_counters:
+            self._threading.thread_local.operator_counters[key] += 1
         else:
-            self._thread_local.operator_counters[key] = 1
+            self._threading.thread_local.operator_counters[key] = 1
 
     def get_operator_call_count_in_scope(self, operator_name: str, scope: Scope):
         key = self._get_operator_counter_key(operator_name, scope)
-        if key in self._thread_local.operator_counters:
-            return self._thread_local.operator_counters[key]
+        if key in self._threading.thread_local.operator_counters:
+            return self._threading.thread_local.operator_counters[key]
         return 0
 
     def reset_operator_call_count_in_scope(self, scope):
         scoped_op_name = str(scope)
-        for key in self._thread_local.operator_counters.keys():
+        for key in self._threading.thread_local.operator_counters.keys():
             if scoped_op_name in key:
-                self._thread_local.operator_counters[key] = 0
-
-    def enter(self):
-        global _CURRENT_CONTEXT
-        self._save_context = _CURRENT_CONTEXT
-        _CURRENT_CONTEXT = self
-        self._init_thread_local()
-
-    def leave(self):
-        global _CURRENT_CONTEXT
-        _CURRENT_CONTEXT = self._save_context
-        self._save_context = None
+                self._threading.thread_local.operator_counters[key] = 0
 
     def push_scope(self, called_module: torch.nn.Module):
         relative_scopes_list = self._get_scope_relative_to_last_registered_module_call(called_module)
@@ -200,7 +200,7 @@ class TracingContext:
                           op_inputs: OperatorInput) -> OperatorInput:
         in_op = getattr(self, 'in_operator', False)
         self.in_operator = False
-        self._thread_local.num_nested_hooks += 1
+        self._threading.thread_local.num_nested_hooks += 1
 
         pre_hook_ids_for_curr_op = [x for x in self._pre_hooks if x.op_address == op_address]
         pre_hook_ids_for_curr_op = sorted(pre_hook_ids_for_curr_op, key=lambda x: x.input_port_id)
@@ -209,7 +209,7 @@ class TracingContext:
             input_arg_to_process = pre_hook_id.input_port_id
             for hook in hook_list_for_current_input_port:
                 op_inputs[input_arg_to_process] = hook(op_inputs[input_arg_to_process])
-        self._thread_local.num_nested_hooks -= 1
+        self._threading.thread_local.num_nested_hooks -= 1
         self.in_operator = in_op
         return op_inputs
 
@@ -221,11 +221,11 @@ class TracingContext:
     def execute_post_hooks(self, op_address: OperationAddress, outputs):
         in_op = getattr(self, 'in_operator', False)
         self.in_operator = False
-        self._thread_local.num_nested_hooks += 1
+        self._threading.thread_local.num_nested_hooks += 1
         if op_address in self._post_hooks:
             for hook in self._post_hooks[op_address]:
                 outputs = hook(outputs)
-        self._thread_local.num_nested_hooks -= 1
+        self._threading.thread_local.num_nested_hooks -= 1
         self.in_operator = in_op
         return outputs
 
@@ -260,29 +260,24 @@ class TracingContext:
         self._input_comparators_per_scope.append((node_input_comparator, scopes_to_apply))
 
     @property
-    def base_module_thread_local_replica(self):
-        self._init_thread_local()
-        return self._thread_local.base_module_replica
+    def base_module_thread_local_replica(self) -> torch.nn.Module:
+        return self._threading.thread_local.base_module_replica
 
     @base_module_thread_local_replica.setter
-    def base_module_thread_local_replica(self, value):
-        self._init_thread_local()
-        self._thread_local.base_module_replica = value
+    def base_module_thread_local_replica(self, value: torch.nn.Module):
+        self._threading.thread_local.base_module_replica = value
 
     @property
     def in_operator(self):
-        self._init_thread_local()
-        return self._thread_local.in_operator
+        return self._threading.thread_local.in_operator
 
     @in_operator.setter
     def in_operator(self, val):
-        self._init_thread_local()
-        self._thread_local.in_operator = val
+        self._threading.thread_local.in_operator = val
 
     @property
     def module_call_stack(self) -> List[torch.nn.Module]:
-        self._init_thread_local()
-        return self._thread_local.module_call_stack
+        return self._threading.thread_local.module_call_stack
 
     def get_current_module(self) -> Optional[torch.nn.Module]:
         if self.module_call_stack:
@@ -291,8 +286,7 @@ class TracingContext:
 
     @property
     def relative_scopes_stack(self) -> List[Scope]:
-        self._init_thread_local()
-        return self._thread_local.scopes
+        return self._threading.thread_local.scopes
 
     @property
     def trace_dynamic_graph(self) -> bool:
@@ -305,12 +299,8 @@ class TracingContext:
     def enable_trace_dynamic_graph(self):
         self._trace_dynamic_graph = True
 
-    def _init_thread_local(self):
-        # todo: primary node part!
-        tl = self._thread_local
-        if getattr(tl, 'ready', False):
-            return
-        tl.ready = True
+    def _reset_thread_local(self):
+        tl = self._threading.thread_local
         tl.scopes = []
         tl.module_call_stack = []
         tl.in_operator = False
@@ -319,18 +309,19 @@ class TracingContext:
         tl.operator_counters = {}
         tl.node_call_tracker = {}
 
+
     def register_node_call(self, node: DynamicGraphNode):
-        if node.node_id in self._thread_local.node_call_tracker:
-            self._thread_local.node_call_tracker[node.node_id] += 1
+        if node.node_id in self._threading.thread_local.node_call_tracker:
+            self._threading.thread_local.node_call_tracker[node.node_id] += 1
         else:
-            self._thread_local.node_call_tracker[node.node_id] = 1
+            self._threading.thread_local.node_call_tracker[node.node_id] = 1
 
     def reset_node_call_counters(self):
-        for k, _ in self._thread_local.node_call_tracker.items():
-            self._thread_local.node_call_tracker[k] = 0
+        for k, _ in self._threading.thread_local.node_call_tracker.items():
+            self._threading.thread_local.node_call_tracker[k] = 0
 
     def get_node_call_counter_dict(self):
-        return self._thread_local.node_call_tracker
+        return self._threading.thread_local.node_call_tracker
 
     def _get_scope_relative_to_last_registered_module_call(self, module) -> Scope:
         module_class = module.__class__.__name__

@@ -26,11 +26,11 @@ from tests.torch.helpers import create_compressed_model_and_algo_for_test
 from tests.torch.helpers import create_ones_mock_dataloader
 from tests.torch.helpers import get_empty_config
 from tests.torch.helpers import register_bn_adaptation_init_args
-from tests.torch.quantization.test_manual_precision_init import TestPrecisionInitDesc
+from tests.torch.quantization.test_manual_precision_init import PrecisionInitTestDesc
 from tests.torch.sparsity.rb.test_algo import get_basic_sparsity_config
 
 
-@pytest.yield_fixture()
+@pytest.fixture()
 def _nncf_caplog(caplog):
     nncf_logger.propagate = True
     yield caplog
@@ -38,8 +38,8 @@ def _nncf_caplog(caplog):
 
 
 LIST_MANUAL_INIT_CASES = [
-    TestPrecisionInitDesc().config_with_all_inits().resume_with_the_same_config(),
-    TestPrecisionInitDesc().config_with_all_inits().resume_with_the_same_config_without_init()
+    PrecisionInitTestDesc().config_with_all_inits().resume_with_the_same_config(),
+    PrecisionInitTestDesc().config_with_all_inits().resume_with_the_same_config_without_init()
 ]
 
 
@@ -81,7 +81,7 @@ def test_can_resume_with_manual_init(mocker, desc, _nncf_caplog):
 @pytest.mark.skip('algo mixing is not supported')
 @pytest.mark.parametrize('is_strict', (True, False))
 def test_can_resume_with_algo_mixing(mocker, is_strict):
-    desc = TestPrecisionInitDesc().config_with_all_inits()
+    desc = PrecisionInitTestDesc().config_with_all_inits()
     all_quantization_init_spies = desc.setup_init_spies(mocker)
     sparsity_config = get_basic_sparsity_config()
     sparsity_config['target_device'] = 'TRIAL'
