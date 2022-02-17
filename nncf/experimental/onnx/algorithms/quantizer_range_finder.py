@@ -29,6 +29,7 @@ from nncf.common.quantization.structs import QuantizationMode
 from nncf.experimental.post_training.algorithms.quantizer_range_finder import QuantizerRangeFinderAlgorithm
 from nncf.experimental.post_training.compressed_model import CompressedModel
 from nncf.experimental.onnx.graph.onnx_graph import ONNXGraph
+from nncf.experimental.onnx.graph.transformations.layout import ONNXTransformationLayout
 from nncf.experimental.onnx.graph.metatypes.onnx_ops import GENERAL_WEIGHT_LAYER_METATYPES
 from nncf.experimental.onnx.algorithms.quantization.default_quantization import DEFAULT_ONNX_QUANT_TRAIT_TO_OP_DICT
 from nncf.experimental.onnx.graph.transformations.commands import ONNXQuantizerInsertionCommand
@@ -70,9 +71,6 @@ class ONNXQuantizerRangeFinderAlgorithm(QuantizerRangeFinderAlgorithm):
         self._activation_quantizers = []
         self.global_quantizer_constraints = {}
 
-    def apply(self, quantized_model, statistics=None):
-        pass
-
     def _determine_aggregation_func(self):
         self.weight_statistics_min_func = self._get_statistics_collection_func(
             self.parameters.weight_min_func)
@@ -110,6 +108,37 @@ class ONNXQuantizerRangeFinderAlgorithm(QuantizerRangeFinderAlgorithm):
             return ONNXStatisticsMeanFunc
         elif function == STATISTICS_AGGREGATION_FUNCTION.ABS_MAX:
             return ONNXStatisticsABSMAXFunc
+
+    def _get_default_qconfig(self) -> QuantizerConfig:
+        qconfig = deepcopy(self.DEFAULT_QCONFIG)
+        return qconfig
+
+    def apply(self, model, layers_statistics, model_transformer):
+        transformation_layout = ONNXTransformationLayout()
+        transformation_commands = []
+        original_model = self.compressed_model.original_model
+        onnx_graph = ONNXGraph(original_model)
+
+        for weight_quantizer in self._weight_quantizers:
+            weight_tensor = onnx_graph.get_initializers_value(weight_quantizer)
+            parameters = self._calculate_weight_quantizer_parameters(weight_tensor, self.weight_quantizer_config)
+            command = ONNXQuantizerInsertionCommand(weight_quantizer, parameters)
+            transformation_commands.append(command)
+
+        for activation_quantizer in self._activation_quantizers:
+            for layer_statistics in layers_statistics:
+                # TODO: improve perfomance of matching
+                if layer_statistics.layer_name == activation_quantizer:
+                    parameters = self._calculate_activation_quantizer_parameters(layer_statistics,
+                                                                                 self.activation_quantizer_config)
+                    command = ONNXQuantizerInsertionCommand(activation_quantizer, parameters)
+                    transformation_commands.append(command)
+
+        for transformation_command in transformation_commands:
+            transformation_layout.register(transformation_command)
+
+        quantized_model = model_transformer.transform(model, transformation_layout)
+        return quantized_model
 
     def get_layers_for_statistics(self, weight_quantizer_config: QuantizerConfig,
                                   activation_quantizer_config: QuantizerConfig) -> List[MinMaxLayerStatistic]:
@@ -155,32 +184,6 @@ class ONNXQuantizerRangeFinderAlgorithm(QuantizerRangeFinderAlgorithm):
             output.append(layer_statistics)
 
         return output
-
-    def get_transformation_commands(self, layers_statistics) -> List[ONNXInsertionCommand]:
-        transformation_commands = []
-        original_model = self.compressed_model.original_model
-        onnx_graph = ONNXGraph(original_model)
-
-        for weight_quantizer in self._weight_quantizers:
-            weight_tensor = onnx_graph.get_initializers_value(weight_quantizer)
-            parameters = self._calculate_weight_quantizer_parameters(weight_tensor, self.weight_quantizer_config)
-            command = ONNXQuantizerInsertionCommand(weight_quantizer, parameters)
-            transformation_commands.append(command)
-
-        for activation_quantizer in self._activation_quantizers:
-            for layer_statistics in layers_statistics:
-                # TODO: improve perfomance of matching
-                if layer_statistics.layer_name == activation_quantizer:
-                    parameters = self._calculate_activation_quantizer_parameters(layer_statistics,
-                                                                                 self.activation_quantizer_config)
-                    command = ONNXQuantizerInsertionCommand(activation_quantizer, parameters)
-                    transformation_commands.append(command)
-
-        return transformation_commands
-
-    def _get_default_qconfig(self) -> QuantizerConfig:
-        qconfig = deepcopy(self.DEFAULT_QCONFIG)
-        return qconfig
 
     def _get_quantizer_setup(self, compressed_model: CompressedModel):
         nncf_graph = compressed_model.nncf_graph

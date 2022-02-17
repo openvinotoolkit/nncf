@@ -37,8 +37,25 @@ class ONNXBiasCorrectionAlgorithm(BiasCorrectionAlgorithm):
         self.engine = engine
         self.parameters = parameters
 
-    def apply(self):
-        pass
+    def apply(self, model, layers_statistics, model_transformer):
+        from nncf.experimental.onnx.graph.transformations.layout import ONNXTransformationLayout
+        transformation_layout = ONNXTransformationLayout()
+
+        original_model = self.compressed_model.original_model
+        quantized_model = self.compressed_model.compressed_model
+        layers_with_biases = self._get_layers_with_biases()
+
+        layers_bias_shifts = {}
+        for layer in layers_with_biases:
+            bias_shift = self._get_output_of_layer(layer, original_model, quantized_model)
+            layers_bias_shifts[layer] = bias_shift
+            command = ONNXUpdateBias(layer.layer_name, bias_shift)
+            transformation_layout.register(command)
+
+            model_transformer._apply_transformation(command)
+            onnx.save(self.compressed_model.compressed_model, '/home/aleksei/tmp/onnx/onnx_ptq_api/test.onnx')
+
+        return model
 
     def get_layers_for_statistics(self, *args) -> List[LayerStatistic]:
         return self._get_outputs_with_biases()
@@ -100,24 +117,3 @@ class ONNXBiasCorrectionAlgorithm(BiasCorrectionAlgorithm):
             print(layer_output_from_model.shape)
             print(quantized_layer_output.shape)
             return np.mean(layer_output_from_model - quantized_layer_output, axis=(0, 2, 3))
-
-    def run(self, compressed_model, model_transformer):
-        output = []
-        from nncf.experimental.onnx.graph.transformations.layout import ONNXTransformationLayout
-        transformation_layout = ONNXTransformationLayout()
-
-        original_model = self.compressed_model.original_model
-        quantized_model = self.compressed_model.compressed_model
-        layers_with_biases = self._get_layers_with_biases()
-
-        layers_bias_shifts = {}
-        for layer in layers_with_biases:
-            bias_shift = self._get_output_of_layer(layer, original_model, quantized_model)
-            layers_bias_shifts[layer] = bias_shift
-            command = ONNXUpdateBias(layer.layer_name, bias_shift)
-            transformation_layout.register(command)
-
-            model_transformer._apply_transformation(command)
-            onnx.save(self.compressed_model.compressed_model, '/home/aleksei/tmp/onnx/onnx_ptq_api/test.onnx')
-
-        return output

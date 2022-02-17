@@ -84,6 +84,3 @@ class QuantizerRangeFinderAlgorithm(Algorithm, ABC):
                                   activation_quantizer_config: QuantizerConfig) -> List[MinMaxLayerStatistic]:
         pass
 
-    @abstractmethod
-    def get_transformation_commands(self, layers_statistics):
-        pass

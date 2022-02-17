@@ -12,6 +12,8 @@
 """
 
 from typing import List
+from typing import Deque
+from collections import deque
 
 from nncf.common.graph.transformations.layout import TransformationLayout
 
@@ -46,11 +48,10 @@ class PostTrainingQuantization(Algorithm):
         self.number_samples = quantization_parameters.number_samples
 
         self.algorithms_to_created = quantization_parameters.algorithms
-        self.algorithms = []
+        self.algorithms = deque()
 
     def apply(self, compressed_model: CompressedModel, engine: Engine) -> CompressedModel:
         model_transformer = self._create_model_transformer(compressed_model)
-        transformation_layout = self._create_transformation_layout(compressed_model)
         statistics_collector = self._create_statistics_collector(compressed_model, engine)
         self.algorithms = self._create_algorithms(compressed_model, engine)
 
@@ -64,14 +65,9 @@ class PostTrainingQuantization(Algorithm):
         layers_statistics = statistics_collector.collect_statistics(layers_to_collect_statistics,
                                                                     self.number_samples)
 
-        # commands from RangeFinder
-        transformation_commands = self.algorithms[0].get_transformation_commands(layers_statistics)
-        for transformation_command in transformation_commands:
-            transformation_layout.register(transformation_command)
-
-        model_transformer.transform(compressed_model, transformation_layout)
-
-        self.algorithms[1].run(compressed_model, model_transformer)
+        while len(self.algorithms) > 0:
+            algorithm = self.algorithms.popleft()
+            compressed_model = algorithm.apply(compressed_model, layers_statistics, model_transformer)
 
         return compressed_model
 
@@ -90,8 +86,8 @@ class PostTrainingQuantization(Algorithm):
             from nncf.experimental.onnx.graph.transformations.layout import ONNXTransformationLayout
             return ONNXTransformationLayout()
 
-    def _create_algorithms(self, compressed_model: CompressedModel, engine: Engine) -> List[Algorithm]:
-        output = []
+    def _create_algorithms(self, compressed_model: CompressedModel, engine: Engine) -> Deque[Algorithm]:
+        output = deque()
         if compressed_model.model_backend == BACKEND.ONNX:
             from nncf.experimental.onnx.algorithms.quantizer_range_finder import ONNXQuantizerRangeFinderAlgorithm
             from nncf.experimental.onnx.algorithms.bias_correction import ONNXBiasCorrectionAlgorithm
