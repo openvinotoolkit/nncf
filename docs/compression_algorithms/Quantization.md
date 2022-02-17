@@ -364,12 +364,14 @@ sparsity and filter pruning algorithms. It can be enabled by setting a non-zero 
     },
     "quantize_inputs": true, // Whether the model inputs should be immediately quantized prior to any other model operations."
     "scope_overrides": { // This option is used to specify overriding quantization constraints for specific scope, e.g. in case you need to quantize a single operation differently than the rest of the model.
-        "{re}.*InvertedResidual.*": {
-            "mode": "symmetric", // Mode of quantization
-            "bits": 4, // Bitwidth to quantize to.
-            "signed": true, // Whether to use signed or unsigned input/output values for quantization. If specified as unsigned and the input values during initialization have differing signs, will reset to performing signed quantization instead.
-            "per_channel": false // Whether to quantize inputs per channel (i.e. per 0-th dimension for weight quantization,and per 1-st dimension for activation quantization)
-        }
+    	"activations": {
+		"{re}.*InvertedResidual.*": {
+		    "mode": "symmetric", // Mode of quantization
+		    "bits": 4, // Bitwidth to quantize to.
+		    "signed": true, // Whether to use signed or unsigned input/output values for quantization. If specified as unsigned and the input values during initialization have differing signs, will reset to performing signed quantization instead.
+		    "per_channel": false // Whether to quantize inputs per channel (i.e. per 0-th dimension for weight quantization,and per 1-st dimension for activation quantization)
+		}
+	}
     },
 
     // A list of model control flow graph node scopes to be ignored for this operation - functions as a 'denylist'. Optional.

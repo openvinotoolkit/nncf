@@ -20,9 +20,11 @@
     "compression": {
         "algorithm": "quantization",
         "scope_overrides": {
-            "{re}RMBlock\\[[0-9]*\\]/ELU\\[activation\\]": {
-                "signed": true
-            }
+		"activations": {
+			    "{re}RMBlock\\[[0-9]*\\]/ELU\\[activation\\]": {
+				"signed": true
+			    }
+		}
         }
     }
 }
