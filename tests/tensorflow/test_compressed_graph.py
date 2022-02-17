@@ -445,8 +445,6 @@ class TestModelsGraph:
         get_model_name(m) for m in get_test_models_desc('filter_pruning')])
     def test_pruning_network(self, desc: ModelDesc, _pruning_case_config):
         model = desc.model_builder(input_shape=tuple(desc.input_sample_sizes[1:]))
-        if model.name != 'inception_v3':
-            return
         config = get_basic_filter_pruning_config(desc.input_sample_sizes)
         compressed_model, _ = create_compressed_model_and_algo_for_test(model, config, force_no_init=True)
 
