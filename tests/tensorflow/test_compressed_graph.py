@@ -232,19 +232,6 @@ SKIP_MAP = {
 }
 
 
-gpu_available = len(tf.config.list_physical_devices('GPU')) > 0
-if gpu_available:
-    SKIP_MAP['quantization'].update({'inception_v3_cpu': pytest.mark.skip(reason='cpu version of the graph')})
-    SKIP_MAP['magnitude_sparsity'].update({'inception_v3_cpu': pytest.mark.skip(reason='cpu version of the graph')})
-    SKIP_MAP['filter_pruning'].update({'inception_v3_cpu': pytest.mark.skip(reason='cpu version of the graph')})
-    SKIP_MAP['rb_sparsity'].update({'inception_v3_cpu': pytest.mark.skip(reason='cpu version of the graph')})
-else:
-    SKIP_MAP['quantization'].update({'inception_v3_gpu': pytest.mark.skip(reason='gpu version of the graph')})
-    SKIP_MAP['magnitude_sparsity'].update({'inception_v3_gpu': pytest.mark.skip(reason='gpu version of the graph')})
-    SKIP_MAP['filter_pruning'].update({'inception_v3_gpu': pytest.mark.skip(reason='gpu version of the graph')})
-    SKIP_MAP['rb_sparsity'].update({'inception_v3_gpu': pytest.mark.skip(reason='gpu version of the graph')})
-
-
 def get_test_models_desc(algorithm):
     def ref_name(name):
         # Reason: graph_def change cond_true and cond_false function names
@@ -263,14 +250,7 @@ def get_test_models_desc(algorithm):
             ModelDesc(ref_name('inception_resnet_v2.pb'), test_models.InceptionResNetV2, [1, 75, 75, 3]),
             marks=SKIP_MAP[algorithm].get('inception_resnet_v2', ())
         ),
-        pytest.param(
-            ModelDesc(ref_name('inception_v3_cpu.pb'), test_models.InceptionV3, [1, 75, 75, 3]),
-            marks=SKIP_MAP[algorithm].get('inception_v3_cpu', ())
-        ),
-        pytest.param(
-            ModelDesc(ref_name('inception_v3_gpu.pb'), test_models.InceptionV3, [1, 75, 75, 3]),
-            marks=SKIP_MAP[algorithm].get('inception_v3_gpu', ())
-        ),
+        ModelDesc('inception_v3.dot', test_models.InceptionV3, [1, 75, 75, 3]),
         ModelDesc(ref_name('mobilenet_v1.pb'), test_models.MobileNet, [1, 128, 128, 3]),
         ModelDesc(ref_name('mobilenet_v2.pb'), test_models.MobileNetV2, [1, 96, 96, 3]),
         pytest.param(
