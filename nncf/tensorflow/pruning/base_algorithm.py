@@ -41,7 +41,6 @@ from nncf.tensorflow.graph.transformations.commands import TFLayerWeight
 from nncf.tensorflow.graph.transformations.commands import TFInsertionCommand
 from nncf.tensorflow.graph.transformations.layout import TFTransformationLayout
 from nncf.tensorflow.graph.utils import get_layer_identifier
-from nncf.tensorflow.graph.utils import collect_wrapped_layers
 from nncf.tensorflow.graph.utils import get_nncf_operations
 from nncf.tensorflow.tensor import TFNNCFTensor
 from nncf.tensorflow.pruning.tensor_processor import TFNNCFPruningTensorProcessor
