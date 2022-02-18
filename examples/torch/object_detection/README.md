@@ -11,13 +11,9 @@ This sample demonstrates DL model compression capabailites for object detection 
 
 ## Installation
 
-At this point it is assumed that you have already installed nncf
+At this point it is assumed that you have already installed nncf. You can find information on downloading nncf [here](https://github.com/openvinotoolkit/nncf#user-content-installation).  
 
-```
-pip install nncf
-```
-
-To work with the sample you should install the corresponding Python package dependencies
+To work with the sample you should install the corresponding Python package dependencies:
 
 ```
 pip install -r examples/torch/requirements.txt
@@ -27,7 +23,8 @@ pip install -r examples/torch/requirements.txt
 This scenario demonstrates quantization with fine-tuning of SSD300 on VOC dataset.
 
 #### Dataset preparation
-- Download and extract VOC2007 and VOC2012 train/val and test data + devkit from [here](https://pjreddie.com/projects/pascal-voc-dataset-mirror/)
+- Download and extract in one folder VOC2007 and VOC2012 train/val and test data from [here](https://pjreddie.com/projects/pascal-voc-dataset-mirror/)
+- In the future, <path_to_dataset> means the path to the VOCdevkit folder.
 
 #### Run object detection sample
 - If you did not install the package then add the repository root folder to the `PYTHONPATH` environment variable
@@ -50,7 +47,7 @@ If you want to validate an FP32 model checkpoint, make sure the compression algo
 
 #### Export compressed model
 To export trained model to ONNX format use the following command:
-`python main.py -m test --config configs/ssd300_vgg_voc_int8.json --data <path_to_dataset> --resume <path_to_compressed_model_checkpoint> --to-onnx=../../results/ssd300_int8.onnx`
+`python main.py -m export --config configs/ssd300_vgg_voc_int8.json --data <path_to_dataset> --resume <path_to_compressed_model_checkpoint> --to-onnx=../../results/ssd300_int8.onnx`
 
 #### Export to OpenVINO Intermediate Representation (IR)
 
