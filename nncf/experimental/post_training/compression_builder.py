@@ -13,10 +13,12 @@
 
 from typing import TypeVar
 
+from collections import deque
+
 from nncf.experimental.post_training.compressed_model import CompressedModel
 from nncf.experimental.post_training.api.engine import Engine
 from nncf.experimental.post_training.api.dataloader import DataLoader
-from nncf.experimental.post_training.algorithm import PostTrainingAlgorithm
+from nncf.experimental.post_training.algorithms import Algorithm
 
 from nncf.experimental.post_training.backend import BACKEND
 
@@ -29,9 +31,9 @@ class CompressionBuilder:
     """
 
     def __init__(self):
-        self.algorithms = []
+        self.algorithms = deque()
 
-    def add_algorithm(self, algorithm: PostTrainingAlgorithm, ) -> None:
+    def add_algorithm(self, algorithm: Algorithm) -> None:
         self.algorithms.append(algorithm)
 
     def _create_engine(self, compressed_model: CompressedModel, dataloader: DataLoader) -> Engine:

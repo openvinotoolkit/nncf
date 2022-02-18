@@ -14,12 +14,15 @@ from abc import ABC
 from abc import abstractmethod
 
 from typing import List
+from copy import deepcopy
 
 from nncf.common.quantization.structs import QuantizerConfig
+from nncf.common.quantization.structs import QuantizationMode
 from nncf.experimental.post_training.compressed_model import CompressedModel
 from nncf.experimental.post_training.statistics.statistics_collector import MinMaxLayerStatistic
 from nncf.experimental.post_training.algorithms import Algorithm
 from nncf.experimental.post_training.algorithms import AlgorithmParameters
+from nncf.experimental.post_training.graph.model_transformer import ModelTransformer
 
 from nncf.experimental.post_training.statistics.statistics_collector import WEIGHTS_ESTIMATOR_FUNCTION
 from nncf.experimental.post_training.statistics.statistics_collector import ACTIVATIONS_ESTIMATOR_FUNCTION
@@ -31,20 +34,23 @@ from nncf.experimental.post_training.statistics.statistics_collector import STAT
 
 
 class QuantizerRangeFinderParameters(AlgorithmParameters):
-    def __init__(self, weight_min_func: WEIGHTS_ESTIMATOR_FUNCTION,
+    def __init__(self,
+                 weight_quantizer_config: QuantizerConfig,
+                 activation_quantizer_config: QuantizerConfig,
+                 weight_min_func: WEIGHTS_ESTIMATOR_FUNCTION,
                  weight_max_func: WEIGHTS_ESTIMATOR_FUNCTION,
                  activation_min_func: ACTIVATIONS_ESTIMATOR_FUNCTION,
                  activation_max_func: ACTIVATIONS_ESTIMATOR_FUNCTION,
                  batch_aggregation_min_func: BATCH_AGGREGATION_FUNCTION,
                  batch_aggregation_max_func: BATCH_AGGREGATION_FUNCTION,
                  statistics_aggregator_func: STATISTICS_AGGREGATION_FUNCTION,
-                 weight_quantizer_config: QuantizerConfig,
-                 activation_quantizer_config: QuantizerConfig,
                  # target_device: DEVICE,
                  target_device,
                  quatize_outputs: bool = False,
                  ignored_scopes: List[str] = None,
                  ):
+        self.weight_quantizer_config = weight_quantizer_config
+        self.activation_quantizer_config = activation_quantizer_config
         self.weight_min_func = weight_min_func
         self.weight_max_func = weight_max_func
         self.activation_min_func = activation_min_func
@@ -52,8 +58,6 @@ class QuantizerRangeFinderParameters(AlgorithmParameters):
         self.batch_aggregation_min_func = batch_aggregation_min_func
         self.batch_aggregation_max_func = batch_aggregation_max_func
         self.statistics_aggregator_func = statistics_aggregator_func
-        self.weight_quantizer_config = weight_quantizer_config
-        self.activation_quantizer_config = activation_quantizer_config
         self.ignored_scopes = ignored_scopes
         self.target_device = target_device
         self.quantize_outputs = quatize_outputs
@@ -64,9 +68,15 @@ class QuantizerRangeFinderAlgorithm(Algorithm, ABC):
 
     """
 
-    def __init__(self, compressed_model: CompressedModel, engine, parameters: QuantizerRangeFinderParameters):
-        self.compressed_model = compressed_model
-        self.engine = engine
+    DEFAULT_QCONFIG = QuantizerConfig(num_bits=8,
+                                      mode=QuantizationMode.SYMMETRIC,
+                                      signedness_to_force=None,
+                                      per_channel=False)
+
+    def __init__(self, model_transformer: ModelTransformer, statistics_collector,
+                 parameters: QuantizerRangeFinderParameters):
+        self.model_transformer = model_transformer
+        self.statistics_collector = statistics_collector
         self.parameters = parameters
         self._determine_aggregation_func()
         self.weight_quantizer_config = parameters.weight_quantizer_config
@@ -75,12 +85,18 @@ class QuantizerRangeFinderAlgorithm(Algorithm, ABC):
         self.target_device = parameters.target_device
         self.quantize_outputs = parameters.quantize_outputs
 
+    def _get_default_qconfig(self) -> QuantizerConfig:
+        qconfig = deepcopy(self.DEFAULT_QCONFIG)
+        return qconfig
+
     @abstractmethod
     def _determine_aggregation_func(self):
-        pass
+        """
+
+        """
 
     @abstractmethod
-    def get_layers_for_statistics(self, weight_quantizer_config: QuantizerConfig,
-                                  activation_quantizer_config: QuantizerConfig) -> List[MinMaxLayerStatistic]:
-        pass
+    def get_layers_for_statistics(self, compressed_model: CompressedModel) -> List[MinMaxLayerStatistic]:
+        """
 
+        """

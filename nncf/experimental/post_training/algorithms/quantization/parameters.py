@@ -80,6 +80,8 @@ class PostTrainingQuantizationParameters(AlgorithmParameters):
         )
 
         self.algorithms = {PostTrainingAlgorithms.QuantizerRangeFinder: QuantizerRangeFinderParameters(
+            weight_quantizer_config=self.weight_quantizer_config,
+            activation_quantizer_config=self.activation_quantizer_config,
             weight_min_func=weight_range_estimator.min_estimator_function,
             weight_max_func=weight_range_estimator.max_estimator_function,
             activation_min_func=activation_range_estimator.min_estimator_function,
@@ -87,12 +89,24 @@ class PostTrainingQuantizationParameters(AlgorithmParameters):
             batch_aggregation_min_func=activation_range_estimator.min_batch_aggregator,
             batch_aggregation_max_func=activation_range_estimator.max_batch_aggregator,
             statistics_aggregator_func=statistics_aggregation_function.statistics_aggregation_func,
-            weight_quantizer_config=self.weight_quantizer_config,
-            activation_quantizer_config=self.activation_quantizer_config,
             ignored_scopes=ignored_scopes,
             target_device=target_device
-        ),
-            PostTrainingAlgorithms.BiasCorrection: BiasCorrectionAlgorithmParameters()}  # type: Dict[InitializationAlgorithms, InitizalizationParameters]
+        )}
+
+        # self.algorithms = {PostTrainingAlgorithms.QuantizerRangeFinder: QuantizerRangeFinderParameters(
+        #     weight_quantizer_config=self.weight_quantizer_config,
+        #     activation_quantizer_config=self.activation_quantizer_config,
+        #     weight_min_func=weight_range_estimator.min_estimator_function,
+        #     weight_max_func=weight_range_estimator.max_estimator_function,
+        #     activation_min_func=activation_range_estimator.min_estimator_function,
+        #     activation_max_func=activation_range_estimator.max_estimator_function,
+        #     batch_aggregation_min_func=activation_range_estimator.min_batch_aggregator,
+        #     batch_aggregation_max_func=activation_range_estimator.max_batch_aggregator,
+        #     statistics_aggregator_func=statistics_aggregation_function.statistics_aggregation_func,
+        #     ignored_scopes=ignored_scopes,
+        #     target_device=target_device
+        # ),
+        #     PostTrainingAlgorithms.BiasCorrection: BiasCorrectionAlgorithmParameters()}  # type: Dict[InitializationAlgorithms, InitizalizationParameters]
 
         self.number_samples = number_samples
         self.target_device = target_device

@@ -14,10 +14,8 @@ class PostTrainingAlgorithms(Enum):
 
 
 class AlgorithmParameters(ABC):
-    def __init__(self):
-        """
-
-        """
+    """
+    """
 
 
 class Algorithm(ABC):

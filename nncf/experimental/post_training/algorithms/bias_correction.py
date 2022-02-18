@@ -16,9 +16,11 @@ from typing import List
 from abc import ABC
 from abc import abstractmethod
 
-from nncf.experimental.post_training.statistics.statistics_collector import LayerStatistic
+from nncf.experimental.post_training.statistics.statistics_collector import MinMaxLayerStatistic
+from nncf.experimental.post_training.compressed_model import CompressedModel
 from nncf.experimental.post_training.algorithms import Algorithm
 from nncf.experimental.post_training.algorithms import AlgorithmParameters
+from nncf.experimental.post_training.graph.model_transformer import ModelTransformer
 
 
 class BiasCorrectionAlgorithmParameters(AlgorithmParameters):
@@ -26,10 +28,15 @@ class BiasCorrectionAlgorithmParameters(AlgorithmParameters):
 
 
 class BiasCorrectionAlgorithm(Algorithm, ABC):
-    @abstractmethod
-    def get_layers_for_statistics(self) -> List[LayerStatistic]:
-        pass
+
+    def __init__(self, model_transformer: ModelTransformer, statistics_collector,
+                 parameters: BiasCorrectionAlgorithmParameters):
+        self.model_transformer = model_transformer
+        self.statistics_collector = statistics_collector
+        self.parameters = parameters
 
     @abstractmethod
-    def get_transformation_commands(self, layers_statistics):
-        pass
+    def get_layers_for_statistics(self, compressed_model: CompressedModel) -> List[MinMaxLayerStatistic]:
+        """
+
+        """

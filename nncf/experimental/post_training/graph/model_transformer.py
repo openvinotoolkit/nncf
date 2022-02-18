@@ -15,13 +15,13 @@ from abc import ABC
 from abc import abstractmethod
 
 from nncf.common.graph.transformations.layout import TransformationLayout
-from nncf.experimental.onnx.compressed_model import CompressedModel
+from nncf.experimental.post_training.compressed_model import CompressedModel
 
 
 class ModelTransformer(ABC):
 
     @abstractmethod
-    def transform(self, model: CompressedModel, transformation_layout: TransformationLayout):
+    def transform(self, compressed_model: CompressedModel, transformation_layout: TransformationLayout):
         """
 
         """

@@ -11,7 +11,6 @@
  limitations under the License.
 """
 
-from typing import List
 from typing import Deque
 from collections import deque
 
@@ -32,10 +31,6 @@ class PostTrainingQuantization(Algorithm):
     1) QuantizerRangeFinder
     2) BiasCorrection
 
-    Post-Training Quantization algorithm makes 3 main things:
-        1) Find the transformations needed to apply to the model.
-        2) Apply these transformations.
-        3) Initialize the transformed model.
     """
 
     def __init__(self,
@@ -53,21 +48,17 @@ class PostTrainingQuantization(Algorithm):
     def apply(self, compressed_model: CompressedModel, engine: Engine) -> CompressedModel:
         model_transformer = self._create_model_transformer(compressed_model)
         statistics_collector = self._create_statistics_collector(compressed_model, engine)
-        self.algorithms = self._create_algorithms(compressed_model, engine)
+        self.algorithms = self._create_algorithms(compressed_model, model_transformer, statistics_collector)
 
-        layers_to_collect_statistics = []  # List[MinMaxLayerStatistic]
-        for initialization_algorithm in self.algorithms:
-            # TODO: potentially could be intersection in layers_to_collect_statistics
-            layers_to_collect_statistics.extend(
-                initialization_algorithm.get_layers_for_statistics(self.weight_quantizer_config,
-                                                                   self.activation_quantizer_config))
+        for algorithm in self.algorithms:
+            layers_to_collect_statistics = algorithm.get_layers_for_statistics(compressed_model)
+            statistics_collector.register_layer_statistics(layers_to_collect_statistics)
 
-        layers_statistics = statistics_collector.collect_statistics(layers_to_collect_statistics,
-                                                                    self.number_samples)
+        statistics_collector.collect_statistics(compressed_model, self.number_samples)
 
         while len(self.algorithms) > 0:
             algorithm = self.algorithms.popleft()
-            compressed_model = algorithm.apply(compressed_model, layers_statistics, model_transformer)
+            compressed_model = algorithm.apply(compressed_model, engine)
 
         return compressed_model
 
@@ -79,21 +70,23 @@ class PostTrainingQuantization(Algorithm):
     def _create_statistics_collector(self, compressed_model: CompressedModel, engine: Engine):
         if compressed_model.model_backend == BACKEND.ONNX:
             from nncf.experimental.onnx.statistics.statistics_collector import ONNXStatisticsCollector
-            return ONNXStatisticsCollector(compressed_model, engine)
+            return ONNXStatisticsCollector(engine)
 
     def _create_transformation_layout(self, compressed_model: CompressedModel) -> TransformationLayout:
         if compressed_model.model_backend == BACKEND.ONNX:
             from nncf.experimental.onnx.graph.transformations.layout import ONNXTransformationLayout
             return ONNXTransformationLayout()
 
-    def _create_algorithms(self, compressed_model: CompressedModel, engine: Engine) -> Deque[Algorithm]:
+    def _create_algorithms(self, compressed_model: CompressedModel, model_transformer: ModelTransformer,
+                           statistics_collector) -> Deque[Algorithm]:
         output = deque()
         if compressed_model.model_backend == BACKEND.ONNX:
             from nncf.experimental.onnx.algorithms.quantizer_range_finder import ONNXQuantizerRangeFinderAlgorithm
             from nncf.experimental.onnx.algorithms.bias_correction import ONNXBiasCorrectionAlgorithm
             for algorithm, parameters in self.algorithms_to_created.items():
                 if algorithm == PostTrainingAlgorithms.QuantizerRangeFinder:
-                    output.append(ONNXQuantizerRangeFinderAlgorithm(compressed_model, engine, parameters))
+                    output.append(
+                        ONNXQuantizerRangeFinderAlgorithm(model_transformer, statistics_collector, parameters))
                 elif algorithm == PostTrainingAlgorithms.BiasCorrection:
-                    output.append(ONNXBiasCorrectionAlgorithm(compressed_model, engine, parameters))
+                    output.append(ONNXBiasCorrectionAlgorithm(model_transformer, statistics_collector, parameters))
         return output

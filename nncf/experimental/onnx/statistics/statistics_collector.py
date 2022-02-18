@@ -9,16 +9,16 @@ from nncf.experimental.post_training.statistics.statistics_collector import Stat
 from nncf.experimental.post_training.statistics.statistics_collector import MinMaxLayerStatistic
 
 from nncf.experimental.onnx.sampler import create_onnx_sampler
+from nncf.experimental.onnx.engine import ONNXEngine
 
 
 class ONNXStatisticsCollector(StatisticsCollector):
-    def __init__(self, compressed_model, engine):
-        super().__init__(compressed_model, engine)
+    def __init__(self, engine: ONNXEngine):
+        super().__init__(engine)
 
-    def collect_statistics(self, layers_statistics: List[MinMaxLayerStatistic], num_iters: int) -> List[
-        MinMaxLayerStatistic]:
-        layers_to_collect_statistics = [layer_statistic.layer_name for layer_statistic in layers_statistics]
-        onnx_model = self.compressed_model.original_model
+    def collect_statistics(self, compressed_model, num_iters: int) -> None:
+        layers_to_collect_statistics = [layer_statistic.layer_name for layer_statistic in self.layers_statistics]
+        onnx_model = compressed_model.original_model
         model_output = list(enumerate_model_node_outputs(onnx_model))[-1]
         model_with_intermediate_outputs = select_model_inputs_outputs(onnx_model,
                                                                       outputs=[*layers_to_collect_statistics,
@@ -33,11 +33,9 @@ class ONNXStatisticsCollector(StatisticsCollector):
                     break
                 _input, target = sample
                 output = self.engine.infer(_input)
-                self._agregate_statistics(output, layers_statistics)
+                self._agregate_statistics(output, self.layers_statistics)
                 if self.is_calculate_metric:
                     self._calculate_metric(target)
-
-        return layers_statistics
 
     def _agregate_statistics(self, output, layers_statistics: List[MinMaxLayerStatistic]):
         for layer_statistic in layers_statistics:

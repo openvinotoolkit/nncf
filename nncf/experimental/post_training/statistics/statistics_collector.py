@@ -97,8 +97,7 @@ class LayerStatistic(ABC):
 
 
 class StatisticsCollector(ABC):
-    def __init__(self, compressed_model: CompressedModel, engine: Engine):
-        self.compressed_model = compressed_model
+    def __init__(self, engine: Engine):
         self.engine = engine
         self.is_calculate_metric = False
         self.layers_statistics = []  # type: List[MinMaxLayerStatistic]
@@ -106,3 +105,7 @@ class StatisticsCollector(ABC):
     @abstractmethod
     def collect_statistics(self, layers_to_collect_statistics: List[str], num_iters: int) -> List[MinMaxLayerStatistic]:
         pass
+
+    def register_layer_statistics(self, layer_statistics: List[MinMaxLayerStatistic]):
+        # TODO: potentially could be intersection in layers_to_collect_statistics
+        self.layers_statistics.extend(layer_statistics)

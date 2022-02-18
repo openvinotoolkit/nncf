@@ -57,12 +57,14 @@ class CompressedModel:
             import onnx
             from onnx import version_converter
             from nncf.experimental.onnx.helper import add_input_from_initializer
+            from nncf.experimental.onnx.graph.onnx_graph import ONNXGraph
             onnx.checker.check_model(model)
             print(f'Original opset = {model.opset_import[0].version}')
 
             add_input_from_initializer(model)
             infered_model = onnx.shape_inference.infer_shapes(model, strict_mode=True)
             self.original_model = version_converter.convert_version(infered_model, 13)
+            self.original_onnx_graph = ONNXGraph(self.original_model)
 
             onnx.checker.check_model(self.original_model)
             print(f'Successfully converted the model to the opset = {self.original_model.opset_import[0].version}')

@@ -24,7 +24,6 @@ from nncf.experimental.post_training.compressed_model import CompressedModel
 
 from nncf.experimental.onnx.graph.transformations.commands import ONNXQuantizerInsertionCommand
 from nncf.experimental.onnx.graph.transformations.commands import ONNXUpdateBias
-from nncf.experimental.onnx.graph.transformations.commands import ONNXInsertionCommand
 
 
 class ONNXModelTransformer(ModelTransformer):
@@ -40,19 +39,13 @@ class ONNXModelTransformer(ModelTransformer):
 
     def _apply_transformation(self, transformation: TransformationCommand):
         if isinstance(transformation, ONNXQuantizerInsertionCommand):
-            self._insert_quantizer(transformation)
+            self._insert_quantizer_dequantizer(transformation)
             self.model.transformations.append(transformation)
         if isinstance(transformation, ONNXUpdateBias):
             self._update_bias(transformation)
             self.model.transformations.append(transformation)
 
     def _update_bias(self, transformation: ONNXUpdateBias):
-
-        def find_node_index(node_name, onnx_model):
-            for i, node in enumerate(onnx_model.graph.node):
-                if node.name == node_name:
-                    return i
-            return 0
 
         onnx_graph = ONNXGraph(self.model.compressed_model)
 
@@ -68,7 +61,6 @@ class ONNXModelTransformer(ModelTransformer):
         n = node.name
         outputs = node.output
         inputs = node.input
-        attrs = node.attribute
 
         node_inputs = [_input for _input in inputs]
 
@@ -94,77 +86,46 @@ class ONNXModelTransformer(ModelTransformer):
         )
         print(f'bias_name = {bias_name}')
 
-        i = find_node_index(n, self.model.compressed_model)
+        i = onnx_graph.get_node_index(n)
         self.model.compressed_model.graph.node.remove(node)
         self.model.compressed_model.graph.initializer.extend([onnx_bias])
         self.model.compressed_model.graph.node.insert(i, new_node)
 
-    def _insert_quantizer(self, transformation: ONNXInsertionCommand):
-        def find_node_index(node_name, onnx_model):
-            for i, node in enumerate(onnx_model.graph.node):
-                if node.name == node_name:
-                    return i
-            return 0
-
-        if isinstance(transformation.parameters[0], list):
-            per_channel = True
-        else:
-            per_channel = False
-
-        scale = transformation.parameters[0]
-        zero_points = transformation.parameters[1]
-        mode = transformation.parameters[2]
-
+    def _insert_quantizer_dequantizer(self, transformation: ONNXQuantizerInsertionCommand):
         target_point = transformation.target_point
+        scale = transformation.quantizer_parameters.scale
+        zero_point = transformation.quantizer_parameters.zero_point
+        mode = transformation.quantizer_parameters.mode
+
+        per_channel = True if isinstance(scale, list) else False
+
+        zero_point = [zero_point] if not isinstance(zero_point, list) else zero_point
+        tensor_type = onnx.TensorProto.UINT8 if mode == QuantizationMode.ASYMMETRIC else onnx.TensorProto.INT8
+        scale = [scale] if not isinstance(scale, list) else scale
+        axis = 0 if per_channel else None
 
         quantizer_name = 'QuantizeLinear_' + target_point
         dequantizer_name = 'DequantizeLinear_' + target_point
+        scale_tensor_name = 'scale_' + target_point
+        zero_point_tensor_name = 'zero_point_' + target_point
 
-        if per_channel:
-            onnx_scale = onnx.helper.make_tensor('scale_' + target_point, onnx.TensorProto.FLOAT, (len(scale),), scale)
-            if mode == QuantizationMode.ASYMMETRIC:
-                onnx_zero_point = onnx.helper.make_tensor('zero_point_' + target_point, onnx.TensorProto.UINT8,
-                                                          (len(scale),),
-                                                          zero_points)
-            else:
-                onnx_zero_point = onnx.helper.make_tensor('zero_point_' + target_point, onnx.TensorProto.INT8,
-                                                          (len(scale),),
-                                                          zero_points)
-            axis = 0
-            quantizer = onnx.helper.make_node(
-                'QuantizeLinear',
-                [target_point, 'scale_' + target_point, 'zero_point_' + target_point],  # inputs
-                ['q_output_' + target_point],  # outputs
-                name=quantizer_name,
-                axis=axis
-            )
-            dequantizer = onnx.helper.make_node(
-                'DequantizeLinear',
-                ['q_output_' + target_point, 'scale_' + target_point, 'zero_point_' + target_point],  # inputs
-                ['dq_output_' + target_point],  # outputs
-                name=dequantizer_name,
-                axis=axis,
-            )
-        else:
-            onnx_scale = onnx.helper.make_tensor('scale_' + target_point, onnx.TensorProto.FLOAT, [], [scale])
-            if mode == QuantizationMode.ASYMMETRIC:
-                onnx_zero_point = onnx.helper.make_tensor('zero_point_' + target_point, onnx.TensorProto.UINT8, [],
-                                                          [zero_points])
-            else:
-                onnx_zero_point = onnx.helper.make_tensor('zero_point_' + target_point, onnx.TensorProto.INT8, [],
-                                                          [zero_points])
-            quantizer = onnx.helper.make_node(
-                'QuantizeLinear',
-                [target_point, 'scale_' + target_point, 'zero_point_' + target_point],  # inputs
-                ['q_output_' + target_point],  # outputs
-                name=quantizer_name
-            )
-            dequantizer = onnx.helper.make_node(
-                'DequantizeLinear',
-                ['q_output_' + target_point, 'scale_' + target_point, 'zero_point_' + target_point],  # inputs
-                ['dq_output_' + target_point],  # outputs
-                name=dequantizer_name
-            )
+        onnx_scale = onnx.helper.make_tensor(scale_tensor_name, onnx.TensorProto.FLOAT, (len(scale),), scale)
+        onnx_zero_point = onnx.helper.make_tensor(zero_point_tensor_name, tensor_type, (len(scale),), zero_point)
+
+        quantizer = onnx.helper.make_node(
+            'QuantizeLinear',
+            [target_point, scale_tensor_name, zero_point_tensor_name],  # inputs
+            ['q_output_' + target_point],  # outputs
+            name=quantizer_name,
+            axis=axis
+        )
+        dequantizer = onnx.helper.make_node(
+            'DequantizeLinear',
+            ['q_output_' + target_point, scale_tensor_name, zero_point_tensor_name],  # inputs
+            ['dq_output_' + target_point],  # outputs
+            name=dequantizer_name,
+            axis=axis,
+        )
 
         # TODO:NEED TO ADJUST LOGIC FOR INCEPTION_v3
         onnx_graph = ONNXGraph(self.model.compressed_model)
@@ -174,8 +135,6 @@ class ONNXModelTransformer(ModelTransformer):
             print(e)
             # TODO:SKIP THE BAD NODE
             return
-        #     input_nodes = onnx_graph.get_nodes_by_output(target_point)
-        # finally:
 
         for node in input_nodes:
             for i, inp in enumerate(node.input):
@@ -184,6 +143,6 @@ class ONNXModelTransformer(ModelTransformer):
 
         self.model.compressed_model.graph.initializer.extend([onnx_scale])
         self.model.compressed_model.graph.initializer.extend([onnx_zero_point])
-        i = find_node_index(input_nodes[0].name, self.model.compressed_model)
-        self.model.compressed_model.graph.node.insert(i, quantizer)
-        self.model.compressed_model.graph.node.insert(i + 1, dequantizer)
+        insert_index = onnx_graph.get_node_index(input_nodes[0].name)
+        self.model.compressed_model.graph.node.insert(insert_index, quantizer)
+        self.model.compressed_model.graph.node.insert(insert_index + 1, dequantizer)

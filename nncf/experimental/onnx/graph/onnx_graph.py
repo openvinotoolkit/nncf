@@ -111,13 +111,19 @@ class ONNXGraph:
                 output.append(node)
         return output
 
-    def find_weight_input_in_module(self, node_name: str) -> ValueInfoProto:
+    def get_weight_input_in_module(self, node_name: str) -> ValueInfoProto:
         """
         Returns weight Initializaer of the mode with the name 'node_name'.
         """
         node_inputs = self.get_node_edges(node_name)['input']
         # TODO(kshpv): add search of input weight tensor
         return node_inputs[1]
+
+    def get_node_index(self, node_name: str):
+        for i, node in enumerate(self.get_all_nodes()):
+            if node.name == node_name:
+                return i
+        return -1
 
     def get_initializers_value(self, initializer_name: str) -> np.ndarray:
         """
