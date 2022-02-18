@@ -386,7 +386,7 @@ def calculate_in_out_channels_in_uniformly_pruned_model(pruning_groups: List[Clu
 
 
 def calculate_in_out_channels_by_masks(pruning_groups: List[Cluster[PrunedLayerInfoBase]],
-                                       num_of_sparse_elements_by_node: Dict[str, int],
+                                       num_of_sparse_elements_by_node: Dict[NNCFNodeName, int],
                                        full_input_channels: Dict[str, int],
                                        full_output_channels: Dict[str, int],
                                        pruning_groups_next_nodes: Dict[int, List[str]]) -> Tuple[Dict[str, int],

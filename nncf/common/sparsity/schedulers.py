@@ -291,7 +291,6 @@ class MultiStepSparsityScheduler(SparsityScheduler):
         self.schedule = MultiStepSchedule(
             sorted(params.get('multistep_steps', [90])), params.get('multistep_sparsity_levels', [0.1, 0.5]))
         self.target_level = self.schedule.values[-1]
-        self._current_level = None
 
     def epoch_step(self, next_epoch: Optional[int] = None) -> None:
         super().epoch_step(next_epoch)
