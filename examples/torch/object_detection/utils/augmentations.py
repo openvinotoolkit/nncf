@@ -104,8 +104,8 @@ class ToAbsoluteCoords:
         boxes[:, 2] *= width
         boxes[:, 1] *= height
         boxes[:, 3] *= height
-        for i in range(0, len(target)):
-            target[i]['bbox'] = boxes[i]
+        for i, x in enumerate(target):
+            x['bbox'] = boxes[i]
         return image, target
 
 
@@ -117,8 +117,8 @@ class ToPercentCoords:
         boxes[:, 2] /= width
         boxes[:, 1] /= height
         boxes[:, 3] /= height
-        for i in range(0, len(target)):
-            target[i]['bbox'] = boxes[i]
+        for i, x in enumerate(target):
+            x['bbox'] = boxes[i]
         return image, target
 
 
@@ -331,9 +331,9 @@ class RandomSampleCrop:
                 current_boxes[:, 2:] -= rect[:2]
 
                 target = target[:len(current_boxes)]
-                for i in range(0, len(target)):
-                    target[i]['bbox'] = current_boxes[i]
-                    target[i]['label_idx'] = current_labels[i]
+                for i, x in enumerate(target):
+                    x['bbox'] = current_boxes[i]
+                    x['label_idx'] = current_labels[i]
                 return current_image, target
 
 
@@ -368,8 +368,8 @@ class Expand:
             boxes = boxes.copy()
             boxes[:, :2] += (int(left), int(top))
             boxes[:, 2:] += (int(left), int(top))
-        for i in range(0, len(target)):
-            target[i]['bbox'] = boxes[i]
+        for i, x in enumerate(target):
+            x['bbox'] = boxes[i]
 
         return image, target
 
@@ -384,8 +384,8 @@ class RandomMirror:
             boxes = boxes.copy()
             boxes[:, 0::2] = width - boxes[:, 2::-2]
 
-        for i in range(0, len(target)):
-            target[i]['bbox'] = boxes[i]
+        for i, x in enumerate(target):
+            x['bbox'] = boxes[i]
 
         return image, target
 

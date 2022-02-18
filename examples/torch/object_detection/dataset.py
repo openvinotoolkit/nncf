@@ -12,9 +12,7 @@
 """
 
 from collections import namedtuple
-
 from PIL.Image import Image
-from torchvision.transforms import functional as F
 
 import cv2
 import numpy as np
