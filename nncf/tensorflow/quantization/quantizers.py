@@ -53,6 +53,7 @@ class TFQuantizerSpec(QuantizerSpec):
         """
         Returns a dictionary with Python data structures (dict, list, tuple, str, int, float, True, False, None) that
         represents state of the object.
+
         :return: state of the object
         """
         return {
@@ -68,6 +69,7 @@ class TFQuantizerSpec(QuantizerSpec):
     def from_state(cls, state: Dict[str, Any]) -> 'TFQuantizerSpec':
         """
         Creates the object from its state.
+
         :param state: Output of `get_state()` method.
         """
         return cls(**state)
@@ -77,9 +79,11 @@ class Quantizer(NNCFOperation):
     """
     Base class for all NNCF quantization operations.
     """
+
     def __init__(self, name: str):
         """
         Initializes internal NNCF quantization operation state.
+
         :param name: Unique operation name in algorithm scope.
         """
         super().__init__(name)
@@ -92,6 +96,7 @@ class Quantizer(NNCFOperation):
     def mode(self) -> str:
         """
         Returns mode of the quantization (symmetric or asymmetric).
+
         :return: The mode of the quantization.
         """
         raise NotImplementedError
@@ -100,6 +105,7 @@ class Quantizer(NNCFOperation):
         """
         The method applies quantization to the input tensor if the quantizer is enabled,
         otherwise, if the quantizer is disabled, the method returns the input tensor as is.
+
         :param inputs: Input tensor.
         :param weights: Quantizer's weights.
         :param training: True if operation called in training mode else False
@@ -115,6 +121,7 @@ class Quantizer(NNCFOperation):
     def quantize(self, inputs, weights, training):
         """
         Apply quantization to the input tensor.
+
         :param inputs: Input tensor.
         :param weights: Quantizer's weights.
         :param training: True if operation called in training mode else False
@@ -125,6 +132,7 @@ class Quantizer(NNCFOperation):
     def apply_range_initialization(self, weights, min_values, max_values, min_range=0.1, eps=0.01):
         """
         Initialize quantizer parameters using minimum and maximum weight values.
+
         :param weights: Quantizer's weights.
         :param min_values: Minimum weight values.
         :param max_values: Maximum weight values.
@@ -140,6 +148,7 @@ class Quantizer(NNCFOperation):
         the shapes: [d], [b, d] [b, h, w, d]. For this reason, Quantizer transforms any inputs tensor
         to one of the supported shapes, then quantizes and then transforms quantized tensor to
         the original inputs shape.
+
         :param input_shape: Shape of the input.
         :param channel_axes: Channel axes.
         """
@@ -258,6 +267,7 @@ class Quantizer(NNCFOperation):
     def get_quantizer_config(self) -> QuantizerConfig:
         """
         Used to get a current quantizer state in terms of QuantizerConfig objects.
+
         :return: A QuantizerConfig struct that corresponds to current state of the quantizer.
         """
         raise NotImplementedError
@@ -288,6 +298,7 @@ class SymmetricQuantizer(Quantizer):
     def signed(self, op_weights) -> bool:
         """
         Returns `True` for signed quantization, `False` for unsigned.
+
         :return: `True` for signed quantization, `False` for unsigned.
         """
         signed_var = op_weights['signed_var']

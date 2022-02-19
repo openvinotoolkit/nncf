@@ -298,7 +298,7 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
         self._bn_adapt_params = self._parse_bn_adapt_params()
 
     def _parse_range_init_params(self) -> TFRangeInitParams:
-        range_init_params = extract_range_init_params(self.config, self.name)
+        range_init_params = extract_range_init_params(self.config)
         return TFRangeInitParams(**range_init_params) if range_init_params is not None else None
 
     def _parse_group_params(self, quant_config: Dict, quantizer_group: QuantizerGroup) -> None:

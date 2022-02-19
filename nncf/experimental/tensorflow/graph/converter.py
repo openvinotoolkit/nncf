@@ -18,6 +18,7 @@ import tensorflow as tf
 
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph.layer_attributes import Dtype
+from nncf.tensorflow.graph.converter import TFModelConverter
 from nncf.tensorflow.graph.metatypes.matcher import get_op_metatype
 from nncf.tensorflow.graph.metatypes.common import ALL_LAYER_METATYPES_WITH_WEIGHTS
 from nncf.experimental.tensorflow.nncf_network import NNCFNetwork
@@ -87,7 +88,7 @@ class EdgeDesc:
         self.tensor_dtype = tensor_dtype
 
 
-class SubclassedConverter:
+class SubclassedConverter(TFModelConverter):
     """
     Converts the NNCF network to the NNCF graph.
     """
