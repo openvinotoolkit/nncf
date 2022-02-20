@@ -29,7 +29,6 @@ from nncf.common.graph.layer_attributes import Dtype
 from nncf.tensorflow.graph.converter import TFModelConverter
 from nncf.tensorflow.graph.metatypes.matcher import get_op_metatype
 from nncf.tensorflow.graph.metatypes.common import ALL_LAYER_METATYPES_WITH_WEIGHTS
-from nncf.experimental.tensorflow.nncf_network import NNCFNetwork
 from nncf.experimental.tensorflow.graph.node_attributes import TFNodeAttributes
 from nncf.experimental.tensorflow.graph.node_attributes import TFWeightedNodeAttributes
 
@@ -91,7 +90,7 @@ class TensorFlowGraphBuilder:
             )
 
         # Step 3: Convert the GraphDef to a tf.Graph
-        with tf.Graph().as_default() as graph:
+        with tf.Graph().as_default() as graph:  # pylint:disable=not-context-manager
             tf.graph_util.import_graph_def(graph_def, name='')
 
         return graph, input_tensors, output_tensors

@@ -49,6 +49,7 @@ from examples.tensorflow.classification.main import get_num_classes
 
 from examples.tensorflow.classification.main import resume_from_checkpoint
 from examples.tensorflow.classification.main import load_compression_state
+from examples.tensorflow.classification.main import load_checkpoint
 
 
 def get_input_signature(config):
@@ -207,7 +208,67 @@ def run(config):
 
 
 def export(config):
-    pass
+    model_fn, model_params = get_model(config.model,
+                                       input_shape=config.get('input_info', {}).get('sample_size', None),
+                                       num_classes=config.get('num_classes', get_num_classes(config.dataset)),
+                                       pretrained=config.get('pretrained', False),
+                                       weights=config.get('weights', None))
+
+    model = NNCFNetwork(model_fn(**model_params), get_input_signature(config.nncf_config))
+
+    compression_state = None
+    if config.ckpt_path:
+        compression_state = load_compression_state(config.ckpt_path)
+
+    compression_ctrl, compress_model = create_compressed_model(model, config.nncf_config, compression_state)
+
+    metrics = [
+        tf.keras.metrics.CategoricalAccuracy(name='acc@1'),
+        tf.keras.metrics.TopKCategoricalAccuracy(k=5, name='acc@5')
+    ]
+    loss_obj = tf.keras.losses.CategoricalCrossentropy(label_smoothing=0.1)
+
+    compress_model.compile(loss=loss_obj,
+                           metrics=metrics)
+    compress_model.summary()
+
+    checkpoint = tf.train.Checkpoint(model=compress_model,
+                                     compression_state=TFCompressionState(compression_ctrl))
+
+    if config.ckpt_path is not None:
+        load_checkpoint(checkpoint=checkpoint,
+                        ckpt_path=config.ckpt_path)
+
+    save_path, save_format = get_saving_parameters(config)
+    model.compute_output_shape(model.input_signature[0].shape.as_list())
+    compression_ctrl.export_model(save_path, save_format)
+    logger.info('Saved to {}'.format(save_path))
+
+
+def validate_saved_model(config, save_model_path: str):
+    model = tf.saved_model.load(save_model_path)
+    inference_fn = model.signatures['serving_default']
+
+    builders = get_dataset_builders(config, 1)
+    _, validation_builder = builders
+    validation_dataset = validation_builder.build()
+
+    metric = tf.keras.metrics.CategoricalAccuracy(name='acc@1')
+
+    print_freq = 1000
+
+    for batch_idx, batch in enumerate(validation_dataset):
+        x, y_true = batch
+        y_pred = inference_fn(x)['output_1']
+        metric.update_state(y_true, y_pred)
+
+        curr_num_examples = batch_idx + 1
+        if (curr_num_examples) % print_freq == 0:
+            logger.info(
+                f'{curr_num_examples} / {validation_builder.num_examples} samples were processed.'
+            )
+
+    logger.info(f'Acc@1: {metric.result()}')
 
 
 def main(argv):
