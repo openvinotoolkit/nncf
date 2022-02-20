@@ -55,7 +55,7 @@ def _get_tf_hw_fused_patterns() -> HWFusedPatterns:
 
     identity = GraphPattern()
     identity.add_node(type=TFIdentityOpMetatype.get_all_aliases(), label='IDENTITY')
-    linear_ops_maybe_followed_by_identity = linear_ops | (linear_ops + identity)
+    linear_ops_maybe_followed_by_identity = linear_ops | (linear_ops + identity) | matmul_biasadd | conv2d_biasadd
 
     agnostic_ops = GraphPattern()
     agnostic_ops.add_node(**QUANTIZATION_AGNOSTIC_OPERATIONS)
