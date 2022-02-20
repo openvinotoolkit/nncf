@@ -192,6 +192,9 @@ class TFPatcher:
             tf_op_wrapper = TensorFlowOpWrapper(fn, op_type_name)
             setattr(module, fn_name, tf_op_wrapper)
 
+            if hasattr(module, op_type_name):
+                setattr(module, op_type_name, tf_op_wrapper)
+
             # Wraps `fn` from the public API
             if hasattr(fn, '_tf_api_names'):
                 tf_api_names = getattr(fn, '_tf_api_names')

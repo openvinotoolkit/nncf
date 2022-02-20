@@ -227,8 +227,17 @@ class MatMulArgProvider(ArgProvider):
 
     def get_input(self, input_port_id: int, args, kwargs) -> tf.Tensor:
         check_port_id(input_port_id, min_port_id=0, max_port_id=1)
-        return args[input_port_id]
+
+        if len(args) == 0:
+            return kwargs['a' if input_port_id == 0 else 'b']
+        else:
+            return args[input_port_id]
 
     def set_input(self, input_port_id: int, value: tf.Tensor, args, kwargs):
         check_port_id(input_port_id, min_port_id=0, max_port_id=1)
-        return replace_value_by_index(args, input_port_id, value), kwargs
+
+        if len(args) == 0:
+            kwargs['a' if input_port_id == 0 else 'b'] = value
+            return args, kwargs
+        else:
+            return replace_value_by_index(args, input_port_id, value), kwargs
