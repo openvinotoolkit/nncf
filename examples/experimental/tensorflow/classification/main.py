@@ -60,7 +60,7 @@ def get_input_signature(config):
     if not sample_size:
         raise RuntimeError('sample_size must be provided in configuration file')
     shape = [None] + list(sample_size[1:])
-    return tf.TensorSpec(shape=shape, dtype=tf.float32)
+    return [tf.TensorSpec(shape=shape, dtype=tf.float32)]
 
 
 def run(config):
@@ -106,10 +106,8 @@ def run(config):
 
     with strategy.scope():
         model = NNCFNetwork(model_fn(**model_params), get_input_signature(nncf_config))
+        compression_ctrl, compress_model = create_compressed_model(model, nncf_config, compression_state)
 
-    compression_ctrl, compress_model = create_compressed_model(model, nncf_config, compression_state)
-
-    with strategy.scope():
         compression_callbacks = create_compression_callbacks(compression_ctrl, log_dir=config.log_dir)
 
         scheduler = build_scheduler(

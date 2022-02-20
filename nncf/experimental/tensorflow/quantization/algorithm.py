@@ -257,7 +257,7 @@ class QuantizationBuilderV2(QuantizationBuilder):
         return []
 
     def _get_quantizer_setup(self, model: NNCFNetwork) -> TFQuantizationSetupV2:
-        converter = SubclassedConverter(model)
+        converter = SubclassedConverter(model, model.input_signature)
         nncf_graph = converter.convert()
         # Find out which metatypes unsupported by the quantization algorithm
         for node in nncf_graph.get_all_nodes():

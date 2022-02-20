@@ -40,7 +40,7 @@ def _add_names_to_input_signature(input_signature: InputSignature):
         return _input_signature
 
     specs = []
-    for i, spec in input_signature:
+    for i, spec in enumerate(input_signature):
         specs.append(
             tf.TensorSpec.from_spec(
                 spec,
@@ -123,12 +123,8 @@ class NNCFNetwork(tf.keras.Model):
         :param point: The location where operations should be inserted.
         :param ops: List of the NNCF operarions.
         """
-        # TODO(andrey-churkin): Need to remove strategy here when example will be fixed
-        with self._model.distribute_strategy.scope():
-            ops_weights = {op.name: op.create_variables(self) for op in ops}
-
+        ops_weights = {op.name: op.create_variables(self) for op in ops}
         hook = Hook(ops, point, ops_weights)
-
         hooks = getattr(self, '_pre_hooks') if hook.is_pre_hook else getattr(self, '_post_hooks')
         # TODO(andrey-churkin): What we should do if the hook with the same `target_point`
         # already exists inside `hooks`? Is it a valid case?
@@ -155,8 +151,8 @@ class NNCFNetwork(tf.keras.Model):
         if not input_name_to_post_hook_map:
             return inputs
 
-        if isinstance(self.input_signature, tf.TensorSpec):
-            post_hook = input_name_to_post_hook_map[self.input_signature.name]
+        if isinstance(self.input_signature, list) and len(self.input_signature) == 1:
+            post_hook = input_name_to_post_hook_map[self.input_signature[0].name]
             return post_hook(inputs)
 
         if isinstance(self.input_signature, dict) and isinstance(inputs, dict):

@@ -11,10 +11,18 @@
  limitations under the License.
 """
 
-from typing import Optional, Dict, Any, List, Tuple
+from typing import Optional
+from typing import Dict
+from typing import Any
+from typing import List
+from typing import Tuple
 from collections import deque
 
 import tensorflow as tf
+from tensorflow.python.keras.saving import saving_utils as _saving_utils
+from tensorflow.lite.python.util import get_grappler_config as _get_grappler_config
+from tensorflow.lite.python.util import run_graph_optimizations as _run_graph_optimizations
+from tensorflow.python.framework import convert_to_constants as _convert_to_constants
 
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph.layer_attributes import Dtype
@@ -24,6 +32,69 @@ from nncf.tensorflow.graph.metatypes.common import ALL_LAYER_METATYPES_WITH_WEIG
 from nncf.experimental.tensorflow.nncf_network import NNCFNetwork
 from nncf.experimental.tensorflow.graph.node_attributes import TFNodeAttributes
 from nncf.experimental.tensorflow.graph.node_attributes import TFWeightedNodeAttributes
+
+
+class TensorFlowGraphBuilder:
+    """
+    Converts given Keras model to the tf.Graph.
+    """
+
+    def __init__(self, model: tf.keras.Model, input_signature: List[tf.TensorSpec]):
+        """
+        Initializes the `TensorFlowGraphBuilder`.
+
+        :param model: The instance of the `tf.keras.Model` class.
+        :param input_signature: A list of the `tf.TensorSpec` objects specifying the
+            inputs to the model.
+        """
+        self._model = model
+        self._input_signature = input_signature
+
+    def build(self, graph_optimizers: List[str]):
+        """
+        :param graph_optimizers: A list of the strings that represent
+            the list of optimizers.
+                - `constfold`
+                - `layout`
+                - `pruning`
+                - `arithmetic`
+                - `dependency`
+                - `function`
+            Look at the [guide](https://www.tensorflow.org/guide/graph_optimization) for more information.
+        :return: The optimized tf.Graph.
+        """
+        # Step 1: Freeze Keras model to frozen graph
+
+        func = _saving_utils.trace_model_call(self._model, self._input_signature)
+        concrete_func = func.get_concrete_function()
+        frozen_func, graph_def = \
+            _convert_to_constants.convert_variables_to_constants_v2_as_graph(concrete_func, lower_control_flow=False)
+        # List of input tensors
+        input_tensors = [tensor for tensor in frozen_func.inputs if tensor.dtype != tf.dtypes.resource]
+        # List of output tensors
+        output_tensors = frozen_func.outputs
+
+        # Step 2: Run a Grappler pass to oprimize the TensorFlow graph.
+
+        # Creates a ConfigProto for configuring Grappler
+        grappler_config = _get_grappler_config(graph_optimizers)
+        # Skip running grappler when there are no optimizers to run. If not,
+        # grappler will run with the default optimizer set and it will lead to
+        # causing an unexpected behavior.
+        if grappler_config.graph_options.rewrite_options.optimizers:
+            graph_def = _run_graph_optimizations(
+                graph_def,
+                input_tensors,
+                output_tensors,
+                config=grappler_config,
+                graph=frozen_func.graph
+            )
+
+        # Step 3: Convert the GraphDef to a tf.Graph
+        with tf.Graph().as_default() as graph:
+            tf.graph_util.import_graph_def(graph_def, name='')
+
+        return graph, input_tensors, output_tensors
 
 
 class NodeDesc:
@@ -90,31 +161,72 @@ class EdgeDesc:
 
 class SubclassedConverter(TFModelConverter):
     """
-    Converts the NNCF network to the NNCF graph.
+    Converts the Keras model, which was created via `tf.keras.Model`
+    subclass, to the `NNCFGraph`.
+
+    Uses the frozen TF graph for the provided model with applied
+    graph optimizers to create `NNCFGraph`
     """
 
     def __init__(self,
-                 nncf_network: NNCFNetwork,
-                 training: bool = False):
+                 model: tf.keras.Model,
+                 input_signature: List[tf.TensorSpec],
+                 training: bool = False,
+                 graph_optimizers: Optional[List[str]] = None):
         """
         Initializes the subclassed converter.
 
-        :param nncf_network: The NNCF network.
+        :param model: Instance of the `tf.keras.Model` class.
+        :param input_signature: A list of `tf.TensorSpec` objects specifying the
+            inputs to the model.
         :param training: Mode of the model.
+        :param graph_optimizers: A list of the strings that represent
+            the list of optimizers.
+                - `constfold`
+                - `layout`
+                - `pruning`
+                - `arithmetic`
+                - `dependency`
+                - `function`
+            Look at the [guide](https://www.tensorflow.org/guide/graph_optimization) for more information.
+            If `graph_optimizers` is `None` `dependency` optimizer will be used.
         """
-        self._nncf_network = nncf_network
+        self._model = model
+        self._input_signature = input_signature
         self._training = training
+
+        if graph_optimizers is None:
+            graph_optimizers = ['dependency']
+        self._graph_optimizers = graph_optimizers
+
+        self._tfgraph_builder = TensorFlowGraphBuilder(self._model, self._input_signature)
 
     def convert(self) -> NNCFGraph:
         """
-        Builds NNCF graph from provided NNCF network.
+        Converts the Keras model to the `NNCFGraph` object.
 
-        :return: The NNCF graph.
+        :return: The `NNCFGraph` object that represents the Keras model
+            for compression algorithms.
         """
-        concrete_function = tf.function(self._nncf_network).get_concrete_function(self._nncf_network.input_signature,
-                                                                                  training=self._training)  # training?
-        node_descs, edge_descs = SubclassedConverter._collect_tfgraph_description(concrete_function.graph)
+        tfgraph, input_tensors, _ = self._tfgraph_builder.build(self._graph_optimizers)
 
+        input_op_names = [tensor.op.name for tensor in input_tensors]
+        node_descs, edge_descs = SubclassedConverter._collect_tfgraph_descs(tfgraph, input_op_names)
+
+        nncf_graph = SubclassedConverter._create_nncf_graph_from_descs(node_descs, edge_descs)
+
+        return nncf_graph
+
+    @staticmethod
+    def _create_nncf_graph_from_descs(node_descs: List[NodeDesc],
+                                      edge_descs: List[EdgeDesc]) -> NNCFGraph:
+        """
+        Creates the NNCF graph from the provided nodes and edges descriptions.
+
+        :param node_descs: A list of `NodeDesc` objects.
+        :param edge_descs: A list of `EdgeDesc` objects.
+        :return: An instance of the `NNCFGraph` class.
+        """
         nncf_graph = NNCFGraph()
         op_name_to_node_id_map = {}
         for desc in node_descs:
@@ -169,69 +281,63 @@ class SubclassedConverter(TFModelConverter):
         return tf.keras.backend.image_data_format()
 
     @staticmethod
-    def _collect_tfgraph_description(graph) -> Tuple[List[NodeDesc], List[EdgeDesc]]:
+    def _collect_tfgraph_descs(graph: tf.Graph,
+                               op_names: List[str]) -> Tuple[List[NodeDesc], List[EdgeDesc]]:
         """
-        Traverses the graph and collects information about nodes and edges
-        which should be included in the NNCF graph.
+        Traverses the TF graph and collects information about nodes and edges
+        which should be included to the NNCF graph.
 
-        :param graph: TensorFlow `FuncGraph`.
-        :return: Description of nodes and edges which should be included in the NNCF graph.
+        :param graph: Frozen `tf.Graph` with applied `dependency` optimization.
+        :param op_names: A list of names for the input operations ()
+        :return: A description of nodes and edges which should be included to the NNCF graph.
         """
-        captured_input_ops = {}  # type: Dict[str, tf.Operation]
-        for tensor in graph.internal_captures:
-            captured_input_ops[tensor.op.name] = tensor.op
 
-        regular_input_ops = {}  # type: Dict[str, tf.Operation]
-        for tensor in graph.inputs:
-            if tensor.op.name not in captured_input_ops:
-                regular_input_ops[tensor.op.name] = tensor.op
+        # Traverse the `graph` and mark all ops reachable from the `input_ops`.
+        # The op `u` is reachable from the `input_ops` if a directed path
+        # from at least one op in `input_ops` to `u` exists in the `graph.`
 
-        # Traverse the graph and mark all nodes reachable from `regular_input_ops`.
-        # The NNCF graph contains only reachable nodes.
-        # If `op_name` in `visited_nodes` the node with `op_name`
-        # reachable from `regular_input_ops`.
-        queue = deque(regular_input_ops.values())
-        visited_nodes = dict(regular_input_ops)
+        # The NNCF graph comtains only reachable nodes (ops).
 
+        # If `op_name` in `visited_ops` then operation `visited_ops[op_name]`
+        # (i.e. operation with `op_name` name) is reachable from the `input_ops`.
+        input_ops = [graph.get_operation_by_name(name) for name in op_names]  # type: List[tf.Operation]
+        queue = deque(input_ops)
+        visited_ops = {op.name: op for op in input_ops}  # type: Dict[str, tf.Operation]
         while len(queue) != 0:
             v = queue.popleft()
             # A successor of node `v` is a node `u` such that exists
             # a directed edge (v, u) from `v` to `u`.
             successors = (op for tensor in v.outputs for op in tensor.consumers())
             for u in successors:
-                if u.name not in visited_nodes:
+                if u.name not in visited_ops:
                     queue.append(u)
-                    visited_nodes[u.name] = u
+                    visited_ops[u.name] = u
 
-        resource_op_name_to_op_names_map =  SubclassedConverter._get_resource_op_name_to_op_names_map(
-            captured_input_ops.values()
-        )
-        # Reverse map
-        op_name_to_resource_op_name_map = {}
-        for resource_op_name, op_names in resource_op_name_to_op_names_map.items():
-            for op_name in op_names:
-                op_name_to_resource_op_name_map[op_name] = resource_op_name
+        op_name_to_const_op_names_map = SubclassedConverter._get_op_name_to_const_op_names_map(graph, visited_ops)
 
-        # Collect descriptions for all visited nodes. The directed edge (v, u)
-        # of `FuncGraph` is added only if nodes v, u were visited.
+        # Collect descriptions for all visited ops. The directed edge (v, u)
+        # of the `graph` is added only if ops v, u were visited.
         node_descs = []
         edge_descs = []
-
-        for op in visited_nodes.values():
+        for op in visited_ops.values():
             metatype = get_op_metatype(op.type)
-
-            node_attributes = TFNodeAttributes(SubclassedConverter._get_data_format(op))
+            node_attributes = TFNodeAttributes(
+                SubclassedConverter._get_data_format(op)
+            )
 
             is_shared = False
-            resource_name = None
+            const_op_name = None
             if metatype in ALL_LAYER_METATYPES_WITH_WEIGHTS:
-                # TODO(andrey-churkin): This code does not work for a quantized model.
-                # Need to use a more advanced algorithm to find resource nodes.
-                resource_name = op_name_to_resource_op_name_map.get(op.name)
-                if resource_name:
-                    is_shared = len(resource_op_name_to_op_names_map[resource_name]) > 1
+                const_op_names = op_name_to_const_op_names_map[op.name]
+                if const_op_names:
+                    # TODO(andrey-churkin): Currently, we don't have metatypes with
+                    # multiple weights definitions.
+                    if len(const_op_names) > 1 or len(metatype.weight_definitions) > 1:
+                        raise NotImplementedError
+                    const_op_name, is_shared = const_op_names[0]
 
-                    assert len(metatype.weight_definitions) == 1
+                    # TODO(andrey-churkin): Seems like we can dynamically collect
+                    # this information. Need to look at this.
                     port_id = metatype.weight_definitions[0].port_id
                     weight_shape = op.inputs[port_id].shape.as_list()
 
@@ -246,14 +352,14 @@ class SubclassedConverter(TFModelConverter):
                     op_type_name=op.type,
                     metatype=metatype,
                     is_shared=is_shared,
-                    resource_name=resource_name,
+                    resource_name=const_op_name,
                     attrs=node_attributes
                 )
             )
 
             for input_port_id, tensor in enumerate(op.inputs):
                 producer_op = tensor.op
-                if producer_op.name not in visited_nodes:
+                if producer_op.name not in visited_ops:
                     continue
 
                 edge_descs.append(
@@ -271,6 +377,12 @@ class SubclassedConverter(TFModelConverter):
 
     @staticmethod
     def _convert_dtype_to_nncf_format(dtype: tf.dtypes.DType) -> Dtype:
+        """
+        Converts `tf.dtypes.DType` to the NNCF representation.
+
+        :param dtype: An instance of the `tf.dtypes.DType`.
+        :return: An instance of the `Dtype`.
+        """
         if dtype.is_floating:
             tensor_dtype = Dtype.FLOAT
         elif dtype.is_integer:
@@ -281,30 +393,47 @@ class SubclassedConverter(TFModelConverter):
         return tensor_dtype
 
     @staticmethod
-    def _get_resource_op_name_to_op_names_map(captured_input_ops) -> Dict[str, List[str]]:
+    def _get_op_name_to_const_op_names_map(graph,
+                                           marked_ops: Dict[str, tf.Operation]) -> Dict[str, List[Tuple[str, bool]]]:
         """
-        Returns mapping from the name of resource node to the name of visited
-        nodes that use this resource.
+        Returns information about constant operations for the `marked_ops`.
 
-        :param captured_input_ops: Placeholders for weights.
-        :return: The mapping from the name of resource node to the name of visited
-            nodes that use this resource.
+        :param graph: Frozen tf.Graph.
+        :param marked_ops: A mapping from operation name to operation. The marked operations are
+            the operations which reachable from the input operations (`input_ops`) in the `graph`.
+        :return: A mapping from the operation name to the list of (const_op_name, is_shared) tuples where
+            - `const_op_name` is the name of constant operation which is used by this operation
+            - `is_shared` is the boolean flag. Takes one of the following values:
+            `True` if the number of operations that use it is greater than 1, `False` otherwise.
         """
-        resource_op_name_to_op_names_map = {}
-        for op in captured_input_ops:
-            if len(op.outputs) != 1:
-                raise RuntimeError(f'Unexpected number of outputs: {len(op.outputs)}')
+        const_ops = [
+            op for op in graph.get_operations() if op.type == 'Const'
+        ]
 
-            output_tensor = op.outputs[0]
-            for consumer_op in output_tensor.consumers():
-                if len(consumer_op.outputs) != 1:
-                    raise RuntimeError(f'Unexpected number of outputs: {len(consumer_op.outputs)}')
+        const_op_name_to_op_names_map = {}  # type: Dict[str, List[str]]
+        for const_op in const_ops:
+            # Traverse the `graph` from the `const_op` and find the reachable ops
+            # which are marked as visited (i.e. it's name in `marked_ops` dict)
+            # from the `input_ops` in the previous traverse.
+            queue = deque([const_op])
+            visited_ops = {const_op.name: const_op}
+            while len(queue) != 0:
+                v = queue.popleft()
+                if v.name in marked_ops:
+                    const_op_name_to_op_names_map.setdefault(const_op.name, []).append(v.name)
+                    continue
+                # A successor of node `v` is a node `u` such that exists
+                # a directed edge (v, u) from `v` to `u`.
+                successors = (op for tensor in v.outputs for op in tensor.consumers())
+                for u in successors:
+                    if u.name not in visited_ops:
+                        queue.append(u)
+                        visited_ops[u.name] = u
 
-                tensor = consumer_op.outputs[0]
-                consumers = tensor.consumers()
-                if len(consumers) != 1:
-                    raise RuntimeError(f'Unexpected number of consumers: {len(consumers)}')
+        op_name_to_const_op_names_map = {}  # type: Dict[str, List[Tuple[str, bool]]]
+        for const_op_name, op_names in const_op_name_to_op_names_map.items():
+            is_shared = len(op_names) > 1
+            for op_name in op_names:
+                op_name_to_const_op_names_map.setdefault(op_name, []).append((const_op_name, is_shared))
 
-                op_names = resource_op_name_to_op_names_map.setdefault(op.name, [])
-                op_names.append(consumers[0].name)
-        return resource_op_name_to_op_names_map
+        return op_name_to_const_op_names_map
