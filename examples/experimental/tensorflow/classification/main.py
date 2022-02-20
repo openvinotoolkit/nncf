@@ -265,10 +265,10 @@ def validate_saved_model(config, save_model_path: str):
         curr_num_examples = batch_idx + 1
         if (curr_num_examples) % print_freq == 0:
             logger.info(
-                f'{curr_num_examples} / {validation_builder.num_examples} samples were processed.'
+                '{} / {} samples were processed.'.format(curr_num_examples, validation_builder.num_examples)
             )
 
-    logger.info(f'Acc@1: {metric.result()}')
+    logger.info('Acc@1: {}'.format(metric.result()))
 
 
 def main(argv):
