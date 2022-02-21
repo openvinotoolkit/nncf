@@ -13,7 +13,6 @@
 
 from nncf.experimental.tensorflow.nncf_network import NNCFNetwork
 
-import pytest
 import os
 
 import tensorflow as tf
@@ -77,7 +76,7 @@ def test_context_independence():
     ]
 
     models = []
-    for i in range(2):
+    for _ in range(2):
         model = NNCFNetwork(ModelWithSharedLayer(), input_signature)
         model.compute_output_signature(input_signature)
         models.append(
