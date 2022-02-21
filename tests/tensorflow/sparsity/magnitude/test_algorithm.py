@@ -71,10 +71,8 @@ def test_compression_controller_state():
     _, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
 
     # Test get state
-    compression_ctrl.scheduler.current_step = 100
-    compression_ctrl.scheduler.current_epoch = 5
     state_content = compression_ctrl.get_state()[algo_name]
-    assert state_content[CtrlStateNames.SCHEDULER] == {'current_step': 100, 'current_epoch': 5}
+    assert state_content[CtrlStateNames.SCHEDULER] == {'current_step': -1, 'current_epoch': -1}
 
     # Test load state
     new_state = {

@@ -89,13 +89,11 @@ def test_compression_controller_state():
     _, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
 
     # Test get state
-    compression_ctrl.scheduler.current_step = 100
-    compression_ctrl.scheduler.current_epoch = 5
     compression_ctrl.set_sparsity_level(0.5)
     compression_ctrl.freeze()
     assert compression_ctrl.get_state() == {
         algo_name: {
-            CtrlStateNames.SCHEDULER: {'current_step': 100, 'current_epoch': 5},
+            CtrlStateNames.SCHEDULER: {'current_step': -1, 'current_epoch': -1},
             CtrlStateNames.LOSS: {'target': 0.5, 'disabled': True, 'p': 0.05},
             CtrlStateNames.COMPRESSION_STAGE: None
         }
