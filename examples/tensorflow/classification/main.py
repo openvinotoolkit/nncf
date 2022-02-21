@@ -18,7 +18,6 @@ from pathlib import Path
 import tensorflow as tf
 import tensorflow_addons as tfa
 
-from examples.tensorflow.common.utils import close_strategy_threadpool
 from nncf.config.utils import is_accuracy_aware_training
 from nncf.tensorflow.helpers.model_creation import create_compressed_model
 from nncf.tensorflow import create_compression_callbacks
@@ -45,6 +44,7 @@ from examples.tensorflow.common.utils import serialize_config
 from examples.tensorflow.common.utils import serialize_cli_args
 from examples.tensorflow.common.utils import write_metrics
 from examples.tensorflow.common.utils import SummaryWriter
+from examples.tensorflow.common.utils import close_strategy_threadpool
 
 
 def get_argument_parser():
