@@ -112,8 +112,7 @@ class PruningScheduler(BaseCompressionScheduler):
 
     def load_state(self, state: Dict[str, Any]) -> None:
         super().load_state(state)
-        if self._current_level is None:
-            self._current_level = self._calculate_pruning_level()
+        self._current_level = self._calculate_pruning_level()
 
 
 @PRUNING_SCHEDULERS.register('baseline')

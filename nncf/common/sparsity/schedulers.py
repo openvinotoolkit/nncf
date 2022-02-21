@@ -91,14 +91,7 @@ class SparsityScheduler(BaseCompressionScheduler):
 
     def load_state(self, state: Dict[str, Any]) -> None:
         super().load_state(state)
-        if self._current_level is None:
-            self._current_level = self._calculate_sparsity_level()
-
-    def get_state(self) -> Dict[str, Any]:
-        if self._current_level is None:
-            self._current_level = self._calculate_sparsity_level()
-        state = super().get_state()
-        return state
+        self._current_level = self._calculate_sparsity_level()
 
 
 @SPARSITY_SCHEDULERS.register('polynomial')
