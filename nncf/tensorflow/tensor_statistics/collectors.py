@@ -69,7 +69,10 @@ class TFNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
 
     @staticmethod
     def unstack(x: NNCFTensor, axis: int = 0) -> List[NNCFTensor]:
-        tensor_list = tf.unstack(x.tensor, axis=axis)
+        tensor = x.tensor
+        if list(tensor.shape) == []:
+            tensor = tf.expand_dims(tensor, 0)
+        tensor_list = tf.unstack(tensor, axis=axis)
         return [TFNNCFTensor(t) for t in tensor_list]
 
     @staticmethod
