@@ -50,6 +50,7 @@ from examples.tensorflow.classification.main import get_num_classes
 from examples.tensorflow.classification.main import resume_from_checkpoint
 from examples.tensorflow.classification.main import load_compression_state
 from examples.tensorflow.classification.main import load_checkpoint
+from examples.tensorflow.common.utils import close_strategy_threadpool
 
 
 def get_input_signature(config):
@@ -61,7 +62,7 @@ def get_input_signature(config):
     if not sample_size:
         raise RuntimeError('sample_size must be provided in configuration file')
     shape = [None] + list(sample_size[1:])
-    return [tf.TensorSpec(shape=shape, dtype=tf.float32)]
+    return tf.TensorSpec(shape=shape, dtype=tf.float32)
 
 
 def run(config):
@@ -205,6 +206,8 @@ def run(config):
         save_path, save_format = get_saving_parameters(config)
         compression_ctrl.export_model(save_path, save_format)
         logger.info('Saved to {}'.format(save_path))
+
+    close_strategy_threadpool(strategy)
 
 
 def export(config):

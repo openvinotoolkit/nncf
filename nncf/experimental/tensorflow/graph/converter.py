@@ -38,16 +38,16 @@ class TensorFlowGraphBuilder:
     Converts given Keras model to the tf.Graph.
     """
 
-    def __init__(self, model: tf.keras.Model, input_signature: List[tf.TensorSpec]):
+    def __init__(self, model: tf.keras.Model, input_signature):
         """
         Initializes the `TensorFlowGraphBuilder`.
 
         :param model: The instance of the `tf.keras.Model` class.
-        :param input_signature: A list of the `tf.TensorSpec` objects specifying the
+        :param input_signature: A structure of the `tf.TensorSpec` objects specifying the
             inputs to the model.
         """
         self._model = model
-        self._input_signature = input_signature
+        self._input_signature = tf.nest.flatten(input_signature)
 
     def build(self, graph_optimizers: List[str]):
         """

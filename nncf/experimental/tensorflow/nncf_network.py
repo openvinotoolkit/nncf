@@ -26,28 +26,17 @@ InputSignature = Union[tf.TensorSpec, Dict[str, tf.TensorSpec], Tuple[tf.TensorS
 
 
 def _add_names_to_input_signature(input_signature: InputSignature):
-    if isinstance(input_signature, tf.TensorSpec):
-        name = input_signature.name if input_signature.name else 'input_0'
-        return tf.TensorSpec.from_spec(input_signature, name=name)
-
-    if isinstance(input_signature, dict):
-        _input_signature = {}
-        for i, (k, spec) in enumerate(input_signature.items()):
-            _input_signature[k] = tf.TensorSpec.from_spec(
-                spec,
-                name=spec.name if spec.name else f'input_{i}'
-            )
-        return _input_signature
-
-    specs = []
-    for i, spec in enumerate(input_signature):
-        specs.append(
+    xs = tf.nest.flatten(input_signature)
+    ys = []
+    for i, spec in enumerate(xs):
+        ys.append(
             tf.TensorSpec.from_spec(
                 spec,
                 name=spec.name if spec.name else f'input_{i}'
             )
         )
-    return input_signature.__class__(specs)
+
+    return tf.nest.pack_sequence_as(input_signature, ys)
 
 
 class NNCFNetwork(tf.keras.Model):
@@ -110,9 +99,9 @@ class NNCFNetwork(tf.keras.Model):
             if there are more than one outputs.
         """
         get_current_context().model = self
+        xs = self._apply_post_hooks_for_inputs(inputs)
         with get_current_context().enter(wrap_ops=True):
-            x = self._apply_post_hooks_for_inputs(inputs)
-            outputs = self._model(x, **kwargs)
+            outputs = self._model(xs, **kwargs)
         get_current_context().model = None
         return outputs
 
@@ -145,26 +134,17 @@ class NNCFNetwork(tf.keras.Model):
         """
         input_name_to_post_hook_map = {
             hook.target_point.op_name: hook for hook in getattr(self, '_hooks') \
-                if hook.target_point.op_type_name == 'Placeholder'
+            if hook.target_point.op_type_name == 'Placeholder'
         }
 
         if not input_name_to_post_hook_map:
             return inputs
 
-        if isinstance(self.input_signature, list) and len(self.input_signature) == 1:
-            post_hook = input_name_to_post_hook_map[self.input_signature[0].name]
-            return post_hook(inputs)
-
-        if isinstance(self.input_signature, dict) and isinstance(inputs, dict):
-            _inputs = {}
-            for k, x in inputs.items():
-                input_name = self.input_signature[k].name
-                post_hook = input_name_to_post_hook_map[input_name]
-                _inputs[k] = post_hook(x)
-            return _inputs
-
-        _inputs = []
-        for x, spec in zip(inputs, self.input_signature):
-            post_hook = input_name_to_post_hook_map[spec.name]
-            _inputs.append(post_hook(x))
-        return inputs.__class__(_inputs)
+        xs = tf.nest.flatten(inputs)
+        ys = tf.nest.flatten(self.input_signature)
+        flat_sequence = []
+        for input_tensor, input_spec in zip(xs, ys):
+            post_hook = input_name_to_post_hook_map[input_spec.name]
+            (ans,), _ = post_hook(input_tensor)
+            flat_sequence.append(ans)
+        return tf.nest.pack_sequence_as(inputs, flat_sequence)
