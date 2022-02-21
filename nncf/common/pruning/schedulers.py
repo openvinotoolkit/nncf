@@ -11,8 +11,6 @@
  limitations under the License.
 """
 
-from typing import Any
-from typing import Dict
 from typing import Optional
 import numpy as np
 import scipy.optimize
@@ -62,7 +60,6 @@ class PruningScheduler(BaseCompressionScheduler):
         self.num_warmup_epochs = params.get('num_init_steps', 0)
         self.num_pruning_epochs = params.get('pruning_steps', 100)
         self.freeze_epoch = self.num_warmup_epochs + self.num_pruning_epochs
-        self._current_level = None
 
     def _calculate_pruning_level(self) -> float:
         """
@@ -83,7 +80,6 @@ class PruningScheduler(BaseCompressionScheduler):
             will update the state of the pruning method.
         """
         super().epoch_step(next_epoch)
-        self._current_level = self._calculate_pruning_level()
         self._controller.set_pruning_level(self.current_pruning_level)
         if self.current_epoch >= self.freeze_epoch:
             self._controller.freeze()
@@ -107,12 +103,8 @@ class PruningScheduler(BaseCompressionScheduler):
         :return: Current sparsity level.
         """
         if self.current_epoch >= self.num_warmup_epochs:
-            return self._current_level
+            return self._calculate_pruning_level()
         return 0
-
-    def load_state(self, state: Dict[str, Any]) -> None:
-        super().load_state(state)
-        self._current_level = self._calculate_pruning_level()
 
 
 @PRUNING_SCHEDULERS.register('baseline')

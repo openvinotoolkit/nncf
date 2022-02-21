@@ -12,6 +12,7 @@
 """
 
 from typing import Optional, Dict, Any
+from typing import Union
 
 from nncf.common.utils.logger import logger
 from nncf.common.utils.registry import Registry
@@ -56,7 +57,6 @@ class SparsityScheduler(BaseCompressionScheduler):
         self.target_level = params.get('sparsity_target', 0.5)
         self.target_epoch = params.get('sparsity_target_epoch', 90)
         self.freeze_epoch = params.get('sparsity_freeze_epoch', 100)
-        self._current_level = None
 
     def _calculate_sparsity_level(self) -> float:
         """
@@ -74,24 +74,21 @@ class SparsityScheduler(BaseCompressionScheduler):
         Calculates the current sparsity level and updates the internal
         state of the `controller`.
         """
-        self._current_level = self._calculate_sparsity_level()
         if self.current_epoch >= self.freeze_epoch:
             self._controller.freeze()
-        self._controller.set_sparsity_level(self._current_level)
+        self._controller.set_sparsity_level(self._calculate_sparsity_level())
 
     @property
-    def current_sparsity_level(self) -> float:
+    def current_sparsity_level(self) -> Union[float, None]:
         """
         Returns sparsity level for the `current_epoch` or for step
         in the `current_epoch`.
 
         :return: Current sparsity level.
         """
-        return self._current_level
-
-    def load_state(self, state: Dict[str, Any]) -> None:
-        super().load_state(state)
-        self._current_level = self._calculate_sparsity_level()
+        if self._current_epoch == -1:
+            return None
+        return self._calculate_sparsity_level()
 
 
 @SPARSITY_SCHEDULERS.register('polynomial')
@@ -236,6 +233,7 @@ class AdaptiveSparsityScheduler(SparsityScheduler):
         self.eps = params.get('eps', 0.03)
         self.patience = params.get('patience', 1)
         self.num_bad_epochs = 0
+        self._current_level = None
 
     def epoch_step(self, next_epoch: Optional[int] = None) -> None:
         super().epoch_step(next_epoch)
@@ -253,7 +251,9 @@ class AdaptiveSparsityScheduler(SparsityScheduler):
             self.num_bad_epochs = 0
             current_level = current_level + self.decay_step
 
-        return min(current_level, self.target_level)
+        self._current_level = min(current_level, self.target_level)
+
+        return self._current_level
 
     def load_state(self, state: Dict[str, Any]) -> None:
         super().load_state(state)

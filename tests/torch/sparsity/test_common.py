@@ -351,7 +351,6 @@ def test_scheduler_get_state(scheduler_cls):
         assert state['_steps_per_epoch'] == 5
     if scheduler_cls == AdaptiveSparsityScheduler:
         assert state['num_bad_epochs'] == 1
-        assert state['current_sparsity_level'] == pytest.approx(0.3)
 
     # Test load state
     new_scheduler = scheduler_cls(*args)
@@ -364,7 +363,7 @@ def test_scheduler_get_state(scheduler_cls):
         assert new_scheduler._steps_per_epoch == 5
     if scheduler_cls == AdaptiveSparsityScheduler:
         assert new_scheduler.num_bad_epochs == 1
-        assert new_scheduler.current_sparsity_level == pytest.approx(0.3)
+        assert new_scheduler.current_sparsity_level == pytest.approx(0.35)
 
 
 @pytest.mark.parametrize('algo',
