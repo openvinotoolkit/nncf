@@ -20,6 +20,8 @@ from typing import Optional, Callable
 from pathlib import Path
 from pathlib import PurePath
 
+from typing import Tuple, Dict
+
 from torch.utils import data
 from torchvision import datasets
 from examples.torch.object_detection.utils.augmentations import Compose
@@ -62,7 +64,7 @@ class VOCAnnotationTransform:
             zip(VOC_CLASSES, range(len(VOC_CLASSES))))
         self.keep_difficult = keep_difficult
 
-    def __call__(self, image: Image, target: dict, pull: bool = False):
+    def __call__(self, image: Image, target: Dict, pull: bool = False):
         """
         Args:
             image (PIL.Image.Image) : image
@@ -123,7 +125,7 @@ class VOCDetection(data.Dataset):
 
     def __init__(self,
                  root: str,
-                 image_sets: tuple = (('2007', 'trainval'), ('2012', 'trainval')),
+                 image_sets: Tuple = (('2007', 'trainval'), ('2012', 'trainval')),
                  transform: Optional[Callable] = None,
                  target_transform: Optional[Callable] = VOCAnnotationTransform(keep_difficult=False),
                  return_image_info: bool = False,

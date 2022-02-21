@@ -14,6 +14,7 @@
 from collections import namedtuple
 from PIL.Image import Image
 
+from typing import List, Dict, Tuple
 import cv2
 import numpy as np
 import torch
@@ -138,17 +139,17 @@ def base_transform(image, size, mean, std, normalize_coef):
 
 class BaseTransform:
     def __init__(self,
-                 size: int,
-                 mean: int,
-                 std: int,
-                 normalize_coef: int
+                 size: np.int32,
+                 mean: np.float32,
+                 std: np.float32,
+                 normalize_coef: np.float32
                  ):
         self.size = size
         self.mean = np.array(mean, dtype=np.float32)
         self.std = np.array(std, dtype=np.float32)
         self.normalize_coef = normalize_coef
 
-    def __call__(self, image: Image, target: list):
+    def __call__(self, image: Image, target: List[Dict]) -> Tuple[torch.Tensor, np.ndarray]:
         boxes = np.asarray([x['bbox'] for x in target])
         labels = np.asarray([x['label_idx'] for x in target])
         target = np.hstack((boxes, np.expand_dims(labels, axis=1)))
