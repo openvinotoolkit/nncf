@@ -18,6 +18,7 @@ from pathlib import Path
 import tensorflow as tf
 import tensorflow_addons as tfa
 
+from examples.tensorflow.common.utils import close_strategy_threadpool
 from nncf.config.utils import is_accuracy_aware_training
 from nncf.tensorflow.helpers.model_creation import create_compressed_model
 from nncf.tensorflow import create_compression_callbacks
@@ -291,6 +292,7 @@ def run(config):
         compression_ctrl.export_model(save_path, save_format)
         logger.info('Saved to {}'.format(save_path))
 
+    close_strategy_threadpool(strategy)
 
 def export(config):
     model, model_params = get_model(config.model,
