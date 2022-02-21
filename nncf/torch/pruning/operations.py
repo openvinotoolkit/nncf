@@ -30,6 +30,7 @@ from nncf.torch.graph.operator_metatypes import (
     PTDivMetatype,
     PTDropoutMetatype,
     PTELUMetatype,
+    PTRELU6Metatype,
     PTGELUMetatype,
     PTGroupNormMetatype,
     PTHardTanhMetatype,
@@ -64,6 +65,7 @@ from nncf.common.pruning.operations import (
     ConvolutionPruningOp,
     TransposeConvolutionPruningOp,
     BatchNormPruningOp,
+    LinearPruningOp,
     GroupNormPruningOp,
     ConcatPruningOp,
     ElementwisePruningOp,
@@ -114,10 +116,10 @@ class PTOutputPruningOp(OutputPruningOp, PTPruner):
 
 @PT_PRUNING_OPERATOR_METATYPES.register('identity_mask_propagation')
 class PTIdentityMaskForwardPruningOp(IdentityMaskForwardPruningOp, PTPruner):
-    subtypes = [PTHardTanhMetatype, PTTanhMetatype, PTRELUMetatype, PTLeakyRELUMetatype, PTPRELUMetatype, PTELUMetatype,
-                PTGELUMetatype, PTSigmoidMetatype, PTSoftmaxMetatype, PTAvgPool2dMetatype, PTMaxPool2dMetatype,
-                PTDropoutMetatype, PTSILUMetatype, PTPowerMetatype, PTHardSwishMetatype, PTHardSigmoidMetatype,
-                PTNoopMetatype]
+    subtypes = [PTHardTanhMetatype, PTTanhMetatype, PTRELUMetatype, PTRELU6Metatype, PTLeakyRELUMetatype,
+                PTPRELUMetatype, PTELUMetatype, PTGELUMetatype, PTSigmoidMetatype, PTSoftmaxMetatype,
+                PTAvgPool2dMetatype, PTMaxPool2dMetatype, PTDropoutMetatype, PTSILUMetatype, PTPowerMetatype,
+                PTHardSwishMetatype, PTHardSigmoidMetatype, PTNoopMetatype]
     additional_types = ['h_sigmoid', 'h_swish', 'RELU']
 
 
@@ -222,6 +224,11 @@ class PTTransposeConvolutionPruningOp(TransposeConvolutionPruningOp, PTPruner):
                          ' {}.'.format(node.data['key'], old_num_clannels, node_module.out_channels))
 
 
+@PT_PRUNING_OPERATOR_METATYPES.register('linear')
+class PTLinearPruningOp(LinearPruningOp, PTPruner):
+    subtypes = [PTLinearMetatype, PTMatMulMetatype]
+
+
 @PT_PRUNING_OPERATOR_METATYPES.register('batch_norm')
 class PTBatchNormPruningOp(BatchNormPruningOp, PTPruner):
     subtypes = [PTBatchNormMetatype]
@@ -301,7 +308,7 @@ class PTElementwisePruningOp(ElementwisePruningOp, PTPruner):
 
 @PT_PRUNING_OPERATOR_METATYPES.register('stop_propagation_ops')
 class PTStopMaskForwardPruningOp(StopMaskForwardPruningOp, PTPruner):
-    subtypes = [PTMeanMetatype, PTMaxMetatype, PTMinMetatype, PTLinearMetatype, PTMatMulMetatype, PTSumMetatype,
+    subtypes = [PTMeanMetatype, PTMaxMetatype, PTMinMetatype, PTSumMetatype,
                 UnknownMetatype]
 
 

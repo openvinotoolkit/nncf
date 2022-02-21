@@ -66,7 +66,6 @@ class PruningNodeSelector:
         pruning_op_metatypes_dict = self._pruning_operator_metatypes.registry_dict
         self._identity_mask_propagation_op_metatype = pruning_op_metatypes_dict['identity_mask_propagation']
         self._stop_propagation_op_metatype = pruning_op_metatypes_dict['stop_propagation_ops']
-        self._convolution_op_metatype = pruning_op_metatypes_dict['convolution']
 
         self._prune_operations_types = prune_operations_types
         self._grouping_operations_types = grouping_operations_types
