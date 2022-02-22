@@ -8,7 +8,9 @@ The method performs differentiable sampling of the continuous signal (for exampl
 
 Quantization is parametrized by clamping range and number of quantization levels. The sampling formula is the following:
 
-![output = \frac{\left\lfloor (clamp(input; input\_low, input\_high)-input\_low)  *s\right \rceil}{s} + input\_low\\](https://latex.codecogs.com/png.latex?output%20%3D%20%5Cfrac%7B%5Cleft%5Clfloor%20%28clamp%28input%3B%20input%5C_low%2C%20input%5C_high%29-input%5C_low%29%20*s%5Cright%20%5Crceil%7D%7Bs%7D%20&plus;%20input%5C_low%5C%5C)
+![ZP = \lfloor-input\_low * s\rceil](https://latex.codecogs.com/png.image?%5Cdpi%7B110%7D%20ZP%20=%20%5Clfloor-input%5C_low%20*%20s%5Crceil)
+
+![output = \frac{\left\lfloor (clamp(input; input\_low, input\_high)-input\_low)  *s - ZP \right \rceil}{s}\\](https://latex.codecogs.com/png.image?%5Cdpi%7B110%7D%20output%20=%20%5Cfrac%7B%5Cleft%5Clfloor%20(clamp(input;%20input%5C_low,%20input%5C_high)-input%5C_low)%20%20*s%20-%20ZP%20%5Cright%20%5Crceil%7D%7Bs%7D)
 
 ![clamp(input; input\_low, input\_high) = min(max(input, input\_low), input\_high)))](https://latex.codecogs.com/png.latex?clamp%28input%3B%20input%5C_low%2C%20input%5C_high%29%20%3D%20min%28max%28input%2C%20input%5C_low%29%2C%20input%5C_high%29%29%29)
 
@@ -114,9 +116,11 @@ For all target HW types, parts of the model graph can be marked as non-quantizab
 
 In our implementation, we use a slightly transformed formula. It is equivalent by order of floating-point operations to simplified symmetric formula and the assymetric one. The small difference is addition of small positive number `eps` to prevent division by zero and taking absolute value of range, since it might become negative on backward:
 
-![output = \frac{clamp(\left\lfloor(input-input\_low^{*})*s\right\rceil, level\_low, level\_high)} {s} + input\_low^{*}](https://latex.codecogs.com/png.latex?output%3D%5Cfrac%7Bclamp%28%5Cleft%5Clfloor%28input-input%5C_low%5E%7B%2A%7D%29%2As%5Cright%5Crceil%2Clevel%5C_low%2Clevel%5C_high%29%7D%7Bs%7D%2Binput%5C_low%5E%7B%2A%7D)
+![output = \frac{clamp(\left\lfloor (input-input\_low^{*}) *s - ZP \right \rceil, level\_low, level\_high)}{s}](https://latex.codecogs.com/svg.image?output%20=%20%5Cfrac%7Bclamp(%5Cleft%5Clfloor%20(input-input%5C_low%5E%7B*%7D)%20*s%20-%20ZP%20%5Cright%20%5Crceil,%20level%5C_low,%20level%5C_high)%7D%7Bs%7D)
 
 ![s = \frac{level\_high}{|input\_range^{*}| + eps}](https://latex.codecogs.com/png.latex?s%20%3D%20%5Cfrac%7Blevel%5C_high%7D%7B%7Cinput%5C_range%5E%7B*%7D%7C%20&plus;%20eps%7D)
+
+![ZP = \lfloor-input\_low * s\rceil](https://latex.codecogs.com/png.image?%5Cdpi%7B110%7D%20ZP%20=%20%5Clfloor-input%5C_low%5E%7B*%7D%20*%20s%5Crceil)
 
 For asymmetric:
 ![\\input\_low^{*} = input\_low \\ input\_range^{*} = input\_range ](https://latex.codecogs.com/png.latex?%5C%5Cinput%5C_low%5E%7B*%7D%20%3D%20input%5C_low%20%5C%5C%20input%5C_range%5E%7B*%7D%20%3D%20input%5C_range)
