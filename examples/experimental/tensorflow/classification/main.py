@@ -243,7 +243,7 @@ def export(config):
                         ckpt_path=config.ckpt_path)
 
     save_path, save_format = get_saving_parameters(config)
-    model.compute_output_shape(model.input_signature[0].shape.as_list())
+    model.compute_output_shape(model.input_signature.shape.as_list())
     compression_ctrl.export_model(save_path, save_format)
     logger.info('Saved to {}'.format(save_path))
 
