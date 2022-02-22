@@ -102,15 +102,17 @@ class ONNXModelTransformer(ModelTransformer):
         zero_point = [zero_point] if not isinstance(zero_point, list) else zero_point
         tensor_type = onnx.TensorProto.UINT8 if mode == QuantizationMode.ASYMMETRIC else onnx.TensorProto.INT8
         scale = [scale] if not isinstance(scale, list) else scale
+
         axis = 0 if per_channel else None
+        dims = [len(scale)] if per_channel else []
 
         quantizer_name = 'QuantizeLinear_' + target_point
         dequantizer_name = 'DequantizeLinear_' + target_point
         scale_tensor_name = 'scale_' + target_point
         zero_point_tensor_name = 'zero_point_' + target_point
 
-        onnx_scale = onnx.helper.make_tensor(scale_tensor_name, onnx.TensorProto.FLOAT, (len(scale),), scale)
-        onnx_zero_point = onnx.helper.make_tensor(zero_point_tensor_name, tensor_type, (len(scale),), zero_point)
+        onnx_scale = onnx.helper.make_tensor(scale_tensor_name, onnx.TensorProto.FLOAT, dims, scale)
+        onnx_zero_point = onnx.helper.make_tensor(zero_point_tensor_name, tensor_type, dims, zero_point)
 
         quantizer = onnx.helper.make_node(
             'QuantizeLinear',

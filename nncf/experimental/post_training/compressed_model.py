@@ -61,8 +61,9 @@ class CompressedModel:
             onnx.checker.check_model(model)
             print(f'Original opset = {model.opset_import[0].version}')
 
+            model.ir_version = 7  # Due to the 'Shufflenet-v1
             add_input_from_initializer(model)
-            infered_model = onnx.shape_inference.infer_shapes(model, strict_mode=True)
+            infered_model = onnx.shape_inference.infer_shapes(model)
             self.original_model = version_converter.convert_version(infered_model, 13)
             self.original_onnx_graph = ONNXGraph(self.original_model)
 
