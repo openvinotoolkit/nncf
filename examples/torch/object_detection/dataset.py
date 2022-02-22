@@ -153,6 +153,6 @@ class BaseTransform:
         boxes = np.asarray([x['bbox'] for x in target])
         labels = np.asarray([x['label_idx'] for x in target])
         target = np.hstack((boxes, np.expand_dims(labels, axis=1)))
-        res = base_transform(np.array(image),
+        res = base_transform(np.array(image)[:, :, ::-1],
                              self.size, self.mean, self.std, self.normalize_coef)
-        return torch.from_numpy(res).permute(2, 0, 1), target
+        return torch.from_numpy(res[:, :, (2, 1, 0)]).permute(2, 0, 1), target
