@@ -202,6 +202,15 @@ class PTConv3dMetatype(PTOperatorMetatype):
 
 
 @PT_OPERATOR_METATYPES.register()
+class PTConvTranspose1dMetatype(PTOperatorMetatype):
+    name = "ConvTranspose1DOp"
+    hw_config_names = [HWConfigOpName.CONVOLUTION]
+    module_to_function_names = {
+        NamespaceTarget.TORCH_NN_FUNCTIONAL: ["conv_transpose1d"]
+    }
+
+
+@PT_OPERATOR_METATYPES.register()
 class PTConvTranspose2dMetatype(PTOperatorMetatype):
     name = "ConvTranspose2DOp"
     hw_config_names = [HWConfigOpName.CONVOLUTION]

@@ -309,7 +309,7 @@ def maybe_convert_legacy_names_in_model_state(state_dict_to_load: Dict[str, Any]
     legacy_bn_names = [name for name in state_dict_to_load if 'BatchNorm2d' in name]
     for name in legacy_bn_names:
         tensor = state_dict_to_load.pop(name)
-        new_name = name.replace('BatchNorm2d', 'NNCFBatchNorm2d')
+        new_name = name.replace('BatchNorm2d', 'NNCFBatchNorm2d') if not 'NNCFBatchNorm2d' in name else name
         state_dict_to_load[new_name] = tensor
 
     if legacy_bn_names:
@@ -335,7 +335,7 @@ def maybe_convert_legacy_names_in_compress_state(compression_state: Dict[str, An
     legacy_bn_names = False
     for point in qips.values():
         name = point['qip']['target_node_name']
-        if 'BatchNorm2d' in name:
+        if 'BatchNorm2d' in name and not 'NNCFBatchNorm2d' in name:
             legacy_bn_names = True
             point['qip']['target_node_name'] = name.replace('BatchNorm2d', 'NNCFBatchNorm2d')
 

@@ -18,7 +18,7 @@ from torch import nn
 
 from nncf.config import NNCFConfig
 from tests.torch.test_models.pnasnet import CellB
-from tests.torch.helpers import create_conv
+from tests.torch.helpers import create_bn, create_conv
 from tests.torch.helpers import create_transpose_conv
 from tests.torch.helpers import create_depthwise_conv
 from tests.torch.helpers import create_grouped_conv
@@ -219,30 +219,65 @@ class PruningTestModelEltwise(nn.Module):
         return x
 
 
+#class BigPruningTestModel(nn.Module):
+#    def __init__(self):
+#        super().__init__()
+#        self.conv1 = create_conv(1, 16, 2, 0, 1)
+#        for i in range(16):
+#            self.conv1.weight.data[i] += i
+#        self.bn1 = nn.BatchNorm2d(16)
+#        self.relu = nn.ReLU()
+#        self.conv_depthwise = create_depthwise_conv(16, 3, 0, 1)
+#        for i in range(16):
+#            self.conv_depthwise.weight.data[i] += i
+#        self.conv2 = create_conv(16, 32, 3, 20, 0)
+#        for i in range(32):
+#            self.conv2.weight.data[i] += i
+#        self.bn2 = nn.BatchNorm2d(32)
+#        self.up = create_transpose_conv(32, 64, 3, 3, 1, 2)
+#        for i in range(64):
+#            self.up.weight.data[0][i] += i
+#        self.conv3 = create_conv(64, 1, 5, 5, 1)
+#
+#    def forward(self, x):
+#        x = self.conv1(x)
+#        x = self.bn1(x)
+#        x = self.relu(x)
+#        x = self.conv_depthwise(x)
+#        x = self.conv2(x)
+#        x = self.bn2(x)
+#        x = self.relu(x)
+#        x = self.up(x)
+#        x = self.relu(x)
+#        x = self.conv3(x)
+#        x = x.view(1, -1)
+#        return x
+
 class BigPruningTestModel(nn.Module):
-    def __init__(self):
+    def __init__(self, dim=2):
         super().__init__()
-        self.conv1 = create_conv(1, 16, 2, 0, 1)
+        self.dim = dim
+        self.conv1 = create_conv(1, 16, 2, 0, 1, dim=self.dim)
         for i in range(16):
             self.conv1.weight.data[i] += i
-        self.bn1 = nn.BatchNorm2d(16)
+        self.bn1 = create_bn(16, dim=self.dim)
         self.relu = nn.ReLU()
-        self.conv_depthwise = create_depthwise_conv(16, 3, 0, 1)
+        self.conv_depthwise = create_depthwise_conv(16, 3, 0, 1, dim=self.dim)
         for i in range(16):
             self.conv_depthwise.weight.data[i] += i
-        self.conv2 = create_conv(16, 32, 3, 20, 0)
+        self.conv2 = create_conv(16, 32, 3, 20, 0, dim=self.dim)
         for i in range(32):
             self.conv2.weight.data[i] += i
-        self.bn2 = nn.BatchNorm2d(32)
-        self.up = create_transpose_conv(32, 64, 3, 3, 1, 2)
+        self.bn2 = create_bn(32, dim=self.dim)
+        self.up = create_transpose_conv(32, 64, 3, 3, 1, 2, dim=self.dim)
         for i in range(64):
             self.up.weight.data[0][i] += i
         self.linear = nn.Linear(3136, 128)
         for i in range(128):
             self.linear.weight.data[i] = i
         self.linear.bias.data.fill_(1)
-        self.bn3 = nn.BatchNorm2d(128)
-        self.conv3 = create_conv(128, 1, 1, 5, 1)
+        self.bn3 = create_bn(128, dim=self.dim)
+        self.conv3 = create_conv(64, 1, 5, 5, 1, dim=self.dim)
 
     def forward(self, x):
         x = self.conv1(x)
@@ -260,7 +295,6 @@ class BigPruningTestModel(nn.Module):
         x = self.conv3(x)
         x = x.view(b, -1)
         return x
-
 
 class TestShuffleUnit(nn.Module):
     def __init__(self,

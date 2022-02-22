@@ -48,11 +48,13 @@ TensorType = Union[torch.Tensor, np.ndarray, numbers.Number]
 
 # pylint: disable=no-member
 
-def fill_conv_weight(conv, value):
+def fill_conv_weight(conv, value, dim=2):
     conv.weight.data.fill_(value)
-    with torch.no_grad():
-        mask = torch.eye(conv.kernel_size[0])
-        conv.weight += mask
+    # TODO: Fill it right
+    if dim in [2, 3]:
+        with torch.no_grad():
+            mask = torch.eye(conv.kernel_size[0])
+            conv.weight += mask
 
 
 def fill_bias(module, value):
@@ -71,12 +73,27 @@ def fill_params_of_model_by_normal(model, std=1.0):
         param.data = torch.normal(0, std, size=param.data.size())
 
 
-def create_conv(in_channels, out_channels, kernel_size, weight_init=1, bias_init=0, padding=0, stride=1):
-    conv = nn.Conv2d(in_channels, out_channels, kernel_size, padding=padding, stride=stride)
-    fill_conv_weight(conv, weight_init)
+def create_conv(in_channels, out_channels, kernel_size, weight_init=1, bias_init=0, padding=0, stride=1, dim=2):
+    conv_dim_map = {
+        1: nn.Conv1d,
+        2: nn.Conv2d,
+        3: nn.Conv3d,
+    }
+
+    conv = conv_dim_map[dim](in_channels, out_channels, kernel_size, padding=padding, stride=stride)
+    fill_conv_weight(conv, weight_init, dim)
     fill_bias(conv, bias_init)
+
     return conv
 
+def create_bn(num_features, dim=2):
+    bn_dim_map = {
+        1: nn.BatchNorm1d,
+        2: nn.BatchNorm2d,
+        3: nn.BatchNorm3d
+    }
+
+    return bn_dim_map[dim](num_features)
 
 def create_grouped_conv(in_channels, out_channels, kernel_size, groups,
                         weight_init=1, bias_init=0, padding=0, stride=1):
@@ -89,16 +106,26 @@ def create_grouped_conv(in_channels, out_channels, kernel_size, groups,
     return conv
 
 
-def create_depthwise_conv(channels, kernel_size, weight_init, bias_init, padding=0, stride=1):
-    conv = nn.Conv2d(channels, channels, kernel_size, padding=padding, stride=stride, groups=channels)
-    fill_conv_weight(conv, weight_init)
+def create_depthwise_conv(channels, kernel_size, weight_init, bias_init, padding=0, stride=1, dim=2):
+    conv_dim_map = {
+        1: nn.Conv1d,
+        2: nn.Conv2d,
+        3: nn.Conv3d
+    }
+    conv = conv_dim_map[dim](channels, channels, kernel_size, padding=padding, stride=stride, groups=channels)
+    fill_conv_weight(conv, weight_init, dim)
     fill_bias(conv, bias_init)
     return conv
 
 
-def create_transpose_conv(in_channels, out_channels, kernel_size, weight_init, bias_init, stride):
-    conv = nn.ConvTranspose2d(in_channels, out_channels, kernel_size, stride=stride)
-    fill_conv_weight(conv, weight_init)
+def create_transpose_conv(in_channels, out_channels, kernel_size, weight_init, bias_init, stride, dim=2):
+    conv_dim_map = {
+        1: nn.ConvTranspose1d,
+        2: nn.ConvTranspose2d,
+        3: nn.ConvTranspose3d
+    }
+    conv = conv_dim_map[dim](in_channels, out_channels, kernel_size, stride=stride)
+    fill_conv_weight(conv, weight_init, dim)
     fill_bias(conv, bias_init)
     return conv
 

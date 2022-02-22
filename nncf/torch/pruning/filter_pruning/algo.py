@@ -54,6 +54,7 @@ from nncf.torch.tensor_statistics.collectors import PTNNCFCollectorTensorProcess
 from nncf.torch.graph.operator_metatypes import PTConv1dMetatype
 from nncf.torch.graph.operator_metatypes import PTConv2dMetatype
 from nncf.torch.graph.operator_metatypes import PTConv3dMetatype
+from nncf.torch.graph.operator_metatypes import PTConvTranspose1dMetatype
 from nncf.torch.graph.operator_metatypes import PTConvTranspose2dMetatype
 from nncf.torch.graph.operator_metatypes import PTConvTranspose3dMetatype
 from nncf.torch.graph.operator_metatypes import PTDepthwiseConv1dSubtype
@@ -87,6 +88,7 @@ GENERAL_CONV_LAYER_METATYPES = [
     PTDepthwiseConv2dSubtype,
     PTConv3dMetatype,
     PTDepthwiseConv3dSubtype,
+    PTConvTranspose1dMetatype,
     PTConvTranspose2dMetatype,
     PTConvTranspose3dMetatype
 ]
