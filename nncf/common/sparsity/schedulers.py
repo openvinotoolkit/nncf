@@ -12,7 +12,6 @@
 """
 
 from typing import Optional, Dict, Any
-from typing import Union
 
 from nncf.common.utils.logger import logger
 from nncf.common.utils.registry import Registry
@@ -79,10 +78,12 @@ class SparsityScheduler(BaseCompressionScheduler):
         self._controller.set_sparsity_level(self._calculate_sparsity_level())
 
     @property
-    def current_sparsity_level(self) -> Union[float, None]:
+    def current_sparsity_level(self) -> Optional[float]:
         """
         Returns sparsity level for the `current_epoch` or for step
         in the `current_epoch`.
+        None is returned when called before the algorithm initialization,
+        i.e. before the first epoch_step is called.
 
         :return: Current sparsity level.
         """
