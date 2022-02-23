@@ -33,13 +33,13 @@ class BNTrainingStateSwitcher:
         self._original_training_state = {}
 
     def __enter__(self):
-        for layer in self._model.layers:
+        for layer in self._model.submodules:
             if get_keras_layer_metatype(layer) == TFBatchNormalizationLayerMetatype:
                 self._original_training_state[layer] = layer.trainable
                 layer.trainable = True
 
     def __exit__(self, *exc):
-        for layer in self._model.layers:
+        for layer in self._model.submodules:
             if get_keras_layer_metatype(layer) == TFBatchNormalizationLayerMetatype:
                 layer.trainable = self._original_training_state[layer]
 
