@@ -58,6 +58,10 @@ class NNCFNetwork(tf.keras.Model):
         self._model = model
         self._input_signature = _add_names_to_input_signature(input_signature)
 
+        # The `__setattr__` was was overridden inside superclasses.
+        # This workaround allows not add dependencies from hooks to the model.
+        # See `tensorflow.python.training.tracking.autotrackable.AutoTrackable`
+        # class for more details.
         self.__dict__['_pre_hooks'] = {}  # type: Dict[str, List[Hook]]
         self.__dict__['_post_hooks'] = {}  # type: Dict[str, List[Hook]]
 
@@ -98,11 +102,9 @@ class NNCFNetwork(tf.keras.Model):
         :return: A tensor if there is a single output, or a list of tensors
             if there are more than one outputs.
         """
-        get_current_context().model = self
         xs = self._apply_post_hooks_for_inputs(inputs)
-        with get_current_context().enter(wrap_ops=True):
+        with get_current_context().enter(in_call=True, wrap_ops=True, model=self):
             outputs = self._model(xs, **kwargs)
-        get_current_context().model = None
         return outputs
 
     def insert_at_point(self, point: TFTargetPoint, ops: List[NNCFOperation]) -> None:

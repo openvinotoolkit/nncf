@@ -13,6 +13,7 @@
 
 from typing import Dict
 from typing import Any
+from typing import Optional
 import threading
 
 
@@ -32,6 +33,50 @@ def get_current_context():
     return tracing_context
 
 
+class TFTracingContextState:
+    """
+    Contains values that describe a state of the `TFTracingContext`.
+    """
+
+    def __init__(self,
+                 in_call: bool = False,
+                 wrap_ops: bool = False,
+                 model: Optional[tf.keras.Model] = None):
+        """
+        Initializes the `TFTracingContextState` instance.
+
+        :param in_call: Whether currently inside the `call()` method of a `tf.keras.Model`.
+        :param wrap_ops: Whether currently adding the compression pre-hooks and post-hooks
+            to TensorFlow operations.
+        :param model: The Keras model whose `call()` method is currently active.
+            The `None` value is specified that model is undefined at this moment. This is only
+            possible when `in_call` is equal to `False`.
+        """
+        self._in_call = in_call
+        self._wrap_ops = wrap_ops
+
+        if model is None and in_call:
+            raise ValueError(
+                f'Inconsisten values `{in_call}` and `{model}` for `in_call` and `model` parameters. '
+                'The `None` value is specified that model is undefined at this moment. This is only '
+                'possible when `in_call` is equal to `False`.'
+            )
+
+        self._model = model
+
+    @property
+    def in_call(self) -> bool:
+        return self._in_call
+
+    @property
+    def wrap_ops(self) -> bool:
+        return self._wrap_ops
+
+    @property
+    def model(self) -> tf.keras.Model:
+        return self._model
+
+
 class TFTracingContext:
     """
     Contains information about should we wrap the TensorFlow
@@ -40,33 +85,38 @@ class TFTracingContext:
 
     def __init__(self):
         """
-        Initializes the tracing context.
-            - in_call: `True` if we are inside the `call` method of the
-                tf.keras.Model instance, `False` otherwise.
-            - wrap_ops: `True` if we should wrap the TensorFlow operation,
-                `False` otherwise.
+        Initializes the `TFTracingContext` instance.
         """
-        self._state = {
-            'in_call': False,
-            'wrap_ops': False,
-        }
+        self._state = TFTracingContextState()
         # Maps a name used in the graph to the next id to use for that name.
         self.names_in_use = {}
-        self.model = None
+
+    @property
+    def model(self) -> Optional[tf.keras.Model]:
+        return self.state.model
 
     @property
     def in_call(self) -> bool:
-        return self._state['in_call']
+        return self.state.in_call
 
     @property
     def wrap_ops(self) -> bool:
-        return self._state['wrap_ops']
+        return self.state.wrap_ops
 
-    def enter(self, wrap_ops: bool, in_call: bool = True):
-        next_state = {
-            'wrap_ops': wrap_ops,
-            'in_call': in_call,
-        }
+    def enter(self,
+              in_call: bool,
+              wrap_ops: bool,
+              model: Optional[tf.keras.Model] = None) -> TFTracingContextManager:
+        """
+        Pushes parameters onto the tracing context.
+
+        :param in_call: Whether currently inside the `call()` method of a model.
+        :param wrap_ops: Whether currently adding the compression pre-hooks and post-hooks
+            to TensorFlow operations.
+        :param model: The Keras model whose `call()` method is currently active.
+        """
+        model = self.state.model if model is None else model
+        next_state = TFTracingContextState(in_call, wrap_ops, model)
         return TFTracingContextManager(self, next_state)
 
     def unique_name(self, name: str) -> str:
@@ -99,10 +149,11 @@ class TFTracingContext:
             name = f'{name}_{i - 1}'
         return name
 
-    def get_state(self) -> Dict[str, Any]:
+    @property
+    def state(self) -> TFTracingContextState:
         return self._state
 
-    def load_state(self, state: Dict[str, Any]) -> None:
+    def load_state(self, state: TFTracingContextState) -> None:
         self._state = state
 
 
@@ -113,7 +164,7 @@ class TFTracingContextManager:
 
     def __init__(self,
                  tracing_context: TFTracingContext,
-                 next_state: Dict[str, Any]):
+                 next_state: TFTracingContextState):
         """
         Initializes the tracing context manager.
 
@@ -126,7 +177,7 @@ class TFTracingContextManager:
         self._prev_state = None
 
     def __enter__(self):
-        self._prev_state = self._tracing_context.get_state()
+        self._prev_state = self._tracing_context.state
         self._tracing_context.load_state(self._next_state)
 
     def __exit__(self, *exc):

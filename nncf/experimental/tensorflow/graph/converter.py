@@ -295,7 +295,7 @@ class SubclassedConverter(TFModelConverter):
         # The op `u` is reachable from the `input_ops` if a directed path
         # from at least one op in `input_ops` to `u` exists in the `graph.`
 
-        # The NNCF graph comtains only reachable nodes (ops).
+        # The NNCF graph contains only reachable nodes (ops).
 
         # If `op_name` in `visited_ops` then operation `visited_ops[op_name]`
         # (i.e. operation with `op_name` name) is reachable from the `input_ops`.
