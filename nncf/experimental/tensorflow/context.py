@@ -11,10 +11,10 @@
  limitations under the License.
 """
 
-from typing import Dict
-from typing import Any
 from typing import Optional
 import threading
+
+import tensorflow as tf
 
 
 _CURRENT_CONTEXT = threading.local()
@@ -106,7 +106,7 @@ class TFTracingContext:
     def enter(self,
               in_call: bool,
               wrap_ops: bool,
-              model: Optional[tf.keras.Model] = None) -> TFTracingContextManager:
+              model: Optional[tf.keras.Model] = None):
         """
         Pushes parameters onto the tracing context.
 

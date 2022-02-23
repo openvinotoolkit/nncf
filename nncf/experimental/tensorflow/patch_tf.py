@@ -144,7 +144,7 @@ class TensorFlowOpWrapper:
         _pre_hooks = getattr(get_current_context().model, '_pre_hooks')
         _post_hooks = getattr(get_current_context().model, '_post_hooks')
 
-        with tracing_context.enter(wrap_ops=False):
+        with tracing_context.enter(in_call=True, wrap_ops=False):
             # Apply pre-hooks
             args, kwargs = TensorFlowOpWrapper._apply_hooks(
                 _pre_hooks.get(op_name, []),
