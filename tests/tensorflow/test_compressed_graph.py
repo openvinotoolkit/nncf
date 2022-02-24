@@ -476,7 +476,7 @@ TYPE_HW = [(HWConfigType.CPU), (HWConfigType.GPU), (HWConfigType.VPU)]
 
 TEST_HW_MODELS_DESC = [
     ModelDesc('resnet50.pb', test_models.ResNet50, [1, 32, 32, 3]),
-    ModelDesc('inception_v3.pb', test_models.InceptionV3, [1, 75, 75, 3]),
+    ModelDesc('inception_v3.dot', test_models.InceptionV3, [1, 75, 75, 3]),
     ModelDesc('mobilenet_v2.pb', test_models.MobileNetV2, [1, 96, 96, 3]),
 ]
 
