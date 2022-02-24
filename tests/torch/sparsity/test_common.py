@@ -311,8 +311,7 @@ REF_DEFAULT_STATE = {
     ExponentialSparsityScheduler: {'current_step': -1, 'current_epoch': -1},
     MultiStepSparsityScheduler: {'current_step': -1, 'current_epoch': -1},
     AdaptiveSparsityScheduler: {'current_step': -1, 'current_epoch': -1,
-                                'num_bad_epochs': 0, 'current_sparsity_level': None}
-
+                                'num_bad_epochs': 0, 'current_sparsity_level': 0.3}
 }
 
 
@@ -363,7 +362,7 @@ def test_scheduler_get_state(scheduler_cls):
         assert new_scheduler._steps_per_epoch == 5
     if scheduler_cls == AdaptiveSparsityScheduler:
         assert new_scheduler.num_bad_epochs == 1
-        assert new_scheduler.current_sparsity_level == pytest.approx(0.35)
+        assert new_scheduler.current_sparsity_level == pytest.approx(0.3)
 
 
 @pytest.mark.parametrize('algo',

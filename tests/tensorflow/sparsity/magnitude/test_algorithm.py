@@ -40,7 +40,7 @@ def test_can_create_magnitude_sparse_algo__with_defaults():
     sparse_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
 
     assert isinstance(compression_ctrl, MagnitudeSparsityController)
-    assert compression_ctrl.scheduler.current_sparsity_level is None
+    assert compression_ctrl.scheduler.current_sparsity_level == approx(0.1)
 
     conv_names = [layer.name for layer in model.layers if isinstance(layer, tf.keras.layers.Conv2D)]
     wrappers = [layer for layer in sparse_model.layers if isinstance(layer, NNCFWrapper)]
@@ -71,8 +71,9 @@ def test_compression_controller_state():
     _, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
 
     # Test get state
+    compression_ctrl.scheduler.load_state({'current_step': 100, 'current_epoch': 5})
     state_content = compression_ctrl.get_state()[algo_name]
-    assert state_content[CtrlStateNames.SCHEDULER] == {'current_step': -1, 'current_epoch': -1}
+    assert state_content[CtrlStateNames.SCHEDULER] == {'current_step': 100, 'current_epoch': 5}
 
     # Test load state
     new_state = {
@@ -112,7 +113,7 @@ def test_can_create_magnitude_algo__without_levels():
     config = get_basic_magnitude_sparsity_config()
     config['compression']['params'] = {'schedule': 'multistep', 'multistep_steps': [1]}
     _, compression_ctrl = create_compressed_model_and_algo_for_test(get_mock_model(), config)
-    assert compression_ctrl.scheduler.current_sparsity_level is None
+    assert compression_ctrl.scheduler.current_sparsity_level== approx(0.1)
 
 
 def test_can_not_create_magnitude_algo__with_not_matched_steps_and_levels():

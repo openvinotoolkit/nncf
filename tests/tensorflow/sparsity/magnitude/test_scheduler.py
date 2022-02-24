@@ -39,7 +39,7 @@ def test_magnitude_scheduler_can_do_epoch_step__with_norm():
     scheduler = compression_ctrl.scheduler
     assert isinstance(scheduler, MultiStepSparsityScheduler)
 
-    assert compression_ctrl.scheduler.current_sparsity_level is None
+    assert compression_ctrl.scheduler.current_sparsity_level == 0.1
 
     expected_levels = [0.1, 0.5, 0.5, 0.9]
     expected_thresholds = [0.219, 0.243, 0.243, 0.371]
@@ -79,7 +79,7 @@ def test_magnitude_scheduler_can_do_epoch_step__with_multistep():
     scheduler = compression_ctrl.scheduler
     assert isinstance(scheduler, MultiStepSparsityScheduler)
 
-    assert compression_ctrl.scheduler.current_sparsity_level is None
+    assert compression_ctrl.scheduler.current_sparsity_level== 0.1
     assert scheduler.schedule.values == [0.1, 0.5]
 
     expected_levels = [0.1, 0.5, 0.5]

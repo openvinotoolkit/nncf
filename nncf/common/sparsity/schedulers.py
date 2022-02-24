@@ -82,13 +82,11 @@ class SparsityScheduler(BaseCompressionScheduler):
         """
         Returns sparsity level for the `current_epoch` or for step
         in the `current_epoch`.
-        None is returned when called before the algorithm initialization,
-        i.e. before the first epoch_step is called.
 
         :return: Current sparsity level.
         """
         if self._current_epoch == -1:
-            return None
+            return self.initial_level
         return self._calculate_sparsity_level()
 
 
@@ -234,16 +232,23 @@ class AdaptiveSparsityScheduler(SparsityScheduler):
         self.eps = params.get('eps', 0.03)
         self.patience = params.get('patience', 1)
         self.num_bad_epochs = 0
-        self._current_level = None
+        self._current_level = self.initial_level
+
+    @property
+    def current_sparsity_level(self) -> Optional[float]:
+        """
+        Returns sparsity level for the `current_epoch` or for step
+        in the `current_epoch`.
+
+        :return: Current sparsity level.
+        """
+        return self._current_level
 
     def epoch_step(self, next_epoch: Optional[int] = None) -> None:
         super().epoch_step(next_epoch)
         self._update_sparsity_level()
 
     def _calculate_sparsity_level(self) -> float:
-        if self._current_level is None:
-            self._current_level = self.initial_level
-
         if self._controller.loss.current_sparsity >= self._current_level - self.eps:
             self.num_bad_epochs += 1
 
@@ -285,6 +290,18 @@ class MultiStepSparsityScheduler(SparsityScheduler):
         self.schedule = MultiStepSchedule(
             sorted(params.get('multistep_steps', [90])), params.get('multistep_sparsity_levels', [0.1, 0.5]))
         self.target_level = self.schedule.values[-1]
+
+    @property
+    def current_sparsity_level(self) -> Optional[float]:
+        """
+        Returns sparsity level for the `current_epoch` or for step
+        in the `current_epoch`.
+
+        :return: Current sparsity level.
+        """
+        if self._current_epoch == -1:
+            return self.schedule.values[0]
+        return self._calculate_sparsity_level()
 
     def epoch_step(self, next_epoch: Optional[int] = None) -> None:
         super().epoch_step(next_epoch)
