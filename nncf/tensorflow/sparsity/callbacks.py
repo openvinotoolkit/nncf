@@ -49,9 +49,6 @@ class SparsityStatisticsCallback(StatisticsCallback):
             f'{base_prefix}/sparsity_level_for_sparsified_layers': ms.sparsity_level_for_layers,
         }
 
-        if stats.target_sparsity_level is not None:
-            tensorboard_stats[f'{base_prefix}/target_sparsity_level'] = stats.target_sparsity_level
-
         for ls in ms.sparsified_layers_summary:
             layer_name, sparsity_level = ls.name, ls.sparsity_level
             tensorboard_stats[f'{detailed_prefix}/{layer_name}/sparsity_level'] = sparsity_level
