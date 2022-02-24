@@ -951,7 +951,8 @@ index 000000000..6b648ca5e
 +        "algorithm": "quantization",
 +        "initializer": {
 +            "range": {
-+                "num_init_samples": 32
++                "num_init_samples": 32,
++                "type": "mean_percentile"
 +            }
 +        },
 +        "ignored_scopes": [
