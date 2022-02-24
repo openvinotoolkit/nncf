@@ -313,7 +313,7 @@ GROUP_PRUNING_MODULES_TEST_CASES = [
              'MobilenetV3BlockSEReshape/InvertedResidual[inverted_residual]/Sequential[conv]/NNCFConv2d[4]/conv2d_0',
              'MobilenetV3BlockSEReshape/InvertedResidual[inverted_residual]/Sequential[conv]/NNCFConv2d[0]/conv2d_0',
              'MobilenetV3BlockSEReshape/InvertedResidual[inverted_residual]/Sequential[conv]/SELayerWithReshape[3]/'
-             'Sequential[fc]/NNCFConv2d[2]/conv2d_0'],
+             'Sequential[fc]/NNCFConv2d[3]/conv2d_0'],
             ['MobilenetV3BlockSEReshape/InvertedResidual[inverted_residual]/Sequential[conv]/'
              'SELayerWithReshape[3]/Sequential[fc]/NNCFConv2d[0]/conv2d_0'],
             ],
@@ -339,7 +339,7 @@ GROUP_PRUNING_MODULES_TEST_CASES = [
              'MobilenetV3BlockSEReshape/InvertedResidual[inverted_residual]/Sequential[conv]/'
              'NNCFConv2d[0]/conv2d_0',
              'MobilenetV3BlockSEReshape/InvertedResidual[inverted_residual]/Sequential[conv]/'
-             'SELayerWithReshapeAndLinear[3]/Sequential[fc]/NNCFLinear[2]/linear_0'],
+             'SELayerWithReshapeAndLinear[3]/Sequential[fc]/NNCFLinear[3]/linear_0'],
             ['MobilenetV3BlockSEReshape/InvertedResidual[inverted_residual]/Sequential[conv]/'
              'SELayerWithReshapeAndLinear[3]/Sequential[fc]/NNCFLinear[0]/linear_0'],
         ],

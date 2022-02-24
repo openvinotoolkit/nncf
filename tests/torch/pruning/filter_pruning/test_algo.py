@@ -161,15 +161,32 @@ def test_valid_modules_replacement_and_pruning(prune_first, prune_batch_norms):
 BIG_PRUNING_MODEL_TEST_PARAMS = ('all_weights', 'pruning_flops_target', 'prune_first', 'ref_masks')
 BIG_PRUNING_MODEL_TEST_PARAMS_VALUES = \
 [
-    (False, None, True, gen_ref_masks([(8, 8), (16, 16), (32, 32), (64, 64)])),
-    (True, None, True, gen_ref_masks([(2, 14), (2, 30), (29, 35), (87, 41)])),
-    (False, None, False, gen_ref_masks([(16, 16), (32, 32), (64, 64)])),
-    (True, None, False, gen_ref_masks([(1, 31), (27, 37), (84, 44)])),
+    (False, None, True, {1 : gen_ref_masks([(8, 8), (16, 16), (32, 32), (64, 64)]),
+                         2 : gen_ref_masks([(8, 8), (16, 16), (32, 32), (64, 64)]),
+                         3 : gen_ref_masks([(8, 8), (16, 16), (32, 32), (64, 64)])}),
+    (True, None, True, {1 : gen_ref_masks([(2, 14), (2, 30), (29, 35), (87, 41)]),
+                        2 : gen_ref_masks([(2, 14), (2, 30), (29, 35), (87, 41)]),
+                        3 : gen_ref_masks([(2, 14), (2, 30), (29, 35), (87, 41)])}),
+    (False, None, False, { 1 : gen_ref_masks([(16, 16), (32, 32), (64, 64)]),
+                           2 : gen_ref_masks([(16, 16), (32, 32), (64, 64)]),
+                           3 : gen_ref_masks([(16, 16), (32, 32), (64, 64)])}),
+
+    (True, None, False, { 1 : gen_ref_masks([(1, 31), (27, 37), (84, 44)]),
+                          2 : gen_ref_masks([(1, 31), (27, 37), (84, 44)]),
+                          3: gen_ref_masks([(1, 31), (27, 37), (84, 44)])}),
     # Flops pruning cases
-    (False, 0.5, True, gen_ref_masks([(8, 8), (16, 16), (32, 32), (64, 64)])),
-    (False, 0.5, False, gen_ref_masks([(16, 16), (32, 32), (64, 64)])),
-    (True, 0.5, True, gen_ref_masks([(3, 13), (8, 24), (41, 23), (113, 15)])),
-    (True, 0.5, False, gen_ref_masks([(9, 23), (41, 23), (113, 15)])),
+    (False, 0.5, True, { 1 : gen_ref_masks([(8, 8), (16, 16), (32, 32), (64, 64)]),
+                         2 : gen_ref_masks([(8, 8), (16, 16), (32, 32), (64, 64)]),
+                         3 : gen_ref_masks([(8, 8), (16, 16), (32, 32), (64, 64)])}),
+    (False, 0.5, False, {1 : gen_ref_masks([(16, 16), (32, 32), (64, 64)]),
+                         2 : gen_ref_masks([(16, 16), (32, 32), (64, 64)]),
+                         3 : gen_ref_masks([(16, 16), (32, 32), (64, 64)])}),
+    (True, 0.5, True, { 1: gen_ref_masks([(3, 13), (7, 25), (39, 25), (109, 19)]),
+                        2: gen_ref_masks([(3, 13), (8, 24), (41, 23), (113, 15)]),
+                        3: gen_ref_masks([(2, 14), (5, 27), (33, 31), (97, 31)])}),
+    (True, 0.5, False, { 1 : gen_ref_masks([(8, 24), (39, 25), (109, 19)]),
+                         2 : gen_ref_masks([(9, 23), (41, 23), (113, 15)]),
+                         3 : gen_ref_masks([(5, 27), (33, 31), (97, 31)])}),
 ]
 
 
@@ -192,7 +209,7 @@ def test_pruning_masks_correctness(all_weights, pruning_flops_target, prune_firs
         #y = pruning_op.binary_filter_pruning_mask.shape[0]
         #y_minus_x = y - x
         #print(x, y)
-        assert torch.allclose(pruning_op.binary_filter_pruning_mask, ref_masks[num])
+        assert torch.allclose(pruning_op.binary_filter_pruning_mask, ref_masks[dim][num])
 
     config = get_basic_pruning_config(input_sample_size=[1, 1] + [8] * dim)
     config['compression']['params']['all_weights'] = all_weights

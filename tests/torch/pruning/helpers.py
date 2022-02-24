@@ -238,12 +238,12 @@ class BigPruningTestModel(nn.Module):
         self.up = create_transpose_conv(32, 64, 3, 3, 1, 2, dim=self.dim)
         for i in range(64):
             self.up.weight.data[0][i] += i
-        self.linear = nn.Linear(3136, 128)
+        self.linear = nn.Linear(448 * 7**(self.dim - 1), 128)
         for i in range(128):
             self.linear.weight.data[i] = i
         self.linear.bias.data.fill_(1)
         self.bn3 = create_bn(128, dim=self.dim)
-        self.conv3 = create_conv(64, 1, 5, 5, 1, dim=self.dim)
+        self.conv3 = create_conv(128, 1, 1, 5, 1, dim=self.dim)
 
     def forward(self, x):
         x = self.conv1(x)
@@ -256,7 +256,7 @@ class BigPruningTestModel(nn.Module):
         x = self.up(x)
         x = self.relu(x)
         b, *_ = x.size()
-        x = self.linear(x.view(b, -1)).view(b, -1, 1, 1)
+        x = self.linear(x.view(b, -1)).view(b, -1, *[1]*self.dim)
         x = self.bn3(x)
         x = self.conv3(x)
         x = x.view(b, -1)
@@ -619,8 +619,10 @@ class SELayerWithReshape(nn.Module):
         self.avg_pool = nn.AdaptiveAvgPool2d(1)
         self.fc = nn.Sequential(
             nn.Conv2d(channel, make_divisible(channel // reduction, 8), 1),
+            nn.BatchNorm2d(make_divisible(channel // reduction, 8)),
             nn.ReLU(inplace=True),
             nn.Conv2d(make_divisible(channel // reduction, 8), channel, 1),
+            nn.BatchNorm2d(channel),
             nn.ReLU(inplace=True)
         )
 
@@ -638,8 +640,10 @@ class SELayerWithReshapeAndLinear(nn.Module):
         self.avg_pool = nn.AdaptiveAvgPool2d(1)
         self.fc = nn.Sequential(
             nn.Linear(channel, make_divisible(channel // reduction, 8)),
+            nn.BatchNorm1d(make_divisible(channel // reduction, 8)),
             nn.ReLU(inplace=True),
             nn.Linear(make_divisible(channel // reduction, 8), channel),
+            nn.BatchNorm1d(channel),
             nn.ReLU(inplace=True)
         )
 
