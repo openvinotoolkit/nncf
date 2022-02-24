@@ -44,6 +44,7 @@ from examples.tensorflow.common.utils import serialize_config
 from examples.tensorflow.common.utils import serialize_cli_args
 from examples.tensorflow.common.utils import write_metrics
 from examples.tensorflow.common.utils import SummaryWriter
+from examples.tensorflow.common.utils import close_strategy_threadpool
 
 
 def get_argument_parser():
@@ -92,7 +93,7 @@ def get_dataset_builders(config, num_devices, one_hot=True):
         one_hot=one_hot,
         is_train=False)
 
-    return [train_builder, val_builder]
+    return train_builder, val_builder
 
 
 def get_num_classes(dataset):
@@ -159,11 +160,8 @@ def run(config):
                                        pretrained=config.get('pretrained', False),
                                        weights=config.get('weights', None))
 
-    builders = get_dataset_builders(config, strategy.num_replicas_in_sync)
-    datasets = [builder.build() for builder in builders]
-
-    train_builder, validation_builder = builders
-    train_dataset, validation_dataset = datasets
+    train_builder, validation_builder = get_dataset_builders(config, strategy.num_replicas_in_sync)
+    train_dataset, validation_dataset = train_builder.build(), validation_builder.build()
 
     nncf_config = config.nncf_config
     nncf_config = register_default_init_args(nncf_config=nncf_config,
@@ -291,6 +289,7 @@ def run(config):
         compression_ctrl.export_model(save_path, save_format)
         logger.info('Saved to {}'.format(save_path))
 
+    close_strategy_threadpool(strategy)
 
 def export(config):
     model, model_params = get_model(config.model,
