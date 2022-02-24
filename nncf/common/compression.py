@@ -136,11 +136,11 @@ class BaseCompressionAlgorithmController(CompressionAlgorithmController):
         if self.name in state:
             algo_state = state[self.name]
             if self._state_names.COMPRESSION_STAGE in state:
-                if self.compression_stage() != state[self._state_names.COMPRESSION_STAGE]:
+                compression_stage = state[self._state_names.COMPRESSION_STAGE]
+                if self.compression_stage() != compression_stage:
                     nncf_logger.warning('Current CompressionStage ({}) of the compression controller does '
                                         'not correspond to the value found in '
-                                        'the checkpoint ({})'.format(self.compression_stage(),
-                                                                     state[self._state_names.COMPRESSION_STAGE]))
+                                        'the checkpoint ({})'.format(self.compression_stage(), compression_stage))
             self.loss.load_state(algo_state[self._state_names.LOSS])
             self.scheduler.load_state(algo_state[self._state_names.SCHEDULER])
 

@@ -315,6 +315,7 @@ class PTBatchNormPruningOp(BatchNormPruningOp, PTPruner):
             return
 
         reorder_indexes = reorder_indexes.tensor
+        reorder_indexes = reorder_indexes.int()
         bn = model.get_containing_module(node.node_name)
 
         bn.weight.data = torch.index_select(bn.weight.data, 0, reorder_indexes)

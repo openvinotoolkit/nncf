@@ -17,7 +17,6 @@ import pytest
 import torch
 
 from nncf import NNCFConfig
-from nncf.api.compression import CompressionStage
 from nncf.common.compression import BaseCompressionAlgorithmController as BaseController
 from nncf.common.compression import BaseControllerStateNames
 from nncf.common.sparsity.schedulers import AdaptiveSparsityScheduler
@@ -105,7 +104,7 @@ class TestSparseModules:
         assert saved_ctrl_state == ctrl.get_state()
         algo_state = next(iter(saved_ctrl_state.values()))
         assert algo_state == {
-            BaseControllerStateNames.COMPRESSION_STAGE: CompressionStage.PARTIALLY_COMPRESSED,
+            BaseControllerStateNames.COMPRESSION_STAGE: {'name': 'UNCOMPRESSED'},
             BaseControllerStateNames.SCHEDULER: {'current_step': 100, 'current_epoch': 5},
             BaseControllerStateNames.LOSS: None
         }

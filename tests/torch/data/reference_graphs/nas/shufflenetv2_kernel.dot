@@ -236,12 +236,12 @@ strict digraph  {
 "234 ShuffleNetV2/Sequential[layer3]/BasicBlock[3]/ShuffleBlock[shuffle]/view_0" [id=234, label="view_#234", style=filled, type=view];
 "235 ShuffleNetV2/Sequential[layer3]/BasicBlock[3]/ShuffleBlock[shuffle]/permute_0" [id=235, label="permute_#235", style=filled, type=permute];
 "236 ShuffleNetV2/Sequential[layer3]/BasicBlock[3]/ShuffleBlock[shuffle]/reshape_0" [id=236, label="reshape_#236", style=filled, type=reshape];
-"237 ShuffleNetV2/NNCFConv2d[conv2]/conv2d_0" [color=lightblue, id=237, label="conv2d_#237", style=filled, type=conv2d];
-"238 ShuffleNetV2/NNCFBatchNorm[bn2]/batch_norm_0" [id=238, label="batch_norm_#238", style=filled, type=batch_norm];
-"239 ShuffleNetV2/relu_1" [id=239, label="relu_#239", style=filled, type=relu];
-"240 ShuffleNetV2/avg_pool2d_0" [id=240, label="avg_pool2d_#240", style=filled, type=avg_pool2d];
-"241 ShuffleNetV2/view_0" [id=241, label="view_#241", style=filled, type=view];
-"242 ShuffleNetV2/NNCFLinear[linear]/linear_0" [id=242, label="linear_#242", style=filled, type=linear];
+"237 ShuffleNetV2/NNCFConv2d[conv2]/conv2d_0" [color=lightblue, id=237, label="conv2d_OW1024_G17_#237", style=filled, type=conv2d];
+"238 ShuffleNetV2/NNCFBatchNorm[bn2]/batch_norm_0" [id=238, label="batch_norm_IW1024_OW1024_#238", style=filled, type=batch_norm];
+"239 ShuffleNetV2/relu_1" [id=239, label="relu_IW1024_OW1024_#239", style=filled, type=relu];
+"240 ShuffleNetV2/avg_pool2d_0" [id=240, label="avg_pool2d_IW1024_OW1024_#240", style=filled, type=avg_pool2d];
+"241 ShuffleNetV2/view_0" [id=241, label="view_IW1024_OW1024_#241", style=filled, type=view];
+"242 ShuffleNetV2/NNCFLinear[linear]/linear_0" [id=242, label="linear_IW1024_#242", style=filled, type=linear];
 "243 /nncf_model_output_0" [id=243, label="nncf_model_output_#243", style=filled, type=nncf_model_output];
 "0 /nncf_model_input_0" -> "1 ShuffleNetV2/NNCFConv2d[conv1]/conv2d_0"  [label="(1, 3, 32, 32)", style=solid];
 "1 ShuffleNetV2/NNCFConv2d[conv1]/conv2d_0" -> "2 ShuffleNetV2/NNCFBatchNorm[bn1]/batch_norm_0"  [label="(1, 24, 32, 32)", style=solid];

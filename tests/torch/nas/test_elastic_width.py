@@ -52,7 +52,7 @@ def fixture_basic_model(request):
     return model
 
 
-BASIC_ELASTIC_WIDTH_PARAMS = {'min_out_channels': 1, 'width_step': 1}
+BASIC_ELASTIC_WIDTH_PARAMS = {'min_width': 1, 'width_step': 1}
 
 
 ###########################

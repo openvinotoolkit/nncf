@@ -22,7 +22,6 @@ from nncf.common.compression import BaseCompressionAlgorithmController as BaseCo
 from nncf.common.utils.debug import set_debug_log_dir
 from nncf.config import NNCFConfig
 from nncf.torch.compression_method_api import PTCompressionAlgorithmBuilder
-from nncf.torch.model_creation import create_compression_algorithm_builder
 from nncf.torch.model_creation import create_compression_algorithm_builder_from_algo_names
 from nncf.torch.model_creation import synchronize_all_processes_in_distributed_mode
 from nncf.torch.nncf_network import NNCFNetwork

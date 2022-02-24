@@ -37,11 +37,17 @@ from nncf.common.pruning.mask_propagation import MaskPropagationAlgorithm
 from nncf.common.pruning.node_selector import PruningNodeSelector
 from nncf.common.pruning.structs import PrunedLayerInfoBase
 from nncf.common.pruning.utils import get_cluster_next_nodes
-from nncf.common.pruning.utils import get_conv_in_out_channels
 from nncf.common.pruning.utils import get_input_masks
+from nncf.common.pruning.utils import get_prunable_layers_in_out_channels
 from nncf.common.pruning.utils import is_prunable_depthwise_conv
 from nncf.common.tensor import NNCFTensor
 from nncf.common.utils.logger import logger as nncf_logger
+from nncf.experimental.torch.nas.bootstrapNAS.elasticity.base_handler import ELASTICITY_BUILDERS
+from nncf.experimental.torch.nas.bootstrapNAS.elasticity.base_handler import ELASTICITY_HANDLERS_MAP
+from nncf.experimental.torch.nas.bootstrapNAS.elasticity.base_handler import SingleElasticityBuilder
+from nncf.experimental.torch.nas.bootstrapNAS.elasticity.base_handler import SingleElasticityHandler
+from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elasticity_dim import ElasticityDim
+from nncf.experimental.torch.nas.bootstrapNAS.elasticity.filter_reorder import FilterReorderingAlgorithm
 from nncf.torch.graph.operator_metatypes import PTBatchNormMetatype
 from nncf.torch.graph.operator_metatypes import PTConv1dMetatype
 from nncf.torch.graph.operator_metatypes import PTConv2dMetatype
@@ -55,16 +61,11 @@ from nncf.torch.graph.operator_metatypes import PTLinearMetatype
 from nncf.torch.graph.transformations.commands import PTInsertionCommand
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.layers import NNCFConv2d
+from nncf.torch.layers import NNCFLinear
 from nncf.torch.module_operations import UpdateBatchNormParams
 from nncf.torch.module_operations import UpdateNumGroups
 from nncf.torch.module_operations import UpdateWeight
 from nncf.torch.module_operations import UpdateWeightAndOptionalBias
-from nncf.experimental.torch.nas.bootstrapNAS.elasticity.base_handler import ELASTICITY_BUILDERS
-from nncf.experimental.torch.nas.bootstrapNAS.elasticity.base_handler import ELASTICITY_HANDLERS_MAP
-from nncf.experimental.torch.nas.bootstrapNAS.elasticity.base_handler import SingleElasticityBuilder
-from nncf.experimental.torch.nas.bootstrapNAS.elasticity.base_handler import SingleElasticityHandler
-from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elasticity_dim import ElasticityDim
-from nncf.experimental.torch.nas.bootstrapNAS.elasticity.filter_reorder import FilterReorderingAlgorithm
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.pruning.filter_pruning.functions import FILTER_IMPORTANCE_FUNCTIONS
 from nncf.torch.pruning.operations import PTElementwisePruningOp
@@ -74,6 +75,7 @@ from nncf.torch.pruning.utils import collect_input_shapes
 from nncf.torch.pruning.utils import collect_output_shapes
 from nncf.torch.tensor import PTNNCFTensor
 from nncf.torch.utils import get_filters_num
+from nncf.torch.utils import get_model_device
 
 pruning_group_id = int
 width_type = int
@@ -87,9 +89,15 @@ class DynamicWidthOp:
     Base class for operations that dynamically adapt the layer parameters after removing some
     number of filters of preceding layers (input width) or the current layer (output width).
     """
+    
+    def __init__(self, max_width: int, node_name: str):
+        """
+        Constructor.
 
-    def __init__(self, *args, max_width: int, node_name: str, **kwargs):
-        super().__init__(*args, **kwargs)
+        :param max_width: maximum number of channels in the original layer.
+        :param node_name: string representation of operation address. It's used for more informative messages only.
+        """
+        super().__init__()
         self._active_width = max_width
         self._max_width = max_width
         self._node_name = node_name
@@ -118,13 +126,59 @@ class DynamicWidthOp:
 
 
 class ElasticWidthOp(DynamicWidthOp):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self._width_list = []
+    def __init__(self, max_width, node_name, elastic_width_params: Dict[str, Any] = None):
+        super().__init__(max_width=max_width, node_name=node_name)
+        if elastic_width_params is None:
+            elastic_width_params = {}
+        min_width = elastic_width_params.get('min_width', 32)
+        max_num_params = elastic_width_params.get('max_num_widths', -1)
+        width_step = elastic_width_params.get('width_step', 32)
+        width_multipliers = elastic_width_params.get('width_multipliers', [])
+
+        self._width_list = self._generate_width_list(self._max_width, min_width, max_num_params, width_step,
+                                                     width_multipliers)
 
     @property
     def width_list(self) -> List[int]:
         return self._width_list
+
+    def set_active_width(self, width: int):
+        if width not in self.width_list and width != self.max_width:
+            raise ValueError(f'Invalid number of output channels to set: {width} in scope={self._node_name}. '
+                             f'Should be a number in {self.width_list}')
+        super().set_active_width(width)
+
+    @staticmethod
+    def _generate_width_list(max_width, min_width, max_num_params, width_step, width_multipliers):
+        width_list = []
+        if max_width <= min_width:
+            width_list.append(max_width)
+        elif not width_multipliers:
+            width = max_width
+            width_list.append(width)
+            width -= width_step
+            while width >= min_width:
+                if max_num_params == len(width_list):
+                    break
+                width_list.append(width)
+                width -= width_step
+        else:
+            width_multipliers.sort(reverse=True)
+            if width_multipliers[0] < 1:
+                width_list.append(max_width)
+            for multiplier in width_multipliers:
+                if max_num_params == len(width_list):
+                    break
+                if 0 >= multiplier > 1:
+                    nncf_logger.warning("Wrong value for multiplier: {}. Skipping ".format(multiplier))
+                    continue
+                w = int(max_width * multiplier)
+                w = w - (w % 8)
+                w = max(w, min_width)
+                if w in width_list:
+                    continue
+                width_list.append(w)
+        return width_list
 
 
 class ElasticWidthInfo(PrunedLayerInfoBase):
@@ -139,19 +193,33 @@ class ElasticWidthInfo(PrunedLayerInfoBase):
         self.elastic_op = elastic_op
 
 
-class DynamicLinearInputOp(DynamicWidthOp, nn.Module):
-    def forward(self, weight):
+class ElasticInputWidthLinearOp(ElasticWidthOp, nn.Module):
+    """
+    Introduces elastic input width for linear layer.
+    """
+
+    def forward(self, weight: torch.Tensor) -> torch.Tensor:
+        """
+        Trims weight according to active number of input channels
+
+        :param weight: weight tensor to be trimmed
+        :return: trimmed weight
+        """""
         return weight[:, :self._active_width]
 
 
-class ElasticLinearOp(DynamicWidthOp, nn.Module):
-    def forward(self, weight, bias):
-        new_bias = None if bias is None else bias[:self._active_width].contiguous()
-        return weight[:self._active_width, :].contiguous(), new_bias
+class ElasticInputWidthConvOp(ElasticWidthOp, nn.Module):
+    """
+    Introduces elastic input width for 2D convolution.
+    """
 
+    def forward(self, weight: torch.Tensor) -> torch.Tensor:
+        """
+        Trims weight according to active number of input channels
 
-class DynamicConvInputOp(DynamicWidthOp, nn.Module):
-    def forward(self, weight):
+        :param weight: weight tensor to be trimmed
+        :return: trimmed weight
+        """""
         return weight[:, :self._active_width, :, :]
 
 
@@ -163,30 +231,17 @@ class DynamicDWConvInputOp(DynamicWidthOp, nn.Module):
 class DynamicBatchNormInputOp(DynamicWidthOp, nn.Module):
     SET_RUNNING_STATISTICS = False
 
-    def forward(self, **bn_params):
+    def forward(self, **bn_params: Dict[str, torch.Tensor]) -> List[torch.Tensor]:
+        """
+        Trims batchnorm parameters according to active number of input channels.
+
+        :param bn_params: map of name and tensor to be trimmed
+        :return: trimmed batchnorm parameters
+        """""
         return [param[:self._active_width] for param in bn_params.values()]
 
 
 class ElasticWidthConv2DOp(ElasticWidthOp, nn.Module):
-    def __init__(self, max_out_channels, node_name, elastic_width_params: Dict[str, Any] = None):
-        super().__init__(max_width=max_out_channels, node_name=node_name)
-
-        if elastic_width_params is None:
-            elastic_width_params = {}
-        min_out_channels = elastic_width_params.get('min_out_channels', 32)
-        max_num_params = elastic_width_params.get('max_num_widths', -1)
-        width_step = elastic_width_params.get('width_step', 32)
-        width_multipliers = elastic_width_params.get('width_multipliers', [])
-
-        self._width_list = self.generate_width_list(self._max_width, min_out_channels, max_num_params, width_step,
-                                                    width_multipliers)
-
-    def set_active_width(self, width: int):
-        if width not in self.width_list and width != self.max_width:
-            raise ValueError(f'Invalid number of output channels to set: {width} in scope={self._node_name}. '
-                             f'Should be a number in {self.width_list}')
-        super().set_active_width(width)
-
     def forward(self, weight, bias):
         nncf_logger.debug('Conv2d with active width={} in scope={}'.format(self._active_width, self._node_name))
         num_out_channels = self._active_width
@@ -194,37 +249,11 @@ class ElasticWidthConv2DOp(ElasticWidthOp, nn.Module):
         new_weights = weight[:num_out_channels, :, :, :]
         return [new_weights, new_bias]
 
-    @staticmethod
-    def generate_width_list(max_out_channels, min_out_channels, max_num_params, width_step, width_multipliers):
-        width_list = []
-        if max_out_channels <= min_out_channels:
-            width_list.append(max_out_channels)
-        elif not width_multipliers:
-            width = max_out_channels
-            width_list.append(width)
-            width -= width_step
-            while width >= min_out_channels:
-                if max_num_params == len(width_list):
-                    break
-                width_list.append(width)
-                width -= width_step
-        else:
-            width_multipliers.sort(reverse=True)
-            if width_multipliers[0] < 1:
-                width_list.append(max_out_channels)
-            for multiplier in width_multipliers:
-                if max_num_params == len(width_list):
-                    break
-                if 0 >= multiplier > 1:
-                    nncf_logger.warning("Wrong value for multiplier: {}. Skipping ".format(multiplier))
-                    continue
-                w = int(max_out_channels * multiplier)
-                w = w - (w % 8)
-                w = max(w, min_out_channels)
-                if w in width_list:
-                    continue
-                width_list.append(w)
-        return width_list
+
+class ElasticWidthLinearOp(ElasticWidthOp, nn.Module):
+    def forward(self, weight, bias):
+        new_bias = None if bias is None else bias[:self._active_width]
+        return weight[:self._active_width, :], new_bias
 
 
 class ElasticWidthHandler(SingleElasticityHandler):
@@ -337,7 +366,8 @@ class ElasticWidthHandler(SingleElasticityHandler):
                 node_id = elastic_width_info.nncf_node_id
                 node = self._propagation_graph.get_node_by_id(node_id)
                 max_width = elastic_width_info.elastic_op.max_width
-                mask = self._width_to_mask(max_width, width)
+                device = get_model_device(self._target_model)
+                mask = self._width_to_mask(width, max_width, device)
                 node.data['output_mask'] = mask
                 elastic_width_info.elastic_op.set_active_width(width)
                 names_of_processed_nodes.add(node_id)
@@ -379,7 +409,7 @@ class ElasticWidthHandler(SingleElasticityHandler):
             PTLinearMetatype
         ]
 
-        tmp_in_channels, tmp_out_channels = get_conv_in_out_channels(graph)
+        tmp_in_channels, tmp_out_channels = get_prunable_layers_in_out_channels(graph)
 
         for group in self._pruned_module_groups_info.get_all_clusters():
             assert all(tmp_out_channels[group.elements[0].node_name] == tmp_out_channels[node.node_name]
@@ -450,7 +480,8 @@ class ElasticWidthHandler(SingleElasticityHandler):
                 cumulative_filters_importance += filters_importance
 
             _, reorder_indexes = torch.sort(cumulative_filters_importance, dim=0, descending=True)
-
+            device = get_model_device(self._target_model)
+            reorder_indexes.to(device)
             # 1.2 Setup reorder indexes as output mask to reorganize filters
             for minfo in group.elements:
                 node = self._propagation_graph.get_node_by_id(minfo.nncf_node_id)
@@ -468,15 +499,27 @@ class ElasticWidthHandler(SingleElasticityHandler):
         for idx, (start_node_name, end_node_name) in enumerate(pairs_of_nodes):
             start_node = self._propagation_graph.get_node_by_name(start_node_name)
             start_mask = start_node.data['output_mask']
-            start_width = ElasticWidthHandler.mask_to_width(start_mask)
             end_node = self._propagation_graph.get_node_by_name(end_node_name)
             end_mask = end_node.data['output_mask']
+
+            start_output_shape = list(set(self._propagation_graph.get_output_shapes_for_node(start_node_name)))
+            end_output_shape = list(set(self._propagation_graph.get_output_shapes_for_node(end_node_name)))
+
+            start_width = ElasticWidthHandler.mask_to_width(start_mask)
             end_width = ElasticWidthHandler.mask_to_width(end_mask)
-            output_node_names = [node.node_name for node in self._propagation_graph.get_output_nodes()]
-            if start_width != end_width and end_node_name not in output_node_names:
-                pair_indexes.append(idx)
-                nncf_logger.warning('Pair of nodes [{}, {}] has a different width: {} != {}'.format(
-                    start_node_name, end_node_name, start_width, end_width))
+
+            if start_width is None and end_width is None and start_output_shape != end_output_shape:
+                reason = f'it has a different shapes on boundaries: {start_output_shape} != {end_output_shape}'
+            elif start_width is not None and end_width is not None and start_width != end_width:
+                reason = f'it has a different width on boundaries: {start_width} != {end_width}'
+            elif (start_width is None or end_width is None) and not(start_width is None and end_width is None):
+                reason = f'it has empty width on one of the boundaries. ' \
+                         f'Width: {start_width} vs {end_width}. Shapes: {start_output_shape} vs {end_output_shape}'
+            else:
+                continue
+            nncf_logger.warning('The block [\n\t{},\n\t{}\n]\n can`t be skipped, because {}'.format(
+                start_node_name, end_node_name, reason))
+            pair_indexes.append(idx)
         return pair_indexes
 
     def _get_width_list_len(self, op: ElasticWidthOp) -> int:
@@ -510,15 +553,16 @@ class ElasticWidthHandler(SingleElasticityHandler):
             actual_mask = mask.tensor
             mask_len = sum(actual_mask.size())
             width = int(sum(actual_mask))
-            ref_mask = ElasticWidthHandler._width_to_mask(mask_len, width).tensor
+            device = actual_mask.device
+            ref_mask = ElasticWidthHandler._width_to_mask(width, mask_len, device).tensor
             assert torch.equal(ref_mask, actual_mask), \
                 f'Invalid mask {actual_mask}: the first {width} values must be ones, the rest - zeros.'
             result = width
         return result
 
     @staticmethod
-    def _width_to_mask(active_width: int, max_width: int) -> PTNNCFTensor:
-        mask = torch.ones(max_width)
+    def _width_to_mask(active_width: int, max_width: int, device: torch.device) -> PTNNCFTensor:
+        mask = torch.ones(max_width).to(device)
         mask[active_width:].fill_(0)
         return PTNNCFTensor(mask)
 
@@ -553,10 +597,11 @@ class ElasticWidthBuilder(SingleElasticityBuilder):
         device = next(target_model.parameters()).device
 
         if not self._grouped_node_names_to_prune:
-            prunable_types = [NNCFConv2d.op_func_name]
+            prunable_types = [NNCFConv2d, NNCFLinear]
+            prune_operations_types = [pt.op_func_name for pt in prunable_types]
             types_of_grouping_ops = PTElementwisePruningOp.get_all_op_aliases()
             pruning_node_selector = PruningNodeSelector(PT_PRUNING_OPERATOR_METATYPES,
-                                                        prunable_types,
+                                                        prune_operations_types,
                                                         types_of_grouping_ops,
                                                         ignored_scopes=self._ignored_scopes,
                                                         target_scopes=self._target_scopes,
@@ -571,14 +616,24 @@ class ElasticWidthBuilder(SingleElasticityBuilder):
         pruned_module_groups_info = Clusterization[ElasticWidthInfo](id_fn=lambda x: x.node_name)
         node_name_vs_dynamic_input_width_op_map = OrderedDict()
 
+        metatype_vs_elastic_op_creator = {
+            PTConv2dMetatype: self._create_elastic_conv_width_op,
+            PTDepthwiseConv2dSubtype: self._create_elastic_conv_width_op,
+            PTLinearMetatype: self._create_elastic_linear_width_op
+        }
+
         for i, grouped_node_names in enumerate(self._grouped_node_names_to_prune):
             group_minfos = []
             list_of_node_ids = []
             for node_name in grouped_node_names:
                 node = graph.get_node_by_name(node_name)
+                metatype = node.metatype
                 list_of_node_ids.append(node.node_id)
                 layer_attrs = node.layer_attributes
-                elastic_width_operation = self._create_elastic_width_op(layer_attrs, node_name, self._elasticity_params)
+                if metatype not in metatype_vs_elastic_op_creator:
+                    raise RuntimeError(f'Elastic width is not supported for {metatype}')
+                elastic_op_creator = metatype_vs_elastic_op_creator[metatype]
+                elastic_width_operation = elastic_op_creator(layer_attrs, node_name, self._elasticity_params)
                 elastic_width_operation.to(device)
                 update_conv_params_op = UpdateWeightAndOptionalBias(elastic_width_operation)
                 transformation_commands.append(
@@ -591,11 +646,12 @@ class ElasticWidthBuilder(SingleElasticityBuilder):
                         TransformationPriority.PRUNING_PRIORITY
                     )
                 )
-                conv_module = target_model.get_containing_module(node_name)
-                assert isinstance(conv_module, nn.Conv2d), 'currently prune only 2D Convolutions'
+                pruned_module = target_model.get_containing_module(node_name)
+                assert isinstance(pruned_module, (nn.Conv2d, nn.Linear)), \
+                    'currently prune only 2D Convolutions and Linear layers'
 
                 group_minfos.append(ElasticWidthInfo(node_name=node_name,
-                                                     module=conv_module,
+                                                     module=pruned_module,
                                                      elastic_op=elastic_width_operation,
                                                      node_id=node.node_id,
                                                      is_depthwise=is_prunable_depthwise_conv(node)))
@@ -603,13 +659,13 @@ class ElasticWidthBuilder(SingleElasticityBuilder):
             cluster = Cluster[ElasticWidthInfo](i, group_minfos, list_of_node_ids)
             pruned_module_groups_info.add_cluster(cluster)
 
-        metatype_vs_op_creator = {
+        metatype_vs_dynamic_input_op_creator = {
             PTConv2dMetatype: self._create_dynamic_conv_input_op,
             PTDepthwiseConv2dSubtype: self._create_dynamic_dw_conv_input_op,
             PTBatchNormMetatype: self._create_dynamic_bn_input_op,
             PTLinearMetatype: self._create_dynamic_linear_input_op
         }
-        for metatype, op_creator in metatype_vs_op_creator.items():
+        for metatype, op_creator in metatype_vs_dynamic_input_op_creator.items():
             nodes = graph.get_nodes_by_metatypes([metatype])
             for node in nodes:
                 node_name = node.node_name
@@ -653,10 +709,16 @@ class ElasticWidthBuilder(SingleElasticityBuilder):
         return state
 
     @staticmethod
-    def _create_elastic_width_op(conv_layer_attrs: BaseLayerAttributes, node_name: str, elastic_width_params):
+    def _create_elastic_conv_width_op(conv_layer_attrs: BaseLayerAttributes, node_name: str, elastic_width_params):
         assert isinstance(conv_layer_attrs, ConvolutionLayerAttributes)
         nncf_logger.info("Adding Dynamic Conv2D Layer in scope: {}".format(str(node_name)))
         return ElasticWidthConv2DOp(conv_layer_attrs.out_channels, node_name, elastic_width_params)
+
+    @staticmethod
+    def _create_elastic_linear_width_op(linear_layer_attrs: BaseLayerAttributes, node_name: str, elastic_width_params):
+        assert isinstance(linear_layer_attrs, LinearLayerAttributes)
+        nncf_logger.info("Adding Dynamic Linear Layer in scope: {}".format(str(node_name)))
+        return ElasticWidthLinearOp(linear_layer_attrs.out_features, node_name, elastic_width_params)
 
     @staticmethod
     def _create_dynamic_conv_input_op(conv_layer_attrs: BaseLayerAttributes, node_name: str):

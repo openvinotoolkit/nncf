@@ -50,8 +50,19 @@ ElasticKernelSearchSpace = List[List[kernel_size_type]]
 
 
 class ElasticKernelOp:
-    def __init__(self, *args, max_kernel_size: kernel_size_type, node_name: str, **kwargs):
-        super().__init__(*args, **kwargs)
+    """
+    Base class for introducing elastic kernel for the operations. On the forward pass it takes parameters of operations
+    and modifies in the way that kernel size is changing to a given value.
+    """
+
+    def __init__(self, max_kernel_size: kernel_size_type, node_name: NNCFNodeName):
+        """
+        Constructor.
+
+        :param max_kernel_size: maximum kernel size value in the original operation.
+        :param node_name: string representation of operation address. It's used for more informative messages only.
+        """
+        super().__init__()
         self._kernel_size_list = []
         self._active_kernel_size = max_kernel_size
         self._max_kernel_size = max_kernel_size
@@ -112,7 +123,13 @@ class ElasticKernelConv2DOp(ElasticKernelOp, nn.Module):
                 break
         return ks_list
 
-    def forward(self, weight):
+    def forward(self, weight: torch.Tensor) -> torch.Tensor:
+        """
+        Modifies weight to have kernel size equals to active kernel size value.
+
+        :param weight: weight tensor to be modified
+        :return: modified weight
+        """
         kernel_size = self.get_active_kernel_size()
         nncf_logger.debug('Conv2d with active kernel size={} in scope={}'.format(kernel_size, self.node_name))
 

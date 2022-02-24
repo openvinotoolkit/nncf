@@ -17,6 +17,7 @@ import pytest
 import torch
 import numpy as np
 
+from nncf.torch.layers import NNCF_LINEAR_MODULES_DICT
 from nncf.torch.module_operations import UpdateWeightAndBias
 from nncf.torch.pruning.filter_pruning.algo import FilterPruningController
 from nncf.torch.pruning.filter_pruning.functions import l2_filter_norm
@@ -490,6 +491,9 @@ def test_func_calculation_flops_for_conv(model):
     for node_name, ref_shape in pruning_algo._modules_out_shapes.items():
         # ref_shape get from tracing graph
         node = graph.get_node_by_name(node_name)
+        if node.node_type in [v.op_func_name for v in NNCF_LINEAR_MODULES_DICT]:
+            continue
+
         shape = _calculate_output_shape(graph, node)
         assert ref_shape == shape, f"Incorrect calculation output name for {node_name}"
 

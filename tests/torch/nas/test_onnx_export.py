@@ -16,6 +16,7 @@ import onnxruntime as rt
 import torch
 
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elasticity_dim import ElasticityDim
+from nncf.torch.utils import get_model_device
 from tests.torch.helpers import get_all_inputs_for_graph_node
 from tests.torch.helpers import get_nodes_by_type
 from tests.torch.nas.descriptors import THREE_CONV_TEST_DESC
@@ -58,28 +59,29 @@ def test_multi_elasticity_weights_in_onnx(tmp_path):
     multi_elasticity_handler.enable_elasticity(ElasticityDim.DEPTH)
     multi_elasticity_handler.activate_minimum_subnet()
     path_to_onnx = tmp_path / 'depth_stage.onnx'
-    ref_orig_weights = [ref_weight1, conv1.bias]
-    check_onnx_weights(ctrl, path_to_onnx, ref_orig_weights, 2)
+    ref_orig_weights = [ref_weight1, conv1.bias, last_conv.weight, last_conv.bias]
+    check_onnx_weights(ctrl, path_to_onnx, ref_orig_weights, 4)
 
     multi_elasticity_handler.enable_elasticity(ElasticityDim.WIDTH)
     multi_elasticity_handler.activate_minimum_subnet()
     path_to_onnx = tmp_path / 'width_stage.onnx'
-    ref_orig_weights = [ref_weight1[:1], conv1.bias[:1]]
-    check_onnx_weights(ctrl, path_to_onnx, ref_orig_weights, 2)
+    ref_orig_weights = [ref_weight1[:1], conv1.bias[:1], last_conv.weight[:, :1, :, :], last_conv.bias[:1]]
+    check_onnx_weights(ctrl, path_to_onnx, ref_orig_weights, 4)
 
 
 def check_onnx_outputs(ctrl, model, path_to_onnx):
     model.eval()
+    device = get_model_device(model)
     ctrl.export_model(path_to_onnx)
     input_sizes = model.get_nncf_wrapped_model().INPUT_SIZE
-    torch_input = torch.ones(input_sizes)
+    torch_input = torch.ones(input_sizes).to(device)
     np_input = np.ones(input_sizes)
     with torch.no_grad():
         torch_model_output = model(torch_input)
     sess = rt.InferenceSession(str(path_to_onnx))
     input_name = sess.get_inputs()[0].name
     onnx_model_output = sess.run(None, {input_name: np_input.astype(np.float32)})[0]
-    assert np.allclose(torch_model_output.numpy(), onnx_model_output)
+    assert np.allclose(torch_model_output.cpu().numpy(), onnx_model_output, rtol=1e-4)
 
 
 def test_multi_elasticity_outputs_in_onnx(tmp_path):

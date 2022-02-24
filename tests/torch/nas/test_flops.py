@@ -46,7 +46,7 @@ LIST_OF_ME_DESCS = [
             supernet=ModelStats(651_599_872, 23_467_712),
             kernel_stage=ModelStats(651_599_872, 23_467_712),
             depth_stage=ModelStats(615_948_288, 23_398_080),
-            width_stage=ModelStats(25_853_952, 581_472)
+            width_stage=ModelStats(22_757_376, 194_400)
         ),
         blocks_to_skip=RESNET50_BLOCK_TO_SKIP,
     ),
@@ -57,7 +57,7 @@ LIST_OF_ME_DESCS = [
             supernet=ModelStats(166_862_848, 23_475_392),
             kernel_stage=ModelStats(162_930_688, 23_467_712),
             depth_stage=ModelStats(154_017_792, 23_398_080),
-            width_stage=ModelStats(6_494_208, 581_472)
+            width_stage=ModelStats(5_720_064, 194_400)
         ),
         blocks_to_skip=RESNET50_BLOCK_TO_SKIP,
     ),
@@ -68,7 +68,7 @@ LIST_OF_ME_DESCS = [
             supernet=ModelStats(12_249_856, 2_202_560),
             kernel_stage=ModelStats(12_249_856, 2_202_560),
             depth_stage=ModelStats(10_750_720, 2_180_336),
-            width_stage=ModelStats(2_220_800, 144_880)
+            width_stage=ModelStats(2_140_928, 104_944)
         ),
         blocks_to_skip=MOBILENET_V2_BLOCKS_TO_SKIP,
     ),
@@ -80,7 +80,7 @@ LIST_OF_ME_DESCS = [
             supernet=ModelStats(601_548_544, 3_469_760),
             kernel_stage=ModelStats(601_548_544, 3_469_760),
             depth_stage=ModelStats(528_090_880, 3_447_536),
-            width_stage=ModelStats(110_124_800, 1_412_080)
+            width_stage=ModelStats(106_211_072, 1_372_144)
         ),
         blocks_to_skip=MOBILENET_V2_BLOCKS_TO_SKIP,
     ),
@@ -101,7 +101,7 @@ LIST_OF_ME_DESCS = [
             supernet=ModelStats(1_776_701_440, 6_872_768),
             kernel_stage=ModelStats(1_776_701_440, 6_872_768),
             depth_stage=ModelStats(472_272_896, 3_145_408),
-            width_stage=ModelStats(415_191_040, 1_769_312)
+            width_stage=ModelStats(358_174_720, 1_139_552)
         ),
         is_auto_skipped_blocks=True,
     ),
@@ -117,7 +117,7 @@ LIST_OF_ME_DESCS = [
         blocks_to_skip=[['DepthBasicConvTestModel/Sequential[branch_with_blocks]/NNCFConv2d[conv0]/conv2d_0',
                          'DepthBasicConvTestModel/Sequential[branch_with_blocks]/NNCFConv2d[conv1]/conv2d_0']],
         input_sizes=DepthBasicConvTestModel.INPUT_SIZE,
-        algo_params={'width': {'min_out_channels': 1, 'width_step': 1}},
+        algo_params={'width': {'min_width': 1, 'width_step': 1}},
     ),
 ]
 
@@ -147,6 +147,4 @@ def test_multi_elasticity_flops(desc: MultiElasticityTestDesc):
     multi_elasticity_handler.enable_elasticity(ElasticityDim.WIDTH)
     multi_elasticity_handler.activate_minimum_subnet()
     assert multi_elasticity_handler.count_flops_and_weights_for_active_subnet() == ref_model_stats.width_stage
-    if 'Dense' in str(desc):
-        pytest.skip('RuntimeError: running_mean should contain 96 elements not 32')
     model.do_dummy_forward()

@@ -883,7 +883,7 @@ def get_root_nncf_config_schema(ref_vs_algo_schema):
                             "method. Keywords can be specified for each entry - if left "
                             "unspecified, the dummy tensor will be passed as a positional arg."),
             "disable_shape_matching": with_attributes(
-                _BOOLEAN,
+                BOOLEAN,
                 description="Whether to enable strict input tensor"
                             "shape matching when building the internal graph"
                             "representation of the model. Set this to false if your"
@@ -909,7 +909,7 @@ def get_root_nncf_config_schema(ref_vs_algo_schema):
                             "values from the set ('CPU', 'GPU', 'VPU', 'ANY', 'TRIAL'). Set "
                             "this value to 'TRIAL' if you are going to use a custom "
                             "quantization schema. Optional."),
-            "log_dir": with_attributes(_STRING,
+            "log_dir": with_attributes(STRING,
                                        description="Log directory for NNCF-specific logging outputs"),
         },
         "required": ["input_info"],

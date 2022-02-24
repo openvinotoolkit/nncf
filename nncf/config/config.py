@@ -22,16 +22,14 @@ import jstyleson as json
 
 from nncf.common.utils.logger import logger
 from nncf.common.utils.os import safe_open
-from nncf.config.schema import get_root_nncf_config_schema
+from nncf.config.experimental_schema import BOOTSTRAP_NAS_ALGO_NAME_IN_CONFIG
+from nncf.config.experimental_schema import BOOTSTRAP_NAS_SCHEMA
+from nncf.config.experimental_schema import EXPERIMENTAL_REF_VS_ALGO_SCHEMA
 from nncf.config.schema import REF_VS_ALGO_SCHEMA
-from nncf.config.schema import validate_single_compression_algo_schema
-from nncf.config.schema import ROOT_NNCF_CONFIG_SCHEMA
+from nncf.config.schema import get_root_nncf_config_schema
 from nncf.config.schema import validate_accuracy_aware_training_schema
 from nncf.config.schema import validate_single_compression_algo_schema
 from nncf.config.structures import NNCFExtraConfigStruct
-from nncf.config.experimental_schema import EXPERIMENTAL_REF_VS_ALGO_SCHEMA
-from nncf.experimental.config.nas_schema import BOOTSTRAP_NAS_ALGO_NAME_IN_CONFIG
-from nncf.experimental.config.nas_schema import BOOTSTRAP_NAS_SCHEMA
 
 
 class NNCFConfig(dict):

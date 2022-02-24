@@ -122,13 +122,11 @@ class MultiElasticityTestDesc(NamedTuple):
 THREE_CONV_TEST_DESC = MultiElasticityTestDesc(model_creator=ThreeConvModel,
                                                ref_model_stats=RefModelStats(supernet=ModelStats(17400, 87),
                                                                              kernel_stage=ModelStats(7800, 39),
-                                                                             depth_stage=ModelStats(5400, 27),
-                                                                             width_stage=ModelStats(1800, 9)),
+                                                                             depth_stage=ModelStats(6000, 30),
+                                                                             width_stage=ModelStats(2000, 10)),
                                                blocks_to_skip=[
-                                                   # TODO(nlyalyus): no need to delete last_layer, as mask propagation
-                                                   #  should fail on newly artificially created last layer?
                                                    ['ThreeConvModel/NNCFConv2d[conv1]/conv2d_0',
-                                                    '/nncf_model_output_0']],
-                                               algo_params={'width': {'min_out_channels': 1, 'width_step': 1}},
+                                                    'ThreeConvModel/NNCFConv2d[conv_to_skip]/conv2d_0']],
+                                               algo_params={'width': {'min_width': 1, 'width_step': 1}},
                                                input_sizes=ThreeConvModel.INPUT_SIZE,
                                                )

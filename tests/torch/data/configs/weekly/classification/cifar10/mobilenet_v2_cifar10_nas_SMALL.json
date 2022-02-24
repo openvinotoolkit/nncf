@@ -26,7 +26,7 @@
                 "available_elasticity_dims": ["width", "depth"],
                 "width": {
                     "max_num_widths": 2,
-                      "min_out_channels": 32,
+                      "min_width": 32,
                       "width_step": 32,
                       "width_multipliers": [1, 0.85]
                 },

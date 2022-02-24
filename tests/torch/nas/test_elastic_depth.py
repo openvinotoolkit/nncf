@@ -25,6 +25,7 @@ from nncf.experimental.torch.search_building_blocks.search_blocks import Buildin
 from nncf.experimental.torch.search_building_blocks.search_blocks import get_building_blocks
 from nncf.torch.layers import NNCFConv2d
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elasticity_dim import ElasticityDim
+from nncf.torch.utils import get_model_device
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
 from tests.torch.helpers import create_conv
 from tests.torch.helpers import get_empty_config
@@ -274,7 +275,8 @@ def test_can_export_model_with_one_skipped_block_resnet18(tmp_path):
     assert len(onnx_resnet18_without_one_block.graph.node) == 67
 
     input_tensor = np.ones(nncf_config['input_info'][0]['sample_size'])
-    torch_input = torch.tensor(input_tensor, dtype=torch.float32)
+    device = get_model_device(compressed_model)
+    torch_input = torch.tensor(input_tensor, dtype=torch.float32).to(device)
     with torch.no_grad():
         torch_model_output = compressed_model(torch_input)
 
@@ -282,7 +284,7 @@ def test_can_export_model_with_one_skipped_block_resnet18(tmp_path):
     sess = rt.InferenceSession(str(onnx_model_without_block_path))
     input_name = sess.get_inputs()[0].name
     onnx_model_output = sess.run(None, {input_name: input_tensor.astype(np.float32)})[0]
-    assert np.allclose(torch_model_output.numpy(), onnx_model_output, rtol=1e-5, atol=1e-3)
+    assert np.allclose(torch_model_output.cpu().numpy(), onnx_model_output)
 
 
 def test_skip_one_block_resnet50(mocker):

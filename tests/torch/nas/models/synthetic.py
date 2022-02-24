@@ -100,7 +100,9 @@ class ThreeConvModel(nn.Module):
 
     def forward_min_subnet_on_depth_stage(self, x):
         ref_weights = ref_kernel_transform(self.conv1.weight, transition_matrix=self._transition_matrix)
-        return do_conv2d(self.conv1, x, padding=1, weight=ref_weights)
+        o1 = do_conv2d(self.conv1, x, padding=1, weight=ref_weights)
+        o3 = o1 + o1
+        return self.last_conv(o3)
 
     def forward_min_subnet_on_width_stage(self, x):
         # NOTE: though the order of kernel/width operations shouldn't lead to a different result mathematically,
@@ -108,7 +110,11 @@ class ThreeConvModel(nn.Module):
         ref_weights = self.conv1.weight[:1, :, :, :]
         ref_weights = ref_kernel_transform(ref_weights, transition_matrix=self._transition_matrix)
         ref_bias = self.conv1.bias[:1]
-        return do_conv2d(self.conv1, x, padding=1, weight=ref_weights, bias=ref_bias)
+        o1 = do_conv2d(self.conv1, x, padding=1, weight=ref_weights, bias=ref_bias)
+        o3 = o1 + o1
+        ref_weights_last = self.last_conv.weight[:, :1, :, :]
+        ref_bias_last = self.last_conv.bias[:1]
+        return do_conv2d(self.last_conv, o3, weight=ref_weights_last, bias=ref_bias_last)
 
     def forward(self, x):
         fn = self._forward_fn_per_mode[self.mode]
