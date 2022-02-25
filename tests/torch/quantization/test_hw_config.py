@@ -106,8 +106,9 @@ class TestHWConfigRules:
             ]
         }
 
-        _, ctrl = self.get_model_and_ctrl_with_applied_hw_config_quantization(ModelForHWConfigTest(with_hardswish=False),
-                                                                              hw_config_dict, False)
+        _, ctrl = \
+            self.get_model_and_ctrl_with_applied_hw_config_quantization(ModelForHWConfigTest(with_hardswish=False),
+                                                                        hw_config_dict, False)
         assert len(ctrl.weight_quantizers) == 0  # Conv2d weights remain unquantized
         assert len(ctrl.non_weight_quantizers) == 1  # Only the matmul input is quantized
 
@@ -191,8 +192,9 @@ class TestHWConfigRules:
             ]
         }
 
-        _, ctrl = self.get_model_and_ctrl_with_applied_hw_config_quantization(ModelForHWConfigTest(with_hardswish=False),
-                                                                              hw_config_dict, False)
+        _, ctrl = \
+            self.get_model_and_ctrl_with_applied_hw_config_quantization(ModelForHWConfigTest(with_hardswish=False),
+                                                                        hw_config_dict, False)
         assert len(ctrl.weight_quantizers) == 1  # Conv2d weights quantized
         conv2d_weight_quantizer_ref = list(ctrl.weight_quantizers.values())[0].quantizer_module_ref
         assert not self.quantizer_has_default_config(conv2d_weight_quantizer_ref)
@@ -237,8 +239,9 @@ class TestHWConfigRules:
             ]
         }
 
-        _, ctrl = self.get_model_and_ctrl_with_applied_hw_config_quantization(ModelForHWConfigTest(with_hardswish=False),
-                                                                              hw_config_dict)
+        _, ctrl = \
+            self.get_model_and_ctrl_with_applied_hw_config_quantization(ModelForHWConfigTest(with_hardswish=False),
+                                                                        hw_config_dict)
         assert len(ctrl.weight_quantizers) == 1  # Conv2d weights quantized with default config
         assert len(ctrl.non_weight_quantizers) == 2  # All inputs are quantized.
         for quantizer_ref in ctrl.all_quantizations.values():
