@@ -446,6 +446,7 @@ def train(net, compression_ctrl, train_data_loader, test_data_loader, criterion,
             with torch.no_grad():
                 net.eval()
                 mAP = test_net(net, config.device, test_data_loader, distributed=config.multiprocessing_distributed)
+                config.tb.add_scalar("eval/mAp", mAP, epoch)
                 is_best_by_mAP = mAP > best_mAp and compression_stage == best_compression_stage
                 is_best = is_best_by_mAP or compression_stage > best_compression_stage
                 if is_best:
