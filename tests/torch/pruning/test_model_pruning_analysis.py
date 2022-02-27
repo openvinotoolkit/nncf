@@ -317,15 +317,15 @@ GROUP_PRUNING_MODULES_TEST_CASES = [
             ['MobilenetV3BlockSEReshape/InvertedResidual[inverted_residual]/Sequential[conv]/'
              'SELayerWithReshape[3]/Sequential[fc]/NNCFConv2d[0]/conv2d_0'],
             ],
-        pruned_groups_by_node_id=[[8], [1, 2, 10, 13]],
+        pruned_groups_by_node_id=[[8], [1, 2, 11, 15]],
         can_prune_after_analysis={0: True, 1: True, 2: True, 3: True, 4: True, 5: True, 6: True, 7: True,
                                   8: True, 9: True, 10: True, 11: True, 12: True, 13: True, 14: True, 15: True,
-                                  16: True, 17: True},
+                                  16: True, 17: True, 18: True, 19: True},
         final_can_prune={1: PruningAnalysisDecision(True),
                          8: PruningAnalysisDecision(True),
-                         10: PruningAnalysisDecision(True),
-                         13: PruningAnalysisDecision(True),
-                         16: PruningAnalysisDecision(False, [PruningAnalysisReason.LAST_CONV])},
+                         11: PruningAnalysisDecision(True),
+                         15: PruningAnalysisDecision(True),
+                         18: PruningAnalysisDecision(False, [PruningAnalysisReason.LAST_CONV])},
 
         prune_params=(True, True)),
 
@@ -343,15 +343,15 @@ GROUP_PRUNING_MODULES_TEST_CASES = [
             ['MobilenetV3BlockSEReshape/InvertedResidual[inverted_residual]/Sequential[conv]/'
              'SELayerWithReshapeAndLinear[3]/Sequential[fc]/NNCFLinear[0]/linear_0'],
         ],
-        pruned_groups_by_node_id=[[7], [1, 2, 9, 13]],
+        pruned_groups_by_node_id=[[7], [1, 2, 10, 15]],
         can_prune_after_analysis={0: True, 1: True, 2: True, 3: True, 4: True, 5: True, 6: True, 7: True,
                                   8: True, 9: True, 10: True, 11: True, 12: True, 13: True, 14: True, 15: True,
-                                  16: True, 17: True},
+                                  16: True, 17: True, 18: True, 19: True},
         final_can_prune={1: PruningAnalysisDecision(True),
                          7: PruningAnalysisDecision(True),
-                         9: PruningAnalysisDecision(True),
-                         13: PruningAnalysisDecision(True),
-                         16: PruningAnalysisDecision(False, [PruningAnalysisReason.LAST_CONV])},
+                         10: PruningAnalysisDecision(True),
+                         15: PruningAnalysisDecision(True),
+                         18: PruningAnalysisDecision(False, [PruningAnalysisReason.LAST_CONV])},
 
         prune_params=(True, True)),
     GroupPruningModulesTestStruct(
@@ -518,6 +518,7 @@ def test_symbolic_mask_propagation(test_input_info_struct_):
     prune_first, *_ = test_input_info_struct_.prune_params
     nncf_model, _ = create_nncf_model_and_pruning_builder(model, {'prune_first_conv': prune_first})
     pruning_types = [v.op_func_name for v in NNCF_PRUNING_MODULES_DICT]
+    nncf_model.eval()
     graph = nncf_model.get_graph()
     algo = MaskPropagationAlgorithm(graph, PT_PRUNING_OPERATOR_METATYPES, SymbolicMaskProcessor)
     final_can_prune = algo.symbolic_mask_propagation(pruning_types,
