@@ -12,8 +12,6 @@
 """
 
 #pylint:disable=too-many-lines
-from asyncio.log import logger
-import logging
 import warnings
 from collections import Counter
 from collections import OrderedDict

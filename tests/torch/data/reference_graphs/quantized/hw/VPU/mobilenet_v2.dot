@@ -150,7 +150,7 @@ strict digraph  {
 "148 MobileNetV2/Sequential[features]/ConvBNActivation[18]/NNCFBatchNorm2d[1]/batch_norm_0" [id=148, type=batch_norm];
 "149 MobileNetV2/Sequential[features]/ConvBNActivation[18]/ReLU6[2]/hardtanh_0" [id=149, type=hardtanh];
 "150 MobileNetV2/adaptive_avg_pool2d_0" [id=150, type=adaptive_avg_pool2d];
-"151 MobileNetV2/flatten_0" [id=151, type=reshape];
+"151 MobileNetV2/flatten_0" [id=151, type=flatten];
 "152 MobileNetV2/Sequential[classifier]/Dropout[0]/dropout_0" [id=152, type=dropout];
 "153 MobileNetV2/Sequential[classifier]/NNCFLinear[1]/linear_0" [id=153, type=linear];
 "154 /nncf_model_output_0" [id=154, type=nncf_model_output];
