@@ -143,7 +143,7 @@ NNCF may be straightforwardly integrated into training/evaluation pipelines of t
 
 ### Git patches for third-party repository
 See [third_party_integration](./third_party_integration) for examples of code modifications (Git patches and base commit IDs are provided) that are necessary to integrate NNCF into the following repositories:
-  - [huggingface-transformers](https://github.com/huggingface/transformers)
+  - [huggingface-transformers](third_party_integration/huggingface_transformers/README.md)
 
 ## System requirements
 - Ubuntu\* 18.04 or later (64-bit)
