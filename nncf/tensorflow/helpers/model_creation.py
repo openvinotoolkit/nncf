@@ -12,7 +12,7 @@
 """
 
 import types
-from typing import Any, Dict, Optional, Tuple, List, Union
+from typing import Any, Dict, Optional, Tuple
 
 import tensorflow as tf
 

@@ -67,17 +67,6 @@ def test_context_independence():
     input_sample_sizes = ([1, 28, 28, 1], [1, 28, 28, 1])
     config = get_basic_quantization_config(case.qconfig, input_sample_sizes)
     config['compression']['algorithm'] = 'experimental_quantization'
-    input_signature = [
-        tf.TensorSpec(
-            shape=[None, 28, 28, 1],
-            dtype=tf.float32
-        ),
-        tf.TensorSpec(
-            shape=[None, 28, 28, 1],
-            dtype=tf.float32
-        )
-    ]
-
     models = []
     for _ in range(2):
         model = ModelWithSharedLayer()
