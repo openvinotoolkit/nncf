@@ -44,14 +44,35 @@ class TFWithoutModelManager(TFOriginalModelManager):
         pass
 
 
-def model_manager(model_fn, nncf_config, *args, **kwargs):
+class TFModelManager:
     """
-    Creates model manager depending on the algorithm name.
+    Controls the process of model creation.
+    """
 
-    :param model_fn: Function for model creation.
-    :nncf_config: NNCF config.
-    :return: Model manger.
-    """
-    if is_experimental_quantization(nncf_config):
-        return TFWithoutModelManager(model_fn, *args, **kwargs)
-    return TFOriginalModelManager(model_fn, *args, **kwargs)
+    def __init__(self, model_fn, nncf_config, *args, **kwargs):
+        """
+        Initializes the `TFModelManager`.
+
+        :param model_fn: Function for model creation.
+        :param nncf_config: NNCF config.
+        """
+        self._manager = TFModelManager._create_model_manager(model_fn, nncf_config, *args, **kwargs)
+
+    def __enter__(self):
+        return self._manager.__enter__()
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        return self._manager.__exit__(exc_type, exc_val, exc_tb)
+
+    @staticmethod
+    def _create_model_manager(model_fn, nncf_config, *args, **kwargs):
+        """
+        Creates model manager depending on the algorithm name.
+
+        :param model_fn: Function for model creation.
+        :param nncf_config: NNCF config.
+        :return: Model manager.
+        """
+        if is_experimental_quantization(nncf_config):
+            return TFWithoutModelManager(model_fn, *args, **kwargs)
+        return TFOriginalModelManager(model_fn, *args, **kwargs)
