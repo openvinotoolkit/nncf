@@ -16,6 +16,9 @@ from nncf.tensorflow.graph.metatypes.tf_ops import TFAddOpMetatype
 from nncf.tensorflow.graph.metatypes.tf_ops import TFRelu6OpMetatype
 from nncf.tensorflow.graph.metatypes.tf_ops import TFReluOpMetatype
 from nncf.tensorflow.graph.metatypes.tf_ops import TFMulOpMetatype
+from nncf.tensorflow.graph.metatypes.tf_ops import TFBiasAddOpMetatype
+from nncf.tensorflow.graph.metatypes.tf_ops import TFMatMulOpMetatype
+from nncf.tensorflow.graph.metatypes.tf_ops import TFConv2DOpMetatype
 
 
 def create_h_sigmoid_act() -> GraphPattern:
@@ -103,8 +106,8 @@ def create_h_swish_act() -> GraphPattern:
 def create_matmul_biasadd_pattern() -> GraphPattern:
     pattern = GraphPattern()
 
-    matmul_node = pattern.add_node(label='MATMUL', type='MatMul')
-    biasadd_node = pattern.add_node(label='BIASADD', type='BiasAdd')
+    matmul_node = pattern.add_node(label='MATMUL', type=TFMatMulOpMetatype.get_all_aliases())
+    biasadd_node = pattern.add_node(label='BIASADD', type=TFBiasAddOpMetatype.get_all_aliases())
     pattern.add_edge(matmul_node, biasadd_node)
 
     return pattern
@@ -113,8 +116,8 @@ def create_matmul_biasadd_pattern() -> GraphPattern:
 def create_conv2d_biasadd_pattern() -> GraphPattern:
     pattern = GraphPattern()
 
-    conv2d_node = pattern.add_node(label='CONV2D', type='Conv2D')
-    biasadd_node = pattern.add_node(label='BIASADD', type='BiasAdd')
+    conv2d_node = pattern.add_node(label='CONV2D', type=TFConv2DOpMetatype.get_all_aliases())
+    biasadd_node = pattern.add_node(label='BIASADD', type=TFBiasAddOpMetatype.get_all_aliases())
     pattern.add_edge(conv2d_node, biasadd_node)
 
     return pattern
