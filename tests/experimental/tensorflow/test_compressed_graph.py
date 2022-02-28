@@ -11,7 +11,8 @@
  limitations under the License.
 """
 
-from nncf.experimental.tensorflow.nncf_network import NNCFNetwork
+from nncf.experimental.tensorflow.patch_tf import patch_tf_operations
+patch_tf_operations()
 
 import os
 
@@ -82,11 +83,7 @@ def check_model_graph_v2(compressed_model, ref_graph_filename, ref_graph_dir, re
 
 @pytest.mark.parametrize('desc', MODELS, ids=MODELS_IDS)
 def test_quantize_network_v2(desc: ModelDesc, _quantization_case_config_v2):
-    input_signature = tf.TensorSpec(
-        shape=[None] + desc.input_sample_sizes[1:],
-        dtype=tf.float32
-    )
-    model = NNCFNetwork(desc.model_builder(), input_signature)
+    model = desc.model_builder()
 
     config = get_basic_quantization_config(_quantization_case_config_v2.qconfig,
                                         input_sample_sizes=desc.input_sample_sizes)

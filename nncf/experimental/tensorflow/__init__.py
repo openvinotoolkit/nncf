@@ -12,6 +12,3 @@
 """
 
 from nncf.experimental.tensorflow.quantization import algorithm as experimental_quantization_algorithm
-from nncf.experimental.tensorflow.patch_tf import patch_tf_operations
-
-patch_tf_operations()

@@ -16,6 +16,8 @@ import weakref
 
 import tensorflow as tf
 
+from nncf.config.utils import is_experimental_quantization
+
 
 class TFOriginalModelManager:
     def __init__(self, model_fn, *args, **kwargs):
@@ -32,3 +34,24 @@ class TFOriginalModelManager:
     def __exit__(self, exc_type, exc_val, exc_tb):
         del self._model
         gc.collect()
+
+
+class TFWithoutModelManager(TFOriginalModelManager):
+    def __enter__(self):
+        return self._model_fn(*self._args, **self._kwargs)
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        pass
+
+
+def model_manager(model_fn, nncf_config, *args, **kwargs):
+    """
+    Creates model manager depending on the algorithm name.
+
+    :param model_fn: Function for model creation.
+    :nncf_config: NNCF config.
+    :return: Model manger.
+    """
+    if is_experimental_quantization(nncf_config):
+        return TFWithoutModelManager(model_fn, *args, **kwargs)
+    return TFOriginalModelManager(model_fn, *args, **kwargs)

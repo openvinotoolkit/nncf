@@ -369,3 +369,7 @@ class QuantizationControllerV2(QuantizationController):
 
     def statistics(self, quickly_collected_only: bool = False) -> NNCFStatistics:
         return NNCFStatistics()
+
+    def prepare_for_export(self) -> None:
+        self._model.compute_output_shape(model.input_signature.shape.as_list())
+        self._model = self.strip_model(self._model)

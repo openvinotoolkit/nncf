@@ -11,7 +11,8 @@
  limitations under the License.
 """
 
-from nncf.experimental.tensorflow.nncf_network import NNCFNetwork
+from nncf.experimental.tensorflow.patch_tf import patch_tf_operations
+patch_tf_operations()
 
 import os
 
@@ -77,8 +78,7 @@ def test_context_independence():
 
     models = []
     for _ in range(2):
-        model = NNCFNetwork(ModelWithSharedLayer(), input_signature)
-        model.compute_output_signature(input_signature)
+        model = ModelWithSharedLayer()
         models.append(
             create_compressed_model_and_algo_for_test(model, config, force_no_init=True)[0]
         )
