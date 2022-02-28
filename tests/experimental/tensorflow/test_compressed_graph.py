@@ -11,13 +11,12 @@
  limitations under the License.
 """
 
-from nncf.experimental.tensorflow.patch_tf import patch_tf_operations
-patch_tf_operations()
-
 import os
 
 import pytest
 import tensorflow as tf
+
+from nncf.experimental.tensorflow.patch_tf import patch_tf_operations
 
 from tests.tensorflow.helpers import create_compressed_model_and_algo_for_test
 from tests.tensorflow.test_compressed_graph import get_graph_to_layer_var_names_map
@@ -30,6 +29,9 @@ from tests.tensorflow.test_compressed_graph import QUANTIZERS
 from tests.tensorflow.test_compressed_graph import QuantizeTestCaseConfiguration
 from tests.tensorflow.test_compressed_graph import create_test_name
 from tests.experimental.tensorflow import test_models
+
+
+patch_tf_operations()
 
 
 MODELS = [

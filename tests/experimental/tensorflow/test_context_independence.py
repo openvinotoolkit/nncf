@@ -11,9 +11,6 @@
  limitations under the License.
 """
 
-from nncf.experimental.tensorflow.patch_tf import patch_tf_operations
-patch_tf_operations()
-
 import os
 
 import tensorflow as tf
@@ -23,6 +20,11 @@ from tests.tensorflow.test_compressed_graph import create_test_name
 from tests.tensorflow.test_compressed_graph import QuantizeTestCaseConfiguration
 from tests.tensorflow.test_compressed_graph import get_basic_quantization_config
 from tests.experimental.tensorflow.test_compressed_graph import check_model_graph_v2
+
+from nncf.experimental.tensorflow.patch_tf import patch_tf_operations
+
+
+patch_tf_operations()
 
 
 class ModelWithSharedLayer(tf.keras.Model):

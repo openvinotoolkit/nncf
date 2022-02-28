@@ -177,7 +177,7 @@ def run(config):
     resume_training = config.ckpt_path is not None
 
     if is_accuracy_aware_training(config):
-        with TFOriginalModelManager(model_fn, **model_params) as model:
+        with model_manager(model_fn, nncf_config, **model_params) as model:
             model.compile(metrics=[tf.keras.metrics.CategoricalAccuracy(name='acc@1')])
             results = model.evaluate(
                 validation_dataset,
