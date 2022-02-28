@@ -12,7 +12,6 @@
 """
 from abc import ABC
 from abc import abstractmethod
-from copy import copy
 from functools import partial
 from typing import TypeVar
 
@@ -26,8 +25,6 @@ from nncf.common.utils.logger import logger as nncf_logger
 from nncf.common.utils.registry import Registry
 from nncf.config.config import NNCFConfig
 from nncf.config.extractors import extract_accuracy_aware_training_params
-from nncf.common.accuracy_aware_training.runner import TrainingRunner
-from nncf.common.accuracy_aware_training.runner import TrainingRunnerCreator
 from nncf.common.accuracy_aware_training.runner import EarlyExitTrainingRunnerCreator
 from nncf.common.accuracy_aware_training.runner import AdaptiveCompressionLevelTrainingRunnerCreator
 
@@ -368,9 +365,9 @@ class AdaptiveCompressionTrainingLoop(BaseEarlyExitCompressionTrainingLoop):
         best_accuracy_budget = runner.best_val_metric_value - runner.minimal_tolerable_accuracy
         nncf_logger.info('Training_epoch_count/patience_epochs: {}/{}'.format(runner.training_epoch_count,
                                                                               runner.patience_epochs))
-        if runner.training_epoch_count >= runner.patience_epochs or best_accuracy_budget >= 0 or force_update:
+        if runner.training_epoch_count >= runner.patience_epochs or best_accuracy_budget >= 0.0 or force_update:
             runner.compression_rate_target += self._determine_compression_rate_step_value(runner)
-            runner.was_compression_increased_on_prev_step = np.sign(best_accuracy_budget)
+            runner.was_compression_increased_on_prev_step = 1.0 if best_accuracy_budget >= 0.0 else -1.0
             return True
         return False
 
@@ -384,7 +381,8 @@ class AdaptiveCompressionTrainingLoop(BaseEarlyExitCompressionTrainingLoop):
 
     @staticmethod
     def _uniform_decrease_compression_step_update(runner):
-        best_accuracy_budget_sign = np.sign(runner.best_val_metric_value - runner.minimal_tolerable_accuracy)
+        best_accuracy_budget = runner.best_val_metric_value - runner.minimal_tolerable_accuracy
+        best_accuracy_budget_sign = 1.0 if best_accuracy_budget >= 0.0 else -1.0
         if runner.was_compression_increased_on_prev_step is not None and \
                 runner.was_compression_increased_on_prev_step != best_accuracy_budget_sign:
             runner.compression_rate_step *= runner.step_reduction_factor

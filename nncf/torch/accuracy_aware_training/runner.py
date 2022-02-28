@@ -164,7 +164,7 @@ class PTAccuracyAwareTrainingRunner(BaseAccuracyAwareTrainingRunner):
 
         self.dump_checkpoint(model, compression_controller)
 
-    def _save_best_checkpoint(self, checkpoint_path, ):
+    def _save_best_checkpoint(self, checkpoint_path):
         best_checkpoint_filename = 'acc_aware_checkpoint_best.pth'
         best_path = osp.join(self._checkpoint_save_dir, best_checkpoint_filename)
         self._best_checkpoint = best_path

@@ -650,8 +650,6 @@ class SELayerWithReshapeAndLinear(nn.Module):
         return x * y
 
 
-<<<<<<< HEAD
-=======
 class SELayerWithReshapeAndLinearAndMean(nn.Module):
     def __init__(self, channel, reduction=4):
         super().__init__()
@@ -669,7 +667,6 @@ class SELayerWithReshapeAndLinearAndMean(nn.Module):
         return x * y
 
 
->>>>>>> develop
 class InvertedResidual(nn.Module):
     def __init__(self, inp, hidden_dim, oup, kernel_size, stride, se_layer):
         super().__init__()
