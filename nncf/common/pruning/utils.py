@@ -512,7 +512,7 @@ class PruningAnalysisDecision:
             return eq and other._reasons is None
         if other._reasons is None:
             return False
-        return eq and sorted(self._reasons) == sorted(other._reasons)
+        return eq and set(self._reasons) == set(other._reasons)
 
     def __bool__(self) -> bool:
         return self.decision

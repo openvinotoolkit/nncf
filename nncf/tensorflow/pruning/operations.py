@@ -79,7 +79,8 @@ class TFTransposeConvolutionPruningOp(TransposeConvolutionPruningOp):
 
 @TF_PRUNING_OPERATOR_METATYPES.register('linear')
 class TFLinearPruningOp(LinearPruningOp):
-    additional_types = ['Dense', 'MatMul']
+    additional_types = layer_metatypes.TFDenseLayerMetatype.get_all_aliases() \
+                       + op_metatypes.TFMatMulOpMetatype.get_all_aliases()
 
 
 @TF_PRUNING_OPERATOR_METATYPES.register('batch_norm')

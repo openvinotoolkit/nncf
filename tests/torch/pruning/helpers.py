@@ -84,7 +84,7 @@ class BranchingModel(nn.Module):
         return x
 
 
-class TestModelResidualConnection(nn.Module):
+class ResidualConnectionModel(nn.Module):
     def __init__(self, last_layer_accept_pruning=True):
         super().__init__()
         self.last_layer_accept_pruning = last_layer_accept_pruning
@@ -650,6 +650,26 @@ class SELayerWithReshapeAndLinear(nn.Module):
         return x * y
 
 
+<<<<<<< HEAD
+=======
+class SELayerWithReshapeAndLinearAndMean(nn.Module):
+    def __init__(self, channel, reduction=4):
+        super().__init__()
+        self.fc = nn.Sequential(
+            nn.Linear(channel, make_divisible(channel // reduction, 8)),
+            nn.ReLU(inplace=True),
+            nn.Linear(make_divisible(channel // reduction, 8), channel),
+            nn.ReLU(inplace=True)
+        )
+
+    def forward(self, x):
+        b, c, _, _ = x.size()
+        y = x.mean((2, 3))
+        y = self.fc(y).view(b, c, 1, 1)
+        return x * y
+
+
+>>>>>>> develop
 class InvertedResidual(nn.Module):
     def __init__(self, inp, hidden_dim, oup, kernel_size, stride, se_layer):
         super().__init__()
@@ -677,9 +697,15 @@ class InvertedResidual(nn.Module):
 
 
 class MobilenetV3BlockSEReshape(nn.Module):
-    def __init__(self, linear_in_se_block=False):
+    def __init__(self, mode='default'):
         super().__init__()
-        se_block = SELayerWithReshape if not linear_in_se_block else SELayerWithReshapeAndLinear
+        se_block_map = {
+            'default': SELayerWithReshape,
+            'linear': SELayerWithReshapeAndLinear,
+            'linear_mean': SELayerWithReshapeAndLinearAndMean
+        }
+
+        se_block = se_block_map[mode]
         self.first_conv = nn.Conv2d(1, 6, 2)
         self.inverted_residual = InvertedResidual(6, 6, 6, 5, 1, se_block)
         self.last_conv = nn.Conv2d(6, 1, 1)

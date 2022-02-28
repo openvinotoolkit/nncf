@@ -115,7 +115,8 @@ def create_sample_config(args, parser) -> SampleConfig:
     if sample_config.get("target_device") is not None:
         target_device = sample_config.pop("target_device")
         loaded_json["target_device"] = target_device
-
     nncf_config = NNCFConfig.from_dict(loaded_json)
+    if args.disable_compression and 'compression' in nncf_config:
+        del nncf_config['compression']
     sample_config.nncf_config = nncf_config
     return sample_config

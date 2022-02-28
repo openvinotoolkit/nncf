@@ -25,6 +25,7 @@ import torch
 from nncf.torch.utils import get_model_device
 from tests.torch.test_models.synthetic import ConvBNLeakyReLU
 from tests.torch.test_models.synthetic import ConvRelu6HSwishHSigmoid
+from tests.torch.test_models.synthetic import FC_ConstMul
 from tests.torch.test_models.synthetic import MMDivConv
 from tests.torch.test_models.synthetic import MatMulDivConv
 from torch import nn
@@ -730,7 +731,8 @@ SYNTHETIC_MODEL_DESC_LIST = [
     GeneralModelDesc(model_builder=MatMulDivConv, input_sample_sizes=([1, 1, 5, 5], [1, 1, 5, 5])),
     GeneralModelDesc(model_builder=MMDivConv, input_sample_sizes=([5, 5], [5, 5])),
     GeneralModelDesc(model_builder=ConvRelu6HSwishHSigmoid, input_sample_sizes=([1, 1, 5, 5],)),
-    GeneralModelDesc(model_builder=ConvBNLeakyReLU, input_sample_sizes=([1, 1, 5, 5],))
+    GeneralModelDesc(model_builder=ConvBNLeakyReLU, input_sample_sizes=([1, 1, 5, 5],)),
+    GeneralModelDesc(model_builder=FC_ConstMul, input_sample_sizes=[1, 3, 6])
 ]
 
 

@@ -60,7 +60,9 @@ __device__ void fakeQuantize(
         const scalar_t levels
         ) {
     scalar_t s = (levels - 1) / (*input_range);
-    (*output) = round((min(max((*input), (*input_low)), (*input_low) + (*input_range)) - (*input_low)) * s) / s + (*input_low);
+    // zero_point is referred as ZP in docs
+    scalar_t zero_point = round((-(*input_low) * s));
+    (*output) = round((min(max((*input), (*input_low)), (*input_low) + (*input_range)) - (*input_low)) * s - zero_point) / s;
 }
 
 template <typename scalar_t>
