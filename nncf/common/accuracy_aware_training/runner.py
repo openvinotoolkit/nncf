@@ -61,6 +61,12 @@ class TrainingRunner(ABC):
         """
 
     @abstractmethod
+    def update_learning_rate(self) -> None:
+        """
+        Update learning rate.
+        """
+
+    @abstractmethod
     def dump_statistics(self, model: ModelType, compression_controller: CompressionAlgorithmController) -> None:
         """
         Dumps current statistics from compression_controller and dumps model's checkpoint.
@@ -252,6 +258,7 @@ class BaseAccuracyAwareTrainingRunner(TrainingRunner):
         self.training_epoch_count = 0
         self.cumulative_epoch_count = 0
         self.best_val_metric_value = 0
+        self.loss = None
 
     def initialize_training_loop_fns(self, train_epoch_fn: Callable[[CompressionAlgorithmController, ModelType,
                                                                      Optional[OptimizerType],
@@ -298,8 +305,19 @@ class BaseAdaptiveCompressionLevelTrainingRunner(BaseAccuracyAwareTrainingRunner
         self.maximal_compression_rate = maximal_compression_rate
 
         self._best_checkpoints = {}
-        self.compression_rate_target = None
+        self._compression_rate_target = None
+        self.adaptive_controller = None
         self.was_compression_increased_on_prev_step = None
+
+    @property
+    def compression_rate_target(self):
+        if self._compression_rate_target is None:
+            return self.adaptive_controller.compression_rate
+        return self._compression_rate_target
+
+    @compression_rate_target.setter
+    def compression_rate_target(self, value):
+        self._compression_rate_target = value
 
     def get_compression_rates_with_positive_acc_budget(self) -> List[float]:
         return [comp_rate for (comp_rate, acc_budget) in self._compressed_training_history if acc_budget >= 0]
