@@ -28,13 +28,33 @@ class TFOpMetatype(OperatorMetatype):
         return cls.op_names
 
 
+class OpWeightDef:
+    """
+    Contains information about the weight of operation.
+    """
+
+    def __init__(self, port_id: int, channel_axes):
+        """
+        Initializes a definition of the weight.
+
+        :param port_id: Zero-based argument number of the operation to
+            which this weight tensor corresponds.
+        :param channel_axes: Channel axes for weight tensor.
+        """
+        # TODO(andrey-churkin): Seems like we can determine the port id
+        # dynamically during the NNCF Graph building.
+        self.port_id = port_id
+        self.channel_axes = channel_axes
+
+
+class TFOpWithWeightsMetatype(TFOpMetatype):
+    weight_definitions = []  # type: List[OpWeightDef]
+
+
 @TF_OPERATION_METATYPES.register()
 class TFNoopMetatype(OperatorMetatype):
     name = 'noop'
-
-    @classmethod
-    def get_all_aliases(cls) -> List[str]:
-        return [cls.name]
+    op_names = ['noop']
 
 
 @TF_OPERATION_METATYPES.register()
@@ -125,27 +145,35 @@ class TFRelu6OpMetatype(TFOpMetatype):
 
 
 @TF_OPERATION_METATYPES.register()
-class TFMatMulOpMetatype(TFOpMetatype):
+class TFMatMulOpMetatype(TFOpWithWeightsMetatype):
     name = 'MatMulOp'
     op_names = ['MatMul', 'linalg.matmul']
+    weight_definitions = [OpWeightDef(port_id=1, channel_axes=-1)]
+    hw_config_names = [HWConfigOpName.MATMUL]
 
 
 @TF_OPERATION_METATYPES.register()
-class TFConv2DOpMetatype(TFOpMetatype):
+class TFConv2DOpMetatype(TFOpWithWeightsMetatype):
     name = 'Conv2DOp'
     op_names = ['Conv2D']
+    weight_definitions = [OpWeightDef(port_id=1, channel_axes=-1)]
+    hw_config_names = [HWConfigOpName.CONVOLUTION]
 
 
 @TF_OPERATION_METATYPES.register()
-class TFConv3DOpMetatype(TFOpMetatype):
+class TFConv3DOpMetatype(TFOpWithWeightsMetatype):
     name = 'Conv3DOp'
     op_names = ['Conv3D']
+    weight_definitions = [OpWeightDef(port_id=1, channel_axes=-1)]
+    hw_config_names = [HWConfigOpName.CONVOLUTION]
 
 
 @TF_OPERATION_METATYPES.register()
-class TFDepthwiseConv2dNativeOpMetatype(TFOpMetatype):
+class TFDepthwiseConv2dNativeOpMetatype(TFOpWithWeightsMetatype):
     name = 'DepthwiseConv2dNativeOp'
     op_names = ['DepthwiseConv2dNative']
+    weight_definitions = [OpWeightDef(port_id=1, channel_axes=[2, 3])]
+    hw_config_names = [HWConfigOpName.DEPTHWISECONVOLUTION]
 
 
 @TF_OPERATION_METATYPES.register()

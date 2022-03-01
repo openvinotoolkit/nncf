@@ -23,7 +23,7 @@ from nncf.common.graph import INPUT_NOOP_METATYPES
 from nncf.common.graph import OUTPUT_NOOP_METATYPES
 from nncf.common.graph.layer_attributes import MultipleInputLayerAttributes
 from nncf.tensorflow.graph.metatypes.common import RESHAPE_METATYPES
-from nncf.tensorflow.graph.converter import TFModelConverter
+from nncf.tensorflow.graph.converter import BaseFunctionalSequentialConverter
 from nncf.tensorflow.graph.converter import convert_keras_model_to_nncf_graph
 from nncf.tensorflow.graph.metatypes.common import LAYER_METATYPES_AGNOSTIC_TO_DATA_PRECISION_WITH_MULTIPLE_INPUTS
 from tests.tensorflow.helpers import get_basic_conv_test_model
@@ -86,7 +86,7 @@ def ModelForCustomLayerTest():
 def test_get_custom_layers():
     model = ModelForCustomLayerTest()
     model.build([16, 16, 3])
-    custom_layers = TFModelConverter.get_custom_layers(model)
+    custom_layers = BaseFunctionalSequentialConverter.get_custom_layers(model)
     assert len(custom_layers) == 1
     assert CustomLayerForTest.CUSTOM_LAYER_NAME in custom_layers
     assert isinstance(custom_layers[CustomLayerForTest.CUSTOM_LAYER_NAME], CustomLayerForTest)

@@ -21,7 +21,7 @@ import numpy as np
 from examples.tensorflow.common.utils import close_strategy_threadpool
 from nncf.common.accuracy_aware_training import create_accuracy_aware_training_loop
 from nncf.tensorflow import create_compressed_model
-from nncf.tensorflow.helpers.model_manager import TFOriginalModelManager
+from nncf.tensorflow.helpers.model_manager import TFModelManager
 from nncf.tensorflow.initialization import register_default_init_args
 from nncf.common.utils.tensorboard import prepare_for_tensorboard
 from nncf.config.utils import is_accuracy_aware_training
@@ -307,8 +307,9 @@ def run(config):
     if resume_training:
         compression_state = load_compression_state(config.ckpt_path)
 
-    with TFOriginalModelManager(model_builder.build_model,
-                                weights=config.get('weights', None)) as model:
+    with TFModelManager(model_builder.build_model,
+                        config.nncf_config,
+                        weights=config.get('weights', None)) as model:
         with strategy.scope():
             config.nncf_config.register_extra_structs(
                 [ModelEvaluationArgs(eval_fn=functools.partial(model_eval_fn,

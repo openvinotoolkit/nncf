@@ -16,6 +16,9 @@ from nncf.tensorflow.graph.metatypes.tf_ops import TFAddOpMetatype
 from nncf.tensorflow.graph.metatypes.tf_ops import TFRelu6OpMetatype
 from nncf.tensorflow.graph.metatypes.tf_ops import TFReluOpMetatype
 from nncf.tensorflow.graph.metatypes.tf_ops import TFMulOpMetatype
+from nncf.tensorflow.graph.metatypes.tf_ops import TFBiasAddOpMetatype
+from nncf.tensorflow.graph.metatypes.tf_ops import TFMatMulOpMetatype
+from nncf.tensorflow.graph.metatypes.tf_ops import TFConv2DOpMetatype
 
 
 def create_h_sigmoid_act() -> GraphPattern:
@@ -75,7 +78,7 @@ def create_h_swish_act() -> GraphPattern:
     pattern.add_edge(add_node, relu_node)
     pattern.add_edge(relu_node, mul_node)
 
-    mul_2_node = pattern.add_node(label='MULTIPLY', type='Multiply')
+    mul_2_node = pattern.add_node(label='MULTIPLY', type=['Multiply', 'Mul'])
     pattern.add_edge(input_pattern_node, mul_2_node)
     pattern.add_edge(mul_node, mul_2_node)
     main_pattern.add_pattern_alternative(pattern)
@@ -98,3 +101,23 @@ def create_h_swish_act() -> GraphPattern:
     main_pattern.add_pattern_alternative(pattern)
 
     return main_pattern
+
+
+def create_matmul_biasadd_pattern() -> GraphPattern:
+    pattern = GraphPattern()
+
+    matmul_node = pattern.add_node(label='MATMUL', type=TFMatMulOpMetatype.get_all_aliases())
+    biasadd_node = pattern.add_node(label='BIASADD', type=TFBiasAddOpMetatype.get_all_aliases())
+    pattern.add_edge(matmul_node, biasadd_node)
+
+    return pattern
+
+
+def create_conv2d_biasadd_pattern() -> GraphPattern:
+    pattern = GraphPattern()
+
+    conv2d_node = pattern.add_node(label='CONV2D', type=TFConv2DOpMetatype.get_all_aliases())
+    biasadd_node = pattern.add_node(label='BIASADD', type=TFBiasAddOpMetatype.get_all_aliases())
+    pattern.add_edge(conv2d_node, biasadd_node)
+
+    return pattern

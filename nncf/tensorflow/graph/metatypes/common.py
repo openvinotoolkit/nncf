@@ -39,6 +39,11 @@ ALL_LAYER_METATYPES_WITH_WEIGHTS = [
     layer_metatypes.TFEmbeddingLayerMetatype,
     layer_metatypes.TFLocallyConnected1DLayerMetatype,
     layer_metatypes.TFLocallyConnected2DLayerMetatype,
+    # ALL_TF_OP_METATYPES_WITH_WEIGHTS
+    op_metatypes.TFConv2DOpMetatype,
+    op_metatypes.TFConv3DOpMetatype,
+    op_metatypes.TFMatMulOpMetatype,
+    op_metatypes.TFDepthwiseConv2dNativeOpMetatype,
 ]
 
 GENERAL_CONV_LAYER_METATYPES = [
@@ -51,14 +56,20 @@ GENERAL_CONV_LAYER_METATYPES = [
     layer_metatypes.TFDepthwiseConv2DLayerMetatype,
     layer_metatypes.TFConv1DTransposeLayerMetatype,
     layer_metatypes.TFConv2DTransposeLayerMetatype,
-    layer_metatypes.TFConv3DTransposeLayerMetatype
+    layer_metatypes.TFConv3DTransposeLayerMetatype,
+    # GENERAL_CONV_TF_OP_METATYPES
+    op_metatypes.TFConv2DOpMetatype,
+    op_metatypes.TFConv3DOpMetatype,
+    op_metatypes.TFDepthwiseConv2dNativeOpMetatype,
 ]
 
 DEPTHWISE_CONV_LAYER_METATYPES = [
     layer_metatypes.TFDepthwiseConv1DSubLayerMetatype,
     layer_metatypes.TFDepthwiseConv2DSubLayerMetatype,
     layer_metatypes.TFDepthwiseConv3DSubLayerMetatype,
-    layer_metatypes.TFDepthwiseConv2DLayerMetatype
+    layer_metatypes.TFDepthwiseConv2DLayerMetatype,
+    # DEPTHWISE_CONV_TF_OP_METATYPES
+    op_metatypes.TFDepthwiseConv2dNativeOpMetatype,
 ]
 
 DECONV_LAYER_METATYPES = [
@@ -68,12 +79,15 @@ DECONV_LAYER_METATYPES = [
 ]
 
 LINEAR_LAYER_METATYPES = [
-    layer_metatypes.TFDenseLayerMetatype
+    layer_metatypes.TFDenseLayerMetatype,
+    # LINEAR_TF_OP_METATYPES
+    op_metatypes.TFMatMulOpMetatype,
 ]
 
 NORMALIZATION_LAYER_METATYPES = [
     layer_metatypes.TFBatchNormalizationLayerMetatype,
     layer_metatypes.TFLayerNormalizationLayerMetatype,
+    # NORMALIZATION_TF_OP_METATYPES
     op_metatypes.TFFusedBatchNormV3OpMetatype,
 ]
 
@@ -93,6 +107,7 @@ LAYER_METATYPES_AGNOSTIC_TO_DATA_PRECISION_WITH_ONE_INPUT = [
     layer_metatypes.TFZeroPadding1DLayerMetatype,
     layer_metatypes.TFZeroPadding2DLayerMetatype,
     layer_metatypes.TFZeroPadding3DLayerMetatype,
+    # TF_OP_METATYPES_AGNOSTIC_TO_DATA_PRECISION_WITH_ONE_INPUT
     op_metatypes.TFIdentityOpMetatype,
     op_metatypes.TFPackOpMetatype,
     op_metatypes.TFPadOpMetatype,
@@ -126,6 +141,7 @@ ELEMENTWISE_LAYER_METATYPES = [
     layer_metatypes.TFAddLayerMetatype,
     layer_metatypes.TFMultiplyLayerMetatype,
     layer_metatypes.TFRescalingLayerMetatype,
+    # ELEMENTWISE_TF_OP_METATYPES
     op_metatypes.TFAddOpMetatype,
     op_metatypes.TFMulOpMetatype,
     op_metatypes.TFBiasAddOpMetatype,

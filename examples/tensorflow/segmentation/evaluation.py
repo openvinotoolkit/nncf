@@ -18,7 +18,7 @@ import tensorflow as tf
 from examples.tensorflow.common.utils import close_strategy_threadpool
 from nncf.tensorflow import create_compressed_model
 from nncf.tensorflow import register_default_init_args
-from nncf.tensorflow.helpers.model_manager import TFOriginalModelManager
+from nncf.tensorflow.helpers.model_manager import TFModelManager
 from nncf.tensorflow.utils.state import TFCompressionState
 from nncf.tensorflow.utils.state import TFCompressionStateLoader
 
@@ -187,9 +187,10 @@ def restore_compressed_model(config, strategy, model_builder, ckpt_path = None):
     if ckpt_path:
         compression_state = load_compression_state(ckpt_path)
 
-    with TFOriginalModelManager(model_builder.build_model,
-                                weights=config.get('weights', None),
-                                is_training=False) as model:
+    with TFModelManager(model_builder.build_model,
+                        config.nncf_config,
+                        weights=config.get('weights', None),
+                        is_training=False) as model:
         with strategy.scope():
             compression_ctrl, compress_model = create_compressed_model(model,
                                                                        config.nncf_config,
