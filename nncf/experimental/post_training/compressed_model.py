@@ -35,20 +35,9 @@ class CompressedModel:
         self.transformations = []
 
     def _determine_model_backend(self, model: ModelType) -> None:
-        from torch.nn import Module
-        from tensorflow.keras.models import Model
         from onnx import ModelProto
         if isinstance(model, ModelProto):
             self.model_backend = BACKEND.ONNX
-            return
-        elif isinstance(model, Module):
-            self.model_backend = BACKEND.PYTORCH
-            return
-        elif isinstance(model, Model):
-            self.model_backend = BACKEND.TENSORFLOW
-            return
-        elif isinstance(model, ):  # TODO: add OpenVINO
-            self.model_backend = BACKEND.OPENVINO
             return
         raise RuntimeError('This backend is not supported')
 

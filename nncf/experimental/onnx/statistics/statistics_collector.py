@@ -1,4 +1,4 @@
-from typing import List
+from typing import Dict
 
 from skl2onnx.helpers.onnx_helper import select_model_inputs_outputs
 from skl2onnx.helpers.onnx_helper import enumerate_model_node_outputs
@@ -6,7 +6,7 @@ import onnx
 import tempfile
 
 from nncf.experimental.post_training.statistics.statistics_collector import StatisticsCollector
-from nncf.experimental.post_training.statistics.statistics_collector import MinMaxLayerStatistic
+from nncf.experimental.onnx.statistics.collectors import ONNXMinMaxStatisticCollector
 
 from nncf.experimental.onnx.sampler import create_onnx_sampler
 from nncf.experimental.onnx.engine import ONNXEngine
@@ -17,7 +17,7 @@ class ONNXStatisticsCollector(StatisticsCollector):
         super().__init__(engine)
 
     def collect_statistics(self, compressed_model, num_iters: int) -> None:
-        layers_to_collect_statistics = [layer_statistic.layer_name for layer_statistic in self.layers_statistics]
+        layers_to_collect_statistics = [list(layer.keys())[0] for layer in self.layers_statistics]
         onnx_model = compressed_model.original_model
         model_output = list(enumerate_model_node_outputs(onnx_model))[-1]
         model_with_intermediate_outputs = select_model_inputs_outputs(onnx_model,
@@ -37,10 +37,11 @@ class ONNXStatisticsCollector(StatisticsCollector):
                 if self.is_calculate_metric:
                     self._calculate_metric(target)
 
-    def _agregate_statistics(self, output, layers_statistics: List[MinMaxLayerStatistic]):
+    def _agregate_statistics(self, output, layers_statistics: Dict[str, ONNXMinMaxStatisticCollector]):
         for layer_statistic in layers_statistics:
-            tensor = output[layer_statistic.layer_name]
-            layer_statistic.add_tensor_statistic(tensor)
+            for k, v in layer_statistic.items():
+                tensor = output[k]
+                v._register_input(tensor)
 
     def _calculate_metric(self, target):
         pass

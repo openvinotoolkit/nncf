@@ -1,6 +1,3 @@
-from typing import List
-from onnx import NodeProto
-
 import numpy as np
 
 from nncf.common.graph.transformations.commands import TransformationCommand

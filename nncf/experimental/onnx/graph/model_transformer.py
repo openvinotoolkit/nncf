@@ -13,12 +13,12 @@
 from copy import deepcopy
 import onnx
 
+from nncf.common.graph.model_transformer import ModelTransformer
 from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.quantization.structs import QuantizationMode
 
 from nncf.experimental.onnx.graph.onnx_graph import ONNXGraph
 
-from nncf.experimental.post_training.graph.model_transformer import ModelTransformer
 from nncf.experimental.onnx.graph.transformations.layout import ONNXTransformationLayout
 from nncf.experimental.post_training.compressed_model import CompressedModel
 
@@ -28,26 +28,26 @@ from nncf.experimental.onnx.graph.transformations.commands import ONNXUpdateBias
 
 class ONNXModelTransformer(ModelTransformer):
     def __init__(self, model: CompressedModel):
-        self.model = model
-        original_model = self.model.original_model
-        self.model.compressed_model = deepcopy(original_model)
+        super().__init__(model)
+        original_model = self._model.original_model
+        self._model.compressed_model = deepcopy(original_model)
 
-    def transform(self, model: CompressedModel, transformation_layout: ONNXTransformationLayout) -> CompressedModel:
+    def transform(self, transformation_layout: ONNXTransformationLayout) -> CompressedModel:
         for transform in transformation_layout.transformations:
             self._apply_transformation(transform)
-        return model
+        return self._model
 
     def _apply_transformation(self, transformation: TransformationCommand):
         if isinstance(transformation, ONNXQuantizerInsertionCommand):
             self._insert_quantizer_dequantizer(transformation)
-            self.model.transformations.append(transformation)
+            self._model.transformations.append(transformation)
         if isinstance(transformation, ONNXUpdateBias):
             self._update_bias(transformation)
-            self.model.transformations.append(transformation)
+            self._model.transformations.append(transformation)
 
     def _update_bias(self, transformation: ONNXUpdateBias):
 
-        onnx_graph = ONNXGraph(self.model.compressed_model)
+        onnx_graph = ONNXGraph(self._model.compressed_model)
 
         target_point = transformation.target_point
         bias_tensor = transformation.bias_tensor
@@ -87,9 +87,9 @@ class ONNXModelTransformer(ModelTransformer):
         print(f'bias_name = {bias_name}')
 
         i = onnx_graph.get_node_index(n)
-        self.model.compressed_model.graph.node.remove(node)
-        self.model.compressed_model.graph.initializer.extend([onnx_bias])
-        self.model.compressed_model.graph.node.insert(i, new_node)
+        self._model.compressed_model.graph.node.remove(node)
+        self._model.compressed_model.graph.initializer.extend([onnx_bias])
+        self._model.compressed_model.graph.node.insert(i, new_node)
 
     def _insert_quantizer_dequantizer(self, transformation: ONNXQuantizerInsertionCommand):
         target_point = transformation.target_point
@@ -130,7 +130,7 @@ class ONNXModelTransformer(ModelTransformer):
         )
 
         # TODO:NEED TO ADJUST LOGIC FOR INCEPTION_v3
-        onnx_graph = ONNXGraph(self.model.compressed_model)
+        onnx_graph = ONNXGraph(self._model.compressed_model)
         try:
             input_nodes = onnx_graph.get_nodes_by_input(target_point)
         except RuntimeError as e:
@@ -143,8 +143,8 @@ class ONNXModelTransformer(ModelTransformer):
                 if inp == target_point:
                     node.input[i] = 'dq_output_' + target_point
 
-        self.model.compressed_model.graph.initializer.extend([onnx_scale])
-        self.model.compressed_model.graph.initializer.extend([onnx_zero_point])
+        self._model.compressed_model.graph.initializer.extend([onnx_scale])
+        self._model.compressed_model.graph.initializer.extend([onnx_zero_point])
         insert_index = onnx_graph.get_node_index(input_nodes[0].name)
-        self.model.compressed_model.graph.node.insert(insert_index, quantizer)
-        self.model.compressed_model.graph.node.insert(insert_index + 1, dequantizer)
+        self._model.compressed_model.graph.node.insert(insert_index, quantizer)
+        self._model.compressed_model.graph.node.insert(insert_index + 1, dequantizer)

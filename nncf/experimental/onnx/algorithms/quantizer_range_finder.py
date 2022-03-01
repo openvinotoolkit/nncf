@@ -11,41 +11,26 @@
  limitations under the License.
 """
 
-from typing import Union
-from typing import List
-
 from nncf.common.hardware.config import HWConfigType
 from nncf.common.hardware.config import HW_CONFIG_TYPE_TARGET_DEVICE_MAP
 from nncf.common.quantization.quantizer_propagation.solver import QuantizerPropagationSolver
 from nncf.common.quantization.structs import QuantizableWeightedLayerNode
 from nncf.common.quantization.structs import QuantizerConfig
+from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.insertion_point_graph import InsertionPointGraph
-from nncf.common.graph.transformations.commands import TargetPoint
 
 from nncf.experimental.post_training.algorithms.quantizer_range_finder import QuantizerRangeFinderAlgorithm
 from nncf.experimental.post_training.compressed_model import CompressedModel
-from nncf.experimental.onnx.graph.model_transformer import ModelTransformer
 from nncf.experimental.onnx.graph.transformations.layout import ONNXTransformationLayout
 from nncf.experimental.onnx.graph.metatypes.onnx_ops import GENERAL_WEIGHT_LAYER_METATYPES
 from nncf.experimental.onnx.algorithms.quantization.default_quantization import DEFAULT_ONNX_QUANT_TRAIT_TO_OP_DICT
 from nncf.experimental.onnx.graph.transformations.commands import ONNXQuantizerInsertionCommand
 from nncf.experimental.onnx.engine import ONNXEngine
 from nncf.experimental.post_training.algorithms.quantizer_range_finder import QuantizerRangeFinderParameters
-from nncf.experimental.post_training.statistics.statistics_collector import MinMaxLayerStatistic
-from nncf.experimental.onnx.statistics.functions import ONNXTensorMaxFunc
-from nncf.experimental.onnx.statistics.functions import ONNXTensorMinFunc
-from nncf.experimental.onnx.statistics.functions import ONNXBatchMaxFunc
-from nncf.experimental.onnx.statistics.functions import ONNXBatchMinFunc
-from nncf.experimental.onnx.statistics.functions import ONNXBatchMeanFunc
-from nncf.experimental.onnx.statistics.functions import ONNXStatisticsMeanFunc
-from nncf.experimental.onnx.statistics.functions import ONNXStatisticsABSMAXFunc
+from nncf.experimental.onnx.statistics.collectors import ONNXMinMaxStatisticCollector
+from nncf.experimental.onnx.graph.model_transformer import ONNXModelTransformer
 
 from nncf.experimental.onnx.hardware.fused_patterns import ONNX_HW_FUSED_PATTERNS
-
-from nncf.experimental.post_training.statistics.statistics_collector import WEIGHTS_ESTIMATOR_FUNCTION
-from nncf.experimental.post_training.statistics.statistics_collector import ACTIVATIONS_ESTIMATOR_FUNCTION
-from nncf.experimental.post_training.statistics.statistics_collector import BATCH_AGGREGATION_FUNCTION
-from nncf.experimental.post_training.statistics.statistics_collector import STATISTICS_AGGREGATION_FUNCTION
 
 from nncf.experimental.onnx.algorithms.quantization.helper import calculate_activation_quantizer_parameters
 from nncf.experimental.onnx.algorithms.quantization.helper import calculate_weight_quantizer_parameters
@@ -57,54 +42,26 @@ QUANTIZATION_LAYER_METATYPES = GENERAL_WEIGHT_LAYER_METATYPES
 
 class ONNXQuantizerRangeFinderAlgorithm(QuantizerRangeFinderAlgorithm):
 
-    def __init__(self, model_transformer: ModelTransformer, statistics_collector,
+    def __init__(self, statistics_collector,
                  parameters: QuantizerRangeFinderParameters):
-        super().__init__(model_transformer, statistics_collector, parameters)
+        super().__init__(statistics_collector, parameters)
         self._weight_quantizers = []
         self._activation_quantizers = []
         self.global_quantizer_constraints = {}
 
-    def _determine_aggregation_func(self):
-        self.weight_statistics_min_func = self._get_statistics_collection_func(
-            self.parameters.weight_min_func)
-        self.weight_statistics_max_func = self._get_statistics_collection_func(
-            self.parameters.weight_max_func)
-        self.activation_statistics_min_func = self._get_statistics_collection_func(
-            self.parameters.activation_min_func)
-        self.activation_statistics_max_func = self._get_statistics_collection_func(
-            self.parameters.activation_max_func)
-        self.batch_aggregation_min_func = self._get_batch_aggregation_func(
-            self.parameters.batch_aggregation_min_func)
-        self.batch_aggregation_max_func = self._get_batch_aggregation_func(
-            self.parameters.batch_aggregation_max_func)
-        self.statistics_aggregator_func = self._get_statistic_aggregation_func(
-            self.parameters.statistics_aggregator_func)
+    def generate_stat_collector(self, quantizer_config: QuantizerConfig):
+        if self.range_type == 'min_max':
+            is_symmetric = True if quantizer_config.mode == QuantizationMode.SYMMETRIC else False
+            if quantizer_config.per_channel:
+                axes = (0, 2, 3)
+                return ONNXMinMaxStatisticCollector(is_symmetric, axes)
+            return ONNXMinMaxStatisticCollector(is_symmetric, None)
 
-    def _get_statistics_collection_func(self,
-                                        function: Union[WEIGHTS_ESTIMATOR_FUNCTION, ACTIVATIONS_ESTIMATOR_FUNCTION]):
-        if function == WEIGHTS_ESTIMATOR_FUNCTION.MIN or function == ACTIVATIONS_ESTIMATOR_FUNCTION.MIN:
-            return ONNXTensorMinFunc
-        elif function == WEIGHTS_ESTIMATOR_FUNCTION.MAX or function == ACTIVATIONS_ESTIMATOR_FUNCTION.MAX:
-            return ONNXTensorMaxFunc
-
-    def _get_batch_aggregation_func(self, function: BATCH_AGGREGATION_FUNCTION):
-        if function == BATCH_AGGREGATION_FUNCTION.MEAN:
-            return ONNXBatchMeanFunc
-        elif function == BATCH_AGGREGATION_FUNCTION.MIN:
-            return ONNXBatchMinFunc
-        elif function == BATCH_AGGREGATION_FUNCTION.MAX:
-            return ONNXBatchMaxFunc
-
-    def _get_statistic_aggregation_func(self,
-                                        function: STATISTICS_AGGREGATION_FUNCTION):
-        if function == STATISTICS_AGGREGATION_FUNCTION.MEAN:
-            return ONNXStatisticsMeanFunc
-        elif function == STATISTICS_AGGREGATION_FUNCTION.ABS_MAX:
-            return ONNXStatisticsABSMAXFunc
+    def _create_model_transformer(self, compressed_model):
+        self.model_transformer = ONNXModelTransformer(compressed_model)
 
     def _get_quantizer_setup(self, compressed_model: CompressedModel):
         nncf_graph = compressed_model.nncf_graph
-        # nncf_graph.visualize_graph('/home/aleksei/tmp/onnx/onnx_ptq_api/nncf_graph.dot')
         ip_graph = InsertionPointGraph(nncf_graph)
         pattern = ONNX_HW_FUSED_PATTERNS.get_full_pattern_graph()
         ip_graph = ip_graph.get_ip_graph_with_merged_hw_optimized_operations(pattern)
@@ -132,6 +89,7 @@ class ONNXQuantizerRangeFinderAlgorithm(QuantizerRangeFinderAlgorithm):
         return final_setup
 
     def apply(self, compressed_model: CompressedModel, engine: ONNXEngine):
+        self._create_model_transformer(compressed_model)
         transformation_layout = ONNXTransformationLayout()
         transformation_commands = []
         onnx_graph = compressed_model.original_onnx_graph
@@ -144,18 +102,19 @@ class ONNXQuantizerRangeFinderAlgorithm(QuantizerRangeFinderAlgorithm):
             transformation_commands.append(command)
         # We are sure that layer_statistics math self._activation_quantizers
         for layer_statistics in layers_statistics:
-            parameters = calculate_activation_quantizer_parameters(layer_statistics,
-                                                                   self.activation_quantizer_config)
-            command = ONNXQuantizerInsertionCommand(layer_statistics.layer_name, parameters)
-            transformation_commands.append(command)
+            for k, v in layer_statistics.items():
+                parameters = calculate_activation_quantizer_parameters(v,
+                                                                       self.activation_quantizer_config)
+                command = ONNXQuantizerInsertionCommand(k, parameters)
+                transformation_commands.append(command)
 
         for transformation_command in transformation_commands:
             transformation_layout.register(transformation_command)
 
-        quantized_model = self.model_transformer.transform(compressed_model, transformation_layout)
+        quantized_model = self.model_transformer.transform(transformation_layout)
         return quantized_model
 
-    def get_layers_for_statistics(self, compressed_model: CompressedModel) -> List[MinMaxLayerStatistic]:
+    def get_layers_for_statistics(self, compressed_model: CompressedModel):
         quantizer_setup = self._get_quantizer_setup(compressed_model)
         onnx_graph = compressed_model.original_onnx_graph
         filled_outputs = []
@@ -186,14 +145,7 @@ class ONNXQuantizerRangeFinderAlgorithm(QuantizerRangeFinderAlgorithm):
 
         output = []
         for activation_quantizer in self._activation_quantizers:
-            axis = 1 if self.activation_quantizer_config.per_channel else None
-            layer_statistics = MinMaxLayerStatistic(activation_quantizer,
-                                                    min_value_func=self.activation_statistics_min_func,
-                                                    max_value_func=self.activation_statistics_max_func,
-                                                    min_batch_aggregator_func=self.batch_aggregation_min_func,
-                                                    max_batch_aggregator_func=self.batch_aggregation_max_func,
-                                                    statistics_aggregation_func=self.statistics_aggregator_func,
-                                                    axis=axis)
+            layer_statistics = {activation_quantizer: self.generate_stat_collector()}
             output.append(layer_statistics)
 
         return output

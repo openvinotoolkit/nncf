@@ -1,13 +1,12 @@
 from typing import Union
 from typing import List
-from typing import Tuple
 
 import numpy as np
 
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizationMode
 
-from nncf.experimental.post_training.statistics.statistics_collector import MinMaxLayerStatistic
+from nncf.experimental.onnx.statistics.collectors import ONNXMinMaxStatisticCollector
 
 
 class QuantizerLayerParameters:
@@ -46,7 +45,7 @@ def calculate_weight_quantizer_parameters(weight_tensor: np.ndarray, quantizer_c
     return QuantizerLayerParameters(scales.tolist(), zero_points.tolist(), mode)
 
 
-def calculate_activation_quantizer_parameters(layer_statistics: MinMaxLayerStatistic,
+def calculate_activation_quantizer_parameters(layer_statistics: ONNXMinMaxStatisticCollector,
                                               quantizer_config: QuantizerConfig) -> \
         QuantizerLayerParameters:
     # TODO:PERCHANNEL IS NOT SUPPORTED.
@@ -60,8 +59,9 @@ def calculate_activation_quantizer_parameters(layer_statistics: MinMaxLayerStati
     #     axes = None
 
     axes = None
-    input_high = layer_statistics.get_global_max_value()
-    input_low = layer_statistics.get_global_min_value()
+    statistics = layer_statistics._get_statistics()
+    input_low = statistics.min_values
+    input_high = statistics.max_values
     if input_low < 0:
         mode = QuantizationMode.SYMMETRIC
     else:

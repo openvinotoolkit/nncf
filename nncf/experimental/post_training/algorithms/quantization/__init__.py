@@ -18,7 +18,6 @@ from nncf.common.graph.transformations.layout import TransformationLayout
 
 from nncf.experimental.post_training.backend import BACKEND
 from nncf.experimental.post_training.api.engine import Engine
-from nncf.experimental.post_training.graph.model_transformer import ModelTransformer
 from nncf.experimental.post_training.algorithms import Algorithm
 from nncf.experimental.post_training.algorithms import PostTrainingAlgorithms
 from nncf.experimental.post_training.compressed_model import CompressedModel
@@ -46,9 +45,8 @@ class PostTrainingQuantization(Algorithm):
         self.algorithms = deque()
 
     def apply(self, compressed_model: CompressedModel, engine: Engine) -> CompressedModel:
-        model_transformer = self._create_model_transformer(compressed_model)
         statistics_collector = self._create_statistics_collector(compressed_model, engine)
-        self.algorithms = self._create_algorithms(compressed_model, model_transformer, statistics_collector)
+        self.algorithms = self._create_algorithms(compressed_model, statistics_collector)
 
         for algorithm in self.algorithms:
             layers_to_collect_statistics = algorithm.get_layers_for_statistics(compressed_model)
@@ -62,11 +60,6 @@ class PostTrainingQuantization(Algorithm):
 
         return compressed_model
 
-    def _create_model_transformer(self, compressed_model: CompressedModel) -> ModelTransformer:
-        if compressed_model.model_backend == BACKEND.ONNX:
-            from nncf.experimental.onnx.graph.model_transformer import ONNXModelTransformer
-            return ONNXModelTransformer(compressed_model)
-
     def _create_statistics_collector(self, compressed_model: CompressedModel, engine: Engine):
         if compressed_model.model_backend == BACKEND.ONNX:
             from nncf.experimental.onnx.statistics.statistics_collector import ONNXStatisticsCollector
@@ -77,16 +70,12 @@ class PostTrainingQuantization(Algorithm):
             from nncf.experimental.onnx.graph.transformations.layout import ONNXTransformationLayout
             return ONNXTransformationLayout()
 
-    def _create_algorithms(self, compressed_model: CompressedModel, model_transformer: ModelTransformer,
-                           statistics_collector) -> Deque[Algorithm]:
+    def _create_algorithms(self, compressed_model: CompressedModel, statistics_collector) -> Deque[Algorithm]:
         output = deque()
         if compressed_model.model_backend == BACKEND.ONNX:
             from nncf.experimental.onnx.algorithms.quantizer_range_finder import ONNXQuantizerRangeFinderAlgorithm
-            from nncf.experimental.onnx.algorithms.bias_correction import ONNXBiasCorrectionAlgorithm
             for algorithm, parameters in self.algorithms_to_created.items():
                 if algorithm == PostTrainingAlgorithms.QuantizerRangeFinder:
                     output.append(
-                        ONNXQuantizerRangeFinderAlgorithm(model_transformer, statistics_collector, parameters))
-                elif algorithm == PostTrainingAlgorithms.BiasCorrection:
-                    output.append(ONNXBiasCorrectionAlgorithm(model_transformer, statistics_collector, parameters))
+                        ONNXQuantizerRangeFinderAlgorithm(statistics_collector, parameters))
         return output
