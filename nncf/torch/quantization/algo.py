@@ -134,6 +134,7 @@ from nncf.torch.tensor_statistics.statistics import TensorStatistic
 from nncf.torch.utils import get_model_device
 from nncf.torch.utils import get_state_dict_names_with_modules
 from nncf.torch.utils import is_main_process
+from nncf.torch.utils import get_model_device, get_model_dtype
 from torch import nn
 
 QUANTIZER_BUILDER_STATE_VERSION_SAVE_NAME = 'version'
@@ -1106,8 +1107,15 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
 
         quantizer = self.__create_quantize_module(qspec).to(self._device_for_callable_obj_creation)
         if range_init_minmax_values is not None:
-            quantizer.apply_minmax_init(min_values=range_init_minmax_values[0],
-                                        max_values=range_init_minmax_values[1],
+            # Need to cast to the model's current dtype since the statistics could have been gathered in an
+            # AMP autocast model (and therefore be FP16 since AMP autocast switches precision of activations
+            # at forward pass time)
+            own_type = get_model_dtype(target_model)
+            min_values = range_init_minmax_values[0].type(own_type)
+            max_values = range_init_minmax_values[1].type(own_type)
+
+            quantizer.apply_minmax_init(min_values=min_values,
+                                        max_values=max_values,
                                         log_module_name=str(primary_ip))
 
         qids = []  # type: List[QuantizerId]

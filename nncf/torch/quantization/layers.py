@@ -355,19 +355,30 @@ class BaseQuantizer(nn.Module):
     def get_trainable_params(self) -> Dict[str, torch.Tensor]:
         raise NotImplementedError
 
-    def apply_minmax_init(self, min_values, max_values, log_module_name: str = None):
+    def apply_minmax_init(self,
+                          min_values: torch.Tensor,
+                          max_values: torch.Tensor,
+                          log_module_name: str = None):
         """min_values and max_values must have the same shape as specified in self.scale_shape"""
         if self.initialized:
             nncf_logger.debug("Skipped initializing {} - loaded from checkpoint".format(log_module_name))
             return
+
+        if torch.all(torch.isinf(min_values)) or torch.all(torch.isinf(max_values)):
+            raise AttributeError('Statistics are not collected for {}'.format(log_module_name))
+
         if torch.any(torch.eq(min_values, np.inf)) or torch.any(torch.eq(max_values, -np.inf)):
-            raise AttributeError('Statistics is not collected for {}'.format(log_module_name))
+            raise AttributeError('Some of the values in statistics have infinite value for {}'.format(log_module_name))
+
         own_device = get_model_device(self)
         min_values = min_values.to(own_device)
         max_values = max_values.to(own_device)
         self._apply_minmax_init(min_values, max_values, log_module_name)
 
-    def _apply_minmax_init(self, min_values, max_values, log_module_name: str = None):
+    def _apply_minmax_init(self,
+                           min_values: torch.Tensor,
+                           max_values: torch.Tensor,
+                           log_module_name: str = None):
         raise NotImplementedError
 
     def set_level_ranges(self):
@@ -609,8 +620,6 @@ class SymmetricQuantizer(BaseQuantizer):
         return {self.SCALE_PARAM_NAME: self.scale.detach()}
 
     def _apply_minmax_init(self, min_values, max_values, log_module_name: str = None):
-        if torch.any(torch.eq(min_values, np.inf)) or torch.any(torch.eq(max_values, -np.inf)):
-            raise AttributeError('Statistics is not collected for {}'.format(log_module_name))
         sign = torch.any(torch.lt(min_values, 0))
         if self._signedness_to_force is not None and sign != self._signedness_to_force:
             nncf_logger.warning("Forcing signed to {} for module {}".format(self._signedness_to_force, log_module_name))
