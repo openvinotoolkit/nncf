@@ -117,7 +117,7 @@ class TestHWConfigRules:
         assert key.target_node_name == ModelForHWConfigTest.CONV2D_OP_NODE_NAME
 
     def test_missing_non_ir_op_results_in_default_qconf_list(self):
-        # GELU is the non-IR op here, adjust if this no longer reflects reality
+        # Hardswish is the non-IR op here, adjust if this no longer reflects reality
         hw_config_dict = {
             "target_device": "test",
             "config": {
