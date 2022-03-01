@@ -21,7 +21,7 @@ import tensorflow_addons as tfa
 from nncf.config.utils import is_accuracy_aware_training
 from nncf.tensorflow.helpers.model_creation import create_compressed_model
 from nncf.tensorflow import create_compression_callbacks
-from nncf.tensorflow.helpers.model_manager import TFOriginalModelManager
+from nncf.tensorflow.helpers.model_manager import TFModelManager
 from nncf.tensorflow.initialization import register_default_init_args
 from nncf.tensorflow.utils.state import TFCompressionState
 from nncf.tensorflow.utils.state import TFCompressionStateLoader
@@ -175,7 +175,7 @@ def run(config):
     resume_training = config.ckpt_path is not None
 
     if is_accuracy_aware_training(config):
-        with TFOriginalModelManager(model_fn, **model_params) as model:
+        with TFModelManager(model_fn, nncf_config, **model_params) as model:
             model.compile(metrics=[tf.keras.metrics.CategoricalAccuracy(name='acc@1')])
             results = model.evaluate(
                 validation_dataset,
@@ -187,7 +187,7 @@ def run(config):
     if resume_training:
         compression_state = load_compression_state(config.ckpt_path)
 
-    with TFOriginalModelManager(model_fn, **model_params) as model:
+    with TFModelManager(model_fn, nncf_config, **model_params) as model:
         with strategy.scope():
             compression_ctrl, compress_model = create_compressed_model(model, nncf_config, compression_state)
             compression_callbacks = create_compression_callbacks(compression_ctrl, log_dir=config.log_dir)

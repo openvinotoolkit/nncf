@@ -10,6 +10,7 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+
 import logging
 from typing import Dict
 
@@ -590,6 +591,7 @@ QUANTIZATION_SCHEMA = {
     "additionalProperties": False
 }
 
+
 BINARIZATION_ALGO_NAME_IN_CONFIG = "binarization"
 BINARIZATION_SCHEMA = {
     **BASIC_COMPRESSION_ALGO_SCHEMA,
@@ -876,61 +878,66 @@ TARGET_DEVICE_SCHEMA = {
     "enum": ["ANY", "CPU", "GPU", "VPU", "TRIAL"]
 }
 
-ROOT_NNCF_CONFIG_SCHEMA = {
-    "$schema": "http://json-schema.org/draft-07/schema",
-    "type": "object",
-    "properties": {
-        "input_info": with_attributes(make_object_or_array_of_objects_schema(SINGLE_INPUT_INFO_SCHEMA),
-                                      description="Required - describe the specifics of your model inputs here."
-                                                  "This information is used to build the internal graph representation"
-                                                  "that is leveraged for proper compression functioning, and for "
-                                                  "exporting the compressed model to ONNX - a dummy tensor with a "
-                                                  "corresponding shape and filler will be generated for each entry"
-                                                  "and passed as a corresponding argument into the model's forward"
-                                                  "method. Keywords can be specified for each entry - if left "
-                                                  "unspecified, the dummy tensor will be passed as a positional arg."),
-        "disable_shape_matching": with_attributes(_BOOLEAN,
-                                                  description="Whether to enable strict input tensor"
-                                                              "shape matching when building the internal graph"
-                                                              "representation of the model. Set this to false if your"
-                                                              "model inputs have any variable dimension other than "
-                                                              "the 0-th (batch) dimension, or if any non-batch "
-                                                              "dimension of the intermediate tensors in your model "
-                                                              "execution flow depends on the input dimension,"
-                                                              "otherwise the compression will most likely fail."),
-        # Validation of each separate compression description schema occurs in a separate step.
-        # This is required for better user feedback, since holistic schema validation is uninformative
-        # if there is an error in one of the compression configs.
-        **COMPRESSION_LR_MULTIPLIER_PROPERTY,
-        "accuracy_aware_training": with_attributes(ACCURACY_AWARE_TRAINING_SCHEMA,
-                                                   description="Accuracy Aware training pipeline's options. "
-                                                               "This section required to define *mode* and *params*"),
-        "compression": make_object_or_array_of_objects_schema(BASIC_COMPRESSION_ALGO_SCHEMA),
-        "target_device": with_attributes(TARGET_DEVICE_SCHEMA,
-                                         description="The target device, the specificity of which will be taken into "
-                                                     "account while compressing in order to obtain the best "
-                                                     "performance for this type of device. The default 'ANY' means "
-                                                     "compatible quantization supported by any HW. The parameter takes "
-                                                     "values from the set ('CPU', 'GPU', 'VPU', 'ANY', 'TRIAL'). Set "
-                                                     "this value to 'TRIAL' if you are going to use a custom "
-                                                     "quantization schema. Optional."),
-        "log_dir": with_attributes(_STRING,
-                                   description="Log directory for NNCF-specific logging outputs"),
-    },
-    "required": ["input_info"],
-    "definitions": REF_VS_ALGO_SCHEMA,
-}
+def get_root_nncf_config_schema(ref_vs_algo_schema):
+    ROOT_NNCF_CONFIG_SCHEMA = {
+        "$schema": "http://json-schema.org/draft-07/schema",
+        "type": "object",
+        "properties": {
+            "input_info": with_attributes(
+                make_object_or_array_of_objects_schema(SINGLE_INPUT_INFO_SCHEMA),
+                description="Required - describe the specifics of your model inputs here."
+                            "This information is used to build the internal graph representation"
+                            "that is leveraged for proper compression functioning, and for "
+                            "exporting the compressed model to ONNX - a dummy tensor with a "
+                            "corresponding shape and filler will be generated for each entry"
+                            "and passed as a corresponding argument into the model's forward"
+                            "method. Keywords can be specified for each entry - if left "
+                            "unspecified, the dummy tensor will be passed as a positional arg."),
+            "disable_shape_matching": with_attributes(
+                _BOOLEAN,
+                description="Whether to enable strict input tensor"
+                            "shape matching when building the internal graph"
+                            "representation of the model. Set this to false if your"
+                            "model inputs have any variable dimension other than "
+                            "the 0-th (batch) dimension, or if any non-batch "
+                            "dimension of the intermediate tensors in your model "
+                            "execution flow depends on the input dimension,"
+                            "otherwise the compression will most likely fail."),
+            # Validation of each separate compression description schema occurs in a separate step.
+            # This is required for better user feedback, since holistic schema validation is uninformative
+            # if there is an error in one of the compression configs.
+            **COMPRESSION_LR_MULTIPLIER_PROPERTY,
+            "accuracy_aware_training": with_attributes(ACCURACY_AWARE_TRAINING_SCHEMA,
+                                                    description="Accuracy Aware training pipeline's options. "
+                                                                "This section required to define *mode* and *params*"),
+            "compression": make_object_or_array_of_objects_schema(BASIC_COMPRESSION_ALGO_SCHEMA),
+            "target_device": with_attributes(
+                TARGET_DEVICE_SCHEMA,
+                description="The target device, the specificity of which will be taken into "
+                            "account while compressing in order to obtain the best "
+                            "performance for this type of device. The default 'ANY' means "
+                            "compatible quantization supported by any HW. The parameter takes "
+                            "values from the set ('CPU', 'GPU', 'VPU', 'ANY', 'TRIAL'). Set "
+                            "this value to 'TRIAL' if you are going to use a custom "
+                            "quantization schema. Optional."),
+            "log_dir": with_attributes(_STRING,
+                                    description="Log directory for NNCF-specific logging outputs"),
+        },
+        "required": ["input_info"],
+        "definitions": ref_vs_algo_schema,
+    }
+    return ROOT_NNCF_CONFIG_SCHEMA
 
 
-def validate_single_compression_algo_schema(single_compression_algo_dict: Dict):
+def validate_single_compression_algo_schema(single_compression_algo_dict: Dict, ref_vs_algo_schema):
     """single_compression_algo_dict must conform to BASIC_COMPRESSION_ALGO_SCHEMA (and possibly has other
     algo-specific properties"""
     algo_name = single_compression_algo_dict["algorithm"]
-    if algo_name not in REF_VS_ALGO_SCHEMA:
+    if algo_name not in ref_vs_algo_schema:
         raise jsonschema.ValidationError(
-            "Incorrect algorithm name - must be one of ({})".format(", ".join(REF_VS_ALGO_SCHEMA.keys())))
+            "Incorrect algorithm name - must be one of ({})".format(", ".join(ref_vs_algo_schema.keys())))
     try:
-        jsonschema.validate(single_compression_algo_dict, schema=REF_VS_ALGO_SCHEMA[algo_name])
+        jsonschema.validate(single_compression_algo_dict, schema=ref_vs_algo_schema[algo_name])
     except Exception as e:
         import sys
         raise type(e)("For algorithm: '{}'\n".format(algo_name) + str(e)).with_traceback(sys.exc_info()[2])

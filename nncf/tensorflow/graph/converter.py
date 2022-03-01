@@ -140,7 +140,24 @@ class CustomLayerInfo:
 
 class TFModelConverter(ABC):
     """
-    A base class for objects converting TF models into NNCFGraph representations.
+    Abstract class which describes the interface needed to convert
+    the Keras model to the `NNCFGraph` object.
+    """
+
+    @abstractmethod
+    def convert(self) -> NNCFGraph:
+        """
+        Converts the Keras model to the `NNCFGraph` object.
+
+        :return: The `NNCFGraph` object that represents the Keras model
+            for compression algorithms.
+        """
+
+
+class BaseFunctionalSequentialConverter(TFModelConverter):
+    """
+    A base class for the `FunctionalConverter` and `SequentialConverter` classes.
+    Contains the implementation of the common methods.
     """
 
     def __init__(self, model: tf.keras.Model):
@@ -157,7 +174,7 @@ class TFModelConverter(ABC):
 
     def _collect_custom_layer_infos(self, model: tf.keras.Model,
                                     use_graph_var_names: bool = False) -> Dict[str, CustomLayerInfo]:
-        custom_layers = TFModelConverter.get_custom_layers(model)
+        custom_layers = BaseFunctionalSequentialConverter.get_custom_layers(model)
         retval = {}
         for layer_name, layer in custom_layers.items():
             layer_input_spec = [self._get_type_spec(tensor)
@@ -175,7 +192,7 @@ class TFModelConverter(ABC):
 
             graphdef_nodes = wrapped_function.graph.as_graph_def().node
             graphdef_name_to_layer_var_map = {} if use_graph_var_names else \
-                TFModelConverter._get_graphdef_name_to_layer_var_map(concr_fn)
+                BaseFunctionalSequentialConverter._get_graphdef_name_to_layer_var_map(concr_fn)
             nodes = {graphdef_name_to_layer_var_map.get(node.name, node.name): node for node in graphdef_nodes}
             graphdef_node_name_vs_node = {node.name: node for node in graphdef_nodes}
 
@@ -329,12 +346,6 @@ class TFModelConverter(ABC):
             return [shape]
         return shape
 
-    @abstractmethod
-    def convert(self) -> NNCFGraph:
-        """
-        Returns an NNCFGraph that represents the TF model for further compression algos.
-        """
-
     def get_layer_info_for_node(self, node_name: NNCFNodeName) -> Tuple[bool, TFLayerInfo]:
         """
         :param node_name: The node name in the converted NNCFGraph
@@ -425,7 +436,7 @@ class TFModelConverterFactory:
         return converter
 
 
-class FunctionalConverter(TFModelConverter):
+class FunctionalConverter(BaseFunctionalSequentialConverter):
     """
     Converter for TF models that use the Functional API.
     """
@@ -617,7 +628,7 @@ class FunctionalConverter(TFModelConverter):
         return nncf_graph
 
 
-class SequentialConverter(TFModelConverter):
+class SequentialConverter(BaseFunctionalSequentialConverter):
     """
     Converter for the TF models using the Sequential API.
     """

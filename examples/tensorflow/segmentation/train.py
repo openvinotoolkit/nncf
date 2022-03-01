@@ -20,7 +20,7 @@ import tensorflow as tf
 
 from examples.tensorflow.common.utils import close_strategy_threadpool
 from nncf.tensorflow import create_compressed_model
-from nncf.tensorflow.helpers.model_manager import TFOriginalModelManager
+from nncf.tensorflow.helpers.model_manager import TFModelManager
 from nncf.tensorflow.initialization import register_default_init_args
 from nncf.common.utils.tensorboard import prepare_for_tensorboard
 from nncf.tensorflow.utils.state import TFCompressionState
@@ -254,9 +254,10 @@ def run_train(config):
     if resume_training:
         compression_state = load_compression_state(config.ckpt_path)
 
-    with TFOriginalModelManager(model_builder.build_model,
-                                weights=config.get('weights', None),
-                                is_training=True) as model:
+    with TFModelManager(model_builder.build_model,
+                        nncf_config,
+                        weights=config.get('weights', None),
+                        is_training=True) as model:
         with strategy.scope():
             compression_ctrl, compress_model = create_compressed_model(model, nncf_config, compression_state)
 
