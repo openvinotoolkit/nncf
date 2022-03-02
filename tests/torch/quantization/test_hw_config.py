@@ -29,14 +29,14 @@ from tests.torch.quantization.test_quantization_helpers import get_quantization_
 
 class ModelForHWConfigTest(torch.nn.Module):
     CONV2D_OP_NODE_NAME = "ModelForHWConfigTest/NNCFConv2d[conv2d]/conv2d_0"
-    def __init__(self, with_gelu=False):
+    def __init__(self, with_hardswish=False):
         super().__init__()
-        self.with_gelu = with_gelu
+        self.with_hardswish = with_hardswish
         self.conv2d = torch.nn.Conv2d(2, 1, 1)
 
     def forward(self, x_):
-        if self.with_gelu:
-            x_ = torch.nn.functional.gelu(x_)
+        if self.with_hardswish:
+            x_ = torch.nn.functional.hardswish(x_)
         x_ = self.conv2d(x_)
         x_ = x_.matmul(x_)
         return x_
@@ -106,8 +106,9 @@ class TestHWConfigRules:
             ]
         }
 
-        _, ctrl = self.get_model_and_ctrl_with_applied_hw_config_quantization(ModelForHWConfigTest(with_gelu=False),
-                                                                              hw_config_dict, False)
+        _, ctrl = \
+            self.get_model_and_ctrl_with_applied_hw_config_quantization(ModelForHWConfigTest(with_hardswish=False),
+                                                                        hw_config_dict, False)
         assert len(ctrl.weight_quantizers) == 0  # Conv2d weights remain unquantized
         assert len(ctrl.non_weight_quantizers) == 1  # Only the matmul input is quantized
 
@@ -116,7 +117,7 @@ class TestHWConfigRules:
         assert key.target_node_name == ModelForHWConfigTest.CONV2D_OP_NODE_NAME
 
     def test_missing_non_ir_op_results_in_default_qconf_list(self):
-        # GELU is the non-IR op here, adjust if this no longer reflects reality
+        # Hardswish is the non-IR op here, adjust if this no longer reflects reality
         hw_config_dict = {
             "target_device": "test",
             "config": {
@@ -150,16 +151,16 @@ class TestHWConfigRules:
             ]
         }
 
-        _, ctrl = self.get_model_and_ctrl_with_applied_hw_config_quantization(ModelForHWConfigTest(with_gelu=True),
+        _, ctrl = self.get_model_and_ctrl_with_applied_hw_config_quantization(ModelForHWConfigTest(with_hardswish=True),
                                                                               hw_config_dict)
         assert len(ctrl.weight_quantizers) == 1  # Conv2d weights quantized
-        assert len(ctrl.non_weight_quantizers) == 3  # GELU input, conv2d input, matmul input (single in this case)
+        assert len(ctrl.non_weight_quantizers) == 3  # hardswish input, conv2d input, matmul input (single in this case)
 
         w_key = next(iter(ctrl.weight_quantizers.keys()))
         assert str(w_key.target_node_name) == ModelForHWConfigTest.CONV2D_OP_NODE_NAME
 
-        gelu_input_act_quantizer_ref = self.get_quantizer_module_after_op_name(MODEL_INPUT_OP_NAME, ctrl)
-        assert self.quantizer_has_default_config(gelu_input_act_quantizer_ref)
+        hardswish_input_act_quantizer_ref = self.get_quantizer_module_after_op_name(MODEL_INPUT_OP_NAME, ctrl)
+        assert self.quantizer_has_default_config(hardswish_input_act_quantizer_ref)
 
     def test_unspecified_quantization_for_fundamentally_quantizable_op_results_in_default_qconfig(self):
         hw_config_dict = {  # Only the MatMul will receive a default config here (8 bit symmetric per-tensor)
@@ -191,8 +192,9 @@ class TestHWConfigRules:
             ]
         }
 
-        _, ctrl = self.get_model_and_ctrl_with_applied_hw_config_quantization(ModelForHWConfigTest(with_gelu=False),
-                                                                              hw_config_dict, False)
+        _, ctrl = \
+            self.get_model_and_ctrl_with_applied_hw_config_quantization(ModelForHWConfigTest(with_hardswish=False),
+                                                                        hw_config_dict, False)
         assert len(ctrl.weight_quantizers) == 1  # Conv2d weights quantized
         conv2d_weight_quantizer_ref = list(ctrl.weight_quantizers.values())[0].quantizer_module_ref
         assert not self.quantizer_has_default_config(conv2d_weight_quantizer_ref)
@@ -237,8 +239,9 @@ class TestHWConfigRules:
             ]
         }
 
-        _, ctrl = self.get_model_and_ctrl_with_applied_hw_config_quantization(ModelForHWConfigTest(with_gelu=False),
-                                                                              hw_config_dict)
+        _, ctrl = \
+            self.get_model_and_ctrl_with_applied_hw_config_quantization(ModelForHWConfigTest(with_hardswish=False),
+                                                                        hw_config_dict)
         assert len(ctrl.weight_quantizers) == 1  # Conv2d weights quantized with default config
         assert len(ctrl.non_weight_quantizers) == 2  # All inputs are quantized.
         for quantizer_ref in ctrl.all_quantizations.values():

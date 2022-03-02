@@ -55,3 +55,4 @@ class HWConfigOpName:
     EMBEDDINGBAG = 'EmbeddingBag'
     PAD ='Pad'
     STRIDEDSLICE='StridedSlice'
+    GELU = 'Gelu'
