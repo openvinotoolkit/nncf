@@ -87,6 +87,12 @@ class TrainingRunner(ABC):
         """
 
     @abstractmethod
+    def update_learning_rate(self) -> None:
+        """
+        Update learning rate.
+        """
+
+    @abstractmethod
     def reset_training(self) -> None:
         """
         Initialize all-training related parameters (e.g. epoch count, optimizer, learning rate scheduler).

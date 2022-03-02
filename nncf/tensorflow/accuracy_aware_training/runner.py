@@ -93,6 +93,9 @@ class TFAccuracyAwareTrainingRunner(BaseAccuracyAwareTrainingRunner):
     def configure_optimizers(self):
         pass
 
+    def update_learning_rate(self):
+        pass
+
 
 class TFAdaptiveCompressionLevelTrainingRunner(TFAccuracyAwareTrainingRunner,
                                                BaseAdaptiveCompressionLevelTrainingRunner):

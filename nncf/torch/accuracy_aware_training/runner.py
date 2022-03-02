@@ -12,6 +12,7 @@
 """
 
 import io
+import os
 import os.path as osp
 from shutil import copyfile
 
@@ -34,6 +35,7 @@ try:
 except ImportError:
     IMG_PACKAGES_AVAILABLE = False
 
+from nncf.api.compression import CompressionStage
 from nncf.torch.checkpoint_loading import load_state
 from nncf.torch.accuracy_aware_training.utils import is_main_process
 from nncf.common.utils.helpers import configure_accuracy_aware_paths
@@ -62,7 +64,7 @@ class PTAccuracyAwareTrainingRunner(BaseAccuracyAwareTrainingRunner):
         super().initialize_training_loop_fns(train_epoch_fn, validate_fn, configure_optimizers_fn, dump_checkpoint_fn,
                                              tensorboard_writer=tensorboard_writer, log_dir=log_dir)
         self._log_dir = self._log_dir if self._log_dir is not None \
-            else 'runs'
+            else os.path.join(os.getcwd(), 'runs')
         self._log_dir = configure_accuracy_aware_paths(self._log_dir)
         self._checkpoint_save_dir = self._log_dir
         if self._tensorboard_writer is None and TENSORBOARD_AVAILABLE:
@@ -85,9 +87,6 @@ class PTAccuracyAwareTrainingRunner(BaseAccuracyAwareTrainingRunner):
                              epoch=self.cumulative_epoch_count,
                              optimizer=self.optimizer,
                              lr_scheduler=self.lr_scheduler)
-        if self.lr_scheduler is not None and self.lr_updates_needed:
-            self.lr_scheduler.step(self.training_epoch_count if not isinstance(self.lr_scheduler, ReduceLROnPlateau)
-                                   else self.best_val_metric_value)
         self.training_epoch_count += 1
         self.cumulative_epoch_count += 1
 
@@ -105,6 +104,11 @@ class PTAccuracyAwareTrainingRunner(BaseAccuracyAwareTrainingRunner):
 
         return self.current_val_metric_value
 
+    def update_learning_rate(self):
+        if self.lr_scheduler is not None and self.lr_updates_needed:
+            self.lr_scheduler.step(self.training_epoch_count if not isinstance(self.lr_scheduler, ReduceLROnPlateau)
+                                   else self.best_val_metric_value)
+
     def configure_optimizers(self):
         self.optimizer, self.lr_scheduler = self._configure_optimizers_fn()
 
@@ -119,29 +123,39 @@ class PTAccuracyAwareTrainingRunner(BaseAccuracyAwareTrainingRunner):
         self.best_val_metric_value = 0
 
     def dump_statistics(self, model, compression_controller):
+        if not is_main_process():
+            return
+
         statistics = compression_controller.statistics()
 
-        if is_main_process():
-            if self.verbose:
-                nncf_logger.info(statistics.to_str())
-                # dump best checkpoint for current target compression rate
-            if self.dump_checkpoints:
-                self.dump_checkpoint(model, compression_controller)
-            for key, value in prepare_for_tensorboard(statistics).items():
-                if isinstance(value, (int, float)):
-                    self.add_tensorboard_scalar('compression/statistics/{0}'.format(key),
-                                                value, self.cumulative_epoch_count)
+        if self.verbose:
+            nncf_logger.info(statistics.to_str())
+
+        for key, value in prepare_for_tensorboard(statistics).items():
+            if isinstance(value, (int, float)):
+                self.add_tensorboard_scalar('compression/statistics/{0}'.format(key),
+                                            value, self.cumulative_epoch_count)
+
+        if self.dump_checkpoints or self._is_best_checkpoint(compression_controller.compression_stage()):
+            self.dump_checkpoint(model, compression_controller)
+
+    def _is_best_checkpoint(self, compression_stage):
+        return (self.best_val_metric_value == self.current_val_metric_value and
+                compression_stage == CompressionStage.FULLY_COMPRESSED)
 
     def _save_best_checkpoint(self, checkpoint_path):
-        if self.best_val_metric_value == self.current_val_metric_value:
-            best_checkpoint_filename = 'acc_aware_checkpoint_best.pth'
-            best_path = osp.join(self._checkpoint_save_dir, best_checkpoint_filename)
-            self._best_checkpoint = best_path
-            copyfile(checkpoint_path, best_path)
+        best_checkpoint_filename = 'acc_aware_checkpoint_best.pth'
+        best_path = osp.join(self._checkpoint_save_dir, best_checkpoint_filename)
+        self._best_checkpoint = best_path
+        copyfile(checkpoint_path, best_path)
+        nncf_logger.info('Copy best checkpoint {} -> {}'.format(checkpoint_path, best_path))
 
     def dump_checkpoint(self, model, compression_controller):
-        if self._dump_checkpoint_fn is not None and is_main_process():
-            self._dump_checkpoint_fn(model, compression_controller, self, self._log_dir)
+        if not is_main_process():
+            return
+
+        if self._dump_checkpoint_fn is not None:
+            checkpoint_path = self._dump_checkpoint_fn(model, compression_controller, self, self._checkpoint_save_dir)
         else:
             checkpoint = {
                 'epoch': self.cumulative_epoch_count + 1,
@@ -150,16 +164,20 @@ class PTAccuracyAwareTrainingRunner(BaseAccuracyAwareTrainingRunner):
                 'best_metric_val': self.best_val_metric_value,
                 'current_val_metric_value': self.current_val_metric_value,
                 'optimizer': self.optimizer.state_dict(),
-                'scheduler': compression_controller.scheduler.get_state()
             }
             checkpoint_path = osp.join(self._checkpoint_save_dir, 'acc_aware_checkpoint_last.pth')
             torch.save(checkpoint, checkpoint_path)
-            nncf_logger.info("The checkpoint is saved in {}".format(checkpoint_path))
+        nncf_logger.info("The checkpoint is saved in {}".format(checkpoint_path))
+        if self._is_best_checkpoint(compression_controller.compression_stage()):
             self._save_best_checkpoint(checkpoint_path)
 
     def add_tensorboard_scalar(self, key, data, step):
         if self.verbose and self._tensorboard_writer is not None:
             self._tensorboard_writer.add_scalar(key, data, step)
+
+    def add_tensorboard_image(self, key, data, step):
+        if self.verbose and self._tensorboard_writer is not None:
+            self._tensorboard_writer.add_image(key, data, step)
 
     def update_training_history(self, compression_rate, best_metric_value):
         best_accuracy_budget = best_metric_value - self.minimal_tolerable_accuracy
@@ -174,10 +192,9 @@ class PTAccuracyAwareTrainingRunner(BaseAccuracyAwareTrainingRunner):
             buf.seek(0)
             image = PIL.Image.open(buf)
             image = ToTensor()(image)
-            if self._tensorboard_writer is not None:
-                self._tensorboard_writer.add_image('compression/accuracy_aware/acc_budget_vs_comp_rate',
-                                                   image,
-                                                   global_step=len(self.compressed_training_history))
+            self.add_tensorboard_image('compression/accuracy_aware/acc_budget_vs_comp_rate',
+                                       image,
+                                       len(self.compressed_training_history))
 
     @property
     def compressed_training_history(self):
