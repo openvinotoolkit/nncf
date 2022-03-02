@@ -39,8 +39,8 @@ BG_COLOR_RED_HEX = 'ffcccc'
 
 DIFF_TARGET_MIN_GLOBAL = -0.1
 DIFF_TARGET_MAX_GLOBAL = 0.1
-DIFF_TARGET_INIT_MIN_GLOBAL = -0.1
-DIFF_TARGET_INIT_MAX_GLOBAL = 0.1
+DIFF_TARGET_INIT_MIN_GLOBAL = -0.3
+DIFF_TARGET_INIT_MAX_GLOBAL = 0.3
 DIFF_FP32_MIN_GLOBAL = -1.0
 DIFF_FP32_MAX_GLOBAL = 0.1
 
@@ -449,6 +449,7 @@ class TestSotaCheckpoints:
                              ids=ids_list)
     def test_eval(self, sota_checkpoints_dir, sota_data_dir, eval_test_struct: EvalRunParamsStruct):
         # pylint: disable=too-many-branches
+        # pylint: too-many-statements
         if sota_data_dir is None:
             pytest.skip('Path to datasets is not set')
 

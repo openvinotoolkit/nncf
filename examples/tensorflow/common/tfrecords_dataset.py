@@ -50,7 +50,7 @@ class TFRecordDataset(ABC):
         pass
 
     def as_dataset(self) -> tf.data.Dataset:
-        dataset = tf.data.Dataset.list_files(self.file_pattern, shuffle=True)
+        dataset = tf.data.Dataset.list_files(self.file_pattern, shuffle=self.is_train)
 
         dataset = dataset.interleave(
             lambda name: tf.data.TFRecordDataset(name, buffer_size=self.buffer_size),
