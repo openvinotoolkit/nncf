@@ -51,7 +51,6 @@ _INT8 model (symmetric quantization)_ - 92.55% F1, 86.1% EM on the dev set.
 
 _INT8 model (symmetric quantization) + Knowledge Distillation_ - 92.89% F1, 86.68% EM on the dev set.
 
-# ToDo: Add KD config through patch
 **INT8 model quantization-aware training + Knowledge Distillation command line (trained on 4x Tesla V100):**
 
 `python examples/pytorch/question-answering/run_qa.py --model_name_or_path bert-large-uncased-whole-word-masking --do_train --do_eval --dataset_name squad --learning_rate 3e-5 --num_train_epochs 2 --max_seq_length 384 --doc_stride 128 --output_dir bert_squad_int8 --per_gpu_eval_batch_size=1 --per_gpu_train_batch_size=10 --save_steps=400 --nncf_config nncf_bert_config_squad_kd.json`
