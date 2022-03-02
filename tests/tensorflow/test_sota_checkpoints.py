@@ -139,10 +139,10 @@ class TestSotaCheckpoints:
     ###############################################################################################################
     if MODE == 'TF2':
         CMD_FORMAT_STRING = '{} examples/tensorflow/{sample_type}/{eval_script_name} -m {} --config {conf} \
-         --data {dataset}/{data_type}/{data_name}/ --log-dir={log_dir}'
+         --data {dataset}/{data_type}/{data_name}/ --log-dir={log_dir} --metrics-dump {metrics_dump_file_path}'
     # if MODE == 'TF2':
     #     CMD_FORMAT_STRING = '{} examples/tensorflow/{sample_type}/{eval_script_name} -m {} --config {conf} \
-    #      --data {dataset} --log-dir={log_dir}'
+    #      --data {dataset} --log-dir={log_dir} --metrics-dump {metrics_dump_file_path}'
     else:
         CMD_FORMAT_STRING = '{} examples/tensorflow/{sample_type}/main.py -m {} --config {conf} \
          --data {dataset}/{data_name}/ --log-dir={log_dir}'
@@ -189,21 +189,18 @@ class TestSotaCheckpoints:
             return exit_code, err_string
 
     @staticmethod
-    def make_table_row(test,
-                       expected_init_,  metric_init, diff_init, error_message_init,
-                       expected_, metrics_type_, key, error_message, metric, diff_target,
-                       fp32_metric_=None, diff_fp32=None, metric_type_from_json=None):
-        if metric_init is None:
-            expected_init_ = '-'
-            metric_init = '-'
-            diff_init = '-'
-            error_message_init = '-'
-        elif metric_init == -1:
-            metric_init = 'Not executed'
-            diff_init = '-'
+    def make_table_row_init(test, expected_init_,  metric_init, diff_init, error_message_init, metrics_type_, key):
+        TestSotaCheckpoints.test = test
+        if metric_init is not None:
+            row = [str(key), str(metrics_type_), str(expected_init_), str(metric_init), str(diff_init), str('-')]
         else:
-            error_message_init = '-'
+            row = [str(key), str(metrics_type_), str(expected_init_), str('Not executed'), str('-'),
+                   str(error_message_init)]
+        return row
 
+    @staticmethod
+    def make_table_row(test, expected_, metrics_type_, key, error_message, metric, diff_target,
+                       fp32_metric_=None, diff_fp32=None, metric_type_from_json=None):
         TestSotaCheckpoints.test = test
         if fp32_metric_ is None:
             fp32_metric_ = '-'
@@ -212,18 +209,14 @@ class TestSotaCheckpoints:
             fp32_metric_ = str(f'({fp32_metric_})')
         if metric is not None:
             if test == 'eval':
-                row = [str(key), str(metrics_type_),
-                       str(expected_init_), str(metric_init), str(diff_init), str(error_message_init),
-                       str(expected_), str(metric), str(fp32_metric_), str(diff_fp32),
+                row = [str(key), str(metrics_type_), str(expected_), str(metric), str(fp32_metric_), str(diff_fp32),
                        str(diff_target), str('-')]
             else:
                 row = [str(key), str(metrics_type_), str(expected_), str(metric), str(diff_target), str('-')]
         else:
             if test == 'eval':
-                row = [str(key), str(metrics_type_),
-                       str(expected_init_), str(metric_init), str(diff_init), str(error_message_init),
-                       str(expected_), str('Not executed'), str(fp32_metric_), str('-'),
-                       str('-'), str(error_message)]
+                row = [str(key), str(metrics_type_), str(expected_), str('Not executed'), str(fp32_metric_),
+                       str('-'), str('-'), str(error_message)]
             else:
                 row = [str(key), str(metrics_type_), str(expected_), str('Not executed'), str('-'), str(error_message)]
         return row
@@ -296,8 +289,21 @@ class TestSotaCheckpoints:
             yaml.dump(template, f, default_flow_style=False)
 
     @staticmethod
-    def threshold_check(is_ok, is_ok_init, diff_target_init, diff_target, diff_fp32_min_=None, diff_fp32_max_=None,
-                        fp32_metric=None, diff_fp32=None, diff_target_min=None, diff_target_max=None):
+    def threshold_check_init(is_ok_init, diff_target_init):
+        color = BG_COLOR_GREEN_HEX
+        within_thresholds = True
+        if is_ok_init:
+            if not DIFF_TARGET_INIT_MIN_GLOBAL < diff_target_init < DIFF_TARGET_INIT_MAX_GLOBAL:
+                color = BG_COLOR_RED_HEX
+                within_thresholds = False
+        else:
+            color = BG_COLOR_RED_HEX
+            within_thresholds = False
+        return color, within_thresholds
+
+    @staticmethod
+    def threshold_check(is_ok, diff_target, diff_fp32_min_=None, diff_fp32_max_=None, fp32_metric=None,
+                        diff_fp32=None, diff_target_min=None, diff_target_max=None):
         color = BG_COLOR_RED_HEX
         within_thresholds = False
         if not diff_target_min:
@@ -318,16 +324,6 @@ class TestSotaCheckpoints:
             elif diff_target_min < diff_target < diff_target_max:
                 color = BG_COLOR_GREEN_HEX
                 within_thresholds = True
-
-        if not is_ok_init:
-            color = BG_COLOR_RED_HEX
-            within_thresholds = False
-        else:
-            if diff_target_init is not None:
-                if not DIFF_TARGET_INIT_MIN_GLOBAL < diff_target_init < DIFF_TARGET_INIT_MAX_GLOBAL:
-                    color = BG_COLOR_RED_HEX
-                    within_thresholds = False
-
         return color, within_thresholds
 
     @staticmethod
@@ -444,22 +440,27 @@ class TestSotaCheckpoints:
                                                  model_name))
                         train_ids_list.append(model_name)
 
-    @pytest.mark.eval
+    @pytest.mark.init
     @pytest.mark.parametrize('eval_test_struct', param_list,
                              ids=ids_list)
-    def test_eval(self, sota_checkpoints_dir, sota_data_dir, eval_test_struct: EvalRunParamsStruct):
+    def test_init(self, sota_checkpoints_dir, sota_data_dir, eval_test_struct: EvalRunParamsStruct):
         # pylint: disable=too-many-branches
-        # pylint: too-many-statements
+        # pylint: disable=too-many-statements
         if sota_data_dir is None:
             pytest.skip('Path to datasets is not set')
 
+        if eval_test_struct.resume_file_ is None or eval_test_struct.sample_type_ == 'segmentation':
+            pytest.skip('Skip initialization run for the full-precision models')
+
         #########################################################################################################
-        # if eval_test_struct.sample_type_ == 'classification': # object_detection classification
+        # if eval_test_struct.sample_type_ == 'object_detection': # object_detection classification
         #     pytest.skip('Classification')
 
-        test = 'eval'
+        test = 'init'
         sample_type = eval_test_struct.sample_type_
         log_dir = pytest.metrics_dump_path / 'logs'
+        metric_file_name_init = self.get_metric_file_name(model_name=eval_test_struct.model_name_, init=True)
+        metrics_dump_file_path_init = pytest.metrics_dump_path / metric_file_name_init
         if MODE == 'TF2':
             cmd = self.CMD_FORMAT_STRING.format(sys.executable, 'test', conf=eval_test_struct.config_name_,
                                                 dataset=sota_data_dir,
@@ -467,6 +468,7 @@ class TestSotaCheckpoints:
                                                 data_type=eval_test_struct.dataset_type_,
                                                 sample_type=sample_type,
                                                 eval_script_name=EVAL_SCRIPT_NAME_MAP[sample_type],
+                                                metrics_dump_file_path=metrics_dump_file_path_init,
                                                 log_dir=log_dir)
             if eval_test_struct.weights_:
                 cmd += ' --weights {}'.format(os.path.join(sota_checkpoints_dir, eval_test_struct.weights_))
@@ -481,47 +483,75 @@ class TestSotaCheckpoints:
         if eval_test_struct.batch_:
             cmd += ' -b {}'.format(eval_test_struct.batch_)
 
-        is_ok_init = True
-        metric_value_init = None
-        diff_target_init = None
-        err_str_init = None
+        cmd_init = cmd + ' --metrics-dump {}'.format(metrics_dump_file_path_init)
+        exit_code_init, err_str_init = self.run_cmd(cmd_init, cwd=PROJECT_ROOT)
+        is_ok_init = (exit_code_init == 0 and metrics_dump_file_path_init.exists())
 
+        if is_ok_init:
+            metric_value_init = self.read_metric(str(metrics_dump_file_path_init))
+            diff_target_init = round((metric_value_init - eval_test_struct.expected_init_), 2)
+        else:
+            metric_value_init = None
+            diff_target_init = None
+
+        self.row_dict[eval_test_struct.model_name_] = self.make_table_row_init(test,
+                                                                               eval_test_struct.expected_init_,
+                                                                               metric_value_init,
+                                                                               diff_target_init,
+                                                                               err_str_init,
+                                                                               eval_test_struct.metric_type_,
+                                                                               eval_test_struct.model_name_)
+        retval = self.threshold_check_init(is_ok_init, diff_target_init)
+
+        self.color_dict[eval_test_struct.model_name_], is_accuracy_within_thresholds = retval
+        assert is_accuracy_within_thresholds
+
+    @pytest.mark.eval
+    @pytest.mark.parametrize('eval_test_struct', param_list,
+                             ids=ids_list)
+    def test_eval(self, sota_checkpoints_dir, sota_data_dir, eval_test_struct: EvalRunParamsStruct):
+        # pylint: disable=too-many-branches
+        if sota_data_dir is None:
+            pytest.skip('Path to datasets is not set')
+
+        #########################################################################################################
+        # if eval_test_struct.sample_type_ in ['object_detection', 'segmentation']: # object_detection classification
+        #     pytest.skip('Classification')
+
+        test = 'eval'
+        sample_type = eval_test_struct.sample_type_
+        metric_file_name = self.get_metric_file_name(model_name=eval_test_struct.model_name_)
+        metrics_dump_file_path = pytest.metrics_dump_path / metric_file_name
+        log_dir = pytest.metrics_dump_path / 'logs'
+        if MODE == 'TF2':
+            cmd = self.CMD_FORMAT_STRING.format(sys.executable, 'test', conf=eval_test_struct.config_name_,
+                                                dataset=sota_data_dir,
+                                                data_name=eval_test_struct.dataset_name_,
+                                                data_type=eval_test_struct.dataset_type_,
+                                                sample_type=sample_type,
+                                                eval_script_name=EVAL_SCRIPT_NAME_MAP[sample_type],
+                                                metrics_dump_file_path=metrics_dump_file_path, log_dir=log_dir)
+            if eval_test_struct.weights_:
+                cmd += ' --weights {}'.format(os.path.join(sota_checkpoints_dir, eval_test_struct.weights_))
+            if DATASET_TYPE_AVAILABILITY[sample_type]:
+                cmd += ' --dataset-type {}'.format(eval_test_struct.dataset_type_)
+        else:
+            cmd = self.CMD_FORMAT_STRING.format(sys.executable, 'test', conf=eval_test_struct.config_name_,
+                                                dataset=sota_data_dir,
+                                                data_name=eval_test_struct.dataset_name_,
+                                                sample_type=eval_test_struct.sample_type_,
+                                                metrics_dump_file_path=metrics_dump_file_path, log_dir=log_dir)
         if eval_test_struct.resume_file_:
-            if eval_test_struct.sample_type_ in ['classification', 'object_detection']:
-                # Run init eval
-                metric_file_name_init = self.get_metric_file_name(model_name=eval_test_struct.model_name_, init=True)
-                metrics_dump_file_path_init = pytest.metrics_dump_path / metric_file_name_init
-
-                cmd_init = cmd + ' --metrics-dump {}'.format(metrics_dump_file_path_init)
-                exit_code_init, err_str_init = self.run_cmd(cmd_init, cwd=PROJECT_ROOT)
-                is_ok_init = (exit_code_init == 0 and metrics_dump_file_path_init.exists())
-
-                if is_ok_init:
-                    metric_value_init = self.read_metric(str(metrics_dump_file_path_init))
-                    diff_target_init = round((metric_value_init - eval_test_struct.expected_init_), 2)
-                else:
-                    metric_value_init = -1
-
-            # Run checkpoint eval
-            metric_file_name = self.get_metric_file_name(model_name=eval_test_struct.model_name_)
-            metrics_dump_file_path = pytest.metrics_dump_path / metric_file_name
             resume_file_path = sota_checkpoints_dir + '/' + eval_test_struct.resume_file_
             cmd += ' --resume {}'.format(resume_file_path)
-            cmd += ' --metrics-dump {}'.format(metrics_dump_file_path)
-            exit_code, err_str = self.run_cmd(cmd, cwd=PROJECT_ROOT)
-            is_ok = (exit_code == 0 and metrics_dump_file_path.exists())
-
         else:
-            metric_file_name = self.get_metric_file_name(model_name=eval_test_struct.model_name_)
-            metrics_dump_file_path = pytest.metrics_dump_path / metric_file_name
-
-            cmd += ' --metrics-dump {}'.format(metrics_dump_file_path)
             if MODE != 'TF2' or PRETRAINED_PARAM_AVAILABILITY[sample_type]:
                 cmd += ' --pretrained'
+        if eval_test_struct.batch_:
+            cmd += ' -b {}'.format(eval_test_struct.batch_)
+        exit_code, err_str = self.run_cmd(cmd, cwd=PROJECT_ROOT)
 
-            exit_code, err_str = self.run_cmd(cmd, cwd=PROJECT_ROOT)
-            is_ok = (exit_code == 0 and metrics_dump_file_path.exists())
-
+        is_ok = (exit_code == 0 and metrics_dump_file_path.exists())
         if is_ok:
             metric_value = self.read_metric(str(metrics_dump_file_path))
         else:
@@ -554,12 +584,7 @@ class TestSotaCheckpoints:
             diff_target = None
             diff_fp32 = None
 
-        self.row_dict[eval_test_struct.model_name_] = self.make_table_row(test,
-                                                                          eval_test_struct.expected_init_,
-                                                                          metric_value_init,
-                                                                          diff_target_init,
-                                                                          err_str_init,
-                                                                          eval_test_struct.expected_,
+        self.row_dict[eval_test_struct.model_name_] = self.make_table_row(test, eval_test_struct.expected_,
                                                                           eval_test_struct.metric_type_,
                                                                           eval_test_struct.model_name_,
                                                                           err_str,
@@ -569,8 +594,6 @@ class TestSotaCheckpoints:
                                                                           diff_fp32,
                                                                           metric_type_from_json)
         retval = self.threshold_check(is_ok,
-                                      is_ok_init,
-                                      diff_target_init,
                                       diff_target,
                                       eval_test_struct.diff_fp32_min_,
                                       eval_test_struct.diff_fp32_max_,
@@ -680,8 +703,10 @@ def results(sota_data_dir):
     if sota_data_dir:
         Tsc.write_common_metrics_file(per_model_metric_file_dump_path=pytest.metrics_dump_path)
         if Tsc.test == 'eval':
-            header = ['Model', 'Metrics type', 'Expected Init', 'Measured Init', 'Diff Expected Init', 'Error Init',
-                      'Expected', 'Measured', 'Reference FP32', 'Diff FP32', 'Diff Expected', 'Error']
+            header = ['Model', 'Metrics type', 'Expected', 'Measured', 'Reference FP32', 'Diff FP32', 'Diff Expected',
+                      'Error']
+        elif Tsc.test == 'init':
+            header = ['Model', 'Metrics type', 'Expected Init', 'Measured Init', 'Diff Expected Init', 'Error Init']
         else:
             header = ['Model', 'Metrics type', 'Expected', 'Measured', 'Diff Expected', 'Error']
         Tsc().write_results_table(header, pytest.metrics_dump_path)
