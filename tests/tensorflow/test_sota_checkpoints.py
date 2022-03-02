@@ -193,45 +193,6 @@ class RunTest:
             writer.writerow({'model': model_name, 'launcher': '-', 'device': '-', 'dataset': '-', 'tags': '-',
                              'metric_name': '-', 'metric_type': '-', 'metric_value': error_message})
 
-    def write_results_table(self, init_table_string, path):
-        result_table = PrettyTable()
-        result_table.field_names = init_table_string
-        for key in self.row_dict:
-            result_table.add_row(self.row_dict[key])
-        print()
-        print(result_table)
-
-        doc, tag, text = Doc().tagtext()
-        doc.asis('<!DOCTYPE html>')
-        with tag('p'):
-            text('legend: ')
-        with tag('p'):
-            with tag('span', style='Background-color: #{}'.format(BG_COLOR_GREEN_HEX)):
-                text('Thresholds for FP32 and Expected are passed')
-        with tag('p'):
-            with tag('span', style='Background-color: #{}'.format(BG_COLOR_YELLOW_HEX)):
-                text('Thresholds for Expected is failed, but for FP32 passed')
-        with tag('p'):
-            with tag('span', style='Background-color: #{}'.format(BG_COLOR_RED_HEX)):
-                text('Thresholds for FP32 and Expected are failed')
-        with tag('p'):
-            text('If Reference FP32 value in parentheses, it takes from "target" field of .json file')
-        with tag('table', border='1', cellpadding='5', style='border-collapse: collapse; border: 1px solid;'):
-            with tag('tr'):
-                for i in init_table_string:
-                    with tag('td'):
-                        text(i)
-            for key in self.row_dict:
-                with tag('tr', bgcolor='{}'.format(self.color_dict[key])):
-                    for i in self.row_dict[key]:
-                        if i is None:
-                            i = '-'
-                        with tag('td'):
-                            text(i)
-        print('Write results at ', path / 'results.html')
-        with open(path / 'results.html', 'w', encoding='utf8') as f:
-            f.write(doc.getvalue())
-
     @staticmethod
     def get_input_shape(config):
         with open(PROJECT_ROOT / config, encoding='utf8') as file:
@@ -365,6 +326,40 @@ class RunTest:
 
 
 class TestInitialization(RunTest):
+    def write_results_table(self, init_table_string, path):
+        result_table = PrettyTable()
+        result_table.field_names = init_table_string
+        for key in self.row_dict:
+            result_table.add_row(self.row_dict[key])
+        print()
+        print(result_table)
+
+        doc, tag, text = Doc().tagtext()
+        doc.asis('<!DOCTYPE html>')
+        with tag('p'):
+            text('legend: ')
+        with tag('p'):
+            with tag('span', style='Background-color: #{}'.format(BG_COLOR_GREEN_HEX)):
+                text('Thresholds for Measured after initialization and Expected are passed')
+        with tag('p'):
+            with tag('span', style='Background-color: #{}'.format(BG_COLOR_RED_HEX)):
+                text('Thresholds for Measured after initialization and Expected are failed')
+        with tag('table', border='1', cellpadding='5', style='border-collapse: collapse; border: 1px solid;'):
+            with tag('tr'):
+                for i in init_table_string:
+                    with tag('td'):
+                        text(i)
+            for key in self.row_dict:
+                with tag('tr', bgcolor='{}'.format(self.color_dict[key])):
+                    for i in self.row_dict[key]:
+                        if i is None:
+                            i = '-'
+                        with tag('td'):
+                            text(i)
+        print('Write results at ', path / 'results_init.html')
+        with open(path / 'results_init.html', 'w', encoding='utf8') as f:
+            f.write(doc.getvalue())
+
     @staticmethod
     def threshold_check(is_ok, diff_target):
         color = BG_COLOR_GREEN_HEX
@@ -459,6 +454,45 @@ class TestInitialization(RunTest):
 
 
 class TestSotaCheckpoints(RunTest):
+    def write_results_table(self, init_table_string, path):
+        result_table = PrettyTable()
+        result_table.field_names = init_table_string
+        for key in self.row_dict:
+            result_table.add_row(self.row_dict[key])
+        print()
+        print(result_table)
+
+        doc, tag, text = Doc().tagtext()
+        doc.asis('<!DOCTYPE html>')
+        with tag('p'):
+            text('legend: ')
+        with tag('p'):
+            with tag('span', style='Background-color: #{}'.format(BG_COLOR_GREEN_HEX)):
+                text('Thresholds for FP32 and Expected are passed')
+        with tag('p'):
+            with tag('span', style='Background-color: #{}'.format(BG_COLOR_YELLOW_HEX)):
+                text('Thresholds for Expected is failed, but for FP32 passed')
+        with tag('p'):
+            with tag('span', style='Background-color: #{}'.format(BG_COLOR_RED_HEX)):
+                text('Thresholds for FP32 and Expected are failed')
+        with tag('p'):
+            text('If Reference FP32 value in parentheses, it takes from "target" field of .json file')
+        with tag('table', border='1', cellpadding='5', style='border-collapse: collapse; border: 1px solid;'):
+            with tag('tr'):
+                for i in init_table_string:
+                    with tag('td'):
+                        text(i)
+            for key in self.row_dict:
+                with tag('tr', bgcolor='{}'.format(self.color_dict[key])):
+                    for i in self.row_dict[key]:
+                        if i is None:
+                            i = '-'
+                        with tag('td'):
+                            text(i)
+        print('Write results at ', path / 'results.html')
+        with open(path / 'results.html', 'w', encoding='utf8') as f:
+            f.write(doc.getvalue())
+
     @staticmethod
     def threshold_check(is_ok, diff_target, diff_fp32_min_=None, diff_fp32_max_=None, fp32_metric=None,
                         diff_fp32=None, diff_target_min=None, diff_target_max=None):
@@ -711,8 +745,10 @@ def results(sota_data_dir):
         if Rt.test == 'eval':
             header = ['Model', 'Metrics type', 'Expected', 'Measured', 'Reference FP32', 'Diff FP32', 'Diff Expected',
                       'Error']
+            TestSotaCheckpoints().write_results_table(header, pytest.metrics_dump_path)
         elif Rt.test == 'init':
             header = ['Model', 'Metrics type', 'Expected Init', 'Measured Init', 'Diff Expected Init', 'Error Init']
+            TestInitialization().write_results_table(header, pytest.metrics_dump_path)
         else:
             header = ['Model', 'Metrics type', 'Expected', 'Measured', 'Diff Expected', 'Error']
-        Rt().write_results_table(header, pytest.metrics_dump_path)
+            TestSotaCheckpoints().write_results_table(header, pytest.metrics_dump_path)
