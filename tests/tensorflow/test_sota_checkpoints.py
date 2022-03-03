@@ -211,7 +211,7 @@ class RunTest:
             yaml.dump(template, f, default_flow_style=False)
 
     @staticmethod
-    def write_common_metrics_file(per_model_metric_file_dump_path: Path):
+    def write_common_metrics_file(test: str, per_model_metric_file_dump_path: Path):
         metric_value = {}
         for file in os.listdir(per_model_metric_file_dump_path):
             filename = os.fsdecode(file)
@@ -221,6 +221,8 @@ class RunTest:
                 model_name = str(file).replace('.metrics.json', '')
                 metric_value[model_name] = metrics['Accuracy']
                 common_metrics_file_path = per_model_metric_file_dump_path / 'metrics.json'
+                if test == 'init':
+                    common_metrics_file_path = per_model_metric_file_dump_path / 'metrics_init.json'
                 if common_metrics_file_path.is_file():
                     data = json.loads(common_metrics_file_path.read_text(encoding='utf-8'))
                     data.update(metric_value)
@@ -732,7 +734,8 @@ def make_metrics_dump_path(metrics_dump_dir):
         pytest.metrics_dump_path = PROJECT_ROOT / 'test_results' / 'metrics_dump_' / f'{data_stamp}'
     else:
         pytest.metrics_dump_path = Path(pytest.metrics_dump_path)
-    assert not os.path.isdir(pytest.metrics_dump_path) or not os.listdir(pytest.metrics_dump_path), \
+    assert not os.path.isdir(pytest.metrics_dump_path) or not os.listdir(pytest.metrics_dump_path) \
+           or len(os.listdir(pytest.metrics_dump_path)) == 4, \
         f'metrics_dump_path dir should be empty: {pytest.metrics_dump_path}'
     print(f'metrics_dump_path: {pytest.metrics_dump_path}')
 
@@ -741,7 +744,7 @@ def make_metrics_dump_path(metrics_dump_dir):
 def results(sota_data_dir):
     yield
     if sota_data_dir:
-        Rt.write_common_metrics_file(per_model_metric_file_dump_path=pytest.metrics_dump_path)
+        Rt.write_common_metrics_file(Rt.test, per_model_metric_file_dump_path=pytest.metrics_dump_path)
         if Rt.test == 'eval':
             header = ['Model', 'Metrics type', 'Expected', 'Measured', 'Reference FP32', 'Diff FP32', 'Diff Expected',
                       'Error']
