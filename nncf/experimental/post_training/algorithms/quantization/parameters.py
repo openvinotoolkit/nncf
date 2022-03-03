@@ -34,7 +34,6 @@ class PostTrainingQuantizationParameters(AlgorithmParameters):
                  target_device: str = 'CPU',
                  ignored_scopes: Optional[List[str]] = None
                  ):
-
         self._determine_weight_activation_quantizers_config(
             preset,
             weight_bits,
@@ -65,15 +64,9 @@ class PostTrainingQuantizationParameters(AlgorithmParameters):
 
         weight_mode, activation_mode = _determine_weight_activation_modes(preset)
 
-        weights_per_channel, activation_per_channel = None, None
-        if weights_granularity == GRANULARITY.PERCHANNEL:
-            weights_per_channel = True if weights_granularity == GRANULARITY.PERCHANNEL else None
-        elif weights_granularity == GRANULARITY.PERTENSOR:
-            weights_per_channel = False
-        if activations_granularity == GRANULARITY.PERCHANNEL:
-            activation_per_channel = True
-        elif activations_granularity == GRANULARITY.PERTENSOR:
-            activation_per_channel = False
+        weights_per_channel = True if weights_granularity == GRANULARITY.PERCHANNEL else False
+        activation_per_channel = True if activations_granularity == GRANULARITY.PERCHANNEL else False
+
         self.weight_quantizer_config = QuantizerConfig(num_bits=weight_bits, mode=weight_mode,
                                                        per_channel=weights_per_channel)
         self.activation_quantizer_config = QuantizerConfig(num_bits=activation_bits, mode=activation_mode,

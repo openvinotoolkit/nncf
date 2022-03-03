@@ -129,7 +129,6 @@ class GraphConverter:
                     output_port_id=output_counter[to_node_id],
                     dtype=nncf_dtype
                 )
-        nncf_graph.visualize_graph('/home/aleksei/tmp/onnx/onnx_ptq_api/nncf_graph.dot')
         return nncf_graph
 
     @staticmethod

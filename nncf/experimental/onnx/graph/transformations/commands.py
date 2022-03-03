@@ -14,9 +14,3 @@ class ONNXQuantizerInsertionCommand(ONNXInsertionCommand):
     def __init__(self, target_layer_name: str, quantizer_parameters: QuantizerLayerParameters):
         super().__init__(target_layer_name)
         self.quantizer_parameters = quantizer_parameters
-
-
-class ONNXUpdateBias(ONNXInsertionCommand):
-    def __init__(self, target_layer_name: str, bias_tensor: np.ndarray):
-        super().__init__(target_layer_name)
-        self.bias_tensor = bias_tensor

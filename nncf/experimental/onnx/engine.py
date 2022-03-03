@@ -38,7 +38,6 @@ class ONNXEngine(Engine):
         self.sess = rt.InferenceSession(self.model, providers=self.providers)
 
     def infer(self, _input) -> Tuple[Dict[str, np.ndarray], np.ndarray]:
-        # feed Dict TF
         output = {}
         input_name = self.sess.get_inputs()[0].name
         input_tensor = _input.cpu().detach().numpy()

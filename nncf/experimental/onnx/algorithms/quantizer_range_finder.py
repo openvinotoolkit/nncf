@@ -145,7 +145,7 @@ class ONNXQuantizerRangeFinderAlgorithm(QuantizerRangeFinderAlgorithm):
 
         output = []
         for activation_quantizer in self._activation_quantizers:
-            layer_statistics = {activation_quantizer: self.generate_stat_collector()}
+            layer_statistics = {activation_quantizer: self.generate_stat_collector(self.activation_quantizer_config)}
             output.append(layer_statistics)
 
         return output
