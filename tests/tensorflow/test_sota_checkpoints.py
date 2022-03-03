@@ -39,8 +39,8 @@ BG_COLOR_RED_HEX = 'ffcccc'
 
 DIFF_TARGET_MIN_GLOBAL = -0.1
 DIFF_TARGET_MAX_GLOBAL = 0.1
-DIFF_TARGET_INIT_MIN_GLOBAL = -0.3
-DIFF_TARGET_INIT_MAX_GLOBAL = 0.3
+DIFF_TARGET_INIT_MIN_GLOBAL = -0.5
+DIFF_TARGET_INIT_MAX_GLOBAL = 0.5
 DIFF_FP32_MIN_GLOBAL = -1.0
 DIFF_FP32_MAX_GLOBAL = 0.1
 
@@ -734,9 +734,6 @@ def make_metrics_dump_path(metrics_dump_dir):
         pytest.metrics_dump_path = PROJECT_ROOT / 'test_results' / 'metrics_dump_' / f'{data_stamp}'
     else:
         pytest.metrics_dump_path = Path(pytest.metrics_dump_path)
-    assert not os.path.isdir(pytest.metrics_dump_path) or not os.listdir(pytest.metrics_dump_path) \
-           or len(os.listdir(pytest.metrics_dump_path)) == 4, \
-        f'metrics_dump_path dir should be empty: {pytest.metrics_dump_path}'
     print(f'metrics_dump_path: {pytest.metrics_dump_path}')
 
 
