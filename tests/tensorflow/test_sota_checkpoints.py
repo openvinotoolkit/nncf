@@ -16,6 +16,8 @@ import json
 import sys
 import csv
 import datetime
+from abc import ABC
+from abc import abstractmethod
 from typing import Tuple
 from typing import List
 from typing import Optional
@@ -39,8 +41,6 @@ BG_COLOR_RED_HEX = 'ffcccc'
 
 DIFF_TARGET_MIN_GLOBAL = -0.1
 DIFF_TARGET_MAX_GLOBAL = 0.1
-DIFF_TARGET_INIT_MIN_GLOBAL = -0.5
-DIFF_TARGET_INIT_MAX_GLOBAL = 0.5
 DIFF_FP32_MIN_GLOBAL = -1.0
 DIFF_FP32_MAX_GLOBAL = 0.1
 
@@ -118,7 +118,7 @@ class EvalRunParamsStruct:
         self.diff_target_max_ = diff_target_max_
 
 
-class RunTest:
+class RunTest(ABC):
     param_list = []
     train_param_list = []
     ids_list = []
@@ -129,6 +129,18 @@ class RunTest:
     color_dict = OrderedDict()
     ref_fp32_dict = OrderedDict()
     test = None
+
+    @staticmethod
+    def get_metric_file_name(model_name: str):
+        return f'{model_name}.metrics.json'
+
+    def print_table(self, init_table_string):
+        result_table = PrettyTable()
+        result_table.field_names = init_table_string
+        for key in self.row_dict:
+            result_table.add_row(self.row_dict[key])
+        print()
+        print(result_table)
 
     ###############################################################################################################
     if MODE == 'TF2':
@@ -194,6 +206,34 @@ class RunTest:
                              'metric_name': '-', 'metric_type': '-', 'metric_value': error_message})
 
     @staticmethod
+    @abstractmethod
+    def update_tag_text(tag, text):
+        pass
+
+    def write_results_table(self, init_table_string, path):
+        self.print_table(init_table_string)
+        doc, tag, text = Doc().tagtext()
+        doc.asis('<!DOCTYPE html>')
+        with tag('p'):
+            text('legend: ')
+        self.update_tag_text(tag, text)
+        with tag('table', border='1', cellpadding='5', style='border-collapse: collapse; border: 1px solid;'):
+            with tag('tr'):
+                for i in init_table_string:
+                    with tag('td'):
+                        text(i)
+            for key in self.row_dict:
+                with tag('tr', bgcolor='{}'.format(self.color_dict[key])):
+                    for i in self.row_dict[key]:
+                        if i is None:
+                            i = '-'
+                        with tag('td'):
+                            text(i)
+        print('Write results at ', path / 'results.html')
+        with open(path / 'results.html', 'w', encoding='utf8') as f:
+            f.write(doc.getvalue())
+
+    @staticmethod
     def get_input_shape(config):
         with open(PROJECT_ROOT / config, encoding='utf8') as file:
             config_file = json.load(file)
@@ -211,7 +251,7 @@ class RunTest:
             yaml.dump(template, f, default_flow_style=False)
 
     @staticmethod
-    def write_common_metrics_file(test: str, per_model_metric_file_dump_path: Path):
+    def write_common_metrics_file(per_model_metric_file_dump_path: Path):
         metric_value = {}
         for file in os.listdir(per_model_metric_file_dump_path):
             filename = os.fsdecode(file)
@@ -221,8 +261,6 @@ class RunTest:
                 model_name = str(file).replace('.metrics.json', '')
                 metric_value[model_name] = metrics['Accuracy']
                 common_metrics_file_path = per_model_metric_file_dump_path / 'metrics.json'
-                if test == 'init':
-                    common_metrics_file_path = per_model_metric_file_dump_path / 'metrics_init.json'
                 if common_metrics_file_path.is_file():
                     data = json.loads(common_metrics_file_path.read_text(encoding='utf-8'))
                     data.update(metric_value)
@@ -327,147 +365,9 @@ class RunTest:
                         train_ids_list.append(model_name)
 
 
-class TestInitialization(RunTest):
-    def write_results_table(self, init_table_string, path):
-        result_table = PrettyTable()
-        result_table.field_names = init_table_string
-        for key in self.row_dict:
-            result_table.add_row(self.row_dict[key])
-        print()
-        print(result_table)
-
-        doc, tag, text = Doc().tagtext()
-        doc.asis('<!DOCTYPE html>')
-        with tag('p'):
-            text('legend: ')
-        with tag('p'):
-            with tag('span', style='Background-color: #{}'.format(BG_COLOR_GREEN_HEX)):
-                text('Thresholds for Measured after initialization and Expected are passed')
-        with tag('p'):
-            with tag('span', style='Background-color: #{}'.format(BG_COLOR_RED_HEX)):
-                text('Thresholds for Measured after initialization and Expected are failed')
-        with tag('table', border='1', cellpadding='5', style='border-collapse: collapse; border: 1px solid;'):
-            with tag('tr'):
-                for i in init_table_string:
-                    with tag('td'):
-                        text(i)
-            for key in self.row_dict:
-                with tag('tr', bgcolor='{}'.format(self.color_dict[key])):
-                    for i in self.row_dict[key]:
-                        if i is None:
-                            i = '-'
-                        with tag('td'):
-                            text(i)
-        print('Write results at ', path / 'results_init.html')
-        with open(path / 'results_init.html', 'w', encoding='utf8') as f:
-            f.write(doc.getvalue())
-
-    @staticmethod
-    def threshold_check(is_ok, diff_target):
-        color = BG_COLOR_GREEN_HEX
-        within_thresholds = True
-        if is_ok:
-            if not DIFF_TARGET_INIT_MIN_GLOBAL < diff_target < DIFF_TARGET_INIT_MAX_GLOBAL:
-                color = BG_COLOR_RED_HEX
-                within_thresholds = False
-        else:
-            color = BG_COLOR_RED_HEX
-            within_thresholds = False
-        return color, within_thresholds
-
-    @staticmethod
-    def get_metric_file_name(model_name: str):
-        return f'{model_name}_init.metrics.json'
-
-    @staticmethod
-    def make_table_row(test, expected,  metric, diff, error_message, metrics_type_, key):
-        RunTest.test = test
-        if metric is not None:
-            row = [str(key), str(metrics_type_), str(expected), str(metric), str(diff), str('-')]
-        else:
-            row = [str(key), str(metrics_type_), str(expected), str('Not executed'), str('-'),
-                   str(error_message)]
-        return row
-
-    @pytest.mark.init
-    @pytest.mark.parametrize('eval_test_struct', RunTest.param_list,
-                             ids=RunTest.ids_list)
-    def test_init(self, sota_checkpoints_dir, sota_data_dir, eval_test_struct: EvalRunParamsStruct):
-        # pylint: disable=too-many-branches
-        if sota_data_dir is None:
-            pytest.skip('Path to datasets is not set')
-
-        if eval_test_struct.resume_file_ is None or eval_test_struct.sample_type_ == 'segmentation':
-            pytest.skip('Skip initialization run for the full-precision models')
-
-        #########################################################################################################
-        # if eval_test_struct.sample_type_ == 'object_detection': # object_detection classification
-        #     pytest.skip('Classification')
-
-        test = 'init'
-        sample_type = eval_test_struct.sample_type_
-        log_dir = pytest.metrics_dump_path / 'logs'
-        metric_file_name = self.get_metric_file_name(model_name=eval_test_struct.model_name_)
-        metrics_dump_file_path = pytest.metrics_dump_path / metric_file_name
-        if MODE == 'TF2':
-            cmd = self.CMD_FORMAT_STRING.format(sys.executable, 'test', conf=eval_test_struct.config_name_,
-                                                dataset=sota_data_dir,
-                                                data_name=eval_test_struct.dataset_name_,
-                                                data_type=eval_test_struct.dataset_type_,
-                                                sample_type=sample_type,
-                                                eval_script_name=EVAL_SCRIPT_NAME_MAP[sample_type],
-                                                metrics_dump_file_path=metrics_dump_file_path,
-                                                log_dir=log_dir)
-            if eval_test_struct.weights_:
-                cmd += ' --weights {}'.format(os.path.join(sota_checkpoints_dir, eval_test_struct.weights_))
-            if DATASET_TYPE_AVAILABILITY[sample_type]:
-                cmd += ' --dataset-type {}'.format(eval_test_struct.dataset_type_)
-        else:
-            cmd = self.CMD_FORMAT_STRING.format(sys.executable, 'test', conf=eval_test_struct.config_name_,
-                                                dataset=sota_data_dir,
-                                                data_name=eval_test_struct.dataset_name_,
-                                                sample_type=eval_test_struct.sample_type_,
-                                                log_dir=log_dir)
-        if eval_test_struct.batch_:
-            cmd += ' -b {}'.format(eval_test_struct.batch_)
-
-        cmd = cmd + ' --metrics-dump {}'.format(metrics_dump_file_path)
-        exit_code, err_str = self.run_cmd(cmd, cwd=PROJECT_ROOT)
-        is_ok = (exit_code == 0 and metrics_dump_file_path.exists())
-
-        if is_ok:
-            metric_value = self.read_metric(str(metrics_dump_file_path))
-            diff_target = round((metric_value - eval_test_struct.expected_init_), 2)
-        else:
-            metric_value = None
-            diff_target = None
-
-        self.row_dict[eval_test_struct.model_name_] = self.make_table_row(test,
-                                                                          eval_test_struct.expected_init_,
-                                                                          metric_value,
-                                                                          diff_target,
-                                                                          err_str,
-                                                                          eval_test_struct.metric_type_,
-                                                                          eval_test_struct.model_name_)
-        retval = self.threshold_check(is_ok, diff_target)
-
-        self.color_dict[eval_test_struct.model_name_], is_accuracy_within_thresholds = retval
-        assert is_accuracy_within_thresholds
-
-
 class TestSotaCheckpoints(RunTest):
-    def write_results_table(self, init_table_string, path):
-        result_table = PrettyTable()
-        result_table.field_names = init_table_string
-        for key in self.row_dict:
-            result_table.add_row(self.row_dict[key])
-        print()
-        print(result_table)
-
-        doc, tag, text = Doc().tagtext()
-        doc.asis('<!DOCTYPE html>')
-        with tag('p'):
-            text('legend: ')
+    @staticmethod
+    def update_tag_text(tag, text):
         with tag('p'):
             with tag('span', style='Background-color: #{}'.format(BG_COLOR_GREEN_HEX)):
                 text('Thresholds for FP32 and Expected are passed')
@@ -479,21 +379,6 @@ class TestSotaCheckpoints(RunTest):
                 text('Thresholds for FP32 and Expected are failed')
         with tag('p'):
             text('If Reference FP32 value in parentheses, it takes from "target" field of .json file')
-        with tag('table', border='1', cellpadding='5', style='border-collapse: collapse; border: 1px solid;'):
-            with tag('tr'):
-                for i in init_table_string:
-                    with tag('td'):
-                        text(i)
-            for key in self.row_dict:
-                with tag('tr', bgcolor='{}'.format(self.color_dict[key])):
-                    for i in self.row_dict[key]:
-                        if i is None:
-                            i = '-'
-                        with tag('td'):
-                            text(i)
-        print('Write results at ', path / 'results.html')
-        with open(path / 'results.html', 'w', encoding='utf8') as f:
-            f.write(doc.getvalue())
 
     @staticmethod
     def threshold_check(is_ok, diff_target, diff_fp32_min_=None, diff_fp32_max_=None, fp32_metric=None,
@@ -519,10 +404,6 @@ class TestSotaCheckpoints(RunTest):
                 color = BG_COLOR_GREEN_HEX
                 within_thresholds = True
         return color, within_thresholds
-
-    @staticmethod
-    def get_metric_file_name(model_name: str):
-        return f'{model_name}.metrics.json'
 
     @staticmethod
     def make_table_row(test, expected_, metrics_type_, key, error_message, metric, diff_target,
@@ -734,6 +615,8 @@ def make_metrics_dump_path(metrics_dump_dir):
         pytest.metrics_dump_path = PROJECT_ROOT / 'test_results' / 'metrics_dump_' / f'{data_stamp}'
     else:
         pytest.metrics_dump_path = Path(pytest.metrics_dump_path)
+    assert not os.path.isdir(pytest.metrics_dump_path) or not os.listdir(pytest.metrics_dump_path), \
+        f'metrics_dump_path dir should be empty: {pytest.metrics_dump_path}'
     print(f'metrics_dump_path: {pytest.metrics_dump_path}')
 
 
@@ -741,14 +624,11 @@ def make_metrics_dump_path(metrics_dump_dir):
 def results(sota_data_dir):
     yield
     if sota_data_dir:
-        Rt.write_common_metrics_file(Rt.test, per_model_metric_file_dump_path=pytest.metrics_dump_path)
+        Rt.write_common_metrics_file(per_model_metric_file_dump_path=pytest.metrics_dump_path)
         if Rt.test == 'eval':
             header = ['Model', 'Metrics type', 'Expected', 'Measured', 'Reference FP32', 'Diff FP32', 'Diff Expected',
                       'Error']
             TestSotaCheckpoints().write_results_table(header, pytest.metrics_dump_path)
-        elif Rt.test == 'init':
-            header = ['Model', 'Metrics type', 'Expected Init', 'Measured Init', 'Diff Expected Init', 'Error Init']
-            TestInitialization().write_results_table(header, pytest.metrics_dump_path)
         else:
             header = ['Model', 'Metrics type', 'Expected', 'Measured', 'Diff Expected', 'Error']
             TestSotaCheckpoints().write_results_table(header, pytest.metrics_dump_path)
