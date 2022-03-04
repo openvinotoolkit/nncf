@@ -1,3 +1,41 @@
+From d333a563fd28c538f93217af3d7556141d19d51b Mon Sep 17 00:00:00 2001
+From: skholkin <kholkinsd@gmail.com>
+Date: Fri, 4 Mar 2022 14:03:05 +0300
+Subject: [PATCH] Modifications for NNCF usage
+
+---
+ examples/pytorch/language-modeling/run_clm.py |  75 ++++++++---
+ examples/pytorch/question-answering/run_qa.py |  63 ++++++++--
+ .../pytorch/text-classification/run_glue.py   | 107 ++++++++++++++--
+ .../pytorch/text-classification/run_xnli.py   |  70 +++++++++--
+ .../pytorch/token-classification/run_ner.py   | 118 ++++++++++++++----
+ nncf_bert_config_conll.json                   |  44 +++++++
+ nncf_bert_config_mrpc.json                    |  42 +++++++
+ nncf_bert_config_squad.json                   |  44 +++++++
+ nncf_bert_config_squad_kd.json                |  50 ++++++++
+ ...config_squad_magnitude_sparsity_cubic.json |  31 +++++
+ nncf_bert_config_xnli.json                    |  36 ++++++
+ nncf_distilbert_config_sst2.json              |  34 +++++
+ nncf_gpt2_config_wikitext_hw_config.json      |  58 +++++++++
+ nncf_mobilebert_config_squad_int8.json        |  46 +++++++
+ nncf_roberta_config_mnli.json                 |  36 ++++++
+ src/transformers/file_utils.py                |   1 +
+ src/transformers/modeling_utils.py            |  29 ++++-
+ src/transformers/trainer.py                   |  74 +++++++++--
+ src/transformers/trainer_callback.py          |   2 +
+ src/transformers/training_args.py             |   6 +
+ 20 files changed, 893 insertions(+), 73 deletions(-)
+ create mode 100644 nncf_bert_config_conll.json
+ create mode 100644 nncf_bert_config_mrpc.json
+ create mode 100644 nncf_bert_config_squad.json
+ create mode 100644 nncf_bert_config_squad_kd.json
+ create mode 100644 nncf_bert_config_squad_magnitude_sparsity_cubic.json
+ create mode 100644 nncf_bert_config_xnli.json
+ create mode 100644 nncf_distilbert_config_sst2.json
+ create mode 100644 nncf_gpt2_config_wikitext_hw_config.json
+ create mode 100644 nncf_mobilebert_config_squad_int8.json
+ create mode 100644 nncf_roberta_config_mnli.json
+
 diff --git a/examples/pytorch/language-modeling/run_clm.py b/examples/pytorch/language-modeling/run_clm.py
 index 0c002deeb..f9e4f4171 100755
 --- a/examples/pytorch/language-modeling/run_clm.py
@@ -1458,3 +1496,6 @@ index 404d92a22..97d8d4483 100644
      def __post_init__(self):
          # Handle --use_env option in torch.distributed.launch (local_rank not passed as an arg then).
          # This needs to happen before any call to self.device or self.n_gpu.
+-- 
+2.17.1
+
