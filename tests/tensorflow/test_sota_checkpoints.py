@@ -134,14 +134,6 @@ class RunTest(ABC):
     def get_metric_file_name(model_name: str):
         return f'{model_name}.metrics.json'
 
-    def print_table(self, init_table_string):
-        result_table = PrettyTable()
-        result_table.field_names = init_table_string
-        for key in self.row_dict:
-            result_table.add_row(self.row_dict[key])
-        print()
-        print(result_table)
-
     ###############################################################################################################
     if MODE == 'TF2':
         CMD_FORMAT_STRING = '{} examples/tensorflow/{sample_type}/{eval_script_name} -m {} --config {conf} \
@@ -211,7 +203,13 @@ class RunTest(ABC):
         pass
 
     def write_results_table(self, init_table_string, path):
-        self.print_table(init_table_string)
+        result_table = PrettyTable()
+        result_table.field_names = init_table_string
+        for key in self.row_dict:
+            result_table.add_row(self.row_dict[key])
+        print()
+        print(result_table)
+
         doc, tag, text = Doc().tagtext()
         doc.asis('<!DOCTYPE html>')
         with tag('p'):
@@ -329,7 +327,6 @@ class RunTest(ABC):
                                                          model_name_=model_name,
                                                          diff_target_min_=diff_target_min,
                                                          diff_target_max_=diff_target_max))
-
                 #################################################################################################
                 for dataset_type in datasets[dataset_name].get('dataset_types'):
                 # for dataset_type in ['tfds']:
@@ -408,7 +405,7 @@ class TestSotaCheckpoints(RunTest):
     @staticmethod
     def make_table_row(test, expected_, metrics_type_, key, error_message, metric, diff_target,
                        fp32_metric_=None, diff_fp32=None, metric_type_from_json=None):
-        RunTest.test = test
+        TestSotaCheckpoints.test = test
         if fp32_metric_ is None:
             fp32_metric_ = '-'
             diff_fp32 = '-'
@@ -452,8 +449,7 @@ class TestSotaCheckpoints(RunTest):
                                                 data_type=eval_test_struct.dataset_type_,
                                                 sample_type=sample_type,
                                                 eval_script_name=EVAL_SCRIPT_NAME_MAP[sample_type],
-                                                metrics_dump_file_path=metrics_dump_file_path,
-                                                log_dir=log_dir)
+                                                metrics_dump_file_path=metrics_dump_file_path, log_dir=log_dir)
             if eval_test_struct.weights_ and not eval_test_struct.resume_file_:
                 cmd += ' --weights {}'.format(os.path.join(sota_checkpoints_dir, eval_test_struct.weights_))
             if DATASET_TYPE_AVAILABILITY[sample_type]:
@@ -593,7 +589,7 @@ class TestSotaCheckpoints(RunTest):
             pytest.fail(err_str)
 
 
-Rt = RunTest
+Tsc = TestSotaCheckpoints
 
 
 @pytest.fixture(autouse=True, scope='class')
@@ -624,11 +620,10 @@ def make_metrics_dump_path(metrics_dump_dir):
 def results(sota_data_dir):
     yield
     if sota_data_dir:
-        Rt.write_common_metrics_file(per_model_metric_file_dump_path=pytest.metrics_dump_path)
-        if Rt.test == 'eval':
+        Tsc.write_common_metrics_file(per_model_metric_file_dump_path=pytest.metrics_dump_path)
+        if Tsc.test == 'eval':
             header = ['Model', 'Metrics type', 'Expected', 'Measured', 'Reference FP32', 'Diff FP32', 'Diff Expected',
                       'Error']
-            TestSotaCheckpoints().write_results_table(header, pytest.metrics_dump_path)
         else:
             header = ['Model', 'Metrics type', 'Expected', 'Measured', 'Diff Expected', 'Error']
-            TestSotaCheckpoints().write_results_table(header, pytest.metrics_dump_path)
+        Tsc().write_results_table(header, pytest.metrics_dump_path)
