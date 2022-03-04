@@ -73,11 +73,7 @@ class TestInitialization(RunTest):
             pytest.skip('Path to datasets is not set')
 
         if eval_test_struct.resume_file_ is None or eval_test_struct.sample_type_ == 'segmentation':
-            pytest.skip('Skip initialization run for the full-precision models')
-
-        #########################################################################################################
-        # if eval_test_struct.sample_type_ == 'object_detection': # object_detection classification
-        #     pytest.skip('Classification')
+            pytest.skip('Skip initialization run for the full-precision and all segmentation models')
 
         sample_type = eval_test_struct.sample_type_
         log_dir = pytest.metrics_dump_path / 'logs'
