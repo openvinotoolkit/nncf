@@ -42,7 +42,7 @@ from nncf.common.pruning.utils import count_flops_and_weights_per_node
 from nncf.common.pruning.utils import get_cluster_next_nodes
 from nncf.common.pruning.utils import get_prunable_layers_in_out_channels
 from nncf.common.pruning.utils import get_rounded_pruned_element_number
-from nncf.common.schedulers import StubCompressionScheduler
+from nncf.common.schedulers import BaseCompressionScheduler
 from nncf.common.statistics import NNCFStatistics
 from nncf.common.utils.debug import is_debug
 from nncf.common.utils.logger import logger as nncf_logger
@@ -679,7 +679,7 @@ class FilterPruningController(BasePruningAlgoController):
         self.freeze(is_pruning_controller_frozen)
 
     def disable_scheduler(self):
-        self._scheduler = StubCompressionScheduler()
+        self._scheduler = BaseCompressionScheduler()
         self._scheduler.current_pruning_level = 0.0
 
     def _collect_pruning_masks(self) -> Dict[str, PTNNCFTensor]:

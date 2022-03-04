@@ -17,7 +17,7 @@ from typing import Dict
 from typing import Optional, List, Tuple, Any, TypeVar
 
 from nncf import NNCFConfig
-from nncf.common.schedulers import StubCompressionScheduler
+from nncf.common.schedulers import BaseCompressionScheduler
 from nncf.api.compression import CompressionAlgorithmBuilder
 from nncf.api.compression import CompressionAlgorithmController
 from nncf.common.utils.logger import logger as nncf_logger
@@ -111,7 +111,7 @@ class BaseCompressionAlgorithmController(CompressionAlgorithmController):
         exporter.export_model(save_path, save_format)
 
     def disable_scheduler(self) -> None:
-        self._scheduler = StubCompressionScheduler()
+        self._scheduler = BaseCompressionScheduler()
 
     def set_builder_state_with_name(self, name: str, builder_state: Dict):
         """
