@@ -13,12 +13,16 @@
 from abc import ABC
 from abc import abstractmethod
 
+from typing import Dict
+from typing import Union
 from typing import List
 from typing import TypeVar
 from copy import deepcopy
 
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizationMode
+from nncf.common.graph.model_transformer import ModelTransformer
+from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
 from nncf.experimental.post_training.algorithms import Algorithm
 from nncf.experimental.post_training.algorithms import AlgorithmParameters
 
@@ -26,6 +30,10 @@ ModelType = TypeVar('ModelType')
 
 
 class MinMaxQuantizationParameters(AlgorithmParameters):
+    """
+    Base class of MinMaxQuantization parameters.
+    """
+
     def __init__(self,
                  weight_quantizer_config: QuantizerConfig = None,
                  activation_quantizer_config: QuantizerConfig = None,
@@ -41,10 +49,16 @@ class MinMaxQuantizationParameters(AlgorithmParameters):
         self.ignored_scopes = ignored_scopes
         self.quantize_outputs = quatize_outputs
 
+    def to_json(self) -> Dict[str, Union[str, float, int]]:
+        """
+        Serialize all MinMaxQuantization parameters to JSON.
+        """
+        pass
+
 
 class MinMaxQuantization(Algorithm, ABC):
     """
-
+    Base class of MinMaxQuantization algorithm. It has the default quantization config.
     """
 
     DEFAULT_QCONFIG = QuantizerConfig(num_bits=8,
@@ -67,13 +81,13 @@ class MinMaxQuantization(Algorithm, ABC):
         return qconfig
 
     @abstractmethod
-    def _create_model_transformer(self):
+    def _create_model_transformer(self, model: ModelType) -> ModelTransformer:
         """
-
+        Create framework-specific ModelTransformer.
         """
 
     @abstractmethod
-    def get_layers_for_statistics(self, model: ModelType):
+    def get_layers_for_statistics(self, model: ModelType) -> List[Dict[str, TensorStatisticCollectorBase]]:
         """
-
+        Returns activations layers, for which StatisticsCollector should collect statistics.
         """

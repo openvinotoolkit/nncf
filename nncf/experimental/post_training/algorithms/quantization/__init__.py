@@ -30,9 +30,12 @@ ModelType = TypeVar('ModelType')
 
 class PostTrainingQuantization(Algorithm):
     """
-
-    1) QuantizerRangeFinder
+    Implements Post-Training Quantization algorithm, which basically includes:
+    1) MinMaxQuantization
     2) BiasCorrection
+    3) ChannelAlignment
+
+    Disclaimer: currently, it only supports MinMaxQuantization. The following algorithms will be added soon.
 
     """
 
@@ -49,6 +52,12 @@ class PostTrainingQuantization(Algorithm):
         self.algorithms = deque()
 
     def apply(self, model: ModelType, engine: Engine) -> ModelType:
+        """
+        1) Creates common statistics_collector for all algorithms.
+        2) Takes activation layers from the algorithms and registered them to statistics_collector.
+        3) Collect statistics.
+        4) Apply algorithms to the model.
+        """
         statistics_collector = self._create_statistics_collector(model, engine)
         self.algorithms = self._create_algorithms(model, statistics_collector)
 
@@ -58,7 +67,7 @@ class PostTrainingQuantization(Algorithm):
 
         statistics_collector.collect_statistics(model, self.number_samples)
 
-        while len(self.algorithms) > 0:
+        while self.algorithms:
             algorithm = self.algorithms.popleft()
             compressed_model = algorithm.apply(compressed_model, engine)
 

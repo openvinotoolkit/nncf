@@ -13,6 +13,9 @@ class Backend(OrderedEnum):
 
 
 def determine_model_backend(model: ModelType) -> Backend:
+    """
+    Returns the backend of the model, if it is supported, otherwise raise the Error.
+    """
     from onnx import ModelProto
     if isinstance(model, ModelProto):
         return Backend.ONNX

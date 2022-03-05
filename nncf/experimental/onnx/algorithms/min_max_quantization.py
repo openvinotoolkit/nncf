@@ -11,6 +11,9 @@
  limitations under the License.
 """
 
+from typing import Dict
+from typing import List
+
 import onnx
 
 from nncf.common.hardware.config import HWConfigType
@@ -20,6 +23,7 @@ from nncf.common.quantization.structs import QuantizableWeightedLayerNode
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.insertion_point_graph import InsertionPointGraph
+from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
 
 from nncf.experimental.post_training.algorithms.min_max_quantization import MinMaxQuantization
 from nncf.experimental.post_training.algorithms.min_max_quantization import MinMaxQuantizationParameters
@@ -54,7 +58,8 @@ class ONNXMinMaxQuantization(MinMaxQuantization):
         self._activation_quantizers = []
         self.global_quantizer_constraints = {}
 
-    def generate_stat_collector(self, quantizer_config: QuantizerConfig):
+    def generate_stat_collector(self, quantizer_config: QuantizerConfig) -> TensorStatisticCollectorBase:
+        #  TODO: change to ONNXTensorStatisticCollectorBase
         if self.range_type == 'min_max':
             is_symmetric = True if quantizer_config.mode == QuantizationMode.SYMMETRIC else False
             if quantizer_config.per_channel:
@@ -62,8 +67,8 @@ class ONNXMinMaxQuantization(MinMaxQuantization):
                 return ONNXMinMaxStatisticCollector(is_symmetric, axes)
             return ONNXMinMaxStatisticCollector(is_symmetric, None)
 
-    def _create_model_transformer(self, model: onnx.ModelProto):
-        self.model_transformer = ONNXModelTransformer(model)
+    def _create_model_transformer(self, model: onnx.ModelProto) -> ONNXModelTransformer:
+        return ONNXModelTransformer(model)
 
     def _get_quantizer_setup(self, model: onnx.ModelProto):
         nncf_graph = GraphConverter.create_nncf_graph(model)
@@ -93,9 +98,9 @@ class ONNXMinMaxQuantization(MinMaxQuantization):
         final_setup = solver.get_final_quantizer_setup(finalized_proposal)
         return final_setup
 
-    def apply(self, model: onnx.ModelProto, engine: ONNXEngine):
+    def apply(self, model: onnx.ModelProto, engine: ONNXEngine) -> onnx.ModelProto:
         modified_model = modify_onnx_model_for_quantization(model)
-        self._create_model_transformer(modified_model)
+        model_transformer = self._create_model_transformer(modified_model)
         transformation_layout = ONNXTransformationLayout()
         transformation_commands = []
         onnx_graph = ONNXGraph(modified_model)
@@ -123,10 +128,10 @@ class ONNXMinMaxQuantization(MinMaxQuantization):
         for transformation_command in transformation_commands:
             transformation_layout.register(transformation_command)
 
-        quantized_model = self.model_transformer.transform(transformation_layout)
+        quantized_model = model_transformer.transform(transformation_layout)
         return quantized_model
 
-    def get_layers_for_statistics(self, model: onnx.ModelProto):
+    def get_layers_for_statistics(self, model: onnx.ModelProto) -> List[Dict[str, TensorStatisticCollectorBase]]:
         quantizer_setup = self._get_quantizer_setup(model)
         onnx_graph = ONNXGraph(model)
         filled_outputs = []

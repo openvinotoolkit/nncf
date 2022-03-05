@@ -7,6 +7,10 @@ from nncf.experimental.post_training.api.dataloader import DataLoader
 
 
 class Sampler(ABC):
+    """
+    Base class for dataset sampler.
+    """
+
     def __init__(self, dataloader: DataLoader):
         self.dataloader = dataloader
 
@@ -20,6 +24,10 @@ class Sampler(ABC):
 
 
 class BatchSampler(Sampler):
+    """
+    Base class for dataset sampler forms a batch from samples with batch_size determined in dataloader.
+    """
+
     def __init__(self, dataloader: DataLoader):
         super().__init__(dataloader)
         self.indices = list(range(len(self.dataloader)))
@@ -40,6 +48,11 @@ class BatchSampler(Sampler):
 
 
 class RandomBatchSampler(BatchSampler):
+    """
+    Base class for dataset sampler forms a batch from randomly shuffled samples
+    with batch_size determined in dataloader.
+    """
+
     def __init__(self, dataloader: DataLoader, seed: int = 0):
         super().__init__(dataloader)
         random.seed(seed)

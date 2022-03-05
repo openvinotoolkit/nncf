@@ -34,6 +34,9 @@ class CompressionBuilder:
         self.algorithms = deque()
 
     def add_algorithm(self, algorithm: Algorithm) -> None:
+        """
+        Adds the algorithm to the pipeline.
+        """
         self.algorithms.append(algorithm)
 
     def _create_engine(self, model: ModelType, dataloader: DataLoader) -> Engine:
@@ -46,9 +49,12 @@ class CompressionBuilder:
         """
         Apply compression algorithms to the 'model'.
         """
+        if not self.algorithms:
+            print('There are no algorithms added. The original model will be returned.')
+            return model
         if engine is None:
             engine = self._create_engine(model, dataloader)
-        while len(self.algorithms) > 0:
-            algorithm = self.algorithms.pop()  # TODO: will remove the last element. Is it expected behavior?
+        while self.algorithms:
+            algorithm = self.algorithms.pop()
             compressed_model = algorithm.apply(model, engine)
         return compressed_model

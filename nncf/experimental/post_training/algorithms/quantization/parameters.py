@@ -23,6 +23,9 @@ class Granularity(OrderedEnum):
 
 
 class PostTrainingQuantizationParameters(AlgorithmParameters):
+    """
+    This class handles parameters for PostTrainingQuantization algorithm.
+    """
     def __init__(self,
                  preset: Preset = Preset.MIXED,
                  weight_bits: int = 8,
