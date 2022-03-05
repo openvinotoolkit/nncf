@@ -1,4 +1,6 @@
+from typing import Dict
 from typing import List
+from typing import Union
 from typing import Optional
 
 from nncf.common.utils.ordered_enum import OrderedEnum
@@ -56,6 +58,9 @@ class PostTrainingQuantizationParameters(AlgorithmParameters):
         self.number_samples = number_samples
         self.target_device = target_device
         self.ignored_scopes = ignored_scopes
+
+    def to_json(self) -> Dict[str, Union[str, float, int]]:
+        pass
 
     def _determine_weight_activation_quantizers_config(self, preset: Preset, weight_bits: int,
                                                        weights_granularity: Granularity, activation_bits: int,
