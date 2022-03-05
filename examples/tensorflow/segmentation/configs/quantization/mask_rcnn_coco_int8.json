@@ -52,7 +52,7 @@
         "fc1",
         "fc0",
         "class-predict",
-        "box-predict",
+        "box-predict"
       ]
   }
 }
