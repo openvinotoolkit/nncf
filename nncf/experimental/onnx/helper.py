@@ -2,9 +2,6 @@ import os
 
 from typing import List
 
-import torchvision
-from torchvision import transforms
-
 import onnx
 
 from nncf.experimental.post_training.api.dataloader import DataLoader
@@ -27,6 +24,8 @@ class ImageNetDataLoader(DataLoader):
 
 def create_dataloader_from_imagenet_torch_dataset(dataset_dir, input_shape: List[int], batch_size: int = 1,
                                                   shuffle: bool = True):
+    import torchvision
+    from torchvision import transforms
     image_size = [input_shape[-2], input_shape[-1]]
     size = int(image_size[0] / 0.875)
     normalize = transforms.Normalize(mean=(0.485, 0.456, 0.406),
