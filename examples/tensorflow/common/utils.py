@@ -11,11 +11,14 @@
  limitations under the License.
 """
 
+import random
 import time
 import datetime
 import json
 import os
 import tarfile
+
+import numpy as np
 import resource
 from os import path as osp
 from pathlib import Path
@@ -210,3 +213,12 @@ def close_strategy_threadpool(strategy):
     # pylint: disable=protected-access
     if isinstance(strategy, MirroredStrategy):
         atexit.register(strategy._extended._collective_ops._pool.close)
+
+
+def set_seed(config):
+    if config.seed is not None:
+        os.environ['TF_DETERMINISTIC_OPS'] = '1'
+        os.environ['TF_CUDNN_DETERMINISTIC'] = '1'
+        random.seed(config.seed)
+        np.random.seed(config.seed)
+        tf.random.set_seed(config.seed)

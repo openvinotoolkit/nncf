@@ -134,13 +134,6 @@ class RunTest(ABC):
     def get_metric_file_name(model_name: str):
         return f'{model_name}.metrics.json'
 
-    if MODE == 'TF2':
-        CMD_FORMAT_STRING = '{} examples/tensorflow/{sample_type}/{eval_script_name} -m {} --config {conf} \
-         --data {dataset}/{data_type}/{data_name}/ --log-dir={log_dir} --metrics-dump {metrics_dump_file_path}'
-    else:
-        CMD_FORMAT_STRING = '{} examples/tensorflow/{sample_type}/main.py -m {} --config {conf} \
-         --data {dataset}/{data_name}/ --log-dir={log_dir}'
-
     @staticmethod
     def run_cmd(comm: str, cwd: str, venv=None) -> Tuple[int, str]:
         print('\n', comm, '\n')
@@ -217,7 +210,7 @@ class RunTest(ABC):
                     with tag('td'):
                         text(i)
             for key in self.row_dict:
-                with tag('tr', bgcolor='{}'.format(self.color_dict[key])):
+                with tag('tr', bgcolor=f'{self.color_dict[key]}'):
                     for i in self.row_dict[key]:
                         if i is None:
                             i = '-'
@@ -269,7 +262,7 @@ class RunTest(ABC):
             metrics = json.load(metric_file)
         return metrics['Accuracy']
 
-    with open('{}/tensorflow/sota_checkpoints_eval.json'.format(TEST_ROOT), encoding='utf8') as f:
+    with open(f'{TEST_ROOT}/tensorflow/sota_checkpoints_eval.json', encoding='utf8') as f:
         sota_eval_config = json.load(f, object_pairs_hook=OrderedDict)
     for sample_type_ in sota_eval_config:
         datasets = sota_eval_config[sample_type_]
@@ -360,13 +353,13 @@ class TestSotaCheckpoints(RunTest):
     @staticmethod
     def update_tag_text(tag, text):
         with tag('p'):
-            with tag('span', style='Background-color: #{}'.format(BG_COLOR_GREEN_HEX)):
+            with tag('span', style=f'Background-color: #{BG_COLOR_GREEN_HEX}'):
                 text('Thresholds for FP32 and Expected are passed')
         with tag('p'):
-            with tag('span', style='Background-color: #{}'.format(BG_COLOR_YELLOW_HEX)):
+            with tag('span', style=f'Background-color: #{BG_COLOR_YELLOW_HEX}'):
                 text('Thresholds for Expected is failed, but for FP32 passed')
         with tag('p'):
-            with tag('span', style='Background-color: #{}'.format(BG_COLOR_RED_HEX)):
+            with tag('span', style=f'Background-color: #{BG_COLOR_RED_HEX}'):
                 text('Thresholds for FP32 and Expected are failed')
         with tag('p'):
             text('If Reference FP32 value in parentheses, it takes from "target" field of .json file')
@@ -433,31 +426,28 @@ class TestSotaCheckpoints(RunTest):
         metrics_dump_file_path = pytest.metrics_dump_path / metric_file_name
         log_dir = pytest.metrics_dump_path / 'logs'
         if MODE == 'TF2':
-            cmd = self.CMD_FORMAT_STRING.format(sys.executable, 'test', conf=eval_test_struct.config_name_,
-                                                dataset=sota_data_dir,
-                                                data_name=eval_test_struct.dataset_name_,
-                                                data_type=eval_test_struct.dataset_type_,
-                                                sample_type=sample_type,
-                                                eval_script_name=EVAL_SCRIPT_NAME_MAP[sample_type],
-                                                metrics_dump_file_path=metrics_dump_file_path, log_dir=log_dir)
+            cmd = (f'{sys.executable} examples/tensorflow/{sample_type}/{EVAL_SCRIPT_NAME_MAP[sample_type]} '
+                   f'-m test --config {eval_test_struct.config_name_} '
+                   f'--data {sota_data_dir}/{eval_test_struct.dataset_type_}/{eval_test_struct.dataset_name_}/ '
+                   f'--log-dir={log_dir} --metrics-dump {metrics_dump_file_path}')
+
             if eval_test_struct.weights_ and not eval_test_struct.resume_file_:
-                cmd += ' --weights {}'.format(os.path.join(sota_checkpoints_dir, eval_test_struct.weights_))
+                cmd += f' --weights {os.path.join(sota_checkpoints_dir, eval_test_struct.weights_)}'
             if DATASET_TYPE_AVAILABILITY[sample_type]:
-                cmd += ' --dataset-type {}'.format(eval_test_struct.dataset_type_)
+                cmd += f' --dataset-type {eval_test_struct.dataset_type_}'
         else:
-            cmd = self.CMD_FORMAT_STRING.format(sys.executable, 'test', conf=eval_test_struct.config_name_,
-                                                dataset=sota_data_dir,
-                                                data_name=eval_test_struct.dataset_name_,
-                                                sample_type=eval_test_struct.sample_type_,
-                                                metrics_dump_file_path=metrics_dump_file_path, log_dir=log_dir)
+            cmd = (f'{sys.executable} examples/tensorflow/{sample_type}/main.py -m test '
+                   f'--config {eval_test_struct.config_name_} '
+                   f'--data {sota_data_dir}/{eval_test_struct.dataset_name_}/ --log-dir={log_dir}')
+
         if eval_test_struct.resume_file_:
             resume_file_path = sota_checkpoints_dir + '/' + eval_test_struct.resume_file_
-            cmd += ' --resume {}'.format(resume_file_path)
+            cmd += f' --resume {resume_file_path}'
         else:
             if MODE != 'TF2' or PRETRAINED_PARAM_AVAILABILITY[sample_type]:
                 cmd += ' --pretrained'
         if eval_test_struct.batch_:
-            cmd += ' -b {}'.format(eval_test_struct.batch_)
+            cmd += f' -b {eval_test_struct.batch_}'
         exit_code, err_str = self.run_cmd(cmd, cwd=PROJECT_ROOT)
 
         is_ok = (exit_code == 0 and metrics_dump_file_path.exists())
@@ -558,9 +548,9 @@ class TestSotaCheckpoints(RunTest):
             if eval_test_struct.reverse_input_channels_:
                 mo_cmd += ' --reverse_input_channels'
             if eval_test_struct.mean_val_:
-                mo_cmd += ' --mean_values={}'.format(eval_test_struct.mean_val_)
+                mo_cmd += f' --mean_values={eval_test_struct.mean_val_}'
             if eval_test_struct.scale_val_:
-                mo_cmd += ' --scale_values={}'.format(eval_test_struct.scale_val_)
+                mo_cmd += f' --scale_values={eval_test_struct.scale_val_}'
             exit_code, err_str = self.run_cmd(mo_cmd, MO_DIR, MO_VENV_DIR)
 
             if exit_code == 0:

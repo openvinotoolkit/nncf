@@ -50,6 +50,7 @@ class DatasetBuilder(BaseDatasetBuilder):
                                              DATASET_NUM_CLASSES.get(self._dataset_name))
         self._one_hot = one_hot
         self._cache = False
+        self._shuffle_train = config.get('seed') is None
         self._shuffle_buffer_size = 10000
         self._deterministic_train = False
         self._use_slack = True
@@ -109,7 +110,8 @@ class DatasetBuilder(BaseDatasetBuilder):
             dataset = dataset.cache()
 
         if self.is_train:
-            dataset = dataset.shuffle(self._shuffle_buffer_size)
+            if self._shuffle_train:
+                dataset = dataset.shuffle(self._shuffle_buffer_size)
             dataset = dataset.repeat()
 
         if self._dataset_type == 'tfrecords':

@@ -45,6 +45,7 @@ from examples.tensorflow.common.utils import serialize_cli_args
 from examples.tensorflow.common.utils import write_metrics
 from examples.tensorflow.common.utils import SummaryWriter
 from examples.tensorflow.common.utils import close_strategy_threadpool
+from examples.tensorflow.common.utils import set_seed
 
 
 def get_argument_parser():
@@ -153,6 +154,8 @@ def run(config):
     strategy = get_distribution_strategy(config)
     if config.metrics_dump is not None:
         write_metrics(0, config.metrics_dump)
+
+    set_seed(config)
 
     model_fn, model_params = get_model(config.model,
                                        input_shape=config.get('input_info', {}).get('sample_size', None),

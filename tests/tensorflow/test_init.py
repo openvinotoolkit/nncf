@@ -26,8 +26,8 @@ from tests.tensorflow.test_sota_checkpoints import EvalRunParamsStruct
 from tests.tensorflow.test_sota_checkpoints import RunTest
 from tests.common.helpers import PROJECT_ROOT
 
-DIFF_TARGET_INIT_MIN_GLOBAL = -1.0
-DIFF_TARGET_INIT_MAX_GLOBAL = 1.0
+DIFF_TARGET_INIT_MIN_GLOBAL = -0.1
+DIFF_TARGET_INIT_MAX_GLOBAL = 0.1
 
 MODE = 'TF2'
 
@@ -36,10 +36,10 @@ class TestInitialization(RunTest):
     @staticmethod
     def update_tag_text(tag, text):
         with tag('p'):
-            with tag('span', style='Background-color: #{}'.format(BG_COLOR_GREEN_HEX)):
+            with tag('span', style=f'Background-color: #{BG_COLOR_GREEN_HEX}'):
                 text('Thresholds for Measured after initialization and Expected are passed')
         with tag('p'):
-            with tag('span', style='Background-color: #{}'.format(BG_COLOR_RED_HEX)):
+            with tag('span', style=f'Background-color: #{BG_COLOR_RED_HEX}'):
                 text('Thresholds for Measured after initialization and Expected are failed')
 
     @staticmethod
@@ -80,28 +80,23 @@ class TestInitialization(RunTest):
         metric_file_name = self.get_metric_file_name(model_name=eval_test_struct.model_name_)
         metrics_dump_file_path = pytest.metrics_dump_path / metric_file_name
         if MODE == 'TF2':
-            cmd = self.CMD_FORMAT_STRING.format(sys.executable, 'test', conf=eval_test_struct.config_name_,
-                                                dataset=sota_data_dir,
-                                                data_name=eval_test_struct.dataset_name_,
-                                                data_type=eval_test_struct.dataset_type_,
-                                                sample_type=sample_type,
-                                                eval_script_name=EVAL_SCRIPT_NAME_MAP[sample_type],
-                                                metrics_dump_file_path=metrics_dump_file_path,
-                                                log_dir=log_dir)
+            cmd = (f'{sys.executable} examples/tensorflow/{sample_type}/{EVAL_SCRIPT_NAME_MAP[sample_type]} '
+                   f'-m test --config {eval_test_struct.config_name_} '
+                   f'--data {sota_data_dir}/{eval_test_struct.dataset_type_}/{eval_test_struct.dataset_name_}/ '
+                   f'--log-dir={log_dir} --metrics-dump {metrics_dump_file_path}')
             if eval_test_struct.weights_:
-                cmd += ' --weights {}'.format(os.path.join(sota_checkpoints_dir, eval_test_struct.weights_))
+                cmd += f' --weights {os.path.join(sota_checkpoints_dir, eval_test_struct.weights_)}'
             if DATASET_TYPE_AVAILABILITY[sample_type]:
-                cmd += ' --dataset-type {}'.format(eval_test_struct.dataset_type_)
+                cmd += f' --dataset-type {eval_test_struct.dataset_type_}'
+            cmd += ' --seed 1'
         else:
-            cmd = self.CMD_FORMAT_STRING.format(sys.executable, 'test', conf=eval_test_struct.config_name_,
-                                                dataset=sota_data_dir,
-                                                data_name=eval_test_struct.dataset_name_,
-                                                sample_type=eval_test_struct.sample_type_,
-                                                log_dir=log_dir)
+            cmd = (f'{sys.executable} examples/tensorflow/{sample_type}/main.py -m test '
+                   f'--config {eval_test_struct.config_name_} '
+                   f'--data {sota_data_dir}/{eval_test_struct.dataset_name_}/ --log-dir={log_dir}')
         if eval_test_struct.batch_:
-            cmd += ' -b {}'.format(eval_test_struct.batch_)
+            cmd += f' -b {eval_test_struct.batch_}'
 
-        cmd = cmd + ' --metrics-dump {}'.format(metrics_dump_file_path)
+        cmd = cmd + f' --metrics-dump {metrics_dump_file_path}'
         exit_code, err_str = self.run_cmd(cmd, cwd=PROJECT_ROOT)
         is_ok = (exit_code == 0 and metrics_dump_file_path.exists())
 
@@ -143,5 +138,5 @@ def results(sota_data_dir):
     yield
     if sota_data_dir:
         RunTest.write_common_metrics_file(per_model_metric_file_dump_path=pytest.metrics_dump_path)
-        header = ['Model', 'Metrics type', 'Expected Init', 'Measured Init', 'Diff Expected Init', 'Error Init']
+        header = ['Model', 'Metrics type', 'Expected Init', 'Measured Init', 'Diff Expected-Measured Init', 'Error Init']
         TestInitialization().write_results_table(header, pytest.metrics_dump_path)
