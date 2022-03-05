@@ -1,6 +1,7 @@
 from typing import Union
 
 import torch
+import numpy as np
 
 from nncf.experimental.onnx.engine import ONNXEngine
 
@@ -16,7 +17,10 @@ class ONNXBatchSampler(BatchSampler):
             tensors.append(self.dataloader[i][0])
             targets.append(self.dataloader[i][1])
 
-        return torch.stack(tensors), targets
+        if isinstance(tensors[0], torch.Tensor):
+            return torch.stack(tensors), targets
+        elif isinstance(tensors[0], np.ndarray):
+            return np.stack(tensors), targets
 
 
 class ONNXRandomBatchSampler(RandomBatchSampler):
@@ -27,7 +31,10 @@ class ONNXRandomBatchSampler(RandomBatchSampler):
             tensors.append(self.dataloader[self.random_permutated_indices[i]][0])
             targets.append(self.dataloader[self.random_permutated_indices[i]][1])
 
-        return torch.stack(tensors), targets
+        if isinstance(tensors[0], torch.Tensor):
+            return torch.stack(tensors), targets
+        elif isinstance(tensors[0], np.ndarray):
+            return np.stack(tensors), targets
 
 
 def create_onnx_sampler(engine: ONNXEngine) -> Union[ONNXBatchSampler, ONNXRandomBatchSampler]:

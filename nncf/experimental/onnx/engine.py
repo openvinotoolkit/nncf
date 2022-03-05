@@ -23,7 +23,7 @@ import numpy as np
 
 
 class ONNXEngine(Engine):
-    def __init__(self, dataloader: DataLoader, providers: List[str] = None):
+    def __init__(self, dataloader: DataLoader = None, providers: List[str] = None):
         super().__init__(dataloader)
         if providers is None:
             self.providers = ['OpenVINOExecutionProvider']
@@ -37,11 +37,10 @@ class ONNXEngine(Engine):
         self.model = model
         self.sess = rt.InferenceSession(self.model, providers=self.providers)
 
-    def infer(self, _input) -> Tuple[Dict[str, np.ndarray], np.ndarray]:
+    def infer(self, _input: np.ndarray) -> Tuple[Dict[str, np.ndarray], np.ndarray]:
         output = {}
         input_name = self.sess.get_inputs()[0].name
-        input_tensor = _input.cpu().detach().numpy()
-        output_tensor = self.sess.run([], {input_name: input_tensor.astype(np.float32)})
+        output_tensor = self.sess.run([], {input_name: _input.astype(np.float32)})
         model_outputs = self.sess.get_outputs()
         for i, model_output in enumerate(model_outputs):
             output[model_output.name] = output_tensor[i]

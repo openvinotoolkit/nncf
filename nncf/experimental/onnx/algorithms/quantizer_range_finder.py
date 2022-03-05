@@ -93,6 +93,12 @@ class ONNXQuantizerRangeFinderAlgorithm(QuantizerRangeFinderAlgorithm):
         transformation_layout = ONNXTransformationLayout()
         transformation_commands = []
         onnx_graph = compressed_model.original_onnx_graph
+
+        # If statistics were not collected
+        if not self.statistics_collector.layers_statistics:
+            layers_to_collect_statistics = self.get_layers_for_statistics(compressed_model)
+            self.statistics_collector.register_layer_statistics(layers_to_collect_statistics)
+            self.statistics_collector.collect_statistics(compressed_model)
         layers_statistics = self.statistics_collector.layers_statistics
 
         for weight_quantizer in self._weight_quantizers:

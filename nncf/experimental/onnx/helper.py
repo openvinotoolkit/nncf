@@ -17,7 +17,9 @@ class ImageNetDataLoader(DataLoader):
         print(f"The dataloader is built with the data located on  {dataset.root}")
 
     def __getitem__(self, item):
-        return self.dataset[item]
+        tensor, target = self.dataset[item]
+        tensor = tensor.cpu().detach().numpy()
+        return tensor, target
 
     def __len__(self):
         return len(self.dataset)

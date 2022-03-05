@@ -23,7 +23,6 @@ from nncf.experimental.onnx.graph.transformations.layout import ONNXTransformati
 from nncf.experimental.post_training.compressed_model import CompressedModel
 
 from nncf.experimental.onnx.graph.transformations.commands import ONNXQuantizerInsertionCommand
-from nncf.experimental.onnx.graph.transformations.commands import ONNXUpdateBias
 
 
 class ONNXModelTransformer(ModelTransformer):

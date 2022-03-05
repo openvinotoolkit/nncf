@@ -13,10 +13,10 @@ from nncf.experimental.onnx.engine import ONNXEngine
 
 
 class ONNXStatisticsCollector(StatisticsCollector):
-    def __init__(self, engine: ONNXEngine):
-        super().__init__(engine)
+    def __init__(self, engine: ONNXEngine, number_iterations: int):
+        super().__init__(engine, number_iterations)
 
-    def collect_statistics(self, compressed_model, num_iters: int) -> None:
+    def collect_statistics(self, compressed_model) -> None:
         layers_to_collect_statistics = [list(layer.keys())[0] for layer in self.layers_statistics]
         onnx_model = compressed_model.original_model
         model_output = list(enumerate_model_node_outputs(onnx_model))[-1]
@@ -29,7 +29,7 @@ class ONNXStatisticsCollector(StatisticsCollector):
             self.engine.set_model(temporary_model.name)
             sampler = create_onnx_sampler(self.engine)
             for i, sample in enumerate(sampler):
-                if i == num_iters:
+                if i == self.number_iterations:
                     break
                 _input, target = sample
                 output = self.engine.infer(_input)

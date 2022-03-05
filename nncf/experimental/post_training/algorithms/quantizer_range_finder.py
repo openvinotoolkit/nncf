@@ -25,9 +25,9 @@ from nncf.experimental.post_training.algorithms import AlgorithmParameters
 
 class QuantizerRangeFinderParameters(AlgorithmParameters):
     def __init__(self,
-                 weight_quantizer_config: QuantizerConfig,
-                 activation_quantizer_config: QuantizerConfig,
-                 target_device: str,
+                 weight_quantizer_config: QuantizerConfig = None,
+                 activation_quantizer_config: QuantizerConfig = None,
+                 target_device: str = 'CPU',
                  range_type: str = 'min_max',
                  quatize_outputs: bool = False,
                  ignored_scopes: List[str] = None,
@@ -53,8 +53,8 @@ class QuantizerRangeFinderAlgorithm(Algorithm, ABC):
     def __init__(self, statistics_collector,
                  parameters: QuantizerRangeFinderParameters):
         self.statistics_collector = statistics_collector
-        self.weight_quantizer_config = parameters.weight_quantizer_config
-        self.activation_quantizer_config = parameters.activation_quantizer_config
+        self.weight_quantizer_config = parameters.weight_quantizer_config if parameters.weight_quantizer_config is not None else self._get_default_qconfig()
+        self.activation_quantizer_config = parameters.activation_quantizer_config if parameters.activation_quantizer_config is not None else self._get_default_qconfig()
         self.target_device = parameters.target_device
         self.range_type = parameters.range_type
         self.quantize_outputs = parameters.quantize_outputs
