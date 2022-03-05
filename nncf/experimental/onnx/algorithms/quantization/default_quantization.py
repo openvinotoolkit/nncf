@@ -19,7 +19,7 @@ DEFAULT_ONNX_QUANT_TRAIT_TO_OP_DICT = {
         AddLayerMetatype,
         MulLayerMetatype,
         BatchNormMetatype,
-        ResizeMetatype,  # ????
+        ResizeMetatype,
     ],
     QuantizationTrait.NON_QUANTIZABLE: [SigmoidMetatype,
                                         UnknownMetatype],

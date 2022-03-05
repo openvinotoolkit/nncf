@@ -19,14 +19,15 @@ from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.insertion_point_graph import InsertionPointGraph
 
-from nncf.experimental.post_training.algorithms.quantizer_range_finder import QuantizerRangeFinderAlgorithm
+from nncf.experimental.post_training.algorithms.min_max_quantization import MinMaxQuantization
+from nncf.experimental.post_training.algorithms.min_max_quantization import MinMaxQuantizationParameters
 from nncf.experimental.post_training.compressed_model import CompressedModel
 from nncf.experimental.onnx.graph.transformations.layout import ONNXTransformationLayout
 from nncf.experimental.onnx.graph.metatypes.onnx_ops import GENERAL_WEIGHT_LAYER_METATYPES
 from nncf.experimental.onnx.algorithms.quantization.default_quantization import DEFAULT_ONNX_QUANT_TRAIT_TO_OP_DICT
 from nncf.experimental.onnx.graph.transformations.commands import ONNXQuantizerInsertionCommand
 from nncf.experimental.onnx.engine import ONNXEngine
-from nncf.experimental.post_training.algorithms.quantizer_range_finder import QuantizerRangeFinderParameters
+
 from nncf.experimental.onnx.statistics.collectors import ONNXMinMaxStatisticCollector
 from nncf.experimental.onnx.graph.model_transformer import ONNXModelTransformer
 
@@ -40,10 +41,10 @@ from nncf.experimental.onnx.hardware.config import ONNXHWConfig
 QUANTIZATION_LAYER_METATYPES = GENERAL_WEIGHT_LAYER_METATYPES
 
 
-class ONNXQuantizerRangeFinderAlgorithm(QuantizerRangeFinderAlgorithm):
+class ONNXMinMaxQuantization(MinMaxQuantization):
 
     def __init__(self, statistics_collector,
-                 parameters: QuantizerRangeFinderParameters):
+                 parameters: MinMaxQuantizationParameters):
         super().__init__(statistics_collector, parameters)
         self._weight_quantizers = []
         self._activation_quantizers = []

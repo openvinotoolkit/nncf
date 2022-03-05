@@ -12,9 +12,10 @@ from tests.onnx.test_nncf_graph_builder import check_nx_graph
 
 from nncf.experimental.post_training.compressed_model import CompressedModel
 from nncf.experimental.onnx.engine import ONNXEngine
-from nncf.experimental.onnx.algorithms.quantizer_range_finder import ONNXQuantizerRangeFinderAlgorithm
+from nncf.experimental.onnx.algorithms.min_max_quantization import ONNXMinMaxQuantization
+from nncf.experimental.onnx.algorithms.min_max_quantization import MinMaxQuantizationParameters
 from nncf.experimental.onnx.statistics.statistics_collector import ONNXStatisticsCollector
-from nncf.experimental.onnx.algorithms.quantizer_range_finder import QuantizerRangeFinderParameters
+
 from nncf.experimental.post_training.api.dataloader import DataLoader
 
 from nncf.experimental.onnx.graph.nncf_graph_builder import GraphConverter
@@ -77,7 +78,7 @@ def test_quantized_graph(tmp_path, model, path_ref_graph, input_shape):
     dataloader = TestDataloader(input_shape)
     engine = ONNXEngine(dataloader)
     statistics_collector = ONNXStatisticsCollector(engine, 1)
-    algorithm = ONNXQuantizerRangeFinderAlgorithm(statistics_collector, QuantizerRangeFinderParameters())
+    algorithm = ONNXMinMaxQuantization(statistics_collector, MinMaxQuantizationParameters())
     compressed_model = algorithm.apply(compressed_model, engine)
 
     nncf_graph = GraphConverter.create_nncf_graph(compressed_model.compressed_model)

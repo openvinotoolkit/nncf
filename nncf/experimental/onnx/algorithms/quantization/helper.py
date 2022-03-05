@@ -10,17 +10,22 @@ from nncf.experimental.onnx.statistics.collectors import ONNXMinMaxStatisticColl
 
 
 class QuantizerLayerParameters:
+    """
+    Class handles Quantizer/Dequantizer layer attributes.
+    """
+
     def __init__(self, scale: List[float], zero_point: List[float], mode: QuantizationMode):
         self.scale = scale
         self.zero_point = zero_point
         self.mode = mode
 
 
-def calculate_scale_level(
-        max_val: Union[float, np.ndarray],
-        min_val: Union[float, np.ndarray],
-        num_bits: int,
-        mode: QuantizationMode):
+def calculate_scale_level(max_val: Union[float, np.ndarray], min_val: Union[float, np.ndarray],
+                          num_bits: int,
+                          mode: QuantizationMode) -> Union[float, np.ndarray]:
+    """
+    Calculates Quantizer/Dequantizer layer scale level.
+    """
     # Always full range
     if mode == QuantizationMode.SYMMETRIC:
         input_abs_max = np.maximum(np.abs(max_val), np.abs(min_val))
@@ -30,6 +35,10 @@ def calculate_scale_level(
 
 def calculate_weight_quantizer_parameters(weight_tensor: np.ndarray, quantizer_config: QuantizerConfig) -> \
         QuantizerLayerParameters:
+    """
+    Calculates Quantizer/Dequantizer layer attributes for weight quantizer such as scale, zero_points and
+    quantization mode: symmetric, asymmetric.
+    """
     per_channel = quantizer_config.per_channel
     num_bits = quantizer_config.num_bits
     mode = quantizer_config.mode
@@ -46,19 +55,12 @@ def calculate_weight_quantizer_parameters(weight_tensor: np.ndarray, quantizer_c
 
 
 def calculate_activation_quantizer_parameters(layer_statistics: ONNXMinMaxStatisticCollector,
-                                              quantizer_config: QuantizerConfig) -> \
-        QuantizerLayerParameters:
-    # TODO:PERCHANNEL IS NOT SUPPORTED.
-    per_channel = quantizer_config.per_channel
+                                              quantizer_config: QuantizerConfig) -> QuantizerLayerParameters:
+    """
+    Calculates Quantizer/Dequantizer layer attributes for activation quantizer such as scale, zero_points and
+    quantization mode: symmetric, asymmetric.
+    """
     num_bits = quantizer_config.num_bits
-    mode = quantizer_config.mode
-
-    # if per_channel:
-    #     axes = tuple(range(len(weight_tensor.shape))[1:])
-    # else:
-    #     axes = None
-
-    axes = None
     statistics = layer_statistics._get_statistics()
     input_low = statistics.min_values
     input_high = statistics.max_values

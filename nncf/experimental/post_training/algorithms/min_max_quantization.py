@@ -23,7 +23,7 @@ from nncf.experimental.post_training.algorithms import Algorithm
 from nncf.experimental.post_training.algorithms import AlgorithmParameters
 
 
-class QuantizerRangeFinderParameters(AlgorithmParameters):
+class MinMaxQuantizationParameters(AlgorithmParameters):
     def __init__(self,
                  weight_quantizer_config: QuantizerConfig = None,
                  activation_quantizer_config: QuantizerConfig = None,
@@ -40,7 +40,7 @@ class QuantizerRangeFinderParameters(AlgorithmParameters):
         self.quantize_outputs = quatize_outputs
 
 
-class QuantizerRangeFinderAlgorithm(Algorithm, ABC):
+class MinMaxQuantization(Algorithm, ABC):
     """
 
     """
@@ -51,7 +51,7 @@ class QuantizerRangeFinderAlgorithm(Algorithm, ABC):
                                       per_channel=False)
 
     def __init__(self, statistics_collector,
-                 parameters: QuantizerRangeFinderParameters):
+                 parameters: MinMaxQuantizationParameters):
         self.statistics_collector = statistics_collector
         self.weight_quantizer_config = parameters.weight_quantizer_config if parameters.weight_quantizer_config is not None else self._get_default_qconfig()
         self.activation_quantizer_config = parameters.activation_quantizer_config if parameters.activation_quantizer_config is not None else self._get_default_qconfig()
