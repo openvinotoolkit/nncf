@@ -10,6 +10,8 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+from typing import TypeVar
+
 from copy import deepcopy
 import onnx
 
@@ -20,26 +22,25 @@ from nncf.common.quantization.structs import QuantizationMode
 from nncf.experimental.onnx.graph.onnx_graph import ONNXGraph
 
 from nncf.experimental.onnx.graph.transformations.layout import ONNXTransformationLayout
-from nncf.experimental.post_training.compressed_model import CompressedModel
 
 from nncf.experimental.onnx.graph.transformations.commands import ONNXQuantizerInsertionCommand
 
+ModelType = TypeVar('ModelType')
+
 
 class ONNXModelTransformer(ModelTransformer):
-    def __init__(self, model: CompressedModel):
+    def __init__(self, model: onnx.ModelProto):
         super().__init__(model)
-        original_model = self._model.original_model
-        self._model.compressed_model = deepcopy(original_model)
+        self.transformed_model = deepcopy(model)
 
-    def transform(self, transformation_layout: ONNXTransformationLayout) -> CompressedModel:
+    def transform(self, transformation_layout: ONNXTransformationLayout) -> onnx.ModelProto:
         for transform in transformation_layout.transformations:
             self._apply_transformation(transform)
-        return self._model
+        return self.transformed_model
 
     def _apply_transformation(self, transformation: TransformationCommand):
         if isinstance(transformation, ONNXQuantizerInsertionCommand):
             self._insert_quantizer_dequantizer(transformation)
-            self._model.transformations.append(transformation)
 
     def _insert_quantizer_dequantizer(self, transformation: ONNXQuantizerInsertionCommand):
         target_point = transformation.target_point
@@ -80,7 +81,7 @@ class ONNXModelTransformer(ModelTransformer):
         )
 
         # TODO:NEED TO ADJUST LOGIC FOR INCEPTION_v3
-        onnx_graph = ONNXGraph(self._model.compressed_model)
+        onnx_graph = ONNXGraph(self.transformed_model)
         try:
             input_nodes = onnx_graph.get_nodes_by_input(target_point)
         except RuntimeError as e:
@@ -93,8 +94,8 @@ class ONNXModelTransformer(ModelTransformer):
                 if inp == target_point:
                     node.input[i] = 'dq_output_' + target_point
 
-        self._model.compressed_model.graph.initializer.extend([onnx_scale])
-        self._model.compressed_model.graph.initializer.extend([onnx_zero_point])
+        self.transformed_model.graph.initializer.extend([onnx_scale])
+        self.transformed_model.graph.initializer.extend([onnx_zero_point])
         insert_index = onnx_graph.get_node_index(input_nodes[0].name)
-        self._model.compressed_model.graph.node.insert(insert_index, quantizer)
-        self._model.compressed_model.graph.node.insert(insert_index + 1, dequantizer)
+        self.transformed_model.graph.node.insert(insert_index, quantizer)
+        self.transformed_model.graph.node.insert(insert_index + 1, dequantizer)

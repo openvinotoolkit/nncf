@@ -12,16 +12,20 @@
 """
 
 from typing import Deque
+from typing import TypeVar
 from collections import deque
 
 from nncf.common.graph.transformations.layout import TransformationLayout
 
-from nncf.experimental.post_training.backend import BACKEND
+from nncf.experimental.post_training.backend import Backend
+from nncf.experimental.post_training.backend import determine_model_backend
 from nncf.experimental.post_training.api.engine import Engine
 from nncf.experimental.post_training.algorithms import Algorithm
 from nncf.experimental.post_training.algorithms import PostTrainingAlgorithms
-from nncf.experimental.post_training.compressed_model import CompressedModel
+from nncf.experimental.post_training.statistics.statistics_collector import StatisticsCollector
 from nncf.experimental.post_training.algorithms.quantization.parameters import PostTrainingQuantizationParameters
+
+ModelType = TypeVar('ModelType')
 
 
 class PostTrainingQuantization(Algorithm):
@@ -44,15 +48,15 @@ class PostTrainingQuantization(Algorithm):
         self.algorithms_to_created = quantization_parameters.algorithms
         self.algorithms = deque()
 
-    def apply(self, compressed_model: CompressedModel, engine: Engine) -> CompressedModel:
-        statistics_collector = self._create_statistics_collector(compressed_model, engine)
-        self.algorithms = self._create_algorithms(compressed_model, statistics_collector)
+    def apply(self, model: ModelType, engine: Engine) -> ModelType:
+        statistics_collector = self._create_statistics_collector(model, engine)
+        self.algorithms = self._create_algorithms(model, statistics_collector)
 
         for algorithm in self.algorithms:
-            layers_to_collect_statistics = algorithm.get_layers_for_statistics(compressed_model)
+            layers_to_collect_statistics = algorithm.get_layers_for_statistics(model)
             statistics_collector.register_layer_statistics(layers_to_collect_statistics)
 
-        statistics_collector.collect_statistics(compressed_model, self.number_samples)
+        statistics_collector.collect_statistics(model, self.number_samples)
 
         while len(self.algorithms) > 0:
             algorithm = self.algorithms.popleft()
@@ -60,22 +64,24 @@ class PostTrainingQuantization(Algorithm):
 
         return compressed_model
 
-    def _create_statistics_collector(self, compressed_model: CompressedModel, engine: Engine):
-        if compressed_model.model_backend == BACKEND.ONNX:
+    def _create_statistics_collector(self, model: ModelType, engine: Engine) -> StatisticsCollector:
+        backend = determine_model_backend(model)
+        if backend == Backend.ONNX:
             from nncf.experimental.onnx.statistics.statistics_collector import ONNXStatisticsCollector
             return ONNXStatisticsCollector(engine)
 
-    def _create_transformation_layout(self, compressed_model: CompressedModel) -> TransformationLayout:
-        if compressed_model.model_backend == BACKEND.ONNX:
+    def _create_transformation_layout(self, model: ModelType) -> TransformationLayout:
+        backend = determine_model_backend(model)
+        if backend == Backend.ONNX:
             from nncf.experimental.onnx.graph.transformations.layout import ONNXTransformationLayout
             return ONNXTransformationLayout()
 
-    def _create_algorithms(self, compressed_model: CompressedModel, statistics_collector) -> Deque[Algorithm]:
+    def _create_algorithms(self, model: ModelType, statistics_collector) -> Deque[Algorithm]:
         output = deque()
-        if compressed_model.model_backend == BACKEND.ONNX:
-            from nncf.experimental.onnx.algorithms.quantizer_range_finder import ONNXQuantizerRangeFinderAlgorithm
+        backend = determine_model_backend(model)
+        if backend == Backend.ONNX:
+            from nncf.experimental.onnx.algorithms.min_max_quantization import ONNXMinMaxQuantization
             for algorithm, parameters in self.algorithms_to_created.items():
                 if algorithm == PostTrainingAlgorithms.QuantizerRangeFinder:
-                    output.append(
-                        ONNXQuantizerRangeFinderAlgorithm(statistics_collector, parameters))
+                    output.append(ONNXMinMaxQuantization(statistics_collector, parameters))
         return output

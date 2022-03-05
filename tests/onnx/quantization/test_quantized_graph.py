@@ -10,7 +10,6 @@ import onnx
 from tests.common.helpers import TEST_ROOT
 from tests.onnx.test_nncf_graph_builder import check_nx_graph
 
-from nncf.experimental.post_training.compressed_model import CompressedModel
 from nncf.experimental.onnx.engine import ONNXEngine
 from nncf.experimental.onnx.algorithms.min_max_quantization import ONNXMinMaxQuantization
 from nncf.experimental.onnx.algorithms.min_max_quantization import MinMaxQuantizationParameters
@@ -72,16 +71,14 @@ def test_quantized_graph(tmp_path, model, path_ref_graph, input_shape):
     torch.onnx.export(model, x, onnx_model_path, opset_version=13)
 
     original_model = onnx.load(onnx_model_path)
-    compressed_model = CompressedModel(original_model)
-    compressed_model.build_and_set_nncf_graph(None, None)
 
     dataloader = TestDataloader(input_shape)
     engine = ONNXEngine(dataloader)
     statistics_collector = ONNXStatisticsCollector(engine, 1)
     algorithm = ONNXMinMaxQuantization(statistics_collector, MinMaxQuantizationParameters())
-    compressed_model = algorithm.apply(compressed_model, engine)
+    compressed_model = algorithm.apply(original_model, engine)
 
-    nncf_graph = GraphConverter.create_nncf_graph(compressed_model.compressed_model)
+    nncf_graph = GraphConverter.create_nncf_graph(compressed_model)
     nx_graph = nncf_graph.get_graph_for_structure_analysis(extended=True)
 
     data_dir = os.path.join(PROJECT_ROOT, REFERENCE_GRAPHS_TEST_ROOT)

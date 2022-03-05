@@ -3,6 +3,7 @@ import os
 from typing import List
 
 import onnx
+from onnx import version_converter
 
 from nncf.experimental.post_training.api.dataloader import DataLoader
 
@@ -38,6 +39,24 @@ def create_dataloader_from_imagenet_torch_dataset(dataset_dir, input_shape: List
     ])
     initialization_dataset = torchvision.datasets.ImageFolder(os.path.join(dataset_dir, 'train'), transform)
     return ImageNetDataLoader(initialization_dataset, batch_size, shuffle)
+
+
+def modify_onnx_model_for_quantization(model: onnx.ModelProto) -> onnx.ModelProto:
+    onnx.checker.check_model(model)
+    print(f'Original opset = {model.opset_import[0].version}')
+
+    model.ir_version = 7  # Due to the 'Shufflenet-v1
+    add_input_from_initializer(model)
+    infered_model = onnx.shape_inference.infer_shapes(model)
+    modified_model = version_converter.convert_version(infered_model, 13)
+
+    onnx.checker.check_model(modified_model)
+    print(f'Successfully converted the model to the opset = {modified_model.opset_import[0].version}')
+
+    for i, node in enumerate(modified_model.graph.node):
+        if node.name == '':
+            node.name = node.op_type + '_nncf_' + str(i)
+    return modified_model
 
 
 def add_input_from_initializer(model: onnx.ModelProto):

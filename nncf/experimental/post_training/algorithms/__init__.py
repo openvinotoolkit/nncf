@@ -1,10 +1,13 @@
 from abc import ABC
 from abc import abstractmethod
 
+from typing import TypeVar
+
 from enum import Enum
 
 from nncf.experimental.post_training.api.engine import Engine
-from nncf.experimental.post_training.compressed_model import CompressedModel
+
+ModelType = TypeVar('ModelType')
 
 
 class PostTrainingAlgorithms(Enum):
@@ -20,7 +23,7 @@ class AlgorithmParameters(ABC):
 
 class Algorithm(ABC):
     @abstractmethod
-    def apply(self, compressed_model: CompressedModel, engine: Engine) -> CompressedModel:
+    def apply(self, model: ModelType, engine: Engine) -> ModelType:
         """
         Applies the algorithm to the 'compressed_model'.
         """

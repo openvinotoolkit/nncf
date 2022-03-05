@@ -16,11 +16,10 @@ class ONNXStatisticsCollector(StatisticsCollector):
     def __init__(self, engine: ONNXEngine, number_iterations: int):
         super().__init__(engine, number_iterations)
 
-    def collect_statistics(self, compressed_model) -> None:
+    def collect_statistics(self, model: onnx.ModelProto) -> None:
         layers_to_collect_statistics = [list(layer.keys())[0] for layer in self.layers_statistics]
-        onnx_model = compressed_model.original_model
-        model_output = list(enumerate_model_node_outputs(onnx_model))[-1]
-        model_with_intermediate_outputs = select_model_inputs_outputs(onnx_model,
+        model_output = list(enumerate_model_node_outputs(model))[-1]
+        model_with_intermediate_outputs = select_model_inputs_outputs(model,
                                                                       outputs=[*layers_to_collect_statistics,
                                                                                model_output])
 

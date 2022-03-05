@@ -14,13 +14,15 @@ from abc import ABC
 from abc import abstractmethod
 
 from typing import List
+from typing import TypeVar
 from copy import deepcopy
 
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizationMode
-from nncf.experimental.post_training.compressed_model import CompressedModel
 from nncf.experimental.post_training.algorithms import Algorithm
 from nncf.experimental.post_training.algorithms import AlgorithmParameters
+
+ModelType = TypeVar('ModelType')
 
 
 class MinMaxQuantizationParameters(AlgorithmParameters):
@@ -71,7 +73,7 @@ class MinMaxQuantization(Algorithm, ABC):
         """
 
     @abstractmethod
-    def get_layers_for_statistics(self, compressed_model: CompressedModel):
+    def get_layers_for_statistics(self, model: ModelType):
         """
 
         """

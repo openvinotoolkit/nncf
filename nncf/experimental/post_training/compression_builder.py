@@ -15,12 +15,12 @@ from typing import TypeVar
 
 from collections import deque
 
-from nncf.experimental.post_training.compressed_model import CompressedModel
 from nncf.experimental.post_training.api.engine import Engine
 from nncf.experimental.post_training.api.dataloader import DataLoader
 from nncf.experimental.post_training.algorithms import Algorithm
 
-from nncf.experimental.post_training.backend import BACKEND
+from nncf.experimental.post_training.backend import Backend
+from nncf.experimental.post_training.backend import determine_model_backend
 
 ModelType = TypeVar('ModelType')
 
@@ -36,30 +36,19 @@ class CompressionBuilder:
     def add_algorithm(self, algorithm: Algorithm) -> None:
         self.algorithms.append(algorithm)
 
-    def _create_engine(self, compressed_model: CompressedModel, dataloader: DataLoader) -> Engine:
-        if compressed_model.model_backend == BACKEND.ONNX:
+    def _create_engine(self, model: ModelType, dataloader: DataLoader) -> Engine:
+        backend = determine_model_backend(model)
+        if backend == Backend.ONNX:
             from nncf.experimental.onnx.engine import ONNXEngine
             return ONNXEngine(dataloader)
-        elif compressed_model.model_backend == BACKEND.PYTORCH:
-            pass
-        elif compressed_model.model_backend == BACKEND.TENSORFLOW:
-            pass
-        elif compressed_model.model_backend == BACKEND.OPENVINO:
-            pass
 
-    def _create_compressed_model(self, model: ModelType) -> CompressedModel:
-        return CompressedModel(model)
-
-    def apply(self, model: ModelType, dataloader: DataLoader,
-              engine: Engine = None) -> CompressedModel:
+    def apply(self, model: ModelType, dataloader: DataLoader, engine: Engine = None) -> ModelType:
         """
         Apply compression algorithms to the 'model'.
         """
-        compressed_model = self._create_compressed_model(model)
         if engine is None:
-            engine = self._create_engine(compressed_model, dataloader)
-        compressed_model.build_and_set_nncf_graph(dataloader, engine)
+            engine = self._create_engine(model, dataloader)
         while len(self.algorithms) > 0:
             algorithm = self.algorithms.pop()  # TODO: will remove the last element. Is it expected behavior?
-            compressed_model = algorithm.apply(compressed_model, engine)
-        return compressed_model.compressed_model
+            compressed_model = algorithm.apply(model, engine)
+        return compressed_model

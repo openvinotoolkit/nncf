@@ -11,6 +11,8 @@
  limitations under the License.
 """
 
+import onnx
+
 from nncf.common.hardware.config import HWConfigType
 from nncf.common.hardware.config import HW_CONFIG_TYPE_TARGET_DEVICE_MAP
 from nncf.common.quantization.quantizer_propagation.solver import QuantizerPropagationSolver
@@ -21,22 +23,24 @@ from nncf.common.insertion_point_graph import InsertionPointGraph
 
 from nncf.experimental.post_training.algorithms.min_max_quantization import MinMaxQuantization
 from nncf.experimental.post_training.algorithms.min_max_quantization import MinMaxQuantizationParameters
-from nncf.experimental.post_training.compressed_model import CompressedModel
 from nncf.experimental.onnx.graph.transformations.layout import ONNXTransformationLayout
 from nncf.experimental.onnx.graph.metatypes.onnx_ops import GENERAL_WEIGHT_LAYER_METATYPES
+from nncf.experimental.onnx.graph.nncf_graph_builder import GraphConverter
 from nncf.experimental.onnx.algorithms.quantization.default_quantization import DEFAULT_ONNX_QUANT_TRAIT_TO_OP_DICT
 from nncf.experimental.onnx.graph.transformations.commands import ONNXQuantizerInsertionCommand
 from nncf.experimental.onnx.engine import ONNXEngine
 
 from nncf.experimental.onnx.statistics.collectors import ONNXMinMaxStatisticCollector
 from nncf.experimental.onnx.graph.model_transformer import ONNXModelTransformer
-
+from nncf.experimental.onnx.graph.onnx_graph import ONNXGraph
 from nncf.experimental.onnx.hardware.fused_patterns import ONNX_HW_FUSED_PATTERNS
 
 from nncf.experimental.onnx.algorithms.quantization.helper import calculate_activation_quantizer_parameters
 from nncf.experimental.onnx.algorithms.quantization.helper import calculate_weight_quantizer_parameters
 
 from nncf.experimental.onnx.hardware.config import ONNXHWConfig
+
+from nncf.experimental.onnx.helper import modify_onnx_model_for_quantization
 
 QUANTIZATION_LAYER_METATYPES = GENERAL_WEIGHT_LAYER_METATYPES
 
@@ -58,11 +62,11 @@ class ONNXMinMaxQuantization(MinMaxQuantization):
                 return ONNXMinMaxStatisticCollector(is_symmetric, axes)
             return ONNXMinMaxStatisticCollector(is_symmetric, None)
 
-    def _create_model_transformer(self, compressed_model):
-        self.model_transformer = ONNXModelTransformer(compressed_model)
+    def _create_model_transformer(self, model: onnx.ModelProto):
+        self.model_transformer = ONNXModelTransformer(model)
 
-    def _get_quantizer_setup(self, compressed_model: CompressedModel):
-        nncf_graph = compressed_model.nncf_graph
+    def _get_quantizer_setup(self, model: onnx.ModelProto):
+        nncf_graph = GraphConverter.create_nncf_graph(model)
         ip_graph = InsertionPointGraph(nncf_graph)
         pattern = ONNX_HW_FUSED_PATTERNS.get_full_pattern_graph()
         ip_graph = ip_graph.get_ip_graph_with_merged_hw_optimized_operations(pattern)
@@ -89,17 +93,18 @@ class ONNXMinMaxQuantization(MinMaxQuantization):
         final_setup = solver.get_final_quantizer_setup(finalized_proposal)
         return final_setup
 
-    def apply(self, compressed_model: CompressedModel, engine: ONNXEngine):
-        self._create_model_transformer(compressed_model)
+    def apply(self, model: onnx.ModelProto, engine: ONNXEngine):
+        modified_model = modify_onnx_model_for_quantization(model)
+        self._create_model_transformer(modified_model)
         transformation_layout = ONNXTransformationLayout()
         transformation_commands = []
-        onnx_graph = compressed_model.original_onnx_graph
+        onnx_graph = ONNXGraph(modified_model)
 
         # If statistics were not collected
         if not self.statistics_collector.layers_statistics:
-            layers_to_collect_statistics = self.get_layers_for_statistics(compressed_model)
+            layers_to_collect_statistics = self.get_layers_for_statistics(modified_model)
             self.statistics_collector.register_layer_statistics(layers_to_collect_statistics)
-            self.statistics_collector.collect_statistics(compressed_model)
+            self.statistics_collector.collect_statistics(modified_model)
         layers_statistics = self.statistics_collector.layers_statistics
 
         for weight_quantizer in self._weight_quantizers:
@@ -121,9 +126,9 @@ class ONNXMinMaxQuantization(MinMaxQuantization):
         quantized_model = self.model_transformer.transform(transformation_layout)
         return quantized_model
 
-    def get_layers_for_statistics(self, compressed_model: CompressedModel):
-        quantizer_setup = self._get_quantizer_setup(compressed_model)
-        onnx_graph = compressed_model.original_onnx_graph
+    def get_layers_for_statistics(self, model: onnx.ModelProto):
+        quantizer_setup = self._get_quantizer_setup(model)
+        onnx_graph = ONNXGraph(model)
         filled_outputs = []
         for qp_id, qp in quantizer_setup.quantization_points.items():
             if qp.is_weight_quantization_point():
