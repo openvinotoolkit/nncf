@@ -16,7 +16,7 @@ from typing import TypeVar
 from nncf.experimental.post_training.api.engine import Engine
 from nncf.experimental.post_training.api.dataloader import DataLoader
 
-from nncf.experimental.post_training.backend import BACKEND
+from nncf.experimental.post_training.backend import Backend
 
 ModelType = TypeVar('ModelType')
 
@@ -37,12 +37,12 @@ class CompressedModel:
     def _determine_model_backend(self, model: ModelType) -> None:
         from onnx import ModelProto
         if isinstance(model, ModelProto):
-            self.model_backend = BACKEND.ONNX
+            self.model_backend = Backend.ONNX
             return
         raise RuntimeError('This backend is not supported')
 
     def _set_original_model(self, model: ModelType):
-        if self.model_backend == BACKEND.ONNX:
+        if self.model_backend == Backend.ONNX:
             import onnx
             from onnx import version_converter
             from nncf.experimental.onnx.helper import add_input_from_initializer
@@ -67,7 +67,7 @@ class CompressedModel:
         """
         Builds NNCFGraph from the model.
         """
-        if self.model_backend == BACKEND.ONNX:
+        if self.model_backend == Backend.ONNX:
             from nncf.experimental.onnx.graph.nncf_graph_builder import GraphConverter
             self.nncf_graph = GraphConverter.create_nncf_graph(self.original_model)
 

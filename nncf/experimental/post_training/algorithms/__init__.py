@@ -8,7 +8,7 @@ from nncf.experimental.post_training.compressed_model import CompressedModel
 
 
 class PostTrainingAlgorithms(Enum):
-    QuantizerRangeFinder = 'quantizer_range_finder'
+    MinMaxQuantization = 'min_max_quantization'
     BiasCorrection = 'bias_correction'
     PostTrainingQuantization = 'post_training_quantization'
 

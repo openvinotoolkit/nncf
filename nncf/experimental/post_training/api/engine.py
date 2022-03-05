@@ -6,7 +6,6 @@ from typing import Dict
 from typing import TypeVar
 
 from nncf.experimental.post_training.api.dataloader import DataLoader
-from nncf.experimental.post_training.sampler import Sampler
 
 ModelType = TypeVar('ModelType')
 TensorType = TypeVar('TensorType')
