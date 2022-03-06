@@ -26,8 +26,8 @@ from tests.tensorflow.test_sota_checkpoints import EvalRunParamsStruct
 from tests.tensorflow.test_sota_checkpoints import RunTest
 from tests.common.helpers import PROJECT_ROOT
 
-DIFF_TARGET_INIT_MIN_GLOBAL = -0.1
-DIFF_TARGET_INIT_MAX_GLOBAL = 0.1
+DIFF_TARGET_INIT_MIN_GLOBAL = -0.3
+DIFF_TARGET_INIT_MAX_GLOBAL = 0.3
 
 MODE = 'TF2'
 
