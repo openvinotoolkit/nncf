@@ -149,8 +149,6 @@ def test_random_multi_elasticity(_seed, nas_model_name):
     multi_elasticity_handler.width_handler.width_num_params_indicator = 1
     multi_elasticity_handler.activate_random_subnet()
     model.do_dummy_forward()
-    # TODO(nlyalyus): some blocks are not skipped because they fail a conflict resolving with elastic width: start or
-    #  end block can be out of pruning scope and can't retrieve width in the propagation graph: mask = None
     check_subnet_visualization(multi_elasticity_handler, model, nas_model_name, stage='width')
 
 

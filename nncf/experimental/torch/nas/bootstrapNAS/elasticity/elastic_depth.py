@@ -69,15 +69,26 @@ class ElasticDepthHandler(SingleElasticityHandler):
         return []
 
     @property
-    def depth_indicator(self):
+    def depth_indicator(self) -> int:
+        """
+        :return: depth indicator value that restricts number of skipped blocks in the independent groups of blocks
+        """
         return self._depth_indicator
 
     @depth_indicator.setter
-    def depth_indicator(self, depth_indicator):
+    def depth_indicator(self, depth_indicator: int) -> None:
+        """
+        Sets depth indicator value that restricts number of skipped blocks in the independent groups of blocks
+
+        :param depth_indicator: depth indicator value
+        """
         self._depth_indicator = depth_indicator
         self._is_search_space_obsolete = True
 
     def get_search_space(self) -> ElasticDepthSearchSpace:
+        """
+        :return: search space that is produced by iterating over all elastic depth parameters
+        """
         if not self._is_search_space_obsolete:
             return self._cached_search_space
         range_block_ids = range(0, len(self._skipped_blocks))
@@ -176,6 +187,11 @@ class ElasticDepthHandler(SingleElasticityHandler):
         return result
 
     def get_kwargs_for_flops_counting(self) -> Dict[str, Any]:
+        """
+        Provides arguments for counting flops of the currently activated subnet.
+
+        :return: mapping of parameters to its values
+        """
         op_addresses_to_skip = []
         active_block_indexes = self._tracing_context.active_block_indexes
         if active_block_indexes is not None:
@@ -247,6 +263,10 @@ class EDBuilderStateNames:
 
 @ELASTICITY_BUILDERS.register(ElasticityDim.DEPTH)
 class ElasticDepthBuilder(SingleElasticityBuilder):
+    """
+    Determines which modifications should be made to the original FP32 model in order to introduce elastic depth
+    to the model.
+    """
     _state_names = EDBuilderStateNames
 
     def __init__(self, elasticity_params: Optional[Dict[str, Any]] = None,

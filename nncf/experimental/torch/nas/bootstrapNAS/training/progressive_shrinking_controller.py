@@ -35,6 +35,14 @@ class PSControllerStateNames:
 
 
 class ProgressiveShrinkingController(BNASTrainingController):
+    """
+    Serves as a handle to the additional modules, parameters and hooks inserted
+    into the original uncompressed model in order to train a supernet using Progressive Shrinking procedure
+    from OFA (https://arxiv.org/abs/1908.09791).
+    Hosts entities that are to be used during the training process, such as compression scheduler and
+    compression loss.
+    """
+
     _ps_state_names = PSControllerStateNames
 
     def __init__(self, target_model: NNCFNetwork,

@@ -99,7 +99,6 @@ class RefModelStats(NamedTuple):
     depth_stage: ModelStats
 
 
-# TODO(nlyalyus): any way to combine with ElasticityDesc?
 class MultiElasticityTestDesc(NamedTuple):
     model_creator: Any
     ref_model_stats: RefModelStats = None

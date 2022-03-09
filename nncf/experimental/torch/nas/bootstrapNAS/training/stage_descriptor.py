@@ -44,6 +44,11 @@ class StageDescriptor:
 
     @classmethod
     def from_state(cls, state: Dict[str, Any]):
+        """
+        Creates the object from its state.
+
+        :param state: Output of `get_state()` method.
+        """
         new_dict = state.copy()
         train_dims = state.get('train_dims', {})
         new_dict['train_dims'] = [ElasticityDim.from_str(dim) for dim in train_dims]

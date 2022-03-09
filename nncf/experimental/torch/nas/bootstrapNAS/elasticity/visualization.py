@@ -25,6 +25,9 @@ from nncf.experimental.torch.nas.bootstrapNAS.elasticity.multi_elasticity_handle
 
 
 class SubnetGraph:
+    """
+    Graph that represents active subnet in convenient way for visualization.
+    """
     def __init__(self, compression_graph: PTNNCFGraph, multi_elasticity_handler: MultiElasticityHandler):
         # TODO: visualize other elastic dimension: depth, kernel (ticket 76870)
         self._width_graph = compression_graph.get_graph_for_structure_analysis(extended=True)

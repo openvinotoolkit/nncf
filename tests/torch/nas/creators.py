@@ -47,8 +47,7 @@ from tests.torch.nas.models.synthetic import TwoConvModel
 from tests.torch.nas.models.vgg_k7 import VGG11_K7
 
 
-# TODO(nlyalyus) reduce number of creators!
-# TODO(nlyalyus) consider creation of TrainingAlgorithm wrapper
+# TODO(nlyalyus) reduce number of creators and descriptors. create wrapper of TrainingAlgorithm  (ticket 81015)
 def create_bootstrap_training_model_and_ctrl(model,
                                              nncf_config: NNCFConfig) -> Tuple[NNCFNetwork, BNASTrainingController]:
     algo_name = nncf_config.get('bootstrapNAS', {}).get('training', {}).get('algorithm', 'progressive_shrinking')
@@ -93,7 +92,6 @@ def build_elastic_model_from_handler(nncf_network, handler):
     return model
 
 
-# TODO(nlyalyus): refactor with unified model descriptor
 NAS_MODEL_DESCS = {
     'resnet50': [test_models.ResNet50, [1, 3, 32, 32]],
     'resnet50_imagenet': [test_models.ResNet50, [1, 3, 224, 224]],

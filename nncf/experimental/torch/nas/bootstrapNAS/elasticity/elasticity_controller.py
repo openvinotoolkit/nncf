@@ -18,9 +18,9 @@ from nncf.api.compression import CompressionScheduler
 from nncf.api.compression import CompressionStage
 from nncf.common.schedulers import BaseCompressionScheduler
 from nncf.common.statistics import NNCFStatistics
+from nncf.experimental.torch.nas.bootstrapNAS.elasticity.multi_elasticity_handler import MultiElasticityHandler
 from nncf.torch.algo_selector import ZeroCompressionLoss
 from nncf.torch.compression_method_api import PTCompressionAlgorithmController
-from nncf.experimental.torch.nas.bootstrapNAS.elasticity.multi_elasticity_handler import MultiElasticityHandler
 from nncf.torch.nncf_network import NNCFNetwork
 
 
@@ -29,6 +29,10 @@ class EControllerStateNames:
 
 
 class ElasticityController(PTCompressionAlgorithmController):
+    """
+    Serves as a handle to the additional modules, parameters and hooks inserted
+    into the original uncompressed model in order to control elasticity in the model.
+    """
     _ec_state_names = EControllerStateNames
 
     def __init__(self, target_model: NNCFNetwork, algo_config: Dict, multi_elasticity_handler: MultiElasticityHandler):
@@ -44,16 +48,37 @@ class ElasticityController(PTCompressionAlgorithmController):
 
     @property
     def loss(self) -> CompressionLoss:
+        """
+        :return: The instance of the `CompressionLoss`.
+        """
         return self._loss
 
     @property
     def scheduler(self) -> CompressionScheduler:
+        """
+        :return: The instance of the `CompressionScheduler`.
+        """
         return self._scheduler
 
     def statistics(self, quickly_collected_only: bool = False) -> NNCFStatistics:
+        """
+        Returns a `Statistics` class instance that contains compression algorithm statistics.
+
+        :param quickly_collected_only: Enables collection of the statistics that
+            don't take too much time to compute. Can be helpful for the case when
+            need to keep track of statistics on each training batch/step/iteration.
+        :return: A `Statistics` class instance that contains compression algorithm statistics.
+        """
         return NNCFStatistics()
 
     def compression_stage(self) -> CompressionStage:
+        """
+        Returns the compression stage. Should be used on saving best checkpoints
+        to distinguish between uncompressed, partially compressed, and fully
+        compressed models.
+
+        :return: The compression stage of the target model.
+        """
         return CompressionStage.UNCOMPRESSED
 
     def load_state(self, state: Dict[str, Any]) -> None:
@@ -75,9 +100,3 @@ class ElasticityController(PTCompressionAlgorithmController):
         state = super().get_state()
         state[self._ec_state_names.MULTI_ELASTICITY_HANDLER_STATE] = self.multi_elasticity_handler.get_state()
         return state
-
-
-class ElasticNet:
-    def __init__(self, nncf_network: NNCFNetwork, elasticity_controller: ElasticityController):
-        self.nncf_network = nncf_network
-        self.elasticity_controller = elasticity_controller

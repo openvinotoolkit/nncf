@@ -18,6 +18,8 @@ from typing import List
 from typing import Optional
 from typing import OrderedDict as OrderedDictType
 
+from typing import Tuple
+
 from nncf.common.pruning.utils import count_flops_and_weights_per_node
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.base_handler import ElasticityConfig
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.base_handler import ElasticityHandler
@@ -39,6 +41,13 @@ class MEHandlerStateNames:
 
 
 class MultiElasticityHandler(ElasticityHandler):
+    """
+    An interface for handling multiple elasticity in the network. The elasticity defines variable values in properties
+    of the layers or the network, e.g. variable number of channels in the Conv or variable number of layers in the
+    network. By applying elasticity it's possible to derive a smaller models (Subnets) that have some elements in
+    common with the original model.
+    The interface defines methods for activation Subnets.
+    """
     _state_names = MEHandlerStateNames
 
     def __init__(self, handlers: OrderedDictType[ElasticityDim, SingleElasticityHandler]):
@@ -71,6 +80,10 @@ class MultiElasticityHandler(ElasticityHandler):
         return self._get_handler_by_elasticity_dim(ElasticityDim.DEPTH)
 
     def get_available_elasticity_dims(self) -> List[ElasticityDim]:
+        """
+        :return: list of available elasticity dimension. E.g. it's possible to have a single elasticity like Elastic
+        Depth or all possible elasticities (Elastic Depth/Width/Kernel) added to the model.
+        """
         return list(self._handlers)
 
     def get_active_config(self) -> SubnetConfig:
@@ -160,19 +173,34 @@ class MultiElasticityHandler(ElasticityHandler):
             self._state_names.IS_HANDLER_ENABLED_MAP: is_handler_enabled_map
         }
 
-    def enable_all(self):
+    def enable_all(self) -> None:
+        """
+        Enables all elasticities for being selected on sampling subnets.
+        """
         self._is_handler_enabled_map = {elasticity_dim: True for elasticity_dim in self._is_handler_enabled_map}
 
-    def disable_all(self):
+    def disable_all(self) -> None:
+        """
+        Disables all elasticities for being selected on sampling subnets.
+        """
         self._is_handler_enabled_map = {elasticity_dim: False for elasticity_dim in self._is_handler_enabled_map}
 
     def enable_elasticity(self, dim: ElasticityDim):
+        """
+        Enables elasticity for being selected on sampling subnets by a given type.
+        """
         self._is_handler_enabled_map[dim] = True
 
     def disable_elasticity(self, dim: ElasticityDim):
+        """
+        Disables elasticity for being selected on sampling subnets by a given type.
+        """
         self._is_handler_enabled_map[dim] = False
 
-    def count_flops_and_weights_for_active_subnet(self):
+    def count_flops_and_weights_for_active_subnet(self) -> Tuple[int, int]:
+        """
+        :return: FLOPs and the number weights and in the model for convolution and fully connected layers.
+        """
         kwargs = {}
         for handler in self._handlers.values():
             kwargs.update(handler.get_kwargs_for_flops_counting())
@@ -189,7 +217,7 @@ class MultiElasticityHandler(ElasticityHandler):
             result = self._handlers[dim]
         return result
 
-    def _collect_handler_data_by_method_name(self, method_name) -> OrderedDictType[ElasticityDim, Any]:
+    def _collect_handler_data_by_method_name(self, method_name: str) -> OrderedDictType[ElasticityDim, Any]:
         result = OrderedDict()
         for elasticity_dim, handler in self._handlers.items():
             if self._is_handler_enabled_map[elasticity_dim]:

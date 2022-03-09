@@ -32,6 +32,20 @@ def create_compressed_model_from_algo_names(nncf_network: NNCFNetwork,
                                             config: NNCFConfig,
                                             algo_names: List[str],
                                             dump_graphs: bool = True) -> Tuple[BaseController, NNCFNetwork]:
+    """
+    The main function used to produce a model ready for compression fine-tuning from empty NNCFNetwork,
+    a configuration object and a list of compression algorithm names.
+
+    :param nncf_network: empty NNCFNetwork, that just wrapped original PyTorch model.
+    :param config: A configuration object used to determine the exact compression modifications to be applied
+    to the model
+    :param algo_names: list of compression algorithm names.
+    :param dump_graphs: Whether or not should also dump the internal graph representation of the
+    original and compressed models in the .dot format into the log directory.
+    :return: A controller for the compression algorithm (or algorithms, in which case the controller
+    is an instance of CompositeCompressionController) and the model ready for compression parameter training wrapped
+    as an object of NNCFNetwork.
+    """
     set_debug_log_dir(config.get("log_dir", ""))
 
     if dump_graphs:
@@ -89,20 +103,3 @@ def resume_compression_from_state(nncf_network, compression_state, config: Optio
     ctrl = builder.build_controller(nncf_network)
     ctrl.load_state(compression_state[BaseController.CONTROLLER_STATE])
     return model, ctrl
-
-
-def add_compression(nncf_network: NNCFNetwork,
-                    compression_ctrl,
-                    compression_config: NNCFConfig):
-    old_compression_state = compression_ctrl.get_compression_state()
-    old_builder = resume_compression_algorithm_builder(old_compression_state)
-
-    new_model = nncf_network.get_clean_shallow_copy()
-
-    new_builder = create_compression_algorithm_builder(compression_config, should_init=True)
-    old_builder.add_builder(new_builder)
-
-    model = new_builder.apply_to(new_model)
-    new_ctrl = new_builder.build_controller(new_model)
-    new_ctrl.load_state(old_compression_state[BaseController.CONTROLLER_STATE])
-    return model, new_ctrl

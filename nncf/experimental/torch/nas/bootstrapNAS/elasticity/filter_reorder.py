@@ -25,13 +25,17 @@ from nncf.common.utils.logger import logger as nncf_logger
 
 
 class FilterReorderingAlgorithm(MaskPropagationAlgorithm):
+    """
+    Reorders filters based on reordering indexes encoded in the `output_mask` attribute in the nodes of
+    model graph.
+    """
     def __init__(self, model: NNCFNetwork, graph: NNCFGraph,
                  pruning_operator_metatypes: PruningOperationsMetatypeRegistry,
                  tensor_processor: Optional[Type[NNCFPruningBaseTensorProcessor]] = None):
         super().__init__(graph, pruning_operator_metatypes, tensor_processor)
         self._model = model
 
-    def apply_reordering_indexes(self):
+    def apply_reordering_indexes(self) -> None:
         """
         Applying propagated masks (which encodes indexes to reorder filters) for all nodes in topological order:
         1. running input_reorder method for this node
@@ -48,7 +52,7 @@ class FilterReorderingAlgorithm(MaskPropagationAlgorithm):
                     pruned_node_modules.append(node_module)
             nncf_logger.debug('Finished mask applying step')
 
-    def reorder_filters(self):
+    def reorder_filters(self) -> None:
         """
         Model pruner work in two stages:
         1. Mask propagation: propagate pruning masks through the graph.

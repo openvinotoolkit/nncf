@@ -252,7 +252,18 @@ class NNCFGraph:
             all_nodes.append(nncf_node)
         return all_nodes
 
-    def get_all_simple_paths(self, start_node_name: NNCFNodeName, end_node_name: NNCFNodeName):
+    def get_all_simple_paths(self,
+                             start_node_name: NNCFNodeName,
+                             end_node_name: NNCFNodeName) -> Generator[List[str], None, None]:
+        """
+        Generates all simple paths in the NNCFGraph from start node to end node.
+        A simple path is a path with no repeated nodes.
+
+        :param start_node_name: a name of starting node for path
+        :param end_node_name: a name of node at which to end path
+        :return: A generator that produces lists of simple paths. If there are no paths between the start and end nodes
+        the generator produces no output.
+        """
         start_node = self.get_node_by_name(start_node_name)
         end_node = self.get_node_by_name(end_node_name)
         start_node_key = self.get_node_key_by_id(start_node.node_id)

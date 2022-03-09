@@ -140,13 +140,14 @@ class SingleElasticityHandler(ElasticityHandler, ABC):
     @abstractmethod
     def get_search_space(self) -> ElasticSearchSpace:
         """
-        :return: search space that can be produced by iterating over all elastic parameters
+        :return: search space that is produced by iterating over all elastic parameters
         """
 
     @abstractmethod
     def get_kwargs_for_flops_counting(self) -> Dict[str, Any]:
         """
         Provides arguments for counting flops of the currently activated subnet.
+
         :return: mapping of parameters to its values
         """
 

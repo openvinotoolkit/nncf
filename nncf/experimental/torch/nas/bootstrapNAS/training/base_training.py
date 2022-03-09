@@ -55,6 +55,9 @@ class BNASTrainingAlgorithm(ABC):
 
 
 class BNASTrainingController(PTCompressionAlgorithmController, BNASTrainingAlgorithm, ABC):
+    """
+    A base class for BootstrapNAS training controllers that provides capabilities for supernet training.
+    """
     @property
     @abstractmethod
     def multi_elasticity_handler(self) -> MultiElasticityHandler:

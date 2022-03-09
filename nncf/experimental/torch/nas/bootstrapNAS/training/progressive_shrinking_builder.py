@@ -34,6 +34,12 @@ class PSBuilderStateNames:
 
 @PT_COMPRESSION_ALGORITHMS.register('progressive_shrinking')
 class ProgressiveShrinkingBuilder(PTCompressionAlgorithmBuilder):
+    """
+    Determines which modifications should be made to the original FP32 model in
+    order to train a supernet using Progressive Shrinking procedure from OFA (https://arxiv.org/abs/1908.09791).
+    Operates on an NNCFNetwork object wrapping a target PyTorch model (torch.nn.Module).
+    """
+
     DEFAULT_PROGRESSIVITY = [ElasticityDim.KERNEL, ElasticityDim.DEPTH, ElasticityDim.WIDTH]
     _state_names = PSBuilderStateNames
 
@@ -50,7 +56,13 @@ class ProgressiveShrinkingBuilder(PTCompressionAlgorithmBuilder):
 
     @staticmethod
     def check_elasticity_dims_consistency(available_elasticity_dims: List[ElasticityDim],
-                                          progressivity_of_elasticity: List[ElasticityDim]):
+                                          progressivity_of_elasticity: List[ElasticityDim]) -> None:
+        """
+        Verifies that progressivity of elasticity is specified for all available elasticity dimensions.
+
+        :param available_elasticity_dims: list of available elasticity dimension
+        :param progressivity_of_elasticity: specifies in which order elasticity should be added
+        """
         for dim in available_elasticity_dims:
             if dim not in progressivity_of_elasticity:
                 raise ValueError(f'Invalid elasticity dimension {dim} specified as available in `elasticity` section.'
@@ -59,7 +71,12 @@ class ProgressiveShrinkingBuilder(PTCompressionAlgorithmBuilder):
                                  f' by going from one training stage to another.')
 
     def initialize(self, model: NNCFNetwork) -> None:
-        pass
+        """
+        Initialize model parameters before training
+
+        :param model: The model with additional modifications necessary to enable
+            algorithm-specific compression during fine-tuning.
+        """
 
     def _get_algo_specific_config_section(self) -> Dict:
         return self.config.get('bootstrapNAS', {}).get('training', {})

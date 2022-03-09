@@ -14,6 +14,9 @@ from enum import Enum
 
 
 class ElasticityDim(Enum):
+    """
+    Defines elasticity dimension or type of elasticity applied to the model
+    """
     KERNEL = 'kernel'
     WIDTH = 'width'
     DEPTH = 'depth'

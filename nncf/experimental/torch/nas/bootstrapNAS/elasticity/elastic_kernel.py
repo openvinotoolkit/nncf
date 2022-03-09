@@ -29,17 +29,17 @@ from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.graph.transformations.commands import TransformationPriority
 from nncf.common.utils.logger import logger as nncf_logger
+from nncf.experimental.torch.nas.bootstrapNAS.elasticity.base_handler import ELASTICITY_BUILDERS
+from nncf.experimental.torch.nas.bootstrapNAS.elasticity.base_handler import ELASTICITY_HANDLERS_MAP
+from nncf.experimental.torch.nas.bootstrapNAS.elasticity.base_handler import SingleElasticityBuilder
+from nncf.experimental.torch.nas.bootstrapNAS.elasticity.base_handler import SingleElasticityHandler
+from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elasticity_dim import ElasticityDim
 from nncf.torch.graph.transformations.commands import PTInsertionCommand
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.layers import NNCFConv2d
 from nncf.torch.module_operations import UpdateInputs
 from nncf.torch.module_operations import UpdatePadding
 from nncf.torch.module_operations import UpdateWeight
-from nncf.experimental.torch.nas.bootstrapNAS.elasticity.base_handler import ELASTICITY_BUILDERS
-from nncf.experimental.torch.nas.bootstrapNAS.elasticity.base_handler import ELASTICITY_HANDLERS_MAP
-from nncf.experimental.torch.nas.bootstrapNAS.elasticity.base_handler import SingleElasticityHandler
-from nncf.experimental.torch.nas.bootstrapNAS.elasticity.base_handler import SingleElasticityBuilder
-from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elasticity_dim import ElasticityDim
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.utils import is_tracing_state
 from nncf.torch.utils import no_jit_trace
@@ -69,9 +69,19 @@ class ElasticKernelOp:
         self._node_name = node_name
 
     def get_active_kernel_size(self) -> kernel_size_type:
+        """
+        :return: a target kernel size that operation's parameters should have after forward's call
+        """
         return self._active_kernel_size
 
-    def set_active_kernel_size(self, kernel_size: kernel_size_type):
+    def set_active_kernel_size(self, kernel_size: kernel_size_type) -> None:
+        """
+        Sets current level of elasticity for the operation - kernel size value that parameters should have.
+        The actual modification of parameters happens on forward call.
+        The value should be less the original kernel size and more than one.
+
+        :param kernel_size: kernel size value
+        """
         if kernel_size is None or kernel_size > self.max_kernel_size or kernel_size < 1:
             raise AttributeError('Invalid kernel size={} in scope={}.\nIt should be within the range: [1, {}]'.format(
                 kernel_size, self.node_name, self.max_kernel_size))
@@ -79,20 +89,45 @@ class ElasticKernelOp:
         self._active_kernel_size = kernel_size
 
     @property
-    def kernel_size_list(self):
+    def kernel_size_list(self) -> List[kernel_size_type]:
+        """
+        Gets list of all available kernel sizes to select from. Each value corresponds to a single element in the
+        search space of operation. The search space of the model is cartesian product of search spaces of operation.
+
+        :return: list of kernel sizes
+        """
         return self._kernel_size_list
 
     @property
-    def node_name(self):
+    def node_name(self) -> NNCFNodeName:
+        """
+        :return: node name that corresponds to operation with elastic kernel
+        """
         return self._node_name
 
     @property
-    def max_kernel_size(self):
+    def max_kernel_size(self) -> kernel_size_type:
+        """
+        :return: kernel size in the original operation
+        """
         return self._max_kernel_size
 
 
 class ElasticKernelConv2DOp(ElasticKernelOp, nn.Module):
-    def __init__(self, max_kernel_size, node_name, elastic_kernel_params):
+    """
+    Introduces elastic kernel for the 2D convolution. On the forward pass it takes parameters of operations
+    and modifies in the way that kernel size is changing to a given value.
+    """
+
+    def __init__(self, max_kernel_size: kernel_size_type, node_name: NNCFNodeName,
+                 elastic_kernel_params: Optional[Dict[str, Any]]):
+        """
+        Constructor.
+
+        :param max_kernel_size: maximum kernel size value in the original operation.
+        :param node_name: string representation of operation address. It's used for more informative messages only.
+        :param elastic_kernel_params: parameters to configure elastic kernel for the operation.
+        """
         super().__init__(max_kernel_size=max_kernel_size, node_name=node_name)
         self._max_num_params = elastic_kernel_params.get('max_num_kernels', -1)
         # Create kernel_size_list based on max module kernel size
@@ -110,7 +145,13 @@ class ElasticKernelConv2DOp(ElasticKernelOp, nn.Module):
         for name, param in scale_params.items():
             self.register_parameter(name, param)
 
-    def generate_kernel_size_list(self, max_kernel_size):
+    def generate_kernel_size_list(self, max_kernel_size: kernel_size_type) -> List[kernel_size_type]:
+        """
+        Generates list of available kernel size values.
+
+        :param max_kernel_size: maximum value of kernel size
+        :return: list of kernel size values.
+        """
         assert max_kernel_size % 2 > 0, 'kernel size should be odd number'
         if max_kernel_size == 1:
             return [1]
@@ -143,7 +184,14 @@ class ElasticKernelConv2DOp(ElasticKernelOp, nn.Module):
                 result = self._get_active_filter(kernel_size, weight)
         return result
 
-    def set_active_kernel_size(self, kernel_size):
+    def set_active_kernel_size(self, kernel_size: kernel_size_type) -> None:
+        """
+        Sets current level of elasticity for the operation - kernel size value that parameters should have.
+        The actual modification of parameters happens on forward call.
+        The value should be less the original kernel size and more than one.
+
+        :param kernel_size: kernel size value
+        """
         nncf_logger.debug('set active elastic_kernel={} in scope={}'.format(kernel_size, self.node_name))
         assert kernel_size % 2 > 0, 'kernel size should be odd number'
         if kernel_size not in self.kernel_size_list and kernel_size != self.max_kernel_size:
@@ -186,15 +234,28 @@ class ElasticKernelConv2DOp(ElasticKernelOp, nn.Module):
 
 
 class ElasticKernelPaddingAdjustment:
+    """
+    Auxiliary operation that adjusts padding of the operation with elastic kernel.
+    This adjustment ensures the same output shapes for different kernel sizes and thus frees from the need to adapt the
+    rest of the operation in the model for each new value of kernel size.
+    """
+
     def __init__(self, elastic_k_w_op: ElasticKernelConv2DOp):
         self._elastic_k_w_op = elastic_k_w_op
 
-    def __call__(self, previous_padding) -> int:
+    def __call__(self, _) -> int:
         return self._elastic_k_w_op.get_active_kernel_size() // 2
 
 
 class ElasticKernelInputForExternalPadding:
-    def __init__(self, elastic_k_w_op: ElasticKernelConv2DOp, max_kernel_size):
+    """
+    Auxiliary operation that adjusts inputs for operations that implements same padding type
+    (e.g. NNCFUserConv2dStaticSamePadding).
+    This adjustment ensures the same output shapes for different kernel sizes and thus frees from the need to adapt the
+    rest of the operation in the model for each new value of kernel size.
+    """
+
+    def __init__(self, elastic_k_w_op: ElasticKernelConv2DOp, max_kernel_size: kernel_size_type):
         self._elastic_k_w_op = elastic_k_w_op
         self._max_kernel_size = max_kernel_size
 
@@ -211,6 +272,7 @@ class ElasticKernelHandler(SingleElasticityHandler):
     """
     An interface for handling elastic kernel dimension in the network, i.e. define size of kernels in the conv layers.
     """
+
     def __init__(self,
                  elastic_kernel_ops: List[ElasticKernelOp],
                  transformation_commands: List[TransformationCommand]):
@@ -225,6 +287,9 @@ class ElasticKernelHandler(SingleElasticityHandler):
         return self._transformation_commands
 
     def get_search_space(self) -> ElasticKernelSearchSpace:
+        """
+        :return: search space that is produced by iterating over all elastic kernel parameters
+        """
         return self._collect_ops_data_by_selection_rule(lambda op: op.kernel_size_list)
 
     def get_active_config(self) -> ElasticKernelConfig:
@@ -279,6 +344,11 @@ class ElasticKernelHandler(SingleElasticityHandler):
             op.set_active_kernel_size(ks)
 
     def get_kwargs_for_flops_counting(self) -> Dict[str, Any]:
+        """
+        Provides arguments for counting flops of the currently activated subnet.
+
+        :return: mapping of parameters to its values
+        """
         active_kernel_sizes = {}
         for elastic_kernel_op in self._elastic_kernel_ops:
             active_kernel_size = elastic_kernel_op.get_active_kernel_size()
