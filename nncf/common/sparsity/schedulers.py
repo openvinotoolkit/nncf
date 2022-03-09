@@ -78,7 +78,7 @@ class SparsityScheduler(BaseCompressionScheduler):
         self._controller.set_sparsity_level(self._calculate_sparsity_level())
 
     @property
-    def current_sparsity_level(self) -> Optional[float]:
+    def current_sparsity_level(self) -> float:
         """
         Returns sparsity level for the `current_epoch` or for step
         in the `current_epoch`.
@@ -235,7 +235,7 @@ class AdaptiveSparsityScheduler(SparsityScheduler):
         self._current_level = self.initial_level
 
     @property
-    def current_sparsity_level(self) -> Optional[float]:
+    def current_sparsity_level(self) -> float:
         """
         Returns sparsity level for the `current_epoch` or for step
         in the `current_epoch`.
@@ -292,7 +292,7 @@ class MultiStepSparsityScheduler(SparsityScheduler):
         self.target_level = self.schedule.values[-1]
 
     @property
-    def current_sparsity_level(self) -> Optional[float]:
+    def current_sparsity_level(self) -> float:
         """
         Returns sparsity level for the `current_epoch` or for step
         in the `current_epoch`.
