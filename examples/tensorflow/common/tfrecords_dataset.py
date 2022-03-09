@@ -25,6 +25,7 @@ class TFRecordDataset(ABC):
         self.dataset_dir = config.dataset_dir
         self.is_train = is_train
 
+        self.shuffle_train = config.get('seed') is None
         self.buffer_size = config.get('buffer_size', BUFFER_SIZE)
         self.cycle_length = config.get('cycle_length', CYCLE_LENGTH)
         self.num_parallel_calls = NUM_PARALLEL_CALLS
@@ -50,7 +51,7 @@ class TFRecordDataset(ABC):
         pass
 
     def as_dataset(self) -> tf.data.Dataset:
-        dataset = tf.data.Dataset.list_files(self.file_pattern, shuffle=True)
+        dataset = tf.data.Dataset.list_files(self.file_pattern, shuffle=(self.is_train and self.shuffle_train))
 
         dataset = dataset.interleave(
             lambda name: tf.data.TFRecordDataset(name, buffer_size=self.buffer_size),

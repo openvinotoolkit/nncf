@@ -223,6 +223,10 @@ def get_common_argument_parser(**flags):
         action="store_true",
     )
 
+    parser.add_argument(
+        '--seed', default=None, type=int,
+        help='Specific seed for initializing pseudo-random number generators.')
+
     return parser
 
 
