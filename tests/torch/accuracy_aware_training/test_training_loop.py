@@ -374,7 +374,7 @@ def test_mock_dump_checkpoint(aa_config, tmp_path):
     early_stopping_training_loop = EarlyExitCompressionTrainingLoop(config, compression_ctrl,
                                                                     dump_checkpoints=True)
     model = early_stopping_training_loop.run(model,
-                                             train_epoch_fn=train_fn,   
+                                             train_epoch_fn=train_fn,
                                              validate_fn=partial(mock_validate_fn),
                                              configure_optimizers_fn=configure_optimizers_fn,
                                              dump_checkpoint_fn=mock_dump_checkpoint_fn,
