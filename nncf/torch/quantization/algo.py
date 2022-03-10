@@ -134,7 +134,7 @@ from nncf.torch.tensor_statistics.statistics import TensorStatistic
 from nncf.torch.utils import get_model_device
 from nncf.torch.utils import get_state_dict_names_with_modules
 from nncf.torch.utils import is_main_process
-from nncf.torch.utils import get_model_device, get_model_dtype
+from nncf.torch.utils import get_model_dtype
 from torch import nn
 
 QUANTIZER_BUILDER_STATE_VERSION_SAVE_NAME = 'version'
