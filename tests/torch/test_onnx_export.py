@@ -1,6 +1,9 @@
+import pytest
+from typing import Any
 import torch
 
 from nncf import NNCFConfig
+from nncf.torch.exporter import PTExporter
 from tests.torch.helpers import get_nodes_by_type
 from tests.torch.helpers import load_exported_onnx_version
 
@@ -48,3 +51,27 @@ def test_io_nodes_naming_scheme(tmp_path):
 
         assert len(node.output) == 1
         assert node.output[0] == f"output.{idx}"
+
+
+# pylint: disable=protected-access
+@pytest.mark.parametrize('save_format, refs',
+                         (
+                             ('onnx', ('onnx', {'opset_version': PTExporter._ONNX_DEFAULT_OPSET})),
+                             ('onnx_9', ('onnx', {'opset_version': 9})),
+                             ('onnx_10', ('onnx', {'opset_version': 10})),
+                             ('onnx_11', ('onnx', {'opset_version': 11})),
+                             ('onnx_0', ValueError),
+                             ('onnx_onnx', ValueError),
+                         )
+                        )
+def test_exporter_parser_format(save_format: str, refs: Any):
+    # pylint: disable=broad-except
+    try:
+        save_format, args = PTExporter.parse_format(save_format)
+    except Exception as e:
+        if not isinstance(refs, tuple):
+            assert isinstance(e, refs)
+            return
+
+    assert save_format == refs[0]
+    assert args == refs[1]
