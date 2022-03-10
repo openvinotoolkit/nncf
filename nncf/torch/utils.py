@@ -300,9 +300,9 @@ def default_distributed_unwrapper(model: nn.Module):
     return model
 
 def rename_legacy_names_in_state_dict(state_dict_to_load: Dict[str, Any],
-                                       legacy_names: List[str],
-                                       legacy_name: str,
-                                       new_name: str):
+                                      legacy_names: List[str],
+                                      legacy_name: str,
+                                      new_name: str):
 
     for name in legacy_names:
         tensor = state_dict_to_load.pop(name)
@@ -336,7 +336,7 @@ def maybe_convert_legacy_names_in_model_state(state_dict_to_load: Dict[str, Any]
     rename_legacy_names_in_state_dict(state_dict_to_load, legacy_bn2d_names, 'BatchNorm2d', 'NNCFBatchNorm2d')
     rename_legacy_names_in_state_dict(state_dict_to_load, legacy_bn3d_names, 'BatchNorm3d', 'NNCFBatchNorm3d')
     rename_legacy_names_in_state_dict(state_dict_to_load, legacy_nncfbn_names, 'NNCFBatchNorm', 'NNCFBatchNorm2d')
- 
+
 def maybe_convert_legacy_names_in_compress_state(compression_state: Dict[str, Any]) -> None:
     """
     Convert legacy layer names in compression state in case such names exist.
@@ -365,7 +365,7 @@ def maybe_convert_legacy_names_in_compress_state(compression_state: Dict[str, An
         if 'BatchNorm1d' in name and not 'NNCFBatchNorm1d' in name:
             legacy_bn1d_names = True
             point['qip']['target_node_name'] = name.replace('BatchNorm1d', 'NNCFBatchNorm1d')
-        
+
         if 'BatchNorm3d' in name and not 'NNCFBatchNorm3d' in name:
             legacy_bn3d_names = True
             point['qip']['target_node_name'] = name.replace('BatchNorm3d', 'NNCFBatchNorm3d')
