@@ -11,6 +11,7 @@
  limitations under the License.
 """
 
+import os
 import pytest
 from functools import partial
 
@@ -253,7 +254,8 @@ def test_early_exit_with_mock_validation(max_accuracy_degradation, exit_epoch_nu
         pass
 
     def configure_optimizers_fn():
-        return None, None
+        optimizer = SGD(model.parameters(), lr=1e-3)
+        return optimizer, None
 
     early_stopping_training_loop = EarlyExitCompressionTrainingLoop(config, compression_ctrl,
                                                                     dump_checkpoints=False)
@@ -277,9 +279,21 @@ def test_early_exit_with_mock_validation(max_accuracy_degradation, exit_epoch_nu
             "compression": [
                 {
                     "algorithm": "filter_pruning",
+                    "pruning_init": 0.1,
+                    "params": {
+                        "schedule": "baseline",
+                        "pruning_flops_target": 0.1,
+                        "num_init_steps": 0,
+                        "pruning_steps": 0,
+                    }
                 },
                 {
                     "algorithm": "rb_sparsity",
+                    "sparsity_init": 0.1,
+                    "params": {
+                        "sparsity_target": 0.1,
+                        "sparsity_target_epoch": 0
+                    }
                 }
             ]
         },
@@ -296,12 +310,19 @@ def test_early_exit_with_mock_validation(max_accuracy_degradation, exit_epoch_nu
             "compression": [
                 {
                     "algorithm": "filter_pruning",
+                    "pruning_init": 0.1,
+                    "params": {
+                        "schedule": "baseline",
+                        "pruning_flops_target": 0.1,
+                        "num_init_steps": 0,
+                        "pruning_steps": 0,
+                    }
                 }
             ]
         }
 )
                          )
-def test_mock_dump_checkpoint(aa_config):
+def test_mock_dump_checkpoint(aa_config, tmp_path):
     is_called_dump_checkpoint_fn = False
 
     def mock_dump_checkpoint_fn(model, compression_controller, accuracy_aware_runner, aa_log_dir):
@@ -313,6 +334,20 @@ def test_mock_dump_checkpoint(aa_config):
         assert isinstance(aa_log_dir, str)
         nonlocal is_called_dump_checkpoint_fn
         is_called_dump_checkpoint_fn = True
+
+        checkpoint = {
+            'epoch': accuracy_aware_runner.cumulative_epoch_count + 1,
+            'state_dict': model.state_dict(),
+            'compression_state': compression_controller.get_compression_state(),
+            'best_metric_val': accuracy_aware_runner.best_val_metric_value,
+            'current_val_metric_value': accuracy_aware_runner.current_val_metric_value,
+            'optimizer': accuracy_aware_runner.optimizer.state_dict(),
+        }
+
+        checkpoint_path = os.path.join(aa_log_dir, 'acc_aware_checkpoint_last.pth')
+        torch.save(checkpoint, checkpoint_path)
+
+        return checkpoint_path
 
     config = get_quantization_config_without_range_init(LeNet.INPUT_SIZE[-1])
     train_loader = create_ones_mock_dataloader(aa_config, num_samples=10)
@@ -342,5 +377,6 @@ def test_mock_dump_checkpoint(aa_config):
                                              train_epoch_fn=train_fn,
                                              validate_fn=partial(mock_validate_fn),
                                              configure_optimizers_fn=configure_optimizers_fn,
-                                             dump_checkpoint_fn=mock_dump_checkpoint_fn)
+                                             dump_checkpoint_fn=mock_dump_checkpoint_fn,
+                                             log_dir=tmp_path)
     assert is_called_dump_checkpoint_fn
