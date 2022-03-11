@@ -65,13 +65,13 @@ class PTExporter(Exporter):
             dict: additional arguments for exporter
         """
         if save_format.startswith(PTExporter._ONNX_FORMAT):
-            splited_format = save_format.split('_')
+            split_format = save_format.split('_')
             opset = None
 
-            if len(splited_format) == 1:
+            if len(split_format) == 1:
                 opset = PTExporter._ONNX_DEFAULT_OPSET
-            elif len(splited_format) == 2:
-                opset = int(splited_format[1])
+            elif len(split_format) == 2:
+                opset = int(split_format[1])
 
             if opset is not None and opset <= 0:
                 raise ValueError("Incorrect save_format, expected 'onnx' or 'onnx_<opset_version>'.")

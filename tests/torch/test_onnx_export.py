@@ -1,9 +1,12 @@
 import pytest
 from typing import Any
 import torch
+import onnx
 
 from nncf import NNCFConfig
 from nncf.torch.exporter import PTExporter
+from tests.torch.helpers import MockModel
+from tests.torch.helpers import create_compressed_model_and_algo_for_test
 from tests.torch.helpers import get_nodes_by_type
 from tests.torch.helpers import load_exported_onnx_version
 
@@ -75,3 +78,22 @@ def test_exporter_parser_format(save_format: str, refs: Any):
 
     assert save_format == refs[0]
     assert args == refs[1]
+
+@pytest.mark.parametrize('save_format, ref_opset',
+                         (
+                             ('onnx', 10),
+                             ('onnx_9', 9),
+                             ('onnx_11', 11)
+                         )
+                        )
+def test_exported_version(tmp_path: str, save_format: str, ref_opset: int):
+    model = MockModel()
+    config = NNCFConfig()
+    config.update({"input_info": {"sample_size": [1, 1, 1, 1]}})
+
+    _, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
+    onnx_checkpoint_path = tmp_path / 'model.onnx'
+    compression_ctrl.export_model(onnx_checkpoint_path, save_format)
+    model_proto = onnx.load_model(onnx_checkpoint_path)
+    # pylint: disable=no-member
+    assert model_proto.opset_import[0].version == ref_opset
