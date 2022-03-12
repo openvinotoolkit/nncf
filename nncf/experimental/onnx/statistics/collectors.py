@@ -29,11 +29,11 @@ class ONNXNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
 
     @staticmethod
     def min(x1: NNCFTensor, x2: NNCFTensor) -> NNCFTensor:
-        return ONNXNNCFTensor(np.min(x1.tensor, x2.tensor))
+        return ONNXNNCFTensor(np.minimum(x1.tensor, x2.tensor))
 
     @staticmethod
     def max(x1: NNCFTensor, x2: NNCFTensor) -> NNCFTensor:
-        return ONNXNNCFTensor(np.max(x1.tensor, x2.tensor))
+        return ONNXNNCFTensor(np.maximum(x1.tensor, x2.tensor))
 
     @staticmethod
     def mean(x: NNCFTensor, axis: Union[int, tuple]) -> NNCFTensor:
@@ -46,7 +46,7 @@ class ONNXNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
 
     @staticmethod
     def unstack(x: NNCFTensor, axis: int = 0) -> List[NNCFTensor]:
-        return np.split(x, axis=axis)
+        return [ONNXNNCFTensor(np.squeeze(e, axis)) for e in np.split(x.tensor, x.tensor.shape[axis], axis=axis)]
 
     @staticmethod
     def sum(tensor: NNCFTensor) -> TensorElementsType:
@@ -55,8 +55,8 @@ class ONNXNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
 
 class ONNXMinMaxStatisticCollector(MinMaxStatisticCollector):
     @staticmethod
-    def _get_processor():
-        return ONNXNNCFCollectorTensorProcessor
+    def _get_processor() -> NNCFCollectorTensorProcessor:
+        return ONNXNNCFCollectorTensorProcessor()
 
     def _register_input(self, x: np.ndarray):
         self._register_input_common(ONNXNNCFTensor(x))
@@ -68,7 +68,7 @@ class ONNXMinMaxStatisticCollector(MinMaxStatisticCollector):
 class ONNXMeanMinMaxStatisticCollector(MeanMinMaxStatisticCollector):
     @staticmethod
     def _get_processor() -> NNCFCollectorTensorProcessor:
-        return ONNXNNCFCollectorTensorProcessor
+        return ONNXNNCFCollectorTensorProcessor()
 
     def _register_input(self, x: np.ndarray):
         self._register_input_common(ONNXNNCFTensor(x))

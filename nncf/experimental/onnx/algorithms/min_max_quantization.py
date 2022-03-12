@@ -34,6 +34,7 @@ from nncf.experimental.onnx.graph.transformations.commands import ONNXQuantizerI
 from nncf.experimental.onnx.engine import ONNXEngine
 
 from nncf.experimental.onnx.statistics.collectors import ONNXMinMaxStatisticCollector
+from nncf.experimental.onnx.statistics.collectors import ONNXMeanMinMaxStatisticCollector
 from nncf.experimental.onnx.graph.model_transformer import ONNXModelTransformer
 from nncf.experimental.onnx.graph.onnx_graph import ONNXGraph
 from nncf.experimental.onnx.hardware.fused_patterns import ONNX_HW_FUSED_PATTERNS
@@ -62,10 +63,13 @@ class ONNXMinMaxQuantization(MinMaxQuantization):
         if self.range_type == RangeType.MINMAX:
             is_symmetric = True if quantizer_config.mode == QuantizationMode.SYMMETRIC else False
             axes = (0, 2, 3) if quantizer_config.per_channel else None
-            return ONNXMinMaxStatisticCollector(is_symmetric, axes)
+            return ONNXMinMaxStatisticCollector(use_abs_max=is_symmetric, reduction_shape=axes)
         elif self.range_type == RangeType.MEAN_MINMAX:
-            pass
-        raise RuntimeError('')
+            is_symmetric = True if quantizer_config.mode == QuantizationMode.SYMMETRIC else False
+            axes = (0, 2, 3) if quantizer_config.per_channel else None
+            return ONNXMeanMinMaxStatisticCollector(use_per_sample_stats=False, use_abs_max=is_symmetric,
+                                                    reduction_shape=axes)
+        raise RuntimeError('This range type is not supported.')
 
     def _create_model_transformer(self, model: onnx.ModelProto) -> ONNXModelTransformer:
         return ONNXModelTransformer(model)
@@ -117,7 +121,7 @@ class ONNXMinMaxQuantization(MinMaxQuantization):
             parameters = calculate_weight_quantizer_parameters(weight_tensor, self.weight_quantizer_config)
             command = ONNXQuantizerInsertionCommand(weight_quantizer, parameters)
             transformation_commands.append(command)
-        # We are sure that layer_statistics math self._activation_quantizers
+        # We are sure that layer_statistics match self._activation_quantizers
         for layer_statistics in layers_statistics:
             for k, v in layer_statistics.items():
                 parameters = calculate_activation_quantizer_parameters(v,

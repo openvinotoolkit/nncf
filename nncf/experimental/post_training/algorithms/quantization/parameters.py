@@ -27,7 +27,7 @@ class PostTrainingQuantizationParameters(AlgorithmParameters):
                  weight_granularity: Granularity = Granularity.PERCHANNEL,
                  activation_bits: int = 8,
                  activation_granularity: Granularity = Granularity.PERTENSOR,
-                 range_type: RangeType = RangeType.MINMAX,
+                 range_type: RangeType = RangeType.MEAN_MINMAX,
                  number_samples: int = 300,
                  target_device: HWConfigType = HWConfigType.CPU,
                  ignored_scopes: Optional[List[str]] = None

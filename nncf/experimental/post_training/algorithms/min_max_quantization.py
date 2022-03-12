@@ -56,7 +56,7 @@ class MinMaxQuantizationParameters(AlgorithmParameters):
                  weight_quantizer_config: QuantizerConfig = None,
                  activation_quantizer_config: QuantizerConfig = None,
                  target_device: HWConfigType = HWConfigType.CPU,
-                 range_type: RangeType = RangeType.MINMAX,
+                 range_type: RangeType = RangeType.MEAN_MINMAX,
                  quatize_outputs: bool = False,
                  ignored_scopes: List[str] = None,
                  ):
