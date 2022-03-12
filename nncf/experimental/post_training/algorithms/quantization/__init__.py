@@ -65,19 +65,19 @@ class PostTrainingQuantization(Algorithm):
             layers_to_collect_statistics = algorithm.get_layers_for_statistics(model)
             statistics_collector.register_layer_statistics(layers_to_collect_statistics)
 
-        statistics_collector.collect_statistics(model, self.number_samples)
+        statistics_collector.collect_statistics(model)
 
         while self.algorithms:
             algorithm = self.algorithms.popleft()
-            compressed_model = algorithm.apply(compressed_model, engine)
+            quantized_model = algorithm.apply(model, engine)
 
-        return compressed_model
+        return quantized_model
 
     def _create_statistics_collector(self, model: ModelType, engine: Engine) -> StatisticsCollector:
         backend = determine_model_backend(model)
         if backend == Backend.ONNX:
             from nncf.experimental.onnx.statistics.statistics_collector import ONNXStatisticsCollector
-            return ONNXStatisticsCollector(engine)
+            return ONNXStatisticsCollector(engine, self.number_samples)
 
     def _create_transformation_layout(self, model: ModelType) -> TransformationLayout:
         backend = determine_model_backend(model)
@@ -91,6 +91,6 @@ class PostTrainingQuantization(Algorithm):
         if backend == Backend.ONNX:
             from nncf.experimental.onnx.algorithms.min_max_quantization import ONNXMinMaxQuantization
             for algorithm, parameters in self.algorithms_to_created.items():
-                if algorithm == PostTrainingAlgorithms.QuantizerRangeFinder:
+                if algorithm == PostTrainingAlgorithms.MinMaxQuantization:
                     output.append(ONNXMinMaxQuantization(statistics_collector, parameters))
         return output

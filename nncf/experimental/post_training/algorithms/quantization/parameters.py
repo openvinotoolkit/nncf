@@ -3,40 +3,33 @@ from typing import List
 from typing import Union
 from typing import Optional
 
-from nncf.common.utils.ordered_enum import OrderedEnum
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizationMode
+from nncf.common.hardware.config import HWConfigType
 
 from nncf.experimental.post_training.algorithms import AlgorithmParameters
 from nncf.experimental.post_training.algorithms import PostTrainingAlgorithms
 
 from nncf.experimental.post_training.algorithms.min_max_quantization import MinMaxQuantizationParameters
-
-
-class Preset(OrderedEnum):
-    PERFOMANCE = 'perfomance'
-    MIXED = 'mixed'
-    ACCURACY = 'accuracy'
-
-
-class Granularity(OrderedEnum):
-    PERTENSOR = 'pertensor'
-    PERCHANNEL = 'perchannel'
+from nncf.experimental.post_training.algorithms.min_max_quantization import Preset
+from nncf.experimental.post_training.algorithms.min_max_quantization import Granularity
+from nncf.experimental.post_training.algorithms.min_max_quantization import RangeType
 
 
 class PostTrainingQuantizationParameters(AlgorithmParameters):
     """
     This class handles parameters for PostTrainingQuantization algorithm.
     """
+
     def __init__(self,
                  preset: Preset = Preset.MIXED,
                  weight_bits: int = 8,
                  weight_granularity: Granularity = Granularity.PERCHANNEL,
                  activation_bits: int = 8,
                  activation_granularity: Granularity = Granularity.PERTENSOR,
-                 range_type: str = 'min_max',
+                 range_type: RangeType = RangeType.MINMAX,
                  number_samples: int = 300,
-                 target_device: str = 'CPU',
+                 target_device: HWConfigType = HWConfigType.CPU,
                  ignored_scopes: Optional[List[str]] = None
                  ):
         self._determine_weight_activation_quantizers_config(
@@ -65,6 +58,7 @@ class PostTrainingQuantizationParameters(AlgorithmParameters):
     def _determine_weight_activation_quantizers_config(self, preset: Preset, weight_bits: int,
                                                        weights_granularity: Granularity, activation_bits: int,
                                                        activations_granularity: Granularity):
+        # TODO (kshpv): make one func for activations and weights
         def _determine_weight_activation_modes(preset: Preset):
             weight_mode = QuantizationMode.SYMMETRIC
             activation_mode = QuantizationMode.SYMMETRIC

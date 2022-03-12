@@ -19,14 +19,32 @@ from typing import List
 from typing import TypeVar
 from copy import deepcopy
 
+from nncf.common.utils.ordered_enum import OrderedEnum
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizationMode
+from nncf.common.hardware.config import HWConfigType
 from nncf.common.graph.model_transformer import ModelTransformer
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
 from nncf.experimental.post_training.algorithms import Algorithm
 from nncf.experimental.post_training.algorithms import AlgorithmParameters
 
 ModelType = TypeVar('ModelType')
+
+
+class Preset(OrderedEnum):
+    PERFOMANCE = 'perfomance'
+    MIXED = 'mixed'
+    ACCURACY = 'accuracy'
+
+
+class Granularity(OrderedEnum):
+    PERTENSOR = 'pertensor'
+    PERCHANNEL = 'perchannel'
+
+
+class RangeType(OrderedEnum):
+    MINMAX = 'min_max'
+    MEAN_MINMAX = 'mean_min_max'
 
 
 class MinMaxQuantizationParameters(AlgorithmParameters):
@@ -37,8 +55,8 @@ class MinMaxQuantizationParameters(AlgorithmParameters):
     def __init__(self,
                  weight_quantizer_config: QuantizerConfig = None,
                  activation_quantizer_config: QuantizerConfig = None,
-                 target_device: str = 'CPU',
-                 range_type: str = 'min_max',
+                 target_device: HWConfigType = HWConfigType.CPU,
+                 range_type: RangeType = RangeType.MINMAX,
                  quatize_outputs: bool = False,
                  ignored_scopes: List[str] = None,
                  ):
@@ -69,8 +87,10 @@ class MinMaxQuantization(Algorithm, ABC):
     def __init__(self, statistics_collector,
                  parameters: MinMaxQuantizationParameters):
         self.statistics_collector = statistics_collector
-        self.weight_quantizer_config = parameters.weight_quantizer_config if parameters.weight_quantizer_config is not None else self._get_default_qconfig()
-        self.activation_quantizer_config = parameters.activation_quantizer_config if parameters.activation_quantizer_config is not None else self._get_default_qconfig()
+        self.weight_quantizer_config = parameters.weight_quantizer_config \
+            if parameters.weight_quantizer_config is not None else self._get_default_qconfig()
+        self.activation_quantizer_config = parameters.activation_quantizer_config \
+            if parameters.activation_quantizer_config is not None else self._get_default_qconfig()
         self.target_device = parameters.target_device
         self.range_type = parameters.range_type
         self.quantize_outputs = parameters.quantize_outputs

@@ -16,8 +16,6 @@ from typing import List
 
 import onnx
 
-from nncf.common.hardware.config import HWConfigType
-from nncf.common.hardware.config import HW_CONFIG_TYPE_TARGET_DEVICE_MAP
 from nncf.common.quantization.quantizer_propagation.solver import QuantizerPropagationSolver
 from nncf.common.quantization.structs import QuantizableWeightedLayerNode
 from nncf.common.quantization.structs import QuantizerConfig
@@ -27,6 +25,7 @@ from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBas
 
 from nncf.experimental.post_training.algorithms.min_max_quantization import MinMaxQuantization
 from nncf.experimental.post_training.algorithms.min_max_quantization import MinMaxQuantizationParameters
+from nncf.experimental.post_training.algorithms.min_max_quantization import RangeType
 from nncf.experimental.onnx.graph.transformations.layout import ONNXTransformationLayout
 from nncf.experimental.onnx.graph.metatypes.onnx_ops import GENERAL_WEIGHT_LAYER_METATYPES
 from nncf.experimental.onnx.graph.nncf_graph_builder import GraphConverter
@@ -60,12 +59,13 @@ class ONNXMinMaxQuantization(MinMaxQuantization):
 
     def generate_stat_collector(self, quantizer_config: QuantizerConfig) -> TensorStatisticCollectorBase:
         #  TODO: change to ONNXTensorStatisticCollectorBase
-        if self.range_type == 'min_max':
+        if self.range_type == RangeType.MINMAX:
             is_symmetric = True if quantizer_config.mode == QuantizationMode.SYMMETRIC else False
-            if quantizer_config.per_channel:
-                axes = (0, 2, 3)
-                return ONNXMinMaxStatisticCollector(is_symmetric, axes)
-            return ONNXMinMaxStatisticCollector(is_symmetric, None)
+            axes = (0, 2, 3) if quantizer_config.per_channel else None
+            return ONNXMinMaxStatisticCollector(is_symmetric, axes)
+        elif self.range_type == RangeType.MEAN_MINMAX:
+            pass
+        raise RuntimeError('')
 
     def _create_model_transformer(self, model: onnx.ModelProto) -> ONNXModelTransformer:
         return ONNXModelTransformer(model)
@@ -80,7 +80,7 @@ class ONNXMinMaxQuantization(MinMaxQuantization):
         quantizable_layer_nodes = [QuantizableWeightedLayerNode(weight_node, [QuantizerConfig()]) for weight_node in
                                    weight_nodes]
 
-        hw_config_type = HWConfigType.from_str(HW_CONFIG_TYPE_TARGET_DEVICE_MAP[self.target_device])
+        hw_config_type = self.target_device
         hw_config_path = ONNXHWConfig.get_path_to_hw_config(hw_config_type)
         hw_config = ONNXHWConfig.from_json(hw_config_path)
 
