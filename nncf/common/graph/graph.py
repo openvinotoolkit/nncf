@@ -110,7 +110,8 @@ class NNCFGraphEdge:
                  input_port_id: int,
                  output_port_id: int,
                  tensor_shape: List[int],
-                 dtype: Dtype):
+                 dtype: Dtype,
+                 multiplicity_edge: int):
         """
         :param from_node: An NNCFNode that sources the directed edge.
         :param to_node: An NNCFNode that sinks the directed edge.
@@ -125,6 +126,7 @@ class NNCFGraphEdge:
         self.output_port_id = output_port_id
         self.tensor_shape = tensor_shape
         self.dtype = dtype
+        self.multiplicity_edge = multiplicity_edge
 
     def __str__(self):
         return str(self.from_node) + ' -> ' + str(self.tensor_shape) + ' -> ' + str(self.to_node)
@@ -168,6 +170,7 @@ class NNCFGraph:
     IS_INTEGER_INPUT_NODE_ATTR = 'is_integer_input'
     DTYPE_EDGE_ATTR = 'dtype'
     IS_SHARED_ATTR = 'is_shared'
+    MULTIPLICITY_EDGE_ATTR = 'multiplicity_edge'
 
     def __init__(self):
         self._nx_graph = nx.DiGraph()
@@ -442,7 +445,8 @@ class NNCFGraph:
                                     tensor_shape: List[int],
                                     input_port_id: int,
                                     output_port_id: int,
-                                    dtype: Dtype):
+                                    dtype: Dtype,
+                                    multiplicity_edge: int):
         """
         Adds a directed edge between two `NNCFNode`s that are already present in the graph.
         The edge represents an activation tensor, produced or consumed by an operation (which is represented by a node)
@@ -476,7 +480,8 @@ class NNCFGraph:
             NNCFGraph.ACTIVATION_SHAPE_EDGE_ATTR: tensor_shape,
             NNCFGraph.INPUT_PORT_ID_EDGE_ATTR: input_port_id,
             NNCFGraph.OUTPUT_PORT_ID_EDGE_ATTR: output_port_id,
-            NNCFGraph.DTYPE_EDGE_ATTR: dtype
+            NNCFGraph.DTYPE_EDGE_ATTR: dtype,
+            NNCFGraph.MULTIPLICITY_EDGE_ATTR: multiplicity_edge
         }
         self._nx_graph.add_edge(from_node_key, to_node_key, **attrs)
 
@@ -616,7 +621,8 @@ class NNCFGraph:
                                       input_port_id=data[NNCFGraph.INPUT_PORT_ID_EDGE_ATTR],
                                       output_port_id=data[NNCFGraph.OUTPUT_PORT_ID_EDGE_ATTR],
                                       tensor_shape=data[NNCFGraph.ACTIVATION_SHAPE_EDGE_ATTR],
-                                      dtype=data[NNCFGraph.DTYPE_EDGE_ATTR])
+                                      dtype=data[NNCFGraph.DTYPE_EDGE_ATTR],
+                                      multiplicity_edge=data[NNCFGraph.MULTIPLICITY_EDGE_ATTR])
             if from_node_key in match:
                 output_nncf_edges.append(nncf_edge)
             elif to_node_key in match:
@@ -648,7 +654,8 @@ class NNCFGraph:
                              data[NNCFGraph.INPUT_PORT_ID_EDGE_ATTR],
                              data[NNCFGraph.OUTPUT_PORT_ID_EDGE_ATTR],
                              data[NNCFGraph.ACTIVATION_SHAPE_EDGE_ATTR],
-                             data[NNCFGraph.DTYPE_EDGE_ATTR])
+                             data[NNCFGraph.DTYPE_EDGE_ATTR],
+                             data[NNCFGraph.MULTIPLICITY_EDGE_ATTR])
 
     def get_all_edges(self) -> Generator[NNCFGraphEdge, None, None]:
         for nx_edge in self._nx_graph.edges:

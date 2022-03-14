@@ -182,13 +182,14 @@ class DynamicGraphNode:
 class DynamicGraphEdge:
     def __init__(self, from_node_id: int, to_node_id: int,
                  activation_shape: List[int], input_port_id: int, output_port_id: int,
-                 dtype: Dtype):
+                 dtype: Dtype, multiplicity_edge: int):
         self.from_node_id = from_node_id
         self.to_node_id = to_node_id
         self.activation_shape = activation_shape
         self.input_port_id = input_port_id
         self.output_port_id = output_port_id
         self.dtype = dtype
+        self.multiplicity_edge = multiplicity_edge
 
 
 class DefaultScopeNodeMatcher:
@@ -265,12 +266,16 @@ class DefaultScopeNodeMatcher:
             if info is None or info.creator_id is None:
                 continue
             parent = self._node_id_to_key_dict[info.creator_id]
+            multiplicity_edge = 1
+            if self._nx_graph.get_edge_data(parent, node_key) is not None:
+                multiplicity_edge = self._nx_graph.edges[parent, node_key][DynamicGraph.MULTIPLICITY_EDGE_ATTR] + 1
             self._nx_graph.add_edge(parent, node_key)
             has_traced_inputs = True
             self._nx_graph.edges[parent, node_key][DynamicGraph.ACTIVATION_SHAPE_EDGE_ATTR] = info.shape
             self._nx_graph.edges[parent, node_key][DynamicGraph.INPUT_PORT_ID_EDGE_ATTR] = i
             self._nx_graph.edges[parent, node_key][DynamicGraph.OUTPUT_PORT_ID_EDGE_ATTR] = info.index
             self._nx_graph.edges[parent, node_key][DynamicGraph.ACTIVATION_DTYPE_EDGE_ATTR] = info.dtype
+            self._nx_graph.edges[parent, node_key][DynamicGraph.MULTIPLICITY_EDGE_ATTR] = multiplicity_edge
 
         nx_node_dict = self._nx_graph.nodes[node_key]
         node = DynamicGraphNode(node_id=nx_node_dict[DynamicGraph.ID_NODE_ATTR],
@@ -500,6 +505,7 @@ class DynamicGraph:
     OUTPUT_PORT_ID_EDGE_ATTR = 'output_port_id'
     IGNORED_ALGOS_NODE_ATTR = 'ignored_algos'
     IS_IN_ITERATION_SCOPE_NODE_ATTR = 'is_in_iteration_scope'
+    MULTIPLICITY_EDGE_ATTR = 'multiplicity_edge'
 
     def __init__(self):
         self._nx_graph = nx.DiGraph()
@@ -579,7 +585,8 @@ class DynamicGraph:
                 activation_shape=nx_edge_attrs[DynamicGraph.ACTIVATION_SHAPE_EDGE_ATTR],
                 input_port_id=nx_edge_attrs[DynamicGraph.INPUT_PORT_ID_EDGE_ATTR],
                 output_port_id=nx_edge_attrs[DynamicGraph.OUTPUT_PORT_ID_EDGE_ATTR],
-                dtype=nx_edge_attrs[DynamicGraph.ACTIVATION_DTYPE_EDGE_ATTR])
+                dtype=nx_edge_attrs[DynamicGraph.ACTIVATION_DTYPE_EDGE_ATTR],
+                multiplicity_edge=nx_edge_attrs[DynamicGraph.MULTIPLICITY_EDGE_ATTR])
 
             all_edges.append(dynamic_graph_edge)
         return all_edges

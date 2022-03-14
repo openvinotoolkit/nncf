@@ -989,6 +989,10 @@ class QuantizerPropagationSolver:
           that branches downwards.
         :return: The TransitionStatus indicating in which fashion the transition should occur.
         """
+        status_for_output_nodes = quant_prop_graph.check_status_for_output_nodes(branching_node_key) 
+        if status_for_output_nodes == TransitionStatus.SHOULD_NOT_TRANSITION:
+            return status_for_output_nodes
+
         dom_op_node_keys = quant_prop_graph.get_non_quant_agnostic_op_nodes_immediately_dominated_by_node(
             branching_node_key)
         dom_op_quantizers = set()
@@ -1023,8 +1027,6 @@ class QuantizerPropagationSolver:
         dom_op_quantizers.discard(prop_quant_to_transition)
         if dom_op_quantizers:
             return TransitionStatus.SHOULD_WAIT_FOR_MERGE
-
-        return quant_prop_graph.check_status_for_output_nodes(branching_node_key)
 
     def _check_affecting_quantizers_in_common_path(self,
                                                    affecting_quantizers: List[PropagatingQuantizer],
