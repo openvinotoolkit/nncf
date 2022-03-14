@@ -1,16 +1,18 @@
 import pytest
 
 import onnx
+import numpy as np
 
 from nncf.experimental.onnx.graph.transformations.commands import ONNXQuantizerInsertionCommand
 from nncf.experimental.onnx.algorithms.quantization.helper import QuantizerLayerParameters
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.experimental.onnx.graph.model_transformer import ONNXModelTransformer
 from nncf.experimental.onnx.graph.transformations.layout import ONNXTransformationLayout
+from nncf.experimental.onnx.graph.onnx_graph import ONNXGraph
 
 from tests.onnx.models import LinearModel
 
-TARGET_LAYERS = [('Non_Existing_Edge', ), ('Conv1_Y', ), ('Conv1_Y', 'BN1_Y', 'ReLU1_Y')]
+TARGET_LAYERS = [('Non_Existing_Edge',), ('Conv1_Y',), ('Conv1_Y', 'BN1_Y', 'ReLU1_Y')]
 SHOULD_RAISE_EXCEPTION = [True, False, False]
 QUANTIZER_NUMBER = [None, 1, 3]
 
@@ -45,3 +47,41 @@ def test_quantizer_insertion(target_layers, should_raise, quantizer_number):
         elif op_type == 'DequantizeLinear':
             num_dq += 1
     assert num_q == num_dq == quantizer_number
+
+
+TARGET_LAYERS = ['Conv1_Y', 'BN1_Y', 'ReLU1_Y']
+QUANTIZER_SCALES = [[3.0], [13.2] * 32, [17.1]]
+QUANTIZER_ZERO_POINT = [[1], [2] * 32, [0]]
+QUANTIZER_MODE = [QuantizationMode.SYMMETRIC, QuantizationMode.SYMMETRIC, QuantizationMode.ASYMMETRIC]
+QUANTIZER_ONNX_DTYPE = [np.dtype(np.int8), np.dtype(np.int8), np.dtype(np.uint8)]
+QUANTIZER_ONNX_ATTRIBUTES = [{'axis': 0}, {'axis': 0}, {'axis': 0}]
+
+
+@pytest.mark.parametrize(
+    "target_layer, quantizer_onnx_attributes, quantizer_onnx_dtype, quantizer_scales, quantizer_zero_point, quantizer_mode",
+    zip(TARGET_LAYERS, QUANTIZER_ONNX_ATTRIBUTES, QUANTIZER_ONNX_DTYPE, QUANTIZER_SCALES,
+        QUANTIZER_ZERO_POINT, QUANTIZER_MODE))
+def test_inserted_quantizer_parameters(target_layer, quantizer_onnx_attributes, quantizer_onnx_dtype,
+                                       quantizer_scales, quantizer_zero_point, quantizer_mode):
+    model = LinearModel().onnx_model
+    transformation_layout = ONNXTransformationLayout()
+    quantizer_parameters = QuantizerLayerParameters(quantizer_scales, quantizer_zero_point, quantizer_mode)
+    command = ONNXQuantizerInsertionCommand(target_layer, quantizer_parameters)
+    transformation_layout.register(command)
+
+    model_transformer = ONNXModelTransformer(model)
+
+    transformed_model = model_transformer.transform(transformation_layout)
+    onnx.checker.check_model(transformed_model)
+
+    onnx_graph = ONNXGraph(transformed_model)
+
+    # pylint:disable=no-member
+    for node in transformed_model.graph.node:
+        op_type = node.op_type
+        if op_type == 'QuantizeLinear':
+            for attr in node.attribute:
+                assert quantizer_onnx_attributes[attr.name] == onnx.helper.get_attribute_value(attr)
+            assert np.allclose(onnx_graph.get_initializers_value(node.input[1]), np.array(quantizer_scales))
+            assert np.allclose(onnx_graph.get_initializers_value(node.input[2]), np.array(quantizer_zero_point))
+            assert onnx_graph.get_initializers_value(node.input[2]).dtype == quantizer_onnx_dtype
