@@ -240,9 +240,10 @@ class PTAdaptiveCompressionLevelTrainingRunner(PTAccuracyAwareTrainingRunner,
             buf.seek(0)
             image = PIL.Image.open(buf)
             image = ToTensor()(image)
-            self._tensorboard_writer.add_image('compression/accuracy_aware/acc_budget_vs_comp_rate',
-                                               image,
-                                               global_step=len(self.compressed_training_history))
+            if self._tensorboard_writer is not None:
+                self._tensorboard_writer.add_image('compression/accuracy_aware/acc_budget_vs_comp_rate',
+                                                   image,
+                                                   global_step=len(self.compressed_training_history))
 
     def _save_best_checkpoint(self, checkpoint_path):
         if self.best_val_metric_value == self.current_val_metric_value:
