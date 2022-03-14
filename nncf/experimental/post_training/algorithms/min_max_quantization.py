@@ -71,7 +71,6 @@ class MinMaxQuantizationParameters(AlgorithmParameters):
         """
         Serialize all MinMaxQuantization parameters to JSON.
         """
-        pass
 
 
 class MinMaxQuantization(Algorithm, ABC):

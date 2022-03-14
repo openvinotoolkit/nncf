@@ -44,6 +44,7 @@ class CompressionBuilder:
         if backend == Backend.ONNX:
             from nncf.experimental.onnx.engine import ONNXEngine
             return ONNXEngine(dataloader)
+        return None
 
     def apply(self, model: ModelType, dataloader: DataLoader, engine: Engine = None) -> ModelType:
         """

@@ -61,7 +61,7 @@ def calculate_activation_quantizer_parameters(layer_statistics: ONNXMinMaxStatis
     quantization mode: symmetric, asymmetric.
     """
     num_bits = quantizer_config.num_bits
-    statistics = layer_statistics._get_statistics()
+    statistics = layer_statistics.get_statistics()
     input_low = statistics.min_values
     input_high = statistics.max_values
     if input_low < 0:

@@ -8,6 +8,8 @@ from onnx import version_converter
 from nncf.experimental.post_training.api.dataloader import DataLoader
 
 
+# pylint: disable=no-member
+
 class ImageNetDataLoader(DataLoader):
     def __init__(self, dataset, batch_size, shuffle):
         super().__init__(batch_size, shuffle)
@@ -69,7 +71,8 @@ def add_input_from_initializer(model: onnx.ModelProto):
     """
     # All (top-level) constants will have ValueInfos before IRv4 as they are all inputs
     if model.ir_version < 4:
-        return
+        print(f'Could not process model, as it has {model.ir_version} < 4')
+        return model
 
     def add_const_value_infos_to_graph(graph: onnx.GraphProto):
         inputs = {i.name for i in graph.input}

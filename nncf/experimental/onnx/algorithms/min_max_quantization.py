@@ -60,13 +60,11 @@ class ONNXMinMaxQuantization(MinMaxQuantization):
 
     def generate_stat_collector(self, quantizer_config: QuantizerConfig) -> TensorStatisticCollectorBase:
         #  TODO: change to ONNXTensorStatisticCollectorBase
+        is_symmetric = quantizer_config.mode == QuantizationMode.SYMMETRIC
+        axes = (0, 2, 3) if quantizer_config.per_channel else None
         if self.range_type == RangeType.MINMAX:
-            is_symmetric = True if quantizer_config.mode == QuantizationMode.SYMMETRIC else False
-            axes = (0, 2, 3) if quantizer_config.per_channel else None
             return ONNXMinMaxStatisticCollector(use_abs_max=is_symmetric, reduction_shape=axes)
-        elif self.range_type == RangeType.MEAN_MINMAX:
-            is_symmetric = True if quantizer_config.mode == QuantizationMode.SYMMETRIC else False
-            axes = (0, 2, 3) if quantizer_config.per_channel else None
+        if self.range_type == RangeType.MEAN_MINMAX:
             return ONNXMeanMinMaxStatisticCollector(use_per_sample_stats=False, use_abs_max=is_symmetric,
                                                     reduction_shape=axes)
         raise RuntimeError('This range type is not supported.')
@@ -136,10 +134,11 @@ class ONNXMinMaxQuantization(MinMaxQuantization):
         return quantized_model
 
     def get_layers_for_statistics(self, model: onnx.ModelProto) -> List[Dict[str, TensorStatisticCollectorBase]]:
-        quantizer_setup = self._get_quantizer_setup(model)
-        onnx_graph = ONNXGraph(model)
+        modified_model = modify_onnx_model_for_quantization(model)
+        quantizer_setup = self._get_quantizer_setup(modified_model)
+        onnx_graph = ONNXGraph(modified_model)
         filled_outputs = []
-        for qp_id, qp in quantizer_setup.quantization_points.items():
+        for _, qp in quantizer_setup.quantization_points.items():
             if qp.is_weight_quantization_point():
                 weight_initializer_name = onnx_graph.get_weight_input_in_module(qp.insertion_point.target_node_name)
                 self._weight_quantizers.append(weight_initializer_name)

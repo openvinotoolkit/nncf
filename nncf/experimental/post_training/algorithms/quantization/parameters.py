@@ -32,13 +32,10 @@ class PostTrainingQuantizationParameters(AlgorithmParameters):
                  target_device: HWConfigType = HWConfigType.CPU,
                  ignored_scopes: Optional[List[str]] = None
                  ):
-        self._determine_weight_activation_quantizers_config(
-            preset,
-            weight_bits,
-            weight_granularity,
-            activation_bits,
-            activation_granularity
-        )
+        weight_mode, activation_mode = self._determine_weight_activation_modes(preset)
+        self.weight_quantizer_config = self._determine_quantizer_config(weight_bits, weight_granularity, weight_mode)
+        self.activation_quantizer_config = self._determine_quantizer_config(activation_bits, activation_granularity,
+                                                                            activation_mode)
 
         self.algorithms = {PostTrainingAlgorithms.MinMaxQuantization: MinMaxQuantizationParameters(
             weight_quantizer_config=self.weight_quantizer_config,
@@ -55,21 +52,13 @@ class PostTrainingQuantizationParameters(AlgorithmParameters):
     def to_json(self) -> Dict[str, Union[str, float, int]]:
         pass
 
-    def _determine_weight_activation_quantizers_config(self, preset: Preset, weight_bits: int,
-                                                       weights_granularity: Granularity, activation_bits: int,
-                                                       activations_granularity: Granularity):
-        # TODO (kshpv): make one func for activations and weights
-        def _determine_weight_activation_modes(preset: Preset):
-            weight_mode = QuantizationMode.SYMMETRIC
-            activation_mode = QuantizationMode.SYMMETRIC
-            return weight_mode, activation_mode
+    def _determine_weight_activation_modes(self, preset: Preset):
+        # TODO(kshpv): add support of presets
+        weight_mode = QuantizationMode.SYMMETRIC
+        activation_mode = QuantizationMode.SYMMETRIC
+        return weight_mode, activation_mode
 
-        weight_mode, activation_mode = _determine_weight_activation_modes(preset)
-
-        weights_per_channel = True if weights_granularity == Granularity.PERCHANNEL else False
-        activation_per_channel = True if activations_granularity == Granularity.PERCHANNEL else False
-
-        self.weight_quantizer_config = QuantizerConfig(num_bits=weight_bits, mode=weight_mode,
-                                                       per_channel=weights_per_channel)
-        self.activation_quantizer_config = QuantizerConfig(num_bits=activation_bits, mode=activation_mode,
-                                                           per_channel=activation_per_channel)
+    def _determine_quantizer_config(self, number_bits: int,
+                                    granularity: Granularity, mode: QuantizationMode):
+        return QuantizerConfig(num_bits=number_bits, mode=mode,
+                               per_channel=granularity == Granularity.PERCHANNEL)

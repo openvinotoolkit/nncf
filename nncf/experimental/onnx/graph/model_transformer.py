@@ -28,6 +28,8 @@ from nncf.experimental.onnx.graph.transformations.commands import ONNXQuantizerI
 ModelType = TypeVar('ModelType')
 
 
+# pylint: disable=no-member
+
 class ONNXModelTransformer(ModelTransformer):
     def __init__(self, model: onnx.ModelProto):
         super().__init__(model)
@@ -48,7 +50,7 @@ class ONNXModelTransformer(ModelTransformer):
         zero_point = transformation.quantizer_parameters.zero_point
         mode = transformation.quantizer_parameters.mode
 
-        per_channel = True if isinstance(scale, list) else False
+        per_channel = isinstance(scale, list)
 
         zero_point = [zero_point] if not isinstance(zero_point, list) else zero_point
         tensor_type = onnx.TensorProto.UINT8 if mode == QuantizationMode.ASYMMETRIC else onnx.TensorProto.INT8

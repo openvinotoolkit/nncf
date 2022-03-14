@@ -78,12 +78,14 @@ class PostTrainingQuantization(Algorithm):
         if backend == Backend.ONNX:
             from nncf.experimental.onnx.statistics.statistics_collector import ONNXStatisticsCollector
             return ONNXStatisticsCollector(engine, self.number_samples)
+        return None
 
     def _create_transformation_layout(self, model: ModelType) -> TransformationLayout:
         backend = determine_model_backend(model)
         if backend == Backend.ONNX:
             from nncf.experimental.onnx.graph.transformations.layout import ONNXTransformationLayout
             return ONNXTransformationLayout()
+        return None
 
     def _create_algorithms(self, model: ModelType, statistics_collector) -> Deque[Algorithm]:
         output = deque()

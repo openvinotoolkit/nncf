@@ -3,7 +3,7 @@ import pytest
 import os
 
 import torch
-import torchvision.models as models
+from torchvision import models
 import numpy as np
 import onnx
 
