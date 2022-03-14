@@ -16,6 +16,8 @@ import json
 import sys
 import csv
 import datetime
+from abc import ABC
+from abc import abstractmethod
 from typing import Tuple
 from typing import List
 from typing import Optional
@@ -78,6 +80,7 @@ class EvalRunParamsStruct:
                  config_name_: str,
                  reference_: Optional[str],
                  expected_: float,
+                 expected_init_: Optional[float],
                  metric_type_: str,
                  dataset_name_: str,
                  dataset_type_: str,
@@ -97,6 +100,7 @@ class EvalRunParamsStruct:
         self.config_name_ = config_name_
         self.reference_ = reference_
         self.expected_ = expected_
+        self.expected_init_ = expected_init_
         self.metric_type_ = metric_type_
         self.dataset_name_ = dataset_name_
         self.dataset_type_ = dataset_type_
@@ -114,7 +118,7 @@ class EvalRunParamsStruct:
         self.diff_target_max_ = diff_target_max_
 
 
-class TestSotaCheckpoints:
+class RunTest(ABC):
     param_list = []
     train_param_list = []
     ids_list = []
@@ -129,15 +133,6 @@ class TestSotaCheckpoints:
     @staticmethod
     def get_metric_file_name(model_name: str):
         return f'{model_name}.metrics.json'
-
-    if MODE == 'TF2':
-        CMD_FORMAT_STRING = '{} examples/tensorflow/{sample_type}/{eval_script_name} -m {} --config {conf} \
-         --data {dataset}/{data_type}/{data_name}/ --log-dir={log_dir} --metrics-dump \
-          {metrics_dump_file_path}'
-    else:
-        CMD_FORMAT_STRING = '{} examples/tensorflow/{sample_type}/main.py -m {} --config {conf} \
-         --data {dataset}/{data_name}/ --log-dir={log_dir} --metrics-dump \
-          {metrics_dump_file_path}'
 
     @staticmethod
     def run_cmd(comm: str, cwd: str, venv=None) -> Tuple[int, str]:
@@ -181,29 +176,6 @@ class TestSotaCheckpoints:
             return exit_code, err_string
 
     @staticmethod
-    def make_table_row(test, expected_, metrics_type_, key, error_message, metric, diff_target,
-                       fp32_metric_=None, diff_fp32=None, metric_type_from_json=None):
-        TestSotaCheckpoints.test = test
-        if fp32_metric_ is None:
-            fp32_metric_ = '-'
-            diff_fp32 = '-'
-        if metric_type_from_json and fp32_metric_ != '-':
-            fp32_metric_ = str(f'({fp32_metric_})')
-        if metric is not None:
-            if test == 'eval':
-                row = [str(key), str(metrics_type_), str(expected_), str(metric), str(fp32_metric_), str(diff_fp32),
-                       str(diff_target), str('-')]
-            else:
-                row = [str(key), str(metrics_type_), str(expected_), str(metric), str(diff_target), str('-')]
-        else:
-            if test == 'eval':
-                row = [str(key), str(metrics_type_), str(expected_), str('Not executed'), str(fp32_metric_),
-                       str('-'), str('-'), str(error_message)]
-            else:
-                row = [str(key), str(metrics_type_), str(expected_), str('Not executed'), str('-'), str(error_message)]
-        return row
-
-    @staticmethod
     def write_error_in_csv(error_message, filename, model_name):
         error_message = 'Error ' + error_message[:80].replace("\n", '')
         with open(filename, 'w', newline='', encoding='utf8') as csvfile:
@@ -213,6 +185,11 @@ class TestSotaCheckpoints:
             writer.writeheader()
             writer.writerow({'model': model_name, 'launcher': '-', 'device': '-', 'dataset': '-', 'tags': '-',
                              'metric_name': '-', 'metric_type': '-', 'metric_value': error_message})
+
+    @staticmethod
+    @abstractmethod
+    def update_tag_text(tag, text):
+        pass
 
     def write_results_table(self, init_table_string, path):
         result_table = PrettyTable()
@@ -226,24 +203,14 @@ class TestSotaCheckpoints:
         doc.asis('<!DOCTYPE html>')
         with tag('p'):
             text('legend: ')
-        with tag('p'):
-            with tag('span', style='Background-color: #{}'.format(BG_COLOR_GREEN_HEX)):
-                text('Thresholds for FP32 and Expected are passed')
-        with tag('p'):
-            with tag('span', style='Background-color: #{}'.format(BG_COLOR_YELLOW_HEX)):
-                text('Thresholds for Expected is failed, but for FP32 passed')
-        with tag('p'):
-            with tag('span', style='Background-color: #{}'.format(BG_COLOR_RED_HEX)):
-                text('Thresholds for FP32 and Expected are failed')
-        with tag('p'):
-            text('If Reference FP32 value in parentheses, it takes from "target" field of .json file')
+        self.update_tag_text(tag, text)
         with tag('table', border='1', cellpadding='5', style='border-collapse: collapse; border: 1px solid;'):
             with tag('tr'):
                 for i in init_table_string:
                     with tag('td'):
                         text(i)
             for key in self.row_dict:
-                with tag('tr', bgcolor='{}'.format(self.color_dict[key])):
+                with tag('tr', bgcolor=f'{self.color_dict[key]}'):
                     for i in self.row_dict[key]:
                         if i is None:
                             i = '-'
@@ -271,31 +238,6 @@ class TestSotaCheckpoints:
             yaml.dump(template, f, default_flow_style=False)
 
     @staticmethod
-    def threshold_check(is_ok, diff_target, diff_fp32_min_=None, diff_fp32_max_=None, fp32_metric=None,
-                        diff_fp32=None, diff_target_min=None, diff_target_max=None):
-        color = BG_COLOR_RED_HEX
-        within_thresholds = False
-        if not diff_target_min:
-            diff_target_min = DIFF_TARGET_MIN_GLOBAL
-        if not diff_target_max:
-            diff_target_max = DIFF_TARGET_MAX_GLOBAL
-        if not diff_fp32_min_:
-            diff_fp32_min_ = DIFF_FP32_MIN_GLOBAL
-        if not diff_fp32_max_:
-            diff_fp32_max_ = DIFF_FP32_MAX_GLOBAL
-        if is_ok:
-            if fp32_metric is not None:
-                if diff_fp32_min_ < diff_fp32 < diff_fp32_max_ and diff_target_min < diff_target < diff_target_max:
-                    color = BG_COLOR_GREEN_HEX
-                    within_thresholds = True
-                elif diff_fp32_min_ < diff_fp32 < diff_fp32_max_:
-                    color = BG_COLOR_YELLOW_HEX
-            elif diff_target_min < diff_target < diff_target_max:
-                color = BG_COLOR_GREEN_HEX
-                within_thresholds = True
-        return color, within_thresholds
-
-    @staticmethod
     def write_common_metrics_file(per_model_metric_file_dump_path: Path):
         metric_value = {}
         for file in os.listdir(per_model_metric_file_dump_path):
@@ -320,7 +262,7 @@ class TestSotaCheckpoints:
             metrics = json.load(metric_file)
         return metrics['Accuracy']
 
-    with open('{}/tensorflow/sota_checkpoints_eval.json'.format(TEST_ROOT), encoding='utf8') as f:
+    with open(f'{TEST_ROOT}/tensorflow/sota_checkpoints_eval.json', encoding='utf8') as f:
         sota_eval_config = json.load(f, object_pairs_hook=OrderedDict)
     for sample_type_ in sota_eval_config:
         datasets = sota_eval_config[sample_type_]
@@ -338,6 +280,7 @@ class TestSotaCheckpoints:
                 else:
                     ref_fp32_dict[model_name] = model_dict[model_name].get('target', {})
                 expected = model_dict[model_name].get('target', {})
+                expected_init = model_dict[model_name].get('target_init', {})
                 metric_type = model_dict[model_name].get('metric_type', {})
                 if model_dict[model_name].get('resume', {}):
                     resume_file = model_dict[model_name].get('resume', {})
@@ -357,6 +300,7 @@ class TestSotaCheckpoints:
                 ov_param_list.append(EvalRunParamsStruct(config_name_=config_name,
                                                          reference_=reference,
                                                          expected_=expected,
+                                                         expected_init_=None,
                                                          metric_type_=metric_type,
                                                          dataset_name_=dataset_name,
                                                          dataset_type_='',
@@ -378,6 +322,7 @@ class TestSotaCheckpoints:
                     param_list.append(EvalRunParamsStruct(config_name_=config_name,
                                                           reference_=reference,
                                                           expected_=expected,
+                                                          expected_init_=expected_init,
                                                           metric_type_=metric_type,
                                                           dataset_name_=dataset_name,
                                                           dataset_type_=dataset_type,
@@ -403,44 +348,106 @@ class TestSotaCheckpoints:
                                                  model_name))
                         train_ids_list.append(model_name)
 
+
+class TestSotaCheckpoints(RunTest):
+    @staticmethod
+    def update_tag_text(tag, text):
+        with tag('p'):
+            with tag('span', style=f'Background-color: #{BG_COLOR_GREEN_HEX}'):
+                text('Thresholds for FP32 and Expected are passed')
+        with tag('p'):
+            with tag('span', style=f'Background-color: #{BG_COLOR_YELLOW_HEX}'):
+                text('Thresholds for Expected is failed, but for FP32 passed')
+        with tag('p'):
+            with tag('span', style=f'Background-color: #{BG_COLOR_RED_HEX}'):
+                text('Thresholds for FP32 and Expected are failed')
+        with tag('p'):
+            text('If Reference FP32 value in parentheses, it takes from "target" field of .json file')
+
+    @staticmethod
+    def threshold_check(is_ok, diff_target, diff_fp32_min_=None, diff_fp32_max_=None, fp32_metric=None,
+                        diff_fp32=None, diff_target_min=None, diff_target_max=None):
+        color = BG_COLOR_RED_HEX
+        within_thresholds = False
+        if not diff_target_min:
+            diff_target_min = DIFF_TARGET_MIN_GLOBAL
+        if not diff_target_max:
+            diff_target_max = DIFF_TARGET_MAX_GLOBAL
+        if not diff_fp32_min_:
+            diff_fp32_min_ = DIFF_FP32_MIN_GLOBAL
+        if not diff_fp32_max_:
+            diff_fp32_max_ = DIFF_FP32_MAX_GLOBAL
+        if is_ok:
+            if fp32_metric is not None:
+                if diff_fp32_min_ < diff_fp32 < diff_fp32_max_ and diff_target_min < diff_target < diff_target_max:
+                    color = BG_COLOR_GREEN_HEX
+                    within_thresholds = True
+                elif diff_fp32_min_ < diff_fp32 < diff_fp32_max_:
+                    color = BG_COLOR_YELLOW_HEX
+            elif diff_target_min < diff_target < diff_target_max:
+                color = BG_COLOR_GREEN_HEX
+                within_thresholds = True
+        return color, within_thresholds
+
+    @staticmethod
+    def make_table_row(test, expected_, metrics_type_, key, error_message, metric, diff_target,
+                       fp32_metric_=None, diff_fp32=None, metric_type_from_json=None):
+        TestSotaCheckpoints.test = test
+        if fp32_metric_ is None:
+            fp32_metric_ = '-'
+            diff_fp32 = '-'
+        if metric_type_from_json and fp32_metric_ != '-':
+            fp32_metric_ = str(f'({fp32_metric_})')
+        if metric is not None:
+            if test == 'eval':
+                row = [str(key), str(metrics_type_), str(expected_), str(metric), str(fp32_metric_), str(diff_fp32),
+                       str(diff_target), str('-')]
+            else:
+                row = [str(key), str(metrics_type_), str(expected_), str(metric), str(diff_target), str('-')]
+        else:
+            if test == 'eval':
+                row = [str(key), str(metrics_type_), str(expected_), str('Not executed'), str(fp32_metric_),
+                       str('-'), str('-'), str(error_message)]
+            else:
+                row = [str(key), str(metrics_type_), str(expected_), str('Not executed'), str('-'), str(error_message)]
+        return row
+
     @pytest.mark.eval
-    @pytest.mark.parametrize('eval_test_struct', param_list,
-                             ids=ids_list)
+    @pytest.mark.parametrize('eval_test_struct', RunTest.param_list,
+                             ids=RunTest.ids_list)
     def test_eval(self, sota_checkpoints_dir, sota_data_dir, eval_test_struct: EvalRunParamsStruct):
         # pylint: disable=too-many-branches
         if sota_data_dir is None:
             pytest.skip('Path to datasets is not set')
+
         test = 'eval'
         sample_type = eval_test_struct.sample_type_
         metric_file_name = self.get_metric_file_name(model_name=eval_test_struct.model_name_)
         metrics_dump_file_path = pytest.metrics_dump_path / metric_file_name
         log_dir = pytest.metrics_dump_path / 'logs'
         if MODE == 'TF2':
-            cmd = self.CMD_FORMAT_STRING.format(sys.executable, 'test', conf=eval_test_struct.config_name_,
-                                                dataset=sota_data_dir,
-                                                data_name=eval_test_struct.dataset_name_,
-                                                data_type=eval_test_struct.dataset_type_,
-                                                sample_type=sample_type,
-                                                eval_script_name=EVAL_SCRIPT_NAME_MAP[sample_type],
-                                                metrics_dump_file_path=metrics_dump_file_path, log_dir=log_dir)
-            if eval_test_struct.weights_:
-                cmd += ' --weights {}'.format(os.path.join(sota_checkpoints_dir, eval_test_struct.weights_))
+            cmd = (f'{sys.executable} examples/tensorflow/{sample_type}/{EVAL_SCRIPT_NAME_MAP[sample_type]} '
+                   f'-m test --config {eval_test_struct.config_name_} '
+                   f'--data {sota_data_dir}/{eval_test_struct.dataset_type_}/{eval_test_struct.dataset_name_}/ '
+                   f'--log-dir={log_dir} --metrics-dump {metrics_dump_file_path}')
+
+            if eval_test_struct.weights_ and not eval_test_struct.resume_file_:
+                cmd += f' --weights {os.path.join(sota_checkpoints_dir, eval_test_struct.weights_)}'
             if DATASET_TYPE_AVAILABILITY[sample_type]:
-                cmd += ' --dataset-type {}'.format(eval_test_struct.dataset_type_)
+                cmd += f' --dataset-type {eval_test_struct.dataset_type_}'
         else:
-            cmd = self.CMD_FORMAT_STRING.format(sys.executable, 'test', conf=eval_test_struct.config_name_,
-                                                dataset=sota_data_dir,
-                                                data_name=eval_test_struct.dataset_name_,
-                                                sample_type=eval_test_struct.sample_type_,
-                                                metrics_dump_file_path=metrics_dump_file_path, log_dir=log_dir)
+            cmd = (f'{sys.executable} examples/tensorflow/{sample_type}/main.py -m test '
+                   f'--config {eval_test_struct.config_name_} '
+                   f'--data {sota_data_dir}/{eval_test_struct.dataset_name_}/ --log-dir={log_dir}')
+
         if eval_test_struct.resume_file_:
             resume_file_path = sota_checkpoints_dir + '/' + eval_test_struct.resume_file_
-            cmd += ' --resume {}'.format(resume_file_path)
+            cmd += f' --resume {resume_file_path}'
         else:
             if MODE != 'TF2' or PRETRAINED_PARAM_AVAILABILITY[sample_type]:
                 cmd += ' --pretrained'
         if eval_test_struct.batch_:
-            cmd += ' -b {}'.format(eval_test_struct.batch_)
+            cmd += f' -b {eval_test_struct.batch_}'
         exit_code, err_str = self.run_cmd(cmd, cwd=PROJECT_ROOT)
 
         is_ok = (exit_code == 0 and metrics_dump_file_path.exists())
@@ -498,7 +505,7 @@ class TestSotaCheckpoints:
         assert is_accuracy_within_thresholds
 
     @pytest.mark.oveval
-    @pytest.mark.parametrize('eval_test_struct', ov_param_list, ids=ov_ids_list)
+    @pytest.mark.parametrize('eval_test_struct', RunTest.ov_param_list, ids=RunTest.ov_ids_list)
     def test_openvino_eval(self, eval_test_struct: EvalRunParamsStruct, sota_checkpoints_dir, ov_data_dir, openvino):
         # pylint: disable=too-many-branches
         if not openvino:
@@ -541,9 +548,9 @@ class TestSotaCheckpoints:
             if eval_test_struct.reverse_input_channels_:
                 mo_cmd += ' --reverse_input_channels'
             if eval_test_struct.mean_val_:
-                mo_cmd += ' --mean_values={}'.format(eval_test_struct.mean_val_)
+                mo_cmd += f' --mean_values={eval_test_struct.mean_val_}'
             if eval_test_struct.scale_val_:
-                mo_cmd += ' --scale_values={}'.format(eval_test_struct.scale_val_)
+                mo_cmd += f' --scale_values={eval_test_struct.scale_val_}'
             exit_code, err_str = self.run_cmd(mo_cmd, MO_DIR, MO_VENV_DIR)
 
             if exit_code == 0:

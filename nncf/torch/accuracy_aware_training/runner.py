@@ -19,8 +19,6 @@ import os
 import torch
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 
-from nncf.api.compression import CompressionStage
-
 try:
     from torch.utils.tensorboard import SummaryWriter
 
@@ -37,6 +35,7 @@ try:
 except ImportError:
     IMG_PACKAGES_AVAILABLE = False
 
+from nncf.api.compression import CompressionStage
 from nncf.torch.checkpoint_loading import load_state
 from nncf.torch.accuracy_aware_training.utils import is_main_process
 from nncf.common.utils.helpers import configure_accuracy_aware_paths

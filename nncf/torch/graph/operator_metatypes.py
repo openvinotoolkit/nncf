@@ -307,6 +307,7 @@ class PTGroupNormMetatype(PTOperatorMetatype):
 @PT_OPERATOR_METATYPES.register()
 class PTGELUMetatype(PTOperatorMetatype):
     name = "GeluOp"
+    hw_config_names = [HWConfigOpName.GELU]
     module_to_function_names = {
         NamespaceTarget.TORCH_NN_FUNCTIONAL: ["gelu"]
     }

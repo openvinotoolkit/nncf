@@ -18,7 +18,6 @@ from pathlib import Path
 import tensorflow as tf
 import numpy as np
 
-from examples.tensorflow.common.utils import close_strategy_threadpool
 from nncf.common.accuracy_aware_training import create_accuracy_aware_training_loop
 from nncf.tensorflow import create_compressed_model
 from nncf.tensorflow.helpers.model_manager import TFModelManager
@@ -47,6 +46,8 @@ from examples.tensorflow.common.utils import get_saving_parameters
 from examples.tensorflow.common.utils import write_metrics
 from examples.tensorflow.object_detection.models.model_selector import get_predefined_config
 from examples.tensorflow.object_detection.models.model_selector import get_model_builder
+from examples.tensorflow.common.utils import close_strategy_threadpool
+from examples.tensorflow.common.utils import set_seed
 
 
 def get_argument_parser():
@@ -278,6 +279,8 @@ def run(config):
     strategy = get_distribution_strategy(config)
     if config.metrics_dump is not None:
         write_metrics(0, config.metrics_dump)
+
+    set_seed(config)
 
     # Create dataset
     train_builder, test_builder = get_dataset_builders(config, strategy.num_replicas_in_sync)

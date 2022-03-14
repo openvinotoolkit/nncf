@@ -1,9 +1,7 @@
 strict digraph  {
 "0 /nncf_model_input_0" [id=0, type=nncf_model_input];
-"1 SymmetricQuantizer/symmetric_quantize_0" [id=1, type=symmetric_quantize];
-"2 TestModel/GELU[_layer]/gelu_0" [id=2, type=gelu];
-"3 /nncf_model_output_0" [id=3, type=nncf_model_output];
-"0 /nncf_model_input_0" -> "1 SymmetricQuantizer/symmetric_quantize_0";
-"1 SymmetricQuantizer/symmetric_quantize_0" -> "2 TestModel/GELU[_layer]/gelu_0";
-"2 TestModel/GELU[_layer]/gelu_0" -> "3 /nncf_model_output_0";
+"1 TestModel/GELU[_layer]/gelu_0" [id=1, type=gelu];
+"2 /nncf_model_output_0" [id=2, type=nncf_model_output];
+"0 /nncf_model_input_0" -> "1 TestModel/GELU[_layer]/gelu_0";
+"1 TestModel/GELU[_layer]/gelu_0" -> "2 /nncf_model_output_0";
 }

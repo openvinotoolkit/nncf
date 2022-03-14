@@ -30,14 +30,14 @@
                 "diff_fp32_max": 0.5
             },
             "resnet50_imagenet_int4_int8": {
-                "config": "examples/torch/classification/configs/mixed_precision/resnet50_imagenet_mixed_int_manual.json",
+                "config": "examples/torch/classification/configs/mixed_precision/resnet50_imagenet_mixed_int_hawq.json",
                 "reference": "resnet50_imagenet",
-                "target": 76.2,
+                "target": 75.97,
                 "metric_type": "Acc@1",
                 "resume": "resnet50_imagenet_int4_int8.pth",
                 "model_description": "ResNet-50",
-                "compression_description": "Mixed, 44.8% INT8 / 55.2% INT4",
-                "diff_fp32_min": -0.05,
+                "compression_description": "Mixed, 43.12% INT8 / 56.88% INT4",
+                "diff_fp32_min": -0.4,
                 "diff_fp32_max": 0.4,
                 "diff_target_min": -0.12,
                 "diff_target_max": 0.12
@@ -103,7 +103,7 @@
             },
             "mobilenet_v2_imagenet": {
                 "config": "examples/torch/classification/configs/quantization/mobilenet_v2_imagenet.json",
-                "target": 71.93,
+                "target": 71.87,
                 "metric_type": "Acc@1",
                 "model_description": "MobileNet V2"
             },
@@ -130,15 +130,15 @@
                 "diff_fp32_max": 0.15
             },
             "mobilenet_v2_imagenet_int4_int8": {
-                "config": "examples/torch/classification/configs/mixed_precision/mobilenet_v2_imagenet_mixed_int_hawq_old_eval.json",
+                "config": "examples/torch/classification/configs/mixed_precision/mobilenet_v2_imagenet_mixed_int_hawq.json",
                 "reference": "mobilenet_v2_imagenet",
-                "target": 71.07,
+                "target": 70.89,
                 "metric_type": "Acc@1",
                 "resume": "mobilenet_v2_imagenet_int4_int8.pth",
                 "model_description": "MobileNet V2",
-                "compression_description": "Mixed, 53.27% INT8 / 46.73% INT4",
+                "compression_description": "Mixed, 58.88% INT8 / 41.12% INT4",
                 "diff_fp32_min": -1,
-                "diff_fp32_max": 0.1
+                "diff_fp32_max": 0.4
             },
             "mobilenet_v2_imagenet_rb_sparsity_int8": {
                 "config": "examples/torch/classification/configs/sparsity_quantization/mobilenet_v2_imagenet_rb_sparsity_int8.json",
