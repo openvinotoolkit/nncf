@@ -82,12 +82,10 @@ class ONNXModelTransformer(ModelTransformer):
 
         # TODO:NEED TO ADJUST LOGIC FOR INCEPTION_v3
         onnx_graph = ONNXGraph(self.transformed_model)
-        try:
-            input_nodes = onnx_graph.get_nodes_by_input(target_point)
-        except RuntimeError as e:
-            print(e)
-            # TODO:SKIP THE BAD NODE
-            return
+        input_nodes = onnx_graph.get_nodes_by_input(target_point)
+        if not input_nodes:
+            raise RuntimeError(
+                f'Can not add the quantizer to the {target_point} edge. This edge does not have end node.')
 
         for node in input_nodes:
             for i, inp in enumerate(node.input):

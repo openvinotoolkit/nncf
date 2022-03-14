@@ -14,7 +14,7 @@ class QuantizerLayerParameters:
     Class handles Quantizer/Dequantizer layer attributes.
     """
 
-    def __init__(self, scale: List[float], zero_point: List[float], mode: QuantizationMode):
+    def __init__(self, scale: List[float], zero_point: List[int], mode: QuantizationMode):
         self.scale = scale
         self.zero_point = zero_point
         self.mode = mode

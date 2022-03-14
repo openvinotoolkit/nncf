@@ -48,6 +48,7 @@ class ONNXGraph:
         for node in self.get_all_nodes():
             if node.name == node_name:
                 return node
+        raise RuntimeError('There is no node with the name {}'.format(node_name))
 
     def get_model_inputs(self) -> List[ValueInfoProto]:
         """

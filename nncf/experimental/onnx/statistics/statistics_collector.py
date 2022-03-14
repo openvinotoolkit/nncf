@@ -33,14 +33,9 @@ class ONNXStatisticsCollector(StatisticsCollector):
                 _input, target = sample
                 output = self.engine.infer(_input)
                 self._agregate_statistics(output, self.layers_statistics)
-                if self.is_calculate_metric:
-                    self._calculate_metric(target)
 
     def _agregate_statistics(self, output, layers_statistics: Dict[str, ONNXMinMaxStatisticCollector]):
         for layer_statistic in layers_statistics:
             for k, v in layer_statistic.items():
                 tensor = output[k]
                 v._register_input(tensor)
-
-    def _calculate_metric(self, target):
-        pass

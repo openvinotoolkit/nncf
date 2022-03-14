@@ -12,8 +12,6 @@
 """
 
 from typing import Dict
-from typing import List
-from typing import Tuple
 
 from nncf.experimental.post_training.api.engine import Engine
 from nncf.experimental.post_training.api.dataloader import DataLoader
