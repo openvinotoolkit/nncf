@@ -23,21 +23,32 @@ import numpy as np
 
 
 class ONNXEngine(Engine):
-    def __init__(self, dataloader: DataLoader = None, providers: List[str] = None):
+    """
+    Engine for ONNX backend using ONNXRuntime to infer the model.
+    """
+
+    def __init__(self, dataloader: DataLoader = None, **rt_session_options):
+        """
+
+        """
         super().__init__(dataloader)
-        if providers is None:
-            self.providers = ['OpenVINOExecutionProvider']
-        else:
-            self.providers = providers
+        self.sess = None
+        self.rt_session_options = rt_session_options
+        if 'providers' not in self.rt_session_options:
+            self.rt_session_options['providers'] = ['OpenVINOExecutionProvider']
 
     def set_model(self, model: str) -> None:
         """
-        Because ORT must load model from the file, we should provide the path.
+        Creates ONNXRuntime InferenceSession for the onnx model with the location at 'model'.
         """
-        self.model = model
-        self.sess = rt.InferenceSession(self.model, providers=self.providers)
+        super().set_model(model)
+        self.sess = rt.InferenceSession(model, **self.rt_session_options)
 
-    def infer(self, _input: np.ndarray) -> Tuple[Dict[str, np.ndarray], np.ndarray]:
+    def _infer(self, _input: np.ndarray) -> Dict[str, np.ndarray]:
+        """
+        Runs InferenceSession on the provided '_input'.
+        Returns the model outputs and corresponding node names in the model.
+        """
         output = {}
         input_name = self.sess.get_inputs()[0].name
         output_tensor = self.sess.run([], {input_name: _input.astype(np.float32)})

@@ -1,5 +1,3 @@
-import numpy as np
-
 from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.graph.transformations.commands import TransformationType
 from nncf.experimental.onnx.algorithms.quantization.helper import QuantizerLayerParameters
@@ -7,6 +5,7 @@ from nncf.experimental.onnx.algorithms.quantization.helper import QuantizerLayer
 
 class ONNXInsertionCommand(TransformationCommand):
     def __init__(self, target_layer_name: str):
+        # TODO (kshpv): align target_layer_name
         super().__init__(TransformationType.INSERT, target_layer_name)
 
 
