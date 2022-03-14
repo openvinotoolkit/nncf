@@ -10,18 +10,21 @@ from nncf.experimental.onnx.graph.transformations.layout import ONNXTransformati
 
 from tests.onnx.models import LinearModel
 
-TARGET_LAYERS = ['Non_Existing_Edge', 'Conv1_Y']
-SHOULD_RAISE_EXCEPTION = [True, False]
+TARGET_LAYERS = [('Non_Existing_Edge', ), ('Conv1_Y', ), ('Conv1_Y', 'BN1_Y', 'ReLU1_Y')]
+SHOULD_RAISE_EXCEPTION = [True, False, False]
+QUANTIZER_NUMBER = [None, 1, 3]
 
 
-@pytest.mark.parametrize("target_layer, should_raise", zip(TARGET_LAYERS, SHOULD_RAISE_EXCEPTION))
-def test_quantizer_insertion(target_layer, should_raise):
+@pytest.mark.parametrize("target_layers, should_raise, quantizer_number",
+                         zip(TARGET_LAYERS, SHOULD_RAISE_EXCEPTION, QUANTIZER_NUMBER))
+def test_quantizer_insertion(target_layers, should_raise, quantizer_number):
     model = LinearModel().onnx_model
-
-    command = ONNXQuantizerInsertionCommand(target_layer,
-                                            QuantizerLayerParameters([1.0], [0], QuantizationMode.SYMMETRIC))
     transformation_layout = ONNXTransformationLayout()
-    transformation_layout.register(command)
+
+    for target_layer in target_layers:
+        command = ONNXQuantizerInsertionCommand(target_layer,
+                                                QuantizerLayerParameters([1.0], [0], QuantizationMode.SYMMETRIC))
+        transformation_layout.register(command)
 
     model_transformer = ONNXModelTransformer(model)
     if should_raise:
@@ -41,5 +44,4 @@ def test_quantizer_insertion(target_layer, should_raise):
             num_q += 1
         elif op_type == 'DequantizeLinear':
             num_dq += 1
-    assert num_q == 1
-    assert num_q == num_dq
+    assert num_q == num_dq == quantizer_number
