@@ -12,11 +12,13 @@
 """
 from typing import Any
 from typing import Optional
+from typing import Tuple
 from functools import partial
 from copy import copy
 import torch
 
 from nncf.common.exporter import Exporter
+from nncf.common.utils.logger import logger as nncf_logger
 from nncf.torch.dynamic_graph.graph_tracer import create_dummy_forward_fn
 from nncf.torch.dynamic_graph.graph_tracer import create_mock_tensor
 from nncf.torch.nested_objects_traversal import objwalk
@@ -48,6 +50,41 @@ class PTExporter(Exporter):
     """
 
     _ONNX_FORMAT = 'onnx'
+    _ONNX_DEFAULT_OPSET = 10
+
+
+    @staticmethod
+    def parse_format(save_format: str) -> Tuple[str, dict]:
+        """
+        Parse saving format to a short form and additional arguments.
+
+        :param save_format: Saving format.
+
+        :return
+            str: short form of the save_format
+            dict: additional arguments for exporter
+        """
+        if save_format.startswith(PTExporter._ONNX_FORMAT):
+            split_format = save_format.split('_')
+            opset = None
+
+            if len(split_format) == 1:
+                opset = PTExporter._ONNX_DEFAULT_OPSET
+            elif len(split_format) == 2:
+                opset = int(split_format[1])
+
+            if opset is not None and opset <= 0:
+                raise ValueError("Incorrect save_format, expected 'onnx' or 'onnx_<opset_version>'.")
+
+            if opset != PTExporter._ONNX_DEFAULT_OPSET:
+                nncf_logger.warning(
+                    'Using {} ONNX opset version. Recommended version is {}.'.format(
+                        opset, PTExporter._ONNX_DEFAULT_OPSET
+                    )
+                )
+
+            return PTExporter._ONNX_FORMAT, {'opset_version': opset}
+        return save_format, {}
 
     def export_model(self, save_path: str, save_format: Optional[str] = None) -> None:
         """
@@ -57,10 +94,16 @@ class PTExporter(Exporter):
         :param save_format: Saving format.
             One of the following:
                 - `onnx` for export to the ONNX format.
+                - `onnx_<opset_version>` for export to the ONNX format with specific opset version.
             The ONNX format will be used if `save_format` is not specified.
         """
+        fn_args = {'save_path': save_path}
+
         if save_format is None:
             save_format = PTExporter._ONNX_FORMAT
+
+        save_format, extra_args = PTExporter.parse_format(save_format)
+        fn_args.update(extra_args)
 
         format_to_export_fn = {
             PTExporter._ONNX_FORMAT: self._export_to_onnx,
@@ -73,9 +116,9 @@ class PTExporter(Exporter):
             raise ValueError(f'Unsupported saving format: \'{save_format}\'. '
                              f'Available formats: {available_formats}')
 
-        export_fn(save_path)
+        export_fn(**fn_args)
 
-    def _export_to_onnx(self, save_path: str) -> None:
+    def _export_to_onnx(self, save_path: str, opset_version: int) -> None:
         """
         Exports the compressed model to the ONNX format.
 
@@ -118,7 +161,7 @@ class PTExporter(Exporter):
                               input_names=input_names,
                               output_names=output_names,
                               enable_onnx_checker=False,
-                              opset_version=10,
+                              opset_version=opset_version,
                               # Do not fuse Conv+BN in ONNX. May cause dropout elements to appear in ONNX.
                               training=True)
             model.enable_dynamic_graph_building()
