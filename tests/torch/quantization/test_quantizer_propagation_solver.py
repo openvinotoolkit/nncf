@@ -901,10 +901,12 @@ class TestQuantizerPropagationSolver:
                                                 'target_branching_node_for_primary_quantizer',
                                                 'expected_status'))
 
-    InitNodeTestStruct = namedtuple('InitNodeTestStruct',
-                                    ('quantization_trait',
-                                     'config',
-                                     'op_meta'), defaults=(UnknownMetatype,))
+    class InitNodeTestStruct:
+        def __init__(self, quantization_trait, config, op_meta=UnknownMetatype):
+            self.quantization_trait = quantization_trait
+            self.config = config
+            self.op_meta = op_meta
+
     BRANCH_TRANSITION_TEST_CASES = [
         # Downward branches are quantization-agnostic
         BranchTransitionTestStruct(
@@ -1193,9 +1195,10 @@ class TestQuantizerPropagationSolver:
 
         primary_prop_quant = None
         for node_key, init_node_struct in init_node_to_trait_and_configs_dict.items():
-            trait, qconfigs, op_meta = init_node_struct
+            qconfigs = init_node_struct.config
+            trait = init_node_struct.quantization_trait
             quant_prop_graph.nodes[node_key][QPSG.QUANTIZATION_TRAIT_NODE_ATTR] = trait
-            quant_prop_graph.nodes[node_key][QPSG.OPERATOR_METATYPE_NODE_ATTR] = op_meta
+            quant_prop_graph.nodes[node_key][QPSG.OPERATOR_METATYPE_NODE_ATTR] = init_node_struct.op_meta
             if trait == QuantizationTrait.INPUTS_QUANTIZABLE:
                 ip_node_key = InsertionPointGraph.get_pre_hook_node_key(node_key)
                 prop_quant = quant_prop_graph.add_propagating_quantizer(qconfigs,

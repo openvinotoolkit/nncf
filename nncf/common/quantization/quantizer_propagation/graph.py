@@ -31,6 +31,7 @@ from nncf.common.graph import NNCFNode
 from nncf.common.graph import NNCFNodeName
 from nncf.common.graph import OperatorMetatype
 from nncf.common.graph.operator_metatypes import NoopMetatype
+from nncf.common.graph.operator_metatypes import OUTPUT_NOOP_METATYPES
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.insertion_point_graph import InsertionPointGraph
 from nncf.common.insertion_point_graph import InsertionPointGraphNodeType
@@ -53,7 +54,6 @@ from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import UnifiedScaleType
 from nncf.common.utils.helpers import should_consider_scope
 from nncf.common.utils.logger import logger as nncf_logger
-from nncf.common.graph.operator_metatypes import OUTPUT_NOOP_METATYPES
 
 
 class QuantizerPropagationStateGraph(nx.DiGraph):

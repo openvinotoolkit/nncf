@@ -1028,6 +1028,8 @@ class QuantizerPropagationSolver:
         if dom_op_quantizers:
             return TransitionStatus.SHOULD_WAIT_FOR_MERGE
 
+        return TransitionStatus.SHOULD_TRANSITION
+
     def _check_affecting_quantizers_in_common_path(self,
                                                    affecting_quantizers: List[PropagatingQuantizer],
                                                    cloned_prop_quantizers: List[PropagatingQuantizer]):
