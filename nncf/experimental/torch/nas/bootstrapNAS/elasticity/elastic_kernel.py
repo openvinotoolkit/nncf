@@ -29,8 +29,10 @@ from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.graph.transformations.commands import TransformationPriority
 from nncf.common.utils.logger import logger as nncf_logger
+from nncf.experimental.torch.nas.bootstrapNAS.elasticity.base_handler import BaseElasticityParams
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.base_handler import ELASTICITY_BUILDERS
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.base_handler import ELASTICITY_HANDLERS_MAP
+from nncf.experimental.torch.nas.bootstrapNAS.elasticity.base_handler import ELASTICITY_PARAMS
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.base_handler import SingleElasticityBuilder
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.base_handler import SingleElasticityHandler
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elasticity_dim import ElasticityDim
@@ -44,9 +46,60 @@ from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.utils import is_tracing_state
 from nncf.torch.utils import no_jit_trace
 
-kernel_size_type = int
-ElasticKernelConfig = List[kernel_size_type]  # list of kernel sizes per layer
-ElasticKernelSearchSpace = List[List[kernel_size_type]]
+KernelSizeType = int
+ElasticKernelConfig = List[KernelSizeType]  # list of kernel sizes per layer
+ElasticKernelSearchSpace = List[List[KernelSizeType]]
+
+
+class EKParamsStateNames:
+    MAX_NUM_KERNELS = 'max_num_kernels'
+
+
+@ELASTICITY_PARAMS.register(ElasticityDim.KERNEL)
+class ElasticKernelParams(BaseElasticityParams):
+    _state_names = EKParamsStateNames
+
+    def __init__(self,
+                 max_num_kernels: int = -1):
+        """
+        Constructor
+
+        :param max_num_kernels: Restricts total number of different elastic kernel values for each layer.
+        The default value is -1 means that there's no restrictions.
+        """
+        self.max_num_kernels = max_num_kernels
+
+    @classmethod
+    def from_config(cls, config: Dict[str, Any]) -> 'ElasticKernelParams':
+        """
+        Creates the object from its config.
+        """
+        kwargs = {
+            cls._state_names.MAX_NUM_KERNELS: config.get(cls._state_names.MAX_NUM_KERNELS, -1),
+        }
+        return cls(**kwargs)
+
+    @classmethod
+    def from_state(cls, state: Dict[str, Any]) -> 'ElasticKernelParams':
+        """
+        Creates the object from its state.
+
+        :param state: Output of `get_state()` method.
+        """
+        return cls(**state)
+
+    def get_state(self) -> Dict[str, Any]:
+        """
+        Returns the compression loss state.
+
+        :return: The compression loss state.
+        """
+        return {
+            self._state_names.MAX_NUM_KERNELS: self.max_num_kernels,
+        }
+
+    def __eq__(self, other: 'ElasticKernelParams') -> bool:
+        return self.__dict__ == other.__dict__
 
 
 class ElasticKernelOp:
@@ -55,7 +108,7 @@ class ElasticKernelOp:
     and modifies in the way that kernel size is changing to a given value.
     """
 
-    def __init__(self, max_kernel_size: kernel_size_type, node_name: NNCFNodeName):
+    def __init__(self, max_kernel_size: KernelSizeType, node_name: NNCFNodeName):
         """
         Constructor.
 
@@ -68,13 +121,13 @@ class ElasticKernelOp:
         self._max_kernel_size = max_kernel_size
         self._node_name = node_name
 
-    def get_active_kernel_size(self) -> kernel_size_type:
+    def get_active_kernel_size(self) -> KernelSizeType:
         """
         :return: a target kernel size that operation's parameters should have after forward's call
         """
         return self._active_kernel_size
 
-    def set_active_kernel_size(self, kernel_size: kernel_size_type) -> None:
+    def set_active_kernel_size(self, kernel_size: KernelSizeType) -> None:
         """
         Sets current level of elasticity for the operation - kernel size value that parameters should have.
         The actual modification of parameters happens on forward call.
@@ -89,7 +142,7 @@ class ElasticKernelOp:
         self._active_kernel_size = kernel_size
 
     @property
-    def kernel_size_list(self) -> List[kernel_size_type]:
+    def kernel_size_list(self) -> List[KernelSizeType]:
         """
         Gets list of all available kernel sizes to select from. Each value corresponds to a single element in the
         search space of operation. The search space of the model is cartesian product of search spaces of operation.
@@ -106,7 +159,7 @@ class ElasticKernelOp:
         return self._node_name
 
     @property
-    def max_kernel_size(self) -> kernel_size_type:
+    def max_kernel_size(self) -> KernelSizeType:
         """
         :return: kernel size in the original operation
         """
@@ -119,17 +172,18 @@ class ElasticKernelConv2DOp(ElasticKernelOp, nn.Module):
     and modifies in the way that kernel size is changing to a given value.
     """
 
-    def __init__(self, max_kernel_size: kernel_size_type, node_name: NNCFNodeName,
-                 elastic_kernel_params: Optional[Dict[str, Any]]):
+    def __init__(self, max_kernel_size: KernelSizeType,
+                 node_name: NNCFNodeName,
+                 params: ElasticKernelParams):
         """
         Constructor.
 
         :param max_kernel_size: maximum kernel size value in the original operation.
         :param node_name: string representation of operation address. It's used for more informative messages only.
-        :param elastic_kernel_params: parameters to configure elastic kernel for the operation.
+        :param params: parameters to configure elastic kernel for the operation.
         """
         super().__init__(max_kernel_size=max_kernel_size, node_name=node_name)
-        self._max_num_params = elastic_kernel_params.get('max_num_kernels', -1)
+        self._max_num_params = params.max_num_kernels
         # Create kernel_size_list based on max module kernel size
         self._kernel_size_list = self.generate_kernel_size_list(max_kernel_size)
         self._ks_set = list(set(self.kernel_size_list))
@@ -145,13 +199,14 @@ class ElasticKernelConv2DOp(ElasticKernelOp, nn.Module):
         for name, param in scale_params.items():
             self.register_parameter(name, param)
 
-    def generate_kernel_size_list(self, max_kernel_size: kernel_size_type) -> List[kernel_size_type]:
+    def generate_kernel_size_list(self, max_kernel_size: KernelSizeType) -> List[KernelSizeType]:
         """
         Generates list of available kernel size values.
 
-        :param max_kernel_size: maximum value of kernel size
+        :param max_kernel_size: maximum value of kernel size, it's supposed to be odd
         :return: list of kernel size values.
         """
+        DEFAULT_KERNEL_SIZE_STEP = 2
         assert max_kernel_size % 2 > 0, 'kernel size should be odd number'
         if max_kernel_size == 1:
             return [1]
@@ -159,7 +214,7 @@ class ElasticKernelConv2DOp(ElasticKernelOp, nn.Module):
         ks_list = []
         while kernel > 1:
             ks_list.append(kernel)
-            kernel -= 2
+            kernel -= DEFAULT_KERNEL_SIZE_STEP
             if self._max_num_params == len(ks_list):
                 break
         return ks_list
@@ -184,7 +239,7 @@ class ElasticKernelConv2DOp(ElasticKernelOp, nn.Module):
                 result = self._get_active_filter(kernel_size, weight)
         return result
 
-    def set_active_kernel_size(self, kernel_size: kernel_size_type) -> None:
+    def set_active_kernel_size(self, kernel_size: KernelSizeType) -> None:
         """
         Sets current level of elasticity for the operation - kernel size value that parameters should have.
         The actual modification of parameters happens on forward call.
@@ -255,7 +310,7 @@ class ElasticKernelInputForExternalPadding:
     rest of the operation in the model for each new value of kernel size.
     """
 
-    def __init__(self, elastic_k_w_op: ElasticKernelConv2DOp, max_kernel_size: kernel_size_type):
+    def __init__(self, elastic_k_w_op: ElasticKernelConv2DOp, max_kernel_size: KernelSizeType):
         self._elastic_k_w_op = elastic_k_w_op
         self._max_kernel_size = max_kernel_size
 
@@ -332,9 +387,9 @@ class ElasticKernelHandler(SingleElasticityHandler):
         Activates the Supernet - the original network to which elasticity was applied.
         """
         supernet_config = self._collect_ops_data_by_selection_rule(lambda op: op.max_kernel_size)
-        self.set_config(supernet_config)
+        self.activate_subnet_for_config(supernet_config)
 
-    def set_config(self, config: ElasticKernelConfig) -> None:
+    def activate_subnet_for_config(self, config: ElasticKernelConfig) -> None:
         """
         Activates a Subnet that corresponds to the given elasticity configuration
 
@@ -343,17 +398,15 @@ class ElasticKernelHandler(SingleElasticityHandler):
         for op, ks in zip(self._elastic_kernel_ops, config):
             op.set_active_kernel_size(ks)
 
-    def get_kwargs_for_flops_counting(self) -> Dict[str, Any]:
+    def get_active_kernel_sizes_per_node(self) -> Dict[str, Any]:
         """
-        Provides arguments for counting flops of the currently activated subnet.
-
-        :return: mapping of parameters to its values
+        :return: mapping of node name to the active kernel sizes in that node
         """
         active_kernel_sizes = {}
         for elastic_kernel_op in self._elastic_kernel_ops:
             active_kernel_size = elastic_kernel_op.get_active_kernel_size()
             active_kernel_sizes[elastic_kernel_op.node_name] = (active_kernel_size, active_kernel_size)
-        return {'kernel_sizes': active_kernel_sizes}
+        return active_kernel_sizes
 
     def resolve_conflicts_with_other_elasticities(self,
                                                   config: ElasticKernelConfig,
@@ -383,11 +436,12 @@ class EKBuilderStateNames:
 class ElasticKernelBuilder(SingleElasticityBuilder):
     _state_names = EKBuilderStateNames
 
-    def __init__(self, elasticity_params: Optional[Dict[str, Any]] = None,
+    def __init__(self, params: ElasticKernelParams,
                  ignored_scopes: Optional[List[str]] = None,
                  target_scopes: Optional[List[str]] = None):
-        super().__init__(ignored_scopes, target_scopes, elasticity_params)
+        super().__init__(ignored_scopes, target_scopes)
         self._node_names_to_make_elastic = []  # type: List[NNCFNodeName]
+        self._params = params
 
     def build(self, target_model: NNCFNetwork) -> ElasticKernelHandler:
         """
@@ -415,7 +469,7 @@ class ElasticKernelBuilder(SingleElasticityBuilder):
             layer_attrs = node.layer_attributes
             assert isinstance(layer_attrs, ConvolutionLayerAttributes), 'Conv2D can have elastic kernel only'
             max_kernel_size = layer_attrs.kernel_size[0]
-            elastic_kernel_op = ElasticKernelConv2DOp(max_kernel_size, node_name, self._elasticity_params)
+            elastic_kernel_op = ElasticKernelConv2DOp(max_kernel_size, node_name, self._params)
             elastic_kernel_op.to(device)
             update_conv_params_op = UpdateWeight(elastic_kernel_op)
             transformation_commands.append(
@@ -480,7 +534,13 @@ class ElasticKernelBuilder(SingleElasticityBuilder):
 
         :param state: Output of `get_state()` method.
         """
-        super().load_state(state)
+        params_from_state = state[SingleElasticityBuilder._state_names.ELASTICITY_PARAMS]
+        params = ElasticKernelParams.from_state(params_from_state)
+        if self._params and self._params != params:
+            nncf_logger.warning(
+                'Different elasticity parameters were provided in two places: on init and on loading '
+                'state. The one from state is taken by ignoring the ones from init.')
+        self._params = params
         self._node_names_to_make_elastic = state[self._state_names.NODE_NAMES_TO_MAKE_ELASTIC]
 
     def get_state(self) -> Dict[str, Any]:
@@ -490,6 +550,7 @@ class ElasticKernelBuilder(SingleElasticityBuilder):
 
         :return: state of the object
         """
-        state = super().get_state()
-        state[self._state_names.NODE_NAMES_TO_MAKE_ELASTIC] = self._node_names_to_make_elastic
-        return state
+        return {
+            SingleElasticityBuilder._state_names.ELASTICITY_PARAMS: self._params.get_state(),
+            self._state_names.NODE_NAMES_TO_MAKE_ELASTIC: self._node_names_to_make_elastic
+        }

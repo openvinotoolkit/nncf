@@ -13,14 +13,17 @@
 from pathlib import Path
 from shutil import copyfile
 from typing import Any
+from typing import Callable
 from typing import Dict
 from typing import Optional
 from typing import Tuple
+from typing import TypeVar
 
 import torch
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 
 from nncf import NNCFConfig
+from nncf.api.compression import CompressionAlgorithmController
 from nncf.api.compression import CompressionStage
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.config.structures import BNAdaptationInitArgs
@@ -32,6 +35,28 @@ from nncf.experimental.torch.nas.bootstrapNAS.training.model_creator_helpers imp
 from nncf.torch.checkpoint_loading import load_state
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.utils import is_main_process
+
+ModelType = TypeVar('ModelType')
+OptimizerType = TypeVar('OptimizerType')
+LRSchedulerType = TypeVar('LRSchedulerType')
+TensorboardWriterType = TypeVar('TensorboardWriterType')
+DataLoaderType = TypeVar('DataLoaderType')
+TrainEpochFnType = Callable[
+    [
+        DataLoaderType,
+        ModelType,
+        CompressionAlgorithmController,
+        int,
+        OptimizerType,
+    ], None
+]
+ValFnType = Callable[
+    [
+        ModelType,
+        DataLoaderType
+    ],
+    Tuple[float, float, float]
+]
 
 
 class EBTrainAlgoStateNames:
@@ -87,14 +112,14 @@ class EpochBasedTrainingAlgorithm:
         return self._training_ctrl.elasticity_controller
 
     def run(self,
-            train_epoch_fn,
-            train_loader,
-            lr_scheduler,
-            val_fn,
-            val_loader,
-            optimizer,
-            checkpoint_save_dir,
-            tensorboard_writer=None) -> Tuple[NNCFNetwork, ElasticityController]:
+            train_epoch_fn: TrainEpochFnType,
+            train_loader: DataLoaderType,
+            lr_scheduler: LRSchedulerType,
+            val_fn: ValFnType,
+            val_loader: DataLoaderType,
+            optimizer: OptimizerType,
+            checkpoint_save_dir: str,
+            tensorboard_writer: Optional[TensorboardWriterType] = None) -> Tuple[NNCFNetwork, ElasticityController]:
         """
         Implements a training loop for supernet training.
 
@@ -208,7 +233,8 @@ class EpochBasedTrainingAlgorithm:
         return EpochBasedTrainingAlgorithm(model, training_ctrl)
 
     @classmethod
-    def from_checkpoint(cls, nncf_network: NNCFNetwork,
+    def from_checkpoint(cls,
+                        nncf_network: NNCFNetwork,
                         bn_adapt_args: BNAdaptationInitArgs,
                         resuming_checkpoint_path: str) -> 'EpochBasedTrainingAlgorithm':
         """
@@ -232,8 +258,10 @@ class EpochBasedTrainingAlgorithm:
         return EpochBasedTrainingAlgorithm(model, training_ctrl, checkpoint)
 
     @staticmethod
-    def _define_best_accuracy(acc1, best_acc1,
-                              compression_stage, best_compression_stage) -> Tuple[float, float]:
+    def _define_best_accuracy(acc1: float,
+                              best_acc1: float,
+                              compression_stage: CompressionStage,
+                              best_compression_stage: CompressionStage) -> float:
         """
         The best accuracy value should be considered not only by value, but also per each stage.
         Currently, there are two stages in NAS algo only: PARTIALLY_COMPRESSED and FULLY_COMPRESSED.
@@ -247,6 +275,6 @@ class EpochBasedTrainingAlgorithm:
             best_acc1 = acc1
         return best_acc1
 
-    def _validate_subnet(self, val_fn, val_loader):
+    def _validate_subnet(self, val_fn: ValFnType, val_loader: DataLoaderType):
         self._training_ctrl.prepare_for_validation()
         return val_fn(self._model, val_loader)

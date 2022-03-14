@@ -17,10 +17,21 @@ from typing import List
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elasticity_dim import ElasticityDim
 
 
+class SDescriptorParamNames:
+    TRAIN_DIMS = 'train_dims'
+    EPOCHS = 'epochs'
+    REORG_WEIGHTS = 'reorg_weights'
+    WIDTH_INDICATOR = 'width_indicator'
+    DEPTH_INDICATOR = 'depth_indicator'
+    BN_ADAPT = 'bn_adapt'
+
+
 class StageDescriptor:
     """
     Describes parameters of the training stage. The stage defines active elastic dimension and its parameters.
     """
+    _state_names = SDescriptorParamNames
+
     def __init__(self, train_dims: List[ElasticityDim],
                  epochs: int = 1,
                  reorg_weights: bool = False,
@@ -35,12 +46,23 @@ class StageDescriptor:
         self.bn_adapt = bn_adapt
 
     def __eq__(self, other: 'StageDescriptor'):
-        return self.train_dims == other.train_dims and \
-               self.epochs == other.epochs and \
-               self.reorg_weights == other.reorg_weights and \
-               self.width_indicator == other.width_indicator and \
-               self.depth_indicator == other.depth_indicator and \
-               self.bn_adapt == other.bn_adapt
+        return self.__dict__ == other.__dict__
+
+    @classmethod
+    def from_config(cls, config: Dict[str, Any]) -> 'StageDescriptor':
+        """
+        Creates the object from its config.
+        """
+        train_dims = config.get(cls._state_names.TRAIN_DIMS, ['kernel'])
+        kwargs = {
+            cls._state_names.TRAIN_DIMS: [ElasticityDim.from_str(dim) for dim in train_dims],
+            cls._state_names.EPOCHS: config.get(cls._state_names.EPOCHS, 1),
+            cls._state_names.REORG_WEIGHTS: config.get(cls._state_names.REORG_WEIGHTS, False),
+            cls._state_names.WIDTH_INDICATOR: config.get(cls._state_names.WIDTH_INDICATOR, 1),
+            cls._state_names.DEPTH_INDICATOR: config.get(cls._state_names.DEPTH_INDICATOR, 1),
+            cls._state_names.BN_ADAPT: config.get(cls._state_names.BN_ADAPT, False),
+        }
+        return cls(**kwargs)
 
     @classmethod
     def from_state(cls, state: Dict[str, Any]):
@@ -49,17 +71,17 @@ class StageDescriptor:
 
         :param state: Output of `get_state()` method.
         """
-        new_dict = state.copy()
-        train_dims = state.get('train_dims', {})
-        new_dict['train_dims'] = [ElasticityDim.from_str(dim) for dim in train_dims]
-        return cls(**new_dict)
+        kwargs = state.copy()
+        train_dims = state[cls._state_names.TRAIN_DIMS]
+        kwargs[cls._state_names.TRAIN_DIMS] = [ElasticityDim.from_str(dim) for dim in train_dims]
+        return cls(**kwargs)
 
     def get_state(self) -> Dict[str, Any]:
         return {
-            'train_dims': [dim.value for dim in self.train_dims],
-            'epochs': self.epochs,
-            'reorg_weights': self.reorg_weights,
-            'width_indicator': self.width_indicator,
-            'depth_indicator': self.depth_indicator,
-            'bn_adapt': self.bn_adapt,
+            self._state_names.TRAIN_DIMS: [dim.value for dim in self.train_dims],
+            self._state_names.EPOCHS: self.epochs,
+            self._state_names.REORG_WEIGHTS: self.reorg_weights,
+            self._state_names.WIDTH_INDICATOR: self.width_indicator,
+            self._state_names.DEPTH_INDICATOR: self.depth_indicator,
+            self._state_names.BN_ADAPT: self.bn_adapt,
         }

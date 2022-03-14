@@ -21,6 +21,7 @@ from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elasticity_builder impo
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elasticity_dim import ElasticityDim
 from nncf.experimental.torch.nas.bootstrapNAS.training.progressive_shrinking_controller import \
     ProgressiveShrinkingController
+from nncf.experimental.torch.nas.bootstrapNAS.training.scheduler import NASSchedulerParams
 from nncf.torch.algo_selector import PT_COMPRESSION_ALGORITHMS
 from nncf.torch.compression_method_api import PTCompressionAlgorithmBuilder
 from nncf.torch.graph.transformations.layout import PTTransformationLayout
@@ -83,7 +84,7 @@ class ProgressiveShrinkingBuilder(PTCompressionAlgorithmBuilder):
 
     def _build_controller(self, model: NNCFNetwork) -> 'ProgressiveShrinkingController':
         elasticity_ctrl = self._elasticity_builder.build_controller(model)
-        schedule_params = self._algo_config.get('schedule', {})
+        schedule_params = NASSchedulerParams.from_config(self._algo_config.get('schedule', {}))
         return ProgressiveShrinkingController(
             model, elasticity_ctrl, self._bn_adaptation, self._progressivity_of_elasticity, schedule_params)
 

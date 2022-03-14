@@ -52,7 +52,11 @@ def fixture_basic_model(request):
     return model
 
 
-BASIC_ELASTIC_WIDTH_PARAMS = {'min_width': 1, 'width_step': 1}
+BASIC_ELASTIC_WIDTH_PARAMS = {'filter_importance': 'L1',
+                              'max_num_widths': -1,
+                              'min_width': 1,
+                              'width_multipliers': None,
+                              'width_step': 1}
 
 
 ###########################
@@ -62,7 +66,7 @@ BASIC_ELASTIC_WIDTH_PARAMS = {'min_width': 1, 'width_step': 1}
 def test_set_elastic_width_by_value_not_from_list():
     width_handler, _ = create_two_conv_width_supernet()
     with pytest.raises(ValueError):
-        width_handler.set_config({0: 16})
+        width_handler.activate_subnet_for_config({0: 16})
 
 
 ###########################
@@ -87,7 +91,7 @@ def test_elastic_width_with_intermediate_value():
 
     ACTIVE_WIDTH = 1
     x = torch.ones(supernet.INPUT_SIZE).to(device)
-    width_handler.set_config({0: ACTIVE_WIDTH})
+    width_handler.activate_subnet_for_config({0: ACTIVE_WIDTH})
     actual_output = supernet(x)
 
     conv1 = supernet.conv1

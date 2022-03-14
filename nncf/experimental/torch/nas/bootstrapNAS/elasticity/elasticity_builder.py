@@ -16,14 +16,14 @@ from typing import Dict
 from typing import List
 
 from nncf import NNCFConfig
-from nncf.torch.algo_selector import PT_COMPRESSION_ALGORITHMS
-from nncf.torch.compression_method_api import PTCompressionAlgorithmBuilder
-from nncf.torch.graph.transformations.layout import PTTransformationLayout
-from nncf.experimental.torch.nas.bootstrapNAS.elasticity.base_handler import ELASTICITY_BUILDERS
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.base_handler import SingleElasticityBuilder
+from nncf.experimental.torch.nas.bootstrapNAS.elasticity.base_handler import create_elasticity_builder_from_config
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elasticity_controller import ElasticityController
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elasticity_dim import ElasticityDim
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.multi_elasticity_handler import MultiElasticityHandler
+from nncf.torch.algo_selector import PT_COMPRESSION_ALGORITHMS
+from nncf.torch.compression_method_api import PTCompressionAlgorithmBuilder
+from nncf.torch.graph.transformations.layout import PTTransformationLayout
 from nncf.torch.nncf_network import NNCFNetwork
 
 
@@ -104,9 +104,11 @@ class ElasticityBuilder(PTCompressionAlgorithmBuilder):
         target_scopes = self._target_scopes
 
         for elasticity_dim in sorted_elasticity_dims:
-            elasticity_params = self._algo_config.get(elasticity_dim.value, {})
-            elasticity_builder_cls = ELASTICITY_BUILDERS.get(elasticity_dim)
-            elasticity_builder = elasticity_builder_cls(elasticity_params, ignored_scopes, target_scopes)
+            elasticity_config = self._algo_config.get(elasticity_dim.value, {})
+            elasticity_builder = create_elasticity_builder_from_config(elasticity_config,
+                                                                       elasticity_dim,
+                                                                       ignored_scopes,
+                                                                       target_scopes)
             self._elasticity_builders[elasticity_dim] = elasticity_builder
 
         if self._builder_states is not None:
@@ -119,7 +121,7 @@ class ElasticityBuilder(PTCompressionAlgorithmBuilder):
         for dim, builder in self._elasticity_builders.items():
             handler = builder.build(target_model)
             elasticity_handlers[dim] = handler
-        self._multi_elasticity_handler = MultiElasticityHandler(elasticity_handlers)
+        self._multi_elasticity_handler = MultiElasticityHandler(elasticity_handlers, target_model)
 
         layout = PTTransformationLayout()
         for handler in elasticity_handlers.values():

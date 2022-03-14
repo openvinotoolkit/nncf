@@ -19,9 +19,7 @@ from typing import Optional
 
 import pytest
 
-from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elastic_depth import ElasticDepthBuilder
-from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elastic_kernel import ElasticKernelBuilder
-from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elastic_width import ElasticWidthBuilder
+from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elasticity_dim import ElasticityDim
 from tests.torch.helpers import BasicConvTestModel
 from tests.torch.nas.descriptors import ElasticityDesc
 from tests.torch.nas.descriptors import WidthElasticityDesc
@@ -41,7 +39,7 @@ KERNEL_SIZE_AND_SEARCH_SPACE = [
 
 LIST_KERNEL_SS_DESCS = [
     ElasticityDesc(
-        ElasticKernelBuilder,
+        ElasticityDim.KERNEL,
         model_cls=partial(BasicConvTestModel, 1, 1, kernel_size),
         name=f'kernel_{kernel_size}_{search_space}',
         input_size=[1, 1, kernel_size, kernel_size],
@@ -88,7 +86,7 @@ LIST_WSS_PARAMS = [
 LIST_WIDTH_SS_DESCS = [
     WidthElasticityDesc(
         ElasticityDesc(
-            ElasticWidthBuilder,
+            ElasticityDim.WIDTH,
             model_cls=partial(TwoConvModel, in_channels=1, out_channels=wss_params.max_out_channels, kernel_size=5),
             params=wss_params.params,
             name=f'width_{wss_params}',
@@ -101,18 +99,18 @@ LIST_WIDTH_SS_DESCS = [
 
 LIST_SEARCH_SPACE_DESCS = [
     COMMON_DEPTH_BASIC_DESC,
-    ElasticityDesc(ElasticDepthBuilder, model_cls=DepthBasicConvTestModel,
+    ElasticityDesc(ElasticityDim.DEPTH, model_cls=DepthBasicConvTestModel,
                    params={'mode': 'auto', 'min_block_size': 2},
                    ref_search_space=[]),
     COMMON_DEPTH_SUPERNET_DESC,
-    ElasticityDesc(ElasticDepthBuilder, model_cls=ResNet18, params={'mode': 'auto'}, input_size=RESNET50_INPUT_SIZE,
+    ElasticityDesc(ElasticityDim.DEPTH, model_cls=ResNet18, params={'mode': 'auto'}, input_size=RESNET50_INPUT_SIZE,
                    ref_search_space=[
                        [1], [2], [3], [4],
                        [1, 2], [1, 3], [1, 4], [2, 3], [2, 4], [3, 4],
                        [1, 2, 3], [1, 2, 4], [1, 3, 4], [2, 3, 4],
                        [1, 2, 3, 4]
                    ]),
-    ElasticityDesc(ElasticDepthBuilder, model_cls=MobileNetV2, params={'mode': 'auto'}, input_size=RESNET50_INPUT_SIZE,
+    ElasticityDesc(ElasticityDim.DEPTH, model_cls=MobileNetV2, params={'mode': 'auto'}, input_size=RESNET50_INPUT_SIZE,
                    ref_search_space=[
                        [0], [2], [5], [7], [9],
                        [0, 2], [0, 5], [0, 7], [0, 9], [2, 5], [2, 7], [2, 9], [5, 7], [5, 9], [7, 9],

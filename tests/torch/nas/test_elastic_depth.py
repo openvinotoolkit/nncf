@@ -514,13 +514,13 @@ def test_change_depth_indicator():
     assert ctrl.multi_elasticity_handler.depth_handler.get_active_config() == [0, 1, 3, 4, 8, 9, 10, 11]
 
     ctrl.multi_elasticity_handler.depth_handler.depth_indicator = 1
-    ctrl.multi_elasticity_handler.depth_handler.set_config([0, 1])
+    ctrl.multi_elasticity_handler.depth_handler.activate_subnet_for_config([0, 1])
     assert ctrl.multi_elasticity_handler.depth_handler.get_active_config() == [1]
 
     ctrl.multi_elasticity_handler.depth_handler.depth_indicator = 2
-    ctrl.multi_elasticity_handler.depth_handler.set_config([0, 1])
+    ctrl.multi_elasticity_handler.depth_handler.activate_subnet_for_config([0, 1])
     assert ctrl.multi_elasticity_handler.depth_handler.get_active_config() == [0, 1]
 
     ctrl.multi_elasticity_handler.depth_handler.depth_indicator = 1
-    ctrl.multi_elasticity_handler.depth_handler.set_config([0, 1])
+    ctrl.multi_elasticity_handler.depth_handler.activate_subnet_for_config([0, 1])
     assert ctrl.multi_elasticity_handler.depth_handler.get_active_config() == [1]

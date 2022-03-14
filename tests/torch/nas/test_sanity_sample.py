@@ -41,7 +41,7 @@ class NASSampleTestDescriptor(SanityTestCaseDescriptor):
         pass
 
     def get_main_location(self):
-        return 'examples.experimental.torch.classification.nas_advanced_main'
+        return 'examples.experimental.torch.classification.bootstrap_nas'
 
     def get_config_update(self) -> Dict:
         sample_params = self.get_sample_params()
@@ -61,7 +61,7 @@ class NASSampleTestDescriptor(SanityTestCaseDescriptor):
             mocker.spy(ElasticDepthHandler, 'get_random_config'),
             mocker.spy(MultiElasticityHandler, 'activate_random_subnet'),
             mocker.spy(MultiElasticityHandler, 'activate_minimum_subnet'),
-            mocker.spy(MultiElasticityHandler, 'set_config'),
+            mocker.spy(MultiElasticityHandler, 'activate_subnet_for_config'),
             mocker.spy(BootstrapNASScheduler, 'epoch_step'),
             mocker.spy(BootstrapNASScheduler, 'step'),
             mocker.spy(ProgressiveShrinkingController, 'step'),

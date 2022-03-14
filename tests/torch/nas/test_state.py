@@ -18,14 +18,12 @@ import pytest
 import torch
 
 from nncf.common.utils.logger import logger as nncf_logger
-from nncf.torch.model_creation import create_nncf_network
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.base_handler import SEHBuilderStateNames
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elastic_depth import EDBuilderStateNames
-from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elastic_depth import ElasticDepthBuilder
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elastic_kernel import EKBuilderStateNames
-from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elastic_kernel import ElasticKernelBuilder
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elastic_width import EWBuilderStateNames
-from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elastic_width import ElasticWidthBuilder
+from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elasticity_dim import ElasticityDim
+from nncf.torch.model_creation import create_nncf_network
 from tests.torch.helpers import BasicConvTestModel
 from tests.torch.helpers import get_empty_config
 from tests.torch.nas.creators import build_elastic_model_from_handler
@@ -54,7 +52,7 @@ def ref_width_output_fn(model, x):
 
 COMMON_WIDTH_STATE_DESCS = [
     ElasticityDesc(
-        ElasticWidthBuilder,
+        ElasticityDim.WIDTH,
         model_cls=TwoConvAddConvTestModel,
         params=BASIC_ELASTIC_WIDTH_PARAMS,
         ref_state={
@@ -67,7 +65,7 @@ COMMON_WIDTH_STATE_DESCS = [
         ref_output_fn=ref_width_output_fn
     ),
     ElasticityDesc(
-        ElasticWidthBuilder,
+        ElasticityDim.WIDTH,
         model_cls=TwoSequentialConvBNTestModel,
         params=BASIC_ELASTIC_WIDTH_PARAMS,
         ref_state={
@@ -90,7 +88,7 @@ def ref_kernel_output_fn(model, x):
 
 
 COMMON_KERNEL_DESC = ElasticityDesc(
-    ElasticKernelBuilder,
+    ElasticityDim.KERNEL,
     model_cls=partial(BasicConvTestModel, 1, out_channels=1, kernel_size=5),
     params=BASIC_ELASTIC_KERNEL_PARAMS,
     ref_output_fn=ref_kernel_output_fn,
@@ -102,14 +100,20 @@ COMMON_KERNEL_DESC = ElasticityDesc(
 )
 
 COMMON_DEPTH_SUPERNET_DESC = ElasticityDesc(
-    ElasticDepthBuilder,
+    ElasticityDim.DEPTH,
     model_cls=BasicTestSuperNet,
     params={
         'mode': 'auto',
         'min_block_size': 2
     },
     ref_state={
-        EDBuilderStateNames.MODE: 'auto',
+        'elasticity_params': {
+            'allow_linear_combination': False,
+            'allow_nested_blocks': False,
+            'max_block_size': 50,
+            'min_block_size': 2,
+            'skipped_blocks': None
+        },
         EDBuilderStateNames.SKIPPED_BLOCKS: [
             {
                 'start_node_name': 'BasicTestSuperNet/NNCFConv2d[conv1]/conv2d_0',
@@ -117,7 +121,7 @@ COMMON_DEPTH_SUPERNET_DESC = ElasticityDesc(
             }
         ],
         EDBuilderStateNames.SKIPPED_BLOCKS_DEPENDENCIES: {0: [0]},
-        EDBuilderStateNames.ORDINAL_IDS: [[1, 3]],
+        EDBuilderStateNames.OrdinalIds: [[1, 3]],
     },
     ref_search_space=[[0]]
 )
@@ -129,16 +133,23 @@ def ref_depth_output_fn(model, x):
 
 
 COMMON_DEPTH_BASIC_DESC = ElasticityDesc(
-    ElasticDepthBuilder,
+    ElasticityDim.DEPTH,
     model_cls=DepthBasicConvTestModel,
     params=BASIC_ELASTIC_DEPTH_PARAMS,
     ref_output_fn=ref_depth_output_fn,
     ref_search_space=[[0]],
     ref_state={
-        EDBuilderStateNames.MODE: 'manual',
+        'elasticity_params': {
+            'allow_linear_combination': False,
+            'allow_nested_blocks': False,
+            'max_block_size': 50,
+            'min_block_size': 6,
+            'skipped_blocks': [['DepthBasicConvTestModel/Sequential[branch_with_blocks]/NNCFConv2d[conv0]/conv2d_0',
+                                'DepthBasicConvTestModel/Sequential[branch_with_blocks]/NNCFConv2d[conv1]/conv2d_0']]
+        },
         EDBuilderStateNames.SKIPPED_BLOCKS: BASIC_ELASTIC_DEPTH_PARAMS['skipped_blocks_state'],
         EDBuilderStateNames.SKIPPED_BLOCKS_DEPENDENCIES: BASIC_ELASTIC_DEPTH_PARAMS['skipped_blocks_dependencies'],
-        EDBuilderStateNames.ORDINAL_IDS: None,
+        EDBuilderStateNames.OrdinalIds: None,
     }
 )
 
@@ -159,7 +170,7 @@ def test_can_get_builder_state_after_build(desc):
 ELASTIC_WIDTH_PARAMS_BB = {'filter_importance': 'L2', **BASIC_ELASTIC_WIDTH_PARAMS}
 LIST_STATE_BEFORE_BUILD_DESCS = [
     ElasticityDesc(
-        ElasticWidthBuilder,
+        ElasticityDim.WIDTH,
         params=ELASTIC_WIDTH_PARAMS_BB,
         ref_state={
             SEHBuilderStateNames.ELASTICITY_PARAMS: ELASTIC_WIDTH_PARAMS_BB,
@@ -167,7 +178,7 @@ LIST_STATE_BEFORE_BUILD_DESCS = [
         }
     ),
     ElasticityDesc(
-        ElasticKernelBuilder,
+        ElasticityDim.KERNEL,
         params=BASIC_ELASTIC_KERNEL_PARAMS,
         ref_state={
             SEHBuilderStateNames.ELASTICITY_PARAMS: BASIC_ELASTIC_KERNEL_PARAMS,
@@ -180,29 +191,28 @@ LIST_STATE_BEFORE_BUILD_DESCS = [
 
 @pytest.mark.parametrize('desc', LIST_STATE_BEFORE_BUILD_DESCS, ids=map(str, LIST_STATE_BEFORE_BUILD_DESCS))
 class TestBeforeBuild:
-    def test_can_get_builder_state_before_build(self, desc):
-        builder = desc.elasticity_builder_cls(desc.params)
+    def test_can_get_builder_state_before_build(self, desc: ElasticityDesc):
+        builder = desc.create_builder()
         actual_state = builder.get_state()
         assert actual_state == desc.ref_state
 
-    def test_output_warning_when_state_overrides_params(self, desc, _nncf_caplog):
-        old_builder = desc.elasticity_builder_cls({})
+    def test_output_warning_when_state_overrides_params(self, desc: ElasticityDesc, _nncf_caplog):
+        old_builder = desc.create_builder_with_config({})
         old_state = old_builder.get_state()
 
         new_params = desc.params
-        new_builder = desc.elasticity_builder_cls(new_params)
+        new_builder = desc.create_builder_with_config(new_params)
         new_builder.load_state(old_state)
 
         record = next(iter(_nncf_caplog.records))
         assert record.levelno == logging.WARNING
 
-    def test_no_warning_when_state_and_params_are_the_same(self, desc, _nncf_caplog):
-        old_params = desc.params
-        old_builder = desc.elasticity_builder_cls(old_params)
+    def test_no_warning_when_state_and_params_are_the_same(self, desc: ElasticityDesc, _nncf_caplog):
+        old_builder = desc.create_builder()
         old_state = old_builder.get_state()
 
         new_params = desc.params.copy()
-        new_builder = desc.elasticity_builder_cls(new_params)
+        new_builder = desc.create_builder_with_config(new_params)
         new_builder.load_state(old_state)
 
         assert not _nncf_caplog.records
@@ -216,7 +226,7 @@ LIST_LOAD_STATE_DESCS = [
 
 
 @pytest.mark.parametrize('desc', LIST_LOAD_STATE_DESCS, ids=map(str, LIST_LOAD_STATE_DESCS))
-def test_can_load_handler_state(desc):
+def test_can_load_handler_state(desc: ElasticityDesc):
     model = desc.model_cls()
     move_model_to_cuda_if_available(model)
     model_copy = deepcopy(model)
@@ -228,7 +238,7 @@ def test_can_load_handler_state(desc):
         input_size = model.INPUT_SIZE
     config = get_empty_config(input_sample_sizes=input_size)
     old_nncf_network = create_nncf_network(model, config)
-    old_builder = desc.elasticity_builder_cls(desc.params)
+    old_builder = desc.create_builder()
     old_handler = old_builder.build(old_nncf_network)
     elastic_model = build_elastic_model_from_handler(old_nncf_network, old_handler)
     old_handler.activate_minimum_subnet()
@@ -239,7 +249,8 @@ def test_can_load_handler_state(desc):
     new_nncf_network = create_nncf_network(model_copy, config)
     builder_state = old_builder.get_state()
     # no need in config to restore builder state
-    new_builder = desc.elasticity_builder_cls()
+    new_builder = desc.create_builder_with_config({})
+
     new_builder.load_state(builder_state)
     new_handler = new_builder.build(new_nncf_network)
     elastic_model = build_elastic_model_from_handler(new_nncf_network, new_handler)

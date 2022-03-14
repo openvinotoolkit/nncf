@@ -22,6 +22,7 @@ from nncf.common.compression import BaseCompressionAlgorithmController as BaseCo
 from nncf.common.utils.debug import set_debug_log_dir
 from nncf.config import NNCFConfig
 from nncf.torch.compression_method_api import PTCompressionAlgorithmBuilder
+from nncf.torch.compression_method_api import PTCompressionAlgorithmController
 from nncf.torch.model_creation import create_compression_algorithm_builder_from_algo_names
 from nncf.torch.model_creation import synchronize_all_processes_in_distributed_mode
 from nncf.torch.nncf_network import NNCFNetwork
@@ -72,12 +73,15 @@ def create_compressed_model_from_algo_names(nncf_network: NNCFNetwork,
 def resume_compression_algorithm_builder(compression_state: Dict[str, Any],
                                          config: Optional[NNCFConfig] = None) -> PTCompressionAlgorithmBuilder:
     """
-    :param compression_state:
-    :param config:
-    #  - NNCFConfig is required for resume from checkpoint, because currently CompressionBuilder takes NNCFConfig to
-    #       get some params, like BNAdaptInitArgs. It's needed not only on init. e.g. BNAdaptInitArgs.train_loader is
-    #       used by ProgressiveShrinkingAlgorithm during the training.
-    :return:
+    Resume compression builder from its state.
+
+    :param compression_state: representation of the entire compression state to unambiguously restore
+    the compressed model. Includes builder and controller states.
+    :param config: A configuration object used to determine the exact compression modifications to be applied
+    to the model. NNCFConfig is required for resume from checkpoint, because currently CompressionBuilder takes
+    NNCFConfig to get some params, like BNAdaptInitArgs. It's needed not only on init. e.g.
+    BNAdaptInitArgs.train_loader is used by ProgressiveShrinkingAlgorithm during the training.
+    :return: resumed compression builder
     """
     if config is None:
         config = NNCFConfig()
@@ -89,14 +93,20 @@ def resume_compression_algorithm_builder(compression_state: Dict[str, Any],
     return builder
 
 
-def resume_compression_from_state(nncf_network, compression_state, config: Optional[NNCFConfig] = None):
+def resume_compression_from_state(nncf_network: NNCFNetwork,
+                                  compression_state: Dict[str, Any],
+                                  config: Optional[NNCFConfig] = None) \
+    -> Tuple[NNCFNetwork, PTCompressionAlgorithmController]:
     """
+    Resumes compression model
 
-    :param nncf_network:
-    :param compression_state:
+    :param nncf_network: empty NNCFNetwork, that just wrapped original PyTorch model.
+    :param compression_state: representation of the entire compression state to unambiguously restore
+    the compressed model. Includes builder and controller states.
     :param config: is needed for overriding state or for passing extra structs only, like BNAdaptInitArgs required
-    during training, like in NAS
-    :return:
+    during training, like in NAS.
+    :return: the model ready for compression parameter training wrapped as an object of NNCFNetwork and
+    a controller for the compression algorithm.
     """
     builder = resume_compression_algorithm_builder(compression_state, config)
     model = builder.apply_to(nncf_network)

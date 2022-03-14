@@ -254,7 +254,7 @@ class NNCFGraph:
 
     def get_all_simple_paths(self,
                              start_node_name: NNCFNodeName,
-                             end_node_name: NNCFNodeName) -> Generator[List[str], None, None]:
+                             end_node_name: NNCFNodeName) -> Generator[List[NNCFNodeName], None, None]:
         """
         Generates all simple paths in the NNCFGraph from start node to end node.
         A simple path is a path with no repeated nodes.

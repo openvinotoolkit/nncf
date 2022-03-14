@@ -11,7 +11,6 @@
  limitations under the License.
 """
 import random
-from enum import Enum
 from itertools import combinations
 from typing import Any
 from typing import Dict
@@ -21,23 +20,25 @@ from typing import Optional
 from nncf.common.graph import NNCFNodeName
 from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.utils.logger import logger as nncf_logger
+from nncf.experimental.torch.nas.bootstrapNAS.elasticity.base_handler import BaseElasticityParams
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.base_handler import ELASTICITY_BUILDERS
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.base_handler import ELASTICITY_HANDLERS_MAP
+from nncf.experimental.torch.nas.bootstrapNAS.elasticity.base_handler import ELASTICITY_PARAMS
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.base_handler import SingleElasticityBuilder
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.base_handler import SingleElasticityHandler
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elastic_width import ElasticWidthHandler
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elasticity_dim import ElasticityDim
-from nncf.experimental.torch.search_building_blocks.search_blocks import BUILDING_BLOCKS
 from nncf.experimental.torch.search_building_blocks.search_blocks import BuildingBlock
-from nncf.experimental.torch.search_building_blocks.search_blocks import GROUPED_BLOCK_IDS
-from nncf.experimental.torch.search_building_blocks.search_blocks import ORDINAL_IDS
+from nncf.experimental.torch.search_building_blocks.search_blocks import BuildingBlocks
+from nncf.experimental.torch.search_building_blocks.search_blocks import GroupedBlockIDs
+from nncf.experimental.torch.search_building_blocks.search_blocks import OrdinalIDs
 from nncf.experimental.torch.search_building_blocks.search_blocks import get_building_blocks
 from nncf.experimental.torch.search_building_blocks.search_blocks import get_group_of_dependent_blocks
 from nncf.torch.dynamic_graph.context import TracingContext
 from nncf.torch.nncf_network import NNCFNetwork
 
-block_id = int
-ElasticDepthConfig = List[block_id]  # list of block indexes
+BlockId = int
+ElasticDepthConfig = List[BlockId]  # list of block indexes
 ElasticDepthSearchSpace = List[ElasticDepthConfig]  # grouped list of block indexes
 
 
@@ -47,10 +48,20 @@ class ElasticDepthHandler(SingleElasticityHandler):
     """
 
     def __init__(self, target_model: NNCFNetwork,
-                 skipped_blocks: BUILDING_BLOCKS,
-                 skip_dependencies: GROUPED_BLOCK_IDS,
-                 node_names_per_block: Dict[int, List[str]],
-                 ordinal_ids: ORDINAL_IDS):
+                 skipped_blocks: BuildingBlocks,
+                 skip_dependencies: GroupedBlockIDs,
+                 node_names_per_block: Dict[int, List[NNCFNodeName]],
+                 ordinal_ids: OrdinalIDs):
+        """
+        Constructor
+
+        :param target_model: a target NNCFNetwork for adding modifications
+        :param skipped_blocks: list of building blocks to be skipped.
+        :param skip_dependencies: indexes of building blocks grouped by connectivity.
+        Blocks that follow each other in the graph (i.e. they are connected by one edge) belong to the same group.
+        :param node_names_per_block: mapping of block id and all node names inside the block.
+        :param ordinal_ids: original ids of the start and end of the block in original graph
+        """
         super().__init__()
         self._target_model = target_model
         self._tracing_context = self._target_model.get_tracing_context()  # type: TracingContext
@@ -149,7 +160,7 @@ class ElasticDepthHandler(SingleElasticityHandler):
         """
         self.activate_maximum_subnet()
 
-    def set_config(self, config: ElasticDepthConfig):
+    def activate_subnet_for_config(self, config: ElasticDepthConfig):
         """
         Activates a Subnet that doesn't execute the blocks specified in the given elasticity configuration
 
@@ -186,18 +197,16 @@ class ElasticDepthHandler(SingleElasticityHandler):
                                       format(indexes_of_pairs))
         return result
 
-    def get_kwargs_for_flops_counting(self) -> Dict[str, Any]:
+    def get_names_of_skipped_nodes(self) -> List[NNCFNodeName]:
         """
-        Provides arguments for counting flops of the currently activated subnet.
-
-        :return: mapping of parameters to its values
+        :return: names of nodes that are currently skipped by Elastic Depth
         """
-        op_addresses_to_skip = []
+        names_of_skipped_nodes = []
         active_block_indexes = self._tracing_context.active_block_indexes
         if active_block_indexes is not None:
             for idx in active_block_indexes:
-                op_addresses_to_skip.extend(self._node_names_per_block[idx])
-        return {'op_addresses_to_skip': op_addresses_to_skip}
+                names_of_skipped_nodes.extend(self._node_names_per_block[idx])
+        return names_of_skipped_nodes
 
     def _remove_inconsistent_blocks(self, config: ElasticDepthConfig) -> ElasticDepthConfig:
         return self._remove_blocks_skipped_non_progressively(config)
@@ -240,25 +249,91 @@ class ElasticDepthHandler(SingleElasticityHandler):
         return block_indexes_to_remove
 
 
-class ElasticDepthMode(Enum):
-    MANUAL = 'manual'
-    AUTO = 'auto'
-
-    @classmethod
-    def from_str(cls, mode: str) -> 'ElasticDepthMode':
-        if mode == ElasticDepthMode.MANUAL.value:
-            return ElasticDepthMode.MANUAL
-        if mode == ElasticDepthMode.AUTO.value:
-            return ElasticDepthMode.AUTO
-        raise RuntimeError(f"Unknown elasticity depth mode: {mode}."
-                           f"List of supported: {[e.value for e in ElasticDepthMode]}")
-
-
 class EDBuilderStateNames:
     SKIPPED_BLOCKS = 'skipped_blocks'
     SKIPPED_BLOCKS_DEPENDENCIES = 'skipped_blocks_dependencies'
-    ORDINAL_IDS = 'ordinal_ids'
+    OrdinalIds = 'ordinal_ids'
+
+
+class EDParamsStateNames:
     MODE = 'mode'
+    MAX_BLOCK_SIZE = 'max_block_size'
+    MIN_BLOCK_SIZE = 'min_block_size'
+    ALLOW_NESTED_BLOCKS = 'allow_nested_blocks'
+    ALLOW_LINEAR_COMBINATION = 'allow_linear_combination'
+    SKIPPED_BLOCKS = 'skipped_blocks'
+
+
+@ELASTICITY_PARAMS.register(ElasticityDim.DEPTH)
+class ElasticDepthParams(BaseElasticityParams):
+    _state_names = EDParamsStateNames
+
+    def __init__(self,
+                 max_block_size: int,
+                 min_block_size: int,
+                 allow_nested_blocks: bool,
+                 allow_linear_combination: bool,
+                 skipped_blocks: Optional[List[List[NNCFNodeName]]] = None):
+        """
+        Constructor
+
+        :param max_block_size: Defines minimal number of operations in the block. Option is available for the auto mode
+         only. Default value is 50.
+        :param min_block_size: Defines minimal number of operations in the skipping block. Option is available for the
+         auto mode only. Default value is 6.
+        :param allow_nested_blocks: If true, automatic block search will consider nested blocks: the ones that are part
+         of bigger block. By default, nested blocks are declined during the search and bigger blocks are found only.
+         False, by default.
+        :param allow_linear_combination: If False, automatic block search will decline blocks that are a combination of
+          other blocks, in another words, that consist entirely of operations of other blocks. False, by default.
+        :param skipped_blocks: list of building blocks to be skipped. The block is defined by names of start and end
+        nodes. If the parameter is not specified blocks to skip are found automatically.
+        """
+        self.max_block_size = max_block_size
+        self.min_block_size = min_block_size
+        self.allow_nested_blocks = allow_nested_blocks
+        self.allow_linear_combination = allow_linear_combination
+        self.skipped_blocks = skipped_blocks
+
+    @classmethod
+    def from_config(cls, config: Dict[str, Any]) -> 'ElasticDepthParams':
+        """
+        Creates the object from its config.
+        """
+        kwargs = {
+            cls._state_names.MAX_BLOCK_SIZE: config.get(cls._state_names.MAX_BLOCK_SIZE, 50),
+            cls._state_names.MIN_BLOCK_SIZE: config.get(cls._state_names.MIN_BLOCK_SIZE, 6),
+            cls._state_names.ALLOW_NESTED_BLOCKS: config.get(cls._state_names.ALLOW_NESTED_BLOCKS, False),
+            cls._state_names.ALLOW_LINEAR_COMBINATION: config.get(cls._state_names.ALLOW_LINEAR_COMBINATION, False),
+            cls._state_names.SKIPPED_BLOCKS: config.get(cls._state_names.SKIPPED_BLOCKS),
+        }
+        return cls(**kwargs)
+
+    @classmethod
+    def from_state(cls, state: Dict[str, Any]) -> 'ElasticDepthParams':
+        """
+        Creates the object from its state.
+
+        :param state: Output of `get_state()` method.
+        """
+        return cls(**state)
+
+    def get_state(self) -> Dict[str, Any]:
+        """
+        Returns the compression loss state.
+
+        :return: The compression loss state.
+        """
+        return {
+            self._state_names.MAX_BLOCK_SIZE: self.max_block_size,
+            self._state_names.MIN_BLOCK_SIZE: self.min_block_size,
+            self._state_names.ALLOW_NESTED_BLOCKS: self.allow_nested_blocks,
+            self._state_names.ALLOW_LINEAR_COMBINATION: self.allow_linear_combination,
+            self._state_names.SKIPPED_BLOCKS: self.skipped_blocks,
+        }
+
+    def __eq__(self, other: 'ElasticDepthParams') -> bool:
+        return self.__dict__ == other.__dict__
 
 
 @ELASTICITY_BUILDERS.register(ElasticityDim.DEPTH)
@@ -269,23 +344,26 @@ class ElasticDepthBuilder(SingleElasticityBuilder):
     """
     _state_names = EDBuilderStateNames
 
-    def __init__(self, elasticity_params: Optional[Dict[str, Any]] = None,
+    def __init__(self,
+                 params: ElasticDepthParams,
                  ignored_scopes: Optional[List[str]] = None,
                  target_scopes: Optional[List[str]] = None):
-        super().__init__(ignored_scopes, target_scopes, elasticity_params)
-        self._mode = ElasticDepthMode.from_str(self._elasticity_params.get('mode', ElasticDepthMode.AUTO.value))
-        self._skipped_blocks = None  # type: Optional[BUILDING_BLOCKS]
-        self._skip_dependencies = None  # type: Optional[GROUPED_BLOCK_IDS]
-        self._ordinal_ids = None  # type: Optional[ORDINAL_IDS]
-        self._max_block_size = self._elasticity_params.get('max_block_size', 50)
-        self._min_block_size = self._elasticity_params.get('min_block_size', 6)
-        self._allow_nested_blocks = self._elasticity_params.get('allow_nested_blocks', False)
-        self._allow_linear_combination = self._elasticity_params.get('allow_linear_combination', False)
-
-        if self._mode == ElasticDepthMode.MANUAL:
-            skipped_blocks = self._elasticity_params.get('skipped_blocks', [])  # type: List[List[str,str]]
-            self._skipped_blocks = [BuildingBlock(*b) for b in skipped_blocks]
+        """
+        :param params: parameters to configure elastic depth.
+        :param ignored_scopes: A list of strings to match against NNCFGraph node names
+          and ignore matching nodes. Ignored nodes will not considered for skipping.
+        :param target_scopes: A list of strings to match against NNCFGraph and define a set of nodes
+          to be considered for skipping. When `ignored_scopes` is a "denylist",
+          the `target_scopes` is an "allowlist"; otherwise, same effects apply as for `ignored_scopes`.
+        """
+        super().__init__(ignored_scopes, target_scopes)
+        self._params = params
+        self._skipped_blocks = None  # type: Optional[BuildingBlocks]
+        self._skip_dependencies = None  # type: Optional[GroupedBlockIDs]
+        if self._params.skipped_blocks is not None:
+            self._skipped_blocks = [BuildingBlock(*b) for b in self._params.skipped_blocks]
             self._skip_dependencies = get_group_of_dependent_blocks(self._skipped_blocks)
+        self._ordinal_ids = None  # type: Optional[OrdinalIDs]
 
     def build(self, target_model: NNCFNetwork) -> ElasticDepthHandler:
         """
@@ -298,18 +376,17 @@ class ElasticDepthBuilder(SingleElasticityBuilder):
         tracing_context = target_model.get_tracing_context()
         tracing_context.elastic_depth = True
 
-        if self._mode == ElasticDepthMode.AUTO:
-            if not self._skipped_blocks and not self._skip_dependencies:
-                self._skipped_blocks, self._ordinal_ids, self._skip_dependencies = \
-                    get_building_blocks(
-                        target_model,
-                        max_block_size=self._max_block_size,
-                        min_block_size=self._min_block_size,
-                        allow_nested_blocks=self._allow_nested_blocks,
-                        allow_linear_combination=self._allow_linear_combination
-                    )
-                str_bs = [str(block) for block in self._skipped_blocks]
-                nncf_logger.info('\n'.join(['\n\"Found building blocks:\": [', ',\n'.join(str_bs), ']']))
+        if self._skipped_blocks is None:
+            self._skipped_blocks, self._ordinal_ids, self._skip_dependencies = \
+                get_building_blocks(
+                    target_model,
+                    max_block_size=self._params.max_block_size,
+                    min_block_size=self._params.min_block_size,
+                    allow_nested_blocks=self._params.allow_nested_blocks,
+                    allow_linear_combination=self._params.allow_linear_combination
+                )
+            str_bs = [str(block) for block in self._skipped_blocks]
+            nncf_logger.info('\n'.join(['\n\"Found building blocks:\": [', ',\n'.join(str_bs), ']']))
         else:
             graph = target_model.get_original_graph()
             ordinal_ids = []
@@ -331,21 +408,17 @@ class ElasticDepthBuilder(SingleElasticityBuilder):
 
         :param state: Output of `get_state()` method.
         """
+        params_from_state = state[SingleElasticityBuilder._state_names.ELASTICITY_PARAMS]
+        params = ElasticDepthParams.from_state(params_from_state)
+        if self._params and self._params != params:
+            nncf_logger.warning(
+                'Different elasticity parameters were provided in two places: on init and on loading '
+                'state. The one from state is taken by ignoring the ones from init.')
+        self._params = params
         skipped_blocks_from_state = state[self._state_names.SKIPPED_BLOCKS]
-        skip_dependencies_from_state = state[self._state_names.SKIPPED_BLOCKS_DEPENDENCIES]
-        skipped_blocks = [BuildingBlock.from_state(bb_state) for bb_state in skipped_blocks_from_state]
-        ordinal_ids_from_state = state[self._state_names.ORDINAL_IDS]
-        is_skipped_blocks_diff = self._skipped_blocks and self._skipped_blocks != skipped_blocks
-        is_skip_dependencies_diff = self._skip_dependencies and self._skip_dependencies != skip_dependencies_from_state
-        is_ordinal_ids_diff = self._ordinal_ids and self._ordinal_ids != ordinal_ids_from_state
-
-        if is_skipped_blocks_diff or is_skip_dependencies_diff or is_ordinal_ids_diff:
-            nncf_logger.warning('Elasticity parameters were provided in two places: on init and on loading '
-                                'state. The one from state is taken by ignoring the ones from init.')
-        self._mode = ElasticDepthMode.from_str(state[self._state_names.MODE])
-        self._skipped_blocks = skipped_blocks
-        self._skip_dependencies = skip_dependencies_from_state
-        self._ordinal_ids = ordinal_ids_from_state
+        self._skip_dependencies = state[self._state_names.SKIPPED_BLOCKS_DEPENDENCIES]
+        self._skipped_blocks = [BuildingBlock.from_state(bb_state) for bb_state in skipped_blocks_from_state]
+        self._ordinal_ids = state[self._state_names.OrdinalIds]
 
     def get_state(self) -> Dict[str, Any]:
         """
@@ -358,10 +431,10 @@ class ElasticDepthBuilder(SingleElasticityBuilder):
         if self._skipped_blocks is not None:
             skipped_blocks_from_state = list(map(lambda x: x.get_state(), self._skipped_blocks))
         return {
-            self._state_names.MODE: self._mode.value,
+            SingleElasticityBuilder._state_names.ELASTICITY_PARAMS: self._params.get_state(),
             self._state_names.SKIPPED_BLOCKS: skipped_blocks_from_state,
             self._state_names.SKIPPED_BLOCKS_DEPENDENCIES: self._skip_dependencies,
-            self._state_names.ORDINAL_IDS: self._ordinal_ids
+            self._state_names.OrdinalIds: self._ordinal_ids
         }
 
     @staticmethod

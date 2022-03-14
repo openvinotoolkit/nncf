@@ -105,7 +105,7 @@ class TestSparseModules:
         assert saved_ctrl_state == ctrl.get_state()
         algo_state = next(iter(saved_ctrl_state.values()))
         assert algo_state == {
-            BaseControllerStateNames.COMPRESSION_STAGE: CompressionStage.UNCOMPRESSED,
+            BaseControllerStateNames.COMPRESSION_STAGE: CompressionStage.PARTIALLY_COMPRESSED,
             BaseControllerStateNames.SCHEDULER: {'current_step': 100, 'current_epoch': 5},
             BaseControllerStateNames.LOSS: None
         }

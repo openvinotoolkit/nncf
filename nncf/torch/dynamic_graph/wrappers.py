@@ -14,6 +14,8 @@
 import warnings
 from copy import deepcopy
 from typing import Callable
+from typing import List
+from typing import Tuple
 
 from torch.nn import Conv1d
 from torch.nn import Conv2d
@@ -32,6 +34,7 @@ from nncf.common.graph.layer_attributes import GroupNormLayerAttributes
 from nncf.common.graph.layer_attributes import LinearLayerAttributes
 from nncf.common.utils.debug import is_debug
 from nncf.common.utils.logger import logger as nncf_logger
+from nncf.torch.dynamic_graph.context import TracingContext
 from nncf.torch.dynamic_graph.context import get_current_context
 from nncf.torch.dynamic_graph.op_input_processing import OperatorInput
 from nncf.torch.dynamic_graph.trace_tensor import make_tensor_metas
@@ -102,7 +105,7 @@ def wrap_operator(operator, operator_info: 'PatchedOperatorInfo'):
                 if ctx.elastic_depth and ctx.in_skipped_block:
                     result = ctx.tensor_cache
                 else:
-                    result = _process_ordinary_op(op_address, operator_info, operator, ctx, *args, **kwargs)
+                    result = _execute_op(op_address, operator_info, operator, ctx, *args, **kwargs)
 
                 str_op_address = str(op_address)
                 if str_op_address in ctx.end_node_name_of_skipped_block:
@@ -159,7 +162,7 @@ def wrap_module_call(module_call):
         else:
             retval = module_call(self, *args, **kwargs)
 
-        if type(self).__name__ in ITERATION_MODULES.registry_dict.keys():
+        if type(self).__name__ in ITERATION_MODULES.registry_dict:
             ctx.reset_operator_call_count_in_scope(ctx.scope)
         ctx.pop_scope()
         return retval
@@ -167,12 +170,12 @@ def wrap_module_call(module_call):
     return wrapped
 
 
-def _process_ordinary_op(op_address: 'OperationAddress',
-                         operator_info: 'PatchedOperatorInfo',
-                         operator: Callable,
-                         ctx: 'TracingContext',
-                         *args,
-                         **kwargs):
+def _execute_op(op_address: 'OperationAddress',
+                operator_info: 'PatchedOperatorInfo',
+                operator: Callable,
+                ctx: 'TracingContext',
+                *args,
+                **kwargs):
     op_name = operator_info.name
 
     op_input = OperatorInput(list(args), kwargs)
@@ -197,7 +200,8 @@ def _process_ordinary_op(op_address: 'OperationAddress',
     return result
 
 
-def _collect_module_attrs_and_ignored_algorithms(ctx, op_name):
+def _collect_module_attrs_and_ignored_algorithms(ctx: TracingContext,
+                                                 op_name: str) -> Tuple[BaseLayerAttributes, List[str]]:
     layer_attrs = None
     ignored_algos = []
     if op_name in OP_NAMES_REQUIRING_MODULE_ATTRS:

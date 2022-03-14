@@ -18,10 +18,10 @@ from torch.backends import cudnn
 from examples.torch.common.models.classification.resnet_cifar10 import resnet50_cifar10
 from nncf import NNCFConfig
 from nncf.api.compression import CompressionStage
-from nncf.torch.model_creation import create_nncf_network
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elasticity_dim import ElasticityDim
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.visualization import SubnetGraph
 from nncf.experimental.torch.nas.bootstrapNAS.training.model_creator_helpers import resume_compression_from_state
+from nncf.torch.model_creation import create_nncf_network
 from nncf.torch.utils import manual_seed
 from tests.torch.helpers import register_bn_adaptation_init_args
 from tests.torch.nas.creators import create_bnas_model_and_ctrl_by_test_desc
@@ -244,7 +244,14 @@ REF_COMPRESSION_STATE_FOR_TWO_CONV = {
                 'elasticity': {
                     'builder_states': {
                         'depth': {
-                            'mode': 'manual',
+                            'elasticity_params': {
+                                'allow_linear_combination': False,
+                                'allow_nested_blocks': False,
+                                'max_block_size': 50,
+                                'min_block_size': 6,
+                                'skipped_blocks': [['ThreeConvModel/NNCFConv2d[conv1]/conv2d_0',
+                                                    'ThreeConvModel/NNCFConv2d[conv_to_skip]/conv2d_0']]
+                            },
                             'skipped_blocks': [
                                 {
                                     'start_node_name': 'ThreeConvModel/NNCFConv2d[conv1]/conv2d_0',
@@ -255,7 +262,13 @@ REF_COMPRESSION_STATE_FOR_TWO_CONV = {
                             'ordinal_ids': [[1, 2]],
                         },
                         'width': {
-                            'elasticity_params': {'min_width': 1, 'width_step': 1},
+                            'elasticity_params': {
+                                'filter_importance': 'L1',
+                                'max_num_widths': -1,
+                                'min_width': 1,
+                                'width_step': 1,
+                                'width_multipliers': None
+                            },
                             'grouped_node_names_to_prune': [['ThreeConvModel/NNCFConv2d[conv1]/conv2d_0',
                                                              'ThreeConvModel/NNCFConv2d[conv_to_skip]/conv2d_0']]
                         }

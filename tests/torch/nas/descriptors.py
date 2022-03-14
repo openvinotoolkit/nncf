@@ -19,6 +19,9 @@ from typing import NamedTuple
 from typing import Optional
 from typing import Tuple
 
+from nncf.experimental.torch.nas.bootstrapNAS.elasticity.base_handler import SingleElasticityBuilder
+from nncf.experimental.torch.nas.bootstrapNAS.elasticity.base_handler import create_elasticity_builder_from_config
+from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elasticity_dim import ElasticityDim
 from nncf.torch.model_creation import create_nncf_network
 from tests.torch.helpers import get_empty_config
 from tests.torch.nas.helpers import move_model_to_cuda_if_available
@@ -27,7 +30,7 @@ from tests.torch.nas.models.synthetic import ThreeConvModel
 
 class ElasticityDesc:
     def __init__(self,
-                 elasticity_builder_cls: Callable,
+                 elasticity_dim: ElasticityDim,
                  model_cls: Optional[Callable] = None,
                  ref_state: Optional[Dict[str, Any]] = None,
                  name: Optional[str] = None,
@@ -35,7 +38,7 @@ class ElasticityDesc:
                  input_size: Optional[List[int]] = None,
                  ref_search_space: Optional[Any] = None,
                  ref_output_fn: Optional[Callable] = None):
-        self.elasticity_builder_cls = elasticity_builder_cls
+        self.elasticity_dim = elasticity_dim
         self.model_cls = model_cls
         self.ref_state = ref_state
         self.name = name
@@ -47,7 +50,7 @@ class ElasticityDesc:
     def __str__(self):
         if self.name:
             return self.name
-        result = self.elasticity_builder_cls.__name__
+        result = self.elasticity_dim.value
         if hasattr(self.model_cls, '__name__'):
             result += '_' + self.model_cls.__name__
         return result
@@ -60,9 +63,15 @@ class ElasticityDesc:
             input_size = model.INPUT_SIZE
         config = get_empty_config(input_sample_sizes=input_size)
         nncf_network = create_nncf_network(model, config)
-        builder = self.elasticity_builder_cls(self.params)
+        builder = self.create_builder()
         handler = builder.build(nncf_network)
         return handler, builder
+
+    def create_builder(self) -> SingleElasticityBuilder:
+        return create_elasticity_builder_from_config(self.params, self.elasticity_dim)
+
+    def create_builder_with_config(self, config: Dict[str, Any]) -> SingleElasticityBuilder:
+        return create_elasticity_builder_from_config(config, self.elasticity_dim)
 
 
 class WidthElasticityDesc:

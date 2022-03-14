@@ -17,7 +17,6 @@ from typing import Dict
 from typing import List
 from typing import Optional
 from typing import OrderedDict as OrderedDictType
-
 from typing import Tuple
 
 from nncf.common.pruning.utils import count_flops_and_weights_per_node
@@ -31,6 +30,18 @@ from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elastic_kernel import E
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elastic_width import ElasticWidthHandler
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elastic_width import ElasticWidthSearchSpace
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elasticity_dim import ElasticityDim
+from nncf.torch.graph.operator_metatypes import PTConv1dMetatype
+from nncf.torch.graph.operator_metatypes import PTConv2dMetatype
+from nncf.torch.graph.operator_metatypes import PTConv3dMetatype
+from nncf.torch.graph.operator_metatypes import PTConvTranspose2dMetatype
+from nncf.torch.graph.operator_metatypes import PTConvTranspose3dMetatype
+from nncf.torch.graph.operator_metatypes import PTDepthwiseConv1dSubtype
+from nncf.torch.graph.operator_metatypes import PTDepthwiseConv2dSubtype
+from nncf.torch.graph.operator_metatypes import PTDepthwiseConv3dSubtype
+from nncf.torch.graph.operator_metatypes import PTLinearMetatype
+from nncf.torch.nncf_network import NNCFNetwork
+from nncf.torch.pruning.utils import collect_input_shapes
+from nncf.torch.pruning.utils import collect_output_shapes
 
 SubnetConfig = OrderedDictType[ElasticityDim, ElasticityConfig]
 
@@ -50,8 +61,11 @@ class MultiElasticityHandler(ElasticityHandler):
     """
     _state_names = MEHandlerStateNames
 
-    def __init__(self, handlers: OrderedDictType[ElasticityDim, SingleElasticityHandler]):
+    def __init__(self,
+                 handlers: OrderedDictType[ElasticityDim, SingleElasticityHandler],
+                 target_model: NNCFNetwork):
         self._handlers = handlers
+        self._target_model = target_model
         self._is_handler_enabled_map = {elasticity_dim: True for elasticity_dim in handlers}
         self.activate_supernet()
 
@@ -125,7 +139,7 @@ class MultiElasticityHandler(ElasticityHandler):
         """
         self._collect_handler_data_by_method_name(self._get_current_method_name())
 
-    def set_config(self, config: SubnetConfig) -> None:
+    def activate_subnet_for_config(self, config: SubnetConfig) -> None:
         """
         Activates a Subnet that corresponds to the given elasticity configuration
 
@@ -139,7 +153,7 @@ class MultiElasticityHandler(ElasticityHandler):
                 sub_config = config[handler_id]
                 other_active_handlers = dict(filter(lambda pair: pair[0] != handler_id, active_handlers.items()))
                 resolved_config = handler.resolve_conflicts_with_other_elasticities(sub_config, other_active_handlers)
-                handler.set_config(resolved_config)
+                handler.activate_subnet_for_config(resolved_config)
 
     def load_state(self, state: Dict[str, Any]) -> None:
         """
@@ -201,11 +215,47 @@ class MultiElasticityHandler(ElasticityHandler):
         """
         :return: FLOPs and the number weights and in the model for convolution and fully connected layers.
         """
-        kwargs = {}
-        for handler in self._handlers.values():
-            kwargs.update(handler.get_kwargs_for_flops_counting())
+        GENERAL_CONV_LAYER_METATYPES = [
+            PTConv1dMetatype,
+            PTDepthwiseConv1dSubtype,
+            PTConv2dMetatype,
+            PTDepthwiseConv2dSubtype,
+            PTConv3dMetatype,
+            PTDepthwiseConv3dSubtype,
+            PTConvTranspose2dMetatype,
+            PTConvTranspose3dMetatype
+        ]
+        LINEAR_LAYER_METATYPES = [
+            PTLinearMetatype
+        ]
 
-        flops_pers_node, num_weights_per_node = count_flops_and_weights_per_node(**kwargs)
+        graph = self._target_model.get_graph()
+        modules_out_shapes = collect_output_shapes(graph)
+        modules_in_shapes = collect_input_shapes(graph)
+
+        kernel_sizes = None
+        if self.kernel_handler is not None:
+            kernel_sizes = self.kernel_handler.get_active_kernel_sizes_per_node()
+
+        names_of_skipped_nodes = None
+        if self.depth_handler is not None:
+            names_of_skipped_nodes = self.depth_handler.get_names_of_skipped_nodes()
+
+        input_width_values, output_width_values = None, None
+        if self.width_handler is not None:
+            input_width_values, output_width_values = self.width_handler.get_active_in_out_width_values()
+
+        flops_pers_node, num_weights_per_node = count_flops_and_weights_per_node(
+            graph=graph,
+            input_shapes=modules_in_shapes,
+            output_shapes=modules_out_shapes,
+            input_channels=input_width_values,
+            output_channels=output_width_values,
+            kernel_sizes=kernel_sizes,
+            op_addresses_to_skip=names_of_skipped_nodes,
+            conv_op_metatypes=GENERAL_CONV_LAYER_METATYPES,
+            linear_op_metatypes=LINEAR_LAYER_METATYPES,
+        )
 
         flops = sum(flops_pers_node.values())
         num_weights = sum(num_weights_per_node.values())

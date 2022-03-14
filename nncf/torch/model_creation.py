@@ -14,6 +14,7 @@ from os import path as osp
 from typing import Any
 from typing import Callable
 from typing import Dict
+from typing import List
 from typing import Optional
 from typing import Tuple
 
@@ -48,7 +49,7 @@ def create_compressed_model(model: Module,
                             wrap_inputs_fn: Callable[[Tuple, Dict], Tuple[Tuple, Dict]] = None,
                             wrap_outputs_fn: Callable[[Tuple, Dict], Tuple[Tuple, Dict]] = None,
                             dump_graphs=True) \
-        -> Tuple[CompressionAlgorithmController, NNCFNetwork]:
+    -> Tuple[CompressionAlgorithmController, NNCFNetwork]:
     """
     The main function used to produce a model ready for compression fine-tuning from an original PyTorch
     model and a configuration object.
@@ -210,12 +211,33 @@ def synchronize_all_processes_in_distributed_mode():
                 "keep attention to that error")
 
 
-def create_compression_algorithm_builder(config, should_init=True) -> PTCompressionAlgorithmBuilder:
+def create_compression_algorithm_builder(config: NNCFConfig, should_init=True) -> PTCompressionAlgorithmBuilder:
+    """
+    Create compression algorithm builders by a given list of algorithm names.
+
+    :param config: A configuration object used to determine the exact compression modifications to be applied
+    to the model
+    :param should_init: The flag indicates that the generated compression builder will initialize (True) or not (False)
+    the training parameters of the model during model building.
+    :return: compression algorithm builder
+    """
     algo_names = extract_algorithm_names(config)
     return create_compression_algorithm_builder_from_algo_names(algo_names, config, should_init)
 
 
-def create_compression_algorithm_builder_from_algo_names(algo_names, config, should_init):
+def create_compression_algorithm_builder_from_algo_names(algo_names: List[str],
+                                                         config: NNCFConfig,
+                                                         should_init: bool) -> PTCompressionAlgorithmBuilder:
+    """
+    Create compression algorithm builders by a given list of algorithm names.
+
+    :param algo_names: list of algorithm names
+    :param config: A configuration object used to determine the exact compression modifications to be applied
+    to the model
+    :param should_init: The flag indicates that the generated compression builder will initialize (True) or not (False)
+    the training parameters of the model during model building.
+    :return: compression algorithm builder
+    """
     if not algo_names:
         algo_builder_classes = [NoCompressionAlgorithmBuilder]
     else:

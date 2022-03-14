@@ -22,6 +22,74 @@ from nncf.experimental.torch.nas.bootstrapNAS.training.base_training import BNAS
 from nncf.experimental.torch.nas.bootstrapNAS.training.stage_descriptor import StageDescriptor
 
 
+class NSParamsStateNames:
+    LIST_STAGE_DESCRIPTIONS = 'list_stage_descriptions'
+
+
+class NASSchedulerParams:
+    _state_names = NSParamsStateNames
+
+    def __init__(self, list_stage_descriptions: Optional[List[StageDescriptor]] = None):
+        """
+        Constructor
+
+        :param list_stage_descriptions: List of parameters per each supernet training stage.
+        """
+        if list_stage_descriptions is None:
+            list_stage_descriptions = [
+                StageDescriptor(train_dims=[ElasticityDim.KERNEL],
+                                epochs=1),
+                StageDescriptor(train_dims=[ElasticityDim.KERNEL, ElasticityDim.DEPTH],
+                                epochs=1),
+                StageDescriptor(train_dims=[ElasticityDim.KERNEL, ElasticityDim.DEPTH],
+                                epochs=1,
+                                depth_indicator=2),
+                StageDescriptor(train_dims=[ElasticityDim.KERNEL, ElasticityDim.DEPTH, ElasticityDim.WIDTH],
+                                epochs=1),
+                StageDescriptor(train_dims=[ElasticityDim.KERNEL, ElasticityDim.DEPTH, ElasticityDim.WIDTH],
+                                epochs=1,
+                                width_indicator=2,
+                                reorg_weights=True,
+                                bn_adapt=True)
+            ]
+        self.list_stage_descriptions = list_stage_descriptions
+
+    @classmethod
+    def from_config(cls, config: Dict[str, Any]) -> 'NASSchedulerParams':
+        """
+        Creates the object from its config.
+        """
+        descs_config = config.get(cls._state_names.LIST_STAGE_DESCRIPTIONS)
+        descs = None
+        if descs_config is not None:
+            descs = [StageDescriptor.from_config(stage_desc_config) for stage_desc_config in descs_config]
+        return cls(descs)
+
+    @classmethod
+    def from_state(cls, state: Dict[str, Any]) -> 'NASSchedulerParams':
+        """
+        Creates the object from its state.
+
+        :param state: Output of `get_state()` method.
+        """
+        list_stage_descriptions_state = state[cls._state_names.LIST_STAGE_DESCRIPTIONS]
+        list_stage_descriptions = [StageDescriptor.from_state(state) for state in list_stage_descriptions_state]
+        return cls(list_stage_descriptions)
+
+    def get_state(self) -> Dict[str, Any]:
+        """
+        Returns the compression loss state.
+
+        :return: The compression loss state.
+        """
+        return {
+            self._state_names.LIST_STAGE_DESCRIPTIONS: [desc.get_state() for desc in self.list_stage_descriptions],
+        }
+
+    def __eq__(self, other: 'NASSchedulerParams') -> bool:
+        return self.__dict__ == other.__dict__
+
+
 class BNASSchedulerStateNames:
     LIST_STAGE_DESCRIPTIONS = 'list_stage_descriptions'
 
@@ -35,22 +103,20 @@ class BootstrapNASScheduler(BaseCompressionScheduler):
     _state_names = BNASSchedulerStateNames
 
     def __init__(self, training_ctrl: BNASTrainingAlgorithm,
-                 params: Dict[str, List[Dict]],
+                 params: NASSchedulerParams,
                  available_elasticity_dims: List[ElasticityDim],
                  progressivity_of_elasticity: List[ElasticityDim]):
         super().__init__()
         self._training_ctrl = training_ctrl
-        self._params = params if params else self._get_default_params()
+        self._params = params
         self._available_elasticity_dims = available_elasticity_dims
         self._progressivity_of_elasticity = progressivity_of_elasticity
-
-        list_stage_descriptions = self._params.get('list_stage_descriptions', [])
         self.current_stage_idx = -1
         # Property setter with validation is not used intentionally for the resume case. When the actual list stage
         #  descriptors are loaded after creation of the scheduler. Scheduler is resumed without config = with empty
         #  params = default stage descriptors, that could lead to inconsistency with progressivity and enabled dims.
         #  The validation will happen in the first usage of list_stage_descriptors property.
-        self._list_stage_descriptors = [StageDescriptor.from_state(d) for d in list_stage_descriptions]
+        self._list_stage_descriptors = self._params.list_stage_descriptions
         self._is_elasticity_dims_validated = False
 
     @property
@@ -151,7 +217,9 @@ class BootstrapNASScheduler(BaseCompressionScheduler):
         state[self._state_names.LIST_STAGE_DESCRIPTIONS] = [desc.get_state() for desc in self.list_stage_descriptors]
         return state
 
-    def _validate_elasticity_dims(self, available_elasticity_dims, progressivity_of_elasticity):
+    def _validate_elasticity_dims(self,
+                                  available_elasticity_dims: List[ElasticityDim],
+                                  progressivity_of_elasticity: List[ElasticityDim]) -> None:
         last_stage = -1
         first_stage = len(progressivity_of_elasticity)
         for desc in self._list_stage_descriptors:

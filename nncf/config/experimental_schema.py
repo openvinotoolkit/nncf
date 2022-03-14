@@ -25,20 +25,16 @@ from nncf.config.schema import TARGET_SCOPES_DESCRIPTION
 from nncf.config.schema import make_string_or_array_of_strings_schema
 from nncf.config.schema import with_attributes
 
-#######################################################################
+########################################################################################################################
 # Experimental Quantization
-#######################################################################
+########################################################################################################################
 EXPERIMENTAL_QUANTIZATION_ALGO_NAME_IN_CONFIG = 'experimental_quantization'
 EXPERIMENTAL_QUANTIZATION_SCHEMA = copy.deepcopy(QUANTIZATION_SCHEMA)
 EXPERIMENTAL_QUANTIZATION_SCHEMA['properties']['algorithm']['const'] = EXPERIMENTAL_QUANTIZATION_ALGO_NAME_IN_CONFIG
 
-EXPERIMENTAL_REF_VS_ALGO_SCHEMA = {
-    EXPERIMENTAL_QUANTIZATION_ALGO_NAME_IN_CONFIG: EXPERIMENTAL_QUANTIZATION_SCHEMA,
-}
-
-#######################################################################
+########################################################################################################################
 # BootstrapNAS
-#######################################################################
+########################################################################################################################
 BOOTSTRAP_NAS_ALGO_NAME_IN_CONFIG = 'bootstrapNAS'
 
 TRAINING_ALGORITHMS_SCHEMA = {
@@ -57,7 +53,8 @@ ELASTIC_DEPTH_SCHEMA = {
         "skipped_blocks": {
             "type": "array",
             "items": ARRAY_OF_STRINGS,
-            "description": "graph node scopes ",
+            "description": "List of building blocks to be skipped. "
+                           "The block is defined by names of start and end nodes.",
             "examples": [
                 [
                     ["start_op_1", "end_op_1"],
@@ -223,4 +220,13 @@ BOOTSTRAP_NAS_SCHEMA = {
         "training": BOOTSTRAP_NAS_TRAINING_SCHEMA
     },
     "additionalProperties": False
+}
+
+########################################################################################################################
+# All experimental schemas
+########################################################################################################################
+
+EXPERIMENTAL_REF_VS_ALGO_SCHEMA = {
+    EXPERIMENTAL_QUANTIZATION_ALGO_NAME_IN_CONFIG: EXPERIMENTAL_QUANTIZATION_SCHEMA,
+    BOOTSTRAP_NAS_ALGO_NAME_IN_CONFIG: BOOTSTRAP_NAS_SCHEMA
 }

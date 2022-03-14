@@ -34,13 +34,13 @@ def test_elastic_kernel_with_odd_value():
 def test_elastic_kernel_with_less_than_minimum_value():
     kernel_handler, _ = create_single_conv_kernel_supernet()
     with pytest.raises(ValueError):
-        kernel_handler.set_config([1])
+        kernel_handler.activate_subnet_for_config([1])
 
 
 def test_elastic_kernel_with_more_than_maximum_value():
     kernel_handler, _ = create_single_conv_kernel_supernet()
     with pytest.raises(ValueError):
-        kernel_handler.set_config([9])
+        kernel_handler.activate_subnet_for_config([9])
 
 
 ###########################
@@ -66,7 +66,7 @@ def test_elastic_kernel_with_intermediate_value():
     device = next(iter(supernet.parameters())).device
     input_ = torch.ones([1, 1, 5, 5]).to(device)
     conv = supernet.conv
-    kernel_handler.set_config([3])
+    kernel_handler.activate_subnet_for_config([3])
     actual_output = supernet(input_)
 
     ref_padding = 1
@@ -86,7 +86,7 @@ def test_elastic_kernel_with_custom_transition_matrix():
     input_ = torch.ones([1, 1, 5, 5]).to(device)
     conv = supernet.conv
 
-    kernel_handler.set_config([3])
+    kernel_handler.activate_subnet_for_config([3])
     actual_output = supernet(input_)
 
     ref_padding = 1

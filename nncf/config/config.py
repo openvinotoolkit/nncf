@@ -22,8 +22,6 @@ import jstyleson as json
 
 from nncf.common.utils.logger import logger
 from nncf.common.utils.os import safe_open
-from nncf.config.experimental_schema import BOOTSTRAP_NAS_ALGO_NAME_IN_CONFIG
-from nncf.config.experimental_schema import BOOTSTRAP_NAS_SCHEMA
 from nncf.config.experimental_schema import EXPERIMENTAL_REF_VS_ALGO_SCHEMA
 from nncf.config.schema import REF_VS_ALGO_SCHEMA
 from nncf.config.schema import get_root_nncf_config_schema
@@ -99,10 +97,6 @@ class NNCFConfig(dict):
         COMMON_REF_VS_ALGO_SCHEMA = {**REF_VS_ALGO_SCHEMA, **EXPERIMENTAL_REF_VS_ALGO_SCHEMA}
         ROOT_NNCF_CONFIG_SCHEMA = get_root_nncf_config_schema(COMMON_REF_VS_ALGO_SCHEMA)
         NNCFConfig._validate_json_section_by_schema(loaded_json, ROOT_NNCF_CONFIG_SCHEMA)
-
-        bootstrap_nas_section = loaded_json.get(BOOTSTRAP_NAS_ALGO_NAME_IN_CONFIG)
-        if bootstrap_nas_section is not None:
-            NNCFConfig._validate_json_section_by_schema(bootstrap_nas_section, BOOTSTRAP_NAS_SCHEMA)
 
         compression_section = loaded_json.get('compression')
         accuracy_aware_section = loaded_json.get('accuracy_aware_training')

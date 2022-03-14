@@ -178,14 +178,14 @@ def get_previous_convs(graph: NNCFGraph, nncf_node: NNCFNode,
     return sources
 
 
-def get_prunable_layers_in_out_channels(graph: NNCFGraph):
+def get_prunable_layers_in_out_channels(graph: NNCFGraph) -> Tuple[Dict[NNCFNodeName, int], Dict[NNCFNodeName, int]]:
     """
     Collects the number of input and output channels for each prunable layer in the graph.
 
     :param graph: NNCFGraph
-    :return Dictionary with the number of input channels to convolution layers:
+    :return Dictionary with the number of input channels to convolution and linear layers:
             {node_name: input_channels_num}
-            Dictionary with the number of output channels from convolution layers:
+            Dictionary with the number of output channels from convolution and linear layers:
             {node_name: output_channels_num}
     """
     in_channels, out_channels = {}, {}
@@ -249,8 +249,10 @@ def count_flops_and_weights(graph: NNCFGraph,
     :param output_channels: Dictionary of output channels number in convolutions.
         If not specified, taken from the graph. {node_name: channels_num}
     :param kernel_sizes: Dictionary of kernel sizes in convolutions.
-        If not specified, taken from the graph. {node_name: kernel_size}
-    :param op_addresses_to_skip: List of operation addresses of layers that should be skipped from calculation
+        If not specified, taken from the graph. {node_name: kernel_size}. It's only supposed to be used in NAS in case
+        of Elastic Kernel enabled.
+    :param op_addresses_to_skip: List of operation addresses of layers that should be skipped from calculation.
+        It's only supposed to be used in NAS in case of Elastic Depth enabled.
     :return number of FLOPs for the model
             number of weights (params) in the model
     """
@@ -270,7 +272,7 @@ def count_flops_and_weights_per_node(graph: NNCFGraph,
                                      input_channels: Dict[NNCFNodeName, int] = None,
                                      output_channels: Dict[NNCFNodeName, int] = None,
                                      kernel_sizes: Dict[NNCFNodeName, Tuple[int, int]] = None,
-                                     op_addresses_to_skip: List[str] = None) -> \
+                                     op_addresses_to_skip: List[NNCFNodeName] = None) -> \
     Tuple[Dict[NNCFNodeName, int], Dict[NNCFNodeName, int]]:
     """
     Counts the number weights and FLOPs per node in the model for convolution and fully connected layers.
@@ -287,8 +289,10 @@ def count_flops_and_weights_per_node(graph: NNCFGraph,
     :param output_channels: Dictionary of output channels number in convolutions.
         If not specified, taken from the graph. {node_name: channels_num}
     :param kernel_sizes: Dictionary of kernel sizes in convolutions.
-        If not specified, taken from the graph. {node_name: kernel_size}
-    :param op_addresses_to_skip: List of operation addresses of layers that should be skipped from calculation
+        If not specified, taken from the graph. {node_name: kernel_size}. It's only supposed to be used in NAS in case
+        of Elastic Kernel enabled.
+    :param op_addresses_to_skip: List of operation addresses of layers that should be skipped from calculation.
+        It's only supposed to be used in NAS in case of Elastic Depth enabled.
     :return Dictionary of FLOPs number {node_name: flops_num}
             Dictionary of weights number {node_name: weights_num}
     """
