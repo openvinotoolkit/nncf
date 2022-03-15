@@ -5,14 +5,15 @@ from skl2onnx.helpers.onnx_helper import enumerate_model_node_outputs
 import onnx
 import tempfile
 
-from nncf.experimental.post_training.statistics.statistics_collector import StatisticsCollector
-from nncf.experimental.onnx.statistics.collectors import ONNXMinMaxStatisticCollector
+from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
+
+from nncf.experimental.post_training.statistics.statistics_aggregator import StatisticsAggregator
 
 from nncf.experimental.onnx.sampler import create_onnx_sampler
 from nncf.experimental.onnx.engine import ONNXEngine
 
 
-class ONNXStatisticsCollector(StatisticsCollector):
+class ONNXStatisticsAggregator(StatisticsAggregator):
     def __init__(self, engine: ONNXEngine):
         super().__init__(engine)
 
@@ -37,8 +38,7 @@ class ONNXStatisticsCollector(StatisticsCollector):
                 output = self.engine.infer(_input)
                 self._agregate_statistics(output, self.layers_statistics)
 
-    def _agregate_statistics(self, output, layers_statistics: Dict[str, ONNXMinMaxStatisticCollector]):
-        # TODO (kshpv): change ONNXMinMaxStatisticCollector
+    def _agregate_statistics(self, output, layers_statistics: Dict[str, TensorStatisticCollectorBase]):
         for k, v in layers_statistics.items():
             tensor = output[k]
             v.register_input(tensor)

@@ -12,7 +12,7 @@ TensorType = TypeVar('TensorType')
 ModelType = TypeVar('ModelType')
 
 
-class StatisticsCollector(ABC):
+class StatisticsAggregator(ABC):
     """
     Base class for statistics collection.
     """
@@ -28,7 +28,7 @@ class StatisticsCollector(ABC):
         Collects statistics for layers determined in self.layers_statistics.
         """
 
-    def register_layer_statistics(self, layer_statistics: Dict[str, TensorStatisticCollectorBase], collection_type):
+    def register_layer_statistics(self, layer_statistics: Dict[str, TensorStatisticCollectorBase]):
         """
         Registered layer for statistics collection.
         """
