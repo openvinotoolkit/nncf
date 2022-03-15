@@ -18,9 +18,8 @@ class StatisticsCollector(ABC):
     Base class for statistics collection.
     """
 
-    def __init__(self, engine: Engine, number_samples: int):
+    def __init__(self, engine: Engine):
         self.engine = engine
-        self.number_samples = number_samples
         self.is_calculate_metric = False
         self.layers_statistics = {}  # type: Dict[str, TensorStatisticCollectorBase]
 
@@ -30,7 +29,7 @@ class StatisticsCollector(ABC):
         Collects statistics for layers determined in self.layers_statistics.
         """
 
-    def register_layer_statistics(self, layer_statistics: Dict[str, TensorStatisticCollectorBase]):
+    def register_layer_statistics(self, layer_statistics: Dict[str, TensorStatisticCollectorBase], collection_type):
         """
         Registered layer for statistics collection.
         """

@@ -12,17 +12,17 @@
 """
 
 from typing import Deque
+from typing import Dict
 from typing import TypeVar
 from collections import deque
 
-from nncf.common.graph.transformations.layout import TransformationLayout
+from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
 
 from nncf.experimental.post_training.backend import Backend
 from nncf.experimental.post_training.backend import determine_model_backend
 from nncf.experimental.post_training.api.engine import Engine
 from nncf.experimental.post_training.algorithms import Algorithm
 from nncf.experimental.post_training.algorithms import PostTrainingAlgorithms
-from nncf.experimental.post_training.statistics.statistics_collector import StatisticsCollector
 from nncf.experimental.post_training.algorithms.quantization.parameters import PostTrainingQuantizationParameters
 
 ModelType = TypeVar('ModelType')
@@ -51,48 +51,27 @@ class PostTrainingQuantization(Algorithm):
         self.algorithms_to_created = quantization_parameters.algorithms
         self.algorithms = deque()
 
-    def apply(self, model: ModelType, engine: Engine) -> ModelType:
-        """
-        1) Creates common statistics_collector for all algorithms.
-        2) Takes activation layers from the algorithms and registered them to statistics_collector.
-        3) Collect statistics.
-        4) Apply algorithms to the model.
-        """
-        statistics_collector = self._create_statistics_collector(model, engine)
-        self.algorithms = self._create_algorithms(model, statistics_collector)
-
-        for algorithm in self.algorithms:
-            layers_to_collect_statistics = algorithm.get_layers_for_statistics(model)
-            statistics_collector.register_layer_statistics(layers_to_collect_statistics)
-
-        statistics_collector.collect_statistics(model)
-
+    def _apply(self, model: ModelType, engine: Engine,
+               layer_statistics: Dict[str, TensorStatisticCollectorBase]) -> ModelType:
         while self.algorithms:
             algorithm = self.algorithms.popleft()
-            quantized_model = algorithm.apply(model, engine)
+            quantized_model = algorithm.apply(model, engine, layer_statistics)
 
         return quantized_model
 
-    def _create_statistics_collector(self, model: ModelType, engine: Engine) -> StatisticsCollector:
-        backend = determine_model_backend(model)
-        if backend == Backend.ONNX:
-            from nncf.experimental.onnx.statistics.statistics_collector import ONNXStatisticsCollector
-            return ONNXStatisticsCollector(engine, self.number_samples)
-        return None
+    def get_layers_for_statistics(self, model: ModelType) -> Dict[str, TensorStatisticCollectorBase]:
+        output = {}
+        self.algorithms = self._create_algorithms(model)
+        for algorithm in self.algorithms:
+            output = {**output, **algorithm.get_layers_for_statistics(model)}
+        return output
 
-    def _create_transformation_layout(self, model: ModelType) -> TransformationLayout:
-        backend = determine_model_backend(model)
-        if backend == Backend.ONNX:
-            from nncf.experimental.onnx.graph.transformations.layout import ONNXTransformationLayout
-            return ONNXTransformationLayout()
-        return None
-
-    def _create_algorithms(self, model: ModelType, statistics_collector) -> Deque[Algorithm]:
+    def _create_algorithms(self, model: ModelType) -> Deque[Algorithm]:
         output = deque()
         backend = determine_model_backend(model)
         if backend == Backend.ONNX:
             from nncf.experimental.onnx.algorithms.min_max_quantization import ONNXMinMaxQuantization
             for algorithm, parameters in self.algorithms_to_created.items():
                 if algorithm == PostTrainingAlgorithms.MinMaxQuantization:
-                    output.append(ONNXMinMaxQuantization(statistics_collector, parameters))
+                    output.append(ONNXMinMaxQuantization(parameters))
         return output

@@ -13,6 +13,7 @@
 
 from typing import Dict
 from typing import List
+from typing import Tuple
 
 import onnx
 
@@ -44,29 +45,26 @@ from nncf.experimental.onnx.algorithms.quantization.helper import calculate_weig
 
 from nncf.experimental.onnx.hardware.config import ONNXHWConfig
 
-from nncf.experimental.onnx.helper import modify_onnx_model_for_quantization
-
 QUANTIZATION_LAYER_METATYPES = GENERAL_WEIGHT_LAYER_METATYPES
 
 
 class ONNXMinMaxQuantization(MinMaxQuantization):
 
-    def __init__(self, statistics_collector,
-                 parameters: MinMaxQuantizationParameters):
-        super().__init__(statistics_collector, parameters)
+    def __init__(self, parameters: MinMaxQuantizationParameters):
+        super().__init__(parameters)
         self._weight_quantizers = []
         self._activation_quantizers = []
-        self.global_quantizer_constraints = {}
 
     def generate_stat_collector(self, quantizer_config: QuantizerConfig) -> TensorStatisticCollectorBase:
         #  TODO: change to ONNXTensorStatisticCollectorBase
         is_symmetric = quantizer_config.mode == QuantizationMode.SYMMETRIC
         axes = (0, 2, 3) if quantizer_config.per_channel else None
         if self.range_type == RangeType.MINMAX:
-            return ONNXMinMaxStatisticCollector(use_abs_max=is_symmetric, reduction_shape=axes)
+            return ONNXMinMaxStatisticCollector(use_abs_max=is_symmetric, reduction_shape=axes,
+                                                num_samples=self.number_samples)
         if self.range_type == RangeType.MEAN_MINMAX:
             return ONNXMeanMinMaxStatisticCollector(use_per_sample_stats=False, use_abs_max=is_symmetric,
-                                                    reduction_shape=axes)
+                                                    reduction_shape=axes, num_samples=self.number_samples)
         raise RuntimeError('This range type is not supported.')
 
     def _create_model_transformer(self, model: onnx.ModelProto) -> ONNXModelTransformer:
@@ -100,32 +98,61 @@ class ONNXMinMaxQuantization(MinMaxQuantization):
         final_setup = solver.get_final_quantizer_setup(finalized_proposal)
         return final_setup
 
-    def apply(self, model: onnx.ModelProto, engine: ONNXEngine) -> onnx.ModelProto:
-        modified_model = modify_onnx_model_for_quantization(model)
-        model_transformer = self._create_model_transformer(modified_model)
+    def get_quantizers(self, model: onnx.ModelProto) -> Tuple[List[str], List[str]]:
+        if self._weight_quantizers and self._activation_quantizers:
+            return self._weight_quantizers, self._activation_quantizers
+        else:
+            quantizer_setup = self._get_quantizer_setup(model)
+            onnx_graph = ONNXGraph(model)
+            filled_outputs = []
+            for _, qp in quantizer_setup.quantization_points.items():
+                if qp.is_weight_quantization_point():
+                    weight_initializer_name = onnx_graph.get_weight_input_in_module(qp.insertion_point.target_node_name)
+                    self._weight_quantizers.append(weight_initializer_name)
+                else:
+                    assert qp.is_activation_quantization_point()
+                    if 'model_input' not in qp.insertion_point.target_node_name:  # If not input node
+                        node_name = qp.insertion_point.target_node_name
+                        if qp.insertion_point.input_port_id == 1:
+                            # If quantization of Input
+                            outputs = onnx_graph.get_node_edges(node_name)['input'][0]
+                        else:
+                            # If quantization of Output
+                            outputs = onnx_graph.get_node_edges(node_name)['output'][0]
+                    else:  # If input node
+                        node_name = qp.directly_quantized_operator_node_names[0]
+                        outputs = onnx_graph.get_node_edges(node_name)['input'][0]
+                    if outputs in filled_outputs:
+                        # TODO: resolve this
+                        # Problems with inception v3
+                        print(f'Skipping {outputs} layer')
+                        continue
+                    filled_outputs.append(outputs)
+                    self._activation_quantizers.append(outputs)
+        return self._weight_quantizers, self._activation_quantizers
+
+    def reset_quantizers(self):
+        self._weight_quantizers = []
+        self._activation_quantizers = []
+
+    def _apply(self, model: onnx.ModelProto, engine: ONNXEngine,
+               layer_statistics: Dict[str, TensorStatisticCollectorBase]) -> onnx.ModelProto:
+        model_transformer = self._create_model_transformer(model)
         transformation_layout = ONNXTransformationLayout()
         transformation_commands = []
-        onnx_graph = ONNXGraph(modified_model)
-
-        # If statistics were not collected
-        if not self.statistics_collector.layers_statistics:
-            layers_to_collect_statistics = self.get_layers_for_statistics(modified_model)
-            self.statistics_collector.register_layer_statistics(layers_to_collect_statistics)
-            self.statistics_collector.collect_statistics(modified_model)
-        layers_statistics = self.statistics_collector.layers_statistics
-
-        for weight_quantizer in self._weight_quantizers:
+        onnx_graph = ONNXGraph(model)
+        weight_quantizers, activation_quantizers = self.get_quantizers(model)
+        for weight_quantizer in weight_quantizers:
             weight_tensor = onnx_graph.get_initializers_value(weight_quantizer)
             parameters = calculate_weight_quantizer_parameters(weight_tensor, self.weight_quantizer_config)
             command = ONNXQuantizerInsertionCommand(weight_quantizer, parameters)
             transformation_commands.append(command)
         # We are sure that layer_statistics match self._activation_quantizers
-        for layer_statistics in layers_statistics:
-            for k, v in layer_statistics.items():
-                parameters = calculate_activation_quantizer_parameters(v,
-                                                                       self.activation_quantizer_config)
-                command = ONNXQuantizerInsertionCommand(k, parameters)
-                transformation_commands.append(command)
+        for layer_to_collect_statistic in activation_quantizers:
+            parameters = calculate_activation_quantizer_parameters(layer_statistics[layer_to_collect_statistic],
+                                                                   self.activation_quantizer_config)
+            command = ONNXQuantizerInsertionCommand(layer_to_collect_statistic, parameters)
+            transformation_commands.append(command)
 
         for transformation_command in transformation_commands:
             transformation_layout.register(transformation_command)
@@ -133,39 +160,10 @@ class ONNXMinMaxQuantization(MinMaxQuantization):
         quantized_model = model_transformer.transform(transformation_layout)
         return quantized_model
 
-    def get_layers_for_statistics(self, model: onnx.ModelProto) -> List[Dict[str, TensorStatisticCollectorBase]]:
-        modified_model = modify_onnx_model_for_quantization(model)
-        quantizer_setup = self._get_quantizer_setup(modified_model)
-        onnx_graph = ONNXGraph(modified_model)
-        filled_outputs = []
-        for _, qp in quantizer_setup.quantization_points.items():
-            if qp.is_weight_quantization_point():
-                weight_initializer_name = onnx_graph.get_weight_input_in_module(qp.insertion_point.target_node_name)
-                self._weight_quantizers.append(weight_initializer_name)
-            else:
-                assert qp.is_activation_quantization_point()
-                if 'model_input' not in qp.insertion_point.target_node_name:  # If not input node
-                    node_name = qp.insertion_point.target_node_name
-                    if qp.insertion_point.input_port_id == 1:
-                        # If quantization of Input
-                        outputs = onnx_graph.get_node_edges(node_name)['input'][0]
-                    else:
-                        # If quantization of Output
-                        outputs = onnx_graph.get_node_edges(node_name)['output'][0]
-                else:  # If input node
-                    node_name = qp.directly_quantized_operator_node_names[0]
-                    outputs = onnx_graph.get_node_edges(node_name)['input'][0]
-                if outputs in filled_outputs:
-                    # TODO: resolve this
-                    # Problems with inception v3
-                    print(f'Skipping {outputs} layer')
-                    continue
-                filled_outputs.append(outputs)
-                self._activation_quantizers.append(outputs)
-
-        output = []
-        for activation_quantizer in self._activation_quantizers:
-            layer_statistics = {activation_quantizer: self.generate_stat_collector(self.activation_quantizer_config)}
-            output.append(layer_statistics)
+    def get_layers_for_statistics(self, model: onnx.ModelProto) -> Dict[str, TensorStatisticCollectorBase]:
+        _, activation_quantizers = self.get_quantizers(model)
+        output = {}
+        for activation_quantizer in activation_quantizers:
+            output[activation_quantizer] = self.generate_stat_collector(self.activation_quantizer_config)
 
         return output

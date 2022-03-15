@@ -46,16 +46,41 @@ class CompressionBuilder:
             return ONNXEngine(dataloader)
         return None
 
+    def _create_statistics_collector(self, model: ModelType, engine: Engine):
+        backend = determine_model_backend(model)
+        if backend == Backend.ONNX:
+            from nncf.experimental.onnx.statistics.statistics_collector import ONNXStatisticsCollector
+            return ONNXStatisticsCollector(engine)
+        return None
+
+    def _get_prepared_model_for_compression(self, model: ModelType) -> ModelType:
+        backend = determine_model_backend(model)
+        if backend == Backend.ONNX:
+            from nncf.experimental.onnx.helper import modify_onnx_model_for_quantization
+            return modify_onnx_model_for_quantization(model)
+
     def apply(self, model: ModelType, dataloader: DataLoader, engine: Engine = None) -> ModelType:
         """
         Apply compression algorithms to the 'model'.
         """
+
         if not self.algorithms:
             print('There are no algorithms added. The original model will be returned.')
             return model
+
+        modified_model = self._get_prepared_model_for_compression(model)
+
         if engine is None:
-            engine = self._create_engine(model, dataloader)
+            engine = self._create_engine(modified_model, dataloader)
+
+        statistics_collector = self._create_statistics_collector(modified_model, engine)
+        for algorithm in self.algorithms:
+            layers_to_collect_statistics = algorithm.get_layers_for_statistics(modified_model)
+            statistics_collector.register_layer_statistics(layers_to_collect_statistics, None)
+
+        statistics_collector.collect_statistics(modified_model)
+
         while self.algorithms:
             algorithm = self.algorithms.pop()
-            compressed_model = algorithm.apply(model, engine)
-        return compressed_model
+            modified_model = algorithm.apply(modified_model, engine, statistics_collector.layers_statistics)
+        return modified_model

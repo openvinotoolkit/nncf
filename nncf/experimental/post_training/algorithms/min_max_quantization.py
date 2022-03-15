@@ -24,7 +24,7 @@ from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.hardware.config import HWConfigType
 from nncf.common.graph.model_transformer import ModelTransformer
-from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
+
 from nncf.experimental.post_training.algorithms import Algorithm
 from nncf.experimental.post_training.algorithms import AlgorithmParameters
 
@@ -55,6 +55,7 @@ class MinMaxQuantizationParameters(AlgorithmParameters):
     def __init__(self,
                  weight_quantizer_config: QuantizerConfig = None,
                  activation_quantizer_config: QuantizerConfig = None,
+                 number_samples: int = 100,
                  target_device: HWConfigType = HWConfigType.CPU,
                  range_type: RangeType = RangeType.MEAN_MINMAX,
                  quatize_outputs: bool = False,
@@ -62,6 +63,7 @@ class MinMaxQuantizationParameters(AlgorithmParameters):
                  ):
         self.weight_quantizer_config = weight_quantizer_config
         self.activation_quantizer_config = activation_quantizer_config
+        self.number_samples = number_samples
         self.target_device = target_device
         self.range_type = range_type
         self.ignored_scopes = ignored_scopes
@@ -83,13 +85,12 @@ class MinMaxQuantization(Algorithm, ABC):
                                       signedness_to_force=None,
                                       per_channel=False)
 
-    def __init__(self, statistics_collector,
-                 parameters: MinMaxQuantizationParameters):
-        self.statistics_collector = statistics_collector
+    def __init__(self, parameters: MinMaxQuantizationParameters):
         self.weight_quantizer_config = parameters.weight_quantizer_config \
             if parameters.weight_quantizer_config is not None else self._get_default_qconfig()
         self.activation_quantizer_config = parameters.activation_quantizer_config \
             if parameters.activation_quantizer_config is not None else self._get_default_qconfig()
+        self.number_samples = parameters.number_samples
         self.target_device = parameters.target_device
         self.range_type = parameters.range_type
         self.quantize_outputs = parameters.quantize_outputs
@@ -103,10 +104,4 @@ class MinMaxQuantization(Algorithm, ABC):
     def _create_model_transformer(self, model: ModelType) -> ModelTransformer:
         """
         Create framework-specific ModelTransformer.
-        """
-
-    @abstractmethod
-    def get_layers_for_statistics(self, model: ModelType) -> List[Dict[str, TensorStatisticCollectorBase]]:
-        """
-        Returns activations layers, for which StatisticsCollector should collect statistics.
         """

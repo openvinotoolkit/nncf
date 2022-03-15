@@ -10,10 +10,9 @@ import onnx
 from tests.common.helpers import TEST_ROOT
 from tests.onnx.test_nncf_graph_builder import check_nx_graph
 
-from nncf.experimental.onnx.engine import ONNXEngine
+from nncf.experimental.post_training.compression_builder import CompressionBuilder
 from nncf.experimental.onnx.algorithms.min_max_quantization import ONNXMinMaxQuantization
 from nncf.experimental.onnx.algorithms.min_max_quantization import MinMaxQuantizationParameters
-from nncf.experimental.onnx.statistics.statistics_collector import ONNXStatisticsCollector
 
 from nncf.experimental.post_training.algorithms.quantization import PostTrainingQuantization
 from nncf.experimental.post_training.algorithms.quantization import PostTrainingQuantizationParameters
@@ -75,10 +74,9 @@ def test_min_max_quantization_graph(tmp_path, model, path_ref_graph, input_shape
     original_model = onnx.load(onnx_model_path)
 
     dataloader = TestDataloader(input_shape)
-    engine = ONNXEngine(dataloader)
-    statistics_collector = ONNXStatisticsCollector(engine, 1)
-    algorithm = ONNXMinMaxQuantization(statistics_collector, MinMaxQuantizationParameters())
-    quantized_model = algorithm.apply(original_model, engine)
+    builder = CompressionBuilder()
+    builder.add_algorithm(ONNXMinMaxQuantization(MinMaxQuantizationParameters(number_samples=1)))
+    quantized_model = builder.apply(original_model, dataloader)
 
     nncf_graph = GraphConverter.create_nncf_graph(quantized_model)
     nx_graph = nncf_graph.get_graph_for_structure_analysis(extended=True)
@@ -100,10 +98,9 @@ def test_post_training_quantization_graph(tmp_path, model, path_ref_graph, input
     original_model = onnx.load(onnx_model_path)
 
     dataloader = TestDataloader(input_shape)
-    engine = ONNXEngine(dataloader)
-
-    algorithm = PostTrainingQuantization(PostTrainingQuantizationParameters(number_samples=1))
-    quantized_model = algorithm.apply(original_model, engine)
+    builder = CompressionBuilder()
+    builder.add_algorithm(PostTrainingQuantization(PostTrainingQuantizationParameters(number_samples=1)))
+    quantized_model = builder.apply(original_model, dataloader)
 
     nncf_graph = GraphConverter.create_nncf_graph(quantized_model)
     nx_graph = nncf_graph.get_graph_for_structure_analysis(extended=True)
