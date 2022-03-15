@@ -1,5 +1,5 @@
 """
- Copyright (c) 2021 Intel Corporation
+ Copyright (c) 2022 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the 'License');
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -30,7 +30,7 @@ from tests.torch.helpers import get_empty_config
 from tests.torch.helpers import register_bn_adaptation_init_args
 from tests.torch.quantization.test_hawq_precision_init import check_bitwidth_graph
 from tests.torch.test_compressed_graph import GeneralModelDesc
-from tests.torch.test_helpers import load_exported_onnx_version
+from tests.torch.helpers import load_exported_onnx_version
 from tests.torch.test_models.synthetic import MultiBranchesModel
 
 

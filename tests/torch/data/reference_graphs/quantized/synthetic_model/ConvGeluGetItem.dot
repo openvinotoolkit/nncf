@@ -1,0 +1,32 @@
+strict digraph  {
+"0 /nncf_model_input_0" [id=0, type=nncf_model_input];
+"1 SymmetricQuantizer/symmetric_quantize_0" [id=1, type=symmetric_quantize];
+"2 ConvGeluGetItem/NNCFLinear[fc1]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize_0" [id=2, type=symmetric_quantize];
+"3 ConvGeluGetItem/NNCFLinear[fc1]/linear_0" [id=3, type=linear];
+"4 ConvGeluGetItem/NNCFLinear[fc1]/SymmetricQuantizer/symmetric_quantize_0" [id=4, type=symmetric_quantize];
+"5 ConvGeluGetItem/Dropout[dp]/dropout_0" [id=5, type=dropout];
+"6 ConvGeluGetItem/transpose_0" [id=6, type=transpose];
+"7 ConvGeluGetItem/NNCFConv1d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize_0" [id=7, type=symmetric_quantize];
+"8 ConvGeluGetItem/NNCFConv1d[conv1]/conv1d_0" [id=8, type=conv1d];
+"9 ConvGeluGetItem/__getitem___0" [id=9, type=__getitem__];
+"10 ConvGeluGetItem/gelu_0" [id=10, type=gelu];
+"11 ConvGeluGetItem/SymmetricQuantizer/symmetric_quantize_0" [id=11, type=symmetric_quantize];
+"12 ConvGeluGetItem/transpose_1" [id=12, type=transpose];
+"13 ConvGeluGetItem/__add___0" [id=13, type=__add__];
+"14 /nncf_model_output_0" [id=14, type=nncf_model_output];
+"0 /nncf_model_input_0" -> "1 SymmetricQuantizer/symmetric_quantize_0";
+"1 SymmetricQuantizer/symmetric_quantize_0" -> "3 ConvGeluGetItem/NNCFLinear[fc1]/linear_0";
+"2 ConvGeluGetItem/NNCFLinear[fc1]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize_0" -> "3 ConvGeluGetItem/NNCFLinear[fc1]/linear_0";
+"3 ConvGeluGetItem/NNCFLinear[fc1]/linear_0" -> "4 ConvGeluGetItem/NNCFLinear[fc1]/SymmetricQuantizer/symmetric_quantize_0";
+"4 ConvGeluGetItem/NNCFLinear[fc1]/SymmetricQuantizer/symmetric_quantize_0" -> "5 ConvGeluGetItem/Dropout[dp]/dropout_0";
+"5 ConvGeluGetItem/Dropout[dp]/dropout_0" -> "6 ConvGeluGetItem/transpose_0";
+"6 ConvGeluGetItem/transpose_0" -> "8 ConvGeluGetItem/NNCFConv1d[conv1]/conv1d_0";
+"7 ConvGeluGetItem/NNCFConv1d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize_0" -> "8 ConvGeluGetItem/NNCFConv1d[conv1]/conv1d_0";
+"8 ConvGeluGetItem/NNCFConv1d[conv1]/conv1d_0" -> "9 ConvGeluGetItem/__getitem___0";
+"5 ConvGeluGetItem/Dropout[dp]/dropout_0" -> "13 ConvGeluGetItem/__add___0";
+"9 ConvGeluGetItem/__getitem___0" -> "10 ConvGeluGetItem/gelu_0";
+"10 ConvGeluGetItem/gelu_0" -> "11 ConvGeluGetItem/SymmetricQuantizer/symmetric_quantize_0";
+"11 ConvGeluGetItem/SymmetricQuantizer/symmetric_quantize_0" -> "12 ConvGeluGetItem/transpose_1";
+"12 ConvGeluGetItem/transpose_1" -> "13 ConvGeluGetItem/__add___0";
+"13 ConvGeluGetItem/__add___0" -> "14 /nncf_model_output_0";
+}

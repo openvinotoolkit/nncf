@@ -216,7 +216,7 @@ TEST_PARAMS = [
 ]
 
 
-@pytest.yield_fixture()
+@pytest.fixture()
 def _nncf_caplog(caplog):
     nncf_logger.propagate = True
     yield caplog

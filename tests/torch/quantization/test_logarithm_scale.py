@@ -1,5 +1,5 @@
 """
- Copyright (c) 2020 Intel Corporation
+ Copyright (c) 2022 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -18,8 +18,7 @@ import nncf
 from nncf import NNCFConfig
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
 from tests.torch.helpers import register_bn_adaptation_init_args
-
-from tests.torch.test_helpers import TwoConvTestModel
+from tests.torch.helpers import TwoConvTestModel
 
 SAMPLE_SIZE = [1, 1, 4, 4]
 

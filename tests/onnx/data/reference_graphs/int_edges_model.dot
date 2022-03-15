@@ -1,0 +1,9 @@
+strict digraph  {
+"0 Shape1" [id=0, type=Shape];
+"1 Constant1" [id=1, type=ConstantOfShape];
+"2 nncf_model_input_0" [id=2, type=nncf_model_input];
+"3 nncf_model_output_0" [id=3, type=nncf_model_output];
+"0 Shape1" -> "1 Constant1"  [label="[4]", style=dashed];
+"1 Constant1" -> "3 nncf_model_output_0"  [label="[1, 6, 3, 3]", style=solid];
+"2 nncf_model_input_0" -> "0 Shape1"  [label="[1, 6, 3, 3]", style=solid];
+}

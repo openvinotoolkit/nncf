@@ -1,5 +1,5 @@
 """
- Copyright (c) 2019 Intel Corporation
+ Copyright (c) 2022 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -37,25 +37,39 @@ CUDA_EXT_SRC_LIST = [
 
 @EXTENSIONS.register()
 class BinarizedFunctionsCPULoader(ExtensionLoader):
-    @staticmethod
-    def extension_type():
+    @classmethod
+    def name(cls) -> str:
+        return 'binarized_functions_cpu'
+
+    @classmethod
+    def extension_type(cls):
         return ExtensionsType.CPU
 
-    @staticmethod
-    def load():
-        return load('binarized_functions_cpu', CPU_EXT_SRC_LIST, extra_include_paths=EXT_INCLUDE_DIRS,
+    @classmethod
+    def load(cls):
+        return load(cls.name(),
+                    CPU_EXT_SRC_LIST,
+                    extra_include_paths=EXT_INCLUDE_DIRS,
+                    build_directory=cls.get_build_dir(),
                     verbose=False)
 
 
 @EXTENSIONS.register()
 class BinarizedFunctionsCUDALoader(ExtensionLoader):
-    @staticmethod
-    def extension_type():
+    @classmethod
+    def name(cls) -> str:
+        return 'binarized_functions_cuda'
+
+    @classmethod
+    def extension_type(cls):
         return ExtensionsType.CUDA
 
-    @staticmethod
-    def load():
-        return load('binarized_functions_cuda', CUDA_EXT_SRC_LIST, extra_include_paths=EXT_INCLUDE_DIRS,
+    @classmethod
+    def load(cls):
+        return load(cls.name(),
+                    CUDA_EXT_SRC_LIST,
+                    extra_include_paths=EXT_INCLUDE_DIRS,
+                    build_directory=cls.get_build_dir(),
                     verbose=False)
 
 

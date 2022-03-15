@@ -1,5 +1,5 @@
 """
- Copyright (c) 2021 Intel Corporation
+ Copyright (c) 2022 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -70,7 +70,10 @@ class PTNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
 
     @staticmethod
     def unstack(x: NNCFTensor, axis: int = 0) -> List[NNCFTensor]:
-        tensor_list = torch.unbind(x.tensor, dim=axis)
+        tensor = x.tensor
+        if list(tensor.shape) == []:
+            tensor = tensor.unsqueeze(0)
+        tensor_list = torch.unbind(tensor, dim=axis)
         return [PTNNCFTensor(t) for t in tensor_list]
 
     @staticmethod

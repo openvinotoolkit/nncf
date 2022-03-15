@@ -1,5 +1,5 @@
 """
- Copyright (c) 2020 Intel Corporation
+ Copyright (c) 2022 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -13,6 +13,9 @@
 import torch
 import torch.nn.functional as F
 from abc import abstractmethod
+
+from torch.nn import BatchNorm2d
+
 from tests.torch.helpers import create_conv
 from torch import nn
 from torch.nn import Dropout
@@ -207,10 +210,6 @@ class EmbeddingCatLinearModel(nn.Module):
         return self.linear(z)
 
 class MultiOutputSameTensorModel(torch.nn.Module):
-    def __init__(self):
-        super().__init__()
-        self._dummy_param = torch.nn.Parameter(torch.ones([1]))
-
     def forward(self, x):
         return x, x*x, x
 
@@ -243,6 +242,18 @@ class MatMulDivConv(nn.Module):
         return self.conv(z)
 
 
+class MMDivConv(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.conv = create_conv(1, 1, 1, 2)
+
+    def forward(self, x: torch.Tensor, y: torch.Tensor):
+        z = torch.mm(x, y) / 2
+        z = z.unsqueeze(0)
+        z = z.unsqueeze(0)
+        return self.conv(z)
+
+
 class ConvRelu6HSwishHSigmoid(nn.Module):
     def __init__(self):
         super().__init__()
@@ -263,3 +274,46 @@ class ConvRelu6HSwishHSigmoid(nn.Module):
         z = self.conv2(z)
         z = self._hsigmoid(z)
         return z
+
+
+class ConvGeluGetItem(torch.nn.Module):
+    def __init__(self):
+        super().__init__()
+
+        self.fc1 = nn.Linear(6, 8)
+        self.dp = nn.Dropout()
+        self.conv1 = nn.Conv1d(8, 8, kernel_size=3, padding=2)
+
+    def forward(self, x):
+        x = self.fc1(x)
+        x = self.dp(x)
+        x1 = x.transpose(2, 1)
+        x1 = self.conv1(x1)
+        x1 = F.gelu(x1[:, :, :-2])
+
+        return x + x1.transpose(2, 1)
+
+
+class ConvBNLeakyReLU(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.conv = create_conv(1, 2, 2, 2)
+        self.bn = BatchNorm2d(2)
+
+    def forward(self, x: torch.Tensor):
+        z = self.conv(x)
+        z = self.bn(z)
+        z = torch.nn.functional.leaky_relu(z)
+        return z
+
+class FC_ConstMul(torch.nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.fc1 = nn.Linear(6, 6)
+        self.dp = nn.Dropout()
+
+    def forward(self, x):
+        x = self.dp(x)
+        x1 = self.fc1(x)
+        x1 = x1 * 2
+        return x + x1

@@ -1,5 +1,5 @@
 """
- Copyright (c) 2019-2020 Intel Corporation
+ Copyright (c) 2019-2022 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -21,6 +21,7 @@ import torch.utils.data
 from torchvision.models import resnet50
 from torchvision.models import squeezenet1_1
 
+from nncf import NNCFConfig
 from nncf.common.utils.debug import nncf_debug
 from nncf.api.compression import CompressionScheduler
 from nncf.torch.checkpoint_loading import load_state
@@ -45,6 +46,7 @@ from nncf.torch.quantization.layers import AsymmetricQuantizer
 from nncf.common.quantization.structs import NonWeightQuantizerId
 from nncf.common.quantization.structs import WeightQuantizerId
 from nncf.torch.utils import get_all_modules_by_type
+from nncf.torch.utils import get_model_device
 from tests.torch.helpers import BasicConvTestModel
 from tests.torch.helpers import TwoConvTestModel
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
@@ -560,7 +562,7 @@ def test_debug_mode():
     with nncf_debug():
         model, _ = create_compressed_model_and_algo_for_test(model, config)
         model.forward(torch.zeros(BasicConvTestModel.INPUT_SIZE,
-                                  device=next(model.parameters()).device))
+                                  device=get_model_device(model)))
 
 
 class SharedLayersModel(torch.nn.Module):
@@ -661,3 +663,24 @@ def test_quantization_preset_with_scope_overrides():
 
     for aq_info in compression_ctrl.non_weight_quantizers.values():
         assert isinstance(aq_info.quantizer_module_ref, AsymmetricQuantizer)
+
+
+def test_quantization_can_be_run_with_no_data_loaders_if_zero_init_samples():
+    model = BasicConvTestModel()
+    # Should complete successfully even though no loaders have been registered into the config.
+    _, _ = create_compressed_model_and_algo_for_test(model, NNCFConfig.from_dict({
+        'input_info': {
+            'sample_size': [1, 1, 4, 4]
+        },
+        'compression': {
+            'algorithm': 'quantization',
+            'initializer': {
+                'range': {
+                    'num_init_samples': 0
+                },
+                'batchnorm_adaptation': {
+                    'num_bn_adaptation_samples': 0
+                }
+            }
+        }
+    }))

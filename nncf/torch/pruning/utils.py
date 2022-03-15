@@ -1,5 +1,5 @@
 """
- Copyright (c) 2020 Intel Corporation
+ Copyright (c) 2022 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -49,13 +49,12 @@ def get_bn_for_conv_node_by_name(target_model: NNCFNetwork, conv_node_name: NNCF
 
 def init_output_masks_in_graph(graph: NNCFGraph, nodes: List):
     """
-    Initialize masks in groph for mask propagation algorithm
+    Initialize masks in graph for mask propagation algorithm
 
     :param graph: NNCFNetwork
     :param nodes: list with pruned nodes
     """
     for node in graph.get_all_nodes():
-        node.data.pop('input_masks', None)
         node.data.pop('output_mask', None)
 
     for minfo in nodes:

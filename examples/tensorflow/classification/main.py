@@ -1,5 +1,5 @@
 """
- Copyright (c) 2020 Intel Corporation
+ Copyright (c) 2022 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -21,7 +21,7 @@ import tensorflow_addons as tfa
 from nncf.config.utils import is_accuracy_aware_training
 from nncf.tensorflow.helpers.model_creation import create_compressed_model
 from nncf.tensorflow import create_compression_callbacks
-from nncf.tensorflow.helpers.model_manager import TFOriginalModelManager
+from nncf.tensorflow.helpers.model_manager import TFModelManager
 from nncf.tensorflow.initialization import register_default_init_args
 from nncf.tensorflow.utils.state import TFCompressionState
 from nncf.tensorflow.utils.state import TFCompressionStateLoader
@@ -44,6 +44,8 @@ from examples.tensorflow.common.utils import serialize_config
 from examples.tensorflow.common.utils import serialize_cli_args
 from examples.tensorflow.common.utils import write_metrics
 from examples.tensorflow.common.utils import SummaryWriter
+from examples.tensorflow.common.utils import close_strategy_threadpool
+from examples.tensorflow.common.utils import set_seed
 
 
 def get_argument_parser():
@@ -92,7 +94,7 @@ def get_dataset_builders(config, num_devices, one_hot=True):
         one_hot=one_hot,
         is_train=False)
 
-    return [train_builder, val_builder]
+    return train_builder, val_builder
 
 
 def get_num_classes(dataset):
@@ -153,17 +155,16 @@ def run(config):
     if config.metrics_dump is not None:
         write_metrics(0, config.metrics_dump)
 
+    set_seed(config)
+
     model_fn, model_params = get_model(config.model,
                                        input_shape=config.get('input_info', {}).get('sample_size', None),
                                        num_classes=config.get('num_classes', get_num_classes(config.dataset)),
                                        pretrained=config.get('pretrained', False),
                                        weights=config.get('weights', None))
 
-    builders = get_dataset_builders(config, strategy.num_replicas_in_sync)
-    datasets = [builder.build() for builder in builders]
-
-    train_builder, validation_builder = builders
-    train_dataset, validation_dataset = datasets
+    train_builder, validation_builder = get_dataset_builders(config, strategy.num_replicas_in_sync)
+    train_dataset, validation_dataset = train_builder.build(), validation_builder.build()
 
     nncf_config = config.nncf_config
     nncf_config = register_default_init_args(nncf_config=nncf_config,
@@ -177,7 +178,7 @@ def run(config):
     resume_training = config.ckpt_path is not None
 
     if is_accuracy_aware_training(config):
-        with TFOriginalModelManager(model_fn, **model_params) as model:
+        with TFModelManager(model_fn, nncf_config, **model_params) as model:
             model.compile(metrics=[tf.keras.metrics.CategoricalAccuracy(name='acc@1')])
             results = model.evaluate(
                 validation_dataset,
@@ -189,7 +190,7 @@ def run(config):
     if resume_training:
         compression_state = load_compression_state(config.ckpt_path)
 
-    with TFOriginalModelManager(model_fn, **model_params) as model:
+    with TFModelManager(model_fn, nncf_config, **model_params) as model:
         with strategy.scope():
             compression_ctrl, compress_model = create_compressed_model(model, nncf_config, compression_state)
             compression_callbacks = create_compression_callbacks(compression_ctrl, log_dir=config.log_dir)
@@ -291,6 +292,7 @@ def run(config):
         compression_ctrl.export_model(save_path, save_format)
         logger.info('Saved to {}'.format(save_path))
 
+    close_strategy_threadpool(strategy)
 
 def export(config):
     model, model_params = get_model(config.model,

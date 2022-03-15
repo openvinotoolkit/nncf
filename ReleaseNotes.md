@@ -7,6 +7,29 @@ samples distributed with the code.  The samples demonstrate the usage of compres
 public models and datasets for three different use cases: Image Classification, Object Detection,
 and Semantic Segmentation.
 
+## New in Release 2.1.0
+- (PyTorch) All PyTorch operations are now NNCF-wrapped automatically.
+- (TensorFlow) Scales for concat-affecting quantizers are now unified
+- (PyTorch) The pruned filters are now set to 0 in the exported ONNX file instead of removing them from the ONNX definition.
+- (PyTorch, TensorFlow) Extended accuracy-aware training pipeline with the `early_exit` mode.
+- (PyTorch, TensorFlow) Added support for quantization presets to be specified in NNCF config.
+- (PyTorch, TensorFlow) Extended pruning statistics displayed to the user.
+- (PyTorch, TensorFlow) Users may now register a `dump_checkpoints_fn` callback to control the location of checkpoint saving during accuracy-aware training.
+- (PyTorch, TensorFlow) Default pruning schedule is now exponential.
+- (PyTorch) SILU activation now supported.
+- (PyTorch) Dynamic graph no longer traced during compressed model execution, which improves training performance of models compressed with NNCF.
+- (PyTorch) Added BERT-MRPC quantization results and integration instructions to the HuggingFace Transformers integration patch.
+- (PyTorch) Knowledge distillation extended with the option to specify temperature for the `softmax` mode.
+- (TensorFlow) Added `mixed_min_max` option for quantizer range initialization.
+- (PyTorch, TensorFlow) ReLU6-based HSwish and HSigmoid activations are now properly fused.
+- (PyTorch - Experimental) Added an algorithm to search the model's architecture for basic building blocks.
+
+Bugfixes:
+- (TensorFlow) Fixed a bug where an operation with int32 inputs (following a Cast op) was attempted to be quantized.
+- (PyTorch, TensorFlow) LeakyReLU now properly handled during pruning
+- (PyTorch) Fixed errors with custom modules failing at the `determine_subtype` stage of metatype assignment.
+- (PyTorch) Fix handling modules with `torch.nn.utils.weight_norm.WeightNorm` applied
+
 ## New in Release 2.0.2
 Target version updates:
 - Relax TensorFlow version requirements to 2.4.x
@@ -40,7 +63,7 @@ NNCF with TensorFlow backend supports the following features:
   - Compression algorithms:
     - Quantization (with HW-specific targeting aligned with PyTorch)
     - Sparsity:
-      - Magnitude Sparsity 
+      - Magnitude Sparsity
       - RB Sparsity
     - Filter pruning
   - Support for only Keras models consisting of standard Keras layers and created by:
@@ -49,7 +72,7 @@ NNCF with TensorFlow backend supports the following features:
   - Automatic, configurable model graph transformation to obtain the compressed model.
   - Distributed training on multiple GPUs on one machine is supported using `tf.distribute.MirroredStrategy`.
   - Exporting compressed models to SavedModel or Frozen Graph format, ready to use with OpenVINO™ toolkit.
-  
+
 - Added model compression samples for NNCF with TensorFlow backend:
   - Classification
     - Keras training loop.

@@ -1,5 +1,5 @@
 """
- Copyright (c) 2019-2020 Intel Corporation
+ Copyright (c) 2019-2022 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -11,7 +11,7 @@
  limitations under the License.
 """
 from collections import OrderedDict
-from typing import Dict, Any
+from typing import Dict, Any, List
 
 import warnings
 import numpy as np
@@ -76,7 +76,8 @@ def get_all_modules_by_type(model, module_types=None, current_scope=None,
     return found
 
 
-def get_state_dict_names_with_modules(model, str_types=None, prefix=''):
+def get_state_dict_names_with_modules(model: 'NNCFNetwork',
+                                      str_types: List[str] = None, prefix='') -> Dict[str, torch.nn.Module]:
     found = OrderedDict()
     for name, module in model.named_children():
         full_node_name = "{}{}".format(prefix, name)
@@ -102,7 +103,7 @@ def manual_seed(seed):
 
 def is_tracing_state():
     # pylint: disable=protected-access
-    return torch._C._get_tracing_state()
+    return torch._C._get_tracing_state() is not None
 
 
 class no_jit_trace:
@@ -342,3 +343,12 @@ def maybe_convert_legacy_names_in_compress_state(compression_state: Dict[str, An
         warnings.warn('Legacy Batch Norm layer names was detected in quantization setup target point names.'
                       ' All occurrences of `BatchNorm2d` in nodes names was replaced by `NNCFBatchNorm`',
                       category=DeprecationWarning)
+
+
+def get_model_device(model: torch.nn.Module) -> torch.device:
+    try:
+        device = next(model.parameters()).device
+    except StopIteration:
+        # The model had no parameters at all, doesn't matter which device to choose
+        device = torch.device('cpu')
+    return device

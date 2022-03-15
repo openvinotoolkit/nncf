@@ -1,5 +1,5 @@
 """
- Copyright (c) 2019-2020 Intel Corporation
+ Copyright (c) 2019-2022 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -145,4 +145,12 @@ def create_l2_norm() -> GraphPattern:
     pattern.add_edge(add_node, div_node)
     pattern.add_edge(div_node, mul_node)
     pattern.add_edge(outside_pattern_node, div_node)
+    return pattern
+
+def create_fc_conv_mul() -> GraphPattern:
+    pattern = GraphPattern()
+    linear_node = pattern.add_node(label='linear', type='linear')
+    mul_node = pattern.add_node(label='MUL', type='__mul__')
+    pattern.add_edge(linear_node, mul_node)
+
     return pattern

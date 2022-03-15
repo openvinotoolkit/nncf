@@ -13,16 +13,7 @@
     "batch_size": 150,
     "workers": 6,
     "multiprocessing_distributed": true,
-    "optimizer": {
-        "base_lr": 0.00031,
-        "schedule_type": "plateau",
-        "type": "Adam",
-        "schedule_params": {
-            "threshold": 0.1,
-            "cooldown": 3
-        },
-        "weight_decay": 1e-05
-    },
+    "epochs": 30,
     "target_device": "VPU",
     "compression": {
         "algorithm": "quantization",
@@ -30,8 +21,18 @@
             "precision": {
                 "type": "hawq",
                 "bits": [4, 8],
-                "compression_ratio": 1.5
+                "compression_ratio": 1.4
             }
+        },
+        "params": {
+            "base_lr": 3.1e-4,
+            "base_wd": 1e-5,
+            "batch_multiplier": 1,
+            "activations_quant_start_epoch": 3,
+            "weights_quant_start_epoch": 12,
+            "lr_poly_drop_start_epoch": 20,
+            "lr_poly_drop_duration_epochs": 10,
+            "disable_wd_start_epoch": 20
         }
     }
 }

@@ -1,5 +1,5 @@
 """
- Copyright (c) 2020 Intel Corporation
+ Copyright (c) 2022 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -13,6 +13,7 @@
 
 import os
 from typing import List
+from pkg_resources import parse_version
 
 import pytest
 from addict import Dict
@@ -24,6 +25,7 @@ from nncf import NNCFConfig
 from nncf.common.hardware.config import HWConfigType
 from tests.tensorflow import test_models
 from tests.tensorflow.helpers import get_empty_config, create_compressed_model_and_algo_for_test
+from tests.tensorflow.helpers import operational_node
 from tests.tensorflow.sparsity.magnitude.test_helpers import get_basic_filter_pruning_config
 from tests.tensorflow.sparsity.magnitude.test_helpers import get_basic_sparsity_config
 
@@ -50,8 +52,8 @@ def get_nx_graph_from_tf_graph(tf_graph: tf.Graph, graph_to_layer_var_names_map:
     def _get_inbound_edges(op: tf.Operation):
         inbound_edges = []
         for input_tensor in op.inputs:
-            inbound_edges.append((graph_to_layer_var_names_map.get(input_tensor.op.name, input_tensor.op.name),
-                                  graph_to_layer_var_names_map.get(op.name, op.name)))
+            inbound_edges.append([graph_to_layer_var_names_map.get(input_tensor.op.name, input_tensor.op.name),
+                                  graph_to_layer_var_names_map.get(op.name, op.name)])
         return inbound_edges
 
     nodes = {}
@@ -60,6 +62,15 @@ def get_nx_graph_from_tf_graph(tf_graph: tf.Graph, graph_to_layer_var_names_map:
         op_name = graph_to_layer_var_names_map.get(op.name, op.name)
         nodes[op_name] = _get_node_attributes(op)
         edges.extend(_get_inbound_edges(op))
+
+    for node_name in list(nodes.keys()):
+        if not operational_node(node_name):
+            del nodes[node_name]
+
+    for node_edges in list(edges):
+        for node_name in node_edges:
+            if not operational_node(node_name):
+                edges.remove(node_edges)
 
     nx_graph = nx.DiGraph()
 
@@ -212,7 +223,7 @@ SKIP_MAP = {
         'nasnet_mobile': pytest.mark.skip(reason='gitlab issue #18'),
         'xception': pytest.mark.skip(reason='gitlab issue #28'),
         'mask_rcnn': pytest.mark.skip(reason='ticket #50605'),
-        'resnet50v2': pytest.mark.skip(resason='Several masks on one weight'),
+        'resnet50v2': pytest.mark.skip(reason='Several masks on one weight'),
         'mobilenet_v2_slim': pytest.mark.skip(reason='ticket #46349')
     },
     'rb_sparsity': {
@@ -239,7 +250,7 @@ def get_test_models_desc(algorithm):
             ModelDesc(ref_name('inception_resnet_v2.pb'), test_models.InceptionResNetV2, [1, 75, 75, 3]),
             marks=SKIP_MAP[algorithm].get('inception_resnet_v2', ())
         ),
-        ModelDesc(ref_name('inception_v3.pb'), test_models.InceptionV3, [1, 75, 75, 3]),
+        ModelDesc('inception_v3.dot', test_models.InceptionV3, [1, 75, 75, 3]),
         ModelDesc(ref_name('mobilenet_v1.pb'), test_models.MobileNet, [1, 128, 128, 3]),
         ModelDesc(ref_name('mobilenet_v2.pb'), test_models.MobileNetV2, [1, 96, 96, 3]),
         pytest.param(
@@ -275,11 +286,7 @@ def get_test_models_desc(algorithm):
             marks=SKIP_MAP[algorithm].get('shared_layers_model', ())
         ),
         pytest.param(
-            ModelDesc('mask_rcnn.dot', test_models.MaskRCNN, [1, 1024, 1024, 3],
-                      ignored_scopes=[
-                            "{re}.*clip_boxes.*", # skip due to https://github.com/tensorflow/tensorflow/issues/51793
-                      ]
-            ),
+            ModelDesc('mask_rcnn.dot', test_models.MaskRCNN, [1, 1024, 1024, 3]),
             marks=SKIP_MAP[algorithm].get('mask_rcnn', ())
         ),
         pytest.param(
@@ -367,7 +374,9 @@ def prepare_and_check_nx_graph(tf_graph: tf.Graph, graph_path: str, ref_graph_ex
 
 
 def check_model_graph(compressed_model, ref_graph_filename, ref_graph_dir, rename_resource_nodes):
-    data_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'reference_graphs')
+    tensorflow_version = parse_version(tf.__version__).base_version
+    data_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'reference_graphs',
+                            tensorflow_version[:3])
     graph_dir = os.path.join(data_dir, ref_graph_dir)
     graph_path = os.path.abspath(os.path.join(graph_dir, ref_graph_filename))
 
@@ -467,7 +476,7 @@ TYPE_HW = [(HWConfigType.CPU), (HWConfigType.GPU), (HWConfigType.VPU)]
 
 TEST_HW_MODELS_DESC = [
     ModelDesc('resnet50.pb', test_models.ResNet50, [1, 32, 32, 3]),
-    ModelDesc('inception_v3.pb', test_models.InceptionV3, [1, 75, 75, 3]),
+    ModelDesc('inception_v3.dot', test_models.InceptionV3, [1, 75, 75, 3]),
     ModelDesc('mobilenet_v2.pb', test_models.MobileNetV2, [1, 96, 96, 3]),
 ]
 

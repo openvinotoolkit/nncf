@@ -1,5 +1,5 @@
 """
- Copyright (c) 2020 Intel Corporation
+ Copyright (c) 2022 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -12,7 +12,6 @@
 """
 
 import tensorflow as tf
-from examples.tensorflow.common.object_detection.architecture import keras_utils
 from examples.tensorflow.common.object_detection.architecture import nn_ops
 
 
@@ -78,9 +77,8 @@ class Resnet:
           The values are corresponding feature hierarchy in ResNet with shape
           [batch_size, height_l, width_l, num_filters].
         """
-        with keras_utils.maybe_enter_backend_graph():
-            with tf.name_scope('resnet%s' % self._resnet_depth):
-                return self._resnet_fn(inputs, is_training)
+        with tf.name_scope('resnet%s' % self._resnet_depth):
+            return self._resnet_fn(inputs, is_training)
 
     def fixed_padding(self, inputs, kernel_size):
         """Pads the input along the spatial dimensions independently of input size.

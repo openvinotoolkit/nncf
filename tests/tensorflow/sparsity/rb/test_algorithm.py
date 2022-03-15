@@ -1,5 +1,5 @@
 """
- Copyright (c) 2021 Intel Corporation
+ Copyright (c) 2022 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -89,8 +89,7 @@ def test_compression_controller_state():
     _, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
 
     # Test get state
-    compression_ctrl.scheduler.current_step = 100
-    compression_ctrl.scheduler.current_epoch = 5
+    compression_ctrl.scheduler.load_state({'current_step': 100, 'current_epoch': 5})
     compression_ctrl.set_sparsity_level(0.5)
     compression_ctrl.freeze()
     assert compression_ctrl.get_state() == {

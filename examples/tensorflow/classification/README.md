@@ -11,7 +11,9 @@ This sample demonstrates a DL model compression in case of the Image Classificat
 
 ## Installation
 
-To work with the sample you should install the corresponding Python package dependencies
+At this point it is assumed that you have already installed nncf. You can find information on downloading nncf [here](https://github.com/openvinotoolkit/nncf#user-content-installation).  
+
+To work with the sample you should install the corresponding Python package dependencies:
 
 ```
 pip install -r examples/tensorflow/requirements.txt
@@ -50,20 +52,37 @@ The ImageNet dataset in TFRecords format should be specified in the configuratio
 
 - If you did not install the package, add the repository root folder to the `PYTHONPATH` environment variable.
 - Go to the `examples/tensorflow/classification` folder.
-- Run the following command to start compression with fine-tuning on all available GPUs on the machine:
-    ```bash
-    python main.py \
-    --mode=train \
-    --config=configs/quantization/mobilenet_v2_imagenet_int8.json \
-    --data=<path_to_imagenet_dataset> \
-    --log-dir=../../results/quantization/mobilenet_v2_int8
-    ```
-    It may take a few epochs to get the baseline accuracy results.
-- Use the `--resume` flag with the path to the checkpoint to resume training from the defined checkpoint or folder with checkpoints to resume training from the last checkpoint.
+
+#### Test Pretrained Model
+
+Before compressing a model, it is highly recommended checking the accuracy of the pretrained model. All models which are supported in the sample has pretrained weights for ImageNet. 
+
+To load pretrained weights into a model and then evaluate the accuracy of that model, make sure that the pretrained=True option is set in the configuration file and use the following command:
+```bash
+python main.py \
+--mode=test \
+--config=configs/quantization/mobilenet_v2_imagenet_int8.json \
+--data=<path_to_imagenet_dataset> \
+--disable-compression 
+```
+
+#### Compress Pretrained Model
+
+Run the following command to start compression with fine-tuning on all available GPUs on the machine:
+  ```bash
+  python main.py \
+  --mode=train \
+  --config=configs/quantization/mobilenet_v2_imagenet_int8.json \
+  --data=<path_to_imagenet_dataset> \
+  --log-dir=../../results/quantization/mobilenet_v2_int8
+  ```
+It may take a few epochs to get the baseline accuracy results.
+
+Use the `--resume` flag with the path to the checkpoint to resume training from the defined checkpoint or folder with checkpoints to resume training from the last checkpoint.
 
 ### Validate Your Model Checkpoint
 
-To estimate the test scores of your model checkpoint, use the following command:
+To estimate the test scores of your trained model checkpoint, use the following command:
 ```bash
 python main.py \
 --mode=test \
@@ -71,7 +90,6 @@ python main.py \
 --data=<path_to_imagenet_dataset> \
 --resume=<path_to_trained_model_checkpoint>
 ```
-To validate an model checkpoint, make sure the compression algorithm settings are empty in the configuration file and `pretrained=True` is set.
 
 ### Export Compressed Model
 
@@ -116,10 +134,10 @@ To export a model to the OpenVINO IR and run it using the Intel® Deep Learning 
 |MobileNet V2|INT8 (per-tensor, symmetric for weights; per-tensor, symmetric for activations) |ImageNet|71.66 (0.19)|[mobilenet_v2_imagenet_int8.json](configs/quantization/mobilenet_v2_imagenet_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/mobilenet_v2_int8_w_sym_t_half_a_sym_t.tar.gz)|
 |MobileNet V2|Sparsity 50% (RB)|ImageNet|71.34 (0.51)|[mobilenet_v2_imagenet_rb_sparsity.json](configs/sparsity/mobilenet_v2_imagenet_rb_sparsity.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/mobilenet_v2_rb_sparsity_50.tar.gz)|
 |MobileNet V2|int8(per-tensor, symmetric for weights; per-tensor, symmetric for activations) + sparsity 52% (RB)|ImageNet|71.0 (0.85)|[mobilenet_v2_imagenet_rb_sparsity_int8.json](configs/sparsity_quantization/mobilenet_v2_imagenet_rb_sparsity_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/mobilenet_v2_int8_w_sym_t_half_a_sym_t_rb_sparsity_52.tar.gz)|
-|MobileNet V3 small|INT8 (per-channel, symmetric for weights; per-tensor, asymmetric for activations) |ImageNet|67.7 (0.68)|[mobilenet_v3_small_imagenet_int8.json](configs/quantization/mobilenet_v3_small_imagenet_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/mobilenet_v3_small_int8_w_sym_ch_half_a_asym_t.tar.gz)|
-|MobileNet V3 small|INT8 (per-channel, symmetric for weights; per-tensor, asymmetric for activations) + Sparsity 42% (RB)|ImageNet|67.7 (0.68)|[mobilenet_v3_small_imagenet_rb_sparsity_int8.json](configs/sparsity_quantization/mobilenet_v3_small_imagenet_rb_sparsity_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/mobilenet_v3_small_int8_w_sym_ch_half_a_asym_t_rb_sparsity_42.tar.gz)|
-|MobileNet V3 large|INT8 (per-channel, symmetric for weights; per-tensor, asymmetric for activations) |ImageNet|75.0 (0.81)|[mobilenet_v3_large_imagenet_int8.json](configs/quantization/mobilenet_v3_large_imagenet_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/mobilenet_v3_large_int8_w_sym_ch_half_a_asym_t.tar.gz)|
-|MobileNet V3 large|INT8 (per-channel, symmetric for weights; per-tensor, asymmetric for activations) + Sparsity 42% (RB)|ImageNet|75.15 (0.66)|[mobilenet_v3_large_imagenet_rb_sparsity_int8.json](configs/sparsity_quantization/mobilenet_v3_large_imagenet_rb_sparsity_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/mobilenet_v3_large_int8_w_sym_ch_half_a_asym_t_rb_sparsity_42.tar.gz)|
+|MobileNet V3 small|INT8 (per-channel, symmetric for weights; per-tensor, asymmetric for activations) |ImageNet|67.75 (0.63)|[mobilenet_v3_small_imagenet_int8.json](configs/quantization/mobilenet_v3_small_imagenet_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/mobilenet_v3_small_int8_w_sym_ch_half_a_asym_t.tar.gz)|
+|MobileNet V3 small|INT8 (per-channel, symmetric for weights; per-tensor, asymmetric for activations) + Sparsity 42% (RB)|ImageNet|67.55 (0.83)|[mobilenet_v3_small_imagenet_rb_sparsity_int8.json](configs/sparsity_quantization/mobilenet_v3_small_imagenet_rb_sparsity_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/mobilenet_v3_small_int8_w_sym_ch_half_a_asym_t_rb_sparsity_42.tar.gz)|
+|MobileNet V3 large|INT8 (per-channel, symmetric for weights; per-tensor, asymmetric for activations) |ImageNet|75.02 (0.79)|[mobilenet_v3_large_imagenet_int8.json](configs/quantization/mobilenet_v3_large_imagenet_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/mobilenet_v3_large_int8_w_sym_ch_half_a_asym_t.tar.gz)|
+|MobileNet V3 large|INT8 (per-channel, symmetric for weights; per-tensor, asymmetric for activations) + Sparsity 42% (RB)|ImageNet|75.28 (0.53)|[mobilenet_v3_large_imagenet_rb_sparsity_int8.json](configs/sparsity_quantization/mobilenet_v3_large_imagenet_rb_sparsity_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/mobilenet_v3_large_int8_w_sym_ch_half_a_asym_t_rb_sparsity_42.tar.gz)|
 |ResNet50|INT8 (per-tensor, symmetric for weights; per-tensor, symmetric for activations)|ImageNet|75.0 (0.04)|[resnet50_imagenet_int8.json](configs/quantization/resnet50_imagenet_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/resnet50_int8_w_sym_t_half_a_sym_t.tar.gz)|
 |ResNet50|Sparsity 80% (RB)|ImageNet|74.36 (0.68)|[resnet50_imagenet_rb_sparsity.json](configs/sparsity/resnet50_imagenet_rb_sparsity.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/resnet50_rb_sparsity_80.tar.gz)|
 |ResNet50|INT8 (per-tensor, symmetric for weights; per-tensor, symmetric for activations) + Sparsity 65% (RB)|ImageNet|74.3 (0.74)|[resnet50_imagenet_rb_sparsity_int8.json](configs/sparsity_quantization/resnet50_imagenet_rb_sparsity_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/resnet50_int8_w_sym_t_half_a_sym_t_rb_sparsity_65.tar.gz)|

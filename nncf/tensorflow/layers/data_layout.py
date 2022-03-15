@@ -1,5 +1,5 @@
 """
- Copyright (c) 2020 Intel Corporation
+ Copyright (c) 2022 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -21,8 +21,7 @@ from nncf.tensorflow.graph.utils import unwrap_layer
 from nncf.tensorflow.layers.operation import InputType
 
 
-def get_channel_size(input_shape, input_type, input_name, layer):
-    channel_axes = get_channel_axis(input_type, input_name, layer)
+def get_channel_size(input_shape, channel_axes):
     if not isinstance(channel_axes, (list, tuple)):
         channel_axes = [channel_axes]
     size = 1

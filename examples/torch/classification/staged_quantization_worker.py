@@ -1,5 +1,5 @@
 """
- Copyright (c) 2019-2020 Intel Corporation
+ Copyright (c) 2019-2022 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -202,10 +202,10 @@ def staged_quantization_main_worker(current_gpu, config):
     best_acc1 = 0
     # optionally resume from a checkpoint
     if resuming_checkpoint is not None and config.to_onnx is None:
-        config.start_epoch = resuming_checkpoint['epoch']
         best_acc1 = resuming_checkpoint['best_acc1']
-        kd_loss_calculator.original_model.load_state_dict(resuming_checkpoint['original_model_state_dict'])
         if 'train' in config.mode:
+            kd_loss_calculator.original_model.load_state_dict(resuming_checkpoint['original_model_state_dict'])
+            config.start_epoch = resuming_checkpoint['epoch']
             optimizer.load_state_dict(resuming_checkpoint['optimizer'])
             optimizer_scheduler.load_state_dict(resuming_checkpoint['optimizer_scheduler'])
             logger.info("=> loaded checkpoint '{}' (epoch: {}, best_acc1: {:.3f})"

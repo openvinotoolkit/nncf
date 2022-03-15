@@ -1,5 +1,5 @@
 """
- Copyright (c) 2019-2020 Intel Corporation
+ Copyright (c) 2019-2022 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -574,4 +574,4 @@ def test_scope_and_call_counters_are_reset_on_exceptions():
     assert not ctx.module_call_stack
     assert not ctx.relative_scopes_stack
     #pylint:disable=protected-access
-    assert not ctx._thread_local.operator_counters
+    assert not ctx._threading.thread_local.operator_counters

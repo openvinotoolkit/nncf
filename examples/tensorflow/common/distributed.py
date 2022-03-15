@@ -1,5 +1,5 @@
 """
- Copyright (c) 2020 Intel Corporation
+ Copyright (c) 2022 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -13,6 +13,8 @@
 
 import os
 import tensorflow as tf
+
+from examples.tensorflow.common.utils import set_memory_growth
 
 
 def get_distribution_strategy(config):
@@ -32,9 +34,12 @@ def get_distribution_strategy(config):
                                'Please do not export the CUDA_VISIBLE_DEVICES environment variable '
                                'or specify GPU with id = {id} in it'.format(id=_gpu_id))
 
-    num_gpus = len(tf.config.list_physical_devices('GPU'))
+    gpus = tf.config.list_physical_devices('GPU')
 
-    if num_gpus > 1:
+    # Workaround for https://github.com/tensorflow/tensorflow/issues/33916
+    set_memory_growth(gpus)
+
+    if len(gpus) > 1:
         return tf.distribute.MirroredStrategy()
 
     return tf.distribute.get_strategy()

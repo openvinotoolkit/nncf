@@ -1,5 +1,5 @@
 """
- Copyright (c) 2020 Intel Corporation
+ Copyright (c) 2022 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -17,6 +17,8 @@ from typing import List
 from typing import Tuple
 
 import tensorflow as tf
+from tensorflow.python.keras.layers.core import SlicingOpLambda
+from tensorflow.python.keras.layers.core import TFOpLambda
 
 from nncf import NNCFConfig
 from nncf.api.compression import CompressionLoss
@@ -50,7 +52,6 @@ from nncf.common.stateful_classes_registry import TF_STATEFUL_CLASSES
 from nncf.common.statistics import NNCFStatistics
 from nncf.common.utils.helpers import should_consider_scope
 from nncf.common.utils.logger import logger
-from nncf.config.extractors import extract_bn_adaptation_init_params
 from nncf.config.extractors import extract_range_init_params
 from nncf.tensorflow.algorithm_selector import TF_COMPRESSION_ALGORITHMS
 from nncf.tensorflow.api.compression import TFCompressionAlgorithmBuilder
@@ -62,6 +63,7 @@ from nncf.tensorflow.graph.metatypes.common import LAYER_METATYPES_AGNOSTIC_TO_D
 from nncf.tensorflow.graph.metatypes.common import LINEAR_LAYER_METATYPES
 from nncf.tensorflow.graph.metatypes.keras_layers import TFLambdaLayerMetatype
 from nncf.tensorflow.graph.metatypes.keras_layers import TFLayerWithWeightsMetatype
+from nncf.tensorflow.graph.metatypes.tf_ops import TFOpWithWeightsMetatype
 from nncf.tensorflow.graph.transformations.commands import TFAfterLayer
 from nncf.tensorflow.graph.transformations.commands import TFBeforeLayer
 from nncf.tensorflow.graph.transformations.commands import TFInsertionCommand
@@ -293,6 +295,7 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
 
     def _parse_init_params(self):
         self._range_init_params = self._parse_range_init_params()
+        self._bn_adapt_params = self._parse_bn_adapt_params()
 
     def _parse_range_init_params(self) -> TFRangeInitParams:
         range_init_params = extract_range_init_params(self.config)
@@ -419,8 +422,9 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
 
     def _run_batchnorm_adaptation(self, model: tf.keras.Model) -> None:
         if self._bn_adaptation is None:
-            self._bn_adaptation = BatchnormAdaptationAlgorithm(
-                **extract_bn_adaptation_init_params(self.config, self.name))
+            self._bn_adaptation = BatchnormAdaptationAlgorithm(self._bn_adapt_params['data_loader'],
+                                                               self._bn_adapt_params['num_bn_adaptation_samples'],
+                                                               self._bn_adapt_params['device'])
         self._bn_adaptation.run(model)
 
     def _get_quantizer_setup(self, model: tf.keras.Model) -> TFQuantizationSetup:
@@ -560,7 +564,8 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
                                               target_scopes=None)):
                 continue
 
-            assert issubclass(metatype, TFLayerWithWeightsMetatype)
+            assert issubclass(metatype, TFLayerWithWeightsMetatype) or \
+                issubclass(metatype, TFOpWithWeightsMetatype)
             nodes_with_weights.append(node)
         scope_overrides_dict = self._get_algo_specific_config_section().get('scope_overrides', {})
         weighted_node_and_qconf_lists = assign_qconfig_lists_to_modules(nodes_with_weights,
@@ -637,7 +642,13 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
                 # in order to correctly count the duplicated edges
                 original_name, _ = get_original_name_and_instance_idx(successor.node_name)
                 layer = model.get_layer(name=original_name)
+
                 num_previous_nodes = len(layer.input) if isinstance(layer.input, list) else 1
+                if isinstance(layer, (TFOpLambda, SlicingOpLambda)):
+                    num_previous_nodes = 0
+                    for inbound_node in layer.inbound_nodes:
+                        num_previous_nodes += len(inbound_node.keras_inputs)
+
                 if successor.metatype in ELEMENTWISE_LAYER_METATYPES and num_previous_nodes == 1:
                     preprocessing_nodes.append(successor)
                     is_finished = False

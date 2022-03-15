@@ -1,5 +1,5 @@
 """
- Copyright (c) 2019 Intel Corporation
+ Copyright (c) 2022 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -295,6 +295,7 @@ NNCF_GENERAL_CONV_MODULES_DICT.update(NNCF_DECONV_MODULES_DICT)
 NNCF_LINEAR_MODULES_DICT = {NNCFLinear: nn.Linear}
 
 NNCF_PRUNING_MODULES_DICT = {
+    NNCFLinear: nn.Linear,
     NNCFConv1d: nn.Conv1d,
     NNCFConv2d: nn.Conv2d,
     NNCFConv3d: nn.Conv3d,

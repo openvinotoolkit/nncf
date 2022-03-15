@@ -1,5 +1,5 @@
 """
- Copyright (c) 2021 Intel Corporation
+ Copyright (c) 2022 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -140,6 +140,18 @@ class TransposeConvolutionPruningOp(BasePruningOp):
         node.data['output_mask'] = output_mask
 
 
+class LinearPruningOp(BasePruningOp):
+    @classmethod
+    def accept_pruned_input(cls, node: NNCFNode) -> bool:
+        return True
+
+    @classmethod
+    def mask_propagation(cls, node: NNCFNode, graph: NNCFGraph,
+                         tensor_processor: Type[NNCFPruningBaseTensorProcessor]) -> None:
+        output_mask = node.data.get('output_mask', None)
+        node.data['output_mask'] = output_mask
+
+
 class BatchNormPruningOp(BasePruningOp):
     @classmethod
     def accept_pruned_input(cls, node: NNCFNode) -> bool:
@@ -224,7 +236,6 @@ class ElementwisePruningOp(BasePruningOp):
         if output_mask is not None:
             output_mask = tensor_processor.elementwise_mask_propagation(input_masks)
 
-        node.data['input_masks'] = input_masks
         node.data['output_mask'] = output_mask
 
 

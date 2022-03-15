@@ -1,5 +1,5 @@
 """
- Copyright (c) 2019 Intel Corporation
+ Copyright (c) 2022 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -109,7 +109,7 @@ if python_version < (3, 6, 2):
 version_string = "{}{}".format(sys.version_info[0], sys.version_info[1])
 
 _extra_deps = [
-    "tensorflow~=2.4.3",
+    "tensorflow~=2.5.0",
     "torch>=1.5.0, <=1.9.1, !=1.8.0",
 ]
 

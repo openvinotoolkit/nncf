@@ -1,5 +1,5 @@
 """
- Copyright (c) 2019-2020 Intel Corporation
+ Copyright (c) 2019-2022 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -21,7 +21,13 @@ from typing import Callable, Dict, List, Tuple, Union
 import networkx as nx
 import pytest
 import torch
+
+from nncf.torch.utils import get_model_device
+from tests.torch.test_models.synthetic import ConvBNLeakyReLU
+from tests.torch.test_models.synthetic import ConvGeluGetItem
 from tests.torch.test_models.synthetic import ConvRelu6HSwishHSigmoid
+from tests.torch.test_models.synthetic import FC_ConstMul
+from tests.torch.test_models.synthetic import MMDivConv
 from tests.torch.test_models.synthetic import MatMulDivConv
 from torch import nn
 import torch.nn.functional as F
@@ -170,7 +176,7 @@ def gnmt_wrap_inputs_fn(model_args, model_kwargs):
 
 def gnmt_forward_fn(seq_len, batch_size, vocab_size):
     def forward_fn(model, seq_len_, batch_size_, vocab_size_, batch_first_):
-        device = next(model.parameters()).device
+        device = get_model_device(model)
 
         def gen_packed_sequence():
             seq_list = []
@@ -221,7 +227,7 @@ def sr_wrap_inputs_fn(model_args, model_kwargs):
 
 
 def sr_dummy_forward_fn(model_, input_sample_sizes: Tuple[List[int]]):
-    device = next(model_.parameters()).device
+    device = get_model_device(model_)
     config = {'input_info': [{"sample_size": sizes} for sizes in input_sample_sizes]}
     input_info_list = create_input_infos(config)
     tensor_list = [create_mock_tensor(info, device) for info in input_info_list]
@@ -632,6 +638,8 @@ SYNTHETIC_MODEL_DESC_LIST = [
     TensorBinaryMethodsDesc(model_name='MatMul', tensor_method='matmul'),
 
     SingleLayerModelDesc(model_name='Mean', layer=torch.mean),
+    SingleLayerModelDesc(model_name='normalize', layer=partial(torch.nn.functional.normalize, p=2),
+                         input_sample_sizes=([1, 1, 1, 1], )),
 
     TensorUnaryMethodsDesc(tensor_method='round'),
 
@@ -722,7 +730,11 @@ SYNTHETIC_MODEL_DESC_LIST = [
                                                                   "filler": "zeros"}),
     GeneralModelDesc(model_builder=MultiOutputSameTensorModel),
     GeneralModelDesc(model_builder=MatMulDivConv, input_sample_sizes=([1, 1, 5, 5], [1, 1, 5, 5])),
-    GeneralModelDesc(model_builder=ConvRelu6HSwishHSigmoid, input_sample_sizes=([1, 1, 5, 5],))
+    GeneralModelDesc(model_builder=MMDivConv, input_sample_sizes=([5, 5], [5, 5])),
+    GeneralModelDesc(model_builder=ConvRelu6HSwishHSigmoid, input_sample_sizes=([1, 1, 5, 5],)),
+    GeneralModelDesc(model_builder=ConvBNLeakyReLU, input_sample_sizes=([1, 1, 5, 5],)),
+    GeneralModelDesc(model_builder=FC_ConstMul, input_sample_sizes=[1, 3, 6]),
+    GeneralModelDesc(model_builder=ConvGeluGetItem, input_sample_sizes=([1, 6, 6],))
 ]
 
 

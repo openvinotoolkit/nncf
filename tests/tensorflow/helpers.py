@@ -1,5 +1,5 @@
 """
- Copyright (c) 2020 Intel Corporation
+ Copyright (c) 2022 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -191,3 +191,8 @@ def get_op_by_cls(wrapper, cls):
             if isinstance(op, cls):
                 return op
     return None
+
+
+def operational_node(node_name: str) -> bool:
+    """Check for non-operational nodes with names 'model_name/1234567'. Appeared in Mask-RCNN"""
+    return not (len(node_name.split('/')) == 2 and node_name.split('/')[1].isdigit())

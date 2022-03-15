@@ -1,5 +1,5 @@
 """
- Copyright (c) 2021 Intel Corporation
+ Copyright (c) 2022 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -31,7 +31,7 @@ def get_axes(ndims: int, per_channel: bool, channel_axes: Union[int, list, tuple
 def get_reduction_shape_activations(layer: tf.keras.layers.Layer,
                                     channel_axes: Union[int, tuple, list],
                                     use_per_sample_stats: bool) -> ReductionShape:
-    ndims = len(layer.input_shape)
+    ndims = len(layer.get_input_shape_at(0))
     channel_axes_ = channel_axes if isinstance(channel_axes, (list, tuple)) else [channel_axes]
     reduction_shape = get_axes(ndims, layer.per_channel, channel_axes_)
     if use_per_sample_stats:

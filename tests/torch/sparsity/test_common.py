@@ -1,5 +1,5 @@
 """
- Copyright (c) 2019-2020 Intel Corporation
+ Copyright (c) 2019-2022 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -99,14 +99,13 @@ class TestSparseModules:
         assert ctrl.scheduler.current_epoch == -1
 
         # Test get state
-        ctrl.scheduler.current_step = 100
-        ctrl.scheduler.current_epoch = 5
+        ctrl.scheduler.load_state({'current_step': 100, 'current_epoch': 5})
         compression_state = ctrl.get_compression_state()
         saved_ctrl_state = compression_state[BaseController.CONTROLLER_STATE]
         assert saved_ctrl_state == ctrl.get_state()
         algo_state = next(iter(saved_ctrl_state.values()))
         assert algo_state == {
-            BaseControllerStateNames.COMPRESSION_STAGE: CompressionStage.UNCOMPRESSED,
+            BaseControllerStateNames.COMPRESSION_STAGE: CompressionStage.PARTIALLY_COMPRESSED,
             BaseControllerStateNames.SCHEDULER: {'current_step': 100, 'current_epoch': 5},
             BaseControllerStateNames.LOSS: None
         }
@@ -313,18 +312,17 @@ REF_DEFAULT_STATE = {
     MultiStepSparsityScheduler: {'current_step': -1, 'current_epoch': -1},
     AdaptiveSparsityScheduler: {'current_step': -1, 'current_epoch': -1,
                                 'num_bad_epochs': 0, 'current_sparsity_level': 0.3}
-
 }
 
 
-class TestLoss:
+class MockLoss:
     def __init__(self):
         self.current_sparsity = 0.5
 
 
-class TestCompressionController:
+class MockCompressionController:
     def __init__(self):
-        self.loss = TestLoss()
+        self.loss = MockLoss()
 
     def set_sparsity_level(self, level):
         pass
@@ -334,7 +332,7 @@ class TestCompressionController:
                                            MultiStepSparsityScheduler, AdaptiveSparsityScheduler],
                          ids=['Polynomial', 'Exponential', 'Multistep', 'Adaptive'])
 def test_scheduler_get_state(scheduler_cls):
-    args = (TestCompressionController(), {'sparsity_init': 0.3, 'update_per_optimizer_step': True, 'patience': 2})
+    args = (MockCompressionController(), {'sparsity_init': 0.3, 'update_per_optimizer_step': True, 'patience': 2})
     scheduler = scheduler_cls(*args)
 
     # Test init state
@@ -352,7 +350,6 @@ def test_scheduler_get_state(scheduler_cls):
         assert state['_steps_per_epoch'] == 5
     if scheduler_cls == AdaptiveSparsityScheduler:
         assert state['num_bad_epochs'] == 1
-        assert state['current_sparsity_level'] == pytest.approx(0.3)
 
     # Test load state
     new_scheduler = scheduler_cls(*args)

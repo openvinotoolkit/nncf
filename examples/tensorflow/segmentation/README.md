@@ -14,7 +14,9 @@ The sample receives a configuration file where the training schedule, hyper-para
 
 ## Installation
 
-To work with the sample you should install the corresponding Python package dependencies
+At this point it is assumed that you have already installed nncf. You can find information on downloading nncf [here](https://github.com/openvinotoolkit/nncf#user-content-installation).  
+
+To work with the sample you should install the corresponding Python package dependencies:
 
 ```
 pip install -r examples/tensorflow/requirements.txt
@@ -54,6 +56,16 @@ archive with pre-trained weights can be found in the `TensorFlow checkpoint` col
 Select the checkpoint corresponding to the `None` compression algorithm, which includes the pre-trained weights for the 
 FP32 model, without applying any compression algorithms.
 - Specify the GPUs to be used for training by setting the environment variable [`CUDA_VISIBLE_DEVICES`](https://developer.nvidia.com/blog/cuda-pro-tip-control-gpu-visibility-cuda_visible_devices/). This is necessary because training and validation during training must be performed on different GPU devices. Please note that usually only one GPU is required for validation during training.
+- (Optional) Before compressing a model, it is highly recommended checking the accuracy of the pretrained model, use the following command:
+  ```bash
+  python evaluation.py \
+  --mode=test \
+  --config=configs/quantization/mask_rcnn_coco_int8.json \
+  --weights=<path_to_ckpt_file_with_pretrained_weights> \
+  --data=<path_to_dataset> \
+  --batch-size=1 \
+  --disable-compression
+  ```
 - Run the following command to start compression with fine-tuning on all available GPUs on the machine:
     ```bash
     python train.py \
@@ -80,7 +92,7 @@ To start checkpoints validation during training follow these steps:
 
 ### Validate Your Model Checkpoint
 
-To estimate the test scores of your model checkpoint, use the following command
+To estimate the test scores of your trained model checkpoint, use the following command
 ```bash
 python evaluation.py \
 --mode=test \
@@ -89,8 +101,6 @@ python evaluation.py \
 --batch-size=1 \
 --resume=<path_to_trained_model_checkpoint>
 ```
-
-To validate an model checkpoint, make sure the compression algorithm settings are empty in the configuration file and path to checkpoint file with model weights is provided in command line argument `--weights`
 
 ### Export Compressed Model
 
@@ -137,5 +147,5 @@ To export a model to the OpenVINO IR and run it using the Intel® Deep Learning 
 |**Model**|**Compression algorithm**|**Dataset**|**mAP (drop) %**|**NNCF config file**|**TensorFlow checkpoint**|
 | :---: | :---: | :---: | :---: | :---: | :---: |
 |MaskRCNN|None|COCO2017|bbox: 37.33<br/>segm: 33.56|[Link](configs/mask_rcnn_coco.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/mask_rcnn_baseline.tar.gz)|
-|MaskRCNN|INT8 (per-tensor, symmetric for weights; per-tensor, symmetric for activations)|COCO2017|bbox: 37.14 (0.19)<br/>segm: 33.53 (0.03)|[Link](configs/quantization/mask_rcnn_coco_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/mask_rcnn_int8_w_sym_t_half_a_sym_t.tar.gz)|
+|MaskRCNN|INT8 (per-tensor, symmetric for weights; per-tensor, symmetric for activations)|COCO2017|bbox: 37.27 (0.06)<br/>segm: 33.54 (0.02)|[Link](configs/quantization/mask_rcnn_coco_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/mask_rcnn_int8_w_sym_t_half_a_sym_t.tar.gz)|
 |MaskRCNN|Sparsity 50% (Magnitude)|COCO2017|bbox: 36.93 (0.40)<br/>segm: 33.23 (0.33)|[Link](configs/sparsity/mask_rcnn_coco_magnitude_sparsity.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/mask_rcnn_sparsity_50.tar.gz)|

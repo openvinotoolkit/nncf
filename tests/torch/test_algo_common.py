@@ -1,5 +1,5 @@
 """
- Copyright (c) 2019-2020 Intel Corporation
+ Copyright (c) 2019-2022 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -83,7 +83,7 @@ class TestCompressionAlgos:
         assert os.path.exists(test_path)
 
 
-class TestConfigCreator:
+class ConfigCreator:
     def __init__(self):
         self._config = get_empty_config()
         self._algorithm_sections = {}
@@ -106,7 +106,7 @@ class TestConfigCreator:
 
 
 class CompressionStageTestStruct:
-    def __init__(self, config_provider: 'TestConfigCreator', compression_stages: List[CompressionStage]):
+    def __init__(self, config_provider: 'ConfigCreator', compression_stages: List[CompressionStage]):
         self.config_provider = config_provider
         self.compression_stages = compression_stages
 
@@ -123,30 +123,30 @@ FFF_levels = [CompressionStage.FULLY_COMPRESSED] * 3
 NPF_levels = [CompressionStage.UNCOMPRESSED, CompressionStage.PARTIALLY_COMPRESSED, CompressionStage.FULLY_COMPRESSED]
 LIST_OF_TEST_PARAMS = [
     CompressionStageTestStruct(
-        config_provider=TestConfigCreator().add_algo('quantization'),
+        config_provider=ConfigCreator().add_algo('quantization'),
         compression_stages=FFF_levels
     ),
     CompressionStageTestStruct(
-        config_provider=TestConfigCreator().add_algo('quantization', staged_quantization_params),
+        config_provider=ConfigCreator().add_algo('quantization', staged_quantization_params),
         compression_stages=NPF_levels
     ),
     CompressionStageTestStruct(
-        config_provider=TestConfigCreator().add_algo('const_sparsity'),
+        config_provider=ConfigCreator().add_algo('const_sparsity'),
         compression_stages=FFF_levels
     ),
     CompressionStageTestStruct(
-        config_provider=TestConfigCreator().add_algo('magnitude_sparsity', magnitude_sparsity_params),
+        config_provider=ConfigCreator().add_algo('magnitude_sparsity', magnitude_sparsity_params),
         compression_stages=NPF_levels
     ),
     CompressionStageTestStruct(
-        config_provider=TestConfigCreator().add_algo('rb_sparsity', {
+        config_provider=ConfigCreator().add_algo('rb_sparsity', {
             'sparsity_target': 0.61,
             'sparsity_target_epoch': 2,
         }),
         compression_stages=NPF_levels
     ),
     CompressionStageTestStruct(
-        config_provider=TestConfigCreator().add_algo('filter_pruning', {
+        config_provider=ConfigCreator().add_algo('filter_pruning', {
             'num_init_steps': 1,
             'pruning_steps': 2,
             'schedule': 'baseline'
@@ -156,26 +156,26 @@ LIST_OF_TEST_PARAMS = [
                             CompressionStage.FULLY_COMPRESSED]
     ),
     CompressionStageTestStruct(
-        config_provider=TestConfigCreator().add_algo('filter_pruning', filter_pruning_params),
+        config_provider=ConfigCreator().add_algo('filter_pruning', filter_pruning_params),
         compression_stages=NPF_levels
     ),
     CompressionStageTestStruct(
-        config_provider=TestConfigCreator().add_algo('magnitude_sparsity', magnitude_sparsity_params).add_algo(
+        config_provider=ConfigCreator().add_algo('magnitude_sparsity', magnitude_sparsity_params).add_algo(
             'quantization'),
         compression_stages=[CompressionStage.PARTIALLY_COMPRESSED] * 2 + [CompressionStage.FULLY_COMPRESSED],
     ),
     CompressionStageTestStruct(
-        config_provider=TestConfigCreator().add_algo('magnitude_sparsity', magnitude_sparsity_params).add_algo(
+        config_provider=ConfigCreator().add_algo('magnitude_sparsity', magnitude_sparsity_params).add_algo(
             'quantization', staged_quantization_params),
         compression_stages=NPF_levels,
     ),
     CompressionStageTestStruct(
-        config_provider=TestConfigCreator().add_algo('quantization', staged_quantization_params).add_algo(
+        config_provider=ConfigCreator().add_algo('quantization', staged_quantization_params).add_algo(
             'filter_pruning', filter_pruning_params),
         compression_stages=NPF_levels,
     ),
     CompressionStageTestStruct(
-        config_provider=TestConfigCreator().add_algo('magnitude_sparsity', magnitude_sparsity_params).add_algo(
+        config_provider=ConfigCreator().add_algo('magnitude_sparsity', magnitude_sparsity_params).add_algo(
             'quantization', staged_quantization_params).add_algo('filter_pruning', filter_pruning_params),
         compression_stages=NPF_levels,
     ),
@@ -203,26 +203,26 @@ def test_can_get_compression_stage(test_struct: CompressionStageTestStruct):
 
 
 @pytest.mark.parametrize(('src', 'dst', 'ref'),
-                            (
-                             (CompressionStage.UNCOMPRESSED,
-                              CompressionStage.UNCOMPRESSED,
-                              CompressionStage.UNCOMPRESSED),
-                             (CompressionStage.PARTIALLY_COMPRESSED,
-                              CompressionStage.PARTIALLY_COMPRESSED,
-                              CompressionStage.PARTIALLY_COMPRESSED),
-                             (CompressionStage.FULLY_COMPRESSED,
-                              CompressionStage.FULLY_COMPRESSED,
-                              CompressionStage.FULLY_COMPRESSED),
-                             (CompressionStage.UNCOMPRESSED,
-                              CompressionStage.PARTIALLY_COMPRESSED,
-                              CompressionStage.PARTIALLY_COMPRESSED),
-                             (CompressionStage.UNCOMPRESSED,
-                              CompressionStage.FULLY_COMPRESSED,
-                              CompressionStage.PARTIALLY_COMPRESSED),
-                             (CompressionStage.PARTIALLY_COMPRESSED,
-                              CompressionStage.FULLY_COMPRESSED,
-                              CompressionStage.PARTIALLY_COMPRESSED)
-                              )
+                         (
+                                 (CompressionStage.UNCOMPRESSED,
+                                  CompressionStage.UNCOMPRESSED,
+                                  CompressionStage.UNCOMPRESSED),
+                                 (CompressionStage.PARTIALLY_COMPRESSED,
+                                  CompressionStage.PARTIALLY_COMPRESSED,
+                                  CompressionStage.PARTIALLY_COMPRESSED),
+                                 (CompressionStage.FULLY_COMPRESSED,
+                                  CompressionStage.FULLY_COMPRESSED,
+                                  CompressionStage.FULLY_COMPRESSED),
+                                 (CompressionStage.UNCOMPRESSED,
+                                  CompressionStage.PARTIALLY_COMPRESSED,
+                                  CompressionStage.PARTIALLY_COMPRESSED),
+                                 (CompressionStage.UNCOMPRESSED,
+                                  CompressionStage.FULLY_COMPRESSED,
+                                  CompressionStage.PARTIALLY_COMPRESSED),
+                                 (CompressionStage.PARTIALLY_COMPRESSED,
+                                  CompressionStage.FULLY_COMPRESSED,
+                                  CompressionStage.PARTIALLY_COMPRESSED)
+                         )
                          )
 def test_combo_of_compression_stages(src, dst, ref):
     assert src + dst == ref
@@ -253,7 +253,7 @@ def test_can_export_compressed_model_with_input_output_names(tmp_path):
 
     assert os.path.exists(test_path)
 
-    onnx_model = onnx.load(test_path)
+    onnx_model = onnx.load(test_path)  # pylint: disable=no-member
     # pylint: disable=no-member
     curr_input_names = [node.name for node in onnx_model.graph.input]
     curr_output_names = [node.name for node in onnx_model.graph.output]
@@ -277,7 +277,7 @@ def test_can_export_compressed_model_with_specified_domain_for_custom_ops(tmp_pa
 
     assert os.path.exists(test_path)
 
-    onnx_model = onnx.load(test_path)
+    onnx_model = onnx.load(test_path)  # pylint: disable=no-member
 
     count_custom_ops = 0
     # pylint: disable=no-member

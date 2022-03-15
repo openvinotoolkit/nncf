@@ -1,5 +1,5 @@
 """
- Copyright (c) 2019-2020 Intel Corporation
+ Copyright (c) 2019-2022 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -12,6 +12,7 @@
 """
 from abc import ABC, abstractmethod
 from copy import deepcopy
+from pathlib import Path
 from typing import Dict, Callable, Any, Union, List, Tuple
 import contextlib
 
@@ -19,7 +20,7 @@ import numbers
 import numpy as np
 import onnx
 import torch
-from onnx import numpy_helper
+from onnx import numpy_helper  # pylint: disable=no-name-in-module
 from torch import nn
 from torch.nn import Module
 from torch.nn import functional as F
@@ -44,6 +45,8 @@ from tests.common.helpers import BaseTensorListComparator
 
 TensorType = Union[torch.Tensor, np.ndarray, numbers.Number]
 
+
+# pylint: disable=no-member
 
 def fill_conv_weight(conv, value):
     conv.weight.data.fill_(value)
@@ -234,7 +237,7 @@ class PTTensorListComparator(BaseTensorListComparator):
         raise Exception(f'Tensor must be np.ndarray or torch.Tensor, not {type(tensor)}')
 
 
-def create_compressed_model_and_algo_for_test(model: Module, config: NNCFConfig=None,
+def create_compressed_model_and_algo_for_test(model: Module, config: NNCFConfig = None,
                                               dummy_forward_fn: Callable[[Module], Any] = None,
                                               wrap_inputs_fn: Callable[[Tuple, Dict], Tuple[Tuple, Dict]] = None,
                                               compression_state: Dict[str, Any] = None) \
@@ -452,3 +455,12 @@ def create_dataloader_with_num_workers(create_dataloader, num_workers, sample_ty
         return create_dataloader_semantic_segmentation
     if sample_type == 'object_detection':
         return create_dataloader_object_detection
+
+
+def load_exported_onnx_version(nncf_config: NNCFConfig, model: torch.nn.Module,
+                               path_to_storage_dir: Path) -> onnx.ModelProto:
+    _, compression_ctrl = create_compressed_model_and_algo_for_test(model, nncf_config)
+    onnx_checkpoint_path = path_to_storage_dir / 'model.onnx'
+    compression_ctrl.export_model(str(onnx_checkpoint_path))
+    model_proto = onnx.load_model(str(onnx_checkpoint_path))
+    return model_proto

@@ -1,0 +1,39 @@
+{
+    "model": "mobilenet_v3_small",
+    "pretrained": true,
+    "input_info": {
+      "sample_size": [2, 3, 224, 224]
+    },
+    "batch_size": 256,
+    "epochs": 5,
+    "optimizer": {
+        "type": "Adam",
+        "base_lr": 1e-4,
+        "schedule_type": "multistep",
+        "steps": [
+            3
+        ],
+        "weight_decay": 1e-05
+    },
+    "compression": {
+        "algorithm": "quantization",
+        "preset": "mixed",
+        "initializer": {
+            "range": {
+                "num_init_samples": 4000,
+                "type": "mean_percentile"
+            },
+           "batchnorm_adaptation": {
+                "num_bn_adaptation_samples": 4096
+           }
+        },
+        "weights": {
+                "bits": 8,
+                "per_channel": true
+        },
+        "activations": {
+                "bits": 8,
+                "per_channel": false
+        }
+       }
+}

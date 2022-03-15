@@ -1,5 +1,5 @@
 """
- Copyright (c) 2019 Intel Corporation
+ Copyright (c) 2022 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -21,7 +21,7 @@ from nncf.torch.sparsity.rb.layers import RBSparsifyingWeight
 from nncf.torch.sparsity.rb.loss import SparseLoss
 
 
-class TestModel(nn.Module):
+class SingleLayerModel(nn.Module):
     def __init__(self, layer, frozen, size=1):
         super().__init__()
         self.size = size
@@ -42,7 +42,7 @@ class TestModel(nn.Module):
 
 def sparse_model(module, frozen, size=1):
     layer = module(size, size, size)
-    return TestModel(layer, frozen, size)
+    return SingleLayerModel(layer, frozen, size)
 
 
 @pytest.mark.parametrize('module',

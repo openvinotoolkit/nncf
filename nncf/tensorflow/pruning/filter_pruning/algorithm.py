@@ -1,5 +1,5 @@
 """
- Copyright (c) 2021 Intel Corporation
+ Copyright (c) 2022 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -34,7 +34,7 @@ from nncf.common.pruning.utils import count_filters_num
 from nncf.common.pruning.utils import count_flops_and_weights
 from nncf.common.pruning.utils import count_flops_and_weights_per_node
 from nncf.common.pruning.utils import get_cluster_next_nodes
-from nncf.common.pruning.utils import get_conv_in_out_channels
+from nncf.common.pruning.utils import get_prunable_layers_in_out_channels
 from nncf.common.pruning.utils import get_rounded_pruned_element_number
 from nncf.common.statistics import NNCFStatistics
 from nncf.common.pruning.statistics import PrunedModelTheoreticalBorderline
@@ -55,7 +55,6 @@ from nncf.tensorflow.pruning.tensor_processor import TFNNCFPruningTensorProcesso
 from nncf.tensorflow.layers.data_layout import get_input_channel_axis
 from nncf.tensorflow.layers.wrapper import NNCFWrapper
 from nncf.tensorflow.loss import TFZeroCompressionLoss
-from nncf.tensorflow.tensor_statistics.collectors import TFNNCFCollectorTensorProcessor
 from nncf.tensorflow.pruning.base_algorithm import BasePruningAlgoBuilder
 from nncf.tensorflow.pruning.base_algorithm import BasePruningAlgoController
 from nncf.tensorflow.pruning.base_algorithm import PrunedLayerInfo
@@ -63,6 +62,7 @@ from nncf.tensorflow.pruning.operations import TF_PRUNING_OPERATOR_METATYPES
 from nncf.tensorflow.pruning.operations import TFConvolutionPruningOp
 from nncf.tensorflow.pruning.operations import TFElementwisePruningOp
 from nncf.tensorflow.pruning.operations import TFTransposeConvolutionPruningOp
+from nncf.tensorflow.pruning.operations import TFLinearPruningOp
 from nncf.tensorflow.pruning.filter_pruning.functions import calculate_binary_mask
 from nncf.tensorflow.pruning.filter_pruning.functions import FILTER_IMPORTANCE_FUNCTIONS
 from nncf.tensorflow.pruning.filter_pruning.functions import tensor_l2_normalizer
@@ -89,11 +89,11 @@ class FilterPruningBuilder(BasePruningAlgoBuilder):
                                        self.config)
 
     def _is_pruned_layer(self, layer: tf.keras.layers.Layer) -> bool:
-        # Currently prune only Convolutions
         return layer.__class__.__name__ in self._prunable_types
 
     def _get_op_types_of_pruned_layers(self) -> List[str]:
-        return [op_name for meta_op in [TFConvolutionPruningOp, TFTransposeConvolutionPruningOp]
+        return [op_name for meta_op in [TFConvolutionPruningOp, TFTransposeConvolutionPruningOp,
+                                        TFLinearPruningOp]
                 for op_name in meta_op.get_all_op_aliases()]
 
     def _get_types_of_grouping_ops(self) -> List[str]:
@@ -134,7 +134,8 @@ class FilterPruningController(BasePruningAlgoController):
         self.current_flops = self.full_flops
         self.full_params_num = sum(self._nodes_params_num.values())
         self.current_params_num = self.full_params_num
-        self.full_filters_num = count_filters_num(self._original_graph, GENERAL_CONV_LAYER_METATYPES)
+        self.full_filters_num = count_filters_num(self._original_graph, GENERAL_CONV_LAYER_METATYPES +
+                                                  LINEAR_LAYER_METATYPES)
         self.current_filters_num = self.full_filters_num
         self._pruned_layers_num = len(self._pruned_layer_groups_info.get_all_nodes())
         self._prunable_layers_num = len(self._original_graph.get_nodes_by_types(self._prunable_types))
@@ -229,7 +230,7 @@ class FilterPruningController(BasePruningAlgoController):
 
     def _init_pruned_layers_params(self):
         # 1. Initialize in/out channels for potentially prunable layers
-        self._layers_in_channels, self._layers_out_channels = get_conv_in_out_channels(self._original_graph)
+        self._layers_in_channels, self._layers_out_channels = get_prunable_layers_in_out_channels(self._original_graph)
 
         # 2. Initialize next_nodes for each pruning cluster
         self._next_nodes = get_cluster_next_nodes(self._original_graph, self._pruned_layer_groups_info,
@@ -524,24 +525,17 @@ class FilterPruningController(BasePruningAlgoController):
 
         return cumulative_filters_importance
 
-    def _collect_pruning_masks(self) -> Dict[str, TFNNCFTensor]:
-        retval = {}
-        for group in self._pruned_layer_groups_info.get_all_clusters():
-            for node in group.elements:
-                retval[node.node_name] = self._original_graph.get_node_by_name(node.node_name).data['output_mask']
-        return retval
-
     def _update_benchmark_statistics(self):
         tmp_in_channels, tmp_out_channels = calculate_in_out_channels_by_masks(
                 pruning_groups=self._pruned_layer_groups_info.get_all_clusters(),
-                masks=self._collect_pruning_masks(),
-                tensor_processor=TFNNCFCollectorTensorProcessor,
+                num_of_sparse_elements_by_node=self._calculate_num_of_sparse_elements_by_node(),
                 full_input_channels=self._layers_in_channels,
                 full_output_channels=self._layers_out_channels,
                 pruning_groups_next_nodes=self._next_nodes)
 
         self.current_filters_num = count_filters_num(self._original_graph,
-                                                     op_metatypes=GENERAL_CONV_LAYER_METATYPES,
+                                                     op_metatypes=GENERAL_CONV_LAYER_METATYPES +
+                                                     LINEAR_LAYER_METATYPES,
                                                      output_channels=tmp_out_channels)
 
         self.current_flops, self.current_params_num = \

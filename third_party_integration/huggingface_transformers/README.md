@@ -43,12 +43,17 @@ _INT8 model (symmetric weights, asymmetric activations quantization)_ - 77.22% a
 
 _Full-precision FP32 baseline model_ - bert-large-uncased-whole-word-masking model, trained on SQuAD v1.1 - 93.21% F1, 87.2% EM on the dev set,
 
-_INT8 model (symmetric quantization)_ - 92.60% F1, 86.36% EM on the dev set.
+_INT8 model (symmetric quantization)_ - 92.55% F1, 86.1% EM on the dev set.
 
 **INT8 model quantization-aware training command line (trained on 4x Tesla V100):**
 
-`python examples/pytorch/question-answering/run_qa.py --model_name_or_path bert-large-uncased-whole-word-masking --do_train --do_eval --dataset_name squad --learning_rate 3e-5 --num_train_epochs 2 --max_seq_length 384 --doc_stride 128 --output_dir bert_squad_int8 --per_gpu_eval_batch_size=1 --per_gpu_train_batch_size=6 --save_steps=400 --nncf_config nncf_bert_config_squad.json`
+`python examples/pytorch/question-answering/run_qa.py --model_name_or_path bert-large-uncased-whole-word-masking --do_train --do_eval --dataset_name squad --learning_rate 3e-5 --num_train_epochs 2 --max_seq_length 384 --doc_stride 128 --output_dir bert_squad_int8 --per_gpu_eval_batch_size=1 --per_gpu_train_batch_size=10 --save_steps=400 --nncf_config nncf_bert_config_squad.json`
 
+_INT8 model (symmetric quantization) + Knowledge Distillation_ - 92.89% F1, 86.68% EM on the dev set.
+
+**INT8 model quantization-aware training + Knowledge Distillation command line (trained on 4x Tesla V100):**
+
+`python examples/pytorch/question-answering/run_qa.py --model_name_or_path bert-large-uncased-whole-word-masking --do_train --do_eval --dataset_name squad --learning_rate 3e-5 --num_train_epochs 2 --max_seq_length 384 --doc_stride 128 --output_dir bert_squad_int8 --per_gpu_eval_batch_size=1 --per_gpu_train_batch_size=10 --save_steps=400 --nncf_config nncf_bert_config_squad_kd.json`
 
 **Fine-tuned INT8 model evaluation and ONNX export command line:**
 
@@ -105,7 +110,7 @@ _INT8 model (asymmetrically quantized)_ - 89.25% accuracy (matched), 88.9% accur
 
 _Full-precision FP32 baseline model_ - distilbert-base-uncased-finetuned-sst-2-english, pre-trained on SST-2 - 91.1% accuracy
 
-_INT8 model (symmetrically quantized)_ - 90.3% accuracy
+_INT8 model (symmetrically quantized)_ - 90.94% accuracy
 
 **INT8 model quantization-aware training command line:**
 

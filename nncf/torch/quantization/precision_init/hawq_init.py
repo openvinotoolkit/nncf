@@ -1,5 +1,5 @@
 """
- Copyright (c) 2020 Intel Corporation
+ Copyright (c) 2022 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -49,6 +49,7 @@ from nncf.common.quantization.quantizer_setup import QuantizationPointId
 from nncf.common.quantization.quantizer_setup import SingleConfigQuantizerSetup
 from nncf.torch.quantization.structs import WeightQuantizerInfo
 from nncf.torch.structures import QuantizationPrecisionInitArgs
+from nncf.torch.utils import get_model_device
 
 
 class BitwidthAssignmentMode(Enum):
@@ -240,7 +241,7 @@ class HAWQPrecisionInitializer(BasePrecisionInitializer):
             if self._hw_precision_constraints else params.bitwidths
         self._init_device = init_args.device
         if self._init_device is None:
-            self._init_device = next(self._model.parameters()).device
+            self._init_device = get_model_device(self._model)
         current_quantizer_setup = self._algo.get_quantizer_setup_for_current_state()
         flops_per_module = self._model.get_flops_per_module()
         self._compression_ratio_calculator = CompressionRatioCalculator(
@@ -253,7 +254,7 @@ class HAWQPrecisionInitializer(BasePrecisionInitializer):
         if not self._weight_quantizations_by_execution_order:
             return self._algo.get_quantizer_setup_for_current_state()
 
-        original_device = next(self._model.parameters()).device
+        original_device = get_model_device(self._model)
         self._model.to(self._init_device)
 
         traces_per_layer = self._calc_traces(self._criterion_fn, self._criterion, self._iter_number, self._tolerance)
@@ -326,8 +327,6 @@ class HAWQPrecisionInitializer(BasePrecisionInitializer):
             groups_of_adjacent_quantizers = new_ctrl.groups_of_adjacent_quantizers
             hawq_debugger.dump_bitwidth_graph(new_ctrl, new_model, groups_of_adjacent_quantizers)
         bitwidth_per_scope = self.get_bitwidth_per_scope(final_quantizer_setup)
-        str_bw = [str(element) for element in self.get_bitwidth_per_scope(final_quantizer_setup)]
-        nncf_logger.info('\n'.join(['\n\"bitwidth_per_scope\": [', ',\n'.join(str_bw), ']']))
         from nncf.common.utils.debug import DEBUG_LOG_DIR
         Path(DEBUG_LOG_DIR).mkdir(parents=True, exist_ok=True)
         with safe_open(Path(DEBUG_LOG_DIR) / 'bitwidth_per_scope.json', "w") as outfile:

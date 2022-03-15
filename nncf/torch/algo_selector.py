@@ -1,5 +1,5 @@
 """
- Copyright (c) 2019-2020 Intel Corporation
+ Copyright (c) 2019-2022 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -29,13 +29,13 @@ from nncf.common.compression import NO_COMPRESSION_ALGORITHM_NAME
 from nncf.common.schedulers import StubCompressionScheduler
 from nncf.common.utils.registry import Registry
 from nncf.common.statistics import NNCFStatistics
-
+from nncf.torch.utils import get_model_device
 
 PT_COMPRESSION_ALGORITHMS = Registry('compression algorithm', add_name_as_attr=True)
 
 
 class ZeroCompressionLoss(PTCompressionLoss):
-    def __init__(self, device: str):
+    def __init__(self, device: torch.device):
         super().__init__()
         self._device = device
 
@@ -65,7 +65,8 @@ class NoCompressionAlgorithmBuilder(PTCompressionAlgorithmBuilder):
 class NoCompressionAlgorithmController(PTCompressionAlgorithmController):
     def __init__(self, target_model):
         super().__init__(target_model)
-        self._loss = ZeroCompressionLoss(next(target_model.parameters()).device)
+
+        self._loss = ZeroCompressionLoss(get_model_device(target_model))
         self._scheduler = StubCompressionScheduler()
 
     def compression_stage(self) -> CompressionStage:

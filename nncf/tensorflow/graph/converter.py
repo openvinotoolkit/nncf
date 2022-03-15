@@ -1,5 +1,5 @@
 """
- Copyright (c) 2020 Intel Corporation
+ Copyright (c) 2022 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -22,6 +22,7 @@ from typing import Type
 import tensorflow as tf
 from tensorflow.core.framework.node_def_pb2 import NodeDef
 from tensorflow.python.framework.convert_to_constants import convert_variables_to_constants_v2
+from tensorflow.python.keras.engine.keras_tensor import KerasTensor
 
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNodeName
@@ -29,19 +30,23 @@ from nncf.common.graph import OperatorMetatype
 from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
 from nncf.common.graph.layer_attributes import MultipleInputLayerAttributes
 from nncf.common.graph.layer_attributes import ReshapeLayerAttributes
+from nncf.common.graph.layer_attributes import LinearLayerAttributes
 from nncf.common.graph.layer_attributes import Dtype
 from nncf.common.graph.utils import get_concat_axis
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.tensorflow.graph.metatypes.common import DECONV_LAYER_METATYPES
 from nncf.tensorflow.graph.metatypes.common import DEPTHWISE_CONV_LAYER_METATYPES
-from nncf.tensorflow.graph.metatypes.common import LAYER_METATYPES_AGNOSTIC_TO_DATA_PRECISION_WITH_MULTIPLE_INPUTS
+from nncf.tensorflow.graph.metatypes.common import \
+    LAYER_METATYPES_AGNOSTIC_TO_DATA_PRECISION_WITH_MULTIPLE_CONCAT_INPUTS
 from nncf.tensorflow.graph.metatypes.common import GENERAL_CONV_LAYER_METATYPES
+from nncf.tensorflow.graph.metatypes.common import LINEAR_LAYER_METATYPES
 from nncf.tensorflow.graph.metatypes.common import RESHAPE_METATYPES
 from nncf.tensorflow.graph.metatypes.matcher import get_keras_layer_metatype
 from nncf.tensorflow.graph.metatypes.matcher import get_op_metatype
 from nncf.common.graph.operator_metatypes import OutputNoopMetatype
 from nncf.tensorflow.graph.metatypes.tf_ops import WEIGHTABLE_TF_OP_METATYPES
 from nncf.tensorflow.graph.utils import get_shared_node_name
+from nncf.tensorflow.graph.utils import reformat_inbound_nodes_for_oplambda
 from nncf.tensorflow.graph.utils import is_builtin_layer
 from nncf.tensorflow.graph.utils import is_functional_model
 from nncf.tensorflow.graph.utils import is_sequential_model
@@ -135,7 +140,24 @@ class CustomLayerInfo:
 
 class TFModelConverter(ABC):
     """
-    A base class for objects converting TF models into NNCFGraph representations.
+    Abstract class which describes the interface needed to convert
+    the Keras model to the `NNCFGraph` object.
+    """
+
+    @abstractmethod
+    def convert(self) -> NNCFGraph:
+        """
+        Converts the Keras model to the `NNCFGraph` object.
+
+        :return: The `NNCFGraph` object that represents the Keras model
+            for compression algorithms.
+        """
+
+
+class BaseFunctionalSequentialConverter(TFModelConverter):
+    """
+    A base class for the `FunctionalConverter` and `SequentialConverter` classes.
+    Contains the implementation of the common methods.
     """
 
     def __init__(self, model: tf.keras.Model):
@@ -144,14 +166,20 @@ class TFModelConverter(ABC):
         self._custom_layer_infos = self._collect_custom_layer_infos(self._model)
         self._nncf_node_names_vs_custom_layer_name = {}  # type: Dict[NNCFNodeName, str]
 
+    @staticmethod
+    def _get_type_spec(tensor):
+        if isinstance(tensor, KerasTensor):
+            return tensor.type_spec
+        return tf.TensorSpec.from_tensor(tensor)
+
     def _collect_custom_layer_infos(self, model: tf.keras.Model,
                                     use_graph_var_names: bool = False) -> Dict[str, CustomLayerInfo]:
-        custom_layers = TFModelConverter.get_custom_layers(model)
+        custom_layers = BaseFunctionalSequentialConverter.get_custom_layers(model)
         retval = {}
         for layer_name, layer in custom_layers.items():
-            layer_input_spec = [tf.TensorSpec.from_tensor(tensor)
+            layer_input_spec = [self._get_type_spec(tensor)
                                 for tensor in layer.input] if isinstance(layer.input, list) \
-                else tf.TensorSpec.from_tensor(layer.input)
+                else self._get_type_spec(layer.input)
 
             # TODO (vshampor) : Use the custom layer's inbound_nodes/outbound_nodes to determine what edges
             #  should connect it to the rest of the graph. Currently the custom layer
@@ -164,7 +192,7 @@ class TFModelConverter(ABC):
 
             graphdef_nodes = wrapped_function.graph.as_graph_def().node
             graphdef_name_to_layer_var_map = {} if use_graph_var_names else \
-                TFModelConverter._get_graphdef_name_to_layer_var_map(concr_fn)
+                BaseFunctionalSequentialConverter._get_graphdef_name_to_layer_var_map(concr_fn)
             nodes = {graphdef_name_to_layer_var_map.get(node.name, node.name): node for node in graphdef_nodes}
             graphdef_node_name_vs_node = {node.name: node for node in graphdef_nodes}
 
@@ -225,20 +253,34 @@ class TFModelConverter(ABC):
                 retval[layer_name] = custom_layer_info
         return retval
 
-    def _get_layer_dtype(self, layer_config: Dict) -> str:
+    def _get_layer_output_dtype(self, layer_config: Dict) -> Dtype:
         if layer_config['class_name'] in ['Functional', 'Sequential']:
-            return self._get_layer_dtype(layer_config['config']['layers'][0])
+            return self._get_layer_output_dtype(layer_config['config']['layers'][0])
 
-        dtype = layer_config['config']['dtype']
+        layer_name = layer_config['config']['name']
         if layer_config['class_name'] == 'TensorFlowOpLayer':
-            attrs = layer_config['config']['node_def'].get('attr', {})
-            dtype = attrs.get('DstT', {}).get('type') or attrs.get('T', {}).get('type') or dtype
-        return dtype
+            layer_name = 'tf_op_layer_' + layer_name
+
+        if layer_config['class_name'] == 'InputLayer':
+            return Dtype.FLOAT
+
+        keras_layer = self._get_layer(layer_name)
+        if isinstance(keras_layer.output, (tf.Tensor, KerasTensor)):
+            dtype = keras_layer.output.dtype
+        else:
+            # In case of multiple outputs, assume all outputs have the same type
+            dtype = keras_layer.output[0].dtype
+
+        if dtype == tf.int32:
+            return Dtype.INTEGER
+        return Dtype.FLOAT
 
     @staticmethod
     def _get_layer_type(layer_config: Dict) -> str:
         if layer_config['class_name'] == 'TensorFlowOpLayer':
             return layer_config['config']['node_def']['op']
+        if layer_config['class_name'] in ['TFOpLambda', 'SlicingOpLambda']:
+            return layer_config['config']['function']
         if layer_config['class_name'] == 'NNCFWrapper':
             # Return class_name of wrapped layer_config
             return layer_config['config']['layer']['class_name']
@@ -303,12 +345,6 @@ class TFModelConverter(ABC):
         if not isinstance(shape, list):
             return [shape]
         return shape
-
-    @abstractmethod
-    def convert(self) -> NNCFGraph:
-        """
-        Returns an NNCFGraph that represents the TF model for further compression algos.
-        """
 
     def get_layer_info_for_node(self, node_name: NNCFNodeName) -> Tuple[bool, TFLayerInfo]:
         """
@@ -400,12 +436,13 @@ class TFModelConverterFactory:
         return converter
 
 
-class FunctionalConverter(TFModelConverter):
+class FunctionalConverter(BaseFunctionalSequentialConverter):
     """
     Converter for TF models that use the Functional API.
     """
     def __init__(self, model: tf.keras.Model):
         super().__init__(model)
+        self._model_config = self._model.get_config()
         self._layer_info = {}  # type: Dict[str, Dict]
         self._collect_layer_information()
         self._layer_name_to_node_names = defaultdict(set)
@@ -414,25 +451,23 @@ class FunctionalConverter(TFModelConverter):
         self._collect_edge_information()
 
     def _collect_layer_information(self):
-        model_config = self._model.get_config()
-        for layer_config in model_config['layers']:
+        for layer_config in self._model_config['layers']:
             layer_name = layer_config['name']
             layer_type = self._get_layer_type(layer_config)
-            layer_dtype = self._get_layer_dtype(layer_config)
+            layer_output_dtype = self._get_layer_output_dtype(layer_config)
             data_format = layer_config['config'].get('data_format')
             model_layer = self._get_layer(layer_name)
             layer_metatype = get_keras_layer_metatype(model_layer)
             self._layer_info[layer_name] = {
                         'type': layer_type,
                         'metatype': layer_metatype,
-                        'dtype': layer_dtype,
+                        'dtype': layer_output_dtype,
                         'data_format': data_format,
                         'inbound_nodes': layer_config.get('inbound_nodes')
                     }
 
     def _collect_node_information(self):
-        model_config = self._model.get_config()
-        for layer_config in model_config['layers']:
+        for layer_config in self._model_config['layers']:
             layer_name = layer_config['name']
             if layer_name not in self._custom_layer_infos:
                 self._add_regular_layer_nodes(layer_config)
@@ -450,9 +485,8 @@ class FunctionalConverter(TFModelConverter):
             is_shared = instances_count > 1
             for i in range(instances_count):
                 node_name = get_shared_node_name(layer_name, i) if is_shared else layer_name
-                input_shapes = self._prepare_shape(layer.inbound_nodes[i].input_shapes)
+                input_shapes = [tuple(tensor.shape) for tensor in layer.inbound_nodes[i].keras_inputs]
                 output_shapes = self._prepare_shape(layer.inbound_nodes[i].output_shapes)
-
                 self._node_info[node_name] = {
                     'layer_name': layer_name,
                     'target_node_name': layer_name,
@@ -478,32 +512,42 @@ class FunctionalConverter(TFModelConverter):
         return len(self._layer_name_to_node_names[layer_name]) > 1
 
     def _collect_edge_information(self):
-        model_config = self._model.get_config()
-        for layer_config in model_config['layers']:
+        for layer_config in self._model_config['layers']:
             layer_name = layer_config['name']
-            for layer_instance_idx, instance_input_info in enumerate(layer_config['inbound_nodes']):
+
+            inbound_nodes = layer_config['inbound_nodes']
+            if layer_config['class_name'] in ['TFOpLambda', 'SlicingOpLambda']:
+                inbound_nodes = reformat_inbound_nodes_for_oplambda(inbound_nodes)
+
+            for layer_instance_idx, inbound_nodes in enumerate(inbound_nodes):
                 if self._is_layer_shared(layer_name):
                     node_name = get_shared_node_name(layer_name, layer_instance_idx)
                 else:
                     node_name = layer_name
                 input_shapes = self._node_info[node_name]['input_shapes']
-                for layer_instance_input_port_id, inbound_node in enumerate(instance_input_info):
-                    producer_layer_name, producer_layer_instance, producer_layer_instance_output_port, _ = inbound_node
+
+                layer_instance_input_port_id = 0
+                for inbound_node in inbound_nodes:
+                    producer_layer_name, producer_layer_instance, \
+                    producer_layer_instance_output_port, _ = inbound_node
+
                     if self._is_layer_shared(producer_layer_name):
                         producer_node_name = get_shared_node_name(producer_layer_name, producer_layer_instance)
                     else:
                         producer_node_name = producer_layer_name
 
                     producer_layer_info = self._layer_info[producer_layer_name]
-                    dtype = Dtype.FLOAT if 'float' in producer_layer_info['dtype'].lower() else Dtype.INTEGER
-                    edge = (producer_node_name, node_name)
+                    dtype = producer_layer_info['dtype']
                     tensor_shape = input_shapes[layer_instance_input_port_id]
+
+                    edge = (producer_node_name, node_name)
                     self._edge_info[edge] = {
                         'tensor_shape': tensor_shape,
                         'dtype': dtype,
                         'to_node_input_port_id': layer_instance_input_port_id,
                         'from_node_output_port_id': producer_layer_instance_output_port
                     }
+                    layer_instance_input_port_id += 1
 
     def convert(self) -> NNCFGraph:
         nncf_graph = NNCFGraph()
@@ -518,10 +562,12 @@ class FunctionalConverter(TFModelConverter):
             metatype = layer_info['metatype']
             layer = self._get_layer(layer_name)
             if metatype in DEPTHWISE_CONV_LAYER_METATYPES:
-                layer_attributes = _get_conv_layer_attributes(self._get_layer(layer_name), is_depthwise=True)
+                layer_attributes = _get_conv_layer_attributes(layer, is_depthwise=True)
             elif metatype in GENERAL_CONV_LAYER_METATYPES:
-                layer_attributes = _get_conv_layer_attributes(self._get_layer(layer_name), is_depthwise=False)
-            elif metatype in LAYER_METATYPES_AGNOSTIC_TO_DATA_PRECISION_WITH_MULTIPLE_INPUTS:
+                layer_attributes = _get_conv_layer_attributes(layer, is_depthwise=False)
+            elif metatype in LINEAR_LAYER_METATYPES:
+                layer_attributes = _get_linear_layer_attributes(layer)
+            elif metatype in LAYER_METATYPES_AGNOSTIC_TO_DATA_PRECISION_WITH_MULTIPLE_CONCAT_INPUTS:
                 layer_attributes = _get_multiple_input_layer_attributes(layer)
             elif metatype in RESHAPE_METATYPES:
                 layer_attributes = _get_reshape_layer_attributes(layer)
@@ -582,7 +628,7 @@ class FunctionalConverter(TFModelConverter):
         return nncf_graph
 
 
-class SequentialConverter(TFModelConverter):
+class SequentialConverter(BaseFunctionalSequentialConverter):
     """
     Converter for the TF models using the Sequential API.
     """
@@ -590,6 +636,7 @@ class SequentialConverter(TFModelConverter):
         nncf_graph = NNCFGraph()
         producer_layer_id = None
         model_config = self._model.get_config()
+
         layer_name = None
         for layer_config in model_config['layers']:
             layer_name = layer_config['config']['name']
@@ -597,13 +644,13 @@ class SequentialConverter(TFModelConverter):
                 nncf_graph = self._add_custom_layer_subgraph(nncf_graph, layer_name)
                 continue
             layer_type = self._get_layer_type(layer_config)
-            layer_dtype = self._get_layer_dtype(layer_config)
+            layer_output_dtype = self._get_layer_output_dtype(layer_config)
             data_format = layer_config['config'].get('data_format')
             model_layer = self._get_layer(layer_name)
             layer_metatype = get_keras_layer_metatype(model_layer)
 
             attrs = dict(type=layer_type,
-                         dtype=layer_dtype,
+                         dtype=layer_output_dtype,
                          metatype=layer_metatype,
                          data_format=data_format,
                          in_ports=[0],
@@ -612,10 +659,12 @@ class SequentialConverter(TFModelConverter):
 
             layer_attributes = None
             if layer_metatype in DEPTHWISE_CONV_LAYER_METATYPES:
-                layer_attributes = _get_conv_layer_attributes(self._get_layer(layer_name), is_depthwise=True)
+                layer_attributes = _get_conv_layer_attributes(model_layer, is_depthwise=True)
             elif layer_metatype in GENERAL_CONV_LAYER_METATYPES:
-                layer_attributes = _get_conv_layer_attributes(self._get_layer(layer_name), is_depthwise=False)
-            elif layer_metatype in LAYER_METATYPES_AGNOSTIC_TO_DATA_PRECISION_WITH_MULTIPLE_INPUTS:
+                layer_attributes = _get_conv_layer_attributes(model_layer, is_depthwise=False)
+            elif layer_metatype in LINEAR_LAYER_METATYPES:
+                layer_attributes = _get_linear_layer_attributes(model_layer)
+            elif layer_metatype in LAYER_METATYPES_AGNOSTIC_TO_DATA_PRECISION_WITH_MULTIPLE_CONCAT_INPUTS:
                 layer_attributes = _get_multiple_input_layer_attributes(model_layer)
             elif layer_metatype in RESHAPE_METATYPES:
                 layer_attributes = _get_reshape_layer_attributes(model_layer)
@@ -672,6 +721,8 @@ def _get_multiple_input_layer_attributes(layer: tf.keras.layers.Layer) -> Multip
     else:
         input_shape = layer.input_shape
         output_shape = layer.output_shape
+        if not isinstance(output_shape, list):
+            output_shape = [output_shape]
         axis = get_concat_axis(input_shape, output_shape)
     return MultipleInputLayerAttributes(axis)
 
@@ -701,7 +752,16 @@ def _get_conv_layer_attributes(layer: tf.keras.layers.Layer, is_depthwise: bool 
                                       padding_values=([0, 0, 0, 0]))
 
 
-def _get_reshape_layer_attributes(layer: tf.keras.layers.Layer):
+def _get_linear_layer_attributes(layer: tf.keras.layers.Layer) -> LinearLayerAttributes:
+    channel_axis = get_input_channel_axis(layer)
+    in_features = layer.get_input_shape_at(0)[channel_axis]
+    out_features = layer.get_output_shape_at(0)[channel_axis]
+    return LinearLayerAttributes(layer.trainable,
+                                 in_features,
+                                 out_features)
+
+
+def _get_reshape_layer_attributes(layer: tf.keras.layers.Layer) -> ReshapeLayerAttributes:
     input_shape = layer.input_shape
     output_shape = layer.output_shape
     if isinstance(output_shape, list):

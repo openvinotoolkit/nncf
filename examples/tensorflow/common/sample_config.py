@@ -1,5 +1,5 @@
 """
- Copyright (c) 2020 Intel Corporation
+ Copyright (c) 2022 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -17,6 +17,7 @@ import argparse
 import os
 
 from nncf import NNCFConfig
+from nncf.config.utils import is_experimental_quantization
 
 try:
     import jstyleson as json
@@ -103,6 +104,13 @@ class SampleConfig(Dict):
 
 def create_sample_config(args, parser) -> SampleConfig:
     nncf_config = NNCFConfig.from_json(args.config)
+
+    if args.disable_compression and 'compression' in nncf_config:
+        del nncf_config['compression']
+
+    if 'compression' in nncf_config and is_experimental_quantization(nncf_config):
+        from nncf.experimental.tensorflow.patch_tf import patch_tf_operations
+        patch_tf_operations()
 
     sample_config = SampleConfig.from_json(args.config)
     sample_config.update_from_args(args, parser)

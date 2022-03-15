@@ -1,5 +1,5 @@
 """
- Copyright (c) 2021 Intel Corporation
+ Copyright (c) 2022 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -13,10 +13,12 @@
 
 import os
 import pytest
+from pkg_resources import parse_version
 import networkx as nx
 import tensorflow as tf
 from tensorflow.python.keras import layers
 from tensorflow.python.keras import models
+from tensorflow.python.keras.engine.keras_tensor import KerasTensor
 
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationPriority
@@ -533,7 +535,7 @@ def apply_insert_before(model):
         else:
             instance_idx = 0
 
-        inputs = [layer.input] if isinstance(layer.input, tf.Tensor) else layer.input
+        inputs = [layer.input] if isinstance(layer.input, KerasTensor) else layer.input
 
         for port, _ in enumerate(inputs):
             fake_quantize_name = f'FakeQuantize_{i}.{port}/{original_node_name}'
@@ -555,7 +557,9 @@ def apply_insert_before(model):
 
 
 def check_graphs(model, ref_graph_filename):
-    data_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'model_transormer')
+    tensorflow_version = parse_version(tf.__version__).base_version
+    data_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'model_transormer',
+                            tensorflow_version[:3])
     ref_graph_path = os.path.abspath(os.path.join(data_dir, ref_graph_filename))
 
     graph, graph_to_layer_var_names_map = keras_model_to_tf_graph(model)

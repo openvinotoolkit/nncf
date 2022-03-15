@@ -1,5 +1,5 @@
 """
- Copyright (c) 2020 Intel Corporation
+ Copyright (c) 2022 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -18,6 +18,7 @@ import torch
 import numpy as np
 
 from nncf.torch.module_operations import UpdateWeightAndBias
+from nncf.torch.layers import NNCF_LINEAR_MODULES_DICT
 from nncf.torch.pruning.filter_pruning.algo import FilterPruningController
 from nncf.torch.pruning.filter_pruning.functions import l2_filter_norm
 from nncf.torch.pruning.filter_pruning.layers import FilterPruningMask
@@ -25,7 +26,6 @@ from nncf.torch.pruning.filter_pruning.layers import apply_filter_binary_mask
 from nncf.common.pruning.utils import calculate_in_out_channels_by_masks
 from nncf.common.pruning.utils import count_flops_and_weights
 from nncf.common.pruning.schedulers import ExponentialPruningScheduler
-from nncf.torch.tensor_statistics.collectors import PTNNCFCollectorTensorProcessor
 from nncf.torch.pruning.filter_pruning.algo import GENERAL_CONV_LAYER_METATYPES
 from nncf.torch.pruning.filter_pruning.algo import LINEAR_LAYER_METATYPES
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
@@ -34,7 +34,7 @@ from tests.torch.pruning.helpers import gen_ref_masks
 from tests.torch.pruning.helpers import get_basic_pruning_config
 from tests.torch.pruning.helpers import PruningTestModel
 from tests.torch.pruning.helpers import BigPruningTestModel
-from tests.torch.pruning.helpers import TestModelMultipleForward
+from tests.torch.pruning.helpers import MultipleForwardModel
 from tests.torch.pruning.helpers import PruningTestModelConcatBN
 from tests.torch.pruning.helpers import DisconectedGraphModel
 
@@ -160,19 +160,19 @@ def test_valid_modules_replacement_and_pruning(prune_first, prune_batch_norms):
 BIG_PRUNING_MODEL_TEST_PARAMS = ('all_weights', 'pruning_flops_target', 'prune_first', 'ref_masks')
 BIG_PRUNING_MODEL_TEST_PARAMS_VALUES = \
 [
-    (False, None, True, gen_ref_masks([(8, 8), (16, 16), (32, 32)])),
-    (True, None, True, gen_ref_masks([(3, 13), (10, 22), (43, 21)])),
-    (False, None, False, gen_ref_masks([(16, 16), (32, 32)])),
-    (True, None, False, gen_ref_masks([(8, 24), (40, 24)])),
+    (False, None, True, gen_ref_masks([(8, 8), (16, 16), (32, 32), (64, 64)])),
+    (True, None, True, gen_ref_masks([(2, 14), (2, 30), (29, 35), (87, 41)])),
+    (False, None, False, gen_ref_masks([(16, 16), (32, 32), (64, 64)])),
+    (True, None, False, gen_ref_masks([(1, 31), (27, 37), (84, 44)])),
     # Flops pruning cases
-    (False, 0.5, True, gen_ref_masks([(0, 16), (8, 24), (24, 40)])),
-    (False, 0.5, False, gen_ref_masks([(8, 24), (24, 40)])),
-    (True, 0.5, True, gen_ref_masks([(2, 14), (3, 29), (30, 34)])),
-    (True, 0.5, False, gen_ref_masks([(3, 29), (31, 33)])),
+    (False, 0.5, True, gen_ref_masks([(8, 8), (16, 16), (32, 32), (64, 64)])),
+    (False, 0.5, False, gen_ref_masks([(16, 16), (32, 32), (64, 64)])),
+    (True, 0.5, True, gen_ref_masks([(3, 13), (8, 24), (41, 23), (113, 15)])),
+    (True, 0.5, False, gen_ref_masks([(9, 23), (41, 23), (113, 15)])),
 ]
 
 
-@pytest.mark.parametrize(BIG_PRUNING_MODEL_TEST_PARAMS, BIG_PRUNING_MODEL_TEST_PARAMS_VALUES )
+@pytest.mark.parametrize(BIG_PRUNING_MODEL_TEST_PARAMS, BIG_PRUNING_MODEL_TEST_PARAMS_VALUES)
 def test_pruning_masks_correctness(all_weights, pruning_flops_target, prune_first, ref_masks):
     """
     Test for pruning masks check (_set_binary_masks_for_filters, _set_binary_masks_for_all_filters_together).
@@ -185,6 +185,10 @@ def test_pruning_masks_correctness(all_weights, pruning_flops_target, prune_firs
     def check_mask(module, num):
         pruning_op = list(module.pre_ops.values())[0].operand
         assert hasattr(pruning_op, 'binary_filter_pruning_mask')
+        #x = torch.sum((pruning_op.binary_filter_pruning_mask == 0.).int())
+        #y = pruning_op.binary_filter_pruning_mask.shape[0]
+        #y_minus_x = y - x
+        #print(x, y)
         assert torch.allclose(pruning_op.binary_filter_pruning_mask, ref_masks[num])
 
     config = get_basic_pruning_config(input_sample_size=[1, 1, 8, 8])
@@ -222,6 +226,12 @@ def test_pruning_masks_correctness(all_weights, pruning_flops_target, prune_firs
     up = pruned_model.up
     assert up in pruned_modules
     check_mask(up, i)
+    i += 1
+
+    # Check for linear
+    linear = pruned_model.linear
+    assert linear in pruned_modules
+    check_mask(linear, i)
 
 
 @pytest.mark.parametrize(BIG_PRUNING_MODEL_TEST_PARAMS, BIG_PRUNING_MODEL_TEST_PARAMS_VALUES )
@@ -238,7 +248,8 @@ def test_pruning_masks_applying_correctness(all_weights, pruning_flops_target, p
                     'conv2': [1, 16, 8, 8],
                     'bn1': [1, 16, 8, 8],
                     'bn2': [1, 32, 8, 8],
-                    'up': [1, 32, 8, 8]}
+                    'up': [1, 32, 8, 8],
+                    'linear': [1, 3136]}
 
     def check_mask(module, num):
         # Mask for weights
@@ -323,6 +334,13 @@ def test_pruning_masks_applying_correctness(all_weights, pruning_flops_target, p
     assert up in pruned_modules
     check_mask(up, i)
     check_module_output(up, 'up', i)
+    i += 1
+
+    # Check for linear
+    linear = pruned_model.linear
+    assert linear in pruned_modules
+    check_mask(linear, i)
+    check_module_output(linear, 'linear', i)
 
 
 @pytest.mark.parametrize('prune_bn',
@@ -360,10 +378,10 @@ def test_valid_masks_for_bn_after_concat(prune_bn):
 
 @pytest.mark.parametrize(('all_weights', 'pruning_flops_target', 'ref_flops', 'ref_params_num'),
                          [
-                             (False, None, 493456, 6664),
-                             (True, None, 474212, 7426),
-                             (False, 0.5, 940400, 13304),
-                             (True, 0.5, 962512, 13560),
+                             (False, None, 1282000, 407336),
+                             (True, None, 1808826, 414861),
+                             (False, 0.5, 1282000, 407336),
+                             (True, 0.5, 1351200, 409368),
                          ]
                          )
 def test_calculation_of_flops(all_weights, pruning_flops_target, ref_flops, ref_params_num):
@@ -387,8 +405,7 @@ def test_calculation_of_flops(all_weights, pruning_flops_target, ref_flops, ref_
     # pylint:disable=protected-access
     tmp_in_channels, tmp_out_channels = calculate_in_out_channels_by_masks(
         pruning_algo.pruned_module_groups_info.get_all_clusters(),
-        masks=pruning_algo._collect_pruning_masks(),
-        tensor_processor=PTNNCFCollectorTensorProcessor,
+        num_of_sparse_elements_by_node=pruning_algo._calculate_num_of_sparse_elements_by_node(),
         full_input_channels=pruning_algo._modules_in_channels,
         full_output_channels=pruning_algo._modules_out_channels,
         pruning_groups_next_nodes=pruning_algo.next_nodes)
@@ -415,7 +432,7 @@ def test_clusters_for_multiple_forward(repeat_seq_of_shared_convs,
     config['compression']['params']['all_weights'] = False
     config['compression']['params']['prune_first_conv'] = True
     config['compression']['pruning_init'] = 0.5
-    model = TestModelMultipleForward(repeat_seq_of_shared_convs, additional_last_shared_layers)
+    model = MultipleForwardModel(repeat_seq_of_shared_convs, additional_last_shared_layers)
     _, pruning_algo = create_compressed_model_and_algo_for_test(model, config)
 
     clusters = pruning_algo.pruned_module_groups_info.clusters
@@ -451,6 +468,9 @@ def test_func_calulation_flops_for_conv(model):
     for node_name, ref_shape in pruning_algo._modules_out_shapes.items():
         # ref_shape get from tracing graph
         node = graph.get_node_by_name(node_name)
+        if node.node_type in [v.op_func_name for v in NNCF_LINEAR_MODULES_DICT]:
+            continue
+
         shape = pruning_algo._calculate_output_shape(graph, node)
         assert ref_shape == shape, f"Incorrect calculation output name for {node_name}"
 

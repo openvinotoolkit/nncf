@@ -1,5 +1,5 @@
 """
- Copyright (c) 2021 Intel Corporation
+ Copyright (c) 2022 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -73,15 +73,17 @@ def extract_algo_specific_config(config: NNCFConfig, algo_name_to_match: str) ->
     return next(iter(matches))
 
 
-def extract_range_init_params(config: NNCFConfig) -> Optional[Dict[str, object]]:
+def extract_range_init_params(config: NNCFConfig, algorithm_name: str = 'quantization') -> Optional[Dict[str, object]]:
     """
     Extracts parameters of the quantization range initialization algorithm from the
     compression algorithm NNCFconfig.
 
     :param config: An instance of the NNCFConfig.
+    :param algorithm_name: Name of the compression algorithm. Should be
+        one of the following: `quantization`, `experimental_quantization`.
     :return: Parameters of the quantization range initialization algorithm.
     """
-    algo_config = extract_algo_specific_config(config, 'quantization')
+    algo_config = extract_algo_specific_config(config, algorithm_name)
     init_range_config_dict_or_list = algo_config.get('initializer', {}).get('range', {})
 
     range_init_args = None
@@ -128,7 +130,7 @@ def extract_range_init_params(config: NNCFConfig) -> Optional[Dict[str, object]]
     return params
 
 
-def extract_bn_adaptation_init_params(config: NNCFConfig, algo_name: str) -> Dict[str, object]:
+def extract_bn_adaptation_init_params(config: NNCFConfig, algo_name: str) -> Optional[Dict[str, object]]:
     """
     Extracts parameters for initialization of an object of the class `BatchnormAdaptationAlgorithm`
     from the compression algorithm NNCFconfig.
@@ -136,17 +138,20 @@ def extract_bn_adaptation_init_params(config: NNCFConfig, algo_name: str) -> Dic
     :param config: An instance of the NNCFConfig.
     :param algo_name: The name of the algorithm for which the params have to be extracted.
     :return: Parameters for initialization of an object of the class `BatchnormAdaptationAlgorithm` specific
-      to the supplied algorithm.
+      to the supplied algorithm, or None if the config specified not to perform any batchnorm adaptation.
     """
     algo_config = extract_algo_specific_config(config, algo_name)
     params = algo_config.get('initializer', {}).get('batchnorm_adaptation', {})
     num_bn_adaptation_samples = params.get('num_bn_adaptation_samples', 2000)
 
+    if num_bn_adaptation_samples == 0:
+        return None
+
     try:
         args = config.get_extra_struct(BNAdaptationInitArgs)
     except KeyError:
         raise RuntimeError(
-            'There is no possibility to create the batch-norm statistics adaptation algorithm '
+            'Unable to create the batch-norm statistics adaptation algorithm '
             'because the data loader is not provided as an extra struct. Refer to the '
             '`NNCFConfig.register_extra_structs` method and the `BNAdaptationInitArgs` class.') from None
 

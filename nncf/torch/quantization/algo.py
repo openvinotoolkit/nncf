@@ -1,5 +1,5 @@
 """
- Copyright (c) 2019-2021 Intel Corporation
+ Copyright (c) 2019-2022 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -115,6 +115,7 @@ from nncf.torch.quantization.precision_constraints import HardwareQuantizationCo
 from nncf.torch.quantization.precision_init.adjacent_quantizers import GroupsOfAdjacentQuantizers
 from nncf.torch.quantization.precision_init.autoq_init import AutoQPrecisionInitParams
 from nncf.torch.quantization.precision_init.base_init import BasePrecisionInitParams
+from nncf.torch.quantization.precision_init.base_init import BasePrecisionInitializer
 from nncf.torch.quantization.precision_init.hawq_init import HAWQPrecisionInitParams
 from nncf.torch.quantization.precision_init.manual_init import ManualPrecisionInitParams
 from nncf.torch.quantization.schedulers import QUANTIZATION_SCHEDULERS
@@ -128,6 +129,7 @@ from nncf.torch.tensor_statistics.collectors import ReductionShape
 from nncf.torch.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.torch.tensor_statistics.statistics import pt_convert_stat_to_min_max_tensor_stat
 from nncf.torch.tensor_statistics.statistics import TensorStatistic
+from nncf.torch.utils import get_model_device
 from nncf.torch.utils import get_state_dict_names_with_modules
 from nncf.torch.utils import is_main_process
 from torch import nn
@@ -586,11 +588,14 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
         # TODO (vshampor): a simpler solution would be to always create callables on CPU and
         # to move these to model-specific device upon actual application, but would this impact
         # the time required to create a compressed model?
-        self._device_for_callable_obj_creation = next(target_model.parameters()).device
+        self._device_for_callable_obj_creation = get_model_device(target_model)
         target_model_graph = target_model.get_original_graph()
         target_model.register_compression_module_type(ExtraCompressionModuleType.EXTERNAL_QUANTIZER)
         if self._single_config_quantizer_setup is None:
             self._single_config_quantizer_setup = self._get_quantizer_setup(target_model)
+        bitwidth_per_scope = BasePrecisionInitializer.get_bitwidth_per_scope(self._single_config_quantizer_setup)
+        str_bw = [str(element) for element in bitwidth_per_scope]
+        nncf_logger.debug('\n'.join(['\n\"bitwidth_per_scope\": [', ',\n'.join(str_bw), ']']))
 
         minmax_values_for_range_init = {}
         if is_main_process() and self.should_init:
@@ -1061,6 +1066,7 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
                                             scale_shape=tuple(scale_shape),
                                             logarithm_scale=use_logarithm_scale,
                                             half_range=half_range,
+                                            is_quantized_on_export=is_weights(primary_ip),
                                             compression_lr_multiplier=compression_lr_multiplier)
         quantizer = self.__create_quantize_module(qspec).to(self._device_for_callable_obj_creation)
         if range_init_minmax_values is not None:
@@ -1171,9 +1177,11 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
 
     def initialize(self, model: NNCFNetwork) -> None:
         if is_main_process() and self.should_init:
-            bn_adaptation = BatchnormAdaptationAlgorithm(
-                **extract_bn_adaptation_init_params(self.config, 'quantization'))
-            bn_adaptation.run(model)
+            bn_adapt_params = self._parse_bn_adapt_params()
+            if bn_adapt_params is not None:
+                bn_adaptation = BatchnormAdaptationAlgorithm(
+                    **extract_bn_adaptation_init_params(self.config, 'quantization'))
+                bn_adaptation.run(model)
 
 
 class QuantizationControllerBase(PTCompressionAlgorithmController):
@@ -1204,7 +1212,7 @@ class QuantizationController(QuantizationControllerBase):
                  build_time_metric_info: QuantizationShareBuildTimeInfo = None,
                  build_time_range_init_params: PTRangeInitParams = None):
         super().__init__(target_model)
-        self._loss = ZeroCompressionLoss(next(target_model.parameters()).device)
+        self._loss = ZeroCompressionLoss(get_model_device(target_model))
         self._scheduler = BaseCompressionScheduler()
         self.debug_interface = debug_interface
         self.config = config

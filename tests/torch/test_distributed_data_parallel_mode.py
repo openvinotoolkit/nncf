@@ -11,7 +11,7 @@ from nncf.torch import register_default_init_args
 from tests.torch.helpers import create_random_mock_dataloader
 
 
-class TestModelWithChangedTrain(nn.Module):
+class ModelWithChangedTrain(nn.Module):
     def __init__(self, in_out_channels: Tuple[Tuple[int, int]] = ((1, 3), (3, 5), (5, 7), (7, 10)),
                  freezing_stages: int = -1):
         super().__init__()
@@ -41,7 +41,7 @@ class TestModelWithChangedTrain(nn.Module):
 def worker(rank: int, world_size: int) -> None:
     torch.distributed.init_process_group(backend="nccl", init_method='tcp://127.0.0.1:8999',
                                          world_size=world_size, rank=rank)
-    model = TestModelWithChangedTrain(freezing_stages=1)
+    model = ModelWithChangedTrain(freezing_stages=1)
     model.cuda()
     model.to(rank)
 

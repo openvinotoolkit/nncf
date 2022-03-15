@@ -1,5 +1,5 @@
 """
- Copyright (c) 2021 Intel Corporation
+ Copyright (c) 2022 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -43,12 +43,23 @@ DEFAULT_TF_QUANT_TRAIT_TO_OP_DICT = {
         layer_metatypes.TFPReLULayerMetatype,
         layer_metatypes.TFLeakyReLULayerMetatype,
         layer_metatypes.TFActivationLayerMetatype,
+        op_metatypes.TFAvgPoolOpMetatype,
+        op_metatypes.TFAvgPool3DOpMetatype,
+        op_metatypes.TFMeanOpMetatype,
+        op_metatypes.TFResizeNearestNeighborOpMetatype,
+        op_metatypes.TFEluOpMetatype,
+        op_metatypes.TFLeakyReluOpMetatype,
+        op_metatypes.TFRelu6OpMetatype,
     ],
     QuantizationTrait.NON_QUANTIZABLE: [layer_metatypes.TFSoftmaxLayerMetatype,
                                         op_metatypes.TFSigmoidOpMetatype,
                                         op_metatypes.TFExpOpMetatype,
                                         op_metatypes.TFLogOpMetatype,
+                                        op_metatypes.TFSoftmaxOpMetatype,
                                         UnknownMetatype],
-    QuantizationTrait.CONCAT: [layer_metatypes.TFConcatenateLayerMetatype],
+    QuantizationTrait.CONCAT: [
+        layer_metatypes.TFConcatenateLayerMetatype,
+        op_metatypes.TFConcatOpMetatype,
+    ],
     QuantizationTrait.OUTPUT_QUANTIZATION_AS_WEIGHTS: [layer_metatypes.TFEmbeddingLayerMetatype]
 }

@@ -1,5 +1,5 @@
 """
- Copyright (c) 2021 Intel Corporation
+ Copyright (c) 2022 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -573,6 +573,38 @@ class TFTensorFlowOpLayerMetatype(TFLayerMetatype):
                           layer: tf.keras.layers.Layer,
                           wrapper: Optional[tf.keras.layers.Wrapper] = None) -> Optional[Type[OperatorMetatype]]:
         return TF_OPERATION_METATYPES.get_operator_metatype_by_op_name(layer.node_def.op)
+
+
+@KERAS_LAYER_METATYPES.register()
+class TFOpLambdaMetatype(TFLayerMetatype):
+    name = 'TFOpLambdaKerasLayer'
+    keras_layer_names = ['TFOpLambda']
+
+    @classmethod
+    def get_subtypes(cls) -> List[Type[OperatorMetatype]]:
+        return list(TF_OPERATION_METATYPES.registry_dict.values())
+
+    @classmethod
+    def determine_subtype(cls,
+                          layer: tf.keras.layers.Layer,
+                          wrapper: Optional[tf.keras.layers.Wrapper] = None) -> Optional[Type[OperatorMetatype]]:
+        return TF_OPERATION_METATYPES.get_operator_metatype_by_op_name(layer.symbol)
+
+
+@KERAS_LAYER_METATYPES.register()
+class TFSlicingOpLambdaMetatype(TFLayerMetatype):
+    name = 'SlicingOpLambdaKerasLayer'
+    keras_layer_names = ['SlicingOpLambda']
+
+    @classmethod
+    def get_subtypes(cls) -> List[Type[OperatorMetatype]]:
+        return list(TF_OPERATION_METATYPES.registry_dict.values())
+
+    @classmethod
+    def determine_subtype(cls,
+                          layer: tf.keras.layers.Layer,
+                          wrapper: Optional[tf.keras.layers.Wrapper] = None) -> Optional[Type[OperatorMetatype]]:
+        return TF_OPERATION_METATYPES.get_operator_metatype_by_op_name(layer.symbol)
 
 
 @KERAS_LAYER_METATYPES.register()

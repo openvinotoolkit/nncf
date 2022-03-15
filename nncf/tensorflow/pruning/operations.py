@@ -1,5 +1,5 @@
 """
- Copyright (c) 2021 Intel Corporation
+ Copyright (c) 2022 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -17,6 +17,8 @@ from typing import List
 from nncf.tensorflow.graph.pattern_operations import KERAS_ACTIVATIONS_OPERATIONS
 from nncf.tensorflow.graph.pattern_operations import ELEMENTWISE_OPERATIONS
 from nncf.tensorflow.graph.pattern_operations import TF_ACTIVATIONS_OPERATIONS
+from nncf.tensorflow.graph.metatypes import keras_layers as layer_metatypes
+from nncf.tensorflow.graph.metatypes import tf_ops as op_metatypes
 from nncf.common.graph.definitions import NNCFGraphNodeType
 from nncf.common.pruning.utils import PruningOperationsMetatypeRegistry
 from nncf.common.pruning.operations import (
@@ -25,6 +27,7 @@ from nncf.common.pruning.operations import (
     IdentityMaskForwardPruningOp,
     ConvolutionPruningOp,
     TransposeConvolutionPruningOp,
+    LinearPruningOp,
     BatchNormPruningOp,
     ConcatPruningOp,
     ElementwisePruningOp,
@@ -53,9 +56,15 @@ class TFOutputPruningOp(OutputPruningOp):
 @TF_PRUNING_OPERATOR_METATYPES.register('identity_mask_propagation')
 class TFIdentityMaskForwardPruningOp(IdentityMaskForwardPruningOp):
     additional_types = _get_types(KERAS_ACTIVATIONS_OPERATIONS) + _get_types(TF_ACTIVATIONS_OPERATIONS) \
-                       + ['AvgPool2D', 'GlobalAvgPool2D', 'AveragePooling2D', 'GlobalAveragePooling2D'] \
-                       + ['MaxPooling2D', 'GlobalMaxPooling2D', 'MaxPool2D', 'GlobalMaxPool2D'] \
-                       + ['Dropout', 'ZeroPadding2D', 'Identity', 'Pad', 'UpSampling2D']
+                       + layer_metatypes.TFAveragePooling2DLayerMetatype.get_all_aliases() \
+                       + layer_metatypes.TFGlobalAveragePooling2DLayerMetatype.get_all_aliases() \
+                       + layer_metatypes.TFMaxPooling2DLayerMetatype.get_all_aliases() \
+                       + layer_metatypes.TFGlobalMaxPooling2DLayerMetatype.get_all_aliases() \
+                       + layer_metatypes.TFDropoutLayerMetatype.get_all_aliases() \
+                       + layer_metatypes.TFZeroPadding2DLayerMetatype.get_all_aliases() \
+                       + layer_metatypes.TFUpSampling2DLayerMetatype.get_all_aliases() \
+                       + op_metatypes.TFIdentityOpMetatype.get_all_aliases() \
+                       + op_metatypes.TFPadOpMetatype.get_all_aliases()
 
 
 @TF_PRUNING_OPERATOR_METATYPES.register('convolution')
@@ -66,6 +75,12 @@ class TFConvolutionPruningOp(ConvolutionPruningOp):
 @TF_PRUNING_OPERATOR_METATYPES.register('transpose_convolution')
 class TFTransposeConvolutionPruningOp(TransposeConvolutionPruningOp):
     additional_types = ['Conv1DTranspose', 'Conv2DTranspose', 'Conv3DTranspose']
+
+
+@TF_PRUNING_OPERATOR_METATYPES.register('linear')
+class TFLinearPruningOp(LinearPruningOp):
+    additional_types = layer_metatypes.TFDenseLayerMetatype.get_all_aliases() \
+                       + op_metatypes.TFMatMulOpMetatype.get_all_aliases()
 
 
 @TF_PRUNING_OPERATOR_METATYPES.register('batch_norm')
@@ -80,19 +95,20 @@ class TFElementwisePruningOp(ElementwisePruningOp):
 
 @TF_PRUNING_OPERATOR_METATYPES.register('reshape')
 class TFReshapeOps(ReshapePruningOp):
-    additional_types = ['Reshape']
+    additional_types = op_metatypes.TFReshapeOpMetatype.get_all_aliases()
 
 
 @TF_PRUNING_OPERATOR_METATYPES.register('flatten')
 class TFFlattenOps(FlattenPruningOp):
-    additional_types = ['Flatten']
+    additional_types = layer_metatypes.TFFlattenLayerMetatype.get_all_aliases()
 
 
 @TF_PRUNING_OPERATOR_METATYPES.register('stop_propagation_ops')
 class TFStopMaskForwardPruningOp(StopMaskForwardPruningOp):
-    additional_types = ['Dense', 'MatMul']
+    additional_types = []
 
 
 @TF_PRUNING_OPERATOR_METATYPES.register('concat')
 class TFConcatPruningOp(ConcatPruningOp):
-    additional_types = ['Concatenate', 'ConcatV2']
+    additional_types = layer_metatypes.TFConcatenateLayerMetatype.get_all_aliases() \
+                       + op_metatypes.TFConcatOpMetatype.get_all_aliases()

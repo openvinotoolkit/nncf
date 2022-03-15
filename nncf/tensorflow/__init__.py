@@ -1,5 +1,5 @@
 """
- Copyright (c) 2020 Intel Corporation
+ Copyright (c) 2022 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -19,11 +19,17 @@ from pkg_resources import parse_version
 
 tensorflow_version = parse_version(tensorflow.__version__).base_version
 if not tensorflow_version.startswith(BKC_TF_VERSION[:-2]):
-    raise RuntimeError(
-         'NNCF only supports tensorflow=={bkc}, while current tensorflow version is {curr}'.format(
+    import warnings
+    warnings.warn("NNCF provides best results with tensorflow=={bkc}, "
+                   "while current tensorflow version is {curr} - consider switching to tensorflow=={bkc}".format(
          bkc=BKC_TF_VERSION,
          curr=tensorflow.__version__
     ))
+elif not ('2.4' <= tensorflow_version[:3] <= '2.5'):
+   raise RuntimeError(
+        'NNCF only supports tensorflow >=2.4.0, ==2.5.*, while current tensorflow version is {curr}'.format(
+        curr=tensorflow.__version__
+   ))
 
 
 from nncf.tensorflow.helpers import create_compressed_model
@@ -37,8 +43,6 @@ from nncf.tensorflow.sparsity.magnitude import algorithm as magnitude_sparsity_a
 from nncf.tensorflow.pruning.filter_pruning import algorithm as filter_pruning_algorithm
 from nncf.tensorflow.sparsity.rb import algorithm as rb_sparsity_algorithm
 
-from tensorflow.python.keras.engine import keras_tensor
-keras_tensor.disable_keras_tensors()
 
 from nncf.common.accuracy_aware_training.training_loop import AdaptiveCompressionTrainingLoop
 from nncf.common.accuracy_aware_training.training_loop import EarlyExitCompressionTrainingLoop

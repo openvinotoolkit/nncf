@@ -1,5 +1,5 @@
 """
- Copyright (c) 2019-2020 Intel Corporation
+ Copyright (c) 2019-2022 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -17,6 +17,7 @@ from copy import deepcopy
 import torch
 
 from nncf.torch.dynamic_graph.graph import DynamicGraph
+from nncf.torch.utils import get_model_device
 
 
 class ModelInputInfo:
@@ -97,8 +98,8 @@ class GraphTracer:
 
         context_to_use.enable_trace_dynamic_graph()
         from nncf.torch.utils import training_mode_switcher
-        context_to_use.base_module_thread_local_replica = model
         with context_to_use as _ctx:
+            _ctx.base_module_thread_local_replica = model
             with torch.no_grad():
                 if as_eval:
                     with training_mode_switcher(model, is_training=False):
@@ -128,7 +129,7 @@ def create_dummy_forward_fn(input_infos: List[ModelInputInfo], with_input_tracin
         from nncf.torch.dynamic_graph.io_handling import wrap_nncf_model_outputs_with_objwalk
         from nncf.torch.dynamic_graph.io_handling import replicate_same_tensors
 
-        device = next(model.parameters()).device
+        device = get_model_device(model)
         args_list = [create_mock_tensor(info, device) for info in input_infos if info.keyword is None]
         kwargs = OrderedDict()
         for info in input_infos:

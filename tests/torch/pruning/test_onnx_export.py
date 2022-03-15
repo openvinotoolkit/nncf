@@ -1,5 +1,5 @@
 """
- Copyright (c) 2020 Intel Corporation
+ Copyright (c) 2022 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -13,8 +13,8 @@
 import pytest
 
 from tests.torch.pruning.helpers import BigPruningTestModel, get_basic_pruning_config, \
-    PruningTestModelConcat, PruningTestModelEltwise, TestModelDiffConvs, TestModelGroupNorm
-from tests.torch.test_helpers import load_exported_onnx_version
+    PruningTestModelConcat, PruningTestModelEltwise, DiffConvsModel, GroupNormModel
+from tests.torch.helpers import load_exported_onnx_version
 
 pytestmark = pytest.mark.skip(reason="Export as actually deleting filters from the model is currently disabled.")
 
@@ -99,7 +99,7 @@ def test_pruning_export_eltwise_model(tmp_path, prune_first, ref_shapes):
                           (True, [[[16, 1, 2, 2], [16]], [[16, 1, 1, 1], [16]], [[32, 16, 3, 3], [32]],
                                   [[16, 4, 1, 1], [16]]])])
 def test_pruning_export_diffconvs_model(tmp_path, prune_first, ref_shapes):
-    model = TestModelDiffConvs()
+    model = DiffConvsModel()
     nncf_config = get_basic_pruning_config(input_sample_size=[1, 1, 8, 8])
     nncf_config['compression']['algorithm'] = 'filter_pruning'
 
@@ -113,7 +113,7 @@ def test_pruning_export_diffconvs_model(tmp_path, prune_first, ref_shapes):
 
 
 def test_pruning_export_groupnorm_model(tmp_path):
-    model = TestModelGroupNorm()
+    model = GroupNormModel()
     nncf_config = get_basic_pruning_config(input_sample_size=[1, 1, 8, 8])
     nncf_config['compression']['algorithm'] = 'filter_pruning'
 

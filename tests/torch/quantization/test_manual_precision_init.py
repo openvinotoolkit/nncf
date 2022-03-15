@@ -1,5 +1,5 @@
 """
- Copyright (c) 2021 Intel Corporation
+ Copyright (c) 2022 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -181,7 +181,7 @@ def test_manual_single_conv(params):
         check_bitwidth_graph(ctrl, model, path_to_dot, graph_dir)
 
 
-class TestPrecisionInitDesc:
+class PrecisionInitTestDesc:
     def __init__(self):
         self.model_creator = AddTwoConv
         config = get_quantization_config_without_range_init()
@@ -251,7 +251,7 @@ class TestPrecisionInitDesc:
 
 
 def test_quantization_configs__with_precisions_list():
-    desc = TestPrecisionInitDesc()
+    desc = PrecisionInitTestDesc()
     model = desc.model_creator()
     config = desc.config
     register_bn_adaptation_init_args(config)
