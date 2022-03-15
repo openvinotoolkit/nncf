@@ -45,7 +45,8 @@ def test_identity_mask_propogation_prune_ops(dummy_op_class):
             tensor_shape=[10] * 4,
             input_port_id=0,
             output_port_id=0,
-            dtype=Dtype.FLOAT)
+            dtype=Dtype.FLOAT,
+            multiplicity_edge=1)
         identity_ops.append(identity_op)
     # Check with and without masks
     for output_mask in [None, NPNNCFTensor(np.ones((10,)))]:
@@ -69,7 +70,8 @@ def test_elementwise_prune_ops(valid_masks):
                        tensor_shape=[10] * 4,
                        input_port_id=0,
                        output_port_id=0,
-                       dtype=Dtype.FLOAT)
+                       dtype=Dtype.FLOAT,
+                       multiplicity_edge=1)
     # conv_op_0 -> elementwise
     add_node(from_node_id=conv_op_0.node_id,
              to_node_id=elementwise_op.node_id)
@@ -123,7 +125,8 @@ def test_group_norm_pruning_ops(num_channels, num_groups, accept_pruned_input_re
         tensor_shape=[10] * 4,
         input_port_id=0,
         output_port_id=0,
-        dtype=Dtype.FLOAT)
+        dtype=Dtype.FLOAT,
+        multiplicity_edge=1)
     # Check with and without masks
     for output_mask in [None, NPNNCFTensor(np.ones((10,)))]:
         conv_op = graph.get_node_by_id(conv_op.node_id)
@@ -193,7 +196,8 @@ def test_conv_pruning_ops(transpose, layer_attributes, ref_accept_pruned_input, 
                                       tensor_shape=[layer_attributes['in_channels']] * 4,
                                       input_port_id=0,
                                       output_port_id=0,
-                                      dtype=Dtype.FLOAT)
+                                      dtype=Dtype.FLOAT,
+                                      multiplicity_edge=1)
     pruning_op_class = dummy_types.DummyTransposeConvPruningOp if transpose else dummy_types.DummyConvPruningOp
     assert pruning_op_class.accept_pruned_input(conv_op_target) == ref_accept_pruned_input
     ones_input_mask = NPNNCFTensor(np.ones((layer_attributes['in_channels'],)))
@@ -232,7 +236,8 @@ def test_linear_pruning_ops():
                                       tensor_shape=[in_features] * 2,
                                       input_port_id=0,
                                       output_port_id=0,
-                                      dtype=Dtype.FLOAT)
+                                      dtype=Dtype.FLOAT,
+                                      multiplicity_edge=1)
     # Check linear layer always accept pruned input
     assert dummy_types.LinearPruningOp.accept_pruned_input(linear_op_target)
     ones_input_mask = NPNNCFTensor(np.ones((in_features)))
@@ -267,7 +272,8 @@ def test_convs_elementwise_source_before_concat(empty_mask_right_branch, empty_m
     add_node = partial(graph.add_edge_between_nncf_nodes,
                        input_port_id=0,
                        output_port_id=0,
-                       dtype=Dtype.FLOAT)
+                       dtype=Dtype.FLOAT,
+                       multiplicity_edge=1)
 
     # conv_op_0 -> elementwise_node
     add_node(from_node_id=conv_op_0.node_id,
@@ -325,7 +331,8 @@ def test_concat_output_tensor_device():
             tensor_shape=[10] * 4,
             input_port_id=0,
             output_port_id=0,
-            dtype=Dtype.FLOAT)
+            dtype=Dtype.FLOAT,
+            multiplicity_edge=1)
 
     # Set mask to last dummy node
     ref_device = 'some_test_device'
@@ -402,7 +409,8 @@ def test_reshape_metatype_mask_prop(node_type, input_shape, output_shape, output
                                       tensor_shape=output_shape,
                                       input_port_id=0,
                                       output_port_id=0,
-                                      dtype=Dtype.FLOAT)
+                                      dtype=Dtype.FLOAT,
+                                      multiplicity_edge=1)
     # Check both None mask and not None mask
     for output_mask_cur, output_mask_ref_cur in ([(None, None), (output_mask, output_mask_ref)]):
         # Get reference to graph node
@@ -437,7 +445,8 @@ def test_reshape_is_last_op(node_type):
                                       tensor_shape=[1, 32],
                                       input_port_id=0,
                                       output_port_id=0,
-                                      dtype=Dtype.FLOAT)
+                                      dtype=Dtype.FLOAT,
+                                      multiplicity_edge=1)
 
     for output_mask in (None, NPNNCFTensor(np.ones((10,)))):
         prev_node = graph.get_node_by_id(prev_node.node_id)

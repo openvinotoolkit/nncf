@@ -752,7 +752,7 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
         self.traverse_graph(node_key, traverse_fn, retval)
         return retval
 
-    def check_status_for_output_nodes(self, from_node_key: str) -> 'TransitionStatus':
+    def is_node_dominating_unquantizable_outputs(self, from_node_key: str) -> bool:
         """
         Checks that all branches outgoing from the branching node can be quantized
         (They do not contain an output that should not be quantized).
@@ -761,7 +761,7 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
 
         def traverse_fn(curr_node_key: str) -> TransitionStatus:
             successors = self.successors(curr_node_key)
-            status = TransitionStatus.SHOULD_TRANSITION
+            status = False
             for successor_key in successors:
                 successor_node = self.nodes[successor_key]
                 succ_node_type = successor_node[QuantizerPropagationStateGraph.NODE_TYPE_NODE_ATTR]
@@ -769,12 +769,12 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
                     op_meta_type_node = successor_node[QuantizerPropagationStateGraph.OPERATOR_METATYPE_NODE_ATTR]
                     node_trait = successor_node[QuantizerPropagationStateGraph.QUANTIZATION_TRAIT_NODE_ATTR]
                     if op_meta_type_node in OUTPUT_NOOP_METATYPES or node_trait == QuantizationTrait.NON_QUANTIZABLE:
-                        return TransitionStatus.SHOULD_NOT_TRANSITION
+                        return True
                     if node_trait == QuantizationTrait.INPUTS_QUANTIZABLE:
-                        return TransitionStatus.SHOULD_TRANSITION
+                        return False
                 if len(list(self.successors(successor_key))) == 1:
                     status = traverse_fn(successor_key)
-                    if status == TransitionStatus.SHOULD_NOT_TRANSITION:
+                    if status == True:
                         return status
             return status
 
