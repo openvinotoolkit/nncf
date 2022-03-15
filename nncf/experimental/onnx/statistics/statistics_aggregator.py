@@ -37,7 +37,7 @@ class ONNXStatisticsAggregator(StatisticsAggregator):
                                                                       outputs=[*layers_to_collect_statistics,
                                                                                model_output])
         max_number_samples = 0
-        for k, v in self.layers_statistics.items():
+        for _, v in self.layers_statistics.items():
             max_number_samples = max(max_number_samples, v._num_samples)
 
         with tempfile.NamedTemporaryFile() as temporary_model:

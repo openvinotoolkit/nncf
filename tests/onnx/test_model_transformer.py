@@ -57,16 +57,25 @@ QUANTIZER_ONNX_DTYPE = [np.dtype(np.int8), np.dtype(np.int8), np.dtype(np.uint8)
 QUANTIZER_ONNX_ATTRIBUTES = [{'axis': 0}, {'axis': 0}, {'axis': 0}]
 
 
-@pytest.mark.parametrize(
-    "target_layer, quantizer_onnx_attributes, quantizer_onnx_dtype, quantizer_scales, quantizer_zero_point, quantizer_mode",
-    zip(TARGET_LAYERS, QUANTIZER_ONNX_ATTRIBUTES, QUANTIZER_ONNX_DTYPE, QUANTIZER_SCALES,
-        QUANTIZER_ZERO_POINT, QUANTIZER_MODE))
-def test_inserted_quantizer_parameters(target_layer, quantizer_onnx_attributes, quantizer_onnx_dtype,
-                                       quantizer_scales, quantizer_zero_point, quantizer_mode):
+class QUANTIZER_PARAMETERS:
+    def __init__(self, target_layer, scale, zero_point, mode, onnx_dtype, onnx_attributes):
+        self.target_layer = target_layer
+        self.scale = scale
+        self.zero_point = zero_point
+        self.mode = mode
+        self.onnx_dtype = onnx_dtype
+        self.onnx_attributes = onnx_attributes
+
+
+@pytest.mark.parametrize("test_parameters", [QUANTIZER_PARAMETERS(*attrs) for attrs in
+                                             zip(TARGET_LAYERS, QUANTIZER_SCALES, QUANTIZER_ZERO_POINT,
+                                                 QUANTIZER_MODE, QUANTIZER_ONNX_DTYPE, QUANTIZER_ONNX_ATTRIBUTES)])
+def test_inserted_quantizer_parameters(test_parameters):
     model = LinearModel().onnx_model
     transformation_layout = ONNXTransformationLayout()
-    quantizer_parameters = QuantizerLayerParameters(quantizer_scales, quantizer_zero_point, quantizer_mode)
-    command = ONNXQuantizerInsertionCommand(target_layer, quantizer_parameters)
+    quantizer_parameters = QuantizerLayerParameters(test_parameters.scale, test_parameters.zero_point,
+                                                    test_parameters.mode)
+    command = ONNXQuantizerInsertionCommand(test_parameters.target_layer, quantizer_parameters)
     transformation_layout.register(command)
 
     model_transformer = ONNXModelTransformer(model)
@@ -81,7 +90,7 @@ def test_inserted_quantizer_parameters(target_layer, quantizer_onnx_attributes, 
         op_type = node.op_type
         if op_type == 'QuantizeLinear':
             for attr in node.attribute:
-                assert quantizer_onnx_attributes[attr.name] == onnx.helper.get_attribute_value(attr)
-            assert np.allclose(onnx_graph.get_initializers_value(node.input[1]), np.array(quantizer_scales))
-            assert np.allclose(onnx_graph.get_initializers_value(node.input[2]), np.array(quantizer_zero_point))
-            assert onnx_graph.get_initializers_value(node.input[2]).dtype == quantizer_onnx_dtype
+                assert test_parameters.onnx_attributes[attr.name] == onnx.helper.get_attribute_value(attr)
+            assert np.allclose(onnx_graph.get_initializers_value(node.input[1]), np.array(test_parameters.scale))
+            assert np.allclose(onnx_graph.get_initializers_value(node.input[2]), np.array(test_parameters.zero_point))
+            assert onnx_graph.get_initializers_value(node.input[2]).dtype == test_parameters.onnx_dtype

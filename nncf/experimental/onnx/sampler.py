@@ -56,6 +56,5 @@ def create_onnx_sampler(engine: ONNXEngine) -> Union[ONNXBatchSampler, ONNXRando
     if engine.dataloader.shuffle:
         print('Using Shuffled dataset')
         return ONNXRandomBatchSampler(engine.dataloader)
-    else:
-        print('Using Non-Shuffled dataset')
-        return ONNXBatchSampler(engine.dataloader)
+    print('Using Non-Shuffled dataset')
+    return ONNXBatchSampler(engine.dataloader)

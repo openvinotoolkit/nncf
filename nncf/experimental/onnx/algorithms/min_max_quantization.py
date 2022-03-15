@@ -100,34 +100,33 @@ class ONNXMinMaxQuantization(MinMaxQuantization):
     def get_quantizers(self, model: onnx.ModelProto) -> Tuple[List[str], List[str]]:
         if self._weight_quantizers and self._activation_quantizers:
             return self._weight_quantizers, self._activation_quantizers
-        else:
-            quantizer_setup = self._get_quantizer_setup(model)
-            onnx_graph = ONNXGraph(model)
-            filled_outputs = []
-            for _, qp in quantizer_setup.quantization_points.items():
-                if qp.is_weight_quantization_point():
-                    weight_initializer_name = onnx_graph.get_weight_input_in_module(qp.insertion_point.target_node_name)
-                    self._weight_quantizers.append(weight_initializer_name)
-                else:
-                    assert qp.is_activation_quantization_point()
-                    if 'model_input' not in qp.insertion_point.target_node_name:  # If not input node
-                        node_name = qp.insertion_point.target_node_name
-                        if qp.insertion_point.input_port_id == 1:
-                            # If quantization of Input
-                            outputs = onnx_graph.get_node_edges(node_name)['input'][0]
-                        else:
-                            # If quantization of Output
-                            outputs = onnx_graph.get_node_edges(node_name)['output'][0]
-                    else:  # If input node
-                        node_name = qp.directly_quantized_operator_node_names[0]
+        quantizer_setup = self._get_quantizer_setup(model)
+        onnx_graph = ONNXGraph(model)
+        filled_outputs = []
+        for _, qp in quantizer_setup.quantization_points.items():
+            if qp.is_weight_quantization_point():
+                weight_initializer_name = onnx_graph.get_weight_input_in_module(qp.insertion_point.target_node_name)
+                self._weight_quantizers.append(weight_initializer_name)
+            else:
+                assert qp.is_activation_quantization_point()
+                if 'model_input' not in qp.insertion_point.target_node_name:  # If not input node
+                    node_name = qp.insertion_point.target_node_name
+                    if qp.insertion_point.input_port_id == 1:
+                        # If quantization of Input
                         outputs = onnx_graph.get_node_edges(node_name)['input'][0]
-                    if outputs in filled_outputs:
-                        # TODO: resolve this
-                        # Problems with inception v3
-                        print(f'Skipping {outputs} layer')
-                        continue
-                    filled_outputs.append(outputs)
-                    self._activation_quantizers.append(outputs)
+                    else:
+                        # If quantization of Output
+                        outputs = onnx_graph.get_node_edges(node_name)['output'][0]
+                else:  # If input node
+                    node_name = qp.directly_quantized_operator_node_names[0]
+                    outputs = onnx_graph.get_node_edges(node_name)['input'][0]
+                if outputs in filled_outputs:
+                    # TODO: resolve this
+                    # Problems with inception v3
+                    print(f'Skipping {outputs} layer')
+                    continue
+                filled_outputs.append(outputs)
+                self._activation_quantizers.append(outputs)
         return self._weight_quantizers, self._activation_quantizers
 
     def reset_quantizers(self):
