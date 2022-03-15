@@ -365,10 +365,10 @@ class BaseQuantizer(nn.Module):
             return
 
         if torch.all(torch.isinf(min_values)) or torch.all(torch.isinf(max_values)):
-            raise AttributeError('Statistics are not collected for {}'.format(log_module_name))
+            raise ValueError('Statistics are not collected for {}'.format(log_module_name))
 
         if torch.any(torch.eq(min_values, np.inf)) or torch.any(torch.eq(max_values, -np.inf)):
-            raise AttributeError('Some of the values in statistics have infinite value for {}'.format(log_module_name))
+            raise ValueError('Some of the values in statistics have infinite value for {}'.format(log_module_name))
 
         own_device = get_model_device(self)
         min_values = min_values.to(own_device)
