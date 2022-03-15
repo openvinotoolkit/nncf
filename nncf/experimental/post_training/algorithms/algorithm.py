@@ -50,7 +50,9 @@ class Algorithm(ABC):
 
     @abstractmethod
     def _apply(self, model: ModelType, engine: Engine, layer_statistics) -> ModelType:
-        pass
+        """
+        Applies the algorithm to the 'compressed_model'.
+        """
 
     @abstractmethod
     def get_layers_for_statistics(self, model: ModelType) -> Dict[str, TensorStatisticCollectorBase]:
@@ -60,9 +62,6 @@ class Algorithm(ABC):
 
     def apply(self, model: ModelType, engine: Engine,
               layer_statistics: Dict[str, TensorStatisticCollectorBase]) -> ModelType:
-        """
-        Applies the algorithm to the 'compressed_model'.
-        """
         layers = self.get_layers_for_statistics(model)
         for layer in layers.keys():
             if layer_statistics.get(layer) is None:
