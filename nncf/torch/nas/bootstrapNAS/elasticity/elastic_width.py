@@ -22,7 +22,6 @@ from typing import Tuple
 
 import torch
 import torch.nn as nn
-from nncf.common.tensor import NNCFTensor
 
 from nncf.common.graph import BaseLayerAttributes
 from nncf.common.graph import NNCFNodeName
@@ -41,6 +40,7 @@ from nncf.common.pruning.utils import get_cluster_next_nodes
 from nncf.common.pruning.utils import get_conv_in_out_channels
 from nncf.common.pruning.utils import get_input_masks
 from nncf.common.pruning.utils import is_prunable_depthwise_conv
+from nncf.common.tensor import NNCFTensor
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.torch.graph.operator_metatypes import PTBatchNormMetatype
 from nncf.torch.graph.operator_metatypes import PTConv1dMetatype
@@ -55,15 +55,14 @@ from nncf.torch.graph.operator_metatypes import PTLinearMetatype
 from nncf.torch.graph.transformations.commands import PTInsertionCommand
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.layers import NNCFConv2d
-from nncf.torch.layers import NNCF_GENERAL_CONV_MODULES_DICT
-from nncf.torch.layers import NNCF_LINEAR_MODULES_DICT
 from nncf.torch.module_operations import UpdateBatchNormParams
 from nncf.torch.module_operations import UpdateNumGroups
 from nncf.torch.module_operations import UpdateWeight
 from nncf.torch.module_operations import UpdateWeightAndOptionalBias
 from nncf.torch.nas.bootstrapNAS.elasticity.base_handler import ELASTICITY_BUILDERS
-from nncf.torch.nas.bootstrapNAS.elasticity.base_handler import SingleElasticHandler
+from nncf.torch.nas.bootstrapNAS.elasticity.base_handler import ELASTICITY_HANDLERS_MAP
 from nncf.torch.nas.bootstrapNAS.elasticity.base_handler import SingleElasticityBuilder
+from nncf.torch.nas.bootstrapNAS.elasticity.base_handler import SingleElasticityHandler
 from nncf.torch.nas.bootstrapNAS.elasticity.elasticity_dim import ElasticityDim
 from nncf.torch.nas.bootstrapNAS.elasticity.filter_reorder import FilterReorderingAlgorithm
 from nncf.torch.nncf_network import NNCFNetwork
@@ -72,6 +71,8 @@ from nncf.torch.pruning.filter_pruning.functions import tensor_l2_normalizer
 from nncf.torch.pruning.operations import PTElementwisePruningOp
 from nncf.torch.pruning.operations import PT_PRUNING_OPERATOR_METATYPES
 from nncf.torch.pruning.tensor_processor import PTNNCFPruningTensorProcessor
+from nncf.torch.pruning.utils import collect_input_shapes
+from nncf.torch.pruning.utils import collect_output_shapes
 from nncf.torch.tensor import PTNNCFTensor
 from nncf.torch.utils import get_filters_num
 
@@ -123,7 +124,7 @@ class ElasticWidthOp(DynamicWidthOp):
         self._width_list = []
 
     @property
-    def width_list(self):
+    def width_list(self) -> List[int]:
         return self._width_list
 
 
@@ -181,6 +182,19 @@ class ElasticWidthConv2DOp(ElasticWidthOp, nn.Module):
         self._width_list = self.generate_width_list(self._max_width, min_out_channels, max_num_params, width_step,
                                                     width_multipliers)
 
+    def set_active_width(self, width: int):
+        if width not in self.width_list and width != self.max_width:
+            raise ValueError(f'Invalid number of output channels to set: {width} in scope={self._node_name}. '
+                             f'Should be a number in {self.width_list}')
+        super().set_active_width(width)
+
+    def forward(self, weight, bias):
+        nncf_logger.debug('Conv2d with active width={} in scope={}'.format(self._active_width, self._node_name))
+        num_out_channels = self._active_width
+        new_bias = None if bias is None else bias[:num_out_channels]
+        new_weights = weight[:num_out_channels, :, :, :]
+        return [new_weights, new_bias]
+
     @staticmethod
     def generate_width_list(max_out_channels, min_out_channels, max_num_params, width_step, width_multipliers):
         width_list = []
@@ -218,21 +232,11 @@ class ElasticWidthConv2DOp(ElasticWidthOp, nn.Module):
                 width_list.append(w)
             return width_list
 
-    def set_active_width(self, width: int):
-        if width not in self.width_list and width != self.max_width:
-            raise ValueError(f'Invalid number of output channels to set: {width} in scope={self._node_name}. '
-                             f'Should be a number in {self.width_list}')
-        super().set_active_width(width)
 
-    def forward(self, weight, bias):
-        nncf_logger.debug('Conv2d with active width={} in scope={}'.format(self._active_width, self._node_name))
-        num_out_channels = self._active_width
-        new_bias = None if bias is None else bias[:num_out_channels]
-        new_weights = weight[:num_out_channels, :, :, :]
-        return [new_weights, new_bias]
-
-
-class ElasticWidthHandler(SingleElasticHandler):
+class ElasticWidthHandler(SingleElasticityHandler):
+    """
+    An interface for handling elastic width dimension in the network, i.e. define number of channels in the layers.
+    """
     def __init__(self, target_model: NNCFNetwork,
                  filter_importance: Callable,
                  weights_normalizer: Callable,
@@ -269,13 +273,10 @@ class ElasticWidthHandler(SingleElasticHandler):
     def propagation_graph(self):
         return self._propagation_graph
 
-    def get_group_id_by_node_name(self, node_name: NNCFNodeName) -> Optional[int]:
-        for cluster in self._pruned_module_groups_info.get_all_clusters():
-            for element in cluster.elements:
-                if node_name == element.node_name:
-                    return cluster.id
-
     def get_transformation_commands(self) -> List[TransformationCommand]:
+        """
+        :return: transformation commands for introducing the elasticity to NNCFNetwork
+        """
         return self._transformation_commands
 
     def get_search_space(self) -> ElasticWidthSearchSpace:
@@ -285,48 +286,52 @@ class ElasticWidthHandler(SingleElasticHandler):
             lambda op: op.width_list[:min(self._width_num_params_indicator, len(op.width_list))])
 
     def get_active_config(self) -> ElasticWidthConfig:
+        """
+        Forms an elasticity configuration that describes currently activated Subnet
+
+        :return: map of pruning group id to width value
+        """
         return self._collect_ops_data_by_selection_rule(lambda op: op.get_active_width())
 
-    def activate_random_subnet(self):
-        if self._width_num_params_indicator == -1:
-            config = self._collect_ops_data_by_selection_rule(
-                lambda op: op.width_list[random.randrange(0, len(op.width_list))])
-        else:
-            config = self._collect_ops_data_by_selection_rule(
-                lambda op: op.width_list[random.randrange(0, self._width_num_params_indicator if len(
-                    op.width_list) > self._width_num_params_indicator else len(op.width_list))])
-        self.set_config(config)
+    def get_random_config(self) -> ElasticWidthConfig:
+        """
+        Forms an elasticity configuration that describes a Subnet with randomly chosen width for each elastic layer
 
-    def activate_minimal_subnet(self):
-        config = self._collect_ops_data_by_selection_rule(lambda op: min(op.width_list))
-        self.set_config(config)
+        :return: map of pruning group id to width value
+        """
+        return self._collect_ops_data_by_selection_rule(
+            lambda op: op.width_list[random.randrange(0, self._get_width_list_len(op))]
+        )
 
-    def activate_maximal_subnet(self):
-        config = self._collect_ops_data_by_selection_rule(lambda op: max(op.width_list))
-        self.set_config(config)
+    def get_minimum_config(self) -> ElasticWidthConfig:
+        """
+        Forms an elasticity configuration that describes a Subnet with minimum width in each elastic layer
 
-    def activate_supernet(self):
+        :return: map of pruning group id to width value
+        """
+        return self._collect_ops_data_by_selection_rule(lambda op: min(self._get_width_list(op)))
+
+    def get_maximum_config(self) -> ElasticWidthConfig:
+        """
+        Forms an elasticity configuration that describes a Subnet with maximum width in each elastic layer
+
+        :return: map of pruning group id to width value
+        """
+        return self._collect_ops_data_by_selection_rule(lambda op: max(self._get_width_list(op)))
+
+    def activate_supernet(self) -> None:
+        """
+        Activates the Supernet - the original network to which elasticity was applied.
+        """
         supernet_config = self._collect_ops_data_by_selection_rule(lambda op: op.max_width)
         self.set_config(supernet_config)
 
-    @staticmethod
-    def mask_to_width(mask: NNCFTensor) -> int:
-        if mask is not None:
-            actual_mask = mask.tensor
-            mask_len = sum(actual_mask.size())
-            width = int(sum(actual_mask))
-            ref_mask = ElasticWidthHandler._width_to_mask(mask_len, width).tensor
-            assert torch.equal(ref_mask, actual_mask), \
-                f'Invalid mask {actual_mask}: the first {width} values must be ones, the rest - zeros.'
-            return width
+    def set_config(self, width_config: ElasticWidthConfig) -> None:
+        """
+        Activates a Subnet that corresponds to the given elasticity configuration
 
-    @staticmethod
-    def _width_to_mask(active_width: int, max_width: int) -> PTNNCFTensor:
-        mask = torch.ones(max_width)
-        mask[active_width:].fill_(0)
-        return PTNNCFTensor(mask)
-
-    def set_config(self, width_config: ElasticWidthConfig):
+        :param width_config: map of pruning group id to width value
+        """
         for node in self._propagation_graph.get_all_nodes():
             node.data.pop('output_mask', None)
 
@@ -362,7 +367,8 @@ class ElasticWidthHandler(SingleElasticHandler):
 
     def get_kwargs_for_flops_counting(self) -> Dict[str, Any]:
         graph = self._target_model.get_graph()
-        modules_in_shapes, modules_out_shapes = self._calculate_module_io_shapes(graph)
+        modules_out_shapes = collect_output_shapes(graph)
+        modules_in_shapes = collect_input_shapes(graph)
 
         GENERAL_CONV_LAYER_METATYPES = [
             PTConv1dMetatype,
@@ -390,8 +396,6 @@ class ElasticWidthHandler(SingleElasticHandler):
             for elastic_width_info in group.elements:
                 tmp_out_channels[elastic_width_info.node_name] = new_out_channels_num
 
-            # TODO(nlyalyus): next_nodes is complicated!!! maybe to couple dynamic input operation??
-            #  Is it added separately??
             # Prune in_channels in all next nodes of cluster
             for node_name in self._cluster_next_nodes[group.id]:
                 tmp_in_channels[node_name] -= num_of_pruned_elems
@@ -406,13 +410,23 @@ class ElasticWidthHandler(SingleElasticHandler):
             'linear_op_metatypes': LINEAR_LAYER_METATYPES,
         }
 
+    def resolve_conflicts_with_other_elasticities(self,
+                                                  config: ElasticWidthConfig,
+                                                  elasticity_handlers: ELASTICITY_HANDLERS_MAP) -> ElasticWidthConfig:
+        return config
+
+    def get_group_id_by_node_name(self, node_name: NNCFNodeName) -> Optional[int]:
+        for cluster in self._pruned_module_groups_info.get_all_clusters():
+            for element in cluster.elements:
+                if node_name == element.node_name:
+                    return cluster.id
+
     def reorganize_weights(self):
         for node in self._propagation_graph.get_all_nodes():
             node.data.pop('output_mask', None)
 
         # 1. Calculate filter importance for all groups of prunable layers
         for group in self._pruned_module_groups_info.get_all_clusters():
-            # TODO(nlyalyus): some code duplication with pruning!
             filters_num = torch.tensor([get_filters_num(minfo.module) for minfo in group.elements])
             assert torch.all(filters_num == filters_num[0])
             device = group.elements[0].module.weight.device
@@ -441,21 +455,7 @@ class ElasticWidthHandler(SingleElasticHandler):
                                                  PTNNCFPruningTensorProcessor)
         reorder_algo.reorder_filters()
 
-    def _collect_ops_data_by_selection_rule(self, selection_rule: Callable) -> Dict[pruning_group_id, Any]:
-        elastic_width_config = dict()
-        for cluster in self._pruned_module_groups_info.get_all_clusters():
-            all_max_out_channels = {el.elastic_op.max_width for el in cluster.elements}
-            if len(all_max_out_channels) != 1:
-                raise RuntimeError('Invalid grouping of layers with different number of output channels')
-
-            first_elastic_width_info = next(iter(cluster.elements))
-            op = first_elastic_width_info.elastic_op
-            selected_width = selection_rule(op)
-            elastic_width_config[cluster.id] = selected_width
-            nncf_logger.debug('Select width={} for group #{}'.format(cluster.id, selected_width))
-        return elastic_width_config
-
-    def find_pairs_of_nodes_with_different_width(self, pairs_of_nodes: List[List[str]]) -> List[int]:
+    def find_pairs_of_nodes_with_different_width(self, pairs_of_nodes: List[Tuple[str, str]]) -> List[int]:
         pair_indexes = []
         for idx, (start_node_name, end_node_name) in enumerate(pairs_of_nodes):
             start_node = self._propagation_graph.get_node_by_name(start_node_name)
@@ -471,26 +471,46 @@ class ElasticWidthHandler(SingleElasticHandler):
                                     f'{start_width} != {end_width}')
         return pair_indexes
 
-    @staticmethod
-    def _calculate_module_io_shapes(graph) -> Tuple[Dict[str, int], Dict[str, int]]:
-        modules_out_shapes = dict()
-        modules_in_shapes = dict()
-        for node in graph.get_nodes_by_types([v.op_func_name for v in NNCF_GENERAL_CONV_MODULES_DICT]):
-            out_edge = graph.get_output_edges(node)[0]
-            out_shape = out_edge.tensor_shape
-            modules_out_shapes[node.node_name] = out_shape[2:]
-        for node in graph.get_nodes_by_types([v.op_func_name for v in NNCF_LINEAR_MODULES_DICT]):
-            out_edge = graph.get_output_edges(node)[0]
-            out_shape = out_edge.tensor_shape
-            modules_out_shapes[node.node_name] = out_shape[-1]
+    def _get_width_list_len(self, op: ElasticWidthOp) -> int:
+        N = len(op.width_list)
+        if 0 < self._width_num_params_indicator < N:
+            return self._width_num_params_indicator
+        return N
 
-            in_edge = graph.get_input_edges(node)[0]
-            in_shape = in_edge.tensor_shape
-            if len(in_shape) == 1:
-                modules_in_shapes[node.node_name] = in_shape[0]
-            else:
-                modules_in_shapes[node.node_name] = in_shape[1:]
-        return modules_in_shapes, modules_out_shapes
+    def _get_width_list(self, op: ElasticWidthOp) -> List[int]:
+        width_list_len = self._get_width_list_len(op)
+        return op.width_list[:width_list_len]
+
+    def _collect_ops_data_by_selection_rule(self, selection_rule: Callable) -> Dict[pruning_group_id, Any]:
+        elastic_width_config = dict()
+        for cluster in self._pruned_module_groups_info.get_all_clusters():
+            all_max_out_channels = {el.elastic_op.max_width for el in cluster.elements}
+            if len(all_max_out_channels) != 1:
+                raise RuntimeError('Invalid grouping of layers with different number of output channels')
+
+            first_elastic_width_info = next(iter(cluster.elements))
+            op = first_elastic_width_info.elastic_op
+            selected_width = selection_rule(op)
+            elastic_width_config[cluster.id] = selected_width
+            nncf_logger.debug('Select width={} for group #{}'.format(cluster.id, selected_width))
+        return elastic_width_config
+
+    @staticmethod
+    def mask_to_width(mask: NNCFTensor) -> int:
+        if mask is not None:
+            actual_mask = mask.tensor
+            mask_len = sum(actual_mask.size())
+            width = int(sum(actual_mask))
+            ref_mask = ElasticWidthHandler._width_to_mask(mask_len, width).tensor
+            assert torch.equal(ref_mask, actual_mask), \
+                f'Invalid mask {actual_mask}: the first {width} values must be ones, the rest - zeros.'
+            return width
+
+    @staticmethod
+    def _width_to_mask(active_width: int, max_width: int) -> PTNNCFTensor:
+        mask = torch.ones(max_width)
+        mask[active_width:].fill_(0)
+        return PTNNCFTensor(mask)
 
 
 class EWBuilderStateNames:
@@ -511,7 +531,14 @@ class ElasticWidthBuilder(SingleElasticityBuilder):
             self._weights_normalizer = tensor_l2_normalizer  # for all weights in common case
         self._grouped_node_names_to_prune = []  # type: List[List[NNCFNodeName]]
 
-    def build(self, target_model: NNCFNetwork, **kwargs) -> ElasticWidthHandler:
+    def build(self, target_model: NNCFNetwork) -> ElasticWidthHandler:
+        """
+        Creates modifications to the given NNCFNetwork for introducing elastic width and creates a handler object that
+        can manipulate this elasticity.
+
+        :param target_model: a target NNCFNetwork for adding modifications
+        :return: a handler object that can manipulate the elastic width.
+        """
         filter_importance_str = self._elasticity_params.get('filter_importance', 'L1')
         filter_importance = FILTER_IMPORTANCE_FUNCTIONS.get(filter_importance_str)
 
@@ -599,10 +626,21 @@ class ElasticWidthBuilder(SingleElasticityBuilder):
                                    pruned_module_groups_info, transformation_commands)
 
     def load_state(self, state: Dict[str, Any]) -> None:
+        """
+        Initializes object from the state.
+
+        :param state: Output of `get_state()` method.
+        """
         super().load_state(state)
         self._grouped_node_names_to_prune = state[self._state_names.GROUPED_NODE_NAMES_TO_PRUNE]
 
     def get_state(self) -> Dict[str, Any]:
+        """
+        Returns a dictionary with Python data structures (dict, list, tuple, str, int, float, True, False, None) that
+        represents state of the object.
+
+        :return: state of the object
+        """
         state = super().get_state()
         state[self._state_names.GROUPED_NODE_NAMES_TO_PRUNE] = self._grouped_node_names_to_prune
         return state

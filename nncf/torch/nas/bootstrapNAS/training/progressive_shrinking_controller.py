@@ -23,6 +23,7 @@ from nncf.common.utils.logger import logger as nncf_logger
 from nncf.torch.algo_selector import ZeroCompressionLoss
 from nncf.torch.nas.bootstrapNAS.elasticity.elasticity_controller import ElasticityController
 from nncf.torch.nas.bootstrapNAS.elasticity.elasticity_dim import ElasticityDim
+from nncf.torch.nas.bootstrapNAS.elasticity.multi_elasticity_handler import MultiElasticityHandler
 from nncf.torch.nas.bootstrapNAS.training.base_training import BNASTrainingController
 from nncf.torch.nas.bootstrapNAS.training.scheduler import BootstrapNASScheduler
 from nncf.torch.nas.bootstrapNAS.training.stage_descriptor import StageDescriptor
@@ -46,47 +47,78 @@ class ProgressiveShrinkingController(BNASTrainingController):
         self._bn_adaptation = bn_adaptation
         self._progressivity_of_elasticity = progressivity_of_elasticity
         self._target_model = target_model
-        width_handler = self.multi_elasticity_handler.width_handler
-        if width_handler is not None:
-            width_handler.width_num_params_indicator = 1
         self._loss = ZeroCompressionLoss(next(target_model.parameters()).device)
-        self._enabled_elasticity_dims = self.multi_elasticity_handler.get_enabled_elasticity_dims()
-        self._scheduler = BootstrapNASScheduler(self, schedule_params, self._enabled_elasticity_dims,
+        self._available_elasticity_dims = self.multi_elasticity_handler.get_available_elasticity_dims()
+        self._scheduler = BootstrapNASScheduler(self, schedule_params, self._available_elasticity_dims,
                                                 self._progressivity_of_elasticity)
 
     @property
-    def multi_elasticity_handler(self):
+    def multi_elasticity_handler(self) -> MultiElasticityHandler:
+        """
+        Gets access to multi elasticity handler to perform some actions with supernet or subnets.
+
+        :return: multi elasticity handler
+        """
         return self._elasticity_ctrl.multi_elasticity_handler
 
     @property
-    def elasticity_controller(self):
+    def elasticity_controller(self) -> ElasticityController:
+        """
+        Gets access to elasticity controller. Usually it's needed for saving its state for further resuming in the
+        search part.
+
+        :return: elasticity controller
+        """
         return self._elasticity_ctrl
 
     @property
     def loss(self) -> CompressionLoss:
+        """
+        :return: The instance of the `CompressionLoss`.
+        """
         return self._loss
 
     @property
     def scheduler(self) -> CompressionScheduler:
+        """
+        :return: The instance of the `CompressionScheduler`.
+        """
         return self._scheduler
 
-    def step(self):
+    def step(self) -> None:
+        """
+        Should be called at the beginning of each training step for activation some Subnet(s).
+        """
         self.multi_elasticity_handler.activate_random_subnet()
         nncf_logger.debug(
             'Active config: {}'.format(self.multi_elasticity_handler.get_active_config()))
 
-    def prepare_for_validation(self):
+    def prepare_for_validation(self) -> None:
+        """
+        Performs some action on active subnet or supernet before validation. For instance, it can be the batchnorm
+        adaptation to achieve the best accuracy on validation.
+        """
         self._run_batchnorm_adaptation(self._target_model)
 
     def get_total_num_epochs(self) -> int:
+        """
+        Returns total number of epochs required for the supernet training.
+
+        :return: number of epochs
+        """
         return self._scheduler.get_total_training_epochs()
 
-    def set_stage(self, stage_desc: StageDescriptor):
-        for elasticity_dim in self._enabled_elasticity_dims:
+    def set_stage(self, stage_desc: StageDescriptor) -> None:
+        """
+        Set a new training stage with parameters from a given stage descriptor
+
+        :param stage_desc: describes parameters of the training stage that should be enabled
+        """
+        for elasticity_dim in self._available_elasticity_dims:
             if elasticity_dim in stage_desc.train_dims:
-                self.multi_elasticity_handler.activate_elasticity(elasticity_dim)
+                self.multi_elasticity_handler.enable_elasticity(elasticity_dim)
             else:
-                self.multi_elasticity_handler.deactivate_elasticity(elasticity_dim)
+                self.multi_elasticity_handler.disable_elasticity(elasticity_dim)
 
         width_handler = self.multi_elasticity_handler.width_handler
         depth_handler = self.multi_elasticity_handler.depth_handler
@@ -105,9 +137,24 @@ class ProgressiveShrinkingController(BNASTrainingController):
             self._run_batchnorm_adaptation(self._target_model)
 
     def statistics(self, quickly_collected_only: bool = False) -> NNCFStatistics:
+        """
+        Returns a `Statistics` class instance that contains compression algorithm statistics.
+
+        :param quickly_collected_only: Enables collection of the statistics that
+            don't take too much time to compute. Can be helpful for the case when
+            need to keep track of statistics on each training batch/step/iteration.
+        :return: A `Statistics` class instance that contains compression algorithm statistics.
+        """
         return NNCFStatistics()
 
     def compression_stage(self) -> CompressionStage:
+        """
+        Returns the compression stage. Should be used on saving best checkpoints
+        to distinguish between uncompressed, partially compressed, and fully
+        compressed models.
+
+        :return: The compression stage of the target model.
+        """
         if self._scheduler.is_final_stage():
             return CompressionStage.FULLY_COMPRESSED
         return CompressionStage.PARTIALLY_COMPRESSED

@@ -259,7 +259,9 @@ class TwoConvAddConvTestModel(nn.Module):
 
     def get_minimal_subnet_output(self, x):
         o = (self.V13 * x + self.V13) + (self.V23 * x + self.V23)
-        return self.last_conv(o)
+        ref_weights = self.last_conv.weight[:, :1, :, :]
+        ref_bias = self.last_conv.bias[:1]
+        return do_conv2d(self.last_conv, o, weight=ref_weights, bias=ref_bias)
 
     def get_minimal_subnet_output_without_reorg(self, x):
         o = (self.V11 * x + self.V11) + (self.V21 * x + self.V21)

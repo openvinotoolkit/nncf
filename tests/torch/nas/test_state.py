@@ -181,16 +181,16 @@ LIST_STATE_BEFORE_BUILD_DESCS = [
 @pytest.mark.parametrize('desc', LIST_STATE_BEFORE_BUILD_DESCS, ids=map(str, LIST_STATE_BEFORE_BUILD_DESCS))
 class TestBeforeBuild:
     def test_can_get_builder_state_before_build(self, desc):
-        builder = desc.elastic_builder_cls(desc.params)
+        builder = desc.elasticity_builder_cls(desc.params)
         actual_state = builder.get_state()
         assert actual_state == desc.ref_state
 
     def test_output_warning_when_state_overrides_params(self, desc, _nncf_caplog):
-        old_builder = desc.elastic_builder_cls({})
+        old_builder = desc.elasticity_builder_cls({})
         old_state = old_builder.get_state()
 
         new_params = desc.params
-        new_builder = desc.elastic_builder_cls(new_params)
+        new_builder = desc.elasticity_builder_cls(new_params)
         new_builder.load_state(old_state)
 
         record = next(iter(_nncf_caplog.records))
@@ -198,11 +198,11 @@ class TestBeforeBuild:
 
     def test_no_warning_when_state_and_params_are_the_same(self, desc, _nncf_caplog):
         old_params = desc.params
-        old_builder = desc.elastic_builder_cls(old_params)
+        old_builder = desc.elasticity_builder_cls(old_params)
         old_state = old_builder.get_state()
 
         new_params = desc.params.copy()
-        new_builder = desc.elastic_builder_cls(new_params)
+        new_builder = desc.elasticity_builder_cls(new_params)
         new_builder.load_state(old_state)
 
         assert not _nncf_caplog.records
@@ -228,10 +228,10 @@ def test_can_load_handler_state(desc):
         input_size = model.INPUT_SIZE
     config = get_empty_config(input_sample_sizes=input_size)
     old_nncf_network = create_nncf_network(model, config)
-    old_builder = desc.elastic_builder_cls(desc.params)
+    old_builder = desc.elasticity_builder_cls(desc.params)
     old_handler = old_builder.build(old_nncf_network)
     elastic_model = build_elastic_model_from_handler(old_nncf_network, old_handler)
-    old_handler.activate_minimal_subnet()
+    old_handler.activate_minimum_subnet()
     old_output = elastic_model(dummy_input)
     ref_output = desc.ref_output_fn(model, dummy_input)
     assert torch.allclose(old_output, ref_output)
@@ -239,10 +239,10 @@ def test_can_load_handler_state(desc):
     new_nncf_network = create_nncf_network(model_copy, config)
     builder_state = old_builder.get_state()
     # no need in config to restore builder state
-    new_builder = desc.elastic_builder_cls()
+    new_builder = desc.elasticity_builder_cls()
     new_builder.load_state(builder_state)
     new_handler = new_builder.build(new_nncf_network)
     elastic_model = build_elastic_model_from_handler(new_nncf_network, new_handler)
-    new_handler.activate_minimal_subnet()
+    new_handler.activate_minimum_subnet()
     new_output = elastic_model(dummy_input)
     assert torch.allclose(old_output, new_output)

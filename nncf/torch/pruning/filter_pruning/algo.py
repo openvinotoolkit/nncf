@@ -22,10 +22,8 @@ from nncf.api.compression import CompressionLoss
 from nncf.api.compression import CompressionStage
 from nncf.common.accuracy_aware_training.training_loop import ADAPTIVE_COMPRESSION_CONTROLLERS
 from nncf.common.initialization.batchnorm_adaptation import BatchnormAdaptationAlgorithm
-from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.graph import NNCFNodeName
-from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
 from nncf.common.pruning.clusterization import Clusterization
 from nncf.common.pruning.mask_propagation import MaskPropagationAlgorithm
 from nncf.common.pruning.schedulers import PRUNING_SCHEDULERS
@@ -59,8 +57,6 @@ from nncf.torch.graph.operator_metatypes import PTDepthwiseConv1dSubtype
 from nncf.torch.graph.operator_metatypes import PTDepthwiseConv2dSubtype
 from nncf.torch.graph.operator_metatypes import PTDepthwiseConv3dSubtype
 from nncf.torch.graph.operator_metatypes import PTLinearMetatype
-from nncf.torch.layers import NNCF_GENERAL_CONV_MODULES_DICT
-from nncf.torch.layers import NNCF_LINEAR_MODULES_DICT
 from nncf.torch.layers import NNCF_PRUNING_MODULES_DICT
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.pruning.base_algo import BasePruningAlgoBuilder
@@ -283,57 +279,10 @@ class FilterPruningController(BasePruningAlgoController):
             self.pruning_quotas[cluster.id] = np.floor(self._modules_out_channels[cluster.elements[0].node_name] \
                                                        * self.pruning_quota)
 
-    def _calculate_output_shape(self, graph: NNCFGraph, node: NNCFNode) -> Tuple[int, ...]:
-        """
-        Calculates output shape of convolution layer by input edge.
-
-        :param graph: the model graph
-        :param node: node from NNCF graph
-        :return: output shape
-        """
-        in_edge = graph.get_input_edges(node)[0]
-        shape = list(in_edge.tensor_shape)[2:]
-        attrs = node.layer_attributes
-
-        assert isinstance(attrs, ConvolutionLayerAttributes)
-
-        for i, _ in enumerate(shape):
-            if attrs.transpose:
-                shape[i] = (shape[i] - 1) * attrs.stride[i] - 2 * attrs.padding_values[i] + attrs.kernel_size[i]
-            else:
-                shape[i] = (shape[i] + 2 * attrs.padding_values[i] - attrs.kernel_size[i]) // attrs.stride[i] + 1
-        return tuple(shape)
-
     def flops_count_init(self) -> None:
         graph = self._model.get_original_graph()
-        for node in graph.get_nodes_by_types([v.op_func_name for v in NNCF_GENERAL_CONV_MODULES_DICT]):
-            output_edges = graph.get_output_edges(node)
-            if output_edges:
-                out_edge = output_edges[0]
-                out_shape = out_edge.tensor_shape[2:]
-            else:
-                # For disconnected NNCFGraph when node have no output edge
-                out_shape = self._calculate_output_shape(graph, node)
-                nncf_logger.error("Node %s have no output edge in NNCFGraph", node.node_name)
-            self._modules_out_shapes[node.node_name] = out_shape
-
-        for node in graph.get_nodes_by_types([v.op_func_name for v in NNCF_LINEAR_MODULES_DICT]):
-            output_edges = graph.get_output_edges(node)
-            if output_edges:
-                out_edge = graph.get_output_edges(node)[0]
-                out_shape = out_edge.tensor_shape
-                self._modules_out_shapes[node.node_name] = out_shape[-1]
-            else:
-                # For disconnected NNCFGraph when node have no output edge
-                nncf_logger.error("Node %s have no output edge in NNCFGraph", node.node_name)
-                self._modules_out_shapes[node.node_name] = node.layer_attributes.out_features
-
-            in_edge = graph.get_input_edges(node)[0]
-            in_shape = in_edge.tensor_shape
-            if len(in_shape) == 1:
-                self._modules_in_shapes[node.node_name] = in_shape[0]
-            else:
-                self._modules_in_shapes[node.node_name] = in_shape[1:]
+        self._modules_out_shapes = collect_output_shapes(graph)
+        self._modules_in_shapes = collect_input_shapes(graph)
 
         self.nodes_flops, self.nodes_params_num = \
             count_flops_and_weights_per_node(graph, self._modules_in_shapes, self._modules_out_shapes,

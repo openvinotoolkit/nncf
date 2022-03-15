@@ -18,6 +18,7 @@ from torchvision.models import resnet50
 
 from examples.torch.common.models.classification.mobilenet_v2_cifar10 import mobilenet_v2_cifar10
 from examples.torch.common.models.classification.resnet50_cifar10 import resnet50_cifar10
+from nncf.torch.nas.bootstrapNAS.elasticity.elasticity_dim import ElasticityDim
 from tests.torch.nas.creators import create_bnas_model_and_ctrl_by_test_desc
 from tests.torch.nas.descriptors import ModelStats
 from tests.torch.nas.descriptors import MultiElasticityTestDesc
@@ -112,7 +113,7 @@ LIST_OF_ME_DESCS = [
             supernet=ModelStats(1_776_701_440, 6_872_768),
             kernel_stage=ModelStats(1_776_701_440, 6_872_768),
             depth_stage=ModelStats(472_272_896, 3_145_408),
-            width_stage=ModelStats(101_142_528, 722_784)
+            width_stage=ModelStats(415_191_040, 1_769_312)
         ),
         is_auto_skipped_blocks=True,
     ),
@@ -144,21 +145,20 @@ def test_multi_elasticity_flops(desc: MultiElasticityTestDesc):
     assert multi_elasticity_handler.count_flops_and_weights_for_active_subnet() == ref_model_stats.supernet
     model.do_dummy_forward()
 
-    multi_elasticity_handler.depth_handler.deactivate()
-    multi_elasticity_handler.width_handler.deactivate()
-    multi_elasticity_handler.kernel_handler.activate()
-    multi_elasticity_handler.activate_minimal_subnet()
+    multi_elasticity_handler.disable_all()
+    multi_elasticity_handler.enable_elasticity(ElasticityDim.KERNEL)
+    multi_elasticity_handler.activate_minimum_subnet()
     assert multi_elasticity_handler.count_flops_and_weights_for_active_subnet() == ref_model_stats.kernel_stage
     model.do_dummy_forward()
 
-    multi_elasticity_handler.depth_handler.activate()
-    multi_elasticity_handler.activate_minimal_subnet()
+    multi_elasticity_handler.enable_elasticity(ElasticityDim.DEPTH)
+    multi_elasticity_handler.activate_minimum_subnet()
 
     assert multi_elasticity_handler.count_flops_and_weights_for_active_subnet() == ref_model_stats.depth_stage
     model.do_dummy_forward()
 
-    multi_elasticity_handler.width_handler.activate()
-    multi_elasticity_handler.activate_minimal_subnet()
+    multi_elasticity_handler.enable_elasticity(ElasticityDim.WIDTH)
+    multi_elasticity_handler.activate_minimum_subnet()
     assert multi_elasticity_handler.count_flops_and_weights_for_active_subnet() == ref_model_stats.width_stage
     if 'Dense' in str(desc):
         pytest.skip('RuntimeError: running_mean should contain 96 elements not 32')

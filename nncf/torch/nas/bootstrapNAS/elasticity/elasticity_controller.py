@@ -40,7 +40,7 @@ class ElasticityController(PTCompressionAlgorithmController):
 
         self.multi_elasticity_handler = multi_elasticity_handler
         # Handlers deactivated at init
-        self.multi_elasticity_handler.deactivate()
+        self.multi_elasticity_handler.disable_all()
 
     @property
     def loss(self) -> CompressionLoss:
@@ -54,7 +54,6 @@ class ElasticityController(PTCompressionAlgorithmController):
         return NNCFStatistics()
 
     def compression_stage(self) -> CompressionStage:
-        # TODO(nlyalyus): should return FULLY_COMPRESSED when search algorithm activates final subnet
         return CompressionStage.UNCOMPRESSED
 
     def load_state(self, state: Dict[str, Any]) -> None:

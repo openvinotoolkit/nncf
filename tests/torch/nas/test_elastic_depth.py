@@ -207,7 +207,7 @@ def test_skip_one_block_resnet18(mocker):
     device = move_model_to_cuda_if_available(model)
     nncf_config = get_empty_config(input_sample_sizes=RESNET50_INPUT_SIZE)
     nncf_config['bootstrapNAS'] = {'training': {'elasticity': {
-        'enabled_elasticity_dims': [ElasticityDim.DEPTH.value],
+        'available_elasticity_dims': [ElasticityDim.DEPTH.value],
         'depth': {
             'mode': 'manual',
             'skipped_blocks': [[
@@ -470,7 +470,7 @@ def test_validate_depth_config():
     move_model_to_cuda_if_available(model)
     nncf_config = get_empty_config(input_sample_sizes=RESNET50_INPUT_SIZE)
     nncf_config['bootstrapNAS'] = {'training': {'elasticity': {
-        'enabled_elasticity_dims': [ElasticityDim.DEPTH.value],
+        'available_elasticity_dims': [ElasticityDim.DEPTH.value],
         'depth': {'mode': 'auto'}}
     }}
     compressed_model, controller = create_bootstrap_training_model_and_ctrl(model, nncf_config)
@@ -496,14 +496,14 @@ def test_change_depth_indicator():
     model = ResNet50()
     move_model_to_cuda_if_available(model)
     nncf_config = get_empty_config(input_sample_sizes=RESNET50_INPUT_SIZE)
-    nncf_config['bootstrapNAS'] = {'training': {'elasticity': {'enabled_elasticity_dims': [ElasticityDim.DEPTH.value]}}}
+    nncf_config['bootstrapNAS'] = {'training': {'elasticity': {'available_elasticity_dims': [ElasticityDim.DEPTH.value]}}}
     compressed_model, ctrl = create_bootstrap_training_model_and_ctrl(model, nncf_config)
 
-    ctrl.multi_elasticity_handler.depth_handler.activate_minimal_subnet()
+    ctrl.multi_elasticity_handler.depth_handler.activate_minimum_subnet()
     assert ctrl.multi_elasticity_handler.depth_handler.get_active_config() == [1, 4, 9, 11]
 
     ctrl.multi_elasticity_handler.depth_handler.depth_indicator = 2
-    ctrl.multi_elasticity_handler.depth_handler.activate_minimal_subnet()
+    ctrl.multi_elasticity_handler.depth_handler.activate_minimum_subnet()
     assert ctrl.multi_elasticity_handler.depth_handler.get_active_config() == [0, 1, 3, 4, 8, 9, 10, 11]
 
     ctrl.multi_elasticity_handler.depth_handler.depth_indicator = 1

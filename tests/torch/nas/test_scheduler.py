@@ -18,7 +18,7 @@ from typing import List
 import pytest
 
 from nncf.torch.nas.bootstrapNAS.elasticity.elasticity_dim import ElasticityDim
-from nncf.torch.nas.bootstrapNAS.elasticity.base_handler import SingleElasticHandler
+from nncf.torch.nas.bootstrapNAS.elasticity.base_handler import SingleElasticityHandler
 from nncf.torch.nas.bootstrapNAS.elasticity.elastic_depth import ElasticDepthHandler
 from nncf.torch.nas.bootstrapNAS.elasticity.elastic_width import ElasticWidthHandler
 from nncf.torch.nas.bootstrapNAS.elasticity.multi_elasticity_handler import MultiElasticityHandler
@@ -67,14 +67,14 @@ class TestScheduler:
 
         scheduler.current_epoch = 0
         ref_desc = StageDescriptor(train_dims=[ElasticityDim.KERNEL], epochs=1)
-        act_desc, act_idx = scheduler.get_train_dims_for_epoch()
+        act_desc, act_idx = scheduler.get_current_stage_desc()
         assert ref_desc == act_desc
         assert act_idx == 0
 
         scheduler.current_epoch = 2
         ref_desc.train_dims.append(ElasticityDim.DEPTH)
         ref_desc.depth_indicator = 2
-        act_desc, act_idx = scheduler.get_train_dims_for_epoch()
+        act_desc, act_idx = scheduler.get_current_stage_desc()
         assert ref_desc == act_desc
         assert act_idx == 2
 
@@ -82,13 +82,13 @@ class TestScheduler:
         ref_desc.train_dims.append(ElasticityDim.WIDTH)
         ref_desc.reorg_weights = True
         ref_desc.width_indicator = 2
-        act_desc, act_idx = scheduler.get_train_dims_for_epoch()
+        act_desc, act_idx = scheduler.get_current_stage_desc()
         assert ref_desc == act_desc
         assert act_idx == 3
 
         scheduler.current_epoch = 4
         ref_desc.width_indicator = 3
-        act_desc, act_idx = scheduler.get_train_dims_for_epoch()
+        act_desc, act_idx = scheduler.get_current_stage_desc()
         assert ref_desc == act_desc
         assert act_idx == 4
 
@@ -96,13 +96,14 @@ class TestScheduler:
         mock_model = MockModel()
         mock_width_handler = mocker.MagicMock(spec=ElasticWidthHandler)
         mock_depth_handler = mocker.MagicMock(spec=ElasticDepthHandler)
-        mock_kernel_handler = mocker.MagicMock(spec=SingleElasticHandler)
+        mock_kernel_handler = mocker.MagicMock(spec=SingleElasticityHandler)
         handlers = OrderedDict({
             ElasticityDim.WIDTH: mock_width_handler,
             ElasticityDim.KERNEL: mock_kernel_handler,
             ElasticityDim.DEPTH: mock_depth_handler,
         })
         mock_handler = MultiElasticityHandler(handlers)
+        is_handler_enabled_map = mock_handler._is_handler_enabled_map
         mock_elasticity_ctrl = mocker.stub()
         mock_elasticity_ctrl.multi_elasticity_handler = mock_handler
         training_algo = ProgressiveShrinkingController(mock_model, mock_elasticity_ctrl, mocker.stub(),
@@ -110,35 +111,49 @@ class TestScheduler:
                                                        schedule_params)
         scheduler = training_algo.scheduler
         scheduler.epoch_step()
-        mock_width_handler.activate.assert_not_called()
-        mock_depth_handler.activate.assert_not_called()
-        mock_kernel_handler.activate.assert_called()
+        assert is_handler_enabled_map == {
+            ElasticityDim.WIDTH: False,
+            ElasticityDim.DEPTH: False,
+            ElasticityDim.KERNEL: True
+        }
 
         scheduler.epoch_step()
-        mock_width_handler.activate.assert_not_called()
-        mock_depth_handler.activate.assert_called()
-        mock_kernel_handler.activate.assert_called()
+        assert is_handler_enabled_map == {
+            ElasticityDim.WIDTH: False,
+            ElasticityDim.DEPTH: True,
+            ElasticityDim.KERNEL: True
+        }
         assert mock_depth_handler.depth_indicator == 1
 
         scheduler.epoch_step()
-        mock_width_handler.activate.assert_not_called()
-        mock_depth_handler.activate.assert_called()
-        mock_kernel_handler.activate.assert_called()
+        assert is_handler_enabled_map == {
+            ElasticityDim.WIDTH: False,
+            ElasticityDim.DEPTH: True,
+            ElasticityDim.KERNEL: True
+        }
         assert mock_depth_handler.depth_indicator == 2
 
         scheduler.epoch_step()
-        mock_width_handler.activate.assert_called()
+        assert is_handler_enabled_map == {
+            ElasticityDim.WIDTH: True,
+            ElasticityDim.DEPTH: True,
+            ElasticityDim.KERNEL: True
+        }
         mock_width_handler.reorganize_weights.assert_called()
         assert mock_width_handler.width_num_params_indicator == 2
 
         scheduler.epoch_step()
-        mock_width_handler.activate.assert_called()
+        assert is_handler_enabled_map == {
+            ElasticityDim.WIDTH: True,
+            ElasticityDim.DEPTH: True,
+            ElasticityDim.KERNEL: True
+        }
         mock_width_handler.reorganize_weights.assert_called()
         assert mock_width_handler.width_num_params_indicator == 3
 
     def test_get_total_training_epochs(self, schedule_params, mocker):
         scheduler = BootstrapNASScheduler(mocker.stub(), schedule_params,
-                                          enabled_elasticity_dims=LIST_DIMS__KDW,
+                                          available_elasticity_dims=LIST_DIMS__KDW,
                                           progressivity_of_elasticity=LIST_DIMS__KDW)
         assert scheduler.get_total_training_epochs() == 5
 
@@ -146,13 +161,13 @@ class TestScheduler:
 class SchedulerTestDesc:
     def __init__(self, list_stage_dims: List[List[ElasticityDim]],
                  progressivity_of_elasticity: List[ElasticityDim],
-                 enabled_elasticity_dims: List[ElasticityDim],
+                 available_elasticity_dims: List[ElasticityDim],
                  name: str = '',
                  error_in_scheduler: bool = False,
                  error_in_builder: bool = False):
         self.list_stage_dims = list_stage_dims
         self.progressivity_of_elasticity = progressivity_of_elasticity
-        self.enabled_elasticity_dims = enabled_elasticity_dims
+        self.available_elasticity_dims = available_elasticity_dims
         self.error_in_scheduler = error_in_scheduler
         self.error_in_builder = error_in_builder
         self.name = name
@@ -172,20 +187,20 @@ LIST_SCHEDULER_DESCS = [
         name='default',
         list_stage_dims=LIST_STAGES__K_KD_KDW,
         progressivity_of_elasticity=LIST_DIMS__KDW,
-        enabled_elasticity_dims=LIST_DIMS__KDW,
+        available_elasticity_dims=LIST_DIMS__KDW,
     ),
     SchedulerTestDesc(
         name='wrong order in progressivity',
         list_stage_dims=LIST_STAGES__K_KW_KWD,
         progressivity_of_elasticity=LIST_DIMS__KDW,
-        enabled_elasticity_dims=LIST_DIMS__KDW,
+        available_elasticity_dims=LIST_DIMS__KDW,
         error_in_scheduler=True
     ),
     SchedulerTestDesc(
         name='limited progressivity',
         list_stage_dims=LIST_STAGES__K_KW_KWD,
         progressivity_of_elasticity=[ElasticityDim.KERNEL],
-        enabled_elasticity_dims=LIST_DIMS__KDW,
+        available_elasticity_dims=LIST_DIMS__KDW,
         error_in_builder=True,
         error_in_scheduler=True,
     ),
@@ -193,27 +208,27 @@ LIST_SCHEDULER_DESCS = [
         name='limited enabled dims',
         list_stage_dims=LIST_STAGES__K_KW_KWD,
         progressivity_of_elasticity=LIST_DIMS__KDW,
-        enabled_elasticity_dims=[ElasticityDim.KERNEL],
+        available_elasticity_dims=[ElasticityDim.KERNEL],
         error_in_scheduler=True
     ),
     SchedulerTestDesc(
         name='limited progressivity and enabled dims',
         list_stage_dims=LIST_STAGES__K_KW_KWD,
         progressivity_of_elasticity=[ElasticityDim.KERNEL],
-        enabled_elasticity_dims=[ElasticityDim.KERNEL],
+        available_elasticity_dims=[ElasticityDim.KERNEL],
         error_in_scheduler=True,
     ),
     SchedulerTestDesc(
         name='limited list stages',
         list_stage_dims=[[ElasticityDim.KERNEL]],
         progressivity_of_elasticity=LIST_DIMS__KDW,
-        enabled_elasticity_dims=LIST_DIMS__KDW,
+        available_elasticity_dims=LIST_DIMS__KDW,
     ),
     SchedulerTestDesc(
         name='violated progressivity',
         list_stage_dims=LIST_STAGES__K_KW_KWD,
         progressivity_of_elasticity=[ElasticityDim.KERNEL, ElasticityDim.DEPTH, ElasticityDim.WIDTH],
-        enabled_elasticity_dims=LIST_DIMS__KDW,
+        available_elasticity_dims=LIST_DIMS__KDW,
         error_in_scheduler=True,
     ),
     SchedulerTestDesc(
@@ -224,7 +239,7 @@ LIST_SCHEDULER_DESCS = [
             [ElasticityDim.DEPTH, ElasticityDim.WIDTH, ElasticityDim.KERNEL]
         ],
         progressivity_of_elasticity=LIST_DIMS__KDW,
-        enabled_elasticity_dims=LIST_DIMS__KDW,
+        available_elasticity_dims=LIST_DIMS__KDW,
     ),
     SchedulerTestDesc(
         name='new single dim on each stage',
@@ -234,7 +249,7 @@ LIST_SCHEDULER_DESCS = [
             [ElasticityDim.WIDTH],
         ],
         progressivity_of_elasticity=LIST_DIMS__KDW,
-        enabled_elasticity_dims=LIST_DIMS__KDW,
+        available_elasticity_dims=LIST_DIMS__KDW,
         error_in_scheduler=True,
     ),
     SchedulerTestDesc(
@@ -244,7 +259,7 @@ LIST_SCHEDULER_DESCS = [
             [ElasticityDim.DEPTH, ElasticityDim.KERNEL],
         ],
         progressivity_of_elasticity=[ElasticityDim.KERNEL, ElasticityDim.WIDTH, ElasticityDim.DEPTH],
-        enabled_elasticity_dims=[ElasticityDim.KERNEL, ElasticityDim.DEPTH],
+        available_elasticity_dims=[ElasticityDim.KERNEL, ElasticityDim.DEPTH],
     ),
 ]
 
@@ -256,7 +271,7 @@ class TestElasticityConsistency:
                                mocker.stub(),
                                desc.scheduler_params,
                                progressivity_of_elasticity=desc.progressivity_of_elasticity,
-                               enabled_elasticity_dims=desc.enabled_elasticity_dims)
+                               available_elasticity_dims=desc.available_elasticity_dims)
         scheduler = scheduler_fn()
         if desc.error_in_scheduler:
             with pytest.raises(ValueError):
@@ -266,7 +281,7 @@ class TestElasticityConsistency:
 
     def test_progressivity_vs_enabled_dims(self, desc: SchedulerTestDesc):
         builder_fn = partial(ProgressiveShrinkingBuilder.check_elasticity_dims_consistency,
-                             desc.enabled_elasticity_dims, desc.progressivity_of_elasticity)
+                             desc.available_elasticity_dims, desc.progressivity_of_elasticity)
         if desc.error_in_builder:
             with pytest.raises(ValueError):
                 builder_fn()

@@ -27,7 +27,7 @@ from tests.torch.nas.models.synthetic import ThreeConvModel
 
 class ElasticityDesc:
     def __init__(self,
-                 elastic_builder_cls: Callable,
+                 elasticity_builder_cls: Callable,
                  model_cls: Optional[Callable] = None,
                  ref_state: Optional[Dict[str, Any]] = None,
                  name: Optional[str] = None,
@@ -35,7 +35,7 @@ class ElasticityDesc:
                  input_size: Optional[List[int]] = None,
                  ref_search_space: Optional[Any] = None,
                  ref_output_fn: Optional[Callable] = None):
-        self.elastic_builder_cls = elastic_builder_cls
+        self.elasticity_builder_cls = elasticity_builder_cls
         self.model_cls = model_cls
         self.ref_state = ref_state
         self.name = name
@@ -47,7 +47,7 @@ class ElasticityDesc:
     def __str__(self):
         if self.name:
             return self.name
-        result = self.elastic_builder_cls.__name__
+        result = self.elasticity_builder_cls.__name__
         if hasattr(self.model_cls, '__name__'):
             result += '_' + self.model_cls.__name__
         return result
@@ -60,7 +60,7 @@ class ElasticityDesc:
             input_size = model.INPUT_SIZE
         config = get_empty_config(input_sample_sizes=input_size)
         nncf_network = create_nncf_network(model, config)
-        builder = self.elastic_builder_cls(self.params)
+        builder = self.elasticity_builder_cls(self.params)
         handler = builder.build(nncf_network)
         return handler, builder
 

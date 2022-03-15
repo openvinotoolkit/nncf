@@ -6,6 +6,9 @@ from nncf.torch.nas.bootstrapNAS.elasticity.elasticity_dim import ElasticityDim
 
 
 class StageDescriptor:
+    """
+    Describes parameters of the training stage. The stage defines active elastic dimension and its parameters.
+    """
     def __init__(self, train_dims: List[ElasticityDim],
                  epochs: int = 1,
                  reorg_weights: bool = False,

@@ -19,9 +19,9 @@ from typing import Optional
 from typing import OrderedDict as OrderedDictType
 
 from nncf.common.pruning.utils import count_flops_and_weights_per_node
-from nncf.torch.nas.bootstrapNAS.elasticity.base_handler import ElasticConfig
-from nncf.torch.nas.bootstrapNAS.elasticity.base_handler import ElasticHandler
-from nncf.torch.nas.bootstrapNAS.elasticity.base_handler import SingleElasticHandler
+from nncf.torch.nas.bootstrapNAS.elasticity.base_handler import ElasticityConfig
+from nncf.torch.nas.bootstrapNAS.elasticity.base_handler import ElasticityHandler
+from nncf.torch.nas.bootstrapNAS.elasticity.base_handler import SingleElasticityHandler
 from nncf.torch.nas.bootstrapNAS.elasticity.elastic_depth import ElasticDepthHandler
 from nncf.torch.nas.bootstrapNAS.elasticity.elastic_depth import ElasticDepthSearchSpace
 from nncf.torch.nas.bootstrapNAS.elasticity.elastic_kernel import ElasticKernelHandler
@@ -30,12 +30,21 @@ from nncf.torch.nas.bootstrapNAS.elasticity.elastic_width import ElasticWidthHan
 from nncf.torch.nas.bootstrapNAS.elasticity.elastic_width import ElasticWidthSearchSpace
 from nncf.torch.nas.bootstrapNAS.elasticity.elasticity_dim import ElasticityDim
 
-SubnetConfig = OrderedDictType[ElasticityDim, ElasticConfig]
+SubnetConfig = OrderedDictType[ElasticityDim, ElasticityConfig]
 
 
-class MultiElasticityHandler(ElasticHandler):
-    def __init__(self, handlers: OrderedDictType[ElasticityDim, SingleElasticHandler]):
+class MEHandlerStateNames:
+    IS_HANDLER_ENABLED_MAP = 'is_handler_enabled_map'
+    STATES_OF_HANDLERS = 'states_of_handlers'
+
+
+class MultiElasticityHandler(ElasticityHandler):
+    _state_names = MEHandlerStateNames
+
+    def __init__(self, handlers: OrderedDictType[ElasticityDim, SingleElasticityHandler]):
         self._handlers = handlers
+        self._is_handler_enabled_map = {elasticity_dim: True for elasticity_dim in handlers}
+        self.activate_supernet()
 
     @property
     def width_search_space(self) -> ElasticWidthSearchSpace:
@@ -61,41 +70,106 @@ class MultiElasticityHandler(ElasticHandler):
     def depth_handler(self) -> Optional[ElasticDepthHandler]:
         return self._get_handler_by_elasticity_dim(ElasticityDim.DEPTH)
 
-    def get_enabled_elasticity_dims(self) -> List[ElasticityDim]:
+    def get_available_elasticity_dims(self) -> List[ElasticityDim]:
         return list(self._handlers)
 
     def get_active_config(self) -> SubnetConfig:
+        """
+        Forms an elasticity configuration that describes currently activated Subnet across all elasticities.
+
+        :return: elasticity configuration
+        """
         return self._collect_handler_data_by_method_name(self._get_current_method_name())
 
-    def activate_random_subnet(self) -> SubnetConfig:
+    def get_random_config(self) -> SubnetConfig:
+        """
+        Forms an elasticity configuration that describes a Subnet with randomly chosen elastic values across all
+        elasticities.
+
+        :return: elasticity configuration
+        """
         return self._collect_handler_data_by_method_name(self._get_current_method_name())
 
-    def activate_minimal_subnet(self):
+    def get_minimum_config(self) -> SubnetConfig:
+        """
+        Forms an elasticity configuration that describes a Subnet with minimum elastic values across all elasticities.
+
+        :return: elasticity configuration
+        """
         return self._collect_handler_data_by_method_name(self._get_current_method_name())
 
-    def activate_maximal_subnet(self) -> SubnetConfig:
+    def get_maximum_config(self) -> SubnetConfig:
+        """
+        Forms an elasticity configuration that describes a Subnet with maximum elastic values across all elasticities.
+
+        :return: elasticity configuration
+        """
         return self._collect_handler_data_by_method_name(self._get_current_method_name())
 
-    def activate_supernet(self):
+    def activate_supernet(self) -> None:
+        """
+        Activates the Supernet - the original network to which elasticity was applied.
+        """
         self._collect_handler_data_by_method_name(self._get_current_method_name())
 
-    def activate(self):
-        self._collect_handler_data_by_method_name(self._get_current_method_name(), ignore_is_active=True)
+    def set_config(self, subnet_config: SubnetConfig) -> None:
+        """
+        Activates a Subnet that corresponds to the given elasticity configuration
 
-    def deactivate(self):
-        self._collect_handler_data_by_method_name(self._get_current_method_name())
-
-    def activate_elasticity(self, dim: ElasticityDim):
-        self._get_handler_by_elasticity_dim(dim).activate()
-
-    def deactivate_elasticity(self, dim: ElasticityDim):
-        self._get_handler_by_elasticity_dim(dim).deactivate()
-
-    def set_config(self, subnet_config: SubnetConfig):
+        :param subnet_config: elasticity configuration
+        """
         for handler_id, handler in self._handlers.items():
             if handler_id in subnet_config:
                 config = subnet_config[handler_id]
-                handler.set_config(config)
+                active_handlers = {
+                    dim: self._handlers[dim] for dim in self._handlers if self._is_handler_enabled_map[dim]
+                }
+                resolved_config = handler.resolve_conflicts_with_other_elasticities(config, active_handlers)
+                handler.set_config(resolved_config)
+
+    def load_state(self, state: Dict[str, Any]) -> None:
+        """
+        Initializes object from the state.
+
+        :param state: Output of `get_state()` method.
+        """
+        states_of_handlers = state[self._state_names.STATES_OF_HANDLERS]
+        is_handler_enabled_map = state[self._state_names.IS_HANDLER_ENABLED_MAP]
+
+        for dim_str, handler_state in states_of_handlers.items():
+            dim = ElasticityDim.from_str(dim_str)
+            if dim in self._handlers:
+                self._handlers[dim].load_state(handler_state)
+
+        for dim_str, is_enabled in is_handler_enabled_map.items():
+            dim = ElasticityDim.from_str(dim_str)
+            self._is_handler_enabled_map[dim] = is_enabled
+
+    def get_state(self) -> Dict[str, Any]:
+        """
+        Returns a dictionary with Python data structures (dict, list, tuple, str, int, float, True, False, None) that
+        represents state of the object.
+
+        :return: state of the object
+        """
+        states_of_handlers = {dim.value: handler.get_state() for dim, handler in self._handlers.items()}
+        is_handler_enabled_map = {dim.value: is_enabled for dim, is_enabled in self._is_handler_enabled_map.items()}
+        return {
+            self._state_names.STATES_OF_HANDLERS: states_of_handlers,
+            self._state_names.IS_HANDLER_ENABLED_MAP: is_handler_enabled_map
+        }
+
+    def enable_all(self):
+        self._is_handler_enabled_map = {elasticity_dim: True for elasticity_dim in self._is_handler_enabled_map}
+
+    def disable_all(self):
+        self._is_handler_enabled_map = {elasticity_dim: False for elasticity_dim in self._is_handler_enabled_map}
+
+    def enable_elasticity(self, dim: ElasticityDim):
+        self._is_handler_enabled_map[dim] = True
+
+    def disable_elasticity(self, dim: ElasticityDim):
+        self._is_handler_enabled_map[dim] = False
 
     def count_flops_and_weights_for_active_subnet(self):
         kwargs = {}
@@ -108,35 +182,14 @@ class MultiElasticityHandler(ElasticHandler):
         num_weights = sum(num_weights_per_node.values())
         return flops, num_weights
 
-    def load_state(self, state: Dict[str, Any]) -> None:
-        """
-        Loads the compression controller state from the map of algorithm name to the dictionary with state attributes.
-
-        :param state: map of the algorithm name to the dictionary with the corresponding state attributes.
-        """
-        for dim_str, handler_state in state.items():
-            dim = ElasticityDim.from_str(dim_str)
-            if dim in self._handlers:
-                self._handlers[dim].load_state(handler_state)
-
-    def get_state(self) -> Dict[str, Any]:
-        """
-        Returns compression controller state, which is the map of the algorithm name to the dictionary with the
-        corresponding state attributes.
-
-        :return: The compression controller state.
-        """
-        return {dim.value: handler.get_state() for dim, handler in self._handlers.items()}
-
-    def _get_handler_by_elasticity_dim(self, dim: ElasticityDim) -> Optional[SingleElasticHandler]:
+    def _get_handler_by_elasticity_dim(self, dim: ElasticityDim) -> Optional[SingleElasticityHandler]:
         if dim in self._handlers:
             return self._handlers[dim]
 
-    def _collect_handler_data_by_method_name(self, method_name,
-                                             ignore_is_active=False) -> OrderedDictType[ElasticityDim, Any]:
+    def _collect_handler_data_by_method_name(self, method_name) -> OrderedDictType[ElasticityDim, Any]:
         result = OrderedDict()
         for elasticity_dim, handler in self._handlers.items():
-            if handler.is_active or ignore_is_active:
+            if self._is_handler_enabled_map[elasticity_dim]:
                 handler_method = getattr(handler, method_name)
                 data = handler_method()
                 result[elasticity_dim] = data

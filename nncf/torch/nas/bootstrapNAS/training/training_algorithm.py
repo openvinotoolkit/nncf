@@ -10,7 +10,6 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-import time
 from pathlib import Path
 from shutil import copyfile
 from typing import Any
@@ -46,15 +45,23 @@ class EBTrainAlgoStateNames:
 
 
 class EpochBasedTrainingAlgorithm:
+    """
+    Algorithm for training supernet by using a train function for a single epoch. In contrast, there can be step-based
+    algorithm that uses a train function for a single training step.
+    """
     _state_names = EBTrainAlgoStateNames
 
-    def __init__(self, nncf_network: NNCFNetwork, training_ctrl: BNASTrainingController,
+    def __init__(self,
+                 nncf_network: NNCFNetwork,
+                 training_ctrl: BNASTrainingController,
                  checkpoint: Optional[Dict[str, Any]] = None):
         """
+        Initializes the training algorithm
 
         :param nncf_network: it's supposed to be a model with elasticity ops,
         controlled by elasticity ctrl, which is owned by training ctrl
         :param training_ctrl: controller of the training algorithm (by default ProgressiveShrinkingController)
+        :param checkpoint: data to restore state of the training algorithm
         """
         self._model = nncf_network
         self._training_ctrl = training_ctrl
@@ -73,10 +80,33 @@ class EpochBasedTrainingAlgorithm:
 
     @property
     def elasticity_ctrl(self) -> ElasticityController:
+        """
+        :return: elasticity controller
+        """
         return self._training_ctrl.elasticity_controller
 
-    def run(self, train_epoch_fn, train_loader, lr_scheduler, val_fn, val_loader, optimizer,
-            checkpoint_save_dir, tensorboard_writer=None) -> Tuple[NNCFNetwork, ElasticityController]:
+    def run(self,
+            train_epoch_fn,
+            train_loader,
+            lr_scheduler,
+            val_fn,
+            val_loader,
+            optimizer,
+            checkpoint_save_dir,
+            tensorboard_writer=None) -> Tuple[NNCFNetwork, ElasticityController]:
+        """
+        Implements a training loop for supernet training.
+
+        :param train_epoch_fn: a method to fine-tune the model for a single epoch
+        :param train_loader: data loader for training
+        :param lr_scheduler: scheduler for learning rate
+        :param val_fn: a method to evaluate the model on the validation dataset
+        :param val_loader: data loader for validation
+        :param optimizer: a training optimizer
+        :param checkpoint_save_dir: path to a directory for saving checkpoints
+        :param tensorboard_writer: The tensorboard object to be used for logging.
+        :return: the fine-tuned model and elasticity controller
+        """
         if self._optimizer_state is not None:
             optimizer.load_state_dict(self._optimizer_state)
 
@@ -108,7 +138,7 @@ class EpochBasedTrainingAlgorithm:
 
             compression_stage = self._training_ctrl.compression_stage()
 
-            self._training_ctrl.multi_elasticity_handler.activate_minimal_subnet()
+            self._training_ctrl.multi_elasticity_handler.activate_minimum_subnet()
             min_subnet_acc1, acc5, loss = self._validate_subnet(val_fn, val_loader)
             if log_validation_info:
                 nncf_logger.info('* Acc@1 {:.3f} Acc@5 {:.3f} for Minimal SubNet={}'.format(
@@ -162,12 +192,15 @@ class EpochBasedTrainingAlgorithm:
 
         return self._model, self.elasticity_ctrl
 
-    def _validate_subnet(self, val_fn, val_loader):
-        self._training_ctrl.prepare_for_validation()
-        return val_fn(self._model, val_loader)
-
     @classmethod
-    def from_config(cls, nncf_network: NNCFNetwork, nncf_config: NNCFConfig):
+    def from_config(cls, nncf_network: NNCFNetwork, nncf_config: NNCFConfig) -> 'EpochBasedTrainingAlgorithm':
+        """
+        Creates the training algorithm from a config by a given empty NNCFNetwork.
+
+        :param nncf_network: empty NNCFNetwork
+        :param nncf_config: parameters of the training algorithm
+        :return: the training algorithm
+        """
         algo_name = nncf_config.get('bootstrapNAS', {}).get('training', {}).get('algorithm', 'progressive_shrinking')
         training_ctrl, model = create_compressed_model_from_algo_names(nncf_network, nncf_config,
                                                                        algo_names=[algo_name])
@@ -176,7 +209,16 @@ class EpochBasedTrainingAlgorithm:
     @classmethod
     def from_checkpoint(cls, nncf_network: NNCFNetwork,
                         bn_adapt_args: BNAdaptationInitArgs,
-                        resuming_checkpoint_path: str):
+                        resuming_checkpoint_path: str) -> 'EpochBasedTrainingAlgorithm':
+        """
+        Resumes the training algorithm from a checkpoint by a given empty NNCFNetwork and BN adaptation arguments only,
+        config is not involved.
+
+        :param nncf_network: empty NNCFNetwork
+        :param bn_adapt_args: arguments for batchnorm statistics adaptation algorithm
+        :param resuming_checkpoint_path: path to the resuming checkpoint
+        :return: the training algorithm
+        """
         if not Path(resuming_checkpoint_path).is_file():
             raise FileNotFoundError("no checkpoint found at '{}'".format(resuming_checkpoint_path))
         nncf_logger.info("=> loading checkpoint '{}'".format(resuming_checkpoint_path))
@@ -203,3 +245,7 @@ class EpochBasedTrainingAlgorithm:
         if is_best:
             best_acc1 = acc1
         return best_acc1
+
+    def _validate_subnet(self, val_fn, val_loader):
+        self._training_ctrl.prepare_for_validation()
+        return val_fn(self._model, val_loader)

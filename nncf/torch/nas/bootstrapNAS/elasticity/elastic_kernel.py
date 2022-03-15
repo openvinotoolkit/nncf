@@ -36,7 +36,9 @@ from nncf.torch.module_operations import UpdateInputs
 from nncf.torch.module_operations import UpdatePadding
 from nncf.torch.module_operations import UpdateWeight
 from nncf.torch.nas.bootstrapNAS.elasticity.base_handler import ELASTICITY_BUILDERS
-from nncf.torch.nas.bootstrapNAS.elasticity.base_handler import SingleElasticHandler
+from nncf.torch.nas.bootstrapNAS.elasticity.base_handler import ELASTICITY_HANDLERS_MAP
+from nncf.torch.nas.bootstrapNAS.elasticity.base_handler import ElasticityConfig
+from nncf.torch.nas.bootstrapNAS.elasticity.base_handler import SingleElasticityHandler
 from nncf.torch.nas.bootstrapNAS.elasticity.base_handler import SingleElasticityBuilder
 from nncf.torch.nas.bootstrapNAS.elasticity.elasticity_dim import ElasticityDim
 from nncf.torch.nncf_network import NNCFNetwork
@@ -189,7 +191,10 @@ class ElasticKernelInputForExternalPadding:
         return new_x
 
 
-class ElasticKernelHandler(SingleElasticHandler):
+class ElasticKernelHandler(SingleElasticityHandler):
+    """
+    An interface for handling elastic kernel dimension in the network, i.e. define size of kernels in the conv layers.
+    """
     def __init__(self,
                  elastic_kernel_ops: List[ElasticKernelOp],
                  transformation_commands: List[TransformationCommand]):
@@ -198,33 +203,62 @@ class ElasticKernelHandler(SingleElasticHandler):
         self._transformation_commands = transformation_commands
 
     def get_transformation_commands(self) -> List[TransformationCommand]:
+        """
+        :return: transformation commands for introducing the elasticity to NNCFNetwork
+        """
         return self._transformation_commands
 
     def get_search_space(self) -> ElasticKernelSearchSpace:
         return self._collect_ops_data_by_selection_rule(lambda op: op.kernel_size_list)
 
     def get_active_config(self) -> ElasticKernelConfig:
+        """
+        Forms an elasticity configuration that describes currently activated Subnet
+
+        :return: list of kernel sizes per layer
+        """
         return self._collect_ops_data_by_selection_rule(lambda op: op.get_active_kernel_size())
 
-    def activate_random_subnet(self):
+    def get_random_config(self) -> ElasticKernelConfig:
+        """
+        Forms an elasticity configuration that describes a Subnet with randomly chosen elastic kernels
+
+        :return: list of kernel sizes per layer
+        """
         config = self._collect_ops_data_by_selection_rule(
             lambda op: op.kernel_size_list[random.randrange(0, len(op.kernel_size_list))]
         )
-        self.set_config(config)
+        return config
 
-    def activate_minimal_subnet(self):
-        config = self._collect_ops_data_by_selection_rule(lambda op: min(op.kernel_size_list))
-        self.set_config(config)
+    def get_minimum_config(self) -> ElasticKernelConfig:
+        """
+        Forms an elasticity configuration that describes a Subnet with minimum elastic kernels
 
-    def activate_maximal_subnet(self):
-        config = self._collect_ops_data_by_selection_rule(lambda op: max(op.kernel_size_list))
-        self.set_config(config)
+        :return: list of kernel sizes per layer
+        """
+        return self._collect_ops_data_by_selection_rule(lambda op: min(op.kernel_size_list))
 
-    def activate_supernet(self):
+    def get_maximum_config(self) -> ElasticKernelConfig:
+        """
+        Forms an elasticity configuration that describes a Subnet with maximum elastic kernels
+
+        :return: list of kernel sizes per layer
+        """
+        return self._collect_ops_data_by_selection_rule(lambda op: max(op.kernel_size_list))
+
+    def activate_supernet(self) -> None:
+        """
+        Activates the Supernet - the original network to which elasticity was applied.
+        """
         supernet_config = self._collect_ops_data_by_selection_rule(lambda op: op.max_kernel_size)
         self.set_config(supernet_config)
 
-    def set_config(self, config: ElasticKernelConfig):
+    def set_config(self, config: ElasticKernelConfig) -> None:
+        """
+        Activates a Subnet that corresponds to the given elasticity configuration
+
+        :return: list of kernel sizes per layer
+        """
         for op, ks in zip(self._elastic_kernel_ops, config):
             op.set_active_kernel_size(ks)
 
@@ -234,6 +268,11 @@ class ElasticKernelHandler(SingleElasticHandler):
             active_kernel_size = elastic_kernel_op.get_active_kernel_size()
             active_kernel_sizes[elastic_kernel_op.node_name] = (active_kernel_size, active_kernel_size)
         return {'kernel_sizes': active_kernel_sizes}
+
+    def resolve_conflicts_with_other_elasticities(self,
+                                                  config: ElasticKernelConfig,
+                                                  elasticity_handlers: ELASTICITY_HANDLERS_MAP) -> ElasticKernelConfig:
+        return config
 
     def _collect_ops_data_by_selection_rule(self, selection_rule: Callable) -> List[Any]:
         return list(map(selection_rule, self._elastic_kernel_ops))
@@ -253,7 +292,14 @@ class ElasticKernelBuilder(SingleElasticityBuilder):
         super().__init__(target_scopes, ignored_scopes, elasticity_params)
         self._node_names_to_make_elastic = []  # type: List[NNCFNodeName]
 
-    def build(self, target_model: NNCFNetwork, **kwargs) -> ElasticKernelHandler:
+    def build(self, target_model: NNCFNetwork) -> ElasticKernelHandler:
+        """
+        Creates modifications to the given NNCFNetwork for introducing elastic kernel and creates a handler object that
+        can manipulate this elasticity.
+
+        :param target_model: a target NNCFNetwork for adding modifications
+        :return: a handler object that can manipulate the elastic kernel.
+        """
         elastic_kernel_ops = []  # type: List[ElasticKernelOp]
         transformation_commands = []
 
@@ -332,10 +378,21 @@ class ElasticKernelBuilder(SingleElasticityBuilder):
         return ElasticKernelHandler(elastic_kernel_ops, transformation_commands)
 
     def load_state(self, state: Dict[str, Any]) -> None:
+        """
+        Initializes object from the state.
+
+        :param state: Output of `get_state()` method.
+        """
         super().load_state(state)
         self._node_names_to_make_elastic = state[self._state_names.NODE_NAMES_TO_MAKE_ELASTIC]
 
     def get_state(self) -> Dict[str, Any]:
+        """
+        Returns a dictionary with Python data structures (dict, list, tuple, str, int, float, True, False, None) that
+        represents state of the object.
+
+        :return: state of the object
+        """
         state = super().get_state()
         state[self._state_names.NODE_NAMES_TO_MAKE_ELASTIC] = self._node_names_to_make_elastic
         return state

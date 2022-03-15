@@ -142,7 +142,7 @@ def create_supernet(model_creator: Callable,
 
 
 def create_single_conv_kernel_supernet(kernel_size=5, out_channels=1) -> Tuple[ElasticKernelHandler, NNCFNetwork]:
-    params = {"enabled_elasticity_dims": [ElasticityDim.KERNEL.value]}
+    params = {"available_elasticity_dims": [ElasticityDim.KERNEL.value]}
     model_creator = partial(BasicConvTestModel, 1, out_channels=out_channels, kernel_size=kernel_size)
     input_sample_sizes = [1, 1, kernel_size, kernel_size]
     multi_elasticity_handler, supernet = create_supernet(model_creator, input_sample_sizes, params)
@@ -151,7 +151,7 @@ def create_single_conv_kernel_supernet(kernel_size=5, out_channels=1) -> Tuple[E
 
 
 def create_two_conv_width_supernet(elasticity_params=None):
-    params = {"enabled_elasticity_dims": [ElasticityDim.WIDTH.value]}
+    params = {"available_elasticity_dims": [ElasticityDim.WIDTH.value]}
     if elasticity_params is not None:
         params.update(elasticity_params)
     multi_elasticity_handler, supernet = create_supernet(TwoConvModel, TwoConvModel.INPUT_SIZE, params)

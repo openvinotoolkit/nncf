@@ -10,6 +10,7 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+import copy
 
 import pytest
 import torch
@@ -111,15 +112,16 @@ def test_width_activation(basic_model):
             }
         }
     })
+    ref_model = copy.deepcopy(basic_model)
     model, ctrl = create_bootstrap_training_model_and_ctrl(basic_model, config)
 
     device = next(model.parameters()).device
     dummy_input = torch.Tensor([1]).reshape(basic_model.INPUT_SIZE).to(device)
     width_handler = ctrl.multi_elasticity_handler.width_handler
     width_handler.reorganize_weights()
-    width_handler.activate_minimal_subnet()
+    width_handler.activate_minimum_subnet()
     actual_output = model(dummy_input)
-    ref_output = model.get_nncf_wrapped_model().get_minimal_subnet_output(dummy_input)
+    ref_output = ref_model.get_minimal_subnet_output(dummy_input)
     compare_tensors_ignoring_the_order(ref_output, actual_output)
 
 
@@ -192,5 +194,7 @@ def test_multi_forward_nodes():
     config['compression'] = {'algorithm': 'bootstrapNAS'}
     model, ctrl = create_bootstrap_training_model_and_ctrl(TestModel(), config)
     multi_elasticity_handler = ctrl.multi_elasticity_handler
+    # multi_elasticity_handler.enable_all()
+    # multi_elasticity_handler.activate_supernet()
     width_graph = SubnetGraph(model.get_graph(), multi_elasticity_handler).get()
     check_nx_graph(width_graph, 'multi_forward_node.dot', 'nas')

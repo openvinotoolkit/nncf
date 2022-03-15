@@ -19,6 +19,7 @@ from examples.torch.common.models.classification.resnet50_cifar10 import resnet5
 from nncf import NNCFConfig
 from nncf.api.compression import CompressionStage
 from nncf.torch.model_creation import create_nncf_network
+from nncf.torch.nas.bootstrapNAS.elasticity.elasticity_dim import ElasticityDim
 from nncf.torch.nas.bootstrapNAS.elasticity.visualization import SubnetGraph
 from nncf.torch.nas.bootstrapNAS.training.model_creator_helpers import resume_compression_from_state
 from nncf.torch.utils import manual_seed
@@ -76,14 +77,14 @@ def test_bn_adaptation_on_minimal_subnet_width_stage():
     # pylint: disable=protected-access
     bn_adaptation = ctrl._bn_adaptation
 
-    multi_elasticity_handler.activate()
+    multi_elasticity_handler.enable_all()
     model.do_dummy_forward()
 
     multi_elasticity_handler.width_handler.reorganize_weights()
     bn_adaptation.run(model)
     model.do_dummy_forward()
 
-    multi_elasticity_handler.activate_minimal_subnet()
+    multi_elasticity_handler.activate_minimum_subnet()
     # ERROR HERE
     bn_adaptation.run(model)
     model.do_dummy_forward()
@@ -130,14 +131,13 @@ def test_random_multi_elasticity(_seed, nas_model_name):
     multi_elasticity_handler = ctrl.multi_elasticity_handler
     model.do_dummy_forward()
 
-    multi_elasticity_handler.depth_handler.deactivate()
-    multi_elasticity_handler.width_handler.deactivate()
-    multi_elasticity_handler.kernel_handler.activate()
+    multi_elasticity_handler.disable_all()
+    multi_elasticity_handler.enable_elasticity(ElasticityDim.KERNEL)
     multi_elasticity_handler.activate_random_subnet()
     model.do_dummy_forward()
     check_subnet_visualization(multi_elasticity_handler, model, nas_model_name, stage='kernel')
 
-    multi_elasticity_handler.depth_handler.activate()
+    multi_elasticity_handler.enable_elasticity(ElasticityDim.DEPTH)
     multi_elasticity_handler.activate_random_subnet()
     if 'squeezenet1_0' in nas_model_name:
         pytest.skip(
@@ -146,9 +146,12 @@ def test_random_multi_elasticity(_seed, nas_model_name):
     model.do_dummy_forward()
     check_subnet_visualization(multi_elasticity_handler, model, nas_model_name, stage='depth')
 
-    multi_elasticity_handler.width_handler.activate()
+    multi_elasticity_handler.enable_elasticity(ElasticityDim.WIDTH)
+    multi_elasticity_handler.width_handler.width_num_params_indicator = 1
     multi_elasticity_handler.activate_random_subnet()
     model.do_dummy_forward()
+    # TODO(nlyalyus): some blocks are not skipped because they fail a conflict resolving with elastic width: start or
+    #  end block can be out of pruning scope and can't retrieve width in the propagation graph: mask = None
     check_subnet_visualization(multi_elasticity_handler, model, nas_model_name, stage='width')
 
 
@@ -168,24 +171,23 @@ def test_multi_elasticity_outputs():
     actual_output = model(input_)
     assert torch.equal(actual_output, ref_output)
 
-    multi_elasticity_handler.depth_handler.deactivate()
-    multi_elasticity_handler.width_handler.deactivate()
-    multi_elasticity_handler.kernel_handler.activate()
-    multi_elasticity_handler.activate_minimal_subnet()
+    multi_elasticity_handler.disable_all()
+    multi_elasticity_handler.enable_elasticity(ElasticityDim.KERNEL)
+    multi_elasticity_handler.activate_minimum_subnet()
     actual_output = model(input_)
     ref_model.mode = ThreeConvModelMode.KERNEL_STAGE
     ref_output = ref_model(input_)
     assert torch.equal(actual_output, ref_output)
 
-    multi_elasticity_handler.depth_handler.activate()
-    multi_elasticity_handler.activate_minimal_subnet()
+    multi_elasticity_handler.enable_elasticity(ElasticityDim.DEPTH)
+    multi_elasticity_handler.activate_minimum_subnet()
     actual_output = model(input_)
     ref_model.mode = ThreeConvModelMode.DEPTH_STAGE
     ref_output = ref_model(input_)
     assert torch.equal(actual_output, ref_output)
 
-    multi_elasticity_handler.activate()
-    multi_elasticity_handler.activate_minimal_subnet()
+    multi_elasticity_handler.enable_all()
+    multi_elasticity_handler.activate_minimum_subnet()
     print(multi_elasticity_handler.get_active_config())
     actual_output = model(input_)
     ref_model.mode = ThreeConvModelMode.WIDTH_STAGE
@@ -208,20 +210,19 @@ def test_multi_elasticity_gradients():
     ref_model.mode = ThreeConvModelMode.SUPERNET
     check_output_and_weights_after_training_step(model, ref_model, actual_optimizer, ref_optimizer, input_)
 
-    multi_elasticity_handler.depth_handler.deactivate()
-    multi_elasticity_handler.width_handler.deactivate()
-    multi_elasticity_handler.kernel_handler.activate()
-    multi_elasticity_handler.activate_minimal_subnet()
+    multi_elasticity_handler.disable_all()
+    multi_elasticity_handler.enable_elasticity(ElasticityDim.KERNEL)
+    multi_elasticity_handler.activate_minimum_subnet()
     ref_model.mode = ThreeConvModelMode.KERNEL_STAGE
     check_output_and_weights_after_training_step(model, ref_model, actual_optimizer, ref_optimizer, input_)
 
-    multi_elasticity_handler.depth_handler.activate()
-    multi_elasticity_handler.activate_minimal_subnet()
+    multi_elasticity_handler.enable_elasticity(ElasticityDim.DEPTH)
+    multi_elasticity_handler.activate_minimum_subnet()
     ref_model.mode = ThreeConvModelMode.DEPTH_STAGE
     check_output_and_weights_after_training_step(model, ref_model, actual_optimizer, ref_optimizer, input_)
 
-    multi_elasticity_handler.width_handler.activate()
-    multi_elasticity_handler.activate_minimal_subnet()
+    multi_elasticity_handler.enable_elasticity(ElasticityDim.WIDTH)
+    multi_elasticity_handler.activate_minimum_subnet()
     ref_model.mode = ThreeConvModelMode.WIDTH_STAGE
     check_output_and_weights_after_training_step(model, ref_model, actual_optimizer, ref_optimizer, input_)
 
@@ -262,7 +263,7 @@ REF_COMPRESSION_STATE_FOR_TWO_CONV = {
                                                              'ThreeConvModel/NNCFConv2d[conv_to_skip]/conv2d_0']]
                         }
                     },
-                    'enabled_elasticity_dims': ['width', 'depth']
+                    'available_elasticity_dims': ['width', 'depth']
                 }
             },
             'progressivity_of_elasticity': ['kernel', 'width', 'depth'],
@@ -276,13 +277,17 @@ REF_COMPRESSION_STATE_FOR_TWO_CONV = {
                 'scheduler_state': {'current_epoch': -1, 'current_step': -1}
             },
             'multi_elasticity_handler_state': {
-                'depth': {
-                    'active_config': [0],
-                    'is_active': True
+                'is_handler_enabled_map': {
+                    'depth': True,
+                    'width': True
                 },
-                'width': {
-                    'active_config': {0: 1},
-                    'is_active': True
+                'states_of_handlers': {
+                    'depth': {
+                        'active_config': [0]
+                    },
+                    'width': {
+                        'active_config': {0: 1}
+                    }
                 }
             }
         },
@@ -315,7 +320,7 @@ TWO_CONV_FULL_CONFIG = {
             },
             "progressivity_of_elasticity": ["kernel", "width", "depth"],
             "elasticity": {
-                "enabled_elasticity_dims": ["width", "depth"],
+                "available_elasticity_dims": ["width", "depth"],
                 "depth": {
                     'mode': 'manual',
                     'skipped_blocks': THREE_CONV_TEST_DESC.blocks_to_skip,
@@ -339,8 +344,8 @@ TWO_CONV_FULL_CONFIG = {
 
 def prepare_train_algo_for_resume(training_ctrl):
     multi_elasticity_handler = training_ctrl.multi_elasticity_handler
-    multi_elasticity_handler.activate()
-    multi_elasticity_handler.activate_minimal_subnet()
+    multi_elasticity_handler.enable_all()
+    multi_elasticity_handler.activate_minimum_subnet()
     training_ctrl.scheduler.epoch_step(next_epoch=2)
 
 
@@ -384,8 +389,8 @@ def test_can_restore_and_get_the_same_output():
 
     model, training_ctrl = create_bnas_model_and_ctrl_by_test_desc(THREE_CONV_TEST_DESC, mode='manual')
     multi_elasticity_handler = training_ctrl.multi_elasticity_handler
-    multi_elasticity_handler.activate()
-    multi_elasticity_handler.activate_minimal_subnet()
+    multi_elasticity_handler.enable_all()
+    multi_elasticity_handler.activate_minimum_subnet()
 
     actual_output = training_ctrl.model(input_)
     ref_model.mode = ThreeConvModelMode.WIDTH_STAGE
