@@ -68,6 +68,8 @@ class TestDataloader(DataLoader):
 def test_min_max_quantization_graph(tmp_path, model, path_ref_graph, input_shape):
     model_name = str(model.__class__)
     onnx_model_path = str(TEST_ROOT.joinpath('onnx', 'data', 'models', model_name))
+    if not os.path.isdir(onnx_model_path):
+        os.mkdir(onnx_model_path)
     x = torch.randn(input_shape, requires_grad=False)
     torch.onnx.export(model, x, onnx_model_path, opset_version=13)
 
@@ -92,6 +94,8 @@ def test_min_max_quantization_graph(tmp_path, model, path_ref_graph, input_shape
 def test_post_training_quantization_graph(tmp_path, model, path_ref_graph, input_shape):
     model_name = str(model.__class__)
     onnx_model_path = str(TEST_ROOT.joinpath('onnx', 'data', 'models', model_name))
+    if not os.path.isdir(onnx_model_path):
+        os.mkdir(onnx_model_path)
     x = torch.randn(input_shape, requires_grad=False)
     torch.onnx.export(model, x, onnx_model_path, opset_version=13)
 
