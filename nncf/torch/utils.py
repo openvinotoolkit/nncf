@@ -310,9 +310,15 @@ def rename_legacy_names_in_state_dict(state_dict_to_load: Dict[str, Any],
         state_dict_to_load[new_key] = tensor
 
     if legacy_names:
-        warnings.warn('Legacy Batch Norm layer names was detected in checkpoint model state dict.'
-                      ' All occurrences of `{}` in nodes names was replaced by `{}`'.format(legacy_name, new_name),
-                      category=DeprecationWarning)
+        nncf_logger.warning('Legacy Batch Norm layer names was detected in checkpoint model state dict.'
+                      ' All occurrences of `{}` in nodes names was replaced by `{}`'.format(legacy_name, new_name))
+
+LEGACY_VS_NEW_BN_MAP = {
+    'BatchNorm1d': 'NNCFBatchNorm1d',
+    'BatchNorm2d': 'NNCFBatchNorm2d',
+    'BatchNorm3d': 'NNCFBatchNorm3d',
+    'NNCFBatchNorm': 'NNCFBatchNorm2d',
+}
 
 def maybe_convert_legacy_names_in_model_state(state_dict_to_load: Dict[str, Any]) -> None:
     """
@@ -320,22 +326,25 @@ def maybe_convert_legacy_names_in_model_state(state_dict_to_load: Dict[str, Any]
 
     :param state_dict_to_load: State dict to convert.
     """
-    legacy_bn2d_names, legacy_bn1d_names, legacy_bn3d_names, legacy_nncfbn_names = [], [], [], []
 
+    legacy_names = {
+        'BatchNorm1d': [],
+        'BatchNorm2d': [],
+        'BatchNorm3d': [],
+        'NNCFBatchNorm': [],
+    }
     for name in state_dict_to_load:
         if 'BatchNorm2d' in name:
-            legacy_bn2d_names.append(name)
+            legacy_names['BatchNorm2d'].append(name)
         if 'BatchNorm1d' in name:
-            legacy_bn1d_names.append(name)
+            legacy_names['BatchNorm1d'].append(name)
         if 'BatchNorm3d' in name:
-            legacy_bn3d_names.append(name)
+            legacy_names['BatchNorm3d'].append(name)
         if 'NNCFBatchNorm' in name:
-            legacy_nncfbn_names.append(name)
+            legacy_names['NNCFBatchNorm'].append(name)
 
-    rename_legacy_names_in_state_dict(state_dict_to_load, legacy_bn1d_names, 'BatchNorm1d', 'NNCFBatchNorm1d')
-    rename_legacy_names_in_state_dict(state_dict_to_load, legacy_bn2d_names, 'BatchNorm2d', 'NNCFBatchNorm2d')
-    rename_legacy_names_in_state_dict(state_dict_to_load, legacy_bn3d_names, 'BatchNorm3d', 'NNCFBatchNorm3d')
-    rename_legacy_names_in_state_dict(state_dict_to_load, legacy_nncfbn_names, 'NNCFBatchNorm', 'NNCFBatchNorm2d')
+    for old_name, new_name in LEGACY_VS_NEW_BN_MAP.items():
+        rename_legacy_names_in_state_dict(state_dict_to_load, legacy_names[old_name], old_name, new_name)
 
 def maybe_convert_legacy_names_in_compress_state(compression_state: Dict[str, Any]) -> None:
     """
@@ -351,45 +360,27 @@ def maybe_convert_legacy_names_in_compress_state(compression_state: Dict[str, An
         return
 
     qips = controller_state['quantization']['quantizer_setup']['quantization_points']
-    legacy_bn1d_names = False
-    legacy_bn2d_names = False
-    legacy_bn3d_names = False
-    legacy_nncfbn_names = False
+
+    detected_legacy_names = {
+        'BatchNorm1d': False,
+        'BatchNorm2d': False,
+        'BatchNorm3d': False,
+        'NNCFBatchNorm': False,
+    }
 
     for point in qips.values():
         name = point['qip']['target_node_name']
-        if 'BatchNorm2d' in name and not 'NNCFBatchNorm2d' in name:
-            legacy_bn2d_names = True
-            point['qip']['target_node_name'] = name.replace('BatchNorm2d', 'NNCFBatchNorm2d')
+        for old_name, new_name in LEGACY_VS_NEW_BN_MAP.items():
+            if old_name in name and not new_name in name:
+                detected_legacy_names[old_name] = True
+                point['qip']['target_node_name'] = name.replace(old_name, new_name)
+                break
 
-        if 'BatchNorm1d' in name and not 'NNCFBatchNorm1d' in name:
-            legacy_bn1d_names = True
-            point['qip']['target_node_name'] = name.replace('BatchNorm1d', 'NNCFBatchNorm1d')
-
-        if 'BatchNorm3d' in name and not 'NNCFBatchNorm3d' in name:
-            legacy_bn3d_names = True
-            point['qip']['target_node_name'] = name.replace('BatchNorm3d', 'NNCFBatchNorm3d')
-
-        if 'NNCFBatchNorm' in name and not 'NNCFBatchNorm2d' in name:
-            legacy_nncfbn_names = True
-            point['qip']['target_node_name'] = name.replace('NNCFBatchNorm', 'NNCFBatchNorm2d')
-
-    if legacy_bn1d_names:
-        warnings.warn('Legacy Batch Norm layer names was detected in quantization setup target point names.'
-                      ' All occurrences of `BatchNorm1d` in nodes names was replaced by `NNCFBatchNorm1d`',
-                      category=DeprecationWarning)
-    if legacy_bn2d_names:
-        warnings.warn('Legacy Batch Norm layer names was detected in quantization setup target point names.'
-                      ' All occurrences of `BatchNorm2d` in nodes names was replaced by `NNCFBatchNorm2d`',
-                      category=DeprecationWarning)
-    if legacy_bn3d_names:
-        warnings.warn('Legacy Batch Norm layer names was detected in quantization setup target point names.'
-                      ' All occurrences of `BatchNorm3d` in nodes names was replaced by `NNCFBatchNorm3d`',
-                      category=DeprecationWarning)
-    if legacy_nncfbn_names:
-        warnings.warn('Legacy Batch Norm layer names was detected in quantization setup target point names.'
-                      ' All occurrences of `NNCFBatchNorm` in nodes names was replaced by `NNCFBatchNorm2d`',
-                      category=DeprecationWarning)
+    for old_name, was_detected in  detected_legacy_names.items():
+        if was_detected:
+            new_name = LEGACY_VS_NEW_BN_MAP[old_name]
+            nncf_logger.warning('Legacy Batch Norm layer names was detected in quantization setup target point names.'
+                      ' All occurrences of `{}` in nodes names was replaced by `{}`'.format(old_name, new_name))
 
 def get_model_device(model: torch.nn.Module) -> torch.device:
     try:
