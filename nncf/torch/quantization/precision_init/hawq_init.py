@@ -327,8 +327,6 @@ class HAWQPrecisionInitializer(BasePrecisionInitializer):
             groups_of_adjacent_quantizers = new_ctrl.groups_of_adjacent_quantizers
             hawq_debugger.dump_bitwidth_graph(new_ctrl, new_model, groups_of_adjacent_quantizers)
         bitwidth_per_scope = self.get_bitwidth_per_scope(final_quantizer_setup)
-        str_bw = [str(element) for element in self.get_bitwidth_per_scope(final_quantizer_setup)]
-        nncf_logger.info('\n'.join(['\n\"bitwidth_per_scope\": [', ',\n'.join(str_bw), ']']))
         from nncf.common.utils.debug import DEBUG_LOG_DIR
         Path(DEBUG_LOG_DIR).mkdir(parents=True, exist_ok=True)
         with safe_open(Path(DEBUG_LOG_DIR) / 'bitwidth_per_scope.json', "w") as outfile:

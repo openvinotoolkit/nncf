@@ -115,6 +115,7 @@ from nncf.torch.quantization.precision_constraints import HardwareQuantizationCo
 from nncf.torch.quantization.precision_init.adjacent_quantizers import GroupsOfAdjacentQuantizers
 from nncf.torch.quantization.precision_init.autoq_init import AutoQPrecisionInitParams
 from nncf.torch.quantization.precision_init.base_init import BasePrecisionInitParams
+from nncf.torch.quantization.precision_init.base_init import BasePrecisionInitializer
 from nncf.torch.quantization.precision_init.hawq_init import HAWQPrecisionInitParams
 from nncf.torch.quantization.precision_init.manual_init import ManualPrecisionInitParams
 from nncf.torch.quantization.schedulers import QUANTIZATION_SCHEDULERS
@@ -592,6 +593,9 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
         target_model.register_compression_module_type(ExtraCompressionModuleType.EXTERNAL_QUANTIZER)
         if self._single_config_quantizer_setup is None:
             self._single_config_quantizer_setup = self._get_quantizer_setup(target_model)
+        bitwidth_per_scope = BasePrecisionInitializer.get_bitwidth_per_scope(self._single_config_quantizer_setup)
+        str_bw = [str(element) for element in bitwidth_per_scope]
+        nncf_logger.debug('\n'.join(['\n\"bitwidth_per_scope\": [', ',\n'.join(str_bw), ']']))
 
         minmax_values_for_range_init = {}
         if is_main_process() and self.should_init:
