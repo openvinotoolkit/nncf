@@ -26,6 +26,8 @@ class Sampler(ABC):
 
     def __init__(self, dataloader: DataLoader):
         self.dataloader = dataloader
+        self.batch_size = dataloader.batch_size
+        self.batch_indices = list(range(0, len(self.dataloader) + 1, self.batch_size))
 
     @abstractmethod
     def __iter__(self):
@@ -43,13 +45,10 @@ class BatchSampler(Sampler):
 
     def __init__(self, dataloader: DataLoader):
         super().__init__(dataloader)
-        self.indices = list(range(len(self.dataloader)))
-        self.batch_size = dataloader.batch_size
 
     def __iter__(self):
-        batch_indices = list(range(0, len(self.dataloader), self.batch_size))
-        for i in range(len(batch_indices) - 1):
-            batch = self.form_batch(batch_indices[i], batch_indices[i + 1])
+        for i in range(len(self.batch_indices) - 1):
+            batch = self.form_batch(self.batch_indices[i], self.batch_indices[i + 1])
             yield batch
 
     def __len__(self):
@@ -73,7 +72,6 @@ class RandomBatchSampler(BatchSampler):
         random.shuffle(self.random_permutated_indices)
 
     def __iter__(self):
-        batch_indices = list(range(0, len(self.dataloader), self.batch_size))
-        for i in range(len(batch_indices) - 1):
-            batch = self.form_batch(batch_indices[i], batch_indices[i + 1])
+        for i in range(len(self.batch_indices) - 1):
+            batch = self.form_batch(self.batch_indices[i], self.batch_indices[i + 1])
             yield batch
