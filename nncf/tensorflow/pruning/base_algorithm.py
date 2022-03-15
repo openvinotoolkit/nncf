@@ -11,6 +11,7 @@
  limitations under the License.
 """
 
+from typing import Dict
 from typing import List
 from typing import Tuple
 
@@ -40,7 +41,7 @@ from nncf.tensorflow.graph.transformations.commands import TFLayerWeight
 from nncf.tensorflow.graph.transformations.commands import TFInsertionCommand
 from nncf.tensorflow.graph.transformations.layout import TFTransformationLayout
 from nncf.tensorflow.graph.utils import get_layer_identifier
-from nncf.tensorflow.graph.utils import collect_wrapped_layers
+from nncf.tensorflow.graph.utils import get_nncf_operations
 from nncf.tensorflow.tensor import TFNNCFTensor
 from nncf.tensorflow.pruning.tensor_processor import TFNNCFPruningTensorProcessor
 from nncf.tensorflow.pruning.operations import TFElementwisePruningOp
@@ -280,6 +281,7 @@ class BasePruningAlgoController(BaseCompressionAlgorithmController):
         self._pruned_layer_groups_info = pruned_layer_groups_info
         self.prune_flops = False
         self._check_pruning_level(params)
+        self._num_of_sparse_elements_by_node = None
 
     def freeze(self):
         raise NotImplementedError
@@ -301,29 +303,39 @@ class BasePruningAlgoController(BaseCompressionAlgorithmController):
         if pruning_flops_target:
             self.prune_flops = True
 
+    def _calculate_num_of_sparse_elements_by_node(self) -> Dict[NNCFNodeName, int]:
+        """Returns the number of sparse elements per node. Take into account names ('^') for the shared ops."""
+        if self._num_of_sparse_elements_by_node is None:
+            self._calculate_pruned_layers_summary()
+
+        retval = {}
+        for group in self._pruned_layer_groups_info.get_all_clusters():
+            for node in group.elements:
+                retval[node.node_name] = self._num_of_sparse_elements_by_node[node.layer_name]
+        return retval
+
     def _calculate_pruned_layers_summary(self) -> List[PrunedLayerSummary]:
         pruning_levels = []
         mask_names = []
         weights_shapes = []
         mask_shapes = []
-        wrapped_layers = collect_wrapped_layers(self._model)
-        for wrapped_layer in wrapped_layers:
-            for weight_attr, ops in wrapped_layer.weights_attr_ops.items():
-                for op_name in ops:
-                    if op_name in self._op_names:
-                        mask = wrapped_layer.ops_weights[op_name]['mask']
-                        mask_names.append(mask.name)
-                        weights_shapes.append(list(mask.shape))
-                        reduce_axes = list(range(len(mask.shape)))
-                        filter_axis = get_filter_axis(wrapped_layer, weight_attr)
-                        if filter_axis == -1:
-                            filter_axis = reduce_axes[filter_axis]
-                        reduce_axes.remove(filter_axis)
-                        filter_mask = tf.reduce_max(tf.cast(mask, tf.int32), axis=reduce_axes, keepdims=True)
-                        mask_shapes.append(list(filter_mask.shape))
-                        filters_number = get_filters_num(wrapped_layer)
-                        pruned_filters_number = filters_number - tf.reduce_sum(filter_mask)
-                        pruning_levels.append(pruned_filters_number / filters_number)
+        self._num_of_sparse_elements_by_node = {}
+        for wrapped_layer, weight_attr, op_name in get_nncf_operations(self._model, self._op_names):
+            mask = wrapped_layer.ops_weights[op_name.name]['mask']
+            mask_names.append(mask.name)
+            weights_shapes.append(list(mask.shape))
+            reduce_axes = list(range(len(mask.shape)))
+            filter_axis = get_filter_axis(wrapped_layer, weight_attr)
+            if filter_axis == -1:
+                filter_axis = reduce_axes[filter_axis]
+            reduce_axes.remove(filter_axis)
+            filter_mask = tf.reduce_max(tf.cast(mask, tf.int32), axis=reduce_axes, keepdims=True)
+            mask_shapes.append(list(filter_mask.shape))
+            filters_number = get_filters_num(wrapped_layer)
+            pruned_filters_number = filters_number - tf.reduce_sum(filter_mask)
+            pruning_levels.append(pruned_filters_number / filters_number)
+            pruned_filter_number = filters_number - tf.reduce_sum(filter_mask)
+            self._num_of_sparse_elements_by_node[wrapped_layer.name] = pruned_filter_number.numpy()
 
         pruning_levels = tf.keras.backend.batch_get_value(pruning_levels)
         mask_pruning = list(zip(mask_names, weights_shapes, mask_shapes, pruning_levels))

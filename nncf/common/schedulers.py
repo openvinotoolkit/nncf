@@ -182,8 +182,26 @@ class BaseCompressionScheduler(CompressionScheduler):
         update the compression method state taking into account the training step,
         there is the same for current_epoch is -1.
         """
-        self.current_step = -1
-        self.current_epoch = -1
+        self._current_step = -1
+        self._current_epoch = -1
+
+    @property
+    def current_step(self) -> int:
+        """
+        Return current step.
+
+        :return: Current step.
+        """
+        return self._current_step
+
+    @property
+    def current_epoch(self) -> int:
+        """
+        Return current epoch.
+
+        :return: Current epoch.
+        """
+        return self._current_epoch
 
     def step(self, next_step: Optional[int] = None) -> None:
         """
@@ -194,8 +212,8 @@ class BaseCompressionScheduler(CompressionScheduler):
             will update the state of the compression method.
         """
         if next_step is None:
-            next_step = self.current_step + 1
-        self.current_step = next_step
+            next_step = self._current_step + 1
+        self._current_step = next_step
 
     def epoch_step(self, next_epoch: Optional[int] = None) -> None:
         """
@@ -206,8 +224,8 @@ class BaseCompressionScheduler(CompressionScheduler):
             will update the state of the compression method.
         """
         if next_epoch is None:
-            next_epoch = self.current_epoch + 1
-        self.current_epoch = next_epoch
+            next_epoch = self._current_epoch + 1
+        self._current_epoch = next_epoch
 
     def load_state(self, state: Dict[str, Any]) -> None:
         """
@@ -216,8 +234,8 @@ class BaseCompressionScheduler(CompressionScheduler):
 
         :param state: Output of `get_state()` method.
         """
-        self.current_step = state['current_step']
-        self.current_epoch = state['current_epoch']
+        self._current_step = state['current_step']
+        self._current_epoch = state['current_epoch']
 
     def get_state(self) -> Dict[str, Any]:
         """
@@ -226,8 +244,8 @@ class BaseCompressionScheduler(CompressionScheduler):
         :return: The compression scheduler state.
         """
         return {
-            'current_step': self.current_step,
-            'current_epoch': self.current_epoch
+            'current_step': self._current_step,
+            'current_epoch': self._current_epoch
         }
 
 

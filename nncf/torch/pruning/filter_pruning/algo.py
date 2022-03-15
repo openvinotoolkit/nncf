@@ -47,10 +47,8 @@ from nncf.common.statistics import NNCFStatistics
 from nncf.common.utils.debug import is_debug
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.config.extractors import extract_bn_adaptation_init_params
-from nncf.torch.tensor import PTNNCFTensor
 from nncf.torch.algo_selector import PT_COMPRESSION_ALGORITHMS
 from nncf.torch.compression_method_api import PTCompressionAlgorithmController
-from nncf.torch.tensor_statistics.collectors import PTNNCFCollectorTensorProcessor
 from nncf.torch.graph.operator_metatypes import PTConv1dMetatype
 from nncf.torch.graph.operator_metatypes import PTConv2dMetatype
 from nncf.torch.graph.operator_metatypes import PTConv3dMetatype
@@ -682,18 +680,17 @@ class FilterPruningController(BasePruningAlgoController):
         self._scheduler = StubCompressionScheduler()
         self._scheduler.current_pruning_level = 0.0
 
-    def _collect_pruning_masks(self) -> Dict[str, PTNNCFTensor]:
-        retval = {}
-        for group in self.pruned_module_groups_info.get_all_clusters():
-            for node in group.elements:
-                retval[node.node_name] = PTNNCFTensor(node.operand.binary_filter_pruning_mask)
-        return retval
+    def _calculate_num_of_sparse_elements_by_node(self) -> Dict[str, int]:
+        num_of_sparse_elements_by_node = {}
+        for minfo in self.pruned_module_groups_info.get_all_nodes():
+            mask = self.get_mask(minfo)
+            num_of_sparse_elements_by_node[minfo.node_name] = mask.view(-1).size(0) - mask.nonzero().size(0)
+        return num_of_sparse_elements_by_node
 
     def _update_benchmark_statistics(self):
         tmp_in_channels, tmp_out_channels = calculate_in_out_channels_by_masks(
             pruning_groups=self.pruned_module_groups_info.get_all_clusters(),
-            masks=self._collect_pruning_masks(),
-            tensor_processor=PTNNCFCollectorTensorProcessor,
+            num_of_sparse_elements_by_node=self._calculate_num_of_sparse_elements_by_node(),
             full_input_channels=self._modules_in_channels,
             full_output_channels=self._modules_out_channels,
             pruning_groups_next_nodes=self.next_nodes)
