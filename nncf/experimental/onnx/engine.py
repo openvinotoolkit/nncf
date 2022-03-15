@@ -25,11 +25,11 @@ class ONNXEngine(Engine):
     Engine for ONNX backend using ONNXRuntime to infer the model.
     """
 
-    def __init__(self, dataloader: DataLoader = None, **rt_session_options):
+    def __init__(self, **rt_session_options):
         """
 
         """
-        super().__init__(dataloader)
+        super().__init__()
         self.sess = None
         self.rt_session_options = rt_session_options
         if 'providers' not in self.rt_session_options:

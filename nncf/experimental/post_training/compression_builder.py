@@ -39,18 +39,18 @@ class CompressionBuilder:
         """
         self.algorithms.append(algorithm)
 
-    def _create_engine(self, model: ModelType, dataloader: DataLoader) -> Engine:
+    def _create_engine(self, model: ModelType) -> Engine:
         backend = determine_model_backend(model)
         if backend == Backend.ONNX:
             from nncf.experimental.onnx.engine import ONNXEngine
-            return ONNXEngine(dataloader)
+            return ONNXEngine()
         return None
 
-    def _create_statistics_aggregator(self, model: ModelType, engine: Engine):
+    def _create_statistics_aggregator(self, model: ModelType, engine: Engine, dataloader: DataLoader):
         backend = determine_model_backend(model)
         if backend == Backend.ONNX:
             from nncf.experimental.onnx.statistics.statistics_aggregator import ONNXStatisticsAggregator
-            return ONNXStatisticsAggregator(engine)
+            return ONNXStatisticsAggregator(engine, dataloader)
         return None
 
     def _get_prepared_model_for_compression(self, model: ModelType) -> ModelType:
@@ -63,6 +63,12 @@ class CompressionBuilder:
     def apply(self, model: ModelType, dataloader: DataLoader, engine: Engine = None) -> ModelType:
         """
         Apply compression algorithms to the 'model'.
+        1) Prepare the original model. This step is essential for some backends, e.g. ONNX
+        2) Creates default Engine if it wasn't provided.
+        3) Creates StatisticsAggregator.
+        4) Get layers for statistics collection from algorithms.
+        5) Collect all statistics.
+        6) Apply algorithms.
         """
 
         if not self.algorithms:
@@ -72,9 +78,9 @@ class CompressionBuilder:
         modified_model = self._get_prepared_model_for_compression(model)
 
         if engine is None:
-            engine = self._create_engine(modified_model, dataloader)
+            engine = self._create_engine(modified_model)
 
-        statistics_aggregator = self._create_statistics_aggregator(modified_model, engine)
+        statistics_aggregator = self._create_statistics_aggregator(modified_model, engine, dataloader)
         for algorithm in self.algorithms:
             layers_to_collect_statistics = algorithm.get_layers_for_statistics(modified_model)
             statistics_aggregator.register_layer_statistics(layers_to_collect_statistics)

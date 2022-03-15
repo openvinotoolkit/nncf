@@ -16,7 +16,7 @@ from typing import Union
 import torch
 import numpy as np
 
-from nncf.experimental.onnx.engine import ONNXEngine
+from nncf.experimental.post_training.api.dataloader import DataLoader
 
 from nncf.experimental.post_training.sampler import BatchSampler
 from nncf.experimental.post_training.sampler import RandomBatchSampler
@@ -52,9 +52,9 @@ class ONNXRandomBatchSampler(RandomBatchSampler):
         raise RuntimeError('Unexpected input data type {tensors[0]}. Should be one of torch.Tensor or np.ndarray')
 
 
-def create_onnx_sampler(engine: ONNXEngine) -> Union[ONNXBatchSampler, ONNXRandomBatchSampler]:
-    if engine.dataloader.shuffle:
+def create_onnx_sampler(dataloader: DataLoader) -> Union[ONNXBatchSampler, ONNXRandomBatchSampler]:
+    if dataloader.shuffle:
         print('Using Shuffled dataset')
-        return ONNXRandomBatchSampler(engine.dataloader)
+        return ONNXRandomBatchSampler(dataloader)
     print('Using Non-Shuffled dataset')
-    return ONNXBatchSampler(engine.dataloader)
+    return ONNXBatchSampler(dataloader)

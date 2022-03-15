@@ -20,6 +20,7 @@ from typing import Dict
 
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
 from nncf.experimental.post_training.api.engine import Engine
+from nncf.experimental.post_training.api.dataloader import DataLoader
 
 TensorType = TypeVar('TensorType')
 ModelType = TypeVar('ModelType')
@@ -30,8 +31,9 @@ class StatisticsAggregator(ABC):
     Base class for statistics collection.
     """
 
-    def __init__(self, engine: Engine):
+    def __init__(self, engine: Engine, dataloader: DataLoader):
         self.engine = engine
+        self.dataloader = dataloader
         self.is_calculate_metric = False
         self.layers_statistics = {}  # type: Dict[str, TensorStatisticCollectorBase]
 
@@ -39,6 +41,7 @@ class StatisticsAggregator(ABC):
     def collect_statistics(self, model: ModelType) -> None:
         """
         Collects statistics for layers determined in self.layers_statistics.
+        The statistics are stored in self.layers_statistics.
         """
 
     def register_layer_statistics(self, layer_statistics: Dict[str, TensorStatisticCollectorBase]):

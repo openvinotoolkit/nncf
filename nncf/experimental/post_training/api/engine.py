@@ -28,8 +28,7 @@ class Engine(ABC):
     The basic class aims to provide the interface to infer the model.
     """
 
-    def __init__(self, dataloader: DataLoader = None):
-        self.dataloader = dataloader
+    def __init__(self):
         self.model = None
 
     def set_model(self, model: ModelType) -> None:

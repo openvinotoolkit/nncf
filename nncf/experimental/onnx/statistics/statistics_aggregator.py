@@ -24,11 +24,12 @@ from nncf.experimental.post_training.statistics.statistics_aggregator import Sta
 
 from nncf.experimental.onnx.sampler import create_onnx_sampler
 from nncf.experimental.onnx.engine import ONNXEngine
+from nncf.experimental.post_training.api.dataloader import DataLoader
 
 
 class ONNXStatisticsAggregator(StatisticsAggregator):
-    def __init__(self, engine: ONNXEngine):
-        super().__init__(engine)
+    def __init__(self, engine: ONNXEngine, dataloader: DataLoader):
+        super().__init__(engine, dataloader)
 
     def collect_statistics(self, model: onnx.ModelProto) -> None:
         layers_to_collect_statistics = list(self.layers_statistics.keys())
@@ -43,7 +44,7 @@ class ONNXStatisticsAggregator(StatisticsAggregator):
         with tempfile.NamedTemporaryFile() as temporary_model:
             onnx.save(model_with_intermediate_outputs, temporary_model.name)
             self.engine.set_model(temporary_model.name)
-            sampler = create_onnx_sampler(self.engine)
+            sampler = create_onnx_sampler(self.dataloader)
             for i, sample in enumerate(sampler):
                 if i == max_number_samples:
                     break

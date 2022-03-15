@@ -56,7 +56,6 @@ class PostTrainingQuantization(Algorithm):
         while self.algorithms:
             algorithm = self.algorithms.popleft()
             quantized_model = algorithm.apply(model, engine, layer_statistics)
-
         return quantized_model
 
     def get_layers_for_statistics(self, model: ModelType) -> Dict[str, TensorStatisticCollectorBase]:
