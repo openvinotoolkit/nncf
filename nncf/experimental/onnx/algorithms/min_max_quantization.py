@@ -44,6 +44,7 @@ from nncf.experimental.onnx.algorithms.quantization.helper import calculate_acti
 from nncf.experimental.onnx.algorithms.quantization.helper import calculate_weight_quantizer_parameters
 
 from nncf.experimental.onnx.hardware.config import ONNXHWConfig
+from nncf.experimental.post_training.backend import Backend
 
 QUANTIZATION_LAYER_METATYPES = GENERAL_WEIGHT_LAYER_METATYPES
 
@@ -164,3 +165,6 @@ class ONNXMinMaxQuantization(MinMaxQuantization):
             output[activation_quantizer] = self.generate_stat_collector(self.activation_quantizer_config)
 
         return output
+
+    def create_subalgorithms(self, backend: Backend) -> None:
+        return

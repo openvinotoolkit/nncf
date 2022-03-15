@@ -39,22 +39,19 @@ class CompressionBuilder:
         """
         self.algorithms.append(algorithm)
 
-    def _create_engine(self, model: ModelType) -> Engine:
-        backend = determine_model_backend(model)
+    def _create_engine(self, backend: Backend) -> Engine:
         if backend == Backend.ONNX:
             from nncf.experimental.onnx.engine import ONNXEngine
             return ONNXEngine()
         return None
 
-    def _create_statistics_aggregator(self, model: ModelType, engine: Engine, dataloader: DataLoader):
-        backend = determine_model_backend(model)
+    def _create_statistics_aggregator(self, engine: Engine, dataloader: DataLoader, backend: Backend):
         if backend == Backend.ONNX:
             from nncf.experimental.onnx.statistics.statistics_aggregator import ONNXStatisticsAggregator
             return ONNXStatisticsAggregator(engine, dataloader)
         return None
 
-    def _get_prepared_model_for_compression(self, model: ModelType) -> ModelType:
-        backend = determine_model_backend(model)
+    def _get_prepared_model_for_compression(self, model: ModelType, backend: Backend) -> ModelType:
         if backend == Backend.ONNX:
             from nncf.experimental.onnx.helper import modify_onnx_model_for_quantization
             return modify_onnx_model_for_quantization(model)
@@ -64,6 +61,7 @@ class CompressionBuilder:
         """
         Apply compression algorithms to the 'model'.
         1) Prepare the original model. This step is essential for some backends, e.g. ONNX
+        2) Creates subalgorithms, which is essential for some composite algorithms such as PostTrainingQuantization
         2) Creates default Engine if it wasn't provided.
         3) Creates StatisticsAggregator.
         4) Get layers for statistics collection from algorithms.
@@ -75,12 +73,16 @@ class CompressionBuilder:
             print('There are no algorithms added. The original model will be returned.')
             return model
 
-        modified_model = self._get_prepared_model_for_compression(model)
+        backend = determine_model_backend(model)
+        modified_model = self._get_prepared_model_for_compression(model, backend)
 
         if engine is None:
-            engine = self._create_engine(modified_model)
+            engine = self._create_engine(backend)
 
-        statistics_aggregator = self._create_statistics_aggregator(modified_model, engine, dataloader)
+        for algorithm in self.algorithms:
+            algorithm.create_subalgorithms(backend)
+
+        statistics_aggregator = self._create_statistics_aggregator(engine, dataloader, backend)
         for algorithm in self.algorithms:
             layers_to_collect_statistics = algorithm.get_layers_for_statistics(modified_model)
             statistics_aggregator.register_layer_statistics(layers_to_collect_statistics)

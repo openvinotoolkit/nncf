@@ -21,6 +21,7 @@ from typing import Union
 from enum import Enum
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
 from nncf.experimental.post_training.api.engine import Engine
+from nncf.experimental.post_training.backend import Backend
 
 ModelType = TypeVar('ModelType')
 
@@ -48,6 +49,14 @@ class Algorithm(ABC):
     Base class for all Post-Training algorithms.
     """
 
+    def apply(self, model: ModelType, engine: Engine,
+              layer_statistics: Dict[str, TensorStatisticCollectorBase]) -> ModelType:
+        layers = self.get_layers_for_statistics(model)
+        for layer in layers.keys():
+            if layer_statistics.get(layer) is None:
+                raise RuntimeError(f'No statistics collected for the layer {layer}')
+        return self._apply(model, engine, layer_statistics)
+
     @abstractmethod
     def _apply(self, model: ModelType, engine: Engine, layer_statistics) -> ModelType:
         """
@@ -60,10 +69,8 @@ class Algorithm(ABC):
         Returns activations layers, for which StatisticsCollector should collect statistics.
         """
 
-    def apply(self, model: ModelType, engine: Engine,
-              layer_statistics: Dict[str, TensorStatisticCollectorBase]) -> ModelType:
-        layers = self.get_layers_for_statistics(model)
-        for layer in layers.keys():
-            if layer_statistics.get(layer) is None:
-                raise RuntimeError('No statistics collected for the layer {layer}')
-        return self._apply(model, engine, layer_statistics)
+    @abstractmethod
+    def create_subalgorithms(self, backend: Backend) -> None:
+        """
+        Some complex algorithms have inner algorithms, such
+        """

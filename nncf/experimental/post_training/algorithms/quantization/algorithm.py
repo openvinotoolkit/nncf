@@ -11,7 +11,6 @@
  limitations under the License.
 """
 
-from typing import Deque
 from typing import Dict
 from typing import TypeVar
 from collections import deque
@@ -19,7 +18,6 @@ from collections import deque
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
 
 from nncf.experimental.post_training.backend import Backend
-from nncf.experimental.post_training.backend import determine_model_backend
 from nncf.experimental.post_training.api.engine import Engine
 from nncf.experimental.post_training.algorithms import Algorithm
 from nncf.experimental.post_training.algorithms import PostTrainingAlgorithms
@@ -60,17 +58,13 @@ class PostTrainingQuantization(Algorithm):
 
     def get_layers_for_statistics(self, model: ModelType) -> Dict[str, TensorStatisticCollectorBase]:
         output = {}
-        self.algorithms = self._create_algorithms(model)
         for algorithm in self.algorithms:
             output = {**output, **algorithm.get_layers_for_statistics(model)}
         return output
 
-    def _create_algorithms(self, model: ModelType) -> Deque[Algorithm]:
-        output = deque()
-        backend = determine_model_backend(model)
+    def create_subalgorithms(self, backend: Backend) -> None:
         if backend == Backend.ONNX:
             from nncf.experimental.onnx.algorithms.min_max_quantization import ONNXMinMaxQuantization
             for algorithm, parameters in self.algorithms_to_created.items():
                 if algorithm == PostTrainingAlgorithms.MinMaxQuantization:
-                    output.append(ONNXMinMaxQuantization(parameters))
-        return output
+                    self.algorithms.append(ONNXMinMaxQuantization(parameters))
