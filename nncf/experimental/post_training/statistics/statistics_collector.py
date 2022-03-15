@@ -13,7 +13,6 @@ ModelType = TypeVar('ModelType')
 
 
 class StatisticsCollector(ABC):
-    # TODO: should be reviewed.
     """
     Base class for statistics collection.
     """

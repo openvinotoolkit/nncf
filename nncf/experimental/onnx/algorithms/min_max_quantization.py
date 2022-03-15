@@ -56,7 +56,6 @@ class ONNXMinMaxQuantization(MinMaxQuantization):
         self._activation_quantizers = []
 
     def generate_stat_collector(self, quantizer_config: QuantizerConfig) -> TensorStatisticCollectorBase:
-        #  TODO: change to ONNXTensorStatisticCollectorBase
         is_symmetric = quantizer_config.mode == QuantizationMode.SYMMETRIC
         axes = (0, 2, 3) if quantizer_config.per_channel else None
         if self.range_type == RangeType.MINMAX:
@@ -147,7 +146,6 @@ class ONNXMinMaxQuantization(MinMaxQuantization):
             parameters = calculate_weight_quantizer_parameters(weight_tensor, self.weight_quantizer_config)
             command = ONNXQuantizerInsertionCommand(weight_quantizer, parameters)
             transformation_commands.append(command)
-        # We are sure that layer_statistics match self._activation_quantizers
         for layer_to_collect_statistic in activation_quantizers:
             parameters = calculate_activation_quantizer_parameters(layer_statistics[layer_to_collect_statistic],
                                                                    self.activation_quantizer_config)

@@ -14,7 +14,8 @@ class DataLoader(ABC):
     """
 
     def __init__(self, batch_size=1, shuffle: bool = True):
-        self.batch_size = batch_size
+        # TODO (kshpv): add support batch_size
+        self.batch_size = 1
         self.shuffle = shuffle
 
     @abstractmethod

@@ -45,7 +45,8 @@ class Algorithm(ABC):
         Returns activations layers, for which StatisticsCollector should collect statistics.
         """
 
-    def apply(self, model: ModelType, engine: Engine, layer_statistics: Dict[str, TensorStatisticCollectorBase]) -> ModelType:
+    def apply(self, model: ModelType, engine: Engine,
+              layer_statistics: Dict[str, TensorStatisticCollectorBase]) -> ModelType:
         """
         Applies the algorithm to the 'compressed_model'.
         """
