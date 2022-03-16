@@ -180,7 +180,6 @@ class TensorFlowOpWrapper:
         return args, kwargs
 
 
-
 class TFPatcher:
     """
     Performs modifications of the TensorFlow code.
