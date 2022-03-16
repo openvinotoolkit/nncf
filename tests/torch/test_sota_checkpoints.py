@@ -86,7 +86,7 @@ class TestSotaCheckpoints:
         return "{}.metrics.json".format(model_name)
 
     CMD_FORMAT_STRING = "{} tests/torch/run_examples_for_test_sota.py {sample_type} -m {} --config {conf} \
-         --data {dataset} --log-dir={log_dir} --metrics-dump \
+         --data {dataset}/{data_name}/ --log-dir={log_dir} --metrics-dump \
           {metrics_dump_file_path}"
 
 
@@ -438,7 +438,7 @@ class TestSotaCheckpoints:
         if not os.path.exists(onnx_path):
             os.mkdir(onnx_path)
         CMD_FORMAT_STRING = "{} examples/torch/{sample_type}/main.py -m export --cpu-only --config {conf} \
-             --data {dataset} --to-onnx={onnx_path}"
+             --data {dataset}/{data_name} --to-onnx={onnx_path}"
         self.test = "openvino_eval"
         if onnx_type == "q_dq":
             if not os.path.exists(onnx_path / 'q_dq'):
