@@ -10,6 +10,7 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+import warnings
 from collections import OrderedDict
 from typing import Dict, Any, List
 
@@ -309,8 +310,8 @@ def rename_legacy_names_in_state_dict(state_dict_to_load: Dict[str, Any],
         state_dict_to_load[new_key] = tensor
 
     if legacy_names:
-        nncf_logger.warning('Legacy Batch Norm layer names was detected in checkpoint model state dict.'
-                      ' All occurrences of `{}` in nodes names was replaced by `{}`'.format(legacy_name, new_name))
+        warning_deprecated('Legacy Batch Norm layer names was detected in checkpoint model state dict.'
+                           ' All occurrences of `{}` in nodes names was replaced by `{}`'.format(legacy_name, new_name))
 
 LEGACY_VS_NEW_BN_MAP = {
     'BatchNorm1d': 'NNCFBatchNorm1d',
@@ -378,8 +379,9 @@ def maybe_convert_legacy_names_in_compress_state(compression_state: Dict[str, An
     for old_name, was_detected in  detected_legacy_names.items():
         if was_detected:
             new_name = LEGACY_VS_NEW_BN_MAP[old_name]
-            nncf_logger.warning('Legacy Batch Norm layer names was detected in quantization setup target point names.'
-                      ' All occurrences of `{}` in nodes names was replaced by `{}`'.format(old_name, new_name))
+            warning_deprecated('Legacy Batch Norm layer names was detected in quantization setup target point names. '
+                               'All occurrences of `{}` in nodes names was replaced by `{}`'.format(old_name,
+                                                                                                    new_name))
 
 def get_model_device(model: torch.nn.Module) -> torch.device:
     try:
@@ -388,3 +390,6 @@ def get_model_device(model: torch.nn.Module) -> torch.device:
         # The model had no parameters at all, doesn't matter which device to choose
         device = torch.device('cpu')
     return device
+
+def warning_deprecated(msg):
+    warnings.warn(msg, DeprecationWarning)
