@@ -164,6 +164,9 @@ class TensorFlowOpWrapper:
 
         return outputs
 
+    def __getattr__(self, name):
+        return getattr(self._op, name)
+
     @staticmethod
     def _apply_hooks(hooks: List[Hook], args, kwargs):
         """
@@ -175,6 +178,7 @@ class TensorFlowOpWrapper:
         for hook in hooks:
             args, kwargs = hook(*args, **kwargs)
         return args, kwargs
+
 
 
 class TFPatcher:
