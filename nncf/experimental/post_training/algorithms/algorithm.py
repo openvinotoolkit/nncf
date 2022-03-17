@@ -34,13 +34,13 @@ class PostTrainingAlgorithms(Enum):
 
 class AlgorithmParameters(ABC):
     """
-    Base class for Post-Training algorithms parameters.
+    Base class for Post-Training algorithm parameters.
     """
 
     @abstractmethod
     def to_json(self) -> Dict[str, Union[str, float, int]]:
         """
-        Serializes algorithms parameters to JSON format.
+        Serializes algorithm parameters to JSON format.
         """
 
 
