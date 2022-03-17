@@ -21,9 +21,9 @@ from nncf.experimental.post_training.api.dataloader import DataLoader
 
 INPUT_SHAPE = [3, 10, 10]
 
-DATASET_SAMPLES = [(np.zeros_like(INPUT_SHAPE), 0),
-                   (np.ones_like(INPUT_SHAPE), 1),
-                   (100 * np.ones_like(INPUT_SHAPE), 2)]
+DATASET_SAMPLES = [(np.zeros(INPUT_SHAPE), 0),
+                   (np.ones(INPUT_SHAPE), 1),
+                   (100 * np.ones(INPUT_SHAPE), 2)]
 
 
 class TestDataloader(DataLoader):
