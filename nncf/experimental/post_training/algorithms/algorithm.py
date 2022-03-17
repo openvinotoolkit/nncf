@@ -66,7 +66,7 @@ class Algorithm(ABC):
     @abstractmethod
     def get_layers_for_statistics(self, model: ModelType) -> Dict[str, TensorStatisticCollectorBase]:
         """
-        Returns activations layers, for which StatisticsCollector should collect statistics.
+        Returns activation layers, for which StatisticsCollector should collect statistics.
         """
 
     @abstractmethod
