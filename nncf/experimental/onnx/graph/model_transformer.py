@@ -28,6 +28,11 @@ from nncf.experimental.onnx.graph.transformations.commands import ONNXQuantizerI
 
 ModelType = TypeVar('ModelType')
 
+QUANTIZER_NAME_PREFIX = 'QuantizeLinear_'
+DEQUANTIZER_NAME_PREFIX = 'DequantizeLinear_'
+SCALE_TENSOR_NAME_PREFIX = 'scale_'
+ZERO_POINT_NAME_PREFIX = 'zero_point_'
+
 
 # pylint: disable=no-member
 
@@ -60,10 +65,10 @@ class ONNXModelTransformer(ModelTransformer):
         axis = 0 if per_channel else None
         dims = [len(scale)] if per_channel else []
 
-        quantizer_name = 'QuantizeLinear_' + target_point
-        dequantizer_name = 'DequantizeLinear_' + target_point
-        scale_tensor_name = 'scale_' + target_point
-        zero_point_tensor_name = 'zero_point_' + target_point
+        quantizer_name = QUANTIZER_NAME_PREFIX + target_point
+        dequantizer_name = DEQUANTIZER_NAME_PREFIX + target_point
+        scale_tensor_name = SCALE_TENSOR_NAME_PREFIX + target_point
+        zero_point_tensor_name = ZERO_POINT_NAME_PREFIX + target_point
 
         onnx_scale = onnx.helper.make_tensor(scale_tensor_name, onnx.TensorProto.FLOAT, dims, scale)
         onnx_zero_point = onnx.helper.make_tensor(zero_point_tensor_name, tensor_type, dims, zero_point)
@@ -83,7 +88,8 @@ class ONNXModelTransformer(ModelTransformer):
             axis=axis,
         )
 
-        # TODO:NEED TO ADJUST LOGIC FOR INCEPTION_v3
+        # TODO (kshpv): need to carefully look through the logic of nodes searching.
+        #  The model with the possible issues is inception_v3.
         onnx_graph = ONNXGraph(self.transformed_model)
         input_nodes = onnx_graph.get_nodes_by_input(target_point)
         if not input_nodes:

@@ -57,7 +57,7 @@ QUANTIZER_ONNX_DTYPE = [np.dtype(np.int8), np.dtype(np.int8), np.dtype(np.uint8)
 QUANTIZER_ONNX_ATTRIBUTES = [{'axis': 0}, {'axis': 0}, {'axis': 0}]
 
 
-class QUANTIZER_PARAMETERS:
+class QuantizerParameters:
     def __init__(self, target_layer, scale, zero_point, mode, onnx_dtype, onnx_attributes):
         self.target_layer = target_layer
         self.scale = scale
@@ -67,7 +67,7 @@ class QUANTIZER_PARAMETERS:
         self.onnx_attributes = onnx_attributes
 
 
-@pytest.mark.parametrize("test_parameters", [QUANTIZER_PARAMETERS(*attrs) for attrs in
+@pytest.mark.parametrize("test_parameters", [QuantizerParameters(*attrs) for attrs in
                                              zip(TARGET_LAYERS, QUANTIZER_SCALES, QUANTIZER_ZERO_POINT,
                                                  QUANTIZER_MODE, QUANTIZER_ONNX_DTYPE, QUANTIZER_ONNX_ATTRIBUTES)])
 def test_inserted_quantizer_parameters(test_parameters):

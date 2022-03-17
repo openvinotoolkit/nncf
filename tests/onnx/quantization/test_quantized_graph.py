@@ -47,7 +47,6 @@ INPUT_SHAPES = [
     [1, 3, 224, 224],
 ]
 
-PROJECT_ROOT = os.path.dirname(os.path.dirname(__file__))
 REFERENCE_GRAPHS_TEST_ROOT = 'data/reference_graphs/quantization'
 
 
@@ -84,7 +83,7 @@ def test_min_max_quantization_graph(tmp_path, model, path_ref_graph, input_shape
     nncf_graph = GraphConverter.create_nncf_graph(quantized_model)
     nx_graph = nncf_graph.get_graph_for_structure_analysis(extended=True)
 
-    data_dir = os.path.join(PROJECT_ROOT, REFERENCE_GRAPHS_TEST_ROOT)
+    data_dir = os.path.join(TEST_ROOT, 'onnx', REFERENCE_GRAPHS_TEST_ROOT)
     path_to_dot = os.path.abspath(os.path.join(data_dir, path_ref_graph))
 
     check_nx_graph(nx_graph, path_to_dot)
@@ -111,7 +110,7 @@ def test_post_training_quantization_graph(tmp_path, model, path_ref_graph, input
     nncf_graph = GraphConverter.create_nncf_graph(quantized_model)
     nx_graph = nncf_graph.get_graph_for_structure_analysis(extended=True)
 
-    data_dir = os.path.join(PROJECT_ROOT, REFERENCE_GRAPHS_TEST_ROOT)
+    data_dir = os.path.join(TEST_ROOT, 'onnx', REFERENCE_GRAPHS_TEST_ROOT)
     path_to_dot = os.path.abspath(os.path.join(data_dir, path_ref_graph))
 
     check_nx_graph(nx_graph, path_to_dot)

@@ -33,6 +33,8 @@ class GraphConverter:
     Builds the NNCFGraph from an ONNX model
     """
 
+    DEFAULT_TENSOR_SHAPE = [1]
+
     @staticmethod
     def create_nncf_graph(onnx_model: ModelProto) -> NNCFGraph:
         """
@@ -62,10 +64,14 @@ class GraphConverter:
                     continue
                 try:
                     shape = onnx_graph.get_edge_shape(output)
+                # This exception raised because ONNX format allows to not have shape field.
+                # Model example - effecienent-v2.
+                # In fact, the quantization algorithm doesn't utilize tensor shape information.
+                # So, if there is no shape, the DEFAULT_TENSOR_SHAPE is used.
                 except RuntimeError as err:
-                    # TODO: effecienent-v2 has no shape in node
                     print(err)
-                    shape = [1]
+                    print('The default tensor shape will be set.')
+                    shape = GraphConverter.DEFAULT_TENSOR_SHAPE
                 onnx_dtype = onnx_graph.get_edge_dtype(output)
                 nncf_dtype = GraphConverter.convert_onnx_dtype_to_nncf_dtype(onnx_dtype)
                 for in_node in nodes:
