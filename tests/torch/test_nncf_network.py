@@ -446,7 +446,7 @@ def get_nncf_graph_from_mock_nx_graph(nx_graph: nx.DiGraph) -> PTNNCFGraph:
                                                    [1, 1, 1, 1], input_port_id=pred_idx,
                                                    output_port_id=out_idx,
                                                    dtype=dtype,
-                                                   multiplicity_edge=1)
+                                                   edge_multiplicity=1)
 
         for out_idx, out_edge in enumerate(nx_graph.out_edges(curr_node_key)):
             edge_vs_output_idx_and_creator_id[out_edge] = (out_idx, node.node_id)

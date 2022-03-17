@@ -757,28 +757,34 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
         Checks that all branches outgoing from the branching node can be quantized
         (They do not contain an output that should not be quantized).
         """
-        from nncf.common.quantization.quantizer_propagation.solver import TransitionStatus
 
-        def traverse_fn(curr_node_key: str) -> TransitionStatus:
-            successors = self.successors(curr_node_key)
-            status = False
-            for successor_key in successors:
-                successor_node = self.nodes[successor_key]
-                succ_node_type = successor_node[QuantizerPropagationStateGraph.NODE_TYPE_NODE_ATTR]
-                if succ_node_type ==  QuantizerPropagationStateGraphNodeType.OPERATOR:
-                    op_meta_type_node = successor_node[QuantizerPropagationStateGraph.OPERATOR_METATYPE_NODE_ATTR]
-                    node_trait = successor_node[QuantizerPropagationStateGraph.QUANTIZATION_TRAIT_NODE_ATTR]
+        def traverse_fn(curr_node_key: str, status: Any) -> bool:
+            if status[0] is None:
+                status[0] = False
+                return False, status
+
+            if status[0] == True:
+                return True, status
+
+            if len(list(self.successors(curr_node_key))) == 1:
+                curr_node = self.nodes[curr_node_key]
+                curr_node_type = curr_node[QuantizerPropagationStateGraph.NODE_TYPE_NODE_ATTR]
+                if curr_node_type ==  QuantizerPropagationStateGraphNodeType.OPERATOR:
+                    op_meta_type_node = curr_node[QuantizerPropagationStateGraph.OPERATOR_METATYPE_NODE_ATTR]
+                    node_trait = curr_node[QuantizerPropagationStateGraph.QUANTIZATION_TRAIT_NODE_ATTR]
                     if op_meta_type_node in OUTPUT_NOOP_METATYPES or node_trait == QuantizationTrait.NON_QUANTIZABLE:
-                        return True
+                        status[0] = True
+                        return True, status
                     if node_trait == QuantizationTrait.INPUTS_QUANTIZABLE:
-                        return False
-                if len(list(self.successors(successor_key))) == 1:
-                    status = traverse_fn(successor_key)
-                    if status == True:
-                        return status
-            return status
+                        status[0] = False
+                        return True, status
+                return False, status
+            else:
+                return True, status
 
-        return traverse_fn(from_node_key)
+        visited_node_keys = set()
+        status = [None]
+        return self._traverse_graph_recursive_helper(from_node_key, visited_node_keys, traverse_fn, status, traverse_fn)[0]
 
     def get_visualized_graph(self):
         out_graph = nx.DiGraph()

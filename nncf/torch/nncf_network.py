@@ -550,7 +550,7 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
             # a port ID attribute.
             in_edges = nncf_graph.get_input_edges(node)
             for edge in in_edges:
-                for i in range(edge.multiplicity_edge):
+                for i in range(edge.edge_multiplicity):
                     port_id = edge.input_port_id - i
                     pre_hook_ip = PreHookInsertionPoint(target_node_name=node.node_name,
                                                         input_port_id=port_id)

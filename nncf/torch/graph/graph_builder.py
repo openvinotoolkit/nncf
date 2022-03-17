@@ -101,7 +101,7 @@ class GraphConverter:
                 input_port_id=dynamic_graph_edge.input_port_id,
                 output_port_id=dynamic_graph_edge.output_port_id,
                 dtype=dynamic_graph_edge.dtype,
-                multiplicity_edge=dynamic_graph_edge.multiplicity_edge
+                edge_multiplicity=dynamic_graph_edge.edge_multiplicity
             )
 
         for node in nncf_graph.get_all_nodes():
