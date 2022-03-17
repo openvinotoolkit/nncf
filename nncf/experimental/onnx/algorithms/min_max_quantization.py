@@ -40,8 +40,8 @@ from nncf.experimental.onnx.graph.model_transformer import ONNXModelTransformer
 from nncf.experimental.onnx.graph.onnx_graph import ONNXGraph
 from nncf.experimental.onnx.hardware.fused_patterns import ONNX_HW_FUSED_PATTERNS
 
-from nncf.experimental.onnx.algorithms.quantization.helper import calculate_activation_quantizer_parameters
-from nncf.experimental.onnx.algorithms.quantization.helper import calculate_weight_quantizer_parameters
+from nncf.experimental.onnx.algorithms.quantization.utils import calculate_activation_quantizer_parameters
+from nncf.experimental.onnx.algorithms.quantization.utils import calculate_weight_quantizer_parameters
 
 from nncf.experimental.onnx.hardware.config import ONNXHWConfig
 from nncf.experimental.post_training.backend import Backend

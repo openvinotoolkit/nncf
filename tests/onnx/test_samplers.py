@@ -15,8 +15,8 @@ import pytest
 
 import numpy as np
 
-from nncf.experimental.onnx.sampler import ONNXBatchSampler
-from nncf.experimental.onnx.sampler import ONNXRandomBatchSampler
+from nncf.experimental.onnx.samplers import ONNXBatchSampler
+from nncf.experimental.onnx.samplers import ONNXRandomBatchSampler
 from nncf.experimental.post_training.api.dataloader import DataLoader
 
 INPUT_SHAPE = [3, 10, 10]

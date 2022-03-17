@@ -4,7 +4,7 @@ import onnx
 import numpy as np
 
 from nncf.experimental.onnx.graph.transformations.commands import ONNXQuantizerInsertionCommand
-from nncf.experimental.onnx.algorithms.quantization.helper import QuantizerLayerParameters
+from nncf.experimental.onnx.algorithms.quantization.utils import QuantizerLayerParameters
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.experimental.onnx.graph.model_transformer import ONNXModelTransformer
 from nncf.experimental.onnx.graph.transformations.layout import ONNXTransformationLayout

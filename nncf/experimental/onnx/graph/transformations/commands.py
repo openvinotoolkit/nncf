@@ -13,7 +13,7 @@
 
 from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.graph.transformations.commands import TransformationType
-from nncf.experimental.onnx.algorithms.quantization.helper import QuantizerLayerParameters
+from nncf.experimental.onnx.algorithms.quantization.utils import QuantizerLayerParameters
 
 
 class ONNXInsertionCommand(TransformationCommand):

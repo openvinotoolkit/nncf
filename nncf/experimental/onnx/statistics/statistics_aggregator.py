@@ -22,7 +22,7 @@ from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBas
 
 from nncf.experimental.post_training.statistics.statistics_aggregator import StatisticsAggregator
 
-from nncf.experimental.onnx.sampler import create_onnx_sampler
+from nncf.experimental.onnx.samplers import create_onnx_sampler
 from nncf.experimental.onnx.engine import ONNXEngine
 from nncf.experimental.post_training.api.dataloader import DataLoader
 

@@ -20,7 +20,7 @@ from nncf.experimental.post_training.api.dataloader import DataLoader
 from nncf.experimental.post_training.algorithms import Algorithm
 
 from nncf.experimental.post_training.backend import Backend
-from nncf.experimental.post_training.backend import determine_model_backend
+from nncf.experimental.post_training.backend import get_model_backend
 
 ModelType = TypeVar('ModelType')
 
@@ -53,7 +53,7 @@ class CompressionBuilder:
 
     def _get_prepared_model_for_compression(self, model: ModelType, backend: Backend) -> ModelType:
         if backend == Backend.ONNX:
-            from nncf.experimental.onnx.helper import modify_onnx_model_for_quantization
+            from nncf.experimental.onnx.utils import modify_onnx_model_for_quantization
             return modify_onnx_model_for_quantization(model)
         return None
 
@@ -73,7 +73,7 @@ class CompressionBuilder:
             print('There are no algorithms added. The original model will be returned.')
             return model
 
-        backend = determine_model_backend(model)
+        backend = get_model_backend(model)
         modified_model = self._get_prepared_model_for_compression(model, backend)
 
         if engine is None:
