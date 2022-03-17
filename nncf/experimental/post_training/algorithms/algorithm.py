@@ -34,13 +34,13 @@ class PostTrainingAlgorithms(Enum):
 
 class AlgorithmParameters(ABC):
     """
-    Base class for Post-Training algorithms parameters.
+    Base class for Post-Training algorithm parameters.
     """
 
     @abstractmethod
     def to_json(self) -> Dict[str, Union[str, float, int]]:
         """
-        Serializes algorithms parameters to JSON format.
+        Serializes algorithm parameters to JSON format.
         """
 
 
@@ -66,7 +66,7 @@ class Algorithm(ABC):
     @abstractmethod
     def get_layers_for_statistics(self, model: ModelType) -> Dict[str, TensorStatisticCollectorBase]:
         """
-        Returns activations layers, for which StatisticsCollector should collect statistics.
+        Returns activation layers, for which StatisticsCollector should collect statistics.
         """
 
     @abstractmethod
