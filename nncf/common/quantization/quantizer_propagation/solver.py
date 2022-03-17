@@ -990,7 +990,7 @@ class QuantizerPropagationSolver:
         :return: The TransitionStatus indicating in which fashion the transition should occur.
         """
         status_for_output_nodes = quant_prop_graph.is_node_dominating_unquantizable_outputs(branching_node_key)
-        if status_for_output_nodes == True and self._quantize_outputs == False:
+        if status_for_output_nodes and not self._quantize_outputs:
             return TransitionStatus.SHOULD_NOT_TRANSITION
 
         dom_op_node_keys = quant_prop_graph.get_non_quant_agnostic_op_nodes_immediately_dominated_by_node(

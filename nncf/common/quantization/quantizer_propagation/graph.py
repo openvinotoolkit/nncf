@@ -758,18 +758,18 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
         (They do not contain an output that should not be quantized).
         """
 
-        def traverse_fn(curr_node_key: str, status: Any) -> bool:
+        def traverse_fn(curr_node_key: str, status: List) -> bool:
             if status[0] is None:
                 status[0] = False
                 return False, status
 
-            if status[0] == True:
+            if status[0]:
                 return True, status
 
             if len(list(self.successors(curr_node_key))) == 1:
                 curr_node = self.nodes[curr_node_key]
                 curr_node_type = curr_node[QuantizerPropagationStateGraph.NODE_TYPE_NODE_ATTR]
-                if curr_node_type ==  QuantizerPropagationStateGraphNodeType.OPERATOR:
+                if curr_node_type == QuantizerPropagationStateGraphNodeType.OPERATOR:
                     op_meta_type_node = curr_node[QuantizerPropagationStateGraph.OPERATOR_METATYPE_NODE_ATTR]
                     node_trait = curr_node[QuantizerPropagationStateGraph.QUANTIZATION_TRAIT_NODE_ATTR]
                     if op_meta_type_node in OUTPUT_NOOP_METATYPES or node_trait == QuantizationTrait.NON_QUANTIZABLE:
@@ -778,13 +778,14 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
                     if node_trait == QuantizationTrait.INPUTS_QUANTIZABLE:
                         status[0] = False
                         return True, status
-                return False, status
             else:
                 return True, status
+            return False, status
 
         visited_node_keys = set()
         status = [None]
-        return self._traverse_graph_recursive_helper(from_node_key, visited_node_keys, traverse_fn, status, traverse_fn)[0]
+        return self._traverse_graph_recursive_helper(from_node_key, visited_node_keys,
+                                                     traverse_fn, status, traverse_fn)[0]
 
     def get_visualized_graph(self):
         out_graph = nx.DiGraph()
