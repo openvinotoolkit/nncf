@@ -21,6 +21,7 @@ from onnx import version_converter
 def modify_onnx_model_for_quantization(model: onnx.ModelProto) -> onnx.ModelProto:
     onnx.checker.check_model(model)
     print(f'Original opset = {model.opset_import[0].version}')
+    print(f'Original ir_version = {model.ir_version}')
 
     model.ir_version = 7  # Due to the 'Shufflenet-v1
     add_input_from_initializer(model)

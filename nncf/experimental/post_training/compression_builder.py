@@ -47,7 +47,7 @@ class CompressionBuilder:
 
     def _create_statistics_aggregator(self, engine: Engine, dataloader: DataLoader, backend: Backend):
         if backend == Backend.ONNX:
-            from nncf.experimental.onnx.statistics.statistics_aggregator import ONNXStatisticsAggregator
+            from nncf.experimental.onnx.statistics.aggregator import ONNXStatisticsAggregator
             return ONNXStatisticsAggregator(engine, dataloader)
         return None
 

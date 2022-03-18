@@ -65,7 +65,7 @@ class GraphConverter:
                 try:
                     shape = onnx_graph.get_edge_shape(output)
                 # This exception raised because ONNX format allows to not have shape field.
-                # Model example - effecienent-v2.
+                # Model example - effecienet-v2, mobilenet_v2.
                 # In fact, the quantization algorithm doesn't utilize tensor shape information.
                 # So, if there is no shape, the DEFAULT_TENSOR_SHAPE is used.
                 except RuntimeError as err:

@@ -15,7 +15,6 @@ import pytest
 
 import numpy as np
 
-from nncf.experimental.post_training.api.dataloader import DataLoader
 from nncf.experimental.post_training.compression_builder import CompressionBuilder
 from nncf.experimental.onnx.algorithms.min_max_quantization import ONNXMinMaxQuantization
 from nncf.experimental.post_training.algorithms.quantization.parameters import MinMaxQuantizationParameters
@@ -23,6 +22,7 @@ from nncf.experimental.onnx.graph.onnx_graph import ONNXGraph
 from nncf.experimental.post_training.algorithms.min_max_quantization import RangeType
 
 from tests.onnx.models import OneConvolutionalModel
+from tests.onnx.test_samplers import TestDataloader
 
 INPUT_SHAPE = [3, 10, 10]
 
@@ -45,17 +45,6 @@ class TestParameters:
         self.number_samples = number_samples
         self.activation_float_range = activation_float_range
         self.weight_float_range = weight_float_range
-
-
-class TestDataloader(DataLoader):
-    def __init__(self):
-        super().__init__(shuffle=False)
-
-    def __getitem__(self, item):
-        return DATASET_SAMPLES[item]
-
-    def __len__(self):
-        return 3
 
 
 @pytest.mark.parametrize('range_type, test_parameters',

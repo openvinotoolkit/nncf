@@ -20,7 +20,7 @@ import tempfile
 
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
 
-from nncf.experimental.post_training.statistics.statistics_aggregator import StatisticsAggregator
+from nncf.experimental.post_training.statistics.aggregator import StatisticsAggregator
 
 from nncf.experimental.onnx.samplers import create_onnx_sampler
 from nncf.experimental.onnx.engine import ONNXEngine

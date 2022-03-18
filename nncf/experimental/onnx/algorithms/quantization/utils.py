@@ -40,7 +40,6 @@ def calculate_scale_level(max_val: Union[float, np.ndarray], min_val: Union[floa
     """
     Calculates Quantizer/Dequantizer layer scale level.
     """
-    # Always full range
     if mode == QuantizationMode.SYMMETRIC:
         input_abs_max = np.maximum(np.abs(max_val), np.abs(min_val))
         return input_abs_max / ((2 ** num_bits - 1) / 2)
