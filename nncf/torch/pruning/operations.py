@@ -25,6 +25,7 @@ from nncf.torch.graph.operator_metatypes import (
     PTConv1dMetatype,
     PTConv2dMetatype,
     PTConv3dMetatype,
+    PTConvTranspose1dMetatype,
     PTConvTranspose2dMetatype,
     PTConvTranspose3dMetatype,
     PTDivMetatype,
@@ -179,7 +180,7 @@ class PTConvolutionPruningOp(ConvolutionPruningOp, PTPruner):
 
 @PT_PRUNING_OPERATOR_METATYPES.register('transpose_convolution')
 class PTTransposeConvolutionPruningOp(TransposeConvolutionPruningOp, PTPruner):
-    subtypes = [PTConvTranspose2dMetatype, PTConvTranspose3dMetatype]
+    subtypes = [PTConvTranspose1dMetatype, PTConvTranspose2dMetatype, PTConvTranspose3dMetatype]
 
     @classmethod
     def input_prune(cls, model: NNCFNetwork, node: NNCFNode, graph: NNCFGraph) -> None:

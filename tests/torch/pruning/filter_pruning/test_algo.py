@@ -39,15 +39,15 @@ from tests.torch.pruning.helpers import PruningTestModelConcatBN
 from tests.torch.pruning.helpers import DisconectedGraphModel
 
 
-def create_pruning_algo_with_config(config):
+def create_pruning_algo_with_config(config, dim=2):
     """
     Create filter_pruning with default params.
     :param config: config for the algorithm
     :return pruned model, pruning_algo, nncf_modules
     """
     config['compression']['algorithm'] = 'filter_pruning'
-    model = BigPruningTestModel()
-    pruned_model, pruning_algo = create_compressed_model_and_algo_for_test(BigPruningTestModel(), config)
+    model = BigPruningTestModel(dim)
+    pruned_model, pruning_algo = create_compressed_model_and_algo_for_test(BigPruningTestModel(dim), config)
 
     # Check that all modules was correctly replaced by NNCF modules and return this NNCF modules
     _, nncf_modules = check_correct_nncf_modules_replacement(model, pruned_model)
@@ -160,26 +160,45 @@ def test_valid_modules_replacement_and_pruning(prune_first, prune_batch_norms):
 BIG_PRUNING_MODEL_TEST_PARAMS = ('all_weights', 'pruning_flops_target', 'prune_first', 'ref_masks')
 BIG_PRUNING_MODEL_TEST_PARAMS_VALUES = \
 [
-    (False, None, True, gen_ref_masks([(8, 8), (16, 16), (32, 32), (64, 64)])),
-    (True, None, True, gen_ref_masks([(2, 14), (2, 30), (29, 35), (87, 41)])),
-    (False, None, False, gen_ref_masks([(16, 16), (32, 32), (64, 64)])),
-    (True, None, False, gen_ref_masks([(1, 31), (27, 37), (84, 44)])),
+    (False, None, True, {1 : gen_ref_masks([(8, 8), (16, 16), (32, 32), (64, 64)]),
+                         2 : gen_ref_masks([(8, 8), (16, 16), (32, 32), (64, 64)]),
+                         3 : gen_ref_masks([(8, 8), (16, 16), (32, 32), (64, 64)])}),
+    (True, None, True, {1 : gen_ref_masks([(2, 14), (2, 30), (29, 35), (87, 41)]),
+                        2 : gen_ref_masks([(2, 14), (2, 30), (29, 35), (87, 41)]),
+                        3 : gen_ref_masks([(2, 14), (2, 30), (29, 35), (87, 41)])}),
+    (False, None, False, { 1 : gen_ref_masks([(16, 16), (32, 32), (64, 64)]),
+                           2 : gen_ref_masks([(16, 16), (32, 32), (64, 64)]),
+                           3 : gen_ref_masks([(16, 16), (32, 32), (64, 64)])}),
+
+    (True, None, False, { 1 : gen_ref_masks([(1, 31), (27, 37), (84, 44)]),
+                          2 : gen_ref_masks([(1, 31), (27, 37), (84, 44)]),
+                          3: gen_ref_masks([(1, 31), (27, 37), (84, 44)])}),
     # Flops pruning cases
-    (False, 0.5, True, gen_ref_masks([(8, 8), (16, 16), (32, 32), (64, 64)])),
-    (False, 0.5, False, gen_ref_masks([(16, 16), (32, 32), (64, 64)])),
-    (True, 0.5, True, gen_ref_masks([(3, 13), (8, 24), (41, 23), (113, 15)])),
-    (True, 0.5, False, gen_ref_masks([(9, 23), (41, 23), (113, 15)])),
+    (False, 0.5, True, { 1 : gen_ref_masks([(8, 8), (16, 16), (32, 32), (64, 64)]),
+                         2 : gen_ref_masks([(8, 8), (16, 16), (32, 32), (64, 64)]),
+                         3 : gen_ref_masks([(8, 8), (16, 16), (32, 32), (64, 64)])}),
+    (False, 0.5, False, {1 : gen_ref_masks([(16, 16), (32, 32), (64, 64)]),
+                         2 : gen_ref_masks([(16, 16), (32, 32), (64, 64)]),
+                         3 : gen_ref_masks([(16, 16), (32, 32), (64, 64)])}),
+    (True, 0.5, True, { 1: gen_ref_masks([(3, 13), (7, 25), (39, 25), (109, 19)]),
+                        2: gen_ref_masks([(3, 13), (8, 24), (41, 23), (113, 15)]),
+                        3: gen_ref_masks([(2, 14), (5, 27), (33, 31), (97, 31)])}),
+    (True, 0.5, False, { 1 : gen_ref_masks([(8, 24), (39, 25), (109, 19)]),
+                         2 : gen_ref_masks([(9, 23), (41, 23), (113, 15)]),
+                         3 : gen_ref_masks([(5, 27), (33, 31), (97, 31)])}),
 ]
 
 
-@pytest.mark.parametrize(BIG_PRUNING_MODEL_TEST_PARAMS, BIG_PRUNING_MODEL_TEST_PARAMS_VALUES)
-def test_pruning_masks_correctness(all_weights, pruning_flops_target, prune_first, ref_masks):
+@pytest.mark.parametrize(BIG_PRUNING_MODEL_TEST_PARAMS, BIG_PRUNING_MODEL_TEST_PARAMS_VALUES )
+@pytest.mark.parametrize('dim', [1, 2, 3])
+def test_pruning_masks_correctness(all_weights, pruning_flops_target, prune_first, ref_masks, dim):
     """
     Test for pruning masks check (_set_binary_masks_for_filters, _set_binary_masks_for_all_filters_together).
     :param all_weights: whether mask will be calculated for all weights in common or not
     :param pruning_flops_target: prune model by flops, if None then by number of channels
     :param prune_first: whether to prune first convolution or not
     :param ref_masks: reference masks values
+    :param dim: dimension of the model
     """
 
     def check_mask(module, num):
@@ -189,19 +208,20 @@ def test_pruning_masks_correctness(all_weights, pruning_flops_target, prune_firs
         #y = pruning_op.binary_filter_pruning_mask.shape[0]
         #y_minus_x = y - x
         #print(x, y)
-        assert torch.allclose(pruning_op.binary_filter_pruning_mask, ref_masks[num])
+        assert torch.allclose(pruning_op.binary_filter_pruning_mask, ref_masks[dim][num])
 
-    config = get_basic_pruning_config(input_sample_size=[1, 1, 8, 8])
+    config = get_basic_pruning_config(input_sample_size=[1, 1] + [8] * dim)
     config['compression']['params']['all_weights'] = all_weights
     config['compression']['params']['prune_first_conv'] = prune_first
-    config['compression']['pruning_init'] = 0.5
+    pruning_init = 0.3 if dim == 1 and pruning_flops_target is not None else 0.5
+    config['compression']['pruning_init'] = pruning_init
     if pruning_flops_target:
         config['compression']['params']['pruning_flops_target'] = pruning_flops_target
 
-    pruned_model, pruning_algo, _ = create_pruning_algo_with_config(config)
+    pruned_model, pruning_algo, _ = create_pruning_algo_with_config(config, dim)
     pruned_module_info = pruning_algo.pruned_module_groups_info.get_all_nodes()
     pruned_modules = [minfo.module for minfo in pruned_module_info]
-    assert pruning_algo.pruning_level == 0.5
+    assert pruning_algo.pruning_level == pruning_init
     assert pruning_algo.all_weights is all_weights
 
     i = 0
@@ -234,8 +254,9 @@ def test_pruning_masks_correctness(all_weights, pruning_flops_target, prune_firs
     check_mask(linear, i)
 
 
-@pytest.mark.parametrize(BIG_PRUNING_MODEL_TEST_PARAMS, BIG_PRUNING_MODEL_TEST_PARAMS_VALUES )
-def test_pruning_masks_applying_correctness(all_weights, pruning_flops_target, prune_first, ref_masks):
+@pytest.mark.parametrize(BIG_PRUNING_MODEL_TEST_PARAMS, BIG_PRUNING_MODEL_TEST_PARAMS_VALUES)
+@pytest.mark.parametrize('dim', [1, 2, 3])
+def test_pruning_masks_applying_correctness(all_weights, pruning_flops_target, prune_first, ref_masks, dim):
     """
     Test for pruning masks check (_set_binary_masks_for_filters, _set_binary_masks_for_all_filters_together).
     :param all_weights: whether mask will be calculated for all weights in common or not.
@@ -243,19 +264,19 @@ def test_pruning_masks_applying_correctness(all_weights, pruning_flops_target, p
     :param prune_first: whether to prune first convolution or not.
     :param ref_masks: reference masks values.
     """
-    input_shapes = {'conv1': [1, 1, 8, 8],
-                    'conv_depthwise': [1, 16, 7, 7],
-                    'conv2': [1, 16, 8, 8],
-                    'bn1': [1, 16, 8, 8],
-                    'bn2': [1, 32, 8, 8],
-                    'up': [1, 32, 8, 8],
-                    'linear': [1, 3136]}
+    input_shapes = {'conv1': [1, 1] + [8] * dim,
+                    'conv_depthwise': [1, 16] + [7] * dim,
+                    'conv2': [1, 16] + [8] * dim,
+                    'bn1': [1, 16] + [8] * dim,
+                    'bn2': [1, 32] + [8] * dim,
+                    'up': [1, 32] + [8] * dim,
+                    'linear': [1, 448 * 7**(dim - 1)]}
 
     def check_mask(module, num):
         # Mask for weights
         pruning_op = list(module.pre_ops.values())[0].operand
         assert hasattr(pruning_op, 'binary_filter_pruning_mask')
-        assert torch.allclose(pruning_op.binary_filter_pruning_mask, ref_masks[num])
+        assert torch.allclose(pruning_op.binary_filter_pruning_mask, ref_masks[dim][num])
 
         # Mask for bias
         # pruning_op = list(module.pre_ops.values())[1].operand
@@ -266,7 +287,7 @@ def test_pruning_masks_applying_correctness(all_weights, pruning_flops_target, p
         """
         Checks that output of module are masked.
         """
-        mask = ref_masks[num]
+        mask = ref_masks[dim][num]
         input_ = torch.ones(input_shapes[name])
         output = module(input_)
         ref_output = apply_filter_binary_mask(mask, output, dim=1)
@@ -276,21 +297,22 @@ def test_pruning_masks_applying_correctness(all_weights, pruning_flops_target, p
         for key in ref_state_dict.keys():
             assert torch.allclose(model_state_dict['nncf_module.' + key], ref_state_dict[key])
 
-    config = get_basic_pruning_config(input_sample_size=[1, 1, 8, 8])
+    config = get_basic_pruning_config(input_sample_size=[1, 1] + [8] * dim)
     config['compression']['algorithm'] = 'filter_pruning'
     config['compression']['params']['all_weights'] = all_weights
     config['compression']['params']['prune_first_conv'] = prune_first
-    config['compression']['pruning_init'] = 0.5
+    pruning_init = 0.3 if dim == 1 and pruning_flops_target is not None else 0.5
+    config['compression']['pruning_init'] = pruning_init
     if pruning_flops_target:
         config['compression']['params']['pruning_flops_target'] = pruning_flops_target
 
-    model = BigPruningTestModel()
+    model = BigPruningTestModel(dim)
     ref_state_dict = deepcopy(model.state_dict())
-    pruned_model, pruning_algo = create_compressed_model_and_algo_for_test(BigPruningTestModel(), config)
+    pruned_model, pruning_algo = create_compressed_model_and_algo_for_test(BigPruningTestModel(dim), config)
 
     pruned_module_info = pruning_algo.pruned_module_groups_info.get_all_nodes()
     pruned_modules = [minfo.module for minfo in pruned_module_info]
-    assert pruning_algo.pruning_level == 0.5
+    assert pruning_algo.pruning_level == pruning_init
     assert pruning_algo.all_weights is all_weights
 
     # Checking that model weights remain unchanged
