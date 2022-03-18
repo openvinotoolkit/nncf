@@ -13,7 +13,6 @@
 
 from typing import TypeVar
 
-from collections import deque
 
 from nncf.experimental.post_training.api.engine import Engine
 from nncf.experimental.post_training.api.dataloader import DataLoader
@@ -31,7 +30,7 @@ class CompressionBuilder:
     """
 
     def __init__(self):
-        self.algorithms = deque()
+        self.algorithms = []
 
     def add_algorithm(self, algorithm: Algorithm) -> None:
         """
@@ -89,7 +88,6 @@ class CompressionBuilder:
 
         statistics_aggregator.collect_statistics(modified_model)
 
-        while self.algorithms:
-            algorithm = self.algorithms.pop()
+        for algorithm in self.algorithms:
             modified_model = algorithm.apply(modified_model, engine, statistics_aggregator.layers_statistics)
         return modified_model

@@ -13,7 +13,6 @@
 
 from typing import Dict
 from typing import TypeVar
-from collections import deque
 
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
 
@@ -47,12 +46,11 @@ class PostTrainingQuantization(Algorithm):
         self.number_samples = quantization_parameters.number_samples
 
         self.algorithms_to_created = quantization_parameters.algorithms
-        self.algorithms = deque()
+        self.algorithms = []
 
     def _apply(self, model: ModelType, engine: Engine,
                layer_statistics: Dict[str, TensorStatisticCollectorBase]) -> ModelType:
-        while self.algorithms:
-            algorithm = self.algorithms.popleft()
+        for algorithm in self.algorithms:
             quantized_model = algorithm.apply(model, engine, layer_statistics)
         return quantized_model
 
