@@ -13,6 +13,7 @@
 
 from typing import TypeVar
 
+from nncf.common.utils.logger import logger as nncf_logger
 
 from nncf.experimental.post_training.api.engine import Engine
 from nncf.experimental.post_training.api.dataloader import DataLoader
@@ -69,7 +70,7 @@ class CompressionBuilder:
         """
 
         if not self.algorithms:
-            print('There are no algorithms added. The original model will be returned.')
+            nncf_logger.info('There are no algorithms added. The original model will be returned.')
             return model
 
         backend = get_model_backend(model)

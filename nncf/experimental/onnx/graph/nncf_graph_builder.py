@@ -20,11 +20,12 @@ from nncf.common.graph.definitions import NNCFGraphNodeType
 from nncf.common.graph.layer_attributes import Dtype
 from nncf.common.graph.definitions import MODEL_INPUT_OP_NAME
 from nncf.common.graph.definitions import MODEL_OUTPUT_OP_NAME
+from nncf.common.graph.operator_metatypes import InputNoopMetatype
+from nncf.common.graph.operator_metatypes import OutputNoopMetatype
+from nncf.common.utils.logger import logger as nncf_logger
 
 from nncf.experimental.onnx.graph.onnx_graph import ONNXGraph
 from nncf.experimental.onnx.graph.metatypes.onnx_ops import ONNX_OPERATION_METATYPES
-from nncf.common.graph.operator_metatypes import InputNoopMetatype
-from nncf.common.graph.operator_metatypes import OutputNoopMetatype
 from nncf.experimental.onnx.graph.metatypes.onnx_ops import ConstantMetatype
 
 
@@ -69,8 +70,8 @@ class GraphConverter:
                 # In fact, the quantization algorithm doesn't utilize tensor shape information.
                 # So, if there is no shape, the DEFAULT_TENSOR_SHAPE is used.
                 except RuntimeError as err:
-                    print(err)
-                    print('The default tensor shape will be set.')
+                    nncf_logger.error(err)
+                    nncf_logger.error('The default tensor shape will be set.')
                     shape = GraphConverter.DEFAULT_TENSOR_SHAPE
                 onnx_dtype = onnx_graph.get_edge_dtype(output)
                 nncf_dtype = GraphConverter.convert_onnx_dtype_to_nncf_dtype(onnx_dtype)

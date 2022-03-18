@@ -16,6 +16,8 @@ from typing import Union
 import torch
 import numpy as np
 
+from nncf.common.utils.logger import logger as nncf_logger
+
 from nncf.experimental.post_training.api.dataloader import DataLoader
 
 from nncf.experimental.post_training.sampler import BatchSampler
@@ -54,7 +56,7 @@ class ONNXRandomBatchSampler(RandomBatchSampler):
 
 def create_onnx_sampler(dataloader: DataLoader) -> Union[ONNXBatchSampler, ONNXRandomBatchSampler]:
     if dataloader.shuffle:
-        print('Using Shuffled dataset')
+        nncf_logger.info('Using Shuffled dataset')
         return ONNXRandomBatchSampler(dataloader)
-    print('Using Non-Shuffled dataset')
+    nncf_logger.info('Using Non-Shuffled dataset')
     return ONNXBatchSampler(dataloader)

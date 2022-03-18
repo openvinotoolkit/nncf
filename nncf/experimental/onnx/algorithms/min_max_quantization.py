@@ -23,6 +23,7 @@ from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.insertion_point_graph import InsertionPointGraph
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
+from nncf.common.utils.logger import logger as nncf_logger
 
 from nncf.experimental.post_training.algorithms.min_max_quantization import MinMaxQuantization
 from nncf.experimental.post_training.algorithms.min_max_quantization import MinMaxQuantizationParameters
@@ -33,16 +34,13 @@ from nncf.experimental.onnx.graph.nncf_graph_builder import GraphConverter
 from nncf.experimental.onnx.algorithms.quantization.default_quantization import DEFAULT_ONNX_QUANT_TRAIT_TO_OP_DICT
 from nncf.experimental.onnx.graph.transformations.commands import ONNXQuantizerInsertionCommand
 from nncf.experimental.onnx.engine import ONNXEngine
-
 from nncf.experimental.onnx.statistics.collectors import ONNXMinMaxStatisticCollector
 from nncf.experimental.onnx.statistics.collectors import ONNXMeanMinMaxStatisticCollector
 from nncf.experimental.onnx.graph.model_transformer import ONNXModelTransformer
 from nncf.experimental.onnx.graph.onnx_graph import ONNXGraph
 from nncf.experimental.onnx.hardware.fused_patterns import ONNX_HW_FUSED_PATTERNS
-
 from nncf.experimental.onnx.algorithms.quantization.utils import calculate_activation_quantizer_parameters
 from nncf.experimental.onnx.algorithms.quantization.utils import calculate_weight_quantizer_parameters
-
 from nncf.experimental.onnx.hardware.config import ONNXHWConfig
 from nncf.experimental.post_training.backend import Backend
 
@@ -122,9 +120,8 @@ class ONNXMinMaxQuantization(MinMaxQuantization):
                     node_name = qp.directly_quantized_operator_node_names[0]
                     outputs = onnx_graph.get_node_edges(node_name)['input'][0]
                 if outputs in filled_outputs:
-                    # TODO: resolve this
-                    # Problems with inception v3
-                    print(f'Skipping {outputs} layer')
+                    # TODO (kshpv): resolve this problem with inception v3.
+                    nncf_logger.debug(f'Skipping {outputs} layer')
                     continue
                 filled_outputs.append(outputs)
                 self._activation_quantizers.append(outputs)

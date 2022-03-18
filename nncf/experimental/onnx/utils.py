@@ -14,14 +14,15 @@
 import onnx
 from onnx import version_converter
 
+from nncf.common.utils.logger import logger as nncf_logger
 
 # pylint: disable=no-member
 
 
 def modify_onnx_model_for_quantization(model: onnx.ModelProto) -> onnx.ModelProto:
     onnx.checker.check_model(model)
-    print(f'Original opset = {model.opset_import[0].version}')
-    print(f'Original ir_version = {model.ir_version}')
+    nncf_logger.info(f'Original opset = {model.opset_import[0].version}')
+    nncf_logger.info(f'Original ir_version = {model.ir_version}')
 
     model.ir_version = 7  # Due to the 'Shufflenet-v1
     add_input_from_initializer(model)
@@ -29,7 +30,7 @@ def modify_onnx_model_for_quantization(model: onnx.ModelProto) -> onnx.ModelProt
     modified_model = version_converter.convert_version(infered_model, 13)
 
     onnx.checker.check_model(modified_model)
-    print(f'Successfully converted the model to the opset = {modified_model.opset_import[0].version}')
+    nncf_logger.info(f'Successfully converted the model to the opset = {modified_model.opset_import[0].version}')
 
     for i, node in enumerate(modified_model.graph.node):
         if node.name == '':
@@ -47,7 +48,7 @@ def add_input_from_initializer(model: onnx.ModelProto):
     """
     # All (top-level) constants will have ValueInfos before IRv4 as they are all inputs
     if model.ir_version < 4:
-        print(f'Could not process model, as it has {model.ir_version} < 4')
+        nncf_logger.info(f'Could not process model, as it has {model.ir_version} < 4')
         return model
 
     def add_const_value_infos_to_graph(graph: onnx.GraphProto):
