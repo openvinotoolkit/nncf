@@ -28,15 +28,15 @@ from nncf.experimental.onnx.graph.transformations.commands import ONNXQuantizerI
 
 ModelType = TypeVar('ModelType')
 
-QUANTIZER_NAME_PREFIX = 'QuantizeLinear_'
-DEQUANTIZER_NAME_PREFIX = 'DequantizeLinear_'
-SCALE_TENSOR_NAME_PREFIX = 'scale_'
-ZERO_POINT_NAME_PREFIX = 'zero_point_'
-
 
 # pylint: disable=no-member
 
 class ONNXModelTransformer(ModelTransformer):
+    QUANTIZER_NAME_PREFIX = 'QuantizeLinear_'
+    DEQUANTIZER_NAME_PREFIX = 'DequantizeLinear_'
+    SCALE_TENSOR_NAME_PREFIX = 'scale_'
+    ZERO_POINT_NAME_PREFIX = 'zero_point_'
+
     def __init__(self, model: onnx.ModelProto):
         super().__init__(model)
         self.transformed_model = deepcopy(model)
@@ -65,10 +65,10 @@ class ONNXModelTransformer(ModelTransformer):
         axis = 0 if per_channel else None
         dims = [len(scale)] if per_channel else []
 
-        quantizer_name = QUANTIZER_NAME_PREFIX + target_point
-        dequantizer_name = DEQUANTIZER_NAME_PREFIX + target_point
-        scale_tensor_name = SCALE_TENSOR_NAME_PREFIX + target_point
-        zero_point_tensor_name = ZERO_POINT_NAME_PREFIX + target_point
+        quantizer_name = ONNXModelTransformer.QUANTIZER_NAME_PREFIX + target_point
+        dequantizer_name = ONNXModelTransformer.DEQUANTIZER_NAME_PREFIX + target_point
+        scale_tensor_name = ONNXModelTransformer.SCALE_TENSOR_NAME_PREFIX + target_point
+        zero_point_tensor_name = ONNXModelTransformer.ZERO_POINT_NAME_PREFIX + target_point
 
         onnx_scale = onnx.helper.make_tensor(scale_tensor_name, onnx.TensorProto.FLOAT, dims, scale)
         onnx_zero_point = onnx.helper.make_tensor(zero_point_tensor_name, tensor_type, dims, zero_point)
