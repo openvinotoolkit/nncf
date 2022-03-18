@@ -11,9 +11,8 @@ from tests.common.helpers import TEST_ROOT
 from tests.onnx.test_nncf_graph_builder import check_nx_graph
 
 from nncf.experimental.post_training.compression_builder import CompressionBuilder
-from nncf.experimental.onnx.algorithms.min_max_quantization import ONNXMinMaxQuantization
-from nncf.experimental.onnx.algorithms.min_max_quantization import MinMaxQuantizationParameters
-
+from nncf.experimental.onnx.algorithms.quantization.min_max_quantization import ONNXMinMaxQuantization
+from nncf.experimental.post_training.algorithms.quantization import MinMaxQuantizationParameters
 from nncf.experimental.post_training.algorithms.quantization import PostTrainingQuantization
 from nncf.experimental.post_training.algorithms.quantization import PostTrainingQuantizationParameters
 from nncf.experimental.post_training.api.dataloader import DataLoader

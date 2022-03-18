@@ -11,6 +11,9 @@
  limitations under the License.
 """
 
+from typing import List
+from typing import Tuple
+
 import pytest
 
 import numpy as np
@@ -27,11 +30,12 @@ DATASET_SAMPLES = [(np.zeros(INPUT_SHAPE), 0),
 
 
 class TestDataloader(DataLoader):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, samples: List[Tuple[np.ndarray, int]]):
+        super().__init__(shuffle=False)
+        self.samples = samples
 
     def __getitem__(self, item):
-        return DATASET_SAMPLES[item]
+        return self.samples[item]
 
     def __len__(self):
         return 3
@@ -39,7 +43,7 @@ class TestDataloader(DataLoader):
 
 @pytest.mark.parametrize("batch_size", (1, 2, 3))
 def test_batch_sampler(batch_size):
-    dataloader = TestDataloader()
+    dataloader = TestDataloader(DATASET_SAMPLES)
     dataloader.batch_size = batch_size
     sampler = ONNXBatchSampler(dataloader)
     for i, sample in enumerate(sampler):
@@ -57,7 +61,7 @@ def test_batch_sampler(batch_size):
 @pytest.mark.parametrize("batch_size", (1, 2, 3))
 def test_random_batch_sampler(batch_size):
     np.random.seed(0)
-    dataloader = TestDataloader()
+    dataloader = TestDataloader(DATASET_SAMPLES)
     dataloader.batch_size = batch_size
     sampler = ONNXRandomBatchSampler(dataloader)
     random_permuated_indices = [0, 2, 1]

@@ -25,9 +25,9 @@ from nncf.common.insertion_point_graph import InsertionPointGraph
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
 from nncf.common.utils.logger import logger as nncf_logger
 
-from nncf.experimental.post_training.algorithms.min_max_quantization import MinMaxQuantization
-from nncf.experimental.post_training.algorithms.min_max_quantization import MinMaxQuantizationParameters
-from nncf.experimental.post_training.algorithms.min_max_quantization import RangeType
+from nncf.experimental.post_training.algorithms.quantization.min_max_quantization import MinMaxQuantization
+from nncf.experimental.post_training.algorithms.quantization.min_max_quantization import MinMaxQuantizationParameters
+from nncf.experimental.post_training.algorithms.quantization.min_max_quantization import RangeType
 from nncf.experimental.onnx.graph.transformations.layout import ONNXTransformationLayout
 from nncf.experimental.onnx.graph.metatypes.onnx_ops import GENERAL_WEIGHT_LAYER_METATYPES
 from nncf.experimental.onnx.graph.nncf_graph_builder import GraphConverter

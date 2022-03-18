@@ -12,17 +12,75 @@
 """
 
 from typing import Dict
+from typing import List
+from typing import Union
+from typing import Optional
 from typing import TypeVar
 
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
+from nncf.common.quantization.structs import QuantizerConfig
+from nncf.common.quantization.structs import QuantizationMode
+from nncf.common.hardware.config import HWConfigType
 
 from nncf.experimental.post_training.backend import Backend
 from nncf.experimental.post_training.api.engine import Engine
 from nncf.experimental.post_training.algorithms import Algorithm
+from nncf.experimental.post_training.algorithms import AlgorithmParameters
 from nncf.experimental.post_training.algorithms import PostTrainingAlgorithms
-from nncf.experimental.post_training.algorithms.quantization.parameters import PostTrainingQuantizationParameters
+from nncf.experimental.post_training.algorithms.quantization.min_max_quantization import MinMaxQuantizationParameters
+from nncf.experimental.post_training.algorithms.quantization.min_max_quantization import Preset
+from nncf.experimental.post_training.algorithms.quantization.min_max_quantization import Granularity
+from nncf.experimental.post_training.algorithms.quantization.min_max_quantization import RangeType
 
 ModelType = TypeVar('ModelType')
+
+
+class PostTrainingQuantizationParameters(AlgorithmParameters):
+    """
+    This class handles parameters for PostTrainingQuantization algorithm.
+    """
+
+    def __init__(self,
+                 preset: Preset = Preset.MIXED,
+                 weight_bits: int = 8,
+                 weight_granularity: Granularity = Granularity.PERCHANNEL,
+                 activation_bits: int = 8,
+                 activation_granularity: Granularity = Granularity.PERTENSOR,
+                 range_type: RangeType = RangeType.MEAN_MINMAX,
+                 number_samples: int = 300,
+                 target_device: HWConfigType = HWConfigType.CPU,
+                 ignored_scopes: Optional[List[str]] = None
+                 ):
+        weight_mode, activation_mode = self._determine_weight_activation_modes(preset)
+        self.weight_quantizer_config = self._determine_quantizer_config(weight_bits, weight_granularity, weight_mode)
+        self.activation_quantizer_config = self._determine_quantizer_config(activation_bits, activation_granularity,
+                                                                            activation_mode)
+
+        self.algorithms = {PostTrainingAlgorithms.MinMaxQuantization: MinMaxQuantizationParameters(
+            weight_quantizer_config=self.weight_quantizer_config,
+            activation_quantizer_config=self.activation_quantizer_config,
+            range_type=range_type,
+            ignored_scopes=ignored_scopes,
+            target_device=target_device
+        )}
+
+        self.number_samples = number_samples
+        self.target_device = target_device
+        self.ignored_scopes = ignored_scopes
+
+    def to_json(self) -> Dict[str, Union[str, float, int]]:
+        pass
+
+    def _determine_weight_activation_modes(self, preset: Preset):
+        # TODO(kshpv): add support of presets
+        weight_mode = QuantizationMode.SYMMETRIC
+        activation_mode = QuantizationMode.SYMMETRIC
+        return weight_mode, activation_mode
+
+    def _determine_quantizer_config(self, number_bits: int,
+                                    granularity: Granularity, mode: QuantizationMode):
+        return QuantizerConfig(num_bits=number_bits, mode=mode,
+                               per_channel=granularity == Granularity.PERCHANNEL)
 
 
 class PostTrainingQuantization(Algorithm):
@@ -62,7 +120,7 @@ class PostTrainingQuantization(Algorithm):
 
     def create_subalgorithms(self, backend: Backend) -> None:
         if backend == Backend.ONNX:
-            from nncf.experimental.onnx.algorithms.min_max_quantization import ONNXMinMaxQuantization
+            from nncf.experimental.onnx.algorithms.quantization.min_max_quantization import ONNXMinMaxQuantization
             for algorithm, parameters in self.algorithms_to_created.items():
                 if algorithm == PostTrainingAlgorithms.MinMaxQuantization:
                     self.algorithms.append(ONNXMinMaxQuantization(parameters))
