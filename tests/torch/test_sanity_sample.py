@@ -16,6 +16,7 @@ import os
 import shlex
 import sys
 import tempfile
+from abc import abstractmethod
 from enum import Enum
 from enum import auto
 from pathlib import Path
@@ -23,6 +24,9 @@ from typing import Dict
 
 import pytest
 import torch
+from nncf.torch.nas.bootstrapNAS.elasticity.elastic_width import ElasticWidthHandler
+from nncf.torch.nas.bootstrapNAS.training.progressive_shrinking_controller import ProgressiveShrinkingController
+from nncf.torch.nas.bootstrapNAS.training.scheduler import BootstrapNASScheduler
 from pytest_dependency import depends
 # pylint: disable=redefined-outer-name
 from torch import nn
@@ -36,6 +40,7 @@ from nncf.api.compression import CompressionStage
 from nncf.common.compression import BaseCompressionAlgorithmController as BaseController
 from nncf.common.compression import BaseControllerStateNames
 from nncf.common.hardware.config import HWConfigType
+from nncf.common.initialization.batchnorm_adaptation import BatchnormAdaptationAlgorithm
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.config import NNCFConfig
 from nncf.torch.quantization.algo import QuantizationController
@@ -66,9 +71,9 @@ class ConfigFactory:
         self.config[key] = value
 
 
-def create_command_line(args, sample_type):
+def create_command_line(args, sample_type, main_filename='main.py'):
     python_path = PROJECT_ROOT.as_posix()
-    executable = EXAMPLES_DIR.joinpath('torch', sample_type, 'main.py').as_posix()
+    executable = EXAMPLES_DIR.joinpath('torch', sample_type, main_filename).as_posix()
     cli_args = " ".join(key if (val is None or val is True) else "{} {}".format(key, val) for key, val in args.items())
     return "PYTHONPATH={path} {python_exe} {main_py} {args}".format(
         path=python_path, main_py=executable, args=cli_args, python_exe=sys.executable
@@ -506,15 +511,13 @@ class SampleType(Enum):
 class SanityTestCaseDescriptor:
     def __init__(self):
         self.config_name: str = ''
+        self.config_path: Path = Path()
         self.config_dict: Dict = {}
-        self.quantization_algo_params: Dict = {}
         self.sample_type: SampleType = SampleType.CLASSIFICATION
         self.dataset_dir: Path = Path()
         self.dataset_name: str = ''
         self.is_real_dataset: bool = False
         self.batch_size: int = 0
-        self.n_weight_quantizers: int = 0
-        self.n_activation_quantizers: int = 0
         self.is_staged: bool = False
         self.staged_main = 'examples.torch.classification.staged_quantization_worker'
         self._main_per_sample = {
@@ -522,8 +525,39 @@ class SanityTestCaseDescriptor:
             SampleType.OBJECT_DETECTION: 'examples.torch.object_detection.main',
             SampleType.SEMANTIC_SEGMENTATION: 'examples.torch.semantic_segmentation.main',
         }
-        self.is_export_called = False
-        self._train_mock = None
+
+    @abstractmethod
+    def get_compression_section(self):
+        pass
+
+    @abstractmethod
+    def setup_spy(self, mocker):
+        pass
+
+    @abstractmethod
+    def validate_spy(self):
+        pass
+
+    def get_config_update(self) -> Dict:
+        sample_params = self.get_sample_params()
+        return {
+            **sample_params,
+            'target_device': 'VPU',
+            'compression': self.get_compression_section()
+        }
+
+    def get_sample_params(self) -> Dict:
+        return {"dataset": self.dataset_name} if self.dataset_name else {}
+
+    def finalize(self, dataset_dir=None) -> 'SanityTestCaseDescriptor':
+        with self.config_path.open() as file:
+            json_config = json.load(file)
+            json_config.update(self.get_config_update())
+            self.config_dict = json_config
+        if self.is_real_dataset:
+            self.dataset_dir = Path(
+                dataset_dir if dataset_dir else os.path.join(tempfile.gettempdir(), self.dataset_name))
+        return self
 
     def get_main_location(self):
         return self._main_per_sample[self.sample_type]
@@ -541,17 +575,12 @@ class SanityTestCaseDescriptor:
         self.batch_size = batch_size
         return self
 
-    def get_config_path(self):
-        return TEST_ROOT.joinpath("torch", "data", "configs", "hawq", self.config_name)
-
-    def config(self, config_name: str):
+    def hawq_config(self, config_name: str):
         self.config_name = config_name
+        self.config_path = TEST_ROOT.joinpath("torch", "data", "configs", "hawq", config_name)
         return self
 
     def staged(self):
-        self.quantization_algo_params = {
-            "activations_quant_start_epoch": 0
-        }
         self.is_staged = True
         return self
 
@@ -569,42 +598,42 @@ class SanityTestCaseDescriptor:
         self.dataset_dir = TEST_ROOT.joinpath("torch", "data", "mock_datasets", dataset_name)
         return self
 
-    def num_weight_quantizers(self, n: int):
-        self.n_weight_quantizers = n
-        return self
-
-    def num_activation_quantizers(self, n: int):
-        self.n_activation_quantizers = n
-        return self
-
     def __str__(self):
-        return '_'.join([self.config_name, 'staged' if self.quantization_algo_params else ''])
+        return '_'.join([self.config_name, 'staged' if self.is_staged else ''])
 
-    def get_config_update(self) -> Dict:
-        sample_params = self.get_sample_params()
-        return {
-            **sample_params,
-            'target_device': 'VPU',
-            'compression': {
-                'algorithm': 'quantization',
-                'initializer': {
-                    'precision': self.get_precision_section(),
-                    'range': {
-                        "num_init_samples": 2
-                    },
-                    "batchnorm_adaptation": {
-                        "num_bn_adaptation_samples": 1
-                    }
-                },
-                'params': self.quantization_algo_params,
-            }
-        }
+
+class PrecisionTestCaseDescriptor(SanityTestCaseDescriptor):
+    def __init__(self):
+        super().__init__()
+        self.n_weight_quantizers: int = 0
+        self.n_activation_quantizers: int = 0
+        self.quantization_algo_params: Dict = {}
+        self._train_mock = None
 
     def get_precision_section(self) -> Dict:
         raise NotImplementedError
 
-    def get_sample_params(self) -> Dict:
-        return {"dataset": self.dataset_name}
+    def get_compression_section(self):
+        return {
+            'algorithm': 'quantization',
+            'initializer': {
+                'precision': self.get_precision_section(),
+                'range': {
+                    "num_init_samples": 2
+                },
+                "batchnorm_adaptation": {
+                    "num_bn_adaptation_samples": 1
+                }
+            },
+            'params': self.quantization_algo_params,
+        }
+
+    def staged(self):
+        super().staged()
+        self.quantization_algo_params = {
+            "activations_quant_start_epoch": 0
+        }
+        return self
 
     def setup_spy(self, mocker):
         train_location = self.get_train_location()
@@ -618,19 +647,16 @@ class SanityTestCaseDescriptor:
     def validate_spy(self):
         self._train_mock.assert_called_once()
 
-    def finalize(self, dataset_dir=None) -> 'SanityTestCaseDescriptor':
-        config_path = self.get_config_path()
-        with config_path.open() as file:
-            json_config = json.load(file)
-            json_config.update(self.get_config_update())
-            self.config_dict = json_config
-        if self.is_real_dataset:
-            self.dataset_dir = Path(
-                dataset_dir if dataset_dir else os.path.join(tempfile.gettempdir(), self.dataset_name))
+    def num_weight_quantizers(self, n: int):
+        self.n_weight_quantizers = n
+        return self
+
+    def num_activation_quantizers(self, n: int):
+        self.n_activation_quantizers = n
         return self
 
 
-class HAWQDescriptor(SanityTestCaseDescriptor):
+class HAWQTestCaseDescriptor(PrecisionTestCaseDescriptor):
     def __init__(self):
         super().__init__()
         self.batch_size_init: int = 0
@@ -675,7 +701,7 @@ class HAWQDescriptor(SanityTestCaseDescriptor):
         assert init_data_loader.batch_size == expected_batch_size
 
 
-class AutoQDescriptor(SanityTestCaseDescriptor):
+class AutoQTestCaseDescriptor(PrecisionTestCaseDescriptor):
     def __init__(self):
         super().__init__()
         self.subset_ratio_: float = 1.0
@@ -716,62 +742,62 @@ class AutoQDescriptor(SanityTestCaseDescriptor):
         assert all(bit in self.BITS for bit in final_bits)
 
 
-def resnet18_desc(x: SanityTestCaseDescriptor):
-    return x.config("resnet18_cifar10_mixed_int.json").sample(SampleType.CLASSIFICATION). \
+def resnet18_desc(x: PrecisionTestCaseDescriptor):
+    return x.hawq_config("resnet18_cifar10_mixed_int.json").sample(SampleType.CLASSIFICATION). \
         mock_dataset('mock_32x32').batch(3).num_weight_quantizers(21).num_activation_quantizers(27)
 
 
-def inception_v3_desc(x: SanityTestCaseDescriptor):
-    return x.config("inception_v3_cifar10_mixed_int.json").sample(SampleType.CLASSIFICATION). \
+def inception_v3_desc(x: PrecisionTestCaseDescriptor):
+    return x.hawq_config("inception_v3_cifar10_mixed_int.json").sample(SampleType.CLASSIFICATION). \
         mock_dataset('mock_32x32').batch(3).num_weight_quantizers(95).num_activation_quantizers(105)
 
 
-def ssd300_vgg_desc(x: SanityTestCaseDescriptor):
-    return x.config("ssd300_vgg_voc_mixed_int.json").sample(SampleType.OBJECT_DETECTION). \
+def ssd300_vgg_desc(x: PrecisionTestCaseDescriptor):
+    return x.hawq_config("ssd300_vgg_voc_mixed_int.json").sample(SampleType.OBJECT_DETECTION). \
         mock_dataset('voc').batch(3).num_weight_quantizers(35).num_activation_quantizers(27)
 
 
-def unet_desc(x: SanityTestCaseDescriptor):
-    return x.config("unet_camvid_mixed_int.json").sample(SampleType.SEMANTIC_SEGMENTATION). \
+def unet_desc(x: PrecisionTestCaseDescriptor):
+    return x.hawq_config("unet_camvid_mixed_int.json").sample(SampleType.SEMANTIC_SEGMENTATION). \
         mock_dataset('camvid').batch(3).num_weight_quantizers(23).num_activation_quantizers(23)
 
 
-def icnet_desc(x: SanityTestCaseDescriptor):
-    return x.config("icnet_camvid_mixed_int.json").sample(SampleType.SEMANTIC_SEGMENTATION). \
+def icnet_desc(x: PrecisionTestCaseDescriptor):
+    return x.hawq_config("icnet_camvid_mixed_int.json").sample(SampleType.SEMANTIC_SEGMENTATION). \
         mock_dataset('camvid').batch(3).num_weight_quantizers(64).num_activation_quantizers(81)
 
 
 TEST_CASE_DESCRIPTORS = [
-    inception_v3_desc(HAWQDescriptor()),
-    inception_v3_desc(HAWQDescriptor()).staged(),
-    resnet18_desc(HAWQDescriptor()),
-    resnet18_desc(HAWQDescriptor()).staged(),
-    resnet18_desc(HAWQDescriptor()).batch_for_init(2),
-    resnet18_desc(HAWQDescriptor()).batch_for_init(2).staged(),
-    ssd300_vgg_desc(HAWQDescriptor()),
-    ssd300_vgg_desc(HAWQDescriptor()).batch_for_init(2),
-    unet_desc(HAWQDescriptor()),
-    unet_desc(HAWQDescriptor()).batch_for_init(2),
-    icnet_desc(HAWQDescriptor()),
-    inception_v3_desc(AutoQDescriptor()).batch(2),
-    inception_v3_desc(AutoQDescriptor()).staged(),
-    resnet18_desc(AutoQDescriptor()).batch(2),
-    resnet18_desc(AutoQDescriptor()).batch(2).staged().dump_debug(True),
-    resnet18_desc(AutoQDescriptor()).subset_ratio(0.2).batch(2),
-    resnet18_desc(AutoQDescriptor()).subset_ratio(0.2).staged(),
-    ssd300_vgg_desc(AutoQDescriptor()).batch(2).dump_debug(True),
-    unet_desc(AutoQDescriptor()).dump_debug(True),
-    icnet_desc(AutoQDescriptor())
+    inception_v3_desc(HAWQTestCaseDescriptor()),
+    inception_v3_desc(HAWQTestCaseDescriptor()).staged(),
+    resnet18_desc(HAWQTestCaseDescriptor()),
+    resnet18_desc(HAWQTestCaseDescriptor()).staged(),
+    resnet18_desc(HAWQTestCaseDescriptor().batch_for_init(2)),
+    resnet18_desc(HAWQTestCaseDescriptor().batch_for_init(2)).staged(),
+    ssd300_vgg_desc(HAWQTestCaseDescriptor()),
+    ssd300_vgg_desc(HAWQTestCaseDescriptor().batch_for_init(2)),
+    unet_desc(HAWQTestCaseDescriptor()),
+    unet_desc(HAWQTestCaseDescriptor().batch_for_init(2)),
+    icnet_desc(HAWQTestCaseDescriptor()),
+    inception_v3_desc(AutoQTestCaseDescriptor()).batch(2),
+    inception_v3_desc(AutoQTestCaseDescriptor()).staged(),
+    resnet18_desc(AutoQTestCaseDescriptor()).batch(2),
+    resnet18_desc(AutoQTestCaseDescriptor().dump_debug(True)).batch(2).staged(),
+    resnet18_desc(AutoQTestCaseDescriptor().subset_ratio(0.2)).batch(2),
+    resnet18_desc(AutoQTestCaseDescriptor().subset_ratio(0.2)).staged(),
+    ssd300_vgg_desc(AutoQTestCaseDescriptor().dump_debug(True)).batch(2),
+    unet_desc(AutoQTestCaseDescriptor().dump_debug(True)),
+    icnet_desc(AutoQTestCaseDescriptor())
 ]
 
 
 @pytest.fixture(params=TEST_CASE_DESCRIPTORS, ids=[str(d) for d in TEST_CASE_DESCRIPTORS])
 def desc(request, dataset_dir):
-    desc: SanityTestCaseDescriptor = request.param
+    desc: PrecisionTestCaseDescriptor = request.param
     return desc.finalize(dataset_dir)
 
 
-def validate_sample(args, desc: SanityTestCaseDescriptor, mocker):
+def validate_sample(args, desc: PrecisionTestCaseDescriptor, mocker):
     arg_list = [key if (val is None or val is True) else "{} {}".format(key, val) for key, val in args.items()]
     command_line = " ".join(arg_list)
 
@@ -784,7 +810,7 @@ def validate_sample(args, desc: SanityTestCaseDescriptor, mocker):
     desc.validate_spy()
 
 
-def test_precision_init(desc: SanityTestCaseDescriptor, tmp_path, mocker):
+def get_default_args(desc, tmp_path):
     config_factory = ConfigFactory(desc.config_dict, tmp_path / 'config.json')
     args = {
         "--data": str(desc.dataset_dir),
@@ -795,7 +821,11 @@ def test_precision_init(desc: SanityTestCaseDescriptor, tmp_path, mocker):
     }
     if not torch.cuda.is_available():
         args["--cpu-only"] = True
+    return args
 
+
+def test_precision_init(desc: PrecisionTestCaseDescriptor, tmp_path, mocker):
+    args = get_default_args(desc, tmp_path)
     validate_sample(args, desc, mocker)
 
 
@@ -899,12 +929,13 @@ def test_accuracy_aware_training_pipeline(accuracy_aware_config, tmp_path, multi
     assert compression_stage in allowed_compression_stages
 
 
-class ExportDescriptor(SanityTestCaseDescriptor):
+class ExportTestCaseDescriptor(PrecisionTestCaseDescriptor):
     def __init__(self):
         super().__init__()
         self._create_compressed_model_patch = None
         self._reg_init_args_patch = None
         self._ctrl_mock = None
+        self.is_export_called = False
 
     def get_precision_section(self) -> Dict:
         return {}
@@ -949,16 +980,16 @@ class ExportDescriptor(SanityTestCaseDescriptor):
 
 
 EXPORT_TEST_CASE_DESCRIPTORS = [
-    resnet18_desc(ExportDescriptor()),
-    resnet18_desc(ExportDescriptor()).staged(),
-    ssd300_vgg_desc(ExportDescriptor()),
-    unet_desc(ExportDescriptor()),
+    resnet18_desc(ExportTestCaseDescriptor()),
+    resnet18_desc(ExportTestCaseDescriptor()).staged(),
+    ssd300_vgg_desc(ExportTestCaseDescriptor()),
+    unet_desc(ExportTestCaseDescriptor()),
 ]
 
 
 @pytest.fixture(params=EXPORT_TEST_CASE_DESCRIPTORS, ids=[str(d) for d in EXPORT_TEST_CASE_DESCRIPTORS])
 def export_desc(request):
-    desc: SanityTestCaseDescriptor = request.param
+    desc: PrecisionTestCaseDescriptor = request.param
     return desc.finalize()
 
 
@@ -970,20 +1001,72 @@ def export_desc(request):
     ),
     ids=['train_with_onnx_path', 'export_after_train']
 )
-def test_export_behavior(export_desc: SanityTestCaseDescriptor, tmp_path, mocker, extra_args, is_export_called):
-    config_factory = ConfigFactory(export_desc.config_dict, tmp_path / 'config.json')
-    args = {
-        "--data": str(export_desc.dataset_dir),
-        "--config": config_factory.serialize(),
-        "--log-dir": tmp_path,
-        "--batch-size": export_desc.batch_size,
-        "--workers": 0,  # Workaround for the PyTorch MultiProcessingDataLoader issue
-        "--to-onnx": tmp_path / 'model.onnx',
-    }
-    if not torch.cuda.is_available():
-        args["--cpu-only"] = True
+def test_export_behavior(export_desc: PrecisionTestCaseDescriptor, tmp_path, mocker, extra_args, is_export_called):
+    args = get_default_args(export_desc, tmp_path)
+    args["--to-onnx"] = tmp_path / 'model.onnx',
     if extra_args is not None:
         args.update(extra_args)
     export_desc.is_export_called = is_export_called
-
     validate_sample(args, export_desc, mocker)
+
+
+class NASTestCaseDescriptor(SanityTestCaseDescriptor):
+    def __init__(self):
+        super().__init__()
+        self.sample(SampleType.CLASSIFICATION)
+        self.mock_dataset('mock_32x32')
+        self.batch(2)
+        self._all_spies = []
+
+    def get_compression_section(self):
+        pass
+
+    def get_main_location(self):
+        return 'examples.torch.classification.nas_advanced_main'
+
+    def get_config_update(self) -> Dict:
+        sample_params = self.get_sample_params()
+        sample_params['num_mock_images'] = 2
+        sample_params['epochs'] = 5
+        return sample_params
+
+    def setup_spy(self, mocker):
+        # Need to mock SafeMLFLow to prevent starting a not closed mlflow session due to memory leak of config and
+        # SafeMLFLow, which happens with a mocked train function
+        mlflow_location = self.get_main_location() + '.SafeMLFLow'
+        mocker.patch(mlflow_location)
+
+        self._all_spies = [
+            mocker.spy(ElasticWidthHandler, 'activate_random_subnet'),
+            mocker.spy(ElasticWidthHandler, 'reorganize_weights'),
+            mocker.spy(BootstrapNASScheduler, 'epoch_step'),
+            mocker.spy(ProgressiveShrinkingController, 'step'),
+            mocker.spy(BatchnormAdaptationAlgorithm, 'run'),
+        ]
+
+    def validate_spy(self):
+        for spy in self._all_spies:
+            spy.assert_called()
+
+    def dummy_config(self, config_name):
+        self.config_name = config_name
+        self.config_path = TEST_ROOT.joinpath("torch", "data", "configs", "nas") / config_name
+        return self
+
+
+NAS_TEST_CASE_DESCRIPTORS = [
+    NASTestCaseDescriptor().dummy_config('resnet50_cifar10_nas.json'),
+    NASTestCaseDescriptor().dummy_config('mobilenet_v2_cifar10_nas.json'),
+    NASTestCaseDescriptor().dummy_config('efficient_net_b1_cifar10_nas.json')
+]
+
+
+@pytest.fixture(params=NAS_TEST_CASE_DESCRIPTORS, ids=[str(d) for d in NAS_TEST_CASE_DESCRIPTORS])
+def nas_desc(request, dataset_dir):
+    desc: NASTestCaseDescriptor = request.param
+    return desc.finalize(dataset_dir)
+
+
+def test_e2e_supernet_training(nas_desc: NASTestCaseDescriptor, tmp_path, mocker):
+    args = get_default_args(nas_desc, tmp_path)
+    validate_sample(args, nas_desc, mocker)
