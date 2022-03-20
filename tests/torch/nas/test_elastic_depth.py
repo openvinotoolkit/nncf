@@ -217,7 +217,7 @@ def test_skip_one_block_resnet18(mocker):
             'mode': 'manual',
             'skipped_blocks': [[
                 'ResNet/Sequential[layer1]/BasicBlock[0]/relu_0',  # 1
-                'ResNet/Sequential[layer1]/BasicBlock[0]/NNCFBatchNorm[bn2]/batch_norm_0'
+                'ResNet/Sequential[layer1]/BasicBlock[0]/NNCFBatchNorm2d[bn2]/batch_norm_0'
             ]],
         }}}}
     compressed_model, _ = create_bootstrap_training_model_and_ctrl(model, nncf_config)
@@ -250,7 +250,7 @@ def test_can_export_model_with_one_skipped_block_resnet18(tmp_path):
 
     nncf_config = get_empty_config(input_sample_sizes=RESNET50_INPUT_SIZE)
     skipped_blocks = [BuildingBlock('ResNet/Sequential[layer1]/BasicBlock[0]/relu_0',
-                                    'ResNet/Sequential[layer1]/BasicBlock[0]/NNCFBatchNorm[bn2]/batch_norm_0')]
+                                    'ResNet/Sequential[layer1]/BasicBlock[0]/NNCFBatchNorm2d[bn2]/batch_norm_0')]
     orig_onnx_model_path = tmp_path / "resnet18.onnx"
     onnx_model_without_block_path = tmp_path / "resnet18_with_one_skipped_block.onnx"
 
