@@ -26,6 +26,7 @@ from nncf.experimental.onnx.statistics.statistics import ONNXMinMaxTensorStatist
 
 class ONNXNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
     """
+    A realization of the processing methods for ONNXNNCFTensors.
     """
 
     @staticmethod

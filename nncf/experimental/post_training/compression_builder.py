@@ -53,8 +53,8 @@ class CompressionBuilder:
 
     def _get_prepared_model_for_compression(self, model: ModelType, backend: Backend) -> ModelType:
         if backend == Backend.ONNX:
-            from nncf.experimental.onnx.utils import modify_onnx_model_for_quantization
-            return modify_onnx_model_for_quantization(model)
+            from nncf.experimental.onnx.model_normalizer import ONNNXModelNormalizer
+            return ONNNXModelNormalizer.modify_onnx_model_for_quantization(model)
         return None
 
     def apply(self, model: ModelType, dataloader: DataLoader, engine: Engine = None) -> ModelType:

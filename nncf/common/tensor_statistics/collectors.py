@@ -41,6 +41,10 @@ class TensorStatisticCollectorBase(ABC):
         self._collected_samples = 0
         self._num_samples = num_samples
 
+    @property
+    def num_samples(self) -> int:
+        return self._num_samples
+
     def register_input(self, x: TensorType) -> TensorType:
         """Registers input tensor"""
         if not self._enabled or \
