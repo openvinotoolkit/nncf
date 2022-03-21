@@ -11,10 +11,11 @@
  limitations under the License.
 """
 
-from tensorflow.python.keras import backend
-from tensorflow.python.keras import layers
-from tensorflow.python.keras.applications import imagenet_utils
-from tensorflow.python.keras.engine import training
+import tensorflow as tf
+
+from nncf.tensorflow.tf_internals import backend
+from nncf.tensorflow.tf_internals import layers
+from nncf.tensorflow.tf_internals import imagenet_utils
 
 NUM_CLASSES = 1000
 
@@ -105,7 +106,7 @@ def NASNet(
     x = layers.Dense(NUM_CLASSES, activation='softmax',
                      name='predictions')(x)
 
-    model = training.Model(img_input, x, name='NASNet')
+    model = tf.keras.Model(img_input, x, name='NASNet')
 
     return model
 

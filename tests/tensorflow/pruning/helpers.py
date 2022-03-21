@@ -12,7 +12,7 @@
 """
 from addict import Dict
 
-from tensorflow.python.keras import layers
+from tensorflow.keras import layers
 import tensorflow as tf
 
 from nncf import NNCFConfig

@@ -43,8 +43,7 @@
                     "mean_value": "[127.5,127.5,127.5]",
                     "scale_value": "[127.5]",
                     "diff_fp32_min": -1,
-                    "diff_fp32_max": 0.1,
-                    "diff_target_min": -0.11
+                    "diff_fp32_max": 0.1
                 },
                 "inception_v3_sparsity_54": {
                     "config": "examples/tensorflow/classification/configs/sparsity/inception_v3_imagenet_magnitude_sparsity.json",
@@ -83,7 +82,9 @@
                     "mean_value": "[127.5,127.5,127.5]",
                     "scale_value": "[127.5]",
                     "diff_fp32_min": -0.5,
-                    "diff_fp32_max": 1
+                    "diff_fp32_max": 1,
+                    "diff_target_max": 0.15,
+                    "diff_target_min": -0.15
                 },
                 "mobilenet_v2_int8_w_sym_t_half_a_sym_t_rb_sparsity_52": {
                     "config": "examples/tensorflow/classification/configs/sparsity_quantization/mobilenet_v2_imagenet_rb_sparsity_int8.json",
@@ -98,7 +99,9 @@
                     "mean_value": "[127.5,127.5,127.5]",
                     "scale_value": "[127.5]",
                     "diff_fp32_min": -1,
-                    "diff_fp32_max": 1
+                    "diff_fp32_max": 1,
+                    "diff_target_max": 0.15,
+                    "diff_target_min": -0.15
                 },
                 "mobilenet_v2_rb_sparsity_50": {
                     "config": "examples/tensorflow/classification/configs/sparsity/mobilenet_v2_imagenet_rb_sparsity.json",
@@ -113,7 +116,9 @@
                     "mean_value": "[127.5,127.5,127.5]",
                     "scale_value": "[127.5]",
                     "diff_fp32_min": -1,
-                    "diff_fp32_max": 1
+                    "diff_fp32_max": 1,
+                    "diff_target_max": 0.15,
+                    "diff_target_min": -0.15
                 },
                 "tf1_mobilenet_v2_1.0_224_sparsity_35": {
                     "config": "examples/tensorflow/classification/configs/sparsity/mobilenet_v2_hub_imagenet_magnitude_sparsity.json",
@@ -143,7 +148,9 @@
                     "metric_type": "Acc@1",
                     "model_description": "mobilenet_v3_small_int8_w_sym_ch_half_a_asym_t",
                     "compression_description": "INT8",
-                    "reverse_input_channels": true
+                    "reverse_input_channels": true,
+                    "diff_target_max": 0.15,
+                    "diff_target_min": -0.15
                 },
                 "mobilenet_v3_small_int8_w_sym_ch_half_a_asym_t_rb_sparsity_42": {
                     "config": "examples/tensorflow/classification/configs/sparsity_quantization/mobilenet_v3_small_imagenet_rb_sparsity_int8.json",
@@ -154,14 +161,18 @@
                     "metric_type": "Acc@1",
                     "model_description": "mobilenet_v3_small_int8_w_sym_ch_half_a_asym_t_rb_sparsity_42",
                     "compression_description": "INT8 Sparsity 42",
-                    "reverse_input_channels": true
+                    "reverse_input_channels": true,
+                    "diff_target_max": 0.15,
+                    "diff_target_min": -0.15
                 },
                 "mobilenet_v3_large": {
                     "config": "tests/tensorflow/data/configs/classification/mobilenet_v3_large_imagenet.json",
                     "target": 75.81,
                     "metric_type": "Acc@1",
                     "model_description": "mobilenet_v3_large",
-                    "reverse_input_channels": true
+                    "reverse_input_channels": true,
+                    "diff_target_max": 0.15,
+                    "diff_target_min": -0.15
                 },
                 "mobilenet_v3_large_int8_w_sym_ch_half_a_asym_t": {
                     "config": "examples/tensorflow/classification/configs/quantization/mobilenet_v3_large_imagenet_int8.json",
@@ -172,7 +183,9 @@
                     "metric_type": "Acc@1",
                     "model_description": "mobilenet_v3_large_int8_w_sym_ch_half_a_asym_t",
                     "compression_description": "INT8",
-                    "reverse_input_channels": true
+                    "reverse_input_channels": true,
+                    "diff_target_max": 0.15,
+                    "diff_target_min": -0.15
                 },
                 "mobilenet_v3_large_int8_w_sym_ch_half_a_asym_t_rb_sparsity_42": {
                     "config": "examples/tensorflow/classification/configs/sparsity_quantization/mobilenet_v3_large_imagenet_rb_sparsity_int8.json",
@@ -183,7 +196,9 @@
                     "metric_type": "Acc@1",
                     "model_description": "mobilenet_v3_large_int8_w_sym_ch_half_a_asym_t_rb_sparsity_42",
                     "compression_description": "INT8 Sparsity 42",
-                    "reverse_input_channels": true
+                    "reverse_input_channels": true,
+                    "diff_target_max": 0.15,
+                    "diff_target_min": -0.15
                 },
                 "resnet50": {
                     "config": "tests/tensorflow/data/configs/classification/resnet50_imagenet.json",
@@ -203,7 +218,8 @@
                     "compression_description": "INT8",
                     "mean_value": "[103.939,116.779,123.68]",
                     "diff_fp32_min": -1,
-                    "diff_fp32_max": 0.1
+                    "diff_fp32_max": 0.1,
+                    "diff_target_min": -0.17
                 },
                 "resnet50_int8_w_sym_t_half_a_sym_t_rb_sparsity_65": {
                     "config": "examples/tensorflow/classification/configs/sparsity_quantization/resnet50_imagenet_rb_sparsity_int8.json",

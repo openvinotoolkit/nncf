@@ -10,15 +10,13 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+
 import copy
 
-from tensorflow.python.keras.engine import training_utils
-from tensorflow.python.profiler import trace
-from tensorflow.python.eager import context
-from tensorflow.python.keras import callbacks as callbacks_module
-from tensorflow.python.keras.engine import data_adapter
+import tensorflow as tf
 
 from nncf.common.accuracy_aware_training import create_accuracy_aware_training_loop
+from nncf.tensorflow import tf_internals
 
 
 def accuracy_aware_fit(cls_instance, train_dataset, compression_ctrl,
@@ -30,9 +28,9 @@ def accuracy_aware_fit(cls_instance, train_dataset, compression_ctrl,
         result_dict_to_val_metric_fn = lambda metric: metric
 
     with cls_instance.distribute_strategy.scope(), \
-        training_utils.RespectCompiledTrainableState(cls_instance):
+        tf_internals.keras_engine.training_utils.RespectCompiledTrainableState(cls_instance):
         # pylint: disable=protected-access
-        data_handler = data_adapter.DataHandler(
+        data_handler = tf_internals.keras_engine.data_adapter.DataHandler(
             x=train_dataset,
             y=None,
             sample_weight=None,
@@ -48,8 +46,8 @@ def accuracy_aware_fit(cls_instance, train_dataset, compression_ctrl,
             model=cls_instance,
             steps_per_execution=cls_instance._steps_per_execution)
 
-        if not isinstance(callbacks, callbacks_module.CallbackList):
-            callbacks = callbacks_module.CallbackList(
+        if not isinstance(callbacks, tf.keras.callbacks.CallbackList):
+            callbacks = tf.keras.callbacks.CallbackList(
                 callbacks,
                 add_history=True,
                 model=cls_instance,
@@ -69,7 +67,7 @@ def accuracy_aware_fit(cls_instance, train_dataset, compression_ctrl,
         callbacks.on_epoch_begin(epoch)
         with data_handler.catch_stop_iteration():
             for step in data_handler.steps():
-                with trace.Trace(
+                with tf.profiler.experimental.Trace(
                     'train',
                     epoch_num=epoch,
                     step_num=step,
@@ -78,7 +76,7 @@ def accuracy_aware_fit(cls_instance, train_dataset, compression_ctrl,
                     callbacks.on_train_batch_begin(step)
                     tmp_logs = model.train_function(iterator)
                     if data_handler.should_sync:
-                        context.async_wait()
+                        tf_internals.eager_context.async_wait()
                     logs = tmp_logs
                     end_step = step + data_handler.step_increment
                     callbacks.on_train_batch_end(end_step, logs)
@@ -95,7 +93,7 @@ def accuracy_aware_fit(cls_instance, train_dataset, compression_ctrl,
 
     def validate_fn(model, epoch=None):
         val_x, val_y, val_sample_weight = (
-            data_adapter.unpack_x_y_sample_weight(validation_data))
+            tf.keras.utils.unpack_x_y_sample_weight(validation_data))
         val_logs = model.evaluate(
             x=val_x,
             y=val_y,

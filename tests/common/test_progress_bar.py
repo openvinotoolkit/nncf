@@ -20,7 +20,7 @@ from nncf.common.utils.logger import logger as nncf_logger
 TEST_RANGE = range(3)
 
 
-@pytest.yield_fixture()
+@pytest.fixture()
 def _nncf_caplog(caplog):
     nncf_logger.propagate = True
     yield caplog
