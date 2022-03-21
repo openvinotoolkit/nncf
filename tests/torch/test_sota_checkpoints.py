@@ -33,7 +33,12 @@ OPENVINO_DIR = PROJECT_ROOT.parent / 'intel' / 'openvino'
 if not os.path.exists(OPENVINO_DIR):
     OPENVINO_DIR = PROJECT_ROOT.parent / 'intel' / 'openvino_2021'
 ACC_CHECK_DIR = OPENVINO_DIR / 'deployment_tools' / 'open_model_zoo' / 'tools' / 'accuracy_checker'
+if not os.path.exists(ACC_CHECK_DIR):
+    ACC_CHECK_DIR = OPENVINO_DIR
+
 MO_DIR = OPENVINO_DIR / 'deployment_tools' / 'model_optimizer'
+if not os.path.exists(MO_DIR):
+    MO_DIR = OPENVINO_DIR
 
 
 class EvalRunParamsStruct:
@@ -557,8 +562,9 @@ Tsc = TestSotaCheckpoints
 @pytest.fixture(autouse=True, scope="class")
 def openvino_preinstall(ov_data_dir):
     if ov_data_dir:
-        subprocess.run("pip install -r requirements_onnx.txt", cwd=MO_DIR, check=True, shell=True)
-        subprocess.run(f"{sys.executable} setup.py install", cwd=ACC_CHECK_DIR, check=True, shell=True)
+        if 'deployment_tools' in MO_DIR and 'deployment_tools' in ACC_CHECK_DIR:
+            subprocess.run("pip install -r requirements_onnx.txt", cwd=MO_DIR, check=True, shell=True)
+            subprocess.run(f"{sys.executable} setup.py install", cwd=ACC_CHECK_DIR, check=True, shell=True)
 
 
 @pytest.fixture(autouse=True, scope="class")
