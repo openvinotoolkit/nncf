@@ -48,7 +48,8 @@ class ONNXStatisticsAggregator(StatisticsAggregator):
             for i, sample in enumerate(sampler):
                 if i == max_number_samples:
                     break
-                _input, target = sample
+                # Currently, there is no an usage of target
+                _input, _ = sample
                 output = self.engine.infer(_input)
                 self._agregate_statistics(output, self.layers_statistics)
 

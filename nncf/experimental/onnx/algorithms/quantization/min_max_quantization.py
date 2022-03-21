@@ -121,7 +121,7 @@ class ONNXMinMaxQuantization(MinMaxQuantization):
                     outputs = onnx_graph.get_node_edges(node_name)['input'][0]
                 if outputs in filled_outputs:
                     # TODO (kshpv): resolve this problem with inception v3.
-                    nncf_logger.debug(f'Skipping {outputs} layer')
+                    nncf_logger.debug('Skipping {} layer'.format(outputs))
                     continue
                 filled_outputs.append(outputs)
                 self._activation_quantizers.append(outputs)

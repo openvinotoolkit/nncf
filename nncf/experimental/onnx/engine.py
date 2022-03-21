@@ -14,7 +14,6 @@
 from typing import Dict
 
 from nncf.experimental.post_training.api.engine import Engine
-from nncf.experimental.post_training.api.dataloader import DataLoader
 
 import onnxruntime as rt
 import numpy as np
@@ -26,9 +25,6 @@ class ONNXEngine(Engine):
     """
 
     def __init__(self, **rt_session_options):
-        """
-
-        """
         super().__init__()
         self.sess = None
         self.rt_session_options = rt_session_options

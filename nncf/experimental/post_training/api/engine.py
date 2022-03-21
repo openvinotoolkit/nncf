@@ -17,8 +17,6 @@ from abc import abstractmethod
 from typing import Dict
 from typing import TypeVar
 
-from nncf.experimental.post_training.api.dataloader import DataLoader
-
 ModelType = TypeVar('ModelType')
 TensorType = TypeVar('TensorType')
 

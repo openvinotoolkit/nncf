@@ -43,9 +43,6 @@ class BatchSampler(Sampler):
     Base class for dataset sampler forms a batch from samples with batch_size determined in dataloader.
     """
 
-    def __init__(self, dataloader: DataLoader):
-        super().__init__(dataloader)
-
     def __iter__(self):
         for i in range(len(self.batch_indices) - 1):
             batch = self.form_batch(self.batch_indices[i], self.batch_indices[i + 1])

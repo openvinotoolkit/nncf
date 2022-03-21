@@ -18,6 +18,7 @@ from nncf.common.tensor import NNCFTensor
 
 class ONNXNNCFTensor(NNCFTensor):
     """
+    A realisation of ONNX tensors wrapper for common NNCF algorithms.
     """
 
     def __init__(self, tensor: np.ndarray):

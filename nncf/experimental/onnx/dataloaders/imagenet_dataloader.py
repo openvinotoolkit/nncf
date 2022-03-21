@@ -24,7 +24,7 @@ class ImageNetDataLoader(DataLoader):
     def __init__(self, dataset, batch_size, shuffle):
         super().__init__(batch_size, shuffle)
         self.dataset = dataset
-        nncf_logger.info(f"The dataloader is built with the data located on  {dataset.root}")
+        nncf_logger.info('The dataloader is built with the data located on  {}'.format(dataset.root))
 
     def __getitem__(self, item):
         tensor, target = self.dataset[item]

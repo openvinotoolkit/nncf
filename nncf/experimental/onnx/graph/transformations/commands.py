@@ -21,8 +21,16 @@ class ONNXInsertionCommand(TransformationCommand):
         # TODO (kshpv): align target_layer_name
         super().__init__(TransformationType.INSERT, target_layer_name)
 
+    def union(self, other: 'TransformationCommand') -> 'TransformationCommand':
+        # Have a look at nncf/torch/graph/transformations/commands/PTInsertionCommand
+        raise NotImplementedError()
+
 
 class ONNXQuantizerInsertionCommand(ONNXInsertionCommand):
     def __init__(self, target_layer_name: str, quantizer_parameters: QuantizerLayerParameters):
         super().__init__(target_layer_name)
         self.quantizer_parameters = quantizer_parameters
+
+    def union(self, other: 'TransformationCommand') -> 'TransformationCommand':
+        # Have a look at nncf/torch/graph/transformations/commands/PTInsertionCommand
+        raise NotImplementedError()
