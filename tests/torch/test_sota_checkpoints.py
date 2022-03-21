@@ -562,7 +562,7 @@ Tsc = TestSotaCheckpoints
 @pytest.fixture(autouse=True, scope="class")
 def openvino_preinstall(ov_data_dir):
     if ov_data_dir:
-        if 'deployment_tools' in MO_DIR and 'deployment_tools' in ACC_CHECK_DIR:
+        if 'deployment_tools' in MO_DIR.parts and 'deployment_tools' in ACC_CHECK_DIR.parts:
             subprocess.run("pip install -r requirements_onnx.txt", cwd=MO_DIR, check=True, shell=True)
             subprocess.run(f"{sys.executable} setup.py install", cwd=ACC_CHECK_DIR, check=True, shell=True)
 
