@@ -375,6 +375,9 @@ class TestParametrized:
 @pytest.mark.parametrize('device', ['cuda', 'cpu'])
 def test_mapping_to_zero(quantization_mode, device):
     torch.manual_seed(1)
+
+    if not torch.cuda.is_available() and device == 'cuda':
+        pytest.skip("Skipping CUDA test cases for CPU only setups")
     x_zero = torch.zeros([1]).to(torch.device(device))
     levels = 256
     eps = 1e-6
