@@ -1,6 +1,7 @@
 import csv
 import datetime
 import json
+import logging
 import os
 import re
 import shlex
@@ -19,6 +20,8 @@ from yattag import Doc
 from nncf.config import NNCFConfig
 from tests.common.helpers import PROJECT_ROOT
 from tests.common.helpers import TEST_ROOT
+
+logger = logging.getLogger(__name__)
 
 BG_COLOR_GREEN_HEX = 'ccffcc'
 BG_COLOR_YELLOW_HEX = 'ffffcc'
@@ -494,6 +497,8 @@ class TestSotaCheckpoints:
             mo_cmd = "{} mo.py --input_model {} --framework=onnx --data_type=FP16 --reverse_input_channels" \
                      " --mean_values={} --scale_values={} --output_dir {}" \
                 .format(sys.executable, onnx_model, mean_val, scale_val, ir_model_folder)
+
+        logger.debug(f">>>> MO cmd : {mo_cmd}")  # TODO remove line before merge to develop
         exit_code, err_str = self.run_cmd(mo_cmd, cwd=MO_DIR)
         if exit_code == 0 and err_str is None:
             if onnx_type == "q_dq":
@@ -505,6 +510,7 @@ class TestSotaCheckpoints:
                          "{}/{config}.csv".format(config_folder, ov_data_dir,
                                                   ir_model_folder, PROJECT_ROOT,
                                                   config=eval_test_struct.model_name_)
+            logger.debug(f">>>> accuracy cmd : {ac_cmd}")                   # TODO remove line before merge to develop
             exit_code, err_str = self.run_cmd(ac_cmd, cwd=ACC_CHECK_DIR)
             if exit_code != 0 or err_str is not None:
                 pytest.fail(err_str)
