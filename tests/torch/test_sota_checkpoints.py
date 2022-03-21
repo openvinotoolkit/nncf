@@ -489,14 +489,24 @@ class TestSotaCheckpoints:
         scale_val = eval_test_struct.scale_val_
         if onnx_type == "q_dq":
             onnx_model = str(onnx_dir + 'q_dq/' + eval_test_struct.model_name_ + '.onnx')
-            mo_cmd = "mo --input_model {} --framework=onnx --data_type=FP16 --reverse_input_channels" \
-                     " --mean_values={} --scale_values={} --output_dir {}" \
-                .format(onnx_model, mean_val, scale_val, q_dq_ir_model_folder)
+            if 'deployment_tools' in MO_DIR.parts:
+                mo_cmd = "{} mo.py --input_model {} --framework=onnx --data_type=FP16 --reverse_input_channels" \
+                         " --mean_values={} --scale_values={} --output_dir {}" \
+                    .format(sys.executable, onnx_model, mean_val, scale_val, q_dq_ir_model_folder)
+            else:
+                mo_cmd = "mo --input_model {} --framework=onnx --data_type=FP16 --reverse_input_channels" \
+                         " --mean_values={} --scale_values={} --output_dir {}" \
+                    .format(onnx_model, mean_val, scale_val, q_dq_ir_model_folder)
         else:
             onnx_model = str(onnx_dir + eval_test_struct.model_name_ + '.onnx')
-            mo_cmd = "mo --input_model {} --framework=onnx --data_type=FP16 --reverse_input_channels" \
-                     " --mean_values={} --scale_values={} --output_dir {}" \
-                .format(onnx_model, mean_val, scale_val, ir_model_folder)
+            if 'deployment_tools' in MO_DIR.parts:
+                mo_cmd = "{} mo.py --input_model {} --framework=onnx --data_type=FP16 --reverse_input_channels" \
+                         " --mean_values={} --scale_values={} --output_dir {}" \
+                    .format(sys.executable, onnx_model, mean_val, scale_val, q_dq_ir_model_folder)
+            else:
+                mo_cmd = "mo --input_model {} --framework=onnx --data_type=FP16 --reverse_input_channels" \
+                         " --mean_values={} --scale_values={} --output_dir {}" \
+                    .format(onnx_model, mean_val, scale_val, ir_model_folder)
 
         logger.debug(f">>>> MO cmd : {mo_cmd}")  # TODO remove line before merge to develop
         exit_code, err_str = self.run_cmd(mo_cmd, cwd=MO_DIR)
