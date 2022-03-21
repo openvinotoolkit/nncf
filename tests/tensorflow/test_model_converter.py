@@ -14,9 +14,9 @@
 import pytest
 import tensorflow as tf
 from functools import partial
-from tensorflow.python.keras import backend
-from tensorflow.python.keras import layers
-from tensorflow.python.keras import models
+from tensorflow.keras import backend
+from tensorflow.keras import layers
+from tensorflow.keras import models
 
 
 from nncf.common.graph import INPUT_NOOP_METATYPES

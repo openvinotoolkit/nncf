@@ -12,6 +12,7 @@
 """
 from typing import Union
 
+from packaging import version
 import numbers
 import numpy as np
 import tensorflow as tf
@@ -24,6 +25,11 @@ from tests.common.helpers import BaseTensorListComparator
 
 from examples.tensorflow.common.object_detection.datasets.builder import COCODatasetBuilder
 from examples.tensorflow.classification.datasets.builder import DatasetBuilder
+
+if version.parse(tf.__version__) < version.parse('2.6'):
+    from tensorflow.python.keras.applications import imagenet_utils
+else:
+    from keras.applications import imagenet_utils
 
 TensorType = Union[tf.Tensor, tf.Variable, np.ndarray, numbers.Number]
 
@@ -196,3 +202,39 @@ def get_op_by_cls(wrapper, cls):
 def operational_node(node_name: str) -> bool:
     """Check for non-operational nodes with names 'model_name/1234567'. Appeared in Mask-RCNN"""
     return not (len(node_name.split('/')) == 2 and node_name.split('/')[1].isdigit())
+
+
+def remove_node_by_name(node_name: str, tf_graph: tf.Graph) -> tf.Graph:
+    """
+    Removes node with provided name from the TF Graph.
+
+    :param node_name: Name of the node which should be removed.
+    :param tf_graph: A TF graph.
+    :return: Modified TF graph.
+    """
+    graph_def = tf_graph.as_graph_def(add_shapes=True)
+
+    node_idx = -1
+    consumers = []
+    for idx, node in enumerate(graph_def.node):
+        if node.name == node_name:
+            incoming_edges = [name for name in node.input]
+            node_idx = idx
+
+        for port_id, name in enumerate(node.input):
+            if name in [node_name, f'^{node_name}']:
+                consumers.append((idx, port_id))
+
+    if node_idx == -1:
+        return tf_graph
+
+    graph_def.node.pop(node_idx)
+
+    for idx, port_idx in consumers:
+        graph_def.node[idx].input.pop(port_idx)
+        graph_def.node[idx].input.extend(incoming_edges)
+
+    with tf.Graph().as_default() as graph:  # pylint:disable=not-context-manager
+        tf.graph_util.import_graph_def(graph_def, name='')
+
+    return graph

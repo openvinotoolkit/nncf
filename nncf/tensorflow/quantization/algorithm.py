@@ -17,8 +17,6 @@ from typing import List
 from typing import Tuple
 
 import tensorflow as tf
-from tensorflow.python.keras.layers.core import SlicingOpLambda
-from tensorflow.python.keras.layers.core import TFOpLambda
 
 from nncf import NNCFConfig
 from nncf.api.compression import CompressionLoss
@@ -644,7 +642,7 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
                 layer = model.get_layer(name=original_name)
 
                 num_previous_nodes = len(layer.input) if isinstance(layer.input, list) else 1
-                if isinstance(layer, (TFOpLambda, SlicingOpLambda)):
+                if layer.__class__.__name__ in ['TFOpLambda', 'SlicingOpLambda']:
                     num_previous_nodes = 0
                     for inbound_node in layer.inbound_nodes:
                         num_previous_nodes += len(inbound_node.keras_inputs)

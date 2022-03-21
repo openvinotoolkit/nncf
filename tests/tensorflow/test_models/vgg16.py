@@ -11,10 +11,11 @@
  limitations under the License.
 """
 
-from tensorflow.python.keras import backend
-from tensorflow.python.keras import layers
-from tensorflow.python.keras.applications import imagenet_utils
-from tensorflow.python.keras.engine import training
+import tensorflow as tf
+from tensorflow.keras import backend
+from tensorflow.keras import layers
+
+from tests.tensorflow.helpers import imagenet_utils
 
 NUM_CLASSES = 1000
 
@@ -81,6 +82,6 @@ def VGG16(input_shape=None):
                      name='predictions')(x)
 
     # Create model.
-    model = training.Model(img_input, x, name='vgg16')
+    model = tf.keras.Model(img_input, x, name='vgg16')
 
     return model

@@ -11,6 +11,7 @@
  limitations under the License.
 """
 
+from packaging import version
 import tensorflow as tf
 
 from examples.tensorflow.common.dataset_builder import BaseDatasetBuilder
@@ -130,7 +131,8 @@ class DatasetBuilder(BaseDatasetBuilder):
             options.experimental_slack = self._use_slack
             options.experimental_optimization.parallel_batch = True
             options.experimental_optimization.map_fusion = True
-            options.experimental_optimization.map_vectorization.enabled = True
+            if version.parse(tf.__version__) < version.parse('2.7'):
+                options.experimental_optimization.map_vectorization.enabled = True
             options.experimental_optimization.map_parallelization = True
             dataset = dataset.with_options(options)
 

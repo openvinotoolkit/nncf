@@ -22,7 +22,6 @@ from typing import Type
 import tensorflow as tf
 from tensorflow.core.framework.node_def_pb2 import NodeDef
 from tensorflow.python.framework.convert_to_constants import convert_variables_to_constants_v2
-from tensorflow.python.keras.engine.keras_tensor import KerasTensor
 
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNodeName
@@ -53,6 +52,7 @@ from nncf.tensorflow.graph.utils import is_sequential_model
 from nncf.tensorflow.graph.utils import unwrap_layer
 from nncf.tensorflow.layers.data_layout import get_input_channel_axis
 from nncf.common.graph.definitions import NNCFGraphNodeType
+from nncf.tensorflow import tf_internals
 
 PREFIX_AUXILIARY_OUTPUT_NODE = 'output'
 
@@ -168,7 +168,7 @@ class BaseFunctionalSequentialConverter(TFModelConverter):
 
     @staticmethod
     def _get_type_spec(tensor):
-        if isinstance(tensor, KerasTensor):
+        if isinstance(tensor, tf_internals.keras_engine.keras_tensor.KerasTensor):
             return tensor.type_spec
         return tf.TensorSpec.from_tensor(tensor)
 
@@ -265,7 +265,7 @@ class BaseFunctionalSequentialConverter(TFModelConverter):
             return Dtype.FLOAT
 
         keras_layer = self._get_layer(layer_name)
-        if isinstance(keras_layer.output, (tf.Tensor, KerasTensor)):
+        if isinstance(keras_layer.output, (tf.Tensor, tf_internals.keras_engine.keras_tensor.KerasTensor)):
             dtype = keras_layer.output.dtype
         else:
             # In case of multiple outputs, assume all outputs have the same type

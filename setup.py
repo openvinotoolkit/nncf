@@ -91,7 +91,7 @@ INSTALL_REQUIRES = ["ninja>=1.10.0.post2",
                     "jsonschema==3.2.0",
                     "pydot>=1.4.1",
                     "jstyleson>=0.0.2",
-                    "numpy~=1.19.2",
+                    "numpy~=1.20",
                     "tqdm>=4.54.1",
                     "natsort>=7.1.0",
                     "pandas~=1.1.5; python_version<'3.7'",
@@ -109,7 +109,7 @@ if python_version < (3, 6, 2):
 version_string = "{}{}".format(sys.version_info[0], sys.version_info[1])
 
 _extra_deps = [
-    "tensorflow~=2.5.0",
+    "tensorflow~=2.8.0",
     "torch>=1.5.0, <=1.9.1, !=1.8.0",
 ]
 
