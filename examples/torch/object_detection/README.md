@@ -40,7 +40,7 @@ This scenario demonstrates quantization with fine-tuning of SSD300 on VOC datase
 - Run the following command to start compression with fine-tuning on GPUs:
 `python main.py -m train --config configs/ssd300_vgg_voc_int8.json --data <path_to_dataset> --log-dir=../../results/quantization/ssd300_int8 --weights=<path_to_checkpoint>`  
  It may take a few epochs to get the baseline accuracy results.
-- Use `--weights` flag with the path to a compatible PyTorch checkpoint in order to load all matching weights from the checkpoint into the model - useful if you need to start compression-aware training from a previously trained uncompressed (FP32) checkpoint instead of performing compression-aware training from scratch. This flag optional, but highly recommended to use.
+- Use `--weights` flag with the path to a compatible PyTorch checkpoint in order to load all matching weights from the checkpoint into the model - useful if you need to start compression-aware training from a previously trained uncompressed (FP32) checkpoint instead of performing compression-aware training from scratch. This flag is optional, but highly recommended to use.
 - Use `--multiprocessing-distributed` flag to run in the distributed mode.
 - Use `--resume` flag with the path to a previously saved model to resume training.
 
