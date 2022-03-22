@@ -402,7 +402,7 @@ class SwapChannels:
     def __init__(self, swaps):
         self.swaps = swaps
 
-    def __call__(self, image):
+    def __call__(self, image: np.ndarray):
         """
         Args:
             image (Tensor): image tensor to be transformed
