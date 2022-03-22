@@ -16,6 +16,7 @@ from typing import List
 from typing import Tuple
 
 import onnx
+# pylint: disable=no-member
 
 from nncf.common.quantization.quantizer_propagation.solver import QuantizerPropagationSolver
 from nncf.common.quantization.structs import QuantizableWeightedLayerNode

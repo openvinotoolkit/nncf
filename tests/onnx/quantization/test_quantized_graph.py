@@ -6,6 +6,7 @@ import torch
 from torchvision import models
 import numpy as np
 import onnx
+# pylint: disable=no-member
 
 from tests.common.helpers import TEST_ROOT
 from tests.onnx.test_nncf_graph_builder import check_nx_graph

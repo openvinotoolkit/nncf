@@ -1,6 +1,7 @@
 import pytest
 
 import onnx
+# pylint: disable=no-member
 import numpy as np
 
 from nncf.experimental.onnx.graph.transformations.commands import ONNXQuantizerInsertionCommand

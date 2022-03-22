@@ -16,6 +16,7 @@ from typing import Dict
 from skl2onnx.helpers.onnx_helper import select_model_inputs_outputs
 from skl2onnx.helpers.onnx_helper import enumerate_model_node_outputs
 import onnx
+# pylint: disable=no-member
 import tempfile
 
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase

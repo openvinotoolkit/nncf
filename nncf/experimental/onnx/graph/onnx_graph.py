@@ -18,7 +18,7 @@ from typing import List
 import onnx
 from onnx import NodeProto  # pylint: disable=no-name-in-module
 from onnx import ValueInfoProto  # pylint: disable=no-name-in-module
-from onnx import numpy_helper
+from onnx import numpy_helper  # pylint: disable=no-name-in-module
 import numpy as np
 
 

@@ -12,7 +12,7 @@
 """
 
 import onnx
-from onnx import version_converter
+from onnx import version_converter  # pylint: disable=no-name-in-module
 
 from nncf.common.utils.logger import logger as nncf_logger
 
