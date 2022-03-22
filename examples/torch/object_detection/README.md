@@ -23,8 +23,8 @@ pip install -r examples/torch/requirements.txt
 This scenario demonstrates quantization with fine-tuning of SSD300 on VOC dataset.
 
 #### Dataset preparation
-- Download and extract in one `folder` train/val+test VOC2007 and train/val VOC2012 data from [here](https://pjreddie.com/projects/pascal-voc-dataset-mirror/)
-- In the future, <path_to_dataset> means the path to this `folder`.
+- Download and extract in one folder train/val+test VOC2007 and train/val VOC2012 data from [here](https://pjreddie.com/projects/pascal-voc-dataset-mirror/)
+- In the future, `<path_to_dataset>` means the path to this folder.
 
 #### Run object detection sample
 - If you did not install the package then add the repository root folder to the `PYTHONPATH` environment variable
