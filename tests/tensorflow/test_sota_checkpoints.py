@@ -564,7 +564,6 @@ class TestSotaCheckpoints(RunTest):
                 mo_cmd += f' --mean_values={eval_test_struct.mean_val_}'
             if eval_test_struct.scale_val_:
                 mo_cmd += f' --scale_values={eval_test_struct.scale_val_}'
-            logger.debug(f">>>> MO cmd: {mo_cmd}")
             if 'deployment_tools' in MO_DIR.parts:
                 exit_code, err_str = self.run_cmd(mo_cmd, MO_DIR, MO_VENV_DIR)
             else:
@@ -578,7 +577,6 @@ class TestSotaCheckpoints(RunTest):
                          f' -d dataset_definitions.yml' \
                          f' -m {ir_model_folder}' \
                          f' --csv_result {csv_result}'
-                logger.debug(f">>>> AC cmd: {ac_cmd}")
                 exit_code, err_str = self.run_cmd(ac_cmd, ACC_CHECK_DIR)
 
         if exit_code != 0:
