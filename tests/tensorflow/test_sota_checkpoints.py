@@ -28,6 +28,7 @@ import subprocess
 import re
 import shlex
 import yaml
+import logging
 from prettytable import PrettyTable
 from collections import OrderedDict
 from yattag import Doc
@@ -35,6 +36,7 @@ from pathlib import Path
 from tests.common.helpers import TEST_ROOT
 from tests.common.helpers import PROJECT_ROOT
 
+logger = logging.getLogger(__name__)
 BG_COLOR_GREEN_HEX = 'ccffcc'
 BG_COLOR_YELLOW_HEX = 'ffffcc'
 BG_COLOR_RED_HEX = 'ffcccc'
@@ -48,7 +50,11 @@ OPENVINO_DIR = PROJECT_ROOT.parent / 'intel' / 'openvino'
 if not os.path.exists(OPENVINO_DIR):
     OPENVINO_DIR = PROJECT_ROOT.parent / 'intel' / 'openvino_2021'
 ACC_CHECK_DIR = OPENVINO_DIR / 'deployment_tools' / 'open_model_zoo' / 'tools' / 'accuracy_checker'
+if not os.path.exists(ACC_CHECK_DIR):
+    ACC_CHECK_DIR = PROJECT_ROOT
 MO_DIR = OPENVINO_DIR / 'deployment_tools' / 'model_optimizer'
+if not os.path.exists(MO_DIR):
+    MO_DIR = PROJECT_ROOT
 MO_VENV_DIR = PROJECT_ROOT / 'model_optimizer'
 venv_activate_string = f'source {MO_VENV_DIR}/bin/activate && source {OPENVINO_DIR}/bin/setupvars.sh'
 
@@ -540,18 +546,29 @@ class TestSotaCheckpoints(RunTest):
         exit_code, err_str = self.run_cmd(save_cmd, cwd=PROJECT_ROOT)
 
         if exit_code == 0:
-            mo_cmd = f'{sys.executable} mo.py' \
-                     f' --framework tf' \
-                     f' --input_shape {self.get_input_shape(eval_test_struct.config_name_)}' \
-                     f' --input_model {tf_checkpoint}' \
-                     f' --output_dir {ir_model_folder}'
+            if 'deployment_tools' in MO_DIR.parts:
+                mo_cmd = f'{sys.executable} mo.py' \
+                         f' --framework tf' \
+                         f' --input_shape {self.get_input_shape(eval_test_struct.config_name_)}' \
+                         f' --input_model {tf_checkpoint}' \
+                         f' --output_dir {ir_model_folder}'
+            else:
+                mo_cmd = f'mo' \
+                         f' --framework tf' \
+                         f' --input_shape {self.get_input_shape(eval_test_struct.config_name_)}' \
+                         f' --input_model {tf_checkpoint}' \
+                         f' --output_dir {ir_model_folder}'
             if eval_test_struct.reverse_input_channels_:
                 mo_cmd += ' --reverse_input_channels'
             if eval_test_struct.mean_val_:
                 mo_cmd += f' --mean_values={eval_test_struct.mean_val_}'
             if eval_test_struct.scale_val_:
                 mo_cmd += f' --scale_values={eval_test_struct.scale_val_}'
-            exit_code, err_str = self.run_cmd(mo_cmd, MO_DIR, MO_VENV_DIR)
+            logger.debug(f">>>> MO cmd: {mo_cmd}")
+            if 'deployment_tools' in MO_DIR.parts:
+                exit_code, err_str = self.run_cmd(mo_cmd, MO_DIR, MO_VENV_DIR)
+            else:
+                exit_code, err_str = self.run_cmd(mo_cmd, MO_DIR)
 
             if exit_code == 0:
                 ac_cmd = f'accuracy_check' \
@@ -561,6 +578,7 @@ class TestSotaCheckpoints(RunTest):
                          f' -d dataset_definitions.yml' \
                          f' -m {ir_model_folder}' \
                          f' --csv_result {csv_result}'
+                logger.debug(f">>>> AC cmd: {ac_cmd}")
                 exit_code, err_str = self.run_cmd(ac_cmd, ACC_CHECK_DIR)
 
         if exit_code != 0:
@@ -575,11 +593,12 @@ Tsc = TestSotaCheckpoints
 @pytest.fixture(autouse=True, scope='class')
 def openvino_preinstall(openvino):
     if openvino:
-        subprocess.run(f'virtualenv -ppython3.8 {MO_VENV_DIR}', cwd=PROJECT_ROOT, check=True, shell=True)
-        subprocess.run(f'{venv_activate_string} && {MO_VENV_DIR}/bin/pip install -r requirements_tf2.txt',
-                       cwd=MO_DIR, check=True, shell=True, executable='/bin/bash')
         subprocess.run('pip install scikit-image!=0.18.2rc1', cwd=ACC_CHECK_DIR, check=True, shell=True)
-        subprocess.run(f'{sys.executable} setup.py install', cwd=ACC_CHECK_DIR, check=True, shell=True)
+        if 'deployment_tools' in MO_DIR.parts and 'deployment_tools' in ACC_CHECK_DIR.parts:
+            subprocess.run(f'virtualenv -ppython3.8 {MO_VENV_DIR}', cwd=PROJECT_ROOT, check=True, shell=True)
+            subprocess.run(f'{venv_activate_string} && {MO_VENV_DIR}/bin/pip install -r requirements_tf2.txt',
+                           cwd=MO_DIR, check=True, shell=True, executable='/bin/bash')
+            subprocess.run(f'{sys.executable} setup.py install', cwd=ACC_CHECK_DIR, check=True, shell=True)
 
 
 # pylint:disable=line-too-long
