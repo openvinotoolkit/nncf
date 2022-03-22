@@ -75,7 +75,7 @@ class Lambda:
         assert isinstance(lambd, types.LambdaType)
         self.lambd = lambd
 
-    def __call__(self, img, target):
+    def __call__(self, img: np.ndarray, target: List[Dict]):
         return self.lambd(img, target)
 
 
@@ -219,12 +219,12 @@ class RandomBrightness:
 
 
 class ToCV2Image:
-    def __call__(self, tensor, target):
+    def __call__(self, tensor, target: List[Dict]):
         return tensor.cpu().numpy().astype(np.float32).transpose((1, 2, 0)), target
 
 
 class ToTensor:
-    def __call__(self, cvimage, target):
+    def __call__(self, cvimage, target: List[Dict]):
         return torch.from_numpy(cvimage.astype(np.float32)).permute(2, 0, 1), target
 
 
