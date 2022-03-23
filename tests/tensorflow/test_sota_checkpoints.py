@@ -560,7 +560,7 @@ class TestSotaCheckpoints(RunTest):
                 mo_cmd += f' --mean_values={eval_test_struct.mean_val_}'
             if eval_test_struct.scale_val_:
                 mo_cmd += f' --scale_values={eval_test_struct.scale_val_}'
-            if 'deployment_tools' in MO_DIR.parts:
+            if RC_PACKAGE_NOT_USED:
                 exit_code, err_str = self.run_cmd(mo_cmd, MO_DIR, MO_VENV_DIR)
             else:
                 exit_code, err_str = self.run_cmd(mo_cmd, MO_DIR)
