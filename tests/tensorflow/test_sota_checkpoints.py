@@ -28,7 +28,6 @@ import subprocess
 import re
 import shlex
 import yaml
-import logging
 from prettytable import PrettyTable
 from collections import OrderedDict
 from yattag import Doc
@@ -36,7 +35,6 @@ from pathlib import Path
 from tests.common.helpers import TEST_ROOT
 from tests.common.helpers import PROJECT_ROOT
 
-logger = logging.getLogger(__name__)
 BG_COLOR_GREEN_HEX = 'ccffcc'
 BG_COLOR_YELLOW_HEX = 'ffffcc'
 BG_COLOR_RED_HEX = 'ffcccc'
@@ -50,13 +48,15 @@ OPENVINO_DIR = PROJECT_ROOT.parent / 'intel' / 'openvino'
 if not os.path.exists(OPENVINO_DIR):
     OPENVINO_DIR = PROJECT_ROOT.parent / 'intel' / 'openvino_2021'
 ACC_CHECK_DIR = OPENVINO_DIR / 'deployment_tools' / 'open_model_zoo' / 'tools' / 'accuracy_checker'
-if not os.path.exists(ACC_CHECK_DIR):
-    ACC_CHECK_DIR = PROJECT_ROOT
 MO_DIR = OPENVINO_DIR / 'deployment_tools' / 'model_optimizer'
-if not os.path.exists(MO_DIR):
-    MO_DIR = PROJECT_ROOT
 MO_VENV_DIR = PROJECT_ROOT / 'model_optimizer'
 venv_activate_string = f'source {MO_VENV_DIR}/bin/activate && source {OPENVINO_DIR}/bin/setupvars.sh'
+RC_PACKAGE_NOT_USED = True
+
+if not os.path.exists(ACC_CHECK_DIR) and not os.path.exists(MO_DIR):
+    ACC_CHECK_DIR = PROJECT_ROOT
+    MO_DIR = PROJECT_ROOT
+    RC_PACKAGE_NOT_USED = False
 
 MODE = 'TF2'
 
@@ -546,18 +546,14 @@ class TestSotaCheckpoints(RunTest):
         exit_code, err_str = self.run_cmd(save_cmd, cwd=PROJECT_ROOT)
 
         if exit_code == 0:
-            if 'deployment_tools' in MO_DIR.parts:
-                mo_cmd = f'{sys.executable} mo.py' \
-                         f' --framework tf' \
-                         f' --input_shape {self.get_input_shape(eval_test_struct.config_name_)}' \
-                         f' --input_model {tf_checkpoint}' \
-                         f' --output_dir {ir_model_folder}'
+            mo_cmd_tail = f' --framework tf' \
+                          f' --input_shape {self.get_input_shape(eval_test_struct.config_name_)}' \
+                          f' --input_model {tf_checkpoint}' \
+                          f' --output_dir {ir_model_folder}'
+            if RC_PACKAGE_NOT_USED:
+                mo_cmd = f'{sys.executable} mo.py {mo_cmd_tail}'
             else:
-                mo_cmd = f'mo' \
-                         f' --framework tf' \
-                         f' --input_shape {self.get_input_shape(eval_test_struct.config_name_)}' \
-                         f' --input_model {tf_checkpoint}' \
-                         f' --output_dir {ir_model_folder}'
+                mo_cmd = f'mo {mo_cmd_tail}'
             if eval_test_struct.reverse_input_channels_:
                 mo_cmd += ' --reverse_input_channels'
             if eval_test_struct.mean_val_:
@@ -592,7 +588,7 @@ Tsc = TestSotaCheckpoints
 def openvino_preinstall(openvino):
     if openvino:
         subprocess.run('pip install scikit-image!=0.18.2rc1', cwd=ACC_CHECK_DIR, check=True, shell=True)
-        if 'deployment_tools' in MO_DIR.parts and 'deployment_tools' in ACC_CHECK_DIR.parts:
+        if RC_PACKAGE_NOT_USED:
             subprocess.run(f'virtualenv -ppython3.8 {MO_VENV_DIR}', cwd=PROJECT_ROOT, check=True, shell=True)
             subprocess.run(f'{venv_activate_string} && {MO_VENV_DIR}/bin/pip install -r requirements_tf2.txt',
                            cwd=MO_DIR, check=True, shell=True, executable='/bin/bash')
