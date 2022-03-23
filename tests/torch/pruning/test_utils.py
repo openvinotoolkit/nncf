@@ -18,7 +18,7 @@ from nncf.common.graph.utils import get_first_nodes_of_type
 from nncf.common.pruning.utils import get_last_nodes_of_type
 from nncf.torch.pruning.utils import get_bn_for_conv_node_by_name
 from tests.torch.pruning.helpers import get_basic_pruning_config, BigPruningTestModel, \
-    TestModelBranching
+    BranchingModel
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
 
 
@@ -65,7 +65,7 @@ def test_get_bn_for_conv_node():
 
 @pytest.mark.parametrize(('model', 'ref_first_module_names'),
                          [(BigPruningTestModel, ['conv1']),
-                          (TestModelBranching, ['conv1', 'conv2', 'conv3']),
+                          (BranchingModel, ['conv1', 'conv2', 'conv3']),
                           ],
                          )
 def test_get_first_pruned_layers(model, ref_first_module_names):
@@ -83,7 +83,7 @@ def test_get_first_pruned_layers(model, ref_first_module_names):
 
 @pytest.mark.parametrize(('model', 'ref_last_module_names'),
                          [(BigPruningTestModel, ['conv3']),
-                          (TestModelBranching, ['conv4', 'conv5']
+                          (BranchingModel, ['conv4', 'conv5']
                            ),
                           ],
                          )

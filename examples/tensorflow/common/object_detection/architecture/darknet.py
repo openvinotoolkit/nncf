@@ -12,7 +12,7 @@
 """
 
 import tensorflow as tf
-import tensorflow.keras.backend as K
+import tensorflow.keras.backend as K  # pylint: disable=no-name-in-module
 from examples.tensorflow.common.object_detection.architecture import nn_ops
 
 

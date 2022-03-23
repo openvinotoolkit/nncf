@@ -17,6 +17,7 @@ import argparse
 import os
 
 from nncf import NNCFConfig
+from nncf.config.utils import is_experimental_quantization
 
 try:
     import jstyleson as json
@@ -106,6 +107,10 @@ def create_sample_config(args, parser) -> SampleConfig:
 
     if args.disable_compression and 'compression' in nncf_config:
         del nncf_config['compression']
+
+    if 'compression' in nncf_config and is_experimental_quantization(nncf_config):
+        from nncf.experimental.tensorflow.patch_tf import patch_tf_operations
+        patch_tf_operations()
 
     sample_config = SampleConfig.from_json(args.config)
     sample_config.update_from_args(args, parser)

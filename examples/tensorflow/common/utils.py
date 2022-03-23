@@ -11,16 +11,21 @@
  limitations under the License.
 """
 
+import random
 import time
 import datetime
 import json
 import os
 import tarfile
+
+import numpy as np
 import resource
 from os import path as osp
 from pathlib import Path
+import atexit
 
 import tensorflow as tf
+from tensorflow.python.distribute.mirrored_strategy import MirroredStrategy
 
 from examples.tensorflow.common.logger import logger as default_logger
 from examples.tensorflow.common.sample_config import CustomArgumentParser
@@ -201,3 +206,19 @@ class Timer:
         self.start_time = 0.
         self.diff = 0.
         self.average_time = 0.
+
+
+def close_strategy_threadpool(strategy):
+    """Due to https://github.com/tensorflow/tensorflow/issues/50487"""
+    # pylint: disable=protected-access
+    if isinstance(strategy, MirroredStrategy):
+        atexit.register(strategy._extended._collective_ops._pool.close)
+
+
+def set_seed(config):
+    if config.seed is not None:
+        os.environ['TF_DETERMINISTIC_OPS'] = '1'
+        os.environ['TF_CUDNN_DETERMINISTIC'] = '1'
+        random.seed(config.seed)
+        np.random.seed(config.seed)
+        tf.random.set_seed(config.seed)

@@ -11,23 +11,29 @@
  limitations under the License.
 """
 
-from functools import partial
-from typing import Dict, List, Optional, Tuple, Type, Union, Callable
-from enum import Enum
-
 import math
+from enum import Enum
+from functools import partial
+from typing import Callable
+from typing import Dict
+from typing import List
+from typing import Optional
+from typing import Tuple
+from typing import Type
+from typing import Union
+
 import numpy as np
 
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.graph import NNCFNodeName
-from nncf.common.tensor import NNCFTensor
-from nncf.common.tensor_statistics.collectors import NNCFCollectorTensorProcessor
+from nncf.common.graph.layer_attributes import LinearLayerAttributes
 from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.pruning.clusterization import Cluster
 from nncf.common.pruning.clusterization import Clusterization
 from nncf.common.pruning.structs import PrunedLayerInfoBase
+from nncf.common.tensor import NNCFTensor
 from nncf.common.utils.registry import Registry
 
 
@@ -172,24 +178,24 @@ def get_previous_convs(graph: NNCFGraph, nncf_node: NNCFNode,
     return sources
 
 
-def get_conv_in_out_channels(graph: NNCFGraph):
+def get_prunable_layers_in_out_channels(graph: NNCFGraph) -> Tuple[Dict[NNCFNodeName, int], Dict[NNCFNodeName, int]]:
     """
-    Collects the number of input and output channels for each convolution in the graph.
+    Collects the number of input and output channels for each prunable layer in the graph.
 
     :param graph: NNCFGraph
-    :return Dictionary with the number of input channels to convolution layers:
+    :return Dictionary with the number of input channels to convolution and linear layers:
             {node_name: input_channels_num}
-            Dictionary with the number of output channels from convolution layers:
+            Dictionary with the number of output channels from convolution and linear layers:
             {node_name: output_channels_num}
     """
     in_channels, out_channels = {}, {}
     for node in graph.get_all_nodes():
-        if isinstance(node.layer_attributes, ConvolutionLayerAttributes):
+        if isinstance(node.layer_attributes, (ConvolutionLayerAttributes, LinearLayerAttributes)):
             name = node.node_name
             if name in in_channels and name in out_channels:
                 continue
-            in_channels[name] = node.layer_attributes.in_channels
-            out_channels[name] = node.layer_attributes.out_channels
+            in_channels[name] = get_input_channels(node)
+            out_channels[name] = get_output_channels(node)
     return in_channels, out_channels
 
 
@@ -224,7 +230,10 @@ def count_flops_and_weights(graph: NNCFGraph,
                             conv_op_metatypes: List[Type[OperatorMetatype]],
                             linear_op_metatypes: List[Type[OperatorMetatype]],
                             input_channels: Dict[NNCFNodeName, int] = None,
-                            output_channels: Dict[NNCFNodeName, int] = None) -> Tuple[int, int]:
+                            output_channels: Dict[NNCFNodeName, int] = None,
+                            kernel_sizes: Dict[NNCFNodeName, Tuple[int, int]] = None,
+                            op_addresses_to_skip: List[str] = None
+                            ) -> Tuple[int, int]:
     """
     Counts the number weights and FLOPs in the model for convolution and fully connected layers.
 
@@ -239,13 +248,19 @@ def count_flops_and_weights(graph: NNCFGraph,
         If not specified, taken from the graph. {node_name: channels_num}
     :param output_channels: Dictionary of output channels number in convolutions.
         If not specified, taken from the graph. {node_name: channels_num}
+    :param kernel_sizes: Dictionary of kernel sizes in convolutions.
+        If not specified, taken from the graph. {node_name: kernel_size}. It's only supposed to be used in NAS in case
+        of Elastic Kernel enabled.
+    :param op_addresses_to_skip: List of operation addresses of layers that should be skipped from calculation.
+        It's only supposed to be used in NAS in case of Elastic Depth enabled.
     :return number of FLOPs for the model
             number of weights (params) in the model
     """
     flops_pers_node, weights_per_node = count_flops_and_weights_per_node(graph,
                                                                          input_shapes, output_shapes,
                                                                          conv_op_metatypes, linear_op_metatypes,
-                                                                         input_channels, output_channels)
+                                                                         input_channels, output_channels,
+                                                                         kernel_sizes, op_addresses_to_skip)
     return sum(flops_pers_node.values()), sum(weights_per_node.values())
 
 
@@ -255,8 +270,10 @@ def count_flops_and_weights_per_node(graph: NNCFGraph,
                                      conv_op_metatypes: List[Type[OperatorMetatype]],
                                      linear_op_metatypes: List[Type[OperatorMetatype]],
                                      input_channels: Dict[NNCFNodeName, int] = None,
-                                     output_channels: Dict[NNCFNodeName, int] = None) -> \
-        Tuple[Dict[NNCFNodeName, int], Dict[NNCFNodeName, int]]:
+                                     output_channels: Dict[NNCFNodeName, int] = None,
+                                     kernel_sizes: Dict[NNCFNodeName, Tuple[int, int]] = None,
+                                     op_addresses_to_skip: List[NNCFNodeName] = None) -> \
+    Tuple[Dict[NNCFNodeName, int], Dict[NNCFNodeName, int]]:
     """
     Counts the number weights and FLOPs per node in the model for convolution and fully connected layers.
 
@@ -271,6 +288,11 @@ def count_flops_and_weights_per_node(graph: NNCFGraph,
         If not specified, taken from the graph. {node_name: channels_num}
     :param output_channels: Dictionary of output channels number in convolutions.
         If not specified, taken from the graph. {node_name: channels_num}
+    :param kernel_sizes: Dictionary of kernel sizes in convolutions.
+        If not specified, taken from the graph. {node_name: kernel_size}. It's only supposed to be used in NAS in case
+        of Elastic Kernel enabled.
+    :param op_addresses_to_skip: List of operation addresses of layers that should be skipped from calculation.
+        It's only supposed to be used in NAS in case of Elastic Depth enabled.
     :return Dictionary of FLOPs number {node_name: flops_num}
             Dictionary of weights number {node_name: weights_num}
     """
@@ -278,10 +300,15 @@ def count_flops_and_weights_per_node(graph: NNCFGraph,
     weights = {}
     input_channels = input_channels or {}
     output_channels = output_channels or {}
+    kernel_sizes = kernel_sizes or {}
+    op_addresses_to_skip = op_addresses_to_skip or []
     for node in graph.get_nodes_by_metatypes(conv_op_metatypes):
         name = node.node_name
+        if name in op_addresses_to_skip:
+            continue
         num_in_channels = input_channels.get(name, node.layer_attributes.in_channels)
         num_out_channels = output_channels.get(name, node.layer_attributes.out_channels)
+        kernel_size = kernel_sizes.get(name, node.layer_attributes.kernel_size)
         if is_prunable_depthwise_conv(node):
             # Prunable depthwise conv processed in special way
             # because common way to calculate filters per
@@ -291,14 +318,15 @@ def count_flops_and_weights_per_node(graph: NNCFGraph,
         else:
             filters_per_channel = num_out_channels // node.layer_attributes.groups
 
-        flops_numpy = 2 * np.prod(node.layer_attributes.kernel_size) * \
-                      num_in_channels * filters_per_channel * np.prod(output_shapes[name])
-        weights_numpy = np.prod(node.layer_attributes.kernel_size) * num_in_channels * filters_per_channel
+        flops_numpy = 2 * np.prod(kernel_size) * num_in_channels * filters_per_channel * np.prod(output_shapes[name])
+        weights_numpy = np.prod(kernel_size) * num_in_channels * filters_per_channel
         flops[name] = flops_numpy.astype(int).item()
         weights[name] = weights_numpy.astype(int).item()
 
     for node in graph.get_nodes_by_metatypes(linear_op_metatypes):
         name = node.node_name
+        if name in op_addresses_to_skip:
+            continue
         flops_numpy = 2 * np.prod(input_shapes[name]) * np.prod(output_shapes[name])
         weights_numpy = np.prod(input_shapes[name]) * np.prod(output_shapes[name])
         flops[name] = flops_numpy.astype(int).item()
@@ -321,7 +349,7 @@ def count_filters_num(graph: NNCFGraph,
     filters_num = 0
     output_channels = output_channels or {}
     for node in graph.get_nodes_by_metatypes(op_metatypes):
-        filters_num += output_channels.get(node.node_name, node.layer_attributes.out_channels)
+        filters_num += output_channels.get(node.node_name, get_output_channels(node))
     return filters_num
 
 
@@ -360,7 +388,7 @@ def calculate_in_out_channels_in_uniformly_pruned_model(pruning_groups: List[Clu
                                                         full_input_channels: Dict[str, int],
                                                         full_output_channels: Dict[str, int],
                                                         pruning_groups_next_nodes: Dict[int, List[str]]) -> \
-                                                        Tuple[Dict[str, int], Dict[str, int]]:
+    Tuple[Dict[str, int], Dict[str, int]]:
     """
     Imitates filters pruning by removing `pruning_rate` percent of output filters in each pruning group
     and updating corresponding input channels number in `pruning_groups_next_nodes` nodes.
@@ -373,6 +401,7 @@ def calculate_in_out_channels_in_uniformly_pruned_model(pruning_groups: List[Clu
     :return Dictionary of new input channels number {node_name: channels_num}
     :return Dictionary of new output channels number {node_name: channels_num}
     """
+
     def get_num_of_sparse_elements_by_node(node_name: str) -> int:
         old_out_channels = full_output_channels[node_name]
         return get_rounded_pruned_element_number(old_out_channels, pruning_level)
@@ -385,8 +414,7 @@ def calculate_in_out_channels_in_uniformly_pruned_model(pruning_groups: List[Clu
 
 
 def calculate_in_out_channels_by_masks(pruning_groups: List[Cluster[PrunedLayerInfoBase]],
-                                       masks: Dict[str, NNCFTensor],
-                                       tensor_processor: Type[NNCFCollectorTensorProcessor],
+                                       num_of_sparse_elements_by_node: Dict[NNCFNodeName, int],
                                        full_input_channels: Dict[str, int],
                                        full_output_channels: Dict[str, int],
                                        pruning_groups_next_nodes: Dict[int, List[str]]) -> Tuple[Dict[str, int],
@@ -396,16 +424,15 @@ def calculate_in_out_channels_by_masks(pruning_groups: List[Cluster[PrunedLayerI
     and updating corresponding input channels number in `pruning_groups_next_nodes` nodes.
 
     :param pruning_groups: A list of pruning groups.
-    :param masks: A dictionary of masks of each pruning node.
-    :param tensor_processor: NNCF Tensor processor to operate on NNCFTensors.
+    :param num_of_sparse_elements_by_node: A dictionary of num_of_sparse_elements of each pruning node.
     :param full_input_channels:  A dictionary of input channels number in original model.
     :param full_output_channels: A dictionary of output channels number in original model.
     :param pruning_groups_next_nodes: A dictionary of next nodes of each pruning group.
     :return Dictionary of new input channels number {node_name: channels_num}
     """
+
     def get_num_of_sparse_elements_by_node(node_name: str) -> int:
-        mask = masks[node_name]
-        return mask.shape[0] - int(tensor_processor.sum(mask))
+        return num_of_sparse_elements_by_node[node_name]
 
     return _calculate_in_out_channels(pruning_groups,
                                       get_num_of_sparse_elements_by_node,
@@ -511,7 +538,7 @@ class PruningAnalysisDecision:
             return eq and other._reasons is None
         if other._reasons is None:
             return False
-        return eq and sorted(self._reasons) == sorted(other._reasons)
+        return eq and set(self._reasons) == set(other._reasons)
 
     def __bool__(self) -> bool:
         return self.decision
@@ -553,7 +580,7 @@ def is_conv_with_downsampling(node: NNCFNode) -> bool:
     layer_attrs = node.layer_attributes
     if isinstance(layer_attrs, ConvolutionLayerAttributes):
         return not np.all(np.array(layer_attrs.stride) == 1) \
-           and not layer_attrs.transpose
+               and not layer_attrs.transpose
     return False
 
 
@@ -567,6 +594,36 @@ def get_input_masks(node: NNCFNode, graph: NNCFGraph) -> List[Optional[NNCFTenso
     """
     input_masks = [input_node.data['output_mask'] for input_node in graph.get_previous_nodes(node)]
     return input_masks
+
+
+def get_input_channels(node: NNCFNode) -> int:
+    """
+    Returns count of input channels of an prunable node.
+
+    :param node: Given prunable node.
+    :return: Count of input channels of the given node.
+    """
+    layer_attrs = node.layer_attributes # type: Union[ConvolutionLayerAttributes, LinearLayerAttributes]
+    if isinstance(layer_attrs, ConvolutionLayerAttributes):
+        return layer_attrs.in_channels
+    if isinstance(layer_attrs, LinearLayerAttributes):
+        return layer_attrs.in_features
+    raise RuntimeError(f'Can\'t get count of input channels from node {node}')
+
+
+def get_output_channels(node: NNCFNode) -> int:
+    """
+    Returns count of output channels of an prunable node.
+
+    :param node: Given prunable node.
+    :return: Count of output channels of the given node.
+    """
+    layer_attrs = node.layer_attributes # type: Union[ConvolutionLayerAttributes, LinearLayerAttributes]
+    if isinstance(layer_attrs, ConvolutionLayerAttributes):
+        return layer_attrs.out_channels
+    if isinstance(layer_attrs, LinearLayerAttributes):
+        return layer_attrs.out_features
+    raise RuntimeError(f'Can\'t get count of output channels from node {node}')
 
 
 def identity_mask_propagation(node: NNCFNode, graph: NNCFGraph) -> None:

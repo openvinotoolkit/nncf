@@ -11,21 +11,29 @@
  limitations under the License.
 """
 from itertools import product
-from typing import Tuple, List
+from typing import Tuple, Dict, List
 
 import onnx
 import pytest
 import torch
+from torch import nn
+import numpy as np
+
 from nncf import NNCFConfig
 from nncf.torch.quantization.layers import PTQuantizerSpec
+from nncf.torch.quantization.layers import BaseQuantizer
+from nncf.torch.quantization.layers import SymmetricQuantizer
+from nncf.torch.quantization.layers import AsymmetricQuantizer
 from nncf.torch.quantization.layers import QUANTIZATION_MODULES
 from nncf.torch.quantization.layers import QuantizationMode
 from nncf.torch.quantization.layers import QuantizerExportMode
-from tests.torch.helpers import TwoConvTestModel
 from tests.torch.helpers import get_nodes_by_type
-from tests.torch.helpers import load_exported_onnx_version
+from tests.torch.helpers import get_all_inputs_for_graph_node
 from tests.torch.helpers import register_bn_adaptation_init_args
 from tests.torch.helpers import resolve_constant_node_inputs_to_values
+from tests.torch.helpers import TwoConvTestModel
+from tests.torch.helpers import load_exported_onnx_version
+from tests.torch.helpers import create_compressed_model_and_algo_for_test
 
 
 def get_config_for_export_mode(should_be_onnx_standard: bool) -> NNCFConfig:
@@ -114,6 +122,7 @@ def test_onnx_export_to_quantize_dequantize_per_channel(per_channel: bool,
         logarithm_scale=False,
         narrow_range=False,
         half_range=False,
+        is_quantized_on_export=False
     )
 
     q_cls = QUANTIZATION_MODULES.get(qmode)
@@ -256,3 +265,86 @@ def test_branching_fqs_are_not_chained(tmp_path, export_mode):
         follower_nodes += lst
     follower_node_types = [x.op_type for x in follower_nodes]
     assert not any(x == target_node_type for x in follower_node_types)
+
+
+def set_parameters_to_quantizer_and_get_attrs(quantizer: BaseQuantizer, paramaters_to_set: Dict)\
+        -> Tuple[np.ndarray, np.ndarray, int]:
+    if isinstance(quantizer, SymmetricQuantizer):
+        return set_scale_to_sym_quantizer_and_get_attrs(quantizer, **paramaters_to_set)
+    return set_input_low_and_input_range_to_asym_quantizer_and_get_attrs(quantizer, **paramaters_to_set)
+
+
+def set_scale_to_sym_quantizer_and_get_attrs(quantizer: SymmetricQuantizer, scale: float)\
+        -> Tuple[np.ndarray, np.ndarray, int]:
+    scale = np.full(quantizer.scale.size(), scale)
+    levels = quantizer.levels
+    level_low = quantizer.level_low
+    level_high = quantizer.level_high
+    input_low = scale * (level_low / level_high)
+    input_range = scale - input_low
+    quant_len = input_range / (levels - 1)
+    quantizer.scale = nn.Parameter(torch.from_numpy(scale.astype(np.single)))
+    return input_low, quant_len, levels
+
+
+def set_input_low_and_input_range_to_asym_quantizer_and_get_attrs(
+        quantizer: AsymmetricQuantizer, input_low: float, input_range: float) -> Tuple[np.ndarray, np.ndarray, int]:
+    input_low = np.full(quantizer.input_low.size(), input_low)
+    input_range = np.full(quantizer.input_low.size(), input_range)
+    levels = quantizer.levels
+    quant_len = input_range / (levels - 1)
+    quantizer.input_low = nn.Parameter(torch.from_numpy(input_low.astype(np.single)))
+    quantizer.input_range = nn.Parameter(torch.from_numpy(input_range.astype(np.single)))
+    return input_low, quant_len, levels
+
+
+def generate_middle_quants(size: List[int], input_low: np.ndarray, quant_len: np.ndarray, levels: np.ndarray)\
+        -> torch.Tensor:
+    ref_weights = ([input_low + (i + 0.5) * quant_len for i in range(levels)])
+    elems = np.prod(size)
+    ref_weights = ref_weights * int(np.round(0.5 + elems / levels))
+    ref_weights = np.reshape(np.array(ref_weights).flatten()[:elems], size, 'F')
+    return torch.from_numpy(ref_weights.astype(np.single))
+
+
+@pytest.mark.parametrize("half_range, quantization_mode, parameters_to_set",
+                         [(True, "symmetric", {"scale": 1.}),
+                          (True, "asymmetric", {"input_low": -1., "input_range": 3.}),
+                          (False, "symmetric", {"scale": 1.}),
+                          (False, "asymmetric", {"input_low": -1., "input_range": 3.})])
+def test_export_quantized_weights_with_middle_quants(tmp_path, half_range, quantization_mode, parameters_to_set):
+    model = TwoConvTestModel()
+    sample_size = [1, 1, 20, 20]
+    config = get_config_for_export_mode(False)
+    config["compression"]["weights"] = {"mode": quantization_mode}
+    if not half_range:
+        config["compression"]["overflow_fix"] = 'disable'
+    config["input_info"]["sample_size"] = sample_size
+
+    _, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
+
+    quantizers = compression_ctrl.weight_quantizers.values()
+    for quantizer in quantizers:
+        input_low, quant_len, levels = set_parameters_to_quantizer_and_get_attrs(
+            quantizer.quantizer_module_ref, parameters_to_set)
+        ref_weights = generate_middle_quants(list(quantizer.quantized_module.weight.size()),
+                                             input_low, quant_len, levels)
+        quantizer.quantized_module.weight = nn.Parameter(ref_weights)
+
+    onnx_checkpoint_path = str(tmp_path / 'two_conv_model_int8.onnx')
+    compression_ctrl.export_model(onnx_checkpoint_path)
+    model_onnx = onnx.load(onnx_checkpoint_path)  # pylint: disable=no-member
+
+    fq_nodes = get_nodes_by_type(model_onnx, 'FakeQuantize')
+    # pylint:disable=no-member
+    inputs = [get_all_inputs_for_graph_node(fq_node, model_onnx.graph) for fq_node in fq_nodes]
+
+    for quantizer, fq_parametres in zip(quantizers, inputs[1::2]):
+        tensor_weight, _, __ = list(fq_parametres.values())
+        # Quantize weights as they are exported quantized
+        quantized_weights = quantizer.quantizer_module_ref(quantizer.quantized_module.weight).detach()
+
+        diff = (quantized_weights.detach() - tensor_weight).abs()
+        if (diff > 1e-6).any():
+            assert ((diff[diff > 1e-6] - quant_len).abs() < 1e-6).all(), 'quants completely different!'
+            assert False, f'quant moved at flatten positions {torch.where(diff.flatten() > 1e-6)}'

@@ -39,9 +39,9 @@ def create_pruning_algo_with_config(config):
 @pytest.mark.parametrize(
     ('all_weights', 'pruning_rate_to_set', 'ref_pruning_rates', 'ref_global_pruning_rate'),
     [
-        (False, 0.5, [0.5, 0.5], 0.5),
-        (True, 0.5, [0.25, 0.625], 0.5),
-        (False, {0: 0.6, 1: 0.8}, [0.5, 0.75], 0.69986),
+        (False, 0.5, [0.5, 0.5, 0.5], 0.5),
+        (True, 0.5, [0.03125, 0.421875, 0.65625], 0.5),
+        (False, {0: 0.6, 1: 0.8, 2: 0.4}, [0.5, 0.75, 0.375], 0.3926983648557004),
     ]
 )
 def test_setting_pruning_rate(all_weights, pruning_rate_to_set, ref_pruning_rates, ref_global_pruning_rate):

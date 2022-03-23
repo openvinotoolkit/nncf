@@ -16,7 +16,6 @@ import functools
 import numpy as np
 import tensorflow as tf
 
-from examples.tensorflow.common.object_detection.architecture import keras_utils
 from examples.tensorflow.common.object_detection.architecture import nn_ops
 
 
@@ -166,7 +165,7 @@ class RetinanetHead:
         """Returns outputs of RetinaNet head."""
         class_outputs = {}
         box_outputs = {}
-        with keras_utils.maybe_enter_backend_graph(), tf.name_scope('retinanet_head'):
+        with tf.name_scope('retinanet_head'):
             for level in range(self._min_level, self._max_level + 1):
                 features = fpn_features[level]
                 class_outputs[str(level)] = self.class_net(features, level, is_training=is_training)
@@ -299,7 +298,7 @@ class RpnHead(tf.keras.layers.Layer):
     def __call__(self, features, is_training=None):
         scores_outputs = {}
         box_outputs = {}
-        with keras_utils.maybe_enter_backend_graph(), tf.name_scope('rpn_head'):
+        with tf.name_scope('rpn_head'):
             for level in range(self._min_level, self._max_level + 1):
                 scores_output, box_output = self._shared_rpn_heads(
                     features[level], self._anchors_per_location, level, is_training)
@@ -422,7 +421,7 @@ class FastrcnnHead(tf.keras.layers.Layer):
                 predictions.
         """
 
-        with keras_utils.maybe_enter_backend_graph(), tf.name_scope('fast_rcnn_head'):
+        with tf.name_scope('fast_rcnn_head'):
             # reshape inputs beofre FC.
             _, num_rois, height, width, filters = roi_features.get_shape().as_list()
 
@@ -543,44 +542,43 @@ class MaskrcnnHead(tf.keras.layers.Layer):
             boxes is not 4.
         """
 
-        with keras_utils.maybe_enter_backend_graph():
-            with tf.name_scope('mask_head'):
-                _, num_rois, height, width, filters = roi_features.get_shape().as_list()
-                net = tf.reshape(roi_features, [-1, height, width, filters])
+        with tf.name_scope('mask_head'):
+            _, num_rois, height, width, filters = roi_features.get_shape().as_list()
+            net = tf.reshape(roi_features, [-1, height, width, filters])
 
-                for i in range(self._num_convs):
-                    net = self._conv2d_ops[i](net)
-                    if self._use_batch_norm:
-                        net = self._norm_activation()(net, is_training=is_training)
-
-                net = self._mask_conv_transpose(net)
+            for i in range(self._num_convs):
+                net = self._conv2d_ops[i](net)
                 if self._use_batch_norm:
                     net = self._norm_activation()(net, is_training=is_training)
 
-                mask_outputs = self._conv2d_op(
-                    self._num_classes,
-                    kernel_size=(1, 1),
-                    strides=(1, 1),
-                    padding='valid',
-                    name='mask_fcn_logits')(
-                        net)
-                mask_outputs = tf.reshape(mask_outputs, [
-                    -1, num_rois, self._mask_target_size, self._mask_target_size,
-                    self._num_classes
-                ])
+            net = self._mask_conv_transpose(net)
+            if self._use_batch_norm:
+                net = self._norm_activation()(net, is_training=is_training)
 
-                with tf.name_scope('masks_post_processing'):
-                    batch_size, num_masks = class_indices.get_shape().as_list()
-                    mask_outputs = tf.transpose(a=mask_outputs, perm=[0, 1, 4, 2, 3])
-                    # Contructs indices for gather.
-                    batch_indices = tf.tile(
-                        tf.expand_dims(tf.range(batch_size), axis=1), [1, num_masks])
-                    mask_indices = tf.tile(
-                        tf.expand_dims(tf.range(num_masks), axis=0), [batch_size, 1])
-                    gather_indices = tf.stack(
-                        [batch_indices, mask_indices, class_indices], axis=2)
-                    mask_outputs = tf.gather_nd(mask_outputs, gather_indices)
-            return mask_outputs
+            mask_outputs = self._conv2d_op(
+                self._num_classes,
+                kernel_size=(1, 1),
+                strides=(1, 1),
+                padding='valid',
+                name='mask_fcn_logits')(
+                    net)
+            mask_outputs = tf.reshape(mask_outputs, [
+                -1, num_rois, self._mask_target_size, self._mask_target_size,
+                self._num_classes
+            ])
+
+            with tf.name_scope('masks_post_processing'):
+                batch_size, num_masks = class_indices.get_shape().as_list()
+                mask_outputs = tf.transpose(a=mask_outputs, perm=[0, 1, 4, 2, 3])
+                # Contructs indices for gather.
+                batch_indices = tf.tile(
+                    tf.expand_dims(tf.range(batch_size), axis=1), [1, num_masks])
+                mask_indices = tf.tile(
+                    tf.expand_dims(tf.range(num_masks), axis=0), [batch_size, 1])
+                gather_indices = tf.stack(
+                    [batch_indices, mask_indices, class_indices], axis=2)
+                mask_outputs = tf.gather_nd(mask_outputs, gather_indices)
+        return mask_outputs
 
 
 class YOLOv4:

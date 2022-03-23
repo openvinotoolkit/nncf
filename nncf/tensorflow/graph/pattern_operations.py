@@ -59,6 +59,7 @@ KERAS_ACTIVATIONS_OPERATIONS = {
 TF_ACTIVATIONS_OPERATIONS = {
     'type': [
         'Relu',
+        'nn.relu',
         'Elu',
         'LeakyRelu',
         'Relu6',

@@ -79,6 +79,7 @@ class Quantizer(NNCFOperation):
     """
     Base class for all NNCF quantization operations.
     """
+
     def __init__(self, name: str):
         """
         Initializes internal NNCF quantization operation state.
@@ -140,7 +141,7 @@ class Quantizer(NNCFOperation):
         """
         raise NotImplementedError
 
-    def setup_input_transformation(self, input_shape, input_type, input_name, layer):
+    def setup_input_transformation(self, input_shape, channel_axes):
         """
         Setup input transformation that the per-channel quantization can be applied to input tensor.
         The TensorFlow fake_quant_with_min_max_vars_per_channel supports only inputs tensor one of
@@ -149,17 +150,16 @@ class Quantizer(NNCFOperation):
         the original inputs shape.
 
         :param input_shape: Shape of the input.
-        :param input_type: Type of the input identifies that inputs are layer weights
-            or inputs of the layer.
-        :param input_name: Input name.
-        :param layer: Layer, where the Quantizer is registered.
+        :param channel_axes: Channel axes.
         """
-        self._pre_processing_fn, self._post_processing_fn = \
-            self._make_transformation_fns(input_shape, input_type, input_name, layer)
+        try:
+            self._pre_processing_fn, self._post_processing_fn = \
+                Quantizer._make_transformation_fns(input_shape, channel_axes)
+        except NotImplementedError as e:
+            raise NotImplementedError(f'Additional information: quantizer name {self.name}') from e
 
-    def _make_transformation_fns(self, input_shape, input_type, input_name, layer):
-        channel_axes = get_channel_axis(input_type, input_name, layer)
-
+    @staticmethod
+    def _make_transformation_fns(input_shape, channel_axes):
         fns_registry = []
         if isinstance(channel_axes, (tuple, list)):
             switch_counter = 0
@@ -181,9 +181,7 @@ class Quantizer(NNCFOperation):
             if switch_counter > 1:
                 raise NotImplementedError(
                     'Quntizer could not transform input to apply per-channel quantization: '
-                    'input shape {}, input type {}, input name {}, channel_axes {} '
-                    'from layer {}'.format(
-                        input_shape, input_type, input_name, channel_axes, layer.name))
+                     f'input_shape {input_shape}, channel_axes {channel_axes}')
             forward_params = {'shape': new_shape}
             backward_params = {'shape': input_shape}
             fns_registry.append((tf.reshape, forward_params, backward_params))
@@ -224,7 +222,10 @@ class Quantizer(NNCFOperation):
             return fused_fns_registry
 
         fused_fns_registry = fuse_functions(fns_registry)
-        return self._make_pre_processing_fn(fused_fns_registry), self._make_post_processing_fn(fused_fns_registry)
+        pre_processing_fn = Quantizer._make_pre_processing_fn(fused_fns_registry)
+        post_processing_fn = Quantizer._make_post_processing_fn(fused_fns_registry)
+
+        return pre_processing_fn, post_processing_fn
 
     @staticmethod
     def _make_pre_processing_fn(fns_registry=None):
@@ -304,10 +305,20 @@ class SymmetricQuantizer(Quantizer):
         return signed_var.numpy() < 0.0
 
     def build(self, input_shape, input_type, name, layer):
+        channel_axes = None
+        if self.per_channel:
+            channel_axes = get_channel_axis(input_type, name, layer)
+        return self._create_variables(layer, input_shape, channel_axes, name)
+
+    def _create_variables(self,
+                          layer,
+                          input_shape,
+                          channel_axes,
+                          name: str = ''):
         shape = None
         if self.per_channel:
-            self.setup_input_transformation(input_shape, input_type, name, layer)
-            shape = (get_channel_size(input_shape, input_type, name, layer),)
+            self.setup_input_transformation(input_shape, channel_axes)
+            shape = (get_channel_size(input_shape, channel_axes),)
 
         scale = layer.add_weight(
             name + '_scale',
@@ -429,10 +440,20 @@ class AsymmetricQuantizer(Quantizer):
         return QuantizationMode.ASYMMETRIC
 
     def build(self, input_shape, input_type, name, layer):
+        channel_axes = None
+        if self.per_channel:
+            channel_axes = get_channel_axis(input_type, name, layer)
+        return self._create_variables(layer, input_shape, channel_axes, name)
+
+    def _create_variables(self,
+                          layer,
+                          input_shape,
+                          channel_axes,
+                          name: str = ''):
         shape = None
         if self.per_channel:
-            self.setup_input_transformation(input_shape, input_type, name, layer)
-            shape = (get_channel_size(input_shape, input_type, name, layer),)
+            self.setup_input_transformation(input_shape, channel_axes)
+            shape = (get_channel_size(input_shape, channel_axes),)
 
         input_low = layer.add_weight(
             name + '_input_low',

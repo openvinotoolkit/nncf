@@ -202,6 +202,15 @@ class PTConv3dMetatype(PTOperatorMetatype):
 
 
 @PT_OPERATOR_METATYPES.register()
+class PTConvTranspose1dMetatype(PTOperatorMetatype):
+    name = "ConvTranspose1DOp"
+    hw_config_names = [HWConfigOpName.CONVOLUTION]
+    module_to_function_names = {
+        NamespaceTarget.TORCH_NN_FUNCTIONAL: ["conv_transpose1d"]
+    }
+
+
+@PT_OPERATOR_METATYPES.register()
 class PTConvTranspose2dMetatype(PTOperatorMetatype):
     name = "ConvTranspose2DOp"
     hw_config_names = [HWConfigOpName.CONVOLUTION]
@@ -307,6 +316,7 @@ class PTGroupNormMetatype(PTOperatorMetatype):
 @PT_OPERATOR_METATYPES.register()
 class PTGELUMetatype(PTOperatorMetatype):
     name = "GeluOp"
+    hw_config_names = [HWConfigOpName.GELU]
     module_to_function_names = {
         NamespaceTarget.TORCH_NN_FUNCTIONAL: ["gelu"]
     }
@@ -511,6 +521,14 @@ class PTRELUMetatype(PTOperatorMetatype):
     name = "ReluOp"
     module_to_function_names = {
         NamespaceTarget.TORCH: ["relu", "relu_"]
+    }
+
+
+@PT_OPERATOR_METATYPES.register()
+class PTRELU6Metatype(PTOperatorMetatype):
+    name = "Relu6Op"
+    module_to_function_names = {
+        NamespaceTarget.TORCH_NN_FUNCTIONAL: ["relu6"]
     }
 
 

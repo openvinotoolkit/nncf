@@ -275,6 +275,25 @@ class ConvRelu6HSwishHSigmoid(nn.Module):
         z = self._hsigmoid(z)
         return z
 
+
+class ConvGeluGetItem(torch.nn.Module):
+    def __init__(self):
+        super().__init__()
+
+        self.fc1 = nn.Linear(6, 8)
+        self.dp = nn.Dropout()
+        self.conv1 = nn.Conv1d(8, 8, kernel_size=3, padding=2)
+
+    def forward(self, x):
+        x = self.fc1(x)
+        x = self.dp(x)
+        x1 = x.transpose(2, 1)
+        x1 = self.conv1(x1)
+        x1 = F.gelu(x1[:, :, :-2])
+
+        return x + x1.transpose(2, 1)
+
+
 class ConvBNLeakyReLU(nn.Module):
     def __init__(self):
         super().__init__()
@@ -286,3 +305,15 @@ class ConvBNLeakyReLU(nn.Module):
         z = self.bn(z)
         z = torch.nn.functional.leaky_relu(z)
         return z
+
+class FC_ConstMul(torch.nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.fc1 = nn.Linear(6, 6)
+        self.dp = nn.Dropout()
+
+    def forward(self, x):
+        x = self.dp(x)
+        x1 = self.fc1(x)
+        x1 = x1 * 2
+        return x + x1

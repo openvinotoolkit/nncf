@@ -1,6 +1,6 @@
-From 8e5d5b5798febec45bb442e96f2633ac1c2bf6ba Mon Sep 17 00:00:00 2001
-From: Vasily Shamporov <vasily.shamporov@intel.com>
-Date: Mon, 2 Aug 2021 17:46:48 +0300
+From d333a563fd28c538f93217af3d7556141d19d51b Mon Sep 17 00:00:00 2001
+From: skholkin <kholkinsd@gmail.com>
+Date: Fri, 4 Mar 2022 14:03:05 +0300
 Subject: [PATCH] Modifications for NNCF usage
 
 ---
@@ -12,9 +12,10 @@ Subject: [PATCH] Modifications for NNCF usage
  nncf_bert_config_conll.json                   |  44 +++++++
  nncf_bert_config_mrpc.json                    |  42 +++++++
  nncf_bert_config_squad.json                   |  44 +++++++
+ nncf_bert_config_squad_kd.json                |  50 ++++++++
  ...config_squad_magnitude_sparsity_cubic.json |  31 +++++
  nncf_bert_config_xnli.json                    |  36 ++++++
- nncf_distilbert_config_sst2.json              |  33 +++++
+ nncf_distilbert_config_sst2.json              |  34 +++++
  nncf_gpt2_config_wikitext_hw_config.json      |  58 +++++++++
  nncf_mobilebert_config_squad_int8.json        |  46 +++++++
  nncf_roberta_config_mnli.json                 |  36 ++++++
@@ -23,10 +24,11 @@ Subject: [PATCH] Modifications for NNCF usage
  src/transformers/trainer.py                   |  74 +++++++++--
  src/transformers/trainer_callback.py          |   2 +
  src/transformers/training_args.py             |   6 +
- 19 files changed, 842 insertions(+), 73 deletions(-)
+ 20 files changed, 893 insertions(+), 73 deletions(-)
  create mode 100644 nncf_bert_config_conll.json
  create mode 100644 nncf_bert_config_mrpc.json
  create mode 100644 nncf_bert_config_squad.json
+ create mode 100644 nncf_bert_config_squad_kd.json
  create mode 100644 nncf_bert_config_squad_magnitude_sparsity_cubic.json
  create mode 100644 nncf_bert_config_xnli.json
  create mode 100644 nncf_distilbert_config_sst2.json
@@ -851,6 +853,62 @@ index 000000000..12e0440f7
 +        }
 +    }
 +}
+diff --git a/nncf_bert_config_squad_kd.json b/nncf_bert_config_squad_kd.json
+new file mode 100644
+index 000000000..f5872a0a2
+--- /dev/null
++++ b/nncf_bert_config_squad_kd.json
+@@ -0,0 +1,50 @@
++{
++    "input_info": [
++        {
++            "sample_size": [1, 384],
++            "type": "long"
++        },
++        {
++            "sample_size": [1, 384],
++            "type": "long"
++        },
++        {
++            "sample_size": [1, 384],
++            "type": "long"
++        }
++    ],
++    "compression": [{
++        "algorithm": "quantization",
++        "initializer": {
++            "range": {
++                "num_init_samples": 32,
++                "type": "percentile",
++                "params":
++                {
++                    "min_percentile": 0.01,
++                    "max_percentile": 99.99
++                }
++            },
++
++            "batchnorm_adaptation": {
++                "num_bn_adaptation_samples": 200
++            }
++        },
++        "activations":
++        {
++            "mode": "symmetric"
++        },
++        "weights":
++        {
++            "mode": "symmetric",
++            "signed": true,
++            "per_channel": false
++        }
++    },
++    {
++        "algorithm": "knowledge_distillation",
++        "type": "softmax",
++        "temperature": 3
++    }
++    ]
++}
 diff --git a/nncf_bert_config_squad_magnitude_sparsity_cubic.json b/nncf_bert_config_squad_magnitude_sparsity_cubic.json
 new file mode 100644
 index 000000000..b4452e8d4
@@ -932,10 +990,10 @@ index 000000000..a21a522fc
 +}
 diff --git a/nncf_distilbert_config_sst2.json b/nncf_distilbert_config_sst2.json
 new file mode 100644
-index 000000000..6b648ca5e
+index 000000000..868735016
 --- /dev/null
 +++ b/nncf_distilbert_config_sst2.json
-@@ -0,0 +1,33 @@
+@@ -0,0 +1,34 @@
 +{
 +    "input_info": [
 +        {
@@ -951,7 +1009,8 @@ index 000000000..6b648ca5e
 +        "algorithm": "quantization",
 +        "initializer": {
 +            "range": {
-+                "num_init_samples": 32
++                "num_init_samples": 32,
++                "type": "mean_percentile"
 +            }
 +        },
 +        "ignored_scopes": [

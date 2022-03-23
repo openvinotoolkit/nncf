@@ -21,7 +21,7 @@ from nncf.torch.sparsity.rb.layers import RBSparsifyingWeight
 from nncf.torch.sparsity.rb.loss import SparseLoss
 
 
-class TestModel(nn.Module):
+class SingleLayerModel(nn.Module):
     def __init__(self, layer, frozen, size=1):
         super().__init__()
         self.size = size
@@ -42,7 +42,7 @@ class TestModel(nn.Module):
 
 def sparse_model(module, frozen, size=1):
     layer = module(size, size, size)
-    return TestModel(layer, frozen, size)
+    return SingleLayerModel(layer, frozen, size)
 
 
 @pytest.mark.parametrize('module',

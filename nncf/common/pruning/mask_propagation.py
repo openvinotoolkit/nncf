@@ -17,6 +17,8 @@ from nncf.common.graph import NNCFGraph
 from nncf.common.pruning.tensor_processor import NNCFPruningBaseTensorProcessor
 from nncf.common.pruning.utils import PruningOperationsMetatypeRegistry
 from nncf.common.pruning.utils import get_input_masks
+from nncf.common.pruning.utils import get_input_channels
+from nncf.common.pruning.utils import get_output_channels
 from nncf.common.pruning.utils import is_grouped_conv
 from nncf.common.pruning.utils import PruningAnalysisDecision
 from nncf.common.pruning.utils import PruningAnalysisReason
@@ -97,7 +99,7 @@ class MaskPropagationAlgorithm:
         for node in self._graph.topological_sort():
             if node.node_id in can_be_closing_convs and can_prune_after_analysis[node.node_id]:
                 # Set output mask
-                node.data['output_mask'] = SymbolicMask(node.layer_attributes.out_channels, [node.node_id])
+                node.data['output_mask'] = SymbolicMask(get_output_channels(node), [node.node_id])
             # Propagate masks
             cls = self.get_meta_operation_by_type_name(node.node_type)
             cls.mask_propagation(node, self._graph, SymbolicMaskProcessor)
@@ -106,13 +108,13 @@ class MaskPropagationAlgorithm:
                 input_masks = get_input_masks(node, self._graph)
                 if any(input_masks):
                     assert len(input_masks) == 1
-                    input_mask = input_masks[0]
+                    input_mask = input_masks[0] # type: SymbolicMask
 
                     for producer in input_mask.mask_producers:
                         previously_dims_equal = True if can_prune_by_dim[producer] is None \
                             else can_prune_by_dim[producer]
 
-                        is_dims_equal = node.layer_attributes.in_channels == input_mask.shape[0]
+                        is_dims_equal = get_input_channels(node) == input_mask.shape[0]
                         decision = previously_dims_equal and is_dims_equal
                         can_prune_by_dim[producer] = PruningAnalysisDecision(
                             decision, PruningAnalysisReason.DIMENSION_MISMATCH)

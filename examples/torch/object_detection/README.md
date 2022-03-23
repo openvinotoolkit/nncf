@@ -11,7 +11,9 @@ This sample demonstrates DL model compression capabailites for object detection 
 
 ## Installation
 
-To work with the sample you should install the corresponding Python package dependencies
+At this point it is assumed that you have already installed nncf. You can find information on downloading nncf [here](https://github.com/openvinotoolkit/nncf#user-content-installation).  
+
+To work with the sample you should install the corresponding Python package dependencies:
 
 ```
 pip install -r examples/torch/requirements.txt
@@ -21,22 +23,30 @@ pip install -r examples/torch/requirements.txt
 This scenario demonstrates quantization with fine-tuning of SSD300 on VOC dataset.
 
 #### Dataset preparation
-- Download and extract VOC2007 and VOC2012 train/val and test data + devkit from [here](https://pjreddie.com/projects/pascal-voc-dataset-mirror/)
+- Download and extract in one folder train/val+test VOC2007 and train/val VOC2012 data from [here](https://pjreddie.com/projects/pascal-voc-dataset-mirror/)
+- In the future, `<path_to_dataset>` means the path to this folder.
 
 #### Run object detection sample
 - If you did not install the package then add the repository root folder to the `PYTHONPATH` environment variable
 - Navigate to the `examples/torch/object_detection` folder
+- (Optional) Before compressing a model, it is highly recommended checking the accuracy of the pretrained model, use the following command: 
+  ```bash
+  python main.py \
+  --mode=test \
+  --config=configs/ssd300_vgg_voc_int8.json \
+  --data=<path_to_dataset> \
+  --disable-compression 
+  ```
 - Run the following command to start compression with fine-tuning on GPUs:
-`python main.py -m train --config configs/ssd300_vgg_int8_voc.json --data <path_to_dataset> --log-dir=../../results/quantization/ssd300_int8`
-It may take a few epochs to get the baseline accuracy results.
+`python main.py -m train --config configs/ssd300_vgg_voc_int8.json --data <path_to_dataset> --log-dir=../../results/quantization/ssd300_int8 --weights=<path_to_checkpoint>`  
+ It may take a few epochs to get the baseline accuracy results.
+- Use `--weights` flag with the path to a compatible PyTorch checkpoint in order to load all matching weights from the checkpoint into the model - useful if you need to start compression-aware training from a previously trained uncompressed (FP32) checkpoint instead of performing compression-aware training from scratch. This flag is optional, but highly recommended to use.
 - Use `--multiprocessing-distributed` flag to run in the distributed mode.
 - Use `--resume` flag with the path to a previously saved model to resume training.
-- Use the `--weights` flag with the path to a compatible PyTorch checkpoint in order to load all matching weights from the checkpoint into the model - useful
- if you need to start compression-aware training from a previously trained uncompressed (FP32) checkpoint instead of performing compression-aware training fr
-om scratch.
+
 
 #### Validate your model checkpoint
-To estimate the test scores of your model checkpoint use the following command:
+To estimate the test scores of your trained model checkpoint use the following command:
 `python main.py -m test --config=configs/ssd300_vgg_voc_int8.json --data <path_to_dataset> --resume <path_to_trained_model_checkpoint>`
 If you want to validate an FP32 model checkpoint, make sure the compression algorithm settings are empty in the configuration file or `pretrained=True` is set.
 
@@ -44,7 +54,7 @@ If you want to validate an FP32 model checkpoint, make sure the compression algo
 
 #### Export compressed model
 To export trained model to ONNX format use the following command:
-`python main.py -m test --config configs/ssd300_vgg_voc_int8.json --data <path_to_dataset> --resume <path_to_compressed_model_checkpoint> --to-onnx=../../results/ssd300_int8.onnx`
+`python main.py -m export --config configs/ssd300_vgg_voc_int8.json --data <path_to_dataset> --resume <path_to_compressed_model_checkpoint> --to-onnx=../../results/ssd300_int8.onnx`
 
 #### Export to OpenVINO Intermediate Representation (IR)
 

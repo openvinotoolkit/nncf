@@ -202,10 +202,10 @@ def staged_quantization_main_worker(current_gpu, config):
     best_acc1 = 0
     # optionally resume from a checkpoint
     if resuming_checkpoint is not None and config.to_onnx is None:
-        config.start_epoch = resuming_checkpoint['epoch']
         best_acc1 = resuming_checkpoint['best_acc1']
-        kd_loss_calculator.original_model.load_state_dict(resuming_checkpoint['original_model_state_dict'])
         if 'train' in config.mode:
+            kd_loss_calculator.original_model.load_state_dict(resuming_checkpoint['original_model_state_dict'])
+            config.start_epoch = resuming_checkpoint['epoch']
             optimizer.load_state_dict(resuming_checkpoint['optimizer'])
             optimizer_scheduler.load_state_dict(resuming_checkpoint['optimizer_scheduler'])
             logger.info("=> loaded checkpoint '{}' (epoch: {}, best_acc1: {:.3f})"

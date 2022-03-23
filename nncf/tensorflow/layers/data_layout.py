@@ -21,8 +21,7 @@ from nncf.tensorflow.graph.utils import unwrap_layer
 from nncf.tensorflow.layers.operation import InputType
 
 
-def get_channel_size(input_shape, input_type, input_name, layer):
-    channel_axes = get_channel_axis(input_type, input_name, layer)
+def get_channel_size(input_shape, channel_axes):
     if not isinstance(channel_axes, (list, tuple)):
         channel_axes = [channel_axes]
     size = 1

@@ -181,7 +181,7 @@ def test_manual_single_conv(params):
         check_bitwidth_graph(ctrl, model, path_to_dot, graph_dir)
 
 
-class TestPrecisionInitDesc:
+class PrecisionInitTestDesc:
     def __init__(self):
         self.model_creator = AddTwoConv
         config = get_quantization_config_without_range_init()
@@ -251,7 +251,7 @@ class TestPrecisionInitDesc:
 
 
 def test_quantization_configs__with_precisions_list():
-    desc = TestPrecisionInitDesc()
+    desc = PrecisionInitTestDesc()
     model = desc.model_creator()
     config = desc.config
     register_bn_adaptation_init_args(config)

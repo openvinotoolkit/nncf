@@ -7,6 +7,7 @@ from nncf.torch.graph.pattern_operations import GROUP_NORMALIZATION_OPERATIONS
 from nncf.torch.graph.pattern_operations import LINEAR_OPERATIONS
 from nncf.torch.graph.pattern_operations import MATMUL_OPERATIONS
 from nncf.torch.graph.pattern_operations import RELU_OPERATIONS
+from nncf.torch.graph.patterns import create_fc_conv_mul
 from nncf.torch.graph.patterns import create_h_sigmoid_act
 from nncf.torch.graph.patterns import create_h_swish_act
 from nncf.torch.graph.patterns import create_swish_act
@@ -58,6 +59,8 @@ def _get_torch_hw_fused_patterns() -> HWFusedPatterns:
 
     l2_norm = create_l2_norm()
     retval.register(l2_norm, 'L2_NORM', match=True)
+    fc_mul = create_fc_conv_mul()
+    retval.register(fc_mul, 'FC_MUL_CONST', match=True)
     return retval
 
 

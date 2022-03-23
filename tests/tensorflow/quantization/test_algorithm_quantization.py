@@ -19,6 +19,7 @@ from nncf.tensorflow.graph.metatypes.matcher import get_keras_layer_metatype
 from nncf.tensorflow.layers.custom_objects import NNCF_QUANTIZATION_OPERATIONS
 from nncf.tensorflow.layers.operation import InputType
 from nncf.tensorflow.layers.wrapper import NNCFWrapper
+from nncf.tensorflow.layers.data_layout import get_channel_axis
 from nncf.tensorflow.quantization import FakeQuantize
 from nncf.tensorflow.quantization.algorithm import QuantizationController
 from nncf.tensorflow.quantization.quantizers import Quantizer
@@ -626,8 +627,9 @@ def test_quantize_pre_post_processing(layer_name, input_type, data_type):
     assert len(layer_metatype.weight_definitions) == 1
     layer_name = layer_metatype.weight_definitions[0].weight_attr_name
     q = Quantizer(name='quantizer')
-    q.setup_input_transformation(layer_desk.shape, layer_desk.input_type,
-                                 layer_name, layer_desk.layer)
+
+    channel_axes = get_channel_axis(layer_desk.input_type, layer_name, layer_desk.layer)
+    q.setup_input_transformation(layer_desk.shape, channel_axes)
     # pylint: disable=protected-access
     preprocess = q._pre_processing_fn(layer_desk.inputs)
     postprocess = q._post_processing_fn(preprocess)

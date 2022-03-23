@@ -12,7 +12,9 @@
 """
 
 from collections import namedtuple
+from PIL.Image import Image
 
+from typing import List, Dict, Tuple
 import cv2
 import numpy as np
 import torch
@@ -56,8 +58,7 @@ def get_training_dataset(dataset_name, path_to_annotations, path_to_imgs, config
             path_to_imgs,
             transform=ssd_transform,
             target_transform=VOCAnnotationTransform(keep_difficult=False),
-            return_image_info=False,
-            rgb=preprocessing.rgb
+            return_image_info=False
         )
     if dataset_name == 'coco':
         training_dataset = COCODataset(
@@ -88,8 +89,7 @@ def get_testing_dataset(dataset_name, path_to_annotations, path_to_imgs, config)
             path_to_imgs, [('2007', 'test')],
             transform=transform,
             target_transform=VOCAnnotationTransform(keep_difficult=True),
-            return_image_info=True,
-            rgb=preprocessing.rgb
+            return_image_info=True
         )
     if dataset_name == 'coco':
         testing_dataset = COCODataset(
@@ -138,11 +138,21 @@ def base_transform(image, size, mean, std, normalize_coef):
 
 
 class BaseTransform:
-    def __init__(self, size, mean, std, normalize_coef):
+    def __init__(self,
+                 size: np.int32,
+                 mean: np.float32,
+                 std: np.float32,
+                 normalize_coef: np.float32
+                 ):
         self.size = size
         self.mean = np.array(mean, dtype=np.float32)
         self.std = np.array(std, dtype=np.float32)
         self.normalize_coef = normalize_coef
 
-    def __call__(self, image, boxes=None, labels=None):
-        return base_transform(image, self.size, self.mean, self.std, self.normalize_coef), boxes, labels
+    def __call__(self, image: Image, target: List[Dict]) -> Tuple[torch.Tensor, np.ndarray]:
+        boxes = np.asarray([x['bbox'] for x in target])
+        labels = np.asarray([x['label_idx'] for x in target])
+        target = np.hstack((boxes, np.expand_dims(labels, axis=1)))
+        res = base_transform(np.array(image)[:, :, ::-1],
+                             self.size, self.mean, self.std, self.normalize_coef)
+        return torch.from_numpy(res[:, :, (2, 1, 0)]).permute(2, 0, 1), target
