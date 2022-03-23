@@ -14,13 +14,13 @@
 from nncf.common.graph.patterns import GraphPattern
 from nncf.common.graph.patterns import HWFusedPatterns
 
-from nncf.experimental.onnx.graph.pattern_operations import LINEAR_OPERATIONS
-from nncf.experimental.onnx.graph.pattern_operations import BATCH_NORMALIZATION_OPERATIONS
-from nncf.experimental.onnx.graph.pattern_operations import ATOMIC_ACTIVATIONS_OPERATIONS
-from nncf.experimental.onnx.graph.pattern_operations import ARITHMETIC_OPERATIONS
-from nncf.experimental.onnx.graph.pattern_operations import MATMUL_OPERATIONS
+from nncf.experimental.onnx.hardware.pattern_operations import LINEAR_OPERATIONS
+from nncf.experimental.onnx.hardware.pattern_operations import BATCH_NORMALIZATION_OPERATIONS
+from nncf.experimental.onnx.hardware.pattern_operations import ATOMIC_ACTIVATIONS_OPERATIONS
+from nncf.experimental.onnx.hardware.pattern_operations import ARITHMETIC_OPERATIONS
+from nncf.experimental.onnx.hardware.pattern_operations import MATMUL_OPERATIONS
 
-from nncf.experimental.onnx.graph.patterns import create_h_sigmoid_act
+from nncf.experimental.onnx.hardware.patterns import create_h_sigmoid_act
 
 
 def _get_onnx_hw_fused_patterns() -> HWFusedPatterns:
@@ -41,7 +41,7 @@ def _get_onnx_hw_fused_patterns() -> HWFusedPatterns:
     atomic_activations = GraphPattern()
     atomic_activations.add_node(**ATOMIC_ACTIVATIONS_OPERATIONS)
     h_sigmoid = create_h_sigmoid_act()
-    activations = ATOMIC_ACTIVATIONS_OPERATIONS | h_sigmoid
+    activations = atomic_activations | h_sigmoid
     hw_fused_patterns.register(activations, 'ACTIVATIONS', match=False)
 
     arithmetic_ops = GraphPattern()
@@ -59,7 +59,6 @@ def _get_onnx_hw_fused_patterns() -> HWFusedPatterns:
     hw_fused_patterns.register(activations + batch_norm, 'ACTIVATIONS + BN', match=True)
     hw_fused_patterns.register(arithmetic_ops + batch_norm_activations_permutation,
                                'ARITHMETIC + BN_ACT_PERM', match=True)
-
     return hw_fused_patterns
 
 

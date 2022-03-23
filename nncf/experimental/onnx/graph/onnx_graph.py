@@ -18,6 +18,7 @@ from typing import List
 import onnx
 from onnx import NodeProto  # pylint: disable=no-name-in-module
 from onnx import ValueInfoProto  # pylint: disable=no-name-in-module
+from onnx import numpy_helper  # pylint: disable=no-name-in-module
 import numpy as np
 
 
@@ -43,11 +44,24 @@ class ONNXGraph:
         """
         return self.onnx_model.graph.node
 
+    def get_node_by_name(self, node_name: str):
+        for node in self.get_all_nodes():
+            if node.name == node_name:
+                return node
+        raise RuntimeError('There is no node with the name {}'.format(node_name))
+
     def get_model_inputs(self) -> List[ValueInfoProto]:
         """
         Returns model inputs.
         """
-        return list(self.onnx_model.graph.input)
+        inputs = []
+        input_all = [node.name for node in self.onnx_model.graph.input]
+        input_initializer = [node.name for node in self.onnx_model.graph.initializer]
+        net_feed_input = list(set(input_all) - set(input_initializer))
+        for node in self.onnx_model.graph.input:
+            if node.name in net_feed_input:
+                inputs.append(node)
+        return inputs
 
     def get_model_outputs(self) -> List[ValueInfoProto]:
         """
@@ -65,7 +79,8 @@ class ONNXGraph:
         """
         Returns all nodes that have input with the name 'input_name'.
         """
-        return self._get_nodes_by_lambda(input_name, lambda node: node.input)
+        nodes = self._get_nodes_by_lambda(input_name, lambda node: node.input)
+        return nodes
 
     def _get_nodes_by_lambda(self, name: str, func: Callable[[NodeProto], List[NodeProto]]):
         output = []
@@ -97,13 +112,19 @@ class ONNXGraph:
                 output.append(node)
         return output
 
-    def find_weight_input_in_module(self, node_name: str) -> ValueInfoProto:
+    def get_weight_input_in_module(self, node_name: str) -> ValueInfoProto:
         """
         Returns weight Initializaer of the mode with the name 'node_name'.
         """
-        node_inputs = self.get_all_node_inputs(node_name)
+        node_inputs = self.get_node_edges(node_name)['input']
         # TODO(kshpv): add search of input weight tensor
         return node_inputs[1]
+
+    def get_node_index(self, node_name: str):
+        for i, node in enumerate(self.get_all_nodes()):
+            if node.name == node_name:
+                return i
+        return -1
 
     def get_initializers_value(self, initializer_name: str) -> np.ndarray:
         """
@@ -112,7 +133,7 @@ class ONNXGraph:
         graph = self.onnx_model.graph
         for init in graph.initializer:
             if init.name == initializer_name:
-                tensor = onnx.numpy_helper.to_array(init)
+                tensor = numpy_helper.to_array(init)
                 return tensor
         raise RuntimeError('There is no initializer with the name {}'.format(initializer_name))
 
@@ -129,11 +150,15 @@ class ONNXGraph:
                     if isinstance(dim_value, int):
                         shape.append(dim_value)
                     else:
-                        raise RuntimeError('The tensor has non integer shape.')
+                        raise RuntimeError(f'The tensor {tensor.name} has non integer shape.')
+                elif d.HasField("dim_param"):
+                    # flexible shape
+                    # make manually 1
+                    shape.append(1)
                 else:
-                    raise RuntimeError('The tensor does not have dim_value field.')
+                    raise RuntimeError(f'The tensor {tensor.name} does not have dim_value field.')
         else:
-            raise RuntimeError('The tensor does not have shape field')
+            raise RuntimeError(f'The tensor {tensor.name} does not have shape field')
         return shape
 
     def get_edge_shape(self, edge_name: str) -> List[int]:
