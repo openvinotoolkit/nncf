@@ -491,16 +491,16 @@ class TestSotaCheckpoints:
         if onnx_type == "q_dq":
             onnx_model = str(onnx_dir + 'q_dq/' + eval_test_struct.model_name_ + '.onnx')
             if RC_PACKAGE_NOT_USED:
-                mo_cmd = "{} mo.py --input_model {}".format(sys.executable, onnx_model) + mo_cmd_tail
+                mo_cmd = "{} mo.py --input_model {} {}".format(sys.executable, onnx_model, mo_cmd_tail)
             else:
-                mo_cmd = "mo --input_model {}".format(onnx_model) + mo_cmd_tail
+                mo_cmd = "mo --input_model {} {}".format(onnx_model, mo_cmd_tail)
         else:
             onnx_model = str(onnx_dir + eval_test_struct.model_name_ + '.onnx')
             if RC_PACKAGE_NOT_USED:
-                mo_cmd = "{} mo.py --input_model {}".format(sys.executable, onnx_model) + mo_cmd_tail
+                mo_cmd = "{} mo.py --input_model {} {}".format(sys.executable, onnx_model, mo_cmd_tail)
             else:
-                mo_cmd = "mo --input_model {}".format(onnx_model) + \
-                         mo_cmd_tail_template.format(mean_val, scale_val, ir_model_folder)
+                mo_cmd_tail = mo_cmd_tail_template.format(mean_val, scale_val, ir_model_folder)
+                mo_cmd = "mo --input_model {} {}".format(onnx_model, mo_cmd_tail)
 
         exit_code, err_str = self.run_cmd(mo_cmd, cwd=MO_DIR)
         if exit_code == 0 and err_str is None:
