@@ -23,7 +23,8 @@ pip install -r examples/torch/requirements.txt
 This scenario demonstrates quantization with fine-tuning of SSD300 on VOC dataset.
 
 #### Dataset preparation
-- Download and extract VOC2007 and VOC2012 train/val and test data + devkit from [here](https://pjreddie.com/projects/pascal-voc-dataset-mirror/)
+- Download and extract in one folder train/val+test VOC2007 and train/val VOC2012 data from [here](https://pjreddie.com/projects/pascal-voc-dataset-mirror/)
+- In the future, `<path_to_dataset>` means the path to this folder.
 
 #### Run object detection sample
 - If you did not install the package then add the repository root folder to the `PYTHONPATH` environment variable
@@ -37,13 +38,12 @@ This scenario demonstrates quantization with fine-tuning of SSD300 on VOC datase
   --disable-compression 
   ```
 - Run the following command to start compression with fine-tuning on GPUs:
-`python main.py -m train --config configs/ssd300_vgg_voc_int8.json --data <path_to_dataset> --log-dir=../../results/quantization/ssd300_int8`
-It may take a few epochs to get the baseline accuracy results.
+`python main.py -m train --config configs/ssd300_vgg_voc_int8.json --data <path_to_dataset> --log-dir=../../results/quantization/ssd300_int8 --weights=<path_to_checkpoint>`  
+ It may take a few epochs to get the baseline accuracy results.
+- Use `--weights` flag with the path to a compatible PyTorch checkpoint in order to load all matching weights from the checkpoint into the model - useful if you need to start compression-aware training from a previously trained uncompressed (FP32) checkpoint instead of performing compression-aware training from scratch. This flag is optional, but highly recommended to use.
 - Use `--multiprocessing-distributed` flag to run in the distributed mode.
 - Use `--resume` flag with the path to a previously saved model to resume training.
-- Use the `--weights` flag with the path to a compatible PyTorch checkpoint in order to load all matching weights from the checkpoint into the model - useful
- if you need to start compression-aware training from a previously trained uncompressed (FP32) checkpoint instead of performing compression-aware training fr
-om scratch.
+
 
 #### Validate your model checkpoint
 To estimate the test scores of your trained model checkpoint use the following command:

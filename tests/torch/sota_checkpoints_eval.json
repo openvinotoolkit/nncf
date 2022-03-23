@@ -286,7 +286,7 @@
         }
     },
     "object_detection": {
-        "VOCdevkit": {
+        "voc": {
             "ssd300_mobilenet_voc": {
                 "config": "examples/torch/object_detection/configs/ssd300_mobilenet_voc.json",
                 "target": 62.23,
