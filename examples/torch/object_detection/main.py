@@ -81,14 +81,13 @@ def get_argument_parser():
     parser = get_common_argument_parser()
 
     parser.add_argument('--basenet', default='', help='pretrained base model, should be located in save_folder')
-    parser.add_argument('--test-interval', default=5000, type=int, help='test interval')
+    parser.add_argument('--test-interval', default=1, type=int, help='test interval')
     parser.add_argument("--dataset", help="Dataset to use.", choices=["voc", "coco"], default=None)
     parser.add_argument('--train_imgs', help='path to training images or VOC root directory')
     parser.add_argument('--train_anno', help='path to training annotations or VOC root directory')
     parser.add_argument('--test_imgs', help='path to testing images or VOC root directory')
     parser.add_argument('--test_anno', help='path to testing annotations or VOC root directory')
     return parser
-
 
 def main(argv):
     parser = get_argument_parser()

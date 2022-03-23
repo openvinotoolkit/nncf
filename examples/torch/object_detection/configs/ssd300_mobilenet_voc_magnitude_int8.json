@@ -14,6 +14,7 @@
   },
   "epochs": 386,
   "batch_size": 256,
+  "test_interval": 5,
   "save_freq": 50,
   "optimizer": {
     "type": "Adam",
