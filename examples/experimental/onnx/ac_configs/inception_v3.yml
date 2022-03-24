@@ -6,13 +6,12 @@ models:
     execution_providers: ['OpenVINOExecutionProvider']
   datasets:
   - name: imagenet_1000_classes
-    data_source: /home/aleksei/datasets/ILSVRC2012_img_val/
+    data_source: <ImageNet folder>
     annotation_conversion:
       converter: imagenet
-      annotation_file: /mnt/icv_externalN/omz-validation-datasets/val_1000.txt
+      annotation_file: <annotation file>
     reader: pillow_imread
     preprocessing:
-#    - type: bgr_to_rgb
     - type: resize
       size: 320
       aspect_ratio_scale: greater
@@ -21,7 +20,7 @@ models:
     - type: crop
       size: 299
       use_pillow: true
-      
+
     - type: normalization
       std: 255
 
@@ -32,9 +31,3 @@ models:
     - name: accuracy@top1
       type: accuracy
       top_k: 1
-      reference: 0.7769
-    - name: accuracy@top5
-      type: accuracy
-      top_k: 5
-      reference: 0.937
-

@@ -1,37 +1,63 @@
-
 # Classification sample
 
-This sample shows an example of quantization of classification models. 
-The used dataset is ImageNet.
+This sample shows an example of quantization of classification models. The used dataset is ImageNet.
 
+## Install
 
-## Install 
-
-To correctly use the sample you should follow the instructions below.
+Please, install the requirements for ONNX Post-Training Quantization of NNCF.
 
 Install requirements
 
 ```
 pip install -r <nncf dir>/nncf/experimental/onnx/requirements.txt
+pip install -r <nncf dir>/examples/experimental/onnx/requirements.txt
 ```
 
-## Run Post-Training quantization sample
+## Getting the quantized model
+
+To run post-training quantization on your model you can use the following command.
 
 ```
-python -m <ONNX model path> -o <quantized ONNX model path> --data <ImageNet data path>
+python onnx_ptq_classification.py -m <ONNX model path> -o <quantized ONNX model path> --data <ImageNet data path>
 ```
 
-## Run validation
+Also, you could specify some options of quantization, please, take a look at the arguments description by using the
 
-You could use [accuracy_checker](https://github.com/openvinotoolkit/open_model_zoo/tree/master/tools/accuracy_checker) to run the validation of the obtained model. The AccuracyChecker config files are located [here](examples/experimental/onnx/ac_configs/).  
+```
+python onnx_ptq_classification.py --help
+```
 
+## Measuring the accuracy of the original and quantized models
+
+If you would like to compare the accuracy of the original model and quantized one, you could
+use [accuracy_checker](https://github.com/openvinotoolkit/open_model_zoo/tree/master/tools/accuracy_checker). The
+necessary config files are located [here](examples/experimental/onnx/ac_configs/). The thing that you only need is to
+fill in the config with the following infromation: the path to ImageNet folder and the path to the annotation file. The
+accuracy checker config for the original and quantized models is the same.
+
+Use the following command to get the model accuracy.
+
+```
+accuracy_check -c <path to config fileh> -o <ONNX model>
+```
 
 ## Results of Post-Training quantization of ONNX models
 
-|          Model           | Original accuracy | Quantized model accuracy |
-|:------------------------:|:-----------------:|:------------------------:|
-|        ResNet-50         |      75.17%       |          74.74%          |
-|       MobilenetV2        |      71.87%       |          71.33%          |
-| InceptionV1(googlenetV1) |      69.77%       |          69.72%          |
-|       InceptionV3        |      77.45%       |          77.31%          |
-|      SqueezenetV1.1      |      58.19%       |          57.73%          |
+|           Model           | Original accuracy | Quantized model accuracy |
+|:-------------------------:|:-----------------:|:------------------------:|
+|         ResNet-50         |      75.17%       |          74.74%          |
+|        MobilenetV2        |      71.87%       |          71.33%          |
+| InceptionV1 (GoogleNetV1) |      69.77%       |          69.72%          |
+| InceptionV3 (GoogleNetV3) |      77.45%       |          77.31%          |
+|      SqueezenetV1.1       |      58.19%       |          57.73%          |
+
+##   
+
+If you would like to compare the perfomance of the original model and quantized one, you could
+use [benchmark_tool](https://github.com/openvinotoolkit/openvino/tree/master/tools/benchmark_tool).
+
+Use the following command to get the model perfomance numbers.
+
+```
+benchmark_app -m <ONNX model>
+```
