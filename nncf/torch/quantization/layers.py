@@ -56,6 +56,7 @@ class PTQuantizerSpec(QuantizerSpec):
     def __init__(self, num_bits: int,
                  mode: QuantizationMode,
                  signedness_to_force: Optional[bool],
+                 per_channel,
                  narrow_range: bool,
                  half_range: bool,
                  scale_shape: Tuple[int, ...],
@@ -70,6 +71,7 @@ class PTQuantizerSpec(QuantizerSpec):
             activation quantizers.
         """
         super().__init__(num_bits, mode, signedness_to_force, narrow_range, half_range)
+        self.per_channel = per_channel
         self.scale_shape = scale_shape
         self.logarithm_scale = logarithm_scale
         self.compression_lr_multiplier = compression_lr_multiplier
@@ -83,12 +85,51 @@ class PTQuantizerSpec(QuantizerSpec):
         return cls(qconfig.num_bits,
                    qconfig.mode,
                    qconfig.signedness_to_force,
+                   qconfig.per_channel,
                    narrow_range,
                    half_range,
                    scale_shape,
                    logarithm_scale,
                    is_quantized_on_export,
                    compression_lr_multiplier)
+
+    def __eq__(self, other):
+        return self.__dict__ == other.__dict__
+
+from nncf.common.quantization.quantizer_setup import QuantizerSetupBase
+from nncf.common.quantization.quantizer_setup import SingleConfigQuantizerSetup
+from nncf.common.quantization.quantizer_setup import QuantizationPointId
+
+
+
+class PTQuantizationPoint:
+    def __init__(self, qspec, target_point, insertion_point):
+        # insertion point is part-time decision
+        self.qspec = qspec
+        self.target_point = target_point
+        self.insertion_point = insertion_point
+
+    def is_weight_quantization_point(self):
+        # target point analysis?
+        pass
+        
+
+class PTQuantizerSetup(QuantizerSetupBase):
+    def __init__(self):
+        super().__init__()
+        # add unified scale groups?
+        self._unified_scale_groups = []
+        self.quantization_points = {} # type: Dict[QuantizationPointId, PTQuantizationPoint]
+
+    def from_state(self, state):
+        pass
+
+    def get_state(self):
+        return None
+
+    def add_quantization_point(self, qp_id: QuantizationPointId, qp: PTQuantizationPoint):
+        self.quantization_points[qp_id] = qp
+
 
 
 class BaseQuantizer(nn.Module):
