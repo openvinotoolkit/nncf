@@ -36,6 +36,18 @@ EXAMPLES_DIR = PROJECT_ROOT / 'examples'
 GITHUB_REPO_URL = 'https://github.com/openvinotoolkit/nncf/'
 
 
+def run_cmd(command, run_path=None):
+    if run_path:
+        ret = subprocess.run(command, capture_output=True, check=True, shell=True, cwd=run_path)
+    else:
+        ret = subprocess.run(command, capture_output=True, check=True, shell=True)
+    output = {'exit_code': int(ret.returncode), 'stdout': str(ret.stdout), 'stderr': str(ret.stderr)}
+    logger.debug(f"Command arguments: {' '.join(str(it) for it in command)}")
+    logger.debug(f"Stdout: {output['stdout']}\n")
+    logger.debug(f"Stderr: {output['stderr']}\n")
+    logger.debug(f"Exit_code: {output['exit_code']}\n")
+
+
 def get_cli_dict_args(args):
     cli_args = {}
     for key, val in args.items():
@@ -55,29 +67,45 @@ def create_venv_with_nncf(tmp_path, package_type, venv_type, extra_reqs):
 
     version_string = '{}.{}'.format(sys.version_info[0], sys.version_info[1])
     if venv_type == 'virtualenv':
-        subprocess.call('virtualenv -ppython{} {}'.format(version_string, venv_path), shell=True)
+        run_cmd('virtualenv -ppython{} {}'.format(version_string, venv_path))
+        # subprocess.call('virtualenv -ppython{} {}'.format(version_string, venv_path), shell=True)
     elif venv_type == 'venv':
-        subprocess.call('python{} -m venv {}'.format(version_string, venv_path), shell=True)
-        subprocess.call('{} install --upgrade pip'.format(pip_with_venv), shell=True)
-        subprocess.call('{} install wheel'.format(pip_with_venv), shell=True)
+        run_cmd('python{} -m venv {}'.format(version_string, venv_path))
+        # subprocess.call('python{} -m venv {}'.format(version_string, venv_path), shell=True)
+        run_cmd('{} install --upgrade pip'.format(pip_with_venv))
+        # subprocess.call('{} install --upgrade pip'.format(pip_with_venv), shell=True)
+        run_cmd('{} install wheel'.format(pip_with_venv))
+        # subprocess.call('{} install wheel'.format(pip_with_venv), shell=True)
 
     run_path = tmp_path / 'run'
     run_path.mkdir()
 
     if package_type == 'pip_pypi':
-        subprocess.run(
-            f'{pip_with_venv} install nncf[{extra_reqs}]', check=True, shell=True)
+        cmd1 = f'{pip_with_venv} install nncf[{extra_reqs}]'
+        run_cmd(cmd1)
+        # subprocess.run(f'{pip_with_venv} install nncf[{extra_reqs}]', check=True, shell=True)
     elif package_type == 'pip_local':
-        subprocess.run(
-            f'{pip_with_venv} install {PROJECT_ROOT}[{extra_reqs}]', check=True, shell=True)
+        cmd2 = f'{pip_with_venv} install {PROJECT_ROOT}[{extra_reqs}]'
+        run_cmd(cmd2)
+        # subprocess.run(f'{pip_with_venv} install {PROJECT_ROOT}[{extra_reqs}]', check=True, shell=True)
+
     elif package_type == 'pip_e_local':
-        subprocess.run(
-            f'{pip_with_venv} install -e {PROJECT_ROOT}[{extra_reqs}]', check=True, shell=True)
+        cmd3 = f'{pip_with_venv} install -e {PROJECT_ROOT}[{extra_reqs}]'
+        run_cmd(cmd3)
+        # subprocess.run(f'{pip_with_venv} install -e {PROJECT_ROOT}[{extra_reqs}]', check=True, shell=True)
     elif package_type == 'pip_git_develop':
-        subprocess.run(
-            f'{pip_with_venv} install git+{GITHUB_REPO_URL}@develop#egg=nncf[{extra_reqs}]', check=True, shell=True)
+        cmd4 = f'{pip_with_venv} install git+{GITHUB_REPO_URL}@develop#egg=nncf[{extra_reqs}]'
+        run_cmd(cmd4)
+        # subprocess.run(f'{pip_with_venv} install git+{GITHUB_REPO_URL}@develop#egg=nncf[{extra_reqs}]',
+        # check=True, shell=True)
     else:
-        subprocess.run(
+        cmd5 = '{python} {nncf_repo_root}/setup.py {package_type} {options}'.format(
+                python=python_executable_with_venv,
+                nncf_repo_root=PROJECT_ROOT,
+                package_type=package_type,
+                options=f'--{extra_reqs}' if extra_reqs else '')
+        run_cmd(cmd5, PROJECT_ROOT)
+        """subprocess.run(
             '{python} {nncf_repo_root}/setup.py {package_type} {options}'.format(
                 python=python_executable_with_venv,
                 nncf_repo_root=PROJECT_ROOT,
@@ -85,21 +113,9 @@ def create_venv_with_nncf(tmp_path, package_type, venv_type, extra_reqs):
                 options=f'--{extra_reqs}' if extra_reqs else ''),
             check=True,
             shell=True,
-            cwd=PROJECT_ROOT)
+            cwd=PROJECT_ROOT)"""
 
     return venv_path
-
-
-def run_cmd(command, run_path=None):
-    if run_path:
-        ret = subprocess.run(command, capture_output=True, check=True, shell=True, cwd=run_path)
-    else:
-        ret = subprocess.run(command, capture_output=True, check=True, shell=True)
-    output = {'exit_code': int(ret.returncode), 'stdout': str(ret.stdout), 'stderr': str(ret.stderr)}
-    logger.debug(f"Command arguments: {' '.join(str(it) for it in command)}")
-    logger.debug(f"Stdout: {output['stdout']}\n")
-    logger.debug(f"Stderr: {output['stderr']}\n")
-    logger.debug(f"Exit_code: {output['exit_code']}\n")
 
 
 def run_install_checks(venv_path, tmp_path, package_type, test_dir, install_type=''):
