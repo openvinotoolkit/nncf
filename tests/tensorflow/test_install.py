@@ -16,6 +16,8 @@ import subprocess
 
 from tests.common.helpers import PROJECT_ROOT
 from tests.common.helpers import run_install_checks
+from tests.common.helpers import logger
+from tests.common.helpers import run_cmd
 
 
 @pytest.fixture(name="venv_type",
@@ -37,10 +39,14 @@ def test_install(tmp_venv_with_nncf, tmp_path, package_type):
 
 def test_install_with_examples_and_tests_requirements(tmp_venv_with_nncf, tmp_path, package_type):
     pip_with_venv = '. {0}/bin/activate && {0}/bin/pip'.format(tmp_venv_with_nncf)
-    subprocess.call(
+    cmd1 = '{} install -r {}/examples/tensorflow/requirements.txt'.format(pip_with_venv, PROJECT_ROOT)
+    cmd2 = '{} install -r {}/tests/tensorflow/requirements.txt'.format(pip_with_venv, PROJECT_ROOT),
+    """subprocess.call(
         '{} install -r {}/examples/tensorflow/requirements.txt'.format(pip_with_venv, PROJECT_ROOT),
         shell=True)
     subprocess.call(
         '{} install -r {}/tests/tensorflow/requirements.txt'.format(pip_with_venv, PROJECT_ROOT),
-        shell=True)
+        shell=True)"""
+    run_cmd(cmd1)
+    run_cmd(cmd2)
     run_install_checks(tmp_venv_with_nncf, tmp_path, package_type, test_dir='tensorflow')

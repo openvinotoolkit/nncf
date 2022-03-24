@@ -25,6 +25,9 @@ from typing import Union
 
 import numpy as np
 
+import logging    # TODO remove the line in case merging to develop!
+logger = logging.getLogger(__name__)    # TODO remove the line in case merging to develop!
+
 TensorType = TypeVar('TensorType')
 
 TEST_ROOT = Path(__file__).absolute().parents[1]
@@ -87,6 +90,18 @@ def create_venv_with_nncf(tmp_path, package_type, venv_type, extra_reqs):
     return venv_path
 
 
+def run_cmd(command, run_path=None):
+    if run_path:
+        ret = subprocess.run(command, capture_output=True, check=True, shell=True, cwd=run_path)
+    else:
+        ret = subprocess.run(command, capture_output=True, check=True, shell=True)
+    output = {'exit_code': int(ret.returncode), 'stdout': str(ret.stdout), 'stderr': str(ret.stderr)}
+    logger.debug(f"Command arguments: {' '.join(str(it) for it in command)}")
+    logger.debug(f"Stdout: {output['stdout']}\n")
+    logger.debug(f"Stderr: {output['stderr']}\n")
+    logger.debug(f"Exit_code: {output['exit_code']}\n")
+
+
 def run_install_checks(venv_path, tmp_path, package_type, test_dir, install_type=''):
     python_executable_with_venv = '. {0}/bin/activate && {0}/bin/python'.format(venv_path)
     pip_with_venv = '. {0}/bin/activate && {0}/bin/pip'.format(venv_path)
@@ -105,15 +120,18 @@ def run_install_checks(venv_path, tmp_path, package_type, test_dir, install_type
             raise FileNotFoundError('NNCF package not found')
 
         option = 'tf' if test_dir == 'tensorflow' else 'torch'
-        subprocess.run(
-            '{} install {}/dist/{}[{}] '.format(pip_with_venv,
-                                                PROJECT_ROOT,
-                                                package_name,
-                                                option),
-            check=True, shell=True)
+        sdist_cmd = '{} install {}/dist/{}[{}] '.format(pip_with_venv,
+                                                        PROJECT_ROOT,
+                                                        package_name,
+                                                        option)
+        """subprocess.run(
+            sdist_cmd,
+            check=True, shell=True) """
+        run_cmd(sdist_cmd)
     elif package_type == "bdist_wheel":
-        subprocess.run(
-            "{} install {}/dist/*.whl ".format(pip_with_venv, PROJECT_ROOT), check=True, shell=True)
+        bdist_wheel_cmd = "{} install {}/dist/*.whl ".format(pip_with_venv, PROJECT_ROOT)
+        # subprocess.run("{} install {}/dist/*.whl ".format(pip_with_venv, PROJECT_ROOT), check=True, shell=True)
+        run_cmd(bdist_wheel_cmd)
 
     if install_type.lower() == 'cpu':
         install_mode = 'cpu'
@@ -121,12 +139,17 @@ def run_install_checks(venv_path, tmp_path, package_type, test_dir, install_type
         install_mode = 'cuda'
     else:
         install_mode = ''
-    subprocess.run(
+    install_check_cmd = '{} {}/install_checks.py {} {}'.format(python_executable_with_venv,
+                                                               run_path,
+                                                               install_mode,
+                                                               package_type)
+    """subprocess.run(
         '{} {}/install_checks.py {} {}'.format(python_executable_with_venv,
                                                run_path,
                                                install_mode,
                                                package_type),
-        check=True, shell=True, cwd=run_path)
+        check=True, shell=True, cwd=run_path)"""
+    run_cmd(install_check_cmd, run_path)
 
 
 class BaseTensorListComparator(ABC):
