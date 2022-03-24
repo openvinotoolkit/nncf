@@ -437,7 +437,7 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
         self._build_time_metric_infos = None  # type: Optional[NetworkQuantizationShareMetricBuildTimeInfo]
         self.hw_config = None
         self._target_points_vs_qspec = {}
-        self._pt_quantizer_setup = {}
+        self._pt_quantizer_setup = None
 
         # can be False to disable setting of adjust padding operations on precision init, because it may add unnecessary
         # noise on model evaluation (e.g. in AutoQ)
@@ -594,28 +594,13 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
         target_model_graph = target_model.get_original_graph()
         target_model.register_compression_module_type(ExtraCompressionModuleType.EXTERNAL_QUANTIZER)
         minmax_values_for_range_init = {}
-        if self._single_config_quantizer_setup is None:
-            self._single_config_quantizer_setup, self._pt_quantizer_setup, minmax_values_for_range_init = self._get_quantizer_setup(target_model)
-        bitwidth_per_scope = BasePrecisionInitializer.get_bitwidth_per_scope(self._single_config_quantizer_setup)
-        str_bw = [str(element) for element in bitwidth_per_scope]
-        nncf_logger.debug('\n'.join(['\n\"bitwidth_per_scope\": [', ',\n'.join(str_bw), ']']))
-
-        # have to consider this init logic because of its importance for mixed precision (else mixed precision init quantization setups won't be inited)
-        # insertion point is used there
-        # minmax_values_for_range_init = {}
-        # if is_main_process() and self.should_init:
-        #     stats_for_range_init = self._get_statistics_for_final_range_init(target_model,
-        #                                                                      self._single_config_quantizer_setup,
-        #                                                                      self._range_init_params)
-        #     minmax_values_for_range_init = self._get_minmax_values_for_quantizer_locations(
-        #         self._single_config_quantizer_setup,
-        #         stats_for_range_init,
-        #         target_model_graph)
+        if self._pt_quantizer_setup is None:
+            self._pt_quantizer_setup, minmax_values_for_range_init = self._get_quantizer_setup(target_model)
 
         dup_filter = DuplicateFilter()  # so that the overflow fix warning is only logged once
         nncf_logger.addFilter(dup_filter)
         insertion_commands, setup_to_module_id_translation_dict = \
-            self._build_insertion_commands_list_for_quantizer_setup(self._single_config_quantizer_setup,
+            self._build_insertion_commands_list_for_quantizer_setup(self._pt_quantizer_setup,
                                                                     target_model,
                                                                     minmax_values_for_range_init)
         nncf_logger.removeFilter(dup_filter)
@@ -629,7 +614,7 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
         all_quantizations.update({k: v.quantizer_module_ref for k, v in self._weight_quantizers.items()})
         all_quantizations.update({k: v.quantizer_module_ref for k, v in self._non_weight_quantizers.items()})
         self._groups_of_adjacent_quantizers.parse_from_quantizer_setup(all_quantizations,
-                                                                       self._single_config_quantizer_setup,
+                                                                       self._pt_quantizer_setup,
                                                                        setup_to_module_id_translation_dict)
 
         # NOTE: Order of activations must be the same to correctly broadcast parameters (e.g. scales) in distributed
@@ -693,16 +678,7 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
         return single_config_quantizer_setup
 
     def _get_quantizer_setup(self, target_model: NNCFNetwork) -> SingleConfigQuantizerSetup:
-        setup_generator = PropagationBasedQuantizerSetupGenerator(self._algo_config,
-                                                                  target_model,
-                                                                  self.hw_config,
-                                                                  self._precision_init_type,
-                                                                  self._precision_init_params,
-                                                                  self._range_init_params,
-                                                                  self._debug_interface)
-        single_config_quantizer_setup = setup_generator.generate_setup()
         single_config_quantizer_setup = self.get_scqs(target_model)
-        self._build_time_metric_infos = setup_generator.get_build_time_metric_infos()
 
         target_model_graph = target_model.get_original_graph()
 
@@ -716,9 +692,13 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
                 stats_for_range_init,
                 target_model_graph)
 
+        bitwidth_per_scope = BasePrecisionInitializer.get_bitwidth_per_scope(single_config_quantizer_setup)
+        str_bw = [str(element) for element in bitwidth_per_scope]
+        nncf_logger.debug('\n'.join(['\n\"bitwidth_per_scope\": [', ',\n'.join(str_bw), ']']))
+
         self._target_points_vs_qspec = {}
         from nncf.torch.quantization.layers import PTQuantizerSetup, PTQuantizationPoint
-        setup = PTQuantizerSetup()
+        setup = PTQuantizerSetup(single_config_quantizer_setup.unified_scale_groups, single_config_quantizer_setup.shared_input_operation_set_groups)
         
         for i, (qp_id, qp) in enumerate(single_config_quantizer_setup.quantization_points.items()):
             qconfig = qp.qconfig
@@ -772,10 +752,10 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
                                                 is_quantized_on_export=qp.is_weight_quantization_point(),
                                                 compression_lr_multiplier=compression_lr_multiplier)
             self._target_points_vs_qspec[str(PTTargetPointTranslator.translate(insertion_point))] = qspec
-            pt_qp = PTQuantizationPoint(qspec, PTTargetPointTranslator.translate(insertion_point), insertion_point)
+            pt_qp = PTQuantizationPoint(qspec, PTTargetPointTranslator.translate(insertion_point), qp.directly_quantized_operator_node_names)
             setup.add_quantization_point(qp_id, pt_qp)
 
-        return single_config_quantizer_setup, setup, minmax_values_for_range_init
+        return setup, minmax_values_for_range_init
 
     def _build_controller(self, model: NNCFNetwork) -> PTCompressionAlgorithmController:
         return QuantizationController(model,
@@ -803,8 +783,8 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
             weight_bitwidth = None
             for qp in quantization_points:
                 is_weight = qp.is_weight_quantization_point()
-                if is_weight and (qp.insertion_point.target_node_name == op_node_name):
-                    weight_bitwidth = qp.qconfig.num_bits
+                if is_weight and (qp.target_point.target_node_name == op_node_name):
+                    weight_bitwidth = qp.qspec.num_bits
                     break
             if weight_bitwidth:
                 is_applicable = False
@@ -895,7 +875,7 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
 
         for qp_id in non_unified_scales_quantization_point_ids:
             qp = quantizer_setup.quantization_points[qp_id]
-            nncf_node = target_model_graph.get_node_by_name(qp.insertion_point.target_node_name)
+            nncf_node = target_model_graph.get_node_by_name(qp.target_point.target_node_name)
             if qp.is_weight_quantization_point() and nncf_node.is_shared():
                 layer_name = nncf_node.layer_name
                 if layer_name in already_weight_quantized_shared_layers:
@@ -904,9 +884,10 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
                     qp_id_vs_quant_module_id_dict[qp_id] = already_weight_quantized_shared_layers[layer_name]
                     continue
 
-            qip = qp.insertion_point
-            tp = PTTargetPointTranslator.translate(qip)
-            qconfig = quantizer_setup.quantization_points[qp_id].qconfig
+            # qip = qp.insertion_point
+            # tp = PTTargetPointTranslator.translate(qip)
+            qspec = quantizer_setup.quantization_points[qp_id].qspec
+            tp = quantizer_setup.quantization_points[qp_id].target_point
 
             range_init_minmax_values = None
             if minmax_values_for_range_init:
@@ -919,7 +900,7 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
 
             quantizer_module_id, commands = self._quantize_at_points_by_single_module(target_model,
                                                                                       [tp, ],
-                                                                                      qconfig,
+                                                                                      qspec,
                                                                                       range_init_minmax_values)
 
             if qp.is_weight_quantization_point() and nncf_node.is_shared() and \
@@ -949,7 +930,7 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
         for us_qp_id in unified_scales_group:
             qp = quantizer_setup.quantization_points[us_qp_id]
             if qp.is_weight_quantization_point():
-                nncf_node = target_model_graph.get_node_by_name(qp.insertion_point.target_node_name)
+                nncf_node = target_model_graph.get_node_by_name(qp.target_point.target_node_name)
                 if nncf_node.is_shared():
                     if nncf_node.layer_name not in observed_shared_layer_names:
                         observed_shared_layer_names.add(nncf_node.layer_name)
@@ -978,7 +959,7 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
             adjust_padding_operation_set = self.hw_config.get_operations_with_adjusted_paddings()
         for wqp_id in weight_qps:
             wqp = quantizer_setup.quantization_points[wqp_id]
-            tp = PTTargetPointTranslator.translate(wqp.insertion_point)
+            tp = quantizer_setup.quantization_points[wqp_id].target_point
             target_node = target_model_graph.get_node_by_name(tp.target_node_name)
 
             op_type = target_node.metatype
@@ -1018,20 +999,20 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
             if quantizer_setup.quantization_points[qp_id].is_weight_quantization_point()]
         act_qp_ids = [qp_id for qp_id in qp_ids_list_for_current_group
             if quantizer_setup.quantization_points[qp_id].is_activation_quantization_point()]
-        ip_str_repr_key_lambda = lambda x: str(quantizer_setup.quantization_points[x].insertion_point)
+        ip_str_repr_key_lambda = lambda x: str(quantizer_setup.quantization_points[x].target_point.target_node_name)
         sorted_wqp_ids = sorted(weight_qp_ids, key=ip_str_repr_key_lambda)
         sorted_aqp_ids = sorted(act_qp_ids, key=ip_str_repr_key_lambda)
         sorted_qp_ids = sorted_wqp_ids + sorted_aqp_ids
 
         primary_qp_id = sorted_qp_ids[0]
         linked_qp_ids = sorted_qp_ids[1:]
-        qconfig = quantizer_setup.quantization_points[primary_qp_id].qconfig
-        linked_qconfigs = [quantizer_setup.quantization_points[qp_id].qconfig for qp_id in linked_qp_ids]
-        for linked_qconfig in linked_qconfigs:
-            if not qconfig.compatible_with_a_unified_scale_linked_qconfig(linked_qconfig):
-                raise RuntimeError("The quantizer configurations for unified scale quantization points should"
+        qspec = quantizer_setup.quantization_points[primary_qp_id].qspec
+        linked_qspecs = [quantizer_setup.quantization_points[qp_id].qspec for qp_id in linked_qp_ids]
+        for linked_qspec in linked_qspecs:
+            if not qspec == linked_qspec:
+                raise RuntimeError("The qspecs for unified scale quantization points should"
                                    "be identical!")
-
+            
         range_init_minmax_values = None
         if minmax_values_for_range_init:
             # Hopefully this will suffice.
@@ -1041,8 +1022,7 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
             for qp_id in sorted_qp_ids:
                 minmax_stat = minmax_values_for_range_init[qp_id] if qp_id in minmax_values_for_range_init else None
                 if minmax_stat is None:
-                    tp = PTTargetPointTranslator.translate(
-                        quantizer_setup.quantization_points[qp_id].insertion_point)
+                    tp = quantizer_setup.quantization_points[qp_id].target_point
                     nncf_logger.warning("Tensor statistics for quantizer at {} were not collected! The corresponding "
                                         "quantizer range will not be initialized!".format(tp))
                     continue
@@ -1059,12 +1039,12 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
             if min_values is not None and max_values is not None:
                 range_init_minmax_values = min_values, max_values
 
-        quant_insertion_points = [quantizer_setup.quantization_points[qp_id].insertion_point for qp_id in sorted_qp_ids]
-        target_points = [PTTargetPointTranslator.translate(qip) for qip in quant_insertion_points]
+        # quant_insertion_points = [quantizer_setup.quantization_points[qp_id].insertion_point for qp_id in sorted_qp_ids]
+        target_points = [quantizer_setup.quantization_points[qp_id].target_point for qp_id in sorted_qp_ids]
         # do we really need here many target points or maybe just primary one?
         quantizer_module_id, commands = self._quantize_at_points_by_single_module(target_model,
                                                                                   target_points,
-                                                                                  qconfig,
+                                                                                  qspec,
                                                                                   range_init_minmax_values)
         return quantizer_module_id, commands
 
@@ -1073,10 +1053,9 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
         # in the HW config, where they are sorted by descending order of priority
         return quantizer_config_list[0]
 
-    # pass multiple PTTargetPoints BUT use one precomputed qspec by primary_ip
     def _quantize_at_points_by_single_module(self, target_model: NNCFNetwork,
                                              insertion_points: List[PTTargetPoint],
-                                             qconfig: QuantizerConfig,
+                                             qspec: PTQuantizerSpec,
                                              range_init_minmax_values: Tuple[torch.Tensor, torch.Tensor] = None) -> \
             Tuple[QuantizerId, List[PTInsertionCommand]]:
         """
@@ -1107,65 +1086,11 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
 
         # The scale shapes for all insertion points must match, otherwise it is impossible to quantize them all
         # using a single module
-
-        scale_shapes = []  # type: List[List[int]]
-        for ip in insertion_points:
-            if is_weights(ip):
-                target_node = target_model_graph.get_node_by_name(ip.target_node_name)
-                layer_attributes = target_node.layer_attributes
-                assert isinstance(layer_attributes, WeightedLayerAttributes)
-                scale_shape = get_scale_shape(layer_attributes.get_weight_shape(),
-                                              is_weights=True,
-                                              per_channel=qconfig.per_channel,
-                                              channel_idx=layer_attributes.get_target_dim_for_compression())
-
-                scale_shapes.append(scale_shape)
-            else:
-                input_shape = target_model_graph.get_input_shape_for_insertion_point(ip)
-                scale_shapes.append(get_scale_shape(list(input_shape),
-                                                    is_weights=False, per_channel=qconfig.per_channel))
-
-        scale_shape = scale_shapes[0]
+        # if not all(shape == scale_shapes[0] for shape in scale_shapes):
+        #     raise RuntimeError("Scale shapes for the insertion points do not match!")
+        # scale_shape = qspec.scale_shape
 
         primary_ip = insertion_points[0]
-        if is_weights(primary_ip):
-            use_logarithm_scale = self._use_logarithm_scale_per_group[QuantizerGroup.WEIGHTS]
-            narrow_range = True
-        else:
-            use_logarithm_scale = self._use_logarithm_scale_per_group[QuantizerGroup.ACTIVATIONS]
-            narrow_range = False
-
-        compression_lr_multiplier = self._get_compression_lr_multiplier()
-
-        half_range = False
-        if self.hw_config and is_weights(primary_ip):
-            if self.hw_config.target_device in ['CPU', 'ANY'] and qconfig.num_bits == 8:
-                if self._overflow_fix == 'enable':
-                    half_range = True
-                    quantizers_with_overflow_fix_str = 'all weight quantizers'
-                elif self._overflow_fix == 'first_layer_only':
-                    if target_node in get_first_nodes_of_type(target_model_graph, ['conv2d']):
-                        half_range = True
-                        quantizers_with_overflow_fix_str = 'first convolution weight quantizers'
-                if half_range:
-                    nncf_logger.warning('The overflow issue fix will be applied. '
-                                        'Now {} will effectively use only 7 bits out of 8 bits. '
-                                        'This resolves the overflow issue problem on AVX2 and AVX-512 machines. '
-                                        'Please take a look at the documentation for a detailed information.'
-                                        .format(quantizers_with_overflow_fix_str))
-
-        qspec = PTQuantizerSpec.from_config(qconfig,
-                                            narrow_range=narrow_range,
-                                            scale_shape=tuple(scale_shape),
-                                            logarithm_scale=use_logarithm_scale,
-                                            half_range=half_range,
-                                            is_quantized_on_export=is_weights(primary_ip),
-                                            compression_lr_multiplier=compression_lr_multiplier)
-
-        matched_qspec = self._target_points_vs_qspec.get(str(primary_ip), {})
-        if matched_qspec:
-            if not matched_qspec == qspec:
-                raise RuntimeError('Not matching qspec')
 
         quantizer = self.__create_quantize_module(qspec).to(self._device_for_callable_obj_creation)
         if range_init_minmax_values is not None:
@@ -1659,7 +1584,7 @@ class ExperimentalQuantizationBuilder(QuantizationBuilder):
         all_quantizations.update({k: v.quantizer_module_ref for k, v in self._non_weight_quantizers.items()})
 
         groups_of_adjacent_quantizers.parse_from_quantizer_setup(all_quantizations,
-                                                                 self._quantizer_setup,
+                                                                 self._pt_quantizer_setup,
                                                                  self._setup_to_module_id_translation_dict)
 
         build_time_metric_infos = QuantizationShareBuildTimeInfo(len(self._non_weight_quantizers),

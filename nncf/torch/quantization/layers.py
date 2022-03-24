@@ -28,6 +28,10 @@ from nncf.common.utils.logger import logger as nncf_logger
 from nncf.common.quantization.structs import QuantizationMode, QuantizerConfig, QuantizerSpec
 from nncf.common.quantization.quantizers import calculate_symmetric_level_ranges
 from nncf.common.quantization.quantizers import calculate_asymmetric_level_ranges
+from nncf.common.quantization.quantizer_setup import QuantizerSetupBase
+from nncf.common.quantization.quantizer_setup import QuantizationPointId
+from nncf.torch.graph.transformations.commands import TargetType
+from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.quantization.quantize_functions import symmetric_quantize, asymmetric_quantize, \
     ExportQuantizeToFakeQuantize, get_scale_zp_from_input_low_input_high, ExportQuantizeToONNXQuantDequant, TuneRange
 from nncf.torch.layer_utils import COMPRESSION_MODULES, CompressionParameter
@@ -56,7 +60,6 @@ class PTQuantizerSpec(QuantizerSpec):
     def __init__(self, num_bits: int,
                  mode: QuantizationMode,
                  signedness_to_force: Optional[bool],
-                 per_channel,
                  narrow_range: bool,
                  half_range: bool,
                  scale_shape: Tuple[int, ...],
@@ -71,7 +74,7 @@ class PTQuantizerSpec(QuantizerSpec):
             activation quantizers.
         """
         super().__init__(num_bits, mode, signedness_to_force, narrow_range, half_range)
-        self.per_channel = per_channel
+        self.per_channel = False if scale_shape == [1] else True
         self.scale_shape = scale_shape
         self.logarithm_scale = logarithm_scale
         self.compression_lr_multiplier = compression_lr_multiplier
@@ -85,7 +88,6 @@ class PTQuantizerSpec(QuantizerSpec):
         return cls(qconfig.num_bits,
                    qconfig.mode,
                    qconfig.signedness_to_force,
-                   qconfig.per_channel,
                    narrow_range,
                    half_range,
                    scale_shape,
@@ -96,40 +98,35 @@ class PTQuantizerSpec(QuantizerSpec):
     def __eq__(self, other):
         return self.__dict__ == other.__dict__
 
-from nncf.common.quantization.quantizer_setup import QuantizerSetupBase
-from nncf.common.quantization.quantizer_setup import SingleConfigQuantizerSetup
-from nncf.common.quantization.quantizer_setup import QuantizationPointId
-
-
 
 class PTQuantizationPoint:
-    def __init__(self, qspec, target_point, insertion_point):
-        # insertion point is part-time decision
+    def __init__(self, qspec, target_point: PTTargetPoint, directly_quantized_operator_node_names):
         self.qspec = qspec
         self.target_point = target_point
-        self.insertion_point = insertion_point
+        self.directly_quantized_operator_node_names = directly_quantized_operator_node_names
 
-    def is_weight_quantization_point(self):
-        # target point analysis?
-        pass
+    def is_activation_quantization_point(self) -> bool:
+        return not self.is_weight_quantization_point()
+
+    def is_weight_quantization_point(self) -> bool:
+        return self.target_point.target_type == TargetType.OPERATION_WITH_WEIGHTS
         
 
 class PTQuantizerSetup(QuantizerSetupBase):
-    def __init__(self):
+    def __init__(self, unified_scale_groups, shared_input_operation_set_groups):
         super().__init__()
-        # add unified scale groups?
-        self._unified_scale_groups = []
+        self.unified_scale_groups = unified_scale_groups
+        self.shared_input_operation_set_groups = shared_input_operation_set_groups
         self.quantization_points = {} # type: Dict[QuantizationPointId, PTQuantizationPoint]
 
     def from_state(self, state):
         pass
 
     def get_state(self):
-        return None
+        return {}
 
     def add_quantization_point(self, qp_id: QuantizationPointId, qp: PTQuantizationPoint):
         self.quantization_points[qp_id] = qp
-
 
 
 class BaseQuantizer(nn.Module):

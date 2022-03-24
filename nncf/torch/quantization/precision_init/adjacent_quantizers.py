@@ -80,7 +80,7 @@ class GroupsOfAdjacentQuantizers:
                 resulting_tuple = (quant_id, quantizer_module)
                 if qp.is_weight_quantization_point():
                     wt_quant_tuples.append(resulting_tuple)
-                    weight_quantized_module_node_name = qp.insertion_point.target_node_name
+                    weight_quantized_module_node_name = qp.target_point.target_node_name
                     module_scope_per_weight_qp_id[weight_quantized_module_node_name] = qp_id
                 elif qp.is_activation_quantization_point():
                     act_quant_tuples.append(resulting_tuple)
