@@ -251,7 +251,7 @@ to find instruction and links to exact configuration files and final checkpoints
 |ResNet-18|DoReFa (weights), scale/threshold (activations)|ImageNet|61.61 (8.19)|
 |ResNet-18|Filter pruning, 40%, magnitude criterion|ImageNet|69.26 (0.54)|
 |ResNet-18|Filter pruning, 40%, geometric median criterion|ImageNet|69.32 (0.48)|
-|ResNet-34|Filter pruning, 40%, geometric median criterion|ImageNet|72.73 (0.57)|
+|ResNet-34|Filter pruning, 50%, geometric median criterion + KD|ImageNet|73.11 (0.19)|
 |GoogLeNet|Filter pruning, 40%, geometric median criterion|ImageNet|68.82 (0.93)|
 
 <a name="pytorch_object_detection"></a>
