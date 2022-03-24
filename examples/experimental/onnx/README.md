@@ -21,7 +21,7 @@ To run post-training quantization on your model you can use the following comman
 python onnx_ptq_classification.py -m <ONNX model path> -o <quantized ONNX model path> --data <ImageNet data path>
 ```
 
-Also, you could specify some options of quantization, please, take a look at the arguments description by using the
+Also, you could specify some options of quantization, please, take a look at the argument description by using the command:
 
 ```
 python onnx_ptq_classification.py --help
@@ -31,11 +31,11 @@ python onnx_ptq_classification.py --help
 
 If you would like to compare the accuracy of the original model and quantized one, you could
 use [accuracy_checker](https://github.com/openvinotoolkit/open_model_zoo/tree/master/tools/accuracy_checker). The
-necessary config files are located [here](examples/experimental/onnx/ac_configs/). The thing that you only need is to
+necessary config files are located [here](./examples/experimental/onnx/ac_configs/). The thing that you only need is to
 fill in the config with the following infromation: the path to ImageNet folder and the path to the annotation file. The
 accuracy checker config for the original and quantized models is the same.
 
-Use the following command to get the model accuracy.
+Use the following command to get the model accuracy:
 
 ```
 accuracy_check -c <path to config fileh> -o <ONNX model>
@@ -51,12 +51,12 @@ accuracy_check -c <path to config fileh> -o <ONNX model>
 | InceptionV3 (GoogleNetV3) |      77.45%       |          77.31%          |
 |      SqueezenetV1.1       |      58.19%       |          57.73%          |
 
-##   
+## Measuring the performance of the original and quantized models
 
-If you would like to compare the perfomance of the original model and quantized one, you could
+If you would like to compare the performance of the original model and quantized one, you could
 use [benchmark_tool](https://github.com/openvinotoolkit/openvino/tree/master/tools/benchmark_tool).
 
-Use the following command to get the model perfomance numbers.
+Use the following command to get the model performance numbers:
 
 ```
 benchmark_app -m <ONNX model>
