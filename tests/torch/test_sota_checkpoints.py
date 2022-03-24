@@ -487,8 +487,8 @@ class TestSotaCheckpoints:
         scale_val = eval_test_struct.scale_val_
         mo_cmd_tail_template = "--framework=onnx --data_type=FP16 --reverse_input_channels" \
                                " --mean_values={} --scale_values={} --output_dir {}"
-        mo_cmd_tail = mo_cmd_tail_template.format(mean_val, scale_val, q_dq_ir_model_folder)
         if onnx_type == "q_dq":
+            mo_cmd_tail = mo_cmd_tail_template.format(mean_val, scale_val, q_dq_ir_model_folder)
             onnx_model = str(onnx_dir + 'q_dq/' + eval_test_struct.model_name_ + '.onnx')
             if USING_OV2_PACKAGE_FORMAT:
                 mo_cmd = "mo --input_model {} {}".format(onnx_model, mo_cmd_tail)
@@ -496,8 +496,8 @@ class TestSotaCheckpoints:
                 mo_cmd = "{} mo.py --input_model {} {}".format(sys.executable, onnx_model, mo_cmd_tail)
         else:
             onnx_model = str(onnx_dir + eval_test_struct.model_name_ + '.onnx')
+            mo_cmd_tail = mo_cmd_tail_template.format(mean_val, scale_val, ir_model_folder)
             if USING_OV2_PACKAGE_FORMAT:
-                mo_cmd_tail = mo_cmd_tail_template.format(mean_val, scale_val, ir_model_folder)
                 mo_cmd = "mo --input_model {} {}".format(onnx_model, mo_cmd_tail)
             else:
                 mo_cmd = "{} mo.py --input_model {} {}".format(sys.executable, onnx_model, mo_cmd_tail)
