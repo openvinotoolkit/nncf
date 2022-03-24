@@ -42,7 +42,7 @@ def run_cmd(command, run_path=None):
     else:
         ret = subprocess.run(command, capture_output=True, check=True, shell=True)
     output = {'exit_code': int(ret.returncode), 'stdout': str(ret.stdout), 'stderr': str(ret.stderr)}
-    logger.debug(f"Command arguments: {' '.join(str(it) for it in command)}")
+    logger.debug(f"Command arguments: {command}")
     logger.debug(f"Stdout: {output['stdout']}\n")
     logger.debug(f"Stderr: {output['stderr']}\n")
     logger.debug(f"Exit_code: {output['exit_code']}\n")
