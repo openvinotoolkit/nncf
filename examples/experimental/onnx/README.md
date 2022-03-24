@@ -32,6 +32,6 @@ You could use [accuracy_checker](https://github.com/openvinotoolkit/open_model_z
 |:------------------------:|:-----------------:|:------------------------:|
 |        ResNet-50         |      75.17%       |          74.74%          |
 |       MobilenetV2        |      71.87%       |          71.33%          |
-| InceptionV1(googlenetV1) |69.77%|      69.72%       |
-|       InceptionV3        |||
-|      SqueezenetV1.1      |||
+| InceptionV1(googlenetV1) |      69.77%       |          69.72%          |
+|       InceptionV3        |      77.45%       |          77.31%          |
+|      SqueezenetV1.1      |      58.19%       |          57.73%          |
