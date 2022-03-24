@@ -26,9 +26,12 @@ python -m <ONNX model path> -o <quantized ONNX model path> --data <ImageNet data
 You could use [accuracy_checker](https://github.com/openvinotoolkit/open_model_zoo/tree/master/tools/accuracy_checker) to run the validation of the obtained model. The AccuracyChecker config files are located [here](examples/experimental/onnx/ac_configs/).  
 
 
-## Results of Post-Training quantization of ONNX model
+## Results of Post-Training quantization of ONNX models
 
-|Model|Original accuracy|Quantized model accuracy|
-| :---: | :---: | :---: |
-|ResNet-50|||
-|MobilenetV2|||
+|          Model           | Original accuracy | Quantized model accuracy |
+|:------------------------:|:-----------------:|:------------------------:|
+|        ResNet-50         |      75.17%       |          74.74%          |
+|       MobilenetV2        |      71.87%       |          71.33%          |
+| InceptionV1(googlenetV1) |69.77%|      69.72%       |
+|       InceptionV3        |||
+|      SqueezenetV1.1      |||
