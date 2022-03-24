@@ -35,14 +35,19 @@ class ImageNetDataLoader(DataLoader):
         return len(self.dataset)
 
 
-def create_dataloader_from_imagenet_torch_dataset(dataset_dir, input_shape: List[int], batch_size: int = 1,
+def create_dataloader_from_imagenet_torch_dataset(dataset_dir: str,
+                                                  input_shape: List[int],
+                                                  mean=(0.485, 0.456, 0.406),
+                                                  std=(0.229, 0.224, 0.225),
+                                                  crop_ratio=0.875,
+                                                  batch_size: int = 1,
                                                   shuffle: bool = True):
     import torchvision
     from torchvision import transforms
     image_size = [input_shape[-2], input_shape[-1]]
-    size = int(image_size[0] / 0.875)
-    normalize = transforms.Normalize(mean=(0.485, 0.456, 0.406),
-                                     std=(0.229, 0.224, 0.225))
+    size = int(image_size[0] / crop_ratio)
+    normalize = transforms.Normalize(mean=mean,
+                                     std=std)
     transform = transforms.Compose([
         transforms.Resize(size),
         transforms.CenterCrop(image_size),
