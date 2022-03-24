@@ -1,0 +1,40 @@
+models:
+- name: googlenet-v3
+  launchers:
+  - framework: onnx_runtime
+    adapter: classification
+    execution_providers: ['OpenVINOExecutionProvider']
+  datasets:
+  - name: imagenet_1000_classes
+    data_source: /home/aleksei/datasets/ILSVRC2012_img_val/
+    annotation_conversion:
+      converter: imagenet
+      annotation_file: /mnt/icv_externalN/omz-validation-datasets/val_1000.txt
+    reader: pillow_imread
+    preprocessing:
+#    - type: bgr_to_rgb
+    - type: resize
+      size: 320
+      aspect_ratio_scale: greater
+      use_pillow: true
+      interpolation: BILINEAR
+    - type: crop
+      size: 299
+      use_pillow: true
+      
+    - type: normalization
+      std: 255
+
+    - type: normalization
+      mean: (0.485, 0.456, 0.406)
+      std: (0.229, 0.224, 0.225)
+    metrics:
+    - name: accuracy@top1
+      type: accuracy
+      top_k: 1
+      reference: 0.7769
+    - name: accuracy@top5
+      type: accuracy
+      top_k: 5
+      reference: 0.937
+
