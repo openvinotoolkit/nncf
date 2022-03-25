@@ -1,12 +1,11 @@
 {
-    "model": "efficient_net",
+    "model": "mobilenet_v2_cifar10",
     "num_classes": 10,
-    "dataset": "cifar10",
+    "dataset": "CIFAR10",
     "input_info": {
         "sample_size": [1, 3, 32, 32]
     },
-    "print_freq": 1000,
-    "batch_size": 2,
+    "batch_size": 512,
     "batch_size_val": 2000,
     "multiprocessing_distributed": false,
     "bootstrapNAS": {
@@ -18,14 +17,13 @@
             },
             "schedule": {
                 "list_stage_descriptions": [
-                    {"train_dims": ["kernel"], "epochs": 1},
-                    {"train_dims": ["kernel","depth"], "epochs": 1, "depth_indicator": 1},
-                    {"train_dims": ["kernel","depth"], "epochs": 1, "depth_indicator": 2},
-                    {"train_dims": ["kernel","depth", "width"], "epochs": 1, "reorg_weights": true, "width_indicator": 2, "bn_adapt": true}
+                    {"train_dims": ["depth"], "epochs": 1, "depth_indicator": 1},
+                    {"train_dims": ["depth"], "epochs": 1, "depth_indicator": 2},
+                    {"train_dims": ["depth", "width"], "epochs": 1, "reorg_weights": true, "width_indicator": 2, "bn_adapt": true}
                 ]
             },
             "elasticity": {
-                "available_elasticity_dims": ["width", "depth", "kernel"],
+                "available_elasticity_dims": ["width", "depth"],
                 "width": {
                     "max_num_widths": 2,
                       "min_width": 32,
@@ -37,8 +35,5 @@
                 }
             }
         },
-    },
-    "model_params": {
-        "model_name": "efficientnet-b0"
     }
 }

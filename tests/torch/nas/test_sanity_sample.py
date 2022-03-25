@@ -11,6 +11,7 @@
  limitations under the License.
 """
 
+from pathlib import Path
 from typing import Dict
 
 import pytest
@@ -23,25 +24,27 @@ from nncf.experimental.torch.nas.bootstrapNAS.training.progressive_shrinking_con
     ProgressiveShrinkingController
 from nncf.experimental.torch.nas.bootstrapNAS.training.scheduler import BootstrapNASScheduler
 from tests.common.helpers import TEST_ROOT
-from tests.torch.test_sanity_sample import SanityTestCaseDescriptor
-from tests.torch.test_sanity_sample import SampleType
-from tests.torch.test_sanity_sample import get_default_args
-from tests.torch.test_sanity_sample import validate_sample
+from tests.torch.sample_test_validator import SampleType
+from tests.torch.sample_test_validator import SanitySampleValidator
+from tests.torch.sample_test_validator import SanityTestCaseDescriptor
 
 
 class NASSampleTestDescriptor(SanityTestCaseDescriptor):
     def __init__(self):
         super().__init__()
-        self.sample(SampleType.CLASSIFICATION)
+        self.sample_type(SampleType.CLASSIFICATION_NAS)
         self.mock_dataset('mock_32x32')
-        self.batch(2)
-        self._all_spies = []
+        self.batch_size(2)
+
+    @property
+    def config_directory(self) -> Path:
+        return TEST_ROOT.joinpath("torch", "data", "configs", "nas")
+
+    def get_validator(self) -> 'NASSampleValidator':
+        return NASSampleValidator(self)
 
     def get_compression_section(self):
         pass
-
-    def get_main_location(self):
-        return 'examples.experimental.torch.classification.bootstrap_nas'
 
     def get_config_update(self) -> Dict:
         sample_params = self.get_sample_params()
@@ -49,11 +52,17 @@ class NASSampleTestDescriptor(SanityTestCaseDescriptor):
         sample_params['epochs'] = 5
         return sample_params
 
+
+class NASSampleValidator(SanitySampleValidator):
+    def __init__(self, desc: NASSampleTestDescriptor):
+        super().__init__(desc)
+        self._desc = desc
+        self._all_spies = []
+
     def setup_spy(self, mocker):
         # Need to mock SafeMLFLow to prevent starting a not closed mlflow session due to memory leak of config and
         # SafeMLFLow, which happens with a mocked train function
-        mlflow_location = self.get_main_location() + '.SafeMLFLow'
-        mocker.patch(mlflow_location)
+        self._sample_handler.mock_mlflow(mocker)
 
         self._all_spies = [
             mocker.spy(ElasticWidthHandler, 'get_random_config'),
@@ -73,17 +82,12 @@ class NASSampleTestDescriptor(SanityTestCaseDescriptor):
         for spy in self._all_spies:
             spy.assert_called()
 
-    def dummy_config(self, config_name):
-        self.config_name = config_name
-        self.config_path = TEST_ROOT.joinpath("torch", "data", "configs", "nas") / config_name
-        return self
-
 
 NAS_TEST_CASE_DESCRIPTORS = [
-    NASSampleTestDescriptor().dummy_config('resnet50_cifar10_nas.json'),
-    NASSampleTestDescriptor().dummy_config('mobilenet_v2_cifar10_nas.json'),
-    NASSampleTestDescriptor().dummy_config('efficient_net_b1_cifar10_nas.json'),
-    NASSampleTestDescriptor().dummy_config('mobilenet_v3_cifar10_nas.json')
+    NASSampleTestDescriptor().config_name('resnet50_cifar10_nas.json'),
+    NASSampleTestDescriptor().config_name('mobilenet_v2_cifar10_nas.json'),
+    NASSampleTestDescriptor().config_name('efficient_net_b1_cifar10_nas.json'),
+    NASSampleTestDescriptor().config_name('mobilenet_v3_cifar10_nas.json')
 ]
 
 
@@ -94,5 +98,6 @@ def fixture_nas_desc(request, dataset_dir):
 
 
 def test_e2e_supernet_training(nas_desc: NASSampleTestDescriptor, tmp_path, mocker):
-    args = get_default_args(nas_desc, tmp_path)
-    validate_sample(args, nas_desc, mocker)
+    validator = nas_desc.get_validator()
+    args = validator.get_default_args(tmp_path)
+    validator.validate_sample(args, mocker)
