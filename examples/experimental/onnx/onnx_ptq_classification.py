@@ -63,7 +63,10 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--onnx_model_path", "-m", help="Path to ONNX model", type=str)
     parser.add_argument("--output_model_path", "-o", help="Path to output quantized ONNX model", type=str)
-    parser.add_argument("--data", help="Path to ImageNet dataset", type=str)
+    parser.add_argument("--data",
+                        help="Path to ImageNet validation data in the ImageFolder torchvision format "
+                             "(Please, take a look at torchvision.datasets.ImageFolder)",
+                        type=str)
     parser.add_argument("--batch_size", help="Batch size for initialization", default=1)
     parser.add_argument("--shuffle", help="Whether to shuffle dataset for initialization", default=True)
     parser.add_argument("--input_shape", help="Model's input shape", nargs="+", type=int, default=[1, 3, 224, 224])

@@ -54,5 +54,6 @@ def create_dataloader_from_imagenet_torch_dataset(dataset_dir: str,
         transforms.ToTensor(),
         normalize,
     ])
-    initialization_dataset = torchvision.datasets.ImageFolder(os.path.join(dataset_dir, 'train'), transform)
+    # The best practise is to use validation part of dataset for calibration (aligning with POT)
+    initialization_dataset = torchvision.datasets.ImageFolder(os.path.join(dataset_dir), transform)
     return ImageNetDataLoader(initialization_dataset, batch_size, shuffle)
