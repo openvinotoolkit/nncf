@@ -33,9 +33,11 @@ from tests.common.helpers import TEST_ROOT
 from tests.torch.helpers import create_ones_mock_dataloader
 from tests.torch.helpers import register_bn_adaptation_init_args
 from tests.torch.quantization.test_range_init import SingleConv2dIdentityModel
+from tests.torch.quantization.test_quantization_helpers import get_quantization_config_without_range_init
 from tests.torch.test_compressed_graph import get_basic_quantization_config
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
 from tests.torch.helpers import Command
+from tests.torch.helpers import TwoConvTestModel
 from tests.common.helpers import get_cli_dict_args
 from tests.torch.test_sanity_sample import create_command_line
 
@@ -279,3 +281,69 @@ def test_quantization_ckpt_without_wrapped_bn_loading():
                                                       compression_state=compression_state_without_bn_wrapping)
     with pytest.deprecated_call():
         _ = load_state(compressed_model, sd_without_nncf_bn_wrapping, is_resume=True)
+
+
+compresison_state_without_qspec = {
+    'builder_state':
+        {'quantization':
+             {'quantizer_setup':
+                  {'quantization_points':
+                       {1:
+                            {'qip':
+                                 {'target_node_name': '/nncf_model_input_0', 'input_port_id': None},
+                             'qip_class': 'ActivationQuantizationInsertionPoint',
+                             'qconfig': {'num_bits': 8, 'mode': 'symmetric', 'signedness_to_force': None,
+                                         'per_channel': False},
+                             'directly_quantized_operator_node_names': [
+                                 'TwoConvTestModel/Sequential[features]/Sequential[0]/NNCFConv2d[0]/conv2d_0']},
+                        2: {'qip': {
+                            'target_node_name':
+                                'TwoConvTestModel/Sequential[features]/Sequential[0]/NNCFConv2d[0]/conv2d_0',
+                            'input_port_id': None},
+                            'qip_class': 'ActivationQuantizationInsertionPoint',
+                            'qconfig': {'num_bits': 8, 'mode': 'symmetric', 'signedness_to_force': None,
+                                        'per_channel': False},
+                            'directly_quantized_operator_node_names': [
+                                'TwoConvTestModel/Sequential[features]/Sequential[1]/NNCFConv2d[0]/conv2d_0']},
+                        4: {'qip': {
+                            'target_node_name':
+                                'TwoConvTestModel/Sequential[features]/Sequential[0]/NNCFConv2d[0]/conv2d_0'},
+                            'qip_class': 'WeightQuantizationInsertionPoint',
+                            'qconfig': {'num_bits': 8, 'mode': 'symmetric', 'signedness_to_force': True,
+                                        'per_channel': True},
+                            'directly_quantized_operator_node_names': [
+                                'TwoConvTestModel/Sequential[features]/Sequential[0]/NNCFConv2d[0]/conv2d_0']},
+                        5: {'qip': {
+                            'target_node_name':
+                                'TwoConvTestModel/Sequential[features]/Sequential[1]/NNCFConv2d[0]/conv2d_0'},
+                            'qip_class': 'WeightQuantizationInsertionPoint',
+                            'qconfig': {'num_bits': 8, 'mode': 'symmetric', 'signedness_to_force': True,
+                                        'per_channel': True},
+                            'directly_quantized_operator_node_names': [
+                                'TwoConvTestModel/Sequential[features]/Sequential[1]/NNCFConv2d[0]/conv2d_0']}},
+                   'unified_scale_groups': {}, 'shared_input_operation_set_groups': {0: [1, 4], 1: [2, 5]}},
+              'build_time_metric_infos': {'aq_potential_num': 3, 'wq_potential_num': 2}}},
+    'ctrl_state':
+        {'quantization':
+             {'loss_state': None,
+              'scheduler_state':
+                  {'current_step': -1,
+                   'current_epoch': -1},
+              'compression_stage': CompressionStage.FULLY_COMPRESSED}}}
+
+
+def test_comp_state_without_qspec():
+    model = TwoConvTestModel()
+    nncf_config = get_quantization_config_without_range_init()
+    register_bn_adaptation_init_args(nncf_config)
+    _, __ = create_compressed_model_and_algo_for_test(model, nncf_config,
+                                                                    compression_state=compresison_state_without_qspec)
+    raise NotImplementedError('ToDo: Compare compresison_state_without_qspec with compression state after model creation')
+
+
+def test_comp_state_versionning():
+    raise NotImplementedError('Test versionning of compression state')
+
+
+def test_quantizartion_qspec_compstate():
+    raise NotImplementedError('Test validity of loading from given compression state with qspec')

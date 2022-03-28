@@ -39,6 +39,7 @@ from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.utils import is_main_process
 from nncf.torch.utils import is_dist_avail_and_initialized
 from nncf.torch.utils import maybe_convert_legacy_names_in_compress_state
+from nncf.torch.utils import get_compression_state_version
 from nncf.config.structures import ModelEvaluationArgs
 from nncf.config.utils import is_accuracy_aware_training
 
@@ -92,10 +93,11 @@ def create_compressed_model(model: Module,
                          "building, then the wrap_inputs_fn parameter MUST also be specified and be consistent with "
                          "the input wrapping done in dummy_forward_fn.")
 
-    is_legacy_model_state_dict = compression_state is not None and \
-                                 BaseController.BUILDER_STATE not in compression_state and \
-                                 BaseController.CONTROLLER_STATE not in compression_state
-    maybe_convert_legacy_names_in_compress_state(compression_state)
+    if compression_state is not None:
+        comp_state_version = get_compression_state_version(compression_state)
+    else:
+        comp_state_version = None
+    maybe_convert_legacy_names_in_compress_state(compression_state, comp_state_version)
     # Compress model that will be deployed for the inference on target device. No need to compress parts of the
     # model that are used on training stage only (e.g. AuxLogits of Inception-v3 model) or unused modules with weights.
     # As a consequence, no need to care about spoiling BN statistics, as there're disabled in eval mode.
@@ -141,7 +143,7 @@ def create_compressed_model(model: Module,
     should_init = compression_state is None
 
     builder = create_compression_algorithm_builder(config, should_init)
-    is_state_loadable = not is_legacy_model_state_dict and compression_state is not None
+    is_state_loadable = not comp_state_version == '0.0' and compression_state is not None
     if is_state_loadable:
         builder.load_state(compression_state[BaseController.BUILDER_STATE])
 
@@ -155,7 +157,7 @@ def create_compressed_model(model: Module,
     compressed_model.rebuild_graph()
 
     try:
-        if is_legacy_model_state_dict:
+        if comp_state_version == '0.0':
             from nncf.torch import load_state
             state_dict_to_load = compression_state.get('state_dict', compression_state)
             load_state(compressed_model, state_dict_to_load, is_resume=True)

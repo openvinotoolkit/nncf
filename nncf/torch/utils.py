@@ -318,7 +318,7 @@ def maybe_convert_legacy_names_in_model_state(state_dict_to_load: Dict[str, Any]
                       category=DeprecationWarning)
 
 
-def maybe_convert_legacy_names_in_compress_state(compression_state: Dict[str, Any]) -> None:
+def maybe_convert_legacy_names_in_compress_state(compression_state: Dict[str, Any], compression_state_version: str) -> None:
     """
     Convert legacy layer names in compression state in case such names exist.
 
@@ -330,19 +330,35 @@ def maybe_convert_legacy_names_in_compress_state(compression_state: Dict[str, An
     controller_state = compression_state[BaseController.BUILDER_STATE]
     if not controller_state or 'quantization' not in controller_state:
         return
+    if compression_state_version == '0.1':
+        qips = controller_state['quantization']['quantizer_setup']['quantization_points']
+        legacy_bn_names = False
+        for point in qips.values():
+            name = point['qip']['target_node_name']
+            if 'BatchNorm2d' in name:
+                legacy_bn_names = True
+                point['qip']['target_node_name'] = name.replace('BatchNorm2d', 'NNCFBatchNorm')
 
-    qips = controller_state['quantization']['quantizer_setup']['quantization_points']
-    legacy_bn_names = False
-    for point in qips.values():
-        name = point['qip']['target_node_name']
-        if 'BatchNorm2d' in name:
-            legacy_bn_names = True
-            point['qip']['target_node_name'] = name.replace('BatchNorm2d', 'NNCFBatchNorm')
+        if legacy_bn_names:
+            warnings.warn('Legacy Batch Norm layer names was detected in quantization setup target point names.'
+                          ' All occurrences of `BatchNorm2d` in nodes names was replaced by `NNCFBatchNorm`',
+                          category=DeprecationWarning)
 
-    if legacy_bn_names:
-        warnings.warn('Legacy Batch Norm layer names was detected in quantization setup target point names.'
-                      ' All occurrences of `BatchNorm2d` in nodes names was replaced by `NNCFBatchNorm`',
-                      category=DeprecationWarning)
+
+def get_compression_state_version(compression_state: Dict[str, Any]):
+    # cyclic import problem
+    from nncf.torch.compression_method_api import PTCompressionAlgorithmController
+    # find a way to strictly set versions by different from str way
+    if PTCompressionAlgorithmController.VERSION in compression_state:
+        return compression_state.get(PTCompressionAlgorithmController.VERSION)
+    elif BaseController.BUILDER_STATE not in compression_state and \
+        BaseController.CONTROLLER_STATE not in compression_state:
+        return '0.0'
+    elif next(iter(compression_state.get('builder_state', {}).get('quantization', {}).get('quantizer_setup', {}).
+                           get('quantization_points', {}).values()), {}).get('qconfig') is not None:
+        return '0.1'
+    else:
+        return None
 
 
 def get_model_device(model: torch.nn.Module) -> torch.device:

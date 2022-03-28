@@ -91,6 +91,7 @@ class PTCompressionAlgorithmController(BaseCompressionAlgorithmController):
     Hosts entities that are to be used during the training process, such as compression scheduler and
     compression loss.
     """
+    VERSION = 'version'
 
     def distributed(self):
         """
@@ -99,6 +100,23 @@ class PTCompressionAlgorithmController(BaseCompressionAlgorithmController):
         Any special preparations for the algorithm to properly support distributed training
         should be made inside this function.
         """
+
+    def get_compression_state(self) -> Dict[str, Any]:
+        """
+        Returns compression state - builder and controller state.
+        This state should be used to resume compression via `compression_state` argument of `create_compressed_model`
+        method.
+
+        :return: The compression state.
+        """
+        if self._builder_state is None:
+            raise RuntimeError('Internal error: builder state is not set for the controller')
+
+        return {
+            self.BUILDER_STATE: self._builder_state,
+            self.CONTROLLER_STATE: self.get_state(),
+            self.VERSION: '1.0'
+        }
 
 
 class PTCompressionAlgorithmBuilder(BaseCompressionAlgorithmBuilder):
