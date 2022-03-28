@@ -13,6 +13,8 @@
 from collections import OrderedDict
 from functools import partial
 from itertools import islice
+from typing import Dict
+from typing import List
 
 from nncf.torch.nested_objects_traversal import NestedObjectIndex
 from nncf.torch.nested_objects_traversal import InputIndexEntry
@@ -23,7 +25,7 @@ def nth(iterable, n, default=None):
 
 
 class OperatorInput:
-    def __init__(self, op_args, op_kwargs):
+    def __init__(self, op_args: List, op_kwargs: Dict):
         self.op_args = op_args
         self.op_kwargs = op_kwargs
         self._index = OrderedDict()  # type: Dict[int, InputIndexEntry]
@@ -37,7 +39,7 @@ class OperatorInput:
                                  op_kwargs_index_entries.get_flat_nested_obj_indexing())}
 
     def __iter__(self):
-        return iter(self._index.values())
+        return OperatorInputIterator(self)
 
     def __getitem__(self, n):
         return self._index[n].getter()
@@ -47,3 +49,16 @@ class OperatorInput:
 
     def __len__(self):
         return len(self._index)
+
+
+class OperatorInputIterator:
+    def __init__(self, op_input: OperatorInput):
+        self._op_input = op_input
+        self._current_element_ordinal = 0
+
+    def __next__(self):
+        if self._current_element_ordinal >= len(self._op_input):
+            raise StopIteration
+        retval = self._op_input[self._current_element_ordinal]
+        self._current_element_ordinal += 1
+        return retval

@@ -58,10 +58,15 @@ class TracedTensor(torch.Tensor):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.tensor_meta = None
+        self.original_cls = None
 
     @staticmethod
-    def from_torch_tensor(tensor, tensor_meta: TensorMeta):
+    def from_torch_tensor(tensor: torch.Tensor, tensor_meta: TensorMeta):
+        """
+        Note that this does not return a copy, but modifies the original tensor by reference!
+        """
         tensor.tensor_meta = tensor_meta
+        tensor.original_cls = tensor.__class__
         tensor.__class__ = TracedTensor
         return tensor
 

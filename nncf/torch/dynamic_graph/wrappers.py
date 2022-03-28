@@ -12,11 +12,15 @@
 """
 
 import warnings
+from contextlib import contextmanager
 from copy import deepcopy
 from typing import Callable
+from typing import Dict
 from typing import List
 from typing import Tuple
 
+import torch
+from pkg_resources import parse_version
 from torch.nn import Conv1d
 from torch.nn import Conv2d
 from torch.nn import Conv3d
@@ -34,14 +38,18 @@ from nncf.common.graph.layer_attributes import GroupNormLayerAttributes
 from nncf.common.graph.layer_attributes import LinearLayerAttributes
 from nncf.common.utils.debug import is_debug
 from nncf.common.utils.logger import logger as nncf_logger
+from nncf.torch import CURRENT_TORCH_VERSION
 from nncf.torch.dynamic_graph.context import TracingContext
 from nncf.torch.dynamic_graph.context import get_current_context
 from nncf.torch.dynamic_graph.op_input_processing import OperatorInput
+from nncf.torch.dynamic_graph.trace_tensor import TracedTensor
 from nncf.torch.dynamic_graph.trace_tensor import make_tensor_metas
 from nncf.torch.dynamic_graph.trace_tensor import trace_tensors
 from nncf.torch.layer_utils import _NNCFModuleMixin
 from nncf.torch.layers import ITERATION_MODULES
 from nncf.torch.layers import NNCF_MODULES_DICT
+from nncf.torch.nested_objects_traversal import NestedObjectIndex
+from nncf.torch.nested_objects_traversal import objwalk
 
 _IGNORED_SCOPES = []
 
@@ -62,8 +70,55 @@ def ignore_scope(cls):
 
 OP_NAMES_REQUIRING_MODULE_ATTRS = [v.op_func_name for v in NNCF_MODULES_DICT] + ['group_norm']
 
+@contextmanager
+def no_torch_patch():
+    from nncf.torch.dynamic_graph.patch_pytorch import unpatch_torch_operators
+    unpatch_torch_operators()
+    yield
+    from nncf.torch import patch_torch_operators
+    patch_torch_operators()
 
-def wrap_operator(operator, operator_info: 'PatchedOperatorInfo'):
+def get_args_str(args: Tuple) -> str:
+    with no_torch_patch():
+        retval = ""
+        for idx, arg in enumerate(args):
+            retval += str(idx) + ': ' + arg.__repr__() + '|' + str(arg.__class__) + ', '
+    return retval
+
+
+
+def get_kwargs_str(kwargs: Dict) -> str:
+    with no_torch_patch():
+        retval = ""
+        for kwarg_name, kwarg_val in kwargs:
+            retval += str(kwarg_name) + '|' + str(kwarg_val.__class__) + kwarg_val.__repr__() + ', '
+    return retval
+
+@contextmanager
+def _handle_torch_indexing_bug(operator_name: str, args: List, kwargs: Dict):
+    """
+    Temporarily sets a TracedTensor's __class__ field to the regular torch.Tensor to
+    work around a bug in torch < 1.11.0. See ticket 82065 for more details.
+    """
+    if CURRENT_TORCH_VERSION < parse_version('1.11.0') and operator_name == '__getitem__':
+        inputs = OperatorInput(args, kwargs)
+        original_tt_indices_vs_metas = {}
+        for idx, elt in enumerate(inputs):
+            if isinstance(elt, TracedTensor):  # applies to `TracedTensor`s
+                original_tt_indices_vs_metas[idx] = elt.tensor_meta
+                tensor_type = elt.type()
+                if tensor_type == "torch.LongTensor" or tensor_type is torch.LongTensor:
+                    cast_long_tensor = torch.LongTensor(elt.clone())
+                    inputs[idx] = cast_long_tensor
+        yield
+        for idx, elt in enumerate(inputs):
+            if idx in original_tt_indices_vs_metas:  # applies to `TracedTensor`s
+               inputs[idx] = TracedTensor.from_torch_tensor(elt, original_tt_indices_vs_metas[idx])
+    else:
+        yield
+
+
+def wrap_operator(operator: Callable, operator_info: 'PatchedOperatorInfo'):
     """
     Wraps the input callable object (`operator`) with the functionality that allows the calls to this object
     to be tracked by the currently set global TracingContext. The wrapped functions can be then intercepted,
@@ -86,7 +141,25 @@ def wrap_operator(operator, operator_info: 'PatchedOperatorInfo'):
     def wrapped(*args, **kwargs):
         ctx = get_current_context()
         if not ctx or getattr(ctx, 'in_operator', False) or not ctx.is_tracing:
-            op1 = operator(*args, **kwargs)
+            import torch
+            if operator_info.name == '__repr__':
+                with no_torch_patch():
+                    if hasattr(torch.Tensor.__repr__, '_original_op'):
+                        op1 = torch.Tensor.__repr__._original_op(*args, **kwargs)
+                    else:
+                        op1 = torch.Tensor.__repr__(*args, **kwargs)
+            elif operator_info.name == '__str__':
+                with no_torch_patch():
+                    if hasattr(torch.Tensor.__str__, '_original_op'):
+                        op1 = torch.Tensor.__str__._original_op(*args, **kwargs)
+                    else:
+                        op1 = torch.Tensor.__str__(*args, **kwargs)
+            else:
+                print(f"Calling operator {operator_info.name},\n\t args: {get_args_str(args)}\n\t "
+                      f"kwargs: {get_kwargs_str(kwargs)}")
+                args = list(args)
+                with _handle_torch_indexing_bug(operator_info.name, args, kwargs):
+                    op1 = operator(*args, **kwargs)
             return op1
 
         ctx.in_operator = True
@@ -105,7 +178,9 @@ def wrap_operator(operator, operator_info: 'PatchedOperatorInfo'):
                 if ctx.elastic_depth and ctx.in_skipped_block:
                     result = ctx.tensor_cache
                 else:
-                    result = _execute_op(op_address, operator_info, operator, ctx, *args, **kwargs)
+                    args = list(args)
+                    with _handle_torch_indexing_bug(operator_info.name, args, kwargs):
+                        result = _execute_op(op_address, operator_info, operator, ctx, *args, **kwargs)
 
                 str_op_address = str(op_address)
                 if str_op_address in ctx.end_node_name_of_skipped_block:

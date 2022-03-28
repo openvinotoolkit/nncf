@@ -17,15 +17,15 @@ from nncf.version import BKC_TORCHVISION_VERSION
 
 import torch
 from pkg_resources import parse_version
-torch_version = parse_version(torch.__version__).base_version
-if parse_version(BKC_TORCH_VERSION).base_version != torch_version:
+CURRENT_TORCH_VERSION = parse_version(torch.__version__)
+if parse_version(BKC_TORCH_VERSION).base_version != CURRENT_TORCH_VERSION.base_version:
     import warnings
     warnings.warn("NNCF provides best results with torch=={bkc}, "
                    "while current torch version is {curr} - consider switching to torch=={bkc}".format(
          bkc=BKC_TORCH_VERSION,
          curr=torch.__version__
     ))
-elif torch_version < '1.5.0' or torch_version == '1.8.0':
+elif CURRENT_TORCH_VERSION < parse_version('1.5.0') or CURRENT_TORCH_VERSION.base_version == '1.8.0':
     raise RuntimeError(
         "NNCF supports torch>=1.5.0, <=1.8.1, !=1.8.0, while current torch version is {curr}".format(
         curr=torch.__version__
