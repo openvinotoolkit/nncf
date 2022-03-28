@@ -18,6 +18,7 @@ from functools import partial
 import pytest
 import tensorflow as tf
 
+from tests.common.config_factory import ConfigFactory
 from tests.common.helpers import TEST_ROOT
 from tests.tensorflow.helpers import get_coco_dataset_builders
 from tests.tensorflow.helpers import get_cifar10_dataset_builders
@@ -51,25 +52,6 @@ def run_around_tests():
     od_main.get_dataset_builders = original_od_main_get_dataset_builders
     seg_train.get_dataset_builders = original_seg_train_get_dataset_builders
     seg_eval.get_dataset_builders = original_seg_eval_get_dataset_builders
-
-
-class ConfigFactory:
-    """Allows to modify config file before test run"""
-
-    def __init__(self, base_config, config_path):
-        self.config = base_config
-        self.config_path = str(config_path)
-
-    def serialize(self):
-        with open(self.config_path, 'w', encoding='utf8') as f:
-            json.dump(self.config, f)
-        return self.config_path
-
-    def __getitem__(self, item):
-        return self.config[item]
-
-    def __setitem__(self, key, value):
-        self.config[key] = value
 
 
 def convert_to_argv(args):
