@@ -1,5 +1,5 @@
 """
- Copyright (c) 2019 Intel Corporation
+ Copyright (c) 2022 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -14,11 +14,12 @@ from typing import Optional, Tuple
 
 import torch
 import torch.multiprocessing as mp
-import torch.nn as nn
+from torch import nn
 
 from nncf.common.quantization.structs import QuantizationMode
-from nncf.quantization.layers import AsymmetricQuantizer, SymmetricQuantizer, PTQuantizerSpec
-from nncf.utils import sum_like, get_per_channel_scale_shape
+from nncf.torch.quantization.layers import AsymmetricQuantizer, SymmetricQuantizer, PTQuantizerSpec
+from nncf.torch.utils import sum_like
+from nncf.torch.quantization.layers import get_per_channel_scale_shape
 
 from tools.benchmark import run_profile, run_wall, run_worker
 
@@ -39,8 +40,15 @@ class DefaultedPTQuantizerSpec(PTQuantizerSpec):
                  mode: QuantizationMode = QuantizationMode.SYMMETRIC,
                  signedness_to_force: Optional[bool] = None,
                  narrow_range: bool = False,
+                 half_range: bool = False,
                  logarithm_scale: bool = None):
-        super().__init__(num_bits, mode, signedness_to_force, narrow_range, scale_shape, logarithm_scale)
+        super().__init__(num_bits,
+                         mode,
+                         signedness_to_force,
+                         narrow_range,
+                         half_range,
+                         scale_shape,
+                         logarithm_scale)
 
 # reference impl
 class ReferenceQuantizeSymmetric(torch.autograd.Function):

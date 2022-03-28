@@ -1,3 +1,0 @@
-strict digraph  {
-"0 /nncf_model_input" [id=0, scope="", type=nncf_model_input];
-}

@@ -1,5 +1,5 @@
 """
- Copyright (c) 2021 Intel Corporation
+ Copyright (c) 2022 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -26,3 +26,6 @@ class OrderedEnum(Enum):
         if self.__class__ is other.__class__:
             return self.value < other.value # pylint: disable=W0143
         return NotImplemented
+
+    def __hash__(self):
+        return hash(self.value)

@@ -1,0 +1,11 @@
+strict digraph  {
+"0 /nncf_model_input_0" [id=0, type=nncf_model_input];
+"1 SymmetricQuantizer/symmetric_quantize_0" [id=1, type=symmetric_quantize];
+"2 TestModel/NNCFConv1d[_layer]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize_0" [id=2, type=symmetric_quantize];
+"3 TestModel/NNCFConv1d[_layer]/conv1d_0" [id=3, type=conv1d];
+"4 /nncf_model_output_0" [id=4, type=nncf_model_output];
+"0 /nncf_model_input_0" -> "1 SymmetricQuantizer/symmetric_quantize_0";
+"1 SymmetricQuantizer/symmetric_quantize_0" -> "3 TestModel/NNCFConv1d[_layer]/conv1d_0";
+"2 TestModel/NNCFConv1d[_layer]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize_0" -> "3 TestModel/NNCFConv1d[_layer]/conv1d_0";
+"3 TestModel/NNCFConv1d[_layer]/conv1d_0" -> "4 /nncf_model_output_0";
+}

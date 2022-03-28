@@ -1,0 +1,16 @@
+strict digraph  {
+"0 /nncf_model_input_0" [id=0, label="nncf_model_input_#0", style=filled, type=nncf_model_input];
+"1 TestModel/NNCFConv2d[conv1]/conv2d_0" [color=lightblue, id=1, label="conv2d_OW3_G0_#1", style=filled, type=conv2d];
+"2 TestModel/NNCFConv2d[multi_forward_conv]/conv2d_0" [color=lightblue, id=2, label="conv2d_IW3_OW3_G0_#2", style=filled, type=conv2d];
+"3 TestModel/__add___0" [id=3, label="__add___IW[3, 3]_OW3_#3", style=filled, type=__add__];
+"4 TestModel/NNCFConv2d[multi_forward_conv]/conv2d_1" [color=lightblue, id=4, label="conv2d_IW3_OW3_G0_#4", style=filled, type=conv2d];
+"5 TestModel/NNCFConv2d[last_conv]/conv2d_0" [color=lightblue, id=5, label="conv2d_IW3_#5", style=filled, type=conv2d];
+"6 /nncf_model_output_0" [id=6, label="nncf_model_output_#6", style=filled, type=nncf_model_output];
+"0 /nncf_model_input_0" -> "1 TestModel/NNCFConv2d[conv1]/conv2d_0"  [label="(1, 1, 5, 5)", style=solid];
+"1 TestModel/NNCFConv2d[conv1]/conv2d_0" -> "2 TestModel/NNCFConv2d[multi_forward_conv]/conv2d_0"  [label="(1, 3, 5, 5)", style=solid];
+"1 TestModel/NNCFConv2d[conv1]/conv2d_0" -> "3 TestModel/__add___0"  [label="(1, 3, 5, 5)", style=solid];
+"2 TestModel/NNCFConv2d[multi_forward_conv]/conv2d_0" -> "3 TestModel/__add___0"  [label="(1, 3, 5, 5)", style=solid];
+"3 TestModel/__add___0" -> "4 TestModel/NNCFConv2d[multi_forward_conv]/conv2d_1"  [label="(1, 3, 5, 5)", style=solid];
+"4 TestModel/NNCFConv2d[multi_forward_conv]/conv2d_1" -> "5 TestModel/NNCFConv2d[last_conv]/conv2d_0"  [label="(1, 3, 5, 5)", style=solid];
+"5 TestModel/NNCFConv2d[last_conv]/conv2d_0" -> "6 /nncf_model_output_0"  [label="(1, 1, 5, 5)", style=solid];
+}

@@ -1,0 +1,45 @@
+{
+    "model": "resnet18",
+    "pretrained": true,
+    "batch_size": 512,
+    "epochs": 100,
+    "input_info": {
+        "sample_size": [
+            1,
+            3,
+            224,
+            224
+        ]
+    },
+    "optimizer": {
+        "type": "SGD",
+        "base_lr": 0.1,
+        "weight_decay": 1e-4,
+        "schedule_type": "multistep",
+        "steps": [
+            20,
+            40,
+            60,
+            80
+        ],
+        "optimizer_params": {
+            "momentum": 0.9,
+            "nesterov": true
+        }
+    },
+    "accuracy_aware_training": {
+        "mode": "early_exit",
+        "params": {
+            "maximal_relative_accuracy_degradation": 1.0,
+            "maximal_total_epochs": 100
+        }
+    },
+    "compression": {
+        "algorithm": "quantization",
+        "initializer": {
+            "range": {
+                "num_init_samples": 850
+            }
+        }
+    }
+}

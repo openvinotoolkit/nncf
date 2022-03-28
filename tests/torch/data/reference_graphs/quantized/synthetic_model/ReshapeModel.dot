@@ -1,0 +1,29 @@
+strict digraph  {
+"0 /nncf_model_input_0" [id=0, type=nncf_model_input];
+"1 ReshapeModel/squeeze_0" [id=1, type=squeeze];
+"2 ReshapeModel/unsqueeze_0" [id=2, type=unsqueeze];
+"3 ReshapeModel/flatten_0" [id=3, type=flatten];
+"4 ReshapeModel/reshape_0" [id=4, type=reshape];
+"5 ReshapeModel/squeeze_1" [id=5, type=squeeze];
+"6 ReshapeModel/flatten_1" [id=6, type=flatten];
+"7 ReshapeModel/unsqueeze_1" [id=7, type=unsqueeze];
+"8 ReshapeModel/view_0" [id=8, type=view];
+"9 /nncf_model_output_0" [id=9, type=nncf_model_output];
+"10 /nncf_model_output_1" [id=10, type=nncf_model_output];
+"11 /nncf_model_output_2" [id=11, type=nncf_model_output];
+"12 /nncf_model_output_3" [id=12, type=nncf_model_output];
+"13 /nncf_model_output_4" [id=13, type=nncf_model_output];
+"0 /nncf_model_input_0" -> "1 ReshapeModel/squeeze_0";
+"0 /nncf_model_input_0" -> "2 ReshapeModel/unsqueeze_0";
+"0 /nncf_model_input_0" -> "3 ReshapeModel/flatten_0";
+"3 ReshapeModel/flatten_0" -> "4 ReshapeModel/reshape_0";
+"3 ReshapeModel/flatten_0" -> "5 ReshapeModel/squeeze_1";
+"3 ReshapeModel/flatten_0" -> "6 ReshapeModel/flatten_1";
+"4 ReshapeModel/reshape_0" -> "9 /nncf_model_output_0";
+"6 ReshapeModel/flatten_1" -> "7 ReshapeModel/unsqueeze_1";
+"6 ReshapeModel/flatten_1" -> "8 ReshapeModel/view_0";
+"5 ReshapeModel/squeeze_1" -> "10 /nncf_model_output_1";
+"6 ReshapeModel/flatten_1" -> "11 /nncf_model_output_2";
+"7 ReshapeModel/unsqueeze_1" -> "12 /nncf_model_output_3";
+"8 ReshapeModel/view_0" -> "13 /nncf_model_output_4";
+}

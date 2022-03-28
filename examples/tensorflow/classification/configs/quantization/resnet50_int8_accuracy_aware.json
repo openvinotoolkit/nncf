@@ -1,0 +1,44 @@
+{
+    "model": "ResNet50",
+    "pretrained": true,
+    "batch_size": 128,
+    "epochs": 4,
+    "input_info": {
+        "sample_size": [
+            1,
+            224,
+            224,
+            3
+        ]
+    },
+    "optimizer": {
+        "type": "Adam",
+        "schedule_type": "piecewise_constant",
+        "schedule_params": {
+            "boundaries": [
+                2
+            ],
+            "values": [
+                1e-5,
+                1e-6
+            ]
+        }
+    },
+    "dataset": "imagenet2012",
+    "dataset_type": "tfds",
+    "accuracy_aware_training": {
+        "mode": "early_exit",
+        "params": {
+            "maximal_relative_accuracy_degradation": 1.0,
+            "maximal_total_epochs": 100
+        }
+    },
+    "compression": {
+        "algorithm": "quantization",
+        "initializer": {
+            "range": {
+                "num_init_samples": 850
+            }
+        }
+    }
+}

@@ -1,0 +1,14 @@
+{
+    "model": "mobilenet_v3_small",
+    "pretrained": true,
+    "input_info": {
+      "sample_size": [2, 3, 224, 224]
+    },
+    "num_classes": 1000,
+    "batch_size": 256,
+    "epochs": 5,
+    "optimizer": {
+        "type": "Adam",
+        "base_lr": 1e-5
+    }
+}

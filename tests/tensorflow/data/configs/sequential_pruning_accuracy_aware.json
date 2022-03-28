@@ -1,0 +1,51 @@
+{
+    "model": "SequentialModel",
+    "pretrained": false,
+    "batch_size": 512,
+    "epochs": 100,
+    "input_info": {
+        "sample_size": [
+            1,
+            32,
+            32,
+            3
+        ]
+    },
+    "optimizer": {
+        "type": "SGD",
+        "base_lr": 0.1,
+        "weight_decay": 1e-4,
+        "schedule_type": "multistep",
+        "steps": [
+            20,
+            40,
+            60,
+            80
+        ],
+        "optimizer_params": {
+            "momentum": 0.9,
+            "nesterov": true
+        }
+    },
+    "accuracy_aware_training": {
+        "mode": "adaptive_compression_level",
+        "params": {
+            "maximal_relative_accuracy_degradation": 100.0,
+            "initial_training_phase_epochs": 1,
+            "patience_epochs": 1,
+            "minimal_compression_rate_step": 0.05
+        }
+    },
+    "compression": [
+        {
+            "algorithm": "filter_pruning",
+            "pruning_init": 0.05,
+            "params": {
+                "schedule": "exponential",
+                "pruning_target": 0.1,
+                "pruning_steps": 1,
+                "num_init_steps": 1
+            }
+        }
+    ]
+}

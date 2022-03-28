@@ -1,5 +1,5 @@
 """
- Copyright (c) 2021 Intel Corporation
+ Copyright (c) 2022 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -12,11 +12,28 @@
 """
 
 from typing import Any
+from typing import Dict
 
 from nncf.common.utils.ordered_enum import OrderedEnum
+from nncf.common.stateful_classes_registry import CommonStatefulClassesRegistry
 
 
 class TransformationPriority(OrderedEnum):
+    """
+    Defines priorities for compression and service operations that are
+    added as modifications to the original model graph in order to turn it into a
+    'compressed' model, i.e. a model that supports compression-aware training and
+    export. Certain compression algorithms may need to act on one and the same
+    spot in the model's control flow graph, and proper priority-based ordering is
+    required for functionally correct results that are invariant w.r.t. compression
+    algorithm application ordering.
+
+    Rationales:
+    * quantization should occur after sparsification/pruning, otherwise the dependency
+    of sparsity level on the value threshold becomes discontinuous which impacts the
+    corresponding algorithms.
+    """
+
     DEFAULT_PRIORITY = 0
     FP32_TENSOR_STATISTICS_OBSERVATION = 1
     PRUNING_PRIORITY = 2
@@ -24,13 +41,39 @@ class TransformationPriority(OrderedEnum):
     QUANTIZATION_PRIORITY = 11
 
 
-class TransformationType(OrderedEnum):
-    INSERT = 0
-    MULTI_INSERT = 1
-    REMOVE = 2
+TARGET_TYPE_STATE_ATTR = 'name'
 
 
 class TargetType(OrderedEnum):
+    """
+    Describes the types of locations in the model that can be modified using NNCF
+    in order to create a compressed model.
+
+    `LAYER` - a location corresponding directly to an existing layer in the model
+    `BEFORE_LAYER` - a location before the associated model layer,
+                     implemented by inserting an additional layer in the TF model
+    `AFTER_LAYER` - a location after the associated model layer,
+                    implemented by inserting an additional layer in the TF model
+    `PRE_LAYER_OPERATION` - a location before the associated PT-module or TF-layer
+                            execution, for which the local attributes of said
+                            PT-module or TF-layer are accessible
+    `POST_LAYER_OPERATION` - a location before the associated PT-module or TF-layer
+                             execution, for which the local attributes of said
+                             PT-module or TF-layer are accessible
+    `OPERATION_WITH_WEIGHTS` - same as PRE_LAYER_OPERATION, but targets weights
+                               of the layer/module specifically
+    `OPERATOR_PRE_HOOK` - a location before a function call in PT without access to
+                          specific module attributes - N/A in TF
+    `OPERATOR_POST_HOOK` - a location after a function call in PT without access to
+                           specific module attributes - N/A in TF
+
+    Notes: Adding operations to a PT-module or TF-layer implemented by wrapping
+    the original PT-module or TF-layer and registering operations that are executed
+    before/after calling the original PT-module or TF-layer according to the
+    registration location:`PRE_LAYER_OPERATION`, `POST_LAYER_OPERATION` and
+    `OPERATION_WITH_WEIGHTS`.
+    """
+
     LAYER = 0
     BEFORE_LAYER = 1
     AFTER_LAYER = 2
@@ -40,7 +83,43 @@ class TargetType(OrderedEnum):
     OPERATOR_PRE_HOOK = 6
     OPERATOR_POST_HOOK = 7
 
+    def get_state(self) -> Dict[str, Any]:
+        """
+        Returns a dictionary with Python data structures (dict, list, tuple, str, int, float, True, False, None) that
+        represents state of the object.
 
+        :return: state of the object
+        """
+        return {TARGET_TYPE_STATE_ATTR: self.name}
+
+    @classmethod
+    def from_state(cls, state: Dict[str, Any]) -> 'TargetType':
+        """
+        Creates the object from its state.
+
+        :param state: Output of `get_state()` method.
+        """
+        return TargetType[state[TARGET_TYPE_STATE_ATTR]]
+
+
+class TransformationType(OrderedEnum):
+    """
+    Defines the types of transformations that can be applied to a location in the control
+     flow graph of the model.
+    `TransformationType` defines *what* to do, while `TargetType` more concerns itself with
+    *where* to do it.
+    """
+
+    INSERT = 0
+    MULTI_INSERT = 1
+    REMOVE = 2
+
+
+class TargetPointStateNames:
+    TARGET_TYPE = 'target_type'
+
+
+@CommonStatefulClassesRegistry.register()
 class TargetPoint:
     """
     The base class for all target points.
@@ -52,12 +131,13 @@ class TargetPoint:
     the target point in the model graph to which the transformation command
     will be applied.
     """
+    _state_names = TargetPointStateNames
 
     def __init__(self, target_type: TargetType):
         """
-        Constructor
+        Constructor.
 
-        :param target_type: Type of the target point
+        :param target_type: Type of the target point.
         """
         self._target_type = target_type
 
@@ -66,9 +146,8 @@ class TargetPoint:
         return self._target_type
 
     def __eq__(self, other: Any) -> bool:
-        if self.__class__ is other.__class__:
-            return self.type == other.type
-        return False
+        return isinstance(other, TargetPoint) and \
+            self.type == other.type
 
     def __str__(self) -> str:
         return str(self.type)
@@ -76,17 +155,38 @@ class TargetPoint:
     def __hash__(self) -> int:
         return hash(str(self))
 
+    def get_state(self) -> Dict[str, Any]:
+        """
+        Returns a dictionary with Python data structures (dict, list, tuple, str, int, float, True, False, None) that
+        represents state of the object.
+
+        :return: state of the object
+        """
+        return {self._state_names.TARGET_TYPE: self._target_type.get_state()}
+
+    @classmethod
+    def from_state(cls, state: Dict[str, Any]) -> 'TargetPoint':
+        """
+        Creates the object from its state.
+
+        :param state: Output of `get_state()` method.
+        """
+        kwargs = {
+            cls._state_names.TARGET_TYPE: TargetType.from_state(state[cls._state_names.TARGET_TYPE])
+        }
+        return cls(**kwargs)
+
 
 class TransformationCommand:
     """
-    The base class for all transformation commands
+    The base class for all transformation commands.
     """
 
     def __init__(self, command_type: TransformationType, target_point: TargetPoint):
         """
-        Constructor
+        Constructor.
 
-        :param command_type: Type of the transformation command
+        :param command_type: Type of the transformation command.
         :param target_point: Target point, the object or spot in the model graph
             to which the transformation command will be applied.
         """
@@ -102,7 +202,7 @@ class TransformationCommand:
         return self._target_point
 
     def check_command_compatibility(self, command: 'TransformationCommand') -> bool:
-        return self.__class__ == command.__class__ and \
+        return isinstance(command, TransformationCommand) and \
                self.type == command.type and \
                self.target_point == command.target_point
 

@@ -1,0 +1,30 @@
+strict digraph  {
+"0 LSTMCellNNCF/LSTMCellForwardNNCF[cell]/Linear[input_linear]/linear_0" [id=0, type=linear];
+"1 LSTMCellNNCF/LSTMCellForwardNNCF[cell]/Linear[hidden_linear]/linear_0" [id=1, type=linear];
+"2 LSTMCellNNCF/LSTMCellForwardNNCF[cell]/__add___0" [id=2, type=__add__];
+"3 LSTMCellNNCF/LSTMCellForwardNNCF[cell]/chunk_0" [id=3, type=chunk];
+"4 LSTMCellNNCF/LSTMCellForwardNNCF[cell]/sigmoid_0" [id=4, type=sigmoid];
+"5 LSTMCellNNCF/LSTMCellForwardNNCF[cell]/sigmoid_1" [id=5, type=sigmoid];
+"6 LSTMCellNNCF/LSTMCellForwardNNCF[cell]/tanh_0" [id=6, type=tanh];
+"7 LSTMCellNNCF/LSTMCellForwardNNCF[cell]/sigmoid_2" [id=7, type=sigmoid];
+"8 LSTMCellNNCF/LSTMCellForwardNNCF[cell]/__mul___0" [id=8, type=__mul__];
+"9 LSTMCellNNCF/LSTMCellForwardNNCF[cell]/__mul___1" [id=9, type=__mul__];
+"10 LSTMCellNNCF/LSTMCellForwardNNCF[cell]/__add___1" [id=10, type=__add__];
+"11 LSTMCellNNCF/LSTMCellForwardNNCF[cell]/tanh_1" [id=11, type=tanh];
+"12 LSTMCellNNCF/LSTMCellForwardNNCF[cell]/__mul___2" [id=12, type=__mul__];
+"0 LSTMCellNNCF/LSTMCellForwardNNCF[cell]/Linear[input_linear]/linear_0" -> "2 LSTMCellNNCF/LSTMCellForwardNNCF[cell]/__add___0";
+"1 LSTMCellNNCF/LSTMCellForwardNNCF[cell]/Linear[hidden_linear]/linear_0" -> "2 LSTMCellNNCF/LSTMCellForwardNNCF[cell]/__add___0";
+"2 LSTMCellNNCF/LSTMCellForwardNNCF[cell]/__add___0" -> "3 LSTMCellNNCF/LSTMCellForwardNNCF[cell]/chunk_0";
+"3 LSTMCellNNCF/LSTMCellForwardNNCF[cell]/chunk_0" -> "4 LSTMCellNNCF/LSTMCellForwardNNCF[cell]/sigmoid_0";
+"3 LSTMCellNNCF/LSTMCellForwardNNCF[cell]/chunk_0" -> "5 LSTMCellNNCF/LSTMCellForwardNNCF[cell]/sigmoid_1";
+"3 LSTMCellNNCF/LSTMCellForwardNNCF[cell]/chunk_0" -> "6 LSTMCellNNCF/LSTMCellForwardNNCF[cell]/tanh_0";
+"3 LSTMCellNNCF/LSTMCellForwardNNCF[cell]/chunk_0" -> "7 LSTMCellNNCF/LSTMCellForwardNNCF[cell]/sigmoid_2";
+"4 LSTMCellNNCF/LSTMCellForwardNNCF[cell]/sigmoid_0" -> "9 LSTMCellNNCF/LSTMCellForwardNNCF[cell]/__mul___1";
+"5 LSTMCellNNCF/LSTMCellForwardNNCF[cell]/sigmoid_1" -> "8 LSTMCellNNCF/LSTMCellForwardNNCF[cell]/__mul___0";
+"6 LSTMCellNNCF/LSTMCellForwardNNCF[cell]/tanh_0" -> "9 LSTMCellNNCF/LSTMCellForwardNNCF[cell]/__mul___1";
+"7 LSTMCellNNCF/LSTMCellForwardNNCF[cell]/sigmoid_2" -> "12 LSTMCellNNCF/LSTMCellForwardNNCF[cell]/__mul___2";
+"8 LSTMCellNNCF/LSTMCellForwardNNCF[cell]/__mul___0" -> "10 LSTMCellNNCF/LSTMCellForwardNNCF[cell]/__add___1";
+"9 LSTMCellNNCF/LSTMCellForwardNNCF[cell]/__mul___1" -> "10 LSTMCellNNCF/LSTMCellForwardNNCF[cell]/__add___1";
+"10 LSTMCellNNCF/LSTMCellForwardNNCF[cell]/__add___1" -> "11 LSTMCellNNCF/LSTMCellForwardNNCF[cell]/tanh_1";
+"11 LSTMCellNNCF/LSTMCellForwardNNCF[cell]/tanh_1" -> "12 LSTMCellNNCF/LSTMCellForwardNNCF[cell]/__mul___2";
+}

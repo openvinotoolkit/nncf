@@ -1,12 +1,27 @@
-from collections import namedtuple
+"""
+ Copyright (c) 2022 Intel Corporation
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+      http://www.apache.org/licenses/LICENSE-2.0
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+"""
+
 from copy import deepcopy
 from enum import Enum
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Any
+
+from nncf.common.graph import NNCFNode
+from nncf.common.graph import NNCFNodeName
 
 
 class QuantizationMode:
-    SYMMETRIC = "symmetric"
-    ASYMMETRIC = "asymmetric"
+    SYMMETRIC = 'symmetric'
+    ASYMMETRIC = 'asymmetric'
 
 
 class QuantizerConfig:
@@ -14,6 +29,7 @@ class QuantizerConfig:
     A generic, framework-agnostic information on a configuration of a quantizer for abstract reasoning
     and determination of a quantizer setup scheme for a given model.
     """
+
     def __init__(self, num_bits: int = 8,
                  mode: QuantizationMode = QuantizationMode.SYMMETRIC,
                  signedness_to_force: Optional[bool] = None,
@@ -35,7 +51,7 @@ class QuantizerConfig:
         return self.__dict__ == other.__dict__
 
     def __str__(self):
-        return "B:{bits} M:{mode} SGN:{signedness} PC:{per_channel}".format(
+        return 'B:{bits} M:{mode} SGN:{signedness} PC:{per_channel}'.format(
             bits=self.num_bits,
             mode='S' if self.mode == QuantizationMode.SYMMETRIC else 'A',
             signedness='ANY' if self.signedness_to_force is None else ('S' if self.signedness_to_force else 'U'),
@@ -50,8 +66,9 @@ class QuantizerConfig:
         specifically, it might be reasonable to put quantizer A after quantizer B in tensor data control flow, so that
         the requantization will further constrain the input tensor data w.r.t. values it can take, but
         putting quantizer A after quantizer B would be unreasonable.
-        :param other: The "primary" QuantizerConfig, i.e. the one that defines an already present quantization
-        :return: True if the current config is a valid requantization for `other`, False otherwise
+
+        :param other: The "primary" QuantizerConfig, i.e. the one that defines an already present quantization.
+        :return: True if the current config is a valid requantization for `other`, False otherwise.
         """
         fail_conditions = [
             self.num_bits > other.num_bits,
@@ -67,9 +84,10 @@ class QuantizerConfig:
         """
         For two configs to be compatible in a unified scale scenario, all of their fundamental parameters
         must be aligned.
+
         :param linked_qconfig: A QuantizerConfig that is compared against the current config.
         :return: A boolean value specifying whether `linked_qconfig` is compatible with the current config in terms
-        of scale unification.
+            of scale unification.
         """
         return self.num_bits == linked_qconfig.num_bits and \
                self.mode == linked_qconfig.mode and \
@@ -80,11 +98,32 @@ class QuantizerConfig:
         """
         :param other_qconfig: A QuantizerConfig to be compared against the current config.
         :return: A boolean value specifying whether `other_config` is identical to the current config
-        in everything except the bitwidth.
+            in everything except the bitwidth.
         """
         return self.per_channel == other_qconfig.per_channel and \
                self.signedness_to_force == other_qconfig.signedness_to_force and \
                self.mode == other_qconfig.mode
+
+    def get_state(self) -> Dict[str, Any]:
+        """
+        Returns a dictionary with Python data structures (dict, list, tuple, str, int, float, True, False, None) that
+        represents state of the object.
+
+        :return: state of the object
+        """
+        return {'num_bits': self.num_bits,
+                'mode': self.mode,
+                'signedness_to_force': self.signedness_to_force,
+                'per_channel': self.per_channel}
+
+    @classmethod
+    def from_state(cls, state: Dict[str, Any]) -> 'QuantizerConfig':
+        """
+        Creates the object from its state.
+
+        :param state: Output of `get_state()` method.
+        """
+        return cls(**state)
 
 
 class QuantizerSpec:
@@ -92,10 +131,12 @@ class QuantizerSpec:
     A specific (potentially framework-aware) parameter struct required to initialize a
     given object that performs quantization of an input tensor.
     """
+
     def __init__(self, num_bits: int,
                  mode: QuantizationMode,
                  signedness_to_force: bool,
-                 narrow_range: bool):
+                 narrow_range: bool,
+                 half_range: bool):
         """
         :param num_bits: Bitwidth of the quantization.
         :param mode: The mode of quantization (symmetric or asymmetric).
@@ -103,35 +144,26 @@ class QuantizerSpec:
             None if the signed/unsigned attribute should be determined based on the incoming activation
             statistics during range initialization.
         :param narrow_range: True if the range of quantized values should be narrowed as compared to the
-        naive case, False if all 2^`num_bits` quantizations should be used.
+            naive case, False if all 2^`num_bits` quantizations should be used.
+        :param half_range: If ``True`` effectively only a half of an quantizer range are used.
+            False - the full range are used.
         """
         self.num_bits = num_bits
         self.mode = mode
         self.signedness_to_force = signedness_to_force
         self.narrow_range = narrow_range
+        self.half_range = half_range
 
     def __eq__(self, other: 'QuantizerSpec'):
         return self.__dict__ == other.__dict__
 
     @classmethod
-    def from_config(cls, qconfig: QuantizerConfig, narrow_range: bool) -> 'QuantizerSpec':
+    def from_config(cls, qconfig: QuantizerConfig, narrow_range: bool, half_range: bool) -> 'QuantizerSpec':
         return cls(qconfig.num_bits,
                    qconfig.mode,
                    qconfig.signedness_to_force,
-                   narrow_range)
-
-
-class QuantizerSetupType(Enum):
-    PATTERN_BASED = "pattern_based"
-    PROPAGATION_BASED = "propagation_based"
-
-    @staticmethod
-    def from_str(quantizer_setup_type: str) -> 'QuantizerSetupType':
-        if quantizer_setup_type == QuantizerSetupType.PATTERN_BASED.value:
-            return QuantizerSetupType.PATTERN_BASED
-        if quantizer_setup_type == QuantizerSetupType.PROPAGATION_BASED.value:
-            return QuantizerSetupType.PROPAGATION_BASED
-        raise RuntimeError("Unknown quantizer setup type. Please select 'pattern_based' or 'propagation_based'.")
+                   narrow_range,
+                   half_range)
 
 
 class QuantizationConstraints:
@@ -145,10 +177,9 @@ class QuantizationConstraints:
         a constraint that corresponds to all 8-bit per-channel quantizers, either
         symmetric or asymmetric, either signed or unsigned.
         """
-
         for attr_name in kwargs:
             if not hasattr(QuantizationConstraints.REF_QCONF_OBJ, attr_name):
-                raise RuntimeError("Invalid constraint - QuantizerConfig has no attribute '{}'".format(attr_name))
+                raise RuntimeError('Invalid constraint - QuantizerConfig has no attribute \'{}\''.format(attr_name))
         self.qconf_attr_vs_constraint_dict = kwargs
 
     def apply_constraints_to(self, qconfig: QuantizerConfig) -> QuantizerConfig:
@@ -173,10 +204,10 @@ class QuantizationConstraints:
 
     @classmethod
     def from_config_dict(cls, config_dict: Dict) -> 'QuantizationConstraints':
-        return cls(num_bits=config_dict.get("bits"),
-                   mode=config_dict.get("mode"),
-                   per_channel=config_dict.get("per_channel"),
-                   signedness_to_force=config_dict.get("signed"))
+        return cls(num_bits=config_dict.get('bits'),
+                   mode=config_dict.get('mode'),
+                   per_channel=config_dict.get('per_channel'),
+                   signedness_to_force=config_dict.get('signed'))
 
     def constrain_qconfig_list(self, quantizer_config_list: List[QuantizerConfig]) -> List[QuantizerConfig]:
         assert quantizer_config_list is not None
@@ -196,8 +227,8 @@ class QuantizationConstraints:
 
 
 class QuantizerGroup(Enum):
-    ACTIVATIONS = "activations"
-    WEIGHTS = "weights"
+    ACTIVATIONS = 'activations'
+    WEIGHTS = 'weights'
 
     @staticmethod
     def from_str(str_: str) -> 'QuantizerGroup':
@@ -205,7 +236,96 @@ class QuantizerGroup(Enum):
             return QuantizerGroup.ACTIVATIONS
         if str_ == QuantizerGroup.WEIGHTS.value:
             return QuantizerGroup.WEIGHTS
-        raise RuntimeError("Unknown quantizer group string")
+        raise RuntimeError('Unknown quantizer group string')
 
 
-QuantizableModule = namedtuple('QuantizableModule', 'module module_scope qconfig_list')
+class QuantizableWeightedLayerNode:
+    def __init__(self, node: NNCFNode, qconfig_list: List[QuantizerConfig]):
+        self.node = node
+        self.qconfig_list = qconfig_list
+
+
+class QuantizerId:
+    """
+    Unique identifier of a quantizer. It's used to store and search all quantizers in a single
+    structure.
+    """
+
+    def get_base(self):
+        raise NotImplementedError
+
+    def get_suffix(self) -> str:
+        raise NotImplementedError
+
+    def __str__(self):
+        return str(self.get_base()) + self.get_suffix()
+
+    def __hash__(self):
+        return hash((self.get_base(), self.get_suffix()))
+
+    def __eq__(self, other: 'QuantizerId'):
+        return (self.get_base() == other.get_base()) and (self.get_suffix() == other.get_suffix())
+
+
+class WeightQuantizerId(QuantizerId):
+    """ Unique identifier of a quantizer for weights."""
+
+    def __init__(self, target_node_name: NNCFNodeName):
+        self.target_node_name = target_node_name
+
+    def get_base(self) -> str:
+        return self.target_node_name
+
+    def get_suffix(self) -> str:
+        return '|WEIGHT'
+
+
+class NonWeightQuantizerId(QuantizerId):
+    """
+    Unique identifier of a quantizer, which corresponds to non-weight operations, such as
+    ordinary activation, function and input
+    """
+
+    def __init__(self, target_node_name: NNCFNodeName,
+                 input_port_id=None):
+        self.target_node_name = target_node_name
+        self.input_port_id = input_port_id
+
+    def get_base(self) -> str:
+        return self.target_node_name
+
+    def get_suffix(self) -> str:
+        return '|OUTPUT' if self.input_port_id is None else '|INPUT{}'.format(self.input_port_id)
+
+
+class UnifiedScaleType(Enum):
+    """
+    UNIFY_ONLY_PER_TENSOR - only results in scale unification if per-tensor quantization is ultimately applied.
+    This is the target scenario for concat unified scales since the channel count between the concatenated tensors
+    may be mismatching and, more importantly, the concatenation might occur on exactly the channel dimension which
+    means that the concatenated tensor must reuse all quantization scales of the input per-channel
+    quantized tensors.
+    UNIFY_ALWAYS - results in scale unification for both per-channel and per-tensor quantization. This is the
+    target scenario for eltwise unified scales, as it is assumed that the eltwise ops have matching input
+    tensor shapes and therefore the quantization channel count is the same.
+    """
+
+    UNIFY_ONLY_PER_TENSOR = 0
+    UNIFY_ALWAYS = 1
+
+class QuantizationPreset(Enum):
+    PERFORMANCE = 'performance'
+    MIXED = 'mixed'
+
+    @staticmethod
+    def from_str(str_: str) -> 'QuantizationPreset':
+        if str_ == QuantizationPreset.PERFORMANCE.value:
+            return QuantizationPreset.PERFORMANCE
+        if str_ == QuantizationPreset.MIXED.value:
+            return QuantizationPreset.MIXED
+        raise RuntimeError('Unknown preset string.')
+
+    def get_params_configured_by_preset(self, quant_group: QuantizerGroup) -> Dict:
+        if quant_group == QuantizerGroup.ACTIVATIONS and self == QuantizationPreset.MIXED:
+            return  {'mode': QuantizationMode.ASYMMETRIC}
+        return {'mode' : QuantizationMode.SYMMETRIC}

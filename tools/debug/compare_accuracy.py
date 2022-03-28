@@ -1,5 +1,5 @@
 """
- Copyright (c) 2019 Intel Corporation
+ Copyright (c) 2022 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -18,7 +18,7 @@ from functools import partial
 from openvino.inference_engine import IENetwork, IEPlugin, get_version
 
 from nncf.config import NNCFConfig
-from nncf.dynamic_graph.graph_builder import create_input_infos
+from nncf.torch.dynamic_graph.graph_tracer import create_input_infos
 from tools.ir_utils import get_ir_paths
 
 
@@ -75,8 +75,8 @@ def main():
     net = IENetwork(model=model_xml, weights=model_bin)
     exec_net = getExecNet(plugin, net)
     from torch.utils.data import DataLoader
-    import torchvision.datasets as datasets
-    import torchvision.transforms as transforms
+    from torchvision import datasets
+    from torchvision import transforms
 
     val_loader = DataLoader(
         datasets.ImageFolder(args.data, transforms.Compose([
@@ -113,7 +113,7 @@ def infer_pytorch_model(model, inputs):
 
 
 def validate_general(val_loader, model, infer_model_fn, cuda=False):
-    from examples.classification.main import AverageMeter, accuracy
+    from examples.torch.classification.main import AverageMeter, accuracy
     top1 = AverageMeter()
     top5 = AverageMeter()
 

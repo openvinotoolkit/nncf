@@ -1,5 +1,5 @@
 """
- Copyright (c) 2019 Intel Corporation
+ Copyright (c) 2022 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -45,7 +45,8 @@ def main():
 
     ir_weights = collect_IR_weights(os.path.join(args.output_dir, "IR"), model_xml, model_bin, args.num_layers)
 
-    config = json.load(open(args.config))
+    with open(args.config, encoding='utf8') as f:
+        config = json.load(f)
     torch_weights = collect_torch_weights(os.path.join(args.output_dir, "PTH"), config, args.num_layers)
 
     assert len(ir_weights) == len(torch_weights), '{} vs {}'.format(len(ir_weights), len(torch_weights))

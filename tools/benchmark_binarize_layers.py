@@ -1,5 +1,5 @@
 """
- Copyright (c) 2019 Intel Corporation
+ Copyright (c) 2022 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -13,11 +13,11 @@
 
 
 import torch
-import torch.nn as nn
+from torch import nn
 
-from nncf.binarization.layers import XNORBinarize, DOREFABinarize, ActivationBinarizationScaleThreshold
+from nncf.torch.binarization.layers import XNORBinarize, DOREFABinarize, ActivationBinarizationScaleThreshold
 from tools.benchmark import run_profile
-from nncf.utils import get_per_channel_scale_shape
+from nncf.torch.quantization.layers import get_per_channel_scale_shape
 
 NBITS = 8
 GPU_RUNS_LOW_BATCH = 10000

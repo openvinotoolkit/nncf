@@ -1,5 +1,5 @@
 """
- Copyright (c) 2021 Intel Corporation
+ Copyright (c) 2022 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -14,13 +14,13 @@
 import logging
 import sys
 
-NNCF_LOGGER_NAME = "nncf"
+NNCF_LOGGER_NAME = 'nncf'
 
 logger = logging.getLogger(NNCF_LOGGER_NAME)
 logger.propagate = False
 
 stdout_handler = logging.StreamHandler(sys.stdout)
-fmt = logging.Formatter("%(levelname)s:%(name)s:%(message)s")
+fmt = logging.Formatter('%(levelname)s:%(name)s:%(message)s')
 stdout_handler.setFormatter(fmt)
 stdout_handler.setLevel(logging.INFO)
 logger.addHandler(stdout_handler)
@@ -35,3 +35,13 @@ def set_log_level(level):
 
 def disable_logging():
     logger.handlers = []
+
+
+class DuplicateFilter:
+    def __init__(self):
+        self.msgs = set()
+
+    def filter(self, rec):
+        retval = rec.msg not in self.msgs
+        self.msgs.add(rec.msg)
+        return retval

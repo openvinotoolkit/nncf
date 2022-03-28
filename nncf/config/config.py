@@ -1,5 +1,5 @@
 """
- Copyright (c) 2019 Intel Corporation
+ Copyright (c) 2022 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -11,26 +11,23 @@
  limitations under the License.
 """
 
-import itertools
 from copy import deepcopy
 from pathlib import Path
-from typing import List, Type
+from typing import List
+from typing import Optional
+from typing import Type
 
 import jsonschema
-
-from nncf.config.schema import ROOT_NNCF_CONFIG_SCHEMA
-from nncf.config.schema import validate_single_compression_algo_schema
-from nncf.config.structure import NNCFExtraConfigStruct
-from nncf.common.os import safe_open
-
-try:
-    import jstyleson as json
-except ImportError:
-    import json
-
-from addict import Dict
+import jstyleson as json
 
 from nncf.common.utils.logger import logger
+from nncf.common.utils.os import safe_open
+from nncf.config.experimental_schema import EXPERIMENTAL_REF_VS_ALGO_SCHEMA
+from nncf.config.schema import REF_VS_ALGO_SCHEMA
+from nncf.config.schema import get_root_nncf_config_schema
+from nncf.config.schema import validate_accuracy_aware_training_schema
+from nncf.config.schema import validate_single_compression_algo_schema
+from nncf.config.structures import NNCFExtraConfigStruct
 
 
 class NNCFConfig(dict):
@@ -38,7 +35,7 @@ class NNCFConfig(dict):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.__nncf_extra_structs = {}  # type: Dict[str, NNCFExtraConfigStruct]
+        self.__nncf_extra_structs = {}  # type: dict[str, NNCFExtraConfigStruct]
 
     @classmethod
     def from_dict(cls, nncf_dict):
@@ -61,50 +58,77 @@ class NNCFConfig(dict):
         for struct in struct_list:
             struct_id = struct.get_id()
             if struct_id in self.__nncf_extra_structs:
-                raise RuntimeError("{} is already registered as extra struct in NNCFConfig!")
+                raise RuntimeError(f'{struct_id} is already registered as extra struct in NNCFConfig!')
             self.__nncf_extra_structs[struct_id] = struct
 
     def get_extra_struct(self, struct_cls: Type[NNCFExtraConfigStruct]) -> NNCFExtraConfigStruct:
         return self.__nncf_extra_structs[struct_cls.get_id()]
 
+    def has_extra_struct(self, struct_cls: Type[NNCFExtraConfigStruct]) -> NNCFExtraConfigStruct:
+        return struct_cls.get_id() in self.__nncf_extra_structs
+
     def get_all_extra_structs_for_copy(self) -> List[NNCFExtraConfigStruct]:
         return list(self.__nncf_extra_structs.values())
 
+    def get_redefinable_global_param_value_for_algo(self, param_name: str, algo_name: str) -> Optional:
+        """
+        Some parameters can be specified both on the global NNCF config .json level (so that they apply
+        to all algos), and at the same time overridden in the algorithm-specific section of the .json.
+        This function returns the value that should apply for a given algorithm name, considering the
+        exact format of this config.
+
+        :param param_name: The name of a parameter in the .json specification of the NNCFConfig, that may
+          be present either at the top-most level of the .json, or at the top level of the algorithm-specific
+          subdict.
+        :param algo_name: The name of the algorithm (among the allowed algorithm names in the .json) for which
+          the resolution of the redefinable parameter should occur.
+        :return: The value of the parameter that should be applied for the algo specified by `algo_name`.
+        """
+        from nncf.config.extractors import extract_algo_specific_config
+        algo_config = extract_algo_specific_config(self, algo_name)
+        param = self.get(param_name)
+        algo_specific_param = algo_config.get(param_name)
+        if algo_specific_param is not None:
+            param = algo_specific_param
+        return param
+
     @staticmethod
     def validate(loaded_json):
-        try:
-            jsonschema.validate(loaded_json, schema=ROOT_NNCF_CONFIG_SCHEMA)
-        except jsonschema.ValidationError as e:
-            logger.error("Invalid NNCF config supplied!")
+        COMMON_REF_VS_ALGO_SCHEMA = {**REF_VS_ALGO_SCHEMA, **EXPERIMENTAL_REF_VS_ALGO_SCHEMA}
+        ROOT_NNCF_CONFIG_SCHEMA = get_root_nncf_config_schema(COMMON_REF_VS_ALGO_SCHEMA)
+        NNCFConfig._validate_json_section_by_schema(loaded_json, ROOT_NNCF_CONFIG_SCHEMA)
 
-            # The default exception's __str__ result will contain the entire schema,
-            # which is too large to be readable.
-            import nncf.config.schema as config_schema
-            msg = e.message + ". See documentation or {} for an NNCF configuration file JSON schema definition".format(
-                config_schema.__file__)
-            raise jsonschema.ValidationError(msg)
-
-        compression_section = loaded_json.get("compression")
+        compression_section = loaded_json.get('compression')
+        accuracy_aware_section = loaded_json.get('accuracy_aware_training')
+        if accuracy_aware_section is not None:
+            validate_accuracy_aware_training_schema(accuracy_aware_section)
         if compression_section is None:
             # No compression specified
             return
 
         try:
             if isinstance(compression_section, dict):
-                validate_single_compression_algo_schema(compression_section)
+                validate_single_compression_algo_schema(compression_section, COMMON_REF_VS_ALGO_SCHEMA)
             else:
                 # Passed a list of dicts
                 for compression_algo_dict in compression_section:
-                    validate_single_compression_algo_schema(compression_algo_dict)
+                    validate_single_compression_algo_schema(compression_algo_dict, COMMON_REF_VS_ALGO_SCHEMA)
         except jsonschema.ValidationError:
             # No need to trim the exception output here since only the compression algo
             # specific sub-schema will be shown, which is much shorter than the global schema
-            logger.error("Invalid NNCF config supplied!")
+            logger.error('Invalid NNCF config supplied!')
             raise
 
+    @staticmethod
+    def _validate_json_section_by_schema(loaded_json, schema):
+        try:
+            jsonschema.validate(loaded_json, schema)
+        except jsonschema.ValidationError as e:
+            logger.error('Invalid NNCF config supplied!')
 
-def product_dict(d):
-    keys = d.keys()
-    vals = d.values()
-    for instance in itertools.product(*vals):
-        yield dict(zip(keys, instance))
+            # The default exception's __str__ result will contain the entire schema,
+            # which is too large to be readable.
+            import nncf.config.schema as config_schema
+            msg = e.message + '. See documentation or {} for an NNCF configuration file JSON schema definition'.format(
+                config_schema.__file__)
+            raise jsonschema.ValidationError(msg)

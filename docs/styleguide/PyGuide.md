@@ -13,6 +13,7 @@
     *   [2.6 Default Iterators and Operators](#s2.6-default-iterators-and-operators)
     *   [2.7 Type Annotated Code](#s2.7-type-annotated-code)
     *   [2.8 Files and Sockets](#2.8-files-and-sockets)
+    *   [2.9 Abstract Classes](#2.9-abstract-classes)
 -   [3 Python Style Rules](#s3-python-style-rules)
     *   [3.1 Line length](#s3.1-line-length)
     *   [3.2 Indentation](#s3.2-indentation)
@@ -120,6 +121,18 @@ Run [pylint](https://github.com/PyCQA/pylint) over your code using this [pylintr
 
 - Wildcard imports (`from module import *`) should be avoided, as they make it unclear which names are present 
   in the namespace, confusing both readers and many automated tools.
+
+- For classes from the typing module. You are explicitly allowed to import multiple specific classes on one line from the typing module.
+  ```python
+  # Recommended:
+  from typing import Any, Dict, Optional
+  ```
+  ```python
+  # Try to avoid, but this is also applicable:
+  from typing import Any 
+  from typing import Dict
+  from typing import Optional
+  ```
 
 <a id="s2.3-3rd-party-packages"></a>
 <a id="23-3rd-party-packages"></a>
@@ -236,6 +249,52 @@ with open("hello.txt") as hello_file:
         print(line)
 ```
 
+
+<a id="s2.9-abstract-classes"></a>
+<a id="29-abstract-classes"></a>
+<a id="abstract-classes"></a>
+### 2.9 Abstract Classes 
+
+When defining abstract classes, the following template should be used:
+
+```python
+from abc import ABC, abstractmethod
+
+class C(ABC):
+    @abstractmethod
+    def my_abstract_method(self, ...):
+        pass
+    
+    @classmethod
+    @abstractmethod
+    def my_abstract_classmethod(cls, ...):
+        pass
+    
+    @staticmethod
+    @abstractmethod
+    def my_abstract_staticmethod(...):
+        pass
+    
+    @property
+    @abstractmethod
+    def my_abstract_property(self):
+        pass
+    
+    @my_abstract_property.setter
+    @abstractmethod
+    def my_abstract_property(self, val):
+        pass
+    
+    @abstractmethod
+    def _get_x(self):
+        pass
+    
+    @abstractmethod
+    def _set_x(self, val):
+        pass
+```
+
+
 <a id="s3-python-style-rules"></a>
 <a id="3-python-style-rules"></a>
 <a id="python-style-rules"></a>
@@ -273,7 +332,7 @@ the first line.
 
 # Aligned with opening delimiter
 foo = long_function_name(var_one, var_two,
-                        var_three, var_four)
+                         var_three, var_four)
 meal = (spam,
        beans)
 
@@ -467,7 +526,7 @@ Every file should contain a license boilerplate.
 
 ```python
 """
- Copyright (c) 2020 Intel Corporation
+ Copyright (c) 2022 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -521,14 +580,18 @@ def load_state(model: torch.nn.Module, state_dict_to_load: dict, is_resume: bool
 <a id="classes"></a>
 #### 3.5.3 Classes 
 
-Classes should have a docstring below the class definition describing the class.
+Classes should have a docstring below the class definition describing the class. If your class
+has public attributes, they should be documented here follow the same formatting as a function's
+params section.
 
 ```python
 class ModelTransformer:
     """
     Applies transformations to the model.
+
+    :param public_attribute: Public attribute description
     """
-    
+
     def __init__(self, model: ModelType, transformation_layout: TransformationLayout):
         """
         Initializes Model Transformer
@@ -539,6 +602,7 @@ class ModelTransformer:
         """
         self._model = model
         self._transformations = transformation_layout.transformations
+        self.public_attribute = None
 
     def transform(self) -> ModelType:
         """
@@ -793,6 +857,8 @@ Always use a `.py` filename extension. Never use dashes.
 -   Place related classes and top-level functions together in a
     module.
 -   Use CapWords for class names, but lower\_with\_under.py for module names.
+-   Use the word "layer" (instead of "module") in the `nncf.common` module to
+    refer to the building block of neural networks.
 
 <a id="s3.10.3-framework-specific-class-naming"></a>
 <a id="3103-framework-specific-class-naming"></a>

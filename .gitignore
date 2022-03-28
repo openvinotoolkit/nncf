@@ -108,4 +108,4 @@ ENV/
 *.tar
 
 # object detection eval results
-examples/object_detection/eval/
+examples/torch/object_detection/eval/
