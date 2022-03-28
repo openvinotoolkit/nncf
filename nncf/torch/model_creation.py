@@ -38,6 +38,7 @@ from nncf.torch.dynamic_graph.graph_tracer import create_input_infos
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.utils import is_dist_avail_and_initialized
 from nncf.torch.utils import is_main_process
+from nncf.torch.utils import get_compression_state_version
 # pylint:disable=too-many-branches
 from nncf.torch.utils import maybe_convert_legacy_names_in_compress_state
 
@@ -89,14 +90,12 @@ def create_compressed_model(model: Module,
     is_legacy_model_state_dict = compression_state is not None and \
                                  BaseController.BUILDER_STATE not in compression_state and \
                                  BaseController.CONTROLLER_STATE not in compression_state
-
     if compression_state is not None:
         comp_state_version = get_compression_state_version(compression_state)
     else:
         comp_state_version = None
 
     maybe_convert_legacy_names_in_compress_state(compression_state, comp_state_version)
-    maybe_convert_legacy_names_in_compress_state(compression_state)
 
     should_init = compression_state is None
 
@@ -217,11 +216,6 @@ def synchronize_all_processes_in_distributed_mode():
                 "If your training pipeline demands the processes be synchronized, please, "
                 "keep attention to that error")
 
-
-def get_compression_algorithm_builder(config):
-    algorithm_key = config.get('algorithm', NO_COMPRESSION_ALGORITHM_NAME)
-    nncf_logger.info("Creating compression algorithm: {}".format(algorithm_key))
-    return PT_COMPRESSION_ALGORITHMS.get(algorithm_key)
 
 def create_compression_algorithm_builder(config: NNCFConfig, should_init=True) -> PTCompressionAlgorithmBuilder:
     """

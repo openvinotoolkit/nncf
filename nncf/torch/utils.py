@@ -346,7 +346,8 @@ def maybe_convert_legacy_names_in_model_state(state_dict_to_load: Dict[str, Any]
     for old_name, new_name in LEGACY_VS_NEW_BN_MAP.items():
         rename_legacy_names_in_state_dict(state_dict_to_load, legacy_names[old_name], old_name, new_name)
 
-def maybe_convert_legacy_names_in_compress_state(compression_state: Dict[str, Any]) -> None:
+
+def maybe_convert_legacy_names_in_compress_state(compression_state: Dict[str, Any], compression_state_version: str) -> None:
     """
     Convert legacy layer names in compression state in case such names exist.
 
@@ -359,27 +360,30 @@ def maybe_convert_legacy_names_in_compress_state(compression_state: Dict[str, An
     if not controller_state or 'quantization' not in controller_state:
         return
 
-    qips = controller_state['quantization']['quantizer_setup']['quantization_points']
+    if compression_state_version == '0.1':
+        qips = controller_state['quantization']['quantizer_setup']['quantization_points']
 
-    detected_legacy_names = {
-        'BatchNorm1d': False,
-        'BatchNorm2d': False,
-        'BatchNorm3d': False,
-        'NNCFBatchNorm': False,
-    }
+        detected_legacy_names = {
+            'BatchNorm1d': False,
+            'BatchNorm2d': False,
+            'BatchNorm3d': False,
+            'NNCFBatchNorm': False,
+        }
 
-    for point in qips.values():
-        name = point['qip']['target_node_name']
-        for old_name, new_name in LEGACY_VS_NEW_BN_MAP.items():
-            if old_name in name and not new_name in name:
-                detected_legacy_names[old_name] = True
-                point['qip']['target_node_name'] = name.replace(old_name, new_name)
-                break
+        for point in qips.values():
+            name = point['qip']['target_node_name']
+            for old_name, new_name in LEGACY_VS_NEW_BN_MAP.items():
+                if old_name in name and not new_name in name:
+                    detected_legacy_names[old_name] = True
+                    point['qip']['target_node_name'] = name.replace(old_name, new_name)
+                    break
 
-    if legacy_bn_names:
-        warnings.warn('Legacy Batch Norm layer names was detected in quantization setup target point names.'
-                      ' All occurrences of `BatchNorm2d` in nodes names was replaced by `NNCFBatchNorm`',
-                      category=DeprecationWarning)
+        for old_name, was_detected in detected_legacy_names.items():
+            if was_detected:
+                new_name = LEGACY_VS_NEW_BN_MAP[old_name]
+                warning_deprecated('Legacy Batch Norm layer names was detected in quantization setup target point names. '
+                                   'All occurrences of `{}` in nodes names was replaced by `{}`'.format(old_name,
+                                                                                                        new_name))
 
 
 def get_compression_state_version(compression_state: Dict[str, Any]):
