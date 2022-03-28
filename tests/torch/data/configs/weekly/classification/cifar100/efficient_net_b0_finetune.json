@@ -1,0 +1,32 @@
+{
+    "model": "efficient_net",
+    "num_classes": 100,
+    "pretrained": true,
+    "dataset": "cifar100_224x224",
+    "input_info": {
+        "sample_size": [1, 3, 224, 224]
+    },
+    "epochs": 300,
+    "batch_size": 64,
+    "batch_size_val": 256,
+    "multiprocessing_distributed": false,
+    "optimizer": {
+        "type": "SGD",
+        "base_lr": 1e-3,
+        "schedule_type": "plateau",
+        "gamma": 0.5,
+        "schedule_params": {
+            "threshold": 0.1,
+            "cooldown": 30,
+            "min_lr": 1e-6,
+            "patience": 5
+        },
+        "optimizer_params": {
+            "momentum": 0.9,
+            "nesterov": true
+        }
+    },
+    "model_params": {
+        "model_name": "efficientnet-b0"
+    }
+}

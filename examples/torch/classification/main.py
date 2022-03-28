@@ -354,16 +354,17 @@ def get_dataset(dataset_config, config, transform, is_train):
         prefix = 'train' if is_train else 'val'
         return datasets.ImageFolder(osp.join(config.dataset_dir, prefix), transform)
     # For testing purposes
+    num_images = config.get('num_mock_images', 1000)
     if dataset_config == 'mock_32x32':
-        return MockDataset(img_size=(32, 32), transform=transform)
+        return MockDataset(img_size=(32, 32), transform=transform, num_images=num_images)
     if dataset_config == 'mock_299x299':
-        return MockDataset(img_size=(299, 299), transform=transform)
+        return MockDataset(img_size=(299, 299), transform=transform, num_images=num_images)
     return create_cifar(config, dataset_config, is_train, transform)
 
 
 def create_cifar(config, dataset_config, is_train, transform):
     create_cifar_fn = None
-    if dataset_config == 'cifar100':
+    if dataset_config in ['cifar100', 'cifar100_224x224']:
         create_cifar_fn = partial(CIFAR100, config.dataset_dir, train=is_train, transform=transform)
     if dataset_config == 'cifar10':
         create_cifar_fn = partial(CIFAR10, config.dataset_dir, train=is_train, transform=transform)
@@ -375,13 +376,13 @@ def create_cifar(config, dataset_config, is_train, transform):
 def create_datasets(config):
     dataset_config = config.dataset if config.dataset is not None else 'imagenet'
     dataset_config = dataset_config.lower()
-    assert dataset_config in ['imagenet', 'cifar100', 'cifar10', 'mock_32x32', 'mock_299x299'], \
+    assert dataset_config in ['imagenet', 'cifar100', 'cifar10', 'cifar100_224x224', 'mock_32x32', 'mock_299x299'], \
         "Unknown dataset option"
 
     if dataset_config == 'imagenet':
         normalize = transforms.Normalize(mean=(0.485, 0.456, 0.406),
                                          std=(0.229, 0.224, 0.225))
-    elif dataset_config == 'cifar100':
+    elif dataset_config in ['cifar100', 'cifar100_224x224']:
         normalize = transforms.Normalize(mean=(0.5071, 0.4865, 0.4409),
                                          std=(0.2673, 0.2564, 0.2761))
     elif dataset_config == 'cifar10':
@@ -394,17 +395,24 @@ def create_datasets(config):
     input_info_list = create_input_infos(config)
     image_size = input_info_list[0].shape[-1]
     size = int(image_size / 0.875)
-    if dataset_config in ['cifar10', 'cifar100']:
-        val_transform = transforms.Compose([
+    if dataset_config in ['cifar10', 'cifar100_224x224', 'cifar100']:
+        list_val_transforms = [
             transforms.ToTensor(),
-            normalize,
-        ])
-        train_transforms = transforms.Compose([
+            normalize
+        ]
+        if dataset_config == 'cifar100_224x224':
+            list_val_transforms.insert(0, transforms.Resize(image_size))
+        val_transform = transforms.Compose(list_val_transforms)
+
+        list_train_transforms = [
             transforms.RandomCrop(image_size, padding=4),
             transforms.RandomHorizontalFlip(),
             transforms.ToTensor(),
-            normalize,
-        ])
+            normalize
+        ]
+        if dataset_config == 'cifar100_224x224':
+            list_train_transforms.insert(0, transforms.Resize(image_size))
+        train_transforms = transforms.Compose(list_train_transforms)
     elif dataset_config in ['mock_32x32', 'mock_299x299']:
         val_transform = transforms.Compose([
             transforms.Resize(size),
@@ -446,14 +454,16 @@ def create_data_loaders(config, train_dataset, val_dataset):
     # ourselves based on the total number of GPUs we have
     batch_size = int(config.batch_size)
     workers = int(config.workers)
+    batch_size_val = int(config.batch_size_val) if config.batch_size_val is not None else int(config.batch_size)
     if config.execution_mode == ExecutionMode.MULTIPROCESSING_DISTRIBUTED:
         batch_size //= config.ngpus_per_node
+        batch_size_val //= config.ngpus_per_node
         workers //= config.ngpus_per_node
 
     val_sampler = torch.utils.data.SequentialSampler(val_dataset)
     val_loader = torch.utils.data.DataLoader(
         val_dataset,
-        batch_size=batch_size, shuffle=False,
+        batch_size=batch_size_val, shuffle=False,
         num_workers=workers, pin_memory=pin_memory,
         sampler=val_sampler, drop_last=False)
 

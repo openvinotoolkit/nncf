@@ -81,14 +81,13 @@ def get_argument_parser():
     parser = get_common_argument_parser()
 
     parser.add_argument('--basenet', default='', help='pretrained base model, should be located in save_folder')
-    parser.add_argument('--test-interval', default=5000, type=int, help='test interval')
+    parser.add_argument('--test-interval', default=1, type=int, help='test interval')
     parser.add_argument("--dataset", help="Dataset to use.", choices=["voc", "coco"], default=None)
     parser.add_argument('--train_imgs', help='path to training images or VOC root directory')
     parser.add_argument('--train_anno', help='path to training annotations or VOC root directory')
     parser.add_argument('--test_imgs', help='path to testing images or VOC root directory')
     parser.add_argument('--test_anno', help='path to testing annotations or VOC root directory')
     return parser
-
 
 def main(argv):
     parser = get_argument_parser()
@@ -406,6 +405,7 @@ def train(net, compression_ctrl, train_data_loader, test_data_loader, criterion,
             with torch.no_grad():
                 net.eval()
                 mAP = test_net(net, config.device, test_data_loader, distributed=config.multiprocessing_distributed)
+                config.tb.add_scalar("eval/mAp", mAP, epoch)
                 is_best_by_mAP = mAP > best_mAp and compression_stage == best_compression_stage
                 is_best = is_best_by_mAP or compression_stage > best_compression_stage
                 if is_best:
@@ -435,43 +435,6 @@ def train(net, compression_ctrl, train_data_loader, test_data_loader, criterion,
             lr_scheduler.step(epoch)
 
         compression_ctrl.scheduler.epoch_step(epoch)
-        if is_main_process():
-            statistics = compression_ctrl.statistics()
-            logger.info(statistics.to_str())
-
-        compression_stage = compression_ctrl.compression_stage()
-        is_best = False
-        if (epoch + 1) % test_freq_in_epochs == 0:
-            with torch.no_grad():
-                net.eval()
-                mAP = test_net(net, config.device, test_data_loader, distributed=config.multiprocessing_distributed)
-                is_best_by_mAP = mAP > best_mAp and compression_stage == best_compression_stage
-                is_best = is_best_by_mAP or compression_stage > best_compression_stage
-                if is_best:
-                    best_mAp = mAP
-                best_compression_stage = max(compression_stage, best_compression_stage)
-                if isinstance(lr_scheduler, ReduceLROnPlateau):
-                    lr_scheduler.step(mAP)
-                net.train()
-
-        if is_on_first_rank(config):
-            logger.info('Saving state, epoch: {}'.format(epoch))
-
-            checkpoint_file_path = osp.join(config.checkpoint_save_dir, "{}_last.pth".format(get_name(config)))
-            torch.save({
-                MODEL_STATE_ATTR: net.state_dict(),
-                COMPRESSION_STATE_ATTR: compression_ctrl.get_compression_state(),
-                'optimizer': optimizer.state_dict(),
-                'epoch': epoch,
-            }, str(checkpoint_file_path))
-            make_additional_checkpoints(checkpoint_file_path,
-                                        is_best=is_best,
-                                        epoch=epoch + 1,
-                                        config=config)
-
-        # Learning rate scheduling should be applied after optimizer’s update
-        if not isinstance(lr_scheduler, ReduceLROnPlateau):
-            lr_scheduler.step(epoch)
 
     if config.metrics_dump is not None:
         write_metrics(best_mAp, config.metrics_dump)
@@ -486,8 +449,7 @@ def train_epoch(compression_ctrl, net, config, train_data_loader, criterion, opt
         compression_ctrl.scheduler.step()
         optimizer.zero_grad()
         batch_iterator, batch_loss, batch_loss_c, batch_loss_l, loss_comp = train_step(
-            batch_iterator, compression_ctrl, config, criterion, net, train_data_loader
-        )
+            batch_iterator, compression_ctrl, config, criterion, net, train_data_loader)
         optimizer.step()
 
         model_loss = batch_loss_l + batch_loss_c

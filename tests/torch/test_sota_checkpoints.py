@@ -34,6 +34,12 @@ if not os.path.exists(OPENVINO_DIR):
     OPENVINO_DIR = PROJECT_ROOT.parent / 'intel' / 'openvino_2021'
 ACC_CHECK_DIR = OPENVINO_DIR / 'deployment_tools' / 'open_model_zoo' / 'tools' / 'accuracy_checker'
 MO_DIR = OPENVINO_DIR / 'deployment_tools' / 'model_optimizer'
+USING_OV2_PACKAGE_FORMAT = False
+
+if not os.path.exists(ACC_CHECK_DIR) and not os.path.exists(MO_DIR):
+    ACC_CHECK_DIR = PROJECT_ROOT
+    MO_DIR = PROJECT_ROOT
+    USING_OV2_PACKAGE_FORMAT = True
 
 
 class EvalRunParamsStruct:
@@ -479,16 +485,23 @@ class TestSotaCheckpoints:
         q_dq_ir_model_folder = PROJECT_ROOT / 'q_dq_ir_models' / eval_test_struct.model_name_
         mean_val = eval_test_struct.mean_val_
         scale_val = eval_test_struct.scale_val_
+        mo_cmd_tail_template = "--framework=onnx --data_type=FP16 --reverse_input_channels" \
+                               " --mean_values={} --scale_values={} --output_dir {}"
         if onnx_type == "q_dq":
+            mo_cmd_tail = mo_cmd_tail_template.format(mean_val, scale_val, q_dq_ir_model_folder)
             onnx_model = str(onnx_dir + 'q_dq/' + eval_test_struct.model_name_ + '.onnx')
-            mo_cmd = "{} mo.py --input_model {} --framework=onnx --data_type=FP16 --reverse_input_channels" \
-                     " --mean_values={} --scale_values={} --output_dir {}" \
-                .format(sys.executable, onnx_model, mean_val, scale_val, q_dq_ir_model_folder)
+            if USING_OV2_PACKAGE_FORMAT:
+                mo_cmd = "mo --input_model {} {}".format(onnx_model, mo_cmd_tail)
+            else:
+                mo_cmd = "{} mo.py --input_model {} {}".format(sys.executable, onnx_model, mo_cmd_tail)
         else:
             onnx_model = str(onnx_dir + eval_test_struct.model_name_ + '.onnx')
-            mo_cmd = "{} mo.py --input_model {} --framework=onnx --data_type=FP16 --reverse_input_channels" \
-                     " --mean_values={} --scale_values={} --output_dir {}" \
-                .format(sys.executable, onnx_model, mean_val, scale_val, ir_model_folder)
+            mo_cmd_tail = mo_cmd_tail_template.format(mean_val, scale_val, ir_model_folder)
+            if USING_OV2_PACKAGE_FORMAT:
+                mo_cmd = "mo --input_model {} {}".format(onnx_model, mo_cmd_tail)
+            else:
+                mo_cmd = "{} mo.py --input_model {} {}".format(sys.executable, onnx_model, mo_cmd_tail)
+
         exit_code, err_str = self.run_cmd(mo_cmd, cwd=MO_DIR)
         if exit_code == 0 and err_str is None:
             if onnx_type == "q_dq":
@@ -556,7 +569,7 @@ Tsc = TestSotaCheckpoints
 
 @pytest.fixture(autouse=True, scope="class")
 def openvino_preinstall(ov_data_dir):
-    if ov_data_dir:
+    if ov_data_dir and not USING_OV2_PACKAGE_FORMAT:
         subprocess.run("pip install -r requirements_onnx.txt", cwd=MO_DIR, check=True, shell=True)
         subprocess.run(f"{sys.executable} setup.py install", cwd=ACC_CHECK_DIR, check=True, shell=True)
 

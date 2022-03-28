@@ -86,6 +86,15 @@ class ArgProvider:
 @TF_ARG_PROVIDERS.register('AddV2')
 @TF_ARG_PROVIDERS.register('Placeholder')
 @TF_ARG_PROVIDERS.register('BiasAdd')
+@TF_ARG_PROVIDERS.register('GatherV2')
+@TF_ARG_PROVIDERS.register('Cast')
+@TF_ARG_PROVIDERS.register('Sub')
+@TF_ARG_PROVIDERS.register('SquaredDifference')
+@TF_ARG_PROVIDERS.register('Rsqrt')
+@TF_ARG_PROVIDERS.register('Mul')
+@TF_ARG_PROVIDERS.register('Erf')
+@TF_ARG_PROVIDERS.register('BatchMatMulV2')
+@TF_ARG_PROVIDERS.register('RealDiv')
 class SimpleOutputArgProvider(ArgProvider):
     def get_output(self, output_port_id: int, args, kwargs) -> tf.Tensor:
         check_port_id(output_port_id, min_port_id=0, max_port_id=0)
@@ -102,6 +111,17 @@ class SimpleOutputArgProvider(ArgProvider):
             raise ValueError(f'Unexpected `args`: {args}')
 
         return replace_value_by_index(args, output_port_id, value), kwargs
+
+
+@TF_ARG_PROVIDERS.register('Transpose')
+class TransposeArgProvider(ArgProvider):
+    def get_input(self, input_port_id: int, args, kwargs) -> tf.Tensor:
+        check_port_id(input_port_id, min_port_id=0, max_port_id=0)
+        return args[input_port_id]
+
+    def set_input(self, input_port_id: int, value: tf.Tensor, args, kwargs):
+        check_port_id(input_port_id, min_port_id=0, max_port_id=0)
+        return replace_value_by_index(args, input_port_id, value), kwargs
 
 
 @TF_ARG_PROVIDERS.register('ResizeNearestNeighbor')
@@ -217,7 +237,7 @@ class DepthwiseConv2dNativeArgProvider(ArgProvider):
 
 
 @TF_ARG_PROVIDERS.register('MatMul')
-class MatMulArgProvider(ArgProvider):
+class MatMulArgProvider(SimpleOutputArgProvider):
     """
     Argument provider of the `MatMul` operation.
     Inputs:

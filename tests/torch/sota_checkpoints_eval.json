@@ -259,14 +259,14 @@
                 "metric_type": "Acc@1",
                 "model_description": "ResNet-34"
             },
-            "resnet34_imagenet_filter_pruning_geomean": {
-                "config": "examples/torch/classification/configs/pruning/resnet34_pruning_geometric_median.json",
+            "resnet34_imagenet_filter_pruning_geomean_kd": {
+                "config": "examples/torch/classification/configs/pruning/resnet34_pruning_geometric_median_kd.json",
                 "reference": "resnet34_imagenet",
-                "target": 72.73,
+                "target": 73.11,
                 "metric_type": "Acc@1",
-                "resume": "resnet34_imagenet_filter_pruning_geomean.pth",
+                "resume": "resnet34_imagenet_filter_pruning_geomean_kd.pth",
                 "model_description": "ResNet-34",
-                "compression_description": "Filter pruning, 40%, geometric median criterion"
+                "compression_description": "Filter pruning, 50%, geometric median criterion + KD"
             },
             "googlenet_imagenet": {
                 "config": "examples/torch/classification/configs/pruning/googlenet_imagenet.json",
@@ -286,7 +286,7 @@
         }
     },
     "object_detection": {
-        "VOCdevkit": {
+        "voc": {
             "ssd300_mobilenet_voc": {
                 "config": "examples/torch/object_detection/configs/ssd300_mobilenet_voc.json",
                 "target": 62.23,

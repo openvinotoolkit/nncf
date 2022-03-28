@@ -117,7 +117,7 @@ class ConvolutionLayerAttributes(WeightedLayerAttributes):
                  stride: Tuple[int, ...],
                  groups: int,
                  transpose: bool,
-                 padding_values: List[int]):
+                 padding_values: Tuple[int, ...]):
         super().__init__(weight_requires_grad)
         self.in_channels = in_channels
         self.out_channels = out_channels

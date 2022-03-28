@@ -103,7 +103,7 @@ class DownBlock(nn.Module):
 
 
 class ShuffleNetV2(nn.Module):
-    def __init__(self, net_size):
+    def __init__(self, net_size=0.5):
         super().__init__()
         out_channels = configs[net_size]['out_channels']
         num_blocks = configs[net_size]['num_blocks']

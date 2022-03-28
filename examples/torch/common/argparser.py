@@ -120,6 +120,12 @@ def get_common_argument_parser():
              "enough to perform memory-consuming initialization (e.g. HAWQ-based bitwidth assignment for quantization) "
              "with a large training batch size")
     parser.add_argument(
+        "--batch-size-val",
+        type=int,
+        default=None,
+        metavar='N',
+        help="TBD")
+    parser.add_argument(
         "--epochs",
         type=int,
         default=300,

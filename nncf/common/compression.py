@@ -12,18 +12,21 @@
 """
 
 from abc import abstractmethod
-
+from typing import Any
 from typing import Dict
-from typing import Optional, List, Tuple, Any, TypeVar
+from typing import List
+from typing import Optional
+from typing import Tuple
+from typing import TypeVar
 
 from nncf import NNCFConfig
-from nncf.common.schedulers import StubCompressionScheduler
 from nncf.api.compression import CompressionAlgorithmBuilder
 from nncf.api.compression import CompressionAlgorithmController
-from nncf.common.utils.logger import logger as nncf_logger
-from nncf.common.utils.registry import Registry
+from nncf.common.schedulers import StubCompressionScheduler
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import infer_backend_from_model
+from nncf.common.utils.logger import logger as nncf_logger
+from nncf.common.utils.registry import Registry
 from nncf.config.extractors import extract_algo_specific_config
 from nncf.config.extractors import extract_bn_adaptation_init_params
 
@@ -46,6 +49,7 @@ class BaseCompressionAlgorithmController(CompressionAlgorithmController):
 
     BUILDER_STATE = 'builder_state'
     CONTROLLER_STATE = 'ctrl_state'
+    _state_names = BaseControllerStateNames
 
     def __init__(self, target_model: ModelType):
         """
@@ -58,7 +62,6 @@ class BaseCompressionAlgorithmController(CompressionAlgorithmController):
         super().__init__(target_model)
         self._name = None
         self._builder_state = None
-        self._state_names = BaseControllerStateNames()
 
     @property
     def name(self):
@@ -133,11 +136,11 @@ class BaseCompressionAlgorithmController(CompressionAlgorithmController):
         if self.name in state:
             algo_state = state[self.name]
             if self._state_names.COMPRESSION_STAGE in state:
-                if self.compression_stage() != state[self._state_names.COMPRESSION_STAGE]:
+                compression_stage = state[self._state_names.COMPRESSION_STAGE]
+                if self.compression_stage() != compression_stage:
                     nncf_logger.warning('Current CompressionStage ({}) of the compression controller does '
                                         'not correspond to the value found in '
-                                        'the checkpoint ({})'.format(self.compression_stage(),
-                                                                     state[self._state_names.COMPRESSION_STAGE]))
+                                        'the checkpoint ({})'.format(self.compression_stage(), compression_stage))
             self.loss.load_state(algo_state[self._state_names.LOSS])
             self.scheduler.load_state(algo_state[self._state_names.SCHEDULER])
 

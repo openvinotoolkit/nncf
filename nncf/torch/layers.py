@@ -77,6 +77,23 @@ class NNCFConv1d(_NNCFModuleMixin, nn.Conv1d):
         return nncf_conv
 
 
+class NNCFConvTranspose1d(_NNCFModuleMixin, nn.ConvTranspose1d):
+    op_func_name = "conv_transpose1d"
+    target_weight_dim_for_compression = 1
+
+    @staticmethod
+    def from_module(module):
+        assert module.__class__.__name__ == nn.ConvTranspose1d.__name__
+        args = [module.in_channels, module.out_channels, module.kernel_size, module.stride,
+                module.padding, module.output_padding, module.groups, hasattr(module, 'bias'),
+                module.dilation]
+        if hasattr(module, 'padding_mode'):
+            args.append(module.padding_mode)
+        nncf_conv_transpose1d = NNCFConvTranspose1d(*args)
+        nncf_conv_transpose1d = align_module_internals(module, nncf_conv_transpose1d)
+        return nncf_conv_transpose1d
+
+
 NNCF_PADDING_VALUE_ATTR_NAME = 'nncf_padding_value'
 OPTIONAL_PARAMETERS_REGISTRY.register(NNCF_PADDING_VALUE_ATTR_NAME)
 
@@ -121,21 +138,34 @@ class NNCFConv2d(_NNCFModuleMixin, nn.Conv2d):
         proxy_padding_value = getattr(self, NNCF_PADDING_VALUE_ATTR_NAME)  # hack to get value from ProxyModule
         proxy_weight = self.weight
         proxy_bias = self.bias
-        return self._conv_forward_proxy(input_, proxy_weight, proxy_bias, proxy_padding_value)
+        proxy_padding = self.padding
+        proxy_num_groups = self.groups
+        return self._conv_forward_proxy(input_,
+                                  proxy_weight, proxy_bias, proxy_padding_value, proxy_padding, proxy_num_groups)
 
-
-    def _conv_forward_proxy(self, input_, weight, bias, padding_value):
+    def _conv_forward_proxy(self, input_, weight, bias, padding_value, padding, num_groups):
         with no_jit_trace():
             padding_val = padding_value.item()
         self.get_padding_value_ref().data.fill_(padding_val)
+        self.groups = num_groups
+
+        def _reverse_repeat_tuple(t, n):
+            r"""Reverse the order of `t` and repeat each element for `n` times.
+
+            This can be used to translate padding arg used by Conv and Pooling modules
+            to the ones used by `F.pad`.
+            """
+            return tuple(x for x in reversed(t) for _ in range(n))
+
+        reversed_padding_repeated_twice = _reverse_repeat_tuple(self.padding, 2)
         if self.padding_mode != 'zeros':
-            return F.conv2d(F.pad(input_, self._reversed_padding_repeated_twice, mode=self.padding_mode,
+            return F.conv2d(F.pad(input_, reversed_padding_repeated_twice, mode=self.padding_mode,
                                   value=padding_val),
                             weight, bias, self.stride,
                             (0, 0), self.dilation, self.groups)
         if padding_val == 0:
-            return F.conv2d(input_, weight, bias, self.stride, self.padding, self.dilation, self.groups)
-        return F.conv2d(F.pad(input_, self._reversed_padding_repeated_twice, value=padding_val),
+            return F.conv2d(input_, weight, bias, self.stride, padding, self.dilation, self.groups)
+        return F.conv2d(F.pad(input_, reversed_padding_repeated_twice, value=padding_val),
                         weight, bias, self.stride,
                         (0, 0), self.dilation, self.groups)
 
@@ -152,7 +182,20 @@ class NNCFLinear(_NNCFModuleMixin, nn.Linear):
         return nncf_linear
 
 
-class NNCFBatchNorm(_NNCFModuleMixin, nn.BatchNorm2d):
+class NNCFBatchNorm1d(_NNCFModuleMixin, nn.BatchNorm1d):
+    op_func_name = "batch_norm"
+    ignored_algorithms = ['magnitude_sparsity', 'rb_sparsity', 'const_sparsity', 'quantization']
+
+    @staticmethod
+    def from_module(module):
+        assert module.__class__.__name__ == nn.BatchNorm1d.__name__
+
+        nncf_bn = NNCFBatchNorm1d(module.num_features)
+        nncf_bn = align_module_internals(module, nncf_bn)
+        return nncf_bn
+
+
+class NNCFBatchNorm2d(_NNCFModuleMixin, nn.BatchNorm2d):
     op_func_name = "batch_norm"
     ignored_algorithms = ['magnitude_sparsity', 'rb_sparsity', 'const_sparsity', 'quantization']
 
@@ -160,7 +203,20 @@ class NNCFBatchNorm(_NNCFModuleMixin, nn.BatchNorm2d):
     def from_module(module):
         assert module.__class__.__name__ == nn.BatchNorm2d.__name__
 
-        nncf_bn = NNCFBatchNorm(module.num_features)
+        nncf_bn = NNCFBatchNorm2d(module.num_features)
+        nncf_bn = align_module_internals(module, nncf_bn)
+        return nncf_bn
+
+
+class NNCFBatchNorm3d(_NNCFModuleMixin, nn.BatchNorm3d):
+    op_func_name = "batch_norm"
+    ignored_algorithms = ['magnitude_sparsity', 'rb_sparsity', 'const_sparsity', 'quantization']
+
+    @staticmethod
+    def from_module(module):
+        assert module.__class__.__name__ == nn.BatchNorm3d.__name__
+
+        nncf_bn = NNCFBatchNorm3d(module.num_features)
         nncf_bn = align_module_internals(module, nncf_bn)
         return nncf_bn
 
@@ -266,8 +322,11 @@ NNCF_MODULES_DICT = {
     NNCFConv2d: nn.Conv2d,
     NNCFConv3d: nn.Conv3d,
     NNCFLinear: nn.Linear,
-    NNCFBatchNorm: nn.BatchNorm2d,
+    NNCFBatchNorm1d: nn.BatchNorm1d,
+    NNCFBatchNorm2d: nn.BatchNorm2d,
+    NNCFBatchNorm3d: nn.BatchNorm3d,
     NNCFGroupNorm: nn.GroupNorm,
+    NNCFConvTranspose1d: nn.ConvTranspose1d,
     NNCFConvTranspose2d: nn.ConvTranspose2d,
     NNCFConvTranspose3d: nn.ConvTranspose3d,
     NNCFEmbedding: nn.Embedding,
@@ -284,6 +343,7 @@ NNCF_CONV_MODULES_DICT = {
     NNCFConv3d: nn.Conv3d,
 }
 NNCF_DECONV_MODULES_DICT = {
+    NNCFConvTranspose1d: nn.ConvTranspose1d,
     NNCFConvTranspose2d: nn.ConvTranspose2d,
     NNCFConvTranspose3d: nn.ConvTranspose3d,
 }
@@ -293,12 +353,14 @@ NNCF_GENERAL_CONV_MODULES_DICT = dict(NNCF_CONV_MODULES_DICT)
 NNCF_GENERAL_CONV_MODULES_DICT.update(NNCF_DECONV_MODULES_DICT)
 
 NNCF_LINEAR_MODULES_DICT = {NNCFLinear: nn.Linear}
+NNCF_MODULES_OP_NAMES = [k.op_func_name for k, _ in NNCF_MODULES_DICT.items()]
 
 NNCF_PRUNING_MODULES_DICT = {
     NNCFLinear: nn.Linear,
     NNCFConv1d: nn.Conv1d,
     NNCFConv2d: nn.Conv2d,
     NNCFConv3d: nn.Conv3d,
+    NNCFConvTranspose1d: nn.ConvTranspose1d,
     NNCFConvTranspose2d: nn.ConvTranspose2d,
     NNCFConvTranspose3d: nn.ConvTranspose3d,
 }
