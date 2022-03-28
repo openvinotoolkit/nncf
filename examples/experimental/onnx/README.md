@@ -38,7 +38,7 @@ accuracy checker config for the original and quantized models is the same.
 Use the following command to get the model accuracy:
 
 ```
-accuracy_check -c <path to config fileh> -o <ONNX model>
+accuracy_check -c <path to config fileh> -m <ONNX model>
 ```
 
 ## Results of Post-Training quantization of ONNX models
@@ -46,10 +46,10 @@ accuracy_check -c <path to config fileh> -o <ONNX model>
 |           Model           | Original accuracy | Quantized model accuracy |
 |:-------------------------:|:-----------------:|:------------------------:|
 |         ResNet-50         |      75.17%       |          74.74%          |
-|        MobilenetV2        |      71.87%       |          71.33%          |
-| InceptionV1 (GoogleNetV1) |      69.77%       |          69.72%          |
-| InceptionV3 (GoogleNetV3) |      77.45%       |          77.31%          |
-|      SqueezenetV1.1       |      58.19%       |          57.73%          |
+|        MobilenetV2        |      71.87%       |          71.29%          |
+| InceptionV1 (GoogleNetV1) |      69.77%       |          69.64%          |
+| InceptionV3 (GoogleNetV3) |      77.45%       |          77.30%          |
+|      SqueezenetV1.1       |      58.19%       |          57.72%          |
 
 ## Measuring the performance of the original and quantized models
 

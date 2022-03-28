@@ -70,7 +70,7 @@ if __name__ == '__main__':
     parser.add_argument("--batch_size", help="Batch size for initialization", default=1)
     parser.add_argument("--shuffle", help="Whether to shuffle dataset for initialization", default=True)
     parser.add_argument("--input_shape", help="Model's input shape", nargs="+", type=int, default=[1, 3, 224, 224])
-    parser.add_argument("--init_samples", help="Number of initialization samples", type=int, default=100)
+    parser.add_argument("--init_samples", help="Number of initialization samples", type=int, default=300)
     parser.add_argument("--ignored_scopes", help="Ignored operations ot quantize", nargs="+", default=None)
     args = parser.parse_args()
     run(args.onnx_model_path,
