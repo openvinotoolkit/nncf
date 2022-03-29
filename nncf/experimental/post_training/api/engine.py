@@ -39,13 +39,25 @@ class Engine(ABC):
     def data_loader(self):
         return self._data_loader
 
+    @data_loader.setter
+    def data_loader(self, data_loader):
+        self._data_loader = data_loader
+
     @property
     def metrics(self):
         return self._metrics
 
+    @metrics.setter
+    def metrics(self, metrics):
+        self._metrics = metrics
+
     @property
     def sampler(self):
         return self._sampler
+
+    @sampler.setter
+    def sampler(self, sampler):
+        self._sampler = sampler
 
     def set_model(self, model: ModelType) -> None:
         self.model = model

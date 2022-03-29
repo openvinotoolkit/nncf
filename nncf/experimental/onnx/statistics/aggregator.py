@@ -54,5 +54,6 @@ class ONNXStatisticsAggregator(StatisticsAggregator):
 
     def _agregate_statistics(self, output, layers_statistics: Dict[str, TensorStatisticCollectorBase]):
         for k, v in layers_statistics.items():
-            tensor = output[k]
-            v.register_input(tensor)
+            tensors = output[k]
+            for tensor in tensors:
+                v.register_input(tensor)
