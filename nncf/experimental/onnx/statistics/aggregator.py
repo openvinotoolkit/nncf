@@ -25,14 +25,17 @@ from nncf.experimental.post_training.statistics.aggregator import StatisticsAggr
 
 from nncf.experimental.onnx.samplers import create_onnx_sampler
 from nncf.experimental.onnx.engine import ONNXEngine
-from nncf.experimental.post_training.api.dataloader import DataLoader
+from nncf.experimental.post_training.api.data_loader import DataLoader
 
 
 class ONNXStatisticsAggregator(StatisticsAggregator):
+    # TODO (Nikita Malinin): Remove ONNXStatisticsAggregator & create the common backend-agnostic solution
+
     def __init__(self, engine: ONNXEngine, dataloader: DataLoader):
         super().__init__(engine, dataloader)
 
     def collect_statistics(self, model: onnx.ModelProto) -> None:
+        # TODO (Nikita Malinin): Need to update adding output process with the backend-specific graph transformer
         layers_to_collect_statistics = list(self.layers_statistics.keys())
         model_output = list(enumerate_model_node_outputs(model))[-1]
         model_with_intermediate_outputs = select_model_inputs_outputs(model,
@@ -45,14 +48,9 @@ class ONNXStatisticsAggregator(StatisticsAggregator):
         with tempfile.NamedTemporaryFile() as temporary_model:
             onnx.save(model_with_intermediate_outputs, temporary_model.name)
             self.engine.set_model(temporary_model.name)
-            sampler = create_onnx_sampler(self.dataloader)
-            for i, sample in enumerate(sampler):
-                if i == max_number_samples:
-                    break
-                # Currently, there is no an usage of target
-                _input, _ = sample
-                output = self.engine.infer(_input)
-                self._agregate_statistics(output, self.layers_statistics)
+            self.engine.sampler = create_onnx_sampler(self.dataloader)
+            output = self.engine.compute_statistics(self.layers_statistics)
+            self._agregate_statistics(output, self.layers_statistics)
 
     def _agregate_statistics(self, output, layers_statistics: Dict[str, TensorStatisticCollectorBase]):
         for k, v in layers_statistics.items():

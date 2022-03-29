@@ -29,7 +29,7 @@ from nncf.experimental.onnx.algorithms.quantization.min_max_quantization import 
 from nncf.experimental.post_training.algorithms.quantization import MinMaxQuantizationParameters
 from nncf.experimental.post_training.algorithms.quantization import PostTrainingQuantization
 from nncf.experimental.post_training.algorithms.quantization import PostTrainingQuantizationParameters
-from nncf.experimental.post_training.api.dataloader import DataLoader
+from nncf.experimental.post_training.api.data_loader import DataLoader
 
 from nncf.experimental.onnx.graph.nncf_graph_builder import GraphConverter
 

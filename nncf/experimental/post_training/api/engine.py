@@ -19,15 +19,33 @@ from typing import TypeVar
 
 ModelType = TypeVar('ModelType')
 TensorType = TypeVar('TensorType')
-
+MetricType = TypeVar('MetricType')
 
 class Engine(ABC):
     """
     The basic class aims to provide the interface to infer the model.
     """
+    # TODO (Nikita Malinin): Update class with the _get_sampler() method
 
     def __init__(self):
         self.model = None
+        self._sampler = None
+        self._data_loader = None
+        self._metrics = None
+
+    # TODO (Nikita Malinin): Add statistic aggregator object (per-backend)
+    
+    @property
+    def data_loader(self):
+        return self._data_loader
+
+    @property
+    def metrics(self):
+        return self._metrics
+
+    @property
+    def sampler(self):
+        return self._sampler
 
     def set_model(self, model: ModelType) -> None:
         self.model = model
@@ -35,14 +53,30 @@ class Engine(ABC):
     def is_model_set(self) -> bool:
         return self.model is not None
 
-    def infer(self, _input: TensorType) -> Dict[str, TensorType]:
-        if not self.is_model_set():
-            raise RuntimeError('The {} tried to infer the model, while the model was not set.'.format(self.__class__))
-        return self._infer(_input)
-
-    @abstractmethod
-    def _infer(self, _input: TensorType) -> Dict[str, TensorType]:
+    def transform_output(self, outputs: TensorType) -> TensorType:
+        """ Processes model output data
+            :param outputs: list of output data
+            :return outputs: list of the output data in an order expected by the accuracy metric if any is used
         """
-        Infer the model on the provided input.
-        Returns the model outputs and corresponding node names in the model.
+        return outputs
+
+    def transform_input(self, inputs: TensorType) -> TensorType:
+        """ Processes model input data based on the backend
+            :param inputs: list of input data
+            :return inputs: list of the input data
+        """
+        return inputs
+
+    def compute_statistics(self, statistics_layout: Dict) -> Dict[str, TensorType]:
+        """ Performs model inference on specified dataset subset for statistics collection and input-based layers layout
+            :param statistics_layout: dictionary of stats collection functions {node_name: {stat_name: fn}}
+            :return statistics: per-layer statistics for the further model optimization 
+        """
+        raise NotImplementedError('Method compute_statistics() should be implementer before calling!')
+    
+    @abstractmethod
+    def compute_metrics(self, metrics_per_sample=False) -> Dict[str, MetricType]:
+        """ Performs model inference on specified dataset subset for metrics calculation
+            :param metrics_per_sample: whether to collect metrics for each batch
+            :return metrics: a tuple of dictionaries of persample and overall metric values if 'metrics_per_sample' is True
         """

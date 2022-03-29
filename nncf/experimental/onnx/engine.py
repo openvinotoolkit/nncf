@@ -12,8 +12,10 @@
 """
 
 from typing import Dict
+from typing import List
 
 from nncf.experimental.post_training.api.engine import Engine
+from nncf.experimental.onnx.samplers import create_onnx_sampler
 
 import onnxruntime as rt
 import numpy as np
@@ -38,15 +40,26 @@ class ONNXEngine(Engine):
         super().set_model(model)
         self.sess = rt.InferenceSession(model, **self.rt_session_options)
 
-    def _infer(self, _input: np.ndarray) -> Dict[str, np.ndarray]:
-        """
-        Runs InferenceSession on the provided '_input'.
-        Returns the model outputs and corresponding node names in the model.
-        """
+    def transform_input(self, inputs):
+        return inputs.astype(np.float32)
+
+    def compute_statistics(self, statistics_layout) -> Dict[str, np.ndarray]:
+        if not self.is_model_set():
+            raise RuntimeError('The {} tried to compute statistics, while the model was not set.'.format(self.__class__))
+
+        sampler = self.sampler if self.sampler else create_onnx_sampler(self.data_loader)
         output = {}
-        input_name = self.sess.get_inputs()[0].name
-        output_tensor = self.sess.run([], {input_name: _input.astype(np.float32)})
-        model_outputs = self.sess.get_outputs()
-        for i, model_output in enumerate(model_outputs):
-            output[model_output.name] = output_tensor[i]
+        for i, sample in enumerate(sampler):
+            _input, _ = sample
+            input_name = self.sess.get_inputs()[0].name
+            output_tensor = self.sess.run([], {input_name: self.transform_input(_input)})
+            model_outputs = self.sess.get_outputs()
+            for i, model_output in enumerate(model_outputs):
+                if model_output.name not in output:
+                    output[model_output.name] = []
+                # TODO (Nikita Malinin): Add backend-specific statistics aggregator usage
+                output[model_output.name].append(output_tensor[i])
         return output
+
+    def compute_metrics(self, metrics_per_sample=False):
+        pass

@@ -20,7 +20,7 @@ from typing import Dict
 
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
 from nncf.experimental.post_training.api.engine import Engine
-from nncf.experimental.post_training.api.dataloader import DataLoader
+from nncf.experimental.post_training.api.data_loader import DataLoader
 
 TensorType = TypeVar('TensorType')
 ModelType = TypeVar('ModelType')

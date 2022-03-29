@@ -18,10 +18,10 @@ import numpy as np
 
 from nncf.common.utils.logger import logger as nncf_logger
 
-from nncf.experimental.post_training.api.dataloader import DataLoader
+from nncf.experimental.post_training.api.data_loader import DataLoader
 
-from nncf.experimental.post_training.sampler import BatchSampler
-from nncf.experimental.post_training.sampler import RandomBatchSampler
+from nncf.experimental.post_training.samplers import BatchSampler
+from nncf.experimental.post_training.samplers import RandomBatchSampler
 
 
 class ONNXBatchSampler(BatchSampler):

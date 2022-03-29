@@ -16,7 +16,7 @@ from typing import TypeVar
 from nncf.common.utils.logger import logger as nncf_logger
 
 from nncf.experimental.post_training.api.engine import Engine
-from nncf.experimental.post_training.api.dataloader import DataLoader
+from nncf.experimental.post_training.api.data_loader import DataLoader
 from nncf.experimental.post_training.algorithms import Algorithm
 
 from nncf.experimental.post_training.backend import Backend
@@ -40,6 +40,7 @@ class CompressionBuilder:
         self.algorithms.append(algorithm)
 
     def _create_engine(self, backend: Backend) -> Engine:
+        # TODO (Nikita Malinin): Place "ifs" into the backend-specific expandable structure
         if backend == Backend.ONNX:
             from nncf.experimental.onnx.engine import ONNXEngine
             return ONNXEngine()
@@ -52,6 +53,7 @@ class CompressionBuilder:
         return None
 
     def _get_prepared_model_for_compression(self, model: ModelType, backend: Backend) -> ModelType:
+        # TODO (Nikita Malinin): Replace this methood into backend-specific graph transformer
         if backend == Backend.ONNX:
             from nncf.experimental.onnx.model_normalizer import ONNNXModelNormalizer
             return ONNNXModelNormalizer.modify_onnx_model_for_quantization(model)

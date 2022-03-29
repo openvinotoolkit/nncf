@@ -11,33 +11,14 @@
  limitations under the License.
 """
 
-from abc import ABC
 from abc import abstractmethod
+from nncf.experimental.post_training.api.sampler import Sampler
+from nncf.experimental.post_training.api.data_loader import DataLoader
 
 import random
 
-from nncf.experimental.post_training.api.dataloader import DataLoader
 
-
-class Sampler(ABC):
-    """
-    Base class for dataset sampler.
-    """
-
-    def __init__(self, dataloader: DataLoader):
-        self.dataloader = dataloader
-        self.batch_size = dataloader.batch_size
-        self.batch_indices = list(range(0, len(self.dataloader) + 1, self.batch_size))
-
-    @abstractmethod
-    def __iter__(self):
-        pass
-
-    @abstractmethod
-    def __len__(self):
-        pass
-
-
+# TODO (Nikita Malinin): Replace or rename this file
 class BatchSampler(Sampler):
     """
     Base class for dataset sampler forms a batch from samples with batch_size determined in dataloader.
