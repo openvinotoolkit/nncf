@@ -44,7 +44,7 @@ class Metric(ABC):
 
     @abstractmethod
     def update(self, output: Output, target: Target) -> None:
-        """ Calculates and updates metric value 
+        """ Calculates and updates metric value
             :param output: model output
             "param target: annotation for metric calculation
         """

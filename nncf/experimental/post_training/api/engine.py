@@ -21,12 +21,12 @@ ModelType = TypeVar('ModelType')
 TensorType = TypeVar('TensorType')
 MetricType = TypeVar('MetricType')
 
+
 class Engine(ABC):
     """
     The basic class aims to provide the interface to infer the model.
     """
     # TODO (Nikita Malinin): Update class with the _get_sampler() method
-
     def __init__(self):
         self.model = None
         self._sampler = None
@@ -34,7 +34,6 @@ class Engine(ABC):
         self._metrics = None
 
     # TODO (Nikita Malinin): Add statistic aggregator object (per-backend)
-    
     @property
     def data_loader(self):
         return self._data_loader
@@ -82,13 +81,14 @@ class Engine(ABC):
     def compute_statistics(self, statistics_layout: Dict) -> Dict[str, TensorType]:
         """ Performs model inference on specified dataset subset for statistics collection and input-based layers layout
             :param statistics_layout: dictionary of stats collection functions {node_name: {stat_name: fn}}
-            :return statistics: per-layer statistics for the further model optimization 
+            :return statistics: per-layer statistics for the further model optimization
         """
         raise NotImplementedError('Method compute_statistics() should be implementer before calling!')
-    
+
     @abstractmethod
     def compute_metrics(self, metrics_per_sample=False) -> Dict[str, MetricType]:
         """ Performs model inference on specified dataset subset for metrics calculation
             :param metrics_per_sample: whether to collect metrics for each batch
-            :return metrics: a tuple of dictionaries of persample and overall metric values if 'metrics_per_sample' is True
+            :return metrics: a tuple of dictionaries of persample and
+            overall metric values if 'metrics_per_sample' is True
         """

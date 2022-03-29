@@ -43,22 +43,23 @@ class ONNXEngine(Engine):
     def transform_input(self, inputs):
         return inputs.astype(np.float32)
 
-    def compute_statistics(self, statistics_layout) -> Dict[str, np.ndarray]:
+    def compute_statistics(self, statistics_layout) -> Dict[str, List[np.ndarray]]:
         if not self.is_model_set():
-            raise RuntimeError('The {} tried to compute statistics, while the model was not set.'.format(self.__class__))
+            raise RuntimeError('The {} tried to compute statistics, '
+                               'while the model was not set.'.format(self.__class__))
 
         sampler = self.sampler if self.sampler else create_onnx_sampler(self.data_loader)
         output = {}
-        for i, sample in enumerate(sampler):
+        for sample in sampler:
             _input, _ = sample
             input_name = self.sess.get_inputs()[0].name
             output_tensor = self.sess.run([], {input_name: self.transform_input(_input)})
             model_outputs = self.sess.get_outputs()
-            for i, model_output in enumerate(model_outputs):
+            for out_id, model_output in enumerate(model_outputs):
                 if model_output.name not in output:
                     output[model_output.name] = []
                 # TODO (Nikita Malinin): Add backend-specific statistics aggregator usage
-                output[model_output.name].append(output_tensor[i])
+                output[model_output.name].append(output_tensor[out_id])
         return output
 
     def compute_metrics(self, metrics_per_sample=False):
