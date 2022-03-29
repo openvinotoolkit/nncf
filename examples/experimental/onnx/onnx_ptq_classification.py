@@ -20,7 +20,7 @@ import onnx
 from nncf.experimental.post_training.compression_builder import CompressionBuilder
 from nncf.experimental.post_training.algorithms.quantization import PostTrainingQuantization
 from nncf.experimental.post_training.algorithms.quantization import PostTrainingQuantizationParameters
-from nncf.experimental.onnx.dataloaders.imagenet_dataloader import create_dataloader_from_imagenet_torch_dataset
+from nncf.experimental.onnx.dataloaders.imagenet_data_loader import create_dataloader_from_imagenet_torch_dataset
 
 
 def run(onnx_model_path: str, output_model_path: str,
