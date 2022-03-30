@@ -60,8 +60,6 @@ REFERENCE_GRAPHS_TEST_ROOT = 'data/reference_graphs/quantization'
 @pytest.mark.parametrize(('model_name', 'model_url', 'path_ref_graph', 'input_shape'),
                          zip(MODELS_NAME, MODELS_URL, PATH_REF_GRAPHS, INPUT_SHAPES))
 def test_min_max_quantization_graph(tmp_path, model_name, model_url, path_ref_graph, input_shape):
-    if model_name == 'yolov2-coco-9':
-        pytest.skip()
     onnx_model_dir = str(TEST_ROOT.joinpath('onnx', 'data', 'models'))
     onnx_model_path = str(TEST_ROOT.joinpath(onnx_model_dir, model_name))
     if not os.path.isdir(onnx_model_dir):
