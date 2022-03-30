@@ -43,8 +43,8 @@ class RandomBatchSampler(BatchSampler):
     with batch_size determined in dataloader.
     """
 
-    def __init__(self, dataloader: DataLoader, seed: int = 0):
-        super().__init__(dataloader)
+    def __init__(self, dataloader: DataLoader, seed: int = 0, sample_indices=None):
+        super().__init__(dataloader, sample_indices)
         random.seed(seed)
         self.random_permutated_indices = list(range(len(self.dataloader)))
         random.shuffle(self.random_permutated_indices)

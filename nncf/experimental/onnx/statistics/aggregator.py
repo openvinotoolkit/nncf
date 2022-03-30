@@ -48,7 +48,7 @@ class ONNXStatisticsAggregator(StatisticsAggregator):
         with tempfile.NamedTemporaryFile() as temporary_model:
             onnx.save(model_with_intermediate_outputs, temporary_model.name)
             self.engine.set_model(temporary_model.name)
-            self.engine.sampler = create_onnx_sampler(self.dataloader)
+            self.engine.sampler = create_onnx_sampler(self.dataloader, range(max_number_samples))
             output = self.engine.compute_statistics(self.layers_statistics)
             self._agregate_statistics(output, self.layers_statistics)
 

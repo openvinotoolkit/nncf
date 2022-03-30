@@ -22,11 +22,12 @@ class Sampler(ABC):
     Base class for dataset sampler.
     """
 
-    def __init__(self, dataloader: DataLoader):
+    def __init__(self, dataloader: DataLoader, sample_indices=None):
         self.dataloader = dataloader
         self.batch_size = dataloader.batch_size
-        self.batch_indices = list(
-            range(0, len(self.dataloader) + 1, self.batch_size))
+        data_loader_len = len(self.dataloader) + 1
+        max_samples_len = min(len(sample_indices), data_loader_len) if sample_indices else data_loader_len
+        self.batch_indices = list(range(0, max_samples_len, self.batch_size))
 
     @abstractmethod
     def __iter__(self):

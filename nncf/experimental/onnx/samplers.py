@@ -11,6 +11,7 @@
  limitations under the License.
 """
 
+from typing import List
 from typing import Union
 
 import torch
@@ -54,9 +55,9 @@ class ONNXRandomBatchSampler(RandomBatchSampler):
         raise RuntimeError('Unexpected input data type {tensors[0]}. Should be one of torch.Tensor or np.ndarray')
 
 
-def create_onnx_sampler(dataloader: DataLoader) -> Union[ONNXBatchSampler, ONNXRandomBatchSampler]:
+def create_onnx_sampler(dataloader: DataLoader, sample_indices: List) -> Union[ONNXBatchSampler, ONNXRandomBatchSampler]:
     if dataloader.shuffle:
         nncf_logger.info('Using Shuffled dataset')
-        return ONNXRandomBatchSampler(dataloader)
+        return ONNXRandomBatchSampler(dataloader, sample_indices=sample_indices)
     nncf_logger.info('Using Non-Shuffled dataset')
-    return ONNXBatchSampler(dataloader)
+    return ONNXBatchSampler(dataloader, sample_indices=sample_indices)
