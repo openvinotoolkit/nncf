@@ -63,4 +63,15 @@ class ONNXEngine(Engine):
         return output
 
     def compute_metrics(self, metrics_per_sample=False):
-        pass
+        if not self.is_model_set():
+            raise RuntimeError('The {} tried to compute statistics, '
+                               'while the model was not set.'.format(self.__class__))
+
+        # TODO (Nikita Malinin): Add per-sample metrics calculation
+        sampler = self.sampler if self.sampler else create_onnx_sampler(self.data_loader, range(len(self.data_loader)))
+        for sample in sampler:
+            input_data, target  = sample
+            input_name = self.sess.get_inputs()[0].name
+            output_tensors = self.sess.run([], {input_name: self.transform_input(input_data)})
+            self.metrics.update(output_tensors, target)
+        return self.metrics.avg_value

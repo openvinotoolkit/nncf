@@ -16,11 +16,15 @@ from typing import TypeVar
 from nncf.common.utils.logger import logger as nncf_logger
 
 from nncf.experimental.post_training.api.engine import Engine
+from nncf.experimental.post_training.api.metric import Metric
 from nncf.experimental.post_training.api.data_loader import DataLoader
 from nncf.experimental.post_training.algorithms import Algorithm
 
 from nncf.experimental.post_training.backend import Backend
 from nncf.experimental.post_training.backend import get_model_backend
+import onnx
+# pylint: disable=no-member
+import tempfile
 
 ModelType = TypeVar('ModelType')
 
@@ -43,7 +47,7 @@ class CompressionBuilder:
         # TODO (Nikita Malinin): Place "ifs" into the backend-specific expandable structure
         if backend == Backend.ONNX:
             from nncf.experimental.onnx.engine import ONNXEngine
-            return ONNXEngine()
+            return ONNXEngine(**{'log_severity_level': 3})
         return None
 
     def _create_statistics_aggregator(self, engine: Engine, dataloader: DataLoader, backend: Backend):
@@ -94,3 +98,15 @@ class CompressionBuilder:
         for algorithm in self.algorithms:
             modified_model = algorithm.apply(modified_model, engine, statistics_aggregator.layers_statistics)
         return modified_model
+
+    def evaluate(self, model: ModelType, metric: Metric, dataloader: DataLoader, engine: Engine = None):
+        backend = get_model_backend(model)
+
+        if engine is None:
+            engine = self._create_engine(backend)
+        with tempfile.NamedTemporaryFile() as temporary_model:
+            onnx.save(model, temporary_model.name)
+            engine.set_model(temporary_model.name)
+        engine.metrics = metric
+        engine.data_loader = dataloader
+        return engine.compute_metrics()
