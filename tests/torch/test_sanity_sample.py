@@ -14,13 +14,7 @@
 import json
 import os
 import shlex
-import sys
 import tempfile
-from abc import abstractmethod
-from enum import Enum
-from enum import auto
-from pathlib import Path
-from typing import Dict
 
 import pytest
 import torch
@@ -36,43 +30,12 @@ from nncf.common.compression import BaseCompressionAlgorithmController as BaseCo
 from nncf.common.compression import BaseControllerStateNames
 from nncf.common.hardware.config import HWConfigType
 from nncf.config import NNCFConfig
-from tests.common.helpers import EXAMPLES_DIR
-from tests.common.helpers import PROJECT_ROOT
+from tests.common.config_factory import ConfigFactory
 from tests.common.helpers import TEST_ROOT
 from tests.torch.helpers import Command
+from tests.torch.sample_test_validator import create_command_line
 
 NUM_DEVICES = torch.cuda.device_count() if torch.cuda.is_available() else 1
-
-
-class ConfigFactory:
-    """Allows to modify config file before test run"""
-
-    def __init__(self, base_config, config_path):
-        self.config = base_config
-        self.config_path = str(config_path)
-
-    def serialize(self):
-        with open(self.config_path, 'w', encoding='utf8') as f:
-            json.dump(self.config, f)
-        return self.config_path
-
-    def __getitem__(self, item):
-        return self.config[item]
-
-    def __setitem__(self, key, value):
-        self.config[key] = value
-
-
-def create_command_line(args, sample_type, main_filename='main.py', is_experimental=False):
-    python_path = PROJECT_ROOT.as_posix()
-    main_path = ['torch', sample_type, main_filename]
-    if is_experimental:
-        main_path.insert(0, 'experimental')
-    executable = EXAMPLES_DIR.joinpath(*main_path).as_posix()
-    cli_args = " ".join(key if (val is None or val is True) else "{} {}".format(key, val) for key, val in args.items())
-    return "PYTHONPATH={path} {python_exe} {main_py} {args}".format(
-        path=python_path, main_py=executable, args=cli_args, python_exe=sys.executable
-    )
 
 
 SAMPLE_TYPES = ["classification", "semantic_segmentation", "object_detection"]
@@ -497,106 +460,6 @@ def test_cpu_only_mode_produces_cpu_only_model(config, tmp_path, mocker):
         assert not p.is_cuda
 
 
-class SampleType(Enum):
-    CLASSIFICATION = auto()
-    SEMANTIC_SEGMENTATION = auto()
-    OBJECT_DETECTION = auto()
-
-
-class SanityTestCaseDescriptor:
-    def __init__(self):
-        self.config_name: str = ''
-        self.config_path: Path = Path()
-        self.config_dict: Dict = {}
-        self.sample_type: SampleType = SampleType.CLASSIFICATION
-        self.dataset_dir: Path = Path()
-        self.dataset_name: str = ''
-        self.is_real_dataset: bool = False
-        self.batch_size: int = 0
-        self.is_staged: bool = False
-        self.staged_main = 'examples.torch.classification.staged_quantization_worker'
-        self._main_per_sample = {
-            SampleType.CLASSIFICATION: 'examples.torch.classification.main',
-            SampleType.OBJECT_DETECTION: 'examples.torch.object_detection.main',
-            SampleType.SEMANTIC_SEGMENTATION: 'examples.torch.semantic_segmentation.main',
-        }
-
-    @abstractmethod
-    def get_compression_section(self):
-        pass
-
-    @abstractmethod
-    def setup_spy(self, mocker):
-        pass
-
-    @abstractmethod
-    def validate_spy(self):
-        pass
-
-    def get_config_update(self) -> Dict:
-        sample_params = self.get_sample_params()
-        return {
-            **sample_params,
-            'target_device': 'VPU',
-            'compression': self.get_compression_section()
-        }
-
-    def get_sample_params(self) -> Dict:
-        return {"dataset": self.dataset_name} if self.dataset_name else {}
-
-    def finalize(self, dataset_dir=None) -> 'SanityTestCaseDescriptor':
-        with self.config_path.open() as file:
-            json_config = json.load(file)
-            json_config.update(self.get_config_update())
-            self.config_dict = json_config
-        if self.is_real_dataset:
-            self.dataset_dir = Path(
-                dataset_dir if dataset_dir else os.path.join(tempfile.gettempdir(), self.dataset_name))
-        return self
-
-    def get_main_location(self):
-        return self._main_per_sample[self.sample_type]
-
-    def get_sample_file_location(self):
-        return self._main_per_sample[self.sample_type] if not self.is_staged else self.staged_main
-
-    def get_train_location(self):
-        prefix = 'train'
-        if self.is_staged:
-            prefix += '_staged'
-        return self.get_sample_file_location() + '.' + prefix
-
-    def batch(self, batch_size: int):
-        self.batch_size = batch_size
-        return self
-
-    def hawq_config(self, config_name: str):
-        self.config_name = config_name
-        self.config_path = TEST_ROOT.joinpath("torch", "data", "configs", "hawq", config_name)
-        return self
-
-    def staged(self):
-        self.is_staged = True
-        return self
-
-    def sample(self, sample_type: SampleType):
-        self.sample_type = sample_type
-        return self
-
-    def real_dataset(self, dataset_name: str):
-        self.dataset_name = dataset_name
-        self.is_real_dataset = True
-        return self
-
-    def mock_dataset(self, dataset_name: str):
-        self.dataset_name = dataset_name
-        self.dataset_dir = TEST_ROOT.joinpath("torch", "data", "mock_datasets", dataset_name)
-        return self
-
-    def __str__(self):
-        return '_'.join([self.config_name, 'staged' if self.is_staged else ''])
-
-
 @pytest.mark.parametrize('target_device', [x.value for x in HWConfigType])
 def test_sample_propagates_target_device_cl_param_to_nncf_config(mocker, tmp_path, target_device):
     config_dict = {
@@ -696,30 +559,3 @@ def test_accuracy_aware_training_pipeline(accuracy_aware_config, tmp_path, multi
         allowed_compression_stages = (CompressionStage.UNCOMPRESSED,)
     compression_stage = extract_compression_stage_from_checkpoint(last_checkpoint_path)
     assert compression_stage in allowed_compression_stages
-
-
-def validate_sample(args, desc: SanityTestCaseDescriptor, mocker):
-    arg_list = [key if (val is None or val is True) else "{} {}".format(key, val) for key, val in args.items()]
-    command_line = " ".join(arg_list)
-
-    import importlib
-    main_location = desc.get_main_location()
-    sample = importlib.import_module(main_location)
-
-    desc.setup_spy(mocker)
-    sample.main(shlex.split(command_line))
-    desc.validate_spy()
-
-
-def get_default_args(desc, tmp_path):
-    config_factory = ConfigFactory(desc.config_dict, tmp_path / 'config.json')
-    args = {
-        "--data": str(desc.dataset_dir),
-        "--config": config_factory.serialize(),
-        "--log-dir": tmp_path,
-        "--batch-size": desc.batch_size,
-        "--workers": 0,  # Workaround for the PyTorch MultiProcessingDataLoader issue
-    }
-    if not torch.cuda.is_available():
-        args["--cpu-only"] = True
-    return args

@@ -554,6 +554,7 @@ QUANTIZATION_SCHEMA = {
                     },
                 }
             },
+            "additionalProperties": False,
             "description": "This option is used to specify overriding quantization constraints for specific scope,"
                            "e.g. in case you need to quantize a single operation differently than the rest of the "
                            "model."
