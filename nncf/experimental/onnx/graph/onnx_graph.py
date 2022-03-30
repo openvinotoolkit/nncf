@@ -35,6 +35,7 @@ class ONNXGraph:
         self.activations_tensors = self.model_with_shapes.graph.value_info
         inputs = self.model_with_shapes.graph.input
         outputs = self.model_with_shapes.graph.output
+        # outputs = self.model_with_shapes.graph.
         self.activations_tensors.extend(inputs)
         self.activations_tensors.extend(outputs)
 

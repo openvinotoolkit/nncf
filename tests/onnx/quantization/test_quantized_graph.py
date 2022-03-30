@@ -15,6 +15,7 @@ import pytest
 
 import os
 
+import requests
 import torch
 from torchvision import models
 import numpy as np
@@ -33,7 +34,7 @@ from nncf.experimental.post_training.api.dataloader import DataLoader
 
 from nncf.experimental.onnx.graph.nncf_graph_builder import GraphConverter
 
-MODELS = [
+CLASSIFICATION_MODELS = [
     models.resnet18(),
     models.mobilenet_v2(),
     models.inception_v3(),
@@ -42,7 +43,7 @@ MODELS = [
     models.shufflenet_v2_x1_0(),
 ]
 
-PATH_REF_GRAPHS = [
+CLASSIFICATION_PATH_REF_GRAPHS = [
     'resnet18.dot',
     'mobilenet_v2.dot',
     'inception_v3.dot',
@@ -51,7 +52,7 @@ PATH_REF_GRAPHS = [
     'shufflenet_v2_x1_0.dot'
 ]
 
-INPUT_SHAPES = [
+CLASSIFICATION_INPUT_SHAPES = [
     [1, 3, 224, 224],
     [1, 3, 224, 224],
     [1, 3, 224, 224],
@@ -59,6 +60,51 @@ INPUT_SHAPES = [
     [1, 3, 224, 224],
     [1, 3, 224, 224],
 ]
+
+
+
+DETECTION_MODELS = [
+    "https://github.com/onnx/models/raw/main/vision/object_detection_segmentation/ssd/model/ssd-10.onnx"
+    # models.detection.retinanet_resnet50_fpn(),
+    # models.detection.maskrcnn_resnet50_fpn(),
+
+]
+
+
+
+
+DETECTION_PATH_REF_GRAPHS = [
+    'ssd.dot'
+    # 'retinanet_resnet50_fpn.dot',
+    # 'maskrcnn_resnet50_fpn.dot',
+
+]
+
+DETECTION_INPUT_SHAPES = [
+    [1, 3, 224, 224],
+    [1, 3, 224, 224],
+]
+
+SEGMENTATION_MODELS = [
+    # models.segmentation.deeplabv3_resnet50(),
+    # models.segmentation.fcn_resnet50(),
+
+]
+
+SEGMENTATION_PATH_REF_GRAPHS = [
+    'deeplabv3_resnet50.dot',
+    'fcn_resnet50.dot',
+
+]
+
+SEGMENTATION_INPUT_SHAPES = [
+    [1, 3, 224, 224],
+    [1, 3, 224, 224],
+]
+
+MODELS = SEGMENTATION_MODELS #CLASSIFICATION_MODELS + DETECTION_MODELS
+PATH_REF_GRAPHS = SEGMENTATION_PATH_REF_GRAPHS #CLASSIFICATION_PATH_REF_GRAPHS + DETECTION_PATH_REF_GRAPHS
+INPUT_SHAPES = SEGMENTATION_INPUT_SHAPES #CLASSIFICATION_INPUT_SHAPES + DETECTION_INPUT_SHAPES
 
 REFERENCE_GRAPHS_TEST_ROOT = 'data/reference_graphs/quantization'
 
@@ -99,7 +145,7 @@ def test_min_max_quantization_graph(tmp_path, model, path_ref_graph, input_shape
     data_dir = os.path.join(TEST_ROOT, 'onnx', REFERENCE_GRAPHS_TEST_ROOT)
     path_to_dot = os.path.abspath(os.path.join(data_dir, path_ref_graph))
 
-    check_nx_graph(nx_graph, path_to_dot)
+    check_nx_graph(nx_graph, path_to_dot, True)
 
 
 @pytest.mark.parametrize(('model', 'path_ref_graph', 'input_shape'),

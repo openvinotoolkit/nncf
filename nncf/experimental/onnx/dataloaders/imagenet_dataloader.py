@@ -15,8 +15,9 @@ from typing import List
 
 import os
 
-from nncf.common.utils.logger import logger as nncf_logger
+import numpy as np
 
+from nncf.common.utils.logger import logger as nncf_logger
 from nncf.experimental.post_training.api.dataloader import DataLoader
 
 
@@ -29,6 +30,30 @@ class ImageNetDataLoader(DataLoader):
     def __getitem__(self, item):
         tensor, target = self.dataset[item]
         tensor = tensor.cpu().detach().numpy()
+        return tensor, target
+
+    def __len__(self):
+        return len(self.dataset)
+
+
+class BinarizedImageNetDataLoader(DataLoader):
+    def __init__(self, dataset_path, batch_size, shuffle):
+        super().__init__(batch_size, shuffle)
+        self.dataset_path = dataset_path
+        self.instances = []
+        for root, _, fnames in sorted(os.walk(dataset_path, followlinks=True)):
+            for fname in sorted(fnames):
+                path = os.path.join(root, fname)
+                item = path
+                self.instances.append(item)
+
+        nncf_logger.info('The dataloader is built with the data located on  {}'.format(dataset_path))
+
+    def __getitem__(self, item):
+        filename = self.instances[item]
+        sample = np.load(filename, allow_pickle=True)
+        tensor, target = sample
+        # tensor = tensor.cpu().detach().numpy()
         return tensor, target
 
     def __len__(self):
@@ -57,3 +82,12 @@ def create_dataloader_from_imagenet_torch_dataset(dataset_dir: str,
     # The best practise is to use validation part of dataset for calibration (aligning with POT)
     initialization_dataset = torchvision.datasets.ImageFolder(os.path.join(dataset_dir), transform)
     return ImageNetDataLoader(initialization_dataset, batch_size, shuffle)
+
+
+def binarize_imagenet_dataset(dataloader: ImageNetDataLoader):
+    for i, sample in enumerate(dataloader):
+        np.save('/home/aleksei/tmp/imagenet_binary/' + str(i), sample)
+
+
+def create_binarized_imagenet_dataset(dataset_path):
+    return BinarizedImageNetDataLoader(dataset_path, 1, True)

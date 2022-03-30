@@ -42,6 +42,8 @@ class ONNXStatisticsAggregator(StatisticsAggregator):
         for _, v in self.layers_statistics.items():
             max_number_samples = max(max_number_samples, v.num_samples)
 
+        # onnx.save(model_with_intermediate_outputs, '/home/aleksei/tmp/onnx/deeplabv3.onnx')
+
         with tempfile.NamedTemporaryFile() as temporary_model:
             onnx.save(model_with_intermediate_outputs, temporary_model.name)
             self.engine.set_model(temporary_model.name)
@@ -57,4 +59,5 @@ class ONNXStatisticsAggregator(StatisticsAggregator):
     def _agregate_statistics(self, output, layers_statistics: Dict[str, TensorStatisticCollectorBase]):
         for k, v in layers_statistics.items():
             tensor = output[k]
+            print(k)
             v.register_input(tensor)
