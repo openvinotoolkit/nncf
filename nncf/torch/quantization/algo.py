@@ -851,7 +851,6 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
         non_unified_scales_quantization_point_ids = set(quantizer_setup.quantization_points.keys())
         already_weight_quantized_shared_layers = {}  # type: Dict[str, QuantizerId]
 
-        # algo build insertion command for two disjoint groups: unified scales and non-unified scales
         for unified_scales_group in quantizer_setup.unified_scale_groups.values():
             for us_qp_id in unified_scales_group:
                 non_unified_scales_quantization_point_ids.discard(us_qp_id)
@@ -860,7 +859,7 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
                 self._remove_shared_layer_weight_quantization_point_duplicates(unified_scales_group,
                                                                                quantizer_setup,
                                                                                target_model_graph)
-            # chooses target points for unified scales group and then runs _quantize_at_points_by_single_module()
+
             quant_module_id, commands = self._build_commands_for_single_unified_scale_group(
                 target_model,
                 quantizer_setup,
@@ -888,8 +887,6 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
                     qp_id_vs_quant_module_id_dict[qp_id] = already_weight_quantized_shared_layers[layer_name]
                     continue
 
-            # qip = qp.insertion_point
-            # tp = PTTargetPointTranslator.translate(qip)
             qspec = quantizer_setup.quantization_points[qp_id].qspec
             tp = quantizer_setup.quantization_points[qp_id].target_point
 
@@ -1043,9 +1040,7 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
             if min_values is not None and max_values is not None:
                 range_init_minmax_values = min_values, max_values
 
-        # quant_insertion_points = [quantizer_setup.quantization_points[qp_id].insertion_point for qp_id in sorted_qp_ids]
         target_points = [quantizer_setup.quantization_points[qp_id].target_point for qp_id in sorted_qp_ids]
-        # do we really need here many target points or maybe just primary one?
         quantizer_module_id, commands = self._quantize_at_points_by_single_module(target_model,
                                                                                   target_points,
                                                                                   qspec,
@@ -1087,12 +1082,6 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
 
         def is_weights(ip: PTTargetPoint) -> bool:
             return ip.target_type is TargetType.OPERATION_WITH_WEIGHTS
-
-        # The scale shapes for all insertion points must match, otherwise it is impossible to quantize them all
-        # using a single module
-        # if not all(shape == scale_shapes[0] for shape in scale_shapes):
-        #     raise RuntimeError("Scale shapes for the insertion points do not match!")
-        # scale_shape = qspec.scale_shape
 
         primary_ip = insertion_points[0]
 
