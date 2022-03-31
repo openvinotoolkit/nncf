@@ -87,13 +87,13 @@ def run(onnx_model_path: str, output_model_path: str,
     print("Post-Training Quantization has just started!")
     quantized_model = builder.apply(original_model, dataloader)
 
-    # Step 6: Save the quantized model.
+    # Step 5: Save the quantized model.
     onnx.save(quantized_model, output_model_path)
     print(f"The quantized model is saved on {output_model_path}")
 
     onnx.checker.check_model(output_model_path)
 
-    # Step 7: (Optional) Validate the quantized model.
+    # Step 6: (Optional) Validate the quantized model.
     if evaluate:
         print("Validating of the quantized model has started")
         metrics = builder.evaluate(quantized_model, metric, dataloader)

@@ -55,7 +55,8 @@ class ONNXRandomBatchSampler(RandomBatchSampler):
         raise RuntimeError('Unexpected input data type {tensors[0]}. Should be one of torch.Tensor or np.ndarray')
 
 
-def create_onnx_sampler(dataloader: DataLoader, sample_indices: List) -> Union[ONNXBatchSampler, ONNXRandomBatchSampler]:
+def create_onnx_sampler(dataloader: DataLoader,
+                        sample_indices: List) -> Union[ONNXBatchSampler, ONNXRandomBatchSampler]:
     if dataloader.shuffle:
         nncf_logger.info('Using Shuffled dataset')
         return ONNXRandomBatchSampler(dataloader, sample_indices=sample_indices)
