@@ -22,9 +22,7 @@ from nncf.experimental.post_training.algorithms import Algorithm
 
 from nncf.experimental.post_training.backend import Backend
 from nncf.experimental.post_training.backend import get_model_backend
-import onnx
-# pylint: disable=no-member
-import tempfile
+
 
 ModelType = TypeVar('ModelType')
 
@@ -47,7 +45,7 @@ class CompressionBuilder:
         # TODO (Nikita Malinin): Place "ifs" into the backend-specific expandable structure
         if backend == Backend.ONNX:
             from nncf.experimental.onnx.engine import ONNXEngine
-            return ONNXEngine(**{'log_severity_level': 3})
+            return ONNXEngine()
         return None
 
     def _create_statistics_aggregator(self, engine: Engine, dataloader: DataLoader, backend: Backend):
@@ -104,9 +102,7 @@ class CompressionBuilder:
 
         if engine is None:
             engine = self._create_engine(backend)
-        with tempfile.NamedTemporaryFile() as temporary_model:
-            onnx.save(model, temporary_model.name)
-            engine.set_model(temporary_model.name)
+        engine.set_model(model)
         engine.metrics = metric
         engine.data_loader = dataloader
         return engine.compute_metrics()

@@ -19,6 +19,9 @@ from nncf.experimental.onnx.samplers import create_onnx_sampler
 
 import onnxruntime as rt
 import numpy as np
+import onnx
+# pylint: disable=no-member
+import tempfile
 
 
 class ONNXEngine(Engine):
@@ -38,28 +41,37 @@ class ONNXEngine(Engine):
         Creates ONNXRuntime InferenceSession for the onnx model with the location at 'model'.
         """
         super().set_model(model)
-        self.sess = rt.InferenceSession(model, **self.rt_session_options)
+        with tempfile.NamedTemporaryFile() as temporary_model:
+            onnx.save(model, temporary_model.name)
+            self.sess = rt.InferenceSession(temporary_model.name, **self.rt_session_options)
+
 
     def transform_input(self, inputs):
         return inputs.astype(np.float32)
+
+    def _infer(self, input_data):
+        input_name = self.sess.get_inputs()[0].name
+        output_tensors = self.sess.run([], {input_name: self.transform_input(input_data)})
+        model_outputs = self.sess.get_outputs()
+        return output_tensors, model_outputs
+
 
     def compute_statistics(self, statistics_layout) -> Dict[str, List[np.ndarray]]:
         if not self.is_model_set():
             raise RuntimeError('The {} tried to compute statistics, '
                                'while the model was not set.'.format(self.__class__))
+        # TODO (Nikita Malinin): Add statistics_layout usage via  backend-specific ModelTransformer
 
         sampler = self.sampler if self.sampler else create_onnx_sampler(self.data_loader)
         output = {}
         for sample in sampler:
             _input, _ = sample
-            input_name = self.sess.get_inputs()[0].name
-            output_tensor = self.sess.run([], {input_name: self.transform_input(_input)})
-            model_outputs = self.sess.get_outputs()
+            output_tensors, model_outputs = self._infer(_input)
             for out_id, model_output in enumerate(model_outputs):
                 if model_output.name not in output:
                     output[model_output.name] = []
                 # TODO (Nikita Malinin): Add backend-specific statistics aggregator usage
-                output[model_output.name].append(output_tensor[out_id])
+                output[model_output.name].append(output_tensors[out_id])
         return output
 
     def compute_metrics(self, metrics_per_sample=False):
@@ -71,7 +83,6 @@ class ONNXEngine(Engine):
         sampler = self.sampler if self.sampler else create_onnx_sampler(self.data_loader, range(len(self.data_loader)))
         for sample in sampler:
             input_data, target  = sample
-            input_name = self.sess.get_inputs()[0].name
-            output_tensors = self.sess.run([], {input_name: self.transform_input(input_data)})
+            output_tensors, _ = self._infer(input_data)
             self.metrics.update(output_tensors, target)
         return self.metrics.avg_value

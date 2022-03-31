@@ -45,12 +45,10 @@ class ONNXStatisticsAggregator(StatisticsAggregator):
         for _, v in self.layers_statistics.items():
             max_number_samples = max(max_number_samples, v.num_samples)
 
-        with tempfile.NamedTemporaryFile() as temporary_model:
-            onnx.save(model_with_intermediate_outputs, temporary_model.name)
-            self.engine.set_model(temporary_model.name)
-            self.engine.sampler = create_onnx_sampler(self.dataloader, range(max_number_samples))
-            output = self.engine.compute_statistics(self.layers_statistics)
-            self._agregate_statistics(output, self.layers_statistics)
+        self.engine.set_model(model_with_intermediate_outputs)
+        self.engine.sampler = create_onnx_sampler(self.dataloader, range(max_number_samples))
+        output = self.engine.compute_statistics(self.layers_statistics)
+        self._agregate_statistics(output, self.layers_statistics)
 
     def _agregate_statistics(self, output, layers_statistics: Dict[str, TensorStatisticCollectorBase]):
         for k, v in layers_statistics.items():
