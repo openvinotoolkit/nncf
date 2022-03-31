@@ -157,14 +157,17 @@ Statistics of the filter pruning algorithm:
 | Target filter pruning level           | 0.800 |
 +---------------------------------------+-------+
 ```
+
 ##### Layer statistics
 `Statistics by pruned layers` section lists names of all layers that will be pruned, shapes of their weight tensors, 
 shapes of pruning masks applied to respective weights and percentage of zeros in those masks. 
 
 ##### Model statistics
 The columns `Full` and `Current` represent the values of the corresponding statistics in the original model and compressed one in the current state, respectively.  
-The `Pruning level` column lists a ratio between values of full and current statistics in the correspondent rows defined by the formula:  
-![Statistic pruning level](https://latex.codecogs.com/png.image?\dpi{110}\text{statistic%20pruning%20level}%20=%201%20-%20\text{statistic%20current}%20/%20\text{statistic%20full})
+
+The `Pruning level` column indicates the ratio between the values of the full and current statistics in the corresponding rows, defined by the formula:
+
+![Statistic pruning level](https://latex.codecogs.com/png.image?\dpi{110}\textit{statistic&space;pruning&space;level}&space;=&space;1&space;-&space;\textit{statistic&space;current}&space;/&space;\textit{statistic&space;full})
   
 `Filter pruning level` - percentage of filters removed from the model.  
 
