@@ -671,7 +671,7 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
 
         return self.get_statistics_for_quantizer_setup(target_model, quantizer_setup, range_init_params)
 
-    def _get_single_quantizer_setup_config(self, target_model) -> SingleConfigQuantizerSetup:
+    def _get_single_config_quantizer_setup(self, target_model) -> SingleConfigQuantizerSetup:
         setup_generator = PropagationBasedQuantizerSetupGenerator(self._algo_config,
                                                                   target_model,
                                                                   self.hw_config,
@@ -685,7 +685,7 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
 
     def _get_quantizer_setup(self, target_model: NNCFNetwork) -> PTQuantizerSetup:
         if self._legacy_single_config_quantizer_setup_from_comp_state is None:
-            single_config_quantizer_setup = self._get_single_quantizer_setup_config(target_model)
+            single_config_quantizer_setup = self._get_single_config_quantizer_setup(target_model)
         else:
             single_config_quantizer_setup = self._legacy_single_config_quantizer_setup_from_comp_state
 
@@ -1558,7 +1558,7 @@ class ExperimentalQuantizationBuilder(QuantizationBuilder):
     def _handle_frozen_layers(self, target_model: NNCFNetwork):
         pass
 
-    def _get_single_quantizer_setup_config(self, target_model) -> SingleConfigQuantizerSetup:
+    def _get_single_config_quantizer_setup(self, target_model) -> SingleConfigQuantizerSetup:
         return self._initial_quantizer_setup
 
     def _get_statistics_for_final_range_init(self,

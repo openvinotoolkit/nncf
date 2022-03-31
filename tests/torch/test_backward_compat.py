@@ -237,34 +237,35 @@ sd_without_nncf_bn_wrapping = {
 
 compression_state_without_bn_wrapping = {
     'builder_state':
-    {'quantization':
-        {'quantizer_setup':
-            {'quantization_points':
-                {1: {'qip': {'target_node_name': '/nncf_model_input_0', 'input_port_id': None},
-                     'qip_class': 'ActivationQuantizationInsertionPoint',
-                     'qconfig':
-                         {'num_bits': 8, 'mode': 'symmetric', 'signedness_to_force': None, 'per_channel': False},
-                     'directly_quantized_operator_node_names': ['ConvBNLayer/NNCFConv2d[conv]/conv2d_0']},
-                 # Old bn layer name:                         |||||||||||
-                 2: {'qip': {'target_node_name': 'ConvBNLayer/BatchNorm2d[bn]/batch_norm_0', 'input_port_id': None},
-                     'qip_class': 'ActivationQuantizationInsertionPoint',
-                     'qconfig':
-                         {'num_bits': 8, 'mode': 'symmetric', 'signedness_to_force': None, 'per_channel': False},
-                     'directly_quantized_operator_node_names': ['ConvBNLayer/NNCFConv2d[conv1]/conv2d_0']},
-                 4: {'qip': {'target_node_name': 'ConvBNLayer/NNCFConv2d[conv]/conv2d_0'},
-                     'qip_class': 'WeightQuantizationInsertionPoint',
-                     'qconfig':
-                         {'num_bits': 8, 'mode': 'symmetric', 'signedness_to_force': True, 'per_channel': True},
-                     'directly_quantized_operator_node_names': ['ConvBNLayer/NNCFConv2d[conv]/conv2d_0']},
-                 5: {'qip': {'target_node_name': 'ConvBNLayer/NNCFConv2d[conv1]/conv2d_0'},
-                     'qip_class': 'WeightQuantizationInsertionPoint',
-                     'qconfig':
-                         {'num_bits': 8, 'mode': 'symmetric', 'signedness_to_force': True, 'per_channel': True},
-                     'directly_quantized_operator_node_names': ['ConvBNLayer/NNCFConv2d[conv1]/conv2d_0']}},
-             'unified_scale_groups': {}, 'shared_input_operation_set_groups': {0: [1, 4], 1: [2, 5]}},
-         'build_time_metric_infos': {'aq_potential_num': 3, 'wq_potential_num': 4}}},
+        {'quantization':
+             {'quantizer_setup':
+                  {'quantization_points':
+                       {1: {'qip': {'target_node_name': '/nncf_model_input_0', 'input_port_id': None},
+                            'qip_class': 'ActivationQuantizationInsertionPoint',
+                            'qconfig':
+                                {'num_bits': 8, 'mode': 'symmetric', 'signedness_to_force': None, 'per_channel': False},
+                            'directly_quantized_operator_node_names': ['ConvBNLayer/NNCFConv2d[conv]/conv2d_0']},
+                        # Old bn layer name:                         |||||||||||
+                        2: {'qip': {'target_node_name': 'ConvBNLayer/BatchNorm2d[bn]/batch_norm_0',
+                                    'input_port_id': None},
+                            'qip_class': 'ActivationQuantizationInsertionPoint',
+                            'qconfig':
+                                {'num_bits': 8, 'mode': 'symmetric', 'signedness_to_force': None, 'per_channel': False},
+                            'directly_quantized_operator_node_names': ['ConvBNLayer/NNCFConv2d[conv1]/conv2d_0']},
+                        4: {'qip': {'target_node_name': 'ConvBNLayer/NNCFConv2d[conv]/conv2d_0'},
+                            'qip_class': 'WeightQuantizationInsertionPoint',
+                            'qconfig':
+                                {'num_bits': 8, 'mode': 'symmetric', 'signedness_to_force': True, 'per_channel': True},
+                            'directly_quantized_operator_node_names': ['ConvBNLayer/NNCFConv2d[conv]/conv2d_0']},
+                        5: {'qip': {'target_node_name': 'ConvBNLayer/NNCFConv2d[conv1]/conv2d_0'},
+                            'qip_class': 'WeightQuantizationInsertionPoint',
+                            'qconfig':
+                                {'num_bits': 8, 'mode': 'symmetric', 'signedness_to_force': True, 'per_channel': True},
+                            'directly_quantized_operator_node_names': ['ConvBNLayer/NNCFConv2d[conv1]/conv2d_0']}},
+                   'unified_scale_groups': {}, 'shared_input_operation_set_groups': {0: [1, 4], 1: [2, 5]}},
+              'build_time_metric_infos': {'aq_potential_num': 3, 'wq_potential_num': 4}}},
     'ctrl_state': {'quantization': {'loss_state': None, 'scheduler_state': {'current_step': -1, 'current_epoch': -1},
-                   'compression_stage': CompressionStage.FULLY_COMPRESSED}}}
+                                    'compression_stage': CompressionStage.FULLY_COMPRESSED}}}
 
 
 def test_quantization_ckpt_without_wrapped_bn_loading():
@@ -281,53 +282,118 @@ def test_quantization_ckpt_without_wrapped_bn_loading():
         _ = load_state(compressed_model, sd_without_nncf_bn_wrapping, is_resume=True)
 
 
-compresison_state_without_qspec = {
-    'builder_state':
-        {'quantization':
-             {'quantizer_setup':
-                  {'quantization_points':
-                       {1:
-                            {'qip':
-                                 {'target_node_name': '/nncf_model_input_0', 'input_port_id': None},
-                             'qip_class': 'ActivationQuantizationInsertionPoint',
-                             'qconfig': {'num_bits': 8, 'mode': 'symmetric', 'signedness_to_force': None,
-                                         'per_channel': False},
-                             'directly_quantized_operator_node_names': [
-                                 'TwoConvTestModel/Sequential[features]/Sequential[0]/NNCFConv2d[0]/conv2d_0']},
-                        2: {'qip': {
-                            'target_node_name':
-                                'TwoConvTestModel/Sequential[features]/Sequential[0]/NNCFConv2d[0]/conv2d_0',
-                            'input_port_id': None},
-                            'qip_class': 'ActivationQuantizationInsertionPoint',
-                            'qconfig': {'num_bits': 8, 'mode': 'symmetric', 'signedness_to_force': None,
-                                        'per_channel': False},
-                            'directly_quantized_operator_node_names': [
-                                'TwoConvTestModel/Sequential[features]/Sequential[1]/NNCFConv2d[0]/conv2d_0']},
-                        4: {'qip': {
-                            'target_node_name':
-                                'TwoConvTestModel/Sequential[features]/Sequential[0]/NNCFConv2d[0]/conv2d_0'},
-                            'qip_class': 'WeightQuantizationInsertionPoint',
-                            'qconfig': {'num_bits': 8, 'mode': 'symmetric', 'signedness_to_force': True,
-                                        'per_channel': True},
-                            'directly_quantized_operator_node_names': [
-                                'TwoConvTestModel/Sequential[features]/Sequential[0]/NNCFConv2d[0]/conv2d_0']},
-                        5: {'qip': {
-                            'target_node_name':
-                                'TwoConvTestModel/Sequential[features]/Sequential[1]/NNCFConv2d[0]/conv2d_0'},
-                            'qip_class': 'WeightQuantizationInsertionPoint',
-                            'qconfig': {'num_bits': 8, 'mode': 'symmetric', 'signedness_to_force': True,
-                                        'per_channel': True},
-                            'directly_quantized_operator_node_names': [
-                                'TwoConvTestModel/Sequential[features]/Sequential[1]/NNCFConv2d[0]/conv2d_0']}},
-                   'unified_scale_groups': {}, 'shared_input_operation_set_groups': {0: [1, 4], 1: [2, 5]}},
-              'build_time_metric_infos': {'aq_potential_num': 3, 'wq_potential_num': 2}}},
-    'ctrl_state':
-        {'quantization':
-             {'loss_state': None,
-              'scheduler_state':
-                  {'current_step': -1,
-                   'current_epoch': -1},
-              'compression_stage': CompressionStage.FULLY_COMPRESSED}}}
+old_comp_state = {
+    'ctrl_state': {
+        'quantization': {
+            'loss_state': None,
+            'scheduler_state': {
+                'current_step': -1, 'current_epoch': -1
+            },
+            'compression_stage': CompressionStage.FULLY_COMPRESSED
+        }
+    }, 'builder_state': {
+        'quantization':
+            {'quantizer_setup':
+                 {'quantization_points': {1:
+                                              {'qip':
+                                                   {'target_node_name': '/nncf_model_input_0',
+                                                    'input_port_id': None},
+                                               'qip_class': 'ActivationQuantizationInsertionPoint',
+                                               'qconfig':
+                                                   {'num_bits': 8, 'mode': 'symmetric', 'signedness_to_force': None,
+                                                    'per_channel': False},
+                                               'directly_quantized_operator_node_names': [
+                                                   'ConvBNLayer/NNCFConv2d[conv]/conv2d_0']},
+                                          2: {
+                                              'qip': {
+                                                  'target_node_name': 'ConvBNLayer/NNCFBatchNorm2d[bn]/batch_norm_0',
+                                                  'input_port_id': None},
+                                              'qip_class': 'ActivationQuantizationInsertionPoint',
+                                              'qconfig': {'num_bits': 8, 'mode': 'symmetric',
+                                                          'signedness_to_force': None,
+                                                          'per_channel': False},
+                                              'directly_quantized_operator_node_names': [
+                                                  'ConvBNLayer/NNCFConv2d[conv1]/conv2d_0']},
+                                          4: {'qip': {'target_node_name': 'ConvBNLayer/NNCFConv2d[conv]/conv2d_0'},
+                                              'qip_class': 'WeightQuantizationInsertionPoint',
+                                              'qconfig': {'num_bits': 8, 'mode': 'symmetric',
+                                                          'signedness_to_force': True,
+                                                          'per_channel': True},
+                                              'directly_quantized_operator_node_names': [
+                                                  'ConvBNLayer/NNCFConv2d[conv]/conv2d_0']},
+                                          5: {'qip': {'target_node_name': 'ConvBNLayer/NNCFConv2d[conv1]/conv2d_0'},
+                                              'qip_class': 'WeightQuantizationInsertionPoint',
+                                              'qconfig': {'num_bits': 8, 'mode': 'symmetric',
+                                                          'signedness_to_force': True,
+                                                          'per_channel': True},
+                                              'directly_quantized_operator_node_names': [
+                                                  'ConvBNLayer/NNCFConv2d[conv1]/conv2d_0']}},
+                  'unified_scale_groups': {},
+                  'shared_input_operation_set_groups': {0: [1, 4], 1: [2, 5]}
+                  },
+             'build_time_metric_infos':
+                 {'aq_potential_num': 3, 'wq_potential_num': 4}
+             }
+    }}
+
+reference_new_builder_state = {
+    'quantization': {
+        'quantizer_setup': {
+            'quantization_points': {
+                1: {
+                    'target_point': {
+                        'target_type': {
+                            'name': 'OPERATOR_POST_HOOK'
+                        },
+                        'input_port_id': None,
+                        'target_node_name': '/nncf_model_input_0'},
+                    'qspec': {
+                        'num_bits': 8, 'mode': 'symmetric', 'signedness_to_force': None, 'narrow_range': False,
+                        'half_range': False, 'scale_shape': (1,),
+                        'logarithm_scale': False, 'is_quantized_on_export': False, 'compression_lr_multiplier': None},
+                    'directly_quantized_operator_node_names':
+                        ['ConvBNLayer/NNCFConv2d[conv]/conv2d_0']},
+                2: {
+                    'target_point': {
+                        'target_type': {
+                            'name': 'OPERATOR_POST_HOOK'
+                        },
+                        'input_port_id': None,
+                        'target_node_name': 'ConvBNLayer/NNCFBatchNorm2d[bn]/batch_norm_0'},
+                    'qspec': {
+                        'num_bits': 8, 'mode': 'symmetric', 'signedness_to_force': None, 'narrow_range': False,
+                        'half_range': False, 'scale_shape': (1,), 'logarithm_scale': False,
+                        'is_quantized_on_export': False, 'compression_lr_multiplier': None
+                    },
+                    'directly_quantized_operator_node_names': ['ConvBNLayer/NNCFConv2d[conv1]/conv2d_0']},
+                4: {
+                    'target_point': {
+                        'target_type': {
+                            'name': 'OPERATION_WITH_WEIGHTS'
+                        },
+                        'input_port_id': None, 'target_node_name': 'ConvBNLayer/NNCFConv2d[conv]/conv2d_0'},
+                    'qspec': {
+                        'num_bits': 8, 'mode': 'symmetric', 'signedness_to_force': True, 'narrow_range': True,
+                        'half_range': True, 'scale_shape': (9, 1, 1, 1), 'logarithm_scale': False,
+                        'is_quantized_on_export': True, 'compression_lr_multiplier': None},
+                    'directly_quantized_operator_node_names': ['ConvBNLayer/NNCFConv2d[conv]/conv2d_0']},
+                5: {'target_point': {
+                    'target_type': {
+                        'name': 'OPERATION_WITH_WEIGHTS'
+                    },
+                    'input_port_id': None, 'target_node_name': 'ConvBNLayer/NNCFConv2d[conv1]/conv2d_0'},
+                    'qspec': {
+                        'num_bits': 8, 'mode': 'symmetric', 'signedness_to_force': True, 'narrow_range': True,
+                        'half_range': True, 'scale_shape': (3, 1, 1, 1), 'logarithm_scale': False,
+                        'is_quantized_on_export': True, 'compression_lr_multiplier': None},
+                    'directly_quantized_operator_node_names': ['ConvBNLayer/NNCFConv2d[conv1]/conv2d_0']}
+            },
+            'unified_scale_groups': {},
+            'shared_input_operation_set_groups': {0: [1, 4], 1: [2, 5]}
+        },
+        'build_time_metric_infos': {'aq_potential_num': 3, 'wq_potential_num': 4}
+    }
+}
 
 
 def test_comp_state_without_qspec():
@@ -336,15 +402,7 @@ def test_comp_state_without_qspec():
         "sample_size": [1, 3, 100, 100]
     })
     register_bn_adaptation_init_args(nncf_config)
-    # переделать old compression state он похоже просто непраивльный
-    old_comp_state = torch.load('/home/skholkin/projects/nncf_forked/old_comp_state_convbnlayer.pth')
-    # {'aq_potential_num': 3, 'wq_potential_num': 4}
-    reference_new_comp_state = torch.load('/home/skholkin/projects/nncf_forked/new_comp_state_convbnlayer.pth')
     _, compression_ctrl = create_compressed_model_and_algo_for_test(model, nncf_config,
                                                                     compression_state=old_comp_state)
-    inter_comp_state = compression_ctrl.get_compression_state()
-
-    _, compression_ctrl = create_compressed_model_and_algo_for_test(model, nncf_config)
     curr_comp_state = compression_ctrl.get_compression_state()
-    torch.save(curr_comp_state, '/home/skholkin/projects/nncf_forked/new_comp_state_convbnlayer.pth')
-    assert curr_comp_state['builder_state'] == inter_comp_state['builder_state']
+    assert curr_comp_state['builder_state'] == reference_new_builder_state

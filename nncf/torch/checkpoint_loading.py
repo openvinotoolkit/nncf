@@ -32,13 +32,12 @@ class PTCompressionStateVersion:
     @classmethod
     def from_compression_state(cls, compression_state):
         if cls.SAVE_NAME in compression_state:
-            # will torch load it right?
             return compression_state.get(cls.SAVE_NAME)
         elif BaseCompressionAlgorithmController.BUILDER_STATE not in compression_state and \
-            BaseCompressionAlgorithmController.CONTROLLER_STATE not in compression_state:
+                BaseCompressionAlgorithmController.CONTROLLER_STATE not in compression_state:
             return cls('0.0')
         elif next(iter(compression_state.get('builder_state', {}).get('quantization', {}).get('quantizer_setup', {}).
-                           get('quantization_points', {}).values()), {}).get('qconfig') is not None:
+                               get('quantization_points', {}).values()), {}).get('qconfig') is not None:
             return cls('0.1')
         else:
             raise ValueError('Unknown CompressionState version')
@@ -48,18 +47,35 @@ class PTCompressionStateVersion:
             return True
         return False
 
+    def __ne__(self, other):
+        if self.version != other.version:
+            return True
+        return False
+
     def __lt__(self, other):
         if self.version < other.version:
             return True
         return False
 
-    # ToDo: rewrite all the other comparation operators
+    def __le__(self, other):
+        if self.version <= other.version:
+            return True
+        return False
+
+    def __gt__(self, other):
+        if self.version > other.version:
+            return True
+        return False
+
+    def __ge__(self, other):
+        if self.version >= other.version:
+            return True
+        return False
 
     def is_state_dict(self):
         if self == PTCompressionStateVersion(PTCompressionStateVersion.COMPRESSION_STATE_STATE_DICT):
             return True
         return False
-
 
 
 def load_state(model: torch.nn.Module, state_dict_to_load: dict, is_resume: bool = False,
@@ -377,7 +393,6 @@ class KeyMatcher:
                           'The loader will try to match these entries to the correspoindig `relu` and `relu_` op '
                           'names. The newly exported checkpoints will be adjusted to the new format.',
                           category=DeprecationWarning)
-
 
         if normalized_keys_to_load.has_legacy_storage_keys:
             warnings.warn('Legacy NNCF-enabled .pth checkpoint has been loaded! '
