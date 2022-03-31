@@ -42,6 +42,7 @@ from nncf.torch import CURRENT_TORCH_VERSION
 from nncf.torch.dynamic_graph.context import TracingContext
 from nncf.torch.dynamic_graph.context import get_current_context
 from nncf.torch.dynamic_graph.op_input_processing import OperatorInput
+from nncf.torch.dynamic_graph.trace_tensor import TracedTensor
 from nncf.torch.dynamic_graph.trace_tensor import make_tensor_metas
 from nncf.torch.dynamic_graph.trace_tensor import trace_tensors
 from nncf.torch.layer_utils import _NNCFModuleMixin
@@ -87,8 +88,18 @@ def _handle_torch_indexing_bug(operator_name: str, args: List, kwargs: Dict):
     if CURRENT_TORCH_VERSION < parse_version('1.11.0') and operator_name == '__getitem__':
         inputs = OperatorInput(args, kwargs)
         indices = inputs[1]  # 0-th arg is `self`
-        inputs[1] = (indices,) if torch.is_tensor(indices) else indices
+        original_meta = None
+        if isinstance(indices, TracedTensor):
+            original_meta = indices.tensor_meta
+            tensor_type = indices.type()
+            if tensor_type == "torch.LongTensor" or tensor_type is torch.LongTensor:
+                cast_long_tensor = torch.LongTensor(indices.clone())
+                inputs[1] = cast_long_tensor
+
         yield
+
+        if original_meta is not None:
+            inputs[1] = TracedTensor.from_torch_tensor(inputs[1], original_meta)
     else:
         yield
 
