@@ -135,7 +135,8 @@ Statistics by pruned layers:
 | FConv2d[conv]        |                  |              |                     |
 +----------------------+------------------+--------------+---------------------+
 | ConvBlock[conv2]/NNC | [384, 64, 1, 1]  | [384]        | 0.500               |
-
+| FConv2d[conv]        |                  |              |                     |
++----------------------+------------------+--------------+---------------------+
 Statistics of the pruned model:
 +---------+-------+---------+---------------+
 |    #    | Full  | Current | Pruning level |
@@ -161,15 +162,13 @@ Statistics of the filter pruning algorithm:
 shapes of pruning masks applied to respective weights and percentage of zeros in those masks. 
 
 ##### Model statistics
-The columns `Full` and `Current` represent the values of the corresponding statistics in the original model and compressed one in the current state, respectively. 
+The columns `Full` and `Current` represent the values of the corresponding statistics in the original model and compressed one in the current state, respectively.  
+The `Pruning level` column lists a ratio between values of full and current statistics in the correspondent rows defined by the formula:  
+![Statistic pruning level](https://latex.codecogs.com/png.image?\dpi{110}\text{statistic%20pruning%20level}%20=%201%20-%20\text{statistic%20current}%20/%20\text{statistic%20full})
+  
+`Filter pruning level` - percentage of filters removed from the model.  
 
-`Filter pruning level` - percentage of filters removed from the model. Calculated as: 
-
-![Filter pruning level](https://latex.codecogs.com/png.image?%5Cdpi%7B110%7D%20%5Cinline%20%5Ctextit%7Bfilter%20pruning%20level%7D%20=%201%20-%20(%5Ctextit%7Bcurrent%20number%20of%20filters%20in%20the%20model%20%7D%20/%20%5Ctextit%7B%20total%20number%20of%20filters%20in%20the%20model%7D))
-
-> **NOTE**: All other pruning levels are calculated in a similar way.
-
-`GFLOPs pruning level` - an estimated reduction in the number of floating point operations of the model. 
+`GFLOPs pruning level` - an estimated reduction in the number of floating point operations of the model.   
 The number of FLOPs for a single convolutional layer can be calculated as:
 
 ![FLOPs](https://latex.codecogs.com/png.image?%5Cdpi%7B110%7D%20FLOPs&space;=&space;2&space;%5Ctimes&space;input%5C;channels&space;%5Ctimes&space;kernel%5C;size%5E%7B2%7D%5Ctimes&space;W%5Ctimes&space;H%5Ctimes&space;filters)
