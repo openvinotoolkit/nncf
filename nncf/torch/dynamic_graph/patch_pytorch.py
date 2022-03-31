@@ -153,7 +153,7 @@ def patch_torch_jit_script():
     setattr(torch.jit, "script", torch_jit_script_wrapper)
 
 
-def patch_namespace_opname(namespace, op_info: PatchedOperatorInfo):
+def patch_op_in_namespace(namespace, op_info: PatchedOperatorInfo):
     op_name = op_info.name
     if hasattr(namespace, op_name):
         orig = getattr(namespace, op_name)
@@ -239,7 +239,7 @@ def patch_torch_operators():
         for function_name in function_names:
             op_info = PatchedOperatorInfo(function_name, namespace)
             patched_namespace = get_namespace_to_patch(namespace)
-            patch_namespace_opname(patched_namespace, op_info)
+            patch_op_in_namespace(patched_namespace, op_info)
 
     # Patch operators without tracing so that
     # both they and any internal calls to otherwise traced functions do not appear into the model graph.
@@ -248,15 +248,19 @@ def patch_torch_operators():
         for function_name in function_names:
             op_info = PatchedOperatorInfo(function_name, namespace, skip_trace=True)
             patched_namespace = get_namespace_to_patch(namespace)
-            patch_namespace_opname(patched_namespace, op_info)
+            patch_op_in_namespace(patched_namespace, op_info)
 
-    # Patch __repr__ twice in 'torch.Tensor' and 'TracedTensor'.
-    # This is done to not add operations behind print() operator for the both TracedTensor and torch.Tensor.
+    # Patch __repr__ both in 'torch.Tensor' and 'TracedTensor'.
+    # This is done in order not to add operations behind print() operator for the both TracedTensor and torch.Tensor.
 
     op_info = PatchedOperatorInfo("__repr__", NamespaceTarget.TORCH_TENSOR, skip_trace=True)
-    patch_namespace_opname(torch.Tensor, op_info)
+    patch_op_in_namespace(torch.Tensor, op_info)
     op_info = PatchedOperatorInfo("__repr__", NamespaceTarget.TORCH_TENSOR, skip_trace=True)
-    patch_namespace_opname(TracedTensor, op_info)
+    patch_op_in_namespace(TracedTensor, op_info)
+
+    # Ticket 82065 - consider removing this when we drop support for torch versions other than >=1.11.0
+    op_info = PatchedOperatorInfo("__getitem__", NamespaceTarget.TORCH_TENSOR, skip_trace=True)
+    patch_op_in_namespace(torch.Tensor, op_info)
 
     ORIGINAL_OPERATORS.append(OriginalOpInfo("__call__", torch.nn.Module, torch.nn.Module.__call__))
     torch.nn.Module.__call__ = wrap_module_call(torch.nn.Module.__call__)

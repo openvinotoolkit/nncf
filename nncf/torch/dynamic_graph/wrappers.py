@@ -97,23 +97,26 @@ def get_kwargs_str(kwargs: Dict) -> str:
 @contextmanager
 def _handle_torch_indexing_bug(operator_name: str, args: List, kwargs: Dict):
     """
-    Temporarily sets a TracedTensor's __class__ field to the regular torch.Tensor to
-    work around a bug in torch < 1.11.0. See ticket 82065 for more details.
+    Temporarily casts TracedTensors containing indices for __getitem__ to the regular torch.LongTensor to
+    work around a bug in torch < 1.11.0. This is fixed starting from torch 1.11.0
+    See ticket 82065 for more details.
     """
     if CURRENT_TORCH_VERSION < parse_version('1.11.0') and operator_name == '__getitem__':
         inputs = OperatorInput(args, kwargs)
-        original_tt_indices_vs_metas = {}
-        for idx, elt in enumerate(inputs):
-            if isinstance(elt, TracedTensor):  # applies to `TracedTensor`s
-                original_tt_indices_vs_metas[idx] = elt.tensor_meta
-                tensor_type = elt.type()
-                if tensor_type == "torch.LongTensor" or tensor_type is torch.LongTensor:
-                    cast_long_tensor = torch.LongTensor(elt.clone())
-                    inputs[idx] = cast_long_tensor
+        indices = inputs[1]  # 0-th arg is `self`
+        inputs[1] = (indices,) if torch.is_tensor(indices) else indices
+        # original_tt_indices_vs_metas = {}
+        # for idx, elt in enumerate(inputs):
+        #     if isinstance(elt, TracedTensor):  # applies to `TracedTensor`s
+        #         original_tt_indices_vs_metas[idx] = elt.tensor_meta
+        #         tensor_type = elt.type()
+        #         if tensor_type == "torch.LongTensor" or tensor_type is torch.LongTensor:
+        #             cast_long_tensor = torch.LongTensor(elt.clone())
+        #             inputs[idx] = cast_long_tensor
         yield
-        for idx, elt in enumerate(inputs):
-            if idx in original_tt_indices_vs_metas:  # applies to `TracedTensor`s
-               inputs[idx] = TracedTensor.from_torch_tensor(elt, original_tt_indices_vs_metas[idx])
+        # for idx, elt in enumerate(inputs):
+        #     if idx in original_tt_indices_vs_metas:  # applies to `TracedTensor`s
+        #        inputs[idx] = TracedTensor.from_torch_tensor(elt, original_tt_indices_vs_metas[idx])
     else:
         yield
 
