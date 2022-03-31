@@ -259,8 +259,8 @@ def patch_torch_operators():
     patch_op_in_namespace(TracedTensor, op_info)
 
     # Ticket 82065 - consider removing this when we drop support for torch versions other than >=1.11.0
-    op_info = PatchedOperatorInfo("__getitem__", NamespaceTarget.TORCH_TENSOR, skip_trace=True)
-    patch_op_in_namespace(torch.Tensor, op_info)
+    # op_info = PatchedOperatorInfo("__getitem__", NamespaceTarget.TORCH_TENSOR, skip_trace=True)
+    # patch_op_in_namespace(torch.Tensor, op_info)
 
     ORIGINAL_OPERATORS.append(OriginalOpInfo("__call__", torch.nn.Module, torch.nn.Module.__call__))
     torch.nn.Module.__call__ = wrap_module_call(torch.nn.Module.__call__)
