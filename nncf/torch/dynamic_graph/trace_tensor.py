@@ -66,7 +66,6 @@ class TracedTensor(torch.Tensor):
         Note that this does not return a copy, but modifies the original tensor by reference!
         """
         tensor.tensor_meta = tensor_meta
-        tensor.original_cls = tensor.__class__
         tensor.__class__ = TracedTensor
         return tensor
 
@@ -130,8 +129,7 @@ def trace_tensors(operator_output, node: 'DynamicGraphNode'):
 
 def make_tensor_metas(inputs: 'OperatorInput') -> List[Optional[TensorMeta]]:
     tensor_metas = []
-    for i, node_input_index_entry in enumerate(inputs):
-        node_input = node_input_index_entry.getter()
+    for i, node_input in enumerate(inputs):
         if isinstance(node_input, TracedTensor):
             tensor_metas.append(node_input.tensor_meta)
         elif isinstance(node_input, torch.Tensor) and not isinstance(node_input, TracedTensor):

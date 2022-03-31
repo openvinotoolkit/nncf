@@ -332,8 +332,7 @@ class IterationScopeNodeMatcher(DefaultScopeNodeMatcher):
                 untraced_tensor_inputs = []
                 traced_tensor_inputs = []
                 non_tensor_inputs = []
-                for i in inputs:
-                    input_obj = i.getter()
+                for input_obj in inputs:
                     if isinstance(input_obj, Tensor):
                         if not isinstance(input_obj, TracedTensor):
                             untraced_tensor_inputs.append(input_obj)

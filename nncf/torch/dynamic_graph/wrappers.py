@@ -42,14 +42,11 @@ from nncf.torch import CURRENT_TORCH_VERSION
 from nncf.torch.dynamic_graph.context import TracingContext
 from nncf.torch.dynamic_graph.context import get_current_context
 from nncf.torch.dynamic_graph.op_input_processing import OperatorInput
-from nncf.torch.dynamic_graph.trace_tensor import TracedTensor
 from nncf.torch.dynamic_graph.trace_tensor import make_tensor_metas
 from nncf.torch.dynamic_graph.trace_tensor import trace_tensors
 from nncf.torch.layer_utils import _NNCFModuleMixin
 from nncf.torch.layers import ITERATION_MODULES
 from nncf.torch.layers import NNCF_MODULES_DICT
-from nncf.torch.nested_objects_traversal import NestedObjectIndex
-from nncf.torch.nested_objects_traversal import objwalk
 
 _IGNORED_SCOPES = []
 
@@ -70,6 +67,7 @@ def ignore_scope(cls):
 
 OP_NAMES_REQUIRING_MODULE_ATTRS = [v.op_func_name for v in NNCF_MODULES_DICT] + ['group_norm']
 
+
 @contextmanager
 def no_torch_patch():
     from nncf.torch.dynamic_graph.patch_pytorch import unpatch_torch_operators
@@ -78,26 +76,11 @@ def no_torch_patch():
     from nncf.torch import patch_torch_operators
     patch_torch_operators()
 
-def get_args_str(args: Tuple) -> str:
-    with no_torch_patch():
-        retval = ""
-        for idx, arg in enumerate(args):
-            retval += str(idx) + ': ' + arg.__repr__() + '|' + str(arg.__class__) + ', '
-    return retval
-
-
-
-def get_kwargs_str(kwargs: Dict) -> str:
-    with no_torch_patch():
-        retval = ""
-        for kwarg_name, kwarg_val in kwargs:
-            retval += str(kwarg_name) + '|' + str(kwarg_val.__class__) + kwarg_val.__repr__() + ', '
-    return retval
 
 @contextmanager
 def _handle_torch_indexing_bug(operator_name: str, args: List, kwargs: Dict):
     """
-    Temporarily casts TracedTensors containing indices for __getitem__ to the regular torch.LongTensor to
+    Wraps any tensor indices in [torch.Tensor.]__getitem__ into a tuple to
     work around a bug in torch < 1.11.0. This is fixed starting from torch 1.11.0
     See ticket 82065 for more details.
     """
@@ -105,18 +88,7 @@ def _handle_torch_indexing_bug(operator_name: str, args: List, kwargs: Dict):
         inputs = OperatorInput(args, kwargs)
         indices = inputs[1]  # 0-th arg is `self`
         inputs[1] = (indices,) if torch.is_tensor(indices) else indices
-        # original_tt_indices_vs_metas = {}
-        # for idx, elt in enumerate(inputs):
-        #     if isinstance(elt, TracedTensor):  # applies to `TracedTensor`s
-        #         original_tt_indices_vs_metas[idx] = elt.tensor_meta
-        #         tensor_type = elt.type()
-        #         if tensor_type == "torch.LongTensor" or tensor_type is torch.LongTensor:
-        #             cast_long_tensor = torch.LongTensor(elt.clone())
-        #             inputs[idx] = cast_long_tensor
         yield
-        # for idx, elt in enumerate(inputs):
-        #     if idx in original_tt_indices_vs_metas:  # applies to `TracedTensor`s
-        #        inputs[idx] = TracedTensor.from_torch_tensor(elt, original_tt_indices_vs_metas[idx])
     else:
         yield
 
@@ -144,26 +116,10 @@ def wrap_operator(operator: Callable, operator_info: 'PatchedOperatorInfo'):
     def wrapped(*args, **kwargs):
         ctx = get_current_context()
         if not ctx or getattr(ctx, 'in_operator', False) or not ctx.is_tracing:
-            import torch
-            if operator_info.name == '__repr__':
-                with no_torch_patch():
-                    if hasattr(torch.Tensor.__repr__, '_original_op'):
-                        op1 = torch.Tensor.__repr__._original_op(*args, **kwargs)
-                    else:
-                        op1 = torch.Tensor.__repr__(*args, **kwargs)
-            elif operator_info.name == '__str__':
-                with no_torch_patch():
-                    if hasattr(torch.Tensor.__str__, '_original_op'):
-                        op1 = torch.Tensor.__str__._original_op(*args, **kwargs)
-                    else:
-                        op1 = torch.Tensor.__str__(*args, **kwargs)
-            else:
-                print(f"Calling operator {operator_info.name},\n\t args: {get_args_str(args)}\n\t "
-                      f"kwargs: {get_kwargs_str(kwargs)}")
-                args = list(args)
-                with _handle_torch_indexing_bug(operator_info.name, args, kwargs):
-                    op1 = operator(*args, **kwargs)
-            return op1
+            args = list(args)
+            with _handle_torch_indexing_bug(operator_info.name, args, kwargs):
+                result = operator(*args, **kwargs)
+            return result
 
         ctx.in_operator = True
 
