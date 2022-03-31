@@ -18,7 +18,48 @@ from typing import Dict, List, Set, Tuple
 import torch
 
 from nncf.common.utils.logger import logger as nncf_logger
-from nncf.torch.utils import maybe_convert_legacy_names_in_model_state
+from nncf.common.compression import BaseCompressionAlgorithmController
+
+
+class PTCompressionStateVersion:
+    SAVE_NAME = 'version'
+    CURR_VERSION = '1.1'
+    COMPRESSION_STATE_STATE_DICT = '0.0'
+
+    def __init__(self, version):
+        self.version = version
+
+    @classmethod
+    def from_compression_state(cls, compression_state):
+        if cls.SAVE_NAME in compression_state:
+            # will torch load it right?
+            return compression_state.get(cls.SAVE_NAME)
+        elif BaseCompressionAlgorithmController.BUILDER_STATE not in compression_state and \
+            BaseCompressionAlgorithmController.CONTROLLER_STATE not in compression_state:
+            return cls('0.0')
+        elif next(iter(compression_state.get('builder_state', {}).get('quantization', {}).get('quantizer_setup', {}).
+                           get('quantization_points', {}).values()), {}).get('qconfig') is not None:
+            return cls('0.1')
+        else:
+            raise ValueError('Unknown CompressionState version')
+
+    def __eq__(self, other):
+        if self.version == other.version:
+            return True
+        return False
+
+    def __lt__(self, other):
+        if self.version < other.version:
+            return True
+        return False
+
+    # ToDo: rewrite all the other comparation operators
+
+    def is_state_dict(self):
+        if self == PTCompressionStateVersion(PTCompressionStateVersion.COMPRESSION_STATE_STATE_DICT):
+            return True
+        return False
+
 
 
 def load_state(model: torch.nn.Module, state_dict_to_load: dict, is_resume: bool = False,
@@ -45,6 +86,7 @@ def load_state(model: torch.nn.Module, state_dict_to_load: dict, is_resume: bool
 
     model_state_dict = model.state_dict()
 
+    from nncf.torch.utils import maybe_convert_legacy_names_in_model_state
     maybe_convert_legacy_names_in_model_state(state_dict_to_load)
     key_matcher = KeyMatcher(is_resume, state_dict_to_load, model_state_dict, keys_to_ignore)
     new_dict = key_matcher.run()

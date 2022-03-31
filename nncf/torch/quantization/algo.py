@@ -70,6 +70,7 @@ from nncf.config.extractors import extract_bn_adaptation_init_params
 from nncf.config.extractors import extract_range_init_params
 from nncf.torch.algo_selector import PT_COMPRESSION_ALGORITHMS
 from nncf.torch.algo_selector import ZeroCompressionLoss
+from nncf.torch.checkpoint_loading import PTCompressionStateVersion
 from nncf.torch.compression_method_api import PTCompressionAlgorithmBuilder
 from nncf.torch.compression_method_api import PTCompressionAlgorithmController
 from nncf.torch.debug import CallCountTracker
@@ -474,14 +475,14 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
         self._overflow_fix = self._algo_config.get('overflow_fix', 'enable')
         self._device_for_callable_obj_creation = 'cpu'
 
-    def _load_state_without_name(self, state_without_name: Dict[str, Any]):
+    def _load_state_without_name(self, state_without_name: Dict[str, Any], version: PTCompressionStateVersion = None):
         """
         Initializes object from the state.
 
         :param state_without_name: Output of `get_state()` method.
         """
         quantizer_setup_state = state_without_name[self._state_names.QUANTIZER_SETUP]
-        if list(quantizer_setup_state.get(PTQSetupStateNames.QUANTIZATION_POINTS, {}).values())[0].get(PTQPointStateNames.QSPEC) is None:
+        if version == PTCompressionStateVersion('0.1'):
             self._legacy_single_config_quantizer_setup_from_comp_state =\
                 SingleConfigQuantizerSetup.from_state(quantizer_setup_state)
         else:

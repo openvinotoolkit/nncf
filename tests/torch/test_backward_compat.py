@@ -33,11 +33,9 @@ from tests.common.helpers import TEST_ROOT
 from tests.torch.helpers import create_ones_mock_dataloader
 from tests.torch.helpers import register_bn_adaptation_init_args
 from tests.torch.quantization.test_range_init import SingleConv2dIdentityModel
-from tests.torch.quantization.test_quantization_helpers import get_quantization_config_without_range_init
 from tests.torch.test_compressed_graph import get_basic_quantization_config
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
 from tests.torch.helpers import Command
-from tests.torch.helpers import TwoConvTestModel
 from tests.common.helpers import get_cli_dict_args
 from tests.torch.test_sanity_sample import create_command_line
 
@@ -333,19 +331,20 @@ compresison_state_without_qspec = {
 
 
 def test_comp_state_without_qspec():
-    model = TwoConvTestModel()
-    nncf_config = get_quantization_config_without_range_init()
+    model = ConvBNLayer()
+    nncf_config = get_basic_quantization_config(input_info={
+        "sample_size": [1, 3, 100, 100]
+    })
     register_bn_adaptation_init_args(nncf_config)
-    _, __ = create_compressed_model_and_algo_for_test(model, nncf_config,
-                                                                    compression_state=compresison_state_without_qspec)
-    # Compare compresison_state_without_qspec with compression state after model creation
+    # переделать old compression state он похоже просто непраивльный
+    old_comp_state = torch.load('/home/skholkin/projects/nncf_forked/old_comp_state_convbnlayer.pth')
+    # {'aq_potential_num': 3, 'wq_potential_num': 4}
+    reference_new_comp_state = torch.load('/home/skholkin/projects/nncf_forked/new_comp_state_convbnlayer.pth')
+    _, compression_ctrl = create_compressed_model_and_algo_for_test(model, nncf_config,
+                                                                    compression_state=old_comp_state)
+    inter_comp_state = compression_ctrl.get_compression_state()
 
-
-def test_comp_state_versionning():
-    # Test versionning of compression state
-    pass
-
-
-def test_quantizartion_qspec_compstate():
-    # Test validity of loading from given compression state with qspec
-    pass
+    _, compression_ctrl = create_compressed_model_and_algo_for_test(model, nncf_config)
+    curr_comp_state = compression_ctrl.get_compression_state()
+    torch.save(curr_comp_state, '/home/skholkin/projects/nncf_forked/new_comp_state_convbnlayer.pth')
+    assert curr_comp_state['builder_state'] == inter_comp_state['builder_state']

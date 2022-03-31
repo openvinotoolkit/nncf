@@ -22,6 +22,7 @@ from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elasticity_controller i
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elasticity_dim import ElasticityDim
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.multi_elasticity_handler import MultiElasticityHandler
 from nncf.torch.algo_selector import PT_COMPRESSION_ALGORITHMS
+from nncf.torch.checkpoint_loading import PTCompressionStateVersion
 from nncf.torch.compression_method_api import PTCompressionAlgorithmBuilder
 from nncf.torch.graph.transformations.layout import PTTransformationLayout
 from nncf.torch.nncf_network import NNCFNetwork
@@ -144,7 +145,7 @@ class ElasticityBuilder(PTCompressionAlgorithmBuilder):
             self._state_names.AVAILABLE_ELASTICITY_DIMS: available_elasticity_dims_state
         }
 
-    def _load_state_without_name(self, state_without_name: Dict[str, Any]):
+    def _load_state_without_name(self, state_without_name: Dict[str, Any], version: PTCompressionStateVersion = None):
         """
         Implementation of load state that takes state without builder name.
 

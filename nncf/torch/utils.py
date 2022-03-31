@@ -26,6 +26,7 @@ from nncf.common.utils.logger import logger as nncf_logger
 from nncf.common.compression import BaseCompressionAlgorithmController as BaseController
 from nncf.torch.dynamic_graph.trace_tensor import TracedTensor
 from nncf.torch.layer_utils import _NNCFModuleMixin
+from nncf.torch.checkpoint_loading import PTCompressionStateVersion
 from contextlib import contextmanager
 
 
@@ -347,20 +348,21 @@ def maybe_convert_legacy_names_in_model_state(state_dict_to_load: Dict[str, Any]
         rename_legacy_names_in_state_dict(state_dict_to_load, legacy_names[old_name], old_name, new_name)
 
 
-def maybe_convert_legacy_names_in_compress_state(compression_state: Dict[str, Any], compression_state_version: str) -> None:
+def maybe_convert_legacy_names_in_compress_state(compression_state: Dict[str, Any], compression_state_version: PTCompressionStateVersion) -> None:
     """
     Convert legacy layer names in compression state in case such names exist.
 
     :param compression_state: Compression state to convert.
+    :param compression_state_version: Version of compression state
     """
-    if not compression_state or BaseController.BUILDER_STATE not in compression_state:
+    if not compression_state or not compression_state_version:
+        return
+
+    if compression_state_version < PTCompressionStateVersion('0.1'):
         return
 
     controller_state = compression_state[BaseController.BUILDER_STATE]
-    if not controller_state or 'quantization' not in controller_state:
-        return
-
-    if compression_state_version == '0.1':
+    if compression_state_version == PTCompressionStateVersion('0.1') and (not controller_state or 'quantization' not in controller_state):
         qips = controller_state['quantization']['quantizer_setup']['quantization_points']
 
         detected_legacy_names = {
@@ -384,22 +386,6 @@ def maybe_convert_legacy_names_in_compress_state(compression_state: Dict[str, An
                 warning_deprecated('Legacy Batch Norm layer names was detected in quantization setup target point names. '
                                    'All occurrences of `{}` in nodes names was replaced by `{}`'.format(old_name,
                                                                                                         new_name))
-
-
-def get_compression_state_version(compression_state: Dict[str, Any]):
-    # cyclic import problem
-    from nncf.torch.compression_method_api import PTCompressionAlgorithmController
-    # find a way to strictly set versions by different from str way
-    if PTCompressionAlgorithmController.VERSION in compression_state:
-        return compression_state.get(PTCompressionAlgorithmController.VERSION)
-    elif BaseController.BUILDER_STATE not in compression_state and \
-        BaseController.CONTROLLER_STATE not in compression_state:
-        return '0.0'
-    elif next(iter(compression_state.get('builder_state', {}).get('quantization', {}).get('quantizer_setup', {}).
-                           get('quantization_points', {}).values()), {}).get('qconfig') is not None:
-        return '0.1'
-    else:
-        return None
 
 
 def get_model_device(model: torch.nn.Module) -> torch.device:

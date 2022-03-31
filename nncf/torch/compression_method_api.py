@@ -38,6 +38,7 @@ from nncf.torch.layers import NNCF_MODULES_DICT
 from nncf.torch.layers import NNCF_WRAPPED_USER_MODULES_DICT
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.nncf_network import PTModelTransformer
+from nncf.torch.checkpoint_loading import PTCompressionStateVersion
 
 ModelType = TypeVar('ModelType')
 
@@ -91,7 +92,6 @@ class PTCompressionAlgorithmController(BaseCompressionAlgorithmController):
     Hosts entities that are to be used during the training process, such as compression scheduler and
     compression loss.
     """
-    VERSION = 'version'
 
     def distributed(self):
         """
@@ -115,7 +115,7 @@ class PTCompressionAlgorithmController(BaseCompressionAlgorithmController):
         return {
             self.BUILDER_STATE: self._builder_state,
             self.CONTROLLER_STATE: self.get_state(),
-            self.VERSION: '1.0'
+            PTCompressionStateVersion.SAVE_NAME: PTCompressionStateVersion(PTCompressionStateVersion.CURR_VERSION)
         }
 
 
@@ -194,7 +194,17 @@ class PTCompressionAlgorithmBuilder(BaseCompressionAlgorithmBuilder):
         """
         return {}
 
-    def _load_state_without_name(self, state_without_name: Dict[str, Any]):
+    def load_state(self, state: Dict[str, Any], version: PTCompressionStateVersion = None) -> None:
+        """
+        Initializes object from the state.
+
+        :param state: Output of `get_state()` method.
+        :param version: Version of compression state
+        """
+        if self.name in state:
+            self._load_state_without_name(state[self.name], version)
+
+    def _load_state_without_name(self, state_without_name: Dict[str, Any], version: PTCompressionStateVersion = None):
         """
         Implementation of load state that takes state without builder name.
 
