@@ -529,7 +529,8 @@ class ModelWithIntegerPaths(torch.nn.Module):
         sz = torch.tensor(x.shape).to(x.device)
         sz_tensor = torch.cat([sz])
         idx_tensor = sz_tensor // sz_tensor
-        x = x[idx_tensor] * torch.ones([1, 1]).to(x.device)
+        single_idx = idx_tensor[0]
+        x = x[single_idx] * torch.ones([1, 1]).to(x.device)
         x = self.linear(x)
         return x
 
