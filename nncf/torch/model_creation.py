@@ -86,13 +86,13 @@ def create_compressed_model(model: Module,
     as an object of NNCFNetwork."""
 
     set_debug_log_dir(config.get("log_dir", "."))
-    is_legacy_comp_state = False
+    is_legacy_model_state_dict = False
     compression_state_version = None
     if compression_state is not None:
         compression_state_version = PTCompressionStateVersion.from_compression_state(compression_state)
-        is_legacy_comp_state = compression_state_version.is_state_dict()
+        is_legacy_model_state_dict = compression_state_version.is_state_dict()
 
-    is_state_loadable = compression_state is not None and not is_legacy_comp_state
+    is_state_loadable = compression_state is not None and not is_legacy_model_state_dict
     maybe_convert_legacy_names_in_compress_state(compression_state, compression_state_version)
 
     should_init = compression_state is None
@@ -112,7 +112,7 @@ def create_compressed_model(model: Module,
     compressed_model.rebuild_graph()
 
     try:
-        if is_legacy_comp_state:
+        if is_legacy_model_state_dict:
             from nncf.torch import load_state
             state_dict_to_load = compression_state.get('state_dict', compression_state)
             load_state(compressed_model, state_dict_to_load, is_resume=True)

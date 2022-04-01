@@ -198,7 +198,6 @@ class StatCollectorGenerator:
     def get_all_scale_shapes_with_params(cls, qp: QuantizationPointBase,
                                          target_nncf_graph: PTNNCFGraph) -> Dict[ReductionShape,
                                                                                  PTRangeInitCollectorParams]:
-        # ToDo: this thing has to work with multiple quantizer setup and PTQuantizerSetup
         qconfigs = qp.get_all_configs_list()
         if qp.is_weight_quantization_point():
             module_node = target_nncf_graph.get_node_by_name(qp.insertion_point.target_node_name)
@@ -211,7 +210,6 @@ class StatCollectorGenerator:
             channel_idx = 1  # channel dim for activations
 
         retval = {}
-        # scale_shape, qconfig.mode, qconfig.per_channel
         for qconfig in qconfigs:
             is_weights = qp.is_weight_quantization_point()
             scale_shape = tuple(get_scale_shape(input_shape,

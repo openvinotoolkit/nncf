@@ -36,11 +36,7 @@ class PTCompressionStateVersion:
         elif BaseCompressionAlgorithmController.BUILDER_STATE not in compression_state and \
                 BaseCompressionAlgorithmController.CONTROLLER_STATE not in compression_state:
             return cls('0.0')
-        elif next(iter(compression_state.get('builder_state', {}).get('quantization', {}).get('quantizer_setup', {}).
-                               get('quantization_points', {}).values()), {}).get('qconfig') is not None:
-            return cls('0.1')
-        else:
-            raise ValueError('Unknown CompressionState version')
+        return cls('0.1')
 
     def __eq__(self, other):
         if self.version == other.version:
@@ -393,6 +389,7 @@ class KeyMatcher:
                           'The loader will try to match these entries to the correspoindig `relu` and `relu_` op '
                           'names. The newly exported checkpoints will be adjusted to the new format.',
                           category=DeprecationWarning)
+
 
         if normalized_keys_to_load.has_legacy_storage_keys:
             warnings.warn('Legacy NNCF-enabled .pth checkpoint has been loaded! '

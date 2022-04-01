@@ -11,7 +11,7 @@
  limitations under the License.
 """
 
-from typing import TypeVar
+from typing import TypeVar, Dict, Any
 
 import torch.nn
 
@@ -21,6 +21,7 @@ from nncf.common.composite_compression import CompositeCompressionAlgorithmContr
 from nncf.common.composite_compression import CompositeCompressionLoss
 from nncf.config.extractors import extract_algorithm_names
 from nncf.torch.algo_selector import PT_COMPRESSION_ALGORITHMS
+from nncf.torch.checkpoint_loading import PTCompressionStateVersion
 from nncf.torch.compression_method_api import PTCompressionAlgorithmBuilder
 from nncf.torch.compression_method_api import PTCompressionAlgorithmController
 from nncf.torch.compression_method_api import PTCompressionLoss
@@ -107,6 +108,18 @@ class PTCompositeCompressionAlgorithmBuilder(
     def _get_transformation_layout(self, target_model: NNCFNetwork) -> PTTransformationLayout:
         pass  # Higher-level get_transformation_layout is overridden, no need to define this
 
+    def load_state(self, state: Dict[str, Any], version: PTCompressionStateVersion = None) -> None:
+        """
+        Initializes object from the state.
+
+        :param state: Output of `get_state()` method.
+        :param version: Version of compression state
+        """
+        for builder in self.child_builders:
+            builder.load_state(state, version)
+
+    # write load state for composit Builder
+
 
 class PTCompositeCompressionAlgorithmController(
     CompositeCompressionAlgorithmController, PTCompressionAlgorithmController):
@@ -121,3 +134,13 @@ class PTCompositeCompressionAlgorithmController(
     def prepare_for_export(self):
         for child_ctrl in self.child_ctrls:
             child_ctrl.prepare_for_export()
+
+    def get_compression_state(self) -> Dict[str, Any]:
+        if self._builder_state is None:
+            raise RuntimeError('Internal error: builder state is not set for the controller')
+
+        return {
+            self.BUILDER_STATE: self._builder_state,
+            self.CONTROLLER_STATE: self.get_state(),
+            PTCompressionStateVersion.SAVE_NAME: PTCompressionStateVersion(PTCompressionStateVersion.CURR_VERSION)
+        }
