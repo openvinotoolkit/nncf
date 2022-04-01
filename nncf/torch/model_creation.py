@@ -38,7 +38,7 @@ from nncf.torch.dynamic_graph.graph_tracer import create_input_infos
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.utils import is_dist_avail_and_initialized
 from nncf.torch.utils import is_main_process
-from nncf.torch.utils import PTCompressionStateVersion
+from nncf.torch.checkpoint_loading import PTCompressionStateVersion
 # pylint:disable=too-many-branches
 from nncf.torch.utils import maybe_convert_legacy_names_in_compress_state
 
@@ -90,7 +90,7 @@ def create_compressed_model(model: Module,
     compression_state_version = None
     if compression_state is not None:
         compression_state_version = PTCompressionStateVersion.from_compression_state(compression_state)
-        is_legacy_model_state_dict = compression_state_version.is_state_dict()
+        is_legacy_model_state_dict = (compression_state_version == PTCompressionStateVersion.v0)
 
     is_state_loadable = compression_state is not None and not is_legacy_model_state_dict
     maybe_convert_legacy_names_in_compress_state(compression_state, compression_state_version)

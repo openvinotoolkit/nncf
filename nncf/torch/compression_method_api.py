@@ -38,7 +38,7 @@ from nncf.torch.layers import NNCF_MODULES_DICT
 from nncf.torch.layers import NNCF_WRAPPED_USER_MODULES_DICT
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.nncf_network import PTModelTransformer
-from nncf.torch.checkpoint_loading import PTCompressionStateVersion
+from nncf.torch.checkpoint_loading import PTCompressionStateVersion, PT_COMPRESSION_STATE_VERSION_SAVE_NAME
 
 ModelType = TypeVar('ModelType')
 
@@ -115,7 +115,7 @@ class PTCompressionAlgorithmController(BaseCompressionAlgorithmController):
         return {
             self.BUILDER_STATE: self._builder_state,
             self.CONTROLLER_STATE: self.get_state(),
-            PTCompressionStateVersion.SAVE_NAME: PTCompressionStateVersion(PTCompressionStateVersion.CURR_VERSION)
+            PT_COMPRESSION_STATE_VERSION_SAVE_NAME: max(PTCompressionStateVersion).value
         }
 
 

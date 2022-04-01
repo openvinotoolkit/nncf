@@ -1,0 +1,24 @@
+{
+    "model": "mobilenet_v2",
+    "input_info": {
+      "sample_size": [2, 3, 32, 32]
+    },
+    "num_classes": 100,
+    "batch_size": 64,
+    "optimizer": {
+        "type": "Adam",
+        "base_lr": 1e-4,
+        "schedule_type": "multistep",
+        "steps": [
+            10, 20
+        ]
+    },
+    "epochs": 15,
+    "dataset": "CIFAR100",
+    "compression": [
+        {
+            "algorithm": "knowledge_distillation",
+            "type": "mse"
+        }
+    ]
+}

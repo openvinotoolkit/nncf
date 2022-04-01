@@ -1,0 +1,45 @@
+{
+    "model": "MobileNetV2",
+    "pretrained": true,
+    "input_info": {
+        "sample_size": [1, 224, 224, 3]
+    },
+
+    "batch_size": 256,
+    "epochs": 50,
+
+    "optimizer": {
+        "type": "Adam",
+        "schedule_type": "piecewise_constant",
+        "schedule_params": {
+            "boundaries": [14],
+            "values": [1e-4, 1e-5]
+        }
+    },
+
+    "dataset": "imagenet2012",
+    "dataset_type": "tfds",
+    "compression": [
+        {
+            "algorithm": "magnitude_sparsity",
+            "sparsity_init": 0.2,
+            "params": {
+                "schedule": "multistep",
+                "multistep_steps": [
+                    2,
+                    6,
+                    10
+                ],
+                "multistep_sparsity_levels": [
+                    0.2,
+                    0.3,
+                    0.4,
+                    0.5
+                ]
+            }
+        },
+        {
+            "algorithm": "knowledge_distillation"
+        }
+    ]
+}

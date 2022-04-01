@@ -152,7 +152,7 @@ class PTQPointStateNames:
 
 class PTQuantizationPoint:
     _state_names = PTQPointStateNames
-    def __init__(self, qspec, target_point: PTTargetPoint, directly_quantized_operator_node_names: List[NNCFNodeName]):
+    def __init__(self, qspec: PTQuantizerSpec, target_point: PTTargetPoint, directly_quantized_operator_node_names: List[NNCFNodeName]):
         self.qspec = qspec
         self.target_point = target_point
         self.directly_quantized_operator_node_names = directly_quantized_operator_node_names

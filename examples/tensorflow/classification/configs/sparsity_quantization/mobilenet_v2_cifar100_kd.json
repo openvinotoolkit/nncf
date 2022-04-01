@@ -1,0 +1,26 @@
+{
+    "model": "MobileNetV2",
+    "input_info": {
+        "sample_size": [1, 32, 32, 3]
+    },
+
+    "batch_size": 256,
+    "epochs": 50,
+
+    "optimizer": {
+        "type": "Adam",
+        "schedule_type": "piecewise_constant",
+        "schedule_params": {
+            "boundaries": [20, 30, 40],
+            "values": [1e-3, 1e-4, 1e-5, 1e-6]
+        }
+    },
+
+    "dataset": "cifar100",
+    "dataset_type": "tfds",
+
+    "compression":
+        {
+            "algorithm": "knowledge_distillation"
+        }
+}

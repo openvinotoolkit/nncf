@@ -22,6 +22,7 @@ from nncf.common.composite_compression import CompositeCompressionLoss
 from nncf.config.extractors import extract_algorithm_names
 from nncf.torch.algo_selector import PT_COMPRESSION_ALGORITHMS
 from nncf.torch.checkpoint_loading import PTCompressionStateVersion
+from nncf.torch.checkpoint_loading import PT_COMPRESSION_STATE_VERSION_SAVE_NAME
 from nncf.torch.compression_method_api import PTCompressionAlgorithmBuilder
 from nncf.torch.compression_method_api import PTCompressionAlgorithmController
 from nncf.torch.compression_method_api import PTCompressionLoss
@@ -118,8 +119,6 @@ class PTCompositeCompressionAlgorithmBuilder(
         for builder in self.child_builders:
             builder.load_state(state, version)
 
-    # write load state for composit Builder
-
 
 class PTCompositeCompressionAlgorithmController(
     CompositeCompressionAlgorithmController, PTCompressionAlgorithmController):
@@ -142,5 +141,5 @@ class PTCompositeCompressionAlgorithmController(
         return {
             self.BUILDER_STATE: self._builder_state,
             self.CONTROLLER_STATE: self.get_state(),
-            PTCompressionStateVersion.SAVE_NAME: PTCompressionStateVersion(PTCompressionStateVersion.CURR_VERSION)
+            PT_COMPRESSION_STATE_VERSION_SAVE_NAME: max(PTCompressionStateVersion).value
         }

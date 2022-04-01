@@ -358,11 +358,12 @@ def maybe_convert_legacy_names_in_compress_state(compression_state: Dict[str, An
     if not compression_state or not compression_state_version:
         return
 
-    if compression_state_version < PTCompressionStateVersion('0.1'):
+    if compression_state_version < PTCompressionStateVersion.v1:
         return
 
     controller_state = compression_state[BaseController.BUILDER_STATE]
-    if compression_state_version == PTCompressionStateVersion('0.1') and (not controller_state or 'quantization' not in controller_state):
+    if compression_state_version == PTCompressionStateVersion.v1 and controller_state and\
+            'quantization' in controller_state:
         qips = controller_state['quantization']['quantizer_setup']['quantization_points']
 
         detected_legacy_names = {

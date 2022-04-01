@@ -13,6 +13,7 @@
 import re
 import warnings
 from enum import Enum
+from enum import IntEnum
 from typing import Dict, List, Set, Tuple
 
 import torch
@@ -20,58 +21,27 @@ import torch
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.common.compression import BaseCompressionAlgorithmController
 
+PT_COMPRESSION_STATE_VERSION_SAVE_NAME = 'version'
 
-class PTCompressionStateVersion:
-    SAVE_NAME = 'version'
-    CURR_VERSION = '1.1'
-    COMPRESSION_STATE_STATE_DICT = '0.0'
 
-    def __init__(self, version):
-        self.version = version
+class PTCompressionStateVersion(IntEnum):
+    # Compression State is saved as model state dict
+    v0 = 0
+    # Compression State is saved as hierarchical dict. Consist of ctrl state and builder state.
+    # In Quantization builder state SingleConfigQuantizerSetup is being saved as quantizer setup.
+    v1 = 1
+    # Compression state version is being saved.
+    # In Quantization builder state PTQuantizerSetup is being saved as quantizer setup.
+    v2 = 2
 
-    @classmethod
-    def from_compression_state(cls, compression_state):
-        if cls.SAVE_NAME in compression_state:
-            return compression_state.get(cls.SAVE_NAME)
+    @staticmethod
+    def from_compression_state(compression_state):
+        if PT_COMPRESSION_STATE_VERSION_SAVE_NAME in compression_state:
+            return compression_state.get(PT_COMPRESSION_STATE_VERSION_SAVE_NAME)
         elif BaseCompressionAlgorithmController.BUILDER_STATE not in compression_state and \
                 BaseCompressionAlgorithmController.CONTROLLER_STATE not in compression_state:
-            return cls('0.0')
-        return cls('0.1')
-
-    def __eq__(self, other):
-        if self.version == other.version:
-            return True
-        return False
-
-    def __ne__(self, other):
-        if self.version != other.version:
-            return True
-        return False
-
-    def __lt__(self, other):
-        if self.version < other.version:
-            return True
-        return False
-
-    def __le__(self, other):
-        if self.version <= other.version:
-            return True
-        return False
-
-    def __gt__(self, other):
-        if self.version > other.version:
-            return True
-        return False
-
-    def __ge__(self, other):
-        if self.version >= other.version:
-            return True
-        return False
-
-    def is_state_dict(self):
-        if self == PTCompressionStateVersion(PTCompressionStateVersion.COMPRESSION_STATE_STATE_DICT):
-            return True
-        return False
+            return PTCompressionStateVersion.v0
+        return PTCompressionStateVersion.v1
 
 
 def load_state(model: torch.nn.Module, state_dict_to_load: dict, is_resume: bool = False,

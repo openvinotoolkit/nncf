@@ -482,7 +482,7 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
         :param state_without_name: Output of `get_state()` method.
         """
         quantizer_setup_state = state_without_name[self._state_names.QUANTIZER_SETUP]
-        if version == PTCompressionStateVersion('0.1'):
+        if version == PTCompressionStateVersion.v1:
             self._legacy_single_config_quantizer_setup_from_comp_state =\
                 SingleConfigQuantizerSetup.from_state(quantizer_setup_state)
         else:
