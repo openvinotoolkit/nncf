@@ -30,17 +30,17 @@ class Engine(ABC):
     def __init__(self):
         self.model = None
         self._sampler = None
-        self._data_loader = None
+        self._dataset = None
         self._metrics = None
 
     # TODO (Nikita Malinin): Add statistic aggregator object (per-backend)
     @property
-    def data_loader(self):
-        return self._data_loader
+    def dataset(self):
+        return self._dataset
 
-    @data_loader.setter
-    def data_loader(self, data_loader):
-        self._data_loader = data_loader
+    @dataset.setter
+    def dataset(self, dataset):
+        self._dataset = dataset
 
     @property
     def metrics(self):

@@ -14,7 +14,7 @@ from abc import ABC
 from abc import abstractmethod
 
 
-from nncf.experimental.post_training.api.data_loader import DataLoader
+from nncf.experimental.post_training.api.dataset import Dataset
 
 
 class Sampler(ABC):
@@ -22,11 +22,11 @@ class Sampler(ABC):
     Base class for dataset sampler.
     """
 
-    def __init__(self, dataloader: DataLoader, sample_indices=None):
-        self.dataloader = dataloader
-        self.batch_size = dataloader.batch_size
-        data_loader_len = len(self.dataloader)
-        max_samples_len = min(len(sample_indices), data_loader_len) if sample_indices else data_loader_len
+    def __init__(self, dataset: Dataset, sample_indices=None):
+        self.dataset = dataset
+        self.batch_size = dataset.batch_size
+        dataset_len = len(self.dataset)
+        max_samples_len = min(len(sample_indices), dataset_len) if sample_indices else dataset_len
         self.batch_indices = list(range(0, max_samples_len + 1, self.batch_size))
 
     @abstractmethod

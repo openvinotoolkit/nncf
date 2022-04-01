@@ -15,23 +15,31 @@ import argparse
 import numpy as np
 
 from typing import List
+from typing import Optional
 
 import onnx
 
 from nncf.experimental.post_training.compression_builder import CompressionBuilder
 from nncf.experimental.post_training.algorithms.quantization import PostTrainingQuantization
 from nncf.experimental.post_training.algorithms.quantization import PostTrainingQuantizationParameters
-from nncf.experimental.onnx.dataloaders.imagenet_data_loader import create_dataloader_from_imagenet_torch_dataset
+from nncf.experimental.onnx.datasets.imagenet_dataset import create_imagenet_torch_dataset
 from nncf.experimental.post_training.api.metric import Metric
+from nncf.common.utils.logger import logger as nncf_logger
 
 
 class Accuracy(Metric):
 
-    # Required methods
-    def __init__(self, top_k=1):
+    """
+    The classification accuracy metric is defined as the number of correct predictions
+    divided by the total number of predictions.
+    It measures the proportion of examples for which the predicted label matches the single target label.
+    Metric is calculated as a percentage.
+    """
+
+    def __init__(self, top_k: int = 1):
         super().__init__()
         self._top_k = top_k
-        self._name = 'accuracy@top{}'.format(self._top_k)
+        self._name = f'accuracy@top{self._top_k}'
         self._matches = []
 
     @property
@@ -39,14 +47,16 @@ class Accuracy(Metric):
         """ Returns accuracy metric value for all model outputs. """
         return {self._name: np.ravel(self._matches).mean()}
 
-    def update(self, output, target):
-        """ Updates prediction matches.
-        :param output: model output
-        :param target: annotations
+    def update(self, output: List, target: List):
+        """ Updates prediction matches based on the model output value and target.
+            To calculate the top@N metric, the model output and target data must be represented
+            as a list of length 1 containing vector and scalar values, respectively.
+            :param output: model output
+            :param target: annotations
         """
         if len(output) > 1:
-            raise Exception('The accuracy metric cannot be calculated '
-                            'for a model with multiple outputs')
+            raise ValueError('The accuracy metric cannot be calculated '
+                             'for a model with multiple outputs')
         predictions = np.argsort(output[0], axis=1)[:, -self._top_k:]
         match = [float(t in predictions[i]) for i, t in enumerate(target)]
 
@@ -59,16 +69,17 @@ class Accuracy(Metric):
 
 def run(onnx_model_path: str, output_model_path: str,
         dataset_path: str, batch_size: int, shuffle: bool, num_init_samples: int,
-        input_shape: List[int], ignored_scopes: List[str] = None, evaluate: bool = False):
-    print("Post-Training Quantization Parameters:")
-    print("  number of samples: ", num_init_samples)
-    print("  ignored_scopes: ", ignored_scopes)
+        input_shape: List[int], ignored_scopes: Optional[List[str]] = None,
+        evaluate: Optional[bool] = False):
+    nncf_logger.info("Post-Training Quantization Parameters:")
+    nncf_logger.info(f"  number of samples: {num_init_samples}")
+    nncf_logger.info(f"  ignored_scopes: {ignored_scopes}")
     onnx.checker.check_model(onnx_model_path)
     original_model = onnx.load(onnx_model_path)
-    print(f"The model is loaded from {onnx_model_path}")
+    nncf_logger.info(f"The model is loaded from {onnx_model_path}")
 
-    # Step 1: Initialize the data loader and metric (if need)
-    dataloader = create_dataloader_from_imagenet_torch_dataset(dataset_path, input_shape,
+    # Step 1: Initialize the data loader and metric (if it is needed).
+    dataset = create_imagenet_torch_dataset(dataset_path, input_shape,
                                                                batch_size=batch_size, shuffle=shuffle)
     metric = Accuracy(top_k=1)
 
@@ -84,19 +95,20 @@ def run(onnx_model_path: str, output_model_path: str,
     builder.add_algorithm(quantization)
 
     # Step 4: Execute the pipeline.
-    print("Post-Training Quantization has just started!")
-    quantized_model = builder.apply(original_model, dataloader)
+    nncf_logger.info("Post-Training Quantization has just started!")
+    quantized_model = builder.apply(original_model, dataset)
 
     # Step 5: Save the quantized model.
     onnx.save(quantized_model, output_model_path)
-    print(f"The quantized model is saved on {output_model_path}")
+    nncf_logger.info(f"The quantized model is saved on {output_model_path}")
 
     onnx.checker.check_model(output_model_path)
 
     # Step 6: (Optional) Validate the quantized model.
     if evaluate:
-        print("Validating of the quantized model has started")
-        metrics = builder.evaluate(quantized_model, metric, dataloader)
+        nncf_logger.info("Validation of the quantized model "
+                         "on the validation part of the dataset.")
+        metrics = builder.evaluate(quantized_model, metric, dataset)
         for metric_name, metric_value in metrics.items():
             print(f"{metric_name}: {metric_value}")
 

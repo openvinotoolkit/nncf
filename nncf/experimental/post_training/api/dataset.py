@@ -21,7 +21,7 @@ ModelInput = TypeVar('ModelInput')
 Target = TypeVar('Target')
 
 
-class DataLoader(ABC):
+class Dataset(ABC):
     """
     Base class provides interface to get elements of the dataset.
     """

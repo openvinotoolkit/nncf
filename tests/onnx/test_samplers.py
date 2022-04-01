@@ -20,7 +20,7 @@ import numpy as np
 
 from nncf.experimental.onnx.samplers import ONNXBatchSampler
 from nncf.experimental.onnx.samplers import ONNXRandomBatchSampler
-from nncf.experimental.post_training.api.data_loader import DataLoader
+from nncf.experimental.post_training.api.dataset import Dataset
 
 INPUT_SHAPE = [3, 10, 10]
 
@@ -29,7 +29,7 @@ DATASET_SAMPLES = [(np.zeros(INPUT_SHAPE), 0),
                    (100 * np.ones(INPUT_SHAPE), 2)]
 
 
-class TestDataloader(DataLoader):
+class TestDataloader(Dataset):
     def __init__(self, samples: List[Tuple[np.ndarray, int]]):
         super().__init__(shuffle=False)
         self.samples = samples

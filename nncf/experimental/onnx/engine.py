@@ -63,7 +63,7 @@ class ONNXEngine(Engine):
                                'while the model was not set.'.format(self.__class__))
         # TODO (Nikita Malinin): Add statistics_layout usage via  backend-specific ModelTransformer
         # TODO (Nikita Malinin): Replace range calling with the max length variable
-        sampler = self.sampler if self.sampler else create_onnx_sampler(self.data_loader, range(len(self.data_loader)))
+        sampler = self.sampler if self.sampler else create_onnx_sampler(self.dataset, range(len(self.dataset)))
         output = {}
         for sample in sampler:
             input_data, _ = sample
@@ -81,7 +81,7 @@ class ONNXEngine(Engine):
                                'while the model was not set.'.format(self.__class__))
 
         # TODO (Nikita Malinin): Add per-sample metrics calculation
-        sampler = self.sampler if self.sampler else create_onnx_sampler(self.data_loader, range(len(self.data_loader)))
+        sampler = self.sampler if self.sampler else create_onnx_sampler(self.dataset, range(len(self.dataset)))
         for sample in sampler:
             input_data, target = sample
             output_tensors, _ = self._infer(input_data)

@@ -17,7 +17,7 @@ from nncf.common.utils.logger import logger as nncf_logger
 
 from nncf.experimental.post_training.api.engine import Engine
 from nncf.experimental.post_training.api.metric import Metric
-from nncf.experimental.post_training.api.data_loader import DataLoader
+from nncf.experimental.post_training.api.dataset import Dataset
 from nncf.experimental.post_training.algorithms import Algorithm
 
 from nncf.experimental.post_training.backend import Backend
@@ -48,10 +48,10 @@ class CompressionBuilder:
             return ONNXEngine()
         return None
 
-    def _create_statistics_aggregator(self, engine: Engine, dataloader: DataLoader, backend: Backend):
+    def _create_statistics_aggregator(self, engine: Engine, dataset: Dataset, backend: Backend):
         if backend == Backend.ONNX:
             from nncf.experimental.onnx.statistics.aggregator import ONNXStatisticsAggregator
-            return ONNXStatisticsAggregator(engine, dataloader)
+            return ONNXStatisticsAggregator(engine, dataset)
         return None
 
     def _get_prepared_model_for_compression(self, model: ModelType, backend: Backend) -> ModelType:
@@ -61,7 +61,7 @@ class CompressionBuilder:
             return ONNNXModelNormalizer.modify_onnx_model_for_quantization(model)
         return None
 
-    def apply(self, model: ModelType, dataloader: DataLoader, engine: Engine = None) -> ModelType:
+    def apply(self, model: ModelType, dataset: Dataset, engine: Engine = None) -> ModelType:
         """
         Apply compression algorithms to the 'model'.
         1) Prepare the original model. This step is essential for some backends, e.g. ONNX
@@ -86,7 +86,7 @@ class CompressionBuilder:
         for algorithm in self.algorithms:
             algorithm.create_subalgorithms(backend)
 
-        statistics_aggregator = self._create_statistics_aggregator(engine, dataloader, backend)
+        statistics_aggregator = self._create_statistics_aggregator(engine, dataset, backend)
         for algorithm in self.algorithms:
             layers_to_collect_statistics = algorithm.get_layers_for_statistics(modified_model)
             statistics_aggregator.register_layer_statistics(layers_to_collect_statistics)
@@ -97,12 +97,12 @@ class CompressionBuilder:
             modified_model = algorithm.apply(modified_model, engine, statistics_aggregator.layers_statistics)
         return modified_model
 
-    def evaluate(self, model: ModelType, metric: Metric, dataloader: DataLoader, engine: Engine = None):
+    def evaluate(self, model: ModelType, metric: Metric, dataset: Dataset, engine: Engine = None):
         backend = get_model_backend(model)
 
         if engine is None:
             engine = self._create_engine(backend)
         engine.set_model(model)
         engine.metrics = metric
-        engine.data_loader = dataloader
+        engine.dataset = dataset
         return engine.compute_metrics()

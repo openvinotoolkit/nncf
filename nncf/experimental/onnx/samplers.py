@@ -19,7 +19,7 @@ import numpy as np
 
 from nncf.common.utils.logger import logger as nncf_logger
 
-from nncf.experimental.post_training.api.data_loader import DataLoader
+from nncf.experimental.post_training.api.dataset import Dataset
 
 from nncf.experimental.post_training.samplers import BatchSampler
 from nncf.experimental.post_training.samplers import RandomBatchSampler
@@ -30,8 +30,8 @@ class ONNXBatchSampler(BatchSampler):
         tensors = []  # type: List[torch.tensor]
         targets = []  # type: List[int]
         for i in range(start_i, end_i):
-            tensors.append(self.dataloader[i][0])
-            targets.append(self.dataloader[i][1])
+            tensors.append(self.dataset[i][0])
+            targets.append(self.dataset[i][1])
 
         if isinstance(tensors[0], torch.Tensor):
             return torch.stack(tensors), targets
@@ -45,8 +45,8 @@ class ONNXRandomBatchSampler(RandomBatchSampler):
         tensors = []  # type: List[torch.tensor]
         targets = []  # type: List[int]
         for i in range(start_i, end_i):
-            tensors.append(self.dataloader[self.random_permutated_indices[i]][0])
-            targets.append(self.dataloader[self.random_permutated_indices[i]][1])
+            tensors.append(self.dataset[self.random_permutated_indices[i]][0])
+            targets.append(self.dataset[self.random_permutated_indices[i]][1])
 
         if isinstance(tensors[0], torch.Tensor):
             return torch.stack(tensors), targets
@@ -55,10 +55,10 @@ class ONNXRandomBatchSampler(RandomBatchSampler):
         raise RuntimeError('Unexpected input data type {tensors[0]}. Should be one of torch.Tensor or np.ndarray')
 
 
-def create_onnx_sampler(dataloader: DataLoader,
+def create_onnx_sampler(dataset: Dataset,
                         sample_indices: List) -> Union[ONNXBatchSampler, ONNXRandomBatchSampler]:
-    if dataloader.shuffle:
+    if dataset.shuffle:
         nncf_logger.info('Using Shuffled dataset')
-        return ONNXRandomBatchSampler(dataloader, sample_indices=sample_indices)
+        return ONNXRandomBatchSampler(dataset, sample_indices=sample_indices)
     nncf_logger.info('Using Non-Shuffled dataset')
-    return ONNXBatchSampler(dataloader, sample_indices=sample_indices)
+    return ONNXBatchSampler(dataset, sample_indices=sample_indices)

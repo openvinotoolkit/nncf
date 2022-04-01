@@ -13,7 +13,7 @@
 
 from abc import abstractmethod
 from nncf.experimental.post_training.api.sampler import Sampler
-from nncf.experimental.post_training.api.data_loader import DataLoader
+from nncf.experimental.post_training.api.dataset import Dataset
 
 import random
 
@@ -21,7 +21,8 @@ import random
 # TODO (Nikita Malinin): Replace or rename this file
 class BatchSampler(Sampler):
     """
-    Base class for dataset sampler forms a batch from samples with batch_size determined in dataloader.
+    Base class for dataset sampler forms a batch from samples
+    with batch_size determined in dataset instance.
     """
 
     def __iter__(self):
@@ -30,7 +31,7 @@ class BatchSampler(Sampler):
             yield batch
 
     def __len__(self):
-        return len(self.dataloader)
+        return len(self.dataset)
 
     @abstractmethod
     def form_batch(self, start_i: int, end_i: int):
@@ -40,13 +41,13 @@ class BatchSampler(Sampler):
 class RandomBatchSampler(BatchSampler):
     """
     Base class for dataset sampler forms a batch from randomly shuffled samples
-    with batch_size determined in dataloader.
+    with batch_size determined in dataset instance.
     """
 
-    def __init__(self, dataloader: DataLoader, seed: int = 0, sample_indices=None):
-        super().__init__(dataloader, sample_indices)
+    def __init__(self, dataset: Dataset, seed: int = 0, sample_indices=None):
+        super().__init__(dataset, sample_indices)
         random.seed(seed)
-        self.random_permutated_indices = list(range(len(self.dataloader)))
+        self.random_permutated_indices = list(range(len(self.dataset)))
         random.shuffle(self.random_permutated_indices)
 
     def __iter__(self):
