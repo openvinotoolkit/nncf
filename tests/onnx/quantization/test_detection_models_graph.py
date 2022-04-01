@@ -61,8 +61,8 @@ def test_min_max_quantization_graph(tmp_path, model_name, model_url, path_ref_gr
         os.mkdir(onnx_model_dir)
 
     r = requests.get(model_url)
-    f = open(onnx_model_path, 'wb')
-    f.write(r.content)
+    with open(onnx_model_path, 'wb') as f:
+        f.write(r.content)
 
     original_model = onnx.load(onnx_model_path)
 
