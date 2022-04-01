@@ -21,7 +21,7 @@ import onnx
 from tests.common.helpers import TEST_ROOT
 from tests.onnx.test_nncf_graph_builder import check_nx_graph
 
-from tests.onnx.quantization.test_quantized_graph import TestDataloader
+from tests.onnx.quantization.test_classification_models_graph import TestDataloader
 
 from nncf.experimental.post_training.compression_builder import CompressionBuilder
 from nncf.experimental.onnx.algorithms.quantization.min_max_quantization import ONNXMinMaxQuantization
@@ -32,21 +32,16 @@ from nncf.experimental.onnx.graph.nncf_graph_builder import GraphConverter
 MODELS_NAME = [
     'yolov2-coco-9',
     'tiny-yolov2',
-
 ]
 
 MODELS_URL = [
     'https://github.com/onnx/models/raw/main/vision/object_detection_segmentation/yolov2-coco/model/yolov2-coco-9.onnx',
     'https://github.com/onnx/models/raw/main/vision/object_detection_segmentation/tiny-yolov2/model/tinyyolov2-7.onnx',
-    # 'https://github.com/onnx/models/raw/main/vision/object_detection_segmentation/ssd-mobilenetv1/model/ssd_mobilenet_v1_10.onnx',
-    # "https://github.com/onnx/models/raw/main/vision/object_detection_segmentation/ssd/model/ssd-12.onnx"
 ]
 
 PATH_REF_GRAPHS = [
     'yolov2-coco-9.dot',
     'tiny-yolov2.dot',
-    # 'ssd_mobilenet_v1_10.dot',
-    # 'ssd-12.dot'
 ]
 
 INPUT_SHAPES = [
