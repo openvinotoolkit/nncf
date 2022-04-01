@@ -22,6 +22,7 @@ import tensorflow as tf
 from tensorflow.python.eager import context
 from tensorflow.python.framework import ops
 from tensorflow.python.ops import nn
+from tensorflow.python.ops import math_ops
 
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.tensorflow.layers.operation import NNCFOperation
@@ -216,6 +217,11 @@ class TFPatcher:
             # to remove this for new versions.
             if getattr(nn, fn_name, None) is fn:
                 setattr(nn, fn_name, tf_op_wrapper)
+
+            # TODO(andrey-churkin): This is required because `tensorflow.python.ops.math_ops` module
+            # contains following import `from tensorflow.python.ops.gen_math_ops import *`
+            if getattr(math_ops, fn_name, None) is fn:
+                setattr(math_ops, fn_name, tf_op_wrapper)
 
         ops.name_scope = TFPatcher._wrap_name_scope_internal_fn(ops.name_scope)
         ops.name_scope_v2.__enter__ = TFPatcher._wrap_name_scope_v2_enter_fn(ops.name_scope_v2.__enter__)
