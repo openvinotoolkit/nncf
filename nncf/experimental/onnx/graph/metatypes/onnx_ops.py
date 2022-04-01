@@ -30,114 +30,121 @@ class ONNXOpMetatype(OperatorMetatype):
 
 
 @ONNX_OPERATION_METATYPES.register()
-class ConvolutionMetatype(ONNXOpMetatype):
+class ONNXConvolutionMetatype(ONNXOpMetatype):
     name = 'ConvOp'
     op_names = ['Conv']
     hw_config_names = [HWConfigOpName.CONVOLUTION]
 
 
 @ONNX_OPERATION_METATYPES.register()
-class LinearMetatype(ONNXOpMetatype):
+class ONNXLinearMetatype(ONNXOpMetatype):
     name = 'LinearOp'
     op_names = ['Gemm']
     hw_config_names = [HWConfigOpName.MATMUL]
 
 
 @ONNX_OPERATION_METATYPES.register()
-class ReluMetatype(ONNXOpMetatype):
+class ONNXReluMetatype(ONNXOpMetatype):
     name = 'ReluOp'
     op_names = ['Relu', 'Clip']
 
 
 @ONNX_OPERATION_METATYPES.register()
-class SigmoidMetatype(ONNXOpMetatype):
+class ONNXSigmoidMetatype(ONNXOpMetatype):
     name = 'SigmoidOp'
     op_names = ['Sigmoid']
 
 
 @ONNX_OPERATION_METATYPES.register()
-class GlobalAveragePoolMetatype(ONNXOpMetatype):
+class ONNXGlobalAveragePoolMetatype(ONNXOpMetatype):
     name = 'GlobalAveragePoolOp'
     op_names = ['GlobalAveragePool']
     hw_config_names = [HWConfigOpName.AVGPOOL]
 
 
 @ONNX_OPERATION_METATYPES.register()
-class MaxPoolMetatype(ONNXOpMetatype):
+class ONNXMaxPoolMetatype(ONNXOpMetatype):
     name = 'MaxPoolOp'
     op_names = ['MaxPool']
     hw_config_names = [HWConfigOpName.MAXPOOL]
 
 
 @ONNX_OPERATION_METATYPES.register()
-class ConstantMetatype(ONNXOpMetatype):
+class ONNXConstantMetatype(ONNXOpMetatype):
     name = 'ConstantOp'
     op_names = ['Constant']
 
 
 @ONNX_OPERATION_METATYPES.register()
-class AddLayerMetatype(ONNXOpMetatype):
+class ONNXAddLayerMetatype(ONNXOpMetatype):
     name = 'AddOp'
     op_names = ['Add']
     hw_config_names = [HWConfigOpName.ADD]
 
 
 @ONNX_OPERATION_METATYPES.register()
-class MulLayerMetatype(ONNXOpMetatype):
+class ONNXMulLayerMetatype(ONNXOpMetatype):
     name = 'MulOp'
     op_names = ['Mul']
     hw_config_names = [HWConfigOpName.MULTIPLY]
 
 
 @ONNX_OPERATION_METATYPES.register()
-class SumMetatype(ONNXOpMetatype):
+class ONNXSumMetatype(ONNXOpMetatype):
     name = 'SumOp'
     op_names = ['Sum']
     hw_config_names = [HWConfigOpName.REDUCESUM]
 
 
 @ONNX_OPERATION_METATYPES.register()
-class ConcatLayerMetatype(ONNXOpMetatype):
+class ONNXConcatLayerMetatype(ONNXOpMetatype):
     name = 'ConcatOp'
     op_names = ['Concat']
     hw_config_names = [HWConfigOpName.CONCAT]
 
 
 @ONNX_OPERATION_METATYPES.register()
-class BatchNormMetatype(ONNXOpMetatype):
+class ONNXBatchNormMetatype(ONNXOpMetatype):
     name = 'BatchNormalizationOp'
     op_names = ['BatchNormalization']
 
 
 @ONNX_OPERATION_METATYPES.register()
-class ResizeMetatype(ONNXOpMetatype):
+class ONNXResizeMetatype(ONNXOpMetatype):
     name = 'ResizeOp'
     op_names = ['Resize']
+    hw_config_names = [HWConfigOpName.INTERPOLATE]
 
 
 @ONNX_OPERATION_METATYPES.register()
-class ReshapeMetatype(ONNXOpMetatype):
+class ONNXReshapeMetatype(ONNXOpMetatype):
     name = 'ReshapeOp'
     op_names = ['Reshape']
     hw_config_names = [HWConfigOpName.RESHAPE]
 
 
 @ONNX_OPERATION_METATYPES.register()
-class TransposeMetatype(ONNXOpMetatype):
+class ONNXTransposeMetatype(ONNXOpMetatype):
     name = 'TransposeOp'
     op_names = ['Transpose']
     hw_config_names = [HWConfigOpName.TRANSPOSE]
 
 
 @ONNX_OPERATION_METATYPES.register()
-class FlattenMetatype(ONNXOpMetatype):
+class ONNXFlattenMetatype(ONNXOpMetatype):
     name = 'FlattenOp'
     op_names = ['Flatten']
     hw_config_names = [HWConfigOpName.FLATTEN]
 
 
-GENERAL_WEIGHT_LAYER_METATYPES = [ConvolutionMetatype,
-                                  LinearMetatype]
+@ONNX_OPERATION_METATYPES.register()
+class ONNXSoftmaxMetatype(ONNXOpMetatype):
+    name = 'SoftmaxOp'
+    op_names = ['Softmax']
+
+
+GENERAL_WEIGHT_LAYER_METATYPES = [ONNXConvolutionMetatype,
+                                  ONNXLinearMetatype]
 
 
 def get_operator_metatypes() -> List[Type[OperatorMetatype]]:
