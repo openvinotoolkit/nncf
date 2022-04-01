@@ -72,8 +72,6 @@ def test_min_max_quantization_graph(tmp_path, model_name, path_ref_graph, input_
 
     check_nx_graph(nx_graph, path_to_dot, True)
 
-    onnx.save(quantized_model, '/home/aleksei/tmp/onnx/' + model_name + '.onnx')
-
     with tempfile.NamedTemporaryFile() as temporary_model:
         onnx.save(quantized_model, temporary_model.name)
 
