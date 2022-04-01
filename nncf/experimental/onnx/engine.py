@@ -20,7 +20,6 @@ from nncf.experimental.onnx.samplers import create_onnx_sampler
 import onnxruntime as rt
 import numpy as np
 import onnx
-# pylint: disable=no-member
 import tempfile
 
 
