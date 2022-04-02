@@ -362,7 +362,7 @@ class ElasticKernelHandler(SingleElasticityHandler):
         :return: list of kernel sizes per layer
         """
         config = self._collect_ops_data_by_selection_rule(
-            lambda op: op.kernel_size_list[random.randrange(0, len(op.kernel_size_list))]
+            lambda op: op.kernel_size_list[random.randrange(0, len(op.kernel_size_list))]  # nosec
         )
         return config
 
