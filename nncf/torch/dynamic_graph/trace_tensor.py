@@ -65,8 +65,8 @@ class TracedTensor(torch.Tensor):
         """
         Note that this does not return a copy, but modifies the original tensor by reference!
         """
-        tensor.tensor_meta = tensor_meta
         tensor.__class__ = TracedTensor
+        tensor.tensor_meta = tensor_meta
         return tensor
 
     def as_subclass(self, cls: 'TracedTensor') -> 'TracedTensor':

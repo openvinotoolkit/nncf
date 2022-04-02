@@ -42,7 +42,6 @@ from nncf.torch import CURRENT_TORCH_VERSION
 from nncf.torch.dynamic_graph.context import TracingContext
 from nncf.torch.dynamic_graph.context import get_current_context
 from nncf.torch.dynamic_graph.op_input_processing import OperatorInput
-from nncf.torch.dynamic_graph.trace_tensor import TracedTensor
 from nncf.torch.dynamic_graph.trace_tensor import make_tensor_metas
 from nncf.torch.dynamic_graph.trace_tensor import trace_tensors
 from nncf.torch.layer_utils import _NNCFModuleMixin
@@ -87,33 +86,17 @@ def _handle_torch_indexing_bug(operator_name: str, args: List, kwargs: Dict):
     """
     if CURRENT_TORCH_VERSION < parse_version('1.11.0') and operator_name == '__getitem__':
         inputs = OperatorInput(args, kwargs)
-        original_meta_vs_idx = {}  # type: Dict[int, TensorMeta]
-        for idx, input_ in enumerate(inputs):
-            if isinstance(input_, TracedTensor):
-                original_meta_vs_idx[idx] = input_.tensor_meta
-                tensor_type = input_.type()
-                if tensor_type == "torch.LongTensor" or tensor_type is torch.LongTensor:
-                    if input_.size() == 0:  # Scalar tensor
-                        cast_long_tensor = torch.LongTensor(input_.clone())
-                    else:
-                        cast_long_tensor = torch.tensor(input_.clone(), dtype=torch.int64)
-                    inputs[idx] = cast_long_tensor
-                else:
-                    inputs[idx] = torch.Tensor(input_.clone())
 
         indices = inputs[1]
         made_tuple_from_indices = False
         if isinstance(indices, torch.Tensor):
-            inputs[1] = (indices, )
+            inputs[1] = (indices,)
             made_tuple_from_indices = True
 
         yield
-
-        for idx, meta in enumerate(original_meta_vs_idx):
-            if idx == 1 and made_tuple_from_indices:
-                unpacked_indices_tensor = inputs[idx][0]
-                inputs[idx] = TracedTensor.from_torch_tensor(unpacked_indices_tensor, meta)
-            inputs[idx] = TracedTensor.from_torch_tensor(inputs[idx], meta)
+        if made_tuple_from_indices:
+            unpacked_indices_tensor = inputs[1][0]
+            inputs[1] = unpacked_indices_tensor
     else:
         yield
 
