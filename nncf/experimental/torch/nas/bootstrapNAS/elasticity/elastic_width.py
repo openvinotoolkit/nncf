@@ -505,7 +505,7 @@ class ElasticWidthHandler(SingleElasticityHandler):
         :return: map of pruning group id to width value
         """
         return self._collect_ops_data_by_selection_rule(
-            lambda op: op.width_list[random.randrange(0, self._get_width_list_len(op))]
+            lambda op: op.width_list[random.randrange(0, self._get_width_list_len(op))]  # nosec
         )
 
     def get_minimum_config(self) -> ElasticWidthConfig:
