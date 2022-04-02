@@ -11,11 +11,11 @@
  limitations under the License.
 """
 
-from typing import Dict
 from typing import List
 
 from nncf.experimental.post_training.api.engine import Engine
 from nncf.experimental.onnx.samplers import create_onnx_sampler
+from nncf.experimental.post_training.api.sampler import Sampler
 
 import onnxruntime as rt
 import numpy as np
@@ -30,59 +30,38 @@ class ONNXEngine(Engine):
 
     def __init__(self, **rt_session_options):
         super().__init__()
+        self._inputs_transforms = lambda input_data: input_data.astype(np.float32)
         self.sess = None
         self.rt_session_options = rt_session_options
         if 'providers' not in self.rt_session_options:
             self.rt_session_options['providers'] = ['OpenVINOExecutionProvider']
 
+    def get_sampler(self) -> Sampler:
+        # TODO (Nikita Malinin): Replace range calling with the max length variable
+        return self.sampler if self.sampler else create_onnx_sampler(self.dataset, range(len(self.dataset)))
+
     def set_model(self, model: str) -> None:
         """
         Creates ONNXRuntime InferenceSession for the onnx model with the location at 'model'.
+
+        :param model: onnx.ModelProto model instance
         """
         super().set_model(model)
         with tempfile.NamedTemporaryFile() as temporary_model:
             onnx.save(model, temporary_model.name)
             self.sess = rt.InferenceSession(temporary_model.name, **self.rt_session_options)
 
+    def infer(self, input_data: np.ndarray) -> List[np.ndarray, List[str]]:
+        """
+        Runs model on the provided input_data via ONNXRuntime InferenceSession.
+        Returns the dictionary of model outputs by node names.
 
-    def transform_input(self, inputs):
-        return inputs.astype(np.float32)
-
-
-    def _infer(self, input_data):
+        :param input_data: inputs for the model transformed with the inputs_transforms
+        :return output_data: models output after outputs_transforms
+        """
+        # TODO (Nikita Malinin): Need to change input_data to Dict values by input names
         input_name = self.sess.get_inputs()[0].name
-        output_tensors = self.sess.run([], {input_name: self.transform_input(input_data)})
+        output_tensors = self.sess.run([], {input_name: self._inputs_transforms(input_data)})
         model_outputs = self.sess.get_outputs()
+        output_tensors = self._outputs_transforms(output_tensors)
         return output_tensors, model_outputs
-
-
-    def compute_statistics(self, statistics_layout) -> Dict[str, List[np.ndarray]]:
-        if not self.is_model_set():
-            raise RuntimeError('The {} tried to compute statistics, '
-                               'while the model was not set.'.format(self.__class__))
-        # TODO (Nikita Malinin): Add statistics_layout usage via  backend-specific ModelTransformer
-        # TODO (Nikita Malinin): Replace range calling with the max length variable
-        sampler = self.sampler if self.sampler else create_onnx_sampler(self.dataset, range(len(self.dataset)))
-        output = {}
-        for sample in sampler:
-            input_data, _ = sample
-            output_tensors, model_outputs = self._infer(input_data)
-            for out_id, model_output in enumerate(model_outputs):
-                if model_output.name not in output:
-                    output[model_output.name] = []
-                # TODO (Nikita Malinin): Add backend-specific statistics aggregator usage
-                output[model_output.name].append(output_tensors[out_id])
-        return output
-
-    def compute_metrics(self, metrics_per_sample=False):
-        if not self.is_model_set():
-            raise RuntimeError('The {} tried to compute statistics, '
-                               'while the model was not set.'.format(self.__class__))
-
-        # TODO (Nikita Malinin): Add per-sample metrics calculation
-        sampler = self.sampler if self.sampler else create_onnx_sampler(self.dataset, range(len(self.dataset)))
-        for sample in sampler:
-            input_data, target = sample
-            output_tensors, _ = self._infer(input_data)
-            self.metrics.update(output_tensors, target)
-        return self.metrics.avg_value
