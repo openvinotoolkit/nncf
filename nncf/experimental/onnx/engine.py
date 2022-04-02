@@ -12,6 +12,7 @@
 """
 
 from typing import List
+from typing import Tuple
 
 from nncf.experimental.post_training.api.engine import Engine
 from nncf.experimental.onnx.samplers import create_onnx_sampler
@@ -51,7 +52,7 @@ class ONNXEngine(Engine):
             onnx.save(model, temporary_model.name)
             self.sess = rt.InferenceSession(temporary_model.name, **self.rt_session_options)
 
-    def infer(self, input_data: np.ndarray) -> List[np.ndarray, List[str]]:
+    def infer(self, input_data: np.ndarray) -> Tuple[List[np.ndarray], List[str]]:
         """
         Runs model on the provided input_data via ONNXRuntime InferenceSession.
         Returns the dictionary of model outputs by node names.

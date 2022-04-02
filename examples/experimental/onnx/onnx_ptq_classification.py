@@ -72,11 +72,11 @@ def run(onnx_model_path: str, output_model_path: str,
         input_shape: List[int], ignored_scopes: Optional[List[str]] = None,
         evaluate: Optional[bool] = False):
     nncf_logger.info("Post-Training Quantization Parameters:")
-    nncf_logger.info(f"  number of samples: {num_init_samples}")
-    nncf_logger.info(f"  ignored_scopes: {ignored_scopes}")
+    nncf_logger.info("  number of samples: {}".format(nncf_logger.info))
+    nncf_logger.info("  ignored_scopes: {}".format(ignored_scopes))
     onnx.checker.check_model(onnx_model_path)
     original_model = onnx.load(onnx_model_path)
-    nncf_logger.info(f"The model is loaded from {onnx_model_path}")
+    nncf_logger.info("The model is loaded from {}".format(onnx_model_path))
 
     # Step 1: Initialize the data loader and metric (if it is needed).
     dataset = create_imagenet_torch_dataset(dataset_path, input_shape,
@@ -100,7 +100,7 @@ def run(onnx_model_path: str, output_model_path: str,
 
     # Step 5: Save the quantized model.
     onnx.save(quantized_model, output_model_path)
-    nncf_logger.info(f"The quantized model is saved on {output_model_path}")
+    nncf_logger.info("The quantized model is saved on {}".format(output_model_path))
 
     onnx.checker.check_model(output_model_path)
 
@@ -110,7 +110,7 @@ def run(onnx_model_path: str, output_model_path: str,
                          "on the validation part of the dataset.")
         metrics = builder.evaluate(quantized_model, metric, dataset)
         for metric_name, metric_value in metrics.items():
-            print(f"{metric_name}: {metric_value}")
+            nncf_logger.info("{}: {}".format(metric_name, metric_value))
 
 
 if __name__ == '__main__':
