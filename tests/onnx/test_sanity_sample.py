@@ -47,7 +47,7 @@ INPUT_SHAPES = [
 ]
 
 
-class TestDataloader(Dataset):
+class TestDataset(Dataset):
     def __init__(self, samples: List[Tuple[np.ndarray, int]]):
         super().__init__(shuffle=False)
         self.samples = samples
@@ -59,14 +59,14 @@ class TestDataloader(Dataset):
         return 1
 
 
-def mock_dataloader_creator(dataset_path, input_shape, batch_size, shuffle):
-    return TestDataloader([(np.zeros(input_shape[1:]), 0), ])
+def mock_dataset_creator(dataset_path, input_shape, batch_size, shuffle):
+    return TestDataset([(np.zeros(input_shape[1:]), 0), ])
 
 
 @pytest.mark.parametrize(("model, input_shape"),
                          zip(MODELS, INPUT_SHAPES))
 @patch('examples.experimental.onnx.onnx_ptq_classification.create_imagenet_torch_dataset',
-       new=mock_dataloader_creator)
+       new=mock_dataset_creator)
 def test_sanity_quantize_sample(tmp_path, model, input_shape):
     model_name = str(model.__class__)
     onnx_model_dir = str(TEST_ROOT.joinpath('onnx', 'data', 'models'))

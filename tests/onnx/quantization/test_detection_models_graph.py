@@ -21,7 +21,7 @@ import onnx
 from tests.common.helpers import TEST_ROOT
 from tests.onnx.test_nncf_graph_builder import check_nx_graph
 
-from tests.onnx.quantization.test_classification_models_graph import TestDataloader
+from tests.onnx.quantization.test_classification_models_graph import TestDataset
 
 from nncf.experimental.post_training.compression_builder import CompressionBuilder
 from nncf.experimental.onnx.algorithms.quantization.min_max_quantization import ONNXMinMaxQuantization
@@ -66,10 +66,10 @@ def test_min_max_quantization_graph(tmp_path, model_name, model_url, path_ref_gr
 
     original_model = onnx.load(onnx_model_path)
 
-    dataloader = TestDataloader(input_shape)
+    dataset = TestDataset(input_shape)
     builder = CompressionBuilder()
     builder.add_algorithm(ONNXMinMaxQuantization(MinMaxQuantizationParameters(number_samples=1)))
-    quantized_model = builder.apply(original_model, dataloader)
+    quantized_model = builder.apply(original_model, dataset)
 
     nncf_graph = GraphConverter.create_nncf_graph(quantized_model)
     nx_graph = nncf_graph.get_graph_for_structure_analysis(extended=True)

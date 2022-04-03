@@ -63,7 +63,7 @@ INPUT_SHAPES = [
 REFERENCE_GRAPHS_TEST_ROOT = 'data/reference_graphs/quantization'
 
 
-class TestDataloader(Dataset):
+class TestDataset(Dataset):
     def __init__(self, input_shape):
         super().__init__()
         self.input_shape = input_shape
@@ -88,10 +88,10 @@ def test_min_max_quantization_graph(tmp_path, model, path_ref_graph, input_shape
 
     original_model = onnx.load(onnx_model_path)
 
-    dataloader = TestDataloader(input_shape)
+    dataset = TestDataset(input_shape)
     builder = CompressionBuilder()
     builder.add_algorithm(ONNXMinMaxQuantization(MinMaxQuantizationParameters(number_samples=1)))
-    quantized_model = builder.apply(original_model, dataloader)
+    quantized_model = builder.apply(original_model, dataset)
 
     nncf_graph = GraphConverter.create_nncf_graph(quantized_model)
     nx_graph = nncf_graph.get_graph_for_structure_analysis(extended=True)
@@ -115,10 +115,10 @@ def test_post_training_quantization_graph(tmp_path, model, path_ref_graph, input
 
     original_model = onnx.load(onnx_model_path)
 
-    dataloader = TestDataloader(input_shape)
+    dataset = TestDataset(input_shape)
     builder = CompressionBuilder()
     builder.add_algorithm(PostTrainingQuantization(PostTrainingQuantizationParameters(number_samples=1)))
-    quantized_model = builder.apply(original_model, dataloader)
+    quantized_model = builder.apply(original_model, dataset)
 
     nncf_graph = GraphConverter.create_nncf_graph(quantized_model)
     nx_graph = nncf_graph.get_graph_for_structure_analysis(extended=True)
