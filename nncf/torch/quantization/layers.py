@@ -71,6 +71,7 @@ class PTQSpecStateNames:
 
 class PTQuantizerSpec(QuantizerSpec):
     _state_names = PTQSpecStateNames
+
     def __init__(self, num_bits: int,
                  mode: QuantizationMode,
                  signedness_to_force: Optional[bool],
@@ -88,7 +89,7 @@ class PTQuantizerSpec(QuantizerSpec):
             activation quantizers.
         """
         super().__init__(num_bits, mode, signedness_to_force, narrow_range, half_range)
-        self.per_channel = False if scale_shape == [1] else True
+        self.per_channel = scale_shape != [1]
         self.scale_shape = scale_shape
         self.logarithm_scale = logarithm_scale
         self.compression_lr_multiplier = compression_lr_multiplier
@@ -152,7 +153,9 @@ class PTQPointStateNames:
 
 class PTQuantizationPoint:
     _state_names = PTQPointStateNames
-    def __init__(self, qspec: PTQuantizerSpec, target_point: PTTargetPoint, directly_quantized_operator_node_names: List[NNCFNodeName]):
+
+    def __init__(self, qspec: PTQuantizerSpec, target_point: PTTargetPoint,
+                 directly_quantized_operator_node_names: List[NNCFNodeName]):
         self.qspec = qspec
         self.target_point = target_point
         self.directly_quantized_operator_node_names = directly_quantized_operator_node_names
@@ -800,7 +803,6 @@ class AsymmetricQuantizer(BaseQuantizer):
                                mode=QuantizationMode.ASYMMETRIC,
                                signedness_to_force=self.signed,
                                per_channel=self.per_channel)
-
 
 
 def get_per_channel_scale_shape(input_shape, is_weights, channel_idx: int = None):

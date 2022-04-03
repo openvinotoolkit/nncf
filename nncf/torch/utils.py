@@ -382,9 +382,9 @@ def maybe_convert_legacy_names_in_compress_state(compression_state: Dict[str, An
         for old_name, was_detected in detected_legacy_names.items():
             if was_detected:
                 new_name = LEGACY_VS_NEW_BN_MAP[old_name]
-                warning_deprecated('Legacy Batch Norm layer names was detected in quantization setup target point names. '
-                                   'All occurrences of `{}` in nodes names was replaced by `{}`'.format(old_name,
-                                                                                                        new_name))
+                warning_deprecated('Legacy Batch Norm layer names was detected in quantization setup target'
+                                   ' point names. All occurrences of `{}` in nodes names was replaced by'
+                                   ' `{}`'.format(old_name, new_name))
 
 
 def get_model_device(model: torch.nn.Module) -> torch.device:

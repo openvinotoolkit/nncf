@@ -698,6 +698,7 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
         self._build_time_metric_infos = setup_generator.get_build_time_metric_infos()
         return single_config_quantizer_setup
 
+    # pylint: disable=too-many-branches
     def _get_quantizer_setup(self, target_model: NNCFNetwork) -> PTQuantizerSetup:
         if self._legacy_single_config_quantizer_setup_from_comp_state is None:
             single_config_quantizer_setup = self._get_single_config_quantizer_setup(target_model)
@@ -719,9 +720,10 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
         str_bw = [str(element) for element in bitwidth_per_scope]
         nncf_logger.debug('\n'.join(['\n\"bitwidth_per_scope\": [', ',\n'.join(str_bw), ']']))
 
-        setup = PTQuantizerSetup(single_config_quantizer_setup.unified_scale_groups, single_config_quantizer_setup.shared_input_operation_set_groups)
-        
-        for i, (qp_id, qp) in enumerate(single_config_quantizer_setup.quantization_points.items()):
+        setup = PTQuantizerSetup(single_config_quantizer_setup.unified_scale_groups,
+                                single_config_quantizer_setup.shared_input_operation_set_groups)
+
+        for qp_id, qp in single_config_quantizer_setup.quantization_points.items():
             qconfig = qp.qconfig
             insertion_point = qp.insertion_point  # QuantizationInsertionPointBase
 
@@ -772,7 +774,8 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
                                                 half_range=half_range,
                                                 is_quantized_on_export=qp.is_weight_quantization_point(),
                                                 compression_lr_multiplier=compression_lr_multiplier)
-            pt_qp = PTQuantizationPoint(qspec, PTTargetPointTranslator.translate(insertion_point), qp.directly_quantized_operator_node_names)
+            pt_qp = PTQuantizationPoint(qspec, PTTargetPointTranslator.translate(insertion_point),
+                                        qp.directly_quantized_operator_node_names)
             setup.add_quantization_point(qp_id, pt_qp)
 
         return setup

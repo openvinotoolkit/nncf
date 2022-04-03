@@ -18,7 +18,6 @@ from typing import Dict, List, Set, Tuple
 import torch
 
 from nncf.common.utils.logger import logger as nncf_logger
-from nncf.common.compression import BaseCompressionAlgorithmController
 
 
 def load_state(model: torch.nn.Module, state_dict_to_load: dict, is_resume: bool = False,
