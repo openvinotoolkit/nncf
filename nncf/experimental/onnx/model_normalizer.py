@@ -82,9 +82,9 @@ class ONNNXModelNormalizer:
         nncf_logger.info('Original ir_version = {}'.format(model.ir_version))
 
         model.ir_version = 7  # Due to the 'Shufflenet-v1
-        add_input_from_initializer(model)
-        infered_model = onnx.shape_inference.infer_shapes(model)
-        modified_model = version_converter.convert_version(infered_model, 13)
+        modified_model = version_converter.convert_version(model, 13)
+        modified_model = onnx.shape_inference.infer_shapes(modified_model)
+        add_input_from_initializer(modified_model)
 
         onnx.checker.check_model(modified_model)
         nncf_logger.info(

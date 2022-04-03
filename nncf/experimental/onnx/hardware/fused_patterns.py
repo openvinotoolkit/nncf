@@ -21,6 +21,7 @@ from nncf.experimental.onnx.hardware.pattern_operations import ARITHMETIC_OPERAT
 from nncf.experimental.onnx.hardware.pattern_operations import MATMUL_OPERATIONS
 
 from nncf.experimental.onnx.hardware.patterns import create_h_sigmoid_act
+from nncf.experimental.onnx.hardware.patterns import create_input_preprocessing_pattern
 
 
 def _get_onnx_hw_fused_patterns() -> HWFusedPatterns:
@@ -59,6 +60,11 @@ def _get_onnx_hw_fused_patterns() -> HWFusedPatterns:
     hw_fused_patterns.register(activations + batch_norm, 'ACTIVATIONS + BN', match=True)
     hw_fused_patterns.register(arithmetic_ops + batch_norm_activations_permutation,
                                'ARITHMETIC + BN_ACT_PERM', match=True)
+
+    input_preprocessing_pattern = create_input_preprocessing_pattern()
+    hw_fused_patterns.register(input_preprocessing_pattern,
+                               'INPUT_PREPROCESSING', match=True)
+
     return hw_fused_patterns
 
 

@@ -113,6 +113,8 @@ class ONNXMinMaxQuantization(MinMaxQuantization):
                     node_name = qp.insertion_point.target_node_name
                     if qp.insertion_point.input_port_id == 1:
                         # If quantization of Input
+                        # TODO (kshpv): need to be reconsidered:
+                        #  some operators such as Mul and Add could have activation input tensor on 0 or 1 indices
                         outputs = onnx_graph.get_node_edges(node_name)['input'][0]
                     else:
                         # If quantization of Output

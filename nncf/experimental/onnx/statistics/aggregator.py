@@ -14,7 +14,6 @@
 from typing import Dict
 
 from skl2onnx.helpers.onnx_helper import select_model_inputs_outputs
-from skl2onnx.helpers.onnx_helper import enumerate_model_node_outputs
 import onnx
 
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
@@ -35,10 +34,12 @@ class ONNXStatisticsAggregator(StatisticsAggregator):
     def collect_statistics(self, model: onnx.ModelProto) -> None:
         # TODO (Nikita Malinin): Need to update adding output process with the backend-specific graph transformer
         layers_to_collect_statistics = list(self.layers_statistics.keys())
-        model_output = list(enumerate_model_node_outputs(model))[-1]
+        model_outputs = []
+        for output in list(model.graph.output):
+            model_outputs.append(output.name)
         model_with_intermediate_outputs = select_model_inputs_outputs(model,
                                                                       outputs=[*layers_to_collect_statistics,
-                                                                               model_output])
+                                                                               *model_outputs])
         max_number_samples = 0
         for _, v in self.layers_statistics.items():
             max_number_samples = max(max_number_samples, v.num_samples)
