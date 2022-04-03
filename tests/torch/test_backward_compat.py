@@ -29,7 +29,6 @@ from nncf.common.graph.definitions import MODEL_INPUT_OP_NAME
 from nncf.config import NNCFConfig
 from nncf.torch.nncf_network import LEGACY_ACT_STORAGE_NAME
 from nncf.torch.nncf_network import MODEL_WRAPPED_BY_NNCF_ATTR_NAME
-from nncf.torch.quantization.algo import QuantizationBuilder
 from nncf.torch.quantization.algo import QUANTIZER_BUILDER_STATE_VERSION_SAVE_NAME
 from nncf.torch.quantization.algo import QuantizerBuilderStateVersion
 from tests.common.helpers import TEST_ROOT

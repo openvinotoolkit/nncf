@@ -23,7 +23,6 @@ from nncf.experimental.torch.nas.bootstrapNAS.training.progressive_shrinking_con
     ProgressiveShrinkingController
 from nncf.experimental.torch.nas.bootstrapNAS.training.scheduler import NASSchedulerParams
 from nncf.torch.algo_selector import PT_COMPRESSION_ALGORITHMS
-from nncf.torch.checkpoint_loading import PTCompressionStateVersion
 from nncf.torch.compression_method_api import PTCompressionAlgorithmBuilder
 from nncf.torch.graph.transformations.layout import PTTransformationLayout
 from nncf.torch.nncf_network import NNCFNetwork
@@ -106,7 +105,7 @@ class ProgressiveShrinkingBuilder(PTCompressionAlgorithmBuilder):
             self._state_names.PROGRESSIVITY_OF_ELASTICITY: [d.value for d in self._progressivity_of_elasticity]
         }
 
-    def _load_state_without_name(self, state_without_name: Dict[str, Any], version: PTCompressionStateVersion = None):
+    def _load_state_without_name(self, state_without_name: Dict[str, Any]):
         """
         Implementation of load state that takes state without builder name.
 
