@@ -38,7 +38,6 @@ from nncf.torch.dynamic_graph.graph_tracer import create_input_infos
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.utils import is_dist_avail_and_initialized
 from nncf.torch.utils import is_main_process
-from nncf.torch.checkpoint_loading import PTCompressionStateVersion
 # pylint:disable=too-many-branches
 from nncf.torch.utils import maybe_convert_legacy_names_in_compress_state
 
@@ -86,22 +85,20 @@ def create_compressed_model(model: Module,
     as an object of NNCFNetwork."""
 
     set_debug_log_dir(config.get("log_dir", "."))
-    is_legacy_model_state_dict = False
-    compression_state_version = None
-    if compression_state is not None:
-        compression_state_version = PTCompressionStateVersion.from_compression_state(compression_state)
-        is_legacy_model_state_dict = (compression_state_version == PTCompressionStateVersion.v0)
 
-    is_state_loadable = compression_state is not None and not is_legacy_model_state_dict
-    maybe_convert_legacy_names_in_compress_state(compression_state, compression_state_version)
+    is_legacy_model_state_dict = compression_state is not None and \
+                                 BaseController.BUILDER_STATE not in compression_state and \
+                                 BaseController.CONTROLLER_STATE not in compression_state
+    maybe_convert_legacy_names_in_compress_state(compression_state)
 
     should_init = compression_state is None
 
     nncf_network = create_nncf_network(model, config, dummy_forward_fn, wrap_inputs_fn, wrap_outputs_fn)
 
     builder = create_compression_algorithm_builder(config, should_init)
+    is_state_loadable = not is_legacy_model_state_dict and compression_state is not None
     if is_state_loadable:
-        builder.load_state(compression_state[BaseController.BUILDER_STATE], compression_state_version)
+        builder.load_state(compression_state[BaseController.BUILDER_STATE])
     compressed_model = builder.apply_to(nncf_network)
     compression_ctrl = builder.build_controller(compressed_model)
     if is_state_loadable:

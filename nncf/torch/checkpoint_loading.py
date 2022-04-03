@@ -13,35 +13,12 @@
 import re
 import warnings
 from enum import Enum
-from enum import IntEnum
 from typing import Dict, List, Set, Tuple
 
 import torch
 
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.common.compression import BaseCompressionAlgorithmController
-
-PT_COMPRESSION_STATE_VERSION_SAVE_NAME = 'version'
-
-
-class PTCompressionStateVersion(IntEnum):
-    # Compression State is saved as model state dict
-    v0 = 0
-    # Compression State is saved as hierarchical dict. Consist of ctrl state and builder state.
-    # In Quantization builder state SingleConfigQuantizerSetup is being saved as quantizer setup.
-    v1 = 1
-    # Compression state version is being saved.
-    # In Quantization builder state PTQuantizerSetup is being saved as quantizer setup.
-    v2 = 2
-
-    @staticmethod
-    def from_compression_state(compression_state):
-        if PT_COMPRESSION_STATE_VERSION_SAVE_NAME in compression_state:
-            return compression_state.get(PT_COMPRESSION_STATE_VERSION_SAVE_NAME)
-        elif BaseCompressionAlgorithmController.BUILDER_STATE not in compression_state and \
-                BaseCompressionAlgorithmController.CONTROLLER_STATE not in compression_state:
-            return PTCompressionStateVersion.v0
-        return PTCompressionStateVersion.v1
 
 
 def load_state(model: torch.nn.Module, state_dict_to_load: dict, is_resume: bool = False,

@@ -26,7 +26,6 @@ from nncf.common.utils.logger import logger as nncf_logger
 from nncf.common.compression import BaseCompressionAlgorithmController as BaseController
 from nncf.torch.dynamic_graph.trace_tensor import TracedTensor
 from nncf.torch.layer_utils import _NNCFModuleMixin
-from nncf.torch.checkpoint_loading import PTCompressionStateVersion
 from contextlib import contextmanager
 
 
@@ -348,22 +347,21 @@ def maybe_convert_legacy_names_in_model_state(state_dict_to_load: Dict[str, Any]
         rename_legacy_names_in_state_dict(state_dict_to_load, legacy_names[old_name], old_name, new_name)
 
 
-def maybe_convert_legacy_names_in_compress_state(compression_state: Dict[str, Any], compression_state_version: PTCompressionStateVersion) -> None:
+def maybe_convert_legacy_names_in_compress_state(compression_state: Dict[str, Any]) -> None:
     """
     Convert legacy layer names in compression state in case such names exist.
 
     :param compression_state: Compression state to convert.
-    :param compression_state_version: Version of compression state
     """
-    if not compression_state or not compression_state_version:
-        return
-
-    if compression_state_version < PTCompressionStateVersion.v1:
+    if not compression_state or BaseController.BUILDER_STATE not in compression_state:
         return
 
     controller_state = compression_state[BaseController.BUILDER_STATE]
-    if compression_state_version == PTCompressionStateVersion.v1 and controller_state and\
-            'quantization' in controller_state:
+    if not controller_state or 'quantization' not in controller_state:
+        return
+
+    from nncf.torch.quantization.algo import QUANTIZER_BUILDER_STATE_VERSION_SAVE_NAME
+    if not controller_state['quantization'].get(QUANTIZER_BUILDER_STATE_VERSION_SAVE_NAME):
         qips = controller_state['quantization']['quantizer_setup']['quantization_points']
 
         detected_legacy_names = {

@@ -23,6 +23,7 @@ from typing import List
 from typing import Optional
 from typing import Set
 from typing import Tuple
+from enum import IntEnum
 
 import networkx as nx
 import numpy as np
@@ -70,7 +71,6 @@ from nncf.config.extractors import extract_bn_adaptation_init_params
 from nncf.config.extractors import extract_range_init_params
 from nncf.torch.algo_selector import PT_COMPRESSION_ALGORITHMS
 from nncf.torch.algo_selector import ZeroCompressionLoss
-from nncf.torch.checkpoint_loading import PTCompressionStateVersion
 from nncf.torch.compression_method_api import PTCompressionAlgorithmBuilder
 from nncf.torch.compression_method_api import PTCompressionAlgorithmController
 from nncf.torch.debug import CallCountTracker
@@ -109,8 +109,6 @@ from nncf.torch.quantization.layers import SymmetricQuantizer
 from nncf.torch.quantization.layers import get_scale_shape
 from nncf.torch.quantization.layers import PTQuantizerSetup
 from nncf.torch.quantization.layers import PTQuantizationPoint
-from nncf.torch.quantization.layers import PTQPointStateNames
-from nncf.torch.quantization.layers import PTQSetupStateNames
 from nncf.torch.quantization.metrics import MemoryConsumptionStatisticsCollector
 from nncf.torch.quantization.metrics import PTQuantizationStatisticsCollector
 from nncf.torch.quantization.metrics import QuantizationShareBuildTimeInfo
@@ -137,6 +135,21 @@ from nncf.torch.utils import get_model_device
 from nncf.torch.utils import get_state_dict_names_with_modules
 from nncf.torch.utils import is_main_process
 from torch import nn
+
+QUANTIZER_BUILDER_STATE_VERSION_SAVE_NAME = 'version'
+
+
+class QuantizerBuilderStateVersion(IntEnum):
+    # In Quantization builder state SingleConfigQuantizerSetup is being saved as quantizer setup.
+    v1 = 1
+    # In Quantization builder state PTQuantizerSetup is being saved as quantizer setup.
+    v2 = 2
+
+    @staticmethod
+    def from_compression_state(compression_state):
+        if QUANTIZER_BUILDER_STATE_VERSION_SAVE_NAME in compression_state:
+            return compression_state.get(QUANTIZER_BUILDER_STATE_VERSION_SAVE_NAME)
+        return QuantizerBuilderStateVersion.v1
 
 
 class QuantizerSetupGeneratorBase:
@@ -475,14 +488,15 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
         self._overflow_fix = self._algo_config.get('overflow_fix', 'enable')
         self._device_for_callable_obj_creation = 'cpu'
 
-    def _load_state_without_name(self, state_without_name: Dict[str, Any], version: PTCompressionStateVersion = None):
+    def _load_state_without_name(self, state_without_name: Dict[str, Any]):
         """
         Initializes object from the state.
 
         :param state_without_name: Output of `get_state()` method.
         """
         quantizer_setup_state = state_without_name[self._state_names.QUANTIZER_SETUP]
-        if version == PTCompressionStateVersion.v1:
+        version = state_without_name.get(QUANTIZER_BUILDER_STATE_VERSION_SAVE_NAME, QuantizerBuilderStateVersion.v1)
+        if version == QuantizerBuilderStateVersion.v1:
             self._legacy_single_config_quantizer_setup_from_comp_state =\
                 SingleConfigQuantizerSetup.from_state(quantizer_setup_state)
         else:
@@ -505,7 +519,8 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
             quantizer_setup_state = self._pt_quantizer_setup.get_state()
         return {
             self._state_names.QUANTIZER_SETUP: quantizer_setup_state,
-            self._state_names.BUILD_TIME_METRIC_INFOS: build_time_metric_infos_state
+            self._state_names.BUILD_TIME_METRIC_INFOS: build_time_metric_infos_state,
+            QUANTIZER_BUILDER_STATE_VERSION_SAVE_NAME: max(QuantizerBuilderStateVersion).value
         }
 
     def _parse_init_params(self):

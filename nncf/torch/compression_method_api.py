@@ -38,7 +38,6 @@ from nncf.torch.layers import NNCF_MODULES_DICT
 from nncf.torch.layers import NNCF_WRAPPED_USER_MODULES_DICT
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.nncf_network import PTModelTransformer
-from nncf.torch.checkpoint_loading import PTCompressionStateVersion, PT_COMPRESSION_STATE_VERSION_SAVE_NAME
 
 ModelType = TypeVar('ModelType')
 
@@ -100,23 +99,6 @@ class PTCompressionAlgorithmController(BaseCompressionAlgorithmController):
         Any special preparations for the algorithm to properly support distributed training
         should be made inside this function.
         """
-
-    def get_compression_state(self) -> Dict[str, Any]:
-        """
-        Returns compression state - builder and controller state.
-        This state should be used to resume compression via `compression_state` argument of `create_compressed_model`
-        method.
-
-        :return: The compression state.
-        """
-        if self._builder_state is None:
-            raise RuntimeError('Internal error: builder state is not set for the controller')
-
-        return {
-            self.BUILDER_STATE: self._builder_state,
-            self.CONTROLLER_STATE: self.get_state(),
-            PT_COMPRESSION_STATE_VERSION_SAVE_NAME: max(PTCompressionStateVersion).value
-        }
 
 
 class PTCompressionAlgorithmBuilder(BaseCompressionAlgorithmBuilder):
@@ -194,17 +176,7 @@ class PTCompressionAlgorithmBuilder(BaseCompressionAlgorithmBuilder):
         """
         return {}
 
-    def load_state(self, state: Dict[str, Any], version: PTCompressionStateVersion = None) -> None:
-        """
-        Initializes object from the state.
-
-        :param state: Output of `get_state()` method.
-        :param version: Version of compression state
-        """
-        if self.name in state:
-            self._load_state_without_name(state[self.name], version)
-
-    def _load_state_without_name(self, state_without_name: Dict[str, Any], version: PTCompressionStateVersion = None):
+    def _load_state_without_name(self, state_without_name: Dict[str, Any]):
         """
         Implementation of load state that takes state without builder name.
 
