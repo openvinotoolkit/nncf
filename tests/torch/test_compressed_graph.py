@@ -796,7 +796,7 @@ def test_compressed_graph_models_hw(desc, hw_config_type):
 
     # pylint:disable=protected-access
     quantization_builder = QuantizationBuilder(config, should_init=False)
-    single_config_quantizer_setup = quantization_builder._get_quantizer_setup(compressed_model)
+    single_config_quantizer_setup = quantization_builder._get_single_config_quantizer_setup(compressed_model)
     sketch_graph = compressed_model.get_original_graph()
 
     potential_quantizer_graph = prepare_potential_quantizer_graph(sketch_graph, single_config_quantizer_setup)
