@@ -15,8 +15,6 @@ import pytest
 
 import os
 
-import requests
-
 import onnx
 
 from tests.common.helpers import TEST_ROOT
@@ -30,11 +28,6 @@ MODELS_NAME = [
     'tiny-yolov2',
 ]
 
-MODELS_URL = [
-    'https://github.com/onnx/models/raw/main/vision/object_detection_segmentation/yolov2-coco/model/yolov2-coco-9.onnx',
-    'https://github.com/onnx/models/raw/main/vision/object_detection_segmentation/tiny-yolov2/model/tinyyolov2-7.onnx',
-]
-
 PATH_REF_GRAPHS = [
     'yolov2-coco-9.dot',
     'tiny-yolov2.dot',
@@ -46,17 +39,13 @@ INPUT_SHAPES = [
 ]
 
 
-@pytest.mark.parametrize(('model_name', 'model_url', 'path_ref_graph', 'input_shape'),
-                         zip(MODELS_NAME, MODELS_URL, PATH_REF_GRAPHS, INPUT_SHAPES))
-def test_min_max_quantization_graph(tmp_path, model_name, model_url, path_ref_graph, input_shape):
+@pytest.mark.parametrize(('model_name', 'path_ref_graph', 'input_shape'),
+                         zip(MODELS_NAME, PATH_REF_GRAPHS, INPUT_SHAPES))
+def test_min_max_quantization_graph(tmp_path, model_name, path_ref_graph, input_shape):
     onnx_model_dir = str(TEST_ROOT.joinpath('onnx', 'data', 'models'))
-    onnx_model_path = str(TEST_ROOT.joinpath(onnx_model_dir, model_name))
+    onnx_model_path = str(TEST_ROOT.joinpath(onnx_model_dir, model_name + '.onnx'))
     if not os.path.isdir(onnx_model_dir):
         os.mkdir(onnx_model_dir)
-
-    r = requests.get(model_url)
-    with open(onnx_model_path, 'wb') as f:
-        f.write(r.content)
 
     original_model = onnx.load(onnx_model_path)
     quantized_model = min_max_quantize_model(input_shape, original_model)
