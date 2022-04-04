@@ -798,4 +798,3 @@ class TestHalfPrecisionModels:
             result = compressed_model(inputs)
             if torch.is_autocast_enabled(): # For torch <= 1.9.1 and CPU the autocast context won't have effect
                 assert result.dtype == torch.float16
-
