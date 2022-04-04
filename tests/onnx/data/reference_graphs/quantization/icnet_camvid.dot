@@ -474,7 +474,7 @@ strict digraph  {
 "472 DequantizeLinear_646" [id=472, type=DequantizeLinear];
 "473 Resize_199" [id=473, type=Resize];
 "474 QuantizeLinear_644" [id=474, type=QuantizeLinear];
-"475 DequantizeL inear_644" [id=475, type=DequantizeLinear];
+"475 DequantizeLinear_644" [id=475, type=DequantizeLinear];
 "476 QuantizeLinear_648" [id=476, type=QuantizeLinear];
 "477 DequantizeLinear_648" [id=477, type=DequantizeLinear];
 "478 Add_200" [id=478, type=Add];

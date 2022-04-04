@@ -35,7 +35,7 @@ from nncf.experimental.onnx.graph.nncf_graph_builder import GraphConverter
 REFERENCE_GRAPHS_TEST_ROOT = 'data/reference_graphs/quantization'
 
 
-class TestDataloader(DataLoader):
+class DataloaderForTest(DataLoader):
     def __init__(self, input_shape):
         super().__init__()
         self.input_shape = input_shape
@@ -48,7 +48,7 @@ class TestDataloader(DataLoader):
 
 
 def min_max_quantize_model(input_shape: List[int], original_model: onnx.ModelProto) -> onnx.ModelProto:
-    dataloader = TestDataloader(input_shape)
+    dataloader = DataloaderForTest(input_shape)
     builder = CompressionBuilder()
     builder.add_algorithm(ONNXMinMaxQuantization(MinMaxQuantizationParameters(number_samples=1)))
     quantized_model = builder.apply(original_model, dataloader)
@@ -56,7 +56,7 @@ def min_max_quantize_model(input_shape: List[int], original_model: onnx.ModelPro
 
 
 def ptq_quantize_model(input_shape: List[int], original_model: onnx.ModelProto) -> onnx.ModelProto:
-    dataloader = TestDataloader(input_shape)
+    dataloader = DataloaderForTest(input_shape)
     builder = CompressionBuilder()
     builder.add_algorithm(PostTrainingQuantization(PostTrainingQuantizationParameters(number_samples=1)))
     quantized_model = builder.apply(original_model, dataloader)
