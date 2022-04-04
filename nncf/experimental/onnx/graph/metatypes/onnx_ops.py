@@ -56,6 +56,12 @@ class ONNXSigmoidMetatype(ONNXOpMetatype):
 
 
 @ONNX_OPERATION_METATYPES.register()
+class ONNXHardSigmoidMetatype(ONNXOpMetatype):
+    name = 'HardSigmoidOp'
+    op_names = ['HardSigmoid']
+
+
+@ONNX_OPERATION_METATYPES.register()
 class ONNXGlobalAveragePoolMetatype(ONNXOpMetatype):
     name = 'GlobalAveragePoolOp'
     op_names = ['GlobalAveragePool']
