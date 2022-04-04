@@ -69,6 +69,13 @@ class ONNXGlobalAveragePoolMetatype(ONNXOpMetatype):
 
 
 @ONNX_OPERATION_METATYPES.register()
+class ONNXAveragePoolMetatype(ONNXOpMetatype):
+    name = 'AveragePoolOp'
+    op_names = ['AveragePool']
+    hw_config_names = [HWConfigOpName.AVGPOOL]
+
+
+@ONNX_OPERATION_METATYPES.register()
 class ONNXMaxPoolMetatype(ONNXOpMetatype):
     name = 'MaxPoolOp'
     op_names = ['MaxPool']
