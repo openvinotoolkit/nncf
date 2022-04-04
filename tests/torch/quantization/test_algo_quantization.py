@@ -11,26 +11,31 @@
  limitations under the License.
 """
 from copy import deepcopy
-from typing import List, Tuple
+from typing import List
+from typing import Tuple
 
 import pytest
 import torch
-from torch import nn
 import torch.nn.functional as F
 import torch.utils.data
+from pkg_resources import parse_version
+from torch import nn
 from torchvision.models import resnet50
 from torchvision.models import squeezenet1_1
 
 from nncf import NNCFConfig
-from nncf.common.utils.debug import nncf_debug
 from nncf.api.compression import CompressionScheduler
-from nncf.torch.checkpoint_loading import load_state
+from nncf.common.hardware.config import HWConfigType
+from nncf.common.quantization.structs import NonWeightQuantizerId
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
+from nncf.common.quantization.structs import WeightQuantizerId
+from nncf.common.utils.debug import nncf_debug
+from nncf.torch import register_default_init_args
+from nncf.torch.checkpoint_loading import load_state
 from nncf.torch.compression_method_api import PTCompressionLoss
 from nncf.torch.dynamic_graph.scope import Scope
 from nncf.torch.dynamic_graph.scope import ScopeElement
-from nncf.common.hardware.config import HWConfigType
 from nncf.torch.layers import NNCFConv2d
 from nncf.torch.model_creation import create_compression_algorithm_builder
 from nncf.torch.module_operations import UpdateInputs
@@ -38,18 +43,17 @@ from nncf.torch.module_operations import UpdateWeight
 from nncf.torch.nncf_network import ExtraCompressionModuleType
 from nncf.torch.quantization.algo import QuantizationBuilder
 from nncf.torch.quantization.algo import QuantizationController
+from nncf.torch.quantization.layers import AsymmetricQuantizer
 from nncf.torch.quantization.layers import BaseQuantizer
 from nncf.torch.quantization.layers import PTQuantizerSpec
 from nncf.torch.quantization.layers import QUANTIZATION_MODULES
 from nncf.torch.quantization.layers import SymmetricQuantizer
-from nncf.torch.quantization.layers import AsymmetricQuantizer
-from nncf.common.quantization.structs import NonWeightQuantizerId
-from nncf.common.quantization.structs import WeightQuantizerId
 from nncf.torch.utils import get_all_modules_by_type
 from nncf.torch.utils import get_model_device
 from tests.torch.helpers import BasicConvTestModel
 from tests.torch.helpers import TwoConvTestModel
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
+from tests.torch.helpers import create_ones_mock_dataloader
 from tests.torch.helpers import get_empty_config
 from tests.torch.helpers import register_bn_adaptation_init_args
 from tests.torch.quantization.test_quantization_helpers import get_quantization_config_without_range_init
@@ -684,3 +688,114 @@ def test_quantization_can_be_run_with_no_data_loaders_if_zero_init_samples():
             }
         }
     }))
+
+if parse_version(torch.__version__).base_version <= parse_version("1.9.1").base_version:
+    from torch.cuda.amp import autocast
+else:
+    from torch import autocast
+
+
+class TestHalfPrecisionModels:
+    class RegularModel(torch.nn.Module):
+        def __init__(self):
+            super().__init__()
+            self.conv_first = torch.nn.Conv2d(1, 1, 1)
+            self.conv_second = torch.nn.Conv2d(1, 1, 1)
+
+        def forward(self, x):
+            y = self.conv_first(x)
+            y = self.conv_second(y)
+            return y
+
+    class ModelWithInternalAutocast(torch.nn.Module):
+        def __init__(self):
+            super().__init__()
+            self.model = TestHalfPrecisionModels.RegularModel()
+
+        def forward(self, x):
+            with autocast():
+                y = self.model(x)
+            return y
+
+    class ModelWithManualPartialHalfPrecision(torch.nn.Module):
+        def __init__(self):
+            super().__init__()
+            self.conv_first = torch.nn.Conv2d(1, 1, 1)
+            self.conv_second = torch.nn.Conv2d(1, 1, 1).half()
+            self.conv_third = torch.nn.Conv2d(1, 1, 1)
+
+        def forward(self, x):
+            y = self.conv_first(x)
+            y = y.half()
+            y = self.conv_second(y)
+            y = y.to(torch.float32)
+            y = self.conv_third(y)
+            return y
+
+    @pytest.fixture()
+    def initializing_config(self):
+        config = get_quantization_config_without_range_init(model_size=1)
+
+        # Make sure that both symmetric and asymmetric quantizers appear in the model
+        config['compression']['scope_overrides'] = {
+            "activations": {
+                "{re}.*conv_first.*": {"mode": "asymmetric"},
+                "{re}.*conv_second.*": {"mode": "symmetric"}
+            },
+            "weights": {
+                "{re}.*conv_first.*": {"mode": "asymmetric"},
+                "{re}.*conv_second.*": {"mode": "symmetric"}
+            },
+        }
+        config['compression']['initializer'] = {
+            'range': {
+                "num_init_samples": 2
+            },
+            "batchnorm_adaptation": {
+                "num_bn_adaptation_samples": 1
+            }
+        }
+        data_loader = create_ones_mock_dataloader(config)
+        config = register_default_init_args(config, data_loader)
+        return config
+
+    def test_internal_autocast_model(self, initializing_config: NNCFConfig):
+        model = TestHalfPrecisionModels.ModelWithInternalAutocast()
+        inputs = torch.ones([1, 1, 1, 1])
+        if torch.cuda.is_available():
+            inputs = inputs.cuda()
+            model = model.cuda()
+
+        compressed_model, _ = create_compressed_model_and_algo_for_test(model, initializing_config)
+
+        # Should complete successfully, including init.
+        compressed_model(inputs)
+
+    def test_manual_partial_half_precision_model(self, initializing_config: NNCFConfig):
+        model = TestHalfPrecisionModels.ModelWithManualPartialHalfPrecision()
+        inputs = torch.ones([1, 1, 1, 1])
+        if torch.cuda.is_available():
+            inputs = inputs.cuda()
+            model = model.cuda()
+
+
+        compressed_model, _ = create_compressed_model_and_algo_for_test(model, initializing_config)
+
+        # Should complete successfully, including init.
+        compressed_model(inputs)
+
+    def test_external_autocast(self, initializing_config: NNCFConfig):
+        model = TestHalfPrecisionModels.RegularModel()
+        inputs = torch.ones([1, 1, 1, 1])
+        if torch.cuda.is_available():
+            inputs = inputs.cuda()
+            model = model.cuda()
+
+        compressed_model, _ = create_compressed_model_and_algo_for_test(model, initializing_config)
+
+        with autocast():
+            # Should complete successfully.
+            result = compressed_model(inputs)
+            if torch.is_autocast_enabled(): # For torch <= 1.9.1 and CPU the autocast context won't have effect
+                assert result.dtype == torch.float16
+
