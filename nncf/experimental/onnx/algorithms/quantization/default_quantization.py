@@ -16,6 +16,7 @@ from nncf.experimental.onnx.graph.metatypes.onnx_ops import ONNXConvolutionMetat
 from nncf.experimental.onnx.graph.metatypes.onnx_ops import ONNXLinearMetatype
 from nncf.experimental.onnx.graph.metatypes.onnx_ops import ONNXSigmoidMetatype
 from nncf.experimental.onnx.graph.metatypes.onnx_ops import ONNXHardSigmoidMetatype
+from nncf.experimental.onnx.graph.metatypes.onnx_ops import ONNXAveragePoolMetatype
 from nncf.experimental.onnx.graph.metatypes.onnx_ops import ONNXGlobalAveragePoolMetatype
 from nncf.experimental.onnx.graph.metatypes.onnx_ops import ONNXAddLayerMetatype
 from nncf.experimental.onnx.graph.metatypes.onnx_ops import ONNXMulLayerMetatype
@@ -30,6 +31,7 @@ DEFAULT_ONNX_QUANT_TRAIT_TO_OP_DICT = {
     QuantizationTrait.INPUTS_QUANTIZABLE: [
         ONNXConvolutionMetatype,
         ONNXLinearMetatype,
+        ONNXAveragePoolMetatype,
         ONNXGlobalAveragePoolMetatype,
         ONNXAddLayerMetatype,
         ONNXMulLayerMetatype,
