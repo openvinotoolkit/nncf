@@ -522,7 +522,7 @@ class ModelWithIntegerPaths(torch.nn.Module):
     def __init__(self):
         super().__init__()
         self.conv1 = torch.nn.Conv2d(2, 2, 1)
-        self.linear = torch.nn.Linear(1, 1, 1)
+        self.linear = torch.nn.Linear(2, 2)
 
     def forward(self, x: torch.Tensor):
         x = self.conv1(x)
@@ -530,18 +530,20 @@ class ModelWithIntegerPaths(torch.nn.Module):
         sz_tensor = torch.cat([sz])
         idx_tensor = sz_tensor // sz_tensor
         single_idx = idx_tensor[0]
-        x = x[single_idx] * torch.ones([1, 1]).to(x.device)
-        x = self.linear(x)
-        return x
+        y = x[single_idx][single_idx] * torch.ones([1, 1]).to(x.device)
+        z = self.linear(y)
+        return z
 
 
 def test_integer_path_marking():
     input_infos = [ModelInputInfo(ModelWithIntegerPaths.INPUT_SHAPE), ]
-    builder = GraphBuilder(create_dummy_forward_fn(input_infos))
+    builder = GraphBuilder(create_dummy_forward_fn(input_infos, with_input_tracing=True, with_output_tracing=True))
     nncf_graph = builder.build_graph(ModelWithIntegerPaths(), input_infos=input_infos)
     edges = list(nncf_graph.get_all_edges())
     num_integer_edges = sum([1 for edge in edges if edge.dtype is Dtype.INTEGER])
-    assert num_integer_edges == 2  # cat -> __floordiv__ and __floordiv__ -> __getitem__
+    # cat -> __floordiv__,  __floordiv__ -> __getitem__0 (to get single_idx),
+    # __getitem__0 -> __getitem__1 (first indexing by tensor), __getitem__0 -> __getitem__2 (second indexing by tensor)
+    assert num_integer_edges == 4
 
 
 class ModelSpecificException(Exception):
