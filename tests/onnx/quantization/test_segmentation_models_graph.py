@@ -70,7 +70,7 @@ def test_min_max_quantization_graph(tmp_path, model_name, path_ref_graph, input_
     data_dir = os.path.join(TEST_ROOT, 'onnx', REFERENCE_GRAPHS_TEST_ROOT)
     path_to_dot = os.path.abspath(os.path.join(data_dir, path_ref_graph))
 
-    check_nx_graph(nx_graph, path_to_dot, True)
+    check_nx_graph(nx_graph, path_to_dot)
 
     with tempfile.NamedTemporaryFile() as temporary_model:
         onnx.save(quantized_model, temporary_model.name)
