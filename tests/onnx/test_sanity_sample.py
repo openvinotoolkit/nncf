@@ -24,7 +24,7 @@ from torchvision import models
 import onnxruntime as rt
 import numpy as np
 
-from examples.experimental.onnx.onnx_ptq_classification import run
+from examples.experimental.onnx.classification.onnx_ptq_classification import run
 from nncf.experimental.post_training.api.dataloader import DataLoader
 from tests.common.helpers import TEST_ROOT
 
