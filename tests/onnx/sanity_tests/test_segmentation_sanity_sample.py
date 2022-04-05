@@ -22,7 +22,7 @@ import os
 import onnxruntime as rt
 import numpy as np
 
-from examples.experimental.onnx.segmentation.onnx_ptq_segmentation import run
+from examples.experimental.onnx.semantic_segmentation.onnx_ptq_segmentation import run
 from nncf.experimental.post_training.api.dataloader import DataLoader
 from tests.common.helpers import TEST_ROOT
 
@@ -56,7 +56,7 @@ def mock_dataloader_creator(dataset_name, dataset_path, input_shape):
 @pytest.mark.parametrize(("model_name, input_shape"),
                          zip(MODELS_NAME, INPUT_SHAPES))
 @patch(
-    'examples.experimental.onnx.segmentation.onnx_ptq_segmentation.create_dataloader_from_segmentation_torch_dataset',
+    'examples.experimental.onnx.semantic_segmentation.onnx_ptq_segmentation.create_dataloader_from_segmentation_torch_dataset',
     new=mock_dataloader_creator)
 def test_sanity_quantize_sample(tmp_path, model_name, input_shape):
     onnx_model_dir = str(TEST_ROOT.joinpath('onnx', 'data', 'models'))
@@ -67,8 +67,7 @@ def test_sanity_quantize_sample(tmp_path, model_name, input_shape):
     onnx_output_model_path = str(tmp_path / model_name)
 
     run(onnx_model_path, onnx_output_model_path, 'CamVid',
-        'none', batch_size=1, shuffle=True, num_init_samples=1,
-        input_shape=input_shape, ignored_scopes=None)
+        'none', num_init_samples=1, input_shape=input_shape, ignored_scopes=None)
 
     sess = rt.InferenceSession(onnx_output_model_path, providers=['OpenVINOExecutionProvider'])
     _input = np.random.random(input_shape)

@@ -37,27 +37,19 @@ class SegmentationDataLoader(DataLoader):
 
 def create_dataloader_from_segmentation_torch_dataset(dataset_name: str,
                                                       dataset_dir: str,
-                                                      input_shape: List[int],
-                                                      mean=None,
-                                                      std=None,
-                                                      batch_size: int = 1,
-                                                      shuffle: bool = True):
+                                                      input_shape: List[int]):
     from examples.torch.semantic_segmentation.utils.transforms import Resize
     from examples.torch.semantic_segmentation.utils.transforms import Normalize
     from examples.torch.semantic_segmentation.utils.transforms import Compose
     from examples.torch.semantic_segmentation.utils.transforms import ToTensor
 
-    if dataset_name == 'Mapillary':
-        if mean is None:
-            mean = (0.485, 0.456, 0.406)
-        if std is None:
-            std = (0.229, 0.224, 0.225)
+    if dataset_name.lower() == 'mapillary':
+        mean = (0.485, 0.456, 0.406)
+        std = (0.229, 0.224, 0.225)
         dataset_class = Mapillary
-    elif dataset_name == 'CamVid':
-        if mean is None:
-            mean = (0.39068785, 0.40521392, 0.41434407)
-        if std is None:
-            std = (0.29652068, 0.30514979, 0.30080369)
+    elif dataset_name.lower() == 'camvid':
+        mean = (0.39068785, 0.40521392, 0.41434407)
+        std = (0.29652068, 0.30514979, 0.30080369)
         dataset_class = CamVid
     else:
         raise RuntimeError('The dataset is not supported')
@@ -69,4 +61,4 @@ def create_dataloader_from_segmentation_torch_dataset(dataset_name: str,
         Normalize(mean, std),
     ])
     initialization_dataset = dataset_class(dataset_dir, 'val', transforms=transform)
-    return SegmentationDataLoader(initialization_dataset, batch_size, shuffle)
+    return SegmentationDataLoader(initialization_dataset, 1, True)

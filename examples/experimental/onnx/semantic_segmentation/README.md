@@ -1,4 +1,4 @@
-# Segmentation sample
+# Semantic Segmentation sample
 
 This sample shows an example of quantization of segmentation models. The used datasets are CamVid, Mapillary.
 
@@ -32,7 +32,7 @@ python onnx_ptq_classification.py --help
 
 If you would like to compare the accuracy of the original model and quantized one, you could
 use [accuracy_checker](https://github.com/openvinotoolkit/open_model_zoo/tree/master/tools/accuracy_checker). The
-necessary config files are located [here](./examples/experimental/onnx/ac_configs/). The thing that you only need is to
+necessary config files are located [here](./examples/experimental/onnx/semantic_segmentation/ac_configs/). The thing that you only need is to
 fill in the config with the following infromation: the path to ImageNet folder and the path to the annotation file. The
 accuracy checker config for the original and quantized models is the same.
 
@@ -44,11 +44,11 @@ accuracy_check -c <path to config fileh> -m <ONNX model>
 
 ## Results of Post-Training quantization of ONNX models
 
-|           Model           | Original accuracy  | Quantized model accuracy |
-|:-------------------------:|:------------------:|:------------------------:|
-|           ICNet           |  67.88% (CamVid)   |          67.8% (CamVid)         |
-|           UNet            |  71.95% (CamVid)   |          71.85% (CamVid)          |
-| UNet | 56.24% (Mapillary) |           56.19% (Mapillary)         |
+| Model |  Original accuracy  | Quantized model accuracy |
+|:-----:|:-------------------:|:------------------------:|
+| ICNet |   67.88% (CamVid)   |      67.8% (CamVid)      |
+| UNet  |   71.95% (CamVid)   |     71.85% (CamVid)      |
+| UNet  |  56.24% (Mapillary) |     56.19% (Mapillary)   |
 
 ## Measuring the performance of the original and quantized models
 
