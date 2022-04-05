@@ -18,24 +18,23 @@ import os
 import onnx
 
 from tests.common.helpers import TEST_ROOT
-
 from tests.onnx.quantization.common import min_max_quantize_model
 from tests.onnx.quantization.common import compare_nncf_graph
 from tests.onnx.quantization.common import infer_model
 
 MODELS_NAME = [
-    'yolov2-coco-9',
-    'tiny-yolov2',
+    'icnet_camvid',
+    'unet_camvid'
 ]
 
 PATH_REF_GRAPHS = [
-    'yolov2-coco-9.dot',
-    'tiny-yolov2.dot',
+    'icnet_camvid.dot',
+    'unet_camvid.dot'
 ]
 
 INPUT_SHAPES = [
-    [1, 3, 416, 416],
-    [1, 3, 416, 416],
+    [1, 3, 768, 960],
+    [1, 3, 368, 480]
 ]
 
 

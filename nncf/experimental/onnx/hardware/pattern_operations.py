@@ -14,7 +14,8 @@
 from nncf.common.graph.patterns import merge_two_types_of_operations
 
 LINEAR_OPERATIONS = {'type': ['Conv',
-                              'ConvTranspose'
+                              'ConvTranspose',
+                              'Gemm'
                               ],
                      'label': 'LINEAR'}
 
