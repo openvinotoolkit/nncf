@@ -20,7 +20,7 @@ import onnx
 from nncf.experimental.post_training.compression_builder import CompressionBuilder
 from nncf.experimental.post_training.algorithms.quantization import PostTrainingQuantization
 from nncf.experimental.post_training.algorithms.quantization import PostTrainingQuantizationParameters
-from nncf.experimental.onnx.dataloaders.camvid_dataloader import create_dataloader_from_segmentation_torch_dataset
+from nncf.experimental.onnx.dataloaders.segmentation_dataloader import create_dataloader_from_segmentation_torch_dataset
 
 
 def run(onnx_model_path: str, output_model_path: str, dataset_name: str,
@@ -34,7 +34,8 @@ def run(onnx_model_path: str, output_model_path: str, dataset_name: str,
     print(f"The model is loaded from {onnx_model_path}")
 
     # Step 1: Initialize the data loader.
-    dataloader = create_dataloader_from_segmentation_torch_dataset(dataset_name, dataset_path, input_shape)
+    dataloader = create_dataloader_from_segmentation_torch_dataset(dataset_name, dataset_path, input_shape,
+                                                                   batch_size=batch_size, shuffle=shuffle)
 
     # Step 2: Create a pipeline of compression algorithms.
     builder = CompressionBuilder()
