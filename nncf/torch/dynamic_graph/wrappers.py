@@ -69,15 +69,6 @@ OP_NAMES_REQUIRING_MODULE_ATTRS = [v.op_func_name for v in NNCF_MODULES_DICT] + 
 
 
 @contextmanager
-def no_torch_patch():
-    from nncf.torch.dynamic_graph.patch_pytorch import unpatch_torch_operators
-    unpatch_torch_operators()
-    yield
-    from nncf.torch import patch_torch_operators
-    patch_torch_operators()
-
-
-@contextmanager
 def _handle_torch_indexing_bug(operator_name: str, args: List, kwargs: Dict):
     """
     Wraps any tensor indices in [torch.Tensor.]__getitem__ into a tuple to
