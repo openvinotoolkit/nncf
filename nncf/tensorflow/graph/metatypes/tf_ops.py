@@ -153,6 +153,13 @@ class TFMatMulOpMetatype(TFOpWithWeightsMetatype):
 
 
 @TF_OPERATION_METATYPES.register()
+class TFBatchMatMulV2OpMetatype(TFOpMetatype):
+    name = 'BatchMatMulV2Op'
+    op_names = ['BatchMatMulV2']
+    hw_config_names = [HWConfigOpName.MATMUL]
+
+
+@TF_OPERATION_METATYPES.register()
 class TFConv2DOpMetatype(TFOpWithWeightsMetatype):
     name = 'Conv2DOp'
     op_names = ['Conv2D']
