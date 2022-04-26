@@ -57,7 +57,9 @@ SAMPLE_HANDLERS = Registry('sample_handlers')
 
 class BaseSampleHandler(ABC):
     @abstractmethod
-    def get_metric_value_from_checkpoint(self, checkpoint_save_dir: str, checkpoint_name: str, config_path: Path):
+    def get_metric_value_from_checkpoint(self, checkpoint_save_dir: str,
+                                         checkpoint_name: Optional[str] = None,
+                                         config_path: Optional[Path] = None):
         pass
 
     @abstractmethod
@@ -94,7 +96,9 @@ class BaseSampleHandler(ABC):
         mocker.patch(mlflow_location)
 
     @staticmethod
-    def get_checkpoint_path(checkpoint_save_dir: str, checkpoint_name: str, config_path: Path):
+    def get_checkpoint_path(checkpoint_save_dir: str,
+                            checkpoint_name: Optional[str] = None,
+                            config_path: Optional[Path] = None):
         if checkpoint_name is None:
             jconfig = NNCFConfig.from_json(config_path)
             checkpoint_name = get_name(jconfig)
@@ -106,7 +110,9 @@ class BaseSampleHandler(ABC):
 
 @SAMPLE_HANDLERS.register(SampleType.CLASSIFICATION)
 class ClassificationHandler(BaseSampleHandler):
-    def get_metric_value_from_checkpoint(self, checkpoint_save_dir: str, checkpoint_name: str, config_path: Path):
+    def get_metric_value_from_checkpoint(self, checkpoint_save_dir: str,
+                                         checkpoint_name: Optional[str] = None,
+                                         config_path: Optional[Path] = None):
         checkpoint_path = self.get_checkpoint_path(checkpoint_save_dir, checkpoint_name, config_path)
         assert os.path.exists(checkpoint_path), 'Path to checkpoint {} does not exist'.format(checkpoint_path)
         accuracy = torch.load(checkpoint_path)['best_acc1']
@@ -146,7 +152,9 @@ class ClassificationNASHandler(ClassificationHandler):
 
 @SAMPLE_HANDLERS.register(SampleType.OBJECT_DETECTION)
 class ObjectDetectionHandler(BaseSampleHandler):
-    def get_metric_value_from_checkpoint(self, checkpoint_save_dir: str, checkpoint_name: str, config_path: Path):
+    def get_metric_value_from_checkpoint(self, checkpoint_save_dir: str,
+                                         checkpoint_name: Optional[str] = None,
+                                         config_path: Optional[Path] = None):
         pass
 
     def get_sample_dir_name(self) -> str:
@@ -158,7 +166,9 @@ class SemanticSegmentationHandler(BaseSampleHandler):
     def get_sample_dir_name(self) -> str:
         return 'semantic_segmentation'
 
-    def get_metric_value_from_checkpoint(self, checkpoint_save_dir: str, checkpoint_name: str, config_path: Path):
+    def get_metric_value_from_checkpoint(self, checkpoint_save_dir: str,
+                                         checkpoint_name: Optional[str] = None,
+                                         config_path: Optional[Path] = None):
         pass
 
 

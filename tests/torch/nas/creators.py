@@ -18,6 +18,7 @@ from typing import List
 from typing import Optional
 from typing import Tuple
 
+import torch
 from torchvision.models import mobilenet_v2
 from torchvision.models import mobilenet_v3_small
 
@@ -54,6 +55,10 @@ def create_bootstrap_training_model_and_ctrl(model,
     nncf_network = create_nncf_network(model, nncf_config)
     register_bn_adaptation_init_args(nncf_config)
     ctrl, model = create_compressed_model_from_algo_names(nncf_network, nncf_config, [algo_name], False)
+
+    # Default optimizer
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
+    ctrl.set_training_lr_scheduler_args(optimizer, 1)
     return model, ctrl
 
 
@@ -71,6 +76,9 @@ def create_bnas_model_and_ctrl_by_test_desc(desc: MultiElasticityTestDesc, mode=
             }
         }
     }
+    depth_config = config['bootstrapNAS']['training']['elasticity']['depth']
+    if depth_config['mode'] == 'auto':
+        del depth_config['skipped_blocks']
     config['bootstrapNAS']['training']['elasticity'].update(desc.algo_params)
     if desc.name == 'densenet_121':
         config['bootstrapNAS']['training'] = {'elasticity': {'depth': {'min_block_size': 10, 'max_block_size': 117}}}

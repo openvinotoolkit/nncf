@@ -210,13 +210,20 @@ class LEGRTrainingTestDescriptor(CompressionTrainingTestDescriptor):
 class NASTrainingValidator(CompressionTrainingValidator):
     def __init__(self, desc: 'NASTrainingTestDescriptor'):
         super().__init__(desc)
-        self._desc = desc
+        self._desc = desc  # to override typehint to a child class
 
     def get_default_args(self, tmp_path):
         args = super().get_default_args(tmp_path)
         if self._desc.num_train_steps_:
             args['train-steps'] = self._desc.num_train_steps_
         return args
+
+    def validate_subnet(self):
+        ref_acc = self._desc.subnet_expected_accuracy_
+        act_acc = self._desc.get_subnet_metric()
+        tolerance = self._desc.absolute_tolerance_train_ if act_acc < ref_acc else self._desc.better_accuracy_tolerance
+        # assert act_acc == approx(ref_acc, abs=tolerance)
+        assert act_acc > ref_acc
 
 
 class NASTrainingTestDescriptor(CompressionTrainingTestDescriptor):
@@ -226,13 +233,24 @@ class NASTrainingTestDescriptor(CompressionTrainingTestDescriptor):
         self.data_parallel()
         self.num_train_steps_ = None
         self.checkpoint_name = 'supernet'
+        self.subnet_expected_accuracy_ = None
+        self.subnet_checkpoint_name = 'subnetwork'
 
     def num_train_steps(self, num_steps: int):
         self.num_train_steps_ = num_steps
         return self
 
-    def get_validator(self):
+    def get_validator(self) -> 'NASTrainingValidator':
         return NASTrainingValidator(self)
+
+    def subnet_expected_accuracy(self, subnet_expected_accuracy: float):
+        self.subnet_expected_accuracy_ = subnet_expected_accuracy
+        return self
+
+    def get_subnet_metric(self):
+        return self.sample_handler.get_metric_value_from_checkpoint(
+            self.checkpoint_save_dir, self.subnet_checkpoint_name
+        )
 
     def _get_weight_path(self, weekly_models_path):
         return os.path.join(weekly_models_path, SampleType.CLASSIFICATION.value, self.dataset_name,
@@ -297,21 +315,24 @@ NAS_DESCRIPTORS = [
     NASTrainingTestDescriptor()
         .real_dataset('cifar10')
         .config_name('mobilenet_v2_nas_SMALL.json')
-        .expected_accuracy(78.86)
+        .expected_accuracy(80.95)
+        .subnet_expected_accuracy(88.67)
         .weights_filename('mobilenet_v2_cifar10_93.91.pth')
         .absolute_tolerance_train(1.0)
         .absolute_tolerance_eval(2e-2),
     NASTrainingTestDescriptor()
         .real_dataset('cifar10')
         .config_name('resnet50_nas_SMALL.json')
-        .expected_accuracy(83.13)
+        .subnet_expected_accuracy(88.67)
+        .expected_accuracy(87.25)
         .weights_filename('resnet50_cifar10_93.65.pth')
         .absolute_tolerance_train(2.0)
         .absolute_tolerance_eval(2e-2),
     NASTrainingTestDescriptor()
         .real_dataset('cifar10')
         .config_name('vgg11_bn_nas_SMALL.json')
-        .expected_accuracy(87.07)
+        .subnet_expected_accuracy(88.67)
+        .expected_accuracy(89.43)
         .weights_filename('vgg11_bn_cifar10_92.39.pth')
         .absolute_tolerance_train(2.0)
         .absolute_tolerance_eval(2e-2),
@@ -319,6 +340,7 @@ NAS_DESCRIPTORS = [
         .real_dataset('cifar100')
         .config_name('efficient_net_b0_nas_SMALL.json')
         .expected_accuracy(1)
+        .subnet_expected_accuracy(88.67)
         .weights_filename('efficient_net_b0_cifar100_87.02.pth')
         .absolute_tolerance_train(1.0)
         .absolute_tolerance_eval(2e-2)
@@ -354,7 +376,6 @@ IMAGENET_DESCRIPTORS = [
 TEST_CASE_DESCRIPTORS = [
     *QUANTIZATION_DESCRIPTORS,
     *SPARSITY_DESCRIPTORS,
-    *NAS_DESCRIPTORS,
     *IMAGENET_DESCRIPTORS,
 ]
 
@@ -394,6 +415,13 @@ def fixture_desc(request, dataset_dir, tmp_path_factory, weekly_models_path, ena
                 params=LEGR_TEST_CASE_DESCRIPTORS, ids=map(str, LEGR_TEST_CASE_DESCRIPTORS))
 def fixture_legr_desc(request, dataset_dir, tmp_path_factory, weekly_models_path, enable_imagenet):
     desc: LEGRTrainingTestDescriptor = request.param
+    return finalize_desc(desc, dataset_dir, tmp_path_factory, weekly_models_path, enable_imagenet)
+
+
+@pytest.fixture(name='nas_desc', scope='module',
+                params=NAS_DESCRIPTORS, ids=map(str, NAS_DESCRIPTORS))
+def fixture_nas_desc(request, dataset_dir, tmp_path_factory, weekly_models_path, enable_imagenet):
+    desc: NASTrainingTestDescriptor = request.param
     return finalize_desc(desc, dataset_dir, tmp_path_factory, weekly_models_path, enable_imagenet)
 
 
@@ -442,6 +470,26 @@ class TestCompression:
 
         self._validate_eval_metric(legr_desc, metric_file_path)
 
+    @pytest.mark.dependency(name="nas_train")
+    def test_compression_nas_train(self, nas_desc: NASTrainingTestDescriptor, tmp_path, mocker):
+        validator = nas_desc.get_validator()
+        args = validator.get_default_args(tmp_path)
+
+        validator.validate_sample(args, mocker)
+
+        self._validate_train_metric(nas_desc)
+        validator.validate_subnet()
+
+    @pytest.mark.dependency(depends=["nas_train"])
+    def test_compression_nas_eval(self, nas_desc: NASTrainingTestDescriptor, tmp_path, mocker):
+        validator = nas_desc.get_validator()
+        args = validator.get_default_args(tmp_path)
+        metric_file_path = self._add_args_for_eval(args, nas_desc, tmp_path)
+
+        validator.validate_sample(args, mocker)
+
+        self._validate_eval_metric(nas_desc, metric_file_path)
+
     @staticmethod
     def _validate_eval_metric(desc, metric_file_path):
         with open(str(metric_file_path), encoding='utf8') as metric_file:
@@ -461,7 +509,7 @@ class TestCompression:
         return metric_file_path
 
     @staticmethod
-    def _validate_train_metric(desc):
+    def _validate_train_metric(desc: CompressionTrainingTestDescriptor):
         ref_acc = desc.expected_accuracy_
         actual_acc = desc.get_metric()
         tolerance = desc.absolute_tolerance_train_ if actual_acc < ref_acc else desc.better_accuracy_tolerance

@@ -17,7 +17,7 @@ from pathlib import Path
 from shutil import copyfile
 
 import torch
-from torch import nn
+import torch.nn as nn
 
 from examples.torch.classification.main import create_data_loaders
 from examples.torch.classification.main import create_datasets
@@ -44,43 +44,37 @@ from examples.torch.common.utils import is_pretrained_model_requested
 from examples.torch.common.utils import print_args
 from nncf.config.structures import BNAdaptationInitArgs
 from nncf.experimental.torch.nas.bootstrapNAS.search import SearchAlgorithm
-from nncf.experimental.torch.nas.bootstrapNAS import EpochBasedTrainingAlgorithm
+from nncf.experimental.torch.nas.bootstrapNAS.training.model_creator_helpers import resume_compression_from_state
 from nncf.torch.initialization import default_criterion_fn
 from nncf.torch.initialization import wrap_dataloader_for_init
 from nncf.torch.model_creation import create_nncf_network
 from nncf.torch.utils import is_main_process
+from nncf.torch.checkpoint_loading import load_state
 
 
 def get_nas_argument_parser():
     parser = get_argument_parser()
     parser.add_argument('--train-steps', default=None, type=int,
                         help='Enables running training for the given number of steps')
+
+    parser.add_argument('--elasticity-state-path', required=True, type=str,
+                        help='Path of elasticity state')
+
+    parser.add_argument('--supernet-weights', required=True, type=str,
+                        help='Path to weights of trained super-network')
+
+    parser.add_argument("--search-mode", "-s", action='store_true', help="Activates search mode")
+
     return parser
-
-
-def label_smooth(target, num_classes: int, label_smoothing=0.1):
-    batch_size = target.size(0)
-    target = torch.unsqueeze(target, 1)
-    soft_target = torch.zeros((batch_size, num_classes), device=target.device)
-    soft_target.scatter_(1, target, 1)
-    soft_target = soft_target * (1 - label_smoothing) + label_smoothing / num_classes
-    return soft_target
-
-
-def cross_entropy_loss_with_soft_target(pred, soft_target):
-    logsoftmax = nn.LogSoftmax()
-    return torch.mean(torch.sum(- soft_target * logsoftmax(pred), 1))
-
-
-def cross_entropy_with_label_smoothing(pred, target, label_smoothing=0.1):
-    soft_target = label_smooth(target, pred.size(1), label_smoothing)
-    return cross_entropy_loss_with_soft_target(pred, soft_target)
 
 
 def main(argv):
     parser = get_nas_argument_parser()
     args = parse_args(parser, argv)
     config = create_sample_config(args, parser)
+    config.search_elasticity_state_path = args.elasticity_state_path
+    config.search_supernet_weights = args.supernet_weights
+    config.search_mode_active = args.search_mode
 
     if config.dist_url == "env://":
         config.update_from_env()
@@ -112,14 +106,9 @@ def main_worker(current_gpu, config: SampleConfig):
 
     set_seed(config)
 
-    opt_config = config.get('optimizer', {})
-
     # define loss function (criterion)
-    if 'label_smoothing' in opt_config:
-        criterion = lambda pred, target: \
-            cross_entropy_with_label_smoothing(pred, target, opt_config.label_smoothing)
-    else:
-        criterion = nn.CrossEntropyLoss()
+    criterion = nn.CrossEntropyLoss()
+    criterion = criterion.to(config.device)
 
     model_name = config['model']
     train_criterion_fn = inception_criterion_fn if 'inception' in model_name else default_criterion_fn
@@ -142,6 +131,8 @@ def main_worker(current_gpu, config: SampleConfig):
 
     model.to(config.device)
 
+    validate(val_loader, model, criterion, config)
+
     # define optimizer
     params_to_optimize = get_parameter_groups(model, config)
     optimizer, lr_scheduler = make_optimizer(params_to_optimize, config)
@@ -160,28 +151,30 @@ def main_worker(current_gpu, config: SampleConfig):
 
     nncf_network = create_nncf_network(model, nncf_config)
 
-    resuming_checkpoint_path = config.resuming_checkpoint_path
-    if resuming_checkpoint_path is None:
-        training_algorithm = EpochBasedTrainingAlgorithm.from_config(nncf_network, nncf_config)
-    else:
-        training_algorithm = EpochBasedTrainingAlgorithm.from_checkpoint(nncf_network, bn_adapt_args,
-                                                                         resuming_checkpoint_path)
+    if config.search_mode_active:
 
-    if 'train' in config.mode:
-        nncf_network, elasticity_ctrl = training_algorithm.run(train_epoch_fn, train_loader,
-                                                               validate_model_fn, val_loader, optimizer,
-                                                               config.checkpoint_save_dir, config.tb,
-                                                               config.train_steps)
+        compression_state = torch.load(config.search_elasticity_state_path)
+        model, elasticity_ctrl = resume_compression_from_state(nncf_network, compression_state)
+        model_weights = torch.load(config.search_supernet_weights)
 
-        if resuming_checkpoint_path is None:
-            search_algo = SearchAlgorithm.from_config(nncf_network, elasticity_ctrl, nncf_config)
-        else:
-            search_algo = SearchAlgorithm.from_checkpoint(nncf_network, elasticity_ctrl, bn_adapt_args, resuming_checkpoint_path)
+        load_state(model, model_weights, is_resume=True)
+
+        top1_acc = validate_model_fn_top1(model, val_loader)
+        print(f'SuperNetwork Top 1: {top1_acc}')
+
+        search_algo = SearchAlgorithm.from_config(model, elasticity_ctrl, nncf_config)
 
         elasticity_ctrl, best_config, performance_metrics = search_algo.run(validate_model_fn_top1, val_loader, config.checkpoint_save_dir, tensorboard_writer=config.tb)
 
         print(best_config)
         print(performance_metrics)
+
+        search_algo.search_progression_to_csv()
+        search_algo.evaluators_to_csv()
+
+        top1_acc = validate_model_fn_top1(model, val_loader)
+        print(top1_acc, elasticity_ctrl.multi_elasticity_handler.count_flops_and_weights_for_active_subnet()[0]/2000000)
+        assert best_config == elasticity_ctrl.multi_elasticity_handler.get_active_config()
 
     if 'test' in config.mode:
         validate(val_loader, model, criterion, config)

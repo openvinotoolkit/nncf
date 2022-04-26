@@ -566,7 +566,8 @@ def train_epoch(train_loader, model, criterion, criterion_fn, optimizer, compres
                 ))
 
         if is_main_process() and log_training_info:
-            global_step = len(train_loader) * epoch
+            # global_step = len(train_loader) * epoch
+            global_step = train_iters * epoch
             config.tb.add_scalar("train/learning_rate", get_lr(optimizer), i + global_step)
             config.tb.add_scalar("train/criterion_loss", criterion_losses.avg, i + global_step)
             config.tb.add_scalar("train/compression_loss", compression_losses.avg, i + global_step)
