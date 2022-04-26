@@ -160,20 +160,21 @@ def main_worker(current_gpu, config: SampleConfig):
         load_state(model, model_weights, is_resume=True)
 
         top1_acc = validate_model_fn_top1(model, val_loader)
-        print(f'SuperNetwork Top 1: {top1_acc}')
+        logger.info("SuperNetwork Top 1: {top1_acc}".format(top1_acc=top1_acc))
 
         search_algo = SearchAlgorithm.from_config(model, elasticity_ctrl, nncf_config)
 
         elasticity_ctrl, best_config, performance_metrics = search_algo.run(validate_model_fn_top1, val_loader, config.checkpoint_save_dir, tensorboard_writer=config.tb)
 
-        print(best_config)
-        print(performance_metrics)
+        logger.info("Best config: {best_config}".format(best_config=best_config))
+        logger.info("Performance metrics: {performance_metrics}".format(performance_metrics=performance_metrics))
 
         search_algo.search_progression_to_csv()
         search_algo.evaluators_to_csv()
 
         top1_acc = validate_model_fn_top1(model, val_loader)
-        print(top1_acc, elasticity_ctrl.multi_elasticity_handler.count_flops_and_weights_for_active_subnet()[0]/2000000)
+        logger.info("Top1 acc: {top1_acc}, Macs: {macs}".format(top1_acc=top1_acc,
+                    macs=elasticity_ctrl.multi_elasticity_handler.count_flops_and_weights_for_active_subnet()[0]/2000000))
         assert best_config == elasticity_ctrl.multi_elasticity_handler.get_active_config()
 
     if 'test' in config.mode:

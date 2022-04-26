@@ -180,8 +180,8 @@ def main_worker(current_gpu, config: SampleConfig):
 
         elasticity_ctrl, best_config, performance_metrics = search_algo.run(validate_model_fn_top1, val_loader, config.checkpoint_save_dir, tensorboard_writer=config.tb)
 
-        print(best_config)
-        print(performance_metrics)
+        logger.info("Best config: {best_config}".format(best_config=best_config))
+        logger.info("Performance metrics: {performance_metrics}".format(performance_metrics=performance_metrics))
 
     if 'test' in config.mode:
         validate(val_loader, model, criterion, config)
