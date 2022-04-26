@@ -20,7 +20,6 @@ from typing import Tuple
 from typing import TypeVar
 
 import torch
-from torch.optim.lr_scheduler import ReduceLROnPlateau
 
 from nncf import NNCFConfig
 from nncf.api.compression import CompressionAlgorithmController
@@ -94,10 +93,10 @@ class EpochBasedTrainingAlgorithm:
         self._start_epoch = 0
         self._supernet_best_acc1 = 0
         self._min_subnet_best_acc1 = 0
+        self._optimizer = None
         self._optimizer_state = None
         if checkpoint is not None:
             resuming_model_state_dict = checkpoint[self._state_names.MODEL_STATE]
-            print(self._model)
             load_state(self._model, resuming_model_state_dict, is_resume=True)
             self._optimizer_state = checkpoint[self._state_names.OPTIMIZER]
             self._start_epoch = checkpoint[self._state_names.EPOCH]
@@ -114,12 +113,12 @@ class EpochBasedTrainingAlgorithm:
     def run(self,
             train_epoch_fn: TrainEpochFnType,
             train_loader: DataLoaderType,
-            lr_scheduler: LRSchedulerType,
             val_fn: ValFnType,
             val_loader: DataLoaderType,
             optimizer: OptimizerType,
             checkpoint_save_dir: str,
-            tensorboard_writer: Optional[TensorboardWriterType] = None) -> Tuple[NNCFNetwork, ElasticityController]:
+            tensorboard_writer: Optional[TensorboardWriterType] = None,
+            train_iters: Optional[float] = None) -> Tuple[NNCFNetwork, ElasticityController]:
         """
         Implements a training loop for supernet training.
 
@@ -133,8 +132,15 @@ class EpochBasedTrainingAlgorithm:
         :param tensorboard_writer: The tensorboard object to be used for logging.
         :return: the fine-tuned model and elasticity controller
         """
+
+        if train_iters is None:
+            train_iters = len(train_loader)
+        self._training_ctrl.set_training_lr_scheduler_args(optimizer, train_iters)  # len(train_loader))
+
         if self._optimizer_state is not None:
             optimizer.load_state_dict(self._optimizer_state)
+
+        self._optimizer = optimizer
 
         log_validation_info = True
         if tensorboard_writer is None:
@@ -158,9 +164,6 @@ class EpochBasedTrainingAlgorithm:
 
             # train for one epoch
             train_epoch_fn(train_loader, self._model, self._training_ctrl, epoch, optimizer)
-
-            # Learning rate scheduling should be applied after optimizer’s update
-            lr_scheduler.step(epoch if not isinstance(lr_scheduler, ReduceLROnPlateau) else self._supernet_best_acc1)
 
             compression_stage = self._training_ctrl.compression_stage()
 
