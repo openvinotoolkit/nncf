@@ -336,14 +336,14 @@ NAS_DESCRIPTORS = [
         .weights_filename('vgg11_bn_cifar10_92.39.pth')
         .absolute_tolerance_train(2.0)
         .absolute_tolerance_eval(2e-2),
-    NASTrainingTestDescriptor()
-        .real_dataset('cifar100')
-        .config_name('efficient_net_b0_nas_SMALL.json')
-        .expected_accuracy(1)
-        .subnet_expected_accuracy(88.67)
-        .weights_filename('efficient_net_b0_cifar100_87.02.pth')
-        .absolute_tolerance_train(1.0)
-        .absolute_tolerance_eval(2e-2)
+    # NASTrainingTestDescriptor()
+    #     .real_dataset('cifar100')
+    #     .config_name('efficient_net_b0_nas_SMALL.json')
+    #     .expected_accuracy(1)
+    #     .subnet_expected_accuracy(88.67)
+    #     .weights_filename('efficient_net_b0_cifar100_87.02.pth')
+    #     .absolute_tolerance_train(1.0)
+    #     .absolute_tolerance_eval(2e-2)
 ]
 
 IMAGENET_DESCRIPTORS = [
