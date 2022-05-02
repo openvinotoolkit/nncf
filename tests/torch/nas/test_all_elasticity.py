@@ -366,7 +366,8 @@ def test_multi_elasticity_state():
     prepare_train_algo_for_resume(training_ctrl)
     compression_state = training_ctrl.get_compression_state()
 
-    assert compression_state == REF_COMPRESSION_STATE_FOR_TWO_CONV
+    assert compression_state['ctrl_state'] == REF_COMPRESSION_STATE_FOR_TWO_CONV['ctrl_state']
+    assert compression_state['builder_state'] == REF_COMPRESSION_STATE_FOR_TWO_CONV['builder_state']
 
 
 def test_can_restore_from_state():

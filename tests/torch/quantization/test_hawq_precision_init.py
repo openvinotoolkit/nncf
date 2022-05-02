@@ -780,10 +780,10 @@ def test_compression_ratio(desc, mocker):
     config = desc.create_config()
     register_bn_adaptation_init_args(config)
     from nncf.torch.quantization.algo import QuantizationBuilder
-    get_qsetyp_spy = mocker.spy(QuantizationBuilder, '_get_quantizer_setup')
+    get_single_config_quantizer_setup_spy = mocker.spy(QuantizationBuilder, '_get_single_config_quantizer_setup')
     model, ctrl = create_compressed_model_and_algo_for_test(ConvLinear(), config)
 
-    quantizer_setup = get_qsetyp_spy.spy_return
+    quantizer_setup = get_single_config_quantizer_setup_spy.spy_return
     weight_qp_id_per_activation_qp_id = ctrl.groups_of_adjacent_quantizers.weight_qp_id_per_activation_qp_id
     flops_per_module = model.get_flops_per_module()
     ratio_calculator = CompressionRatioCalculator(flops_per_module, quantizer_setup, weight_qp_id_per_activation_qp_id)

@@ -15,16 +15,25 @@ from nncf.common.graph.definitions import NNCFGraphNodeType
 from nncf.common.graph.patterns import GraphPattern
 
 
-def create_h_sigmoid_act() -> GraphPattern:
+def create_swish_activation() -> GraphPattern:
     pattern = GraphPattern()
 
-    input_pattern_node = pattern.add_node(label='*INPUT_NODE*', type=GraphPattern.NON_PATTERN_NODE_TYPE)
-    sigmoid_node = pattern.add_node(label='SIGMOID', type='Sigmoid')
-    mul_node = pattern.add_node(label='MUL', type='Mul')
+    input_pattern_node_1 = pattern.add_node(label='*INPUT_NODE*', type=GraphPattern.NON_PATTERN_NODE_TYPE)
+    sigmoid_node_1 = pattern.add_node(label='SIGMOID', type='Sigmoid')
+    mul_node_1 = pattern.add_node(label='MUL', type='Mul')
 
-    pattern.add_edge(input_pattern_node, sigmoid_node)
-    pattern.add_edge(input_pattern_node, mul_node)
-    pattern.add_edge(sigmoid_node, mul_node)
+    pattern.add_edge(input_pattern_node_1, sigmoid_node_1)
+    pattern.add_edge(input_pattern_node_1, mul_node_1)
+    pattern.add_edge(sigmoid_node_1, mul_node_1)
+
+    input_pattern_node_2 = pattern.add_node(label='*INPUT_NODE*', type=GraphPattern.NON_PATTERN_NODE_TYPE)
+    sigmoid_node_2 = pattern.add_node(label='HARDSIGMOID', type='HardSigmoid')
+    mul_node_2 = pattern.add_node(label='MUL', type='Mul')
+
+    pattern.add_edge(input_pattern_node_2, sigmoid_node_2)
+    pattern.add_edge(input_pattern_node_2, mul_node_2)
+    pattern.add_edge(sigmoid_node_2, mul_node_2)
+
     return pattern
 
 
