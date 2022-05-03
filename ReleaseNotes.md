@@ -7,6 +7,27 @@ samples distributed with the code.  The samples demonstrate the usage of compres
 public models and datasets for three different use cases: Image Classification, Object Detection,
 and Semantic Segmentation.
 
+## New in Release 2.2.0
+- (TensorFlow) Added TensorFlow 2.5.x support.
+- (TensorFlow) The `SubclassedConverter` class was added to create `NNCFGraph` for the `tf.Graph` Keras model.
+- (TensorFlow) Added `TFOpLambda ` layer support with `TFModelConverter`, `TFModelTransformer`, and `TFOpLambdaMetatype`.
+- (TensorFlow) Patterns from `MatMul` and `Conv2D` to `BiasAdd` and `Metatypes` of TensorFlow operations with weights `TFOpWithWeightsMetatype` are added.
+- (PyTorch, TensorFlow) Added prunings for `Reshape` and `Linear` as `ReshapePruningOp` and `LinearPruningOp`.
+- (PyTorch) Added mixed precision quantization config with HAWQ for `Resnet50` and `Mobilenet_v2` for the latest VPU.
+- (PyTorch) Splitted `NNCFBatchNorm` into `NNCFBatchNorm1d`, `NNCFBatchNorm2d`, `NNCFBatchNorm3d`.
+- (PyTorch - Experimental) Added the `BNASTrainingController` and `BNASTrainingAlgorithm` for BootstrapNAS to search the model's architecture.
+- (Experimental) ONNX `ModelProto` is now converted to `NNCFGraph` through `GraphConverter`.
+- (Experimental) `ONNXOpMetatype` and extended patterns for fusing HW config is now available.
+- (Experimental) Added `ONNXPostTrainingQuantization` and `MinMaxQuantization` supports for ONNX.
+
+Bugfixes:
+- (PyTorch, TensorFlow) Added exception handling of BN adaptation for zero sample values.
+- (PyTorch, TensorFlow) Fixed learning rate after validation step for `EarlyExitCompressionTrainingLoop`.
+- (PyTorch) Fixed `FakeQuantizer` to make exact zeros.
+- (PyTorch) Fixed `Quantizer` misplacements during ONNX export.
+- (PyTorch) Restored device information during ONNX export.
+- (PyTorch) Fixed the statistics collection from the pruned model.
+
 ## New in Release 2.1.0
 - (PyTorch) All PyTorch operations are now NNCF-wrapped automatically.
 - (TensorFlow) Scales for concat-affecting quantizers are now unified
