@@ -130,7 +130,7 @@ if __name__ == '__main__':
     parser.add_argument("--input_shape", help="Model's input shape", nargs="+", type=int, default=[1, 3, 224, 224])
     parser.add_argument("--init_samples", help="Number of initialization samples", type=int, default=300)
     parser.add_argument("--ignored_scopes", help="Ignored operations ot quantize", nargs="+", default=None)
-    parser.add_argument("--evaluate", help="Whether is a validation of the final model need", default=False)
+    parser.add_argument("--evaluate", help="Run an evaluation step for the final quantized model", default=False)
     args = parser.parse_args()
     run(args.onnx_model_path,
         args.output_model_path,
