@@ -21,32 +21,42 @@ Target = TypeVar('Target')
 
 
 class Metric(ABC):
-    """An abstract class representing an metric. """
+    """
+    An abstract class representing an metric.
+    """
 
     def __init__(self):
         self.reset()
 
     @property
     def value(self):
-        """ Computes metric value for the one dataset sample """
+        """
+        Computes metric value for the one dataset sample
+        """
         raise NotImplementedError('The value() property should be implemented to use this metric '
                                   'with AccuracyAwareQuantization algorithm!')
 
     @property
     @abstractmethod
     def avg_value(self):
-        """ Computes metric value across dataset """
+        """
+        Computes metric value across dataset
+        """
 
     @property
     def higher_better(self) -> bool:
-        """ Boolean attribute whether the metric should be increased """
+        """
+        Boolean attribute whether the metric should be increased
+        """
         return True
 
     @abstractmethod
     def update(self, output: Output, target: Target) -> None:
-        """ Calculates and updates metric value
-            :param output: model output
-            "param target: annotation for metric calculation
+        """
+        Calculates and updates metric value
+        
+        :param output: model output
+        :param target: annotation for metric calculation
         """
 
     @abstractmethod

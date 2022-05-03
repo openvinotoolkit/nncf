@@ -44,15 +44,19 @@ class Accuracy(Metric):
 
     @property
     def avg_value(self):
-        """ Returns accuracy metric value for all model outputs. """
+        """
+        Returns accuracy metric value for all model outputs.
+        """
         return {self._name: np.ravel(self._matches).mean()}
 
     def update(self, output: List, target: List):
-        """ Updates prediction matches based on the model output value and target.
-            To calculate the top@N metric, the model output and target data must be represented
-            as a list of length 1 containing vector and scalar values, respectively.
-            :param output: model output
-            :param target: annotations
+        """
+        Updates prediction matches based on the model output value and target.
+        To calculate the top@N metric, the model output and target data must be represented
+        as a list of length 1 containing vector and scalar values, respectively.
+
+        :param output: model output
+        :param target: annotations
         """
         if len(output) > 1:
             raise ValueError('The accuracy metric cannot be calculated '

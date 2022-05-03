@@ -74,7 +74,7 @@ class Engine:
 
     def set_outputs_transforms(self, outputs_transforms: Callable):
         """
-         Sets outputs transforms that applies to the model outputs after inference.
+        Sets outputs transforms that applies to the model outputs after inference.
         """
         self._outputs_transforms = outputs_transforms
 
