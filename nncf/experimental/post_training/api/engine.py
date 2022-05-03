@@ -11,7 +11,7 @@
  limitations under the License.
 """
 
-from abc import abstractmethod
+from abc import ABC, abstractmethod
 
 from typing import Dict
 from typing import TypeVar
@@ -23,7 +23,7 @@ TensorType = TypeVar('TensorType')
 MetricType = TypeVar('MetricType')
 
 
-class Engine:
+class Engine(ABC):
     """
     The basic class aims to provide the interface to infer the model.
     """
@@ -41,24 +41,21 @@ class Engine:
     def dataset(self):
         return self._dataset
 
-    @dataset.setter
-    def dataset(self, dataset):
-        self._dataset = dataset
-
     @property
     def metrics(self):
         return self._metrics
-
-    @metrics.setter
-    def metrics(self, metrics):
-        self._metrics = metrics
 
     @property
     def sampler(self):
         return self._sampler
 
-    @sampler.setter
-    def sampler(self, sampler):
+    def set_dataset(self, dataset) -> None:
+        self._dataset = dataset
+
+    def set_metrics(self, metrics) -> None:
+        self._metrics = metrics
+
+    def set_sampler(self, sampler) -> None:
         self._sampler = sampler
 
     def set_model(self, model: ModelType) -> None:
