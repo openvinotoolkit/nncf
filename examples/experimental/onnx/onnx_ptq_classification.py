@@ -12,7 +12,6 @@
 """
 
 import argparse
-import numpy as np
 
 from typing import List
 from typing import Optional
@@ -23,52 +22,8 @@ from nncf.experimental.post_training.compression_builder import CompressionBuild
 from nncf.experimental.post_training.algorithms.quantization import PostTrainingQuantization
 from nncf.experimental.post_training.algorithms.quantization import PostTrainingQuantizationParameters
 from nncf.experimental.onnx.datasets.imagenet_dataset import create_imagenet_torch_dataset
-from nncf.experimental.post_training.api.metric import Metric
+from nncf.experimental.post_training.api.metric import Accuracy
 from nncf.common.utils.logger import logger as nncf_logger
-
-
-class Accuracy(Metric):
-
-    """
-    The classification accuracy metric is defined as the number of correct predictions
-    divided by the total number of predictions.
-    It measures the proportion of examples for which the predicted label matches the single target label.
-    Metric is calculated as a percentage.
-    """
-
-    def __init__(self, top_k: int = 1):
-        super().__init__()
-        self._top_k = top_k
-        self._name = f'accuracy@top{self._top_k}'
-        self._matches = []
-
-    @property
-    def avg_value(self):
-        """
-        Returns accuracy metric value for all model outputs.
-        """
-        return {self._name: np.ravel(self._matches).mean()}
-
-    def update(self, output: List, target: List):
-        """
-        Updates prediction matches based on the model output value and target.
-        To calculate the top@N metric, the model output and target data must be represented
-        as a list of length 1 containing vector and scalar values, respectively.
-
-        :param output: model output
-        :param target: annotations
-        """
-        if len(output) > 1:
-            raise ValueError('The accuracy metric cannot be calculated '
-                             'for a model with multiple outputs')
-        predictions = np.argsort(output[0], axis=1)[:, -self._top_k:]
-        match = [float(t in predictions[i]) for i, t in enumerate(target)]
-
-        self._matches.append(match)
-
-    def reset(self):
-        """ Resets collected matches """
-        self._matches = []
 
 
 def run(onnx_model_path: str, output_model_path: str,
