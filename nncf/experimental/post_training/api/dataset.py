@@ -17,6 +17,8 @@ from typing import TypeVar
 from abc import ABC
 from abc import abstractmethod
 
+from nncf.common.utils.logger import logger as nncf_logger
+
 ModelInput = TypeVar('ModelInput')
 Target = TypeVar('Target')
 
@@ -26,8 +28,11 @@ class Dataset(ABC):
     Base class provides interface to get elements of the dataset.
     """
 
-    def __init__(self, batch_size=1, shuffle: bool = True):
+    def __init__(self, batch_size: int = 1, shuffle: bool = True):
         # TODO (kshpv): add support batch_size
+        if batch_size != 1:
+            nncf_logger.warn(
+                f"We don't support batch_size={batch_size} > 1 yet. Set batch_size=1")
         self.batch_size = 1
         self.shuffle = shuffle
 

@@ -16,6 +16,7 @@ import argparse
 from typing import List
 from typing import Optional
 
+import numpy as np
 import onnx
 
 from nncf.experimental.post_training.compression_builder import CompressionBuilder
@@ -39,7 +40,7 @@ def run(onnx_model_path: str, output_model_path: str,
 
     # Step 1: Initialize the data loader and metric (if it is needed).
     dataset = create_imagenet_torch_dataset(dataset_path, input_shape,
-                                                               batch_size=batch_size, shuffle=shuffle)
+                                            batch_size=batch_size, shuffle=shuffle)
     metric = Accuracy(top_k=1)
 
     # Step 2: Create a pipeline of compression algorithms.
@@ -59,7 +60,8 @@ def run(onnx_model_path: str, output_model_path: str,
 
     # Step 5: Save the quantized model.
     onnx.save(quantized_model, output_model_path)
-    nncf_logger.info("The quantized model is saved on {}".format(output_model_path))
+    nncf_logger.info(
+        "The quantized model is saved on {}".format(output_model_path))
 
     onnx.checker.check_model(output_model_path)
 
@@ -67,7 +69,9 @@ def run(onnx_model_path: str, output_model_path: str,
     if evaluate:
         nncf_logger.info("Validation of the quantized model "
                          "on the validation part of the dataset.")
-        metrics = builder.evaluate(quantized_model, metric, dataset)
+
+        metrics = builder.evaluate(
+            quantized_model, metric, dataset, outputs_transforms=lambda x: np.concatenate(x, axis=0))
         for metric_name, metric_value in metrics.items():
             nncf_logger.info("{}: {}".format(metric_name, metric_value))
 
@@ -80,12 +84,12 @@ if __name__ == '__main__':
                         help="Path to ImageNet validation data in the ImageFolder torchvision format "
                              "(Please, take a look at torchvision.datasets.ImageFolder)",
                         type=str)
-    parser.add_argument("--batch_size", help="Batch size for initialization", default=1)
+    parser.add_argument("--batch_size", help="Batch size for initialization", type=int, default=1)
     parser.add_argument("--shuffle", help="Whether to shuffle dataset for initialization", default=True)
     parser.add_argument("--input_shape", help="Model's input shape", nargs="+", type=int, default=[1, 3, 224, 224])
     parser.add_argument("--init_samples", help="Number of initialization samples", type=int, default=300)
     parser.add_argument("--ignored_scopes", help="Ignored operations ot quantize", nargs="+", default=None)
-    parser.add_argument("--evaluate", help="Run an evaluation step for the final quantized model", default=False)
+    parser.add_argument("--evaluate", help="Run an evaluation step for the final quantized model", action="store_true")
     args = parser.parse_args()
     run(args.onnx_model_path,
         args.output_model_path,

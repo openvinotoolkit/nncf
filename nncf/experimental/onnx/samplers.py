@@ -33,11 +33,7 @@ class ONNXBatchSampler(BatchSampler):
             tensors.append(self.dataset[i][0])
             targets.append(self.dataset[i][1])
 
-        if isinstance(tensors[0], torch.Tensor):
-            return torch.stack(tensors), targets
-        if isinstance(tensors[0], np.ndarray):
-            return np.stack(tensors), targets
-        raise RuntimeError('Unexpected input data type {tensors[0]}. Should be one of torch.Tensor or np.ndarray')
+        return self._post_process(tensors, targets)
 
 
 class ONNXRandomBatchSampler(RandomBatchSampler):
@@ -48,11 +44,7 @@ class ONNXRandomBatchSampler(RandomBatchSampler):
             tensors.append(self.dataset[self.random_permutated_indices[i]][0])
             targets.append(self.dataset[self.random_permutated_indices[i]][1])
 
-        if isinstance(tensors[0], torch.Tensor):
-            return torch.stack(tensors), targets
-        if isinstance(tensors[0], np.ndarray):
-            return np.stack(tensors), targets
-        raise RuntimeError('Unexpected input data type {tensors[0]}. Should be one of torch.Tensor or np.ndarray')
+        return self._post_process(tensors, targets)
 
 
 def create_onnx_sampler(dataset: Dataset,

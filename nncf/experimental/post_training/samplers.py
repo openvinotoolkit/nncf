@@ -11,12 +11,17 @@
  limitations under the License.
 """
 
+from typing import List, Tuple, Union
+import torch
+import numpy as np
+
 from abc import abstractmethod
 from nncf.experimental.post_training.api.sampler import Sampler
 from nncf.experimental.post_training.api.dataset import Dataset
 
 import random
 
+SAMPLER_OUTPUT_TYPE = Union[torch.Tensor, np.ndarray]
 
 # TODO (Nikita Malinin): Replace or rename this file
 class BatchSampler(Sampler):
@@ -27,7 +32,8 @@ class BatchSampler(Sampler):
 
     def __iter__(self):
         for i in range(len(self.batch_indices) - 1):
-            batch = self.form_batch(self.batch_indices[i], self.batch_indices[i + 1])
+            batch = self.form_batch(
+                self.batch_indices[i], self.batch_indices[i + 1])
             yield batch
 
     def __len__(self):
@@ -36,6 +42,14 @@ class BatchSampler(Sampler):
     @abstractmethod
     def form_batch(self, start_i: int, end_i: int):
         pass
+
+    def _post_process(self, tensors: List, targets: List) -> Tuple[SAMPLER_OUTPUT_TYPE, SAMPLER_OUTPUT_TYPE]:
+        if isinstance(tensors[0], torch.Tensor):
+            return torch.stack(tensors), torch.LongTensor(targets)
+        if isinstance(tensors[0], np.ndarray):
+            return np.stack(tensors), np.array(targets)
+        raise RuntimeError(
+            'Unexpected input data type {tensors[0]}. Should be one of torch.Tensor or np.ndarray')
 
 
 class RandomBatchSampler(BatchSampler):
@@ -52,5 +66,6 @@ class RandomBatchSampler(BatchSampler):
 
     def __iter__(self):
         for i in range(len(self.batch_indices) - 1):
-            batch = self.form_batch(self.batch_indices[i], self.batch_indices[i + 1])
+            batch = self.form_batch(
+                self.batch_indices[i], self.batch_indices[i + 1])
             yield batch

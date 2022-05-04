@@ -11,7 +11,7 @@
  limitations under the License.
 """
 
-from typing import TypeVar
+from typing import Callable, Optional, TypeVar
 
 from nncf.common.utils.logger import logger as nncf_logger
 
@@ -98,12 +98,15 @@ class CompressionBuilder:
             modified_model = algorithm.apply(modified_model, engine, statistics_aggregator.layers_statistics)
         return modified_model
 
-    def evaluate(self, model: ModelType, metric: Metric, dataset: Dataset, engine: Engine = None):
+    def evaluate(self, model: ModelType, metric: Metric, dataset: Dataset,
+                 engine: Engine = None, outputs_transforms: Optional[Callable] = None):
         backend = get_model_backend(model)
 
         if engine is None:
             engine = self._create_engine(backend)
+        if outputs_transforms is not None:
+            engine.set_outputs_transforms(outputs_transforms)
         engine.set_model(model)
-        engine.metrics = metric
-        engine.dataset = dataset
+        engine.set_metrics(metric)
+        engine.set_dataset(dataset)
         return engine.compute_metrics()
