@@ -28,6 +28,15 @@ from examples.experimental.onnx.onnx_ptq_classification import run
 from nncf.experimental.post_training.api.dataset import Dataset
 from tests.common.helpers import TEST_ROOT
 
+MODEL_NAMES = [
+    'resnet18',
+    'mobilenet_v2',
+    'inception_v3',
+    'googlenet',
+    'vgg16',
+    'shufflenet_v2_x1_0'
+]
+
 MODELS = [
     models.resnet18(),
     models.mobilenet_v2(),
@@ -63,12 +72,11 @@ def mock_dataset_creator(dataset_path, input_shape, batch_size, shuffle):
     return TestDataset([(np.zeros(input_shape[1:]), 0), ])
 
 
-@pytest.mark.parametrize(("model, input_shape"),
-                         zip(MODELS, INPUT_SHAPES))
+@pytest.mark.parametrize(("model_name, model, input_shape"),
+                         zip(MODEL_NAMES, MODELS, INPUT_SHAPES))
 @patch('examples.experimental.onnx.onnx_ptq_classification.create_imagenet_torch_dataset',
        new=mock_dataset_creator)
-def test_sanity_quantize_sample(tmp_path, model, input_shape):
-    model_name = str(model.__class__)
+def test_sanity_quantize_sample(tmp_path, model_name, model, input_shape):
     onnx_model_dir = str(TEST_ROOT.joinpath('onnx', 'data', 'models'))
     onnx_model_path = str(TEST_ROOT.joinpath(onnx_model_dir, model_name))
     if not os.path.isdir(onnx_model_dir):

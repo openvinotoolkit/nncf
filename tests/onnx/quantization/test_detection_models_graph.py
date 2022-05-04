@@ -14,29 +14,18 @@
 import pytest
 
 import os
-import requests
 
 import onnx
 
 from tests.common.helpers import TEST_ROOT
-from tests.onnx.test_nncf_graph_builder import check_nx_graph
 
-from tests.onnx.quantization.test_classification_models_graph import TestDataset
-
-from nncf.experimental.post_training.compression_builder import CompressionBuilder
-from nncf.experimental.onnx.algorithms.quantization.min_max_quantization import ONNXMinMaxQuantization
-from nncf.experimental.post_training.algorithms.quantization import MinMaxQuantizationParameters
-
-from nncf.experimental.onnx.graph.nncf_graph_builder import GraphConverter
+from tests.onnx.quantization.common import min_max_quantize_model
+from tests.onnx.quantization.common import compare_nncf_graph
+from tests.onnx.quantization.common import infer_model
 
 MODELS_NAME = [
     'yolov2-coco-9',
     'tiny-yolov2',
-]
-
-MODELS_URL = [
-    'https://github.com/onnx/models/raw/main/vision/object_detection_segmentation/yolov2-coco/model/yolov2-coco-9.onnx',
-    'https://github.com/onnx/models/raw/main/vision/object_detection_segmentation/tiny-yolov2/model/tinyyolov2-7.onnx',
 ]
 
 PATH_REF_GRAPHS = [
@@ -49,32 +38,16 @@ INPUT_SHAPES = [
     [1, 3, 416, 416],
 ]
 
-REFERENCE_GRAPHS_TEST_ROOT = 'data/reference_graphs/quantization'
 
-
-@pytest.mark.parametrize(('model_name', 'model_url', 'path_ref_graph', 'input_shape'),
-                         zip(MODELS_NAME, MODELS_URL, PATH_REF_GRAPHS, INPUT_SHAPES))
-def test_min_max_quantization_graph(tmp_path, model_name, model_url, path_ref_graph, input_shape):
+@pytest.mark.parametrize(('model_name', 'path_ref_graph', 'input_shape'),
+                         zip(MODELS_NAME, PATH_REF_GRAPHS, INPUT_SHAPES))
+def test_min_max_quantization_graph(tmp_path, model_name, path_ref_graph, input_shape):
     onnx_model_dir = str(TEST_ROOT.joinpath('onnx', 'data', 'models'))
-    onnx_model_path = str(TEST_ROOT.joinpath(onnx_model_dir, model_name))
+    onnx_model_path = str(TEST_ROOT.joinpath(onnx_model_dir, model_name + '.onnx'))
     if not os.path.isdir(onnx_model_dir):
         os.mkdir(onnx_model_dir)
 
-    r = requests.get(model_url)
-    with open(onnx_model_path, 'wb') as f:
-        f.write(r.content)
-
     original_model = onnx.load(onnx_model_path)
-
-    dataset = TestDataset(input_shape)
-    builder = CompressionBuilder()
-    builder.add_algorithm(ONNXMinMaxQuantization(MinMaxQuantizationParameters(number_samples=1)))
-    quantized_model = builder.apply(original_model, dataset)
-
-    nncf_graph = GraphConverter.create_nncf_graph(quantized_model)
-    nx_graph = nncf_graph.get_graph_for_structure_analysis(extended=True)
-
-    data_dir = os.path.join(TEST_ROOT, 'onnx', REFERENCE_GRAPHS_TEST_ROOT)
-    path_to_dot = os.path.abspath(os.path.join(data_dir, path_ref_graph))
-
-    check_nx_graph(nx_graph, path_to_dot, True)
+    quantized_model = min_max_quantize_model(input_shape, original_model)
+    compare_nncf_graph(quantized_model, path_ref_graph)
+    infer_model(input_shape, quantized_model)

@@ -48,18 +48,18 @@ class DatasetForTest(Dataset):
 
 
 def min_max_quantize_model(input_shape: List[int], original_model: onnx.ModelProto) -> onnx.ModelProto:
-    dataloader = DatasetForTest(input_shape)
+    dataset = DatasetForTest(input_shape)
     builder = CompressionBuilder()
     builder.add_algorithm(ONNXMinMaxQuantization(MinMaxQuantizationParameters(number_samples=1)))
-    quantized_model = builder.apply(original_model, dataloader)
+    quantized_model = builder.apply(original_model, dataset)
     return quantized_model
 
 
 def ptq_quantize_model(input_shape: List[int], original_model: onnx.ModelProto) -> onnx.ModelProto:
-    dataloader = DatasetForTest(input_shape)
+    dataset = DatasetForTest(input_shape)
     builder = CompressionBuilder()
     builder.add_algorithm(PostTrainingQuantization(PostTrainingQuantizationParameters(number_samples=1)))
-    quantized_model = builder.apply(original_model, dataloader)
+    quantized_model = builder.apply(original_model, dataset)
     return quantized_model
 
 

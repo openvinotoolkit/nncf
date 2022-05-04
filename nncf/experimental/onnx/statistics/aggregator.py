@@ -44,8 +44,10 @@ class ONNXStatisticsAggregator(StatisticsAggregator):
         for _, v in self.layers_statistics.items():
             max_number_samples = max(max_number_samples, v.num_samples)
 
+        sampler = create_onnx_sampler(self.dataset, range(max_number_samples))
+
         self.engine.set_model(model_with_intermediate_outputs)
-        self.engine.sampler = create_onnx_sampler(self.dataset, range(max_number_samples))
+        self.engine.set_sampler(sampler)
         output = self.engine.compute_statistics(self.layers_statistics)
         self._agregate_statistics(output, self.layers_statistics)
 
