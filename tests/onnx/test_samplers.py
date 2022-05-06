@@ -20,7 +20,7 @@ import numpy as np
 
 from nncf.experimental.onnx.samplers import ONNXBatchSampler
 from nncf.experimental.onnx.samplers import ONNXRandomBatchSampler
-from nncf.experimental.post_training.api.dataloader import DataLoader
+from nncf.experimental.post_training.api.dataset import Dataset
 
 INPUT_SHAPE = [3, 10, 10]
 
@@ -29,7 +29,7 @@ DATASET_SAMPLES = [(np.zeros(INPUT_SHAPE), 0),
                    (100 * np.ones(INPUT_SHAPE), 2)]
 
 
-class TestDataloader(DataLoader):
+class TestDataset(Dataset):
     def __init__(self, samples: List[Tuple[np.ndarray, int]]):
         super().__init__(shuffle=False)
         self.samples = samples
@@ -43,9 +43,9 @@ class TestDataloader(DataLoader):
 
 @pytest.mark.parametrize("batch_size", (1, 2, 3))
 def test_batch_sampler(batch_size):
-    dataloader = TestDataloader(DATASET_SAMPLES)
-    dataloader.batch_size = batch_size
-    sampler = ONNXBatchSampler(dataloader)
+    dataset = TestDataset(DATASET_SAMPLES)
+    dataset.batch_size = batch_size
+    sampler = ONNXBatchSampler(dataset)
     for i, sample in enumerate(sampler):
         ref_sample = []
         ref_target = []
@@ -61,9 +61,9 @@ def test_batch_sampler(batch_size):
 @pytest.mark.parametrize("batch_size", (1, 2, 3))
 def test_random_batch_sampler(batch_size):
     np.random.seed(0)
-    dataloader = TestDataloader(DATASET_SAMPLES)
-    dataloader.batch_size = batch_size
-    sampler = ONNXRandomBatchSampler(dataloader)
+    dataset = TestDataset(DATASET_SAMPLES)
+    dataset.batch_size = batch_size
+    sampler = ONNXRandomBatchSampler(dataset)
     random_permuated_indices = [0, 2, 1]
     for i, sample in enumerate(sampler):
         ref_sample = []

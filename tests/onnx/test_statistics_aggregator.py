@@ -22,7 +22,7 @@ from nncf.experimental.onnx.graph.onnx_graph import ONNXGraph
 from nncf.experimental.post_training.algorithms.quantization.min_max_quantization import RangeType
 
 from tests.onnx.models import OneConvolutionalModel
-from tests.onnx.test_samplers import TestDataloader
+from tests.onnx.test_samplers import TestDataset
 
 INPUT_SHAPE = [3, 10, 10]
 
@@ -59,7 +59,7 @@ class TestParameters:
 def test_statistics_aggregator(range_type, test_parameters):
     model = OneConvolutionalModel().onnx_model
 
-    dataloader = TestDataloader(DATASET_SAMPLES)
+    dataset = TestDataset(DATASET_SAMPLES)
     compression_builder = CompressionBuilder()
 
     quantization = ONNXMinMaxQuantization(MinMaxQuantizationParameters(
@@ -68,7 +68,7 @@ def test_statistics_aggregator(range_type, test_parameters):
     ))
 
     compression_builder.add_algorithm(quantization)
-    quantized_model = compression_builder.apply(model, dataloader)
+    quantized_model = compression_builder.apply(model, dataset)
 
     onnx_graph = ONNXGraph(quantized_model)
     num_q = 0

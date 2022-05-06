@@ -27,6 +27,15 @@ from tests.onnx.quantization.common import ptq_quantize_model
 from tests.onnx.quantization.common import compare_nncf_graph
 from tests.onnx.quantization.common import infer_model
 
+MODEL_NAMES = [
+    'resnet18',
+    'mobilenet_v2',
+    'inception_v3',
+    'googlenet',
+    'vgg16',
+    'shufflenet_v2_x1_0'
+]
+
 MODELS = [
     models.resnet18(),
     models.mobilenet_v2(),
@@ -34,15 +43,6 @@ MODELS = [
     models.googlenet(),
     models.vgg16(),
     models.shufflenet_v2_x1_0(),
-]
-
-PATH_REF_GRAPHS = [
-    'resnet18.dot',
-    'mobilenet_v2.dot',
-    'inception_v3.dot',
-    'googlenet.dot',
-    'vgg16.dot',
-    'shufflenet_v2_x1_0.dot'
 ]
 
 INPUT_SHAPES = [
@@ -55,10 +55,10 @@ INPUT_SHAPES = [
 ]
 
 
-@pytest.mark.parametrize(('model', 'path_ref_graph', 'input_shape'),
-                         zip(MODELS, PATH_REF_GRAPHS, INPUT_SHAPES))
-def test_min_max_quantization_graph(tmp_path, model, path_ref_graph, input_shape):
-    model_name = str(model.__class__)
+@pytest.mark.parametrize(('model_name', 'model', 'input_shape'),
+                         zip(MODEL_NAMES, MODELS, INPUT_SHAPES))
+def test_min_max_quantization_graph(tmp_path, model_name, model, input_shape):
+    path_ref_graph = model_name + '.dot'
     onnx_model_dir = str(TEST_ROOT.joinpath('onnx', 'data', 'models'))
     onnx_model_path = str(TEST_ROOT.joinpath(onnx_model_dir, model_name))
     if not os.path.isdir(onnx_model_dir):
@@ -72,10 +72,10 @@ def test_min_max_quantization_graph(tmp_path, model, path_ref_graph, input_shape
     infer_model(input_shape, quantized_model)
 
 
-@pytest.mark.parametrize(('model', 'path_ref_graph', 'input_shape'),
-                         zip(MODELS, PATH_REF_GRAPHS, INPUT_SHAPES))
-def test_post_training_quantization_graph(tmp_path, model, path_ref_graph, input_shape):
-    model_name = str(model.__class__)
+@pytest.mark.parametrize(('model_name', 'model', 'input_shape'),
+                         zip(MODEL_NAMES, MODELS, INPUT_SHAPES))
+def test_post_training_quantization_graph(tmp_path, model_name, model, input_shape):
+    path_ref_graph = model_name + '.dot'
     onnx_model_dir = str(TEST_ROOT.joinpath('onnx', 'data', 'models'))
     onnx_model_path = str(TEST_ROOT.joinpath(onnx_model_dir, model_name))
     if not os.path.isdir(onnx_model_dir):

@@ -15,8 +15,6 @@ from typing import Dict
 
 from skl2onnx.helpers.onnx_helper import select_model_inputs_outputs
 import onnx
-# pylint: disable=no-member
-import tempfile
 
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
 
@@ -24,14 +22,17 @@ from nncf.experimental.post_training.statistics.aggregator import StatisticsAggr
 
 from nncf.experimental.onnx.samplers import create_onnx_sampler
 from nncf.experimental.onnx.engine import ONNXEngine
-from nncf.experimental.post_training.api.dataloader import DataLoader
+from nncf.experimental.post_training.api.dataset import Dataset
 
 
 class ONNXStatisticsAggregator(StatisticsAggregator):
-    def __init__(self, engine: ONNXEngine, dataloader: DataLoader):
-        super().__init__(engine, dataloader)
+    # TODO (Nikita Malinin): Remove ONNXStatisticsAggregator & create the common backend-agnostic solution
+
+    def __init__(self, engine: ONNXEngine, dataset: Dataset):
+        super().__init__(engine, dataset)
 
     def collect_statistics(self, model: onnx.ModelProto) -> None:
+        # TODO (Nikita Malinin): Need to update adding output process with the backend-specific graph transformer
         layers_to_collect_statistics = list(self.layers_statistics.keys())
         model_outputs = []
         for output in list(model.graph.output):
@@ -43,19 +44,15 @@ class ONNXStatisticsAggregator(StatisticsAggregator):
         for _, v in self.layers_statistics.items():
             max_number_samples = max(max_number_samples, v.num_samples)
 
-        with tempfile.NamedTemporaryFile() as temporary_model:
-            onnx.save(model_with_intermediate_outputs, temporary_model.name)
-            self.engine.set_model(temporary_model.name)
-            sampler = create_onnx_sampler(self.dataloader)
-            for i, sample in enumerate(sampler):
-                if i == max_number_samples:
-                    break
-                # Currently, there is no an usage of target
-                _input, _ = sample
-                output = self.engine.infer(_input)
-                self._agregate_statistics(output, self.layers_statistics)
+        sampler = create_onnx_sampler(self.dataset, range(max_number_samples))
 
-    def _agregate_statistics(self, output, layers_statistics: Dict[str, TensorStatisticCollectorBase]):
+        self.engine.set_model(model_with_intermediate_outputs)
+        self.engine.set_sampler(sampler)
+        output = self.engine.compute_statistics(self.layers_statistics)
+        self._aggregate_statistics(output, self.layers_statistics)
+
+    def _aggregate_statistics(self, output, layers_statistics: Dict[str, TensorStatisticCollectorBase]):
         for k, v in layers_statistics.items():
-            tensor = output[k]
-            v.register_input(tensor)
+            tensors = output[k]
+            for tensor in tensors:
+                v.register_input(tensor)

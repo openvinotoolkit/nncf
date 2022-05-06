@@ -10,35 +10,29 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-
-from typing import Tuple
-from typing import TypeVar
-
 from abc import ABC
 from abc import abstractmethod
 
-ModelInput = TypeVar('ModelInput')
-Target = TypeVar('Target')
+
+from nncf.experimental.post_training.api.dataset import Dataset
 
 
-class DataLoader(ABC):
+class Sampler(ABC):
     """
-    Base class provides interface to get elements of the dataset.
+    Base class for dataset sampler.
     """
 
-    def __init__(self, batch_size=1, shuffle: bool = True):
-        # TODO (kshpv): add support batch_size
-        self.batch_size = 1
-        self.shuffle = shuffle
+    def __init__(self, dataset: Dataset, sample_indices=None):
+        self.dataset = dataset
+        self.batch_size = dataset.batch_size
+        dataset_len = len(self.dataset)
+        max_samples_len = min(len(sample_indices), dataset_len) if sample_indices else dataset_len
+        self.batch_indices = list(range(0, max_samples_len + 1, self.batch_size))
 
     @abstractmethod
-    def __getitem__(self, i: int) -> Tuple[ModelInput, Target]:
-        """
-        Returns the i-th element of the dataset with the target value.
-        """
+    def __iter__(self):
+        pass
 
     @abstractmethod
-    def __len__(self) -> int:
-        """
-        Returns the length of the dataset.
-        """
+    def __len__(self):
+        pass
