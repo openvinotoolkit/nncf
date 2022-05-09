@@ -123,7 +123,7 @@ COMMON_DEPTH_SUPERNET_DESC = ElasticityDesc(
         EDBuilderStateNames.SKIPPED_BLOCKS_DEPENDENCIES: {0: [0]},
         EDBuilderStateNames.OrdinalIds: [[1, 3]],
     },
-    ref_search_space=[[0]]
+    ref_search_space=[[0], []]
 )
 
 
@@ -137,7 +137,7 @@ COMMON_DEPTH_BASIC_DESC = ElasticityDesc(
     model_cls=DepthBasicConvTestModel,
     params=BASIC_ELASTIC_DEPTH_PARAMS,
     ref_output_fn=ref_depth_output_fn,
-    ref_search_space=[[0]],
+    ref_search_space=[[0], []],
     ref_state={
         'elasticity_params': {
             'allow_linear_combination': False,

@@ -20,6 +20,11 @@
             "elasticity": {
                 "available_elasticity_dims": ["depth", "width"]
             }
+        },
+        "search": {
+            "algorithm": "NSGA2",
+            "num_evals": 2,
+            "population": 1
         }
     }
 }

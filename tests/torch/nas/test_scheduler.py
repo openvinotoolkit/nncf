@@ -22,12 +22,15 @@ from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elastic_width import El
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elasticity_dim import ElasticityDim
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.multi_elasticity_handler import MultiElasticityHandler
 from nncf.experimental.torch.nas.bootstrapNAS.training.base_training import BNASTrainingAlgorithm
+from nncf.experimental.torch.nas.bootstrapNAS.training.lr_scheduler import GlobalLRScheduler
+from nncf.experimental.torch.nas.bootstrapNAS.training.lr_scheduler import StageLRScheduler
 from nncf.experimental.torch.nas.bootstrapNAS.training.progressive_shrinking_builder import ProgressiveShrinkingBuilder
 from nncf.experimental.torch.nas.bootstrapNAS.training.progressive_shrinking_controller import \
     ProgressiveShrinkingController
 from nncf.experimental.torch.nas.bootstrapNAS.training.scheduler import BootstrapNASScheduler
 from nncf.experimental.torch.nas.bootstrapNAS.training.scheduler import NASSchedulerParams
 from nncf.experimental.torch.nas.bootstrapNAS.training.stage_descriptor import StageDescriptor
+from nncf.experimental.torch.nas.bootstrapNAS.training.stage_descriptor import DEFAULT_STAGE_LR_RATE
 from nncf.torch.nncf_network import NNCFNetwork
 from tests.torch.helpers import MockModel
 
@@ -69,10 +72,13 @@ LIST_DIMS__KDW = [ElasticityDim.KERNEL, ElasticityDim.DEPTH, ElasticityDim.WIDTH
 class TestScheduler:
     def test_get_stage(self, schedule_params: NASSchedulerParams, mocker):
         training_ctrl_mock = mocker.MagicMock(spec=BNASTrainingAlgorithm)
+        training_ctrl_mock.lr_schedule_config = {}
         scheduler = BootstrapNASScheduler(training_ctrl_mock, schedule_params, LIST_DIMS__KDW, LIST_DIMS__KDW)
-
+        optimizer_mock = mocker.stub()
+        optimizer_mock.param_groups = [{'lr': 1}]
+        scheduler.set_lr_scheduler(StageLRScheduler(optimizer_mock, 10))
         scheduler.epoch_step()
-        ref_desc = StageDescriptor(train_dims=[ElasticityDim.KERNEL])
+        ref_desc = StageDescriptor(train_dims=[ElasticityDim.KERNEL], epochs=1, init_lr=DEFAULT_STAGE_LR_RATE, epochs_lr=1)
         act_desc, act_idx = scheduler.get_current_stage_desc()
         assert ref_desc == act_desc
         assert act_idx == 0
@@ -114,10 +120,13 @@ class TestScheduler:
         is_handler_enabled_map = mock_handler._is_handler_enabled_map
         mock_elasticity_ctrl = mocker.stub()
         mock_elasticity_ctrl.multi_elasticity_handler = mock_handler
+        lr_schedule_config = {}
         training_algo = ProgressiveShrinkingController(mock_model, mock_elasticity_ctrl, mocker.stub(),
                                                        ProgressiveShrinkingBuilder.DEFAULT_PROGRESSIVITY,
-                                                       schedule_params)
+                                                       schedule_params, lr_schedule_config)
         scheduler = training_algo.scheduler
+        lr_scheduler = GlobalLRScheduler(mocker.stub(), mocker.stub(), base_lr=None, num_epochs=None)
+        scheduler.set_lr_scheduler(lr_scheduler)
         scheduler.epoch_step()
         assert is_handler_enabled_map == {
             ElasticityDim.WIDTH: False,
@@ -160,7 +169,9 @@ class TestScheduler:
         assert mock_width_handler.width_num_params_indicator == 3
 
     def test_get_total_training_epochs(self, schedule_params, mocker):
-        scheduler = BootstrapNASScheduler(mocker.stub(), schedule_params,
+        training_controller_mock = mocker.stub()
+        training_controller_mock.lr_schedule_config = {}
+        scheduler = BootstrapNASScheduler(training_controller_mock, schedule_params,
                                           available_elasticity_dims=LIST_DIMS__KDW,
                                           progressivity_of_elasticity=LIST_DIMS__KDW)
         assert scheduler.get_total_training_epochs() == 5
@@ -284,8 +295,10 @@ LIST_SCHEDULER_DESCS = [
 @pytest.mark.parametrize('desc', LIST_SCHEDULER_DESCS, ids=map(str, LIST_SCHEDULER_DESCS))
 class TestElasticityConsistency:
     def test_checks_on_scheduler_init(self, mocker, desc: SchedulerTestDesc):
+        training_controller_mock = mocker.stub()
+        training_controller_mock.lr_schedule_config = {}
         scheduler_fn = partial(BootstrapNASScheduler,
-                               mocker.stub(),
+                               training_controller_mock,
                                desc.scheduler_params,
                                progressivity_of_elasticity=desc.progressivity_of_elasticity,
                                available_elasticity_dims=desc.available_elasticity_dims)

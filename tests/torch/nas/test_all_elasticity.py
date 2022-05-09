@@ -301,6 +301,7 @@ REF_COMPRESSION_STATE_FOR_TWO_CONV = {
                 }
             }
         },
+        'learning_rate_global_schedule_state': {'params': {'base_lr': 2.5e-06, 'num_epochs': 2}},
         'progressive_shrinking': {
             'compression_stage': CompressionStage.PARTIALLY_COMPRESSED,
             'loss_state': None,
@@ -339,6 +340,11 @@ TWO_CONV_FULL_CONFIG = {
                     "max_num_kernels": 3
                 },
                 **THREE_CONV_TEST_DESC.algo_params
+            },
+            "lr_schedule": {
+                "params": {
+                    "base_lr": 2.5e-6
+                },
             },
             "schedule": {
                 "list_stage_descriptions": [
