@@ -73,7 +73,7 @@ ELASTIC_DEPTH_SCHEMA = {
                                                       "Option is available for the auto mode only. "
                                                       "Default value is 6"),
         "max_block_size": with_attributes(NUMBER,
-                                          description="Defines minimal number of operations in the block. "
+                                          description="Defines maximal number of operations in the block. "
                                                       "Option is available for the auto mode only. "
                                                       "Default value is 50"),
         "allow_nested_blocks": with_attributes(BOOLEAN,
@@ -124,7 +124,7 @@ ELASTIC_KERNEL_SCHEMA = {
     "type": "object",
     "properties": {
         "max_num_kernels": with_attributes(NUMBER,
-                                           description="Restricts total number of different elastic kernel values for "
+                                           description="Restricts the total number of different elastic kernel values for "
                                                        "each layer. The default value is -1 means that there's no "
                                                        "restrictions."),
     },
@@ -252,7 +252,7 @@ BOOTSTRAP_NAS_SEARCH_SCHEMA = {
         "population": with_attributes(NUMBER,
                                       description="Defines the population size when using an evolutionary search algorithm."),
         "acc_delta": with_attributes(NUMBER,
-                                      description="Defines the possible + or - difference in accuracy that is tolerated when looking for a subnetwork."),
+                                      description="Defines the absolute difference in accuracy that is tolerated when looking for a subnetwork."),
         "ref_acc": with_attributes(NUMBER,
                                       description="Defines the reference accuracy from the pre-trained model used to generate the super-network."),
     },
