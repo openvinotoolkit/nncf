@@ -33,7 +33,7 @@ ScaleType get_scale_type(const at::Tensor& input, const at::Tensor& input_low, c
             TORCH_CHECK(input_range.size(0) == scale_count, "Scale shape is not flat");
             return ScaleType::PER_WEIGHT_CHANNEL;
         }
-        else if (scale_dim >= 2 and input_range.size(1) > 1)
+        else if (scale_dim >= 2 && input_range.size(1) > 1)
         {
             TORCH_CHECK(input_range.size(1) == input.size(1), "Scale count and activations channel count is different");
             TORCH_CHECK(input_range.size(1) == scale_count, "Scale shape is not flat");
