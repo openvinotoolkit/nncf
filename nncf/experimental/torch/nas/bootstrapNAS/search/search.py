@@ -346,7 +346,7 @@ class SearchAlgorithm(BaseSearchAlgorithm):
             self.best_config = self._elasticity_ctrl.multi_elasticity_handler.get_active_config()
             self.best_vals = [None, None]
 
-        return self._elasticity_ctrl, self.best_config, self.best_vals
+        return self._elasticity_ctrl, self.best_config, [abs(elem) for elem in self.best_vals if elem is not None]
 
     def visualize_search_progression(self, filename='search_progression') -> NoReturn:
         """
@@ -359,15 +359,19 @@ class SearchAlgorithm(BaseSearchAlgorithm):
         colormap = plt.cm.get_cmap('viridis')
         col = range(int(self.search_params.num_evals / self.search_params.population))
         for i in range(0, len(self.search_records), self.search_params.population):
+            c = [col[int(i/self.search_params.population)]]*len(self.search_records[i:i+self.search_params.population])
             plt.scatter([abs(row[2]) for row in self.search_records][i:i+self.search_params.population],
                         [abs(row[4]) for row in self.search_records][i:i+self.search_params.population],
-                        s=9, c=[col[int(i/self.search_params.population)]]*self.search_params.population, alpha=0.5,
+                        s=9, c=c, alpha=0.5,
                         marker='D', cmap=colormap)
-        plt.scatter(*tuple([ev.input_model_value for ev in self.evaluator_handlers]),
+
+        plt.scatter(*tuple([abs(ev.input_model_value) for ev in self.evaluator_handlers]),
                     marker='s', s=120, color='blue', label='Input Model', edgecolors='black')
         if None not in self.best_vals:
             plt.scatter(*tuple([abs(val) for val in self.best_vals]), marker='o', s=120,color='yellow', label='BootstrapNAS A',
                         edgecolors='black', linewidth=2.5)
+        plt.xlabel(self.efficiency_evaluator_handler.name)
+        plt.ylabel(self.accuracy_evaluator_handler.name)
         plt.savefig(f'{self._log_dir}/{filename}.png')
 
     def save_evaluators_state(self) -> NoReturn:
