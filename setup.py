@@ -79,7 +79,7 @@ INSTALL_REQUIRES = ["ninja>=1.10.0.post2",
                     "scipy>=1.3.2, <1.8; python_version>='3.7'",
                     "matplotlib~=3.3.4; python_version<'3.7'",
                     "matplotlib>=3.3.4; python_version>='3.7'",
-                    "networkx>=2.5",
+                    "networkx>=2.5, <2.8.1rc1",
                     "pillow>=9.0.0",
 
                     # The recent pyparsing major version update seems to break
