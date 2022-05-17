@@ -83,6 +83,8 @@ class ONNNXModelNormalizer:
 
         model.ir_version = 7  # Due to the 'Shufflenet-v1
         modified_model = version_converter.convert_version(model, 13)
+        # ONNX shape inference
+        # https://github.com/onnx/onnx/blob/main/docs/proposals/SymbolicShapeInfProposal.md
         modified_model = onnx.shape_inference.infer_shapes(modified_model)
         add_input_from_initializer(modified_model)
 
