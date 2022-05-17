@@ -211,6 +211,9 @@ class SearchAlgorithm(BaseSearchAlgorithm):
         self._vars_upper = []
 
         self._num_vars, self._vars_upper = self._elasticity_ctrl.multi_elasticity_handler.get_design_vars_info()
+        if self._num_vars == 0 or self._vars_lower is None:
+            raise RuntimeError("Search space is empty")
+
         self._result = None
         bn_adapt_params = nncf_config.get('compression', {}).get('initializer', {}).get('batchnorm_adaptation', {})
         bn_adapt_algo_kwargs = get_bn_adapt_algo_kwargs(nncf_config, bn_adapt_params)
