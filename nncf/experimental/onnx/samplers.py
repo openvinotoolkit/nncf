@@ -11,6 +11,7 @@
  limitations under the License.
 """
 
+from typing import List
 from typing import Union
 
 import torch
@@ -18,10 +19,10 @@ import numpy as np
 
 from nncf.common.utils.logger import logger as nncf_logger
 
-from nncf.experimental.post_training.api.dataloader import DataLoader
+from nncf.experimental.post_training.api.dataset import Dataset
 
-from nncf.experimental.post_training.sampler import BatchSampler
-from nncf.experimental.post_training.sampler import RandomBatchSampler
+from nncf.experimental.post_training.samplers import BatchSampler
+from nncf.experimental.post_training.samplers import RandomBatchSampler
 
 
 class ONNXBatchSampler(BatchSampler):
@@ -29,14 +30,10 @@ class ONNXBatchSampler(BatchSampler):
         tensors = []  # type: List[torch.tensor]
         targets = []  # type: List[int]
         for i in range(start_i, end_i):
-            tensors.append(self.dataloader[i][0])
-            targets.append(self.dataloader[i][1])
+            tensors.append(self.dataset[i][0])
+            targets.append(self.dataset[i][1])
 
-        if isinstance(tensors[0], torch.Tensor):
-            return torch.stack(tensors), targets
-        if isinstance(tensors[0], np.ndarray):
-            return np.stack(tensors), targets
-        raise RuntimeError('Unexpected input data type {tensors[0]}. Should be one of torch.Tensor or np.ndarray')
+        return self._post_process(tensors, targets)
 
 
 class ONNXRandomBatchSampler(RandomBatchSampler):
@@ -44,19 +41,16 @@ class ONNXRandomBatchSampler(RandomBatchSampler):
         tensors = []  # type: List[torch.tensor]
         targets = []  # type: List[int]
         for i in range(start_i, end_i):
-            tensors.append(self.dataloader[self.random_permutated_indices[i]][0])
-            targets.append(self.dataloader[self.random_permutated_indices[i]][1])
+            tensors.append(self.dataset[self.random_permutated_indices[i]][0])
+            targets.append(self.dataset[self.random_permutated_indices[i]][1])
 
-        if isinstance(tensors[0], torch.Tensor):
-            return torch.stack(tensors), targets
-        if isinstance(tensors[0], np.ndarray):
-            return np.stack(tensors), targets
-        raise RuntimeError('Unexpected input data type {tensors[0]}. Should be one of torch.Tensor or np.ndarray')
+        return self._post_process(tensors, targets)
 
 
-def create_onnx_sampler(dataloader: DataLoader) -> Union[ONNXBatchSampler, ONNXRandomBatchSampler]:
-    if dataloader.shuffle:
+def create_onnx_sampler(dataset: Dataset,
+                        sample_indices: List) -> Union[ONNXBatchSampler, ONNXRandomBatchSampler]:
+    if dataset.shuffle:
         nncf_logger.info('Using Shuffled dataset')
-        return ONNXRandomBatchSampler(dataloader)
+        return ONNXRandomBatchSampler(dataset, sample_indices=sample_indices)
     nncf_logger.info('Using Non-Shuffled dataset')
-    return ONNXBatchSampler(dataloader)
+    return ONNXBatchSampler(dataset, sample_indices=sample_indices)

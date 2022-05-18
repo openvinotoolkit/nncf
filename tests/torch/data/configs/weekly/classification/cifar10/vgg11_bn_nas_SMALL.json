@@ -15,6 +15,11 @@
             "batchnorm_adaptation": {
                 "num_bn_adaptation_samples": 1
             },
+            "lr_schedule": {
+                "params": {
+                    "base_lr": 1e-4
+                }
+            },
             "schedule": {
                 "list_stage_descriptions": [
                     {"train_dims": ["kernel"], "epochs": 1},
@@ -35,5 +40,11 @@
                 }
             }
         },
+        "search": {
+            "algorithm": "NSGA2",
+            "num_evals": 4,
+            "population": 1,
+            "acc_delta": 2
+        }
     }
 }

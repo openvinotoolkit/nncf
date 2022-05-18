@@ -42,7 +42,11 @@ def get_op_name(op_type_name: str, scope: Optional[str] = None) -> str:
             return scope
         op_name = scope[:-1]
     else:
-        op_name = f'{get_current_name_scope()}/{op_type_name}'
+        current_scope = get_current_name_scope()
+        if current_scope[current_scope.rfind('/') + 1:].startswith(op_type_name.lower()):
+            op_name = current_scope
+        else:
+            op_name = f'{current_scope}/{op_type_name}'
 
     # Remove `replica_*/` prefix from `op_name`.
     if op_name.startswith('replica'):

@@ -17,14 +17,14 @@ import os
 
 from nncf.common.utils.logger import logger as nncf_logger
 
-from nncf.experimental.post_training.api.dataloader import DataLoader
+from nncf.experimental.post_training.api.dataset import Dataset
 
 
-class ImageNetDataLoader(DataLoader):
+class ImageNetDataset(Dataset):
     def __init__(self, dataset, batch_size, shuffle):
         super().__init__(batch_size, shuffle)
         self.dataset = dataset
-        nncf_logger.info('The dataloader is built with the data located on  {}'.format(dataset.root))
+        nncf_logger.info('The dataset is built with the data located on  {}'.format(dataset.root))
 
     def __getitem__(self, item):
         tensor, target = self.dataset[item]
@@ -35,13 +35,13 @@ class ImageNetDataLoader(DataLoader):
         return len(self.dataset)
 
 
-def create_dataloader_from_imagenet_torch_dataset(dataset_dir: str,
-                                                  input_shape: List[int],
-                                                  mean=(0.485, 0.456, 0.406),
-                                                  std=(0.229, 0.224, 0.225),
-                                                  crop_ratio=0.875,
-                                                  batch_size: int = 1,
-                                                  shuffle: bool = True):
+def create_imagenet_torch_dataset(dataset_dir: str,
+                                  input_shape: List[int],
+                                  mean=(0.485, 0.456, 0.406),
+                                  std=(0.229, 0.224, 0.225),
+                                  crop_ratio=0.875,
+                                  batch_size: int = 1,
+                                  shuffle: bool = True):
     import torchvision
     from torchvision import transforms
     image_size = [input_shape[-2], input_shape[-1]]
@@ -56,4 +56,4 @@ def create_dataloader_from_imagenet_torch_dataset(dataset_dir: str,
     ])
     # The best practise is to use validation part of dataset for calibration (aligning with POT)
     initialization_dataset = torchvision.datasets.ImageFolder(os.path.join(dataset_dir), transform)
-    return ImageNetDataLoader(initialization_dataset, batch_size, shuffle)
+    return ImageNetDataset(initialization_dataset, batch_size, shuffle)

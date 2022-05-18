@@ -188,6 +188,7 @@ class AdaptiveCompressionTrainingLoop(TrainingLoop):
                  minimal_compression_rate=0.05,
                  maximal_compression_rate=0.95,
                  dump_checkpoints=True):
+        self.compression_controller = compression_controller
         self.adaptive_controller = self._get_adaptive_compression_ctrl(compression_controller)
         if self.adaptive_controller is None:
             raise RuntimeError('No compression algorithm supported by the accuracy-aware training '
@@ -243,6 +244,7 @@ class AdaptiveCompressionTrainingLoop(TrainingLoop):
         self.runner.update_training_history(compression_rate=self.adaptive_controller.compression_rate,
                                             best_metric_value=self.runner.best_val_metric_value)
 
+        self.compression_controller.disable_scheduler()
         while self.runner.compression_rate_step >= self.runner.minimal_compression_rate_step and \
                 self.runner.cumulative_epoch_count < self.runner.maximal_total_epochs:
 
@@ -265,7 +267,7 @@ class AdaptiveCompressionTrainingLoop(TrainingLoop):
                 if self.runner.compression_rate_target > self.runner.maximal_compression_rate:
                     nncf_logger.info('Reached maximal possible compression rate '
                                      '{max_rate}'.format(max_rate=self.runner.maximal_compression_rate))
-                    self.runner.dump_statistics(model, self.adaptive_controller)
+                    self.runner.dump_statistics(model, self.compression_controller)
                     return model
 
                 self.runner.reset_training()
@@ -285,7 +287,7 @@ class AdaptiveCompressionTrainingLoop(TrainingLoop):
 
             self.runner.train_epoch(model, self.adaptive_controller)
             compressed_model_accuracy = self.runner.validate(model)
-            self.runner.dump_statistics(model, self.adaptive_controller)
+            self.runner.dump_statistics(model, self.compression_controller)
             self.runner.accuracy_bugdet = compressed_model_accuracy - self.runner.minimal_tolerable_accuracy
             self.runner.add_tensorboard_scalar('val/accuracy_aware/accuracy_bugdet', self.runner.accuracy_bugdet,
                                                self.runner.cumulative_epoch_count)

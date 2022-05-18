@@ -16,6 +16,7 @@ import warnings
 from pathlib import Path
 from shutil import copyfile
 
+import torch
 from torch import nn
 
 from examples.torch.classification.main import create_data_loaders
@@ -42,6 +43,7 @@ from examples.torch.common.utils import create_code_snapshot
 from examples.torch.common.utils import is_pretrained_model_requested
 from examples.torch.common.utils import print_args
 from nncf.config.structures import BNAdaptationInitArgs
+from nncf.experimental.torch.nas.bootstrapNAS.search import SearchAlgorithm
 from nncf.experimental.torch.nas.bootstrapNAS import EpochBasedTrainingAlgorithm
 from nncf.torch.initialization import default_criterion_fn
 from nncf.torch.initialization import wrap_dataloader_for_init
@@ -54,6 +56,25 @@ def get_nas_argument_parser():
     parser.add_argument('--train-steps', default=None, type=int,
                         help='Enables running training for the given number of steps')
     return parser
+
+
+def label_smooth(target, num_classes: int, label_smoothing=0.1):
+    batch_size = target.size(0)
+    target = torch.unsqueeze(target, 1)
+    soft_target = torch.zeros((batch_size, num_classes), device=target.device)
+    soft_target.scatter_(1, target, 1)
+    soft_target = soft_target * (1 - label_smoothing) + label_smoothing / num_classes
+    return soft_target
+
+
+def cross_entropy_loss_with_soft_target(pred, soft_target):
+    logsoftmax = nn.LogSoftmax()
+    return torch.mean(torch.sum(- soft_target * logsoftmax(pred), 1))
+
+
+def cross_entropy_with_label_smoothing(pred, target, label_smoothing=0.1):
+    soft_target = label_smooth(target, pred.size(1), label_smoothing)
+    return cross_entropy_loss_with_soft_target(pred, soft_target)
 
 
 def main(argv):
@@ -91,9 +112,14 @@ def main_worker(current_gpu, config: SampleConfig):
 
     set_seed(config)
 
+    opt_config = config.get('optimizer', {})
+
     # define loss function (criterion)
-    criterion = nn.CrossEntropyLoss()
-    criterion = criterion.to(config.device)
+    if 'label_smoothing' in opt_config:
+        criterion = lambda pred, target: \
+            cross_entropy_with_label_smoothing(pred, target, opt_config.label_smoothing)
+    else:
+        criterion = nn.CrossEntropyLoss()
 
     model_name = config['model']
     train_criterion_fn = inception_criterion_fn if 'inception' in model_name else default_criterion_fn
@@ -128,6 +154,10 @@ def main_worker(current_gpu, config: SampleConfig):
         top1, top5, loss = validate(loader, model_, criterion, config, log_validation_info=False)
         return top1, top5, loss
 
+    def validate_model_fn_top1(model_, loader_):
+        top1, _, _ = validate_model_fn(model_, loader_)
+        return top1
+
     nncf_network = create_nncf_network(model, nncf_config)
 
     resuming_checkpoint_path = config.resuming_checkpoint_path
@@ -138,9 +168,20 @@ def main_worker(current_gpu, config: SampleConfig):
                                                                          resuming_checkpoint_path)
 
     if 'train' in config.mode:
-        training_algorithm.run(train_epoch_fn, train_loader, lr_scheduler,
-                               validate_model_fn, val_loader, optimizer,
-                               config.checkpoint_save_dir, config.tb)
+        nncf_network, elasticity_ctrl = training_algorithm.run(train_epoch_fn, train_loader,
+                                                               validate_model_fn, val_loader, optimizer,
+                                                               config.checkpoint_save_dir, config.tb,
+                                                               config.train_steps)
+
+        if resuming_checkpoint_path is None:
+            search_algo = SearchAlgorithm.from_config(nncf_network, elasticity_ctrl, nncf_config)
+        else:
+            search_algo = SearchAlgorithm.from_checkpoint(nncf_network, elasticity_ctrl, bn_adapt_args, resuming_checkpoint_path)
+
+        elasticity_ctrl, best_config, performance_metrics = search_algo.run(validate_model_fn_top1, val_loader, config.checkpoint_save_dir, tensorboard_writer=config.tb)
+
+        logger.info("Best config: {best_config}".format(best_config=best_config))
+        logger.info("Performance metrics: {performance_metrics}".format(performance_metrics=performance_metrics))
 
     if 'test' in config.mode:
         validate(val_loader, model, criterion, config)

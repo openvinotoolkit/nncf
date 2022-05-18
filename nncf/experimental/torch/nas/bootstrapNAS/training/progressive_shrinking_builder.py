@@ -55,6 +55,8 @@ class ProgressiveShrinkingBuilder(PTCompressionAlgorithmBuilder):
         self._progressivity_of_elasticity = list(map(ElasticityDim.from_str, progressivity_of_elasticity))
         self._elasticity_builder = ElasticityBuilder(self.config, self.should_init)
 
+        self._lr_schedule_config = self._algo_config.get('lr_schedule', {})
+
     @staticmethod
     def check_elasticity_dims_consistency(available_elasticity_dims: List[ElasticityDim],
                                           progressivity_of_elasticity: List[ElasticityDim]) -> None:
@@ -86,7 +88,8 @@ class ProgressiveShrinkingBuilder(PTCompressionAlgorithmBuilder):
         elasticity_ctrl = self._elasticity_builder.build_controller(model)
         schedule_params = NASSchedulerParams.from_config(self._algo_config.get('schedule', {}))
         return ProgressiveShrinkingController(
-            model, elasticity_ctrl, self._bn_adaptation, self._progressivity_of_elasticity, schedule_params)
+            model, elasticity_ctrl, self._bn_adaptation, self._progressivity_of_elasticity, schedule_params,
+            self._lr_schedule_config)
 
     def _get_transformation_layout(self, target_model: NNCFNetwork) -> PTTransformationLayout:
         available_elasticity_dims = self._elasticity_builder.get_available_elasticity_dims()

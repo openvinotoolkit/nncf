@@ -26,7 +26,7 @@ from nncf.common.utils.logger import logger as nncf_logger
 
 from nncf.experimental.onnx.graph.onnx_graph import ONNXGraph
 from nncf.experimental.onnx.graph.metatypes.onnx_ops import ONNX_OPERATION_METATYPES
-from nncf.experimental.onnx.graph.metatypes.onnx_ops import ConstantMetatype
+from nncf.experimental.onnx.graph.metatypes.onnx_ops import ONNXConstantMetatype
 
 
 class GraphConverter:
@@ -48,7 +48,7 @@ class GraphConverter:
             node_name = node.name
             node_type = node.op_type
             metatype = ONNX_OPERATION_METATYPES.get_operator_metatype_by_op_name(node_type)
-            if metatype == ConstantMetatype:  # We don't need to quantize Constants
+            if metatype == ONNXConstantMetatype:  # We don't need to quantize Constants
                 continue
             nncf_graph.add_nncf_node(node_name=node_name,
                                      node_type=node_type,
