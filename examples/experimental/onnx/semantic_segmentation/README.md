@@ -1,6 +1,6 @@
-# Semantic Segmentation sample
+# Semantic Segmentation example
 
-This sample shows an example of quantization of segmentation models. The used datasets are CamVid, Mapillary.
+This example demonstrates quantization of UNet and ICNet segmentation models on CamVid and Mapillary datasets.
 
 ## Install
 
@@ -13,7 +13,7 @@ pip install -r <nncf dir>/nncf/experimental/onnx/requirements.txt
 pip install -r <nncf dir>/examples/experimental/onnx/requirements.txt
 ```
 
-## Getting the quantized model
+## Quantizing the model
 
 To run post-training quantization on your model you can use the following command.
 
@@ -25,10 +25,10 @@ Also, you could specify some options of quantization, please, take a look at the
 command:
 
 ```
-python onnx_ptq_classification.py --help
+python onnx_ptq_segmentation.py --help
 ```
 
-## Measuring the accuracy of the original and quantized models
+## Validating the accuracy of the original and quantized models
 
 If you would like to compare the accuracy of the original model and quantized one, you could
 use [accuracy_checker](https://github.com/openvinotoolkit/open_model_zoo/tree/master/tools/accuracy_checker). The
@@ -50,7 +50,7 @@ accuracy_check -c <path to config fileh> -m <ONNX model>
 | UNet  |   71.95% (CamVid)   |     71.85% (CamVid)      |
 | UNet  |  56.24% (Mapillary) |     56.19% (Mapillary)   |
 
-## Measuring the performance of the original and quantized models
+## Benchmarking the original and quantized models
 
 If you would like to compare the performance of the original model and quantized one, you could
 use [benchmark_tool](https://github.com/openvinotoolkit/openvino/tree/master/tools/benchmark_tool).
