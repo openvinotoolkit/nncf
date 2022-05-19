@@ -80,6 +80,7 @@ INSTALL_REQUIRES = ["ninja>=1.10.0.post2",
                     "matplotlib~=3.3.4; python_version<'3.7'",
                     "matplotlib>=3.3.4; python_version>='3.7'",
                     "networkx>=2.5",
+                    "pillow>=9.0.0",
 
                     # The recent pyparsing major version update seems to break
                     # integration with networkx - the graphs parsed from current .dot
@@ -87,7 +88,7 @@ INSTALL_REQUIRES = ["ninja>=1.10.0.post2",
                     # Using 2.x versions of pyparsing seems to fix the issue.
                     # Ticket: 69520
                     "pyparsing<3.0",
-
+                    "pymoo==0.5.0",
                     "jsonschema==3.2.0",
                     "pydot>=1.4.1",
                     "jstyleson>=0.0.2",
@@ -161,7 +162,7 @@ setup(
     extras_require=EXTRAS_REQUIRE,
     keywords=["compression", "quantization", "sparsity", "mixed-precision-training",
               "quantization-aware-training", "hawq", "classification",
-              "pruning", "object-detection", "semantic-segmentation", "nlp",
+              "pruning", "object-detection", "semantic-segmentation", "nas", "nlp",
               "bert", "transformers", "mmdetection"],
     include_package_data=True
 )

@@ -11,13 +11,13 @@
  limitations under the License.
 """
 import torch
-import warnings
 
 from nncf.torch.utils import add_domain
+from nncf.common.utils.logger import logger as nncf_logger
 
-from .extensions import QuantizedFunctionsCPU, QuantizedFunctionsCUDA
-from ..dynamic_graph.patch_pytorch import register_operator
-from ..functions import STRound, clamp
+from nncf.torch.quantization.extensions import QuantizedFunctionsCPU, QuantizedFunctionsCUDA
+from nncf.torch.dynamic_graph.patch_pytorch import register_operator
+from nncf.torch.functions import STRound, clamp
 
 
 class QuantizeSymmetric(torch.autograd.Function):
@@ -28,8 +28,14 @@ class QuantizeSymmetric(torch.autograd.Function):
 
         if input_.is_cuda:
             if not input_.is_contiguous():
-                warnings.warn("input_ is not contiguous!", RuntimeWarning)
+                nncf_logger.warning("input_ is not contiguous!")
                 input_ = input_.contiguous()
+
+            # Required to support both torch.amp.autocast and models that perform explicit type casting
+            # inside their forward calls.
+            if input_.dtype == torch.float16:
+                input_low = input_low.type(torch.float16)
+                input_range = input_range.type(torch.float16)
             output = QuantizedFunctionsCUDA.Quantize_forward(input_, input_low, input_range, levels)
         else:
             output = QuantizedFunctionsCPU.Quantize_forward(input_, input_low, input_range, levels)
@@ -50,7 +56,7 @@ class QuantizeSymmetric(torch.autograd.Function):
 
         if grad_output.is_cuda:
             if not grad_output.is_contiguous():
-                warnings.warn("grad_output is not contiguous!", RuntimeWarning)
+                nncf_logger.warning("grad_output is not contiguous!")
                 grad_output = grad_output.contiguous()
 
             grad_input, _, grad_scale = QuantizedFunctionsCUDA.Quantize_backward(
@@ -69,8 +75,14 @@ class QuantizeAsymmetric(torch.autograd.Function):
     def forward(ctx, input_, input_low, input_range, level_low, level_high, levels):
         if input_.is_cuda:
             if not input_.is_contiguous():
-                warnings.warn("input_ is not contiguous!", RuntimeWarning)
+                nncf_logger.warning("input_ is not contiguous!")
                 input_ = input_.contiguous()
+
+            # Required to support both torch.amp.autocast and models that perform explicit type casting
+            # inside their forward calls.
+            if input_.dtype == torch.float16:
+                input_low = input_low.type(torch.float16)
+                input_range = input_range.type(torch.float16)
             output = QuantizedFunctionsCUDA.Quantize_forward(input_, input_low, input_range, levels)
         else:
             output = QuantizedFunctionsCPU.Quantize_forward(input_, input_low, input_range, levels)
@@ -91,7 +103,7 @@ class QuantizeAsymmetric(torch.autograd.Function):
 
         if grad_output.is_cuda:
             if not grad_output.is_contiguous():
-                warnings.warn("grad_output is not contiguous!", RuntimeWarning)
+                nncf_logger.warning("grad_output is not contiguous!")
                 grad_output = grad_output.contiguous()
 
             grad_input, grad_input_low, grad_input_range = QuantizedFunctionsCUDA.Quantize_backward(
@@ -171,6 +183,7 @@ def get_scale_zp_from_input_low_input_high(level_low, level_high, input_low, inp
 def symmetric_quantize(input_, levels, level_low, level_high, scale, eps, skip: bool = False):
     if skip:
         return input_
+    scale = scale.to(dtype=input_.dtype)
     scale_safe = abs(scale) + eps
     return QuantizeSymmetric.apply(input_, scale_safe, level_low, level_high, levels)
 

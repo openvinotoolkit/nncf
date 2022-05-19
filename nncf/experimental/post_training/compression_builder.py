@@ -11,16 +11,18 @@
  limitations under the License.
 """
 
-from typing import TypeVar
+from typing import Callable, Optional, TypeVar
 
 from nncf.common.utils.logger import logger as nncf_logger
 
 from nncf.experimental.post_training.api.engine import Engine
-from nncf.experimental.post_training.api.dataloader import DataLoader
+from nncf.experimental.post_training.api.metric import Metric
+from nncf.experimental.post_training.api.dataset import Dataset
 from nncf.experimental.post_training.algorithms import Algorithm
 
 from nncf.experimental.post_training.backend import Backend
 from nncf.experimental.post_training.backend import get_model_backend
+
 
 ModelType = TypeVar('ModelType')
 
@@ -40,26 +42,29 @@ class CompressionBuilder:
         self.algorithms.append(algorithm)
 
     def _create_engine(self, backend: Backend) -> Engine:
+        # TODO (Nikita Malinin): Place "ifs" into the backend-specific expandable structure
         if backend == Backend.ONNX:
             from nncf.experimental.onnx.engine import ONNXEngine
             return ONNXEngine()
         return None
 
-    def _create_statistics_aggregator(self, engine: Engine, dataloader: DataLoader, backend: Backend):
+    def _create_statistics_aggregator(self, engine: Engine, dataset: Dataset, backend: Backend):
         if backend == Backend.ONNX:
             from nncf.experimental.onnx.statistics.aggregator import ONNXStatisticsAggregator
-            return ONNXStatisticsAggregator(engine, dataloader)
+            return ONNXStatisticsAggregator(engine, dataset)
         return None
 
     def _get_prepared_model_for_compression(self, model: ModelType, backend: Backend) -> ModelType:
+        # TODO (Nikita Malinin): Replace this methood into backend-specific graph transformer
         if backend == Backend.ONNX:
             from nncf.experimental.onnx.model_normalizer import ONNNXModelNormalizer
             return ONNNXModelNormalizer.modify_onnx_model_for_quantization(model)
         return None
 
-    def apply(self, model: ModelType, dataloader: DataLoader, engine: Engine = None) -> ModelType:
+    def apply(self, model: ModelType, dataset: Dataset, engine: Engine = None) -> ModelType:
         """
         Apply compression algorithms to the 'model'.
+
         1) Prepare the original model. This step is essential for some backends, e.g. ONNX
         2) Creates subalgorithms, which is essential for some composite algorithms such as PostTrainingQuantization
         2) Creates default Engine if it wasn't provided.
@@ -82,7 +87,7 @@ class CompressionBuilder:
         for algorithm in self.algorithms:
             algorithm.create_subalgorithms(backend)
 
-        statistics_aggregator = self._create_statistics_aggregator(engine, dataloader, backend)
+        statistics_aggregator = self._create_statistics_aggregator(engine, dataset, backend)
         for algorithm in self.algorithms:
             layers_to_collect_statistics = algorithm.get_layers_for_statistics(modified_model)
             statistics_aggregator.register_layer_statistics(layers_to_collect_statistics)
@@ -92,3 +97,16 @@ class CompressionBuilder:
         for algorithm in self.algorithms:
             modified_model = algorithm.apply(modified_model, engine, statistics_aggregator.layers_statistics)
         return modified_model
+
+    def evaluate(self, model: ModelType, metric: Metric, dataset: Dataset,
+                 engine: Engine = None, outputs_transforms: Optional[Callable] = None):
+        backend = get_model_backend(model)
+
+        if engine is None:
+            engine = self._create_engine(backend)
+        if outputs_transforms is not None:
+            engine.set_outputs_transforms(outputs_transforms)
+        engine.set_model(model)
+        engine.set_metrics(metric)
+        engine.set_dataset(dataset)
+        return engine.compute_metrics()

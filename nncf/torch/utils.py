@@ -397,3 +397,11 @@ def get_model_device(model: torch.nn.Module) -> torch.device:
 
 def warning_deprecated(msg):
     warnings.warn(msg, DeprecationWarning)
+
+def get_model_dtype(model: torch.nn.Module) -> torch.dtype:
+    try:
+        dtype = next(model.parameters()).dtype
+    except StopIteration:
+        # The model had no parameters at all, assume FP32
+        dtype = torch.float32
+    return dtype

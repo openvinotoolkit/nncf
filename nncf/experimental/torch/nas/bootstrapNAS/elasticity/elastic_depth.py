@@ -112,6 +112,8 @@ class ElasticDepthHandler(SingleElasticityHandler):
                 valid_depth_configs.append(list(d_sample))
         self._cached_search_space = valid_depth_configs
         self._is_search_space_obsolete = False
+        if [] not in valid_depth_configs:
+            valid_depth_configs.append([])
         return valid_depth_configs
 
     def get_active_config(self) -> ElasticDepthConfig:

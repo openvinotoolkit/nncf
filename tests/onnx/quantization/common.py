@@ -24,7 +24,7 @@ from tests.common.helpers import TEST_ROOT
 
 from tests.onnx.test_nncf_graph_builder import check_nx_graph
 
-from nncf.experimental.post_training.api.dataloader import DataLoader
+from nncf.experimental.post_training.api.dataset import Dataset
 from nncf.experimental.post_training.compression_builder import CompressionBuilder
 from nncf.experimental.onnx.algorithms.quantization.min_max_quantization import ONNXMinMaxQuantization
 from nncf.experimental.post_training.algorithms.quantization import MinMaxQuantizationParameters
@@ -35,7 +35,7 @@ from nncf.experimental.onnx.graph.nncf_graph_builder import GraphConverter
 REFERENCE_GRAPHS_TEST_ROOT = 'data/reference_graphs/quantization'
 
 
-class DataloaderForTest(DataLoader):
+class DatasetForTest(Dataset):
     def __init__(self, input_shape):
         super().__init__()
         self.input_shape = input_shape
@@ -48,18 +48,18 @@ class DataloaderForTest(DataLoader):
 
 
 def min_max_quantize_model(input_shape: List[int], original_model: onnx.ModelProto) -> onnx.ModelProto:
-    dataloader = DataloaderForTest(input_shape)
+    dataset = DatasetForTest(input_shape)
     builder = CompressionBuilder()
     builder.add_algorithm(ONNXMinMaxQuantization(MinMaxQuantizationParameters(number_samples=1)))
-    quantized_model = builder.apply(original_model, dataloader)
+    quantized_model = builder.apply(original_model, dataset)
     return quantized_model
 
 
 def ptq_quantize_model(input_shape: List[int], original_model: onnx.ModelProto) -> onnx.ModelProto:
-    dataloader = DataloaderForTest(input_shape)
+    dataset = DatasetForTest(input_shape)
     builder = CompressionBuilder()
     builder.add_algorithm(PostTrainingQuantization(PostTrainingQuantizationParameters(number_samples=1)))
-    quantized_model = builder.apply(original_model, dataloader)
+    quantized_model = builder.apply(original_model, dataset)
     return quantized_model
 
 
