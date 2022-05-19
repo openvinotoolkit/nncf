@@ -23,7 +23,7 @@ import onnxruntime as rt
 import numpy as np
 
 from examples.experimental.onnx.semantic_segmentation.onnx_ptq_segmentation import run
-from nncf.experimental.post_training.api.dataloader import DataLoader
+from nncf.experimental.post_training.api.dataset import Dataset
 from tests.common.helpers import TEST_ROOT
 
 MODELS_NAME = [
@@ -37,7 +37,7 @@ INPUT_SHAPES = [
 ]
 
 
-class TestDataloader(DataLoader):
+class TestDataloader(Dataset):
     def __init__(self, samples: List[Tuple[np.ndarray, int]]):
         super().__init__(shuffle=False)
         self.samples = samples
@@ -56,7 +56,7 @@ def mock_dataloader_creator(dataset_name, dataset_path, input_shape):
 @pytest.mark.parametrize(("model_name, input_shape"),
                          zip(MODELS_NAME, INPUT_SHAPES))
 @patch(
-    'examples.experimental.onnx.semantic_segmentation.onnx_ptq_segmentation.create_dataloader_from_segmentation_torch_dataset',
+    'examples.experimental.onnx.semantic_segmentation.onnx_ptq_segmentation.create_dataset_from_segmentation_torch_dataset',
     new=mock_dataloader_creator)
 def test_sanity_quantize_sample(tmp_path, model_name, input_shape):
     onnx_model_dir = str(TEST_ROOT.joinpath('onnx', 'data', 'models'))

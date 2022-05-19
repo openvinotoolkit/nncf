@@ -74,7 +74,7 @@ def mock_dataset_creator(dataset_path, input_shape, batch_size, shuffle):
 
 @pytest.mark.parametrize(("model_name, model, input_shape"),
                          zip(MODEL_NAMES, MODELS, INPUT_SHAPES))
-@patch('examples.experimental.onnx.onnx_ptq_classification.create_imagenet_torch_dataset',
+@patch('examples.experimental.onnx.classification.onnx_ptq_classification.create_imagenet_torch_dataset',
        new=mock_dataset_creator)
 def test_sanity_quantize_sample(tmp_path, model_name, model, input_shape):
     onnx_model_dir = str(TEST_ROOT.joinpath('onnx', 'data', 'models'))

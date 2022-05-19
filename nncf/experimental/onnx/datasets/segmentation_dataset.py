@@ -15,16 +15,17 @@ from typing import List
 
 from nncf.common.utils.logger import logger as nncf_logger
 
-from nncf.experimental.post_training.api.dataloader import DataLoader
+from nncf.experimental.post_training.api.dataset import Dataset
 from examples.torch.semantic_segmentation.datasets.camvid import CamVid
 from examples.torch.semantic_segmentation.datasets.mapillary import Mapillary
 
 
-class SegmentationDataLoader(DataLoader):
+class SegmentationDataLoader(Dataset):
     def __init__(self, dataset, batch_size, shuffle):
         super().__init__(batch_size, shuffle)
         self.dataset = dataset
-        nncf_logger.info('The dataloader is built with the data located on  {}'.format(dataset.root_dir))
+        nncf_logger.info(
+            'The dataset is built with the data located on  {}'.format(dataset.root_dir))
 
     def __getitem__(self, item):
         tensor, target = self.dataset[item]
@@ -35,9 +36,9 @@ class SegmentationDataLoader(DataLoader):
         return len(self.dataset)
 
 
-def create_dataloader_from_segmentation_torch_dataset(dataset_name: str,
-                                                      dataset_dir: str,
-                                                      input_shape: List[int]):
+def create_dataset_from_segmentation_torch_dataset(dataset_name: str,
+                                                   dataset_dir: str,
+                                                   input_shape: List[int]):
     from examples.torch.semantic_segmentation.utils.transforms import Resize
     from examples.torch.semantic_segmentation.utils.transforms import Normalize
     from examples.torch.semantic_segmentation.utils.transforms import Compose
@@ -60,5 +61,6 @@ def create_dataloader_from_segmentation_torch_dataset(dataset_name: str,
         ToTensor(),
         Normalize(mean, std),
     ])
-    initialization_dataset = dataset_class(dataset_dir, 'val', transforms=transform)
+    initialization_dataset = dataset_class(
+        dataset_dir, 'val', transforms=transform)
     return SegmentationDataLoader(initialization_dataset, 1, True)

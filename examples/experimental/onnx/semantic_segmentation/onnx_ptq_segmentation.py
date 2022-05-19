@@ -20,7 +20,7 @@ import onnx
 from nncf.experimental.post_training.compression_builder import CompressionBuilder
 from nncf.experimental.post_training.algorithms.quantization import PostTrainingQuantization
 from nncf.experimental.post_training.algorithms.quantization import PostTrainingQuantizationParameters
-from nncf.experimental.onnx.dataloaders.segmentation_dataloader import create_dataloader_from_segmentation_torch_dataset
+from nncf.experimental.onnx.datasets.segmentation_dataset import create_dataset_from_segmentation_torch_dataset
 
 
 def run(onnx_model_path: str, output_model_path: str, dataset_name: str,
@@ -34,7 +34,8 @@ def run(onnx_model_path: str, output_model_path: str, dataset_name: str,
     print(f"The model is loaded from {onnx_model_path}")
 
     # Step 1: Initialize the data loader.
-    dataloader = create_dataloader_from_segmentation_torch_dataset(dataset_name, dataset_path, input_shape)
+    dataloader = create_dataset_from_segmentation_torch_dataset(
+        dataset_name, dataset_path, input_shape)
 
     # Step 2: Create a pipeline of compression algorithms.
     builder = CompressionBuilder()
@@ -60,17 +61,22 @@ def run(onnx_model_path: str, output_model_path: str, dataset_name: str,
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("--onnx_model_path", "-m", help="Path to ONNX model", type=str)
-    parser.add_argument("--output_model_path", "-o", help="Path to output quantized ONNX model", type=str)
+    parser.add_argument("--onnx_model_path", "-m",
+                        help="Path to ONNX model", type=str)
+    parser.add_argument("--output_model_path", "-o",
+                        help="Path to output quantized ONNX model", type=str)
     parser.add_argument("--dataset_name",
                         help="CamVid or Mapillary",
                         type=str)
     parser.add_argument("--data",
                         help="Path to dataset",
                         type=str)
-    parser.add_argument("--input_shape", help="Model's input shape", nargs="+", type=int, default=[1, 3, 768, 960])
-    parser.add_argument("--init_samples", help="Number of initialization samples", type=int, default=300)
-    parser.add_argument("--ignored_scopes", help="Ignored operations ot quantize", nargs="+", default=None)
+    parser.add_argument("--input_shape", help="Model's input shape",
+                        nargs="+", type=int, default=[1, 3, 768, 960])
+    parser.add_argument(
+        "--init_samples", help="Number of initialization samples", type=int, default=300)
+    parser.add_argument(
+        "--ignored_scopes", help="Ignored operations ot quantize", nargs="+", default=None)
     args = parser.parse_args()
     run(args.onnx_model_path,
         args.output_model_path,
