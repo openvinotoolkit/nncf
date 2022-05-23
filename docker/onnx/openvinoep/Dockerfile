@@ -35,8 +35,14 @@ WORKDIR /opt/nncf_ws
 ADD nncf/experimental/onnx/requirements.txt onnx_requirements.txt
 RUN python3 -m pip install -r onnx_requirements.txt
 
-ADD . ./
+ADD nncf ./nncf
+ADD setup.py ./
+ADD README.md ./
+
 RUN python3 -m pip install -e .
+
+RUN ln -s /usr/bin/python3 /usr/bin/python
 
 USER onnxruntimedev
 WORKDIR /home/onnxruntimedev
+ADD examples/experimental/onnx ./examples
