@@ -34,6 +34,8 @@ class ONNXEngine(Engine):
         self._inputs_transforms = lambda input_data: input_data.astype(np.float32)
         self.sess = None
         self.rt_session_options = rt_session_options
+        self.sess_options = rt.SessionOptions()
+        self.sess_options.graph_optimization_level = rt.GraphOptimizationLevel.ORT_DISABLE_ALL
         if 'providers' not in self.rt_session_options:
             self.rt_session_options['providers'] = ['OpenVINOExecutionProvider']
 
@@ -50,7 +52,7 @@ class ONNXEngine(Engine):
         super().set_model(model)
         with tempfile.NamedTemporaryFile() as temporary_model:
             onnx.save(model, temporary_model.name)
-            self.sess = rt.InferenceSession(temporary_model.name, **self.rt_session_options)
+            self.sess = rt.InferenceSession(temporary_model.name, self.sess_options, **self.rt_session_options)
 
     def infer(self, input_data: np.ndarray) -> Tuple[List[np.ndarray], List[str]]:
         """

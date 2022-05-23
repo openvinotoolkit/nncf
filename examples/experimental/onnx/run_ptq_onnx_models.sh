@@ -12,11 +12,41 @@ echo "OUTPUT_DIR=$OUTPUT_DIR"
 echo "NUMBER_OF_SAMPLES=$NUMBER_OF_SAMPLES"
 
 for config in `ls $CONFIGS_DIR`; do
-    model_name=$(echo "$config" | cut -f 1 -d '.')
+    model_name=${config%.*}
     echo $model_name
-    python ${SCRIPT_DIR}/run_ptq.py     \
-        -c ${CONFIGS_DIR}/$config -m    \
-        ${MODEL_DIR}/${model_name}.onnx \
-        -o ${OUTPUT_DIR} \
-        -ss ${NUMBER_OF_SAMPLES}
+
+    # Post-training quantization
+    python $SCRIPT_DIR/run_ptq.py       \
+        -c $CONFIGS_DIR/$config         \
+        -m $MODEL_DIR/$model_name.onnx  \
+        -o $OUTPUT_DIR                  \
+        -ss $NUMBER_OF_SAMPLES
+
+    # Accuracy check for the original model
+    accuracy_check  \
+        -c $CONFIGS_DIR/$config                     \
+        -ss $NUMBER_OF_SAMPLES                      \
+        -m $MODEL_DIR/$model_name.onnx              \
+        --csv_result $OUTPUT_DIR/original_accuracy.csv
+
+    # Accuracy check for the quantized model
+    accuracy_check  \
+        -c $CONFIGS_DIR/$config                     \
+        -ss $NUMBER_OF_SAMPLES                      \
+        -m $OUTPUT_DIR/$model_name-quantized.onnx   \
+        --csv_result $OUTPUT_DIR/quantize_accuracy.csv
+
+    # Benchmark the original model
+    mkdir -p $OUTPUT_DIR/$model_name/original
+
+    benchmark_app -m $MODEL_DIR/$model_name.onnx        \
+        -report_type no_counters                        \
+        -report_folder $OUTPUT_DIR/$model_name/original
+
+    # Benchmark the quantized model
+    mkdir -p $OUTPUT_DIR/$model_name/quantized
+
+    benchmark_app -m $OUTPUT_DIR/$model_name-quantized.onnx \
+        -report_type no_counters                            \
+        -report_folder $OUTPUT_DIR/$model_name/quantized
 done
