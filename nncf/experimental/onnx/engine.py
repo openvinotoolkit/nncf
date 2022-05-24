@@ -34,10 +34,11 @@ class ONNXEngine(Engine):
         self._inputs_transforms = lambda input_data: input_data.astype(np.float32)
         self.sess = None
         self.rt_session_options = rt_session_options
-        self.sess_options = rt.SessionOptions()
-        self.sess_options.graph_optimization_level = rt.GraphOptimizationLevel.ORT_DISABLE_ALL
-        if 'providers' not in self.rt_session_options:
-            self.rt_session_options['providers'] = ['OpenVINOExecutionProvider']
+        
+        # TODO: Do not force it to use CPUExecutionProvider
+        # OpenVINOExecutionProvider raises the following error.
+        # onnxruntime.capi.onnxruntime_pybind11_state.Fail: [ONNXRuntimeError] : 1 : FAIL : This is an invalid model. Error: Duplicate definition of name (data).
+        self.rt_session_options['providers'] = ['CPUExecutionProvider']
 
     def get_sampler(self) -> Sampler:
         # TODO (Nikita Malinin): Replace range calling with the max length variable
