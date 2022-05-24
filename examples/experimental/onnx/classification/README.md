@@ -31,7 +31,7 @@ python onnx_ptq_classification.py --help
 
 If you would like to compare the accuracy of the original model and quantized one, you could
 use [accuracy_checker](https://github.com/openvinotoolkit/open_model_zoo/tree/master/tools/accuracy_checker). The
-necessary config files are located [here](./examples/experimental/onnx/ac_configs/). The thing that you only need is to
+necessary config files are located [here](./examples/experimental/onnx/classification/ac_configs/). The thing that you only need is to
 fill in the config with the following infromation: the path to ImageNet folder and the path to the annotation file. The
 accuracy checker config for the original and quantized models is the same.
 

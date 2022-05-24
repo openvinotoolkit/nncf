@@ -19,44 +19,25 @@ from unittest.mock import patch
 
 import os
 
-import torch
-from torchvision import models
 import onnxruntime as rt
 import numpy as np
 
-from examples.experimental.onnx.onnx_ptq_classification import run
+from examples.experimental.onnx.semantic_segmentation.onnx_ptq_segmentation import run
 from nncf.experimental.post_training.api.dataset import Dataset
 from tests.common.helpers import TEST_ROOT
 
-MODEL_NAMES = [
-    'resnet18',
-    'mobilenet_v2',
-    'inception_v3',
-    'googlenet',
-    'vgg16',
-    'shufflenet_v2_x1_0'
-]
-
-MODELS = [
-    models.resnet18(),
-    models.mobilenet_v2(),
-    models.inception_v3(),
-    models.googlenet(),
-    models.vgg16(),
-    models.shufflenet_v2_x1_0(),
+MODELS_NAME = [
+    'icnet_camvid',
+    'unet_camvid'
 ]
 
 INPUT_SHAPES = [
-    [1, 3, 224, 224],
-    [1, 3, 224, 224],
-    [1, 3, 224, 224],
-    [1, 3, 224, 224],
-    [1, 3, 224, 224],
-    [1, 3, 224, 224],
+    [1, 3, 768, 960],
+    [1, 3, 368, 480]
 ]
 
 
-class TestDataset(Dataset):
+class TestDataloader(Dataset):
     def __init__(self, samples: List[Tuple[np.ndarray, int]]):
         super().__init__(shuffle=False)
         self.samples = samples
@@ -68,25 +49,25 @@ class TestDataset(Dataset):
         return 1
 
 
-def mock_dataset_creator(dataset_path, input_shape, batch_size, shuffle):
-    return TestDataset([(np.zeros(input_shape[1:]), 0), ])
+def mock_dataloader_creator(dataset_name, dataset_path, input_shape):
+    return TestDataloader([(np.zeros(input_shape[1:]), 0), ])
 
 
-@pytest.mark.parametrize(("model_name, model, input_shape"),
-                         zip(MODEL_NAMES, MODELS, INPUT_SHAPES))
-@patch('examples.experimental.onnx.onnx_ptq_classification.create_imagenet_torch_dataset',
-       new=mock_dataset_creator)
-def test_sanity_quantize_sample(tmp_path, model_name, model, input_shape):
+@pytest.mark.parametrize(("model_name, input_shape"),
+                         zip(MODELS_NAME, INPUT_SHAPES))
+@patch(
+    'examples.experimental.onnx.semantic_segmentation.onnx_ptq_segmentation.create_dataset_from_segmentation_torch_dataset',
+    new=mock_dataloader_creator)
+def test_sanity_quantize_sample(tmp_path, model_name, input_shape):
     onnx_model_dir = str(TEST_ROOT.joinpath('onnx', 'data', 'models'))
-    onnx_model_path = str(TEST_ROOT.joinpath(onnx_model_dir, model_name))
+    onnx_model_path = str(TEST_ROOT.joinpath(onnx_model_dir, model_name + '.onnx'))
     if not os.path.isdir(onnx_model_dir):
         os.mkdir(onnx_model_dir)
-    x = torch.randn(input_shape, requires_grad=False)
-    torch.onnx.export(model, x, onnx_model_path, opset_version=13)
+
     onnx_output_model_path = str(tmp_path / model_name)
-    run(onnx_model_path, onnx_output_model_path, 'none',
-        batch_size=1, shuffle=True, num_init_samples=1,
-        input_shape=input_shape, ignored_scopes=None)
+
+    run(onnx_model_path, onnx_output_model_path, 'CamVid',
+        'none', num_init_samples=1, input_shape=input_shape, ignored_scopes=None)
 
     sess = rt.InferenceSession(onnx_output_model_path, providers=['OpenVINOExecutionProvider'])
     _input = np.random.random(input_shape)
