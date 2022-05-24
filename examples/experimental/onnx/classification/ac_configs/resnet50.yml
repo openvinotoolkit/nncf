@@ -5,16 +5,16 @@ models:
         adapter: classification
         execution_providers: ['OpenVINOExecutionProvider']
         inputs:
-          - name: data
+          - name: input.1
             type: INPUT
             shape: [1,3,224,224]
 
     datasets:
       - name: imagenet_1000_classes
-        data_source: /home/onnxruntimedev/omz_data/ILSVRC2012_img_val
+        data_source: <ImageNet folder>
         annotation_conversion:
            converter: imagenet
-           annotation_file: /home/onnxruntimedev/omz_data/ILSVRC2012_img_val/ILSVRC2012_val.txt
+           annotation_file: <annotation file>
         reader: pillow_imread
 
         preprocessing:
