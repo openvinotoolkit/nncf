@@ -40,6 +40,7 @@ for config in `ls $CONFIGS_DIR`; do
     mkdir -p $OUTPUT_DIR/$model_name/original
 
     benchmark_app -m $MODEL_DIR/$model_name.onnx        \
+        --batch_size 1 --time 10                        \
         -report_type no_counters                        \
         -report_folder $OUTPUT_DIR/$model_name/original
 
@@ -47,6 +48,7 @@ for config in `ls $CONFIGS_DIR`; do
     mkdir -p $OUTPUT_DIR/$model_name/quantized
 
     benchmark_app -m $OUTPUT_DIR/$model_name-quantized.onnx \
+        --batch_size 1 --time 10                            \
         -report_type no_counters                            \
         -report_folder $OUTPUT_DIR/$model_name/quantized
 done
