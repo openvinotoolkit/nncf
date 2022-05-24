@@ -7,6 +7,8 @@ ARG http_proxy
 ARG https_proxy
 ARG no_proxy
 
+RUN echo "PIP_EXTRA_INDEX_URL=${PIP_EXTRA_INDEX_URL}"
+RUN echo "PIP_TRUSTED_HOST=${PIP_TRUSTED_HOST}"
 RUN echo "http_proxy=${http_proxy}"
 RUN echo "https_proxy=${https_proxy}"
 RUN echo "no_proxy=${no_proxy}"
