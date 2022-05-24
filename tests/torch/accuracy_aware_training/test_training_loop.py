@@ -267,6 +267,66 @@ def test_early_exit_with_mock_validation(max_accuracy_degradation, exit_epoch_nu
     assert epoch_counter == exit_epoch_number
 
 
+@pytest.mark.parametrize(
+    ('max_accuracy_degradation'),
+    (({'maximal_absolute_accuracy_degradation': 0.1}),)
+)
+def test_early_exit_with_mock_validation_and_no_improvement(
+    max_accuracy_degradation, maximal_total_epochs=5
+):
+    epoch_counter = 0
+
+    def mock_validate_fn(model, init_step=False, epoch=0):
+        original_metric = 0.85
+        if init_step:
+            return original_metric
+        nonlocal epoch_counter
+        epoch_counter = epoch
+        return original_metric - 0.11 * (epoch+1)
+
+    config = get_quantization_config_without_range_init(LeNet.INPUT_SIZE[-1])
+
+    params = {
+        "maximal_total_epochs": maximal_total_epochs
+    }
+    params.update(max_accuracy_degradation)
+    accuracy_aware_config = {
+        "accuracy_aware_training": {
+            "mode": "early_exit",
+            "params": params
+        }
+    }
+
+    config.update(accuracy_aware_config)
+
+    train_loader = create_ones_mock_dataloader(config, num_samples=10)
+    model = LeNet()
+
+    config = register_default_init_args(config,
+                                        train_loader=train_loader,
+                                        model_eval_fn=partial(mock_validate_fn, init_step=True))
+
+    model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
+
+    def train_fn(compression_ctrl, model, epoch, optimizer, lr_scheduler,
+                 train_loader=train_loader):
+        pass
+
+    def configure_optimizers_fn():
+        optimizer = SGD(model.parameters(), lr=1e-3)
+        return optimizer, None
+
+    early_stopping_training_loop = EarlyExitCompressionTrainingLoop(config, compression_ctrl,
+                                                                    dump_checkpoints=False)
+    assert early_stopping_training_loop.runner._best_checkpoint is None
+
+    model = early_stopping_training_loop.run(model,
+                                             train_epoch_fn=train_fn,
+                                             validate_fn=partial(mock_validate_fn),
+                                             configure_optimizers_fn=configure_optimizers_fn)
+    assert early_stopping_training_loop.runner._best_checkpoint is not None
+
+
 @pytest.mark.parametrize('aa_config', (
         {
             "accuracy_aware_training": {

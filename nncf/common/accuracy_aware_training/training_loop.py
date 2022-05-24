@@ -102,8 +102,8 @@ class EarlyExitCompressionTrainingLoop(TrainingLoop):
         rel_accuracy_drop = self._calculate_rel_accuracy_drop(uncompressed_model_accuracy,
                                                               compressed_model_accuracy)
 
+        self.runner.dump_statistics(model, self.compression_controller)
         if self._accuracy_criterion_satisfied(accuracy_budget, self.compression_controller):
-            self.runner.dump_statistics(model, self.compression_controller)
             nncf_logger.info('The accuracy criteria is reached after the initialization step.')
             self.print_accuracy_statistics(uncompressed_model_accuracy, compressed_model_accuracy,
                                            accuracy_drop, rel_accuracy_drop, accuracy_budget)
