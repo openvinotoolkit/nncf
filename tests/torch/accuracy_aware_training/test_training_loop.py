@@ -274,14 +274,11 @@ def test_early_exit_with_mock_validation(max_accuracy_degradation, exit_epoch_nu
 def test_early_exit_with_mock_validation_and_no_improvement(
     max_accuracy_degradation, maximal_total_epochs=5
 ):
-    epoch_counter = 0
-
     def mock_validate_fn(model, init_step=False, epoch=0):
         original_metric = 0.85
         if init_step:
             return original_metric
-        nonlocal epoch_counter
-        epoch_counter = epoch
+            
         return original_metric - 0.11 * (epoch+1)
 
     config = get_quantization_config_without_range_init(LeNet.INPUT_SIZE[-1])
