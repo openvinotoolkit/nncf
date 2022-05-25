@@ -22,7 +22,7 @@ import onnx
 from nncf.experimental.post_training.compression_builder import CompressionBuilder
 from nncf.experimental.post_training.algorithms.quantization import PostTrainingQuantization
 from nncf.experimental.post_training.algorithms.quantization import PostTrainingQuantizationParameters
-from nncf.experimental.onnx.datasets.imagenet_dataset import create_imagenet_torch_dataset
+from nncf.experimental.onnx.datasets.imagenet_dataset import create_imagenet_torch_dataset, infer_input_shape
 from nncf.experimental.post_training.api.metric import Accuracy
 from nncf.common.utils.logger import logger as nncf_logger
 
@@ -38,8 +38,13 @@ def run(onnx_model_path: str, output_model_path: str,
     original_model = onnx.load(onnx_model_path)
     nncf_logger.info("The model is loaded from {}".format(onnx_model_path))
 
+    if input_shape is None:
+        nncf_logger.info(
+            "input_shape is None. Infer input_shape from the model.")
+        input_shape = infer_input_shape(original_model)
+
     # Step 1: Initialize the data loader and metric (if it is needed).
-    dataset = create_imagenet_torch_dataset(original_model, dataset_path, input_shape,
+    dataset = create_imagenet_torch_dataset(dataset_path, input_shape,
                                             batch_size=batch_size, shuffle=shuffle)
     metric = Accuracy(top_k=1)
 

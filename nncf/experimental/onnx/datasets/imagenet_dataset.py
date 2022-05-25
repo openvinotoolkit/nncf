@@ -80,18 +80,13 @@ def get_transform(image_size: Tuple[int, int],
     return transforms.Compose(transform_list)
 
 
-def create_imagenet_torch_dataset(model: ModelProto,
-                                  dataset_dir: str,
+def create_imagenet_torch_dataset(dataset_dir: str,
                                   input_shape: Optional[Tuple[int, int, int, int]],
                                   mean=(0.485, 0.456, 0.406),
                                   std=(0.229, 0.224, 0.225),
                                   crop_ratio=0.875,
                                   batch_size: int = 1,
                                   shuffle: bool = True):
-    if input_shape is None:
-        nncf_logger.info("input_shape is None. Infer input_shape from the model.")
-        input_shape = infer_input_shape(model)
-
     channel_last = input_shape[1] > input_shape[3] and input_shape[2] > input_shape[3]
 
     if channel_last:
