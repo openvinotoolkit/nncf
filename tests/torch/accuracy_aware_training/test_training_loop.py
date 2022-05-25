@@ -319,7 +319,7 @@ def test_early_exit_with_mock_validation_and_no_improvement(
 
     model = early_stopping_training_loop.run(model,
                                              train_epoch_fn=train_fn,
-                                             validate_fn=partial(mock_validate_fn),
+                                             validate_fn=partial(mock_validate_fn, init_step=False),
                                              configure_optimizers_fn=configure_optimizers_fn)
     assert early_stopping_training_loop.runner._best_checkpoint is not None
 
