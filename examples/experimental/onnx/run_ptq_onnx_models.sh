@@ -1,11 +1,27 @@
 #!/usr/bin/env bash
 
 SCRIPT_DIR=$(dirname "$0")
-CONFIGS_DIR=${SCRIPT_DIR}/classification/onnx_models_configs
 
-MODEL_DIR=$1
-OUTPUT_DIR=$2
-NUMBER_OF_SAMPLES=$3
+if [ $# -ne 4 ]; then
+    echo "illegal number of parameters"
+    echo "E.g. ./run_ptq_onnx_models.sh classification <MODEL_DIR> <OUTPUT_DIR> <NUMBER_OF_SAMPLES>"
+    exit 2
+fi
+
+case $1 in
+    classification|det_and_seg)
+        CONFIGS_DIR=${SCRIPT_DIR}/$1/onnx_models_configs;
+        echo "CONFIGS_DIR=$CONFIGS_DIR"
+        ;;
+    *)
+        echo "You should choose classification or det_and_seg. E.g. ./run_ptq_onnx_models.sh classification ..."
+        exit 2
+        ;;
+esac
+
+MODEL_DIR=$2
+OUTPUT_DIR=$3
+NUMBER_OF_SAMPLES=$4
 
 echo "MODEL_DIR=$MODEL_DIR"
 echo "OUTPUT_DIR=$OUTPUT_DIR"
