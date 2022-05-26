@@ -133,6 +133,79 @@ def test_adaptive_compression_training_loop(max_accuracy_degradation,
 
 
 @pytest.mark.parametrize(
+    ('max_accuracy_degradation', 'maximal_total_epochs', 'initial_compression_rate_step'),
+    (({'maximal_absolute_accuracy_degradation': 0.1}, 1, 0.01),)
+)
+def test_adaptive_compression_training_loop_with_no_training(
+    max_accuracy_degradation,
+    maximal_total_epochs,
+    initial_compression_rate_step,
+    learning_rate=1e-3,
+    initial_training_phase_epochs=1,
+    patience_epochs=3,
+):
+    """When conditions below for adaptive compression training is not satisfied in the loop.
+    - self.runner.compression_rate_step >= self.runner.minimal_compression_rate_step
+    - self.runner.cumulative_epoch_count < self.runner.maximal_total_epochs
+    """
+
+    def mock_validate_fn(model, init_step=False, epoch=0):
+        original_metric = 0.85
+        if init_step:
+            return original_metric
+            
+        return original_metric - 0.04 * epoch
+
+    input_sample_size = [1, 1, LeNet.INPUT_SIZE[-1], LeNet.INPUT_SIZE[-1]]
+    config = get_basic_magnitude_sparsity_config(input_sample_size=input_sample_size)
+
+    params = {
+        "initial_training_phase_epochs": initial_training_phase_epochs,
+        "patience_epochs": patience_epochs,
+        "maximal_total_epochs": maximal_total_epochs,
+        "initial_compression_rate_step": initial_compression_rate_step
+    }
+    params.update(max_accuracy_degradation)
+    accuracy_aware_config = {
+        "accuracy_aware_training": {
+            "mode": "adaptive_compression_level",
+            "params": params
+        }
+    }
+
+    config.update(accuracy_aware_config)
+
+    train_loader = create_ones_mock_dataloader(config, num_samples=10)
+    model = LeNet()
+
+    config = register_default_init_args(config,
+                                        train_loader=train_loader,
+                                        model_eval_fn=partial(mock_validate_fn, init_step=True))
+
+    model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
+
+    def train_fn(compression_ctrl, model, optimizer,
+                 train_loader=train_loader, **kwargs):
+        pass
+
+    def configure_optimizers_fn():
+        optimizer = SGD(model.parameters(), lr=learning_rate)
+        return optimizer, None
+
+    acc_aware_training_loop = AdaptiveCompressionTrainingLoop(config, compression_ctrl)
+
+    model = acc_aware_training_loop.run(model,
+                                        train_epoch_fn=train_fn,
+                                        validate_fn=partial(mock_validate_fn, init_step=False),
+                                        configure_optimizers_fn=configure_optimizers_fn)
+    assert len(acc_aware_training_loop.runner._best_checkpoints) == 0
+
+    possible_checkpoint_compression_rates = \
+        acc_aware_training_loop.runner.get_compression_rates_with_positive_acc_budget()
+    assert len(possible_checkpoint_compression_rates) == 1
+
+
+@pytest.mark.parametrize(
     'max_accuracy_degradation',
     (({'maximal_relative_accuracy_degradation': 30.0}), ({'maximal_relative_accuracy_degradation': 1.0}),
      ({'maximal_absolute_accuracy_degradation': 0.30}), ({'maximal_absolute_accuracy_degradation': 0.05}))
@@ -265,6 +338,63 @@ def test_early_exit_with_mock_validation(max_accuracy_degradation, exit_epoch_nu
                                              configure_optimizers_fn=configure_optimizers_fn)
     # Epoch number starts from 0
     assert epoch_counter == exit_epoch_number
+
+
+@pytest.mark.parametrize(
+    ('max_accuracy_degradation'),
+    (({'maximal_absolute_accuracy_degradation': 0.1}),)
+)
+def test_early_exit_with_mock_validation_and_no_improvement(
+    max_accuracy_degradation, maximal_total_epochs=5
+):
+    def mock_validate_fn(model, init_step=False, epoch=0):
+        original_metric = 0.85
+        if init_step:
+            return original_metric
+            
+        return original_metric - 0.11 * (epoch+1)
+
+    config = get_quantization_config_without_range_init(LeNet.INPUT_SIZE[-1])
+
+    params = {
+        "maximal_total_epochs": maximal_total_epochs
+    }
+    params.update(max_accuracy_degradation)
+    accuracy_aware_config = {
+        "accuracy_aware_training": {
+            "mode": "early_exit",
+            "params": params
+        }
+    }
+
+    config.update(accuracy_aware_config)
+
+    train_loader = create_ones_mock_dataloader(config, num_samples=10)
+    model = LeNet()
+
+    config = register_default_init_args(config,
+                                        train_loader=train_loader,
+                                        model_eval_fn=partial(mock_validate_fn, init_step=True))
+
+    model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
+
+    def train_fn(compression_ctrl, model, epoch, optimizer, lr_scheduler,
+                 train_loader=train_loader):
+        pass
+
+    def configure_optimizers_fn():
+        optimizer = SGD(model.parameters(), lr=1e-3)
+        return optimizer, None
+
+    early_stopping_training_loop = EarlyExitCompressionTrainingLoop(config, compression_ctrl,
+                                                                    dump_checkpoints=False)
+    assert early_stopping_training_loop.runner._best_checkpoint is None
+
+    model = early_stopping_training_loop.run(model,
+                                             train_epoch_fn=train_fn,
+                                             validate_fn=partial(mock_validate_fn, init_step=False),
+                                             configure_optimizers_fn=configure_optimizers_fn)
+    assert early_stopping_training_loop.runner._best_checkpoint is not None
 
 
 @pytest.mark.parametrize('aa_config', (
