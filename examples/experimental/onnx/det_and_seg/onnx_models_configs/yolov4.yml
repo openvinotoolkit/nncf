@@ -1,5 +1,5 @@
 models:
-  - name: yolov3-12
+  - name: yolov4
     launchers:
       - framework: onnx_runtime
         execution_providers: ['OpenVINOExecutionProvider']
