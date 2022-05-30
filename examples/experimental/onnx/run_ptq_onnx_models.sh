@@ -31,8 +31,8 @@ echo "NUMBER_OF_SAMPLES=$NUMBER_OF_SAMPLES"
 
 for config in `ls $CONFIGS_DIR`; do
     model_name=${config%.*}
-    echo $model_name
 
+    echo "1) RUN PTQ for $model_name"
     # Post-training quantization
     python $SCRIPT_DIR/run_ptq.py               \
         -c $CONFIGS_DIR/$config                 \
@@ -43,6 +43,7 @@ for config in `ls $CONFIGS_DIR`; do
         -a $DATASET_DIR                         \
         -ss $NUMBER_OF_SAMPLES
 
+    echo "2) Check model accuracy for $model_name (original)"
     # Accuracy check for the original model
     accuracy_check  \
         -c $CONFIGS_DIR/$config                     \
@@ -53,6 +54,7 @@ for config in `ls $CONFIGS_DIR`; do
         -a $DATASET_DIR                             \
         --csv_result $OUTPUT_DIR/original_accuracy.csv
 
+    echo "3) Check model accuracy for $model_name (quantized)"
     # Accuracy check for the quantized model
     accuracy_check  \
         -c $CONFIGS_DIR/$config                     \
@@ -63,6 +65,7 @@ for config in `ls $CONFIGS_DIR`; do
         -a $DATASET_DIR                             \
         --csv_result $OUTPUT_DIR/quantize_accuracy.csv
 
+    echo "4) Benchmark model latency for $model_name (original)"
     # Benchmark the original model
     mkdir -p $OUTPUT_DIR/$model_name/original
 
@@ -71,6 +74,7 @@ for config in `ls $CONFIGS_DIR`; do
         -report_type no_counters                        \
         -report_folder $OUTPUT_DIR/$model_name/original
 
+    echo "4) Benchmark model latency for $model_name (quantized)"
     # Benchmark the quantized model
     mkdir -p $OUTPUT_DIR/$model_name/quantized
 
