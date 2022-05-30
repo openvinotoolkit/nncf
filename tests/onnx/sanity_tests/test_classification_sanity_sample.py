@@ -88,7 +88,8 @@ def test_sanity_quantize_sample(tmp_path, model_name, model, input_shape):
         batch_size=1, shuffle=True, num_init_samples=1,
         input_shape=input_shape, ignored_scopes=None)
 
-    sess = rt.InferenceSession(onnx_output_model_path, providers=['OpenVINOExecutionProvider'])
+    sess = rt.InferenceSession(onnx_output_model_path, providers=[
+                               'OpenVINOExecutionProvider'])
     _input = np.random.random(input_shape)
     input_name = sess.get_inputs()[0].name
     _ = sess.run([], {input_name: _input.astype(np.float32)})

@@ -109,3 +109,9 @@ ENV/
 
 # object detection eval results
 examples/torch/object_detection/eval/
+
+# VSCode
+.vscode/
+
+# NNCF debug
+nncf_debug/
