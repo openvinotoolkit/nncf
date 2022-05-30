@@ -35,3 +35,5 @@
 /docker/tensorflow/gpu/Dockerfile filter=lfs diff=lfs merge=lfs -text
 /docker/torch/cpu/Dockerfile filter=lfs diff=lfs merge=lfs -text
 /docker/torch/gpu/Dockerfile filter=lfs diff=lfs merge=lfs -text
+*.dockerignore filter=lfs diff=lfs merge=lfs -text
+/docker/onnx/openvinoep/Dockerfile filter=lfs diff=lfs merge=lfs -text
