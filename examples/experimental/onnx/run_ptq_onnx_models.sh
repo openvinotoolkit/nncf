@@ -2,9 +2,9 @@
 
 SCRIPT_DIR=$(dirname "$0")
 
-if [ $# -ne 4 ]; then
+if [ $# -ne 5 ]; then
     echo "illegal number of parameters"
-    echo "E.g. ./run_ptq_onnx_models.sh classification <MODEL_DIR> <OUTPUT_DIR> <NUMBER_OF_SAMPLES>"
+    echo "E.g. ./run_ptq_onnx_models.sh [classification|det_and_seg] <MODEL_DIR> <OUTPUT_DIR> <DATASET_DIR> <NUMBER_OF_SAMPLES>"
     exit 2
 fi
 
@@ -21,10 +21,12 @@ esac
 
 MODEL_DIR=$2
 OUTPUT_DIR=$3
-NUMBER_OF_SAMPLES=$4
+DATASET_DIR=$4
+NUMBER_OF_SAMPLES=$5
 
 echo "MODEL_DIR=$MODEL_DIR"
 echo "OUTPUT_DIR=$OUTPUT_DIR"
+echo "DATASET_DIR=$DATASET_DIR"
 echo "NUMBER_OF_SAMPLES=$NUMBER_OF_SAMPLES"
 
 for config in `ls $CONFIGS_DIR`; do
@@ -32,10 +34,13 @@ for config in `ls $CONFIGS_DIR`; do
     echo $model_name
 
     # Post-training quantization
-    python $SCRIPT_DIR/run_ptq.py       \
-        -c $CONFIGS_DIR/$config         \
-        -m $MODEL_DIR/$model_name.onnx  \
-        -o $OUTPUT_DIR                  \
+    python $SCRIPT_DIR/run_ptq.py               \
+        -c $CONFIGS_DIR/$config                 \
+        -m $MODEL_DIR/$model_name.onnx          \
+        -o $OUTPUT_DIR                          \
+        -d $SCRIPT_DIR/dataset_definitions.yml  \
+        -s $DATASET_DIR                         \
+        -a $DATASET_DIR                         \
         -ss $NUMBER_OF_SAMPLES
 
     # Accuracy check for the original model
@@ -43,6 +48,9 @@ for config in `ls $CONFIGS_DIR`; do
         -c $CONFIGS_DIR/$config                     \
         -ss $NUMBER_OF_SAMPLES                      \
         -m $MODEL_DIR/$model_name.onnx              \
+        -d $SCRIPT_DIR/dataset_definitions.yml      \
+        -s $DATASET_DIR                             \
+        -a $DATASET_DIR                             \
         --csv_result $OUTPUT_DIR/original_accuracy.csv
 
     # Accuracy check for the quantized model
@@ -50,6 +58,9 @@ for config in `ls $CONFIGS_DIR`; do
         -c $CONFIGS_DIR/$config                     \
         -ss $NUMBER_OF_SAMPLES                      \
         -m $OUTPUT_DIR/$model_name-quantized.onnx   \
+        -d $SCRIPT_DIR/dataset_definitions.yml      \
+        -s $DATASET_DIR                             \
+        -a $DATASET_DIR                             \
         --csv_result $OUTPUT_DIR/quantize_accuracy.csv
 
     # Benchmark the original model
