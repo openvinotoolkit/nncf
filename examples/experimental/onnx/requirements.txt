@@ -1,2 +1,3 @@
 torchvision
 openvino-dev==2022.1.0
+pycocotools
