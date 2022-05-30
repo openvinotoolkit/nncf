@@ -122,7 +122,7 @@ After benchmark is done, outputs are located in `/output` which is a mounted dir
 
 2. Object detection and segmentation models
 
-| name                 |   original_latency |   quantized_latency |   diff_latency |   original_accuracy |   quantized_accuracy |   diff_accuracy |
+| name                 |  FP32 latency (ms) |   INT8 latency (ms) |   Latency diff. (FP32/INT8) |   FP32 accuracy (%) |   INT8 accuracy (%) |   Accuracy diff. (%) |
 |:---------------------|-------------------:|--------------------:|---------------:|--------------------:|---------------------:|----------------:|
 | FasterRCNN-12        |             nan    |              nan    |         nan    |               37.71 |               nan    |          nan    |
 | MaskRCNN-12-det      |             nan    |              nan    |         nan    |               36.91 |               nan    |          nan    |
