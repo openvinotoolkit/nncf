@@ -141,13 +141,14 @@ class FilterPruningController(BasePruningAlgoController):
         self.nodes_params_num = {}  # type: Dict[NNCFNodeName, int]
         self.next_nodes = {}  # type: Dict[int, List[NNCFNodeName]]
         self._init_pruned_modules_params()
+        self.op_addresses_to_skip = self.pruning_config.get('ignored_scopes')
         self.flops_count_init()
         self.full_flops = sum(self.nodes_flops.values())
         self.current_flops = self.full_flops
         self.full_params_num = sum(self.nodes_params_num.values())
         self.current_params_num = self.full_params_num
         self.full_filters_num = count_filters_num(self._model.get_original_graph(), GENERAL_CONV_LAYER_METATYPES +
-                                                  LINEAR_LAYER_METATYPES)
+                                                  LINEAR_LAYER_METATYPES, op_addresses_to_skip=self.op_addresses_to_skip)
         self.current_filters_num = self.full_filters_num
         self._pruned_layers_num = len(self.pruned_module_groups_info.get_all_nodes())
         self._prunable_layers_num = len(self._model.get_graph().get_nodes_by_types(self._prunable_types))
@@ -289,7 +290,8 @@ class FilterPruningController(BasePruningAlgoController):
         self.nodes_flops, self.nodes_params_num = \
             count_flops_and_weights_per_node(graph, self._modules_in_shapes, self._modules_out_shapes,
                                              conv_op_metatypes=GENERAL_CONV_LAYER_METATYPES,
-                                             linear_op_metatypes=LINEAR_LAYER_METATYPES)
+                                             linear_op_metatypes=LINEAR_LAYER_METATYPES,
+                                             op_addresses_to_skip=self.op_addresses_to_skip)
 
     def _calculate_flops_and_weights_in_uniformly_pruned_model(self, pruning_level: float) -> Tuple[int, int]:
         """
@@ -313,7 +315,8 @@ class FilterPruningController(BasePruningAlgoController):
                                        input_channels=tmp_in_channels,
                                        output_channels=tmp_out_channels,
                                        conv_op_metatypes=GENERAL_CONV_LAYER_METATYPES,
-                                       linear_op_metatypes=LINEAR_LAYER_METATYPES)
+                                       linear_op_metatypes=LINEAR_LAYER_METATYPES,
+                                       op_addresses_to_skip=self.op_addresses_to_skip)
 
     def _find_uniform_pruning_level_for_target_flops(self, target_flops_pruning_level: float) -> float:
         """
@@ -574,7 +577,8 @@ class FilterPruningController(BasePruningAlgoController):
                                                         input_channels=tmp_in_channels,
                                                         output_channels=tmp_out_channels,
                                                         conv_op_metatypes=GENERAL_CONV_LAYER_METATYPES,
-                                                        linear_op_metatypes=LINEAR_LAYER_METATYPES)
+                                                        linear_op_metatypes=LINEAR_LAYER_METATYPES,
+                                                        op_addresses_to_skip=self.op_addresses_to_skip)
             if flops < target_flops:
                 self.current_flops = flops
                 self.current_params_num = params_num
@@ -650,7 +654,8 @@ class FilterPruningController(BasePruningAlgoController):
 
         self.current_filters_num = count_filters_num(self._model.get_original_graph(),
                                                      op_metatypes=GENERAL_CONV_LAYER_METATYPES,
-                                                     output_channels=tmp_out_channels)
+                                                     output_channels=tmp_out_channels,
+                                                     op_addresses_to_skip=self.op_addresses_to_skip)
 
         self.current_flops, self.current_params_num = \
             count_flops_and_weights(self._model.get_original_graph(),
