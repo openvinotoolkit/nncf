@@ -1,0 +1,37 @@
+models:
+  - name: tiniyolov2-8
+    launchers:
+      - framework: onnx_runtime
+        adapter:
+          type: yolo_v2
+          anchors: tini_yolo_v2
+        execution_providers: ['OpenVINOExecutionProvider']
+
+    datasets:
+      - name: VOC2012
+
+        preprocessing:
+          - type: bgr_to_rgb
+          - type: resize
+            size: 416
+          - type: normalization
+            std: 255.0
+
+        postprocessing:
+          - type: filter
+            apply_to: prediction
+            min_confidence: 0.01
+            remove_filtered: True
+          - type: nms
+            overlap: 0.5
+            include_boundaries: False
+          - type: resize_prediction_boxes
+          - type: clip_boxes
+            apply_to: prediction
+
+        metrics:
+          - type: map
+            ignore_difficult: True
+            include_boundaries: True
+            presenter: print_scalar
+            allow_multiple_matches_per_ignored: True

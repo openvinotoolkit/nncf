@@ -6,10 +6,6 @@ models:
     execution_providers: ['OpenVINOExecutionProvider']
   datasets:
   - name: imagenet_1000_classes
-    data_source: /omz_data/ILSVRC2012_img_val
-    annotation_conversion:
-      converter: imagenet
-      annotation_file: /omz_data/val.txt
     # read in RGB format
     reader: pillow_imread
     preprocessing:

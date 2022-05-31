@@ -100,6 +100,8 @@ After benchmark is done, outputs are located in `/output` which is a mounted dir
 
 ### Results
 
+1. Classification models
+
 | name                  |   FP32 latency (ms) |   INT8 latency (ms) |   Latency diff. (FP32/INT8) |   FP32 accuracy (%) |   INT8 accuracy (%) |  Accuracy diff. (%) |
 |:----------------------|-------------------:|--------------------:|---------------:|--------------------:|---------------------:|----------------:|
 | bvlcalexnet-12        |              26.12 |                5.56 |           4.70 |               50.20 |                49.80 |            0.40 |
@@ -117,5 +119,23 @@ After benchmark is done, outputs are located in `/output` which is a mounted dir
 | squeezenet1.0-12      |               3.76 |                1.85 |           2.03 |               53.20 |                53.60 |           -0.40 |
 | vgg16-12              |             159.44 |               38.75 |           4.11 |               70.80 |                70.60 |            0.20 |
 | zfnet512-12           |              43.68 |               14.46 |           3.02 |               58.60 |                59.00 |           -0.40 |
+
+2. Object detection and segmentation models
+
+| name                 |  FP32 latency (ms) |   INT8 latency (ms) |   Latency diff. (FP32/INT8) |   FP32 accuracy (%) |   INT8 accuracy (%) |   Accuracy diff. (%) |
+|:---------------------|-------------------:|--------------------:|---------------:|--------------------:|---------------------:|----------------:|
+| FasterRCNN-12        |             nan    |              nan    |         nan    |               37.71 |               nan    |          nan    |
+| MaskRCNN-12-det      |             nan    |              nan    |         nan    |               36.91 |               nan    |          nan    |
+| MaskRCNN-12-inst-seg |             nan    |              nan    |         nan    |               34.27 |               nan    |          nan    |
+| ResNet101-DUC-7      |            6473.99 |              nan    |         nan    |               71.21 |               nan    |          nan    |
+| fcn-resnet50-12      |             nan    |              nan    |         nan    |              nan    |               nan    |          nan    |
+| retinanet-9          |             851.38 |              217.39 |           3.92 |               18.45 |               nan    |          nan    |
+| ssd-12               |            1901.20 |              nan    |         nan    |               22.91 |               nan    |          nan    |
+| ssd_mobilenet_v1_12  |             nan    |              nan    |         nan    |              nan    |               nan    |          nan    |
+| tiny-yolov3-11       |             nan    |              nan    |         nan    |              nan    |               nan    |          nan    |
+| tinyyolov2-8         |              32.27 |              nan    |         nan    |              nan    |               nan    |          nan    |
+| yolov2-coco-9        |             124.79 |               45.50 |           2.74 |               21.70 |                22.17 |           -0.47 |
+| yolov3-12            |             nan    |              nan    |         nan    |               31.08 |               nan    |          nan    |
+| yolov4               |             281.76 |              450.50 |           0.63 |               14.28 |               nan    |          nan    |
 
 * `nan` means that NNCF PTQ API failed to generate proper quantized onnx model. We are working on these defects.
