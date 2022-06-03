@@ -664,7 +664,8 @@ class FilterPruningController(BasePruningAlgoController):
                                     input_channels=tmp_in_channels,
                                     output_channels=tmp_out_channels,
                                     conv_op_metatypes=GENERAL_CONV_LAYER_METATYPES,
-                                    linear_op_metatypes=LINEAR_LAYER_METATYPES)
+                                    linear_op_metatypes=LINEAR_LAYER_METATYPES,
+                                    op_addresses_to_skip=self.op_addresses_to_skip)
 
     def _run_batchnorm_adaptation(self):
         if self._bn_adaptation is None:
