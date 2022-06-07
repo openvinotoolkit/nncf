@@ -53,8 +53,11 @@ def fixture_basic_model(request):
 
 
 BASIC_ELASTIC_WIDTH_PARAMS = {'filter_importance': 'L1',
+                              'add_dynamic_inputs': None,
                               'max_num_widths': -1,
                               'min_width': 1,
+                              'overwrite_groups': None,
+                              'overwrite_groups_widths': None,
                               'width_multipliers': None,
                               'width_step': 1}
 

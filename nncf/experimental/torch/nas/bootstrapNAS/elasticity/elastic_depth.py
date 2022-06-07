@@ -397,6 +397,8 @@ class ElasticDepthBuilder(SingleElasticityBuilder):
                 end_node = graph.get_node_by_name(block.end_node_name)
                 ordinal_ids.append([start_node.node_id, end_node.node_id])
             self._ordinal_ids = ordinal_ids
+            str_bs = [str(block) for block in self._skipped_blocks]
+            nncf_logger.info('\n'.join(['\n\"Manual depth blocks:\": [', ',\n'.join(str_bs), ']']))
 
         tracing_context.set_elastic_blocks(self._skipped_blocks, self._ordinal_ids)
         node_names_per_block = self._get_node_names_per_block(target_model, self._skipped_blocks)
