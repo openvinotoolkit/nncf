@@ -480,7 +480,7 @@ class ElasticWidthHandler(SingleElasticityHandler):
         self._add_dynamic_inputs = add_dynamic_inputs
 
         graph = self._target_model.get_original_graph()
-        prunable_types = [NNCFConv2d.op_func_name, NNCFLinear.op_func_name] #TODO(pablo) Why aren't we listing Linear layers here? I added linear 5/23/22
+        prunable_types = [NNCFConv2d.op_func_name, NNCFLinear.op_func_name]
         self._cluster_next_nodes = get_cluster_next_nodes(graph, self._pruned_module_groups_info, prunable_types)
 
         # Need a copy because it will be used for adding `output_mask`/`input_masks` to nodes that are relevant to
