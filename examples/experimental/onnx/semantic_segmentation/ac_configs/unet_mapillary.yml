@@ -1,0 +1,42 @@
+models:
+  - name: unet_mapillary
+
+    launchers:
+      - framework: onnx_runtime
+        execution_providers: ['OpenVINOExecutionProvider']
+        adapter: segmentation
+    datasets:
+      - name: mapillary_vistas
+        data_source: <Mapillary folder>
+        segmentation_masks_source: <labels folder>
+        annotation_conversion:
+          converter: mapillary_vistas
+          data_dir: <annotation dir>
+        reader: pillow_imread
+
+        preprocessing:
+          - type: resize
+            dst_height: 512
+            dst_width: 1024
+            use_pillow: True
+            interpolation: BILINEAR
+
+          - type: normalization
+            std: 255
+
+          - type: normalization
+            mean: (0.485, 0.456, 0.406)
+            std: (0.229, 0.224, 0.225)
+
+        postprocessing:
+          - type: resize_segmentation_mask
+            apply_to: annotation
+            dst_height: 512
+            dst_width: 1024
+          - type: encode_segmentation_mask
+            apply_to: annotation
+
+        metrics:
+          - type: mean_iou
+            use_argmax: True
+            ignore_label: 0

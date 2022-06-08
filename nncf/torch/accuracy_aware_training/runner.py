@@ -254,19 +254,22 @@ class PTAdaptiveCompressionLevelTrainingRunner(PTAccuracyAwareTrainingRunner,
             copyfile(checkpoint_path, best_path)
 
     def load_best_checkpoint(self, model):
-        # load checkpoint with highest compression rate and positive acc budget
-        possible_checkpoint_rates = self.get_compression_rates_with_positive_acc_budget()
-        if not possible_checkpoint_rates:
-            nncf_logger.warning('Could not produce a compressed model satisfying the set accuracy '
-                                'degradation criterion during training. Increasing the number of training '
-                                'epochs')
-        best_checkpoint_compression_rate = sorted(possible_checkpoint_rates)[-1]
-        resuming_checkpoint_path = self._best_checkpoints[best_checkpoint_compression_rate]
-        nncf_logger.info('Loading the best checkpoint found during training '
-                         '{}...'.format(resuming_checkpoint_path))
-        resuming_checkpoint = torch.load(resuming_checkpoint_path, map_location='cpu')
-        resuming_model_state_dict = resuming_checkpoint.get('state_dict', resuming_checkpoint)
-        load_state(model, resuming_model_state_dict, is_resume=True)
+        if len(self._best_checkpoints) > 0:
+            # load checkpoint with highest compression rate and positive acc budget
+            possible_checkpoint_rates = self.get_compression_rates_with_positive_acc_budget()
+            if not possible_checkpoint_rates:
+                nncf_logger.warning('Could not produce a compressed model satisfying the set accuracy '
+                                    'degradation criterion during training. Increasing the number of training '
+                                    'epochs')
+            best_checkpoint_compression_rate = sorted(possible_checkpoint_rates)[-1]
+            resuming_checkpoint_path = self._best_checkpoints[best_checkpoint_compression_rate]
+            nncf_logger.info('Loading the best checkpoint found during training '
+                            '{}...'.format(resuming_checkpoint_path))
+            resuming_checkpoint = torch.load(resuming_checkpoint_path, map_location='cpu')
+            resuming_model_state_dict = resuming_checkpoint.get('state_dict', resuming_checkpoint)
+            load_state(model, resuming_model_state_dict, is_resume=True)
+        else:
+            nncf_logger.info('The best checkpoint has not been set yet. Return the last checkpoint...')
 
     @property
     def compressed_training_history(self):

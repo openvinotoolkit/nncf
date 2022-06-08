@@ -183,6 +183,7 @@ def get_scale_zp_from_input_low_input_high(level_low, level_high, input_low, inp
 def symmetric_quantize(input_, levels, level_low, level_high, scale, eps, skip: bool = False):
     if skip:
         return input_
+    scale = scale.to(dtype=input_.dtype)
     scale_safe = abs(scale) + eps
     return QuantizeSymmetric.apply(input_, scale_safe, level_low, level_high, levels)
 

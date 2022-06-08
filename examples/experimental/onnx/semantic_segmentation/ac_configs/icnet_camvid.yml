@@ -1,0 +1,42 @@
+models:
+  - name: icnet_camvid
+
+    launchers:
+      - framework: onnx_runtime
+        execution_providers: ['OpenVINOExecutionProvider']
+        adapter: segmentation
+    datasets:
+      - name: CamVid
+        data_source: <CamVid folder>
+        annotation_conversion:
+            converter: camvid
+            annotation_file: <annotation file>
+        reader: pillow_imread
+
+        preprocessing:
+          - type: resize
+            dst_height: 768
+            dst_width: 960
+            use_pillow: True
+            interpolation: BILINEAR
+
+
+          - type: normalization
+            std: 255
+
+          - type: normalization
+            mean: (0.39068785, 0.40521392, 0.41434407)
+            std: (0.29652068, 0.30514979, 0.30080369)
+            
+        postprocessing:
+          - type: resize_segmentation_mask
+            apply_to: annotation
+            dst_width: 960
+            dst_height: 768
+
+
+
+        metrics:
+          - type: mean_iou
+            use_argmax: True
+            ignore_label: 11
