@@ -9,13 +9,13 @@ models:
     datasets:
       - name: mscoco_segmentation_to_voc
         annotation_conversion:
-          converter: mscoco_segmentation
+          converter: mscoco_segmentation_to_voc
           annotation_file: annotations/instances_val2017.json
           has_background: True
           sort_annotations: True
           semantic_only: True
           # This should be an absolute path
-          masks_dir: /mnt/ssd2/omz_data/val2017/segmentation_masks
+          masks_dir: segmentation_masks
           # Only evaluate on VOC labels
           convert_COCO_to_VOC_labels: True
         annotation: mscoco_segmentation_to_voc.pickle
