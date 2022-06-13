@@ -1,5 +1,5 @@
 models:
-  - name: tiniyolov2-8
+  - name: tinyyolov2-8
     launchers:
       - framework: onnx_runtime
         adapter:
