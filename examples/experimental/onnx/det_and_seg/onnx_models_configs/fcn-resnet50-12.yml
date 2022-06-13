@@ -14,8 +14,8 @@ models:
           has_background: True
           sort_annotations: True
           semantic_only: True
-          # This should be an absolute path
-          masks_dir: segmentation_masks
+          # Do not change masks_dir path
+          masks_dir: val2017/segmentation_masks
           # Only evaluate on VOC labels
           convert_COCO_to_VOC_labels: True
         annotation: mscoco_segmentation_to_voc.pickle
