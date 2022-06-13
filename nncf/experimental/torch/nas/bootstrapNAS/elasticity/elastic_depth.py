@@ -337,6 +337,9 @@ class ElasticDepthParams(BaseElasticityParams):
     def __eq__(self, other: 'ElasticDepthParams') -> bool:
         return self.__dict__ == other.__dict__
 
+    def __str__(self):
+        return f"{self.__class__.__name__}: max_block_size: {self.max_block_size} min_block_size: {self.min_block_size} allow_nested_blocks: {self.allow_nested_blocks} allow_linear_combinations: {self.allow_linear_combination} skipped_blocks: {self.skipped_blocks}"
+
 
 @ELASTICITY_BUILDERS.register(ElasticityDim.DEPTH)
 class ElasticDepthBuilder(SingleElasticityBuilder):
@@ -387,8 +390,6 @@ class ElasticDepthBuilder(SingleElasticityBuilder):
                     allow_nested_blocks=self._params.allow_nested_blocks,
                     allow_linear_combination=self._params.allow_linear_combination
                 )
-            str_bs = [str(block) for block in self._skipped_blocks]
-            nncf_logger.info('\n'.join(['\n\"Found building blocks:\": [', ',\n'.join(str_bs), ']']))
         else:
             graph = target_model.get_original_graph()
             ordinal_ids = []
@@ -397,8 +398,12 @@ class ElasticDepthBuilder(SingleElasticityBuilder):
                 end_node = graph.get_node_by_name(block.end_node_name)
                 ordinal_ids.append([start_node.node_id, end_node.node_id])
             self._ordinal_ids = ordinal_ids
-            str_bs = [str(block) for block in self._skipped_blocks]
-            nncf_logger.info('\n'.join(['\n\"Manual depth blocks:\": [', ',\n'.join(str_bs), ']']))
+            nncf_logger.info("Manual depth blocks:")
+        new_line = '\n'
+        str_bs = [str(block) for block in self._skipped_blocks]
+        nncf_logger.info(f"""[{new_line.join(str_bs)}
+                        ]
+                        """)
 
         tracing_context.set_elastic_blocks(self._skipped_blocks, self._ordinal_ids)
         node_names_per_block = self._get_node_names_per_block(target_model, self._skipped_blocks)

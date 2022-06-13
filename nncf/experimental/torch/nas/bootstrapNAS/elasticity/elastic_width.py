@@ -150,7 +150,7 @@ class ElasticWidthParams(BaseElasticityParams):
                  filter_importance: str,
                  overwrite_groups: List[str],
                  overwrite_groups_widths: List[str],
-                 add_dynamic_inputs: List[str]):
+                 add_dynamic_inputs: Optional[List[str]]):
         """
         Constructor
 
@@ -235,7 +235,8 @@ class ElasticOutputWidthOp(ElasticWidthOp):
     Base class for trimming output channels (output width) of the operations.
     """
 
-    def __init__(self, max_width: int, node_name: str, params: ElasticWidthParams, fixed_width_list=[]):
+    def __init__(self, max_width: int, node_name: str, params: ElasticWidthParams,
+                 fixed_width_list: Optional[List[int]] = []):
         """
         Constructor.
 
@@ -349,6 +350,11 @@ class ElasticWidthInfo(PrunedLayerInfoBase):
         self.module = module
         self.elastic_op = elastic_op
 
+    def __str__(self):
+        return f"{self.__class__.__name__}: node_name: {self.node_name} module: {self.module} " \
+               f"elastic_op: {self.elastic_op} node_id: {self.nncf_node_id} is_depthwise: {self.is_depthwise}"
+
+
 
 class ElasticInputWidthLinearOp(ElasticWidthOp, nn.Module):
     """
@@ -457,7 +463,7 @@ class ElasticWidthHandler(SingleElasticityHandler):
                  node_name_vs_dynamic_input_width_op_map: Dict[NNCFNodeName, ElasticWidthOp],
                  pruned_module_groups_info: Clusterization[ElasticWidthInfo](id_fn=lambda x: x.node_name),
                  transformation_commands: List[TransformationCommand],
-                 add_dynamic_inputs = None):
+                 add_dynamic_inputs: Optional[List[str]] = None):
         """
         Constructor
 
@@ -480,7 +486,7 @@ class ElasticWidthHandler(SingleElasticityHandler):
         self._add_dynamic_inputs = add_dynamic_inputs
 
         graph = self._target_model.get_original_graph()
-        prunable_types = [NNCFConv2d.op_func_name, NNCFLinear.op_func_name]
+        prunable_types = [NNCFConv2d.op_func_name] #, NNCFLinear.op_func_name]
         self._cluster_next_nodes = get_cluster_next_nodes(graph, self._pruned_module_groups_info, prunable_types)
 
         # Need a copy because it will be used for adding `output_mask`/`input_masks` to nodes that are relevant to
@@ -833,7 +839,8 @@ class ElasticWidthHandler(SingleElasticityHandler):
 
 class EWBuilderStateNames:
     GROUPED_NODE_NAMES_TO_PRUNE = 'grouped_node_names_to_prune'
-
+    OVERWRITE_GROUP_WIDTHS = 'overwrite_groups_widths'
+    ADD_DYNAMIC_INPUTS = 'add_dynamic_inputs'
 
 @ELASTICITY_BUILDERS.register(ElasticityDim.WIDTH)
 class ElasticWidthBuilder(SingleElasticityBuilder):
@@ -906,12 +913,12 @@ class ElasticWidthBuilder(SingleElasticityBuilder):
                     raise RuntimeError(f'Elastic width is not supported for {metatype}')
                 elastic_op_creator = metatype_vs_elastic_op_creator[metatype]
 
-                if self._overwriting_pruning_groups:
-                    elastic_width_operation = elastic_op_creator(layer_attrs, node_name,
-                                                                 self._params,
-                                                                 self._overwrite_groups_widths[i])
-                else:
-                    elastic_width_operation = elastic_op_creator(layer_attrs, node_name, self._params, [])
+                elastic_width_operation = elastic_op_creator(
+                        layer_attrs,
+                        node_name,
+                        self._params,
+                        self._overwrite_groups_widths[i] if self._overwriting_pruning_groups
+                                                        else [])
                 elastic_width_operation.to(device)
                 update_conv_params_op = UpdateWeightAndOptionalBias(elastic_width_operation)
                 transformation_commands.append(
@@ -981,6 +988,14 @@ class ElasticWidthBuilder(SingleElasticityBuilder):
         self._params = params
         self._grouped_node_names_to_prune = state[self._state_names.GROUPED_NODE_NAMES_TO_PRUNE]
 
+        if params_from_state[self._state_names.OVERWRITE_GROUP_WIDTHS] is not None:
+            self._overwrite_groups_widths = params_from_state[self._state_names.OVERWRITE_GROUP_WIDTHS]
+            self._overwriting_pruning_groups = True
+            if len(self._grouped_node_names_to_prune) != len(self._overwrite_groups_widths):
+                raise RuntimeError("Mismatch between number of groups for pruning and their corresponding widths")
+        if params_from_state[self._state_names.ADD_DYNAMIC_INPUTS] is not None:
+            self._add_dynamic_inputs = params_from_state[self._state_names.ADD_DYNAMIC_INPUTS]
+
     def get_state(self) -> Dict[str, Any]:
         """
         Returns a dictionary with Python data structures (dict, list, tuple, str, int, float, True, False, None) that
@@ -990,7 +1005,7 @@ class ElasticWidthBuilder(SingleElasticityBuilder):
         """
         return {
             SingleElasticityBuilder._state_names.ELASTICITY_PARAMS: self._params.get_state(),
-            self._state_names.GROUPED_NODE_NAMES_TO_PRUNE: self._grouped_node_names_to_prune
+            self._state_names.GROUPED_NODE_NAMES_TO_PRUNE: self._grouped_node_names_to_prune,
         }
 
     @staticmethod
