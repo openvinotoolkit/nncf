@@ -167,6 +167,9 @@ class ModelAnalyzer:
         for node in reversed_sorted_nodes:
             # Check all output nodes accept_pruned_input attribute
             out_nodes = self.graph.get_next_nodes(node)
+            if out_nodes == []:
+                self.can_prune[node.node_id] =False
+                continue
             outputs_accept_pruned_input = all(self.accept_pruned_input[node.node_id] for node in out_nodes)
 
             # Check all output nodes can_prune attribute
@@ -181,6 +184,8 @@ class ModelAnalyzer:
         """
         sorted_nodes = self.graph.topological_sort()
         for node in sorted_nodes:
+            if not self.can_prune[node.node_id]:
+                continue
             # Propagate attribute only in not conv case
             if self.node_propagate_can_prune_attr(node):
                 in_nodes = self.graph.get_previous_nodes(node)
