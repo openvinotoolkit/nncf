@@ -11,12 +11,23 @@
  limitations under the License.
 """
 import os
+import pytest
+try:
+    import torch
+except:
+    torch = None
 
 from tests.common.helpers import create_venv_with_nncf
 
-import pytest
 
 pytest.register_assert_rewrite('tests.torch.helpers')
+
+
+@pytest.fixture(scope="session", autouse=True)
+def disable_tf32_precision():
+    if torch:
+        torch.backends.cuda.matmul.allow_tf32 = False
+        torch.backends.cudnn.allow_tf32 = False
 
 
 def pytest_addoption(parser):
