@@ -162,7 +162,7 @@ class InsertionPointGraph(nx.DiGraph):
                     }
 
                     self.add_node(ip_node_key, **pre_hook_ip_attrs)
-                    self.edges[edge][NNCFGraph.EDGE_MULTIPLICITY_ATTR] -=1
+                    self.edges[edge][NNCFGraph.EDGE_MULTIPLICITY_ATTR] -= 1
                     if self.edges[edge][NNCFGraph.EDGE_MULTIPLICITY_ATTR] == 0:
                         self.remove_edge(from_node_key, to_node_key)
                     self.add_edge(from_node_key, ip_node_key, **original_edge_attrs)
