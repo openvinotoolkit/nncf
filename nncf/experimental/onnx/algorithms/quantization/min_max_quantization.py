@@ -105,8 +105,12 @@ class ONNXMinMaxQuantization(MinMaxQuantization):
         filled_outputs = []
         for _, qp in quantizer_setup.quantization_points.items():
             if qp.is_weight_quantization_point():
-                weight_initializer_name = onnx_graph.get_weight_input_in_module(qp.insertion_point.target_node_name)
-                self._weight_quantizers.append(weight_initializer_name)
+                weight_initializer_name = onnx_graph.get_weight_tensor_with_initializer(
+                    qp.insertion_point.target_node_name)
+
+                # This algorithm only uses a weight tensor with initializer
+                if weight_initializer_name is not None:
+                    self._weight_quantizers.append(weight_initializer_name)
             else:
                 assert qp.is_activation_quantization_point()
                 if 'model_input' not in qp.insertion_point.target_node_name:  # If not input node
