@@ -45,7 +45,7 @@ for config in `ls $CONFIGS_DIR`; do
 
     echo "2) Check model accuracy for $model_name (original)"
     # Accuracy check for the original model
-    accuracy_check  \
+    python $SCRIPT_DIR/accuracy_checker.py  \
         -c $CONFIGS_DIR/$config                     \
         -ss $NUMBER_OF_SAMPLES                      \
         -m $MODEL_DIR/$model_name.onnx              \
@@ -56,7 +56,7 @@ for config in `ls $CONFIGS_DIR`; do
 
     echo "3) Check model accuracy for $model_name (quantized)"
     # Accuracy check for the quantized model
-    accuracy_check  \
+    python $SCRIPT_DIR/accuracy_checker.py  \
         -c $CONFIGS_DIR/$config                     \
         -ss $NUMBER_OF_SAMPLES                      \
         -m $OUTPUT_DIR/$model_name-quantized.onnx   \
