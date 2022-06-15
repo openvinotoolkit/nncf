@@ -53,7 +53,7 @@ def extract_algo_specific_config(config: NNCFConfig, algo_name_to_match: str) ->
         assert isinstance(compression_section, dict)
         algo_list = [compression_section]
 
-    from nncf.common.compression import NO_COMPRESSION_ALGORITHM_NAME
+    from nncf.common.compression import NO_COMPRESSION_ALGORITHM_NAME #pylint: disable=cyclic-import
     if algo_name_to_match == NO_COMPRESSION_ALGORITHM_NAME:
         if len(algo_list) > 0:
             raise RuntimeError(f'No algorithm configuration should be specified '
@@ -181,7 +181,7 @@ def extract_accuracy_aware_training_params(config: NNCFConfig) -> Dict[str, obje
         SPARSITY = ['rb_sparsity', 'magnitude_sparsity', 'const_sparsity']
 
     def validate_accuracy_aware_schema(config: NNCFConfig, params: Dict[str, object]):
-        from nncf.common.accuracy_aware_training import AccuracyAwareTrainingMode
+        from nncf.common.accuracy_aware_training import AccuracyAwareTrainingMode #pylint: disable=cyclic-import
         if params["mode"] == AccuracyAwareTrainingMode.EARLY_EXIT:
             return
         if params["mode"] == AccuracyAwareTrainingMode.ADAPTIVE_COMPRESSION_LEVEL:

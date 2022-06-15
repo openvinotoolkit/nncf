@@ -71,7 +71,7 @@ class PTNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
     @staticmethod
     def unstack(x: NNCFTensor, axis: int = 0) -> List[NNCFTensor]:
         tensor = x.tensor
-        if list(tensor.shape) == []:
+        if list(tensor.shape) == []: #pylint: disable=C1803
             tensor = tensor.unsqueeze(0)
         tensor_list = torch.unbind(tensor, dim=axis)
         return [PTNNCFTensor(t) for t in tensor_list]

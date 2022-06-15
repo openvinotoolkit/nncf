@@ -132,7 +132,7 @@ def wrap_operator(operator, operator_info: 'PatchedOperatorInfo'):
 
 
 def wrap_module_call(module_call):
-    from nncf.torch.dynamic_graph.patch_pytorch import ORIGINAL_OPERATORS
+    from nncf.torch.dynamic_graph.patch_pytorch import ORIGINAL_OPERATORS #pylint: disable=cyclic-import
     NAMES_ORIGINAL_OPERATORS = [op.name for op in ORIGINAL_OPERATORS]
 
     def wrapped(self, *args, **kwargs):

@@ -93,29 +93,34 @@ ELASTIC_DEPTH_SCHEMA = {
 ELASTIC_WIDTH_SCHEMA = {
     "type": "object",
     "properties": {
-        "min_width": with_attributes(NUMBER,
-                                     description="Minimal number of output channels that can be activated for "
-                                                 "each layers with elastic width. Default value is 32."),
-        "max_num_widths": with_attributes(NUMBER,
-                                          description="Restricts total number of different elastic width values for "
-                                                      "each layer. The default value is -1 means that there's no "
-                                                      "restrictions."),
-        "width_step": with_attributes(NUMBER,
-                                      description="Defines a step size for a generation of the elastic width search "
-                                                  "space - the list of all possible width values for each layer. The "
-                                                  "generation starts from the number of output channels in the "
-                                                  "original model and stops when it reaches whether a "
-                                                  "`min_width` width value or number of generated width values "
-                                                  "equal to `max_num_widths`"),
-        "width_multipliers": with_attributes(ARRAY_OF_NUMBERS,
-                                             description="Defines elastic width search space via a list of "
-                                                         "multipliers. All possible width values are obtained by "
-                                                         "multiplying the original width value with the values in the "
-                                                         "given list."),
-        "filter_importance": with_attributes(STRING,
-                                             description="The type of filter importance metric. Can be"
-                                                         " one of `L1`, `L2`, `geometric_median`."
-                                                         " `L2` by default.")
+        "min_width":
+        with_attributes(NUMBER,
+                        description="Minimal number of output channels that can be activated for "
+                                    "each layers with elastic width. Default value is 32."),
+        "max_num_widths":
+        with_attributes(NUMBER,
+                        description="Restricts total number of different elastic width values for "
+                                    "each layer. The default value is -1 means that there's no "
+                                    "restrictions."),
+        "width_step":
+        with_attributes(NUMBER,
+                        description="Defines a step size for a generation of the elastic width search "
+                                    "space - the list of all possible width values for each layer. The "
+                                    "generation starts from the number of output channels in the "
+                                    "original model and stops when it reaches whether a "
+                                    "`min_width` width value or number of generated width values "
+                                    "equal to `max_num_widths`"),
+        "width_multipliers":
+        with_attributes(ARRAY_OF_NUMBERS,
+                        description="Defines elastic width search space via a list of "
+                                    "multipliers. All possible width values are obtained by "
+                                    "multiplying the original width value with the values in the "
+                                    "given list."),
+        "filter_importance":
+        with_attributes(STRING,
+                        description="The type of filter importance metric. Can be"
+                                    " one of `L1`, `L2`, `geometric_median`."
+                                    " `L2` by default.")
     },
     "additionalProperties": False
 }
@@ -123,10 +128,11 @@ ELASTIC_WIDTH_SCHEMA = {
 ELASTIC_KERNEL_SCHEMA = {
     "type": "object",
     "properties": {
-        "max_num_kernels": with_attributes(NUMBER,
-                                           description="Restricts the total number of different elastic kernel values for "
-                                                       "each layer. The default value is -1 means that there's no "
-                                                       "restrictions."),
+        "max_num_kernels":
+        with_attributes(NUMBER,
+                        description="Restricts the total number of different elastic kernel values for "
+                                    "each layer. The default value is -1 means that there's no "
+                                    "restrictions."),
     },
     "additionalProperties": False
 }
@@ -181,7 +187,9 @@ STAGE_DESCRIPTOR_SCHEMA = {
         "bn_adapt": with_attributes(BOOLEAN,
                                     description="if True, triggers batchnorm adaptation in the beginning of the stage"),
         "init_lr": with_attributes(NUMBER,
-                                   description="Initial learning rate for a stage. If specified in the stage descriptor, it will trigger a reset of the learning rate at the beginning of the stage."),
+                                   description="Initial learning rate for a stage. If specified in the stage "
+                                               " descriptor, it will trigger a reset of the learning rate at "
+                                               "the beginning of the stage."),
         "epochs_lr": with_attributes(NUMBER,
                                      description="Number of epochs to compute the adjustment of the learning rate.")
     },
@@ -208,8 +216,10 @@ LR_SCHEDULE_SCHEMA = {
         "params": {
             "type": "object",
             "properties": {
-                "base_lr": with_attributes(NUMBER,
-                                           description="Defines a global learning rate scheduler. If these parameters are not set, a stage learning rate scheduler will be used."),
+                "base_lr":
+                with_attributes(NUMBER,
+                                description="Defines a global learning rate scheduler."
+                                "If these parameters are not set, a stage learning rate scheduler will be used."),
             },
             "additionalProperties": False
         }
@@ -245,16 +255,23 @@ SEARCH_ALGORITHMS_SCHEMA = {
 BOOTSTRAP_NAS_SEARCH_SCHEMA = {
     "type": "object",
     "properties": {
-        "algorithm": with_attributes(SEARCH_ALGORITHMS_SCHEMA,
-                                     description="Defines the search algorithm. Default algorithm is NSGA-II."),
-        "num_evals": with_attributes(NUMBER,
-                                     description="Defines the number of evaluations that will be used by the search algorithm."),
-        "population": with_attributes(NUMBER,
-                                      description="Defines the population size when using an evolutionary search algorithm."),
-        "acc_delta": with_attributes(NUMBER,
-                                      description="Defines the absolute difference in accuracy that is tolerated when looking for a subnetwork."),
-        "ref_acc": with_attributes(NUMBER,
-                                      description="Defines the reference accuracy from the pre-trained model used to generate the super-network."),
+        "algorithm":
+        with_attributes(SEARCH_ALGORITHMS_SCHEMA,
+                        description="Defines the search algorithm. Default algorithm is NSGA-II."),
+        "num_evals":
+        with_attributes(NUMBER,
+                        description="Defines the number of evaluations that will be used by the search algorithm."),
+        "population":
+        with_attributes(NUMBER,
+                        description="Defines the population size when using an evolutionary search algorithm."),
+        "acc_delta":
+        with_attributes(NUMBER,
+                        description="Defines the absolute difference in accuracy that is tolerated "
+                                    "when looking for a subnetwork."),
+        "ref_acc":
+        with_attributes(NUMBER,
+                        description="Defines the reference accuracy from the pre-trained model used "
+                                    "to generate the super-network."),
     },
     "additionalProperties": False
 }

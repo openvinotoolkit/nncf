@@ -15,7 +15,6 @@ from typing import List
 from typing import Union
 
 import torch
-import numpy as np
 
 from nncf.common.utils.logger import logger as nncf_logger
 

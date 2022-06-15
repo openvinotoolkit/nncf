@@ -435,7 +435,7 @@ class NodeManager:
     @staticmethod
     def _within_iteration(scope: Scope):
         scope_name = str(scope)
-        from nncf.torch.layers import ITERATION_MODULES
+        from nncf.torch.layers import ITERATION_MODULES #pylint: disable=cyclic-import
         for iter_scope in ITERATION_MODULES.registry_dict:
             if iter_scope in scope_name:
                 return True
@@ -532,8 +532,8 @@ class DynamicGraph:
         node = self.match_manager.add_node(op_address, tensor_metas, input_comparators_per_scope, inputs,
                                            layer_attrs, ignored_algorithms)
 
-        from nncf.common.graph.definitions import MODEL_OUTPUT_OP_NAME
-        from nncf.common.graph.definitions import MODEL_INPUT_OP_NAME
+        from nncf.common.graph.definitions import MODEL_OUTPUT_OP_NAME #pylint: disable=cyclic-import
+        from nncf.common.graph.definitions import MODEL_INPUT_OP_NAME #pylint: disable=cyclic-import
         if node.op_exec_context.operator_name == MODEL_INPUT_OP_NAME:
             self._input_nncf_nodes.append(node)
 

@@ -52,6 +52,7 @@ class MEHandlerStateNames:
     STATES_OF_HANDLERS = 'states_of_handlers'
 
 
+#pylint: disable=too-many-public-methods
 class MultiElasticityHandler(ElasticityHandler):
     """
     An interface for handling multiple elasticity in the network. The elasticity defines variable values in properties

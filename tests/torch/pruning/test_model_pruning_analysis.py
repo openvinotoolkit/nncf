@@ -741,7 +741,7 @@ def test_nodes_cluster():
 
     # test clean
     cluster.clean_cluster()
-    assert cluster.elements == []
+    assert cluster.elements == [] #pylint: disable=use-implicit-booleaness-not-comparison
     assert cluster.importance == 0
 
 

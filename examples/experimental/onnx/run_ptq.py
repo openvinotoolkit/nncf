@@ -28,9 +28,10 @@ from openvino.tools.accuracy_checker.argparser import build_arguments_parser
 from openvino.tools.accuracy_checker.dataset import Dataset
 from openvino.tools.accuracy_checker.evaluators import ModelEvaluator
 
-import nncf.experimental.post_training.api.dataset as ptq_api_dataset
+from nncf.experimental.post_training.api import dataset as ptq_api_dataset
 
 
+#pylint: disable=redefined-outer-name
 class OpenVINOAccuracyCheckerDataset(ptq_api_dataset.Dataset):
     def __init__(self, model_evaluator: ModelEvaluator, batch_size, shuffle):
         super().__init__(batch_size, shuffle)
@@ -47,7 +48,7 @@ class OpenVINOAccuracyCheckerDataset(ptq_api_dataset.Dataset):
         for _, v in filled_inputs[0].items():
             return np.squeeze(v, axis=0), dummy_target
 
-        raise RuntimeError(f"filled_inputs has no value.")
+        raise RuntimeError("filled_inputs has no value.")
 
     def __len__(self):
         return len(self.model_evaluator.dataset)

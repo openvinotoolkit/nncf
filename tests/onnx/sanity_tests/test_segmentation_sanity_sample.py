@@ -56,7 +56,8 @@ def mock_dataloader_creator(dataset_name, dataset_path, input_shape):
 @pytest.mark.parametrize(("model_name, input_shape"),
                          zip(MODELS_NAME, INPUT_SHAPES))
 @patch(
-    'examples.experimental.onnx.semantic_segmentation.onnx_ptq_segmentation.create_dataset_from_segmentation_torch_dataset',
+    'examples.experimental.onnx.semantic_segmentation.onnx_ptq_segmentation.'
+    'create_dataset_from_segmentation_torch_dataset',
     new=mock_dataloader_creator)
 def test_sanity_quantize_sample(tmp_path, model_name, input_shape):
     onnx_model_dir = str(TEST_ROOT.joinpath('onnx', 'data', 'models'))
