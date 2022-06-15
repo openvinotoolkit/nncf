@@ -135,6 +135,9 @@ if "--torch" in sys.argv:
     sys.argv.remove("--torch")
 
 if "--tf" in sys.argv:
+    # See also: https://github.com/tensorflow/tensorflow/issues/56077
+    # This is a temporary patch, that limites the protobuf version from above
+    INSTALL_REQUIRES.extend(["protobuf>=3.9.2,<3.20"])
     INSTALL_REQUIRES.extend(EXTRAS_REQUIRE["tf"])
     sys.argv.remove("--tf")
 
