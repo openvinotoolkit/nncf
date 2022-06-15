@@ -182,11 +182,11 @@ class EarlyExitTrainingRunnerCreator(TrainingRunnerCreator):
         """
         nncf_backend = infer_backend_from_compression_controller(self.compression_controller)
         if nncf_backend is BackendType.TORCH:
-            from nncf.torch.accuracy_aware_training.runner import PTAccuracyAwareTrainingRunner
+            from nncf.torch.accuracy_aware_training.runner import PTAccuracyAwareTrainingRunner #pylint: disable=cyclic-import
             return PTAccuracyAwareTrainingRunner(self.accuracy_aware_training_params, self.lr_updates_needed,
                                                  self.verbose, self.dump_checkpoints)
         if nncf_backend == BackendType.TENSORFLOW:
-            from nncf.tensorflow.accuracy_aware_training.runner import TFAccuracyAwareTrainingRunner
+            from nncf.tensorflow.accuracy_aware_training.runner import TFAccuracyAwareTrainingRunner #pylint: disable=cyclic-import
             return TFAccuracyAwareTrainingRunner(self.accuracy_aware_training_params,
                                                  self.verbose, self.dump_checkpoints)
         raise RuntimeError('Got an unsupported value of nncf_backend')
@@ -218,14 +218,14 @@ class AdaptiveCompressionLevelTrainingRunnerCreator(TrainingRunnerCreator):
         nncf_backend = infer_backend_from_compression_controller(self.compression_controller)
 
         if nncf_backend is BackendType.TORCH:
-            from nncf.torch.accuracy_aware_training.runner import PTAdaptiveCompressionLevelTrainingRunner
+            from nncf.torch.accuracy_aware_training.runner import PTAdaptiveCompressionLevelTrainingRunner #pylint: disable=cyclic-import
             return PTAdaptiveCompressionLevelTrainingRunner(self.accuracy_aware_training_params,
                                                             self.lr_updates_needed, self.verbose,
                                                             self.minimal_compression_rate,
                                                             self.maximal_compression_rate,
                                                             self.dump_checkpoints)
         if nncf_backend == BackendType.TENSORFLOW:
-            from nncf.tensorflow.accuracy_aware_training.runner import TFAdaptiveCompressionLevelTrainingRunner
+            from nncf.tensorflow.accuracy_aware_training.runner import TFAdaptiveCompressionLevelTrainingRunner #pylint: disable=cyclic-import
             return TFAdaptiveCompressionLevelTrainingRunner(self.accuracy_aware_training_params,
                                                             self.verbose,
                                                             self.minimal_compression_rate,

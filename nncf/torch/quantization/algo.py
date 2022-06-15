@@ -357,7 +357,7 @@ class PropagationBasedQuantizerSetupGenerator(QuantizerSetupGeneratorBase):
         insertion_point_graph = self._target_model.get_insertion_point_graph()
         if self._debug_interface:
             self._debug_interface.visualize_insertion_point_graph(insertion_point_graph)
-        from nncf.common.quantization.quantizer_propagation.solver import QuantizerPropagationSolver
+        from nncf.common.quantization.quantizer_propagation.solver import QuantizerPropagationSolver #pylint: disable=cyclic-import
 
         def str_or_list_to_list(list_or_str: Union[List[str], str]) -> List:
             if list_or_str is None:
@@ -1441,7 +1441,7 @@ class QuantizationDebugInterface(DebugInterface):
         }
         self.graph_size = 0
 
-        from nncf.common.utils.debug import DEBUG_LOG_DIR
+        from nncf.common.utils.debug import DEBUG_LOG_DIR #pylint: disable=cyclic-import
         self.dump_dir = Path(DEBUG_LOG_DIR) / Path("debug_dumps")
         self.dump_dir.mkdir(parents=True, exist_ok=True)
         self.scale_dump_dir = self.dump_dir / Path("scale")

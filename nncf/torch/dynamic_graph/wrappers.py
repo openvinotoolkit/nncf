@@ -95,7 +95,7 @@ def wrap_operator(operator, operator_info: 'PatchedOperatorInfo'):
             if operator_info.skip_trace:
                 result = operator(*args, **kwargs)
             elif ctx.is_forwarding:
-                from nncf.torch.dynamic_graph.trace_functions import forward_trace_only
+                from nncf.torch.dynamic_graph.trace_functions import forward_trace_only #pylint: disable=cyclic-import
                 result = forward_trace_only(operator, *args, **kwargs)
             else:
                 op_name = operator_info.name
