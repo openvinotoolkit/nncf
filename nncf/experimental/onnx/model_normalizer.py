@@ -13,7 +13,6 @@
 
 import onnx
 from onnx import version_converter  # pylint: disable=no-name-in-module
-
 from nncf.common.utils.logger import logger as nncf_logger
 
 
@@ -26,6 +25,12 @@ class ONNNXModelNormalizer:
             Currently onnx.shape_inference doesn't use the shape of initializers, so add
             that info explicitly as ValueInfoProtos.
             Mutates the model.
+
+            History of this code
+             - After onnx.shape_inference.infer_shapes the model graph value_info doesn't
+             include all activations tensors #4102
+             - https://github.com/onnx/onnx/issues/4102
+
             Args:
                 model: The ModelProto to update.
             """
