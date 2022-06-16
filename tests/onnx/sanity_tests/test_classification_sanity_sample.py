@@ -55,6 +55,12 @@ INPUT_SHAPES = [
     [1, 3, 224, 224],
 ]
 
+TEST_CASES = [
+    pytest.param(name, model, shape) if name != "shufflenet_v2_x1_0"
+    else pytest.param(name, model, shape, marks=pytest.mark.xfail)
+    for name, model, shape in zip(MODEL_NAMES, MODELS, INPUT_SHAPES)
+]
+
 
 class TestDataset(Dataset):
     def __init__(self, samples: List[Tuple[np.ndarray, int]]):
@@ -72,8 +78,7 @@ def mock_dataset_creator(dataset_path, input_shape, batch_size, shuffle):
     return TestDataset([(np.zeros(input_shape[1:]), 0), ])
 
 
-@pytest.mark.parametrize(("model_name, model, input_shape"),
-                         zip(MODEL_NAMES, MODELS, INPUT_SHAPES))
+@pytest.mark.parametrize(("model_name, model, input_shape"), TEST_CASES)
 @patch('examples.experimental.onnx.classification.onnx_ptq_classification.create_imagenet_torch_dataset',
        new=mock_dataset_creator)
 def test_sanity_quantize_sample(tmp_path, model_name, model, input_shape):
