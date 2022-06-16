@@ -63,7 +63,7 @@ def calculate_weight_quantizer_parameters(weight_tensor: np.ndarray, quantizer_c
     input_high = np.amax(weight_tensor, axis=axes)
     input_low = np.amin(weight_tensor, axis=axes)
     scales = calculate_scale_level(input_high, input_low, num_bits, mode)
-    zero_points = np.zeros_like(scales, dtype=np.int)
+    zero_points = np.zeros_like(scales, dtype=np.int64)
     return QuantizerLayerParameters(scales.tolist(), zero_points.tolist(), mode)
 
 
