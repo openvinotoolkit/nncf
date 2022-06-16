@@ -204,10 +204,6 @@ class ConcatPruningOp(BasePruningOp):
         if not not_empty_masks:
             return None
 
-        # if node is leaf node return None
-        if not graph.get_output_edges(node):
-            return None
-
         first_non_empty_mask = not_empty_masks[0]
         device = first_non_empty_mask.device
         filled_input_masks = []
