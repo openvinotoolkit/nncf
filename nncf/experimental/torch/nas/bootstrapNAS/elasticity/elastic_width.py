@@ -227,7 +227,10 @@ class ElasticWidthParams(BaseElasticityParams):
         return self.__dict__ == other.__dict__
 
     def __str__(self):
-        return f"{self.__class__.__name__}: width_step: {self.width_step} min_width: {self.min_width} width_multipliers: {self.width_multipliers} max_num_widths: {self.max_num_widths} overwrite_groups: {self.overwrite_groups} overwrite_group_widths: {self.overwrite_groups_widths}"
+        return f"{self.__class__.__name__}: width_step: {self.width_step} " \
+               f"min_width: {self.min_width} width_multipliers: {self.width_multipliers} " \
+               f"max_num_widths: {self.max_num_widths} overwrite_groups: {self.overwrite_groups} " \
+               f"overwrite_group_widths: {self.overwrite_groups_widths}"
 
 
 class ElasticOutputWidthOp(ElasticWidthOp):
@@ -236,7 +239,7 @@ class ElasticOutputWidthOp(ElasticWidthOp):
     """
 
     def __init__(self, max_width: int, node_name: str, params: ElasticWidthParams,
-                 fixed_width_list: Optional[List[int]] = []):
+                 fixed_width_list: Optional[List[int]] = None):
         """
         Constructor.
 
@@ -245,10 +248,13 @@ class ElasticOutputWidthOp(ElasticWidthOp):
         :param params: parameters to configure elastic width for the operation.
         """
         super().__init__(max_width=max_width, node_name=node_name)
+        if fixed_width_list is None:
+            fixed_width_list = []
         if fixed_width_list:
             fixed_width_list.sort(reverse=True)
             if fixed_width_list[0] > max_width:
-                nncf_logger.warning(f"Width list for {node_name} contains invalid values: {fixed_width_list}, {max_width}")
+                nncf_logger.warning(f"Width list for {node_name} "
+                                    f"contains invalid values: {fixed_width_list}, {max_width}")
                 self._width_list = self._generate_width_list(self._max_width, params)
             if fixed_width_list[0] != max_width:
                 nncf_logger.warning(f"Max width for {node_name} is not aligned with pre-trained model")
@@ -636,7 +642,8 @@ class ElasticWidthHandler(SingleElasticityHandler):
                             dynamic_input_width_op.set_active_width(input_width)
                             was_set = True
                     if was_set:
-                        nncf_logger.debug("Success setting up user's request for dynamic input at scope={}".format(node_name))
+                        nncf_logger.debug("Success setting up user's request for dynamic input at "
+                                          "scope={}".format(node_name))
 
     def get_active_in_out_width_values(self) -> Tuple[Dict[NNCFNodeName, int], Dict[NNCFNodeName, int]]:
         """
@@ -856,7 +863,8 @@ class ElasticWidthBuilder(SingleElasticityBuilder):
         super().__init__(params, ignored_scopes, target_scopes)
         self._weights_normalizer = None
         self._overwriting_pruning_groups = params.overwrite_groups is not None
-        self._grouped_node_names_to_prune = params.overwrite_groups if params.overwrite_groups is not None else [] # type: List[List[NNCFNodeName]]
+        self._grouped_node_names_to_prune = params.overwrite_groups \
+            if params.overwrite_groups is not None else [] # type: List[List[NNCFNodeName]]
         self._overwrite_groups_widths = params.overwrite_groups_widths
         self._add_dynamic_inputs = params.add_dynamic_inputs
         self._params = params
@@ -1012,17 +1020,22 @@ class ElasticWidthBuilder(SingleElasticityBuilder):
     def _create_elastic_conv_width_op(conv_layer_attrs: BaseLayerAttributes,
                                       node_name: str,
                                       params: ElasticWidthParams,
-                                      fixed_width_list=[]) -> ElasticOutputWidthConv2DOp:
+                                      fixed_width_list: Optional[List[int]] = None) -> ElasticOutputWidthConv2DOp:
         assert isinstance(conv_layer_attrs, ConvolutionLayerAttributes)
         nncf_logger.info("Adding Dynamic Conv2D Layer in scope: {}".format(str(node_name)))
-        return ElasticOutputWidthConv2DOp(conv_layer_attrs.out_channels, node_name, params, fixed_width_list=fixed_width_list)
+        if fixed_width_list is None:
+            fixed_width_list = []
+        return ElasticOutputWidthConv2DOp(conv_layer_attrs.out_channels, node_name,
+                                          params, fixed_width_list=fixed_width_list)
 
     @staticmethod
     def _create_elastic_linear_width_op(linear_layer_attrs: BaseLayerAttributes,
                                         node_name: str,
                                         params: ElasticWidthParams,
-                                        fixed_width_list=[]) -> ElasticOutputWidthLinearOp:
+                                        fixed_width_list: Optional[List[int]] = None) -> ElasticOutputWidthLinearOp:
         assert isinstance(linear_layer_attrs, LinearLayerAttributes)
+        if fixed_width_list is None:
+            fixed_width_list = []
         nncf_logger.info("Adding Dynamic Linear Layer in scope: {}".format(str(node_name)))
         return ElasticOutputWidthLinearOp(linear_layer_attrs.out_features, node_name, params,
                                           fixed_width_list=fixed_width_list)

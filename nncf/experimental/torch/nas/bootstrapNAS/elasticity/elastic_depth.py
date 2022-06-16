@@ -338,7 +338,9 @@ class ElasticDepthParams(BaseElasticityParams):
         return self.__dict__ == other.__dict__
 
     def __str__(self):
-        return f"{self.__class__.__name__}: max_block_size: {self.max_block_size} min_block_size: {self.min_block_size} allow_nested_blocks: {self.allow_nested_blocks} allow_linear_combinations: {self.allow_linear_combination} skipped_blocks: {self.skipped_blocks}"
+        return f"{self.__class__.__name__}: max_block_size: {self.max_block_size} " \
+               f"min_block_size: {self.min_block_size} allow_nested_blocks: {self.allow_nested_blocks} " \
+               f"allow_linear_combinations: {self.allow_linear_combination} skipped_blocks: {self.skipped_blocks}"
 
 
 @ELASTICITY_BUILDERS.register(ElasticityDim.DEPTH)
