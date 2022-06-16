@@ -11,4 +11,4 @@ install-onnx-dev:
 	pip install numpy==1.21.0
 
 test-onnx:
-	pytest tests/onnx
+	pytest tests/onnx --junitxml nncf-tests.xml
