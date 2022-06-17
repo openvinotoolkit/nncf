@@ -11,7 +11,7 @@
  limitations under the License.
 """
 
-from typing import Callable
+from typing import Callable, Optional
 from typing import Dict
 from typing import List
 
@@ -37,6 +37,7 @@ class ONNXGraph:
         outputs = self.model_with_shapes.graph.output
         self.activations_tensors.extend(inputs)
         self.activations_tensors.extend(outputs)
+        self.initializer_names = {n.name for n in self.onnx_model.graph.initializer}
 
     def get_all_nodes(self) -> List[NodeProto]:
         """
@@ -112,9 +113,24 @@ class ONNXGraph:
                 output.append(node)
         return output
 
+    def get_weight_tensor_with_initializer(self, node_name: str) -> Optional[str]:
+        """
+        Return 'node_name' node's input weight tensor if it has an initializer type.
+        Otherwise, return None.
+        """
+        node_inputs = self.get_node_edges(node_name)['input']
+
+        # TODO(kshpv): add search of input weight tensor
+        weight_tensor_name = node_inputs[1]
+
+        if weight_tensor_name in self.initializer_names:
+            return weight_tensor_name
+        return None
+
+
     def get_weight_input_in_module(self, node_name: str) -> ValueInfoProto:
         """
-        Returns weight Initializaer of the mode with the name 'node_name'.
+        Returns 'node_name' node's input weight tensor.
         """
         node_inputs = self.get_node_edges(node_name)['input']
         # TODO(kshpv): add search of input weight tensor
