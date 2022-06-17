@@ -24,6 +24,7 @@ from tests.torch.nas.creators import create_bnas_model_and_ctrl_by_test_desc, cr
 from tests.torch.nas.creators import NAS_MODEL_DESCS
 from tests.torch.nas.models.synthetic import ThreeConvModel
 from nncf import NNCFConfig
+from tests.torch.nas.test_all_elasticity import fixture_nas_model_name #pylint: disable=unused-import
 from nncf.config.structures import BNAdaptationInitArgs
 from nncf.experimental.torch.nas.bootstrapNAS.search import SearchAlgorithm
 
