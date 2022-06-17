@@ -141,7 +141,7 @@ class FilterPruningController(BasePruningAlgoController):
         self.nodes_params_num = {}  # type: Dict[NNCFNodeName, int]
         self.next_nodes = {}  # type: Dict[int, List[NNCFNodeName]]
         self._init_pruned_modules_params()
-        self.op_addresses_to_skip = self.pruning_config.get('ignored_scopes')
+        self.op_addresses_to_skip = self.pruning_config.get('ignored_scopes') if self.pruning_config.get('ignored_scopes') else []
         self.flops_count_init()
         self.full_flops = sum(self.nodes_flops.values())
         self.current_flops = self.full_flops
