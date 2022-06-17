@@ -206,6 +206,12 @@ Note that in order for this to work for pip versions >= 21.3, your Git version m
 #### As a Docker image
 Use one of the Dockerfiles in the [docker](./docker) directory to build an image with an environment already set up and ready for running NNCF [sample scripts](#model-compression-samples).
 
+#### [Experimental] NNCF for ONNXRuntime-OpenVINO
+Install the package and its dependencies by running the following in the repository root directory:
+```bash
+make install-onnx-dev
+```
+
 ## Contributing
 Refer to the [CONTRIBUTING.md](./CONTRIBUTING.md) file for guidelines on contributions to the NNCF repository.
 

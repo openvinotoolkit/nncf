@@ -54,9 +54,14 @@ INPUT_SHAPES = [
     [1, 3, 224, 224],
 ]
 
+TEST_CASES = [
+    pytest.param(name, model, shape) if name != "shufflenet_v2_x1_0"
+    else pytest.param(name, model, shape, marks=pytest.mark.xfail)
+    for name, model, shape in zip(MODEL_NAMES, MODELS, INPUT_SHAPES)
+]
 
-@pytest.mark.parametrize(('model_name', 'model', 'input_shape'),
-                         zip(MODEL_NAMES, MODELS, INPUT_SHAPES))
+
+@pytest.mark.parametrize(('model_name', 'model', 'input_shape'), TEST_CASES)
 def test_min_max_quantization_graph(tmp_path, model_name, model, input_shape):
     path_ref_graph = model_name + '.dot'
     onnx_model_dir = str(TEST_ROOT.joinpath('onnx', 'data', 'models'))
@@ -72,8 +77,7 @@ def test_min_max_quantization_graph(tmp_path, model_name, model, input_shape):
     infer_model(input_shape, quantized_model)
 
 
-@pytest.mark.parametrize(('model_name', 'model', 'input_shape'),
-                         zip(MODEL_NAMES, MODELS, INPUT_SHAPES))
+@pytest.mark.parametrize(('model_name', 'model', 'input_shape'), TEST_CASES)
 def test_post_training_quantization_graph(tmp_path, model_name, model, input_shape):
     path_ref_graph = model_name + '.dot'
     onnx_model_dir = str(TEST_ROOT.joinpath('onnx', 'data', 'models'))
