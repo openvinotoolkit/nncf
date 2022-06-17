@@ -129,13 +129,14 @@ class FilterPruningController(BasePruningAlgoController):
         self._pruning_quotas = {}
         self._next_nodes = {}
         self._init_pruned_layers_params()
+        self.op_addresses_to_skip = self.pruning_config.get('ignored_scopes') if self.pruning_config.get('ignored_scopes') else []
         self._flops_count_init()
         self.full_flops = sum(self._nodes_flops.values())
         self.current_flops = self.full_flops
         self.full_params_num = sum(self._nodes_params_num.values())
         self.current_params_num = self.full_params_num
         self.full_filters_num = count_filters_num(self._original_graph, GENERAL_CONV_LAYER_METATYPES +
-                                                  LINEAR_LAYER_METATYPES)
+                                                  LINEAR_LAYER_METATYPES, op_addresses_to_skip=self.op_addresses_to_skip)
         self.current_filters_num = self.full_filters_num
         self._pruned_layers_num = len(self._pruned_layer_groups_info.get_all_nodes())
         self._prunable_layers_num = len(self._original_graph.get_nodes_by_types(self._prunable_types))
@@ -536,7 +537,8 @@ class FilterPruningController(BasePruningAlgoController):
         self.current_filters_num = count_filters_num(self._original_graph,
                                                      op_metatypes=GENERAL_CONV_LAYER_METATYPES +
                                                      LINEAR_LAYER_METATYPES,
-                                                     output_channels=tmp_out_channels)
+                                                     output_channels=tmp_out_channels,
+                                                     op_addresses_to_skip=self.op_addresses_to_skip)
 
         self.current_flops, self.current_params_num = \
             count_flops_and_weights(self._original_graph,
