@@ -37,3 +37,5 @@
 /docker/torch/gpu/Dockerfile filter=lfs diff=lfs merge=lfs -text
 *.dockerignore filter=lfs diff=lfs merge=lfs -text
 /docker/onnx/openvinoep/Dockerfile filter=lfs diff=lfs merge=lfs -text
+/Makefile filter=lfs diff=lfs merge=lfs -text
+*.dev filter=lfs diff=lfs merge=lfs -text
