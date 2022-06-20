@@ -63,23 +63,28 @@ for config in `ls $CONFIGS_DIR`; do
         -d $SCRIPT_DIR/dataset_definitions.yml      \
         -s $DATASET_DIR                             \
         -a $DATASET_DIR                             \
-        --csv_result $OUTPUT_DIR/quantize_accuracy.csv
+        --csv_result $OUTPUT_DIR/quantized_accuracy.csv
 
     echo "4) Benchmark model latency for $model_name (original)"
     # Benchmark the original model
-    mkdir -p $OUTPUT_DIR/$model_name/original
+    python $SCRIPT_DIR/performance_checker.py       \
+        -m $MODEL_DIR/$model_name.onnx              \
+        -c $CONFIGS_DIR/$config                     \
+        -ss $NUMBER_OF_SAMPLES                      \
+        -d $SCRIPT_DIR/dataset_definitions.yml      \
+        -s $DATASET_DIR                             \
+        -a $DATASET_DIR                             \
+        -o $OUTPUT_DIR/original_performance.csv
 
-    benchmark_app -m $MODEL_DIR/$model_name.onnx        \
-        --batch_size 1 --time 10                        \
-        -report_type no_counters                        \
-        -report_folder $OUTPUT_DIR/$model_name/original
-
-    echo "4) Benchmark model latency for $model_name (quantized)"
+    echo "5) Benchmark model latency for $model_name (quantized)"
     # Benchmark the quantized model
-    mkdir -p $OUTPUT_DIR/$model_name/quantized
+    python $SCRIPT_DIR/performance_checker.py       \
+        -m $OUTPUT_DIR/$model_name-quantized.onnx   \
+        -c $CONFIGS_DIR/$config                     \
+        -ss $NUMBER_OF_SAMPLES                      \
+        -d $SCRIPT_DIR/dataset_definitions.yml      \
+        -s $DATASET_DIR                             \
+        -a $DATASET_DIR                             \
+        -o $OUTPUT_DIR/quantized_performance.csv
 
-    benchmark_app -m $OUTPUT_DIR/$model_name-quantized.onnx \
-        --batch_size 1 --time 10                            \
-        -report_type no_counters                            \
-        -report_folder $OUTPUT_DIR/$model_name/quantized
 done
