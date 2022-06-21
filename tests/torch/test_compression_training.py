@@ -278,7 +278,7 @@ QUANTIZATION_DESCRIPTORS = [
         .expected_accuracy(68.11)
         .weights_filename('mobilenet_v2_32x32_cifar100_68.11.pth')
         .absolute_tolerance_train(1.0)
-        .absolute_tolerance_eval(2e-2),
+        .absolute_tolerance_eval(1.5e-1),
     MOBILENET_V2_ASYM_INT8,
     deepcopy(MOBILENET_V2_ASYM_INT8).cpu_only(),
     CompressionTrainingTestDescriptor()
