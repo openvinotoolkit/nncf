@@ -44,7 +44,7 @@ def load_state(model: torch.nn.Module, state_dict_to_load: dict, is_resume: bool
 
     model_state_dict = model.state_dict()
 
-    from nncf.torch.utils import maybe_convert_legacy_names_in_model_state
+    from nncf.torch.utils import maybe_convert_legacy_names_in_model_state #pylint: disable=cyclic-import
     maybe_convert_legacy_names_in_model_state(state_dict_to_load)
     key_matcher = KeyMatcher(is_resume, state_dict_to_load, model_state_dict, keys_to_ignore)
     new_dict = key_matcher.run()
@@ -228,7 +228,7 @@ class NormalizedKeys:
     @staticmethod
     def _key_clipper(key: str) -> str:
         new_key = key
-        from nncf.torch.nncf_network import MODEL_WRAPPED_BY_NNCF_ATTR_NAME
+        from nncf.torch.nncf_network import MODEL_WRAPPED_BY_NNCF_ATTR_NAME #pylint: disable=cyclic-import
         clip_patterns = [MODEL_WRAPPED_BY_NNCF_ATTR_NAME + '.', 'module.', '|OUTPUT', '|INPUT']
         for pattern in clip_patterns:
             new_key = new_key.replace(pattern, '')
@@ -262,7 +262,7 @@ class NormalizedKeys:
             Returns original key if there's no ';' and operation doesn't start with EXTERNAL_QUANTIZERS_STORAGE_NAME
         """
         result = [new_key]
-        from nncf.torch.nncf_network import EXTERNAL_QUANTIZERS_STORAGE_NAME
+        from nncf.torch.nncf_network import EXTERNAL_QUANTIZERS_STORAGE_NAME #pylint: disable=cyclic-import
         if ';' in new_key and new_key.startswith(EXTERNAL_QUANTIZERS_STORAGE_NAME):
             group_of_keys = new_key.split(';')
             last_key = group_of_keys[-1]
@@ -279,8 +279,8 @@ class NormalizedKeys:
     def _replace_legacy_act_quantizer_storage_name(checkpoint_key: str) -> Tuple[str, bool]:
         did_replace = False
         splits = checkpoint_key.split('.')
-        from nncf.torch.nncf_network import LEGACY_ACT_STORAGE_NAME
-        from nncf.torch.nncf_network import EXTERNAL_QUANTIZERS_STORAGE_NAME
+        from nncf.torch.nncf_network import LEGACY_ACT_STORAGE_NAME #pylint: disable=cyclic-import
+        from nncf.torch.nncf_network import EXTERNAL_QUANTIZERS_STORAGE_NAME #pylint: disable=cyclic-import
         if splits[0] == LEGACY_ACT_STORAGE_NAME:
             did_replace = True
             splits[0] = EXTERNAL_QUANTIZERS_STORAGE_NAME

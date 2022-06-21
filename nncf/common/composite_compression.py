@@ -316,11 +316,11 @@ class CompositeCompressionAlgorithmController(CompressionAlgorithmController):
         self.prepare_for_export()
         backend = infer_backend_from_model(self.model)
         if backend is BackendType.TENSORFLOW:
-            from nncf.tensorflow.exporter import TFExporter
+            from nncf.tensorflow.exporter import TFExporter #pylint: disable=cyclic-import
             exporter = TFExporter(self.model, input_names, output_names, model_args)
         else:
             assert backend is BackendType.TORCH
-            from nncf.torch.exporter import PTExporter
+            from nncf.torch.exporter import PTExporter #pylint: disable=cyclic-import
             exporter = PTExporter(self.model, input_names, output_names, model_args)
         exporter.export_model(save_path, save_format)
 

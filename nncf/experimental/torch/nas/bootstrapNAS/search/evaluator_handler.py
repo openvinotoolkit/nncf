@@ -49,7 +49,6 @@ class EfficiencyEvaluatorHandler(BaseEvaluatorHandler):
     """
     An interface for handling efficiency evaluators
     """
-    pass
 
 
 class AccuracyEvaluatorHandler(BaseEvaluatorHandler):

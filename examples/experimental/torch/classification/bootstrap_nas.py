@@ -144,7 +144,7 @@ def main_worker(current_gpu, config: SampleConfig):
 
     # define optimizer
     params_to_optimize = get_parameter_groups(model, config)
-    optimizer, lr_scheduler = make_optimizer(params_to_optimize, config)
+    optimizer, _ = make_optimizer(params_to_optimize, config)
 
     def train_epoch_fn(loader, model_, compression_ctrl, epoch, optimizer_):
         train_epoch(loader, model_, criterion, train_criterion_fn, optimizer_, compression_ctrl, epoch, config,
@@ -176,9 +176,13 @@ def main_worker(current_gpu, config: SampleConfig):
         if resuming_checkpoint_path is None:
             search_algo = SearchAlgorithm.from_config(nncf_network, elasticity_ctrl, nncf_config)
         else:
-            search_algo = SearchAlgorithm.from_checkpoint(nncf_network, elasticity_ctrl, bn_adapt_args, resuming_checkpoint_path)
+            search_algo = SearchAlgorithm.from_checkpoint(nncf_network, elasticity_ctrl,
+                                                          bn_adapt_args, resuming_checkpoint_path)
 
-        elasticity_ctrl, best_config, performance_metrics = search_algo.run(validate_model_fn_top1, val_loader, config.checkpoint_save_dir, tensorboard_writer=config.tb)
+        elasticity_ctrl, best_config, performance_metrics = search_algo.run(validate_model_fn_top1,
+                                                                            val_loader,
+                                                                            config.checkpoint_save_dir,
+                                                                            tensorboard_writer=config.tb)
 
         logger.info("Best config: {best_config}".format(best_config=best_config))
         logger.info("Performance metrics: {performance_metrics}".format(performance_metrics=performance_metrics))

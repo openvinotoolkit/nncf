@@ -37,7 +37,8 @@ class ONNXEngine(Engine):
 
         # TODO: Do not force it to use CPUExecutionProvider
         # OpenVINOExecutionProvider raises the following error.
-        # onnxruntime.capi.onnxruntime_pybind11_state.Fail: [ONNXRuntimeError] : 1 : FAIL : This is an invalid model. Error: Duplicate definition of name (data).
+        # onnxruntime.capi.onnxruntime_pybind11_state.Fail: [ONNXRuntimeError] : 1
+        # : FAIL : This is an invalid model. Error: Duplicate definition of name (data).
         self.rt_session_options['providers'] = ['CPUExecutionProvider']
 
     def get_sampler(self) -> Sampler:

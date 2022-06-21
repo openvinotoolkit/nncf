@@ -75,7 +75,7 @@ def create_compressed_model(model: tf.keras.Model,
             necessary to enable algorithm-specific compression during fine-tuning.
     """
     if is_experimental_quantization(config):
-        from nncf.experimental.tensorflow.nncf_network import NNCFNetwork
+        from nncf.experimental.tensorflow.nncf_network import NNCFNetwork #pylint: disable=cyclic-import
         input_signature = get_input_signature(config)
         model = NNCFNetwork(model, input_signature)
         model.compute_output_signature(model.input_signature)

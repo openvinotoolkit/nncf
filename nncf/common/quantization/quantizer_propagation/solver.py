@@ -265,7 +265,7 @@ class QuantizerPropagationSolver:
         self._hw_config = hw_config  # type: HWConfig
         self._visualizer = None
         if is_debug():
-            from nncf.common.quantization.quantizer_propagation.visualizer import QuantizerPropagationVisualizer
+            from nncf.common.quantization.quantizer_propagation.visualizer import QuantizerPropagationVisualizer #pylint: disable=cyclic-import
             self._visualizer = QuantizerPropagationVisualizer(DEBUG_LOG_DIR + "/quant_prop")
         self._propagation_strategy = propagation_strategy if propagation_strategy \
             else QuantizerPropagationSolver.DEFAULT_PROPAGATION_STRATEGY  # TODO (vshampor): determine from config
@@ -898,7 +898,7 @@ class QuantizerPropagationSolver:
             nncf_node_ref = next(iter(quant_prop_graph.op_node_keys_to_underlying_nodes_mapping[operator_node_key]))
             qconf_list = self._filter_qconfigs_according_to_scope(qconf_list, nncf_node_ref.node_name)
         else:
-            from nncf.torch.quantization.algo import QuantizerSetupGeneratorBase
+            from nncf.torch.quantization.algo import QuantizerSetupGeneratorBase #pylint: disable=cyclic-import
             qconf_list = [deepcopy(QuantizerSetupGeneratorBase.DEFAULT_QUANTIZER_CONFIG)]
 
         is_unified_scale = quant_det_id in self._unified_scales_operation_set

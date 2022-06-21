@@ -43,7 +43,7 @@ def replace_module_by_nncf_module(module: nn.Module):
             if not module.__class__.__name__ == nncf_module_type.__name__:
                 nncf_module = nncf_module_type.from_module(module)
             return nncf_module
-    from nncf.torch.layers import UNWRAPPED_USER_MODULES
+    from nncf.torch.layers import UNWRAPPED_USER_MODULES #pylint: disable=cyclic-import
     for _, user_module_type in UNWRAPPED_USER_MODULES.registry_dict.items():
         if module.__class__ == user_module_type:
             nncf_module = deepcopy(module)

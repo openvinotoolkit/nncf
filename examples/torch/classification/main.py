@@ -125,7 +125,7 @@ def main(argv):
     if not is_staged_quantization(config):
         start_worker(main_worker, config)
     else:
-        from examples.torch.classification.staged_quantization_worker import staged_quantization_main_worker
+        from examples.torch.classification.staged_quantization_worker import staged_quantization_main_worker #pylint: disable=cyclic-import
         start_worker(staged_quantization_main_worker, config)
 
 

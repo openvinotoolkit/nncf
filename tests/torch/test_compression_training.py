@@ -221,8 +221,6 @@ class NASTrainingValidator(CompressionTrainingValidator):
     def validate_subnet(self):
         ref_acc = self._desc.subnet_expected_accuracy_
         act_acc = self._desc.get_subnet_metric()
-        tolerance = self._desc.absolute_tolerance_train_ if act_acc < ref_acc else self._desc.better_accuracy_tolerance
-        # assert act_acc == approx(ref_acc, abs=tolerance)
         assert act_acc > ref_acc
 
 
