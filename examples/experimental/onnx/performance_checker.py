@@ -34,9 +34,9 @@ import pandas as pd
 
 
 class OpenVINOAccuracyCheckerDataset(ptq_api_dataset.Dataset):
-    def __init__(self, model_evaluator: ModelEvaluator, batch_size, shuffle):
+    def __init__(self, evaluator: ModelEvaluator, batch_size, shuffle):
         super().__init__(batch_size, shuffle)
-        self.model_evaluator = model_evaluator
+        self.model_evaluator = evaluator
 
     def __getitem__(self, item):
         _, batch_annotation, batch_input, _ = self.model_evaluator.dataset[item]
@@ -49,7 +49,7 @@ class OpenVINOAccuracyCheckerDataset(ptq_api_dataset.Dataset):
         for _, v in filled_inputs[0].items():
             return np.squeeze(v, axis=0), dummy_target
 
-        raise RuntimeError(f"filled_inputs has no value.")
+        raise RuntimeError("filled_inputs has no value.")
 
     def __len__(self):
         return len(self.model_evaluator.dataset)
@@ -114,13 +114,10 @@ if __name__ == '__main__':
                    ) == 1, "Config should have one dataset."
 
         dataset_config = config_entry["datasets"][0]
-        dataset = OpenVINOAccuracyCheckerDataset(
-            model_evaluator, batch_size=1, shuffle=True)
 
         assert "launchers" in config_entry
         assert len(config_entry["launchers"]) == 1
 
-        onnx_model_path = config_entry["launchers"][0]["model"]
-
-        onnx_model_path = str(onnx_model_path)
-        run(onnx_model_path, args.output_file_path, dataset)
+        run(onnx_model_path=str(config_entry["launchers"][0]["model"]),
+            output_file_path=args.output_file_path,
+            dataset=OpenVINOAccuracyCheckerDataset(model_evaluator, batch_size=1, shuffle=True))

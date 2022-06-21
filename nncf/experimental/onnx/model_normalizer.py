@@ -15,18 +15,20 @@ import onnx
 from onnx import version_converter  # pylint: disable=no-name-in-module
 from nncf.common.utils.logger import logger as nncf_logger
 
+
 class ONNNXModelNormalizer:
     @staticmethod
     def modify_onnx_model_for_quantization(model: onnx.ModelProto) -> onnx.ModelProto:
         onnx.checker.check_model(model)
-        nncf_logger.info('Original opset = {}'.format(model.opset_import[0].version))
+        nncf_logger.info('Original opset = {}'.format(
+            model.opset_import[0].version))
         nncf_logger.info('Original ir_version = {}'.format(model.ir_version))
 
         model.ir_version = 7  # Due to the 'Shufflenet-v1
         modified_model = version_converter.convert_version(model, 13)
         # ONNX shape inference
         # https://github.com/onnx/onnx/blob/main/docs/proposals/SymbolicShapeInfProposal.md
-        modified_model: onnx.ModelProto = onnx.shape_inference.infer_shapes(modified_model)
+        modified_model = onnx.shape_inference.infer_shapes(modified_model)
         onnx.checker.check_model(modified_model)
         nncf_logger.info(
             'Successfully converted the model to the opset = {}'.format(modified_model.opset_import[0].version))
