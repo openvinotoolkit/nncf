@@ -83,5 +83,5 @@ def calculate_activation_quantizer_parameters(layer_statistics: ONNXMinMaxStatis
         mode = QuantizationMode.ASYMMETRIC
 
     scales = calculate_scale_level(input_high, input_low, num_bits, mode)
-    zero_points = np.zeros_like(scales, dtype=np.int)
+    zero_points = np.zeros_like(scales, dtype=np.int64)
     return QuantizerLayerParameters(scales.tolist(), zero_points.tolist(), mode)
