@@ -262,7 +262,7 @@ MOBILENET_V2_ASYM_INT8 = CompressionTrainingTestDescriptor(). \
     expected_accuracy(68.11). \
     weights_filename('mobilenet_v2_32x32_cifar100_68.11.pth'). \
     absolute_tolerance_train(1.0). \
-    absolute_tolerance_eval(6e-2). \
+    absolute_tolerance_eval(2e-1). \
     no_seed()
 
 MOBILENET_V2_MAGNITUDE_SPARSITY_INT8 = CompressionTrainingTestDescriptor(). \
@@ -270,7 +270,7 @@ MOBILENET_V2_MAGNITUDE_SPARSITY_INT8 = CompressionTrainingTestDescriptor(). \
     expected_accuracy(68.11). \
     weights_filename('mobilenet_v2_32x32_cifar100_68.11.pth'). \
     absolute_tolerance_train(1.5). \
-    absolute_tolerance_eval(1.5e-1)
+    absolute_tolerance_eval(2e-1)
 
 QUANTIZATION_DESCRIPTORS = [
     CompressionTrainingTestDescriptor()
@@ -278,7 +278,7 @@ QUANTIZATION_DESCRIPTORS = [
         .expected_accuracy(68.11)
         .weights_filename('mobilenet_v2_32x32_cifar100_68.11.pth')
         .absolute_tolerance_train(1.0)
-        .absolute_tolerance_eval(1.5e-1),
+        .absolute_tolerance_eval(2e-1),
     MOBILENET_V2_ASYM_INT8,
     deepcopy(MOBILENET_V2_ASYM_INT8).cpu_only(),
     CompressionTrainingTestDescriptor()
@@ -286,14 +286,14 @@ QUANTIZATION_DESCRIPTORS = [
         .expected_accuracy(77.53)
         .weights_filename('inceptionV3_77.53.sd')
         .data_parallel()
-        .absolute_tolerance_eval(1.5e-1)
+        .absolute_tolerance_eval(2e-1)
         .timeout_seconds(60 * 60),  # 1 hour
     CompressionTrainingTestDescriptor()
         .config_name('resnet50_int8.json')
         .expected_accuracy(67.93)
         .data_parallel()
         .weights_filename('resnet50_cifar100_67.93.pth')
-        .absolute_tolerance_eval(1.5e-1),
+        .absolute_tolerance_eval(2e-1),
 ]
 
 SPARSITY_DESCRIPTORS = [
