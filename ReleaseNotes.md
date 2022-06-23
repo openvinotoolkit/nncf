@@ -7,6 +7,15 @@ samples distributed with the code.  The samples demonstrate the usage of compres
 public models and datasets for three different use cases: Image Classification, Object Detection,
 and Semantic Segmentation.
 
+## New in Release 2.3.0
+- (ONNX) PTQ API support for ONNX.
+- (ONNX) Added PTQ examples for ONNX in image classification, object detection, and semantic segmentation.
+- (PyTorch) Added `BootstrapNAS` to find high-performing sub-networks from the super-network optimization.
+
+Bugfixes:
+- (PyTorch) Returned the initial quantized model when the retraining failed to find out the best checkpoint.
+- (Experimental) Fixed weight initialization for `ONNXGraph` and `MinMaxQuantization`
+
 ## New in Release 2.2.0
 - (TensorFlow) Added TensorFlow 2.5.x support.
 - (TensorFlow) The `SubclassedConverter` class was added to create `NNCFGraph` for the `tf.Graph` Keras model.
