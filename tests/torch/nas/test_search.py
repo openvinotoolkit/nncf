@@ -26,7 +26,7 @@ from tests.torch.nas.models.synthetic import ThreeConvModel
 from nncf import NNCFConfig
 from tests.torch.nas.test_all_elasticity import fixture_nas_model_name #pylint: disable=unused-import
 from nncf.config.structures import BNAdaptationInitArgs
-from nncf.experimental.torch.nas.bootstrapNAS.search import SearchAlgorithm
+from nncf.experimental.torch.nas.bootstrapNAS import SearchAlgorithm
 
 
 class SearchTestDesc(NamedTuple):
@@ -151,6 +151,7 @@ class TestSearchAlgorithm:
                                      input_sizes=ThreeConvModel.INPUT_SIZE,
                                      )
         model, elasticity_ctrl, nncf_config = prepare_test_model(search_desc)
+        elasticity_ctrl.multi_elasticity_handler.enable_elasticity(ElasticityDim.WIDTH)
         SearchAlgorithm(model, elasticity_ctrl, nncf_config)
         config_init = elasticity_ctrl.multi_elasticity_handler.get_active_config()
         elasticity_ctrl.multi_elasticity_handler.activate_maximum_subnet()

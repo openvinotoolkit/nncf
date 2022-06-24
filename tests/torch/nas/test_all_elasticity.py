@@ -263,9 +263,12 @@ REF_COMPRESSION_STATE_FOR_TWO_CONV = {
                         },
                         'width': {
                             'elasticity_params': {
+                                'add_dynamic_inputs': None,
                                 'filter_importance': 'L1',
                                 'max_num_widths': -1,
                                 'min_width': 1,
+                                'overwrite_groups': None,
+                                'overwrite_groups_widths': None,
                                 'width_step': 1,
                                 'width_multipliers': None
                             },
