@@ -1,21 +1,19 @@
 models:
-  - name: tiniyolov2-8
+  - name: tinyyolov2-8
     launchers:
       - framework: onnx_runtime
         adapter:
           type: yolo_v2
-          anchors: tini_yolo_v2
+          anchors: tiny_yolo_v2
         execution_providers: ['OpenVINOExecutionProvider']
 
     datasets:
-      - name: VOC2012
+      - name: VOC2012_without_background
 
         preprocessing:
-          - type: bgr_to_rgb
           - type: resize
             size: 416
-          - type: normalization
-            std: 255.0
+            interpolation: LINEAR
 
         postprocessing:
           - type: filter

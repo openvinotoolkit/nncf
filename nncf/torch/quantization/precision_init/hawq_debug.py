@@ -42,7 +42,7 @@ class HAWQDebugger:
         self._num_weights = len(traces_per_layer.traces_order)
         self._perturbations = perturbations
 
-        from nncf.common.utils.debug import DEBUG_LOG_DIR
+        from nncf.common.utils.debug import DEBUG_LOG_DIR #pylint: disable=cyclic-import
         self._dump_dir = Path(DEBUG_LOG_DIR) / Path("hawq_dumps")
         self._dump_dir.mkdir(parents=True, exist_ok=True)
 
@@ -186,7 +186,7 @@ class HAWQDebugger:
 
     def dump_bitwidth_graph(self, algo_ctrl: 'QuantizationController', model: NNCFNetwork,
                             groups_of_adjacent_quantizers: GroupsOfAdjacentQuantizers):
-        from nncf.torch.quantization.precision_init.bitwidth_graph import BitwidthGraph
+        from nncf.torch.quantization.precision_init.bitwidth_graph import BitwidthGraph #pylint: disable=cyclic-import
         bw_graph = BitwidthGraph(algo_ctrl, model, groups_of_adjacent_quantizers).get()
         nx_graph = add_adjust_padding_nodes(bw_graph, model)
         nx.drawing.nx_pydot.write_dot(nx_graph, self._dump_dir / Path('bitwidth_graph.dot'))

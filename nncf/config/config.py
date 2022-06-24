@@ -84,7 +84,7 @@ class NNCFConfig(dict):
           the resolution of the redefinable parameter should occur.
         :return: The value of the parameter that should be applied for the algo specified by `algo_name`.
         """
-        from nncf.config.extractors import extract_algo_specific_config
+        from nncf.config.extractors import extract_algo_specific_config #pylint: disable=cyclic-import
         algo_config = extract_algo_specific_config(self, algo_name)
         param = self.get(param_name)
         algo_specific_param = algo_config.get(param_name)
@@ -128,7 +128,7 @@ class NNCFConfig(dict):
 
             # The default exception's __str__ result will contain the entire schema,
             # which is too large to be readable.
-            import nncf.config.schema as config_schema
+            import nncf.config.schema as config_schema #pylint: disable=cyclic-import
             msg = e.message + '. See documentation or {} for an NNCF configuration file JSON schema definition'.format(
                 config_schema.__file__)
             raise jsonschema.ValidationError(msg)

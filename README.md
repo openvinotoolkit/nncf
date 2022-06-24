@@ -174,6 +174,11 @@ Install NNCF and TensorFlow in one line:
 ```
 python setup.py install --tf
 ```
+(Experimental) Install NNCF for ONNXRuntime-OpenVINO
+```bash
+python setup.py install --onnx
+```
+
 
 _NB_: For launching example scripts in this repository, we recommend replacing the `install` option above with `develop` and setting the `PYTHONPATH` variable to the root of the checked-out repository.
 
@@ -190,6 +195,10 @@ pip install nncf[torch]
 Install NNCF and TensorFlow in one line:
 ```
 pip install nncf[tf]
+```
+(Experimental) Install NNCF for ONNXRuntime-OpenVINO
+```bash
+pip install nncf[onnx]
 ```
 
 NNCF is also available via [conda](https://anaconda.org/conda-forge/nncf):

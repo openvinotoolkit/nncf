@@ -17,13 +17,11 @@ from pathlib import Path
 from shutil import copyfile
 
 import torch
-import torch.nn as nn
+from torch import nn
 
 from examples.torch.classification.main import create_data_loaders
 from examples.torch.classification.main import create_datasets
 from examples.torch.classification.main import get_argument_parser
-from examples.torch.classification.main import inception_criterion_fn
-from examples.torch.classification.main import train_epoch
 from examples.torch.classification.main import validate
 from examples.torch.common.argparser import parse_args
 from examples.torch.common.example_logger import logger
@@ -31,8 +29,6 @@ from examples.torch.common.execution import get_execution_mode
 from examples.torch.common.execution import set_seed
 from examples.torch.common.execution import start_worker
 from examples.torch.common.model_loader import load_model
-from examples.torch.common.optimizer import get_parameter_groups
-from examples.torch.common.optimizer import make_optimizer
 from examples.torch.common.sample_config import SampleConfig
 from examples.torch.common.sample_config import create_sample_config
 from examples.torch.common.utils import SafeMLFLow
@@ -45,7 +41,6 @@ from examples.torch.common.utils import print_args
 from nncf.config.structures import BNAdaptationInitArgs
 from nncf.experimental.torch.nas.bootstrapNAS.search import SearchAlgorithm
 from nncf.experimental.torch.nas.bootstrapNAS.training.model_creator_helpers import resume_compression_from_state
-from nncf.torch.initialization import default_criterion_fn
 from nncf.torch.initialization import wrap_dataloader_for_init
 from nncf.torch.model_creation import create_nncf_network
 from nncf.torch.utils import is_main_process
@@ -111,7 +106,6 @@ def main_worker(current_gpu, config: SampleConfig):
     criterion = criterion.to(config.device)
 
     model_name = config['model']
-    train_criterion_fn = inception_criterion_fn if 'inception' in model_name else default_criterion_fn
 
     nncf_config = config.nncf_config
     pretrained = is_pretrained_model_requested(config)
@@ -132,14 +126,6 @@ def main_worker(current_gpu, config: SampleConfig):
     model.to(config.device)
 
     validate(val_loader, model, criterion, config)
-
-    # define optimizer
-    params_to_optimize = get_parameter_groups(model, config)
-    optimizer, lr_scheduler = make_optimizer(params_to_optimize, config)
-
-    def train_epoch_fn(loader, model_, compression_ctrl, epoch, optimizer_):
-        train_epoch(loader, model_, criterion, train_criterion_fn, optimizer_, compression_ctrl, epoch, config,
-                    train_iters=config.train_steps, log_training_info=True)
 
     def validate_model_fn(model_, loader):
         top1, top5, loss = validate(loader, model_, criterion, config, log_validation_info=False)
@@ -164,17 +150,21 @@ def main_worker(current_gpu, config: SampleConfig):
 
         search_algo = SearchAlgorithm.from_config(model, elasticity_ctrl, nncf_config)
 
-        elasticity_ctrl, best_config, performance_metrics = search_algo.run(validate_model_fn_top1, val_loader, config.checkpoint_save_dir, tensorboard_writer=config.tb)
+        elasticity_ctrl, best_config, performance_metrics = search_algo.run(validate_model_fn_top1,
+                                                                            val_loader,
+                                                                            config.checkpoint_save_dir,
+                                                                            tensorboard_writer=config.tb)
 
-        logger.info("Best config: {best_config}".format(best_config=best_config))
-        logger.info("Performance metrics: {performance_metrics}".format(performance_metrics=performance_metrics))
+        logger.info(f"Best config: {best_config}")
+        logger.info(f"Performance metrics: {performance_metrics}")
 
         search_algo.search_progression_to_csv()
         search_algo.evaluators_to_csv()
 
         top1_acc = validate_model_fn_top1(model, val_loader)
         logger.info("Top1 acc: {top1_acc}, Macs: {macs}".format(top1_acc=top1_acc,
-                    macs=elasticity_ctrl.multi_elasticity_handler.count_flops_and_weights_for_active_subnet()[0]/2000000))
+                    macs=elasticity_ctrl.multi_elasticity_handler.count_flops_and_weights_for_active_subnet()[0]\
+                    /2000000))
         assert best_config == elasticity_ctrl.multi_elasticity_handler.get_active_config()
 
     if 'test' in config.mode:

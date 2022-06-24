@@ -93,7 +93,6 @@ INSTALL_REQUIRES = ["ninja>=1.10.0.post2",
                     "jsonschema==3.2.0",
                     "pydot>=1.4.1",
                     "jstyleson>=0.0.2",
-                    "numpy~=1.19.2",
                     "tqdm>=4.54.1",
                     "natsort>=7.1.0",
                     "pandas~=1.1.5; python_version<'3.7'",
@@ -110,33 +109,46 @@ if python_version < (3, 6, 2):
 
 version_string = "{}{}".format(sys.version_info[0], sys.version_info[1])
 
-_extra_deps = [
-    "tensorflow~=2.5.0",
-    "torch>=1.5.0, <=1.9.1, !=1.8.0",
-]
-
-extra_deps = {b: a for a, b in (re.findall(r"^(([^~!=<>]+)(?:[~!=<>].*)?$)", x)[0] for x in _extra_deps)}
-
 EXTRAS_REQUIRE = {
-    "tests": [
-        "pytest"],
+    "tests": ["pytest"],
     "docs": [],
     "tf": [
-        extra_deps["tensorflow"]],
+        "tensorflow~=2.5.0",
+        "numpy~=1.19.2",
+    ],
     "torch": [
-        extra_deps["torch"]],
-    "all": [
-        extra_deps["tensorflow"],
-        extra_deps["torch"]],
+        "torch>=1.5.0, <=1.9.1, !=1.8.0",
+        "numpy~=1.19.2",
+    ],
+    "onnx": [
+        "torch==1.9.1",
+        "torchvision==0.10.1",
+        "onnx==1.11.0",
+        "skl2onnx==1.9.3",
+        "protobuf==3.20.1",
+        "onnxruntime-openvino==1.11.0",
+    ],
 }
+
+EXTRAS_REQUIRE["all"] = [
+    EXTRAS_REQUIRE["tf"],
+    EXTRAS_REQUIRE["torch"]
+]
 
 if "--torch" in sys.argv:
     INSTALL_REQUIRES.extend(EXTRAS_REQUIRE["torch"])
     sys.argv.remove("--torch")
 
 if "--tf" in sys.argv:
+    # See also: https://github.com/tensorflow/tensorflow/issues/56077
+    # This is a temporary patch, that limites the protobuf version from above
+    INSTALL_REQUIRES.extend(["protobuf>=3.9.2,<3.20"])
     INSTALL_REQUIRES.extend(EXTRAS_REQUIRE["tf"])
     sys.argv.remove("--tf")
+
+if "--onnx" in sys.argv:
+    INSTALL_REQUIRES.extend(EXTRAS_REQUIRE["onnx"])
+    sys.argv.remove("--onnx")
 
 if "--all" in sys.argv:
     INSTALL_REQUIRES.extend(EXTRAS_REQUIRE["all"])

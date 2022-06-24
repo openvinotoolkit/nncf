@@ -95,7 +95,8 @@ if __name__ == '__main__':
         "--batch_size", help="Batch size for initialization", type=int, default=1)
     parser.add_argument(
         "--shuffle", help="Whether to shuffle dataset for initialization", default=True)
-    parser.add_argument("--input_shape", help="Model's input shape. e.g. [1, 3, 224, 224]. If it's not given, it automatically infers input shape.",
+    parser.add_argument("--input_shape",
+        help="Model's input shape. e.g. [1, 3, 224, 224]. If it's not given, it automatically infers input shape.",
                         nargs="+", type=int, default=None)
     parser.add_argument(
         "--init_samples", help="Number of initialization samples", type=int, default=300)

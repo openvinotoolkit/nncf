@@ -18,9 +18,7 @@ from typing import Optional
 import numpy as np
 import onnx
 
-from nncf.experimental.post_training.compression_builder import CompressionBuilder
-from nncf.experimental.post_training.algorithms.quantization import PostTrainingQuantization
-from nncf.experimental.post_training.algorithms.quantization import PostTrainingQuantizationParameters
+from tqdm import tqdm
 from nncf.common.utils.logger import logger as nncf_logger
 
 from openvino.tools.accuracy_checker.config import ConfigReader
@@ -28,14 +26,17 @@ from openvino.tools.accuracy_checker.argparser import build_arguments_parser
 from openvino.tools.accuracy_checker.dataset import Dataset
 from openvino.tools.accuracy_checker.evaluators import ModelEvaluator
 
-from nncf.experimental.post_training.api import dataset as ptq_api_dataset
+import nncf.experimental.post_training.api.dataset as ptq_api_dataset
+from nncf.experimental.onnx.engine import ONNXEngine
+from nncf.experimental.onnx.samplers import create_onnx_sampler
+from time import time
+import pandas as pd
 
 
-#pylint: disable=redefined-outer-name
 class OpenVINOAccuracyCheckerDataset(ptq_api_dataset.Dataset):
-    def __init__(self, model_evaluator: ModelEvaluator, batch_size, shuffle):
+    def __init__(self, evaluator: ModelEvaluator, batch_size, shuffle):
         super().__init__(batch_size, shuffle)
-        self.model_evaluator = model_evaluator
+        self.model_evaluator = evaluator
 
     def __getitem__(self, item):
         _, batch_annotation, batch_input, _ = self.model_evaluator.dataset[item]
@@ -54,7 +55,7 @@ class OpenVINOAccuracyCheckerDataset(ptq_api_dataset.Dataset):
         return len(self.model_evaluator.dataset)
 
 
-def run(onnx_model_path: str, output_model_path: str, dataset: Dataset,
+def run(onnx_model_path: str, output_file_path: str, dataset: Dataset,
         ignored_scopes: Optional[List[str]] = None, evaluate: Optional[bool] = False):
 
     num_init_samples = len(dataset)
@@ -66,32 +67,41 @@ def run(onnx_model_path: str, output_model_path: str, dataset: Dataset,
     original_model = onnx.load(onnx_model_path)
     nncf_logger.info(f"The model is loaded from {onnx_model_path}")
 
-    # Step 1: Create a pipeline of compression algorithms.
-    builder = CompressionBuilder()
+    onnx.checker.check_model(original_model)
 
-    # Step 2: Create the quantization algorithm and add to the builder.
-    quantization_parameters = PostTrainingQuantizationParameters(
-        number_samples=num_init_samples,
-        ignored_scopes=ignored_scopes
-    )
-    quantization = PostTrainingQuantization(quantization_parameters)
-    builder.add_algorithm(quantization)
+    engine = ONNXEngine()
+    sampler = create_onnx_sampler(dataset, range(len(dataset)))
 
-    # Step 4: Execute the pipeline.
-    nncf_logger.info("Post-Training Quantization has just started!")
-    quantized_model = builder.apply(original_model, dataset)
+    engine.rt_session_options['providers'] = ["OpenVINOExecutionProvider"]
+    engine.set_model(original_model)
+    engine.set_sampler(sampler)
 
-    # Step 5: Save the quantized model.
-    onnx.save(quantized_model, output_model_path)
-    nncf_logger.info(
-        "The quantized model is saved on {}".format(output_model_path))
+    elapsed_times = []
 
-    onnx.checker.check_model(output_model_path)
+    for input_data, _ in tqdm(sampler):
+        start_time = time()
+        engine.infer(input_data)
+        elapsed_times += [1000.0 * (time() - start_time)]
+
+    elapsed_times = np.array(elapsed_times)
+
+    model_name, _ = os.path.splitext(os.path.basename(onnx_model_path))
+
+    df = pd.DataFrame({
+        "model_name": [model_name],
+        "latency_mean": [np.mean(elapsed_times)],
+        "latency_std": [np.std(elapsed_times)]
+    })
+
+    if os.path.exists(output_file_path):
+        df.to_csv(output_file_path, header=False, mode="a", index=False)
+    else:
+        df.to_csv(output_file_path, header=True, mode="w", index=False)
 
 
 if __name__ == '__main__':
     parser = build_arguments_parser()
-    parser.add_argument("--output-model-dir", "-o",
+    parser.add_argument("--output-file-path", "-o",
                         help="Directory path to save output quantized ONNX model", type=str)
     args = parser.parse_args()
     config, mode = ConfigReader.merge(args)
@@ -104,20 +114,10 @@ if __name__ == '__main__':
                    ) == 1, "Config should have one dataset."
 
         dataset_config = config_entry["datasets"][0]
-        dataset = OpenVINOAccuracyCheckerDataset(
-            model_evaluator, batch_size=1, shuffle=True)
 
         assert "launchers" in config_entry
         assert len(config_entry["launchers"]) == 1
 
-        onnx_model_path = config_entry["launchers"][0]["model"]
-
-        fname = onnx_model_path.stem
-        output_model_path = os.path.join(
-            args.output_model_dir, fname + "-quantized.onnx")
-
-        onnx_model_path = str(onnx_model_path)
-        run(onnx_model_path,
-            output_model_path,
-            dataset
-            )
+        run(onnx_model_path=str(config_entry["launchers"][0]["model"]),
+            output_file_path=args.output_file_path,
+            dataset=OpenVINOAccuracyCheckerDataset(model_evaluator, batch_size=1, shuffle=True))

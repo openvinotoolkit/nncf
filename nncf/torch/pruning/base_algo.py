@@ -53,7 +53,7 @@ class BasePruningAlgoBuilder(PTCompressionAlgorithmBuilder):
 
         self._prunable_types = self.get_op_types_of_pruned_modules()
 
-        from nncf.common.pruning.node_selector import PruningNodeSelector
+        from nncf.common.pruning.node_selector import PruningNodeSelector #pylint: disable=cyclic-import
         self.pruning_node_selector = PruningNodeSelector(PT_PRUNING_OPERATOR_METATYPES,
                                                          self._prunable_types,
                                                          self.get_types_of_grouping_ops(),

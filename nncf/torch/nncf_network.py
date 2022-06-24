@@ -297,7 +297,7 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
     def get_clean_shallow_copy(self) -> 'NNCFNetwork':
         # WARNING: Will reset pre- and post-ops of the underlying model. Use save_nncf_module_additions
         # and load_nncf_module_additions to preserve these, or temporary_clean_view().
-        from nncf.torch.utils import save_module_state, load_module_state
+        from nncf.torch.utils import save_module_state, load_module_state #pylint: disable=cyclic-import
         saved_state = save_module_state(self)
         model_copy = NNCFNetwork(self.get_nncf_wrapped_model(), self.input_infos,
                                  self._user_dummy_forward_fn, self._wrap_inputs_fn,

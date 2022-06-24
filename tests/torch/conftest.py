@@ -11,12 +11,23 @@
  limitations under the License.
 """
 import os
+import pytest
+try:
+    import torch
+except: #pylint: disable=bare-except
+    torch = None
 
 from tests.common.helpers import create_venv_with_nncf
 
-import pytest
 
 pytest.register_assert_rewrite('tests.torch.helpers')
+
+
+@pytest.fixture(scope="session", autouse=True)
+def disable_tf32_precision():
+    if torch:
+        torch.backends.cuda.matmul.allow_tf32 = False
+        torch.backends.cudnn.allow_tf32 = False
 
 
 def pytest_addoption(parser):
@@ -184,6 +195,7 @@ def runs_subprocess_in_precommit():
     # memory which has not been cached (and thus remains reserved) in the owning pytest process by PyTorch,
     # and the tests below may fail with an OOM. To avoid this, need to call torch.cuda.empty_cache()
     # each time a GPU-powered subprocess is executed during a test.
+    #pylint: disable=W0702,W0621
     try:
         import torch
         if torch.cuda.is_available():

@@ -27,6 +27,7 @@ LR_SCHEDULER_PARAMS = LRSchedulerParams.from_dict({
         })
 
 
+# pylint: disable=protected-access
 class TestLRScheduler:
     def test_warmup_lr(self, mocker):
         warmup_lr = mocker.patch(
@@ -88,20 +89,26 @@ class TestLRScheduler:
         assert lr_scheduler.current_step == 0
 
     def get_global_lr(self, lr_scheduler):
-        step_from_epoch_start = lr_scheduler.current_step - (lr_scheduler.current_epoch*(lr_scheduler._num_steps_in_epoch+1))
-        print(lr_scheduler.current_epoch < lr_scheduler._warmup_epochs and lr_scheduler.current_epoch != -1, lr_scheduler.current_epoch, lr_scheduler._warmup_epochs)
+        step_from_epoch_start = lr_scheduler.current_step -\
+                                (lr_scheduler.current_epoch*(lr_scheduler._num_steps_in_epoch+1))
+        print(lr_scheduler.current_epoch < lr_scheduler._warmup_epochs and
+              lr_scheduler.current_epoch != -1, lr_scheduler.current_epoch, lr_scheduler._warmup_epochs)
         if lr_scheduler.current_epoch < lr_scheduler._warmup_epochs and lr_scheduler.current_epoch != -1:
             print("Warmup")
             t_cur = lr_scheduler.current_epoch * lr_scheduler._num_steps_in_epoch + step_from_epoch_start + 1
-            new_lr = t_cur / (lr_scheduler._warmup_epochs * lr_scheduler._num_steps_in_epoch) * (lr_scheduler._base_lr - lr_scheduler._warmup_lr) + lr_scheduler._warmup_lr
+            new_lr = t_cur / (lr_scheduler._warmup_epochs * lr_scheduler._num_steps_in_epoch) *\
+                     (lr_scheduler._base_lr - lr_scheduler._warmup_lr) + lr_scheduler._warmup_lr
         else:
-            new_lr = calc_learning_rate(lr_scheduler.current_epoch-lr_scheduler._warmup_epochs, lr_scheduler._base_lr, lr_scheduler._num_epochs, step_from_epoch_start, lr_scheduler._num_steps_in_epoch, 'cosine')
+            new_lr = calc_learning_rate(lr_scheduler.current_epoch-lr_scheduler._warmup_epochs,
+                                        lr_scheduler._base_lr, lr_scheduler._num_epochs,
+                                        step_from_epoch_start, lr_scheduler._num_steps_in_epoch, 'cosine')
         return new_lr
-            
+
     def get_stage_lr(self, lr_scheduler):
-        step_from_epoch_start = lr_scheduler.current_step - (lr_scheduler.current_epoch * (lr_scheduler._num_steps_in_epoch + 1))
-        return calc_learning_rate(lr_scheduler.current_epoch, lr_scheduler._init_lr, lr_scheduler._num_epochs, step_from_epoch_start, lr_scheduler._num_steps_in_epoch, 'cosine')
-        
+        step_from_epoch_start = lr_scheduler.current_step -\
+                                (lr_scheduler.current_epoch * (lr_scheduler._num_steps_in_epoch + 1))
+        return calc_learning_rate(lr_scheduler.current_epoch, lr_scheduler._init_lr, lr_scheduler._num_epochs,
+                                  step_from_epoch_start, lr_scheduler._num_steps_in_epoch, 'cosine')
 
     def test_lr_value_update(self, mocker):
         optimizer = mocker.stub()
@@ -109,17 +116,17 @@ class TestLRScheduler:
         lr_scheduler = StageLRScheduler.from_config(optimizer, LR_SCHEDULER_PARAMS)
         lr_scheduler._init_lr = 2.5e-4
         lr_scheduler._num_epochs = 10
-        for i in range(lr_scheduler._num_epochs):
+        for _ in range(lr_scheduler._num_epochs):
             lr_scheduler.epoch_step()
-            for j in range(lr_scheduler._num_steps_in_epoch):
+            for _ in range(lr_scheduler._num_steps_in_epoch):
                 lr_scheduler.step()
                 assert optimizer.param_groups[0]['lr'] == pytest.approx(self.get_stage_lr(lr_scheduler))
 
 
         optimizer.param_groups = [{'lr': 3.4e-4}]
         lr_scheduler = GlobalLRScheduler.from_config(optimizer, LR_SCHEDULER_PARAMS)
-        for i in range(lr_scheduler._num_epochs):
+        for _ in range(lr_scheduler._num_epochs):
             lr_scheduler.epoch_step()
-            for j in range(lr_scheduler._num_steps_in_epoch):
+            for _ in range(lr_scheduler._num_steps_in_epoch):
                 lr_scheduler.step()
                 assert optimizer.param_groups[0]['lr'] == pytest.approx(self.get_global_lr(lr_scheduler))

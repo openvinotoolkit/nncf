@@ -44,20 +44,20 @@ class CompressionBuilder:
     def _create_engine(self, backend: Backend) -> Engine:
         # TODO (Nikita Malinin): Place "ifs" into the backend-specific expandable structure
         if backend == Backend.ONNX:
-            from nncf.experimental.onnx.engine import ONNXEngine
+            from nncf.experimental.onnx.engine import ONNXEngine #pylint: disable=cyclic-import
             return ONNXEngine()
         return None
 
     def _create_statistics_aggregator(self, engine: Engine, dataset: Dataset, backend: Backend):
         if backend == Backend.ONNX:
-            from nncf.experimental.onnx.statistics.aggregator import ONNXStatisticsAggregator
+            from nncf.experimental.onnx.statistics.aggregator import ONNXStatisticsAggregator #pylint: disable=cyclic-import
             return ONNXStatisticsAggregator(engine, dataset)
         return None
 
     def _get_prepared_model_for_compression(self, model: ModelType, backend: Backend) -> ModelType:
         # TODO (Nikita Malinin): Replace this methood into backend-specific graph transformer
         if backend == Backend.ONNX:
-            from nncf.experimental.onnx.model_normalizer import ONNNXModelNormalizer
+            from nncf.experimental.onnx.model_normalizer import ONNNXModelNormalizer #pylint: disable=cyclic-import
             return ONNNXModelNormalizer.modify_onnx_model_for_quantization(model)
         return None
 

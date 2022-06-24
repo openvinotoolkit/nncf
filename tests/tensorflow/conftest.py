@@ -18,6 +18,12 @@ except ImportError:
     tf = None
 
 
+@pytest.fixture(scope="session", autouse=True)
+def disable_tf32_precision():
+    if tf:
+        tf.config.experimental.enable_tensor_float_32_execution(False)
+
+
 @pytest.fixture(scope="function", autouse=True)
 def clear_session():
     yield

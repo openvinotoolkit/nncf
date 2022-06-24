@@ -1,3 +1,0 @@
-onnx>=1.8.1
-numpy
-skl2onnx==1.9.3

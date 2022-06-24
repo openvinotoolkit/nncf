@@ -92,12 +92,12 @@ class GraphTracer:
                     as_eval: bool = False) -> DynamicGraph:
         sd = deepcopy(model.state_dict())
 
-        from nncf.torch.dynamic_graph.context import TracingContext
+        from nncf.torch.dynamic_graph.context import TracingContext #pylint: disable=cyclic-import
         if context_to_use is None:
             context_to_use = TracingContext()
 
         context_to_use.enable_trace_dynamic_graph()
-        from nncf.torch.utils import training_mode_switcher
+        from nncf.torch.utils import training_mode_switcher #pylint: disable=cyclic-import
         with context_to_use as _ctx:
             _ctx.base_module_thread_local_replica = model
             with torch.no_grad():
@@ -125,9 +125,9 @@ def create_dummy_forward_fn(input_infos: List[ModelInputInfo], with_input_tracin
                             with_output_tracing=False):
 
     def default_dummy_forward_fn(model):
-        from nncf.torch.dynamic_graph.io_handling import wrap_nncf_model_inputs_with_objwalk
-        from nncf.torch.dynamic_graph.io_handling import wrap_nncf_model_outputs_with_objwalk
-        from nncf.torch.dynamic_graph.io_handling import replicate_same_tensors
+        from nncf.torch.dynamic_graph.io_handling import wrap_nncf_model_inputs_with_objwalk #pylint: disable=cyclic-import
+        from nncf.torch.dynamic_graph.io_handling import wrap_nncf_model_outputs_with_objwalk #pylint: disable=cyclic-import
+        from nncf.torch.dynamic_graph.io_handling import replicate_same_tensors #pylint: disable=cyclic-import
 
         device = get_model_device(model)
         args_list = [create_mock_tensor(info, device) for info in input_infos if info.keyword is None]

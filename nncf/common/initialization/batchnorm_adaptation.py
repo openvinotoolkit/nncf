@@ -93,11 +93,11 @@ class BatchnormAdaptationAlgorithm:
         """
         backend = infer_backend_from_model(model)
         if backend is BackendType.TORCH:
-            from nncf.torch.batchnorm_adaptation import PTBatchnormAdaptationAlgorithmImpl
+            from nncf.torch.batchnorm_adaptation import PTBatchnormAdaptationAlgorithmImpl #pylint: disable=cyclic-import
             impl_cls = PTBatchnormAdaptationAlgorithmImpl
         else:
             assert backend is BackendType.TENSORFLOW
-            from nncf.tensorflow.batchnorm_adaptation import TFBatchnormAdaptationAlgorithmImpl
+            from nncf.tensorflow.batchnorm_adaptation import TFBatchnormAdaptationAlgorithmImpl #pylint: disable=cyclic-import
             impl_cls = TFBatchnormAdaptationAlgorithmImpl
         impl = impl_cls(self._data_loader,
                         self._num_bn_adaptation_steps,

@@ -78,7 +78,8 @@ class TestScheduler:
         optimizer_mock.param_groups = [{'lr': 1}]
         scheduler.set_lr_scheduler(StageLRScheduler(optimizer_mock, 10))
         scheduler.epoch_step()
-        ref_desc = StageDescriptor(train_dims=[ElasticityDim.KERNEL], epochs=1, init_lr=DEFAULT_STAGE_LR_RATE, epochs_lr=1)
+        ref_desc = StageDescriptor(train_dims=[ElasticityDim.KERNEL],
+                                   epochs=1, init_lr=DEFAULT_STAGE_LR_RATE, epochs_lr=1)
         act_desc, act_idx = scheduler.get_current_stage_desc()
         assert ref_desc == act_desc
         assert act_idx == 0

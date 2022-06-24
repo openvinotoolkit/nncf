@@ -31,7 +31,7 @@ class Dataset(ABC):
     def __init__(self, batch_size: int = 1, shuffle: bool = True):
         # TODO (kshpv): add support batch_size
         if batch_size != 1:
-            nncf_logger.warn(
+            nncf_logger.warning(
                 f"We don't support batch_size={batch_size} > 1 yet. Set batch_size=1")
         self.batch_size = 1
         self.shuffle = shuffle
