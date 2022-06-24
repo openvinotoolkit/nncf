@@ -49,4 +49,4 @@ class ONNXStatisticsAggregator(StatisticsAggregator):
 
         self.engine.set_model(model_with_intermediate_outputs)
         self.engine.set_sampler(sampler)
-        output = self.engine.compute_statistics(self.layers_statistics)
+        self.engine.compute_statistics(self.layers_statistics)
