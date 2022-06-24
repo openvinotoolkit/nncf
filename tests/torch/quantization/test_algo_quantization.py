@@ -771,13 +771,18 @@ class TestHalfPrecisionModels:
         # Should complete successfully, including init.
         compressed_model(inputs)
 
-    def test_manual_partial_half_precision_model(self, initializing_config: NNCFConfig):
+    @pytest.mark.parametrize('device',
+        [pytest.param("cuda"), pytest.param("cpu", marks=pytest.mark.xfail(reason="CVS-86697"))])
+    def test_manual_partial_half_precision_model(self, initializing_config: NNCFConfig, device):
         model = TestHalfPrecisionModels.ModelWithManualPartialHalfPrecision()
         inputs = torch.ones([1, 1, 1, 1])
-        if torch.cuda.is_available():
-            inputs = inputs.cuda()
-            model = model.cuda()
 
+        if device == "cuda":
+            if torch.cuda.is_available():
+                inputs = inputs.cuda()
+                model = model.cuda()
+            else:
+                pytest.skip("CUDA is not available.")
 
         compressed_model, _ = create_compressed_model_and_algo_for_test(model, initializing_config)
 
