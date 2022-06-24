@@ -11,8 +11,9 @@
  limitations under the License.
 """
 
+from copy import deepcopy
 import onnx
-from onnx import version_converter  # pylint: disable=no-name-in-module
+from onnx.version_converter import convert_version, ConvertError  # pylint: disable=no-name-in-module
 from nncf.common.utils.logger import logger as nncf_logger
 
 
@@ -86,16 +87,23 @@ class ONNNXModelNormalizer:
         nncf_logger.info('Original opset = {}'.format(model.opset_import[0].version))
         nncf_logger.info('Original ir_version = {}'.format(model.ir_version))
 
-        model.ir_version = 7  # Due to the 'Shufflenet-v1
-        modified_model = version_converter.convert_version(model, 13)
-        # ONNX shape inference
-        # https://github.com/onnx/onnx/blob/main/docs/proposals/SymbolicShapeInfProposal.md
-        modified_model = onnx.shape_inference.infer_shapes(modified_model)
-        add_input_from_initializer(modified_model)
+        try:
+            modified_model = deepcopy(model)
+            modified_model.ir_version = 7  # Due to the 'Shufflenet-v1
+            modified_model = convert_version(modified_model, 13)
 
-        onnx.checker.check_model(modified_model)
-        nncf_logger.info(
-            'Successfully converted the model to the opset = {}'.format(modified_model.opset_import[0].version))
+            # ONNX shape inference
+            # https://github.com/onnx/onnx/blob/main/docs/proposals/SymbolicShapeInfProposal.md
+            modified_model = onnx.shape_inference.infer_shapes(modified_model)
+            add_input_from_initializer(modified_model)
+
+            onnx.checker.check_model(modified_model)
+
+            nncf_logger.info(
+                'Successfully converted the model to the opset = {}'.format(modified_model.opset_import[0].version))
+        except (RuntimeError, ConvertError) as e:
+            modified_model = model
+            nncf_logger.warning(f"Failed to convert version. Use the original model. Reason: {e}")
 
         for i, node in enumerate(modified_model.graph.node):
             if node.name == '':
