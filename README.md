@@ -1,5 +1,6 @@
 # Neural Network Compression Framework (NNCF)
 
+
 NNCF provides a suite of advanced algorithms for Neural Networks inference optimization in [OpenVINO&trade;](https://github.com/openvinotoolkit/openvino) with minimal accuracy drop.
 
 NNCF is designed to work with models from [PyTorch](https://pytorch.org/) and [TensorFlow](https://www.tensorflow.org/).
