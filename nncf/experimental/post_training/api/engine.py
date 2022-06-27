@@ -14,10 +14,11 @@
 from abc import ABC, abstractmethod
 from typing import Callable, Dict, TypeVar
 
+from tqdm import tqdm
+
 from nncf.common.tensor_statistics.collectors import \
     TensorStatisticCollectorBase
 from nncf.experimental.post_training.api.sampler import Sampler
-from tqdm import tqdm
 
 ModelType = TypeVar('ModelType')
 TensorType = TypeVar('TensorType')
