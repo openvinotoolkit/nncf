@@ -16,7 +16,6 @@ from typing import Callable, Dict, TypeVar
 
 from nncf.common.tensor_statistics.collectors import \
     TensorStatisticCollectorBase
-from nncf.common.utils.logger import logger as nncf_logger
 from nncf.experimental.post_training.api.sampler import Sampler
 from tqdm import tqdm
 

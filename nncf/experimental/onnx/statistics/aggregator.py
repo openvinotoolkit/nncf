@@ -11,13 +11,8 @@
  limitations under the License.
 """
 
-from typing import Dict
-
 from skl2onnx.helpers.onnx_helper import select_model_inputs_outputs
 import onnx
-from nncf.common.tensor import NNCFTensor
-
-from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
 
 from nncf.experimental.post_training.statistics.aggregator import StatisticsAggregator
 
