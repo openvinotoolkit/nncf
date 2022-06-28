@@ -10,10 +10,10 @@ You should make an environment including [ONNXRuntime](https://onnxruntime.ai/do
 # Build
 $ ./docker/onnx/openvinoep/build.sh
 ...
-Successfully tagged onnx_ptq_experimental:latest
+Successfully tagged onnx_ptq_experimental:dev
 
 # Check image
-$ docker images | grep onnx_ptq_experimental:latest
+$ docker images | grep onnx_ptq_experimental:dev
 ```
 
 ## Run NNCF PTQ for ONNXRuntime for your model
@@ -142,8 +142,9 @@ Please refer to [Docker image build](#docker-image-build) section.
                 -v <DATASET_DIR>:/omz_data  \
                 -v <MODEL_DIR>:/onnx-models \
                 -v <OUTPUT_DIR>:/output     \
-                onnx_ptq_experimental:latest
-(container) $ ./examples/run_ptq_onnx_models.sh [classification|det_and_seg] /onnx-models /output /omz_data $NUMBER_OF_SAMPLES
+                onnx_ptq_experimental:dev
+
+(container) $ nncf/examples/experimental/onnx/run_ptq_onnx_models.sh [classification|det_and_seg] /onnx-models /output /omz_data $NUMBER_OF_SAMPLES
 ```
 
 You have to choose the model type between `[classification|det_and_seg]`.
@@ -153,13 +154,13 @@ For examples, to run with `NUMBER_OF_SAMPLES=500`, you can command as follows.
 1. Classification models
 
 ```bash
-(container) $ ./examples/run_ptq_onnx_models.sh classification /onnx-models /output /omz_data 500
+(container) $ nncf/examples/experimental/onnx/run_ptq_onnx_models.sh classification /onnx-models /output /omz_data 500
 ```
 
 2. Object detection and segmentation models
 
 ```bash
-(container) $ ./examples/run_ptq_onnx_models.sh det_and_seg /onnx-models /output /omz_data 500
+(container) $ nncf/examples/run_ptq_onnx_models.sh det_and_seg /onnx-models /output /omz_data 500
 ```
 
 After benchmark is done, outputs are located in `/output` which is a mounted directory from the host path `<OUTPUT_DIR>`.
