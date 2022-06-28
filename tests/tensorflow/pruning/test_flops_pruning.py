@@ -62,7 +62,6 @@ def test_flops_calulation_for_spec_layers(model_fn, all_weights, pruning_flops_t
 
     cur_flops, cur_params_num = \
         count_flops_and_weights(compression_ctrl._original_graph,
-                                compression_ctrl._layers_in_shapes,
                                 compression_ctrl._layers_out_shapes,
                                 input_channels=tmp_in_channels,
                                 output_channels=tmp_out_channels,

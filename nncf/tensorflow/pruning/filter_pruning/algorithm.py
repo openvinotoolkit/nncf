@@ -124,7 +124,6 @@ class FilterPruningController(BasePruningAlgoController):
         self._nodes_params_num = {}  # type: Dict[NNCFNodeName, int]
         self._layers_in_channels = {}
         self._layers_out_channels = {}
-        self._layers_in_shapes = {}
         self._layers_out_shapes = {}
         self._pruning_quotas = {}
         self._next_nodes = {}
@@ -260,7 +259,6 @@ class FilterPruningController(BasePruningAlgoController):
             if not is_valid_shape(in_shape) or not is_valid_shape(out_shape):
                 raise RuntimeError(f'Input/output shape is not defined for layer `{layer.name}` ')
 
-            self._layers_in_shapes[node.node_name] = in_shape
             self._layers_out_shapes[node.node_name] = out_shape
 
         for node in self._original_graph.get_nodes_by_metatypes(LINEAR_LAYER_METATYPES):
@@ -273,12 +271,10 @@ class FilterPruningController(BasePruningAlgoController):
             if not is_valid_shape(in_shape) or not is_valid_shape(out_shape):
                 raise RuntimeError(f'Input/output shape is not defined for layer `{layer.name}` ')
 
-            self._layers_in_shapes[node.node_name] = in_shape
             self._layers_out_shapes[node.node_name] = out_shape
 
         self._nodes_flops, self._nodes_params_num = \
             count_flops_and_weights_per_node(self._original_graph,
-                                             self._layers_in_shapes,
                                              self._layers_out_shapes,
                                              conv_op_metatypes=GENERAL_CONV_LAYER_METATYPES,
                                              linear_op_metatypes=LINEAR_LAYER_METATYPES)
@@ -423,7 +419,6 @@ class FilterPruningController(BasePruningAlgoController):
                 tmp_in_channels[node_name] -= 1
 
             flops, params_num = count_flops_and_weights(self._original_graph,
-                                                        self._layers_in_shapes,
                                                         self._layers_out_shapes,
                                                         input_channels=tmp_in_channels,
                                                         output_channels=tmp_out_channels,
@@ -492,7 +487,6 @@ class FilterPruningController(BasePruningAlgoController):
                 pruning_groups_next_nodes=self._next_nodes)
 
         return count_flops_and_weights(self._original_graph,
-                                       self._layers_in_shapes,
                                        self._layers_out_shapes,
                                        input_channels=tmp_in_channels,
                                        output_channels=tmp_out_channels,
@@ -540,7 +534,6 @@ class FilterPruningController(BasePruningAlgoController):
 
         self.current_flops, self.current_params_num = \
             count_flops_and_weights(self._original_graph,
-                                    self._layers_in_shapes,
                                     self._layers_out_shapes,
                                     input_channels=tmp_in_channels,
                                     output_channels=tmp_out_channels,

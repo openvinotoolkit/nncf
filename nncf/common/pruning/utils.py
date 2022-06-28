@@ -225,7 +225,6 @@ def get_cluster_next_nodes(graph: NNCFGraph, pruned_groups_info: Clusterization[
 
 
 def count_flops_and_weights(graph: NNCFGraph,
-                            input_shapes: Dict[NNCFNodeName, List[int]],
                             output_shapes: Dict[NNCFNodeName, List[int]],
                             conv_op_metatypes: List[Type[OperatorMetatype]],
                             linear_op_metatypes: List[Type[OperatorMetatype]],
@@ -238,8 +237,6 @@ def count_flops_and_weights(graph: NNCFGraph,
     Counts the number weights and FLOPs in the model for convolution and fully connected layers.
 
     :param graph: NNCFGraph.
-    :param input_shapes: Dictionary of input dimension shapes for convolutions and
-        fully connected layers. E.g {node_name: (height, width)}
     :param output_shapes: Dictionary of output dimension shapes for convolutions and
         fully connected layers. E.g {node_name: (height, width)}
     :param conv_op_metatypes: List of metatypes defining convolution operations.
@@ -257,7 +254,7 @@ def count_flops_and_weights(graph: NNCFGraph,
             number of weights (params) in the model
     """
     flops_pers_node, weights_per_node = count_flops_and_weights_per_node(graph,
-                                                                         input_shapes, output_shapes,
+                                                                         output_shapes,
                                                                          conv_op_metatypes, linear_op_metatypes,
                                                                          input_channels, output_channels,
                                                                          kernel_sizes, op_addresses_to_skip)
@@ -265,7 +262,6 @@ def count_flops_and_weights(graph: NNCFGraph,
 
 
 def count_flops_and_weights_per_node(graph: NNCFGraph,
-                                     input_shapes: Dict[NNCFNodeName, List[int]],
                                      output_shapes: Dict[NNCFNodeName, List[int]],
                                      conv_op_metatypes: List[Type[OperatorMetatype]],
                                      linear_op_metatypes: List[Type[OperatorMetatype]],
@@ -278,8 +274,6 @@ def count_flops_and_weights_per_node(graph: NNCFGraph,
     Counts the number weights and FLOPs per node in the model for convolution and fully connected layers.
 
     :param graph: NNCFGraph.
-    :param input_shapes: Dictionary of input dimension shapes for convolutions and
-        fully connected layers. E.g {node_name: (height, width)}
     :param output_shapes: Dictionary of output dimension shapes for convolutions and
         fully connected layers. E.g {node_name: (height, width)}
     :param conv_op_metatypes: List of metatypes defining convolution operations.
@@ -327,10 +321,14 @@ def count_flops_and_weights_per_node(graph: NNCFGraph,
         name = node.node_name
         if name in op_addresses_to_skip:
             continue
-        flops_numpy = 2 * np.prod(input_shapes[name]) * np.prod(output_shapes[name])
-        weights_numpy = np.prod(input_shapes[name]) * np.prod(output_shapes[name])
-        flops[name] = flops_numpy.astype(int).item()
-        weights[name] = weights_numpy.astype(int).item()
+
+        num_in_features = node.layer_attributes.in_features
+        num_out_features = node.layer_attributes.out_features
+
+        flops_numpy = 2 * num_in_features * num_out_features
+        weights_numpy = num_in_features * num_out_features
+        flops[name] = flops_numpy
+        weights[name] = weights_numpy
 
     return flops, weights
 

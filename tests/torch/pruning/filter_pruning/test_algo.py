@@ -435,7 +435,6 @@ def test_calculation_of_flops(all_weights, pruning_flops_target, ref_flops, ref_
 
     cur_flops, cur_params_num = count_flops_and_weights(
         pruning_algo._model.get_original_graph(),
-        pruning_algo._modules_in_shapes,
         pruning_algo._modules_out_shapes,
         input_channels=tmp_in_channels,
         output_channels=tmp_out_channels,
