@@ -103,7 +103,9 @@ class ONNNXModelNormalizer:
                 'Successfully converted the model to the opset = {}'.format(modified_model.opset_import[0].version))
         except (RuntimeError, ConvertError) as e:
             modified_model = model
-            nncf_logger.warning(f"Failed to convert version. Use the original model. Reason: {e}")
+            nncf_logger.error("Couldn't convert target model to opset13. "
+                              "Models with opset < 13 is not supported by PTQ yet.")
+            raise ConvertError from e
 
         for i, node in enumerate(modified_model.graph.node):
             if node.name == '':
