@@ -12,10 +12,12 @@
 """
 
 from abc import ABC, abstractmethod
+from typing import Callable, Dict, TypeVar
 
-from typing import Dict
-from typing import TypeVar
-from typing import Callable
+from tqdm import tqdm
+
+from nncf.common.tensor_statistics.collectors import \
+    TensorStatisticCollectorBase
 from nncf.experimental.post_training.api.sampler import Sampler
 
 ModelType = TypeVar('ModelType')
@@ -81,7 +83,7 @@ class Engine(ABC):
         """
         self._inputs_transforms = inputs_transforms
 
-    def compute_statistics(self, statistics_layout: Dict) -> Dict[str, TensorType]:
+    def compute_statistics(self, statistics_layout: Dict[str, TensorStatisticCollectorBase]) -> None:
         """
         Performs model inference on specified dataset subset for statistics collection and input-based layers layout
 
@@ -91,18 +93,16 @@ class Engine(ABC):
         if not self.is_model_set():
             raise RuntimeError(f'The {self.__class__} tried to compute statistics, '
                                'while the model was not set.')
-        # TODO (Nikita Malinin): Add statistics_layout usage via  backend-specific ModelTransformer
         sampler = self.get_sampler()
-        output = {}
-        for sample in sampler:
+
+        for sample in tqdm(sampler):
             input_data, _ = sample
             output_tensors, model_outputs = self.infer(input_data)
             for out_id, model_output in enumerate(model_outputs):
-                if model_output.name not in output:
-                    output[model_output.name] = []
-                # TODO (Nikita Malinin): Add backend-specific statistics aggregator usage
-                output[model_output.name].append(output_tensors[out_id])
-        return output
+                output_tensor = output_tensors[out_id]
+                output_name = model_output.name
+                if output_name in statistics_layout:
+                    statistics_layout[output_name].register_input(output_tensor)
 
     def compute_metrics(self, metrics_per_sample: bool = False) -> Dict[str, MetricType]:
         """

@@ -1,5 +1,5 @@
 models:
-  - name: ResNet101-DUC-7
+  - name: ResNet101-DUC-12
     launchers:
       - framework: onnx_runtime
         execution_providers: ['OpenVINOExecutionProvider']

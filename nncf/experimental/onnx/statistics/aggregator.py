@@ -11,12 +11,8 @@
  limitations under the License.
 """
 
-from typing import Dict
-
 from skl2onnx.helpers.onnx_helper import select_model_inputs_outputs
 import onnx
-
-from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
 
 from nncf.experimental.post_training.statistics.aggregator import StatisticsAggregator
 
@@ -48,11 +44,4 @@ class ONNXStatisticsAggregator(StatisticsAggregator):
 
         self.engine.set_model(model_with_intermediate_outputs)
         self.engine.set_sampler(sampler)
-        output = self.engine.compute_statistics(self.layers_statistics)
-        self._aggregate_statistics(output, self.layers_statistics)
-
-    def _aggregate_statistics(self, output, layers_statistics: Dict[str, TensorStatisticCollectorBase]):
-        for k, v in layers_statistics.items():
-            tensors = output[k]
-            for tensor in tensors:
-                v.register_input(tensor)
+        self.engine.compute_statistics(self.layers_statistics)
