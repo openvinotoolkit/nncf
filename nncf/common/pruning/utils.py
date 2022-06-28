@@ -322,8 +322,8 @@ def count_flops_and_weights_per_node(graph: NNCFGraph,
         if name in op_addresses_to_skip:
             continue
 
-        num_in_features = node.layer_attributes.in_features
-        num_out_features = node.layer_attributes.out_features
+        num_in_features = input_channels.get(name, node.layer_attributes.in_features)
+        num_out_features = output_channels.get(name, node.layer_attributes.out_features)
 
         flops_numpy = 2 * num_in_features * num_out_features
         weights_numpy = num_in_features * num_out_features
