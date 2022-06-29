@@ -562,7 +562,14 @@ class FilterPruningController(BasePruningAlgoController):
             # Prune in channels in all next nodes
             next_nodes = self.next_nodes[cluster.id]
             for node_id in next_nodes:
-                tmp_in_channels[node_id] -= 1
+                # Next layer for prunable convolution could be
+                # a linear layer. In such case sparse_elems_mult
+                # equal to amount of elemens in one channel
+                next_node_in_channels = self._modules_in_channels[node_id]
+                prev_node_out_channels = self._modules_out_channels[node.node_name]
+                assert next_node_in_channels % prev_node_out_channels == 0
+                sparse_elems_mult = next_node_in_channels // prev_node_out_channels 
+                tmp_in_channels[node_id] -= sparse_elems_mult
 
             flops, params_num = count_flops_and_weights(self._model.get_original_graph(),
                                                         self._modules_out_shapes,

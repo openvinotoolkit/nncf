@@ -401,10 +401,10 @@ def test_valid_masks_for_bn_after_concat(prune_bn):
 
 @pytest.mark.parametrize(('all_weights', 'pruning_flops_target', 'ref_flops', 'ref_params_num'),
                          [
-                             (False, None, 1282000, 407336),
-                             (True, None, 1808826, 414861),
-                             (False, 0.5, 1282000, 407336),
-                             (True, 0.5, 1351200, 409368),
+                             (False, None, 679888, 106280),
+                             (True, None, 1146640, 83768),
+                             (False, 0.5, 1236160, 169184),
+                             (True, 0.5, 1328162, 104833),
                          ]
                          )
 def test_calculation_of_flops(all_weights, pruning_flops_target, ref_flops, ref_params_num):

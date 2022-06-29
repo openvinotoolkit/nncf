@@ -376,7 +376,13 @@ def _calculate_in_out_channels(pruning_groups: List[Cluster[PrunedLayerInfoBase]
 
         # Prune in_channels in all next nodes of cluster
         for node_name in pruning_groups_next_nodes[group.id]:
-            tmp_in_channels[node_name] -= num_of_sparse_elems
+            # Next layer for prunable convolution could be
+            # a linear layer. In such case sparse_elems_mult
+            # equal to amount of elemens in one channel
+            next_node_in_channels = full_input_channels[node_name]
+            assert next_node_in_channels % old_out_channels == 0
+            sparse_elems_mult = next_node_in_channels // old_out_channels 
+            tmp_in_channels[node_name] -= num_of_sparse_elems * sparse_elems_mult
 
     return tmp_in_channels, tmp_out_channels
 
