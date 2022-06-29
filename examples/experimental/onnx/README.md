@@ -2,7 +2,12 @@
 
 This examples shows how to quantize ONNX formated NN model (FP32) into the quantized NN model (INT8) using NNCF PTQ API with ONNXRuntime framework.
 
-## Docker image build
+## Installation
+### Pip installation
+
+Firstly, you would better to prepare a Python virtual environment with Python3.8. Then, please refer to [installation guide for developers](../../../CONTRIBUTING.md#experimental-onnxruntime-openvino) to configure the environment.
+
+### Docker image build
 
 You should make an environment including [ONNXRuntime](https://onnxruntime.ai/docs) with [OpenVINOExecutionProvider](https://onnxruntime.ai/docs/execution-providers/OpenVINO-ExecutionProvider.html). We officially support `onnxruntime==1.11.0` and `openvino==2022.1.0`. You can use use a docker image build script we provided in `./docker/onnx/openvinoep/build.sh` to configure the environment easily.
 
@@ -398,3 +403,30 @@ After benchmark is done, outputs are located in `/output` which is a mounted dir
 
 * `nan` means that NNCF PTQ API failed to generate proper quantized onnx model. We are working on these defects.
 * `MaskRCNN-12` can be used two task types detection (`det`) and instance segmentation (`inst-seg`).
+
+# Support ONNXRuntime PTQ for Yolov5 models
+
+## Prerequisite
+
+1. Follow the [installation step](#installation)
+2. Clone [Yolov5 repository](https://github.com/ultralytics/yolov5.git) and patch it.
+
+```bash
+$ cd examples/experimental/onnx/yolov5
+$ git init
+$ git remote add origin https://github.com/ultralytics/yolov5.git
+$ git fetch origin
+$ git checkout 34df5032a7d2e83fe3d16770a03bd129b115d184
+$ git apply 0001-Add-NNCF-ONNX-PTQ-example-notebook.patch
+```
+
+## Run NNCF ONNXRuntime PTQ
+
+After [prerequisite](#prerequisite) is done, you can find `run_notebook.ipynb` notebook file in `examples/experimental/onnx/yolov5`. If you finish running all notebook cells, you will obtain the following PTQ benchmark results.
+
+```
+# Model latency
+FP32 latency: 23.7ms, INT8 latency: 19.7ms, FP32/INT8: 1.21x
+# Model accuracy
+FP32 mAP: 37.1%, INT8 mAP: 36.4%, mAP difference: 0.8%
+```
