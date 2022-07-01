@@ -288,7 +288,6 @@ class PTLinearPruningOp(LinearPruningOp, PTPruner):
         if reorder_indexes is None:
             return
         reorder_indexes = reorder_indexes.tensor
-        reorder_indexes = reorder_indexes.int()
         fc = model.get_containing_module(node.node_name)
         fc.weight.data = torch.index_select(fc.weight.data, 1, reorder_indexes)
         nncf_logger.debug(
