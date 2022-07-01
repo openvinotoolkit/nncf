@@ -281,6 +281,33 @@ class PTTransposeConvolutionPruningOp(TransposeConvolutionPruningOp, PTPruner):
 class PTLinearPruningOp(LinearPruningOp, PTPruner):
     subtypes = [PTLinearMetatype, PTMatMulMetatype]
 
+    @classmethod
+    def input_reorder(cls, model: NNCFNetwork, node: NNCFNode, graph: NNCFGraph):
+        input_masks = get_input_masks(node, graph)
+        reorder_indexes = input_masks[0]
+        if reorder_indexes is None:
+            return
+        reorder_indexes = reorder_indexes.tensor
+        reorder_indexes = reorder_indexes.int()
+        fc = model.get_containing_module(node.node_name)
+        fc.weight.data = torch.index_select(fc.weight.data, 1, reorder_indexes)
+        nncf_logger.debug(
+            'Reordered input channels (first 10 reorder indexes {}) of Linear: {} '.format(reorder_indexes[:10],
+                                                                                           node.data['key']))
+
+    @classmethod
+    def output_reorder(cls, model: NNCFNetwork, node: NNCFNode, graph: NNCFGraph):
+        reorder_indexes = node.data['output_mask']
+        if reorder_indexes is None:
+            return
+        fc = model.get_containing_module(node.node_name)
+        reorder_indexes = reorder_indexes.tensor
+        fc.weight.data = torch.index_select(fc.weight.data, 0, reorder_indexes)
+        if fc.bias is not None:
+            fc.bias.data = torch.index_select(fc.bias.data, 0, reorder_indexes)
+        nncf_logger.debug(
+            'Reordered output channels (first 10 reorder indexes {}) of Linear: {} '.format(reorder_indexes[:10],
+                                                                                            node.data['key']))
 
 @PT_PRUNING_OPERATOR_METATYPES.register('batch_norm')
 class PTBatchNormPruningOp(BatchNormPruningOp, PTPruner):
