@@ -14,6 +14,7 @@
 from typing import List
 
 from nncf.common.utils.logger import logger as nncf_logger
+from nncf.experimental.onnx.tensor import ONNXNNCFTensor
 
 from nncf.experimental.post_training.api.dataset import Dataset
 from examples.torch.semantic_segmentation.datasets.camvid import CamVid
@@ -21,16 +22,17 @@ from examples.torch.semantic_segmentation.datasets.mapillary import Mapillary
 
 
 class SegmentationDataLoader(Dataset):
-    def __init__(self, dataset, batch_size, shuffle):
+    def __init__(self, dataset, batch_size, shuffle, input_key):
         super().__init__(batch_size, shuffle)
         self.dataset = dataset
+        self.input_key = input_key
         nncf_logger.info(
             'The dataset is built with the data located on  {}'.format(dataset.root_dir))
 
     def __getitem__(self, item):
         tensor, target = self.dataset[item]
         tensor = tensor.cpu().detach().numpy()
-        return tensor, target
+        return {self.input_key: ONNXNNCFTensor(tensor), "targets": ONNXNNCFTensor(target)}
 
     def __len__(self):
         return len(self.dataset)
@@ -38,6 +40,7 @@ class SegmentationDataLoader(Dataset):
 
 def create_dataset_from_segmentation_torch_dataset(dataset_name: str,
                                                    dataset_dir: str,
+                                                   input_key: str,
                                                    input_shape: List[int]):
     from examples.torch.semantic_segmentation.utils.transforms import Resize
     from examples.torch.semantic_segmentation.utils.transforms import Normalize
@@ -63,4 +66,4 @@ def create_dataset_from_segmentation_torch_dataset(dataset_name: str,
     ])
     initialization_dataset = dataset_class(
         dataset_dir, 'val', transforms=transform)
-    return SegmentationDataLoader(initialization_dataset, 1, True)
+    return SegmentationDataLoader(initialization_dataset, 1, True, input_key)

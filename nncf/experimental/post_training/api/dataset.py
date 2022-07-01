@@ -11,16 +11,15 @@
  limitations under the License.
 """
 
-from typing import Tuple
-from typing import TypeVar
+from typing import Dict
 
 from abc import ABC
 from abc import abstractmethod
 
 from nncf.common.utils.logger import logger as nncf_logger
+from nncf.common.tensor import NNCFTensor
 
-ModelInput = TypeVar('ModelInput')
-Target = TypeVar('Target')
+NNCFData = Dict[str, NNCFTensor]
 
 
 class Dataset(ABC):
@@ -37,7 +36,7 @@ class Dataset(ABC):
         self.shuffle = shuffle
 
     @abstractmethod
-    def __getitem__(self, i: int) -> Tuple[ModelInput, Target]:
+    def __getitem__(self, i: int) -> NNCFData:
         """
         Returns the i-th element of the dataset with the target value.
         """

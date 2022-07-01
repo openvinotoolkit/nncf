@@ -72,8 +72,8 @@ class ONNXMinMaxStatisticCollector(MinMaxStatisticCollector):
     def _get_processor() -> NNCFCollectorTensorProcessor:
         return ONNXNNCFCollectorTensorProcessor()
 
-    def _register_input(self, x: np.ndarray):
-        self._register_input_common(ONNXNNCFTensor(x))
+    def _register_input(self, x: ONNXNNCFTensor):
+        self._register_input_common(x)
 
     def _get_statistics(self) -> ONNXMinMaxTensorStatistic:
         return ONNXMinMaxTensorStatistic(self._min_values.tensor, self._max_values.tensor)
@@ -84,8 +84,8 @@ class ONNXMeanMinMaxStatisticCollector(MeanMinMaxStatisticCollector):
     def _get_processor() -> NNCFCollectorTensorProcessor:
         return ONNXNNCFCollectorTensorProcessor()
 
-    def _register_input(self, x: np.ndarray):
-        self._register_input_common(ONNXNNCFTensor(x))
+    def _register_input(self, x: ONNXNNCFTensor):
+        self._register_input_common(x)
 
     def _get_statistics(self) -> ONNXMinMaxTensorStatistic:
         return ONNXMinMaxTensorStatistic(self._min_aggregate().tensor, self._max_aggregate().tensor)

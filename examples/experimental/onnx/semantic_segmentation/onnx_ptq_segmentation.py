@@ -33,9 +33,14 @@ def run(onnx_model_path: str, output_model_path: str, dataset_name: str,
     original_model = onnx.load(onnx_model_path)
     print(f"The model is loaded from {onnx_model_path}")
 
+    input_keys = [node.name for node in original_model.graph.input]
+    if len(input_keys) != 1:
+        raise RuntimeError(
+            f"The number of inputs should be 1(!={len(input_keys)}).")
+
     # Step 1: Initialize the data loader.
     dataloader = create_dataset_from_segmentation_torch_dataset(
-        dataset_name, dataset_path, input_shape)
+        dataset_name, dataset_path, input_keys[0], input_shape)
 
     # Step 2: Create a pipeline of compression algorithms.
     builder = CompressionBuilder()

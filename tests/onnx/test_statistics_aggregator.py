@@ -26,9 +26,9 @@ from tests.onnx.test_samplers import TestDataset
 
 INPUT_SHAPE = [3, 10, 10]
 
-DATASET_SAMPLES = [(np.zeros(INPUT_SHAPE), 0),
-                   (np.zeros(INPUT_SHAPE), 1),
-                   (np.zeros(INPUT_SHAPE), 2)]
+DATASET_SAMPLES = [(np.zeros(INPUT_SHAPE, dtype=np.float32), 0),
+                   (np.zeros(INPUT_SHAPE, dtype=np.float32), 1),
+                   (np.zeros(INPUT_SHAPE, dtype=np.float32), 2)]
 
 DATASET_SAMPLES[0][0][0, 0, 0] = 128  # max
 DATASET_SAMPLES[0][0][0, 0, 1] = -128  # min
@@ -59,7 +59,7 @@ class TestParameters:
 def test_statistics_aggregator(range_type, test_parameters):
     model = OneConvolutionalModel().onnx_model
 
-    dataset = TestDataset(DATASET_SAMPLES)
+    dataset = TestDataset(DATASET_SAMPLES, input_key="X")
     compression_builder = CompressionBuilder()
 
     quantization = ONNXMinMaxQuantization(MinMaxQuantizationParameters(

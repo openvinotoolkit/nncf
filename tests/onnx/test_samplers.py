@@ -20,7 +20,8 @@ import numpy as np
 
 from nncf.experimental.onnx.samplers import ONNXBatchSampler
 from nncf.experimental.onnx.samplers import ONNXRandomBatchSampler
-from nncf.experimental.post_training.api.dataset import Dataset
+from nncf.experimental.onnx.tensor import ONNXNNCFTensor
+from nncf.experimental.post_training.api.dataset import Dataset, NNCFData
 
 INPUT_SHAPE = [3, 10, 10]
 
@@ -30,12 +31,14 @@ DATASET_SAMPLES = [(np.zeros(INPUT_SHAPE), 0),
 
 
 class TestDataset(Dataset):
-    def __init__(self, samples: List[Tuple[np.ndarray, int]]):
+    def __init__(self, samples: List[Tuple[np.ndarray, int]], input_key: str = "input"):
         super().__init__(shuffle=False)
         self.samples = samples
+        self.input_key = input_key
 
-    def __getitem__(self, item):
-        return self.samples[item]
+    def __getitem__(self, item) -> NNCFData:
+        inputs, targets = self.samples[item]
+        return {self.input_key: ONNXNNCFTensor(inputs), "targets": ONNXNNCFTensor(targets)}
 
     def __len__(self):
         return 3
@@ -54,8 +57,8 @@ def test_batch_sampler(batch_size):
             ref_target.extend([DATASET_SAMPLES[j][1]])
         ref_sample = np.stack(ref_sample)
         ref_target = np.stack(ref_target)
-        assert np.array_equal(sample[0], ref_sample)
-        assert np.array_equal(sample[1], ref_target)
+        assert np.array_equal(sample["input"].tensor, ref_sample)
+        assert np.array_equal(sample["targets"].tensor, ref_target)
 
 
 @pytest.mark.parametrize("batch_size", (1, 2, 3))
@@ -69,9 +72,11 @@ def test_random_batch_sampler(batch_size):
         ref_sample = []
         ref_target = []
         for j in range(i * batch_size, i * batch_size + batch_size):
-            ref_sample.extend([DATASET_SAMPLES[random_permuated_indices[j]][0]])
-            ref_target.extend([DATASET_SAMPLES[random_permuated_indices[j]][1]])
+            ref_sample.extend(
+                [DATASET_SAMPLES[random_permuated_indices[j]][0]])
+            ref_target.extend(
+                [DATASET_SAMPLES[random_permuated_indices[j]][1]])
         ref_sample = np.stack(ref_sample)
         ref_target = np.stack(ref_target)
-        assert np.array_equal(sample[0], ref_sample)
-        assert np.array_equal(sample[1], ref_target)
+        assert np.array_equal(sample["input"].tensor, ref_sample)
+        assert np.array_equal(sample["targets"].tensor, ref_target)

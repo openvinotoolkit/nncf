@@ -18,8 +18,9 @@ import os
 import torch
 
 from nncf.common.utils.logger import logger as nncf_logger
+from nncf.experimental.onnx.tensor import ONNXNNCFTensor
 
-from nncf.experimental.post_training.api.dataset import Dataset
+from nncf.experimental.post_training.api.dataset import Dataset, NNCFData
 
 from onnx import ModelProto
 from google.protobuf.json_format import MessageToDict
@@ -28,18 +29,21 @@ from torchvision.datasets import ImageFolder
 
 
 class ImageNetDataset(Dataset):
-    def __init__(self, dataset, batch_size, shuffle):
+    def __init__(self, dataset, batch_size, shuffle, input_key):
         super().__init__(batch_size, shuffle)
         self.dataset = dataset
+        self.input_key = input_key
         nncf_logger.info(
-            'The dataset is built with the data located on  {}'.format(dataset.root))
+            f"The dataset is built with the data located on {dataset.root}. "
+            f"Model input key is {input_key}."
+        )
 
-    def __getitem__(self, item):
+    def __getitem__(self, item) -> NNCFData:
         tensor, target = self.dataset[item]
         tensor = tensor.cpu().detach().numpy()
-        return tensor, target
+        return {self.input_key: ONNXNNCFTensor(tensor), "targets": ONNXNNCFTensor(target)}
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self.dataset)
 
 
@@ -81,6 +85,7 @@ def get_transform(image_size: Tuple[int, int],
 
 
 def create_imagenet_torch_dataset(dataset_dir: str,
+                                  input_key: str,
                                   input_shape: Optional[Tuple[int, int, int, int]],
                                   mean=(0.485, 0.456, 0.406),
                                   std=(0.229, 0.224, 0.225),
@@ -97,4 +102,4 @@ def create_imagenet_torch_dataset(dataset_dir: str,
     transform = get_transform(image_size, crop_ratio, mean, std, channel_last)
     # The best practise is to use validation part of dataset for calibration (aligning with POT)
     initialization_dataset = ImageFolder(os.path.join(dataset_dir), transform)
-    return ImageNetDataset(initialization_dataset, batch_size, shuffle)
+    return ImageNetDataset(initialization_dataset, batch_size, shuffle, input_key)

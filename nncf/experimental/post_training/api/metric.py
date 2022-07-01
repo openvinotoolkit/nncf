@@ -10,15 +10,13 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+from typing import Optional, Tuple
 import numpy as np
-
-from typing import List, TypeVar
 
 from abc import ABC
 from abc import abstractmethod
 
-Output = TypeVar('Output')
-Target = TypeVar('Target')
+from nncf.experimental.post_training.api.dataset import NNCFData
 
 
 class Metric(ABC):
@@ -52,7 +50,7 @@ class Metric(ABC):
         return True
 
     @abstractmethod
-    def update(self, outputs: Output, targets: Target) -> None:
+    def update(self, outputs: NNCFData, targets: NNCFData) -> None:
         """
         Calculates and updates metric value
 
@@ -74,10 +72,12 @@ class Accuracy(Metric):
     Metric is calculated as a percentage.
     """
 
-    def __init__(self, top_k: int = 1):
+    def __init__(self, top_k: int = 1, output_key: Optional[str] = None, target_key: str = "targets"):
         super().__init__()
         self._top_k = top_k
         self._matches = []
+        self._output_key = output_key
+        self._target_key = target_key
 
     @property
     def name(self):
@@ -90,7 +90,29 @@ class Accuracy(Metric):
         """
         return {self.name: np.ravel(self._matches).mean()}
 
-    def update(self, outputs: np.ndarray, targets: np.ndarray):
+    def _extract(self, outputs: NNCFData, targets: NNCFData) -> Tuple[np.ndarray, np.ndarray]:
+        """
+        Extract outputs and targets np.ndarray to compute accuracy
+        If output_key is None and the model produces only one tensor,
+        it implicitly uses that tensor to compute the model accuracy.
+        """
+        if self._output_key is None and len(outputs) == 1:
+            outputs = list(outputs.values())[0].tensor
+        elif self._output_key in outputs:
+            outputs = outputs[self._output_key].tensor
+        else:
+            raise KeyError(
+                f"There is no {self._output_key} in the model outputs.")
+
+        if self._target_key in targets:
+            targets = targets[self._target_key].tensor
+        else:
+            raise KeyError(
+                f"There is no {self._target_key} in the input data.")
+
+        return outputs, targets
+
+    def update(self, outputs: NNCFData, targets: NNCFData) -> None:
         """
         Updates prediction matches based on the model output value and target.
         To calculate the top@N metric, the model output and target data must be represented
@@ -109,6 +131,8 @@ class Accuracy(Metric):
             label_N     # Batch N
         ]
         """
+        outputs, targets = self._extract(outputs, targets)
+
         if outputs.ndim != 2:
             raise ValueError('The accuracy metric should be calculated on 2d outputs. '
                              f'However, the outputs has ndim={outputs.ndim}.')

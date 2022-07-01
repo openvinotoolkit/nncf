@@ -43,9 +43,15 @@ def run(onnx_model_path: str, output_model_path: str,
             "input_shape is None. Infer input_shape from the model.")
         input_shape = infer_input_shape(original_model)
 
+    input_keys = [node.name for node in original_model.graph.input]
+    if len(input_keys) != 1:
+        raise RuntimeError(
+            f"The number of inputs should be 1(!={len(input_keys)}).")
+
     # Step 1: Initialize the data loader and metric (if it is needed).
-    dataset = create_imagenet_torch_dataset(dataset_path, input_shape,
-                                            batch_size=batch_size, shuffle=shuffle)
+    dataset = create_imagenet_torch_dataset(
+        dataset_path, input_key=input_keys[0],
+        input_shape=input_shape, batch_size=batch_size, shuffle=shuffle)
     metric = Accuracy(top_k=1)
 
     # Step 2: Create a pipeline of compression algorithms.
@@ -84,13 +90,13 @@ def run(onnx_model_path: str, output_model_path: str,
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--onnx_model_path", "-m",
-                        help="Path to ONNX model", type=str)
+                        help="Path to ONNX model", type=str, required=True)
     parser.add_argument("--output_model_path", "-o",
-                        help="Path to output quantized ONNX model", type=str)
+                        help="Path to output quantized ONNX model", type=str, required=True)
     parser.add_argument("--data",
                         help="Path to ImageNet validation data in the ImageFolder torchvision format "
                              "(Please, take a look at torchvision.datasets.ImageFolder)",
-                        type=str)
+                        type=str, required=True)
     parser.add_argument(
         "--batch_size", help="Batch size for initialization", type=int, default=1)
     parser.add_argument(
