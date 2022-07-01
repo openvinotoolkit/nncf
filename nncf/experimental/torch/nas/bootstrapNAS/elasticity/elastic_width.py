@@ -39,7 +39,7 @@ from nncf.common.pruning.clusterization import Clusterization
 from nncf.common.pruning.mask_propagation import MaskPropagationAlgorithm
 from nncf.common.pruning.node_selector import PruningNodeSelector
 from nncf.common.pruning.structs import PrunedLayerInfoBase
-from nncf.common.pruning.utils import get_cluster_next_nodes
+from nncf.common.pruning.utils import ShapePruninigProcessor
 from nncf.common.pruning.utils import get_input_masks
 from nncf.common.pruning.utils import get_prunable_layers_in_out_channels
 from nncf.common.pruning.utils import is_prunable_depthwise_conv
@@ -496,7 +496,11 @@ class ElasticWidthHandler(SingleElasticityHandler):
 
         graph = self._target_model.get_original_graph()
         prunable_types = [NNCFConv2d.op_func_name] #, NNCFLinear.op_func_name]
-        self._cluster_next_nodes = get_cluster_next_nodes(graph, self._pruned_module_groups_info, prunable_types)
+        self._shape_pruning_processor = ShapePruninigProcessor(
+                                            graph=self._target_model.get_original_graph(),
+                                            pruning_groups=pruned_module_groups_info,
+                                            prunable_types=prunable_types,
+                                            conv_op_metatypes=None, linear_op_metatypes=None)
 
         # Need a copy because it will be used for adding `output_mask`/`input_masks` to nodes that are relevant to
         # Elastic Width only and therefore it should be isolated to not intercept with other algorithms.
@@ -667,12 +671,9 @@ class ElasticWidthHandler(SingleElasticityHandler):
             first_elastic_op = first_elastic_width_info.elastic_op  # type: ElasticOutputWidthOp
             new_out_channels_num = first_elastic_op.get_active_width()
             num_of_pruned_elems = first_elastic_op.max_width - new_out_channels_num
-            for elastic_width_info in group.elements:
-                out_channels[elastic_width_info.node_name] = new_out_channels_num
-
-            # Prune in_channels in all next nodes of cluster
-            for node_name in self._cluster_next_nodes[group.id]:
-                in_channels[node_name] -= num_of_pruned_elems
+            in_channels, out_channels = \
+                self._shape_pruning_processor.prune_cluster_shapes(group.id, num_of_pruned_elems,
+                                                                   in_channels, out_channels)
 
         return in_channels, out_channels
 

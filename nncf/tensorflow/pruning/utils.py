@@ -14,10 +14,19 @@
 import numpy as np
 import tensorflow as tf
 
+from typing import List, Dict
+
 from nncf.common.graph import NNCFNode
+from nncf.common.graph import NNCFGraph
+from nncf.common.graph import NNCFNodeName
 from nncf.common.utils.logger import logger as nncf_logger
+from nncf.tensorflow.graph.utils import unwrap_layer
+from nncf.tensorflow.graph.utils import get_original_name_and_instance_idx
+from nncf.tensorflow.graph.metatypes.common import GENERAL_CONV_LAYER_METATYPES
+from nncf.tensorflow.graph.metatypes.common import LINEAR_LAYER_METATYPES
 from nncf.tensorflow.graph.metatypes.matcher import get_keras_layer_metatype
 from nncf.tensorflow.graph.metatypes.keras_layers import TFBatchNormalizationLayerMetatype
+from nncf.tensorflow.layers.data_layout import get_input_channel_axis
 from nncf.tensorflow.layers.data_layout import get_weight_channel_axis
 from nncf.tensorflow.layers.wrapper import NNCFWrapper
 
@@ -65,3 +74,42 @@ def broadcast_filter_mask(filter_mask, shape, dim):
     meta_shape[dim] = filter_mask.shape[0]
     broadcasted_filter_mask += tf.reshape(filter_mask, tuple(meta_shape))
     return broadcasted_filter_mask
+
+
+def collect_output_shapes(model: 'NNCFNetwork', graph: NNCFGraph) -> Dict[NNCFNodeName, List[int]]:
+    """
+    Collects output dimension shapes for convolutions and fully connected layers
+    from the connected edges in the NNCFGraph.
+
+    :param graph: NNCFGraph.
+    :return: Dictionary of output dimension shapes. E.g {node_name: (height, width)}
+    """
+    layers_out_shapes = dict()
+    for node in graph.get_nodes_by_metatypes(GENERAL_CONV_LAYER_METATYPES):
+        node_name, node_index = get_original_name_and_instance_idx(node.node_name)
+        layer = model.get_layer(node_name)
+        layer_ = unwrap_layer(layer)
+
+        channel_axis = get_input_channel_axis(layer)
+        dims_slice = slice(channel_axis - layer_.rank, channel_axis) \
+            if layer.data_format == 'channels_last' else slice(channel_axis + 1, None)
+        in_shape = layer.get_input_shape_at(node_index)[dims_slice]
+        out_shape = layer.get_output_shape_at(node_index)[dims_slice]
+
+        if not is_valid_shape(in_shape) or not is_valid_shape(out_shape):
+            raise RuntimeError(f'Input/output shape is not defined for layer `{layer.name}` ')
+
+        layers_out_shapes[node.node_name] = out_shape
+
+    for node in graph.get_nodes_by_metatypes(LINEAR_LAYER_METATYPES):
+        node_name, node_index = get_original_name_and_instance_idx(node.node_name)
+        layer = model.get_layer(node_name)
+
+        in_shape = layer.get_input_shape_at(node_index)[1:]
+        out_shape = layer.get_output_shape_at(node_index)[1:]
+
+        if not is_valid_shape(in_shape) or not is_valid_shape(out_shape):
+            raise RuntimeError(f'Input/output shape is not defined for layer `{layer.name}` ')
+
+        layers_out_shapes[node.node_name] = out_shape
+    return layers_out_shapes

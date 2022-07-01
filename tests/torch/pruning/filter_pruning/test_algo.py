@@ -23,8 +23,7 @@ from nncf.torch.pruning.filter_pruning.algo import FilterPruningController
 from nncf.torch.pruning.filter_pruning.functions import l2_filter_norm
 from nncf.torch.pruning.filter_pruning.layers import FilterPruningMask
 from nncf.torch.pruning.filter_pruning.layers import apply_filter_binary_mask
-from nncf.common.pruning.utils import calculate_in_out_channels_by_masks
-from nncf.common.pruning.utils import count_flops_and_weights
+from nncf.common.pruning.utils import ShapePruninigProcessor
 from nncf.common.pruning.schedulers import ExponentialPruningScheduler
 from nncf.torch.pruning.utils import _calculate_output_shape
 from nncf.torch.pruning.filter_pruning.algo import GENERAL_CONV_LAYER_METATYPES
@@ -158,41 +157,41 @@ def test_valid_modules_replacement_and_pruning(prune_first, prune_batch_norms):
     check_that_module_is_not_pruned(conv3)
 
 
-BIG_PRUNING_MODEL_TEST_PARAMS = ('all_weights', 'pruning_flops_target', 'prune_first', 'ref_masks')
+BIG_PRUNING_MODEL_TEST_PARAMS = ('all_weights', 'prune_by_flops', 'pruning_init', 'prune_first', 'ref_masks')
 BIG_PRUNING_MODEL_TEST_PARAMS_VALUES = \
 [
-    (False, None, True, {1 : gen_ref_masks([(8, 8), (16, 16), (32, 32), (64, 64)]),
+    (False, False, 0.5, True, {1 : gen_ref_masks([(8, 8), (16, 16), (32, 32), (64, 64)]),
                          2 : gen_ref_masks([(8, 8), (16, 16), (32, 32), (64, 64)]),
                          3 : gen_ref_masks([(8, 8), (16, 16), (32, 32), (64, 64)])}),
-    (True, None, True, {1 : gen_ref_masks([(2, 14), (2, 30), (29, 35), (87, 41)]),
+    (True, False, 0.5, True, {1 : gen_ref_masks([(2, 14), (2, 30), (29, 35), (87, 41)]),
                         2 : gen_ref_masks([(2, 14), (2, 30), (29, 35), (87, 41)]),
                         3 : gen_ref_masks([(2, 14), (2, 30), (29, 35), (87, 41)])}),
-    (False, None, False, { 1 : gen_ref_masks([(16, 16), (32, 32), (64, 64)]),
+    (False, False, 0.5, False, { 1 : gen_ref_masks([(16, 16), (32, 32), (64, 64)]),
                            2 : gen_ref_masks([(16, 16), (32, 32), (64, 64)]),
                            3 : gen_ref_masks([(16, 16), (32, 32), (64, 64)])}),
 
-    (True, None, False, { 1 : gen_ref_masks([(1, 31), (27, 37), (84, 44)]),
+    (True, False, 0.5, False, { 1 : gen_ref_masks([(1, 31), (27, 37), (84, 44)]),
                           2 : gen_ref_masks([(1, 31), (27, 37), (84, 44)]),
                           3: gen_ref_masks([(1, 31), (27, 37), (84, 44)])}),
     # Flops pruning cases
-    (False, 0.5, True, { 1 : gen_ref_masks([(8, 8), (16, 16), (32, 32), (64, 64)]),
+    (False, True, 0.7, True, { 1 : gen_ref_masks([(8, 8), (16, 16), (32, 32), (64, 64)]),
                          2 : gen_ref_masks([(8, 8), (16, 16), (32, 32), (64, 64)]),
                          3 : gen_ref_masks([(8, 8), (16, 16), (32, 32), (64, 64)])}),
-    (False, 0.5, False, {1 : gen_ref_masks([(16, 16), (32, 32), (64, 64)]),
+    (False, True, 0.7, False, {1 : gen_ref_masks([(16, 16), (32, 32), (64, 64)]),
                          2 : gen_ref_masks([(16, 16), (32, 32), (64, 64)]),
                          3 : gen_ref_masks([(16, 16), (32, 32), (64, 64)])}),
-    (True, 0.5, True, { 1: gen_ref_masks([(3, 13), (7, 25), (39, 25), (109, 19)]),
-                        2: gen_ref_masks([(3, 13), (8, 24), (41, 23), (113, 15)]),
-                        3: gen_ref_masks([(2, 14), (5, 27), (33, 31), (97, 31)])}),
-    (True, 0.5, False, { 1 : gen_ref_masks([(8, 24), (39, 25), (109, 19)]),
-                         2 : gen_ref_masks([(9, 23), (41, 23), (113, 15)]),
-                         3 : gen_ref_masks([(5, 27), (33, 31), (97, 31)])}),
+    (True, True, 0.7, True, { 1: gen_ref_masks([(2, 14), (4, 28), (31, 33), (93, 35)]),
+                        2: gen_ref_masks([(2, 14), (6, 26), (35, 29), (102, 26)]),
+                        3: gen_ref_masks([(2, 14), (7, 25), (38, 26), (106, 22)])}),
+    (True, True, 0.7, False, { 1 : gen_ref_masks([(4, 28), (32, 32), (93, 35)]),
+                         2 : gen_ref_masks([(6, 26), (36, 28), (102, 26)]),
+                         3 : gen_ref_masks([(7, 25), (38, 26), (106, 22)])}),
 ]
 
 
 @pytest.mark.parametrize(BIG_PRUNING_MODEL_TEST_PARAMS, BIG_PRUNING_MODEL_TEST_PARAMS_VALUES )
 @pytest.mark.parametrize('dim', [1, 2, 3])
-def test_pruning_masks_correctness(all_weights, pruning_flops_target, prune_first, ref_masks, dim):
+def test_pruning_masks_correctness(all_weights, prune_by_flops, pruning_init, prune_first, ref_masks, dim):
     """
     Test for pruning masks check (_set_binary_masks_for_filters, _set_binary_masks_for_all_filters_together).
     :param all_weights: whether mask will be calculated for all weights in common or not
@@ -214,10 +213,10 @@ def test_pruning_masks_correctness(all_weights, pruning_flops_target, prune_firs
     config = get_basic_pruning_config(input_sample_size=[1, 1] + [8] * dim)
     config['compression']['params']['all_weights'] = all_weights
     config['compression']['params']['prune_first_conv'] = prune_first
-    pruning_init = 0.3 if dim == 1 and pruning_flops_target is not None else 0.5
+    
     config['compression']['pruning_init'] = pruning_init
-    if pruning_flops_target:
-        config['compression']['params']['pruning_flops_target'] = pruning_flops_target
+    if prune_by_flops:
+        config['compression']['params']['pruning_flops_target'] = pruning_init
 
     pruned_model, pruning_algo, _ = create_pruning_algo_with_config(config, dim)
     pruned_module_info = pruning_algo.pruned_module_groups_info.get_all_nodes()
@@ -257,7 +256,7 @@ def test_pruning_masks_correctness(all_weights, pruning_flops_target, prune_firs
 
 @pytest.mark.parametrize(BIG_PRUNING_MODEL_TEST_PARAMS, BIG_PRUNING_MODEL_TEST_PARAMS_VALUES)
 @pytest.mark.parametrize('dim', [1, 2, 3])
-def test_pruning_masks_applying_correctness(all_weights, pruning_flops_target, prune_first, ref_masks, dim):
+def test_pruning_masks_applying_correctness(all_weights, prune_by_flops, pruning_init, prune_first, ref_masks, dim):
     """
     Test for pruning masks check (_set_binary_masks_for_filters, _set_binary_masks_for_all_filters_together).
     :param all_weights: whether mask will be calculated for all weights in common or not.
@@ -302,10 +301,9 @@ def test_pruning_masks_applying_correctness(all_weights, pruning_flops_target, p
     config['compression']['algorithm'] = 'filter_pruning'
     config['compression']['params']['all_weights'] = all_weights
     config['compression']['params']['prune_first_conv'] = prune_first
-    pruning_init = 0.3 if dim == 1 and pruning_flops_target is not None else 0.5
     config['compression']['pruning_init'] = pruning_init
-    if pruning_flops_target:
-        config['compression']['params']['pruning_flops_target'] = pruning_flops_target
+    if prune_by_flops:
+        config['compression']['params']['pruning_flops_target'] = pruning_init
 
     model = BigPruningTestModel(dim)
     ref_state_dict = deepcopy(model.state_dict())
@@ -426,20 +424,19 @@ def test_calculation_of_flops(all_weights, pruning_flops_target, ref_flops, ref_
     assert pruning_algo.current_flops == ref_flops
     assert pruning_algo.current_params_num == ref_params_num
     # pylint:disable=protected-access
-    tmp_in_channels, tmp_out_channels = calculate_in_out_channels_by_masks(
-        pruning_algo.pruned_module_groups_info.get_all_clusters(),
-        num_of_sparse_elements_by_node=pruning_algo._calculate_num_of_sparse_elements_by_node(),
-        full_input_channels=pruning_algo._modules_in_channels,
-        full_output_channels=pruning_algo._modules_out_channels,
-        pruning_groups_next_nodes=pruning_algo.next_nodes)
+    shape_pruning_processor = ShapePruninigProcessor(
+                                graph=pruning_algo._model.get_original_graph(),
+                                pruning_groups=pruning_algo.pruned_module_groups_info.get_all_clusters(),
+                                prunable_types=None,
+                                conv_op_metatypes=GENERAL_CONV_LAYER_METATYPES,
+                                linear_op_metatypes=LINEAR_LAYER_METATYPES)
+    tmp_in_channels, tmp_out_channels = shape_pruning_processor.calculate_in_out_channels_by_masks(
+        num_of_sparse_elements_by_node=pruning_algo._calculate_num_of_sparse_elements_by_node())
 
-    cur_flops, cur_params_num = count_flops_and_weights(
-        pruning_algo._model.get_original_graph(),
-        pruning_algo._modules_out_shapes,
+    cur_flops, cur_params_num = \
+        shape_pruning_processor.count_flops_and_weights(
         input_channels=tmp_in_channels,
-        output_channels=tmp_out_channels,
-        conv_op_metatypes=GENERAL_CONV_LAYER_METATYPES,
-        linear_op_metatypes=LINEAR_LAYER_METATYPES)
+        output_channels=tmp_out_channels)
     assert (cur_flops, cur_params_num) == (ref_flops, ref_params_num)
 
 
