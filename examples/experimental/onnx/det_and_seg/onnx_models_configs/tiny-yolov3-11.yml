@@ -31,3 +31,8 @@ models:
           - type: coco_precision
             max_detections: 100
             threshold: .5:.05:.95
+
+    ignored_scopes: [
+      "{re}TFNodes/yolo_evaluation_layer_*",
+      "Add__375"
+    ]
