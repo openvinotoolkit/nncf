@@ -122,21 +122,3 @@ def collect_output_shapes(graph: NNCFGraph) -> Dict[NNCFNodeName, List[int]]:
             nncf_logger.error("Node %s have no output edge in NNCFGraph", node.node_name)
             modules_out_shapes[node.node_name] = node.layer_attributes.out_features
     return modules_out_shapes
-
-
-def collect_input_shapes(graph: NNCFGraph) -> Dict[NNCFNodeName, List[int]]:
-    """
-    Collects input dimension shapes for fully connected layers from the connected edges in the NNCFGraph.
-
-    :param graph: NNCFGraph.
-    :return: Dictionary of input dimension shapes. E.g {node_name: (height, width)}
-    """
-    modules_in_shapes = {}
-    for node in graph.get_nodes_by_types([v.op_func_name for v in NNCF_LINEAR_MODULES_DICT]):
-        in_edge = graph.get_input_edges(node)[0]
-        in_shape = in_edge.tensor_shape
-        if len(in_shape) == 1:
-            modules_in_shapes[node.node_name] = in_shape[0]
-        else:
-            modules_in_shapes[node.node_name] = in_shape[1:]
-    return modules_in_shapes

@@ -70,7 +70,6 @@ from nncf.torch.pruning.filter_pruning.functions import tensor_l2_normalizer
 from nncf.torch.pruning.filter_pruning.global_ranking.legr import LeGR
 from nncf.torch.pruning.filter_pruning.layers import FilterPruningMask
 from nncf.torch.pruning.structs import PrunedModuleInfo
-from nncf.torch.pruning.utils import collect_input_shapes
 from nncf.torch.pruning.utils import collect_output_shapes
 from nncf.torch.pruning.utils import init_output_masks_in_graph
 from nncf.torch.structures import LeGRInitArgs, DistributedCallbacksArgs
@@ -265,7 +264,6 @@ class FilterPruningController(BasePruningAlgoController):
     def _init_module_channels_and_shapes(self):
         self._modules_in_channels = {}  # type: Dict[NNCFNodeName, int]
         self._modules_out_channels = {}  # type: Dict[NNCFNodeName, int]
-        self._modules_in_shapes = {}  # type: Dict[NNCFNodeName, List[int]]
         self._modules_out_shapes = {}  # type: Dict[NNCFNodeName, List[int]]
 
     def _init_pruned_modules_params(self):
@@ -284,10 +282,9 @@ class FilterPruningController(BasePruningAlgoController):
     def flops_count_init(self) -> None:
         graph = self._model.get_original_graph()
         self._modules_out_shapes = collect_output_shapes(graph)
-        self._modules_in_shapes = collect_input_shapes(graph)
 
         self.nodes_flops, self.nodes_params_num = \
-            count_flops_and_weights_per_node(graph, self._modules_in_shapes, self._modules_out_shapes,
+            count_flops_and_weights_per_node(graph, self._modules_out_shapes,
                                              conv_op_metatypes=GENERAL_CONV_LAYER_METATYPES,
                                              linear_op_metatypes=LINEAR_LAYER_METATYPES)
 
@@ -308,7 +305,6 @@ class FilterPruningController(BasePruningAlgoController):
                 pruning_groups_next_nodes=self.next_nodes)
 
         return count_flops_and_weights(self._model.get_original_graph(),
-                                       self._modules_in_shapes,
                                        self._modules_out_shapes,
                                        input_channels=tmp_in_channels,
                                        output_channels=tmp_out_channels,
@@ -569,7 +565,6 @@ class FilterPruningController(BasePruningAlgoController):
                 tmp_in_channels[node_id] -= 1
 
             flops, params_num = count_flops_and_weights(self._model.get_original_graph(),
-                                                        self._modules_in_shapes,
                                                         self._modules_out_shapes,
                                                         input_channels=tmp_in_channels,
                                                         output_channels=tmp_out_channels,
@@ -649,12 +644,12 @@ class FilterPruningController(BasePruningAlgoController):
             pruning_groups_next_nodes=self.next_nodes)
 
         self.current_filters_num = count_filters_num(self._model.get_original_graph(),
-                                                     op_metatypes=GENERAL_CONV_LAYER_METATYPES,
+                                                     op_metatypes=GENERAL_CONV_LAYER_METATYPES +
+                                                     LINEAR_LAYER_METATYPES,
                                                      output_channels=tmp_out_channels)
 
         self.current_flops, self.current_params_num = \
             count_flops_and_weights(self._model.get_original_graph(),
-                                    self._modules_in_shapes,
                                     self._modules_out_shapes,
                                     input_channels=tmp_in_channels,
                                     output_channels=tmp_out_channels,

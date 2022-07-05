@@ -41,7 +41,6 @@ from nncf.torch.graph.operator_metatypes import PTDepthwiseConv2dSubtype
 from nncf.torch.graph.operator_metatypes import PTDepthwiseConv3dSubtype
 from nncf.torch.graph.operator_metatypes import PTLinearMetatype
 from nncf.torch.nncf_network import NNCFNetwork
-from nncf.torch.pruning.utils import collect_input_shapes
 from nncf.torch.pruning.utils import collect_output_shapes
 
 SubnetConfig = OrderedDictType[ElasticityDim, ElasticityConfig]
@@ -238,7 +237,6 @@ class MultiElasticityHandler(ElasticityHandler):
 
         graph = self._target_model.get_graph()
         modules_out_shapes = collect_output_shapes(graph)
-        modules_in_shapes = collect_input_shapes(graph)
 
         kernel_sizes = None
         if self.kernel_handler is not None:
@@ -254,7 +252,6 @@ class MultiElasticityHandler(ElasticityHandler):
 
         flops_pers_node, num_weights_per_node = count_flops_and_weights_per_node(
             graph=graph,
-            input_shapes=modules_in_shapes,
             output_shapes=modules_out_shapes,
             input_channels=input_width_values,
             output_channels=output_width_values,
