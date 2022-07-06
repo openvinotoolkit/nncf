@@ -303,7 +303,7 @@ After benchmark is done, outputs are located in `/output` which is a mounted dir
 | MaskRCNN-12-inst-seg | NaN               | NaN               | NaN                       | 34.27             | NaN               | NaN                |
 | ResNet101-DUC-12     | 904.88            | 435.51            | 2.08                      | 71.2              | 70.36             | 0.84               |
 | fcn-resnet50-12      | 250.28            | 400.34            | 0.63                      | 38.31             | 38.14             | 0.17               |
-| retinanet-9          | 110.18            | NaN               | NaN                       | 18.45             | NaN               | NaN                |
+| retinanet-9          | 110.18            | 38.05             | 2.90                      | 18.45             | 18.39             | 0.06                |
 | ssd-12               | 205.84            | NaN               | NaN                       | 22.91             | NaN               | NaN                |
 | tiny-yolov3-11       | 9.87              | NaN               | NaN                       | 8.68              | 7.97              | NaN                |
 | tinyyolov2-8         | 10.48             | 6.06              | 1.73                      | 32.34             | 31.78             | 0.56               |
