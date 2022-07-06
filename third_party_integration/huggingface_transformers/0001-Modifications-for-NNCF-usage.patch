@@ -84,7 +84,7 @@ index 0c002deeb..f9e4f4171 100755
  
      # Preprocessing the datasets.
      # First we tokenize all the texts.
-@@ -444,6 +437,59 @@ def main():
+@@ -444,6 +437,51 @@ def main():
          if data_args.max_eval_samples is not None:
              eval_dataset = eval_dataset.select(range(data_args.max_eval_samples))
  
@@ -133,6 +133,21 @@ index 0c002deeb..f9e4f4171 100755
 +
 +    model.resize_token_embeddings(len(tokenizer))
 +
+     # Initialize our Trainer
+     trainer = Trainer(
+         model=model,
+@@ -453,6 +491,7 @@ def main():
+         tokenizer=tokenizer,
+         # Data collator will default to DataCollatorWithPadding, so we change it.
+         data_collator=default_data_collator,
++        compression_ctrl=compression_ctrl
+     )
+ 
+     # Training
+@@ -476,6 +515,14 @@ def main():
+         trainer.save_metrics("train", metrics)
+         trainer.save_state()
+ 
 +    if training_args.to_onnx:
 +        if nncf_config is not None:
 +           compression_ctrl.export_model(training_args.to_onnx)
@@ -141,17 +156,9 @@ index 0c002deeb..f9e4f4171 100755
 +           dummy_tensor = torch.ones([1, config.n_positions], dtype=torch.long)
 +           onnx.export(model, dummy_tensor, training_args.to_onnx)
 +
-     # Initialize our Trainer
-     trainer = Trainer(
-         model=model,
-@@ -453,6 +499,7 @@ def main():
-         tokenizer=tokenizer,
-         # Data collator will default to DataCollatorWithPadding, so we change it.
-         data_collator=default_data_collator,
-+        compression_ctrl=compression_ctrl
-     )
- 
-     # Training
+     # Evaluation
+     if training_args.do_eval:
+         logger.info("*** Evaluate ***")
 diff --git a/examples/pytorch/question-answering/run_qa.py b/examples/pytorch/question-answering/run_qa.py
 index b8559bb72..0d15131c2 100755
 --- a/examples/pytorch/question-answering/run_qa.py
@@ -199,7 +206,7 @@ index b8559bb72..0d15131c2 100755
  
      # Tokenizer check: this script requires a fast tokenizer.
      if not isinstance(tokenizer, PreTrainedTokenizerFast):
-@@ -555,6 +556,51 @@ def main():
+@@ -555,6 +556,41 @@ def main():
      def compute_metrics(p: EvalPrediction):
          return metric.compute(predictions=p.predictions, references=p.label_ids)
  
@@ -238,6 +245,21 @@ index b8559bb72..0d15131c2 100755
 +    else:
 +        compression_ctrl, model = retval
 +
+     # Initialize our Trainer
+     trainer = QuestionAnsweringTrainer(
+         model=model,
+@@ -566,6 +602,7 @@ def main():
+         data_collator=data_collator,
+         post_process_function=post_processing_function,
+         compute_metrics=compute_metrics,
++        compression_ctrl=compression_ctrl
+     )
+ 
+     # Training
+@@ -588,6 +625,16 @@ def main():
+         trainer.save_metrics("train", metrics)
+         trainer.save_state()
+ 
 +    if training_args.to_onnx:
 +    # Expecting the following forward signature:
 +    # (input_ids, attention_mask, token_type_ids, ...)
@@ -248,17 +270,9 @@ index b8559bb72..0d15131c2 100755
 +            dummy_tensor = torch.ones([1, 384], dtype=torch.long)
 +            onnx.export(model, (dummy_tensor, dummy_tensor, dummy_tensor), training_args.to_onnx)
 +
-     # Initialize our Trainer
-     trainer = QuestionAnsweringTrainer(
-         model=model,
-@@ -566,6 +612,7 @@ def main():
-         data_collator=data_collator,
-         post_process_function=post_processing_function,
-         compute_metrics=compute_metrics,
-+        compression_ctrl=compression_ctrl
-     )
- 
-     # Training
+     # Evaluation
+     if training_args.do_eval:
+         logger.info("*** Evaluate ***")
 diff --git a/examples/pytorch/text-classification/run_glue.py b/examples/pytorch/text-classification/run_glue.py
 index 6e66af923..bfb9503f5 100755
 --- a/examples/pytorch/text-classification/run_glue.py
@@ -323,7 +337,7 @@ index 6e66af923..bfb9503f5 100755
  
      if data_args.max_seq_length > tokenizer.model_max_length:
          logger.warning(
-@@ -414,6 +411,87 @@ def main():
+@@ -414,6 +411,74 @@ def main():
          if data_args.max_train_samples is not None:
              train_dataset = train_dataset.select(range(data_args.max_train_samples))
  
@@ -395,23 +409,10 @@ index 6e66af923..bfb9503f5 100755
 +    else:
 +        compression_ctrl, model = retval
 +
-+    if training_args.to_onnx:
-+    # Expecting the following forward signature:
-+    # (input_ids, attention_mask, token_type_ids, ...)
-+        if nncf_config is not None:
-+            compression_ctrl.export_model(training_args.to_onnx)
-+        else:
-+            model.to('cpu')
-+            import torch
-+            from torch import onnx
-+            dummy_tensor = torch.ones([1, 128], dtype=torch.long)
-+            onnx.export(model, (dummy_tensor, dummy_tensor, dummy_tensor),
-+                        training_args.to_onnx, opset_version=10)
-+
      if training_args.do_eval:
          if "validation" not in raw_datasets and "validation_matched" not in raw_datasets:
              raise ValueError("--do_eval requires a validation dataset")
-@@ -471,8 +549,13 @@ def main():
+@@ -471,8 +536,13 @@ def main():
          compute_metrics=compute_metrics,
          tokenizer=tokenizer,
          data_collator=data_collator,
@@ -425,6 +426,26 @@ index 6e66af923..bfb9503f5 100755
      # Training
      if training_args.do_train:
          checkpoint = None
+@@ -493,6 +563,19 @@ def main():
+         trainer.save_metrics("train", metrics)
+         trainer.save_state()
+ 
++    if training_args.to_onnx:
++    # Expecting the following forward signature:
++    # (input_ids, attention_mask, token_type_ids, ...)
++        if nncf_config is not None:
++            compression_ctrl.export_model(training_args.to_onnx)
++        else:
++            model.to('cpu')
++            import torch
++            from torch import onnx
++            dummy_tensor = torch.ones([1, 128], dtype=torch.long)
++            onnx.export(model, (dummy_tensor, dummy_tensor, dummy_tensor),
++                        training_args.to_onnx, opset_version=10)
++
+     # Evaluation
+     if training_args.do_eval:
+         logger.info("*** Evaluate ***")
 diff --git a/examples/pytorch/text-classification/run_xnli.py b/examples/pytorch/text-classification/run_xnli.py
 index d7e5dfd83..6947317f8 100755
 --- a/examples/pytorch/text-classification/run_xnli.py
@@ -468,7 +489,7 @@ index d7e5dfd83..6947317f8 100755
  
      # Preprocessing the datasets
      # Padding strategy
-@@ -331,6 +330,56 @@ def main():
+@@ -331,6 +330,46 @@ def main():
      else:
          data_collator = None
  
@@ -512,20 +533,10 @@ index d7e5dfd83..6947317f8 100755
 +    else:
 +        compression_ctrl, model = retval
 +
-+    if training_args.to_onnx:
-+        # Expecting the following forward signature:
-+        # (input_ids, attention_mask, token_type_ids, ...)
-+        if nncf_config is not None:
-+            compression_ctrl.export_model(training_args.to_onnx)
-+        else:
-+            model.to('cpu')
-+            dummy_tensor = torch.ones([1, training_args.max_seq_length], dtype=torch.long)
-+            torch.onnx.export(model, (dummy_tensor, dummy_tensor, dummy_tensor), training_args.to_onnx)
-+
      # Initialize our Trainer
      trainer = Trainer(
          model=model,
-@@ -340,8 +389,13 @@ def main():
+@@ -340,8 +379,13 @@ def main():
          compute_metrics=compute_metrics,
          tokenizer=tokenizer,
          data_collator=data_collator,
@@ -539,6 +550,23 @@ index d7e5dfd83..6947317f8 100755
      # Training
      if training_args.do_train:
          checkpoint = None
+@@ -362,6 +406,16 @@ def main():
+         trainer.save_metrics("train", metrics)
+         trainer.save_state()
+ 
++    if training_args.to_onnx:
++        # Expecting the following forward signature:
++        # (input_ids, attention_mask, token_type_ids, ...)
++        if nncf_config is not None:
++            compression_ctrl.export_model(training_args.to_onnx)
++        else:
++            model.to('cpu')
++            dummy_tensor = torch.ones([1, training_args.max_seq_length], dtype=torch.long)
++            torch.onnx.export(model, (dummy_tensor, dummy_tensor, dummy_tensor), training_args.to_onnx)
++
+     # Evaluation
+     if training_args.do_eval:
+         logger.info("*** Evaluate ***")
 diff --git a/examples/pytorch/token-classification/run_ner.py b/examples/pytorch/token-classification/run_ner.py
 index 65c26cd9e..f3cf0f857 100755
 --- a/examples/pytorch/token-classification/run_ner.py
@@ -631,7 +659,7 @@ index 65c26cd9e..f3cf0f857 100755
  
      # Tokenizer check: this script requires a fast tokenizer.
      if not isinstance(tokenizer, PreTrainedTokenizerFast):
-@@ -432,6 +444,65 @@ def main():
+@@ -432,6 +444,54 @@ def main():
      # Data collator
      data_collator = DataCollatorForTokenClassification(tokenizer, pad_to_multiple_of=8 if training_args.fp16 else None)
  
@@ -683,6 +711,21 @@ index 65c26cd9e..f3cf0f857 100755
 +        compression_ctrl, model = retval
 +
 +
+     # Metrics
+     metric = load_metric("seqeval")
+ 
+@@ -477,6 +537,7 @@ def main():
+         tokenizer=tokenizer,
+         data_collator=data_collator,
+         compute_metrics=compute_metrics,
++        compression_ctrl=compression_ctrl
+     )
+ 
+     # Training
+@@ -499,6 +560,17 @@ def main():
+         trainer.save_metrics("train", metrics)
+         trainer.save_state()
+ 
 +    if training_args.to_onnx:
 +    # Expecting the following forward signature:
 +    # (input_ids, attention_mask, token_type_ids, ...)
@@ -694,17 +737,9 @@ index 65c26cd9e..f3cf0f857 100755
 +            onnx.export(model, (dummy_tensor, dummy_tensor, dummy_tensor), training_args.to_onnx,
 +                        opset_version=10)
 +
-     # Metrics
-     metric = load_metric("seqeval")
- 
-@@ -477,6 +548,7 @@ def main():
-         tokenizer=tokenizer,
-         data_collator=data_collator,
-         compute_metrics=compute_metrics,
-+        compression_ctrl=compression_ctrl
-     )
- 
-     # Training
+     # Evaluation
+     if training_args.do_eval:
+         logger.info("*** Evaluate ***")
 diff --git a/nncf_bert_config_conll.json b/nncf_bert_config_conll.json
 new file mode 100644
 index 000000000..0f73fe368
