@@ -11,14 +11,20 @@
  limitations under the License.
 """
 
+# pylint: disable=no-member, redefined-outer-name, no-name-in-module
+
+from onnxruntime.capi.onnxruntime_pybind11_state import Fail
 from dataclasses import dataclass
 from typing import List
+from contextlib import nullcontext as does_not_raise
 
 import numpy as np
 import onnx
 import pytest
 
-#pylint: disable=no-member
+from tests.onnx.quantization.common import infer_model, min_max_quantize_model
+
+
 def create_initializer_tensor(
         name: str,
         tensor_array: np.ndarray,
@@ -41,7 +47,7 @@ class TestCase:
 
 
 @pytest.fixture
-def fixture_fxt_reshape_weight_graph(name='fxt_reshape_weight_graph'):
+def fxt_reshape_weight_graph():
     # This graph pattern is in inception-v1-12:
     # https://github.com/onnx/models/tree/main/vision/classification/inception_and_googlenet/inception_v1
     #
@@ -120,10 +126,107 @@ def fixture_fxt_reshape_weight_graph(name='fxt_reshape_weight_graph'):
     yield TestCase(input_shape=[1, model_input_channels], model=model_def)
 
 
-#def test_fxt_reshape_weight_graph(fxt_reshape_weight_graph: TestCase):
-#    input_shape = fxt_reshape_weight_graph.input_shape
-#    model = fxt_reshape_weight_graph.model
-#
-#    # TODO: PTQ succeeds, but this raises errors. Need to revisit.
-#    # onnx.save(quantized_model, "tmp.onnx")
-#    # infer_model(input_shape, quantized_model)
+@pytest.fixture
+def fxt_weight_sharing_graph():
+    # This graph pattern is in retinanet-9:
+    # https://github.com/onnx/models/tree/main/vision/object_detection_segmentation/retinanet
+    #
+    #             X
+    #             |
+    #           ReLU
+    #          /    \
+    # W -> Conv1    Conv2 <- W
+    #          \    /
+    #           Add
+    #            |
+    #            Y
+    input_shape = output_shape = [1, 1, 5, 5]
+
+    # IO tensors (ValueInfoProto).
+    model_input_name = "X"
+    X = onnx.helper.make_tensor_value_info(model_input_name,
+                                           onnx.TensorProto.FLOAT,
+                                           input_shape)
+    model_output_name = "Y"
+    Y = onnx.helper.make_tensor_value_info(model_output_name,
+                                           onnx.TensorProto.FLOAT,
+                                           output_shape)
+
+    W = np.array([[[[1., 1., 1.],  # (1, 1, 3, 3) tensor for convolution weights
+                    [1., 1., 1.],
+                    [1., 1., 1.]]]]).astype(np.float32)
+
+    w_tensor = create_initializer_tensor(
+        name="W",
+        tensor_array=W,
+        data_type=onnx.TensorProto.FLOAT)
+
+    relu_x_node = onnx.helper.make_node(
+        "Relu",
+        inputs=["X"],
+        outputs=["relu_X"],
+    )
+
+    conv1_node = onnx.helper.make_node(
+        name="Conv1",
+        op_type="Conv",
+        inputs=["relu_X", "W"],
+        outputs=["conv_1"],
+        kernel_shape=[3, 3],
+        # Default values for other attributes: strides=[1, 1], dilations=[1, 1], groups=1
+        pads=[1, 1, 1, 1],
+    )
+
+    conv2_node = onnx.helper.make_node(
+        name="Conv2",
+        op_type="Conv",
+        inputs=["relu_X", "W"],
+        outputs=["conv_2"],
+        kernel_shape=[3, 3],
+        # Default values for other attributes: strides=[1, 1], dilations=[1, 1], groups=1
+        pads=[1, 1, 1, 1],
+    )
+
+    add_node = onnx.helper.make_node(
+        op_type="Add",
+        inputs=["conv_1", "conv_2"],
+        outputs=["Y"],
+    )
+
+    graph_def = onnx.helper.make_graph(
+        nodes=[relu_x_node, conv1_node, conv2_node, add_node],
+        name="Net",
+        inputs=[X],
+        outputs=[Y],
+        initializer=[w_tensor],
+    )
+
+    # Create the model (ModelProto)
+    model_def = onnx.helper.make_model(graph_def, producer_name="onnx-example")
+    model_def.opset_import[0].version = 13
+
+    model_def = onnx.shape_inference.infer_shapes(model_def)
+
+    onnx.checker.check_model(model_def)
+
+    yield TestCase(input_shape=input_shape, model=model_def)
+
+
+def min_max_quantize_model_for_fxt_graph(fxt_graph: TestCase):
+    input_shape = fxt_graph.input_shape
+    model = fxt_graph.model
+
+    with does_not_raise():
+        quantized_model = min_max_quantize_model(input_shape, model)
+        infer_model(input_shape, quantized_model)
+
+
+@pytest.mark.xfail(
+    raises=Fail,
+    reason="min_max_quantize_model() succeeds, but infer_model() fails.")
+def test_fxt_reshape_weight_graph(fxt_reshape_weight_graph: TestCase):
+    min_max_quantize_model_for_fxt_graph(fxt_reshape_weight_graph)
+
+
+def test_fxt_weight_sharing_graph(fxt_weight_sharing_graph: TestCase):
+    min_max_quantize_model_for_fxt_graph(fxt_weight_sharing_graph)
