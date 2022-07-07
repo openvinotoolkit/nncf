@@ -89,7 +89,12 @@ class GraphConverter:
                     )
         # Add Input Nodes
         for i, _input in enumerate(onnx_graph.get_model_inputs()):
-            input_shape = onnx_graph.get_tensor_shape(_input)
+            try:
+                input_shape = onnx_graph.get_tensor_shape(_input)
+            except RuntimeError as err:
+                nncf_logger.error(err)
+                nncf_logger.error('The default tensor shape will be set.')
+                input_shape = GraphConverter.DEFAULT_TENSOR_SHAPE
             input_node = nncf_graph.add_nncf_node(node_name=MODEL_INPUT_OP_NAME + '_' + str(i),
                                                   node_type=NNCFGraphNodeType.INPUT_NODE,
                                                   node_metatype=InputNoopMetatype,
@@ -113,7 +118,12 @@ class GraphConverter:
                 )
         # Add Output Nodes
         for i, _output in enumerate(onnx_graph.get_model_outputs()):
-            output_shape = onnx_graph.get_tensor_shape(_output)
+            try:
+                output_shape = onnx_graph.get_tensor_shape(_output)
+            except RuntimeError as err:
+                nncf_logger.error(err)
+                nncf_logger.error('The default tensor shape will be set.')
+                output_shape = GraphConverter.DEFAULT_TENSOR_SHAPE
             output_node = nncf_graph.add_nncf_node(node_name=MODEL_OUTPUT_OP_NAME + '_' + str(i),
                                                    node_type=NNCFGraphNodeType.OUTPUT_NODE,
                                                    node_metatype=OutputNoopMetatype,

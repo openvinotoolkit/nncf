@@ -305,10 +305,10 @@ After benchmark is done, outputs are located in `/output` which is a mounted dir
 | fcn-resnet50-12      | 250.28            | 400.34            | 0.63                      | 38.31             | 38.14             | 0.17               |
 | retinanet-9          | 110.18            | NaN               | NaN                       | 18.45             | NaN               | NaN                |
 | ssd-12               | 205.84            | NaN               | NaN                       | 22.91             | NaN               | NaN                |
-| tiny-yolov3-11       | NaN               | NaN               | NaN                       | 8.68              | NaN               | NaN                |
+| tiny-yolov3-11       | 9.87              | NaN               | NaN                       | 8.68              | 7.97              | NaN                |
 | tinyyolov2-8         | 10.48             | 6.06              | 1.73                      | 32.34             | 31.78             | 0.56               |
 | yolov2-coco-9        | 24.06             | 14.8              | 1.63                      | 21.7              | 22.17             | \-0.47             |
-| yolov3-12            | NaN               | NaN               | NaN                       | 31.08             | NaN               | NaN                |
+| yolov3-12            | 40.09             | NaN               | NaN                       | 31.08             | 29.01             | NaN                |
 | yolov4               | 41.08             | NaN               | NaN                       | 14.28             | NaN               | NaN                |
 
 <details>
@@ -403,6 +403,7 @@ After benchmark is done, outputs are located in `/output` which is a mounted dir
 
 * `nan` means that NNCF PTQ API failed to generate proper quantized onnx model. We are working on these defects.
 * `MaskRCNN-12` can be used two task types detection (`det`) and instance segmentation (`inst-seg`).
+* `tiny-yolov3-11` and `yolov3-12` models can be quantized by PTQ API, but the quantized models cannot be run on `OpenVINOExecutionProvider(onnxruntime-openvino==1.11.0)`. Therefore, we obtain the model accuracy by running those models on `CPUExecutionProvider`.
 
 # Support ONNXRuntime PTQ for Yolov5 models
 

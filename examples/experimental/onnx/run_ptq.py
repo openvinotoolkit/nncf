@@ -115,7 +115,10 @@ if __name__ == '__main__':
             args.output_model_dir, fname + "-quantized.onnx")
 
         onnx_model_path = str(onnx_model_path)
+
+        ignored_scopes = config_entry.get("ignored_scopes", None)
+
         run(onnx_model_path,
             output_model_path,
-            dataset
-            )
+            dataset,
+            ignored_scopes)
