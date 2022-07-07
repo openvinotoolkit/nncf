@@ -25,6 +25,7 @@ from openvino.tools.accuracy_checker.config import ConfigReader
 from openvino.tools.accuracy_checker.argparser import build_arguments_parser
 from openvino.tools.accuracy_checker.dataset import Dataset
 from openvino.tools.accuracy_checker.evaluators import ModelEvaluator
+from nncf.experimental.onnx.tensor import ONNXNNCFTensor
 
 import nncf.experimental.post_training.api.dataset as ptq_api_dataset
 from nncf.experimental.onnx.engine import ONNXEngine
@@ -33,23 +34,21 @@ from time import time
 import pandas as pd
 
 
+#pylint: disable=redefined-outer-name
 class OpenVINOAccuracyCheckerDataset(ptq_api_dataset.Dataset):
-    def __init__(self, evaluator: ModelEvaluator, batch_size, shuffle):
+    def __init__(self, model_evaluator: ModelEvaluator, batch_size, shuffle):
         super().__init__(batch_size, shuffle)
-        self.model_evaluator = evaluator
+        self.model_evaluator = model_evaluator
 
     def __getitem__(self, item):
         _, batch_annotation, batch_input, _ = self.model_evaluator.dataset[item]
         filled_inputs, _, _ = self.model_evaluator._get_batch_input(
             batch_annotation, batch_input)
 
-        assert len(filled_inputs) == 1
-        dummy_target = 0
+        if len(filled_inputs) == 1:
+            return {k: ONNXNNCFTensor(np.squeeze(v, axis=0)) for k, v in filled_inputs[0].items()}
 
-        for _, v in filled_inputs[0].items():
-            return np.squeeze(v, axis=0), dummy_target
-
-        raise RuntimeError("filled_inputs has no value.")
+        raise Exception("len(filled_inputs) should be one.")
 
     def __len__(self):
         return len(self.model_evaluator.dataset)
@@ -78,7 +77,7 @@ def run(onnx_model_path: str, output_file_path: str, dataset: Dataset,
 
     elapsed_times = []
 
-    for input_data, _ in tqdm(sampler):
+    for input_data in tqdm(sampler):
         start_time = time()
         engine.infer(input_data)
         elapsed_times += [1000.0 * (time() - start_time)]

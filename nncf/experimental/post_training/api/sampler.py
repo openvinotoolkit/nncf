@@ -12,9 +12,10 @@
 """
 from abc import ABC
 from abc import abstractmethod
+from typing import Iterator
 
 
-from nncf.experimental.post_training.api.dataset import Dataset
+from nncf.experimental.post_training.api.dataset import Dataset, NNCFData
 
 
 class Sampler(ABC):
@@ -30,9 +31,9 @@ class Sampler(ABC):
         self.batch_indices = list(range(0, max_samples_len + 1, self.batch_size))
 
     @abstractmethod
-    def __iter__(self):
+    def __iter__(self) -> Iterator[NNCFData]:
         pass
 
     @abstractmethod
-    def __len__(self):
+    def __len__(self) -> int:
         pass

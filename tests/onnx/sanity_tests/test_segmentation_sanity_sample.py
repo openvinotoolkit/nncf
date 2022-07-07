@@ -23,6 +23,7 @@ import onnxruntime as rt
 import numpy as np
 
 from examples.experimental.onnx.semantic_segmentation.onnx_ptq_segmentation import run
+from nncf.experimental.onnx.tensor import ONNXNNCFTensor
 from nncf.experimental.post_training.api.dataset import Dataset
 from tests.common.helpers import TEST_ROOT
 
@@ -37,20 +38,22 @@ INPUT_SHAPES = [
 ]
 
 
-class TestDataloader(Dataset):
-    def __init__(self, samples: List[Tuple[np.ndarray, int]]):
+class TestDataset(Dataset):
+    def __init__(self, samples: List[Tuple[np.ndarray, int]], input_key: str):
         super().__init__(shuffle=False)
         self.samples = samples
+        self.input_key = input_key
 
     def __getitem__(self, item):
-        return self.samples[item]
+        inputs, targets = self.samples[item]
+        return {self.input_key: ONNXNNCFTensor(inputs), "targets": ONNXNNCFTensor(targets)}
 
     def __len__(self):
         return 1
 
 
-def mock_dataloader_creator(dataset_name, dataset_path, input_shape):
-    return TestDataloader([(np.zeros(input_shape[1:]), 0), ])
+def mock_dataloader_creator(dataset_name, dataset_path, input_key, input_shape):
+    return TestDataset([(np.zeros(input_shape[1:], dtype=np.float32), 0), ], input_key)
 
 
 @pytest.mark.parametrize(("model_name, input_shape"),

@@ -25,6 +25,7 @@ import onnxruntime as rt
 import numpy as np
 
 from examples.experimental.onnx.classification.onnx_ptq_classification import run
+from nncf.experimental.onnx.tensor import ONNXNNCFTensor
 from nncf.experimental.post_training.api.dataset import Dataset
 from tests.common.helpers import TEST_ROOT
 
@@ -63,19 +64,21 @@ TEST_CASES = [
 
 
 class TestDataset(Dataset):
-    def __init__(self, samples: List[Tuple[np.ndarray, int]]):
+    def __init__(self, samples: List[Tuple[np.ndarray, int]], input_key: str):
         super().__init__(shuffle=False)
         self.samples = samples
+        self.input_key = input_key
 
     def __getitem__(self, item):
-        return self.samples[item]
+        inputs, targets = self.samples[item]
+        return {self.input_key: ONNXNNCFTensor(inputs), "targets": ONNXNNCFTensor(targets)}
 
     def __len__(self):
         return 1
 
 
-def mock_dataset_creator(dataset_path, input_shape, batch_size, shuffle):
-    return TestDataset([(np.zeros(input_shape[1:]), 0), ])
+def mock_dataset_creator(dataset_path, input_key, input_shape, batch_size, shuffle):
+    return TestDataset([(np.zeros(input_shape[1:], dtype=np.float32), 0), ], input_key=input_key)
 
 
 @pytest.mark.parametrize(("model_name, model, input_shape"), TEST_CASES)

@@ -13,37 +13,38 @@
 
 from typing import List
 from typing import Union
-
-import torch
+from collections import defaultdict
 
 from nncf.common.utils.logger import logger as nncf_logger
+from nncf.experimental.onnx.statistics.collectors import ONNXNNCFCollectorTensorProcessor
 
-from nncf.experimental.post_training.api.dataset import Dataset
+from nncf.experimental.post_training.api.dataset import Dataset, NNCFData
 
 from nncf.experimental.post_training.samplers import BatchSampler
 from nncf.experimental.post_training.samplers import RandomBatchSampler
 
 
-class ONNXBatchSampler(BatchSampler):
-    def form_batch(self, start_i: int, end_i: int):
-        tensors = []  # type: List[torch.tensor]
-        targets = []  # type: List[int]
-        for i in range(start_i, end_i):
-            tensors.append(self.dataset[i][0])
-            targets.append(self.dataset[i][1])
+def _post_process(nncf_data_list: List[NNCFData]) -> NNCFData:
+    outputs = defaultdict(list)
 
-        return self._post_process(tensors, targets)
+    for nncf_data in nncf_data_list:
+        for k, v in nncf_data.items():
+            outputs[k] += [v]
+
+    for k in outputs:
+        outputs[k] = ONNXNNCFCollectorTensorProcessor.stack(outputs[k])
+
+    return outputs
+
+
+class ONNXBatchSampler(BatchSampler):
+    def form_batch(self, start_i: int, end_i: int) -> NNCFData:
+        return _post_process([self.dataset[i] for i in range(start_i, end_i)])
 
 
 class ONNXRandomBatchSampler(RandomBatchSampler):
-    def form_batch(self, start_i: int, end_i: int):
-        tensors = []  # type: List[torch.tensor]
-        targets = []  # type: List[int]
-        for i in range(start_i, end_i):
-            tensors.append(self.dataset[self.random_permutated_indices[i]][0])
-            targets.append(self.dataset[self.random_permutated_indices[i]][1])
-
-        return self._post_process(tensors, targets)
+    def form_batch(self, start_i: int, end_i: int) -> NNCFData:
+        return _post_process([self.dataset[self.random_permutated_indices[i]] for i in range(start_i, end_i)])
 
 
 def create_onnx_sampler(dataset: Dataset,

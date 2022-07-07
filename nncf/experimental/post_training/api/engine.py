@@ -18,10 +18,10 @@ from tqdm import tqdm
 
 from nncf.common.tensor_statistics.collectors import \
     TensorStatisticCollectorBase
+from nncf.experimental.post_training.api.dataset import NNCFData
 from nncf.experimental.post_training.api.sampler import Sampler
 
 ModelType = TypeVar('ModelType')
-TensorType = TypeVar('TensorType')
 MetricType = TypeVar('MetricType')
 
 
@@ -95,12 +95,10 @@ class Engine(ABC):
                                'while the model was not set.')
         sampler = self.get_sampler()
 
-        for sample in tqdm(sampler):
-            input_data, _ = sample
-            output_tensors, model_outputs = self.infer(input_data)
-            for out_id, model_output in enumerate(model_outputs):
-                output_tensor = output_tensors[out_id]
-                output_name = model_output.name
+        for input_data in tqdm(sampler):
+            outputs = self.infer(input_data)
+
+            for output_name, output_tensor in outputs.items():
                 if output_name in statistics_layout:
                     statistics_layout[output_name].register_input(output_tensor)
 
@@ -118,14 +116,13 @@ class Engine(ABC):
 
         # TODO (Nikita Malinin): Add per-sample metrics calculation
         sampler = self.get_sampler()
-        for sample in sampler:
-            input_data, target = sample
-            output_tensors, _ = self.infer(input_data)
-            self.metrics.update(output_tensors, target)
+        for input_data in sampler:
+            outputs = self.infer(input_data)
+            self.metrics.update(outputs, input_data)
         return self.metrics.avg_value
 
     @abstractmethod
-    def infer(self, input_data: TensorType) -> Dict[str, TensorType]:
+    def infer(self, input_data: NNCFData) -> NNCFData:
         """
         Runs model on the provided input_data.
         Returns the dictionary of model outputs by node names.

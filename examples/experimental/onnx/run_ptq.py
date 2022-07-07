@@ -17,6 +17,7 @@ from typing import Optional
 
 import numpy as np
 import onnx
+from nncf.experimental.onnx.tensor import ONNXNNCFTensor
 
 from nncf.experimental.post_training.compression_builder import CompressionBuilder
 from nncf.experimental.post_training.algorithms.quantization import PostTrainingQuantization
@@ -42,13 +43,10 @@ class OpenVINOAccuracyCheckerDataset(ptq_api_dataset.Dataset):
         filled_inputs, _, _ = self.model_evaluator._get_batch_input(
             batch_annotation, batch_input)
 
-        assert len(filled_inputs) == 1
-        dummy_target = 0
+        if len(filled_inputs) == 1:
+            return {k: ONNXNNCFTensor(np.squeeze(v, axis=0)) for k, v in filled_inputs[0].items()}
 
-        for _, v in filled_inputs[0].items():
-            return np.squeeze(v, axis=0), dummy_target
-
-        raise RuntimeError("filled_inputs has no value.")
+        raise Exception("len(filled_inputs) should be one.")
 
     def __len__(self):
         return len(self.model_evaluator.dataset)

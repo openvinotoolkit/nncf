@@ -11,8 +11,8 @@
  limitations under the License.
 """
 
-from typing import List
-from typing import Tuple
+from nncf.experimental.onnx.tensor import ONNXNNCFTensor
+from nncf.experimental.post_training.api.dataset import NNCFData
 
 from nncf.experimental.post_training.api.engine import Engine
 from nncf.experimental.onnx.samplers import create_onnx_sampler
@@ -33,6 +33,7 @@ class ONNXEngine(Engine):
         super().__init__()
         self._inputs_transforms = lambda input_data: input_data.astype(np.float32)
         self.sess = None
+        self.input_names = set()
         self.rt_session_options = rt_session_options
 
         # TODO: Do not force it to use CPUExecutionProvider
@@ -45,7 +46,7 @@ class ONNXEngine(Engine):
         # TODO (Nikita Malinin): Replace range calling with the max length variable
         return self.sampler if self.sampler else create_onnx_sampler(self.dataset, range(len(self.dataset)))
 
-    def set_model(self, model: str) -> None:
+    def set_model(self, model: onnx.ModelProto) -> None:
         """
         Creates ONNXRuntime InferenceSession for the onnx model with the location at 'model'.
 
@@ -56,7 +57,11 @@ class ONNXEngine(Engine):
             onnx.save(model, temporary_model.name)
             self.sess = rt.InferenceSession(temporary_model.name, **self.rt_session_options)
 
-    def infer(self, input_data: np.ndarray) -> Tuple[List[np.ndarray], List[str]]:
+        self.input_names.clear()
+        for inp in self.sess.get_inputs():
+            self.input_names.add(inp.name)
+
+    def infer(self, input_data: NNCFData) -> NNCFData:
         """
         Runs model on the provided input_data via ONNXRuntime InferenceSession.
         Returns the dictionary of model outputs by node names.
@@ -64,9 +69,11 @@ class ONNXEngine(Engine):
         :param input_data: inputs for the model transformed with the inputs_transforms
         :return output_data: models output after outputs_transforms
         """
-        # TODO (Nikita Malinin): Need to change input_data to Dict values by input names
-        input_name = self.sess.get_inputs()[0].name
-        output_tensors = self.sess.run([], {input_name: self._inputs_transforms(input_data)})
+        output_tensors = self.sess.run(
+            [], {k: v.tensor for k, v in input_data.items() if k in self.input_names})
         model_outputs = self.sess.get_outputs()
-        output_tensors = self._outputs_transforms(output_tensors)
-        return output_tensors, model_outputs
+
+        return {
+            output.name: ONNXNNCFTensor(tensor)
+            for tensor, output in zip(output_tensors, model_outputs)
+        }

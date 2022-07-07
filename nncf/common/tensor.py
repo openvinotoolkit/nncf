@@ -27,7 +27,7 @@ class NNCFTensor:
     def __init__(self, tensor: Optional[TensorType]):
         self._tensor = tensor
 
-    def __eq__(self, other: 'NNCFTensor') -> bool:
+    def __eq__(self, other: "NNCFTensor") -> bool:
         return self._tensor == other.tensor
 
     @property
