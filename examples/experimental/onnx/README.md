@@ -174,23 +174,23 @@ After benchmark is done, outputs are located in `/output` which is a mounted dir
 
 1. Classification models
 
-| name                  | FP32 latency (ms) | INT8 latency (ms) | Latency diff. (FP32/INT8) | FP32 accuracy (%) | INT8 accuracy (%) | Accuracy diff. (%) |
-| --------------------- | ----------------- | ----------------- | ------------------------- | ----------------- | ----------------- | ------------------ |
-| bvlcalexnet-12        | 6.65              | 2.91              | 2.29                      | 50.33             | 49.67             | 0.67               |
-| caffenet-12           | 6.75              | 2.81              | 2.4                       | 54                | 54                | 0                  |
-| densenet-12           | 12.7              | NaN               | NaN                       | 60                | NaN               | NaN                |
-| efficientnet-lite4-11 | 7.07              | 3.94              | 1.79                      | 77.67             | 78                | \-0.33             |
-| googlenet-12          | 6.52              | 5.48              | 1.19                      | 69                | 68.33             | 0.67               |
-| inception-v1-12       | 6.54              | 5.5               | 1.19                      | 67                | 67                | 0                  |
-| inception-v2-9        | 8.31              | NaN               | NaN                       | 0                 | NaN               | NaN                |
-| mobilenetv2-12        | 3.77              | 3.62              | 1.04                      | 73.33             | 71.33             | 2                  |
-| resnet50-v1-12        | 10.99             | 6.02              | 1.82                      | 73.33             | 72                | 1.33               |
-| resnet50-v2-7         | 13.23             | 5.32              | 2.49                      | 73.67             | 74                | \-0.33             |
-| shufflenet-9          | 5.05              | 6.14              | 0.82                      | 48                | 0                 | 48                 |
-| shufflenet-v2-12      | 3.88              | NaN               | NaN                       | 68.33             | NaN               | NaN                |
-| squeezenet1.0-12      | 2.63              | 2.56              | 1.03                      | 52.33             | 52.33             | 0                  |
-| vgg16-12              | 23.56             | 11.48             | 2.05                      | 71.67             | 70.67             | 1                  |
-| zfnet512-12           | 9.6               | 4.16              | 2.31                      | 57                | 57.67             | \-0.67             |
+| name                              | FP32 latency (ms) | INT8 latency (ms) | Latency diff. (FP32/INT8) | FP32 accuracy (%) | INT8 accuracy (%) | Accuracy diff. (%) |
+| --------------------------------- | ----------------- | ----------------- | ------------------------- | ----------------- | ----------------- | ------------------ |
+| bvlcalexnet-12                    | 6.65              | 2.91              | 2.29                      | 50.33             | 49.67             | 0.67               |
+| caffenet-12                       | 6.75              | 2.81              | 2.4                       | 54                | 54                | 0                  |
+| densenet-12 :cloud: :umbrella:    | 12.7              | NaN               | NaN                       | 60                | 4.67              | 55.33              |
+| efficientnet-lite4-11             | 7.07              | 3.94              | 1.79                      | 77.67             | 78                | \-0.33             |
+| googlenet-12                      | 6.52              | 5.48              | 1.19                      | 69                | 68.33             | 0.67               |
+| inception-v1-12                   | 6.54              | 5.5               | 1.19                      | 67                | 67                | 0                  |
+| inception-v2-9 :cloud: :umbrella: | 8.31              | NaN               | NaN                       | 0                 | NaN               | NaN                |
+| mobilenetv2-12                    | 3.77              | 3.62              | 1.04                      | 73.33             | 71.33             | 2                  |
+| resnet50-v1-12                    | 10.99             | 6.02              | 1.82                      | 73.33             | 72                | 1.33               |
+| resnet50-v2-7                     | 13.23             | 5.32              | 2.49                      | 73.67             | 74                | \-0.33             |
+| shufflenet-9 :umbrella:           | 5.05              | 6.14              | 0.82                      | 48                | 0                 | 48                 |
+| shufflenet-v2-12 :cloud:          | 3.88              | NaN               | NaN                       | 68.33             | 67.33             | 1                  |
+| squeezenet1.0-12                  | 2.63              | 2.56              | 1.03                      | 52.33             | 52.33             | 0                  |
+| vgg16-12                          | 23.56             | 11.48             | 2.05                      | 71.67             | 70.67             | 1                  |
+| zfnet512-12                       | 9.6               | 4.16              | 2.31                      | 57                | 57.67             | \-0.67             |
 
 <details>
 <summary>Performance benchmark using OpenVINO runtime (not ONNXRuntime-OpenVINOExecutionProvider)</summary>
@@ -296,20 +296,20 @@ After benchmark is done, outputs are located in `/output` which is a mounted dir
 
 2. Object detection and segmentation models
 
-| name                 | FP32 latency (ms) | INT8 latency (ms) | Latency diff. (FP32/INT8) | FP32 accuracy (%) | INT8 accuracy (%) | Accuracy diff. (%) |
-| -------------------- | ----------------- | ----------------- | ------------------------- | ----------------- | ----------------- | ------------------ |
-| FasterRCNN-12        | NaN               | NaN               | NaN                       | 37.71             | NaN               | NaN                |
-| MaskRCNN-12-det      | NaN               | NaN               | NaN                       | 36.91             | NaN               | NaN                |
-| MaskRCNN-12-inst-seg | NaN               | NaN               | NaN                       | 34.27             | NaN               | NaN                |
-| ResNet101-DUC-12     | 904.88            | 435.51            | 2.08                      | 71.2              | 70.36             | 0.84               |
-| fcn-resnet50-12      | 250.28            | 400.34            | 0.63                      | 38.31             | 38.14             | 0.17               |
-| retinanet-9          | 110.18            | 38.05             | 2.90                      | 18.45             | 18.39             | 0.06               |
-| ssd-12               | 205.84            | NaN               | NaN                       | 22.91             | NaN               | NaN                |
-| tiny-yolov3-11       | 9.87              | NaN               | NaN                       | 8.68              | 7.97              | 0.71               |
-| tinyyolov2-8         | 10.48             | 6.06              | 1.73                      | 32.34             | 31.78             | 0.56               |
-| yolov2-coco-9        | 24.06             | 14.8              | 1.63                      | 21.7              | 22.17             | \-0.47             |
-| yolov3-12            | 40.09             | NaN               | NaN                       | 31.08             | 29.01             | 2.07               |
-| yolov4               | 41.08             | NaN               | NaN                       | 14.28             | 13.97             | 0.31               |
+| name                          | FP32 latency (ms) | INT8 latency (ms) | Latency diff. (FP32/INT8) | FP32 accuracy (%) | INT8 accuracy (%) | Accuracy diff. (%) |
+| ----------------------------- | ----------------- | ----------------- | ------------------------- | ----------------- | ----------------- | ------------------ |
+| FasterRCNN-12 :zap:           | NaN               | NaN               | NaN                       | 37.71             | NaN               | NaN                |
+| MaskRCNN-12-det :zap:         | NaN               | NaN               | NaN                       | 36.91             | NaN               | NaN                |
+| MaskRCNN-12-inst-seg :zap:    | NaN               | NaN               | NaN                       | 34.27             | NaN               | NaN                |
+| ResNet101-DUC-12              | 904.88            | 435.51            | 2.08                      | 71.2              | 70.36             | 0.84               |
+| fcn-resnet50-12               | 250.28            | 400.34            | 0.63                      | 38.31             | 38.14             | 0.17               |
+| retinanet-9                   | 110.18            | 38.05             | 2.90                      | 18.45             | 18.39             | 0.06               |
+| ssd-12 :zap:                  | 205.84            | NaN               | NaN                       | 22.91             | NaN               | NaN                |
+| tiny-yolov3-11 :cloud:        | 9.87              | NaN               | NaN                       | 8.68              | 7.97              | 0.71               |
+| tinyyolov2-8                  | 10.48             | 6.06              | 1.73                      | 32.34             | 31.78             | 0.56               |
+| yolov2-coco-9                 | 24.06             | 14.8              | 1.63                      | 21.7              | 22.17             | \-0.47             |
+| yolov3-12 :cloud:             | 40.09             | NaN               | NaN                       | 31.08             | 29.01             | 2.07               |
+| yolov4 :cloud:                | 41.08             | NaN               | NaN                       | 14.28             | 13.97             | 0.31               |
 
 <details>
 <summary>Performance benchmark using OpenVINO runtime (not ONNXRuntime-OpenVINOExecutionProvider)</summary>
@@ -403,7 +403,10 @@ After benchmark is done, outputs are located in `/output` which is a mounted dir
 
 * `nan` means that NNCF PTQ API failed to generate proper quantized onnx model. We are working on these defects.
 * `MaskRCNN-12` can be used two task types detection (`det`) and instance segmentation (`inst-seg`).
-* `tiny-yolov3-11` and `yolov3-12` models can be quantized by PTQ API, but the quantized models cannot be run on `OpenVINOExecutionProvider(onnxruntime-openvino==1.11.0)`. Therefore, we obtain the model accuracy by running those models on `CPUExecutionProvider`.
+* Failure types:
+    1. :umbrella: - A quantized model shows too much model accuracy degradation.
+    2. :cloud: - A quantized model cannot be executed on `OpenVINOExecutionProvider(onnxruntime-openvino==1.11.0)`, but it can be executed on `CPUExecutionProvider`.
+    3. :zap: - A original model cannot convert `opset_version` to 13.
 
 # Support ONNXRuntime PTQ for Yolov5 models
 
