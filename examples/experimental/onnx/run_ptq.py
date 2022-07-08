@@ -53,7 +53,8 @@ class OpenVINOAccuracyCheckerDataset(ptq_api_dataset.Dataset):
 
 
 def run(onnx_model_path: str, output_model_path: str, dataset: Dataset,
-        ignored_scopes: Optional[List[str]] = None, evaluate: Optional[bool] = False):
+        ignored_scopes: Optional[List[str]] = None,
+        convert_opset_version: bool = True):
 
     num_init_samples = len(dataset)
 
@@ -65,7 +66,7 @@ def run(onnx_model_path: str, output_model_path: str, dataset: Dataset,
     nncf_logger.info(f"The model is loaded from {onnx_model_path}")
 
     # Step 1: Create a pipeline of compression algorithms.
-    builder = CompressionBuilder()
+    builder = CompressionBuilder(convert_opset_version)
 
     # Step 2: Create the quantization algorithm and add to the builder.
     quantization_parameters = PostTrainingQuantizationParameters(

@@ -11,6 +11,7 @@
  limitations under the License.
 """
 
+from copy import deepcopy
 from typing import Dict
 from typing import List
 from typing import Tuple
@@ -132,6 +133,11 @@ class ONNXMinMaxQuantization(MinMaxQuantization):
                     continue
                 filled_outputs.append(outputs)
                 self._activation_quantizers.append(outputs)
+
+        # It prevents the duplicate weight quantizers from being added.
+        # It can happen when you have layers that share the identical weight tensor.
+        self._weight_quantizers = list(dict.fromkeys(self._weight_quantizers))
+
         return self._weight_quantizers, self._activation_quantizers
 
     def reset_quantizers(self):
@@ -146,13 +152,11 @@ class ONNXMinMaxQuantization(MinMaxQuantization):
         onnx_graph = ONNXGraph(model)
         weight_quantizers, activation_quantizers = self.get_quantizers(model)
 
-        # It prevents the duplicate weight quantizers from being added.
-        # It can happen when you have layers that share the identical weight tensor.
-        weight_quantizers = list(dict.fromkeys(weight_quantizers))
+        weight_quantizer_config = self._get_weight_quantizer_config(model)
 
         for weight_quantizer in weight_quantizers:
             weight_tensor = onnx_graph.get_initializers_value(weight_quantizer)
-            parameters = calculate_weight_quantizer_parameters(weight_tensor, self.weight_quantizer_config)
+            parameters = calculate_weight_quantizer_parameters(weight_tensor, weight_quantizer_config)
             command = ONNXQuantizerInsertionCommand(weight_quantizer, parameters)
             transformation_commands.append(command)
         for layer_to_collect_statistic in activation_quantizers:
@@ -177,3 +181,16 @@ class ONNXMinMaxQuantization(MinMaxQuantization):
 
     def create_subalgorithms(self, backend: Backend) -> None:
         return
+
+    def _get_weight_quantizer_config(self, model: onnx.ModelProto) -> QuantizerConfig:
+        config = deepcopy(self.weight_quantizer_config)
+
+        if model.opset_import[0].version < 13:
+            config.per_channel = False
+            nncf_logger.warning(
+                f"Model opset version is {model.opset_import[0].version} < 13. "
+                "Per-channel quantization is not supported. "
+                "Set self.weight_quantizer_config.per_channel = False"
+            )
+
+        return config

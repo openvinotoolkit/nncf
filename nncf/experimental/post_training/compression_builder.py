@@ -32,8 +32,9 @@ class CompressionBuilder:
     The main class applies the compression algorithms to the model according to their order.
     """
 
-    def __init__(self):
+    def __init__(self, convert_opset_version: bool = True):
         self.algorithms = []
+        self.convert_opset_version = convert_opset_version
 
     def add_algorithm(self, algorithm: Algorithm) -> None:
         """
@@ -57,8 +58,11 @@ class CompressionBuilder:
     def _get_prepared_model_for_compression(self, model: ModelType, backend: Backend) -> ModelType:
         # TODO (Nikita Malinin): Replace this methood into backend-specific graph transformer
         if backend == Backend.ONNX:
-            from nncf.experimental.onnx.model_normalizer import ONNNXModelNormalizer #pylint: disable=cyclic-import
-            return ONNNXModelNormalizer.modify_onnx_model_for_quantization(model)
+            from nncf.experimental.onnx.model_normalizer import ONNXModelNormalizer  # pylint: disable=cyclic-import
+            if self.convert_opset_version:
+                model = ONNXModelNormalizer.convert_opset_version(model)
+            return ONNXModelNormalizer.replace_empty_node_name(model)
+
         return None
 
     def apply(self, model: ModelType, dataset: Dataset, engine: Engine = None) -> ModelType:
