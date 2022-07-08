@@ -27,6 +27,7 @@ class SDescriptorParamNames:
     BN_ADAPT = 'bn_adapt'
     INIT_LR = 'init_lr'
     EPOCHS_LR = 'epochs_lr'
+    SAMPLE_RATE = 'sample_rate'
 
 
 class StageDescriptor:
@@ -42,7 +43,8 @@ class StageDescriptor:
                  depth_indicator: int = 1,
                  width_indicator: int = 1,
                  init_lr = None,
-                 epochs_lr = None):
+                 epochs_lr = None,
+                 sample_rate: int = 1):
         self.train_dims = train_dims
         self.epochs = epochs
         self.depth_indicator = depth_indicator
@@ -51,6 +53,7 @@ class StageDescriptor:
         self.bn_adapt = bn_adapt
         self.init_lr = init_lr
         self.epochs_lr = epochs_lr
+        self.sample_rate = sample_rate
 
     def __eq__(self, other: 'StageDescriptor'):
         return self.__dict__ == other.__dict__
@@ -69,7 +72,8 @@ class StageDescriptor:
             cls._state_names.DEPTH_INDICATOR: config.get(cls._state_names.DEPTH_INDICATOR, 1),
             cls._state_names.BN_ADAPT: config.get(cls._state_names.BN_ADAPT, False),
             cls._state_names.INIT_LR: config.get(cls._state_names.INIT_LR, None),
-            cls._state_names.EPOCHS_LR: config.get(cls._state_names.EPOCHS_LR, None)
+            cls._state_names.EPOCHS_LR: config.get(cls._state_names.EPOCHS_LR, None),
+            cls._state_names.SAMPLE_RATE: config.get(cls._state_names.SAMPLE_RATE, 1)
         }
         return cls(**kwargs)
 
@@ -93,6 +97,7 @@ class StageDescriptor:
             self._state_names.WIDTH_INDICATOR: self.width_indicator,
             self._state_names.DEPTH_INDICATOR: self.depth_indicator,
             self._state_names.BN_ADAPT: self.bn_adapt,
+            self._state_names.SAMPLE_RATE: self.sample_rate
         }
         if self.init_lr is not None:
             state_dict['init_lr'] = self.init_lr

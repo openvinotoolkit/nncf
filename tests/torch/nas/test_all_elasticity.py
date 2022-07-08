@@ -313,11 +313,11 @@ REF_COMPRESSION_STATE_FOR_TWO_CONV = {
                 'list_stage_descriptions': [
                     {
                         'bn_adapt': True, 'depth_indicator': 1, 'epochs': 1, 'reorg_weights': False,
-                        'train_dims': ['width'], 'width_indicator': 2
+                        "sample_rate": 1, 'train_dims': ['width'], 'width_indicator': 2
                     },
                     {
                         'bn_adapt': False, 'depth_indicator': 2, 'epochs': 1, 'reorg_weights': True,
-                        'train_dims': ['depth', 'width'], 'width_indicator': 1
+                        "sample_rate": 1, 'train_dims': ['depth', 'width'], 'width_indicator': 1
                     }
                 ]
             }
