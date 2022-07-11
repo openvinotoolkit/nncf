@@ -298,7 +298,7 @@ After benchmark is done, outputs are located in `/output` which is a mounted dir
 
 | name                          | FP32 latency (ms) | INT8 latency (ms) | Latency diff. (FP32/INT8) | FP32 accuracy (%) | INT8 accuracy (%) | Accuracy diff. (%) |
 | ----------------------------- | ----------------- | ----------------- | ------------------------- | ----------------- | ----------------- | ------------------ |
-| FasterRCNN-12 :zap:           | NaN               | NaN               | NaN                       | 37.71             | NaN               | NaN                |
+| FasterRCNN-12 :umbrella:      | 441.48            | 863.70            | 0.51                      | 37.71             | 25.59             | 12.12              |
 | MaskRCNN-12-det :zap:         | NaN               | NaN               | NaN                       | 36.91             | NaN               | NaN                |
 | MaskRCNN-12-inst-seg :zap:    | NaN               | NaN               | NaN                       | 34.27             | NaN               | NaN                |
 | ResNet101-DUC-12              | 904.88            | 435.51            | 2.08                      | 71.2              | 70.36             | 0.84               |

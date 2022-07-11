@@ -26,6 +26,7 @@ class Sampler(ABC):
     def __init__(self, dataset: Dataset, sample_indices=None):
         self.dataset = dataset
         self.batch_size = dataset.batch_size
+        self.has_batch_dim = dataset.has_batch_dim
         dataset_len = len(self.dataset)
         max_samples_len = min(len(sample_indices), dataset_len) if sample_indices else dataset_len
         self.batch_indices = list(range(0, max_samples_len + 1, self.batch_size))

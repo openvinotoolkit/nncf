@@ -30,6 +30,14 @@ models:
           - type: coco_precision
             threshold: .5:.05:.95
 
+    has_batch_dim: False
+    ignored_scopes: [
+      "415",
+      "447",
+      "479"
+    ]
+    convert_opset_version: False
+
   - name: MaskRCNN-12-inst-seg
     launchers:
       - framework: onnx_runtime

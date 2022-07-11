@@ -34,9 +34,10 @@ from nncf.experimental.post_training.api import dataset as ptq_api_dataset
 
 #pylint: disable=redefined-outer-name
 class OpenVINOAccuracyCheckerDataset(ptq_api_dataset.Dataset):
-    def __init__(self, model_evaluator: ModelEvaluator, batch_size, shuffle):
+    def __init__(self, model_evaluator: ModelEvaluator, batch_size: int, shuffle: bool, has_batch_dim: bool = True):
         super().__init__(batch_size, shuffle)
         self.model_evaluator = model_evaluator
+        self.has_batch_dim = has_batch_dim
 
     def __getitem__(self, item):
         _, batch_annotation, batch_input, _ = self.model_evaluator.dataset[item]
@@ -44,7 +45,11 @@ class OpenVINOAccuracyCheckerDataset(ptq_api_dataset.Dataset):
             batch_annotation, batch_input)
 
         if len(filled_inputs) == 1:
-            return {k: ONNXNNCFTensor(np.squeeze(v, axis=0)) for k, v in filled_inputs[0].items()}
+            return {
+                k: ONNXNNCFTensor(np.squeeze(v, axis=0))
+                if self.has_batch_dim else ONNXNNCFTensor(v)
+                for k, v in filled_inputs[0].items()
+            }
 
         raise Exception("len(filled_inputs) should be one.")
 
@@ -102,9 +107,13 @@ if __name__ == '__main__':
         assert len(config_entry["datasets"]
                    ) == 1, "Config should have one dataset."
 
+        ignored_scopes = config_entry.get("ignored_scopes", None)
+        has_batch_dim = config_entry.get("has_batch_dim", True)
+        convert_opset_version = config_entry.get("convert_opset_version", True)
+
         dataset_config = config_entry["datasets"][0]
         dataset = OpenVINOAccuracyCheckerDataset(
-            model_evaluator, batch_size=1, shuffle=True)
+            model_evaluator, batch_size=1, shuffle=True, has_batch_dim=has_batch_dim)
 
         assert "launchers" in config_entry
         assert len(config_entry["launchers"]) == 1
@@ -117,9 +126,8 @@ if __name__ == '__main__':
 
         onnx_model_path = str(onnx_model_path)
 
-        ignored_scopes = config_entry.get("ignored_scopes", None)
-
         run(onnx_model_path,
             output_model_path,
             dataset,
-            ignored_scopes)
+            ignored_scopes,
+            convert_opset_version)

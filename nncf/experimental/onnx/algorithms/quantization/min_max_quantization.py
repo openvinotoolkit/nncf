@@ -129,8 +129,13 @@ class ONNXMinMaxQuantization(MinMaxQuantization):
                     outputs = onnx_graph.get_node_edges(node_name)['input'][0]
                 if outputs in filled_outputs:
                     # TODO (kshpv): resolve this problem with inception v3.
-                    nncf_logger.debug('Skipping {} layer'.format(outputs))
+                    nncf_logger.debug(f"Skipping {outputs} layer because it's duplicated.")
                     continue
+                if not onnx_graph.is_valid_node_output(outputs):
+                    nncf_logger.warning(
+                        f"Skipping {outputs} activation layer because it's not a valid node output.")
+                    continue
+
                 filled_outputs.append(outputs)
                 self._activation_quantizers.append(outputs)
 
