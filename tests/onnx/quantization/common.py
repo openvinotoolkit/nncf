@@ -45,7 +45,9 @@ class DatasetForTest(Dataset):
 
     def __getitem__(self, item):
         return {
-            self.input_key: ONNXNNCFTensor(np.squeeze(np.random.random(self.input_shape).astype(np.float32))),
+            self.input_key: ONNXNNCFTensor(
+                np.squeeze(np.random.random(self.input_shape).astype(np.float32), axis=0)
+            ),
             "targets": ONNXNNCFTensor(0)
         }
 

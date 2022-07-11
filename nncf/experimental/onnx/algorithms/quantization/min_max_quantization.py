@@ -145,6 +145,11 @@ class ONNXMinMaxQuantization(MinMaxQuantization):
         transformation_commands = []
         onnx_graph = ONNXGraph(model)
         weight_quantizers, activation_quantizers = self.get_quantizers(model)
+
+        # It prevents the duplicate weight quantizers from being added.
+        # It can happen when you have layers that share the identical weight tensor.
+        weight_quantizers = list(dict.fromkeys(weight_quantizers))
+
         for weight_quantizer in weight_quantizers:
             weight_tensor = onnx_graph.get_initializers_value(weight_quantizer)
             parameters = calculate_weight_quantizer_parameters(weight_tensor, self.weight_quantizer_config)
