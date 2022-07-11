@@ -40,14 +40,15 @@ class ONNXGraph:
         self.activations_tensors.extend(outputs)
         self.initializer_names = {n.name for n in self.onnx_model.graph.initializer}
         self.lookup_nodes = {n.name: n for n in self.onnx_model.graph.node}
-        self.node_output_names = set(enumerate_model_node_outputs(onnx_model))
+        self.valid_tensor_names = set(enumerate_model_node_outputs(onnx_model))
+        self.valid_tensor_names.update({inp.name for inp in self.get_model_inputs()})
 
-    def is_valid_node_output(self, output_name: str) -> bool:
+    def is_valid_tensor(self, tensor_name: str) -> bool:
         """
-        If output_name does not exist in the output of any node, return True.
+        If tensor_name is not the output of all nodes or the model input, return True.
         Otherwise, return False.
         """
-        if output_name in self.node_output_names:
+        if tensor_name in self.valid_tensor_names:
             return True
 
         return False

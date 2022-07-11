@@ -131,7 +131,7 @@ class ONNXMinMaxQuantization(MinMaxQuantization):
                     # TODO (kshpv): resolve this problem with inception v3.
                     nncf_logger.debug(f"Skipping {outputs} layer because it's duplicated.")
                     continue
-                if not onnx_graph.is_valid_node_output(outputs):
+                if not onnx_graph.is_valid_tensor(outputs):
                     nncf_logger.warning(
                         f"Skipping {outputs} activation layer because it's not a valid node output.")
                     continue

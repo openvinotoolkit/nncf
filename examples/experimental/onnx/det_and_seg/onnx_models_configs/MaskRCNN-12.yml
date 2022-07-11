@@ -67,3 +67,5 @@ models:
 
         metrics:
           - type: coco_orig_segm_precision
+
+    no_ptq: True

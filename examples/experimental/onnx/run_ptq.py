@@ -107,6 +107,9 @@ if __name__ == '__main__':
         assert len(config_entry["datasets"]
                    ) == 1, "Config should have one dataset."
 
+        if config_entry.get("no_ptq", False):
+            continue
+
         ignored_scopes = config_entry.get("ignored_scopes", None)
         has_batch_dim = config_entry.get("has_batch_dim", True)
         convert_opset_version = config_entry.get("convert_opset_version", True)
