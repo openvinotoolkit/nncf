@@ -182,7 +182,6 @@ After benchmark is done, outputs are located in `/output` which is a mounted dir
 | efficientnet-lite4-11             | 7.07              | 3.94              | 1.79                      | 77.67             | 78                | \-0.33             |
 | googlenet-12                      | 6.52              | 5.48              | 1.19                      | 69                | 68.33             | 0.67               |
 | inception-v1-12                   | 6.54              | 5.5               | 1.19                      | 67                | 67                | 0                  |
-| inception-v2-9 :cloud: :umbrella: | 8.31              | NaN               | NaN                       | 0                 | NaN               | NaN                |
 | mobilenetv2-12                    | 3.77              | 3.62              | 1.04                      | 73.33             | 71.33             | 2                  |
 | resnet50-v1-12                    | 10.99             | 6.02              | 1.82                      | 73.33             | 72                | 1.33               |
 | resnet50-v2-7                     | 13.23             | 5.32              | 2.49                      | 73.67             | 74                | \-0.33             |
@@ -236,12 +235,6 @@ After benchmark is done, outputs are located in `/output` which is a mounted dir
         <td>14.13</td>
         <td>8.62</td>
         <td>1.64</td>
-    </tr>
-    <tr>
-        <td>inception-v2-9</td>
-        <td>18.98</td>
-        <td>10.23</td>
-        <td>1.86</td>
     </tr>
     <tr>
         <td>mobilenetv2-12</td>
