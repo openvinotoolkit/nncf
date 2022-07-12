@@ -12,7 +12,8 @@
 """
 
 from copy import deepcopy
-from typing import Dict
+import itertools
+from typing import Dict, Set
 from typing import List
 from typing import Tuple
 
@@ -103,7 +104,7 @@ class ONNXMinMaxQuantization(MinMaxQuantization):
             return self._weight_quantizers, self._activation_quantizers
         quantizer_setup = self._get_quantizer_setup(model)
         onnx_graph = ONNXGraph(model)
-        filled_outputs = []
+        filled_outputs = set()
         for _, qp in quantizer_setup.quantization_points.items():
             if qp.is_weight_quantization_point():
                 weight_initializer_name = onnx_graph.get_weight_tensor_with_initializer(
@@ -127,17 +128,10 @@ class ONNXMinMaxQuantization(MinMaxQuantization):
                 else:  # If input node
                     node_name = qp.directly_quantized_operator_node_names[0]
                     outputs = onnx_graph.get_node_edges(node_name)['input'][0]
-                if outputs in filled_outputs:
-                    # TODO (kshpv): resolve this problem with inception v3.
-                    nncf_logger.debug(f"Skipping {outputs} layer because it's duplicated.")
-                    continue
-                if not onnx_graph.is_valid_tensor(outputs):
-                    nncf_logger.warning(
-                        f"Skipping {outputs} activation layer because it's not a valid node output.")
-                    continue
 
-                filled_outputs.append(outputs)
-                self._activation_quantizers.append(outputs)
+                if self._is_valid_activation_quantizer(outputs, filled_outputs, onnx_graph):
+                    filled_outputs.add(outputs)
+                    self._activation_quantizers.append(outputs)
 
         # It prevents the duplicate weight quantizers from being added.
         # It can happen when you have layers that share the identical weight tensor.
@@ -195,7 +189,20 @@ class ONNXMinMaxQuantization(MinMaxQuantization):
             nncf_logger.warning(
                 f"Model opset version is {model.opset_import[0].version} < 13. "
                 "Per-channel quantization is not supported. "
-                "Set self.weight_quantizer_config.per_channel = False"
+                "Set weight_quantizer_config.per_channel = False"
             )
 
         return config
+
+    def _is_valid_activation_quantizer(
+            self, outputs: str, filled_outputs: Set[str], onnx_graph: ONNXGraph) -> bool:
+
+        if outputs in filled_outputs:
+            # TODO (kshpv): resolve this problem with inception v3.
+            nncf_logger.debug(f"Skipping {outputs} layer because it's duplicated.")
+            return False
+        if not onnx_graph.is_valid_tensor(outputs):
+            nncf_logger.warning(f"Skipping {outputs} activation layer because it's not a valid node output.")
+            return False
+
+        return True
