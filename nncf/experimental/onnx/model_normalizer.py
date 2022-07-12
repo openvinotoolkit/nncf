@@ -11,7 +11,7 @@
  limitations under the License.
 """
 
-from collections import defaultdict
+from collections import Counter, defaultdict
 from copy import deepcopy
 import onnx
 from onnx.version_converter import convert_version, ConvertError  # pylint: disable=no-name-in-module
@@ -119,16 +119,12 @@ class ONNXModelNormalizer:
             if node.name == '':
                 node.name = node.op_type + '_nncf_' + str(i)
 
-        name_counter = defaultdict(int)
+        name_counter = Counter([node.name for node in model.graph.node])
 
-        for i, node in enumerate(model.graph.node):
-            name_counter[node.name] += 1
-
-        for name, cnt in name_counter.items():
-            if cnt > 1:
-                raise RuntimeError(
-                    f"Node {name} occurs more than once ({cnt} times). "
-                    "NNCF expects every node to have a unique name."
-                )
+        if max(name_counter.values()) > 1:
+            raise RuntimeError(
+                f"Nodes {[(name, cnt) for name, cnt in name_counter.items() if cnt > 1]} "
+                "(name, counts) occurred more than once. "
+                "NNCF expects every node to have a unique name.")
 
         return model
