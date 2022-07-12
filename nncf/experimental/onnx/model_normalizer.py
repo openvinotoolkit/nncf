@@ -11,15 +11,16 @@
  limitations under the License.
 """
 
+from collections import Counter
 from copy import deepcopy
 import onnx
 from onnx.version_converter import convert_version, ConvertError  # pylint: disable=no-name-in-module
 from nncf.common.utils.logger import logger as nncf_logger
 
 
-class ONNNXModelNormalizer:
+class ONNXModelNormalizer:
     @staticmethod
-    def modify_onnx_model_for_quantization(model: onnx.ModelProto) -> onnx.ModelProto:
+    def convert_opset_version(model: onnx.ModelProto) -> onnx.ModelProto:
         # pylint: disable=no-member
         def add_input_from_initializer(model: onnx.ModelProto) -> None:
             """
@@ -101,13 +102,29 @@ class ONNNXModelNormalizer:
 
             nncf_logger.info(
                 'Successfully converted the model to the opset = {}'.format(modified_model.opset_import[0].version))
-        except (RuntimeError, ConvertError) as e:
+        except (RuntimeError, ConvertError):
             modified_model = model
-            nncf_logger.error("Couldn't convert target model to opset13. "
-                              "Models with opset < 13 is not supported by PTQ yet.")
-            raise ConvertError from e
+            nncf_logger.error(
+                "Couldn't convert target model to opset13. Use original model")
 
-        for i, node in enumerate(modified_model.graph.node):
+        return modified_model
+
+    @staticmethod
+    def replace_empty_node_name(model: onnx.ModelProto):
+        """
+        NNCFGraph.get_node_by_name() does not allow empty node names.
+        NNCF expects every node to have a unique name.
+        """
+        for i, node in enumerate(model.graph.node):
             if node.name == '':
                 node.name = node.op_type + '_nncf_' + str(i)
-        return modified_model
+
+        name_counter = Counter([node.name for node in model.graph.node])
+
+        if max(name_counter.values()) > 1:
+            raise RuntimeError(
+                f"Nodes {[(name, cnt) for name, cnt in name_counter.items() if cnt > 1]} "
+                "(name, counts) occurred more than once. "
+                "NNCF expects every node to have a unique name.")
+
+        return model

@@ -22,7 +22,7 @@ import numpy as np
 import onnx
 import pytest
 
-from tests.onnx.quantization.common import infer_model, min_max_quantize_model
+from tests.onnx.quantization.common import infer_model, min_max_quantize_model, ptq_quantize_model
 
 
 def create_initializer_tensor(
@@ -212,12 +212,29 @@ def fxt_weight_sharing_graph():
     yield TestCase(input_shape=input_shape, model=model_def)
 
 
-def min_max_quantize_model_for_fxt_graph(fxt_graph: TestCase):
+@pytest.fixture
+def fxt_old_opset_version(fxt_weight_sharing_graph):
+    fxt_weight_sharing_graph.model.opset_import[0].version = 12
+    yield fxt_weight_sharing_graph
+
+
+def min_max_quantize_model_for_fxt_graph(fxt_graph: TestCase, convert_opset_version: bool = True):
     input_shape = fxt_graph.input_shape
     model = fxt_graph.model
 
     with does_not_raise():
-        quantized_model = min_max_quantize_model(input_shape, model)
+        quantized_model = min_max_quantize_model(
+            input_shape, model, convert_opset_version)
+        infer_model(input_shape, quantized_model)
+
+
+def ptq_quantize_model_for_fxt_graph(fxt_graph: TestCase, convert_opset_version: bool = True):
+    input_shape = fxt_graph.input_shape
+    model = fxt_graph.model
+
+    with does_not_raise():
+        quantized_model = ptq_quantize_model(
+            input_shape, model, convert_opset_version)
         infer_model(input_shape, quantized_model)
 
 
@@ -226,7 +243,15 @@ def min_max_quantize_model_for_fxt_graph(fxt_graph: TestCase):
     reason="min_max_quantize_model() succeeds, but infer_model() fails.")
 def test_fxt_reshape_weight_graph(fxt_reshape_weight_graph: TestCase):
     min_max_quantize_model_for_fxt_graph(fxt_reshape_weight_graph)
+    ptq_quantize_model_for_fxt_graph(fxt_reshape_weight_graph)
 
 
 def test_fxt_weight_sharing_graph(fxt_weight_sharing_graph: TestCase):
     min_max_quantize_model_for_fxt_graph(fxt_weight_sharing_graph)
+    ptq_quantize_model_for_fxt_graph(fxt_weight_sharing_graph)
+
+
+@pytest.mark.parametrize("convert_opset_version", [True, False])
+def test_fxt_old_opset_version(fxt_old_opset_version: TestCase, convert_opset_version: bool):
+    min_max_quantize_model_for_fxt_graph(fxt_old_opset_version, convert_opset_version)
+    ptq_quantize_model_for_fxt_graph(fxt_old_opset_version, convert_opset_version)
