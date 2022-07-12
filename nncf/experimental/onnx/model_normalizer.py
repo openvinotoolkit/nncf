@@ -11,7 +11,7 @@
  limitations under the License.
 """
 
-from collections import Counter, defaultdict
+from collections import Counter
 from copy import deepcopy
 import onnx
 from onnx.version_converter import convert_version, ConvertError  # pylint: disable=no-name-in-module
