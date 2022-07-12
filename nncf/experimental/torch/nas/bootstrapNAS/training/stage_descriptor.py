@@ -14,6 +14,7 @@ from typing import Any
 from typing import Dict
 from typing import List
 
+from nncf.common.utils.logger import logger as nncf_logger
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elasticity_dim import ElasticityDim
 
 DEFAULT_STAGE_LR_RATE = 3.5e-06
@@ -42,8 +43,8 @@ class StageDescriptor:
                  bn_adapt: bool = False,
                  depth_indicator: int = 1,
                  width_indicator: int = 1,
-                 init_lr = None,
-                 epochs_lr = None,
+                 init_lr: float = None,
+                 epochs_lr: int = None,
                  sample_rate: int = 1):
         self.train_dims = train_dims
         self.epochs = epochs
@@ -54,6 +55,10 @@ class StageDescriptor:
         self.init_lr = init_lr
         self.epochs_lr = epochs_lr
         self.sample_rate = sample_rate
+        if sample_rate <= 0:
+            nncf_logger.warning(f"Only positive integers are allowed for sample rate, but sample_rate={sample_rate}.")
+            nncf_logger.warning(f"Setting sample rate to default 1")
+            self.sample_rate = 1
 
     def __eq__(self, other: 'StageDescriptor'):
         return self.__dict__ == other.__dict__
