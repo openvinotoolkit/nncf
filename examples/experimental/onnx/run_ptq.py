@@ -17,6 +17,7 @@ from typing import Optional
 
 import numpy as np
 import onnx
+from nncf.experimental.onnx.algorithms.quantization.utils import find_ignored_scopes
 from nncf.experimental.onnx.tensor import ONNXNNCFTensor
 
 from nncf.experimental.post_training.compression_builder import CompressionBuilder
@@ -59,16 +60,21 @@ class OpenVINOAccuracyCheckerDataset(ptq_api_dataset.Dataset):
 
 def run(onnx_model_path: str, output_model_path: str, dataset: Dataset,
         ignored_scopes: Optional[List[str]] = None,
+        disallowed_op_types: Optional[List[str]] = None,
         convert_opset_version: bool = True):
 
     num_init_samples = len(dataset)
 
     nncf_logger.info("Post-Training Quantization Parameters:")
-    nncf_logger.info(f"  number of samples: {num_init_samples}")
-    nncf_logger.info(f"  ignored_scopes: {ignored_scopes}")
     onnx.checker.check_model(onnx_model_path)
     original_model = onnx.load(onnx_model_path)
     nncf_logger.info(f"The model is loaded from {onnx_model_path}")
+    if ignored_scopes is None:
+        ignored_scopes = []
+    if disallowed_op_types is not None:
+        ignored_scopes += find_ignored_scopes(disallowed_op_types, original_model)
+    nncf_logger.info(f"  number of samples: {num_init_samples}")
+    nncf_logger.info(f"  ignored_scopes: {ignored_scopes}")
 
     # Step 1: Create a pipeline of compression algorithms.
     builder = CompressionBuilder(convert_opset_version)
@@ -111,6 +117,7 @@ if __name__ == '__main__':
             continue
 
         ignored_scopes = config_entry.get("ignored_scopes", None)
+        disallowed_op_types = config_entry.get("disallowed_op_types", None)
         has_batch_dim = config_entry.get("has_batch_dim", True)
         convert_opset_version = config_entry.get("convert_opset_version", True)
 
@@ -133,4 +140,5 @@ if __name__ == '__main__':
             output_model_path,
             dataset,
             ignored_scopes,
+            disallowed_op_types,
             convert_opset_version)

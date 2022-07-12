@@ -12,7 +12,6 @@
 """
 
 from copy import deepcopy
-import itertools
 from typing import Dict, Set
 from typing import List
 from typing import Tuple
