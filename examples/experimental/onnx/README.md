@@ -178,15 +178,14 @@ After benchmark is done, outputs are located in `/output` which is a mounted dir
 | --------------------------------- | ----------------- | ----------------- | ------------------------- | ----------------- | ----------------- | ------------------ |
 | bvlcalexnet-12                    | 6.65              | 2.91              | 2.29                      | 50.33             | 49.67             | 0.67               |
 | caffenet-12                       | 6.75              | 2.81              | 2.4                       | 54                | 54                | 0                  |
-| densenet-12 :cloud: :umbrella:    | 12.7              | NaN               | NaN                       | 60                | 4.67              | 55.33              |
+| densenet-12                       | 12.7              | 6.38              | 1.99                      | 60                | 58.33             | 1.67               |
 | efficientnet-lite4-11             | 7.07              | 3.94              | 1.79                      | 77.67             | 78                | \-0.33             |
 | googlenet-12                      | 6.52              | 5.48              | 1.19                      | 69                | 68.33             | 0.67               |
 | inception-v1-12                   | 6.54              | 5.5               | 1.19                      | 67                | 67                | 0                  |
-| inception-v2-9 :cloud: :umbrella: | 8.31              | NaN               | NaN                       | 0                 | NaN               | NaN                |
 | mobilenetv2-12                    | 3.77              | 3.62              | 1.04                      | 73.33             | 71.33             | 2                  |
 | resnet50-v1-12                    | 10.99             | 6.02              | 1.82                      | 73.33             | 72                | 1.33               |
 | resnet50-v2-7                     | 13.23             | 5.32              | 2.49                      | 73.67             | 74                | \-0.33             |
-| shufflenet-9 :umbrella:           | 5.05              | 6.14              | 0.82                      | 48                | 0                 | 48                 |
+| shufflenet-9 :cloud:              | 5.05              | 6.14              | 0.82                      | 48                | 46.33             | 1.67               |
 | shufflenet-v2-12 :cloud:          | 3.88              | NaN               | NaN                       | 68.33             | 67.33             | 1                  |
 | squeezenet1.0-12                  | 2.63              | 2.56              | 1.03                      | 52.33             | 52.33             | 0                  |
 | vgg16-12                          | 23.56             | 11.48             | 2.05                      | 71.67             | 70.67             | 1                  |
@@ -236,12 +235,6 @@ After benchmark is done, outputs are located in `/output` which is a mounted dir
         <td>14.13</td>
         <td>8.62</td>
         <td>1.64</td>
-    </tr>
-    <tr>
-        <td>inception-v2-9</td>
-        <td>18.98</td>
-        <td>10.23</td>
-        <td>1.86</td>
     </tr>
     <tr>
         <td>mobilenetv2-12</td>
@@ -298,9 +291,9 @@ After benchmark is done, outputs are located in `/output` which is a mounted dir
 
 | name                          | FP32 latency (ms) | INT8 latency (ms) | Latency diff. (FP32/INT8) | FP32 accuracy (%) | INT8 accuracy (%) | Accuracy diff. (%) |
 | ----------------------------- | ----------------- | ----------------- | ------------------------- | ----------------- | ----------------- | ------------------ |
-| FasterRCNN-12 :zap:           | NaN               | NaN               | NaN                       | 37.71             | NaN               | NaN                |
-| MaskRCNN-12-det :zap:         | NaN               | NaN               | NaN                       | 36.91             | NaN               | NaN                |
-| MaskRCNN-12-inst-seg :zap:    | NaN               | NaN               | NaN                       | 34.27             | NaN               | NaN                |
+| FasterRCNN-12                 | 430.64            | 386.54            | 1.11                      | 37.71             | 37.45             | 0.26               |
+| MaskRCNN-12-det               | 518.64            | 400.65            | 1.29                      | 36.91             | 37.06             | \-0.15             |
+| MaskRCNN-12-inst-seg          | -                 | -                 | -                         | 34.27             | 34.28             | \-0.01             |
 | ResNet101-DUC-12              | 904.88            | 435.51            | 2.08                      | 71.2              | 70.36             | 0.84               |
 | fcn-resnet50-12               | 250.28            | 400.34            | 0.63                      | 38.31             | 38.14             | 0.17               |
 | retinanet-9                   | 110.18            | 38.05             | 2.90                      | 18.45             | 18.39             | 0.06               |
@@ -405,8 +398,7 @@ After benchmark is done, outputs are located in `/output` which is a mounted dir
 * `MaskRCNN-12` can be used two task types detection (`det`) and instance segmentation (`inst-seg`).
 * Failure types:
     1. :umbrella: - A quantized model shows too much model accuracy degradation.
-    2. :cloud: - A quantized model cannot be executed on `OpenVINOExecutionProvider(onnxruntime-openvino==1.11.0)`, but it can be executed on `CPUExecutionProvider`.
-    3. :zap: - A original model cannot convert `opset_version` to 13.
+    2. :cloud: - A quantized model cannot be executed on `OpenVINOExecutionProvider(onnxruntime-openvino==1.11.0)`, but it can be executed on `CPUExecutionProvider` (`shufflenet-9` can be executed on `OpenVINOExecutionProvider`, but drops too much accuracy).
 
 # Support ONNXRuntime PTQ for Yolov5 models
 

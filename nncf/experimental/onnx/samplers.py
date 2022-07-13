@@ -24,7 +24,7 @@ from nncf.experimental.post_training.samplers import BatchSampler
 from nncf.experimental.post_training.samplers import RandomBatchSampler
 
 
-def _post_process(nncf_data_list: List[NNCFData]) -> NNCFData:
+def _post_process(nncf_data_list: List[NNCFData], stack_tensors: bool = True) -> NNCFData:
     outputs = defaultdict(list)
 
     for nncf_data in nncf_data_list:
@@ -32,19 +32,31 @@ def _post_process(nncf_data_list: List[NNCFData]) -> NNCFData:
             outputs[k] += [v]
 
     for k in outputs:
-        outputs[k] = ONNXNNCFCollectorTensorProcessor.stack(outputs[k])
+        if stack_tensors:
+            outputs[k] = ONNXNNCFCollectorTensorProcessor.stack(outputs[k])
+        elif not stack_tensors and len(outputs[k]) == 1:
+            outputs[k] = outputs[k][0]
+        else:
+            raise RuntimeError(f"{k} has more than one non-stacked tensor.")
 
     return outputs
 
 
 class ONNXBatchSampler(BatchSampler):
     def form_batch(self, start_i: int, end_i: int) -> NNCFData:
-        return _post_process([self.dataset[i] for i in range(start_i, end_i)])
+        return _post_process(
+            nncf_data_list=[self.dataset[i] for i in range(start_i, end_i)],
+            stack_tensors=self.has_batch_dim
+        )
 
 
 class ONNXRandomBatchSampler(RandomBatchSampler):
     def form_batch(self, start_i: int, end_i: int) -> NNCFData:
-        return _post_process([self.dataset[self.random_permutated_indices[i]] for i in range(start_i, end_i)])
+        return _post_process(
+            nncf_data_list=[self.dataset[self.random_permutated_indices[i]]
+                            for i in range(start_i, end_i)],
+            stack_tensors=self.has_batch_dim
+        )
 
 
 def create_onnx_sampler(dataset: Dataset,

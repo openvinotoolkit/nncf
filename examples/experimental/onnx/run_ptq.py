@@ -17,6 +17,7 @@ from typing import Optional
 
 import numpy as np
 import onnx
+from nncf.experimental.onnx.algorithms.quantization.utils import find_ignored_scopes
 from nncf.experimental.onnx.tensor import ONNXNNCFTensor
 
 from nncf.experimental.post_training.compression_builder import CompressionBuilder
@@ -34,9 +35,10 @@ from nncf.experimental.post_training.api import dataset as ptq_api_dataset
 
 #pylint: disable=redefined-outer-name
 class OpenVINOAccuracyCheckerDataset(ptq_api_dataset.Dataset):
-    def __init__(self, model_evaluator: ModelEvaluator, batch_size, shuffle):
+    def __init__(self, model_evaluator: ModelEvaluator, batch_size: int, shuffle: bool, has_batch_dim: bool = True):
         super().__init__(batch_size, shuffle)
         self.model_evaluator = model_evaluator
+        self.has_batch_dim = has_batch_dim
 
     def __getitem__(self, item):
         _, batch_annotation, batch_input, _ = self.model_evaluator.dataset[item]
@@ -44,7 +46,11 @@ class OpenVINOAccuracyCheckerDataset(ptq_api_dataset.Dataset):
             batch_annotation, batch_input)
 
         if len(filled_inputs) == 1:
-            return {k: ONNXNNCFTensor(np.squeeze(v, axis=0)) for k, v in filled_inputs[0].items()}
+            return {
+                k: ONNXNNCFTensor(np.squeeze(v, axis=0))
+                if self.has_batch_dim else ONNXNNCFTensor(v)
+                for k, v in filled_inputs[0].items()
+            }
 
         raise Exception("len(filled_inputs) should be one.")
 
@@ -54,16 +60,21 @@ class OpenVINOAccuracyCheckerDataset(ptq_api_dataset.Dataset):
 
 def run(onnx_model_path: str, output_model_path: str, dataset: Dataset,
         ignored_scopes: Optional[List[str]] = None,
+        disallowed_op_types: Optional[List[str]] = None,
         convert_opset_version: bool = True):
 
     num_init_samples = len(dataset)
 
     nncf_logger.info("Post-Training Quantization Parameters:")
-    nncf_logger.info(f"  number of samples: {num_init_samples}")
-    nncf_logger.info(f"  ignored_scopes: {ignored_scopes}")
     onnx.checker.check_model(onnx_model_path)
     original_model = onnx.load(onnx_model_path)
     nncf_logger.info(f"The model is loaded from {onnx_model_path}")
+    if ignored_scopes is None:
+        ignored_scopes = []
+    if disallowed_op_types is not None:
+        ignored_scopes += find_ignored_scopes(disallowed_op_types, original_model)
+    nncf_logger.info(f"  number of samples: {num_init_samples}")
+    nncf_logger.info(f"  ignored_scopes: {ignored_scopes}")
 
     # Step 1: Create a pipeline of compression algorithms.
     builder = CompressionBuilder(convert_opset_version)
@@ -102,9 +113,17 @@ if __name__ == '__main__':
         assert len(config_entry["datasets"]
                    ) == 1, "Config should have one dataset."
 
+        if config_entry.get("no_ptq", False):
+            continue
+
+        ignored_scopes = config_entry.get("ignored_scopes", None)
+        disallowed_op_types = config_entry.get("disallowed_op_types", None)
+        has_batch_dim = config_entry.get("has_batch_dim", True)
+        convert_opset_version = config_entry.get("convert_opset_version", True)
+
         dataset_config = config_entry["datasets"][0]
         dataset = OpenVINOAccuracyCheckerDataset(
-            model_evaluator, batch_size=1, shuffle=True)
+            model_evaluator, batch_size=1, shuffle=True, has_batch_dim=has_batch_dim)
 
         assert "launchers" in config_entry
         assert len(config_entry["launchers"]) == 1
@@ -117,9 +136,9 @@ if __name__ == '__main__':
 
         onnx_model_path = str(onnx_model_path)
 
-        ignored_scopes = config_entry.get("ignored_scopes", None)
-
         run(onnx_model_path,
             output_model_path,
             dataset,
-            ignored_scopes)
+            ignored_scopes,
+            disallowed_op_types,
+            convert_opset_version)

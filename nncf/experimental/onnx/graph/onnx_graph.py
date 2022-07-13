@@ -21,6 +21,7 @@ from onnx import ValueInfoProto  # pylint: disable=no-name-in-module
 from onnx import numpy_helper  # pylint: disable=no-name-in-module
 import numpy as np
 
+from skl2onnx.helpers.onnx_helper import enumerate_model_node_outputs
 
 # pylint: disable=no-member
 
@@ -38,6 +39,19 @@ class ONNXGraph:
         self.activations_tensors.extend(inputs)
         self.activations_tensors.extend(outputs)
         self.initializer_names = {n.name for n in self.onnx_model.graph.initializer}
+        self.lookup_nodes = {n.name: n for n in self.onnx_model.graph.node}
+        self.valid_tensor_names = set(enumerate_model_node_outputs(onnx_model))
+        self.valid_tensor_names.update({inp.name for inp in self.get_model_inputs()})
+
+    def is_valid_tensor(self, tensor_name: str) -> bool:
+        """
+        If tensor_name is not the output of all nodes or the model input, return True.
+        Otherwise, return False.
+        """
+        if tensor_name in self.valid_tensor_names:
+            return True
+
+        return False
 
     def get_all_nodes(self) -> List[NodeProto]:
         """
@@ -45,11 +59,11 @@ class ONNXGraph:
         """
         return self.onnx_model.graph.node
 
-    def get_node_by_name(self, node_name: str):
-        for node in self.get_all_nodes():
-            if node.name == node_name:
-                return node
-        raise RuntimeError('There is no node with the name {}'.format(node_name))
+    def get_node_by_name(self, node_name: str) -> NodeProto:
+        try:
+            return self.lookup_nodes[node_name]
+        except KeyError as e:
+            raise KeyError(f"There is no node with the name {node_name}") from e
 
     def get_model_inputs(self) -> List[ValueInfoProto]:
         """
