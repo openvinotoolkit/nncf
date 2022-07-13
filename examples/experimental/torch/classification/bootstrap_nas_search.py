@@ -39,7 +39,7 @@ from examples.torch.common.utils import create_code_snapshot
 from examples.torch.common.utils import is_pretrained_model_requested
 from examples.torch.common.utils import print_args
 from nncf.config.structures import BNAdaptationInitArgs
-from nncf.experimental.torch.nas.bootstrapNAS.search import SearchAlgorithm
+from nncf.experimental.torch.nas.bootstrapNAS import SearchAlgorithm
 from nncf.experimental.torch.nas.bootstrapNAS.training.model_creator_helpers import resume_compression_from_state
 from nncf.torch.initialization import wrap_dataloader_for_init
 from nncf.torch.model_creation import create_nncf_network
@@ -158,6 +158,7 @@ def main_worker(current_gpu, config: SampleConfig):
         logger.info(f"Best config: {best_config}")
         logger.info(f"Performance metrics: {performance_metrics}")
 
+        search_algo.visualize_search_progression()
         search_algo.search_progression_to_csv()
         search_algo.evaluators_to_csv()
 

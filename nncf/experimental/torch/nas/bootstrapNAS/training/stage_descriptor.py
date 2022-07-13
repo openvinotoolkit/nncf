@@ -14,6 +14,7 @@ from typing import Any
 from typing import Dict
 from typing import List
 
+from nncf.common.utils.logger import logger as nncf_logger
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elasticity_dim import ElasticityDim
 
 DEFAULT_STAGE_LR_RATE = 3.5e-06
@@ -27,6 +28,7 @@ class SDescriptorParamNames:
     BN_ADAPT = 'bn_adapt'
     INIT_LR = 'init_lr'
     EPOCHS_LR = 'epochs_lr'
+    SAMPLE_RATE = 'sample_rate'
 
 
 class StageDescriptor:
@@ -41,8 +43,9 @@ class StageDescriptor:
                  bn_adapt: bool = False,
                  depth_indicator: int = 1,
                  width_indicator: int = 1,
-                 init_lr = None,
-                 epochs_lr = None):
+                 init_lr: float = None,
+                 epochs_lr: int = None,
+                 sample_rate: int = 1):
         self.train_dims = train_dims
         self.epochs = epochs
         self.depth_indicator = depth_indicator
@@ -51,6 +54,11 @@ class StageDescriptor:
         self.bn_adapt = bn_adapt
         self.init_lr = init_lr
         self.epochs_lr = epochs_lr
+        self.sample_rate = sample_rate
+        if sample_rate <= 0:
+            nncf_logger.warning(f"Only positive integers are allowed for sample rate, but sample_rate={sample_rate}.")
+            nncf_logger.warning(f"Setting sample rate to default 1")
+            self.sample_rate = 1
 
     def __eq__(self, other: 'StageDescriptor'):
         return self.__dict__ == other.__dict__
@@ -69,7 +77,8 @@ class StageDescriptor:
             cls._state_names.DEPTH_INDICATOR: config.get(cls._state_names.DEPTH_INDICATOR, 1),
             cls._state_names.BN_ADAPT: config.get(cls._state_names.BN_ADAPT, False),
             cls._state_names.INIT_LR: config.get(cls._state_names.INIT_LR, None),
-            cls._state_names.EPOCHS_LR: config.get(cls._state_names.EPOCHS_LR, None)
+            cls._state_names.EPOCHS_LR: config.get(cls._state_names.EPOCHS_LR, None),
+            cls._state_names.SAMPLE_RATE: config.get(cls._state_names.SAMPLE_RATE, 1)
         }
         return cls(**kwargs)
 
@@ -93,6 +102,7 @@ class StageDescriptor:
             self._state_names.WIDTH_INDICATOR: self.width_indicator,
             self._state_names.DEPTH_INDICATOR: self.depth_indicator,
             self._state_names.BN_ADAPT: self.bn_adapt,
+            self._state_names.SAMPLE_RATE: self.sample_rate
         }
         if self.init_lr is not None:
             state_dict['init_lr'] = self.init_lr

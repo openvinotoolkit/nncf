@@ -191,7 +191,10 @@ STAGE_DESCRIPTOR_SCHEMA = {
                                                " descriptor, it will trigger a reset of the learning rate at "
                                                "the beginning of the stage."),
         "epochs_lr": with_attributes(NUMBER,
-                                     description="Number of epochs to compute the adjustment of the learning rate.")
+                                     description="Number of epochs to compute the adjustment of the learning rate."),
+        "sample_rate": with_attributes(NUMBER,
+                                       description="Number of iterations to activate the random subnet."
+                                                   "Default value is 1.")
     },
     "description": "Defines a supernet training stage: how many epochs it takes, which elasticities with which "
                    "settings are enabled, whether some operation should happen in the beginning",

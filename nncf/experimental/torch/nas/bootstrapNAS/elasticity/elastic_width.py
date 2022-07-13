@@ -148,9 +148,9 @@ class ElasticWidthParams(BaseElasticityParams):
                  width_step: int,
                  width_multipliers: List[float],
                  filter_importance: str,
-                 overwrite_groups: List[str],
-                 overwrite_groups_widths: List[str],
-                 add_dynamic_inputs: Optional[List[str]]):
+                 overwrite_groups: Optional[List[str]] = None,
+                 overwrite_groups_widths: Optional[List[str]] = None,
+                 add_dynamic_inputs: Optional[List[str]] = None):
         """
         Constructor
 
@@ -996,12 +996,12 @@ class ElasticWidthBuilder(SingleElasticityBuilder):
         self._params = params
         self._grouped_node_names_to_prune = state[self._state_names.GROUPED_NODE_NAMES_TO_PRUNE]
 
-        if params_from_state[self._state_names.OVERWRITE_GROUP_WIDTHS] is not None:
+        if params_from_state.get(self._state_names.OVERWRITE_GROUP_WIDTHS, None) is not None:
             self._overwrite_groups_widths = params_from_state[self._state_names.OVERWRITE_GROUP_WIDTHS]
             self._overwriting_pruning_groups = True
             if len(self._grouped_node_names_to_prune) != len(self._overwrite_groups_widths):
                 raise RuntimeError("Mismatch between number of groups for pruning and their corresponding widths")
-        if params_from_state[self._state_names.ADD_DYNAMIC_INPUTS] is not None:
+        if params_from_state.get(self._state_names.ADD_DYNAMIC_INPUTS, None) is not None:
             self._add_dynamic_inputs = params_from_state[self._state_names.ADD_DYNAMIC_INPUTS]
 
     def get_state(self) -> Dict[str, Any]:

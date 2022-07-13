@@ -66,6 +66,7 @@ class ProgressiveShrinkingController(BNASTrainingController):
         self._lr_schedule_config = lr_schedule_config
         self._scheduler = BootstrapNASScheduler(self, schedule_params, self._available_elasticity_dims,
                                                 self._progressivity_of_elasticity)
+        self._sample_rate = 1
 
     def set_training_lr_scheduler_args(self, optimizer, train_iters):
         params = self._lr_schedule_config.get('params', {})
@@ -133,9 +134,10 @@ class ProgressiveShrinkingController(BNASTrainingController):
         """
         Should be called at the beginning of each training step for activation some Subnet(s).
         """
-        self.multi_elasticity_handler.activate_random_subnet()
-        nncf_logger.debug(
-            'Active config: {}'.format(self.multi_elasticity_handler.get_active_config()))
+        if self._scheduler._lr_scheduler.current_step % self._sample_rate == 0:
+            self.multi_elasticity_handler.activate_random_subnet()
+            nncf_logger.debug(
+                'Active config: {}'.format(self.multi_elasticity_handler.get_active_config()))
 
     def prepare_for_validation(self) -> None:
         """
@@ -179,6 +181,8 @@ class ProgressiveShrinkingController(BNASTrainingController):
 
         if stage_desc.bn_adapt:
             self._run_batchnorm_adaptation(self._target_model)
+
+        self._sample_rate = stage_desc.sample_rate
 
     def statistics(self, quickly_collected_only: bool = False) -> NNCFStatistics:
         """
