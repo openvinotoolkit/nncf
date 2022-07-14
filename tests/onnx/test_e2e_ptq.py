@@ -58,15 +58,6 @@ XFAIL_QUANTIZED_MODELS = {
 }
 
 
-def instances(name, params):
-    def vstr(val):
-        if isinstance(val, (list, tuple)):
-            return "-".join([str(v) for v in val])
-        else:
-            return str(val)
-    return [f"{name}[{vstr(v)}]" for v in params]
-
-
 def check_xfail(model_name):
     if model_name in XFAIL_MODELS:
         pytest.xfail("ONNXRuntime-OVEP cannot execute the original model")
