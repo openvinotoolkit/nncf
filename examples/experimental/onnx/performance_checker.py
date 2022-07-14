@@ -29,6 +29,7 @@ from nncf.experimental.onnx.tensor import ONNXNNCFTensor
 from nncf.experimental.onnx.engine import ONNXEngine
 from nncf.experimental.onnx.samplers import create_onnx_sampler
 from nncf.experimental.post_training.api.dataset import Dataset
+from examples.experimental.onnx.accuracy_checker import MSCocoSegmentationToVOCConverter  # pylint: disable=unused-import
 
 from time import time
 import pandas as pd
@@ -59,8 +60,8 @@ class OpenVINOAccuracyCheckerDataset(Dataset):
         return len(self.model_evaluator.dataset)
 
 
-def run(onnx_model_path: str, output_file_path: str, dataset: Dataset,
-        ignored_scopes: Optional[List[str]] = None, evaluate: Optional[bool] = False):
+def run(onnx_model_path: str, output_file_path: str, dataset: Dataset, model_name: str,
+        ignored_scopes: Optional[List[str]] = None):
 
     num_init_samples = len(dataset)
 
@@ -89,8 +90,6 @@ def run(onnx_model_path: str, output_file_path: str, dataset: Dataset,
 
     elapsed_times = np.array(elapsed_times)
 
-    model_name, _ = os.path.splitext(os.path.basename(onnx_model_path))
-
     df = pd.DataFrame({
         "model_name": [model_name],
         "latency_mean": [np.mean(elapsed_times)],
@@ -105,8 +104,6 @@ def run(onnx_model_path: str, output_file_path: str, dataset: Dataset,
 
 if __name__ == '__main__':
     parser = build_arguments_parser()
-    parser.add_argument("--output-file-path", "-o",
-                        help="Directory path to save output quantized ONNX model", type=str)
     args = parser.parse_args()
     config, mode = ConfigReader.merge(args)
 
@@ -129,8 +126,8 @@ if __name__ == '__main__':
         assert len(config_entry["launchers"]) == 1
 
         run(onnx_model_path=str(config_entry["launchers"][0]["model"]),
-            output_file_path=args.output_file_path,
+            output_file_path=args.csv_result,
             dataset=OpenVINOAccuracyCheckerDataset(
                 model_evaluator, batch_size=1, shuffle=True, has_batch_dim=has_batch_dim),
-            ignored_scopes=ignored_scopes
-            )
+            model_name=config_entry["name"],
+            ignored_scopes=ignored_scopes)

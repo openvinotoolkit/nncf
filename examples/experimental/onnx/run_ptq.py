@@ -31,9 +31,11 @@ from openvino.tools.accuracy_checker.dataset import Dataset
 from openvino.tools.accuracy_checker.evaluators import ModelEvaluator
 
 from nncf.experimental.post_training.api import dataset as ptq_api_dataset
-
+from examples.experimental.onnx.accuracy_checker import MSCocoSegmentationToVOCConverter # pylint: disable=unused-import
 
 #pylint: disable=redefined-outer-name
+
+
 class OpenVINOAccuracyCheckerDataset(ptq_api_dataset.Dataset):
     def __init__(self, model_evaluator: ModelEvaluator, batch_size: int, shuffle: bool, has_batch_dim: bool = True):
         super().__init__(batch_size, shuffle)
