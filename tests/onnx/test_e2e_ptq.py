@@ -105,17 +105,26 @@ def output_dir(request):
     return Path(option)
 
 
-@pytest.fixture(scope="class", autouse=False)
-def anno_dir():
-    with TemporaryDirectory() as tmp_dir:
-        yield Path(tmp_dir)
+@pytest.fixture(scope="module")
+def anno_dir(request):
+    option = request.config.getoption("--anno-dir")
+    if option is not None:
+        yield Path(option)
+    else:
+        with TemporaryDirectory() as tmp_dir:
+            nncf_logger.info(f"Use anno_dir: {tmp_dir}")
+            yield Path(tmp_dir)
 
 
-@pytest.fixture(scope="module", autouse=True)
-def ckpt_dir():
-    with TemporaryDirectory() as tmp_dir:
-        nncf_logger.info(f"Use ckpt_dir: {tmp_dir}")
-        yield Path(tmp_dir)
+@pytest.fixture(scope="module")
+def ckpt_dir(request):
+    option = request.config.getoption("--ckpt-dir")
+    if option is not None:
+        yield Path(option)
+    else:
+        with TemporaryDirectory() as tmp_dir:
+            nncf_logger.info(f"Use ckpt_dir: {tmp_dir}")
+            yield Path(tmp_dir)
 
 
 @pytest.fixture(scope="module")
@@ -144,16 +153,20 @@ class TestPTQ:
         task_path = EXAMPLES_DIR / task_type
         config_path = task_path / "onnx_models_configs" / (model_name + ".yml")
 
-        task_ckpt_dir = ckpt_dir / task_type
-        if not os.path.exists(task_ckpt_dir):
-            os.makedirs(task_ckpt_dir)
+        ckpt_dir = ckpt_dir / task_type
+        if not os.path.exists(ckpt_dir):
+            os.makedirs(ckpt_dir)
+
+        anno_dir = anno_dir / str(ptq_size)
+        if not os.path.exists(anno_dir):
+            os.makedirs(anno_dir)
 
         com_line = [
             sys.executable, str(program_path),
             "-c", str(config_path),
             "-d", str(DATASET_DEFINITIONS_PATH),
             "-m", str(model_dir / task_type / (model_name + ".onnx")),
-            "-o", str(task_ckpt_dir),
+            "-o", str(ckpt_dir),
             "-s", str(data_dir),
             "-a", str(anno_dir),
             "-ss", str(ptq_size)
@@ -177,6 +190,10 @@ class TestBenchmark:
         output_dir = output_dir / task_type
         if not os.path.exists(output_dir):
             os.makedirs(output_dir)
+
+        anno_dir = anno_dir / str(eval_size)
+        if not os.path.exists(anno_dir):
+            os.makedirs(anno_dir)
 
         out_file_name = os.path.splitext(program)[0]
 
