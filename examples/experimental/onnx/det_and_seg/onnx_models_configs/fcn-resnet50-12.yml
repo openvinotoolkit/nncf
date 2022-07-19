@@ -15,12 +15,14 @@ models:
           sort_annotations: True
           semantic_only: True
           # Do not change masks_dir path
-          masks_dir: val2017/segmentation_masks
+          masks_dir: mscoco_to_voc_seg_masks
           # Only evaluate on VOC labels
           convert_COCO_to_VOC_labels: True
         annotation: mscoco_segmentation_to_voc.pickle
         dataset_meta: mscoco_segmentation_to_voc.json
         data_source: val2017
+        # Do not change segmentation_masks_source path
+        segmentation_masks_source: .
 
         preprocessing:
           - type: bgr_to_rgb

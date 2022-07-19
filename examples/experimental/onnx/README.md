@@ -87,15 +87,14 @@ In this example, you have to prepare 15 classification models.
 4. [efficientnet-lite4-11](https://github.com/onnx/models/blob/main/vision/classification/efficientnet-lite4/model/efficientnet-lite4-11.onnx)
 5. [googlenet-12](https://github.com/onnx/models/blob/main/vision/classification/inception_and_googlenet/googlenet/model/googlenet-12.onnx)
 6. [inception-v1-12](https://github.com/onnx/models/blob/main/vision/classification/inception_and_googlenet/inception_v1/model/inception-v1-12.onnx)
-7. [inception-v2-9](https://github.com/onnx/models/blob/main/vision/classification/inception_and_googlenet/inception_v2/model/inception-v2-9.onnx)
-8. [mobilenetv2-12](https://github.com/onnx/models/blob/main/vision/classification/mobilenet/model/mobilenetv2-12.onnx)
-9. [resnet50-v1-12](https://github.com/onnx/models/blob/main/vision/classification/resnet/model/resnet50-v1-12.onnx)
-10. [resnet50-v2-7](https://github.com/onnx/models/blob/main/vision/classification/resnet/model/resnet50-v2-7.onnx)
-11. [shufflenet-9](https://github.com/onnx/models/blob/main/vision/classification/shufflenet/model/shufflenet-9.onnx)
-12. [shufflenet-v2-12](https://github.com/onnx/models/blob/main/vision/classification/shufflenet/model/shufflenet-v2-12.onnx)
-13. [squeezenet1.0-12](https://github.com/onnx/models/blob/main/vision/classification/squeezenet/model/squeezenet1.0-12.onnx)
-14. [vgg16-12](https://github.com/onnx/models/blob/main/vision/classification/vgg/model/vgg16-12.onnx)
-15. [zfnet512-12](https://github.com/onnx/models/blob/main/vision/classification/zfnet-512/model/zfnet512-12.onnx)
+7. [mobilenetv2-12](https://github.com/onnx/models/blob/main/vision/classification/mobilenet/model/mobilenetv2-12.onnx)
+8. [resnet50-v1-12](https://github.com/onnx/models/blob/main/vision/classification/resnet/model/resnet50-v1-12.onnx)
+9. [resnet50-v2-7](https://github.com/onnx/models/blob/main/vision/classification/resnet/model/resnet50-v2-7.onnx)
+10. [shufflenet-9](https://github.com/onnx/models/blob/main/vision/classification/shufflenet/model/shufflenet-9.onnx)
+11. [shufflenet-v2-12](https://github.com/onnx/models/blob/main/vision/classification/shufflenet/model/shufflenet-v2-12.onnx)
+12. [squeezenet1.0-12](https://github.com/onnx/models/blob/main/vision/classification/squeezenet/model/squeezenet1.0-12.onnx)
+13. [vgg16-12](https://github.com/onnx/models/blob/main/vision/classification/vgg/model/vgg16-12.onnx)
+14. [zfnet512-12](https://github.com/onnx/models/blob/main/vision/classification/zfnet-512/model/zfnet512-12.onnx)
 
 All downloaded models are located in the same directory. `MODELS_DIR` should be the following structure.
 ```
@@ -109,7 +108,7 @@ MODELS_DIR/
 
 2. Object detection and segmentation models
 
-You can download models from [ONNX Model Zoo - Image Classification](https://github.com/onnx/models#image_classification).
+You can download models from [ONNX Model Zoo - Object Detection & Image Segmentation](https://github.com/onnx/models#object_detection).
 In this example, you have to prepare 15 classification models.
 
 - [FasterRCNN-12](https://github.com/onnx/models/blob/main/vision/object_detection_segmentation/faster-rcnn/model/FasterRCNN-12.onnx)
@@ -298,6 +297,7 @@ After benchmark is done, outputs are located in `/output` which is a mounted dir
 | fcn-resnet50-12               | 250.28            | 400.34            | 0.63                      | 38.31             | 38.14             | 0.17               |
 | retinanet-9                   | 110.18            | 38.05             | 2.90                      | 18.45             | 18.39             | 0.06               |
 | ssd-12                        | 204.44            | 76.08             | 2.69                      | 22.91             | 22.54             | 0.37               |
+| ssd_mobilenet_v1_12 :cloud:   | -                 | -                 | -                         | -                 | -                 | -                  |
 | tiny-yolov3-11 :cloud:        | 9.87              | NaN               | NaN                       | 8.68              | 7.97              | 0.71               |
 | tinyyolov2-8                  | 10.48             | 6.06              | 1.73                      | 32.34             | 31.78             | 0.56               |
 | yolov2-coco-9                 | 24.06             | 14.8              | 1.63                      | 21.7              | 22.17             | \-0.47             |

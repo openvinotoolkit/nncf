@@ -74,7 +74,7 @@ for config in `ls $CONFIGS_DIR`; do
         -d $SCRIPT_DIR/dataset_definitions.yml      \
         -s $DATASET_DIR                             \
         -a $DATASET_DIR                             \
-        -o $OUTPUT_DIR/original_performance.csv
+        --csv_result $OUTPUT_DIR/original_performance.csv
 
     echo "5) Benchmark model latency for $model_name (quantized)"
     # Benchmark the quantized model
@@ -85,6 +85,6 @@ for config in `ls $CONFIGS_DIR`; do
         -d $SCRIPT_DIR/dataset_definitions.yml      \
         -s $DATASET_DIR                             \
         -a $DATASET_DIR                             \
-        -o $OUTPUT_DIR/quantized_performance.csv
+        --csv_result $OUTPUT_DIR/quantized_performance.csv
 
 done
