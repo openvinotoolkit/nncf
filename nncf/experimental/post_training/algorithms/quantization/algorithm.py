@@ -59,6 +59,7 @@ class PostTrainingQuantizationParameters(AlgorithmParameters):
         self.algorithms = {PostTrainingAlgorithms.MinMaxQuantization: MinMaxQuantizationParameters(
             weight_quantizer_config=self.weight_quantizer_config,
             activation_quantizer_config=self.activation_quantizer_config,
+            number_samples=number_samples,
             range_type=range_type,
             ignored_scopes=ignored_scopes,
             target_device=target_device

@@ -1,14 +1,14 @@
-From 336d1004727fa2c43d466dbd98c218bf50f7d6b7 Mon Sep 17 00:00:00 2001
+From e644b3f218c6d9867e5ac280626a4d7223c8ce8c Mon Sep 17 00:00:00 2001
 From: "Kim, Vinnam" <vinnam.kim@intel.com>
-Date: Thu, 14 Jul 2022 16:15:46 +0900
+Date: Wed, 20 Jul 2022 11:23:23 +0900
 Subject: [PATCH] Add NNCF ONNX PTQ example notebook
 
 Signed-off-by: Kim, Vinnam <vinnam.kim@intel.com>
 ---
  models/common.py                  |   6 +-
- ptq_notebook.ipynb                | 814 ++++++++++++++++++++++++++++++
- ptq_notebook_no_ignore_head.ipynb | 739 +++++++++++++++++++++++++++
- 3 files changed, 1556 insertions(+), 3 deletions(-)
+ ptq_notebook.ipynb                | 806 ++++++++++++++++++++++++++++++
+ ptq_notebook_no_ignore_head.ipynb | 731 +++++++++++++++++++++++++++
+ 3 files changed, 1540 insertions(+), 3 deletions(-)
  create mode 100644 ptq_notebook.ipynb
  create mode 100644 ptq_notebook_no_ignore_head.ipynb
 
@@ -33,10 +33,10 @@ index 7690f71..6c0e496 100644
                  stride, names = int(meta['stride']), eval(meta['names'])
 diff --git a/ptq_notebook.ipynb b/ptq_notebook.ipynb
 new file mode 100644
-index 0000000..3568657
+index 0000000..a0c05b2
 --- /dev/null
 +++ b/ptq_notebook.ipynb
-@@ -0,0 +1,814 @@
+@@ -0,0 +1,806 @@
 +{
 + "cells": [
 +  {
@@ -777,17 +777,9 @@ index 0000000..3568657
 +  },
 +  {
 +   "cell_type": "code",
-+   "execution_count": 8,
++   "execution_count": null,
 +   "metadata": {},
-+   "outputs": [
-+    {
-+     "name": "stdout",
-+     "output_type": "stream",
-+     "text": [
-+      "FP32 latency: 23.5ms, INT8 latency: 19.6ms, FP32/INT8: 1.20x\n"
-+     ]
-+    }
-+   ],
++   "outputs": [],
 +   "source": [
 +    "o_latency = o_results[2][1]\n",
 +    "q_latency = q_results[2][1]\n",
@@ -853,10 +845,10 @@ index 0000000..3568657
 +}
 diff --git a/ptq_notebook_no_ignore_head.ipynb b/ptq_notebook_no_ignore_head.ipynb
 new file mode 100644
-index 0000000..f364733
+index 0000000..96bd204
 --- /dev/null
 +++ b/ptq_notebook_no_ignore_head.ipynb
-@@ -0,0 +1,739 @@
+@@ -0,0 +1,731 @@
 +{
 + "cells": [
 +  {
@@ -1522,17 +1514,9 @@ index 0000000..f364733
 +  },
 +  {
 +   "cell_type": "code",
-+   "execution_count": 8,
++   "execution_count": null,
 +   "metadata": {},
-+   "outputs": [
-+    {
-+     "name": "stdout",
-+     "output_type": "stream",
-+     "text": [
-+      "FP32 latency: 23.6ms, INT8 latency: 20.0ms, FP32/INT8: 1.18x\n"
-+     ]
-+    }
-+   ],
++   "outputs": [],
 +   "source": [
 +    "o_latency = o_results[2][1]\n",
 +    "q_latency = q_results[2][1]\n",
