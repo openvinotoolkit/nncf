@@ -235,8 +235,6 @@ $ git apply 0001-Add-NNCF-ONNX-PTQ-example-notebook.patch
 After [prerequisite](#prerequisite) is done, you can find `run_notebook.ipynb` notebook file in `examples/experimental/onnx/yolov5`. If you finish running all notebook cells, you will obtain the following PTQ benchmark results.
 
 ```
-# Model latency
-FP32 latency: 23.7ms, INT8 latency: 19.7ms, FP32/INT8: 1.21x
 # Model accuracy
 FP32 mAP: 37.1%, INT8 mAP: 36.4%, mAP difference: 0.8%
 ```
