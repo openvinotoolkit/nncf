@@ -18,6 +18,8 @@ from nncf.experimental.post_training.api.engine import Engine
 from nncf.experimental.onnx.samplers import create_onnx_sampler
 from nncf.experimental.post_training.api.sampler import Sampler
 
+import os
+
 import onnxruntime as rt
 import numpy as np
 import onnx
@@ -53,9 +55,11 @@ class ONNXEngine(Engine):
         :param model: onnx.ModelProto model instance
         """
         super().set_model(model)
-        with tempfile.NamedTemporaryFile() as temporary_model:
-            onnx.save(model, temporary_model.name)
-            self.sess = rt.InferenceSession(temporary_model.name, **self.rt_session_options)
+        temporary_model = tempfile.NamedTemporaryFile(delete=False)
+        temporary_model.close()
+        onnx.save(model, temporary_model.name)
+        self.sess = rt.InferenceSession(temporary_model.name, **self.rt_session_options)
+        os.unlink(temporary_model.name)
 
         self.input_names.clear()
         for inp in self.sess.get_inputs():
