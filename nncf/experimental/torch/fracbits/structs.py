@@ -11,6 +11,8 @@
  limitations under the License.
 """
 
-class FracBitsQuantizationMode:
+from nncf.common.quantization.structs import QuantizationMode
+
+class FracBitsQuantizationMode(QuantizationMode):
     SYMMETRIC = 'fracbits_symmetric'
     ASYMMETRIC = 'fracbits_asymmetric'
