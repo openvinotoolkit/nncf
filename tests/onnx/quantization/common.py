@@ -14,7 +14,6 @@
 from typing import List
 
 import os
-import tempfile
 import warnings
 
 import numpy as np
@@ -94,11 +93,8 @@ def compare_nncf_graph(quantized_model: onnx.ModelProto, path_ref_graph: str,
 
 
 def infer_model(input_shape: List[int], quantized_model: onnx.ModelProto) -> None:
-    temporary_model = tempfile.NamedTemporaryFile(delete=False)
-    temporary_model.close()
-    onnx.save(quantized_model, temporary_model.name)
-    sess = rt.InferenceSession(temporary_model.name, providers=['OpenVINOExecutionProvider'])
-    os.unlink(temporary_model.name)
+    serialized_model = quantized_model.SerializeToString()
+    sess = rt.InferenceSession(serialized_model, providers=['OpenVINOExecutionProvider'])
     _input = np.random.random(input_shape)
     input_name = sess.get_inputs()[0].name
     _ = sess.run([], {input_name: _input.astype(np.float32)})
