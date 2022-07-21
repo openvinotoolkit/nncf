@@ -30,13 +30,11 @@ from nncf.torch.utils import no_jit_trace
 @QUANTIZATION_MODULES.register(FracBitsQuantizationMode.SYMMETRIC)
 class FracBitsSymmetricQuantizer(SymmetricQuantizer):
     def __init__(self, qspec: PTQuantizerSpec):
-        self._constructed = False
         super().__init__(qspec)
         self._min_num_bits = int(0.5 * qspec.num_bits)
         self._max_num_bits = int(1.5 * qspec.num_bits)
         self._num_bits = CompressionParameter(torch.FloatTensor([qspec.num_bits]), requires_grad=True,
                                               compression_lr_multiplier=qspec.compression_lr_multiplier)
-        self._constructed = True
 
     @property
     def frac_num_bits(self):
@@ -44,7 +42,7 @@ class FracBitsSymmetricQuantizer(SymmetricQuantizer):
 
     @property
     def num_bits(self):
-        if not self._constructed:
+        if self._num_bits.dtype == torch.int32:
             return super().num_bits
 
         with no_jit_trace():
@@ -55,7 +53,7 @@ class FracBitsSymmetricQuantizer(SymmetricQuantizer):
         if num_bits < self._min_num_bits or num_bits > self._max_num_bits:
             raise RuntimeError(
                 f"{num_bits} should be in [{self._min_num_bits}, {self._max_num_bits}]")
-        self._frac_num_bits.fill_(num_bits)
+        self._num_bits.fill_(num_bits)
 
     @property
     def is_num_bits_frozen(self) -> bool:
@@ -76,11 +74,11 @@ class FracBitsSymmetricQuantizer(SymmetricQuantizer):
         super().set_level_ranges()
 
     def enable_gradients(self):
-        self._scale_param_storage.requires_grad = True
+        super().enable_gradients()
         self.unfreeze_num_bits()
 
     def disable_gradients(self):
-        self._scale_param_storage.requires_grad = False
+        super().disable_gradients()
         self.freeze_num_bits()
 
     def _quantize_with_n_bits(self, x, num_bits, execute_traced_op_as_identity: bool = False):
@@ -125,13 +123,11 @@ class FracBitsSymmetricQuantizer(SymmetricQuantizer):
 @QUANTIZATION_MODULES.register(FracBitsQuantizationMode.ASYMMETRIC)
 class FracBitsAsymmetricQuantizer(AsymmetricQuantizer):
     def __init__(self, qspec: PTQuantizerSpec):
-        self._constructed = False
         super().__init__(qspec)
         self._min_num_bits = int(0.5 * qspec.num_bits)
         self._max_num_bits = int(1.5 * qspec.num_bits)
         self._num_bits = CompressionParameter(torch.FloatTensor([qspec.num_bits]), requires_grad=True,
                                               compression_lr_multiplier=qspec.compression_lr_multiplier)
-        self._constructed = True
 
     @property
     def frac_num_bits(self):
@@ -139,7 +135,7 @@ class FracBitsAsymmetricQuantizer(AsymmetricQuantizer):
 
     @property
     def num_bits(self):
-        if not self._constructed:
+        if self._num_bits.dtype == torch.int32:
             return super().num_bits
 
         with no_jit_trace():
@@ -171,13 +167,11 @@ class FracBitsAsymmetricQuantizer(AsymmetricQuantizer):
         super().set_level_ranges()
 
     def enable_gradients(self):
-        self.input_low.requires_grad = True
-        self._input_range_param_storage.requires_grad = True
+        super().enable_gradients()
         self.unfreeze_num_bits()
 
     def disable_gradients(self):
-        self.input_low.requires_grad = False
-        self._input_range_param_storage.requires_grad = False
+        super().disable_gradients()
         self.freeze_num_bits()
 
     def _quantize_with_n_bits(self, x, num_bits, execute_traced_op_as_identity: bool = False):
