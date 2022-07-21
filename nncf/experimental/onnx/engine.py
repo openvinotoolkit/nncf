@@ -21,7 +21,6 @@ from nncf.experimental.post_training.api.sampler import Sampler
 import onnxruntime as rt
 import numpy as np
 import onnx
-import tempfile
 
 
 class ONNXEngine(Engine):
@@ -48,14 +47,13 @@ class ONNXEngine(Engine):
 
     def set_model(self, model: onnx.ModelProto) -> None:
         """
-        Creates ONNXRuntime InferenceSession for the onnx model with the location at 'model'.
+        Creates ONNXRuntime InferenceSession for the onnx model.
 
         :param model: onnx.ModelProto model instance
         """
         super().set_model(model)
-        with tempfile.NamedTemporaryFile() as temporary_model:
-            onnx.save(model, temporary_model.name)
-            self.sess = rt.InferenceSession(temporary_model.name, **self.rt_session_options)
+        serialized_model = model.SerializeToString()
+        self.sess = rt.InferenceSession(serialized_model, **self.rt_session_options)
 
         self.input_names.clear()
         for inp in self.sess.get_inputs():
