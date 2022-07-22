@@ -66,3 +66,7 @@ class FracBitsQuantizationController(QuantizationController):
 
     def _get_algo_config(self) -> Dict:
         return extract_algo_specific_config(self.config, algo_name_to_match="fracbits_quantization")
+
+    def freeze_bit_widths(self):
+        for q in self.all_quantizations.values():
+            q.freeze_num_bits()

@@ -12,7 +12,7 @@
 """
 
 from numbers import Number
-from typing import List, Union
+from typing import Dict, List, Union
 import torch
 from nncf.common.utils.registry import Registry
 from nncf.torch.compression_method_api import PTCompressionLoss
@@ -54,8 +54,8 @@ class ModelSizeCompressionLoss(PTCompressionLoss):
             self._init_model_size = self._get_model_size()
 
     def calculate(self) -> torch.Tensor:
-        cur_comp_rate = self._get_model_size() / (self._init_model_size + 1e-6)
-        tgt_comp_rate = torch.full_like(cur_comp_rate, 1 / self._compression_rate)
+        cur_comp_rate = self._init_model_size / (self._get_model_size() + 1e-6)
+        tgt_comp_rate = torch.full_like(cur_comp_rate, self._compression_rate)
 
         return self._criteria(cur_comp_rate, tgt_comp_rate)
 
@@ -69,13 +69,19 @@ class ModelSizeCompressionLoss(PTCompressionLoss):
     def _get_model_size(self) -> Union[torch.Tensor, Number]:
         def _get_module_size(module: nn.Module, num_bits: Union[int, torch.Tensor]) -> Union[torch.Tensor, Number]:
             if isinstance(module, nn.modules.conv._ConvNd):
-                return (module.weight * num_bits).sum()
+                return (module.weight.shape.numel() * num_bits).sum()
             if isinstance(module, nn.Linear):
-                return (module.weight * num_bits).sum()
+                return (module.weight.shape.numel() * num_bits).sum()
             nncf_logger.warning("module={module} is not supported by ModelSizeCompressionLoss. Skip it.")
             return 0.
 
         return sum([_get_module_size(pair.module, pair.quantizer._num_bits) for pair in self._w_q_pairs])
+
+    @torch.no_grad()
+    def get_state(self) -> Dict[str, Number]:
+        return {
+            "compression_rate": self._init_model_size / (self._get_model_size() + 1e-6).item()
+        }
 
 
 @FRACBITS_LOSSES.register("bitops")

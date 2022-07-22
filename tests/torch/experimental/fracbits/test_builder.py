@@ -68,3 +68,29 @@ def test_quant_loss(config, conv_model):
     for qinfo in compression_ctrl.weight_quantizers.values():
         q = qinfo.quantizer_module_ref
         assert q._num_bits.grad.data is not None
+
+
+def test_e2e_quant_loss(config, conv_model_with_input_output):
+    conv_model, x, y = conv_model_with_input_output
+    criterion = torch.nn.MSELoss()
+
+    quant_model, compression_ctrl = create_compressed_model_and_algo_for_test(conv_model, config)
+
+    optimizer = torch.optim.SGD(quant_model.parameters(), lr=1e-1)
+
+    for i in range(500):
+        optimizer.zero_grad()
+        target_loss = criterion(quant_model(x), y)
+        comp_loss = compression_ctrl.loss.calculate()
+
+        loss = target_loss + comp_loss
+        loss.backward()
+        optimizer.step()
+
+        if i == 300:
+            compression_ctrl.freeze_bit_widths()
+
+    target_comp_rate = config["compression"]["loss"]["compression_rate"]
+    for qinfo in compression_ctrl.weight_quantizers.values():
+        q = qinfo.quantizer_module_ref
+        assert q.num_bits <= int(8 / target_comp_rate)
