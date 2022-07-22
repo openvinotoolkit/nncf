@@ -18,7 +18,7 @@ from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.quantization.algo import QuantizationBuilder
 from nncf.torch.quantization.layers import PTQuantizerSetup
 from nncf.common.quantization.structs import QuantizationMode
-from nncf.experimental.torch.fracbits.structs import FracBitsQuantizationMode
+from nncf.experimental.torch.fracbits.quantizer import FracBitsQuantizationMode
 
 
 @PT_COMPRESSION_ALGORITHMS.register('fracbits_quantization')

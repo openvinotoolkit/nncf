@@ -12,7 +12,6 @@
 """
 
 from copy import deepcopy
-import pytest
 import torch
 
 from nncf.torch.compression_method_api import PTCompressionLoss
@@ -21,38 +20,9 @@ from nncf.torch.model_creation import create_compression_algorithm_builder
 from nncf.torch.module_operations import UpdateInputs, UpdateWeight
 from nncf.torch.utils import get_all_modules_by_type
 
-from tests.torch.helpers import BasicConvTestModel, create_compressed_model_and_algo_for_test, register_bn_adaptation_init_args
-from tests.torch.quantization.test_quantization_helpers import get_empty_config
+from tests.torch.helpers import create_compressed_model_and_algo_for_test
 from nncf.experimental.torch.fracbits.builder import FracBitsQuantizationBuilder
 from nncf.experimental.torch.fracbits.quantizer import FracBitsSymmetricQuantizer
-
-#pylint: disable=redefined-outer-name
-
-
-@pytest.fixture
-def config(model_size: int = 4):
-    config = get_empty_config(model_size)
-
-    config["compression"] = {
-        "algorithm": "fracbits_quantization",
-        "initializer": {
-            "range": {
-                "num_init_samples": 0
-            }
-        },
-        "loss": {
-            "type": "model_size",
-            "compression_rate": 1.5,
-            "criteria": "L1"
-        }
-    }
-    register_bn_adaptation_init_args(config)
-    return config
-
-
-@pytest.fixture
-def model():
-    return BasicConvTestModel()
 
 
 def test_create_builder(config):
@@ -60,11 +30,11 @@ def test_create_builder(config):
     assert isinstance(builder, FracBitsQuantizationBuilder)
 
 
-def test_can_load_quant_algo__with_defaults(config, model):
+def test_can_load_quant_algo__with_defaults(config, conv_model):
     quant_model, _ = create_compressed_model_and_algo_for_test(
-        deepcopy(model), config)
+        deepcopy(conv_model), config)
 
-    model_conv = get_all_modules_by_type(model, 'Conv2d')
+    model_conv = get_all_modules_by_type(conv_model, 'Conv2d')
     quant_model_conv = get_all_modules_by_type(
         quant_model.get_nncf_wrapped_model(), 'NNCFConv2d')
     assert len(model_conv) == len(quant_model_conv)
@@ -83,8 +53,8 @@ def test_can_load_quant_algo__with_defaults(config, model):
         assert UpdateWeight.__name__ in store
 
 
-def test_quant_loss(config, model):
-    _, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
+def test_quant_loss(config, conv_model):
+    _, compression_ctrl = create_compressed_model_and_algo_for_test(conv_model, config)
 
     loss = compression_ctrl.loss
     assert isinstance(loss, PTCompressionLoss)

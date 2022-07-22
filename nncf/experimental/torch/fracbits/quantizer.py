@@ -17,13 +17,17 @@
 from typing import Dict
 import torch
 
-from nncf.experimental.torch.fracbits.structs import FracBitsQuantizationMode
-
 from nncf.torch.layer_utils import COMPRESSION_MODULES, CompressionParameter
 from nncf.torch.quantization.layers import (
     QUANTIZATION_MODULES, AsymmetricQuantizer, PTQuantizerSpec, SymmetricQuantizer)
 from nncf.torch.quantization.quantize_functions import asymmetric_quantize, symmetric_quantize
 from nncf.torch.utils import no_jit_trace
+from nncf.common.quantization.structs import QuantizationMode
+
+
+class FracBitsQuantizationMode(QuantizationMode):
+    SYMMETRIC = 'fracbits_symmetric'
+    ASYMMETRIC = 'fracbits_asymmetric'
 
 
 @COMPRESSION_MODULES.register()
