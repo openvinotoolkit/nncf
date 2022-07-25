@@ -11,11 +11,15 @@
  limitations under the License.
 """
 
+from contextlib import contextmanager
 from typing import Dict, Tuple
 
 from nncf.common.quantization.structs import NonWeightQuantizerId, QuantizerId, WeightQuantizerId
+from nncf.common.statistics import NNCFStatistics
 from nncf.config.config import NNCFConfig
 from nncf.config.extractors import extract_algo_specific_config
+from nncf.experimental.torch.fracbits.statistics import FracBitsStatistics
+from nncf.torch.compression_method_api import PTCompressionLoss
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.quantization.algo import QuantizationController, QuantizationDebugInterface
 from nncf.torch.quantization.init_range import PTRangeInitParams
@@ -61,7 +65,7 @@ class FracBitsQuantizationController(QuantizationController):
         compression_rate = loss_config.get("compression_rate")
         criteria = loss_config.get("criteria")
 
-        self._loss = FRACBITS_LOSSES.get(loss_type)(
+        self._loss: PTCompressionLoss = FRACBITS_LOSSES.get(loss_type)(
             model=target_model, compression_rate=compression_rate, criteria=criteria)
 
     def _get_algo_config(self) -> Dict:
@@ -70,3 +74,18 @@ class FracBitsQuantizationController(QuantizationController):
     def freeze_bit_widths(self):
         for q in self.all_quantizations.values():
             q.freeze_num_bits()
+
+    def statistics(self, quickly_collected_only=False) -> NNCFStatistics:
+        @contextmanager
+        def _base_name_context():
+            tmp_name = self._name
+            self._name = "quantization"
+            yield self.name
+            self._name = tmp_name
+
+        with _base_name_context():
+            nncf_statistics = super().statistics(quickly_collected_only)
+
+        nncf_statistics.register(self.name, FracBitsStatistics(self._loss.get_state()))
+
+        return nncf_statistics

@@ -104,12 +104,13 @@ class NNCFStatistics(Statistics):
             - quantization
             - filter_pruning
             - binarization
+            - fracbits_quantization
         :param stats: Statistics of the algorithm.
         """
 
         available_algorithms = [
             'magnitude_sparsity', 'rb_sparsity', 'const_sparsity',
-            'quantization', 'filter_pruning', 'binarization'
+            'quantization', 'filter_pruning', 'binarization', "fracbits_quantization"
         ]
         if algorithm_name not in available_algorithms:
             raise ValueError('Can not register statistics for the algorithm. '

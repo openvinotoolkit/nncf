@@ -12,7 +12,7 @@
 """
 
 from numbers import Number
-from typing import Dict, List, Union
+from typing import Dict, Union
 import torch
 from nncf.common.utils.registry import Registry
 from nncf.torch.compression_method_api import PTCompressionLoss
@@ -41,14 +41,14 @@ class ModelSizeCompressionLoss(PTCompressionLoss):
         self._compression_rate = compression_rate
         self._criteria = self._get_criteria(criteria)
 
-        self._w_q_pairs: List[ModuleQuantizerPair] = []
+        self._w_q_pairs: Dict[str, ModuleQuantizerPair] = {}
 
         for name, module in self._model.named_modules():
             if isinstance(module, UpdateWeight):
                 parent_name = ".".join(name.split(".")[:-2])
                 parent_module = self._model.get_submodule(parent_name)
 
-                self._w_q_pairs += [ModuleQuantizerPair(parent_module, module.op)]
+                self._w_q_pairs[parent_name] = ModuleQuantizerPair(parent_module, module.op)
 
         with torch.no_grad():
             self._init_model_size = self._get_model_size()
@@ -75,13 +75,18 @@ class ModelSizeCompressionLoss(PTCompressionLoss):
             nncf_logger.warning("module={module} is not supported by ModelSizeCompressionLoss. Skip it.")
             return 0.
 
-        return sum([_get_module_size(pair.module, pair.quantizer._num_bits) for pair in self._w_q_pairs])
+        return sum([_get_module_size(pair.module, pair.quantizer.frac_num_bits) for pair in self._w_q_pairs.values()])
 
     @torch.no_grad()
     def get_state(self) -> Dict[str, Number]:
-        return {
+        states = {
             "compression_rate": self._init_model_size / (self._get_model_size() + 1e-6).item()
         }
+
+        for name, pair in self._w_q_pairs.items():
+            states[f"frac_bits[{name}]"] = pair.quantizer.frac_num_bits.item()
+
+        return states
 
 
 @FRACBITS_LOSSES.register("bitops")
@@ -90,4 +95,8 @@ class BitOpsCompressionLoss(PTCompressionLoss):
         super().__init__()
 
     def calculate(self) -> torch.Tensor:
+        raise NotImplementedError()
+
+    @torch.no_grad()
+    def get_state(self) -> Dict[str, Number]:
         raise NotImplementedError()

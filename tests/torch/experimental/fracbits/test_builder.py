@@ -13,6 +13,7 @@
 
 from copy import deepcopy
 import torch
+from nncf.common.statistics import NNCFStatistics
 
 from nncf.torch.compression_method_api import PTCompressionLoss
 from nncf.torch.dynamic_graph.scope import Scope, ScopeElement
@@ -31,8 +32,7 @@ def test_create_builder(config):
 
 
 def test_can_load_quant_algo__with_defaults(config, conv_model):
-    quant_model, _ = create_compressed_model_and_algo_for_test(
-        deepcopy(conv_model), config)
+    quant_model, _ = create_compressed_model_and_algo_for_test(conv_model, config)
 
     model_conv = get_all_modules_by_type(conv_model, 'Conv2d')
     quant_model_conv = get_all_modules_by_type(
@@ -94,3 +94,12 @@ def test_e2e_quant_loss(config, conv_model_with_input_output):
     for qinfo in compression_ctrl.weight_quantizers.values():
         q = qinfo.quantizer_module_ref
         assert q.num_bits <= int(8 / target_comp_rate)
+
+def test_statistics(config, conv_model):
+    _, ctrl = create_compressed_model_and_algo_for_test(conv_model, config)
+
+    stats: NNCFStatistics = ctrl.statistics()
+    assert stats.quantization is not None
+
+    dict_stats = {k: v for k, v in stats}
+    assert dict_stats[ctrl.name] is not None
