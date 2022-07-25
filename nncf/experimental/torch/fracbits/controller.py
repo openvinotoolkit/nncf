@@ -19,6 +19,7 @@ from nncf.common.statistics import NNCFStatistics
 from nncf.config.config import NNCFConfig
 from nncf.config.extractors import extract_algo_specific_config
 from nncf.experimental.torch.fracbits.statistics import FracBitsStatistics
+from nncf.experimental.torch.fracbits.scheduler import FracBitsQuantizationScheduler
 from nncf.torch.compression_method_api import PTCompressionLoss
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.quantization.algo import QuantizationController, QuantizationDebugInterface
@@ -43,6 +44,7 @@ class FracBitsQuantizationController(QuantizationController):
                          groups_of_adjacent_quantizers, quantizers_input_shapes,
                          build_time_metric_info, build_time_range_init_params)
         self._set_fracbits_loss(target_model)
+        self._set_scheduler()
 
     def _set_fracbits_loss(self, target_model: NNCFNetwork):
         algo_config = self._get_algo_config()
@@ -67,6 +69,22 @@ class FracBitsQuantizationController(QuantizationController):
 
         self._loss: PTCompressionLoss = FRACBITS_LOSSES.get(loss_type)(
             model=target_model, compression_rate=compression_rate, criteria=criteria)
+
+    def _set_scheduler(self):
+        algo_config = self._get_algo_config()
+
+        freeze_epoch = algo_config.get("freeze_epoch", None)
+
+        if freeze_epoch is None:
+            raise RuntimeError("You didn't set freeze_epoch config.")
+
+        def _callback():
+            self.freeze_bit_widths()
+
+        self._scheduler = FracBitsQuantizationScheduler(
+            freeze_callback=_callback,
+            freeze_epoch=freeze_epoch
+        )
 
     def _get_algo_config(self) -> Dict:
         return extract_algo_specific_config(self.config, algo_name_to_match="fracbits_quantization")

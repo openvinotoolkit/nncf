@@ -295,6 +295,8 @@ BOOTSTRAP_NAS_SCHEMA = {
 FRACBITS_QUANTIZATION_ALGO_NAME_IN_CONFIG = 'fracbits_quantization'
 FRACBITS_QUANTIZATION_SCHEMA = copy.deepcopy(QUANTIZATION_SCHEMA)
 FRACBITS_QUANTIZATION_SCHEMA['properties']['algorithm']['const'] = FRACBITS_QUANTIZATION_ALGO_NAME_IN_CONFIG
+FRACBITS_QUANTIZATION_SCHEMA['properties']['freeze_epoch'] = with_attributes(
+    NUMBER, description="The number of epoch to freeze fractional bit widths to integers by rounding them.")
 FRACBITS_QUANTIZATION_SCHEMA['properties']['loss'] = {
     "type": "object",
     "properties": {

@@ -84,7 +84,7 @@ class ModelSizeCompressionLoss(PTCompressionLoss):
         }
 
         for name, pair in self._w_q_pairs.items():
-            states[f"frac_bits[{name}]"] = pair.quantizer.frac_num_bits.item()
+            states[f"frac_bits/{name}"] = pair.quantizer.frac_num_bits.item()
 
         return states
 
