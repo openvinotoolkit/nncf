@@ -36,10 +36,11 @@ class ModuleQuantizerPair:
 
 @FRACBITS_LOSSES.register("model_size")
 class ModelSizeCompressionLoss(PTCompressionLoss):
-    def __init__(self, model: NNCFNetwork, compression_rate: float, criteria: str = "L1", **kwargs):
+    def __init__(
+            self, model: NNCFNetwork, compression_rate: float, criteria: str = "L1", flip_loss=True, alpha=1.0, **kwargs):
         super().__init__()
         self._model = model
-        self._compression_rate = compression_rate
+        self._compression_rate = torch.FloatTensor([compression_rate])
         self._criteria = self._get_criteria(criteria)
 
         self._w_q_pairs: Dict[str, ModuleQuantizerPair] = {}
@@ -54,11 +55,18 @@ class ModelSizeCompressionLoss(PTCompressionLoss):
         with torch.no_grad():
             self._init_model_size = self._get_model_size()
 
-    def calculate(self) -> torch.Tensor:
-        cur_comp_rate = self._init_model_size / (self._get_model_size() + EPS)
-        tgt_comp_rate = torch.full_like(cur_comp_rate, self._compression_rate)
+        self._flip_loss = flip_loss
+        self._alpha = alpha
 
-        return self._criteria(cur_comp_rate, tgt_comp_rate)
+    def calculate(self) -> torch.Tensor:
+        if self._flip_loss:
+            cur_comp_rate = self._get_model_size() / self._init_model_size
+            tgt_comp_rate = 1 / self._compression_rate.to(device=cur_comp_rate.device)
+        else:
+            cur_comp_rate = self._init_model_size / (self._get_model_size() + EPS)
+            tgt_comp_rate = self._compression_rate.to(device=cur_comp_rate.device)
+
+        return self._alpha * self._criteria(cur_comp_rate, tgt_comp_rate)
 
     def _get_criteria(self, criteria) -> nn.modules.loss._Loss:
         if criteria == "L1":

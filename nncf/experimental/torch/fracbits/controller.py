@@ -66,9 +66,11 @@ class FracBitsQuantizationController(QuantizationController):
         loss_type = loss_config.get("type")
         compression_rate = loss_config.get("compression_rate")
         criteria = loss_config.get("criteria")
+        flip_loss = loss_config.get("flip_loss")
+        alpha = loss_config.get("alpha")
 
         self._loss: PTCompressionLoss = FRACBITS_LOSSES.get(loss_type)(
-            model=target_model, compression_rate=compression_rate, criteria=criteria)
+            model=target_model, compression_rate=compression_rate, criteria=criteria, flip_loss=flip_loss, alpha=alpha)
 
     def _set_scheduler(self):
         algo_config = self._get_algo_config()
