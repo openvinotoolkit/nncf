@@ -59,6 +59,7 @@ def config(model_size: int = 4):
                 "num_init_samples": 0
             }
         },
+        "freeze_epoch": -1,
         "loss": {
             "type": "model_size",
             "compression_rate": 1.5,

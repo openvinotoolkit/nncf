@@ -32,7 +32,7 @@ def test_create_builder(config):
 
 
 def test_can_load_quant_algo__with_defaults(config, conv_model):
-    quant_model, _ = create_compressed_model_and_algo_for_test(conv_model, config)
+    quant_model, _ = create_compressed_model_and_algo_for_test(deepcopy(conv_model), config)
 
     model_conv = get_all_modules_by_type(conv_model, 'Conv2d')
     quant_model_conv = get_all_modules_by_type(
