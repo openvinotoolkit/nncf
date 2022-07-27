@@ -8,24 +8,20 @@
     "batch_size" : 1024,
     "epochs": 5,
     "optimizer": {
-        "type": "SGD",
-        "base_lr": 1e-3,
+        "type": "Adam",
+        "base_lr": 0.00001,
         "schedule_type": "multistep",
         "steps": [
             5
         ]
     },
     "compression": {
-        "algorithm": "fracbits_quantization",
+        "algorithm": "quantization",
         "overflow_fix": "disable",
-        "quantize_inputs": true,
-        "freeze_epoch": 4,
-        "loss": {
-            "type": "model_size",
-            "compression_rate": 1.5,
-            "criteria": "L1",
-            "flip_loss": false,
-            "alpha": 40.0
+        "initializer": {
+            "range": {
+                "num_init_samples": 2560
+            }
         }
     }
 }
