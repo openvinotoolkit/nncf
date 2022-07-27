@@ -95,6 +95,11 @@ class FracBitsQuantizationController(QuantizationController):
         for q in self.all_quantizations.values():
             q.freeze_num_bits()
 
+        # We need to broadcast bit widths to synchronize if it is under distributed system.
+        # If you remove this you can get the following error.
+        # RuntimeError: Expected to have finished reduction in the prior iteration before starting a new one...
+        self._broadcast_initialized_params_for_each_quantizer()
+
     def statistics(self, quickly_collected_only=False) -> NNCFStatistics:
         @contextmanager
         def _base_name_context():
