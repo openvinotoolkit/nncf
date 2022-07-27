@@ -25,6 +25,7 @@ from nncf.common.utils.logger import logger as nncf_logger
 
 
 FRACBITS_LOSSES = Registry("fracbits_loss")
+EPS = 1e-6
 
 
 @dataclass
@@ -54,7 +55,7 @@ class ModelSizeCompressionLoss(PTCompressionLoss):
             self._init_model_size = self._get_model_size()
 
     def calculate(self) -> torch.Tensor:
-        cur_comp_rate = self._init_model_size / (self._get_model_size() + 1e-6)
+        cur_comp_rate = self._init_model_size / (self._get_model_size() + EPS)
         tgt_comp_rate = torch.full_like(cur_comp_rate, self._compression_rate)
 
         return self._criteria(cur_comp_rate, tgt_comp_rate)
@@ -80,7 +81,7 @@ class ModelSizeCompressionLoss(PTCompressionLoss):
     @torch.no_grad()
     def get_state(self) -> Dict[str, Number]:
         states = {
-            "compression_rate": self._init_model_size / (self._get_model_size() + 1e-6).item()
+            "compression_rate": self._init_model_size / (self._get_model_size() + EPS).item()
         }
 
         for name, pair in self._w_q_pairs.items():
