@@ -69,9 +69,7 @@ class ModelSizeCompressionLoss(PTCompressionLoss):
 
     def _get_model_size(self) -> Union[torch.Tensor, Number]:
         def _get_module_size(module: nn.Module, num_bits: Union[int, torch.Tensor]) -> Union[torch.Tensor, Number]:
-            if isinstance(module, nn.modules.conv._ConvNd):
-                return (module.weight.shape.numel() * num_bits).sum()
-            if isinstance(module, nn.Linear):
+            if isinstance(module, (nn.modules.conv._ConvNd, nn.Linear)):
                 return (module.weight.shape.numel() * num_bits).sum()
             nncf_logger.warning("module={module} is not supported by ModelSizeCompressionLoss. Skip it.")
             return 0.
