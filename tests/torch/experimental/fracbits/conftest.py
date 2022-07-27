@@ -63,7 +63,9 @@ def config(model_size: int = 4):
         "loss": {
             "type": "model_size",
             "compression_rate": 1.5,
-            "criteria": "L1"
+            "criteria": "L1",
+            "flip_loss": False,
+            "alpha": 1.0
         }
     }
     register_bn_adaptation_init_args(config)

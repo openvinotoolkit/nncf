@@ -46,7 +46,7 @@ class FracBitsSymmetricQuantizer(SymmetricQuantizer):
 
     @property
     def num_bits(self):
-        if self.is_num_bits_frozen:
+        if self._num_bits.dtype == torch.int32:
             return super().num_bits
 
         with no_jit_trace():
@@ -139,7 +139,7 @@ class FracBitsAsymmetricQuantizer(AsymmetricQuantizer):
 
     @property
     def num_bits(self) -> int:
-        if self.is_num_bits_frozen:
+        if self._num_bits.dtype == torch.int32:
             return super().num_bits
 
         with no_jit_trace():

@@ -13,6 +13,7 @@
 
 from contextlib import contextmanager
 from typing import Dict, Tuple
+from torch import distributed
 
 from nncf.common.quantization.structs import NonWeightQuantizerId, QuantizerId, WeightQuantizerId
 from nncf.common.statistics import NNCFStatistics
@@ -98,7 +99,8 @@ class FracBitsQuantizationController(QuantizationController):
         # We need to broadcast bit widths to synchronize if it is under distributed system.
         # If you remove this you can get the following error.
         # RuntimeError: Expected to have finished reduction in the prior iteration before starting a new one...
-        self._broadcast_initialized_params_for_each_quantizer()
+        if distributed.is_initialized():
+            self._broadcast_initialized_params_for_each_quantizer()
 
     def statistics(self, quickly_collected_only=False) -> NNCFStatistics:
         @contextmanager
