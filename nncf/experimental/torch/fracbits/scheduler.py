@@ -15,6 +15,7 @@ from typing import Callable
 from nncf.common.schedulers import BaseCompressionScheduler
 from nncf.common.utils.logger import logger as nncf_logger
 
+
 class FracBitsQuantizationScheduler(BaseCompressionScheduler):
     def __init__(self, freeze_epoch: int, freeze_callback: Callable):
         super().__init__()
