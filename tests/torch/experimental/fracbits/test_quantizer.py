@@ -16,39 +16,8 @@ import torch
 from torch import nn
 
 from nncf.common.utils.logger import logger as nncf_logger
-from nncf.experimental.torch.fracbits.quantizer import FracBitsAsymmetricQuantizer, FracBitsSymmetricQuantizer
-from nncf.experimental.torch.fracbits.structs import FracBitsQuantizationMode
-from nncf.torch.quantization.layers import PTQuantizerSpec
-
-#pylint: disable=redefined-outer-name
-
-
-def set_manual_seed():
-    torch.manual_seed(3003)
-
-
-@pytest.fixture(scope="function")
-def linear_problem(num_bits: int = 4, sigma: float = 0.2):
-    set_manual_seed()
-
-    levels = 2 ** num_bits
-    w = 1 / levels * (torch.randint(0, levels, size=[100, 10]) - levels // 2)
-    x = torch.randn([1000, 10])
-    y = w.mm(x.t())
-    y += sigma * torch.randn_like(y)
-
-    return w, x, y, num_bits, sigma
-
-
-@pytest.fixture()
-def qspec(request):
-    return PTQuantizerSpec(num_bits=8,
-                           mode=request.param,
-                           signedness_to_force=None,
-                           scale_shape=(1, 1),
-                           narrow_range=False,
-                           half_range=False,
-                           logarithm_scale=False)
+from nncf.experimental.torch.fracbits.quantizer import (
+    FracBitsAsymmetricQuantizer, FracBitsSymmetricQuantizer, FracBitsQuantizationMode)
 
 
 @pytest.mark.parametrize("add_bitwidth_loss", [True, False])
