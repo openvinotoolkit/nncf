@@ -57,8 +57,8 @@ class PrunedModelStatistics(Statistics):
         """
         Initializes statistics of the pruned model.
 
-        :param full_flops: The total amount of FLOPS in the model.
-        :param current_flops: Current amount of FLOPS in the model.
+        :param full_flops: The total amount of FLOPs in the model.
+        :param current_flops: Current amount of FLOPs in the model.
         :param full_params_num: The total amount of weights in the model.
         :param current_params_num: Current amount of weights in the model.
         :param full_filters_num: The total amount of filters in the model.
@@ -83,7 +83,7 @@ class PrunedModelStatistics(Statistics):
         model_string = create_table(
             header=['#', 'Full', 'Current', 'Pruning level'],
             rows=[
-                ['GFLOPS', f'{self.full_flops / self._giga:.3f}',
+                ['GFLOPs', f'{self.full_flops / self._giga:.3f}',
                            f'{self.current_flops / self._giga:.3f}',
                            self.flops_pruning_level],
                 ['MParams', f'{self.full_params_num / self._mega:.3f}',
@@ -137,7 +137,7 @@ class FilterPruningStatistics(Statistics):
         self.prune_flops = prune_flops
 
     def to_str(self) -> str:
-        pruning_mode = 'FLOPS' if self.prune_flops else 'filter'
+        pruning_mode = 'FLOPs' if self.prune_flops else 'filter'
         algorithm_string = create_table(
             header=['Statistic\'s name', 'Value'],
             rows=[
@@ -168,14 +168,10 @@ class PrunedModelTheoreticalBorderline(Statistics):
         """
         Initializes statistics of the filter pruning theoretical borderline.
 
-        :param num_pruned_layers: Number of layers which was actually
-            pruned.
-        :param num_prunable_layers: Number of layers which have
-            prunable type.
-        :param max_prunable_flops: Number of flops for pruned
-            model with pruning rate = 1.
-        :param max_prunable_params: Number of weights for pruned
-            model with pruning rate = 1.
+        :param num_pruned_layers: Number of layers which was actually pruned.
+        :param num_prunable_layers: Number of layers which have prunable type.
+        :param max_prunable_flops: Number of flops for pruned model with pruning level = 1.
+        :param max_prunable_params: Number of weights for pruned model with pruning level = 1.
         :param total_flops: The total amount of FLOPS in the model.
         :param total_params: The total amount of weights in the model.
         """
@@ -194,7 +190,7 @@ class PrunedModelTheoreticalBorderline(Statistics):
             rows=[
                 ['Pruned layers count / prunable layers count', f'{self.pruned_layers_num} /'
                                                                 f' {self.prunable_layers_num}'],
-                ['GFLOPS minimum possible after pruning / total', f'{self.minimum_possible_flops / self._giga:.3f} /'
+                ['GFLOPs minimum possible after pruning / total', f'{self.minimum_possible_flops / self._giga:.3f} /'
                                                                   f' {self.total_flops / self._giga:.3f}'],
                 ['MParams minimum possible after pruning / total', f'{self.minimum_possible_params / self._mega:.3f} /'
                                                                    f' {self.total_params / self._mega:.3f}'],

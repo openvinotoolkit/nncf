@@ -158,7 +158,7 @@ class ExponentialPruningScheduler(PruningScheduler):
 @PRUNING_SCHEDULERS.register('exponential_with_bias')
 class ExponentialWithBiasPruningScheduler(PruningScheduler):
     """
-    Pruning scheduler which calculates pruning rate for the current epoch
+    Pruning scheduler which calculates pruning level for the current epoch
     according to the formula:
 
         current_level = a * exp(-k * epoch_idx) + b,
