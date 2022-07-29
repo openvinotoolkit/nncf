@@ -53,17 +53,17 @@ class ModelSizeCompressionLoss(PTCompressionLoss):
                 self._w_q_pairs[parent_name] = ModuleQuantizerPair(parent_module, module.op)
 
         with torch.no_grad():
-            self._init_model_size = self._get_model_size()
+            self._init_model_size = self._get_frac_model_size()
 
         self._flip_loss = flip_loss
         self._alpha = alpha
 
     def calculate(self) -> torch.Tensor:
         if self._flip_loss:
-            cur_comp_rate = self._get_model_size() / self._init_model_size
+            cur_comp_rate = self._get_frac_model_size() / self._init_model_size
             tgt_comp_rate = 1 / self._compression_rate.to(device=cur_comp_rate.device)
         else:
-            cur_comp_rate = self._init_model_size / (self._get_model_size() + EPS)
+            cur_comp_rate = self._init_model_size / (self._get_frac_model_size() + EPS)
             tgt_comp_rate = self._compression_rate.to(device=cur_comp_rate.device)
 
         return self._alpha * self._criteria(cur_comp_rate, tgt_comp_rate)
@@ -75,19 +75,26 @@ class ModelSizeCompressionLoss(PTCompressionLoss):
             return nn.MSELoss()
         raise RuntimeError(f"Unknown criteria = {criteria}.")
 
-    def _get_model_size(self) -> Union[torch.Tensor, Number]:
-        def _get_module_size(module: nn.Module, num_bits: Union[int, torch.Tensor]) -> Union[torch.Tensor, Number]:
-            if isinstance(module, (nn.modules.conv._ConvNd, nn.Linear)):
-                return (module.weight.shape.numel() * num_bits).sum()
-            nncf_logger.warning("module={module} is not supported by ModelSizeCompressionLoss. Skip it.")
-            return 0.
+    @staticmethod
+    def _get_module_size(module: nn.Module, num_bits: Union[int, torch.Tensor]) -> Union[torch.Tensor, Number]:
+        if isinstance(module, (nn.modules.conv._ConvNd, nn.Linear)):
+            return (module.weight.shape.numel() * num_bits).sum()
+        nncf_logger.warning("module={module} is not supported by ModelSizeCompressionLoss. Skip it.")
+        return 0.
 
-        return sum([_get_module_size(pair.module, pair.quantizer.frac_num_bits) for pair in self._w_q_pairs.values()])
+    def _get_frac_model_size(self) -> Union[torch.Tensor, Number]:
+        return sum([self._get_module_size(pair.module, pair.quantizer.frac_num_bits) for pair in self._w_q_pairs.values()])
+
+    def _get_model_size(self) -> Union[torch.Tensor, Number]:
+        return sum([self._get_module_size(pair.module, pair.quantizer.num_bits) for pair in self._w_q_pairs.values()])
 
     @torch.no_grad()
     def get_state(self) -> Dict[str, Number]:
+        curr_model_size = self._get_model_size().item()
+
         states = {
-            "compression_rate": self._init_model_size / (self._get_model_size() + EPS).item()
+            "current_model_size": curr_model_size,
+            "compression_rate": self._init_model_size / (curr_model_size + EPS)
         }
 
         for name, pair in self._w_q_pairs.items():
