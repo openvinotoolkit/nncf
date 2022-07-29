@@ -32,6 +32,8 @@ We provide configurations for three model architectures: `inception_v3`, `mobile
 | MobileNet-V2 |       FracBits        | ImageNet |   71.21 (0.66)    | [mobilenet_v2_imagenet_mixed_int_fracbits_msize.json](examples/experimental/torch/classification/configs/mobilenet_v2_imagenet_mixed_int_fracbits_msize.json) |       1.5        |
 |  ResNet-50   |       FracBits        | ImageNet |   76.17 (-0.01)   |     [resnet50_imagenet_mixed_int_fracbits_msize.json](examples/experimental/torch/classification/configs/resnet50_imagenet_mixed_int_fracbits_msize.json)     |       1.5        |
 
+- We used a NVIDIA V100 x 8 machine to obtain all results except MobileNet-V2, CIFAR100 experiment.
+- Model accuracy is obtained by averaging on 5 repeats.
 - Absolute accuracy drop is compared to FP32 model accuracy reported in [Results for quantization](../../../torch/classification/README.md#results-for-quantization).
 - Compression rate is about the reduced model size compared to the initial one. The model initial state starts from INT8 quantization, so compression rate = 1.5 means that the model size is reduced to 2/3 compared to the INT8 model.
 - Model size is the total number of bits in model weights. it is computed by $\sum_i \textrm{\# of params}_i \times \textrm{bitwidth}_i$ where $\textrm{\# of params}_i$ is the number of parameters of $i$th layer and $\textrm{bitwidth}_i$ is the bit-width of $i$th layer.
