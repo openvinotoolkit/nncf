@@ -8,6 +8,7 @@
     "batch_size" : 512,
     "epochs": 1,
     "multiprocessing_distributed" : true,
+    "find_unused_parameters": true,
     "optimizer": {
         "type": "SGD",
         "base_lr": 1e-3,

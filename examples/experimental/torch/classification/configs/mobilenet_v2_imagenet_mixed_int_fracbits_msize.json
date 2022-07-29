@@ -7,6 +7,8 @@
     "num_classes": 1000,
     "batch_size" : 1024,
     "epochs": 5,
+    "multiprocessing_distributed": true,
+    "find_unused_parameters": true,
     "optimizer": {
         "type": "SGD",
         "base_lr": 1e-3,
