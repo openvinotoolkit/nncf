@@ -568,11 +568,11 @@ def train_epoch(train_loader, model, criterion, criterion_fn, optimizer, compres
         if is_main_process() and log_training_info:
             global_step = train_iters * epoch
             config.tb.add_scalar("train/learning_rate", get_lr(optimizer), i + global_step)
-            config.tb.add_scalar("train/criterion_loss", criterion_losses.avg, i + global_step)
-            config.tb.add_scalar("train/compression_loss", compression_losses.avg, i + global_step)
-            config.tb.add_scalar("train/loss", losses.avg, i + global_step)
-            config.tb.add_scalar("train/top1", top1.avg, i + global_step)
-            config.tb.add_scalar("train/top5", top5.avg, i + global_step)
+            config.tb.add_scalar("train/criterion_loss", criterion_losses.val, i + global_step)
+            config.tb.add_scalar("train/compression_loss", compression_losses.val, i + global_step)
+            config.tb.add_scalar("train/loss", losses.val, i + global_step)
+            config.tb.add_scalar("train/top1", top1.val, i + global_step)
+            config.tb.add_scalar("train/top5", top5.val, i + global_step)
 
             statistics = compression_ctrl.statistics(quickly_collected_only=True)
             for stat_name, stat_value in prepare_for_tensorboard(statistics).items():
