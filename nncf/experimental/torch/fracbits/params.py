@@ -18,7 +18,8 @@ from typing import Dict
 class FracBitsParamsBase:
     @classmethod
     def from_config(cls, config: Dict) -> "FracBitsParamsBase":
-        return cls(**{k: v for k, v in config.items() if k in fields(cls)})
+        attr_names = {f.name for f in fields(cls)}
+        return cls(**{k: v for k, v in config.items() if k in attr_names})
 
 
 @dataclass

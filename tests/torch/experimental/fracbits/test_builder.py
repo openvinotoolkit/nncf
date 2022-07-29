@@ -14,6 +14,7 @@
 from copy import deepcopy
 import torch
 from nncf.common.statistics import NNCFStatistics
+from nncf.experimental.torch.fracbits.loss import ModelSizeCompressionLoss
 
 from nncf.torch.compression_method_api import PTCompressionLoss
 from nncf.torch.dynamic_graph.scope import Scope, ScopeElement
@@ -24,6 +25,8 @@ from nncf.torch.utils import get_all_modules_by_type
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
 from nncf.experimental.torch.fracbits.builder import FracBitsQuantizationBuilder
 from nncf.experimental.torch.fracbits.quantizer import FracBitsSymmetricQuantizer
+
+#pylint: disable=protected-access
 
 
 def test_create_builder(config):
@@ -70,6 +73,19 @@ def test_quant_loss(config, conv_model):
         assert q._num_bits.grad.data is not None
 
 
+def test_quant_loss_params(config, conv_model):
+    _, compression_ctrl = create_compressed_model_and_algo_for_test(conv_model, config)
+
+    loss: ModelSizeCompressionLoss = compression_ctrl.loss
+    assert isinstance(loss, ModelSizeCompressionLoss)
+
+    loss_config = config["compression"]["loss"]
+    assert isinstance(loss._criteria, torch.nn.L1Loss)
+    assert loss._alpha == loss_config["alpha"]
+    assert loss._flip_loss == loss_config["flip_loss"]
+    assert loss._compression_rate.item() == loss_config["compression_rate"]
+
+
 def test_e2e_quant_loss(config, conv_model_with_input_output):
     conv_model, x, y = conv_model_with_input_output
     criterion = torch.nn.MSELoss()
@@ -94,6 +110,7 @@ def test_e2e_quant_loss(config, conv_model_with_input_output):
     for qinfo in compression_ctrl.weight_quantizers.values():
         q = qinfo.quantizer_module_ref
         assert q.num_bits <= int(8 / target_comp_rate)
+
 
 def test_statistics(config, conv_model):
     _, ctrl = create_compressed_model_and_algo_for_test(conv_model, config)
