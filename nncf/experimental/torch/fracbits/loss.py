@@ -77,7 +77,7 @@ class ModelSizeCompressionLoss(PTCompressionLoss):
 
     @staticmethod
     def _get_module_size(module: nn.Module, num_bits: Union[int, torch.Tensor]) -> Union[torch.Tensor, Number]:
-        if isinstance(module, (nn.modules.conv._ConvNd, nn.Linear)): # pylint: disable=protected-access
+        if isinstance(module, (nn.modules.conv._ConvNd, nn.Linear)):  # pylint: disable=protected-access
             return module.weight.shape.numel() * num_bits
         nncf_logger.warning("module={module} is not supported by ModelSizeCompressionLoss. Skip it.")
         return 0.
@@ -92,9 +92,11 @@ class ModelSizeCompressionLoss(PTCompressionLoss):
     @torch.no_grad()
     def get_state(self) -> Dict[str, Number]:
         curr_model_size = self._get_model_size()
+        frac_model_size = self._get_frac_model_size()
 
         states = {
             "current_model_size": curr_model_size,
+            "fractional_model_size": self._init_model_size / (frac_model_size + EPS),
             "compression_rate": self._init_model_size / (curr_model_size + EPS)
         }
 
