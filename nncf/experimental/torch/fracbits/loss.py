@@ -53,7 +53,7 @@ class ModelSizeCompressionLoss(PTCompressionLoss):
                 self._w_q_pairs[parent_name] = ModuleQuantizerPair(parent_module, module.op)
 
         with torch.no_grad():
-            self._init_model_size = self._get_frac_model_size()
+            self._init_model_size = self._get_model_size()
 
         self._flip_loss = params.flip_loss
         self._alpha = params.alpha
@@ -77,13 +77,14 @@ class ModelSizeCompressionLoss(PTCompressionLoss):
 
     @staticmethod
     def _get_module_size(module: nn.Module, num_bits: Union[int, torch.Tensor]) -> Union[torch.Tensor, Number]:
-        if isinstance(module, (nn.modules.conv._ConvNd, nn.Linear)):
+        if isinstance(module, (nn.modules.conv._ConvNd, nn.Linear)): # pylint: disable=protected-access
             return module.weight.shape.numel() * num_bits
         nncf_logger.warning("module={module} is not supported by ModelSizeCompressionLoss. Skip it.")
         return 0.
 
     def _get_frac_model_size(self) -> torch.Tensor:
-        return sum([self._get_module_size(pair.module, pair.quantizer.frac_num_bits) for pair in self._w_q_pairs.values()])
+        return sum([self._get_module_size(pair.module, pair.quantizer.frac_num_bits)
+                    for pair in self._w_q_pairs.values()])
 
     def _get_model_size(self) -> Number:
         return sum([self._get_module_size(pair.module, pair.quantizer.num_bits) for pair in self._w_q_pairs.values()])
@@ -105,9 +106,6 @@ class ModelSizeCompressionLoss(PTCompressionLoss):
 
 @FRACBITS_LOSSES.register("bitops")
 class BitOpsCompressionLoss(PTCompressionLoss):
-    def __init__(self):
-        super().__init__()
-
     def calculate(self) -> torch.Tensor:
         raise NotImplementedError()
 

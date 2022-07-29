@@ -11,6 +11,8 @@
  limitations under the License.
 """
 
+# pylint: disable=unused-import
+
 import sys
 
 from examples.torch.classification.main import main
