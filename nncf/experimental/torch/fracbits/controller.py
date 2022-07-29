@@ -28,6 +28,7 @@ from nncf.torch.quantization.metrics import QuantizationShareBuildTimeInfo
 from nncf.torch.quantization.precision_init.adjacent_quantizers import GroupsOfAdjacentQuantizers
 from nncf.torch.quantization.structs import NonWeightQuantizerInfo, WeightQuantizerInfo
 from nncf.experimental.torch.fracbits.loss import FRACBITS_LOSSES
+from nncf.experimental.torch.fracbits.params import FracBitsSchedulerParams, FracBitsLossParams
 
 
 class FracBitsQuantizationController(QuantizationController):
@@ -48,45 +49,18 @@ class FracBitsQuantizationController(QuantizationController):
 
     def _set_fracbits_loss(self, target_model: NNCFNetwork):
         algo_config = self._get_algo_config()
-
-        if algo_config.get("loss") is None:
-            raise RuntimeError("You didn't set loss config.")
-
-        loss_config = algo_config.get("loss")
-
-        if loss_config.get("type") is None:
-            raise RuntimeError("You didn't set loss.type config.")
-
-        if loss_config.get("compression_rate") is None:
-            raise RuntimeError("You didn't set compression_rate config.")
-
-        if loss_config.get("criteria") is None:
-            raise RuntimeError("You didn't set criteria config.")
-
-        loss_type = loss_config.get("type")
-        compression_rate = loss_config.get("compression_rate")
-        criteria = loss_config.get("criteria")
-        flip_loss = loss_config.get("flip_loss")
-        alpha = loss_config.get("alpha")
-
-        self._loss: PTCompressionLoss = FRACBITS_LOSSES.get(loss_type)(
-            model=target_model, compression_rate=compression_rate, criteria=criteria, flip_loss=flip_loss, alpha=alpha)
+        loss_config = algo_config.get("loss", {})
+        params = FracBitsLossParams.from_config(loss_config)
+        self._loss: PTCompressionLoss = FRACBITS_LOSSES.get(params.type)(target_model, params)
 
     def _set_scheduler(self):
         algo_config = self._get_algo_config()
-
-        freeze_epoch = algo_config.get("freeze_epoch", None)
-
-        if freeze_epoch is None:
-            raise RuntimeError("You didn't set freeze_epoch config.")
+        params = FracBitsSchedulerParams.from_config(algo_config)
 
         def _callback():
             self.freeze_bit_widths()
 
-        self._scheduler = FracBitsQuantizationScheduler(
-            freeze_callback=_callback,
-            freeze_epoch=freeze_epoch
-        )
+        self._scheduler = FracBitsQuantizationScheduler(freeze_callback=_callback, params=params)
 
     def _get_algo_config(self) -> Dict:
         return extract_algo_specific_config(self.config, algo_name_to_match="fracbits_quantization")

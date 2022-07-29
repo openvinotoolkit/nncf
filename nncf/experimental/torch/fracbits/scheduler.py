@@ -12,15 +12,20 @@
 """
 
 from typing import Callable
+
 from nncf.common.schedulers import BaseCompressionScheduler
 from nncf.common.utils.logger import logger as nncf_logger
+from nncf.experimental.torch.fracbits.params import FracBitsSchedulerParams
 
 
 class FracBitsQuantizationScheduler(BaseCompressionScheduler):
-    def __init__(self, freeze_epoch: int, freeze_callback: Callable):
+    def __init__(self, freeze_callback: Callable, params: FracBitsSchedulerParams):
         super().__init__()
-        self._freeze_epoch = freeze_epoch
+        self._freeze_epoch = params.freeze_epoch
         self._freeze_callback = freeze_callback
+
+        if self._freeze_epoch < 0:
+            nncf_logger.warning(f"freeze_epoch={self._freeze_epoch} is less than 0. Don't freeze fractional bit widths")
 
     def epoch_step(self, next_epoch=None):
         super().epoch_step(next_epoch)
