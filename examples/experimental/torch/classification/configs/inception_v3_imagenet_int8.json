@@ -5,7 +5,7 @@
       "sample_size": [2, 3, 299, 299]
     },
     "num_classes": 1000,
-    "batch_size" : 32,
+    "batch_size" : 512,
     "epochs": 1,
     "multiprocessing_distributed" : true,
     "optimizer": {

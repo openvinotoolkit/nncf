@@ -18,7 +18,11 @@
     "compression": {
         "algorithm": "fracbits_quantization",
         "overflow_fix": "disable",
-        "quantize_inputs": true,
+        "initializer": {
+            "range": {
+                "num_init_samples": 2560
+            }
+        },
         "freeze_epoch": 4,
         "loss": {
             "type": "model_size",
