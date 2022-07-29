@@ -369,9 +369,8 @@ class FilterPruningController(BasePruningAlgoController):
             self._pruning_quotas[group_id] -= 1
 
             # Update input/output shapes of pruned elements
-            tmp_in_channels, tmp_out_channels = \
-                self._shape_pruning_proc.prune_cluster_shapes(cluster_idx=group_id, pruned_elems=1,
-                                                              input_channels=tmp_in_channels, output_channels=tmp_out_channels)
+            self._shape_pruning_proc.prune_cluster_shapes(cluster=group_id, pruned_elems=1,
+                                                          input_channels=tmp_in_channels, output_channels=tmp_out_channels)
 
             flops, params_num = self._weights_flops_calc.count_flops_and_weights(
                                                          input_channels=tmp_in_channels,

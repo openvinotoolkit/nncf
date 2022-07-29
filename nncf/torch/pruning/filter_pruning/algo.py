@@ -538,10 +538,9 @@ class FilterPruningController(BasePruningAlgoController):
                 cur_num += 1
                 continue
 
-            tmp_in_channels, tmp_out_channels = self._shape_pruning_proc.prune_cluster_shapes(
-                                                                              cluster_idx=cluster_idx, pruned_elems=1,
-                                                                              in_channels=tmp_in_channels, out_channels=tmp_out_channels)
             cluster = self.pruned_module_groups_info.get_cluster_by_id(cluster_idx)
+            self._shape_pruning_proc.prune_cluster_shapes(cluster=cluster, pruned_elems=1,
+                                                          input_channels=tmp_in_channels, output_channels=tmp_out_channels)
 
             for node in cluster.elements:
                 node.operand.binary_filter_pruning_mask[filter_idx] = 0

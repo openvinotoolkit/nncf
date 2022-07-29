@@ -671,9 +671,8 @@ class ElasticWidthHandler(SingleElasticityHandler):
             first_elastic_op = first_elastic_width_info.elastic_op  # type: ElasticOutputWidthOp
             new_out_channels_num = first_elastic_op.get_active_width()
             num_of_pruned_elems = first_elastic_op.max_width - new_out_channels_num
-            in_channels, out_channels = \
-                self._shape_pruning_processor.prune_cluster_shapes(group.id, num_of_pruned_elems,
-                                                                   in_channels, out_channels)
+            self._shape_pruning_processor.prune_cluster_shapes(group, num_of_pruned_elems,
+                                                                in_channels, out_channels)
 
         return in_channels, out_channels
 

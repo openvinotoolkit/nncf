@@ -24,8 +24,10 @@ from nncf.torch.pruning.filter_pruning.functions import l2_filter_norm
 from nncf.torch.pruning.filter_pruning.layers import FilterPruningMask
 from nncf.torch.pruning.filter_pruning.layers import apply_filter_binary_mask
 from nncf.common.pruning.utils import ShapePruninigProcessor
+from nncf.common.pruning.utils import WeightsFlopsCalculator
 from nncf.common.pruning.schedulers import ExponentialPruningScheduler
-from nncf.torch.pruning.utils import _calculate_output_shape
+from nncf.torch.pruning.utils import _calculate_output_shape, collect_output_shapes
+from nncf.torch.layers import NNCF_PRUNING_MODULES_DICT
 from nncf.torch.pruning.filter_pruning.algo import GENERAL_CONV_LAYER_METATYPES
 from nncf.torch.pruning.filter_pruning.algo import LINEAR_LAYER_METATYPES
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
@@ -424,17 +426,22 @@ def test_calculation_of_flops(all_weights, pruning_flops_target, ref_flops, ref_
     assert pruning_algo.current_flops == ref_flops
     assert pruning_algo.current_params_num == ref_params_num
     # pylint:disable=protected-access
+    graph = pruning_algo._model.get_original_graph()
     shape_pruning_processor = ShapePruninigProcessor(
-                                graph=pruning_algo._model.get_original_graph(),
-                                pruning_groups=pruning_algo.pruned_module_groups_info.get_all_clusters(),
-                                prunable_types=None,
-                                conv_op_metatypes=GENERAL_CONV_LAYER_METATYPES,
-                                linear_op_metatypes=LINEAR_LAYER_METATYPES)
+                                graph=graph,
+                                prunable_types=[v.op_func_name for v in NNCF_PRUNING_MODULES_DICT],
+                                pruning_groups=pruning_algo.pruned_module_groups_info)
+
+    weights_flops_calc = WeightsFlopsCalculator(graph=graph,
+                                                output_shapes=collect_output_shapes(graph),
+                                                conv_op_metatypes=GENERAL_CONV_LAYER_METATYPES,
+                                                linear_op_metatypes=LINEAR_LAYER_METATYPES)
+
     tmp_in_channels, tmp_out_channels = shape_pruning_processor.calculate_in_out_channels_by_masks(
         num_of_sparse_elements_by_node=pruning_algo._calculate_num_of_sparse_elements_by_node())
 
     cur_flops, cur_params_num = \
-        shape_pruning_processor.count_flops_and_weights(
+        weights_flops_calc.count_flops_and_weights(
         input_channels=tmp_in_channels,
         output_channels=tmp_out_channels)
     assert (cur_flops, cur_params_num) == (ref_flops, ref_params_num)

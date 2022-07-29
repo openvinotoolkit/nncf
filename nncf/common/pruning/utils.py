@@ -221,16 +221,18 @@ class ShapePruninigProcessor:
         return self._calculate_in_out_channels(get_num_of_sparse_elements_by_node)
 
 
-    def prune_cluster_shapes(self, cluster_idx: int, pruned_elems: int,
+    def prune_cluster_shapes(self, cluster: Union[int, Cluster],
+                             pruned_elems: int,
                              input_channels: Dict[NNCFNodeName, int],
                              output_channels: Dict[NNCFNodeName, int]):
-        tmp_in_channels = input_channels.copy()
-        tmp_out_channels = output_channels.copy()
-        cluster = self._pruning_groups.get_cluster_by_id(cluster_idx)
+        assert isinstance(cluster, (int, Cluster)), 'Wrong type for cluster param'
+        if isinstance(cluster, int):
+            cluster = self._pruning_groups.get_cluster_by_id(cluster)
+
         for node in cluster.elements:
-            tmp_out_channels[node.node_name] -= pruned_elems
+            output_channels[node.node_name] -= pruned_elems
             if node.is_depthwise:
-                tmp_in_channels[node.node_name] -= pruned_elems
+                input_channels[node.node_name] -= pruned_elems
 
         # Prune in channels in all next nodes
         #TODO employ mask propagation
@@ -243,10 +245,7 @@ class ShapePruninigProcessor:
                 sparse_elems_mult = next_node_in_channels // prev_node_out_channels 
             else:
                 sparse_elems_mult = 1
-            tmp_in_channels[next_node.node_name] -= pruned_elems * sparse_elems_mult
-        
-        return tmp_in_channels, tmp_out_channels
-
+            input_channels[next_node.node_name] -= pruned_elems * sparse_elems_mult
         
     def _calculate_in_out_channels(self, sparse_elements_counter: Callable[[str], int]) -> \
         Tuple[Dict[str, int], Dict[str, int]]:
@@ -258,24 +257,11 @@ class ShapePruninigProcessor:
             assert all(tmp_out_channels[layer_name] == tmp_out_channels[node.node_name] for node in
                        group.elements)
             # Prune all nodes in cluster (by output channels)
-            old_out_channels = self._full_out_channels[layer_name]
             num_of_sparse_elems = sparse_elements_counter(layer_name)
-            new_out_channels_num = old_out_channels - num_of_sparse_elems
 
-            for minfo in group.elements:
-                tmp_out_channels[minfo.node_name] = new_out_channels_num
-                if minfo.is_depthwise:
-                    tmp_in_channels[minfo.node_name] = new_out_channels_num
-
-            # Prune in_channels in all next nodes of cluster
-            for next_node in self._pruning_groups_next_nodes[group.id]:
-                # Next layer for prunable convolution could be
-                # a linear layer. In such case sparse_elems_mult
-                # equal to amount of elemens in one channel
-                next_node_in_channels = self._full_inp_channels[next_node.node_name]
-                assert next_node_in_channels % old_out_channels == 0
-                sparse_elems_mult = next_node_in_channels // old_out_channels 
-                tmp_in_channels[next_node.node_name] -= num_of_sparse_elems * sparse_elems_mult
+            self.prune_cluster_shapes(cluster=group, pruned_elems=num_of_sparse_elems,
+                                      input_channels=tmp_in_channels,
+                                      output_channels=tmp_out_channels)
 
         return tmp_in_channels, tmp_out_channels
 
