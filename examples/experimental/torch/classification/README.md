@@ -28,9 +28,9 @@ We provide configurations for three model architectures: `inception_v3`, `mobile
 |    Model     | Compression algorithm | Dataset  | Accuracy (Drop) % |                                                                       NNCF config file                                                                        | Compression rate |
 | :----------: | :-------------------: | :------: | :---------------: | :-----------------------------------------------------------------------------------------------------------------------------------------------------------: | :--------------: |
 | MobileNet-V2 |       FracBits        | CIFAR100 |   67.23 (0.48)    | [mobilenet_v2_cifar100_mixed_int_fracbits_msize.json](examples/experimental/torch/classification/configs/mobilenet_v2_cifar100_mixed_int_fracbits_msize.json) |       1.5        |
-| Inception-V3 |       FracBits        | ImageNet |   78.17 (-0.83)   | [inception_v3_imagenet_mixed_int_fracbits_msize.json](examples/experimental/torch/classification/configs/inception_v3_imagenet_mixed_int_fracbits_msize.json) |       1.5        |
-| MobileNet-V2 |       FracBits        | ImageNet |   71.21 (0.66)    | [mobilenet_v2_imagenet_mixed_int_fracbits_msize.json](examples/experimental/torch/classification/configs/mobilenet_v2_imagenet_mixed_int_fracbits_msize.json) |       1.5        |
-|  ResNet-50   |       FracBits        | ImageNet |   76.17 (-0.01)   |     [resnet50_imagenet_mixed_int_fracbits_msize.json](examples/experimental/torch/classification/configs/resnet50_imagenet_mixed_int_fracbits_msize.json)     |       1.5        |
+| Inception-V3 |       FracBits        | ImageNet |   78.16 (-0.82)   | [inception_v3_imagenet_mixed_int_fracbits_msize.json](examples/experimental/torch/classification/configs/inception_v3_imagenet_mixed_int_fracbits_msize.json) |       1.51       |
+| MobileNet-V2 |       FracBits        | ImageNet |   71.19 (0.68)    | [mobilenet_v2_imagenet_mixed_int_fracbits_msize.json](examples/experimental/torch/classification/configs/mobilenet_v2_imagenet_mixed_int_fracbits_msize.json) |       1.53       |
+|  ResNet-50   |       FracBits        | ImageNet |   76.12 (0.04)    |     [resnet50_imagenet_mixed_int_fracbits_msize.json](examples/experimental/torch/classification/configs/resnet50_imagenet_mixed_int_fracbits_msize.json)     |       1.54       |
 
 - We used a NVIDIA V100 x 8 machine to obtain all results except MobileNet-V2, CIFAR100 experiment.
 - Model accuracy is obtained by averaging on 5 repeats.
