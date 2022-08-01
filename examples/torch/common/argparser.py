@@ -183,6 +183,15 @@ def get_common_argument_parser():
         help="Disable compression",
         action="store_true",
     )
+
+    parser.add_argument(
+        "--find-unused-parameters",
+        help="For distributed execution mode, if it is true, "
+        "Parameters that don't receive gradients as part of this graph "
+        "are preemptively marked as being ready to be reduced. "
+        "FracBits should turn on this option if freeze_epoch > 0.",
+        action="store_true",
+    )
     return parser
 
 

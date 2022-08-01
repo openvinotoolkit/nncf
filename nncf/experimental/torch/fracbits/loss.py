@@ -15,6 +15,7 @@ from numbers import Number
 from typing import Dict, Union
 import torch
 from nncf.common.utils.registry import Registry
+from nncf.experimental.torch.fracbits.params import FracBitsLossParams
 from nncf.torch.compression_method_api import PTCompressionLoss
 from nncf.torch.module_operations import UpdateWeight
 from nncf.torch.nncf_network import NNCFNetwork
@@ -36,11 +37,11 @@ class ModuleQuantizerPair:
 
 @FRACBITS_LOSSES.register("model_size")
 class ModelSizeCompressionLoss(PTCompressionLoss):
-    def __init__(self, model: NNCFNetwork, compression_rate: float, criteria: str = "L1", **kwargs):
+    def __init__(self, model: NNCFNetwork, params: FracBitsLossParams):
         super().__init__()
         self._model = model
-        self._compression_rate = compression_rate
-        self._criteria = self._get_criteria(criteria)
+        self._compression_rate = torch.FloatTensor([params.compression_rate])
+        self._criteria = self._get_criteria(params.criteria)
 
         self._w_q_pairs: Dict[str, ModuleQuantizerPair] = {}
 
@@ -54,11 +55,18 @@ class ModelSizeCompressionLoss(PTCompressionLoss):
         with torch.no_grad():
             self._init_model_size = self._get_model_size()
 
-    def calculate(self) -> torch.Tensor:
-        cur_comp_rate = self._init_model_size / (self._get_model_size() + EPS)
-        tgt_comp_rate = torch.full_like(cur_comp_rate, self._compression_rate)
+        self._flip_loss = params.flip_loss
+        self._alpha = params.alpha
 
-        return self._criteria(cur_comp_rate, tgt_comp_rate)
+    def calculate(self) -> torch.Tensor:
+        if self._flip_loss:
+            cur_comp_rate = self._get_frac_model_size() / self._init_model_size
+            tgt_comp_rate = 1 / self._compression_rate.to(device=cur_comp_rate.device)
+        else:
+            cur_comp_rate = self._init_model_size / (self._get_frac_model_size() + EPS)
+            tgt_comp_rate = self._compression_rate.to(device=cur_comp_rate.device)
+
+        return self._alpha * self._criteria(cur_comp_rate, tgt_comp_rate)
 
     def _get_criteria(self, criteria) -> nn.modules.loss._Loss:
         if criteria == "L1":
@@ -67,19 +75,29 @@ class ModelSizeCompressionLoss(PTCompressionLoss):
             return nn.MSELoss()
         raise RuntimeError(f"Unknown criteria = {criteria}.")
 
-    def _get_model_size(self) -> Union[torch.Tensor, Number]:
-        def _get_module_size(module: nn.Module, num_bits: Union[int, torch.Tensor]) -> Union[torch.Tensor, Number]:
-            if isinstance(module, (nn.modules.conv._ConvNd, nn.Linear)):
-                return (module.weight.shape.numel() * num_bits).sum()
-            nncf_logger.warning("module={module} is not supported by ModelSizeCompressionLoss. Skip it.")
-            return 0.
+    @staticmethod
+    def _get_module_size(module: nn.Module, num_bits: Union[int, torch.Tensor]) -> Union[torch.Tensor, Number]:
+        if isinstance(module, (nn.modules.conv._ConvNd, nn.Linear)):  # pylint: disable=protected-access
+            return module.weight.shape.numel() * num_bits
+        nncf_logger.warning("module={module} is not supported by ModelSizeCompressionLoss. Skip it.")
+        return 0.
 
-        return sum([_get_module_size(pair.module, pair.quantizer.frac_num_bits) for pair in self._w_q_pairs.values()])
+    def _get_frac_model_size(self) -> torch.Tensor:
+        return sum([self._get_module_size(pair.module, pair.quantizer.frac_num_bits)
+                    for pair in self._w_q_pairs.values()])
+
+    def _get_model_size(self) -> Number:
+        return sum([self._get_module_size(pair.module, pair.quantizer.num_bits) for pair in self._w_q_pairs.values()])
 
     @torch.no_grad()
     def get_state(self) -> Dict[str, Number]:
+        curr_model_size = self._get_model_size()
+        frac_model_size = self._get_frac_model_size()
+
         states = {
-            "compression_rate": self._init_model_size / (self._get_model_size() + EPS).item()
+            "current_model_size": curr_model_size,
+            "fractional_model_size": self._init_model_size / (frac_model_size + EPS),
+            "compression_rate": self._init_model_size / (curr_model_size + EPS)
         }
 
         for name, pair in self._w_q_pairs.items():
@@ -90,9 +108,6 @@ class ModelSizeCompressionLoss(PTCompressionLoss):
 
 @FRACBITS_LOSSES.register("bitops")
 class BitOpsCompressionLoss(PTCompressionLoss):
-    def __init__(self):
-        super().__init__()
-
     def calculate(self) -> torch.Tensor:
         raise NotImplementedError()
 

@@ -138,12 +138,12 @@ class FracBitsAsymmetricQuantizer(AsymmetricQuantizer):
         return torch.clamp(self._num_bits, self._min_num_bits, self._max_num_bits)
 
     @property
-    def num_bits(self):
+    def num_bits(self) -> int:
         if self._num_bits.dtype == torch.int32:
             return super().num_bits
 
         with no_jit_trace():
-            return self.frac_num_bits.round().item()
+            return self.frac_num_bits.round().int().item()
 
     @num_bits.setter
     def num_bits(self, num_bits: int):

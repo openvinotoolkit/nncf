@@ -1,0 +1,37 @@
+{
+    "model": "mobilenet_v2",
+    "pretrained": true,
+    "input_info": {
+      "sample_size": [2, 3, 224, 224]
+    },
+    "num_classes": 1000,
+    "batch_size" : 1024,
+    "epochs": 5,
+    "multiprocessing_distributed": true,
+    "find_unused_parameters": true,
+    "optimizer": {
+        "type": "SGD",
+        "base_lr": 1e-3,
+        "schedule_type": "multistep",
+        "steps": [
+            5
+        ]
+    },
+    "compression": {
+        "algorithm": "fracbits_quantization",
+        "overflow_fix": "disable",
+        "initializer": {
+            "range": {
+                "num_init_samples": 2560
+            }
+        },
+        "freeze_epoch": 4,
+        "loss": {
+            "type": "model_size",
+            "compression_rate": 1.5,
+            "criteria": "L1",
+            "flip_loss": false,
+            "alpha": 40.0
+        }
+    }
+}

@@ -1,0 +1,33 @@
+{
+    "model": "mobilenet_v2_32x32",
+    "pretrained": false,
+    "input_info": {
+      "sample_size": [2, 3, 32, 32]
+    },
+    "num_classes": 100,
+    "batch_size": 256,
+    "optimizer": {
+        "type": "SGD",
+        "base_lr": 1e-3
+    },
+    "compression": {
+        "algorithm": "fracbits_quantization",
+        "overflow_fix": "disable",
+        "activations": {
+            "mode": "asymmetric"
+        },
+        "weights": {
+            "mode": "asymmetric"
+        },
+        "freeze_epoch": 4,
+        "loss": {
+            "type": "model_size",
+            "compression_rate": 1.5,
+            "criteria": "L1",
+            "flip_loss": false,
+            "alpha": 40.0
+        }
+    },
+    "epochs": 5,
+    "dataset": "CIFAR100"
+}
