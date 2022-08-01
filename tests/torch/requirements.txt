@@ -9,5 +9,3 @@ pytest-dependency>=0.5.1
 
 # Ticket 69520
 pyparsing<3.0
-
-efficientnet_pytorch

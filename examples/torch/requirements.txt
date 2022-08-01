@@ -7,3 +7,4 @@ mlflow>=1.12.1
 returns==0.14
 opencv-python>=4.4.0.46
 torchvision==0.10.1  # should always match the torch version that is installed via NNCF's setup.py
+efficientnet_pytorch
