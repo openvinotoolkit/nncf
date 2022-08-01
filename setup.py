@@ -119,6 +119,9 @@ EXTRAS_REQUIRE = {
     "torch": [
         "torch>=1.5.0, <=1.9.1, !=1.8.0",
         "numpy~=1.19.2",
+        # Please see
+        # https://stackoverflow.com/questions/70520120/attributeerror-module-setuptools-distutils-has-no-attribute-version
+        "setuptools==59.5.0"
     ],
     "onnx": [
         "torch==1.9.1",
