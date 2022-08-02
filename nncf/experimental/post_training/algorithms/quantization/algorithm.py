@@ -17,7 +17,6 @@ from typing import Union
 from typing import Optional
 from typing import TypeVar
 
-from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.hardware.config import HWConfigType
@@ -108,19 +107,17 @@ class PostTrainingQuantization(Algorithm):
         self.algorithms_to_created = quantization_parameters.algorithms
         self.algorithms = []
 
-    def _apply(self, model: ModelType, engine: Engine,
-               layer_statistics: Dict[str, TensorStatisticCollectorBase]) -> ModelType:
+    def _apply(self, model: ModelType, engine: Engine, statistic_points: StatisticPointsContainer) -> ModelType:
         for algorithm in self.algorithms:
-            quantized_model = algorithm.apply(model, engine, layer_statistics)
+            quantized_model = algorithm.apply(model, engine, statistic_points)
         return quantized_model
 
     def get_statistic_points(self, model: ModelType) -> StatisticPointsContainer:
-        statistic_points = StatisticPointsContainer()
+        output = StatisticPointsContainer()
         for algorithm in self.algorithms:
-            for edge_name, statistic_points_to_edge in algorithm.get_statistic_points(model).items():
-                for statistic_point_to_edge in statistic_points_to_edge:
-                    statistic_points.add_statistic_point(statistic_point_to_edge)
-        return statistic_points
+            for _, statistic_point in algorithm.get_statistic_points(model).items():
+                output.add_statistic_point(statistic_point)
+        return output
 
     def create_subalgorithms(self, backend: Backend) -> None:
         if backend == Backend.ONNX:

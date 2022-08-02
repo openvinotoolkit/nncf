@@ -48,10 +48,10 @@ class StatisticsAggregator(ABC):
         Register statistic points for statistics collection and recalculates the maximum number samples
         for collecting statistics, based on the maximum value from the all algorithms.
         """
-        for target_point, stastistic_point in stastistic_points.items():
+        for _, stastistic_point in stastistic_points.items():
             self.statistic_points.add_statistic_point(stastistic_point)
 
         for _, statistic_point in self.statistic_points.items():
-            for algorithm, tensor_collector in statistic_point.algorithm_to_tensor_collector.items():
+            for _, tensor_collector in statistic_point.algorithm_to_tensor_collector.items():
                 if tensor_collector.num_samples is not None:
                     self.max_number_samples = max(self.max_number_samples, tensor_collector.num_samples)

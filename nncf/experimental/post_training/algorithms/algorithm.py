@@ -58,7 +58,7 @@ class Algorithm(ABC):
         return self._apply(model, engine, statistic_points)
 
     @abstractmethod
-    def _apply(self, model: ModelType, engine: Engine, layer_statistics) -> ModelType:
+    def _apply(self, model: ModelType, engine: Engine, statistic_points: StatisticPointsContainer) -> ModelType:
         """
         Applies the algorithm to the 'compressed_model'.
         """

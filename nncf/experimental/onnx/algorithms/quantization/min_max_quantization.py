@@ -12,9 +12,8 @@
 """
 
 from copy import deepcopy
-from typing import Dict, Set
+from typing import Set
 from typing import List
-from typing import Tuple
 
 import onnx
 # pylint: disable=no-member
@@ -166,13 +165,14 @@ class ONNXMinMaxQuantization(MinMaxQuantization):
             if quantization_target_point.type == TargetType.OPERATION_WITH_WEIGHTS:
                 weight_initializer_name = onnx_graph.get_weight_tensor_with_initializer(
                     quantization_target_point.target_node_name)
-                weight_tensor = onnx_graph.get_initializers_value(weight_initializer_name)
-                parameters = calculate_weight_quantizer_parameters(weight_tensor, weight_quantizer_config)
+                # TODO (kshpv): need to discover whether we could delete checking weight_initializer_name on None
+                if weight_initializer_name is not None:
+                    weight_tensor = onnx_graph.get_initializers_value(weight_initializer_name)
+                    parameters = calculate_weight_quantizer_parameters(weight_tensor, weight_quantizer_config)
 
-                command = ONNXQuantizerInsertionCommand(quantization_target_point, parameters)
-                transformation_commands.append(command)
-            elif quantization_target_point.type == TargetType.PRE_LAYER_OPERATION or \
-                    quantization_target_point.type == TargetType.POST_LAYER_OPERATION:
+                    command = ONNXQuantizerInsertionCommand(quantization_target_point, parameters)
+                    transformation_commands.append(command)
+            elif quantization_target_point.type in [TargetType.PRE_LAYER_OPERATION, TargetType.POST_LAYER_OPERATION]:
                 statistic_point = statistic_points[quantization_target_point.target_node_name]
                 if PostTrainingAlgorithms.MinMaxQuantization in statistic_point.algorithm_to_tensor_collector:
                     parameters = calculate_activation_quantizer_parameters(
@@ -194,8 +194,7 @@ class ONNXMinMaxQuantization(MinMaxQuantization):
         quantization_target_points = self.get_quantization_target_points(model)
         output = StatisticPointsContainer()
         for quantization_target_point in quantization_target_points:
-            if quantization_target_point.type == TargetType.PRE_LAYER_OPERATION or \
-                    quantization_target_point.type == TargetType.POST_LAYER_OPERATION:
+            if quantization_target_point.type in [TargetType.PRE_LAYER_OPERATION, TargetType.POST_LAYER_OPERATION]:
                 nncf_logger.debug(
                     'Adding {} Quantization Target Point to the Statistics Points,'
                     ' which outputs will be used for statistics collection'.format(
