@@ -11,7 +11,7 @@
  limitations under the License.
 """
 
-from typing import Optional, Tuple
+from typing import Optional, Tuple, List
 
 import os
 
@@ -47,20 +47,26 @@ class ImageNetDataset(Dataset):
         return len(self.dataset)
 
 
-def infer_input_shape(model: ModelProto) -> Tuple[Optional[int], int, int, int]:
+def infer_input_shape(model: ModelProto, main_shape: List[int] = None) -> Tuple[List[int], List[str]]:
     input_shape = None
     input_keys = None
     for _input in model.graph.input:
         if len(_input.type.tensor_type.shape.dim) == 4:
             dim = _input.type.tensor_type.shape.dim
             _input_shape = [int(MessageToDict(d).get("dimValue")) for d in dim]
-            if input_shape is None and input_keys is None:
-                input_shape = _input_shape
-                input_keys = _input.name
+            if main_shape is not None:
+                if main_shape == _input_shape:
+                    input_shape = main_shape
+                    input_keys = _input.name
+                    break
             else:
-                if input_shape[2] < _input_shape[2]:
+                if input_shape is None and input_keys is None:
                     input_shape = _input_shape
                     input_keys = _input.name
+                else:
+                    if input_shape[2] < _input_shape[2]:
+                        input_shape = _input_shape
+                        input_keys = _input.name
 
     assert len(input_shape) == 4 and input_keys is not None
 

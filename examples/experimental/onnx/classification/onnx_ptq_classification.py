@@ -18,6 +18,7 @@ from typing import Optional
 
 import numpy as np
 import onnx
+from google.protobuf.json_format import MessageToDict
 
 from nncf.experimental.post_training.compression_builder import CompressionBuilder
 from nncf.experimental.post_training.algorithms.quantization import PostTrainingQuantization
@@ -38,17 +39,7 @@ def run(onnx_model_path: str, output_model_path: str,
     original_model = onnx.load(onnx_model_path)
     nncf_logger.info("The model is loaded from {}".format(onnx_model_path))
 
-    input_keys = None
-    if input_shape is None:
-        nncf_logger.info(
-            "input_shape is None. Infer input_shape from the model.")
-        input_shape, input_keys = infer_input_shape(original_model)
-
-    input_keys = input_keys if input_keys is not None else \
-        [node.name for node in original_model.graph.input]
-    if len(input_keys) != 1:
-        raise RuntimeError(
-            f"The number of inputs should be 1(!={len(input_keys)}).")
+    input_shape, input_keys = infer_input_shape(original_model, input_shape)
 
     # Step 1: Initialize the data loader and metric (if it is needed).
     dataset = create_imagenet_torch_dataset(
