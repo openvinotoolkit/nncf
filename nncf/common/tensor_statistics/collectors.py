@@ -212,21 +212,6 @@ class NNCFCollectorTensorProcessor(ABC):
         """
 
 
-class FullTensorStatisticCollector(OfflineTensorStatisticCollector):
-    """
-    Collector saves the full tensor.
-    """
-
-    def __init__(self, reduction_shape: Optional[ReductionShape] = None,
-                 num_samples: int = None):
-        super().__init__(reduction_shape, num_samples)
-        self.tensors = []
-
-    def _register_input(self, x: TensorType):
-        self.tensors.append(x)
-        self._num_samples += 1
-
-
 class MinMaxStatisticCollector(OnlineTensorStatisticCollector):
     """Collector estimates min of minimum values and max of maximum values."""
 
