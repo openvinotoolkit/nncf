@@ -48,17 +48,23 @@ class ImageNetDataset(Dataset):
 
 
 def infer_input_shape(model: ModelProto) -> Tuple[Optional[int], int, int, int]:
-    assert len(model.graph.input) == 1
-
+    input_shape = None
+    input_keys = None
     for _input in model.graph.input:
-        dim = _input.type.tensor_type.shape.dim
-        input_shape = [MessageToDict(d).get("dimValue") for d in dim]
+        if len(_input.type.tensor_type.shape.dim) == 4:
+            dim = _input.type.tensor_type.shape.dim
+            _input_shape = [int(MessageToDict(d).get("dimValue")) for d in dim]
+            if input_shape is None and input_keys is None:
+                input_shape = _input_shape
+                input_keys = _input.name
+            else:
+                if input_shape[2] < _input_shape[2]:
+                    input_shape = _input_shape
+                    input_keys = _input.name
 
-    input_shape = [int(dim) if dim is not None else dim for dim in input_shape]
+    assert len(input_shape) == 4 and input_keys is not None
 
-    assert len(input_shape) == 4
-
-    return input_shape
+    return input_shape, [input_keys]
 
 
 def get_transform(image_size: Tuple[int, int],
