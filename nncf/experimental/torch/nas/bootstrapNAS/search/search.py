@@ -215,7 +215,7 @@ class SearchAlgorithm(BaseSearchAlgorithm):
             raise RuntimeError("Search space is empty")
 
         self._result = None
-        bn_adapt_params = nncf_config.get('compression', {}).get('initializer', {}).get('batchnorm_adaptation', {})
+        bn_adapt_params = search_config.get('batchnorm_adaptation', {})
         bn_adapt_algo_kwargs = get_bn_adapt_algo_kwargs(nncf_config, bn_adapt_params)
         self.bn_adaptation = BatchnormAdaptationAlgorithm(**bn_adapt_algo_kwargs)
         self._problem = None
@@ -373,6 +373,8 @@ class SearchAlgorithm(BaseSearchAlgorithm):
             plt.scatter(*tuple(abs(val) for val in self.best_vals),
                         marker='o', s=120,color='yellow', label='BootstrapNAS A',
                         edgecolors='black', linewidth=2.5)
+        plt.legend()
+        plt.title('Search Progression')
         plt.xlabel(self.efficiency_evaluator_handler.name)
         plt.ylabel(self.accuracy_evaluator_handler.name)
         plt.savefig(f'{self._log_dir}/{filename}.png')

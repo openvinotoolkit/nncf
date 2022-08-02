@@ -261,6 +261,7 @@ BOOTSTRAP_NAS_SEARCH_SCHEMA = {
         "algorithm":
         with_attributes(SEARCH_ALGORITHMS_SCHEMA,
                         description="Defines the search algorithm. Default algorithm is NSGA-II."),
+        "batchnorm_adaptation": BATCHNORM_ADAPTATION_SCHEMA,
         "num_evals":
         with_attributes(NUMBER,
                         description="Defines the number of evaluations that will be used by the search algorithm."),
