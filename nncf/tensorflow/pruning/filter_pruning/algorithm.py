@@ -28,8 +28,8 @@ from nncf.common.pruning.schedulers import PRUNING_SCHEDULERS
 from nncf.common.pruning.schedulers import PruningScheduler
 from nncf.common.pruning.statistics import FilterPruningStatistics
 from nncf.common.pruning.statistics import PrunedModelStatistics
-from nncf.common.pruning.utils import WeightsFlopsCalculator
-from nncf.common.pruning.utils import ShapePruninigProcessor
+from nncf.common.pruning.shape_pruning import WeightsFlopsCalculator
+from nncf.common.pruning.shape_pruning import ShapePruninigProcessor
 from nncf.common.pruning.utils import get_rounded_pruned_element_number
 from nncf.common.statistics import NNCFStatistics
 from nncf.common.pruning.statistics import PrunedModelTheoreticalBorderline
@@ -130,6 +130,7 @@ class FilterPruningController(BasePruningAlgoController):
                                                           conv_op_metatypes=GENERAL_CONV_LAYER_METATYPES,
                                                           linear_op_metatypes=LINEAR_LAYER_METATYPES)
         self._shape_pruning_proc = ShapePruninigProcessor(graph=graph,
+                                                          pruning_operations_metatype=TF_PRUNING_OPERATOR_METATYPES,
                                                           pruning_groups=pruned_layer_groups,
                                                           prunable_types=prunable_types)
         self._nodes_flops, self._nodes_params_num = \

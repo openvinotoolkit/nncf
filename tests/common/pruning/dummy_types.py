@@ -1,7 +1,7 @@
 from typing import List
 
 from nncf.common.graph.operator_metatypes import OperatorMetatype
-from nncf.common.pruning.utils import PruningOperationsMetatypeRegistry
+from nncf.common.pruning.registry import PruningOperationsMetatypeRegistry
 from nncf.common.pruning.operations import (
     InputPruningOp,
     OutputPruningOp,

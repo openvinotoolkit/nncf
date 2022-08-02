@@ -23,9 +23,10 @@ from nncf.torch.pruning.filter_pruning.algo import FilterPruningController
 from nncf.torch.pruning.filter_pruning.functions import l2_filter_norm
 from nncf.torch.pruning.filter_pruning.layers import FilterPruningMask
 from nncf.torch.pruning.filter_pruning.layers import apply_filter_binary_mask
-from nncf.common.pruning.utils import ShapePruninigProcessor
-from nncf.common.pruning.utils import WeightsFlopsCalculator
+from nncf.common.pruning.shape_pruning import ShapePruninigProcessor
+from nncf.common.pruning.shape_pruning import WeightsFlopsCalculator
 from nncf.common.pruning.schedulers import ExponentialPruningScheduler
+from nncf.torch.pruning.operations import PT_PRUNING_OPERATOR_METATYPES
 from nncf.torch.pruning.utils import _calculate_output_shape, collect_output_shapes
 from nncf.torch.layers import NNCF_PRUNING_MODULES_DICT
 from nncf.torch.pruning.filter_pruning.algo import GENERAL_CONV_LAYER_METATYPES
@@ -429,6 +430,7 @@ def test_calculation_of_flops(all_weights, pruning_flops_target, ref_flops, ref_
     graph = pruning_algo._model.get_original_graph()
     shape_pruning_processor = ShapePruninigProcessor(
                                 graph=graph,
+                                pruning_operations_metatype=PT_PRUNING_OPERATOR_METATYPES,
                                 prunable_types=[v.op_func_name for v in NNCF_PRUNING_MODULES_DICT],
                                 pruning_groups=pruning_algo.pruned_module_groups_info)
 

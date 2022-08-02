@@ -39,10 +39,10 @@ from nncf.common.pruning.clusterization import Clusterization
 from nncf.common.pruning.mask_propagation import MaskPropagationAlgorithm
 from nncf.common.pruning.node_selector import PruningNodeSelector
 from nncf.common.pruning.structs import PrunedLayerInfoBase
-from nncf.common.pruning.utils import ShapePruninigProcessor
 from nncf.common.pruning.utils import get_input_masks
 from nncf.common.pruning.utils import get_prunable_layers_in_out_channels
 from nncf.common.pruning.utils import is_prunable_depthwise_conv
+from nncf.common.pruning.shape_pruning import ShapePruninigProcessor
 from nncf.common.tensor import NNCFTensor
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.base_handler import BaseElasticityParams
@@ -498,6 +498,7 @@ class ElasticWidthHandler(SingleElasticityHandler):
         prunable_types = [NNCFConv2d.op_func_name] #, NNCFLinear.op_func_name]
         self._shape_pruning_processor = ShapePruninigProcessor(
                                             graph=self._target_model.get_original_graph(),
+                                            pruning_operations_metatype=PT_PRUNING_OPERATOR_METATYPES,
                                             pruning_groups=pruned_module_groups_info,
                                             prunable_types=prunable_types,
                                             conv_op_metatypes=None, linear_op_metatypes=None)

@@ -99,7 +99,7 @@ class MaskPropagationAlgorithm:
         for node in self._graph.topological_sort():
             if node.node_id in can_be_closing_convs and can_prune_after_analysis[node.node_id]:
                 # Set output mask
-                node.data['output_mask'] = SymbolicMask(get_output_channels(node), [node.node_id])
+                node.data['output_mask'] = SymbolicMask(get_output_channels(node), node.node_id)
             # Propagate masks
             cls = self.get_meta_operation_by_type_name(node.node_type)
             cls.mask_propagation(node, self._graph, SymbolicMaskProcessor)
