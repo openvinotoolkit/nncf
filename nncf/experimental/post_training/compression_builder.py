@@ -23,7 +23,6 @@ from nncf.experimental.post_training.algorithms import Algorithm
 from nncf.experimental.post_training.backend import Backend
 from nncf.experimental.post_training.backend import get_model_backend
 
-
 ModelType = TypeVar('ModelType')
 
 
@@ -45,13 +44,14 @@ class CompressionBuilder:
     def _create_engine(self, backend: Backend) -> Engine:
         # TODO (Nikita Malinin): Place "ifs" into the backend-specific expandable structure
         if backend == Backend.ONNX:
-            from nncf.experimental.onnx.engine import ONNXEngine #pylint: disable=cyclic-import
+            from nncf.experimental.onnx.engine import ONNXEngine  # pylint: disable=cyclic-import
             return ONNXEngine()
         return None
 
     def _create_statistics_aggregator(self, engine: Engine, dataset: Dataset, backend: Backend):
         if backend == Backend.ONNX:
-            from nncf.experimental.onnx.statistics.aggregator import ONNXStatisticsAggregator #pylint: disable=cyclic-import
+            from nncf.experimental.onnx.statistics.aggregator import \
+                ONNXStatisticsAggregator  # pylint: disable=cyclic-import
             return ONNXStatisticsAggregator(engine, dataset)
         return None
 
@@ -93,13 +93,13 @@ class CompressionBuilder:
 
         statistics_aggregator = self._create_statistics_aggregator(engine, dataset, backend)
         for algorithm in self.algorithms:
-            layers_to_collect_statistics = algorithm.get_layers_for_statistics(modified_model)
-            statistics_aggregator.register_layer_statistics(layers_to_collect_statistics)
+            statistic_points = algorithm.get_statistic_points(modified_model)
+            statistics_aggregator.register_stastistic_points(statistic_points)
 
         statistics_aggregator.collect_statistics(modified_model)
 
         for algorithm in self.algorithms:
-            modified_model = algorithm.apply(modified_model, engine, statistics_aggregator.layers_statistics)
+            modified_model = algorithm.apply(modified_model, engine, statistics_aggregator.statistic_points)
         return modified_model
 
     def evaluate(self, model: ModelType, metric: Metric, dataset: Dataset,

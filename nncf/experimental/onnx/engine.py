@@ -11,12 +11,15 @@
  limitations under the License.
 """
 
-from nncf.experimental.onnx.tensor import ONNXNNCFTensor
-from nncf.experimental.post_training.api.dataset import NNCFData
+from nncf.common.graph.transformations.commands import TargetType
 
+from nncf.experimental.post_training.api.dataset import NNCFData
 from nncf.experimental.post_training.api.engine import Engine
-from nncf.experimental.onnx.samplers import create_onnx_sampler
 from nncf.experimental.post_training.api.sampler import Sampler
+from nncf.experimental.post_training.statistics.statistic_point import StatisticPointsContainer
+from nncf.experimental.onnx.samplers import create_onnx_sampler
+from nncf.experimental.onnx.tensor import ONNXNNCFTensor
+from nncf.experimental.onnx.graph.onnx_graph import ONNXGraph
 
 import onnxruntime as rt
 import numpy as np
@@ -75,3 +78,20 @@ class ONNXEngine(Engine):
             output.name: ONNXNNCFTensor(tensor)
             for tensor, output in zip(output_tensors, model_outputs)
         }
+
+    def _register_statistics(self, outputs: NNCFData, statistic_points: StatisticPointsContainer) -> None:
+        onnx_graph = ONNXGraph(self.model)
+        edge_name_to_node_name = {}
+        for node_name, statistic_point in statistic_points.items():
+            if statistic_point.target_point.type == TargetType.POST_LAYER_OPERATION:
+                edge_name = onnx_graph.get_node_edges(node_name)['output'][0]
+            elif statistic_point.target_point.type == TargetType.PRE_LAYER_OPERATION:
+                edge_name = onnx_graph.get_node_edges(node_name)['input'][0]
+            else:
+                RuntimeError('The statistics should be collected only from the input of output edges of the node')
+            edge_name_to_node_name[edge_name] = node_name
+
+        for output_name, output_tensor in outputs.items():
+            if output_name in edge_name_to_node_name:
+                node_name = edge_name_to_node_name[output_name]
+                statistic_points[node_name].register_tensor(output_tensor)

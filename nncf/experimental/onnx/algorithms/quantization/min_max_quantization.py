@@ -23,6 +23,8 @@ from nncf.common.quantization.quantizer_propagation.solver import QuantizerPropa
 from nncf.common.quantization.structs import QuantizableWeightedLayerNode
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizationMode
+from nncf.common.graph.definitions import NNCFGraphNodeType
+from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.insertion_point_graph import InsertionPointGraph
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
 from nncf.common.utils.logger import logger as nncf_logger
@@ -30,6 +32,10 @@ from nncf.common.utils.logger import logger as nncf_logger
 from nncf.experimental.post_training.algorithms.quantization.min_max_quantization import MinMaxQuantization
 from nncf.experimental.post_training.algorithms.quantization.min_max_quantization import MinMaxQuantizationParameters
 from nncf.experimental.post_training.algorithms.quantization.min_max_quantization import RangeType
+from nncf.experimental.post_training.algorithms.algorithm import PostTrainingAlgorithms
+from nncf.experimental.onnx.graph.transformations.commands import ONNXTargetPoint
+from nncf.experimental.post_training.statistics.statistic_point import StatisticPoint
+from nncf.experimental.post_training.statistics.statistic_point import StatisticPointsContainer
 from nncf.experimental.onnx.graph.transformations.layout import ONNXTransformationLayout
 from nncf.experimental.onnx.graph.metatypes.onnx_ops import GENERAL_WEIGHT_LAYER_METATYPES
 from nncf.experimental.onnx.graph.nncf_graph_builder import GraphConverter
@@ -53,8 +59,7 @@ class ONNXMinMaxQuantization(MinMaxQuantization):
 
     def __init__(self, parameters: MinMaxQuantizationParameters):
         super().__init__(parameters)
-        self._weight_quantizers = []
-        self._activation_quantizers = []
+        self._quantization_target_points = []  # type: List[ONNXTargetPoint]
 
     def generate_stat_collector(self, quantizer_config: QuantizerConfig) -> TensorStatisticCollectorBase:
         is_symmetric = quantizer_config.mode == QuantizationMode.SYMMETRIC
@@ -98,70 +103,86 @@ class ONNXMinMaxQuantization(MinMaxQuantization):
         final_setup = solver.get_final_quantizer_setup(finalized_proposal)
         return final_setup
 
-    def get_quantizers(self, model: onnx.ModelProto) -> Tuple[List[str], List[str]]:
-        if self._weight_quantizers and self._activation_quantizers:
-            return self._weight_quantizers, self._activation_quantizers
+    def get_quantization_target_points(self, model: onnx.ModelProto) -> List[ONNXTargetPoint]:
+        if self._quantization_target_points:
+            return self._quantization_target_points
         quantizer_setup = self._get_quantizer_setup(model)
         onnx_graph = ONNXGraph(model)
-        filled_outputs = set()
-        for _, qp in quantizer_setup.quantization_points.items():
-            if qp.is_weight_quantization_point():
-                weight_initializer_name = onnx_graph.get_weight_tensor_with_initializer(
-                    qp.insertion_point.target_node_name)
+        weight_quantizer_node_names, filled_outputs = set(), set()
+        for _, quantization_point in quantizer_setup.quantization_points.items():
+            if quantization_point.is_weight_quantization_point():
+                # It prevents the duplicate weight quantizers from being added.
+                # It can happen when you have layers that share the identical weight tensor.
+                # TODO (kshpv): in which model does it occur?
+                if quantization_point.insertion_point.target_node_name in weight_quantizer_node_names:
+                    continue
+                weight_quantizer_node_names.add(quantization_point.insertion_point.target_node_name)
 
-                # This algorithm only uses a weight tensor with initializer
-                if weight_initializer_name is not None:
-                    self._weight_quantizers.append(weight_initializer_name)
+                weight_quantization_target_point = ONNXTargetPoint(TargetType.OPERATION_WITH_WEIGHTS,
+                                                                   quantization_point.insertion_point.target_node_name)
+                self._quantization_target_points.append(weight_quantization_target_point)
             else:
-                assert qp.is_activation_quantization_point()
-                if 'model_input' not in qp.insertion_point.target_node_name:  # If not input node
-                    node_name = qp.insertion_point.target_node_name
-                    if qp.insertion_point.input_port_id == 1:
-                        # If quantization of Input
+                assert quantization_point.is_activation_quantization_point()
+                # If not Input node
+                if NNCFGraphNodeType.INPUT_NODE not in quantization_point.insertion_point.target_node_name:
+                    node_name = quantization_point.insertion_point.target_node_name
+                    # If quantization of Input
+                    if quantization_point.insertion_point.input_port_id == 1:
                         # TODO (kshpv): need to be reconsidered:
                         #  some operators such as Mul and Add could have activation input tensor on 0 or 1 indices
                         outputs = onnx_graph.get_node_edges(node_name)['input'][0]
+                        activation_quantization_target_point = ONNXTargetPoint(TargetType.PRE_LAYER_OPERATION,
+                                                                               node_name)
+                    # If quantization of Output
                     else:
-                        # If quantization of Output
                         outputs = onnx_graph.get_node_edges(node_name)['output'][0]
-                else:  # If input node
-                    node_name = qp.directly_quantized_operator_node_names[0]
+                        activation_quantization_target_point = ONNXTargetPoint(TargetType.POST_LAYER_OPERATION,
+                                                                               node_name)
+                # If Input node
+                else:
+                    node_name = quantization_point.directly_quantized_operator_node_names[0]
                     outputs = onnx_graph.get_node_edges(node_name)['input'][0]
+                    activation_quantization_target_point = ONNXTargetPoint(TargetType.PRE_LAYER_OPERATION, node_name)
 
                 if self._is_valid_activation_quantizer(outputs, filled_outputs, onnx_graph):
                     filled_outputs.add(outputs)
-                    self._activation_quantizers.append(outputs)
+                    self._quantization_target_points.append(activation_quantization_target_point)
 
-        # It prevents the duplicate weight quantizers from being added.
-        # It can happen when you have layers that share the identical weight tensor.
-        self._weight_quantizers = list(dict.fromkeys(self._weight_quantizers))
+        return self._quantization_target_points
 
-        return self._weight_quantizers, self._activation_quantizers
-
-    def reset_quantizers(self):
-        self._weight_quantizers = []
-        self._activation_quantizers = []
+    def reset_quantization_target_points(self):
+        self._quantization_target_points = []
 
     def _apply(self, model: onnx.ModelProto, engine: ONNXEngine,
-               layer_statistics: Dict[str, TensorStatisticCollectorBase]) -> onnx.ModelProto:
+               statistic_points: StatisticPointsContainer) -> onnx.ModelProto:
         model_transformer = self._create_model_transformer(model)
-        transformation_layout = ONNXTransformationLayout()
-        transformation_commands = []
+        transformation_layout, transformation_commands = ONNXTransformationLayout(), []
         onnx_graph = ONNXGraph(model)
-        weight_quantizers, activation_quantizers = self.get_quantizers(model)
 
+        quantization_target_points = self.get_quantization_target_points(model)
         weight_quantizer_config = self._get_weight_quantizer_config(model)
 
-        for weight_quantizer in weight_quantizers:
-            weight_tensor = onnx_graph.get_initializers_value(weight_quantizer)
-            parameters = calculate_weight_quantizer_parameters(weight_tensor, weight_quantizer_config)
-            command = ONNXQuantizerInsertionCommand(weight_quantizer, parameters)
-            transformation_commands.append(command)
-        for layer_to_collect_statistic in activation_quantizers:
-            parameters = calculate_activation_quantizer_parameters(layer_statistics[layer_to_collect_statistic],
-                                                                   self.activation_quantizer_config)
-            command = ONNXQuantizerInsertionCommand(layer_to_collect_statistic, parameters)
-            transformation_commands.append(command)
+        for quantization_target_point in quantization_target_points:
+            if quantization_target_point.type == TargetType.OPERATION_WITH_WEIGHTS:
+                weight_initializer_name = onnx_graph.get_weight_tensor_with_initializer(
+                    quantization_target_point.target_node_name)
+                weight_tensor = onnx_graph.get_initializers_value(weight_initializer_name)
+                parameters = calculate_weight_quantizer_parameters(weight_tensor, weight_quantizer_config)
+
+                command = ONNXQuantizerInsertionCommand(quantization_target_point, parameters)
+                transformation_commands.append(command)
+            elif quantization_target_point.type == TargetType.PRE_LAYER_OPERATION or \
+                    quantization_target_point.type == TargetType.POST_LAYER_OPERATION:
+                statistic_point = statistic_points[quantization_target_point.target_node_name]
+                if PostTrainingAlgorithms.MinMaxQuantization in statistic_point.algorithm_to_tensor_collector:
+                    parameters = calculate_activation_quantizer_parameters(
+                        statistic_point.algorithm_to_tensor_collector[
+                            PostTrainingAlgorithms.MinMaxQuantization].get_statistics(),
+                        self.activation_quantizer_config)
+                    command = ONNXQuantizerInsertionCommand(quantization_target_point, parameters)
+                    transformation_commands.append(command)
+            else:
+                raise RuntimeError('Inccorrect type of Quantization Target Point')
 
         for transformation_command in transformation_commands:
             transformation_layout.register(transformation_command)
@@ -169,12 +190,25 @@ class ONNXMinMaxQuantization(MinMaxQuantization):
         quantized_model = model_transformer.transform(transformation_layout)
         return quantized_model
 
-    def get_layers_for_statistics(self, model: onnx.ModelProto) -> Dict[str, TensorStatisticCollectorBase]:
-        _, activation_quantizers = self.get_quantizers(model)
-        output = {}
-        for activation_quantizer in activation_quantizers:
-            output[activation_quantizer] = self.generate_stat_collector(self.activation_quantizer_config)
-
+    def get_statistic_points(self, model: onnx.ModelProto) -> StatisticPointsContainer:
+        quantization_target_points = self.get_quantization_target_points(model)
+        output = StatisticPointsContainer()
+        for quantization_target_point in quantization_target_points:
+            if quantization_target_point.type == TargetType.PRE_LAYER_OPERATION or \
+                    quantization_target_point.type == TargetType.POST_LAYER_OPERATION:
+                nncf_logger.debug(
+                    'Adding {} Quantization Target Point to the Statistics Points,'
+                    ' which outputs will be used for statistics collection'.format(
+                        quantization_target_point.target_node_name))
+                output.add_statistic_point(StatisticPoint(target_point=quantization_target_point,
+                                                          tensor_collector=self.generate_stat_collector(
+                                                              self.activation_quantizer_config),
+                                                          algorithm=PostTrainingAlgorithms.MinMaxQuantization)
+                                           )
+            else:
+                nncf_logger.debug(
+                    'Skipping {} Quantization Target Point, which is used for weights quantization'.format(
+                        quantization_target_point))
         return output
 
     def create_subalgorithms(self, backend: Backend) -> None:

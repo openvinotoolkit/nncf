@@ -16,9 +16,7 @@ from abc import abstractmethod
 
 from typing import TypeVar
 
-from typing import Dict
-
-from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
+from nncf.experimental.post_training.statistics.statistic_point import StatisticPointsContainer
 from nncf.experimental.post_training.api.engine import Engine
 from nncf.experimental.post_training.api.dataset import Dataset
 
@@ -35,7 +33,8 @@ class StatisticsAggregator(ABC):
         self.engine = engine
         self.dataset = dataset
         self.is_calculate_metric = False
-        self.layers_statistics = {}  # type: Dict[str, TensorStatisticCollectorBase]
+        self.max_number_samples = 10
+        self.statistic_points = StatisticPointsContainer()
 
     @abstractmethod
     def collect_statistics(self, model: ModelType) -> None:
@@ -44,9 +43,15 @@ class StatisticsAggregator(ABC):
         The statistics are stored in self.layers_statistics.
         """
 
-    def register_layer_statistics(self, layer_statistics: Dict[str, TensorStatisticCollectorBase]):
+    def register_stastistic_points(self, stastistic_points: StatisticPointsContainer):
         """
-        Registered layer for statistics collection.
+        Register statistic points for statistics collection and recalculates the maximum number samples
+        for collecting statistics, based on the maximum value from the all algorithms.
         """
-        # TODO: potentially could be intersection in layers_to_collect_statistics
-        self.layers_statistics = layer_statistics
+        for target_point, stastistic_point in stastistic_points.items():
+            self.statistic_points.add_statistic_point(stastistic_point)
+
+        for _, statistic_point in self.statistic_points.items():
+            for algorithm, tensor_collector in statistic_point.algorithm_to_tensor_collector.items():
+                if tensor_collector.num_samples is not None:
+                    self.max_number_samples = max(self.max_number_samples, tensor_collector.num_samples)

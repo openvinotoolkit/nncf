@@ -31,6 +31,7 @@ from nncf.experimental.post_training.algorithms.quantization.min_max_quantizatio
 from nncf.experimental.post_training.algorithms.quantization.min_max_quantization import Preset
 from nncf.experimental.post_training.algorithms.quantization.min_max_quantization import Granularity
 from nncf.experimental.post_training.algorithms.quantization.min_max_quantization import RangeType
+from nncf.experimental.post_training.statistics.statistic_point import StatisticPointsContainer
 
 ModelType = TypeVar('ModelType')
 
@@ -113,15 +114,18 @@ class PostTrainingQuantization(Algorithm):
             quantized_model = algorithm.apply(model, engine, layer_statistics)
         return quantized_model
 
-    def get_layers_for_statistics(self, model: ModelType) -> Dict[str, TensorStatisticCollectorBase]:
-        output = {}
+    def get_statistic_points(self, model: ModelType) -> StatisticPointsContainer:
+        statistic_points = StatisticPointsContainer()
         for algorithm in self.algorithms:
-            output = {**output, **algorithm.get_layers_for_statistics(model)}
-        return output
+            for edge_name, statistic_points_to_edge in algorithm.get_statistic_points(model).items():
+                for statistic_point_to_edge in statistic_points_to_edge:
+                    statistic_points.add_statistic_point(statistic_point_to_edge)
+        return statistic_points
 
     def create_subalgorithms(self, backend: Backend) -> None:
         if backend == Backend.ONNX:
-            from nncf.experimental.onnx.algorithms.quantization.min_max_quantization import ONNXMinMaxQuantization #pylint: disable=cyclic-import
+            from nncf.experimental.onnx.algorithms.quantization.min_max_quantization import \
+                ONNXMinMaxQuantization  # pylint: disable=cyclic-import
             for algorithm, parameters in self.algorithms_to_created.items():
                 if algorithm == PostTrainingAlgorithms.MinMaxQuantization:
                     self.algorithms.append(ONNXMinMaxQuantization(parameters))

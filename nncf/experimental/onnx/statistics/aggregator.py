@@ -18,7 +18,9 @@ from nncf.experimental.post_training.statistics.aggregator import StatisticsAggr
 
 from nncf.experimental.onnx.samplers import create_onnx_sampler
 from nncf.experimental.onnx.engine import ONNXEngine
+from nncf.experimental.onnx.graph.onnx_graph import ONNXGraph
 from nncf.experimental.post_training.api.dataset import Dataset
+from nncf.common.graph.transformations.commands import TargetType
 
 
 class ONNXStatisticsAggregator(StatisticsAggregator):
@@ -29,19 +31,24 @@ class ONNXStatisticsAggregator(StatisticsAggregator):
 
     def collect_statistics(self, model: onnx.ModelProto) -> None:
         # TODO (Nikita Malinin): Need to update adding output process with the backend-specific graph transformer
-        layers_to_collect_statistics = list(self.layers_statistics.keys())
-        model_outputs = []
-        for output in list(model.graph.output):
-            model_outputs.append(output.name)
-        model_with_intermediate_outputs = select_model_inputs_outputs(model,
-                                                                      outputs=[*layers_to_collect_statistics,
-                                                                               *model_outputs])
-        max_number_samples = 0
-        for _, v in self.layers_statistics.items():
-            max_number_samples = max(max_number_samples, v.num_samples)
+        onnx_graph = ONNXGraph(model)
+        model_outputs = [output.name for output in onnx_graph.get_model_outputs()]
+        extra_model_outputs = []
+        for node_name, statistic_point in self.statistic_points.items():
+            if statistic_point.target_point.type == TargetType.POST_LAYER_OPERATION:
+                edge_name = onnx_graph.get_node_edges(node_name)['output'][0]
+            elif statistic_point.target_point.type == TargetType.PRE_LAYER_OPERATION:
+                edge_name = onnx_graph.get_node_edges(node_name)['input'][0]
+            else:
+                raise RuntimeError
+            extra_model_outputs.append(edge_name)
 
-        sampler = create_onnx_sampler(self.dataset, range(max_number_samples))
+        model_with_intermediate_outputs = select_model_inputs_outputs(model,
+                                                                      outputs=[*extra_model_outputs,
+                                                                               *model_outputs])
+
+        sampler = create_onnx_sampler(self.dataset, self.max_number_samples)
 
         self.engine.set_model(model_with_intermediate_outputs)
         self.engine.set_sampler(sampler)
-        self.engine.compute_statistics(self.layers_statistics)
+        self.engine.compute_statistics(self.statistic_points)
