@@ -238,9 +238,6 @@ def ptq_quantize_model_for_fxt_graph(fxt_graph: TestCase, convert_opset_version:
         infer_model(input_shape, quantized_model)
 
 
-@pytest.mark.xfail(
-    raises=Fail,
-    reason="min_max_quantize_model() succeeds, but infer_model() fails.")
 def test_fxt_reshape_weight_graph(fxt_reshape_weight_graph: TestCase):
     min_max_quantize_model_for_fxt_graph(fxt_reshape_weight_graph)
     ptq_quantize_model_for_fxt_graph(fxt_reshape_weight_graph)

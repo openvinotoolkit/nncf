@@ -55,9 +55,7 @@ INPUT_SHAPES = [
 ]
 
 TEST_CASES = [
-    pytest.param(name, model, shape) if name != "shufflenet_v2_x1_0"
-    else pytest.param(name, model, shape, marks=pytest.mark.xfail)
-    for name, model, shape in zip(MODEL_NAMES, MODELS, INPUT_SHAPES)
+    pytest.param(name, model, shape) for name, model, shape in zip(MODEL_NAMES, MODELS, INPUT_SHAPES)
 ]
 
 
