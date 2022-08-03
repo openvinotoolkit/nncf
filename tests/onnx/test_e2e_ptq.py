@@ -16,12 +16,14 @@ limitations under the License.
 
 # pylint: disable=redefined-outer-name
 
+import itertools
 import os
 import subprocess
 import sys
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
+import pandas as pd
 import pytest
 from nncf.common.utils.logger import logger as nncf_logger
 from pytest_dependency import depends
@@ -37,15 +39,11 @@ if "PYTHONPATH" in ENV_VARS:
 else:
     ENV_VARS["PYTHONPATH"] = str(PROJECT_ROOT)
 
-MODELS = []
-MODELS += [
-    ("classification", os.path.splitext(model)[0])
-    for model in os.listdir(BENCHMARKING_DIR / "classification" / "onnx_models_configs")
-]
-MODELS += [
-    ("object_detection_segmentation", os.path.splitext(model)[0])
-    for model in os.listdir(BENCHMARKING_DIR / "object_detection_segmentation" / "onnx_models_configs")
-]
+TASKS = ["classification", "object_detection_segmentation"]
+MODELS = list(itertools.chain(*[
+    [(task, os.path.splitext(model)[0])
+     for model in os.listdir(BENCHMARKING_DIR / task / "onnx_models_configs")]
+    for task in TASKS]))
 
 XFAIL_MODELS = {"ssd_mobilenet_v1_12"}
 
@@ -138,6 +136,34 @@ def eval_size(request):
     if option is None:
         nncf_logger.warning("--eval-size is not provided. Use full dataset for evaluation")
     return option
+
+
+@pytest.fixture
+def reference_model_accuracy(scope="module"):
+    dfs = []
+    for task in TASKS:
+        csv_fp = str(TEST_ROOT / "onnx" / "data" / "reference_model_accuracy" / task / "accuracy_checker-original.csv")
+        dfs += [pd.read_csv(csv_fp)]
+    df = pd.concat(dfs, axis=0)
+    df = df[["model", "metric_value"]]
+    df = df.set_index("model")
+    df.columns = ["original_model_accuracy"]
+    df["original_model_accuracy"] = df["original_model_accuracy"] * 100.0
+    return df
+
+
+@pytest.fixture
+def quantized_model_accuracy(output_dir, scope="function"):
+    dfs = []
+    for task in TASKS:
+        csv_fp = str(output_dir / task / "accuracy_checker-quantized.csv")
+        dfs += [pd.read_csv(csv_fp)]
+    df = pd.concat(dfs, axis=0)
+    df = df[["model", "metric_value"]]
+    df = df.set_index("model")
+    df.columns = ["quantized_model_accuracy"]
+    df["quantized_model_accuracy"] = df["quantized_model_accuracy"] * 100.0
+    return df
 
 
 @pytest.mark.e2e_ptq
@@ -275,3 +301,61 @@ class TestBenchmark:
         command = self.get_command(task_type, model_name, model_dir, data_dir, anno_dir, output_dir, eval_size,
                                    program="performance_checker.py", is_quantized=True)
         run_command(command)
+
+
+@pytest.mark.run(order=3)
+class TestBenchmarkResult:
+    @pytest.mark.e2e_ptq
+    @pytest.mark.dependency()
+    @pytest.mark.parametrize("task_type, model_name", MODELS)
+    def test_model_accuracy(self, request, task_type, model_name, reference_model_accuracy, quantized_model_accuracy):
+        # Run PTQ first
+        depends(request, ["TestPTQ::test_ptq_model" + request.node.name.lstrip("test_quantized_model_performance")])
+        check_xfail(model_name)
+        check_quantized_xfail(model_name)
+
+        df = quantized_model_accuracy.join(reference_model_accuracy)
+        df["absolute_accuracy_degradation"] = df["original_model_accuracy"] - df["quantized_model_accuracy"]
+        this_model_accuracy = df[df.index.str.contains(model_name)]
+
+        assert len(this_model_accuracy) > 0, f"{model_name} has no result from the table."
+
+        for idx, cols in this_model_accuracy.iterrows():
+            abs_acc_degradation = cols["absolute_accuracy_degradation"]
+            assert abs_acc_degradation < 1.0, \
+                f"The absolute model accuracy degradation of {idx} exceeds 1% ({abs_acc_degradation}%)."
+
+    @pytest.mark.e2e_ptq
+    @pytest.mark.run(order=4)
+    def test_generate_report(self, reference_model_accuracy, quantized_model_accuracy, output_dir):
+        df = quantized_model_accuracy.join(reference_model_accuracy)
+
+        output_fp = str(output_dir / "report.html")
+
+        df["absolute_accuracy_degradation"] = df["original_model_accuracy"] - df["quantized_model_accuracy"]
+        df["relative_accuracy_degradation"] = df["absolute_accuracy_degradation"] / df["original_model_accuracy"]
+
+        def _highlight_abs_acc_deg_fails(row):
+            print(row)
+            if row["absolute_accuracy_degradation"] > 1.0:
+                return ["background-color: yellow" for _ in row.index]
+
+            return ["" for _ in row.index]
+
+        styler = df.style.apply(_highlight_abs_acc_deg_fails, axis=1).format(
+            "{:.2f}").set_properties(**{"text-align": "center"})
+
+        with open(output_fp, "w", encoding="utf-8") as fp:
+            fp.write(f"""
+            <html>
+            <head>
+            <style> 
+            table, th, td {{font-size:10pt; border:1px solid black; border-collapse:collapse; text-align:left;}}
+            th, td {{padding: 5px;}}
+            </style>
+            </head>
+            <body>
+            {styler.render()}
+            </body>
+            </html>
+            """)
