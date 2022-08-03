@@ -82,16 +82,18 @@ class ONNXEngine(Engine):
     def _register_statistics(self, outputs: NNCFData, statistic_points: StatisticPointsContainer) -> None:
         onnx_graph = ONNXGraph(self.model)
         edge_name_to_node_name = {}
-        for node_name, statistic_point in statistic_points.items():
-            if statistic_point.target_point.type == TargetType.POST_LAYER_OPERATION:
-                edge_name = onnx_graph.get_node_edges(node_name)['output'][0]
-            elif statistic_point.target_point.type == TargetType.PRE_LAYER_OPERATION:
-                edge_name = onnx_graph.get_node_edges(node_name)['input'][0]
-            else:
-                RuntimeError('The statistics should be collected only from the input of output edges of the node')
-            edge_name_to_node_name[edge_name] = node_name
+        for node_name, _statistic_points in statistic_points.items():
+            for statistic_point in _statistic_points:
+                if statistic_point.target_point.type == TargetType.POST_LAYER_OPERATION:
+                    edge_name = onnx_graph.get_node_edges(node_name)['output'][0]
+                elif statistic_point.target_point.type == TargetType.PRE_LAYER_OPERATION:
+                    edge_name = onnx_graph.get_node_edges(node_name)['input'][0]
+                else:
+                    RuntimeError('The statistics should be collected only from the input of output edges of the node')
+                edge_name_to_node_name[edge_name] = node_name
 
         for output_name, output_tensor in outputs.items():
             if output_name in edge_name_to_node_name:
                 node_name = edge_name_to_node_name[output_name]
-                statistic_points[node_name].register_tensor(output_tensor)
+                for statistic_point in statistic_points[node_name]:
+                    statistic_point.register_tensor(output_tensor)

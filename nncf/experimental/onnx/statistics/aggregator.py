@@ -34,14 +34,15 @@ class ONNXStatisticsAggregator(StatisticsAggregator):
         onnx_graph = ONNXGraph(model)
         model_outputs = [output.name for output in onnx_graph.get_model_outputs()]
         extra_model_outputs = []
-        for node_name, statistic_point in self.statistic_points.items():
-            if statistic_point.target_point.type == TargetType.POST_LAYER_OPERATION:
-                edge_name = onnx_graph.get_node_edges(node_name)['output'][0]
-            elif statistic_point.target_point.type == TargetType.PRE_LAYER_OPERATION:
-                edge_name = onnx_graph.get_node_edges(node_name)['input'][0]
-            else:
-                raise RuntimeError
-            extra_model_outputs.append(edge_name)
+        for node_name, statistic_points in self.statistic_points.items():
+            for statistic_point in statistic_points:
+                if statistic_point.target_point.type == TargetType.POST_LAYER_OPERATION:
+                    edge_name = onnx_graph.get_node_edges(node_name)['output'][0]
+                elif statistic_point.target_point.type == TargetType.PRE_LAYER_OPERATION:
+                    edge_name = onnx_graph.get_node_edges(node_name)['input'][0]
+                else:
+                    raise RuntimeError
+                extra_model_outputs.append(edge_name)
 
         model_with_intermediate_outputs = select_model_inputs_outputs(model,
                                                                       outputs=[*extra_model_outputs,

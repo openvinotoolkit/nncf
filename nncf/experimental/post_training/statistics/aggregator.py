@@ -43,14 +43,17 @@ class StatisticsAggregator(ABC):
         The statistics are stored in self.layers_statistics.
         """
 
-    def register_stastistic_points(self, stastistic_points: StatisticPointsContainer):
+    def register_stastistic_points(self, statistic_points: StatisticPointsContainer):
         """
         Register statistic points for statistics collection and recalculates the maximum number samples
         for collecting statistics, based on the maximum value from the all algorithms.
         """
-        for _, stastistic_point in stastistic_points.items():
-            self.statistic_points.add_statistic_point(stastistic_point)
+        for _, _statistic_points in statistic_points.items():
+            for _statistic_point in _statistic_points:
+                self.statistic_points.add_statistic_point(_statistic_point)
 
-        for _, statistic_point in self.statistic_points.items():
-            for _, tensor_collector in statistic_point.algorithm_to_tensor_collector.items():
-                self.max_number_samples = max(self.max_number_samples, tensor_collector.num_samples)
+        for _, _statistic_points in self.statistic_points.items():
+            for _statistic_point in _statistic_points:
+                for _, tensor_collectors in _statistic_point.algorithm_to_tensor_collectors.items():
+                    for tensor_collector in tensor_collectors:
+                        self.max_number_samples = max(self.max_number_samples, tensor_collector.num_samples)

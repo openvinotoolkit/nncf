@@ -115,8 +115,9 @@ class PostTrainingQuantization(Algorithm):
     def get_statistic_points(self, model: ModelType) -> StatisticPointsContainer:
         output = StatisticPointsContainer()
         for algorithm in self.algorithms:
-            for _, statistic_point in algorithm.get_statistic_points(model).items():
-                output.add_statistic_point(statistic_point)
+            for statistic_points in algorithm.get_statistic_points(model).values():
+                for statistic_point in statistic_points:
+                    output.add_statistic_point(statistic_point)
         return output
 
     def create_subalgorithms(self, backend: Backend) -> None:
