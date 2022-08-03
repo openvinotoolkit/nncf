@@ -13,7 +13,6 @@
 
 # pylint: disable=no-member, redefined-outer-name, no-name-in-module
 
-from onnxruntime.capi.onnxruntime_pybind11_state import Fail
 from dataclasses import dataclass
 from typing import List
 from contextlib import nullcontext as does_not_raise
