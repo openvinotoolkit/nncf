@@ -20,7 +20,7 @@ import numpy as np
 from nncf.common.tensor import NNCFTensor
 from nncf.common.tensor import TensorType
 from nncf.common.tensor import TensorElementsType
-
+from nncf.common.utils.logger import logger
 from nncf.common.tensor_statistics.reduction import get_per_channel_history
 
 ReductionShape = Tuple[int]
@@ -49,6 +49,8 @@ class TensorStatisticCollectorBase(ABC):
         """Registers input tensor"""
         if not self._enabled or \
                 self._num_samples is not None and self._collected_samples >= self._num_samples:
+            logger.debug(
+                'Trying to register input, but the number of samples is exceeded. So the tensor will not be registered')
             return x
         if self._reduction_shape is None:
             self._reduction_shape = tuple(range(len(x.shape)))

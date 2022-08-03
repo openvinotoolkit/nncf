@@ -11,7 +11,8 @@
  limitations under the License.
 """
 
-from typing import Iterator, List, Union
+from typing import Iterator
+from typing import Union
 import torch
 import numpy as np
 
@@ -23,6 +24,7 @@ from nncf.experimental.post_training.api.dataset import Dataset, NNCFData
 import random
 
 SAMPLER_OUTPUT_TYPE = Union[torch.Tensor, np.ndarray]
+
 
 # TODO (Nikita Malinin): Replace or rename this file
 
@@ -38,9 +40,6 @@ class BatchSampler(Sampler):
             batch = self.form_batch(
                 self.batch_indices[i], self.batch_indices[i + 1])
             yield batch
-
-    def __len__(self) -> int:
-        return len(self.dataset)
 
     @abstractmethod
     def form_batch(self, start_i: int, end_i: int) -> NNCFData:

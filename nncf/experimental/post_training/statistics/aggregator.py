@@ -33,7 +33,7 @@ class StatisticsAggregator(ABC):
         self.engine = engine
         self.dataset = dataset
         self.is_calculate_metric = False
-        self.max_number_samples = 10
+        self.max_number_samples = 0
         self.statistic_points = StatisticPointsContainer()
 
     @abstractmethod
@@ -53,5 +53,4 @@ class StatisticsAggregator(ABC):
 
         for _, statistic_point in self.statistic_points.items():
             for _, tensor_collector in statistic_point.algorithm_to_tensor_collector.items():
-                if tensor_collector.num_samples is not None:
-                    self.max_number_samples = max(self.max_number_samples, tensor_collector.num_samples)
+                self.max_number_samples = max(self.max_number_samples, tensor_collector.num_samples)

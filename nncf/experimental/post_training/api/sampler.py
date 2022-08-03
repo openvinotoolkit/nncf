@@ -14,7 +14,6 @@ from abc import ABC
 from abc import abstractmethod
 from typing import Iterator
 
-
 from nncf.experimental.post_training.api.dataset import Dataset, NNCFData
 
 
@@ -31,10 +30,9 @@ class Sampler(ABC):
         max_samples_len = min(sample_indices, dataset_len) if sample_indices else dataset_len
         self.batch_indices = list(range(0, max_samples_len + 1, self.batch_size))
 
-    @abstractmethod
-    def __iter__(self) -> Iterator[NNCFData]:
-        pass
+    def __len__(self) -> int:
+        return len(self.batch_indices) - 1
 
     @abstractmethod
-    def __len__(self) -> int:
+    def __iter__(self) -> Iterator[NNCFData]:
         pass
