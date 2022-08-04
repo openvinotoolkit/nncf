@@ -20,6 +20,7 @@ from nncf.common.pruning.utils import get_sources_of_node
 from nncf.common.graph.utils import get_first_nodes_of_type
 from nncf.common.pruning.utils import get_previous_convs
 from nncf.common.pruning.utils import is_grouped_conv
+from nncf.common.pruning.utils import is_batched_linear
 from nncf.common.pruning.utils import PruningAnalysisDecision
 from nncf.common.pruning.utils import PruningAnalysisReason
 from nncf.common.pruning.utils import PruningOperationsMetatypeRegistry
@@ -101,6 +102,7 @@ class PruningNodeSelector:
 
         # 2. Clusters for nodes that should be pruned together (taking into account clusters for special ops)
         for i, cluster in enumerate(special_ops_clusterization.get_all_clusters()):
+            # TODO: Process case when channel dims are not equal in one cluster
             all_pruned_inputs = {}
             clusters_to_merge = []
 
@@ -301,5 +303,8 @@ class PruningNodeSelector:
 
         if not self._prune_downsample_convs and is_conv_with_downsampling(node):
             return PruningAnalysisDecision(False, PruningAnalysisReason.DOWNSAMPLE_CONV)
+
+        if is_batched_linear(node, graph):
+            return PruningAnalysisDecision(False, PruningAnalysisReason.BATCHED_LINEAR)
 
         return PruningAnalysisDecision(True)

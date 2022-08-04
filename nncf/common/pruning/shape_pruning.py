@@ -260,7 +260,7 @@ class WeightsFlopsCalculator:
             num_in_features = input_channels.get(name, node.layer_attributes.in_features)
             num_out_features = output_channels.get(name, node.layer_attributes.out_features)
 
-            flops_numpy = 2 * num_in_features * num_out_features 
+            flops_numpy = 2 * num_in_features * num_out_features * np.prod(self._output_shapes[name][:-1])
             weights_numpy = num_in_features * num_out_features 
             flops[name] = flops_numpy
             weights[name] = weights_numpy

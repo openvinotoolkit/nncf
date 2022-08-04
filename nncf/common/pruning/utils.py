@@ -38,6 +38,18 @@ def is_grouped_conv(node: NNCFNode) -> bool:
            and node.layer_attributes.groups != 1
 
 
+def is_batched_linear(node: NNCFNode, graph: NNCFGraph) -> bool:
+    if not isinstance(node.layer_attributes, LinearLayerAttributes):
+        return False
+
+    edges = graph.get_input_edges(node)
+    if not edges:
+        edges = graph.get_ouput_edges(node)
+        if not edges:
+            return False
+    return len(edges[0].tensor_shape) > 2
+
+
 def get_sources_of_node(nncf_node: NNCFNode, graph: NNCFGraph, sources_types: List[str]) -> List[NNCFNode]:
     """
     Source is a node of source such that there is path from this node to `nncf_node` and on this path
@@ -241,6 +253,7 @@ class PruningAnalysisReason(Enum):
     DIMENSION_MISMATCH = 'of dimension mismatch'
     CLOSING_CONV_MISSING = 'closing convolution missing'
     IN_GROUP_OF_UNPRUNABLE = 'is in the group with non prunable layers'
+    BATCHED_LINEAR = 'linear node has bathced dimension'
 
     @classmethod
     def message(cls, node_name: str, decision: Optional['PruningAnalysisDecision']) -> str:

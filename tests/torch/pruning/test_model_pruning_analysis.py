@@ -12,6 +12,7 @@
 """
 
 from collections import Counter
+from torch import nn
 from functools import partial
 from typing import Callable
 from typing import Dict
@@ -23,7 +24,6 @@ from typing import Union
 
 import pytest
 import torch
-from torch import nn
 
 from nncf.common.graph import NNCFNodeName
 from nncf.common.pruning.clusterization import Cluster
@@ -70,6 +70,8 @@ from tests.torch.pruning.helpers import SplitConcatModel
 from tests.torch.pruning.helpers import MultipleSplitConcatModel
 from tests.torch.pruning.helpers import SplitReshapeModel
 from tests.torch.pruning.helpers import HRNetBlock
+from tests.torch.pruning.helpers import GroupNormModel
+from tests.torch.pruning.helpers import PruningTestBatchedLinear
 
 
 # pylint: disable=protected-access
@@ -548,7 +550,17 @@ GROUP_PRUNING_MODULES_TEST_CASES = [
                          9: PruningAnalysisDecision(True),
                          12: PruningAnalysisDecision(False, [PruningAnalysisReason.LAST_CONV]),
                          13: PruningAnalysisDecision(False, [PruningAnalysisReason.LAST_CONV])},
-        prune_params=(True, True))
+        prune_params=(True, True)),
+        GroupPruningModulesTestStruct(model=PruningTestBatchedLinear,
+        non_pruned_module_nodes=['PruningTestBatchedLinear/NNCFConv2d[first_conv]/conv2d_0',
+                                 'PruningTestBatchedLinear/NNCFLinear[linear1]/linear_0',
+                                 'PruningTestBatchedLinear/NNCFLinear[last_linear]/linear_0'],
+        pruned_groups=[],
+        pruned_groups_by_node_id=[],
+        can_prune_after_analysis={0: True, 1: True, 2: False, 3: True, 4: True, 5: True},
+        final_can_prune={1: PruningAnalysisDecision(False, PruningAnalysisReason.CLOSING_CONV_MISSING),
+                         4: PruningAnalysisDecision(False, PruningAnalysisReason.LAST_CONV)},
+        prune_params=(True, True)),
 ]
 
 

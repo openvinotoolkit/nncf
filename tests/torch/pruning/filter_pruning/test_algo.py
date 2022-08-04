@@ -41,6 +41,7 @@ from tests.torch.pruning.helpers import PruningTestModel
 from tests.torch.pruning.helpers import BigPruningTestModel
 from tests.torch.pruning.helpers import PruningTestModelDiffChInPruningCluster
 from tests.torch.pruning.helpers import PruningTestModelBroadcastedLinearWithConcat
+from tests.torch.pruning.helpers import PruningTestBatchedLinear
 from tests.torch.pruning.helpers import PruningTestModelBroadcastedLinear
 from tests.torch.pruning.helpers import PruningTestModelConcatWithLinear
 from tests.torch.pruning.helpers import MultipleForwardModel
@@ -495,6 +496,16 @@ PruningTestModelConcatWithLinearRefs = {
     }
 }
 
+PruningTestBatchedLinearRef = { "next_nodes": {},
+    "num_of_sparse_by_node": {},
+    "pruned_in_channels": {'PruningTestBatchedLinear/NNCFConv2d[first_conv]/conv2d_0': 1,
+                           'PruningTestBatchedLinear/NNCFLinear[linear1]/linear_0': 8,
+                           'PruningTestBatchedLinear/NNCFLinear[last_linear]/linear_0': 4096},
+    "pruned_out_channels": {'PruningTestBatchedLinear/NNCFConv2d[first_conv]/conv2d_0': 32,
+                            'PruningTestBatchedLinear/NNCFLinear[linear1]/linear_0': 16,
+                            'PruningTestBatchedLinear/NNCFLinear[last_linear]/linear_0': 1}
+}
+
 @pytest.mark.parametrize(('model_module', 'all_weights', 'pruning_flops_target', 'ref_flops',
                           'ref_params_num', 'refs'),
                          [
@@ -502,9 +513,11 @@ PruningTestModelConcatWithLinearRefs = {
                             #(partial(BigPruningTestModel, dim=2), True, None, 1146640, 83768, BigPruningTestModelNextNoderRef),
                             #(partial(BigPruningTestModel, dim=2), False, 0.5, 1236160, 169184, BigPruningTestModelNextNoderRef),
                             #(partial(BigPruningTestModel, dim=2), True, 0.5, 1328162, 104833, BigPruningTestModelNextNoderRef),
-                            (PruningTestModelBroadcastedLinear, False, 0.3, 35840, 8848, PruningTestModelBroadcastedLinearRefs),
-                            (PruningTestModelConcatWithLinear, False, 0.3, 79168, 2208, PruningTestModelConcatWithLinearRefs),
-                            (PruningTestModelBroadcastedLinearWithConcat, False, 0.3, 53248, 9488, PruningTestModelBroadcastedLinearWithConcatRefs),
+                            #(PruningTestModelBroadcastedLinear, False, 0.3, 35840, 8848, PruningTestModelBroadcastedLinearRefs),
+                            #(PruningTestModelConcatWithLinear, False, 0.3, 79168, 2208, PruningTestModelConcatWithLinearRefs),
+                            #(PruningTestModelBroadcastedLinearWithConcat, False, 0.3, 53248, 9488, PruningTestModelBroadcastedLinearWithConcatRefs),
+                            (PruningTestBatchedLinear, False, 0.0, 77824, 4256, PruningTestBatchedLinearRef),
+
                          ]
                          )
 def test_flops_calclucaltor(model_module, all_weights, pruning_flops_target, ref_flops, ref_params_num, refs):
@@ -528,6 +541,8 @@ def test_flops_calclucaltor(model_module, all_weights, pruning_flops_target, ref
     # Check num of sparse by node
     # pylint:disable=protected-access
     num_of_sparse_by_node = pruning_algo._calculate_num_of_sparse_elements_by_node()
+
+    assert len(num_of_sparse_by_node) == len(refs['num_of_sparse_by_node'])
     for node_name in num_of_sparse_by_node:
         assert num_of_sparse_by_node[node_name] == refs['num_of_sparse_by_node'][node_name]
 
@@ -540,6 +555,7 @@ def test_flops_calclucaltor(model_module, all_weights, pruning_flops_target, ref
                                 pruning_groups=pruning_algo.pruned_module_groups_info)
     # Next nodes cluster check
     pruning_groups_next_nodes = shape_pruning_processor._pruning_groups_next_nodes
+    assert len(pruning_groups_next_nodes) == len(refs['next_nodes'])
     for idx, next_nodes in pruning_groups_next_nodes.items():
         next_nodes_ref = refs['next_nodes'][idx]
         next_nodes_ref_names = [node.node_name for node in next_nodes_ref]
@@ -551,6 +567,7 @@ def test_flops_calclucaltor(model_module, all_weights, pruning_flops_target, ref
     tmp_in_channels, tmp_out_channels = shape_pruning_processor.calculate_in_out_channels_by_masks(
         num_of_sparse_elements_by_node=refs['num_of_sparse_by_node'])
 
+    assert len(tmp_in_channels) == len(tmp_out_channels) == len(refs['pruned_in_channels'])
     for node_name in tmp_in_channels:
         assert tmp_in_channels[node_name] == refs['pruned_in_channels'][node_name]
         assert tmp_out_channels[node_name] == refs['pruned_out_channels'][node_name]
