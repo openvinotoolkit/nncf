@@ -174,7 +174,6 @@ def get_previous_convs(graph: NNCFGraph, nncf_node: NNCFNode,
     return sources
 
 
-
 def get_prunable_layers_in_out_channels(graph: NNCFGraph) -> Tuple[Dict[NNCFNodeName, int], Dict[NNCFNodeName, int]]:
     """
     Collects the number of input and output channels for each prunable layer in the graph.

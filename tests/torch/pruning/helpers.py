@@ -18,7 +18,7 @@ from torch import nn
 
 from nncf.config import NNCFConfig
 from tests.torch.test_models.pnasnet import CellB
-from tests.torch.helpers import create_bn, create_conv
+from tests.torch.helpers import create_bn, create_conv, fill_linear_weight
 from tests.torch.helpers import create_transpose_conv
 from tests.torch.helpers import create_depthwise_conv
 from tests.torch.helpers import create_grouped_conv
@@ -152,6 +152,99 @@ class PruningTestModelConcat(nn.Module):
         x = self.relu(x)
         x = self.conv4(x)
         return x
+
+
+class PruningTestModelConcatWithLinear(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.conv1 = create_conv(1, 16, 2, 1, -2)
+        for i in range(16):
+            self.conv1.weight.data[i] += i
+        self.conv2 = create_conv(16, 32, 2, 2, -2)
+        for i in range(32):
+            self.conv2.weight.data[i] += i
+        self.conv3 = create_conv(16, 32, 2, 2, -2)
+        for i in range(32):
+            self.conv3.weight.data[i] += i
+        self.relu = nn.ReLU()
+        self.linear = nn.Linear(64 * 6 * 6, 1)
+        self.linear.weight.data[0] = 1
+
+    def forward(self, x):
+        x = self.conv1(x)
+        x = torch.cat([self.conv2(x), self.conv3(x)], dim=1)
+        x = self.relu(x.view(1, -1))
+        x = self.linear(x)
+        return x
+
+
+class PruningTestModelDiffChInPruningCluster(nn.Module):
+    def __init__(self):
+        super().__init__()
+        # input_shape=[1, 1, 8, 8]
+        self.first_conv = create_conv(1, 8, 2, 1, -2)
+        self.conv1 = create_conv(8, 16, 2, 1, -2)
+        self.linear1 = nn.Linear(8 * 7 * 7, 16 * 6 * 6)
+        self.last_linear = nn.Linear(16 * 6 * 6, 1)
+
+    def forward(self, x):
+        x = self.first_conv(x)
+        y = self.conv1(x).view(1, -1)
+        z = self.linear1(x.view(1, -1))
+        return self.last_linear(y + z)
+
+
+class PruningTestModelBroadcastedLinear(nn.Module):
+    def __init__(self):
+        super().__init__()
+        # input_shape=[1, 1, 8, 8]
+        self.first_conv = create_conv(1, 32, 1)
+        for i in range(32):
+            self.first_conv.weight.data[i] += i
+        self.conv1 = create_conv(32, 16, 1)
+        for i in range(16):
+            self.conv1.weight.data[i] += i
+        self.linear1 = nn.Linear(32 * 8 * 8, 16)
+        for i in range (16):
+            self.linear1.weight.data[i] = i
+        self.last_linear = nn.Linear(16 * 8 * 8, 1)
+        fill_linear_weight(self.last_linear, 1)
+
+    def forward(self, x):
+        x = self.first_conv(x)
+        y = self.conv1(x)
+        z = self.linear1(x.view(1, -1))
+        x = y + z.view(1, -1, 1, 1)
+        return self.last_linear(x.view(1, -1))
+
+
+class PruningTestModelBroadcastedLinearWithConcat(nn.Module):
+    def __init__(self):
+        super().__init__()
+        # input_shape=[1, 1, 8, 8]
+        self.first_conv = create_conv(1, 32, 1)
+        for i in range(32):
+            self.first_conv.weight.data[i] += i
+        self.conv1 = create_conv(32, 16, 1)
+        for i in range(16):
+            self.conv1.weight.data[i] += i
+        self.linear1 = nn.Linear(32 * 8 * 8, 16)
+        for i in range (16):
+            self.linear1.weight.data[i] = i
+        self.conv2 = create_conv(32, 16, 1)
+        for i in range(16):
+            self.conv2.weight.data[i] += i
+        self.last_linear = nn.Linear(2 * 16 * 8 * 8, 1)
+        fill_linear_weight(self.last_linear, 1)
+
+    def forward(self, x):
+        x = self.first_conv(x)
+        y = self.conv1(x)
+        z = self.linear1(x.view(1, -1))
+        w = y + z.view(1, -1, 1, 1)
+        p = self.conv2(x)
+        x = torch.cat((w, p), dim=1)
+        return self.last_linear(x.view(1, -1))
 
 
 class PruningTestModelConcatBN(nn.Module):

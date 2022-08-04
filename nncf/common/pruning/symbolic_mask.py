@@ -22,9 +22,6 @@ class SymbolicMaskProducer:
         self._id = id
         self._sparse_multiplier = sparse_multiplier
     
-    def update_sparse_multiplier(self, repeats: int) -> None:
-        self._sparse_multiplier *= repeats
-    
     @property
     def sparse_multiplier(self) -> int:
         return self._sparse_multiplier
@@ -111,9 +108,11 @@ class SymbolicMaskProcessor(NNCFPruningBaseTensorProcessor):
 
     @classmethod
     def repeat(cls, tensor: SymbolicMask, repeats: int) -> SymbolicMask:
-        for mask_producer in tensor.mask_producers.values():
-            mask_producer.update_sparse_multiplier(repeats)
-        return SymbolicMask(tensor.shape[0] * repeats, tensor.mask_producers)
+        updated_mask_producers = dict()
+        for producer_id, mask_producer in tensor.mask_producers.items():
+            updated_mask_producers[producer_id] =\
+                SymbolicMaskProducer(producer_id, mask_producer.sparse_multiplier * repeats)
+        return SymbolicMask(tensor.shape[0] * repeats, updated_mask_producers)
 
     @classmethod
     def elementwise_mask_propagation(cls, input_masks: List[SymbolicMask]) -> SymbolicMask:

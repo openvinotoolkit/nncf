@@ -10,9 +10,14 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+
 import pytest
+from functools import partial
 
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
+from tests.torch.pruning.helpers import MobilenetV3BlockSEReshape, PruningTestModelConcatWithLinear
+from tests.torch.pruning.helpers import PruningTestModelDiffChInPruningCluster
+from tests.torch.pruning.helpers import PruningTestModelBroadcastedLinear
 from tests.torch.pruning.helpers import GroupedConvolutionModel
 from tests.torch.pruning.helpers import PruningTestModel
 from tests.torch.pruning.helpers import PruningTestModelSharedConvs

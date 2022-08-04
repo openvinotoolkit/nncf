@@ -84,10 +84,13 @@ class ShapePruninigProcessor:
     def prune_cluster_shapes(self, cluster: Union[int, Cluster],
                              pruned_elems: int,
                              input_channels: Dict[NNCFNodeName, int],
-                             output_channels: Dict[NNCFNodeName, int]):
+                             output_channels: Dict[NNCFNodeName, int]) -> None:
         assert isinstance(cluster, (int, Cluster)), 'Wrong type for cluster param'
         if isinstance(cluster, int):
             cluster = self._pruning_groups.get_cluster_by_id(cluster)
+
+        if not pruned_elems:
+            return
 
         for node in cluster.elements:
             output_channels[node.node_name] -= pruned_elems
@@ -135,9 +138,10 @@ class ShapePruninigProcessor:
     
     def _get_cluster_next_nodes(self) -> Dict[int, List['NextNode']]:
         """
-        Finds nodes of `prunable_types` types that receive the output of a pruned cluster as input.
+        Finds nodes of `prunable_types` types that receive the output of a pruned cluster as input
+        and collects all info specified in NextNode.
 
-        :return Dictionary of next node names by cluster {cluster_id: [node]}.
+        :return Dictionary of next nodes by cluster {cluster_id: [node]}.
         """
         for pruned_layer_info in self._pruning_groups.get_all_nodes():
             node = self._graph.get_node_by_id(pruned_layer_info.nncf_node_id)

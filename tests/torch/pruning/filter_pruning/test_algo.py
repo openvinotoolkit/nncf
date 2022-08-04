@@ -12,6 +12,7 @@
 """
 
 from copy import deepcopy
+from functools import partial
 
 import pytest
 import torch
@@ -31,12 +32,17 @@ from nncf.torch.pruning.utils import _calculate_output_shape, collect_output_sha
 from nncf.torch.layers import NNCF_PRUNING_MODULES_DICT
 from nncf.torch.pruning.filter_pruning.algo import GENERAL_CONV_LAYER_METATYPES
 from nncf.torch.pruning.filter_pruning.algo import LINEAR_LAYER_METATYPES
+from tests.torch import pruning
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
 from tests.torch.helpers import check_correct_nncf_modules_replacement
 from tests.torch.pruning.helpers import gen_ref_masks
 from tests.torch.pruning.helpers import get_basic_pruning_config
 from tests.torch.pruning.helpers import PruningTestModel
 from tests.torch.pruning.helpers import BigPruningTestModel
+from tests.torch.pruning.helpers import PruningTestModelDiffChInPruningCluster
+from tests.torch.pruning.helpers import PruningTestModelBroadcastedLinearWithConcat
+from tests.torch.pruning.helpers import PruningTestModelBroadcastedLinear
+from tests.torch.pruning.helpers import PruningTestModelConcatWithLinear
 from tests.torch.pruning.helpers import MultipleForwardModel
 from tests.torch.pruning.helpers import PruningTestModelConcatBN
 from tests.torch.pruning.helpers import DisconectedGraphModel
@@ -400,47 +406,159 @@ def test_valid_masks_for_bn_after_concat(prune_bn):
         assert np.allclose(node.data['output_mask'].tensor.numpy(), ref_concat_masks[i])
 
 
-@pytest.mark.parametrize(('all_weights', 'pruning_flops_target', 'ref_flops', 'ref_params_num'),
+BigPruningTestModelRefs = {
+    "next_nodes": {
+        0: [ShapePruninigProcessor.NextNode('BigPruningTestModel/NNCFConv2d[conv2]/conv2d_0', 1)],
+        1: [ShapePruninigProcessor.NextNode('BigPruningTestModel/NNCFConvTranspose2d[up]/conv_transpose2d_0', 1)],
+        2: [ShapePruninigProcessor.NextNode('BigPruningTestModel/NNCFLinear[linear]/linear_0', 49)],
+        3: [ShapePruninigProcessor.NextNode('BigPruningTestModel/NNCFConv2d[conv3]/conv2d_0', 1)],
+    },
+}
+
+PruningTestModelBroadcastedLinearRefs = {
+    "next_nodes": {
+        0: [ShapePruninigProcessor.NextNode('PruningTestModelBroadcastedLinear/NNCFLinear[last_linear]/linear_0', 64)],
+        1: [ShapePruninigProcessor.NextNode('PruningTestModelBroadcastedLinear/NNCFLinear[linear1]/linear_0', 64),
+            ShapePruninigProcessor.NextNode('PruningTestModelBroadcastedLinear/NNCFConv2d[conv1]/conv2d_0', 1)],
+    },
+    "num_of_sparse_by_node": {
+        'PruningTestModelBroadcastedLinear/NNCFConv2d[first_conv]/conv2d_0': 16,
+        'PruningTestModelBroadcastedLinear/NNCFConv2d[conv1]/conv2d_0': 8,
+        'PruningTestModelBroadcastedLinear/NNCFLinear[linear1]/linear_0': 8,
+    },
+    "pruned_in_channels": {
+        'PruningTestModelBroadcastedLinear/NNCFConv2d[first_conv]/conv2d_0': 1,
+        'PruningTestModelBroadcastedLinear/NNCFConv2d[conv1]/conv2d_0': 16,
+        'PruningTestModelBroadcastedLinear/NNCFLinear[linear1]/linear_0': 1024,
+        'PruningTestModelBroadcastedLinear/NNCFLinear[last_linear]/linear_0': 512,
+    },
+    "pruned_out_channels": {
+        'PruningTestModelBroadcastedLinear/NNCFConv2d[first_conv]/conv2d_0': 16,
+        'PruningTestModelBroadcastedLinear/NNCFConv2d[conv1]/conv2d_0': 8,
+        'PruningTestModelBroadcastedLinear/NNCFLinear[linear1]/linear_0': 8,
+        'PruningTestModelBroadcastedLinear/NNCFLinear[last_linear]/linear_0': 1
+    }
+}
+
+PruningTestModelBroadcastedLinearWithConcatRefs = {
+    "next_nodes": {
+        0: [ShapePruninigProcessor.NextNode('PruningTestModelBroadcastedLinearWithConcat/NNCFLinear[last_linear]/linear_0', 64)],
+        1: [ShapePruninigProcessor.NextNode('PruningTestModelBroadcastedLinearWithConcat/NNCFLinear[linear1]/linear_0', 64),
+            ShapePruninigProcessor.NextNode('PruningTestModelBroadcastedLinearWithConcat/NNCFConv2d[conv1]/conv2d_0', 1),
+            ShapePruninigProcessor.NextNode('PruningTestModelBroadcastedLinearWithConcat/NNCFConv2d[conv2]/conv2d_0', 1)],
+        2: [ShapePruninigProcessor.NextNode('PruningTestModelBroadcastedLinearWithConcat/NNCFLinear[last_linear]/linear_0', 64)],
+    },
+    "num_of_sparse_by_node": {
+        'PruningTestModelBroadcastedLinearWithConcat/NNCFConv2d[first_conv]/conv2d_0': 16,
+        'PruningTestModelBroadcastedLinearWithConcat/NNCFConv2d[conv1]/conv2d_0': 8,
+        'PruningTestModelBroadcastedLinearWithConcat/NNCFConv2d[conv2]/conv2d_0': 8,
+        'PruningTestModelBroadcastedLinearWithConcat/NNCFLinear[linear1]/linear_0': 8,
+    },
+    "pruned_in_channels": {
+        'PruningTestModelBroadcastedLinearWithConcat/NNCFConv2d[first_conv]/conv2d_0': 1,
+        'PruningTestModelBroadcastedLinearWithConcat/NNCFConv2d[conv1]/conv2d_0': 16,
+        'PruningTestModelBroadcastedLinearWithConcat/NNCFConv2d[conv2]/conv2d_0': 16,
+        'PruningTestModelBroadcastedLinearWithConcat/NNCFLinear[linear1]/linear_0': 1024,
+        'PruningTestModelBroadcastedLinearWithConcat/NNCFLinear[last_linear]/linear_0': 1024,
+    },
+    "pruned_out_channels": {
+        'PruningTestModelBroadcastedLinearWithConcat/NNCFConv2d[first_conv]/conv2d_0': 16,
+        'PruningTestModelBroadcastedLinearWithConcat/NNCFConv2d[conv1]/conv2d_0': 8,
+        'PruningTestModelBroadcastedLinearWithConcat/NNCFConv2d[conv2]/conv2d_0': 8,
+        'PruningTestModelBroadcastedLinearWithConcat/NNCFLinear[linear1]/linear_0': 8,
+        'PruningTestModelBroadcastedLinearWithConcat/NNCFLinear[last_linear]/linear_0': 1
+    }
+}
+PruningTestModelConcatWithLinearRefs = {
+    "next_nodes": {
+        0: [ShapePruninigProcessor.NextNode('PruningTestModelConcatWithLinear/NNCFConv2d[conv2]/conv2d_0', 1),
+            ShapePruninigProcessor.NextNode('PruningTestModelConcatWithLinear/NNCFConv2d[conv3]/conv2d_0', 1)],
+        1: [ShapePruninigProcessor.NextNode('PruningTestModelConcatWithLinear/NNCFLinear[linear]/linear_0', 36)],
+        2: [ShapePruninigProcessor.NextNode('PruningTestModelConcatWithLinear/NNCFLinear[linear]/linear_0', 36)],
+    },
+    "num_of_sparse_by_node": {
+        'PruningTestModelConcatWithLinear/NNCFConv2d[conv1]/conv2d_0': 8,
+        'PruningTestModelConcatWithLinear/NNCFConv2d[conv2]/conv2d_0': 16,
+        'PruningTestModelConcatWithLinear/NNCFConv2d[conv3]/conv2d_0': 16,
+    },
+    "pruned_in_channels": {
+        'PruningTestModelConcatWithLinear/NNCFConv2d[conv1]/conv2d_0': 1,
+        'PruningTestModelConcatWithLinear/NNCFConv2d[conv2]/conv2d_0': 8,
+        'PruningTestModelConcatWithLinear/NNCFConv2d[conv3]/conv2d_0': 8,
+        'PruningTestModelConcatWithLinear/NNCFLinear[linear]/linear_0': 1152,
+    },
+    "pruned_out_channels": {
+        'PruningTestModelConcatWithLinear/NNCFConv2d[conv1]/conv2d_0': 8,
+        'PruningTestModelConcatWithLinear/NNCFConv2d[conv2]/conv2d_0': 16,
+        'PruningTestModelConcatWithLinear/NNCFConv2d[conv3]/conv2d_0': 16,
+        'PruningTestModelConcatWithLinear/NNCFLinear[linear]/linear_0': 1,
+    }
+}
+
+@pytest.mark.parametrize(('model_module', 'all_weights', 'pruning_flops_target', 'ref_flops',
+                          'ref_params_num', 'refs'),
                          [
-                             (False, None, 679888, 106280),
-                             (True, None, 1146640, 83768),
-                             (False, 0.5, 1236160, 169184),
-                             (True, 0.5, 1328162, 104833),
+                            #(partial(BigPruningTestModel, dim=2), False, None, 679888, 106280, BigPruningTestModelNextNoderRef),
+                            #(partial(BigPruningTestModel, dim=2), True, None, 1146640, 83768, BigPruningTestModelNextNoderRef),
+                            #(partial(BigPruningTestModel, dim=2), False, 0.5, 1236160, 169184, BigPruningTestModelNextNoderRef),
+                            #(partial(BigPruningTestModel, dim=2), True, 0.5, 1328162, 104833, BigPruningTestModelNextNoderRef),
+                            (PruningTestModelBroadcastedLinear, False, 0.3, 35840, 8848, PruningTestModelBroadcastedLinearRefs),
+                            (PruningTestModelConcatWithLinear, False, 0.3, 79168, 2208, PruningTestModelConcatWithLinearRefs),
+                            (PruningTestModelBroadcastedLinearWithConcat, False, 0.3, 53248, 9488, PruningTestModelBroadcastedLinearWithConcatRefs),
                          ]
                          )
-def test_calculation_of_flops(all_weights, pruning_flops_target, ref_flops, ref_params_num):
-    """
-    Test for pruning masks check (_set_binary_masks_for_filters, _set_binary_masks_for_all_filters_together).
-    :param all_weights: whether mask will be calculated for all weights in common or not
-    :param pruning_flops_target: prune model by flops, if None then by number of channels
-    :param ref_flops: reference size of model
-    """
+def test_flops_calclucaltor(model_module, all_weights, pruning_flops_target, ref_flops, ref_params_num, refs):
     config = get_basic_pruning_config(input_sample_size=[1, 1, 8, 8])
+    config['compression']['algorithm'] = 'filter_pruning'
     config['compression']['params']['all_weights'] = all_weights
     config['compression']['params']['prune_first_conv'] = True
-    config['compression']['pruning_init'] = 0.5
+    config['compression']['pruning_init'] = 0.5 if not pruning_flops_target else pruning_flops_target
     if pruning_flops_target:
         config['compression']['params']['pruning_flops_target'] = pruning_flops_target
 
-    _, pruning_algo, _ = create_pruning_algo_with_config(config)
+    model = model_module()
+    pruned_model, pruning_algo = create_compressed_model_and_algo_for_test(model_module(), config)
+
+    # Check that all modules was correctly replaced by NNCF modules and return this NNCF modules
+    check_correct_nncf_modules_replacement(model, pruned_model)
 
     assert pruning_algo.current_flops == ref_flops
     assert pruning_algo.current_params_num == ref_params_num
+
+    # Check num of sparse by node
     # pylint:disable=protected-access
+    num_of_sparse_by_node = pruning_algo._calculate_num_of_sparse_elements_by_node()
+    for node_name in num_of_sparse_by_node:
+        assert num_of_sparse_by_node[node_name] == refs['num_of_sparse_by_node'][node_name]
+
     graph = pruning_algo._model.get_original_graph()
+
     shape_pruning_processor = ShapePruninigProcessor(
                                 graph=graph,
                                 pruning_operations_metatype=PT_PRUNING_OPERATOR_METATYPES,
                                 prunable_types=[v.op_func_name for v in NNCF_PRUNING_MODULES_DICT],
                                 pruning_groups=pruning_algo.pruned_module_groups_info)
+    # Next nodes cluster check
+    pruning_groups_next_nodes = shape_pruning_processor._pruning_groups_next_nodes
+    for idx, next_nodes in pruning_groups_next_nodes.items():
+        next_nodes_ref = refs['next_nodes'][idx]
+        next_nodes_ref_names = [node.node_name for node in next_nodes_ref]
+        for next_node in next_nodes:
+            idx = next_nodes_ref_names.index(next_node.node_name)
+            next_node_ref = next_nodes_ref[idx]
+            assert next_node.sparse_multiplier == next_node_ref.sparse_multiplier
+
+    tmp_in_channels, tmp_out_channels = shape_pruning_processor.calculate_in_out_channels_by_masks(
+        num_of_sparse_elements_by_node=refs['num_of_sparse_by_node'])
+
+    for node_name in tmp_in_channels:
+        assert tmp_in_channels[node_name] == refs['pruned_in_channels'][node_name]
+        assert tmp_out_channels[node_name] == refs['pruned_out_channels'][node_name]
 
     weights_flops_calc = WeightsFlopsCalculator(graph=graph,
                                                 output_shapes=collect_output_shapes(graph),
                                                 conv_op_metatypes=GENERAL_CONV_LAYER_METATYPES,
                                                 linear_op_metatypes=LINEAR_LAYER_METATYPES)
-
-    tmp_in_channels, tmp_out_channels = shape_pruning_processor.calculate_in_out_channels_by_masks(
-        num_of_sparse_elements_by_node=pruning_algo._calculate_num_of_sparse_elements_by_node())
 
     cur_flops, cur_params_num = \
         weights_flops_calc.count_flops_and_weights(
