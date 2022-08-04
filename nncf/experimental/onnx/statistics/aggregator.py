@@ -14,13 +14,13 @@
 from skl2onnx.helpers.onnx_helper import select_model_inputs_outputs
 import onnx
 
+from nncf.common.graph.transformations.commands import TargetType
+from nncf.common.graph.definitions import NNCFGraphNodeType
+from nncf.experimental.post_training.api.dataset import Dataset
 from nncf.experimental.post_training.statistics.aggregator import StatisticsAggregator
-
 from nncf.experimental.onnx.samplers import create_onnx_sampler
 from nncf.experimental.onnx.engine import ONNXEngine
 from nncf.experimental.onnx.graph.onnx_graph import ONNXGraph
-from nncf.experimental.post_training.api.dataset import Dataset
-from nncf.common.graph.transformations.commands import TargetType
 
 
 class ONNXStatisticsAggregator(StatisticsAggregator):
@@ -36,12 +36,15 @@ class ONNXStatisticsAggregator(StatisticsAggregator):
         extra_model_outputs = []
         for node_name, statistic_points in self.statistic_points.items():
             for statistic_point in statistic_points:
-                if statistic_point.target_point.type == TargetType.POST_LAYER_OPERATION:
-                    edge_name = onnx_graph.get_node_edges(node_name)['output'][0]
-                elif statistic_point.target_point.type == TargetType.PRE_LAYER_OPERATION:
-                    edge_name = onnx_graph.get_node_edges(node_name)['input'][0]
+                if NNCFGraphNodeType.INPUT_NODE in statistic_point.target_point.target_node_name:
+                    edge_name = onnx_graph.get_model_inputs()
                 else:
-                    raise RuntimeError
+                    if statistic_point.target_point.type == TargetType.POST_LAYER_OPERATION:
+                        edge_name = onnx_graph.get_node_edges(node_name)['output'][0]
+                    elif statistic_point.target_point.type == TargetType.PRE_LAYER_OPERATION:
+                        edge_name = onnx_graph.get_node_edges(node_name)['input'][0]
+                    else:
+                        raise RuntimeError
                 extra_model_outputs.append(edge_name)
 
         model_with_intermediate_outputs = select_model_inputs_outputs(model,

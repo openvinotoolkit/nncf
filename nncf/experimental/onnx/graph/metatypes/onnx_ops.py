@@ -156,8 +156,18 @@ class ONNXSoftmaxMetatype(ONNXOpMetatype):
     op_names = ['Softmax']
 
 
+@ONNX_OPERATION_METATYPES.register()
+class ONNXPadMetatype(ONNXOpMetatype):
+    name = 'PadOp'
+    op_names = ['Pad']
+
+
 GENERAL_WEIGHT_LAYER_METATYPES = [ONNXConvolutionMetatype,
                                   ONNXLinearMetatype]
+
+LAYERS_WITH_BIAS_METATYPES = [ONNXConvolutionMetatype,
+                              ONNXLinearMetatype,
+                              ONNXBatchNormMetatype]
 
 
 def get_operator_metatypes() -> List[Type[OperatorMetatype]]:

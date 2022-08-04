@@ -139,9 +139,9 @@ class ONNXMinMaxQuantization(MinMaxQuantization):
                                                                                node_name)
                 # If Input node
                 else:
-                    node_name = quantization_point.directly_quantized_operator_node_names[0]
+                    node_name = quantization_point.insertion_point.target_node_name
                     outputs = onnx_graph.get_node_edges(node_name)['input'][0]
-                    activation_quantization_target_point = ONNXTargetPoint(TargetType.PRE_LAYER_OPERATION, node_name)
+                    activation_quantization_target_point = ONNXTargetPoint(TargetType.POST_LAYER_OPERATION, node_name)
 
                 if self._is_valid_activation_quantizer(outputs, filled_outputs, onnx_graph):
                     filled_outputs.add(outputs)
@@ -173,15 +173,15 @@ class ONNXMinMaxQuantization(MinMaxQuantization):
                     command = ONNXQuantizerInsertionCommand(quantization_target_point, parameters)
                     transformation_commands.append(command)
             elif quantization_target_point.type in [TargetType.PRE_LAYER_OPERATION, TargetType.POST_LAYER_OPERATION]:
-                _statistic_points = statistic_points[quantization_target_point.target_node_name]
-                for _statistic_point in _statistic_points:
-                    if PostTrainingAlgorithms.MinMaxQuantization in _statistic_point.algorithm_to_tensor_collectors:
-                        for tensor_collector in _statistic_point.algorithm_to_tensor_collectors[
-                                PostTrainingAlgorithms.MinMaxQuantization]:
-                            parameters = calculate_activation_quantizer_parameters(tensor_collector.get_statistics(),
-                                                                                   self.activation_quantizer_config)
-                            command = ONNXQuantizerInsertionCommand(quantization_target_point, parameters)
-                            transformation_commands.append(command)
+                f = lambda point: PostTrainingAlgorithms.MinMaxQuantization in point.algorithm_to_tensor_collectors
+                for _statistic_points in statistic_points.iter_through_target_node_name_statistic_points(
+                        quantization_target_point.target_node_name, f):
+                    for tensor_collector in _statistic_points.algorithm_to_tensor_collectors[
+                            PostTrainingAlgorithms.MinMaxQuantization]:
+                        parameters = calculate_activation_quantizer_parameters(tensor_collector.get_statistics(),
+                                                                               self.activation_quantizer_config)
+                        command = ONNXQuantizerInsertionCommand(quantization_target_point, parameters)
+                        transformation_commands.append(command)
             else:
                 raise RuntimeError('Inccorrect type of Quantization Target Point')
 
