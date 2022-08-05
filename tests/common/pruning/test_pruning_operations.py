@@ -2,6 +2,7 @@ import numpy as np
 import pytest
 
 from functools import partial
+from nncf.common.graph import layer_attributes
 
 from nncf.common.pruning.tensor_processor import NNCFPruningBaseTensorProcessor
 from tests.common.pruning import dummy_types
@@ -15,6 +16,7 @@ from nncf.common.graph.layer_attributes import MultipleInputLayerAttributes
 from nncf.common.graph.layer_attributes import GroupNormLayerAttributes
 from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
 from nncf.common.graph.layer_attributes import LinearLayerAttributes
+from nncf.common.graph.layer_attributes import SplitLayerAttributes
 from nncf.common.pruning.operations import BasePruningOp
 from nncf.common.pruning.mask_propagation import MaskPropagationAlgorithm
 
@@ -310,6 +312,8 @@ def test_convs_elementwise_source_before_concat(empty_mask_right_branch, empty_m
         reference_mask = np.ones((10 + right_branch_output_channels,))
         np.testing.assert_equal(concat_node.data['output_mask'].tensor, reference_mask)
 
+    assert dummy_types.DummyConcatPruningOp.accept_pruned_input(concat_node) == True
+
 
 def test_concat_output_tensor_device():
     graph = NNCFGraph()
@@ -445,3 +449,65 @@ def test_reshape_is_last_op(node_type):
         prev_node.data['output_mask'] = output_mask
         METATYPES_MAP[node_type]['ops'].mask_propagation(reshape_node, graph, NPNNCFTensorProcessor)
         assert reshape_node.data['output_mask'] is None
+
+SPLIT_TEST_CASES = [
+    ['chunk', 2, 0],
+    ['chunk', 2, 1],
+]
+
+@pytest.mark.parametrize(('node_type', 'chunks', 'dim'), SPLIT_TEST_CASES)
+def test_split_accept_pruned_input(node_type, chunks, dim):
+    node_name = 'dummy_split'
+    layer_attributes = SplitLayerAttributes(chunks, dim)
+    graph = NNCFGraph()
+    node = graph.add_nncf_node(node_name, node_type, dummy_types.DummySplitMetatype, layer_attributes=layer_attributes)
+
+    actual_accept_pruned_input = dummy_types.DummySplitPruningOp.accept_pruned_input(node)
+    assert actual_accept_pruned_input
+
+@pytest.mark.parametrize('empty_mask_left_branch', [False, True])
+@pytest.mark.parametrize('empty_mask_right_branch', [False, True])
+@pytest.mark.parametrize('right_branch_output_channels', [5, 10])
+def test_split_metatype_mask_prop(empty_mask_left_branch, empty_mask_right_branch, right_branch_output_channels):
+    node_name = 'dummy_split'
+    layer_attributes = SplitLayerAttributes(chunks=2, dim=1)
+
+    graph = NNCFGraph()
+    conv_op_0 = graph.add_nncf_node('conv_op_0', 'conv', dummy_types.DummyConvMetatype)
+    split_node = graph.add_nncf_node(node_name, 'chunk', dummy_types.DummySplitMetatype, layer_attributes=layer_attributes)
+    conv_op_1 = graph.add_nncf_node('conv_op_1', 'conv', dummy_types.DummyConvMetatype)
+    conv_op_2 = graph.add_nncf_node('conv_op_2', 'conv', dummy_types.DummyConvMetatype)
+
+    add_node = partial(graph.add_edge_between_nncf_nodes,
+                       input_port_id=0,
+                       output_port_id=0,
+                       dtype=Dtype.FLOAT)
+    
+    # dummy_op -> split_node
+    add_node(from_node_id=conv_op_0.node_id,
+             to_node_id=split_node.node_id,
+             tensor_shape=[10] * 4)
+
+    # split_node -> conv_op_0
+    add_node(from_node_id=split_node.node_id,
+             to_node_id=conv_op_1.node_id,
+             tensor_shape=[10, 5, 10, 10])
+
+    # split_node -> conv_op_1
+    add_node(from_node_id=split_node.node_id,
+             to_node_id=conv_op_2.node_id,
+             tensor_shape=[10, 5, 10, 10])
+
+    conv_op_0.data['output_mask'] = NPNNCFTensor(np.ones(10))
+
+    # Propagate masks
+    MaskPropagationAlgorithm(graph, dummy_types.DUMMY_PRUNING_OPERATOR_METATYPES,
+                             NPNNCFTensorProcessor).mask_propagation()
+
+    # Check with masks
+    split_node = graph.get_node_by_id(split_node.node_id)
+    if split_node.data['output_mask'] is None:
+        assert empty_mask_left_branch and empty_mask_right_branch == False
+    else:
+        reference_mask = np.ones((10 - right_branch_output_channels,))
+        np.testing.assert_equal(split_node.data['output_mask'].tensor, reference_mask)

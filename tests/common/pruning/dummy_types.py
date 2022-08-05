@@ -16,6 +16,7 @@ from nncf.common.pruning.operations import (
     ReshapePruningOp,
     FlattenPruningOp,
     StopMaskForwardPruningOp,
+    SplitPruningOp
 )
 
 
@@ -75,6 +76,9 @@ class DummyReshapeMetatye(OperatorMetatype):
 
 class DummyFlattenMetatype(OperatorMetatype):
     name = 'flatten'
+
+class DummySplitMetatype(OperatorMetatype):
+    name = 'chunk'
 
 
 DUMMY_PRUNING_OPERATOR_METATYPES = PruningOperationsMetatypeRegistry("operator_metatypes")
@@ -146,3 +150,7 @@ class DummyReshapePruningOp(ReshapePruningOp):
 @DUMMY_PRUNING_OPERATOR_METATYPES.register(DummyFlattenMetatype.name)
 class DummyFlattenPruningOp(FlattenPruningOp):
     additional_types = [DummyFlattenMetatype.name]
+
+@DUMMY_PRUNING_OPERATOR_METATYPES.register(DummySplitMetatype.name)
+class DummySplitPruningOp(SplitPruningOp):
+    additional_types = [DummySplitMetatype.name]

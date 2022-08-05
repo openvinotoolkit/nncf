@@ -35,9 +35,10 @@ from nncf.torch.dynamic_graph.context import get_current_context
 from nncf.torch.dynamic_graph.context import no_nncf_trace
 from nncf.torch.dynamic_graph.context import TracingContext
 from nncf.torch.graph.graph_builder import GraphBuilder
-from nncf.torch.graph.operator_metatypes import PTCatMetatype
+from nncf.torch.graph.operator_metatypes import PTCatMetatype, PTSplitMetatype
 from nncf.torch.graph.operator_metatypes import PTReshapeMetatype
 from nncf.common.graph.layer_attributes import ReshapeLayerAttributes
+from nncf.common.graph.layer_attributes import SplitLayerAttributes
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
 from tests.torch.helpers import register_bn_adaptation_init_args
 from tests.torch.test_compressed_graph import get_basic_quantization_config
@@ -280,6 +281,42 @@ def test_reshape_attributes_saved_during_graph_building(input_shape):
             else:
                 assert node.layer_attributes is None
                 assert reshape_nodes_with_attributes[node.node_name] is None
+
+class ModelForTestWithSplit(ModelForTest):
+    def __init__(self):
+        super().__init__()
+        self.conv3 = nn.Conv2d(5, 10, kernel_size=3, padding=1)
+
+    def forward(self, x):
+        y = super().forward(x)
+        y1, y2 = torch.chunk(y, chunks=2, dim=1)
+
+        y1 = self.conv3(y1)
+        y2 = self.conv3(y2)
+        y = torch.cat([y1, y2], axis=1)
+        return y
+
+@pytest.mark.parametrize("input_shape", input_shapes)
+def test_split_attributes(input_shape):
+    model = ModelForTestWithSplit()
+    input_info = ModelInputInfo(input_shape)
+    graph_builder = GraphBuilder(create_dummy_forward_fn([input_info, ], with_input_tracing=True, with_output_tracing=True))
+
+    graph = graph_builder.build_graph(model)
+    chunk_nodes_with_attributes = {
+        'ModelForTestWithSplit/chunk_0': {'chunks': 2, 'dim': 1}
+    }
+
+    for node in graph.get_all_nodes():
+        if node.metatype is PTSplitMetatype:
+            assert node.node_name in chunk_nodes_with_attributes
+            if isinstance(node.layer_attributes, SplitLayerAttributes):
+                ref_attrs = chunk_nodes_with_attributes[node.node_name]
+                assert node.layer_attributes.chunks == ref_attrs['chunks']
+                assert node.layer_attributes.dim == ref_attrs['dim']
+            else:
+                assert node.layer_attributes is None
+                assert chunk_nodes_with_attributes[node.node_name] is None
 
 
 TEST_KEYWORD_1 = "keyword1"
