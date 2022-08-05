@@ -57,7 +57,7 @@ class StageDescriptor:
         self.sample_rate = sample_rate
         if sample_rate <= 0:
             nncf_logger.warning(f"Only positive integers are allowed for sample rate, but sample_rate={sample_rate}.")
-            nncf_logger.warning(f"Setting sample rate to default 1")
+            nncf_logger.warning("Setting sample rate to default 1")
             self.sample_rate = 1
 
     def __eq__(self, other: 'StageDescriptor'):
