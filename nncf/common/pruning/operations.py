@@ -235,7 +235,7 @@ class SplitPruningOp(BasePruningOp):
         """
         input_edge = graph.get_input_edges(node)
         previous_node = [edge.from_node for edge in input_edge]
-        input_mask = [input_node.data['output_mask'] for input_node in previous_node]
+        input_mask = previous_node[0].data['output_mask']
 
         chunk_size = node.layer_attributes.chunks
         chunk_dim = node.layer_attributes.dim

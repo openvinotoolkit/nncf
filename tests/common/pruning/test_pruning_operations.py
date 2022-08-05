@@ -467,10 +467,10 @@ def test_split_accept_pruned_input(node_type, chunks, dim):
 
 @pytest.mark.parametrize('empty_mask_left_branch', [False, True])
 @pytest.mark.parametrize('empty_mask_right_branch', [False, True])
-@pytest.mark.parametrize('right_branch_output_channels', [5, 10])
+@pytest.mark.parametrize('right_branch_output_channels', [5, 5])
 def test_split_metatype_mask_prop(empty_mask_left_branch, empty_mask_right_branch, right_branch_output_channels):
     node_name = 'dummy_split'
-    layer_attributes = SplitLayerAttributes(chunks=2, dim=1)
+    layer_attributes = SplitLayerAttributes(chunks=2, dim=0)
 
     graph = NNCFGraph()
     conv_op_0 = graph.add_nncf_node('conv_op_0', 'conv', dummy_types.DummyConvMetatype)
@@ -498,7 +498,8 @@ def test_split_metatype_mask_prop(empty_mask_left_branch, empty_mask_right_branc
              to_node_id=conv_op_2.node_id,
              tensor_shape=[10, 5, 10, 10])
 
-    conv_op_0.data['output_mask'] = NPNNCFTensor(np.ones(10))
+    conv_op_0_node = graph.get_node_by_id(conv_op_0.node_id)
+    conv_op_0_node.data['output_mask'] = NPNNCFTensor(np.ones(10))
 
     # Propagate masks
     MaskPropagationAlgorithm(graph, dummy_types.DUMMY_PRUNING_OPERATOR_METATYPES,
@@ -510,4 +511,4 @@ def test_split_metatype_mask_prop(empty_mask_left_branch, empty_mask_right_branc
         assert empty_mask_left_branch and empty_mask_right_branch == False
     else:
         reference_mask = np.ones((10 - right_branch_output_channels,))
-        np.testing.assert_equal(split_node.data['output_mask'].tensor, reference_mask)
+        np.testing.assert_equal(split_node.data['output_mask'][0].tensor, reference_mask)
