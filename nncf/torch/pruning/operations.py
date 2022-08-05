@@ -55,6 +55,7 @@ from nncf.torch.graph.operator_metatypes import (
     PTSigmoidMetatype,
     PTSILUMetatype,
     PTSoftmaxMetatype,
+    PTSplitMetatype,
     PTSubMetatype,
     PTSumMetatype,
     PTTanhMetatype,
@@ -72,7 +73,8 @@ from nncf.common.pruning.operations import (
     ConcatPruningOp,
     ElementwisePruningOp,
     ReshapePruningOp,
-    StopMaskForwardPruningOp
+    StopMaskForwardPruningOp,
+    SplitPruningOp
 )
 
 from nncf.common.pruning.utils import PruningOperationsMetatypeRegistry
@@ -420,6 +422,9 @@ class PTReshape(ReshapePruningOp, PTPruner):
 class PTConcatPruningOp(ConcatPruningOp, PTPruner):
     subtypes = [PTCatMetatype]
 
+@PT_PRUNING_OPERATOR_METATYPES.register('chunk')
+class PTSplitPruningOp(SplitPruningOp, PTPruner):
+    subtypes = [PTSplitMetatype]
 
 class ModelPruner(MaskPropagationAlgorithm):
     def __init__(self, model: NNCFNetwork, graph: NNCFGraph,

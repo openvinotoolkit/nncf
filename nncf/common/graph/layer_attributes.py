@@ -13,7 +13,7 @@
 from abc import ABC
 from abc import abstractmethod
 from enum import Enum
-from typing import List, Tuple, Any
+from typing import List, Tuple, Any, Union
 
 
 class Dtype(Enum):
@@ -187,3 +187,15 @@ class ReshapeLayerAttributes(BaseLayerAttributes):
                  output_shape: List[int]):
         self.input_shape = input_shape
         self.output_shape = output_shape
+
+class SplitLayerAttributes(BaseLayerAttributes):
+    """
+    This class stores attributes of split/chunk modules/layers
+    that are useful for some algorithms.
+    """
+
+    def __init__(self,
+                 chunks: Union[int, List],
+                 dim: int=0):
+        self.chunks = chunks
+        self.dim = dim

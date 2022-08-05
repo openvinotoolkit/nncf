@@ -222,6 +222,32 @@ class ConcatPruningOp(BasePruningOp):
         result_mask = cls.generate_output_mask(node, graph, tensor_processor)
         node.data['output_mask'] = result_mask
 
+class SplitPruningOp(BasePruningOp):
+    @classmethod
+    def accept_pruned_input(cls, node: NNCFNode):
+        return True
+    
+    @classmethod
+    def generate_output_masks(cls, node: NNCFNode, graph: NNCFGraph,
+                              tensor_processor: Type[NNCFPruningBaseTensorProcessor]) -> Optional[NNCFTensor]:
+        """
+        Generate output mask
+        """
+        input_edge = graph.get_input_edges(node)
+        previous_node = [edge.from_node for edge in input_edge]
+        input_mask = [input_node.data['output_mask'] for input_node in previous_node]
+
+        chunk_size = node.layer_attributes.chunks
+        chunk_dim = node.layer_attributes.dim
+
+        result_masks = tensor_processor.split(input_mask, chunk_size, chunk_dim)
+        return result_masks
+
+    @classmethod
+    def mask_propagation(cls, node: NNCFNode, graph: NNCFGraph,
+                         tensor_processor: Type[NNCFPruningBaseTensorProcessor]) -> None:
+        result_mask = cls.generate_output_masks(node, graph, tensor_processor)
+        node.data['output_mask'] = result_mask
 
 class ElementwisePruningOp(BasePruningOp):
     @classmethod
