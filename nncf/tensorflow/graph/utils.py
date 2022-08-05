@@ -44,6 +44,20 @@ def is_functional_model(model):
            and getattr(model, '_is_graph_network', False)
 
 
+def is_keras_layer_model(model: tf.keras.Model) -> bool:
+    """
+    Checks if there is `tensorflow_hub.KerasLayer` layer in the model or not.
+
+    :param model: Keras model to check.
+    :return: `True` if there is `hub.KerasLayer` in the model and
+        `False` otherwise.
+    """
+    for layer in model.submodules:
+        if layer.__class__.__name__ == 'KerasLayer':
+            return True
+    return False
+
+
 def get_keras_layers_class_names():
     keras_layers = [class_name for class_name, _ in
                     inspect.getmembers(sys.modules[tf.keras.layers.__name__], inspect.isclass)]

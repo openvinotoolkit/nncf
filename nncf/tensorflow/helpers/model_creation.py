@@ -29,6 +29,7 @@ from nncf.tensorflow.algorithm_selector import NoCompressionAlgorithmBuilder
 from nncf.tensorflow.algorithm_selector import get_compression_algorithm_builder
 from nncf.tensorflow.api.composite_compression import TFCompositeCompressionAlgorithmBuilder
 from nncf.tensorflow.helpers.utils import get_built_model
+from nncf.tensorflow.graph.utils import is_keras_layer_model
 
 
 def create_compression_algorithm_builder(config: NNCFConfig,
@@ -75,6 +76,10 @@ def create_compressed_model(model: tf.keras.Model,
             necessary to enable algorithm-specific compression during fine-tuning.
     """
     if is_experimental_quantization(config):
+        if is_keras_layer_model(model):
+            raise ValueError('Experimental quantization algorithm has not supported models with '
+                             '`tensorflow_hub.KerasLayer` layer yet.')
+
         from nncf.experimental.tensorflow.nncf_network import NNCFNetwork #pylint: disable=cyclic-import
         input_signature = get_input_signature(config)
         model = NNCFNetwork(model, input_signature)
