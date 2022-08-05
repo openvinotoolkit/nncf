@@ -73,7 +73,6 @@ def get_first_nodes_of_type(graph: NNCFGraph, op_types: List[str]) -> List[NNCFN
 def get_split_axis(input_shapes: List[List[int]], output_shapes: List[List[int]]) -> int:
     """
     Returns split/chunk axis by given input and output shape of split/chunk node.
-
     :param input_shapes: Input_shapes of given split/chunk node.
     :param output_shapes: Output_shapes of given split/chunk node.
     :returns: Split/Chunk axis of given split/chunk node.
