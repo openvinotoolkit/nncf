@@ -233,10 +233,8 @@ class InsertionPointGraph(nx.DiGraph):
     def _get_default_post_hook_ip_list(nncf_graph: NNCFGraph) -> List[PostHookInsertionPoint]:
         # Post-hook all nodes, post hook applies to the entire op output
         allowed_post_hook_insertion_points = []
-        input_nodes = nncf_graph.get_input_nodes()
         for nncf_node in nncf_graph.get_all_nodes():
-            if nncf_node not in input_nodes:
-                allowed_post_hook_insertion_points.append(PostHookInsertionPoint(nncf_node.node_name))
+            allowed_post_hook_insertion_points.append(PostHookInsertionPoint(nncf_node.node_name))
         return allowed_post_hook_insertion_points
 
     def get_ip_graph_with_merged_hw_optimized_operations(self,

@@ -23,6 +23,7 @@ import numpy as np
 
 from skl2onnx.helpers.onnx_helper import enumerate_model_node_outputs
 
+
 # pylint: disable=no-member
 
 class ONNXGraph:
@@ -141,7 +142,6 @@ class ONNXGraph:
             return weight_tensor_name
         return None
 
-
     def get_weight_input_in_module(self, node_name: str) -> ValueInfoProto:
         """
         Returns 'node_name' node's input weight tensor.
@@ -200,12 +200,21 @@ class ONNXGraph:
                 return self.get_tensor_shape(tensor)
         raise RuntimeError('There is no edge with the name {}'.format(edge_name))
 
-    def get_edge_dtype(self, edge_name: str) -> str:
+    def get_edge_dtype_name(self, edge_name: str) -> str:
         """
-        Returns the data type of the edge with the name 'edge_name'.
+        Returns the data name of the edge with the name 'edge_name'.
         """
         for tensor in self.activations_tensors:
             if tensor.name == edge_name:
                 elem_type = tensor.type.tensor_type.elem_type
                 return onnx.TensorProto.DataType.Name(elem_type)
+        raise RuntimeError('There is no edge with the name {}'.format(edge_name))
+
+    def get_edge_dtype(self, edge_name: str):
+        """
+        Returns the data type of the edge with the name 'edge_name'.
+        """
+        for tensor in self.activations_tensors:
+            if tensor.name == edge_name:
+                return tensor.type.tensor_type.elem_type
         raise RuntimeError('There is no edge with the name {}'.format(edge_name))

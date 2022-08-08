@@ -50,9 +50,11 @@ def fxt_reshape_weight_graph():
     # This graph pattern is in inception-v1-12:
     # https://github.com/onnx/models/tree/main/vision/classification/inception_and_googlenet/inception_v1
     #
-    # reshaped_X      reshaped_W
+    #       X + Z      reshaped_W
     #          \     /
     #           GEMM
+    #             |
+    #          softmax
 
     # IO tensors (ValueInfoProto).
     model_input_name = "X"

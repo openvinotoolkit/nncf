@@ -58,6 +58,7 @@ class ONNXMinMaxQuantization(MinMaxQuantization):
 
     def __init__(self, parameters: MinMaxQuantizationParameters):
         super().__init__(parameters)
+        self.nncf_graph = None
         self._quantization_target_points = []  # type: List[ONNXTargetPoint]
 
     def generate_stat_collector(self, quantizer_config: QuantizerConfig) -> TensorStatisticCollectorBase:
@@ -75,12 +76,12 @@ class ONNXMinMaxQuantization(MinMaxQuantization):
         return ONNXModelTransformer(model)
 
     def _get_quantizer_setup(self, model: onnx.ModelProto):
-        nncf_graph = GraphConverter.create_nncf_graph(model)
-        ip_graph = InsertionPointGraph(nncf_graph)
+        self.nncf_graph = GraphConverter.create_nncf_graph(model) if self.nncf_graph is None else self.nncf_graph
+        ip_graph = InsertionPointGraph(self.nncf_graph)
         pattern = ONNX_HW_FUSED_PATTERNS.get_full_pattern_graph()
         ip_graph = ip_graph.get_ip_graph_with_merged_hw_optimized_operations(pattern)
 
-        weight_nodes = nncf_graph.get_nodes_by_metatypes(QUANTIZATION_LAYER_METATYPES)
+        weight_nodes = self.nncf_graph.get_nodes_by_metatypes(QUANTIZATION_LAYER_METATYPES)
         quantizable_layer_nodes = [QuantizableWeightedLayerNode(weight_node, [QuantizerConfig()]) for weight_node in
                                    weight_nodes]
 
@@ -123,8 +124,8 @@ class ONNXMinMaxQuantization(MinMaxQuantization):
             else:
                 assert quantization_point.is_activation_quantization_point()
                 # If not Input node
+                node_name = quantization_point.insertion_point.target_node_name
                 if NNCFGraphNodeType.INPUT_NODE not in quantization_point.insertion_point.target_node_name:
-                    node_name = quantization_point.insertion_point.target_node_name
                     # If quantization of Input
                     if quantization_point.insertion_point.input_port_id == 1:
                         # TODO (kshpv): need to be reconsidered:
@@ -139,8 +140,8 @@ class ONNXMinMaxQuantization(MinMaxQuantization):
                                                                                node_name)
                 # If Input node
                 else:
-                    node_name = quantization_point.insertion_point.target_node_name
-                    outputs = onnx_graph.get_node_edges(node_name)['input'][0]
+                    outputs = \
+                    onnx_graph.get_node_edges(quantization_point.directly_quantized_operator_node_names[0])['input'][0]
                     activation_quantization_target_point = ONNXTargetPoint(TargetType.POST_LAYER_OPERATION, node_name)
 
                 if self._is_valid_activation_quantizer(outputs, filled_outputs, onnx_graph):
@@ -162,9 +163,9 @@ class ONNXMinMaxQuantization(MinMaxQuantization):
         weight_quantizer_config = self._get_weight_quantizer_config(model)
 
         for quantization_target_point in quantization_target_points:
+            target_node_name = quantization_target_point.target_node_name
             if quantization_target_point.type == TargetType.OPERATION_WITH_WEIGHTS:
-                weight_initializer_name = onnx_graph.get_weight_tensor_with_initializer(
-                    quantization_target_point.target_node_name)
+                weight_initializer_name = onnx_graph.get_weight_tensor_with_initializer(target_node_name)
                 # TODO (kshpv): need to discover whether we could delete checking weight_initializer_name on None
                 if weight_initializer_name is not None:
                     weight_tensor = onnx_graph.get_initializers_value(weight_initializer_name)
@@ -173,15 +174,12 @@ class ONNXMinMaxQuantization(MinMaxQuantization):
                     command = ONNXQuantizerInsertionCommand(quantization_target_point, parameters)
                     transformation_commands.append(command)
             elif quantization_target_point.type in [TargetType.PRE_LAYER_OPERATION, TargetType.POST_LAYER_OPERATION]:
-                f = lambda point: PostTrainingAlgorithms.MinMaxQuantization in point.algorithm_to_tensor_collectors
-                for _statistic_points in statistic_points.iter_through_target_node_name_statistic_points(
-                        quantization_target_point.target_node_name, f):
-                    for tensor_collector in _statistic_points.algorithm_to_tensor_collectors[
-                            PostTrainingAlgorithms.MinMaxQuantization]:
-                        parameters = calculate_activation_quantizer_parameters(tensor_collector.get_statistics(),
-                                                                               self.activation_quantizer_config)
-                        command = ONNXQuantizerInsertionCommand(quantization_target_point, parameters)
-                        transformation_commands.append(command)
+                for tensor_collector in statistic_points.iter_through_algorithm_tensor_collectors_in_target_node(
+                        target_node_name, PostTrainingAlgorithms.MinMaxQuantization):
+                    parameters = calculate_activation_quantizer_parameters(tensor_collector.get_statistics(),
+                                                                           self.activation_quantizer_config)
+                    command = ONNXQuantizerInsertionCommand(quantization_target_point, parameters)
+                    transformation_commands.append(command)
             else:
                 raise RuntimeError('Inccorrect type of Quantization Target Point')
 

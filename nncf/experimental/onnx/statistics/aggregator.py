@@ -11,48 +11,44 @@
  limitations under the License.
 """
 
-from skl2onnx.helpers.onnx_helper import select_model_inputs_outputs
 import onnx
 
-from nncf.common.graph.transformations.commands import TargetType
-from nncf.common.graph.definitions import NNCFGraphNodeType
+from nncf.common.utils.logger import logger as nncf_logger
 from nncf.experimental.post_training.api.dataset import Dataset
 from nncf.experimental.post_training.statistics.aggregator import StatisticsAggregator
-from nncf.experimental.onnx.samplers import create_onnx_sampler
+from nncf.experimental.post_training.api.sampler import Sampler
+from nncf.experimental.onnx.samplers import ONNXBatchSampler
+from nncf.experimental.onnx.samplers import ONNXRandomBatchSampler
 from nncf.experimental.onnx.engine import ONNXEngine
-from nncf.experimental.onnx.graph.onnx_graph import ONNXGraph
+from nncf.experimental.onnx.graph.model_transformer import ONNXModelTransformer
+from nncf.experimental.onnx.graph.transformations.layout import ONNXTransformationLayout
+from nncf.experimental.onnx.graph.transformations.commands import ONNXOutputInsertionCommand
 
 
 class ONNXStatisticsAggregator(StatisticsAggregator):
     # TODO (Nikita Malinin): Remove ONNXStatisticsAggregator & create the common backend-agnostic solution
-
     def __init__(self, engine: ONNXEngine, dataset: Dataset):
         super().__init__(engine, dataset)
 
-    def collect_statistics(self, model: onnx.ModelProto) -> None:
-        # TODO (Nikita Malinin): Need to update adding output process with the backend-specific graph transformer
-        onnx_graph = ONNXGraph(model)
-        model_outputs = [output.name for output in onnx_graph.get_model_outputs()]
-        extra_model_outputs = []
-        for node_name, statistic_points in self.statistic_points.items():
-            for statistic_point in statistic_points:
-                if NNCFGraphNodeType.INPUT_NODE in statistic_point.target_point.target_node_name:
-                    edge_name = onnx_graph.get_model_inputs()
-                else:
-                    if statistic_point.target_point.type == TargetType.POST_LAYER_OPERATION:
-                        edge_name = onnx_graph.get_node_edges(node_name)['output'][0]
-                    elif statistic_point.target_point.type == TargetType.PRE_LAYER_OPERATION:
-                        edge_name = onnx_graph.get_node_edges(node_name)['input'][0]
-                    else:
-                        raise RuntimeError
-                extra_model_outputs.append(edge_name)
+    def _get_transformation_layout_extra_outputs(self, model):
+        transformation_layout = ONNXTransformationLayout()
+        transformation_commands = []
+        for target_node, _statistic_points in self.statistic_points.items():
+            for _statistic_point in _statistic_points:
+                transformation_commands.append(ONNXOutputInsertionCommand(_statistic_point.target_point))
 
-        model_with_intermediate_outputs = select_model_inputs_outputs(model,
-                                                                      outputs=[*extra_model_outputs,
-                                                                               *model_outputs])
+        for transformation_command in transformation_commands:
+            transformation_layout.register(transformation_command)
 
-        sampler = create_onnx_sampler(self.dataset, self.max_number_samples)
+        return transformation_layout
 
-        self.engine.set_model(model_with_intermediate_outputs)
-        self.engine.set_sampler(sampler)
-        self.engine.compute_statistics(self.statistic_points)
+    def _create_model_transformer(self, model: onnx.ModelProto) -> ONNXModelTransformer:
+        return ONNXModelTransformer(model)
+
+    def _create_sampler(self, dataset: Dataset,
+                        sample_indices: int) -> Sampler:
+        if dataset.shuffle:
+            nncf_logger.info('Using Shuffled dataset')
+            return ONNXRandomBatchSampler(dataset, sample_indices=sample_indices)
+        nncf_logger.info('Using Non-Shuffled dataset')
+        return ONNXBatchSampler(dataset, sample_indices=sample_indices)
