@@ -84,10 +84,10 @@ class Engine(ABC):
 
     def compute_statistics(self, statistic_points: StatisticPointsContainer) -> None:
         """
-        Performs model inference on specified dataset subset for statistics collection and input-based layers layout
+        Performs model inference on specified dataset subset and collects statistics
 
-        :param statistic_points: StatisticsPoints in which statistics should be collected and registered.
-        :return statistics: per-layer statistics for the further model optimization
+        :param statistic_points: StatisticPointsContaine with StatisticPoints,
+         in which statistics are collected and registered.
         """
         if not self.is_model_set():
             raise RuntimeError(f'The {self.__class__} tried to compute statistics, '

@@ -17,15 +17,19 @@ from collections import UserDict
 
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
 from nncf.common.tensor import TensorType
-
-from nncf.experimental.onnx.graph.transformations.commands import ONNXTargetPoint
+from nncf.common.graph.transformations.commands import TargetPoint
 
 
 class StatisticPoint:
-    def __init__(self, target_point: ONNXTargetPoint, tensor_collector: TensorStatisticCollectorBase, algorithm):
-        """
-        StatisticPoint is attached to the output of the node
-        """
+    """
+    StatisticPoint stores information is necessary for statistics collection process:
+    target_point from which statistics is collected: node_name and target_type determines the node edge.
+    tensor_collector determines how to aggregate statistics in target_point
+    algorithm implies on what algorithm nedeed this statistics.
+    """
+
+    def __init__(self, target_point: TargetPoint, tensor_collector: TensorStatisticCollectorBase,
+                 algorithm: 'PostTrainingAlgorithms'):
         self.target_point = target_point
         self.algorithm_to_tensor_collectors = {algorithm: [tensor_collector]}
 
@@ -42,6 +46,10 @@ class StatisticPoint:
 
 
 class StatisticPointsContainer(UserDict):
+    """
+    Container with iteration interface for handling a composition of StatisticPoint.
+    """
+
     def add_statistic_point(self, statistic_point: StatisticPoint):
         target_node_name = statistic_point.target_point.target_node_name
         if target_node_name not in self.data:
@@ -68,7 +76,7 @@ class StatisticPointsContainer(UserDict):
                 yield _statistic_point
 
     def iter_through_algorithm_tensor_collectors_in_target_node(self, target_node_name: str,
-                                                                algorithm):
+                                                                algorithm: 'PostTrainingAlgorithms'):
         def filter_func(point):
             return algorithm in point.algorithm_to_tensor_collectors
 
