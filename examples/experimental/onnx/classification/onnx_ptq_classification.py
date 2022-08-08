@@ -18,7 +18,6 @@ from typing import Optional
 
 import numpy as np
 import onnx
-from google.protobuf.json_format import MessageToDict
 
 from nncf.experimental.post_training.compression_builder import CompressionBuilder
 from nncf.experimental.post_training.algorithms.quantization import PostTrainingQuantization
@@ -38,6 +37,10 @@ def run(onnx_model_path: str, output_model_path: str,
     onnx.checker.check_model(onnx_model_path)
     original_model = onnx.load(onnx_model_path)
     nncf_logger.info("The model is loaded from {}".format(onnx_model_path))
+
+    if input_shape is None:
+        nncf_logger.info(
+            "input_shape is None. Infer input_shape from the model.")
 
     input_shape, input_keys = infer_input_shape(original_model, input_shape)
 
