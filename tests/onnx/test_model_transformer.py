@@ -20,6 +20,7 @@ import numpy as np
 from nncf.experimental.onnx.graph.transformations.commands import ONNXTargetPoint
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.experimental.onnx.graph.transformations.commands import ONNXQuantizerInsertionCommand
+from nncf.experimental.onnx.graph.transformations.commands import ONNXOutputInsertionCommand
 from nncf.experimental.onnx.algorithms.quantization.utils import QuantizerLayerParameters
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.experimental.onnx.graph.model_transformer import ONNXModelTransformer
@@ -112,3 +113,27 @@ def test_inserted_quantizer_parameters(test_parameters):
             assert np.allclose(onnx_graph.get_initializers_value(node.input[1]), np.array(test_parameters.scale))
             assert np.allclose(onnx_graph.get_initializers_value(node.input[2]), np.array(test_parameters.zero_point))
             assert onnx_graph.get_initializers_value(node.input[2]).dtype == test_parameters.onnx_dtype
+
+
+TARGET_LAYERS = [['ReLU1'], ['Conv1', 'BN1'], ['Conv1', 'BN1', 'ReLU1']]
+TARGET_LAYERS_OUTPUT = [['ReLU1_Y'], ['Conv1_Y', 'BN1_Y'],  ['Conv1_Y', 'BN1_Y', 'ReLU1_Y']]
+
+
+@pytest.mark.parametrize('target_layers, target_layer_outputs', zip(TARGET_LAYERS, TARGET_LAYERS_OUTPUT))
+def test_output_insertion(target_layers, target_layer_outputs):
+    model = LinearModel().onnx_model
+    transformation_layout = ONNXTransformationLayout()
+    for target_layer in target_layers:
+        target_point = ONNXTargetPoint(TargetType.POST_LAYER_OPERATION, target_layer)
+        command = ONNXOutputInsertionCommand(target_point)
+        transformation_layout.register(command)
+
+    model_transformer = ONNXModelTransformer(model)
+
+    transformed_model = model_transformer.transform(transformation_layout)
+    onnx.checker.check_model(transformed_model)
+
+    onnx_graph = ONNXGraph(transformed_model)
+    # Should be topologically sorted
+    for i in range(len(target_layers)):
+        assert onnx_graph.get_model_outputs()[i].name == target_layer_outputs[i]
