@@ -113,7 +113,6 @@ class ONNXMinMaxQuantization(MinMaxQuantization):
             if quantization_point.is_weight_quantization_point():
                 # It prevents the duplicate weight quantizers from being added.
                 # It can happen when you have layers that share the identical weight tensor.
-                # TODO (kshpv): in which model does it occur?
                 if quantization_point.insertion_point.target_node_name in weight_quantizer_node_names:
                     continue
                 weight_quantizer_node_names.add(quantization_point.insertion_point.target_node_name)
@@ -141,7 +140,8 @@ class ONNXMinMaxQuantization(MinMaxQuantization):
                 # If Input node
                 else:
                     outputs = \
-                    onnx_graph.get_node_edges(quantization_point.directly_quantized_operator_node_names[0])['input'][0]
+                        onnx_graph.get_node_edges(quantization_point.directly_quantized_operator_node_names[0])[
+                            'input'][0]
                     activation_quantization_target_point = ONNXTargetPoint(TargetType.POST_LAYER_OPERATION, node_name)
 
                 if self._is_valid_activation_quantizer(outputs, filled_outputs, onnx_graph):
@@ -161,18 +161,25 @@ class ONNXMinMaxQuantization(MinMaxQuantization):
 
         quantization_target_points = self.get_quantization_target_points(model)
         weight_quantizer_config = self._get_weight_quantizer_config(model)
+        weight_initializer_names = set()
 
         for quantization_target_point in quantization_target_points:
             target_node_name = quantization_target_point.target_node_name
             if quantization_target_point.type == TargetType.OPERATION_WITH_WEIGHTS:
-                weight_initializer_name = onnx_graph.get_weight_tensor_with_initializer(target_node_name)
-                # TODO (kshpv): need to discover whether we could delete checking weight_initializer_name on None
-                if weight_initializer_name is not None:
-                    weight_tensor = onnx_graph.get_initializers_value(weight_initializer_name)
-                    parameters = calculate_weight_quantizer_parameters(weight_tensor, weight_quantizer_config)
+                try:
+                    weight_initializer_name = onnx_graph.get_weight_tensor_with_initializer(target_node_name)
+                    # If the nodes share one weight tensor, we should have only one quantizer on that
+                    if weight_initializer_name in weight_initializer_names:
+                        continue
+                    weight_initializer_names.add(weight_initializer_name)
+                except RuntimeError as er:
+                    nncf_logger.exception(er)
+                    continue
+                weight_tensor = onnx_graph.get_initializers_value(weight_initializer_name)
+                parameters = calculate_weight_quantizer_parameters(weight_tensor, weight_quantizer_config)
 
-                    command = ONNXQuantizerInsertionCommand(quantization_target_point, parameters)
-                    transformation_commands.append(command)
+                command = ONNXQuantizerInsertionCommand(quantization_target_point, parameters)
+                transformation_commands.append(command)
             elif quantization_target_point.type in [TargetType.PRE_LAYER_OPERATION, TargetType.POST_LAYER_OPERATION]:
                 for tensor_collector in statistic_points.iter_through_algorithm_tensor_collectors_in_target_node(
                         target_node_name, PostTrainingAlgorithms.MinMaxQuantization):

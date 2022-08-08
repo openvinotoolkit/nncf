@@ -44,9 +44,6 @@ class ONNXQuantizerInsertionCommand(ONNXInsertionCommand):
 
 
 class ONNXOutputInsertionCommand(ONNXInsertionCommand):
-    def __init__(self, target_point: ONNXTargetPoint):
-        super().__init__(target_point)
-
     def union(self, other: 'TransformationCommand') -> 'TransformationCommand':
         # Have a look at nncf/torch/graph/transformations/commands/PTInsertionCommand
         raise NotImplementedError()

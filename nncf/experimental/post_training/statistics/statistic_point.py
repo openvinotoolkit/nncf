@@ -69,7 +69,9 @@ class StatisticPointsContainer(UserDict):
 
     def iter_through_algorithm_tensor_collectors_in_target_node(self, target_node_name: str,
                                                                 algorithm):
-        f = lambda point: algorithm in point.algorithm_to_tensor_collectors
-        for _statistic_point in self.iter_through_statistic_points_in_target_node(target_node_name, f):
+        def filter_func(point):
+            return algorithm in point.algorithm_to_tensor_collectors
+
+        for _statistic_point in self.iter_through_statistic_points_in_target_node(target_node_name, filter_func):
             for _tensor_collector in _statistic_point.algorithm_to_tensor_collectors[algorithm]:
                 yield _tensor_collector

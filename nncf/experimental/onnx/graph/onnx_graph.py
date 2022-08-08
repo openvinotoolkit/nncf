@@ -140,7 +140,10 @@ class ONNXGraph:
 
         if weight_tensor_name in self.initializer_names:
             return weight_tensor_name
-        return None
+        raise RuntimeError(
+            'There is no weight tensor with the name {}.'
+            ' Probably this node utilizes other nodes outputs as its weight '.format(
+                node_name))
 
     def get_weight_input_in_module(self, node_name: str) -> ValueInfoProto:
         """

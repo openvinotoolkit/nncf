@@ -33,7 +33,7 @@ class ONNXStatisticsAggregator(StatisticsAggregator):
     def _get_transformation_layout_extra_outputs(self, model):
         transformation_layout = ONNXTransformationLayout()
         transformation_commands = []
-        for target_node, _statistic_points in self.statistic_points.items():
+        for _statistic_points in self.statistic_points.values():
             for _statistic_point in _statistic_points:
                 transformation_commands.append(ONNXOutputInsertionCommand(_statistic_point.target_point))
 
