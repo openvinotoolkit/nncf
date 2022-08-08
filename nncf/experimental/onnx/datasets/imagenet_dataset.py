@@ -64,7 +64,9 @@ def infer_input_shape(model: ModelProto, main_shape: List[int] = None) -> Tuple[
                     input_shape = _input_shape
                     input_keys = _input.name
                 else:
-                    if input_shape[2] < _input_shape[2]:
+                    if input_shape[2:] < _input_shape[2:]:
+                        # If _input_shape > input_shape, input_shape is not a real input size, 
+                        # so replace it with _input_shape.
                         input_shape = _input_shape
                         input_keys = _input.name
 
