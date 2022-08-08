@@ -50,3 +50,8 @@ class TFNNCFPruningTensorProcessor(NNCFPruningBaseTensorProcessor):
     def elementwise_mask_propagation(cls, input_masks: List[NNCFTensor]) -> NNCFTensor:
         cls.assert_allclose(input_masks)
         return input_masks[0]
+
+    @classmethod
+    def split(cls, tensor: NNCFTensor, chunks: int, dim: int) -> List[NNCFTensor]:
+        ret_tensors = tf.split(tensor.tensor, chunks, dim)
+        return [TFNNCFTensor(ret_tensor) for ret_tensor in ret_tensors]

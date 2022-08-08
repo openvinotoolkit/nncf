@@ -36,16 +36,6 @@ def test_concat():
     assert torch.all(concatenated_tensor.tensor == torch.tensor(tensor_data * 3))
 
 
-def test_split():
-    tensor_data = [0., 1., 2., 3.]
-    chunks = 2
-    tensors = PTNNCFTensor(torch.tensor(tensor_data))
-    split_tensor = PTNNCFPruningTensorProcessor.split(tensors, chunks=chunks, dim=0)
-    ref_split = torch.tensor(tensor_data).chunk(chunks)
-    assert torch.all(split_tensor[0].tensor == ref_split[0])
-    assert torch.all(split_tensor[1].tensor == ref_split[1])
-
-
 @pytest.mark.parametrize('all_close', [False, True])
 def test_assert_all_close(all_close):
     tensor_data = [0., 1.]
@@ -70,3 +60,13 @@ def test_elementwise_mask_propagation(all_close):
         result = PTNNCFPruningTensorProcessor.elementwise_mask_propagation(tensors)
         for t in tensors:
             assert torch.allclose(result.tensor, t.tensor)
+
+
+def test_split():
+    tensor_data = [0., 1., 2., 3.]
+    chunks = 2
+    tensor = PTNNCFTensor(torch.tensor(tensor_data))
+    split_tensors = PTNNCFPruningTensorProcessor.split(tensor, chunks=chunks, dim=0)
+    ref_split = torch.tensor(tensor_data).chunk(chunks)
+    assert torch.all(split_tensors[0].tensor == ref_split[0])
+    assert torch.all(split_tensors[1].tensor == ref_split[1])

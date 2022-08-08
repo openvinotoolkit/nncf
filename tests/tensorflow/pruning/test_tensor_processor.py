@@ -60,3 +60,13 @@ def test_elementwise_mask_propagation(all_close):
         result = TFNNCFPruningTensorProcessor.elementwise_mask_propagation(tensors)
         for t in tensors:
             tf.debugging.assert_near(result.tensor, t.tensor)
+
+
+def test_split():
+    tensor_data = [0., 1., 2., 3.]
+    chunks = 2
+    tensor = TFNNCFTensor(tf.Variable(tensor_data))
+    split_tensors = TFNNCFPruningTensorProcessor.split(tensor, chunks=chunks, dim=0)
+    ref_split = tf.split(tf.Variable(tensor_data), chunks)
+    assert tf.reduce_all(split_tensors[0].tensor == ref_split[0])
+    assert tf.reduce_all(split_tensors[1].tensor == ref_split[1])
