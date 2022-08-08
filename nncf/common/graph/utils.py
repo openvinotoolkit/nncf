@@ -84,8 +84,6 @@ def get_split_axis(input_shapes: List[List[int]], output_shapes: List[List[int]]
         if dim_in != dim_out:
             axis = idx
             break
-        if dim_in is None:
-            none_dim = idx
 
     if axis is None:
         if none_dim is None:

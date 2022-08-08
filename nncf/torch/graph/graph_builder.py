@@ -28,7 +28,6 @@ from nncf.common.graph.layer_attributes import SplitLayerAttributes
 from nncf.common.graph.operator_metatypes import UnknownMetatype
 from nncf.common.graph.utils import get_concat_axis
 from nncf.common.graph.utils import get_split_axis
-from nncf.common.graph.utils import get_split_size
 from nncf.torch.dynamic_graph.graph import DynamicGraph
 from nncf.torch.dynamic_graph.graph_tracer import GraphTracer
 from nncf.torch.dynamic_graph.graph_tracer import ModelInputInfo
