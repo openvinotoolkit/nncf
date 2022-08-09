@@ -84,8 +84,15 @@ class ONNXModelTransformer(ModelTransformer):
             onnx_graph = ONNXGraph(model)
             var_out = []
             for out in outputs:
+                try:
+                    shape = onnx_graph.get_edge_shape(out)
+                except RuntimeError as err:
+                    nncf_logger.error(err)
+                    nncf_logger.error('The default tensor shape will be set.')
+                    shape = None
+
                 type_proto = onnx.helper.make_tensor_type_proto(onnx_graph.get_edge_dtype(out),
-                                                                shape=onnx_graph.get_edge_shape(out))
+                                                                shape)
                 value_info = onnx.helper.make_value_info(name=out, type_proto=type_proto)
                 var_out.append(value_info)
 
@@ -135,7 +142,6 @@ class ONNXModelTransformer(ModelTransformer):
         model_with_intermediate_outputs = select_model_inputs_outputs(self.transformed_model,
                                                                       outputs=[*extra_model_outputs,
                                                                                *model_outputs])
-        onnx.checker.check_model(model_with_intermediate_outputs)
         self.transformed_model = model_with_intermediate_outputs
 
     def _apply_quantizer_insertion_transformations(self):
@@ -147,16 +153,16 @@ class ONNXModelTransformer(ModelTransformer):
         # TODO (kshpv): remove many branches
         # pylint: disable=too-many-branches
         onnx_graph = ONNXGraph(self.transformed_model)
-        target_edge_names = []
+        target_edge_names = set()
         if transformation.target_point.type == TargetType.OPERATION_WITH_WEIGHTS:
             try:
-                target_edge_names.append(onnx_graph.get_weight_tensor_with_initializer(
+                target_edge_names.add(onnx_graph.get_weight_tensor_with_initializer(
                     transformation.target_point.target_node_name))
             except RuntimeError as er:
                 nncf_logger.exception(er)
                 return
         elif transformation.target_point.type == TargetType.PRE_LAYER_OPERATION:
-            target_edge_names.append(
+            target_edge_names.add(
                 onnx_graph.get_node_edges(transformation.target_point.target_node_name)['input'][0])
         elif transformation.target_point.type == TargetType.POST_LAYER_OPERATION:
             if NNCFGraphNodeType.INPUT_NODE in transformation.target_point.target_node_name:  # ADD INPUT NODE CASE
@@ -165,9 +171,10 @@ class ONNXModelTransformer(ModelTransformer):
                 nncf_node_name = nncf_graph.get_node_by_name(transformation.target_point.target_node_name)
                 onnx_nodes_after_input_node = [edge.to_node for edge in nncf_graph.get_output_edges(nncf_node_name)]
                 for onnx_node_name in onnx_nodes_after_input_node:
-                    target_edge_names.append(onnx_graph.get_node_edges(onnx_node_name.node_name)['input'][0])
+                    if onnx_graph.get_node_edges(onnx_node_name.node_name)['input'][0] not in target_edge_names:
+                        target_edge_names.add(onnx_graph.get_node_edges(onnx_node_name.node_name)['input'][0])
             else:
-                target_edge_names.append(
+                target_edge_names.add(
                     onnx_graph.get_node_edges(transformation.target_point.target_node_name)['output'][0])
         else:
             raise RuntimeError(
@@ -186,11 +193,11 @@ class ONNXModelTransformer(ModelTransformer):
         axis = 0 if per_channel else None
         dims = [len(scale)] if per_channel else []
 
-        quantizer_name = ONNXModelTransformer.QUANTIZER_NAME_PREFIX + target_edge_names[0]
-        dequantizer_name = ONNXModelTransformer.DEQUANTIZER_NAME_PREFIX + target_edge_names[0]
-        scale_tensor_name = ONNXModelTransformer.SCALE_TENSOR_NAME_PREFIX + target_edge_names[0]
-        zero_point_tensor_name = ONNXModelTransformer.ZERO_POINT_NAME_PREFIX + target_edge_names[0]
-        target_edge_name = target_edge_names[0]
+        target_edge_name = next(iter(target_edge_names))
+        quantizer_name = ONNXModelTransformer.QUANTIZER_NAME_PREFIX + target_edge_name
+        dequantizer_name = ONNXModelTransformer.DEQUANTIZER_NAME_PREFIX + target_edge_name
+        scale_tensor_name = ONNXModelTransformer.SCALE_TENSOR_NAME_PREFIX + target_edge_name
+        zero_point_tensor_name = ONNXModelTransformer.ZERO_POINT_NAME_PREFIX + target_edge_name
 
         onnx_scale = onnx.helper.make_tensor(scale_tensor_name, onnx.TensorProto.FLOAT, dims, scale)
         onnx_zero_point = onnx.helper.make_tensor(zero_point_tensor_name, tensor_type, dims, zero_point)
