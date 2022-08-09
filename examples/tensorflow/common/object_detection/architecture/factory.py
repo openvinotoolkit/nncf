@@ -28,7 +28,7 @@ def norm_activation_generator(params):
 def backbone_generator(params):
     """Generator function for various backbone models."""
     backbone_name = params.model_params.architecture.backbone.name
-    if params.model == 'RetinaNet' or params.model == 'MaskRCNN':
+    if params.model in ('RetinaNet', 'MaskRCNN'):
         if backbone_name == 'resnet':
             resnet_params = params.model_params.architecture.backbone.params
             backbone_fn = resnet.Resnet(resnet_depth=resnet_params.depth,
