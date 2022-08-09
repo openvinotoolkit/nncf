@@ -60,8 +60,12 @@ class ONNXModelTransformer(ModelTransformer):
         self.output_insertion_commands.append(transformation)
 
     def _apply_transformations(self):
-        self._apply_quantizer_insertion_transformations()
-        self._apply_outputs_transformations()
+        if self.quantizer_insertion_commands:
+            self._apply_quantizer_insertion_transformations()
+            self.quantizer_insertion_commands = []
+        if self.output_insertion_commands:
+            self._apply_outputs_transformations()
+            self.output_insertion_commands = []
 
     def _apply_outputs_transformations(self):
         def select_model_inputs_outputs(model, outputs=None):
@@ -146,13 +150,14 @@ class ONNXModelTransformer(ModelTransformer):
         target_edge_names = []
         if transformation.target_point.type == TargetType.OPERATION_WITH_WEIGHTS:
             try:
-                target_edge_name = onnx_graph.get_weight_tensor_with_initializer(
-                    transformation.target_point.target_node_name)
+                target_edge_names.append(onnx_graph.get_weight_tensor_with_initializer(
+                    transformation.target_point.target_node_name))
             except RuntimeError as er:
                 nncf_logger.exception(er)
                 return
         elif transformation.target_point.type == TargetType.PRE_LAYER_OPERATION:
-            target_edge_name = onnx_graph.get_node_edges(transformation.target_point.target_node_name)['input'][0]
+            target_edge_names.append(
+                onnx_graph.get_node_edges(transformation.target_point.target_node_name)['input'][0])
         elif transformation.target_point.type == TargetType.POST_LAYER_OPERATION:
             if NNCFGraphNodeType.INPUT_NODE in transformation.target_point.target_node_name:  # ADD INPUT NODE CASE
 
@@ -162,7 +167,8 @@ class ONNXModelTransformer(ModelTransformer):
                 for onnx_node_name in onnx_nodes_after_input_node:
                     target_edge_names.append(onnx_graph.get_node_edges(onnx_node_name.node_name)['input'][0])
             else:
-                target_edge_name = onnx_graph.get_node_edges(transformation.target_point.target_node_name)['output'][0]
+                target_edge_names.append(
+                    onnx_graph.get_node_edges(transformation.target_point.target_node_name)['output'][0])
         else:
             raise RuntimeError(
                 'Could not find the edge corresponding to node {}'.format(
@@ -180,18 +186,11 @@ class ONNXModelTransformer(ModelTransformer):
         axis = 0 if per_channel else None
         dims = [len(scale)] if per_channel else []
 
-        if target_edge_names:
-            # TODO (kshpv): make only List
-            quantizer_name = ONNXModelTransformer.QUANTIZER_NAME_PREFIX + target_edge_names[0]
-            dequantizer_name = ONNXModelTransformer.DEQUANTIZER_NAME_PREFIX + target_edge_names[0]
-            scale_tensor_name = ONNXModelTransformer.SCALE_TENSOR_NAME_PREFIX + target_edge_names[0]
-            zero_point_tensor_name = ONNXModelTransformer.ZERO_POINT_NAME_PREFIX + target_edge_names[0]
-            target_edge_name = target_edge_names[0]
-        else:
-            quantizer_name = ONNXModelTransformer.QUANTIZER_NAME_PREFIX + target_edge_name
-            dequantizer_name = ONNXModelTransformer.DEQUANTIZER_NAME_PREFIX + target_edge_name
-            scale_tensor_name = ONNXModelTransformer.SCALE_TENSOR_NAME_PREFIX + target_edge_name
-            zero_point_tensor_name = ONNXModelTransformer.ZERO_POINT_NAME_PREFIX + target_edge_name
+        quantizer_name = ONNXModelTransformer.QUANTIZER_NAME_PREFIX + target_edge_names[0]
+        dequantizer_name = ONNXModelTransformer.DEQUANTIZER_NAME_PREFIX + target_edge_names[0]
+        scale_tensor_name = ONNXModelTransformer.SCALE_TENSOR_NAME_PREFIX + target_edge_names[0]
+        zero_point_tensor_name = ONNXModelTransformer.ZERO_POINT_NAME_PREFIX + target_edge_names[0]
+        target_edge_name = target_edge_names[0]
 
         onnx_scale = onnx.helper.make_tensor(scale_tensor_name, onnx.TensorProto.FLOAT, dims, scale)
         onnx_zero_point = onnx.helper.make_tensor(zero_point_tensor_name, tensor_type, dims, zero_point)
@@ -203,10 +202,12 @@ class ONNXModelTransformer(ModelTransformer):
             name=quantizer_name,
             axis=axis
         )
+        # If several nodes on one edge
+        dequantizer_outputs = ['dq_output_' + st for st in target_edge_names]
         dequantizer = onnx.helper.make_node(
             'DequantizeLinear',
             inputs=['q_output_' + target_edge_name, scale_tensor_name, zero_point_tensor_name],
-            outputs=['dq_output_' + target_edge_name],
+            outputs=dequantizer_outputs,
             name=dequantizer_name,
             axis=axis,
 
@@ -214,16 +215,17 @@ class ONNXModelTransformer(ModelTransformer):
 
         # TODO (kshpv): need to carefully look through the logic of nodes searching.
         #  The model with the possible issues is inception_v3.
+        # If several nodes on one edge
+        for target_edge_name in target_edge_names:
+            input_nodes = onnx_graph.get_nodes_by_input(target_edge_name)
+            if not input_nodes:
+                raise RuntimeError(
+                    f'Can not add the quantizer to the {target_edge_name} edge. This edge does not have end node.')
 
-        input_nodes = onnx_graph.get_nodes_by_input(target_edge_name)
-        if not input_nodes:
-            raise RuntimeError(
-                f'Can not add the quantizer to the {target_edge_name} edge. This edge does not have end node.')
-
-        for node in input_nodes:
-            for i, inp in enumerate(node.input):
-                if inp == target_edge_name:
-                    node.input[i] = 'dq_output_' + target_edge_name
+            for node in input_nodes:
+                for i, inp in enumerate(node.input):
+                    if inp == target_edge_name:
+                        node.input[i] = 'dq_output_' + target_edge_name
 
         self.transformed_model.graph.initializer.extend([onnx_scale])
         self.transformed_model.graph.initializer.extend([onnx_zero_point])

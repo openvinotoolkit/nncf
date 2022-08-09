@@ -60,7 +60,7 @@ class ONNXRandomBatchSampler(RandomBatchSampler):
 
 
 def create_onnx_sampler(dataset: Dataset,
-                        sample_indices: List) -> Union[ONNXBatchSampler, ONNXRandomBatchSampler]:
+                        sample_indices: int) -> Union[ONNXBatchSampler, ONNXRandomBatchSampler]:
     if dataset.shuffle:
         nncf_logger.info('Using Shuffled dataset')
         return ONNXRandomBatchSampler(dataset, sample_indices=sample_indices)

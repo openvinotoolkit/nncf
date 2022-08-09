@@ -75,7 +75,7 @@ def run(onnx_model_path: str, output_file_path: str, dataset: Dataset, model_nam
     onnx.checker.check_model(original_model)
 
     engine = ONNXEngine()
-    sampler = create_onnx_sampler(dataset, range(len(dataset)))
+    sampler = create_onnx_sampler(dataset, len(dataset))
 
     engine.rt_session_options['providers'] = ["OpenVINOExecutionProvider"]
     engine.set_model(original_model)

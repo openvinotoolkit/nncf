@@ -181,12 +181,17 @@ class ONNXMinMaxQuantization(MinMaxQuantization):
                 command = ONNXQuantizerInsertionCommand(quantization_target_point, parameters)
                 transformation_commands.append(command)
             elif quantization_target_point.type in [TargetType.PRE_LAYER_OPERATION, TargetType.POST_LAYER_OPERATION]:
-                for tensor_collector in statistic_points.iter_through_algorithm_tensor_collectors_in_target_node(
-                        target_node_name, PostTrainingAlgorithms.MinMaxQuantization):
-                    parameters = calculate_activation_quantizer_parameters(tensor_collector.get_statistics(),
-                                                                           self.activation_quantizer_config)
-                    command = ONNXQuantizerInsertionCommand(quantization_target_point, parameters)
-                    transformation_commands.append(command)
+                def filter_func(point):
+                    return PostTrainingAlgorithms.MinMaxQuantization in point.algorithm_to_tensor_collectors and \
+                           point.target_point.type == quantization_target_point.type
+
+                for _statistic_point in statistic_points.iter_through_statistic_points_in_target_node(target_node_name,
+                                                                                                      filter_func):
+                    for tensor_collector in _statistic_point.algorithm_to_tensor_collectors[PostTrainingAlgorithms.MinMaxQuantization]:
+                        parameters = calculate_activation_quantizer_parameters(tensor_collector.get_statistics(),
+                                                                               self.activation_quantizer_config)
+                        command = ONNXQuantizerInsertionCommand(quantization_target_point, parameters)
+                        transformation_commands.append(command)
             else:
                 raise RuntimeError('Inccorrect type of Quantization Target Point')
 
