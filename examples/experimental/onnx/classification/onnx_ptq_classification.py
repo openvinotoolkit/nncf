@@ -29,7 +29,8 @@ from nncf.common.utils.logger import logger as nncf_logger
 
 def run(onnx_model_path: str, output_model_path: str,
         dataset_path: str, batch_size: int, shuffle: bool, num_init_samples: int,
-        input_shape: Optional[List[int]] = None, ignored_scopes: Optional[List[str]] = None,
+        input_shape: Optional[List[int]] = None, input_keys: Optional[str] = None,
+        ignored_scopes: Optional[List[str]] = None,
         evaluate: Optional[bool] = False):
     nncf_logger.info("Post-Training Quantization Parameters:")
     nncf_logger.info("  number of samples: {}".format(num_init_samples))
@@ -38,11 +39,17 @@ def run(onnx_model_path: str, output_model_path: str,
     original_model = onnx.load(onnx_model_path)
     nncf_logger.info("The model is loaded from {}".format(onnx_model_path))
 
+    assert input_shape or input_keys, "Either input_shape or input_keys must be set."
+
     if input_shape is None:
         nncf_logger.info(
             "input_shape is None. Infer input_shape from the model.")
 
-    input_shape, input_keys = infer_input_shape(original_model, input_shape)
+    elif input_keys is None:
+        nncf_logger.info(
+            "input_keys is None. Infer input_keys from the model.")
+
+    input_shape, input_keys = infer_input_shape(original_model, input_shape, input_keys)
 
     # Step 1: Initialize the data loader and metric (if it is needed).
     dataset = create_imagenet_torch_dataset(
@@ -97,9 +104,11 @@ if __name__ == '__main__':
         "--batch_size", help="Batch size for initialization", type=int, default=1)
     parser.add_argument(
         "--shuffle", help="Whether to shuffle dataset for initialization", default=True)
-    parser.add_argument("--input_shape",
-        help="Model's input shape. e.g. [1, 3, 224, 224]. If it's not given, it automatically infers input shape.",
-                        nargs="+", type=int, default=None)
+    parser.add_argument(
+        "--input_shape", help="Model's input shape. e.g. [1, 3, 224, 224].",
+        nargs="+", type=int, default=None)
+    parser.add_argument(
+        "--input_keys", help="Model's input key.", type=str, default=None)
     parser.add_argument(
         "--init_samples", help="Number of initialization samples", type=int, default=300)
     parser.add_argument(
@@ -114,6 +123,7 @@ if __name__ == '__main__':
         args.shuffle,
         args.init_samples,
         args.input_shape,
+        args.input_keys,
         args.ignored_scopes,
         args.evaluate
         )

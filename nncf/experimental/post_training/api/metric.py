@@ -133,13 +133,12 @@ class Accuracy(Metric):
         """
         outputs, targets = self._extract(outputs, targets)
 
-        if outputs.ndim != 2:
-            if outputs.ndim == 4 and (outputs.shape[2] == 1 and outputs.shape[3] == 1):
-                # densenet outputs (1,1000,1,1). It is able to change tensor shape.
-                outputs = outputs.squeeze(axis=(2, 3))
-            else:
-                raise ValueError('The accuracy metric should be calculated on 2d outputs. '
-                                 f'However, the outputs has ndim={outputs.ndim}.')
+        if outputs.ndim == 4 and (outputs.shape[2] == 1 and outputs.shape[3] == 1):
+            # densenet outputs (1,1000,1,1). It is able to change tensor shape.
+            outputs = outputs.squeeze(axis=(2, 3))
+        elif outputs.ndim != 2:
+            raise ValueError('The accuracy metric should be calculated on 2d outputs. '
+                             f'However, the outputs has ndim={outputs.ndim}.')
 
         if targets.ndim != 1:
             raise ValueError('The accuracy metric should be calculated on 1d targets. '
