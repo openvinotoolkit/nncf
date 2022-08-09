@@ -11,6 +11,8 @@
  limitations under the License.
 """
 
+# pylint:disable=redefined-outer-name
+
 import pytest
 
 import numpy as np
