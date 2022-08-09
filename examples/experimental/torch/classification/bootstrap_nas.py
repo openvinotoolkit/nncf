@@ -186,6 +186,22 @@ def main_worker(current_gpu, config: SampleConfig):
 
         logger.info("Best config: {best_config}".format(best_config=best_config))
         logger.info("Performance metrics: {performance_metrics}".format(performance_metrics=performance_metrics))
+        search_algo.visualize_search_progression()
+
+        # Maximal subnet
+        elasticity_ctrl.multi_elasticity_handler.activate_maximum_subnet()
+        search_algo.bn_adaptation.run(model)
+        top1_acc = validate_model_fn_top1(model, val_loader)
+        logger.info("Maximal subnet Top1 acc: {top1_acc}, Macs: {macs}".format(top1_acc=top1_acc, macs=
+                    elasticity_ctrl.multi_elasticity_handler.count_flops_and_weights_for_active_subnet()[0] / 2000000))
+
+        # Best found subnet
+        elasticity_ctrl.multi_elasticity_handler.activate_subnet_for_config(best_config)
+        search_algo.bn_adaptation.run(model)
+        top1_acc = validate_model_fn_top1(model, val_loader)
+        logger.info("Best found subnet Top1 acc: {top1_acc}, Macs: {macs}".format(top1_acc=top1_acc, macs=
+        elasticity_ctrl.multi_elasticity_handler.count_flops_and_weights_for_active_subnet()[0] / 2000000))
+        elasticity_ctrl.export_model(osp.join(config.log_dir, "best_subnet.onnx"))
 
     if 'test' in config.mode:
         validate(val_loader, model, criterion, config)

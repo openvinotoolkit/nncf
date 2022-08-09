@@ -331,6 +331,8 @@ class SearchAlgorithm(BaseSearchAlgorithm):
                                                                             self._elasticity_ctrl)
         self._evaluator_handlers.append(self._efficiency_evaluator_handler)
         self._evaluator_handlers.append(self._accuracy_evaluator_handler)
+        self.maximal_vals = [evaluator_handler.current_value for evaluator_handler
+                                  in self._evaluator_handlers]
 
         self._problem = SearchProblem(self)
         self._result = minimize(self._problem, self._algorithm,
@@ -342,14 +344,16 @@ class SearchAlgorithm(BaseSearchAlgorithm):
         if self.best_config is not None:
             self._elasticity_ctrl.multi_elasticity_handler.activate_subnet_for_config(self.best_config)
             self.bn_adaptation.run(self._model)
+            ret_vals = self.best_vals
         else:
             nncf_logger.warning("Couldn't find a subnet that satisfies the requirements. Returning maximum subnet.")
             self._elasticity_ctrl.multi_elasticity_handler.activate_maximum_subnet()
             self.bn_adaptation.run(self._model)
             self.best_config = self._elasticity_ctrl.multi_elasticity_handler.get_active_config()
             self.best_vals = [None, None]
+            ret_vals = self.maximal_vals
 
-        return self._elasticity_ctrl, self.best_config, [abs(elem) for elem in self.best_vals if elem is not None]
+        return self._elasticity_ctrl, self.best_config, [abs(elem) for elem in ret_vals if elem is not None]
 
     def visualize_search_progression(self, filename='search_progression') -> NoReturn:
         """
@@ -367,7 +371,7 @@ class SearchAlgorithm(BaseSearchAlgorithm):
                         [abs(row[4]) for row in self.search_records][i:i+self.search_params.population],
                         s=9, c=c, alpha=0.5,
                         marker='D', cmap=colormap)
-        plt.scatter(*tuple(abs(ev.input_model_value) for ev in self.evaluator_handlers),
+        plt.scatter(*tuple([abs(ev.input_model_value) for ev in self.evaluator_handlers]),
                     marker='s', s=120, color='blue', label='Input Model', edgecolors='black')
         if None not in self.best_vals:
             plt.scatter(*tuple(abs(val) for val in self.best_vals),
