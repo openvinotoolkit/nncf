@@ -134,7 +134,7 @@ class ProgressiveShrinkingController(BNASTrainingController):
         """
         Should be called at the beginning of each training step for activation some Subnet(s).
         """
-        if self._scheduler._lr_scheduler.current_step % self._sample_rate == 0:
+        if self._scheduler.current_step % self._sample_rate == 0:
             self.multi_elasticity_handler.activate_random_subnet()
             nncf_logger.debug(
                 'Active config: {}'.format(self.multi_elasticity_handler.get_active_config()))
