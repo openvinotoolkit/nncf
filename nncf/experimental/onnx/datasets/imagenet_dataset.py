@@ -47,8 +47,8 @@ class ImageNetDataset(Dataset):
         return len(self.dataset)
 
 
-def infer_input_shape(model: ModelProto, 
-                      main_shape: Optional[List[int]] = None, 
+def infer_input_shape(model: ModelProto,
+                      main_shape: Optional[List[int]] = None,
                       main_keys: Optional[str] = None) -> Tuple[List[int], List[str]]:
     assert len(model.graph.input) > 0
 
@@ -59,7 +59,7 @@ def infer_input_shape(model: ModelProto,
     if main_shape and main_keys:
         return main_shape, [main_keys]
 
-    elif main_keys:
+    if main_keys:
         for _input in model.graph.input:
             if main_keys == _input.name:
                 input_shape = set_input_shape(_input)
