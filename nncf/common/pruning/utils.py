@@ -590,6 +590,8 @@ def get_input_masks(node: NNCFNode, graph: NNCFGraph) -> List[Optional[NNCFTenso
     :param graph: Graph to work with.
     :return: Input masks.
     """
+    if 'input_mask' in node.data:
+        return [node.data['input_mask']]
     input_masks = [input_node.data['output_mask'] for input_node in graph.get_previous_nodes(node)]
     return input_masks
 

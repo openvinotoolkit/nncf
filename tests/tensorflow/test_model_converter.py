@@ -11,6 +11,7 @@
  limitations under the License.
 """
 
+from curses import noecho
 import pytest
 import tensorflow as tf
 from functools import partial
@@ -22,14 +23,16 @@ from tensorflow.python.keras import models
 from nncf.common.graph import INPUT_NOOP_METATYPES
 from nncf.common.graph import OUTPUT_NOOP_METATYPES
 from nncf.common.graph.layer_attributes import MultipleInputLayerAttributes
-from nncf.tensorflow.graph.metatypes.common import RESHAPE_METATYPES
+from nncf.tensorflow.graph.metatypes.common import LAYER_METATYPES_AGNOSTIC_TO_DATA_PRECISION_WITH_MULTIPLE_CONCAT_INPUTS, RESHAPE_METATYPES
 from nncf.tensorflow.graph.converter import BaseFunctionalSequentialConverter
 from nncf.tensorflow.graph.converter import convert_keras_model_to_nncf_graph
 from nncf.tensorflow.graph.metatypes.common import LAYER_METATYPES_AGNOSTIC_TO_DATA_PRECISION_WITH_MULTIPLE_INPUTS
+from nncf.tensorflow.graph.metatypes.common import LAYER_METATYPES_AGNOSTIC_TO_DATA_PRECISION_WITH_MULTIPLE_OUTPUTS
 from tests.tensorflow.helpers import get_basic_conv_test_model
 from tests.tensorflow.helpers import create_compressed_model_and_algo_for_test
 from tests.tensorflow.quantization.test_algorithm_quantization import get_basic_quantization_config
 from tests.tensorflow.pruning.helpers import get_concat_test_model
+from tests.tensorflow.pruning.helpers import get_split_test_model
 
 
 def test_struct_auxiliary_nodes_nncf_graph():
@@ -142,3 +145,17 @@ def test_reshape_attributes_saved_during_graph_building():
             assert node.layer_attributes is not None
             assert node.layer_attributes.input_shape == ref_reshape_nodes[node.node_name]['input_shape']
             assert node.layer_attributes.output_shape == ref_reshape_nodes[node.node_name]['output_shape']
+
+
+def test_split_attribute_saved_during_graph_building():
+    sample_size = [1, 8, 8, 1]
+    model = get_split_test_model(sample_size)
+    graph = convert_keras_model_to_nncf_graph(model)
+
+    ref_split_nodes = {'tf.split': {'chunks':2, 'axis': 3}}
+    for node in graph.get_all_nodes():
+        if node.metatype in LAYER_METATYPES_AGNOSTIC_TO_DATA_PRECISION_WITH_MULTIPLE_OUTPUTS:
+            assert node.node_name in ref_split_nodes
+            assert node.layer_attributes is not None
+            assert node.layer_attributes.chunks == ref_split_nodes[node.node_name]['chunks']
+            assert node.layer_attributes.axis == ref_split_nodes[node.node_name]['axis']

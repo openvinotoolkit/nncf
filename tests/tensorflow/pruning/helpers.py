@@ -147,3 +147,30 @@ def get_model_depthwise_conv(input_shape):
     x = linear(flatten(x))
 
     return tf.keras.Model(inputs=inputs, outputs=[x])
+
+def get_split_test_model(input_shape):
+    #          (input)
+    #             |
+    #          (conv1)
+    #             |
+    #          (chunk)
+    #        /       |
+    #    (conv2)  (conv3)
+    #         \    /
+    #        (concat)    
+    #           |
+    #         (conv4)
+
+    inputs = tf.keras.Input(shape=input_shape[1:], name='input')
+    conv1 = layers.Conv2D(16, 1, name='conv1')
+    conv2 = layers.Conv2D(32, 1, name='conv2')
+    conv3 = layers.Conv2D(32, 1, name='conv3')
+    conv4 = layers.Conv2D(64, 1, name='conv5')
+
+    x = conv1(inputs)
+    y1, x = tf.split(x, 2, -1, name='tf_split')
+    y1 = conv2(y1)
+    x = conv3(x)
+    x = tf.concat([y1, x], -1, name='tf_concat')
+    outputs = conv4(x)
+    return tf.keras.Model(inputs=inputs, outputs=outputs)
