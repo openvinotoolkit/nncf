@@ -18,12 +18,10 @@ from typing import List
 from typing import Set
 from typing import Tuple
 from typing import Type
-
 import tensorflow as tf
 from tensorflow.core.framework.node_def_pb2 import NodeDef
 from tensorflow.python.framework.convert_to_constants import convert_variables_to_constants_v2
 from tensorflow.python.keras.engine.keras_tensor import KerasTensor
-
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNodeName
 from nncf.common.graph import OperatorMetatype
