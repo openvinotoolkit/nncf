@@ -30,6 +30,7 @@ from tests.onnx.quantization.common import infer_model
 MODEL_NAMES = [
     'resnet18',
     'mobilenet_v2',
+    'mobilenet_v3_small',
     'inception_v3',
     'googlenet',
     'vgg16',
@@ -39,6 +40,7 @@ MODEL_NAMES = [
 MODELS = [
     models.resnet18(),
     models.mobilenet_v2(),
+    models.mobilenet_v3_small(),
     models.inception_v3(),
     models.googlenet(),
     models.vgg16(),
@@ -46,6 +48,7 @@ MODELS = [
 ]
 
 INPUT_SHAPES = [
+    [1, 3, 224, 224],
     [1, 3, 224, 224],
     [1, 3, 224, 224],
     [1, 3, 224, 224],

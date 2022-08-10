@@ -105,6 +105,7 @@ class ONNXAddLayerMetatype(ONNXOpMetatype):
 class ONNXSubMetatype(ONNXOpMetatype):
     name = 'SubOp'
     op_names = ['Sub']
+    hw_config_names = [HWConfigOpName.SUBTRACT]
 
 
 @ONNX_OPERATION_METATYPES.register()
@@ -112,6 +113,13 @@ class ONNXMulLayerMetatype(ONNXOpMetatype):
     name = 'MulOp'
     op_names = ['Mul']
     hw_config_names = [HWConfigOpName.MULTIPLY]
+
+
+@ONNX_OPERATION_METATYPES.register()
+class ONNXDivLayerMetatype(ONNXOpMetatype):
+    name = 'DivOp'
+    op_names = ['Div']
+    hw_config_names = [HWConfigOpName.DIVIDE]
 
 
 @ONNX_OPERATION_METATYPES.register()
@@ -170,12 +178,14 @@ class ONNXGatherMetatype(ONNXOpMetatype):
 class ONNXUnsqueezeMetatype(ONNXOpMetatype):
     name = 'UnsqueezeOp'
     op_names = ['Unsqueeze']
+    hw_config_names = [HWConfigOpName.UNSQUEEZE]
 
 
 @ONNX_OPERATION_METATYPES.register()
 class ONNXSqueezeMetatype(ONNXOpMetatype):
     name = 'SqueezeOp'
     op_names = ['Squeeze']
+    hw_config_names = [HWConfigOpName.SQUEEZE]
 
 
 @ONNX_OPERATION_METATYPES.register()
@@ -188,12 +198,20 @@ class ONNXNonMaxSuppressionMetatype(ONNXOpMetatype):
 class ONNXCastMetatype(ONNXOpMetatype):
     name = 'CastOp'
     op_names = ['Cast']
+    hw_config_names = [HWConfigOpName.SQUEEZE]
 
 
 @ONNX_OPERATION_METATYPES.register()
 class ONNXReduceMinMetatype(ONNXOpMetatype):
     name = 'ReduceMinOp'
     op_names = ['ReduceMin']
+
+
+@ONNX_OPERATION_METATYPES.register()
+class ONNXReduceMeanMetatype(ONNXOpMetatype):
+    name = 'ReduceMeanOp'
+    op_names = ['ReduceMean']
+    hw_config_names = [HWConfigOpName.REDUCEMEAN]
 
 
 @ONNX_OPERATION_METATYPES.register()
