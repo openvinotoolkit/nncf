@@ -106,7 +106,6 @@ class ONNXModelTransformer(ModelTransformer):
                                                 domain=model.domain,
                                                 model_version=model.model_version,
                                                 doc_string=model.doc_string)
-            onnx_model.opset_import[0].version = model.opset_import[0].version
             if len(model.metadata_props) > 0:
                 values = {p.key: p.value for p in model.metadata_props}
                 onnx.helper.set_model_props(onnx_model, values)
@@ -114,6 +113,13 @@ class ONNXModelTransformer(ModelTransformer):
             if len(onnx_model.graph.input) != len(model.graph.input):
                 raise RuntimeError("Input mismatch {} != {}".format(
                     len(onnx_model.input), len(model.input)))
+
+            # fix opset import
+            del onnx_model.opset_import[:]
+            for oimp in model.opset_import:
+                op_set = onnx_model.opset_import.add()
+                op_set.domain = oimp.domain
+                op_set.version = oimp.version
 
             return onnx_model
 
