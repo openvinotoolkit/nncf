@@ -18,6 +18,7 @@ from tests.tensorflow.helpers import create_compressed_model_and_algo_for_test
 from nncf.tensorflow.graph.utils import collect_wrapped_layers
 from tests.tensorflow.pruning.helpers import get_basic_pruning_config
 from tests.tensorflow.pruning.helpers import get_concat_test_model
+from tests.tensorflow.pruning.helpers import get_split_test_model
 
 
 def check_pruning_mask(mask, pruning_rate, layer_name):
@@ -54,3 +55,30 @@ def test_masks_in_concat_model(all_weights, prune_batch_norms, ref_num_wrapped_l
             assert len(layer.ops_weights) == 2
             for op in layer.ops_weights.values():
                 check_pruning_mask(op['mask'].numpy(), target_pruning_rate, layer.name)
+
+@pytest.mark.parametrize(('all_weights', 'ref_num_wrapped_layer'),
+                         [
+                             [True, 3],
+                             [False, 3],
+                         ])
+def test_masks_in_split_model(all_weights, ref_num_wrapped_layer):
+    config = get_basic_pruning_config(8)
+    config['compression']['params']['all_weights'] = all_weights
+    sample_size = [1, 8, 8, 3]
+    model = get_split_test_model(sample_size)
+
+    model, _ = create_compressed_model_and_algo_for_test(model, config)
+    wrapped_layers = collect_wrapped_layers(model)
+
+    # Check number of wrapped layers
+    assert len(wrapped_layers) == ref_num_wrapped_layer
+
+    for layer in wrapped_layers:
+        # Check existed weights of masks
+        assert layer.ops_weights
+
+        # Check masks correctness
+        if not all_weights:
+            assert len(layer.ops_weights) == 2
+            for op in layer.ops_weights.values():
+                check_pruning_mask(op['mask'].numpy(), pruning_rate=0.5, layer_name=layer.name)
