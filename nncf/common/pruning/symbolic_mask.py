@@ -13,7 +13,7 @@
 
 from typing import List, Union
 
-import math
+import numpy as np
 
 from nncf.common.tensor import NNCFTensor
 from nncf.common.pruning.tensor_processor import NNCFPruningBaseTensorProcessor
@@ -114,6 +114,6 @@ class SymbolicMaskProcessor(NNCFPruningBaseTensorProcessor):
 
     @classmethod
     def split(cls, tensor: SymbolicMask, chunks: int, axis: int) -> List[SymbolicMask]:
-        producer = tensor.mask_producers
-        tensor_shape = math.floor(tensor.shape[0]/chunks)
-        return [SymbolicMask(tensor_shape, producer) for _ in range(chunks)]
+        producers = tensor.mask_producers
+        tensor_shape = np.floor(tensor.shape[0]/chunks)
+        return [SymbolicMask(tensor_shape, producers) for _ in range(chunks)]

@@ -250,15 +250,16 @@ class SplitPruningOp(BasePruningOp):
             for i, result_mask in enumerate(result_masks):
                 next_nodes[i].data['input_mask'] = result_mask
         else:
-            idx = output_shapes.index(result_mask.shape[0])
-            next_nodes[idx].data['input_mask'] = result_mask
+            for i, result_mask in enumerate(result_masks):
+                idx = output_shapes.index(result_mask.shape[0])
+                next_nodes[idx].data['input_mask'] = result_mask
         return result_masks
 
     @classmethod
     def mask_propagation(cls, node: NNCFNode, graph: NNCFGraph,
                          tensor_processor: Type[NNCFPruningBaseTensorProcessor]) -> None:
-        result_mask = cls.generate_output_masks(node, graph, tensor_processor)       
-        node.data['output_mask'] = result_mask
+        result_masks = cls.generate_output_masks(node, graph, tensor_processor)       
+        node.data['output_mask'] = result_masks
 
 class ElementwisePruningOp(BasePruningOp):
     @classmethod
