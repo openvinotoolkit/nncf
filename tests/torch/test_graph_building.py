@@ -304,7 +304,7 @@ def test_split_attributes(input_shape):
 
     graph = graph_builder.build_graph(model)
     chunk_nodes_with_attributes = {
-        'ModelForTestWithSplit/chunk_0': {'chunks': 2, 'dim': 1}
+        'ModelForTestWithSplit/chunk_0': {'chunks': 2, 'axis': 1}
     }
 
     for node in graph.get_all_nodes():

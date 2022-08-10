@@ -675,7 +675,7 @@ class SequentialConverter(BaseFunctionalSequentialConverter):
                 layer_attributes = _get_multiple_input_layer_attributes(model_layer)
             elif layer_metatype in RESHAPE_METATYPES:
                 layer_attributes = _get_reshape_layer_attributes(model_layer)
-            elif layer_metatype in LAYER_METATYPES_AGNOSTIC_TO_DATA_PRECISION_WITH_MUTIPLE_OUTPUTS:
+            elif layer_metatype in LAYER_METATYPES_AGNOSTIC_TO_DATA_PRECISION_WITH_MULTIPLE_OUTPUTS:
                 layer_attributes = _get_multiple_output_layer_attributes(model_layer)
 
             if layer_attributes is not None:

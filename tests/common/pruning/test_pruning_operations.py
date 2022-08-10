@@ -455,10 +455,10 @@ SPLIT_TEST_CASES = [
     ['chunk', 2, 1],
 ]
 
-@pytest.mark.parametrize(('node_type', 'chunks', 'dim'), SPLIT_TEST_CASES)
-def test_split_accept_pruned_input(node_type, chunks, dim):
+@pytest.mark.parametrize(('node_type', 'chunks', 'axis'), SPLIT_TEST_CASES)
+def test_split_accept_pruned_input(node_type, chunks, axis):
     node_name = 'dummy_split'
-    layer_attributes = MultipleOutputLayerAttributes(chunks, dim)
+    layer_attributes = MultipleOutputLayerAttributes(chunks, axis)
     graph = NNCFGraph()
     node = graph.add_nncf_node(node_name, node_type, dummy_types.DummySplitMetatype, layer_attributes=layer_attributes)
 
@@ -470,7 +470,7 @@ def test_split_accept_pruned_input(node_type, chunks, dim):
 @pytest.mark.parametrize('right_branch_output_channels', [5, 5])
 def test_split_metatype_mask_prop(empty_mask_left_branch, empty_mask_right_branch, right_branch_output_channels):
     node_name = 'dummy_split'
-    layer_attributes = MultipleOutputLayerAttributes(chunks=2, dim=0)
+    layer_attributes = MultipleOutputLayerAttributes(chunks=2, axis=0)
 
     graph = NNCFGraph()
     conv_op_0 = graph.add_nncf_node('conv_op_0', 'conv', dummy_types.DummyConvMetatype)

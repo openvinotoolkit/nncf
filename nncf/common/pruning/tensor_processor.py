@@ -77,7 +77,7 @@ class NNCFPruningBaseTensorProcessor:
 
     @classmethod
     @abstractmethod
-    def split(cls, tensor: NNCFTensor, chunks: int, dim: int) -> List[NNCFTensor]:
+    def split(cls, tensor: NNCFTensor, chunks: int, axis: int) -> List[NNCFTensor]:
         """
         Split/chunk NNCFTensor into chunks along an exsiting dimension.
 

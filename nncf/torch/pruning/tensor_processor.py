@@ -50,6 +50,6 @@ class PTNNCFPruningTensorProcessor(NNCFPruningBaseTensorProcessor):
         return input_masks[0]
 
     @classmethod
-    def split(cls, tensor: NNCFTensor, chunks: int, dim: int) -> List[NNCFTensor]:
-        ret_tensors = torch.chunk(tensor.tensor, chunks, dim)
+    def split(cls, tensor: NNCFTensor, chunks: int, axis: int) -> List[NNCFTensor]:
+        ret_tensors = torch.chunk(tensor.tensor, chunks, axis)
         return [PTNNCFTensor(ret_tensor) for ret_tensor in ret_tensors]

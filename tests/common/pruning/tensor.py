@@ -48,8 +48,8 @@ class NPNNCFTensorProcessor(NNCFPruningBaseTensorProcessor):
         return input_masks[0]
 
     @classmethod
-    def split(cls, tensor: NNCFTensor, chunks: int, dim: int) -> List[NNCFTensor]:
-        ret_tensors = np.split(tensor.tensor, chunks, dim)
+    def split(cls, tensor: NNCFTensor, chunks: int, axis: int) -> List[NNCFTensor]:
+        ret_tensors = np.split(tensor.tensor, chunks, axis)
         return [NPNNCFTensor(ret_tensor) for ret_tensor in ret_tensors]
 
 
