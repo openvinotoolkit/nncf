@@ -127,6 +127,10 @@ class BootstrapNASScheduler(BaseCompressionScheduler):
         self._lr_scheduler = lr_scheduler
 
     @property
+    def current_step(self) -> int:
+        return self._lr_scheduler.current_step
+
+    @property
     def list_stage_descriptors(self) -> List[StageDescriptor]:
         """
         :return: a list of stage descriptors (parameters of the training stage).

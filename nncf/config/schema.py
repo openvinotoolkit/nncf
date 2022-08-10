@@ -748,7 +748,7 @@ FILTER_PRUNING_SCHEMA = {
                                                       description="Number of epochs for model pretraining before"
                                                                   " starting filter pruning. 0 by default."),
                     "pruning_steps": with_attributes(NUMBER,
-                                                     description="Number of epochs during which the pruning rate is"
+                                                     description="Number of epochs during which the pruning level is"
                                                                  " increased from `pruning_init` to `pruning_target`"
                                                                  " value."),
                     "filter_importance": with_attributes(STRING,
@@ -803,7 +803,7 @@ FILTER_PRUNING_SCHEMA = {
                                                                            " will be used for multiple pruning"
                                                                            " rates, the highest should be used as"
                                                                            "`max_pruning`. If model will be pruned"
-                                                                           " with one pruning rate, this target should"
+                                                                           " with one pruning level, this target should"
                                                                            "be used."),
                                 "random_seed": with_attributes(NUMBER,
                                                                description="Random seed for LeGR coefficients"

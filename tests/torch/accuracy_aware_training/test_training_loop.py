@@ -153,7 +153,7 @@ def test_adaptive_compression_training_loop_with_no_training(
         original_metric = 0.85
         if init_step:
             return original_metric
-            
+
         return original_metric - 0.04 * epoch
 
     input_sample_size = [1, 1, LeNet.INPUT_SIZE[-1], LeNet.INPUT_SIZE[-1]]
@@ -198,7 +198,7 @@ def test_adaptive_compression_training_loop_with_no_training(
                                         train_epoch_fn=train_fn,
                                         validate_fn=partial(mock_validate_fn, init_step=False),
                                         configure_optimizers_fn=configure_optimizers_fn)
-    assert len(acc_aware_training_loop.runner._best_checkpoints) == 0
+    assert len(acc_aware_training_loop.runner._best_checkpoints) == 0 # pylint: disable=protected-access
 
     possible_checkpoint_compression_rates = \
         acc_aware_training_loop.runner.get_compression_rates_with_positive_acc_budget()
@@ -351,7 +351,7 @@ def test_early_exit_with_mock_validation_and_no_improvement(
         original_metric = 0.85
         if init_step:
             return original_metric
-            
+
         return original_metric - 0.11 * (epoch+1)
 
     config = get_quantization_config_without_range_init(LeNet.INPUT_SIZE[-1])
@@ -388,13 +388,13 @@ def test_early_exit_with_mock_validation_and_no_improvement(
 
     early_stopping_training_loop = EarlyExitCompressionTrainingLoop(config, compression_ctrl,
                                                                     dump_checkpoints=False)
-    assert early_stopping_training_loop.runner._best_checkpoint is None
+    assert early_stopping_training_loop.runner._best_checkpoint is None # pylint: disable=protected-access
 
     model = early_stopping_training_loop.run(model,
                                              train_epoch_fn=train_fn,
                                              validate_fn=partial(mock_validate_fn, init_step=False),
                                              configure_optimizers_fn=configure_optimizers_fn)
-    assert early_stopping_training_loop.runner._best_checkpoint is not None
+    assert early_stopping_training_loop.runner._best_checkpoint is not None # pylint: disable=protected-access
 
 
 @pytest.mark.parametrize('aa_config', (

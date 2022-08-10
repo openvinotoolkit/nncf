@@ -392,7 +392,7 @@ def calculate_in_out_channels_in_uniformly_pruned_model(pruning_groups: List[Clu
     and updating corresponding input channels number in `pruning_groups_next_nodes` nodes.
 
     :param pruning_groups: A list of pruning groups.
-    :param pruning_level: Target pruning rate.
+    :param pruning_level: Target pruning level.
     :param full_input_channels:  A dictionary of input channels number in original model.
     :param full_output_channels: A dictionary of output channels number in original model.
     :param pruning_groups_next_nodes: A dictionary of next nodes of each pruning group.

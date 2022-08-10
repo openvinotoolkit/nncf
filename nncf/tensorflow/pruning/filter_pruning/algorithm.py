@@ -205,7 +205,7 @@ class FilterPruningController(BasePruningAlgoController):
     def set_pruning_level(self, pruning_level: float,
                           run_batchnorm_adaptation: bool = False):
         """
-        Setup pruning masks in accordance to provided pruning rate
+        Setup pruning masks in accordance to provided pruning level
         :param pruning_level: pruning ration
         :return:
         """
