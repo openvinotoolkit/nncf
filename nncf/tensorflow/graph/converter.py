@@ -42,7 +42,7 @@ from nncf.tensorflow.graph.metatypes.common import DEPTHWISE_CONV_LAYER_METATYPE
 from nncf.tensorflow.graph.metatypes.common import \
     LAYER_METATYPES_AGNOSTIC_TO_DATA_PRECISION_WITH_MULTIPLE_CONCAT_INPUTS
 from nncf.tensorflow.graph.metatypes.common import \
-    LAYER_METATYPES_AGNOSTIC_TO_DATA_PRECISION_WITH_MUTIPLE_OUTPUTS
+    LAYER_METATYPES_AGNOSTIC_TO_DATA_PRECISION_WITH_MULTIPLE_OUTPUTS
 from nncf.tensorflow.graph.metatypes.common import GENERAL_CONV_LAYER_METATYPES
 from nncf.tensorflow.graph.metatypes.common import LINEAR_LAYER_METATYPES
 from nncf.tensorflow.graph.metatypes.common import RESHAPE_METATYPES
@@ -576,7 +576,7 @@ class FunctionalConverter(BaseFunctionalSequentialConverter):
                 layer_attributes = _get_multiple_input_layer_attributes(layer)
             elif metatype in RESHAPE_METATYPES:
                 layer_attributes = _get_reshape_layer_attributes(layer)
-            elif metatype in LAYER_METATYPES_AGNOSTIC_TO_DATA_PRECISION_WITH_MUTIPLE_OUTPUTS:
+            elif metatype in LAYER_METATYPES_AGNOSTIC_TO_DATA_PRECISION_WITH_MULTIPLE_OUTPUTS:
                 layer_attributes = _get_multiple_output_layer_attributes(layer)
             else:
                 layer_attributes = None
@@ -782,5 +782,7 @@ def _get_multiple_output_layer_attributes(layer: tf.keras.layers.Layer) -> Multi
     input_shape = layer.input_shape
     output_shape = layer.output_shape
     chunks = len(output_shape)
+    if not isinstance(input_shape, list):
+        input_shape = [input_shape]
     axis = get_split_axis(input_shape, output_shape)
     return MultipleOutputLayerAttributes(chunks, axis)
