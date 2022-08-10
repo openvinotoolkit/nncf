@@ -75,12 +75,9 @@ class ONNXModelTransformer(ModelTransformer):
             :param model: *ONNX* model
             :param outputs: new outputs
             :return: modified model
-
-            The function removes unneeded files.
             """
             if outputs is None:
                 raise RuntimeError("Parameter outputs cannot be None.")
-            nodes = model.graph.node
             onnx_graph = ONNXGraph(model)
             var_out = []
             for out in outputs:
@@ -96,8 +93,12 @@ class ONNXModelTransformer(ModelTransformer):
                 value_info = onnx.helper.make_value_info(name=out, type_proto=type_proto)
                 var_out.append(value_info)
 
-            graph = onnx.helper.make_graph(nodes, model.graph.name, model.graph.input,
-                                           var_out, model.graph.initializer)
+            graph = onnx.helper.make_graph(nodes=model.graph.node,
+                                           name=model.graph.name,
+                                           inputs=model.graph.input,
+                                           outputs=var_out,
+                                           initializer=model.graph.initializer,
+                                           value_info=model.graph.value_info)
             onnx_model = onnx.helper.make_model(graph,
                                                 ir_version=model.ir_version,
                                                 producer_name=model.producer_name,
@@ -105,6 +106,7 @@ class ONNXModelTransformer(ModelTransformer):
                                                 domain=model.domain,
                                                 model_version=model.model_version,
                                                 doc_string=model.doc_string)
+            onnx_model.opset_import[0].version = model.opset_import[0].version
             if len(model.metadata_props) > 0:
                 values = {p.key: p.value for p in model.metadata_props}
                 onnx.helper.set_model_props(onnx_model, values)
@@ -129,6 +131,8 @@ class ONNXModelTransformer(ModelTransformer):
                 onnx_nodes_after_input_node = [edge.to_node for edge in nncf_graph.get_output_edges(nncf_node_name)]
                 for onnx_node_name in onnx_nodes_after_input_node:
                     input_edge_names.append(onnx_graph.get_node_edges(onnx_node_name.node_name)['input'][0])
+                extra_model_outputs.extend(input_edge_names)
+                input_edge_names = []
             else:
                 if transformation.target_point.type == TargetType.POST_LAYER_OPERATION:
                     edge_name = onnx_graph.get_node_edges(node_name)['output'][0]
