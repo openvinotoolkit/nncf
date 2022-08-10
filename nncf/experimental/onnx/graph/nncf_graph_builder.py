@@ -17,6 +17,7 @@ from onnx import ModelProto  # pylint: disable=no-name-in-module
 
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph.definitions import NNCFGraphNodeType
+from nncf.common.graph.operator_metatypes import UnknownMetatype
 from nncf.common.graph.layer_attributes import Dtype
 from nncf.common.graph.definitions import MODEL_INPUT_OP_NAME
 from nncf.common.graph.definitions import MODEL_OUTPUT_OP_NAME
@@ -50,6 +51,11 @@ class GraphConverter:
             metatype = ONNX_OPERATION_METATYPES.get_operator_metatype_by_op_name(node_type)
             if metatype == ONNXConstantMetatype:  # We don't need to quantize Constants
                 continue
+            if metatype == UnknownMetatype:
+                nncf_logger.warning(
+                    'The node with name {} with type {} was mapped to UnknownMetatype,'
+                    ' which means that there was not registered such NNCF metatype'.format(
+                        node_name, node_type))
             nncf_graph.add_nncf_node(node_name=node_name,
                                      node_type=node_type,
                                      node_metatype=metatype,

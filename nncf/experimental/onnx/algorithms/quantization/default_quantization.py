@@ -19,11 +19,13 @@ from nncf.experimental.onnx.graph.metatypes.onnx_ops import ONNXHardSigmoidMetat
 from nncf.experimental.onnx.graph.metatypes.onnx_ops import ONNXAveragePoolMetatype
 from nncf.experimental.onnx.graph.metatypes.onnx_ops import ONNXGlobalAveragePoolMetatype
 from nncf.experimental.onnx.graph.metatypes.onnx_ops import ONNXAddLayerMetatype
+from nncf.experimental.onnx.graph.metatypes.onnx_ops import ONNXSubMetatype
 from nncf.experimental.onnx.graph.metatypes.onnx_ops import ONNXMulLayerMetatype
 from nncf.experimental.onnx.graph.metatypes.onnx_ops import ONNXConcatLayerMetatype
 from nncf.experimental.onnx.graph.metatypes.onnx_ops import ONNXBatchNormMetatype
 from nncf.experimental.onnx.graph.metatypes.onnx_ops import ONNXResizeMetatype
 from nncf.experimental.onnx.graph.metatypes.onnx_ops import ONNXSoftmaxMetatype
+from nncf.experimental.onnx.graph.metatypes.onnx_ops import ONNXExpMetatype
 
 from nncf.common.graph.operator_metatypes import UnknownMetatype
 
@@ -34,6 +36,7 @@ DEFAULT_ONNX_QUANT_TRAIT_TO_OP_DICT = {
         ONNXAveragePoolMetatype,
         ONNXGlobalAveragePoolMetatype,
         ONNXAddLayerMetatype,
+        ONNXSubMetatype,
         ONNXMulLayerMetatype,
         ONNXBatchNormMetatype,
         ONNXHardSigmoidMetatype,
@@ -41,6 +44,7 @@ DEFAULT_ONNX_QUANT_TRAIT_TO_OP_DICT = {
     ],
     QuantizationTrait.NON_QUANTIZABLE: [ONNXSigmoidMetatype,
                                         ONNXSoftmaxMetatype,
+                                        ONNXExpMetatype,
                                         UnknownMetatype],
     QuantizationTrait.CONCAT: [ONNXConcatLayerMetatype],
     QuantizationTrait.OUTPUT_QUANTIZATION_AS_WEIGHTS: []

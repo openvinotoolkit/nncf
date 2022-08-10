@@ -50,6 +50,12 @@ class ONNXReluMetatype(ONNXOpMetatype):
 
 
 @ONNX_OPERATION_METATYPES.register()
+class ONNXLeakyReluMetatype(ONNXOpMetatype):
+    name = 'LeakyReluOp'
+    op_names = ['LeakyRelu']
+
+
+@ONNX_OPERATION_METATYPES.register()
 class ONNXSigmoidMetatype(ONNXOpMetatype):
     name = 'SigmoidOp'
     op_names = ['Sigmoid']
@@ -96,6 +102,12 @@ class ONNXAddLayerMetatype(ONNXOpMetatype):
 
 
 @ONNX_OPERATION_METATYPES.register()
+class ONNXSubMetatype(ONNXOpMetatype):
+    name = 'SubOp'
+    op_names = ['Sub']
+
+
+@ONNX_OPERATION_METATYPES.register()
 class ONNXMulLayerMetatype(ONNXOpMetatype):
     name = 'MulOp'
     op_names = ['Mul']
@@ -134,6 +146,72 @@ class ONNXReshapeMetatype(ONNXOpMetatype):
     name = 'ReshapeOp'
     op_names = ['Reshape']
     hw_config_names = [HWConfigOpName.RESHAPE]
+
+
+@ONNX_OPERATION_METATYPES.register()
+class ONNXConstantOfShapeMetatype(ONNXOpMetatype):
+    name = 'ConstantOfShapeOp'
+    op_names = ['ConstantOfShape']
+
+
+@ONNX_OPERATION_METATYPES.register()
+class ONNXShapeMetatype(ONNXOpMetatype):
+    name = 'ShapeOp'
+    op_names = ['Shape']
+
+
+@ONNX_OPERATION_METATYPES.register()
+class ONNXGatherMetatype(ONNXOpMetatype):
+    name = 'GatherOp'
+    op_names = ['Gather']
+
+
+@ONNX_OPERATION_METATYPES.register()
+class ONNXUnsqueezeMetatype(ONNXOpMetatype):
+    name = 'UnsqueezeOp'
+    op_names = ['Unsqueeze']
+
+
+@ONNX_OPERATION_METATYPES.register()
+class ONNXSqueezeMetatype(ONNXOpMetatype):
+    name = 'SqueezeOp'
+    op_names = ['Squeeze']
+
+
+@ONNX_OPERATION_METATYPES.register()
+class ONNXNonMaxSuppressionMetatype(ONNXOpMetatype):
+    name = 'NonMaxSuppressionOp'
+    op_names = ['NonMaxSuppression']
+
+
+@ONNX_OPERATION_METATYPES.register()
+class ONNXCastMetatype(ONNXOpMetatype):
+    name = 'CastOp'
+    op_names = ['Cast']
+
+
+@ONNX_OPERATION_METATYPES.register()
+class ONNXReduceMinMetatype(ONNXOpMetatype):
+    name = 'ReduceMinOp'
+    op_names = ['ReduceMin']
+
+
+@ONNX_OPERATION_METATYPES.register()
+class ONNXTopKMetatype(ONNXOpMetatype):
+    name = 'TopKOp'
+    op_names = ['TopK']
+
+
+@ONNX_OPERATION_METATYPES.register()
+class ONNXSliceMetatype(ONNXOpMetatype):
+    name = 'SliceOp'
+    op_names = ['Slice']
+
+
+@ONNX_OPERATION_METATYPES.register()
+class ONNXExpMetatype(ONNXOpMetatype):
+    name = 'ExpOp'
+    op_names = ['Exp']
 
 
 @ONNX_OPERATION_METATYPES.register()
