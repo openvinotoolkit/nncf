@@ -16,7 +16,7 @@ from nncf.common.graph.layer_attributes import MultipleInputLayerAttributes
 from nncf.common.graph.layer_attributes import GroupNormLayerAttributes
 from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
 from nncf.common.graph.layer_attributes import LinearLayerAttributes
-from nncf.common.graph.layer_attributes import SplitLayerAttributes
+from nncf.common.graph.layer_attributes import MultipleOutputLayerAttributes
 from nncf.common.pruning.operations import BasePruningOp
 from nncf.common.pruning.mask_propagation import MaskPropagationAlgorithm
 
@@ -458,7 +458,7 @@ SPLIT_TEST_CASES = [
 @pytest.mark.parametrize(('node_type', 'chunks', 'dim'), SPLIT_TEST_CASES)
 def test_split_accept_pruned_input(node_type, chunks, dim):
     node_name = 'dummy_split'
-    layer_attributes = SplitLayerAttributes(chunks, dim)
+    layer_attributes = MultipleOutputLayerAttributes(chunks, dim)
     graph = NNCFGraph()
     node = graph.add_nncf_node(node_name, node_type, dummy_types.DummySplitMetatype, layer_attributes=layer_attributes)
 
@@ -470,7 +470,7 @@ def test_split_accept_pruned_input(node_type, chunks, dim):
 @pytest.mark.parametrize('right_branch_output_channels', [5, 5])
 def test_split_metatype_mask_prop(empty_mask_left_branch, empty_mask_right_branch, right_branch_output_channels):
     node_name = 'dummy_split'
-    layer_attributes = SplitLayerAttributes(chunks=2, dim=0)
+    layer_attributes = MultipleOutputLayerAttributes(chunks=2, dim=0)
 
     graph = NNCFGraph()
     conv_op_0 = graph.add_nncf_node('conv_op_0', 'conv', dummy_types.DummyConvMetatype)

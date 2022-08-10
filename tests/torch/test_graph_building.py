@@ -38,7 +38,7 @@ from nncf.torch.graph.graph_builder import GraphBuilder
 from nncf.torch.graph.operator_metatypes import PTCatMetatype, PTSplitMetatype
 from nncf.torch.graph.operator_metatypes import PTReshapeMetatype
 from nncf.common.graph.layer_attributes import ReshapeLayerAttributes
-from nncf.common.graph.layer_attributes import SplitLayerAttributes
+from nncf.common.graph.layer_attributes import MultipleOutputLayerAttributes
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
 from tests.torch.helpers import register_bn_adaptation_init_args
 from tests.torch.test_compressed_graph import get_basic_quantization_config
@@ -310,7 +310,7 @@ def test_split_attributes(input_shape):
     for node in graph.get_all_nodes():
         if node.metatype is PTSplitMetatype:
             assert node.node_name in chunk_nodes_with_attributes
-            if isinstance(node.layer_attributes, SplitLayerAttributes):
+            if isinstance(node.layer_attributes, MultipleOutputLayerAttributes):
                 ref_attrs = chunk_nodes_with_attributes[node.node_name]
                 assert node.layer_attributes.chunks == ref_attrs['chunks']
                 assert node.layer_attributes.dim == ref_attrs['dim']

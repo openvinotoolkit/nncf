@@ -188,14 +188,19 @@ class ReshapeLayerAttributes(BaseLayerAttributes):
         self.input_shape = input_shape
         self.output_shape = output_shape
 
-class SplitLayerAttributes(BaseLayerAttributes):
+
+class MultipleOutputLayerAttributes(BaseLayerAttributes):
     """
-    This class stores attributes of split/chunk modules/layers
-    that are useful for some algorithms.
+    Represents a layer with multiple outputs.
     """
 
     def __init__(self,
                  chunks: Union[int, List],
-                 dim: int=0):
+                 axis: int):
         self.chunks = chunks
-        self.dim = dim
+        self.axis = axis
+
+    def __eq__(self, other: Any):
+        return isinstance(other, MultipleOutputLayerAttributes) \
+               and self.chunks == other.chunks \
+               and self.axis == other.axis

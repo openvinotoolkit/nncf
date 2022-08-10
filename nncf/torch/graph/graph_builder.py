@@ -24,7 +24,7 @@ from nncf.common.graph import LayerName
 from nncf.common.graph.layer_attributes import GenericWeightedLayerAttributes
 from nncf.common.graph.layer_attributes import MultipleInputLayerAttributes
 from nncf.common.graph.layer_attributes import ReshapeLayerAttributes
-from nncf.common.graph.layer_attributes import SplitLayerAttributes
+from nncf.common.graph.layer_attributes import MultipleOutputLayerAttributes
 from nncf.common.graph.operator_metatypes import UnknownMetatype
 from nncf.common.graph.utils import get_concat_axis
 from nncf.common.graph.utils import get_split_axis
@@ -138,7 +138,7 @@ class GraphConverter:
                     output_shapes = [edge.tensor_shape for edge in output_edges]
                     axis = get_split_axis(input_shapes, output_shapes)
                     chunks = len(output_edges)
-                    layer_attributes = SplitLayerAttributes(chunks, axis)
+                    layer_attributes = MultipleOutputLayerAttributes(chunks, axis)
                     node.layer_attributes = layer_attributes
                     
         return nncf_graph
