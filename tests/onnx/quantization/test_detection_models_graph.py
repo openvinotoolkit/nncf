@@ -24,16 +24,19 @@ from tests.onnx.quantization.common import compare_nncf_graph
 from tests.onnx.quantization.common import infer_model
 
 MODELS_NAME = [
+    'ssd-12',
     'yolov2-coco-9',
     'tiny-yolov2',
 ]
 
 PATH_REF_GRAPHS = [
+    'ssd-12.dot',
     'yolov2-coco-9.dot',
     'tiny-yolov2.dot',
 ]
 
 INPUT_SHAPES = [
+    [1, 3, 1200, 1200],
     [1, 3, 416, 416],
     [1, 3, 416, 416],
 ]
@@ -49,5 +52,5 @@ def test_min_max_quantization_graph(tmp_path, model_name, path_ref_graph, input_
 
     original_model = onnx.load(onnx_model_path)
     quantized_model = min_max_quantize_model(input_shape, original_model)
-    compare_nncf_graph(quantized_model, path_ref_graph)
+    compare_nncf_graph(quantized_model, path_ref_graph, True)
     infer_model(input_shape, quantized_model)
