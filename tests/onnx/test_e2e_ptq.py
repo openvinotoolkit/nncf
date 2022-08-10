@@ -51,10 +51,7 @@ XFAIL_MODELS = {"ssd_mobilenet_v1_12"}
 
 XFAIL_QUANTIZED_MODELS = {
     "shufflenet-9",
-    "shufflenet-v2-12",
-    "tiny-yolov3-11",
-    "yolov3-12",
-    "yolov4",
+    "shufflenet-v2-12"
 }
 
 
