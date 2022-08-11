@@ -66,7 +66,7 @@ def test_split():
     tensor_data = [0., 1., 2., 3.]
     chunks = 2
     tensor = PTNNCFTensor(torch.tensor(tensor_data))
-    split_tensors = PTNNCFPruningTensorProcessor.split(tensor, chunks=chunks, dim=0)
+    split_tensors = PTNNCFPruningTensorProcessor.split(tensor, chunks=chunks, axis=0)
     ref_split = torch.tensor(tensor_data).chunk(chunks)
     assert torch.all(split_tensors[0].tensor == ref_split[0])
     assert torch.all(split_tensors[1].tensor == ref_split[1])

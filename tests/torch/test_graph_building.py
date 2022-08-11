@@ -313,7 +313,7 @@ def test_split_attributes(input_shape):
             if isinstance(node.layer_attributes, MultipleOutputLayerAttributes):
                 ref_attrs = chunk_nodes_with_attributes[node.node_name]
                 assert node.layer_attributes.chunks == ref_attrs['chunks']
-                assert node.layer_attributes.dim == ref_attrs['dim']
+                assert node.layer_attributes.axis == ref_attrs['axis']
             else:
                 assert node.layer_attributes is None
                 assert chunk_nodes_with_attributes[node.node_name] is None
