@@ -254,6 +254,7 @@ class PruningAnalysisReason(Enum):
     CLOSING_CONV_MISSING = 'closing convolution missing'
     IN_GROUP_OF_UNPRUNABLE = 'is in the group with non prunable layers'
     BATCHED_LINEAR = 'linear node has bathced dimension'
+    INCOMPATIBLE_DIMS_IN_CLUSTER = 'channels in cluster nodes has different values'
 
     @classmethod
     def message(cls, node_name: str, decision: Optional['PruningAnalysisDecision']) -> str:

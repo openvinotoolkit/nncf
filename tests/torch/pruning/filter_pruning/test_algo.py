@@ -506,6 +506,24 @@ PruningTestBatchedLinearRef = { "next_nodes": {},
                             'PruningTestBatchedLinear/NNCFLinear[last_linear]/linear_0': 1}
 }
 
+PruningTestModelDiffChInPruningClusterRef = {
+    "next_nodes": {
+        0: [ShapePruninigProcessor.NextNode('PruningTestModelDiffChInPruningCluster/NNCFConv2d[conv1]/conv2d_0', 1),
+            ShapePruninigProcessor.NextNode('PruningTestModelDiffChInPruningCluster/NNCFLinear[linear1]/linear_0', 49)],
+    },
+    "num_of_sparse_by_node": {'PruningTestModelDiffChInPruningCluster/NNCFConv2d[first_conv]/conv2d_0': 8},
+
+    "pruned_in_channels": {'PruningTestModelDiffChInPruningCluster/NNCFConv2d[first_conv]/conv2d_0': 1,
+                           'PruningTestModelDiffChInPruningCluster/NNCFConv2d[conv1]/conv2d_0': 8,
+                           'PruningTestModelDiffChInPruningCluster/NNCFLinear[linear1]/linear_0': 392,
+                           'PruningTestModelDiffChInPruningCluster/NNCFLinear[last_linear]/linear_0': 1152},
+    "pruned_out_channels": {'PruningTestModelDiffChInPruningCluster/NNCFConv2d[first_conv]/conv2d_0': 8,
+                           'PruningTestModelDiffChInPruningCluster/NNCFConv2d[conv1]/conv2d_0': 32,
+                           'PruningTestModelDiffChInPruningCluster/NNCFLinear[linear1]/linear_0': 1152,
+                           'PruningTestModelDiffChInPruningCluster/NNCFLinear[last_linear]/linear_0': 1}
+
+}
+
 @pytest.mark.parametrize(('model_module', 'all_weights', 'pruning_flops_target', 'ref_flops',
                           'ref_params_num', 'refs'),
                          [
@@ -513,14 +531,15 @@ PruningTestBatchedLinearRef = { "next_nodes": {},
                             #(partial(BigPruningTestModel, dim=2), True, None, 1146640, 83768, BigPruningTestModelNextNoderRef),
                             #(partial(BigPruningTestModel, dim=2), False, 0.5, 1236160, 169184, BigPruningTestModelNextNoderRef),
                             #(partial(BigPruningTestModel, dim=2), True, 0.5, 1328162, 104833, BigPruningTestModelNextNoderRef),
-                            #(PruningTestModelBroadcastedLinear, False, 0.3, 35840, 8848, PruningTestModelBroadcastedLinearRefs),
-                            #(PruningTestModelConcatWithLinear, False, 0.3, 79168, 2208, PruningTestModelConcatWithLinearRefs),
-                            #(PruningTestModelBroadcastedLinearWithConcat, False, 0.3, 53248, 9488, PruningTestModelBroadcastedLinearWithConcatRefs),
+                            (PruningTestModelBroadcastedLinear, False, 0.3, 35840, 8848, PruningTestModelBroadcastedLinearRefs),
+                            (PruningTestModelConcatWithLinear, False, 0.3, 79168, 2208, PruningTestModelConcatWithLinearRefs),
+                            (PruningTestModelBroadcastedLinearWithConcat, False, 0.3, 53248, 9488, PruningTestModelBroadcastedLinearWithConcatRefs),
                             (PruningTestBatchedLinear, False, 0.0, 77824, 4256, PruningTestBatchedLinearRef),
+                            (PruningTestModelDiffChInPruningCluster, False, 0.3, 982336, 453792, PruningTestModelDiffChInPruningClusterRef),
 
                          ]
                          )
-def test_flops_calclucaltor(model_module, all_weights, pruning_flops_target, ref_flops, ref_params_num, refs):
+def test_flops_calculator(model_module, all_weights, pruning_flops_target, ref_flops, ref_params_num, refs):
     config = get_basic_pruning_config(input_sample_size=[1, 1, 8, 8])
     config['compression']['algorithm'] = 'filter_pruning'
     config['compression']['params']['all_weights'] = all_weights

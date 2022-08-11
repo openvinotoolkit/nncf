@@ -182,10 +182,17 @@ class PruningTestModelDiffChInPruningCluster(nn.Module):
     def __init__(self):
         super().__init__()
         # input_shape=[1, 1, 8, 8]
-        self.first_conv = create_conv(1, 8, 2, 1, -2)
-        self.conv1 = create_conv(8, 16, 2, 1, -2)
-        self.linear1 = nn.Linear(8 * 7 * 7, 16 * 6 * 6)
-        self.last_linear = nn.Linear(16 * 6 * 6, 1)
+        self.first_conv = create_conv(1, 16, 2, 1, -2)
+        for i in range(16):
+            self.first_conv.weight.data[i] += i
+        self.conv1 = create_conv(16, 32, 2, 1, -2)
+        for i in range(32):
+            self.conv1.weight.data[i] += i
+        self.linear1 = nn.Linear(16 * 7 * 7, 32 * 6 * 6)
+        for i in range(32 * 6 * 6):
+            self.linear1.weight.data[i] += i
+        self.last_linear = nn.Linear(32 * 6 * 6, 1)
+        self.last_linear.weight.data[0] = 1
 
     def forward(self, x):
         x = self.first_conv(x)

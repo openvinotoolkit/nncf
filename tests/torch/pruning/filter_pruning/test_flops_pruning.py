@@ -88,13 +88,19 @@ def test_init_params_for_flops_calculation(model, ref_params):
 @pytest.mark.parametrize(
     ("model", "all_weights", "pruning_flops_target", "ref_full_flops", "ref_current_flops", "ref_sizes"),
     (
-        (PruningTestWideModelConcat, False, 0.4, 671154176, 399057920, [328, 656, 656]),
-        (PruningTestWideModelEltwise, False, 0.4, 268500992, 160773120, [360, 720, 720]),
-        (PruningTestWideModelConcat, True, 0.4, 671154176, 402513920, [380, 647, 648]),
-        (PruningTestWideModelEltwise, True, 0.4, 268500992, 161043328, [321, 755, 755]),
-        (PruningTestModelSharedConvs, True, 0.4, 461438976, 276594768, [361, 809]),
-        (PruningTestModelSharedConvs, False, 0.4, 461438976, 275300352, [384, 768]),
-        (GroupedConvolutionModel, False, 0.0, 11243520, 11243520, [])
+        #(PruningTestWideModelConcat, False, 0.4, 671154176, 399057920, [328, 656, 656]),
+        #(PruningTestWideModelEltwise, False, 0.4, 268500992, 160773120, [360, 720, 720]),
+        #(PruningTestWideModelConcat, True, 0.4, 671154176, 402513920, [380, 647, 648]),
+        #(PruningTestWideModelEltwise, True, 0.4, 268500992, 161043328, [321, 755, 755]),
+        #(PruningTestModelSharedConvs, True, 0.4, 461438976, 276594768, [361, 809]),
+        #(PruningTestModelSharedConvs, False, 0.4, 461438976, 275300352, [384, 768]),
+        #(GroupedConvolutionModel, False, 0.0, 11243520, 11243520, []),
+        #{(PruningTestModelConcatWithLinear, False, 0.1, 11243520, 11243520, []),
+        #(partial(MobilenetV3BlockSEReshape, mode='linear'), False, 0.1, 11243520, 11243520, []),
+        #(PruningTestModelBroadcastedLinear, False, 0.1, 11243520, 11243520, []),
+        (PruningTestModelBroadcastedLinear, False, 0.1, 11243520, 11243520, []),
+        (PruningTestModelDiffChInPruningCluster, False, 0.1, 11243520, 11243520, []),
+            
     )
 )
 def test_flops_calulation_for_spec_layers(model, all_weights, pruning_flops_target,
