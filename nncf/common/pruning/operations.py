@@ -233,9 +233,7 @@ class SplitPruningOp(BasePruningOp):
         """
         Generate output mask
         """
-        input_edges = graph.get_input_edges(node)
-        previous_nodes = [edge.from_node for edge in input_edges]
-        input_mask = previous_nodes[0].data['output_mask']
+        input_mask = get_input_masks(node, graph)[0]
         if not input_mask:
             return None
 
