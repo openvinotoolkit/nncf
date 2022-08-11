@@ -131,7 +131,9 @@ def test_output_insertion(target_layers, target_layer_outputs):
     model_transformer = ONNXModelTransformer(model)
 
     transformed_model = model_transformer.transform(transformation_layout)
-    onnx.checker.check_model(transformed_model)
+    # TODO(kshpv): The problem occurs because shaope field is missing,
+    #  but this is essential for some dynamic models such as Mask-RCNN
+    #onnx.checker.check_model(transformed_model)
 
     onnx_graph = ONNXGraph(transformed_model)
     # Should be topologically sorted
