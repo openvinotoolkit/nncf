@@ -20,7 +20,6 @@ from nncf.common.pruning.utils import is_grouped_conv
 from nncf.common.pruning.utils import get_input_masks
 from nncf.common.pruning.utils import is_prunable_depthwise_conv
 from nncf.common.pruning.utils import identity_mask_propagation
-from nncf.common.pruning.utils import get_input_channels
 from nncf.common.tensor import NNCFTensor
 from nncf.common.graph.layer_attributes import GroupNormLayerAttributes
 
@@ -237,22 +236,13 @@ class SplitPruningOp(BasePruningOp):
         input_edges = graph.get_input_edges(node)
         previous_nodes = [edge.from_node for edge in input_edges]
         input_mask = previous_nodes[0].data['output_mask']
-
-        output_edges = graph.get_output_edges(node)
-        next_nodes = [edge.to_node for edge in output_edges]
-        output_shapes = [get_input_channels(node) for node in next_nodes]
+        if not input_mask:
+            return None
 
         chunk_size = node.layer_attributes.chunks
         chunk_axis = node.layer_attributes.axis
 
         result_masks = tensor_processor.split(input_mask, chunk_size, chunk_axis)
-        if len(set(output_shapes)) == 1:
-            for i, result_mask in enumerate(result_masks):
-                next_nodes[i].data['input_mask'] = result_mask
-        else:
-            for i, result_mask in enumerate(result_masks):
-                idx = output_shapes.index(result_mask.shape[0])
-                next_nodes[idx].data['input_mask'] = result_mask
         return result_masks
 
     @classmethod
