@@ -203,17 +203,7 @@ class ONNXGraph:
                 return self.get_tensor_shape(tensor)
         raise RuntimeError('There is no edge with the name {}'.format(edge_name))
 
-    def get_edge_dtype_name(self, edge_name: str) -> str:
-        """
-        Returns the data name of the edge with the name 'edge_name'.
-        """
-        for tensor in self.activations_tensors:
-            if tensor.name == edge_name:
-                elem_type = tensor.type.tensor_type.elem_type
-                return onnx.TensorProto.DataType.Name(elem_type)
-        raise RuntimeError('There is no edge with the name {}'.format(edge_name))
-
-    def get_edge_dtype(self, edge_name: str):
+    def get_edge_dtype(self, edge_name: str) -> int:
         """
         Returns the data type of the edge with the name 'edge_name'.
         """
@@ -221,3 +211,9 @@ class ONNXGraph:
             if tensor.name == edge_name:
                 return tensor.type.tensor_type.elem_type
         raise RuntimeError('There is no edge with the name {}'.format(edge_name))
+
+    def get_edge_dtype_name(self, edge_name: str) -> str:
+        """
+        Returns the name of datatype of the edge with the name 'edge_name'.
+        """
+        return onnx.TensorProto.DataType.Name(self.get_edge_dtype(edge_name))
