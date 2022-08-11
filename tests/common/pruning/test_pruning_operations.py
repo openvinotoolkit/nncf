@@ -2,7 +2,6 @@ import numpy as np
 import pytest
 
 from functools import partial
-from nncf.common.graph import layer_attributes
 
 from nncf.common.pruning.tensor_processor import NNCFPruningBaseTensorProcessor
 from tests.common.pruning import dummy_types
@@ -475,25 +474,25 @@ def test_split_metatype_mask_prop(empty_mask_left_branch, empty_mask_right_branc
     graph = NNCFGraph()
     conv_op_0 = graph.add_nncf_node('conv_op_0', 'conv', dummy_types.DummyConvMetatype)
     split_node = graph.add_nncf_node(node_name, 'chunk', dummy_types.DummySplitMetatype, layer_attributes=layer_attributes)
-    conv_op_1 = graph.add_nncf_node('conv_op_1', 'conv', dummy_types.DummyConvMetatype)
-    conv_op_2 = graph.add_nncf_node('conv_op_2', 'conv', dummy_types.DummyConvMetatype)
+    conv_op_1 = graph.add_nncf_node('conv_op_1', 'conv', dummy_types.DummyConvMetatype, layer_attributes=ConvolutionLayerAttributes)
+    conv_op_2 = graph.add_nncf_node('conv_op_2', 'conv', dummy_types.DummyConvMetatype, layer_attributes=ConvolutionLayerAttributes)
 
     add_node = partial(graph.add_edge_between_nncf_nodes,
                        input_port_id=0,
                        output_port_id=0,
                        dtype=Dtype.FLOAT)
     
-    # dummy_op -> split_node
+    # conv_op_0 -> split_node
     add_node(from_node_id=conv_op_0.node_id,
              to_node_id=split_node.node_id,
              tensor_shape=[10] * 4)
 
-    # split_node -> conv_op_0
+    # split_node -> conv_op_1
     add_node(from_node_id=split_node.node_id,
              to_node_id=conv_op_1.node_id,
              tensor_shape=[10, 5, 10, 10])
 
-    # split_node -> conv_op_1
+    # split_node -> conv_op_2
     add_node(from_node_id=split_node.node_id,
              to_node_id=conv_op_2.node_id,
              tensor_shape=[10, 5, 10, 10])

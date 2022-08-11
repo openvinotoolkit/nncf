@@ -79,17 +79,13 @@ def get_split_axis(input_shapes: List[List[int]], output_shapes: List[List[int]]
     :returns: Split/Chunk axis of given split/chunk node.
     """
     axis = None
-    none_dim = None
     for idx, (dim_in, dim_out) in enumerate(zip(input_shapes[0], output_shapes[0])):
         if dim_in != dim_out:
             axis = idx
             break
 
     if axis is None:
-        if none_dim is None:
-            axis = -1
-            logger.warning('Identity split/concat node detected')
-        else:
-            axis = none_dim
+        axis = -1
+        logger.warning('Identity split/concat node detected')
 
     return axis
