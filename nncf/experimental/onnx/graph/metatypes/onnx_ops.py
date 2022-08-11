@@ -37,6 +37,13 @@ class ONNXConvolutionMetatype(ONNXOpMetatype):
 
 
 @ONNX_OPERATION_METATYPES.register()
+class ONNXConvolutionTransposeMetatype(ONNXOpMetatype):
+    name = 'ConvTransposeOp'
+    op_names = ['ConvTranspose']
+    hw_config_names = [HWConfigOpName.CONVOLUTION]
+
+
+@ONNX_OPERATION_METATYPES.register()
 class ONNXLinearMetatype(ONNXOpMetatype):
     name = 'LinearOp'
     op_names = ['Gemm']
@@ -163,9 +170,11 @@ class ONNXPadMetatype(ONNXOpMetatype):
 
 
 GENERAL_WEIGHT_LAYER_METATYPES = [ONNXConvolutionMetatype,
+                                  ONNXConvolutionTransposeMetatype,
                                   ONNXLinearMetatype]
 
 LAYERS_WITH_BIAS_METATYPES = [ONNXConvolutionMetatype,
+                              ONNXConvolutionTransposeMetatype,
                               ONNXLinearMetatype,
                               ONNXBatchNormMetatype]
 

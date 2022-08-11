@@ -81,15 +81,9 @@ class ONNXModelTransformer(ModelTransformer):
             onnx_graph = ONNXGraph(model)
             var_out = []
             for out in outputs:
-                try:
-                    shape = onnx_graph.get_edge_shape(out)
-                except RuntimeError as err:
-                    nncf_logger.error(err)
-                    nncf_logger.error('The default tensor shape will be set.')
-                    shape = None
-
+                # shape should be None; if you place not None, some models will have inference problems (e.g. Mask RCNN)
                 type_proto = onnx.helper.make_tensor_type_proto(onnx_graph.get_edge_dtype(out),
-                                                                shape)
+                                                                shape=None)
                 value_info = onnx.helper.make_value_info(name=out, type_proto=type_proto)
                 var_out.append(value_info)
 
@@ -113,14 +107,12 @@ class ONNXModelTransformer(ModelTransformer):
             if len(onnx_model.graph.input) != len(model.graph.input):
                 raise RuntimeError("Input mismatch {} != {}".format(
                     len(onnx_model.input), len(model.input)))
-
             # fix opset import
             del onnx_model.opset_import[:]
             for oimp in model.opset_import:
                 op_set = onnx_model.opset_import.add()
                 op_set.domain = oimp.domain
                 op_set.version = oimp.version
-
             return onnx_model
 
         onnx_graph = ONNXGraph(self.transformed_model)
