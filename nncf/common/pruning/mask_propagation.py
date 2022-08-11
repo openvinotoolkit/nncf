@@ -20,6 +20,7 @@ from nncf.common.pruning.utils import get_input_masks
 from nncf.common.pruning.utils import get_input_channels
 from nncf.common.pruning.utils import get_output_channels
 from nncf.common.pruning.utils import is_grouped_conv
+from nncf.common.pruning.utils import merge_multiple_input_masks
 from nncf.common.pruning.utils import PruningAnalysisDecision
 from nncf.common.pruning.utils import PruningAnalysisReason
 from nncf.common.pruning.symbolic_mask import SymbolicMask
@@ -109,6 +110,10 @@ class MaskPropagationAlgorithm:
                 if any(input_masks):
                     assert len(input_masks) == 1
                     input_mask = input_masks[0] # type: SymbolicMask
+
+                    # merge input_mask if multiple input masks existed
+                    if isinstance(input_mask, List):
+                        input_mask = merge_multiple_input_masks(input_mask)
 
                     for producer in input_mask.mask_producers:
                         previously_dims_equal = True if can_prune_by_dim[producer] is None \
