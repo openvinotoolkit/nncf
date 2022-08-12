@@ -6,6 +6,7 @@ pytest-dependency
 yattag>=1.14.0
 prettytable>=2.0.0
 pydot
+tensorflow_hub
 
 # Ticket 69520
 pyparsing<3.0
