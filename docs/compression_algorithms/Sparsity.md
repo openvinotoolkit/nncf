@@ -10,8 +10,10 @@ $ \sum\_{i=0}{|\theta|} $
 
 $\sum_{n=1}^{\infty}$
 
+$\sum\limits_{i=0}^n f(x)$
 
-$||\theta||\_0   =   \lbrack \theta\_i = 0 \rbrack$
+
+$||\theta||\_0 =   \lbrack \theta\_i = 0 \rbrack$
 
 We then reparametrize the network's weights as follows:
 
