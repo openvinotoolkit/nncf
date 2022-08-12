@@ -138,6 +138,7 @@ $input\\_range^{*} = input\\_range$
 For symmetric:
 
 $input\\_low^{*} = 0$
+
 $input\\_range^{*} = scale$
 
 ---
@@ -169,7 +170,6 @@ calculated by multiplying the average Hessian trace with the L2 norm of quantiza
 
 $\overline{Tr}(H_{i}) * \left \| Q(W_{i}) - W_{i} \right \|^2_2$
 
-
 The sum of the sensitivities for each layer forms a metric which serves as a proxy to the accuracy of the compressed
 model: the lower the metric, the more accurate should be the corresponding mixed precision model on the validation
 dataset.
@@ -196,14 +196,14 @@ $Tr(H) = \mathbb{E}[v^T H v]$
 The randomized algorithm solves the expectation by Monte Carlo using sampling of v from its distribution, evaluating
 the quadratic term, and averaging:
 
-Tr(H) \approx \frac{1}{m}\sum_{i=1}^{m}[v_i^T H v_i]$
+$Tr(H) \approx \frac{1}{m}\sum_{i=1}^{m}[v_i^T H v_i]$
 
 Evaluation of the quadratic term happens by computing ![Hv](https://latex.codecogs.com/png.latex?Hv) - the result
 of multiplication of the Hessian matrix with a given random vector v, without the explicit formation of the Hessian operator.
 For gradient of the loss with respect to the i-th block ![g_i](https://latex.codecogs.com/png.latex?g_i) and for
 a random vector v, which is independent of ![W_i](https://latex.codecogs.com/png.latex?W_i), we have the equation:
 
-\frac{\partial(g_i^T v)}{\partial  W_i} = H_i v$
+$\frac{\partial(g_i^T v)}{\partial  W_i} = H_i v$
 
 where $H_i$ is the Hessian matrix of loss with respect to
 $W_i$. Hence $Hv$ can be
