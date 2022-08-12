@@ -6,9 +6,9 @@ so that zero values are randomly distributed inside the tensor. Most of the spar
 
 This section describes the Regularization-Based Sparsity (RB-Sparsity) algorithm implemented in this framework. The method is based on $L_0$-regularization, with which parameters of the model tend to zero:
 
-$||\theta||_0 = \sum\_{i=0}$
+$||\theta||_0 = \sum\_{i=0}^{|\theta|} \lbrack \theta\_i = 0 \rbrack$
 
-^{|\theta|} \lbrack \theta_i = 0 \rbrack$
+
 
 We then reparametrize the network's weights as follows:
 
