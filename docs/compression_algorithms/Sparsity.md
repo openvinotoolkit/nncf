@@ -16,12 +16,7 @@ Here, $\mathcal{B}(p_i)$ is the Bernoulli distribution, $\epsilon_i$ may be inte
 
 
 
-$L_{sparse} = \mathbb{E}\_{\epsilon \sim P_{\epsilon}} $
-
-
-
-$\lbrack \frac{\sum\limits_{i=0}^{|\theta|} \epsilon_i}{|\theta|} - level \rbrack ^2$
-
+$L_{sparse} = \mathbb{E}\_{\epsilon \sim P_{\epsilon}} \lbrack \frac{\sum\limits_{i=0}^{|\theta|} \epsilon_i}{|\theta|} - level \rbrack ^2 $
 
 
 
