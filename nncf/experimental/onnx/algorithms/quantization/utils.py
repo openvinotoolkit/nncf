@@ -11,7 +11,6 @@
  limitations under the License.
 """
 
-
 from typing import Union
 from typing import List
 
@@ -21,7 +20,7 @@ import numpy as np
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizationMode
 
-from nncf.experimental.onnx.statistics.collectors import ONNXMinMaxStatisticCollector
+from nncf.experimental.onnx.statistics.collectors import ONNXMinMaxTensorStatistic
 
 
 class QuantizerLayerParameters:
@@ -68,14 +67,13 @@ def calculate_weight_quantizer_parameters(weight_tensor: np.ndarray, quantizer_c
     return QuantizerLayerParameters(scales.tolist(), zero_points.tolist(), mode)
 
 
-def calculate_activation_quantizer_parameters(layer_statistics: ONNXMinMaxStatisticCollector,
+def calculate_activation_quantizer_parameters(statistics: ONNXMinMaxTensorStatistic,
                                               quantizer_config: QuantizerConfig) -> QuantizerLayerParameters:
     """
     Calculates Quantizer/Dequantizer layer attributes for activation quantizer such as scale, zero_points and
     quantization mode: symmetric, asymmetric.
     """
     num_bits = quantizer_config.num_bits
-    statistics = layer_statistics.get_statistics()
     input_low = statistics.min_values
     input_high = statistics.max_values
     if input_low < 0:

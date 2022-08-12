@@ -67,7 +67,7 @@ class MinMaxQuantizationParameters(AlgorithmParameters):
         self.number_samples = number_samples
         self.target_device = target_device
         self.range_type = range_type
-        self.ignored_scopes = ignored_scopes
+        self.ignored_scopes = [] if ignored_scopes is None else ignored_scopes
         self.quantize_outputs = quatize_outputs
 
     def to_json(self) -> Dict[str, Union[str, float, int]]:

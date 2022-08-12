@@ -17,7 +17,10 @@ import onnx
 # pylint: disable=no-member
 import numpy as np
 
+from nncf.experimental.onnx.graph.transformations.commands import ONNXTargetPoint
+from nncf.common.graph.transformations.commands import TargetType
 from nncf.experimental.onnx.graph.transformations.commands import ONNXQuantizerInsertionCommand
+from nncf.experimental.onnx.graph.transformations.commands import ONNXOutputInsertionCommand
 from nncf.experimental.onnx.algorithms.quantization.utils import QuantizerLayerParameters
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.experimental.onnx.graph.model_transformer import ONNXModelTransformer
@@ -26,7 +29,7 @@ from nncf.experimental.onnx.graph.onnx_graph import ONNXGraph
 
 from tests.onnx.models import LinearModel
 
-TARGET_LAYERS = [('Non_Existing_Edge',), ('Conv1_Y',), ('Conv1_Y', 'BN1_Y', 'ReLU1_Y')]
+TARGET_LAYERS = [('Non_Existing_Edge',), ('Conv1',), ('Conv1', 'BN1', 'ReLU1')]
 SHOULD_RAISE_EXCEPTION = [True, False, False]
 QUANTIZER_NUMBER = [None, 1, 3]
 
@@ -38,7 +41,8 @@ def test_quantizer_insertion(target_layers, should_raise, quantizer_number):
     transformation_layout = ONNXTransformationLayout()
 
     for target_layer in target_layers:
-        command = ONNXQuantizerInsertionCommand(target_layer,
+        target_point = ONNXTargetPoint(TargetType.POST_LAYER_OPERATION, target_layer)
+        command = ONNXQuantizerInsertionCommand(target_point,
                                                 QuantizerLayerParameters([1.0], [0], QuantizationMode.SYMMETRIC))
         transformation_layout.register(command)
 
@@ -63,7 +67,7 @@ def test_quantizer_insertion(target_layers, should_raise, quantizer_number):
     assert num_q == num_dq == quantizer_number
 
 
-TARGET_LAYERS = ['Conv1_Y', 'BN1_Y', 'ReLU1_Y']
+TARGET_LAYERS = ['Conv1', 'BN1', 'ReLU1']
 QUANTIZER_SCALES = [[3.0], [13.2] * 32, [17.1]]
 QUANTIZER_ZERO_POINT = [[1], [2] * 32, [0]]
 QUANTIZER_MODE = [QuantizationMode.SYMMETRIC, QuantizationMode.SYMMETRIC, QuantizationMode.ASYMMETRIC]
@@ -89,7 +93,8 @@ def test_inserted_quantizer_parameters(test_parameters):
     transformation_layout = ONNXTransformationLayout()
     quantizer_parameters = QuantizerLayerParameters(test_parameters.scale, test_parameters.zero_point,
                                                     test_parameters.mode)
-    command = ONNXQuantizerInsertionCommand(test_parameters.target_layer, quantizer_parameters)
+    target_point = ONNXTargetPoint(TargetType.POST_LAYER_OPERATION, test_parameters.target_layer)
+    command = ONNXQuantizerInsertionCommand(target_point, quantizer_parameters)
     transformation_layout.register(command)
 
     model_transformer = ONNXModelTransformer(model)
@@ -108,3 +113,29 @@ def test_inserted_quantizer_parameters(test_parameters):
             assert np.allclose(onnx_graph.get_initializers_value(node.input[1]), np.array(test_parameters.scale))
             assert np.allclose(onnx_graph.get_initializers_value(node.input[2]), np.array(test_parameters.zero_point))
             assert onnx_graph.get_initializers_value(node.input[2]).dtype == test_parameters.onnx_dtype
+
+
+TARGET_LAYERS = [['ReLU1'], ['Conv1', 'BN1'], ['Conv1', 'BN1', 'ReLU1']]
+TARGET_LAYERS_OUTPUT = [['ReLU1_Y'], ['Conv1_Y', 'BN1_Y'],  ['Conv1_Y', 'BN1_Y', 'ReLU1_Y']]
+
+
+@pytest.mark.parametrize('target_layers, target_layer_outputs', zip(TARGET_LAYERS, TARGET_LAYERS_OUTPUT))
+def test_output_insertion(target_layers, target_layer_outputs):
+    model = LinearModel().onnx_model
+    transformation_layout = ONNXTransformationLayout()
+    for target_layer in target_layers:
+        target_point = ONNXTargetPoint(TargetType.POST_LAYER_OPERATION, target_layer)
+        command = ONNXOutputInsertionCommand(target_point)
+        transformation_layout.register(command)
+
+    model_transformer = ONNXModelTransformer(model)
+
+    transformed_model = model_transformer.transform(transformation_layout)
+    # TODO(kshpv): The problem occurs because shaope field is missing,
+    #  but this is essential for some dynamic models such as Mask-RCNN
+    #onnx.checker.check_model(transformed_model)
+
+    onnx_graph = ONNXGraph(transformed_model)
+    # Should be topologically sorted
+    for i in range(len(target_layers)):
+        assert onnx_graph.get_model_outputs()[i].name == target_layer_outputs[i]

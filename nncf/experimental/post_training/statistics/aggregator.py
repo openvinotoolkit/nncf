@@ -16,11 +16,12 @@ from abc import abstractmethod
 
 from typing import TypeVar
 
-from typing import Dict
-
-from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
+from nncf.common.graph.model_transformer import ModelTransformer
+from nncf.common.graph.model_transformer import TransformationLayout
+from nncf.experimental.post_training.statistics.statistic_point import StatisticPointsContainer
 from nncf.experimental.post_training.api.engine import Engine
 from nncf.experimental.post_training.api.dataset import Dataset
+from nncf.experimental.post_training.api.sampler import Sampler
 
 TensorType = TypeVar('TensorType')
 ModelType = TypeVar('ModelType')
@@ -35,18 +36,56 @@ class StatisticsAggregator(ABC):
         self.engine = engine
         self.dataset = dataset
         self.is_calculate_metric = False
-        self.layers_statistics = {}  # type: Dict[str, TensorStatisticCollectorBase]
+        self.max_number_samples = 0
+        self.statistic_points = StatisticPointsContainer()
 
-    @abstractmethod
     def collect_statistics(self, model: ModelType) -> None:
         """
-        Collects statistics for layers determined in self.layers_statistics.
-        The statistics are stored in self.layers_statistics.
+        Collects statistics for registered StatisticPoints.
+        The statistics are stored in self.statistic_points.
+        """
+        self.engine.set_model(self._prepare_model_for_statistics_collection(model))
+        self.engine.set_sampler(self._create_sampler(self.dataset, self.max_number_samples))
+        self.engine.compute_statistics(self.statistic_points)
+
+    def register_stastistic_points(self, statistic_points: StatisticPointsContainer):
+        """
+        Register statistic points for statistics collection and recalculates the maximum number samples
+        for collecting statistics, based on the maximum value from the all algorithms.
+        """
+        for _, _statistic_points in statistic_points.items():
+            for _statistic_point in _statistic_points:
+                self.statistic_points.add_statistic_point(_statistic_point)
+
+        for _, _statistic_points in self.statistic_points.items():
+            for _statistic_point in _statistic_points:
+                for _, tensor_collectors in _statistic_point.algorithm_to_tensor_collectors.items():
+                    for tensor_collector in tensor_collectors:
+                        self.max_number_samples = max(self.max_number_samples, tensor_collector.num_samples)
+
+    def _prepare_model_for_statistics_collection(self, model: ModelType) -> ModelType:
+        """
+        Adds additional model outputs.
+        """
+        model_transformer = self._create_model_transformer(model)
+        transformation_layout = self._get_transformation_layout_extra_outputs(model)
+        return model_transformer.transform(transformation_layout)
+
+    @abstractmethod
+    def _get_transformation_layout_extra_outputs(self, model: ModelType) -> TransformationLayout:
+        """
+        Return backend-specific TransformationLayout with transformations for adding extra model outputs.
         """
 
-    def register_layer_statistics(self, layer_statistics: Dict[str, TensorStatisticCollectorBase]):
+    @abstractmethod
+    def _create_model_transformer(self, model: ModelType) -> ModelTransformer:
         """
-        Registered layer for statistics collection.
+        Create backend-specific ModelTransformer.
         """
-        # TODO: potentially could be intersection in layers_to_collect_statistics
-        self.layers_statistics = layer_statistics
+
+    @abstractmethod
+    def _create_sampler(self, dataset: Dataset,
+                        sample_indices: int) -> Sampler:
+        """
+        Create backend-specific Sampler.
+        """

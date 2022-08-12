@@ -13,7 +13,6 @@
 
 # pylint: disable=no-member, redefined-outer-name, no-name-in-module
 
-from onnxruntime.capi.onnxruntime_pybind11_state import Fail
 from dataclasses import dataclass
 from typing import List
 from contextlib import nullcontext as does_not_raise
@@ -51,9 +50,11 @@ def fxt_reshape_weight_graph():
     # This graph pattern is in inception-v1-12:
     # https://github.com/onnx/models/tree/main/vision/classification/inception_and_googlenet/inception_v1
     #
-    # reshaped_X      reshaped_W
+    #       X + Z      reshaped_W
     #          \     /
     #           GEMM
+    #             |
+    #          softmax
 
     # IO tensors (ValueInfoProto).
     model_input_name = "X"
@@ -238,9 +239,6 @@ def ptq_quantize_model_for_fxt_graph(fxt_graph: TestCase, convert_opset_version:
         infer_model(input_shape, quantized_model)
 
 
-@pytest.mark.xfail(
-    raises=Fail,
-    reason="min_max_quantize_model() succeeds, but infer_model() fails.")
 def test_fxt_reshape_weight_graph(fxt_reshape_weight_graph: TestCase):
     min_max_quantize_model_for_fxt_graph(fxt_reshape_weight_graph)
     ptq_quantize_model_for_fxt_graph(fxt_reshape_weight_graph)

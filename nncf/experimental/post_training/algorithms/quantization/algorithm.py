@@ -17,7 +17,6 @@ from typing import Union
 from typing import Optional
 from typing import TypeVar
 
-from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.hardware.config import HWConfigType
@@ -31,6 +30,7 @@ from nncf.experimental.post_training.algorithms.quantization.min_max_quantizatio
 from nncf.experimental.post_training.algorithms.quantization.min_max_quantization import Preset
 from nncf.experimental.post_training.algorithms.quantization.min_max_quantization import Granularity
 from nncf.experimental.post_training.algorithms.quantization.min_max_quantization import RangeType
+from nncf.experimental.post_training.statistics.statistic_point import StatisticPointsContainer
 
 ModelType = TypeVar('ModelType')
 
@@ -107,21 +107,23 @@ class PostTrainingQuantization(Algorithm):
         self.algorithms_to_created = quantization_parameters.algorithms
         self.algorithms = []
 
-    def _apply(self, model: ModelType, engine: Engine,
-               layer_statistics: Dict[str, TensorStatisticCollectorBase]) -> ModelType:
+    def _apply(self, model: ModelType, engine: Engine, statistic_points: StatisticPointsContainer) -> ModelType:
         for algorithm in self.algorithms:
-            quantized_model = algorithm.apply(model, engine, layer_statistics)
+            quantized_model = algorithm.apply(model, engine, statistic_points)
         return quantized_model
 
-    def get_layers_for_statistics(self, model: ModelType) -> Dict[str, TensorStatisticCollectorBase]:
-        output = {}
+    def get_statistic_points(self, model: ModelType) -> StatisticPointsContainer:
+        output = StatisticPointsContainer()
         for algorithm in self.algorithms:
-            output = {**output, **algorithm.get_layers_for_statistics(model)}
+            for statistic_points in algorithm.get_statistic_points(model).values():
+                for statistic_point in statistic_points:
+                    output.add_statistic_point(statistic_point)
         return output
 
     def create_subalgorithms(self, backend: Backend) -> None:
         if backend == Backend.ONNX:
-            from nncf.experimental.onnx.algorithms.quantization.min_max_quantization import ONNXMinMaxQuantization #pylint: disable=cyclic-import
+            from nncf.experimental.onnx.algorithms.quantization.min_max_quantization import \
+                ONNXMinMaxQuantization  # pylint: disable=cyclic-import
             for algorithm, parameters in self.algorithms_to_created.items():
                 if algorithm == PostTrainingAlgorithms.MinMaxQuantization:
                     self.algorithms.append(ONNXMinMaxQuantization(parameters))
