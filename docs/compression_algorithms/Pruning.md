@@ -74,7 +74,7 @@ sparsity and filter pruning algorithms. It can be enabled by setting a non-zero 
 Interlayer ranking type can be one of `unweighted_ranking` or `learned_ranking`.
 - In case of `unweighted_ranking` and with  `all_weights=True` all filter norms will be collected together and sorted to choose the least important ones. But this approach may not be optimal because filter norms are a good measure of filter importance inside a layer, but not across layers.
 - In the case of `learned_ranking` that uses re-implementation of [Learned Global Ranking method](https://arxiv.org/abs/1904.12368), a set of ranking coefficients will be learned for comparing filters across different layers.
-The $(a_i, b_i)$ pair of scalars will be learned for each ($i$ layer and used to transform norms of $i$-th layer filters before sorting all filter norms together as $a_i * N_i + b_i$ , where $N_i$ - is vector of filter norma of $i$-th layer, $(a_i, b_i)$ is ranking coefficients for $i$-th layer.
+The $(a_i, b_i)$ pair of scalars will be learned for each ( $i$ layer and used to transform norms of $i$-th layer filters before sorting all filter norms together as $a_i * N_i + b_i$ , where $N_i$ - is vector of filter norma of $i$-th layer, $(a_i, b_i)$ is ranking coefficients for $i$-th layer.
 This approach allows pruning the model taking into account layer-specific sensitivity to weight perturbations and get pruned models with higher accuracy.
 
 #### Filter pruning configuration file parameters
