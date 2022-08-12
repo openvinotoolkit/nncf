@@ -74,17 +74,17 @@ $level\\_high=2^{bits}-1$
 
 For better accuracy, floating-point zero should be within quantization range and strictly mapped into quant (without rounding). Therefore, the following scheme is applied to ranges of weights and activations before quantization:
 
-${input\_low}' = min(input\_low, 0)$
+${input\\_low}' = min(input\\_low, 0)$
 
-${input\_high}' = max(input\_high, 0)$
+${input\\_high}' = max(input\\_high, 0)$
 
-$ZP= \left\lfloor \frac{-{input\_low}'*(levels-1)}{{input\_high}'-{input\_low}'} \right \rceil$
+$ZP= \left\lfloor \frac{-{input\\_low}'*(levels-1)}{{input\\_high}'-{input\\_low}'} \right \rceil$
 
-${input\_high}''=\frac{ZP-levels+1}{ZP}*{input\_low}'$
+${input\\_high}''=\frac{ZP-levels+1}{ZP}*{input\\_low}'$
 
-${input\_low}''=\frac{ZP}{ZP-levels+1}*{input\_high}'$
+${input\\_low}''=\frac{ZP}{ZP-levels+1}*{input\\_high}'$
 
-${input\_low,input\_high} = \begin{cases} {input\_low}',{input\_high}', & ZP \in $\{0,levels-1\}$ \\ {input\_low}',{input\_high}'', & {input\_high}'' - {input\_low}' > {input\_high}' - {input\_low}'' \\ {input\_low}'',{input\_high}', & {input\_high}'' - {input\_low}' <= {input\_high}' - {input\_low}''\\ \end{cases}$
+${input\\_low,input\\_high} = \begin{cases} {input\\_low}',{input\\_high}', & ZP \in $\{0,levels-1\}$ \\ {input\\_low}',{input\\_high}'', & {input\\_high}'' - {input\\_low}' > {input\\_high}' - {input\\_low}'' \\ {input\\_low}'',{input\\_high}', & {input\\_high}'' - {input\\_low}' <= {input\\_high}' - {input\\_low}''\\ \end{cases}$
 
 You can use the `num_init_samples` parameter from the `initializer` group to initialize the values of `input_low` and `input_range` from the collected statistics using given number of samples.
 
