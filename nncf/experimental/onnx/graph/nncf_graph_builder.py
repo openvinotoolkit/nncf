@@ -73,7 +73,7 @@ class GraphConverter:
                     nncf_logger.error(err)
                     nncf_logger.error('The default tensor shape will be set.')
                     shape = GraphConverter.DEFAULT_TENSOR_SHAPE
-                onnx_dtype = onnx_graph.get_edge_dtype(output)
+                onnx_dtype = onnx_graph.get_edge_dtype_name(output)
                 nncf_dtype = GraphConverter.convert_onnx_dtype_to_nncf_dtype(onnx_dtype)
                 for in_node in nodes:
                     in_node_id = nncf_graph.get_node_by_name(in_node.name).node_id
@@ -106,7 +106,7 @@ class GraphConverter:
                 to_node_id = nncf_graph.get_node_by_name(node.name).node_id
                 input_counter[in_node_id] += 1
                 output_counter[to_node_id] += 1
-                onnx_dtype = onnx_graph.get_edge_dtype(input_name)
+                onnx_dtype = onnx_graph.get_edge_dtype_name(input_name)
                 nncf_dtype = GraphConverter.convert_onnx_dtype_to_nncf_dtype(onnx_dtype)
                 nncf_graph.add_edge_between_nncf_nodes(
                     from_node_id=input_node.node_id,
@@ -136,7 +136,7 @@ class GraphConverter:
                 to_node_id = nncf_graph.get_node_by_name(node.name).node_id
                 input_counter[out_node_id] += 1
                 output_counter[to_node_id] += 1
-                onnx_dtype = onnx_graph.get_edge_dtype(output_name)
+                onnx_dtype = onnx_graph.get_edge_dtype_name(output_name)
                 nncf_dtype = GraphConverter.convert_onnx_dtype_to_nncf_dtype(onnx_dtype)
                 nncf_graph.add_edge_between_nncf_nodes(
                     from_node_id=to_node_id,

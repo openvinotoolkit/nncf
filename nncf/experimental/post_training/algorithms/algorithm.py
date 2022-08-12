@@ -19,7 +19,7 @@ from typing import Dict
 from typing import Union
 
 from enum import Enum
-from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
+from nncf.experimental.post_training.statistics.statistic_point import StatisticPointsContainer
 from nncf.experimental.post_training.api.engine import Engine
 from nncf.experimental.post_training.backend import Backend
 
@@ -50,21 +50,21 @@ class Algorithm(ABC):
     """
 
     def apply(self, model: ModelType, engine: Engine,
-              layer_statistics: Dict[str, TensorStatisticCollectorBase]) -> ModelType:
-        layers = self.get_layers_for_statistics(model)
-        for layer in layers.keys():
-            if layer_statistics.get(layer) is None:
-                raise RuntimeError(f'No statistics collected for the layer {layer}')
-        return self._apply(model, engine, layer_statistics)
+              statistic_points: StatisticPointsContainer) -> ModelType:
+        _statistic_points = self.get_statistic_points(model)
+        for edge_name in _statistic_points.keys():
+            if statistic_points.get(edge_name) is None:
+                raise RuntimeError(f'No statistics collected for the layer {edge_name}')
+        return self._apply(model, engine, statistic_points)
 
     @abstractmethod
-    def _apply(self, model: ModelType, engine: Engine, layer_statistics) -> ModelType:
+    def _apply(self, model: ModelType, engine: Engine, statistic_points: StatisticPointsContainer) -> ModelType:
         """
         Applies the algorithm to the 'compressed_model'.
         """
 
     @abstractmethod
-    def get_layers_for_statistics(self, model: ModelType) -> Dict[str, TensorStatisticCollectorBase]:
+    def get_statistic_points(self, model: ModelType) -> StatisticPointsContainer:
         """
         Returns activation layers, for which StatisticsCollector should collect statistics.
         """

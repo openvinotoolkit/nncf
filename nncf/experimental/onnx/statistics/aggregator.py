@@ -11,37 +11,44 @@
  limitations under the License.
 """
 
-from skl2onnx.helpers.onnx_helper import select_model_inputs_outputs
 import onnx
 
-from nncf.experimental.post_training.statistics.aggregator import StatisticsAggregator
-
-from nncf.experimental.onnx.samplers import create_onnx_sampler
-from nncf.experimental.onnx.engine import ONNXEngine
+from nncf.common.utils.logger import logger as nncf_logger
 from nncf.experimental.post_training.api.dataset import Dataset
+from nncf.experimental.post_training.statistics.aggregator import StatisticsAggregator
+from nncf.experimental.post_training.api.sampler import Sampler
+from nncf.experimental.onnx.samplers import ONNXBatchSampler
+from nncf.experimental.onnx.samplers import ONNXRandomBatchSampler
+from nncf.experimental.onnx.engine import ONNXEngine
+from nncf.experimental.onnx.graph.model_transformer import ONNXModelTransformer
+from nncf.experimental.onnx.graph.transformations.layout import ONNXTransformationLayout
+from nncf.experimental.onnx.graph.transformations.commands import ONNXOutputInsertionCommand
 
 
 class ONNXStatisticsAggregator(StatisticsAggregator):
     # TODO (Nikita Malinin): Remove ONNXStatisticsAggregator & create the common backend-agnostic solution
-
     def __init__(self, engine: ONNXEngine, dataset: Dataset):
         super().__init__(engine, dataset)
 
-    def collect_statistics(self, model: onnx.ModelProto) -> None:
-        # TODO (Nikita Malinin): Need to update adding output process with the backend-specific graph transformer
-        layers_to_collect_statistics = list(self.layers_statistics.keys())
-        model_outputs = []
-        for output in list(model.graph.output):
-            model_outputs.append(output.name)
-        model_with_intermediate_outputs = select_model_inputs_outputs(model,
-                                                                      outputs=[*layers_to_collect_statistics,
-                                                                               *model_outputs])
-        max_number_samples = 0
-        for _, v in self.layers_statistics.items():
-            max_number_samples = max(max_number_samples, v.num_samples)
+    def _get_transformation_layout_extra_outputs(self, model):
+        transformation_layout = ONNXTransformationLayout()
+        transformation_commands = []
+        for _statistic_points in self.statistic_points.values():
+            for _statistic_point in _statistic_points:
+                transformation_commands.append(ONNXOutputInsertionCommand(_statistic_point.target_point))
 
-        sampler = create_onnx_sampler(self.dataset, range(max_number_samples))
+        for transformation_command in transformation_commands:
+            transformation_layout.register(transformation_command)
 
-        self.engine.set_model(model_with_intermediate_outputs)
-        self.engine.set_sampler(sampler)
-        self.engine.compute_statistics(self.layers_statistics)
+        return transformation_layout
+
+    def _create_model_transformer(self, model: onnx.ModelProto) -> ONNXModelTransformer:
+        return ONNXModelTransformer(model)
+
+    def _create_sampler(self, dataset: Dataset,
+                        sample_indices: int) -> Sampler:
+        if dataset.shuffle:
+            nncf_logger.info('Using Shuffled dataset')
+            return ONNXRandomBatchSampler(dataset, sample_indices=sample_indices)
+        nncf_logger.info('Using Non-Shuffled dataset')
+        return ONNXBatchSampler(dataset, sample_indices=sample_indices)

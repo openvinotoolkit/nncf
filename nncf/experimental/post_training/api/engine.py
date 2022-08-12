@@ -16,8 +16,7 @@ from typing import Callable, Dict, TypeVar
 
 from tqdm import tqdm
 
-from nncf.common.tensor_statistics.collectors import \
-    TensorStatisticCollectorBase
+from nncf.experimental.post_training.statistics.statistic_point import StatisticPointsContainer
 from nncf.experimental.post_training.api.dataset import NNCFData
 from nncf.experimental.post_training.api.sampler import Sampler
 
@@ -83,12 +82,12 @@ class Engine(ABC):
         """
         self._inputs_transforms = inputs_transforms
 
-    def compute_statistics(self, statistics_layout: Dict[str, TensorStatisticCollectorBase]) -> None:
+    def compute_statistics(self, statistic_points: StatisticPointsContainer) -> None:
         """
-        Performs model inference on specified dataset subset for statistics collection and input-based layers layout
+        Performs model inference on specified dataset subset and collects statistics
 
-        :param statistics_layout: dictionary of stats collection functions {node_name: {stat_name: fn}}
-        :return statistics: per-layer statistics for the further model optimization
+        :param statistic_points: StatisticPointsContaine with StatisticPoints,
+         in which statistics are collected and registered.
         """
         if not self.is_model_set():
             raise RuntimeError(f'The {self.__class__} tried to compute statistics, '
@@ -97,10 +96,7 @@ class Engine(ABC):
 
         for input_data in tqdm(sampler):
             outputs = self.infer(input_data)
-
-            for output_name, output_tensor in outputs.items():
-                if output_name in statistics_layout:
-                    statistics_layout[output_name].register_input(output_tensor)
+            self._register_statistics(outputs, statistic_points)
 
     def compute_metrics(self, metrics_per_sample: bool = False) -> Dict[str, MetricType]:
         """
@@ -129,4 +125,10 @@ class Engine(ABC):
 
         :param input_data: inputs for the model transformed with the inputs_transforms
         :return output_data: models output after outputs_transforms
+        """
+
+    @abstractmethod
+    def _register_statistics(self, outputs: NNCFData, statistic_points: StatisticPointsContainer) -> None:
+        """
+        Does mapping from the provided output and statistics_points to register statistics.
         """

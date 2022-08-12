@@ -37,6 +37,13 @@ class ONNXConvolutionMetatype(ONNXOpMetatype):
 
 
 @ONNX_OPERATION_METATYPES.register()
+class ONNXConvolutionTransposeMetatype(ONNXOpMetatype):
+    name = 'ConvTransposeOp'
+    op_names = ['ConvTranspose']
+    hw_config_names = [HWConfigOpName.CONVOLUTION]
+
+
+@ONNX_OPERATION_METATYPES.register()
 class ONNXLinearMetatype(ONNXOpMetatype):
     name = 'LinearOp'
     op_names = ['Gemm']
@@ -156,8 +163,20 @@ class ONNXSoftmaxMetatype(ONNXOpMetatype):
     op_names = ['Softmax']
 
 
+@ONNX_OPERATION_METATYPES.register()
+class ONNXPadMetatype(ONNXOpMetatype):
+    name = 'PadOp'
+    op_names = ['Pad']
+
+
 GENERAL_WEIGHT_LAYER_METATYPES = [ONNXConvolutionMetatype,
+                                  ONNXConvolutionTransposeMetatype,
                                   ONNXLinearMetatype]
+
+LAYERS_WITH_BIAS_METATYPES = [ONNXConvolutionMetatype,
+                              ONNXConvolutionTransposeMetatype,
+                              ONNXLinearMetatype,
+                              ONNXBatchNormMetatype]
 
 
 def get_operator_metatypes() -> List[Type[OperatorMetatype]]:
