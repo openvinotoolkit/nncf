@@ -72,6 +72,8 @@ from tests.torch.pruning.helpers import SplitReshapeModel
 from tests.torch.pruning.helpers import HRNetBlock
 from tests.torch.pruning.helpers import GroupNormModel
 from tests.torch.pruning.helpers import PruningTestBatchedLinear
+from tests.torch.pruning.helpers import PruningTestModelBroadcastedLinearWithConcat
+from tests.torch.pruning.helpers import PruningTestModelDiffChInPruningCluster
 
 
 # pylint: disable=protected-access
@@ -560,6 +562,37 @@ GROUP_PRUNING_MODULES_TEST_CASES = [
         can_prune_after_analysis={0: True, 1: True, 2: False, 3: True, 4: True, 5: True},
         final_can_prune={1: PruningAnalysisDecision(False, PruningAnalysisReason.CLOSING_CONV_MISSING),
                          4: PruningAnalysisDecision(False, PruningAnalysisReason.LAST_CONV)},
+        prune_params=(True, True)),
+    GroupPruningModulesTestStruct(
+        model=PruningTestModelBroadcastedLinearWithConcat,
+        non_pruned_module_nodes=['PruningTestModelBroadcastedLinearWithConcat/NNCFLinear[last_linear]/linear_0'],
+        pruned_groups=[['PruningTestModelBroadcastedLinearWithConcat/NNCFConv2d[first_conv]/conv2d_0'],
+                       ['PruningTestModelBroadcastedLinearWithConcat/NNCFConv2d[conv1]/conv2d_0',
+                        'PruningTestModelBroadcastedLinearWithConcat/NNCFLinear[linear1]/linear_0'],
+                       ['PruningTestModelBroadcastedLinearWithConcat/NNCFConv2d[conv2]/conv2d_0']],
+        pruned_groups_by_node_id=[[1], [2, 4], [7]],
+        can_prune_after_analysis={0: True, 1: True, 2: True, 3: True, 4: True, 5: True, 6: True,
+                                  7: True, 8: True, 9: True, 10: True, 11: True},
+        final_can_prune={1: PruningAnalysisDecision(True),
+                         2: PruningAnalysisDecision(True),
+                         4: PruningAnalysisDecision(True),
+                         7: PruningAnalysisDecision(True),
+                         10: PruningAnalysisDecision(False, PruningAnalysisReason.LAST_CONV)},
+        prune_params=(True, True)),
+    GroupPruningModulesTestStruct(
+        model=PruningTestModelDiffChInPruningCluster,
+        non_pruned_module_nodes=[
+            'PruningTestModelDiffChInPruningCluster/NNCFConv2d[conv1]/conv2d_0',
+            'PruningTestModelDiffChInPruningCluster/NNCFLinear[linear1]/linear_0',
+            'PruningTestModelDiffChInPruningCluster/NNCFLinear[last_linear]/linear_0'],
+        pruned_groups=[['PruningTestModelDiffChInPruningCluster/NNCFConv2d[first_conv]/conv2d_0']],
+        pruned_groups_by_node_id=[[1]],
+        can_prune_after_analysis={0: True, 1: True, 2: False, 3: True, 4: True, 5: False, 6: True,
+                                  7: True, 8: True},
+        final_can_prune={1: PruningAnalysisDecision(True),
+                         2: PruningAnalysisDecision(False, PruningAnalysisReason.CLOSING_CONV_MISSING),
+                         5: PruningAnalysisDecision(False, PruningAnalysisReason.CLOSING_CONV_MISSING),
+                         7: PruningAnalysisDecision(False, PruningAnalysisReason.LAST_CONV)},
         prune_params=(True, True)),
 ]
 

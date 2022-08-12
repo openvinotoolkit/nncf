@@ -201,6 +201,25 @@ class PruningTestModelDiffChInPruningCluster(nn.Module):
         return self.last_linear(y + z)
 
 
+class PruningTestBatchedLinear(nn.Module):
+    def __init__(self):
+        super().__init__()
+        # input_shape=[1, 1, 8, 8]
+        self.first_conv = create_conv(1, 32, 1)
+        for i in range(32):
+            self.first_conv.weight.data[i] += i
+        self.linear1 = nn.Linear(8, 16)
+        for i in range (16):
+            self.linear1.weight.data[i] = i
+        self.last_linear = nn.Linear(32 * 8 * 16, 1)
+        fill_linear_weight(self.last_linear, 1)
+
+    def forward(self, x):
+        x = self.first_conv(x)
+        x = self.linear1(x)
+        return self.last_linear(x.view(1, -1))
+
+
 class PruningTestModelBroadcastedLinear(nn.Module):
     def __init__(self):
         super().__init__()
@@ -222,25 +241,6 @@ class PruningTestModelBroadcastedLinear(nn.Module):
         y = self.conv1(x)
         z = self.linear1(x.view(1, -1))
         x = y + z.view(1, -1, 1, 1)
-        return self.last_linear(x.view(1, -1))
-
-
-class PruningTestBatchedLinear(nn.Module):
-    def __init__(self):
-        super().__init__()
-        # input_shape=[1, 1, 8, 8]
-        self.first_conv = create_conv(1, 32, 1)
-        for i in range(32):
-            self.first_conv.weight.data[i] += i
-        self.linear1 = nn.Linear(8, 16)
-        for i in range (16):
-            self.linear1.weight.data[i] = i
-        self.last_linear = nn.Linear(32 * 8 * 16, 1)
-        fill_linear_weight(self.last_linear, 1)
-
-    def forward(self, x):
-        x = self.first_conv(x)
-        x = self.linear1(x)
         return self.last_linear(x.view(1, -1))
 
 

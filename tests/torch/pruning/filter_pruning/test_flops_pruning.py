@@ -15,7 +15,9 @@ import pytest
 from functools import partial
 
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
-from tests.torch.pruning.helpers import MobilenetV3BlockSEReshape, PruningTestModelConcatWithLinear
+from tests.torch.pruning.helpers import MobilenetV3BlockSEReshape
+from tests.torch.pruning.helpers import  PruningTestBatchedLinear
+from tests.torch.pruning.helpers import  PruningTestModelConcatWithLinear
 from tests.torch.pruning.helpers import PruningTestModelDiffChInPruningCluster
 from tests.torch.pruning.helpers import PruningTestModelBroadcastedLinear
 from tests.torch.pruning.helpers import GroupedConvolutionModel
@@ -88,18 +90,18 @@ def test_init_params_for_flops_calculation(model, ref_params):
 @pytest.mark.parametrize(
     ("model", "all_weights", "pruning_flops_target", "ref_full_flops", "ref_current_flops", "ref_sizes"),
     (
-        #(PruningTestWideModelConcat, False, 0.4, 671154176, 399057920, [328, 656, 656]),
-        #(PruningTestWideModelEltwise, False, 0.4, 268500992, 160773120, [360, 720, 720]),
-        #(PruningTestWideModelConcat, True, 0.4, 671154176, 402513920, [380, 647, 648]),
-        #(PruningTestWideModelEltwise, True, 0.4, 268500992, 161043328, [321, 755, 755]),
-        #(PruningTestModelSharedConvs, True, 0.4, 461438976, 276594768, [361, 809]),
-        #(PruningTestModelSharedConvs, False, 0.4, 461438976, 275300352, [384, 768]),
-        #(GroupedConvolutionModel, False, 0.0, 11243520, 11243520, []),
-        #{(PruningTestModelConcatWithLinear, False, 0.1, 11243520, 11243520, []),
-        #(partial(MobilenetV3BlockSEReshape, mode='linear'), False, 0.1, 11243520, 11243520, []),
-        #(PruningTestModelBroadcastedLinear, False, 0.1, 11243520, 11243520, []),
-        (PruningTestModelBroadcastedLinear, False, 0.1, 11243520, 11243520, []),
-        (PruningTestModelDiffChInPruningCluster, False, 0.1, 11243520, 11243520, []),
+        (PruningTestWideModelConcat, False, 0.4, 671154176, 399057920, [328, 656, 656]),
+        (PruningTestWideModelEltwise, False, 0.4, 268500992, 160773120, [720, 360]),
+        (PruningTestWideModelConcat, True, 0.4, 671154176, 402513920, [380, 647, 648]),
+        (PruningTestWideModelEltwise, True, 0.4, 268500992, 161043328, [755, 321]),
+        (PruningTestModelSharedConvs, True, 0.4, 461438976, 276594768, [361, 809]),
+        (PruningTestModelSharedConvs, False, 0.4, 461438976, 275300352, [384, 768]),
+        (GroupedConvolutionModel, False, 0.0, 11243520, 11243520, []),
+        (PruningTestModelConcatWithLinear, False, 0.1, 305792, 230912, [16, 24, 24]),
+        (partial(MobilenetV3BlockSEReshape, mode='linear'), False, 0.1, 21360, 3532, [1, 1]),
+        (PruningTestBatchedLinear, False, 0.0, 77824, 77824, []),
+        (PruningTestModelBroadcastedLinear, False, 0.1, 137216, 103424, [16, 24]),
+        (PruningTestModelDiffChInPruningCluster, False, 0.1, 1962368, 982336, [8]),
             
     )
 )
@@ -114,13 +116,15 @@ def test_flops_calulation_for_spec_layers(model, all_weights, pruning_flops_targ
     config['compression']['params']['prune_first_conv'] = True
     config['compression']['params']['all_weights'] = all_weights
     model = model()
-    compressed_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
+    _, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
 
     assert compression_ctrl.full_flops == ref_full_flops
     assert compression_ctrl.current_flops == ref_current_flops
 
-    for i, ref_size in enumerate(ref_sizes):
-        node = getattr(compressed_model, f"conv{i+1}")
-        op = list(node.pre_ops.values())[0]
-        mask = op.operand.binary_filter_pruning_mask
-        assert int(sum(mask)) == ref_size
+    all_clusters = compression_ctrl.pruned_module_groups_info.get_all_clusters()
+    assert len(all_clusters) == len(ref_sizes)
+    for cluster, ref_size in zip(all_clusters, ref_sizes):
+        for node in cluster.elements:
+            op = list(node.module.pre_ops.values())[0]
+            mask = op.operand.binary_filter_pruning_mask
+            assert int(sum(mask)) == ref_size

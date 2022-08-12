@@ -16,7 +16,6 @@ from typing import Dict, List, Tuple, Union
 
 import numpy as np
 import torch
-from build.lib.nncf.common.pruning.utils import get_output_channels, get_prunable_layers_in_out_channels
 
 from nncf import NNCFConfig
 from nncf.api.compression import CompressionLoss
@@ -36,6 +35,7 @@ from nncf.common.pruning.statistics import PrunedModelStatistics
 from nncf.common.pruning.shape_pruning import ShapePruninigProcessor
 from nncf.common.pruning.shape_pruning import WeightsFlopsCalculator
 from nncf.common.pruning.utils import get_rounded_pruned_element_number
+from nncf.common.pruning.utils import get_prunable_layers_in_out_channels
 from nncf.common.schedulers import StubCompressionScheduler
 from nncf.common.statistics import NNCFStatistics
 from nncf.common.utils.debug import is_debug

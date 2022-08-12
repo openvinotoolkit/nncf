@@ -407,12 +407,122 @@ def test_valid_masks_for_bn_after_concat(prune_bn):
         assert np.allclose(node.data['output_mask'].tensor.numpy(), ref_concat_masks[i])
 
 
-BigPruningTestModelRefs = {
-    "next_nodes": {
-        0: [ShapePruninigProcessor.NextNode('BigPruningTestModel/NNCFConv2d[conv2]/conv2d_0', 1)],
-        1: [ShapePruninigProcessor.NextNode('BigPruningTestModel/NNCFConvTranspose2d[up]/conv_transpose2d_0', 1)],
-        2: [ShapePruninigProcessor.NextNode('BigPruningTestModel/NNCFLinear[linear]/linear_0', 49)],
-        3: [ShapePruninigProcessor.NextNode('BigPruningTestModel/NNCFConv2d[conv3]/conv2d_0', 1)],
+BigPruningTestModelNextNodesRef = {
+    0: [ShapePruninigProcessor.NextNode('BigPruningTestModel/NNCFConv2d[conv2]/conv2d_0', 1)],
+    1: [ShapePruninigProcessor.NextNode('BigPruningTestModel/NNCFConvTranspose2d[up]/conv_transpose2d_0', 1)],
+    2: [ShapePruninigProcessor.NextNode('BigPruningTestModel/NNCFLinear[linear]/linear_0', 49)],
+    3: [ShapePruninigProcessor.NextNode('BigPruningTestModel/NNCFConv2d[conv3]/conv2d_0', 1)],
+}
+
+
+BigPruningTestModelRef = {
+    0:  {
+        "next_nodes":
+            BigPruningTestModelNextNodesRef,
+        "num_of_sparse_by_node": {
+            'BigPruningTestModel/NNCFConv2d[conv_depthwise]/conv2d_0': 8,
+            'BigPruningTestModel/NNCFConv2d[conv1]/conv2d_0': 8,
+            'BigPruningTestModel/NNCFConv2d[conv2]/conv2d_0': 16,
+            'BigPruningTestModel/NNCFConvTranspose2d[up]/conv_transpose2d_0': 32,
+            'BigPruningTestModel/NNCFLinear[linear]/linear_0': 64
+        },
+        "pruned_in_channels": {
+            'BigPruningTestModel/NNCFConv2d[conv1]/conv2d_0': 1,
+            'BigPruningTestModel/NNCFConv2d[conv_depthwise]/conv2d_0': 8,
+            'BigPruningTestModel/NNCFConv2d[conv2]/conv2d_0': 8,
+            'BigPruningTestModel/NNCFConvTranspose2d[up]/conv_transpose2d_0': 16,
+            'BigPruningTestModel/NNCFLinear[linear]/linear_0': 1568,
+            'BigPruningTestModel/NNCFConv2d[conv3]/conv2d_0': 64,
+        },
+        "pruned_out_channels": {
+            'BigPruningTestModel/NNCFConv2d[conv1]/conv2d_0': 8,
+            'BigPruningTestModel/NNCFConv2d[conv_depthwise]/conv2d_0': 8,
+            'BigPruningTestModel/NNCFConv2d[conv2]/conv2d_0': 16,
+            'BigPruningTestModel/NNCFConvTranspose2d[up]/conv_transpose2d_0': 32,
+            'BigPruningTestModel/NNCFLinear[linear]/linear_0': 64,
+            'BigPruningTestModel/NNCFConv2d[conv3]/conv2d_0': 1,
+        }
+    },
+    1:{
+        "next_nodes":
+            BigPruningTestModelNextNodesRef,
+        "num_of_sparse_by_node": {
+            'BigPruningTestModel/NNCFConv2d[conv_depthwise]/conv2d_0': 2,
+            'BigPruningTestModel/NNCFConv2d[conv1]/conv2d_0': 2,
+            'BigPruningTestModel/NNCFConv2d[conv2]/conv2d_0': 2,
+            'BigPruningTestModel/NNCFConvTranspose2d[up]/conv_transpose2d_0': 29,
+            'BigPruningTestModel/NNCFLinear[linear]/linear_0': 87
+        },
+        "pruned_in_channels": {
+            'BigPruningTestModel/NNCFConv2d[conv1]/conv2d_0': 1,
+            'BigPruningTestModel/NNCFConv2d[conv_depthwise]/conv2d_0': 14,
+            'BigPruningTestModel/NNCFConv2d[conv2]/conv2d_0': 14,
+            'BigPruningTestModel/NNCFConvTranspose2d[up]/conv_transpose2d_0': 30,
+            'BigPruningTestModel/NNCFLinear[linear]/linear_0': 1715,
+            'BigPruningTestModel/NNCFConv2d[conv3]/conv2d_0': 41
+        },
+        "pruned_out_channels": {
+            'BigPruningTestModel/NNCFConv2d[conv1]/conv2d_0': 14,
+            'BigPruningTestModel/NNCFConv2d[conv_depthwise]/conv2d_0': 14,
+            'BigPruningTestModel/NNCFConv2d[conv2]/conv2d_0': 30,
+            'BigPruningTestModel/NNCFConvTranspose2d[up]/conv_transpose2d_0': 35,
+            'BigPruningTestModel/NNCFLinear[linear]/linear_0': 41,
+            'BigPruningTestModel/NNCFConv2d[conv3]/conv2d_0': 1
+        }
+    },
+    2: {
+        "next_nodes":
+            BigPruningTestModelNextNodesRef,
+        "num_of_sparse_by_node": {
+            'BigPruningTestModel/NNCFConv2d[conv_depthwise]/conv2d_0': 0,
+            'BigPruningTestModel/NNCFConv2d[conv1]/conv2d_0': 0,
+            'BigPruningTestModel/NNCFConv2d[conv2]/conv2d_0': 8,
+            'BigPruningTestModel/NNCFConvTranspose2d[up]/conv_transpose2d_0': 24,
+            'BigPruningTestModel/NNCFLinear[linear]/linear_0': 48
+        },
+        "pruned_in_channels": {
+            'BigPruningTestModel/NNCFConv2d[conv1]/conv2d_0': 1,
+            'BigPruningTestModel/NNCFConv2d[conv_depthwise]/conv2d_0': 16,
+            'BigPruningTestModel/NNCFConv2d[conv2]/conv2d_0': 16,
+            'BigPruningTestModel/NNCFConvTranspose2d[up]/conv_transpose2d_0': 24,
+            'BigPruningTestModel/NNCFLinear[linear]/linear_0': 1960,
+            'BigPruningTestModel/NNCFConv2d[conv3]/conv2d_0': 80
+        },
+        "pruned_out_channels": {
+            'BigPruningTestModel/NNCFConv2d[conv1]/conv2d_0': 16,
+            'BigPruningTestModel/NNCFConv2d[conv_depthwise]/conv2d_0': 16,
+            'BigPruningTestModel/NNCFConv2d[conv2]/conv2d_0': 24,
+            'BigPruningTestModel/NNCFConvTranspose2d[up]/conv_transpose2d_0': 40,
+            'BigPruningTestModel/NNCFLinear[linear]/linear_0': 80,
+            'BigPruningTestModel/NNCFConv2d[conv3]/conv2d_0': 1
+        }
+    },
+    3: {
+        "next_nodes":
+            BigPruningTestModelNextNodesRef,
+        "num_of_sparse_by_node": {
+            'BigPruningTestModel/NNCFConv2d[conv_depthwise]/conv2d_0': 2,
+            'BigPruningTestModel/NNCFConv2d[conv1]/conv2d_0': 2,
+            'BigPruningTestModel/NNCFConv2d[conv2]/conv2d_0': 1,
+            'BigPruningTestModel/NNCFConvTranspose2d[up]/conv_transpose2d_0': 25,
+            'BigPruningTestModel/NNCFLinear[linear]/linear_0': 81
+        },
+        "pruned_in_channels": {
+            'BigPruningTestModel/NNCFConv2d[conv1]/conv2d_0': 1,
+            'BigPruningTestModel/NNCFConv2d[conv_depthwise]/conv2d_0': 14,
+            'BigPruningTestModel/NNCFConv2d[conv2]/conv2d_0': 14,
+            'BigPruningTestModel/NNCFConvTranspose2d[up]/conv_transpose2d_0': 31,
+            'BigPruningTestModel/NNCFLinear[linear]/linear_0': 1911,
+            'BigPruningTestModel/NNCFConv2d[conv3]/conv2d_0': 47
+        },
+        "pruned_out_channels": {
+            'BigPruningTestModel/NNCFConv2d[conv1]/conv2d_0': 14,
+            'BigPruningTestModel/NNCFConv2d[conv_depthwise]/conv2d_0': 14,
+            'BigPruningTestModel/NNCFConv2d[conv2]/conv2d_0': 31,
+            'BigPruningTestModel/NNCFConvTranspose2d[up]/conv_transpose2d_0': 39,
+            'BigPruningTestModel/NNCFLinear[linear]/linear_0': 47,
+            'BigPruningTestModel/NNCFConv2d[conv3]/conv2d_0': 1
+        }
     },
 }
 
@@ -527,10 +637,10 @@ PruningTestModelDiffChInPruningClusterRef = {
 @pytest.mark.parametrize(('model_module', 'all_weights', 'pruning_flops_target', 'ref_flops',
                           'ref_params_num', 'refs'),
                          [
-                            #(partial(BigPruningTestModel, dim=2), False, None, 679888, 106280, BigPruningTestModelNextNoderRef),
-                            #(partial(BigPruningTestModel, dim=2), True, None, 1146640, 83768, BigPruningTestModelNextNoderRef),
-                            #(partial(BigPruningTestModel, dim=2), False, 0.5, 1236160, 169184, BigPruningTestModelNextNoderRef),
-                            #(partial(BigPruningTestModel, dim=2), True, 0.5, 1328162, 104833, BigPruningTestModelNextNoderRef),
+                            #(partial(BigPruningTestModel, dim=2), False, None, 679888, 106280, BigPruningTestModelRef[0]),
+                            #(partial(BigPruningTestModel, dim=2), True, None, 1146640, 83768, BigPruningTestModelRef[1]),
+                            #(partial(BigPruningTestModel, dim=2), False, 0.5, 1236160, 169184, BigPruningTestModelRef[2]),
+                            (partial(BigPruningTestModel, dim=2), True, 0.5, 1328162, 104833, BigPruningTestModelRef[3]),
                             (PruningTestModelBroadcastedLinear, False, 0.3, 35840, 8848, PruningTestModelBroadcastedLinearRefs),
                             (PruningTestModelConcatWithLinear, False, 0.3, 79168, 2208, PruningTestModelConcatWithLinearRefs),
                             (PruningTestModelBroadcastedLinearWithConcat, False, 0.3, 53248, 9488, PruningTestModelBroadcastedLinearWithConcatRefs),

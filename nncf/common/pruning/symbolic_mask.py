@@ -30,6 +30,18 @@ class SymbolicMaskProducer:
     def id(self) -> int:
         return self._id
 
+    @classmethod
+    def merge_producers(cls, masks: List['SymbolicMask']) -> Dict[int, 'SymbolicMaskProducer']:
+        merged_producers = dict()
+        for mask in masks:
+            for mask_producer in mask.mask_producers.values():
+                if mask_producer.id in merged_producers:
+                    assert mask_producer.sparse_multiplier == merged_producers[mask_producer.id].sparse_multiplier, \
+                        f"Inconsistent sparse multiplier for NNCF node with id={mask_producer.id}"
+            merged_producers.update(mask.mask_producers)
+        return merged_producers
+
+
 class SymbolicMask(NNCFTensor):
     """
     Framework agnostic 1D NNCFTensor representation which only uses given dimension and do not uses value
@@ -83,13 +95,7 @@ class SymbolicMaskProcessor(NNCFPruningBaseTensorProcessor):
     @classmethod
     def concatenate(cls, tensors: List[SymbolicMask], axis: int) -> SymbolicMask:
         ret_shape = sum([t.shape[0] for t in tensors])
-        producers = dict()
-        for tensor in tensors:
-            if tensor.mask_producers is not None:
-                producers.update(tensor.mask_producers)
-        if not producers:
-            producers = None
-
+        producers = SymbolicMaskProducer.merge_producers(tensors)
         return SymbolicMask(ret_shape, producers)
 
     @classmethod
@@ -123,10 +129,7 @@ class SymbolicMaskProcessor(NNCFPruningBaseTensorProcessor):
         :param input_masks: Given input masks.
         :return: Elementwise pruning operation output mask.
         """
-        producers = dict()
-        for mask in input_masks:
-            producers.update(mask.mask_producers)
-
+        producers = SymbolicMaskProducer.merge_producers(input_masks)
         for input_mask in input_masks[1:]:
             if not input_masks[0].shape == input_mask.shape:
                 return AmbiguousSymbolicMask(producers)
