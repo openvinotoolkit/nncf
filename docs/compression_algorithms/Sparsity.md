@@ -20,7 +20,7 @@ $L_{sparse} = \mathbb{E}\_{\epsilon \sim P_{\epsilon}} $
 
 
 
-$\lbrack \frac{\sum_{i=0}^{|\theta|} \epsilon_i}{|\theta|} - level \rbrack ^2$
+$\lbrack \frac{\sum\limits_{i=0}^{|\theta|} \epsilon_i}{|\theta|} - level \rbrack ^2$
 
 
 
