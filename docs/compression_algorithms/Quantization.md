@@ -14,11 +14,11 @@ $output = \frac{\left\lfloor (clamp(input; input\\_low, input\\_high)-input\\_lo
 
 $clamp(input; input\\_low, input\\_high)$
 
+$s = \frac{levels - 1}{input\\_high - input\\_low}$
 
 
 
-
-$input_low$ and $input_high$ represent the quantization range and $\left\lfloor\cdot\right \rceil$ denotes rounding to the nearest integer.
+$input\\_low$ and $input\\_high$ represent the quantization range and $\left\lfloor \cdot \right\rceil$ denotes rounding to the nearest integer.
 
 
 ####  Symmetric Quantization
