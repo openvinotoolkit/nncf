@@ -17,7 +17,6 @@ $clamp(input; input\\_low, input\\_high)$
 $s = \frac{levels - 1}{input\\_high - input\\_low}$
 
 
-
 $input\\_low$ and $input\\_high$ represent the quantization range and $\left\lfloor \cdot \right\rceil$ denotes rounding to the nearest integer.
 
 
@@ -25,66 +24,67 @@ $input\\_low$ and $input\\_high$ represent the quantization range and $\left\lfl
 
 During the training, we optimize the **scale** parameter that represents the range `[input_low, input_range]` of the original signal using gradient descent:
 
-![input\_low=scale*\frac{level\_low}{level\_high}](https://latex.codecogs.com/png.latex?input%5C_low%3Dscale*%5Cfrac%7Blevel%5C_low%7D%7Blevel%5C_high%7D)
+$input\\_low=scale*\frac{level\\_low}{level\\_high}$
 
-![input\_high=scale](https://latex.codecogs.com/png.latex?input%5C_high%3Dscale)
+$input\\_high=scale$
 
-In the formula above, `level_low` and `level_high` represent the range of the discrete signal.
+
+In the formula above, $level_low$ and $level_high$ represent the range of the discrete signal.
  - For weights:
+    
+    $level\\_low=-2^{bits-1}+1$
+    
+    $level\\_high=2^{bits-1}-1$
 
-    ![level\_low=-2^{bits-1}+1](https://latex.codecogs.com/png.latex?%5Cinline%20%5Cdpi%7B120%7D%20level%5C_low%3D-2%5E%7Bbits-1%7D&plus;1),
-
-    ![level\_high=2^{bits-1}-1](https://latex.codecogs.com/png.latex?%5Cinline%20%5Cdpi%7B120%7D%20level%5C_high%3D2%5E%7Bbits-1%7D-1)
-
-    ![levels=255](https://latex.codecogs.com/png.latex?levels%3D255)
+    $levels=255$
 
  - For unsigned activations:
 
-    ![level\_low=0](https://latex.codecogs.com/png.latex?%5Cinline%20%5Cdpi%7B120%7D%20level%5C_low%3D0)
+    $level\\_low=0$
 
-    ![level\_high=2^{bits}-1](https://latex.codecogs.com/png.latex?%5Cinline%20%5Cdpi%7B120%7D%20level%5C_high%3D2%5E%7Bbits%7D-1)
+    $level\\_high=2^{bits}-1$
 
-    ![levels=256](https://latex.codecogs.com/png.latex?levels%3D256)
+    $levels=256$
 
  - For signed activations:
 
-    ![level\_low=-2^{bits-1}](https://latex.codecogs.com/png.latex?%5Cdpi%7B120%7D%20level%5C_low%3D-2%5E%7Bbits-1%7D)
+    $level\\_low=-2^{bits-1}$
 
-    ![level\_high=2^{bits-1}-1](https://latex.codecogs.com/png.latex?%5Cinline%20%5Cdpi%7B120%7D%20level%5C_high%3D2%5E%7Bbits-1%7D-1)
+    $level\\_high=2^{bits-1}-1$
 
-    ![levels=256](https://latex.codecogs.com/png.latex?levels%3D256)
+    $levels=256$
 
-For all the cases listed above, the common quantization formula is simplified after substitution of `input_low`, `input_high` and `levels`:
+For all the cases listed above, the common quantization formula is simplified after substitution of $input_low$, $input_high$ and $levels$:
 
-![output = \left\lfloor clamp(input * \frac{level\_high}{scale}, level\_low, level\_high)\right \rceil * \frac{scale}{level\_high}](https://latex.codecogs.com/png.latex?output%20%3D%20%5Cleft%5Clfloor%20clamp%28input%20*%20%5Cfrac%7Blevel%5C_high%7D%7Bscale%7D%2C%20level%5C_low%2C%20level%5C_high%29%5Cright%20%5Crceil%20*%20%5Cfrac%7Bscale%7D%7Blevel%5C_high%7D)
+$output = \left\lfloor clamp(input * \frac{level\_high}{scale}, level\_low, level\_high)\right \rceil * \frac{scale}{level\_high}$
 
 Use the `num_init_samples` parameter from the `initializer` group to initialize the values of `scale` and determine which activation should be signed or unsigned from the collected statistics using given number of samples.
 
 ####  Asymmetric Quantization
 
-During the training we optimize the **input_low** and **input_range** parameters using gradient descent:
+During the training we optimize the `input_low` and `input_range` parameters using gradient descent:
 
-![input\_high=input\_low + input\_range](https://latex.codecogs.com/png.latex?input%5C_high%3Dinput%5C_low%20&plus;%20input%5C_range)
+$input\\_high=input\\_low + input\\_range$
 
-![levels=256](https://latex.codecogs.com/png.latex?levels%3D256)
+$levels=256$
 
-![level\_low=0](https://latex.codecogs.com/png.latex?%5Cinline%20%5Cdpi%7B120%7D%20level%5C_low%3D0)
+$level\\_low=0$
 
-![level\_high=2^{bits}-1](https://latex.codecogs.com/png.latex?%5Cinline%20%5Cdpi%7B120%7D%20level%5C_high%3D2%5E%7Bbits%7D-1)
+$level\\_high=2^{bits}-1$
 
 For better accuracy, floating-point zero should be within quantization range and strictly mapped into quant (without rounding). Therefore, the following scheme is applied to ranges of weights and activations before quantization:
 
-![{input\_low}' = min(input\_low, 0)](https://latex.codecogs.com/png.latex?%7Binput%5C_low%7D%27%20%3D%20min%28input%5C_low%2C%200%29)
+${input\_low}' = min(input\_low, 0)$
 
-![{input\_high}' = max(input\_high, 0)](https://latex.codecogs.com/png.latex?%7Binput%5C_high%7D%27%20%3D%20max%28input%5C_high%2C%200%29)
+${input\_high}' = max(input\_high, 0)$
 
-![ZP= \left\lfloor \frac{-{input\_low}'*(levels-1)}{{input\_high}'-{input\_low}'} \right \rceil ](https://latex.codecogs.com/png.latex?ZP%3D%20%5Cleft%5Clfloor%20%5Cfrac%7B-%7Binput%5C_low%7D%27*%28levels-1%29%7D%7B%7Binput%5C_high%7D%27-%7Binput%5C_low%7D%27%7D%20%5Cright%20%5Crceil)
+$ZP= \left\lfloor \frac{-{input\_low}'*(levels-1)}{{input\_high}'-{input\_low}'} \right \rceil$
 
-![{input\_high}''=\frac{ZP-levels+1}{ZP}*{input\_low}'](https://latex.codecogs.com/png.latex?%7Binput%5C_high%7D%27%27%3D%5Cfrac%7BZP-levels+1%7D%7BZP%7D*%7Binput%5C_low%7D%27)
+${input\_high}''=\frac{ZP-levels+1}{ZP}*{input\_low}'$
 
-![{input\_low}''=\frac{ZP}{ZP-levels+1}*{input\_high}'](https://latex.codecogs.com/png.latex?%7Binput%5C_low%7D%27%27%3D%5Cfrac%7BZP%7D%7BZP-levels+1%7D*%7Binput%5C_high%7D%27)
+${input\_low}''=\frac{ZP}{ZP-levels+1}*{input\_high}'$
 
-![{input\_low,input\_high} = \begin{cases} {input\_low}',{input\_high}', & ZP \in $\{0,levels-1\}$ \\ {input\_low}',{input\_high}'', & {input\_high}'' - {input\_low}' > {input\_high}' - {input\_low}'' \\ {input\_low}'',{input\_high}', & {input\_high}'' - {input\_low}' <= {input\_high}' - {input\_low}''\\ \end{cases}](https://latex.codecogs.com/png.latex?%7Binput%5C_low%2Cinput%5C_high%7D%20%3D%20%5Cbegin%7Bcases%7D%20%7Binput%5C_low%7D%27%2C%7Binput%5C_high%7D%27%2C%20%26%20ZP%20%5Cin%20%24%5C%7B0%2Clevels-1%5C%7D%24%20%5C%5C%20%7Binput%5C_low%7D%27%2C%7Binput%5C_high%7D%27%27%2C%20%26%20%7Binput%5C_high%7D%27%27%20-%20%7Binput%5C_low%7D%27%20%3E%20%7Binput%5C_high%7D%27%20-%20%7Binput%5C_low%7D%27%27%20%5C%5C%20%7Binput%5C_low%7D%27%27%2C%7Binput%5C_high%7D%27%2C%20%26%20%7Binput%5C_high%7D%27%27%20-%20%7Binput%5C_low%7D%27%20%3C%3D%20%7Binput%5C_high%7D%27%20-%20%7Binput%5C_low%7D%27%27%5C%5C%20%5Cend%7Bcases%7D)
+${input\_low,input\_high} = \begin{cases} {input\_low}',{input\_high}', & ZP \in $\{0,levels-1\}$ \\ {input\_low}',{input\_high}'', & {input\_high}'' - {input\_low}' > {input\_high}' - {input\_low}'' \\ {input\_low}'',{input\_high}', & {input\_high}'' - {input\_low}' <= {input\_high}' - {input\_low}''\\ \end{cases}$
 
 You can use the `num_init_samples` parameter from the `initializer` group to initialize the values of `input_low` and `input_range` from the collected statistics using given number of samples.
 
