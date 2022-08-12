@@ -164,6 +164,12 @@ class ONNXReshapeMetatype(ONNXOpMetatype):
 
 
 @ONNX_OPERATION_METATYPES.register()
+class ONNXUpsampleMetatype(ONNXOpMetatype):
+    name = 'UpsampleOp'
+    op_names = ['Upsample']
+
+
+@ONNX_OPERATION_METATYPES.register()
 class ONNXConstantOfShapeMetatype(ONNXOpMetatype):
     name = 'ConstantOfShapeOp'
     op_names = ['ConstantOfShape']

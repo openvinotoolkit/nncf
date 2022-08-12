@@ -16,12 +16,12 @@ from typing import List
 import os
 import warnings
 
+import networkx as nx
 import numpy as np
 import onnx
 import onnxruntime as rt
 
 from tests.common.helpers import TEST_ROOT
-
 from tests.onnx.test_nncf_graph_builder import check_nx_graph
 
 from nncf.experimental.post_training.api.dataset import Dataset
@@ -89,7 +89,22 @@ def compare_nncf_graph(quantized_model: onnx.ModelProto, path_ref_graph: str,
     data_dir = os.path.join(TEST_ROOT, 'onnx', REFERENCE_GRAPHS_TEST_ROOT)
     path_to_dot = os.path.abspath(os.path.join(data_dir, path_ref_graph))
 
-    check_nx_graph(nx_graph, path_to_dot, generate_ref_graphs)
+    if generate_ref_graphs:
+        nx.drawing.nx_pydot.write_dot(nx_graph, path_to_dot)
+
+    expected_graph = nx.drawing.nx_pydot.read_dot(path_to_dot)
+
+    check_nx_graph(nx_graph, expected_graph)
+
+
+def compare_nncf_graph_onnx_models(quantized_model: onnx.ModelProto, _quantized_model: onnx.ModelProto) -> None:
+    nncf_graph = GraphConverter.create_nncf_graph(quantized_model)
+    nx_graph = nncf_graph.get_graph_for_structure_analysis(extended=True)
+
+    _nncf_graph = GraphConverter.create_nncf_graph(_quantized_model)
+    _nx_graph = _nncf_graph.get_graph_for_structure_analysis(extended=True)
+
+    check_nx_graph(nx_graph, _nx_graph)
 
 
 def infer_model(input_shape: List[int], quantized_model: onnx.ModelProto) -> None:
