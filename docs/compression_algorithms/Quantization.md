@@ -7,6 +7,17 @@ The method performs differentiable sampling of the continuous signal (for exampl
 #### Common Quantization Formula
 
 Quantization is parametrized by clamping range and number of quantization levels. The sampling formula is the following:
+```math
+ZP = \lfloor-input\_low * s\rceil
+
+output = \frac{\left\lfloor (clamp(input; input\_low, input\_high)-input\_low)  *s - ZP \right \rceil}{s}\\
+
+clamp(input; input\_low, input\_high
+
+s=\frac{levels-1}{input\_high - input\_low
+
+```
+
 
 ![ZP = \lfloor-input\_low * s\rceil](https://latex.codecogs.com/png.image?%5Cdpi%7B110%7D%20ZP%20=%20%5Clfloor-input%5C_low%20*%20s%5Crceil)
 
@@ -15,6 +26,9 @@ Quantization is parametrized by clamping range and number of quantization levels
 ![clamp(input; input\_low, input\_high) = min(max(input, input\_low), input\_high)))](https://latex.codecogs.com/png.latex?clamp%28input%3B%20input%5C_low%2C%20input%5C_high%29%20%3D%20min%28max%28input%2C%20input%5C_low%29%2C%20input%5C_high%29%29%29)
 
 ![s=\frac{levels-1}{input\_high - input\_low}](https://latex.codecogs.com/png.latex?s%3D%5Cfrac%7Blevels-1%7D%7Binput%5C_high%20-%20input%5C_low%7D)
+
+
+$`input_low`$ and $`input_high`$ represent the quantization range and $`\left\lfloor\cdot\right \rceil`$ denotes rounding to the nearest integer.
 
 `input_low` and `input_high` represent the quantization range and ![\left\lfloor\cdot\right \rceil](https://latex.codecogs.com/png.latex?%5Cleft%5Clfloor%5Ccdot%5Cright%20%5Crceil) denotes rounding to the nearest integer.
 
