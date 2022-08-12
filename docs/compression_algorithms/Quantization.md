@@ -7,15 +7,19 @@ The method performs differentiable sampling of the continuous signal (for exampl
 #### Common Quantization Formula
 
 Quantization is parametrized by clamping range and number of quantization levels. The sampling formula is the following:
+
+```math
+x = clamp(x ; T_{low}, T_{up}) = min(max(x, T_{low}), T_{high})
+```
+
 ```math
 ZP = \lfloor-input\_low * s\rceil
+```
 
+```math
 output = \frac{\left\lfloor (clamp(input; input\_low, input\_high)-input\_low)  *s - ZP \right \rceil}{s}\\
-
 clamp(input; input\_low, input\_high
-
 s=\frac{levels-1}{input\_high - input\_low
-
 ```
 
 
