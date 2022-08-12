@@ -448,7 +448,6 @@ def test_reshape_is_last_op(node_type):
         METATYPES_MAP[node_type]['ops'].mask_propagation(reshape_node, graph, NPNNCFTensorProcessor)
         assert reshape_node.data['output_mask'] is None
 
-
 SPLIT_TEST_CASES = [
     ['chunk', 2, 0],
     ['chunk', 2, 1],

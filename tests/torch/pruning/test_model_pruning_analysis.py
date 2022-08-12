@@ -552,7 +552,8 @@ GROUP_PRUNING_MODULES_TEST_CASES = [
 ]
 
 
-@pytest.fixture(params=GROUP_PRUNING_MODULES_TEST_CASES, name='test_input_info_struct_',
+@pytest.fixture(params=GROUP_PRUNING_MODULES_TEST_CASES,
+                name='test_input_info_struct_',
                 ids=list(map(str, GROUP_PRUNING_MODULES_TEST_CASES)))
 def test_input_info_struct(request):
     return request.param
