@@ -123,19 +123,19 @@ For all target HW types, parts of the model graph can be marked as non-quantizab
 
 In our implementation, we use a slightly transformed formula. It is equivalent by order of floating-point operations to simplified symmetric formula and the assymetric one. The small difference is addition of small positive number `eps` to prevent division by zero and taking absolute value of range, since it might become negative on backward:
 
-$output = \frac{clamp(\left\lfloor (input-input\_low^{*}) *s - ZP \right \rceil, level\_low, level\_high)}{s}$
+$output = \frac{clamp(\left\lfloor (input-input\\_low^{*}) *s - ZP \right \rceil, level\\_low, level\\_high)}{s}$
 
-$s = \frac{level\_high}{|input\_range^{*}| + eps}$
+$s = \frac{level\\_high}{|input\\_range^{*}| + eps}$
 
-$ZP = \lfloor-input\_low * s\rceil$
+$ZP = \lfloor-input\\_low * s\rceil$
 
 For asymmetric:
 
-$\\input\_low^{*} = input\_low \\ input\_range^{*} = input\_range$
+$input\\_low^{*} = input\\_low \\ input\\_range^{*} = input\\_range$
 
 For symmetric:
 
-$\\input\_low^{*} = 0 \\ input\_range^{*} = scale$
+$input\\_low^{*} = 0 \\ input\\_range^{*} = scale$
 
 ---
 **NOTE**
