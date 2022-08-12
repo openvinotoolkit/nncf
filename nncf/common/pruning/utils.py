@@ -33,8 +33,6 @@ from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.pruning.clusterization import Cluster
 from nncf.common.pruning.clusterization import Clusterization
 from nncf.common.pruning.structs import PrunedLayerInfoBase
-from nncf.common.pruning.symbolic_mask import AmbiguousSymbolicMask
-from nncf.common.pruning.symbolic_mask import SymbolicMask
 from nncf.common.tensor import NNCFTensor
 from nncf.common.utils.registry import Registry
 
@@ -645,22 +643,3 @@ def identity_mask_propagation(node: NNCFNode, graph: NNCFGraph) -> None:
     assert len(input_masks) == 1
 
     node.data['output_mask'] = input_masks[0]
-
-def merge_multiple_input_masks(input_masks: List[SymbolicMask]) -> SymbolicMask:
-    """
-    Merge multiple input mask.
-    In case input_masks have different shape don't propagate any masks.
-
-    :param input_masks: Given input masks.
-    :return: Merged input mask.
-    """
-    producers = set()
-    for mask in input_masks:
-        producers = producers.union(set(mask.mask_producers))
-    producers = list(producers)
-
-    for mask in input_masks[1:]:
-        if not input_masks[0].shape == mask.shape:
-            return AmbiguousSymbolicMask(producers)
-
-    return SymbolicMask(input_masks[0].shape[0], producers)
