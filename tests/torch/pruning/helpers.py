@@ -597,6 +597,117 @@ class GroupedConvolutionModel(nn.Module):
         return self.fc(x)
 
 
+class SplitConcatModel(nn.Module):
+    #          (input)
+    #             |
+    #          (conv1)
+    #             |
+    #          (chunk)
+    #        /       |
+    #    (conv2)  (conv3)
+    #         \    /
+    #        (concat)
+    #           |
+    #        (conv4)
+    def __init__(self):
+        super().__init__()
+        self.conv1 = create_conv(1, 16, 1, 1)
+        self.conv2 = create_conv(8, 16, 1, 1)
+        self.conv3 = create_conv(8, 16, 1, 1)
+        self.conv4 = create_conv(32, 64, 1, 1)
+
+    def forward(self, x):
+        x = self.conv1(x)
+        y1, y2 = torch.chunk(x, chunks=2, dim=1)
+
+        y1 = self.conv2(y1)
+        y2 = self.conv3(y2)
+
+        y = torch.cat([y1, y2], dim=1)
+        y = self.conv4(y)
+        return y
+
+
+class MultipleSplitConcatModel(nn.Module):
+    #              (input)
+    #                 |
+    #              (conv1)
+    #             /      \
+    #        (chunk)    (chunk)
+    #        /     \  /   \    \
+    #  (conv2) (concat) (conv3) (conv4)
+    #         \    /
+    #        (concat)
+    #           |
+    #        (conv5)
+    def __init__(self):
+        super().__init__()
+        self.conv1 = create_conv(1, 16, 1, 1)
+        self.conv2 = create_conv(8, 16, 1, 1)
+        self.conv3 = create_conv(6, 12, 1, 1)
+        self.conv4 = create_conv(4, 8, 1, 1)
+        self.conv5 = create_conv(14, 28, 1, 1)
+
+    def forward(self, x):
+        x = self.conv1(x)
+        y1, y2 = torch.chunk(x, chunks=2, dim=1)
+        y1 = self.conv2(y1)
+
+        y3, y4, y5 = torch.chunk(x, chunks=3, dim=1)
+        y = torch.cat([y2, y3], dim=1)
+
+        y4 = self.conv3(y4)
+        y5 = self.conv4(y5)
+        y = self.conv5(y)
+        return y
+
+
+class HRNetBlock(nn.Module):
+    # omit interpolate, min
+    #                    (input)
+    #                   /      \
+    #             (conv1)     (conv2)
+    #               /            |
+    #            (chunk1)      (chunk2)
+    #            /    \       /     \
+    #           /      \  (pool) (conv3)
+    #          /        \   /       /
+    #      (conv4)     (concat1)   /
+    #        \           /        /
+    #         \      (conv5)     /
+    #          \    /     \     /
+    #        (concat2)   (concat3)
+    #           |            |
+    #        (conv6)     (conv7)
+    def __init__(self):
+        super().__init__()
+        self.conv1 = create_conv(1, 8, 5, 5)
+        self.conv2 = create_conv(1, 8, 1, 1)
+        self.conv3 = create_conv(4, 8, 5, 5)
+        self.conv4 = create_conv(4, 8, 1, 1)
+        self.conv5 = create_conv(8, 16, 1, 1)
+        self.conv6 = create_conv(24, 48, 1, 1)
+        self.conv7 = create_conv(24, 48, 1, 1)
+
+        self.avg_pool = nn.AdaptiveAvgPool2d(4)
+
+    def forward(self, x):
+        x1 = self.conv1(x)
+        x2 = self.conv2(x)
+        y1, x1 = torch.chunk(x1, chunks=2, dim=1) # chunk1
+        x2, y2 = torch.chunk(x2, chunks=2, dim=1) # chunk2
+        x2 = self.avg_pool(x2)
+        y2 = self.conv3(y2)
+        y1 = self.conv4(y1)
+        y = torch.cat([x1, x2], dim=1) # concat1
+        y = self.conv5(y)
+        out1 = torch.cat([y1, y], dim=1) # concat2
+        out2 = torch.cat([y, y2], dim=1) # concat3
+        out1 = self.conv6(out1)
+        out2 = self.conv7(out2)
+        return out1, out2
+
+
 def make_divisible(v, divisor, min_value=None):
     """
     This function is taken from the original tf repo.

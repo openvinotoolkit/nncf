@@ -18,6 +18,7 @@ from nncf.common.graph.layer_attributes import LinearLayerAttributes
 from nncf.common.graph.layer_attributes import MultipleOutputLayerAttributes
 from nncf.common.pruning.operations import BasePruningOp
 from nncf.common.pruning.mask_propagation import MaskPropagationAlgorithm
+from nncf.common.pruning.utils import find_input_mask_for_node
 
 
 @pytest.mark.parametrize('pruning_op,metatype,accept_pruned_input',
@@ -464,24 +465,35 @@ def test_split_accept_pruned_input(node_type, chunks, axis):
     actual_accept_pruned_input = dummy_types.DummySplitPruningOp.accept_pruned_input(node)
     assert actual_accept_pruned_input
 
-@pytest.mark.parametrize('empty_mask_left_branch', [False, True])
-@pytest.mark.parametrize('empty_mask_right_branch', [False, True])
-@pytest.mark.parametrize('right_branch_output_channels', [5, 5])
-def test_split_metatype_mask_prop(empty_mask_left_branch, empty_mask_right_branch, right_branch_output_channels):
-    node_name = 'dummy_split'
-    layer_attributes = MultipleOutputLayerAttributes(chunks=2, axis=0)
+
+@pytest.mark.parametrize('empty_mask_left_branch', [False])
+@pytest.mark.parametrize('empty_mask_right_branch', [False])
+@pytest.mark.parametrize('layer_attributes', [{'in_channels': 5, 'out_channels': 10, 'groups': 1}])
+def test_split_metatype_mask_prop(empty_mask_left_branch, empty_mask_right_branch, layer_attributes):
+    default_conv_params = {
+        'weight_requires_grad': True,
+        'kernel_size': (2, 2),
+        'stride': (1, 1),
+        'padding_values': [0, 0]
+     }
+    split_attributes = MultipleOutputLayerAttributes(chunks=2, axis=0)
+    conv_attributes = ConvolutionLayerAttributes(transpose=False, **layer_attributes, **default_conv_params)
 
     graph = NNCFGraph()
-    conv_op_0 = graph.add_nncf_node('conv_op_0', 'conv', dummy_types.DummyConvMetatype)
-    split_node = graph.add_nncf_node(node_name, 'chunk', dummy_types.DummySplitMetatype, layer_attributes=layer_attributes)
-    conv_op_1 = graph.add_nncf_node('conv_op_1', 'conv', dummy_types.DummyConvMetatype, layer_attributes=ConvolutionLayerAttributes)
-    conv_op_2 = graph.add_nncf_node('conv_op_2', 'conv', dummy_types.DummyConvMetatype, layer_attributes=ConvolutionLayerAttributes)
+    conv_op_0 = graph.add_nncf_node('conv_op_0', dummy_types.DummyConvMetatype.name, dummy_types.DummyConvMetatype, 
+                                    layer_attributes=ConvolutionLayerAttributes)
+    split_node = graph.add_nncf_node('split_0', dummy_types.DummySplitMetatype.name, dummy_types.DummySplitMetatype, 
+                                    layer_attributes=split_attributes)
+    conv_op_1 = graph.add_nncf_node('conv_op_1', dummy_types.DummyConvMetatype.name, dummy_types.DummyConvMetatype, 
+                                    layer_attributes=conv_attributes)
+    conv_op_2 = graph.add_nncf_node('conv_op_2', dummy_types.DummyConvMetatype.name, dummy_types.DummyConvMetatype, 
+                                    layer_attributes=conv_attributes)
 
     add_node = partial(graph.add_edge_between_nncf_nodes,
                        input_port_id=0,
                        output_port_id=0,
                        dtype=Dtype.FLOAT)
-    
+
     # conv_op_0 -> split_node
     add_node(from_node_id=conv_op_0.node_id,
              to_node_id=split_node.node_id,
@@ -497,8 +509,14 @@ def test_split_metatype_mask_prop(empty_mask_left_branch, empty_mask_right_branc
              to_node_id=conv_op_2.node_id,
              tensor_shape=[10, 5, 10, 10])
 
+    # Set masks
     conv_op_0_node = graph.get_node_by_id(conv_op_0.node_id)
     conv_op_0_node.data['output_mask'] = NPNNCFTensor(np.ones(10))
+
+    # Set in_channles
+    for node in (conv_op_1, conv_op_2):
+        conv_node = graph.get_node_by_id(node.node_id)
+        conv_node.layer_attributes.in_channels = 5
 
     # Propagate masks
     MaskPropagationAlgorithm(graph, dummy_types.DUMMY_PRUNING_OPERATOR_METATYPES,
@@ -506,8 +524,9 @@ def test_split_metatype_mask_prop(empty_mask_left_branch, empty_mask_right_branc
 
     # Check with masks
     split_node = graph.get_node_by_id(split_node.node_id)
-    if split_node.data['output_mask'] is None:
-        assert empty_mask_left_branch and empty_mask_right_branch == False
-    else:
-        reference_mask = np.ones((10 - right_branch_output_channels,))
-        np.testing.assert_equal(split_node.data['output_mask'][0].tensor, reference_mask)
+    split_output_masks = split_node.data['output_mask']
+    reference_mask = np.ones((5,))
+    for node in (conv_op_1, conv_op_2):
+        conv_node = graph.get_node_by_id(conv_op_1.node_id)
+        output_mask = find_input_mask_for_node(split_output_masks, conv_node)
+        np.testing.assert_equal(output_mask.tensor, reference_mask)

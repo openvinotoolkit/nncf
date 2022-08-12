@@ -63,6 +63,9 @@ from tests.torch.pruning.helpers import ResidualConnectionModel
 from tests.torch.pruning.helpers import ShuffleNetUnitModel
 from tests.torch.pruning.helpers import ShuffleNetUnitModelDW
 from tests.torch.pruning.helpers import get_basic_pruning_config
+from tests.torch.pruning.helpers import SplitConcatModel
+from tests.torch.pruning.helpers import MultipleSplitConcatModel
+from tests.torch.pruning.helpers import HRNetBlock
 
 
 # pylint: disable=protected-access
@@ -452,6 +455,50 @@ GROUP_PRUNING_MODULES_TEST_CASES = [
         final_can_prune={1: PruningAnalysisDecision(True),
                          3: PruningAnalysisDecision(False, PruningAnalysisReason.CLOSING_CONV_MISSING)},
         prune_params=(True, True)),
+    GroupPruningModulesTestStruct(
+        model=SplitConcatModel,
+        non_pruned_module_nodes=[],
+        pruned_groups=[['SplitConcatModel/NNCFConv2d[conv1]/conv2d_0'],
+                       ['SplitConcatModel/NNCFConv2d[conv2]/conv2d_0'],
+                       ['SplitConcatModel/NNCFConv2d[conv3]/conv2d_0']],
+        pruned_groups_by_node_id=[[1], [3], [4]],
+        can_prune_after_analysis={0: True, 1: True, 2: True, 3: True, 4: True, 5: True, 6: True, 7: True},
+        final_can_prune={1: PruningAnalysisDecision(True),
+                         3: PruningAnalysisDecision(True),
+                         4: PruningAnalysisDecision(True),
+                         6: PruningAnalysisDecision(False, PruningAnalysisReason.LAST_CONV)},
+        prune_params=(True, True)),
+    GroupPruningModulesTestStruct(
+        model=MultipleSplitConcatModel,
+        non_pruned_module_nodes=[],
+        pruned_groups=[['MultipleSplitConcatModel/NNCFConv2d[conv1]/conv2d_0']],
+        pruned_groups_by_node_id=[[1]],
+        can_prune_after_analysis={0: True, 1: True, 2: True, 3: True, 4: True, 5: True, 6: True, 7: True, 8: True, 9: True},
+        final_can_prune={1: PruningAnalysisDecision(True),
+                         3: PruningAnalysisDecision(False, PruningAnalysisReason.CLOSING_CONV_MISSING),
+                         6: PruningAnalysisDecision(False, PruningAnalysisReason.CLOSING_CONV_MISSING),
+                         7: PruningAnalysisDecision(False, PruningAnalysisReason.CLOSING_CONV_MISSING),
+                         8: PruningAnalysisDecision(False, PruningAnalysisReason.LAST_CONV)},
+        prune_params=(True, True)),
+    GroupPruningModulesTestStruct(
+        model=HRNetBlock,
+        non_pruned_module_nodes=[],
+        pruned_groups=[['HRNetBlock/NNCFConv2d[conv1]/conv2d_0'],
+                       ['HRNetBlock/NNCFConv2d[conv2]/conv2d_0'],
+                       ['HRNetBlock/NNCFConv2d[conv3]/conv2d_0'],
+                       ['HRNetBlock/NNCFConv2d[conv4]/conv2d_0'],
+                       ['HRNetBlock/NNCFConv2d[conv5]/conv2d_0']],
+        pruned_groups_by_node_id=[[1], [2], [6], [7], [9]],
+        can_prune_after_analysis={0: True, 1: True, 2: True, 3: True, 4: True, 5: True, 6: True, 7: True,
+                                  8: True, 9: True, 10: True, 11: True, 12: True, 13: True},
+        final_can_prune={1: PruningAnalysisDecision(True),
+                         2: PruningAnalysisDecision(True),
+                         6: PruningAnalysisDecision(True),
+                         7: PruningAnalysisDecision(True),
+                         9: PruningAnalysisDecision(True),
+                         12: PruningAnalysisDecision(False, PruningAnalysisReason.LAST_CONV),
+                         13: PruningAnalysisDecision(False, PruningAnalysisReason.LAST_CONV)},
+        prune_params=(True, True))
 ]
 
 
