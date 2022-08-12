@@ -20,6 +20,8 @@ from nncf.common.pruning.utils import is_grouped_conv
 from nncf.common.pruning.utils import get_input_masks
 from nncf.common.pruning.utils import is_prunable_depthwise_conv
 from nncf.common.pruning.utils import identity_mask_propagation
+from nncf.common.pruning.utils import match_multiple_output_masks
+from nncf.common.pruning.utils import find_input_mask_for_node
 from nncf.common.tensor import NNCFTensor
 from nncf.common.graph.layer_attributes import GroupNormLayerAttributes
 
@@ -199,12 +201,16 @@ class ConcatPruningOp(BasePruningOp):
         input_edges = graph.get_input_edges(node)
         previous_nodes = [edge.from_node for edge in input_edges]
         input_masks = [input_node.data['output_mask'] for input_node in previous_nodes]
+        input_masks = [find_input_mask_for_node(mask, node) if isinstance(mask, list) else mask for mask in input_masks]
 
         not_empty_masks = [mask for mask in input_masks if mask is not None]  # type: List[NNCFTensor]
         if not not_empty_masks:
             return None
 
         first_non_empty_mask = not_empty_masks[0]
+        if isinstance(first_non_empty_mask, list):
+            first_non_empty_mask = find_input_mask_for_node(first_non_empty_mask, node)
+
         device = first_non_empty_mask.device
         filled_input_masks = []
         for i, mask in enumerate(input_masks):
@@ -226,12 +232,18 @@ class SplitPruningOp(BasePruningOp):
     @classmethod
     def accept_pruned_input(cls, node: NNCFNode):
         return True
-    
+
     @classmethod
     def generate_output_masks(cls, node: NNCFNode, graph: NNCFGraph,
                               tensor_processor: Type[NNCFPruningBaseTensorProcessor]) -> Optional[NNCFTensor]:
         """
-        Generate output mask
+        Generate output mask from input masks for split/chunk operations.
+        If input mask is None return None
+
+        :param node: Node to determine it's sources.
+        :param graph: NNCF graph to work with
+        :param tensor_processor: Interface with tensor processing methods.
+        :return: Filled input masks.
         """
         input_mask = get_input_masks(node, graph)[0]
         if not input_mask:
@@ -240,13 +252,18 @@ class SplitPruningOp(BasePruningOp):
         chunk_size = node.layer_attributes.chunks
         chunk_axis = node.layer_attributes.axis
 
-        result_masks = tensor_processor.split(input_mask, chunk_size, chunk_axis)
+        output_edges = graph.get_output_edges(node)
+        output_shapes = [edge.tensor_shape[chunk_axis] for edge in output_edges]
+
+        split_masks = tensor_processor.split(input_mask, chunk_size, chunk_axis, output_shapes)
+        result_masks = match_multiple_output_masks(split_masks, output_edges, chunk_axis)
+
         return result_masks
 
     @classmethod
     def mask_propagation(cls, node: NNCFNode, graph: NNCFGraph,
                          tensor_processor: Type[NNCFPruningBaseTensorProcessor]) -> None:
-        result_masks = cls.generate_output_masks(node, graph, tensor_processor)       
+        result_masks = cls.generate_output_masks(node, graph, tensor_processor)
         node.data['output_mask'] = result_masks
 
 class ElementwisePruningOp(BasePruningOp):

@@ -27,13 +27,13 @@ import numpy as np
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.graph import NNCFNodeName
+from nncf.common.graph import NNCFGraphEdge
 from nncf.common.graph.layer_attributes import LinearLayerAttributes
 from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.pruning.clusterization import Cluster
 from nncf.common.pruning.clusterization import Clusterization
 from nncf.common.pruning.structs import PrunedLayerInfoBase
-from nncf.common.pruning.symbolic_mask import AmbiguousSymbolicMask
 from nncf.common.pruning.symbolic_mask import SymbolicMask
 from nncf.common.tensor import NNCFTensor
 from nncf.common.utils.registry import Registry
@@ -596,6 +596,13 @@ def get_input_masks(node: NNCFNode, graph: NNCFGraph) -> List[Optional[NNCFTenso
     return input_masks
 
 
+def get_output_mask(node: NNCFNode) -> Optional[NNCFTensor]:
+    output_mask = node.data['output_mask']
+    if isinstance(output_mask, list):
+        output_mask = find_input_mask_for_node(output_mask, node)
+    return output_mask
+
+
 def get_input_channels(node: NNCFNode) -> int:
     """
     Returns count of input channels of an prunable node.
@@ -638,23 +645,43 @@ def identity_mask_propagation(node: NNCFNode, graph: NNCFGraph) -> None:
         # In case for disconnected NNCFGraph
         input_masks = [None]
     assert len(input_masks) == 1
-    node.data['output_mask'] = input_masks[0]
+    input_mask = input_masks[0]
 
-def merge_multiple_input_masks(input_masks: List[SymbolicMask]) -> SymbolicMask:
+    if isinstance(input_mask, list):
+        input_mask = find_input_mask_for_node(input_mask, node)
+    node.data['output_mask'] = input_mask
+
+
+def match_multiple_output_masks(output_masks: List[SymbolicMask], output_edges: List[NNCFGraphEdge], chunk_axis: int) -> dict:
     """
-    Merge multiple input mask.
-    In case input_masks have different shape don't propagate any masks.
+    Match multiple input mask to each next nodes.
 
-    :param input_masks: Given input masks.
-    :return: Merged input mask.
+    :param output_masks: Given output masks.
+    :return: Matched output mask for each next node.
     """
-    producers = set()
-    for mask in input_masks:
-        producers = producers.union(set(mask.mask_producers))
-    producers = list(producers)
+    output_shapes = [edge.tensor_shape[chunk_axis] for edge in output_edges]
+    next_nodes = [edge.to_node for edge in output_edges]
+    result_masks = {node.node_name: None for node in next_nodes}
 
-    for mask in input_masks[1:]:
-        if not input_masks[0].shape == mask.shape:
-            return AmbiguousSymbolicMask(producers)
+    if len(set(output_shapes)) == 1:
+        for i, split_mask in enumerate(output_masks):
+            result_masks[next_nodes[i].node_name] = split_mask
+    else:
+        for split_mask in output_masks:
+            idx = output_shapes.index(split_mask.shape[0])
+            result_masks[next_nodes[idx].node_name] = split_mask
+            # update already matched
+            output_shapes[idx]=None
 
-    return SymbolicMask(input_masks[0].shape[0], producers)
+    return list(result_masks.items())
+
+def find_input_mask_for_node(input_mask: List, node: NNCFNode) -> SymbolicMask:
+    """
+    Find exact input mask for node among multiple input masks.
+
+    :param input_mask: Given input masks.
+    :return: Exact input mask for node.
+    """
+    node_name = node.node_name
+    input_mask = dict(input_mask)
+    return input_mask[node_name]
