@@ -14,7 +14,7 @@ $output = \frac{\left\lfloor (clamp(input; input\\_low, input\\_high)-input\\_lo
 
 $clamp(input; input\\_low, input\\_high)$
 
-$s = \frac{levels-1}{input\\_high - input\\_low$
+
 
 
 
