@@ -54,9 +54,9 @@ In the formula above, $level_low$ and $level_high$ represent the range of the di
 
     $levels=256$
 
-For all the cases listed above, the common quantization formula is simplified after substitution of $input_low$, $input_high$ and $levels$:
+For all the cases listed above, the common quantization formula is simplified after substitution of $input\\_low$, $input\\_high$ and $levels$:
 
-$output = \left\lfloor clamp(input * \frac{level\_high}{scale}, level\_low, level\_high)\right \rceil * \frac{scale}{level\_high}$
+$output = \left\lfloor clamp(input * \frac{level\\_high}{scale}, level\\_low, level\\_high)\right \rceil * \frac{scale}{level\\_high}$
 
 Use the `num_init_samples` parameter from the `initializer` group to initialize the values of `scale` and determine which activation should be signed or unsigned from the collected statistics using given number of samples.
 
