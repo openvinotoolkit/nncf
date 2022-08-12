@@ -85,7 +85,7 @@ ${input\\_high}''=\frac{ZP-levels+1}{ZP}*{input\\_low}'$
 ${input\\_low}''=\frac{ZP}{ZP-levels+1}*{input\\_high}'$
 
 
-${input\\_low,input\\_high} = \begin{cases} {input\\_low}',{input\\_high}', \& ZP \in \$\{0,levels-1\}$ \\ {input\\_low}',{input\\_high}'', \& {input\\_high}'' - {input\\_low}' > {input\\_high}' - {input\\_low}'' \\ {input\\_low}'',{input\\_high}', \& {input\\_high}'' - {input\\_low}' <= {input\\_high}' - {input\\_low}''\\ \end{cases}$
+${input\\_low,input\\_high} = \begin{cases} {input\\_low}',{input\\_high}', \\& ZP \in \\$\{0,levels-1\}\\$ \\ {input\\_low}',{input\\_high}'', \\& {input\\_high}'' - {input\\_low}' > {input\\_high}' - {input\\_low}'' \\ {input\\_low}'',{input\\_high}', \& {input\\_high}'' - {input\\_low}' <= {input\\_high}' - {input\\_low}''\\ \end{cases}$
 
 
 
