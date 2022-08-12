@@ -16,7 +16,7 @@ Here, $\mathcal{B}(p_i)$ is the Bernoulli distribution, $\epsilon_i$ may be inte
 
 
 
-$L_{sparse} = \mathbb{E}\_{\epsilon \sum P_{\epsilon}} $
+$L_{sparse} = \mathbb{E}\_{\epsilon \sim P_{\epsilon}} $
 
 $L_{sparse} = \mathbb{E}$
 
