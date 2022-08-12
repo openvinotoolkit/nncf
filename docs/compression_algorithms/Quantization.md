@@ -8,7 +8,7 @@ The method performs differentiable sampling of the continuous signal (for exampl
 
 Quantization is parametrized by clamping range and number of quantization levels. The sampling formula is the following:
 
-$ZP = \lfloor - input_low * s \rceil$
+$ZP = \lfloor - input\\_low * s \rceil$
 
 $output = \frac{\left\lfloor (clamp(input; input\_low, input\_high)-input\_low)  *s - ZP \right \rceil}{s}\\$
 
