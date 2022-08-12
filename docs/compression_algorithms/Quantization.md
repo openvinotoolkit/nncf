@@ -8,19 +8,14 @@ The method performs differentiable sampling of the continuous signal (for exampl
 
 Quantization is parametrized by clamping range and number of quantization levels. The sampling formula is the following:
 
-```math
-x = clamp(x ; T_{low}, T_{up}) = min(max(x, T_{low}), T_{high})
-```
+$ZP = \lfloor-input\_low * s\rceil$
 
-```math
-ZP = \lfloor-input\_low * s\rceil
-```
+$output = \frac{\left\lfloor (clamp(input; input\_low, input\_high)-input\_low)  *s - ZP \right \rceil}{s}\\$
 
-```math
-output = \frac{\left\lfloor (clamp(input; input\_low, input\_high)-input\_low)  *s - ZP \right \rceil}{s}\\
-clamp(input; input\_low, input\_high
-s=\frac{levels-1}{input\_high - input\_low
-```
+$clamp(input; input\_low, input\_high$
+
+$s=\frac{levels-1}{input\_high - input\_low$
+
 
 
 ![ZP = \lfloor-input\_low * s\rceil](https://latex.codecogs.com/png.image?%5Cdpi%7B110%7D%20ZP%20=%20%5Clfloor-input%5C_low%20*%20s%5Crceil)
@@ -32,7 +27,7 @@ s=\frac{levels-1}{input\_high - input\_low
 ![s=\frac{levels-1}{input\_high - input\_low}](https://latex.codecogs.com/png.latex?s%3D%5Cfrac%7Blevels-1%7D%7Binput%5C_high%20-%20input%5C_low%7D)
 
 
-$`input_low`$ and $`input_high`$ represent the quantization range and $`\left\lfloor\cdot\right \rceil`$ denotes rounding to the nearest integer.
+$input_low$ and $input_high$ represent the quantization range and $\left\lfloor\cdot\right \rceil$ denotes rounding to the nearest integer.
 
 `input_low` and `input_high` represent the quantization range and ![\left\lfloor\cdot\right \rceil](https://latex.codecogs.com/png.latex?%5Cleft%5Clfloor%5Ccdot%5Cright%20%5Crceil) denotes rounding to the nearest integer.
 
