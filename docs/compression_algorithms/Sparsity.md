@@ -6,7 +6,7 @@ so that zero values are randomly distributed inside the tensor. Most of the spar
 
 This section describes the Regularization-Based Sparsity (RB-Sparsity) algorithm implemented in this framework. The method is based on $L_0$-regularization, with which parameters of the model tend to zero:
 
-$ \sum\_{i=0}^{|\theta|} $
+$ \sum\_{i=0}{|\theta|} $
 
 $\sum_{n=1}^{\infty}$
 
