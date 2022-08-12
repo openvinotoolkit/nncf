@@ -16,7 +16,11 @@ Here, $\mathcal{B}(p_i)$ is the Bernoulli distribution, $\epsilon_i$ may be inte
 
 $L_{sparse} = \mathbb{E}_{\epsilon \sim P_{\epsilon}} $
 
+$L_{sparse} =$
+
 $ \lbrack \frac{\sum_{i=0}^{|\theta|} \epsilon_i}{|\theta|} - level \rbrack ^2$
+
+
 
 
 During training, we store and optimize $p_i$'s in the logit form:
