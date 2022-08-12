@@ -12,6 +12,8 @@ $ZP = \lfloor - input\\_low * s \rceil$
 
 $output = \frac{\left \lfloor (clamp(input; input\\_low, input\\_high)-input\\_low) * s - ZP \right \rceil}{s}\\$
 
+$(clamp(input; input\\_low, input\\_high)-input\\_low)$
+
 $output = \frac{\left\lfloor input\\_low - input\\_low \right\rceil} {s}$
 
 
