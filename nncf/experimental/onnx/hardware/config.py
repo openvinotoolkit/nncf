@@ -16,7 +16,7 @@ from typing import Type
 
 from nncf.common.graph import OperatorMetatype
 from nncf.common.hardware.config import HWConfig
-from nncf.experimental.onnx.graph.metatypes.onnx_ops import get_operator_metatypes
+from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import get_operator_metatypes
 
 
 class ONNXHWConfig(HWConfig):

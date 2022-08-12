@@ -36,7 +36,7 @@ from nncf.experimental.onnx.graph.transformations.commands import ONNXTargetPoin
 from nncf.experimental.post_training.statistics.statistic_point import StatisticPoint
 from nncf.experimental.post_training.statistics.statistic_point import StatisticPointsContainer
 from nncf.experimental.onnx.graph.transformations.layout import ONNXTransformationLayout
-from nncf.experimental.onnx.graph.metatypes.onnx_ops import GENERAL_WEIGHT_LAYER_METATYPES
+from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import GENERAL_WEIGHT_LAYER_METATYPES
 from nncf.experimental.onnx.graph.nncf_graph_builder import GraphConverter
 from nncf.experimental.onnx.algorithms.quantization.default_quantization import DEFAULT_ONNX_QUANT_TRAIT_TO_OP_DICT
 from nncf.experimental.onnx.graph.transformations.commands import ONNXQuantizerInsertionCommand

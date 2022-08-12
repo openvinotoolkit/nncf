@@ -182,6 +182,107 @@ class ONNXShapeMetatype(ONNXOpMetatype):
 
 
 @ONNX_OPERATION_METATYPES.register()
+class ONNXExpandMetatype(ONNXOpMetatype):
+    # TODO (kshpv): hw_config_names?
+    name = 'ExpandOp'
+    op_names = ['Expand']
+
+
+@ONNX_OPERATION_METATYPES.register()
+class ONNXNonZeroMetatype(ONNXOpMetatype):
+    name = 'NonZeroOp'
+    op_names = ['NonZero']
+
+
+@ONNX_OPERATION_METATYPES.register()
+class ONNXSplitMetatype(ONNXOpMetatype):
+    name = 'SplitOp'
+    op_names = ['Split']
+    hw_config_names = [HWConfigOpName.SPLIT]
+
+
+@ONNX_OPERATION_METATYPES.register()
+class ONNXLessMetatype(ONNXOpMetatype):
+    name = 'LessOp'
+    op_names = ['Less']
+    hw_config_names = [HWConfigOpName.LESS]
+
+
+@ONNX_OPERATION_METATYPES.register()
+class ONNXGreaterMetatype(ONNXOpMetatype):
+    name = 'GreaterOp'
+    op_names = ['Greater']
+    hw_config_names = [HWConfigOpName.GREATER]
+
+
+@ONNX_OPERATION_METATYPES.register()
+class ONNXEqualMetatype(ONNXOpMetatype):
+    name = 'EqualOp'
+    op_names = ['Equal']
+    hw_config_names = [HWConfigOpName.EQUAL]
+
+
+@ONNX_OPERATION_METATYPES.register()
+class ONNXNotMetatype(ONNXOpMetatype):
+    name = 'NotOp'
+    op_names = ['Not']
+    hw_config_names = [HWConfigOpName.LOGICALNOT]
+
+
+@ONNX_OPERATION_METATYPES.register()
+class ONNXAndMetatype(ONNXOpMetatype):
+    name = 'AndOp'
+    op_names = ['And']
+    hw_config_names = [HWConfigOpName.LOGICALAND]
+
+
+@ONNX_OPERATION_METATYPES.register()
+class ONNXOrMetatype(ONNXOpMetatype):
+    name = 'OrOp'
+    op_names = ['Or']
+    hw_config_names = [HWConfigOpName.LOGICALOR]
+
+
+@ONNX_OPERATION_METATYPES.register()
+class ONNXFloorMetatype(ONNXOpMetatype):
+    name = 'FloorOp'
+    op_names = ['Floor']
+    hw_config_names = [HWConfigOpName.FLOORMOD]
+
+
+@ONNX_OPERATION_METATYPES.register()
+class ONNXSqrtMetatype(ONNXOpMetatype):
+    name = 'SqrtOp'
+    op_names = ['Sqrt']
+    hw_config_names = [HWConfigOpName.POWER]
+
+
+@ONNX_OPERATION_METATYPES.register()
+class ONNXLogMetatype(ONNXOpMetatype):
+    name = 'LogOp'
+    op_names = ['Log']
+
+
+@ONNX_OPERATION_METATYPES.register()
+class ONNXScatterElementslMetatype(ONNXOpMetatype):
+    name = 'ScatterElementsOp'
+    op_names = ['ScatterElements']
+
+
+@ONNX_OPERATION_METATYPES.register()
+class ONNXRoiAlignMetatype(ONNXOpMetatype):
+    name = 'RoiAlignOp'
+    op_names = ['RoiAlign']
+
+
+@ONNX_OPERATION_METATYPES.register()
+class ONNXMatMulMetatype(ONNXOpMetatype):
+    name = 'MatMulOp'
+    op_names = ['MatMul']
+    hw_config_names = [HWConfigOpName.MATMUL]
+
+
+@ONNX_OPERATION_METATYPES.register()
 class ONNXGatherMetatype(ONNXOpMetatype):
     name = 'GatherOp'
     op_names = ['Gather']

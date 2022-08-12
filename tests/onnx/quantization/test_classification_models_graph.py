@@ -47,6 +47,9 @@ MODELS = [
     models.googlenet(),
     models.vgg16(),
     models.shufflenet_v2_x1_0(),
+    models.squeezenet1_0(),
+    models.densenet121(),
+    models.mnasnet0_5()
 ]
 
 INPUT_SHAPES = [

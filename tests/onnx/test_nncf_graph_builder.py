@@ -61,4 +61,6 @@ def test_built_nncf_graphs(model_creator_func):
     data_dir = os.path.join(PROJECT_ROOT, REFERENCE_GRAPHS_TEST_ROOT)
     path_to_dot = os.path.abspath(os.path.join(data_dir, model.path_ref_graph))
 
-    check_nx_graph(nx_graph, path_to_dot)
+    expected_graph = nx.drawing.nx_pydot.read_dot(path_to_dot)
+
+    check_nx_graph(nx_graph, expected_graph)

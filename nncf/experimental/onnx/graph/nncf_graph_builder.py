@@ -26,8 +26,8 @@ from nncf.common.graph.operator_metatypes import OutputNoopMetatype
 from nncf.common.utils.logger import logger as nncf_logger
 
 from nncf.experimental.onnx.graph.onnx_graph import ONNXGraph
-from nncf.experimental.onnx.graph.metatypes.onnx_ops import ONNX_OPERATION_METATYPES
-from nncf.experimental.onnx.graph.metatypes.onnx_ops import ONNXConstantMetatype
+from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNX_OPERATION_METATYPES
+from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXConstantMetatype
 
 
 class GraphConverter:

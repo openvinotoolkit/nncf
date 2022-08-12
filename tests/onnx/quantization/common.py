@@ -37,21 +37,24 @@ REFERENCE_GRAPHS_TEST_ROOT = 'data/reference_graphs/quantization'
 
 
 class DatasetForTest(Dataset):
-    def __init__(self, input_key, input_shape):
+    def __init__(self, input_key, input_shape, has_batch_dim):
         super().__init__()
         self.input_key = input_key
         self.input_shape = input_shape
+        self.has_batch_dim = has_batch_dim
 
     def __getitem__(self, item):
         return {
             self.input_key: ONNXNNCFTensor(
-                np.squeeze(np.random.random(self.input_shape).astype(np.float32), axis=0)
-            ),
+                np.squeeze(np.random.random(self.input_shape).astype(np.float32),
+                           axis=0)) if self.has_batch_dim else ONNXNNCFTensor(
+                np.random.random(self.input_shape).astype(np.float32)),
             "targets": ONNXNNCFTensor(0)
         }
 
     def __len__(self):
         return 10
+
 
 def _get_input_key(original_model: onnx.ModelProto) -> str:
     input_keys = [node.name for node in original_model.graph.input]
@@ -64,19 +67,23 @@ def _get_input_key(original_model: onnx.ModelProto) -> str:
 
 
 def min_max_quantize_model(
-    input_shape: List[int], original_model: onnx.ModelProto, convert_opset_version: bool = True) -> onnx.ModelProto:
-    dataset = DatasetForTest(_get_input_key(original_model), input_shape)
+        input_shape: List[int], original_model: onnx.ModelProto, convert_opset_version: bool = True,
+        ignored_scopes: List[str] = None, dataset_has_batch_size: bool = True) -> onnx.ModelProto:
+    dataset = DatasetForTest(_get_input_key(original_model), input_shape, dataset_has_batch_size)
     builder = CompressionBuilder(convert_opset_version)
-    builder.add_algorithm(ONNXMinMaxQuantization(MinMaxQuantizationParameters(number_samples=1)))
+    builder.add_algorithm(
+        ONNXMinMaxQuantization(MinMaxQuantizationParameters(number_samples=1, ignored_scopes=ignored_scopes)))
     quantized_model = builder.apply(original_model, dataset)
     return quantized_model
 
 
 def ptq_quantize_model(
-    input_shape: List[int], original_model: onnx.ModelProto, convert_opset_version: bool = True) -> onnx.ModelProto:
-    dataset = DatasetForTest(_get_input_key(original_model), input_shape)
+        input_shape: List[int], original_model: onnx.ModelProto, convert_opset_version: bool = True,
+        ignored_scopes: List[str] = None, dataset_has_batch_size: bool = True) -> onnx.ModelProto:
+    dataset = DatasetForTest(_get_input_key(original_model), input_shape, dataset_has_batch_size)
     builder = CompressionBuilder(convert_opset_version)
-    builder.add_algorithm(PostTrainingQuantization(PostTrainingQuantizationParameters(number_samples=1)))
+    builder.add_algorithm(
+        PostTrainingQuantization(PostTrainingQuantizationParameters(number_samples=1, ignored_scopes=ignored_scopes)))
     quantized_model = builder.apply(original_model, dataset)
     return quantized_model
 
