@@ -12,7 +12,10 @@ Not all Convolution layers in the model can be pruned. Such layers are determine
 > Convolutional filters with small $l_p$ norms do not significantly contribute to output activation values, and thus have a small impact on the final predictions of CNN models.
 In the above, the $l_p$ norm for filter F is:
 
-$||F||_p = \sqrt[p]{\sum_{c, k_1, k_2 = 1}^{C, K, K}|F(c, k_1, k_2)|^p}$
+$||F||_p =$
+
+
+$\sqrt[p]{\sum_{c, k_1, k_2 = 1}^{C, K, K}|F(c, k_1, k_2)|^p}$
 
 During the pruning procedure filters with smaller  `L1` or `L2` norm will be pruned first.
 
