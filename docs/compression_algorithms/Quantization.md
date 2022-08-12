@@ -12,9 +12,9 @@ $ZP = \lfloor - input\\_low * s \rceil$
 
 $output = \frac{\left\lfloor (clamp(input; input\\_low, input\\_high)-input\\_low) * s- ZP \right\rceil} {s}$
 
-$clamp(input; input\\_low, input\\_high$
+$clamp(input; input\\_low, input\\_high)$
 
-$s=\frac{levels-1}{input\\_high - input\\_low$
+$s = \frac{levels-1}{input\\_high - input\\_low$
 
 
 
