@@ -131,11 +131,14 @@ $ZP = \lfloor-input\\_low * s\rceil$
 
 For asymmetric:
 
-$input\\_low^{*} = input\\_low \\\\ input\\_range^{*} = input\\_range$
+$input\\_low^{*} = input\\_low$
+
+$input\\_range^{*} = input\\_range$
 
 For symmetric:
 
-$input\\_low^{*} = 0 \\\\ input\\_range^{*} = scale$
+$input\\_low^{*} = 0$
+$input\\_range^{*} = scale$
 
 ---
 **NOTE**
