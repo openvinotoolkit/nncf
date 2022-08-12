@@ -123,17 +123,19 @@ For all target HW types, parts of the model graph can be marked as non-quantizab
 
 In our implementation, we use a slightly transformed formula. It is equivalent by order of floating-point operations to simplified symmetric formula and the assymetric one. The small difference is addition of small positive number `eps` to prevent division by zero and taking absolute value of range, since it might become negative on backward:
 
-![output = \frac{clamp(\left\lfloor (input-input\_low^{*}) *s - ZP \right \rceil, level\_low, level\_high)}{s}](https://latex.codecogs.com/svg.image?output%20=%20%5Cfrac%7Bclamp(%5Cleft%5Clfloor%20(input-input%5C_low%5E%7B*%7D)%20*s%20-%20ZP%20%5Cright%20%5Crceil,%20level%5C_low,%20level%5C_high)%7D%7Bs%7D)
+$output = \frac{clamp(\left\lfloor (input-input\_low^{*}) *s - ZP \right \rceil, level\_low, level\_high)}{s}$
 
-![s = \frac{level\_high}{|input\_range^{*}| + eps}](https://latex.codecogs.com/png.latex?s%20%3D%20%5Cfrac%7Blevel%5C_high%7D%7B%7Cinput%5C_range%5E%7B*%7D%7C%20&plus;%20eps%7D)
+$s = \frac{level\_high}{|input\_range^{*}| + eps}$
 
-![ZP = \lfloor-input\_low * s\rceil](https://latex.codecogs.com/png.image?%5Cdpi%7B110%7D%20ZP%20=%20%5Clfloor-input%5C_low%5E%7B*%7D%20*%20s%5Crceil)
+$ZP = \lfloor-input\_low * s\rceil$
 
 For asymmetric:
-![\\input\_low^{*} = input\_low \\ input\_range^{*} = input\_range ](https://latex.codecogs.com/png.latex?%5C%5Cinput%5C_low%5E%7B*%7D%20%3D%20input%5C_low%20%5C%5C%20input%5C_range%5E%7B*%7D%20%3D%20input%5C_range)
+
+$\\input\_low^{*} = input\_low \\ input\_range^{*} = input\_range$
 
 For symmetric:
-![\\input\_low^{*} = 0 \\ input\_range^{*} = scale](https://latex.codecogs.com/png.latex?%5C%5Cinput%5C_low%5E%7B*%7D%20%3D%200%20%5C%5C%20input%5C_range%5E%7B*%7D%20%3D%20scale)
+
+$\\input\_low^{*} = 0 \\ input\_range^{*} = scale$
 
 ---
 **NOTE**
@@ -162,7 +164,8 @@ configuration by taking into account the sensitivity of each layer, i.e. how muc
 decreases the accuracy of model. The most sensitive layers are kept at higher precision. The sensitivity of the i-th layer is
 calculated by multiplying the average Hessian trace with the L2 norm of quantization perturbation:
 
-![\overline{Tr}(H_{i}) * \left \| Q(W_{i}) - W_{i} \right \|^2_2](https://latex.codecogs.com/png.latex?%5Coverline%7BTr%7D%28H_%7Bi%7D%29%20*%20%5Cleft%20%5C%7C%20Q%28W_%7Bi%7D%29%20-%20W_%7Bi%7D%20%5Cright%20%5C%7C%5E2_2)
+$\overline{Tr}(H_{i}) * \left \| Q(W_{i}) - W_{i} \right \|^2_2$
+
 
 The sum of the sensitivities for each layer forms a metric which serves as a proxy to the accuracy of the compressed
 model: the lower the metric, the more accurate should be the corresponding mixed precision model on the validation
@@ -185,22 +188,22 @@ trace value are quantized to lower bitwidth and vice versa.
 The Hessian trace is estimated with the randomized [Hutchinson algorithm](https://www.researchgate.net/publication/220432178_Randomized_Algorithms_for_Estimating_the_Trace_of_an_Implicit_Symmetric_Positive_Semi-Definite_Matrix).
 Given Rademacher distributed random vector v, the trace of symmetric matrix H is equal to the estimation of a quadratic form:
 
-![Tr(H) = \mathbb{E}[v^T H v]](https://latex.codecogs.com/png.latex?Tr%28H%29%20%3D%20%5Cmathbb%7BE%7D%5Bv%5ET%20H%20v%5D)
+$Tr(H) = \mathbb{E}[v^T H v]$
 
 The randomized algorithm solves the expectation by Monte Carlo using sampling of v from its distribution, evaluating
 the quadratic term, and averaging:
 
-![Tr(H) \approx \frac{1}{m}\sum_{i=1}^{m}[v_i^T H v_i]](https://latex.codecogs.com/png.latex?Tr%28H%29%20%5Capprox%20%5Cfrac%7B1%7D%7Bm%7D%5Csum_%7Bi%3D1%7D%5E%7Bm%7D%5Bv_i%5ET%20H%20v_i%5D)
+Tr(H) \approx \frac{1}{m}\sum_{i=1}^{m}[v_i^T H v_i]$
 
 Evaluation of the quadratic term happens by computing ![Hv](https://latex.codecogs.com/png.latex?Hv) - the result
 of multiplication of the Hessian matrix with a given random vector v, without the explicit formation of the Hessian operator.
 For gradient of the loss with respect to the i-th block ![g_i](https://latex.codecogs.com/png.latex?g_i) and for
 a random vector v, which is independent of ![W_i](https://latex.codecogs.com/png.latex?W_i), we have the equation:
 
-![\frac{\partial(g_i^T v)}{\partial  W_i} = H_i v](https://latex.codecogs.com/png.latex?%5Cfrac%7B%5Cpartial%28g_i%5ET%20v%29%7D%7B%5Cpartial%20W_i%7D%20%3D%20H_i%20v)
+\frac{\partial(g_i^T v)}{\partial  W_i} = H_i v$
 
-where ![H_i](https://latex.codecogs.com/png.latex?H_i) is the Hessian matrix of loss with respect to
-![W_i](https://latex.codecogs.com/png.latex?W_i). Hence ![Hv](https://latex.codecogs.com/png.latex?Hv) can be
+where $H_i$ is the Hessian matrix of loss with respect to
+$W_i$. Hence $Hv$ can be
 computed by 2 backpropagation passes: first  - with respect to the loss and second - with respect to the product of the
 gradients and a random vector.
 
