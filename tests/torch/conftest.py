@@ -78,6 +78,11 @@ def pytest_addoption(parser):
         "--third-party-sanity", action="store_true", default=False, help="To run third party sanity test cases"
     )
     parser.addoption(
+        "--torch-with-cuda11", action="store_true", default=False, help="To trigger installation of pytorch with "
+                                                                        "CUDA11. It's required for 3rd sanity tests "
+                                                                        "on RTX3090 cards"
+    )
+    parser.addoption(
         "--run-openvino-eval", action="store_true", default=False, help="To run eval models via OpenVino"
     )
     parser.addoption(
@@ -157,6 +162,11 @@ def torch_home_dir(request, monkeypatch):
 @pytest.fixture(scope="session")
 def third_party(request):
     return request.config.getoption("--third-party-sanity")
+
+
+@pytest.fixture(scope="session")
+def torch_with_cuda11(request):
+    return request.config.getoption("--torch-with-cuda11")
 
 
 @pytest.fixture(scope="session")
