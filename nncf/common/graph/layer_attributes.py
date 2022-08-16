@@ -42,6 +42,23 @@ class MultipleInputLayerAttributes(BaseLayerAttributes):
                and self.axis == other.axis
 
 
+class MultipleOutputLayerAttributes(BaseLayerAttributes):
+    """
+    Represents a layer with multiple outputs.
+    """
+
+    def __init__(self,
+                 chunks: Union[int, List],
+                 axis: int):
+        self.chunks = chunks
+        self.axis = axis
+
+    def __eq__(self, other: Any):
+        return isinstance(other, MultipleOutputLayerAttributes) \
+               and self.chunks == other.chunks \
+               and self.axis == other.axis
+
+
 class WeightedLayerAttributes(BaseLayerAttributes):
     """
     Represents a layer with weights.
@@ -187,20 +204,3 @@ class ReshapeLayerAttributes(BaseLayerAttributes):
                  output_shape: List[int]):
         self.input_shape = input_shape
         self.output_shape = output_shape
-
-
-class MultipleOutputLayerAttributes(BaseLayerAttributes):
-    """
-    Represents a layer with multiple outputs.
-    """
-
-    def __init__(self,
-                 chunks: Union[int, List],
-                 axis: int):
-        self.chunks = chunks
-        self.axis = axis
-
-    def __eq__(self, other: Any):
-        return isinstance(other, MultipleOutputLayerAttributes) \
-               and self.chunks == other.chunks \
-               and self.axis == other.axis

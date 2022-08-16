@@ -228,6 +228,7 @@ class ConcatPruningOp(BasePruningOp):
         result_mask = cls.generate_output_mask(node, graph, tensor_processor)
         node.data['output_mask'] = result_mask
 
+
 class SplitPruningOp(BasePruningOp):
     @classmethod
     def accept_pruned_input(cls, node: NNCFNode):
@@ -265,6 +266,7 @@ class SplitPruningOp(BasePruningOp):
                          tensor_processor: Type[NNCFPruningBaseTensorProcessor]) -> None:
         result_masks = cls.generate_output_masks(node, graph, tensor_processor)
         node.data['output_mask'] = result_masks
+
 
 class ElementwisePruningOp(BasePruningOp):
     @classmethod

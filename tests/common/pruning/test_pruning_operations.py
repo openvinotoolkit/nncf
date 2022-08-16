@@ -3,22 +3,23 @@ import pytest
 
 from functools import partial
 
-from nncf.common.pruning.tensor_processor import NNCFPruningBaseTensorProcessor
-from tests.common.pruning import dummy_types
-from tests.common.pruning.tensor import NPNNCFTensor
-from tests.common.pruning.tensor import NPNNCFTensorProcessor
-from nncf.common.graph.layer_attributes import ReshapeLayerAttributes
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.layer_attributes import Dtype
 from nncf.common.graph.layer_attributes import MultipleInputLayerAttributes
+from nncf.common.graph.layer_attributes import MultipleOutputLayerAttributes
 from nncf.common.graph.layer_attributes import GroupNormLayerAttributes
 from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
 from nncf.common.graph.layer_attributes import LinearLayerAttributes
-from nncf.common.graph.layer_attributes import MultipleOutputLayerAttributes
+from nncf.common.graph.layer_attributes import ReshapeLayerAttributes
 from nncf.common.pruning.operations import BasePruningOp
 from nncf.common.pruning.mask_propagation import MaskPropagationAlgorithm
 from nncf.common.pruning.utils import find_input_mask_for_node
+from nncf.common.pruning.tensor_processor import NNCFPruningBaseTensorProcessor
+
+from tests.common.pruning import dummy_types
+from tests.common.pruning.tensor import NPNNCFTensor
+from tests.common.pruning.tensor import NPNNCFTensorProcessor
 
 
 @pytest.mark.parametrize('pruning_op,metatype,accept_pruned_input',
@@ -312,8 +313,6 @@ def test_convs_elementwise_source_before_concat(empty_mask_right_branch, empty_m
         reference_mask = np.ones((10 + right_branch_output_channels,))
         np.testing.assert_equal(concat_node.data['output_mask'].tensor, reference_mask)
 
-    assert dummy_types.DummyConcatPruningOp.accept_pruned_input(concat_node) == True
-
 
 def test_concat_output_tensor_device():
     graph = NNCFGraph()
@@ -480,13 +479,13 @@ def test_split_metatype_mask_prop(empty_mask_left_branch, empty_mask_right_branc
     conv_attributes = ConvolutionLayerAttributes(transpose=False, **layer_attributes, **default_conv_params)
 
     graph = NNCFGraph()
-    conv_op_0 = graph.add_nncf_node('conv_op_0', dummy_types.DummyConvMetatype.name, dummy_types.DummyConvMetatype, 
+    conv_op_0 = graph.add_nncf_node('conv_op_0', dummy_types.DummyConvMetatype.name, dummy_types.DummyConvMetatype,
                                     layer_attributes=ConvolutionLayerAttributes)
-    split_node = graph.add_nncf_node('split_0', dummy_types.DummySplitMetatype.name, dummy_types.DummySplitMetatype, 
+    split_node = graph.add_nncf_node('split_0', dummy_types.DummySplitMetatype.name, dummy_types.DummySplitMetatype,
                                     layer_attributes=split_attributes)
-    conv_op_1 = graph.add_nncf_node('conv_op_1', dummy_types.DummyConvMetatype.name, dummy_types.DummyConvMetatype, 
+    conv_op_1 = graph.add_nncf_node('conv_op_1', dummy_types.DummyConvMetatype.name, dummy_types.DummyConvMetatype,
                                     layer_attributes=conv_attributes)
-    conv_op_2 = graph.add_nncf_node('conv_op_2', dummy_types.DummyConvMetatype.name, dummy_types.DummyConvMetatype, 
+    conv_op_2 = graph.add_nncf_node('conv_op_2', dummy_types.DummyConvMetatype.name, dummy_types.DummyConvMetatype,
                                     layer_attributes=conv_attributes)
 
     add_node = partial(graph.add_edge_between_nncf_nodes,

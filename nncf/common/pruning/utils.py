@@ -652,7 +652,8 @@ def identity_mask_propagation(node: NNCFNode, graph: NNCFGraph) -> None:
     node.data['output_mask'] = input_mask
 
 
-def match_multiple_output_masks(output_masks: List[SymbolicMask], output_edges: List[NNCFGraphEdge], chunk_axis: int) -> dict:
+def match_multiple_output_masks(output_masks: List[SymbolicMask], output_edges: List[NNCFGraphEdge],
+                                chunk_axis: int) -> dict:
     """
     Match multiple input mask to each next nodes.
 

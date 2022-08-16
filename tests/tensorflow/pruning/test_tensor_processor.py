@@ -67,6 +67,5 @@ def test_split():
     chunks = 2
     tensor = TFNNCFTensor(tf.Variable(tensor_data))
     split_tensors = TFNNCFPruningTensorProcessor.split(tensor, chunks=chunks, axis=0)
-    ref_split = tf.split(tf.Variable(tensor_data), chunks)
-    assert tf.reduce_all(split_tensors[0].tensor == ref_split[0])
-    assert tf.reduce_all(split_tensors[1].tensor == ref_split[1])
+    assert tf.reduce_all(split_tensors[0].tensor == tensor_data[:2])
+    assert tf.reduce_all(split_tensors[1].tensor == tensor_data[2:])

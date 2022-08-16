@@ -13,7 +13,6 @@
 from abc import ABC
 from abc import abstractmethod
 from collections import defaultdict
-from re import S
 from typing import Dict
 from typing import List
 from typing import Set

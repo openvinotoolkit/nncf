@@ -300,7 +300,9 @@ class ModelForTestWithSplit(ModelForTest):
 def test_split_attributes(input_shape):
     model = ModelForTestWithSplit()
     input_info = ModelInputInfo(input_shape)
-    graph_builder = GraphBuilder(create_dummy_forward_fn([input_info, ], with_input_tracing=True, with_output_tracing=True))
+    graph_builder = GraphBuilder(create_dummy_forward_fn([input_info, ],
+                                 with_input_tracing=True,
+                                 with_output_tracing=True))
 
     graph = graph_builder.build_graph(model)
     chunk_nodes_with_attributes = {

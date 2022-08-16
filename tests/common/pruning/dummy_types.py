@@ -12,11 +12,11 @@ from nncf.common.pruning.operations import (
     BatchNormPruningOp,
     GroupNormPruningOp,
     ConcatPruningOp,
+    SplitPruningOp,
     ElementwisePruningOp,
     ReshapePruningOp,
     FlattenPruningOp,
-    StopMaskForwardPruningOp,
-    SplitPruningOp
+    StopMaskForwardPruningOp
 )
 
 

@@ -140,5 +140,5 @@ class GraphConverter:
                     chunks = len(output_edges)
                     layer_attributes = MultipleOutputLayerAttributes(chunks, axis)
                     node.layer_attributes = layer_attributes
-                    
+
         return nncf_graph

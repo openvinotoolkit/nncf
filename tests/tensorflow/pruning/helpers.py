@@ -154,12 +154,12 @@ def get_split_test_model(input_shape):
     #          (conv1)
     #             |
     #          (chunk)
-    #        /       |
+    #        /       \
     #    (conv2)  (conv3)
     #         \    /
-    #        (concat)    
+    #        (concat)
     #           |
-    #         (conv4)
+    #        (conv4)
 
     inputs = tf.keras.Input(shape=input_shape[1:], name='input')
     conv1 = layers.Conv2D(16, 1, name='conv1')
