@@ -13,19 +13,22 @@ Knowledge is transferred from the teacher model to the student one by minimizing
 based on predictions of the models. At the moment, two types of loss functions are available. 
 One of them should be explicitly specified in the config.
  
- MSE distillation loss:
+MSE distillation loss:
  
 ${L}_{MSE}(z^{s}, z^{t}) = || z^s - z^t ||_2^2$
  
+Cross-Entropy distillation loss:
  
- Cross-Entropy distillation loss:
+${p}_{i}=$
+
+$\frac{\exp({z}\_{i})}{\sum\_{j}(\exp({z}\_{j}))}$
  
- ${p}_{i}=\frac{\exp({z}_{i})}{\sum_{j}(\exp({z}_{j}))}$
  
- ${L}_{CE}({p}^{s}, {p}^{t}) = -\sum_{i}{p}^{t}_{i}*\log({p}^{s}_{i})$
  
- The Knowledge Distillation loss function is combined with a regular loss function, so overall loss function will be
-  computed as:
+${L}_{CE}({p}^{s}, {p}^{t}) = -\sum_{i}{p}^{t}_{i}*\log({p}^{s}_{i})$
+ 
+The Knowledge Distillation loss function is combined with a regular loss function, so overall loss function will be
+computed as:
   
  $L = {L}_{reg}({z}^{s}, y) + {L}_{distill}({z}^{s}, {z}^{t})$
   
