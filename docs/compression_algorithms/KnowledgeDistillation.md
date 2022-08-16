@@ -19,18 +19,14 @@ ${L}_{MSE}(z^{s}, z^{t}) = || z^s - z^t ||_2^2$
  
 Cross-Entropy distillation loss:
  
-${p}_{i}=$
-
-$\frac{\exp({z}\_{i})}{\sum\_{j}(\exp({z}\_{j}))}$
+${p}_{i} = \frac{\exp({z}\_{i})}{\sum\_{j}(\exp({z}\_{j}))}$
  
- 
- 
-${L}_{CE}({p}^{s}, {p}^{t}) = -\sum_{i}{p}^{t}_{i}*\log({p}^{s}_{i})$
+${L}\_{CE}({p}^{s}, {p}^{t}) = -\sum_{i}{p}^{t}\_{i}*\log({p}^{s}\_{i})$
  
 The Knowledge Distillation loss function is combined with a regular loss function, so overall loss function will be
 computed as:
   
- $L = {L}_{reg}({z}^{s}, y) + {L}_{distill}({z}^{s}, {z}^{t})$
+ $L = {L}\_{reg}({z}^{s}, y) + {L}\_{distill}({z}^{s}, {z}^{t})$
   
  ![kd_pic](../pics/knowledge_distillation.png)
   
