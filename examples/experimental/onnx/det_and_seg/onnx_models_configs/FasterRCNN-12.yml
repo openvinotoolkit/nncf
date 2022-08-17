@@ -30,5 +30,5 @@ models:
             threshold: .5:.05:.95
 
     has_batch_dim: False
-    disallowed_op_types: ["Concat", "Mul", "Add", "Sub", "Sigmoid", "Softmax", "Floor", "RoiAlign", "Resize"]
+    disallowed_op_types: ["Concat", "Mul", "Add", "Sub", "Sigmoid", "Softmax", "Floor", "RoiAlign", "Resize", 'Div']
     convert_opset_version: False
