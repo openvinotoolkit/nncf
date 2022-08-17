@@ -174,7 +174,7 @@ $Statistic pruning level = 1 - statistic current / statistic full$
 `GFLOPs pruning level` - an estimated reduction in the number of floating point operations of the model.   
 The number of FLOPs for a single convolutional layer can be calculated as:
 
-$FLOPs = 2x input channels x kernel size ^2 x W x H x filters$
+$FLOPs = 2 * input channels * kernel size ^2 * W * H * filters$
 
 > **NOTE**: One GFLOP is one billion (1e9) FLOPs.
 
