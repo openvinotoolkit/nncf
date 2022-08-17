@@ -114,11 +114,11 @@ EXTRAS_REQUIRE = {
     "docs": [],
     "tf": [
         "tensorflow~=2.5.0",
-        "numpy~=1.19.2",
+        "numpy>=1.19.2,<=1.23.1",
     ],
     "torch": [
         "torch>=1.5.0, <=1.9.1, !=1.8.0",
-        "numpy~=1.19.2",
+        "numpy>=1.19.2,<=1.23.1",
         # Please see
         # https://stackoverflow.com/questions/70520120/attributeerror-module-setuptools-distutils-has-no-attribute-version
         "setuptools==59.5.0"
