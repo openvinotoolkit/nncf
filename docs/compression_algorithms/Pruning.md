@@ -167,7 +167,7 @@ The columns `Full` and `Current` represent the values of the corresponding stati
 
 The `Pruning level` column indicates the ratio between the values of the full and current statistics in the corresponding rows, defined by the formula:
 
-$Statistic pruning level = 1 - statistic current / statistic full$
+$Statistic\\:pruning\\:level = 1 - statistic\\:current / statistic\\:full$
   
 `Filter pruning level` - percentage of filters removed from the model.  
 
