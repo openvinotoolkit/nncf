@@ -168,7 +168,7 @@ configuration by taking into account the sensitivity of each layer, i.e. how muc
 decreases the accuracy of model. The most sensitive layers are kept at higher precision. The sensitivity of the i-th layer is
 calculated by multiplying the average Hessian trace with the L2 norm of quantization perturbation:
 
-$\overline{Tr}(H_{i}) * \left \| Q(W_{i}) - W_{i} \right \|^2_2$
+$\overline{Tr}(H_{i}) * \left \|\| Q(W_{i}) - W_{i} \right \|\|^2_2$
 
 The sum of the sensitivities for each layer forms a metric which serves as a proxy to the accuracy of the compressed
 model: the lower the metric, the more accurate should be the corresponding mixed precision model on the validation
