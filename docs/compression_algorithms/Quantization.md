@@ -196,7 +196,7 @@ $Tr(H) = \mathbb{E}[v^T H v]$
 The randomized algorithm solves the expectation by Monte Carlo using sampling of v from its distribution, evaluating
 the quadratic term, and averaging:
 
-$Tr(H) \approx \frac{1}{m}\sum_{i=1}^{m}[v_i^T H v_i]$
+$Tr(H) \approx \frac{1}{m}\sum\limits_{i=1}^{m}[v_i^T H v_i]$
 
 Evaluation of the quadratic term happens by computing ![Hv](https://latex.codecogs.com/png.latex?Hv) - the result
 of multiplication of the Hessian matrix with a given random vector v, without the explicit formation of the Hessian operator.
