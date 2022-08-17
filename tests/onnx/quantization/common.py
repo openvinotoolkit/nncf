@@ -37,13 +37,13 @@ REFERENCE_GRAPHS_TEST_ROOT = 'data/reference_graphs/quantization'
 
 
 class DatasetForTest(Dataset):
-    def __init__(self, input_key, input_shape, has_batch_dim):
+    def __init__(self, input_key: str, input_shape: List[int], has_batch_dim: bool):
         super().__init__()
         self.input_key = input_key
         self.input_shape = input_shape
         self.has_batch_dim = has_batch_dim
 
-    def __getitem__(self, item):
+    def __getitem__(self, item: int):
         return {
             self.input_key: ONNXNNCFTensor(
                 np.squeeze(np.random.random(self.input_shape).astype(np.float32),

@@ -84,6 +84,9 @@ class ONNXModelNormalizer:
 
     @staticmethod
     def convert_opset_version(model: onnx.ModelProto) -> onnx.ModelProto:
+        """
+        Try to convert model to opset version 13, also adding some important information to the model such shapes.
+        """
         # pylint: disable=no-member
         onnx.checker.check_model(model)
         nncf_logger.info('Original opset = {}'.format(model.opset_import[0].version))
