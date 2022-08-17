@@ -25,7 +25,7 @@ def get_concat_axis(input_shapes: List[List[int]], output_shapes: List[List[int]
     Returns concatenation axis by given input and output shape of concat node.
 
     :param input_shapes: Input_shapes of given concat node.
-    :param output_shapes: Input_shapes of given concat node.
+    :param output_shapes: Output_shapes of given concat node.
     :returns: Concatenation axis of given concat node.
     """
     axis = None
@@ -74,8 +74,8 @@ def get_split_axis(input_shapes: List[List[int]], output_shapes: List[List[int]]
     """
     Returns split/chunk axis by given input and output shape of split/chunk node.
 
-    :param input_shapes:
-    :param output_shapes:
+    :param input_shapes: Input_shapes of given split/chunk node.
+    :param output_shapes: Output_shapes of given split/chunk node.
     :returns: Split/Chunk axis of given split/chunk node.
     """
     axis = None
