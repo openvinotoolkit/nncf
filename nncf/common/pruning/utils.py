@@ -676,7 +676,7 @@ def match_multiple_output_masks(output_masks: List[SymbolicMask], output_edges: 
 
     return list(result_masks.items())
 
-def find_input_mask_for_node(input_mask: List, node: NNCFNode) -> SymbolicMask:
+def find_input_mask_for_node(input_mask: List[Tuple['str', SymbolicMask]], node: NNCFNode) -> SymbolicMask:
     """
     Find exact input mask for node among multiple input masks.
 
