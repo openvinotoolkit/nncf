@@ -185,7 +185,7 @@ significantly from the filter pruning level.
 In addition, the decrease in GFLOPs is estimated by calculating the number of FLOPs of convolutional and fully connected layers. 
 As a result, these estimates may differ slightly from the actual number of FLOPs in the compressed model.
 
-`MParams  pruning level` - calculated reduction in the number of parameters in the model in millions. Typically convolutional layer weights have the shape of $(kernel size, kernel size, input channels, filter num)$.
+`MParams  pruning level` - calculated reduction in the number of parameters in the model in millions. Typically convolutional layer weights have the shape of $(kernel\\:size,\\:kernel\\:size,\\:input\\:channels,\\:filter\\:num)$.
 
 Thus, each removed filter affects the number of parameters in two convolutional layers as it affects the number 
 of filters in one and the number of input channels of the next layer. It is expected that this number may differ 
