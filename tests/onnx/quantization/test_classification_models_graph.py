@@ -21,68 +21,34 @@ import onnx
 # pylint: disable=no-member
 
 from tests.common.helpers import TEST_ROOT
-
+from tests.onnx.quantization.common import TestCase
 from tests.onnx.quantization.common import min_max_quantize_model
 from tests.onnx.quantization.common import compare_nncf_graph
 from tests.onnx.quantization.common import infer_model
 
-MODEL_NAMES = [
-    'resnet18',
-    'mobilenet_v2',
-    'mobilenet_v3_small',
-    'inception_v3',
-    'googlenet',
-    'vgg16',
-    'shufflenet_v2_x1_0',
-    'squeezenet1_0',
-    'densenet121',
-    'mnasnet0_5'
-]
 
-MODELS = [
-    models.resnet18(),
-    models.mobilenet_v2(),
-    models.mobilenet_v3_small(),
-    models.inception_v3(),
-    models.googlenet(),
-    models.vgg16(),
-    models.shufflenet_v2_x1_0(),
-    models.squeezenet1_0(),
-    models.densenet121(),
-    models.mnasnet0_5()
-]
-
-INPUT_SHAPES = [
-    [1, 3, 224, 224],
-    [1, 3, 224, 224],
-    [1, 3, 224, 224],
-    [1, 3, 224, 224],
-    [1, 3, 224, 224],
-    [1, 3, 224, 224],
-    [1, 3, 224, 224],
-    [1, 3, 224, 224],
-    [1, 3, 224, 224],
-    [1, 3, 224, 224],
-]
-
-TEST_CASES = [
-    pytest.param(name, model, shape) if name != "shufflenet_v2_x1_0"
-    else pytest.param(name, model, shape, marks=pytest.mark.xfail)
-    for name, model, shape in zip(MODEL_NAMES, MODELS, INPUT_SHAPES)
-]
-
-
-@pytest.mark.parametrize(('model_name', 'model', 'input_shape'), TEST_CASES)
-def test_min_max_quantization_graph(tmp_path, model_name, model, input_shape):
-    path_ref_graph = model_name + '.dot'
+@pytest.mark.parametrize(('test_case', 'model'),
+                         [(TestCase('resnet18', [1, 3, 224, 224]), models.resnet18()),
+                          (TestCase('mobilenet_v2', [1, 3, 224, 224]), models.mobilenet_v2()),
+                          (TestCase('mobilenet_v3_small', [1, 3, 224, 224]), models.mobilenet_v3_small()),
+                          (TestCase('inception_v3', [1, 3, 224, 224]), models.inception_v3()),
+                          (TestCase('googlenet', [1, 3, 224, 224]), models.googlenet()),
+                          (TestCase('vgg16', [1, 3, 224, 224]), models.vgg16()),
+                          (TestCase('shufflenet_v2_x1_0', [1, 3, 224, 224]), models.shufflenet_v2_x1_0()),
+                          (TestCase('squeezenet1_0', [1, 3, 224, 224]), models.squeezenet1_0()),
+                          (TestCase('densenet121', [1, 3, 224, 224]), models.densenet121()),
+                          (TestCase('mnasnet0_5', [1, 3, 224, 224]), models.mnasnet0_5()),
+                          ]
+                         )
+def test_min_max_quantization_graph(tmp_path, test_case, model):
     onnx_model_dir = str(TEST_ROOT.joinpath('onnx', 'data', 'models'))
-    onnx_model_path = str(TEST_ROOT.joinpath(onnx_model_dir, model_name))
+    onnx_model_path = str(TEST_ROOT.joinpath(onnx_model_dir, test_case.model_name))
     if not os.path.isdir(onnx_model_dir):
         os.mkdir(onnx_model_dir)
-    x = torch.randn(input_shape, requires_grad=False)
+    x = torch.randn(test_case.input_shape, requires_grad=False)
     torch.onnx.export(model, x, onnx_model_path, opset_version=13)
 
     original_model = onnx.load(onnx_model_path)
-    quantized_model = min_max_quantize_model(input_shape, original_model)
-    compare_nncf_graph(quantized_model, path_ref_graph)
-    infer_model(input_shape, quantized_model)
+    quantized_model = min_max_quantize_model(test_case.input_shape, original_model)
+    compare_nncf_graph(quantized_model, test_case.path_ref_graph)
+    infer_model(test_case.input_shape, quantized_model)

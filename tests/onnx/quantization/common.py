@@ -56,6 +56,13 @@ class DatasetForTest(Dataset):
         return 10
 
 
+class TestCase:
+    def __init__(self, model_name: str, input_shape: List[int]):
+        self.model_name = model_name
+        self.path_ref_graph = self.model_name + '.dot'
+        self.input_shape = input_shape
+
+
 def _get_input_key(original_model: onnx.ModelProto) -> str:
     input_keys = [node.name for node in original_model.graph.input]
     if len(input_keys) != 1:

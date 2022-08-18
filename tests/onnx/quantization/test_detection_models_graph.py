@@ -11,7 +11,6 @@
  limitations under the License.
 """
 
-from typing import List
 import pytest
 
 import os
@@ -22,17 +21,11 @@ from nncf.experimental.onnx.model_normalizer import ONNXModelNormalizer
 from nncf.experimental.onnx.algorithms.quantization.utils import find_ignored_scopes
 
 from tests.common.helpers import TEST_ROOT
+from tests.onnx.quantization.common import TestCase
 
 from tests.onnx.quantization.common import min_max_quantize_model
 from tests.onnx.quantization.common import compare_nncf_graph
 from tests.onnx.quantization.common import infer_model
-
-
-class TestCase:
-    def __init__(self, model_name: str, input_shape: List[int]):
-        self.model_name = model_name
-        self.path_ref_graph = self.model_name + '.dot'
-        self.input_shape = input_shape
 
 
 @pytest.mark.parametrize(('test_case'),
