@@ -18,24 +18,24 @@ import os
 import onnx
 
 from tests.common.helpers import TEST_ROOT
-from tests.onnx.quantization.common import TestCase
+from tests.onnx.quantization.common import ModelToTest
 from tests.onnx.quantization.common import min_max_quantize_model
 from tests.onnx.quantization.common import compare_nncf_graph
 from tests.onnx.quantization.common import infer_model
 
 
-@pytest.mark.parametrize(('test_case'),
-                         [TestCase('icnet_camvid', [1, 3, 768, 960]),
-                          TestCase('unet_camvid', [1, 3, 368, 480]),
+@pytest.mark.parametrize(('model_to_test'),
+                         [ModelToTest('icnet_camvid', [1, 3, 768, 960]),
+                          ModelToTest('unet_camvid', [1, 3, 368, 480]),
                           ]
                          )
-def test_min_max_quantization_graph(tmp_path, test_case):
+def test_min_max_quantization_graph(tmp_path, model_to_test):
     onnx_model_dir = str(TEST_ROOT.joinpath('onnx', 'data', 'models'))
-    onnx_model_path = str(TEST_ROOT.joinpath(onnx_model_dir, test_case.model_name + '.onnx'))
+    onnx_model_path = str(TEST_ROOT.joinpath(onnx_model_dir, model_to_test.model_name + '.onnx'))
     if not os.path.isdir(onnx_model_dir):
         os.mkdir(onnx_model_dir)
 
     original_model = onnx.load(onnx_model_path)
-    quantized_model = min_max_quantize_model(test_case.input_shape, original_model)
-    compare_nncf_graph(quantized_model, test_case.path_ref_graph)
-    infer_model(test_case.input_shape, quantized_model)
+    quantized_model = min_max_quantize_model(model_to_test.input_shape, original_model)
+    compare_nncf_graph(quantized_model, model_to_test.path_ref_graph)
+    infer_model(model_to_test.input_shape, quantized_model)

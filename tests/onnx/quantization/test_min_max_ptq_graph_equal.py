@@ -21,43 +21,26 @@ import onnx
 # pylint: disable=no-member
 
 from tests.common.helpers import TEST_ROOT
-
+from tests.onnx.quantization.common import ModelToTest
 from tests.onnx.quantization.common import min_max_quantize_model
 from tests.onnx.quantization.common import ptq_quantize_model
 from tests.onnx.quantization.common import compare_nncf_graph_onnx_models
 
-MODEL_NAMES = [
-    'resnet18',
-    'mobilenet_v2',
-]
 
-MODELS = [
-    models.resnet18(),
-    models.mobilenet_v2(),
-]
-
-INPUT_SHAPES = [
-    [1, 3, 224, 224],
-    [1, 3, 224, 224],
-]
-
-TEST_CASES = [
-    pytest.param(name, model, shape) if name != "shufflenet_v2_x1_0"
-    else pytest.param(name, model, shape, marks=pytest.mark.xfail)
-    for name, model, shape in zip(MODEL_NAMES, MODELS, INPUT_SHAPES)
-]
-
-
-@pytest.mark.parametrize(('model_name', 'model', 'input_shape'), TEST_CASES)
-def test_min_max_ptq_quantization_graph_are_same(tmp_path, model_name, model, input_shape):
+@pytest.mark.parametrize(('model_to_test', 'model'),
+                         [(ModelToTest('resnet18', [1, 3, 224, 224]), models.resnet18()),
+                          (ModelToTest('mobilenet_v2', [1, 3, 224, 224]), models.mobilenet_v2()),
+                          ]
+                         )
+def test_min_max_ptq_quantization_graph_are_same(tmp_path, model_to_test, model):
     onnx_model_dir = str(TEST_ROOT.joinpath('onnx', 'data', 'models'))
-    onnx_model_path = str(TEST_ROOT.joinpath(onnx_model_dir, model_name))
+    onnx_model_path = str(TEST_ROOT.joinpath(onnx_model_dir, model_to_test.model_name))
     if not os.path.isdir(onnx_model_dir):
         os.mkdir(onnx_model_dir)
-    x = torch.randn(input_shape, requires_grad=False)
+    x = torch.randn(model_to_test.input_shape, requires_grad=False)
     torch.onnx.export(model, x, onnx_model_path, opset_version=13)
 
     original_model = onnx.load(onnx_model_path)
-    min_max_quantized_model = min_max_quantize_model(input_shape, original_model)
-    ptq_quantized_model = ptq_quantize_model(input_shape, original_model)
+    min_max_quantized_model = min_max_quantize_model(model_to_test.input_shape, original_model)
+    ptq_quantized_model = ptq_quantize_model(model_to_test.input_shape, original_model)
     compare_nncf_graph_onnx_models(min_max_quantized_model, ptq_quantized_model)

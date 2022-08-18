@@ -21,46 +21,46 @@ from nncf.experimental.onnx.model_normalizer import ONNXModelNormalizer
 from nncf.experimental.onnx.algorithms.quantization.utils import find_ignored_scopes
 
 from tests.common.helpers import TEST_ROOT
-from tests.onnx.quantization.common import TestCase
+from tests.onnx.quantization.common import ModelToTest
 
 from tests.onnx.quantization.common import min_max_quantize_model
 from tests.onnx.quantization.common import compare_nncf_graph
 from tests.onnx.quantization.common import infer_model
 
 
-@pytest.mark.parametrize(('test_case'),
-                         [TestCase('ssd-12', [1, 3, 1200, 1200]),
-                          TestCase('yolov2-coco-9', [1, 3, 416, 416]),
-                          TestCase('tiny-yolov2', [1, 3, 416, 416]),
-                          TestCase('MaskRCNN-12', [3, 30, 30]),
-                          TestCase('retinanet-9', [1, 3, 480, 640]),
-                          TestCase('fcn-resnet50-12', [1, 3, 480, 640])
+@pytest.mark.parametrize(('model_to_test'),
+                         [ModelToTest('ssd-12', [1, 3, 1200, 1200]),
+                          ModelToTest('yolov2-coco-9', [1, 3, 416, 416]),
+                          ModelToTest('tiny-yolov2', [1, 3, 416, 416]),
+                          ModelToTest('MaskRCNN-12', [3, 30, 30]),
+                          ModelToTest('retinanet-9', [1, 3, 480, 640]),
+                          ModelToTest('fcn-resnet50-12', [1, 3, 480, 640])
                           ]
                          )
-def test_min_max_quantization_graph(tmp_path, test_case):
+def test_min_max_quantization_graph(tmp_path, model_to_test):
     convert_opset_version = True
-    dataset_has_batch_size = len(test_case.input_shape) > 3
+    dataset_has_batch_size = len(model_to_test.input_shape) > 3
 
     onnx_model_dir = str(TEST_ROOT.joinpath('onnx', 'data', 'models'))
-    onnx_model_path = str(TEST_ROOT.joinpath(onnx_model_dir, test_case.model_name + '.onnx'))
+    onnx_model_path = str(TEST_ROOT.joinpath(onnx_model_dir, model_to_test.model_name + '.onnx'))
     if not os.path.isdir(onnx_model_dir):
         os.mkdir(onnx_model_dir)
     original_model = onnx.load(onnx_model_path)
 
     ignored_scopes = []
-    if test_case.model_name == 'MaskRCNN-12':
+    if model_to_test.model_name == 'MaskRCNN-12':
         # The problem with convert function - convert_opset_version.
         convert_opset_version = False
         # TODO: need to investigate disallowed_op_types for Mask RCNN
         ignored_scopes += find_ignored_scopes(
             ["Concat", "Mul", "Add", "Sub", "Sigmoid", "Softmax", "Floor", "RoiAlign", "Resize", 'Div'], original_model)
 
-    quantized_model = min_max_quantize_model(test_case.input_shape, original_model,
+    quantized_model = min_max_quantize_model(model_to_test.input_shape, original_model,
                                              convert_opset_version=convert_opset_version,
                                              ignored_scopes=ignored_scopes,
                                              dataset_has_batch_size=dataset_has_batch_size)
     if convert_opset_version:
         quantized_model = ONNXModelNormalizer.convert_opset_version(quantized_model)
         # The problem with convert function - convert_opset_version.
-        infer_model(test_case.input_shape, quantized_model)
-    compare_nncf_graph(quantized_model, test_case.path_ref_graph)
+        infer_model(model_to_test.input_shape, quantized_model)
+    compare_nncf_graph(quantized_model, model_to_test.path_ref_graph)
