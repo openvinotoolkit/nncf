@@ -112,7 +112,7 @@ class MaskPropagationAlgorithm:
                     input_mask = input_masks[0] # type: SymbolicMask
 
                     # find input_mask for node if multiple input masks existed
-                    if isinstance(input_mask, list):
+                    if isinstance(input_mask, dict):
                         input_mask = find_input_mask_for_node(input_mask, node)
 
                     for producer in input_mask.mask_producers:
