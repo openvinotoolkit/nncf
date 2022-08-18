@@ -14,7 +14,6 @@ from nncf.common.graph.layer_attributes import LinearLayerAttributes
 from nncf.common.graph.layer_attributes import ReshapeLayerAttributes
 from nncf.common.pruning.operations import BasePruningOp
 from nncf.common.pruning.mask_propagation import MaskPropagationAlgorithm
-from nncf.common.pruning.utils import find_input_mask_for_node
 from nncf.common.pruning.tensor_processor import NNCFPruningBaseTensorProcessor
 
 from tests.common.pruning import dummy_types
@@ -527,5 +526,5 @@ def test_split_metatype_mask_prop(empty_mask_left_branch, empty_mask_right_branc
     reference_mask = np.ones((5,))
     for node in (conv_op_1, conv_op_2):
         conv_node = graph.get_node_by_id(conv_op_1.node_id)
-        output_mask = find_input_mask_for_node(split_output_masks, conv_node)
+        output_mask = split_output_masks[conv_node.node_name]
         np.testing.assert_equal(output_mask.tensor, reference_mask)

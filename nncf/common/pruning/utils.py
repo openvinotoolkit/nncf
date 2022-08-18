@@ -27,7 +27,6 @@ import numpy as np
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.graph import NNCFNodeName
-from nncf.common.graph import NNCFGraphEdge
 from nncf.common.graph.layer_attributes import LinearLayerAttributes
 from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
 from nncf.common.graph.operator_metatypes import OperatorMetatype
@@ -592,8 +591,11 @@ def get_input_masks(node: NNCFNode, graph: NNCFGraph) -> List[Optional[NNCFTenso
     :param graph: Graph to work with.
     :return: Input masks.
     """
+    retval = []
     input_masks = [input_node.data['output_mask'] for input_node in graph.get_previous_nodes(node)]
-    return input_masks
+    for input_mask in input_masks:
+        retval.append(input_mask[node.node_name] if isinstance(input_mask, dict) else input_mask)
+    return retval
 
 
 def get_input_channels(node: NNCFNode) -> int:
@@ -638,36 +640,9 @@ def identity_mask_propagation(node: NNCFNode, graph: NNCFGraph) -> None:
         # In case for disconnected NNCFGraph
         input_masks = [None]
     assert len(input_masks) == 1
-    input_mask = input_masks[0]
 
-    if isinstance(input_mask, dict):
-        input_mask = find_input_mask_for_node(input_mask, node)
-    node.data['output_mask'] = input_mask
+    node.data['output_mask'] = input_masks[0]
 
-
-def match_multiple_output_masks(output_masks: List[SymbolicMask], output_edges: List[NNCFGraphEdge],
-                                chunk_axis: int) -> Dict['str', SymbolicMask]:
-    """
-    Match multiple input mask to each next nodes.
-
-    :param output_masks: Given output masks.
-    :return: Matched output mask for each next node.
-    """
-    output_shapes = [edge.tensor_shape[chunk_axis] for edge in output_edges]
-    next_nodes = [edge.to_node for edge in output_edges]
-    result_masks = {node.node_name: None for node in next_nodes}
-
-    if len(set(output_shapes)) == 1:
-        for i, split_mask in enumerate(output_masks):
-            result_masks[next_nodes[i].node_name] = split_mask
-    else:
-        for split_mask in output_masks:
-            idx = output_shapes.index(split_mask.shape[0])
-            result_masks[next_nodes[idx].node_name] = split_mask
-            # update already matched
-            output_shapes[idx]=None
-
-    return result_masks
 
 def find_input_mask_for_node(input_mask: Dict['str', SymbolicMask], node: NNCFNode) -> SymbolicMask:
     """

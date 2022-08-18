@@ -11,7 +11,7 @@
  limitations under the License.
 """
 
-from typing import Optional, List, Type
+from typing import Optional, List, Type, Dict
 
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
@@ -20,9 +20,9 @@ from nncf.common.pruning.utils import is_grouped_conv
 from nncf.common.pruning.utils import get_input_masks
 from nncf.common.pruning.utils import is_prunable_depthwise_conv
 from nncf.common.pruning.utils import identity_mask_propagation
-from nncf.common.pruning.utils import match_multiple_output_masks
-from nncf.common.pruning.utils import find_input_mask_for_node
 from nncf.common.tensor import NNCFTensor
+from nncf.common.pruning.symbolic_mask import SymbolicMask
+from nncf.common.graph import NNCFGraphEdge
 from nncf.common.graph.layer_attributes import GroupNormLayerAttributes
 
 
@@ -201,7 +201,7 @@ class ConcatPruningOp(BasePruningOp):
         input_edges = graph.get_input_edges(node)
         previous_nodes = [edge.from_node for edge in input_edges]
         input_masks = [input_node.data['output_mask'] for input_node in previous_nodes]
-        input_masks = [find_input_mask_for_node(mask, node) if isinstance(mask, dict) else mask for mask in input_masks]
+        input_masks = [mask[node.node_name] if isinstance(mask, dict) else mask for mask in input_masks]
 
         not_empty_masks = [mask for mask in input_masks if mask is not None]  # type: List[NNCFTensor]
         if not not_empty_masks:
@@ -209,7 +209,7 @@ class ConcatPruningOp(BasePruningOp):
 
         first_non_empty_mask = not_empty_masks[0]
         if isinstance(first_non_empty_mask, dict):
-            first_non_empty_mask = find_input_mask_for_node(first_non_empty_mask, node)
+            first_non_empty_mask = first_non_empty_mask[node.node_name]
 
         device = first_non_empty_mask.device
         filled_input_masks = []
@@ -230,6 +230,31 @@ class ConcatPruningOp(BasePruningOp):
 
 
 class SplitPruningOp(BasePruningOp):
+    @classmethod
+    def match_multiple_output_masks(cls, output_masks: List[SymbolicMask], output_edges: List[NNCFGraphEdge],
+                                    chunk_axis: int) -> Dict['str', SymbolicMask]:
+        """
+        Match multiple input mask to each next nodes.
+
+        :param output_masks: Given output masks.
+        :return: Matched output mask for each next node.
+        """
+        output_shapes = [edge.tensor_shape[chunk_axis] for edge in output_edges]
+        next_nodes = [edge.to_node for edge in output_edges]
+        result_masks = {node.node_name: None for node in next_nodes}
+
+        if len(set(output_shapes)) == 1:
+            for i, split_mask in enumerate(output_masks):
+                result_masks[next_nodes[i].node_name] = split_mask
+        else:
+            for split_mask in output_masks:
+                idx = output_shapes.index(split_mask.shape[0])
+                result_masks[next_nodes[idx].node_name] = split_mask
+                # update already matched
+                output_shapes[idx]=None
+
+        return result_masks
+
     @classmethod
     def accept_pruned_input(cls, node: NNCFNode):
         return True
@@ -257,7 +282,7 @@ class SplitPruningOp(BasePruningOp):
         output_shapes = [edge.tensor_shape[chunk_axis] for edge in output_edges]
 
         split_masks = tensor_processor.split(input_mask, chunk_size, chunk_axis, output_shapes)
-        result_masks = match_multiple_output_masks(split_masks, output_edges, chunk_axis)
+        result_masks = cls.match_multiple_output_masks(split_masks, output_edges, chunk_axis)
 
         return result_masks
 
