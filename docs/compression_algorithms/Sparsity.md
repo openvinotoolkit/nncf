@@ -4,27 +4,27 @@ so that zero values are randomly distributed inside the tensor. Most of the spar
 
 #### RB-Sparsity
 
-This section describes the Regularization-Based Sparsity (RB-Sparsity) algorithm implemented in this framework. The method is based on ![L_0](https://latex.codecogs.com/png.latex?%5Cinline%20%5Cdpi%7B120%7D%20L_0)-regularization, with which parameters of the model tend to zero:
+This section describes the Regularization-Based Sparsity (RB-Sparsity) algorithm implemented in this framework. The method is based on $L_0$-regularization, with which parameters of the model tend to zero:
 
-![||\theta||_0 = \sum_{i=0}^{|\theta|} \lbrack \theta_i = 0 \rbrack](https://latex.codecogs.com/png.latex?%5Cdpi%7B130%7D%20%7C%7C%5Ctheta%7C%7C_0%20%3D%20%5Csum_%7Bi%3D0%7D%5E%7B%7C%5Ctheta%7C%7D%20%5Clbrack%20%5Ctheta_i%20%3D%200%20%5Crbrack)
+$||\theta||\_0 = \sum\limits_{i=0}^{|\theta|} \lbrack \theta\_i = 0 \rbrack$
 
 We then reparametrize the network's weights as follows:
 
-![\theta_{sparse}^{(i)} = \theta_i \cdot \epsilon_i, \quad \epsilon_i \sim \mathcal{B}(p_i)](https://latex.codecogs.com/png.latex?%5Cdpi%7B130%7D%20%5Ctheta_%7Bsparse%7D%5E%7B%28i%29%7D%20%3D%20%5Ctheta_i%20%5Ccdot%20%5Cepsilon_i%2C%20%5Cquad%20%5Cepsilon_i%20%5Csim%20%5Cmathcal%7BB%7D%28p_i%29)
+$\theta_{sparse}^{(i)} = \theta_i \cdot \epsilon_i, \quad \epsilon_i \sim \mathcal{B}(p_i)$
 
-Here, ![\mathcal{B}(p_i)](https://latex.codecogs.com/png.latex?%5Cmathcal%7BB%7D%28p_i%29) is the Bernoulli distribution, ![\epsilon_i](https://latex.codecogs.com/png.latex?%5Cinline%20%5Cdpi%7B120%7D%20%5Cepsilon_i) may be interpreted as a binary mask that selects which weights should be zeroed. We then add the regularizing term to the objective function that encourages desired level of sparsity to our model:
+Here, $\mathcal{B}(p_i)$ is the Bernoulli distribution, $\epsilon_i$ may be interpreted as a binary mask that selects which weights should be zeroed. We then add the regularizing term to the objective function that encourages desired level of sparsity to our model:
 
-![L_{sparse} = \mathbb{E}_{\epsilon \sim P_{\epsilon}} \lbrack \frac{\sum_{i=0}^{|\theta|} \epsilon_i}{|\theta|} - level \rbrack ^2](https://latex.codecogs.com/png.latex?%5Cdpi%7B120%7D%20L_%7Bsparse%7D%20%3D%20%5Cmathbb%7BE%7D_%7B%5Cepsilon%20%5Csim%20P_%7B%5Cepsilon%7D%7D%20%5Clbrack%20%5Cfrac%7B%5Csum_%7Bi%3D0%7D%5E%7B%7C%5Ctheta%7C%7D%20%5Cepsilon_i%7D%7B%7C%5Ctheta%7C%7D%20-%20level%20%5Crbrack%20%5E2)
+$L_{sparse} = \mathbb{E}\_{\epsilon \sim P_{\epsilon}} \lbrack \frac{\sum\limits_{i=0}^{|\theta|} \epsilon_i}{|\theta|} - level \rbrack ^2 $
 
-During training, we store and optimize ![p_i](https://latex.codecogs.com/png.latex?%5Cinline%20%5Cdpi%7B120%7D%20p_i)'s in the logit form:
+During training, we store and optimize $p_i$'s in the logit form:
 
-![s_i = \sigma^{-1}(p_i) = log (\frac{p_i}{1 - p_i})](https://latex.codecogs.com/png.latex?%5Cdpi%7B120%7D%20s_i%20%3D%20%5Csigma%5E%7B-1%7D%28p_i%29%20%3D%20log%20%28%5Cfrac%7Bp_i%7D%7B1%20-%20p_i%7D%29)
+$s_i = \sigma^{-1}(p_i) = log (\frac{p_i}{1 - p_i})$
 
-and reparametrize the sampling of ![\epsilon_i](https://latex.codecogs.com/png.latex?%5Cinline%20%5Cdpi%7B120%7D%20%5Cepsilon_i)'s as follows:
+and reparametrize the sampling of $\epsilon_i$'s as follows:
 
-![\epsilon = \lbrack \sigma(s + \sigma^{-1}(\xi)) > \frac{1}{2} \rbrack, \quad \xi \sim \mathcal{U}(0,1)](https://latex.codecogs.com/png.latex?%5Cdpi%7B120%7D%20%5Cepsilon%20%3D%20%5Clbrack%20%5Csigma%28s%20&plus;%20%5Csigma%5E%7B-1%7D%28%5Cxi%29%29%20%3E%20%5Cfrac%7B1%7D%7B2%7D%20%5Crbrack%2C%20%5Cquad%20%5Cxi%20%5Csim%20%5Cmathcal%7BU%7D%280%2C1%29)
+$\epsilon = \lbrack \sigma(s + \sigma^{-1}(\xi)) > \frac{1}{2} \rbrack, \quad \xi \sim \mathcal{U}(0,1)$
 
-With this reparametrization, the probability of keeping a particular weight during the forward pass equals exactly to ![\mathbb{P}( \epsilon_i = 1) = p_i](https://latex.codecogs.com/png.latex?%5Cdpi%7B100%7D%20%5Cmathbb%7BP%7D%28%20%5Cepsilon_i%20%3D%201%29%20%3D%20p_i). We only sample the binary mask once per each training iteration. At test time, we only use the weights with ![p_i > \frac{1}{2}](https://latex.codecogs.com/png.latex?%5Cinline%20p_i%20%3E%20%5Cfrac%7B1%7D%7B2%7D) as given by the trained importance scores ![s_i](https://latex.codecogs.com/png.latex?%5Cinline%20%5Cdpi%7B120%7D%20s_i). To make the objective function differentiable, we treat threshold function ![t(x) = x > c](https://latex.codecogs.com/png.latex?%5Cinline%20t%28x%29%20%3D%20x%20%3E%20c) as a straight through estimator i.e. ![\frac{d t}{dx} = 1](https://latex.codecogs.com/png.latex?%5Cinline%20%5Cfrac%7Bd%20t%7D%7Bdx%7D%20%3D%201)
+With this reparametrization, the probability of keeping a particular weight during the forward pass equals exactly to $\mathbb{P}( \epsilon_i = 1) = p_i$. We only sample the binary mask once per each training iteration. At test time, we only use the weights with $p_i > \frac{1}{2}$ as given by the trained importance scores $s_i$. To make the objective function differentiable, we treat threshold function $t(x) = x > c$ as a straight through estimator i.e. $\frac{d t}{dx} = 1$
 
 The method requires a long schedule of the training process in order to minimize the accuracy drop.
 
