@@ -596,13 +596,6 @@ def get_input_masks(node: NNCFNode, graph: NNCFGraph) -> List[Optional[NNCFTenso
     return input_masks
 
 
-def get_output_mask(node: NNCFNode) -> Optional[NNCFTensor]:
-    output_mask = node.data['output_mask']
-    if isinstance(output_mask, dict):
-        output_mask = find_input_mask_for_node(output_mask, node)
-    return output_mask
-
-
 def get_input_channels(node: NNCFNode) -> int:
     """
     Returns count of input channels of an prunable node.
