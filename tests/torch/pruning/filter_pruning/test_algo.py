@@ -28,7 +28,8 @@ from nncf.common.pruning.shape_pruning import ShapePruninigProcessor
 from nncf.common.pruning.shape_pruning import WeightsFlopsCalculator
 from nncf.common.pruning.schedulers import ExponentialPruningScheduler
 from nncf.torch.pruning.operations import PT_PRUNING_OPERATOR_METATYPES
-from nncf.torch.pruning.utils import _calculate_output_shape, collect_output_shapes
+from nncf.torch.pruning.utils import _calculate_output_shape
+from nncf.torch.pruning.utils import collect_output_shapes
 from nncf.torch.layers import NNCF_PRUNING_MODULES_DICT
 from nncf.torch.pruning.filter_pruning.algo import GENERAL_CONV_LAYER_METATYPES
 from nncf.torch.pruning.filter_pruning.algo import LINEAR_LAYER_METATYPES
@@ -752,12 +753,12 @@ def test_func_calculation_flops_for_conv(model):
     config['compression']['pruning_init'] = 0.4
     config['compression']['params']['pruning_flops_target'] = 0.4
     model = model()
-    pruned_model, pruning_algo = create_compressed_model_and_algo_for_test(model, config)
+    pruned_model, _ = create_compressed_model_and_algo_for_test(model, config)
 
     graph = pruned_model.get_original_graph()
 
     # pylint:disable=protected-access
-    for node_name, ref_shape in pruning_algo._modules_out_shapes.items():
+    for node_name, ref_shape in collect_output_shapes(graph).items():
         # ref_shape get from tracing graph
         node = graph.get_node_by_name(node_name)
         if node.node_type in [v.op_func_name for v in NNCF_LINEAR_MODULES_DICT]:

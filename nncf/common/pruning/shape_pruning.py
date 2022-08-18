@@ -23,6 +23,7 @@ import numpy as np
 
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNodeName
+from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.pruning.clusterization import Cluster
 from nncf.common.pruning.structs import PrunedLayerInfoBase
 from nncf.common.pruning.symbolic_mask import SymbolicMask
@@ -48,6 +49,14 @@ class ShapePruninigProcessor:
         self._pruning_operations_metatype = pruning_operations_metatype
         self._full_inp_channels, self._full_out_channels = get_prunable_layers_in_out_channels(graph)
         self._pruning_groups_next_nodes = self._get_cluster_next_nodes()
+
+    @property
+    def full_input_channels(self):
+        return self._full_inp_channels.copy()
+
+    @property
+    def full_output_channels(self):
+        return self._full_out_channels.copy()
 
     def calculate_in_out_channels_by_masks(self,
                                            num_of_sparse_elements_by_node: Dict[NNCFNodeName, int]) -> \
@@ -120,6 +129,9 @@ class ShapePruninigProcessor:
 
         return tmp_in_channels, tmp_out_channels
 
+    def get_prunable_layers_in_out_channels(self):
+        return self._full_inp_channels.copy(), self._full_out_channels.copy()
+
     class NextNode:
         def __init__(self, node_name, sparse_multiplier):
             self.node_name = node_name
@@ -171,9 +183,9 @@ class ShapePruninigProcessor:
 class WeightsFlopsCalculator:
     def __init__(self,
                  graph: NNCFGraph,
-                 output_shapes,
-                 conv_op_metatypes,
-                 linear_op_metatypes):
+                 output_shapes: Dict[NNCFNodeName, List[int]],
+                 conv_op_metatypes: List[OperatorMetatype],
+                 linear_op_metatypes: List[OperatorMetatype]):
         self._graph = graph
         self._conv_op_metatypes = conv_op_metatypes
         self._linear_op_metatypes = linear_op_metatypes

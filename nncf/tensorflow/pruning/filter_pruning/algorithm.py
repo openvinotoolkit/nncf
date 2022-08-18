@@ -116,31 +116,27 @@ class FilterPruningController(BasePruningAlgoController):
         self.frozen = False
         self.pruning_quota = 0.9
 
-        self._nodes_flops = {}  # type: Dict[NNCFNodeName, int]
-        self._nodes_params_num = {}  # type: Dict[NNCFNodeName, int]
-        self._layers_in_channels = {}
-        self._layers_out_channels = {}
-        self._layers_out_shapes = {}
-        self._pruning_quotas = {}
-        self._next_nodes = {}
-        self._init_pruned_layers_params()
 
         self._weights_flops_calc = WeightsFlopsCalculator(graph=graph,
-                                                          output_shapes=self._layers_out_shapes,
+                                                          output_shapes=collect_output_shapes(self._model, self._original_graph),
                                                           conv_op_metatypes=GENERAL_CONV_LAYER_METATYPES,
                                                           linear_op_metatypes=LINEAR_LAYER_METATYPES)
+
         self._shape_pruning_proc = ShapePruninigProcessor(graph=graph,
                                                           pruning_operations_metatype=TF_PRUNING_OPERATOR_METATYPES,
                                                           pruning_groups=pruned_layer_groups,
                                                           prunable_types=prunable_types)
-        self._nodes_flops, self._nodes_params_num = \
-            self._weights_flops_calc.count_flops_and_weights_per_node()
-        self.full_flops = sum(self._nodes_flops.values())
-        self.current_flops = self.full_flops
-        self.full_params_num = sum(self._nodes_params_num.values())
-        self.current_params_num = self.full_params_num
+
+        self.full_flops, self.full_params_num = self._weights_flops_calc.count_flops_and_weights()
         self.full_filters_num = self._weights_flops_calc.count_filters_num()
+
+        self.current_flops, self.current_params_num = self.full_flops, self.full_params_num
         self.current_filters_num = self.full_filters_num
+
+
+        self._pruning_quotas = {}
+        self._init_pruning_quotas()
+
         self._pruned_layers_num = len(self._pruned_layer_groups_info.get_all_nodes())
         self._prunable_layers_num = len(self._original_graph.get_nodes_by_types(self._prunable_types))
         self._max_prunable_flops, self._max_prunable_params = \
@@ -232,12 +228,10 @@ class FilterPruningController(BasePruningAlgoController):
         if run_batchnorm_adaptation:
             self._run_batchnorm_adaptation()
 
-    def _init_pruned_layers_params(self):
-        # 0. Initialize layer out shapes
-        self._layers_out_shapes = collect_output_shapes(self._model, self._original_graph)
-        # 1. Initialize pruning quotas
+    def _init_pruning_quotas(self):
+        layers_out_channels = self._shape_pruning_proc.full_output_channels
         for cluster in self._pruned_layer_groups_info.get_all_clusters():
-            self._pruning_quotas[cluster.id] = floor(self._layers_out_channels[cluster.elements[0].node_name]
+            self._pruning_quotas[cluster.id] = floor(layers_out_channels[cluster.elements[0].node_name]
                                                      * self.pruning_quota)
 
     def _set_binary_masks_for_pruned_layers_groupwise(self, pruning_level: float):
@@ -359,8 +353,8 @@ class FilterPruningController(BasePruningAlgoController):
             masks[group.id] = tf.ones(filters_num)
 
         # 2.
-        tmp_in_channels = self._layers_in_channels.copy()
-        tmp_out_channels = self._layers_out_channels.copy()
+        tmp_in_channels, tmp_out_channels =\
+            self._shape_pruning_proc.get_prunable_layers_in_out_channels()
         sorted_importances = sorted(zip(filter_importances, group_indexes, filter_indexes),
                                     key=lambda x: x[0])
         for _, group_id, filter_index in sorted_importances:

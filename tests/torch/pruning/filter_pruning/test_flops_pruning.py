@@ -65,10 +65,10 @@ def test_both_targets_assert():
 
 @pytest.mark.parametrize(
     ("model", "ref_params"),
-    ((PruningTestModel, {"_modules_in_channels": {PruningTestModel.CONV_1_NODE_NAME: 1,
+    ((PruningTestModel, {"in_channels": {PruningTestModel.CONV_1_NODE_NAME: 1,
                                                   PruningTestModel.CONV_2_NODE_NAME: 3,
                                                   PruningTestModel.CONV_3_NODE_NAME: 1},
-                         "_modules_out_channels": {PruningTestModel.CONV_1_NODE_NAME: 3,
+                         "out_channels": {PruningTestModel.CONV_1_NODE_NAME: 3,
                                                    PruningTestModel.CONV_2_NODE_NAME: 1,
                                                    PruningTestModel.CONV_3_NODE_NAME: 1},
                          "nodes_flops": {PruningTestModel.CONV_1_NODE_NAME: 216,
@@ -83,8 +83,10 @@ def test_init_params_for_flops_calculation(model, ref_params):
 
     model = model()
     _, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
-    for key, value in ref_params.items():
-        assert getattr(compression_ctrl, key) == value
+
+    assert compression_ctrl.nodes_flops == ref_params['nodes_flops']
+    assert compression_ctrl._shape_pruning_proc.full_input_channels == ref_params['in_channels']
+    assert compression_ctrl._shape_pruning_proc.full_output_channels == ref_params['out_channels']
 
 
 @pytest.mark.parametrize(

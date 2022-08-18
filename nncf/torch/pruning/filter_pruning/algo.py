@@ -139,12 +139,11 @@ class FilterPruningController(BasePruningAlgoController):
                                                           pruning_operations_metatype=PT_PRUNING_OPERATOR_METATYPES,
                                                           pruning_groups=pruned_module_groups,
                                                           prunable_types=prunable_types)
-        self._init_module_channels_and_shapes()
         self.pruning_quotas = {}
         self.nodes_flops = {}  # type: Dict[NNCFNodeName, int]
         self.nodes_params_num = {}  # type: Dict[NNCFNodeName, int]
         self.next_nodes = {}  # type: Dict[int, List[NNCFNodeName]]
-        self._init_pruned_modules_params()
+        self._init_pruninig_quotas()
         self.flops_count_init()
         self.full_flops = sum(self.nodes_flops.values())
         self.current_flops = self.full_flops
@@ -265,17 +264,10 @@ class FilterPruningController(BasePruningAlgoController):
     def freeze(self, freeze: bool = True):
         self.frozen = freeze
 
-    def _init_module_channels_and_shapes(self):
-        self._modules_in_channels = {}  # type: Dict[NNCFNodeName, int]
-        self._modules_out_channels = {}  # type: Dict[NNCFNodeName, int]
-        self._modules_out_shapes = {}  # type: Dict[NNCFNodeName, List[int]]
-
-    def _init_pruned_modules_params(self):
-        # Init prunable layers in out channels
-        self._modules_in_channels, self._modules_out_channels = get_prunable_layers_in_out_channels(self._model.get_original_graph())
-        # Init pruning quotas
+    def _init_pruninig_quotas(self):
+        full_out_channels = self._shape_pruning_proc.full_output_channels
         for cluster in self.pruned_module_groups_info.get_all_clusters():
-            self.pruning_quotas[cluster.id] = np.floor(self._modules_out_channels[cluster.elements[0].node_name] \
+            self.pruning_quotas[cluster.id] = np.floor(full_out_channels[cluster.elements[0].node_name] \
                                                        * self.pruning_quota)
 
     def flops_count_init(self) -> None:
@@ -525,8 +517,7 @@ class FilterPruningController(BasePruningAlgoController):
         # until target flops pruning level is achieved
         sorted_importances = sorted(zip(importances, cluster_indexes, filter_indexes), key=lambda x: x[0])
         cur_num = 0
-        tmp_in_channels = self._modules_in_channels.copy()
-        tmp_out_channels = self._modules_out_channels.copy()
+        tmp_in_channels, tmp_out_channels = self._shape_pruning_proc.get_prunable_layers_in_out_channels()
         tmp_pruning_quotas = self.pruning_quotas.copy()
 
         while cur_num < len(sorted_importances):

@@ -13,10 +13,12 @@
 
 import pytest
 
-from nncf.common.pruning.utils import calculate_in_out_channels_by_masks
-from nncf.common.pruning.utils import count_flops_and_weights
+from nncf.common.pruning.shape_pruning import ShapePruninigProcessor
+from nncf.common.pruning.shape_pruning import WeightsFlopsCalculator
 from nncf.tensorflow.graph.metatypes.common import GENERAL_CONV_LAYER_METATYPES
 from nncf.tensorflow.graph.metatypes.common import LINEAR_LAYER_METATYPES
+from nncf.tensorflow.pruning.operations import TF_PRUNING_OPERATOR_METATYPES
+from nncf.tensorflow.pruning.utils import collect_output_shapes
 from tests.tensorflow.helpers import create_compressed_model_and_algo_for_test
 from tests.tensorflow.pruning.helpers import get_basic_pruning_config
 from tests.tensorflow.pruning.helpers import get_model_grouped_convs
@@ -53,18 +55,21 @@ def test_flops_calulation_for_spec_layers(model_fn, all_weights, pruning_flops_t
     assert compression_ctrl.current_flops == ref_current_flops
     assert compression_ctrl.current_params_num == ref_current_params
     # pylint:disable=protected-access
-    tmp_in_channels, tmp_out_channels = calculate_in_out_channels_by_masks(
-        pruning_groups=compression_ctrl._pruned_layer_groups_info.get_all_clusters(),
-        num_of_sparse_elements_by_node=compression_ctrl._calculate_num_of_sparse_elements_by_node(),
-        full_input_channels=compression_ctrl._layers_in_channels,
-        full_output_channels=compression_ctrl._layers_out_channels,
-        pruning_groups_next_nodes=compression_ctrl._next_nodes)
+    original_graph = compression_ctrl._original_graph
+    shape_pruner = ShapePruninigProcessor(graph=original_graph,
+                                          prunable_types=compression_ctrl._prunable_types,
+                                          pruning_operations_metatype=TF_PRUNING_OPERATOR_METATYPES,
+                                          pruning_groups=compression_ctrl._pruned_layer_groups_info)
 
+    tmp_in_channels, tmp_out_channels = shape_pruner.calculate_in_out_channels_by_masks(
+        num_of_sparse_elements_by_node=compression_ctrl._calculate_num_of_sparse_elements_by_node())
+
+    flops_weights_calculator = WeightsFlopsCalculator(graph=original_graph,
+                                                      output_shapes=collect_output_shapes(compression_ctrl.model, original_graph),
+                                                      conv_op_metatypes=GENERAL_CONV_LAYER_METATYPES,
+                                                      linear_op_metatypes=LINEAR_LAYER_METATYPES)
     cur_flops, cur_params_num = \
-        count_flops_and_weights(compression_ctrl._original_graph,
-                                compression_ctrl._layers_out_shapes,
+        flops_weights_calculator.count_flops_and_weights(
                                 input_channels=tmp_in_channels,
-                                output_channels=tmp_out_channels,
-                                conv_op_metatypes=GENERAL_CONV_LAYER_METATYPES,
-                                linear_op_metatypes=LINEAR_LAYER_METATYPES)
+                                output_channels=tmp_out_channels)
     assert (cur_flops, cur_params_num) == (ref_current_flops, ref_current_params)
