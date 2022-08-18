@@ -23,21 +23,6 @@ from tests.onnx.quantization.common import min_max_quantize_model
 from tests.onnx.quantization.common import compare_nncf_graph
 from tests.onnx.quantization.common import infer_model
 
-MODELS_NAME = [
-    'icnet_camvid',
-    'unet_camvid'
-]
-
-PATH_REF_GRAPHS = [
-    'icnet_camvid.dot',
-    'unet_camvid.dot'
-]
-
-INPUT_SHAPES = [
-    [1, 3, 768, 960],
-    [1, 3, 368, 480]
-]
-
 
 @pytest.mark.parametrize(('test_case'),
                          [TestCase('icnet_camvid', [1, 3, 768, 960]),
