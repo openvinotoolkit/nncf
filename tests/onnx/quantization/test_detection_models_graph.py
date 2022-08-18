@@ -61,5 +61,6 @@ def test_min_max_quantization_graph(tmp_path, test_case):
                                              dataset_has_batch_size=dataset_has_batch_size)
     if convert_opset_version:
         quantized_model = ONNXModelNormalizer.convert_opset_version(quantized_model)
+        # The problem with convert function - convert_opset_version.
         infer_model(test_case.input_shape, quantized_model)
     compare_nncf_graph(quantized_model, test_case.path_ref_graph)
