@@ -83,6 +83,6 @@ class NNCFPruningBaseTensorProcessor:
 
         :param tensor: Given NNCFTensor.
         :param chunks: The number of chunks
-        :param dims: The axis along which the tensors will be splited
+        :param axis: The axis along which the tensors will be splited
         :returns: The list of NNCFTensor which is split
         """
