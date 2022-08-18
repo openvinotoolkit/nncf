@@ -201,14 +201,14 @@ class ConcatPruningOp(BasePruningOp):
         input_edges = graph.get_input_edges(node)
         previous_nodes = [edge.from_node for edge in input_edges]
         input_masks = [input_node.data['output_mask'] for input_node in previous_nodes]
-        input_masks = [find_input_mask_for_node(mask, node) if isinstance(mask, list) else mask for mask in input_masks]
+        input_masks = [find_input_mask_for_node(mask, node) if isinstance(mask, dict) else mask for mask in input_masks]
 
         not_empty_masks = [mask for mask in input_masks if mask is not None]  # type: List[NNCFTensor]
         if not not_empty_masks:
             return None
 
         first_non_empty_mask = not_empty_masks[0]
-        if isinstance(first_non_empty_mask, list):
+        if isinstance(first_non_empty_mask, dict):
             first_non_empty_mask = find_input_mask_for_node(first_non_empty_mask, node)
 
         device = first_non_empty_mask.device

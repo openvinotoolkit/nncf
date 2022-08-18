@@ -598,7 +598,7 @@ def get_input_masks(node: NNCFNode, graph: NNCFGraph) -> List[Optional[NNCFTenso
 
 def get_output_mask(node: NNCFNode) -> Optional[NNCFTensor]:
     output_mask = node.data['output_mask']
-    if isinstance(output_mask, list):
+    if isinstance(output_mask, dict):
         output_mask = find_input_mask_for_node(output_mask, node)
     return output_mask
 
@@ -647,13 +647,13 @@ def identity_mask_propagation(node: NNCFNode, graph: NNCFGraph) -> None:
     assert len(input_masks) == 1
     input_mask = input_masks[0]
 
-    if isinstance(input_mask, list):
+    if isinstance(input_mask, dict):
         input_mask = find_input_mask_for_node(input_mask, node)
     node.data['output_mask'] = input_mask
 
 
 def match_multiple_output_masks(output_masks: List[SymbolicMask], output_edges: List[NNCFGraphEdge],
-                                chunk_axis: int) -> dict:
+                                chunk_axis: int) -> Dict['str', SymbolicMask]:
     """
     Match multiple input mask to each next nodes.
 
@@ -674,9 +674,9 @@ def match_multiple_output_masks(output_masks: List[SymbolicMask], output_edges: 
             # update already matched
             output_shapes[idx]=None
 
-    return list(result_masks.items())
+    return result_masks
 
-def find_input_mask_for_node(input_mask: List[Tuple['str', SymbolicMask]], node: NNCFNode) -> SymbolicMask:
+def find_input_mask_for_node(input_mask: Dict['str', SymbolicMask], node: NNCFNode) -> SymbolicMask:
     """
     Find exact input mask for node among multiple input masks.
 
@@ -684,5 +684,4 @@ def find_input_mask_for_node(input_mask: List[Tuple['str', SymbolicMask]], node:
     :return: Exact input mask for node.
     """
     node_name = node.node_name
-    input_mask = dict(input_mask)
     return input_mask[node_name]
