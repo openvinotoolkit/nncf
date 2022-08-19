@@ -36,7 +36,7 @@ from nncf.experimental.onnx.graph.transformations.commands import ONNXTargetPoin
 from nncf.experimental.post_training.statistics.statistic_point import StatisticPoint
 from nncf.experimental.post_training.statistics.statistic_point import StatisticPointsContainer
 from nncf.experimental.onnx.graph.transformations.layout import ONNXTransformationLayout
-from nncf.experimental.onnx.graph.metatypes.onnx_ops import GENERAL_WEIGHT_LAYER_METATYPES
+from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import GENERAL_WEIGHT_LAYER_METATYPES
 from nncf.experimental.onnx.graph.nncf_graph_builder import GraphConverter
 from nncf.experimental.onnx.algorithms.quantization.default_quantization import DEFAULT_ONNX_QUANT_TRAIT_TO_OP_DICT
 from nncf.experimental.onnx.graph.transformations.commands import ONNXQuantizerInsertionCommand
@@ -126,9 +126,11 @@ class ONNXMinMaxQuantization(MinMaxQuantization):
                 node_name = quantization_point.insertion_point.target_node_name
                 if NNCFGraphNodeType.INPUT_NODE not in quantization_point.insertion_point.target_node_name:
                     # If quantization of Input
-                    if quantization_point.insertion_point.input_port_id == 1:
+                    if quantization_point.insertion_point.input_port_id is not None:
                         # TODO (kshpv): need to be reconsidered:
                         #  some operators such as Mul and Add could have activation input tensor on 0 or 1 indices
+                        # TODO (kshpv): input_port_id can be usefull in terms of quantizing only one edge.
+                        #  Some of the models could required this.
                         outputs = onnx_graph.get_node_edges(node_name)['input'][0]
                         activation_quantization_target_point = ONNXTargetPoint(TargetType.PRE_LAYER_OPERATION,
                                                                                node_name)

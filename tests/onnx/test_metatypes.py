@@ -18,13 +18,14 @@ from nncf.experimental.onnx.graph.nncf_graph_builder import GraphConverter
 
 from nncf.common.graph.operator_metatypes import InputNoopMetatype
 from nncf.common.graph.operator_metatypes import OutputNoopMetatype
-from nncf.common.graph.operator_metatypes import UnknownMetatype
-from nncf.experimental.onnx.graph.metatypes.onnx_ops import ONNXConvolutionMetatype
-from nncf.experimental.onnx.graph.metatypes.onnx_ops import ONNXBatchNormMetatype
-from nncf.experimental.onnx.graph.metatypes.onnx_ops import ONNXReluMetatype
-from nncf.experimental.onnx.graph.metatypes.onnx_ops import ONNXGlobalAveragePoolMetatype
-from nncf.experimental.onnx.graph.metatypes.onnx_ops import ONNXConcatLayerMetatype
-from nncf.experimental.onnx.graph.metatypes.onnx_ops import ONNXAddLayerMetatype
+from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXConvolutionMetatype
+from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXBatchNormMetatype
+from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXReluMetatype
+from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXGlobalAveragePoolMetatype
+from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXConcatLayerMetatype
+from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXAddLayerMetatype
+from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXConstantOfShapeMetatype
+from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXShapeMetatype
 
 from tests.onnx.models import LinearModel
 from tests.onnx.models import MultiInputOutputModel
@@ -36,7 +37,7 @@ REF_METATYPES_COUNTERS = [
      ONNXConvolutionMetatype, OutputNoopMetatype],
     [InputNoopMetatype, InputNoopMetatype, InputNoopMetatype,
      ONNXConcatLayerMetatype, ONNXAddLayerMetatype, OutputNoopMetatype, OutputNoopMetatype],
-    [InputNoopMetatype, UnknownMetatype, UnknownMetatype, OutputNoopMetatype]]
+    [InputNoopMetatype, ONNXConstantOfShapeMetatype, ONNXShapeMetatype, OutputNoopMetatype]]
 
 
 @pytest.mark.parametrize(("model_creator_func, ref_metatypes"),

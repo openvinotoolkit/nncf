@@ -57,6 +57,12 @@ class ONNXReluMetatype(ONNXOpMetatype):
 
 
 @ONNX_OPERATION_METATYPES.register()
+class ONNXLeakyReluMetatype(ONNXOpMetatype):
+    name = 'LeakyReluOp'
+    op_names = ['LeakyRelu']
+
+
+@ONNX_OPERATION_METATYPES.register()
 class ONNXSigmoidMetatype(ONNXOpMetatype):
     name = 'SigmoidOp'
     op_names = ['Sigmoid']
@@ -103,10 +109,24 @@ class ONNXAddLayerMetatype(ONNXOpMetatype):
 
 
 @ONNX_OPERATION_METATYPES.register()
+class ONNXSubMetatype(ONNXOpMetatype):
+    name = 'SubOp'
+    op_names = ['Sub']
+    hw_config_names = [HWConfigOpName.SUBTRACT]
+
+
+@ONNX_OPERATION_METATYPES.register()
 class ONNXMulLayerMetatype(ONNXOpMetatype):
     name = 'MulOp'
     op_names = ['Mul']
     hw_config_names = [HWConfigOpName.MULTIPLY]
+
+
+@ONNX_OPERATION_METATYPES.register()
+class ONNXDivLayerMetatype(ONNXOpMetatype):
+    name = 'DivOp'
+    op_names = ['Div']
+    hw_config_names = [HWConfigOpName.DIVIDE]
 
 
 @ONNX_OPERATION_METATYPES.register()
@@ -141,6 +161,189 @@ class ONNXReshapeMetatype(ONNXOpMetatype):
     name = 'ReshapeOp'
     op_names = ['Reshape']
     hw_config_names = [HWConfigOpName.RESHAPE]
+
+
+@ONNX_OPERATION_METATYPES.register()
+class ONNXUpsampleMetatype(ONNXOpMetatype):
+    name = 'UpsampleOp'
+    op_names = ['Upsample']
+
+
+@ONNX_OPERATION_METATYPES.register()
+class ONNXConstantOfShapeMetatype(ONNXOpMetatype):
+    name = 'ConstantOfShapeOp'
+    op_names = ['ConstantOfShape']
+
+
+@ONNX_OPERATION_METATYPES.register()
+class ONNXShapeMetatype(ONNXOpMetatype):
+    name = 'ShapeOp'
+    op_names = ['Shape']
+
+
+@ONNX_OPERATION_METATYPES.register()
+class ONNXExpandMetatype(ONNXOpMetatype):
+    # TODO (kshpv): hw_config_names?
+    name = 'ExpandOp'
+    op_names = ['Expand']
+
+
+@ONNX_OPERATION_METATYPES.register()
+class ONNXNonZeroMetatype(ONNXOpMetatype):
+    name = 'NonZeroOp'
+    op_names = ['NonZero']
+
+
+@ONNX_OPERATION_METATYPES.register()
+class ONNXSplitMetatype(ONNXOpMetatype):
+    name = 'SplitOp'
+    op_names = ['Split']
+    hw_config_names = [HWConfigOpName.SPLIT]
+
+
+@ONNX_OPERATION_METATYPES.register()
+class ONNXLessMetatype(ONNXOpMetatype):
+    name = 'LessOp'
+    op_names = ['Less']
+    hw_config_names = [HWConfigOpName.LESS]
+
+
+@ONNX_OPERATION_METATYPES.register()
+class ONNXGreaterMetatype(ONNXOpMetatype):
+    name = 'GreaterOp'
+    op_names = ['Greater']
+    hw_config_names = [HWConfigOpName.GREATER]
+
+
+@ONNX_OPERATION_METATYPES.register()
+class ONNXEqualMetatype(ONNXOpMetatype):
+    name = 'EqualOp'
+    op_names = ['Equal']
+    hw_config_names = [HWConfigOpName.EQUAL]
+
+
+@ONNX_OPERATION_METATYPES.register()
+class ONNXNotMetatype(ONNXOpMetatype):
+    name = 'NotOp'
+    op_names = ['Not']
+    hw_config_names = [HWConfigOpName.LOGICALNOT]
+
+
+@ONNX_OPERATION_METATYPES.register()
+class ONNXAndMetatype(ONNXOpMetatype):
+    name = 'AndOp'
+    op_names = ['And']
+    hw_config_names = [HWConfigOpName.LOGICALAND]
+
+
+@ONNX_OPERATION_METATYPES.register()
+class ONNXOrMetatype(ONNXOpMetatype):
+    name = 'OrOp'
+    op_names = ['Or']
+    hw_config_names = [HWConfigOpName.LOGICALOR]
+
+
+@ONNX_OPERATION_METATYPES.register()
+class ONNXFloorMetatype(ONNXOpMetatype):
+    name = 'FloorOp'
+    op_names = ['Floor']
+    hw_config_names = [HWConfigOpName.FLOORMOD]
+
+
+@ONNX_OPERATION_METATYPES.register()
+class ONNXSqrtMetatype(ONNXOpMetatype):
+    name = 'SqrtOp'
+    op_names = ['Sqrt']
+    hw_config_names = [HWConfigOpName.POWER]
+
+
+@ONNX_OPERATION_METATYPES.register()
+class ONNXLogMetatype(ONNXOpMetatype):
+    name = 'LogOp'
+    op_names = ['Log']
+
+
+@ONNX_OPERATION_METATYPES.register()
+class ONNXScatterElementslMetatype(ONNXOpMetatype):
+    name = 'ScatterElementsOp'
+    op_names = ['ScatterElements']
+
+
+@ONNX_OPERATION_METATYPES.register()
+class ONNXRoiAlignMetatype(ONNXOpMetatype):
+    name = 'RoiAlignOp'
+    op_names = ['RoiAlign']
+
+
+@ONNX_OPERATION_METATYPES.register()
+class ONNXMatMulMetatype(ONNXOpMetatype):
+    name = 'MatMulOp'
+    op_names = ['MatMul']
+    hw_config_names = [HWConfigOpName.MATMUL]
+
+
+@ONNX_OPERATION_METATYPES.register()
+class ONNXGatherMetatype(ONNXOpMetatype):
+    name = 'GatherOp'
+    op_names = ['Gather']
+
+
+@ONNX_OPERATION_METATYPES.register()
+class ONNXUnsqueezeMetatype(ONNXOpMetatype):
+    name = 'UnsqueezeOp'
+    op_names = ['Unsqueeze']
+    hw_config_names = [HWConfigOpName.UNSQUEEZE]
+
+
+@ONNX_OPERATION_METATYPES.register()
+class ONNXSqueezeMetatype(ONNXOpMetatype):
+    name = 'SqueezeOp'
+    op_names = ['Squeeze']
+    hw_config_names = [HWConfigOpName.SQUEEZE]
+
+
+@ONNX_OPERATION_METATYPES.register()
+class ONNXNonMaxSuppressionMetatype(ONNXOpMetatype):
+    name = 'NonMaxSuppressionOp'
+    op_names = ['NonMaxSuppression']
+
+
+@ONNX_OPERATION_METATYPES.register()
+class ONNXCastMetatype(ONNXOpMetatype):
+    name = 'CastOp'
+    op_names = ['Cast']
+    hw_config_names = [HWConfigOpName.SQUEEZE]
+
+
+@ONNX_OPERATION_METATYPES.register()
+class ONNXReduceMinMetatype(ONNXOpMetatype):
+    name = 'ReduceMinOp'
+    op_names = ['ReduceMin']
+
+
+@ONNX_OPERATION_METATYPES.register()
+class ONNXReduceMeanMetatype(ONNXOpMetatype):
+    name = 'ReduceMeanOp'
+    op_names = ['ReduceMean']
+    hw_config_names = [HWConfigOpName.REDUCEMEAN]
+
+
+@ONNX_OPERATION_METATYPES.register()
+class ONNXTopKMetatype(ONNXOpMetatype):
+    name = 'TopKOp'
+    op_names = ['TopK']
+
+
+@ONNX_OPERATION_METATYPES.register()
+class ONNXSliceMetatype(ONNXOpMetatype):
+    name = 'SliceOp'
+    op_names = ['Slice']
+
+
+@ONNX_OPERATION_METATYPES.register()
+class ONNXExpMetatype(ONNXOpMetatype):
+    name = 'ExpOp'
+    op_names = ['Exp']
 
 
 @ONNX_OPERATION_METATYPES.register()

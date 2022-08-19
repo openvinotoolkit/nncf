@@ -20,70 +20,74 @@ from nncf.common.utils.logger import logger as nncf_logger
 
 class ONNXModelNormalizer:
     @staticmethod
-    def convert_opset_version(model: onnx.ModelProto) -> onnx.ModelProto:
-        # pylint: disable=no-member
-        def add_input_from_initializer(model: onnx.ModelProto) -> None:
-            """
-            Currently onnx.shape_inference doesn't use the shape of initializers, so add
-            that info explicitly as ValueInfoProtos.
-            Mutates the model.
+    def add_input_from_initializer(model: onnx.ModelProto) -> None:
+        """
+        Currently onnx.shape_inference doesn't use the shape of initializers, so add
+        that info explicitly as ValueInfoProtos.
+        Mutates the model.
 
-            History of this code
-             - After onnx.shape_inference.infer_shapes the model graph value_info doesn't
-             include all activations tensors #4102
-             - https://github.com/onnx/onnx/issues/4102
+        History of this code
+         - After onnx.shape_inference.infer_shapes the model graph value_info doesn't
+         include all activations tensors #4102
+         - https://github.com/onnx/onnx/issues/4102
 
-            Args:
-                model: The ModelProto to update.
-            """
-            # All (top-level) constants will have ValueInfos before IRv4 as they are all inputs
-            if model.ir_version < 4:
-                nncf_logger.info('Could not process model, as it has {} < 4'.format(model.ir_version))
-                return model
+        Args:
+            model: The ModelProto to update.
+        """
+        # All (top-level) constants will have ValueInfos before IRv4 as they are all inputs
+        if model.ir_version < 4:
+            nncf_logger.info('Could not process model, as it has {} < 4'.format(model.ir_version))
+            return model
 
-            def add_const_value_infos_to_graph(graph: onnx.GraphProto):
-                inputs = {i.name for i in graph.input}
-                existing_info = {vi.name: vi for vi in graph.input}
-                for init in graph.initializer:
-                    # Check it really is a constant, not an input
-                    if init.name in inputs:
+        def add_const_value_infos_to_graph(graph: onnx.GraphProto):
+            inputs = {i.name for i in graph.input}
+            existing_info = {vi.name: vi for vi in graph.input}
+            for init in graph.initializer:
+                # Check it really is a constant, not an input
+                if init.name in inputs:
+                    continue
+
+                # The details we want to add
+                elem_type = init.data_type
+                shape = init.dims
+
+                # Get existing or create new value info for this constant
+                vi = existing_info.get(init.name)
+                if vi is None:
+                    vi = graph.input.add()
+                    vi.name = init.name
+
+                # Even though it would be weird, we will not overwrite info even if it doesn't match
+                tt = vi.type.tensor_type
+                if tt.elem_type == onnx.TensorProto.UNDEFINED:
+                    tt.elem_type = elem_type
+                if not tt.HasField("shape"):
+                    # Ensure we set an empty list if the const is scalar (zero dims)
+                    tt.shape.dim.extend([])
+                    for dim in shape:
+                        tt.shape.dim.add().dim_value = dim
+
+            # Handle subgraphs
+            for node in graph.node:
+                for attr in node.attribute:
+                    # Ref attrs refer to other attrs, so we don't need to do anything
+                    if attr.ref_attr_name != "":
                         continue
 
-                    # The details we want to add
-                    elem_type = init.data_type
-                    shape = init.dims
+                    if attr.type == onnx.AttributeProto.GRAPH:
+                        add_const_value_infos_to_graph(attr.g)
+                    if attr.type == onnx.AttributeProto.GRAPHS:
+                        for g in attr.graphs:
+                            add_const_value_infos_to_graph(g)
 
-                    # Get existing or create new value info for this constant
-                    vi = existing_info.get(init.name)
-                    if vi is None:
-                        vi = graph.input.add()
-                        vi.name = init.name
+        return add_const_value_infos_to_graph(model.graph)
 
-                    # Even though it would be weird, we will not overwrite info even if it doesn't match
-                    tt = vi.type.tensor_type
-                    if tt.elem_type == onnx.TensorProto.UNDEFINED:
-                        tt.elem_type = elem_type
-                    if not tt.HasField("shape"):
-                        # Ensure we set an empty list if the const is scalar (zero dims)
-                        tt.shape.dim.extend([])
-                        for dim in shape:
-                            tt.shape.dim.add().dim_value = dim
-
-                # Handle subgraphs
-                for node in graph.node:
-                    for attr in node.attribute:
-                        # Ref attrs refer to other attrs, so we don't need to do anything
-                        if attr.ref_attr_name != "":
-                            continue
-
-                        if attr.type == onnx.AttributeProto.GRAPH:
-                            add_const_value_infos_to_graph(attr.g)
-                        if attr.type == onnx.AttributeProto.GRAPHS:
-                            for g in attr.graphs:
-                                add_const_value_infos_to_graph(g)
-
-            return add_const_value_infos_to_graph(model.graph)
-
+    @staticmethod
+    def convert_opset_version(model: onnx.ModelProto) -> onnx.ModelProto:
+        """
+        Try to convert model to opset version 13, also adding some important information to the model such shapes.
+        """
+        # pylint: disable=no-member
         onnx.checker.check_model(model)
         nncf_logger.info('Original opset = {}'.format(model.opset_import[0].version))
         nncf_logger.info('Original ir_version = {}'.format(model.ir_version))
@@ -96,7 +100,7 @@ class ONNXModelNormalizer:
             # ONNX shape inference
             # https://github.com/onnx/onnx/blob/main/docs/proposals/SymbolicShapeInfProposal.md
             modified_model = onnx.shape_inference.infer_shapes(modified_model)
-            add_input_from_initializer(modified_model)
+            ONNXModelNormalizer.add_input_from_initializer(modified_model)
 
             onnx.checker.check_model(modified_model)
 
