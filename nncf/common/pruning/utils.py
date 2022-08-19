@@ -642,14 +642,3 @@ def identity_mask_propagation(node: NNCFNode, graph: NNCFGraph) -> None:
     assert len(input_masks) == 1
 
     node.data['output_mask'] = input_masks[0]
-
-
-def find_input_mask_for_node(input_mask: Dict['str', SymbolicMask], node: NNCFNode) -> SymbolicMask:
-    """
-    Find exact input mask for node among multiple input masks.
-
-    :param input_mask: Given input masks.
-    :return: Exact input mask for node.
-    """
-    node_name = node.node_name
-    return input_mask[node_name]
