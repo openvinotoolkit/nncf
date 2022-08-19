@@ -111,6 +111,6 @@ class SymbolicMaskProcessor(NNCFPruningBaseTensorProcessor):
         return SymbolicMask(input_masks[0].shape[0], producers)
 
     @classmethod
-    def split(cls, tensor: SymbolicMask, chunks: int, axis: int, output_shapes: List[int] = None) -> List[SymbolicMask]:
+    def split(cls, tensor: SymbolicMask, output_shapes: List[int]) -> List[SymbolicMask]:
         producers = tensor.mask_producers
         return [SymbolicMask(output_shape, producers) for output_shape in output_shapes]

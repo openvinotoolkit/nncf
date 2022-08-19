@@ -52,8 +52,8 @@ class TFNNCFPruningTensorProcessor(NNCFPruningBaseTensorProcessor):
         return input_masks[0]
 
     @classmethod
-    def split(cls, tensor: NNCFTensor, chunks: int, axis: int, output_shapes: List[int] = None) -> List[NNCFTensor]:
-        if axis >= len(tensor.tensor.shape):
-            axis = -1
-        ret_tensors = tf.split(tensor.tensor, chunks, axis)
+    def split(cls, tensor: NNCFTensor, output_shapes: List[int]) -> List[NNCFTensor]:
+        # pylint: disable=E1120
+        chunks = len(output_shapes)
+        ret_tensors = tf.split(tensor.tensor, chunks)
         return [TFNNCFTensor(ret_tensor) for ret_tensor in ret_tensors]

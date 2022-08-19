@@ -208,8 +208,6 @@ class ConcatPruningOp(BasePruningOp):
             return None
 
         first_non_empty_mask = not_empty_masks[0]
-        if isinstance(first_non_empty_mask, dict):
-            first_non_empty_mask = first_non_empty_mask[node.node_name]
 
         device = first_non_empty_mask.device
         filled_input_masks = []
@@ -237,21 +235,21 @@ class SplitPruningOp(BasePruningOp):
         Match multiple input mask to each next nodes.
 
         :param output_masks: Given output masks.
+        :param output_edges: Given output edges of the node.
+        :param chunk_axis: Given the axis on which operation was performed.
         :return: Matched output mask for each next node.
         """
-        output_shapes = [edge.tensor_shape[chunk_axis] for edge in output_edges]
         next_nodes = [edge.to_node for edge in output_edges]
         result_masks = {node.node_name: None for node in next_nodes}
 
-        if len(set(output_shapes)) == 1:
-            for i, split_mask in enumerate(output_masks):
-                result_masks[next_nodes[i].node_name] = split_mask
-        else:
-            for split_mask in output_masks:
-                idx = output_shapes.index(split_mask.shape[0])
-                result_masks[next_nodes[idx].node_name] = split_mask
-                # update already matched
-                output_shapes[idx]=None
+        result_masks = dict()
+        tmp_output_masks = output_masks.copy()
+        tmp_output_masks_shape = [mask.shape[0] for mask in tmp_output_masks]
+        for edge in output_edges:
+            node_name = edge.to_node.node_name
+            idx = tmp_output_masks_shape.index(edge.tensor_shape[chunk_axis])
+            result_masks[node_name] = tmp_output_masks.pop(idx)
+            tmp_output_masks_shape.pop(idx)
 
         return result_masks
 
@@ -275,13 +273,12 @@ class SplitPruningOp(BasePruningOp):
         if not input_mask:
             return None
 
-        chunk_size = node.layer_attributes.chunks
         chunk_axis = node.layer_attributes.axis
 
         output_edges = graph.get_output_edges(node)
         output_shapes = [edge.tensor_shape[chunk_axis] for edge in output_edges]
 
-        split_masks = tensor_processor.split(input_mask, chunk_size, chunk_axis, output_shapes)
+        split_masks = tensor_processor.split(input_mask, output_shapes)
         result_masks = cls.match_multiple_output_masks(split_masks, output_edges, chunk_axis)
 
         return result_masks

@@ -474,7 +474,7 @@ def test_split_metatype_mask_prop(empty_mask_left_branch, empty_mask_right_branc
         'stride': (1, 1),
         'padding_values': [0, 0]
      }
-    split_attributes = MultipleOutputLayerAttributes(chunks=2, axis=0)
+    split_attributes = MultipleOutputLayerAttributes(chunks=2, axis=1)
     conv_attributes = ConvolutionLayerAttributes(transpose=False, **layer_attributes, **default_conv_params)
 
     graph = NNCFGraph()

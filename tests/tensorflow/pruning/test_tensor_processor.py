@@ -63,9 +63,12 @@ def test_elementwise_mask_propagation(all_close):
 
 
 def test_split():
+    # pylint: disable=E1120
     tensor_data = [0., 1., 2., 3.]
-    chunks = 2
+    tf_variable = tf.Variable(tensor_data)
+    tf_output = tf.split(tf_variable, 2)
+    output_shapes = [output.shape[0] for output in tf_output]
     tensor = TFNNCFTensor(tf.Variable(tensor_data))
-    split_tensors = TFNNCFPruningTensorProcessor.split(tensor, chunks=chunks, axis=0)
+    split_tensors = TFNNCFPruningTensorProcessor.split(tensor, output_shapes=output_shapes)
     assert tf.reduce_all(split_tensors[0].tensor == tensor_data[:2])
     assert tf.reduce_all(split_tensors[1].tensor == tensor_data[2:])
