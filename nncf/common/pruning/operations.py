@@ -264,7 +264,10 @@ class SplitPruningOp(BasePruningOp):
         :param tensor_processor: Interface with tensor processing methods.
         :return: Filled input masks.
         """
-        input_mask = get_input_masks(node, graph)[0]
+        input_masks = get_input_masks(node, graph)
+        if not input_masks:
+            return None
+        input_mask = input_masks[0]
         chunk_axis = node.layer_attributes.axis
 
         output_edges = graph.get_output_edges(node)
