@@ -199,9 +199,7 @@ class ConcatPruningOp(BasePruningOp):
         :return: Filled input masks.
         """
         input_edges = graph.get_input_edges(node)
-        previous_nodes = [edge.from_node for edge in input_edges]
-        input_masks = [input_node.data['output_mask'] for input_node in previous_nodes]
-        input_masks = [mask[node.node_name] if isinstance(mask, dict) else mask for mask in input_masks]
+        input_masks = get_input_masks(node, graph)
 
         not_empty_masks = [mask for mask in input_masks if mask is not None]  # type: List[NNCFTensor]
         if not not_empty_masks:

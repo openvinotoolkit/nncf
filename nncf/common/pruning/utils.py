@@ -33,7 +33,6 @@ from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.pruning.clusterization import Cluster
 from nncf.common.pruning.clusterization import Clusterization
 from nncf.common.pruning.structs import PrunedLayerInfoBase
-from nncf.common.pruning.symbolic_mask import SymbolicMask
 from nncf.common.tensor import NNCFTensor
 from nncf.common.utils.registry import Registry
 
