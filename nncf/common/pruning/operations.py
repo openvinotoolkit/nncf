@@ -239,9 +239,6 @@ class SplitPruningOp(BasePruningOp):
         :param chunk_axis: Given the axis on which operation was performed.
         :return: Matched output mask for each next node.
         """
-        next_nodes = [edge.to_node for edge in output_edges]
-        result_masks = {node.node_name: None for node in next_nodes}
-
         result_masks = {}
         tmp_output_masks = output_masks.copy()
         tmp_output_masks_shape = [mask.shape[0] for mask in tmp_output_masks]
@@ -264,15 +261,12 @@ class SplitPruningOp(BasePruningOp):
         Generate output mask from input masks for split/chunk operations.
         If input mask is None return None
 
-        :param node: Node to determine it's sources.
-        :param graph: NNCF graph to work with
+        :param node: Node to determine its sources.
+        :param graph: NNCF graph to work with.
         :param tensor_processor: Interface with tensor processing methods.
         :return: Filled input masks.
         """
         input_mask = get_input_masks(node, graph)[0]
-        if not input_mask:
-            return None
-
         chunk_axis = node.layer_attributes.axis
 
         output_edges = graph.get_output_edges(node)
