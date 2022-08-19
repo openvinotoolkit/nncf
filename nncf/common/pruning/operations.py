@@ -242,7 +242,7 @@ class SplitPruningOp(BasePruningOp):
         next_nodes = [edge.to_node for edge in output_edges]
         result_masks = {node.node_name: None for node in next_nodes}
 
-        result_masks = dict()
+        result_masks = {}
         tmp_output_masks = output_masks.copy()
         tmp_output_masks_shape = [mask.shape[0] for mask in tmp_output_masks]
         for edge in output_edges:
