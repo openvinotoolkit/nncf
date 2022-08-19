@@ -73,14 +73,18 @@ class TestTransformers:
                                               "0001-Modifications-for-NNCF-usage.patch"))
 
     @pytest.mark.dependency(name='install_trans')
-    def test_install_trans_(self, pip_cache_dir):
+    def test_install_trans_(self, pip_cache_dir, torch_with_cuda11):
         version_string = "{}.{}".format(sys.version_info[0], sys.version_info[1])
         subprocess.call("virtualenv -ppython{} {}".format(version_string, self.VENV_PATH), shell=True)
         pip_runner = CachedPipRunner(self.VENV_ACTIVATE, pip_cache_dir)
+        pip_runner.run_pip("install --upgrade pip")  # cache options are available with pip > 20.2
         pip_runner.run_pip("uninstall setuptools -y")
         pip_runner.run_pip("install setuptools")
         pip_runner.run_pip("install onnx")
-        pip_runner.run_pip("install torch=={}".format(BKC_TORCH_VERSION))
+        torch_install_cmd = "install torch=={}".format(BKC_TORCH_VERSION)
+        if torch_with_cuda11:
+            pip_runner.run_pip(torch_install_cmd + '+cu111 -f https://download.pytorch.org/whl/torch_stable.html')
+        pip_runner.run_pip(torch_install_cmd)
         subprocess.run("git clone https://github.com/huggingface/transformers {}".format(self.TRANSFORMERS_REPO_PATH),
                        check=True, shell=True)
         subprocess.run("git checkout {}".format(TRANSFORMERS_COMMIT), check=True, shell=True,
