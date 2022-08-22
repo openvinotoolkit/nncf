@@ -17,6 +17,7 @@ limitations under the License.
 # pylint: disable=redefined-outer-name
 
 import itertools
+import math
 import os
 import subprocess
 import sys
@@ -58,7 +59,7 @@ XFAIL_QUANTIZED_MODELS = {
 
 def check_xfail(model_name):
     if model_name in XFAIL_MODELS:
-        pytest.xfail("ONNXRuntime-OVEP cannot execute the original model")
+        pytest.xfail("ONNXRuntime-OVEP cannot execute the reference model")
 
 
 def check_quantized_xfail(model_name):
@@ -138,32 +139,29 @@ def eval_size(request):
     return option
 
 
-@pytest.fixture
-def reference_model_accuracy(scope="module"):
+def _read_csv(root_dir: Path, key=str):
     dfs = []
     for task in TASKS:
-        csv_fp = str(TEST_ROOT / "onnx" / "data" / "reference_model_accuracy" / task / "accuracy_checker-original.csv")
+        csv_fp = str(root_dir / task / f"accuracy_checker-{key}.csv")
         dfs += [pd.read_csv(csv_fp)]
     df = pd.concat(dfs, axis=0)
-    df = df[["model", "metric_value"]]
+    df = df[["model", "metric_value", "metric_name"]]
     df = df.set_index("model")
-    df.columns = ["original_model_accuracy"]
-    df["original_model_accuracy"] = df["original_model_accuracy"] * 100.0
+    df["model_accuracy"] = df["metric_value"] * 100.0
+    df = df[["model_accuracy", "metric_name"]]
     return df
+
+
+@pytest.fixture
+def reference_model_accuracy(scope="module"):
+    root_dir = TEST_ROOT / "onnx" / "data" / "reference_model_accuracy"
+    return _read_csv(root_dir, "reference")
 
 
 @pytest.fixture
 def quantized_model_accuracy(output_dir, scope="function"):
-    dfs = []
-    for task in TASKS:
-        csv_fp = str(output_dir / task / "accuracy_checker-quantized.csv")
-        dfs += [pd.read_csv(csv_fp)]
-    df = pd.concat(dfs, axis=0)
-    df = df[["model", "metric_value"]]
-    df = df.set_index("model")
-    df.columns = ["quantized_model_accuracy"]
-    df["quantized_model_accuracy"] = df["quantized_model_accuracy"] * 100.0
-    return df
+    root_dir = output_dir
+    return _read_csv(root_dir, "quantized")
 
 
 @pytest.mark.e2e_ptq
@@ -226,7 +224,7 @@ class TestBenchmark:
         if is_quantized:
             out_file_name += "-quantized.csv"
         else:
-            out_file_name += "-original.csv"
+            out_file_name += "-reference.csv"
 
         model_file_name = model_name + "-quantized" if is_quantized else model_name
         model_file_name += ".onnx"
@@ -248,9 +246,9 @@ class TestBenchmark:
         nncf_logger.info(f"Run command: {com_str}")
         return com_line
 
-    @pytest.mark.e2e_eval_original_model
+    @pytest.mark.e2e_eval_reference_model
     @pytest.mark.parametrize("task_type, model_name", MODELS)
-    def test_original_model_accuracy(
+    def test_reference_model_accuracy(
             self, task_type, model_name, model_dir, data_dir, anno_dir, output_dir, eval_size):
 
         check_xfail(model_name)
@@ -259,9 +257,9 @@ class TestBenchmark:
                                    program="accuracy_checker.py", is_quantized=False)
         run_command(command)
 
-    @pytest.mark.e2e_eval_original_model
+    @pytest.mark.e2e_eval_reference_model
     @pytest.mark.parametrize("task_type, model_name", MODELS)
-    def test_original_model_performance(
+    def test_reference_model_performance(
             self, task_type, model_name, model_dir, data_dir, anno_dir, output_dir, eval_size):
 
         check_xfail(model_name)
@@ -314,48 +312,71 @@ class TestBenchmarkResult:
         check_xfail(model_name)
         check_quantized_xfail(model_name)
 
-        df = quantized_model_accuracy.join(reference_model_accuracy)
-        df["absolute_accuracy_degradation"] = df["original_model_accuracy"] - df["quantized_model_accuracy"]
+        df = reference_model_accuracy.join(quantized_model_accuracy, lsuffix="_FP32", rsuffix="_INT8")
+        df["Diff"] = df["model_accuracy_FP32"] - df["model_accuracy_INT8"]
         this_model_accuracy = df[df.index.str.contains(model_name)]
 
         assert len(this_model_accuracy) > 0, f"{model_name} has no result from the table."
 
         for idx, cols in this_model_accuracy.iterrows():
-            abs_acc_degradation = cols["absolute_accuracy_degradation"]
+            abs_acc_degradation = cols["Diff"]
             assert abs_acc_degradation < 1.0, \
                 f"The absolute model accuracy degradation of {idx} exceeds 1% ({abs_acc_degradation}%)."
 
     @pytest.mark.e2e_ptq
     @pytest.mark.run(order=4)
     def test_generate_report(self, reference_model_accuracy, quantized_model_accuracy, output_dir):
-        df = quantized_model_accuracy.join(reference_model_accuracy)
+        df = reference_model_accuracy.join(quantized_model_accuracy, lsuffix="_FP32", rsuffix="_INT8")
 
         output_fp = str(output_dir / "report.html")
 
-        df["absolute_accuracy_degradation"] = df["original_model_accuracy"] - df["quantized_model_accuracy"]
-        df["relative_accuracy_degradation"] = df["absolute_accuracy_degradation"] / df["original_model_accuracy"]
+        df["Diff"] = df["model_accuracy_FP32"] - df["model_accuracy_INT8"]
 
-        def _highlight_abs_acc_deg_fails(row):
-            print(row)
-            if row["absolute_accuracy_degradation"] > 1.0:
-                return ["background-color: yellow" for _ in row.index]
+        df = df.reset_index()
+        df = df.rename({"model": "Model", "metric_name_FP32": "Metrics type",
+                        "model_accuracy_FP32": "FP32", "model_accuracy_INT8": "INT8"}, axis=1)
 
-            return ["" for _ in row.index]
+        # TODO : We need to replace the values in those columns with the appropriate values in the future.
+        df["Expected FP32"] = None
+        df["Diff Expected"] = "<1%"
 
-        styler = df.style.apply(_highlight_abs_acc_deg_fails, axis=1).format(
-            "{:.2f}").set_properties(**{"text-align": "center"})
+        df = df[["Model", "Metrics type", "Expected FP32", "FP32", "INT8", "Diff", "Diff Expected"]]
+
+        yellow_rows = []
+        red_rows = []
+
+        for idx, row in df.iterrows():
+            if row["Diff"] > 1.0:
+                yellow_rows += [idx]
+
+            if math.isnan(row["INT8"]):
+                red_rows += [idx]
+
+        def _style_rows():
+            styles = []
+            for idx in yellow_rows:
+                styles.append(f"""
+                .row{idx} {{background-color: yellow;}}
+                """)
+            for idx in red_rows:
+                styles.append(f"""
+                .row{idx} {{background-color: rgb(205, 92, 92);}}
+                """)
+
+            return "\n".join(styles)
 
         with open(output_fp, "w", encoding="utf-8") as fp:
             fp.write(f"""
             <html>
             <head>
             <style> 
-            table, th, td {{font-size:10pt; border:1px solid black; border-collapse:collapse; text-align:left;}}
-            th, td {{padding: 5px;}}
+            table, th, td {{font-size:10pt; border:1px solid black; border-collapse:collapse; text-align:center;}}
+            th, td {{padding: 5px; background-color: rgb(144, 238, 144);}}
+            {_style_rows()}
             </style>
             </head>
             <body>
-            {styler.render()}
+            {df.style.set_precision(2).render()}
             </body>
             </html>
             """)
