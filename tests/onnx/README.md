@@ -22,8 +22,8 @@ We provide two types of tests.
 
     You should give three arguments to run this test.
 
-    1. `--model-dir`: The directory path which includes ONNX Model ZOO models (.onnx files). See [#prepare-models](../../examples/experimental/onnx/README.md#prepare-models) for details.
-    2. `--data-dir`: The directory path which includes datasets (ImageNet2012, COCO, Cityscapes, and VOC) [#prepare-models](../../examples/experimental/onnx/README.md#prepare-models).
+    1. `--model-dir`: The directory path which includes ONNX Model ZOO models (.onnx files). See [#prepare-models](benchmarking/README.md#prepare-models) for details.
+    2. `--data-dir`: The directory path which includes datasets (ImageNet2012, COCO, Cityscapes, and VOC) [#prepare-models](benchmarking/README.md#prepare-models).
     3. `--output-dir`: The directory path where the test results will be saved.
     4. (Optional) `--ckpt-dir`: Directory path to save quantized models.
     5. (Optional) `--anno-dir`: Directory path for dataset annotations. Please refer to [OpenVINO accuracy checker](https://github.com/openvinotoolkit/open_model_zoo/tree/master/tools/accuracy_checker).

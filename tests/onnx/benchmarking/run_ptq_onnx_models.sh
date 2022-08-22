@@ -9,7 +9,7 @@ if [ $# -ne 5 ]; then
 fi
 
 case $1 in
-    classification|det_and_seg)
+    classification|object_detection_segmentation)
         CONFIGS_DIR=${SCRIPT_DIR}/$1/onnx_models_configs;
         echo "CONFIGS_DIR=$CONFIGS_DIR"
         ;;

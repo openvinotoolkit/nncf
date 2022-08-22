@@ -25,8 +25,8 @@ $ docker images | grep onnx_ptq_experimental:dev
 
 Please refer to guides:
 
-1. [Classification models](classification/README.md)
-2. [Semantic segmenantation models](semantic_segmentation/README.md)
+1. [Classification models](../../../examples/experimental/onnx/classification/README.md)
+2. [Semantic segmenantation models](../../../examples/experimental/onnx/semantic_segmentation/README.md)
 
 ## Benchmark for ONNX Model Zoo
 
@@ -148,7 +148,7 @@ Please refer to [Docker image build](#docker-image-build) section.
                 -v <OUTPUT_DIR>:/output     \
                 onnx_ptq_experimental:dev
 
-(container) $ nncf/examples/experimental/onnx/run_ptq_onnx_models.sh [classification|det_and_seg] /onnx-models /output /omz_data $NUMBER_OF_SAMPLES
+(container) $ nncf/examples/experimental/onnx/run_ptq_onnx_models.sh [classification|object_detection_segmentation] /onnx-models /output /omz_data $NUMBER_OF_SAMPLES
 ```
 
 You have to choose the model type between `[classification|det_and_seg]`.
@@ -164,7 +164,7 @@ For examples, to run with `NUMBER_OF_SAMPLES=500`, you can command as follows.
 2. Object detection and segmentation models
 
 ```bash
-(container) $ nncf/examples/run_ptq_onnx_models.sh det_and_seg /onnx-models /output /omz_data 500
+(container) $ nncf/examples/run_ptq_onnx_models.sh object_detection_segmentation /onnx-models /output /omz_data 500
 ```
 
 After benchmark is done, outputs are located in `/output` which is a mounted directory from the host path `<OUTPUT_DIR>`.

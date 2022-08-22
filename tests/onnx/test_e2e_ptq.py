@@ -43,8 +43,8 @@ MODELS += [
     for model in os.listdir(EXAMPLES_DIR / "classification" / "onnx_models_configs")
 ]
 MODELS += [
-    ("det_and_seg", os.path.splitext(model)[0])
-    for model in os.listdir(EXAMPLES_DIR / "det_and_seg" / "onnx_models_configs")
+    ("object_detection_segmentation", os.path.splitext(model)[0])
+    for model in os.listdir(EXAMPLES_DIR / "object_detection_segmentation" / "onnx_models_configs")
 ]
 
 XFAIL_MODELS = {"ssd_mobilenet_v1_12"}
