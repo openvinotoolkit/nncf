@@ -408,6 +408,52 @@ def test_valid_masks_for_bn_after_concat(prune_bn):
         assert np.allclose(node.data['output_mask'].tensor.numpy(), ref_concat_masks[i])
 
 
+@pytest.mark.parametrize('model,ref_output_shapes',
+    [(partial(BigPruningTestModel, dim=2),
+    {'BigPruningTestModel/NNCFConv2d[conv1]/conv2d_0': (7, 7),
+     'BigPruningTestModel/NNCFConv2d[conv_depthwise]/conv2d_0': (5, 5),
+     'BigPruningTestModel/NNCFConv2d[conv2]/conv2d_0': (3, 3),
+     'BigPruningTestModel/NNCFConvTranspose2d[up]/conv_transpose2d_0': (7, 7),
+     'BigPruningTestModel/NNCFConv2d[conv3]/conv2d_0': (1, 1),
+     'BigPruningTestModel/NNCFLinear[linear]/linear_0': (1, 128)}),
+     (PruningTestModelBroadcastedLinear,
+     {'PruningTestModelBroadcastedLinear/NNCFConv2d[first_conv]/conv2d_0': (8, 8),
+      'PruningTestModelBroadcastedLinear/NNCFConv2d[conv1]/conv2d_0': (8, 8),
+      'PruningTestModelBroadcastedLinear/NNCFLinear[linear1]/linear_0': (1, 16),
+      'PruningTestModelBroadcastedLinear/NNCFLinear[last_linear]/linear_0': (1, 1)}),
+     (PruningTestModelConcatWithLinear,
+     {'PruningTestModelConcatWithLinear/NNCFConv2d[conv1]/conv2d_0': (7, 7),
+      'PruningTestModelConcatWithLinear/NNCFConv2d[conv2]/conv2d_0': (6, 6),
+      'PruningTestModelConcatWithLinear/NNCFConv2d[conv3]/conv2d_0': (6, 6),
+      'PruningTestModelConcatWithLinear/NNCFLinear[linear]/linear_0': (1, 1)}),
+     (PruningTestModelBroadcastedLinearWithConcat,
+     {'PruningTestModelBroadcastedLinearWithConcat/NNCFConv2d[first_conv]/conv2d_0': (8, 8),
+      'PruningTestModelBroadcastedLinearWithConcat/NNCFConv2d[conv1]/conv2d_0': (8, 8),
+      'PruningTestModelBroadcastedLinearWithConcat/NNCFConv2d[conv2]/conv2d_0': (8, 8),
+      'PruningTestModelBroadcastedLinearWithConcat/NNCFLinear[linear1]/linear_0': (1, 16),
+      'PruningTestModelBroadcastedLinearWithConcat/NNCFLinear[last_linear]/linear_0': (1, 1)}),
+     (PruningTestBatchedLinear,
+     {'PruningTestBatchedLinear/NNCFConv2d[first_conv]/conv2d_0': (8, 8),
+     'PruningTestBatchedLinear/NNCFLinear[linear1]/linear_0': (1, 32, 8, 16),
+     'PruningTestBatchedLinear/NNCFLinear[last_linear]/linear_0': (1, 1)}),
+     (PruningTestModelDiffChInPruningCluster,
+     {'PruningTestModelDiffChInPruningCluster/NNCFConv2d[first_conv]/conv2d_0': (7, 7),
+     'PruningTestModelDiffChInPruningCluster/NNCFConv2d[conv1]/conv2d_0': (6, 6),
+     'PruningTestModelDiffChInPruningCluster/NNCFLinear[linear1]/linear_0': (1, 1152),
+     'PruningTestModelDiffChInPruningCluster/NNCFLinear[last_linear]/linear_0': (1, 1)})
+     ])
+def test_collect_output_shapes(model, ref_output_shapes):
+    config = get_basic_pruning_config(input_sample_size=[1, 1, 8, 8])
+    config['compression']['algorithm'] = 'filter_pruning'
+    config['compression']['pruning_init'] = 0.0
+    model = model()
+    _, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
+    # pylint:disable=protected-access
+    graph = compression_ctrl._model.get_original_graph()
+    output_shapes = collect_output_shapes(graph)
+    assert output_shapes == ref_output_shapes
+
+
 BigPruningTestModelNextNodesRef = {
     0: [ShapePruninigProcessor.NextNode('BigPruningTestModel/NNCFConv2d[conv2]/conv2d_0', 1)],
     1: [ShapePruninigProcessor.NextNode('BigPruningTestModel/NNCFConvTranspose2d[up]/conv_transpose2d_0', 1)],
@@ -638,9 +684,9 @@ PruningTestModelDiffChInPruningClusterRef = {
 @pytest.mark.parametrize(('model_module', 'all_weights', 'pruning_flops_target', 'ref_flops',
                           'ref_params_num', 'refs'),
                          [
-                            #(partial(BigPruningTestModel, dim=2), False, None, 679888, 106280, BigPruningTestModelRef[0]),
-                            #(partial(BigPruningTestModel, dim=2), True, None, 1146640, 83768, BigPruningTestModelRef[1]),
-                            #(partial(BigPruningTestModel, dim=2), False, 0.5, 1236160, 169184, BigPruningTestModelRef[2]),
+                            (partial(BigPruningTestModel, dim=2), False, None, 679888, 106280, BigPruningTestModelRef[0]),
+                            (partial(BigPruningTestModel, dim=2), True, None, 1146640, 83768, BigPruningTestModelRef[1]),
+                            (partial(BigPruningTestModel, dim=2), False, 0.5, 1236160, 169184, BigPruningTestModelRef[2]),
                             (partial(BigPruningTestModel, dim=2), True, 0.5, 1328162, 104833, BigPruningTestModelRef[3]),
                             (PruningTestModelBroadcastedLinear, False, 0.3, 35840, 8848, PruningTestModelBroadcastedLinearRefs),
                             (PruningTestModelConcatWithLinear, False, 0.3, 79168, 2208, PruningTestModelConcatWithLinearRefs),

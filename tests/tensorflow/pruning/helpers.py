@@ -174,3 +174,57 @@ def get_split_test_model(input_shape):
     x = tf.concat([y1, x], -1, name='tf_concat')
     outputs = conv4(x)
     return tf.keras.Model(inputs=inputs, outputs=outputs)
+
+def get_broadcasted_linear_model(input_shape):
+    input_shape = [1, 8, 8, 1]
+    inputs = tf.keras.Input(shape=input_shape[1:], name='input')
+    first_conv = layers.Conv2D(32, 1, name='first_conv',
+                               kernel_initializer='Ones', bias_initializer='Ones')
+    conv1 = layers.Conv2D(16, 1, name='conv1',
+                          kernel_initializer='Ones', bias_initializer='Ones')
+    linear1 = layers.Dense(16, name='linear1',
+                           kernel_initializer='Ones', bias_initializer='Ones')
+    last_conv = layers.Conv2D(16, 1, name='last_linear',
+                               kernel_initializer='Ones', bias_initializer='Ones')
+
+    x = first_conv(inputs)
+    y = conv1(x)
+    z = linear1(tf.reshape(x, (-1, tf.reduce_prod(x.shape[1:]))))
+    x = y + tf.reshape(z, (-1, 1, 1, 16))
+    out = last_conv(x)
+    return tf.keras.Model(inputs=inputs, outputs=[out])
+
+
+def get_batched_linear_model(input_shape):
+    input_shape = [1, 8, 8, 1]
+    inputs = tf.keras.Input(shape=input_shape[1:], name='input')
+    first_conv = layers.Conv2D(32, 1, name='first_conv',
+                               kernel_initializer='Ones', bias_initializer='Ones')
+    linear1 = layers.Dense(16, name='linear1',
+                           kernel_initializer='Ones', bias_initializer='Ones')
+    last_linear = layers.Dense(1, name='last_linear',
+                               kernel_initializer='Ones', bias_initializer='Ones')
+
+    x = first_conv(inputs)
+    x = linear1(x)
+    out = last_linear(tf.reshape(x, (-1, tf.reduce_prod(x.shape[1:]))))
+    return tf.keras.Model(inputs=inputs, outputs=[out])
+
+
+def get_diff_cluster_channels_model(input_shape):
+    input_shape = [1, 8, 8, 1]
+    inputs = tf.keras.Input(shape=input_shape[1:], name='input')
+    first_conv = layers.Conv2D(32, 1, name='first_conv',
+                               kernel_initializer='Ones', bias_initializer='Ones')
+    conv1 = layers.Conv2D(16, 1, name='conv1',
+                          kernel_initializer='Ones', bias_initializer='Ones')
+    linear1 = layers.Dense(2048, name='linear1',
+                           kernel_initializer='Ones', bias_initializer='Ones')
+    last_conv = layers.Dense(16, name='last_linear',
+                               kernel_initializer='Ones', bias_initializer='Ones')
+
+    x = first_conv(inputs)
+    y = tf.reshape(conv1(x), (-1, tf.reduce_prod(x.shape[1:])))
+    z = linear1(tf.reshape(x, (-1, tf.reduce_prod(x.shape[1:]))))
+    out = last_conv(y + z)
+    return tf.keras.Model(inputs=inputs, outputs=[out])
