@@ -597,13 +597,91 @@ class GroupedConvolutionModel(nn.Module):
         return self.fc(x)
 
 
+class SplitModel(nn.Module):
+    #         (input)
+    #            |
+    #         (conv1)
+    #            |
+    #         (chunk)
+    #        /      \
+    #    (conv2)  (conv3)
+    def __init__(self):
+        super().__init__()
+        self.conv1 = create_conv(1, 4, 1, 1)
+        self.conv2 = create_conv(4, 8, 1, 1)
+        self.conv3 = create_conv(4, 8, 1, 1)
+
+    def forward(self, x):
+        x = self.conv1(x)
+        y1, y2 = torch.chunk(x, chunks=2, dim=-1)
+
+        y1 = self.conv2(y1)
+        y2 = self.conv3(y2)
+        return y1, y2
+
+
+class SplitMaskPropFailModel(nn.Module):
+    #         (input)
+    #            |
+    #         (conv1)
+    #            |
+    #         (chunk)
+    #        /      \
+    #    (conv2)  (conv3)
+    """
+    Weights have shape [N, C, C, W] and split dimension is not 1, but 2.
+    Mask propagation should fail because of inconsistency of number of channels (C)
+    and length of the resulting mask (C/2).
+    """
+    def __init__(self):
+        super().__init__()
+        self.conv1 = create_conv(1, 4, 4, 1)
+        self.conv2 = create_conv(4, 8, 1, 1)
+        self.conv3 = create_conv(4, 8, 1, 1)
+
+    def forward(self, x):
+        x = self.conv1(x)
+        y1, y2 = torch.chunk(x, chunks=2, dim=2)
+
+        y1 = self.conv2(y1)
+        y2 = self.conv3(y2)
+        return y1, y2
+
+
+class SplitPruningInvalidModel(nn.Module):
+    #         (input)
+    #            |
+    #         (conv1)
+    #            |
+    #         (chunk)
+    #        /      \
+    #    (conv2)  (conv3)
+    """
+    Weights have shape [N, C, 2C, W] and split dimension is not 1, but 2.
+    Mask propagation won't fail with the current code, but pruning will be invalid.
+    """
+    def __init__(self):
+        super().__init__()
+        self.conv1 = create_conv(1, 2, 4, 1)
+        self.conv2 = create_conv(2, 4, 1, 1)
+        self.conv3 = create_conv(2, 4, 1, 1)
+
+    def forward(self, x):
+        x = self.conv1(x)
+        y1, y2 = torch.chunk(x, chunks=2, dim=2)
+
+        y1 = self.conv2(y1)
+        y2 = self.conv3(y2)
+        return y1, y2
+
+
 class SplitConcatModel(nn.Module):
-    #          (input)
-    #             |
-    #          (conv1)
-    #             |
-    #          (chunk)
-    #        /       |
+    #         (input)
+    #            |
+    #         (conv1)
+    #            |
+    #         (chunk)
+    #        /      \
     #    (conv2)  (conv3)
     #         \    /
     #        (concat)

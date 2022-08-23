@@ -265,9 +265,9 @@ class SplitPruningOp(BasePruningOp):
         :return: Filled input masks.
         """
         input_masks = get_input_masks(node, graph)
-        if not input_masks:
-            return None
         input_mask = input_masks[0]
+        if not input_mask:
+            return None
         chunk_axis = node.layer_attributes.axis
 
         output_edges = graph.get_output_edges(node)
