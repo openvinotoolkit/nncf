@@ -112,7 +112,7 @@ class MaskPropagationAlgorithm:
 
                     for producer in input_mask.mask_producers:
                         previously_dims_equal = True if can_prune_by_dim[producer] is None \
-                            else can_prune_by_dim[producer]
+                            else can_prune_by_dim[producer].decision
 
                         is_dims_equal = get_input_channels(node) == input_mask.shape[0]
                         decision = previously_dims_equal and is_dims_equal
