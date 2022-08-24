@@ -277,6 +277,8 @@ class SplitPruningOp(BasePruningOp):
 
         output_edges = graph.get_output_edges(node)
         output_shapes = [edge.tensor_shape[chunk_axis] for edge in output_edges]
+        if not input_mask.shape[0] == sum(output_shapes):
+            return None
 
         # if identity split detected
         if len(output_shapes) == 1:
