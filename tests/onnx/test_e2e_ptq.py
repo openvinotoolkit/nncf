@@ -28,8 +28,8 @@ from pytest_dependency import depends
 
 TEST_ROOT = Path(__file__).absolute().parents[1]
 PROJECT_ROOT = TEST_ROOT.parent.absolute()
-EXAMPLES_DIR = PROJECT_ROOT / 'examples' / "experimental" / "onnx"
-DATASET_DEFINITIONS_PATH = EXAMPLES_DIR / "dataset_definitions.yml"
+BENCHMARKING_DIR = PROJECT_ROOT / 'tests' / "onnx" / "benchmarking"
+DATASET_DEFINITIONS_PATH = BENCHMARKING_DIR / "dataset_definitions.yml"
 
 ENV_VARS = os.environ.copy()
 if "PYTHONPATH" in ENV_VARS:
@@ -40,11 +40,11 @@ else:
 MODELS = []
 MODELS += [
     ("classification", os.path.splitext(model)[0])
-    for model in os.listdir(EXAMPLES_DIR / "classification" / "onnx_models_configs")
+    for model in os.listdir(BENCHMARKING_DIR / "classification" / "onnx_models_configs")
 ]
 MODELS += [
     ("object_detection_segmentation", os.path.splitext(model)[0])
-    for model in os.listdir(EXAMPLES_DIR / "object_detection_segmentation" / "onnx_models_configs")
+    for model in os.listdir(BENCHMARKING_DIR / "object_detection_segmentation" / "onnx_models_configs")
 ]
 
 XFAIL_MODELS = {"ssd_mobilenet_v1_12"}
@@ -148,9 +148,9 @@ class TestPTQ:
     def test_ptq_model(self, task_type, model_name, model_dir, data_dir, anno_dir, ckpt_dir, ptq_size):
         check_xfail(model_name)
 
-        program_path = EXAMPLES_DIR / "run_ptq.py"
+        program_path = BENCHMARKING_DIR / "run_ptq.py"
 
-        task_path = EXAMPLES_DIR / task_type
+        task_path = BENCHMARKING_DIR / task_type
         config_path = task_path / "onnx_models_configs" / (model_name + ".yml")
 
         ckpt_dir = ckpt_dir / task_type
@@ -182,9 +182,9 @@ class TestBenchmark:
     def get_command(
             self, task_type, model_name, model_dir, data_dir, anno_dir, output_dir, eval_size, program, is_quantized):
 
-        program_path = EXAMPLES_DIR / program
+        program_path = BENCHMARKING_DIR / program
 
-        task_path = EXAMPLES_DIR / task_type
+        task_path = BENCHMARKING_DIR / task_type
         config_path = task_path / "onnx_models_configs" / (model_name + ".yml")
 
         output_dir = output_dir / task_type
