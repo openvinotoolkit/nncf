@@ -635,9 +635,9 @@ class SplitMaskPropFailModel(nn.Module):
     """
     def __init__(self):
         super().__init__()
-        self.conv1 = create_conv(1, 4, 4, 1)
-        self.conv2 = create_conv(4, 8, 1, 1)
-        self.conv3 = create_conv(4, 8, 1, 1)
+        self.conv1 = create_conv(1, 6, 3, 1)
+        self.conv2 = create_conv(6, 12, 1, 1)
+        self.conv3 = create_conv(6, 12, 1, 1)
 
     def forward(self, x):
         x = self.conv1(x)
@@ -662,9 +662,9 @@ class SplitPruningInvalidModel(nn.Module):
     """
     def __init__(self):
         super().__init__()
-        self.conv1 = create_conv(1, 2, 4, 1)
-        self.conv2 = create_conv(2, 4, 1, 1)
-        self.conv3 = create_conv(2, 4, 1, 1)
+        self.conv1 = create_conv(1, 3, 3, 1)
+        self.conv2 = create_conv(3, 6, 1, 1)
+        self.conv3 = create_conv(3, 6, 1, 1)
 
     def forward(self, x):
         x = self.conv1(x)
