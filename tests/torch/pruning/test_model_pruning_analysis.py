@@ -63,6 +63,7 @@ from tests.torch.pruning.helpers import ResidualConnectionModel
 from tests.torch.pruning.helpers import ShuffleNetUnitModel
 from tests.torch.pruning.helpers import ShuffleNetUnitModelDW
 from tests.torch.pruning.helpers import get_basic_pruning_config
+from tests.torch.pruning.helpers import SplitModel
 from tests.torch.pruning.helpers import SplitMaskPropFailModel
 from tests.torch.pruning.helpers import SplitPruningInvalidModel
 from tests.torch.pruning.helpers import SplitConcatModel
@@ -456,6 +457,18 @@ GROUP_PRUNING_MODULES_TEST_CASES = [
         can_prune_after_analysis={0: True, 1: True, 2: True, 3: False, 4: False, 5: False},
         final_can_prune={1: PruningAnalysisDecision(True),
                          3: PruningAnalysisDecision(False, PruningAnalysisReason.CLOSING_CONV_MISSING)},
+        prune_params=(True, True)),
+    GroupPruningModulesTestStruct(
+        model=SplitModel,
+        non_pruned_module_nodes=['SplitModel/NNCFConv2d[conv1]/conv2d_0',
+                                 'SplitModel/NNCFConv2d[conv2]/conv2d_0',
+                                 'SplitModel/NNCFConv2d[conv3]/conv2d_0',],
+        pruned_groups=[],
+        pruned_groups_by_node_id=[],
+        can_prune_after_analysis={0: True, 1: False, 2: True, 3: False, 4: False},
+        final_can_prune={1: PruningAnalysisDecision(False, [PruningAnalysisReason.CLOSING_CONV_MISSING]),
+                         3: PruningAnalysisDecision(False, [PruningAnalysisReason.CLOSING_CONV_MISSING]),
+                         4: PruningAnalysisDecision(False, [PruningAnalysisReason.CLOSING_CONV_MISSING])},
         prune_params=(True, True)),
     GroupPruningModulesTestStruct(
         model=SplitMaskPropFailModel,
