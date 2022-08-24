@@ -1,6 +1,7 @@
 # Classification sample
 
-This sample shows an example of quantization of classification models. The used dataset is ImageNet.
+This sample shows an example of quantization of classification models: 
+ResNet-50, MobilenetV2, InceptionV1 (GoogleNetV1), InceptionV3 (GoogleNetV3), SqueezenetV1.1. The used dataset is ImageNet.
 
 ## Install
 

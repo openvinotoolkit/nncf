@@ -1,6 +1,4 @@
-# Post-Training Quantization (PTQ) using ONNXRuntime
-
-This examples shows how to quantize ONNX formated NN model (FP32) into the quantized NN model (INT8) using NNCF PTQ API with ONNXRuntime framework.
+## Benchmark for ONNX Model Zoo
 
 ## Installation
 ### Pip installation
@@ -20,17 +18,6 @@ Successfully tagged onnx_ptq_experimental:dev
 # Check image
 $ docker images | grep onnx_ptq_experimental:dev
 ```
-
-## Run NNCF PTQ for ONNXRuntime for your model
-
-Please refer to guides:
-
-1. [Classification models](../../../examples/experimental/onnx/classification/README.md)
-2. [Semantic segmenantation models](../../../examples/experimental/onnx/semantic_segmentation/README.md)
-
-## Benchmark for ONNX Model Zoo
-
-[ONNX Model Zoo](https://github.com/onnx/models) provides is an open standard format for popular deep NN models with their pretrained weights. In this examples, we will quantize ONNX Model ZOO models. After quantization, model accuracy and model latency are compared between the original model (FP32) and quantized model (INT8).
 
 ## Benchmark for ONNX Models: Vision
 
@@ -213,28 +200,3 @@ After benchmark is done, outputs are located in `/output` which is a mounted dir
 * Failure types:
     1. :umbrella: - A quantized model shows too much model accuracy degradation.
     2. :cloud: - A quantized model cannot be executed on `OpenVINOExecutionProvider(onnxruntime-openvino==1.11.0)`, but it can be executed on `CPUExecutionProvider` (`shufflenet-9` can be executed on `OpenVINOExecutionProvider`, but drops too much accuracy).
-
-# Support ONNXRuntime PTQ for Yolov5 models
-
-## Prerequisite
-
-1. Follow the [installation step](#installation)
-2. Clone [Yolov5 repository](https://github.com/ultralytics/yolov5.git) and patch it.
-
-```bash
-$ cd examples/experimental/onnx/yolov5
-$ git init
-$ git remote add origin https://github.com/ultralytics/yolov5.git
-$ git fetch origin
-$ git checkout 34df5032a7d2e83fe3d16770a03bd129b115d184
-$ git apply 0001-Add-NNCF-ONNX-PTQ-example-notebook.patch
-```
-
-## Run NNCF ONNXRuntime PTQ
-
-After [prerequisite](#prerequisite) is done, you can find `run_notebook.ipynb` notebook file in `examples/experimental/onnx/yolov5`. If you finish running all notebook cells, you will obtain the following PTQ benchmark results.
-
-```
-# Model accuracy
-FP32 mAP: 37.1%, INT8 mAP: 36.4%, mAP difference: 0.8%
-```
