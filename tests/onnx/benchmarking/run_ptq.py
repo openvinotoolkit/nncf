@@ -30,10 +30,13 @@ from openvino.tools.accuracy_checker.argparser import build_arguments_parser
 from openvino.tools.accuracy_checker.dataset import Dataset
 from openvino.tools.accuracy_checker.evaluators import ModelEvaluator
 
+# pylint: disable=unused-import
+# This import need to register custom Conerter
+from accuracy_checker import MSCocoSegmentationToVOCConverter
 from nncf.experimental.post_training.api import dataset as ptq_api_dataset
 
 
-#pylint: disable=redefined-outer-name
+# pylint: disable=redefined-outer-name
 
 
 class OpenVINOAccuracyCheckerDataset(ptq_api_dataset.Dataset):
@@ -103,7 +106,7 @@ def run(onnx_model_path: str, output_model_path: str, dataset: Dataset,
 
 if __name__ == '__main__':
     parser = build_arguments_parser()
-    parser.add_argument("--output-model-dir", "-o",
+    parser.add_argument("--output-model-dir", "-o", required=True,
                         help="Directory path to save output quantized ONNX model", type=str)
     args = parser.parse_args()
     config, mode = ConfigReader.merge(args)
