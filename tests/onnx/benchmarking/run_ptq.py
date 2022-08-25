@@ -32,7 +32,7 @@ from openvino.tools.accuracy_checker.evaluators import ModelEvaluator
 
 # pylint: disable=unused-import
 # This import need to register custom Conerter
-from accuracy_checker import MSCocoSegmentationToVOCConverter
+from .accuracy_checker import MSCocoSegmentationToVOCConverter
 from nncf.experimental.post_training.api import dataset as ptq_api_dataset
 
 
