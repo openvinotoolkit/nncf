@@ -66,13 +66,16 @@ def infer_input_shape(model: ModelProto,
                 input_keys = main_keys
                 break
 
-    else:
+    elif main_shape:
         for _input in model.graph.input:
             _input_shape = set_input_shape(_input)
             if main_shape == _input_shape:
                 input_shape = main_shape
                 input_keys = _input.name
                 break
+
+    else:
+        raise ValueError('Either main_shape or main_keys must be set correctly.')
 
     assert len(input_shape) == 4 and input_keys is not None
 
