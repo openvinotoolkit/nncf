@@ -25,7 +25,7 @@ from nncf.experimental.onnx.datasets.segmentation_dataset import create_dataset_
 
 def run(onnx_model_path: str, output_model_path: str, dataset_name: str,
         dataset_path: str, num_init_samples: int,
-        input_shape: List[int], ignored_scopes: List[str] = []):
+        input_shape: List[int], ignored_scopes: Optional[List[str]] = None):
     print("Post-Training Quantization Parameters:")
     print("  number of samples: ", num_init_samples)
     print("  ignored_scopes: ", ignored_scopes)
