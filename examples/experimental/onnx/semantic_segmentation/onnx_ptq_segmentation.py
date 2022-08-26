@@ -20,12 +20,14 @@ import onnx
 from nncf.experimental.post_training.compression_builder import CompressionBuilder
 from nncf.experimental.post_training.algorithms.quantization import PostTrainingQuantization
 from nncf.experimental.post_training.algorithms.quantization import PostTrainingQuantizationParameters
+from nncf.experimental.onnx.datasets.common import infer_input_shape
 from nncf.experimental.onnx.datasets.segmentation_dataset import create_dataset_from_segmentation_torch_dataset
 
 
 def run(onnx_model_path: str, output_model_path: str, dataset_name: str,
         dataset_path: str, num_init_samples: int,
-        input_shape: List[int], ignored_scopes: Optional[List[str]] = None):
+        input_shape: Optional[List[int]] = None, input_keys: Optional[str] = None,
+        ignored_scopes: Optional[List[str]] = None):
     print("Post-Training Quantization Parameters:")
     print("  number of samples: ", num_init_samples)
     print("  ignored_scopes: ", ignored_scopes)
@@ -33,10 +35,9 @@ def run(onnx_model_path: str, output_model_path: str, dataset_name: str,
     original_model = onnx.load(onnx_model_path)
     print(f"The model is loaded from {onnx_model_path}")
 
-    input_keys = [node.name for node in original_model.graph.input]
-    if len(input_keys) != 1:
-        raise RuntimeError(
-            f"The number of inputs should be 1(!={len(input_keys)}).")
+    assert input_shape or input_keys, "Either input_shape or input_keys must be set."
+
+    input_shape, input_keys = infer_input_shape(original_model, input_shape, input_keys)
 
     # Step 1: Initialize the data loader.
     dataloader = create_dataset_from_segmentation_torch_dataset(
@@ -76,8 +77,11 @@ if __name__ == '__main__':
     parser.add_argument("--data",
                         help="Path to dataset",
                         type=str)
-    parser.add_argument("--input_shape", help="Model's input shape",
-                        nargs="+", type=int, default=[1, 3, 768, 960])
+    parser.add_argument(
+        "--input_shape", help="Model's input shape. e.g. [1, 3, 768, 960]",
+        nargs="+", type=int, default=None)
+    parser.add_argument(
+        "--input_keys", help="Model's input key.", type=str, default=None)
     parser.add_argument(
         "--init_samples", help="Number of initialization samples", type=int, default=300)
     parser.add_argument(
@@ -89,5 +93,6 @@ if __name__ == '__main__':
         args.data,
         args.init_samples,
         args.input_shape,
+        args.input_keys,
         args.ignored_scopes
         )
