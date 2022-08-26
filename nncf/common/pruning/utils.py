@@ -591,11 +591,13 @@ def get_input_masks(node: NNCFNode, graph: NNCFGraph) -> List[Optional[NNCFTenso
     :return: Input masks.
     """
     retval = []
-    input_masks = [input_node.data['output_mask'] for input_node in graph.get_previous_nodes(node)]
+    input_edges = graph.get_input_edges(node)
+    previous_nodes = [edge.from_node for edge in input_edges]
+    input_masks = [input_node.data['output_mask'] for input_node in previous_nodes]
     for input_mask in input_masks:
         retval.append(input_mask[node.node_name] if isinstance(input_mask, dict) else input_mask)
     if not retval:
-        return [None]
+        retval = []
     return retval
 
 

@@ -201,10 +201,7 @@ class ConcatPruningOp(BasePruningOp):
         :return: Filled input masks.
         """
         input_edges = graph.get_input_edges(node)
-        previous_nodes = [edge.from_node for edge in input_edges]
-        input_masks = [input_node.data['output_mask'] for input_node in previous_nodes]
-        input_masks = [input_mask[node.node_name] if isinstance(input_mask, dict) else input_mask
-                       for input_mask in input_masks]
+        input_masks = get_input_masks(node, graph)
 
         not_empty_masks = [mask for mask in input_masks if mask is not None]  # type: List[NNCFTensor]
         if not not_empty_masks:
@@ -315,13 +312,12 @@ class ReshapePruningOp(BasePruningOp):
 
     @staticmethod
     def _is_not_mixing_dim(node: NNCFNode, graph) -> bool:
-        input_edges = graph.get_input_edges(node)
-        input_shape = input_edges[0].tensor_shape
+        input_shape = node.layer_attributes.input_shape
 
         output_edges = graph.get_output_edges(node)
         if not output_edges:
             return True
-        output_shape = output_edges[0].tensor_shape
+        output_shape = node.layer_attributes.output_shape
 
         if len(input_shape)==len(output_shape) and set(input_shape)==set(output_shape):
             input_shape_idx = np.argsort(input_shape)
