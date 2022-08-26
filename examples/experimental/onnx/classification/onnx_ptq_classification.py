@@ -32,7 +32,7 @@ def run(onnx_model_path: str, output_model_path: str,
         input_shape: Optional[List[int]] = None, ignored_scopes: Optional[List[str]] = None,
         evaluate: Optional[bool] = False):
     nncf_logger.info("Post-Training Quantization Parameters:")
-    nncf_logger.info("  number of samples: {}".format(nncf_logger.info))
+    nncf_logger.info("  number of samples: {}".format(num_init_samples))
     nncf_logger.info("  ignored_scopes: {}".format(ignored_scopes))
     onnx.checker.check_model(onnx_model_path)
     original_model = onnx.load(onnx_model_path)

@@ -29,7 +29,6 @@ from nncf.experimental.onnx.tensor import ONNXNNCFTensor
 from nncf.experimental.onnx.engine import ONNXEngine
 from nncf.experimental.onnx.samplers import create_onnx_sampler
 from nncf.experimental.post_training.api.dataset import Dataset
-from examples.experimental.onnx.accuracy_checker import MSCocoSegmentationToVOCConverter  # pylint: disable=unused-import
 
 from time import time
 import pandas as pd
