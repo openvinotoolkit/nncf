@@ -595,7 +595,7 @@ def get_input_masks(node: NNCFNode, graph: NNCFGraph) -> List[Optional[NNCFTenso
     for input_mask in input_masks:
         retval.append(input_mask[node.node_name] if isinstance(input_mask, dict) else input_mask)
     if not retval:
-        return None
+        return [None]
     return retval
 
 

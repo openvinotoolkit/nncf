@@ -68,6 +68,7 @@ from tests.torch.pruning.helpers import SplitMaskPropFailModel
 from tests.torch.pruning.helpers import SplitPruningInvalidModel
 from tests.torch.pruning.helpers import SplitConcatModel
 from tests.torch.pruning.helpers import MultipleSplitConcatModel
+from tests.torch.pruning.helpers import SplitReshapeModel
 from tests.torch.pruning.helpers import HRNetBlock
 
 
@@ -519,6 +520,18 @@ GROUP_PRUNING_MODULES_TEST_CASES = [
                          6: PruningAnalysisDecision(False, [PruningAnalysisReason.CLOSING_CONV_MISSING]),
                          7: PruningAnalysisDecision(False, [PruningAnalysisReason.CLOSING_CONV_MISSING]),
                          8: PruningAnalysisDecision(False, [PruningAnalysisReason.LAST_CONV])},
+        prune_params=(True, True)),
+    GroupPruningModulesTestStruct(
+        model=SplitReshapeModel,
+        non_pruned_module_nodes=['SplitReshapeModel/NNCFConv2d[conv1]/conv2d_0',
+                                 'SplitReshapeModel/NNCFConv2d[conv2]/conv2d_0',
+                                 'SplitReshapeModel/NNCFConv2d[conv3]/conv2d_0',],
+        pruned_groups=[],
+        pruned_groups_by_node_id=[],
+        can_prune_after_analysis={0: True, 1: True, 2: True, 3: True, 4: True, 5: True, 6: True, 7: True, 8: True},
+        final_can_prune={1: PruningAnalysisDecision(False, [PruningAnalysisReason.CLOSING_CONV_MISSING]),
+                         5: PruningAnalysisDecision(False, [PruningAnalysisReason.LAST_CONV]),
+                         6: PruningAnalysisDecision(False, [PruningAnalysisReason.LAST_CONV])},
         prune_params=(True, True)),
     GroupPruningModulesTestStruct(
         model=HRNetBlock,

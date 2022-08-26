@@ -13,6 +13,8 @@
 
 from typing import Optional, List, Type, Dict
 
+import numpy as np
+
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.pruning.tensor_processor import NNCFPruningBaseTensorProcessor
@@ -311,6 +313,22 @@ class ReshapePruningOp(BasePruningOp):
     def _is_flatten(node: NNCFNode) -> bool:
         return len(node.layer_attributes.output_shape) == 2
 
+    @staticmethod
+    def _is_not_mixing_dim(node: NNCFNode, graph) -> bool:
+        input_edges = graph.get_input_edges(node)
+        input_shape = input_edges[0].tensor_shape
+
+        output_edges = graph.get_output_edges(node)
+        if not output_edges:
+            return True
+        output_shape = output_edges[0].tensor_shape
+
+        if len(input_shape)==len(output_shape) and set(input_shape)==set(output_shape):
+            input_shape_idx = np.argsort(input_shape)
+            output_shape_idx = np.argsort(output_shape)
+            return np.allclose(input_shape_idx, output_shape_idx)
+        return True
+
     @classmethod
     def accept_pruned_input(cls, node: NNCFNode) -> bool:
         if node.layer_attributes is None:
@@ -323,8 +341,10 @@ class ReshapePruningOp(BasePruningOp):
         if cls.accept_pruned_input(node):
             if cls._is_flatten(node):
                 FlattenPruningOp.mask_propagation(node, graph, tensor_processor)
-            else:
+            elif cls._is_not_mixing_dim(node, graph):
                 identity_mask_propagation(node, graph)
+            else:
+                node.data['output_mask'] = None
         else:
             node.data['output_mask'] = None
 

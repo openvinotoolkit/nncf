@@ -740,6 +740,32 @@ class MultipleSplitConcatModel(nn.Module):
         return y
 
 
+class SplitReshapeModel(nn.Module):
+    #         (input)
+    #            |
+    #         (conv1)
+    #            |
+    #         (chunk)
+    #        /      \
+    #  (reshape1) (reshape2)
+    #      |          |
+    #   (conv2)    (conv3)
+    def __init__(self):
+        super().__init__()
+        self.conv1 = create_conv(1, 8, 1, 1)
+        self.conv2 = create_conv(4, 8, 1, 1)
+        self.conv3 = create_conv(4, 8, 1, 1)
+
+    def forward(self, x):
+        x = self.conv1(x)
+        y1, y2 = torch.chunk(x, chunks=2, dim=2)
+        y1 = torch.reshape(y1, [1, 4, 8, 8])
+        y2 = torch.reshape(y2, [1, 4, 8, 8])
+        y1 = self.conv2(y1)
+        y2 = self.conv3(y2)
+        return y1, y2
+
+
 class HRNetBlock(nn.Module):
     # omit interpolate, min
     #                    (input)
