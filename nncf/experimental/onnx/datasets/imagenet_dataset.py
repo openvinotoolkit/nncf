@@ -11,7 +11,7 @@
  limitations under the License.
 """
 
-from typing import Optional, Tuple, List
+from typing import Optional, Tuple
 
 import os
 
@@ -22,8 +22,6 @@ from nncf.experimental.onnx.tensor import ONNXNNCFTensor
 
 from nncf.experimental.post_training.api.dataset import Dataset, NNCFData
 
-from onnx import ModelProto
-from google.protobuf.json_format import MessageToDict
 from torchvision import transforms
 from torchvision.datasets import ImageFolder
 
