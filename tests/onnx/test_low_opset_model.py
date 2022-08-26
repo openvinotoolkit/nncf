@@ -54,7 +54,7 @@ MODELS = [
 
 INPUT_SHAPE = [1, 3, 224, 224]
 INPUT_KEY = 'input.1'
-LOW_OPSET_VERSIONS = [6, 7, 8, 9]
+LOW_OPSET_VERSIONS = [7, 8, 9]
 
 
 TEST_CASES = []
@@ -80,9 +80,6 @@ class TestLowOpsetModel:
 
     @pytest.mark.parametrize(('model_to_test', 'model', 'input_keys', 'opset_version'), TEST_CASES)
     def test_input_shape(self, model_to_test, model, input_keys, opset_version):
-        if opset_version == 6:
-            pytest.skip(f'Unsupported ONNX opset version: {opset_version}')
-
         model = load_model(model_to_test, model, opset_version)
 
         input_shape, input_keys = infer_input_shape(model, model_to_test.input_shape, None)
@@ -92,9 +89,6 @@ class TestLowOpsetModel:
 
     @pytest.mark.parametrize(('model_to_test', 'model', 'input_keys', 'opset_version'), TEST_CASES)
     def test_input_keys(self, model_to_test, model, input_keys, opset_version):
-        if opset_version == 6:
-            pytest.skip(f'Unsupported ONNX opset version: {opset_version}')
-
         model = load_model(model_to_test, model, opset_version)
 
         input_shape, input_keys = infer_input_shape(model, None, input_keys)
@@ -104,9 +98,6 @@ class TestLowOpsetModel:
 
     @pytest.mark.parametrize(('model_to_test', 'model', 'input_keys', 'opset_version'), TEST_CASES)
     def test_input_shape_input_keys(self, model_to_test, model, input_keys, opset_version):
-        if opset_version == 6:
-            pytest.skip(f'Unsupported ONNX opset version: {opset_version}')
-
         model = load_model(model_to_test, model, opset_version)
 
         input_shape, input_keys = infer_input_shape(model, model_to_test.input_shape, input_keys)
@@ -117,9 +108,6 @@ class TestLowOpsetModel:
     @pytest.mark.xfail(reason="both input_shape and input_keys are None")
     @pytest.mark.parametrize(('model_to_test', 'model', 'input_keys', 'opset_version'), TEST_CASES)
     def test_input_shape_input_keys_none(self, model_to_test, model, input_keys, opset_version):
-        if opset_version == 6:
-            pytest.skip(f'Unsupported ONNX opset version: {opset_version}')
-
         model = load_model(model_to_test, model, opset_version)
 
         _, _ = infer_input_shape(model, None, None)
