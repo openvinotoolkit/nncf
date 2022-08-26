@@ -21,7 +21,7 @@ import torch
 from torchvision import models
 import onnx
 
-from nncf.experimental.onnx.datasets.imagenet_dataset import infer_input_shape
+from nncf.experimental.onnx.datasets.common import infer_input_shape
 from tests.common.helpers import TEST_ROOT
 from tests.onnx.quantization.common import ModelToTest
 

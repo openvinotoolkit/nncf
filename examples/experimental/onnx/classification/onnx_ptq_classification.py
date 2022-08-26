@@ -22,7 +22,8 @@ import onnx
 from nncf.experimental.post_training.compression_builder import CompressionBuilder
 from nncf.experimental.post_training.algorithms.quantization import PostTrainingQuantization
 from nncf.experimental.post_training.algorithms.quantization import PostTrainingQuantizationParameters
-from nncf.experimental.onnx.datasets.imagenet_dataset import create_imagenet_torch_dataset, infer_input_shape
+from nncf.experimental.onnx.datasets.common import infer_input_shape
+from nncf.experimental.onnx.datasets.imagenet_dataset import create_imagenet_torch_dataset
 from nncf.experimental.post_training.api.metric import Accuracy
 from nncf.common.utils.logger import logger as nncf_logger
 
