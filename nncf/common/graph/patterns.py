@@ -166,6 +166,7 @@ class GraphPattern:
         assert second_graph.in_degree(first_node_second_graph) == 0
 
         # Special case when first node is ANY_PATTERN_NODE_TYPE or NON_PATTERN_NODE_TYPE
+        # if 'type' in second_graph.nodes[first_node_second_graph]:
         if GraphPattern.ANY_PATTERN_NODE_TYPE in second_graph.nodes[first_node_second_graph]['type'] or \
                 GraphPattern.NON_PATTERN_NODE_TYPE in second_graph.nodes[first_node_second_graph]['type']:
             successors = self_graph.successors(first_node_second_graph)
@@ -242,7 +243,10 @@ class GraphPattern:
 
 
 def merge_two_types_of_operations(first_op: Dict, second_op: Dict, label: str) -> Dict:
-    res = {'type': first_op['type']}
-    res['type'].extend(second_op['type'])
-    res['label'] = label
-    return res
+    if 'type' in first_op and 'type' in second_op:
+        res = {'type': first_op['type']}
+        res['type'].extend(second_op['type'])
+        res['label'] = label
+        return res
+    raise RuntimeError('Incorrect dicts of operations')
+

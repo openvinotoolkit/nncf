@@ -16,6 +16,7 @@ from typing import Set
 import networkx as nx
 import networkx.algorithms.isomorphism as ism
 from nncf.common.graph.patterns import GraphPattern
+#from nncf.common.graph.graph import NNCFGraph
 
 
 def get_edge_boundaries(match: List[str], graph: nx.DiGraph):
@@ -87,8 +88,10 @@ def find_subgraphs_matching_pattern(graph: nx.DiGraph, pattern_graph: GraphPatte
                 # GraphPattern.ANY_PATTERN_NODE_TYPE and GraphPattern.NON_PATTERN_NODE_TYPE
                 # are matched to any node type.
 
-                if GraphPattern.ANY_PATTERN_NODE_TYPE in node_2['type'] or \
-                        GraphPattern.NON_PATTERN_NODE_TYPE in node_2['type']:
+                if GraphPattern.ANY_PATTERN_NODE_TYPE in node_2[attr] or \
+                        GraphPattern.NON_PATTERN_NODE_TYPE in node_2[attr]:
+                    continue
+                if node_1['metatype'] in node_2[attr]:
                     continue
             if node_1[attr] not in node_2[attr]:
                 return False

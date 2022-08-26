@@ -12,46 +12,52 @@
 """
 
 from nncf.common.graph.patterns import merge_two_types_of_operations
+from nncf.common.graph.graph import NNCFGraph
+from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXConvolutionMetatype
+from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXConvolutionTransposeMetatype
+from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXLinearMetatype
+from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXMatMulMetatype
+from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXBatchNormMetatype
+from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXReluMetatype
+from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXLeakyReluMetatype
+from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXSigmoidMetatype
+from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXHardSigmoidMetatype
+from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXAddLayerMetatype
+from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXMulLayerMetatype
+from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXDivLayerMetatype
+from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXSubMetatype
 
-LINEAR_OPERATIONS = {'type': ['Conv',
-                              'ConvTranspose',
-                              'Gemm'
+LINEAR_OPERATIONS = {'type': [ONNXConvolutionMetatype,
+                              ONNXConvolutionTransposeMetatype,
+                              ONNXLinearMetatype
                               ],
                      'label': 'LINEAR'}
 
-BATCH_NORMALIZATION_OPERATIONS = {'type': ['BatchNormalization'],
+BATCH_NORMALIZATION_OPERATIONS = {'type': [ONNXBatchNormMetatype],
                                   'label': 'BATCH_NORMALIZATION'}
 
-RELU_OPERATIONS = {'type': ['Relu',
-                            'Clip',
-                            'LeakyRelu',
-                            'ThresholdedRelu'
+RELU_OPERATIONS = {'type': [ONNXReluMetatype,
+                            ONNXLeakyReluMetatype,
                             ],
                    'label': 'RELU'}
 
-NON_RELU_ACTIVATIONS_OPERATIONS = {'type': ['Elu',
-                                            'PRelu',
-                                            'Sigmoid',
-                                            'HardSigmoid',
-                                            'HardSwish',
-                                            'Tanh',
-                                            'ScaledTanh'
-                                            'Selu'
-                                            ],
-                                   'label': 'NON_RELU_ACTIVATIONS'
-
-                                   }
+NON_RELU_ACTIVATIONS_OPERATIONS = {'type': [
+    ONNXSigmoidMetatype,
+    ONNXHardSigmoidMetatype,
+],
+    'label': 'NON_RELU_ACTIVATIONS'}
 
 ATOMIC_ACTIVATIONS_OPERATIONS = merge_two_types_of_operations(RELU_OPERATIONS,
                                                               NON_RELU_ACTIVATIONS_OPERATIONS,
                                                               'ATOMIC_ACTIVATIONS')
 
-ARITHMETIC_OPERATIONS = {'type': ['Add',
-                                  'Mul',
-                                  'Div'
+ARITHMETIC_OPERATIONS = {'type': [ONNXAddLayerMetatype,
+                                  ONNXSubMetatype,
+                                  ONNXMulLayerMetatype,
+                                  ONNXDivLayerMetatype,
                                   ],
                          'label': 'ARITHMETIC'}
 
-MATMUL_OPERATIONS = {'type': ['MatMul'
+MATMUL_OPERATIONS = {'type': [ONNXMatMulMetatype
                               ],
                      'label': 'MATMUL'}
