@@ -224,7 +224,7 @@ class ONNXMinMaxQuantization(MinMaxQuantization):
                         quantization_target_point))
         return output
 
-    def create_subalgorithms(self, backend: Backend) -> None:
+    def create_subalgorithms(self, backend: BackendType) -> None:
         return
 
     def _get_weight_quantizer_config(self, model: onnx.ModelProto) -> QuantizerConfig:
