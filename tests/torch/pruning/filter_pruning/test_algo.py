@@ -729,6 +729,11 @@ def test_flops_calculator(model_module, all_weights, pruning_flops_target, ref_f
                                 pruning_operations_metatype=PT_PRUNING_OPERATOR_METATYPES,
                                 prunable_types=[v.op_func_name for v in NNCF_PRUNING_MODULES_DICT],
                                 pruning_groups=pruning_algo.pruned_module_groups_info)
+
+    # Check output_shapes are empty in graph
+    for node in graph.get_all_nodes():
+        assert node.data['output_shape'] == None
+
     # Next nodes cluster check
     pruning_groups_next_nodes = shape_pruning_processor._pruning_groups_next_nodes
     assert len(pruning_groups_next_nodes) == len(refs['next_nodes'])

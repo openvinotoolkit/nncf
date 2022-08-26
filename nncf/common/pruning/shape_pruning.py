@@ -155,6 +155,7 @@ class ShapePruninigProcessor:
 
         :return Dictionary of next nodes by cluster {cluster_id: [node]}.
         """
+        # 1. Propagate symbolic masks throught the net
         for pruned_layer_info in self._pruning_groups.get_all_nodes():
             node = self._graph.get_node_by_id(pruned_layer_info.nncf_node_id)
             node.data['output_mask'] = SymbolicMask(get_output_channels(node), node.node_id)
@@ -163,6 +164,7 @@ class ShapePruninigProcessor:
                                  self._pruning_operations_metatype,
                                  SymbolicMaskProcessor).mask_propagation()
 
+        # 2. Find next nodes and correspondent sparse multipliers
         next_nodes = defaultdict(list) 
         for cluster in self._pruning_groups.get_all_clusters():
             next_nodes_cluster = set()
@@ -177,6 +179,11 @@ class ShapePruninigProcessor:
             for next_node in next_nodes_cluster:
                 sparse_multiplier = self._get_next_node_sparse_multiplier(next_node, cluster)
                 next_nodes[cluster.id].append(self.NextNode(next_node.node_name, sparse_multiplier)) 
+
+        # 3. Clean graph output shapes
+        for node in self._graph.get_all_nodes():
+            node.data['output_shape'] = None
+
         return next_nodes
 
 

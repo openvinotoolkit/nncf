@@ -77,6 +77,10 @@ def test_flops_calulation_for_spec_layers(model_fn, all_weights, pruning_flops_t
                                           pruning_operations_metatype=TF_PRUNING_OPERATOR_METATYPES,
                                           pruning_groups=compression_ctrl._pruned_layer_groups_info)
 
+    # Check output_shapes are empty in graph
+    for node in original_graph.get_all_nodes():
+        assert node.data['output_shape'] == None
+
     assert compression_ctrl._calculate_num_of_sparse_elements_by_node() == ref_num_of_sparse
 
     tmp_in_channels, tmp_out_channels = shape_pruner.calculate_in_out_channels_by_masks(
