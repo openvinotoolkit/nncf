@@ -20,7 +20,6 @@ import networkx as nx
 import networkx.algorithms.isomorphism as iso
 from networkx.drawing.nx_agraph import to_agraph
 
-from nncf.common.graph.graph_matching import get_edge_boundaries
 from nncf.common.graph.layer_attributes import BaseLayerAttributes
 from nncf.common.graph.layer_attributes import Dtype
 from nncf.common.graph.operator_metatypes import INPUT_NOOP_METATYPES
@@ -30,6 +29,13 @@ from nncf.common.utils.logger import logger as nncf_logger
 
 NNCFNodeName = str
 LayerName = str
+
+
+def get_edge_boundaries(match: List[str], graph: nx.DiGraph):
+    out_edge_boundary = list(nx.edge_boundary(graph, match, data=True))
+    complement = list(filter(lambda x: x not in match, graph.nodes.keys()))
+    in_edge_boundary = list(nx.edge_boundary(graph, complement, data=True))
+    return sorted(in_edge_boundary), sorted(out_edge_boundary)  # must be sorted for determinism
 
 
 class NNCFNode:
@@ -141,12 +147,13 @@ class NNCFGraphPatternIO:
     """
     Describes the inputs and outputs of a subgraph in NNCFGraph.
     """
+
     def __init__(self, input_edges: List[NNCFGraphEdge], output_edges: List[NNCFGraphEdge]):
         self.input_edges = input_edges
         self.output_edges = output_edges
 
 
-#pylint:disable=too-many-public-methods
+# pylint:disable=too-many-public-methods
 class NNCFGraph:
     """
     Wrapper over a regular directed acyclic graph that represents a control flow/execution graph of a DNN
@@ -227,7 +234,6 @@ class NNCFGraph:
             if nncf_node.metatype in metatype_list:
                 all_nodes_of_type.append(nncf_node)
         return all_nodes_of_type
-
 
     def get_all_node_ids(self) -> KeysView[int]:
         """
@@ -498,13 +504,13 @@ class NNCFGraph:
         try:
             A = to_agraph(out_graph)
             A.layout('dot')
-            png_path = os.path.splitext(path)[0]+'.png'
+            png_path = os.path.splitext(path)[0] + '.png'
             A.draw(png_path)
         except ImportError:
             nncf_logger.warning('Graphviz is not installed - only the .dot model visualization format will be used. '
                                 'Install pygraphviz into your Python environment and graphviz system-wide to enable '
                                 'PNG rendering.')
-        except Exception: #pylint:disable=broad-except
+        except Exception:  # pylint:disable=broad-except
             nncf_logger.warning('Failed to render graph to PNG')
 
     def get_graph_for_structure_analysis(self, extended: bool = False) -> nx.DiGraph:

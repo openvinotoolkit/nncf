@@ -21,7 +21,7 @@ from typing import Union
 from enum import Enum
 from nncf.experimental.post_training.statistics.statistic_point import StatisticPointsContainer
 from nncf.experimental.post_training.api.engine import Engine
-from nncf.experimental.post_training.backend import Backend
+from nncf.common.utils.backend import BackendType
 
 ModelType = TypeVar('ModelType')
 
@@ -70,7 +70,7 @@ class Algorithm(ABC):
         """
 
     @abstractmethod
-    def create_subalgorithms(self, backend: Backend) -> None:
+    def create_subalgorithms(self, backend: BackendType) -> None:
         """
         Some complex algorithms have inner algorithms, such
         """
