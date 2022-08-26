@@ -60,6 +60,9 @@ def infer_input_shape(model: ModelProto,
         return main_shape, [main_keys]
 
     if main_keys:
+        nncf_logger.info(
+            "input_shape is None. Infer input_shape from the model.")
+
         for _input in model.graph.input:
             if main_keys == _input.name:
                 input_shape = set_input_shape(_input)
@@ -67,6 +70,9 @@ def infer_input_shape(model: ModelProto,
                 break
 
     elif main_shape:
+        nncf_logger.info(
+            "input_keys is None. Infer input_keys from the model.")
+            
         for _input in model.graph.input:
             _input_shape = set_input_shape(_input)
             if main_shape == _input_shape:

@@ -41,14 +41,6 @@ def run(onnx_model_path: str, output_model_path: str,
 
     assert input_shape or input_keys, "Either input_shape or input_keys must be set."
 
-    if input_shape is None:
-        nncf_logger.info(
-            "input_shape is None. Infer input_shape from the model.")
-
-    elif input_keys is None:
-        nncf_logger.info(
-            "input_keys is None. Infer input_keys from the model.")
-
     input_shape, input_keys = infer_input_shape(original_model, input_shape, input_keys)
 
     # Step 1: Initialize the data loader and metric (if it is needed).
