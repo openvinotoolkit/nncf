@@ -35,7 +35,6 @@ from nncf.common.pruning.statistics import PrunedModelStatistics
 from nncf.common.pruning.shape_pruning import ShapePruninigProcessor
 from nncf.common.pruning.shape_pruning import WeightsFlopsCalculator
 from nncf.common.pruning.utils import get_rounded_pruned_element_number
-from nncf.common.pruning.utils import get_prunable_layers_in_out_channels
 from nncf.common.schedulers import StubCompressionScheduler
 from nncf.common.statistics import NNCFStatistics
 from nncf.common.utils.debug import is_debug
@@ -285,7 +284,7 @@ class FilterPruningController(BasePruningAlgoController):
         tmp_in_channels, tmp_out_channels = \
             self._shape_pruning_proc.calculate_in_out_channels_in_uniformly_pruned_model(
                 pruning_level=pruning_level)
-                
+
 
         return self._weights_flops_calc.count_flops_and_weights(
                                              input_channels=tmp_in_channels,
@@ -531,8 +530,9 @@ class FilterPruningController(BasePruningAlgoController):
                 continue
 
             cluster = self.pruned_module_groups_info.get_cluster_by_id(cluster_idx)
-            self._shape_pruning_proc.prune_cluster_shapes(cluster=cluster, pruned_elems=1,
-                                                          input_channels=tmp_in_channels, output_channels=tmp_out_channels)
+            self._shape_pruning_proc.prune_cluster_shapes(
+                cluster=cluster, pruned_elems=1,
+                input_channels=tmp_in_channels, output_channels=tmp_out_channels)
 
             for node in cluster.elements:
                 node.operand.binary_filter_pruning_mask[filter_idx] = 0

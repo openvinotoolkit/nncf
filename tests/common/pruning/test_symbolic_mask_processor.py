@@ -13,7 +13,7 @@ def test_ones(shape, raise_runtime_error):
             tensor = SymbolicMaskProcessor.ones(shape, device)
     else:
         tensor = SymbolicMaskProcessor.ones(shape, device)
-        assert tensor.mask_producers == dict()
+        assert tensor.mask_producers == {}
         assert len(tensor.shape) == 1
         assert tensor.shape[0] == shape[0] if isinstance(shape, list) else shape
         assert tensor.device is None
@@ -43,7 +43,7 @@ def test_concat_inconsistent_sparse_multiplier(consistent):
     concated_mask = SymbolicMaskProcessor.concatenate(masks, axis=0)
     assert concated_mask.shape[0] == 12
     assert len(concated_mask.mask_producers) == 1
-    assert 1 in concated_mask.mask_producers 
+    assert 1 in concated_mask.mask_producers
     assert concated_mask.mask_producers[1].id == 1
     assert concated_mask.mask_producers[1].sparse_multiplier == 2
 
@@ -68,7 +68,7 @@ def test_empty_concat():
     empty_concat = SymbolicMaskProcessor.concatenate([], axis=0)
     assert empty_concat.shape[0] == 0
     assert not empty_concat.mask_producers
-    
+
 
 def test_concat_no_producers():
     concated_masks = SymbolicMaskProcessor.concatenate([SymbolicMask(2), SymbolicMask(3)], axis=0)
@@ -110,7 +110,7 @@ def test_elementwise_mask_propagation_inconsistent_(consistent):
         with pytest.raises(AssertionError):
             SymbolicMaskProcessor.elementwise_mask_propagation(masks)
         return
-    
+
     result = SymbolicMaskProcessor.elementwise_mask_propagation(masks)
     assert result.shape[0] == 5
     assert len(result.mask_producers) == 1

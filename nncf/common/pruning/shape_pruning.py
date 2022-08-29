@@ -1,4 +1,3 @@
-
 """
  Copyright (c) 2022 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
@@ -72,7 +71,7 @@ class ShapePruninigProcessor:
             return num_of_sparse_elements_by_node[node_name]
 
         return self._calculate_in_out_channels(get_num_of_sparse_elements_by_node)
-    
+
     def calculate_in_out_channels_in_uniformly_pruned_model(self, pruning_level: float) -> \
         Tuple[Dict[str, int], Dict[str, int]]:
         """
@@ -147,7 +146,7 @@ class ShapePruninigProcessor:
                     return mask_producers[cluster_node.nncf_node_id].sparse_multiplier
 
         raise RuntimeError('Next node for cluster {cluster} doesn\'t have closing mask')
-    
+
     def _get_cluster_next_nodes(self) -> Dict[int, List['NextNode']]:
         """
         Finds nodes of `prunable_types` types that receive the output of a pruned cluster as input
@@ -165,7 +164,7 @@ class ShapePruninigProcessor:
                                  SymbolicMaskProcessor).mask_propagation()
 
         # 2. Find next nodes and correspondent sparse multipliers
-        next_nodes = defaultdict(list) 
+        next_nodes = defaultdict(list)
         for cluster in self._pruning_groups.get_all_clusters():
             next_nodes_cluster = set()
             cluster_nodes = set()
@@ -178,7 +177,7 @@ class ShapePruninigProcessor:
             next_nodes_cluster = next_nodes_cluster - cluster_nodes
             for next_node in next_nodes_cluster:
                 sparse_multiplier = self._get_next_node_sparse_multiplier(next_node, cluster)
-                next_nodes[cluster.id].append(self.NextNode(next_node.node_name, sparse_multiplier)) 
+                next_nodes[cluster.id].append(self.NextNode(next_node.node_name, sparse_multiplier))
 
         # 3. Clean graph output shapes
         for node in self._graph.get_all_nodes():
@@ -212,8 +211,8 @@ class WeightsFlopsCalculator:
         :param output_channels: Dictionary of output channels number in convolutions.
             If not specified, taken from the graph. {node_name: channels_num}
         :param kernel_sizes: Dictionary of kernel sizes in convolutions.
-            If not specified, taken from the graph. {node_name: kernel_size}. It's only supposed to be used in NAS in case
-            of Elastic Kernel enabled.
+            If not specified, taken from the graph. {node_name: kernel_size}.
+            It's only supposed to be used in NAS in case of Elastic Kernel enabled.
         :param op_addresses_to_skip: List of operation addresses of layers that should be skipped from calculation.
             It's only supposed to be used in NAS in case of Elastic Depth enabled.
         :return number of FLOPs for the model
@@ -237,8 +236,8 @@ class WeightsFlopsCalculator:
         :param output_channels: Dictionary of output channels number in convolutions.
             If not specified, taken from the graph. {node_name: channels_num}
         :param kernel_sizes: Dictionary of kernel sizes in convolutions.
-            If not specified, taken from the graph. {node_name: kernel_size}. It's only supposed to be used in NAS in case
-            of Elastic Kernel enabled.
+            If not specified, taken from the graph. {node_name: kernel_size}.
+            It's only supposed to be used in NAS in case of Elastic Kernel enabled.
         :param op_addresses_to_skip: List of operation addresses of layers that should be skipped from calculation.
             It's only supposed to be used in NAS in case of Elastic Depth enabled.
         :return Dictionary of FLOPs number {node_name: flops_num}
@@ -266,8 +265,10 @@ class WeightsFlopsCalculator:
             else:
                 filters_per_channel = num_out_channels // node.layer_attributes.groups
 
-            flops_numpy = 2 * np.prod(kernel_size) * num_in_channels * filters_per_channel * np.prod(self._output_shapes[name])
+            flops_numpy = 2 * np.prod(kernel_size) * num_in_channels * filters_per_channel *\
+                np.prod(self._output_shapes[name])
             weights_numpy = np.prod(kernel_size) * num_in_channels * filters_per_channel
+
             flops[name] = flops_numpy.astype(int).item()
             weights[name] = weights_numpy.astype(int).item()
 
@@ -280,7 +281,7 @@ class WeightsFlopsCalculator:
             num_out_features = output_channels.get(name, node.layer_attributes.out_features)
 
             flops_numpy = 2 * num_in_features * num_out_features * np.prod(self._output_shapes[name][:-1])
-            weights_numpy = num_in_features * num_out_features 
+            weights_numpy = num_in_features * num_out_features
             flops[name] = flops_numpy
             weights[name] = weights_numpy
 
@@ -290,7 +291,7 @@ class WeightsFlopsCalculator:
                           output_channels: Dict[NNCFNodeName, int] = None) -> int:
         """
         Counts filters of `op_metatypes` layers taking into account new output channels number.
-    
+
         :param output_channels:  A dictionary of output channels number in pruned model.
         :return: Current number of filters according to given graph and output channels.
         """

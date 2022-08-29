@@ -18,10 +18,10 @@ from nncf.common.pruning.tensor_processor import NNCFPruningBaseTensorProcessor
 
 
 class SymbolicMaskProducer:
-    def __init__(self, id: int, sparse_multiplier: int = 1) -> None:
-        self._id = id
+    def __init__(self, id_: int, sparse_multiplier: int = 1) -> None:
+        self._id = id_
         self._sparse_multiplier = sparse_multiplier
-    
+
     @property
     def sparse_multiplier(self) -> int:
         return self._sparse_multiplier
@@ -32,7 +32,7 @@ class SymbolicMaskProducer:
 
     @classmethod
     def merge_producers(cls, masks: List['SymbolicMask']) -> Dict[int, 'SymbolicMaskProducer']:
-        merged_producers = dict()
+        merged_producers = {}
         for mask in masks:
             for mask_producer in mask.mask_producers.values():
                 if mask_producer.id in merged_producers:
@@ -52,10 +52,12 @@ class SymbolicMask(NNCFTensor):
     symbolic mask propagation by SymbolicMaskProcessor.
     """
 
-    def __init__(self, dimension: int, mask_producers: Union[int, Dict[int, SymbolicMaskProducer]] = dict()):
+    def __init__(self, dimension: int, mask_producers: Union[int, Dict[int, SymbolicMaskProducer]] = None):
         super().__init__(None)
         self._mask_producers = mask_producers
-        if isinstance(mask_producers, int):
+        if mask_producers is None:
+            self._mask_producers = {}
+        elif isinstance(mask_producers, int):
             self._mask_producers = {mask_producers: SymbolicMaskProducer(mask_producers)}
 
         self._shape = dimension
@@ -114,7 +116,7 @@ class SymbolicMaskProcessor(NNCFPruningBaseTensorProcessor):
 
     @classmethod
     def repeat(cls, tensor: SymbolicMask, repeats: int) -> SymbolicMask:
-        updated_mask_producers = dict()
+        updated_mask_producers = {}
         for producer_id, mask_producer in tensor.mask_producers.items():
             updated_mask_producers[producer_id] =\
                 SymbolicMaskProducer(producer_id, mask_producer.sparse_multiplier * repeats)

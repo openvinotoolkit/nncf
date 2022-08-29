@@ -216,9 +216,8 @@ class PruningNodeSelector:
 
         nodes_of_group_with_non_eq_pruning_dim = self._check_internal_groups_dim(pruned_nodes_clusterization)
         can_prune_after_check_updated = can_prune_after_check.copy()
-        for node_id in nodes_of_group_with_non_eq_pruning_dim:
-            can_prune_after_check_updated[node_id] =\
-                can_prune_after_check_updated[node_id].join(nodes_of_group_with_non_eq_pruning_dim[node_id])
+        for node_id, val in nodes_of_group_with_non_eq_pruning_dim.items():
+            can_prune_after_check_updated[node_id] = can_prune_after_check_updated[node_id].join(val)
 
         return self._check_all_closing_nodes_are_feasible(graph, can_prune_after_check_updated)
 
@@ -261,8 +260,9 @@ class PruningNodeSelector:
                 all(get_output_channels(cluster.elements[0]) == get_output_channels(node)
                                         for node in cluster.elements[1:])
             if not has_equal_amount_of_channel:
-                retval.update({node.node_id: PruningAnalysisDecision(False, PruningAnalysisReason.INCOMPATIBLE_DIMS_IN_CLUSTER)
-                               for node in cluster.elements})
+                retval.update(
+                    {node.node_id: PruningAnalysisDecision(False, PruningAnalysisReason.INCOMPATIBLE_DIMS_IN_CLUSTER)
+                     for node in cluster.elements})
         return retval
 
     def _should_prune_groups_analysis(self, graph: NNCFGraph, pruned_nodes_clusterization: Clusterization,

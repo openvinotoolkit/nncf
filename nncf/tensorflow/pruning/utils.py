@@ -84,7 +84,7 @@ def collect_output_shapes(model: 'NNCFNetwork', graph: NNCFGraph) -> Dict[NNCFNo
     :param graph: NNCFGraph.
     :return: Dictionary of output dimension shapes. E.g {node_name: (height, width)}
     """
-    layers_out_shapes = dict()
+    layers_out_shapes = {}
     for node in graph.get_nodes_by_metatypes(GENERAL_CONV_LAYER_METATYPES):
         node_name, node_index = get_original_name_and_instance_idx(node.node_name)
         layer = model.get_layer(node_name)

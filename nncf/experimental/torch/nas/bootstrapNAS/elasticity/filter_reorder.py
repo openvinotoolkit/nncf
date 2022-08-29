@@ -19,7 +19,7 @@ from nncf.common.pruning.tensor_processor import NNCFPruningBaseTensorProcessor
 
 from nncf.common.graph import NNCFGraph
 from nncf.common.pruning.mask_propagation import MaskPropagationAlgorithm
-from nncf.common.pruning.registry import PruningOperationsMetatypeRegistry
+from nncf.common.pruning.utils import PruningOperationsMetatypeRegistry
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.common.utils.logger import logger as nncf_logger
 

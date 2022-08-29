@@ -12,14 +12,13 @@
 """
 
 from math import floor
-from typing import Dict, List, Set
+from typing import List, Set
 
 import tensorflow as tf
 
 from nncf import NNCFConfig
 from nncf.api.compression import CompressionLoss
 from nncf.common.graph import NNCFGraph
-from nncf.common.graph import NNCFNodeName
 from nncf.common.initialization.batchnorm_adaptation import BatchnormAdaptationAlgorithm
 from nncf.common.pruning.clusterization import Cluster
 from nncf.common.pruning.clusterization import Clusterization
@@ -43,11 +42,8 @@ from nncf.tensorflow.graph.metatypes.common import GENERAL_CONV_LAYER_METATYPES
 from nncf.tensorflow.graph.metatypes.common import LINEAR_LAYER_METATYPES
 from nncf.tensorflow.graph.metatypes.matcher import get_keras_layer_metatype
 from nncf.tensorflow.graph.utils import collect_wrapped_layers
-from nncf.tensorflow.graph.utils import get_original_name_and_instance_idx
-from nncf.tensorflow.graph.utils import unwrap_layer
 from nncf.tensorflow.tensor import TFNNCFTensor
 from nncf.tensorflow.pruning.tensor_processor import TFNNCFPruningTensorProcessor
-from nncf.tensorflow.layers.data_layout import get_input_channel_axis
 from nncf.tensorflow.layers.wrapper import NNCFWrapper
 from nncf.tensorflow.loss import TFZeroCompressionLoss
 from nncf.tensorflow.pruning.base_algorithm import BasePruningAlgoBuilder
@@ -65,7 +61,6 @@ from nncf.tensorflow.pruning.utils import broadcast_filter_mask
 from nncf.tensorflow.pruning.utils import collect_output_shapes
 from nncf.tensorflow.pruning.utils import get_filter_axis
 from nncf.tensorflow.pruning.utils import get_filters_num
-from nncf.tensorflow.pruning.utils import is_valid_shape
 from nncf.tensorflow.sparsity.magnitude.operation import BinaryMask
 
 
@@ -117,15 +112,17 @@ class FilterPruningController(BasePruningAlgoController):
         self.pruning_quota = 0.9
 
 
-        self._weights_flops_calc = WeightsFlopsCalculator(graph=graph,
-                                                          output_shapes=collect_output_shapes(self._model, self._original_graph),
-                                                          conv_op_metatypes=GENERAL_CONV_LAYER_METATYPES,
-                                                          linear_op_metatypes=LINEAR_LAYER_METATYPES)
+        self._weights_flops_calc = WeightsFlopsCalculator(
+            graph=graph,
+            output_shapes=collect_output_shapes(self._model, self._original_graph),
+            conv_op_metatypes=GENERAL_CONV_LAYER_METATYPES,
+            linear_op_metatypes=LINEAR_LAYER_METATYPES)
 
-        self._shape_pruning_proc = ShapePruninigProcessor(graph=graph,
-                                                          pruning_operations_metatype=TF_PRUNING_OPERATOR_METATYPES,
-                                                          pruning_groups=pruned_layer_groups,
-                                                          prunable_types=prunable_types)
+        self._shape_pruning_proc = ShapePruninigProcessor(
+            graph=graph,
+            pruning_operations_metatype=TF_PRUNING_OPERATOR_METATYPES,
+            pruning_groups=pruned_layer_groups,
+            prunable_types=prunable_types)
 
         self.full_flops, self.full_params_num = self._weights_flops_calc.count_flops_and_weights()
         self.full_filters_num = self._weights_flops_calc.count_filters_num()
@@ -364,8 +361,9 @@ class FilterPruningController(BasePruningAlgoController):
             self._pruning_quotas[group_id] -= 1
 
             # Update input/output shapes of pruned elements
-            self._shape_pruning_proc.prune_cluster_shapes(cluster=group_id, pruned_elems=1,
-                                                          input_channels=tmp_in_channels, output_channels=tmp_out_channels)
+            self._shape_pruning_proc.prune_cluster_shapes(
+                cluster=group_id, pruned_elems=1,
+                input_channels=tmp_in_channels, output_channels=tmp_out_channels)
 
             flops, params_num = self._weights_flops_calc.count_flops_and_weights(
                                                          input_channels=tmp_in_channels,

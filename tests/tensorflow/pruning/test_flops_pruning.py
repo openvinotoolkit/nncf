@@ -79,17 +79,18 @@ def test_flops_calulation_for_spec_layers(model_fn, all_weights, pruning_flops_t
 
     # Check output_shapes are empty in graph
     for node in original_graph.get_all_nodes():
-        assert node.data['output_shape'] == None
+        assert node.data['output_shape'] is None
 
     assert compression_ctrl._calculate_num_of_sparse_elements_by_node() == ref_num_of_sparse
 
     tmp_in_channels, tmp_out_channels = shape_pruner.calculate_in_out_channels_by_masks(
         num_of_sparse_elements_by_node=ref_num_of_sparse)
 
-    flops_weights_calculator = WeightsFlopsCalculator(graph=original_graph,
-                                                      output_shapes=collect_output_shapes(compression_ctrl.model, original_graph),
-                                                      conv_op_metatypes=GENERAL_CONV_LAYER_METATYPES,
-                                                      linear_op_metatypes=LINEAR_LAYER_METATYPES)
+    flops_weights_calculator = WeightsFlopsCalculator(
+        graph=original_graph,
+        output_shapes=collect_output_shapes(compression_ctrl.model, original_graph),
+                                            conv_op_metatypes=GENERAL_CONV_LAYER_METATYPES,
+                                            linear_op_metatypes=LINEAR_LAYER_METATYPES)
     cur_flops, cur_params_num = \
         flops_weights_calculator.count_flops_and_weights(
                                 input_channels=tmp_in_channels,

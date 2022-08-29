@@ -64,7 +64,6 @@ def test_masks_in_concat_model(all_weights, prune_batch_norms, ref_num_wrapped_l
             for op in layer.ops_weights.values():
                 check_pruning_mask(op['mask'].numpy(), target_pruning_rate, layer.name)
 
-<<<<<<< HEAD
 @pytest.mark.parametrize(('all_weights', 'ref_num_wrapped_layer'),
                          [
                              [True, 3],
@@ -91,15 +90,21 @@ def test_masks_in_split_model(all_weights, ref_num_wrapped_layer):
             assert len(layer.ops_weights) == 2
             for op in layer.ops_weights.values():
                 check_pruning_mask(op['mask'].numpy(), pruning_rate=0.5, layer_name=layer.name)
-=======
+
 
 @pytest.mark.parametrize('model_fn,ref_output_shapes',
-    [(get_test_model_shared_convs, {'conv1': (8, 8), 'conv2^0': (6, 6), 'conv2^1': (2, 2), 'conv3^0': (6, 6), 'conv3^1': (2, 2)}),
-     (get_model_grouped_convs, {'conv1': (8, 8), 'conv2': (6, 6), 'conv3': (4, 4), 'conv4': (2, 2), 'dense': (128,)}),
-     (get_model_depthwise_conv, {'conv1': (8, 8), 'conv2': (6, 6), 'conv3': (2, 2), 'conv4': (4, 4), 'dense': (128,)}),
-     (get_broadcasted_linear_model, {'first_conv': (8, 8), 'conv1': (8, 8), 'last_linear': (8, 8), 'linear1': (16,)}),
-     (get_batched_linear_model, {'first_conv': (8, 8), 'linear1': (8, 8, 16), 'last_linear': (1,)}),
-     (get_diff_cluster_channels_model, {'first_conv': (8, 8), 'conv1': (8, 8), 'linear1': (2048,), 'last_linear': (16,)})])
+    [(get_test_model_shared_convs,
+      {'conv1': (8, 8), 'conv2^0': (6, 6), 'conv2^1': (2, 2), 'conv3^0': (6, 6), 'conv3^1': (2, 2)}),
+     (get_model_grouped_convs,
+      {'conv1': (8, 8), 'conv2': (6, 6), 'conv3': (4, 4), 'conv4': (2, 2), 'dense': (128,)}),
+     (get_model_depthwise_conv,
+      {'conv1': (8, 8), 'conv2': (6, 6), 'conv3': (2, 2), 'conv4': (4, 4), 'dense': (128,)}),
+     (get_broadcasted_linear_model,
+      {'first_conv': (8, 8), 'conv1': (8, 8), 'last_linear': (8, 8), 'linear1': (16,)}),
+     (get_batched_linear_model,
+      {'first_conv': (8, 8), 'linear1': (8, 8, 16), 'last_linear': (1,)}),
+     (get_diff_cluster_channels_model,
+      {'first_conv': (8, 8), 'conv1': (8, 8), 'linear1': (2048,), 'last_linear': (16,)})])
 def test_collect_output_shapes(model_fn, ref_output_shapes):
     config = get_basic_pruning_config(8)
     input_shape = [1, 8, 8, 1]
@@ -109,4 +114,3 @@ def test_collect_output_shapes(model_fn, ref_output_shapes):
     # pylint:disable=protected-access
     output_shapes = collect_output_shapes(compression_ctrl.model, compression_ctrl._original_graph)
     assert output_shapes == ref_output_shapes
->>>>>>> Test coverage for TF and collect_output_shape fn

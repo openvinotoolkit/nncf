@@ -85,6 +85,7 @@ def test_init_params_for_flops_calculation(model, ref_params):
     _, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
 
     assert compression_ctrl.nodes_flops == ref_params['nodes_flops']
+    # pylint: disable=protected-access
     assert compression_ctrl._shape_pruning_proc.full_input_channels == ref_params['in_channels']
     assert compression_ctrl._shape_pruning_proc.full_output_channels == ref_params['out_channels']
 
@@ -104,7 +105,7 @@ def test_init_params_for_flops_calculation(model, ref_params):
         (PruningTestBatchedLinear, False, 0.0, 77824, 77824, []),
         (PruningTestModelBroadcastedLinear, False, 0.1, 137216, 103424, [16, 24]),
         (PruningTestModelDiffChInPruningCluster, False, 0.1, 1962368, 982336, [8]),
-            
+
     )
 )
 def test_flops_calulation_for_spec_layers(model, all_weights, pruning_flops_target,

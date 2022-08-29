@@ -497,11 +497,10 @@ class ElasticWidthHandler(SingleElasticityHandler):
         graph = self._target_model.get_original_graph()
         prunable_types = [NNCFConv2d.op_func_name] #, NNCFLinear.op_func_name]
         self._shape_pruning_processor = ShapePruninigProcessor(
-                                            graph=self._target_model.get_original_graph(),
-                                            pruning_operations_metatype=PT_PRUNING_OPERATOR_METATYPES,
-                                            pruning_groups=pruned_module_groups_info,
-                                            prunable_types=prunable_types,
-                                            conv_op_metatypes=None, linear_op_metatypes=None)
+            graph=self._target_model.get_original_graph(),
+            prunable_types=prunable_types,
+            pruning_operations_metatype=PT_PRUNING_OPERATOR_METATYPES,
+            pruning_groups=pruned_module_groups_info)
 
         # Need a copy because it will be used for adding `output_mask`/`input_masks` to nodes that are relevant to
         # Elastic Width only and therefore it should be isolated to not intercept with other algorithms.
