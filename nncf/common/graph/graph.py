@@ -31,13 +31,6 @@ NNCFNodeName = str
 LayerName = str
 
 
-def get_edge_boundaries(match: List[str], graph: nx.DiGraph):
-    out_edge_boundary = list(nx.edge_boundary(graph, match, data=True))
-    complement = list(filter(lambda x: x not in match, graph.nodes.keys()))
-    in_edge_boundary = list(nx.edge_boundary(graph, complement, data=True))
-    return sorted(in_edge_boundary), sorted(out_edge_boundary)  # must be sorted for determinism
-
-
 class NNCFNode:
     """
     Class describing nodes used in NNCFGraph.
@@ -153,7 +146,7 @@ class NNCFGraphPatternIO:
         self.output_edges = output_edges
 
 
-# pylint:disable=too-many-public-methods
+#pylint:disable=too-many-public-methods
 class NNCFGraph:
     """
     Wrapper over a regular directed acyclic graph that represents a control flow/execution graph of a DNN
@@ -510,7 +503,7 @@ class NNCFGraph:
             nncf_logger.warning('Graphviz is not installed - only the .dot model visualization format will be used. '
                                 'Install pygraphviz into your Python environment and graphviz system-wide to enable '
                                 'PNG rendering.')
-        except Exception:  # pylint:disable=broad-except
+        except Exception:  #pylint:disable=broad-except
             nncf_logger.warning('Failed to render graph to PNG')
 
     def get_graph_for_structure_analysis(self, extended: bool = False) -> nx.DiGraph:
@@ -608,7 +601,15 @@ class NNCFGraph:
         `match` list
         :return: NNCFGraphPatternIO object describing the inputs and outputs of the matched subgraph
         """
-        in_edge_boundary, out_edge_boundary = get_edge_boundaries(match, self._nx_graph)
+
+        def _get_edge_boundaries(match: List[str], graph: nx.DiGraph) -> Tuple[
+            List[Tuple[str, str]], List[Tuple[str, str]]]:
+            out_edge_boundary = list(nx.edge_boundary(graph, match, data=True))
+            complement = list(filter(lambda x: x not in match, graph.nodes.keys()))
+            in_edge_boundary = list(nx.edge_boundary(graph, complement, data=True))
+            return sorted(in_edge_boundary), sorted(out_edge_boundary)  # must be sorted for determinism
+
+        in_edge_boundary, out_edge_boundary = _get_edge_boundaries(match, self._nx_graph)
         boundary = in_edge_boundary + out_edge_boundary
         input_nncf_edges = []
         output_nncf_edges = []

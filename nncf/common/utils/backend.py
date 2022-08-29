@@ -53,7 +53,8 @@ def infer_backend_from_model(model) -> BackendType:
         return BackendType.ONNX
 
     raise RuntimeError('Could not infer the backend framework from the model type because '
-                       'the framework is not available or the model type is unsupported.')
+                       'the framework is not available or the model type is unsupported. '
+                       'Supported frameworks: PyTorch, Tensorflow, ONNX.')
 
 
 def infer_backend_from_compression_controller(compression_controller: CompressionAlgorithmController) -> BackendType:
