@@ -597,29 +597,6 @@ class GroupedConvolutionModel(nn.Module):
         return self.fc(x)
 
 
-class SplitModel(nn.Module):
-    #         (input)
-    #            |
-    #         (conv1)
-    #            |
-    #         (chunk)
-    #        /      \
-    #    (conv2)  (conv3)
-    def __init__(self):
-        super().__init__()
-        self.conv1 = create_conv(1, 4, 1, 1)
-        self.conv2 = create_conv(4, 8, 1, 1)
-        self.conv3 = create_conv(4, 8, 1, 1)
-
-    def forward(self, x):
-        x = self.conv1(x)
-        y1, y2 = torch.chunk(x, chunks=2, dim=-1)
-
-        y1 = self.conv2(y1)
-        y2 = self.conv3(y2)
-        return y1, y2
-
-
 class SplitIdentityModel(nn.Module):
     #         (input)
     #            |
