@@ -466,7 +466,7 @@ GROUP_PRUNING_MODULES_TEST_CASES = [
         pruned_groups_by_node_id=[[1]],
         can_prune_after_analysis={0: True, 1: False, 2: True, 3: False},
         final_can_prune={1: PruningAnalysisDecision(False, [PruningAnalysisReason.CLOSING_CONV_MISSING]),
-                         3: PruningAnalysisDecision(False, [PruningAnalysisReason.CLOSING_CONV_MISSING])},
+                         3: PruningAnalysisDecision(False, [PruningAnalysisReason.LAST_CONV])},
         prune_params=(True, True)),
     GroupPruningModulesTestStruct(
         model=SplitMaskPropFailModel,
