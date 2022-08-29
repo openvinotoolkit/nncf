@@ -107,11 +107,6 @@ class GroupPruningModulesTestStruct:
         assert self.name, 'Can\'t define name from the model (usually due to partial), please specify it explicitly'
         return self.name
 
-    def __str__(self):
-        if hasattr(self.model, '__name__'):
-            return self.model.__name__
-        return self.__class__.__name__
-
 
 GROUP_PRUNING_MODULES_TEST_CASES = [
     GroupPruningModulesTestStruct(model=PruningTestModelEltwise,
@@ -470,15 +465,6 @@ GROUP_PRUNING_MODULES_TEST_CASES = [
         pruned_groups=[['SplitIdentityModel/NNCFConv2d[conv1]/conv2d_0']],
         pruned_groups_by_node_id=[[1]],
         can_prune_after_analysis={0: True, 1: True, 2: True, 3: True},
-        final_can_prune={1: PruningAnalysisDecision(True),
-                         3: PruningAnalysisDecision(False, [PruningAnalysisReason.LAST_CONV])},
-        prune_params=(True, True)),
-    GroupPruningModulesTestStruct(
-        model=SplitIdentityModel,
-        non_pruned_module_nodes=['SplitIdentityModel/NNCFConv2d[conv2]/conv2d_0'],
-        pruned_groups=[['SplitIdentityModel/NNCFConv2d[conv1]/conv2d_0']],
-        pruned_groups_by_node_id=[[1]],
-        can_prune_after_analysis={0: True, 1: False, 2: True},
         final_can_prune={1: PruningAnalysisDecision(True),
                          3: PruningAnalysisDecision(False, [PruningAnalysisReason.LAST_CONV])},
         prune_params=(True, True)),
