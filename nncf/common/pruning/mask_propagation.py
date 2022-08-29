@@ -111,12 +111,12 @@ class MaskPropagationAlgorithm:
                     input_mask = input_masks[0] # type: SymbolicMask
 
                     for producer in input_mask.mask_producers:
-                        previously_dims_equal = True if can_prune_by_dim[producer] is None \
-                            else can_prune_by_dim[producer]
+                        previously_dims_equal = True if can_prune_by_dim[producer.id] is None \
+                            else can_prune_by_dim[producer.id]
 
                         is_dims_equal = get_input_channels(node) == input_mask.shape[0]
                         decision = previously_dims_equal and is_dims_equal
-                        can_prune_by_dim[producer] = PruningAnalysisDecision(
+                        can_prune_by_dim[producer.id] = PruningAnalysisDecision(
                             decision, PruningAnalysisReason.DIMENSION_MISMATCH)
         # Remove all convolutions with masks
         # that were propagated to output node
@@ -124,7 +124,7 @@ class MaskPropagationAlgorithm:
             for input_mask in get_input_masks(out_node, self._graph):
                 if input_mask:
                     for producer in input_mask.mask_producers:
-                        can_prune_by_dim[producer] = PruningAnalysisDecision(
+                        can_prune_by_dim[producer.id] = PruningAnalysisDecision(
                                 False, PruningAnalysisReason.LAST_CONV)
         # Update decision for nodes which
         # have no closing convolution

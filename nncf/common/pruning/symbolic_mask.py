@@ -11,7 +11,7 @@
  limitations under the License.
 """
 
-from typing import List, Dict, Union
+from typing import List, Dict, Set, Union
 
 from nncf.common.tensor import NNCFTensor
 from nncf.common.pruning.tensor_processor import NNCFPruningBaseTensorProcessor
@@ -31,15 +31,15 @@ class SymbolicMaskProducer:
         return self._id
 
     @classmethod
-    def merge_producers(cls, masks: List['SymbolicMask']) -> Dict[int, 'SymbolicMaskProducer']:
+    def merge_producers(cls, masks: List['SymbolicMask']) -> List['SymbolicMaskProducer']:
         merged_producers = {}
         for mask in masks:
-            for mask_producer in mask.mask_producers.values():
+            for mask_producer in mask.mask_producers:
                 if mask_producer.id in merged_producers:
                     assert mask_producer.sparse_multiplier == merged_producers[mask_producer.id].sparse_multiplier, \
                         f"Inconsistent sparse multiplier for NNCF node with id={mask_producer.id}"
-            merged_producers.update(mask.mask_producers)
-        return merged_producers
+            merged_producers.update({p.id: p for p in mask.mask_producers})
+        return list(merged_producers.values())
 
 
 class SymbolicMask(NNCFTensor):
@@ -52,13 +52,13 @@ class SymbolicMask(NNCFTensor):
     symbolic mask propagation by SymbolicMaskProcessor.
     """
 
-    def __init__(self, dimension: int, mask_producers: Union[int, Dict[int, SymbolicMaskProducer]] = None):
+    def __init__(self, dimension: int, mask_producers: Union[int, List[SymbolicMaskProducer]] = None):
         super().__init__(None)
         self._mask_producers = mask_producers
         if mask_producers is None:
-            self._mask_producers = {}
+            self._mask_producers = []
         elif isinstance(mask_producers, int):
-            self._mask_producers = {mask_producers: SymbolicMaskProducer(mask_producers)}
+            self._mask_producers = [SymbolicMaskProducer(mask_producers)]
 
         self._shape = dimension
 
@@ -67,7 +67,7 @@ class SymbolicMask(NNCFTensor):
         return [self._shape]
 
     @property
-    def mask_producers(self) -> Dict[int, SymbolicMaskProducer]:
+    def mask_producers(self) -> List[SymbolicMaskProducer]:
         return self._mask_producers
 
     @property
@@ -82,7 +82,7 @@ class AmbiguousSymbolicMask(SymbolicMask):
     certainly mark all producers of such mask as unprunable by dimension mismatch.
     """
 
-    def __init__(self, mask_producers: Dict[int, SymbolicMaskProducer] = None):
+    def __init__(self, mask_producers: Union[int, List[SymbolicMaskProducer]] = None):
         super().__init__(-1, mask_producers)
 
 
@@ -116,10 +116,10 @@ class SymbolicMaskProcessor(NNCFPruningBaseTensorProcessor):
 
     @classmethod
     def repeat(cls, tensor: SymbolicMask, repeats: int) -> SymbolicMask:
-        updated_mask_producers = {}
-        for producer_id, mask_producer in tensor.mask_producers.items():
-            updated_mask_producers[producer_id] =\
-                SymbolicMaskProducer(producer_id, mask_producer.sparse_multiplier * repeats)
+        updated_mask_producers = []
+        for mask_producer in tensor.mask_producers:
+            updated_mask_producers.append(
+                SymbolicMaskProducer(mask_producer.id, mask_producer.sparse_multiplier * repeats))
         return SymbolicMask(tensor.shape[0] * repeats, updated_mask_producers)
 
     @classmethod

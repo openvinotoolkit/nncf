@@ -137,15 +137,15 @@ class ShapePruninigProcessor:
             self.sparse_multiplier = sparse_multiplier
 
     def _get_next_node_sparse_multiplier(self, next_node, cluster):
+        cluster_nodes_idxs = {node.nncf_node_id for node in cluster.elements}
         for input_mask in get_input_masks(next_node, self._graph):
             if not input_mask:
                 continue
-            mask_producers = input_mask.mask_producers
-            for cluster_node in cluster.elements:
-                if cluster_node.nncf_node_id in mask_producers:
-                    return mask_producers[cluster_node.nncf_node_id].sparse_multiplier
+            for mask_producer in input_mask.mask_producers:
+                if mask_producer.id in cluster_nodes_idxs:
+                    return mask_producer.sparse_multiplier
 
-        raise RuntimeError('Next node for cluster {cluster} doesn\'t have closing mask')
+        raise RuntimeError(f'Next node for cluster {cluster.elements} doesn\'t have closing mask')
 
     def _get_cluster_next_nodes(self) -> Dict[int, List['NextNode']]:
         """
