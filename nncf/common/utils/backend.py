@@ -28,18 +28,22 @@ def infer_backend_from_model(model) -> BackendType:
     :param model: The framework-specific object representing the trainable model.
     :return: A BackendType representing the correct NNCF backend to be used when working with the framework.
     """
+    available_frameworks = []
     try:
         import torch
+        available_frameworks.append('PyTorch')
     except ImportError:
         torch = None
 
     try:
         import tensorflow
+        available_frameworks.append('Tensorflow')
     except ImportError:
         tensorflow = None
 
     try:
         import onnx
+        available_frameworks.append('ONNX')
     except ImportError:
         onnx = None
 
@@ -54,7 +58,7 @@ def infer_backend_from_model(model) -> BackendType:
 
     raise RuntimeError('Could not infer the backend framework from the model type because '
                        'the framework is not available or the model type is unsupported. '
-                       'Supported frameworks: PyTorch, Tensorflow, ONNX.')
+                       'The available frameworks found: {}.'.format(', '.join(available_frameworks)))
 
 
 def infer_backend_from_compression_controller(compression_controller: CompressionAlgorithmController) -> BackendType:

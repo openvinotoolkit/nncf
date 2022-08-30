@@ -275,6 +275,14 @@ class NNCFGraph:
                         node_name=nx_node[NNCFGraph.NODE_NAME_ATTR],
                         data=nx_node)
 
+    @staticmethod
+    def _get_edge_boundaries(match: List[str], graph: nx.DiGraph) -> Tuple[
+        List[Tuple[str, str]], List[Tuple[str, str]]]:
+        out_edge_boundary = list(nx.edge_boundary(graph, match, data=True))
+        complement = list(filter(lambda x: x not in match, graph.nodes.keys()))
+        in_edge_boundary = list(nx.edge_boundary(graph, complement, data=True))
+        return sorted(in_edge_boundary), sorted(out_edge_boundary)  # must be sorted for determinism
+
     def get_node_key_by_id(self, node_id: id) -> str:
         """
         Returns node key (node_name) by provided id.
@@ -602,14 +610,7 @@ class NNCFGraph:
         :return: NNCFGraphPatternIO object describing the inputs and outputs of the matched subgraph
         """
 
-        def _get_edge_boundaries(match: List[str], graph: nx.DiGraph) -> Tuple[
-            List[Tuple[str, str]], List[Tuple[str, str]]]:
-            out_edge_boundary = list(nx.edge_boundary(graph, match, data=True))
-            complement = list(filter(lambda x: x not in match, graph.nodes.keys()))
-            in_edge_boundary = list(nx.edge_boundary(graph, complement, data=True))
-            return sorted(in_edge_boundary), sorted(out_edge_boundary)  # must be sorted for determinism
-
-        in_edge_boundary, out_edge_boundary = _get_edge_boundaries(match, self._nx_graph)
+        in_edge_boundary, out_edge_boundary = NNCFGraph._get_edge_boundaries(match, self._nx_graph)
         boundary = in_edge_boundary + out_edge_boundary
         input_nncf_edges = []
         output_nncf_edges = []
