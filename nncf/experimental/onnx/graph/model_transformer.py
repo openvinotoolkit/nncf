@@ -44,6 +44,13 @@ class ONNXModelTransformer(ModelTransformer):
         self.quantizer_insertion_commands = []  # type: List[ONNXQuantizerInsertionCommand]
         self.output_insertion_commands = []  # type: List[ONNXOutputInsertionCommand]
 
+    def prepare_model_for_statistics_collection(self, model: ModelType) -> ModelType:
+        """
+        Adds additional model outputs.
+        """
+        transformation_layout = self._get_transformation_layout_extra_outputs(model)
+        return self.transform(transformation_layout)
+
     def transform(self, transformation_layout: ONNXTransformationLayout) -> onnx.ModelProto:
         for transformation in transformation_layout.transformations:
             if isinstance(transformation, ONNXQuantizerInsertionCommand):
@@ -52,6 +59,19 @@ class ONNXModelTransformer(ModelTransformer):
                 self._add_output_transformation(transformation)
         self._apply_transformations()
         return self.transformed_model
+
+    def _get_transformation_layout_extra_outputs(self, model: ModelType) -> ONNXTransformationLayout:
+        transformation_layout = ONNXTransformationLayout()
+        transformation_commands = []
+        for _statistic_points in self.statistic_points.values():
+            for _statistic_point in _statistic_points:
+                transformation_commands.append(
+                    ONNXOutputInsertionCommand(_statistic_point.target_point))
+
+        for transformation_command in transformation_commands:
+            transformation_layout.register(transformation_command)
+
+        return transformation_layout
 
     def _add_quantizer_insertion_transformation(self, transformation: ONNXQuantizerInsertionCommand):
         self.quantizer_insertion_commands.append(transformation)

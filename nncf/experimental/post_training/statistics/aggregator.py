@@ -44,7 +44,7 @@ class StatisticsAggregator(ABC):
         Collects statistics for registered StatisticPoints.
         The statistics are stored in self.statistic_points.
         """
-        self.engine.set_model(self._prepare_model_for_statistics_collection(model, model_transformer))
+        self.engine.set_model(model_transformer.prepare_model_for_statistics_collection(model))
         self.engine.set_sampler(self._create_sampler(self.dataset, self.max_number_samples))
         self.engine.compute_statistics(self.statistic_points)
 
@@ -62,19 +62,6 @@ class StatisticsAggregator(ABC):
                 for _, tensor_collectors in _statistic_point.algorithm_to_tensor_collectors.items():
                     for tensor_collector in tensor_collectors:
                         self.max_number_samples = max(self.max_number_samples, tensor_collector.num_samples)
-
-    def _prepare_model_for_statistics_collection(self, model: ModelType, model_transformer: ModelTransformer) -> ModelType:
-        """
-        Adds additional model outputs.
-        """
-        transformation_layout = self._get_transformation_layout_extra_outputs(model)
-        return model_transformer.transform(transformation_layout)
-
-    @abstractmethod
-    def _get_transformation_layout_extra_outputs(self, model: ModelType) -> TransformationLayout:
-        """
-        Return backend-specific TransformationLayout with transformations for adding extra model outputs.
-        """
 
     @abstractmethod
     def _create_sampler(self, dataset: Dataset,
