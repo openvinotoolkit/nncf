@@ -26,6 +26,7 @@ from nncf.experimental.onnx.graph.nncf_graph_builder import GraphConverter
 from nncf.experimental.onnx.graph.transformations.layout import ONNXTransformationLayout
 from nncf.experimental.onnx.graph.transformations.commands import ONNXQuantizerInsertionCommand
 from nncf.experimental.onnx.graph.transformations.commands import ONNXOutputInsertionCommand
+from nncf.experimental.post_training.statistics.statistic_point import StatisticPointsContainer
 
 ModelType = TypeVar('ModelType')
 
@@ -44,11 +45,11 @@ class ONNXModelTransformer(ModelTransformer):
         self.quantizer_insertion_commands = []  # type: List[ONNXQuantizerInsertionCommand]
         self.output_insertion_commands = []  # type: List[ONNXOutputInsertionCommand]
 
-    def prepare_model_for_statistics_collection(self, model: ModelType) -> ModelType:
+    def prepare_model_for_statistics_collection(self, statistic_points: StatisticPointsContainer) -> ModelType:
         """
         Adds additional model outputs.
         """
-        transformation_layout = self._get_transformation_layout_extra_outputs(model)
+        transformation_layout = self._get_transformation_layout_extra_outputs(statistic_points)
         return self.transform(transformation_layout)
 
     def transform(self, transformation_layout: ONNXTransformationLayout) -> onnx.ModelProto:
@@ -60,10 +61,10 @@ class ONNXModelTransformer(ModelTransformer):
         self._apply_transformations()
         return self.transformed_model
 
-    def _get_transformation_layout_extra_outputs(self, model: ModelType) -> ONNXTransformationLayout:
+    def _get_transformation_layout_extra_outputs(self, statistic_points) -> ONNXTransformationLayout:
         transformation_layout = ONNXTransformationLayout()
         transformation_commands = []
-        for _statistic_points in self.statistic_points.values():
+        for _statistic_points in statistic_points.values():
             for _statistic_point in _statistic_points:
                 transformation_commands.append(
                     ONNXOutputInsertionCommand(_statistic_point.target_point))
