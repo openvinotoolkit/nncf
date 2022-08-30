@@ -14,6 +14,7 @@
 from typing import Callable, Optional, TypeVar
 
 from nncf.common.utils.logger import logger as nncf_logger
+from nncf.common.graph.model_transformer import ModelTransformer
 
 from nncf.experimental.post_training.api.engine import Engine
 from nncf.experimental.post_training.api.metric import Metric
@@ -42,17 +43,32 @@ class CompressionBuilder:
         self.algorithms.append(algorithm)
 
     def _create_engine(self, backend: Backend) -> Engine:
-        # TODO (Nikita Malinin): Place "ifs" into the backend-specific expandable structure
+        """
+        Creates backend-specific Engine.
+        """
         if backend == Backend.ONNX:
             from nncf.experimental.onnx.engine import ONNXEngine  # pylint: disable=cyclic-import
             return ONNXEngine()
         return None
 
     def _create_statistics_aggregator(self, engine: Engine, dataset: Dataset, backend: Backend):
+        """
+        Creates backend-specific StatisticsAggregator.
+        """
         if backend == Backend.ONNX:
             from nncf.experimental.onnx.statistics.aggregator import \
                 ONNXStatisticsAggregator  # pylint: disable=cyclic-import
             return ONNXStatisticsAggregator(engine, dataset)
+        return None
+
+    def _create_model_transformer(self, model: ModelType, backend: Backend) -> ModelTransformer:
+        """
+        Creates backend-specific ModelTransformer.
+        """
+        if backend == Backend.ONNX:
+            from nncf.experimental.onnx.graph.model_transformer import \
+                ONNXModelTransformer  # pylint: disable=cyclic-import
+            return ONNXModelTransformer(model)
         return None
 
     def _get_prepared_model_for_compression(self, model: ModelType, backend: Backend) -> ModelType:
@@ -85,6 +101,8 @@ class CompressionBuilder:
         backend = get_model_backend(model)
         modified_model = self._get_prepared_model_for_compression(model, backend)
 
+        model_transformer = self._create_model_transformer(model, backend)
+
         if engine is None:
             engine = self._create_engine(backend)
 
@@ -96,7 +114,7 @@ class CompressionBuilder:
             statistic_points = algorithm.get_statistic_points(modified_model)
             statistics_aggregator.register_stastistic_points(statistic_points)
 
-        statistics_aggregator.collect_statistics(modified_model)
+        statistics_aggregator.collect_statistics(modified_model, model_transformer)
 
         for algorithm in self.algorithms:
             modified_model = algorithm.apply(modified_model, engine, statistics_aggregator.statistic_points)

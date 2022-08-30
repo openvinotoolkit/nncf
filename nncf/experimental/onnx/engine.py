@@ -47,8 +47,7 @@ class ONNXEngine(Engine):
         self.rt_session_options['providers'] = ['CPUExecutionProvider']
 
     def get_sampler(self) -> Sampler:
-        # TODO (Nikita Malinin): Replace range calling with the max length variable
-        return self.sampler if self.sampler else create_onnx_sampler(self.dataset, range(len(self.dataset)))
+        return self.sampler if self.sampler else create_onnx_sampler(self.dataset, len(self.dataset))
 
     def set_model(self, model: onnx.ModelProto) -> None:
         """

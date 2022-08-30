@@ -39,12 +39,12 @@ class StatisticsAggregator(ABC):
         self.max_number_samples = 0
         self.statistic_points = StatisticPointsContainer()
 
-    def collect_statistics(self, model: ModelType) -> None:
+    def collect_statistics(self, model: ModelType, model_transformer: ModelTransformer) -> None:
         """
         Collects statistics for registered StatisticPoints.
         The statistics are stored in self.statistic_points.
         """
-        self.engine.set_model(self._prepare_model_for_statistics_collection(model))
+        self.engine.set_model(self._prepare_model_for_statistics_collection(model, model_transformer))
         self.engine.set_sampler(self._create_sampler(self.dataset, self.max_number_samples))
         self.engine.compute_statistics(self.statistic_points)
 
@@ -63,11 +63,10 @@ class StatisticsAggregator(ABC):
                     for tensor_collector in tensor_collectors:
                         self.max_number_samples = max(self.max_number_samples, tensor_collector.num_samples)
 
-    def _prepare_model_for_statistics_collection(self, model: ModelType) -> ModelType:
+    def _prepare_model_for_statistics_collection(self, model: ModelType, model_transformer: ModelTransformer) -> ModelType:
         """
         Adds additional model outputs.
         """
-        model_transformer = self._create_model_transformer(model)
         transformation_layout = self._get_transformation_layout_extra_outputs(model)
         return model_transformer.transform(transformation_layout)
 
@@ -75,12 +74,6 @@ class StatisticsAggregator(ABC):
     def _get_transformation_layout_extra_outputs(self, model: ModelType) -> TransformationLayout:
         """
         Return backend-specific TransformationLayout with transformations for adding extra model outputs.
-        """
-
-    @abstractmethod
-    def _create_model_transformer(self, model: ModelType) -> ModelTransformer:
-        """
-        Create backend-specific ModelTransformer.
         """
 
     @abstractmethod

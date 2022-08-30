@@ -42,9 +42,6 @@ class ONNXStatisticsAggregator(StatisticsAggregator):
 
         return transformation_layout
 
-    def _create_model_transformer(self, model: onnx.ModelProto) -> ONNXModelTransformer:
-        return ONNXModelTransformer(model)
-
     def _create_sampler(self, dataset: Dataset,
                         sample_indices: int) -> Sampler:
         if dataset.shuffle:

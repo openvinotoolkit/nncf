@@ -28,7 +28,7 @@ class Engine(ABC):
     """
     The basic class aims to provide the interface to infer the model.
     """
-    # TODO (Nikita Malinin): Update class with the _get_sampler() method
+
     def __init__(self):
         self.model = None
         self._sampler = None
