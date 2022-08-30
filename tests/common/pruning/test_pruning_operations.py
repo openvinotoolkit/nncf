@@ -3,6 +3,11 @@ import pytest
 
 from functools import partial
 
+from tests.common.pruning import dummy_types
+from nncf.common.pruning.tensor_processor import NNCFPruningBaseTensorProcessor
+from tests.common.pruning.tensor import NPNNCFTensor
+from tests.common.pruning.tensor import NPNNCFTensorProcessor
+from nncf.common.graph.layer_attributes import ReshapeLayerAttributes
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.layer_attributes import Dtype

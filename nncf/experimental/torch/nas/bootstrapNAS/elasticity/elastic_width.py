@@ -495,7 +495,7 @@ class ElasticWidthHandler(SingleElasticityHandler):
         self._add_dynamic_inputs = add_dynamic_inputs
 
         graph = self._target_model.get_original_graph()
-        prunable_types = [NNCFConv2d.op_func_name] #, NNCFLinear.op_func_name]
+        prunable_types = [NNCFConv2d.op_func_name, NNCFLinear.op_func_name]
         self._shape_pruning_processor = ShapePruninigProcessor(
             graph=self._target_model.get_original_graph(),
             prunable_types=prunable_types,
@@ -663,6 +663,8 @@ class ElasticWidthHandler(SingleElasticityHandler):
         """
         graph = self._target_model.get_graph()
         in_channels, out_channels = get_prunable_layers_in_out_channels(graph)
+        self._shape_pruning_processor.update_graph(graph)
+        #self._shape_pruning_processor.update_pruninig_groups(self._pruned_module_groups_info)
 
         for group in self._pruned_module_groups_info.get_all_clusters():
             assert all(out_channels[group.elements[0].node_name] == out_channels[node.node_name]

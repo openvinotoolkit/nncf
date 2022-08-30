@@ -46,7 +46,7 @@ LIST_OF_ME_DESCS = [
             supernet=ModelStats(651_599_872, 23_467_712),
             kernel_stage=ModelStats(651_599_872, 23_467_712),
             depth_stage=ModelStats(615_948_288, 23_398_080),
-            width_stage=ModelStats(22_757_376, 194_400)
+            width_stage=ModelStats(22_717_056, 174_240)
         ),
         blocks_to_skip=RESNET50_BLOCK_TO_SKIP,
     ),
@@ -57,7 +57,7 @@ LIST_OF_ME_DESCS = [
             supernet=ModelStats(166_862_848, 23_475_392),
             kernel_stage=ModelStats(162_930_688, 23_467_712),
             depth_stage=ModelStats(154_017_792, 23_398_080),
-            width_stage=ModelStats(5_720_064, 194_400)
+            width_stage=ModelStats(5_679_744, 174_240)
         ),
         blocks_to_skip=RESNET50_BLOCK_TO_SKIP,
     ),
@@ -68,7 +68,7 @@ LIST_OF_ME_DESCS = [
             supernet=ModelStats(12_249_856, 2_202_560),
             kernel_stage=ModelStats(12_249_856, 2_202_560),
             depth_stage=ModelStats(10_750_720, 2_180_336),
-            width_stage=ModelStats(2_140_928, 104_944)
+            width_stage=ModelStats(1_717_376, 35_728)
         ),
         blocks_to_skip=MOBILENET_V2_BLOCKS_TO_SKIP,
     ),
@@ -80,7 +80,7 @@ LIST_OF_ME_DESCS = [
             supernet=ModelStats(601_548_544, 3_469_760),
             kernel_stage=ModelStats(601_548_544, 3_469_760),
             depth_stage=ModelStats(528_090_880, 3_447_536),
-            width_stage=ModelStats(106_211_072, 1_372_144)
+            width_stage=ModelStats(84_184_064, 67_408)
         ),
         blocks_to_skip=MOBILENET_V2_BLOCKS_TO_SKIP,
     ),
@@ -90,7 +90,7 @@ LIST_OF_ME_DESCS = [
             supernet=ModelStats(175_952_896, 2_202_560),
             kernel_stage=ModelStats(175_952_896, 2_202_560),
             depth_stage=ModelStats(151_966_720, 2_180_336),
-            width_stage=ModelStats(21_779_456, 144_880)
+            width_stage=ModelStats(15_401_984, 88_144)
         ),
         blocks_to_skip=MOBILENET_V2_BLOCKS_TO_SKIP,
     ),
@@ -101,7 +101,7 @@ LIST_OF_ME_DESCS = [
             supernet=ModelStats(1_776_701_440, 6_872_768),
             kernel_stage=ModelStats(1_776_701_440, 6_872_768),
             depth_stage=ModelStats(472_272_896, 3_145_408),
-            width_stage=ModelStats(358_174_720, 1_139_552)
+            width_stage=ModelStats(358_165_120, 1_134_752)
         ),
         is_auto_skipped_blocks=True,
     ),

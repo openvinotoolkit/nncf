@@ -16,7 +16,6 @@ from typing import Dict
 from typing import List
 from typing import Tuple
 from typing import Union
-from collections import defaultdict
 
 import numpy as np
 
@@ -110,6 +109,9 @@ class ShapePruninigProcessor:
         for next_node in next_nodes:
             input_channels[next_node.node_name] -= pruned_elems * next_node.sparse_multiplier
 
+    def update_graph(self, graph: NNCFGraph):
+        self._graph = graph
+
     def _calculate_in_out_channels(self, sparse_elements_counter: Callable[[str], int]) -> \
         Tuple[Dict[str, int], Dict[str, int]]:
         tmp_in_channels = self._full_inp_channels.copy()
@@ -164,7 +166,7 @@ class ShapePruninigProcessor:
                                  SymbolicMaskProcessor).mask_propagation()
 
         # 2. Find next nodes and correspondent sparse multipliers
-        next_nodes = defaultdict(list)
+        next_nodes = {}
         for cluster in self._pruning_groups.get_all_clusters():
             next_nodes_cluster = set()
             cluster_nodes = set()
@@ -175,6 +177,7 @@ class ShapePruninigProcessor:
 
                 next_nodes_cluster = next_nodes_cluster.union(curr_next_nodes)
             next_nodes_cluster = next_nodes_cluster - cluster_nodes
+            next_nodes[cluster.id] = []
             for next_node in next_nodes_cluster:
                 sparse_multiplier = self._get_next_node_sparse_multiplier(next_node, cluster)
                 next_nodes[cluster.id].append(self.NextNode(next_node.node_name, sparse_multiplier))
@@ -300,3 +303,7 @@ class WeightsFlopsCalculator:
         for node in self._graph.get_nodes_by_metatypes(self._conv_op_metatypes + self._linear_op_metatypes):
             filters_num += output_channels.get(node.node_name, get_output_channels(node))
         return filters_num
+
+    def update_graph_and_output_shapes(self, graph: NNCFGraph, output_shapes: Dict[str, List[int]]) -> None:
+        self._graph = graph
+        self._output_shapes = output_shapes

@@ -253,6 +253,10 @@ class MultiElasticityHandler(ElasticityHandler):
             input_width_values, output_width_values = self.width_handler.get_active_in_out_width_values()
 
 
+        graph = self._target_model.get_graph()
+        output_shapes = collect_output_shapes(graph)
+        self._weights_calc.update_graph_and_output_shapes(graph, output_shapes)
+
         flops, num_weights = self._weights_calc.count_flops_and_weights(
             input_channels=input_width_values,
             output_channels=output_width_values,
