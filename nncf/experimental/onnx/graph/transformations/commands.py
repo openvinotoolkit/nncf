@@ -11,6 +11,8 @@
  limitations under the License.
 """
 
+from typing import Optional
+
 from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.graph.transformations.commands import TransformationType
 from nncf.common.graph.transformations.commands import TargetType
@@ -19,9 +21,10 @@ from nncf.experimental.onnx.algorithms.quantization.utils import QuantizerLayerP
 
 
 class ONNXTargetPoint(TargetPoint):
-    def __init__(self, target_type: TargetType, target_node_name: str):
+    def __init__(self, target_type: TargetType, target_node_name: str, edge_name: Optional[str] = None):
         super().__init__(target_type)
         self.target_node_name = target_node_name
+        self.edge_name = edge_name
 
 
 class ONNXInsertionCommand(TransformationCommand):

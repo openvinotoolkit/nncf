@@ -97,17 +97,25 @@ class ONNXEngine(Engine):
                                                    self.nncf_graph.get_output_edges(nncf_node_name)]
                     for onnx_node_name in onnx_nodes_after_input_node:
                         edge_name = self.onnx_graph.get_node_edges(onnx_node_name.node_name)['input'][0]
-                        edge_name_to_node_name[edge_name] = node_name
+                        if edge_name in edge_name_to_node_name:
+                            edge_name_to_node_name[edge_name].append(node_name)
+                        else:
+                            edge_name_to_node_name[edge_name] = [node_name]
+                    continue
                 elif statistic_point.target_point.type == TargetType.POST_LAYER_OPERATION:
+                    # Any edge is fine so take 0-index
                     edge_name = self.onnx_graph.get_node_edges(node_name)['output'][0]
                 elif statistic_point.target_point.type == TargetType.PRE_LAYER_OPERATION:
-                    edge_name = self.onnx_graph.get_node_edges(node_name)['input'][0]
+                    edge_name = statistic_point.target_point.edge_name
                 else:
                     RuntimeError('The statistics should be collected only from the input of output edges of the node')
-                edge_name_to_node_name[edge_name] = node_name
+                if edge_name in edge_name_to_node_name:
+                    edge_name_to_node_name[edge_name].append(node_name)
+                else:
+                    edge_name_to_node_name[edge_name] = [node_name]
 
         for output_name, output_tensor in outputs.items():
             if output_name in edge_name_to_node_name:
-                node_name = edge_name_to_node_name[output_name]
-                for statistic_point in statistic_points[node_name]:
-                    statistic_point.register_tensor(output_tensor)
+                for node_name in edge_name_to_node_name[output_name]:
+                    for statistic_point in statistic_points[node_name]:
+                        statistic_point.register_tensor(output_tensor)

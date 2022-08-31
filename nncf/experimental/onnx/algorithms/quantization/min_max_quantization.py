@@ -127,13 +127,25 @@ class ONNXMinMaxQuantization(MinMaxQuantization):
                 if NNCFGraphNodeType.INPUT_NODE not in quantization_point.insertion_point.target_node_name:
                     # If quantization of Input
                     if quantization_point.insertion_point.input_port_id is not None:
-                        # TODO (kshpv): need to be reconsidered:
-                        #  some operators such as Mul and Add could have activation input tensor on 0 or 1 indices
-                        # TODO (kshpv): input_port_id can be usefull in terms of quantizing only one edge.
-                        #  Some of the models could required this.
-                        outputs = onnx_graph.get_node_edges(node_name)['input'][0]
+                        # If there are several inputs to quantize
+                        if isinstance(quantization_point.insertion_point.input_port_id, list):
+                            for input_port_id in quantization_point.insertion_point.input_port_id:
+                                # NNCFGraph starts countig from 1 while ONNX from 0
+                                edge_id = input_port_id - 1
+                                edge_name = onnx_graph.get_node_edges(node_name)['input'][edge_id]
+                                activation_quantization_target_point = ONNXTargetPoint(TargetType.PRE_LAYER_OPERATION,
+                                                                                       node_name,
+                                                                                       edge_name)
+                                self._quantization_target_points.append(activation_quantization_target_point)
+                            continue
+                        # NNCFGraph starts countig from 1 while ONNX from 0
+                        edge_id = quantization_point.insertion_point.input_port_id - 1
+                        edge_name = onnx_graph.get_node_edges(node_name)['input'][edge_id]
                         activation_quantization_target_point = ONNXTargetPoint(TargetType.PRE_LAYER_OPERATION,
-                                                                               node_name)
+                                                                               node_name,
+                                                                               edge_name)
+                        self._quantization_target_points.append(activation_quantization_target_point)
+                        continue
                     # If quantization of Output
                     else:
                         outputs = onnx_graph.get_node_edges(node_name)['output'][0]
