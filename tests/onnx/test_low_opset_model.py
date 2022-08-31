@@ -28,28 +28,12 @@ from tests.onnx.quantization.common import ModelToTest
 
 MODEL_NAMES = [
     'resnet18',
-    'mobilenet_v2',
-    'mobilenet_v3_small',
-    'inception_v3',
-    'googlenet',
-    'vgg16',
-    'shufflenet_v2_x1_0',
-    'squeezenet1_0',
     'densenet121',
-    'mnasnet0_5',
 ]
 
 MODELS = [
     models.resnet18(),
-    models.mobilenet_v2(),
-    models.mobilenet_v3_small(),
-    models.inception_v3(),
-    models.googlenet(),
-    models.vgg16(),
-    models.shufflenet_v2_x1_0(),
-    models.squeezenet1_0(),
     models.densenet121(),
-    models.mnasnet0_5(),
 ]
 
 INPUT_SHAPE = [1, 3, 224, 224]
@@ -65,7 +49,7 @@ for name, model in zip(MODEL_NAMES, MODELS):
 
 def load_model(model_to_test, model, opset_version):
     onnx_model_dir = str(TEST_ROOT.joinpath('onnx', 'data', 'models'))
-    onnx_model_path = str(TEST_ROOT.joinpath(onnx_model_dir, model_to_test.model_name))
+    onnx_model_path = str(TEST_ROOT.joinpath(onnx_model_dir, model_to_test.model_name + '.onnx'))
     if not os.path.isdir(onnx_model_dir):
         os.mkdir(onnx_model_dir)
     x = torch.randn(model_to_test.input_shape, requires_grad=False)
