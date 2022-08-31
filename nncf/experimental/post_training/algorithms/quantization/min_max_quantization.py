@@ -24,7 +24,6 @@ from nncf.common.utils.ordered_enum import OrderedEnum
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.hardware.config import HWConfigType
-from nncf.common.graph.model_transformer import ModelTransformer
 
 from nncf.experimental.post_training.algorithms import Algorithm
 from nncf.experimental.post_training.algorithms import AlgorithmParameters
@@ -100,9 +99,3 @@ class MinMaxQuantization(Algorithm, ABC):
     def _get_default_qconfig(self) -> QuantizerConfig:
         qconfig = deepcopy(self.DEFAULT_QCONFIG)
         return qconfig
-
-    @abstractmethod
-    def _create_model_transformer(self, model: ModelType) -> ModelTransformer:
-        """
-        Create framework-specific ModelTransformer.
-        """

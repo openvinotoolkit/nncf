@@ -23,6 +23,7 @@ from nncf.experimental.post_training.algorithms import Algorithm
 
 from nncf.experimental.post_training.backend import Backend
 from nncf.experimental.post_training.backend import get_model_backend
+from nncf.experimental.post_training.model_transformer_handler import MODEL_TRANSFORMERS
 
 ModelType = TypeVar('ModelType')
 
@@ -68,11 +69,13 @@ class CompressionBuilder:
         if backend == Backend.ONNX:
             from nncf.experimental.onnx.graph.model_transformer import \
                 ONNXModelTransformer  # pylint: disable=cyclic-import
-            return ONNXModelTransformer(model)
+            model_transformer = MODEL_TRANSFORMERS.get()
+            assert isinstance(model_transformer, ONNXModelTransformer)
+            model_transformer.set_model(model)
+            return model_transformer
         return None
 
     def _get_prepared_model_for_compression(self, model: ModelType, backend: Backend) -> ModelType:
-        # TODO (Nikita Malinin): Replace this methood into backend-specific graph transformer
         if backend == Backend.ONNX:
             from nncf.experimental.onnx.model_normalizer import ONNXModelNormalizer  # pylint: disable=cyclic-import
             if self.convert_opset_version:
@@ -101,7 +104,7 @@ class CompressionBuilder:
         backend = get_model_backend(model)
         modified_model = self._get_prepared_model_for_compression(model, backend)
 
-        model_transformer = self._create_model_transformer(model, backend)
+        self._create_model_transformer(model, backend)
 
         if engine is None:
             engine = self._create_engine(backend)
@@ -113,8 +116,7 @@ class CompressionBuilder:
         for algorithm in self.algorithms:
             statistic_points = algorithm.get_statistic_points(modified_model)
             statistics_aggregator.register_stastistic_points(statistic_points)
-
-        statistics_aggregator.collect_statistics(model_transformer)
+        statistics_aggregator.collect_statistics()
 
         for algorithm in self.algorithms:
             modified_model = algorithm.apply(modified_model, engine, statistics_aggregator.statistic_points)

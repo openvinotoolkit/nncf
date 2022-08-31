@@ -50,6 +50,7 @@ from nncf.experimental.onnx.algorithms.quantization.utils import calculate_activ
 from nncf.experimental.onnx.algorithms.quantization.utils import calculate_weight_quantizer_parameters
 from nncf.experimental.onnx.hardware.config import ONNXHWConfig
 from nncf.experimental.post_training.backend import Backend
+from nncf.experimental.post_training.model_transformer_handler import MODEL_TRANSFORMERS
 
 QUANTIZATION_LAYER_METATYPES = GENERAL_WEIGHT_LAYER_METATYPES
 
@@ -71,9 +72,6 @@ class ONNXMinMaxQuantization(MinMaxQuantization):
             return ONNXMeanMinMaxStatisticCollector(use_per_sample_stats=False, use_abs_max=is_symmetric,
                                                     reduction_shape=axes, num_samples=self.number_samples)
         raise RuntimeError('This range type is not supported.')
-
-    def _create_model_transformer(self, model: onnx.ModelProto) -> ONNXModelTransformer:
-        return ONNXModelTransformer(model)
 
     def _get_quantizer_setup(self, model: onnx.ModelProto):
         self.nncf_graph = GraphConverter.create_nncf_graph(model) if self.nncf_graph is None else self.nncf_graph
@@ -157,7 +155,8 @@ class ONNXMinMaxQuantization(MinMaxQuantization):
 
     def _apply(self, model: onnx.ModelProto, engine: ONNXEngine,
                statistic_points: StatisticPointsContainer) -> onnx.ModelProto:
-        model_transformer = self._create_model_transformer(model)
+        model_transformer = MODEL_TRANSFORMERS.get()
+        model_transformer.set_model(model)
         transformation_layout, transformation_commands = ONNXTransformationLayout(), []
         onnx_graph = ONNXGraph(model)
 

@@ -27,12 +27,13 @@ from nncf.experimental.onnx.graph.transformations.layout import ONNXTransformati
 from nncf.experimental.onnx.graph.transformations.commands import ONNXQuantizerInsertionCommand
 from nncf.experimental.onnx.graph.transformations.commands import ONNXOutputInsertionCommand
 from nncf.experimental.post_training.statistics.statistic_point import StatisticPointsContainer
+from nncf.experimental.post_training.compression_builder import MODEL_TRANSFORMERS
 
 ModelType = TypeVar('ModelType')
 
 
 # pylint: disable=no-member
-
+@MODEL_TRANSFORMERS.register()
 class ONNXModelTransformer(ModelTransformer):
     QUANTIZER_NAME_PREFIX = 'QuantizeLinear_'
     DEQUANTIZER_NAME_PREFIX = 'DequantizeLinear_'
@@ -44,6 +45,9 @@ class ONNXModelTransformer(ModelTransformer):
         self.transformed_model = deepcopy(model)
         self.quantizer_insertion_commands = []  # type: List[ONNXQuantizerInsertionCommand]
         self.output_insertion_commands = []  # type: List[ONNXOutputInsertionCommand]
+
+    def set_model(self, model: onnx.ModelProto):
+        self.transformed_model = deepcopy(model)
 
     def prepare_model_for_statistics_collection(self, statistic_points: StatisticPointsContainer) -> ModelType:
         """

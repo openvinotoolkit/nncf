@@ -16,11 +16,11 @@ from abc import abstractmethod
 
 from typing import TypeVar
 
-from nncf.common.graph.model_transformer import ModelTransformer
 from nncf.experimental.post_training.statistics.statistic_point import StatisticPointsContainer
 from nncf.experimental.post_training.api.engine import Engine
 from nncf.experimental.post_training.api.dataset import Dataset
 from nncf.experimental.post_training.api.sampler import Sampler
+from nncf.experimental.post_training.model_transformer_handler import MODEL_TRANSFORMERS
 
 TensorType = TypeVar('TensorType')
 ModelType = TypeVar('ModelType')
@@ -38,11 +38,12 @@ class StatisticsAggregator(ABC):
         self.max_number_samples = 0
         self.statistic_points = StatisticPointsContainer()
 
-    def collect_statistics(self, model_transformer: ModelTransformer) -> None:
+    def collect_statistics(self) -> None:
         """
         Collects statistics for registered StatisticPoints.
         The statistics are stored in self.statistic_points.
         """
+        model_transformer = MODEL_TRANSFORMERS.get()
         self.engine.set_model(model_transformer.prepare_model_for_statistics_collection(self.statistic_points))
         self.engine.set_sampler(self._create_sampler(self.dataset, self.max_number_samples))
         self.engine.compute_statistics(self.statistic_points)
