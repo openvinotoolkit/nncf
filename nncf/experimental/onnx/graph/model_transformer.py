@@ -14,6 +14,7 @@
 from typing import TypeVar
 
 from copy import deepcopy
+from collections import Counter
 import onnx
 
 from nncf.common.graph.model_transformer import ModelTransformer
@@ -135,7 +136,7 @@ class ONNXModelTransformer(ModelTransformer):
                 if transformation.target_point.type == TargetType.POST_LAYER_OPERATION:
                     edge_name = onnx_graph.get_node_edges(node_name)['output'][0]
                 elif transformation.target_point.type == TargetType.PRE_LAYER_OPERATION:
-                    edge_name = onnx_graph.get_node_edges(node_name)['input'][0]
+                    edge_name = transformation.target_point.edge_name
                 else:
                     raise RuntimeError
                 extra_model_outputs.add(edge_name)
@@ -165,8 +166,7 @@ class ONNXModelTransformer(ModelTransformer):
                 nncf_logger.exception(er)
                 return
         elif transformation.target_point.type == TargetType.PRE_LAYER_OPERATION:
-            target_edge_names.add(
-                onnx_graph.get_node_edges(transformation.target_point.target_node_name)['input'][0])
+            target_edge_names.add(transformation.target_point.edge_name)
         elif transformation.target_point.type == TargetType.POST_LAYER_OPERATION:
             if NNCFGraphNodeType.INPUT_NODE in transformation.target_point.target_node_name:  # ADD INPUT NODE CASE
 
