@@ -396,6 +396,12 @@ class ONNXPadMetatype(ONNXOpMetatype):
     op_names = ['Pad']
 
 
+@ONNX_OPERATION_METATYPES.register()
+class ONNXIdentityMetatype(ONNXOpMetatype):
+    name = 'IdentityOp'
+    op_names = ['Identity']
+
+
 GENERAL_WEIGHT_LAYER_METATYPES = [ONNXConvolutionMetatype,
                                   ONNXConvolutionTransposeMetatype,
                                   ONNXLinearMetatype]
