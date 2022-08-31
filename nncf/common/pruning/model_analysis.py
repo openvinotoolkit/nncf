@@ -11,7 +11,7 @@
  limitations under the License.
 """
 
-from typing import Callable, List, Dict
+from typing import List, Dict
 
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
@@ -22,6 +22,7 @@ from nncf.common.pruning.utils import find_next_nodes_not_of_types
 from nncf.common.pruning.utils import PruningOperationsMetatypeRegistry
 from nncf.common.pruning.utils import PruningAnalysisDecision
 from nncf.common.pruning.utils import PruningAnalysisReason
+from nncf.common.pruning.utils import is_prunable_depthwise_conv
 
 
 def get_position(nodes_list: List[NNCFNode], idx: int):
@@ -111,16 +112,21 @@ class ModelAnalyzer:
 
     def __init__(self, graph: NNCFGraph,
                  pruning_operator_metatypes: PruningOperationsMetatypeRegistry,
-                 is_depthwise_conv_fn: Callable[[NNCFNode], bool]):
+                 prune_operations_types: List[str]):
+        """
+        :param pruning_operator_metatypes: registry with operation metatypes pruning algorithm is aware of, i.e.
+        metatypes describing operations with common pruning mask application and propagation properties, e.g.
+        IdentityMaskForwardOps unifies operations that propagate pruning masks as is (relu, swish etc.), whereas
+        Convolution unifies different convolution operations (conv1d, conv2d, conv3d) which accepts some input masks
+        and provide some output masks.
+        :param prune_operations_types: Types of operations with prunable parameters.
+        """
         self.graph = graph
-
         self._pruning_operator_metatypes = pruning_operator_metatypes
+        self._prune_operations_types = prune_operations_types
         pruning_op_metatypes_dict = self._pruning_operator_metatypes.registry_dict
         self._stop_propagation_op_metatype = pruning_op_metatypes_dict['stop_propagation_ops']
         self._concat_op_metatype = pruning_op_metatypes_dict['concat']
-        self._convolution_op_metatype = pruning_op_metatypes_dict['convolution']
-
-        self._is_depthwise_conv_fn = is_depthwise_conv_fn
 
         self.can_prune = {idx: True for idx in self.graph.get_all_node_ids()}
         self.accept_pruned_input = {idx: True for idx in self.graph.get_all_node_ids()}
@@ -134,8 +140,8 @@ class ModelAnalyzer:
         :return: Propagates this node can_prune throw or not.
         """
         node_type = nncf_node.node_type
-        is_conv = node_type in self._convolution_op_metatype.get_all_op_aliases()
-        return not is_conv or (is_conv and self._is_depthwise_conv_fn(nncf_node))
+        is_prunable = node_type in self._prune_operations_types
+        return not is_prunable or (is_prunable and is_prunable_depthwise_conv(nncf_node))
 
     def node_accept_different_inputs(self, nncf_node: NNCFNode) -> bool:
         """

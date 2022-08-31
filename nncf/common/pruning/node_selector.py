@@ -54,7 +54,7 @@ class PruningNodeSelector:
             IdentityMaskForwardOps unifies operations that propagate pruning masks as is (relu, swish etc.), whereas
             Convolution unifies different convolution operations (conv1d, conv2d, conv3d) which accepts some input masks
             and provide some output masks.
-        :param prune_operations_types: Types of operations with prunable filters.
+        :param prune_operations_types: Types of operations with prunable parameters.
         :param grouping_operations_types: Types of operations causing the need to prune connected to them
             operations together.
         :param ignored_scopes: Ignored scopes.
@@ -171,7 +171,7 @@ class PruningNodeSelector:
             pruned_nodes_clusterization.merge_list_of_clusters(previous_clusters)
 
         # 6. Checks for groups (all nodes in group can be pruned or all group can't be pruned).
-        model_analyser = ModelAnalyzer(graph, self._pruning_operator_metatypes, is_prunable_depthwise_conv)
+        model_analyser = ModelAnalyzer(graph, self._pruning_operator_metatypes, self._prune_operations_types)
         can_prune_analysis = model_analyser.analyse_model_before_pruning()
         can_prune_and_should_prune_analysis = self._should_prune_groups_analysis(graph,
                                                                                  pruned_nodes_clusterization,
