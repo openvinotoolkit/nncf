@@ -89,7 +89,7 @@ def test_elementwise_mask_propagation(all_close):
     masks_producers = [[SymbolicMaskProducer(i)] for i in range(3)]
     masks = [SymbolicMask(5 if all_close else i, producer) for i, producer in enumerate(masks_producers)]
     result = SymbolicMaskProcessor.elementwise_mask_propagation(masks)
-    assert set([p.id for p in result.mask_producers]) == set(range(3))
+    assert {p.id for p in result.mask_producers} == set(range(3))
     if not all_close:
         assert isinstance(result, AmbiguousSymbolicMask)
     else:

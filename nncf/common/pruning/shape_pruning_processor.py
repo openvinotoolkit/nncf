@@ -51,12 +51,12 @@ class ShapePruninigProcessor:
         self._prunable_types = prunable_types
         self._pruning_operations_metatype = pruning_operations_metatype
 
-    def calculate_in_out_channels_by_masks(self,
-                                           graph: NNCFGraph,
-                                           pruning_groups: List[Cluster[PrunedLayerInfoBase]],
-                                           pruning_groups_next_nodes: Dict[int, List['ShapePruninigProcessor.NextNode']],
-                                           num_of_sparse_elements_by_node: Dict[NNCFNodeName, int],
-                                           ) -> \
+    def calculate_in_out_channels_by_masks(
+        self,
+        graph: NNCFGraph,
+        pruning_groups: List[Cluster[PrunedLayerInfoBase]],
+        pruning_groups_next_nodes: Dict[int, List['ShapePruninigProcessor.NextNode']],
+        num_of_sparse_elements_by_node: Dict[NNCFNodeName, int]) -> \
         Tuple[Dict[str, int], Dict[str, int]]:
         """
         Imitates filters pruning by removing output filters zeroed by pruning masks in each pruning group

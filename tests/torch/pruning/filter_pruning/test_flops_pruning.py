@@ -13,8 +13,8 @@
 
 import pytest
 from functools import partial
-from build.lib.nncf.common.pruning.utils import get_prunable_layers_in_out_channels
 
+from nncf.common.pruning.utils import get_prunable_layers_in_out_channels
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
 from tests.torch.pruning.helpers import MobilenetV3BlockSEReshape
 from tests.torch.pruning.helpers import  PruningTestBatchedLinear

@@ -50,7 +50,6 @@ from tests.torch.pruning.helpers import BranchingModel
 from tests.torch.pruning.helpers import DepthwiseConvolutionModel
 from tests.torch.pruning.helpers import DiffConvsModel
 from tests.torch.pruning.helpers import EltwiseCombinationModel
-from tests.torch.pruning.helpers import GroupNormModel
 from tests.torch.pruning.helpers import MobilenetV3BlockSEReshape
 from tests.torch.pruning.helpers import MultipleDepthwiseConvolutionModel
 from tests.torch.pruning.helpers import NASnetBlock

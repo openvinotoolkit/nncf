@@ -126,7 +126,8 @@ class FilterPruningController(BasePruningAlgoController):
         _, output_channels = get_prunable_layers_in_out_channels(self._original_graph)
         self._init_pruned_layers_params(output_channels)
 
-        self.full_flops, self.full_params_num = self._weights_flops_calc.count_flops_and_weights(graph, self._output_shapes)
+        self.full_flops, self.full_params_num = self._weights_flops_calc.count_flops_and_weights(
+            graph, self._output_shapes)
         self.full_filters_num = self._weights_flops_calc.count_filters_num(graph, output_channels)
 
         self.current_flops, self.current_params_num = self.full_flops, self.full_params_num
