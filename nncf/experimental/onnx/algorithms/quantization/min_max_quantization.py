@@ -27,6 +27,7 @@ from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.insertion_point_graph import InsertionPointGraph
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
 from nncf.common.utils.logger import logger as nncf_logger
+from nncf.common.utils.backend import BackendType
 
 from nncf.experimental.post_training.algorithms.quantization.min_max_quantization import MinMaxQuantization
 from nncf.experimental.post_training.algorithms.quantization.min_max_quantization import MinMaxQuantizationParameters
@@ -49,7 +50,6 @@ from nncf.experimental.onnx.hardware.fused_patterns import ONNX_HW_FUSED_PATTERN
 from nncf.experimental.onnx.algorithms.quantization.utils import calculate_activation_quantizer_parameters
 from nncf.experimental.onnx.algorithms.quantization.utils import calculate_weight_quantizer_parameters
 from nncf.experimental.onnx.hardware.config import ONNXHWConfig
-from nncf.experimental.post_training.backend import Backend
 from nncf.experimental.post_training.model_transformer_handler import MODEL_TRANSFORMERS
 
 QUANTIZATION_LAYER_METATYPES = GENERAL_WEIGHT_LAYER_METATYPES
@@ -223,7 +223,7 @@ class ONNXMinMaxQuantization(MinMaxQuantization):
                         quantization_target_point))
         return output
 
-    def create_subalgorithms(self, backend: Backend) -> None:
+    def create_subalgorithms(self, backend: BackendType) -> None:
         return
 
     def _get_weight_quantizer_config(self, model: onnx.ModelProto) -> QuantizerConfig:

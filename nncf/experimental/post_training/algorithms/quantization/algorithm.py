@@ -21,7 +21,7 @@ from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.hardware.config import HWConfigType
 
-from nncf.experimental.post_training.backend import Backend
+from nncf.common.utils.backend import BackendType
 from nncf.experimental.post_training.api.engine import Engine
 from nncf.experimental.post_training.algorithms import Algorithm
 from nncf.experimental.post_training.algorithms import AlgorithmParameters
@@ -120,8 +120,8 @@ class PostTrainingQuantization(Algorithm):
                     output.add_statistic_point(statistic_point)
         return output
 
-    def create_subalgorithms(self, backend: Backend) -> None:
-        if backend == Backend.ONNX:
+    def create_subalgorithms(self, backend: BackendType) -> None:
+        if backend == BackendType.ONNX:
             from nncf.experimental.onnx.algorithms.quantization.min_max_quantization import \
                 ONNXMinMaxQuantization  # pylint: disable=cyclic-import
             for algorithm, parameters in self.algorithms_to_created.items():

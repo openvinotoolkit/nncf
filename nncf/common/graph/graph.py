@@ -20,7 +20,6 @@ import networkx as nx
 import networkx.algorithms.isomorphism as iso
 from networkx.drawing.nx_agraph import to_agraph
 
-from nncf.common.graph.graph_matching import get_edge_boundaries
 from nncf.common.graph.layer_attributes import BaseLayerAttributes
 from nncf.common.graph.layer_attributes import Dtype
 from nncf.common.graph.operator_metatypes import INPUT_NOOP_METATYPES
@@ -141,6 +140,7 @@ class NNCFGraphPatternIO:
     """
     Describes the inputs and outputs of a subgraph in NNCFGraph.
     """
+
     def __init__(self, input_edges: List[NNCFGraphEdge], output_edges: List[NNCFGraphEdge]):
         self.input_edges = input_edges
         self.output_edges = output_edges
@@ -228,7 +228,6 @@ class NNCFGraph:
                 all_nodes_of_type.append(nncf_node)
         return all_nodes_of_type
 
-
     def get_all_node_ids(self) -> KeysView[int]:
         """
         Returns all graph nodes' node_ids.
@@ -275,6 +274,14 @@ class NNCFGraph:
         return NNCFNode(node_id=nx_node[NNCFGraph.ID_NODE_ATTR],
                         node_name=nx_node[NNCFGraph.NODE_NAME_ATTR],
                         data=nx_node)
+
+    @staticmethod
+    def _get_edge_boundaries(match: List[str], graph: nx.DiGraph) -> Tuple[
+        List[Tuple[str, str]], List[Tuple[str, str]]]:
+        out_edge_boundary = list(nx.edge_boundary(graph, match, data=True))
+        complement = list(filter(lambda x: x not in match, graph.nodes.keys()))
+        in_edge_boundary = list(nx.edge_boundary(graph, complement, data=True))
+        return sorted(in_edge_boundary), sorted(out_edge_boundary)  # must be sorted for determinism
 
     def get_node_key_by_id(self, node_id: id) -> str:
         """
@@ -498,13 +505,13 @@ class NNCFGraph:
         try:
             A = to_agraph(out_graph)
             A.layout('dot')
-            png_path = os.path.splitext(path)[0]+'.png'
+            png_path = os.path.splitext(path)[0] + '.png'
             A.draw(png_path)
         except ImportError:
             nncf_logger.warning('Graphviz is not installed - only the .dot model visualization format will be used. '
                                 'Install pygraphviz into your Python environment and graphviz system-wide to enable '
                                 'PNG rendering.')
-        except Exception: #pylint:disable=broad-except
+        except Exception:  #pylint:disable=broad-except
             nncf_logger.warning('Failed to render graph to PNG')
 
     def get_graph_for_structure_analysis(self, extended: bool = False) -> nx.DiGraph:
@@ -602,7 +609,8 @@ class NNCFGraph:
         `match` list
         :return: NNCFGraphPatternIO object describing the inputs and outputs of the matched subgraph
         """
-        in_edge_boundary, out_edge_boundary = get_edge_boundaries(match, self._nx_graph)
+
+        in_edge_boundary, out_edge_boundary = NNCFGraph._get_edge_boundaries(match, self._nx_graph)
         boundary = in_edge_boundary + out_edge_boundary
         input_nncf_edges = []
         output_nncf_edges = []

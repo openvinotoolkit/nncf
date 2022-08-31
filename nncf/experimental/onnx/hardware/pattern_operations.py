@@ -12,46 +12,59 @@
 """
 
 from nncf.common.graph.patterns import merge_two_types_of_operations
+from nncf.common.graph.graph_matching import GraphPattern
+from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXConvolutionMetatype
+from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXConvolutionTransposeMetatype
+from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXLinearMetatype
+from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXMatMulMetatype
+from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXBatchNormMetatype
+from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXReluMetatype
+from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXLeakyReluMetatype
+from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXThresholdedReluMetatype
+from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXEluMetatype
+from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXPReluMetatype
+from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXSigmoidMetatype
+from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXHardSigmoidMetatype
+from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXHardSwishMetatype
+from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXAddLayerMetatype
+from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXMulLayerMetatype
+from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXDivLayerMetatype
+from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXSubMetatype
 
-LINEAR_OPERATIONS = {'type': ['Conv',
-                              'ConvTranspose',
-                              'Gemm'
-                              ],
-                     'label': 'LINEAR'}
+LINEAR_OPERATIONS = {GraphPattern.METATYPE_ATTR: [ONNXConvolutionMetatype,
+                                                  ONNXConvolutionTransposeMetatype,
+                                                  ONNXLinearMetatype
+                                                  ],
+                     GraphPattern.LABEL_ATTR: 'LINEAR'}
 
-BATCH_NORMALIZATION_OPERATIONS = {'type': ['BatchNormalization'],
-                                  'label': 'BATCH_NORMALIZATION'}
+BATCH_NORMALIZATION_OPERATIONS = {GraphPattern.METATYPE_ATTR: [ONNXBatchNormMetatype],
+                                  GraphPattern.LABEL_ATTR: 'BATCH_NORMALIZATION'}
 
-RELU_OPERATIONS = {'type': ['Relu',
-                            'Clip',
-                            'LeakyRelu',
-                            'ThresholdedRelu'
-                            ],
-                   'label': 'RELU'}
+RELU_OPERATIONS = {GraphPattern.METATYPE_ATTR: [ONNXReluMetatype,
+                                                ONNXLeakyReluMetatype,
+                                                ONNXThresholdedReluMetatype
+                                                ],
+                   GraphPattern.LABEL_ATTR: 'RELU'}
 
-NON_RELU_ACTIVATIONS_OPERATIONS = {'type': ['Elu',
-                                            'PRelu',
-                                            'Sigmoid',
-                                            'HardSigmoid',
-                                            'HardSwish',
-                                            'Tanh',
-                                            'ScaledTanh'
-                                            'Selu'
-                                            ],
-                                   'label': 'NON_RELU_ACTIVATIONS'
-
-                                   }
+NON_RELU_ACTIVATIONS_OPERATIONS = {GraphPattern.METATYPE_ATTR: [ONNXEluMetatype,
+                                                                ONNXPReluMetatype,
+                                                                ONNXSigmoidMetatype,
+                                                                ONNXHardSigmoidMetatype,
+                                                                ONNXHardSwishMetatype
+                                                                ],
+                                   GraphPattern.LABEL_ATTR: 'NON_RELU_ACTIVATIONS'}
 
 ATOMIC_ACTIVATIONS_OPERATIONS = merge_two_types_of_operations(RELU_OPERATIONS,
                                                               NON_RELU_ACTIVATIONS_OPERATIONS,
                                                               'ATOMIC_ACTIVATIONS')
 
-ARITHMETIC_OPERATIONS = {'type': ['Add',
-                                  'Mul',
-                                  'Div'
-                                  ],
-                         'label': 'ARITHMETIC'}
+ARITHMETIC_OPERATIONS = {GraphPattern.METATYPE_ATTR: [ONNXAddLayerMetatype,
+                                                      ONNXSubMetatype,
+                                                      ONNXMulLayerMetatype,
+                                                      ONNXDivLayerMetatype,
+                                                      ],
+                         GraphPattern.LABEL_ATTR: 'ARITHMETIC'}
 
-MATMUL_OPERATIONS = {'type': ['MatMul'
-                              ],
-                     'label': 'MATMUL'}
+MATMUL_OPERATIONS = {GraphPattern.METATYPE_ATTR: [ONNXMatMulMetatype
+                                                  ],
+                     GraphPattern.LABEL_ATTR: 'MATMUL'}

@@ -112,7 +112,7 @@ class Engine(ABC):
 
         # TODO (Nikita Malinin): Add per-sample metrics calculation
         sampler = self.get_sampler()
-        for input_data in sampler:
+        for input_data in tqdm(sampler):
             outputs = self.infer(input_data)
             self.metrics.update(outputs, input_data)
         return self.metrics.avg_value
